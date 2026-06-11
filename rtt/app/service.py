@@ -1531,6 +1531,13 @@ def plain_text_values(
             ("prescaling", "interest"): _prescale_vector_list(_sized(_prescaled(interest)), outer=""),
             ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios, domain_basis=db), wrap=False),
         })
+    # the projection P and generator embedding G plain-text bands (the editable duals — the only edit
+    # path now that the gridded cells are read-only). Computed from the SAME held basis the grid's
+    # P/G cells use, so band and grid agree cell-for-cell, dashed in lockstep when the tuning isn't a
+    # full rational projection. Only when projection is on (consolidate_v), like the grid.
+    if consolidate_v:
+        values[("projection", "primes")] = projection_ebk(tuning_projection(state, held_basis_ratios), state.d)
+        values[("projection", "gens")] = embedding_ebk(tuning_embedding(state, held_basis_ratios), state.d, len(state.mapping))
     # the chapter-9 nonstandard-domain superspace region: B_L (the basis-embedding matrix
     # as a list of dL-tall kets, one per domain element), M_L (the temperament's mapping
     # over the superspace primes — a covector stack like M), M_jL (the dL × dL identity),
@@ -1624,6 +1631,26 @@ def _ket_list(vectors, close: str, wrap: bool = True) -> str:
         return "[" + " ".join(comps) + close
     kets = " ".join(_ket(v) for v in vectors)
     return f"[{kets}]" if wrap else kets
+
+
+def projection_ebk(matrix, d: int) -> str:
+    """The rational tempering projection P as a map-list EBK string — a covector stack like the
+    mapping (each row a map ``⟨ … ]``), but closing with the prime-coordinate ket ``⟩`` since P is
+    p/p: ``[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩``. ``matrix`` is the d×d grid of display strings from
+    :func:`tuning_projection`; ``None`` (not a full rational projection) dashes every entry to match
+    the dashed grid. The editable dual the projection-primes plain text shows (parsed by
+    :func:`parse_projection`)."""
+    grid = matrix if matrix is not None else tuple((_DASH,) * d for _ in range(d))
+    return "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in grid) + "⟩"
+
+
+def embedding_ebk(matrix, d: int, r: int) -> str:
+    """The rational generator embedding G as a vector-list EBK string — its r held generators as
+    prime-count ket columns: ``[[1 0 0⟩[0 0 -1/4⟩]``. ``matrix`` is the d×r grid of display strings
+    from :func:`tuning_embedding`; ``None`` dashes every entry. The editable dual the projection-gens
+    plain text shows (parsed by :func:`parse_embedding`)."""
+    grid = matrix if matrix is not None else tuple((_DASH,) * r for _ in range(d))  # d×r
+    return _ket_list(list(zip(*grid)), "⟩")  # transpose to the r ket columns
 
 
 def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]") -> str:
@@ -1726,6 +1753,24 @@ def _int_matrix_or_none(matrix) -> Matrix | None:
     return tuple(rows)
 
 
+def _rational_matrix_or_none(matrix):
+    """A rectangular matrix of ints/Fractions as a grid of display strings, or None — the
+    fraction-aware gate for an edited P/G plain-text string (the integer-only
+    :func:`_int_matrix_or_none` rejects the ``1/4`` entries P/G carry). Floats, booleans, blanks,
+    or a ragged shape are rejected so the caller can flag the input rather than apply it."""
+    if not matrix or not all(matrix):
+        return None
+    width = len(matrix[0])
+    rows = []
+    for row in matrix:
+        if len(row) != width:
+            return None
+        if any(isinstance(x, bool) or not isinstance(x, (int, Fraction)) for x in row):
+            return None
+        rows.append(tuple(str(x) for x in row))
+    return tuple(rows)
+
+
 def _parse_float_list(text: str, n: int | None = None) -> tuple[float, ...] | None:
     """A whitespace/comma-separated list of floats inside any EBK bracket pair
     (``{ ⟨ [ ( ) ] ⟩ }``), or None if it is empty, non-numeric, or (when ``n`` is given)
@@ -1761,6 +1806,37 @@ def parse_mapping(text: str) -> Matrix | None:
     if t.variance is not Variance.ROW:
         return None
     return _int_matrix_or_none(t.matrix)
+
+
+def parse_projection(text: str):
+    """Read a map-list EBK string (e.g. ``[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩``) back to a d×d projection as a
+    grid of display strings, or None if unparseable, the wrong variance (a vector, not a map), or not
+    a rational matrix. The inverse of :func:`projection_ebk` — whether the matrix is actually a valid
+    (idempotent) projection is the editor's call (``set_projection_matrix``)."""
+    try:
+        t = parse_temperament_data(text)
+    except Exception:
+        return None
+    if t.variance is not Variance.ROW:
+        return None
+    return _rational_matrix_or_none(t.matrix)
+
+
+def parse_embedding(text: str, d: int, r: int):
+    """Read a vector-list EBK string (e.g. ``[[1 0 0⟩[0 0 -1/4⟩]``) back to a d×r embedding as a grid
+    of display strings, or None. The string's r kets parse as r rows of length d, so we TRANSPOSE
+    them into the d×r grid ``set_embedding_matrix`` expects; a wrong variance (a map, not vectors) or
+    a shape that isn't r kets of length d is rejected. The inverse of :func:`embedding_ebk`."""
+    try:
+        t = parse_temperament_data(text)
+    except Exception:
+        return None
+    if t.variance is not Variance.COL:
+        return None
+    kets = _rational_matrix_or_none(t.matrix)  # r rows (the kets), each d-tall
+    if kets is None or len(kets) != r or any(len(k) != d for k in kets):
+        return None
+    return tuple(tuple(kets[g][i] for g in range(r)) for i in range(d))  # transpose to d×r
 
 
 def parse_prescaler_diagonal(text: str, d: int) -> tuple[float, ...] | None:

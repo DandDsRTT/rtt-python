@@ -208,6 +208,10 @@ _PTEXT_HELP: dict[str, str] = {
     "ptext:tuning:gens": "Type the generator tuning map as a plain-text string to drive the grid.",
     "ptext:vectors:targets": "Type the target-interval list as a plain-text string to drive the grid.",
     "ptext:prescaling:primes": "Type the prescaler as a plain-text string to drive the grid.",
+    # P and G are edited only here (the gridded cells are read-only — a single entry can't keep P
+    # idempotent / 𝑀𝐺 = 𝐼): type the WHOLE matrix to retune; rejected unless it's a valid projection.
+    "ptext:projection:primes": "Type the projection 𝑃 as a plain-text string to retune to it; rejected unless it's a valid projection (idempotent, commas in its kernel).",
+    "ptext:projection:gens": "Type the generator embedding 𝐺 as a plain-text string to retune to it; rejected unless 𝑀𝐺 = 𝐼.",
 }
 
 
@@ -254,12 +258,6 @@ def control_help(kind: str, cid: str) -> str | None:
         return _PRESET_HELP.get(cid.split(":")[1])
     if kind == "ptextedit":
         return _PTEXT_HELP.get(cid)
-    # the editable projection P / embedding G matrix cells are elementcell/elementratio by entry shape
-    # (int vs fraction), so route them by id, not kind, before the element-kind help below.
-    if cid.startswith("cell:proj:"):  # the editable P entries, NOT the read-only P·V list (cell:proj_v:…)
-        return "Projection-matrix entry — a fraction of 𝑃 = 𝐺𝑀. Retype 𝑃 to retune to the projection it defines (rejected unless it's a valid projection)."
-    if cid.startswith("cell:embed:"):
-        return "Generator-embedding entry — a fraction of 𝐺. Retype 𝐺 to retune to the embedding it defines (rejected unless 𝑀𝐺 = 𝐼)."
     if kind == "ratiocell":  # comma / target / held / interest / unchanged
         return _RATIO_HELP.get(cid.split(":")[0])
     return _ID_HELP.get(cid) or _KIND_HELP.get(kind)

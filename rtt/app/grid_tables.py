@@ -216,6 +216,8 @@ SYMBOLS = {
     ("ss_mapping", "detempering"): f"𝑀ₛ→{SUBSCRIPT_L}D",
     ("scaling_factors", "commas"): "𝝀",  # the eigenvalue list diag(λ) over V (bold-italic λ)
     ("projection", "commas"): "PV",  # the projected unrotated vector list P·V = V·diag(λ) over V
+    ("projection", "primes"): "𝑃",   # the rational tempering projection P = GM (math-italic P, like 𝑀)
+    ("projection", "gens"): "𝐺",     # the rational generator embedding G = H(MH)⁻¹ (math-italic G)
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -279,6 +281,8 @@ SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symb
 # list itself, the italic form its scalar entries.
 ROW_LABEL_LETTERS = {
     ("mapping", "primes"): "𝒎",      # 𝑀 → 𝒎: each row of the mapping is a covector 𝒎ᵢ
+    # the projection P = GM is a stack of maps like 𝑀 (each row a covector 𝒑ᵢ over the primes)
+    ("projection", "primes"): "𝒑",
     # each row of the bare prescaler matrix is a covector, labelled with the lowercase of the
     # glyph it realises — build() swaps in 𝒍ᵢ when 𝑋 = 𝐿 (the log-prime matrix), else the generic
     # 𝒙ᵢ (see row_labels). The static value is that generic fallback.
@@ -301,6 +305,8 @@ COL_LABEL_LETTERS = {
     ("scaling_factors", "commas"): "𝜆",
     # the projected unrotated vector list: each column is P·𝐯ᵢ (Pv₁ Pv₂ … in the mockup)
     ("projection", "commas"): "P𝐯",
+    # the generator embedding G is a vector list (each column a held generator 𝐠ᵢ as a prime vector)
+    ("projection", "gens"): "𝐠",
     # interval vectors row — d-tall column-vector matrices
     ("vectors", "commas"): "𝐜",
     ("vectors", "targets"): "𝐭",
@@ -624,6 +630,10 @@ EQUIVALENCES = {
     ("ss_mapping", "targets"): " = 𝑀ₛ→LT",
     ("mapping", "commas"): " = 𝑂",
     ("mapping", "targets"): " = 𝑀T",
+    # the rational tempering projection and generator embedding (the superspace tail on P,
+    # " = 𝐺ₛ→ₗ𝑀ₛ→ₗ", is appended per-render in build() only when show_superspace, like the prescaler)
+    ("projection", "primes"): " = 𝐺𝑀 = 𝐺C𝑀C = 𝑉·diag(𝝀)𝑉⁻¹",
+    ("projection", "gens"): " = 𝐺C𝐹⁻¹ = U(𝑀U)⁻¹",
     ("tuning", "detempering"): " = 𝒈",  # 𝒕D = the generator tuning map (tempering D gives the generators)
     ("tuning", "primes"): " = 𝒈𝑀",
     ("tuning", "targets"): " = 𝒕T",
@@ -664,6 +674,10 @@ UNITS = {
     # the projected unrotated vector list P·V — prime-count vectors, like the interval-vectors V it
     # projects (P maps each just prime back to a prime-count vector, hence p, not the mapping's g)
     ("projection", "commas"): "p",
+    # P = GM maps prime-count vectors to prime-count vectors (p/p); G embeds the generators as
+    # prime-count vectors (p/g, the mapping's reciprocal)
+    ("projection", "primes"): "p/p",
+    ("projection", "gens"): "p/g",
     ("vectors", "targets"): "p",
     ("vectors", "held"): "p",
     ("vectors", "detempering"): "p",
@@ -899,7 +913,10 @@ UNITS_TILES = (
 # form parses to a d-tuple via service.parse_prescaler_diagonal). Every other plain-text
 # value is a computed read-only display.
 EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas"), ("tuning", "gens"),
-                            ("vectors", "targets"), ("prescaling", "primes")})
+                            ("vectors", "targets"), ("prescaling", "primes"),
+                            # P and G aren't per-cell editable (a single entry can't keep P
+                            # idempotent / 𝑀𝐺 = 𝐼), so the whole-matrix EBK string is the only edit path
+                            ("projection", "primes"), ("projection", "gens")})
 EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)  # rows whose band holds an input
 # Rows that carry a plain-text band (every value row; the counts row has none). The
 # quantities row's band holds only the domain-primes basis string ("2.3.5"); its interval-

@@ -2126,6 +2126,38 @@ def test_set_established_projection_sets_the_tuning_not_the_held_column():
     assert ed.displayed_tuning_scheme_name is None
 
 
+def test_try_edit_projection_text_retunes_or_rejects():
+    # the editable P plain-text band: a valid map-list EBK string retunes to the projection it defines;
+    # an unparseable or non-idempotent one returns False (state untouched) so the caller toasts/reddens
+    ed = Editor()
+    assert ed.try_edit_projection_text("[⟨1 4/3 4/3]⟨0 -1/3 -4/3]⟨0 1/3 4/3]⟩") is True  # 1/3-comma P
+    assert [round(x, 3) for x in ed.effective_generator_tuning()] == [1200.0, 694.786]
+    assert ed.try_edit_projection_text("[⟨2 0 0]⟨0 1 0]⟨0 0 1]⟩") is False   # P[0][0]=2 → P² ≠ P
+    assert ed.try_edit_projection_text("not a matrix") is False
+    assert ed.try_edit_projection_text("[[1 0 0⟩[0 1 0⟩[0 0 1⟩]") is False   # a vector list, not a map
+    # the rejected edits left the third-comma tuning from the first (valid) edit untouched
+    assert [round(x, 3) for x in ed.effective_generator_tuning()] == [1200.0, 694.786]
+
+
+def test_try_edit_embedding_text_retunes_or_rejects():
+    # the editable G plain-text band: a valid vector-list EBK string (its r kets transposed into d×r)
+    # retunes; an invalid embedding (𝑀𝐺 ≠ 𝐼) or wrong variance/shape returns False
+    ed = Editor()
+    assert ed.try_edit_embedding_text("[[1 0 0⟩[1/3 -1/3 1/3⟩]") is True   # 1/3-comma G
+    assert [round(x, 3) for x in ed.effective_generator_tuning()] == [1200.0, 694.786]
+    assert ed.try_edit_embedding_text("[[0 0 0⟩[0 0 1/4⟩]") is False       # zeroed column → 𝑀𝐺 ≠ 𝐼
+    assert ed.try_edit_embedding_text("[⟨1 1 0]⟨0 1 4]}") is False         # a map, not a vector list
+
+
+def test_try_edit_projection_text_is_undoable():
+    ed = Editor()
+    assert ed.try_edit_projection_text("[⟨1 4/3 4/3]⟨0 -1/3 -4/3]⟨0 1/3 4/3]⟩") is True
+    assert ed.manual_tuning is True
+    ed.undo()
+    assert ed.manual_tuning is False  # back to the auto optimum (default 1/4-comma)
+    assert ed.displayed_projection_scheme_name == "1/4-comma"
+
+
 def test_set_established_projection_is_undoable():
     ed = Editor()
     ed.set_established_projection("1/3-comma")

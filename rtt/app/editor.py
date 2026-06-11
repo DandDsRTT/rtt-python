@@ -728,6 +728,26 @@ class Editor:
             return False
         return True
 
+    def try_edit_projection_text(self, text: str) -> bool:
+        """Parse an EBK map string as the projection P and apply it — the editable P plain-text band,
+        the only P edit path now that the gridded cells are read-only (a single cell can't keep P
+        idempotent). False (state untouched) when the text isn't a parseable d×d rational map OR isn't
+        a valid tempering projection (rejected by :meth:`set_projection_matrix`), so the caller reddens
+        the box and toasts why."""
+        matrix = service.parse_projection(text)
+        if matrix is None:
+            return False
+        return self.set_projection_matrix(matrix)
+
+    def try_edit_embedding_text(self, text: str) -> bool:
+        """Parse an EBK vector string as the generator embedding G and apply it — the editable G
+        plain-text band. False when it isn't a parseable d×r rational vector list OR isn't a valid
+        embedding (𝑀𝐺 ≠ 𝐼, rejected by :meth:`set_embedding_matrix`)."""
+        matrix = service.parse_embedding(text, self.state.d, len(self.state.mapping))
+        if matrix is None:
+            return False
+        return self.set_embedding_matrix(matrix)
+
     def set_tuning_scheme(self, name: str) -> None:
         """Apply a systematic scheme name from the established-tuning-scheme chooser, preserving
         the current target mode: all-interval when the scheme currently targets every interval,

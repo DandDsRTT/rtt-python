@@ -150,15 +150,15 @@ async def test_projection_renders_the_embedding_and_its_choosers(user: User) -> 
     # the default meantone (TILT minimax-U) IS quarter-comma — it holds 2/1 and 5/4 — so the choosers
     # read 1/4-comma and P/G fill in (the 5^(1/4) entries), NOT dashes
     assert _cell_child(user, "preset:projection").value == "1/4-comma"
-    # P and G are now editable stacked-fraction cells — read their rejoined value
-    assert _ratio_value(user, "cell:proj:2:1") == "1/4"
-    assert _ratio_value(user, "cell:embed:2:1") == "1/4"
+    # P and G are read-only "mapped" cells now (edited via their plain-text bands) — read the cell text
+    assert _cell_text(user, "cell:proj:2:1") == "1/4"
+    assert _cell_text(user, "cell:embed:2:1") == "1/4"
     # pick 1/3-comma -> P and G re-form (it holds 6/5), both choosers track it, and the genmap
     # actually re-solves to third-comma (1200, 694.786)
     _cell_child(user, "preset:projection").set_value("1/3-comma")
     await user.should_see(marker="cell:embed:2:1")
-    assert _ratio_value(user, "cell:proj:2:1") == "1/3"
-    assert _ratio_value(user, "cell:embed:2:1") == "1/3"
+    assert _cell_text(user, "cell:proj:2:1") == "1/3"
+    assert _cell_text(user, "cell:embed:2:1") == "1/3"
     assert _cell_child(user, "preset:projection:gens").value == "1/3-comma"
     assert _cell_child(user, "tuning:gen:1").value == "694.786"  # the dropdown changed the tuning
 
@@ -215,69 +215,62 @@ async def test_editing_the_unchanged_ratio_retunes(user: User) -> None:
 
 
 async def test_editing_the_generator_embedding_retunes(user: User) -> None:
-    # the generator embedding G is editable too: retype the default meantone's G (1/4-comma) as
-    # 1/3-comma's G = ((1,1/3),(0,-1/3),(0,1/3)) and the tuning re-solves to third-comma
+    # G's gridded cells are read-only (a single entry can't keep 𝑀𝐺 = 𝐼); editing is via its
+    # plain-text band. Type 1/3-comma's G as a vector-list EBK string and the tuning re-solves to
+    # third-comma (1200, 694.786).
     await _enable(user, "projection")
-    await user.should_see(marker="cell:embed:2:1")
+    _toggle(user, "plain text values")
+    await user.should_see(marker="ptext:projection:gens")
     assert _cell_child(user, "tuning:gen:1").value == "696.578"
-    for (i, g), v in {(0, 0): "1", (0, 1): "1/3", (1, 0): "0", (1, 1): "-1/3", (2, 0): "0", (2, 1): "1/3"}.items():
-        _cell_child(user, f"cell:embed:{i}:{g}").set_value(v)
-    _commit(user, "cell:embed:2:1")                               # blur commits the whole matrix
+    _cell_child(user, "ptext:projection:gens").set_value("[[1 0 0⟩[1/3 -1/3 1/3⟩]")  # 1/3-comma G
     assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
 
 
 async def test_editing_the_projection_matrix_retunes(user: User) -> None:
-    # the projection matrix P is editable too: retype the default meantone's P (1/4-comma) as
-    # 1/3-comma's P and the tuning re-solves to third-comma — rejected if it weren't a valid projection
+    # P's gridded cells are read-only too (a single entry can't keep P idempotent); editing is via its
+    # plain-text band. Type 1/3-comma's P as a map-list EBK string and the tuning re-solves to third-comma.
     await _enable(user, "projection")
-    await user.should_see(marker="cell:proj:2:1")
+    _toggle(user, "plain text values")
+    await user.should_see(marker="ptext:projection:primes")
     assert _cell_child(user, "tuning:gen:1").value == "696.578"
-    p13 = (("1", "4/3", "4/3"), ("0", "-1/3", "-4/3"), ("0", "1/3", "4/3"))
-    for i in range(3):
-        for p in range(3):
-            _cell_child(user, f"cell:proj:{i}:{p}").set_value(p13[i][p])
-    _commit(user, "cell:proj:2:2")                               # blur commits the whole matrix
+    _cell_child(user, "ptext:projection:primes").set_value("[⟨1 4/3 4/3]⟨0 -1/3 -4/3]⟨0 1/3 4/3]⟩")  # 1/3-comma P
     assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
 
 
-async def test_a_projection_cell_rerenders_its_face_when_it_flips_integer_to_fraction(user: User) -> None:
-    # reuse-fidelity guard: P/G entries are elementcell (plain integer) / elementratio (stacked
-    # fraction) by shape, so a retune that flips an entry int→fraction must REBUILD the cell — not
-    # leave a stale integer where a fraction now belongs (the bug a single ratiocell kind would have).
-    # 1/4-comma's P[1][1] = "0" (a plain elementcell); retuning to 1/3-comma (hold 6/5) makes it
-    # "-1/3" (a stacked elementratio). Assert the VISIBLE stacked face, not just the input .value.
+async def test_an_invalid_projection_plain_text_toasts_and_reddens(user: User) -> None:
+    # a P plain-text string that parses but ISN'T a valid projection (a 2 on the diagonal breaks
+    # idempotency P² = P) toasts the reason at top and reddens the band — the tuning stays put.
     await _enable(user, "projection")
-    await user.should_see(marker="cell:proj:1:1")
-    assert _cell_child(user, "cell:proj:1:1").value == "0"        # 1/4-comma: the big-integer view
-    _cell_child(user, "unchanged:1").set_value("6/5")            # retune to 1/3-comma
-    _commit(user, "unchanged:1")
-    num, den = _ratio_face(user, "cell:proj:1:1")               # rebuilt as a stacked fraction
-    assert (num.value, den.value) == ("-1", "3")                # the face followed the value, not a stale "0"
-
-
-async def test_an_invalid_projection_edit_toasts_and_reverts(user: User) -> None:
-    # editing P to something that ISN'T a valid projection (a 2 on the diagonal breaks idempotency
-    # P² = P) must TOAST the reason at top and revert the field — not silently retune or swallow it.
-    await _enable(user, "projection")
-    await user.should_see(marker="cell:proj:0:0")
+    _toggle(user, "plain text values")
+    await user.should_see(marker="ptext:projection:primes")
     assert _cell_child(user, "tuning:gen:1").value == "696.578"   # 1/4-comma
-    _cell_child(user, "cell:proj:0:0").set_value("2")            # P[0][0] = 2 → P² ≠ P
-    _commit(user, "cell:proj:0:0")
+    _cell_child(user, "ptext:projection:primes").set_value("[⟨2 0 0]⟨0 1 0]⟨0 0 1]⟩")  # P[0][0]=2 → P²≠P
     await user.should_see("isn't a valid projection")           # the red toast names the reason
-    assert _cell_child(user, "cell:proj:0:0").value == "1"      # reverted, not left showing the bad 2
+    assert "rtt-ptext-error" in _cell_child(user, "ptext:projection:primes").classes
     assert _cell_child(user, "tuning:gen:1").value == "696.578"  # tuning unchanged
 
 
-async def test_an_invalid_embedding_edit_toasts_and_reverts(user: User) -> None:
-    # editing G so that M·G ≠ I (here zeroing the octave generator's prime-2 coordinate) must toast
-    # the reason at top and revert — the embedding counterpart of the invalid-projection toast.
+async def test_an_invalid_embedding_plain_text_toasts_and_reddens(user: User) -> None:
+    # a G plain-text string that parses but isn't a valid embedding (a zeroed column → 𝑀𝐺 ≠ 𝐼) toasts
+    # the reason and reddens — the embedding counterpart of the invalid-projection case.
     await _enable(user, "projection")
-    await user.should_see(marker="cell:embed:0:0")
+    _toggle(user, "plain text values")
+    await user.should_see(marker="ptext:projection:gens")
     assert _cell_child(user, "tuning:gen:1").value == "696.578"
-    _cell_child(user, "cell:embed:0:0").set_value("0")          # G[0][0] = 0 → M·G ≠ I
-    _commit(user, "cell:embed:0:0")
+    _cell_child(user, "ptext:projection:gens").set_value("[[0 0 0⟩[0 0 1/4⟩]")  # zeroed column → 𝑀𝐺 ≠ 𝐼
     await user.should_see("isn't a valid embedding")
-    assert _cell_child(user, "cell:embed:0:0").value == "1"     # reverted
+    assert "rtt-ptext-error" in _cell_child(user, "ptext:projection:gens").classes
+    assert _cell_child(user, "tuning:gen:1").value == "696.578"  # tuning unchanged
+
+
+async def test_an_unparseable_projection_plain_text_reddens_without_a_toast(user: User) -> None:
+    # garbage that isn't even a parseable map string just reddens the band (its shape is the feedback)
+    # — no toast, like the mapping / comma-basis / prescaler duals. The tuning stays put.
+    await _enable(user, "projection")
+    _toggle(user, "plain text values")
+    await user.should_see(marker="ptext:projection:primes")
+    _cell_child(user, "ptext:projection:primes").set_value("not a matrix")
+    assert "rtt-ptext-error" in _cell_child(user, "ptext:projection:primes").classes
     assert _cell_child(user, "tuning:gen:1").value == "696.578"  # tuning unchanged
 
 

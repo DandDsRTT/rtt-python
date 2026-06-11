@@ -1704,6 +1704,41 @@ def test_unchanged_basis_from_embedding_recovers_U_and_rejects_invalid():
     assert service.unchanged_basis_from_embedding(state, (("2", "0"), ("0", "0"), ("0", "1/4"))) is None  # M·G ≠ I
 
 
+def test_projection_and_embedding_ebk_match_the_mockup_and_round_trip():
+    # P is a map-list EBK ([⟨…]…⟩, a covector stack closing with the prime ket ⟩); G a vector-list EBK
+    # ([[…⟩…], its held generators as ket columns). The strings match the mockup, and parse back to the
+    # exact grids (G's r kets transposed into the d×r matrix the setter expects).
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 5-limit meantone, d=3 r=2
+    P = service.tuning_projection(state, ("2/1", "5/4"))   # 1/4-comma
+    G = service.tuning_embedding(state, ("2/1", "5/4"))
+    assert service.projection_ebk(P, 3) == "[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩"
+    assert service.embedding_ebk(G, 3, 2) == "[[1 0 0⟩ [0 0 1/4⟩]"
+    assert service.parse_projection(service.projection_ebk(P, 3)) == P
+    assert service.parse_embedding(service.embedding_ebk(G, 3, 2), 3, 2) == G
+    # a None matrix (not a full rational projection) dashes every entry, matching the dashed grid
+    assert service.projection_ebk(None, 3) == "[⟨— — —]⟨— — —]⟨— — —]⟩"
+    assert service.embedding_ebk(None, 3, 2) == "[[— — —⟩ [— — —⟩]"
+
+
+def test_projection_and_embedding_parsers_reject_bad_input():
+    # the parsers gate shape, variance, and rationality before the editor's idempotency / 𝑀𝐺=𝐼 checks
+    assert service.parse_projection("[[1 0 0⟩[0 1 0⟩[0 0 1⟩]") is None     # COL variance (a vector list), not a map
+    assert service.parse_projection("[⟨1.5 0 0]⟨0 1 0]⟨0 0 1]⟩") is None   # a float entry
+    assert service.parse_projection("garbage") is None                     # unparseable
+    assert service.parse_embedding("[⟨1 1 0]⟨0 1 4]}", 3, 2) is None       # ROW variance (a map), not a vector list
+    assert service.parse_embedding("[[1 0 0⟩[0 0 1/4⟩[0 0 0⟩]", 3, 2) is None  # 3 kets, but r = 2
+    assert service.parse_embedding("[[1 0⟩[0 1⟩]", 3, 2) is None           # kets of length 2, but d = 3
+
+
+def test_rational_matrix_or_none_accepts_fractions_rejects_floats_and_ragged():
+    from fractions import Fraction
+    assert service._rational_matrix_or_none(((1, Fraction(1, 4)), (0, -1))) == (("1", "1/4"), ("0", "-1"))
+    assert service._rational_matrix_or_none(((1.5, 0), (0, 1))) is None     # float
+    assert service._rational_matrix_or_none(((True, 0), (0, 1))) is None    # bool
+    assert service._rational_matrix_or_none(((1, 0), (0,))) is None         # ragged
+    assert service._rational_matrix_or_none(()) is None                     # empty
+
+
 def test_tuning_embedding_of_just_intonation_is_the_identity():
     # nullity 0: every prime is its own generator, so G = I (the d×d identity).
     state = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))

@@ -87,6 +87,12 @@ def _doc_store() -> dict:
 # generators, or a prime tempered to a unison (see service.is_proper_temperament)
 _INVALID_TEMPERAMENT = "Not a valid temperament: the generators must be independent and every prime reached."
 
+# the toasts shown when an edited projection P / generator embedding G plain-text string parses but
+# isn't a valid projection of this temperament (P must be idempotent with the commas in its kernel;
+# 𝑀𝐺 must be the identity). A string that doesn't even parse just reddens the box (no toast).
+_INVALID_PROJECTION = "That isn't a valid projection — 𝑃 must be idempotent (𝑃² = 𝑃) with the commas in its kernel."
+_INVALID_EMBEDDING = "That isn't a valid embedding — 𝑀𝐺 must equal the identity."
+
 # the toast shown when the "nonstandard domain" Show toggle is turned off while a nonstandard
 # basis is still live — the setting can't go off until the basis is back to a standard prime limit
 _NONSTANDARD_BASIS_IN_USE = (
@@ -1855,12 +1861,6 @@ class _Reconciler:
         cells pass the cell id and commit one at a time; the integer matrix/vector cells re-read the
         WHOLE matrix and take a ``preview=`` flag. ``preview`` is None for the ratiocell — it commits
         on blur with no live keystroke preview (parsing a half-typed fraction would mis-retune)."""
-        # the element kinds do double duty: a projection P / embedding G matrix entry
-        # (cell:proj/embed:i) commits the WHOLE matrix via on_ratio_change with no preview (a partial
-        # fraction can't be a valid matrix), unlike a domain basis element (prime:i), which relabels
-        # via on_element_change with a live preview. Dispatch the P/G entries by their cell id.
-        if cb.id.startswith(("cell:proj:", "cell:embed:")):
-            return (lambda _=None, cid=cb.id: self._cb.on_ratio_change(cid)), None
         fn = getattr(self._cb, spec.commit)
         if spec.cid_arg:
             commit = lambda _=None, cid=cb.id: fn(cid)
@@ -3013,28 +3013,7 @@ def index() -> None:
         # cell is a silent no-op (no toast), not an error.
         if building[0] or cid not in rec.inputs:
             return
-        parts = cid.split(":")
-        if parts[0] == "cell":  # the editable projection P / embedding G MATRIX cells (scalar fractions,
-            # cell:proj:i:p / cell:embed:i:g) — read the WHOLE matrix and retune to the projection it
-            # defines; an invalid edit toasts WHY instead of silently reverting
-            kind, d, r = parts[1], editor.state.d, editor.state.r
-            ncols = d if kind == "proj" else r
-            ids = [[f"cell:{kind}:{i}:{j}" for j in range(ncols)] for i in range(d)]
-            if any(cid2 not in rec.inputs for row in ids for cid2 in row):
-                render()
-                return
-            matrix = [[rec.cell_value(cid2) for cid2 in row] for row in ids]  # rejoin a fraction cell's num/den
-            if any(not x for row in matrix for x in row):  # an in-progress edit (a cleared cell)
-                render()
-                return
-            ok = editor.set_projection_matrix(matrix) if kind == "proj" else editor.set_embedding_matrix(matrix)
-            if not ok:
-                ui.notify("That isn't a valid projection — 𝑃 must be idempotent (𝑃² = 𝑃) with the commas in its kernel."
-                          if kind == "proj" else "That isn't a valid embedding — 𝑀𝐺 must equal the identity.",
-                          type="negative", position="top")
-            render()
-            return
-        group, tok = parts  # the column's id-TOKEN, not its index — a reorder decouples them
+        group, tok = cid.split(":")  # the column's id-TOKEN, not its index — a reorder decouples them
         raw = rec.cell_value(cid)  # the cell's "num/den" (a fraction cell rejoins its two fields)
         if raw in ("", "?/?"):  # an untouched draft placeholder or a cleared cell
             render()
@@ -3348,6 +3327,12 @@ def index() -> None:
             # for typing the WHOLE diagonal at once. An invalid shape (non-diagonal, wrong size)
             # reddens the box rather than mangling 𝐿, like the mapping / comma-basis duals.
             ok = editor.set_custom_prescaler_text(value)
+        elif cid == "ptext:projection:primes":  # a typed d×d map string retunes to the projection P it
+            # defines — the only P edit path (the gridded cells are read-only, since a single entry
+            # can't keep P idempotent). Rejected (reddens, toasts) unless it's a valid projection.
+            ok = editor.try_edit_projection_text(value)
+        elif cid == "ptext:projection:gens":  # a typed vector-list string retunes to the embedding G
+            ok = editor.try_edit_embedding_text(value)
         else:
             return
         if ok:
@@ -3355,18 +3340,25 @@ def index() -> None:
             render()
         else:
             rec.ptext_inputs[cid].classes(add="rtt-ptext-error")
-            # a parseable but degenerate temperament (rejected by the editor) toasts WHY, like the
-            # ratio cells; an unparseable string just reddens (its shape is the feedback)
+            # a string that PARSED but was rejected by the editor (a degenerate temperament, or a P/G
+            # that isn't a valid projection / embedding) toasts WHY, like the ratio cells; an
+            # unparseable string just reddens (its shape is the feedback)
+            toast = None
             if cid == "ptext:mapping:primes":
                 st = service.parse_mapping_state(value)
-                degenerate = st is not None and not service.is_proper_temperament(st.mapping)
+                if st is not None and not service.is_proper_temperament(st.mapping):
+                    toast = _INVALID_TEMPERAMENT
             elif cid == "ptext:vectors:commas":
                 b = service.parse_comma_basis(value)
-                degenerate = b is not None and not service.is_proper_temperament(service.from_comma_basis(b).mapping)
-            else:
-                degenerate = False
-            if degenerate:
-                ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
+                if b is not None and not service.is_proper_temperament(service.from_comma_basis(b).mapping):
+                    toast = _INVALID_TEMPERAMENT
+            elif cid == "ptext:projection:primes" and service.parse_projection(value) is not None:
+                toast = _INVALID_PROJECTION  # parsed as a d×d map, but P² ≠ P / commas not in its kernel
+            elif cid == "ptext:projection:gens" and \
+                    service.parse_embedding(value, editor.state.d, len(editor.state.mapping)) is not None:
+                toast = _INVALID_EMBEDDING  # parsed as a vector list, but 𝑀𝐺 ≠ 𝐼
+            if toast:
+                ui.notify(toast, type="negative", position="top")
 
     def act(action):
         action()

@@ -2972,38 +2972,29 @@ class _GridBuilder:
                         self.cells.append(CellBox(f"cell:mapped_unchanged:{dr}:{j}", self.comma_left(self.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
 
         # the projection matrix P = GM: a d×d operator over the domain primes, a stack of read-only
-        # maps like the mapping. Its cells are "mapped" (a computed value, not editable like the
-        # mapping's), carrying the rational entry text ("1", "0", "1/4") service stringified.
-        # P is totally DASHED when the tuning isn't a full rational projection (projection_matrix
-        # None — it holds fewer than r rational intervals): every cell an em-dash, not a fabricated
-        # value.
+        # maps like the mapping. Its cells are "mapped" (a computed value, NOT per-cell editable — a
+        # single entry can't keep P idempotent with the commas in its kernel, so editing is only via
+        # the whole-matrix plain-text band below), carrying the rational entry text ("1", "0", "1/4")
+        # service stringified. P is totally DASHED when the tuning isn't a full rational projection
+        # (projection_matrix None — it holds fewer than r rational intervals): every cell an em-dash.
         if self.row_open("projection") and self.tile_open("projection", "primes"):
-            full_p = self.projection_matrix is not None  # EDITABLE when shown (a full rational projection)
+            full_p = self.projection_matrix is not None
             for i in range(self.d):
                 for p in range(self.d):
                     text = DASH if not full_p else self.projection_matrix[i][p]
-                    # editable like every mixed int/fraction gridded value (the domain elements): an
-                    # integer entry ("1","0") as a plain elementcell, a fraction ("1/4") as the stacked
-                    # elementratio — switching kind across an int↔fraction retune so the reconciler
-                    # rebuilds the face (else a stale "0" lingers where "-1/3" now belongs). Dashed →
-                    # read-only "mapped". Commit routes to on_ratio_change by the cell: id (see _element_input).
-                    kind = self._element_cell_kind(text) if full_p else "mapped"
                     self.cells.append(CellBox(f"cell:proj:{i}:{p}", self.prime_left(p), self.proj_top(i),
-                                         COL_W, ROW_H, kind, text=text, prime=p))
+                                         COL_W, ROW_H, "mapped", text=text, prime=p))
         # the generator embedding G = H(MH)⁻¹ (d×r), beside P in the gens columns: its columns are
-        # the held tuning's generators as fractional vectors. Read-only ("mapped") cells like P, but
-        # over the r generator columns rather than the d primes (rows are the d primes, like P).
-        # Dashed in lockstep with P (embedding_matrix None ⟺ not a full rational projection).
+        # the held tuning's generators as fractional vectors. Read-only ("mapped") cells like P (edited
+        # only via the plain-text band, since 𝑀𝐺 = 𝐼 couples every entry), over the r generator columns
+        # rather than the d primes. Dashed in lockstep with P (embedding_matrix None ⟺ not a full rational projection).
         if self.row_open("projection") and self.tile_open("projection", "gens"):
-            full_g = self.embedding_matrix is not None  # EDITABLE when shown (a full rational projection)
+            full_g = self.embedding_matrix is not None
             for i in range(self.d):
                 for g in range(self.r):
                     text = DASH if not full_g else self.embedding_matrix[i][g]
-                    # editable like P (elementcell for an integer, elementratio for a fraction; kind
-                    # follows the value across an int↔fraction retune). Dashed → read-only "mapped".
-                    kind = self._element_cell_kind(text) if full_g else "mapped"
                     self.cells.append(CellBox(f"cell:embed:{i}:{g}", self.gen_left(g), self.proj_top(i),
-                                         COL_W, ROW_H, kind, text=text, gen=g))
+                                         COL_W, ROW_H, "mapped", text=text, gen=g))
 
         # the projected unrotated vector list P·V (the projection row over the V column): each
         # unrotated vector scaled by its eigenvalue — the comma columns vanish (P·𝐜 = 0, the
@@ -3972,6 +3963,7 @@ class _GridBuilder:
             _prescale_top = lambda i: self.row_y["prescaling"] + i * ROW_H
             row_top = {
                 ("mapping", "primes"): self.map_top,
+                ("projection", "primes"): self.proj_top,  # P's d rows of maps 𝒑ᵢ, like the mapping's 𝒎ᵢ
                 ("prescaling", "primes"): _prescale_top,
                 ("prescaling", "ssprimes"): _prescale_top,
                 ("ss_mapping", "ssprimes"): self.ss_map_top,
@@ -3979,6 +3971,7 @@ class _GridBuilder:
                 ("ss_just_mapping", "ssprimes"): self.ss_just_map_top,
             }
             row_count = {("mapping", "primes"): self.r,
+                         ("projection", "primes"): self.d,  # P is d×d (a map per domain prime)
                          ("prescaling", "primes"): self.prescale_rows + self.size_rows,
                          ("prescaling", "ssprimes"): self.prescale_rows + self.size_rows,
                          ("ss_mapping", "ssprimes"): self.rL,
@@ -4153,6 +4146,9 @@ class _GridBuilder:
                         # comma half of M·V vanishes; the unchanged half maps to the held generators).
                         **({("vectors", "commas"): " = C|U", ("mapping", "commas"): ""}
                            if self.show_unchanged else {})}
+        if self.show_superspace:  # P's equivalence gains the superspace decomposition (per the mockup)
+            equivalences[("projection", "primes")] = (
+                EQUIVALENCES[("projection", "primes")] + f" = 𝐺{SUBSCRIPT_L}→ₛ𝑀ₛ→{SUBSCRIPT_L}")
         if ai:
             # all-interval (Tₚ = I): the kept target tiles take prime-proxy closed forms in the live
             # prescaler glyph (X→L). The complexity list IS the prescaler diagonal; the (simplicity)

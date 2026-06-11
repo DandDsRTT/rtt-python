@@ -7915,14 +7915,12 @@ def test_projection_hides_with_its_parent_tuning_boxes():
 def test_projection_on_adds_the_generator_embedding_G_beside_P():
     cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # quarter-comma: a full rational hold
     # G shares the projection band (the d prime rows) but lives in the r generator columns:
-    # a d×r matrix of editable cells (d=3, r=2 here) when the tuning is a full rational projection
+    # a d×r matrix of read-only "mapped" cells (d=3, r=2 here) — edited only via the plain-text band,
+    # since 𝑀𝐺 = 𝐼 couples every entry
     for i in range(3):
         for g in range(2):
             cell = cells[f"cell:embed:{i}:{g}"]
-            # editable like the domain elements: a fraction is the stacked elementratio, an integer
-            # the plain elementcell — the kind follows the value's shape so the face rebuilds across
-            # an int↔fraction retune (else a stale "0" lingers where "1/4" now belongs)
-            assert cell.kind == ("elementratio" if "/" in cell.text else "elementcell")
+            assert cell.kind == "mapped"                  # read-only (a single entry can't be a valid edit)
             assert cell.x == cells[f"tuning:gen:{g}"].x   # the same generator columns as 𝒈
             assert cell.y == cells[f"cell:proj:{i}:0"].y  # the same prime rows as P
     # quarter-comma's embedding G: the octave and 5^(1/4)
@@ -7933,6 +7931,34 @@ def test_projection_on_adds_the_generator_embedding_G_beside_P():
     # under-held (the default), G dashes out in lockstep with P
     dashed = {c.id: c for c in _proj_build().cells}
     assert all(dashed[f"cell:embed:{i}:{g}"].text == "—" for i in range(3) for g in range(2))
+
+
+def test_projection_p_and_g_carry_full_chrome_and_editable_plain_text():
+    # P and G are at chrome parity with the mapping: symbols 𝑃/𝐺 (+ equivalence), the p/p and p/g
+    # units, P's covector rows labelled 𝒑ᵢ and G's columns 𝐠ᵢ, and an EDITABLE plain-text band each —
+    # the only edit path now the gridded cells are read-only "mapped".
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, units=True,
+                                          equivalences=True, plain_text_values=True).cells}
+    assert cells["symbol:projection:primes"].text.startswith("𝑃") and "= 𝐺𝑀" in cells["symbol:projection:primes"].text
+    assert cells["symbol:projection:gens"].text.startswith("𝐺")
+    assert cells["units:projection:primes"].text == "units: p/p"
+    assert cells["units:projection:gens"].text == "units: p/g"
+    assert cells["matlabel:row:projection:primes:0"].text == "𝒑₁"   # P's covector rows
+    assert cells["matlabel:col:projection:gens:0"].text == "𝐠₁"     # G's vector columns
+    # the gridded cells are read-only; editing is via the plain-text bands (kind "ptextedit")
+    assert cells["cell:proj:0:0"].kind == "mapped" and cells["cell:embed:0:0"].kind == "mapped"
+    assert cells["ptext:projection:primes"].kind == "ptextedit"
+    assert cells["ptext:projection:gens"].kind == "ptextedit"
+    assert cells["ptext:projection:primes"].text == "[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩"
+    assert cells["ptext:projection:gens"].text == "[[1 0 0⟩ [0 0 1/4⟩]"
+
+
+def test_projection_plain_text_bands_dash_when_under_held():
+    # under-held (the default), P/G aren't a full rational projection, so the bands dash in lockstep
+    # with the grid cells
+    cells = {c.id: c for c in _proj_build(plain_text_values=True).cells}
+    assert cells["ptext:projection:primes"].text == "[⟨— — —]⟨— — —]⟨— — —]⟩"
+    assert cells["ptext:projection:gens"].text == "[[— — —⟩ [— — —⟩]"
 
 
 def test_return_to_scheme_button_is_boxed_above_the_dropdown_with_presets():
