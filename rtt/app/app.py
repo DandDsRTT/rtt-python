@@ -445,6 +445,8 @@ def _mathexpr_html(text: str, width: float) -> str:
 # (¢(E-sopfr-S)/, (E-sopfr-C)) fits its narrow COL_W spine instead of spilling the tile.
 _UNITS_MAX_FONT = 10.0    # px — the comfortable units-label size (matches .rtt-units in rtt.css)
 _CELLUNIT_MAX_FONT = 6.0  # px — the per-value unit overlay (matches .rtt-cellunit)
+_MATLABEL_FONT = 11.0     # px — the default column/row matrix-label size (matches .rtt-matlabel)
+_MATLABEL_MIN_FONT = 6.0  # px — floor for a wide column header shrunk to fit its COL_W slot
 
 
 def _units_font(text: str, width: float, max_font: float) -> float:
@@ -1750,9 +1752,21 @@ class _Reconciler:
                 self.math_rendered[cb.id] = (html, cb.w)
             return
         html = _math_html(cb.text)
-        if self.math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
+        # a wide COLUMN header (the superspace / projection labels 𝐠_L→sᵢ, 𝐜ʟᵢ … carrying an arrow +
+        # subscript markup) shrinks to fit its COL_W slot rather than overlapping its neighbours —
+        # sized off the layout's own width model (_min_width_for_lines) so the fit matches the column.
+        # ROW labels keep full size (their gutter widens to hold them); the ‖…‖q / spaced norm labels
+        # wrap via their CSS class, so they keep the default size too.
+        font = None
+        if cb.kind == "matlabel" and ":col:" in cb.id and "‖" not in cb.text and " " not in cb.text:
+            w = spreadsheet._min_width_for_lines(cb.text, 1, _MATLABEL_FONT)
+            if w > cb.w - 2:  # overflows its slot → shrink to fit (never enlarges; floored for legibility)
+                font = max(_MATLABEL_MIN_FONT, _MATLABEL_FONT * (cb.w - 2) / w)
+        if self.math_rendered.get(cb.id) != (html, font):  # rewrite on a toggle / value / fit change
             self.math_cells[cb.id].set_content(html)
-            self.math_rendered[cb.id] = html
+            if font is not None:
+                self.math_cells[cb.id].style(f"font-size:{font:.2f}px")
+            self.math_rendered[cb.id] = (html, font)
             if cb.kind == "matlabel":
                 # the label may have changed shape (bare wₙ → wₙ = cₙ⁻¹); re-pick its size class
                 # so a now-wider header takes the shrink/wrap variant instead of overspilling.

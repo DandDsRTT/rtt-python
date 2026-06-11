@@ -8162,6 +8162,27 @@ def test_projection_superspace_tiles_dash_when_under_held():
     assert all(cells[f"cell:proj_sl:{i}:{p}"].text == "—" for i in range(3) for p in range(4))
 
 
+def test_projection_row_comes_after_the_superspace_rows():
+    # per the mockup the projection row (P, G_L→s, P_L→s) sits BELOW the superspace interval-vectors
+    # (B_L) and superspace mapping (M_L) rows, not above them
+    cells = {c.id: c for c in _proj_superspace().cells}
+    proj_y = cells["cell:proj:0:0"].y
+    assert proj_y > cells["cell:ss_vectors:primes:0:0"].y    # below B_L
+    assert proj_y > cells["cell:ss_mapping:ssprimes:0:0"].y  # below M_L
+
+
+def test_projection_targets_tile_tracks_the_targets_column():
+    # the projection P·T tile is gated like the other targets tiles, so it is never absent while the
+    # interval-vectors targets tile renders an empty [] (the reported inconsistent state): both the
+    # populated list and an empty-but-open one keep the two tiles in lockstep
+    st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s.update(projection=True)
+    for kw in ({}, {"target_override": ()}):  # a populated target list, then an empty-but-open one
+        ids = {c.id for c in spreadsheet.build(st, s, held_basis_ratios=("2/1", "5/4"), **kw).cells}
+        assert ("bracket:vec:targets:l" in ids) == ("bracket:proj_pt:l" in ids)
+
+
 def test_projection_symbol_floor_widens_the_tile_so_the_equivalence_never_wraps():
     # P's equivalence (𝑃 = G𝑀 = V·diag(𝝀)V⁻¹) is wider than the bare 3-column matrix, so the column
     # widens (the _symbol_floor) to fit it on ONE line — the symbol/equivalence must never wrap. The

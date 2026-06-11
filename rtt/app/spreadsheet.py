@@ -88,6 +88,9 @@ MATLABEL_W = 22  # width reserved left of an EBK ⟨ bracket for row labels (�
 MATLABEL_W_SS = 64  # the primes column's wider row-label gutter when the superspace is shown: it
 # also carries M_s→L's 𝒎ₛ→ₗᵢ labels (an arrow + two subscripts, far wider than the plain 𝒎ᵢ),
 # so the gutter widens to fit them rather than overflowing the ⟨ bracket. (Centred, like 𝒎ᵢ.)
+MATLABEL_W_SSPRIMES = 56  # the ssprimes column's row-label gutter: wider than the plain MATLABEL_W
+# (22) so the projection row's P_L→s covector labels 𝒑ₗ→ₛᵢ (an arrow + two subscripts, like M_s→L)
+# fit beside M_L's 𝒎ʟᵢ rather than overflowing the ⟨ bracket. (Centred, like 𝒎ʟᵢ.)
 UNIT_H = 12  # height of the per-box "units: …" line (below the caption, when units shown)
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
@@ -1192,7 +1195,10 @@ class _GridBuilder:
             )
             if self.show_detempering:
                 projection_col_tiles += (("block:proj:detempering", "projection", "detempering"),)
-            if self.k:
+            if self.targets_editable:  # present whenever the targets column is (col_open gates it),
+                # like the other ("*","targets") tiles — so P·T shows an empty [] alongside them when
+                # the list is empty, never a partial state (PT missing while the rest show []). Dropped
+                # in all-interval (Tₚ = I) with the other product-with-T tiles, since P·Tₚ = P.
                 projection_col_tiles += (("block:proj:targets", "projection", "targets"),)
             if self.nh_shown:
                 projection_col_tiles += (("block:proj:held", "projection", "held"),)
@@ -1289,7 +1295,7 @@ class _GridBuilder:
         # M_L / M_jL stack covectors in the ssprimes column with row labels (𝒎ʟᵢ), so it needs
         # the same MATLABEL_W gutter the primes column reserves — without it the labels collide
         # with each row's ⟨ bracket and first cell
-        self.matlabel_ssprimes_w = MATLABEL_W if (self.show_symbols and self.show_superspace) else 0
+        self.matlabel_ssprimes_w = MATLABEL_W_SSPRIMES if (self.show_symbols and self.show_superspace) else 0
         # the drag-to-combine row handles ride a gutter to the LEFT of the row labels (the 𝒎ᵢ
         # matlabels), so the primes column reserves room for them — present when the feature is on
         # and there are ≥ 2 generator rows to combine. Balanced by an equal empty right gutter (like
@@ -1362,12 +1368,7 @@ class _GridBuilder:
             ("vectors", self.d * ROW_H, show_temp, True, "interval vectors"),
             ("canon", self.rc * ROW_H, self.show_form_controls, True, "canonical mapping"),
             ("mapping", self.r_shown * ROW_H, show_temp, True, "mapping"),
-            # the rational tempering projection P = GM, a d×d matrix over the domain primes —
-            # d rows tall like the interval-vectors row, framed like the mapping. Placed between
-            # the mapping and the tuning rows (the mockup). Present only when service could build
-            # it (projection on, tuning boxes on); a None matrix drops the band entirely.
-            ("projection", self.d * ROW_H, self.show_projection, True, "projection"),
-            # the chapter-9 superspace rows sit between mapping and tuning, the row
+            # the chapter-9 superspace rows sit between mapping and the projection row, the row
             # counterparts of the ssgens / ssprimes columns: ss_vectors holds the dL-tall
             # vector columns (B_L, target/comma vectors in the superspace); ss_mapping the
             # rL × dL matrix M_L; ss_just_mapping the dL × dL identity M_jL (each
@@ -1382,6 +1383,11 @@ class _GridBuilder:
             # rL × dL mapping M_L (ss_mapping × ssprimes), only its gens-column self-map drops.
             ("ss_just_mapping", self.dL * ROW_H,
              self.show_superspace and self.show_identity_objects, True, "superspace\nJI mapping"),
+            # the rational tempering projection P = GM, a d×d matrix over the domain primes — d rows
+            # tall like the interval-vectors row, framed like the mapping. Comes AFTER the superspace
+            # rows (the mockup), so its superspace tiles G_L→s / P_L→s sit below B_L / M_L. Present only
+            # when service could build it (projection on, tuning boxes on); a None matrix drops the band.
+            ("projection", self.d * ROW_H, self.show_projection, True, "projection"),
             ("tuning", ROW_H, show_tuning, True, "tuning"),
             ("just", ROW_H, show_tuning, True, "just tuning"),
             ("retune", ROW_H, show_tuning, True, "retuning"),
