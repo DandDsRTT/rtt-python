@@ -222,13 +222,12 @@ class _GridValueSpec(NamedTuple):
 
 # Every editable ratio-or-integer kind, routed to the one shared builder/update via the registry
 # (the kind strings stay — they are load-bearing in _WHEEL_STEPS, the drag predicates, tooltips and
-# the cell-kind tests). The projection P / embedding G fractions are already `ratiocell`s (cell ids
-# cell:proj:* / cell:embed:*, committed through on_ratio_change), so they ride this row for free.
+# the cell-kind tests).
 _GRIDVALUE_SPECS = {
     "ratiocell":     _GridValueSpec(True,  True,  "on_ratio_change",        None,                 True),
-    # the domain basis elements (prime:i) AND the projection P / embedding G matrix entries
-    # (cell:proj/embed:i) — an integer shows the big-number view, a fraction the stacked view, the
-    # kind following the value's shape. P/G dispatch to on_ratio_change by cid (see _gridvalue_handlers).
+    # the chapter-9 domain basis elements (prime:i): an integer prime shows the big-number view, a
+    # nonprime the stacked fraction, the kind following the value's shape (so an int↔fraction relabel
+    # rebuilds the cell).
     "elementcell":   _GridValueSpec(True,  True,  "on_element_change",      "on_element_preview",  True),
     "elementratio":  _GridValueSpec(True,  True,  "on_element_change",      "on_element_preview",  True),
     "mapping":       _GridValueSpec(False, True,  "on_mapping_change",      "on_mapping_change",   False, ("row",)),
