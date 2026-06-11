@@ -1686,8 +1686,11 @@ class _GridBuilder:
         # the vectors row carries the basis +, the mapping row the +r,−n mapping-row + (only when
         # there's a comma to un-temper — at full rank a generator can't be added holding d).
         self.row_plus_y = {}
-        if self.tile_open("vectors", "quantities") and self.standard_domain:  # basis + walks primes
-            self.row_plus_y["vectors"] = self.vec_top(self.d) + ROW_H / 2
+        # the basis + rides the stub one ROW_H below the stack (PAST any ?/? element draft, so
+        # d_shown not d). It shows whenever the quantities-row primes + does — the standard prime
+        # walk (box off, standard limit) OR a typed element draft (nonstandard-domain box on).
+        if self.tile_open("vectors", "quantities") and (self.show_nonstandard_domain or self.standard_domain):
+            self.row_plus_y["vectors"] = self.vec_top(self.d_shown) + ROW_H / 2
         if self.tile_open("mapping", "quantities") and self.state.n > 0:
             self.row_plus_y["mapping"] = self.map_top(self.r) + ROW_H / 2
 
@@ -2936,16 +2939,37 @@ class _GridBuilder:
             if self.tile_open("vectors", "quantities"):
                 bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2  # square, centred in the spine
                 for p in range(self.d):
-                    self.cells.append(CellBox(f"basis:{p}", bx, self.vec_top(p), COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))
+                    # with the nonstandard-domain box on the spine elements are typeable — the vertical
+                    # mirror of the editable quantities-row prime cells (same on_element_change): typing a
+                    # rational relabels that basis element, holding its mapping coordinates. An integer
+                    # prime shows as a plain number (elementcell), a nonprime as a stacked fraction
+                    # (elementratio). Off, they're read-only domain primes.
+                    text = str(self.elements[p])
+                    kind = self._element_cell_kind(text) if self.show_nonstandard_domain else "prime"
+                    self.cells.append(CellBox(f"basis:{p}", bx, self.vec_top(p), COL_W, ROW_H, kind, text=text, prime=p))
                 # the left bus the controls ride (node_edge + FAN when the row fans — matching
                 # row_axis); the − zone drops from it rightward over the bottom prime as the hover target
                 basis_bus_x = self.node_edge + self.FAN if self._row_fans("vectors") else self.node_edge
-                if self.domain_can_shrink:  # the highest prime is removable only when the shrink applies
+                if self.element_draft:  # the green ?/? draft row below the stack: type a rational to add a
+                    # new basis element (held just) — the row twin of the quantities-row prime:pending draft,
+                    # committing through the SAME on_element_change. A distinct id so it's removed, not
+                    # restructured, on commit; its − cancels the draft (like the quantities row's).
+                    draft_text = self.pending_element or "?/?"
+                    self.cells.append(CellBox("basis:pending", bx, self.vec_top(self.d), COL_W, ROW_H,
+                                              self._element_cell_kind(draft_text), text=draft_text, prime=self.d, pending=True))
+                    self.cells.append(CellBox("element_minus:basis", basis_bus_x, self.vec_top(self.d),
+                                         (bx + COL_W) - basis_bus_x, ROW_H, "element_minus"))
+                # the highest prime's walk − (shrink) only when the domain is prime-walked (box off); with
+                # the box on the domain is typed, not prime-walked, so the draft carries its own − instead
+                # (the row mirror of the quantities row's suppression).
+                if self.domain_can_shrink and not self.show_nonstandard_domain:
                     self.cells.append(CellBox("basis_minus", basis_bus_x, self.vec_top(self.d - 1),
                                          (bx + COL_W) - basis_bus_x, ROW_H, "basis_minus"))
-                if self.standard_domain:  # the basis + walks the next standard prime (row_plus_y set to match)
+                if "vectors" in self.row_plus_y:  # the basis +: a typed ?/? element draft (element_plus →
+                    # editor.add_element, box on) or the standard prime walk (plus → editor.expand, box off)
+                    plus_kind = "element_plus" if self.show_nonstandard_domain else "plus"
                     self.cells.append(CellBox("basis_plus", basis_bus_x - BTN / 2, self.row_plus_y["vectors"] - BTN / 2,
-                                         BTN, BTN, "plus"))
+                                         BTN, BTN, plus_kind))
             if self.tile_open("vectors", "commas"):
                 for c in range(self.nc):
                     for p in range(self.d):

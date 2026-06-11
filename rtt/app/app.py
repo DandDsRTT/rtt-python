@@ -3297,6 +3297,9 @@ def index() -> None:
                            if cb.pending and cb.prime == 0 and cb.kind == vec_kind), None)
         else:
             target = None
+        if target is None and group == "element":  # quantities row folded: focus the interval-vectors
+            # spine draft instead (basis:pending, the row twin of prime:pending), so the + always lands
+            target = next((cb.id for cb in lay.cells if cb.id == "basis:pending"), None)
         inp = rec.inputs.get(target) if target is not None else None
         if inp is not None:
             # focus into the draft cell. render() above created it, and the outbox emits that

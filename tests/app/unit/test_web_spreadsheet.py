@@ -7651,33 +7651,59 @@ def test_domain_header_flips_to_basis_elements_only_with_a_nonprime():
     assert on_np["header:primes"].text == "domain basis\nelements"
 
 
-def test_basis_spine_stays_read_only_with_the_box_on():
-    # only the quantities-row element cells are the editable home; the interval-vectors spine
-    # shows the same elements read-only (kind "prime"), like the comma ratio's editable twin
+def test_basis_spine_is_editable_with_the_box_on():
+    # the interval-vectors spine becomes interactive too — the vertical twin of the editable
+    # quantities-row element cells: typing a rational relabels that basis element (holding its
+    # mapping coordinates) through the SAME on_element_change. An integer prime is a plain
+    # elementcell, a nonprime a stacked-fraction elementratio; off, both are read-only "prime".
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
-    assert on["basis:0"].kind == "prime"
+    assert on["basis:0"].kind == "elementcell" and on["basis:0"].text == "2"
+    assert on["basis:2"].kind == "elementratio" and on["basis:2"].text == "13/5"
+    off = {c.id: c for c in spreadsheet.build(state, settings.defaults()).cells}
+    assert off["basis:0"].kind == "prime" and off["basis:2"].kind == "prime"
 
 
 def test_domain_plus_is_element_draft_with_the_box_on():
+    # the + opens a typed draft, not a prime walk — on BOTH axes: the quantities-row primes +
+    # (id "element_plus" / "plus") and the interval-vectors spine + (id "basis_plus", whose KIND
+    # flips element_plus ↔ plus), so each adds held-just rather than resetting to a prime limit.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # standard 2.3.5
     on = {c.id: c for c in spreadsheet.build(state, settings.defaults() | {"nonstandard_domain": True}).cells}
-    assert "element_plus" in on and "plus" not in on  # the + opens a typed draft, not a prime walk
+    assert "element_plus" in on and "plus" not in on  # the column + opens a typed draft, not a prime walk
+    assert on["basis_plus"].kind == "element_plus"     # ...and so does the spine + (its kind, the id stays basis_plus)
     off = {c.id: c for c in spreadsheet.build(state, settings.defaults()).cells}
-    assert "plus" in off and "element_plus" not in off  # the + walks to the next prime
+    assert "plus" in off and "element_plus" not in off  # box off: the column + walks to the next prime
+    assert off["basis_plus"].kind == "plus"             # ...and so does the spine +
 
 
-def test_pending_element_renders_a_green_draft_column():
+def test_basis_spine_walk_minus_is_suppressed_with_the_box_on():
+    # the spine walk − (basis_minus → shrink) only shows when the domain is prime-walked (box off);
+    # with the box on the domain is typed, so it's withheld — the row mirror of the quantities − .
+    augmented = service.from_comma_basis(((7, 0, -3),))  # 2.3.5, a shrinkable standard limit
+    off = {c.id for c in spreadsheet.build(augmented).cells}
+    assert "basis_minus" in off and "minus" in off  # box off: the − is offered on both axes
+    on = {c.id for c in spreadsheet.build(augmented, _nonstd_on(augmented)).cells}
+    assert "basis_minus" not in on and "minus" not in on  # box on: typed, so no walk − on either axis
+
+
+def test_pending_element_renders_drafts_on_both_axes():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     s = settings.defaults() | {"nonstandard_domain": True}
     cells = {c.id: c for c in spreadsheet.build(state, s, pending_element="").cells}
-    draft = cells["prime:pending"]
-    # the "?/?" placeholder is a fraction form, so it rides the stacked-fraction kind
-    assert draft.kind == "elementratio" and draft.pending and draft.text == "?/?"
-    assert "element_minus:pending" in cells  # its − cancels the draft
-    # a partially-typed draft shows the raw text
+    # the quantities-row ratio draft AND the interval-vectors spine draft, two views of one
+    # pending element — each a "?/?" placeholder committing through the SAME on_element_change
+    for draft_id, minus_id in (("prime:pending", "element_minus:pending"),
+                               ("basis:pending", "element_minus:basis")):
+        draft = cells[draft_id]
+        assert draft.kind == "elementratio" and draft.pending and draft.text == "?/?"
+        assert minus_id in cells  # its − cancels the draft
+    # the spine draft sits one ROW_H below the basis stack, past which the spine + has dropped
+    assert cells["basis:pending"].y == cells["basis:2"].y + spreadsheet.ROW_H
+    assert cells["basis_plus"].y > cells["basis:pending"].y  # the + rides the stub below the draft
+    # a partially-typed draft shows the raw text on both axes
     typed = {c.id: c for c in spreadsheet.build(state, s, pending_element="9").cells}
-    assert typed["prime:pending"].text == "9"
+    assert typed["prime:pending"].text == "9" and typed["basis:pending"].text == "9"
 
 
 # --- the projection box (a tuning-boxes sub-control; the rational P = GM) ---
