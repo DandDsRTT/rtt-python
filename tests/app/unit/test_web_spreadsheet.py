@@ -8167,6 +8167,57 @@ def test_projection_column_tiles_use_their_vectors_row_brackets():
     assert "ebkangle:proj_pd:0" in cells and "ebkangle:proj_pt:0" in cells  # per-column ket feet
 
 
+def _proj_superspace(**overrides):
+    # BARBADOS over the nonstandard domain 2.3.13/5 with projection + the superspace columns on,
+    # holding {2/1, 3/1} (a full rational projection)
+    st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()
+    s.update(projection=True, nonstandard_domain=True)
+    s.update(overrides)
+    return spreadsheet.build(st, s, held_basis_ratios=("2/1", "3/1"))
+
+
+def test_projection_superspace_tiles_fill_the_gap_between_G_and_P():
+    # the missing tiles: G_L→s (d×rL vector list, ssgens) and P_L→s (d×dL covector stack, ssprimes),
+    # between G (gens) and P (primes) in the projection row — so the row reads G, G_L→s, P_L→s, P
+    cells = {c.id: c for c in _proj_superspace().cells}
+    assert [cells[f"cell:embed_sl:0:{g}"].text for g in range(3)] == ["1", "0", "0"]      # G_L→s row 0
+    assert [cells[f"cell:embed_sl:1:{g}"].text for g in range(3)] == ["0", "1/2", "0"]    # G_L→s row 1
+    assert [cells[f"cell:proj_sl:0:{p}"].text for p in range(4)] == ["1", "0", "0", "-1"]  # P_L→s row 0
+    assert [cells[f"cell:proj_sl:1:{p}"].text for p in range(4)] == ["0", "1", "0", "3/2"]  # P_L→s row 1
+    assert cells["cell:embed_sl:0:0"].kind == "mapped" and cells["cell:proj_sl:0:0"].kind == "mapped"
+    assert cells["cell:embed_sl:0:0"].y == cells["cell:proj:0:0"].y  # the projection row's prime rows
+    # left→right order: G < G_L→s < P_L→s < P
+    assert (cells["cell:embed:0:0"].x < cells["cell:embed_sl:0:0"].x
+            < cells["cell:proj_sl:0:0"].x < cells["cell:proj:0:0"].x)
+
+
+def test_projection_superspace_tiles_carry_chrome():
+    from rtt.app.grid_tables import SUBSCRIPT_L
+    cells = {c.id: c for c in _proj_superspace(symbols=True, equivalences=True, units=True).cells}
+    assert cells["caption:projection:ssgens"].text == "embedding from superspace generators to subspace elements"
+    assert cells["caption:projection:ssprimes"].text == "projection from superspace to subspace"
+    assert cells["symbol:projection:ssgens"].text == f"G{SUBSCRIPT_L}→ₛ"
+    assert cells["symbol:projection:ssprimes"].text == f"𝑃{SUBSCRIPT_L}→ₛ = G{SUBSCRIPT_L}→ₛ𝑀{SUBSCRIPT_L}"
+    assert cells["units:projection:ssgens"].text == f"units: p/g{SUBSCRIPT_L}"
+    assert cells["units:projection:ssprimes"].text == "units: p/b"
+    assert cells["matlabel:col:projection:ssgens:0"].text == f"𝐠{SUBSCRIPT_L}→ₛ₁"     # G_L→s columns
+    assert cells["matlabel:row:projection:ssprimes:0"].text == f"𝒑{SUBSCRIPT_L}→ₛ₁"   # P_L→s covector rows
+    # G_L→s the genmap { … ] (a vector list, like G); P_L→s a covector stack ⟨ … ] per row (like P)
+    assert cells["bracket:embed_sl:l"].text == "{" and cells["bracket:embed_sl:r"].text == "]"
+    assert cells["bracket:proj_sl:0:l"].text == "⟨" and cells["bracket:proj_sl:0:r"].text == "]"
+
+
+def test_projection_superspace_tiles_dash_when_under_held():
+    # under-held (no rational projection), G_L→s / P_L→s dash in lockstep with P/G
+    st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()
+    s.update(projection=True, nonstandard_domain=True)
+    cells = {c.id: c for c in spreadsheet.build(st, s).cells}  # no held_basis_ratios → under-held
+    assert all(cells[f"cell:embed_sl:{i}:{g}"].text == "—" for i in range(3) for g in range(3))
+    assert all(cells[f"cell:proj_sl:{i}:{p}"].text == "—" for i in range(3) for p in range(4))
+
+
 def test_projection_symbol_floor_widens_the_tile_so_the_equivalence_never_wraps():
     # P's equivalence (𝑃 = G𝑀 = V·diag(𝝀)V⁻¹) is wider than the bare 3-column matrix, so the column
     # widens (the _symbol_floor) to fit it on ONE line — the symbol/equivalence must never wrap. The

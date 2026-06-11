@@ -128,6 +128,11 @@ CAPTIONS = {
     ("projection", "targets"): "projected target-interval list",
     ("projection", "held"): "projected held-interval basis",
     ("projection", "interest"): "projected intervals",
+    # the chapter-9 superspace projection tiles (between G and P in the row): G_L→s the embedding from
+    # the superspace generators to the subspace elements, P_L→s = G_L→s·M_L the projection from the
+    # superspace to the subspace (the on-domain P factors through it: P = G_L→s·M_s→L = P_L→s·B_Lᵀ)
+    ("projection", "ssgens"): "embedding from superspace generators to subspace elements",
+    ("projection", "ssprimes"): "projection from superspace to subspace",
     # the scaling factors λ = diag(λ) — the projection's eigenvalue list over the
     # consolidated V = C|U column (0 per comma, 1 per unchanged interval); toggled with
     # projection, one row above the interval-vectors row
@@ -230,6 +235,10 @@ SYMBOLS = {
     ("projection", "detempering"): "𝑃D",
     ("projection", "targets"): "𝑃T",
     ("projection", "held"): "𝑃H",
+    # the chapter-9 superspace projection tiles. G_L→s upright (a basis, like G); P_L→s math-italic
+    # (an operator, like P). L→s mirrors the M_s→L "s→L" subscript pattern (SUBSCRIPT_L + → + ₛ).
+    ("projection", "ssgens"): f"G{SUBSCRIPT_L}→ₛ",
+    ("projection", "ssprimes"): f"𝑃{SUBSCRIPT_L}→ₛ",
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -295,6 +304,8 @@ ROW_LABEL_LETTERS = {
     ("mapping", "primes"): "𝒎",      # 𝑀 → 𝒎: each row of the mapping is a covector 𝒎ᵢ
     # the projection P = GM is a stack of maps like 𝑀 (each row a covector 𝒑ᵢ over the primes)
     ("projection", "primes"): "𝒑",
+    # P_L→s is a covector stack like P (each row a covector 𝒑_L→sᵢ over the superspace primes)
+    ("projection", "ssprimes"): f"𝒑{SUBSCRIPT_L}→ₛ",
     # each row of the bare prescaler matrix is a covector, labelled with the lowercase of the
     # glyph it realises — build() swaps in 𝒍ᵢ when 𝑋 = 𝐿 (the log-prime matrix), else the generic
     # 𝒙ᵢ (see row_labels). The static value is that generic fallback.
@@ -319,6 +330,8 @@ COL_LABEL_LETTERS = {
     ("projection", "commas"): "𝑃𝐯",
     # the generator embedding G is a vector list (each column a held generator 𝐠ᵢ as a prime vector)
     ("projection", "gens"): "𝐠",
+    # G_L→s is a vector list too (each column a superspace generator 𝐠_L→sᵢ as a domain prime vector)
+    ("projection", "ssgens"): f"𝐠{SUBSCRIPT_L}→ₛ",
     # the projected vector lists' columns: 𝑃 (italic operator) + the bold column letter of the list it
     # projects (𝑃𝐝 / 𝑃𝐭 / 𝑃𝐡 / 𝑃𝐢), like the mapped lists' 𝑀𝐜 / 𝑀𝐡
     ("projection", "detempering"): "𝑃𝐝",
@@ -655,6 +668,8 @@ EQUIVALENCES = {
     ("projection", "gens"): " = U(𝑀U)⁻¹",
     # P·H = H: the held intervals are P's eigenvalue-1 directions, returned unchanged by the projection
     ("projection", "held"): " = H",
+    # P_L→s = G_L→s·M_L (the superspace projection composes the embedding with the superspace mapping)
+    ("projection", "ssprimes"): f" = G{SUBSCRIPT_L}→ₛ𝑀{SUBSCRIPT_L}",
     ("tuning", "detempering"): " = 𝒈",  # 𝒕D = the generator tuning map (tempering D gives the generators)
     ("tuning", "primes"): " = 𝒈𝑀",
     ("tuning", "targets"): " = 𝒕T",
@@ -698,6 +713,10 @@ UNITS = {
     # P = GM maps prime-count vectors to prime-count vectors (p/p); G embeds the generators as
     # prime-count vectors (p/g, the mapping's reciprocal)
     ("projection", "primes"): "p/p",
+    # the superspace projection tiles: G_L→s embeds the superspace generators in domain primes (p/g_L),
+    # P_L→s projects superspace basis elements to domain primes (p/b — per the mockup)
+    ("projection", "ssgens"): f"p/g{SUBSCRIPT_L}",
+    ("projection", "ssprimes"): "p/b",
     ("projection", "gens"): "p/g",
     # the projected vector lists are prime-count vectors (p), like the interval-vectors lists they project
     ("projection", "detempering"): "p",

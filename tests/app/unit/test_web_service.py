@@ -1732,6 +1732,42 @@ def test_project_vectors_is_empty_without_a_projection():
     assert service.project_vectors(p, ()) == ()
 
 
+def test_superspace_generator_embedding_and_projection_for_barbados():
+    # the superspace projection-row tiles G_L→s (d×rL) and P_L→s (d×dL) for BARBADOS over 2.3.13/5,
+    # holding {2/1, 3/1}. P·(M_s→L)⁺ gives G_L→s; P_L→s = G_L→s·M_L.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    assert service.superspace_generator_embedding_display(state, ("2/1", "3/1")) == (
+        ("1", "0", "0"),
+        ("0", "1/2", "0"),
+        ("0", "0", "0"),
+    )
+    assert service.superspace_prime_projection_display(state, ("2/1", "3/1")) == (
+        ("1", "0", "0", "-1"),
+        ("0", "1", "0", "3/2"),
+        ("0", "0", "0", "0"),
+    )
+
+
+def test_superspace_projection_satisfies_the_mockup_identities():
+    # the defining identities the mockup pins: P = G_L→s·M_s→L and P = P_L→s·B_Lᵀ
+    from rtt.library.matrix_utils import matrix_multiply, transpose
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    p = service.projection_matrix_rationals(state, ("2/1", "3/1"))
+    g_ls = service.superspace_generator_embedding(state, ("2/1", "3/1"))
+    p_ls = service.superspace_prime_projection(state, ("2/1", "3/1"))
+    msl = service.mapping_to_superspace_generators(state)
+    bl = service.basis_in_superspace(state.domain_basis)
+    assert matrix_multiply(g_ls, msl) == p             # G_L→s · M_s→L = P
+    assert matrix_multiply(p_ls, transpose(bl)) == p   # P_L→s · B_Lᵀ = P
+
+
+def test_superspace_projection_is_none_when_under_held():
+    # dashed in lockstep with the on-domain projection — an under-held tuning is no rational projection
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    assert service.superspace_generator_embedding_display(state) is None
+    assert service.superspace_prime_projection_display(state) is None
+
+
 def test_unchanged_basis_from_projection_recovers_U_and_rejects_invalid():
     # a hand-edited P round-trips to its unchanged basis (eigenvalue-1 eigenvectors); an invalid edit
     # (not idempotent, or commas not in its kernel) is rejected with None

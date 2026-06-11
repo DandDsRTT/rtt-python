@@ -1179,6 +1179,14 @@ class _GridBuilder:
         self.proj_held = service.project_vectors(self.projection_rationals, self.held)
         self.proj_targets = service.project_vectors(self.projection_rationals, self.target_vectors)
         self.proj_interest = service.project_vectors(self.projection_rationals, self.interest)
+        # the chapter-9 superspace projection tiles (only when the superspace columns show): G_L→s the
+        # embedding from the superspace generators to the subspace elements (d×rL), P_L→s = G_L→s·M_L the
+        # projection from the superspace to the subspace (d×dL). Display-string grids, None (dashed) in
+        # lockstep with P/G when the tuning isn't a full rational projection.
+        self.embedding_superspace = (service.superspace_generator_embedding_display(self.state, self.held_basis_ratios)
+                                     if (self.show_projection and self.show_superspace) else None)
+        self.projection_superspace = (service.superspace_prime_projection_display(self.state, self.held_basis_ratios)
+                                      if (self.show_projection and self.show_superspace) else None)
         # the projection row's column tiles, each gated on its column being present exactly like the
         # vectors-row tile it projects (and overall on the projection toggle): the quantities/units
         # spine, then P·D / P·T / P·H / P·interest. Declared here (not in the static TILES) so the
@@ -1197,6 +1205,11 @@ class _GridBuilder:
                 projection_col_tiles += (("block:proj:held", "projection", "held"),)
             if self.mi_shown:
                 projection_col_tiles += (("block:proj:interest", "projection", "interest"),)
+            if self.show_superspace:  # G_L→s / P_L→s ride the ssgens / ssprimes columns (between G and P)
+                projection_col_tiles += (
+                    ("block:proj:ssgens", "projection", "ssgens"),
+                    ("block:proj:ssprimes", "projection", "ssprimes"),
+                )
         # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
         # tile (see opt_box below), not in a tile/row of their own
         self.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
@@ -3059,6 +3072,23 @@ class _GridBuilder:
                     text = DASH if not full_g else self.embedding_matrix[i][g]
                     self.cells.append(CellBox(f"cell:embed:{i}:{g}", self.gen_left(g), self.proj_top(i),
                                          COL_W, ROW_H, "mapped", text=text, gen=g))
+        # the chapter-9 superspace projection tiles (between G and P): G_L→s a d×rL vector list over the
+        # superspace-generator columns, P_L→s a d×dL covector stack over the superspace-prime columns —
+        # read-only ("mapped"), dashed in lockstep with P/G when the tuning isn't a full rational projection.
+        if self.row_open("projection") and self.tile_open("projection", "ssgens"):  # G_L→s
+            full = self.embedding_superspace is not None
+            for i in range(self.d):
+                for g in range(self.rL):
+                    text = DASH if not full else self.embedding_superspace[i][g]
+                    self.cells.append(CellBox(f"cell:embed_sl:{i}:{g}", self.ss_gen_left(g), self.proj_top(i),
+                                         COL_W, ROW_H, "mapped", text=text, gen=g))
+        if self.row_open("projection") and self.tile_open("projection", "ssprimes"):  # P_L→s = G_L→s·M_L
+            full = self.projection_superspace is not None
+            for i in range(self.d):
+                for p in range(self.dL):
+                    text = DASH if not full else self.projection_superspace[i][p]
+                    self.cells.append(CellBox(f"cell:proj_sl:{i}:{p}", self.ss_prime_left(p), self.proj_top(i),
+                                         COL_W, ROW_H, "mapped", text=text, prime=p))
 
         # the projected unrotated vector list P·V (the projection row over the V column): each
         # unrotated vector scaled by its eigenvalue — the comma columns vanish (P·𝐜 = 0, the
@@ -3893,6 +3923,13 @@ class _GridBuilder:
             # vector_list_marks below) inside an outer { … ] (curly open, square close, generator
             # coords) — matching its plain text {[…⟩…], NOT a covector stack
             self.bracket("embed", GENMAP_BRACKETS, "gens", self.row_y["projection"], self.d * ROW_H, fit=True)
+        if self.row_open("projection") and self.tile_open("projection", "ssgens"):
+            # G_L→s is a vector LIST like G — outer { … ] over the superspace-generator columns
+            self.bracket("embed_sl", GENMAP_BRACKETS, "ssgens", self.row_y["projection"], self.d * ROW_H, fit=True)
+        if self.row_open("projection") and self.tile_open("projection", "ssprimes"):
+            # P_L→s is a covector stack like P: ⟨ … ] per row over the superspace primes
+            for i in range(self.d):
+                self.bracket(f"proj_sl:{i}", MAP_BRACKETS, "ssprimes", self.proj_top(i), ROW_H)
         if self.show_unchanged and self.row_open("projection") and self.tile_open("projection", "commas"):
             # P·V is a list of projected vectors (kets) — [ … ⟩ per column, [ ] outer, like V itself
             self.bracket("proj_v", LIST_BRACKETS, "commas", self.row_y["projection"], self.d * ROW_H, fit=True)
@@ -4080,6 +4117,8 @@ class _GridBuilder:
             row_top = {
                 ("mapping", "primes"): self.map_top,
                 ("projection", "primes"): self.proj_top,  # P's d rows of maps 𝒑ᵢ, like the mapping's 𝒎ᵢ
+                ("projection", "ssprimes"): self.proj_top,  # P_L→s's d rows of maps 𝒑_L→sᵢ
+
                 ("prescaling", "primes"): _prescale_top,
                 ("prescaling", "ssprimes"): _prescale_top,
                 ("ss_mapping", "ssprimes"): self.ss_map_top,
@@ -4088,6 +4127,8 @@ class _GridBuilder:
             }
             row_count = {("mapping", "primes"): self.r,
                          ("projection", "primes"): self.d,  # P is d×d (a map per domain prime)
+                         ("projection", "ssprimes"): self.d,  # P_L→s is d×dL (a covector per domain prime)
+
                          ("prescaling", "primes"): self.prescale_rows + self.size_rows,
                          ("prescaling", "ssprimes"): self.prescale_rows + self.size_rows,
                          ("ss_mapping", "ssprimes"): self.rL,
@@ -4464,6 +4505,8 @@ class _GridBuilder:
         # P = GM: a covector stack like the mapping, but closing with the prime-coordinate ket ⟩
         # (P is p/p) — matching its plain text [⟨…]…⟩, not the mapping's generator-coordinate }
         self.matrix_frame("projection", "primes", "proj", foot="ebkangle")
+        # P_L→s the superspace projection: a covector stack like P, framed over the ssprimes column
+        self.matrix_frame("projection", "ssprimes", "proj_sl", foot="ebkangle")
         self.matrix_frame("canon", "primes", "canon")
         self.matrix_frame("canon", "gens", "form")
         # the BARE prescaler 𝐿 reads exactly like the mapping in plain text — outer
@@ -4493,6 +4536,8 @@ class _GridBuilder:
         # the generator embedding G: each held generator a prime-count ket [ … ⟩ column over the gens
         # columns (the outer { … ] is the bracket() call above), no dividing rules
         self.vector_list_marks("projection", "embed", "gens", self.gen_left, self.r, foot="ebkangle", separators=False)
+        # G_L→s the superspace generator embedding: a vector list like G over the ssgens columns
+        self.vector_list_marks("projection", "embed_sl", "ssgens", self.ss_gen_left, self.rL, foot="ebkangle", separators=False)
         # the projected vector lists' per-column ket marks (P·D / P·T / P·H / P·interest): [ … ⟩ feet
         # over each column, like the interval-vectors row they project. P·D = the embedding G (no
         # separators, like G); P·T a matrix (separator rules, like T); P·H mirrors the held column; the

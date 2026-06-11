@@ -29,7 +29,7 @@ from rtt.library.formatting import strip_negative_zero, to_ebk
 from rtt.library.generator_detempering import get_generator_detempering
 from rtt.library.generator_embedding import get_generator_embedding, get_tempering_projection
 from rtt.library.math_utils import get_primes, pcv_to_quotient, quotient_to_pcv
-from rtt.library.matrix_utils import Matrix
+from rtt.library.matrix_utils import Matrix, matrix_multiply
 from rtt.library.parsing import parse_quotient_list, parse_temperament_data
 from rtt.library.target_intervals import (
     default_old_limit,
@@ -687,6 +687,52 @@ def project_vectors(p_matrix, vectors):
         tuple(sum(p_matrix[i][j] * v[j] for j in range(d)) for i in range(d))
         for v in vectors
     )
+
+
+def superspace_generator_embedding(state: TemperamentState, held_ratios=()):
+    """The superspace generator embedding ``G_L→s`` (``d×rL``) — the embedding from the superspace
+    generators to the subspace (domain) elements, the factor of the projection identity the mockup
+    pins on P: ``P = G_L→s·M_s→L``. Since ``M_s→L`` (``rL×d``) can be rank-deficient when ``rL > r``
+    (extra superspace primes add generators), it is solved as the least-squares right factor
+    ``P·(M_s→L)⁺``. ``Fraction`` entries; ``None`` in lockstep with :func:`projection_matrix_rationals`
+    (an under-held / degenerate tuning is no rational projection)."""
+    p_rat = projection_matrix_rationals(state, held_ratios)
+    if p_rat is None:
+        return None
+    msl = mapping_to_superspace_generators(state)
+    if not msl:
+        return None
+    try:
+        g = sp.Matrix([list(r) for r in p_rat]) * sp.Matrix([list(r) for r in msl]).pinv()
+        return tuple(tuple(Fraction(g[i, j].p, g[i, j].q) for j in range(g.cols))
+                     for i in range(g.rows))
+    except (ArithmeticError, ValueError, IndexError, TypeError, AttributeError):
+        return None
+
+
+def superspace_prime_projection(state: TemperamentState, held_ratios=()):
+    """The superspace-prime projection ``P_L→s`` (``d×dL``) ``= G_L→s·M_L`` — the projection from the
+    superspace to the subspace, the superspace embedding of the on-domain projection (the on-domain
+    ``P = P_L→s·B_Lᵀ`` is recovered by restricting to the domain subspace). ``None`` in lockstep with
+    :func:`superspace_generator_embedding`."""
+    g = superspace_generator_embedding(state, held_ratios)
+    if g is None:
+        return None
+    return matrix_multiply(g, superspace_mapping(state))
+
+
+def superspace_generator_embedding_display(state: TemperamentState, held_ratios=()):
+    """``G_L→s`` as a grid of display strings, or ``None`` (dashed) when the tuning isn't a full
+    rational projection — the projection-row tile in the superspace-generators column."""
+    g = superspace_generator_embedding(state, held_ratios)
+    return _matrix_strings(g) if g is not None else None
+
+
+def superspace_prime_projection_display(state: TemperamentState, held_ratios=()):
+    """``P_L→s`` as a grid of display strings, or ``None`` (dashed) in lockstep with ``G_L→s`` — the
+    projection-row tile in the superspace-primes column."""
+    p = superspace_prime_projection(state, held_ratios)
+    return _matrix_strings(p) if p is not None else None
 
 
 def _integer_columns(vectors):
