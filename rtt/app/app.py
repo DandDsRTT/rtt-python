@@ -185,6 +185,40 @@ _INT_WHEEL_JS = ("(e) => { if (e.currentTarget.contains(document.activeElement))
 _TARGET_LIMIT_DEBOUNCE = 0.3
 
 
+class _GridValueSpec(NamedTuple):
+    """How one editable ratio-or-integer cell kind drives the shared ``_build_gridvalue`` /
+    ``_update_gridvalue`` component — the unified replacement for the ~10 near-identical builders.
+    ``ratio_allowed`` cells can hold a ``"num/den"`` fraction (a numerator over a denominator
+    input, the ``/`` key splits a bare integer, a ``1``/blank denominator collapses back to the
+    big-integer view); integer-only cells are a single field. ``commit``/``preview`` name the
+    handlers on ``self._cb``; ``cid_arg`` is True when they take the cell id (the scalar ratio +
+    domain-element cells, committed one at a time) and False when they re-read the WHOLE matrix /
+    column and take a ``preview=`` flag (the integer matrix/vector cells). ``arm`` makes the cell a
+    drag-to-combine drop target: ``("row",)`` a mapping row, ``("col", group)`` an interval column."""
+    ratio_allowed: bool
+    pending: bool
+    commit: str
+    preview: str | None
+    cid_arg: bool
+    arm: tuple | None = None
+
+
+# Every editable ratio-or-integer kind, routed to the one shared builder/update via the registry
+# (the kind strings stay — they are load-bearing in _WHEEL_STEPS, the drag predicates, tooltips and
+# the cell-kind tests). The projection P / embedding G fractions are already `ratiocell`s (cell ids
+# cell:proj:* / cell:embed:*, committed through on_ratio_change), so they ride this row for free.
+_GRIDVALUE_SPECS = {
+    "ratiocell":     _GridValueSpec(True,  True,  "on_ratio_change",        None,                 True),
+    "elementcell":   _GridValueSpec(True,  True,  "on_element_change",      "on_element_preview",  True),
+    "mapping":       _GridValueSpec(False, True,  "on_mapping_change",      "on_mapping_change",   False, ("row",)),
+    "commacell":     _GridValueSpec(False, True,  "on_comma_change",        "on_comma_change",     False, ("col", "comma")),
+    "unchangedcell": _GridValueSpec(False, False, "on_unchanged_change",    "on_unchanged_change", False),
+    "interestcell":  _GridValueSpec(False, True,  "on_interest_change",     "on_interest_change",  False, ("col", "interest")),
+    "heldcell":      _GridValueSpec(False, True,  "on_held_change",         "on_held_change",      False, ("col", "held")),
+    "targetcell":    _GridValueSpec(False, True,  "on_target_cells_change", "on_target_cells_change", False, ("col", "target")),
+}
+
+
 def _wave_svg(kind: str) -> str:
     """A small waveform glyph (sine/square/triangle/sawtooth) for the bank's waveform control."""
     paths = {"sine": "M1,6 Q3,1 5.5,6 T11,6", "square": "M1,9 V3 H6 V9 H11 V3",
@@ -1283,12 +1317,12 @@ class _Reconciler:
         self.cell_kinds["ptextpending"] = _KindHandlers(self._build_ptextpending, self._update_ptextpending)
         self.cell_kinds["mathexpr"] = _KindHandlers(self._build_mathexpr, self._update_mathexpr)
 
-        self.cell_kinds["mapping"] = _KindHandlers(self._build_mapping, self._update_mapping)
-        self.cell_kinds["commacell"] = _KindHandlers(self._build_commacell, self._update_commacell)
-        self.cell_kinds["unchangedcell"] = _KindHandlers(self._build_unchangedcell, self._update_input_text)
-        self.cell_kinds["interestcell"] = _KindHandlers(self._build_interestcell, self._update_input_text)
-        self.cell_kinds["heldcell"] = _KindHandlers(self._build_heldcell, self._update_input_text)
-        self.cell_kinds["targetcell"] = _KindHandlers(self._build_targetcell, self._update_input_text)
+        # the unified ratio-or-integer cells all route to one shared builder/update (behaviour per
+        # each kind's _GridValueSpec); the kind strings stay (load-bearing for wheel/drag/tooltips).
+        _gridvalue = _KindHandlers(self._build_gridvalue, self._update_gridvalue)
+        for _gv_kind in ("mapping", "commacell", "unchangedcell",
+                         "interestcell", "heldcell", "targetcell"):
+            self.cell_kinds[_gv_kind] = _gridvalue
         self.cell_kinds["prescalercell"] = _KindHandlers(self._build_prescalercell, self._update_prescalercell)
         self.cell_kinds["powerinput"] = _KindHandlers(self._build_powerinput, self._update_powerinput)
         self.cell_kinds["powerdisplay"] = _KindHandlers(self._build_powerdisplay, self._update_powerdisplay)
@@ -1729,90 +1763,63 @@ class _Reconciler:
             self.exprs[cb.id].set_content(_mathexpr_html(cb.text, cb.w))
             self.expr_state[cb.id] = (cb.text, cb.w)
 
-    # ---- editable grid-input cells: an input registered in the inputs dict, its value mirrored
-    # in the update. interestcell / heldcell / targetcell share the plain-value fill; prescalercell
-    # / gentuningcell / powerinput also overlay a stacked face (cents whole/.frac, power ∞/(max)). ----
-    def _build_mapping(self, cb, wrap):
-        wrap.classes("rtt-cell-input")  # a per-cell unit overlays inside the input box
-        # the integer cells PREVIEW the ripple as you type (on_change, preview=True) and COMMIT only on
-        # Enter / blur — like the ratio + domain-element cells — rather than re-solving on every keystroke
-        inp = ui.input(on_change=lambda e: self._cb.on_mapping_change(preview=True)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_mapping_change())  # Enter blurs (make_cell), committing here
+    # ---- the unified editable ratio-or-integer grid cell (was ~10 near-identical builders). One
+    # q-input (the integer view / a fraction's numerator), plus a denominator input + bar for the
+    # ratio-capable kinds; behaviour driven by the cell's _GridValueSpec. prescalercell /
+    # gentuningcell / powerinput are a DIFFERENT family (a decimal cents / power face overlaid on the
+    # input) and keep their own builders. ----
+    def _build_gridvalue(self, cb, wrap):
+        # PREVIEW the ripple as you type (the kinds that have a live preview) and COMMIT on Enter /
+        # blur (Enter blurs via make_cell) — never re-solving on every keystroke. A per-cell unit
+        # overlays inside the input box; drag-to-combine arming is per its spec.
+        spec = _GRIDVALUE_SPECS[cb.kind]
+        commit, preview = self._gridvalue_handlers(cb, spec)
+        wrap.classes("rtt-cell-input")
+        inp = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput")
+        inp.on("blur", commit)
         self.inputs[cb.id] = inp
-        # drop a dragged generator row onto this row to combine. Armed even for the draft row (gen = r):
-        # it's inert while the row stays a draft (a drop onto index r no-ops — see add_mapping_row_to's
-        # guard), and once the draft commits the reconciler reuses this same element, so arming it now
-        # means the freshly-committed generator is a drop target without waiting for a full rebuild.
-        self._arm_row_target(wrap, cb.gen)
+        self._arm_gridvalue(wrap, cb, spec)
 
-    def _update_mapping(self, cb):
-        if cb.pending:  # the draft row: show the typed component (blank if None), green-ringed
-            v = self._editor.pending_mapping_row[cb.prime] if self._editor.pending_mapping_row is not None else None
-            self.inputs[cb.id].value = "" if v is None else str(v)
+    def _gridvalue_handlers(self, cb, spec):
+        """A gridded cell's (commit, preview) event handlers. The scalar ratio / domain-element
+        cells pass the cell id and commit one at a time; the integer matrix/vector cells re-read the
+        WHOLE matrix and take a ``preview=`` flag. ``preview`` is None for the ratiocell — it commits
+        on blur with no live keystroke preview (parsing a half-typed fraction would mis-retune)."""
+        fn = getattr(self._cb, spec.commit)
+        if spec.cid_arg:
+            commit = lambda _=None, cid=cb.id: fn(cid)
+            pv = getattr(self._cb, spec.preview) if spec.preview else None
+            preview = (lambda e=None, cid=cb.id: pv(cid)) if pv else None
         else:
-            self.inputs[cb.id].value = "" if cb.blank else str(self._editor.state.mapping[cb.gen][cb.prime])
-        self.inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                              remove="" if cb.pending else "rtt-pending")
+            commit = lambda _=None: fn()
+            preview = (lambda e=None: fn(preview=True)) if spec.preview else None
+        return commit, preview
 
-    def _build_commacell(self, cb, wrap):
-        wrap.classes("rtt-cell-input")
-        # PREVIEW on type, COMMIT on Enter/blur (see _build_mapping)
-        inp = ui.input(on_change=lambda e: self._cb.on_comma_change(preview=True)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_comma_change())  # Enter blurs (make_cell), committing here
-        self.inputs[cb.id] = inp
-        self._arm_col_target(wrap, "comma", cb.comma)  # drop a dragged comma onto this one to combine
+    def _arm_gridvalue(self, wrap, cb, spec):  # drag-to-combine drop target, per the cell's spec
+        if spec.arm is None:
+            return
+        if spec.arm[0] == "row":  # a mapping row: drop a dragged generator row here to combine
+            self._arm_row_target(wrap, cb.gen)
+        else:  # ("col", group): drop a dragged interval onto this column (its product) to combine
+            self._arm_col_target(wrap, spec.arm[1], cb.comma)
 
-    def _build_unchangedcell(self, cb, wrap):
-        # the editable unchanged-basis cells (U of V = C|U), like the comma cells: preview on type,
-        # commit on Enter/blur. Editing the basis retunes to the projection that holds it.
-        wrap.classes("rtt-cell-input")
-        inp = ui.input(on_change=lambda e: self._cb.on_unchanged_change(preview=True)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_unchanged_change())
-        self.inputs[cb.id] = inp
+    def _update_gridvalue(self, cb):
+        spec = _GRIDVALUE_SPECS[cb.kind]
+        self.inputs[cb.id].value = self._gridvalue_text(cb)
+        if spec.pending:  # the green draft ring/wash + text (a comma/target/held/interest being added)
+            self.inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                                       remove="" if cb.pending else "rtt-pending")
 
-    def _update_commacell(self, cb):
-        if cb.pending:  # the draft column: show the typed component (blank if None), green-ringed
-            v = self._editor.pending_comma[cb.prime] if self._editor.pending_comma is not None else None
-            self.inputs[cb.id].value = "" if v is None else str(v)
-        else:
-            self.inputs[cb.id].value = "" if cb.blank else str(self._editor.state.comma_basis[cb.comma][cb.prime])
-        self.inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                              remove="" if cb.pending else "rtt-pending")
-
-    def _build_interestcell(self, cb, wrap):
-        wrap.classes("rtt-cell-input")
-        # PREVIEW on type, COMMIT on Enter/blur (see _build_mapping)
-        inp = ui.input(on_change=lambda e: self._cb.on_interest_change(preview=True)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_interest_change())  # Enter blurs (make_cell), committing here
-        self.inputs[cb.id] = inp
-        self._arm_col_target(wrap, "interest", cb.comma)
-
-    def _build_heldcell(self, cb, wrap):
-        wrap.classes("rtt-cell-input")
-        # PREVIEW on type, COMMIT on Enter/blur (see _build_mapping)
-        inp = ui.input(on_change=lambda e: self._cb.on_held_change(preview=True)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_held_change())  # Enter blurs (make_cell), committing here
-        self.inputs[cb.id] = inp
-        self._arm_col_target(wrap, "held", cb.comma)
-
-    def _build_targetcell(self, cb, wrap):
-        wrap.classes("rtt-cell-input")
-        # PREVIEW on type, COMMIT on Enter/blur (see _build_mapping)
-        inp = ui.input(on_change=lambda e: self._cb.on_target_cells_change(preview=True)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_target_cells_change())  # Enter blurs (make_cell), committing here
-        self.inputs[cb.id] = inp
-        self._arm_col_target(wrap, "target", cb.comma)
-
-    def _update_input_text(self, cb):  # interestcell / heldcell / targetcell: mirror cb.text
-        self.inputs[cb.id].value = cb.text  # a pending draft cell carries "" / the typed component
-        self.inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                              remove="" if cb.pending else "rtt-pending")
+    def _gridvalue_text(self, cb):
+        """The string a gridded cell shows. A live DRAFT (a comma column / a mapping row being added)
+        reads its typed component straight from the editor — it changes during a preview without a
+        spreadsheet rebuild; every other cell already carries it in ``cb.text`` (blanked when
+        ``quantities`` is off)."""
+        if cb.pending and cb.kind in ("commacell", "mapping"):
+            draft = self._editor.pending_comma if cb.kind == "commacell" else self._editor.pending_mapping_row
+            v = draft[cb.prime] if draft is not None else None
+            return "" if v is None else str(v)
+        return "" if cb.blank else cb.text
 
     def _build_prescalercell(self, cb, wrap):
         # a bare prescaler 𝐿 diagonal cell, the user's editable override (off-diagonal cells stay
