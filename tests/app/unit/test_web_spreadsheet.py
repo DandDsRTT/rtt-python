@@ -653,6 +653,40 @@ def test_pending_token_never_collides_with_a_live_column():
     assert spreadsheet.pending_token([2]) == 3               # after removals: clears the survivor
 
 
+def test_mid_list_removal_keeps_every_survivors_token():
+    # removing entry 0 (any non-last entry) leaves the survivors' tokens untouched — its own token
+    # simply vanishes, so the remove-preview diff blames the REMOVED column/row, not whichever one
+    # slides into its slot (the reported hover-the-first-comma's-minus-reds-the-last bug)
+    a, b, c = "81/80", "128/125", "64/63"
+    prev = spreadsheet.assign_column_tokens(None, [a, b, c])   # tokens 0,1,2
+    removed = spreadsheet.assign_column_tokens(prev, [b, c])   # drop the FIRST entry
+    assert _tokens(removed) == [1, 2]                          # survivors keep their ids; 0 is gone
+
+
+def test_basis_groups_claim_freed_slots_positionally_on_a_resolve():
+    # a BASIS group (claim_unmatched=True: the mapping rows, the commas) can be rewritten wholesale
+    # by a re-solve — a rank drop recombines every row, so nothing content-matches. The unmatched
+    # new rows claim the freed tokens in order: the diff reads "row 0's values moved (amber), the
+    # surplus last row goes (red)" — not every row removed-plus-recreated (which would paint the
+    # whole matrix red and ring nothing as moved).
+    r0, r1 = (1, 1, 0), (0, 1, 4)
+    prev = spreadsheet.assign_column_tokens(None, [r0, r1])    # rank 2: tokens 0,1
+    dropped = spreadsheet.assign_column_tokens(prev, [(12, 19, 28)], claim_unmatched=True)
+    assert _tokens(dropped) == [0]                             # the survivor claims slot 0; 1 is the red row
+    # but a survivor-verbatim removal still matches by content first: removing row 0 keeps row 1's id
+    removed = spreadsheet.assign_column_tokens(prev, [r1], claim_unmatched=True)
+    assert _tokens(removed) == [1]                             # row 0's id vanishes with it → row 0 reds
+
+
+def test_interval_sets_never_relabel_a_dropped_column_as_a_new_one():
+    # the independent interval SETS (targets/held/interest) leave claim_unmatched off: a brand-new
+    # ratio is genuinely new, never "the same column as" a dropped one — so a family switch reds the
+    # dropped ratios (still on screen) and the new ones arrive with fresh ids (off-screen, no ring)
+    prev = spreadsheet.assign_column_tokens(None, ["3/2", "6/5", "5/4"])  # tokens 0,1,2
+    switched = spreadsheet.assign_column_tokens(prev, ["3/2", "7/4"])     # 3/2 survives; 6/5+5/4 drop; 7/4 new
+    assert _tokens(switched) == [0, 3]                         # 7/4 is FRESH (3), not relabelled 1 or 2
+
+
 def _held_state():
     return service.from_mapping(((1, 1, 0), (0, 1, 4)))
 
@@ -8491,8 +8525,9 @@ def test_projection_adds_a_scaling_factors_row_over_v():
     cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # a full rational hold completes U
     assert cells["label:scaling_factors"].text == "scaling factors"
     # λ = diag(λ): 0 per comma (vanished), 1 per unchanged interval (held). Meantone fully held
-    # has n=1 comma + u=2 unchanged → [0, 1, 1] over the three V sub-columns.
-    assert [cells[f"cell:scaling:{c}"].text for c in range(3)] == ["0", "1", "1"]
+    # has n=1 comma + u=2 unchanged → [0, 1, 1] over the three V sub-columns. The comma half is
+    # identity-keyed (token == index until a removal); the U half rides its own u{j} namespace.
+    assert [cells[i].text for i in ("cell:scaling:0", "cell:scaling:u0", "cell:scaling:u1")] == ["0", "1", "1"]
     # it rides between the header rows and the interval-vectors row (per the mockup)
     assert cells["label:scaling_factors"].y < cells["label:vectors"].y
     # a one-ROW_H scalar list, on the same V sub-axes as the vectors below it
@@ -8548,23 +8583,25 @@ def test_projection_mapping_row_spans_v_mapping_the_unchanged_intervals():
 def test_projection_row_spans_v_with_the_projected_unrotated_vector_list():
     cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # quarter-comma: a full rational hold
     # P·V over the V column: P·comma = 0 (the eigenvalue-0 direction vanishes), P·unchanged = the
-    # unchanged interval itself (eigenvalue 1). V col 0 = comma, cols 1,2 = the unchanged u₁=2/1, u₂=5/4.
+    # unchanged interval itself (eigenvalue 1). V col 0 = comma (identity-keyed), the unchanged
+    # u₁=2/1, u₂=5/4 ride their own u{j} namespace.
     assert [cells[f"cell:proj_v:{p}:0"].text for p in range(3)] == ["0", "0", "0"]    # P·c₁ = 𝟎
-    assert [cells[f"cell:proj_v:{p}:1"].text for p in range(3)] == ["1", "0", "0"]    # P·u₁ = 2/1
-    assert [cells[f"cell:proj_v:{p}:2"].text for p in range(3)] == ["-2", "0", "1"]   # P·u₂ = 5/4
+    assert [cells[f"cell:proj_v:{p}:u0"].text for p in range(3)] == ["1", "0", "0"]   # P·u₁ = 2/1
+    assert [cells[f"cell:proj_v:{p}:u1"].text for p in range(3)] == ["-2", "0", "1"]  # P·u₂ = 5/4
     # it rides the projection row band (same y as P over the primes) on the V sub-axes
     assert cells["cell:proj_v:0:0"].y == cells["cell:proj:0:0"].y
-    assert cells["cell:proj_v:0:1"].x == cells["cell:unchanged:0:0"].x  # V col 1 = first unchanged col
+    assert cells["cell:proj_v:0:u0"].x == cells["cell:unchanged:0:0"].x  # V col 1 = first unchanged col
     assert cells["caption:projection:commas"].text == "projected unrotated vector list"
 
 
 def test_projection_size_rows_span_v():
     cells = {c.id: c for c in _with(projection=True).cells}
-    # tuning / just / retuning size lists run over all d = n+u columns of V
+    # tuning / just / retuning size lists run over all d = n+u columns of V — the comma half
+    # identity-keyed, the unchanged half on its own u{j} namespace
     for key in ("tuning", "just", "retune"):
-        assert {f"{key}:comma:{i}" for i in range(3)} <= set(cells)
+        assert {f"{key}:comma:0", f"{key}:comma:u0", f"{key}:comma:u1"} <= set(cells)
         # the unchanged size cells sit on the U sub-axes (right of the comma sizes)
-        assert cells[f"{key}:comma:2"].x == cells["cell:unchanged:0:1"].x
+        assert cells[f"{key}:comma:u1"].x == cells["cell:unchanged:0:1"].x
 
 
 def test_projection_v_column_has_one_c_u_divider_per_tile_and_no_stray_separators():
@@ -8614,7 +8651,7 @@ def test_projection_at_full_rank_shows_the_complete_unchanged_basis():
     assert not any(c.startswith("cell:comma:") for c in cells)   # no commas (C empty)
     assert [[cells[f"cell:unchanged:{p}:{j}"].text for p in range(3)] for j in range(3)] == \
         [["1", "0", "0"], ["0", "1", "0"], ["0", "0", "1"]]      # U = all d primes
-    assert [cells[f"cell:scaling:{c}"].text for c in range(3)] == ["1", "1", "1"]  # every prime unchanged
+    assert [cells[f"cell:scaling:u{j}"].text for j in range(3)] == ["1", "1", "1"]  # every prime unchanged (nc=0: all of V is U)
     assert "comma_plus" in cells           # …and a + to add a first comma back
     assert not any(c.startswith("comma_minus") for c in cells)  # nothing to remove
     # no comma half, so no C|U divider and no wasted gap — U starts at the column's left and runs flush
@@ -8656,13 +8693,13 @@ def test_projection_pending_comma_reddens_the_unchanged_interval_it_will_delete(
     cells = {c.id: c for c in lay.cells}
     nu = sum(1 for i in cells if i.startswith("cell:unchanged:0:"))
     assert nu >= 2
-    last, v = nu - 1, 1 + (nu - 1)   # doomed U column index, and its V-column position (nc=1 comma)
+    last = nu - 1   # the doomed U column's index — its V-band cells ride the u{j} namespace
     # the doomed column reddens across EVERY value tile: vectors, the ratio, mapping, all three size
     # rows, P·V and the scaling factor — one consistent preview, the whole column
     doomed_ids = ([f"cell:unchanged:{p}:{last}" for p in range(3)] + [f"unchanged:{last}"]
                   + [f"cell:mapped_unchanged:{i}:{last}" for i in range(2)]
-                  + [f"tuning:comma:{v}", f"just:comma:{v}", f"retune:comma:{v}"]
-                  + [f"cell:proj_v:{p}:{v}" for p in range(3)] + [f"cell:scaling:{v}"])
+                  + [f"tuning:comma:u{last}", f"just:comma:u{last}", f"retune:comma:u{last}"]
+                  + [f"cell:proj_v:{p}:u{last}" for p in range(3)] + [f"cell:scaling:u{last}"])
     assert all(cells[cid].preview_remove for cid in doomed_ids), \
         [cid for cid in doomed_ids if not cells[cid].preview_remove]
     # the earlier U column, the unchanged count/caption, and the drag grip are NOT reddened
@@ -8807,13 +8844,13 @@ def test_projection_prescaling_and_complexity_rows_span_v():
     # with complexity weighting on, the prescaling (𝐿·v) and complexity (‖𝐿·v‖) rows run over
     # V = C|U too — the unchanged intervals get prescaled / normed exactly like the commas
     cells = {c.id: c for c in _with("minimax-S", projection=True, weighting=True).cells}
-    # prescaling: a d-tall 𝐿·v matrix per V sub-column; the two unchanged columns are at sub-
-    # indices nc..d-1 (nc=1 here), so row 0 of each appears
-    assert {"cell:prescaling:commas:0:1", "cell:prescaling:commas:0:2"} <= set(cells)
+    # prescaling: a d-tall 𝐿·v matrix per V sub-column; the two unchanged columns ride the
+    # u{j} namespace (nc=1 here), so row 0 of each appears
+    assert {"cell:prescaling:commas:0:u0", "cell:prescaling:commas:0:u1"} <= set(cells)
     # complexity: the list 𝒄 = ‖𝐿·v‖ over all d V sub-columns
-    assert {f"complexity:comma:{i}" for i in range(3)} <= set(cells)
+    assert {"complexity:comma:0", "complexity:comma:u0", "complexity:comma:u1"} <= set(cells)
     # the unchanged complexity sits on its V sub-axis (aligned with its vector column)
-    assert cells["complexity:comma:2"].x == cells["cell:unchanged:0:1"].x
+    assert cells["complexity:comma:u1"].x == cells["cell:unchanged:0:1"].x
 
 
 def test_v_column_unchanged_basis_follows_the_held_basis():

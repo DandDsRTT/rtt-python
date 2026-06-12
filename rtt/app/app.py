@@ -1516,7 +1516,7 @@ class _Reconciler:
             guard = _FRAC_EXIT_JS if den is not None else None
             for fld in (edit_input, den) if den is not None else (edit_input,):
                 fld.on("focus", lambda _=None, cid=cb.id: self._cb.on_cell_focus(cid), js_handler=guard)
-                fld.on("blur", lambda _=None: self._cb.on_cell_blur(), js_handler=guard)
+                fld.on("blur", lambda _=None, cid=cb.id: self._cb.on_cell_blur(cid), js_handler=guard)
                 # Enter just BLURS the input (client-side) — it does not commit on its own. Blurring routes
                 # Enter through the proven blur path: the cell's own blur handler commits the value and
                 # on_cell_blur ends the edit-preview. This matches the expected UX (the cursor leaves the box)
@@ -2258,7 +2258,7 @@ class _Reconciler:
                 # The invalid-limit reddening (_sync_target_limit_error) rides the field itself, a
                 # different signal that coexists with the rings (which ride OTHER cells).
                 num.on("focus", lambda _=None: self._cb.on_cell_focus(cb.id))
-                num.on("blur", lambda _=None: self._cb.on_cell_blur())
+                num.on("blur", lambda _=None, cid=cb.id: self._cb.on_cell_blur(cid))
                 # Enter commits the typed limit. The field is debounce=300 + loopback-controlled, so its
                 # value only settles to the server (firing the on_change commit) after a typing pause or
                 # on blur — pressing Enter alone did nothing (the reported "Enter doesn't submit the
@@ -2943,24 +2943,35 @@ def index() -> None:
         if building[0] or not editor.settings["temperament_boxes"]:  # no editable matrix when hidden
             return
         d, r = editor.state.d, len(editor.state.mapping)
+        rtoks = col_tokens("gens")  # each row's id-token (== its index until a removal/re-rank)
         if editor.pending_mapping_row is not None:
-            # the draft row rides at index r; hand its cells to the editor, which commits (and
-            # re-ranks) once they form a proper, independent generator. Like the comma draft, the row
-            # is off-screen-until-committed for preview purposes, so a preview pass rings nothing.
-            if any(f"cell:mapping:{r}:{p}" not in rec.inputs for p in range(d)):
+            # the draft row rides one token past the committed ones; hand its cells to the editor,
+            # which commits (and re-ranks) once they form a proper, independent generator
+            pt = spreadsheet.pending_token(rtoks)
+            if any(f"cell:mapping:{pt}:{p}" not in rec.inputs for p in range(d)):
                 if preview:
                     _edit_candidate(None)
                 return  # the draft cells aren't shown (folded away)
+            values = [_parse_int(rec.inputs[f"cell:mapping:{pt}:{p}"].value) for p in range(d)]
+            if preview:
+                # arm the draft's would-be commit as the edit candidate — exactly what blur will do.
+                # set_pending_mapping_row itself decides whether anything lands (a complete,
+                # independent row re-ranks; an incomplete or dependent one changes nothing), so the
+                # rings show the rank change the moment the typed row would commit, and nothing
+                # before — the same one-diff path every committed-cell edit previews through.
+                _edit_candidate(lambda v=values: editor.set_pending_mapping_row(v))
+                return
+            editor.set_pending_mapping_row(values)
+            if editor.pending_mapping_row is None:  # the draft materialized into a real row
+                render()
+                _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
+            # an uncommitted draft renders nothing — see on_comma_change's draft branch
+            return
+        if len(rtoks) != r or any(f"cell:mapping:{rtoks[i]}:{p}" not in rec.inputs for i in range(r) for p in range(d)):
             if preview:
                 _edit_candidate(None)
-                return
-            editor.set_pending_mapping_row([_parse_int(rec.inputs[f"cell:mapping:{r}:{p}"].value) for p in range(d)])
-            committed = editor.pending_mapping_row is None  # the draft materialized into a real row
-            render()
-            if committed:
-                _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
-            return
-        matrix = [[_parse_int(rec.inputs[f"cell:mapping:{i}:{p}"].value) for p in range(d)] for i in range(r)]
+            return  # the mapping cells aren't currently shown (folded away)
+        matrix = [[_parse_int(rec.inputs[f"cell:mapping:{rtoks[i]}:{p}"].value) for p in range(d)] for i in range(r)]
         if any(v is None for row in matrix for v in row):
             if preview:
                 _edit_candidate(None)
@@ -2978,54 +2989,47 @@ def index() -> None:
         editor.edit_mapping(matrix)
         render()
 
-    def _draft_comma_reranks(values):
-        # whether a complete draft comma is independent of the basis — so committing it raises the
-        # nullity (drops the rank), the change worth previewing. Mirrors editor.set_pending_comma's
-        # own commit guard, so the preview fires exactly when the blur would commit + re-rank.
-        if any(v is None for v in values):
-            return False
-        new_comma = tuple(int(v) for v in values)
-        domain = editor.state.domain_basis if len(new_comma) == editor.state.d else None
-        return service.from_comma_basis(editor.state.comma_basis + (new_comma,), domain).n > editor.state.n
-
     def on_comma_change(preview=False):
         # the comma basis (the mapping's dual) is edited in the interval-vectors row, present
         # independent of the temperament boxes. preview=True rings the would-be change without
-        # committing (commit lands on Enter/blur); a complete draft comma previews its would-be
-        # commit (the rank drop), an incomplete or dependent one rings nothing.
+        # committing (commit lands on Enter/blur); a draft column previews its would-be commit.
         if building[0]:
             return
         d, nc = editor.state.d, len(editor.state.comma_basis)
+        ctoks = col_tokens("commas")  # each column's id-token (== its index until a removal)
         if editor.pending_comma is not None:
-            # the draft column rides at index nc; hand its cells to the editor, which
-            # commits (and re-ranks) once they form a valid independent comma
-            if any(f"cell:comma:{p}:{nc}" not in rec.inputs for p in range(d)):
+            # the draft column rides one token past the committed ones; hand its cells to the
+            # editor, which commits (and re-ranks) once they form a valid independent comma
+            pt = spreadsheet.pending_token(ctoks)
+            if any(f"cell:comma:{p}:{pt}" not in rec.inputs for p in range(d)):
                 if preview:
                     _edit_candidate(None)
                 return  # the draft cells aren't shown (folded away)
-            values = [_parse_int(rec.inputs[f"cell:comma:{p}:{nc}"].value) for p in range(d)]
+            values = [_parse_int(rec.inputs[f"cell:comma:{p}:{pt}"].value) for p in range(d)]
             if preview:
-                # a complete, independent draft comma WILL commit and re-rank on blur — the rank
-                # drops, so the last mapping row goes (red) and the survivors recombine, while the
-                # rest of the temperament re-solves (amber). Preview that whole commit by arming it
-                # as the edit candidate; capture/restore sandboxes the would-be set_pending_comma, so
-                # nothing lands on the live document until blur. An incomplete or dependent draft (no
-                # re-rank, like the off-screen draft column this used to skip) still rings nothing.
-                _edit_candidate((lambda v=values: editor.set_pending_comma(v))
-                                if _draft_comma_reranks(values) else None)
+                # arm the draft's would-be commit as the edit candidate — exactly what blur will do.
+                # set_pending_comma itself decides whether anything lands (a complete, independent
+                # comma re-ranks; an incomplete or dependent one changes nothing), so the rings show
+                # the rank drop the moment the typed comma would commit, and nothing before — the
+                # same one-diff path every committed-cell edit previews through.
+                _edit_candidate(lambda v=values: editor.set_pending_comma(v))
                 return
             editor.set_pending_comma(values)
-            committed = editor.pending_comma is None  # the draft materialized into a real column
-            render()
-            if committed:
+            if editor.pending_comma is None:  # the draft materialized into a real column
+                render()
                 _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
+            # an uncommitted (partial / dependent) draft renders NOTHING: the DOM already shows the
+            # typed values, and in a real browser this blur-commit can land mid-typing of the NEXT
+            # draft cell (the value sync is throttled, blur is not) — a render here pushed the stale
+            # pending back over the focused cell, wiping the in-flight keystrokes (the live
+            # no-preview bug the in-order in-process tests never reproduced).
             return
-        if any(f"cell:comma:{p}:{c}" not in rec.inputs for c in range(nc) for p in range(d)):
+        if len(ctoks) != nc or any(f"cell:comma:{p}:{ctoks[c]}" not in rec.inputs for c in range(nc) for p in range(d)):
             if preview:
                 _edit_candidate(None)
             return  # the comma cells aren't currently shown (folded away)
         # the comma cells are the basis transposed (prime down the rows, comma across)
-        basis = [[_parse_int(rec.inputs[f"cell:comma:{p}:{c}"].value) for p in range(d)] for c in range(nc)]
+        basis = [[_parse_int(rec.inputs[f"cell:comma:{p}:{ctoks[c]}"].value) for p in range(d)] for c in range(nc)]
         if any(v is None for comma in basis for v in comma):
             if preview:
                 _edit_candidate(None)
@@ -3085,14 +3089,18 @@ def index() -> None:
                 if preview:
                     _edit_candidate(None)
                 return  # the draft cells aren't shown (folded away)
+            values = [_parse_int(rec.inputs[f"cell:interest:{p}:{pt}"].value) for p in range(d)]
             if preview:
-                _edit_candidate(None)  # a draft column is off-screen until committed — preview nothing
+                # arm the draft's would-be commit (what blur will do): set_pending_interest itself
+                # decides whether anything lands, so a complete draft previews its new rows filling
+                # in and an incomplete one rings nothing
+                _edit_candidate(lambda v=values: editor.set_pending_interest(v))
                 return
-            editor.set_pending_interest([_parse_int(rec.inputs[f"cell:interest:{p}:{pt}"].value) for p in range(d)])
-            committed = editor.pending_interest is None  # the draft materialized into a real column
-            render()
-            if committed:
+            editor.set_pending_interest(values)
+            if editor.pending_interest is None:  # the draft materialized into a real column
+                render()
                 _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
+            # an uncommitted draft renders nothing — see on_comma_change's draft branch
             return
         if len(toks) != mi or any(f"cell:interest:{p}:{toks[i]}" not in rec.inputs for i in range(mi) for p in range(d)):
             if preview:
@@ -3123,14 +3131,18 @@ def index() -> None:
                 if preview:
                     _edit_candidate(None)
                 return  # the draft cells aren't shown (folded away)
+            values = [_parse_int(rec.inputs[f"cell:held:{p}:{pt}"].value) for p in range(d)]
             if preview:
-                _edit_candidate(None)  # a draft column is off-screen until committed — preview nothing
+                # arm the draft's would-be commit (what blur will do): set_pending_held itself
+                # decides whether anything lands, so a complete draft previews the held-list
+                # retune and an incomplete one rings nothing — the one-diff path every edit uses
+                _edit_candidate(lambda v=values: editor.set_pending_held(v))
                 return
-            editor.set_pending_held([_parse_int(rec.inputs[f"cell:held:{p}:{pt}"].value) for p in range(d)])
-            committed = editor.pending_held is None  # the draft materialized into a real column
-            render()
-            if committed:
+            editor.set_pending_held(values)
+            if editor.pending_held is None:  # the draft materialized into a real column
+                render()
                 _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
+            # an uncommitted draft renders nothing — see on_comma_change's draft branch
             return
         if len(toks) != nh or any(f"cell:held:{p}:{toks[i]}" not in rec.inputs for i in range(nh) for p in range(d)):
             if preview:
@@ -3165,14 +3177,18 @@ def index() -> None:
                 if preview:
                     _edit_candidate(None)
                 return  # the draft cells aren't shown (folded away)
+            values = [_parse_int(rec.inputs[f"cell:vec:targets:{pt}:{p}"].value) for p in range(d)]
             if preview:
-                _edit_candidate(None)  # a draft column is off-screen until committed — preview nothing
+                # arm the draft's would-be commit (what blur will do): set_pending_target itself
+                # decides whether anything lands, so a complete draft previews the re-weighted
+                # target list and an incomplete one rings nothing
+                _edit_candidate(lambda v=values: editor.set_pending_target(v))
                 return
-            editor.set_pending_target([_parse_int(rec.inputs[f"cell:vec:targets:{pt}:{p}"].value) for p in range(d)])
-            committed = editor.pending_target is None  # the draft materialized into a real column
-            render()
-            if committed:
+            editor.set_pending_target(values)
+            if editor.pending_target is None:  # the draft materialized into a real column
+                render()
                 _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
+            # an uncommitted draft renders nothing — see on_comma_change's draft branch
             return
         if len(toks) != k or any(f"cell:vec:targets:{toks[j]}:{p}" not in rec.inputs for j in range(k) for p in range(d)):
             if preview:
@@ -3212,9 +3228,10 @@ def index() -> None:
             return
 
         def replace(current, setter):  # swap the edited column in, skipping a no-op blur (no undo step)
-            # the token's CURRENT list index: identity-keyed columns may have been reordered, so map
-            # the token through the live identities (commas aren't reorderable, so token IS the index)
-            list_name = {"target": "targets", "held": "held", "interest": "interest"}.get(group)
+            # the token's CURRENT list index: identity-keyed columns may have been reordered (or a
+            # removal decoupled token from slot), so map the token through the live identities
+            list_name = {"target": "targets", "held": "held", "interest": "interest",
+                         "comma": "commas"}.get(group)
             toks = col_tokens(list_name) if list_name else []
             pos = toks.index(int(tok)) if int(tok) in toks else int(tok)
             vectors = [list(v) for v in current]
@@ -3333,6 +3350,13 @@ def index() -> None:
             editor.set_optimization_power(power)
         render()
 
+    def _gen_position(tok):
+        # a tuning:gen cell id carries the row's id-TOKEN (== its index until a removal/re-rank
+        # decouples them); the editor's per-generator setters take the POSITION, so map the token
+        # through the live row identities. (The superspace ssgen cells stay position-keyed.)
+        toks = col_tokens("gens")
+        return toks.index(tok) if tok in toks else tok
+
     def on_gentuning_change(cid):
         # an editable generator-tuning-map cell: a valid cents number overrides that one
         # generator's tuning (a per-number manual override); an unparseable entry is ignored
@@ -3348,7 +3372,7 @@ def index() -> None:
         if ":ssgen:" in cid:
             editor.set_superspace_generator_tuning_component(i, cents)
         else:
-            editor.set_generator_tuning_component(i, cents)
+            editor.set_generator_tuning_component(_gen_position(i), cents)
         render()
 
     def on_gentuning_wheel(cid, delta_y):
@@ -3361,7 +3385,7 @@ def index() -> None:
         if ":ssgen:" in cid:  # a superspace generator 𝒈L cell (prime-based shift)
             editor.nudge_superspace_generator_tuning_component(i, steps)
         else:
-            editor.nudge_generator_tuning_component(i, steps)
+            editor.nudge_generator_tuning_component(_gen_position(i), steps)
         render()
 
     def on_value_wheel(cid, delta_y):
@@ -3732,9 +3756,15 @@ def index() -> None:
         take_over_gesture()
         rec.gesture = _Gesture(kind="edit", source=cid, baseline=last_lay[0])
 
-    def on_cell_blur():
-        # leaving the cell ends the edit (or a lingering wheel) gesture; the repaint strips its rings
-        if rec.gesture is not None and rec.gesture.kind in ("edit", "wheel"):
+    def on_cell_blur(cid=None):
+        # leaving the cell ends the edit (or a lingering wheel) gesture; the repaint strips its
+        # rings. Scoped to the blurred CELL: in a real browser the messages of a cell-to-cell hop
+        # can arrive out of DOM order (the value sync is throttled, blur/focus are not), so the
+        # PREVIOUS cell's blur routinely lands AFTER the next cell's focus has armed a fresh
+        # gesture — an unscoped blur then killed that new gesture and the draft preview never
+        # showed (the in-process tests replay events in order, so only the live app hit it).
+        g = rec.gesture
+        if g is not None and g.kind in ("edit", "wheel") and (cid is None or g.source == cid):
             end_gesture()
             paint_rings()
 

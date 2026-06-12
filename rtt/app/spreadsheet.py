@@ -408,13 +408,16 @@ def removed_cell_ids(old: Layout, new: Layout) -> frozenset:
     DISAPPEARS. A removed cell is still on screen while the +/- is merely hovered (the click hasn't
     committed), so the preview can light it up to show exactly what the click takes away. Restricted
     to the value-bearing :data:`RINGABLE_KINDS`, so the scaffolding around a removed value — its
-    brackets, separators, drag grips and ± controls — is not flagged."""
+    brackets, separators, drag grips and ± controls — is not flagged. PENDING cells (a green
+    draft's placeholders) never read as removed either: they are not committed content, and an op
+    that materializes (or discards) the draft merely renames its placeholder ids — red there would
+    speckle the very column being typed into."""
     after = {c.id for c in new.cells}
     return frozenset(c.id for c in old.cells
-                     if c.kind in RINGABLE_KINDS and c.id not in after)
+                     if c.kind in RINGABLE_KINDS and not c.pending and c.id not in after)
 
 
-def assign_column_tokens(prev, keys):
+def assign_column_tokens(prev, keys, claim_unmatched=False):
     """Assign a stable id-token to each interval column, so a column keeps its cell ids across a
     render and the reconciler glides it to its new x (rather than re-filling a fixed-index cell).
 
@@ -427,8 +430,15 @@ def assign_column_tokens(prev, keys):
     into a freed slot's id (which would falsely read every later column as "changed" in the edit
     preview). Only an in-place EDIT — same column count, one value changed — matches by POSITION, so
     the focused cell keeps its id (reused, not rebuilt mid-keystroke) and a value already present
-    elsewhere isn't mistaken for a move into it. Anything still unmatched gets a token greater than
-    every token in play, so live columns never collide. With no previous render the columns number
+    elsewhere isn't mistaken for a move into it. With ``claim_unmatched`` (the BASIS groups — the
+    mapping rows and the commas, whose entries a re-solve rewrites in place), a count change that
+    leaves entries unmatched on BOTH sides pairs the unmatched new entries with the unclaimed
+    previous tokens in order, so the diff reads them as moved values rather than a wholesale
+    remove-plus-recreate — a rank change reads "survivors move (amber), the surplus slot goes
+    (red)". The independent interval SETS (targets/held/interest) leave it off: a brand-new ratio
+    is genuinely new, never "the same column as" a dropped one, so a family switch reds what it
+    drops instead of relabelling it. Anything still unmatched gets a token greater than every
+    token in play, so live columns never collide. With no previous render the columns number
     0,1,2,… in order."""
     keys = list(keys)
     prev = list(prev or [])
@@ -451,6 +461,21 @@ def assign_column_tokens(prev, keys):
                 if not claimed[pi] and pkey == key:
                     tokens[j], claimed[pi] = tok, True
                     break
+        # a BASIS group's re-solve can rewrite the surviving entries wholesale (a rank change
+        # recombines every mapping row), so nothing content-matches even though the slots are still
+        # on screen. Pair the still-unmatched new entries with the unclaimed previous slots IN
+        # ORDER: the diff then reads "this slot's value moved" (amber) and only the genuinely
+        # surplus previous slots read as removed (red) — rather than every slot reading
+        # removed-plus-brand-new. A pure add or a survivor-verbatim remove leaves no (unmatched,
+        # unclaimed) pair, so this changes nothing for the cases content already matches.
+        if claim_unmatched:
+            unclaimed = iter([pi for pi in range(len(prev)) if not claimed[pi]])
+            for j in range(len(keys)):
+                if tokens[j] is None:
+                    pi = next(unclaimed, None)
+                    if pi is None:
+                        break
+                    tokens[j] = prev[pi][0]
     nxt = max([t for t in tokens if t is not None] + [tok for tok, _ in prev] + [-1]) + 1
     for j in range(len(keys)):  # fresh token, greater than any in play (no reuse → no collision)
         if tokens[j] is None:
@@ -1033,20 +1058,37 @@ class _GridBuilder:
         self.interest_ratios = service.comma_ratios(self.interest, self.elements)  # vector -> "num/den" (shared renderer)
         self.interest_mapped = service.mapped_intervals(self.state.mapping, self.interest_ratios, self.elements)
         self.interest_sizes = service.interval_sizes(self.tun, self.interest_ratios, self.elements)
-        # a stable id-token per column of each reorderable interval list, matched against the
-        # previous render (prev_ids): a within-list reorder keeps a column's token, so all its cells
-        # keep their ids and the reconciler slides them to the new x. Fresh (no prev) numbers each
-        # list by index, so every cell id is unchanged until the first reorder. Commas are excluded
-        # (their column order is canonicalized by the dual — a reorder is unobservable). The identity
-        # key is the interval's RATIO, not its vector: a domain ± re-dimensions the vector (a 5-limit
-        # target's 3-tall vector becomes 2-tall), so matching by vector read every shared target as a
-        # whole-list delete; the ratio is the same interval across domains, so a shared column keeps
-        # its token and only the genuinely-dropped intervals (the lost prime's) read as removed.
+        # a stable id-token per column of each interval list (and per mapping ROW), matched against
+        # the previous render (prev_ids): a within-list reorder keeps a column's token, so all its
+        # cells keep their ids and the reconciler slides them to the new x — and a MID-LIST removal
+        # keeps every survivor's id, so the remove-preview reds exactly the removed column/row, not
+        # whichever one happens to sit last. Fresh (no prev) numbers each list by index, so every
+        # cell id is unchanged until the first reorder/removal. The identity key for the interval
+        # lists is the RATIO, not the vector: a domain ± re-dimensions the vector (a 5-limit
+        # target's 3-tall vector becomes 2-tall), so matching by vector read every shared target as
+        # a whole-list delete; the ratio is the same interval across domains, so a shared column
+        # keeps its token and only the genuinely-dropped intervals (the lost prime's) read as
+        # removed. Commas key by ratio too (each comma's − removes ANY one, so removal attribution
+        # needs identity even though a reorder is unobservable); only the COMMITTED commas are keyed
+        # — a pending draft rides at pending_col_token. The mapping rows ("gens") key by the row
+        # tuple itself: remove_mapping_row keeps the survivors verbatim, so the hovered row's −
+        # reds that row, while a re-rank that rewrites every row falls back to positional claiming
+        # (see assign_column_tokens) and reads as "survivors move, last row goes". The generator
+        # detempering columns are the generators seen from the comma side — one column per mapping
+        # row — so they SHARE the gens identity.
+        # claim_unmatched is on for the two BASIS groups only (commas, gens): a re-solve rewrites
+        # their surviving entries in place, so unmatched new entries positionally claim freed slots
+        # (amber) rather than reading as remove-plus-recreate. The interval SETS stay strict: a
+        # brand-new ratio is never "the same column as" a dropped one, so a family switch reds it.
         self._col_ids = {
-            name: assign_column_tokens(self.prev_ids.get(name), ratios)
-            for name, ratios in (("targets", self.targets),
-                                 ("held", self.held_ratios), ("interest", self.interest_ratios))
+            name: assign_column_tokens(self.prev_ids.get(name), keys, claim_unmatched=claim)
+            for name, keys, claim in (("targets", self.targets, False),
+                                      ("held", self.held_ratios, False),
+                                      ("interest", self.interest_ratios, False),
+                                      ("commas", self.comma_ratios, True),
+                                      ("gens", tuple(tuple(row) for row in self.state.mapping), True))
         }
+        self._col_ids["detempering"] = self._col_ids["gens"]
         # the complexity row norms each interval's prescaled vector (𝒄): a covector over the
         # domain elements (each element's complexity, log₂ of it for the default log-prime
         # norm), a list over the comma / target / interest interval sets.
@@ -2222,10 +2264,16 @@ class _GridBuilder:
         return None
 
     def col_token(self, group, i):
-        """The stable id-token for column ``i`` of a reorderable interval list (targets/held/
-        interest), so all of a column's cells share one token and re-key together when it moves
-        (the reconciler then glides them). Any other group (gens/primes/commas, which don't reorder)
-        keeps its bare index, so those cell ids are unchanged."""
+        """The stable id-token for column ``i`` of an identity-keyed list (targets/held/interest/
+        commas, the gens mapping rows and their detempering twins), so all of an entry's cells
+        share one token and re-key together when it moves or a neighbour is removed (the
+        reconciler glides them; the remove-preview reds the right entry). A group without
+        identity (the primes, the superspace bands) keeps its bare index. Over the consolidated
+        V = C|U the commas group runs past the nc commas into the unchanged intervals, which
+        carry their own positional ``u{j}`` namespace — U only ever shrinks from its end, and a
+        distinct namespace keeps a comma token from ever colliding with an unchanged id."""
+        if group == "commas" and i >= self.nc:
+            return f"u{i - self.nc}"
         pairs = self._col_ids.get(group)
         return i if pairs is None else pairs[i][0]
 
@@ -2856,7 +2904,7 @@ class _GridBuilder:
                 for c in range(self.nc):
                     # the comma ratio is editable — a ratiocell, the scalar twin of the editable
                     # comma vector below it: typing a fraction re-parses to that comma's vector
-                    self.cells.append(CellBox(f"comma:{c}", self.comma_left(c), qy, COL_W, ROW_H, "ratiocell", text=self.comma_ratios[c], comma=c))
+                    self.cells.append(CellBox(f"comma:{self.col_token('commas', c)}", self.comma_left(c), qy, COL_W, ROW_H, "ratiocell", text=self.comma_ratios[c], comma=c))
                     self._voice("quantities:commas", c, self.comma_sizes.just[c])
                 if self.pending is not None:  # the draft's editable "?/?" ratio: type a fraction to fill it
                     # (or its vector cells). A distinct id so it's removed, not restructured, on commit.
@@ -2877,7 +2925,7 @@ class _GridBuilder:
                 # column's − cancels it. Stays live in the consolidated V view (removing a comma grows
                 # U by a column) — only the C half carries −, never the derived unchanged columns.
                 for c in range(self.nc):
-                    branch_minus(f"comma_minus:{c}", "commas", c, "comma_minus", comma=c)
+                    branch_minus(f"comma_minus:{self.col_token('commas', c)}", "commas", c, "comma_minus", comma=c)
                 if self.pending is not None:
                     branch_minus("comma_minus:pending", "commas", self.nc, "comma_minus")
             if self.tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
@@ -2992,7 +3040,7 @@ class _GridBuilder:
                                      COL_W, vtop - self.fanout_y, kind, **kw))
             if self.tile_open("vectors", "commas"):
                 for c in range(self.nc):
-                    vec_minus(f"comma_minus:{c}", "commas", c, "comma_minus", comma=c)
+                    vec_minus(f"comma_minus:{self.col_token('commas', c)}", "commas", c, "comma_minus", comma=c)
                 if self.pending is not None:
                     vec_minus("comma_minus:pending", "commas", self.nc, "comma_minus")
             if self.tile_open("vectors", "targets"):
@@ -3019,7 +3067,7 @@ class _GridBuilder:
             # quantities spine column, labelling the rows as the primes label the columns
             if self.tile_open("mapping", "quantities"):
                 for i in range(self.r):
-                    self.cells.append(CellBox(f"gen:{i}", self.col_x["quantities"], self.map_top(i), self.col_w["quantities"], ROW_H, "genratio", text=self.gens[i] if i < len(self.gens) else "", gen=i))
+                    self.cells.append(CellBox(f"gen:{self.col_token('gens', i)}", self.col_x["quantities"], self.map_top(i), self.col_w["quantities"], ROW_H, "genratio", text=self.gens[i] if i < len(self.gens) else "", gen=i))
                 # the mapping-row ± ride the row's LEFT bus (like the basis controls on the vectors
                 # row), out to the left of the generator-ratio spine: a − on EACH generator's branch
                 # point (any row removable, −r,+n), the + on the stub below the stack (un-temper a
@@ -3030,7 +3078,7 @@ class _GridBuilder:
                 gen_right = self.col_x["quantities"] + self.col_w["quantities"]
                 if self.r > 1:  # never down to rank 0
                     for i in range(self.r):
-                        self.cells.append(CellBox(f"map_minus:{i}", map_bus_x, self.map_top(i), gen_right - map_bus_x, ROW_H, "map_minus", gen=i))
+                        self.cells.append(CellBox(f"map_minus:{self.col_token('gens', i)}", map_bus_x, self.map_top(i), gen_right - map_bus_x, ROW_H, "map_minus", gen=i))
                 if "mapping" in self.row_plus_y:  # only when there's a comma to un-temper (n > 0)
                     self.cells.append(CellBox("map_plus", map_bus_x - BTN / 2, self.row_plus_y["mapping"] - BTN / 2, BTN, BTN, "map_plus"))
             # a drag handle hugging the left of each mapping row: drag one generator row onto another
@@ -3040,42 +3088,43 @@ class _GridBuilder:
             # handles a sibling concern adds ride the branch points up top — deliberately separate.)
             if self.settings.get("drag_to_combine") and self.r > 1 and self.tile_open("mapping", "primes"):
                 for i in range(self.r):
-                    self.cells.append(CellBox(f"map_drag:{i}", self.primes_x, self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
+                    self.cells.append(CellBox(f"map_drag:{self.col_token('gens', i)}", self.primes_x, self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
             for i in range(self.r):
+                rt = self.col_token("gens", i)  # the row's stable id-token (== i until a removal/re-rank)
                 if self.tile_open("mapping", "primes"):
                     for p in range(self.d):
                         # text carries the mapping entry into the CellBox content (like the comma /
                         # target / held / interest vector cells already do) so changed_cell_ids sees a
                         # mapping change — otherwise the edit preview is blind to the matrix a
                         # temperament swap or a +/- rewrites. The input still shows it via _update_mapping.
-                        self.cells.append(CellBox(f"cell:mapping:{i}:{p}", self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", text=str(self.state.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
+                        self.cells.append(CellBox(f"cell:mapping:{rt}:{p}", self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", text=str(self.state.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
                 if self.tile_open("mapping", "targets"):
                     for j in range(self.k):
-                        self.cells.append(CellBox(f"cell:mapped:{i}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped[i][j]), gen=i, unit=self.cell_unit("mapping", "targets", gen=i)))
+                        self.cells.append(CellBox(f"cell:mapped:{rt}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped[i][j]), gen=i, unit=self.cell_unit("mapping", "targets", gen=i)))
                     if self.pending_target is not None:  # blank green placeholder under the draft target
-                        self.cells.append(CellBox(f"cell:mapped:{i}:draft", self.target_left(self.k), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+                        self.cells.append(CellBox(f"cell:mapped:{rt}:draft", self.target_left(self.k), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
                 if self.tile_open("mapping", "interest"):  # interest mapped through M, like the targets
                     for ii in range(self.mi):
-                        self.cells.append(CellBox(f"cell:imapped:{i}:{self.col_token('interest', ii)}", self.interest_left(ii), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.interest_mapped[i][ii]), gen=i, unit=self.cell_unit("mapping", "interest", gen=i)))
+                        self.cells.append(CellBox(f"cell:imapped:{rt}:{self.col_token('interest', ii)}", self.interest_left(ii), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.interest_mapped[i][ii]), gen=i, unit=self.cell_unit("mapping", "interest", gen=i)))
                     if self.pending_interest is not None:  # blank green placeholder under the draft interest interval
-                        self.cells.append(CellBox(f"cell:imapped:{i}:draft", self.interest_left(self.mi), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+                        self.cells.append(CellBox(f"cell:imapped:{rt}:draft", self.interest_left(self.mi), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
                 if self.tile_open("mapping", "held"):  # held mapped through M, like the targets / interest
                     for hi in range(self.nh):
-                        self.cells.append(CellBox(f"cell:hmapped:{i}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.held_mapped[i][hi]), gen=i, unit=self.cell_unit("mapping", "held", gen=i)))
+                        self.cells.append(CellBox(f"cell:hmapped:{rt}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.held_mapped[i][hi]), gen=i, unit=self.cell_unit("mapping", "held", gen=i)))
                     if self.pending_held is not None:  # blank green placeholder under the draft held interval
-                        self.cells.append(CellBox(f"cell:hmapped:{i}:draft", self.held_left(self.nh), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+                        self.cells.append(CellBox(f"cell:hmapped:{rt}:draft", self.held_left(self.nh), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
                 # the comma basis mapped through M — it vanishes to 0 (parallel to the
                 # mapped target list); the raw basis lives in the interval-vectors row.
                 # Over V the unchanged basis maps too (M·U ≠ 0 — the held intervals in gen coords).
                 if self.tile_open("mapping", "commas"):
                     for c in range(self.nc):
-                        self.cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
+                        self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.col_token('commas', c)}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
                     if self.pending is not None:  # blank green placeholder under the draft comma, so the
                         # draft column reads green down through the computed rows, not just its vectors
-                        self.cells.append(CellBox(f"cell:mapped_comma:{i}:{self.nc}", self.comma_left(self.nc), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+                        self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.pending_col_token('commas')}", self.comma_left(self.nc), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
                     for j in range(self.nu):
                         mapped_text = DASH if self.unchanged_mapped[i][j] is None else str(self.unchanged_mapped[i][j])
-                        self.cells.append(CellBox(f"cell:mapped_unchanged:{i}:{j}", self.comma_left(self.nc_shown + j), self.map_top(i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
+                        self.cells.append(CellBox(f"cell:mapped_unchanged:{rt}:{j}", self.comma_left(self.nc_shown + j), self.map_top(i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
             # the draft generator row being added: a green ?/blank row at index r — the ROW mirror of
             # the pending comma COLUMN. It rides ONLY the mapping band (the genmap, canonical mapping
             # and comma dual all stay at the committed rank), and commits once the typed row appended
@@ -3086,6 +3135,7 @@ class _GridBuilder:
             # (the values are undefined until the row commits). The r_shown brackets enclose them.
             if self.pending_mapping_row is not None:
                 dr = self.r  # the draft row's index, one past the committed generators
+                drt = self.pending_col_token("gens")  # its id-token, one past every committed row's
                 if self.tile_open("mapping", "quantities"):
                     self.cells.append(CellBox("gen:pending", self.col_x["quantities"], self.map_top(dr), self.col_w["quantities"], ROW_H, "genratio", text="?", gen=dr, pending=True))
                     map_bus_x = self.node_edge + self.FAN if self._row_fans("mapping") else self.node_edge
@@ -3094,23 +3144,23 @@ class _GridBuilder:
                 if self.tile_open("mapping", "primes"):
                     for p in range(self.d):
                         v = self.pending_mapping_row[p]
-                        self.cells.append(CellBox(f"cell:mapping:{dr}:{p}", self.prime_left(p), self.map_top(dr), COL_W, ROW_H, "mapping", text="" if v is None else str(v), gen=dr, prime=p, pending=True))
+                        self.cells.append(CellBox(f"cell:mapping:{drt}:{p}", self.prime_left(p), self.map_top(dr), COL_W, ROW_H, "mapping", text="" if v is None else str(v), gen=dr, prime=p, pending=True))
                 # blank green placeholders in the derived mapped tiles (M·target / M·interest / M·held
                 # / M·comma / M·U for the not-yet-committed generator), so the whole draft row greens
                 if self.tile_open("mapping", "targets"):
                     for j in range(self.k):
-                        self.cells.append(CellBox(f"cell:mapped:{dr}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                        self.cells.append(CellBox(f"cell:mapped:{drt}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
                 if self.tile_open("mapping", "interest"):
                     for ii in range(self.mi):
-                        self.cells.append(CellBox(f"cell:imapped:{dr}:{self.col_token('interest', ii)}", self.interest_left(ii), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                        self.cells.append(CellBox(f"cell:imapped:{drt}:{self.col_token('interest', ii)}", self.interest_left(ii), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
                 if self.tile_open("mapping", "held"):
                     for hi in range(self.nh):
-                        self.cells.append(CellBox(f"cell:hmapped:{dr}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                        self.cells.append(CellBox(f"cell:hmapped:{drt}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
                 if self.tile_open("mapping", "commas"):
                     for c in range(self.nc):
-                        self.cells.append(CellBox(f"cell:mapped_comma:{dr}:{c}", self.comma_left(c), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                        self.cells.append(CellBox(f"cell:mapped_comma:{drt}:{self.col_token('commas', c)}", self.comma_left(c), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
                     for j in range(self.nu):
-                        self.cells.append(CellBox(f"cell:mapped_unchanged:{dr}:{j}", self.comma_left(self.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                        self.cells.append(CellBox(f"cell:mapped_unchanged:{drt}:{j}", self.comma_left(self.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
 
         # the projection matrix P = GM: a d×d operator over the domain primes, a stack of read-only
         # maps like the mapping. Its cells are "mapped" (a computed value, NOT per-cell editable — a
@@ -3161,7 +3211,7 @@ class _GridBuilder:
         if self.show_unchanged and self.row_open("projection") and self.tile_open("projection", "commas"):
             for c in range(self.nc):  # P·comma = the zero vector
                 for p in range(self.d):
-                    self.cells.append(CellBox(f"cell:proj_v:{p}:{c}", self.comma_left(c), self.proj_top(p),
+                    self.cells.append(CellBox(f"cell:proj_v:{p}:{self.col_token('commas', c)}", self.comma_left(c), self.proj_top(p),
                                          COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
             if self.pending is not None:  # blank green placeholder column under the draft comma (P·draft)
                 for p in range(self.d):
@@ -3170,7 +3220,7 @@ class _GridBuilder:
             for j in range(self.nu):  # P·unchanged = the unchanged interval itself (dashed if U is)
                 dashed = self.unchanged_basis[j] is None
                 for p in range(self.d):
-                    self.cells.append(CellBox(f"cell:proj_v:{p}:{self.nc + j}", self.comma_left(self.nc_shown + j), self.proj_top(p),
+                    self.cells.append(CellBox(f"cell:proj_v:{p}:u{j}", self.comma_left(self.nc_shown + j), self.proj_top(p),
                                          COL_W, ROW_H, "mapped",
                                          text=DASH if dashed else str(self.unchanged_basis[j][p]), prime=p, comma=self.nc + j))
 
@@ -3192,7 +3242,7 @@ class _GridBuilder:
             for i in range(self.r):
                 for p in range(self.d):
                     text = DASH if not full_proj else str(self.proj_detempering[i][p])
-                    self.cells.append(CellBox(f"cell:proj_pd:{i}:{p}", self.detempering_left(i), self.proj_top(p),
+                    self.cells.append(CellBox(f"cell:proj_pd:{self.col_token('detempering', i)}:{p}", self.detempering_left(i), self.proj_top(p),
                                          COL_W, ROW_H, "mapped", text=text, prime=p, gen=i))
         if self.row_open("projection") and self.tile_open("projection", "targets"):  # P·T
             for j in range(self.k):
@@ -3222,7 +3272,7 @@ class _GridBuilder:
             # column (the tuning leaves that direction irrational) has no determined eigenvalue → dash
             scaling = ["0"] * self.nc + [(DASH if v is None else "1") for v in self.unchanged_basis]
             for c, lam in enumerate(scaling):  # comma_value_pos skips the pending-draft slot for the U half
-                self.cells.append(CellBox(f"cell:scaling:{c}", self.comma_left(self.comma_value_pos(c)), self.row_y["scaling_factors"],
+                self.cells.append(CellBox(f"cell:scaling:{self.col_token('commas', c)}", self.comma_left(self.comma_value_pos(c)), self.row_y["scaling_factors"],
                                      COL_W, ROW_H, "mapped", text=lam, comma=c))
 
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
@@ -3292,7 +3342,7 @@ class _GridBuilder:
             if self.tile_open("vectors", "commas"):
                 for c in range(self.nc):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:comma:{p}:{c}", self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
+                        self.cells.append(CellBox(f"cell:comma:{p}:{self.col_token('commas', c)}", self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
                         self._voice("vectors:commas", c, self.comma_sizes.just[c])
                 # the unchanged basis U completes V = C|U: the projection's eigenvalue-1 eigenvectors,
                 # held just (e.g. 2/1, 5/1). EDITABLE (like the comma basis) when U is a FULL rational
@@ -3313,7 +3363,7 @@ class _GridBuilder:
                 if self.pending is not None:  # the draft column: blank, green-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending[p]
-                        self.cells.append(CellBox(f"cell:comma:{p}:{self.nc}", self.comma_left(self.nc), self.vec_top(p), COL_W, ROW_H, "commacell",
+                        self.cells.append(CellBox(f"cell:comma:{p}:{self.pending_col_token('commas')}", self.comma_left(self.nc), self.vec_top(p), COL_W, ROW_H, "commacell",
                                              text="" if v is None else str(v), prime=p, comma=self.nc, pending=True, unit=self.cell_unit("vectors", "commas", prime=p)))
             if self.tile_open("vectors", "targets"):
                 # the target interval list as vector columns — an EDITABLE hybrid input like the comma
@@ -3348,7 +3398,7 @@ class _GridBuilder:
             if self.tile_open("vectors", "detempering"):  # the matrix D, one vector column per generator
                 for i in range(self.r):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:vec:detempering:{i}:{p}", self.detempering_left(i), self.vec_top(p), COL_W, ROW_H, "vec", text=str(self.detempering_vectors[i][p]), unit=self.cell_unit("vectors", "detempering", prime=p)))
+                        self.cells.append(CellBox(f"cell:vec:detempering:{self.col_token('detempering', i)}:{p}", self.detempering_left(i), self.vec_top(p), COL_W, ROW_H, "vec", text=str(self.detempering_vectors[i][p]), unit=self.cell_unit("vectors", "detempering", prime=p)))
                         self._voice("vectors:detempering", i, self.detempering_sizes.just[i])
             if self.tile_open("vectors", "interest"):  # the user's intervals of interest: editable vectors, like the comma basis
                 for i in range(self.mi):
@@ -3631,7 +3681,7 @@ class _GridBuilder:
         if self.row_open("tuning") and self.tile_open("tuning", "gens"):
             gen_kind = "tuningvalue" if self.show_superspace_generators else "gentuningcell"
             for i, v in enumerate(self.tun.generator_map):
-                self.cells.append(CellBox(f"tuning:gen:{i}", self.group_left["gens"](i), self.row_y["tuning"], COL_W, ROW_H,
+                self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.row_y["tuning"], COL_W, ROW_H,
                                      gen_kind, text=service.cents(v), unit=self.cell_unit("tuning", "gens", gen=i)))
                 self._voice("tuning:gens", i, v)  # the genmap sounds each generator's tuned size
         # the chapter-9 superspace tuning row: 𝒈ₗ over the ssgens column, 𝒕ₗ / 𝒋ₗ / 𝒓ₗ over ssprimes.

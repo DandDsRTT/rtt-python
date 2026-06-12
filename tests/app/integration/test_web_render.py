@@ -343,7 +343,7 @@ async def test_projection_renders_the_consolidated_v_and_scaling_factors(user: U
     # fault building the appended unchanged columns / λ list / their EBK marks).
     await _enable(user, "projection")
     await user.should_see(marker="label:scaling_factors")
-    await user.should_see(marker="cell:scaling:1")             # λ₂ = 1 (a held interval)
+    await user.should_see(marker="cell:scaling:u0")            # λ₂ = 1 (a held interval; the U half rides u{j})
     await user.should_see(marker="cell:unchanged:0:0")         # the first unchanged-basis vector cell
     await user.should_see(marker="cell:mapped_unchanged:1:1")  # M·U appended to the mapping row over V
 
@@ -1066,8 +1066,10 @@ async def test_clicking_a_non_last_comma_minus_un_tempers_that_comma(user: User)
     keep0, keep_last = service.comma_ratios(drop0.comma_basis)[0], service.comma_ratios(drop_last.comma_basis)[0]
     assert keep0 != keep_last                               # dropping the first vs the last genuinely differ
     _click_glyph(user, "comma_minus:0")                     # click the FIRST comma's − (not the last)
-    await user.should_not_see(marker="comma_minus:1")       # back to a single comma
-    assert _ratio_value(user, "comma:0") == keep0           # the index-0 removal rendered, NOT the last-comma one
+    await user.should_not_see(marker="comma_minus:0")       # comma 0 is gone — and its id went WITH it:
+    # the survivor keeps its own identity token (1), so its cells keep their ids and the remove
+    # preview/diff blames the removed column, not the one that slid into its slot
+    assert _ratio_value(user, "comma:1") == keep0           # the index-0 removal rendered, NOT the last-comma one
 
 
 def test_ratio_font_shrinks_a_long_fraction_to_fit_its_square() -> None:
@@ -2128,6 +2130,77 @@ async def test_adding_a_comma_previews_the_rank_drop_on_the_mapping(user: User) 
     UserInteraction(user, {last}, None).trigger("blur")       # blur COMMITS → rank 1, rings clear
     await user.should_see(marker="cell:mapping:0:0")
     await user.should_not_see(marker="cell:mapping:1:0")      # row 1 gone: committed to rank 1
+
+
+async def test_blurring_an_incomplete_draft_cell_keeps_the_other_typed_cells(user: User) -> None:
+    # tabbing between draft cells fires a non-committing blur each hop (the comma isn't complete yet).
+    # That blur must NOT re-render: a render would push the still-blank editor draft back over the
+    # cells, wiping the digits already typed into the siblings. So an uncommitted draft blur is inert
+    # and the typed values stand until the comma completes and commits.
+    await user.open("/")
+    _click_glyph(user, "comma_plus")
+    await user.should_see(marker="cell:comma:0:1")
+    _cell_child(user, "cell:comma:0:1").set_value("7")
+    UserInteraction(user, {_cell_child(user, "cell:comma:0:1")}, None).trigger("blur")  # hop away, incomplete
+    await user.should_see(marker="cell:comma:0:1")
+    assert _cell_child(user, "cell:comma:0:1").value == "7"       # the typed digit survives the blur
+
+
+async def test_hovering_a_non_last_comma_minus_reds_that_comma_not_the_last(user: User) -> None:
+    # each comma column owns its id (identity-keyed, like the reorderable lists), so the remove
+    # preview blames the comma actually being removed: hovering the FIRST comma's − reds ITS cells,
+    # not whichever comma happens to sit last. (Index-keyed ids slid the survivor into the freed
+    # slot, so the diff used to red the LAST column whatever you hovered — the reported bug.)
+    await user.open("/")
+    _click_glyph(user, "comma_plus")                        # open the draft comma column
+    for p, v in zip(range(3), ("7", "0", "-3")):            # the diesis 128/125 = (7 0 -3)
+        _cell_child(user, f"cell:comma:{p}:1").set_value(v)
+    _commit(user, "cell:comma:2:1")                         # commit → two commas, rank 1
+    await user.should_see(marker="comma_minus:1")
+    btn = set(user.find(marker="comma_minus:0").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")  # hover the FIRST comma's −
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")   # the hovered comma reds...
+    assert "rtt-preview-remove" in _wrap_classes(user, "comma:0")          # ...its ratio too
+    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:comma:0:1")  # the survivor does NOT
+    assert "rtt-preview-remove" not in _wrap_classes(user, "comma:1")
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:comma:0:0")  # cleared on mouse-out
+
+
+async def test_hovering_a_non_last_mapping_row_minus_reds_that_row_not_the_last(user: User) -> None:
+    # the row twin: mapping rows are identity-keyed by their content (remove_mapping_row keeps the
+    # survivors verbatim), so hovering the FIRST row's − reds that row — its matrix cells, its
+    # generator ratio and its tuning cents — while the surviving row keeps its id and doesn't ring.
+    await user.open("/")
+    btn = set(user.find(marker="map_minus:0").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")     # hover row 0's − (meantone: 2 rows)
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:0:0")  # the hovered row reds...
+    assert "rtt-preview-remove" in _wrap_classes(user, "gen:0")             # ...its generator ratio
+    assert "rtt-preview-remove" in _wrap_classes(user, "tuning:gen:0")      # ...and its tuning cents
+    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:mapping:1:0")  # the survivor does NOT
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:mapping:0:0")  # cleared on mouse-out
+
+
+async def test_adding_a_mapping_row_previews_the_rank_raise_while_the_draft_is_green(user: User) -> None:
+    # the row twin of the comma-draft preview: typing a complete, independent generator row into the
+    # green draft previews its commit — the un-tempered comma's column reds (the rank raise consumes
+    # it) and the re-solved cells ring amber — while the draft stays green and uncommitted until blur.
+    await user.open("/")
+    _click_glyph(user, "gen_plus")                            # open the green draft mapping row
+    await user.should_see(marker="cell:mapping:2:0")
+    for p, v in zip(range(2), ("0", "0")):
+        _cell_child(user, f"cell:mapping:2:{p}").set_value(v)
+    last = _cell_child(user, "cell:mapping:2:2")
+    UserInteraction(user, {last}, None).trigger("focus")      # arm the edit gesture
+    last.set_value("1")                                       # ⟨0 0 1] — independent → previews the commit
+    await user.should_see(marker="cell:comma:0:0")
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")  # the comma it un-tempers → red
+    assert "rtt-preview-remove" in _wrap_classes(user, "comma:0")
+    assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes  # the draft is STILL green
+    UserInteraction(user, {last}, None).trigger("blur")       # blur commits → rank 3, comma gone
+    await user.should_see(marker="cell:mapping:2:0")
+    await user.should_not_see(marker="comma_minus:0")         # nothing tempered any more
 
 
 async def test_typing_a_target_limit_rings_the_rows_it_moves(user: User) -> None:
