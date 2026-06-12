@@ -1530,6 +1530,23 @@ def displayed_prescaler_name(mapping, scheme=DEFAULT_TUNING_SCHEME, custom_presc
     return prescaler_of(scheme)
 
 
+@dataclass(frozen=True)
+class DerivedQuantities:
+    """The displayed quantities the grid has already derived, handed into
+    :func:`plain_text_values` so the EBK text is built FROM the grid's own numbers
+    rather than from a parallel re-derivation: divergence between the two views is
+    structurally impossible, and the optimizer solve behind ``tun`` runs once per
+    build instead of twice. ``superspace_tun`` rides along whenever the grid shows
+    the chapter-9 block (None otherwise; the text then solves it itself)."""
+
+    targets: tuple
+    tun: Tuning
+    target_weights: tuple
+    target_sizes: IntervalSizes
+    comma_sizes: IntervalSizes
+    superspace_tun: Tuning | None = None
+
+
 def plain_text_values(
     state: TemperamentState,
     scheme: str = DEFAULT_TUNING_SCHEME,
@@ -1544,6 +1561,7 @@ def plain_text_values(
     consolidate_v: bool = False,
     held_basis_ratios=(),
     custom_prescaler=None,
+    derived: DerivedQuantities | None = None,
 ) -> dict[tuple[str, str], str]:
     """Each value group's natural plain-text form, keyed by its ``(row, column)``
     tile (the same vocabulary the spreadsheet layout uses). The grid and this text
@@ -1553,9 +1571,12 @@ def plain_text_values(
     target list), ``nonprime_approach`` (the nonprime-basis optimization trait) and
     ``custom_prescaler`` (the bare prescaler tile's hand-edited diagonal / matrix override)
     are threaded into the same tuning/weights/complexity/prescaling the grid builds, so the
-    two views can't diverge."""
+    two views can't diverge. The grid passes ``derived`` — its own already-computed
+    :class:`DerivedQuantities` — making that guarantee structural; a direct caller may
+    omit it and this function derives the same quantities itself."""
     db = state.domain_basis
-    targets = displayed_targets(state, scheme, target_spec, target_override)  # all-interval-aware, like the grid
+    targets = derived.targets if derived else \
+        displayed_targets(state, scheme, target_spec, target_override)  # all-interval-aware, like the grid
     # the REAL comma basis: empty at full rank (n = 0), where state.comma_basis is just the trivial
     # zero comma — the grid shows no comma column there, so the plain text must show no comma vector
     # either (not a phantom [0 0 0⟩). Everything comma-side below reads this, like the grid's self.nc.
@@ -1565,9 +1586,12 @@ def plain_text_values(
     mapped_comma = mapped_commas(state.mapping, comma_basis)
     target_vectors = target_interval_vectors(targets, state.d, db)
     held_ratios = comma_ratios(held, db) if held else ()
-    # match the grid's tuning exactly: a manual generator-tuning override
-    # drives the maps directly; otherwise the scheme's optimum holding the held intervals just
-    if generator_tuning is not None and len(generator_tuning) == len(state.mapping):
+    # match the grid's tuning exactly: the grid hands over its own solve when it built one;
+    # otherwise a manual generator-tuning override drives the maps directly, else the
+    # scheme's optimum holding the held intervals just
+    if derived is not None:
+        tun = derived.tun
+    elif generator_tuning is not None and len(generator_tuning) == len(state.mapping):
         tun = tuning_from_generators(state.mapping, generator_tuning, db)
     else:  # a typed target-list override retunes the optimum, matching the grid's own tuning —
         # over the SAME nonprime approach + custom prescaler the grid threads (else the tuning rows
@@ -1578,10 +1602,13 @@ def plain_text_values(
     # shows and the optimizer minimizes), so the displayed damage tracks the unity/complexity/
     # simplicity slope rather than staying plain |error|. The custom prescaler rides into the
     # weights too (the grid passes it to interval_weights), so a hand-edited diagonal reweights here.
-    target_damage_weights = interval_weights(state.mapping, scheme, targets, domain_basis=db,
-                                             prescaler_override=custom_prescaler)
-    target_sizes = interval_sizes(tun, targets, db, weights=target_damage_weights)
-    comma_sizes = interval_sizes(tun, commas, db)  # comma sizes, like the grid's commas column
+    target_damage_weights = derived.target_weights if derived else \
+        interval_weights(state.mapping, scheme, targets, domain_basis=db,
+                         prescaler_override=custom_prescaler)
+    target_sizes = derived.target_sizes if derived else \
+        interval_sizes(tun, targets, db, weights=target_damage_weights)
+    comma_sizes = derived.comma_sizes if derived else \
+        interval_sizes(tun, commas, db)  # comma sizes, like the grid's commas column
     detemper_ratios = generators(state.mapping, db)  # the detempering as ratios (= service.generators)
     detemper_sizes = interval_sizes(tun, detemper_ratios, db)  # tempered = the genmap, plus just/error
     detemper_vectors = generator_detempering(state.mapping)  # D's vectors, for the prescaling matrix
@@ -1776,8 +1803,10 @@ def plain_text_values(
         mlgl = superspace_self_map(state)
         msl = mapping_to_superspace_generators(state)
         bl = basis_in_superspace(db)
-        ss_tun = superspace_tuning(state, scheme, nonprime_approach,
-                                   generator_override=superspace_generator_override)
+        ss_tun = (derived.superspace_tun
+                  if derived is not None and derived.superspace_tun is not None else
+                  superspace_tuning(state, scheme, nonprime_approach,
+                                    generator_override=superspace_generator_override))
 
         def _covector_stack(rows):  # mapping-style: each row ⟨ … ], outer [ … }
             return "[" + "".join("⟨" + " ".join(str(x) for x in r) + "]" for r in rows) + "}"

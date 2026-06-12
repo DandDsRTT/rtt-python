@@ -837,6 +837,9 @@ class _GridBuilder:
         # can reach them without re-resolving the service call.
         self.dL = service.superspace_dimension(self.elements)
         self.rL = service.superspace_rank(self.state)
+        # the chapter-9 superspace tuning solve, memoized (see superspace_tun below): the
+        # plain-text bundle and layout()'s ss tuning rows share one solve per build
+        self._ss_tun = None
         # the dL superspace primes (e.g. (2, 3, 5, 13) for BARBADOS) — the basis the
         # ss_vectors row's spine column labels its rows with, and the columns of M_L
         self.superspace_primes = service.superspace_primes(self.elements)
@@ -1697,7 +1700,17 @@ class _GridBuilder:
                                                    # the bare prescaler tile's hand-edited diagonal /
                                                    # matrix override, threaded into the same tuning /
                                                    # weights / complexity / prescaling the grid builds
-                                                   custom_prescaler=self.custom_prescaler)
+                                                   custom_prescaler=self.custom_prescaler,
+                                                   # the grid's own derived quantities: the text is
+                                                   # built FROM these (one tuning solve per build,
+                                                   # and the two views structurally cannot diverge)
+                                                   derived=service.DerivedQuantities(
+                                                       targets=self.targets, tun=self.tun,
+                                                       target_weights=self.target_weights,
+                                                       target_sizes=self.target_sizes,
+                                                       comma_sizes=self.comma_sizes,
+                                                       superspace_tun=(self.superspace_tun()
+                                                                       if self.show_superspace else None)))
                          if self.show_ptext else {})
 
         y = rows_top_y
@@ -1847,6 +1860,15 @@ class _GridBuilder:
         if self.tile_open("mapping", "quantities") and self.state.n > 0:
             # below the last SHOWN row — so an open draft row pushes the + down past it
             self.row_plus_y["mapping"] = self.map_top(self.r_shown) + ROW_H / 2
+
+    def superspace_tun(self):
+        """The chapter-9 superspace tuning, solved at most once per build — the plain-text
+        bundle and layout()'s ss tuning rows share this one (expensive) solve."""
+        if self._ss_tun is None:
+            ss_override = self.superspace_generator_tuning if self.show_superspace_generators else None
+            self._ss_tun = service.superspace_tuning(self.state, self.tuning_scheme, self.nonprime_approach,
+                                                     generator_override=ss_override)
+        return self._ss_tun
 
     def _caption_floor(self, key):
         # the width an open column needs so its captions stay within MAX_CAPTION_LINES,
@@ -3690,9 +3712,7 @@ class _GridBuilder:
         # via service.superspace_tuning's generator_override and projects down to drive 𝒈 and every
         # on-domain map. In neutral the superspace is only a complexity lens, so 𝒈L stays read-only.
         if self.show_superspace and self.row_open("tuning"):
-            ss_override = self.superspace_generator_tuning if self.show_superspace_generators else None
-            ss_tun = service.superspace_tuning(self.state, self.tuning_scheme, self.nonprime_approach,
-                                               generator_override=ss_override)
+            ss_tun = self.superspace_tun()  # memoized: shared with the plain-text bundle's solve
             if self.tile_open("tuning", "ssgens"):
                 if self.show_superspace_generators:  # editable 𝒈L cells (the prime-based live map)
                     for i, v in enumerate(ss_tun.generator_map):

@@ -8861,3 +8861,44 @@ def test_v_column_unchanged_basis_follows_the_held_basis():
     third = {c.id: c for c in _proj_build(("2/1", "6/5")).cells}
     assert [quarter[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["-2", "0", "1"]  # 5/4
     assert [third[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["1", "1", "-1"]     # 6/5
+
+
+def _assert_ptext_cells_match(lay, pt):
+    # every rendered ptext band cell carries exactly the string the direct derivation gives
+    ptext_cells = [c for c in lay.cells if c.id.startswith("ptext:")]
+    assert len(ptext_cells) >= 8  # the band is actually on, so the loop below isn't vacuous
+    for c in ptext_cells:
+        _, rkey, ckey = c.id.split(":")
+        assert c.text == pt[(rkey, ckey)], c.id
+
+
+def test_ptext_band_matches_a_direct_derivation_under_a_custom_prescaler():
+    # the band is built FROM the grid's DerivedQuantities bundle; a direct (self-deriving)
+    # plain_text_values call over the same document must produce identical strings. The
+    # custom prescaler is one of the knobs that historically diverged the two views.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    lay = spreadsheet.build(state, {**settings.defaults(), "plain_text_values": True},
+                            custom_prescaler=(1.0, 2.0, 3.0))
+    pt = service.plain_text_values(state, service.DEFAULT_DOCUMENT_SCHEME,
+                                   custom_prescaler=(1.0, 2.0, 3.0))
+    _assert_ptext_cells_match(lay, pt)
+
+
+def test_ptext_band_matches_a_direct_derivation_under_a_manual_generator_tuning():
+    # a frozen manual tuning takes the bundle's tun straight from the grid's
+    # tuning_from_generators result — same strings as a direct self-deriving call
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    lay = spreadsheet.build(state, {**settings.defaults(), "plain_text_values": True},
+                            generator_tuning=(1201.7, 697.6))
+    pt = service.plain_text_values(state, service.DEFAULT_DOCUMENT_SCHEME,
+                                   generator_tuning=(1201.7, 697.6))
+    _assert_ptext_cells_match(lay, pt)
+
+
+def test_ptext_band_matches_a_direct_derivation_over_the_superspace():
+    # the chapter-9 block rides the bundle's memoized superspace_tun (the grid's one solve);
+    # the direct call solves it itself — both must give the same ss tile strings
+    lay = _barbados_ss(plain_text_values=True)
+    pt = service.plain_text_values(_barbados_state(), service.DEFAULT_DOCUMENT_SCHEME,
+                                   superspace=True)
+    _assert_ptext_cells_match(lay, pt)
