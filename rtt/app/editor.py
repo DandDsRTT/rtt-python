@@ -82,10 +82,16 @@ class _Doc:
     # a full d×d matrix (a non-diagonal pretransformer).
     custom_prescaler: tuple | None
     target_override: tuple[str, ...] | None  # a typed explicit target list, overriding the TILT/OLD spec
-    # NB: there is no separate "projection" field — the projection P = GM, embedding G and
-    # unchanged interval basis U are all driven by the tuning's HELD interval basis (the scheme's
-    # structural held plus held_vectors). The established-projection chooser just writes a named
-    # tuning's full rational basis into held_vectors (see Editor.set_established_projection).
+    # The exact rational basis a DELIBERATE projection pin holds — the ratios the user established by
+    # picking a projection or hand-editing U / P / G (all via Editor._hold_as_manual_tuning). It does
+    # NOT live in the held column (a pin leaves that untouched); recording it here is what lets
+    # :attr:`Editor.unchanged_ratios` recover the full unchanged basis even when those ratios aren't in
+    # the candidate pool it otherwise tests (established-projection ratios — meantone only — plus the
+    # target set plus the held column). Empty () when no projection is pinned (a scheme-driven or freely
+    # hand-tuned generator map), so U/P/G then fall back to reading the basis off the tuning. Validated
+    # against the live tuning downstream, so a stale entry is harmless — it only ever contributes ratios
+    # the displayed tuning still holds exactly just.
+    projection_basis: tuple[str, ...]
     settings: tuple[tuple[str, bool], ...]
     collapsed: frozenset[str]
 
@@ -131,6 +137,7 @@ def _initial_doc() -> _Doc:
         manual_tuning=False,
         custom_prescaler=None,
         target_override=None,
+        projection_basis=(),  # no deliberate projection pinned by default — U/P/G read off the tuning
         settings=tuple(sorted(show_settings.defaults().items())),
         collapsed=INITIAL_COLLAPSED,
     )
@@ -199,6 +206,7 @@ class Editor:
             manual_tuning=self.manual_tuning,
             custom_prescaler=self.custom_prescaler,
             target_override=self.target_override,
+            projection_basis=self.projection_basis,
             settings=tuple(sorted(self.settings.items())),
             collapsed=frozenset(self.collapsed),
         )
@@ -218,6 +226,7 @@ class Editor:
         self.manual_tuning = doc.manual_tuning
         self.custom_prescaler = doc.custom_prescaler
         self.target_override = doc.target_override
+        self.projection_basis = doc.projection_basis
         self.settings = dict(doc.settings)
         self.collapsed = set(doc.collapsed)
         self._clear_pending()  # a draft never survives a document restore
@@ -287,10 +296,13 @@ class Editor:
         if not service.domain_has_nonprimes(new_state.domain_basis):
             self.nonprime_basis_approach = ""
         # a manual 𝒈L is over the superspace mapping M_L, so any temperament or domain edit makes it
-        # stale (rL / M_L change); drop it, as a domain change drops the stale on-domain generators
+        # stale (rL / M_L change); drop it, as a domain change drops the stale on-domain generators.
+        # A pinned projection's basis is likewise tied to this temperament/domain — drop it too so a
+        # stale basis can't masquerade as the new temperament's unchanged intervals.
         if (new_state.mapping != self._state.mapping
                 or new_state.domain_basis != self._state.domain_basis):
             self.superspace_generator_tuning = None
+            self.projection_basis = ()
         self._state = new_state
 
     @property
@@ -487,6 +499,7 @@ class Editor:
         self.generator_tuning = None
         self.superspace_generator_tuning = None
         self.manual_tuning = False
+        self.projection_basis = ()  # the wheel is handed back to the scheme — no pinned projection
 
     def effective_generator_tuning(self) -> tuple[float, ...] | None:
         """The generator tuning the grid should display: None (recompute the scheme's optimum
@@ -568,6 +581,7 @@ class Editor:
         self._snapshot()
         self.generator_tuning = gens
         self.manual_tuning = True  # a typed tuning is a hand-edit — it leaves the established scheme
+        self.projection_basis = ()  # a free cents map need not be a rational projection — drop the pin
         return True
 
     def _override_generator(self, i: int, transform, *, snapshot: bool = True) -> None:
@@ -587,6 +601,7 @@ class Editor:
             self._snapshot()
         self.generator_tuning = tuple(base)
         self.manual_tuning = True  # editing one generator is a hand-edit — it leaves the scheme
+        self.projection_basis = ()  # nudging one generator breaks the pinned projection — drop it
 
     def set_generator_tuning_component(self, i: int, cents: float) -> None:
         """Override one generator's tuning (one editable generator-tuning-map cell)."""
@@ -730,6 +745,7 @@ class Editor:
         self.generator_tuning = None
         self.superspace_generator_tuning = None
         self.manual_tuning = False
+        self.projection_basis = ()  # a scheme pick hands the wheel back — no pinned projection
 
     def set_established_projection(self, name: str | None) -> None:
         """Apply an established projection / embedding from that chooser: set the generator tuning
@@ -754,6 +770,9 @@ class Editor:
         ).generator_map
         self.superspace_generator_tuning = None
         self.manual_tuning = True  # a deliberate tuning override (not the scheme optimum)
+        # remember the exact basis this pin holds, so unchanged_ratios recovers the FULL unchanged
+        # basis (hence targets_in_use / P / G / U) even when these ratios aren't in its candidate pool
+        self.projection_basis = tuple(ratios)
 
     def set_unchanged_basis(self, ratios) -> None:
         """Apply a hand-edited unchanged interval basis (the editable U cells) — set the tuning to the
@@ -814,7 +833,13 @@ class Editor:
         retuning = self._displayed_retuning_map()
         if retuning is None:  # the tuning can't be measured — nothing known unchanged, all dashes
             return ()
-        candidates = (presets.projection_candidate_ratios(self.state)
+        # the exact basis a deliberate pin holds leads the candidate pool — without it a projection
+        # whose ratios aren't an established/target/held candidate (a hand-edited U/P/G, or any pick on
+        # a temperament with no established projections) reads as under-rank, wrongly keeping the target
+        # column up and dashing P/G/U. Each candidate is still validated against the live tuning below,
+        # so listing it never forces a ratio the tuning doesn't actually hold.
+        candidates = (self.projection_basis
+                      + presets.projection_candidate_ratios(self.state)
                       + tuple(service.target_interval_set(self.target_spec, self.state.domain_basis))
                       + (tuple(service.comma_ratios(self.held_vectors)) if self.held_vectors else ()))
         return service.unchanged_ratios_of_tuning(self.state, retuning, candidates)
@@ -1429,6 +1454,7 @@ class Editor:
             "manual_tuning": self.manual_tuning,
             "custom_prescaler": _prescaler_to_json(self.custom_prescaler),
             "target_override": list(self.target_override) if self.target_override is not None else None,
+            "projection_basis": list(self.projection_basis),
             "settings": dict(self.settings),
             "collapsed": sorted(self.collapsed),
         }
@@ -1464,6 +1490,7 @@ class Editor:
             custom_prescaler=_prescaler_from_json(data.get("custom_prescaler")),
             target_override=tuple(data["target_override"])
             if data.get("target_override") is not None else None,
+            projection_basis=tuple(data.get("projection_basis", ()) or ()),
             settings=tuple(sorted(show_settings.from_persisted(data.get("settings", {})).items())),
             collapsed=frozenset(data.get("collapsed", INITIAL_COLLAPSED)),
         )

@@ -2178,3 +2178,88 @@ def test_established_projection_round_trips_via_the_generator_tuning():
     reloaded = Editor()
     reloaded.load(ed.serialize())
     assert reloaded.displayed_projection_scheme_name == "Pythagorean"
+
+
+def _has_targets(ed):
+    return any(c.id.startswith(("target:", "cell:target")) for c in ed.layout().cells)
+
+
+def test_hand_edited_full_projection_off_the_candidate_list_hides_the_targets():
+    # regression: a COMPLETE rational projection pinned by hand-editing U (here meantone's {2/1, 10/9},
+    # which is NOT an established-projection ratio nor in the TILT target set) used to read as under-rank
+    # — unchanged_ratios only tested those candidates — so targets_in_use stayed True and the whole
+    # target column lingered (with P/G/U dashed). Recording the pinned basis fixes it: the column goes.
+    ed = Editor()
+    ed.settings["projection"] = True
+    assert service.tuning_projection(ed.state, ("2/1", "10/9")) is not None  # a valid full projection
+    ed.set_unchanged_basis(("2/1", "10/9"))
+    assert ed.unchanged_ratios == ("2/1", "10/9")  # the FULL basis is recovered, not just 2/1
+    assert ed.targets_in_use is False
+    assert not _has_targets(ed)
+
+
+def test_full_projection_hides_targets_on_a_temperament_with_no_established_projections():
+    # porcupine has no established-projection presets, so the candidate pool is just the target set +
+    # held column; a hand-pinned full projection ({2/1, 27/25}) outside it must still hide the column.
+    ed = Editor()
+    ed.settings["projection"] = True
+    ed.edit_mapping(((1, 2, 3), (0, 3, 5)))  # porcupine, r=2, no established projections
+    assert service.tuning_projection(ed.state, ("2/1", "27/25")) is not None
+    ed.set_unchanged_basis(("2/1", "27/25"))
+    assert ed.targets_in_use is False
+    assert not _has_targets(ed)
+
+
+def test_back_to_scheme_restores_the_targets_after_an_off_candidate_pin():
+    # the pinned-basis memory clears when the wheel is handed back to the scheme, so the column returns
+    ed = Editor()
+    ed.settings["projection"] = True
+    ed.set_unchanged_basis(("2/1", "10/9"))
+    assert not _has_targets(ed)
+    ed.back_to_scheme()
+    assert ed.projection_basis == ()
+    assert ed.targets_in_use is True
+    assert _has_targets(ed)
+
+
+def test_off_candidate_pin_undo_redo_keeps_the_targets_column_correct():
+    # the pinned basis lives in the document, so undo/redo flips the targets column with it
+    ed = Editor()
+    ed.settings["projection"] = True
+    ed.set_unchanged_basis(("2/1", "10/9"))
+    assert not _has_targets(ed)
+    ed.undo()
+    assert _has_targets(ed)        # back to the scheme optimum — targets shown
+    ed.redo()
+    assert not _has_targets(ed)    # the pin (and its hidden column) is restored
+
+
+def test_off_candidate_pin_round_trips_serialize_and_older_docs_lack_it():
+    # the pinned basis serializes, so a refresh keeps the column hidden; an older doc without the key
+    # loads cleanly to no pin
+    ed = Editor()
+    ed.settings["projection"] = True
+    ed.set_unchanged_basis(("2/1", "10/9"))
+    data = ed.serialize()
+    assert data["projection_basis"] == ["2/1", "10/9"]
+    reloaded = Editor()
+    reloaded.load(data)
+    reloaded.settings["projection"] = True
+    assert reloaded.projection_basis == ("2/1", "10/9")
+    assert reloaded.targets_in_use is False
+
+    data.pop("projection_basis")  # an older saved document predates the field
+    legacy = Editor()
+    legacy.load(data)
+    assert legacy.projection_basis == ()  # defaults to no pin, no crash
+
+
+def test_a_typed_generator_tuning_drops_a_prior_projection_pin():
+    # a free cents map need not be a rational projection, so it clears the pin and falls back to the
+    # candidate search (here it lands back near the scheme optimum, so the under-rank/optimum logic runs)
+    ed = Editor()
+    ed.settings["projection"] = True
+    ed.set_unchanged_basis(("2/1", "10/9"))
+    assert ed.projection_basis == ("2/1", "10/9")
+    ed.set_generator_tuning_text("1200 697")
+    assert ed.projection_basis == ()
