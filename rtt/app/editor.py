@@ -828,20 +828,34 @@ class Editor:
         tuning itself (the candidates it leaves at zero damage), not off the held column, so e.g.
         the default minimax-U meantone reports {2/1, 5/4} (it IS quarter-comma). This is what drives
         the projection P/G and the unchanged basis U; fewer than r ⇒ not a full rational projection,
-        and the rest dash. Candidates: the established-projection bases (for clean representatives),
-        the target interval set, and the held column."""
+        and the rest dash.
+
+        Candidate ORDER matters: the basis representatives chosen for U are the first independent
+        unchanged candidates found. The held column comes FIRST — an interval the user deliberately
+        holds is unchanged by construction, so it must itself appear in U (overriding an auto-picked
+        representative of the same direction); this is ch3's "anything in the held interval basis
+        will always be in the unchanged interval basis too". Only AFTER the held intervals do we
+        fall back to the established-projection bases (clean representatives like 5/4 over 5/2 for
+        the directions the optimizer holds on its own) and then the target interval set. With no
+        held column the order is unchanged, so the default still reports {2/1, 5/4}."""
         retuning = self._displayed_retuning_map()
         if retuning is None:  # the tuning can't be measured — nothing known unchanged, all dashes
             return ()
-        # the exact basis a deliberate pin holds leads the candidate pool — without it a projection
-        # whose ratios aren't an established/target/held candidate (a hand-edited U/P/G, or any pick on
-        # a temperament with no established projections) reads as under-rank, wrongly keeping the target
-        # column up and dashing P/G/U. Each candidate is still validated against the live tuning below,
-        # so listing it never forces a ratio the tuning doesn't actually hold.
-        candidates = (self.projection_basis
+        # The held column leads the candidate pool: an interval the user deliberately holds is
+        # unchanged by construction, so it must itself be U's representative for its direction
+        # (overriding an auto-pick). Next comes the exact basis a deliberate pin holds — without it a
+        # projection whose ratios aren't an established/target/held candidate (a hand-edited U/P/G, or
+        # any pick on a temperament with no established projections) reads as under-rank, wrongly
+        # keeping the target column up and dashing P/G/U. Held and the pin lead in different scenarios
+        # (an optimization-time hold vs a manual pin) so they rarely coincide; when they do, the
+        # explicit hold wins the representative slot while the count stays the same (order doesn't
+        # change the rank). Each candidate is still validated against the live tuning below, so
+        # listing one never forces a ratio the tuning doesn't actually hold.
+        held = tuple(service.comma_ratios(self.held_vectors)) if self.held_vectors else ()
+        candidates = (held
+                      + self.projection_basis
                       + presets.projection_candidate_ratios(self.state)
-                      + tuple(service.target_interval_set(self.target_spec, self.state.domain_basis))
-                      + (tuple(service.comma_ratios(self.held_vectors)) if self.held_vectors else ()))
+                      + tuple(service.target_interval_set(self.target_spec, self.state.domain_basis)))
         return service.unchanged_ratios_of_tuning(self.state, retuning, candidates)
 
     @property

@@ -2135,6 +2135,31 @@ def test_established_projection_reflects_a_hand_typed_held_basis():
     assert ed.displayed_projection_scheme_name == "1/4-comma"
 
 
+def test_a_held_interval_always_appears_in_the_unchanged_basis():
+    # ch3: "anything in the held-interval basis will always be in the unchanged-interval basis too."
+    # 9/8 is NOT one of the temperament's clean projection-candidate ratios, but the optimizer holds
+    # it (zero damage), so it must be the representative U shows for its direction — not some other
+    # basis of the same subspace (the pre-fix bug reported 2/1, 3/2 and dropped the held 9/8).
+    ed = Editor()
+    v = lambda r: tuple(service.interval_vector(r, ed.state.d, ed.state.domain_basis))
+    ed.set_held_vectors([v("9/8")])
+    assert "9/8" in ed.unchanged_ratios            # the held interval itself, not a stand-in
+    assert ed.unchanged_ratios[0] == "9/8"         # and FIRST — it overrides the auto-picked rep
+    assert service.interval_vector("9/8", ed.state.d, ed.state.domain_basis) in (
+        service.unchanged_interval_basis(ed.state, ed.unchanged_ratios) or ())
+
+
+def test_an_unheld_interval_is_never_faked_into_the_unchanged_basis():
+    # the flip side: held-first must NOT lie. A manual tuning that genuinely does not hold the held
+    # interval (here 12-EDO meantone changes 9/8) leaves it out of U, dashing the unpinned direction.
+    ed = Editor()
+    v = lambda r: tuple(service.interval_vector(r, ed.state.d, ed.state.domain_basis))
+    ed.set_held_vectors([v("9/8")])
+    ed.set_generator_tuning_component(0, 1200.0)
+    ed.set_generator_tuning_component(1, 700.0)    # 12-EDO: 9/8 -> 200c, not its just 203.91c
+    assert "9/8" not in ed.unchanged_ratios        # not held by THIS tuning, so not claimed unchanged
+
+
 def test_targets_in_use_tracks_whether_the_tuning_is_the_target_optimum():
     # with the projection box on, the target list is only computing the tuning while the displayed
     # tuning IS the scheme's target-driven optimum
