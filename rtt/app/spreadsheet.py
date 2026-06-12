@@ -4483,10 +4483,13 @@ class _GridBuilder:
 
         if self.col_x and self.row_y:
             bands = []  # (id, x, y, w, h, group)
-            for rkey, ckey in self.declared_tiles:
-                if not self.tile_open(rkey, ckey):
+            # walk self.tiles (the ordered declaration), NOT the declared_tiles set: set
+            # iteration order varies per process (string hashing), which emitted the wash
+            # blocks in a different DOM order on every server restart. Same filter, fixed order.
+            for _bid, rkey, ckey in self.tiles:
+                if (rkey, ckey) not in self.declared_tiles or not self.tile_open(rkey, ckey):
                     continue
-                groups = {g for g in self.tile_groups(rkey, ckey) if self.settings.get(f"{g}_colorization")}
+                groups = sorted(g for g in self.tile_groups(rkey, ckey) if self.settings.get(f"{g}_colorization"))
                 if not groups:
                     continue
                 x, w = self.col_x[ckey] - WASH_PAD, self.col_w[ckey] + 2 * WASH_PAD
