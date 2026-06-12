@@ -2683,15 +2683,8 @@ class _GridBuilder:
             if self.tile_open(rkey, "commas"):
                 self.cells.append(CellBox(f"vsplit:{rkey}", x, self.row_y[rkey], SEP_W, self.row_h[rkey], "vbar"))
 
-    def layout(self) -> Layout:
-        self.cells: list[CellBox] = []
-        self.lines: list[Line] = []
-        self.blocks: list[Block] = []
-        # the box-𝐋/𝒄/𝒘 control boxes are emitted during the cell pass (to position their controls)
-        # but must LAYER ON TOP of the grey tile panels — appended below the panel loop, like the
-        # optimization / ranges boxes — so collect them here and flush them after the panels.
-        self._control_region_boxes: list[Block] = []
-
+    def _emit_headers(self):
+        """Column headers, row labels, their fold toggles, and the master expand/collapse-all toggle."""
         # column headers (always shown; a collapsed column keeps its title) plus a
         # fold toggle in the header band for collapsible ones. A matlabel-widened column
         # (primes when symbols is on) carries the gutter on both sides, so the header + toggle
@@ -2734,6 +2727,8 @@ class _GridBuilder:
         self.cells.append(CellBox("toggle:all", self.node_x, self.col_node_y, TOGGLE, TOGGLE, "alltoggle",
                              text=_fold_glyph(all_collapsed)))
 
+    def _emit_counts_row(self):
+        """The counts row: each present column's set cardinality, centred over its values."""
         # counts row: each present column's set cardinality, centred over its values. The
         # detempering column counts the rank r (one detempering interval per generator); the
         # superspace columns count their own rank rL and dimensionality dL.
@@ -2763,6 +2758,8 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"count:{ckey}", self.col_x[ckey], self.row_y["counts"], self.col_w[ckey], ROW_H,
                                      "count", text=f"{_count_sym(sym)} = {cardinality[ckey]}"))
 
+    def _emit_units(self):
+        """The units row + column: coordinate-unit labels per row and per column."""
         # units row + column (the specific `domain_units` toggle): coordinate-unit labels.
         # The units COLUMN labels each row's coordinate — the interval-vectors basis in
         # primes (pᵢ/), the mapping in generators (gᵢ/), the cents tuning rows as ¢/. The
@@ -2854,6 +2851,8 @@ class _GridBuilder:
                 for ih in range(self.nh):
                     self.cells.append(CellBox(f"urow:held:{ih}", self.held_left(ih), uy, COL_W, ROW_H, "units", text="/1"))
 
+    def _emit_quantities_row(self):
+        """The quantities row: domain primes, interval ratios, their ± controls and the reorder grips."""
         # quantities row: domain primes (+ controls) and target ratios (below the
         # tile's toggle head, like every other row's values). The whole row -- its
         # headers and the domain/comma ± controls riding it -- answers to the specific
@@ -3034,6 +3033,8 @@ class _GridBuilder:
                         self.cells.append(CellBox(f"grip:unchanged:{j}", self.sub_axis_x("commas", self.nc_shown + j) - COL_W / 2,
                                              grip_top, COL_W, GRIP_BAND, "colgrip", comma=j))
 
+    def _emit_column_plus_controls(self):
+        """The addable columns' + controls riding the shared column fan above the grid."""
         # The addable columns' + controls ride the shared column fan above the grid, NOT inside the
         # quantities row — so they survive that row being hidden, keeping every interval kind addable
         # from the interval-vectors row alone (clicking + then drops the cursor into the new column's
@@ -3048,6 +3049,8 @@ class _GridBuilder:
             if ckey in self.plus_stub_x:
                 self.cells.append(CellBox(cid, self.plus_stub_x[ckey] - BTN / 2, self.fanout_y - BTN / 2, BTN, BTN, cid))
 
+    def _emit_rehomed_minus_controls(self):
+        """The interval columns' − controls re-homed onto the vectors row when the quantities row is hidden."""
         # The interval columns' − controls — each column's removal, and the draft column's cancel —
         # normally ride the quantities row (emitted in its block above). When that row is hidden but
         # the interval vectors are shown, re-home them onto the vectors row: its top edge bounds the
@@ -3082,6 +3085,8 @@ class _GridBuilder:
                 if self.pending_interest is not None:
                     vec_minus("interest_minus:pending", "interest", self.mi, "interest_minus")
 
+    def _emit_mapping_band(self):
+        """Generator ratios, the mapping matrix, its mapped lists and the draft generator row."""
         # generator ratios (aligned with the mapping rows they label) + the mapping
         # matrix and its mapped target interval list
         if self.row_open("mapping"):
@@ -3184,6 +3189,8 @@ class _GridBuilder:
                     for j in range(self.nu):
                         self.cells.append(CellBox(f"cell:mapped_unchanged:{drt}:{j}", self.comma_left(self.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
 
+    def _emit_projection_band(self):
+        """The projection band: P = GM, the embedding G, the projected lists and the scaling factors."""
         # the projection matrix P = GM: a d×d operator over the domain primes, a stack of read-only
         # maps like the mapping. Its cells are "mapped" (a computed value, NOT per-cell editable — a
         # single entry can't keep P idempotent with the commas in its kernel, so editing is only via
@@ -3297,6 +3304,8 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"cell:scaling:{self.col_token('commas', c)}", self.comma_left(self.comma_value_pos(c)), self.row_y["scaling_factors"],
                                      COL_W, ROW_H, "mapped", text=lam, comma=c))
 
+    def _emit_canon_band(self):
+        """The canonical-mapping form box and the generator form matrix."""
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
         # read-only maps over the primes, framed like the mapping matrix one row above it; the
         # generator form matrix F (units 𝒈/𝒈) rides its gens column as a bordered r×r grid
@@ -3310,6 +3319,8 @@ class _GridBuilder:
                     for j in range(len(self.form_M)):
                         self.cells.append(CellBox(f"cell:form:{i}:{j}", self.gen_left(j), self.canon_top(i), COL_W, ROW_H, "formcell", text=str(self.form_M[i][j])))
 
+    def _emit_vectors_band(self):
+        """The interval-vectors row: the basis spine, comma/target/held/interest vectors and drag handles."""
         # interval-vectors row: each column's intervals as vectors (d-tall columns over
         # the domain primes), on the same prime/comma/target axes as the quantities row.
         # The comma basis is the editable raw vectors (the mapping's dual); the targets
@@ -3447,6 +3458,8 @@ class _GridBuilder:
                         for i in range(count):
                             self.cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), hy, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
 
+    def _emit_superspace_rows(self):
+        """The chapter-9 superspace rows: spines, B_L, M_L, M_jL, the lifted lists and the P_L tiles."""
         # the chapter-9 superspace interval-vectors row's spine basis index: the dL
         # superspace primes stacked down the quantities spine column, one per row — the
         # row counterpart of the d domain primes that head the existing vectors row's spine
@@ -3664,6 +3677,8 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"cell:ss_proj_pi:{i}:{p}", self.interest_left(i) + KET_INSET, self.ss_proj_top(p),
                                          COL_W - 2 * KET_INSET, ROW_H, "mapped", text=text, prime=p, comma=i))
 
+    def _emit_tuning_rows(self):
+        """The tuning/just/retune rows; returns the chart_indicators dict the chart pass reads."""
         # tuning rows over the primes, commas and targets (cents); each can collapse on
         # its own. Commas sit on the same footing as targets — they are just the dual
         # interval set. Math expressions only ADDS the exact closed form where one exists
@@ -3736,7 +3751,10 @@ class _GridBuilder:
                                 ("retune", self.detempering_sizes.errors)):
                 if self.row_open(key):
                     self.tuning_value_row(key, "detempering", values)
+        return chart_indicators
 
+    def _emit_prescaling_band(self):
+        """The prescaling row: the prescaler applied to each column group's vectors."""
         # the prescaling row applies the prescaler 𝐿 to each column group's vectors: over the
         # primes it is the d×d diagonal (𝐿·eₚ — the prescaler matrix itself), over the comma /
         # target / interest sets it is 𝐿·vector (each component scaled by the diagonal), a d-tall
@@ -3857,6 +3875,9 @@ class _GridBuilder:
                     cy = self.row_y["prescaling"] + i * ROW_H
                     self.cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left(pending_idx[1]),
                                          cy, COL_W, ROW_H, "tuningvalue", text="", pending=True))
+
+    def _emit_lbox_control(self):
+        """Box 𝐋's lone alt.-complexity control: the replace-diminuator checkbox."""
         if self.lbox_ctrl:  # box 𝐋's lone alt.-complexity control: the "replace diminuator" checkbox,
             # in a bordered box at the bottom of the prescaling matrix (the prescaler chooser is a preset
             # now, riding the preset band above). A SQUARE (no inline label — it wraps broken in the narrow
@@ -3869,6 +3890,9 @@ class _GridBuilder:
                                  checked=service.diminuator_replaced(self.tuning_scheme)))
             self.cells.append(CellBox("caption:diminuator", bx, by + OPTION_BOX_PX, LBOX_DIM_W,
                                  CAPTION_LINE, "caption", text="replace diminuator"))
+
+    def _emit_cbox_controls(self):
+        """Box 𝒄's controls: the predefined-complexities dropdown, q and dual(q)."""
         if self.cbox_ctrl:  # box 𝒄's three controls sit on one row in a bordered box at the bottom of the
             # complexity list: [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its
             # bottom; q and dual(q) use the optimization box's value-over-symbol-over-caption stack — the
@@ -3941,6 +3965,9 @@ class _GridBuilder:
                                      "symbol", text="dual(𝑞)"))
                 self.cells.append(CellBox("caption:dual", dual_slot_x, cap_y, slot_w, cap_h, "caption",
                                      text="dual norm power"))
+
+    def _emit_complexity_row(self):
+        """The complexity row: 𝒄 over every interval set."""
         if self.row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
             for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
                 # the comma list runs over V = C|U when projection is on (the unchanged intervals'
@@ -3955,6 +3982,9 @@ class _GridBuilder:
             if self.show_superspace and self.tile_open("complexity", "ssprimes"):
                 self.tuning_value_row("complexity", "ssprimes",
                               service.superspace_complexity_prescaler(self.state, self.tuning_scheme))
+
+    def _emit_weight_row(self):
+        """The weight row and box 𝒘's weight-slope chooser."""
         if self.row_open("weight") and self.tile_open("weight", "targets"):
             # the weight is always a per-target list (it scales the targets, like damage). The all-
             # interval simplicity weight that has no concrete diagonal form (the size factor / a non-
@@ -3972,6 +4002,9 @@ class _GridBuilder:
             self.cells.append(CellBox("caption:slope", bx, by + PRESET_H,
                                  slope_w, CAPTION_LINE, "caption",
                                  text="damage weight slope", align="left", disabled=self.slope_locked))
+
+    def _emit_damage_row(self, chart_indicators):
+        """The damage row; records the minimized-damage chart indicator."""
         if self.row_open("damage"):  # damage is over the targets only (the tuning's own column)
             self.tuning_value_row("damage", "targets", self.target_sizes.damage)
             # optimization adds the horizontal minimized-damage indicator (the mean damage ⟪𝐝⟫ₚ
@@ -3983,12 +4016,16 @@ class _GridBuilder:
                 chart_indicators[("damage", "targets")] = (
                     _power_mean(self.target_sizes.damage, power), _format_power(power))
 
+    def _emit_charts(self, chart_indicators):
+        """Draw a bar chart over every tile a charted row recorded."""
         # Draw a bar chart over every tile a charted row recorded (see chart_tiles above):
         # one pass, so the set of charts always equals the set of charted-row value tiles.
         for rkey, ckey, values in self.chart_tiles:
             indicator, label = chart_indicators.get((rkey, ckey), (None, ""))
             self.chart(rkey, ckey, values, indicator=indicator, indicator_label=label)
 
+    def _emit_tuning_ranges_box(self):
+        """The generator tuning-ranges chart box; returns its frame rect (gtm_box)."""
         # The generator tuning-ranges chart nests at the BOTTOM of the generator tuning map
         # tile (below its values and caption), a per-generator [min, max] I-beam (octave held
         # pure, so the period generator pins to a point) under the selected mode, diamond-
@@ -4014,7 +4051,10 @@ class _GridBuilder:
             self.cells.append(CellBox("rangemode:tuning:gens", gx, chart_y + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
                                  "rangemode", text=self.range_mode))
             gtm_box = (gx, cy, gw, BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
+        return gtm_box
 
+    def _emit_optimization_box(self):
+        """The optimization box at the bottom of the damage tile; returns its frame rect (opt_box)."""
         # the optimization box, nested at the BOTTOM of the target interval damage list tile (the
         # tuning's own column, whose damages it minimizes): a bordered box titled "optimization",
         # spanning the FULL width of the tile (like the tuning-ranges box) and DISTRIBUTING two
@@ -4025,8 +4065,6 @@ class _GridBuilder:
         # opt_extra to enclose the box's height, and the targets column is floored to OPT_BOX_MIN_W
         # (see _control_floor) so the spread-out controls always fit.
         opt_box = None  # (x, y, w, h) of the bordered frame around the optimization controls
-        approach_frame = None  # (x, y, w, h) of the bordered frame around the approach box
-        self.approach_box = None  # (x, y, w, h) the approach radio is positioned over (None ⇒ hidden)
         if self.opt_ctrl:
             ox = self.col_x["targets"]
             box_w = self.col_w["targets"]                 # the box spans the full width of the damage tile
@@ -4092,7 +4130,12 @@ class _GridBuilder:
             self.cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,
                                  OPT_POW_CAP_W, CAPTION_LINE, "caption", text="optimization power"))
             opt_box = (ox, box_top, box_w, OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + body_h)
+        return opt_box
 
+    def _emit_approach_box(self):
+        """The chapter-9 approach box above the optimization box; returns its frame rect (approach_frame)."""
+        approach_frame = None  # (x, y, w, h) of the bordered frame around the approach box
+        self.approach_box = None  # (x, y, w, h) the approach radio is positioned over (None ⇒ hidden)
         # the chapter-9 approach box: a bordered control box (the tuning-ranges / optimization style)
         # titled "nonstandard domain approach", framing the prime-based/nonprime-based/neutral square
         # radio. It rides the reserved approach_extra slice ABOVE the optimization box, spanning the
@@ -4110,7 +4153,10 @@ class _GridBuilder:
             self.approach_box = (ax + OPT_PAD_L, radio_top,
                                  aw - OPT_PAD_L - OPT_PAD_R, APPROACH_RADIO_H)
             approach_frame = (ax, box_top, aw, BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H)
+        return approach_frame
 
+    def _emit_brackets(self):
+        """The per-row / per-list EBK brackets across all the bands."""
         if self.row_open("canon") and self.tile_open("canon", "primes"):  # canonical maps: ⟨ … ] per row
             for i in range(self.rc):
                 self.bracket(f"canon:map:{i}", MAP_BRACKETS, "primes", self.canon_top(i), ROW_H)
@@ -4319,6 +4365,8 @@ class _GridBuilder:
         if self.tile_open("damage", "targets"):
             self.bracket("damage", LIST_BRACKETS, "targets", self.row_y["damage"], ROW_H)
 
+    def _emit_matrix_labels(self):
+        """Matrix row + column labels (when symbols is on)."""
         # Matrix row + column labels (when symbols is on). A row-labelled tile is a
         # covector stack — the mapping 𝑀, the prescaler 𝑋 — and labels each row 𝒎ᵢ / 𝒙ᵢ
         # at the LEFT of the row's ⟨, inside the MATLABEL_W gutter reserved in the primes
@@ -4408,6 +4456,8 @@ class _GridBuilder:
                         "matlabel", text=text,
                     ))
 
+    def _emit_axes(self):
+        """Shared axes: the fanned column/row buses, the trunks and the spine gridlines."""
         # Shared axes. A multi-element group is one line that fans out at the near end
         # (from its node) into one line per element, runs through the data, then fans
         # back in at the far end to a foot extending a touch past the data — pinched at
@@ -4465,6 +4515,8 @@ class _GridBuilder:
                 self.gridline(f"h:{key}", "h", self.row_y[key] + self.row_h[key] / 2, self.node_edge, self.total_w - self.node_edge,
                          dotted=f"row:{key}" in self.collapsed)
 
+    def _emit_panels(self, gtm_box, opt_box, approach_frame):
+        """The grey tile panels plus the control-region / ranges / optimization / approach boxes."""
         for bid, rkey, ckey in self.tiles:
             if (rkey, ckey) in self.declared_tiles:  # a dropped tile (e.g. all-interval's redundant ones) loses its panel too
                 self.panel(bid, ckey, rkey)
@@ -4481,6 +4533,8 @@ class _GridBuilder:
         if approach_frame is not None:
             self.blocks.append(Block("block:optimization:approach:box", *approach_frame, boxed=True))
 
+    def _emit_washes(self):
+        """The colorization washes: white bases plus the per-group colour bands."""
         if self.col_x and self.row_y:
             bands = []  # (id, x, y, w, h, group)
             # walk self.tiles (the ordered declaration), NOT the declared_tiles set: set
@@ -4501,6 +4555,8 @@ class _GridBuilder:
             for bid, x, y, w, h, group in bands:  # the darken colour bands over them
                 self.blocks.append(Block(f"wash:{bid}", x, y, w, h, tint=group))
 
+    def _emit_symbols_captions(self):
+        """Quantity symbols, equivalences, captions and units lines inside each tile."""
         # quantity symbol + name stacked inside each tile, below its values + bottom
         # frame: the symbol line (toggled by symbols) on top, the long-form name
         # (toggled by names) under it. Equivalences extends the symbol line with the
@@ -4610,6 +4666,8 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"units:{rkey}:{ckey}", self.col_x[ckey], uy, self.col_w[ckey], UNIT_H,
                                      "units", text=f"units: {unit}"))
 
+    def _emit_presets(self):
+        """Preset chooser dropdowns in the reserved band below each governing tile."""
         # preset chooser dropdowns, in the reserved band below each governing tile's
         # plain-text box. The tuning/target choosers carry the live selection; the
         # temperament chooser is a placeholder (it loads, not mirrors). These are controls,
@@ -4664,6 +4722,8 @@ class _GridBuilder:
                     ckey = "ssgens"
                 emit_preset(f"preset:{name}:{ckey}", name, rkey, ckey, label)
 
+    def _emit_all_interval_check_fallback(self):
+        """The all-interval checkbox alone in the band when the presets layer is hidden."""
         # the all-interval checkbox is revealed by the show-panel "all-interval" entry ALONE (not the
         # presets toggle). When the target chooser is shown, emit_preset seats the checkbox inside
         # the chooser's box (box 𝐓, above); when it is hidden the checkbox is the band's only target
@@ -4672,6 +4732,8 @@ class _GridBuilder:
             top = self.ptext_band_y("vectors") + self.row_ptext["vectors"]
             self.emit_all_interval_check(self.col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
 
+    def _emit_form_choosers(self):
+        """The form choosers, one box below the preset choosers."""
         # the form chooser, one box below the preset chooser: it canonicalizes the mapping /
         # comma basis it rides (an undoable edit). A control, so it ignores the value-display
         # toggles, like the preset choosers.
@@ -4683,6 +4745,8 @@ class _GridBuilder:
                 cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESET_W, label)
                 self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser"))
 
+    def _emit_scheme_buttons(self):
+        """The return-to-scheme ✕ buttons in their own boxes when presets are off."""
         # the always-present "return to scheme" ✕ button on the projection (P) and embedding (G) tiles —
         # hands a picked/edited tuning back to the scheme + target list (editor.back_to_scheme). With
         # presets ON it rides INSIDE the established-projection chooser's box (control_box's scheme_btn,
@@ -4701,6 +4765,8 @@ class _GridBuilder:
                                          BOX_INNER + SCHEME_BTN_SQ + CTRL_LABEL_GAP, boxed=True))
                 self.emit_scheme_button(self.col_x[ckey] + BOX_INNER, box_y + BOX_INNER, ckey)
 
+    def _emit_ptext_band(self):
+        """The plain-text value band below each tile's symbol/caption stack."""
         # plain-text value band: each tile's value as its natural EBK string, directly
         # below the symbol/caption stack (above the preset chooser). The two editable
         # duals (mapping, comma basis) render as inputs that drive the grid; every other
@@ -4730,6 +4796,8 @@ class _GridBuilder:
             # a quantities-row plain text — "2.3.5", the compact prime-limit notation (from the
             # service seam above), which the gridded "2 3 5" cells don't show that way.
 
+    def _emit_ebk_frames_and_marks(self):
+        """Matrix frames, vector-list ket marks and the C|U split bars."""
         self.matrix_frame("mapping", "primes", "primes")
         # P = GM: a covector stack like the mapping, but closing with the prime-coordinate ket ⟩
         # (P is p/p) — matching its plain text [⟨…]…⟩, not the mapping's generator-coordinate }
@@ -4841,6 +4909,8 @@ class _GridBuilder:
         self.vector_list_marks("prescaling", "prescaling:interest", "interest", self.interest_left, self.mi, foot="ebkangle", separators=False)
         self.v_split_bars()  # the lone C|U divider down every tile of the consolidated V column
 
+    def _emit_tile_toggles(self):
+        """A per-tile fold toggle inset into each content tile's top-left corner."""
         # a per-tile fold toggle inset into each content tile's top-left corner: it
         # sits in the head strip reserved above the content, TOGGLE_INSET in from the
         # grey panel's top-left, so it never touches an edge or overlaps the frame.
@@ -4856,6 +4926,8 @@ class _GridBuilder:
                                      self.col_x[ckey] - PAD + TOGGLE_INSET, self.tile_top[rkey] - PAD + TOGGLE_INSET,
                                      TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
+    def _apply_value_display_filters(self):
+        """Value-display filtering and the doomed-column remove preview over the final cells."""
         # Value-display filtering. The tiles (blocks) and gridlines (lines) always
         # stand; only a tile's *contents* answer to the value-display toggles, applied
         # here by kind rather than threaded through every emission above. "gridded
@@ -4881,6 +4953,52 @@ class _GridBuilder:
                               and cb.kind not in ("count", "caption", "colgrip"))
                           else cb
                           for cb in self.cells]
+
+    def layout(self) -> Layout:
+        self.cells: list[CellBox] = []
+        self.lines: list[Line] = []
+        self.blocks: list[Block] = []
+        # the box-𝐋/𝒄/𝒘 control boxes are emitted during the cell pass (to position their controls)
+        # but must LAYER ON TOP of the grey tile panels — appended below the panel loop, like the
+        # optimization / ranges boxes — so collect them here and flush them after the panels.
+        self._control_region_boxes: list[Block] = []
+
+        self._emit_headers()
+        self._emit_counts_row()
+        self._emit_units()
+        self._emit_quantities_row()
+        self._emit_column_plus_controls()
+        self._emit_rehomed_minus_controls()
+        self._emit_mapping_band()
+        self._emit_projection_band()
+        self._emit_canon_band()
+        self._emit_vectors_band()
+        self._emit_superspace_rows()
+        chart_indicators = self._emit_tuning_rows()
+        self._emit_prescaling_band()
+        self._emit_lbox_control()
+        self._emit_cbox_controls()
+        self._emit_complexity_row()
+        self._emit_weight_row()
+        self._emit_damage_row(chart_indicators)
+        self._emit_charts(chart_indicators)
+        gtm_box = self._emit_tuning_ranges_box()
+        opt_box = self._emit_optimization_box()
+        approach_frame = self._emit_approach_box()
+        self._emit_brackets()
+        self._emit_matrix_labels()
+        self._emit_axes()
+        self._emit_panels(gtm_box, opt_box, approach_frame)
+        self._emit_washes()
+        self._emit_symbols_captions()
+        self._emit_presets()
+        self._emit_all_interval_check_fallback()
+        self._emit_form_choosers()
+        self._emit_scheme_buttons()
+        self._emit_ptext_band()
+        self._emit_ebk_frames_and_marks()
+        self._emit_tile_toggles()
+        self._apply_value_display_filters()
 
         # Each column title renders unwrapped and centred on its gridline (see _title_w and the
         # .rtt-colheader rule), so one wider than its content-hugging column overhangs it. Interior
