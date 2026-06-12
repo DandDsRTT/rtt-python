@@ -1,6 +1,36 @@
+import pickle
+
+import pytest
+
 from rtt.app import service, settings, spreadsheet
 from rtt.app.editor import Editor
 from rtt.app.layout import CellBox, Layout
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _memoized_build():
+    """Cache byte-identical spreadsheet.build calls for this module. Measured: ~465 of this
+    file's ~857 builds repeat a prior (args, kwargs) exactly — ~34s of pure waste per run.
+    Layout and its parts are frozen dataclasses and no test mutates a returned layout, so
+    handing repeat calls the same object is behavior-preserving. In-file (not a tests/app
+    conftest) deliberately: the render tests re-import rtt.* and must not see a stale patch."""
+    real = spreadsheet.build
+    cache: dict = {}
+
+    def cached(*args, **kwargs):
+        try:
+            key = pickle.dumps((args, sorted(kwargs.items())), protocol=pickle.HIGHEST_PROTOCOL)
+        except Exception:
+            return real(*args, **kwargs)  # unpicklable arguments: just build
+        if key not in cache:
+            cache[key] = real(*args, **kwargs)
+        return cache[key]
+
+    spreadsheet.build = cached
+    try:
+        yield
+    finally:
+        spreadsheet.build = real
 
 
 def _layout(mapping=((1, 1, 0), (0, 1, 4))):

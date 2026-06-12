@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import math
 import os
 import sys
@@ -46,6 +47,8 @@ from rtt.app.marks import (
     _top_bracket,
     _vbar,
 )
+
+_log = logging.getLogger(__name__)
 
 
 class _KindHandlers(NamedTuple):
@@ -2765,7 +2768,9 @@ def index() -> None:
         try:
             editor.load(stored)
         except Exception:
-            pass
+            # still fall back to the as-shipped defaults, but leave a trace: a load-path
+            # regression silently resetting every returning user's document must be visible
+            _log.exception("stored document failed to load; using defaults: %.200r", stored)
     rec = _Reconciler(editor)
     building = [False]
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
@@ -3441,7 +3446,8 @@ def index() -> None:
         spec = f"{int(float(text))}-{family}" if text else family  # blank -> the bare family (domain default)
         try:
             valid = bool(service.target_interval_set(spec, editor.state.domain_basis))
-        except Exception:
+        except Exception as exc:
+            _log.debug("target spec %r rejected: %r", spec, exc)
             valid = False
         if not valid:
             _edit_candidate(None)
@@ -3673,7 +3679,8 @@ def index() -> None:
         spec = f"{int(float(text))}-{family}" if text else family
         try:
             valid = bool(service.target_interval_set(spec, editor.state.domain_basis))
-        except Exception:
+        except Exception as exc:
+            _log.debug("target spec %r rejected: %r", spec, exc)
             valid = False
         if not valid:
             return

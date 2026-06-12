@@ -14,6 +14,7 @@ NiceGUI layer is thin glue over this; all of it is unit-testable without a UI.
 from __future__ import annotations
 
 import functools
+import logging
 import re
 from dataclasses import dataclass
 from fractions import Fraction
@@ -24,6 +25,8 @@ from rtt.app import settings as show_settings
 from rtt.app import spreadsheet
 from rtt.app.layout import Layout
 from rtt.app.service import TemperamentState
+
+_log = logging.getLogger(__name__)
 
 INITIAL_MAPPING = ((1, 1, 0), (0, 1, 4))  # meantone, matching the original app
 # The rows/columns/tiles folded to strips on a fresh start and after Reset. Empty:
@@ -685,6 +688,9 @@ class Editor:
                 return False
             self.edit_comma_basis(basis, domain_basis)
         except Exception:
+            # parse gates already rejected every malformed basis, so reaching here is a bug,
+            # not bad input — log it loudly instead of letting it masquerade as a red box
+            _log.exception("comma-basis edit failed on %r", basis)
             return False
         return True
 
@@ -793,7 +799,8 @@ class Editor:
                                       targets=self.target_override).retuning_map
             return service.tuning_from_generators(
                 self.state.mapping, generators, self.state.domain_basis).retuning_map
-        except (ValueError, ArithmeticError, IndexError, TypeError):
+        except (ValueError, ArithmeticError, IndexError, TypeError) as exc:
+            _log.debug("_displayed_retuning_map dashed: %r", exc)
             return None
 
     @property
@@ -837,7 +844,8 @@ class Editor:
             return True
         try:
             optimum = self._optimum_generator_tuning()
-        except (ValueError, ArithmeticError, IndexError, TypeError):
+        except (ValueError, ArithmeticError, IndexError, TypeError) as exc:
+            _log.debug("optimum solve failed; treating displayed tuning as optimal: %r", exc)
             return True
         return len(displayed) == len(optimum) and all(abs(a - b) < 1e-6 for a, b in zip(displayed, optimum))
 

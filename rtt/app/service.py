@@ -7,6 +7,7 @@ a temperament's mapping and its dual comma basis (kept in sync) plus dimensions.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict, dataclass, replace
 from fractions import Fraction
 from functools import reduce
@@ -49,6 +50,8 @@ from rtt.library.tuning import (
     tuning_map_from_generators,
 )
 from rtt.library.tuning_ranges import get_generator_tuning_range as _get_generator_tuning_range
+
+_log = logging.getLogger(__name__)
 
 
 def get_generator_tuning_range(t, mode):
@@ -641,7 +644,8 @@ def tuning_projection(state: TemperamentState, held_ratios=()):
         if inputs is None:
             return None
         return _matrix_strings(get_tempering_projection(*inputs))
-    except (ArithmeticError, ValueError, IndexError, TypeError):
+    except (ArithmeticError, ValueError, IndexError, TypeError) as exc:
+        _log.debug("tuning_projection dashed: %r", exc)
         return None
 
 
@@ -656,7 +660,8 @@ def tuning_embedding(state: TemperamentState, held_ratios=()):
         if inputs is None:
             return None
         return _matrix_strings(get_generator_embedding(*inputs))
-    except (ArithmeticError, ValueError, IndexError, TypeError):
+    except (ArithmeticError, ValueError, IndexError, TypeError) as exc:
+        _log.debug("tuning_embedding dashed: %r", exc)
         return None
 
 
@@ -670,7 +675,8 @@ def projection_matrix_rationals(state: TemperamentState, held_ratios=()):
         if inputs is None:
             return None
         return get_tempering_projection(*inputs)
-    except (ArithmeticError, ValueError, IndexError, TypeError):
+    except (ArithmeticError, ValueError, IndexError, TypeError) as exc:
+        _log.debug("projection_matrix_rationals dashed: %r", exc)
         return None
 
 
@@ -705,7 +711,8 @@ def superspace_generator_embedding(state: TemperamentState, held_ratios=()):
         g = sp.Matrix([list(r) for r in p_rat]) * sp.Matrix([list(r) for r in msl]).pinv()
         return tuple(tuple(Fraction(g[i, j].p, g[i, j].q) for j in range(g.cols))
                      for i in range(g.rows))
-    except (ArithmeticError, ValueError, IndexError, TypeError, AttributeError):
+    except (ArithmeticError, ValueError, IndexError, TypeError, AttributeError) as exc:
+        _log.debug("superspace_generator_embedding dashed: %r", exc)
         return None
 
 
@@ -797,7 +804,8 @@ def superspace_tuning_projection(state: TemperamentState, held_ratios=()):
         if inputs is None:
             return None
         return _matrix_strings(get_tempering_projection(*inputs))
-    except (ArithmeticError, ValueError, IndexError, TypeError):
+    except (ArithmeticError, ValueError, IndexError, TypeError) as exc:
+        _log.debug("superspace_tuning_projection dashed: %r", exc)
         return None
 
 
@@ -863,7 +871,8 @@ def unchanged_basis_from_projection(state: TemperamentState, projection):
                 return None
         U = _integer_columns((P - sp.eye(d)).nullspace())
         return tuple(U) if len(U) == r else None
-    except (ArithmeticError, ValueError, IndexError, TypeError):
+    except (ArithmeticError, ValueError, IndexError, TypeError) as exc:
+        _log.debug("unchanged_basis_from_projection dashed: %r", exc)
         return None
 
 
@@ -880,7 +889,8 @@ def unchanged_basis_from_embedding(state: TemperamentState, embedding):
             return None
         U = _integer_columns(G.columnspace())
         return tuple(U) if len(U) == r else None
-    except (ArithmeticError, ValueError, IndexError, TypeError):
+    except (ArithmeticError, ValueError, IndexError, TypeError) as exc:
+        _log.debug("unchanged_basis_from_embedding dashed: %r", exc)
         return None
 
 
@@ -2022,7 +2032,8 @@ def parse_projection(text: str):
     (idempotent) projection is the editor's call (``set_projection_matrix``)."""
     try:
         t = parse_temperament_data(text)
-    except Exception:
+    except Exception as exc:
+        _log.debug("parse_projection rejected %.80r: %r", text, exc)
         return None
     if t.variance is not Variance.ROW:
         return None
@@ -2036,7 +2047,8 @@ def parse_embedding(text: str, d: int, r: int):
     a shape that isn't r kets of length d is rejected. The inverse of :func:`embedding_ebk`."""
     try:
         t = parse_temperament_data(text)
-    except Exception:
+    except Exception as exc:
+        _log.debug("parse_embedding rejected %.80r: %r", text, exc)
         return None
     if t.variance is not Variance.COL:
         return None
@@ -2058,7 +2070,8 @@ def parse_prescaler_diagonal(text: str, d: int) -> tuple[float, ...] | None:
     The reader behind a typed custom-prescaler EBK string (the bare prescaler tile's ptext)."""
     try:
         t = parse_temperament_data(text)
-    except Exception:
+    except Exception as exc:
+        _log.debug("parse_prescaler_diagonal rejected %.80r: %r", text, exc)
         return None
     # the matrix is d×d, or (d+1)×d when the size factor adds the size-sensitizing row (the
     # rectangular 𝑋 = 𝑍𝐿); only the d diagonal rows are validated and read — the size row is
@@ -2087,7 +2100,8 @@ def parse_mapping_state(text: str) -> TemperamentState | None:
         if t.variance is not Variance.ROW or _int_matrix_or_none(t.matrix) is None:
             return None
         return from_temperament_data(text)
-    except Exception:
+    except Exception as exc:
+        _log.debug("parse_mapping_state rejected %.80r: %r", text, exc)
         return None
 
 
@@ -2097,7 +2111,8 @@ def parse_comma_basis(text: str) -> Matrix | None:
     The inverse of the ``("vectors", "commas")`` plain text."""
     try:
         t = parse_temperament_data(text)
-    except Exception:
+    except Exception as exc:
+        _log.debug("parse_comma_basis rejected %.80r: %r", text, exc)
         return None
     if t.variance is not Variance.COL:
         return None
