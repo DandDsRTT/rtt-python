@@ -255,10 +255,11 @@ SYMBOLS = {
     ("ss_projection", "ssprimes"): f"𝑃{SUBSCRIPT_L}",
     # the rest of the superspace projection row: the embedding G_L (upright, a basis like the on-domain
     # G) and P_L applied to each lifted basis — 𝑃_L (italic operator) + the upright basis letter with
-    # its subscript L (B_Ls / D_L / C_L / T_L / H_L), parallel to the on-domain 𝑃D / 𝑃T / 𝑃H. Interest
-    # carries no symbol (a loose collection, like the on-domain projected interest).
+    # its subscript L (B_L / D_L / C_L / T_L / H_L), parallel to the on-domain 𝑃D / 𝑃T / 𝑃H. Interest
+    # carries no symbol (a loose collection, like the on-domain projected interest). (The mockup writes
+    # P_L·B_Ls with a trailing ₛ, but no other symbol carries that subscript, so we drop it for parity.)
     ("ss_projection", "ssgens"): f"G{SUBSCRIPT_L}",
-    ("ss_projection", "primes"): f"𝑃{SUBSCRIPT_L}B{SUBSCRIPT_L}ₛ",
+    ("ss_projection", "primes"): f"𝑃{SUBSCRIPT_L}B{SUBSCRIPT_L}",
     ("ss_projection", "detempering"): f"𝑃{SUBSCRIPT_L}D{SUBSCRIPT_L}",
     ("ss_projection", "commas"): f"𝑃{SUBSCRIPT_L}C{SUBSCRIPT_L}",
     ("ss_projection", "targets"): f"𝑃{SUBSCRIPT_L}T{SUBSCRIPT_L}",

@@ -1597,6 +1597,25 @@ def test_plain_text_values_includes_the_superspace_projection_when_projection_on
     assert dashed[("ss_projection", "ssprimes")] == service.projection_ebk(None, 4)
 
 
+def test_plain_text_values_includes_every_superspace_projection_tile():
+    # parity with the on-domain projection row: EVERY tile of the superspace projection row gets its EBK
+    # band, not just P_L — the embedding G_L and P_L applied to each lifted list (P_L·B_L / P_L·D_L /
+    # P_L·V / P_L·T_L), each built from the same P_L the grid uses.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    pt = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=("2", "13/5"))
+    for col in ("ssgens", "ssprimes", "primes", "detempering", "commas", "targets"):
+        assert ("ss_projection", col) in pt, col
+    # the bracket shapes mirror the on-domain twins: G_L a vector list ({…]), P_L·B_Ls the covector-style
+    # ⟨…] of B_L, P_L·D_L the generator-coordinate {…], P_L·V / P_L·T_L the plain […]
+    assert pt[("ss_projection", "ssgens")].startswith("{") and pt[("ss_projection", "ssgens")].endswith("]")
+    assert pt[("ss_projection", "primes")].startswith("⟨")
+    assert pt[("ss_projection", "detempering")].startswith("{")
+    assert pt[("ss_projection", "targets")].startswith("[")
+    # dashed in lockstep with P_L when under-held
+    dashed = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=())
+    assert "—" in dashed[("ss_projection", "primes")]
+
+
 def test_plain_text_values_includes_superspace_entries_when_superspace_on():
     # Phase 4: the nonstandard-domain superspace region (B_L, M_L, M_jL, 𝒈ₗ / 𝒕ₗ / 𝒋ₗ /
     # 𝒓ₗ) gets its own plain-text strings when the superspace flag is on — the EBK string

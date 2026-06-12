@@ -1839,13 +1839,36 @@ def plain_text_values(
             ("just", "ssprimes"): _cents_map(ss_tun.just_map),
             ("retune", "ssprimes"): _cents_map(ss_tun.retuning_map),
         })
-        # the superspace projection P_L = G_L·M_L's EBK band — the plain-text twin of its grid, a
-        # covector stack closing with the angle ⟩ (the b/b operator, framed like the on-domain P).
-        # Only when the projection toggle is on (consolidate_v), like the on-domain P band below, and
-        # built from the SAME held basis so the two views agree; projection_ebk dashes a None matrix.
+        # the superspace projection row's EBK bands — the plain-text twins of its grid tiles. P_L
+        # itself is a covector stack closing with the angle ⟩ (the b/b operator, framed like the on-
+        # domain P); the embedding G_L is a vector list ({…]); and each projected list is P_L applied
+        # to the lifted vectors, mirroring the on-domain G / P·B_Ls / P·D / P·V / P·T / P·H / P·interest
+        # plain text. Only when the projection toggle is on (consolidate_v), like the on-domain bands,
+        # built from the SAME P_L so the two views agree; dashed in lockstep when P_L is None.
         if consolidate_v:
+            dL = len(ss_primes)
+            p_L = superspace_projection_matrix_rationals(state, held_basis_ratios)
+
+            def _ssp_cols(vectors):  # P_L · each lifted vector, dashed (dL-tall) when P_L is None
+                cols = project_vectors(p_L, lift_vectors_to_superspace(db, vectors))
+                return list(cols) if cols else [tuple(_DASH for _ in range(dL)) for _ in vectors]
+
+            proj_bl = project_vectors(p_L, bl) or [tuple(_DASH for _ in range(dL)) for _ in bl]
+            ss_u = [None if u is None else lift_vectors_to_superspace(db, (u,))[0] for u in u_basis]
             values[("ss_projection", "ssprimes")] = projection_ebk(
-                superspace_tuning_projection(state, held_basis_ratios), len(ss_primes))
+                superspace_tuning_projection(state, held_basis_ratios), dL)
+            values[("ss_projection", "ssgens")] = embedding_ebk(
+                superspace_tuning_embedding(state, held_basis_ratios), dL, superspace_rank(state))
+            # P_L·B_Ls keeps B_L's outer ⟨ … ] (covector-style) around its per-element kets [ … ⟩
+            values[("ss_projection", "primes")] = "⟨" + _ket_list(proj_bl, "⟩", wrap=False) + "]"
+            values[("ss_projection", "detempering")] = "{" + _ket_list(_ssp_cols(detemper_vectors), "⟩", wrap=False) + "]"
+            # P_L·V: the comma half vanishes (P_L·𝐜 = 𝟎) then the unchanged half held, lifted (like on-domain P·V)
+            values[("ss_projection", "commas")] = _ket_list([(0,) * dL for _ in commas] + ss_u, "⟩")
+            values[("ss_projection", "targets")] = _ket_list(_ssp_cols(target_vectors), "⟩")
+            if held:
+                values[("ss_projection", "held")] = _ket_list(_ssp_cols(held), "⟩")
+            if interest:
+                values[("ss_projection", "interest")] = _ket_list(_ssp_cols(interest), "⟩", wrap=False)
         # the chapter-9 prescaler SHIFT (the plain-text twin of the gridded cells): the bare 𝐿
         # moves into the ss-primes column — the dL×dL log-prime diagonal over the TRUE primes, a
         # covector stack [ ⟨…] ⟨…] ⟩ that stays EDITABLE — while the domain-primes tile becomes the

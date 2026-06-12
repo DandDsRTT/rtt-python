@@ -6998,7 +6998,7 @@ def test_superspace_projection_extra_tiles_carry_captions_symbols_and_units():
     # the commas tile reads as the consolidated V (unrotated vector list) under the projection view
     assert cells["caption:ss_projection:commas"].text == "projected unrotated vector list in superspace"
     assert cells["symbol:ss_projection:ssgens"].text == "GL"                  # G_L
-    assert cells["symbol:ss_projection:primes"].text == "𝑃LBLₛ"   # P_L B_Ls
+    assert cells["symbol:ss_projection:primes"].text == spreadsheet.SYMBOLS[("ss_projection", "primes")]  # P_L B_L (no trailing s)
     assert cells["units:ss_projection:ssgens"].text == "units: b/gL"            # b/gL
     assert cells["units:ss_projection:primes"].text == "units: b/p"
     assert cells["units:ss_projection:detempering"].text == "units: b"
@@ -7030,6 +7030,14 @@ def test_superspace_projection_emits_a_plain_text_band():
     off = {c.id for c in _barbados_ss(plain_text_values=True).cells}  # projection off
     assert "ptext:ss_mapping:ssprimes" in off
     assert "ptext:ss_projection:ssprimes" not in off
+
+
+def test_superspace_projection_every_tile_emits_a_plain_text_band():
+    # parity with the on-domain projection row: EVERY tile carries a plain-text EBK band when
+    # plain_text_values is on — not just P_L, but the embedding G_L and each projected list.
+    cells = {c.id for c in _barbados_proj(plain_text_values=True, generator_detempering=True).cells}
+    for col in ["ssgens", "ssprimes", "primes", "detempering", "commas", "targets"]:
+        assert f"ptext:ss_projection:{col}" in cells, col
 
 
 def test_superspace_projection_caption_symbol_and_units_when_named():
