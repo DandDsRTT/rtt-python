@@ -579,7 +579,7 @@ def canonical_comma_basis(comma_basis) -> Matrix:
 
 
 def held_basis_vectors(state: TemperamentState, held_ratios) -> tuple:
-    """The tuning's held-interval basis as up to ``r`` INDEPENDENT domain vectors: the held
+    """The tuning's held interval basis as up to ``r`` INDEPENDENT domain vectors: the held
     intervals (the scheme's structural held plus the held column) parsed to vectors and reduced
     to a basis — dependent, out-of-domain, and beyond-rank entries are dropped. These are the
     KNOWN unchanged intervals of the tuning; a tuning holding fewer than ``r`` of them leaves the
@@ -621,7 +621,7 @@ def _projection_temperaments(state: TemperamentState, held_vectors):
 
 def _held_for_projection(state: TemperamentState, held_ratios):
     """The held basis that pins ``P``/``G``: every prime for the trivial temperament (``n = 0``,
-    JI), else the tuning's held-interval basis from ``held_ratios``."""
+    JI), else the tuning's held interval basis from ``held_ratios``."""
     return _all_primes_held(state) if state.n == 0 else held_basis_vectors(state, held_ratios)
 
 
@@ -635,7 +635,7 @@ def tuning_projection(state: TemperamentState, held_ratios=()):
     ``"0"``, ``"1/4"`` …), or ``None`` when the tuning is NOT a full rational projection — its
     held basis isn't full rank ``r`` (it holds fewer than ``r`` rational intervals, so ``P`` is
     undetermined and the caller dashes it out) or is degenerate (a singular hold like pajara's
-    ``{2/1, 7/5}``). ``held_ratios`` is the tuning's held-interval basis (the scheme's structural
+    ``{2/1, 7/5}``). ``held_ratios`` is the tuning's held interval basis (the scheme's structural
     held plus the held column) as ratio strings; the trivial temperament (``n = 0``) is JI, so
     ``P = I``. ``P`` sends each just prime to its tempered size (``j·P = t``), idempotent with the
     commas in its kernel."""
@@ -742,7 +742,7 @@ def superspace_prime_projection_display(state: TemperamentState, held_ratios=())
 
 
 def _superspace_held_basis(state: TemperamentState, held_ratios, ml):
-    """The held-interval basis that pins ``P_L``, as ``rL`` independent ``dL``-tall vectors over the
+    """The held interval basis that pins ``P_L``, as ``rL`` independent ``dL``-tall vectors over the
     superspace primes (rows-as-intervals, the COL-variance storage convention), or ``None`` when the
     tuning isn't a full rational projection (its domain held basis isn't full rank ``r``).
 
@@ -856,7 +856,7 @@ def _integer_columns(vectors):
 
 
 def unchanged_basis_from_projection(state: TemperamentState, projection):
-    """The unchanged-interval basis ``U`` recovered from a hand-edited projection matrix ``P`` (a
+    """The unchanged interval basis ``U`` recovered from a hand-edited projection matrix ``P`` (a
     ``d×d`` grid of fraction strings) — its eigenvalue-1 eigenvectors ``nullspace(P − I)`` as
     primitive integer interval vectors. ``None`` when the edit isn't a valid rational tempering
     projection of THIS temperament: not idempotent (``P² ≠ P``), the commas not in its kernel
@@ -877,7 +877,7 @@ def unchanged_basis_from_projection(state: TemperamentState, projection):
 
 
 def unchanged_basis_from_embedding(state: TemperamentState, embedding):
-    """The unchanged-interval basis ``U`` recovered from a hand-edited generator embedding ``G`` (a
+    """The unchanged interval basis ``U`` recovered from a hand-edited generator embedding ``G`` (a
     ``d×r`` grid of fraction strings) — the integer basis of its column space (the generators span
     the held subspace). ``None`` when ``G`` isn't a valid embedding of this temperament: ``M·G ≠ I``
     (its generators don't map to themselves) or the wrong rank. The inverse of :func:`tuning_embedding`."""
@@ -895,14 +895,14 @@ def unchanged_basis_from_embedding(state: TemperamentState, embedding):
 
 
 def unchanged_interval_basis(state: TemperamentState, held_ratios=()):
-    """The unchanged-interval basis ``U`` as exactly ``r`` columns: the tuning's held intervals
+    """The unchanged interval basis ``U`` as exactly ``r`` columns: the tuning's held intervals
     (``h`` known, rational vectors, stored rows-as-intervals like the comma basis) padded to rank
     ``r`` with ``None`` — a DASHED column — for each direction the optimization leaves irrational.
     A tuning holding fewer than ``r`` rational intervals is not a full rational projection there,
     so those columns are unknown. Together with the comma basis ``C`` it forms ``V = C | U`` (the
     commas have eigenvalue 0, the unchanged 1). The trivial temperament (``n = 0``, JI) tempers
     nothing, so every prime is unchanged — ``U`` is all ``d`` primes with no dashes. ``held_ratios``
-    is the tuning's held-interval basis (scheme held + held column). ``None`` only on a degenerate
+    is the tuning's held interval basis (scheme held + held column). ``None`` only on a degenerate
     domain (``d ≤ 0`` / ``r`` out of range)."""
     d, r = state.d, state.r
     if d <= 0 or not 0 < r <= d:
@@ -973,13 +973,13 @@ def unchanged_interval_data(state: TemperamentState, held_ratios, tun: Tuning, s
 
 def unchanged_ratios_of_tuning(state: TemperamentState, retuning_map, candidate_ratios, tol=1e-6):
     """The ratio strings of the intervals the DISPLAYED tuning actually holds unchanged — its
-    rational unchanged-interval basis, read straight off the tuning rather than off the held
+    rational unchanged interval basis, read straight off the tuning rather than off the held
     column. An interval ``i`` is unchanged exactly when its damage is zero, i.e. the per-prime
     retuning map (tempered − just sizes) dotted with ``i`` is ``0``; genuine holds land at ``0``
     to floating-point precision while everything else is whole cents away, so the check is a clean
     threshold with no integer-relation guessing. We only TEST ``candidate_ratios`` (the
     temperament's established-projection bases first — for clean representatives like ``5/4`` over
-    ``5/2`` — then the target-interval set, then the held column), so a basis of the unchanged
+    ``5/2`` — then the target interval set, then the held column), so a basis of the unchanged
     subspace is always among them. Returns up to ``r`` independent ratios (fewer ⇒ the tuning isn't
     a full rational projection, and the caller dashes the rest); JI (``n = 0``) holds every prime."""
     d, r = state.d, state.r

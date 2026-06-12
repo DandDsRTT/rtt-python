@@ -233,7 +233,7 @@ def tuning_scheme_options(all_interval: bool, include_alternatives: bool, weight
 # Established rational projections / embeddings, keyed by temperament chooser value (see
 # :func:`temperament_options`): the recognized rational tunings of each temperament, as
 # ``{name: held ratio strings}``. A tuning belongs here only if it holds a FULL-RANK set of
-# RATIONAL intervals exactly just (its unchanged-interval basis) — only then is it expressible
+# RATIONAL intervals exactly just (its unchanged interval basis) — only then is it expressible
 # as a rational projection ``P = GM`` and embedding ``G`` (the established-projection chooser
 # drives P/G by the chosen tuning's held intervals; see :func:`rtt.app.service.tuning_projection`).
 # Most temperaments have NO such established tuning — an OPTIMIZED tuning (minimax-S, minimax-ES …)
@@ -271,7 +271,7 @@ def projection_candidate_ratios(state) -> tuple[str, ...]:
     established projections, octave first then the distinguishing held interval of each tuning,
     de-duplicated in list order. Putting these first means a tuning that holds, say, ``5/4`` is
     reported with that clean representative rather than an equivalent like ``5/2``. The caller
-    appends the target-interval set and held column so a basis of the unchanged subspace is always
+    appends the target interval set and held column so a basis of the unchanged subspace is always
     covered even for temperaments with no established projection."""
     seen: dict[str, None] = {}
     for ratios in ESTABLISHED_PROJECTIONS.get(identify(state), {}).values():
@@ -309,7 +309,7 @@ def identify_established_projection(state, held_ratios) -> str | None:
     """The named established tuning the current held basis realises — the chooser's displayed
     value — found by matching its projection. ``None`` (the placeholder) when the tuning isn't a
     full rational projection (``P`` dashed, so the held basis is under-rank) or matches no named
-    tuning. ``held_ratios`` is the tuning's held-interval basis (scheme held + held column)."""
+    tuning. ``held_ratios`` is the tuning's held interval basis (scheme held + held column)."""
     current = service.tuning_projection(state, held_ratios)
     if current is None:
         return None

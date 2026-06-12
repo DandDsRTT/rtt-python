@@ -1999,14 +1999,14 @@ def test_tuning_embedding_of_just_intonation_is_the_identity():
 
 def test_tuning_projection_and_embedding_drop_a_degenerate_held_basis():
     # pajara maps 7/5 to exactly half the octave's image, so {2/1, 7/5} cannot be a
-    # simultaneous unchanged-interval basis: M·H is singular and no rational projection
+    # simultaneous unchanged interval basis: M·H is singular and no rational projection
     # forms. Both helpers return None rather than crash (the chooser then won't offer it).
     state = service.from_mapping(((2, 3, 5, 6), (0, 1, -2, -2)))
     assert service.tuning_projection(state, ("2/1", "7/5")) is None
     assert service.tuning_embedding(state, ("2/1", "7/5")) is None
 
 
-# --- the unchanged-interval basis U: the held intervals padded to rank r with dashes ---
+# --- the unchanged interval basis U: the held intervals padded to rank r with dashes ---
 
 def test_unchanged_interval_basis_is_all_dashes_for_an_under_held_tuning():
     # the default meantone tuning holds nothing rational (h=0), so BOTH unchanged columns are
@@ -2049,7 +2049,7 @@ def test_unchanged_interval_basis_always_has_r_columns():
 
 
 def test_held_basis_vectors_keeps_only_independent_in_domain_intervals():
-    # the held-interval basis reduces to a basis: dependent / out-of-domain / beyond-rank entries
+    # the held interval basis reduces to a basis: dependent / out-of-domain / beyond-rank entries
     # are dropped (a tuning can't hold more than r independent directions).
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     assert service.held_basis_vectors(state, ("2/1", "4/1")) == ((1, 0, 0),)   # 4/1 ∥ 2/1, dropped

@@ -83,7 +83,7 @@ class _Doc:
     custom_prescaler: tuple | None
     target_override: tuple[str, ...] | None  # a typed explicit target list, overriding the TILT/OLD spec
     # NB: there is no separate "projection" field — the projection P = GM, embedding G and
-    # unchanged-interval basis U are all driven by the tuning's HELD-interval basis (the scheme's
+    # unchanged interval basis U are all driven by the tuning's HELD interval basis (the scheme's
     # structural held plus held_vectors). The established-projection chooser just writes a named
     # tuning's full rational basis into held_vectors (see Editor.set_established_projection).
     settings: tuple[tuple[str, bool], ...]
@@ -443,7 +443,7 @@ class Editor:
         self.interest_vectors = [tuple(int(x) for x in m) for m in vectors]
 
     def add_held(self) -> None:
-        """Begin a blank held-interval draft — the held intervals column's + control,
+        """Begin a blank held interval draft — the held intervals column's + control,
         mirroring :meth:`add_interest`."""
         self._clear_pending()  # one draft at a time: opening this discards any other
         self.pending_held = [None] * self.state.d
@@ -756,7 +756,7 @@ class Editor:
         self.manual_tuning = True  # a deliberate tuning override (not the scheme optimum)
 
     def set_unchanged_basis(self, ratios) -> None:
-        """Apply a hand-edited unchanged-interval basis (the editable U cells) — set the tuning to the
+        """Apply a hand-edited unchanged interval basis (the editable U cells) — set the tuning to the
         rational projection that holds those intervals, exactly like picking an established projection
         but with your own basis. A no-op when they don't form a valid FULL rational projection, so an
         in-progress or degenerate edit is rejected and reverts on re-render. Undoable."""
@@ -810,7 +810,7 @@ class Editor:
         the default minimax-U meantone reports {2/1, 5/4} (it IS quarter-comma). This is what drives
         the projection P/G and the unchanged basis U; fewer than r ⇒ not a full rational projection,
         and the rest dash. Candidates: the established-projection bases (for clean representatives),
-        the target-interval set, and the held column."""
+        the target interval set, and the held column."""
         retuning = self._displayed_retuning_map()
         if retuning is None:  # the tuning can't be measured — nothing known unchanged, all dashes
             return ()
@@ -821,7 +821,7 @@ class Editor:
 
     @property
     def targets_in_use(self) -> bool:
-        """Whether the target-interval list is actually computing the displayed tuning. The targets
+        """Whether the target interval list is actually computing the displayed tuning. The targets
         only do their job — minimizing damage to pin the generators — when the displayed tuning IS
         the scheme's target-driven optimum. Once you specify a projection (pick one, or edit U/G/P)
         whose tuning deviates from that optimum, the targets play no role, so the whole target column
@@ -1010,7 +1010,7 @@ class Editor:
         return list(service.target_interval_set(self.target_spec, self.state.domain_basis))
 
     def add_target(self) -> None:
-        """Begin a blank target-interval draft — the target list's + control, mirroring
+        """Begin a blank target interval draft — the target list's + control, mirroring
         :meth:`add_interest`. Off in all-interval (the control is hidden there)."""
         self._clear_pending()  # one draft at a time: opening this discards any other
         self.pending_target = [None] * self.state.d
@@ -1044,7 +1044,7 @@ class Editor:
     # rather than one generic list edit. A move is ONE undoable step: it snapshots once, reads
     # the moved vector BEFORE mutating, and removes from the source BEFORE inserting into the
     # destination (so a targets→commas move can't clobber the override it just wrote).
-    # "unchanged" is a COPY source only: the unchanged-interval basis U is derived (read off the
+    # "unchanged" is a COPY source only: the unchanged interval basis U is derived (read off the
     # tuning), so dragging one of its intervals to another list copies it there without removing it
     # from U, and nothing can be dropped INTO U (see _move_feasible / _take_from).
     MOVE_LISTS = ("targets", "held", "interest", "commas", "unchanged")
@@ -1058,7 +1058,7 @@ class Editor:
             return [tuple(v) for v in self.held_vectors]
         if name == "interest":
             return [tuple(v) for v in self.interest_vectors]
-        if name == "unchanged":  # the derived unchanged-interval basis U (None for a dashed column)
+        if name == "unchanged":  # the derived unchanged interval basis U (None for a dashed column)
             return list(service.unchanged_interval_basis(self.state, self.unchanged_ratios) or ())
         return [tuple(v) for v in self.state.comma_basis]  # commas
 

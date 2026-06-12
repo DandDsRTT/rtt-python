@@ -975,7 +975,7 @@ async def test_editing_a_held_ratio_updates_the_interval(user: User) -> None:
     # First commit a held interval via the draft flow (fill its vector cells), then edit the ratio.
     await user.open("/")
     _toggle(user, "optimization")                    # show the optimization box's held column
-    _click_glyph(user, "held_plus")                  # start a blank green held-interval draft
+    _click_glyph(user, "held_plus")                  # start a blank green held interval draft
     _cell_child(user, "cell:held:0:0").set_value("-1")  # fill it to 3/2 = (-1 1 0)
     _cell_child(user, "cell:held:1:0").set_value("1")
     _cell_child(user, "cell:held:2:0").set_value("0")
@@ -1685,10 +1685,10 @@ async def test_a_held_interval_retunes_the_grid_immediately(user: User) -> None:
     # realises the bare scheme, so the established-tuning-scheme chooser drops to "-".
     await user.open("/")
     _toggle(user, "presets")             # show the chooser
-    _toggle(user, "optimization")        # ...and the held-interval column
+    _toggle(user, "optimization")        # ...and the held interval column
     assert _cell_child(user, "preset:tuning").value == "minimax-U"  # the default scheme, named
     assert _cell_child(user, "tuning:gen:1").value != "701.955"     # the unheld optimum fifth is tempered
-    _click_glyph(user, "held_plus")                  # start a blank held-interval draft
+    _click_glyph(user, "held_plus")                  # start a blank held interval draft
     await user.should_see(marker="cell:held:0:0")
     _cell_child(user, "cell:held:0:0").set_value("-1")  # make it the fifth 3/2
     _cell_child(user, "cell:held:1:0").set_value("1")
@@ -2247,7 +2247,7 @@ async def test_scrolling_the_target_limit_down_reddens_the_dropped_target_rows(
     num, _sel = _target_preset(user)
     assert int(num.value) == 5                                 # the shown number stepped down at once
     assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:7")  # the dropped 6/5 row → red
-    assert "rtt-preview-remove" in _wrap_classes(user, "target:7")         # …its target-interval cell too
+    assert "rtt-preview-remove" in _wrap_classes(user, "target:7")         # …its target interval cell too
     assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:6")  # a surviving row is untouched
 
 
@@ -2272,7 +2272,7 @@ async def test_typing_the_target_limit_down_reddens_the_dropped_target_rows(
     UserInteraction(user, {num}, None).trigger("focus")        # snapshot the 6-TILT baseline + own the preview
     UserInteraction(user, {num}, None).trigger("keyup", "5")   # TYPE the limit down to 5-TILT, dropping 6/5
     assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:7")  # the dropped 6/5 row → red
-    assert "rtt-preview-remove" in _wrap_classes(user, "target:7")         # …its target-interval cell too
+    assert "rtt-preview-remove" in _wrap_classes(user, "target:7")         # …its target interval cell too
     assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:6")  # a surviving row is untouched
 
 
@@ -2929,7 +2929,7 @@ async def test_completing_a_held_interval_draft_clears_the_rings_without_blur(us
     assert _ratio_value(user, "held:0") == "3/2"
     for p in range(3):                                           # the committed column carries no ring
         assert "rtt-preview-change" not in _wrap_classes(user, f"cell:held:{p}:0"), \
-            "the held-interval commit left its rings stranded (no blur ever fires on this path)"
+            "the held interval commit left its rings stranded (no blur ever fires on this path)"
     assert "rtt-preview-change" not in _wrap_classes(user, "held:0")
 
 

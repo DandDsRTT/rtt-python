@@ -727,7 +727,7 @@ class _GridBuilder:
                  displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
                  targets_in_use=True, pending_mapping_row=None):
         self.prev_ids = prev_ids or {}
-        # the target-interval column is hidden when the targets aren't computing the tuning (the
+        # the target interval column is hidden when the targets aren't computing the tuning (the
         # displayed tuning has deviated from the scheme's target-driven optimum onto a projection)
         self.targets_in_use = targets_in_use
         self.state = state
@@ -753,7 +753,7 @@ class _GridBuilder:
         # app._build_preset's on-list check. None (a bare spreadsheet.build) keeps the chooser a
         # dropdown; the live page always passes it (see Editor.layout).
         self.displayed_tuning_name = displayed_tuning_name
-        # the tuning's held-interval basis (ratio strings: the scheme's structural held plus the
+        # the tuning's held interval basis (ratio strings: the scheme's structural held plus the
         # held column — editor.held_basis_ratios) drives the projection P = GM, the embedding G and
         # the unchanged basis U; whatever it doesn't pin (h < r) is dashed out. The NAME the
         # established-projection chooser shows (editor.displayed_projection_scheme_name) is threaded
@@ -970,7 +970,7 @@ class _GridBuilder:
         self.nc = len(self.comma_ratios)  # the real commas (those that define the temperament)
         self.mapped_commas = service.mapped_commas(self.state.mapping, self.state.comma_basis)  # M·commas = 0 (vanish)
         self.comma_sizes = service.interval_sizes(self.tun, self.comma_ratios, self.elements)  # comma sizes (tempered ~0)
-        # the unchanged-interval basis U = nullspace(P − I): the projection P's eigenvalue-1
+        # the unchanged interval basis U = nullspace(P − I): the projection P's eigenvalue-1
         # eigenvectors (the intervals held exactly just). When projection is on, U consolidates
         # with the comma basis C into one "unrotated vector basis" column V = C|U — the comma
         # sub-columns then the unchanged ones — and its eigenvalue list λ (0 per comma, 1 per
@@ -979,7 +979,7 @@ class _GridBuilder:
         # +/−/drag and the pending draft (a structural edit would change the rank, hence U). Gated
         # on there being a comma to merge with (n > 0). Its mapped / sized / complexity twins are
         # precomputed so the V value tiles read one geometry, exactly as the comma column's do.
-        # the unchanged basis U from the tuning's held-interval basis: r columns, the h held
+        # the unchanged basis U from the tuning's held interval basis: r columns, the h held
         # intervals (known) padded with None (dashed) for what the tuning doesn't pin. So the V =
         # C|U column and the scaling row track the held intervals / established-projection chooser.
         # the unchanged half U (vectors, ratios, M·U, sizes, complexities — dash-aware) is assembled
@@ -1191,7 +1191,7 @@ class _GridBuilder:
         # the rational tempering projection P = GM and its generator embedding G (the projection
         # sub-control of tuning boxes): P is a d×d operator over the domain primes, G a d×r matrix
         # whose columns are the held tuning's generators as fractional vectors. Both are built from
-        # the tuning's held-interval basis (self.held_basis_ratios) — so P = GM. service returns None
+        # the tuning's held interval basis (self.held_basis_ratios) — so P = GM. service returns None
         # when the tuning is NOT a full rational projection (it holds fewer than r rational intervals,
         # or a degenerate basis): the box then renders TOTALLY DASHED rather than asserting a tuning
         # the optimum doesn't have. The band/tiles are present whenever the projection toggle is on
@@ -1829,7 +1829,7 @@ class _GridBuilder:
         self.group_ratio = {  # the just interval ratio each value group is taken over
             "primes": lambda i: service.element_ratio(self.elements[i]),  # a prime "p/1", or a nonprime element "n/d"
             # over V = C|U the comma sub-columns index the comma ratios, the unchanged sub-columns
-            # (i ≥ nc) the unchanged-interval ratios — so the just/retune closed forms resolve for both
+            # (i ≥ nc) the unchanged interval ratios — so the just/retune closed forms resolve for both
             "commas": lambda i: self.comma_ratios[i] if i < self.nc else self.unchanged_ratios[i - self.nc],
             "targets": lambda i: self.targets[i],
             "interest": lambda i: self.interest_ratios[i],
@@ -2746,7 +2746,7 @@ class _GridBuilder:
                     continue
                 if ckey == "commas" and self.show_unchanged:
                     # the consolidated V = C|U carries two counts: the nullity n over the comma half,
-                    # the unchanged-interval count u over the unchanged half (split by the C|U bar).
+                    # the unchanged interval count u over the unchanged half (split by the C|U bar).
                     # At full rank (n = 0) the comma half is the reserved empty_comma_w stub — the
                     # n = 0 tally and its "nullity" caption still show there (sized to fit), and only
                     # a true zero-width comma half (a pending first comma, no stub) drops the tally.
@@ -2931,7 +2931,7 @@ class _GridBuilder:
                 if self.pending is not None:  # the draft's editable "?/?" ratio: type a fraction to fill it
                     # (or its vector cells). A distinct id so it's removed, not restructured, on commit.
                     self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nc, pending=True))
-                if self.show_unchanged:  # the unchanged-interval ratios complete V = C|U. EDITABLE (the
+                if self.show_unchanged:  # the unchanged interval ratios complete V = C|U. EDITABLE (the
                     # scalar twin of the editable U vector) when the tuning is a full rational projection —
                     # typing a fraction retunes; read-only "commaratio" (em-dash) otherwise.
                     full_u = self.unchanged_basis is not None and all(v is not None for v in self.unchanged_basis)
@@ -3679,7 +3679,7 @@ class _GridBuilder:
         chart_indicators = {}  # (row, col) -> (indicator, label); only the damage chart carries one
 
         # the comma-column size lists run over the consolidated V = C|U when projection is on:
-        # the comma sizes then the unchanged-interval sizes (the empty unchanged tuples no-op off
+        # the comma sizes then the unchanged interval sizes (the empty unchanged tuples no-op off
         # projection). Same geometry as the comma column's, so tuning_value_row places each at
         # comma_left(i) over the d V sub-columns.
         tuning_data = {

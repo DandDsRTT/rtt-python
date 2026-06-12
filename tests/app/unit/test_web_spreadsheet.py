@@ -52,7 +52,7 @@ def _with(scheme=None, **overrides):
 
 
 def _proj_build(held_basis_ratios=(), **overrides):
-    # a meantone build with the projection box on and a given held-interval basis — () leaves the
+    # a meantone build with the projection box on and a given held interval basis — () leaves the
     # tuning under-held (P/G/U dashed), a full rational basis like ("2/1", "5/4") completes it.
     s = settings.defaults()
     s["projection"] = True
@@ -163,12 +163,12 @@ def test_adjacent_column_titles_keep_a_margin():
     # Titles render unwrapped and centred on their gridline, overhanging a content-hugged column.
     # When two narrow columns sit side by side, the gap between them widens so the two overhangs
     # always stay >= TITLE_MARGIN apart — a long title (the "other intervals of interest" header)
-    # can never overspill into its neighbour's title. The worst case is the empty held-intervals
-    # column right beside the empty interest column, with the wide target-intervals column that
+    # can never overspill into its neighbour's title. The worst case is the empty held intervals
+    # column right beside the empty interest column, with the wide target intervals column that
     # normally shields interest hidden: before the fix interest's title started 54px LEFT of where
     # held's title ended (the "o" of "other" left of the "s" of held's "intervals").
     s = settings.defaults()
-    s["optimization"] = True  # show the (narrow) held-intervals column, immediately left of interest
+    s["optimization"] = True  # show the (narrow) held intervals column, immediately left of interest
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, targets_in_use=False)
     edges = _title_edges(lay)
     assert [k for k, _l, _r in edges][-2:] == ["held", "interest"]  # the colliding pair, now adjacent
@@ -179,7 +179,7 @@ def test_adjacent_column_titles_keep_a_margin():
 def test_title_clearance_leaves_shielded_columns_untouched():
     # The gap only widens on an ACTUAL title collision: where a column's neighbour is wide (its
     # title well inside its footprint) the clearance term goes slack and the gap stays GAP, so the
-    # common layouts are unchanged. In the default view the wide target-intervals column sits left
+    # common layouts are unchanged. In the default view the wide target intervals column sits left
     # of interest, so interest keeps its plain GAP and narrow footprint (and still overhangs the
     # grid's right edge — right_overhang > 0).
     lay = _layout()
@@ -5074,7 +5074,7 @@ def test_complexity_col_labels_spell_out_the_norm_definition():
 
 
 def test_complexity_target_col_headers_gain_the_norm_equivalence():
-    # the target-interval complexity list 𝒄 names its column cells cₙ; with the equivalences
+    # the target interval complexity list 𝒄 names its column cells cₙ; with the equivalences
     # layer each header gains its defining equation cₙ = ‖𝐿𝐭ₙ‖q (the q-norm of the prescaled
     # target vector), mirroring the tile big-symbols' "= …" tails. The prescaler glyph follows
     # the X→L rule (𝐿 for the log-prime matrix). All-interval (Tₚ = I) replaces the per-target
@@ -6046,7 +6046,7 @@ def _colormap_layout():
     s = settings.defaults()
     s["tuning_colorization"] = True
     s["temperament_colorization"] = True
-    s["optimization"] = True  # reveal the held-intervals column (a tuning-box sub-control)
+    s["optimization"] = True  # reveal the held intervals column (a tuning-box sub-control)
     return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                              interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),))
 
@@ -6994,7 +6994,7 @@ def test_superspace_projection_extra_tiles_carry_captions_symbols_and_units():
     assert cells["caption:ss_projection:ssgens"].text == "superspace generator embedding"
     assert cells["caption:ss_projection:primes"].text == "superspace projected subspace basis elements"
     assert cells["caption:ss_projection:detempering"].text == "projected generator detempering in superspace"
-    assert cells["caption:ss_projection:targets"].text == "projected target-interval list in superspace"
+    assert cells["caption:ss_projection:targets"].text == "projected target interval list in superspace"
     # the commas tile reads as the consolidated V (unrotated vector list) under the projection view
     assert cells["caption:ss_projection:commas"].text == "projected unrotated vector list in superspace"
     assert cells["symbol:ss_projection:ssgens"].text == "GL"                  # G_L
@@ -8331,7 +8331,7 @@ def test_projection_column_tiles_carry_full_chrome():
     cells = {c.id: c for c in _proj_build(("2/1", "5/4"), generator_detempering=True,
                                           symbols=True, units=True, equivalences=True).cells}
     assert cells["caption:projection:detempering"].text == "projected generator detempering"
-    assert cells["caption:projection:targets"].text == "projected target-interval list"
+    assert cells["caption:projection:targets"].text == "projected target interval list"
     assert cells["symbol:projection:detempering"].text == "𝑃D"
     assert cells["symbol:projection:targets"].text == "𝑃T"
     assert cells["units:projection:detempering"].text == "units: p"
@@ -8344,7 +8344,7 @@ def test_projection_held_tile_carries_the_equals_H_equivalence():
     # PH = H: the held tile's symbol gains the "= H" equivalence (the held intervals are unchanged)
     cells = {c.id: c for c in _proj_full(optimization=True, held_vectors=[(1, 0, 0), (-2, 0, 1)],
                                          symbols=True, equivalences=True).cells}
-    assert cells["caption:projection:held"].text == "projected held-interval basis"
+    assert cells["caption:projection:held"].text == "projected held interval basis"
     assert cells["symbol:projection:held"].text == "𝑃H = H"
     assert cells["matlabel:col:projection:held:0"].text == "𝑃𝐡₁"
 
@@ -8514,7 +8514,7 @@ def test_established_projection_choosers_need_both_presets_and_the_projection_bo
 
 
 # --- the projection view's V = C|U consolidation + the scaling-factors row ---
-# When projection is on, the commas column and the unchanged-interval basis U =
+# When projection is on, the commas column and the unchanged interval basis U =
 # nullspace(P − I) consolidate into one "unrotated vector basis" column V = C|U, and a
 # "scaling factors" row (the eigenvalue list λ = diag(λ), 0 per comma, 1 per unchanged)
 # rides over it. (The mockup only draws V in the first row by its author's own admission —
@@ -8740,7 +8740,7 @@ def test_projection_pending_comma_pushes_the_unchanged_half_past_the_draft():
 def test_projection_v_column_counts_both_nullity_and_unchanged():
     cells = {c.id: c for c in _with(projection=True, counts=True).cells}
     # the consolidated V = C|U carries two counts: the nullity n over the comma half and the
-    # unchanged-interval count u over the unchanged half (meantone: n=1, u=2)
+    # unchanged interval count u over the unchanged half (meantone: n=1, u=2)
     assert cells["count:commas"].text.endswith("= 1")        # n = 1 (nullity)
     assert cells["count:commas:u"].text.endswith("= 2")      # u = 2 (unchanged intervals)
     # the u-count sits over the unchanged sub-columns, right of the n-count

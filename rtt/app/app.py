@@ -3249,7 +3249,7 @@ def index() -> None:
         elif group == "held":
             replace(editor.held_vectors, editor.set_held_vectors)
         elif group == "unchanged":
-            # the unchanged-interval ratios drive the projection as a WHOLE: read the full basis (this
+            # the unchanged interval ratios drive the projection as a WHOLE: read the full basis (this
             # column's new ratio + the others) and retune to the projection that holds it — the scalar
             # twin of editing the U vectors (on_unchanged_change)
             ratios = [rec.cell_value(f"unchanged:{j}") for j in range(editor.state.r)
@@ -3413,7 +3413,7 @@ def index() -> None:
 
     def on_target_limit_wheel(delta_y):
         # step the TILT/OLD limit by ±1 per wheel notch. Unlike a matrix/vector cell, COMMITTING a
-        # new limit rebuilds the whole target-interval set, re-solves the tuning and re-renders the
+        # new limit rebuilds the whole target interval set, re-solves the tuning and re-renders the
         # grid — far too heavy to run on every notch. A fast scroll would queue one such solve per
         # notch, each costlier than the last as the set grows, and grind the app to a halt. So step
         # the shown number now (under the build guard, so the field's own on_target_change echo is a
@@ -3450,7 +3450,7 @@ def index() -> None:
     def on_target_limit_preview(typed=None):
         # live edit preview for the TILT/OLD limit field, mirroring on_element_preview: as the shown
         # limit changes (a wheel notch steps it, a keystroke types it) but BEFORE the debounced commit
-        # reflows the grid, the candidate rings the target-interval cells the new limit would MOVE
+        # reflows the grid, the candidate rings the target interval cells the new limit would MOVE
         # (amber) / REMOVE (red) in place. LOWERING the limit drops intervals; reddening them while
         # they're still on screen is what shows "what's going away" — a post-commit render can't, the
         # reflow has already deleted them. RAISING it just rings the survivors that move (the added

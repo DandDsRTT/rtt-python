@@ -116,10 +116,10 @@ _KIND_HELP: dict[str, str] = {
     # cell's thousandth-cent wheel fine-adjust).
     "mapping": "Mapping entry — how many of this generator map to this prime. Type to edit the temperament, or scroll the wheel to step it by 1.",
     "commacell": "Comma-vector entry — this prime's exponent in a comma the temperament tempers out. Type to edit, or scroll the wheel to step it by 1.",
-    "unchangedcell": "Unchanged-interval entry — this prime's exponent in an interval the tuning holds just. Type a new basis to retune to the projection that holds it.",
+    "unchangedcell": "Unchanged interval entry — this prime's exponent in an interval the tuning holds just. Type a new basis to retune to the projection that holds it.",
     "interestcell": "Interval-of-interest entry — this prime's exponent in an interval you're tracking. Type to edit, or scroll the wheel to step it by 1.",
-    "heldcell": "Held-interval entry — this prime's exponent in an interval held unchanged (pure) by the tuning. Type to edit, or scroll the wheel to step it by 1.",
-    "targetcell": "Target-interval entry — this prime's exponent in a target the tuning optimizes over. Type to override the chosen target set, or scroll the wheel to step it by 1.",
+    "heldcell": "Held interval entry — this prime's exponent in an interval held unchanged (pure) by the tuning. Type to edit, or scroll the wheel to step it by 1.",
+    "targetcell": "Target interval entry — this prime's exponent in a target the tuning optimizes over. Type to override the chosen target set, or scroll the wheel to step it by 1.",
     "prescalercell": "Prescaler entry — the weight on this prime applied before optimizing. Type to override the scheme's value, or scroll the wheel to nudge it by 0.001.",
     "gentuningcell": "Generator tuning — this generator's tuned size in cents. Type to override the optimum, click its sign to reverse the generator (its mapping row flips too, so the tuning is unchanged), or scroll the wheel to fine-tune by a thousandth of a cent.",
     "elementcell": "Domain basis element — a prime, or any rational (e.g. 13/5) for a nonstandard domain. Type to relabel this basis element; the ?/? draft adds a new one (held just). Valid if it's a positive rational that keeps the basis independent.",
@@ -183,7 +183,7 @@ _ID_HELP: dict[str, str] = {
 _PRESET_HELP: dict[str, str] = {
     "temperament": "Load a named temperament preset — sets the mapping and comma basis.",
     "tuning": "Choose a named tuning scheme (e.g. minimax-S).",
-    "target": "Choose the target-interval set and its limit — an integer limit for the triangle (TILT), an odd limit for the diamond (OLD). Scroll the wheel over the limit to step it by 1.",
+    "target": "Choose the target interval set and its limit — an integer limit for the triangle (TILT), an odd limit for the diamond (OLD). Scroll the wheel over the limit to step it by 1.",
     "prescaler": "Choose a predefined prescaler — the per-prime weighting applied before optimizing.",
     "projection": "Choose an established projection — a named rational tuning (e.g. 1/4-comma) that sets the generator tuning; its unchanged intervals drive the projection 𝑃 = 𝐺𝑀 and the generator embedding 𝐺. Empty when the temperament has no such tuning.",
 }
@@ -194,9 +194,9 @@ _PRESET_HELP: dict[str, str] = {
 _RATIO_HELP: dict[str, str] = {
     "comma": "Comma ratio — an interval this temperament tempers out. Type a fraction (e.g. 81/80) to edit the comma.",
     "target": "Target ratio — an interval the tuning optimizes over. Type a fraction to override the chosen target set.",
-    "held": "Held-interval ratio — an interval held unchanged (pure) by the tuning. Type a fraction to edit it.",
+    "held": "Held interval ratio — an interval held unchanged (pure) by the tuning. Type a fraction to edit it.",
     "interest": "Interval-of-interest ratio — an interval you're tracking. Type a fraction to edit it.",
-    "unchanged": "Unchanged-interval ratio — an interval the tuning holds just. Type a fraction to retune to the projection that holds it.",
+    "unchanged": "Unchanged interval ratio — an interval the tuning holds just. Type a fraction to retune to the projection that holds it.",
 }
 
 # the editable plain-text duals (kind ``ptextedit``), each naming its own value. These
@@ -205,7 +205,7 @@ _PTEXT_HELP: dict[str, str] = {
     "ptext:mapping:primes": "Type the mapping as a plain-text string (e.g. ⟨⟨1 0 -4]]) to drive the grid.",
     "ptext:vectors:commas": "Type the comma basis as a plain-text string to drive the grid.",
     "ptext:tuning:gens": "Type the generator tuning map as a plain-text string to drive the grid.",
-    "ptext:vectors:targets": "Type the target-interval list as a plain-text string to drive the grid.",
+    "ptext:vectors:targets": "Type the target interval list as a plain-text string to drive the grid.",
     "ptext:prescaling:primes": "Type the prescaler as a plain-text string to drive the grid.",
     # P and G are edited only here (the gridded cells are read-only — a single entry can't keep P
     # idempotent / 𝑀𝐺 = 𝐼): type the WHOLE matrix to retune; rejected unless it's a valid projection.

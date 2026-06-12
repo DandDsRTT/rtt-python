@@ -1,4 +1,4 @@
-"""Target-interval set schemes (tests.m 4008-4035). The library's testTargetSetScheme
+"""Target interval set schemes (tests.m 4008-4035). The library's testTargetSetScheme
 compares order-agnostically, so these assert set equality."""
 
 from fractions import Fraction

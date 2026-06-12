@@ -2162,7 +2162,7 @@ def test_target_list_returns_when_the_projection_box_is_off():
 
 def test_target_column_hides_when_the_tuning_deviates_from_the_optimum():
     # ch3 h+k≥r: once a projection pins the tuning away from the target optimum, the targets play no
-    # role, so the whole target-interval column disappears (while the projection box is on)
+    # role, so the whole target interval column disappears (while the projection box is on)
     ed = Editor()
     ed.settings["projection"] = True
     has_targets = lambda: any(c.id.startswith(("target:", "cell:target")) for c in ed.layout().cells)

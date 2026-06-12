@@ -304,7 +304,7 @@ def test_complexity_name_traits_surfaces_held_separately():
     assert plain_held is None
 
 
-# Held-intervals (trait 0, tests.m 2813-2853): named intervals tuned exactly justly.
+# Held intervals (trait 0, tests.m 2813-2853): named intervals tuned exactly justly.
 @pytest.mark.parametrize("held", ["octave", "2", "2/1", "{2}", "{2/1}"])
 def test_held_octave_synonyms_dict(held):
     t = parse_temperament_data(MEANTONE)
@@ -386,7 +386,7 @@ def test_optimize_et_tilt(scheme, expected):
     assert optimize_generator_tuning_map(t, scheme) == pytest.approx((expected,), abs=TOL)
 
 
-# Held-interval cases that use a TILT target (tests.m 2832-2838).
+# Held interval cases that use a TILT target (tests.m 2832-2838).
 TILT_HELD = [
     ("held-octave TILT miniRMS-U", (1200.000, 696.274)),
     ("held-2 TILT miniRMS-U", (1200.000, 696.274)),
