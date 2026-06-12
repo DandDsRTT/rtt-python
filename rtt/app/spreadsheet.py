@@ -1189,6 +1189,32 @@ class _GridBuilder:
         self.show_ss_projection = self.show_projection and self.show_superspace
         self.ss_projection_matrix = (service.superspace_tuning_projection(self.state, self.held_basis_ratios)
                                      if self.show_ss_projection else None)
+        # the superspace projection row's other column tiles — the chapter-9 analogues of the on-domain
+        # projection-row tiles, each P_L applied to a list LIFTED into the superspace (or, for G_L, the
+        # held basis): G_L the dL×rL embedding (P_L = G_L·M_L), P_L·B_Ls the projected subspace basis
+        # elements (P_L·B_L), and P_L·D_L / P_L·C_L / P_L·H_L / P_L·T_L / P_L·interest the projected lifted
+        # lists. G_L as display strings; the rational P_L drives project_vectors. None / () (dashed) in
+        # lockstep with P_L when the tuning isn't a full rational projection.
+        self.ss_embedding_matrix = (service.superspace_tuning_embedding(self.state, self.held_basis_ratios)
+                                    if self.show_ss_projection else None)
+        self.ss_projection_rationals = (service.superspace_projection_matrix_rationals(self.state, self.held_basis_ratios)
+                                        if self.show_ss_projection else None)
+        _lift = lambda vs: service.lift_vectors_to_superspace(self.elements, vs)
+        _ssp = self.ss_projection_rationals
+        self.ss_proj_basis = service.project_vectors(_ssp, service.basis_in_superspace(self.elements))  # P_L·B_Ls (d cols)
+        # P_L·D_L projects the LIFTED DOMAIN detempering (r cols) — unlike the on-domain P·D = G, the
+        # lifted D_L is not M_L's right inverse (it is dL×r, not dL×rL), so this is NOT the embedding G_L
+        # (which lives over the ssgens column). It is the chapter-9 "projected generator detempering".
+        self.ss_proj_detempering = service.project_vectors(_ssp, _lift(self.detempering_vectors))
+        self.ss_proj_held = service.project_vectors(_ssp, _lift(self.held))                                # P_L·H_L = H_L
+        self.ss_proj_targets = service.project_vectors(_ssp, _lift(self.target_vectors))                   # P_L·T_L
+        self.ss_proj_interest = service.project_vectors(_ssp, _lift(self.interest))                        # P_L·interest
+        # P_L·V over the consolidated V = C|U column (show_unchanged): the comma half vanishes (P_L·C = 0)
+        # and each unchanged interval is held (P_L·𝐮 = 𝐮), so the row shows the unchanged basis LIFTED into
+        # the superspace — None entries (a dashed unchanged direction) pass through as None (dashed cell).
+        self.ss_unchanged = tuple(
+            (service.lift_vectors_to_superspace(self.elements, (ub,))[0] if ub is not None else None)
+            for ub in (self.unchanged_basis if self.show_unchanged else ()))
         # the projection row's column tiles, each gated on its column being present exactly like the
         # vectors-row tile it projects (and overall on the projection toggle): the quantities/units
         # spine, then P·D / P·T / P·H / P·interest. Declared here (not in the static TILES) so the
@@ -1215,12 +1241,34 @@ class _GridBuilder:
                     ("block:proj:ssgens", "projection", "ssgens"),
                     ("block:proj:ssprimes", "projection", "ssprimes"),
                 )
+        # the SUPERSPACE projection row's column tiles, mirroring projection_col_tiles over the superspace:
+        # the embedding G_L (ssgens) and the projected subspace basis P_L·B_Ls (primes) always ride the row,
+        # then P_L·D_L / P_L·C_L / P_L·T_L / P_L·H_L / P_L·interest follow their column exactly as the on-domain
+        # P·D / P·V / P·T / P·H / P·interest do. ((ss_projection, ssprimes/quantities/units) are the static
+        # SUPERSPACE_TILES.) Declared here so a conditional column drops its projected tile with it.
+        ss_projection_col_tiles = ()
+        if self.show_ss_projection:
+            ss_projection_col_tiles += (
+                ("block:ssproj:ssgens", "ss_projection", "ssgens"),   # G_L (the embedding, dL×rL)
+                ("block:ssproj:primes", "ss_projection", "primes"),   # P_L·B_Ls (the projected subspace basis)
+            )
+            if self.show_unchanged:  # P_L·V over the consolidated V = C|U column (commas vanish, U held)
+                ss_projection_col_tiles += (("block:ssproj:commas", "ss_projection", "commas"),)
+            if self.show_detempering:
+                ss_projection_col_tiles += (("block:ssproj:detempering", "ss_projection", "detempering"),)
+            if self.targets_editable:
+                ss_projection_col_tiles += (("block:ssproj:targets", "ss_projection", "targets"),)
+            if self.nh_shown:
+                ss_projection_col_tiles += (("block:ssproj:held", "ss_projection", "held"),)
+            if self.mi_shown:
+                ss_projection_col_tiles += (("block:ssproj:interest", "ss_projection", "interest"),)
         # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
         # tile (see opt_box below), not in a tile/row of their own
         self.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
                  + SUPERSPACE_COUNTS_TILES
                  + TILES + UNITS_TILES + SUPERSPACE_TILES
-                 + interest_tiles + held_tiles + detempering_tiles + projection_col_tiles)
+                 + interest_tiles + held_tiles + detempering_tiles + projection_col_tiles
+                 + ss_projection_col_tiles)
         # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
         # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
         # vanishes everywhere — panels, toggles, cells, brackets and marks — with no chance
@@ -3492,6 +3540,62 @@ class _GridBuilder:
                         "mapped", text=text, gen=i, prime=j,
                         unit=self.cell_unit("ss_projection", "ssprimes", gen=i, prime=j),
                     ))
+        # the rest of the superspace projection row — P_L applied to each column's vectors (lifted into
+        # the superspace), the chapter-9 analogues of the embedding G and P·D / P·V / P·T / P·H / P·interest.
+        # All dL-tall over ss_proj_top, read-only "mapped" cells, DASHED in lockstep with P_L (when
+        # ss_projection_rationals is None) exactly like the on-domain projected lists.
+        ss_full = self.ss_projection_rationals is not None
+        if self.row_open("ss_projection") and self.tile_open("ss_projection", "ssgens"):  # G_L = the embedding
+            for i in range(self.dL):
+                for g in range(self.rL):
+                    text = DASH if not ss_full else self.ss_embedding_matrix[i][g]
+                    self.cells.append(CellBox(f"cell:ss_embed:{i}:{g}", self.ss_gen_left(g), self.ss_proj_top(i),
+                                         COL_W, ROW_H, "mapped", text=text, gen=g))
+        if self.row_open("ss_projection") and self.tile_open("ss_projection", "primes"):  # P_L·B_Ls
+            for e in range(self.d):
+                for p in range(self.dL):
+                    text = DASH if not ss_full else str(self.ss_proj_basis[e][p])
+                    self.cells.append(CellBox(f"cell:ss_proj_bls:{e}:{p}", self.prime_left(e), self.ss_proj_top(p),
+                                         COL_W, ROW_H, "mapped", text=text, prime=p, comma=e))
+        if self.row_open("ss_projection") and self.tile_open("ss_projection", "detempering"):  # P_L·D_L
+            for i in range(self.r):
+                for p in range(self.dL):
+                    text = DASH if not ss_full else str(self.ss_proj_detempering[i][p])
+                    self.cells.append(CellBox(f"cell:ss_proj_pd:{i}:{p}", self.detempering_left(i), self.ss_proj_top(p),
+                                         COL_W, ROW_H, "mapped", text=text, prime=p, gen=i))
+        if self.show_unchanged and self.row_open("ss_projection") and self.tile_open("ss_projection", "commas"):  # P_L·V
+            for c in range(self.nc):  # P_L·comma = the zero vector (the comma half of V vanishes)
+                for p in range(self.dL):
+                    self.cells.append(CellBox(f"cell:ss_proj_v:{p}:{c}", self.comma_left(c), self.ss_proj_top(p),
+                                         COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
+            if self.pending is not None:  # blank green placeholder column under the draft comma
+                for p in range(self.dL):
+                    self.cells.append(CellBox(f"cell:ss_proj_v:{p}:draft", self.comma_left(self.nc), self.ss_proj_top(p),
+                                         COL_W, ROW_H, "mapped", text="", prime=p, pending=True))
+            for j in range(self.nu):  # P_L·unchanged = the unchanged interval itself, lifted (dashed if U is)
+                dashed = self.ss_unchanged[j] is None
+                for p in range(self.dL):
+                    self.cells.append(CellBox(f"cell:ss_proj_v:{p}:{self.nc + j}", self.comma_left(self.nc_shown + j), self.ss_proj_top(p),
+                                         COL_W, ROW_H, "mapped",
+                                         text=DASH if dashed else str(self.ss_unchanged[j][p]), prime=p, comma=self.nc + j))
+        if self.row_open("ss_projection") and self.tile_open("ss_projection", "targets"):  # P_L·T_L
+            for j in range(self.k):
+                for p in range(self.dL):
+                    text = DASH if not ss_full else str(self.ss_proj_targets[j][p])
+                    self.cells.append(CellBox(f"cell:ss_proj_pt:{j}:{p}", self.target_left(j), self.ss_proj_top(p),
+                                         COL_W, ROW_H, "mapped", text=text, prime=p, comma=j))
+        if self.row_open("ss_projection") and self.tile_open("ss_projection", "held"):  # P_L·H_L
+            for i in range(self.nh):
+                for p in range(self.dL):
+                    text = DASH if not ss_full else str(self.ss_proj_held[i][p])
+                    self.cells.append(CellBox(f"cell:ss_proj_ph:{i}:{p}", self.held_left(i), self.ss_proj_top(p),
+                                         COL_W, ROW_H, "mapped", text=text, prime=p, comma=i))
+        if self.row_open("ss_projection") and self.tile_open("ss_projection", "interest"):  # P_L·interest
+            for i in range(self.mi):
+                for p in range(self.dL):
+                    text = DASH if not ss_full else str(self.ss_proj_interest[i][p])
+                    self.cells.append(CellBox(f"cell:ss_proj_pi:{i}:{p}", self.interest_left(i) + KET_INSET, self.ss_proj_top(p),
+                                         COL_W - 2 * KET_INSET, ROW_H, "mapped", text=text, prime=p, comma=i))
 
         # tuning rows over the primes, commas and targets (cents); each can collapse on
         # its own. Commas sit on the same footing as targets — they are just the dual
@@ -4010,6 +4114,24 @@ class _GridBuilder:
         if self.row_open("ss_projection") and self.tile_open("ss_projection", "ssprimes"):
             for i in range(self.dL):
                 self.bracket(f"ss_proj:{i}", MAP_BRACKETS, "ssprimes", self.ss_proj_top(i), ROW_H)
+        # the rest of the superspace projection row's OUTER brackets (their inner per-column kets come
+        # from vector_list_marks below), mirroring the on-domain G / P·D / P·V / P·T / P·H / P·interest:
+        # the embedding G_L and P_L·D_L take the curly { … ] (generator coords); P_L·B_Ls the covector-
+        # style ⟨ … ] (like B_L); P_L·C_L / P_L·T_L / P_L·H_L the plain [ … ]; P_L·interest stands alone.
+        ssp_top, ssp_h = self.row_y.get("ss_projection", 0), self.dL * ROW_H
+        if self.row_open("ss_projection"):
+            if self.tile_open("ss_projection", "ssgens"):
+                self.bracket("ss_embed", GENMAP_BRACKETS, "ssgens", ssp_top, ssp_h, fit=True)
+            if self.tile_open("ss_projection", "primes"):
+                self.bracket("ss_proj_bls", MAP_BRACKETS, "primes", ssp_top, ssp_h, fit=True)
+            if self.tile_open("ss_projection", "detempering"):
+                self.bracket("ss_proj_pd", GENMAP_BRACKETS, "detempering", ssp_top, ssp_h, fit=True)
+            if self.show_unchanged and self.tile_open("ss_projection", "commas"):  # P_L·V over the V = C|U column
+                self.bracket("ss_proj_v", LIST_BRACKETS, "commas", ssp_top, ssp_h, fit=True)
+            if self.tile_open("ss_projection", "targets"):
+                self.bracket("ss_proj_pt", LIST_BRACKETS, "targets", ssp_top, ssp_h, fit=True)
+            if self.tile_open("ss_projection", "held"):
+                self.bracket("ss_proj_ph", LIST_BRACKETS, "held", ssp_top, ssp_h, fit=True)
         # the chapter-9 "new × new" tiles. M_jL = I at (ss_vectors, ssprimes): a dL × dL covector
         # stack ⟨ … ] like M_L. M_s→L at (ss_mapping, primes): rL covectors over the domain
         # elements. M_LgL = I at (ss_mapping, ssgens): the gen-space self-map, framed { … ] (the
@@ -4588,6 +4710,15 @@ class _GridBuilder:
         self.vector_list_marks("projection", "proj_pt", "targets", self.target_left, self.k, foot="ebkangle")
         self.vector_list_marks("projection", "proj_ph", "held", self.held_left, self.nh, foot="ebkangle")
         self.vector_list_marks("projection", "proj_pi", "interest", self.interest_left, self.mi, foot="ebkangle", separators=False)
+        # the SUPERSPACE projection row's per-column ket marks (the inner [ … ⟩ of G_L / P_L·B_Ls /
+        # P_L·D_L / P_L·C_L / P_L·T_L / P_L·H_L / P_L·interest), dL-tall, mirroring the on-domain marks above
+        self.vector_list_marks("ss_projection", "ss_embed", "ssgens", self.ss_gen_left, self.rL, foot="ebkangle", separators=False)
+        self.vector_list_marks("ss_projection", "ss_proj_bls", "primes", self.prime_left, self.d, foot="ebkangle", separators=False)
+        self.vector_list_marks("ss_projection", "ss_proj_pd", "detempering", self.detempering_left, self.r, foot="ebkangle", separators=False)
+        self.vector_list_marks("ss_projection", "ss_proj_v", "commas", self.comma_left, self.nc + self.nu, foot="ebkangle", separators=False)
+        self.vector_list_marks("ss_projection", "ss_proj_pt", "targets", self.target_left, self.k, foot="ebkangle")
+        self.vector_list_marks("ss_projection", "ss_proj_ph", "held", self.held_left, self.nh, foot="ebkangle")
+        self.vector_list_marks("ss_projection", "ss_proj_pi", "interest", self.interest_left, self.mi, foot="ebkangle", separators=False)
         self.vector_list_marks("mapping", "mapped", "targets", self.target_left, self.k)
         # the interest column's mapped images stand alone — no separator rules between columns
         self.vector_list_marks("mapping", "imapped", "interest", self.interest_left, self.mi, separators=False)

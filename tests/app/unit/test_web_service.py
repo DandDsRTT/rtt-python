@@ -1546,6 +1546,33 @@ def test_superspace_tuning_projection_is_a_dL_idempotent_holding_the_lifted_held
     assert list(m * sp.Matrix(4, 1, [2, -3, -2, 2])) == [0, 0, 0, 0]
 
 
+def test_superspace_tuning_embedding_is_the_dL_by_rL_factor_of_P_L():
+    # G_L = H_L·(M_L·H_L)⁻¹, the embedding factor of P_L = G_L·M_L (the ssgens-column tile): dL × rL,
+    # its columns the held tuning's superspace generators as fractional superspace-prime vectors.
+    # BARBADOS over 2.3.13/5 (dL=4, rL=3) held by {2/1, 13/5}. None (dashed) in lockstep with P_L.
+    import sympy as sp
+    barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    gl = service.superspace_tuning_embedding(barb, ("2", "13/5"))
+    assert len(gl) == 4 and all(len(row) == 3 for row in gl)  # dL × rL
+    assert service.superspace_tuning_embedding(barb, ("2",)) is None  # under-held dashes, like P_L
+    # G_L is genuinely the embedding factor of P_L: G_L·M_L equals P_L (rebuilt from the rationals)
+    ml = service.superspace_mapping(barb)
+    g = sp.Matrix([[sp.Rational(x) for x in row] for row in gl])
+    m = sp.Matrix([list(r) for r in ml])
+    pl = sp.Matrix([[sp.Rational(x) for x in row] for row in service.superspace_tuning_projection(barb, ("2", "13/5"))])
+    assert g * m == pl  # P_L = G_L · M_L
+
+
+def test_superspace_projection_matrix_rationals_matches_the_display_strings():
+    # the rational (Fraction) P_L drives project_vectors for the row's P_L·B_Ls / P_L·V / P_L·T_L tiles;
+    # str() of each entry is exactly the display grid superspace_tuning_projection returns.
+    barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    rat = service.superspace_projection_matrix_rationals(barb, ("2", "13/5"))
+    disp = service.superspace_tuning_projection(barb, ("2", "13/5"))
+    assert tuple(tuple(str(x) for x in row) for row in rat) == disp
+    assert service.superspace_projection_matrix_rationals(barb, ("2",)) is None  # dashes in lockstep
+
+
 def test_superspace_tuning_projection_is_none_when_under_held():
     # under-held (fewer than r rational held intervals): no full rational projection, so None —
     # the row dashes, exactly like the on-domain tuning_projection. BARBADOS (r=2) held by only 2/1.

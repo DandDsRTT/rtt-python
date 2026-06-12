@@ -802,6 +802,35 @@ def superspace_tuning_projection(state: TemperamentState, held_ratios=()):
         return None
 
 
+def superspace_projection_matrix_rationals(state: TemperamentState, held_ratios=()):
+    """The superspace projection ``P_L = G_L·M_L`` as the ``dL × dL`` matrix of ``Fraction`` entries —
+    the numeric source behind :func:`superspace_tuning_projection`'s display strings, for projecting the
+    lifted vector sets through ``P_L`` (the row's ``P_L·B_Ls`` / ``P_L·D_L`` / ``P_L·V_L`` / … tiles).
+    ``None`` in lockstep with :func:`superspace_tuning_projection`."""
+    try:
+        inputs = _superspace_projection_temperaments(state, held_ratios)
+        if inputs is None:
+            return None
+        return get_tempering_projection(*inputs)
+    except (ArithmeticError, ValueError, IndexError, TypeError):
+        return None
+
+
+def superspace_tuning_embedding(state: TemperamentState, held_ratios=()):
+    """The superspace generator embedding ``G_L = H_L·(M_L·H_L)⁻¹`` as a ``dL × rL`` grid of display
+    strings — its columns are the held tuning's superspace generators as fractional superspace-prime
+    vectors, the embedding factor of ``P_L = G_L·M_L`` (the projection row's superspace-generators tile,
+    the chapter-9 analogue of the on-domain ``G``). ``None`` (dashed) in lockstep with
+    :func:`superspace_tuning_projection`."""
+    try:
+        inputs = _superspace_projection_temperaments(state, held_ratios)
+        if inputs is None:
+            return None
+        return _matrix_strings(get_generator_embedding(*inputs))
+    except (ArithmeticError, ValueError, IndexError, TypeError):
+        return None
+
+
 def _integer_columns(vectors):
     """sympy rational column vectors → primitive integer tuples (rows-as-intervals, like a comma
     basis): clear each to its lowest-terms integer form."""

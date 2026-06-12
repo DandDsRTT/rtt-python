@@ -6796,6 +6796,55 @@ def test_superspace_projection_row_renders_PL_over_the_superspace_primes():
     assert cells["cell:ss_projection:ssprimes:0:0"].x == cells["cell:ss_mapping:ssprimes:0:0"].x
 
 
+def test_superspace_projection_row_renders_the_embedding_and_projected_lists():
+    # the superspace projection row carries the full tile set, paralleling the on-domain projection row:
+    # the embedding G_L (ssgens), P_L·B_Ls (primes), P_L·V (commas/V), P_L·T_L (targets) — each P_L applied
+    # to that column's lifted vectors. BARBADOS over 2.3.13/5 (dL=4, rL=3, d=3) held by {2/1, 13/5}.
+    cells = {c.id: c for c in _barbados_proj().cells}
+    # G_L the embedding, dL × rL = 4 × 3 (a vector list over the superspace generators)
+    assert {f"cell:ss_embed:{i}:{g}" for i in range(4) for g in range(3)} <= set(cells)
+    assert cells["cell:ss_embed:0:0"].text == "1" and cells["cell:ss_embed:0:1"].text == "1/3"
+    # P_L·B_Ls the projected subspace basis, dL-tall over the d = 3 domain-element columns
+    assert {f"cell:ss_proj_bls:{e}:{p}" for e in range(3) for p in range(4)} <= set(cells)
+    assert cells["cell:ss_proj_bls:0:0"].text == "1"     # P_L·2/1 = 2/1 (held)
+    assert cells["cell:ss_proj_bls:1:0"].text == "2/3"   # P_L·3 is tempered
+    # P_L·V over the consolidated V = C|U column: the comma half vanishes (0), the unchanged half is held
+    assert {f"cell:ss_proj_v:{p}:0" for p in range(4)} <= set(cells)
+    assert [cells[f"cell:ss_proj_v:{p}:0"].text for p in range(4)] == ["0", "0", "0", "0"]  # P_L·comma = 0
+    # P_L·T_L the projected target list, dL-tall over the targets, not dashed (a full rational projection)
+    assert any(c.startswith("cell:ss_proj_pt:") for c in cells)
+    assert cells["cell:ss_proj_pt:0:0"].text != spreadsheet.DASH
+    # the tiles carry their mockup captions
+    assert cells["caption:ss_projection:ssgens"].text == "superspace generator embedding"
+    assert cells["caption:ss_projection:primes"].text == "superspace projected subspace basis elements"
+
+
+def test_superspace_projection_detempering_tile_renders_when_shown():
+    # P_L·D_L (the projected lifted domain detempering, dL × r) rides the generator-detempering column,
+    # the chapter-9 analogue of the on-domain P·D — shown only when that column is on, dashed-aware.
+    cells = {c.id: c for c in _barbados_proj(generator_detempering=True).cells}
+    assert {f"cell:ss_proj_pd:{i}:{p}" for i in range(2) for p in range(4)} <= set(cells)  # dL × r = 4 × 2
+    assert cells["cell:ss_proj_pd:0:0"].text != spreadsheet.DASH  # a full rational projection, not dashed
+    assert cells["caption:ss_projection:detempering"].text == "projected generator detempering in superspace"
+    # absent when the generator-detempering column is off (parity with the on-domain P·D)
+    off = {c.id for c in _barbados_proj().cells}
+    assert not any(c.startswith("cell:ss_proj_pd:") for c in off)
+
+
+def test_superspace_projection_extra_tiles_dash_when_under_held():
+    # every projected tile dashes in lockstep with P_L when the tuning isn't a full rational projection
+    cells = {c.id: c for c in _barbados_proj(held_basis_ratios=()).cells}
+    assert cells["cell:ss_embed:0:0"].text == spreadsheet.DASH       # G_L dashed
+    assert cells["cell:ss_proj_bls:0:0"].text == spreadsheet.DASH    # P_L·B_Ls dashed
+
+
+def test_superspace_projection_extra_tiles_absent_without_projection():
+    # additive-only: the embedding / projected-list tiles need the projection toggle, like P_L itself
+    cells = {c.id for c in _barbados_ss().cells}  # projection off
+    assert not any(c.startswith(("cell:ss_embed:", "cell:ss_proj_bls:", "cell:ss_proj_v:",
+                                 "cell:ss_proj_pt:", "cell:ss_proj_pd:")) for c in cells)
+
+
 def test_superspace_projection_row_dashes_when_under_held():
     # under-held (P_L undetermined, service returns None): every cell an em-dash — in lockstep with
     # the on-domain projection P, never asserting a projection the optimum doesn't have.
@@ -6842,6 +6891,70 @@ def test_superspace_projection_units_column_reads_basis_element():
     cells = {c.id: c for c in _barbados_proj(domain_units=True).cells}
     assert cells["ucol:ss_projection:0"].text == "b₁/"
     assert cells["ucol:ss_projection:3"].text == "b₄/"
+
+
+def test_superspace_projection_row_carries_the_full_projected_tile_set():
+    # the row is the chapter-9 analogue of the WHOLE on-domain projection row: not just the P_L matrix
+    # but the embedding G_L and P_L applied to every column's lifted vectors — P_L·B_Ls / P_L·D_L /
+    # P_L·V / P_L·T_L (the superspace twins of G / P·D / P·V / P·T).
+    cells = {c.id: c for c in _barbados_proj(generator_detempering=True).cells}
+    assert {f"cell:ss_embed:{i}:{g}" for i in range(4) for g in range(3)} <= set(cells)        # G_L (dL × rL)
+    assert {f"cell:ss_proj_bls:{e}:{p}" for e in range(3) for p in range(4)} <= set(cells)      # P_L·B_Ls (d × dL)
+    assert {f"cell:ss_proj_pd:{i}:{p}" for i in range(2) for p in range(4)} <= set(cells)        # P_L·D_L (r × dL)
+    assert "cell:ss_proj_pt:0:0" in cells                                                         # P_L·T_L
+    # P_L·V over the consolidated V = C|U column: the comma half vanishes (every entry zero)
+    assert all(cells[f"cell:ss_proj_v:{p}:0"].text == "0" for p in range(4))
+
+
+def test_superspace_projection_embedding_G_L_matches_the_service():
+    # G_L = the dL × rL superspace generator embedding (the embedding factor of P_L = G_L·M_L); the
+    # grid cells read it cell-for-cell, over the superspace-generators column
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    gl = service.superspace_tuning_embedding(state, ("2", "13/5"))
+    cells = {c.id: c for c in _barbados_proj().cells}
+    assert [[cells[f"cell:ss_embed:{i}:{g}"].text for g in range(3)] for i in range(4)] == [list(r) for r in gl]
+
+
+def test_superspace_projection_projected_basis_matches_P_L_times_B_L():
+    # P_L·B_Ls projects each domain basis element (a superspace vector — the columns of B_L) through P_L
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    pl = service.superspace_projection_matrix_rationals(state, ("2", "13/5"))
+    expected = service.project_vectors(pl, service.basis_in_superspace(state.domain_basis))
+    cells = {c.id: c for c in _barbados_proj().cells}
+    assert [[cells[f"cell:ss_proj_bls:{e}:{p}"].text for p in range(4)] for e in range(3)] \
+        == [[str(x) for x in v] for v in expected]
+
+
+def test_superspace_projection_extra_tiles_carry_captions_symbols_and_units():
+    cells = {c.id: c for c in _barbados_proj(generator_detempering=True, names=True, symbols=True, units=True).cells}
+    assert cells["caption:ss_projection:ssgens"].text == "superspace generator embedding"
+    assert cells["caption:ss_projection:primes"].text == "superspace projected subspace basis elements"
+    assert cells["caption:ss_projection:detempering"].text == "projected generator detempering in superspace"
+    assert cells["caption:ss_projection:targets"].text == "projected target-interval list in superspace"
+    # the commas tile reads as the consolidated V (unrotated vector list) under the projection view
+    assert cells["caption:ss_projection:commas"].text == "projected unrotated vector list in superspace"
+    assert cells["symbol:ss_projection:ssgens"].text == "GL"                  # G_L
+    assert cells["symbol:ss_projection:primes"].text == "𝑃LBLₛ"   # P_L B_Ls
+    assert cells["units:ss_projection:ssgens"].text == "units: b/gL"            # b/gL
+    assert cells["units:ss_projection:primes"].text == "units: b/p"
+    assert cells["units:ss_projection:detempering"].text == "units: b"
+
+
+def test_superspace_projection_extra_tiles_dash_when_under_held():
+    # the whole row dashes in lockstep with P_L when the tuning isn't a full rational projection
+    cells = {c.id: c for c in _barbados_proj(held_basis_ratios=(), generator_detempering=True).cells}
+    assert cells["cell:ss_embed:0:0"].text == spreadsheet.DASH        # G_L
+    assert cells["cell:ss_proj_bls:0:0"].text == spreadsheet.DASH     # P_L·B_Ls
+    assert cells["cell:ss_proj_pd:0:0"].text == spreadsheet.DASH      # P_L·D_L
+    assert cells["cell:ss_proj_pt:0:0"].text == spreadsheet.DASH      # P_L·T_L
+
+
+def test_superspace_projection_extra_tiles_absent_without_projection():
+    # additive-only: with the projection toggle off, none of the projected tiles leave a trace
+    cells = {c.id for c in _barbados_ss(generator_detempering=True).cells}  # projection off
+    assert not any(c.startswith(("cell:ss_embed:", "cell:ss_proj_bls:", "cell:ss_proj_pd:",
+                                 "cell:ss_proj_v:", "cell:ss_proj_pt:", "cell:ss_proj_ph:",
+                                 "cell:ss_proj_pi:")) for c in cells)
 
 
 def test_superspace_projection_emits_a_plain_text_band():

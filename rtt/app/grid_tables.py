@@ -100,6 +100,15 @@ CAPTIONS = {
     ("ss_just_mapping", "ssprimes"): "superspace JI mapping",
     # the superspace tempering projection P_L = G_L·M_L (the chapter-9 analogue of the on-domain P)
     ("ss_projection", "ssprimes"): "superspace projection",
+    # the rest of the superspace projection row — the embedding G_L and P_L applied to each column's
+    # lifted vectors (the chapter-9 analogues of the on-domain G / P·D / P·V / P·T / P·H projected tiles)
+    ("ss_projection", "ssgens"): "superspace generator embedding",
+    ("ss_projection", "primes"): "superspace projected subspace basis elements",
+    ("ss_projection", "detempering"): "projected generator detempering in superspace",
+    ("ss_projection", "commas"): "projected comma basis in superspace",
+    ("ss_projection", "targets"): "projected target-interval list in superspace",
+    ("ss_projection", "held"): "projected held-interval basis in superspace",
+    ("ss_projection", "interest"): "projected intervals in superspace",
     ("tuning", "ssgens"): "superspace generator tuning map",
     ("tuning", "ssprimes"): "superspace tuning map",
     ("just", "ssprimes"): "superspace just tuning map",
@@ -244,6 +253,16 @@ SYMBOLS = {
     # the superspace projection P_L = G_L·M_L: math-italic 𝑃 + subscript L, parallel to M_L's 𝑀L
     # and the on-domain P's 𝑃 (an operator; its " = G_L 𝑀_L" form tail is set in EQUIVALENCES)
     ("ss_projection", "ssprimes"): f"𝑃{SUBSCRIPT_L}",
+    # the rest of the superspace projection row: the embedding G_L (upright, a basis like the on-domain
+    # G) and P_L applied to each lifted basis — 𝑃_L (italic operator) + the upright basis letter with
+    # its subscript L (B_Ls / D_L / C_L / T_L / H_L), parallel to the on-domain 𝑃D / 𝑃T / 𝑃H. Interest
+    # carries no symbol (a loose collection, like the on-domain projected interest).
+    ("ss_projection", "ssgens"): f"G{SUBSCRIPT_L}",
+    ("ss_projection", "primes"): f"𝑃{SUBSCRIPT_L}B{SUBSCRIPT_L}ₛ",
+    ("ss_projection", "detempering"): f"𝑃{SUBSCRIPT_L}D{SUBSCRIPT_L}",
+    ("ss_projection", "commas"): f"𝑃{SUBSCRIPT_L}C{SUBSCRIPT_L}",
+    ("ss_projection", "targets"): f"𝑃{SUBSCRIPT_L}T{SUBSCRIPT_L}",
+    ("ss_projection", "held"): f"𝑃{SUBSCRIPT_L}H{SUBSCRIPT_L}",
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -346,6 +365,16 @@ COL_LABEL_LETTERS = {
     ("projection", "targets"): "𝑃𝐭",
     ("projection", "held"): "𝑃𝐡",
     ("projection", "interest"): "𝑃𝐢",
+    # the SUPERSPACE projection row's column labels: G_L's columns are the superspace generators 𝐠_L;
+    # the rest are 𝑃_L (italic operator) + the bold column letter of the lifted list it projects
+    # (𝑃_L𝐛 / 𝑃_L𝐝 / 𝑃_L𝐜 / 𝑃_L𝐭 / 𝑃_L𝐡 / 𝑃_L𝐢), parallel to the on-domain 𝑃𝐝 / 𝑃𝐭 / 𝑃𝐡 / 𝑃𝐢
+    ("ss_projection", "ssgens"): f"𝐠{SUBSCRIPT_L}",
+    ("ss_projection", "primes"): f"𝑃{SUBSCRIPT_L}𝐛",
+    ("ss_projection", "detempering"): f"𝑃{SUBSCRIPT_L}𝐝",
+    ("ss_projection", "commas"): f"𝑃{SUBSCRIPT_L}𝐜",
+    ("ss_projection", "targets"): f"𝑃{SUBSCRIPT_L}𝐭",
+    ("ss_projection", "held"): f"𝑃{SUBSCRIPT_L}𝐡",
+    ("ss_projection", "interest"): f"𝑃{SUBSCRIPT_L}𝐢",
     # interval vectors row — d-tall column-vector matrices
     ("vectors", "commas"): "𝐜",
     ("vectors", "targets"): "𝐭",
@@ -772,6 +801,15 @@ UNITS = {
     # the gL/p or p/p of M_L / M_jL (the mockup labels its rows bᵢ; its spine α, β, γ … are
     # placeholders for the superspace primes the row's quantities spine actually lists)
     ("ss_projection", "ssprimes"): "b/b",
+    # the rest of the superspace projection row's tiles (the mockup): the embedding G_L is b/gL, the
+    # projected subspace basis P_L·B_Ls is b/p, and every projected lifted list is b (a basis vector)
+    ("ss_projection", "ssgens"): f"b/g{SUBSCRIPT_L}",
+    ("ss_projection", "primes"): "b/p",
+    ("ss_projection", "detempering"): "b",
+    ("ss_projection", "commas"): "b",
+    ("ss_projection", "targets"): "b",
+    ("ss_projection", "held"): "b",
+    ("ss_projection", "interest"): "b",
     # the cyan superspace tuning row mirrors the on-domain tuning row over the superspace
     # primes (p, true primes); 𝒈ₗ is ¢ per superspace generator gL.
     ("tuning", "ssgens"): f"¢/g{SUBSCRIPT_L}",
