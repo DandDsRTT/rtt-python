@@ -379,13 +379,6 @@ class Editor:
         """Whether the mapping − is live: a generator to spare (never down to rank 0)."""
         return self.state.r > 1
 
-    @property
-    def can_remove_comma(self) -> bool:
-        """Whether the comma − is live: it cancels a pending draft, or un-tempers a comma — down
-        to and including the last one, which leaves just intonation (the comma-space face of the
-        mapping +). Off only with nothing tempered (nullity 0) and no draft."""
-        return self.pending_comma is not None or self.state.n > 0
-
     def _apply(self, state: TemperamentState) -> None:
         """Make a temperament edit: snapshot for undo, abandon any pending drafts, set state."""
         self._snapshot()
@@ -942,16 +935,6 @@ class Editor:
         self._snapshot()
         self.custom_prescaler = diag
         return True
-
-    def clear_custom_prescaler(self) -> None:
-        """Drop the custom override — every weighting calculation reverts to the live
-        scheme's computed diagonal. The Show-panel reset path uses :meth:`reset` (which
-        clears the whole document); this is the targeted clear that the preset choosers
-        and the bare prescaler tile's revert control rely on."""
-        if self.custom_prescaler is None:
-            return  # no-op so a redundant revert doesn't push an empty undo step
-        self._snapshot()
-        self.custom_prescaler = None
 
     def set_diminuator_replaced(self, replaced: bool) -> None:
         """Toggle the size factor (the box 𝐋 "replace diminuator" checkbox) — the integer-limit

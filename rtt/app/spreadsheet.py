@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, replace
-from dataclasses import replace
 from fractions import Fraction
 
 from rtt.app import presets
@@ -713,7 +712,6 @@ class _GridBuilder:
         self.target_spec = target_spec
         self.interest = interest
         self.range_mode = range_mode
-        self.pending_comma = pending_comma
         self.pending_interest = pending_interest
         self.pending_held = pending_held
         self.pending_target = pending_target
@@ -721,9 +719,6 @@ class _GridBuilder:
         # a generator being added: a draft mapping ROW (d ints, None while blank) the user types in,
         # rendered as a green draft row across the mapping band — the row mirror of pending_comma
         self.pending_mapping_row = pending_mapping_row
-        self.held_vectors = held_vectors
-        self.generator_tuning = generator_tuning
-        self.target_override = target_override
         self.custom_prescaler = custom_prescaler
         self.tuning_optimized = tuning_optimized
         self.nonprime_approach = nonprime_approach
@@ -4845,10 +4840,16 @@ def build(state, settings=None, collapsed=None,
           displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
           targets_in_use=True, pending_mapping_row=None) -> Layout:
     return _GridBuilder(
-        state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
-        pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
-        tuning_optimized, pending_interest, pending_held, pending_target,
-        prev_ids, pending_element, nonprime_approach, superspace_generator_tuning,
-        displayed_tuning_name, held_basis_ratios, displayed_projection_name, targets_in_use,
+        state, settings=settings, collapsed=collapsed, tuning_scheme=tuning_scheme,
+        target_spec=target_spec, interest=interest, range_mode=range_mode,
+        pending_comma=pending_comma, held_vectors=held_vectors,
+        generator_tuning=generator_tuning, target_override=target_override,
+        custom_prescaler=custom_prescaler, tuning_optimized=tuning_optimized,
+        pending_interest=pending_interest, pending_held=pending_held,
+        pending_target=pending_target, prev_ids=prev_ids, pending_element=pending_element,
+        nonprime_approach=nonprime_approach,
+        superspace_generator_tuning=superspace_generator_tuning,
+        displayed_tuning_name=displayed_tuning_name, held_basis_ratios=held_basis_ratios,
+        displayed_projection_name=displayed_projection_name, targets_in_use=targets_in_use,
         pending_mapping_row=pending_mapping_row,
     ).layout()

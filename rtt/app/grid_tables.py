@@ -348,7 +348,6 @@ ROW_LABEL_LETTERS = {
     # math-bold-italic 𝒑 + subscript ₗ + index, parallel to the on-domain P's 𝒑ᵢ and M_L's 𝒎ₗᵢ
     ("ss_projection", "ssprimes"): f"𝒑{SUBSCRIPT_L}",
 }
-ROW_LABELED_TILES = frozenset(ROW_LABEL_LETTERS)
 COL_LABEL_LETTERS = {
     # the scaling factors λ = diag(λ): one eigenvalue λᵢ per V sub-column (commas then unchanged),
     # the scalar entries in italic (𝜆ᵢ), like the other size lists' italic scalar headers

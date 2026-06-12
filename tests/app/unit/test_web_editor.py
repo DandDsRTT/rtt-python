@@ -114,14 +114,6 @@ def test_load_round_trips_a_matrix_pretransformer_override():
     assert e3.custom_prescaler == editor.custom_prescaler
 
 
-def test_clear_custom_prescaler_reverts_to_the_scheme():
-    editor = Editor()
-    editor.set_custom_prescaler_entry(0, 0, 4.0)
-    assert editor.custom_prescaler is not None
-    editor.clear_custom_prescaler()
-    assert editor.custom_prescaler is None  # the cells revert to the scheme's diagonal
-
-
 def test_picking_a_preset_prescaler_clears_the_custom_override():
     # the prescaler preset is the user's reset path: picking "log-prime" / "prime" /
     # "identity" CLEARS the custom override AND swaps the scheme's prescaler trait, so the
@@ -151,7 +143,7 @@ def test_displayed_prescaler_name_tracks_the_scheme_and_falls_back_on_a_manual_e
     assert editor.displayed_prescaler_name == "log-prime"  # the default scheme's prescaler
     editor.set_custom_prescaler_entry(1, 1, 9.9)  # a deviating hand-edit
     assert editor.displayed_prescaler_name is None
-    editor.clear_custom_prescaler()
+    editor.undo()
     assert editor.displayed_prescaler_name == "log-prime"  # reverts with the override gone
 
 
@@ -521,7 +513,7 @@ def test_cancelling_a_pending_comma_discards_the_draft():
     # untouched — distinct from remove_comma, which un-tempers a real comma (see below).
     editor = Editor()
     editor.add_comma()
-    assert editor.can_remove_comma is True  # a pending draft can be cancelled
+    assert editor.pending_comma is not None  # a pending draft can be cancelled
     editor.cancel_pending_comma()
     assert editor.pending_comma is None
     assert editor.state.comma_basis == ((4, -4, 1),)  # the real comma untouched — the draft went, not it
@@ -1357,7 +1349,6 @@ def test_remove_comma_un_tempers_the_last_comma_to_just_intonation():
     # generator, reaching nullity 0. Removing meantone's 81/80 leaves 5-limit just intonation (the
     # identity mapping), one undoable edit.
     editor = Editor()
-    assert editor.can_remove_comma is True  # the last comma IS removable
     editor.remove_comma()
     assert (editor.state.d, editor.state.r, editor.state.n) == (3, 3, 0)  # full rank: nothing tempered
     assert editor.state.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))  # JI over 2.3.5
@@ -1370,7 +1361,7 @@ def test_remove_comma_is_a_noop_with_nothing_tempered():
     # the UI hides it); the + adds a comma back. Reaching n=0 first, a second − must not crash.
     editor = Editor()
     editor.remove_comma()  # meantone -> JI (n=0)
-    assert editor.state.n == 0 and editor.can_remove_comma is False
+    assert editor.state.n == 0
     editor.remove_comma()  # guarded no-op
     assert editor.state.n == 0 and editor.can_undo is True  # still just the one edit
 

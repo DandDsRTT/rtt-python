@@ -1287,12 +1287,12 @@ def test_mapping_pending_text_splices_the_draft_map_before_the_closing_brace():
         == "2.3.13/5 [⟨1 2 2] ⟨0 -2 -3] "
 
 
-def test_parse_mapping_reads_an_ebk_map_string():
-    assert service.parse_mapping("[⟨1 1 0] ⟨0 1 4]}") == ((1, 1, 0), (0, 1, 4))
-    assert service.parse_mapping("⟨12 19 28]") == ((12, 19, 28),)  # a single map
+def test_parse_mapping_state_reads_an_ebk_map_string():
+    assert service.parse_mapping_state("[⟨1 1 0] ⟨0 1 4]}").mapping == ((1, 1, 0), (0, 1, 4))
+    assert service.parse_mapping_state("⟨12 19 28]").mapping == ((12, 19, 28),)  # a single map
     # round-trips the mapping plain text
     pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
-    assert service.parse_mapping(pt[("mapping", "primes")]) == ((1, 1, 0), (0, 1, 4))
+    assert service.parse_mapping_state(pt[("mapping", "primes")]).mapping == ((1, 1, 0), (0, 1, 4))
 
 
 def test_parse_comma_basis_reads_an_ebk_vector_string():
@@ -1302,10 +1302,10 @@ def test_parse_comma_basis_reads_an_ebk_vector_string():
 
 
 def test_parse_rejects_unparseable_wrong_variance_or_non_integer():
-    assert service.parse_mapping("garbage") is None
-    assert service.parse_mapping("") is None
-    assert service.parse_mapping("[1 0 0⟩") is None  # a vector, not a map
-    assert service.parse_mapping("⟨1 1.5 0]") is None  # a non-integer entry
+    assert service.parse_mapping_state("garbage") is None
+    assert service.parse_mapping_state("") is None
+    assert service.parse_mapping_state("[1 0 0⟩") is None  # a vector, not a map
+    assert service.parse_mapping_state("⟨1 1.5 0]") is None  # a non-integer entry
     assert service.parse_comma_basis("⟨1 0 0]") is None  # a map, not a vector
     assert service.parse_comma_basis("nonsense") is None
 

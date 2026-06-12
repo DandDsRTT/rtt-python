@@ -10,7 +10,6 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, replace
 from fractions import Fraction
 from functools import reduce
-from math import lcm
 
 import sympy as sp
 
@@ -2014,19 +2013,6 @@ def parse_cents_map(text: str, n: int | None = None) -> tuple[float, ...] | None
     inverse of :func:`_cents_genmap` / :func:`_cents_map`. None if unparseable or (with
     ``n`` set) not exactly ``n`` values. The reader behind a typed manual generator tuning."""
     return _parse_float_list(text, n)
-
-
-def parse_mapping(text: str) -> Matrix | None:
-    """Read an EBK *map* string (e.g. ``[⟨1 1 0] ⟨0 1 4]}``) back to a mapping
-    matrix, or None if it is unparseable, the wrong variance (a vector, not a map),
-    or not an integer matrix. The inverse of the ``("mapping", "primes")`` plain text."""
-    try:
-        t = parse_temperament_data(text)
-    except Exception:
-        return None
-    if t.variance is not Variance.ROW:
-        return None
-    return _int_matrix_or_none(t.matrix)
 
 
 def parse_projection(text: str):
