@@ -2406,7 +2406,18 @@ def index() -> None:
                 or show_settings.reveal_chapter(key) > chapter[0]
             box.props("disable") if disabled else box.props(remove="disable")
         states = [editor.settings[k] for k in _available_keys()]
-        select_all_box.value = bool(states) and all(states)
+        # This is a programmatic sync of the master checkbox to the document, NOT a user click —
+        # so it must never cascade through on_select_all (which would flip every toggle to match).
+        # render() already runs us under building[0]; but the direct apply_chapter() callers (Reset
+        # and the chapter slider) don't, and there a real value CHANGE here (e.g. select-all was on,
+        # Reset drops it to the mixed defaults) fires on_select_all synchronously and turns every
+        # setting off. Guard the write itself so every caller is covered.
+        was_building = building[0]
+        building[0] = True
+        try:
+            select_all_box.value = bool(states) and all(states)
+        finally:
+            building[0] = was_building
         select_all_box.classes(add="rtt-show-mixed") if (any(states) and not all(states)) \
             else select_all_box.classes(remove="rtt-show-mixed")
 
