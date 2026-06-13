@@ -4026,6 +4026,47 @@ def test_the_mapped_list_brackets_grow_to_enclose_the_draft_rows_placeholders():
     assert drafting["cell:mapped_comma:2:0"].preview_remove and not drafting["cell:mapped_comma:2:0"].pending
 
 
+def test_a_comma_minus_hover_fills_the_born_generator_rows_derived_cells():
+    # the − hover op is known, so the green ghost row is a COMPLETE generator row, not a blank
+    # placeholder: its prime coords AND its mapped image of every interval are computed (the new
+    # generator born from un-tempering the comma). Dropping meantone's syntonic comma → JI, whose
+    # third generator is prime 5 (⟨0 0 1]); its target images are that prime's exponents.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone r=2; ghost row rides at token 2
+    cells = {c.id: c for c in spreadsheet.build(base, preview_remove=("comma", 0)).cells}
+    assert [cells[f"cell:mapping:2:{p}"].text for p in range(3)] == ["0", "0", "1"]
+    assert all(f"cell:mapped:2:{j}" in cells and cells[f"cell:mapped:2:{j}"].text != "" for j in range(2))
+
+
+def test_a_mapping_minus_hover_fills_the_born_commas_derived_cells():
+    # the dual: the green ghost comma column is a COMPLETE comma column — its vector, and down the
+    # mapping band M[surviving row]·newborn = 0 (the rank-reduced mapping tempers it out), and its
+    # tuning sizes: it vanishes in the new temperament, so tempered 0, just its just size, error −just.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone; ghost comma rides at token 1
+    cells = {c.id: c for c in spreadsheet.build(base, preview_remove=("row", 0)).cells}
+    assert [cells[f"cell:comma:{p}:1"].text for p in range(3)] == ["0", "-4", "1"]
+    assert cells["tuning:comma:draft"].text == "0.000"                       # vanishes → tempered 0
+    assert (cells["just:comma:draft"].text.lstrip("-")                       # error = −just (equal magnitude)
+            == cells["retune:comma:draft"].text.lstrip("-") != "0.000")
+    assert cells["cell:mapped_comma:1:1"].text == "0"                        # surviving row tempers it out
+    assert cells["cell:mapped_comma:0:1"].preview_remove                     # the removed row reds over its cell
+
+
+def test_a_comma_minus_hover_in_projection_births_an_unchanged_interval():
+    # in projection (V = C|U, #unchanged = rank) a comma − raises the rank, so the U half grows: a held
+    # interval is BORN with its computed value, tinted green, the dual of the doomed-U a mapping − reds.
+    s = settings.defaults(); s["projection"] = True
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone r=2 → 2 unchanged columns
+    plain = {c.id: c for c in spreadsheet.build(base, s).cells}
+    hovered = {c.id: c for c in spreadsheet.build(base, s, preview_remove=("comma", 0)).cells}
+    base_nu = sum(1 for i in plain if i.startswith("cell:unchanged:0:"))
+    hov_nu = sum(1 for i in hovered if i.startswith("cell:unchanged:0:"))
+    assert hov_nu == base_nu + 1                                             # the U half grew by one
+    born = hov_nu - 1
+    assert [hovered[f"cell:unchanged:{p}:{born}"].text for p in range(3)] == ["0", "0", "1"]  # computed (prime 5)
+    assert all(hovered[f"cell:unchanged:{p}:{born}"].pending for p in range(3))                # ...green
+    assert not any(hovered[f"cell:unchanged:{p}:0"].pending for p in range(3))                 # an existing one isn't
+
+
 # --- math expressions: the just row's exact log₂ closed forms ---
 
 def test_math_expressions_render_the_just_tuning_primes_as_logs():

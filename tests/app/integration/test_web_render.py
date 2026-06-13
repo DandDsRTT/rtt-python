@@ -2212,6 +2212,9 @@ async def test_hovering_a_comma_minus_previews_the_born_generator(user: User) ->
     # the op is known, so the born generator's coords are COMPUTED and shown: dropping the syntonic
     # comma un-tempers to JI, whose third generator is prime 5 → ⟨0 0 1]
     assert [_cell_text(user, f"cell:mapping:2:{p}") for p in range(3)] == ["0", "0", "1"]
+    # ...and the row's DERIVED mapped cells are computed too (not left blank): the born generator's
+    # image of each interval is filled across the band
+    assert _cell_text(user, "cell:mapped:2:0") != ""
     assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")    # the hovered comma → red
     assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:0")  # a survivor recombines → amber
     assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:0")
@@ -2236,6 +2239,10 @@ async def test_hovering_a_mapping_minus_previews_the_born_comma(user: User) -> N
     # the born comma's coords are COMPUTED and shown (dropping meantone's generator un-tempers to the
     # rank-1 ET whose extra comma is [0 -4 1⟩)
     assert [_cell_text(user, f"cell:comma:{p}:1") for p in range(3)] == ["0", "-4", "1"]
+    # ...and the column's DERIVED mapped cells are computed: M[surviving row]·newborn = 0 (the
+    # rank-reduced mapping tempers the born comma out). (Its tuning SIZES are checked in the unit
+    # test — a tuningvalue face isn't readable through _cell_text.)
+    assert _cell_text(user, "cell:mapped_comma:1:1") == "0"
     assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:0:0")  # the hovered row → red
     assert "rtt-preview-change" in _wrap_classes(user, "cell:comma:0:0")    # the survivor comma recombines → amber
     # where the red mapping row crosses the green ghost comma, red wins
@@ -2244,6 +2251,35 @@ async def test_hovering_a_mapping_minus_previews_the_born_comma(user: User) -> N
     UserInteraction(user, btn, None).trigger("mouseleave")
     await user.should_not_see(marker="cell:comma:0:1")                      # the ghost clears on mouse-out
     assert "rtt-preview-remove" not in _wrap_classes(user, "cell:mapping:0:0")
+
+
+async def test_hovering_a_mapping_minus_in_projection_dooms_the_last_unchanged_interval(user: User) -> None:
+    # in projection the V column splits C|U with #unchanged = rank, so a mapping − (which drops the
+    # rank) deletes the last unchanged interval — preview it red, the U-half dual of the comma born on
+    # the C side. (A comma − raises the rank instead, birthing a U interval — the dual born case.)
+    await _enable(user, "projection")
+    await user.should_see(marker="cell:unchanged:0:1")            # meantone rank 2 → two unchanged columns
+    btn = set(user.find(marker="map_minus:0").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:unchanged:0:1")       # the last U interval → red
+    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:unchanged:0:0")   # the earlier one survives
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:unchanged:0:1")   # cleared on mouse-out
+
+
+async def test_hovering_a_comma_minus_in_projection_births_an_unchanged_interval(user: User) -> None:
+    # the dual of the doomed case: a comma − raises the rank, so in projection the U half grows — a
+    # held interval is BORN (green), the U-half dual of the generator born on the mapping axis. It
+    # reflows in to the right of the existing unchanged columns; leaving clears it.
+    await _enable(user, "projection")
+    await user.should_see(marker="cell:unchanged:0:1")        # meantone rank 2 → two unchanged columns
+    await user.should_not_see(marker="cell:unchanged:0:2")    # ...not a third yet
+    btn = set(user.find(marker="comma_minus:0").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    await user.should_see(marker="cell:unchanged:0:2")        # the born held interval reflows in...
+    assert "rtt-pending" in _wrap_classes(user, "cell:unchanged:0:2")   # ...green (a newborn)
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    await user.should_not_see(marker="cell:unchanged:0:2")    # cleared on mouse-out
 
 
 async def test_blurring_an_incomplete_draft_cell_keeps_the_other_typed_cells(user: User) -> None:

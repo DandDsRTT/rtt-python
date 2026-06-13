@@ -990,17 +990,21 @@ class _GridBuilder:
         # removing generator idx gives the extra comma. The newborn is the fresh-token entry — the
         # last row / comma of the re-dualed basis (assign_column_tokens pairs the survivors
         # positionally, so the surplus lands last). Computed once; the ghost emission fills its cells.
+        self.ghost_new = None  # the post-remove temperament the − hover previews (its newborn is the ghost)
         self.ghost_row_map = self.ghost_row_ratio = None
+        self.ghost_row_mapped = {}        # comma−: the newborn generator's M·interval over each set (filled at 1149)
         self.ghost_comma_vec = self.ghost_comma_ratio = None
+        self.ghost_comma_mapped = ()      # mapping−: M_current[i]·newborn per row (0 for survivors)
+        self.ghost_comma_just = 0.0       # mapping−: the newborn comma's just size (it vanishes → tempered 0)
         if self.ghost_row:
-            born = service.remove_comma(self.state, self.preview_remove[1])
-            self.ghost_row_map = born.mapping[-1]
-            born_gens = service.generators(born.mapping, self.elements)
+            self.ghost_new = service.remove_comma(self.state, self.preview_remove[1])
+            self.ghost_row_map = self.ghost_new.mapping[-1]
+            born_gens = service.generators(self.ghost_new.mapping, self.elements)
             self.ghost_row_ratio = born_gens[-1] if born_gens else ""
         elif self.ghost_comma:
-            born = service.remove_mapping_row(self.state, self.preview_remove[1])
-            self.ghost_comma_vec = born.comma_basis[-1] if born.comma_basis else None
-            born_crs = service.comma_ratios(born.comma_basis, self.elements) if born.comma_basis else ()
+            self.ghost_new = service.remove_mapping_row(self.state, self.preview_remove[1])
+            self.ghost_comma_vec = self.ghost_new.comma_basis[-1] if self.ghost_new.comma_basis else None
+            born_crs = service.comma_ratios(self.ghost_new.comma_basis, self.elements) if self.ghost_new.comma_basis else ()
             self.ghost_comma_ratio = born_crs[-1] if born_crs else ""
         # the displayed target list: a typed explicit target list overrides the TILT/OLD spec, but
         # all-interval auto-replaces it with Tₚ = I (the domain basis, every interval's prime-based
@@ -1092,6 +1096,33 @@ class _GridBuilder:
             self.unchanged_basis = None
             self.unchanged_ratios = self.unchanged_mapped = self.unchanged_complexities = ()
             self.unchanged_sizes = service.IntervalSizes((), (), (), ())
+        # A comma − hover RAISES the rank, so in projection the U half grows: a held interval is BORN.
+        # Compute the new (higher-rank) projection's unchanged basis and APPEND its surplus interval,
+        # so every U loop + the V geometry render it for free; a green post-pass below tints it. (Only
+        # the comma − hover: its dual mapping-row DRAFT can't compute the born U — the generator isn't
+        # typed yet.) It vanishes nothing — a held interval has tempered = just, error 0 — so the
+        # appended sizes come straight from the new projection.
+        self.born_u = self.ghost_row and self.show_unchanged
+        if self.born_u:
+            tun_new = service.tuning(self.ghost_new.mapping, self.tuning_scheme, self.elements,
+                                     self.nonprime_approach, held=self.held_basis_ratios,
+                                     prescaler_override=self.custom_prescaler)
+            ud_new = service.unchanged_interval_data(self.ghost_new, self.held_basis_ratios, tun_new,
+                                                     self.tuning_scheme, self.elements, self.custom_prescaler)
+            if ud_new is not None and len(ud_new.basis) > self.nu:
+                bratio = ud_new.ratios[-1]  # None when the born held interval is irrational (dashed)
+                bm = service.mapped_intervals(self.state.mapping, (bratio,), self.elements) if bratio is not None else None
+                self.unchanged_basis = tuple(self.unchanged_basis) + (ud_new.basis[-1],)
+                self.unchanged_ratios = tuple(self.unchanged_ratios) + (bratio,)
+                self.unchanged_mapped = tuple(tuple(row) + (bm[i][0] if bm is not None else None,) for i, row in enumerate(self.unchanged_mapped))
+                self.unchanged_complexities = tuple(self.unchanged_complexities) + (ud_new.complexities[-1],)
+                s, n = self.unchanged_sizes, ud_new.sizes
+                self.unchanged_sizes = service.IntervalSizes(
+                    tuple(s.tempered) + (n.tempered[-1],), tuple(s.just) + (n.just[-1],),
+                    tuple(s.errors) + (n.errors[-1],), tuple(s.damage) + (n.damage[-1],))
+                self.nu += 1
+            else:
+                self.born_u = False
         # a comma being added is shown as a pending draft column to the right of the real
         # ones: blank green cells and a "?" quantity until it is a valid independent comma
         # (then it commits and the mapping re-ranks). It is not a real comma, so it does
@@ -1155,6 +1186,28 @@ class _GridBuilder:
         self.interest_ratios = service.comma_ratios(self.interest, self.elements)  # vector -> "num/den" (shared renderer)
         self.interest_mapped = service.mapped_intervals(self.state.mapping, self.interest_ratios, self.elements)
         self.interest_sizes = service.interval_sizes(self.tun, self.interest_ratios, self.elements)
+        # the − hover ghost's DERIVED values (now that the tuning + interval sets are resolved). The
+        # ghost is the newborn row/column of self.ghost_new, so its derived cells are that entry's
+        # mapped images / sizes — lifted from the post-remove temperament, the same service calls the
+        # real rows/columns use, indexed at the newborn ([-1], the fresh-token surplus).
+        if self.ghost_row and self.ghost_new is not None:
+            nm = self.ghost_new.mapping
+            def _newborn_mapped(ratios):  # the newborn generator's image of each interval ([-1] row);
+                # per-ratio so a DASHED (None) unchanged interval maps to None (DASH), not a crash
+                return tuple(service.mapped_intervals(nm, (r,), self.elements)[-1][0] if r is not None else None
+                             for r in ratios)
+            self.ghost_row_mapped = {
+                key: _newborn_mapped(ratios)
+                for key, ratios in (("targets", self.targets), ("interest", self.interest_ratios),
+                                    ("held", self.held_ratios), ("commas", self.comma_ratios),
+                                    ("unchanged", self.unchanged_ratios))}
+        elif self.ghost_comma and self.ghost_comma_ratio:
+            # the born comma down the mapping rows: M_current[i]·newborn — 0 for every SURVIVING row
+            # (the rank-reduced mapping still tempers it out), nonzero only on the removed row (which
+            # reds over it). And its just size (it vanishes in the new temperament, so tempered 0).
+            col = service.mapped_intervals(self.state.mapping, (self.ghost_comma_ratio,), self.elements)
+            self.ghost_comma_mapped = tuple(row[0] for row in col)
+            self.ghost_comma_just = service.interval_sizes(self.tun, (self.ghost_comma_ratio,), self.elements).just[0]
         # a stable id-token per column of each interval list (and per mapping ROW), matched against
         # the previous render (prev_ids): a within-list reorder keeps a column's token, so all its
         # cells keep their ids and the reconciler slides them to the new x — and a MID-LIST removal
@@ -2516,8 +2569,15 @@ class _GridBuilder:
         # bracket already spans the draft (content_w is _shown-wide), so only the cell is needed.
         pending_idx = self._pending_draft_idx(group)
         if pending_idx is not None and pending_idx[0] is not None:
+            # a real draft's size is unknown (blank); the mapping − hover's born comma has known sizes
+            # — it vanishes in the new temperament, so tempered 0, just its just size, error −just.
+            text = ""
+            if self.ghost_comma and group == "commas":
+                gsize = {"tuning": 0.0, "just": self.ghost_comma_just, "retune": -self.ghost_comma_just}.get(key)
+                if gsize is not None:
+                    text = service.cents(gsize)
             self.cells.append(CellBox(f"{key}:{self.group_elem[group]}:draft", self.group_left[group](pending_idx[1]),
-                                      y, COL_W, ROW_H, "tuningvalue", text="", pending=True))
+                                      y, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
 
     # a charted tile draws a bar chart in the band reserved above its values. The box spans
     # the value block exactly — the left bracket gutter, the value columns, and the right
@@ -3335,9 +3395,12 @@ class _GridBuilder:
                 if self.tile_open("mapping", "commas"):
                     for c in range(self.nc):
                         self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.col_token('commas', c)}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
-                    if self.comma_draft:  # blank green placeholder under the draft/ghost comma, so the
-                        # draft column reads green down through the computed rows, not just its vectors
-                        self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.pending_col_token('commas')}", self.comma_left(self.nc), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+                    if self.comma_draft:  # the draft/ghost comma's cell in this row, so the column reads
+                        # green down through the computed rows. A real draft is blank; a − hover ghost
+                        # shows M[i]·newborn (0 on every surviving row, nonzero only on the removed row,
+                        # which reds over it).
+                        mc_text = str(self.ghost_comma_mapped[i]) if (self.ghost_comma and i < len(self.ghost_comma_mapped)) else ""
+                        self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.pending_col_token('commas')}", self.comma_left(self.nc), self.map_top(i), COL_W, ROW_H, "mapped", text=mc_text, gen=i, pending=True))
                     for j in range(self.nu):
                         mapped_text = DASH if self.unchanged_mapped[i][j] is None else str(self.unchanged_mapped[i][j])
                         self.cells.append(CellBox(f"cell:mapped_unchanged:{rt}:{j}", self.comma_left(self.nc_shown + j), self.map_top(i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
@@ -3371,22 +3434,29 @@ class _GridBuilder:
                         # the ghost shows the born generator's COMPUTED prime coords; a real draft is blank
                         v = self.ghost_row_map[p] if self.ghost_row else self.pending_mapping_row[p]
                         self.cells.append(CellBox(ids.mapping_cell(drt, p), self.prime_left(p), self.map_top(dr), COL_W, ROW_H, row_kind, text="" if v is None else str(v), gen=dr, prime=p, pending=True))
-                # blank green placeholders in the derived mapped tiles (M·target / M·interest / M·held
-                # / M·comma / M·U for the not-yet-committed generator), so the whole draft row greens
+                # the derived mapped tiles (M·target / M·interest / M·held / M·comma / M·U for the new
+                # generator). A real draft is blank (undefined until it commits); a − hover ghost shows
+                # the born generator's COMPUTED images (self.ghost_row_mapped), so the row reads green
+                # all the way across with real values.
+                def gmap(key, j):
+                    vals = self.ghost_row_mapped.get(key, ()) if self.ghost_row else ()
+                    if j >= len(vals):
+                        return ""
+                    return DASH if vals[j] is None else str(vals[j])
                 if self.tile_open("mapping", "targets"):
                     for j in range(self.k):
-                        self.cells.append(CellBox(f"cell:mapped:{drt}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                        self.cells.append(CellBox(f"cell:mapped:{drt}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(dr), COL_W, ROW_H, "mapped", text=gmap("targets", j), gen=dr, pending=True))
                 if self.tile_open("mapping", "interest"):
                     for ii in range(self.mi):
-                        self.cells.append(CellBox(f"cell:imapped:{drt}:{self.col_token('interest', ii)}", self.interest_left(ii), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                        self.cells.append(CellBox(f"cell:imapped:{drt}:{self.col_token('interest', ii)}", self.interest_left(ii), self.map_top(dr), COL_W, ROW_H, "mapped", text=gmap("interest", ii), gen=dr, pending=True))
                 if self.tile_open("mapping", "held"):
                     for hi in range(self.nh):
-                        self.cells.append(CellBox(f"cell:hmapped:{drt}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                        self.cells.append(CellBox(f"cell:hmapped:{drt}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(dr), COL_W, ROW_H, "mapped", text=gmap("held", hi), gen=dr, pending=True))
                 if self.tile_open("mapping", "commas"):
                     for c in range(self.nc):
-                        self.cells.append(CellBox(f"cell:mapped_comma:{drt}:{self.col_token('commas', c)}", self.comma_left(c), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                        self.cells.append(CellBox(f"cell:mapped_comma:{drt}:{self.col_token('commas', c)}", self.comma_left(c), self.map_top(dr), COL_W, ROW_H, "mapped", text=gmap("commas", c), gen=dr, pending=True))
                     for j in range(self.nu):
-                        self.cells.append(CellBox(f"cell:mapped_unchanged:{drt}:{j}", self.comma_left(self.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                        self.cells.append(CellBox(f"cell:mapped_unchanged:{drt}:{j}", self.comma_left(self.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text=gmap("unchanged", j), gen=dr, pending=True))
 
     def _emit_mapped_grid(self, tile, prefix, grid, n_cols, left, col_kw, *,
                           full=None, colwise=False, col_token_key=None, inset=0,
@@ -3600,10 +3670,11 @@ class _GridBuilder:
                 full_u = self.unchanged_basis is not None and all(v is not None for v in self.unchanged_basis)
                 for j in range(self.nu):
                     doomed = self.pending is not None and j == self.nu - 1
+                    born = self.born_u and j == self.nu - 1  # the comma − hover's born held interval: read-only
                     for p in range(self.d):
                         vec_text = DASH if self.unchanged_basis[j] is None else str(self.unchanged_basis[j][p])
                         self.cells.append(CellBox(ids.unchanged_cell(j, p), self.comma_left(self.nc_shown + j), self.vec_top(p), COL_W, ROW_H,
-                                             "unchangedcell" if (full_u and not doomed) else "vec", text=vec_text, prime=p, comma=self.nc + j,
+                                             "unchangedcell" if (full_u and not doomed and not born) else "vec", text=vec_text, prime=p, comma=self.nc + j,
                                              unit=self.cell_unit("vectors", "commas", prime=p)))
                     self._voice("vectors:commas", self.nc + j, self.unchanged_sizes.just[j])
                 if self.comma_draft:  # the green column at index nc: an editable draft, or a hover GHOST
@@ -5166,16 +5237,29 @@ class _GridBuilder:
             self.cells = [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
                      for cb in self.cells]
 
-        # While a comma DRAFT is open over the consolidated V column, committing it drops the rank by
-        # one and deletes the last unchanged interval. Preview that interval's WHOLE column red — the
-        # app's standard remove-preview look (rtt-preview-remove), across every value tile, not just a
-        # couple. The doomed column's value cells all share one x (comma_left of its sub-column), so a
-        # single pass flags them; the w == COL_W / kind guard skips the count + caption that ride that
-        # x when there is only one unchanged column (nu == 1).
-        if self.pending is not None and self.show_unchanged and self.nu:
+        # Any rank DROP over the consolidated V column deletes the last unchanged interval (in
+        # projection #unchanged = rank): a comma DRAFT being added (self.pending), or a mapping − hover
+        # un-tempering a comma born in its place (self.ghost_comma). Preview that interval's WHOLE
+        # column red — the standard remove look — across every value tile. The doomed column's value
+        # cells all share one x (comma_left of its sub-column), so a single pass flags them; the
+        # w == COL_W / kind guard skips the count + caption that ride that x when nu == 1. (A rank
+        # RISE — comma − / mapping-row draft — instead BIRTHS a U interval; see the born-U ghost below.)
+        if (self.pending is not None or self.ghost_comma) and self.show_unchanged and self.nu:
             doomed_x = self.comma_left(self.nc_shown + self.nu - 1)
             self.cells = [replace(cb, preview_remove=True)
                           if (cb.w == COL_W and cb.x == doomed_x
+                              and cb.kind not in ("count", "caption", "colgrip"))
+                          else cb
+                          for cb in self.cells]
+
+        # The dual: a comma − hover RAISES the rank, BIRTHING the last unchanged column (appended to
+        # the U arrays above with its computed values). Tint that whole column green — the standard
+        # newborn look — BEFORE the rank-duality pass below, so its `pending` survives the amber the
+        # crossing mapping rows would otherwise paint (green beats amber; only a red row/col overrides).
+        if self.born_u:
+            born_x = self.comma_left(self.nc_shown + self.nu - 1)
+            self.cells = [replace(cb, pending=True)
+                          if (cb.w == COL_W and cb.x == born_x
                               and cb.kind not in ("count", "caption", "colgrip"))
                           else cb
                           for cb in self.cells]
