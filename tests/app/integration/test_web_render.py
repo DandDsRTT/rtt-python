@@ -504,8 +504,9 @@ async def test_edge_washes_also_render_into_the_frozen_panes(user: User) -> None
     # branch and confirm both frozen copies exist (the body copy keeps the bare id).
     await user.open("/")
     user.find(kind=ui.checkbox, content="colorization").click()
-    await user.should_see(marker="wash:temperament:quantities:gens")        # the body copy
-    await user.should_see(marker="wash:temperament:quantities:gens#col")    # the column-strip copy (top spill)
+    # counts is the top row now, so it's the one whose wash spills up into the column strip
+    await user.should_see(marker="wash:temperament:counts:gens")        # the body copy
+    await user.should_see(marker="wash:temperament:counts:gens#col")    # the column-strip copy (top spill)
     await user.should_see(marker="wash:temperament:mapping:quantities#row")  # the row-band copy (left spill)
 
 
@@ -594,13 +595,14 @@ async def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_defaul
     slider = next(iter(user.find(marker="chapterslider").elements))
     assert slider.value == show_settings.CHAPTER_DEFAULT  # the as-shipped slider position (ch4)
     # ch2/3/4 specific rows are revealed at the default (the ch3 tuning sub-controls included)...
-    for key in ("counts", "tuning_boxes", "optimization", "weighting", "interest"):
+    for key in ("counts", "tuning_boxes", "optimization", "weighting", "interest",
+                "domain_quantities", "domain_units"):
         assert "rtt-chap-hidden" not in _row_classes(user, key), key
-    # ...while ch5+ and the outside-guide (★) rows are collapsed. (These are all top-level rows, or
+    # ...while the ch9 / outside-guide (★) rows are collapsed. (These are all top-level rows, or
     # — projection — a sub-control of the on-by-default tuning boxes, so they're present/findable;
     # a sub-control of an OFF parent, like all-interval under weighting, is hidden by its own
     # visibility binding and so isn't found regardless of chapter.)
-    for key in ("domain_units", "domain_quantities", "nonstandard_domain", "projection"):
+    for key in ("nonstandard_domain", "projection", "generator_detempering", "identity_objects"):
         assert "rtt-chap-hidden" in _row_classes(user, key), key
     # the dummy tile's parts are gated the space-preserving way: an early layer shows, a ch5 one is
     # invisible-but-in-place (visibility:hidden, NOT display:none)
@@ -612,8 +614,8 @@ async def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_defaul
     # `disable` prop; a revealed one does not.
     def _box(key):
         return next(iter(user.find(marker=f"showbox:{key}").elements))
-    assert "disable" in _box("domain_units")._props   # ch5 — hidden + disabled at ch4
-    assert "disable" not in _box("counts")._props      # ch2 — revealed + enabled
+    assert "disable" in _box("nonstandard_domain")._props  # ch9 — hidden + disabled at ch4
+    assert "disable" not in _box("counts")._props          # ch2 — revealed + enabled
     # the live readout reads "<n>: <title>" (no "ch " prefix)
     reading = next(iter(user.find(marker="chapterreading").elements))
     assert reading.text == "4: Exploring temperaments"
