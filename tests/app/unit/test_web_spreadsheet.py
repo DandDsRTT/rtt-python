@@ -4056,6 +4056,23 @@ def test_a_mapping_minus_hover_fills_the_born_commas_derived_cells():
     assert cells["cell:mapped_comma:0:1"].preview_remove                     # the removed row reds over its cell
 
 
+def test_a_mapping_minus_hover_fills_the_born_commas_projection_and_complexity_rows():
+    # the born comma column reads green top-to-bottom: the projection-half rows (scaling factors λ and
+    # P·comma) show the vanished-comma values 0, and the complexity-prescaling matrix + complexity norm
+    # show the born comma's own 𝐿·comma and ‖𝐿·comma‖q — not the blank placeholders a real draft leaves.
+    s = settings.defaults(); s["weighting"], s["projection"] = True, True
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone; minimax-S → the complexity rows show
+    cells = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S", preview_remove=("row", 0)).cells}
+    assert cells["cell:scaling:draft"].text == "0"                           # λ = 0 (a vanished comma)
+    assert [cells[f"cell:proj_v:{p}:draft"].text for p in range(3)] == ["0", "0", "0"]  # P·comma = 0
+    # the prescaled born-comma vector 𝐿·comma matches what the committed comma columns compute
+    pre = [cells[f"cell:prescaling:commas:{i}:draft"].text for i in range(3)]
+    assert pre[0] == "0" and pre != ["", "", ""]                             # filled, not blank
+    assert cells["complexity:comma:draft"].text not in ("", "<MISSING>")     # its own ‖𝐿·comma‖q
+    assert cells["complexity:comma:draft"].pending                           # ...tinted green
+    assert all(cells[f"cell:prescaling:commas:{i}:draft"].pending for i in range(3))
+
+
 def test_a_comma_minus_hover_in_projection_births_an_unchanged_interval():
     # in projection (V = C|U, #unchanged = rank) a comma − raises the rank, so the U half grows: a held
     # interval is BORN with its computed value, tinted green, the dual of the doomed-U a mapping − reds.

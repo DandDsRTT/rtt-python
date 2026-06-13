@@ -1006,6 +1006,7 @@ class _GridBuilder:
         self.ghost_comma_vec = self.ghost_comma_ratio = None
         self.ghost_comma_mapped = ()      # mapping−: M_current[i]·newborn per row (0 for survivors)
         self.ghost_comma_just = 0.0       # mapping−: the newborn comma's just size (it vanishes → tempered 0)
+        self.ghost_comma_complexity = 0.0 # mapping−: the newborn comma's complexity ‖𝐿·comma‖q
         if self.ghost_row:
             self.ghost_new = service.remove_comma(self.state, self.preview_remove[1])
             self.ghost_row_map = self.ghost_new.mapping[-1]
@@ -1218,6 +1219,10 @@ class _GridBuilder:
             col = service.mapped_intervals(self.state.mapping, (self.ghost_comma_ratio,), self.elements)
             self.ghost_comma_mapped = tuple(row[0] for row in col)
             self.ghost_comma_just = service.interval_sizes(self.tun, (self.ghost_comma_ratio,), self.elements).just[0]
+            # its complexity 𝒄 = ‖𝐿·comma‖q, the same service call the committed commas use (_resolve_complexities)
+            self.ghost_comma_complexity = service.interval_complexities(
+                self.state.mapping, self.tuning_scheme, (self.ghost_comma_ratio,),
+                prescaler_override=self.custom_prescaler, domain_basis=self.elements)[0]
         # a stable id-token per column of each interval list (and per mapping ROW), matched against
         # the previous render (prev_ids): a within-list reorder keeps a column's token, so all its
         # cells keep their ids and the reconciler slides them to the new x — and a MID-LIST removal
@@ -2588,10 +2593,12 @@ class _GridBuilder:
         pending_idx = self._pending_draft_idx(group)
         if pending_idx is not None and pending_idx[0] is not None:
             # a real draft's size is unknown (blank); the mapping − hover's born comma has known sizes
-            # — it vanishes in the new temperament, so tempered 0, just its just size, error −just.
+            # — it vanishes in the new temperament, so tempered 0, just its just size, error −just,
+            # and its own complexity ‖𝐿·comma‖q (the complexity row reads green through the ghost too).
             text = ""
             if self.ghost_comma and group == "commas":
-                gsize = {"tuning": 0.0, "just": self.ghost_comma_just, "retune": -self.ghost_comma_just}.get(key)
+                gsize = {"tuning": 0.0, "just": self.ghost_comma_just, "retune": -self.ghost_comma_just,
+                         "complexity": self.ghost_comma_complexity}.get(key)
                 if gsize is not None:
                     text = service.cents(gsize)
             self.cells.append(CellBox(f"{key}:{self.group_elem[group]}:draft", self.group_left[group](pending_idx[1]),
@@ -3560,10 +3567,11 @@ class _GridBuilder:
                 for p in range(self.d):
                     self.cells.append(CellBox(f"cell:proj_v:{p}:{self.col_token('commas', c)}", self.comma_left(c), self.proj_top(p),
                                          COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
-            if self.comma_draft:  # blank green placeholder column under the draft/ghost comma (P·draft)
+            if self.comma_draft:  # the draft/ghost comma's P·column: a born comma (ghost) vanishes, so
+                # P·comma = 0 (the zero vector) like every committed comma; a real draft is blank
                 for p in range(self.d):
                     self.cells.append(CellBox(f"cell:proj_v:{p}:draft", self.comma_left(self.nc), self.proj_top(p),
-                                         COL_W, ROW_H, "mapped", text="", prime=p, pending=True))
+                                         COL_W, ROW_H, "mapped", text="0" if self.ghost_comma else "", prime=p, pending=True))
             for j in range(self.nu):  # P·unchanged = the unchanged interval itself (dashed if U is)
                 dashed = self.unchanged_basis[j] is None
                 for p in range(self.d):
@@ -3604,9 +3612,10 @@ class _GridBuilder:
             for c, lam in enumerate(scaling):  # comma_value_pos skips the pending-draft slot for the U half
                 self.cells.append(CellBox(f"cell:scaling:{self.col_token('commas', c)}", self.comma_left(self.comma_value_pos(c)), self.row_y["scaling_factors"],
                                      COL_W, ROW_H, "mapped", text=lam, comma=c))
-            if self.comma_draft:  # the open comma draft column: a blank green λ slot, like every other V-column row
+            if self.comma_draft:  # the comma draft column's λ slot: a born comma (ghost) vanishes, so
+                # eigenvalue 0 like every committed comma; a real draft is blank until it commits
                 self.cells.append(CellBox("cell:scaling:draft", self.comma_left(self.nc), self.row_y["scaling_factors"],
-                                     COL_W, ROW_H, "mapped", text="", pending=True))
+                                     COL_W, ROW_H, "mapped", text="0" if self.ghost_comma else "", pending=True))
 
     def _emit_canon_band(self) -> None:
         """The canonical-mapping form box and the generator form matrix."""
@@ -4175,10 +4184,22 @@ class _GridBuilder:
             # _shown-wide), so only the cells are needed. left() is this group's group_left.
             pending_idx = self._pending_draft_idx(group)
             if pending_idx is not None and pending_idx[0] is not None:
+                # a real draft's prescaled column is unknown (blank); the mapping − hover's born comma
+                # has a known vector, so its 𝐿·comma fills the placeholder (lifted into the superspace
+                # first when shown), the same per-row product the committed comma columns use above.
+                ghost_pre = None
+                if self.ghost_comma and group == "commas" and self.ghost_comma_vec is not None:
+                    gvec = _lift((self.ghost_comma_vec,))[0] if self.show_superspace else self.ghost_comma_vec
+                    ghost_pre = ([sum(prescaler_diag[i][k] * gvec[k] for k in range(nrows)) for i in range(nrows)]
+                                 if prescaler_is_matrix else [prescaler_diag[i] * gvec[i] for i in range(nrows)])
                 for i in range(nrows + self.size_rows):
                     cy = self.row_y["prescaling"] + i * ROW_H
+                    text = ""
+                    if ghost_pre is not None:
+                        value = ghost_pre[i] if i < nrows else self.size_factor * sum(ghost_pre)
+                        text = service.prescale_text(value)
                     self.cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left(pending_idx[1]),
-                                         cy, COL_W, ROW_H, "tuningvalue", text="", pending=True))
+                                         cy, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
 
     def _emit_lbox_control(self) -> None:
         """Box 𝐋's lone alt.-complexity control: the replace-diminuator checkbox."""
