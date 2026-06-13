@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from itertools import product
-
 import sympy as sp
+from sympy.matrices.normalforms import smith_normal_decomp
 
 from rtt.library.canonicalization import canonical_form
 from rtt.library.dimensions import get_d, get_n, get_r
@@ -40,11 +39,32 @@ def _prepare(t1: Temperament, t2: Temperament) -> tuple[Temperament, Temperament
 def _addition(t1: Temperament, t2: Temperament, is_sum: bool) -> Temperament:
     if _dimensions_mismatch(t1, t2) or get_domain_basis(t1) != get_domain_basis(t2):
         raise ValueError("temperaments not addable: dimensions or bases differ")
+    # The temperament sum/difference is duality-independent, but the per-input
+    # negation check (largest-minors orientation of the explicit-L_dep form) is
+    # not: the Hodge dual carries a permutation sign the check ignores, so for
+    # some addable pairs the two duality sides disagree about which input is
+    # "negated" and silently swap sum<->difference. Pin the computation to one
+    # canonical side (the guide's g_min single-vector side, COL on a tie) and
+    # dualize the result back, so dual(sum_(M1, M2)) == sum_(dual M1, dual M2).
+    output_variance = t1.variance
+    compute_variance = _canonical_addition_variance(t1)
+    if t1.variance is not compute_variance:
+        t1, t2 = dual(t1), dual(t2)
     ldb = _get_linear_dependence_basis(t1, t2)  # raises if not addable
     v1 = _linear_independence_basis_vector(t1, ldb)
     v2 = _linear_independence_basis_vector(t2, ldb)
     combined = tuple(a + b if is_sum else a - b for a, b in zip(v1, v2))
-    return canonical_form(Temperament(tuple(ldb) + (combined,), t1.variance))
+    result = canonical_form(
+        Temperament(tuple(ldb) + (combined,), t1.variance, t1.domain_basis)
+    )
+    return result if result.variance is output_variance else dual(result)
+
+
+def _canonical_addition_variance(t: Temperament) -> Variance:
+    """The duality side the addition is computed on: the smaller-grade (g_min)
+    side, which for g_min == 1 is the guide's single-vector side; ties (r == n)
+    resolve to the comma (COL) side."""
+    return Variance.ROW if get_r(t) < get_n(t) else Variance.COL
 
 
 def _dimensions_mismatch(t1: Temperament, t2: Temperament) -> bool:
@@ -108,15 +128,49 @@ def _get_greatest_factor(a: tuple) -> int:
 
 
 def _find_modular_solution(ldb: tuple, base: tuple, modulus: int) -> tuple:
-    if modulus <= 1:
-        return (0,) * len(ldb)
-    for candidate in product(range(modulus), repeat=len(ldb)):
-        if all(
-            (base[j] + sum(candidate[i] * ldb[i][j] for i in range(len(ldb)))) % modulus == 0
-            for j in range(len(base))
-        ):
-            return candidate
-    raise ValueError("no modular solution found for addabilization defactoring")
+    """Integer multiples ``x`` of the L_dep vectors such that, component-wise,
+    ``base + sum_i x_i * ldb_i`` is divisible by ``modulus``.
+
+    Solved exactly from the Smith normal form of the integer system
+    ``A x + modulus * y = -base`` (``A`` holds the L_dep vectors as its columns),
+    so the cost is a single matrix decomposition no matter how large the modulus.
+    This is the guide's "eliminate the greatest factor piecemeal" prescription in
+    closed form; it replaces a brute force over ``modulus ** len(ldb)`` candidates
+    that grew without bound (tens of seconds, then effectively a hang, on ordinary
+    13-limit rank-5 sums)."""
+    k = len(ldb)
+    if modulus <= 1 or k == 0:
+        return (0,) * k
+    width = len(base)
+    a_rows = transpose(ldb)  # a_rows[j][i] == ldb[i][j]
+    system = sp.Matrix(
+        [
+            list(a_rows[j]) + [modulus if col == j else 0 for col in range(width)]
+            for j in range(width)
+        ]
+    )
+    # left @ system @ right == diagonal (Smith normal form), left/right unimodular,
+    # so system @ z == target  <=>  diagonal @ (right^-1 @ z) == left @ target.
+    diagonal, left, right = smith_normal_decomp(system, domain=sp.ZZ)
+    image = left * sp.Matrix([[-value] for value in base])
+    n_cols = k + width
+    reduced = [0] * n_cols
+    for i in range(width):
+        pivot = int(diagonal[i, i])
+        value = int(image[i, 0])
+        if pivot == 0:
+            if value != 0:
+                raise _no_modular_solution()
+        elif value % pivot:
+            raise _no_modular_solution()
+        else:
+            reduced[i] = value // pivot
+    solution = right * sp.Matrix([[value] for value in reduced])
+    return tuple(int(solution[i, 0]) for i in range(k))
+
+
+def _no_modular_solution() -> ValueError:
+    return ValueError("no modular solution found for addabilization defactoring")
 
 
 def _is_negative(a: tuple, is_contravariant: bool) -> bool:

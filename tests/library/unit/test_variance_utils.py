@@ -6,9 +6,9 @@ from rtt.library.variance_utils import (
     is_cols,
     is_rows,
     multiply,
+    reinterpret_as_dual_variance,
     scale,
     subtract_t,
-    transpose,
 )
 
 ROW, COL = Variance.ROW, Variance.COL
@@ -68,12 +68,17 @@ def test_multiply(factors, variance, expected):
     assert multiply(factors, variance) == expected
 
 
-def test_transpose():
-    assert transpose(Temperament(((1, 2, 3), (4, 5, 6)), ROW)) == Temperament(
-        ((1, 2, 3), (4, 5, 6)), COL
+def test_reinterpret_as_dual_variance():
+    # only the variance label flips; the matrix is left untouched (not transposed)
+    assert reinterpret_as_dual_variance(
+        Temperament(((1, 2, 3), (4, 5, 6)), ROW)
+    ) == Temperament(((1, 2, 3), (4, 5, 6)), COL)
+    assert reinterpret_as_dual_variance(
+        Temperament(((1, 2, 3), (4, 5, 6)), COL)
+    ) == Temperament(((1, 2, 3), (4, 5, 6)), ROW)
+    assert reinterpret_as_dual_variance(Temperament(((1, 2, 3),), ROW)) == Temperament(
+        ((1, 2, 3),), COL
     )
-    assert transpose(Temperament(((1, 2, 3), (4, 5, 6)), COL)) == Temperament(
-        ((1, 2, 3), (4, 5, 6)), ROW
+    assert reinterpret_as_dual_variance(Temperament(((1, 2, 3),), COL)) == Temperament(
+        ((1, 2, 3),), ROW
     )
-    assert transpose(Temperament(((1, 2, 3),), ROW)) == Temperament(((1, 2, 3),), COL)
-    assert transpose(Temperament(((1, 2, 3),), COL)) == Temperament(((1, 2, 3),), ROW)

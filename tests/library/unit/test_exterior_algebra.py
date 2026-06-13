@@ -312,11 +312,9 @@ _SRU = Multivector((2, -4, -11), 2, ROW)
         (ea_diff, _ET12_MM, _ET19_MM, Multivector((7, 11, 16, 19), 1, ROW)),
         (ea_sum, _ET12_MC, _ET19_MC, Multivector((-87, 72, -49, 31), 3, COL)),
         (ea_diff, _ET12_MC, _ET19_MC, Multivector((-19, 16, -11, 7), 3, COL)),
-        # examples with themselves (diff -> zero multivector, not an error)
+        # examples with themselves (sum -> itself; diff -> undefined, see errors below)
         (ea_sum, _MEANTONE_MM, _MEANTONE_MM, _MEANTONE_MM),
-        (ea_diff, _MEANTONE_MM, _MEANTONE_MM, Multivector((0, 0, 0), 2, ROW)),
         (ea_sum, _ET7_MC, _ET7_MC, Multivector((16, -11, 7), 2, COL)),
-        (ea_diff, _ET7_MC, _ET7_MC, Multivector((0, 0, 0), 2, COL)),
         # basic examples
         (ea_sum, _AUG, _DIM, Multivector((7, 4, -10), 2, ROW)),
         (ea_diff, _AUG, _DIM, Multivector((1, 4, 4), 2, ROW)),
@@ -355,6 +353,9 @@ def test_ea_addition(op, u1, u2, expected):
     [
         (ea_sum, Multivector((1, 4, 10, 4, 13, 12), 2, ROW), Multivector((0, 5, 0, 8, 0, -14), 2, ROW)),
         (ea_diff, Multivector((1, 4, 10, 4, 13, 12), 2, ROW), Multivector((0, 5, 0, 8, 0, -14), 2, ROW)),
+        # a temperament minus itself is undefined (matches addition.diff_)
+        (ea_diff, _MEANTONE_MM, _MEANTONE_MM),
+        (ea_diff, _ET7_MC, _ET7_MC),
         (ea_sum, _ET7_MM, _MEANTONE_MM),  # mismatched rank
         (ea_sum, _ET7_MC, _MEANTONE_MC),
         (ea_sum, _ET7_MM, _ET12_MM),  # mismatched dimensionality
@@ -374,3 +375,66 @@ def test_ea_addition_errors(op, u1, u2):
 def test_u_to_tensor():
     # tests.m 1556: a grade-2 multivector becomes its antisymmetric d×d tensor.
     assert u_to_tensor(D3G2CO1) == ((0, 1, 4), (-1, 0, 4), (-4, -4, 0))
+
+
+# --- dual-merge-ea-1: matrix_to_multivector tolerates dependent leading rows -
+@pytest.mark.parametrize(
+    "matrix, variance, expected",
+    [
+        # meantone with a doubled first row (row 1 == 2 * row 0)
+        (((12, 19, 28), (24, 38, 56), (19, 30, 44)), ROW, (1, 4, 4)),
+        # reordering it (independent first rows) already worked -- same answer
+        (((12, 19, 28), (19, 30, 44), (24, 38, 56)), ROW, (1, 4, 4)),
+        # comma side: septimal-meantone comma basis with a doubled first comma
+        (
+            ((4, -4, 1, 0), (8, -8, 2, 0), (13, -10, 0, 1)),
+            COL,
+            matrix_to_multivector(
+                Temperament(((4, -4, 1, 0), (13, -10, 0, 1)), COL)
+            ).coords,
+        ),
+    ],
+)
+def test_matrix_to_multivector_dependent_leading_rows(matrix, variance, expected):
+    result = matrix_to_multivector(Temperament(matrix, variance))
+    assert result.coords == expected
+    assert result.coords != (0,) * len(result.coords)  # not the all-zero signal
+
+
+# --- temperament-addition-5 / dual-merge-ea-3: ea_diff(u, u) is undefined ----
+@pytest.mark.parametrize(
+    "u",
+    [
+        Multivector((1, 4, 4), 2, ROW),
+        Multivector((16, -11, 7), 2, COL),
+        matrix_to_multivector(Temperament(((12, 19, 28),), ROW)),
+    ],
+)
+def test_ea_diff_with_itself_raises(u):
+    with pytest.raises(ValueError, match="cannot diff a temperament with itself"):
+        ea_diff(u, u)
+
+
+# --- dual-merge-ea-4: non-addable ea_sum/ea_diff report non-addability -------
+def test_ea_addition_non_addable_message():
+    septimal_meantone = matrix_to_multivector(
+        Temperament(((4, -4, 1, 0), (13, -10, 0, 1)), COL)
+    )
+    septimal_blackwood = matrix_to_multivector(
+        Temperament(((-8, 5, 0, 0), (-6, 2, 0, 1)), COL)
+    )
+    with pytest.raises(ValueError, match="not addable"):
+        ea_sum(septimal_meantone, septimal_blackwood)
+
+
+# --- dual-merge-ea-2: progressive_product rejects mismatched dimensionality --
+@pytest.mark.parametrize(
+    "u1, u2",
+    [
+        (Multivector((12, 19, 28), 1, ROW), Multivector((12, 19, 28, 34), 1, ROW)),
+        (Multivector((12, 19, 28, 34), 1, ROW), Multivector((12, 19, 28), 1, ROW)),
+    ],
+)
+def test_progressive_product_dimensionality_mismatch(u1, u2):
+    with pytest.raises(ValueError, match="dimensionality"):
+        progressive_product(u1, u2)

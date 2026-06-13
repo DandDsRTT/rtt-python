@@ -182,6 +182,11 @@ def progressive_product(u1: Multivector, u2: Multivector) -> Multivector:
     if u1.variance is not u2.variance:
         raise ValueError("progressive product requires matching variance")
     d = ea_get_d(u1)
+    # d is inferred from u1 alone; without this check a higher-d u2 is silently
+    # truncated (zip drops its trailing coords -> a false all-zero "linear
+    # dependence" wedge) and a lower-d u2 dies with a bare KeyError.
+    if _ea_get_decomposable_d(u2) != d:
+        raise ValueError("progressive product requires matching dimensionality")
     grade = u1.grade + u2.grade
     if grade > d:
         raise ValueError("progressive product grade exceeds dimensionality")
@@ -231,16 +236,34 @@ def _ea_addition(u1: Multivector, u2: Multivector, is_sum: bool) -> Multivector:
     second = ea_dual(u2) if u2.variance is not first.variance else ea_canonical_form(u2)
     if ea_get_r(first) != ea_get_r(second) or ea_get_d(first) != ea_get_d(second):
         raise ValueError("multivectors not addable: dimensions differ")
+    # Match the matrix layer (addition.py): a temperament minus itself is undefined,
+    # not the all-zero multivector that ea_canonical_form's zero short-circuit would
+    # otherwise hand back as if it were a result.
+    if not is_sum and first == second:
+        raise ValueError("cannot diff a temperament with itself")
     combined = tuple(
         a + b if is_sum else a - b for a, b in zip(first.coords, second.coords)
     )
-    return ea_canonical_form(Multivector(combined, first.grade, first.variance))
+    result = Multivector(combined, first.grade, first.variance)
+    # A non-addable pair sums to a nondecomposable multivector (a theorem for
+    # bivectors). Report that as non-addability -- as addition.sum_ does -- rather
+    # than letting canonicalization complain about an internal "no canonical form".
+    if is_nondecomposable(result):
+        raise ValueError("multivectors not addable")
+    return ea_canonical_form(result)
 
 
 def matrix_to_multivector(t: Temperament) -> Multivector:
     grade = get_n(t) if t.variance is Variance.COL else get_r(t)
+    # get_largest_minors_l takes its minors from the FIRST grade-many rows, so a
+    # valid temperament whose leading rows happen to be linearly dependent (e.g. a
+    # mapping with a doubled first row) would yield all-zero minors -- the EA layer's
+    # "not a temperament" signal -- for a real temperament. HNF first so the leading
+    # rows are an independent basis of the row space (a unimodular transform, so the
+    # multivector is unchanged up to the canonical sign/scale ea_canonical_form fixes).
+    independent_rows = hnf(t.matrix)[:grade]
     return ea_canonical_form(
-        Multivector(get_largest_minors_l(t.matrix), grade, t.variance, get_d(t))
+        Multivector(get_largest_minors_l(independent_rows), grade, t.variance, get_d(t))
     )
 
 

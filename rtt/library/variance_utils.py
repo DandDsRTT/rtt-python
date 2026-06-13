@@ -51,7 +51,14 @@ def subtract_t(t1: Temperament, t2: Temperament) -> Temperament:
     return Temperament(matrix, t1.variance, t1.domain_basis)
 
 
-def transpose(t: Temperament) -> Temperament:
-    """Reinterpret a temperament as its dual variance (mapping <-> comma basis)."""
+def reinterpret_as_dual_variance(t: Temperament) -> Temperament:
+    """Re-tag a temperament with its dual variance, leaving the matrix untouched
+    (mapping <-> comma basis).
+
+    NOT a transpose and NOT the dual temperament: it does no math at all, it only
+    flips the variance label, so the same numbers are re-read as the opposite kind
+    of (co)vector. It was named ``transpose`` before, which is a trap -- callers
+    expecting a real transpose (or ``dual.dual``) got silently wrong-shaped data.
+    Use ``dual.dual`` for the actual dual temperament."""
     flipped = Variance.COL if t.variance is Variance.ROW else Variance.ROW
     return Temperament(t.matrix, flipped, t.domain_basis)

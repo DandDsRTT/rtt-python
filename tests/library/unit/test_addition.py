@@ -1,6 +1,10 @@
-import pytest
+import random
+import time
 
-from rtt.library.addition import diff_, sum_
+import pytest
+import sympy as sp
+
+from rtt.library.addition import _find_modular_solution, diff_, sum_
 from rtt.library.dual import dual
 from rtt.library.formatting import to_ebk
 from rtt.library.parsing import parse_temperament_data
@@ -279,3 +283,122 @@ ERROR_PAIRS = [
 def test_addition_errors(op, a, b):
     with pytest.raises(ValueError):
         op(a, b)
+
+
+# --- temperament-addition-1: sum_/diff_ are duality-consistent --------------
+# The temperament sum/difference must be independent of which side of duality the
+# inputs are handed in as: dual(sum_(M1, M2)) == sum_(dual M1, dual M2). The old
+# per-variance negation rule ignored the Hodge permutation sign and silently
+# swapped sum<->difference for some addable pairs (e.g. the schisma below).
+
+# Curated regression pairs that USED to swap sum<->diff across duality.
+DUALITY_SWAP_PAIRS = [
+    # compton (Pythagorean comma) + meantone -> schisma was returned as the diff
+    # on the mapping side; the sum is ((-15, 8, 1),), the diff ((23, -16, 1),).
+    (Temperament(((-19, 12, 0),), COL), Temperament(((4, -4, 1),), COL)),
+    # nullity-1 / rank-1 pairs that fuzzing flagged as inconsistent
+    (Temperament(((2, 2, -3),), ROW), Temperament(((0, 2, -1),), ROW)),
+    (Temperament(((0, 4, 3),), ROW), Temperament(((6, -1, 4),), ROW)),
+    # r == n == 2 in d=4 (no g_min tie-break) that also used to swap
+    (
+        Temperament(((-6, -4, 1, -2), (5, 0, 1, -1)), ROW),
+        Temperament(((-3, 0, -5, 5), (-2, 0, -1, 1)), ROW),
+    ),
+    (
+        Temperament(((2, -3, 6, 2), (0, 1, -5, -4)), ROW),
+        Temperament(((6, 0, 6, 3), (-6, 0, -3, 0)), ROW),
+    ),
+]
+
+
+@pytest.mark.parametrize("op", [sum_, diff_])
+@pytest.mark.parametrize("a, b", DUALITY_SWAP_PAIRS)
+def test_addition_duality_consistent_regressions(op, a, b):
+    assert op(a, b) == dual(op(dual(a), dual(b)))
+
+
+def test_compton_meantone_sum_is_schisma_on_both_sides():
+    c1, c2 = Temperament(((-19, 12, 0),), COL), Temperament(((4, -4, 1),), COL)
+    m1, m2 = dual(c1), dual(c2)
+    assert sum_(c1, c2) == Temperament(((-15, 8, 1),), COL)  # schisma
+    assert dual(sum_(m1, m2)) == Temperament(((-15, 8, 1),), COL)
+    assert diff_(c1, c2) == Temperament(((23, -16, 1),), COL)
+    assert dual(diff_(m1, m2)) == Temperament(((23, -16, 1),), COL)
+
+
+def _random_full_rank_rows(rng, d, r):
+    while True:
+        rows = tuple(tuple(rng.randint(-6, 6) for _ in range(d)) for _ in range(r))
+        if sp.Matrix(rows).rank() == r:
+            return rows
+
+
+def test_addition_duality_consistent_fuzz():
+    rng = random.Random(20240613)
+    checked = 0
+    for _ in range(250):
+        d = rng.choice([3, 4, 5])
+        r = rng.randint(1, d - 1)
+        t1 = Temperament(_random_full_rank_rows(rng, d, r), ROW)
+        t2 = Temperament(_random_full_rank_rows(rng, d, r), ROW)
+        for op in (sum_, diff_):
+            try:
+                result = op(t1, t2)
+            except ValueError:
+                # non-addability (or self-diff) must be reported on both sides
+                with pytest.raises(ValueError):
+                    op(dual(t1), dual(t2))
+                continue
+            assert result == dual(op(dual(t1), dual(t2)))
+            checked += 1
+    assert checked > 100  # the fuzz actually exercised addable pairs
+
+
+# --- temperament-addition-3: the result carries the inputs' domain basis ----
+def test_addition_preserves_domain_basis():
+    a = Temperament(((5, 8, 14),), ROW, (2, 3, 7))
+    b = Temperament(((7, 11, 20),), ROW, (2, 3, 7))
+    result = sum_(a, b)
+    assert result.matrix == ((12, 19, 34),)
+    assert result.domain_basis == (2, 3, 7)
+    assert diff_(a, b).domain_basis == (2, 3, 7)
+    # a nonstandard COL pair keeps its basis too
+    c = Temperament(((-8, 5, 0), (-6, 2, 1)), COL, (2, 3, 7))
+    d = Temperament(((-2, 0, 1), (-3, 2, 0)), COL, (2, 3, 7))
+    assert sum_(c, d).domain_basis == (2, 3, 7)
+
+
+# --- temperament-addition-4: addabilization defactoring is not brute force --
+def test_find_modular_solution_is_bounded_and_correct():
+    # A 4-vector L_dep with a sizeable modulus: the old brute force scanned
+    # modulus ** 4 candidates (here ~1.5e8); the closed-form solve is instant.
+    # Build base so a solution is guaranteed to exist (base == -L^T x mod modulus).
+    rng = random.Random(7)
+    modulus = 111
+    ldb = tuple(tuple(rng.randint(-9, 9) for _ in range(6)) for _ in range(4))
+    seed_multiples = [rng.randint(0, modulus - 1) for _ in range(len(ldb))]
+    base = tuple(
+        modulus * rng.randint(-3, 3)
+        - sum(seed_multiples[i] * ldb[i][j] for i in range(len(ldb)))
+        for j in range(6)
+    )
+    start = time.perf_counter()
+    multiples = _find_modular_solution(ldb, base, modulus)
+    assert time.perf_counter() - start < 5.0
+    combined = [
+        base[j] + sum(multiples[i] * ldb[i][j] for i in range(len(ldb)))
+        for j in range(len(base))
+    ]
+    assert all(value % modulus == 0 for value in combined)
+
+
+def test_heavy_13_limit_sum_is_fast_and_consistent():
+    # monzisma (13-limit) + 123201/123200: the old modulus ** (grade-1) brute
+    # force took ~16 s here; bound the whole sum_ call well under that.
+    c1 = Temperament(((54, -37, 2, 0, 0, 0),), COL)
+    c2 = Temperament(((-5, 6, -2, 2, -1, -1),), COL)
+    start = time.perf_counter()
+    comma_side = sum_(c1, c2)
+    map_side = dual(sum_(dual(c1), dual(c2)))
+    assert time.perf_counter() - start < 10.0
+    assert comma_side == map_side
