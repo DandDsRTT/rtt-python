@@ -1407,11 +1407,16 @@ def test_mapped_list_rules_its_vector_columns_apart_clear_of_the_marks():
     # the mapped target interval list separates its vector columns with vertical
     # bars, and the per-column top/bottom marks are inset so they never touch one
     assert "sep:mapped:1" in cells  # a bar between columns 0 and 1
-    sep, first = cells["sep:mapped:1"], cells["cell:mapped:0:0"]
+    sep = cells["sep:mapped:1"]
     top0, brace0 = cells["ebktop:mapped:0"], cells["ebkbrace:mapped:0"]
     assert top0.w < spreadsheet.COL_W and brace0.w < spreadsheet.COL_W  # inset, not full column
     assert top0.x + top0.w < sep.x  # the mark stops short of the bar to its right
-    assert sep.y == first.y and sep.h == cells["cell:mapped:1:0"].y + cells["cell:mapped:1:0"].h - first.y
+    # the rules span the matrix's full framed height — flush with the per-column top/bottom
+    # marks and the outer [ ] wrap — so every vertical rule encloses the marks rather than
+    # stopping at the value cells and letting them poke out past it
+    outer = cells["bracket:mapped:l"]
+    assert sep.y == top0.y == outer.y
+    assert sep.y + sep.h == brace0.y + brace0.h == outer.y + outer.h
 
 
 def test_maps_get_angle_brackets_and_lists_get_square_brackets():
@@ -4008,9 +4013,13 @@ def test_the_mapped_list_brackets_grow_to_enclose_the_draft_rows_placeholders():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # r=2, n=1 (one comma — the doomed one)
     plain = {c.id: c for c in spreadsheet.build(base).cells}
     drafting = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[None, None, None]).cells}
+    # the spanning [ ] wrap encloses the value rows AND the framing bands it spans (see
+    # bracket's fit branch), so its height is r·ROW_H plus that constant frame allowance...
+    frame = (spreadsheet.FRAME_H + spreadsheet.FRAME_GAP) + (spreadsheet.FRAME_GAP + spreadsheet.BRACE_H)
     for bid in ("bracket:mapped:l", "bracket:mapped_comma:l"):
-        assert plain[bid].h == 2 * spreadsheet.ROW_H        # committed: r rows
-        assert drafting[bid].h == 3 * spreadsheet.ROW_H     # draft: r_shown rows
+        assert plain[bid].h == 2 * spreadsheet.ROW_H + frame        # committed: r rows
+        # ...and grows by exactly one ROW_H when the draft row joins, enclosing its placeholder
+        assert drafting[bid].h == plain[bid].h + spreadsheet.ROW_H  # draft: r_shown rows
     # the draft row's mapped-target cell is a blank green placeholder the grown bracket now encloses
     assert drafting["cell:mapped:2:0"].pending and drafting["cell:mapped:2:0"].text == ""
     # ...but its cell over the doomed comma is red (the draft generator un-tempers it away), enclosed all the same

@@ -2533,13 +2533,26 @@ class _GridBuilder:
     # target-side rows are lists ([ … ]). Maps stack one per generator row.
     def bracket(self, bid, glyphs, group_key, y, h, *, fit=False, span=None, pending=False):
         # value brackets are short and centred in their row (so stacked rows keep a
-        # gap); the enclosing mapped-list [ ] passes fit=True to span the matrix.
+        # gap); the enclosing vector-list [ ] passes fit=True to span the matrix.
         # matrix_span hugs the cells (interest's content, not its footprint) and steps
         # the left ⟨ right past the matlabel gutter, so the row labels sit inside the
         # panel left of the ⟨ rather than overflowing it. ``span`` overrides the default span.
         # ``pending`` recolours the bracket green (via _ebk_svg) to match a draft row's cells.
         gx, gw = span if span else self.matrix_span(group_key)
-        by, bh = (y, h) if fit else (y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H)
+        if fit:
+            # A vector-list outer wrap [ … ] spans the matrix's full FRAMED height, so it
+            # ENCLOSES the per-column top/bottom marks (each ket's ebktop + ebkbrace/angle,
+            # which stand FRAME_GAP off the cells — see vector_list_marks). This mirrors how a
+            # covector matrix's spanning top bracket + brace enclose its per-row ⟨ … ] across
+            # the full WIDTH: there the horizontal wrap reaches past the vertical inner marks;
+            # here the vertical wrap reaches past the horizontal ones. ``y`` is always the
+            # matrix's row_y, so y - (FRAME_H + FRAME_GAP) is exactly its frame_top_y (flush
+            # with the top marks) and the foot lands FRAME_GAP + BRACE_H below the cells (flush
+            # with the bottom marks). Without this the wrap spanned only the value cells, so the
+            # marks poked out above and below it and the [ ] hugged the gridded values.
+            by, bh = y - (FRAME_H + FRAME_GAP), h + (FRAME_H + FRAME_GAP) + (FRAME_GAP + BRACE_H)
+        else:
+            by, bh = y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H
         self.cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0], pending=pending))
         self.cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1], pending=pending))
 
@@ -2830,8 +2843,14 @@ class _GridBuilder:
             self.cells.append(CellBox(f"{foot}:{name}:{c}", mx, self.frame_brace_y(rkey), mark_w, BRACE_H, foot, pending=pend))
         if not separators:
             return
+        # the dividing rules span the matrix's full FRAMED height — the same extent as the
+        # outer [ ] wrap (see bracket's fit branch) — so every vertical rule of the matrix
+        # encloses the per-column top/bottom marks alike, rather than stopping at the value
+        # cells and letting the marks poke out past it.
+        sep_y = self.frame_top_y(rkey)
+        sep_h = self.frame_brace_y(rkey) + BRACE_H - sep_y
         for c in range(1, n_cols):  # a rule on each interior column boundary
-            self.cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, self.row_y[rkey], SEP_W, self.row_h[rkey], "vbar"))
+            self.cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, sep_y, SEP_W, sep_h, "vbar"))
 
     def v_split_bars(self):
         # the single vertical rule dividing the comma half C from the unchanged half U, centred in
