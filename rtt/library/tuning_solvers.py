@@ -12,7 +12,11 @@ from scipy.optimize import linprog, minimize
 def solve_optimum(
     tempered: np.ndarray, just: np.ndarray, power: float, rank: int
 ) -> np.ndarray:
-    """Solve for the generators minimizing the ``power``-norm of (tempered·g − just)."""
+    """Solve for the generators minimizing the ``power``-norm of (tempered·g − just).
+
+    An underdetermined system (the target rows not spanning the generator space) leaves the free
+    directions at 0 here; :func:`rtt.library.tuning._default_free_generators_to_just` then defaults
+    them to the just tuning rather than to 0 cents (a benign no-op when fully determined)."""
     if power == 2:
         generators, *_ = np.linalg.lstsq(tempered, just, rcond=None)
         return generators
@@ -94,6 +98,8 @@ def _capped_minimax(
         b_eq=np.array(frozen_values) if frozen_values else None,
         bounds=bounds,
     )
+    if not result.success:
+        raise ValueError(f"minimax linear program did not converge: {result.message}")
     return result.x[-1], result.x[:rank]
 
 
@@ -124,17 +130,43 @@ def _targets_locked_at_delta(
     locked = []
     for i in active:
         low = linprog(tempered[i], A_ub=a_ub, b_ub=b_ub, A_eq=a_eq, b_eq=b_eq, bounds=bounds)
-        if abs((tempered[i] @ low.x - just[i]) - delta) <= tol * scale:
+        if low.success and abs((tempered[i] @ low.x - just[i]) - delta) <= tol * scale:
             locked.append((i, just[i] + delta))
             continue
         high = linprog(-tempered[i], A_ub=a_ub, b_ub=b_ub, A_eq=a_eq, b_eq=b_eq, bounds=bounds)
-        if abs((tempered[i] @ high.x - just[i]) + delta) <= tol * scale:
+        if high.success and abs((tempered[i] @ high.x - just[i]) + delta) <= tol * scale:
             locked.append((i, just[i] - delta))
     return locked
 
 
 def _minisum(tempered: np.ndarray, just: np.ndarray, rank: int) -> np.ndarray:
-    """Minimize the sum of absolute damages via a linear program (a slack per target)."""
+    """Minimize the sum of absolute damages (p = 1 / miniaverage).
+
+    A plain LP returns *an* optimal vertex, but the optimum is often a tied range of vertices,
+    and the LP lands on an arbitrary endpoint. The true miniaverage tuning is the limit of the
+    p-norm optimum as p → 1⁺ (tuning-fundamentals MUST-GET-RIGHT 12 / units MUST-GET-RIGHT 8:
+    the power-limit schedule), which is the *interior* of the tied range, not an endpoint —
+    the p = 1 counterpart of the nested tie-break the p = ∞ path already does.
+
+    The uniqueness check is only a fast-path that skips the power limit when the optimum is clearly
+    a single point; it never asserts uniqueness it can't certify (an LP that fails to converge —
+    e.g. under heavy parallel load — counts as *not* unique). So the power limit also runs whenever
+    uniqueness is uncertain, and the snap-back below makes that harmless: a power limit seeded at a
+    determined optimum doesn't move it at all (verified ~0 cents), while a genuinely tied optimum is
+    pulled a meaningful distance into the range's interior. Snapping back to the exact LP vertex
+    when the move is negligible keeps determined miniaverage tunings bit-stable regardless of which
+    branch ran."""
+    generators, optimum = _minisum_lp(tempered, just, rank)
+    if _minisum_optimum_is_unique(tempered, just, rank, optimum):
+        return generators
+    refined = _power_limit(tempered, just, generators)
+    if float(np.max(np.abs(refined - generators))) < 1e-3:
+        return generators  # a determined optimum after all: the LP vertex is exact, don't drift it
+    return refined
+
+
+def _minisum_lp(tempered: np.ndarray, just: np.ndarray, rank: int) -> tuple[np.ndarray, float]:
+    """The minisum LP (a slack per target): the optimal generators and the minimized Σ damage."""
     k = len(just)
     cost = np.concatenate([np.zeros(rank), np.ones(k)])  # minimize Σ slack
     identity = np.eye(k)
@@ -144,4 +176,61 @@ def _minisum(tempered: np.ndarray, just: np.ndarray, rank: int) -> np.ndarray:
     b_ub = np.concatenate([just, -just])
     bounds = [(None, None)] * rank + [(0, None)] * k
     result = linprog(cost, A_ub=a_ub, b_ub=b_ub, bounds=bounds)
-    return result.x[:rank]
+    if not result.success:
+        raise ValueError(f"miniaverage linear program did not converge: {result.message}")
+    return result.x[:rank], float(result.fun)
+
+
+def _minisum_optimum_is_unique(
+    tempered: np.ndarray, just: np.ndarray, rank: int, optimum: float, tol: float = 1e-6
+) -> bool:
+    """Whether the minisum optimum is *certainly* a single point (vs. a tied range). For each
+    generator, push it as low and as high as possible while the total damage stays at the optimum:
+    any coordinate with a nonzero achievable range means the optimum is non-unique.
+
+    Conservative on purpose: this only ever returns ``True`` (skip the power-limit tie-break) when
+    every probe LP converged and pinned every coordinate. A probe LP that fails to converge (which
+    can happen transiently under heavy parallel CPU load) returns ``False`` — *not unique* — so the
+    caller falls through to the power limit + snap-back rather than wrongly certifying a tied
+    optimum as unique. Wrongly running the tie-break on a determined optimum is harmless (it snaps
+    back); wrongly skipping it on a tied one is not."""
+    k = len(just)
+    identity = np.eye(k)
+    a_ub = np.vstack([
+        np.hstack([tempered, -identity]),
+        np.hstack([-tempered, -identity]),
+        np.concatenate([np.zeros(rank), np.ones(k)]),  # Σ damage ≤ optimum (within tol)
+    ])
+    b_ub = np.concatenate([just, -just, [optimum + tol]])
+    bounds = [(None, None)] * rank + [(0, None)] * k
+    for axis in range(rank):
+        direction = np.zeros(rank + k)
+        direction[axis] = 1.0
+        low = linprog(direction, A_ub=a_ub, b_ub=b_ub, bounds=bounds)
+        high = linprog(-direction, A_ub=a_ub, b_ub=b_ub, bounds=bounds)
+        if not (low.success and high.success):
+            return False  # can't certify uniqueness → let the power limit + snap-back decide
+        if (high.x[axis] - low.x[axis]) > 1e-4:
+            return False
+    return True
+
+
+def _power_limit(
+    tempered: np.ndarray, just: np.ndarray, start: np.ndarray, steps: int = 14
+) -> np.ndarray:
+    """The p → 1⁺ limit of the p-norm optimum: minimize the (scaled) sum of damages**p for
+    p = 1 + 2⁻ᵏ stepping toward 1, each step seeded from the last (units MUST-GET-RIGHT 8's
+    power-limit schedule). Resolves a tied p = 1 optimum to its unique interior limit; the
+    scaling keeps the powered damages from under/overflowing as p approaches 1."""
+    generators = np.array(start, dtype=float)
+    scale = max(float(np.max(np.abs(tempered @ generators - just))), 1.0)
+    for k in range(1, steps + 1):
+        power = 1.0 + 2.0 ** -k
+        result = minimize(
+            lambda g: float(np.sum((np.abs(tempered @ g - just) / scale) ** power)),
+            generators,
+            method="Nelder-Mead",
+            options={"xatol": 1e-10, "fatol": 1e-14, "maxiter": 20000},
+        )
+        generators = result.x
+    return generators

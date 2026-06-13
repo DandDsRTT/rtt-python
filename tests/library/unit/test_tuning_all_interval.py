@@ -230,12 +230,14 @@ ORIGINAL_NAME_EQUIVALENCES = [
     ("WOP", "minimax-lils-S"),
     ("WE", "minimax-E-lils-S"),
     ("Weil-Euclidean", "minimax-E-lils-S"),
-    ("Kees", "destretched-octave minimax-lils-S"),
-    ("KOP", "destretched-octave minimax-lils-S"),
-    ("KE", "destretched-octave minimax-E-lils-S"),
-    ("Kees-Euclidean", "destretched-octave minimax-E-lils-S"),
-    ("CWE", "destretched-octave minimax-E-lils-S"),
-    ("constrained Weil-Euclidean", "destretched-octave minimax-E-lils-S"),
+    # 2024 convention: Kees/KE/CWE are HELD-octave (= the odd-limit lols/E-lols schemes), not
+    # destretched (now POWOP/POWE). minimax-lols-S ≡ held-octave minimax-lils-S.
+    ("Kees", "minimax-lols-S"),
+    ("KOP", "minimax-lols-S"),
+    ("KE", "minimax-E-lols-S"),
+    ("Kees-Euclidean", "minimax-E-lols-S"),
+    ("CWE", "minimax-E-lols-S"),
+    ("constrained Weil-Euclidean", "minimax-E-lols-S"),
 ]
 
 

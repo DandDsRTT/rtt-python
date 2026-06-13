@@ -129,3 +129,21 @@ def test_every_spec_field_survives_a_render_parse_round_trip():
 )
 def test_systematic_name_is_none_for_an_unnameable_spec(spec):
     assert systematic_name(spec) is None
+
+
+# all-interval-alt-complexity-16: the complexity norm power must read the maxized ``M`` (q = ∞)
+# and explicit numeric tokens — not silently default to q = 1, resolving a different scheme's spec.
+@pytest.mark.parametrize(
+    "name, expected_norm_power",
+    [
+        ("minimax-MS", inf),       # maxized: q = ∞ (a real scheme; was silently read as minimax-S)
+        ("minimax-1.5-S", 1.5),    # explicit numeric norm power
+        ("minimax-3S", 3),         # explicit numeric norm power, glued
+        ("minimax-S", 1),          # plain taxicab default — unchanged
+        ("minimax-ES", 2),         # Euclidean — unchanged
+        ("9-OLD minimax-S", 1),    # the target-limit 9 is NOT mistaken for a norm power
+        ("mini-3-mean-S", 1),      # the optimization-power 3 is NOT mistaken for a norm power
+    ],
+)
+def test_norm_power_token_parsing(name, expected_norm_power):
+    assert parse(name).complexity_norm_power == expected_norm_power

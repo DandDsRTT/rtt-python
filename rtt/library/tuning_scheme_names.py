@@ -25,6 +25,7 @@ class TuningSchemeSpec:
     complexity_log_prime_power: float = 1  # trait 5a
     complexity_prime_power: float = 0  # trait 5b
     complexity_size_factor: float = 0  # trait 5c
+    complexity_rough: int = 0  # trait 5d: rough(·,k) drops primes < k (k=3 = odd-limit: drop 2)
     nonprime_basis_approach: str = ""  # trait 7
     held_intervals: str | None = None  # trait 0: intervals tuned exactly justly
     destretched_interval: str | None = None  # trait 6: interval rescaled to be just
@@ -66,10 +67,11 @@ def _complexity_traits_from_name(name: str) -> dict:
         return f"-{token}-" in padded
 
     traits = {
-        "complexity_norm_power": 2 if "-E" in padded else 1,
+        "complexity_norm_power": _norm_power_from_name(padded),
         "complexity_log_prime_power": 1,
         "complexity_prime_power": 0,
         "complexity_size_factor": 0,
+        "complexity_rough": 0,
     }
     held = None
     if has("copfr"):
@@ -81,21 +83,34 @@ def _complexity_traits_from_name(name: str) -> dict:
     if has("ils"):
         traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 0, 1
         traits["complexity_size_factor"] = 1
-    if has("ols"):
+    if has("ols"):  # integer-odd-limit: integer-limit with the 2's roughed out, octave held
         traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 0, 1
-        traits["complexity_size_factor"], held = 1, "octave"
+        traits["complexity_size_factor"], traits["complexity_rough"], held = 1, 3, "octave"
     if has("lils"):
         traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 1, 0
         traits["complexity_size_factor"] = 1
     if has("limit"):
         traits["complexity_size_factor"] = 1
-    if has("lols"):
-        traits["complexity_size_factor"], held = 1, "octave"
+    if has("lols"):  # log-odd-limit: lils with the 2's roughed out, octave held
+        traits["complexity_size_factor"], traits["complexity_rough"], held = 1, 3, "octave"
     if has("odd"):
         held = "octave"
     if held is not None:
         traits["held_intervals"] = held
     return traits
+
+
+def _norm_power_from_name(padded: str) -> float:
+    """The complexity norm power (trait 4) a name's annotated token encodes: ``E`` = 2
+    (Euclidean), ``M`` = ∞ (maxized), an explicit number = that power, else 1 (taxicab). Parsing
+    the ``M``/numeric tokens stops ``minimax-MS`` / ``minimax-1.5-S`` from silently resolving to a
+    *different* scheme (plain ``minimax-S``, q = 1)."""
+    if "-E" in padded:
+        return 2
+    if "-M" in padded:
+        return inf
+    numeric = re.search(r"-(\d+(?:\.\d+)?)-?[SCU]-?$", padded)
+    return float(numeric.group(1)) if numeric else 1
 
 
 def damage_name_traits(name: str) -> dict:
@@ -145,12 +160,17 @@ _ORIGINAL_NAME_SCHEMES = {
     "WOP": "minimax-lils-S",
     "WE": "minimax-E-lils-S",
     "Weil-Euclidean": "minimax-E-lils-S",
-    "Kees": "destretched-octave minimax-lils-S",
-    "KOP": "destretched-octave minimax-lils-S",
-    "KE": "destretched-octave minimax-E-lils-S",
-    "Kees-Euclidean": "destretched-octave minimax-E-lils-S",
-    "CWE": "destretched-octave minimax-E-lils-S",
-    "constrained Weil-Euclidean": "destretched-octave minimax-E-lils-S",
+    # 2024 convention: "constrained" = held (as CTE already is), so Kees/KE/CWE are HELD-octave,
+    # i.e. the odd-limit (lols/E-lols) schemes — minimax-lols-S ≡ held-octave minimax-lils-S. The
+    # old destretched-octave readings are now named POWOP/POWE; "constrained" mapping to destretched
+    # was internally inconsistent. (alternative-complexities MUST-GET-RIGHT 21; "constrained
+    # Weil-Euclidean" expands CWE, and constrained = held.)
+    "Kees": "minimax-lols-S",
+    "KOP": "minimax-lols-S",
+    "KE": "minimax-E-lols-S",
+    "Kees-Euclidean": "minimax-E-lols-S",
+    "CWE": "minimax-E-lols-S",
+    "constrained Weil-Euclidean": "minimax-E-lols-S",
 }
 
 
@@ -160,14 +180,19 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
     gives the target intervals, and the trailing ``U``/``S``/``C`` plus complexity tokens
     give the damage weighting. An optional ``held-<interval(s)>`` prefix names intervals
     to tune justly."""
-    held = None
-    held_match = re.match(r"\s*held-(\{[^}]*\}|[\w/]+)\s+(.*)", name)
-    if held_match:
-        held, name = held_match.group(1), held_match.group(2)
-    destretched = None
-    destretched_match = re.match(r"\s*destretched-(\S+)\s+(.*)", name)
-    if destretched_match:
-        destretched, name = destretched_match.group(1), destretched_match.group(2)
+    # Peel ``held-X`` / ``destretched-X`` prefixes in EITHER order (and any number) — reading them
+    # order-dependently silently dropped a held- token written after a destretched- one, hiding a
+    # combination the optimizer must instead refuse (destretching breaks a held interval).
+    held = destretched = None
+    while True:
+        prefix = re.match(r"\s*(held|destretched)-(\{[^}]*\}|[\w/]+)\s+(.*)", name, re.DOTALL)
+        if not prefix:
+            break
+        if prefix.group(1) == "held":
+            held = prefix.group(2)
+        else:
+            destretched = prefix.group(2)
+        name = prefix.group(3)
     power = _optimization_power_from_name(name)
     target_match = re.search(
         r"\{[\d/,\s]*\}|\d*-?TILT|\d*-?OLD|primes", name
@@ -279,8 +304,10 @@ def _complexity_part(spec: TuningSchemeSpec) -> tuple[str, bool] | None:
     )
     if family is None:
         return None
-    if family in _OCTAVE_HOLDING_FAMILY and spec.held_intervals == "octave":
-        return _OCTAVE_HOLDING_FAMILY[family], True  # lils->lols / ils->ols, octave folded in
+    if family in _OCTAVE_HOLDING_FAMILY and spec.complexity_rough:
+        # lils->lols / ils->ols: the odd-limit form roughs out the 2's (complexity_rough) and
+        # folds in the held octave, so the held-octave token is not separately re-emitted.
+        return _OCTAVE_HOLDING_FAMILY[family], True
     return family, False
 
 

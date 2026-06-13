@@ -209,8 +209,9 @@ def test_optimize_generator_tuning_map_systematic_name(scheme_name, expected):
 
 # Section "by damageSystematicName" (tests.m 2684-2720): srutal over sixTilt, damage
 # scheme named (slope + complexity) with explicit power. The L1 (power 1) copfr-S-damage
-# case asserts OUR vertex ⟨599.111 1901.955]; it is a true tie with the library's
-# ⟨599.054 1901.955] (identical total damage 0.815, just a different optimal vertex).
+# case has a *tied range* of optimal vertices (total damage flat across them); the miniaverage
+# solver now resolves the tie to the true p→1⁺ limit ⟨599.052 1901.955] — the interior point of
+# the range — rather than an arbitrary endpoint (was ⟨599.111 1901.955]). See test_tuning_solvers.
 SRUTAL_DAMAGE = [
     (inf, "U-damage", (600.000, 1905.214)),
     (inf, "copfr-S-damage", (599.425, 1903.105)),
@@ -231,7 +232,7 @@ SRUTAL_DAMAGE = [
     (2, "C-damage", (599.159, 1902.609)),
     (2, "EC-damage", (599.116, 1902.444)),
     (1, "U-damage", (598.914, 1901.955)),
-    (1, "copfr-S-damage", (599.111, 1901.955)),  # tie with library's ⟨599.054 1901.955]
+    (1, "copfr-S-damage", (599.052, 1901.955)),  # tied range → true p→1⁺ interior limit
     (1, "E-copfr-S-damage", (598.914, 1901.955)),
     (1, "S-damage", (599.111, 1901.955)),
     (1, "ES-damage", (598.914, 1901.955)),
