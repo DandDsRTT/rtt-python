@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, replace
 from fractions import Fraction
+from typing import Callable, NamedTuple
 
 from rtt.app import ids
 from rtt.app import presets
@@ -735,6 +736,23 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
         col_labels={**COL_LABEL_LETTERS, **_prescaler_col_labels(symbol, show_equiv, all_interval, show_superspace)},
         row_labels=row_labels, effective_captions=effective_captions,
     )
+
+
+class _VecGrid(NamedTuple):
+    """Per-list descriptor for the three cleanly-uniform editable interval-vector grids
+    (targets, held, intervals of interest) emitted by _emit_vectors_band. Each emits the
+    same `for col: for prime:` committed grid plus one pending-draft column; only these
+    parameters differ. (Commas and detempering are NOT in this family — see the method.)"""
+    group: str                          # tile/col-token group key ("targets" / "held" / "interest")
+    count: int                          # committed column count (k / nh / mi)
+    id_fn: Callable[[str, int], str]    # cell-id builder (ids.target_cell / held_cell / interest_cell)
+    left_fn: Callable[[int], float]     # column-left x (self.target_left / held_left / interest_left)
+    inset: float                        # per-side box inset within the COL_W slot
+    committed_kind: str                 # cell kind for committed cells (targets: "targetcell" or "vec")
+    pending_kind: str                   # cell kind for the draft column (always the editable kind)
+    data: object                        # the committed vector columns (self.target_vectors / held / interest)
+    pending: object                     # the open draft vector, or None (self.pending_target / held / interest)
+    sizes: object                       # the size record whose .just[col] feeds _voice
 
 
 class _GridBuilder:
@@ -3677,6 +3695,20 @@ class _GridBuilder:
                     for j in range(len(self.form_M)):
                         self.cells.append(CellBox(f"cell:form:{i}:{j}", self.gen_left(j), self.canon_top(i), COL_W, ROW_H, "formcell", text=str(self.form_M[i][j])))
 
+    def _emit_vec_grid(self, g: _VecGrid) -> None:
+        """Emit one editable interval-vector grid (targets / held / interest): the committed
+        `for col: for prime:` matrix of CellBoxes, then the pending-draft column if one is open.
+        Behaviour-identical to the former three inline blocks; only `g`'s parameters differ."""
+        for col in range(g.count):
+            for p in range(self.d):
+                self.cells.append(CellBox(g.id_fn(self.col_token(g.group, col), p), g.left_fn(col) + g.inset, self.vec_top(p), COL_W - 2 * g.inset, ROW_H, g.committed_kind, text=str(g.data[col][p]), prime=p, comma=col, unit=self.cell_unit("vectors", g.group, prime=p)))
+                self._voice(f"vectors:{g.group}", col, g.sizes.just[col])
+        if g.pending is not None:  # the draft column: blank, green-outlined cells the user fills in
+            for p in range(self.d):
+                v = g.pending[p]
+                self.cells.append(CellBox(g.id_fn(self.pending_col_token(g.group), p), g.left_fn(g.count) + g.inset, self.vec_top(p), COL_W - 2 * g.inset, ROW_H, g.pending_kind,
+                                     text="" if v is None else str(v), prime=p, comma=g.count, pending=True, unit=self.cell_unit("vectors", g.group, prime=p)))
+
     def _emit_vectors_band(self) -> None:
         """The interval-vectors row: the basis spine, comma/target/held/interest vectors and drag handles."""
         # interval-vectors row: each column's intervals as vectors (d-tall columns over
@@ -3777,44 +3809,24 @@ class _GridBuilder:
                 # input's opaque box, flush at the slot boundary, would paint over the thin rule. So
                 # the editable cells are inset within their COL_W slot (like the interest kets, KET_INSET)
                 # — leaving a gap the separator shows through — while the read-only Tₚ vecs stay full
-                # COL_W (no covering box, so they abut their column separators).
+                # COL_W (no covering box, so they abut their column separators). The draft column is
+                # always the editable "targetcell" kind (a read-only Tₚ = I list has no draft).
                 cell_inset = KET_INSET if self.targets_editable else 0
-                for j in range(self.k):
-                    for p in range(self.d):
-                        self.cells.append(CellBox(ids.target_cell(self.col_token('targets', j), p), self.target_left(j) + cell_inset, self.vec_top(p), COL_W - 2 * cell_inset, ROW_H, target_kind, text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
-                        self._voice("vectors:targets", j, self.target_sizes.just[j])
-                if self.pending_target is not None:  # the draft column: blank, green-outlined cells the user fills in
-                    for p in range(self.d):
-                        v = self.pending_target[p]
-                        self.cells.append(CellBox(ids.target_cell(self.pending_col_token('targets'), p), self.target_left(self.k) + cell_inset, self.vec_top(p), COL_W - 2 * cell_inset, ROW_H, "targetcell",
-                                             text="" if v is None else str(v), prime=p, comma=self.k, pending=True, unit=self.cell_unit("vectors", "targets", prime=p)))
+                self._emit_vec_grid(_VecGrid("targets", self.k, ids.target_cell, self.target_left,
+                    cell_inset, target_kind, "targetcell", self.target_vectors, self.pending_target, self.target_sizes))
             if self.tile_open("vectors", "held"):  # the held intervals as editable vectors, like the intervals of interest
-                for i in range(self.nh):
-                    for p in range(self.d):
-                        self.cells.append(CellBox(ids.held_cell(self.col_token('held', i), p), self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p)))
-                        self._voice("vectors:held", i, self.held_sizes.just[i])
-                if self.pending_held is not None:  # the draft column: blank, green-outlined cells the user fills in
-                    for p in range(self.d):
-                        v = self.pending_held[p]
-                        self.cells.append(CellBox(ids.held_cell(self.pending_col_token('held'), p), self.held_left(self.nh), self.vec_top(p), COL_W, ROW_H, "heldcell",
-                                             text="" if v is None else str(v), prime=p, comma=self.nh, pending=True, unit=self.cell_unit("vectors", "held", prime=p)))
+                self._emit_vec_grid(_VecGrid("held", self.nh, ids.held_cell, self.held_left,
+                    0, "heldcell", "heldcell", self.held, self.pending_held, self.held_sizes))
             if self.tile_open("vectors", "detempering"):  # the matrix D, one vector column per generator
                 for i in range(self.r):
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:vec:detempering:{self.col_token('detempering', i)}:{p}", self.detempering_left(i), self.vec_top(p), COL_W, ROW_H, "vec", text=str(self.detempering_vectors[i][p]), unit=self.cell_unit("vectors", "detempering", prime=p)))
                         self._voice("vectors:detempering", i, self.detempering_sizes.just[i])
             if self.tile_open("vectors", "interest"):  # the user's intervals of interest: editable vectors, like the comma basis
-                for i in range(self.mi):
-                    for p in range(self.d):
-                        # inset within the COL_W slot (centred) so each ket is its own box with a
-                        # gap to its neighbours — the interest column is a collection, not a matrix
-                        self.cells.append(CellBox(ids.interest_cell(self.col_token('interest', i), p), self.interest_left(i) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(self.interest[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "interest", prime=p)))
-                        self._voice("vectors:interest", i, self.interest_sizes.just[i])
-                if self.pending_interest is not None:  # the draft column: blank, green-outlined cells the user fills in
-                    for p in range(self.d):
-                        v = self.pending_interest[p]
-                        self.cells.append(CellBox(ids.interest_cell(self.pending_col_token('interest'), p), self.interest_left(self.mi) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell",
-                                             text="" if v is None else str(v), prime=p, comma=self.mi, pending=True, unit=self.cell_unit("vectors", "interest", prime=p)))
+                # inset within the COL_W slot (centred) so each ket is its own box with a
+                # gap to its neighbours — the interest column is a collection, not a matrix
+                self._emit_vec_grid(_VecGrid("interest", self.mi, ids.interest_cell, self.interest_left,
+                    KET_INSET, "interestcell", "interestcell", self.interest, self.pending_interest, self.interest_sizes))
             # the drag-to-combine handles ride the band above the column labels (one per interval
             # entry): drag one interval onto another in the same column to ADD it in (their product).
             # Gated on the feature + ≥ 2 entries; targets only when the list is editable (not Tₚ = I).
