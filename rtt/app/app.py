@@ -26,6 +26,7 @@ from urllib.parse import quote
 from nicegui import app, background_tasks, helpers, ui
 
 from rtt.library.formatting import strip_negative_zero
+from rtt.app import ids
 from rtt.app import presets
 from rtt.app import service
 from rtt.app import settings as show_settings
@@ -2531,32 +2532,32 @@ def index() -> None:
 
     _MAPPING_EDIT = _VecGridEdit(
         group="gens", count=lambda: len(editor.state.mapping),
-        cell_id=lambda tok, p: f"cell:mapping:{tok}:{p}",  # row-major: token (row) before prime
+        cell_id=ids.mapping_cell,  # row-major: token (row) before prime
         pending=lambda: editor.pending_mapping_row, set_pending=editor.set_pending_mapping_row,
         commit=editor.edit_mapping,
         validate=lambda rows: service.is_proper_temperament(rows),
         guard=lambda: editor.settings["temperament_boxes"])  # no editable matrix when hidden
     _COMMA_EDIT = _VecGridEdit(
         group="commas", count=lambda: len(editor.state.comma_basis),
-        cell_id=lambda tok, p: f"cell:comma:{p}:{tok}",  # prime down the rows, comma across
+        cell_id=ids.comma_cell,  # prime down the rows, comma across
         pending=lambda: editor.pending_comma, set_pending=editor.set_pending_comma,
         commit=editor.edit_comma_basis,
         validate=lambda basis: service.is_proper_temperament(service.from_comma_basis(basis).mapping))
     _INTEREST_EDIT = _VecGridEdit(
         group="interest", count=lambda: len(editor.interest_vectors),
-        cell_id=lambda tok, p: f"cell:interest:{p}:{tok}",
+        cell_id=ids.interest_cell,
         pending=lambda: editor.pending_interest, set_pending=editor.set_pending_interest,
         commit=editor.set_interest_vectors, draft_arms=True)
     _HELD_EDIT = _VecGridEdit(
         group="held", count=lambda: len(editor.held_vectors),
-        cell_id=lambda tok, p: f"cell:held:{p}:{tok}",
+        cell_id=ids.held_cell,
         pending=lambda: editor.pending_held, set_pending=editor.set_pending_held,
         commit=editor.set_held_vectors, draft_arms=True)
     _TARGET_EDIT = _VecGridEdit(
         group="targets",
         count=lambda: len(editor.target_override or service.target_interval_set(
             editor.target_spec, editor.state.domain_basis)),
-        cell_id=lambda tok, p: f"cell:vec:targets:{tok}:{p}",  # REVERSED: token (column) before prime
+        cell_id=ids.target_cell,  # REVERSED: token (column) before prime
         pending=lambda: editor.pending_target, set_pending=editor.set_pending_target,
         commit=editor.set_target_override_vectors, draft_arms=True)
 
@@ -2574,11 +2575,11 @@ def index() -> None:
         if building[0]:
             return
         d, r = editor.state.d, editor.state.r
-        if any(f"cell:unchanged:{p}:{j}" not in rec.inputs for j in range(r) for p in range(d)):
+        if any(ids.unchanged_cell(j, p) not in rec.inputs for j in range(r) for p in range(d)):
             if preview:
                 _edit_candidate(None)
             return  # U isn't editable (under-rank) or not shown
-        vectors = [[_parse_int(rec.inputs[f"cell:unchanged:{p}:{j}"].value) for p in range(d)] for j in range(r)]
+        vectors = [[_parse_int(rec.inputs[ids.unchanged_cell(j, p)].value) for p in range(d)] for j in range(r)]
         if any(v is None for vec in vectors for v in vec):
             if preview:
                 _edit_candidate(None)

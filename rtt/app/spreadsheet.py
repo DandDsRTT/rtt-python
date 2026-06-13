@@ -15,6 +15,7 @@ import re
 from dataclasses import dataclass, replace
 from fractions import Fraction
 
+from rtt.app import ids
 from rtt.app import presets
 from rtt.app import service
 from rtt.app.layout import Block, CellBox, Layout, Line
@@ -3305,7 +3306,7 @@ class _GridBuilder:
                         # target / held / interest vector cells already do) so changed_cell_ids sees a
                         # mapping change — otherwise the edit preview is blind to the matrix a
                         # temperament swap or a +/- rewrites. The input still shows it via _update_mapping.
-                        self.cells.append(CellBox(f"cell:mapping:{rt}:{p}", self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", text=str(self.state.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
+                        self.cells.append(CellBox(ids.mapping_cell(rt, p), self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", text=str(self.state.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
                 if self.tile_open("mapping", "targets"):
                     for j in range(self.k):
                         self.cells.append(CellBox(f"cell:mapped:{rt}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped[i][j]), gen=i, unit=self.cell_unit("mapping", "targets", gen=i)))
@@ -3362,7 +3363,7 @@ class _GridBuilder:
                     for p in range(self.d):
                         # the ghost shows the born generator's COMPUTED prime coords; a real draft is blank
                         v = self.ghost_row_map[p] if self.ghost_row else self.pending_mapping_row[p]
-                        self.cells.append(CellBox(f"cell:mapping:{drt}:{p}", self.prime_left(p), self.map_top(dr), COL_W, ROW_H, row_kind, text="" if v is None else str(v), gen=dr, prime=p, pending=True))
+                        self.cells.append(CellBox(ids.mapping_cell(drt, p), self.prime_left(p), self.map_top(dr), COL_W, ROW_H, row_kind, text="" if v is None else str(v), gen=dr, prime=p, pending=True))
                 # blank green placeholders in the derived mapped tiles (M·target / M·interest / M·held
                 # / M·comma / M·U for the not-yet-committed generator), so the whole draft row greens
                 if self.tile_open("mapping", "targets"):
@@ -3580,7 +3581,7 @@ class _GridBuilder:
             if self.tile_open("vectors", "commas"):
                 for c in range(self.nc):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:comma:{p}:{self.col_token('commas', c)}", self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
+                        self.cells.append(CellBox(ids.comma_cell(self.col_token('commas', c), p), self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
                         self._voice("vectors:commas", c, self.comma_sizes.just[c])
                 # the unchanged basis U completes V = C|U: the projection's eigenvalue-1 eigenvectors,
                 # held just (e.g. 2/1, 5/1). EDITABLE (like the comma basis) when U is a FULL rational
@@ -3594,7 +3595,7 @@ class _GridBuilder:
                     doomed = self.pending is not None and j == self.nu - 1
                     for p in range(self.d):
                         vec_text = DASH if self.unchanged_basis[j] is None else str(self.unchanged_basis[j][p])
-                        self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc_shown + j), self.vec_top(p), COL_W, ROW_H,
+                        self.cells.append(CellBox(ids.unchanged_cell(j, p), self.comma_left(self.nc_shown + j), self.vec_top(p), COL_W, ROW_H,
                                              "unchangedcell" if (full_u and not doomed) else "vec", text=vec_text, prime=p, comma=self.nc + j,
                                              unit=self.cell_unit("vectors", "commas", prime=p)))
                     self._voice("vectors:commas", self.nc + j, self.unchanged_sizes.just[j])
@@ -3603,7 +3604,7 @@ class _GridBuilder:
                     for p in range(self.d):
                         # the ghost shows the born comma's COMPUTED prime coords; a real draft is blank
                         v = self.ghost_comma_vec[p] if self.ghost_comma else self.pending[p]
-                        self.cells.append(CellBox(f"cell:comma:{p}:{self.pending_col_token('commas')}", self.comma_left(self.nc), self.vec_top(p), COL_W, ROW_H, col_kind,
+                        self.cells.append(CellBox(ids.comma_cell(self.pending_col_token('commas'), p), self.comma_left(self.nc), self.vec_top(p), COL_W, ROW_H, col_kind,
                                              text="" if v is None else str(v), prime=p, comma=self.nc, pending=True, unit=self.cell_unit("vectors", "commas", prime=p)))
             if self.tile_open("vectors", "targets"):
                 # the target interval list as vector columns — an EDITABLE hybrid input like the comma
@@ -3618,22 +3619,22 @@ class _GridBuilder:
                 cell_inset = KET_INSET if self.targets_editable else 0
                 for j in range(self.k):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:vec:targets:{self.col_token('targets', j)}:{p}", self.target_left(j) + cell_inset, self.vec_top(p), COL_W - 2 * cell_inset, ROW_H, target_kind, text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
+                        self.cells.append(CellBox(ids.target_cell(self.col_token('targets', j), p), self.target_left(j) + cell_inset, self.vec_top(p), COL_W - 2 * cell_inset, ROW_H, target_kind, text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
                         self._voice("vectors:targets", j, self.target_sizes.just[j])
                 if self.pending_target is not None:  # the draft column: blank, green-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_target[p]
-                        self.cells.append(CellBox(f"cell:vec:targets:{self.pending_col_token('targets')}:{p}", self.target_left(self.k) + cell_inset, self.vec_top(p), COL_W - 2 * cell_inset, ROW_H, "targetcell",
+                        self.cells.append(CellBox(ids.target_cell(self.pending_col_token('targets'), p), self.target_left(self.k) + cell_inset, self.vec_top(p), COL_W - 2 * cell_inset, ROW_H, "targetcell",
                                              text="" if v is None else str(v), prime=p, comma=self.k, pending=True, unit=self.cell_unit("vectors", "targets", prime=p)))
             if self.tile_open("vectors", "held"):  # the held intervals as editable vectors, like the intervals of interest
                 for i in range(self.nh):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:held:{p}:{self.col_token('held', i)}", self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p)))
+                        self.cells.append(CellBox(ids.held_cell(self.col_token('held', i), p), self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p)))
                         self._voice("vectors:held", i, self.held_sizes.just[i])
                 if self.pending_held is not None:  # the draft column: blank, green-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_held[p]
-                        self.cells.append(CellBox(f"cell:held:{p}:{self.pending_col_token('held')}", self.held_left(self.nh), self.vec_top(p), COL_W, ROW_H, "heldcell",
+                        self.cells.append(CellBox(ids.held_cell(self.pending_col_token('held'), p), self.held_left(self.nh), self.vec_top(p), COL_W, ROW_H, "heldcell",
                                              text="" if v is None else str(v), prime=p, comma=self.nh, pending=True, unit=self.cell_unit("vectors", "held", prime=p)))
             if self.tile_open("vectors", "detempering"):  # the matrix D, one vector column per generator
                 for i in range(self.r):
@@ -3645,12 +3646,12 @@ class _GridBuilder:
                     for p in range(self.d):
                         # inset within the COL_W slot (centred) so each ket is its own box with a
                         # gap to its neighbours — the interest column is a collection, not a matrix
-                        self.cells.append(CellBox(f"cell:interest:{p}:{self.col_token('interest', i)}", self.interest_left(i) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(self.interest[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "interest", prime=p)))
+                        self.cells.append(CellBox(ids.interest_cell(self.col_token('interest', i), p), self.interest_left(i) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(self.interest[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "interest", prime=p)))
                         self._voice("vectors:interest", i, self.interest_sizes.just[i])
                 if self.pending_interest is not None:  # the draft column: blank, green-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_interest[p]
-                        self.cells.append(CellBox(f"cell:interest:{p}:{self.pending_col_token('interest')}", self.interest_left(self.mi) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell",
+                        self.cells.append(CellBox(ids.interest_cell(self.pending_col_token('interest'), p), self.interest_left(self.mi) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell",
                                              text="" if v is None else str(v), prime=p, comma=self.mi, pending=True, unit=self.cell_unit("vectors", "interest", prime=p)))
             # the drag-to-combine handles ride the band above the column labels (one per interval
             # entry): drag one interval onto another in the same column to ADD it in (their product).
