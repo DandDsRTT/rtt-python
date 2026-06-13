@@ -2766,43 +2766,31 @@ class _GridBuilder:
         # units ROW labels each column's coordinate — /gᵢ over generators, /pᵢ over the
         # domain primes, /1 over the ratio columns. Each rides its own grey tile
         # (UNITS_TILES), so tile_open gates emission against the live layout.
-        if self.tile_open("vectors", "units"):
-            for p in range(self.d):
-                self.cells.append(CellBox(f"ucol:vectors:{p}", self.col_x["units"], self.vec_top(p), self.col_w["units"], ROW_H,
-                                     "units", text=f"{self.domain_label}{_sub(p + 1)}/"))
-        # the projection row labels each of its prime-indexed rows pᵢ/ (P is a p/p operator), like the
-        # interval-vectors row above — the numerator side of its p/p units (the /pᵢ denominators ride
-        # the units row over the primes columns)
-        if self.tile_open("projection", "units"):
-            for p in range(self.d):
-                self.cells.append(CellBox(f"ucol:projection:{p}", self.col_x["units"], self.proj_top(p), self.col_w["units"], ROW_H,
-                                     "units", text=f"{self.domain_label}{_sub(p + 1)}/"))
-        if self.tile_open("mapping", "units"):
-            for i in range(self.r):
-                self.cells.append(CellBox(f"ucol:mapping:{i}", self.col_x["units"], self.map_top(i), self.col_w["units"], ROW_H,
-                                     "units", text=f"g{_sub(i + 1)}/"))
-        # the chapter-9 superspace rows label their coordinate in the units column too: B_L's
-        # components and M_jL's identity are superspace primes (pᵢ/), M_L's rows are superspace
-        # generators (gLᵢ/) — true primes / superspace generators, never the on-domain b/g
-        if self.tile_open("ss_vectors", "units"):
-            for p in range(self.dL):
-                self.cells.append(CellBox(f"ucol:ss_vectors:{p}", self.col_x["units"], self.ss_vec_top(p), self.col_w["units"], ROW_H,
-                                     "units", text=f"p{_sub(p + 1)}/"))
-        if self.tile_open("ss_mapping", "units"):
-            for i in range(self.rL):
-                self.cells.append(CellBox(f"ucol:ss_mapping:{i}", self.col_x["units"], self.ss_map_top(i), self.col_w["units"], ROW_H,
-                                     "units", text=f"g{SUBSCRIPT_L}{_sub(i + 1)}/"))
-        if self.tile_open("ss_just_mapping", "units"):
-            for p in range(self.dL):
-                self.cells.append(CellBox(f"ucol:ss_just_mapping:{p}", self.col_x["units"], self.ss_just_map_top(p), self.col_w["units"], ROW_H,
-                                     "units", text=f"p{_sub(p + 1)}/"))
-        # the superspace projection P_L is a b/b operator (each row a projected basis element), so its
-        # units-column numerator reads bᵢ/ — the basis label (b for a nonstandard subgroup), like the
-        # on-domain projection's, NOT the true-prime pᵢ/ of M_L / M_jL above it
-        if self.tile_open("ss_projection", "units"):
-            for p in range(self.dL):
-                self.cells.append(CellBox(f"ucol:ss_projection:{p}", self.col_x["units"], self.ss_proj_top(p), self.col_w["units"], ROW_H,
-                                     "units", text=f"{self.domain_label}{_sub(p + 1)}/"))
+        # The matrix rows' units-column labels — one table entry per tile: (row count, row-top
+        # accessor, label for subrow i). The projection row labels each of its prime-indexed rows
+        # like the interval-vectors row (P is a p/p operator — the numerator side of its p/p units;
+        # the /pᵢ denominators ride the units row over the primes columns). The chapter-9 superspace
+        # rows label their coordinate too: B_L's components and M_jL's identity are superspace primes
+        # (pᵢ/), M_L's rows are superspace generators (gLᵢ/) — true primes / superspace generators,
+        # never the on-domain b/g. But the superspace projection P_L is a b/b operator (each row a
+        # projected basis element), so its units-column numerator reads bᵢ/ — the basis label (b for
+        # a nonstandard subgroup), like the on-domain projection's, NOT the true-prime pᵢ/ of
+        # M_L / M_jL above it.
+        matrix_units = {
+            "vectors": (self.d, self.vec_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
+            "projection": (self.d, self.proj_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
+            "mapping": (self.r, self.map_top, lambda i: f"g{_sub(i + 1)}/"),
+            "ss_vectors": (self.dL, self.ss_vec_top, lambda i: f"p{_sub(i + 1)}/"),
+            "ss_mapping": (self.rL, self.ss_map_top, lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
+            "ss_just_mapping": (self.dL, self.ss_just_map_top, lambda i: f"p{_sub(i + 1)}/"),
+            "ss_projection": (self.dL, self.ss_proj_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
+        }
+        for key, (n, top, label) in matrix_units.items():
+            if not self.tile_open(key, "units"):
+                continue
+            for i in range(n):
+                self.cells.append(CellBox(f"ucol:{key}:{i}", self.col_x["units"], top(i),
+                                     self.col_w["units"], ROW_H, "units", text=label(i)))
         # the cents / octave / annotated-unit rows (guide ch.10 "Annotated units"). Each renders one
         # unit cell PER SUBROW — derived from the cell-row count row_nsub — so a matrix-valued row (the
         # prescaler 𝑋 = 𝑍𝐿's size row) carries a unit on EVERY row, not just its first. Generic to any
@@ -2821,35 +2809,29 @@ class _GridBuilder:
                                      self.col_w["units"], ROW_H, "units", text=text))
         if "units" in self.row_y:
             uy = self.row_y["units"]
-            if self.tile_open("units", "gens"):
-                for g in range(self.r):
-                    self.cells.append(CellBox(f"urow:gens:{g}", self.gen_left(g), uy, COL_W, ROW_H, "units", text=f"/g{_sub(g + 1)}"))
-            if self.tile_open("units", "primes"):
-                for p in range(self.d):
-                    self.cells.append(CellBox(f"urow:primes:{p}", self.prime_left(p), uy, COL_W, ROW_H, "units", text=f"/{self.domain_label}{_sub(p + 1)}"))
-            # the chapter-9 superspace columns: /gLᵢ over the superspace generators, /pᵢ over
-            # the superspace primes (true primes p — NOT the on-domain b, even when nonstandard)
-            if self.tile_open("units", "ssgens"):
-                for g in range(self.rL):
-                    self.cells.append(CellBox(f"urow:ssgens:{g}", self.ss_gen_left(g), uy, COL_W, ROW_H, "units", text=f"/g{SUBSCRIPT_L}{_sub(g + 1)}"))
-            if self.tile_open("units", "ssprimes"):
-                for p in range(self.dL):
-                    self.cells.append(CellBox(f"urow:ssprimes:{p}", self.ss_prime_left(p), uy, COL_W, ROW_H, "units", text=f"/p{_sub(p + 1)}"))
-            if self.tile_open("units", "commas"):
-                for c in range(self.nv_shown):  # over all of V = C|U (each sub-column dimensionless)
-                    self.cells.append(CellBox(f"urow:commas:{c}", self.comma_left(c), uy, COL_W, ROW_H, "units", text="/1"))
-            if self.tile_open("units", "detempering"):  # each detempering generator is a ratio column
-                for i in range(self.r):
-                    self.cells.append(CellBox(f"urow:detempering:{i}", self.detempering_left(i), uy, COL_W, ROW_H, "units", text="/1"))
-            if self.tile_open("units", "targets"):
-                for j in range(self.k):
-                    self.cells.append(CellBox(f"urow:targets:{j}", self.target_left(j), uy, COL_W, ROW_H, "units", text="/1"))
-            if self.tile_open("units", "interest"):
-                for ii in range(self.mi):
-                    self.cells.append(CellBox(f"urow:interest:{ii}", self.interest_left(ii), uy, COL_W, ROW_H, "units", text="/1"))
-            if self.tile_open("units", "held"):
-                for ih in range(self.nh):
-                    self.cells.append(CellBox(f"urow:held:{ih}", self.held_left(ih), uy, COL_W, ROW_H, "units", text="/1"))
+            # The units row's per-column-family table: (column count, column-left accessor, label
+            # for column i). /gᵢ over the generators, /pᵢ over the domain primes; the chapter-9
+            # superspace columns take /gLᵢ over the superspace generators and /pᵢ over the
+            # superspace primes (true primes p — NOT the on-domain b, even when nonstandard).
+            # Every ratio column is dimensionless /1: all of V = C|U (each sub-column), each
+            # detempering generator, the targets, the interest kets and the held intervals.
+            column_units = {
+                "gens": (self.r, self.gen_left, lambda i: f"/g{_sub(i + 1)}"),
+                "primes": (self.d, self.prime_left, lambda i: f"/{self.domain_label}{_sub(i + 1)}"),
+                "ssgens": (self.rL, self.ss_gen_left, lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
+                "ssprimes": (self.dL, self.ss_prime_left, lambda i: f"/p{_sub(i + 1)}"),
+                "commas": (self.nv_shown, self.comma_left, lambda i: "/1"),
+                "detempering": (self.r, self.detempering_left, lambda i: "/1"),
+                "targets": (self.k, self.target_left, lambda i: "/1"),
+                "interest": (self.mi, self.interest_left, lambda i: "/1"),
+                "held": (self.nh, self.held_left, lambda i: "/1"),
+            }
+            for key, (n, left, label) in column_units.items():
+                if not self.tile_open("units", key):
+                    continue
+                for i in range(n):
+                    self.cells.append(CellBox(f"urow:{key}:{i}", left(i), uy, COL_W, ROW_H,
+                                         "units", text=label(i)))
 
     def _emit_quantities_row(self):
         """The quantities row: domain primes, interval ratios, their ± controls and the reorder grips."""
@@ -3189,6 +3171,46 @@ class _GridBuilder:
                     for j in range(self.nu):
                         self.cells.append(CellBox(f"cell:mapped_unchanged:{drt}:{j}", self.comma_left(self.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
 
+    def _emit_mapped_grid(self, tile, prefix, grid, n_cols, left, col_kw, *,
+                          full=None, colwise=False, col_token_key=None, inset=0):
+        """One read-only ("mapped") grid of the projection band: d rows over the projection
+        row's prime-indexed tops (proj_top) × ``n_cols`` columns at ``left(j)``, each cell id
+        ``cell:{prefix}:…`` with ``col_kw`` (prime/gen/comma) carrying the column index.
+        ``full`` gates dashing — every cell an em-dash when the tuning isn't a full rational
+        projection — defaulting to ``grid is not None`` (P, G and the superspace pair each dash
+        on their own matrix; the P·X family instead shares the caller's one projection_rationals
+        flag). Row-major grids (P / G / G_L→s / P_L→s) are matrices of pre-stringified entries
+        emitted row-by-row with ids ``…:{row}:{col}``. ``colwise`` grids (the P·X family) are
+        lists of d-tall projected column vectors: emitted column-by-column, entries
+        ``grid[col][row]`` str()-wrapped, ids ``…:{col}:{row}`` — ``col_token_key`` swaps that
+        id's column index for the column's identity token — and each cell also carries
+        ``prime=row``. ``inset`` narrows each cell within its COL_W slot (centred), like the
+        loose interest kets the P·interest grid sits under."""
+        if not (self.row_open("projection") and self.tile_open("projection", tile)):
+            return
+        if full is None:
+            full = grid is not None
+
+        def cell(i, j):  # row i (a domain-prime index), column j
+            if colwise:
+                text = str(grid[j][i]) if full else DASH
+                tok = j if col_token_key is None else self.col_token(col_token_key, j)
+                cid, kw = f"cell:{prefix}:{tok}:{i}", {"prime": i, col_kw: j}
+            else:
+                text = grid[i][j] if full else DASH
+                cid, kw = f"cell:{prefix}:{i}:{j}", {col_kw: j}
+            self.cells.append(CellBox(cid, left(j) + inset, self.proj_top(i),
+                                 COL_W - 2 * inset, ROW_H, "mapped", text=text, **kw))
+
+        if colwise:
+            for j in range(n_cols):
+                for i in range(self.d):
+                    cell(i, j)
+        else:
+            for i in range(self.d):
+                for j in range(n_cols):
+                    cell(i, j)
+
     def _emit_projection_band(self):
         """The projection band: P = GM, the embedding G, the projected lists and the scaling factors."""
         # the projection matrix P = GM: a d×d operator over the domain primes, a stack of read-only
@@ -3197,41 +3219,17 @@ class _GridBuilder:
         # the whole-matrix plain-text band below), carrying the rational entry text ("1", "0", "1/4")
         # service stringified. P is totally DASHED when the tuning isn't a full rational projection
         # (projection_matrix None — it holds fewer than r rational intervals): every cell an em-dash.
-        if self.row_open("projection") and self.tile_open("projection", "primes"):
-            full_p = self.projection_matrix is not None
-            for i in range(self.d):
-                for p in range(self.d):
-                    text = DASH if not full_p else self.projection_matrix[i][p]
-                    self.cells.append(CellBox(f"cell:proj:{i}:{p}", self.prime_left(p), self.proj_top(i),
-                                         COL_W, ROW_H, "mapped", text=text, prime=p))
+        self._emit_mapped_grid("primes", "proj", self.projection_matrix, self.d, self.prime_left, "prime")
         # the generator embedding G = H(MH)⁻¹ (d×r), beside P in the gens columns: its columns are
         # the held tuning's generators as fractional vectors. Read-only ("mapped") cells like P (edited
         # only via the plain-text band, since 𝑀𝐺 = 𝐼 couples every entry), over the r generator columns
         # rather than the d primes. Dashed in lockstep with P (embedding_matrix None ⟺ not a full rational projection).
-        if self.row_open("projection") and self.tile_open("projection", "gens"):
-            full_g = self.embedding_matrix is not None
-            for i in range(self.d):
-                for g in range(self.r):
-                    text = DASH if not full_g else self.embedding_matrix[i][g]
-                    self.cells.append(CellBox(f"cell:embed:{i}:{g}", self.gen_left(g), self.proj_top(i),
-                                         COL_W, ROW_H, "mapped", text=text, gen=g))
+        self._emit_mapped_grid("gens", "embed", self.embedding_matrix, self.r, self.gen_left, "gen")
         # the chapter-9 superspace projection tiles (between G and P): G_L→s a d×rL vector list over the
         # superspace-generator columns, P_L→s a d×dL covector stack over the superspace-prime columns —
         # read-only ("mapped"), dashed in lockstep with P/G when the tuning isn't a full rational projection.
-        if self.row_open("projection") and self.tile_open("projection", "ssgens"):  # G_L→s
-            full = self.embedding_superspace is not None
-            for i in range(self.d):
-                for g in range(self.rL):
-                    text = DASH if not full else self.embedding_superspace[i][g]
-                    self.cells.append(CellBox(f"cell:embed_sl:{i}:{g}", self.ss_gen_left(g), self.proj_top(i),
-                                         COL_W, ROW_H, "mapped", text=text, gen=g))
-        if self.row_open("projection") and self.tile_open("projection", "ssprimes"):  # P_L→s = G_L→s·M_L
-            full = self.projection_superspace is not None
-            for i in range(self.d):
-                for p in range(self.dL):
-                    text = DASH if not full else self.projection_superspace[i][p]
-                    self.cells.append(CellBox(f"cell:proj_sl:{i}:{p}", self.ss_prime_left(p), self.proj_top(i),
-                                         COL_W, ROW_H, "mapped", text=text, prime=p))
+        self._emit_mapped_grid("ssgens", "embed_sl", self.embedding_superspace, self.rL, self.ss_gen_left, "gen")  # G_L→s
+        self._emit_mapped_grid("ssprimes", "proj_sl", self.projection_superspace, self.dL, self.ss_prime_left, "prime")  # P_L→s = G_L→s·M_L
 
         # the projected unrotated vector list P·V (the projection row over the V column): each
         # unrotated vector scaled by its eigenvalue — the comma columns vanish (P·𝐜 = 0, the
@@ -3267,31 +3265,14 @@ class _GridBuilder:
         # the embedding G), P·T over the targets, P·H = H over the held basis, P·interest over the loose
         # interest kets (inset, a collection not a matrix).
         full_proj = self.projection_rationals is not None
-        if self.row_open("projection") and self.tile_open("projection", "detempering"):  # P·D = G
-            for i in range(self.r):
-                for p in range(self.d):
-                    text = DASH if not full_proj else str(self.proj_detempering[i][p])
-                    self.cells.append(CellBox(f"cell:proj_pd:{self.col_token('detempering', i)}:{p}", self.detempering_left(i), self.proj_top(p),
-                                         COL_W, ROW_H, "mapped", text=text, prime=p, gen=i))
-        if self.row_open("projection") and self.tile_open("projection", "targets"):  # P·T
-            for j in range(self.k):
-                for p in range(self.d):
-                    text = DASH if not full_proj else str(self.proj_targets[j][p])
-                    self.cells.append(CellBox(f"cell:proj_pt:{j}:{p}", self.target_left(j), self.proj_top(p),
-                                         COL_W, ROW_H, "mapped", text=text, prime=p, comma=j))
-        if self.row_open("projection") and self.tile_open("projection", "held"):  # P·H = H
-            for i in range(self.nh):
-                for p in range(self.d):
-                    text = DASH if not full_proj else str(self.proj_held[i][p])
-                    self.cells.append(CellBox(f"cell:proj_ph:{i}:{p}", self.held_left(i), self.proj_top(p),
-                                         COL_W, ROW_H, "mapped", text=text, prime=p, comma=i))
-        if self.row_open("projection") and self.tile_open("projection", "interest"):  # P·interest
-            for i in range(self.mi):
-                for p in range(self.d):
-                    text = DASH if not full_proj else str(self.proj_interest[i][p])
-                    # inset within the COL_W slot (centred), like the interest kets — a loose collection
-                    self.cells.append(CellBox(f"cell:proj_pi:{i}:{p}", self.interest_left(i) + KET_INSET, self.proj_top(p),
-                                         COL_W - 2 * KET_INSET, ROW_H, "mapped", text=text, prime=p, comma=i))
+        self._emit_mapped_grid("detempering", "proj_pd", self.proj_detempering, self.r, self.detempering_left, "gen",
+                               full=full_proj, colwise=True, col_token_key="detempering")  # P·D = G
+        self._emit_mapped_grid("targets", "proj_pt", self.proj_targets, self.k, self.target_left, "comma",
+                               full=full_proj, colwise=True)  # P·T
+        self._emit_mapped_grid("held", "proj_ph", self.proj_held, self.nh, self.held_left, "comma",
+                               full=full_proj, colwise=True)  # P·H = H
+        self._emit_mapped_grid("interest", "proj_pi", self.proj_interest, self.mi, self.interest_left, "comma",
+                               full=full_proj, colwise=True, inset=KET_INSET)  # P·interest
 
         # the scaling factors λ = diag(λ): the projection's eigenvalue list over the V column —
         # 0 for each comma sub-column (vanished, eigenvalue 0) then 1 for each unchanged
