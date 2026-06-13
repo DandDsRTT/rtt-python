@@ -313,6 +313,11 @@
 .rtt-preset .q-field__native, .rtt-preset .q-field__input { font-size:13px; color:#000;
             min-height:0 !important; padding:0; line-height:30px; font-family:'Cambria',Georgia,serif; }
 .rtt-preset .q-field__marginal, .rtt-preset .q-field__append { height:30px; min-height:0 !important; }
+/* drop Quasar's hint/error strip below the field (like .rtt-ptextedit / .rtt-cellinput do): its
+   reserved height, centred with the 30px control inside the cell, lifted the field up and opened a
+   gap between the dropdown and the caption labelling it. Hidden, the control fills its cell and the
+   caption hugs the dropdown's bottom. */
+.rtt-preset .q-field__bottom { display:none !important; }
 .rtt-preset .q-icon { font-size:15px; color:#555; }
 /* a LOCKED chooser -- set_enabled(False), so Quasar's `q-field--disabled` (the all-interval
    weight-slope chooser, pinned to simplicity; the locked target chooser likewise). Quasar only
