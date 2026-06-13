@@ -53,6 +53,47 @@ def test_parse_domain_basis():
     assert parse_domain_basis("2.3.7") == (2, 3, 7)
 
 
+# ebk-notation-5: a grade-≥2 multivector (wedgie) repeats its variance bracket — it is not a
+# map/vector, so it must be rejected, never silently parsed as the inner single bracket.
+@pytest.mark.parametrize(
+    "data",
+    [
+        "⟨⟨1 4 4]]",  # meantone's covariant bivector
+        "[[1 4 4⟩⟩",  # the contravariant multicomma
+        "⟨⟨ 1 4 4 ]]",  # whitespace inside the repeated brackets
+        "⟨⟨⟨1 0 0]]]",  # a trivector
+    ],
+)
+def test_multivector_rejected(data):
+    with pytest.raises(ValueError):
+        parse_temperament_data(data)
+
+
+# ebk-notation-6: a string mixing bras and kets at one nesting level is not valid EBK (a matrix
+# is a ket of bras OR a bra of kets, never both), and arbitrary junk around the vectors is junk.
+@pytest.mark.parametrize(
+    "data",
+    [
+        "[⟨1 0 -4] [0 1 4⟩]",  # a bra and a ket at one level — don't drop the bra
+        "junk [-4 4 -1⟩ junk",  # stray words around a vector
+        "[-4 4 -1⟩ 5",  # a stray number outside the vectors
+    ],
+)
+def test_mixed_variance_and_junk_rejected(data):
+    with pytest.raises(ValueError):
+        parse_temperament_data(data)
+
+
+# ebk-notation-14: the Secor zero-run elision ', ,' stands for a dropped group of three zeros, so
+# it must round-trip to the full vector; a bare ',,' (no space) is still a single blank (None).
+def test_secor_zero_run_elision_expands_to_three_zeros():
+    assert parse_temperament_data("[-3 0, , 1⟩").matrix == ((-3, 0, 0, 0, 0, 1),)
+    # equal to the un-elided separated form
+    assert parse_temperament_data("[-3 0, , 1⟩") == parse_temperament_data("[-3 0, 0 0 0, 1⟩")
+    # a bare ',,' is unchanged: still a single blank entry
+    assert parse_ebk_vector("1 ,, 3 , 4") == (1, None, 3, 4)
+
+
 @pytest.mark.parametrize(
     "text, expected",
     [

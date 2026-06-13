@@ -73,6 +73,11 @@ def strip_negative_zero(text: str) -> str:
 def _format_number(entry) -> str:
     if isinstance(entry, int):
         return str(entry)
-    if isinstance(entry, Fraction) and entry.denominator == 1:
-        return str(entry.numerator)
+    if isinstance(entry, Fraction):
+        # A whole fraction collapses to its integer (2/1 → 2); a non-whole one keeps its
+        # exact ``numerator/denominator`` form so to_ebk stays the inverse of parsing —
+        # printing 1/3 as a 3-dp float would re-parse as 0.333, degrading the rational.
+        if entry.denominator == 1:
+            return str(entry.numerator)
+        return f"{entry.numerator}/{entry.denominator}"
     return strip_negative_zero(f"{float(entry):.{_OUTPUT_ACCURACY}f}")

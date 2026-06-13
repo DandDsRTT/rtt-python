@@ -1,3 +1,5 @@
+from fractions import Fraction
+
 import pytest
 
 from rtt.library.formatting import (
@@ -7,6 +9,7 @@ from rtt.library.formatting import (
     to_ebk,
     vector_to_ebk,
 )
+from rtt.library.parsing import parse_temperament_data
 from rtt.library.temperament import Temperament, Variance
 
 DUMMY = Temperament(((1, 2, 3), (0, 5, 6)), Variance.ROW)  # d = 3, r = 2
@@ -78,6 +81,16 @@ def test_format_output_ebk():
 )
 def test_strip_negative_zero(text, expected):
     assert strip_negative_zero(text) == expected
+
+
+# ebk-notation-11: to_ebk is the inverse of parsing, so a non-whole Fraction must keep its exact
+# rational form (1/4, -1/3) rather than degrade to a 3-dp float that re-parses as 0.250 / -0.333.
+def test_to_ebk_preserves_exact_rationals():
+    t = parse_temperament_data("[1/4 -1/3 0⟩")
+    assert to_ebk(t) == "[1/4 -1/3 0⟩"
+    assert parse_temperament_data(to_ebk(t)).matrix == ((Fraction(1, 4), Fraction(-1, 3), 0),)
+    # a whole fraction still collapses to its integer
+    assert vector_to_ebk((Fraction(2, 1), Fraction(3, 2), 0), DUMMY) == "[2 3/2 0⟩"
 
 
 def test_format_number_drops_negative_zero():
