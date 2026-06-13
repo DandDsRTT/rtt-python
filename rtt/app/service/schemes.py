@@ -330,31 +330,40 @@ def scheme_from_json(data):
 
 
 def complexity_prescaler(
-    mapping, scheme: str = DEFAULT_TUNING_SCHEME, override=None,
+    mapping, scheme: str = DEFAULT_TUNING_SCHEME, override=None, domain_basis=None,
+    nonprime_approach: str = "",
 ) -> tuple[float, ...]:
-    """The diagonal of the complexity prescaler L — each domain prime's pre-norm weight
-    (log2(prime) for the default log-prime norm). The L matrix is diag of this.
+    """The diagonal of the complexity prescaler L — each domain basis element's pre-norm weight
+    (log2(element) for the default log-prime norm). The L matrix is diag of this.
 
     ``override`` lets the bare prescaler tile's editable cells short-circuit the scheme's
     computed diagonal: a d-tuple typed in there REPLACES the log-prime/prime/identity
     diagonal everywhere it flows — the matrix display, the 𝐿·basis products, complexity,
     weights, and the tuning solve. ``None`` (the default) keeps today's behavior. The override
     is a d-tuple diagonal, or — once alt-complexity makes the whole square editable — a full d×d
-    matrix (a non-diagonal pretransformer); a matrix is returned as rows of floats, a diagonal flat."""
+    matrix (a non-diagonal pretransformer); a matrix is returned as rows of floats, a diagonal flat.
+
+    ``domain_basis`` (the d basis elements) and ``nonprime_approach`` (trait 7) make the diagonal
+    reflect the ACTUAL domain rather than the first d standard primes: over a prime subgroup or a
+    nonprime-based domain the element complexities differ (log₂7 over 2.3.7, not log₂5; log₂(13/5)
+    under nonprime-based), and the diagonal must agree with the complexity row computed from the
+    same scheme — and seed the right weights when a prescaler cell is edited. (nonstandard-superspace-6.)"""
     if override is not None:
         if _is_matrix(override):
             return tuple(tuple(float(x) for x in row) for row in override)
         return tuple(float(x) for x in override)
-    t = Temperament(_to_matrix(mapping), Variance.ROW)
+    t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
     spec = resolve_tuning_scheme(scheme)
     return tuple(
         get_complexity_prescaler(
-            t, spec.complexity_log_prime_power, spec.complexity_prime_power, spec.nonprime_basis_approach
+            t, spec.complexity_log_prime_power, spec.complexity_prime_power,
+            nonprime_approach or spec.nonprime_basis_approach,
         )
     )
 
 
-def displayed_prescaler_name(mapping, scheme=DEFAULT_TUNING_SCHEME, custom_prescaler=None) -> str | None:
+def displayed_prescaler_name(mapping, scheme=DEFAULT_TUNING_SCHEME, custom_prescaler=None,
+                             domain_basis=None, nonprime_approach: str = "") -> str | None:
     """The named prescaler (:data:`PRESCALERS`) the displayed L diagonal realises, or ``None`` —
     for which the prescaler chooser shows "-". ``None`` when a ``custom_prescaler`` override
     deviates from the scheme's computed diagonal (the user hand-edited the bare prescaler tile),
@@ -369,7 +378,8 @@ def displayed_prescaler_name(mapping, scheme=DEFAULT_TUNING_SCHEME, custom_presc
     if custom_prescaler is not None:
         if _is_matrix(custom_prescaler):
             return None  # a non-diagonal pretransformer has no named (diagonal) prescaler form
-        computed = complexity_prescaler(mapping, scheme)
+        computed = complexity_prescaler(mapping, scheme, domain_basis=domain_basis,
+                                        nonprime_approach=nonprime_approach)
         shown = tuple(float(x) for x in custom_prescaler)
         if len(shown) != len(computed) or any(
                 prescale_text(a) != prescale_text(b) for a, b in zip(shown, computed)):

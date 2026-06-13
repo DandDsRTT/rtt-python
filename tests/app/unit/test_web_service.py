@@ -2052,3 +2052,130 @@ def test_held_basis_vectors_keeps_only_independent_in_domain_intervals():
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     assert service.held_basis_vectors(state, ("2/1", "4/1")) == ((1, 0, 0),)   # 4/1 ∥ 2/1, dropped
     assert service.held_basis_vectors(state, ("2/1", "5/4", "3/2")) == ((1, 0, 0), (-2, 0, 1))  # capped at r=2
+
+
+# ── audit fixes: crash guard, domain preservation, prescaler basis, enfactoring, empty targets ──
+# (the functionality-audit report's service-layer findings; each reproduces the exact repro and
+# asserts the fix. The report predates the service.py → service/ package split, so line numbers
+# in the finding IDs below refer to the old single file.)
+
+
+def test_vectors_to_ratios_flags_an_over_complex_ratio_instead_of_crashing():
+    # CPython refuses to stringify an int past ~4300 digits, so a degenerate near-full-rank mapping
+    # whose generator detempering is astronomically complex used to crash the formatter mid-render
+    # (and, with no try/finally around render(), brick the page). Such a ratio is now flagged with a
+    # sentinel rather than rendered. (editor-state-machine-1.)
+    huge = service.from_mapping(((3, 4, -8), (-1, 7, 6), (3, 0, 6)))  # full-rank, accepted, vast generators
+    gens = service.generators(huge.mapping)
+    assert gens == (service._OVER_COMPLEX_RATIO,) * 3  # flagged, not a 4300+-digit string (no crash)
+    # a normal (small) generator still renders its ratio — the guard only intercepts the meaningless
+    assert service.generators(((1, 1, 0), (0, 1, 4))) == ("2/1", "3/2")
+
+
+def test_over_complex_generators_round_trip_back_to_a_finite_size():
+    # the flagged ratio is parsed back as a unison so the detempering size / complexity rows that
+    # round-trip these ratio strings stay finite instead of crashing the same way. The whole grid
+    # build (the original crash site, service.generators inside spreadsheet.build) succeeds.
+    state = service.from_mapping(((3, 4, -8), (-1, 7, 6), (3, 0, 6)))
+    tun = service.tuning(state.mapping, "TILT minimax-U")
+    sizes = service.interval_sizes(tun, service.generators(state.mapping))  # would have raised at parse
+    assert all(math.isfinite(s) for s in sizes.tempered)
+    pt = service.plain_text_values(state, "TILT minimax-U", "TILT")  # the ptext detempering round-trip
+    assert pt[("tuning", "detempering")]  # built without raising
+    gb = _grid_with_ptext(state, "TILT minimax-U")  # the exact crash site: _resolve_interval_sets
+    assert service._OVER_COMPLEX_RATIO in gb.gens   # the genmap cell shows the sentinel, render survives
+
+
+def test_remove_mapping_row_keeps_a_nonstandard_domain():
+    # dropping a generator changes the temperament, not its domain — the re-dual must keep a
+    # nonstandard subgroup, not silently revert to the standard primes. (nonstandard-superspace-5.)
+    state = service.from_temperament_data("2.3.13/5 [⟨1 0 -1] ⟨0 2 3]}")
+    assert service.remove_mapping_row(state, 1).domain_basis == (2, 3, Fraction(13, 5))
+
+
+def test_remove_comma_keeps_a_nonstandard_domain_at_higher_nullity():
+    # the n ≥ 2 branch of the comma − re-dualed WITHOUT the domain basis, resetting 2.3.13/5 to the
+    # standard primes; the n == 1 (emptied → just intonation) branch already preserved it. Both must.
+    # (nonstandard-superspace-5 / canonical-defactor-7.)
+    n2 = service.from_temperament_data("2.3.13/5 [⟨1 1 1]}")  # n = 2
+    assert n2.n == 2
+    assert service.remove_comma(n2, 0).domain_basis == (2, 3, Fraction(13, 5))  # n ≥ 2 branch
+    n1 = service.from_temperament_data("2.3.13/5 [⟨1 0 -1] ⟨0 2 3]}")  # n = 1
+    assert service.remove_comma(n1, 0).domain_basis == (2, 3, Fraction(13, 5))  # emptied branch
+
+
+def test_complexity_prescaler_runs_over_the_domain_basis_not_standard_primes():
+    # the bare prescaler 𝑋 diagonal is each DOMAIN element's pre-norm weight, like the complexity row
+    # — over 2.3.7 the third entry is log₂7, never log₂5 (a prime the domain does not contain). The
+    # no-domain_basis build read log₂ of the first d standard primes and contradicted the complexity
+    # row directly below it (and seeded the wrong diagonal into the solve). (nonstandard-superspace-6.)
+    diag = service.complexity_prescaler(((1, 1, 3), (0, 3, -1)), "minimax-C", domain_basis=(2, 3, 7))
+    assert diag == pytest.approx((1.0, math.log2(3), math.log2(7)), abs=1e-9)
+    # it agrees with the complexity-over-primes row computed from the same scheme + domain
+    elems = ("2/1", "3/1", "7/1")
+    comps = service.interval_complexities(((1, 1, 3), (0, 3, -1)), "minimax-C", elems, domain_basis=(2, 3, 7))
+    assert service.cents(diag[2]) == service.cents(comps[2])  # the two adjacent rows now match
+
+
+def test_complexity_prescaler_honors_the_nonprime_based_approach():
+    # under the nonprime-based approach a nonprime element is an atom (13/5 → log₂(13/5)=1.379), not
+    # prime-factored (log₂65). Threaded so the displayed diagonal tracks the approach radio.
+    db = (2, 3, Fraction(13, 5))
+    neutral = service.complexity_prescaler(((1, 0, -1), (0, 2, 3)), "minimax-C", domain_basis=db)
+    nonprime = service.complexity_prescaler(((1, 0, -1), (0, 2, 3)), "minimax-C", domain_basis=db,
+                                            nonprime_approach="nonprime-based")
+    assert neutral[2] == pytest.approx(math.log2(13 * 5), abs=1e-9)      # prime-factored
+    assert nonprime[2] == pytest.approx(math.log2(Fraction(13, 5)), abs=1e-9)  # the atom
+
+
+def test_greatest_factor_and_is_enfactored_detect_temperoids():
+    # the defactoring digest (column-HNF pivot product), NOT a row GCD: it catches hidden enfactoring
+    # where no single row is divisible. is_enfactored is the gate the renderer uses to dash the
+    # generator/detempering rows (M·Dᵀ ≠ I for a temperoid), deliberately SEPARATE from
+    # is_proper_temperament, which still accepts enfactored full-rank mappings. (canonical-defactor-4.)
+    assert service.greatest_factor(((24, 38, 56),)) == 2            # ⟨24 38 56] = 2·⟨12 19 28]
+    assert service.greatest_factor(((2, 2, 0), (0, 1, 4))) == 2     # hidden: no single row is divisible
+    assert service.greatest_factor(((1, 1, 0), (0, 1, 4))) == 1     # meantone, defactored
+    assert service.greatest_factor(((0, 1, 4),)) == 1               # a zero-column state is not enfactored
+    assert service.greatest_factor(((1, 0, -4), (2, 0, -8))) == 1   # dependent rows → no well-defined factor
+    assert service.is_enfactored(((24, 38, 56),)) is True
+    assert service.is_enfactored(((1, 1, 0), (0, 1, 4))) is False
+    # is_proper still ACCEPTS the enfactored full-rank mapping (acceptance is policy; dashing is display)
+    assert service.is_proper_temperament(((2, 0, 0), (0, 1, 1))) is True
+    assert service.is_enfactored(((2, 0, 0), (0, 1, 1))) is True    # but it IS flagged enfactored
+
+
+def test_tuning_honors_an_explicit_empty_target_override():
+    # deleting EVERY target leaves an explicit empty override (). It used to be falsy and ignored, so
+    # Optimize silently froze the full default-TILT optimum behind an empty displayed list. An empty
+    # override now means the underdetermined empty set — the SAME degenerate optimum the family's
+    # 1-limit (1-TILT / 1-OLD) produces, so the two empty-set routes agree. (tuning-core-10.)
+    m = ((1, 1, 0), (0, 1, 4))
+    assert service.tuning(m, "TILT minimax-U", targets=()).generator_map \
+        == service.tuning(m, "1-TILT minimax-U").generator_map        # consistent with the limit chooser
+    assert service.tuning(m, "OLD minimax-U", targets=()).generator_map \
+        == service.tuning(m, "1-OLD minimax-U").generator_map         # family-aware (OLD → 1-OLD)
+    # None (no override) still optimizes the full set; a non-empty override still retunes to that list
+    assert service.tuning(m, "TILT minimax-U", targets=None).generator_map \
+        != service.tuning(m, "TILT minimax-U", targets=()).generator_map
+    assert service.tuning(m, "TILT minimax-U", targets=("3/2",)).generator_map[1] == pytest.approx(701.955, abs=1e-2)
+    # an all-interval scheme (target set {} = every interval) is untouched: () is not a target override there
+    assert service.tuning(m, "minimax-S", targets=()).generator_map \
+        == service.tuning(m, "minimax-S").generator_map
+
+
+def test_plain_text_superspace_prescaling_lifts_like_the_grid():
+    # under the superspace the prescaling 𝐿·v products lift to dL-tall over the TRUE primes and
+    # prescale with the superspace diagonal — the grid does this; the plain-text band used to show the
+    # UNLIFTED d-tall domain vectors with the wrong (domain-prime) diagonal, contradicting the grid
+    # cells above it. (ebk-notation-4.)
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    pt = service.plain_text_values(state, "minimax-ES", superspace=True)
+    ss_pre = service.superspace_complexity_prescaler(state, "minimax-ES")   # the dL-tall diagonal
+    lifted = service.lift_vectors_to_superspace(state.domain_basis, state.comma_basis)
+    expected_cols = [tuple(ss_pre[i] * v[i] for i in range(len(ss_pre))) for v in lifted]
+    assert pt[("prescaling", "commas")] == service._prescale_vector_list(expected_cols)
+    # dL-tall (4 over the 2.3.5.13 superspace), not the unlifted d = 3 the bug showed
+    assert len(expected_cols[0]) == len(ss_pre) == 4
+    # the band agrees with the lifted-and-prescaled basis the grid renders for the same tile
+    assert " 7.401" in pt[("prescaling", "commas")]   # 2·log₂13 — the lifted 13-coordinate, never log₂5

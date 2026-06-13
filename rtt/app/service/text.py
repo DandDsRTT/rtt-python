@@ -147,8 +147,11 @@ def plain_text_values(
     # prime-factors correctly (13/5 reads log₂(13·5), not log₂5 over a domain that has no 5).
     prime_ratios = tuple(element_ratio(e) for e in db)
     # the bare prescaler 𝑋 (its diagonal, or a hand-entered non-diagonal matrix override) — the
-    # SAME override the grid threads into every prescaling/complexity/weight/tuning calculation.
-    prescaler = complexity_prescaler(state.mapping, scheme, override=custom_prescaler)
+    # SAME override the grid threads into every prescaling/complexity/weight/tuning calculation,
+    # over the actual domain basis + approach (so a prime-subgroup or nonprime-based diagonal reads
+    # log₂ of the right elements, matching the complexity row). (nonstandard-superspace-6.)
+    prescaler = complexity_prescaler(state.mapping, scheme, override=custom_prescaler,
+                                     domain_basis=db, nonprime_approach=nonprime_approach)
     prescaler_is_matrix = bool(prescaler) and isinstance(prescaler[0], (tuple, list))
     size_factor = complexity_size_factor(scheme)  # nonzero ⇒ the rectangular 𝑋 = 𝑍𝐿 (size row)
 
@@ -421,6 +424,21 @@ def plain_text_values(
             ("complexity", "ssprimes"): _cents_map(ss_prescaler),
             ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, elem_ratios, domain_basis=db, prescaler_override=custom_prescaler)),
         })
+        # every prescaling 𝐿·v product ALSO lifts to dL-tall over the superspace primes and prescales
+        # with the superspace diagonal — the same lift the grid takes (spreadsheet.build). Leaving the
+        # commas/targets/held/detempering/interest products as the earlier UNLIFTED d-tall domain
+        # vectors (with the wrong domain diagonal) made the band contradict the grid cells above it —
+        # e.g. a 13/5 column reading 2·log₂5 instead of the lifted log₂13/log₂5 split. (ebk-notation-4.)
+        _ss_prod = lambda vs: _sized(_prescaled_ss(lift_vectors_to_superspace(db, vs)))
+        ss_u_prescaled = [None if u is None else _sized(_prescaled_ss(lift_vectors_to_superspace(db, (u,))))[0]
+                          for u in u_basis]
+        values[("prescaling", "commas")] = _prescale_vector_list(list(_ss_prod(comma_basis)) + ss_u_prescaled)
+        values[("prescaling", "detempering")] = _prescale_vector_list(_ss_prod(detemper_vectors))
+        values[("prescaling", "targets")] = _prescale_vector_list(_ss_prod(target_vectors))
+        if held:
+            values[("prescaling", "held")] = _prescale_vector_list(_ss_prod(held))
+        if interest:
+            values[("prescaling", "interest")] = _prescale_vector_list(_ss_prod(interest), outer="")
     return values
 
 

@@ -152,7 +152,11 @@ def remove_comma(state: TemperamentState, index: int = -1) -> TemperamentState:
     basis = state.comma_basis
     i = index % len(basis)  # normalize, so the -1 default drops the last comma
     remaining = basis[:i] + basis[i + 1:]
-    return from_comma_basis(remaining) if remaining else just_intonation(state.domain_basis)
+    # re-dual over the SAME domain basis — a comma removal changes the temperament's form, not its
+    # domain, so a nonstandard subgroup (2.3.13/5) must survive (the emptied branch already does this
+    # via just_intonation). Omitting it silently reset the domain to standard primes whenever n ≥ 2.
+    # (nonstandard-superspace-5 / canonical-defactor-7.)
+    return from_comma_basis(remaining, state.domain_basis) if remaining else just_intonation(state.domain_basis)
 
 
 def remove_mapping_row(state: TemperamentState, i: int) -> TemperamentState:
@@ -162,7 +166,10 @@ def remove_mapping_row(state: TemperamentState, i: int) -> TemperamentState:
     raise rank). Callers guard against removing the sole row. Adding a mapping row
     is the comma-space :func:`remove_comma` reached from the mapping (+r, −n)."""
     kept = state.mapping[:i] + state.mapping[i + 1:]
-    return from_mapping(kept)
+    # re-dual over the SAME domain basis — dropping a generator changes the temperament, not its
+    # domain, so a nonstandard subgroup (2.3.13/5) must survive rather than silently reverting to the
+    # standard primes (the dual of remove_comma, which has the same obligation). (nonstandard-superspace-5.)
+    return from_mapping(kept, state.domain_basis)
 
 
 def add_mapping_row(state: TemperamentState) -> TemperamentState:

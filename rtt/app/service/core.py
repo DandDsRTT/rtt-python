@@ -14,6 +14,7 @@ from functools import lru_cache
 
 import sympy as sp
 
+from rtt.library.addition import _get_greatest_factor
 from rtt.library.canonicalization import canonical_ca, canonical_ma
 from rtt.library.dimensions import get_d, get_r
 from rtt.library.domain_basis import (
@@ -153,6 +154,36 @@ def is_proper_temperament(mapping) -> bool:
     return all(any(row[p] for row in rows) for p in range(len(rows[0])))  # every element reached
 
 
+def greatest_factor(mapping) -> int:
+    """The mapping's greatest enfactoring — the defactoring digest: the |det| of the square
+    Hermite form of its saturated row space (equivalently the product of its column-HNF pivots).
+    ``1`` for a defactored (proper) temperament; ``> 1`` marks an *enfactored* temperoid, e.g.
+    ``⟨24 38 56]`` = 2·``⟨12 19 28]`` (greatest factor 2) or the hidden ``[⟨2 0 0] ⟨0 1 4]]``.
+
+    Enfactoring is the column-HNF pivot product, NOT a row GCD — a row GCD misses hidden
+    enfactoring where no single row is divisible. A dependent / empty mapping (which
+    :func:`is_proper_temperament` already rejects) has no well-defined enfactoring, reported as 1."""
+    rows = _to_matrix(mapping)
+    if not rows or not rows[0] or get_r(Temperament(rows, Variance.ROW)) < len(rows):
+        return 1
+    return abs(_get_greatest_factor(rows))
+
+
+def is_enfactored(mapping) -> bool:
+    """Whether ``mapping`` is enfactored (:func:`greatest_factor` ``> 1``) — a temperoid whose
+    generator detempering ``D`` does NOT satisfy the defining identity ``M·Dᵀ = I``, so the
+    generators / detempering / ``𝒕D``-vs-``𝒈`` rows :func:`generators` and
+    :func:`generator_detempering` produce for it are confidently wrong (they only hold for a
+    defactored mapping).
+
+    Deliberately distinct from :func:`is_proper_temperament`, which *accepts* enfactored full-rank
+    mappings (canonicalization and temperament identification reduce them, and the canonical-form box
+    shows the defactored form): a temperoid is a legitimate thing to enter and inspect. The renderer
+    uses this to DASH the detempering-derived rows when the mapping isn't defactored, rather than
+    presenting numeric noise as a working tuning. (canonical-defactor-4.)"""
+    return greatest_factor(mapping) > 1
+
+
 def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
     """Resolve a target interval set spec against a domain basis, as ratio strings.
 
@@ -212,11 +243,37 @@ def target_limit_problem(family: str | None, limit_value) -> str | None:
     return None
 
 
+# A generator/comma ratio whose numerator or denominator runs past this many decimal digits is
+# flagged with the sentinel below instead of being rendered. CPython refuses to stringify an int
+# past ~4300 digits (a quadratic-time DoS guard) — so a ratio that large would crash the formatter
+# (and, with no try/finally around render(), brick the page); and a ratio even close to it is the
+# noise of a degenerate near-full-rank or enfactored mapping (whose generator detempering is
+# astronomically complex), not a musical interval. The threshold sits far below the 4300 crash
+# ceiling and far above any real interval, so it only ever intercepts meaningless ratios.
+_OVER_COMPLEX_RATIO = "⋯"  # a ratio too complex to render (a degenerate mapping's noise); see below
+_MAX_RATIO_DIGITS = 1000  # decimal digits a renderable ratio component may reach (editor-state-machine-1)
+
+
+def _ratio_too_complex(quotient) -> bool:
+    """Whether a Fraction's numerator or denominator is too large to render as a ratio string —
+    its decimal length, bounded from its bit length (an ``n``-bit int has about ``n·log₁₀2`` digits,
+    so this never invokes the very int→str conversion that would crash), exceeds
+    :data:`_MAX_RATIO_DIGITS`. The cheap guard that keeps a degenerate mapping's vast generator /
+    comma ratios from crashing the render (:func:`_vectors_to_ratios`)."""
+    bits = max(quotient.numerator.bit_length(), quotient.denominator.bit_length())
+    return bits * 0.30103 > _MAX_RATIO_DIGITS
+
+
 def _vectors_to_ratios(vectors, domain_basis=None) -> tuple[str, ...]:
     """Each vector as a ``"num/den"`` ratio string (the shared rendering for generators
     and commas). A vector's components are exponents on the domain basis: the standard
     primes (``pcv_to_quotient``) or, for a nonstandard basis, its (nonprime) elements —
-    so a comma over ``2.3.13/5`` multiplies those out (676/675), not the primes (100/27)."""
+    so a comma over ``2.3.13/5`` multiplies those out (676/675), not the primes (100/27).
+
+    A component too large to stringify (a degenerate / enfactored mapping's astronomical
+    generator ratio) is flagged :data:`_OVER_COMPLEX_RATIO` rather than crashing the formatter;
+    the read-only ratio face renders the sentinel as a plain label, and :func:`_interval_vectors`
+    reads it back as a unison so the dependent size/complexity rows stay finite."""
     standard = domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis)
     elements = None if standard else tuple(Fraction(e) for e in domain_basis)
     ratios = []
@@ -227,7 +284,10 @@ def _vectors_to_ratios(vectors, domain_basis=None) -> tuple[str, ...]:
             quotient = Fraction(1)
             for element, exponent in zip(elements, vector):
                 quotient *= element**exponent
-        ratios.append(f"{quotient.numerator}/{quotient.denominator}")
+        if _ratio_too_complex(quotient):
+            ratios.append(_OVER_COMPLEX_RATIO)
+        else:
+            ratios.append(f"{quotient.numerator}/{quotient.denominator}")
     return tuple(ratios)
 
 
@@ -264,6 +324,10 @@ def _interval_vectors(ratios, domain_basis, d) -> tuple:
     """Each ratio as a vector over the domain basis: parsed over the first ``d`` primes for a
     standard basis, or expressed over the (possibly nonprime) elements for a nonstandard one
     (so e.g. ``13/5`` keeps its 13 over ``2.3.13/5`` instead of being truncated to the d primes)."""
+    # a ratio :func:`_vectors_to_ratios` flagged as over-complex (a degenerate mapping's vast
+    # generator/comma ratio) has no renderable string to parse — read it back as a unison so the
+    # size/complexity rows that round-trip these ratios stay finite rather than crash (editor-state-machine-1)
+    ratios = tuple("1/1" if r == _OVER_COMPLEX_RATIO else r for r in ratios)
     if domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis):
         return _vectors(ratios, d)
     return express_quotients_in_domain_basis(tuple(Fraction(r) for r in ratios), tuple(domain_basis))
@@ -399,8 +463,18 @@ def _cached_tuning(mapping, scheme, domain_basis, nonprime_approach, held,
                    prescaler_override, targets) -> Tuning:
     t = Temperament(mapping, Variance.ROW, domain_basis)
     spec = resolve_tuning_scheme(scheme)
-    if targets and (spec.target_intervals or "").strip() not in ("{}", ""):
-        spec = replace(spec, target_intervals="{" + ", ".join(targets) + "}")
+    if targets is not None and (spec.target_intervals or "").strip() not in ("{}", ""):
+        # an EXPLICIT target override on a target-based scheme replaces its named TILT/OLD set.
+        # An EMPTY override (the user deleted every target) means no target intervals — the
+        # underdetermined empty set, NOT "all intervals". ``{}`` would read as all-interval (by
+        # duality, optimizing over the primes), so instead route it through the family's 1-limit:
+        # the same resolved-empty target list the N-TILT/N-OLD limit chooser produces, so deleting
+        # all targets and picking 1-TILT reach the identical (degenerate, zero-generator) optimum
+        # rather than silently optimizing the full default set behind an empty list. (tuning-core-10.)
+        if targets:
+            spec = replace(spec, target_intervals="{" + ", ".join(targets) + "}")
+        else:
+            spec = replace(spec, target_intervals="1-OLD" if "OLD" in (spec.target_intervals or "") else "1-TILT")
     if nonprime_approach:
         spec = replace(spec, nonprime_basis_approach=nonprime_approach)
     if held:  # fold the user's held intervals into the scheme's own (its bare tokens, brace-free)
