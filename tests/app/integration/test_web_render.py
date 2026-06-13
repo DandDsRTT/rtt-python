@@ -2255,6 +2255,9 @@ async def test_hovering_a_mapping_minus_previews_the_born_comma(user: User) -> N
     UserInteraction(user, btn, None).trigger("mouseenter")
     await user.should_see(marker="cell:comma:0:1")                          # the born comma column reflows in
     assert "rtt-pending" in _wrap_classes(user, "cell:comma:0:1")           # ...green (a newborn)
+    # its quantities-row ratio face (a read-only commaratio showing the COMPUTED ratio) greens too —
+    # rings its wrap like every sibling value cell down the column, not just the vector/derived rows
+    assert "rtt-pending" in _wrap_classes(user, "comma:pending")
     # the born comma's coords are COMPUTED and shown (dropping meantone's generator un-tempers to the
     # rank-1 ET whose extra comma is [0 -4 1⟩)
     assert [_cell_text(user, f"cell:comma:{p}:1") for p in range(3)] == ["0", "-4", "1"]

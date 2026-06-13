@@ -1577,24 +1577,30 @@ class _Reconciler:
 
     # ---- ratio faces (a stacked fraction via _ratio) + the read-only cents (tuning value) face ----
     def _build_genratio(self, cb: spreadsheet.CellBox, wrap) -> None:
-        if cb.pending:  # the draft row's generator ratio: a green "?" placeholder until the row commits
-            self.labels[cb.id] = ui.label(cb.text).classes("rtt-value rtt-pending-q")
-            return
-        self._ratio(cb, approx=True)  # a generator ratio, shown ~approximate
+        self._build_ratio_face(cb, wrap, approx=True)  # a generator ratio, shown ~approximate
 
     def _build_commaratio(self, cb: spreadsheet.CellBox, wrap) -> None:
-        self._build_ratio_or_pending(cb)
+        self._build_ratio_face(cb, wrap, approx=False)
 
-    def _build_ratio_or_pending(self, cb: spreadsheet.CellBox) -> None:
-        # a read-only comma ratio heading its column — the generator-detempering D ratio, or a
-        # pending comma draft's green "?" placeholder (no value until the vector is filled in). The
-        # editable comma/target/held/interest ratios are ratiocells (the shared _build_gridvalue).
+    def _build_ratio_face(self, cb: spreadsheet.CellBox, wrap, approx: bool) -> None:
+        # a read-only ratio face — the generator/detempering ratio, a comma/unchanged ratio heading
+        # its column, or a − hover GHOST's computed ratio. A pending cell is a draft/ghost: ring the
+        # wrap green so it matches its sibling value cells down the column (the same
+        # .rtt-cell:not(.rtt-cell-input).rtt-pending ring _update_label gives them). A ghost carries a
+        # real value, shown as the normal face; only a bare "?" placeholder (a fresh draft with
+        # nothing typed yet) drops to the flat green-text label, with no value to face.
         if cb.pending:
+            wrap.classes(add="rtt-pending")
+        if cb.pending and cb.text in ("?", "?/?", ""):
             self.labels[cb.id] = ui.label(cb.text).classes("rtt-value rtt-pending-q")
         else:
-            self._ratio(cb, approx=False)
+            self._ratio(cb, approx=approx)
 
     def _update_ratio(self, cb: spreadsheet.CellBox) -> None:  # genratio / commaratio (read-only): rebuild the stacked fraction face
+        # keep the draft/ghost green ring on the wrap in sync (committed cells clear it — no-op), the
+        # ratio twin of _update_label's toggle, so a − hover ghost ratio greens like its column siblings
+        self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                                remove="" if cb.pending else "rtt-pending")
         # The value's SHAPE can flip between renders — a real numeric ratio <-> a blanked (quantities
         # off) or dashed value, or a whole "n/1" <-> a true fraction — and the ~approx + fraction
         # structure differs from a bare label / bare integer. Patching the fraction's numbers in
