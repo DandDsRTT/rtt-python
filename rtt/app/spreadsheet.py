@@ -22,10 +22,10 @@ from rtt.app.grid_tables import *  # noqa: F403  (semantic content tables, re-ex
 from rtt.app.grid_tables import _FACTOR_GROUP  # build() reads it; import * skips the underscore name
 from rtt.app.settings import defaults as _default_settings
 
-ROW_H = 30  # px per row / matrix-entry height
-COL_W = 30  # px per value column; == ROW_H so matrix cells are squares that tile
+ROW_H = 37  # px per row / matrix-entry height
+COL_W = 37  # px per value column; == ROW_H so matrix cells are squares that tile
 # the column (a shared-border grid, per the mockup); cents stack int-over-frac to fit
-GAP = 20  # px between row/column groups (the visible gap between two grey tiles is GAP - 2*PAD)
+GAP = 28  # px between row/column groups (the visible gap between two grey tiles is GAP - 2*PAD)
 PAD = 4  # px a block extends around its cells
 TITLE_MARGIN = 8  # min px kept between two adjacent columns' centred, unwrapped titles: a column's
 # title overhangs its content-hugged footprint into the gaps (see the col-layout loop), so the gap

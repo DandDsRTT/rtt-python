@@ -1107,14 +1107,18 @@ async def test_clicking_a_non_last_comma_minus_un_tempers_that_comma(user: User)
 
 def test_ratio_font_shrinks_a_long_fraction_to_fit_its_square() -> None:
     # the stacked fraction face sits at a fixed comfortable size, but a long numerator or
-    # denominator (e.g. 65536 = the target 2/1 re-vectored to [16 0 0⟩) outgrows the 30px square.
-    # _ratio_font caps a short fraction at the comfortable size and shrinks a long one until its
-    # longer line plus the fraction-bar padding fits the cell — num and den scaled together.
+    # denominator (e.g. 65536 = the target 2/1 re-vectored to [16 0 0⟩) can outgrow the COL_W
+    # square. _ratio_font caps a short fraction at the comfortable size and shrinks a long one
+    # until its longer line plus the fraction-bar padding fits the cell — num and den scaled together.
+    import math
     from rtt.app.app import _ratio_font, _RATIO_MAX_FONT, _RATIO_DIGIT_EM, _RATIO_PAD
     cell = spreadsheet.COL_W
     assert _ratio_font("2", "1", cell) == _RATIO_MAX_FONT          # 1-digit: sits at the cap
     assert _ratio_font("128", "125", cell) == _RATIO_MAX_FONT      # 3-digit still fits the cap
-    for num, den in [("65536", "1"), ("1", "65536"), ("2048", "2025"), ("9999999", "1")]:
+    # the fewest digits whose line can't fit the cell at the comfortable cap — so it MUST shrink
+    # (derived from the cell width, so this holds at any COL_W rather than a hard-coded length)
+    overflow = math.floor((cell - _RATIO_PAD) / (_RATIO_DIGIT_EM * _RATIO_MAX_FONT)) + 1
+    for num, den in [("9" * overflow, "1"), ("1", "9" * overflow), ("9" * (overflow + 2), "1")]:
         font = _ratio_font(num, den, cell)
         assert font < _RATIO_MAX_FONT                             # a long fraction shrinks
         longest = max(len(num), len(den))

@@ -924,13 +924,13 @@ def test_mapping_rejoin_bars_span_the_full_generator_fan():
     assert left.start + left.length > glast.pos + half  # ...but extends past the fan to the +
 
 
-def test_adjacent_tiles_keep_a_twelve_px_minimum_gap():
-    # the minimum whitespace between two grey tiles is GAP - 2*PAD; the design doubles it
-    # from 6px to 12px so the (now 2px-thick) gridlines threading the gap keep their room
+def test_adjacent_tiles_keep_a_roomy_minimum_gap():
+    # the minimum whitespace between two grey tiles is GAP - 2*PAD — wide enough that the
+    # 2px-thick gridlines threading the gap keep their room
     blocks = {b.id: b for b in _layout().blocks}
     top, bot = blocks["block:tuning:targets"], blocks["block:just:targets"]
     assert (top.x, top.w) == (bot.x, bot.w)  # the same column, stacked vertically
-    assert bot.y - (top.y + top.h) == 12  # the visible gap between the two tiles
+    assert bot.y - (top.y + top.h) == spreadsheet.GAP - 2 * spreadsheet.PAD  # the visible gap between the two tiles
 
 
 def test_quantities_spine_row_has_a_horizontal_gridline():
@@ -2968,10 +2968,12 @@ def test_predefined_complexities_dropdown_is_gated_on_presets():
     on = {c.id: c for c in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").cells}
     assert "control:complexity" in on and "caption:complexity" in on  # presets on restores the dropdown
     assert off["control:q"].x < on["control:q"].x  # 𝑞 leads (shifts left) once the dropdown is gone
-    # and the box stops reserving the absent dropdown's width — the targets column hugs back in
+    # and the box never grows by dropping the dropdown. Whether the targets column actually narrows
+    # depends on cell size: at COL_W the column is wide enough to contain box 𝒄 either way, so its
+    # width is column-floored — the released dropdown reservation shows in 𝑞's leftward shift above.
     off_box = {b.id: b for b in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
     on_box = {b.id: b for b in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
-    assert off_box.w < on_box.w
+    assert off_box.w <= on_box.w
 
 
 def test_box_c_lays_out_with_q_and_dual_q_norm_power_fields():
@@ -4626,7 +4628,7 @@ def test_interest_title_overhangs_symmetrically_centred_on_the_gridline():
     # right-aligned header would. The tiles sit centred on that same gridline.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     title_w = spreadsheet._title_w("other intervals\nof interest")
-    for mi in range(4):  # a handful of intervals: content stays narrower than the title
+    for mi in range(3):  # a handful of intervals: at COL_W the content stays narrower than the title
         lay = spreadsheet.build(base, collapsed=frozenset(), interest=[(0, 0, 0)] * mi)
         cells = {c.id: c for c in lay.cells}
         lines = {ln.id: ln for ln in lay.lines}

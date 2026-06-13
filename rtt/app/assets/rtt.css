@@ -296,9 +296,9 @@
 .rtt-cell-united:not(.rtt-cell-input) .rtt-value { line-height:1; }
 /* an editable value cell keeps its full-size white input box (border stays on the input)
    and overlays the unit INSIDE it, with the number nudged up to clear the unit */
-.rtt-cell-united.rtt-cell-input .rtt-cellunit { position:absolute; left:0; right:0; bottom:2.5px;
+.rtt-cell-united.rtt-cell-input .rtt-cellunit { position:absolute; left:0; right:0; bottom:6px;
             pointer-events:none; z-index:1; }
-.rtt-cell-united.rtt-cell-input .rtt-cellinput .q-field__native { padding-bottom:11px !important; }
+.rtt-cell-united.rtt-cell-input .rtt-cellinput .q-field__native { padding-bottom:10px !important; }
 /* every EBK mark (⟨ ] [, top bracket, brace, vector rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill { width:100%; height:100%; line-height:0; }
