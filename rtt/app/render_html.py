@@ -178,7 +178,7 @@ def _units_font(text: str, width: float, max_font: float) -> float:
     estimate overshoots the units sans (Corbel ≈0.42 em), so the chosen size never spills."""
     return _fit_font(text, width, max_font=max_font)
 
-def _chart_ticks(lo, hi):
+def _chart_ticks(lo: float, hi: float) -> list[float]:
     """Nice round tick values enclosing ``[lo, hi]``: rounded down to a tick at/below
     ``lo`` and up to the first tick strictly *above* ``hi`` (~4-5 steps). A chart scaled
     to span the returned ticks therefore always shows a gridline past its tallest bar."""
@@ -198,7 +198,7 @@ def _chart_ticks(lo, hi):
     return ticks                           # numerically flat, so scale it flat as for span<=0
 
 
-def _bar_chart(w, h, values, indicator=None, indicator_label=""):
+def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="") -> str:
     """A bar chart filling its 1:1 px box: one bar per value, aligned to the value
     columns below, rising/falling from a zero baseline; gridlines mark nice ticks. When
     ``indicator`` is set (the optimization mean damage ⟪𝐝⟫ₚ on the damage chart), a solid
@@ -255,7 +255,7 @@ def _bar_chart(w, h, values, indicator=None, indicator_label=""):
     return _svg(w, h, "".join(body))
 
 
-def _range_chart(w, h, ranges, tunings=()):
+def _range_chart(w: float, h: float, ranges, tunings=()) -> str:
     """The generator tuning-ranges chart filling its 1:1 px box: one vertical I-beam per
     generator showing its [min, max] tuning in cents (max at the top cap, min at the
     bottom), with a shorter tick marking where the live tuning falls within that range. A
@@ -292,7 +292,7 @@ def _range_chart(w, h, ranges, tunings=()):
     return _svg(w, h, "".join(body))
 
 
-def _parse_int(text):
+def _parse_int(text: str) -> int | None:
     """``text`` -> int, or None for blank/partial input (matching the old parseInt)."""
     try:
         return int(str(text).strip())
@@ -327,13 +327,13 @@ def _limit_text(limit) -> str | None:
     return None if limit is None else str(limit)
 
 
-def _ratio_parts(text):
+def _ratio_parts(text) -> tuple[str, str] | None:
     """Split a ratio like ``"3/2"`` into ``("3", "2")``; None if it isn't a fraction."""
     num, sep, den = str(text).partition("/")
     return (num, den) if sep and num and den else None
 
 
-def _cents_parts(text):
+def _cents_parts(text) -> tuple[str, str]:
     """Split a cents value like ``"1899.260"`` into a big whole part and small fraction."""
     whole, _, frac = str(text).partition(".")
     return whole, frac
@@ -347,7 +347,7 @@ def _approach_visible(editor) -> bool:
     return service.domain_has_nonprimes(editor.state.domain_basis)
 
 
-def _gentuning_parts(text):
+def _gentuning_parts(text: str) -> tuple[str, str, str]:
     """Split a generator-tuning cents value into ``(sign, whole, frac)`` for the genmap's
     clickable signed face: a non-negative value carries an explicit ``"+"`` (ordinarily
     assumed), a negative one a ``"−"`` with the bare magnitude; blank text (quantities off)
@@ -359,7 +359,7 @@ def _gentuning_parts(text):
     return sign, whole, frac
 
 
-def _power_parts(text):
+def _power_parts(text) -> tuple[str, str]:
     """Split an optimization/norm power into a stacked face: ``∞`` carries a small ``"(max)"``
     below it (it IS the max-norm / minimax power), the way a cents value carries its decimal;
     a numeric power (``2``, ``1``) shows bare, with no annotation."""
@@ -381,14 +381,14 @@ _PTEXT_GLYPH_EM = {
 }
 
 
-def _ptext_units(text):
+def _ptext_units(text: str) -> float:
     """``text``'s width in em (font-size multiples), summed from the real per-glyph widths —
     so a punctuation-heavy value is estimated narrower than a digit-dense one of the same
     length, and each sizes to fill its box."""
     return sum(_PTEXT_GLYPH_EM.get(c, _PTEXT_DEFAULT_EM) for c in text)
 
 
-def _ptext_font(text, width):
+def _ptext_font(text: str, width: float) -> float:
     """The largest font (px, capped at PTEXT_MAX_FONT) at which ``text`` fits on ONE line
     within a ``width``-px box. The plain-text contract is fit-on-one-line, so there is NO
     readability floor: a dense value (a prescaling ket-matrix at a high prime limit) keeps
@@ -407,7 +407,7 @@ _RATIO_PAD = 6.0  # px — the .rtt-frac-num/.rtt-frac-den left+right padding (3
                   # fixed regardless of font, so it is reserved before the digits get the rest of the cell
 
 
-def _digit_fit_font(longest, width, max_font):
+def _digit_fit_font(longest, width: float, max_font: float) -> float:
     """The largest font (px, capped at ``max_font``) at which ``longest`` digits plus the fixed
     fraction-bar padding fit a ``width``-px square. Truncated (not rounded) to 0.1px so the chosen
     size never rounds back up and spills; like ``_ptext_font`` there is no readability floor — the
@@ -419,7 +419,7 @@ def _digit_fit_font(longest, width, max_font):
     return int(min(max_font, fit) * 10) / 10
 
 
-def _ratio_font(num, den, width):
+def _ratio_font(num, den, width: float) -> float:
     """The largest font (px, capped at ``_RATIO_MAX_FONT``) at which a stacked fraction's longer
     line fits its ``width``-px square. A long numerator or denominator (e.g. 65536 = the target
     2/1 re-vectored to [16 0 0⟩) spills the 30px cell at the comfortable size, so the whole
@@ -430,7 +430,7 @@ def _ratio_font(num, den, width):
 _DESCENDERS = "gjpqy"  # letters whose tail dips below the baseline
 
 
-def _underline_html(text, spans):
+def _underline_html(text: str, spans) -> str:
     """``text`` with each ``(start, len)`` span wrapped in ``<u>`` — the mnemonic
     underline marking a caption's symbol letter. All text is HTML-escaped. A span
     holding a descender (g/j/p/q/y) is tagged ``rtt-desc`` so only its underline is
@@ -619,7 +619,7 @@ def _general_part_html(key: str) -> str:
     raise KeyError(key)  # every general layer must have a sample
 
 
-def _demath(ch):
+def _demath(ch: str) -> tuple[str, bool, bool] | None:
     """A Mathematical Alphanumeric letter (or bold digit) as ``(base, bold, italic)``,
     or None for an ordinary character. Covers the bold, italic and bold-italic letter
     blocks — the maps (bold-italic), matrices/vectors (bold-upright) and the counts'
@@ -643,7 +643,7 @@ def _demath(ch):
     return None
 
 
-def _math_html(text):
+def _math_html(text: str) -> str:
     """``text`` with each Mathematical Alphanumeric letter rendered as its base
     letter in a span carrying explicit CSS weight/slant — so the UI serif draws a
     correctly bold/italic glyph rather than depending on a maths font (which font
@@ -688,13 +688,13 @@ _SUB_TAGS = {
 }
 
 
-def _run_html(s):
+def _run_html(s: str) -> str:
     # a bold-able unit run, HTML-escaped, with the subscript sentinels turned into <sub>…</sub>
     # (so the superspace marker gʟ reads as g + subscript capital L, not the raw PUA chars)
     return "".join(_SUB_TAGS.get(ch) or _escape(ch) for ch in s)
 
 
-def _bold_units(value):
+def _bold_units(value) -> str:
     """A unit value with its variable symbols bold (the unit letters g/p and the
     placeholder 1, plus any subscript), leaving the units ¢ and ``oct`` and the ``/``
     separator un-bold. Bolds maximal runs of variable characters so e.g. ``g₁/`` →
@@ -720,7 +720,7 @@ def _bold_units(value):
     return "".join(out)
 
 
-def _units_html(text):
+def _units_html(text: str) -> str:
     """A unit label (kind ``units``). The value's face — a single-story-g sans — comes
     from the ``.rtt-units`` class; the variable symbols are bold (see :func:`_bold_units`).
     A per-box line (``units: g/p``) keeps its ``units:`` label in the serif body face; a
