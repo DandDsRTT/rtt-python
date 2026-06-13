@@ -77,6 +77,9 @@ PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box
 PTEXT_H = 13  # px height of a one-line read-only plain-text value
 PTEXT_EDIT_H = 16  # px height of an editable plain-text input box (a touch taller than a text line)
 SYMBOL_H = 18  # height of the quantity-symbol glyph above the caption (when symbols shown)
+BAND_GAP = 6  # breathing room added to each in-tile band (symbol, caption, units, plain text) so the
+# stacked bands — values, symbol/equivalence, name, units, plain text, control boxes — don't crowd
+# (each present band reserves +BAND_GAP, centred, so adjacent bands clear each other by ~BAND_GAP)
 SYMBOL_FONT = 15  # px font size of the symbol + equivalence glyph (matches .rtt-symbol in rtt.css);
 # its width drives _symbol_floor, which widens a tile so the symbol/equivalence never wraps
 MATLABEL_H = 13  # height of a per-column matrix label (𝐜₁, 𝒕₁, 𝐲₁, …) when symbols is on
@@ -1755,7 +1758,7 @@ class _GridBuilder:
         # gens tile of the (present, unfolded) tuning row.
         self.gtm_chart = (show_ranges and show_tuning and "row:tuning" not in self.collapsed
                      and self.col_open("gens") and "tile:tuning:gens" not in self.collapsed)
-        self.gtm_extra = (RANGE_GAP + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if self.gtm_chart else 0
+        self.gtm_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if self.gtm_chart else 0
         # the alt.-complexity controls nest at the bottom of their matrix/list tiles (like the
         # ranges box in the gens tile): box 𝐋 (the prescaling matrix over the primes) carries the
         # "replace diminuator" checkbox, box 𝒄 (the complexity list over the targets) stacks the
@@ -1806,7 +1809,7 @@ class _GridBuilder:
         self.show_approach = (service.domain_has_nonprimes(self.elements)
                           and "row:damage" not in self.collapsed and self.col_open("targets")
                           and "tile:damage:targets" not in self.collapsed)
-        self.approach_extra = (RANGE_GAP + BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H) if self.show_approach else 0
+        self.approach_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H) if self.show_approach else 0
         # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
         # shows with WEIGHTING itself, not gated on the alt. complexity extra. In all-interval
         # mode the weight is simplicity by construction, not a free choice, so the chooser stays put
@@ -1959,6 +1962,13 @@ class _GridBuilder:
             # comma-basis boxes, when form controls are shown
             formctrl = self.formchooser_band_h(key) if (self.show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
             ptext = self.ptext_band(key, folded)
+            # open a consistent gap between the stacked in-tile bands: pad each present one by BAND_GAP
+            # (its content centres, so adjacent bands clear each other) — values, symbol/equivalence,
+            # name, units, plain text and the control boxes below no longer crowd
+            if sym:   sym += BAND_GAP
+            if cap:   cap += BAND_GAP
+            if uni:   uni += BAND_GAP
+            if ptext: ptext += BAND_GAP
             self.row_h[key] = STRIP if folded else natural
             self.row_nsub[key] = round(natural / ROW_H)  # matrix height in cells (fold-independent)
             self.tile_top[key] = y
@@ -4336,15 +4346,15 @@ class _GridBuilder:
             # for the box itself, so back it out to find the values' bottom); a left-aligned
             # boxtitle tops it (like every control box), then the chart, then the mode selector
             cy = self.tile_top["tuning"] + self.tile_h["tuning"] - self.gtm_extra + RANGE_GAP
-            self.cells.append(CellBox("rangetitle:tuning:gens", gx, cy, gw, BOX_TITLE_H, "boxtitle",
+            self.cells.append(CellBox("rangetitle:tuning:gens", gx, cy + BOX_INNER, gw, BOX_TITLE_H, "boxtitle",
                                  text="tuning ranges", align="left"))
-            chart_y = cy + BOX_TITLE_H + BOX_TITLE_GAP
+            chart_y = cy + BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP
             self.cells.append(CellBox("rangechart:tuning:gens", gx, chart_y, gw, RANGE_CHART_H, "rangechart",
                                  ranges=tuple(chosen) if chosen is not None else (),
                                  values=tuple(self.tun.generator_map)))  # the live tuning, marked within each range
             self.cells.append(CellBox("rangemode:tuning:gens", gx, chart_y + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
                                  "rangemode", text=self.range_mode))
-            gtm_box = (gx, cy, gw, BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
+            gtm_box = (gx, cy, gw, 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
         return gtm_box
 
     def _emit_optimization_box(self):
@@ -4445,12 +4455,12 @@ class _GridBuilder:
             aw = self.col_w["targets"]
             box_top = (self.tile_top["damage"] + self.tile_h["damage"]
                        - self.opt_extra - self.approach_extra + RANGE_GAP)
-            self.cells.append(CellBox("optimization:approach:title", ax, box_top, aw, BOX_TITLE_H, "boxtitle",
+            self.cells.append(CellBox("optimization:approach:title", ax, box_top + BOX_INNER, aw, BOX_TITLE_H, "boxtitle",
                                  text="nonstandard domain approach", align="left"))
-            radio_top = box_top + BOX_TITLE_H + BOX_TITLE_GAP
+            radio_top = box_top + BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP
             self.approach_box = (ax + OPT_PAD_L, radio_top,
                                  aw - OPT_PAD_L - OPT_PAD_R, APPROACH_RADIO_H)
-            approach_frame = (ax, box_top, aw, BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H)
+            approach_frame = (ax, box_top, aw, 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H)
         return approach_frame
 
     def _emit_brackets(self) -> None:

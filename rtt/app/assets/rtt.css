@@ -665,7 +665,7 @@
    padded off the left border. One line that overhangs to the right rather than wrapping —
    the box is sized to seat it, so it never clips. */
 .rtt-boxtitle { font-family:'Cambria',Georgia,serif; font-size:11px; font-weight:bold;
-                 color:#000; width:100%; text-align:left; padding-left:4px;
+                 color:#000; width:100%; text-align:left; padding-left:8px;
                  white-space:nowrap; overflow:visible; }
 /* a per-tile bank control square (waveform / play-mode / hold-loop / include-1/1), the same
    12px box as the fold toggle; .rtt-audio-on marks the active hold/1-1 (greyscale, not blue). */

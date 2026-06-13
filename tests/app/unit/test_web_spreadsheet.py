@@ -3784,8 +3784,9 @@ def test_a_long_caption_widens_its_tile_to_stay_within_two_lines():
     # the name never wraps past two lines: the column is floored wide enough to hold it,
     # rather than the font shrinking or the name spilling tall down a narrow column
     assert spreadsheet._wrap_lines(name, cap.w) <= spreadsheet.MAX_CAPTION_LINES
-    assert cap.h == spreadsheet._wrap_lines(name, cap.w) * spreadsheet.CAPTION_LINE
-    assert cap.h <= spreadsheet.MAX_CAPTION_LINES * spreadsheet.CAPTION_LINE
+    # the caption band is its wrapped lines plus BAND_GAP (the in-tile breathing room)
+    assert cap.h == spreadsheet._wrap_lines(name, cap.w) * spreadsheet.CAPTION_LINE + spreadsheet.BAND_GAP
+    assert cap.h <= spreadsheet.MAX_CAPTION_LINES * spreadsheet.CAPTION_LINE + spreadsheet.BAND_GAP
     # the tile widened to make that fit: the commas column is wider than its lone value
     # cell + brackets alone would make it (a narrow one-comma content width)
     content_w = 2 * spreadsheet.BRACKET_W + spreadsheet.COL_W
@@ -3835,7 +3836,7 @@ def test_short_captions_span_the_full_band_so_css_can_centre_them():
     tall = cells["caption:tuning:commas"]   # "tempered ... (made to vanish!)" — two lines
     assert spreadsheet._wrap_lines(short.text, short.w) == 1
     assert spreadsheet._wrap_lines(tall.text, tall.w) == 2
-    assert short.h == tall.h == spreadsheet._wrap_lines(tall.text, tall.w) * spreadsheet.CAPTION_LINE
+    assert short.h == tall.h == spreadsheet._wrap_lines(tall.text, tall.w) * spreadsheet.CAPTION_LINE + spreadsheet.BAND_GAP
     assert short.y == tall.y  # both start at the band top; the CSS centres within the band
 
 
