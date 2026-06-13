@@ -2431,6 +2431,329 @@ async def test_an_invalid_target_limit_stays_reddened_through_the_edit_preview_g
     assert "rtt-limit-error" in num._classes               # ...and never strips the reddening
 
 
+# --- characterization net for the six interval-grid edit handlers (audit cluster C, Phase-2 Lane B) ---
+# Before the later phase consolidates on_mapping/comma/unchanged/interest/held/target_cells_change into
+# one factory, these lock the arms the rest of the suite leaves uncovered: the PREVIEW (no-commit) arm,
+# the INVALID-entry arm (toast+revert vs silent revert), the DRAFT arm's materialization, and the guard
+# only on_mapping_change carries. They pin what the code does TODAY — including silent reverts — so the
+# consolidation cannot drift them. (The differences between handlers are deliberate; each test preserves
+# its own handler's shape.)
+
+
+async def test_mapping_keystroke_preview_does_not_commit_until_blur(user: User) -> None:
+    # on_mapping_change(preview=True): focusing a mapping cell arms the edit gesture, and a keystroke
+    # (set_value -> on_change -> preview) only ARMS the would-be change — it does NOT mutate the
+    # document. The mapped list still reads the pre-edit value; the new value lands only on blur.
+    await user.open("/")
+    assert _cell_text(user, "cell:mapped:1:6") == "4"          # meantone: 5/4 maps to 4 fifths
+    cell = _cell_child(user, "cell:mapping:1:2")
+    UserInteraction(user, {cell}, None).trigger("focus")       # arm the edit gesture
+    cell.set_value("7")                                        # a preview keystroke, NOT a commit
+    assert _cell_text(user, "cell:mapped:1:6") == "4"          # still the pre-edit value — no commit
+    UserInteraction(user, {cell}, None).trigger("blur")        # NOW commit
+    await user.should_see(marker="cell:mapped:1:6")
+    assert _cell_text(user, "cell:mapped:1:6") == "7"          # the value landed on blur
+
+
+async def test_an_improper_mapping_commit_toasts_and_reverts_the_cells(user: User) -> None:
+    # on_mapping_change commit arm with an IMPROPER matrix: making row 1 a copy of row 0 (dependent
+    # generators) is not a valid temperament, so committing it toasts _INVALID_TEMPERAMENT (a negative
+    # ui.notify) AND reverts the cells — the row snaps back to meantone's (0 1 4), document untouched.
+    await user.open("/")
+    for p, v in zip(range(3), ("1", "1", "0")):                # set row 1 == row 0 -> dependent, improper
+        _cell_child(user, f"cell:mapping:1:{p}").set_value(v)
+    _commit(user, "cell:mapping:1:2")
+    await user.should_see(web_app._INVALID_TEMPERAMENT)        # the negative toast names the failure
+    assert [_cell_child(user, f"cell:mapping:1:{p}").value for p in range(3)] == ["0", "1", "4"]  # reverted
+    assert _cell_text(user, "cell:mapped:1:6") == "4"          # the document stayed meantone
+
+
+async def test_an_improper_mapping_preview_rings_nothing_and_does_not_toast(user: User) -> None:
+    # the dual of the above on the preview path: an improper in-progress matrix previewed (focus +
+    # keystroke, no blur) must ring NOTHING and NOT toast — only the commit toasts. Pin that no
+    # preview-ring appears on the cells the would-be change touches and the document is unchanged.
+    await user.open("/")
+    UserInteraction(user, {_cell_child(user, "cell:mapping:1:0")}, None).trigger("focus")
+    _cell_child(user, "cell:mapping:1:0").set_value("1")       # row 1 -> (1 1 4): independent of row 0?
+    # drive the cells to a genuinely improper matrix while focused: row1 = row0 = (1 1 0)
+    _cell_child(user, "cell:mapping:1:1").set_value("1")
+    cell = _cell_child(user, "cell:mapping:1:2")
+    UserInteraction(user, {cell}, None).trigger("focus")
+    cell.set_value("0")                                        # row 1 now equals row 0 -> improper
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")  # an improper preview rings nothing
+    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:mapped:1:6")
+    assert _cell_text(user, "cell:mapped:1:6") == "4"          # ...and never touched the document (no commit)
+
+
+async def test_a_mapping_row_draft_commit_materializes_a_new_generator_row(user: User) -> None:
+    # on_mapping_change DRAFT branch: opening a green draft row and typing a complete, independent
+    # generator into it materializes the draft into a real row the moment the vector completes — the
+    # rank raises (the syntonic comma it un-tempers leaves) without any blur. Pin the materialization.
+    await user.open("/")
+    await user.should_not_see(marker="cell:mapping:2:0")       # meantone is rank 2: no third row yet
+    _click_glyph(user, "gen_plus")                             # open the green draft row
+    await user.should_see(marker="cell:mapping:2:0")
+    assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes  # the draft reads green
+    for p, v in zip(range(3), ("0", "0", "1")):                # ⟨0 0 1] — the prime-5 generator, independent
+        _cell_child(user, f"cell:mapping:2:{p}").set_value(v)
+    _commit(user, "cell:mapping:2:2")                          # blur -> on_mapping_change(False) materializes the draft row
+    await user.should_see(marker="cell:mapping:2:0")
+    assert "rtt-pending" not in _cell_child(user, "cell:mapping:2:0")._classes  # the draft MATERIALIZED -> a real row
+    await user.should_not_see(marker="comma_minus:0")          # rank 3 now: nothing tempered, the comma is gone
+
+
+async def test_a_comma_keystroke_preview_does_not_commit_until_blur(user: User) -> None:
+    # on_comma_change(preview=True): the comma basis is the mapping's dual. A focused keystroke arms
+    # the would-be change but does NOT commit — the mapped list (a comma-derived quantity) still reads
+    # the pre-edit value until blur. (The comma row is present independent of the temperament boxes.)
+    await user.open("/")
+    assert _cell_text(user, "cell:mapped:1:6") == "4"
+    cell = _cell_child(user, "cell:comma:0:0")                 # the syntonic comma's prime-2 exponent (4)
+    UserInteraction(user, {cell}, None).trigger("focus")
+    cell.set_value("8")                                        # a preview keystroke, NOT a commit
+    assert _cell_text(user, "cell:mapped:1:6") == "4"          # still the pre-edit mapped value — no commit yet
+    UserInteraction(user, {cell}, None).trigger("blur")        # blur is the commit: (8 -4 1) is a proper basis
+    await user.should_see(marker="cell:comma:0:0")
+    assert _cell_child(user, "cell:comma:0:0").value == "8"    # the typed component committed on blur
+
+
+async def test_an_improper_comma_commit_toasts_and_reverts_the_cells(user: User) -> None:
+    # on_comma_change commit arm with an improper comma BASIS: a comma whose dual mapping can't reach
+    # every prime — (0 0 1) tempers out prime 5 alone, leaving a mapping that never reaches it — is not
+    # a proper temperament, so committing toasts _INVALID_TEMPERAMENT and reverts to the syntonic comma.
+    await user.open("/")
+    for p, v in zip(range(3), ("0", "0", "1")):                # (0 0 1): from_comma_basis.mapping not proper
+        _cell_child(user, f"cell:comma:{p}:0").set_value(v)
+    _commit(user, "cell:comma:2:0")
+    await user.should_see(web_app._INVALID_TEMPERAMENT)        # the negative toast
+    assert [_cell_child(user, f"cell:comma:{p}:0").value for p in range(3)] == ["4", "-4", "1"]  # reverted to syntonic
+
+
+async def test_an_improper_comma_preview_rings_nothing_and_does_not_toast(user: User) -> None:
+    # the comma preview twin of the improper-mapping preview: an improper in-progress comma previewed
+    # (focused keystroke, no blur) rings NOTHING and does NOT toast — only the commit toasts.
+    await user.open("/")
+    _cell_child(user, "cell:comma:0:0").set_value("0")         # drive toward the improper (0 0 1)
+    _cell_child(user, "cell:comma:1:0").set_value("0")
+    cell = _cell_child(user, "cell:comma:2:0")
+    UserInteraction(user, {cell}, None).trigger("focus")
+    cell.set_value("1")                                        # the basis is now improper, but only previewed
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")
+    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:mapped:1:6")
+    assert _cell_text(user, "cell:mapped:1:6") == "4"          # the document is untouched (no commit)
+
+
+async def test_a_comma_draft_commit_materializes_a_new_comma_column(user: User) -> None:
+    # on_comma_change DRAFT branch: opening a green draft comma column and typing a valid independent
+    # comma into it materializes it into a real column the instant the vector completes (rank drops),
+    # with no blur. Pin the draft head turning into a committed second comma carrying its own minus.
+    await user.open("/")
+    _click_glyph(user, "comma_plus")                           # open the draft comma column
+    await user.should_see(marker="cell:comma:0:1")
+    assert "rtt-pending" in _cell_child(user, "cell:comma:0:1")._classes  # the draft reads green
+    for p, v in zip(range(3), ("7", "0", "-3")):               # the diesis 128/125 = (7 0 -3), independent
+        _cell_child(user, f"cell:comma:{p}:1").set_value(v)
+    _commit(user, "cell:comma:2:1")                            # blur -> on_comma_change(False) materializes the draft column
+    await user.should_see(marker="comma_minus:1")              # the draft MATERIALIZED -> a real 2nd comma
+    assert "rtt-pending" not in _cell_child(user, "cell:comma:0:1")._classes
+
+
+async def test_an_invalid_unchanged_basis_reverts_silently(user: User) -> None:
+    # on_unchanged_change INVALID arm is the silent variant: a U column that can't form valid ratios
+    # (a zero vector raises inside service.comma_ratios, caught) reverts WITHOUT a toast — no
+    # ui.notify fires. Pin the silence: the tuning is unchanged and the user-fixture sees no error.
+    await _enable(user, "projection")
+    await user.should_see(marker="cell:unchanged:0:1")
+    before = _cell_child(user, "tuning:gen:1").value           # the default 1/4-comma fifth
+    for p, v in zip(range(3), ("0", "0", "0")):                # a zero column -> comma_ratios raises
+        _cell_child(user, f"cell:unchanged:{p}:1").set_value(v)
+    _commit(user, "cell:unchanged:2:1")
+    await user.should_see(marker="tuning:gen:1")
+    assert _cell_child(user, "tuning:gen:1").value == before   # silently reverted — the tuning never moved
+    # the silence is the point: no toast text reached the page (a toast would be visible to should_see)
+    await user.should_not_see("Not a valid")
+
+
+async def test_an_unchanged_keystroke_preview_does_not_commit_until_blur(user: User) -> None:
+    # on_unchanged_change(preview=True): a focused keystroke arms the would-be projection but does NOT
+    # retune until blur. on_unchanged_change has NO draft branch (skip draft) — only the plain
+    # preview/commit/invalid arms exist.
+    await _enable(user, "projection")
+    await user.should_see(marker="cell:unchanged:0:1")
+    before = _cell_child(user, "tuning:gen:1").value
+    cell = _cell_child(user, "cell:unchanged:2:1")
+    UserInteraction(user, {cell}, None).trigger("focus")
+    cell.set_value("-1")                                       # toward holding 6/5; a preview keystroke only
+    assert _cell_child(user, "tuning:gen:1").value == before   # not retuned — no commit on the keystroke
+
+
+async def test_an_interest_keystroke_preview_does_not_commit_until_blur(user: User) -> None:
+    # on_interest_change(preview=True): any integer vector is accepted (no validity check), but a
+    # focused keystroke only ARMS the candidate (set_interest_vectors would run on commit) — it does
+    # NOT commit. Commit one interest interval first, then preview editing it and pin no state change.
+    await user.open("/")
+    _click_glyph(user, "interest_plus")                        # start a draft
+    for p, v in zip(range(3), ("-1", "1", "0")):               # 3/2 = (-1 1 0)
+        _cell_child(user, f"cell:interest:{p}:0").set_value(v)
+    _commit(user, "cell:interest:2:0")                         # blur materializes the draft into a real column
+    await user.should_see(marker="interest:0")
+    assert _ratio_value(user, "interest:0") == "3/2"           # committed
+    cell = _cell_child(user, "cell:interest:0:0")
+    UserInteraction(user, {cell}, None).trigger("focus")
+    cell.set_value("-2")                                       # a preview keystroke toward 5/4 = (-2 0 1)
+    assert _ratio_value(user, "interest:0") == "3/2"           # the committed interval is unchanged — no commit
+
+
+async def test_any_integer_interest_vector_is_accepted_on_commit(user: User) -> None:
+    # on_interest_change has NO validity check (unlike mapping/comma): committing ANY integer vector
+    # is accepted, never toasts, never reverts. Pin an arbitrary vector landing as-is — even one that
+    # would be an invalid comma/mapping (it isn't one; an interest interval is just a vector).
+    await user.open("/")
+    _click_glyph(user, "interest_plus")
+    for p, v in zip(range(3), ("5", "-3", "2")):               # an arbitrary integer vector, no validity gate
+        _cell_child(user, f"cell:interest:{p}:0").set_value(v)
+    _commit(user, "cell:interest:2:0")                         # blur -> on_interest_change(False) commits the arbitrary vector
+    await user.should_see(marker="interest:0")
+    assert [_cell_child(user, f"cell:interest:{p}:0").value for p in range(3)] == ["5", "-3", "2"]  # accepted as-is
+
+
+async def test_an_interest_draft_commit_materializes_a_new_interest_column(user: User) -> None:
+    # on_interest_change DRAFT branch: filling the green draft column commits it into a real interval
+    # of interest the moment the vector completes (set_pending_interest materializes it), no blur.
+    await user.open("/")
+    await user.should_not_see(marker="interest:0")             # no intervals of interest by default
+    _click_glyph(user, "interest_plus")
+    await user.should_see(marker="cell:interest:0:0")
+    assert "rtt-pending" in _cell_child(user, "cell:interest:0:0")._classes  # the draft reads green
+    for p, v in zip(range(3), ("-1", "1", "0")):               # 3/2
+        _cell_child(user, f"cell:interest:{p}:0").set_value(v)
+    _commit(user, "cell:interest:2:0")                         # blur -> on_interest_change(False) materializes the draft column
+    await user.should_see(marker="interest:0")                 # the draft MATERIALIZED -> a committed column
+    assert "rtt-pending" not in _cell_child(user, "cell:interest:0:0")._classes
+
+
+async def test_a_held_keystroke_preview_does_not_commit_until_blur(user: User) -> None:
+    # on_held_change(preview=True): like interest, no validity check; a focused keystroke arms the
+    # candidate (set_held_vectors would run on commit) but does NOT retune. Commit a held interval,
+    # then preview editing it: the held-constrained tuning must NOT move on the keystroke.
+    await user.open("/")
+    _toggle(user, "optimization")                              # show the held column
+    _click_glyph(user, "held_plus")
+    for p, v in zip(range(3), ("-1", "1", "0")):               # hold 3/2 -> the fifth goes pure
+        _cell_child(user, f"cell:held:{p}:0").set_value(v)
+    _commit(user, "cell:held:2:0")                             # blur materializes the draft held interval
+    await user.should_see(marker="held:0")
+    assert _cell_child(user, "tuning:gen:1").value == "701.955"  # retuned to hold 3/2 (pure fifth)
+    cell = _cell_child(user, "cell:held:0:0")
+    UserInteraction(user, {cell}, None).trigger("focus")
+    cell.set_value("-2")                                       # a preview keystroke toward 5/4 = (-2 0 1)
+    assert _cell_child(user, "tuning:gen:1").value == "701.955"  # the tuning is unchanged — no commit
+
+
+async def test_a_held_draft_commit_materializes_a_new_held_column(user: User) -> None:
+    # on_held_change DRAFT branch: filling the green held draft commits it into a real held interval
+    # the moment the vector completes (set_pending_held materializes it), no blur.
+    await user.open("/")
+    _toggle(user, "optimization")
+    _click_glyph(user, "held_plus")
+    await user.should_see(marker="cell:held:0:0")
+    assert "rtt-pending" in _cell_child(user, "cell:held:0:0")._classes
+    for p, v in zip(range(3), ("-1", "1", "0")):               # 3/2
+        _cell_child(user, f"cell:held:{p}:0").set_value(v)
+    _commit(user, "cell:held:2:0")                             # blur -> on_held_change(False) materializes the draft column
+    await user.should_see(marker="held:0")                     # the draft MATERIALIZED -> a committed held interval
+    assert "rtt-pending" not in _cell_child(user, "cell:held:0:0")._classes
+
+
+async def test_a_target_keystroke_preview_does_not_commit_until_blur(user: User) -> None:
+    # on_target_cells_change(preview=True): note its cell-id order is REVERSED vs the others —
+    # cell:vec:targets:{token}:{prime} (token then prime), not cell:{group}:{prime}:{token}. A focused
+    # keystroke through that id shape arms the candidate but does NOT commit the override.
+    await user.open("/")
+    assert _cell_child(user, "cell:vec:targets:0:0").value == "1"  # the first target 2/1 = (1 0 0): prime-2 entry
+    cell = _cell_child(user, "cell:vec:targets:0:0")               # NB token (0) BEFORE prime (0)
+    UserInteraction(user, {cell}, None).trigger("focus")
+    cell.set_value("2")                                           # a preview keystroke (would override to 4/1)
+    # no commit on the keystroke: a sibling target cell still shows the un-overridden default set
+    assert _cell_child(user, "cell:vec:targets:1:1").value == "1"  # the second target 3/1's prime-3 entry, unmoved
+    UserInteraction(user, {cell}, None).trigger("blur")           # blur is the commit: the override lands
+    await user.should_see(marker="cell:vec:targets:0:0")
+    assert _cell_child(user, "cell:vec:targets:0:0").value == "2"  # the typed override component committed on blur
+
+
+async def test_a_target_cell_edit_commits_through_the_reversed_id_shape(user: User) -> None:
+    # the commit arm through on_target_cells_change's REVERSED id (cell:vec:targets:{token}:{prime}):
+    # overriding a component freezes the set as an explicit override that survives the render. Pin the
+    # edit landing through that id order — the axis flip the consolidation must preserve.
+    await user.open("/")
+    cell = _cell_child(user, "cell:vec:targets:0:1")              # token 0, PRIME 1 (the 2/1 target's prime-3 entry)
+    cell.set_value("1")                                           # override the first target to (1 1 0) = 6/1
+    _commit(user, "cell:vec:targets:0:1")
+    await user.should_see(marker="cell:vec:targets:0:1")
+    assert _cell_child(user, "cell:vec:targets:0:1").value == "1"  # the override held through the reversed-id commit
+
+
+async def test_a_target_draft_commit_materializes_a_new_target_column(user: User) -> None:
+    # on_target_cells_change DRAFT branch: filling the green target draft (riding index k past the
+    # defaults) commits it into a real target the moment the vector completes (set_pending_target), no
+    # blur. Pin the materialization through the reversed cell:vec:targets:{token}:{prime} id.
+    k = len(service.target_interval_set(service.DEFAULT_TARGET_SPEC, Editor().state.domain_basis))
+    await user.open("/")
+    _click_glyph(user, "target_plus")
+    await user.should_see(marker=f"cell:vec:targets:{k}:0")
+    assert "rtt-pending" in _cell_child(user, f"cell:vec:targets:{k}:0")._classes
+    for p, v in zip(range(3), ("-1", "1", "0")):                 # 3/2 = (-1 1 0)
+        _cell_child(user, f"cell:vec:targets:{k}:{p}").set_value(v)
+    _commit(user, f"cell:vec:targets:{k}:2")                   # blur -> on_target_cells_change(False) materializes the draft
+    await user.should_see(marker=f"target:{k}")                  # the draft MATERIALIZED -> a real target column
+    assert "rtt-pending" not in _cell_child(user, f"cell:vec:targets:{k}:0")._classes
+
+
+async def test_an_interest_draft_keystroke_preview_does_not_materialize_early(user: User) -> None:
+    # the interest/held/target DRAFT-preview arm ARMS a candidate (set_pending_* would run on commit)
+    # but an INCOMPLETE draft previews nothing landing: a partial green draft, previewed cell by cell,
+    # must NOT materialize until the vector is complete. Pin that a half-filled draft stays pending.
+    await user.open("/")
+    _click_glyph(user, "interest_plus")
+    await user.should_see(marker="cell:interest:0:0")
+    first = _cell_child(user, "cell:interest:0:0")
+    UserInteraction(user, {first}, None).trigger("focus")
+    first.set_value("-1")                                        # one component typed (preview), draft incomplete
+    assert "rtt-pending" in _cell_child(user, "cell:interest:0:0")._classes  # STILL a green draft — nothing committed
+    await user.should_not_see(marker="interest:0")              # no real interval-of-interest materialized yet
+
+
+async def test_a_mapping_draft_keystroke_preview_rings_nothing_from_the_value(user: User) -> None:
+    # the mapping/comma DRAFT-preview arm is value-INDEPENDENT: the rank-change preview (doomed reds,
+    # survivor ambers) is the builder's, painted the instant the green draft opens — so a per-keystroke
+    # preview into the draft cells rings NOTHING extra (it calls _edit_candidate(None)). Pin that the
+    # builder-driven reds the draft already shows are unchanged by typing into it, and nothing commits.
+    await user.open("/")
+    _click_glyph(user, "gen_plus")                              # open the draft mapping row -> builder reds the comma
+    await user.should_see(marker="cell:mapping:2:0")
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")  # the builder-driven red (draft opened)
+    first = _cell_child(user, "cell:mapping:2:0")
+    UserInteraction(user, {first}, None).trigger("focus")
+    first.set_value("0")                                        # a draft keystroke -> _edit_candidate(None), rings nothing
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")  # the builder red persists, unchanged
+    assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes  # the draft is still green — no commit
+
+
+async def test_the_mapping_matrix_is_inert_when_temperament_boxes_are_off(user: User) -> None:
+    # the GUARD only on_mapping_change carries: it returns early when settings["temperament_boxes"] is
+    # off (no editable matrix when the boxes are hidden). With the boxes off the matrix cells are not
+    # rendered at all, so the handler can never edit — pin both halves: the editable mapping cells
+    # vanish, and turning the boxes back on restores meantone (the document was never mutated).
+    await user.open("/")
+    assert user.find(marker="cell:mapping:0:0").elements        # the editable matrix is shown by default
+    assert _cell_text(user, "cell:mapped:1:6") == "4"
+    user.find(kind=ui.checkbox, content="temperament boxes").click()  # turn the boxes OFF
+    await user.should_not_see(marker="cell:mapping:0:0")        # no editable matrix -> on_mapping_change is inert
+    user.find(kind=ui.checkbox, content="temperament boxes").click()  # back ON
+    await user.should_see(marker="cell:mapping:0:0")
+    assert _cell_text(user, "cell:mapped:1:6") == "4"           # the mapping was never touched while hidden
+
+
 async def test_an_unfocused_grid_rings_no_cells(user: User) -> None:
     # with no cell being edited there is no baseline, so a plain edit (here via the mapped list's
     # source cell, then read back) leaves nothing ringed — the highlight is strictly an editing aid
