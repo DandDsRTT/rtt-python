@@ -969,6 +969,23 @@ class _GridBuilder:
                                show_temp, show_tuning):
         """Resolve the interval sets (targets/held/commas/unchanged/interest), their pending drafts, derived quantities and id-tokens."""
         self.gens = service.generators(self.state.mapping, self.elements)
+        # the − hover's BORN row/column shows COMPUTED values (the op is known): removing comma idx
+        # gives a definite new temperament whose extra generator is the green ghost mapping row;
+        # removing generator idx gives the extra comma. The newborn is the fresh-token entry — the
+        # last row / comma of the re-dualed basis (assign_column_tokens pairs the survivors
+        # positionally, so the surplus lands last). Computed once; the ghost emission fills its cells.
+        self.ghost_row_map = self.ghost_row_ratio = None
+        self.ghost_comma_vec = self.ghost_comma_ratio = None
+        if self.ghost_row:
+            born = service.remove_comma(self.state, self.preview_remove[1])
+            self.ghost_row_map = born.mapping[-1]
+            born_gens = service.generators(born.mapping, self.elements)
+            self.ghost_row_ratio = born_gens[-1] if born_gens else ""
+        elif self.ghost_comma:
+            born = service.remove_mapping_row(self.state, self.preview_remove[1])
+            self.ghost_comma_vec = born.comma_basis[-1] if born.comma_basis else None
+            born_crs = service.comma_ratios(born.comma_basis, self.elements) if born.comma_basis else ()
+            self.ghost_comma_ratio = born_crs[-1] if born_crs else ""
         # the displayed target list: a typed explicit target list overrides the TILT/OLD spec, but
         # all-interval auto-replaces it with Tₚ = I (the domain basis, every interval's prime-based
         # proxy). Resolved in the service so the grid and the plain text can't diverge; every target
@@ -3010,12 +3027,14 @@ class _GridBuilder:
                     # comma vector below it: typing a fraction re-parses to that comma's vector
                     self.cells.append(CellBox(f"comma:{self.col_token('commas', c)}", self.comma_left(c), qy, COL_W, ROW_H, "ratiocell", text=self.comma_ratios[c], comma=c))
                     self._voice("quantities:commas", c, self.comma_sizes.just[c])
-                if self.comma_draft:  # the draft/ghost's "?/?" ratio over its vector column. A real
-                    # draft is editable (type a fraction to fill it, or its vector cells); a hover
-                    # ghost is a read-only green placeholder. A distinct id so it's removed, not
-                    # restructured, on commit.
+                if self.comma_draft:  # the draft/ghost's ratio over its vector column. A real draft is
+                    # an editable "?/?" (type a fraction to fill it, or its vector cells); a hover ghost
+                    # is a read-only face showing the born comma's COMPUTED ratio. A distinct id so it's
+                    # removed, not restructured, on commit.
                     self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H,
-                                         "commaratio" if self.ghost_comma else "ratiocell", text="?/?", comma=self.nc, pending=True))
+                                         "commaratio" if self.ghost_comma else "ratiocell",
+                                         text=(self.ghost_comma_ratio or DASH) if self.ghost_comma else "?/?",
+                                         comma=self.nc, pending=True))
                 if self.show_unchanged:  # the unchanged interval ratios complete V = C|U. EDITABLE (the
                     # scalar twin of the editable U vector) when the tuning is a full rational projection —
                     # typing a fraction retunes; read-only "commaratio" (em-dash) otherwise.
@@ -3254,7 +3273,10 @@ class _GridBuilder:
                 dr = self.r  # the draft/ghost row's index, one past the committed generators
                 drt = self.pending_col_token("gens")  # its id-token, one past every committed row's
                 if self.tile_open("mapping", "quantities"):
-                    self.cells.append(CellBox("gen:pending", self.col_x["quantities"], self.map_top(dr), self.col_w["quantities"], ROW_H, "genratio", text="?", gen=dr, pending=True))
+                    # a real draft's generator ratio is unknown ("?"); the hover ghost's is the born
+                    # generator's computed ratio
+                    gen_text = self.ghost_row_ratio if self.ghost_row else "?"
+                    self.cells.append(CellBox("gen:pending", self.col_x["quantities"], self.map_top(dr), self.col_w["quantities"], ROW_H, "genratio", text=gen_text, gen=dr, pending=True))
                     if not self.ghost_row:  # a real draft carries a − to cancel it; a hover ghost doesn't
                         map_bus_x = self.node_edge + self.FAN if self._row_fans("mapping") else self.node_edge
                         gen_right = self.col_x["quantities"] + self.col_w["quantities"]
@@ -3262,7 +3284,8 @@ class _GridBuilder:
                 if self.tile_open("mapping", "primes"):
                     row_kind = "mapped" if self.ghost_row else "mapping"  # ghost is read-only
                     for p in range(self.d):
-                        v = None if self.ghost_row else self.pending_mapping_row[p]
+                        # the ghost shows the born generator's COMPUTED prime coords; a real draft is blank
+                        v = self.ghost_row_map[p] if self.ghost_row else self.pending_mapping_row[p]
                         self.cells.append(CellBox(f"cell:mapping:{drt}:{p}", self.prime_left(p), self.map_top(dr), COL_W, ROW_H, row_kind, text="" if v is None else str(v), gen=dr, prime=p, pending=True))
                 # blank green placeholders in the derived mapped tiles (M·target / M·interest / M·held
                 # / M·comma / M·U for the not-yet-committed generator), so the whole draft row greens
@@ -3487,7 +3510,8 @@ class _GridBuilder:
                 if self.comma_draft:  # the green column at index nc: an editable draft, or a hover GHOST
                     col_kind = "vec" if self.ghost_comma else "commacell"  # ghost is read-only
                     for p in range(self.d):
-                        v = None if self.ghost_comma else self.pending[p]
+                        # the ghost shows the born comma's COMPUTED prime coords; a real draft is blank
+                        v = self.ghost_comma_vec[p] if self.ghost_comma else self.pending[p]
                         self.cells.append(CellBox(f"cell:comma:{p}:{self.pending_col_token('commas')}", self.comma_left(self.nc), self.vec_top(p), COL_W, ROW_H, col_kind,
                                              text="" if v is None else str(v), prime=p, comma=self.nc, pending=True, unit=self.cell_unit("vectors", "commas", prime=p)))
             if self.tile_open("vectors", "targets"):
@@ -5048,19 +5072,14 @@ class _GridBuilder:
 
         # The comma↔mapping rank-duality preview. The comma basis and the mapping are duals
         # (r + n = d), so every rank change is one operation seen from two sides, and the grid
-        # previews BOTH: what LEAVES reds, what RECOMBINES ambers, what is BORN greens. This pass
-        # paints the structural red/amber; the BORN green is rendered above (the editable draft
-        # column/row, or the non-editable hover ghost), so it's skipped here (pending stays green).
-        # The amber is a hue, not a value — the survivors' new numbers aren't known on a blank draft
-        # (and on a − hover we keep it value-independent for symmetry), so it just marks the band.
+        # previews BOTH: what LEAVES reds, what RECOMBINES ambers, what is BORN greens. The BORN
+        # green is rendered above (the editable draft column/row, or the non-editable hover ghost
+        # whose VALUES are computed for a − hover); this pass paints the structural red/amber.
         #   • comma DRAFT / comma − : the mapping side moves. A draft drops the LAST row (red) and
         #     recombines the rest (amber); a − hover recombines ALL rows (amber) as a generator is
         #     born (the green ghost row above).
         #   • mapping-row DRAFT / mapping − : the comma side moves, dually. (Meantone has one comma,
         #     so a draft just reds it — no survivor to amber.)
-        # Rows are keyed by the `gen` attr (every mapping-band cell carries its row index); commas by
-        # the `comma` attr restricted to comma-basis ids, so a target/held/interest column sharing
-        # that index isn't swept in.
         remove_rows = change_rows = remove_commas = change_commas = frozenset()
         if self.pending is not None and self.r:               # adding a comma → drops the last row
             remove_rows, change_rows = frozenset({self.r - 1}), frozenset(range(self.r - 1))
@@ -5073,15 +5092,26 @@ class _GridBuilder:
             else:                    # removing row idx → that row reds; all commas recombine
                 remove_rows, change_commas = frozenset({idx}), frozenset(range(self.nc))
         if remove_rows or change_rows or remove_commas or change_commas:
-            comma_ids = ("cell:comma:", "comma:", "cell:scaling:", "cell:proj_v:")
+            # A red row/column overrides the perpendicular amber AND green at every crossing — the
+            # cell there is about to vanish with its row/column. A mapping ROW is its cells by the
+            # `gen` attr (which the matrix, mapped values, generator ratio AND the generator's tuning
+            # cell all carry); a comma COLUMN is the value cells sharing its x (the `comma` attr is
+            # overloaded across interval groups, so x is the safe column key). Precedence: RED (row
+            # OR col) > the green newborn (pending) > AMBER. Cells already reddened above (the doomed
+            # unchanged column) keep their red.
+            red_xs = frozenset(self.comma_left(c) for c in remove_commas)
+            amber_xs = frozenset(self.comma_left(c) for c in change_commas)
             def _dual(cb):
-                if cb.kind not in RINGABLE_KINDS or cb.pending:  # green born cells keep their hue
+                if cb.kind not in RINGABLE_KINDS or cb.preview_remove:
                     return cb
-                if cb.gen in remove_rows: return replace(cb, preview_remove=True)
-                if cb.gen in change_rows: return replace(cb, preview_change=True)
-                if cb.id.startswith(comma_ids):
-                    if cb.comma in remove_commas: return replace(cb, preview_remove=True)
-                    if cb.comma in change_commas: return replace(cb, preview_change=True)
+                if cb.gen in remove_rows or cb.x in red_xs:
+                    # red overrides the green/amber it crosses; clear `pending` so a crossed ghost
+                    # cell renders purely red (its value vanishes with its row/column)
+                    return replace(cb, preview_remove=True, pending=False)
+                if cb.pending:
+                    return cb                                  # the green newborn, where no red crossed it
+                if cb.gen in change_rows or cb.x in amber_xs:
+                    return replace(cb, preview_change=True)
                 return cb
             self.cells = [_dual(cb) for cb in self.cells]
 

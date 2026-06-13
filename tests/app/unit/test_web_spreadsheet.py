@@ -3994,16 +3994,19 @@ def test_the_mapped_list_brackets_grow_to_enclose_the_draft_rows_placeholders():
     # the spanning derived [ ]s (M·targets, M·commas) grow with the band so they enclose the draft
     # row's blank green placeholders at the band floor — mirroring the comma draft, whose mapped_comma
     # [ ] grows over nc_shown to enclose its draft-COLUMN placeholder. The placeholders read green
-    # (their value is undefined until the row commits), so the draft row greens all the way across.
-    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # r=2
+    # (their value is undefined until the row commits), so the draft row greens across — EXCEPT where
+    # it crosses the comma the new generator un-tempers: adding a row drops a comma (the rank-duality
+    # preview reds that comma's column), and red overrides green at the crossing.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # r=2, n=1 (one comma — the doomed one)
     plain = {c.id: c for c in spreadsheet.build(base).cells}
     drafting = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[None, None, None]).cells}
     for bid in ("bracket:mapped:l", "bracket:mapped_comma:l"):
         assert plain[bid].h == 2 * spreadsheet.ROW_H        # committed: r rows
         assert drafting[bid].h == 3 * spreadsheet.ROW_H     # draft: r_shown rows
-    # the draft row's mapped cells are blank green placeholders the grown bracket now encloses
+    # the draft row's mapped-target cell is a blank green placeholder the grown bracket now encloses
     assert drafting["cell:mapped:2:0"].pending and drafting["cell:mapped:2:0"].text == ""
-    assert drafting["cell:mapped_comma:2:0"].pending and drafting["cell:mapped_comma:2:0"].text == ""
+    # ...but its cell over the doomed comma is red (the draft generator un-tempers it away), enclosed all the same
+    assert drafting["cell:mapped_comma:2:0"].preview_remove and not drafting["cell:mapped_comma:2:0"].pending
 
 
 # --- math expressions: the just row's exact log₂ closed forms ---

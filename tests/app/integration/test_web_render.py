@@ -2148,9 +2148,15 @@ async def test_hovering_a_comma_minus_previews_the_born_generator(user: User) ->
     UserInteraction(user, btn, None).trigger("mouseenter")
     await user.should_see(marker="cell:mapping:2:0")                        # the born generator row reflows in
     assert "rtt-pending" in _wrap_classes(user, "cell:mapping:2:0")         # ...green (a newborn)
+    # the op is known, so the born generator's coords are COMPUTED and shown: dropping the syntonic
+    # comma un-tempers to JI, whose third generator is prime 5 → ⟨0 0 1]
+    assert [_cell_text(user, f"cell:mapping:2:{p}") for p in range(3)] == ["0", "0", "1"]
     assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")    # the hovered comma → red
     assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:0")  # a survivor recombines → amber
     assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:0")
+    # where the red comma column crosses the green ghost row, red wins (the value vanishes with it)
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapped_comma:2:0")
+    assert "rtt-pending" not in _wrap_classes(user, "cell:mapped_comma:2:0")
     UserInteraction(user, btn, None).trigger("mouseleave")
     await user.should_not_see(marker="cell:mapping:2:0")                    # the ghost clears on mouse-out
     assert "rtt-preview-remove" not in _wrap_classes(user, "cell:comma:0:0")
@@ -2166,8 +2172,14 @@ async def test_hovering_a_mapping_minus_previews_the_born_comma(user: User) -> N
     UserInteraction(user, btn, None).trigger("mouseenter")
     await user.should_see(marker="cell:comma:0:1")                          # the born comma column reflows in
     assert "rtt-pending" in _wrap_classes(user, "cell:comma:0:1")           # ...green (a newborn)
+    # the born comma's coords are COMPUTED and shown (dropping meantone's generator un-tempers to the
+    # rank-1 ET whose extra comma is [0 -4 1⟩)
+    assert [_cell_text(user, f"cell:comma:{p}:1") for p in range(3)] == ["0", "-4", "1"]
     assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:0:0")  # the hovered row → red
     assert "rtt-preview-change" in _wrap_classes(user, "cell:comma:0:0")    # the survivor comma recombines → amber
+    # where the red mapping row crosses the green ghost comma, red wins
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapped_comma:0:1")
+    assert "rtt-pending" not in _wrap_classes(user, "cell:mapped_comma:0:1")
     UserInteraction(user, btn, None).trigger("mouseleave")
     await user.should_not_see(marker="cell:comma:0:1")                      # the ghost clears on mouse-out
     assert "rtt-preview-remove" not in _wrap_classes(user, "cell:mapping:0:0")
