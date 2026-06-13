@@ -49,8 +49,8 @@
 .rtt-hamburger { position:absolute; top:7px; left:6px;
                  width:28px !important; min-width:28px !important; height:28px !important;
                  min-height:28px !important; padding:0 !important; background:#fff !important;
-                 border:1px solid #999; border-radius:3px !important; box-shadow:none !important; }
-.rtt-hamburger .q-icon { color:#333 !important; font-size:19px; }
+                 border:1px solid #999; border-radius:2px !important; box-shadow:none !important; }
+.rtt-hamburger .q-icon { color:#333 !important; font-size:18px; }
 /* the app title swings in place between the two states (an animated transform, so it reorients
    smoothly rather than a hard flip): a quarter-turn reading DOWN the closed tab (below the hamburger),
    upright ACROSS the open bar (beside it). Absolutely placed and pivoted about its top-left corner —
@@ -236,7 +236,7 @@
    (g/j/p/q/y — e.g. the j of "just tuning map") drops its underline below the tail
    so it reads instead of hiding under the glyph */
 .rtt-caption u.rtt-desc { text-underline-position:under; }
-.rtt-count { font-size:16px; color:#000; white-space:nowrap; }
+.rtt-count { font-size:15px; color:#000; white-space:nowrap; }
 /* a read-only plain-text value: serif text on ONE line, no box. Its font-size is set
    inline per box (shrunk to fit its column), so a long value never wraps or spills. */
 .rtt-ptext { width:100%; text-align:center; color:#000; white-space:nowrap; line-height:1;
@@ -246,7 +246,7 @@
    Its font-size is set inline per box too, so the value stays on one line. */
 .rtt-ptextedit { width:100%; height:100%; }
 .rtt-ptextedit .q-field__control { min-height:0 !important; height:100%;
-            background:#fff; border:1px solid #888; border-radius:2px; padding:0 3px; }
+            background:#fff; border:1px solid #8a8a8a; border-radius:2px; padding:0 3px; }
 .rtt-ptextedit .q-field__control::before, .rtt-ptextedit .q-field__control::after { display:none !important; }
 .rtt-ptextedit .q-field__native { color:#000; min-height:0 !important; padding:0; text-align:center;
             line-height:var(--ptext-edit-h); white-space:nowrap; font-size:inherit !important;
@@ -288,7 +288,7 @@
 /* the per-value unit (the `units` toggle): a tiny line in the same single-story-g sans,
    stacked right beneath the value so the value + unit read as one centred pair — like the
    cents int-over-fraction stack, the unit hugging its value rather than floating away. */
-.rtt-cellunit { font-size:6px; line-height:1; color:#555; white-space:nowrap; text-align:center;
+.rtt-cellunit { font-size:7px; line-height:1; color:#555; white-space:nowrap; text-align:center;
             font-family:'Corbel','Candara','Trebuchet MS',sans-serif; }
 /* a read-only value cell simply stacks [value, unit] in a centred column; the value's
    line-height is tightened so the value + unit pair fits the square and stays centred */
@@ -310,10 +310,10 @@
 .rtt-preset .q-field__control { min-height:0 !important; height:30px;
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px 0 6px; }
 .rtt-preset .q-field__control::before, .rtt-preset .q-field__control::after { display:none !important; }
-.rtt-preset .q-field__native, .rtt-preset .q-field__input { font-size:12px; color:#000;
+.rtt-preset .q-field__native, .rtt-preset .q-field__input { font-size:13px; color:#000;
             min-height:0 !important; padding:0; line-height:30px; font-family:'Cambria',Georgia,serif; }
 .rtt-preset .q-field__marginal, .rtt-preset .q-field__append { height:30px; min-height:0 !important; }
-.rtt-preset .q-icon { font-size:16px; color:#555; }
+.rtt-preset .q-icon { font-size:15px; color:#555; }
 /* a LOCKED chooser -- set_enabled(False), so Quasar's `q-field--disabled` (the all-interval
    weight-slope chooser, pinned to simplicity; the locked target chooser likewise). Quasar only
    fades the content to .6 and leaves the field's WHITE fill and selectable text, so it still reads
@@ -443,7 +443,7 @@
    awkward if the boxes were centred and so didn't align vertically. */
 .rtt-rangemode { width:100%; display:flex; flex-direction:column; align-items:flex-start;
                   justify-content:center; gap:3px; line-height:1; overflow:hidden;
-                  padding:5px 5px 5px 10px; }  /* top/bottom 5 so the bottom row doesn't touch the box edge */
+                  padding:4px 4px 4px 8px; }  /* top/bottom 4 so the bottom row doesn't touch the box edge */
 .rtt-rangeopt { display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }
 .rtt-rangebox { width:var(--option-box); height:var(--option-box); flex:none;
                 box-sizing:border-box; background-repeat:no-repeat; background-size:100% 100%;
@@ -467,7 +467,7 @@
 .rtt-frac-whole .rtt-frac-den { display:none; }
 .rtt-frac-whole .rtt-frac-num { border-bottom:none; padding:0; }
 .rtt-tuning-value { display:flex; flex-direction:column; align-items:center; justify-content:center;
-            width:100%; color:#000; white-space:nowrap; line-height:1.05; }
+            width:100%; color:#000; white-space:nowrap; line-height:1.04; }
 /* a stacked gridded-value face: a big main glyph over a smaller sub-line. Cents stack the
    whole part over the .fraction; a minimax power stacks ∞ over a small "(max)". */
 .rtt-stacked-main { font-size:10px; }
@@ -503,7 +503,7 @@
    added the value+unit hug as one pair — height:100% would float the unit to the bottom. */
 .rtt-mathexpr { width:100%; display:flex; align-items:center; justify-content:center; }
 .rtt-mathexpr-stack { display:flex; flex-direction:column; align-items:center; justify-content:center;
-                      line-height:1.15; color:#000; white-space:nowrap; }
+                      line-height:1.1; color:#000; white-space:nowrap; }
 .rtt-cellinput { width:100% !important; height:100%; min-height:0; overflow:visible; }
 .rtt-cellinput .q-field__inner { overflow:visible; }
 .rtt-cellinput .q-field__control { position:absolute !important; top:0; left:0;
@@ -618,7 +618,7 @@
    one colour) but a static box matching the input's frame, holding the committed commas
    in black and the red draft vector — you edit the draft in the red grid cells */
 .rtt-ptextpending { width:100%; height:100%; box-sizing:border-box; display:flex;
-            align-items:center; justify-content:center; background:#fff; border:1px solid #888;
+            align-items:center; justify-content:center; background:#fff; border:1px solid #8a8a8a;
             border-radius:2px; padding:0 3px; color:#000; white-space:nowrap; overflow:hidden;
             font-family:'Cambria',Georgia,serif; }
 /* the fan controls — the +/− add/remove buttons and the fold toggles — are inline-SVG glyphs
@@ -638,7 +638,7 @@
 .rtt-drag-handle:hover { color:#555; }
 .rtt-drag-handle:active { cursor:grabbing; }
 .rtt-drag-handle .rtt-grip { font-size:18px; pointer-events:none; }
-.rtt-col-handle .rtt-grip { font-size:16px; }  /* the column grip rides a shorter band */
+.rtt-col-handle .rtt-grip { font-size:15px; }  /* the column grip rides a shorter band */
 /* the "back to scheme" button on the projection / generator-embedding tiles — a 3D button: a
    light-top/dark-bottom face with a crisp inset bevel (white highlight top-left, soft shadow
    bottom-right) just inside the black cell border, so it reads as raised off the row; greyed
@@ -665,7 +665,7 @@
    padded off the left border. One line that overhangs to the right rather than wrapping —
    the box is sized to seat it, so it never clips. */
 .rtt-boxtitle { font-family:'Cambria',Georgia,serif; font-size:11px; font-weight:bold;
-                 color:#000; width:100%; text-align:left; padding-left:8px;
+                 color:#000; width:100%; text-align:left; padding-left:4px;
                  white-space:nowrap; overflow:visible; }
 /* a per-tile bank control square (waveform / play-mode / hold-loop / include-1/1), the same
    12px box as the fold toggle; .rtt-audio-on marks the active hold/1-1 (greyscale, not blue). */
@@ -692,11 +692,11 @@
    cursor up onto it never crosses dead space — the mouseout's relatedTarget is the float itself. */
 .rtt-spk-float { position:fixed; transform:translate(-50%, -100%); z-index:50; display:none;
     align-items:center; justify-content:center; width:24px; height:24px; background:#fff;
-    border:1px solid #8a8a8a; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.3);
-    color:#444; cursor:pointer; }
+    border:1px solid #8a8a8a; border-radius:2px; box-shadow:0 1px 4px rgba(0,0,0,0.3);
+    color:#555; cursor:pointer; }
 .rtt-spk-float.rtt-spk-float-on { display:flex; }
 .rtt-spk-float:hover { color:#000; background:#f2f2f2; }
-.rtt-spk-float .material-icons { font-size:16px; }
+.rtt-spk-float .material-icons { font-size:15px; }
 .material-icons.rtt-audio-glyph { font-size:12px; width:auto; height:auto; }
 .rtt-audio-rootglyph { font-size:8px; font-family:'Cambria',Georgia,serif; line-height:1; }
 /* the domain − is a hover affordance: an invisible zone dropping from the removable
@@ -761,9 +761,9 @@
    renders), aligned over the grid columns the rows below use. Both share one font and
    sit on a common baseline so the two words line up. */
 .rtt-show-head { display:grid; grid-template-columns:160px 1fr; align-items:baseline;
-                 padding:0 9px; }
-.rtt-show-title { font-size:14px; font-weight:bold; }
-.rtt-show-examplehdr { font-size:14px; font-weight:bold; }
+                 padding:0; }
+.rtt-show-title { font-size:13px; font-weight:bold; }
+.rtt-show-examplehdr { font-size:13px; font-weight:bold; }
 /* general and specific each sit in their own rounded, lightly-bordered sub-card,
    stacked vertically (general above specific) */
 .rtt-show-group { border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6;
@@ -777,8 +777,8 @@
    far clearer "inactive" cue than Quasar's faint default opacity dim alone */
 .rtt-show-item.disabled .q-checkbox__label { color:#999; }
 .rtt-show-item.disabled .q-checkbox__inner { color:#999 !important; }
-.rtt-ex-cell { font-family:'Cambria',Georgia,serif; font-size:14px; color:#000;
-               display:flex; align-items:center; min-height:24px; }
+.rtt-ex-cell { font-family:'Cambria',Georgia,serif; font-size:13px; color:#000;
+               display:flex; align-items:center; min-height:26px; }
 /* a disabled toggle's sample greys to match its label — color for the glyph examples,
    plus the same 0.75 dim Quasar puts on the checkbox so the two read as one shade */
 .rtt-ex-cell.rtt-ex-disabled { color:#999; opacity:0.75; }
@@ -814,7 +814,7 @@
    control boxes (.rtt-block-boxed: the lighter #e8e8e8 fill, a #8a8a8a border) */
 .rtt-tile-cbox { width:100%; box-sizing:border-box; display:flex; flex-direction:column;
                  align-items:stretch; border:1px solid #8a8a8a; background:#e8e8e8;
-                 padding:3px 5px; margin:2px 0; }
+                 padding:4px; margin:2px 0; }
 /* every part is a click target. The on/off classes carry the live state — black + opaque when
    the layer is shown, grey + dimmed when hidden (the dim also fades the SVG samples, whose
    baked-in strokes a colour change alone can't grey). A part is inert (no click) while its host

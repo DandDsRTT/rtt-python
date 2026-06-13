@@ -388,7 +388,7 @@ _CSS = (_CSS_VARS + (_ASSETS / "rtt.css").read_text(encoding="utf-8")
 # unit overlay shrink to fit their cell, like the math-expression cells — so a long annotated unit
 # (¢(E-sopfr-S)/, (E-sopfr-C)) fits its narrow COL_W spine instead of spilling the tile.
 _UNITS_MAX_FONT = 10.0    # px — the comfortable units-label size (matches .rtt-units in rtt.css)
-_CELLUNIT_MAX_FONT = 6.0  # px — the per-value unit overlay (matches .rtt-cellunit)
+_CELLUNIT_MAX_FONT = 7.0  # px — the per-value unit overlay (matches .rtt-cellunit)
 _MATLABEL_FONT = 11.0     # px — the default column/row matrix-label size (matches .rtt-matlabel)
 _MATLABEL_MIN_FONT = 6.0  # px — floor for a wide column header shrunk to fit its COL_W slot
 
@@ -454,7 +454,7 @@ _TILE_HOST: dict[str, str] = {
 _TILE_FONT = {
     "symbols": 15, "equivalences": 15, "rowlabel": spreadsheet.MATLABEL_H - 2,
     "names": spreadsheet.CAPTION_FONT, "mnemonics": spreadsheet.CAPTION_FONT,
-    "units": 10, "cellunit": 6, "plain_text_values": 11, "drag_to_combine": 18,
+    "units": 10, "cellunit": 7, "plain_text_values": 11, "drag_to_combine": 18,
 }
 
 

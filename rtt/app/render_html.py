@@ -578,7 +578,7 @@ def _tile_preset_html() -> str:
     field showing the "(presets)" placeholder with a dropdown caret."""
     return ('<span style="display:flex;align-items:center;justify-content:space-between;'
             'gap:4px;width:100%;height:22px;box-sizing:border-box;background:#fff;border:1px solid #999;'
-            'border-radius:2px;padding:0 2px 0 6px;font-size:12px;color:#000">(presets)'
+            'border-radius:2px;padding:0 2px 0 6px;font-size:13px;color:#000">(presets)'
             '<span class="material-icons" style="font-size:16px;color:#555">arrow_drop_down</span></span>')
 
 
