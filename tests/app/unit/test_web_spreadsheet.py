@@ -3172,7 +3172,7 @@ def test_all_interval_relabels_the_optimization_mean_damage():
 def test_optimization_mean_damage_carries_a_label_caption():
     # the mean damage gains a caption under its symbol, mirroring the power's "optimization power":
     # target-based it is the Lp "power mean" of the target damages; all-interval that quantity is
-    # the "retuning magnitude" (the ‖𝒓𝐿⁻¹‖ relabel). The wide all-interval label does not fit on
+    # the "retuning magnitude" (the ⟪𝒓𝐿⁻¹⟫ relabel). The wide all-interval label does not fit on
     # one line in the min-width box, so it wraps to two lines (centred under the value cell, like
     # the q/dual captions) and the box reserves the extra caption line.
     based = _with(scheme="TILT minimax-S", optimization=True)
@@ -3251,8 +3251,9 @@ def test_optimized_tuning_wraps_the_mean_damage_symbol_in_min():
 
     assert symbol("TILT minimax-S", True) == "min(⟪𝐝⟫ₚ)"
     assert symbol("TILT minimax-S", False) == "⟪𝐝⟫ₚ"
-    # all-interval: the retuning-magnitude relabel wraps in min() the same way
-    inner = "‖𝒓𝐿⁻¹‖" + spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE
+    # all-interval: the retuning-magnitude relabel (double-angle power-MEAN ⟪…⟫, not a norm) wraps in
+    # min() the same way
+    inner = "⟪𝒓𝐿⁻¹⟫" + spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE
     assert symbol("minimax-S", True) == "min(" + inner + ")"
     assert symbol("minimax-S", False) == inner
 
