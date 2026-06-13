@@ -2194,21 +2194,28 @@ def index() -> None:
 
     def apply_chapter():
         # Show/hide each Show control by the slider: a control appears once the slider reaches its
-        # reveal chapter (its own, or a later ancestor's — settings.reveal_chapter). Hiding rides a
-        # dedicated class (display:none), independent of the dummy-tile part-on/off styling render()
-        # writes and of the sub-control parent-visibility binding, so all three coexist cleanly. The
-        # panel elements persist across renders (render rebuilds the GRID, not the toggle rows/tile
-        # parts), so this needs to run only when the slider moves — not on every render.
+        # reveal chapter (its own, or a later ancestor's — settings.reveal_chapter). An unrevealed
+        # control isn't merely disabled, it's made INVISIBLE — but the two sections do it differently:
+        #   • the dummy tile keeps the tile's shape, so its parts go visibility:hidden (invisible but
+        #     still occupying their slot — rtt-chap-invisible);
+        #   • the show/example rows collapse, so they go display:none (no leftover gap — rtt-chap-hidden).
+        # Both ride dedicated classes, independent of the part-on/off styling render() writes and of
+        # the sub-control parent-visibility binding, so they coexist. The panel elements persist
+        # across renders (render rebuilds the GRID, not these), so this runs only when the slider moves.
         ch = chapter[0]
         chapter_reading.set_text(_chapter_reading(ch))
 
-        def _gate(el, hidden):
-            el.classes(add="rtt-chap-hidden") if hidden else el.classes(remove="rtt-chap-hidden")
+        def _gate(el, cls, hidden):
+            el.classes(add=cls) if hidden else el.classes(remove=cls)
         for key, parts in tile_parts.items():
             for part in parts:
-                _gate(part, show_settings.reveal_chapter(key) > ch)
+                _gate(part, "rtt-chap-invisible", show_settings.reveal_chapter(key) > ch)
         for key, row in show_rows.items():
-            _gate(row, show_settings.reveal_chapter(key) > ch)
+            _gate(row, "rtt-chap-hidden", show_settings.reveal_chapter(key) > ch)
+        # the dummy tile's audio bank isn't a Show layer, but it rides the tile, so the slider gates
+        # it the same space-preserving way; it's available from the first notch (ch2 = CHAPTER_MIN).
+        if "audio_bank" in refs:
+            _gate(refs["audio_bank"], "rtt-chap-invisible", show_settings.CHAPTER_MIN > ch)
 
     def on_chapter_change(v):
         chapter[0] = _clamp_chapter(v)

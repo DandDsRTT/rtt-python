@@ -775,10 +775,13 @@
 .rtt-chapter-title { font-size:14px; font-weight:bold; }
 .rtt-chapter-reading { font-family:'Cambria',Georgia,serif; font-size:12px; opacity:0.7; }
 .rtt-chapter-slider { padding:0 6px; }
-/* a control the chapter slider has not yet revealed (its chapter is past the slider): removed from
-   the panel entirely, independent of the dummy-tile part-on/off styling and the sub-control
-   parent-visibility binding (display:none beats both). */
+/* a control the chapter slider has not yet revealed (its chapter is past the slider) is made
+   INVISIBLE, two ways: a show/example row COLLAPSES (display:none — no leftover gap), while a
+   dummy-tile part stays INVISIBLE BUT IN PLACE (visibility:hidden — the tile keeps its shape, and
+   the hidden part can't be clicked). Both beat the part-on/off styling and the parent-visibility
+   binding. */
 .rtt-chap-hidden { display:none !important; }
+.rtt-chap-invisible { visibility:hidden !important; }
 /* one toggle row: the checkbox+label in the Show column, its sample in the example column */
 .rtt-show-row { display:grid; grid-template-columns:160px 1fr; align-items:center; min-height:26px; }
 .rtt-show-item .q-checkbox__label { font-family:'Cambria',Georgia,serif; font-size:13px;

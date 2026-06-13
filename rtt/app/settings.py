@@ -172,18 +172,21 @@ CHAPTER_DEFAULT = 4   # the slider's as-shipped position — the default-state d
 CHAPTER: dict[str, int] = {
     # general — the dummy tile's display layers
     "gridded_values": 2, "quantities": 2, "names": 2, "symbols": 2, "plain_text_values": 2,
+    "math_expressions": 2, "presets": 2,
+    # mnemonics is the underlinable LETTER of the name word, so it must reveal WITH names (its
+    # ancestor, ch2) — a later chapter would blank a letter mid-word ("tile name" -> "tile  ame").
+    "mnemonics": 2,
     "equivalences": 3, "charts": 3,
-    "presets": 4, "drag_to_combine": 4,
-    "units": 5, "math_expressions": 5,
-    "mnemonics": CHAPTER_STAR,
+    "drag_to_combine": 4,
+    "units": 5,
     # specific boxes & controls
     "counts": 2, "temperament_boxes": 2, "temperament_colorization": 2,
     "tuning_boxes": 3, "tuning_colorization": 3,
+    "optimization": 3, "tuning_ranges": 3, "weighting": 3,
     "interest": 4,
     "domain_quantities": 5, "domain_units": 5,
-    "optimization": 6, "tuning_ranges": 6,
     "all_interval": 7,
-    "weighting": 8, "alt_complexity": 8,
+    "alt_complexity": 8,
     "nonstandard_domain": 9,
     "form_controls": CHAPTER_STAR, "form_colorization": CHAPTER_STAR,
     "projection": CHAPTER_STAR, "generator_detempering": CHAPTER_STAR,

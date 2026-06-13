@@ -580,25 +580,29 @@ def _row_classes(user: User, key: str) -> list[str]:
 
 
 async def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_default(user: User) -> None:
-    # the chapter slider opens at the default position (ch4) and reveal-gates the panel's controls:
-    # a control whose guide chapter is past the slider gets `rtt-chap-hidden` (display:none),
-    # independent of its on/off state. The hiding is a CSS class (the in-process User plugin reads
-    # the Python tree, not CSS), so this checks the class directly — what a real browser keys off.
+    # the chapter slider opens at the default position (ch4) and reveal-gates the panel's controls.
+    # A show/example row past the slider COLLAPSES (rtt-chap-hidden / display:none); a dummy-tile
+    # part past it stays in place but INVISIBLE (rtt-chap-invisible / visibility:hidden) so the tile
+    # keeps its shape. The hiding is a CSS class (the in-process User plugin reads the Python tree,
+    # not CSS), so this checks the class directly — what a real browser keys off.
     await user.open("/")
     slider = next(iter(user.find(marker="chapterslider").elements))
     assert slider.value == show_settings.CHAPTER_DEFAULT  # the as-shipped slider position (ch4)
-    # ch2/3/4 specific rows are revealed at the default...
-    assert "rtt-chap-hidden" not in _row_classes(user, "counts")            # ch2
-    assert "rtt-chap-hidden" not in _row_classes(user, "tuning_boxes")      # ch3
-    assert "rtt-chap-hidden" not in _row_classes(user, "interest")          # ch4
-    # ...while ch5+ and the outside-guide (★) rows are hidden
-    assert "rtt-chap-hidden" in _row_classes(user, "domain_units")          # ch5
-    assert "rtt-chap-hidden" in _row_classes(user, "optimization")          # ch6
-    assert "rtt-chap-hidden" in _row_classes(user, "nonstandard_domain")    # ch9
-    assert "rtt-chap-hidden" in _row_classes(user, "projection")            # outside guide -> ★
-    # the dummy tile's parts are gated the same way: an early layer shows, a ch5 one is hidden
-    assert "rtt-chap-hidden" not in _part_classes(user, "gridded_values")   # ch2
-    assert "rtt-chap-hidden" in _part_classes(user, "math_expressions")     # ch5
+    # ch2/3/4 specific rows are revealed at the default (the ch3 tuning sub-controls included)...
+    for key in ("counts", "tuning_boxes", "optimization", "weighting", "interest"):
+        assert "rtt-chap-hidden" not in _row_classes(user, key), key
+    # ...while ch5+ and the outside-guide (★) rows are collapsed. (These are all top-level rows, or
+    # — projection — a sub-control of the on-by-default tuning boxes, so they're present/findable;
+    # a sub-control of an OFF parent, like all-interval under weighting, is hidden by its own
+    # visibility binding and so isn't found regardless of chapter.)
+    for key in ("domain_units", "domain_quantities", "nonstandard_domain", "projection"):
+        assert "rtt-chap-hidden" in _row_classes(user, key), key
+    # the dummy tile's parts are gated the space-preserving way: an early layer shows, a ch5 one is
+    # invisible-but-in-place (visibility:hidden, NOT display:none)
+    assert "rtt-chap-invisible" not in _part_classes(user, "gridded_values")  # ch2
+    assert "rtt-chap-invisible" in _part_classes(user, "units")               # ch5
+    # the audio bank rides the tile and is available from the first notch, so it shows at the default
+    assert "rtt-chap-invisible" not in next(iter(user.find(marker="audiobank").elements))._classes
 
 
 async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cells(user: User) -> None:

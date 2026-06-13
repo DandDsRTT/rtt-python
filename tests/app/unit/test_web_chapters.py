@@ -52,10 +52,13 @@ def test_revealed_grows_monotonically_and_ends_complete():
 
 def test_default_position_reveals_the_early_controls_and_hides_the_later_ones():
     shown = show_settings.revealed(show_settings.CHAPTER_DEFAULT)
-    assert {"counts", "temperament_boxes", "tuning_boxes", "gridded_values"} <= shown
+    # everything introduced by ch4: the ch2 display layers, the ch3 tuning boxes + their
+    # sub-controls (optimization / tuning ranges / weighting), and ch4's intervals of interest
+    assert {"counts", "temperament_boxes", "tuning_boxes", "gridded_values", "presets",
+            "math_expressions", "optimization", "tuning_ranges", "weighting", "interest"} <= shown
     # ch5+ controls stay hidden at the default ch4
-    assert not ({"domain_units", "optimization", "all_interval", "weighting",
-                 "nonstandard_domain"} & shown)
+    assert not ({"units", "domain_units", "domain_quantities", "all_interval",
+                 "alt_complexity", "nonstandard_domain"} & shown)
     # the outside-guide controls wait for the ★ notch
     for key in ("projection", "generator_detempering", "identity_objects",
                 "form_controls", "form_colorization"):
@@ -76,6 +79,10 @@ def test_chapter_slider_carries_chrome_hover_text():
     assert "chapter" not in tooltips.SHOW_HELP  # it's chrome, like the dark-mode toggle
 
 
-def test_unrevealed_controls_are_hidden_by_a_dedicated_css_class():
+def test_unrevealed_controls_are_hidden_two_ways_by_dedicated_css_classes():
+    # show/example rows COLLAPSE (display:none); dummy-tile parts stay in place but INVISIBLE
+    # (visibility:hidden), so the tile keeps its shape as the slider moves
     m = re.search(r"\.rtt-chap-hidden\s*\{([^}]*)\}", app._CSS)
     assert m and "display:none" in m.group(1).replace(" ", "")
+    m2 = re.search(r"\.rtt-chap-invisible\s*\{([^}]*)\}", app._CSS)
+    assert m2 and "visibility:hidden" in m2.group(1).replace(" ", "")
