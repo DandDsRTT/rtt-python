@@ -40,7 +40,14 @@
       // re-fits both fields (and shrinks a long fraction further) on commit.
       box.querySelectorAll('.rtt-frac-num-in input, .rtt-frac-den-in input').forEach(function (i) { i.style.fontSize = '13px'; });
       const den = box.querySelector('.rtt-frac-den-in input');
-      if (den) den.focus();
+      if (den) {
+        den.focus();
+        // a draft cell opens as "?/?"; once the numerator is filled, jumping to the denominator should
+        // highlight its leftover "?" so the next keystroke replaces it (same no-backspace behaviour the
+        // + button gives the numerator). Only the bare "?" placeholder is auto-selected — a real
+        // denominator the user is re-editing keeps its cursor untouched.
+        if (den.value === '?') den.select();
+      }
     }
   }, true);
 

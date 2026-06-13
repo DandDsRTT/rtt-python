@@ -2989,16 +2989,20 @@ def index() -> None:
             target = next((cb.id for cb in lay.cells if cb.id == "basis:pending"), None)
         inp = rec.inputs.get(target) if target is not None else None
         if inp is not None:
-            # Focus into the freshly-created draft cell. A direct runMethod can lose a race in a real
-            # (visible) browser: the cell-create 'update' and this focus message can be delivered in
-            # one frame, so the focus runs before Vue has mounted the new cell and populated its
-            # $ref — and silently no-ops. So defer to the next macrotask and poll briefly for the
-            # mount (getElement returns the ref once it exists). setTimeout works whether the page is
-            # visible or hidden — requestAnimationFrame would be paused while hidden (e.g. the render
-            # tests / a backgrounded tab), so it is the wrong tool here.
+            # Focus into the freshly-created draft cell AND select its contents, so the "?" placeholder
+            # the draft starts with is highlighted — the first keystroke replaces it instead of typing
+            # after it (no backspace needed). select() resolves through getElement().$refs.qRef to
+            # QInput.select() (a native input.select()); it is a harmless no-op on the empty
+            # integer-vector fallback cell. A direct runMethod can lose a race in a real (visible)
+            # browser: the cell-create 'update' and this focus message can be delivered in one frame,
+            # so the focus runs before Vue has mounted the new cell and populated its $ref — and
+            # silently no-ops. So defer to the next macrotask and poll briefly for the mount (getElement
+            # returns the ref once it exists). setTimeout works whether the page is visible or hidden —
+            # requestAnimationFrame would be paused while hidden (e.g. the render tests / a backgrounded
+            # tab), so it is the wrong tool here.
             ui.run_javascript(
                 f"(function(){{var id={inp.id},n=0;function go(){{"
-                f"if(getElement(id)){{runMethod(id,'focus',[]);return;}}"
+                f"if(getElement(id)){{runMethod(id,'focus',[]);runMethod(id,'select',[]);return;}}"
                 f"if(n++<60)setTimeout(go,16);}}setTimeout(go,0);}})()")
 
     def on_show_toggle(key, value):
