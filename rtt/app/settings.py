@@ -23,11 +23,15 @@ glyph — so it only makes sense when symbols are shown.
 
 Three top-level toggles — ``temperament``, ``form`` and ``tuning`` — are *pure grouping
 parents*: they carry no grid layer of their own (the layout never reads them), existing only
-to expand/collapse the box toggle(s) nested beneath them (``temperament_boxes`` and its
-colorization, ``form_controls`` and its colorization, ``tuning_boxes`` and the whole tuning
-column). They use the same sub-control machinery as any other parent — so collapsing one
-turns its boxes off too — they just have nothing of their own to show. ``form`` is held out
-of :data:`IMPLEMENTED` for now, so it (and the form controls under it) renders greyed.
+to expand/collapse the toggles grouped directly beneath them. Each group holds its box toggle
+plus everything that used to nest under that box toggle, now flattened up to be its direct
+children: ``temperament`` holds ``temperament_boxes`` and ``temperament_colorization``;
+``tuning`` holds the whole tuning column (``tuning_boxes``, ``optimization``, ``tuning_ranges``,
+``weighting``, ``projection``, ``tuning_colorization``); ``form`` holds ``form_controls`` and
+``form_colorization``. They use the same sub-control machinery as any other parent — so
+collapsing one turns its whole group off — they just have nothing of their own to show.
+``form`` is held out of :data:`IMPLEMENTED` for now, so it (and the form controls under it)
+renders greyed.
 """
 
 from __future__ import annotations
@@ -62,7 +66,8 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("domain_quantities", "quantities", True),
             ("domain_units", "units", False),
             # ``temperament`` / ``form`` / ``tuning`` are pure grouping parents (see the module
-            # docstring): each only expands the box toggle(s) beneath it; the layout reads the
+            # docstring): each only expands the toggles grouped directly beneath it (its box toggle
+            # and that box's former children, now flattened to siblings); the layout reads the
             # boxes, never the parent. ``form`` is held out of IMPLEMENTED for now, so it greys.
             ("temperament", "temperament", True),
             ("temperament_boxes", "temperament boxes", True),
@@ -96,18 +101,25 @@ DEFAULTS: dict[str, bool] = {
 SUBCONTROLS: dict[str, str] = {
     "mnemonics": "names",
     "equivalences": "symbols",
-    "temperament_boxes": "temperament",  # under the pure grouping parent (no grid layer of its own)
-    "temperament_colorization": "temperament_boxes",
-    "form_controls": "form",  # under the pure grouping parent (greyed until "form" is built)
-    "form_colorization": "form_controls",  # the magenta wash (deferred; greyed until built)
-    "tuning_boxes": "tuning",  # under the pure grouping parent (no grid layer of its own)
-    "optimization": "tuning_boxes",
-    "tuning_ranges": "tuning_boxes",
-    "weighting": "tuning_boxes",
-    "all_interval": "weighting",  # a control in box 𝐓 (nested under weighting)
-    "alt_complexity": "weighting",  # controls in boxes 𝐋 and 𝒄
-    "projection": "tuning_boxes",
-    "tuning_colorization": "tuning_boxes",
+    # Each grouping parent (temperament / form / tuning) directly holds everything that used to
+    # nest under its box toggle: the box toggle itself AND its former direct children are now
+    # direct children of the group (siblings of the box toggle). So "temperament boxes" and its
+    # "colorization" both sit under "temperament"; the whole tuning column — tuning boxes,
+    # optimization, tuning ranges, weighting, projection, colorization — sits under "tuning".
+    # (Grandchildren stay put: all-interval / alt. complexity were children of weighting, not of
+    # tuning boxes, so they remain under weighting.)
+    "temperament_boxes": "temperament",
+    "temperament_colorization": "temperament",
+    "form_controls": "form",
+    "form_colorization": "form",
+    "tuning_boxes": "tuning",
+    "optimization": "tuning",
+    "tuning_ranges": "tuning",
+    "weighting": "tuning",
+    "all_interval": "weighting",  # a control in box 𝐓 (still nested under weighting)
+    "alt_complexity": "weighting",  # controls in boxes 𝐋 and 𝒄 (still nested under weighting)
+    "projection": "tuning",
+    "tuning_colorization": "tuning",
 }
 
 # Toggles whose behaviour the layout actually builds today; the panel disables
@@ -137,8 +149,8 @@ def defaults() -> dict[str, bool]:
 def depth_of(key: str) -> int:
     """How many levels ``key`` is nested under a top-level toggle (see :data:`SUBCONTROLS`):
     0 for a top-level toggle, rising by one per nesting level. The panel indents each row by its
-    depth, so a great-grandchild (all-interval, under weighting, under tuning boxes, under the
-    tuning grouping parent) sits further right than its parent instead of level with it."""
+    depth, so a grandchild (all-interval, under weighting, under the tuning grouping parent) sits
+    further right than its parent instead of level with it."""
     depth = 0
     parent = SUBCONTROLS.get(key)
     while parent is not None:

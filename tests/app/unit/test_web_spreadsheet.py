@@ -3619,17 +3619,21 @@ def test_weighting_subcontrols_are_registered_under_weighting():
 
 def test_subcontrol_nesting_depth_drives_panel_indentation():
     # the panel indents each row by its nesting depth, so a child sits further right than its
-    # parent rather than level with it. "tuning boxes" now nests under the "tuning" grouping
-    # parent (depth 0), so it is depth 1, weighting depth 2, and all-interval / alt. complexity
-    # (under weighting, under tuning boxes, under tuning) depth 3.
+    # parent rather than level with it. The "tuning" grouping parent (depth 0) directly holds the
+    # whole tuning column flat — tuning boxes, optimization, weighting, projection, colorization
+    # are all depth 1 (siblings); only all-interval / alt. complexity stay nested under weighting
+    # (depth 2).
     assert settings.depth_of("tuning") == 0          # the pure grouping parent is top-level
     assert settings.depth_of("tuning_boxes") == 1
-    assert settings.depth_of("weighting") == 2
-    assert settings.depth_of("all_interval") == 3
-    assert settings.depth_of("alt_complexity") == 3
+    assert settings.depth_of("optimization") == 1    # a former child of tuning boxes, now level with it
+    assert settings.depth_of("weighting") == 1
+    assert settings.depth_of("projection") == 1
+    assert settings.depth_of("tuning_colorization") == 1
+    assert settings.depth_of("all_interval") == 2    # still under weighting (not a former tuning-box child)
+    assert settings.depth_of("alt_complexity") == 2
     assert settings.depth_of("temperament") == 0     # the other grouping parents are top-level too
     assert settings.depth_of("temperament_boxes") == 1
-    assert settings.depth_of("temperament_colorization") == 2
+    assert settings.depth_of("temperament_colorization") == 1  # now level with the boxes, not under them
     assert settings.depth_of("mnemonics") == 1       # untouched by the regroup (still under names)
 
 
@@ -6387,11 +6391,12 @@ def test_every_interval_ratio_and_vector_is_click_to_play():
 def test_form_colorization_is_a_greyed_form_subcontrol():
     # form colorization completes the M/G/F colour trio alongside temperament (𝑀) and
     # tuning (G) colorization, but its content — the form matrix 𝐹 — isn't a built tile
-    # yet, so it rides as a greyed stub: registered and indented under the form controls,
+    # yet, so it rides as a greyed stub: registered and grouped directly under "form"
+    # (level with the form controls, since the regroup flattened the box toggle's children),
     # default off, and NOT implemented (no wash to paint), like the other deferred controls.
     keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
     assert "form_colorization" in keys
-    assert settings.SUBCONTROLS["form_colorization"] == "form_controls"
+    assert settings.SUBCONTROLS["form_colorization"] == "form"
     assert settings.defaults()["form_colorization"] is False
     assert "form_colorization" not in settings.IMPLEMENTED
 
@@ -6399,9 +6404,9 @@ def test_form_colorization_is_a_greyed_form_subcontrol():
 def test_interest_is_a_top_level_toggle_after_the_tuning_boxes_group():
     # "other intervals of interest" is a standalone grey column (not part of the cyan
     # tuning region), so it owns a top-level toggle: built (implemented), default on, and
-    # NOT a sub-control of tuning boxes. It sits just after the tuning boxes group (its
-    # last sub-control, colorization) and before generator detempering, mirroring the grid
-    # where the interest column lands just right of the target intervals.
+    # NOT a sub-control of the tuning group. It sits just after that group (whose last
+    # member is colorization) and before generator detempering, mirroring the grid where
+    # the interest column lands just right of the target intervals.
     items = dict(settings.SHOW_GROUPS)["specific boxes & controls"]
     keys = [k for k, *_ in items]
     assert keys[keys.index("tuning_colorization") + 1] == "interest"
