@@ -238,16 +238,26 @@ def _ea_addition(u1: Multivector, u2: Multivector, is_sum: bool) -> Multivector:
         raise ValueError("multivectors not addable: dimensions differ")
     # Match the matrix layer (addition.py): a temperament minus itself is undefined,
     # not the all-zero multivector that ea_canonical_form's zero short-circuit would
-    # otherwise hand back as if it were a result.
+    # otherwise hand back as if it were a result. The EA-for-RTT guide's addition
+    # section doesn't cover T-T; the "T1 minus T1 is undefined" rule lives in the
+    # companion "Temperament addition" guide, which the EA section defers to.
     if not is_sum and first == second:
         raise ValueError("cannot diff a temperament with itself")
     combined = tuple(
         a + b if is_sum else a - b for a, b in zip(first.coords, second.coords)
     )
     result = Multivector(combined, first.grade, first.variance)
-    # A non-addable pair sums to a nondecomposable multivector (a theorem for
-    # bivectors). Report that as non-addability -- as addition.sum_ does -- rather
-    # than letting canonicalization complain about an internal "no canonical form".
+    # A non-addable pair sums to a nondecomposable multivector -- "the way that
+    # multivectors convey ... there is no true temperament sum" (EA-for-RTT guide).
+    # Report that as non-addability, as addition.sum_ does, rather than letting
+    # canonicalization complain about an internal "no canonical form".
+    #
+    # CAVEAT: the guide states/proves the "indecomposable <=> not addable"
+    # equivalence for BIVECTORS (grade 2). For higher grades a decomposable-but-
+    # not-addable sum is theoretically possible, which this check would accept where
+    # addition.py's explicit-L_dep (linear-dependence-basis) test would reject it.
+    # No such case is known/tested; this is the one spot where the EA-side and the
+    # LA-side (addition.py) addability tests are not provably identical.
     if is_nondecomposable(result):
         raise ValueError("multivectors not addable")
     return ea_canonical_form(result)
