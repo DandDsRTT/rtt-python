@@ -769,6 +769,40 @@ class _GridBuilder:
         if self.target_spec is None:
             self.target_spec = service.DEFAULT_TARGET_SPEC
         self.collapsed = self.collapsed or frozenset()  # ids ("row:tuning", "col:targets") shown as strips
+        (show_counts, show_charts, show_ranges, show_domain_units, show_temp,
+         show_tuning, show_interest, show_domain_quantities) = self._unpack_show_flags()
+        # Row labels and column headers (and their gutters) are always present.
+        label_w = LABEL_W
+        header_h = HEADER_H
+        self._resolve_superspace_dims()
+        self._resolve_prescaler_and_domain_labels()
+        self._resolve_interval_sets(generator_tuning, target_override, held_vectors, pending_comma,
+                                    show_temp, show_tuning)
+        self._resolve_complexities()
+        interest_tiles, held_tiles, detempering_tiles = self._declare_interval_column_tiles()
+        self._resolve_projection_data(show_tuning)
+        self._declare_tiles(interest_tiles, held_tiles, detempering_tiles)
+
+        col_bands, content_x0 = self._define_col_bands(show_domain_quantities, show_domain_units,
+                                                       show_temp, show_tuning, show_interest, label_w)
+
+        row_bands = self._define_row_bands(show_counts, show_domain_quantities, show_domain_units,
+                                           show_temp, show_tuning)
+
+        self._layout_columns(col_bands, content_x0)
+
+        tile_extra = self._resolve_tile_extras(show_ranges, show_tuning)
+
+        rows_top_y = self._init_row_geometry(header_h)
+
+        self._resolve_ptext_strings(generator_tuning, target_override)
+
+        self._layout_rows(row_bands, tile_extra, rows_top_y, show_charts)
+
+        self._init_group_geometry()
+
+    def _unpack_show_flags(self):
+        """Phase 1: resolve the Show-panel view flags onto self; returns the build-local ones."""
         # Phase 1 — resolve the Show-panel view flags + their gating (see _resolve_show_flags above),
         # then unpack into the local names the rest of build() reads.
         _f = _resolve_show_flags(self.settings, self.collapsed)
@@ -814,9 +848,11 @@ class _GridBuilder:
         self.show_quantities = _f.quantities
         show_domain_quantities = _f.domain_quantities
         self.show_math = _f.math
-        # Row labels and column headers (and their gutters) are always present.
-        label_w = LABEL_W
-        header_h = HEADER_H
+        return (show_counts, show_charts, show_ranges, show_domain_units, show_temp,
+                show_tuning, show_interest, show_domain_quantities)
+
+    def _resolve_superspace_dims(self):
+        """Resolve the domain dims (d, r, elements) and the chapter-9 superspace dims + show flags."""
         self.d = self.state.d
         self.r = len(self.state.mapping)
         # the mapping rows the grid SHOWS: the r committed generators, plus one extra while a draft
@@ -870,6 +906,9 @@ class _GridBuilder:
         # the generator-map editing/controls to 𝒈L (ssgens): there 𝒈L is the live map and 𝒈 is its
         # read-only projection. Neutral optimizes in the domain, so 𝒈 stays live there.
         self.show_superspace_generators = self.show_superspace and self.nonprime_approach == "prime-based"
+
+    def _resolve_prescaler_and_domain_labels(self):
+        """Phase 2: resolve the prescaler glyph/labels, the identity-objects gate and the domain coordinate labels."""
         # Phase 2 — resolve the complexity-prescaler glyph + labels (see _resolve_prescaler_labels).
         # Resolved here, AFTER show_superspace, because the superspace shift renames/relocates the
         # bare-prescaler captions, symbols and row labels (the bare 𝐿 moves into the ss-primes column,
@@ -911,6 +950,10 @@ class _GridBuilder:
         # subgroup, nor when the smaller temperament would be improper). Gates both the quantities-row
         # − and its interval-vectors-row twin, so neither ever appears inert.
         self.domain_can_shrink = service.can_shrink_domain(self.state)
+
+    def _resolve_interval_sets(self, generator_tuning, target_override, held_vectors, pending_comma,
+                               show_temp, show_tuning):
+        """Resolve the interval sets (targets/held/commas/unchanged/interest), their pending drafts, derived quantities and id-tokens."""
         self.gens = service.generators(self.state.mapping, self.elements)
         # the displayed target list: a typed explicit target list overrides the TILT/OLD spec, but
         # all-interval auto-replaces it with Tₚ = I (the domain basis, every interval's prime-based
@@ -1092,6 +1135,9 @@ class _GridBuilder:
                                       ("gens", tuple(tuple(row) for row in self.state.mapping), True))
         }
         self._col_ids["detempering"] = self._col_ids["gens"]
+
+    def _resolve_complexities(self):
+        """Resolve the per-column complexity lists and the prescaler matrix 𝑋."""
         # the complexity row norms each interval's prescaled vector (𝒄): a covector over the
         # domain elements (each element's complexity, log₂ of it for the default log-prime
         # norm), a list over the comma / target / interest interval sets.
@@ -1124,6 +1170,9 @@ class _GridBuilder:
         # all_interval_simplicity_weight below, which drops the weight tile's concrete diag(𝐿)⁻¹
         # equivalence for the generic 𝒘 = 𝒄⁻¹ + per-column cₙ⁻¹ headers).
         self.prescaler_is_matrix = isinstance(self.prescaler[0], (tuple, list))
+
+    def _declare_interval_column_tiles(self):
+        """Declare the interest/held/detempering column tiles (and resolve the detempering data)."""
         # a pending draft alone (no committed intervals) declares just the two tiles that host
         # it — the editable vector ket and its "?" ratio header; the derived rows (sizes,
         # complexity, …) have no value until it commits, so they stay undeclared (no empty
@@ -1188,6 +1237,10 @@ class _GridBuilder:
             ("block:complexity:detempering", "complexity", "detempering"),
             ("block:urow:detempering", "units", "detempering"),
         ) if self.show_detempering else ()
+        return interest_tiles, held_tiles, detempering_tiles
+
+    def _resolve_projection_data(self, show_tuning):
+        """Resolve the projection/embedding matrices and the projected vector lists (domain + superspace)."""
         # the rational tempering projection P = GM and its generator embedding G (the projection
         # sub-control of tuning boxes): P is a d×d operator over the domain primes, G a d×r matrix
         # whose columns are the held tuning's generators as fractional vectors. Both are built from
@@ -1255,6 +1308,9 @@ class _GridBuilder:
         self.ss_unchanged = tuple(
             (service.lift_vectors_to_superspace(self.elements, (ub,))[0] if ub is not None else None)
             for ub in (self.unchanged_basis if self.show_unchanged else ()))
+
+    def _declare_tiles(self, interest_tiles, held_tiles, detempering_tiles):
+        """Declare the projection-row column tiles and assemble the authoritative tile set."""
         # the projection row's column tiles, each gated on its column being present exactly like the
         # vectors-row tile it projects (and overall on the projection toggle): the quantities/units
         # spine, then P·D / P·T / P·H / P·interest. Declared here (not in the static TILES) so the
@@ -1340,6 +1396,9 @@ class _GridBuilder:
         if not self.mi:
             self.declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
 
+    def _define_col_bands(self, show_domain_quantities, show_domain_units, show_temp,
+                          show_tuning, show_interest, label_w):
+        """Define the column bands (key, natural width, present, collapsible) and the content origin."""
         # Column bands left-to-right: (key, natural width, present, collapsible).
         # Each set-column belongs to a box toggle: generators, the domain primes and
         # the commas are the temperament's (shown with temperament_boxes), target-
@@ -1446,7 +1505,11 @@ class _GridBuilder:
         self.node_x = label_w + GAP
         self.node_edge = self.node_x + TOGGLE  # the node's content-facing (right) edge
         content_x0 = self.node_x + TOGGLE + GAP
+        return col_bands, content_x0
 
+    def _define_row_bands(self, show_counts, show_domain_quantities, show_domain_units,
+                          show_temp, show_tuning):
+        """Define the row bands (key, natural height, present, collapsible, label) and the captioned-row set."""
         # Row bands top-to-bottom: (key, natural height, present, collapsible, label), laid
         # out below by the same running-cursor rule as the columns. Defined here, ahead of
         # that layout, so each column's width can reserve room for its present rows' captions.
@@ -1499,7 +1562,10 @@ class _GridBuilder:
         # keep each of these within MAX_CAPTION_LINES (see _caption_floor in the loop)
         self.present_caption_rows = frozenset(
             key for key, _h, present, _c, _l in row_bands if present and key in CAPTIONED_ROWS)
+        return row_bands
 
+    def _layout_columns(self, col_bands, content_x0):
+        """Lay the column bands left-to-right (the running-cursor walk): col_x/col_w/content_w/total_w."""
         # each column hugs its content (a long caption widens the footprint), the columns laid
         # left to right a GAP apart — widened to TITLE_MARGIN where two columns' overhanging titles
         # would otherwise collide (see the gap rule at the foot of the loop). The element +/−
@@ -1571,6 +1637,8 @@ class _GridBuilder:
         self.ssgens_x = self.content_x.get("ssgens")  # None when the superspace generators column is hidden
         self.ssprimes_x = self.content_x.get("ssprimes")  # None when the superspace primes column is hidden
 
+    def _resolve_tile_extras(self, show_ranges, show_tuning):
+        """Reserve the nested tile-control heights (ranges chart, box 𝐋/𝒄/𝒘, optimization box, approach radio)."""
         # The generator tuning-ranges box (the chart + its mode selector) nests at the bottom
         # of the generator tuning map tile when tuning_ranges is on. Its extra height is
         # reserved in the tuning row (below) so the rows beneath drop clear of it rather than
@@ -1649,7 +1717,10 @@ class _GridBuilder:
             "weight": self.slope_extra,      # box 𝒘: the weight-slope chooser
             "damage": self.opt_extra + self.approach_extra,  # optimization controls + the approach radio band
         }
+        return tile_extra
 
+    def _init_row_geometry(self, header_h):
+        """Seat the header/fan anchors and initialize the per-row geometry maps; returns the first row band's top y."""
         self.header_y = 0
         self.col_node_y = header_h + (GAP - TOGGLE) / 2  # the column toggle sits just under the header text
         # Branching (trunk/bus/verticals) starts just below the column nodes so no
@@ -1679,7 +1750,10 @@ class _GridBuilder:
         # drawing all of them, converged, while it's folded, so the fold animates as a merge
         self.row_matlabel_top = {}  # y of the column-label band when reserved (one MATLABEL_H slot above
         self.row_int_handle_top = {}  # y of the interval drag-handle band (above the column labels, when drag-to-combine is on)
+        return rows_top_y
 
+    def _resolve_ptext_strings(self, generator_tuning, target_override):
+        """Build the plain-text value strings from the grid's own derived quantities."""
         # pass the held intervals + any frozen manual tuning so the plain text builds the SAME
         # tuning the grid does (held-just sizes, frozen-tuning maps) — the two views can't diverge.
         # The superspace flag adds the chapter-9 superspace tile strings (B_L, M_L, M_jL, 𝒈ₗ / 𝒕ₗ
@@ -1713,6 +1787,8 @@ class _GridBuilder:
                                                                        if self.show_superspace else None)))
                          if self.show_ptext else {})
 
+    def _layout_rows(self, row_bands, tile_extra, rows_top_y, show_charts):
+        """Lay the row bands top-to-bottom (the running-cursor walk): row_y/tile_h/total_h + the fan-out bus."""
         y = rows_top_y
         for key, natural, present, collapsible, label in row_bands:
             if not present:
@@ -1807,6 +1883,8 @@ class _GridBuilder:
         # cardinality simply has the already-split sub-lines threading through it.
         self.fanout_y = self.branch_top_y + self.FAN
 
+    def _init_group_geometry(self):
+        """Define the value-group geometry maps (element names, left edges, counts, ratios) and the +/− stubs."""
         # The value groups share an element name (for cell ids), a left-edge accessor, a fanned
         # element count, and the operand of their just log₂ (a bare prime, or a comma/target
         # ratio). Defined here — ahead of the cells, the EBK pass and the column_axis fan — so the
