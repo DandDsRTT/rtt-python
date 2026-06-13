@@ -4489,8 +4489,10 @@ def test_adding_an_interval_of_interest_opens_a_blank_green_draft_column():
     assert cells["interest:pending"].text == "?/?" and cells["interest:pending"].pending
     assert all(cells[f"cell:interest:{p}:0"].text == "" and cells[f"cell:interest:{p}:0"].pending
                for p in range(3))
-    # the draft has no size cells (undefined until valid), like the comma draft
-    assert "tuning:interest:0" not in cells
+    # adding the FIRST interval lights every row the column crosses: the derived rows get blank
+    # green placeholders at the draft column too, so it reads green top-to-bottom (not just the ket)
+    assert cells["tuning:interest:draft"].pending and cells["tuning:interest:draft"].text == ""
+    assert cells["cell:imapped:0:draft"].pending  # the mapped-list draft slot
     # the + rides one slot past the draft column; the draft can be cancelled with a −
     assert cells["interest_plus"].x > cells["interest:pending"].x
     assert "interest_minus:pending" in cells
@@ -4530,7 +4532,9 @@ def test_adding_a_held_interval_opens_a_blank_green_draft_column():
     assert cells["held:pending"].text == "?/?" and cells["held:pending"].pending
     assert all(cells[f"cell:held:{p}:0"].text == "" and cells[f"cell:held:{p}:0"].pending
                for p in range(3))
-    assert "tuning:held:0" not in cells  # no size cells until valid
+    # the derived rows green the draft column too now (blank placeholders), like the interest draft
+    assert cells["tuning:held:draft"].pending and cells["tuning:held:draft"].text == ""
+    assert cells["cell:hmapped:0:draft"].pending
     assert cells["held_plus"].x > cells["held:pending"].x
     assert "held_minus:pending" in cells  # the draft's − cancels it
     assert cells["count:held"].text == "ℎ = 0"  # the draft is not a committed held interval
@@ -6713,46 +6717,58 @@ def _barbados_ss_identity(**overrides):
 
 
 def test_every_derived_matrix_row_greens_its_draft_column():
-    # Adding an interval opens a DRAFT column, which must read green top-to-bottom across every
-    # derived matrix row whose tile it crosses — the projection band (P·T / P·H / P·interest /
-    # P·V), the scaling factors (λ over V), and the chapter-9 superspace rows (B_L·v, M_s→L·v,
-    # P_L·v). Each of those used to hand-write its own per-list loop and several FORGOT the draft
-    # slot, so a draft column went blank in those rows (projection / scaling / the whole superspace
-    # block). Emission now flows through one pending-aware emitter per band (_emit_mapped_grid and
-    # the ss-lists loop), so the existence of the tile is enough — this guards that no derived row
-    # can drop the draft slot again as more rows are added. BARBADOS (2.3.13/5) lights the whole
-    # superspace block (dL = 4, rL = 3); projection + optimization light the projection band.
+    # Adding an interval opens a DRAFT column that must read green top-to-bottom across EVERY value
+    # row the column crosses — INCLUDING when it's the first interval of its kind (nothing committed
+    # yet). Two bugs broke this: held/interest declared their derived rows only once an interval had
+    # committed (so a first draft left ~9 rows blank), and the units row never emitted a draft cell
+    # for any list. This guards both: under the maxed config (superspace + complexity weighting) the
+    # FIRST held and FIRST interest draft green every value row of their column (units included), and
+    # so do the target and comma drafts. BARBADOS lights the superspace block; minimax-ES (an all-
+    # interval, complexity-weighted scheme) lights the prescaling / complexity rows.
     s = settings.defaults()
-    s.update(projection=True, nonstandard_domain=True, optimization=True, interest=True)
-    b = spreadsheet._GridBuilder(
-        service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), s,
-        interest=[(-2, 0, 1), (1, 1, -1)], pending_interest=[None, None, None],
-        held_vectors=[(1, 0, 0)], pending_held=[None, None, None],
-        target_override=["3/2"], pending_target=[None, None, None],
-        pending_comma=[None, None, None],
-    )
-    lay = b.layout()
-    assert b.show_superspace and b.show_ss_projection and b.show_unchanged  # the config is fully lit
-    pending = [c for c in lay.cells if c.pending]
-    # the x of each interval list's draft column (one past its committed sub-columns)
-    draft_x = {"targets": b.target_left(b.k), "interest": b.interest_left(b.mi),
-               "held": b.held_left(b.nh), "commas": b.comma_left(b.nc)}
-    # every value row that runs over interval columns must green the draft — the derived matrix rows
-    # this rework fixed PLUS the rows that were already correct (so the invariant stays complete)
-    rows = ("vectors", "mapping", "tuning", "just", "retune",
-            "projection", "scaling_factors", "ss_vectors", "ss_mapping", "ss_projection")
-    checked = 0
-    for rkey in rows:
-        if rkey not in b.row_y:
-            continue
-        top, h = b.tile_top[rkey], b.tile_h[rkey]
-        for ckey, x in draft_x.items():
-            if (rkey, ckey) not in b.declared_tiles:
-                continue  # that list has no tile in this row (e.g. scaling is the V column only)
-            hits = [c for c in pending if abs(c.x - x) < 6 and top - 1 <= c.y <= top + h + 1]
-            assert hits, f"{rkey} × {ckey}: the draft column is not greened (the regressed bug)"
+    for k, v in list(s.items()):
+        if isinstance(v, bool):
+            s[k] = True  # every show toggle on, to maximise the rows in play
+    barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    VALUE_ROWS = ("quantities", "vectors", "units", "mapping", "tuning", "just", "retune",
+                  "prescaling", "complexity", "projection", "scaling_factors",
+                  "ss_vectors", "ss_mapping", "ss_projection")
+    STRUCTURAL = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matlabel", "colgrip", "int_drag"}
+
+    def assert_draft_greened(b, lst, committed, minimum):
+        # every DECLARED value-row tile of `lst`'s column must hold a cell (value OR unit) at the
+        # draft column — one slot past the `committed` sub-columns. A blank there is exactly the bug.
+        lay = b.layout()
+        left = {"held": b.held_left, "interest": b.interest_left,
+                "targets": b.target_left, "commas": b.comma_left}[lst]
+        dx = left(committed)
+        checked = 0
+        for rkey in VALUE_ROWS:
+            if rkey not in b.row_y or (rkey, lst) not in b.declared_tiles:
+                continue
+            top, h = b.tile_top[rkey], b.tile_h[rkey]
+            hit = any(abs(c.x - dx) < 7 and top - 1 <= c.y <= top + h + 1 and c.kind not in STRUCTURAL
+                      for c in lay.cells)
+            assert hit, f"first {lst} draft: row {rkey!r} is blank at the draft column (the bug)"
             checked += 1
-    assert checked >= 20  # the projection + scaling + three superspace rows × their open lists
+        assert checked >= minimum, f"{lst}: only {checked} rows checked (config not fully lit?)"
+
+    # the FIRST held and FIRST interest interval (nothing committed) — the exact reported failure
+    b = spreadsheet._GridBuilder(barb, s, tuning_scheme="minimax-ES",
+                                 held_vectors=(), pending_held=[None, None, None],
+                                 interest=(), pending_interest=[None, None, None])
+    assert b.show_superspace and "prescaling" in b.row_y and "complexity" in b.row_y
+    assert_draft_greened(b, "held", 0, minimum=10)
+    assert_draft_greened(b, "interest", 0, minimum=10)
+
+    # the target and comma drafts green every value row too (the units row included — its draft cell
+    # was also missing for targets). A target-based scheme so a target draft is allowed.
+    b2 = spreadsheet._GridBuilder(barb, s,
+                                  target_override=["3/2", "5/4"], pending_target=[None, None, None],
+                                  pending_comma=[None, None, None])
+    assert ("units", "targets") in b2.declared_tiles  # the units tile the targets draft must fill
+    assert_draft_greened(b2, "targets", b2.k, minimum=6)
+    assert_draft_greened(b2, "commas", b2.nc, minimum=6)
 
 
 def test_nonstandard_domain_adds_superspace_columns_between_gens_and_primes():

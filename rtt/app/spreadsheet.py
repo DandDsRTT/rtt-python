@@ -1222,19 +1222,17 @@ class _GridBuilder:
 
     def _declare_interval_column_tiles(self):
         """Declare the interest/held/detempering column tiles (and resolve the detempering data)."""
-        # a pending draft alone (no committed intervals) declares just the two tiles that host
-        # it — the editable vector ket and its "?" ratio header; the derived rows (sizes,
-        # complexity, …) have no value until it commits, so they stay undeclared (no empty
-        # bracketed panels). With at least one committed interval the full set declares, and the
-        # draft rides as a blank slot within those tiles, exactly as the pending comma does.
+        # the WHOLE column declares on the SHOWN count (committed + any open draft) — so opening a
+        # draft (even the first interval, with nothing committed yet) declares every row the column
+        # crosses, and the draft greens top-to-bottom across all of them, exactly as the comma and
+        # target columns do. The committed-cell loops emit nothing while the count is 0; each row's
+        # pending slot fills the draft column. (Gating the derived rows on the committed count
+        # instead left a first draft with blank panels in 9 of the rows — the bug this fixes.)
         interest_tiles = ()
         if self.mi_shown:
             interest_tiles += (
                 ("block:vec:interest", "vectors", "interest"),
                 ("block:interest", "quantities", "interest"),
-            )
-        if self.mi:
-            interest_tiles += (
                 ("block:imapped", "mapping", "interest"),
                 ("block:tuning:interest", "tuning", "interest"),
                 ("block:just:interest", "just", "interest"),
@@ -1244,17 +1242,12 @@ class _GridBuilder:
                 ("block:complexity:interest", "complexity", "interest"),
             )
         # the held interval column's tiles: a user-editable interval list, like the intervals of
-        # interest. Empty by default. A pending draft alone declares just the two tiles that host
-        # it (the ket + its "?" ratio); the derived rows declare once an interval commits — the
-        # same split the interest column uses, so a draft never leaves empty bracketed panels.
+        # interest — declared on the shown count too, so a draft greens every derived row.
         held_tiles = ()
         if self.nh_shown:
             held_tiles += (
                 ("block:held", "quantities", "held"),
                 ("block:vec:held", "vectors", "held"),
-            )
-        if self.nh:
-            held_tiles += (
                 ("block:hmapped", "mapping", "held"),       # M·held in generator coords
                 ("block:tuning:held", "tuning", "held"),    # tempered sizes (= just, since held)
                 ("block:just:held", "just", "held"),        # just sizes
@@ -1442,12 +1435,12 @@ class _GridBuilder:
             # above; ss_mapping's stays for the real M_L in its ssprimes column.)
             self.declared_tiles -= {("ss_mapping", "gens"), ("ss_just_mapping", "ssprimes"),
                                     ("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
-        # the superspace held / interest tiles only exist to lift an actual held / interest list —
-        # with none present (nh / mi == 0) they'd be empty boxes, so drop them (cells, panel,
-        # caption, brackets and fold toggle all go with the tile).
-        if not self.nh:
+        # the superspace held / interest tiles only exist to lift an actual held / interest list (or
+        # an open draft of one) — with none shown (nh_shown / mi_shown == 0) they'd be empty boxes,
+        # so drop them (cells, panel, caption, brackets and fold toggle all go with the tile).
+        if not self.nh_shown:
             self.declared_tiles -= {("ss_vectors", "held"), ("ss_mapping", "held")}
-        if not self.mi:
+        if not self.mi_shown:
             self.declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
 
     def _define_col_bands(self, show_domain_quantities, show_domain_units, show_temp,
@@ -2999,7 +2992,10 @@ class _GridBuilder:
             # superspace columns take /gLᵢ over the superspace generators and /pᵢ over the
             # superspace primes (true primes p — NOT the on-domain b, even when nonstandard).
             # Every ratio column is dimensionless /1: all of V = C|U (each sub-column), each
-            # detempering generator, the targets, the interest kets and the held intervals.
+            # detempering generator, the targets, the interest kets and the held intervals. The
+            # interval lists use their SHOWN count so an open draft column gets its /1 too (the
+            # consolidated V already does, via nv_shown) — otherwise the units row alone goes blank
+            # under the draft while every other row greens it.
             column_units = {
                 "gens": (self.r, self.gen_left, lambda i: f"/g{_sub(i + 1)}"),
                 "primes": (self.d, self.prime_left, lambda i: f"/{self.domain_label}{_sub(i + 1)}"),
