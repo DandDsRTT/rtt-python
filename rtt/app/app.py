@@ -3588,21 +3588,23 @@ def index() -> None:
     # release the GIL, so the loop keeps answering pings and the scrim can paint), warming the tuning
     # memo; render() then rebuilds on the loop from that warm cache (fast). A scrim is revealed after
     # a short delay so the common fast edit never flashes it, and swallows clicks while it's up.
-    busy_timer = [None]
     render_inflight = [False]
     render_again = [False]
     render_after = [None]  # a continuation to run on the loop right after the offloaded render
 
-    def _arm_busy():
-        # reveal the scrim after _BUSY_DELAY unless the build lands first (the timer is cancelled)
-        if busy_timer[0] is None:
-            busy_timer[0] = ui.timer(
-                _BUSY_DELAY, lambda: busy_overlay.classes(add="rtt-busy-on"), once=True)
+    async def _deferred_show():
+        # reveal the scrim only if the build is still running after _BUSY_DELAY (a fast edit
+        # cancels this first, so it never flashes). A plain asyncio task — NOT ui.timer, which
+        # needs a UI *slot* context that background_tasks.create doesn't carry into this coroutine
+        # (creating one here raised and aborted the whole offloaded render). Toggling a class on
+        # the already-built overlay needs only the client context, which IS carried over.
+        try:
+            await asyncio.sleep(_BUSY_DELAY)
+        except asyncio.CancelledError:
+            return
+        busy_overlay.classes(add="rtt-busy-on")
 
     def _clear_busy():
-        if busy_timer[0] is not None:
-            busy_timer[0].cancel()
-            busy_timer[0] = None
         busy_overlay.classes(remove="rtt-busy-on")
 
     def _request_render(after=None):
@@ -3632,7 +3634,7 @@ def index() -> None:
             again = True
             cont = after
             while again:
-                _arm_busy()
+                show = asyncio.create_task(_deferred_show())  # arms the scrim after _BUSY_DELAY
                 prev = last_lay[0].identities if last_lay[0] is not None else None
                 try:
                     # warm the tuning memo off the loop; the result is discarded — render() below
@@ -3642,6 +3644,7 @@ def index() -> None:
                 except Exception:
                     _log.exception("off-loop layout warm-up failed; rendering on the loop")
                 finally:
+                    show.cancel()
                     _clear_busy()
                 render()
                 if cont is not None:
