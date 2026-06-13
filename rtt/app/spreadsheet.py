@@ -2826,13 +2826,13 @@ class _GridBuilder:
         box Block is DEFERRED (collected, not appended now) so it layers on top of the grey panels."""
         box_y = top + BOX_OUTER
         self._control_region_boxes.append(Block(box_id, self.col_x[ckey], box_y, self.col_w[ckey],
-                                                 BOX_INNER + content_h + CTRL_LABEL_GAP, boxed=True))
+                                                 2 * BOX_INNER + content_h, boxed=True))  # BOX_INNER pad top AND bottom
         return self.col_x[ckey] + BOX_INNER, box_y + BOX_INNER
 
     def control_region_band_h(self, content_h):
         """The full band a :func:`control_region` of ``content_h`` reserves — the box plus its
         BOX_OUTER vertical padding above and below (the counterpart of :func:`control_band_h`)."""
-        return 2 * BOX_OUTER + BOX_INNER + content_h + CTRL_LABEL_GAP
+        return 2 * BOX_OUTER + 2 * BOX_INNER + content_h
 
     def emit_all_interval_check(self, check_x, ctrl_y) -> None:
         """the all-interval checkbox + its caption, seated on a control row at ctrl_y: an OPTION_BOX_PX
