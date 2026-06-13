@@ -191,6 +191,22 @@ def test_select_none_turns_nonstandard_domain_off_on_a_standard_basis():
     assert editor.settings["nonstandard_domain"] is False
 
 
+def test_disable_hidden_settings_turns_off_layers_past_the_chapter():
+    # sliding the guide-chapter slider DOWN doesn't just hide the advanced controls — it disables
+    # them, turning off any layer the chapter no longer reveals so its grid content drops out. A
+    # revealed layer is left on; it's a view prune, so nothing lands on the undo stack.
+    editor = Editor()
+    editor.set_show("weighting", True)            # ch3
+    editor.set_show("nonstandard_domain", True)   # ch9
+    editor.set_show("counts", True)               # ch2
+    undo_depth = len(editor._undo_stack)
+    editor.disable_hidden_settings(2)             # the slider lands on ch2
+    assert editor.settings["weighting"] is False           # ch3 > 2 -> disabled
+    assert editor.settings["nonstandard_domain"] is False  # ch9 > 2 -> disabled
+    assert editor.settings["counts"] is True               # ch2 -> still revealed, left on
+    assert len(editor._undo_stack) == undo_depth           # a view prune, not an undoable edit
+
+
 def test_set_all_show_only_flips_the_keys_it_is_given():
     # the panel narrows select-all/none to the chapter-revealed toggles, so set_all_show flips only
     # the keys it's handed — an unrevealed (hidden, disabled) toggle is left untouched.

@@ -614,6 +614,21 @@ async def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_defaul
     assert reading.text == "4: Exploring temperaments"
 
 
+async def test_sliding_the_chapter_down_disables_the_advanced_layers_in_the_grid(user: User) -> None:
+    # a hidden setting is DISABLED, not just hidden: with the slider at ★ and select-all on, an
+    # advanced layer (units, ch5) renders its content; sliding the slider down to ch2 turns that
+    # layer off, so its content drops out of the grid (not merely its panel control).
+    await user.open("/")
+    slider = next(iter(user.find(marker="chapterslider").elements))
+    slider.set_value(show_settings.CHAPTER_STAR)            # reveal everything (fires on_chapter_change)
+    next(iter(user.find(marker="showall").elements)).set_value(True)  # select-all over all revealed
+    await user.should_see(marker="units:mapping:primes")   # the per-box "units: …" line is now shown
+    slider.set_value(2)                                    # slide down to ch2
+    await user.should_not_see(marker="units:mapping:primes")  # units (ch5) is disabled -> content gone
+    # the readout tracked the move, and the master is still "all (available) on" for ch2
+    assert next(iter(user.find(marker="chapterreading").elements)).text == "2: Mappings"
+
+
 async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cells(user: User) -> None:
     # the user's own action: open the live page, then click the gridded-values part to turn it OFF.
     # The dummy-tile test above only checks the PART's class flips; this drives the whole reconcile

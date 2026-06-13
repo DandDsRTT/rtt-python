@@ -2281,7 +2281,11 @@ def index() -> None:
     def on_chapter_change(v):
         chapter[0] = _clamp_chapter(v)
         _doc_store()[_CHAPTER_KEY] = chapter[0]
-        apply_chapter()
+        # a hidden setting is DISABLED, not just hidden: turn off any layer the new chapter no longer
+        # reveals so its grid content drops out (raising the slider re-reveals the control, left off).
+        editor.disable_hidden_settings(chapter[0])
+        apply_chapter()  # panel: reveal/hide + enable/disable the controls and sync the readout
+        render()         # grid: drop the now-disabled layers' content (+ sync the checkboxes off)
 
     # The Editor owns the whole document — temperament, view selections, the Show
     # settings (editor.settings) and the folded rows/columns/tiles (editor.collapsed) —
@@ -3932,7 +3936,7 @@ def index() -> None:
                             value=all(editor.settings[k] for k in show_settings.IMPLEMENTED),
                             on_change=lambda e: on_select_all(e.value)) \
                             .props("dense size=xs color=grey-8").classes("rtt-show-item") \
-                            .tooltip(tooltips.CHROME_HELP["select_all"])
+                            .mark("showall").tooltip(tooltips.CHROME_HELP["select_all"])
                         # the dark-mode toggle rides beside select-all (both are app chrome, not Show
                         # layers): a sun/moon icon button showing the theme a click would switch to.
                         dark_btn = ui.button(on_click=on_dark_toggle, color=None) \

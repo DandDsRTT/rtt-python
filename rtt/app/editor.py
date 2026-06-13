@@ -1345,6 +1345,21 @@ class Editor:
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
 
+    def disable_hidden_settings(self, chapter: int) -> None:
+        """Turn OFF every Show toggle the guide-chapter slider has hidden (its reveal chapter is past
+        ``chapter``), so a hidden layer's content drops out of the grid — the slider doesn't merely
+        hide the control, it disables the setting. A view-driven prune (the slider is a viewing
+        preference, not a document edit), so it is NOT snapshotted for undo; raising the slider
+        re-reveals the control but leaves it off for the user to turn back on. Turning off every
+        unrevealed key together keeps the sub-control hierarchy consistent (a child's reveal chapter
+        is never before its parent's), and resets to basic tuning if alt. complexity was hidden away."""
+        had_alt_complexity = self.settings["alt_complexity"]
+        for key in self.settings:
+            if self.settings[key] and show_settings.reveal_chapter(key) > chapter:
+                self.settings[key] = False
+        if had_alt_complexity and not self.settings["alt_complexity"]:
+            self._reset_to_basic_tuning()
+
     def toggle_collapsed(self, item: str) -> None:
         """Fold or unfold one row, column, or tile (``"row:tuning"``, ``"col:targets"``,
         ``"tile:mapping:primes"``) — an undoable change to the expand/collapse state."""
