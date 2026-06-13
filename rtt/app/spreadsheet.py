@@ -1541,7 +1541,7 @@ class _GridBuilder:
             ("ssprimes", 2 * BRACKET_W + self.dL * COL_W + 2 * self.matlabel_ssprimes_w, self.show_superspace, True),
             ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
-            ("commas", 2 * BRACKET_W + self.nv_shown * COL_W + (V_SPLIT_GAP if (self.show_unchanged and self.nc_shown > 0) else 0) + self.empty_comma_w, show_temp, True),
+            ("commas", self._commas_band_w(self.nc_shown), show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
             ("targets", 2 * BRACKET_W + self.k_shown * COL_W, show_tuning and self.targets_in_use, True),
             # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
@@ -2111,6 +2111,30 @@ class _GridBuilder:
         return key in self.col_x and f"col:{key}" not in self.collapsed
     # the value cells), so column labels (𝐜₁, 𝒕₁, …) can be emitted at a fixed row-relative y
 
+    def _commas_band_w(self, nc_count):
+        """The commas/V column's natural footprint for ``nc_count`` comma sub-columns (the
+        real commas, plus any draft). Factored out of the column band so caption wrapping can
+        price the column at its RESTING comma count — see :meth:`_caption_wrap_w`."""
+        nv = nc_count + self.nu
+        split = V_SPLIT_GAP if (self.show_unchanged and nc_count > 0) else 0
+        empty = (_min_width_for_lines("nullity", 1)
+                 if (self.show_unchanged and nc_count == 0) else 0)
+        return 2 * BRACKET_W + nv * COL_W + split + empty
+
+    def _caption_wrap_w(self, ckey):
+        # the width a caption wraps within: the column's OPEN footprint, EXCEPT the commas/V
+        # column is priced at its RESTING comma count while a mapping-row − hover previews a
+        # born comma (ghost_comma). That transient ghost widens the column by one cell; without
+        # this, every commas-column caption ("scaling factors", "projection", …) could rewrap
+        # from two lines to one, shrinking those tiles and lifting the hovered − button out from
+        # under the cursor. A real comma DRAFT (self.pending) DOES count — the layout grows on
+        # that deliberate click, so its caption may rewrap as usual.
+        if ckey == "commas" and self.ghost_comma:
+            resting = self._commas_band_w(self.nc + (1 if self.pending is not None else 0))
+            return max(resting, self._caption_floor(ckey),
+                       self._control_floor(ckey), self._symbol_floor(ckey))
+        return self.open_col_w[ckey]
+
     def caption_band(self, key, folded):
         # the row's caption band is sized to its tallest (wrapped) caption, so the longest
         # name fits within its tile rather than spilling off a narrow column. Only columns
@@ -2122,7 +2146,7 @@ class _GridBuilder:
         # no captions at all.
         if not (self.show_captions and key in CAPTIONED_ROWS and not folded):
             return 0
-        lines = [_wrap_lines(self.effective_captions[(key, c)], self.open_col_w[c]) for c in self.col_x
+        lines = [_wrap_lines(self.effective_captions[(key, c)], self._caption_wrap_w(c)) for c in self.col_x
                  if (key, c) in self.effective_captions and (key, c) in self.declared_tiles]
         # the V counts tile carries TWO names — "nullity" over the comma half, "unchanged interval
         # count" over the unchanged half — each wrapped within its own (narrower) sub-area, so the
