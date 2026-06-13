@@ -243,21 +243,33 @@ def weight_slope_of(scheme) -> str:
 def scheme_with_complexity(scheme, name: str):
     """``scheme`` with its whole complexity shape set to the predefined complexity ``name``
     (a :data:`COMPLEXITY_NAMES` key) — the master chooser in box 𝒄, which overrides the box 𝐋
-    prescaler and box 𝒄 norm. lols/lols-E hold the octave just (log-odd-limit); every other
-    name clears the held octave, since the held interval is the complexity's own (trait 0).
-    Keeps the optimization power and damage slope. Returns a resolved spec."""
+    prescaler and box 𝒄 norm. lols/lols-E hold the octave just (log-odd-limit), so they set the
+    held octave. Keeps the optimization power and damage slope. Returns a resolved spec.
+
+    A SCHEME-level held interval (the defining held octave of ``held-octave minimax-ES``, or any
+    held-X trait) survives a complexity swap — just as the destretched-octave modifier already
+    does — so e.g. held-octave minimax-ES + sopfr → held-octave minimax-sopfr-S, octave still
+    held. The held octave is only cleared when it was the OLD complexity's own internal fold
+    (lols/ols, marked by their odd-limit rough); swapping away from such a complexity legitimately
+    drops it."""
+    spec = resolve_tuning_scheme(scheme)
     traits, held = complexity_name_traits(COMPLEXITY_NAMES[name])  # only lols/ols hold an interval
-    return replace(resolve_tuning_scheme(scheme), held_intervals=held, **traits)  # non-lols clears it
+    if held is None:
+        held = None if spec.complexity_rough else spec.held_intervals
+    return replace(spec, held_intervals=held, **traits)
 
 
 def _complexity_signature(spec) -> tuple:
     """The traits that distinguish the predefined complexities: norm power, prescaler powers,
-    size factor, and whether the octave is held (lols vs lils). Two schemes share a complexity
-    name iff they share this signature."""
+    size factor, and the odd-limit rough (lols/ols vs lils/ils — the complexity's OWN held-octave
+    fold). Two schemes share a complexity name iff they share this signature. The rough — a
+    complexity trait — distinguishes lols from lils without folding in a scheme-level held octave:
+    a held octave that is a SCHEME modifier (held-octave minimax-ES) must not change the complexity
+    identity, or no named complexity would match and the chooser would read 'custom'."""
     return (
         spec.complexity_norm_power, spec.complexity_log_prime_power,
         spec.complexity_prime_power, spec.complexity_size_factor,
-        spec.held_intervals == "octave",
+        bool(spec.complexity_rough),
     )
 
 

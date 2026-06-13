@@ -58,9 +58,8 @@ def _complexity_traits_from_name(name: str) -> dict:
     complexity name encodes, following source.m's sequential dash-delimited token overrides.
 
     ``E`` = Euclidean (norm power 2); ``copfr`` = unweighted, ``lopfr``/``lp``/[blank] =
-    log-prime (Tenney), ``sopfr``/``prod`` = prime (Benedetti); ``ils``/``ols``/``lils``/
-    ``lols``/``limit`` add the size factor (Weil-style); ``ols``/``lols``/``odd`` also hold
-    the octave justly."""
+    log-prime, ``sopfr``/``prod`` = prime; ``ils``/``ols``/``lils``/``lols``/``limit`` add
+    the size factor; ``ols``/``lols``/``odd`` also hold the octave justly."""
     padded = "-" + name.replace(" ", "-") + "-"
 
     def has(token: str) -> bool:
@@ -133,53 +132,17 @@ def complexity_name_traits(name: str) -> tuple[dict, str | None]:
     return traits, held
 
 
-# Historical tuning-scheme names, each expressed as the equivalent systematic name.
-_ORIGINAL_NAME_SCHEMES = {
-    "minimax": "held-octave OLD minimax-U",
-    "least squares": "held-octave OLD miniRMS-U",
-    "TOP": "minimax-S",
-    "TIPTOP": "minimax-S",
-    "T1": "minimax-S",
-    "TOP-max": "minimax-S",
-    "Tenney": "minimax-S",
-    "TE": "minimax-ES",
-    "Tenney-Euclidean": "minimax-ES",
-    "T2": "minimax-ES",
-    "TOP-RMS": "minimax-ES",
-    "CTE": "held-octave minimax-ES",
-    "Constrained Tenney-Euclidean": "held-octave minimax-ES",
-    "POTE": "destretched-octave minimax-ES",
-    "POTOP": "destretched-octave minimax-S",
-    "POTT": "destretched-octave minimax-S",
-    "Frobenius": "minimax-E-copfr-S",
-    "BOP": "minimax-sopfr-S",
-    "Benedetti": "minimax-sopfr-S",
-    "BE": "minimax-E-sopfr-S",
-    "Benedetti-Euclidean": "minimax-E-sopfr-S",
-    "Weil": "minimax-lils-S",
-    "WOP": "minimax-lils-S",
-    "WE": "minimax-E-lils-S",
-    "Weil-Euclidean": "minimax-E-lils-S",
-    # 2024 convention: "constrained" = held (as CTE already is), so Kees/KE/CWE are HELD-octave,
-    # i.e. the odd-limit (lols/E-lols) schemes — minimax-lols-S ≡ held-octave minimax-lils-S. The
-    # old destretched-octave readings are now named POWOP/POWE; "constrained" mapping to destretched
-    # was internally inconsistent. (alternative-complexities MUST-GET-RIGHT 21; "constrained
-    # Weil-Euclidean" expands CWE, and constrained = held.)
-    "Kees": "minimax-lols-S",
-    "KOP": "minimax-lols-S",
-    "KE": "minimax-E-lols-S",
-    "Kees-Euclidean": "minimax-E-lols-S",
-    "CWE": "minimax-E-lols-S",
-    "constrained Weil-Euclidean": "minimax-E-lols-S",
-}
-
-
 def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
     """Build a spec from a systematic tuning-scheme name like ``"{2/1, ...} minimax-E-copfr-S"``:
     the ``mini{max,RMS,average}`` prefix gives the optimization power, an optional ``{...}``
     gives the target intervals, and the trailing ``U``/``S``/``C`` plus complexity tokens
     give the damage weighting. An optional ``held-<interval(s)>`` prefix names intervals
-    to tune justly."""
+    to tune justly.
+
+    Only systematic names resolve. A non-systematic / historical / community scheme name
+    (these are banned in this codebase) ends in something other than a weight-slope letter,
+    so it is rejected with a clear error rather than silently mis-resolving."""
+    original = name
     # Peel ``held-X`` / ``destretched-X`` prefixes in EITHER order (and any number) — reading them
     # order-dependently silently dropped a held- token written after a destretched- one, hiding a
     # combination the optimizer must instead refuse (destretching breaks a held interval).
@@ -200,7 +163,7 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
     target = target_match.group(0) if target_match else None
     # a bare name with no target-set prefix and a SIMPLICITY slope is an all-interval scheme — its
     # damage is minimized over every interval, which by duality is a dual-norm optimization over the
-    # primes (minimax-S = TOP, minimax-ES = TE, and likewise miniRMS-S / miniaverage-S, all of whose
+    # primes (minimax-S, minimax-ES, and likewise miniRMS-S / miniaverage-S, all of whose
     # over-all-intervals optima are well-defined). Test the trailing slope letter, NOT "S" anywhere:
     # "miniRMS" contains an S of its own, so the old `"minimax" in name and "S" in name` test caught
     # only the minimax forms and left miniRMS-S / miniaverage-S resolving to a target-less spec the
@@ -215,10 +178,18 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
         if "nonprime-based" in name
         else "prime-based" if "prime-based" in name else ""
     )
+    slope_letter = name.strip()[-1:]
+    if slope_letter not in _SLOPE_BY_LETTER:
+        raise ValueError(
+            f"{original!r} is not a recognized systematic tuning-scheme name. A systematic "
+            f"name ends in a weight-slope letter (U, S, or C), e.g. 'minimax-S', "
+            f"'held-octave minimax-ES'. Non-systematic / historical / community scheme names "
+            f"are not accepted."
+        )
     return TuningSchemeSpec(
         optimization_power=power,
         target_intervals=target,
-        damage_weight_slope=_SLOPE_BY_LETTER[name.strip()[-1]],
+        damage_weight_slope=_SLOPE_BY_LETTER[slope_letter],
         held_intervals=held,
         destretched_interval=destretched,
         nonprime_basis_approach=nonprime_approach,
@@ -227,10 +198,11 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
 
 
 def resolve_tuning_scheme(spec: TuningSchemeSpec | str) -> TuningSchemeSpec:
-    """A scheme given as a :class:`TuningSchemeSpec`, a systematic name, or a historical
-    name (e.g. ``"TOP"``, ``"TE"``, ``"CTE"``) resolved to a :class:`TuningSchemeSpec`."""
+    """A scheme given as a :class:`TuningSchemeSpec` or a systematic name (e.g. ``"minimax-S"``,
+    ``"held-octave minimax-ES"``) resolved to a :class:`TuningSchemeSpec`. Only systematic names
+    resolve — a non-systematic / historical / community name raises a clear error."""
     if isinstance(spec, str):
-        return tuning_scheme_from_systematic_name(_ORIGINAL_NAME_SCHEMES.get(spec, spec))
+        return tuning_scheme_from_systematic_name(spec)
     return spec
 
 

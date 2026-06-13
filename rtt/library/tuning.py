@@ -30,8 +30,8 @@ def optimize_generator_tuning_map(
 ) -> tuple[float, ...]:
     """The generator tuning map minimizing target interval damage under the scheme.
 
-    ``spec`` may be a :class:`TuningSchemeSpec`, a systematic tuning-scheme name string,
-    or a historical scheme name (e.g. ``"TOP"``, ``"TE"``, ``"CTE"``).
+    ``spec`` may be a :class:`TuningSchemeSpec` or a systematic tuning-scheme name string
+    (e.g. ``"minimax-S"``, ``"held-octave minimax-ES"``).
 
     ``prescaler_override`` (a d-tuple) bypasses the spec's trait-derived prescaler
     diagonal, riding through into the damage-weight complexities; ``None`` keeps the
@@ -188,7 +188,7 @@ def _optimize_augmented_all_interval(
     d: int,
     prescaler_override=None,
 ) -> np.ndarray:
-    """All-interval schemes with a size factor (Weil/lils family) augment the system with a
+    """All-interval schemes with a size factor (the lils/ils family) augment the system with a
     phantom prime: an extra generator and a mapping row ``(size_factor·log2(p), -1)``, the
     phantom tuned justly to 0 and weighted 1. After solving, the phantom generator is dropped."""
     rank = mapping.shape[0]
@@ -520,7 +520,7 @@ def get_complexity(
 
     A nonzero ``size_factor`` augments the pre-transformed vector with one extra entry
     (the size-weighted sum, ``size_factor`` times the interval's log size), then divides
-    the norm by ``1 + size_factor`` — the Weil/lils family of complexities.
+    the norm by ``1 + size_factor`` — the lils/ils family of complexities.
 
     ``prescaler_override`` bypasses the trait-driven prescaler — a d-tuple diagonal, or a full
     d×d matrix (a non-diagonal pretransformer) the web app's editable tile rides in. A diagonal
