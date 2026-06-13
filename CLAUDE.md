@@ -72,6 +72,19 @@ all the library, service, editor and spreadsheet-layout checks — finish in ~75
   that makes a bare `pytest` silently skip the render tests — the user's own runs and CI must
   stay complete.
 
+**Render runs take turns automatically — let them queue, don't kill them.** With many agents
+in parallel, all firing the render gate at once pins every core and nobody ever finishes. So
+`tests/app/integration/conftest.py` holds **one machine-wide lock** (`/tmp/rtt-render-gate.lock`):
+any pytest session that collected render tests grabs it before running and releases it at the
+end, so render runs **serialize** — you'll see `[render-gate] … waiting our turn…` on stderr
+while another agent's run finishes, then `[render-gate] lock acquired`. That wait is correct
+and expected; **do not treat it as a hang, and do not `pkill` other agents' render runs to jump
+the queue** — just let your run wait its turn. The fast pass (`--ignore=…/test_web_render.py`)
+collects no render tests, so it never takes the lock and stays fast. The lock self-heals (a
+killed holder's lock is reclaimed) and never blocks forever (`RTT_RENDER_GATE_WAIT`, default
+3600s, then it proceeds anyway). `RTT_RENDER_GATE_NOLOCK=1` opts a run out. Don't wrap the gate
+in `/tmp` scripts to dodge the lock or sibling kills — that's the dogpile this prevents.
+
 ## Git: you're on a fast-moving team — rebase onto main, then ff-merge
 
 You work in your own worktree on a `claude/<name>` branch. Several agents run in parallel and
