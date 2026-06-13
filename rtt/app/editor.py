@@ -306,6 +306,15 @@ class Editor:
         self._state = new_state
 
     @property
+    def _real_comma_basis(self) -> tuple[tuple[int, ...], ...]:
+        """The committed comma basis with the full-rank zero-comma placeholder dropped — the basis a
+        new comma must EXTEND. At full rank (``n == 0``) ``state.comma_basis`` holds a trivial
+        ``((0,…,0),)`` by convention; appending the first real comma beside it would commit a phantom
+        ``1/1`` comma column (violating ``d = r + n``), so callers extend ``()`` instead. Mirrors the
+        ``comma_basis if n else ()`` read that ``plain_text_values`` / the spreadsheet already use."""
+        return self.state.comma_basis if self.state.n else ()
+
+    @property
     def can_undo(self) -> bool:
         return bool(self._undo_stack)
 
@@ -399,13 +408,34 @@ class Editor:
         return self.state.r > 1
 
     def _apply(self, state: TemperamentState) -> None:
-        """Make a temperament edit: snapshot for undo, abandon any pending drafts, set state."""
+        """Make a temperament edit: snapshot for undo, abandon any pending drafts, set state, and
+        drop a now-stale manual generator tuning (see :meth:`_drop_stale_manual_tuning`)."""
         self._snapshot()
         self._clear_pending()
+        old_mapping = self._state.mapping
         self.state = state
+        self._drop_stale_manual_tuning(old_mapping)
+
+    def _drop_stale_manual_tuning(self, old_mapping) -> None:
+        """A manual generator tuning is a tuple of cents read against a SPECIFIC generator basis. A
+        temperament edit that reshapes the mapping — choose-form / canonicalize, picking a preset,
+        dragging a comma — keeps the rank but changes which generators those cents describe, so the
+        frozen tuple would be silently reinterpreted into nonsense (negative or thousands-of-cents
+        primes) while the chooser still named the scheme. Drop it back to scheme-driven, so the grid
+        recomputes the optimum for the new form. The two ops that CAN preserve the sounding tuning —
+        :meth:`add_mapping_row_to` and :meth:`flip_generator` — transform the cents themselves and
+        re-assert the manual tuning after, so they don't lose it here."""
+        if self.generator_tuning is not None and self.state.mapping != old_mapping:
+            self.generator_tuning = None
+            self.manual_tuning = False
 
     def edit_mapping(self, mapping) -> None:
-        self._apply(service.from_mapping(mapping))
+        # keep a nonstandard domain when the new matrix is the same width (a cell edit, choose-form
+        # or sign flip is the same temperament-or-domain), mirroring try_edit_comma_basis_text /
+        # set_pending_comma — else from_mapping silently rebuilds the standard prime limit and
+        # reverts the temperament's basis (e.g. 2.3.13/5 -> 2.3.5).
+        domain_basis = self.state.domain_basis if mapping and len(mapping[0]) == self.state.d else None
+        self._apply(service.from_mapping(mapping, domain_basis))
 
     def edit_comma_basis(self, comma_basis, domain_basis=None) -> None:
         self._apply(service.from_comma_basis(comma_basis, domain_basis))
@@ -437,8 +467,11 @@ class Editor:
 
     def canonicalize_comma_basis(self) -> None:
         """Re-store the comma basis in canonical form (the comma-basis box's
-        ``<choose form>`` control) — an undoable edit, like :meth:`canonicalize_mapping`."""
-        self.edit_comma_basis(service.canonical_comma_basis(self.state.comma_basis))
+        ``<choose form>`` control) — an undoable edit, like :meth:`canonicalize_mapping`. Passes the
+        current domain basis so reforming a nonstandard temperament doesn't reset it to standard
+        primes (the dual of canonical_mapping's domain-preserving edit_mapping)."""
+        self.edit_comma_basis(
+            service.canonical_comma_basis(self.state.comma_basis), self.state.domain_basis)
 
     def _feed_draft(self, values, commit) -> list[int | None] | None:
         """Drive an interval-list draft (interest / held / target): store the entered
@@ -503,18 +536,26 @@ class Editor:
         self._snapshot()
         self.held_vectors = [tuple(int(x) for x in m) for m in vectors]
 
+    def _optimum_tuning(self) -> service.Tuning:
+        """The scheme's current optimal Tuning — the single solve behind every editor-side reference
+        to "the optimum" (the scheme name, the optimized flag, a stale tuning's reseed, the
+        projection's retuning). It threads the SAME arguments the grid's own solve does
+        (``spreadsheet.build``): the document's ``domain_basis`` and ch9 ``nonprime_basis_approach``
+        (so a nonstandard subgroup optimizes over ITS elements, not the standard primes — else
+        barbados freezes an 822 ¢ "octave"), the held intervals expressed in that basis (so a held
+        13/5 isn't read as 5/1), and the custom prescaler override (so a hand-edited complexity
+        diagonal reaches the optimum and ``min(⟪𝐝⟫ₚ)`` names a genuinely minimized value)."""
+        held = service.comma_ratios(self.held_vectors, self.state.domain_basis) if self.held_vectors else ()
+        return service.tuning(
+            self.state.mapping, self.tuning_scheme, self.state.domain_basis,
+            self.nonprime_basis_approach, held=held,
+            prescaler_override=self.custom_prescaler, targets=self.target_override)
+
     def _optimum_generator_tuning(self) -> tuple[float, ...]:
         """The scheme's current optimal generator tuning, respecting any held intervals and a
         typed target-list override (so re-optimizing tracks the displayed target intervals, not
-        just the named TILT/OLD set). Run over the actual domain basis and nonprime approach — the
-        same two arguments the grid's tuning takes (spreadsheet.build) — so over a nonstandard
-        (nonprime) domain the optimum matches the grid instead of silently reverting to the
-        standard primes; the held vectors stringify over that basis too (so (0,1,0) over (2,9,5)
-        renders 9/1, not 3/1, and parses back)."""
-        held = service.comma_ratios(self.held_vectors, self.state.domain_basis) if self.held_vectors else ()
-        return service.tuning(self.state.mapping, self.tuning_scheme, self.state.domain_basis,
-                              self.nonprime_basis_approach, held=held,
-                              targets=self.target_override).generator_map
+        just the named TILT/OLD set). See :meth:`_optimum_tuning` for the threaded arguments."""
+        return self._optimum_tuning().generator_map
 
     def back_to_scheme(self) -> None:
         """The projection / generator-embedding tiles' "back to scheme" button: leave a picked or
@@ -556,10 +597,13 @@ class Editor:
         cents), mirroring :attr:`displayed_prescaler_name`."""
         # the optimum WITH held intervals (what the grid would show if optimized) vs the BARE optimum
         # WITHOUT them — over the SAME displayed target list either way. With no held interval the two
-        # coincide, so skip the second solve.
-        bare = service.tuning(self.state.mapping, self.tuning_scheme, self.state.domain_basis,
-                              self.nonprime_basis_approach,
-                              targets=self.target_override).generator_map
+        # coincide, so skip the second solve. Both run over the document's domain basis / ch9 approach
+        # / custom prescaler (as the grid does), so the name doesn't compare against a standard-primes
+        # optimum the grid never shows.
+        bare = service.tuning(
+            self.state.mapping, self.tuning_scheme, self.state.domain_basis,
+            self.nonprime_basis_approach, prescaler_override=self.custom_prescaler,
+            targets=self.target_override).generator_map
         held_optimum = self._optimum_generator_tuning() if self.held_vectors else bare
         override = self.effective_generator_tuning()
         displayed = (override if override is not None and len(override) == len(self.state.mapping)
@@ -626,6 +670,10 @@ class Editor:
         override = self.effective_generator_tuning()
         base = list(override if override is not None and len(override) == len(self.state.mapping)
                     else self._optimum_generator_tuning())
+        if not 0 <= i < len(base):
+            return  # a stale-LONGER frozen tuning (a rank-reducing edit since it was set) can offer a
+            # component index past the new rank; ignore it rather than IndexError. The live grid only
+            # renders r cells, so this guards an API/fuzzer path, not a normal edit.
         base[i] = float(transform(base[i]))
         if snapshot:
             self._snapshot()
@@ -688,11 +736,13 @@ class Editor:
         override = self.effective_generator_tuning()
         mapping = [list(row) for row in self.state.mapping]
         mapping[i] = [-x for x in mapping[i]]
-        self.edit_mapping(mapping)  # snapshots; negating a row is the same temperament
+        self.edit_mapping(mapping)  # snapshots; negating a row is the same temperament (and drops the
+        # frozen tuning as stale — we re-assert the sound-preserving transform of it just below)
         if override is not None and len(override) == len(mapping):
             flipped = list(override)
             flipped[i] = -flipped[i]
             self.generator_tuning = tuple(flipped)
+            self.manual_tuning = True  # _apply dropped the manual flag; this IS still a manual tuning
 
     def nudge_generator_tuning_component(self, i: int, steps: int) -> None:
         """Fine-adjust one generator's tuning by ``steps`` thousandths of a cent — the hover-
@@ -707,14 +757,37 @@ class Editor:
             snapshot=self._nudging_generator != i)
         self._nudging_generator = i
 
+    @staticmethod
+    def _valid_domain_basis(state: TemperamentState) -> bool:
+        """Whether a parsed state's domain basis is well-formed enough to render and solve: one
+        element per matrix column, each a positive non-unit rational, and the set multiplicatively
+        independent. A typed mapping prefix can violate any of these — ``0.5`` (a zero element),
+        ``1.3`` (the unit 1), ``2.4`` (4 = 2², dependent), or ``2.3.7`` over a 2-wide matrix (a
+        length mismatch) — and the matrix itself still parses, so without this guard the bad domain
+        commits and the NEXT render raises (a non-positive input, a non-invertible basis, or a ragged
+        broadcast). Positivity/unit are checked before independence, which can't size a 0/1 element."""
+        basis = state.domain_basis
+        if not state.mapping or len(basis) != len(state.mapping[0]):
+            return False
+        try:
+            elements = [Fraction(e) for e in basis]
+        except (TypeError, ValueError, ZeroDivisionError):
+            return False
+        if any(e <= 0 or e == 1 for e in elements):
+            return False
+        return service.is_independent_domain_basis(basis)
+
     def try_edit_mapping_text(self, text: str) -> bool:
         """Parse an EBK map string (honouring a domain-basis prefix, so a nonstandard
         temperament can be typed in) and apply it. Returns False (leaving the state
-        untouched) when the text is not a valid integer map, so the caller can flag the
-        input rather than mangling the temperament."""
+        untouched) when the text is not a valid integer map, or its domain-basis prefix is
+        malformed (:meth:`_valid_domain_basis`), so the caller can flag the input rather than
+        mangling the temperament or committing a state that crashes the next render."""
         state = service.parse_mapping_state(text)
         if state is None or not service.is_proper_temperament(state.mapping):
             return False  # unparseable, or a degenerate temperament (the caller toasts and reverts)
+        if not self._valid_domain_basis(state):
+            return False  # a malformed domain prefix (0/1/dependent element, or wrong length)
         self._apply(state)
         return True
 
@@ -795,12 +868,13 @@ class Editor:
         projection), WITHOUT writing the held column — the shared core of picking an established
         projection and hand-editing the unchanged basis / G / P. Undoable."""
         self._snapshot()
-        # over the domain basis and nonprime approach, like every other editor tuning solve — else a
-        # pin on a nonstandard (nonprime) domain solves over the standard primes and holds the wrong
-        # interval (e.g. pinning 9/1 over (2,9,5) would hold 3/1's worth), dropping it back out of U
+        # thread the domain basis / ch9 approach / custom prescaler (as the grid's solve does), so a
+        # held nonprime ratio like 13/5 is read over the domain — not parsed over the prime series
+        # (which raised an uncaught ValueError) — and the residual optimization uses the right just map
         self.generator_tuning = service.tuning(
             self.state.mapping, self.tuning_scheme, self.state.domain_basis,
-            self.nonprime_basis_approach, held=tuple(ratios), targets=self.target_override
+            self.nonprime_basis_approach, held=tuple(ratios),
+            prescaler_override=self.custom_prescaler, targets=self.target_override,
         ).generator_map
         self.superspace_generator_tuning = None
         self.manual_tuning = True  # a deliberate tuning override (not the scheme optimum)
@@ -843,16 +917,23 @@ class Editor:
         actually showing — a hand-edited/established manual 𝒈 if there is one, else the scheme's
         live optimum. Its zeros are the intervals held unchanged, which is what drives U/P/G.
         ``None`` when it can't be measured (a stale manual 𝒈 from before a dimension change, or a
-        nonstandard mixed basis the solver can't size) — the projection then simply dashes out."""
+        nonstandard mixed basis the solver can't size) — the projection then simply dashes out.
+
+        A manual 𝒈 that rounds to the optimum at DISPLAY precision is treated AS the optimum here, so
+        the projection identification agrees with the scheme-name / optimized flag (which already
+        compare at display precision): retyping or wheel-nudging the tuning back to its shown 3-dp
+        cents then keeps P/G/U and the projection name, rather than dashing them while the scheme
+        chooser still reads the optimum."""
         try:
             generators = self.effective_generator_tuning()
-            if generators is None or len(generators) != self.state.r:  # scheme-driven, or a stale manual 𝒈
-                held = tuple(service.comma_ratios(self.held_vectors, self.state.domain_basis)) if self.held_vectors else ()
-                return service.tuning(self.state.mapping, self.tuning_scheme, self.state.domain_basis,
-                                      self.nonprime_basis_approach, held=held,
-                                      targets=self.target_override).retuning_map
-            return service.tuning_from_generators(
-                self.state.mapping, generators, self.state.domain_basis).retuning_map
+            if generators is not None and len(generators) == self.state.r:
+                optimum = self._optimum_tuning()  # the held-/target-/basis-aware solve the grid uses
+                if not _same_cents_map(generators, optimum.generator_map):
+                    return service.tuning_from_generators(
+                        self.state.mapping, generators, self.state.domain_basis).retuning_map
+                return optimum.retuning_map  # a manual 𝒈 indistinguishable from the optimum at display precision
+            # scheme-driven, or a stale-length manual 𝒈 from before a dimension change
+            return self._optimum_tuning().retuning_map
         except (ValueError, ArithmeticError, IndexError, TypeError) as exc:
             _log.debug("_displayed_retuning_map dashed: %r", exc)
             return None
@@ -970,6 +1051,12 @@ class Editor:
         self.nonprime_basis_approach = approach
         # a manual 𝒈L only exists in the prime-based superspace; any approach switch drops it
         self.superspace_generator_tuning = None
+        # dropping the only manual tuning drops the manual flag too: if no on-domain manual 𝒈 remains,
+        # the tuning reverts to the scheme optimum, so leaving manual_tuning True would strand the
+        # back-to-scheme button lit with nothing to revert (back_to_scheme / the scheme pick both
+        # clear it alongside 𝒈L). A manual on-domain 𝒈 still set keeps the flag.
+        if self.generator_tuning is None:
+            self.manual_tuning = False
 
     def set_complexity_name(self, name: str) -> None:
         """Set the whole complexity shape from the predefined-complexities master chooser (box
@@ -1151,7 +1238,7 @@ class Editor:
             return False  # nothing tempered: no real comma to drag out (parity with the comma −)
         if dst == "commas":  # tempering the interval out must genuinely raise the nullity
             domain_basis = self.state.domain_basis if len(vector) == self.state.d else None
-            extended = service.from_comma_basis(self.state.comma_basis + (tuple(vector),), domain_basis)
+            extended = service.from_comma_basis(self._real_comma_basis + (tuple(vector),), domain_basis)
             if extended.n <= self.state.n:
                 return False  # a dependent interval re-ranks nothing — reject the drop
         return True
@@ -1181,7 +1268,7 @@ class Editor:
             self.interest_vectors.insert(i, tuple(vector))
         else:  # commas — temper the interval out (+n, −r); the dual fixes the column order
             domain_basis = self.state.domain_basis if len(vector) == self.state.d else None
-            self.state = service.from_comma_basis(self.state.comma_basis + (tuple(vector),), domain_basis)
+            self.state = service.from_comma_basis(self._real_comma_basis + (tuple(vector),), domain_basis)
 
     def move_interval(self, src_list: str, src_idx: int, dst_list: str, dst_idx: int) -> bool:
         """Move interval ``src_idx`` of ``src_list`` so it LANDS AT index ``dst_idx`` of ``dst_list``
@@ -1353,14 +1440,20 @@ class Editor:
         """Drag comma ``source`` onto a DIFFERENT comma ``target``: add the dragged comma into the
         dropped-on one (``comma[target] += comma[source]``). The interval-column twin of
         :meth:`add_mapping_row_to` — a comma-basis change that holds the temperament (see
-        :func:`service.add_comma_to`); the mapping is unaffected, so no tuning transform. ``source ==
-        target`` is a no-op."""
+        :func:`service.add_comma_to`); the mapping is the comma basis's canonical dual. When the
+        displayed mapping is ALREADY that dual the mapping is unchanged, so no tuning transform is
+        needed; but the editor accepts any proper form (e.g. an ET-pair mapping), and re-dualing then
+        rewrites the mapping to canonical — a generator-basis change that would silently reinterpret a
+        frozen tuning. So drop a now-stale manual tuning (:meth:`_drop_stale_manual_tuning`) rather
+        than leave it pointing at the old generators. ``source == target`` is a no-op."""
         n = len(self.state.comma_basis)
         if source == target or not (0 <= source < n and 0 <= target < n):
             return
         self._snapshot()
         self._clear_pending()
+        old_mapping = self.state.mapping
         self.state = service.add_comma_to(self.state, source, target)
+        self._drop_stale_manual_tuning(old_mapping)
 
     def _combine_interval_vectors(self, vectors: list, source: int, target: int) -> None:
         """Add interval ``source`` into a DIFFERENT interval ``target`` in a vector list (intervals
@@ -1411,7 +1504,7 @@ class Editor:
         # try_edit_comma_basis_text — else from_comma_basis would silently rebuild the
         # standard prime limit and revert the temperament's basis (e.g. 2.3.13/5 -> 2.3.5).
         domain_basis = self.state.domain_basis if len(new_comma) == self.state.d else None
-        extended = service.from_comma_basis(self.state.comma_basis + (new_comma,), domain_basis)
+        extended = service.from_comma_basis(self._real_comma_basis + (new_comma,), domain_basis)
         if extended.n > self.state.n:  # an independent new comma re-ranks the temperament
             self._snapshot()
             self.state = extended

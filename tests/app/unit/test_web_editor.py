@@ -290,11 +290,13 @@ def test_prime_based_superspace_generator_edit_drives_domain_and_resets():
     # an approach switch drops the manual 𝒈L (it only lives in the prime-based superspace)
     editor.set_nonprime_basis_approach("")
     assert editor.superspace_generator_tuning is None
-    # ... and it's stale after a temperament edit
+    # ... and it's stale after a temperament edit (a genuinely different mapping over the same
+    # nonstandard domain — which edit_mapping now preserves rather than resetting to standard primes)
     editor.set_nonprime_basis_approach("prime-based")
     editor.set_superspace_generator_tuning_component(0, 1200.0)
-    editor.edit_mapping([[1, 2, 2], [0, -2, -3]])  # re-enter the same mapping (a temperament edit)
-    assert editor.superspace_generator_tuning is None
+    editor.edit_mapping([[1, 0, -1], [0, 2, 3]])  # a different mapping: the superspace M_L changes
+    assert editor.state.domain_basis == (2, 3, Fraction(13, 5))  # the nonstandard domain is preserved
+    assert editor.superspace_generator_tuning is None  # the manual 𝒈L is over the OLD M_L — dropped
 
 
 def test_turning_off_alt_complexity_resets_the_tuning_to_basic_minimax_lp():
@@ -2393,3 +2395,193 @@ def test_a_typed_generator_tuning_drops_a_prior_projection_pin():
     assert ed.projection_basis == ("2/1", "10/9")
     ed.set_generator_tuning_text("1200 697")
     assert ed.projection_basis == ()
+
+
+# ── audit fixes: editor-side tuning seams (Root Cause #1), stale-tuning drops (Root Cause #2), ──
+# ── nonstandard-domain preservation, and input/state validation. See EVALUATION_REPORT.md. ────
+
+BARBADOS = "2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"        # TILT minimax-U optimum ≈ (1199.872, 248.766)
+BARBADOS_ALT = "2.3.13/5 [⟨1 0 -1] ⟨0 2 3]}"      # another barbados form, optimum ≈ (1199.872, 951.106)
+
+
+def test_editor_optimum_uses_the_domain_basis_not_standard_primes():
+    # ebk-notation-1 / nonstandard-superspace-2: the editor's own solve must optimize over the
+    # document's domain basis, exactly as the grid's solve (spreadsheet.build) does — not over the
+    # standard prime limit, which froze an 822 ¢ "octave" on barbados.
+    editor = Editor()
+    assert editor.try_edit_mapping_text(BARBADOS)
+    gens = editor._optimum_generator_tuning()
+    grid = service.tuning(editor.state.mapping, editor.tuning_scheme, editor.state.domain_basis).generator_map
+    assert _cents_map(gens) == _cents_map(grid)  # editor seam agrees with the grid's reference solve
+    assert round(gens[0], 3) == 1199.872 and round(gens[1], 3) == 248.766  # the real optimum, not 822 ¢
+
+
+def test_editor_optimized_flag_and_scheme_name_are_honest_on_a_nonstandard_domain():
+    # nonstandard-superspace-2: with the editor solving over the right basis, the scheme-driven
+    # default tuning IS the optimum, so tuning_is_optimized and the chooser name tell the truth
+    # (they used to certify the standard-primes garbage as the scheme optimum).
+    editor = Editor()
+    assert editor.try_edit_mapping_text(BARBADOS_ALT)
+    assert editor.tuning_is_optimized is True
+    assert editor.displayed_tuning_scheme_name == "minimax-U"
+    gens = editor._optimum_generator_tuning()
+    assert round(gens[0], 3) == 1199.872 and round(gens[1], 3) == 951.106
+
+
+def test_editor_optimum_honors_the_custom_prescaler():
+    # tuning-core-3 / all-interval-alt-complexity-1: a hand-edited complexity prescaler must reach
+    # the editor's solve (as it reaches the grid's), so the frozen/compared optimum is the one the
+    # weight/damage rows show and min(⟪𝐝⟫ₚ) names a genuinely minimized value.
+    editor = Editor()
+    editor.set_weight_slope("simplicity-weight")
+    editor.set_custom_prescaler_entry(0, 0, 3.0)
+    gens = editor._optimum_generator_tuning()
+    grid = service.tuning(editor.state.mapping, editor.tuning_scheme,
+                          prescaler_override=editor.custom_prescaler).generator_map
+    assert _cents_map(gens) == _cents_map(grid)
+    # and a tuning typed back at the prescaler-aware optimum reads as optimized (the min() is honest)
+    editor.set_generator_tuning_text("{%f %f]" % gens)
+    assert editor.tuning_is_optimized is True
+
+
+def test_held_interval_is_expressed_in_the_domain_basis():
+    # nonstandard-superspace-3 (editor half): a held column vector (0,0,1) over 2.3.13/5 is 13/5, and
+    # the editor must hand the solver "13/5", not "5/1" (the same exponents read over the prime
+    # series). The held SOLVE itself relies on the library expressing it in-basis (finding C1).
+    editor = Editor()
+    assert editor.try_edit_mapping_text(BARBADOS_ALT)
+    editor.add_held()
+    editor.set_pending_held([0, 0, 1])
+    assert service.comma_ratios(editor.held_vectors, editor.state.domain_basis) == ("13/5",)
+
+
+def test_choose_form_drops_a_stale_manual_tuning_to_scheme_driven():
+    # canonical-defactor-1: canonicalize is a generator-basis change; a manual tuning held against
+    # the old generators would otherwise be reinterpreted into garbage (a negative prime cent). It
+    # re-seeds to scheme-driven instead, so the displayed tuning is a tuning OF the new form.
+    editor = Editor()
+    editor.set_generator_tuning_text("{1200.000 696.578]")  # a manual tuning of the meantone form
+    editor.canonicalize_mapping()  # ((1,1,0),(0,1,4)) -> ((1,0,-4),(0,1,4)): generators change
+    assert editor.effective_generator_tuning() is None  # scheme-driven again
+    assert editor.manual_tuning is False
+    tuning_map = service.tuning(editor.state.mapping, editor.tuning_scheme).tuning_map
+    assert all(x > 0 for x in tuning_map)  # no negative/garbage prime cents
+
+
+def test_preset_pick_drops_a_stale_manual_tuning():
+    # presets-sweep-1: picking a preset changes the generator basis (HNF dual); a frozen manual
+    # tuning must not survive reinterpreted against the new generators.
+    from rtt.app import presets
+    editor = Editor()
+    editor.set_generator_tuning_text("{1200.000 696.578]")
+    editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS["5:Meantone"])
+    assert editor.effective_generator_tuning() is None and editor.manual_tuning is False
+
+
+def test_comma_drag_drops_a_stale_manual_tuning_on_a_non_canonical_mapping():
+    # temperament-addition-2: add_comma_to re-duals a non-canonical mapping to canonical form (a
+    # generator-basis change), so a frozen manual tuning must drop rather than describe the old rows.
+    editor = Editor()
+    assert editor.try_edit_mapping_text("[⟨12 19 28 34] ⟨19 30 44 53]]")  # septimal meantone, 12&19 form
+    optimum = editor._optimum_generator_tuning()
+    editor.set_generator_tuning_text("{%f %f]" % optimum)  # a manual tuning of THESE generators
+    editor.add_comma_to(0, 1)
+    assert editor.state.mapping == ((1, 0, -4, -13), (0, 1, 4, 10))  # rewritten to canonical
+    assert editor.effective_generator_tuning() is None and editor.manual_tuning is False
+
+
+def test_structural_edits_preserve_a_nonstandard_domain():
+    # nonstandard-superspace-5 / canonical-defactor-7 (editor half): a mapping cell edit, choose-form
+    # and generator sign-flip must re-dual over the SAME domain, not silently reset 2.3.13/5 -> 2.3.5.
+    barbados_domain = (2, 3, Fraction(13, 5))
+    for op in (
+        lambda e: e.flip_generator(1),
+        lambda e: e.edit_mapping([[1, 0, -1], [0, 2, 4]]),
+        lambda e: e.canonicalize_mapping(),
+        lambda e: e.canonicalize_comma_basis(),
+    ):
+        editor = Editor()
+        assert editor.try_edit_mapping_text(BARBADOS_ALT)
+        op(editor)
+        assert editor.state.domain_basis == barbados_domain
+
+
+def test_try_edit_mapping_text_rejects_malformed_domain_prefixes():
+    # ebk-notation-2: a domain prefix with a zero/unit/dependent element, or a length that doesn't
+    # match the matrix width, parses but would crash the next render — reject it, state untouched.
+    for bad in ("0.5 [⟨1 0] ⟨0 1]]",      # element 0 (a decimal typed where a ratio was meant)
+                "1.3 [⟨1 0] ⟨0 1]]",      # the unit 1 spans nothing
+                "2.4 [⟨1 0] ⟨0 1]]",      # 4 = 2², dependent
+                "2.3.7 [⟨1 0] ⟨0 1]]"):   # 3-element prefix on a 2-wide matrix
+        editor = Editor()
+        before = editor.state.mapping
+        assert editor.try_edit_mapping_text(bad) is False
+        assert editor.state.mapping == before  # untouched (no snapshot, no broken commit)
+    # a well-formed nonstandard prefix still loads
+    assert Editor().try_edit_mapping_text("2.3.7 [⟨1 1 3] ⟨0 3 -1]}") is True
+
+
+def test_override_generator_clamps_an_out_of_range_component():
+    # editor-state-machine-2: a rank-reducing edit can leave a frozen tuning LONGER than the new
+    # rank; editing/nudging a component that only existed in the old longer tuning must no-op, not
+    # IndexError (the live grid only ever offers r cells).
+    editor = Editor()
+    editor.add_mapping_row()
+    editor.set_pending_mapping_row([0, 0, 1])           # r 2 -> 3
+    editor.set_generator_tuning_component(2, 700.0)     # manual tuning length 3
+    editor.add_comma()
+    editor.set_pending_comma([4, -4, 1])                # re-temper: r 3 -> 2, tuning still length 3
+    before = editor.generator_tuning
+    editor.set_generator_tuning_component(2, 700.0)     # component 2 is past the new rank — no crash
+    editor.nudge_generator_tuning_component(2, 1)       # ditto via the wheel
+    assert editor.generator_tuning == before            # the out-of-range edits are clean no-ops
+    editor.layout()                                     # still renders (the stale tuning reads as scheme-driven)
+
+
+def test_first_comma_from_just_intonation_commits_no_phantom_unison():
+    # canonical-defactor-3: tempering out the first comma from JI must replace the full-rank zero
+    # placeholder, not append beside it (which committed a phantom 1/1 comma and broke d = r + n).
+    editor = Editor()
+    editor.remove_comma()                  # 5-limit JI: comma_basis == ((0,0,0),), n == 0
+    editor.add_comma()
+    editor.set_pending_comma([4, -4, 1])
+    assert editor.state.comma_basis == ((4, -4, 1),) and editor.state.n == 1
+    # and via a drag of a target into the commas
+    editor2 = Editor()
+    editor2.remove_comma()
+    editor2.move_interval("targets", 0, "commas", 0)
+    assert (0, 0, 0) not in editor2.state.comma_basis and editor2.state.n == 1
+
+
+def test_approach_switch_clears_a_stranded_manual_flag():
+    # nonstandard-superspace-8 / render-fiddle-9: switching the approach radio drops the manual
+    # superspace 𝒈L; with no on-domain manual tuning left, manual_tuning must drop too, so the
+    # back-to-scheme button doesn't light over a scheme-driven grid.
+    editor = Editor()
+    assert editor.try_edit_mapping_text(BARBADOS_ALT)
+    editor.set_nonprime_basis_approach("prime-based")
+    editor.set_superspace_generator_tuning_component(0, 1190.0)
+    assert editor.manual_tuning is True
+    editor.set_nonprime_basis_approach("")
+    assert editor.superspace_generator_tuning is None
+    assert editor.manual_tuning is False
+
+
+def test_projection_identification_agrees_with_the_scheme_name_at_display_precision():
+    # ebk-notation-7 / projection-7: the scheme-name/optimized side compares at 3-dp display
+    # precision; the projection side used 1e-6, so retyping or wheel-nudging back to the shown cents
+    # kept the scheme name yet dashed P/G/U. Now a manual tuning that rounds to the optimum is treated
+    # AS the optimum for projection too, so the two views agree.
+    editor = Editor()
+    editor.set_generator_tuning_text("{1200.0 696.578]")  # the displayed 3-dp cents of 1/4-comma
+    assert editor.unchanged_ratios == ("2/1", "5/4")
+    assert editor.displayed_projection_scheme_name == "1/4-comma"
+    # and a pure wheel up-then-down gesture lands back consistent on both sides
+    editor2 = Editor()
+    editor2.set_show("projection", True)
+    editor2.nudge_generator_tuning_component(1, +1)
+    editor2.nudge_generator_tuning_component(1, -1)
+    assert editor2.tuning_is_optimized is True
+    assert editor2.displayed_tuning_scheme_name == "minimax-U"
+    assert editor2.unchanged_ratios == ("2/1", "5/4")
+    assert editor2.displayed_projection_scheme_name == "1/4-comma"
