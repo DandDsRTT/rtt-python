@@ -493,7 +493,7 @@ def assign_column_tokens(prev, keys, claim_unmatched=False):
     return list(zip(tokens, keys))
 
 
-def pending_token(tokens):
+def pending_token(tokens) -> int:
     """The id-token for a list's draft (pending) column: one past every committed column's token, so
     it can't collide with a live column even after a removal leaves a gap. On a fresh list (tokens =
     indices) this is the column count, so a first draft cell keeps its historical ``…:count`` id."""
@@ -540,7 +540,7 @@ def _min_width_for_lines(text: str, max_lines: int, font: float = CAPTION_FONT) 
     return int(len(text) * font * CAPTION_CHAR_W + 4) + 1
 
 
-def _bus_span(positions):
+def _bus_span(positions) -> tuple[float, float]:
     """The (start, length) of a convergence bus across fanned sub-lines at ``positions``.
     It reaches half a line-width past the outer sub-lines so the rejoin corners stay solid
     at LINE_W; when the sub-lines coincide (a collapsed column or a single element) it
@@ -884,7 +884,7 @@ class _GridBuilder:
         return (show_counts, show_charts, show_ranges, show_domain_units, show_temp,
                 show_tuning, show_interest, show_domain_quantities)
 
-    def _resolve_superspace_dims(self):
+    def _resolve_superspace_dims(self) -> None:
         """Resolve the domain dims (d, r, elements) and the chapter-9 superspace dims + show flags."""
         self.d = self.state.d
         self.r = len(self.state.mapping)
@@ -945,7 +945,7 @@ class _GridBuilder:
         # read-only projection. Neutral optimizes in the domain, so 𝒈 stays live there.
         self.show_superspace_generators = self.show_superspace and self.nonprime_approach == "prime-based"
 
-    def _resolve_prescaler_and_domain_labels(self):
+    def _resolve_prescaler_and_domain_labels(self) -> None:
         """Phase 2: resolve the prescaler glyph/labels, the identity-objects gate and the domain coordinate labels."""
         # Phase 2 — resolve the complexity-prescaler glyph + labels (see _resolve_prescaler_labels).
         # Resolved here, AFTER show_superspace, because the superspace shift renames/relocates the
@@ -990,7 +990,7 @@ class _GridBuilder:
         self.domain_can_shrink = service.can_shrink_domain(self.state)
 
     def _resolve_interval_sets(self, generator_tuning, target_override, held_vectors, pending_comma,
-                               show_temp, show_tuning):
+                               show_temp, show_tuning) -> None:
         """Resolve the interval sets (targets/held/commas/unchanged/interest), their pending drafts, derived quantities and id-tokens."""
         self.gens = service.generators(self.state.mapping, self.elements)
         # the − hover's BORN row/column shows COMPUTED values (the op is known): removing comma idx
@@ -1248,7 +1248,7 @@ class _GridBuilder:
         }
         self._col_ids["detempering"] = self._col_ids["gens"]
 
-    def _resolve_complexities(self):
+    def _resolve_complexities(self) -> None:
         """Resolve the per-column complexity lists and the prescaler matrix 𝑋."""
         # the complexity row norms each interval's prescaled vector (𝒄): a covector over the
         # domain elements (each element's complexity, log₂ of it for the default log-prime
@@ -1344,7 +1344,7 @@ class _GridBuilder:
         ) if self.show_detempering else ()
         return interest_tiles, held_tiles, detempering_tiles
 
-    def _resolve_projection_data(self, show_tuning):
+    def _resolve_projection_data(self, show_tuning) -> None:
         """Resolve the projection/embedding matrices and the projected vector lists (domain + superspace)."""
         # the rational tempering projection P = GM and its generator embedding G (the projection
         # sub-control of tuning boxes): P is a d×d operator over the domain primes, G a d×r matrix
@@ -1414,7 +1414,7 @@ class _GridBuilder:
             (service.lift_vectors_to_superspace(self.elements, (ub,))[0] if ub is not None else None)
             for ub in (self.unchanged_basis if self.show_unchanged else ()))
 
-    def _declare_tiles(self, interest_tiles, held_tiles, detempering_tiles):
+    def _declare_tiles(self, interest_tiles, held_tiles, detempering_tiles) -> None:
         """Declare the projection-row column tiles and assemble the authoritative tile set."""
         # the projection row's column tiles, each gated on its column being present exactly like the
         # vectors-row tile it projects (and overall on the projection toggle): the quantities/units
@@ -1674,7 +1674,7 @@ class _GridBuilder:
             key for key, _h, present, _c, _l in row_bands if present and key in CAPTIONED_ROWS)
         return row_bands
 
-    def _layout_columns(self, col_bands, content_x0):
+    def _layout_columns(self, col_bands, content_x0) -> None:
         """Lay the column bands left-to-right (the running-cursor walk): col_x/col_w/content_w/total_w."""
         # each column hugs its content (a long caption widens the footprint), the columns laid
         # left to right a GAP apart — widened to TITLE_MARGIN where two columns' overhanging titles
@@ -1859,10 +1859,11 @@ class _GridBuilder:
         # gridline pass can fan a multi-row matrix into that many horizontal sub-axes -- and keep
         # drawing all of them, converged, while it's folded, so the fold animates as a merge
         self.row_matlabel_top = {}  # y of the column-label band when reserved (one MATLABEL_H slot above
+        # the value cells), so column labels (𝐜₁, 𝒕₁, …) can be emitted at a fixed row-relative y
         self.row_int_handle_top = {}  # y of the interval drag-handle band (above the column labels, when drag-to-combine is on)
         return rows_top_y
 
-    def _resolve_ptext_strings(self, generator_tuning, target_override):
+    def _resolve_ptext_strings(self, generator_tuning, target_override) -> None:
         """Build the plain-text value strings from the grid's own derived quantities."""
         # pass the held intervals + any frozen manual tuning so the plain text builds the SAME
         # tuning the grid does (held-just sizes, frozen-tuning maps) — the two views can't diverge.
@@ -1897,7 +1898,7 @@ class _GridBuilder:
                                                                        if self.show_superspace else None)))
                          if self.show_ptext else {})
 
-    def _layout_rows(self, row_bands, tile_extra, rows_top_y, show_charts):
+    def _layout_rows(self, row_bands, tile_extra, rows_top_y, show_charts) -> None:
         """Lay the row bands top-to-bottom (the running-cursor walk): row_y/tile_h/total_h + the fan-out bus."""
         y = rows_top_y
         for key, natural, present, collapsible, label in row_bands:
@@ -1993,7 +1994,7 @@ class _GridBuilder:
         # cardinality simply has the already-split sub-lines threading through it.
         self.fanout_y = self.branch_top_y + self.FAN
 
-    def _init_group_geometry(self):
+    def _init_group_geometry(self) -> None:
         """Define the value-group geometry maps (element names, left edges, counts, ratios) and the +/− stubs."""
         # The value groups share an element name (for cell ids), a left-edge accessor, a fanned
         # element count, and the operand of their just log₂ (a bare prime, or a comma/target
@@ -2058,10 +2059,10 @@ class _GridBuilder:
                                                      generator_override=ss_override)
         return self._ss_tun
 
-    def _caption_floor(self, key):
-        # the width an open column needs so its captions stay within MAX_CAPTION_LINES,
-        # widening the tile rather than scaling the font or letting a long name spill;
-        # zero when names are hidden (no caption renders) so the column keeps its content size
+    def _caption_floor(self, key: str):
+        """the width an open column needs so its captions stay within MAX_CAPTION_LINES,
+        widening the tile rather than scaling the font or letting a long name spill;
+        zero when names are hidden (no caption renders) so the column keeps its content size"""
         if not self.show_captions:
             return 0
         return max((_min_width_for_lines(self.effective_captions[(rk, key)], MAX_CAPTION_LINES)
@@ -2069,16 +2070,16 @@ class _GridBuilder:
                     if (rk, key) in self.effective_captions and (rk, key) in self.declared_tiles), default=0)
 
     def _projection_superspace_tail(self) -> str:
-        # the superspace decomposition appended to P's equivalence when the superspace block shows
-        # (per the mockup): P = … = Gₛ→ₗ𝑀ₛ→ₗ. Shared by the build() override and _symbol_floor so the
-        # widened width and the rendered text agree.
+        """the superspace decomposition appended to P's equivalence when the superspace block shows
+        (per the mockup): P = … = Gₛ→ₗ𝑀ₛ→ₗ. Shared by the build() override and _symbol_floor so the
+        widened width and the rendered text agree."""
         return f" = G{SUBSCRIPT_L}→ₛ𝑀ₛ→{SUBSCRIPT_L}" if self.show_superspace else ""
 
-    def _symbol_floor(self, key):
-        # the width an open column needs so its widest symbol + equivalence fits on ONE line — the
-        # symbol/equivalence element must never wrap (it widens the tile instead, like a long caption).
-        # Zero when neither symbols nor equivalences show. P's equivalence (with the superspace tail)
-        # is the long one this guards; short symbols floor below the natural width, so no effect.
+    def _symbol_floor(self, key: str):
+        """the width an open column needs so its widest symbol + equivalence fits on ONE line — the
+        symbol/equivalence element must never wrap (it widens the tile instead, like a long caption).
+        Zero when neither symbols nor equivalences show. P's equivalence (with the superspace tail)
+        is the long one this guards; short symbols floor below the natural width, so no effect."""
         if not (self.show_symbols or self.show_equiv):
             return 0
         floor = 0
@@ -2093,10 +2094,10 @@ class _GridBuilder:
             floor = max(floor, _min_width_for_lines(glyph + equiv, 1, SYMBOL_FONT))
         return floor
 
-    def _control_floor(self, key):
-        # the width an open column needs so its in-tile choosers fit without overhanging the
-        # column's right edge (e.g. the narrow targets column is widened to seat box 𝒄's wide
-        # predefined-complexities dropdown); widens the column to enclose them
+    def _control_floor(self, key: str):
+        """the width an open column needs so its in-tile choosers fit without overhanging the
+        column's right edge (e.g. the narrow targets column is widened to seat box 𝒄's wide
+        predefined-complexities dropdown); widens the column to enclose them"""
         floor = 0
         # each weighting control sits in a bordered box (control_region), so the column must fit the
         # control PLUS the box's BOX_INNER inset on each side, like the optimization box's OPT_PAD.
@@ -2129,45 +2130,44 @@ class _GridBuilder:
             floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_W)
         return floor
 
-    def content_box(self, key):
-        # the (x, width) of a column's actual content — the value cells and the brackets/
-        # axes that hug them, centred within the (possibly wider) tile and footprint
+    def content_box(self, key: str):
+        """the (x, width) of a column's actual content — the value cells and the brackets/
+        axes that hug them, centred within the (possibly wider) tile and footprint"""
         return self.content_x[key], self.content_w[key]
 
-    def tile_box(self, key):
-        # the (x, width) of a column's grey tile/panel: the full footprint (the panel fills it
-        # and overhangs by PAD). The caption stack rides this width; content centres within.
+    def tile_box(self, key: str):
+        """the (x, width) of a column's grey tile/panel: the full footprint (the panel fills it
+        and overhangs by PAD). The caption stack rides this width; content centres within."""
         return self.col_x[key], self.col_w[key]
 
     def displayed_optimization_power(self) -> float:
-        # the optimization power 𝑝 as shown: ∞ in all-interval mode, the scheme's stored power
-        # otherwise. All-interval tuning minimaxes over every interval (it optimizes the primes at
-        # the dual norm power and never reads the stored 𝑝), so 𝑝 is fixed at ∞ there — the cell
-        # shows ∞ and goes disabled (app._update_powerinput). The power cell, the mean damage, and the
-        # damage-chart indicator all read this so the locked display stays consistent.
+        """the optimization power 𝑝 as shown: ∞ in all-interval mode, the scheme's stored power
+        otherwise. All-interval tuning minimaxes over every interval (it optimizes the primes at
+        the dual norm power and never reads the stored 𝑝), so 𝑝 is fixed at ∞ there — the cell
+        shows ∞ and goes disabled (app._update_powerinput). The power cell, the mean damage, and the
+        damage-chart indicator all read this so the locked display stays consistent."""
         if service.is_all_interval(self.tuning_scheme):
             return float("inf")
         return service.optimization_power(self.tuning_scheme)
 
     def displayed_mean_damage_power(self) -> float:
-        # the power at which the displayed mean damage AGGREGATES the per-target/per-prime weighted
-        # damages — i.e. the power the optimizer actually minimized at (matching
-        # tuning.get_tuning_map_mean_damage). For a target-based scheme that is the optimization
-        # power 𝑝 (∞/2/1), same as displayed_optimization_power(). For an all-interval scheme the
-        # minimax-over-every-interval is, by duality, an optimization over the PRIMES at the DUAL of
-        # the complexity norm power — 2 for a Euclidean (ES) norm, ∞ for taxicab (-S) — so the
-        # mean damage is that dual-power mean of the per-prime damages, NOT their max. (The 𝑝 cell still
-        # shows ∞: that is the power over intervals; this is the power over primes, the mean damage
-        # symbol's dual(𝑞) subscript.) For -S, dual(𝑞) = ∞ so this coincides with 𝑝, as before.
+        """the power at which the displayed mean damage AGGREGATES the per-target/per-prime weighted
+        damages — i.e. the power the optimizer actually minimized at (matching
+        tuning.get_tuning_map_mean_damage). For a target-based scheme that is the optimization
+        power 𝑝 (∞/2/1), same as displayed_optimization_power(). For an all-interval scheme the
+        minimax-over-every-interval is, by duality, an optimization over the PRIMES at the DUAL of
+        the complexity norm power — 2 for a Euclidean (ES) norm, ∞ for taxicab (-S) — so the
+        mean damage is that dual-power mean of the per-prime damages, NOT their max. (The 𝑝 cell still
+        shows ∞: that is the power over intervals; this is the power over primes, the mean damage
+        symbol's dual(𝑞) subscript.) For -S, dual(𝑞) = ∞ so this coincides with 𝑝, as before."""
         if service.is_all_interval(self.tuning_scheme):
             return service.dual_norm_power(self.tuning_scheme)
         return service.optimization_power(self.tuning_scheme)
 
-    def col_open(self, key):
+    def col_open(self, key: str) -> bool:
         return key in self.col_x and f"col:{key}" not in self.collapsed
-    # the value cells), so column labels (𝐜₁, 𝒕₁, …) can be emitted at a fixed row-relative y
 
-    def _commas_band_w(self, nc_count):
+    def _commas_band_w(self, nc_count: int):
         """The commas/V column's natural footprint for ``nc_count`` comma sub-columns (the
         real commas, plus any draft). Factored out of the column band so caption wrapping can
         price the column at its RESTING comma count — see :meth:`_caption_wrap_w`."""
@@ -2177,29 +2177,29 @@ class _GridBuilder:
                  if (self.show_unchanged and nc_count == 0) else 0)
         return 2 * BRACKET_W + nv * COL_W + split + empty
 
-    def _caption_wrap_w(self, ckey):
-        # the width a caption wraps within: the column's OPEN footprint, EXCEPT the commas/V
-        # column is priced at its RESTING comma count while a mapping-row − hover previews a
-        # born comma (ghost_comma). That transient ghost widens the column by one cell; without
-        # this, every commas-column caption ("scaling factors", "projection", …) could rewrap
-        # from two lines to one, shrinking those tiles and lifting the hovered − button out from
-        # under the cursor. A real comma DRAFT (self.pending) DOES count — the layout grows on
-        # that deliberate click, so its caption may rewrap as usual.
+    def _caption_wrap_w(self, ckey: str):
+        """the width a caption wraps within: the column's OPEN footprint, EXCEPT the commas/V
+        column is priced at its RESTING comma count while a mapping-row − hover previews a
+        born comma (ghost_comma). That transient ghost widens the column by one cell; without
+        this, every commas-column caption ("scaling factors", "projection", …) could rewrap
+        from two lines to one, shrinking those tiles and lifting the hovered − button out from
+        under the cursor. A real comma DRAFT (self.pending) DOES count — the layout grows on
+        that deliberate click, so its caption may rewrap as usual."""
         if ckey == "commas" and self.ghost_comma:
             resting = self._commas_band_w(self.nc + (1 if self.pending is not None else 0))
             return max(resting, self._caption_floor(ckey),
                        self._control_floor(ckey), self._symbol_floor(ckey))
         return self.open_col_w[ckey]
 
-    def caption_band(self, key, folded):
-        # the row's caption band is sized to its tallest (wrapped) caption, so the longest
-        # name fits within its tile rather than spilling off a narrow column. Only columns
-        # that actually declare a tile here count: an empty interest column declares no
-        # tile, so it reserves no caption height (its captions would otherwise wrap tall in
-        # the bare bracket-gutter stub and inflate the empty board). Each caption wraps at
-        # its column's OPEN width — collapse-independent — so collapsing a column (hiding its
-        # caption) never drops the band and shrinks the row's other tiles. A folded ROW shows
-        # no captions at all.
+    def caption_band(self, key: str, folded: bool):
+        """the row's caption band is sized to its tallest (wrapped) caption, so the longest
+        name fits within its tile rather than spilling off a narrow column. Only columns
+        that actually declare a tile here count: an empty interest column declares no
+        tile, so it reserves no caption height (its captions would otherwise wrap tall in
+        the bare bracket-gutter stub and inflate the empty board). Each caption wraps at
+        its column's OPEN width — collapse-independent — so collapsing a column (hiding its
+        caption) never drops the band and shrinks the row's other tiles. A folded ROW shows
+        no captions at all."""
         if not (self.show_captions and key in CAPTIONED_ROWS and not folded):
             return 0
         lines = [_wrap_lines(self.effective_captions[(key, c)], self._caption_wrap_w(c)) for c in self.col_x
@@ -2212,7 +2212,7 @@ class _GridBuilder:
             lines.append(_wrap_lines("nullity", self.nc * COL_W + self.empty_comma_w))
         return max(lines, default=1) * CAPTION_LINE
 
-    def ptext_editable(self, rkey, ckey):
+    def ptext_editable(self, rkey: str, ckey: str) -> bool:
         """Whether a tile's plain text is an editable input. Normally :data:`EDITABLE_PTEXT`, but
         under the superspace shift the editable bare prescaler MOVES from the domain-primes column
         to ss-primes (the domain-primes tile is then the read-only 𝐿·B_Ls product), so the
@@ -2225,12 +2225,12 @@ class _GridBuilder:
             return ckey == "ssgens"
         return (rkey, ckey) in EDITABLE_PTEXT
 
-    def ptext_height(self, rkey, ckey):  # one line; the app shrinks the font to fit the box width
+    def ptext_height(self, rkey: str, ckey: str):  # one line; the app shrinks the font to fit the box width
         return PTEXT_EDIT_H if self.ptext_editable(rkey, ckey) else PTEXT_H
 
-    def ptext_band(self, key, folded):
-        # a single-line band for every value row's plain text (taller for the rows whose
-        # band holds an editable input); the font auto-fits so nothing wraps or spills
+    def ptext_band(self, key: str, folded: bool):
+        """a single-line band for every value row's plain text (taller for the rows whose
+        band holds an editable input); the font auto-fits so nothing wraps or spills"""
         if not (self.show_ptext and key in PTEXT_ROWS and not folded):
             return 0
         return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
@@ -2239,10 +2239,10 @@ class _GridBuilder:
     # and the dropdown keeps its NATURAL width (cap_w) seated at the box's left — only shrunk if a
     # tiny tile can't seat even that. The label is the standard one-line left-justified caption
     # hugging the dropdown's bottom (the .rtt-caption-left asset), overflowing right if long.
-    def control_dims(self, ckey, cap_w, label, scheme_btn=False, fill=False):
-        # a single-dropdown box FILLS its column-spanning box (no dead grey beside a short dropdown); a
-        # box that carries a trailing checkbox (the target all-interval, the prescaler diminuator) keeps
-        # the cap so the checkbox has room in the space to the dropdown's right
+    def control_dims(self, ckey: str, cap_w, label, scheme_btn: bool = False, fill: bool = False):
+        """a single-dropdown box FILLS its column-spanning box (no dead grey beside a short dropdown); a
+        box that carries a trailing checkbox (the target all-interval, the prescaler diminuator) keeps
+        the cap so the checkbox has room in the space to the dropdown's right"""
         dropdown_w = (max(40, self.col_w[ckey] - 2 * BOX_INNER) if fill
                       else max(40, min(self.col_w[ckey] - 2 * BOX_INNER, cap_w)))
         label_h = CAPTION_LINE if label else 0  # one line (overflows right, never wraps the box wider)
@@ -2252,29 +2252,29 @@ class _GridBuilder:
         box_h += (SCHEME_BTN_SQ + CTRL_LABEL_GAP) if scheme_btn else 0
         return dropdown_w, label_h, box_h
 
-    def control_band_h(self, ckey, cap_w, label, scheme_btn=False):  # the box plus outer padding
+    def control_band_h(self, ckey: str, cap_w, label, scheme_btn: bool = False):  # the box plus outer padding
         return 2 * BOX_OUTER + self.control_dims(ckey, cap_w, label, scheme_btn)[2]
 
-    def preset_cap(self, name):
+    def preset_cap(self, name: str):
         return TARGET_PRESET_W if name == "target" else PRESET_W
 
-    def preset_band_h(self, key):  # the tallest preset control box riding this row
+    def preset_band_h(self, key: str):  # the tallest preset control box riding this row
         return max((self.control_band_h(ckey, self.preset_cap(name), label, scheme_btn=(name == "projection"))
                     for name, rk, ckey, label in PRESETS + PRESET_COPIES
                     if rk == key and ckey in self.col_w), default=0)
 
-    def formchooser_band_h(self, key):
+    def formchooser_band_h(self, key: str):
         return max((self.control_band_h(ckey, PRESET_W, label)
                     for name, rk, ckey, label in FORM_CHOOSERS if rk == key and ckey in self.col_w), default=0)
 
-    def row_open(self, key):
+    def row_open(self, key: str) -> bool:
         return key in self.row_y and f"row:{key}" not in self.collapsed
 
-    def tile_open(self, rkey, ckey):  # a real tile, whose row + column are open and not folded
+    def tile_open(self, rkey: str, ckey: str) -> bool:  # a real tile, whose row + column are open and not folded
         return ((rkey, ckey) in self.declared_tiles and self.row_open(rkey) and self.col_open(ckey)
                 and f"tile:{rkey}:{ckey}" not in self.collapsed)
 
-    def tile_unit(self, rkey, ckey):
+    def tile_unit(self, rkey: str, ckey: str):
         """The (rkey, ckey) tile's unit string before per-cell subscripting — the static UNITS
         template, but with the damage / weight / complexity annotation resolved from the live
         scheme (guide ch.10 "Annotated units"): the weight reads ``(<weight_code>)``, damage its
@@ -2292,17 +2292,17 @@ class _GridBuilder:
             return self.damage_unit
         return base
 
-    def cell_unit(self, rkey, ckey, *, gen=None, prime=None, elem=None):
-        # the per-value unit shown beneath a gridded cell when cell units are on (a toggle
-        # independent of the per-box "units: …" line): the tile's unit
-        # (tile_unit) with its STANDALONE coordinate variables subscripted by this cell's
-        # generator/prime index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped
-        # list g₁. Only standalone tokens subscript (see _subscript_coord), so the p inside an
-        # annotation family like (sopfr-C)/p stays put while the trailing prime coordinate becomes
-        # p₁. A nonstandard subgroup swaps the on-domain p for b (basis element); see domain_label.
-        # The chapter-9 superspace tiles run over true primes (p) and superspace generators (gL),
-        # NOT the on-domain g/b — so they keep p (the p → b swap is scoped to non-superspace
-        # tiles) and subscript the gL token (gL₁) for M_L / 𝒈ₗ.
+    def cell_unit(self, rkey: str, ckey: str, *, gen=None, prime=None, elem=None):
+        """the per-value unit shown beneath a gridded cell when cell units are on (a toggle
+        independent of the per-box "units: …" line): the tile's unit
+        (tile_unit) with its STANDALONE coordinate variables subscripted by this cell's
+        generator/prime index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped
+        list g₁. Only standalone tokens subscript (see _subscript_coord), so the p inside an
+        annotation family like (sopfr-C)/p stays put while the trailing prime coordinate becomes
+        p₁. A nonstandard subgroup swaps the on-domain p for b (basis element); see domain_label.
+        The chapter-9 superspace tiles run over true primes (p) and superspace generators (gL),
+        NOT the on-domain g/b — so they keep p (the p → b swap is scoped to non-superspace
+        tiles) and subscript the gL token (gL₁) for M_L / 𝒈ₗ."""
         if not self.show_cell_units:
             return ""
         u = self.tile_unit(rkey, ckey)
@@ -2322,37 +2322,37 @@ class _GridBuilder:
             u = _subscript_coord(u, self.domain_label, f"{self.domain_label}{_sub(elem + 1)}")
         return u
 
-    def matlabel_gutter_w(self, group_key):
-        # The MATLABEL_W gutter reserved on EACH side of a content footprint for row
-        # labels (𝒎₁, …) — only the primes column under the mapping matrix needs it in
-        # the built layout. The LEFT gutter carries the labels; the RIGHT one is empty,
-        # mirroring it so the matrix stays centred in its tile (see content_w above).
-        # Shared by prime_left and the bracket placement so the cells, the left ⟨ and the
-        # labels stay in lockstep.
+    def matlabel_gutter_w(self, group_key: str):
+        """The MATLABEL_W gutter reserved on EACH side of a content footprint for row
+        labels (𝒎₁, …) — only the primes column under the mapping matrix needs it in
+        the built layout. The LEFT gutter carries the labels; the RIGHT one is empty,
+        mirroring it so the matrix stays centred in its tile (see content_w above).
+        Shared by prime_left and the bracket placement so the cells, the left ⟨ and the
+        labels stay in lockstep."""
         if group_key == "primes":
             return self.matlabel_primes_w
         if group_key == "ssprimes":
             return self.matlabel_ssprimes_w
         return 0
 
-    def handle_gutter_w(self, group_key):
-        # The drag-handle gutter reserved OUTSIDE the row-label gutter (further from the matrix),
-        # on each side for balance — only the primes column, only when drag-to-combine is on. The
-        # left one carries the per-row handles; the right one balances them, like the matlabel gutter.
+    def handle_gutter_w(self, group_key: str):
+        """The drag-handle gutter reserved OUTSIDE the row-label gutter (further from the matrix),
+        on each side for balance — only the primes column, only when drag-to-combine is on. The
+        left one carries the per-row handles; the right one balances them, like the matlabel gutter."""
         return self.row_handle_w if group_key == "primes" else 0
 
-    def outer_gutter_w(self, group_key):
-        # the full left/right reservation outside the cells: the handle gutter then the row-label
-        # gutter. Used wherever the cells' true left edge matters (prime_left, the EBK span, the header).
+    def outer_gutter_w(self, group_key: str):
+        """the full left/right reservation outside the cells: the handle gutter then the row-label
+        gutter. Used wherever the cells' true left edge matters (prime_left, the EBK span, the header)."""
         return self.handle_gutter_w(group_key) + self.matlabel_gutter_w(group_key)
 
-    def matrix_span(self, group_key):
-        # The (x, width) of a group's CELL matrix — its content_box minus the outer gutters, which
-        # content_w carries on BOTH sides (the left holds the handles + row labels, the right
-        # balances them). This is the region the EBK encloses: the per-row ⟨ … ] brackets seat
-        # their ⟨ at its left edge and ] at its right, and the spanning ebktop/ebkbrace/ebkangle
-        # frame runs its full width. Anchored to the cells (not the wider grey footprint), so a
-        # column widened past them keeps the EBK hugging the matrix with the labels/handles outside.
+    def matrix_span(self, group_key: str):
+        """The (x, width) of a group's CELL matrix — its content_box minus the outer gutters, which
+        content_w carries on BOTH sides (the left holds the handles + row labels, the right
+        balances them). This is the region the EBK encloses: the per-row ⟨ … ] brackets seat
+        their ⟨ at its left edge and ] at its right, and the spanning ebktop/ebkbrace/ebkangle
+        frame runs its full width. Anchored to the cells (not the wider grey footprint), so a
+        column widened past them keeps the EBK hugging the matrix with the labels/handles outside."""
         x, w = self.content_box(group_key)
         mx = self.outer_gutter_w(group_key)
         x, w = x + mx, w - 2 * mx
@@ -2363,85 +2363,85 @@ class _GridBuilder:
             x, w = x + self.empty_comma_w, w - self.empty_comma_w
         return x, w
 
-    def _weight_simplicity_header(self, i):
-        # the all-interval simplicity weight's per-column header — simply the reciprocal of the
-        # complexity column cₙ (whose own header cₙ = ‖𝐿[n]‖q carries the norm detail, so it needn't be
-        # repeated here). Matches the tile's big symbol 𝒘 = 𝒄⁻¹, subscripted per column: wₙ = cₙ⁻¹ (bare
-        # wₙ when equivalences are off).
+    def _weight_simplicity_header(self, i: int):
+        """the all-interval simplicity weight's per-column header — simply the reciprocal of the
+        complexity column cₙ (whose own header cₙ = ‖𝐿[n]‖q carries the norm detail, so it needn't be
+        repeated here). Matches the tile's big symbol 𝒘 = 𝒄⁻¹, subscripted per column: wₙ = cₙ⁻¹ (bare
+        wₙ when equivalences are off)."""
         symbol = f"w{_sub(i + 1)}"
         if not self.show_equiv:
             return symbol
         return f"{symbol} = c{_sub(i + 1)}⁻¹"
 
-    def prime_left(self, p):
+    def prime_left(self, p: int):
         return self.primes_x + self.outer_gutter_w("primes") + BRACKET_W + p * COL_W
 
     @staticmethod
-    def _element_cell_kind(text):
+    def _element_cell_kind(text: str):
         """The editable domain-element kind for a value's display form: a fraction (e.g. "13/5", or
         the "?/?" draft) renders as a stacked fraction face (elementratio); a bare integer prime
         ("2") as a plain number (elementcell). Switching kind across a relabel makes the reconciler
         rebuild the cell, so the face form follows the value."""
         return "elementratio" if "/" in text else "elementcell"
 
-    def comma_left(self, c):
-        # the unchanged half U (the sub-columns at or past nc_shown — i.e. past the comma cells AND
-        # any pending draft) is pushed right by V_SPLIT_GAP, opening the gap that holds the C|U
-        # divider clear of the cells. Only when there IS a comma half (nc_shown > 0): at full rank
-        # (n = 0) the column is the whole unchanged basis with no C, so no gap and no divider.
+    def comma_left(self, c: int):
+        """the unchanged half U (the sub-columns at or past nc_shown — i.e. past the comma cells AND
+        any pending draft) is pushed right by V_SPLIT_GAP, opening the gap that holds the C|U
+        divider clear of the cells. Only when there IS a comma half (nc_shown > 0): at full rank
+        (n = 0) the column is the whole unchanged basis with no C, so no gap and no divider."""
         gap = V_SPLIT_GAP if (self.show_unchanged and 0 < self.nc_shown <= c) else 0
         return self.commas_x + BRACKET_W + self.empty_comma_w + c * COL_W + gap
 
-    def comma_value_pos(self, i):
-        # the DISPLAY sub-column for the i-th value of the consolidated commas group, whose value
-        # sequence is the comma values (0..nc-1) then the unchanged values (nc..nc+nu-1). The
-        # unchanged half sits past any pending comma draft (which occupies index nc), so it shifts
-        # right by nc_shown - nc (= 1 while a draft is open, 0 otherwise). Identity off-projection.
+    def comma_value_pos(self, i: int):
+        """the DISPLAY sub-column for the i-th value of the consolidated commas group, whose value
+        sequence is the comma values (0..nc-1) then the unchanged values (nc..nc+nu-1). The
+        unchanged half sits past any pending comma draft (which occupies index nc), so it shifts
+        right by nc_shown - nc (= 1 while a draft is open, 0 otherwise). Identity off-projection."""
         return i if i < self.nc else i + (self.nc_shown - self.nc)
 
-    def target_left(self, j):
+    def target_left(self, j: int):
         return self.targets_x + BRACKET_W + j * COL_W
 
-    def interest_left(self, i):
+    def interest_left(self, i: int):
         return self.interest_x + BRACKET_W + i * COL_W
 
-    def held_left(self, i):
+    def held_left(self, i: int):
         return self.held_x + BRACKET_W + i * COL_W
 
-    def detempering_left(self, i):  # the i-th generator detempering column
+    def detempering_left(self, i: int):  # the i-th generator detempering column
         return self.detempering_x + BRACKET_W + i * COL_W
 
-    def gen_left(self, g):  # the g-th generator column in the generators box (its tuning-map cells)
+    def gen_left(self, g: int):  # the g-th generator column in the generators box (its tuning-map cells)
         return self.content_x["gens"] + BRACKET_W + g * COL_W
 
-    def ss_gen_left(self, g):  # the g-th superspace generator column (chapter-9)
+    def ss_gen_left(self, g: int):  # the g-th superspace generator column (chapter-9)
         return self.ssgens_x + BRACKET_W + g * COL_W
 
-    def ss_prime_left(self, p):  # the p-th superspace prime column (chapter-9)
+    def ss_prime_left(self, p: int):  # the p-th superspace prime column (chapter-9)
         return self.ssprimes_x + self.outer_gutter_w("ssprimes") + BRACKET_W + p * COL_W
 
-    def map_top(self, i):
+    def map_top(self, i: int):
         return self.row_y["mapping"] + i * ROW_H
 
-    def proj_top(self, i):  # the y of projection-matrix row i (the d stacked maps of P = GM)
+    def proj_top(self, i: int):  # the y of projection-matrix row i (the d stacked maps of P = GM)
         return self.row_y["projection"] + i * ROW_H
 
-    def canon_top(self, i):  # the y of canonical-mapping row i (the r stacked canonical maps)
+    def canon_top(self, i: int):  # the y of canonical-mapping row i (the r stacked canonical maps)
         return self.row_y["canon"] + i * ROW_H
 
-    def vec_top(self, p):  # the y of vector component p in the d-tall interval-vectors row
+    def vec_top(self, p: int):  # the y of vector component p in the d-tall interval-vectors row
         return self.row_y["vectors"] + p * ROW_H
 
-    def ss_vec_top(self, p):  # the y of superspace-vector component p in the dL-tall ss_vectors row
+    def ss_vec_top(self, p: int):  # the y of superspace-vector component p in the dL-tall ss_vectors row
         return self.row_y["ss_vectors"] + p * ROW_H
 
-    def ss_map_top(self, i):  # the y of ss_mapping row i (the rL stacked superspace maps)
+    def ss_map_top(self, i: int):  # the y of ss_mapping row i (the rL stacked superspace maps)
         return self.row_y["ss_mapping"] + i * ROW_H
 
-    def ss_just_map_top(self, i):  # the y of ss_just_mapping row i (the dL stacked superspace JI maps)
+    def ss_just_map_top(self, i: int):  # the y of ss_just_mapping row i (the dL stacked superspace JI maps)
         return self.row_y["ss_just_mapping"] + i * ROW_H
 
-    def ss_proj_top(self, i):  # the y of ss_projection row i (the dL stacked maps of P_L = G_L M_L)
+    def ss_proj_top(self, i: int):  # the y of ss_projection row i (the dL stacked maps of P_L = G_L M_L)
         return self.row_y["ss_projection"] + i * ROW_H
 
     # The element +/− controls ride each fanning column's TOP bus (the fan-out, just after the
@@ -2450,10 +2450,10 @@ class _GridBuilder:
     # branch — with the top bus stretched out to reach it. sub_axis_x is the split's x (column_axis
     # fans the same centres); plus_stub_x records, per addable column that shows a +, where that +
     # (and so the bus end) sits, keeping the cells and the gridlines in lockstep.
-    def sub_axis_x(self, ckey, i):  # centre of column ckey's i-th per-element sub-axis (a branch point)
+    def sub_axis_x(self, ckey: str, i: int):  # centre of column ckey's i-th per-element sub-axis (a branch point)
         return self.group_left[ckey](i) + COL_W / 2
 
-    def col_plus_x(self, ckey):
+    def col_plus_x(self, ckey: str):
         n = self.group_n[ckey]
         if n == 0:  # an empty set has no branch points: the + centres on the single trunk
             mx, mw = self.matrix_span(ckey)
@@ -2472,12 +2472,12 @@ class _GridBuilder:
             return self.comma_left(self.nc_shown - 1) + COL_W + V_SPLIT_GAP / 2
         return self.sub_axis_x(ckey, n - 1) + COL_W  # one slot past the last branch point
 
-    def _plus_shows(self, ckey):  # whether column ckey shows a + (and so where its fan bus ends).
-        # The interval columns (commas / targets / held / interest) are addable from EITHER interval
-        # row — the quantities ratios OR the interval vectors — so their + survives hiding the
-        # quantities row, then drops the cursor into the new column's first vector cell instead (see
-        # app.add_interval). gens / primes add through the quantities row alone: their draft is a
-        # ratio / domain-element header with no editable vectors-row twin to fall back to.
+    def _plus_shows(self, ckey: str) -> bool:  # whether column ckey shows a + (and so where its fan bus ends).
+        """The interval columns (commas / targets / held / interest) are addable from EITHER interval
+        row — the quantities ratios OR the interval vectors — so their + survives hiding the
+        quantities row, then drops the cursor into the new column's first vector cell instead (see
+        app.add_interval). gens / primes add through the quantities row alone: their draft is a
+        ratio / domain-element header with no editable vectors-row twin to fall back to."""
         if ckey in ("interest", "held"):  # addable sets, so an empty-but-open column still adds one
             return self.col_open(ckey) and (self.row_open("quantities") or self.row_open("vectors"))
         if ckey == "targets":  # the target list is user-curated only when NOT all-interval (else it's auto Tₚ = I)
@@ -2507,7 +2507,7 @@ class _GridBuilder:
             return _log_operand(f"{recip.numerator}/{recip.denominator}")
         return None
 
-    def col_token(self, group, i):
+    def col_token(self, group: str, i: int):
         """The stable id-token for column ``i`` of an identity-keyed list (targets/held/interest/
         commas, the gens mapping rows and their detempering twins), so all of an entry's cells
         share one token and re-key together when it moves or a neighbour is removed (the
@@ -2521,13 +2521,13 @@ class _GridBuilder:
         pairs = self._col_ids.get(group)
         return i if pairs is None else pairs[i][0]
 
-    def pending_col_token(self, group):
+    def pending_col_token(self, group: str):
         """The id-token for a list's draft (pending) column — one past every committed column's, so
         it never collides with a live column. On a fresh list this is the column count, matching the
         historical ``…:count`` draft-cell ids."""
         return pending_token([tok for tok, _ in self._col_ids[group]])
 
-    def _pending_draft_idx(self, group):
+    def _pending_draft_idx(self, group: str):
         """The ``(draft-marker, committed-count)`` for an interval list's pending draft column,
         or ``None`` for a group with no draft. Shared by the quantities/tuning rows and the
         prescaling row, which each append one blank green slot one column past the committed
@@ -2535,7 +2535,7 @@ class _GridBuilder:
         return {"commas": (self.comma_draft or None, self.nc), "targets": (self.pending_target, self.k),
                 "held": (self.pending_held, self.nh), "interest": (self.pending_interest, self.mi)}.get(group)
 
-    def _voice(self, tile, idx, cents):
+    def _voice(self, tile, idx, cents) -> None:
         """Make the just-built cell (``self.cells[-1]``) click-to-play: hovering it reveals a speaker
         that sounds ``cents``. ``tile`` + ``idx`` group a row's cells so the bank's arp / chord /
         rolled-chord modes sweep the whole tile from the clicked note — the client derives the chord
@@ -2545,7 +2545,7 @@ class _GridBuilder:
             return
         self.cells[-1] = replace(self.cells[-1], audio=(tile, int(idx), float(cents)))
 
-    def tuning_value_row(self, key, group, values):
+    def tuning_value_row(self, key: str, group: str, values) -> None:
         if not self.tile_open(key, group):
             return
         values = tuple(values)
@@ -2595,7 +2595,7 @@ class _GridBuilder:
     # offsets the cells within it (the gridlines follow the cells the same way; see
     # column_axis). chart_top[key] exists only where a chart band was reserved (charts on,
     # row charted, not folded), so it gates emission against the layout with no drift.
-    def chart(self, rkey, ckey, values, indicator=None, indicator_label=""):
+    def chart(self, rkey: str, ckey: str, values, indicator=None, indicator_label="") -> None:
         values = tuple(values)
         if values and rkey in self.chart_top and self.tile_open(rkey, ckey):
             x = self.group_left[ckey](0) - BRACKET_W  # the left bracket gutter, where the value block starts
@@ -2605,13 +2605,13 @@ class _GridBuilder:
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.
-    def bracket(self, bid, glyphs, group_key, y, h, *, fit=False, span=None, pending=False):
-        # value brackets are short and centred in their row (so stacked rows keep a
-        # gap); the enclosing vector-list [ ] passes fit=True to span the matrix.
-        # matrix_span hugs the cells (interest's content, not its footprint) and steps
-        # the left ⟨ right past the matlabel gutter, so the row labels sit inside the
-        # panel left of the ⟨ rather than overflowing it. ``span`` overrides the default span.
-        # ``pending`` recolours the bracket green (via _ebk_svg) to match a draft row's cells.
+    def bracket(self, bid: str, glyphs, group_key: str, y, h, *, fit=False, span=None, pending=False) -> None:
+        """value brackets are short and centred in their row (so stacked rows keep a
+        gap); the enclosing vector-list [ ] passes fit=True to span the matrix.
+        matrix_span hugs the cells (interest's content, not its footprint) and steps
+        the left ⟨ right past the matlabel gutter, so the row labels sit inside the
+        panel left of the ⟨ rather than overflowing it. ``span`` overrides the default span.
+        ``pending`` recolours the bracket green (via _ebk_svg) to match a draft row's cells."""
         gx, gw = span if span else self.matrix_span(group_key)
         if fit:
             # A vector-list outer wrap [ … ] spans the matrix's full FRAMED height, so it
@@ -2636,10 +2636,10 @@ class _GridBuilder:
     # the single place a gridline is recorded. ``dotted`` marks a rule whose band is
     # collapsed: a folded row/column converges its fan onto one centre rule, drawn dotted
     # so the band reads as a placeholder for its hidden content (see Line.dotted).
-    def gridline(self, lid, orientation, pos, start, length, *, dotted):
+    def gridline(self, lid: str, orientation: str, pos, start, length, *, dotted: bool) -> None:
         self.lines.append(Line(lid, orientation, pos, start, length, dotted=dotted))
 
-    def column_axis(self, key, prefix, n, center_open):
+    def column_axis(self, key: str, prefix: str, n: int, center_open: bool) -> None:
         if key not in self.col_x:
             return
         self.fanned_columns.add(key)
@@ -2671,15 +2671,15 @@ class _GridBuilder:
         self.gridline(f"bus:{key}:bot", "h", self.bot_bus_y, bx, bw, dotted=dotted)
         self.gridline(f"trunk:{key}", "v", cx, self.branch_top_y, self.fanout_y - self.branch_top_y, dotted=dotted)
         self.gridline(f"foot:{key}", "v", cx, self.bot_bus_y, self.total_h - self.bot_bus_y, dotted=dotted)
-    def _row_fans(self, key):
-        # A row fans its left bus OUT to node_edge + FAN (branching into per-sub-row rules) when it
-        # has more than one cell-row OR carries a row + stub. The + must ride a fanned bus to sit
-        # beside the content and stay reached by the connecting bar — so even a SINGLE-row band that
-        # adds elements fans (a rank-1 ET mapping, whose lone generator row still shows the
-        # comma-un-tempering +): the row mirror of an addable column always fanning to seat its +.
+    def _row_fans(self, key: str):
+        """A row fans its left bus OUT to node_edge + FAN (branching into per-sub-row rules) when it
+        has more than one cell-row OR carries a row + stub. The + must ride a fanned bus to sit
+        beside the content and stay reached by the connecting bar — so even a SINGLE-row band that
+        adds elements fans (a rank-1 ET mapping, whose lone generator row still shows the
+        comma-un-tempering +): the row mirror of an addable column always fanning to seat its +."""
         return self.row_nsub[key] > 1 or key in self.row_plus_y
 
-    def row_axis(self, key):
+    def row_axis(self, key: str) -> None:
         n = self.row_nsub[key]
         folded = f"row:{key}" in self.collapsed  # the whole fan dots and converges when the row folds
         cy = self.row_y[key] + self.row_h[key] / 2
@@ -2703,9 +2703,9 @@ class _GridBuilder:
     # never a leftover grey strip. Every tile is simply its row band's full height — a row with
     # a nested control (chart/chooser) is one uniform band: tile_h already includes that control's
     # reservation, so every tile in the row gets the same (extended) height here.
-    def panel_rect(self, ckey, rkey):
-        # a folded tile collapses both ways at once, so it shrinks to a point at its
-        # centre — like a row+column collapse confined to this one tile.
+    def panel_rect(self, ckey: str, rkey: str):
+        """a folded tile collapses both ways at once, so it shrinks to a point at its
+        centre — like a row+column collapse confined to this one tile."""
         tile_c = f"tile:{rkey}:{ckey}" in self.collapsed
         col_c = f"col:{ckey}" in self.collapsed or tile_c
         row_c = f"row:{rkey}" in self.collapsed or tile_c
@@ -2717,7 +2717,7 @@ class _GridBuilder:
         by = cy + ch / 2 if row_c else cy
         return bx - px, by - py, w + 2 * px, h + 2 * py
 
-    def panel(self, bid, ckey, rkey):
+    def panel(self, bid: str, ckey: str, rkey: str) -> None:
         if ckey not in self.col_x or rkey not in self.row_y:
             return
         self.blocks.append(Block(bid, *self.panel_rect(ckey, rkey)))
@@ -2734,11 +2734,11 @@ class _GridBuilder:
     # their quantity, CELL_FACTORS); the spine label cells colour by the BAND they head — the
     # counts + units rows by their column's family, the quantities + units columns by their
     # row's family — continuing each value band's colour through the spine (see SPINE_*).
-    def tile_groups(self, rkey, ckey):
-        # the consolidated unrotated-vector-list column V = C|U mixes the comma half (the comma basis
-        # C — temperament/yellow) with the unchanged half (the held/unchanged intervals — tuning/cyan),
-        # so EVERY tile of the column reads GREEN (the darken blend of the two washes). This overrides
-        # the per-tile factors: off projection each commas tile keeps its own colour (C-yellow, etc.).
+    def tile_groups(self, rkey: str, ckey: str):
+        """the consolidated unrotated-vector-list column V = C|U mixes the comma half (the comma basis
+        C — temperament/yellow) with the unchanged half (the held/unchanged intervals — tuning/cyan),
+        so EVERY tile of the column reads GREEN (the darken blend of the two washes). This overrides
+        the per-tile factors: off projection each commas tile keeps its own colour (C-yellow, etc.)."""
         if self.show_unchanged and ckey == "commas":
             return {"temperament", "tuning"}
         # a spine family may be one string or a set of families (a both-families band reads green)
@@ -2761,7 +2761,7 @@ class _GridBuilder:
 
     # the plain-text box sits directly below the symbol/caption/units stack; the preset
     # chooser rides one plain-text band lower (so presets appear under plain text).
-    def ptext_band_y(self, rkey):
+    def ptext_band_y(self, rkey: str):
         return self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey] + self.row_sym[rkey] + self.row_cap[rkey] + self.row_units[rkey]
 
     # A chooser dropdown that offers only ONE option, with that option already selected, is not a
@@ -2770,7 +2770,7 @@ class _GridBuilder:
     # (Douglas's request). These predicates decide that, shared by the preset choosers (tuning /
     # prescaler) and the box-𝒄 complexity control select.
     @staticmethod
-    def _is_sole_option(options, value):
+    def _is_sole_option(options, value) -> bool:
         """True when ``options`` offers exactly one choice AND ``value`` is it — so the chooser has
         no real choice and renders disabled. ``options`` is a ``{value: label}`` mapping (a list/tuple
         is taken as value==label). False for a real choice (≥2 options) or an off-list value — a
@@ -2778,7 +2778,7 @@ class _GridBuilder:
         opts = options if isinstance(options, dict) else {o: o for o in options}
         return len(opts) == 1 and value in opts
 
-    def _preset_locked(self, name):
+    def _preset_locked(self, name: str) -> bool:
         """Whether a tuning / prescaler preset is locked to its single on-list option (→ a disabled
         dropdown). Temperament and target always offer a real choice. The on-list value mirrors
         app._build_preset: the tuning chooser's via the threaded displayed_tuning_name, the
@@ -2804,7 +2804,7 @@ class _GridBuilder:
     # other labelled control uses. Any sibling control (the target chooser's all-interval checkbox,
     # box 𝐓) rides the empty space to the dropdown's right, inside this same full-width box. Returns
     # the (x, width, y) to seat the dropdown at.
-    def control_box(self, box_id, ckey, top, cap_w, label, disabled=False, scheme_btn=False, fill=False):
+    def control_box(self, box_id: str, ckey: str, top, cap_w, label, disabled: bool = False, scheme_btn: bool = False, fill: bool = False):
         dropdown_w, label_h, box_h = self.control_dims(ckey, cap_w, label, scheme_btn, fill)
         box_x, box_y = self.col_x[ckey], top + BOX_OUTER  # spans the tile footprint; BOX_OUTER is vertical only
         self.blocks.append(Block(box_id, box_x, box_y, self.col_w[ckey], box_h, boxed=True))
@@ -2817,7 +2817,7 @@ class _GridBuilder:
                                  "caption", text=label, align="left", disabled=disabled))
         return ctrl_x, dropdown_w, ctrl_y
 
-    def control_region(self, box_id, ckey, top, content_h):
+    def control_region(self, box_id: str, ckey: str, top, content_h):
         """A bordered control box (boxed Block) spanning tile ``ckey`` from ``top``, enclosing
         ``content_h`` of stacked controls inset BOX_INNER at the top and CTRL_LABEL_GAP at the
         bottom — the control_box frame, but for arbitrary content (the box-𝐋 checkbox, the box-𝒄
@@ -2834,22 +2834,22 @@ class _GridBuilder:
         BOX_OUTER vertical padding above and below (the counterpart of :func:`control_band_h`)."""
         return 2 * BOX_OUTER + BOX_INNER + content_h + CTRL_LABEL_GAP
 
-    def emit_all_interval_check(self, check_x, ctrl_y):
-        # the all-interval checkbox + its caption, seated on a control row at ctrl_y: an OPTION_BOX_PX
-        # square over an "all-interval" caption in an LBOX_DIM_W slot (the box-𝐋 diminuator's shape). It
-        # reflects whether the scheme targets every interval (ticking it is wired in app.py).
+    def emit_all_interval_check(self, check_x, ctrl_y) -> None:
+        """the all-interval checkbox + its caption, seated on a control row at ctrl_y: an OPTION_BOX_PX
+        square over an "all-interval" caption in an LBOX_DIM_W slot (the box-𝐋 diminuator's shape). It
+        reflects whether the scheme targets every interval (ticking it is wired in app.py)."""
         check_y = ctrl_y + (PRESET_H - OPTION_BOX_PX) / 2  # centre the square on the control row
         self.cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
                              "control_check", text="", checked=service.is_all_interval(self.tuning_scheme)))
         self.cells.append(CellBox("caption:all_interval", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
                              CAPTION_LINE, "caption", text="all-interval"))
 
-    def emit_scheme_button(self, x, y, ckey):
-        # the square ✕ "return to scheme" button + a caption snug to its right (vertically centred on
-        # the square), with the ✕'s top-left at (x, y). Seated INSIDE the established-projection
-        # chooser's box (the row ABOVE the dropdown) when presets is on, or in its own small box when
-        # presets is off. back_to_scheme is wired in app.py, which greys it when the tuning is already
-        # scheme-driven.
+    def emit_scheme_button(self, x, y, ckey: str) -> None:
+        """the square ✕ "return to scheme" button + a caption snug to its right (vertically centred on
+        the square), with the ✕'s top-left at (x, y). Seated INSIDE the established-projection
+        chooser's box (the row ABOVE the dropdown) when presets is on, or in its own small box when
+        presets is off. back_to_scheme is wired in app.py, which greys it when the tuning is already
+        scheme-driven."""
         self.cells.append(CellBox(f"scheme:{ckey}", x, y, SCHEME_BTN_SQ, SCHEME_BTN_SQ, "scheme_button", text="✕"))
         label_y = y + (SCHEME_BTN_SQ - CAPTION_LINE) / 2  # centre the one-line caption on the square
         # the caption box starts 2px right of the ✕; its rtt-caption-left class adds a 6px text inset,
@@ -2857,10 +2857,10 @@ class _GridBuilder:
         self.cells.append(CellBox(f"scheme:{ckey}:label", x + SCHEME_BTN_SQ + 2, label_y, SCHEME_LABEL_W,
                              CAPTION_LINE, "caption", text="return to scheme", align="left"))
 
-    def emit_diminuator_check(self, check_x, ctrl_y):
-        # the "replace diminuator" checkbox + caption, seated to the RIGHT of the predefined-
-        # pretransformers dropdown inside its preset box — box 𝐋's control riding the existing
-        # pretransformer-chooser box, the way the all-interval check rides the target chooser box.
+    def emit_diminuator_check(self, check_x, ctrl_y) -> None:
+        """the "replace diminuator" checkbox + caption, seated to the RIGHT of the predefined-
+        pretransformers dropdown inside its preset box — box 𝐋's control riding the existing
+        pretransformer-chooser box, the way the all-interval check rides the target chooser box."""
         check_y = ctrl_y + (PRESET_H - OPTION_BOX_PX) / 2  # centre the square on the control row
         self.cells.append(CellBox("control:diminuator", check_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
                              "control_check", text="", checked=service.diminuator_replaced(self.tuning_scheme)))
@@ -2870,10 +2870,10 @@ class _GridBuilder:
     # a framed matrix's top bracket + bottom brace stand off the cells by FRAME_GAP:
     # the top bracket just above row 0 (below the toggle head), the brace a matching
     # gap below the last row of that band.
-    def frame_top_y(self, rkey):
+    def frame_top_y(self, rkey: str):
         return self.row_y[rkey] - FRAME_H - FRAME_GAP
 
-    def frame_brace_y(self, rkey):
+    def frame_brace_y(self, rkey: str):
         return self.row_y[rkey] + self.row_h[rkey] + FRAME_GAP
 
     # a matrix tile (the primes mapping and its canonical forms) is enclosed by a top
@@ -2881,16 +2881,16 @@ class _GridBuilder:
     # coordinates, so it's the right close for the mapping but not for raw vectors or
     # prescaled vectors (those use per-column marks via vector_list_marks). ``bid`` keeps
     # each frame's ids stable so two framed rows over the same column never collide.
-    def matrix_frame(self, rkey, ckey, bid, foot="ebkbrace", span=None):
-        # The spanning frame hugs the CELL matrix — content_box, exactly as the per-row
-        # bracket() calls do — not the grey footprint (col_x/col_w). The matlabel gutter
-        # (row labels 𝒎ᵢ / 𝒙ᵢ) sits LEFT of that matrix, OUTSIDE the frame. Anchoring to
-        # the footprint instead would, whenever it is widened past its content (e.g. by the
-        # prescaler chooser or box-𝐋 diminuator under the prescaling matrix), drag the frame left
-        # over those labels and right past the cells. ``foot`` is the bottom-spanning close:
-        # ``ebkbrace`` for the mapping family (generator coordinates, curly close),
-        # ``ebkangle`` for the bare prescaler 𝐿 (angle close ⟩, mirroring the mapping's
-        # plain-text bracket but with ⟩ in place of }).
+    def matrix_frame(self, rkey: str, ckey: str, bid: str, foot: str = "ebkbrace", span=None) -> None:
+        """The spanning frame hugs the CELL matrix — content_box, exactly as the per-row
+        bracket() calls do — not the grey footprint (col_x/col_w). The matlabel gutter
+        (row labels 𝒎ᵢ / 𝒙ᵢ) sits LEFT of that matrix, OUTSIDE the frame. Anchoring to
+        the footprint instead would, whenever it is widened past its content (e.g. by the
+        prescaler chooser or box-𝐋 diminuator under the prescaling matrix), drag the frame left
+        over those labels and right past the cells. ``foot`` is the bottom-spanning close:
+        ``ebkbrace`` for the mapping family (generator coordinates, curly close),
+        ``ebkangle`` for the bare prescaler 𝐿 (angle close ⟩, mirroring the mapping's
+        plain-text bracket but with ⟩ in place of })."""
         if not self.tile_open(rkey, ckey):
             return
         gx, gw = span if span else self.matrix_span(ckey)  # ``span`` overrides the default cell-matrix span
@@ -2909,7 +2909,7 @@ class _GridBuilder:
     # ``separators=False`` drops the dividing rules: for a bordered grid (the comma
     # basis — its own cell borders already divide the columns) or for the standalone
     # columns of the intervals-of-interest collection (which isn't a matrix at all).
-    def vector_list_marks(self, rkey, name, ckey, left, n_cols, top="ebktop", foot="ebkbrace", separators=True, pending_col=-1):
+    def vector_list_marks(self, rkey, name, ckey, left, n_cols, top="ebktop", foot="ebkbrace", separators=True, pending_col=-1) -> None:
         if not self.tile_open(rkey, ckey):
             return
         mark_w = COL_W - 2 * MARK_INSET
@@ -2929,12 +2929,12 @@ class _GridBuilder:
         for c in range(1, n_cols):  # a rule on each interior column boundary
             self.cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, sep_y, SEP_W, sep_h, "vbar"))
 
-    def v_split_bars(self):
-        # the single vertical rule dividing the comma half C from the unchanged half U, centred in
-        # the V_SPLIT_GAP between them, down EVERY value tile of the consolidated unrotated-vector-
-        # list column V = C|U (the mockup's V | divider). The per-column separators are off
-        # throughout V, so this lone bar is its only divider. The counts tile is excluded — it holds
-        # only the two scalar tallies (n, u), not a matrix, so a dividing rule there reads as noise.
+    def v_split_bars(self) -> None:
+        """the single vertical rule dividing the comma half C from the unchanged half U, centred in
+        the V_SPLIT_GAP between them, down EVERY value tile of the consolidated unrotated-vector-
+        list column V = C|U (the mockup's V | divider). The per-column separators are off
+        throughout V, so this lone bar is its only divider. The counts tile is excluded — it holds
+        only the two scalar tallies (n, u), not a matrix, so a dividing rule there reads as noise."""
         if not self.show_unchanged or self.commas_x is None or self.nc_shown == 0:
             return  # no comma half (full rank, n = 0 → the whole column is U): nothing to divide
         x = self.comma_left(self.nc_shown) - V_SPLIT_GAP / 2 - SEP_W / 2  # mid-gap, between C (+ any draft) and U
@@ -2943,7 +2943,7 @@ class _GridBuilder:
             if self.tile_open(rkey, "commas"):
                 self.cells.append(CellBox(f"vsplit:{rkey}", x, self.row_y[rkey], SEP_W, self.row_h[rkey], "vbar"))
 
-    def _emit_headers(self):
+    def _emit_headers(self) -> None:
         """Column headers, row labels, their fold toggles, and the master expand/collapse-all toggle."""
         # column headers (always shown; a collapsed column keeps its title) plus a
         # fold toggle in the header band for collapsible ones. A matlabel-widened column
@@ -2987,7 +2987,7 @@ class _GridBuilder:
         self.cells.append(CellBox("toggle:all", self.node_x, self.col_node_y, TOGGLE, TOGGLE, "alltoggle",
                              text=_fold_glyph(all_collapsed)))
 
-    def _emit_counts_row(self):
+    def _emit_counts_row(self) -> None:
         """The counts row: each present column's set cardinality, centred over its values."""
         # counts row: each present column's set cardinality, centred over its values. The
         # detempering column counts the rank r (one detempering interval per generator); the
@@ -3018,7 +3018,7 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"count:{ckey}", self.col_x[ckey], self.row_y["counts"], self.col_w[ckey], ROW_H,
                                      "count", text=f"{_count_sym(sym)} = {cardinality[ckey]}"))
 
-    def _emit_units(self):
+    def _emit_units(self) -> None:
         """The units row + column: coordinate-unit labels per row and per column."""
         # units row + column (the specific `domain_units` toggle): coordinate-unit labels.
         # The units COLUMN labels each row's coordinate — the interval-vectors basis in
@@ -3100,7 +3100,7 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"urow:{key}:{i}", left(i), uy, COL_W, ROW_H,
                                          "units", text=label(i)))
 
-    def _emit_quantities_row(self):
+    def _emit_quantities_row(self) -> None:
         """The quantities row: domain primes, interval ratios, their ± controls and the reorder grips."""
         # quantities row: domain primes (+ controls) and target ratios (below the
         # tile's toggle head, like every other row's values). The whole row -- its
@@ -3110,12 +3110,12 @@ class _GridBuilder:
             qy = self.row_y["quantities"]
 
             def branch_minus(cid, ckey, i, kind, **kw):
-                # a hover − centred on column ckey's i-th branch point (its top-bus split): the
-                # zone occupies the fan-out gap ABOVE the header (where the revealed button parks),
-                # COL_W wide on the sub-axis, frozen with the fan. It stops AT the header's top edge
-                # — the header ratio is an editable input, and a covering z-index-4 zone would
-                # swallow clicks into it. For an interval column the prominent drag grip overlays the
-                # zone's TOP, so its button reveals at the zone's BOTTOM instead (CSS .rtt-minus-low).
+                """a hover − centred on column ckey's i-th branch point (its top-bus split): the
+                zone occupies the fan-out gap ABOVE the header (where the revealed button parks),
+                COL_W wide on the sub-axis, frozen with the fan. It stops AT the header's top edge
+                — the header ratio is an editable input, and a covering z-index-4 zone would
+                swallow clicks into it. For an interval column the prominent drag grip overlays the
+                zone's TOP, so its button reveals at the zone's BOTTOM instead (CSS .rtt-minus-low)."""
                 self.cells.append(CellBox(cid, self.sub_axis_x(ckey, i) - COL_W / 2, self.fanout_y, COL_W,
                                      qy - self.fanout_y, kind, **kw))
 
@@ -3293,7 +3293,7 @@ class _GridBuilder:
                         self.cells.append(CellBox(f"grip:unchanged:{j}", self.sub_axis_x("commas", self.nc_shown + j) - COL_W / 2,
                                              grip_top, COL_W, GRIP_BAND, "colgrip", comma=j))
 
-    def _emit_column_plus_controls(self):
+    def _emit_column_plus_controls(self) -> None:
         """The addable columns' + controls riding the shared column fan above the grid."""
         # The addable columns' + controls ride the shared column fan above the grid, NOT inside the
         # quantities row — so they survive that row being hidden, keeping every interval kind addable
@@ -3309,7 +3309,7 @@ class _GridBuilder:
             if ckey in self.plus_stub_x:
                 self.cells.append(CellBox(cid, self.plus_stub_x[ckey] - BTN / 2, self.fanout_y - BTN / 2, BTN, BTN, cid))
 
-    def _emit_rehomed_minus_controls(self):
+    def _emit_rehomed_minus_controls(self) -> None:
         """The interval columns' − controls re-homed onto the vectors row when the quantities row is hidden."""
         # The interval columns' − controls — each column's removal, and the draft column's cancel —
         # normally ride the quantities row (emitted in its block above). When that row is hidden but
@@ -3345,7 +3345,7 @@ class _GridBuilder:
                 if self.pending_interest is not None:
                     vec_minus("interest_minus:pending", "interest", self.mi, "interest_minus")
 
-    def _emit_mapping_band(self):
+    def _emit_mapping_band(self) -> None:
         """Generator ratios, the mapping matrix, its mapped lists and the draft generator row."""
         # generator ratios (aligned with the mapping rows they label) + the mapping
         # matrix and its mapped target interval list
@@ -3471,7 +3471,7 @@ class _GridBuilder:
 
     def _emit_mapped_grid(self, tile, prefix, grid, n_cols, left, col_kw, *,
                           full=None, colwise=False, col_token_key=None, inset=0,
-                          row="projection", top=None, height=None, pending=None):
+                          row="projection", top=None, height=None, pending=None) -> None:
         """One read-only ("mapped") grid of a projection band: ``height`` rows over ``row``'s
         prime-indexed tops (``top``, default proj_top) × ``n_cols`` columns at ``left(j)``, each
         cell id ``cell:{prefix}:…`` with ``col_kw`` (prime/gen/comma) carrying the column index.
@@ -3521,7 +3521,7 @@ class _GridBuilder:
                 for j in range(n_cols):
                     cell(i, j)
 
-    def _emit_projection_band(self):
+    def _emit_projection_band(self) -> None:
         """The projection band: P = GM, the embedding G, the projected lists and the scaling factors."""
         # the projection matrix P = GM: a d×d operator over the domain primes, a stack of read-only
         # maps like the mapping. Its cells are "mapped" (a computed value, NOT per-cell editable — a
@@ -3598,7 +3598,7 @@ class _GridBuilder:
                 self.cells.append(CellBox("cell:scaling:draft", self.comma_left(self.nc), self.row_y["scaling_factors"],
                                      COL_W, ROW_H, "mapped", text="", pending=True))
 
-    def _emit_canon_band(self):
+    def _emit_canon_band(self) -> None:
         """The canonical-mapping form box and the generator form matrix."""
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
         # read-only maps over the primes, framed like the mapping matrix one row above it; the
@@ -3613,7 +3613,7 @@ class _GridBuilder:
                     for j in range(len(self.form_M)):
                         self.cells.append(CellBox(f"cell:form:{i}:{j}", self.gen_left(j), self.canon_top(i), COL_W, ROW_H, "formcell", text=str(self.form_M[i][j])))
 
-    def _emit_vectors_band(self):
+    def _emit_vectors_band(self) -> None:
         """The interval-vectors row: the basis spine, comma/target/held/interest vectors and drag handles."""
         # interval-vectors row: each column's intervals as vectors (d-tall columns over
         # the domain primes), on the same prime/comma/target axes as the quantities row.
@@ -3755,7 +3755,7 @@ class _GridBuilder:
                         for i in range(count):
                             self.cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), hy, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
 
-    def _emit_superspace_rows(self):
+    def _emit_superspace_rows(self) -> None:
         """The chapter-9 superspace rows: spines, B_L, M_L, M_jL, the lifted lists and the P_L tiles."""
         # the chapter-9 superspace interval-vectors row's spine basis index: the dL
         # superspace primes stacked down the quantities spine column, one per row — the
@@ -4048,7 +4048,7 @@ class _GridBuilder:
                     self.tuning_value_row(key, "detempering", values)
         return chart_indicators
 
-    def _emit_prescaling_band(self):
+    def _emit_prescaling_band(self) -> None:
         """The prescaling row: the prescaler applied to each column group's vectors."""
         # the prescaling row applies the prescaler 𝐿 to each column group's vectors: over the
         # primes it is the d×d diagonal (𝐿·eₚ — the prescaler matrix itself), over the comma /
@@ -4170,7 +4170,7 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left(pending_idx[1]),
                                          cy, COL_W, ROW_H, "tuningvalue", text="", pending=True))
 
-    def _emit_lbox_control(self):
+    def _emit_lbox_control(self) -> None:
         """Box 𝐋's lone alt.-complexity control: the replace-diminuator checkbox."""
         if self.lbox_ctrl:  # box 𝐋's lone alt.-complexity control: the "replace diminuator" checkbox,
             # in a bordered box at the bottom of the prescaling matrix (the prescaler chooser is a preset
@@ -4185,7 +4185,7 @@ class _GridBuilder:
             self.cells.append(CellBox("caption:diminuator", bx, by + OPTION_BOX_PX, LBOX_DIM_W,
                                  CAPTION_LINE, "caption", text="replace diminuator"))
 
-    def _emit_cbox_controls(self):
+    def _emit_cbox_controls(self) -> None:
         """Box 𝒄's controls: the predefined-complexities dropdown, q and dual(q)."""
         if self.cbox_ctrl:  # box 𝒄's three controls sit on one row in a bordered box at the bottom of the
             # complexity list: [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its
@@ -4260,7 +4260,7 @@ class _GridBuilder:
                 self.cells.append(CellBox("caption:dual", dual_slot_x, cap_y, slot_w, cap_h, "caption",
                                      text="dual norm power"))
 
-    def _emit_complexity_row(self):
+    def _emit_complexity_row(self) -> None:
         """The complexity row: 𝒄 over every interval set."""
         if self.row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
             for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
@@ -4277,7 +4277,7 @@ class _GridBuilder:
                 self.tuning_value_row("complexity", "ssprimes",
                               service.superspace_complexity_prescaler(self.state, self.tuning_scheme))
 
-    def _emit_weight_row(self):
+    def _emit_weight_row(self) -> None:
         """The weight row and box 𝒘's weight-slope chooser."""
         if self.row_open("weight") and self.tile_open("weight", "targets"):
             # the weight is always a per-target list (it scales the targets, like damage). The all-
@@ -4297,7 +4297,7 @@ class _GridBuilder:
                                  slope_w, CAPTION_LINE, "caption",
                                  text="damage weight slope", align="left", disabled=self.slope_locked))
 
-    def _emit_damage_row(self, chart_indicators):
+    def _emit_damage_row(self, chart_indicators) -> None:
         """The damage row; records the minimized-damage chart indicator."""
         if self.row_open("damage"):  # damage is over the targets only (the tuning's own column)
             self.tuning_value_row("damage", "targets", self.target_sizes.damage)
@@ -4310,7 +4310,7 @@ class _GridBuilder:
                 chart_indicators[("damage", "targets")] = (
                     _power_mean(self.target_sizes.damage, power), _format_power(power))
 
-    def _emit_charts(self, chart_indicators):
+    def _emit_charts(self, chart_indicators) -> None:
         """Draw a bar chart over every tile a charted row recorded."""
         # Draw a bar chart over every tile a charted row recorded (see chart_tiles above):
         # one pass, so the set of charts always equals the set of charted-row value tiles.
@@ -4453,7 +4453,7 @@ class _GridBuilder:
             approach_frame = (ax, box_top, aw, BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H)
         return approach_frame
 
-    def _emit_brackets(self):
+    def _emit_brackets(self) -> None:
         """The per-row / per-list EBK brackets across all the bands."""
         if self.row_open("canon") and self.tile_open("canon", "primes"):  # canonical maps: ⟨ … ] per row
             for i in range(self.rc):
@@ -4663,7 +4663,7 @@ class _GridBuilder:
         if self.tile_open("damage", "targets"):
             self.bracket("damage", LIST_BRACKETS, "targets", self.row_y["damage"], ROW_H)
 
-    def _emit_matrix_labels(self):
+    def _emit_matrix_labels(self) -> None:
         """Matrix row + column labels (when header symbols are on — independent of the in-tile symbol)."""
         # Matrix row + column labels (when header symbols are on — a toggle independent of the
         # in-tile big symbol above). A row-labelled tile is a
@@ -4761,7 +4761,7 @@ class _GridBuilder:
                         "matlabel", text=text,
                     ))
 
-    def _emit_axes(self):
+    def _emit_axes(self) -> None:
         """Shared axes: the fanned column/row buses, the trunks and the spine gridlines."""
         # Shared axes. A multi-element group is one line that fans out at the near end
         # (from its node) into one line per element, runs through the data, then fans
@@ -4820,7 +4820,7 @@ class _GridBuilder:
                 self.gridline(f"h:{key}", "h", self.row_y[key] + self.row_h[key] / 2, self.node_edge, self.total_w - self.node_edge,
                          dotted=f"row:{key}" in self.collapsed)
 
-    def _emit_panels(self, gtm_box, opt_box, approach_frame):
+    def _emit_panels(self, gtm_box, opt_box, approach_frame) -> None:
         """The grey tile panels plus the control-region / ranges / optimization / approach boxes."""
         for bid, rkey, ckey in self.tiles:
             if (rkey, ckey) in self.declared_tiles:  # a dropped tile (e.g. all-interval's redundant ones) loses its panel too
@@ -4838,7 +4838,7 @@ class _GridBuilder:
         if approach_frame is not None:
             self.blocks.append(Block("block:optimization:approach:box", *approach_frame, boxed=True))
 
-    def _emit_washes(self):
+    def _emit_washes(self) -> None:
         """The colorization washes: white bases plus the per-group colour bands."""
         if self.col_x and self.row_y:
             bands = []  # (id, x, y, w, h, group)
@@ -4860,7 +4860,7 @@ class _GridBuilder:
             for bid, x, y, w, h, group in bands:  # the darken colour bands over them
                 self.blocks.append(Block(f"wash:{bid}", x, y, w, h, tint=group))
 
-    def _emit_symbols_captions(self):
+    def _emit_symbols_captions(self) -> None:
         """Quantity symbols, equivalences, captions and units lines inside each tile."""
         # quantity symbol + name stacked inside each tile, below its values + bottom
         # frame: the symbol line (toggled by symbols) on top, the long-form name
@@ -4971,7 +4971,7 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"units:{rkey}:{ckey}", self.col_x[ckey], uy, self.col_w[ckey], UNIT_H,
                                      "units", text=f"units: {unit}"))
 
-    def _emit_presets(self):
+    def _emit_presets(self) -> None:
         """Preset chooser dropdowns in the reserved band below each governing tile."""
         # preset chooser dropdowns, in the reserved band below each governing tile's
         # plain-text box. The tuning/target choosers carry the live selection; the
@@ -5030,7 +5030,7 @@ class _GridBuilder:
                     ckey = "ssgens"
                 emit_preset(f"preset:{name}:{ckey}", name, rkey, ckey, label)
 
-    def _emit_all_interval_check_fallback(self):
+    def _emit_all_interval_check_fallback(self) -> None:
         """The all-interval checkbox alone in the band when the presets layer is hidden."""
         # the all-interval checkbox is revealed by the show-panel "all-interval" entry ALONE (not the
         # presets toggle). When the target chooser is shown, emit_preset seats the checkbox inside
@@ -5040,7 +5040,7 @@ class _GridBuilder:
             top = self.ptext_band_y("vectors") + self.row_ptext["vectors"]
             self.emit_all_interval_check(self.col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
 
-    def _emit_form_choosers(self):
+    def _emit_form_choosers(self) -> None:
         """The form choosers, one box below the preset choosers."""
         # the form chooser, one box below the preset chooser: it canonicalizes the mapping /
         # comma basis it rides (an undoable edit). A control, so it ignores the value-display
@@ -5053,7 +5053,7 @@ class _GridBuilder:
                 cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESET_W, label, fill=True)
                 self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser"))
 
-    def _emit_scheme_buttons(self):
+    def _emit_scheme_buttons(self) -> None:
         """The return-to-scheme ✕ buttons in their own boxes when presets are off."""
         # the always-present "return to scheme" ✕ button on the projection (P) and embedding (G) tiles —
         # hands a picked/edited tuning back to the scheme + target list (editor.back_to_scheme). With
@@ -5073,7 +5073,7 @@ class _GridBuilder:
                                          BOX_INNER + SCHEME_BTN_SQ + CTRL_LABEL_GAP, boxed=True))
                 self.emit_scheme_button(self.col_x[ckey] + BOX_INNER, box_y + BOX_INNER, ckey)
 
-    def _emit_ptext_band(self):
+    def _emit_ptext_band(self) -> None:
         """The plain-text value band below each tile's symbol/caption stack."""
         # plain-text value band: each tile's value as its natural EBK string, directly
         # below the symbol/caption stack (above the preset chooser). The two editable
@@ -5104,7 +5104,7 @@ class _GridBuilder:
             # a quantities-row plain text — "2.3.5", the compact prime-limit notation (from the
             # service seam above), which the gridded "2 3 5" cells don't show that way.
 
-    def _emit_ebk_frames_and_marks(self):
+    def _emit_ebk_frames_and_marks(self) -> None:
         """Matrix frames, vector-list ket marks and the C|U split bars."""
         self.matrix_frame("mapping", "primes", "primes")
         # P = GM: a covector stack like the mapping, but closing with the prime-coordinate ket ⟩
@@ -5217,7 +5217,7 @@ class _GridBuilder:
         self.vector_list_marks("prescaling", "prescaling:interest", "interest", self.interest_left, self.mi, foot="ebkangle", separators=False)
         self.v_split_bars()  # the lone C|U divider down every tile of the consolidated V column
 
-    def _emit_tile_toggles(self):
+    def _emit_tile_toggles(self) -> None:
         """A per-tile fold toggle inset into each content tile's top-left corner."""
         # a per-tile fold toggle inset into each content tile's top-left corner: it
         # sits in the head strip reserved above the content, TOGGLE_INSET in from the
@@ -5234,7 +5234,7 @@ class _GridBuilder:
                                      self.col_x[ckey] - PAD + TOGGLE_INSET, self.tile_top[rkey] - PAD + TOGGLE_INSET,
                                      TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
-    def _apply_value_display_filters(self):
+    def _apply_value_display_filters(self) -> None:
         """Value-display filtering and the doomed-column remove preview over the final cells."""
         # Value-display filtering. The tiles (blocks) and gridlines (lines) always
         # stand; only a tile's *contents* answer to the value-display toggles, applied
