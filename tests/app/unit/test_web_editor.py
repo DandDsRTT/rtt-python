@@ -2585,3 +2585,63 @@ def test_projection_identification_agrees_with_the_scheme_name_at_display_precis
     assert editor2.displayed_tuning_scheme_name == "minimax-U"
     assert editor2.unchanged_ratios == ("2/1", "5/4")
     assert editor2.displayed_projection_scheme_name == "1/4-comma"
+
+
+# --- per-sub-row ET picker (set_mapping_row) / per-sub-column comma picker (set_comma) ---
+
+from rtt.app import presets  # noqa: E402
+
+
+def test_set_mapping_row_replaces_a_row_verbatim_and_is_undoable():
+    editor = Editor()  # meantone, rank 2
+    assert editor.set_mapping_row(0, (12, 19, 28)) is True
+    assert editor.state.mapping[0] == (12, 19, 28)   # stored verbatim, not canonicalized
+    assert editor.state.mapping[1] == (0, 1, 4)      # the other row is untouched
+    assert (editor.state.r, editor.state.n) == (2, 1)  # rank/nullity preserved
+    assert editor.can_undo is True
+    editor.undo()
+    assert editor.state.mapping == INITIAL_MAPPING
+
+
+def test_set_mapping_row_rejects_a_dependent_row():
+    editor = Editor()
+    assert editor.set_mapping_row(1, (2, 2, 0)) is False  # a multiple of row 0
+    assert editor.state.mapping == INITIAL_MAPPING        # untouched
+    assert editor.can_undo is False
+
+
+def test_set_comma_replaces_a_column_verbatim_and_is_undoable():
+    editor = Editor()  # meantone, one comma (4,-4,1)
+    vector = presets.comma_value_to_vector("128/125", (2, 3, 5))  # (7,0,-3)
+    assert editor.set_comma(0, vector) is True
+    assert editor.state.comma_basis[0] == tuple(vector)
+    assert editor.state.n == 1
+    assert editor.can_undo is True
+    editor.undo()
+    assert editor.state.comma_basis == ((4, -4, 1),)
+
+
+def test_set_comma_rejects_a_dependent_comma():
+    editor = Editor()
+    editor.edit_comma_basis([[-4, 4, -1, 0], [1, 2, -3, 1]])  # two independent 7-limit commas
+    assert editor.state.n == 2
+    assert editor.set_comma(1, (-8, 8, -2, 0)) is False  # a multiple of column 0 -> rank-deficient
+    assert editor.state.comma_basis == ((-4, 4, -1, 0), (1, 2, -3, 1))  # untouched
+    assert editor.state.n == 2
+
+
+def test_set_comma_preserves_a_nonstandard_domain():
+    editor = Editor()
+    editor.edit_comma_basis([(6, -1, -1)], (2, 9, 7))  # 64/63 over 2.9.7
+    assert editor.state.domain_basis == (2, 9, 7)
+    vector = presets.comma_value_to_vector("531441/524288", (2, 9, 7))  # (-19,6,0)
+    assert editor.set_comma(0, vector) is True
+    assert editor.state.domain_basis == (2, 9, 7)  # not silently reset to standard primes
+
+
+def test_set_mapping_row_preserves_a_nonstandard_domain():
+    editor = Editor()
+    editor.edit_comma_basis([(6, -1, -1)], (2, 9, 7))  # rank-2 over 2.9.7
+    val = presets.et_value_to_val("12", (2, 9, 7))  # (12,38,34)
+    assert editor.set_mapping_row(0, val) is True
+    assert editor.state.domain_basis == (2, 9, 7)

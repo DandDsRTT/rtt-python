@@ -3654,3 +3654,44 @@ async def test_an_invalid_unchanged_basis_cell_reverts_with_a_toast(user: User) 
     assert _cell_child(user, "cell:unchanged:0:0").value == before   # reverted: no garbage retained
     assert _cell_child(user, "cell:unchanged:0:0").value != "zz"
     assert user.notify.contains("valid unchanged-interval basis")    # ...with a toast explaining why
+
+
+# --- per-sub-row ET picker / per-sub-column comma picker (curated build-up) -------------
+
+
+async def test_subpickers_build_and_derive_their_value_from_state(user: User) -> None:
+    await _enable(user, "presets")
+    et0 = _cell_child(user, "etpick:0")
+    cp0 = _cell_child(user, "commapick:0")
+    assert isinstance(et0, ui.select) and isinstance(cp0, ui.select)
+    # default meantone: its canonical rows aren't single ETs, so the ET picker shows the "-" prompt;
+    # its comma (4 -4 1) IS the syntonic comma (up to sign), so the comma picker matches it
+    assert et0.value is None
+    assert cp0.value == "81/80"
+
+
+async def test_picking_two_ets_builds_the_temperament_and_syncs_the_chooser(user: User) -> None:
+    await _enable(user, "presets")
+    _cell_child(user, "etpick:0").set_value("12")
+    _cell_child(user, "etpick:1").set_value("19")
+    # 12 & 19 merge to meantone: each row reads back its picked ET (stored verbatim)...
+    assert _cell_child(user, "etpick:0").value == "12"
+    assert _cell_child(user, "etpick:1").value == "19"
+    # ...and the whole-temperament chooser recognizes the result, staying in sync
+    assert _cell_child(user, "preset:temperament").value == "5:Meantone"
+
+
+async def test_picking_a_dependent_et_is_rejected_and_reverts(user: User) -> None:
+    await _enable(user, "presets")
+    _cell_child(user, "etpick:0").set_value("12")
+    _cell_child(user, "etpick:1").set_value("19")
+    _cell_child(user, "etpick:1").set_value("12")  # same as row 0 -> dependent, can't combine
+    assert _cell_child(user, "etpick:1").value == "19"  # rejected; reverts to the last valid pick
+
+
+async def test_picking_a_comma_replaces_the_column_and_syncs(user: User) -> None:
+    await _enable(user, "presets")
+    _cell_child(user, "commapick:0").set_value("128/125")  # swap the syntonic comma for the diesis
+    # the column re-derives to the picked comma, and the temperament chooser follows (augmented)
+    assert _cell_child(user, "commapick:0").value == "128/125"
+    assert _cell_child(user, "preset:temperament").value == "5:Augmented"

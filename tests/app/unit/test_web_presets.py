@@ -241,3 +241,54 @@ def test_identify_established_projection_is_none_for_an_unnamed_rational_tuning(
     meantone = service.from_mapping(INITIAL_MAPPING)
     assert service.tuning_projection(meantone, ("2/1", "10/9")) is not None  # it IS rational
     assert presets.identify_established_projection(meantone, ("2/1", "10/9")) is None  # but unnamed
+
+
+# --- per-sub-column / per-sub-row curated pickers (commas / ETs) -----------------------
+
+
+def test_comma_options_filter_to_the_current_domain():
+    options_235 = presets.comma_options((2, 3, 5))
+    assert "81/80" in options_235          # 5-limit comma present
+    assert "64/63" not in options_235      # needs prime 7
+    options_2357 = presets.comma_options((2, 3, 5, 7))
+    assert "64/63" in options_2357
+    # a nonstandard subgroup keeps only commas expressible in it
+    options_297 = presets.comma_options((2, 9, 7))
+    assert "64/63" in options_297          # 2^6·9^-1·7^-1
+    assert "81/80" not in options_297      # needs prime 5
+
+
+def test_comma_option_labels_show_the_vector_over_the_basis():
+    assert presets.comma_options((2, 3, 5))["81/80"].endswith("[-4 4 -1⟩")
+    # over 2.9.7 the same comma is expressed in that basis
+    assert presets.comma_options((2, 9, 7))["64/63"].endswith("[6 -1 -1⟩")
+
+
+def test_et_options_exist_for_every_domain_with_val_over_the_basis():
+    for domain in ((2, 3, 5), (2, 3, 5, 7), (2, 9, 5)):
+        options = presets.et_options(domain)
+        assert len(options) == len(presets.CURATED_ETS)
+    assert presets.et_options((2, 3, 5))["12"].endswith("⟨12 19 28]")
+    assert presets.et_options((2, 9, 5))["12"].endswith("⟨12 38 28]")  # 9 -> round(12·log2 9)=38
+
+
+def test_identify_comma_matches_up_to_sign_else_none():
+    assert presets.identify_comma((-4, 4, -1), (2, 3, 5)) == "81/80"
+    assert presets.identify_comma((4, -4, 1), (2, 3, 5)) == "81/80"   # dual's flipped sign
+    assert presets.identify_comma((1, -2, 1), (2, 3, 5)) is None      # 25/24, not curated
+
+
+def test_identify_et_matches_exactly_else_none():
+    assert presets.identify_et((12, 19, 28), (2, 3, 5)) == "12"
+    assert presets.identify_et((12, 38, 28), (2, 9, 5)) == "12"
+    assert presets.identify_et((1, 1, 0), (2, 3, 5)) is None          # a canonical row, no ET
+
+
+def test_curated_pickers_round_trip_through_their_value_keys():
+    for domain in ((2, 3, 5), (2, 3, 5, 7), (2, 9, 7)):
+        for value in presets.comma_options(domain):
+            vector = presets.comma_value_to_vector(value, domain)
+            assert presets.identify_comma(vector, domain) == value
+        for value in presets.et_options(domain):
+            val = presets.et_value_to_val(value, domain)
+            assert presets.identify_et(val, domain) == value

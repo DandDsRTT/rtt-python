@@ -324,6 +324,16 @@
 .rtt-preset.q-field--disabled .q-field__control { background:#d6d6d6; border-color:#bbb; }
 .rtt-preset.q-field--disabled .q-field__native, .rtt-preset.q-field--disabled .q-icon { color:#999; }
 .rtt-preset.q-field--disabled, .rtt-preset.q-field--disabled * { user-select:none !important; }
+/* the per-sub-row ET picker / per-sub-column comma picker (.rtt-subpick): the .rtt-preset chooser,
+   pinned to ~one gridded value wide so the closed box reads as a cell-sized control. The SELECTED
+   label is HIDDEN in the closed trigger (it can't fit a 30px box — by design; the "-" placeholder
+   likewise) — only a small caret shows. The OPEN popup carries the full "name ratio [vector⟩" /
+   "wart ⟨val]" label (min-width/max-content from _select_props keeps every option readable).
+   Hiding the native text reuses the .rtt-cell-stacked transparent-native trick. */
+.rtt-subpick .q-field__control { padding:0 0 0 2px; }
+.rtt-subpick .q-field__native, .rtt-subpick .q-field__input {
+            color:transparent !important; text-indent:-9999px; width:0; min-width:0; padding:0; }
+.rtt-subpick .q-icon { font-size:14px; }
 /* the target chooser's numeric-limit square (.rtt-preset-num) is a SECOND field beside the select,
    so it needs the same locked palette — without these it kept its live white fill + #000 value/"-"
    placeholder (its enabled rules below force #000) while the select greyed, reading as half-locked. */

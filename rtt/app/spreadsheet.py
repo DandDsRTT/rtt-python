@@ -161,6 +161,10 @@ BRACKET_W = 16  # gutter inside a value group for an EBK bracket (one side)
 FRAME_OVERHANG = BRACKET_W - _BR_INSET - _BR_SERIF_L
 ROW_HANDLE_W = 14  # the per-mapping-row drag handle (drag a generator row onto another to add it)
 ROW_HANDLE_GAP = 4  # the gap it keeps from the matrix's opening bracket
+ETPICK_W = COL_W  # the per-mapping-row ET picker (a compact chooser ~one gridded value wide, riding
+# the leftmost gutter of the primes column): pick a curated ET to set that row to its val
+ETPICK_GAP = 4  # the gap the ET picker keeps from the drag handle / row label / opening bracket
+COMMAPICK_GAP = 4  # the gap a comma column's per-column comma picker keeps below the ⟩ foot
 VAL_BRACKET_H = 16  # a single-row value bracket, kept short and centred in its
 # ROW_H row so neighbouring rows' brackets keep a clear gap (the enclosing
 # mapped-list [ ] is the tall exception and spans the whole matrix)
@@ -1572,6 +1576,11 @@ class _GridBuilder:
         # the matlabel gutter) so the matrix stays centred in its tile.
         self.row_handle_w = (ROW_HANDLE_W + ROW_HANDLE_GAP) if (
             self.settings.get("drag_to_combine") and show_temp and self.r > 1) else 0
+        # the per-mapping-row ET pickers ride a gutter at the very LEFT of the primes column —
+        # outside the drag-handle and row-label gutters — one compact chooser per row. Reserved
+        # whenever the preset choosers show and the mapping renders; balanced by an equal empty
+        # right gutter (like the matlabel / handle gutters) so the matrix stays centred in its tile.
+        self.etpick_w = (ETPICK_W + ETPICK_GAP) if (self.show_presets and show_temp) else 0
         # The complexity size factor (the box-𝐋 "replace diminuator" trait, lp→lils): a nonzero
         # factor makes the complexity pretransformer 𝑋 rectangular — the guide's 𝑋 = 𝑍𝐿, the
         # diagonal log-prime matrix 𝐿 composed with a size-sensitizing matrix 𝑍 that appends one
@@ -1602,7 +1611,7 @@ class _GridBuilder:
             # standard EBK-gutter footprint like the gens/primes columns they parallel
             ("ssgens", 2 * BRACKET_W + self.rL * COL_W, self.show_superspace, True),
             ("ssprimes", 2 * BRACKET_W + self.dL * COL_W + 2 * self.matlabel_ssprimes_w, self.show_superspace, True),
-            ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
+            ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w + 2 * self.etpick_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", self._commas_band_w(self.nc_shown), show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
@@ -1861,6 +1870,7 @@ class _GridBuilder:
         self.row_y, self.row_h, self.row_label, self.row_collapsible = {}, {}, {}, {}
         self.tile_h, self.tile_top, self.row_frame, self.row_sym, self.row_cap, self.row_units, self.row_ptext, self.chart_top = {}, {}, {}, {}, {}, {}, {}, {}
         self.row_pre = {}  # the preset band height, so the <choose form> chooser can stack below it
+        self.row_cpick = {}  # the per-comma-column picker band height (interval-vectors row only)
         self.row_schemebtn = {}  # the ✕ "return to scheme" row (projection tiles), below the preset band
         self.row_nsub = {}  # each row's natural cell-row count (a matrix's height in cells), so the
         # gridline pass can fan a multi-row matrix into that many horizontal sub-axes -- and keep
@@ -1966,6 +1976,12 @@ class _GridBuilder:
             # the form chooser rides one box below the preset chooser, in the mapping and
             # comma-basis boxes, when form controls are shown
             formctrl = self.formchooser_band_h(key) if (self.show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
+            # the per-comma-column pickers ride a band just below the ⟩ foot of the comma matrix
+            # (above the symbol/caption stack and the whole-temperament chooser): one compact comma
+            # chooser per real comma column. Reserved on the interval-vectors row when the preset
+            # choosers show and there are commas to pick (a full-rank temperament has none).
+            cpick = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and self.show_presets
+                                               and self.nc > 0 and not folded) else 0
             ptext = self.ptext_band(key, folded)
             # open a consistent gap between the stacked in-tile bands: pad each present one by BAND_GAP
             # (its content centres, so adjacent bands clear each other) — values, symbol/equivalence,
@@ -1987,6 +2003,7 @@ class _GridBuilder:
                 self.row_matlabel_top[key] = y + handle_band + (base_head - MATLABEL_H) // 2
             self.row_y[key] = y + head + top_frame + chart_band  # values sit below toggle head, top frame, chart
             self.row_frame[key] = bot_frame  # the symbol/caption stack sits below the bottom brace band
+            self.row_cpick[key] = cpick  # the comma-picker band sits below the brace, above the symbol slot
             self.row_sym[key] = sym  # the caption (and bands below it) sit below the symbol slot
             self.row_cap[key] = cap  # the units line and plain-text box sit below the caption
             self.row_units[key] = uni  # the plain-text box and preset chooser sit below the units line
@@ -1995,7 +2012,7 @@ class _GridBuilder:
             self.row_schemebtn[key] = schemebtn  # the ✕ return-to-scheme row, below the preset band
             self.row_label[key] = label
             self.row_collapsible[key] = collapsible
-            self.tile_h[key] = head + top_frame + chart_band + self.row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl + schemebtn
+            self.tile_h[key] = head + top_frame + chart_band + self.row_h[key] + bot_frame + cpick + sym + cap + uni + pre + ptext + formctrl + schemebtn
             # a row with a nested tile-control (ranges chart, alt-complexity chooser, optimization
             # block) adds its reserved height here, so the rows below drop clear of it and every
             # tile in the row grows to the same height (the row stays one uniform band)
@@ -2356,10 +2373,17 @@ class _GridBuilder:
         left one carries the per-row handles; the right one balances them, like the matlabel gutter."""
         return self.row_handle_w if group_key == "primes" else 0
 
+    def etpick_gutter_w(self, group_key: str):
+        """The ET-picker gutter, reserved OUTSIDE the handle + row-label gutters (the leftmost slot
+        of the primes column) on each side for balance — only the primes column, only when the
+        preset pickers show. The left one carries the per-row ET pickers; the right one balances it."""
+        return self.etpick_w if group_key == "primes" else 0
+
     def outer_gutter_w(self, group_key: str):
-        """the full left/right reservation outside the cells: the handle gutter then the row-label
-        gutter. Used wherever the cells' true left edge matters (prime_left, the EBK span, the header)."""
-        return self.handle_gutter_w(group_key) + self.matlabel_gutter_w(group_key)
+        """the full left/right reservation outside the cells: the ET-picker gutter, then the handle
+        gutter, then the row-label gutter. Used wherever the cells' true left edge matters
+        (prime_left, the EBK span, the header)."""
+        return self.etpick_gutter_w(group_key) + self.handle_gutter_w(group_key) + self.matlabel_gutter_w(group_key)
 
     def matrix_span(self, group_key: str):
         """The (x, width) of a group's CELL matrix — its content_box minus the outer gutters, which
@@ -2776,10 +2800,14 @@ class _GridBuilder:
             return groups
         return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((rkey, ckey), ())}
 
+    def cpick_band_y(self, rkey):
+        # the per-comma-column picker band, just below the ⟩ foot (above the symbol/caption stack)
+        return self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey]
+
     # the plain-text box sits directly below the symbol/caption/units stack; the preset
     # chooser rides one plain-text band lower (so presets appear under plain text).
     def ptext_band_y(self, rkey: str):
-        return self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey] + self.row_sym[rkey] + self.row_cap[rkey] + self.row_units[rkey]
+        return self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey] + self.row_cpick[rkey] + self.row_sym[rkey] + self.row_cap[rkey] + self.row_units[rkey]
 
     # A chooser dropdown that offers only ONE option, with that option already selected, is not a
     # choice — it renders as a DISABLED dropdown (greyed, non-interactive, but still left-justified
@@ -3392,10 +3420,14 @@ class _GridBuilder:
             # handles a sibling concern adds ride the branch points up top — deliberately separate.)
             if self.settings.get("drag_to_combine") and self.r > 1 and self.tile_open("mapping", "primes"):
                 for i in range(self.r):
-                    self.cells.append(CellBox(f"map_drag:{self.col_token('gens', i)}", self.primes_x, self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
+                    self.cells.append(CellBox(f"map_drag:{self.col_token('gens', i)}", self.primes_x + self.etpick_gutter_w("primes"), self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
             for i in range(self.r):
                 rt = self.col_token("gens", i)  # the row's stable id-token (== i until a removal/re-rank)
                 if self.tile_open("mapping", "primes"):
+                    # the per-row ET picker rides the leftmost gutter (a compact chooser; pick a
+                    # curated ET to set this generator row to its val) — see etpick_gutter_w
+                    if self.show_presets:
+                        self.cells.append(CellBox(f"etpick:{rt}", self.primes_x, self.map_top(i), ETPICK_W, ROW_H, "etpick", gen=i))
                     for p in range(self.d):
                         # text carries the mapping entry into the CellBox content (like the comma /
                         # target / held / interest vector cells already do) so changed_cell_ids sees a
@@ -3690,6 +3722,11 @@ class _GridBuilder:
                     for p in range(self.d):
                         self.cells.append(CellBox(ids.comma_cell(self.col_token('commas', c), p), self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
                         self._voice("vectors:commas", c, self.comma_sizes.just[c])
+                    # the per-column comma picker, in the band below the ⟩ foot (a compact chooser;
+                    # pick a curated comma to set this column to its vector) — only REAL commas (not
+                    # the unchanged half U, nor the pending draft) get one — see cpick_band_y
+                    if self.show_presets:
+                        self.cells.append(CellBox(f"commapick:{self.col_token('commas', c)}", self.comma_left(c), self.cpick_band_y("vectors") + COMMAPICK_GAP, COL_W, ROW_H, "commapick", comma=c))
                 # the unchanged basis U completes V = C|U: the projection's eigenvalue-1 eigenvectors,
                 # held just (e.g. 2/1, 5/1). EDITABLE (like the comma basis) when U is a FULL rational
                 # projection — typing a new basis retunes to the projection that holds it; read-only
@@ -4749,10 +4786,10 @@ class _GridBuilder:
                     text = "𝒛" if size_row else f"{glyph}{_sub(i + 1)}"
                     self.cells.append(CellBox(
                         f"matlabel:row:{rkey}:{ckey}:{i}",
-                        # past the drag-handle gutter (when present), so the handle sits to its left;
-                        # the box fills the column's row-label gutter (wider in the superspace primes
-                        # column, for M_s→L's 𝒎ₛ→ₗᵢ) so a wide label never overflows the ⟨ bracket
-                        self.content_x[ckey] + self.handle_gutter_w(ckey), top(i),
+                        # past the ET-picker + drag-handle gutters (when present), so they sit to its
+                        # left; the box fills the column's row-label gutter (wider in the superspace
+                        # primes column, for M_s→L's 𝒎ₛ→ₗᵢ) so a wide label never overflows the ⟨ bracket
+                        self.content_x[ckey] + self.etpick_gutter_w(ckey) + self.handle_gutter_w(ckey), top(i),
                         self.matlabel_gutter_w(ckey), ROW_H,
                         "matlabel", text=text,
                     ))
@@ -4952,7 +4989,7 @@ class _GridBuilder:
                 continue
             if ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:  # the prime-proxy name (per the Guide)
                 name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
-            cy = self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey]
+            cy = self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey] + self.row_cpick[rkey]
             if (self.show_symbols or self.show_equiv) and rkey in SYMBOLED_ROWS:
                 equiv = equivalences.get((rkey, ckey), "") if self.show_equiv else ""
                 base_symbol = self.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
@@ -4998,7 +5035,7 @@ class _GridBuilder:
             if unit and not (rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")):
                 unit = _subscript_coord(unit, "p", self.domain_label)
             if self.show_units and unit:
-                uy = self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey] + self.row_sym[rkey] + self.row_cap[rkey]
+                uy = self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey] + self.row_cpick[rkey] + self.row_sym[rkey] + self.row_cap[rkey]
                 self.cells.append(CellBox(f"units:{rkey}:{ckey}", self.col_x[ckey], uy, self.col_w[ckey], UNIT_H,
                                      "units", text=f"units: {unit}"))
 

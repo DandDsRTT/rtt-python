@@ -460,6 +460,44 @@ class Editor:
         self._snapshot()
         self._standardize_domain_in_place()
 
+    def set_mapping_row(self, i: int, val) -> bool:
+        """Replace mapping row ``i`` with ``val`` (a curated ET's val over the current domain)
+        and commit it — the per-sub-row ET picker's action. Stored verbatim like a cell edit
+        (not canonicalized), so the row reads as the chosen ET. Returns False, leaving the
+        state untouched, when the replacement isn't a proper temperament (a dependent/zero row
+        or an unreached element) — the picker then toasts and reverts. Preserves a nonstandard
+        domain. One undo snapshot."""
+        rows = self.state.mapping
+        if not 0 <= i < len(rows):
+            return False
+        matrix = [list(row) for row in rows]
+        matrix[i] = [int(x) for x in val]
+        if not service.is_proper_temperament(matrix):
+            return False
+        self._apply(service.from_mapping(matrix, self.state.domain_basis))
+        return True
+
+    def set_comma(self, c: int, vector) -> bool:
+        """Replace comma-basis column ``c`` with ``vector`` (a curated comma over the current
+        domain) and commit it — the per-sub-column comma picker's action. Stored verbatim, so
+        the column reads as the chosen comma. Returns False, leaving the state untouched, when
+        the replacement would drop the nullity (the new comma is dependent on the others) or
+        yield an improper dual mapping — the picker then toasts and reverts. Preserves a
+        nonstandard domain (mirroring :meth:`set_pending_comma`). One undo snapshot."""
+        cols = self.state.comma_basis
+        if not 0 <= c < len(cols):
+            return False
+        basis = [list(col) for col in cols]
+        basis[c] = [int(x) for x in vector]
+        domain_basis = self.state.domain_basis if len(basis[c]) == self.state.d else None
+        state = service.from_comma_basis(basis, domain_basis)
+        # the dual stays proper even for a dependent column (it just drops a comma), so also
+        # require the nullity to survive — a replacement must keep all nc commas independent.
+        if state.n != len(basis) or not service.is_proper_temperament(state.mapping):
+            return False
+        self._apply(state)
+        return True
+
     def canonicalize_mapping(self) -> None:
         """Re-store the mapping in canonical form (the mapping box's ``<choose form>``
         control) — an undoable edit, so an equivalent generating set can be normalized."""

@@ -1606,9 +1606,11 @@ def test_presets_on_adds_the_three_chooser_dropdowns_under_their_tiles():
     cells = {c.id: c for c in _with(presets=True).cells}
     assert {"preset:temperament", "preset:tuning", "preset:target"} <= set(cells)
     inset = spreadsheet.BOX_INNER  # the dropdown sits one inner-pad inside its tile-spanning box
-    # the temperament chooser sits under the mapping matrix, in its column
+    # the temperament chooser sits under the mapping matrix, in its column — seated at the
+    # column's left edge (aligned with the per-row ET pickers above it). The header centres over
+    # the matrix, now inset by the ET-picker gutter, so it no longer shares the chooser's left.
     temp, matrix = cells["preset:temperament"], cells["cell:mapping:0:0"]
-    assert temp.y > matrix.y and temp.x == cells["header:primes"].x + inset
+    assert temp.y > matrix.y and temp.x == cells["etpick:0"].x + inset
     # the target chooser sits under the target interval list, in its column
     assert cells["preset:target"].x == cells["header:targets"].x + inset
 
@@ -2877,7 +2879,7 @@ def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile():
     # it rides below the prescaling matrix, seated one inner pad into the primes column (like the
     # other presets, the dropdown sits inside a tile-spanning box at BOX_INNER off the edge)
     assert sel.y > on["cell:prescaling:primes:2:2"].y
-    assert sel.x == on["header:primes"].x + spreadsheet.BOX_INNER
+    assert sel.x == on["etpick:0"].x + spreadsheet.BOX_INNER  # the column's left edge (the ET-picker gutter)
     # gone without the prescaling tile (weighting off) or its column (temperament boxes off)
     assert "preset:prescaler" not in {c.id for c in _with(weighting=False, presets=True).cells}
     assert "preset:prescaler" not in {
@@ -9259,3 +9261,40 @@ def test_all_interval_mean_damage_value_and_symbol_denote_the_same_quantity():
     assert val == pytest.approx(mean, abs=1e-3)               # the value IS that mean (matches the ⟪…⟫ symbol)
     norm = val * math.sqrt(3)                                 # the single-bar NORM the OLD symbol named is √d larger
     assert norm == pytest.approx(2.741, abs=1e-2) and abs(val - norm) > 1.0  # value is the mean, NOT the norm
+
+
+# --- per-sub-row ET picker / per-sub-column comma picker placement ---------------------
+
+
+def test_etpick_rides_the_left_gutter_of_each_mapping_row():
+    cells = {c.id: c for c in _with(presets=True).cells}
+    for i in range(2):  # meantone, rank 2
+        ep = cells[f"etpick:{i}"]
+        assert ep.kind == "etpick" and ep.gen == i
+        assert ep.w == spreadsheet.COL_W and ep.h == spreadsheet.ROW_H
+        assert ep.y == cells[f"cell:mapping:{i}:0"].y   # the picker shares the row
+        assert ep.x < cells[f"cell:mapping:{i}:0"].x    # and sits left of the matrix
+    # gone without presets, and the column sheds the reserved gutter (the matrix shifts back left)
+    off = {c.id: c for c in _with(presets=False).cells}
+    assert not any(k.startswith("etpick:") for k in off)
+    assert off["cell:mapping:0:0"].x < cells["cell:mapping:0:0"].x
+
+
+def test_commapick_rides_below_each_real_comma_column():
+    cells = {c.id: c for c in _with(presets=True).cells}
+    cp = cells["commapick:0"]  # meantone has one comma
+    assert cp.kind == "commapick" and cp.comma == 0
+    assert cp.w == spreadsheet.COL_W and cp.h == spreadsheet.ROW_H
+    column_cell = next(c for cid, c in cells.items()
+                       if cid.startswith("cell:comma:0:") and c.comma == 0)
+    assert cp.x == column_cell.x   # aligned under its column
+    assert cp.y > column_cell.y    # below the matrix (and its ⟩ foot)
+    assert not any(c.id.startswith("commapick:") for c in _with(presets=False).cells)
+
+
+def test_a_full_rank_temperament_has_no_comma_pickers():
+    # no commas -> no comma column -> no per-column pickers, and no reserved band
+    full = spreadsheet.build(service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1))),
+                             {**settings.defaults(), "presets": True})
+    assert not any(c.id.startswith("commapick:") for c in full.cells)
+    assert any(c.id.startswith("etpick:") for c in full.cells)  # but still one ET picker per row

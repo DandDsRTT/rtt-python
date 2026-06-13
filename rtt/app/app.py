@@ -181,6 +181,11 @@ def _doc_store() -> dict:
 # generators, or a prime tempered to a unison (see service.is_proper_temperament)
 _INVALID_TEMPERAMENT = "Not a valid temperament: the generators must be independent and every prime reached."
 
+# the open-popup min width for the compact sub-row/sub-col pickers (etpick / commapick): their CLOSED
+# trigger is pinned to ~one gridded value (so the selection isn't readable there — by design), but the
+# OPEN popup must be wide enough to read each option's full "name ratio [vector⟩" / "wart ⟨val]" label
+_SUBPICK_POPUP_W = 220
+
 # the toasts shown when an edited projection P / generator embedding G plain-text string parses but
 # isn't a valid projection of this temperament (P must be idempotent with the commas in its kernel;
 # 𝑀𝐺 must be the identity). A string that doesn't even parse just reddens the box (no toast).
@@ -921,6 +926,10 @@ class _Reconciler:
         self.cell_kinds["alltoggle"] = _KindHandlers(self._build_alltoggle, self._update_foldtoggle)
 
         self.cell_kinds["preset"] = _KindHandlers(self._build_preset, self._update_preset)
+        # the per-sub-row ET picker / per-sub-column comma picker — compact choosers that build a
+        # temperament one ET row / one comma column at a time (a shared _build_subpick + _update_subpick)
+        self.cell_kinds["etpick"] = _KindHandlers(self._build_etpick, self._update_subpick)
+        self.cell_kinds["commapick"] = _KindHandlers(self._build_commapick, self._update_subpick)
         self.cell_kinds["control_select"] = _KindHandlers(self._build_control_select, self._update_control_select)
         self.cell_kinds["control_check"] = _KindHandlers(self._build_control_check, self._update_control_check)
         self.cell_kinds["formchooser"] = _KindHandlers(self._build_formchooser, self._update_formchooser)
@@ -1895,6 +1904,50 @@ class _Reconciler:
             _set_offlist_prompt(self.selects[cb.id], scheme)
             self.selects[cb.id].set_enabled(not cb.disabled)  # greyed+locked when it's the lone scheme
 
+    # The per-sub-row ET picker (one per mapping row) and per-sub-column comma picker (one per comma
+    # column): compact choosers, styled like the temperament chooser but pinned to ~one gridded value
+    # wide (the selection isn't readable closed — the open popup carries the full label). Each derives
+    # its value from state every render (the matched ET / comma, else the "-" placeholder), and on a
+    # pick REPLACES that row / column verbatim (editor.set_mapping_row / set_comma) — see on_subpick.
+    def _build_subpick(self, cb, wrap, options, value):
+        sel = ui.select(options, value=value if value in options else None,
+                on_change=lambda e, cid=cb.id: self._cb.on_subpick(cid, e.value)) \
+            .props(_select_props(_SUBPICK_POPUP_W)).classes("rtt-preset rtt-subpick")
+        _set_offlist_prompt(sel, value if value in options else None)
+        self._arm_option_hover(sel, wrap, cb.id)  # stamps the option plumbing; hover-preview deferred (on_chooser_hover early-returns)
+        self.selects[cb.id] = sel
+
+    def _build_etpick(self, cb, wrap):
+        db = self._editor.state.domain_basis
+        self._build_subpick(cb, wrap, presets.et_options(db),
+                            presets.identify_et(self._editor.state.mapping[cb.gen], db))
+
+    def _build_commapick(self, cb, wrap):
+        db = self._editor.state.domain_basis
+        self._build_subpick(cb, wrap, presets.comma_options(db),
+                            presets.identify_comma(self._editor.state.comma_basis[cb.comma], db))
+
+    def _update_subpick(self, cb):
+        # recompute options + matched value from live state each render, so a pick (or any other edit /
+        # a domain change) re-derives the displayed value and the whole-temperament chooser stays in sync
+        sel = self.selects.get(cb.id)
+        if not isinstance(sel, ui.select):
+            return
+        db = self._editor.state.domain_basis
+        if cb.id.startswith("etpick:"):
+            if cb.gen >= len(self._editor.state.mapping):
+                return  # a transient reflow shrank the mapping past this row; the rebuild will catch up
+            options = presets.et_options(db)
+            value = presets.identify_et(self._editor.state.mapping[cb.gen], db)
+        else:
+            if cb.comma >= len(self._editor.state.comma_basis):
+                return
+            options = presets.comma_options(db)
+            value = presets.identify_comma(self._editor.state.comma_basis[cb.comma], db)
+        value = value if value in options else None
+        sel.set_options(options, value=value)
+        _set_offlist_prompt(sel, value)
+
     def _sync_target_limit_error(self, num, family, limit) -> None:
         """Render-driven flag for the target chooser's limit field: when the DISPLAYED
         ``(family, limit)`` is invalid (an even limit for the odd-limit diamond), redden the field
@@ -2422,6 +2475,15 @@ def index() -> None:
         # until the list is reordered), not the bare index
         ids = last_lay[0].identities if last_lay[0] is not None else None
         return [tok for tok, _ in (ids or {}).get(name, [])]
+
+    def _token_index(cid, name):
+        # map a sub-picker cell id ("etpick:{token}" / "commapick:{token}") back to its live row /
+        # column index, by the same id-token the cells carry (== the index until a reorder/removal)
+        token = cid.split(":", 1)[1]
+        for i, tok in enumerate(col_tokens(name)):
+            if str(tok) == token:
+                return i
+        return None
 
     # ---- The declarative preview-ring core ------------------------------------------------------
     # The ring highlights (amber rtt-preview-change / red rtt-preview-remove) are a PURE FUNCTION
@@ -3204,6 +3266,25 @@ def index() -> None:
             apply()
             _request_render()  # a tuning / prescaler preset re-solves — render off the loop
 
+    def on_subpick(cid, value):
+        # a per-sub-row ET picker / per-sub-column comma picker committed its option: REPLACE that
+        # mapping row / comma column with the chosen ET's val / comma's vector (an undoable edit that
+        # keeps the rank/nullity). A rejected pick (a dependent row/column) toasts and the re-render
+        # re-derives the box's value. building[0] guards the programmatic re-render echo.
+        if building[0] or value is None:
+            return
+        end_gesture()  # revert any live preview first, so the edit is one clean undo step
+        db = editor.state.domain_basis
+        if cid.startswith("etpick:"):
+            i = _token_index(cid, "gens")
+            ok = i is not None and editor.set_mapping_row(i, presets.et_value_to_val(value, db))
+        else:  # commapick:
+            c = _token_index(cid, "commas")
+            ok = c is not None and editor.set_comma(c, presets.comma_value_to_vector(value, db))
+        if not ok:
+            ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
+        render()
+
     def on_form_choose(cid, value):
         # the <choose form> control: selecting "canonical" re-stores that matrix in canonical form (an
         # undoable edit); the placeholder "choose form" yields no edit. The select snaps back to the
@@ -3533,6 +3614,8 @@ def index() -> None:
         # e.g. the in-process tests, which drive `opthover` without opening a popup) allows.
         if index is not None and rec.popup_state.get(cid) == "closed":
             return
+        if cid.startswith(("etpick:", "commapick:")):
+            return  # v1: the sub-row/sub-col pickers commit on select; the hover preview is a later add
         if cid.startswith("preset:temperament"):
             _temperament_hover_preview(_option_key(sel, index))
             return
@@ -3687,6 +3770,7 @@ def index() -> None:
         on_power_change=on_power_change,
         on_prescaler_change=on_prescaler_change,
         on_preset=on_preset,
+        on_subpick=on_subpick,
         on_ptext_edit=on_ptext_edit,
         on_ratio_change=on_ratio_change,
         on_element_change=on_element_change,

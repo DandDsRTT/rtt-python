@@ -142,6 +142,9 @@ _KIND_HELP: dict[str, str] = {
     "map_minus": "Remove this generator (a mapping row) — lowers the rank, tempering one more comma; holds the dimensionality.",
     "map_drag": "Drag this generator (a mapping row) onto another row to add it into that row — a change of generator basis that holds the temperament and its tuning.",
     "int_drag": "Drag this interval onto another in the same column to combine them into their product. For the comma basis this re-expresses the same temperament; for a target / held / interest list it just combines the two intervals.",
+    # per-sub-row / per-sub-column curated pickers
+    "etpick": "Set this generator row to a curated equal temperament — pick one (in wart notation, with its map) to build the temperament by merging ETs. Only ETs over the current domain basis are offered.",
+    "commapick": "Set this comma column to a curated comma — pick one (with its prime-count vector) to build the temperament by merging commas. Only commas within the current domain basis are offered.",
     "basis_minus": "Remove the highest prime from the domain.",
     "element_plus": "Add a domain basis element — opens a blank ?/? draft; type any positive rational (e.g. 13/5) to add it, held just (its own pure generator).",
     "element_minus": "Remove this domain basis element — re-expresses the temperament over the remaining basis.",

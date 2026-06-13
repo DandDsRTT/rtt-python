@@ -25,6 +25,7 @@ from __future__ import annotations
 import functools
 
 from rtt.app import service
+from rtt.library import equal_temperament
 
 # Systematic tuning-scheme names (the minimax family, which optimize to sensible
 # all-interval tunings). The trailing comment names the interval complexity each is built
@@ -333,3 +334,139 @@ def identify(state) -> str | None:
     canonical comma basis, or None when the current temperament is not a preset."""
     signature = service.from_mapping(state.mapping).comma_basis
     return _signature_to_value().get(signature)
+
+
+# --- per-sub-column / per-sub-row pickers: curated commas and ETs ---------------------
+#
+# These feed the compact dropdown that rides each comma sub-column and each mapping
+# sub-row, letting you build a temperament by choosing a comma per column / an ET per row.
+# Unlike the temperament chooser (which spans fixed prime limits and can reset the domain),
+# these lists are always presented WITHIN the current domain basis: commas are filtered to
+# those that lie in the domain subgroup, and ETs are shown as their val over the current d
+# elements. Both are short, hand-picked starter lists — edit freely.
+
+# (name, ratio). The ">1" (super) form is canonical here; matching against the live comma
+# basis is up-to-sign (the dual stores either direction). Ratios are filtered per domain
+# basis via :func:`rtt.app.service.interval_vector`, which keeps only those expressible in
+# the current subgroup (so 81/80 drops out of 2.3.7, 64/63 out of 2.3.5, etc.).
+CURATED_COMMAS: tuple[tuple[str, str], ...] = (
+    # 5-limit
+    ("syntonic", "81/80"),
+    ("diaschisma", "2048/2025"),
+    ("schisma", "32805/32768"),
+    ("lesser diesis", "128/125"),
+    ("greater diesis", "648/625"),
+    ("Pythagorean", "531441/524288"),
+    # 7-limit
+    ("Archytas'", "64/63"),
+    ("septimal kleisma", "225/224"),
+    ("septimal diesis", "36/35"),
+    ("jubilisma", "50/49"),
+    ("slendro diesis", "49/48"),
+    ("sensamagic", "245/243"),
+    ("gamelisma", "1029/1024"),
+    # 11-limit
+    ("rastma", "243/242"),
+    ("mothwellsma", "99/98"),
+    ("biyatisma", "121/120"),
+    ("ptolemisma", "100/99"),
+    # 13-limit
+    ("grossma", "144/143"),
+    ("tridecimal", "1053/1024"),
+)
+
+# Notable equal temperaments, each as (N, warts) — ``warts == ""`` is the patent val. Their
+# val is recomputed over the current domain basis, so the same EDO shows a different map at a
+# different limit / nonstandard domain.
+CURATED_ETS: tuple[tuple[int, str], ...] = (
+    (5, ""), (7, ""), (12, ""), (15, ""), (19, ""), (22, ""), (26, ""), (27, ""),
+    (29, ""), (31, ""), (34, ""), (41, ""), (46, ""), (53, ""), (58, ""), (72, ""),
+)
+
+
+def _fmt_components(components) -> str:
+    return " ".join(str(int(x)) for x in components)
+
+
+@functools.lru_cache(maxsize=None)
+def _commas_in_domain(domain_basis: tuple) -> tuple[tuple[str, str, tuple[int, ...]], ...]:
+    """The curated commas that lie in ``domain_basis``, each as ``(name, ratio, vector)``.
+    A comma outside the current subgroup (its ratio carries a prime/element the domain lacks)
+    is dropped — :func:`service.interval_vector` raises for it. Cached per domain basis (a
+    handful per session); the result is immutable, so callers must not mutate it."""
+    d = len(domain_basis)
+    out: list[tuple[str, str, tuple[int, ...]]] = []
+    for name, ratio in CURATED_COMMAS:
+        try:
+            vector = service.interval_vector(ratio, d, domain_basis)
+        except ValueError:
+            continue  # not expressible in this domain's subgroup
+        out.append((name, ratio, vector))
+    return tuple(out)
+
+
+@functools.lru_cache(maxsize=None)
+def _ets_in_domain(domain_basis: tuple) -> tuple[tuple[str, tuple[int, ...]], ...]:
+    """The curated ETs as ``(wart_name, val)`` over ``domain_basis``. Every ET maps the whole
+    domain (a val is always defined), so unlike the commas there is no filtering — only the
+    val changes with the basis. Cached per domain basis; the result is immutable."""
+    return tuple(
+        (equal_temperament.wart_name(n, warts), equal_temperament.warted_val(n, warts, domain_basis))
+        for n, warts in CURATED_ETS
+    )
+
+
+def comma_options(domain_basis) -> dict[str, str]:
+    """Ordered ``{value: label}`` for a comma sub-column's picker — the curated commas in the
+    current domain, valued by their ratio string and labelled ``"name  ratio  [vector⟩"``.
+    Empty when none lie in the domain (e.g. a full-rank/standard-prime domain with no listed
+    comma)."""
+    return {
+        ratio: f"{name.lower()}  {ratio}  [{_fmt_components(vector)}⟩"
+        for name, ratio, vector in _commas_in_domain(tuple(domain_basis))
+    }
+
+
+def et_options(domain_basis) -> dict[str, str]:
+    """Ordered ``{value: label}`` for a mapping sub-row's picker — the curated ETs over the
+    current domain, valued by their wart name and labelled ``"wartname  ⟨val]"`` (the val/map
+    shown over the current d elements)."""
+    return {
+        value: f"{value}  ⟨{_fmt_components(val)}]"
+        for value, val in _ets_in_domain(tuple(domain_basis))
+    }
+
+
+def identify_comma(vector, domain_basis) -> str | None:
+    """The :data:`CURATED_COMMAS` value whose vector equals ``vector`` UP TO SIGN (the dual may
+    store a comma in either direction), or None when the column matches no curated comma — the
+    picker's off-list placeholder, the comma analogue of :func:`identify`."""
+    target = tuple(int(x) for x in vector)
+    negated = tuple(-x for x in target)
+    for _name, ratio, curated in _commas_in_domain(tuple(domain_basis)):
+        if curated == target or curated == negated:
+            return ratio
+    return None
+
+
+def identify_et(val, domain_basis) -> str | None:
+    """The :data:`CURATED_ETS` value whose val equals ``val`` exactly (a mapping row is stored
+    verbatim, no sign ambiguity), or None when the row matches no curated ET."""
+    target = tuple(int(x) for x in val)
+    for value, curated in _ets_in_domain(tuple(domain_basis)):
+        if curated == target:
+            return value
+    return None
+
+
+def comma_value_to_vector(value: str, domain_basis) -> tuple[int, ...]:
+    """The interval vector a chosen comma value (its ratio string) names, over the current
+    domain — the vector :meth:`Editor.set_comma` writes into the column."""
+    return service.interval_vector(value, len(domain_basis), domain_basis)
+
+
+def et_value_to_val(value: str, domain_basis) -> tuple[int, ...]:
+    """The val a chosen ET value (its wart name) names, over the current domain — the row
+    :meth:`Editor.set_mapping_row` writes into the mapping."""
+    n, warts = equal_temperament.parse_wart_name(value)
+    return equal_temperament.warted_val(n, warts, domain_basis)
