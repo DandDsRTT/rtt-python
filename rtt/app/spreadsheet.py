@@ -733,9 +733,17 @@ class _GridBuilder:
         # ghost comma column) and recombines the surviving commas. The dual twin of the +/draft
         # preview, but on a hover, so it renders a non-editable green GHOST rather than an editable
         # draft. (The red leaver is the hovered comma/row itself, already on screen — just flagged.)
+        # Validate against the live counts so an out-of-range / impossible removal previews nothing
+        # (the UI gates these — no comma − without a comma, no row − at rank 1 — but the builder must
+        # not crash if asked anyway, e.g. a stale hover): a comma idx must be a REAL comma (state.n,
+        # so just intonation's placeholder zero-comma doesn't count), a row idx removable (r > 1).
         self.preview_remove = preview_remove
-        self.ghost_row = preview_remove is not None and preview_remove[0] == "comma"
-        self.ghost_comma = preview_remove is not None and preview_remove[0] == "row"
+        self.ghost_row = (preview_remove is not None and preview_remove[0] == "comma"
+                          and 0 <= preview_remove[1] < state.n)
+        self.ghost_comma = (preview_remove is not None and preview_remove[0] == "row"
+                            and len(state.mapping) > 1 and 0 <= preview_remove[1] < len(state.mapping))
+        if not (self.ghost_row or self.ghost_comma):
+            self.preview_remove = None
         # the target interval column is hidden when the targets aren't computing the tuning (the
         # displayed tuning has deviated from the scheme's target-driven optimum onto a projection)
         self.targets_in_use = targets_in_use
