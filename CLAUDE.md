@@ -74,16 +74,19 @@ all the library, service, editor and spreadsheet-layout checks — finish in ~75
 
 **Render runs take turns automatically — let them queue, don't kill them.** With many agents
 in parallel, all firing the render gate at once pins every core and nobody ever finishes. So
-`tests/app/integration/conftest.py` holds **one machine-wide lock** (`/tmp/rtt-render-gate.lock`):
-any pytest session that collected render tests grabs it before running and releases it at the
-end, so render runs **serialize** — you'll see `[render-gate] … waiting our turn…` on stderr
-while another agent's run finishes, then `[render-gate] lock acquired`. That wait is correct
-and expected; **do not treat it as a hang, and do not `pkill` other agents' render runs to jump
-the queue** — just let your run wait its turn. The fast pass (`--ignore=…/test_web_render.py`)
-collects no render tests, so it never takes the lock and stays fast. The lock self-heals (a
-killed holder's lock is reclaimed) and never blocks forever (`RTT_RENDER_GATE_WAIT`, default
-3600s, then it proceeds anyway). `RTT_RENDER_GATE_NOLOCK=1` opts a run out. Don't wrap the gate
-in `/tmp` scripts to dodge the lock or sibling kills — that's the dogpile this prevents.
+`tests/app/integration/conftest.py` meters render runs through a **counting semaphore**: at most
+`RTT_RENDER_GATE_SLOTS` of them (default **3**) run at once; the rest queue and take turns. Any
+pytest session that collected render tests drops a FIFO **ticket** (`/tmp/rtt-render-gate.d/`)
+and waits until it's among the N lowest live tickets, then runs and removes its ticket at the
+end. While queued you'll see `[render-gate] waiting our turn… position 2 of 5 queued (3 slots
+busy …)` on stderr — your **exact place in line** — then `[render-gate] slot acquired`. That
+wait is correct and expected; **do not treat it as a hang, and do not `pkill` other agents'
+render runs to jump the queue** — ordering is FIFO/fair, so just wait your turn. The fast pass
+(`--ignore=…/test_web_render.py`) collects no render tests, so it never queues and stays fast.
+The gate self-heals (a killed holder's ticket is reclaimed on the next scan) and never blocks
+forever (`RTT_RENDER_GATE_WAIT`, default 3600s, then it proceeds anyway). Tune concurrency with
+`RTT_RENDER_GATE_SLOTS`; `RTT_RENDER_GATE_NOLOCK=1` opts a run out. Don't wrap the gate in `/tmp`
+scripts to dodge it or sibling kills — that's the dogpile this prevents.
 
 ## Git: you're on a fast-moving team — rebase onto main, then ff-merge
 
