@@ -411,12 +411,12 @@ _EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "hbar"}
 # dummy sample shown black when its layer is shown and grey when hidden; clicking it flips the
 # layer in the live grid. The tile carries its OWN sample content (below); the specific group's
 # example column still uses _example_html / _EXAMPLE_TEXT.
-_TILE_ROWLABEL = "𝒏₁"           # the matrix's row header (a matlabel) — rides the symbol layer, like real row labels
 # The tile's stacked lines, top to bottom, by their PRIMARY layer keys (left-to-right render
-# order). The value cell additionally shows the symbol layer's row header and the units layer's
-# per-cell unit (secondary appearances, added in the builder), and seats math_expressions /
-# quantities INSIDE its box rather than on rows of their own. The symbol line seats the symbol +
-# its equivalence tail; the name line the mnemonic letter + the rest of the name.
+# order). The value cell additionally hosts two layers that have no line of their own — the
+# header_symbols row header and the cell_units per-cell unit (added in the builder, each its own
+# independent key) — and seats math_expressions / quantities INSIDE its box rather than on rows of
+# their own. The symbol line seats the symbol + its equivalence tail; the name line the mnemonic
+# letter + the rest of the name.
 _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     # the drag-to-combine grip rides the value line, in a slot to the LEFT of the row label —
     # mirroring where the real handle sits in the grid (left of the 𝒎ᵢ label).
@@ -428,6 +428,14 @@ _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     ("presets",),
     ("charts",),
 )
+
+# The two general layers that render INSIDE the value cell rather than on a line of their own (the
+# builder hand-places them in the value-line block): the row/col header symbol (header_symbols, in
+# the left gutter) and the per-cell unit (cell_units, beneath the value). They are independent
+# toggles, NOT sub-controls — splitting them out unbound the matlabel from the in-tile symbol and
+# the per-cell unit from the per-box "units:" line. Together with _GENERAL_TILE_LINES they cover
+# every general key exactly once (see test_general_tile_covers_every_general_layer_exactly_once).
+_TILE_IN_CELL_LAYERS: tuple[str, ...] = ("header_symbols", "cell_units")
 
 # A tile part that renders INSIDE another's cell is inert (greyed, unclickable) until that host
 # cell is shown — the dummy mirrors the grid, where the value and its closed form have nowhere to
@@ -3846,10 +3854,13 @@ def index() -> None:
                                 # than a checkbox column — laid out and proportioned like a real value
                                 # tile. Each part is a sample of that layer, clicked directly to show/
                                 # hide it; render() styles it by the live setting. A layer's PRIMARY
-                                # element carries the showpart:<key> marker + hover help; some layers
-                                # also surface inside the value cell (the symbol's row header, the
-                                # units' per-cell unit) or split in two (the name, around its mnemonic
-                                # letter) — those extra elements ride the same key's list.
+                                # element carries the showpart:<key> marker + hover help. Two layers
+                                # live INSIDE the value cell rather than on a line of their own — the
+                                # row/col header symbols (header_symbols, its 𝒏₁ sample in the left
+                                # gutter) and the per-cell unit (cell_units, beneath the value); each
+                                # is its OWN key, independent of the in-tile symbol / "units:" line
+                                # above. The name layer also splits in two (around its mnemonic letter),
+                                # those two halves riding the names key's list.
                                 def add_el(key, html, *, marked=False, size=None, style=""):
                                     fs = size if size is not None else _TILE_FONT.get(key)
                                     css = (f"font-size:{fs}px;" if fs else "") + style
@@ -3895,7 +3906,8 @@ def index() -> None:
                                                 part_el("drag_to_combine", size=15,
                                                         style=f"position:absolute;left:0;top:{cell_y}px;width:{hgut}px;"
                                                               f"height:{_TILE_CELL}px;justify-content:center")
-                                                add_el("symbols", _math_html(_TILE_ROWLABEL), size=_TILE_FONT["rowlabel"],
+                                                add_el("header_symbols", _general_part_html("header_symbols"), marked=True,
+                                                       size=_TILE_FONT["rowlabel"],
                                                        style=f"position:absolute;left:{hgut}px;top:{row_y}px;width:{gut - 3}px;"
                                                              "height:13px;justify-content:flex-end")
                                                 part_el("gridded_values", style=f"position:absolute;left:{hgut + gut}px;top:0")
@@ -3905,7 +3917,8 @@ def index() -> None:
                                                 part_el("quantities", size=_fit_font(_TILE_VALUE, _TILE_CELL),
                                                         style=f"position:absolute;left:{cell_x}px;top:{cell_y + 10}px;"
                                                               f"width:{_TILE_CELL}px;height:10px;justify-content:center")
-                                                add_el("units", _units_html(_TILE_UNITS), size=_TILE_FONT["cellunit"],
+                                                add_el("cell_units", _general_part_html("cell_units"), marked=True,
+                                                       size=_TILE_FONT["cellunit"],
                                                        style=f"position:absolute;left:{cell_x}px;top:{cell_y + 20}px;"
                                                              f"width:{_TILE_CELL}px;height:8px;justify-content:center;color:#555")
                                         elif "names" in line:

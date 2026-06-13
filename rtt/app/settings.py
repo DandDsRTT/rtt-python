@@ -46,6 +46,11 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("names", "names", True),
             ("mnemonics", "mnemonics", False),
             ("symbols", "symbols", False),
+            # the matrix row/column header labels (matlabels 𝒎₁, 𝐜₁, …) are their OWN toggle,
+            # independent of the in-tile big symbol above — NOT a sub-control (no SUBCONTROLS
+            # entry): either can show without the other. Both render parts of the same dummy
+            # tile, so this adds no panel row; it just unbinds the two appearances.
+            ("header_symbols", "row/col header symbols", False),
             ("equivalences", "equivalences", False),
             ("gridded_values", "gridded values", True),
             ("plain_text_values", "plain text values", False),
@@ -53,6 +58,10 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("presets", "presets", False),
             ("quantities", "quantities", True),
             ("units", "units", False),
+            # the per-value unit beneath each gridded cell is its OWN toggle, independent of the
+            # per-box "units: …" line above (the `units` key) — NOT a sub-control. Like
+            # header_symbols, it just unbinds a second appearance already drawn in the dummy tile.
+            ("cell_units", "per-cell units", False),
             ("math_expressions", "math expressions", False),
             # a grid affordance rather than a value-display layer, but it rides the general tile as
             # one more clickable part (its sample is a drag-handle grip); off by default.
@@ -126,8 +135,9 @@ SUBCONTROLS: dict[str, str] = {
 # (greys out) the rest until their content exists.
 IMPLEMENTED: frozenset[str] = frozenset(
     {"drag_to_combine",
-     "names", "symbols", "mnemonics", "equivalences", "gridded_values", "plain_text_values",
-     "quantities", "domain_quantities", "units", "domain_units", "counts", "presets",
+     "names", "symbols", "header_symbols", "mnemonics", "equivalences", "gridded_values",
+     "plain_text_values",
+     "quantities", "domain_quantities", "units", "cell_units", "domain_units", "counts", "presets",
      "temperament", "temperament_boxes", "tuning", "tuning_boxes",
      "math_expressions", "charts", "tuning_ranges",
      "tuning_colorization", "temperament_colorization", "weighting",

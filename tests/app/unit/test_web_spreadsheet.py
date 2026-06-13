@@ -2037,7 +2037,7 @@ def test_mapping_row_drag_handles_sit_left_of_the_row_labels():
     # matlabels), in the widened mapping tile — drag one row onto another to ADD it in. Verified with
     # symbols on (where the row labels render): the handle clears the labels and the left-bus − too.
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
-                            {**settings.defaults(), "symbols": True, "drag_to_combine": True})
+                            {**settings.defaults(), "symbols": True, "header_symbols": True, "drag_to_combine": True})
     cells = {c.id: c for c in lay.cells}
     for i in range(2):
         handle = cells[f"map_drag:{i}"]
@@ -2061,7 +2061,7 @@ def test_interval_drag_handles_sit_above_the_column_labels_in_the_vectors_row():
     # another to combine them. Verified with symbols on, where the column labels render: the order
     # down each column is handle / label / vector cells.
     lay = spreadsheet.build(service.from_mapping(((12, 19, 28),)),  # 12-ET 5-limit: two commas
-                            {**settings.defaults(), "symbols": True, "drag_to_combine": True},
+                            {**settings.defaults(), "symbols": True, "header_symbols": True, "drag_to_combine": True},
                             interest=((-1, 1, 0), (0, 0, 1)))
     cells = {c.id: c for c in lay.cells}
     for i in range(2):
@@ -2242,12 +2242,12 @@ def test_the_size_factor_prescaler_carries_a_horizontal_size_bar():
 def test_the_size_sensitizing_row_is_labelled_z_not_a_fourth_prime():
     # the bottom (size-sensitizing) row of 𝑋 = 𝑍𝐿 is labelled 𝒛 (the size-sensitizing matrix 𝑍's row
     # variable, §10), NOT 𝒍₄ / 𝒙₄ — it isn't a fourth prime. The d real prime rows keep their 𝒍ᵢ.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True).cells}
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, header_symbols=True).cells}
     assert lils["matlabel:row:prescaling:primes:0"].text == "𝒍₁"
     assert lils["matlabel:row:prescaling:primes:2"].text == "𝒍₃"
     assert lils["matlabel:row:prescaling:primes:3"].text == "𝒛"  # the size row — not 𝒍₄
     # a square (no size factor) prescaler has only the d prime rows, all 𝒍ᵢ (no 𝒛 row)
-    lp = {c.id: c for c in _with("minimax-S", weighting=True, symbols=True).cells}
+    lp = {c.id: c for c in _with("minimax-S", weighting=True, symbols=True, header_symbols=True).cells}
     assert lp["matlabel:row:prescaling:primes:2"].text == "𝒍₃"
     assert "matlabel:row:prescaling:primes:3" not in lp
 
@@ -2427,7 +2427,7 @@ def test_size_factor_grows_the_prescaler_product_tiles_and_labels_the_size_row()
     # row gets its own row label (the (d+1)-th covector of 𝑋), like the diagonal rows above it.
     mapping = ((1, 1, 0), (0, 1, 4))
     lils = {c.id: c for c in _with("TILT minimax-lils-S", weighting=True).cells}
-    lils_sym = {c.id: c for c in _with("TILT minimax-lils-S", weighting=True, symbols=True).cells}
+    lils_sym = {c.id: c for c in _with("TILT minimax-lils-S", weighting=True, symbols=True, header_symbols=True).cells}
     pre = service.complexity_prescaler(mapping, "TILT minimax-S")
     comma = service.from_mapping(mapping).comma_basis[0]      # the syntonic comma vector
     # the comma product tile 𝑋C grows the size row: sf·Σ(𝐿ⱼ·commaⱼ) = sf · the comma's log size
@@ -2536,7 +2536,7 @@ def test_prescaler_symbol_never_mixes_L_and_X_within_a_tile():
     # symbol but 𝑋𝐝 over its columns. Under the default (log-prime) scheme the prescaler IS
     # the log-prime matrix, so BOTH must use 𝐿 — the symbol and the column headers in lockstep.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    s = {**settings.defaults(), "symbols": True, "weighting": True,
+    s = {**settings.defaults(), "symbols": True, "header_symbols": True, "weighting": True,
          "generator_detempering": True}
     # non-unity slope reveals the prescaling rows (the prescaler is the log-prime matrix)
     on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
@@ -2596,7 +2596,7 @@ def test_custom_prescaler_diagonal_keeps_the_generic_symbol():
     # stays the generic 𝑋 everywhere (no 𝐿 promotion, no "= log-prime matrix") — the typed
     # diagonal speaks for itself, so the bare tile prints no equivalence.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    s = {**settings.defaults(), "symbols": True, "equivalences": True,
+    s = {**settings.defaults(), "symbols": True, "header_symbols": True, "equivalences": True,
          "weighting": True, "generator_detempering": True}
     on = {c.id: c for c in spreadsheet.build(
         base, s, custom_prescaler=(1.0, 1.5, 2.0),
@@ -2727,7 +2727,7 @@ def test_damage_weight_and_complexity_units_track_the_tuning_scheme():
         ("TILT minimax-lils-S", "¢(lils-S)", "(lils-S)", "(lils-C)"),                # lils (Weil-style size factor)
     ]
     for scheme, damage, weight, complexity in cases:
-        cells = {c.id: c for c in _with(scheme, weighting=True, units=True, domain_units=True).cells}
+        cells = {c.id: c for c in _with(scheme, weighting=True, units=True, cell_units=True, domain_units=True).cells}
         # damage (the tuning's own column) and the weight list always show under weighting
         assert cells["units:damage:targets"].text == f"units: {damage}", scheme
         assert cells["damage:target:0"].unit == damage, scheme
@@ -2814,7 +2814,7 @@ def test_outer_matrix_frame_hugs_the_cells_leaving_subrow_labels_outside():
     # content_box). Otherwise the frame drifts left over the subrow labels (𝒎ᵢ / 𝒙ᵢ),
     # swallowing them, and overhangs the cells on the right. Per the mockup the labels
     # sit OUTSIDE the frame, to its left.
-    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, symbols=True).cells}  # non-unity slope reveals the prescaling row
+    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, symbols=True, header_symbols=True).cells}  # non-unity slope reveals the prescaling row
     for top_id, foot_id, label_id, left_id, right_id in (
         ("ebktop:primes", "ebkbrace:primes", "matlabel:row:mapping:primes:0",
          "bracket:map:0:l", "bracket:map:0:r"),
@@ -3408,7 +3408,7 @@ def test_a_non_diagonal_pretransformer_drops_the_complexity_diag_equivalence():
     # the generic 𝒘 = 𝒄⁻¹ symbol with per-column wₙ = cₙ⁻¹ headers (referencing each complexity column).
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s.update(weighting=True, alt_complexity=True, symbols=True, equivalences=True)
+    s.update(weighting=True, alt_complexity=True, symbols=True, header_symbols=True, equivalences=True)
     square = ((1.0, 0.0, 0.0), (0.3, 1.0, 0.0), (0.0, 0.0, 1.0))  # an off-diagonal pretransformer
     on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S",
                                              custom_prescaler=square).cells}
@@ -4844,7 +4844,9 @@ def test_every_implemented_toggle_actually_changes_the_layout():
         # otherwise flipping alt_complexity changes nothing under the unity default.
         lay = spreadsheet.build(base, s, tuning_scheme="TILT minimax-S")
         return (
-            frozenset((c.id, c.x, c.y, c.w, c.h, c.kind, c.text, c.underlines) for c in lay.cells),
+            # c.unit is in the tuple so cell_units (which adds/removes the per-value unit beneath a
+            # cell without changing the cell's id/geometry/text) registers as a real layout change
+            frozenset((c.id, c.x, c.y, c.w, c.h, c.kind, c.text, c.unit, c.underlines) for c in lay.cells),
             frozenset((b.id, b.x, b.y, b.w, b.h, b.tint) for b in lay.blocks),
         )
 
@@ -4906,14 +4908,13 @@ def test_equivalences_alone_render_the_symbol_line_only_where_there_is_an_equati
     assert not any(c.startswith("caption:") for c in eq_only)  # names is off here
 
 
-def test_symbols_labels_each_matrix_row_or_column_with_a_subscripted_glyph():
-    # Symbols on doesn't just put the matrix's name (𝑀, C, 𝒕, …) below the cells; it
-    # also labels each individual row/column of the matrix with a subscripted version
-    # of that name, per the maximized mockup. A covector stack labels its ROWS at the
-    # left of each row's ⟨ bracket; every other multi-value tile labels its COLUMNS
-    # above each cell.
-    on = {c.id: c for c in _with(symbols=True, names=True).cells}
-    off = {c.id: c for c in _with(symbols=False).cells}
+def test_header_symbols_label_each_matrix_row_or_column_with_a_subscripted_glyph():
+    # Header symbols (a toggle independent of the in-tile name symbol below the cells) label
+    # each individual row/column of the matrix with a subscripted version of that name, per
+    # the maximized mockup. A covector stack labels its ROWS at the left of each row's ⟨
+    # bracket; every other multi-value tile labels its COLUMNS above each cell.
+    on = {c.id: c for c in _with(header_symbols=True, names=True).cells}
+    off = {c.id: c for c in _with(header_symbols=False).cells}
 
     # The mapping matrix 𝑀 is a stack of two covector rows (one per generator), each
     # labelled 𝒎ᵢ at the left of its ⟨ — the bold-italic lowercase of 𝑀
@@ -4949,15 +4950,28 @@ def test_symbols_labels_each_matrix_row_or_column_with_a_subscripted_glyph():
     assert on["matlabel:col:retune:targets:0"].text == "e₁"    # target retunings
     assert on["matlabel:col:damage:targets:0"].text == "d₁"    # damage list
 
-    # Symbols off drops every label, like the symbol/equivalence cells
+    # Header symbols off drops every label (independent of the in-tile symbol/equivalence cells)
     assert not any(c.startswith("matlabel:") for c in off)
+
+
+def test_in_tile_symbols_and_header_symbols_toggle_independently():
+    # the in-tile big symbol (𝒕, above the caption) and the matrix row/column header labels
+    # (matlabels 𝒎ᵢ / 𝐜ᵢ) are now SEPARATE toggles — either renders without the other.
+    sym_only = {c.id for c in _with(symbols=True, header_symbols=False).cells}
+    hdr_only = {c.id for c in _with(symbols=False, header_symbols=True).cells}
+    # symbols on, header symbols off: the in-tile symbol renders, but NO row/col header labels
+    assert "symbol:tuning:primes" in sym_only
+    assert not any(c.startswith("matlabel:") for c in sym_only)
+    # header symbols on, symbols off: the matlabels render, but NO in-tile big symbol
+    assert any(c.startswith("matlabel:") for c in hdr_only)
+    assert not any(c.startswith("symbol:") for c in hdr_only)
 
 
 def test_matrix_labels_index_match_their_matrix_size():
     # Each label set covers exactly its matrix's rows/columns — r=2 row labels for the
     # mapping, d=3 column labels for the tuning map, k=4 for the target list — so the
     # i-suffix on the ids tracks the live matrix and a relabel adds/drops in lockstep
-    on = {c.id for c in _with(symbols=True).cells}
+    on = {c.id for c in _with(header_symbols=True).cells}
     assert {f"matlabel:row:mapping:primes:{i}" for i in range(2)} <= on
     assert "matlabel:row:mapping:primes:2" not in on   # only r=2 rows
     assert {f"matlabel:col:vectors:targets:{j}" for j in range(8)} <= on
@@ -4969,7 +4983,7 @@ def test_matrix_labels_index_match_their_matrix_size():
 def test_matrix_labels_only_emit_where_the_tile_is_open():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["symbols"] = True
+    s["header_symbols"] = True
     # the mapping row collapsed: its row labels vanish with the rest of its content,
     # while the interval-vectors row's column labels are unaffected
     cells = {c.id for c in spreadsheet.build(base, s, collapsed={"row:mapping"}).cells}
@@ -4978,7 +4992,7 @@ def test_matrix_labels_only_emit_where_the_tile_is_open():
 
 
 def test_matrix_labels_sit_above_or_left_of_the_cells_they_label():
-    on = {c.id: c for c in _with(symbols=True).cells}
+    on = {c.id: c for c in _with(header_symbols=True).cells}
     # a column label sits directly above the cell it labels (same x, smaller y)
     assert on["matlabel:col:tuning:primes:0"].x == on["tuning:prime:0"].x
     assert on["matlabel:col:tuning:primes:0"].y < on["tuning:prime:0"].y
@@ -4997,7 +5011,7 @@ def test_col_labels_sit_inside_the_tile_centred_above_the_bracket():
     # matrix's top bracket.
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
-        {**settings.defaults(), "symbols": True},
+        {**settings.defaults(), "header_symbols": True},
     )
     on = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
@@ -5029,7 +5043,7 @@ def test_col_labels_sit_above_the_top_frame_in_framed_rows():
     # …) MUST sit above the matrix's top bracket ─┐ — the labels name the columns the
     # bracket spans, so they read like a header over the matrix, not as decoration
     # squeezed into the bracket gutter.
-    on = {c.id: c for c in _with(symbols=True).cells}
+    on = {c.id: c for c in _with(header_symbols=True).cells}
     # mapping matrix: top bracket (ebktop:primes) sits BELOW the row labels' band, and
     # the col labels for the mapping's mapped lists sit above their own ebktop marks
     assert on["matlabel:col:mapping:targets:0"].y + on["matlabel:col:mapping:targets:0"].h \
@@ -5049,7 +5063,7 @@ def test_mapping_top_frame_hugs_the_cells_not_the_row_label_gutter():
     # cells (left of which the per-row ⟨ sits, in turn left of which the matlabel
     # gutter sits). Without this the bracket would be a MATLABEL_W wider than the
     # matrix, visually swallowing the 𝒎ᵢ labels.
-    on = {c.id: c for c in _with(symbols=True).cells}
+    on = {c.id: c for c in _with(header_symbols=True).cells}
     ebktop = on["ebktop:primes"]
     ebkbrace = on["ebkbrace:primes"]
     left_bracket = on["bracket:map:0:l"]
@@ -5064,11 +5078,11 @@ def test_mapping_top_frame_hugs_the_cells_not_the_row_label_gutter():
 
 
 def test_row_labels_balance_the_primes_tile_with_an_equal_right_gutter():
-    # symbols on adds the 𝒎ᵢ / 𝒙ᵢ row-label gutter on the LEFT of the domain-primes matrix.
+    # header symbols on adds the 𝒎ᵢ / 𝒙ᵢ row-label gutter on the LEFT of the domain-primes matrix.
     # With no counterpart it shoves the matrix right-of-centre in its grey tile, so we mirror
     # it with an equal empty gutter on the RIGHT. The matrix's per-row ⟨ … ⟩ brackets then sit
     # centred in the primes tile (block:mapping), with a full label width of room each side.
-    lay = _with(symbols=True)
+    lay = _with(header_symbols=True)
     on = {c.id: c for c in lay.cells}
     panel = {b.id: b for b in lay.blocks}["block:mapping"]
     left = on["bracket:map:0:l"].x - panel.x
@@ -5087,7 +5101,7 @@ def test_complexity_col_labels_spell_out_the_norm_definition():
     # The TARGETS column is the named complexity list 𝒄, so its labels stay plain "c".
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["symbols"] = True
+    s["header_symbols"] = True
     s["weighting"] = True              # opens the complexity row
     s["optimization"] = True           # opens the held column
     s["generator_detempering"] = True  # opens the detempering column
@@ -5118,7 +5132,7 @@ def test_complexity_target_col_headers_gain_the_norm_equivalence():
     # complexity map's per-column ‖𝐿[n]‖q. Without equivalences only the bare cₙ shows.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
-    s = {**settings.defaults(), "symbols": True, "weighting": True, "equivalences": True}
+    s = {**settings.defaults(), "header_symbols": True, "weighting": True, "equivalences": True}
     # non-unity slope reveals the complexity row (the prescaler is the log-prime matrix)
     on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
     assert on["matlabel:col:complexity:targets:0"].text == f"c₁ = ‖𝐿𝐭₁‖{q}"
@@ -5132,7 +5146,7 @@ def test_complexity_target_col_headers_gain_the_norm_equivalence():
     assert allint["matlabel:col:complexity:primes:0"].text == f"‖𝐿[1]‖{q}"
     # equivalences off → just the bare named symbol cₙ
     off = {c.id: c for c in spreadsheet.build(
-        base, {**settings.defaults(), "symbols": True, "weighting": True},
+        base, {**settings.defaults(), "header_symbols": True, "weighting": True},
         tuning_scheme="TILT minimax-S").cells}  # non-unity slope reveals the complexity row
     assert off["matlabel:col:complexity:targets:0"].text == "c₁"
 
@@ -5145,7 +5159,7 @@ def test_prescaling_matrix_row_and_col_labels():
     # would mix with the 𝐿 in the same tile.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["symbols"] = True
+    s["header_symbols"] = True
     s["weighting"] = True
     s["optimization"] = True
     s["generator_detempering"] = True
@@ -5183,7 +5197,7 @@ def test_units_annotate_each_box_with_its_unit_string():
 
 
 def test_units_carry_a_per_value_unit_on_each_gridded_cell():
-    on = {c.id: c for c in _with("TILT minimax-S", units=True, weighting=True).cells}  # non-unity slope reveals the prescaling/complexity rows
+    on = {c.id: c for c in _with("TILT minimax-S", units=True, cell_units=True, weighting=True).cells}  # non-unity slope reveals the prescaling/complexity rows
     off = {c.id: c for c in _with(units=False, weighting=True).cells}
     # each gridded value cell carries its coordinate-specialized unit: the tile's unit
     # with its variables subscripted by the cell's generator/prime index (the mockup's
@@ -5204,6 +5218,19 @@ def test_units_carry_a_per_value_unit_on_each_gridded_cell():
     assert on["complexity:prime:0"].unit == "(C)/p₁"          # complexity map: (C) per prime
     # the unit is absent when units is off
     assert all(not c.unit for c in off.values())
+
+
+def test_per_box_units_line_and_cell_units_toggle_independently():
+    # the per-box "units: …" line (below each caption) and the per-value unit beneath each gridded
+    # cell are now SEPARATE toggles — either renders without the other.
+    line_only = {c.id: c for c in _with(units=True, cell_units=False).cells}
+    cell_only = {c.id: c for c in _with(units=False, cell_units=True).cells}
+    # units on, cell units off: the per-box "units:" line renders, but no value carries a per-cell unit
+    assert "units:tuning:primes" in line_only
+    assert all(not c.unit for c in line_only.values())
+    # cell units on, units off: each value carries its per-cell unit, but no per-box "units:" line shows
+    assert cell_only["tuning:prime:0"].unit == "¢/p₁"
+    assert not any(cid.startswith("units:") for cid in cell_only)
 
 
 def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels():
@@ -5250,6 +5277,7 @@ def test_nonstandard_domain_units_use_basis_element_label_b():
     s = settings.defaults()
     s["domain_units"] = True
     s["units"] = True   # also turn on the per-cell unit annotations
+    s["cell_units"] = True
     s["weighting"] = True  # opens the prescaling row so its per-cell oct/𝒃 unit shows
     on = {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="TILT minimax-S").cells}
     # the units column over the interval-vectors row: basis-element coordinate
@@ -7080,7 +7108,7 @@ def test_superspace_projection_every_tile_emits_a_plain_text_band():
 def test_superspace_projection_caption_symbol_and_units_when_named():
     # names + symbols + units on: the tile carries the "superspace projection" caption, the in-tile
     # 𝒑Lᵢ covector row labels, the b/b units line, and the P_L = G_L M_L symbol/equivalence
-    cells = {c.id: c for c in _barbados_proj(names=True, symbols=True, units=True).cells}
+    cells = {c.id: c for c in _barbados_proj(names=True, symbols=True, header_symbols=True, units=True).cells}
     assert cells["caption:ss_projection:ssprimes"].text == "superspace projection"
     assert "matlabel:row:ss_projection:ssprimes:0" in cells  # 𝒑L₁ row label
     # the units line under the tile reads b/b (a basis-element operator)
@@ -7207,7 +7235,7 @@ def _barbados_prescaling(approach="", nonstandard=True):
     # KeyError (they once did, on the hardcoded (prescaling, primes) row_top / equivalence keys).
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     s = settings.defaults() | {"nonstandard_domain": nonstandard, "weighting": True,
-                               "symbols": True, "captions": True, "equivalences": True,
+                               "symbols": True, "header_symbols": True, "captions": True, "equivalences": True,
                                "plain_text_values": True, "presets": True}
     return spreadsheet.build(state, s, tuning_scheme="TILT minimax-C", nonprime_approach=approach)
 
@@ -7437,7 +7465,7 @@ def test_M_L_tile_row_labels_each_covector():
     # M's row label is 𝒎ᵢ (each row a covector 𝒎ᵢ — see ROW_LABEL_LETTERS). M_L's parallel:
     # each row labelled 𝒎ₗᵢ (math-italic 𝒎 + subscript ₗ + i+1). With symbols on the row
     # labels render in the row-label gutter at the left of each ⟨ bracket.
-    cells = {c.id: c for c in _barbados_ss(symbols=True).cells}
+    cells = {c.id: c for c in _barbados_ss(symbols=True, header_symbols=True).cells}
     for i in range(3):  # rL=3 rows
         sub_i = str(i + 1).translate(_SUBSCRIPT_DIGITS)
         assert cells[f"matlabel:row:ss_mapping:ssprimes:{i}"].text == f"\U0001D48EL{sub_i}"
@@ -7523,7 +7551,7 @@ def test_M_jL_tile_carries_caption_and_symbol():
 
 def test_M_jL_tile_row_labels_each_covector():
     # each row labelled 𝒎ⱼₗᵢ — math-italic 𝒎 + subscript j (U+2C7C) + ₗ + index
-    cells = {c.id: c for c in _barbados_ss_identity(symbols=True).cells}
+    cells = {c.id: c for c in _barbados_ss_identity(symbols=True, header_symbols=True).cells}
     for i in range(4):  # dL=4 rows
         sub_i = str(i + 1).translate(_SUBSCRIPT_DIGITS)
         assert cells[f"matlabel:row:ss_just_mapping:ssprimes:{i}"].text == f"\U0001D48EⱼL{sub_i}"
@@ -7847,7 +7875,7 @@ def test_per_cell_units_subscript_p_on_the_superspace_tuning_cells():
     # primes p (it is prime-only by construction), NOT the on-domain basis element b, even when
     # the domain is nonstandard. With units on, each cell's unit subscripts the prime index —
     # ¢/p₁, ¢/p₂, … — and the on-domain p → b swap does NOT reach these tiles.
-    cells = {c.id: c for c in _barbados_ss(units=True).cells}
+    cells = {c.id: c for c in _barbados_ss(units=True, cell_units=True).cells}
     assert cells["tuning:ssprime:0"].unit == "¢/p₁"
     assert cells["tuning:ssprime:1"].unit == "¢/p₂"
     assert cells["just:ssprime:0"].unit == "¢/p₁"
@@ -7857,7 +7885,7 @@ def test_per_cell_units_subscript_p_on_the_superspace_tuning_cells():
 def test_per_cell_units_subscript_gL_on_the_g_L_cells():
     # 𝒈ₗ over the ssgens column carries "¢/gL" units (one cents-per-superspace-generator entry),
     # subscripted by the generator index — ¢/gL₁, ¢/gL₂, … (gL, distinct from the on-domain g)
-    cells = {c.id: c for c in _barbados_ss(units=True).cells}
+    cells = {c.id: c for c in _barbados_ss(units=True, cell_units=True).cells}
     assert cells["tuning:ssgen:0"].unit == "¢/gL₁"
     assert cells["tuning:ssgen:1"].unit == "¢/gL₂"
 
@@ -7866,7 +7894,7 @@ def test_per_cell_units_on_the_M_L_cells_carry_gL_over_p():
     # M_L (superspace mapping) is superspace-generators-per-superspace-prime (gL/p), one entry
     # per (superspace generator, superspace prime). The subscripts follow row × column —
     # gL₁/p₁, gL₁/p₂, … like the on-domain mapping cells take g₁/p₁ etc.
-    cells = {c.id: c for c in _barbados_ss(units=True).cells}
+    cells = {c.id: c for c in _barbados_ss(units=True, cell_units=True).cells}
     assert cells["cell:ss_mapping:ssprimes:0:0"].unit == "gL₁/p₁"
     assert cells["cell:ss_mapping:ssprimes:0:1"].unit == "gL₁/p₂"
     assert cells["cell:ss_mapping:ssprimes:1:0"].unit == "gL₂/p₁"
@@ -7895,7 +7923,7 @@ def test_superspace_keeps_p_while_the_nonstandard_domain_swaps_to_b():
     # the crux of p vs b: over a nonstandard domain the on-domain coordinate swaps p → b
     # (basis element), but the superspace — prime-only by construction — keeps p (true primes).
     # The two coexist in one grid: the domain column reads /b, the superspace column reads /p.
-    cells = {c.id: c for c in _barbados_ss(domain_units=True, units=True).cells}
+    cells = {c.id: c for c in _barbados_ss(domain_units=True, units=True, cell_units=True).cells}
     # on-domain: basis-element b (the 2.3.13/5 domain has a nonprime element)
     assert cells["urow:primes:0"].text == "/b₁"
     assert cells["ucol:vectors:0"].text == "b₁/"
@@ -7927,7 +7955,7 @@ def test_superspace_mapping_row_labels_clear_the_bracket_and_cells():
     # M_L's row labels (𝒎ʟᵢ) seat in a reserved gutter LEFT of each row's ⟨ bracket and first
     # cell — the ssprimes column now reserves the same MATLABEL_W gutter the primes column does,
     # so the labels no longer collide with the EBK or the matrix (the issue-2 fix)
-    cells = {c.id: c for c in _barbados_ss(symbols=True).cells}
+    cells = {c.id: c for c in _barbados_ss(symbols=True, header_symbols=True).cells}
     label = cells["matlabel:row:ss_mapping:ssprimes:0"]
     bracket = cells["bracket:ss_map:0:l"]
     cell0 = cells["cell:ss_mapping:ssprimes:0:0"]
@@ -7960,7 +7988,7 @@ def test_superspace_tuning_tiles_get_subcolumn_headers():
     # (the issue-4 fix — they were missing while the on-domain 𝒕ᵢ etc. had them). M_L / M_jL
     # head their ROWS (𝒎ʟᵢ) instead, like the on-domain mapping, so they carry no col header.
     L = spreadsheet.SUBSCRIPT_L
-    cells = {c.id: c for c in _barbados_ss(symbols=True).cells}
+    cells = {c.id: c for c in _barbados_ss(symbols=True, header_symbols=True).cells}
     assert cells["matlabel:col:tuning:ssgens:0"].text == f"\U0001D488{L}₁"   # 𝒈ʟ₁
     assert cells["matlabel:col:tuning:ssprimes:0"].text == f"\U0001D495{L}₁"  # 𝒕ʟ₁
     assert cells["matlabel:col:just:ssprimes:1"].text == f"\U0001D48B{L}₂"    # 𝒋ʟ₂
@@ -8000,7 +8028,7 @@ def test_size_factor_all_interval_weight_is_a_list_mirroring_the_complexity_row(
     # reciprocal of that column's complexity cₙ (the norm detail stays on the 𝒄 tile's own cₙ = ‖𝐿[n]‖q
     # header, not repeated). NOT the matrix 𝑆ₚ / ⊕ 1 — that's the (d+1)×(d+1) form a list can't be.
     lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, charts=True,
-                                   symbols=True, equivalences=True, names=True).cells}
+                                   symbols=True, header_symbols=True, equivalences=True, names=True).cells}
     assert "weight:target:0" in lils and "chart:weight:targets" in lils   # a single-row list, with its chart
     assert "cell:weight:targets:1:0" not in lils and "bar:weight" not in lils  # NOT a matrix, no size bar
     assert lils["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹"
@@ -8008,11 +8036,11 @@ def test_size_factor_all_interval_weight_is_a_list_mirroring_the_complexity_row(
     assert lils["matlabel:col:weight:targets:0"].text == "w₁ = c₁⁻¹"
     assert lils["matlabel:col:weight:targets:2"].text == "w₃ = c₃⁻¹"
     # symbols only (no equivalences) → the bare glyph 𝒘 and the bare per-column wₙ
-    bare = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True).cells}
+    bare = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, header_symbols=True).cells}
     assert bare["symbol:weight:targets"].text == "𝒘"
     assert bare["matlabel:col:weight:targets:0"].text == "w₁"
     # a plain all-interval diagonal weight (no size factor) keeps the concrete 𝒘 = diag(𝐿)⁻¹ + bare wₙ
-    lp = {c.id: c for c in _with("minimax-S", weighting=True, charts=True, symbols=True, equivalences=True).cells}
+    lp = {c.id: c for c in _with("minimax-S", weighting=True, charts=True, symbols=True, header_symbols=True, equivalences=True).cells}
     assert lp["symbol:weight:targets"].text == "𝒘 = diag(𝐿)⁻¹" and lp["matlabel:col:weight:targets:0"].text == "w₁"
     assert "weight:target:0" in lp and "cell:weight:targets:1:0" not in lp
 
@@ -8024,7 +8052,7 @@ def test_a_non_diagonal_pretransformer_all_interval_weight_is_a_reciprocal_list(
     # norm detail (‖𝑋[n]‖q) lives on the complexity tile, not here.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s.update(weighting=True, charts=True, symbols=True, equivalences=True)
+    s.update(weighting=True, charts=True, symbols=True, header_symbols=True, equivalences=True)
     square = ((1.0, 0.0, 0.0), (0.3, 1.0, 0.0), (0.0, 0.0, 1.0))  # an off-diagonal editable square
     on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S",
                                              custom_prescaler=square).cells}
@@ -8261,7 +8289,7 @@ def test_projection_p_and_g_carry_full_chrome_and_editable_plain_text():
     # P and G are at chrome parity with the mapping: symbols 𝑃/𝐺 (+ equivalence), the p/p and p/g
     # units, P's covector rows labelled 𝒑ᵢ and G's columns 𝐠ᵢ, and an EDITABLE plain-text band each —
     # the only edit path now the gridded cells are read-only "mapped".
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, units=True,
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, header_symbols=True, units=True,
                                           equivalences=True, plain_text_values=True).cells}
     assert cells["symbol:projection:primes"].text.startswith("𝑃") and "= G𝑀" in cells["symbol:projection:primes"].text
     assert cells["symbol:projection:gens"].text.startswith("G")   # upright G (a basis), not italic 𝐺
@@ -8374,7 +8402,7 @@ def test_projection_column_tiles_dash_when_under_held():
 def test_projection_column_tiles_carry_full_chrome():
     # captions, symbols, units and per-column labels at parity with the vectors-row tiles they project
     cells = {c.id: c for c in _proj_build(("2/1", "5/4"), generator_detempering=True,
-                                          symbols=True, units=True, equivalences=True).cells}
+                                          symbols=True, header_symbols=True, units=True, equivalences=True).cells}
     assert cells["caption:projection:detempering"].text == "projected generator detempering"
     assert cells["caption:projection:targets"].text == "projected target interval list"
     assert cells["symbol:projection:detempering"].text == "𝑃D"
@@ -8388,7 +8416,7 @@ def test_projection_column_tiles_carry_full_chrome():
 def test_projection_held_tile_carries_the_equals_H_equivalence():
     # PH = H: the held tile's symbol gains the "= H" equivalence (the held intervals are unchanged)
     cells = {c.id: c for c in _proj_full(optimization=True, held_vectors=[(1, 0, 0), (-2, 0, 1)],
-                                         symbols=True, equivalences=True).cells}
+                                         symbols=True, header_symbols=True, equivalences=True).cells}
     assert cells["caption:projection:held"].text == "projected held interval basis"
     assert cells["symbol:projection:held"].text == "𝑃H = H"
     assert cells["matlabel:col:projection:held:0"].text == "𝑃𝐡₁"
@@ -8396,7 +8424,7 @@ def test_projection_held_tile_carries_the_equals_H_equivalence():
 
 def test_projection_interest_tile_caption_and_label():
     # interest carries a caption + per-column label but NO big symbol (a loose collection, like the vectors row)
-    cells = {c.id: c for c in _proj_full(interest=[(-1, 1, 0), (1, 1, -1)], symbols=True).cells}
+    cells = {c.id: c for c in _proj_full(interest=[(-1, 1, 0), (1, 1, -1)], symbols=True, header_symbols=True).cells}
     assert cells["caption:projection:interest"].text == "projected intervals"
     assert cells["matlabel:col:projection:interest:0"].text == "𝑃𝐢₁"
     assert "symbol:projection:interest" not in cells
@@ -8447,7 +8475,7 @@ def test_projection_superspace_tiles_fill_the_gap_between_G_and_P():
 
 def test_projection_superspace_tiles_carry_chrome():
     from rtt.app.grid_tables import SUBSCRIPT_L
-    cells = {c.id: c for c in _proj_superspace(symbols=True, equivalences=True, units=True).cells}
+    cells = {c.id: c for c in _proj_superspace(symbols=True, header_symbols=True, equivalences=True, units=True).cells}
     assert cells["caption:projection:ssgens"].text == "embedding from superspace generators to subspace elements"
     assert cells["caption:projection:ssprimes"].text == "projection from superspace to subspace"
     assert cells["symbol:projection:ssgens"].text == f"G{SUBSCRIPT_L}→ₛ"
@@ -8876,7 +8904,7 @@ def test_projection_relabels_the_whole_column_as_the_unrotated_vector_list():
 
 
 def test_projection_v_column_labels_are_v_and_lambda():
-    cells = {c.id: c for c in _with(projection=True, symbols=True).cells}
+    cells = {c.id: c for c in _with(projection=True, symbols=True, header_symbols=True).cells}
     # the C|U split is the vertical bar, so every V sub-column is labelled 𝐯ᵢ (not a 𝐜/𝐮 split)
     assert [cells[f"matlabel:col:vectors:commas:{i}"].text for i in range(3)] == ["𝐯₁", "𝐯₂", "𝐯₃"]
     assert cells["matlabel:col:mapping:commas:2"].text == "𝑀𝐯₃"   # the mapping over V: 𝑀𝐯ᵢ

@@ -94,6 +94,7 @@ async def _enable(user: User, label: str) -> None:
 _FEATURE_CELLS = [
     ("counts", "count:primes"),                      # the count scalar ("d = 3"), _math_html
     ("symbols", "symbol:mapping:primes"),            # the quantity-symbol glyph, _math_html
+    ("row/col header symbols", "matlabel:row:mapping:primes:0"),  # the matrix row header label (header_symbols)
     ("plain text values", "ptext:mapping:primes"),   # the editable EBK dual input
     ("presets", "preset:temperament"),         # the chooser dropdowns (q-select)
     ("presets", "preset:tuning:gens"),         # a copied dropdown (its own :col-suffixed id)

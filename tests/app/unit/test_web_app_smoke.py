@@ -687,14 +687,15 @@ def test_interest_example_is_the_bold_interval_symbol():
 
 def test_general_tile_covers_every_general_layer_exactly_once():
     # the "general" group is rendered as a single clickable dummy tile (the alternative to a
-    # column of checkboxes); _GENERAL_TILE_LINES lays the layers out in tile order, so it must
-    # account for EVERY general toggle exactly once — a new general layer can't slip in without
-    # earning a place (and a click target) in the tile.
+    # column of checkboxes); _GENERAL_TILE_LINES lays most layers out in tile order, and two more
+    # (header_symbols, cell_units) ride INSIDE the value cell (_TILE_IN_CELL_LAYERS) rather than on
+    # a line of their own. Together they must account for EVERY general toggle exactly once — a new
+    # general layer can't slip in without earning a place (and a click target) in the tile.
     general = [key for key, _label, _default in dict(show_settings.SHOW_GROUPS)["general"]]
-    placed = [key for line in app._GENERAL_TILE_LINES for key in line]
-    assert sorted(placed) == sorted(general)
-    assert len(placed) == len(set(placed))  # no layer placed twice
-    for key in placed:  # every placed part renders a non-empty sample (the builder uses this)
+    covered = [key for line in app._GENERAL_TILE_LINES for key in line] + list(app._TILE_IN_CELL_LAYERS)
+    assert sorted(covered) == sorted(general)
+    assert len(covered) == len(set(covered))  # no layer placed twice
+    for key in covered:  # every covered part renders a non-empty sample (the builder uses this)
         assert app._general_part_html(key).strip(), f"empty tile part for {key}"
 
 

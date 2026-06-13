@@ -515,6 +515,7 @@ def _example_html(key: str) -> str:
 
 _TILE_NAME = "tile name"        # the name caption; its symbol-spelling letter (the n of "name") underlines for mnemonics
 _TILE_SYMBOL = "𝒏"              # the quantity symbol — a bold-italic n, matching the underlined letter
+_TILE_ROWLABEL = "𝒏₁"           # the matrix's row header (a matlabel) — its own header_symbols layer, like real row labels
 _TILE_EQUIV = " = 𝑒G"          # the symbol's defining-equation tail (𝒏 = 𝑒G — mixed object styling: italic scalar, upright matrix)
 _TILE_MATH = "1200·log₂(3/2) ="  # math_expressions: a value's closed form; the "=" belongs to the EXPRESSION, not the value
 _TILE_VALUE = "701.96"          # quantities: the bare value the form evaluates to (no "=" — that rides the expression)
@@ -595,6 +596,8 @@ def _general_part_html(key: str) -> str:
         return _math_html(_TILE_VALUE)
     if key == "symbols":
         return _math_html(_TILE_SYMBOL)
+    if key == "header_symbols":  # the matrix's row/col header label (matlabel), in the cell's left gutter
+        return _math_html(_TILE_ROWLABEL)
     if key == "equivalences":
         return _math_html(_TILE_EQUIV)
     if key == "names":
@@ -603,6 +606,8 @@ def _general_part_html(key: str) -> str:
         return _escape(_tile_name_pieces()[1])
     if key == "units":
         return f'<span class="rtt-units-pre">units: </span>{_units_html(_TILE_UNITS)}'
+    if key == "cell_units":  # the per-value unit beneath a gridded cell (no "units:" prefix)
+        return _units_html(_TILE_UNITS)
     if key == "plain_text_values":
         return _math_html(_TILE_PTEXT)
     if key == "presets":

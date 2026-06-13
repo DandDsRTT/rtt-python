@@ -554,7 +554,9 @@ class _ShowFlags:
     charts: bool
     ranges: bool
     symbols: bool
+    header_symbols: bool
     units: bool
+    cell_units: bool
     domain_units: bool
     temp: bool
     form_controls: bool
@@ -594,7 +596,9 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         charts=settings["charts"],  # per-tile bar charts above the value cells
         ranges=settings["tuning_ranges"],  # the generator tuning-ranges I-beam chart (in the gens box)
         symbols=settings["symbols"],  # the in-tile quantity symbols, stacked above the captions
+        header_symbols=settings["header_symbols"],  # the matrix row/col header labels (matlabels 𝒎ᵢ, 𝐜ᵢ)
         units=settings["units"],  # the in-tile "units: …" line, below each box's caption
+        cell_units=settings["cell_units"],  # the per-value unit beneath each gridded cell
         domain_units=settings["domain_units"],  # the units row (spine) + units column
         temp=temp,
         form_controls=settings["form_controls"],  # the canonical-mapping form row + <choose form> chooser
@@ -832,7 +836,9 @@ class _GridBuilder:
         show_charts = _f.charts
         show_ranges = _f.ranges
         self.show_symbols = _f.symbols
+        self.show_header_symbols = _f.header_symbols
         self.show_units = _f.units
+        self.show_cell_units = _f.cell_units
         show_domain_units = _f.domain_units
         show_temp = _f.temp
         self.show_form_controls = _f.form_controls
@@ -1492,11 +1498,11 @@ class _GridBuilder:
         # widen the primes gutter when the superspace is shown — it also carries M_s→L's wide
         # 𝒎ₛ→ₗᵢ row labels (see MATLABEL_W_SS), which would otherwise overflow the ⟨ bracket
         self.matlabel_primes_w = ((MATLABEL_W_SS if self.show_superspace else MATLABEL_W)
-                                  if (self.show_symbols and show_temp) else 0)
+                                  if (self.show_header_symbols and show_temp) else 0)
         # M_L / M_jL stack covectors in the ssprimes column with row labels (𝒎ʟᵢ), so it needs
         # the same MATLABEL_W gutter the primes column reserves — without it the labels collide
         # with each row's ⟨ bracket and first cell
-        self.matlabel_ssprimes_w = MATLABEL_W_SSPRIMES if (self.show_symbols and self.show_superspace) else 0
+        self.matlabel_ssprimes_w = MATLABEL_W_SSPRIMES if (self.show_header_symbols and self.show_superspace) else 0
         # the drag-to-combine row handles ride a gutter to the LEFT of the row labels (the 𝒎ᵢ
         # matlabels), so the primes column reserves room for them — present when the feature is on
         # and there are ≥ 2 generator rows to combine. Balanced by an equal empty right gutter (like
@@ -1848,7 +1854,7 @@ class _GridBuilder:
             # the tile_top and the bracket. The head is expanded when a matlabel is present
             # so the label has padding on both sides (the toggle stays in its corner — the
             # two share the head's y-range but at different x).
-            has_matlabel = (self.show_symbols and key in COL_LABELED_ROWS and not folded)
+            has_matlabel = (self.show_header_symbols and key in COL_LABELED_ROWS and not folded)
             head_default = TOGGLE + 2 * TOGGLE_INSET - PAD  # toggle's natural head reservation
             # the drag-to-combine handles ride a band at the TOP of the interval-vectors head, ABOVE
             # the column labels (so the grip sits OUTSIDE the c₁/𝒕ᵢ labels, mirroring the row handle
@@ -2203,7 +2209,8 @@ class _GridBuilder:
         return base
 
     def cell_unit(self, rkey, ckey, *, gen=None, prime=None, elem=None):
-        # the per-value unit shown beneath a gridded cell when units is on: the tile's unit
+        # the per-value unit shown beneath a gridded cell when cell units are on (a toggle
+        # independent of the per-box "units: …" line): the tile's unit
         # (tile_unit) with its STANDALONE coordinate variables subscripted by this cell's
         # generator/prime index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped
         # list g₁. Only standalone tokens subscript (see _subscript_coord), so the p inside an
@@ -2212,7 +2219,7 @@ class _GridBuilder:
         # The chapter-9 superspace tiles run over true primes (p) and superspace generators (gL),
         # NOT the on-domain g/b — so they keep p (the p → b swap is scoped to non-superspace
         # tiles) and subscript the gL token (gL₁) for M_L / 𝒈ₗ.
-        if not self.show_units:
+        if not self.show_cell_units:
             return ""
         u = self.tile_unit(rkey, ckey)
         superspace = rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")
@@ -4490,13 +4497,14 @@ class _GridBuilder:
             self.bracket("damage", LIST_BRACKETS, "targets", self.row_y["damage"], ROW_H)
 
     def _emit_matrix_labels(self):
-        """Matrix row + column labels (when symbols is on)."""
-        # Matrix row + column labels (when symbols is on). A row-labelled tile is a
+        """Matrix row + column labels (when header symbols are on — independent of the in-tile symbol)."""
+        # Matrix row + column labels (when header symbols are on — a toggle independent of the
+        # in-tile big symbol above). A row-labelled tile is a
         # covector stack — the mapping 𝑀, the prescaler 𝑋 — and labels each row 𝒎ᵢ / 𝒙ᵢ
         # at the LEFT of the row's ⟨, inside the MATLABEL_W gutter reserved in the primes
         # column. Every other multi-cell tile labels its COLUMNS above each cell in the
         # MATLABEL_H band reserved at the top of the row's value band.
-        if self.show_symbols:
+        if self.show_header_symbols:
             # the per-column group's count, so a tile's columns are iterated by its
             # (rkey, ckey) without re-deriving the loop bounds each time
             group_count = {"gens": self.r, "primes": self.d, "commas": self.nc + self.nu, "targets": self.k,
