@@ -2196,6 +2196,75 @@ def test_an_unheld_interval_is_never_faked_into_the_unchanged_basis():
     assert "9/8" not in ed.unchanged_ratios        # not held by THIS tuning, so not claimed unchanged
 
 
+def _cents_close(a, b):
+    return a is not None and b is not None and all(abs(x - y) < 1e-9 for x, y in zip(a, b))
+
+
+def test_a_held_nonprime_element_appears_in_the_unchanged_basis():
+    # ch3's "anything in the held-interval basis will always be in the unchanged-interval basis too",
+    # now on a NONSTANDARD (nonprime) domain: holding 9/1 over (2, 9, 5) must put 9/1 itself in U. The
+    # pre-fix bug computed the editor's tuning over the STANDARD PRIMES (the domain basis was never
+    # threaded into its tuning helpers), which stringified the held (0,1,0) as 3/1 — unparseable over
+    # (2,9,5) — and silently dropped it, so U came back as just ('8/5',) with the held 9/1 missing.
+    ed = Editor()
+    ed.settings["nonstandard_domain"] = True
+    ed.state = service.from_mapping(((1, 0, 0), (0, 1, 1)), domain_basis=(2, 9, 5))
+    ed.set_held_vectors([(0, 1, 0)])               # 9/1, genuinely held
+    assert "9/1" in ed.unchanged_ratios            # the held nonprime element itself, not a stand-in
+    assert ed.unchanged_ratios[0] == "9/1"         # and FIRST — the hold overrides any auto-picked rep
+    assert (0, 1, 0) in (service.unchanged_interval_basis(ed.state, ed.unchanged_ratios) or ())
+    assert service.tuning_projection(ed.state, ed.unchanged_ratios) is not None  # P/G render, not dashed
+
+
+def test_unchanged_basis_tuning_runs_over_the_domain_basis_not_the_standard_primes():
+    # U/P/G are read off _displayed_retuning_map, which must run over the actual domain basis — the
+    # SAME tuning the grid shows (spreadsheet.build) — not the standard primes. Over (2,9,5) the two
+    # genuinely differ, so this pins that the editor tracks the grid, not the primes.
+    ed = Editor()
+    ed.settings["nonstandard_domain"] = True
+    ed.state = service.from_mapping(((1, 0, 0), (0, 1, 1)), domain_basis=(2, 9, 5))
+    ed.set_held_vectors([(0, 1, 0)])               # 9/1
+    held = service.comma_ratios(ed.held_vectors, ed.state.domain_basis)
+    grid = service.tuning(ed.state.mapping, ed.tuning_scheme, ed.state.domain_basis, held=held)
+    over_primes = service.tuning(ed.state.mapping, ed.tuning_scheme, held=("3/1",))  # the old, wrong basis
+    editor = ed._displayed_retuning_map()
+    assert _cents_close(editor, grid.retuning_map)            # tracks the grid (domain basis)
+    assert not _cents_close(editor, over_primes.retuning_map)  # NOT the standard-primes tuning
+
+
+def test_unchanged_basis_threads_the_nonprime_approach():
+    # the grid's tuning takes BOTH the domain basis and the nonprime approach (the chapter-9 trait);
+    # the editor's U/P/G must thread the approach too, or they diverge from the grid on a nonprime
+    # domain whenever the approach moves the optimum. minimax-S over 2.7/3.11/3 is such a case:
+    # nonprime-based retunes away from neutral. Each approach must match the grid run with it.
+    ed = Editor()
+    ed.settings["nonstandard_domain"] = True
+    ed.state = service.from_temperament_data("2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]]")
+    ed.set_weight_slope("simplicity-weight")       # minimax-S — where the approach changes the tuning
+    seen = {}
+    for approach in ("", "nonprime-based", "prime-based"):
+        ed.nonprime_basis_approach = approach
+        grid = service.tuning(ed.state.mapping, ed.tuning_scheme, ed.state.domain_basis, approach)
+        seen[approach] = ed._displayed_retuning_map()
+        assert _cents_close(seen[approach], grid.retuning_map)  # the editor tracks the grid for THIS approach
+    assert not _cents_close(seen[""], seen["nonprime-based"])    # the approach is load-bearing, not ignored
+
+
+def test_hand_pinned_nonprime_projection_holds_over_the_domain_basis():
+    # the manual-pin path (editing U / picking an established projection) shared the bug: its
+    # generator-tuning solve dropped the domain basis, so pinning U={2/1, 9/1} over (2,9,5) solved
+    # over the standard primes and held 3/1's worth instead — dropping the just-pinned 9/1 back out
+    # of U. Threading the basis makes the pin hold the interval it names, matching the grid's 𝒈.
+    ed = Editor()
+    ed.settings["nonstandard_domain"] = True
+    ed.state = service.from_mapping(((1, 0, 0), (0, 1, 1)), domain_basis=(2, 9, 5))
+    assert service.tuning_projection(ed.state, ("2/1", "9/1")) is not None  # a valid full projection
+    ed.set_unchanged_basis(("2/1", "9/1"))
+    assert ed.unchanged_ratios == ("2/1", "9/1")   # the pinned basis is recovered, the held 9/1 kept
+    grid = service.tuning(ed.state.mapping, ed.tuning_scheme, ed.state.domain_basis, held=("2/1", "9/1"))
+    assert _cents_close(ed.generator_tuning, grid.generator_map)  # the pin's 𝒈 matches the grid's
+
+
 def test_targets_in_use_tracks_whether_the_tuning_is_the_target_optimum():
     # with the projection box on, the target list is only computing the tuning while the displayed
     # tuning IS the scheme's target-driven optimum

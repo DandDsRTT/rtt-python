@@ -486,9 +486,14 @@ class Editor:
     def _optimum_generator_tuning(self) -> tuple[float, ...]:
         """The scheme's current optimal generator tuning, respecting any held intervals and a
         typed target-list override (so re-optimizing tracks the displayed target intervals, not
-        just the named TILT/OLD set)."""
-        held = service.comma_ratios(self.held_vectors) if self.held_vectors else ()
-        return service.tuning(self.state.mapping, self.tuning_scheme, held=held,
+        just the named TILT/OLD set). Run over the actual domain basis and nonprime approach — the
+        same two arguments the grid's tuning takes (spreadsheet.build) — so over a nonstandard
+        (nonprime) domain the optimum matches the grid instead of silently reverting to the
+        standard primes; the held vectors stringify over that basis too (so (0,1,0) over (2,9,5)
+        renders 9/1, not 3/1, and parses back)."""
+        held = service.comma_ratios(self.held_vectors, self.state.domain_basis) if self.held_vectors else ()
+        return service.tuning(self.state.mapping, self.tuning_scheme, self.state.domain_basis,
+                              self.nonprime_basis_approach, held=held,
                               targets=self.target_override).generator_map
 
     def back_to_scheme(self) -> None:
@@ -532,7 +537,8 @@ class Editor:
         # the optimum WITH held intervals (what the grid would show if optimized) vs the BARE optimum
         # WITHOUT them — over the SAME displayed target list either way. With no held interval the two
         # coincide, so skip the second solve.
-        bare = service.tuning(self.state.mapping, self.tuning_scheme,
+        bare = service.tuning(self.state.mapping, self.tuning_scheme, self.state.domain_basis,
+                              self.nonprime_basis_approach,
                               targets=self.target_override).generator_map
         held_optimum = self._optimum_generator_tuning() if self.held_vectors else bare
         override = self.effective_generator_tuning()
@@ -769,8 +775,12 @@ class Editor:
         projection), WITHOUT writing the held column — the shared core of picking an established
         projection and hand-editing the unchanged basis / G / P. Undoable."""
         self._snapshot()
+        # over the domain basis and nonprime approach, like every other editor tuning solve — else a
+        # pin on a nonstandard (nonprime) domain solves over the standard primes and holds the wrong
+        # interval (e.g. pinning 9/1 over (2,9,5) would hold 3/1's worth), dropping it back out of U
         self.generator_tuning = service.tuning(
-            self.state.mapping, self.tuning_scheme, held=tuple(ratios), targets=self.target_override
+            self.state.mapping, self.tuning_scheme, self.state.domain_basis,
+            self.nonprime_basis_approach, held=tuple(ratios), targets=self.target_override
         ).generator_map
         self.superspace_generator_tuning = None
         self.manual_tuning = True  # a deliberate tuning override (not the scheme optimum)
@@ -817,8 +827,9 @@ class Editor:
         try:
             generators = self.effective_generator_tuning()
             if generators is None or len(generators) != self.state.r:  # scheme-driven, or a stale manual 𝒈
-                held = tuple(service.comma_ratios(self.held_vectors)) if self.held_vectors else ()
-                return service.tuning(self.state.mapping, self.tuning_scheme, held=held,
+                held = tuple(service.comma_ratios(self.held_vectors, self.state.domain_basis)) if self.held_vectors else ()
+                return service.tuning(self.state.mapping, self.tuning_scheme, self.state.domain_basis,
+                                      self.nonprime_basis_approach, held=held,
                                       targets=self.target_override).retuning_map
             return service.tuning_from_generators(
                 self.state.mapping, generators, self.state.domain_basis).retuning_map
@@ -855,7 +866,7 @@ class Editor:
         # explicit hold wins the representative slot while the count stays the same (order doesn't
         # change the rank). Each candidate is still validated against the live tuning below, so
         # listing one never forces a ratio the tuning doesn't actually hold.
-        held = tuple(service.comma_ratios(self.held_vectors)) if self.held_vectors else ()
+        held = tuple(service.comma_ratios(self.held_vectors, self.state.domain_basis)) if self.held_vectors else ()
         candidates = (held
                       + self.projection_basis
                       + presets.projection_candidate_ratios(self.state)
