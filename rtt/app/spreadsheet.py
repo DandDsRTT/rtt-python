@@ -92,18 +92,18 @@ MATLABEL_W_SSPRIMES = 56  # the ssprimes column's row-label gutter: wider than t
 # fit beside M_L's 𝒎ʟᵢ rather than overflowing the ⟨ bracket. (Centred, like 𝒎ʟᵢ.)
 UNIT_H = 12  # height of the per-box "units: …" line (below the caption, when units shown)
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
-CHART_GAP = 5  # gap between a chart and the value cells below it
+CHART_GAP = 4  # gap between a chart and the value cells below it
 RANGE_CHART_H = 58  # height of the generator tuning-ranges I-beam chart (title + caps + min/max labels)
 RANGE_MODE_H = 46  # height of the monotone/tradeoff range-mode selector — two rows of square
-# indicators STACKED below the chart, with 5px top/bottom padding so neither row touches the
+# indicators STACKED below the chart, with 4px top/bottom padding so neither row touches the
 # enclosing box's edge (the bumped 16px boxes don't fit side by side anyway)
 RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the values above the chart)
 OPT_TITLE_H = 14  # height of the optimization box's title strip ("optimization")
-OPT_PAD_T = 3  # inset above the title so it sits inside the box, not awkwardly on its top border
+OPT_PAD_T = 4  # inset above the title so it sits inside the box, not awkwardly on its top border
 OPT_PAD_B = 4  # bottom margin below the captions (the box hugs the contents vertically too)
-OPT_PAD_L = 8  # left margin: inset of the mean damage from the box's left edge
-OPT_PAD_R = 8  # right margin: inset of the power's clearance from the box's right edge
-OPT_TITLE_GAP = 6  # bottom margin under the title, before the control row
+OPT_PAD_L = 4  # left margin: inset of the mean damage from the box's left edge
+OPT_PAD_R = 4  # right margin: inset of the power's clearance from the box's right edge
+OPT_TITLE_GAP = 4  # bottom margin under the title, before the control row
 OPT_COL_GAP = 8  # the standard gap between adjacent in-tile controls — sizes OPT_BOX_MIN_W
 # (the clearance around the optimization box's centered power) and the box-𝐋 / q-dual / all-
 # interval slots elsewhere
@@ -128,7 +128,7 @@ OPT_BOX_MIN_W = OPT_PAD_L + OPT_MEAN_DAMAGE_W + OPT_COL_GAP + OPT_POW_CAP_W + OP
 # CTRL_LABEL_GAP sits between the label and the control. Box heights vary with the label, so a
 # row reserves its tallest.
 BOX_OUTER = 4  # vertical gap above/below a control box (it spans its tile's width — see control_box)
-BOX_INNER = 5  # inset of the dropdown within the box (off the border)
+BOX_INNER = 4  # inset of the dropdown within the box (off the border)
 CTRL_LABEL_GAP = 2  # padding below the label, to the box's bottom edge
 # box 𝐓's footprint: the target chooser dropdown + the all-interval checkbox slot on one row,
 # both inside one bordered box. Unlike the un-boxed LBOX_DIM_W/CBOX_W above, this includes the box
