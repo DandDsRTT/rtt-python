@@ -284,8 +284,8 @@ _TARGET_LIMIT_DEBOUNCE = 0.3
 _BUSY_DELAY_MS = 180  # ms a commit may run before the busy scrim is revealed (client-side; see
 # _BUSY_JS) — long enough that the common fast edit never flashes it, short enough that a real wait
 # shows feedback promptly
-_BUSY_SAFETY_MS = 12000  # ms after which the scrim self-clears if no render ever lands (a click that
-# commits nothing must never strand it); a real commit's render clears it far sooner via rttBusy.done
+_BUSY_SAFETY_MS = 6000  # ms after which the scrim self-clears if no render ever lands (a backstop;
+# every armed interaction commits and re-renders, clearing it far sooner via rttBusy.done)
 
 
 class _GridValueSpec(NamedTuple):
@@ -678,23 +678,26 @@ _BUSY_JS = f"""
   }};
   window.rttBusy = {{ arm, done: clear }};
 
-  // Arm on any interaction that commits to the document (and so triggers a server re-render): the
-  // +/-/fold controls and undo/redo/reset (.rtt-iconbtn), the Show checkboxes / range radios, the
-  // scheme/target dropdowns and their option picks, a committed cell edit (Enter, or focus leaving
-  // the cell), a wheel on a value cell, and Ctrl/Cmd+Z/Y. NOT a click that merely focuses a cell to
-  // type into it — that commits later, on blur — so the scrim never covers a cell mid-edit.
+  // Arm ONLY on a real (e.isTrusted) user interaction that commits to the document and so triggers
+  // a server re-render: the +/-/fold controls and undo/redo/reset (.rtt-iconbtn), the Show checkboxes
+  // / range radios, the scheme/target dropdowns and their option picks, Enter committing a cell edit,
+  // and Ctrl/Cmd+Z/Y. The isTrusted gate is essential: render() re-syncs control values
+  // programmatically (e.g. box.value = …), which fires SYNTHETIC change events — without the gate
+  // those would re-arm the scrim after the render, so it would flash "Computing…" for no reason and
+  // linger. We deliberately do NOT arm on wheel (it fires on every scroll over the grid, and the
+  // shown scrim would then eat the scroll) or on focus leaving a cell (fires on any focus change,
+  // mostly with no commit) — those were the spurious-trigger / stuck-spinner sources.
   const BTN = '.rtt-fanbtn,.rtt-minus-btn,.rtt-minus-btn-v,.rtt-toggle,.rtt-iconbtn';
-  const at = (e, sel) => e.target && e.target.closest && e.target.closest(sel);
+  const at = (e, sel) => e.isTrusted && e.target && e.target.closest && e.target.closest(sel);
   document.addEventListener('pointerdown', (e) => {{ if (at(e, BTN)) window.rttBusy.arm(); }}, true);
   document.addEventListener('click', (e) => {{ if (at(e, '[role=option],.q-item')) window.rttBusy.arm(); }}, true);
   document.addEventListener('change', (e) => {{
     if (at(e, '.q-select,.q-checkbox,.q-radio,input[type=checkbox],input[type=radio]')) window.rttBusy.arm();
   }}, true);
-  document.addEventListener('focusout', (e) => {{ if (at(e, '.rtt-cell')) window.rttBusy.arm(); }}, true);
-  document.addEventListener('wheel', (e) => {{ if (at(e, '.rtt-cell')) window.rttBusy.arm(); }}, {{capture: true, passive: true}});
   document.addEventListener('keydown', (e) => {{
+    if (!e.isTrusted) return;
     if ((e.ctrlKey || e.metaKey) && /^[zyZY]$/.test(e.key)) window.rttBusy.arm();
-    else if (e.key === 'Enter' && at(e, '.rtt-cell')) window.rttBusy.arm();
+    else if (e.key === 'Enter' && e.target.closest && e.target.closest('.rtt-cell')) window.rttBusy.arm();
   }}, true);
 }})()
 """
