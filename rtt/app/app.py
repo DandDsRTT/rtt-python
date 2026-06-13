@@ -2836,13 +2836,15 @@ def index() -> None:
     def compute_rings(lay):
         # the amber ("value would move" / "value moved") and red ("would be removed") cell-id sets
         # for the current gesture against layout `lay` — the pure function the painter applies.
-        # The layout contributes its OWN steady reds independent of any gesture: a builder-driven
-        # cb.preview_remove (the value a pending comma draft will delete — the doomed unchanged
-        # interval) is render-state, painted with the same red look and kept until the draft
-        # closes (the next build without the flag drops it from the set).
+        # The layout contributes its OWN steady reds AND ambers independent of any gesture: the
+        # builder-driven cb.preview_remove (red: the doomed unchanged interval / the mapping row a
+        # comma-add drops / the comma a generator-add drops) and cb.preview_change (amber: the
+        # surviving rows/commas a rank change recombines) are render-state, painted with the same
+        # look and kept until the draft / hover closes (the next build without the flags drops them).
         static_red = frozenset(cb.id for cb in lay.cells if cb.preview_remove)
+        static_amber = frozenset(cb.id for cb in lay.cells if cb.preview_change)
         amber, red = _gesture_rings(lay)
-        return amber, red | static_red
+        return amber | static_amber, red | static_red
 
     def _gesture_rings(lay):
         # the active gesture's contribution to the ring sets (empty when no gesture is live)
@@ -2956,12 +2958,10 @@ def index() -> None:
                 return  # the draft cells aren't shown (folded away)
             values = [_parse_int(rec.inputs[f"cell:mapping:{pt}:{p}"].value) for p in range(d)]
             if preview:
-                # arm the draft's would-be commit as the edit candidate — exactly what blur will do.
-                # set_pending_mapping_row itself decides whether anything lands (a complete,
-                # independent row re-ranks; an incomplete or dependent one changes nothing), so the
-                # rings show the rank change the moment the typed row would commit, and nothing
-                # before — the same one-diff path every committed-cell edit previews through.
-                _edit_candidate(lambda v=values: editor.set_pending_mapping_row(v))
+                # the rank-raise preview (the doomed comma reds, surviving commas amber) is
+                # builder-driven from the open draft itself — value-independent — so a per-keystroke
+                # gesture candidate would only double-paint it.
+                _edit_candidate(None)
                 return
             editor.set_pending_mapping_row(values)
             if editor.pending_mapping_row is None:  # the draft materialized into a real row
@@ -3009,12 +3009,10 @@ def index() -> None:
                 return  # the draft cells aren't shown (folded away)
             values = [_parse_int(rec.inputs[f"cell:comma:{p}:{pt}"].value) for p in range(d)]
             if preview:
-                # arm the draft's would-be commit as the edit candidate — exactly what blur will do.
-                # set_pending_comma itself decides whether anything lands (a complete, independent
-                # comma re-ranks; an incomplete or dependent one changes nothing), so the rings show
-                # the rank drop the moment the typed comma would commit, and nothing before — the
-                # same one-diff path every committed-cell edit previews through.
-                _edit_candidate(lambda v=values: editor.set_pending_comma(v))
+                # the rank-drop preview (the doomed mapping row reds, the survivors amber) is
+                # builder-driven from the open draft itself — value-independent and already on
+                # screen — so a per-keystroke gesture candidate would only double-paint it.
+                _edit_candidate(None)
                 return
             editor.set_pending_comma(values)
             if editor.pending_comma is None:  # the draft materialized into a real column

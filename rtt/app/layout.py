@@ -61,6 +61,10 @@ class CellBox:
     preview_remove: bool = False  # a value cell a pending edit will DELETE (e.g. the unchanged
     # interval a comma-being-added will drop): the renderer rings it red with the standard
     # remove-preview look (rtt-preview-remove), persistently while the draft is open
+    preview_change: bool = False  # a value cell a pending rank-change will RECOMBINE (the surviving
+    # mapping rows when a comma is added, the surviving commas when a generator is added): the
+    # renderer rings it amber (rtt-preview-change), the builder-driven twin of preview_remove. The
+    # dual newborn (a generator born from removing a comma, vice versa) rides `pending` (green).
     checked: bool = False  # a "control_check" checkbox's state (the box-𝐋 "replace diminuator")
     blank: bool = False  # a value cell kept (its box/brackets stay) but emptied of its
     # number -- how "quantities" off shows the bare gridded structure

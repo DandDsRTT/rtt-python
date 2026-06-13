@@ -5018,6 +5018,37 @@ class _GridBuilder:
                           else cb
                           for cb in self.cells]
 
+        # The comma↔mapping rank-duality preview. The comma basis and the mapping are duals
+        # (r + n = d), so every rank change is one operation seen from two sides, and the grid
+        # previews BOTH: what LEAVES reds, what RECOMBINES ambers, what is BORN greens. This pass
+        # paints the structural red/amber the instant a draft opens — value-independent, before
+        # anything is typed (the survivors' new numbers aren't known until the draft commits, so the
+        # amber is a hue, not a value). The BORN side is the green draft itself (it already renders
+        # via `pending`); the − hover's green ghost newborn is added in app.py's reflow preview.
+        #   • a comma DRAFT (pending) will drop the last mapping row and recombine the rest.
+        #   • a mapping-row DRAFT (pending_mapping_row) does the dual: drops the last comma, the rest
+        #     recombine. (Meantone has one comma, so it just reds — no survivor to amber.)
+        # Rows are keyed by the `gen` attr (every mapping-band cell carries its row index); commas by
+        # the `comma` attr restricted to comma-basis ids, so a target/held/interest column sharing
+        # that index isn't swept in.
+        remove_rows = change_rows = remove_commas = change_commas = frozenset()
+        if self.pending is not None and self.r:
+            remove_rows, change_rows = frozenset({self.r - 1}), frozenset(range(self.r - 1))
+        if self.pending_mapping_row is not None and self.nc:
+            remove_commas, change_commas = frozenset({self.nc - 1}), frozenset(range(self.nc - 1))
+        if remove_rows or change_rows or remove_commas or change_commas:
+            comma_ids = ("cell:comma:", "comma:", "cell:scaling:", "cell:proj_v:")
+            def _dual(cb):
+                if cb.kind not in RINGABLE_KINDS:
+                    return cb
+                if cb.gen in remove_rows: return replace(cb, preview_remove=True)
+                if cb.gen in change_rows: return replace(cb, preview_change=True)
+                if cb.id.startswith(comma_ids):
+                    if cb.comma in remove_commas: return replace(cb, preview_remove=True)
+                    if cb.comma in change_commas: return replace(cb, preview_change=True)
+                return cb
+            self.cells = [_dual(cb) for cb in self.cells]
+
     def layout(self) -> Layout:
         self.cells: list[CellBox] = []
         self.lines: list[Line] = []
