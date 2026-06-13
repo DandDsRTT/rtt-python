@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from fractions import Fraction
+from functools import lru_cache
 
 import sympy as sp
 
@@ -96,6 +97,15 @@ class IntervalSizes:
 
 def _to_matrix(rows) -> Matrix:
     return tuple(tuple(int(x) for x in row) for row in rows)
+
+
+def _hashable(value):
+    """A hashable (tuple-frozen) copy of an optional sequence argument, for memoization
+    keys: handles a flat sequence (a domain basis, a target list, a prescaler diagonal)
+    and a nested one (a full prescaler matrix); ``None`` passes through."""
+    if value is None:
+        return None
+    return tuple(tuple(row) if isinstance(row, (tuple, list)) else row for row in value)
 
 
 def _is_matrix(x) -> bool:
@@ -373,8 +383,21 @@ def tuning(
     ``targets`` (ratio strings) is a typed explicit target interval list overriding the
     scheme's named TILT/OLD set, so the optimum minimizes damage over THOSE intervals —
     changing the target list retunes. An all-interval scheme keeps its empty set (every
-    interval, by duality) and ignores the list."""
-    t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
+    interval, by duality) and ignores the list.
+
+    Memoized on the (frozen) arguments: the optimization is a pure function of them, and
+    one page render asks for the same tuning several times (the grid build plus the
+    editor's displayed-scheme / unchanged-interval reads) — as does every render after,
+    until the document actually moves. The solves run once per distinct document state."""
+    return _cached_tuning(_to_matrix(mapping), scheme, _hashable(domain_basis),
+                          nonprime_approach, tuple(held), _hashable(prescaler_override),
+                          _hashable(targets))
+
+
+@lru_cache(maxsize=256)
+def _cached_tuning(mapping, scheme, domain_basis, nonprime_approach, held,
+                   prescaler_override, targets) -> Tuning:
+    t = Temperament(mapping, Variance.ROW, domain_basis)
     spec = resolve_tuning_scheme(scheme)
     if targets and (spec.target_intervals or "").strip() not in ("{}", ""):
         spec = replace(spec, target_intervals="{" + ", ".join(targets) + "}")
@@ -384,10 +407,13 @@ def tuning(
         own = (spec.held_intervals or "").strip().strip("{}").strip()
         parts = ([own] if own else []) + [r for r in held]
         spec = replace(spec, held_intervals="{" + ", ".join(parts) + "}")
-    tempered = optimize_tuning_map(t, spec, prescaler_override=prescaler_override)
+    # one solve serves both maps: the tuning map IS the generators applied to the mapping
+    # (optimize_tuning_map re-runs the identical optimization just to take that product)
+    gmap = optimize_generator_tuning_map(t, spec, prescaler_override=prescaler_override)
+    tempered = tuple(float(x) for x in tuning_map_from_generators(t, gmap))
     just = get_just_tuning_map(t)
     return Tuning(
-        generator_map=optimize_generator_tuning_map(t, spec, prescaler_override=prescaler_override),
+        generator_map=gmap,
         tuning_map=tempered,
         just_map=just,
         retuning_map=tuple(t_ - j for t_, j in zip(tempered, just)),
@@ -400,8 +426,15 @@ def tuning_from_generators(mapping, generators, domain_basis=None) -> Tuning:
     """The Tuning produced by a manually-set generator tuning (cents per generator):
     ``tuning_map = generators · mapping``, rather than the scheme's optimum. Backs a manual
     generator-tuning override (a typed/nudged/projection-picked tuning). Just map and
-    generator ranges are temperament properties, computed as for the optimum."""
-    t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
+    generator ranges are temperament properties, computed as for the optimum.
+    Memoized like :func:`tuning` (the ranges are the expensive part here)."""
+    return _cached_tuning_from_generators(
+        _to_matrix(mapping), tuple(float(g) for g in generators), _hashable(domain_basis))
+
+
+@lru_cache(maxsize=256)
+def _cached_tuning_from_generators(mapping, generators, domain_basis) -> Tuning:
+    t = Temperament(mapping, Variance.ROW, domain_basis)
     tempered = tuple(float(x) for x in tuning_map_from_generators(t, generators))
     just = get_just_tuning_map(t)
     return Tuning(

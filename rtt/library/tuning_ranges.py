@@ -96,15 +96,29 @@ def _tradeoff_range(
 
     Returns ``None`` when no vertex pins a tuning — a degenerate temperament whose
     octave tempers out (so no tuning holds it pure) has none, like the empty
-    monotone polytope. The caller draws a placeholder rather than I-beams."""
+    monotone polytope. The caller draws a placeholder rather than I-beams.
+
+    The combinations are batched through numpy's stacked det/solve — at the
+    13-limit a rank-5 diamond yields C(49, 4) ≈ 212k candidate systems, far too
+    many for a per-combo Python loop. Batches are chunked so the (m, r, r) stack
+    never balloons past a few hundred MB on giant diamonds."""
+    combos = np.array(list(combinations(range(len(coords)), r - 1)), dtype=np.intp)
+    if combos.size == 0 and r > 1:
+        return None  # fewer than r-1 diamond intervals: nothing pins a tuning
+    chunk = 500_000  # combos per batch, ~chunk * r * r floats at a time
     vertices = []
-    for combo in combinations(range(len(coords)), r - 1):
-        a = np.vstack([octave_coords, *(coords[i] for i in combo)])  # r x r
-        b = np.array([octave_just, *(just_sizes[i] for i in combo)])  # r
-        if abs(np.linalg.det(a)) < 1e-9:
-            continue  # the chosen intervals don't pin a unique tuning
-        vertices.append(np.linalg.solve(a, b))
+    for start in range(0, len(combos), chunk):
+        idx = combos[start : start + chunk]  # m x (r-1)
+        a = np.empty((len(idx), r, r))  # m stacked r x r systems
+        a[:, 0] = octave_coords
+        a[:, 1:] = coords[idx]
+        b = np.empty((len(idx), r))
+        b[:, 0] = octave_just
+        b[:, 1:] = just_sizes[idx]
+        keep = np.abs(np.linalg.det(a)) >= 1e-9  # else the intervals don't pin a unique tuning
+        if keep.any():
+            vertices.append(np.linalg.solve(a[keep], b[keep, :, None])[:, :, 0])
     if not vertices:
         return None  # no pure-octave tuning exists (the octave tempers out)
-    v = np.array(vertices)  # m x r
+    v = np.vstack(vertices)  # m x r
     return tuple((float(v[:, i].min()), float(v[:, i].max())) for i in range(r))

@@ -1,18 +1,26 @@
 from __future__ import annotations
 
 from fractions import Fraction
+from functools import lru_cache
 
 import sympy as sp
 
 
+@lru_cache(maxsize=64)
 def get_primes(count: int) -> tuple[int, ...]:
     """The first ``count`` primes, e.g. ``get_primes(5) == (2, 3, 5, 7, 11)``."""
     return tuple(int(sp.prime(i)) for i in range(1, count + 1))
 
 
 def quotient_to_pcv(quotient: Fraction | int) -> tuple[int, ...]:
-    """Quotient to prime-count vector over the first N primes."""
-    q = Fraction(quotient)
+    """Quotient to prime-count vector over the first N primes. Memoized: the spreadsheet
+    re-factors the same target/comma/held ratios many times per build, and sympy's
+    factorint is the cost."""
+    return _quotient_to_pcv_cached(Fraction(quotient))
+
+
+@lru_cache(maxsize=4096)
+def _quotient_to_pcv_cached(q: Fraction) -> tuple[int, ...]:
     if q == 0:
         return (0,)
     exponents: dict[int, int] = {}
@@ -28,7 +36,13 @@ def quotient_to_pcv(quotient: Fraction | int) -> tuple[int, ...]:
 
 
 def pcv_to_quotient(pcv: tuple[int, ...]) -> Fraction:
-    """Prime-count vector back to its quotient."""
+    """Prime-count vector back to its quotient. Memoized (callers may pass any int
+    sequence, so the key is normalized to a plain tuple first)."""
+    return _pcv_to_quotient_cached(tuple(int(x) for x in pcv))
+
+
+@lru_cache(maxsize=4096)
+def _pcv_to_quotient_cached(pcv: tuple[int, ...]) -> Fraction:
     quotient = Fraction(1)
     for index, power in enumerate(pcv):
         quotient *= Fraction(int(sp.prime(index + 1))) ** power

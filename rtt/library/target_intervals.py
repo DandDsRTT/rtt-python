@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from fractions import Fraction
+from functools import lru_cache
 
 import sympy as sp
 
@@ -11,6 +12,7 @@ MIN_SIZE = Fraction(15, 13)
 MAX_SIZE = Fraction(13, 4)
 
 
+@lru_cache(maxsize=64)
 def get_tilt(integer_limit: int) -> tuple[Fraction, ...]:
     """Truncated integer-limit triangle: the reduced quotients ``n/d`` with ``1 < n/d``
     and ``n <= integer_limit`` that fall within ``[15/13, 13/4]`` and whose ``n*d`` does
@@ -29,6 +31,7 @@ def get_tilt(integer_limit: int) -> tuple[Fraction, ...]:
     )
 
 
+@lru_cache(maxsize=64)
 def get_old(odd_limit: int) -> tuple[Fraction, ...]:
     """Odd-limit diamond: every octave-reduced reduced quotient among odd/odd ratios
     (excluding 1/1), with 2/1 prepended (Partch's tonality diamond, 2/1 for 1/1)."""
