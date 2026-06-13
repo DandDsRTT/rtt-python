@@ -284,6 +284,32 @@ class _GridValueSpec(NamedTuple):
     arm: tuple | None = None
 
 
+
+class _VecGridEdit(NamedTuple):
+    """Per-list spec driving the shared ``_edit_vector_grid`` factory. The five matrix/vector
+    column editors — mapping, comma basis, intervals of interest, held intervals, targets — are
+    one 8-step state machine that differ ONLY in these fields, so they route through one body
+    instead of five near-clones. ``cell_id(token, prime)`` mints the cell id (capturing each
+    list's id-axis order — targets is reversed, token before prime); ``count`` is the shown
+    column/row count; ``pending``/``set_pending`` drive the green draft column; ``commit`` folds
+    the read vectors into the document; ``validate`` (mapping/comma only) rejects an improper
+    temperament with a toast, ``None`` skips the check; ``guard`` (mapping only) gates the whole
+    handler on a setting; ``draft_arms`` is True when an in-progress draft previews its would-be
+    commit (interest/held/target) and False when the rank-change preview is builder-driven and
+    value-independent (mapping/comma). ``on_unchanged_change`` is deliberately NOT one of these —
+    it has no draft column and silently transforms its vectors to ratios (see its own def)."""
+    group: str
+    count: "Callable[[], int]"
+    cell_id: "Callable[[object, int], str]"
+    pending: "Callable[[], object]"
+    set_pending: "Callable[[list], None]"
+    commit: "Callable[[list], None]"
+    validate: "Callable[[list], bool] | None" = None
+    guard: "Callable[[], bool] | None" = None
+    draft_arms: bool = False
+
+
+
 # Every editable ratio-or-integer kind, routed to the one shared builder/update via the registry
 # (the kind strings stay — they are load-bearing in _WHEEL_STEPS, the drag predicates, tooltips and
 # the cell-kind tests).
@@ -2335,112 +2361,100 @@ def index() -> None:
             g.baseline = last_lay[0]
             paint_rings()
 
-    def on_mapping_change(preview=False):
-        # commit (Enter/blur), or with preview=True (live, on each keystroke) ring the cells the typed
-        # matrix WOULD move without committing. An incomplete / improper entry rings nothing (no toast)
-        # while previewing; only the commit toasts + reverts.
-        if building[0] or not editor.settings["temperament_boxes"]:  # no editable matrix when hidden
+    def _edit_vector_grid(spec, preview=False):
+        # the shared state machine behind on_mapping/comma/interest/held/target_cells_change:
+        # a building-echo guard (+ spec.guard — mapping's temperament-boxes gate), then either
+        # the green draft column's commit-once-complete, or read the whole grid and preview/commit.
+        if building[0] or (spec.guard is not None and not spec.guard()):
             return
-        d, r = editor.state.d, len(editor.state.mapping)
-        rtoks = col_tokens("gens")  # each row's id-token (== its index until a removal/re-rank)
-        if editor.pending_mapping_row is not None:
-            # the draft row rides one token past the committed ones; hand its cells to the editor,
-            # which commits (and re-ranks) once they form a proper, independent generator
-            pt = spreadsheet.pending_token(rtoks)
-            if any(f"cell:mapping:{pt}:{p}" not in rec.inputs for p in range(d)):
+        d = editor.state.d
+        toks = col_tokens(spec.group)
+        cell_id = spec.cell_id
+        if spec.pending() is not None:
+            # the draft column rides one token past the committed ones; hand its cells to the
+            # editor, which commits (and re-ranks) once they form a valid independent entry
+            pt = spreadsheet.pending_token(toks)
+            if any(cell_id(pt, p) not in rec.inputs for p in range(d)):
                 if preview:
                     _edit_candidate(None)
                 return  # the draft cells aren't shown (folded away)
-            values = [_parse_int(rec.inputs[f"cell:mapping:{pt}:{p}"].value) for p in range(d)]
+            values = [_parse_int(rec.inputs[cell_id(pt, p)].value) for p in range(d)]
             if preview:
-                # the rank-raise preview (the doomed comma reds, surviving commas amber) is
-                # builder-driven from the open draft itself — value-independent — so a per-keystroke
-                # gesture candidate would only double-paint it.
-                _edit_candidate(None)
+                # interest/held/target arm the draft's would-be commit (set_pending_* itself
+                # decides whether anything lands); mapping/comma's rank-change preview is
+                # builder-driven from the open draft — value-independent — so they arm nothing
+                _edit_candidate((lambda v=values: spec.set_pending(v)) if spec.draft_arms else None)
                 return
-            editor.set_pending_mapping_row(values)
-            if editor.pending_mapping_row is None:  # the draft materialized into a real row
+            spec.set_pending(values)
+            if spec.pending() is None:  # the draft materialized into a real column / row
                 render()
                 _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
-            # an uncommitted draft renders nothing — see on_comma_change's draft branch
+            # an uncommitted draft renders nothing: the DOM already shows the typed values, and in a
+            # real browser this blur-commit can land mid-typing of the NEXT draft cell, so a render
+            # here would push the stale pending back over the focused cell and wipe in-flight keys
             return
-        if len(rtoks) != r or any(f"cell:mapping:{rtoks[i]}:{p}" not in rec.inputs for i in range(r) for p in range(d)):
+        count = spec.count()
+        if len(toks) != count or any(
+                cell_id(toks[i], p) not in rec.inputs for i in range(count) for p in range(d)):
             if preview:
                 _edit_candidate(None)
-            return  # the mapping cells aren't currently shown (folded away)
-        matrix = [[_parse_int(rec.inputs[f"cell:mapping:{rtoks[i]}:{p}"].value) for p in range(d)] for i in range(r)]
-        if any(v is None for row in matrix for v in row):
+            return  # the cells aren't currently shown (folded away)
+        vectors = [[_parse_int(rec.inputs[cell_id(toks[i], p)].value) for p in range(d)]
+                   for i in range(count)]
+        if any(v is None for vec in vectors for v in vec):
             if preview:
                 _edit_candidate(None)
-            return
-        if not service.is_proper_temperament(matrix):
+            return  # an in-progress / non-integer edit
+        if spec.validate is not None and not spec.validate(vectors):
             if preview:
-                _edit_candidate(None)  # an improper in-progress matrix previews nothing (no toast)
+                _edit_candidate(None)  # an improper in-progress entry previews nothing (no toast)
                 return
             ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
             render()  # revert the cells to the current temperament
             return
         if preview:
-            _edit_candidate(lambda: editor.edit_mapping(matrix))
+            _edit_candidate(lambda: spec.commit(vectors))
             return
-        editor.edit_mapping(matrix)
+        spec.commit(vectors)
         render()
 
+    _MAPPING_EDIT = _VecGridEdit(
+        group="gens", count=lambda: len(editor.state.mapping),
+        cell_id=lambda tok, p: f"cell:mapping:{tok}:{p}",  # row-major: token (row) before prime
+        pending=lambda: editor.pending_mapping_row, set_pending=editor.set_pending_mapping_row,
+        commit=editor.edit_mapping,
+        validate=lambda rows: service.is_proper_temperament(rows),
+        guard=lambda: editor.settings["temperament_boxes"])  # no editable matrix when hidden
+    _COMMA_EDIT = _VecGridEdit(
+        group="commas", count=lambda: len(editor.state.comma_basis),
+        cell_id=lambda tok, p: f"cell:comma:{p}:{tok}",  # prime down the rows, comma across
+        pending=lambda: editor.pending_comma, set_pending=editor.set_pending_comma,
+        commit=editor.edit_comma_basis,
+        validate=lambda basis: service.is_proper_temperament(service.from_comma_basis(basis).mapping))
+    _INTEREST_EDIT = _VecGridEdit(
+        group="interest", count=lambda: len(editor.interest_vectors),
+        cell_id=lambda tok, p: f"cell:interest:{p}:{tok}",
+        pending=lambda: editor.pending_interest, set_pending=editor.set_pending_interest,
+        commit=editor.set_interest_vectors, draft_arms=True)
+    _HELD_EDIT = _VecGridEdit(
+        group="held", count=lambda: len(editor.held_vectors),
+        cell_id=lambda tok, p: f"cell:held:{p}:{tok}",
+        pending=lambda: editor.pending_held, set_pending=editor.set_pending_held,
+        commit=editor.set_held_vectors, draft_arms=True)
+    _TARGET_EDIT = _VecGridEdit(
+        group="targets",
+        count=lambda: len(editor.target_override or service.target_interval_set(
+            editor.target_spec, editor.state.domain_basis)),
+        cell_id=lambda tok, p: f"cell:vec:targets:{tok}:{p}",  # REVERSED: token (column) before prime
+        pending=lambda: editor.pending_target, set_pending=editor.set_pending_target,
+        commit=editor.set_target_override_vectors, draft_arms=True)
+
+
+    def on_mapping_change(preview=False):
+        _edit_vector_grid(_MAPPING_EDIT, preview)
+
     def on_comma_change(preview=False):
-        # the comma basis (the mapping's dual) is edited in the interval-vectors row, present
-        # independent of the temperament boxes. preview=True rings the would-be change without
-        # committing (commit lands on Enter/blur); a draft column previews its would-be commit.
-        if building[0]:
-            return
-        d, nc = editor.state.d, len(editor.state.comma_basis)
-        ctoks = col_tokens("commas")  # each column's id-token (== its index until a removal)
-        if editor.pending_comma is not None:
-            # the draft column rides one token past the committed ones; hand its cells to the
-            # editor, which commits (and re-ranks) once they form a valid independent comma
-            pt = spreadsheet.pending_token(ctoks)
-            if any(f"cell:comma:{p}:{pt}" not in rec.inputs for p in range(d)):
-                if preview:
-                    _edit_candidate(None)
-                return  # the draft cells aren't shown (folded away)
-            values = [_parse_int(rec.inputs[f"cell:comma:{p}:{pt}"].value) for p in range(d)]
-            if preview:
-                # the rank-drop preview (the doomed mapping row reds, the survivors amber) is
-                # builder-driven from the open draft itself — value-independent and already on
-                # screen — so a per-keystroke gesture candidate would only double-paint it.
-                _edit_candidate(None)
-                return
-            editor.set_pending_comma(values)
-            if editor.pending_comma is None:  # the draft materialized into a real column
-                render()
-                _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
-            # an uncommitted (partial / dependent) draft renders NOTHING: the DOM already shows the
-            # typed values, and in a real browser this blur-commit can land mid-typing of the NEXT
-            # draft cell (the value sync is throttled, blur is not) — a render here pushed the stale
-            # pending back over the focused cell, wiping the in-flight keystrokes (the live
-            # no-preview bug the in-order in-process tests never reproduced).
-            return
-        if len(ctoks) != nc or any(f"cell:comma:{p}:{ctoks[c]}" not in rec.inputs for c in range(nc) for p in range(d)):
-            if preview:
-                _edit_candidate(None)
-            return  # the comma cells aren't currently shown (folded away)
-        # the comma cells are the basis transposed (prime down the rows, comma across)
-        basis = [[_parse_int(rec.inputs[f"cell:comma:{p}:{ctoks[c]}"].value) for p in range(d)] for c in range(nc)]
-        if any(v is None for comma in basis for v in comma):
-            if preview:
-                _edit_candidate(None)
-            return
-        if not service.is_proper_temperament(service.from_comma_basis(basis).mapping):
-            if preview:
-                _edit_candidate(None)
-                return
-            ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
-            render()
-            return
-        if preview:
-            _edit_candidate(lambda: editor.edit_comma_basis(basis))
-            return
-        editor.edit_comma_basis(basis)
-        render()
+        _edit_vector_grid(_COMMA_EDIT, preview)
 
     def on_unchanged_change(preview=False):
         # the unchanged basis U is editable when it is a full rational projection (like the comma
@@ -2471,134 +2485,13 @@ def index() -> None:
         render()
 
     def on_interest_change(preview=False):
-        # the intervals of interest are edited as vectors in the interval-vectors row, like the comma
-        # basis; read the d-tall columns and replace the set. preview=True rings without committing.
-        if building[0]:
-            return
-        d, mi = editor.state.d, len(editor.interest_vectors)
-        toks = col_tokens("interest")  # each column's id-token (== its index until reordered)
-        if editor.pending_interest is not None:
-            # the draft column rides one token past the committed ones; commit it once filled
-            pt = spreadsheet.pending_token(toks)
-            if any(f"cell:interest:{p}:{pt}" not in rec.inputs for p in range(d)):
-                if preview:
-                    _edit_candidate(None)
-                return  # the draft cells aren't shown (folded away)
-            values = [_parse_int(rec.inputs[f"cell:interest:{p}:{pt}"].value) for p in range(d)]
-            if preview:
-                # arm the draft's would-be commit (what blur will do): set_pending_interest itself
-                # decides whether anything lands, so a complete draft previews its new rows filling
-                # in and an incomplete one rings nothing
-                _edit_candidate(lambda v=values: editor.set_pending_interest(v))
-                return
-            editor.set_pending_interest(values)
-            if editor.pending_interest is None:  # the draft materialized into a real column
-                render()
-                _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
-            # an uncommitted draft renders nothing — see on_comma_change's draft branch
-            return
-        if len(toks) != mi or any(f"cell:interest:{p}:{toks[i]}" not in rec.inputs for i in range(mi) for p in range(d)):
-            if preview:
-                _edit_candidate(None)
-            return  # the interest cells aren't currently shown (folded away)
-        vectors = [[_parse_int(rec.inputs[f"cell:interest:{p}:{toks[i]}"].value) for p in range(d)] for i in range(mi)]
-        if any(v is None for m in vectors for v in m):
-            if preview:
-                _edit_candidate(None)
-            return
-        if preview:
-            _edit_candidate(lambda: editor.set_interest_vectors(vectors))
-            return
-        editor.set_interest_vectors(vectors)
-        render()
+        _edit_vector_grid(_INTEREST_EDIT, preview)
 
     def on_held_change(preview=False):
-        # the held intervals are edited as vectors in the interval-vectors row, like the intervals of
-        # interest; read the d-tall columns and replace the held set. preview=True rings, no commit.
-        if building[0]:
-            return
-        d, nh = editor.state.d, len(editor.held_vectors)
-        toks = col_tokens("held")  # each column's id-token (== its index until reordered)
-        if editor.pending_held is not None:
-            # the draft column rides one token past the committed ones; commit it once filled
-            pt = spreadsheet.pending_token(toks)
-            if any(f"cell:held:{p}:{pt}" not in rec.inputs for p in range(d)):
-                if preview:
-                    _edit_candidate(None)
-                return  # the draft cells aren't shown (folded away)
-            values = [_parse_int(rec.inputs[f"cell:held:{p}:{pt}"].value) for p in range(d)]
-            if preview:
-                # arm the draft's would-be commit (what blur will do): set_pending_held itself
-                # decides whether anything lands, so a complete draft previews the held-list
-                # retune and an incomplete one rings nothing — the one-diff path every edit uses
-                _edit_candidate(lambda v=values: editor.set_pending_held(v))
-                return
-            editor.set_pending_held(values)
-            if editor.pending_held is None:  # the draft materialized into a real column
-                render()
-                _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
-            # an uncommitted draft renders nothing — see on_comma_change's draft branch
-            return
-        if len(toks) != nh or any(f"cell:held:{p}:{toks[i]}" not in rec.inputs for i in range(nh) for p in range(d)):
-            if preview:
-                _edit_candidate(None)
-            return  # the held cells aren't currently shown (folded away / optimization off)
-        vectors = [[_parse_int(rec.inputs[f"cell:held:{p}:{toks[i]}"].value) for p in range(d)] for i in range(nh)]
-        if any(v is None for m in vectors for v in m):
-            if preview:
-                _edit_candidate(None)
-            return
-        if preview:
-            _edit_candidate(lambda: editor.set_held_vectors(vectors))
-            return
-        editor.set_held_vectors(vectors)
-        render()
+        _edit_vector_grid(_HELD_EDIT, preview)
 
     def on_target_cells_change(preview=False):
-        # the target interval list is edited as vector columns, like the comma basis; read the d-tall
-        # columns (id is cell:vec:targets:{column}:{prime}) and replace the target set. preview=True
-        # rings without committing (commit lands on Enter/blur); a draft column previews nothing.
-        if building[0]:
-            return
-        d = editor.state.d
-        targets = editor.target_override or service.target_interval_set(
-            editor.target_spec, editor.state.domain_basis)
-        k = len(targets)
-        toks = col_tokens("targets")  # each column's id-token (== its index until reordered)
-        if editor.pending_target is not None:
-            # the draft column rides one token past the committed ones; commit it once filled
-            pt = spreadsheet.pending_token(toks)
-            if any(f"cell:vec:targets:{pt}:{p}" not in rec.inputs for p in range(d)):
-                if preview:
-                    _edit_candidate(None)
-                return  # the draft cells aren't shown (folded away)
-            values = [_parse_int(rec.inputs[f"cell:vec:targets:{pt}:{p}"].value) for p in range(d)]
-            if preview:
-                # arm the draft's would-be commit (what blur will do): set_pending_target itself
-                # decides whether anything lands, so a complete draft previews the re-weighted
-                # target list and an incomplete one rings nothing
-                _edit_candidate(lambda v=values: editor.set_pending_target(v))
-                return
-            editor.set_pending_target(values)
-            if editor.pending_target is None:  # the draft materialized into a real column
-                render()
-                _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
-            # an uncommitted draft renders nothing — see on_comma_change's draft branch
-            return
-        if len(toks) != k or any(f"cell:vec:targets:{toks[j]}:{p}" not in rec.inputs for j in range(k) for p in range(d)):
-            if preview:
-                _edit_candidate(None)
-            return  # the target cells aren't currently shown (folded away)
-        vectors = [[_parse_int(rec.inputs[f"cell:vec:targets:{toks[j]}:{p}"].value) for p in range(d)] for j in range(k)]
-        if any(v is None for m in vectors for v in m):
-            if preview:
-                _edit_candidate(None)
-            return
-        if preview:
-            _edit_candidate(lambda: editor.set_target_override_vectors(vectors))
-            return
-        editor.set_target_override_vectors(vectors)
-        render()
+        _edit_vector_grid(_TARGET_EDIT, preview)
 
     def on_ratio_change(cid):
         # a quantities-row ratio cell committing on blur (comma / target / held / interest) — the
