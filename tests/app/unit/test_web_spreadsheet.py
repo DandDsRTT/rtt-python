@@ -9087,7 +9087,7 @@ def test_v_column_labels_track_their_cells_during_a_pending_comma():
     # U-half value cells shift right past the draft slot (comma_value_pos); the column labels must
     # follow — else every U label sits a slot LEFT (over the draft) and the last U column is unlabelled.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    s = {**settings.defaults(), "projection": True, "symbols": True}
+    s = {**settings.defaults(), "projection": True, "header_symbols": True}  # header_symbols drives matlabel
     c = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None]).cells}
     # meantone, projection on: 1 comma + draft + 2 U → labels 0,1,2 (nc + nu = 3); the draft is unlabelled
     assert c["matlabel:col:vectors:commas:0"].x == c["cell:comma:0:0"].x        # 𝐯₁ over the comma
