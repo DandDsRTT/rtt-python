@@ -777,12 +777,13 @@ UNITS = {
     # coordinates (p), M_L is gL/p (one superspace generator per superspace prime), M_jL is p/p
     # (identity). The p → b on-domain swap (see cell_unit) does NOT reach these tiles.
     # B_L (basis change matrix) and M_s→L are the two tiles that bridge the two spaces, so they
-    # carry BOTH coordinates: B_L is b/p (each domain element b as superspace-prime p components),
-    # M_s→L is gL/b (each domain element b mapped to superspace generators gL). Every other
+    # carry BOTH coordinates: B_L is p/b (each domain element b expressed as superspace-prime p
+    # components), M_s→L is gL/b (each domain element b mapped to superspace generators gL) — both
+    # in output/input order, the superspace coordinate (p, gL) leading. Every other
     # superspace tile lives wholly in the superspace (p / gL only). The gL token uses the
     # SUBSCRIPT_L markup so cell_unit can subscript it per generator.
     ("ss_vectors", "ssprimes"): "p/p",   # M_jL = I
-    ("ss_vectors", "primes"): "b/p",      # B_L basis change matrix
+    ("ss_vectors", "primes"): "p/b",      # B_L basis change matrix (superspace prime p per domain element b)
     ("ss_vectors", "commas"): "p",        # C_L
     ("ss_vectors", "held"): "p",          # H_L
     ("ss_vectors", "targets"): "p",       # T_L

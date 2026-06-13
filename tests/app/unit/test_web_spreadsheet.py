@@ -7285,6 +7285,14 @@ def test_B_L_tile_has_a_caption_and_symbol():
     assert cells["symbol:ss_vectors:primes"].text == "BL"
 
 
+def test_B_L_units_line_reads_superspace_prime_over_domain_element():
+    # B_L's units line is in output/input order: a superspace prime (p) per domain element (b) —
+    # p/b — matching the rest of the p-coordinate ss_vectors row (M_jL p/p, C_L/T_L/H_L p) and the
+    # gL/b of its M_s→L sibling (the superspace coordinate leads), NOT the reversed b/p.
+    cells = {c.id: c for c in _barbados_ss(units=True).cells}
+    assert cells["units:ss_vectors:primes"].text == "units: p/b"
+
+
 def test_nonstandard_domain_off_leaves_no_superspace_trace():
     # the additive-only contract: with the toggle off, NONE of the scaffolding leaves a
     # trace — no panels, no toggles, no axes, no captions, no symbols (an existing build
