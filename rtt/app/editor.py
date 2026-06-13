@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import functools
 import logging
+import math
 import re
 from dataclasses import dataclass
 from fractions import Fraction
@@ -106,12 +107,38 @@ def _prescaler_to_json(p):
 
 def _prescaler_from_json(p):
     """Rebuild a custom pretransformer override from :func:`_prescaler_to_json`: a tuple diagonal, or
-    a tuple-of-tuples matrix when the saved value is a list of rows. The inverse of the above."""
+    a tuple-of-tuples matrix when the saved value is a list of rows. The inverse of the above.
+
+    A restored prescaler is honoured only if it can't crash the tuning solve: every entry must be
+    finite and each DIAGONAL entry strictly positive — the same rule the bare-prescaler UI handler
+    (``on_prescaler_change``) enforces, because a complexity is a norm, so a 0 diagonal makes a
+    prime's complexity 0 and its simplicity weight infinite, which scipy linprog rejects (and a
+    negative is a meaningless "complexity"). An invalid persisted prescaler — smuggled in by a
+    hand-edited document — is dropped to ``None`` so the scheme's own prescaler is used, rather than
+    committing a value that crashes every render (the deeper solver guard backs this up)."""
     if p is None:
         return None
     if p and isinstance(p[0], (list, tuple)):
-        return tuple(tuple(float(x) for x in row) for row in p)
-    return tuple(float(x) for x in p)
+        prescaler = tuple(tuple(float(x) for x in row) for row in p)
+    else:
+        prescaler = tuple(float(x) for x in p)
+    return prescaler if _prescaler_is_solvable(prescaler) else None
+
+
+def _prescaler_is_solvable(p) -> bool:
+    """Whether a custom prescaler 𝐿 is safe to feed the tuning solve: all entries finite, and each
+    diagonal entry strictly positive (see :func:`_prescaler_from_json`). Accepts a flat diagonal
+    tuple or a full d×d matrix."""
+    if not p:
+        return False
+    is_matrix = isinstance(p[0], (tuple, list))
+    if is_matrix:
+        for i, row in enumerate(p):
+            for j, x in enumerate(row):
+                if not math.isfinite(x) or (i == j and x <= 0):
+                    return False
+        return True
+    return all(math.isfinite(x) and x > 0 for x in p)
 
 
 @functools.lru_cache(maxsize=1)

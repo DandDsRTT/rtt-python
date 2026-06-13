@@ -25,6 +25,31 @@ from rtt.library.tuning_scheme_names import TuningSchemeSpec, resolve_tuning_sch
 from rtt.library.tuning_solvers import solve_optimum
 
 
+def _sanitized_prescaler_override(prescaler_override):
+    """Drop a complexity-prescaler override that would crash the solver, falling back to the
+    scheme's own trait-derived prescaler (``None``).
+
+    A complexity is a norm, so the prescaler 𝐿 must be invertible with strictly-positive diagonal
+    entries and every entry finite. A 0 (or negative) diagonal makes a prime's complexity 0 and its
+    simplicity weight infinite; an inf/nan entry is equally meaningless. Either feeds inf/nan into
+    scipy ``linprog``, which raises an opaque ``ValueError`` *before* returning (so the usual
+    ``.success`` check can't catch it) — hence this input guard. The UI handler and
+    :func:`rtt.app.editor._prescaler_from_json` already reject such a prescaler upstream; this is the
+    deeper net so no code path (a persisted bad document, a direct API call) can reach the solver
+    with one. Accepts a flat diagonal d-tuple or a full d×d matrix."""
+    if prescaler_override is None:
+        return None
+    arr = np.asarray(prescaler_override, dtype=float)
+    if not np.all(np.isfinite(arr)):
+        return None
+    diagonal = np.diagonal(arr) if arr.ndim == 2 else arr
+    if np.any(diagonal <= 0):
+        return None
+    if arr.ndim == 2 and not np.isfinite(np.linalg.cond(arr)):
+        return None  # singular matrix — non-invertible, so no usable complexity norm
+    return prescaler_override
+
+
 def optimize_generator_tuning_map(
     t: Temperament, spec: TuningSchemeSpec | str, prescaler_override=None,
 ) -> tuple[float, ...]:
@@ -36,6 +61,7 @@ def optimize_generator_tuning_map(
     ``prescaler_override`` (a d-tuple) bypasses the spec's trait-derived prescaler
     diagonal, riding through into the damage-weight complexities; ``None`` keeps the
     existing behavior."""
+    prescaler_override = _sanitized_prescaler_override(prescaler_override)
     spec = resolve_tuning_scheme(spec)
     _validate_powers(spec)
     if spec.destretched_interval and spec.held_intervals:

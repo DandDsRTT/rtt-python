@@ -114,6 +114,42 @@ def test_load_round_trips_a_matrix_pretransformer_override():
     assert e3.custom_prescaler == editor.custom_prescaler
 
 
+def test_load_drops_a_crash_inducing_prescaler_and_still_renders():
+    # a persisted document can smuggle in a bad custom_prescaler that never went through the UI
+    # handler's validation — e.g. a 0 on the diagonal. Under a simplicity-weight scheme that makes
+    # a prime's complexity 0 and its simplicity weight infinite, which scipy linprog rejects, so a
+    # naive load+layout used to crash the render (ValueError: A_ub must not contain inf/nan). load
+    # now validates the restored prescaler the same way the UI does and drops an invalid one to
+    # None (the scheme's own prescaler), so the page still builds.
+    editor = Editor()
+    editor.set_weight_slope("simplicity-weight")
+    doc = editor.serialize()
+    doc["custom_prescaler"] = [0.0, 1.585, 2.322]  # a 0 diagonal smuggled via persistence
+    editor.load(doc)
+    assert editor.custom_prescaler is None  # the crash-inducing prescaler was dropped
+    editor.layout()  # builds without raising
+
+    # an inf entry (also unsolvable) is dropped just the same
+    editor2 = Editor()
+    editor2.set_weight_slope("simplicity-weight")
+    doc2 = editor2.serialize()
+    doc2["custom_prescaler"] = [float("inf"), 1.585, 2.322]
+    editor2.load(doc2)
+    assert editor2.custom_prescaler is None
+    editor2.layout()
+
+
+def test_load_keeps_a_valid_custom_prescaler():
+    # the guard only drops crash-inducing prescalers — a legitimate hand-edited diagonal still
+    # round-trips through load untouched
+    editor = Editor()
+    editor.set_custom_prescaler_entry(1, 1, 7.5)
+    saved = editor.custom_prescaler
+    e2 = Editor()
+    e2.load(editor.serialize())
+    assert e2.custom_prescaler == saved
+
+
 def test_picking_a_preset_prescaler_clears_the_custom_override():
     # the prescaler preset is the user's reset path: picking "log-prime" / "prime" /
     # "identity" CLEARS the custom override AND swaps the scheme's prescaler trait, so the

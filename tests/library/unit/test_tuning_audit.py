@@ -121,3 +121,36 @@ def test_held_only_mean_damage_is_zero():
         optimization_power=float("inf"), target_intervals=None, held_intervals="{2/1, 5/4}"
     )
     assert get_tuning_map_mean_damage(meantone, (1200.0, 1896.578, 2786.314), spec) == 0.0
+
+
+# tuning-core-7: a crash-inducing complexity-prescaler override (a 0 / negative diagonal, or an
+# inf/nan entry) must not reach scipy linprog. A complexity is a norm, so a 0 diagonal makes a
+# prime's complexity 0 and, under a simplicity-weight scheme, its weight infinite — which linprog
+# rejects with an opaque "A_ub must not contain values inf, nan, or None" raised BEFORE returning
+# (so a .success check can't catch it). The solve sanitizes such an override away, falling back to
+# the scheme's own prescaler, so no code path (a persisted bad document, a direct API call) crashes.
+@pytest.mark.parametrize(
+    "bad_prescaler",
+    [
+        (0.0, 1.585, 2.322),          # a 0 diagonal -> complexity 0 -> inf simplicity weight
+        (-1.0, 1.585, 2.322),         # a negative "complexity" is meaningless
+        (float("inf"), 1.585, 2.322),  # a non-finite entry
+        (float("nan"), 1.585, 2.322),
+        ((0.0, 0.0, 0.0), (0.0, 1.585, 0.0), (0.0, 0.0, 2.322)),  # singular matrix override
+    ],
+)
+def test_crash_inducing_prescaler_override_falls_back_to_the_scheme(bad_prescaler):
+    meantone = parse_temperament_data(MEANTONE)
+    spec = "minimax-S"  # simplicity-weight: the slope that turns a 0 complexity into an inf weight
+    expected = optimize_generator_tuning_map(meantone, spec)  # the scheme's own prescaler
+    got = optimize_generator_tuning_map(meantone, spec, prescaler_override=bad_prescaler)
+    assert np.allclose(got, expected, atol=TOL)
+
+
+def test_valid_prescaler_override_still_drives_the_solve():
+    # the guard only drops crash-inducing overrides — a legitimate diagonal still changes the optimum
+    meantone = parse_temperament_data(MEANTONE)
+    spec = "minimax-S"
+    baseline = optimize_generator_tuning_map(meantone, spec)
+    tweaked = optimize_generator_tuning_map(meantone, spec, prescaler_override=(1.0, 5.0, 1.0))
+    assert not np.allclose(tweaked, baseline, atol=TOL)
