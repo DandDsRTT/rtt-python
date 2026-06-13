@@ -3344,24 +3344,32 @@ class _GridBuilder:
                         self.cells.append(CellBox(f"cell:mapped_unchanged:{drt}:{j}", self.comma_left(self.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
 
     def _emit_mapped_grid(self, tile, prefix, grid, n_cols, left, col_kw, *,
-                          full=None, colwise=False, col_token_key=None, inset=0):
-        """One read-only ("mapped") grid of the projection band: d rows over the projection
-        row's prime-indexed tops (proj_top) × ``n_cols`` columns at ``left(j)``, each cell id
-        ``cell:{prefix}:…`` with ``col_kw`` (prime/gen/comma) carrying the column index.
+                          full=None, colwise=False, col_token_key=None, inset=0,
+                          row="projection", top=None, height=None, pending=None):
+        """One read-only ("mapped") grid of a projection band: ``height`` rows over ``row``'s
+        prime-indexed tops (``top``, default proj_top) × ``n_cols`` columns at ``left(j)``, each
+        cell id ``cell:{prefix}:…`` with ``col_kw`` (prime/gen/comma) carrying the column index.
         ``full`` gates dashing — every cell an em-dash when the tuning isn't a full rational
         projection — defaulting to ``grid is not None`` (P, G and the superspace pair each dash
         on their own matrix; the P·X family instead shares the caller's one projection_rationals
         flag). Row-major grids (P / G / G_L→s / P_L→s) are matrices of pre-stringified entries
         emitted row-by-row with ids ``…:{row}:{col}``. ``colwise`` grids (the P·X family) are
-        lists of d-tall projected column vectors: emitted column-by-column, entries
+        lists of ``height``-tall projected column vectors: emitted column-by-column, entries
         ``grid[col][row]`` str()-wrapped, ids ``…:{col}:{row}`` — ``col_token_key`` swaps that
         id's column index for the column's identity token — and each cell also carries
         ``prime=row``. ``inset`` narrows each cell within its COL_W slot (centred), like the
-        loose interest kets the P·interest grid sits under."""
-        if not (self.row_open("projection") and self.tile_open("projection", tile)):
+        loose interest kets the P·interest grid sits under. ``row``/``top``/``height`` retarget
+        the whole grid to another projection band (the superspace P_L row reuses this verbatim).
+
+        A ``pending`` draft (the colwise P·X family of an interval list being added) appends one
+        blank green column at ``left(n_cols)`` — so the existence of the tile is enough to green
+        the draft column, with no per-list draft branch to forget (the gap this rework closes)."""
+        if not (self.row_open(row) and self.tile_open(row, tile)):
             return
         if full is None:
             full = grid is not None
+        top = top or self.proj_top
+        height = self.d if height is None else height
 
         def cell(i, j):  # row i (a domain-prime index), column j
             if colwise:
@@ -3371,15 +3379,19 @@ class _GridBuilder:
             else:
                 text = grid[i][j] if full else DASH
                 cid, kw = f"cell:{prefix}:{i}:{j}", {col_kw: j}
-            self.cells.append(CellBox(cid, left(j) + inset, self.proj_top(i),
+            self.cells.append(CellBox(cid, left(j) + inset, top(i),
                                  COL_W - 2 * inset, ROW_H, "mapped", text=text, **kw))
 
         if colwise:
             for j in range(n_cols):
-                for i in range(self.d):
+                for i in range(height):
                     cell(i, j)
+            if pending is not None:  # the open draft column: a blank green slot per row (the fix)
+                for i in range(height):
+                    self.cells.append(CellBox(f"cell:{prefix}:draft:{i}", left(n_cols) + inset, top(i),
+                                         COL_W - 2 * inset, ROW_H, "mapped", text="", prime=i, pending=True))
         else:
-            for i in range(self.d):
+            for i in range(height):
                 for j in range(n_cols):
                     cell(i, j)
 
@@ -3440,11 +3452,11 @@ class _GridBuilder:
         self._emit_mapped_grid("detempering", "proj_pd", self.proj_detempering, self.r, self.detempering_left, "gen",
                                full=full_proj, colwise=True, col_token_key="detempering")  # P·D = G
         self._emit_mapped_grid("targets", "proj_pt", self.proj_targets, self.k, self.target_left, "comma",
-                               full=full_proj, colwise=True)  # P·T
+                               full=full_proj, colwise=True, pending=self.pending_target)  # P·T
         self._emit_mapped_grid("held", "proj_ph", self.proj_held, self.nh, self.held_left, "comma",
-                               full=full_proj, colwise=True)  # P·H = H
+                               full=full_proj, colwise=True, pending=self.pending_held)  # P·H = H
         self._emit_mapped_grid("interest", "proj_pi", self.proj_interest, self.mi, self.interest_left, "comma",
-                               full=full_proj, colwise=True, inset=KET_INSET)  # P·interest
+                               full=full_proj, colwise=True, inset=KET_INSET, pending=self.pending_interest)  # P·interest
 
         # the scaling factors λ = diag(λ): the projection's eigenvalue list over the V column —
         # 0 for each comma sub-column (vanished, eigenvalue 0) then 1 for each unchanged
@@ -3456,6 +3468,9 @@ class _GridBuilder:
             for c, lam in enumerate(scaling):  # comma_value_pos skips the pending-draft slot for the U half
                 self.cells.append(CellBox(f"cell:scaling:{self.col_token('commas', c)}", self.comma_left(self.comma_value_pos(c)), self.row_y["scaling_factors"],
                                      COL_W, ROW_H, "mapped", text=lam, comma=c))
+            if self.comma_draft:  # the open comma draft column: a blank green λ slot, like every other V-column row
+                self.cells.append(CellBox("cell:scaling:draft", self.comma_left(self.nc), self.row_y["scaling_factors"],
+                                     COL_W, ROW_H, "mapped", text="", pending=True))
 
     def _emit_canon_band(self):
         """The canonical-mapping form box and the generator form matrix."""
@@ -3718,12 +3733,15 @@ class _GridBuilder:
         # row (B_L · column), and rL-tall mapped columns over the superspace generators in the
         # ss_mapping row (M_s→L · column — mapped commas vanish to 0, like the on-domain mapped
         # comma basis). Same column axes as the on-domain vectors / mapping rows above.
-        ss_lists = (("commas", self.state.comma_basis, self.nc, self.comma_left),
-                    ("targets", self.target_vectors, self.k, self.target_left),
-                    ("held", self.held, self.nh, self.held_left),
-                    ("interest", self.interest, self.mi, self.interest_left),
-                    ("detempering", self.detempering_vectors, self.r, self.detempering_left))
-        for ckey, vectors, n, left in ss_lists:
+        # each entry's `draft` flag says whether an open draft column rides past its committed cells
+        # (commas via comma_draft, the editable lists via their pending vector) — so the lifted
+        # ss_vectors / ss_mapping rows green that column too, like every other derived row.
+        ss_lists = (("commas", self.state.comma_basis, self.nc, self.comma_left, self.comma_draft),
+                    ("targets", self.target_vectors, self.k, self.target_left, self.pending_target is not None),
+                    ("held", self.held, self.nh, self.held_left, self.pending_held is not None),
+                    ("interest", self.interest, self.mi, self.interest_left, self.pending_interest is not None),
+                    ("detempering", self.detempering_vectors, self.r, self.detempering_left, False))
+        for ckey, vectors, n, left, draft in ss_lists:
             cols = tuple(vectors)[:n]
             if self.row_open("ss_vectors") and self.tile_open("ss_vectors", ckey):
                 lifted = service.lift_vectors_to_superspace(self.elements, cols)
@@ -3733,6 +3751,10 @@ class _GridBuilder:
                             f"cell:ss_vectors:{ckey}:{p}:{c}", left(c), self.ss_vec_top(p),
                             COL_W, ROW_H, "vec", text=str(lifted[c][p]), prime=p, comma=c,
                             unit=self.cell_unit("ss_vectors", ckey, prime=p)))
+                if draft:  # the open draft column: one blank green slot per superspace prime
+                    for p in range(self.dL):
+                        self.cells.append(CellBox(f"cell:ss_vectors:{ckey}:{p}:draft", left(n), self.ss_vec_top(p),
+                                             COL_W, ROW_H, "vec", text="", prime=p, pending=True))
             if self.row_open("ss_mapping") and self.tile_open("ss_mapping", ckey):
                 mapped = service.map_vectors_into_superspace_generators(self.state, cols)
                 for c in range(len(mapped)):
@@ -3741,6 +3763,10 @@ class _GridBuilder:
                             f"cell:ss_mapping:{ckey}:{g}:{c}", left(c), self.ss_map_top(g),
                             COL_W, ROW_H, "mapped", text=str(mapped[c][g]), gen=g, comma=c,
                             unit=self.cell_unit("ss_mapping", ckey, gen=g)))
+                if draft:  # the open draft column: one blank green slot per superspace generator
+                    for g in range(self.rL):
+                        self.cells.append(CellBox(f"cell:ss_mapping:{ckey}:{g}:draft", left(n), self.ss_map_top(g),
+                                             COL_W, ROW_H, "mapped", text="", gen=g, pending=True))
         # M_jL (superspace JI mapping): the dL × dL identity. Each superspace prime is its
         # own basis element, so the just mapping is trivially I. Same read-only "mapped" kind
         # and bracket convention as M_L; lives in its own row band ss_just_mapping below it.
@@ -3792,12 +3818,11 @@ class _GridBuilder:
                     text = DASH if not ss_full else str(self.ss_proj_basis[e][p])
                     self.cells.append(CellBox(f"cell:ss_proj_bls:{e}:{p}", self.prime_left(e), self.ss_proj_top(p),
                                          COL_W, ROW_H, "mapped", text=text, prime=p, comma=e))
-        if self.row_open("ss_projection") and self.tile_open("ss_projection", "detempering"):  # P_L·D_L
-            for i in range(self.r):
-                for p in range(self.dL):
-                    text = DASH if not ss_full else str(self.ss_proj_detempering[i][p])
-                    self.cells.append(CellBox(f"cell:ss_proj_pd:{i}:{p}", self.detempering_left(i), self.ss_proj_top(p),
-                                         COL_W, ROW_H, "mapped", text=text, prime=p, gen=i))
+        # the interval-list columns of P_L (D_L / T_L / H_L / interest) reuse the same _emit_mapped_grid
+        # as the on-domain projection band, retargeted to the ss_projection row (top=ss_proj_top, dL-tall)
+        # — so each draftable list (T/H/interest) greens its draft column automatically, no per-list branch.
+        _ssp = dict(full=ss_full, colwise=True, row="ss_projection", top=self.ss_proj_top, height=self.dL)
+        self._emit_mapped_grid("detempering", "ss_proj_pd", self.ss_proj_detempering, self.r, self.detempering_left, "gen", **_ssp)  # P_L·D_L
         if self.show_unchanged and self.row_open("ss_projection") and self.tile_open("ss_projection", "commas"):  # P_L·V
             for c in range(self.nc):  # P_L·comma = the zero vector (the comma half of V vanishes)
                 for p in range(self.dL):
@@ -3813,24 +3838,12 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"cell:ss_proj_v:{p}:{self.nc + j}", self.comma_left(self.nc_shown + j), self.ss_proj_top(p),
                                          COL_W, ROW_H, "mapped",
                                          text=DASH if dashed else str(self.ss_unchanged[j][p]), prime=p, comma=self.nc + j))
-        if self.row_open("ss_projection") and self.tile_open("ss_projection", "targets"):  # P_L·T_L
-            for j in range(self.k):
-                for p in range(self.dL):
-                    text = DASH if not ss_full else str(self.ss_proj_targets[j][p])
-                    self.cells.append(CellBox(f"cell:ss_proj_pt:{j}:{p}", self.target_left(j), self.ss_proj_top(p),
-                                         COL_W, ROW_H, "mapped", text=text, prime=p, comma=j))
-        if self.row_open("ss_projection") and self.tile_open("ss_projection", "held"):  # P_L·H_L
-            for i in range(self.nh):
-                for p in range(self.dL):
-                    text = DASH if not ss_full else str(self.ss_proj_held[i][p])
-                    self.cells.append(CellBox(f"cell:ss_proj_ph:{i}:{p}", self.held_left(i), self.ss_proj_top(p),
-                                         COL_W, ROW_H, "mapped", text=text, prime=p, comma=i))
-        if self.row_open("ss_projection") and self.tile_open("ss_projection", "interest"):  # P_L·interest
-            for i in range(self.mi):
-                for p in range(self.dL):
-                    text = DASH if not ss_full else str(self.ss_proj_interest[i][p])
-                    self.cells.append(CellBox(f"cell:ss_proj_pi:{i}:{p}", self.interest_left(i) + KET_INSET, self.ss_proj_top(p),
-                                         COL_W - 2 * KET_INSET, ROW_H, "mapped", text=text, prime=p, comma=i))
+        self._emit_mapped_grid("targets", "ss_proj_pt", self.ss_proj_targets, self.k, self.target_left, "comma",
+                               pending=self.pending_target, **_ssp)  # P_L·T_L
+        self._emit_mapped_grid("held", "ss_proj_ph", self.ss_proj_held, self.nh, self.held_left, "comma",
+                               pending=self.pending_held, **_ssp)  # P_L·H_L
+        self._emit_mapped_grid("interest", "ss_proj_pi", self.ss_proj_interest, self.mi, self.interest_left, "comma",
+                               inset=KET_INSET, pending=self.pending_interest, **_ssp)  # P_L·interest
 
     def _emit_tuning_rows(self):
         """The tuning/just/retune rows; returns the chart_indicators dict the chart pass reads."""

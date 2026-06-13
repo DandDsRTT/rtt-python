@@ -6695,6 +6695,49 @@ def _barbados_ss_identity(**overrides):
     return _barbados_ss(identity_objects=True, **overrides)
 
 
+def test_every_derived_matrix_row_greens_its_draft_column():
+    # Adding an interval opens a DRAFT column, which must read green top-to-bottom across every
+    # derived matrix row whose tile it crosses — the projection band (P·T / P·H / P·interest /
+    # P·V), the scaling factors (λ over V), and the chapter-9 superspace rows (B_L·v, M_s→L·v,
+    # P_L·v). Each of those used to hand-write its own per-list loop and several FORGOT the draft
+    # slot, so a draft column went blank in those rows (projection / scaling / the whole superspace
+    # block). Emission now flows through one pending-aware emitter per band (_emit_mapped_grid and
+    # the ss-lists loop), so the existence of the tile is enough — this guards that no derived row
+    # can drop the draft slot again as more rows are added. BARBADOS (2.3.13/5) lights the whole
+    # superspace block (dL = 4, rL = 3); projection + optimization light the projection band.
+    s = settings.defaults()
+    s.update(projection=True, nonstandard_domain=True, optimization=True, interest=True)
+    b = spreadsheet._GridBuilder(
+        service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), s,
+        interest=[(-2, 0, 1), (1, 1, -1)], pending_interest=[None, None, None],
+        held_vectors=[(1, 0, 0)], pending_held=[None, None, None],
+        target_override=["3/2"], pending_target=[None, None, None],
+        pending_comma=[None, None, None],
+    )
+    lay = b.layout()
+    assert b.show_superspace and b.show_ss_projection and b.show_unchanged  # the config is fully lit
+    pending = [c for c in lay.cells if c.pending]
+    # the x of each interval list's draft column (one past its committed sub-columns)
+    draft_x = {"targets": b.target_left(b.k), "interest": b.interest_left(b.mi),
+               "held": b.held_left(b.nh), "commas": b.comma_left(b.nc)}
+    # every value row that runs over interval columns must green the draft — the derived matrix rows
+    # this rework fixed PLUS the rows that were already correct (so the invariant stays complete)
+    rows = ("vectors", "mapping", "tuning", "just", "retune",
+            "projection", "scaling_factors", "ss_vectors", "ss_mapping", "ss_projection")
+    checked = 0
+    for rkey in rows:
+        if rkey not in b.row_y:
+            continue
+        top, h = b.tile_top[rkey], b.tile_h[rkey]
+        for ckey, x in draft_x.items():
+            if (rkey, ckey) not in b.declared_tiles:
+                continue  # that list has no tile in this row (e.g. scaling is the V column only)
+            hits = [c for c in pending if abs(c.x - x) < 6 and top - 1 <= c.y <= top + h + 1]
+            assert hits, f"{rkey} × {ckey}: the draft column is not greened (the regressed bug)"
+            checked += 1
+    assert checked >= 20  # the projection + scaling + three superspace rows × their open lists
+
+
 def test_nonstandard_domain_adds_superspace_columns_between_gens_and_primes():
     # the toggle adds two new columns to the temperament region: the superspace generators
     # (rL columns) and superspace primes (dL columns), seated between the generators and
