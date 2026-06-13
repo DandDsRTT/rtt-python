@@ -332,6 +332,20 @@ _GRIDVALUE_SPECS = {
 }
 
 
+def _vgroup_key(cb) -> str:
+    """The vector/map a non-scalar gridded cell (a `cid_arg=False` _GRIDVALUE_SPECS kind) belongs to —
+    its whole interval-vector COLUMN or mapping ROW, the unit the user fills in and submits as a whole
+    (see `_GROUP_EXIT_JS`). All of one group's cells share this key, and DIFFERENT groups never collide,
+    because it is the cell id with only its PRIME coordinate dropped: the rest is the column/row's stable
+    id-token, so the key survives reorder/removal exactly as the id does. The prime sits LAST for the
+    row-keyed kinds (`cell:mapping:{row}:{p}`, `cell:vec:targets:{col}:{p}`) and as the 3rd segment for the
+    column-keyed ones (`cell:{name}:{p}:{col}`)."""
+    if cb.kind in ("mapping", "targetcell"):
+        return cb.id.rsplit(":", 1)[0]
+    parts = cb.id.split(":")
+    return ":".join(parts[:2] + parts[3:])
+
+
 # the four play modes' 3×3 glyphs: 1 one-off (centre), 2 arpeggiate (bottom-left→top-right
 # diagonal), 3 chord (centre column), 4 rolled chord (diagonal + the bottom-right triangle)
 _MODE_FILLS = (
@@ -380,6 +394,16 @@ _FRACTION_JS = (_ASSETS / "fraction.js").read_text(encoding="utf-8")
 # when you truly leave. (relatedTarget is the element focus is moving to/from.)
 _FRAC_EXIT_JS = ("(e) => { const b = e.target.closest('.rtt-frac-edit'); "
                  "if (!b || !b.contains(e.relatedTarget)) emit(); }")
+
+# The same idea ONE LEVEL UP, for the integer interval-vector columns and mapping rows: an interval
+# vector / map is edited as a WHOLE — Tab/blur HOP between its sibling cells while you fill it in, and
+# it must not submit on each hop. So its commit fires only when focus leaves the whole group (a
+# DIFFERENT vector/map, a non-grid control, or nothing — an Enter blurs the input, so relatedTarget is
+# null and this emits, committing). Each such cell's wrap carries a `data-vgroup` shared by exactly its
+# column/row siblings (see `_vgroup_key`); a hop to a sibling carries the SAME group and is held.
+_GROUP_EXIT_JS = ("(e) => { const g = e.target.closest('[data-vgroup]'), "
+                  "t = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('[data-vgroup]'); "
+                  "if (!g || !t || g.getAttribute('data-vgroup') !== t.getAttribute('data-vgroup')) emit(); }")
 
 
 _CSS_VARS = f""":root {{
@@ -1256,9 +1280,13 @@ class _Reconciler:
         if spec.ratio_allowed:
             self._build_fraction(cb, wrap, commit, preview)
         else:
-            wrap.classes("rtt-cell-input")
+            # an integer interval-vector / mapping cell: tag the wrap with the column/row group it shares
+            # with its siblings, and commit only when focus leaves that WHOLE group (Tab/blur between
+            # siblings keeps filling it in — see _GROUP_EXIT_JS). Enter blurs the input (make_cell), so it
+            # exits with no relatedTarget and commits, as does a blur to anything outside the group.
+            wrap.classes("rtt-cell-input").props(f'data-vgroup="{_vgroup_key(cb)}"')
             inp = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput")
-            inp.on("blur", commit)
+            inp.on("blur", commit, js_handler=_GROUP_EXIT_JS)
             self.inputs[cb.id] = inp
         self._arm_gridvalue(wrap, cb, spec)
 
