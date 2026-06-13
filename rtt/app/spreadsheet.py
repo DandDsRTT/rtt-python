@@ -101,10 +101,10 @@ RANGE_MODE_H = 46  # height of the monotone/tradeoff range-mode selector — two
 # enclosing box's edge (the bumped 16px boxes don't fit side by side anyway)
 RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the values above the chart)
 OPT_TITLE_H = 14  # height of the optimization box's title strip ("optimization")
-OPT_PAD_T = 4  # inset above the title so it sits inside the box, not awkwardly on its top border
-OPT_PAD_B = 4  # bottom margin below the captions (the box hugs the contents vertically too)
-OPT_PAD_L = 4  # left margin: inset of the mean damage from the box's left edge
-OPT_PAD_R = 4  # right margin: inset of the power's clearance from the box's right edge
+OPT_PAD_T = 8  # inset above the title (== BOX_INNER, so every control box pads its content the same)
+OPT_PAD_B = 8  # bottom inset below the captions (== BOX_INNER)
+OPT_PAD_L = 8  # left inset of the mean damage from the box's edge (== BOX_INNER)
+OPT_PAD_R = 8  # right inset of the power's clearance from the box's edge (== BOX_INNER)
 OPT_TITLE_GAP = 4  # bottom margin under the title, before the control row
 OPT_COL_GAP = 8  # the standard gap between adjacent in-tile controls — sizes OPT_BOX_MIN_W
 # (the clearance around the optimization box's centered power) and the box-𝐋 / q-dual / all-
@@ -130,9 +130,8 @@ OPT_BOX_MIN_W = OPT_PAD_L + OPT_MEAN_DAMAGE_W + OPT_COL_GAP + OPT_POW_CAP_W + OP
 # CTRL_LABEL_GAP sits between the label and the control. Box heights vary with the label, so a
 # row reserves its tallest.
 BOX_OUTER = 4  # vertical gap above/below a control box (it spans its tile's width — see control_box)
-BOX_INNER = 4  # inset of the dropdown within the box (off the border)
-CTRL_LABEL_GAP = 2  # padding below the label, to the box's bottom edge
-CTRL_CAPTION_GAP = 5  # gap between a control and its caption below it, so the caption reads as a label
+BOX_INNER = 8  # padding inside a control box, from its content to its border (all four sides)
+CTRL_LABEL_GAP = 2  # gap between the scheme-button row and the dropdown below it
 # box 𝐓's footprint: the target chooser dropdown + the all-interval checkbox slot on one row,
 # both inside one bordered box. Unlike the un-boxed LBOX_DIM_W/CBOX_W above, this includes the box
 # padding (BOX_OUTER off the tile, BOX_INNER off the border, each side) so _control_floor can
@@ -2239,14 +2238,12 @@ class _GridBuilder:
     # and the dropdown keeps its NATURAL width (cap_w) seated at the box's left — only shrunk if a
     # tiny tile can't seat even that. The label is the standard one-line left-justified caption
     # hugging the dropdown's bottom (the .rtt-caption-left asset), overflowing right if long.
-    def control_dims(self, ckey: str, cap_w, label, scheme_btn: bool = False, fill: bool = False):
-        """a single-dropdown box FILLS its column-spanning box (no dead grey beside a short dropdown); a
-        box that carries a trailing checkbox (the target all-interval, the prescaler diminuator) keeps
-        the cap so the checkbox has room in the space to the dropdown's right"""
-        dropdown_w = (max(40, self.col_w[ckey] - 2 * BOX_INNER) if fill
-                      else max(40, min(self.col_w[ckey] - 2 * BOX_INNER, cap_w)))
-        label_h = CAPTION_LINE if label else 0  # one line (overflows right, never wraps the box wider)
-        box_h = BOX_INNER + PRESET_H + (CTRL_CAPTION_GAP + label_h + CTRL_LABEL_GAP if label else BOX_INNER)
+    def control_dims(self, ckey: str, cap_w, label, scheme_btn: bool = False):
+        # the dropdown keeps a consistent capped width; the box spans the tile (see control_box) and
+        # insets its content BOX_INNER off every border
+        dropdown_w = max(40, min(self.col_w[ckey] - 2 * BOX_INNER, cap_w))
+        label_h = CAPTION_LINE if label else 0  # one line, hugging the dropdown's bottom (overflows right if long)
+        box_h = 2 * BOX_INNER + PRESET_H + label_h  # BOX_INNER pad, dropdown, hugging caption, BOX_INNER pad
         # the established-projection chooser carries the ✕ "return to scheme" button on a row inside
         # its own box, ABOVE the dropdown + caption (so the button is NOT a separate control box)
         box_h += (SCHEME_BTN_SQ + CTRL_LABEL_GAP) if scheme_btn else 0
@@ -2804,16 +2801,16 @@ class _GridBuilder:
     # other labelled control uses. Any sibling control (the target chooser's all-interval checkbox,
     # box 𝐓) rides the empty space to the dropdown's right, inside this same full-width box. Returns
     # the (x, width, y) to seat the dropdown at.
-    def control_box(self, box_id: str, ckey: str, top, cap_w, label, disabled: bool = False, scheme_btn: bool = False, fill: bool = False):
-        dropdown_w, label_h, box_h = self.control_dims(ckey, cap_w, label, scheme_btn, fill)
-        box_x, box_y = self.col_x[ckey], top + BOX_OUTER  # spans the tile footprint; BOX_OUTER is vertical only
+    def control_box(self, box_id: str, ckey: str, top, cap_w, label, disabled: bool = False, scheme_btn: bool = False):
+        dropdown_w, label_h, box_h = self.control_dims(ckey, cap_w, label, scheme_btn)
+        box_x, box_y = self.col_x[ckey], top + BOX_OUTER  # the box spans the tile's full width (col_w)
         self.blocks.append(Block(box_id, box_x, box_y, self.col_w[ckey], box_h, boxed=True))
-        ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
+        ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER  # content inset BOX_INNER off every border
         if scheme_btn:  # the ✕ "return to scheme" row sits ABOVE the dropdown, at the top of the box
             self.emit_scheme_button(ctrl_x, ctrl_y, ckey)
             ctrl_y += SCHEME_BTN_SQ + CTRL_LABEL_GAP  # the dropdown + caption drop below it
         if label:  # disabled greys the label with its control (a locked chooser, e.g. all-interval target)
-            self.cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H + CTRL_CAPTION_GAP, dropdown_w, label_h,
+            self.cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
                                  "caption", text=label, align="left", disabled=disabled))
         return ctrl_x, dropdown_w, ctrl_y
 
@@ -5000,11 +4997,8 @@ class _GridBuilder:
                 #    T minimax-U / log-prime) — see _preset_locked.
                 disabled = (name == "target" and service.is_all_interval(self.tuning_scheme)) \
                     or self._preset_locked(name)
-                # fill the dropdown across the box EXCEPT when a trailing checkbox shares the row (the
-                # target's all-interval, the prescaler's diminuator) — there the cap leaves the checkbox room
-                fill = name != "target" and not (name == "prescaler" and self.settings["alt_complexity"])
                 cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preset_cap(name), label,
-                                              disabled=disabled, scheme_btn=(name == "projection"), fill=fill)
+                                              disabled=disabled, scheme_btn=(name == "projection"))
                 self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
                                      disabled=disabled))
                 # the target chooser carries the all-interval checkbox to the dropdown's right, in the
@@ -5050,7 +5044,7 @@ class _GridBuilder:
                 if not self.tile_open(rkey, ckey):
                     continue
                 top = self.ptext_band_y(rkey) + self.row_ptext[rkey] + self.row_pre[rkey]  # below the preset box
-                cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESET_W, label, fill=True)
+                cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESET_W, label)
                 self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser"))
 
     def _emit_scheme_buttons(self) -> None:
