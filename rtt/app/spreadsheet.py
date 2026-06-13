@@ -1373,11 +1373,16 @@ class _GridBuilder:
         if service.is_all_interval(self.tuning_scheme):
             # all-interval (Tₚ = I): every target-column list that just re-expresses an existing column
             # collapses to a duplicate, so drop it — mapped 𝑀T → 𝑀, prescaled 𝐿T → 𝐿, and each size/error
-            # list to its prime map (tempered 𝐚 → 𝒕, just 𝐨 → 𝒋, error 𝐞 → 𝒓). The kept target tiles are
-            # the target list itself (Tₚ = I), the complexity ‖𝐿‖, and the weight/damage. Dropping a tile
-            # here clears its cells, bracket, caption, panel and fold toggle (never a blank box).
+            # list to its prime map (tempered 𝐚 → 𝒕, just 𝐨 → 𝒋, error 𝐞 → 𝒓). The superspace lifts collapse
+            # the same way: the target vectors T_L → B_L (the (ss_vectors, primes) tile) and the mapped
+            # targets Y_L → M_s→L (the (ss_mapping, primes) tile), so they drop too — the projection rows'
+            # P·T / P_L·T already drop via targets_editable below. The kept target tiles are the target list
+            # itself (Tₚ = I), the complexity ‖𝐿‖, and the weight/damage; so the whole column wipes from the
+            # mapping row down to the complexity row. Dropping a tile here clears its cells, bracket, caption,
+            # panel and fold toggle (never a blank box).
             self.declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
-                               ("tuning", "targets"), ("just", "targets"), ("retune", "targets")}
+                               ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
+                               ("ss_vectors", "targets"), ("ss_mapping", "targets")}
         if not self.show_identity_objects:
             # the superspace identity objects — M_L over its own generators (ss_mapping × gens,
             # trivially 𝐼) and the JI mapping M_jL = I (ss_just_mapping × ssprimes) — are deferred

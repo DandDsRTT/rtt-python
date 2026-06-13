@@ -3131,6 +3131,25 @@ def test_all_interval_removes_all_redundant_target_tiles():
             "block:damage:targets"} <= allint  # the kept target tiles remain
 
 
+def test_all_interval_removes_the_superspace_target_lifts_too():
+    # the chapter-9 superspace rows were added AFTER the collapse above, so they must register with
+    # it too: over Tₚ = I the target lifts re-express their domain-prime tiles — the target vectors
+    # T_L → B_L (the (ss_vectors, primes) tile) and the mapped targets Y_L → M_s→L (the
+    # (ss_mapping, primes) tile) — so both drop, leaving the target column wiped from the mapping row
+    # down to the complexity row with no stray superspace tiles floating in the gap. Their
+    # non-duplicate prime-column counterparts (B_L, M_s→L) survive.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")  # BARBADOS: dL = 4 superspace
+    def blocks(scheme):
+        s = settings.defaults()
+        s["nonstandard_domain"], s["weighting"] = True, True  # show the superspace; reveal prescaling/complexity
+        return {b.id for b in spreadsheet.build(state, s, tuning_scheme=scheme).blocks}
+    based, allint = blocks("TILT minimax-S"), blocks("minimax-S")
+    for bid in ("block:ss_vectors:targets", "block:ss_mapping:targets"):
+        assert bid in based, bid       # the superspace target lifts show when target-based
+        assert bid not in allint, bid  # and drop (panel and all) when all-interval
+    assert {"block:ss_vectors:primes", "block:ss_mapping:primes"} <= allint  # B_L / M_s→L survive
+
+
 def test_all_interval_relabels_the_optimization_mean_damage():
     # the optimization mean damage ⟪𝐝⟫ₚ is the minimized total damage; when all-interval that quantity
     # IS the retuning magnitude ‖𝒓𝐿⁻¹‖ at the dual norm power, so the symbol relabels with dual(q)
