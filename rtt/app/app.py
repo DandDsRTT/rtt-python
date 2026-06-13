@@ -187,6 +187,24 @@ _INVALID_TEMPERAMENT = "Not a valid temperament: the generators must be independ
 _INVALID_PROJECTION = "That isn't a valid projection — 𝑃 must be idempotent (𝑃² = 𝑃) with the commas in its kernel."
 _INVALID_EMBEDDING = "That isn't a valid embedding — 𝑀𝐺 must equal the identity."
 
+# the toast shown when a prescaler 𝐿 diagonal entry is edited to a value that can't be a complexity
+# scale: a complexity is a norm, so a diagonal entry must be a positive, finite number (a 0 makes a
+# weight infinite and crashes the solve; a negative is a meaningless "complexity"). Off-diagonal
+# entries are unconstrained except that they too must be finite.
+_INVALID_PRESCALER = "A prescaler diagonal entry must be a positive, finite number."
+
+# the toast shown when an unchanged-basis (U) cell is committed with a value that can't drive the
+# projection — an unparseable / non-integer entry. Mirrors the ratio/mapping handlers: toast + revert.
+_INVALID_UNCHANGED = "That isn't a valid unchanged-interval basis — each entry must be a whole number."
+
+# the toast shown when a persisted document fails to load on page open — the page falls back to the
+# shipped defaults, but the stored bytes are KEPT (not overwritten) so the user's work can be
+# recovered (e.g. by an older client) rather than being silently wiped to defaults on this refresh.
+_LOAD_FAILED = (
+    "Couldn’t restore your saved document — showing the defaults. Your saved data is kept; "
+    "editing anything here will replace it."
+)
+
 # the toast shown when the "nonstandard domain" Show toggle is turned off while a nonstandard
 # basis is still live — the setting can't go off until the basis is back to a standard prime limit
 _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the scrolling body
@@ -771,7 +789,7 @@ class _Reconciler:
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.scheme_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
         # The active preview gesture — the ONE record the ring highlights derive from (see
         # _Gesture). None when no gesture is live; every paint recomputes the rings from it.
         self.gesture: _Gesture | None = None
@@ -2294,6 +2312,11 @@ def index() -> None:
     # corrupt/old blob is ignored, falling back to the as-shipped defaults.
     editor = Editor()
     stored = _doc_store().get(_STORE_KEY)
+    # True when a persisted blob existed but failed to load: render() must then NOT overwrite the
+    # stored bytes with the fallback defaults (which would silently wipe every other still-valid
+    # field the user had), so they survive for recovery. Cleared the moment the user makes a real
+    # edit (editor.can_undo) — at which point persisting their freshly-built document IS intended.
+    load_failed = [False]
     if stored:
         try:
             editor.load(stored)
@@ -2301,6 +2324,7 @@ def index() -> None:
             # still fall back to the as-shipped defaults, but leave a trace: a load-path
             # regression silently resetting every returning user's document must be visible
             _log.exception("stored document failed to load; using defaults: %.200r", stored)
+            load_failed[0] = True
     rec = _Reconciler(editor)
     building = [False]
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
@@ -2574,25 +2598,34 @@ def index() -> None:
 
     def on_unchanged_change(preview=False):
         # the unchanged basis U is editable when it is a full rational projection (like the comma
-        # basis): read its d-tall columns and set the tuning to the projection that holds them. A
-        # silent revert when they don't form a valid full projection. Mirrors on_comma_change.
+        # basis): read its d-tall columns and set the tuning to the projection that holds them. On
+        # COMMIT (preview=False), an entry that can't drive the projection — a non-integer / garbage
+        # value, or one comma_ratios rejects — toasts WHY and reverts the cell (render() refills it
+        # from the live basis), matching on_ratio_change / on_mapping_change; while PREVIEWING it just
+        # rings nothing. Mirrors on_comma_change.
         if building[0]:
             return
         d, r = editor.state.d, editor.state.r
         if any(ids.unchanged_cell(j, p) not in rec.inputs for j in range(r) for p in range(d)):
             if preview:
                 _edit_candidate(None)
-            return  # U isn't editable (under-rank) or not shown
+            return  # U isn't editable (under-rank) or not shown — nothing on screen to revert
         vectors = [[_parse_int(rec.inputs[ids.unchanged_cell(j, p)].value) for p in range(d)] for j in range(r)]
         if any(v is None for vec in vectors for v in vec):
             if preview:
                 _edit_candidate(None)
-            return  # an in-progress / non-integer edit
+                return  # an in-progress / non-integer edit previews nothing (no toast)
+            ui.notify(_INVALID_UNCHANGED, type="negative", position="top")
+            render()  # revert the cell to the live unchanged basis
+            return
         try:
             ratios = service.comma_ratios(tuple(tuple(v) for v in vectors), editor.state.domain_basis)
         except (ValueError, ZeroDivisionError, ArithmeticError):
             if preview:
                 _edit_candidate(None)
+                return
+            ui.notify(_INVALID_UNCHANGED, type="negative", position="top")
+            render()  # revert the cell to the live unchanged basis
             return
         if preview:
             _edit_candidate(lambda: editor.set_unchanged_basis(ratios))
@@ -2740,13 +2773,16 @@ def index() -> None:
             return
         raw = str(rec.inputs[cid].value).strip().lower()
         if raw in ("∞", "inf", "max", "minimax"):
-            power = float("inf")
+            power = float("inf")  # ∞ (minimax / max-norm) is the one legitimate non-finite power
         else:
             try:
                 power = float(raw)
             except ValueError:
                 return  # leave the scheme unchanged on unparseable input
-            if power <= 0:
+            # reject nan and a numeric that overflows to ±inf ("1e999"): a power must be a finite
+            # positive number (type ∞/inf/max for minimax). nan slips past `<= 0` (every nan
+            # comparison is False), so it would otherwise commit and crash the solve/format.
+            if not math.isfinite(power) or power <= 0:
                 return
         if cid == "control:q":
             if power < 1:
@@ -2900,7 +2936,18 @@ def index() -> None:
         except ValueError:
             return
         parts = cid.split(":")  # "cell:prescaling:primes:i:j" — row i, column j (the whole square edits)
-        editor.set_custom_prescaler_entry(int(parts[3]), int(parts[4]), value)
+        i, j = int(parts[3]), int(parts[4])
+        # A complexity is a norm, so a DIAGONAL prescaler entry must be a positive, finite number — a 0
+        # makes the prime's complexity 0 and its simplicity weight infinite, which crashes the solver
+        # (linprog rejects inf), and a negative is a meaningless "complexity". An off-diagonal entry is
+        # unconstrained except that it too must be finite. Reject invalid input here — toast + revert,
+        # state untouched — like the ratio / mapping handlers, rather than committing it and crashing
+        # the next render. (Keeping the resulting matrix invertible is the solver's deeper guard.)
+        if not math.isfinite(value) or (i == j and value <= 0):
+            ui.notify(_INVALID_PRESCALER, type="negative", position="top")
+            render()  # revert the cell to its current value (no retune — synchronous)
+            return
+        editor.set_custom_prescaler_entry(i, j, value)
         _request_render()  # the prescaler drives the weighted tuning solve — render off the loop
 
     def on_ptext_edit(cid, value):
@@ -3682,211 +3729,218 @@ def index() -> None:
         if not rank_rendering[0]:  # a foreign render ends a live comma−/mapping− hover preview, the
             rank_remove[0] = None  # view-state twin of ending a foreign hover gesture (no strand)
         building[0] = True
-        st = editor.state
-        # thread the previous render's interval-column identities so a within-list reorder keeps
-        # each column's id-token: its cells then persist across the render and the CSS left/top
-        # transition slides them to the new slot (rather than the old cells re-filling in place)
-        prev = last_lay[0].identities if last_lay[0] is not None else None
-        lay = editor.layout(prev_ids=prev, preview_remove=rank_remove[0])
-        last_lay[0] = lay
-        # The body scroller holds the grid shifted up by the column strip's height (freeze_y): the
-        # board content is (total_h - fy) tall, its cells/lines/blocks placed at native coords minus
-        # fy, so they land where they always did with the column-title rows now lifted into the strip
-        # above. The strip (its inner is full grid width, translated horizontally by _FREEZE_JS) and
-        # the corner keep native coords. gridbody drops below the strip (top = _PAD + fy).
-        fx, fy = lay.freeze_x, lay.freeze_y
-        # the grid pane is sized to enclose the grid + the column strip, a _PAD margin on every side,
-        # and the last column title's right overhang (right_overhang — the interest title renders
-        # unwrapped past its narrow column, so the pane widens to show it instead of clipping). Its
-        # grey backdrop then frames the gridlines all round, white beyond, rather than filling the
-        # window. The top/left margin is the frozen regions' _PAD inset; the right/bottom margin is the
-        # body's own scroll padding, so it survives scrolling to the end (see .rtt-gridbody). The CSS
-        # caps the pane at the window, past which the body scrolls.
-        base_w = lay.width + lay.right_overhang + 2 * _PAD
-        base_h = lay.height + 2 * _PAD
-        grid_pane.style(f"width:{base_w}px; height:{base_h}px")
-        # publish sizes for the scrollbar-fit pass (rttFreeze.fit): it resets the pane to the base size,
-        # sees which axis the window caps, then grows the pane by a scrollbar width on the PERPENDICULAR
-        # axis so a vertical scrollbar never tips a spurious horizontal one (and the grid never reflows
-        # when a bar appears). base-w/-h are the pane's footprint (incl. the right_overhang the last
-        # column title spills); fit-w is the gridlines' own width — the pane width below which the BODY
-        # must scroll horizontally. They differ by the overhang, which lives in the frozen colhead (not
-        # the body scroller), so it must not count toward needing a body h-scrollbar. See freeze.js.
-        fit_w = lay.width + 2 * _PAD
-        grid_pane.props(f'data-base-w="{base_w}" data-base-h="{base_h}" data-fit-w="{fit_w}"')
-        board.style(f"width:{lay.width}px; height:{lay.height - fy}px")
-        colhead.style(f"height:{fy}px")
-        colhead_inner.style(f"width:{lay.width}px; height:{fy}px")
-        corner.style(f"width:{fx}px; height:{fy}px")
-        gridbody.style(f"top:{_PAD + fy}px")
-        rowband.style(f"width:{fx}px; height:{lay.height - fy}px")
-        # the chrome title bar + the settings frozen header below it together span the grid's frozen
-        # column-strip height (freeze_y), so the settings and grid frozen/scrolling seams line up
-        # across the app. The header itself is therefore freeze_y minus the chrome bar.
-        show_frozen.style(f"height:{max(0, fy - _CHROME_H)}px")
-        # the settings body sizes to its own content but caps at the window less the inset and that
-        # combined frozen band (which equals the inset + freeze_y), so a tall toggle list scrolls
-        # there instead of off-screen
-        show_scroll.style(f"max-height:calc(100vh - {_PAD + fy}px)")
-        seen = set()
+        try:
+            st = editor.state
+            # thread the previous render's interval-column identities so a within-list reorder keeps
+            # each column's id-token: its cells then persist across the render and the CSS left/top
+            # transition slides them to the new slot (rather than the old cells re-filling in place)
+            prev = last_lay[0].identities if last_lay[0] is not None else None
+            lay = editor.layout(prev_ids=prev, preview_remove=rank_remove[0])
+            last_lay[0] = lay
+            # The body scroller holds the grid shifted up by the column strip's height (freeze_y): the
+            # board content is (total_h - fy) tall, its cells/lines/blocks placed at native coords minus
+            # fy, so they land where they always did with the column-title rows now lifted into the strip
+            # above. The strip (its inner is full grid width, translated horizontally by _FREEZE_JS) and
+            # the corner keep native coords. gridbody drops below the strip (top = _PAD + fy).
+            fx, fy = lay.freeze_x, lay.freeze_y
+            # the grid pane is sized to enclose the grid + the column strip, a _PAD margin on every side,
+            # and the last column title's right overhang (right_overhang — the interest title renders
+            # unwrapped past its narrow column, so the pane widens to show it instead of clipping). Its
+            # grey backdrop then frames the gridlines all round, white beyond, rather than filling the
+            # window. The top/left margin is the frozen regions' _PAD inset; the right/bottom margin is the
+            # body's own scroll padding, so it survives scrolling to the end (see .rtt-gridbody). The CSS
+            # caps the pane at the window, past which the body scrolls.
+            base_w = lay.width + lay.right_overhang + 2 * _PAD
+            base_h = lay.height + 2 * _PAD
+            grid_pane.style(f"width:{base_w}px; height:{base_h}px")
+            # publish sizes for the scrollbar-fit pass (rttFreeze.fit): it resets the pane to the base size,
+            # sees which axis the window caps, then grows the pane by a scrollbar width on the PERPENDICULAR
+            # axis so a vertical scrollbar never tips a spurious horizontal one (and the grid never reflows
+            # when a bar appears). base-w/-h are the pane's footprint (incl. the right_overhang the last
+            # column title spills); fit-w is the gridlines' own width — the pane width below which the BODY
+            # must scroll horizontally. They differ by the overhang, which lives in the frozen colhead (not
+            # the body scroller), so it must not count toward needing a body h-scrollbar. See freeze.js.
+            fit_w = lay.width + 2 * _PAD
+            grid_pane.props(f'data-base-w="{base_w}" data-base-h="{base_h}" data-fit-w="{fit_w}"')
+            board.style(f"width:{lay.width}px; height:{lay.height - fy}px")
+            colhead.style(f"height:{fy}px")
+            colhead_inner.style(f"width:{lay.width}px; height:{fy}px")
+            corner.style(f"width:{fx}px; height:{fy}px")
+            gridbody.style(f"top:{_PAD + fy}px")
+            rowband.style(f"width:{fx}px; height:{lay.height - fy}px")
+            # the chrome title bar + the settings frozen header below it together span the grid's frozen
+            # column-strip height (freeze_y), so the settings and grid frozen/scrolling seams line up
+            # across the app. The header itself is therefore freeze_y minus the chrome bar.
+            show_frozen.style(f"height:{max(0, fy - _CHROME_H)}px")
+            # the settings body sizes to its own content but caps at the window less the inset and that
+            # combined frozen band (which equals the inset + freeze_y), so a tall toggle list scrolls
+            # there instead of off-screen
+            show_scroll.style(f"max-height:calc(100vh - {_PAD + fy}px)")
+            seen = set()
 
-        # Each gridline renders into every pane its extent reaches, so the branching stays put in
-        # the frozen header / row band while the body scrolls beneath. The scrolling body holds
-        # the copy shifted up by fy; a line rising above freeze_y also draws into the column strip
-        # (at native y), and one reaching left of freeze_x into the sticky row band (body space) —
-        # each clipped to its band by the pane's overflow:hidden, meeting the body copy
-        # continuously at the seam. No gridline falls in the corner (column lines sit right of
-        # freeze_x, row lines below freeze_y), so it's skipped. Copies are keyed #col / #row, each
-        # added to `seen`, so the orphan sweep below drops one whose line later stops reaching it.
-        def place_line(ln, suffix, parent, shift):
-            eid = ln.id + suffix
-            seen.add(eid)
-            if eid not in rec.els:
-                with parent:
-                    cls = "rtt-line " + ("rtt-line-v" if ln.orientation == "v" else "rtt-line-h")
-                    rec.els[eid] = ui.element("div").classes(cls).props(f'data-eid="{eid}"')
-            rec.els[eid].style(_line_style(ln, shift))
+            # Each gridline renders into every pane its extent reaches, so the branching stays put in
+            # the frozen header / row band while the body scrolls beneath. The scrolling body holds
+            # the copy shifted up by fy; a line rising above freeze_y also draws into the column strip
+            # (at native y), and one reaching left of freeze_x into the sticky row band (body space) —
+            # each clipped to its band by the pane's overflow:hidden, meeting the body copy
+            # continuously at the seam. No gridline falls in the corner (column lines sit right of
+            # freeze_x, row lines below freeze_y), so it's skipped. Copies are keyed #col / #row, each
+            # added to `seen`, so the orphan sweep below drops one whose line later stops reaching it.
+            def place_line(ln, suffix, parent, shift):
+                eid = ln.id + suffix
+                seen.add(eid)
+                if eid not in rec.els:
+                    with parent:
+                        cls = "rtt-line " + ("rtt-line-v" if ln.orientation == "v" else "rtt-line-h")
+                        rec.els[eid] = ui.element("div").classes(cls).props(f'data-eid="{eid}"')
+                rec.els[eid].style(_line_style(ln, shift))
 
-        for ln in lay.lines:
-            x0, x1 = (ln.pos, ln.pos) if ln.orientation == "v" else (ln.start, ln.start + ln.length)
-            y0, y1 = (ln.start, ln.start + ln.length) if ln.orientation == "v" else (ln.pos, ln.pos)
-            if x1 >= fx and y1 >= fy:
-                place_line(ln, "", board, fy)              # the scrolling body
-            if x1 >= fx and y0 < fy:
-                place_line(ln, "#col", colhead_inner, 0)   # the frozen column strip (native y)
-            if x0 < fx and y1 >= fy:
-                place_line(ln, "#row", rowband, fy)        # the frozen row band (body scroll space)
+            for ln in lay.lines:
+                x0, x1 = (ln.pos, ln.pos) if ln.orientation == "v" else (ln.start, ln.start + ln.length)
+                y0, y1 = (ln.start, ln.start + ln.length) if ln.orientation == "v" else (ln.pos, ln.pos)
+                if x1 >= fx and y1 >= fy:
+                    place_line(ln, "", board, fy)              # the scrolling body
+                if x1 >= fx and y0 < fy:
+                    place_line(ln, "#col", colhead_inner, 0)   # the frozen column strip (native y)
+                if x0 < fx and y1 >= fy:
+                    place_line(ln, "#row", rowband, fy)        # the frozen row band (body scroll space)
 
-        # A block renders into each pane _block_panes routes it to. A grey tile (tint "") or a
-        # thin-bordered box (boxed, the nested tuning-ranges / optimization frame) clears both seams,
-        # so it gets the body alone; a colorization wash's white base (tint "base") or coloured layer
-        # (tint = group name) overhangs the seam, so a top-row / left-column one also rides the frozen
-        # strip / band / corner it spills into (suffix #col/#row/#corner), each copy clipped to its
-        # pane so the colour fills the inter-title gap rather than being shaved off there. Native y in
-        # the column strip + corner, body scroll space (shifted up by freeze_y) in the body + row band,
-        # mirroring place_line; the orphan sweep drops a copy a wash later stops needing. The class is
-        # chosen once per copy (fixed for its lifetime).
-        def place_block(bl, pane):
-            suffix = "" if pane == "body" else "#" + pane
-            shift = 0 if pane in ("col", "corner") else fy
-            eid = bl.id + suffix
-            seen.add(eid)
-            if eid not in rec.els:
-                with cell_parents[pane]:
-                    cls = ("rtt-block-boxed" if bl.boxed
-                           else "rtt-washbase" if bl.tint == "base"
-                           else "rtt-wash" if bl.tint else "rtt-block")
-                    rec.els[eid] = ui.element("div").classes(cls).props(f'data-eid="{eid}"').mark(eid)
-            style = f"left:{bl.x}px; top:{bl.y - shift}px; width:{bl.w}px; height:{bl.h}px"
-            if bl.tint in _TINTS:  # the coloured layer (the base draws --wash-base from CSS). The
-                # tint rides a --wash-<group> variable so dark mode can retint the whole palette;
-                # :root defines each to its _TINTS value, so light renders unchanged.
-                style += f"; background:var(--wash-{bl.tint})"
-            rec.els[eid].style(style)
+            # A block renders into each pane _block_panes routes it to. A grey tile (tint "") or a
+            # thin-bordered box (boxed, the nested tuning-ranges / optimization frame) clears both seams,
+            # so it gets the body alone; a colorization wash's white base (tint "base") or coloured layer
+            # (tint = group name) overhangs the seam, so a top-row / left-column one also rides the frozen
+            # strip / band / corner it spills into (suffix #col/#row/#corner), each copy clipped to its
+            # pane so the colour fills the inter-title gap rather than being shaved off there. Native y in
+            # the column strip + corner, body scroll space (shifted up by freeze_y) in the body + row band,
+            # mirroring place_line; the orphan sweep drops a copy a wash later stops needing. The class is
+            # chosen once per copy (fixed for its lifetime).
+            def place_block(bl, pane):
+                suffix = "" if pane == "body" else "#" + pane
+                shift = 0 if pane in ("col", "corner") else fy
+                eid = bl.id + suffix
+                seen.add(eid)
+                if eid not in rec.els:
+                    with cell_parents[pane]:
+                        cls = ("rtt-block-boxed" if bl.boxed
+                               else "rtt-washbase" if bl.tint == "base"
+                               else "rtt-wash" if bl.tint else "rtt-block")
+                        rec.els[eid] = ui.element("div").classes(cls).props(f'data-eid="{eid}"').mark(eid)
+                style = f"left:{bl.x}px; top:{bl.y - shift}px; width:{bl.w}px; height:{bl.h}px"
+                if bl.tint in _TINTS:  # the coloured layer (the base draws --wash-base from CSS). The
+                    # tint rides a --wash-<group> variable so dark mode can retint the whole palette;
+                    # :root defines each to its _TINTS value, so light renders unchanged.
+                    style += f"; background:var(--wash-{bl.tint})"
+                rec.els[eid].style(style)
 
-        for bl in lay.blocks:
-            for pane in _block_panes(bl, fx, fy):
-                place_block(bl, pane)
+            for bl in lay.blocks:
+                for pane in _block_panes(bl, fx, fy):
+                    place_block(bl, pane)
 
-        # Source-cell-gone guard: if this render DROPS or REBUILDS the very cell anchoring the
-        # gesture — the id vanished (e.g. committing the held:pending ratio cell replaces it with
-        # held:{tok}) or its kind flipped (a domain element relabelled int↔fraction,
-        # elementcell↔elementratio) — end the gesture now. The blur listeners that would normally
-        # end it ride that cell's input, so when the rebuild destroys it they never fire; without
-        # this guard the gesture (and its rings) would strand until a later blur landed elsewhere
-        # (both the historical "lingers until I click another cell" bug and the reported
-        # held-interval-submit one).
-        g = rec.gesture
-        if g is not None and g.source is not None:
-            src_kind = next((cb.kind for cb in lay.cells if cb.id == g.source), None)
-            if src_kind is None or (g.source in rec.kinds and rec.kinds[g.source] != src_kind):
-                end_gesture()
-        # the ring highlights: a pure function of (document, gesture), recomputed every render —
-        # so any commit's render structurally repaints/strips them, whatever path it came from.
-        # While a gesture is live the renders that reach here are doc-moving (guard at the top
-        # nulled any edit candidate), so this is always the cheap baseline diff — never a solve.
-        amber, red = compute_rings(lay)
+            # Source-cell-gone guard: if this render DROPS or REBUILDS the very cell anchoring the
+            # gesture — the id vanished (e.g. committing the held:pending ratio cell replaces it with
+            # held:{tok}) or its kind flipped (a domain element relabelled int↔fraction,
+            # elementcell↔elementratio) — end the gesture now. The blur listeners that would normally
+            # end it ride that cell's input, so when the rebuild destroys it they never fire; without
+            # this guard the gesture (and its rings) would strand until a later blur landed elsewhere
+            # (both the historical "lingers until I click another cell" bug and the reported
+            # held-interval-submit one).
+            g = rec.gesture
+            if g is not None and g.source is not None:
+                src_kind = next((cb.kind for cb in lay.cells if cb.id == g.source), None)
+                if src_kind is None or (g.source in rec.kinds and rec.kinds[g.source] != src_kind):
+                    end_gesture()
+            # the ring highlights: a pure function of (document, gesture), recomputed every render —
+            # so any commit's render structurally repaints/strips them, whatever path it came from.
+            # While a gesture is live the renders that reach here are doc-moving (guard at the top
+            # nulled any edit candidate), so this is always the cheap baseline diff — never a solve.
+            amber, red = compute_rings(lay)
 
-        for cb in lay.cells:
-            seen.add(cb.id)
-            if cb.id in rec.els and rec.kinds[cb.id] != cb.kind:
-                rec.drop(cb.id)  # a cell changed kind (e.g. cents <-> math expression): rebuild it
-            container = _freeze_container(cb, fx, fy)
-            if cb.id not in rec.els:
-                with cell_parents[container]:
-                    rec.make_cell(cb)
-            # body + row cells live in the scroll space (shifted up by fy); column + corner cells
-            # keep native coords in their frozen strip / corner
-            top = cb.y - (fy if container in ("body", "row") else 0)
-            rec.els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
-            rec.update_cell(cb)
-            paint_cell(cb.id, amber, red)
+            for cb in lay.cells:
+                seen.add(cb.id)
+                if cb.id in rec.els and rec.kinds[cb.id] != cb.kind:
+                    rec.drop(cb.id)  # a cell changed kind (e.g. cents <-> math expression): rebuild it
+                container = _freeze_container(cb, fx, fy)
+                if cb.id not in rec.els:
+                    with cell_parents[container]:
+                        rec.make_cell(cb)
+                # body + row cells live in the scroll space (shifted up by fy); column + corner cells
+                # keep native coords in their frozen strip / corner
+                top = cb.y - (fy if container in ("body", "row") else 0)
+                rec.els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
+                rec.update_cell(cb)
+                paint_cell(cb.id, amber, red)
 
-        for eid in [e for e in rec.els if e not in seen]:
-            rec.drop(eid)
+            for eid in [e for e in rec.els if e not in seen]:
+                rec.drop(eid)
 
-        # the optimization mean damage is read-only yet helped, and that help names a different
-        # quantity per mode — the minimized damage ⟪𝐝⟫ₚ over the targets, or (all-interval) the
-        # retuning magnitude. Swap its tooltip(s) to match the live scheme, the same in-place
-        # relabel the symbol glyph makes; set_text only pushes when the wording actually changes.
-        if rec.mean_damage_tips:
-            mean_damage_help_text = tooltips.mean_damage_help(service.is_all_interval(editor.tuning_scheme))
-            for tip in rec.mean_damage_tips.values():
-                tip.set_text(mean_damage_help_text)
+            # the optimization mean damage is read-only yet helped, and that help names a different
+            # quantity per mode — the minimized damage ⟪𝐝⟫ₚ over the targets, or (all-interval) the
+            # retuning magnitude. Swap its tooltip(s) to match the live scheme, the same in-place
+            # relabel the symbol glyph makes; set_text only pushes when the wording actually changes.
+            if rec.mean_damage_tips:
+                mean_damage_help_text = tooltips.mean_damage_help(service.is_all_interval(editor.tuning_scheme))
+                for tip in rec.mean_damage_tips.values():
+                    tip.set_text(mean_damage_help_text)
 
-        refs["undo"].set_enabled(editor.can_undo)
-        refs["redo"].set_enabled(editor.can_redo)
-        refs["reset"].set_enabled(editor.can_reset)
-        # the nonstandard-domain-approach radio: positioned over the reserved band inside the approach
-        # box (lay.approach_box, body coordinates → shift up by fy like any body cell) when the domain
-        # carries a nonprime element, hidden otherwise. The live approach's square is filled and the
-        # others hollow (the _update_rangemode pattern); this runs while building[0] is True, so the
-        # class toggle is a pure display sync, never re-firing as an edit.
-        if lay.approach_box is not None:
-            ax, ay, aw, ah = lay.approach_box
-            refs["approach"].style(f"position:absolute; left:{ax}px; top:{ay - fy}px; "
-                                   f"width:{aw}px; height:{ah}px")
-            refs["approach"].set_visibility(True)
-        else:
-            refs["approach"].set_visibility(False)
-        for key, opt in refs["approach_opts"].items():
-            (opt.classes(add="rtt-rangeopt-on") if key == editor.nonprime_basis_approach
-             else opt.classes(remove="rtt-rangeopt-on"))
-        # reflect the document's Show settings into the panel (after undo/redo/reset/
-        # select-all/load). building[0] is still True, so these programmatic value writes
-        # are swallowed by on_show_toggle/on_select_all rather than re-firing as edits.
-        for key, box in boxes.items():
-            if box.value != editor.settings[key]:
-                box.value = editor.settings[key]
-        # the general dummy tile: style each layer's part(s) by its live setting — black + opaque
-        # when shown, grey + dimmed when hidden — so the tile both mirrors and drives the grid. A
-        # value-cell part is inert (no click) until its host cell is shown (_TILE_HOST), mirroring
-        # the grid where the value/closed-form need the boxed cell to sit in. Mnemonics is special:
-        # it is an underline ON the name, so its COLOUR tracks the name (the layer it refines) while
-        # only the underline tracks mnemonics itself — else a name-shown/mnemonic-hidden state would
-        # grey just the one letter mid-word.
-        for key, parts in tile_parts.items():
-            shown = editor.settings["names"] if key == "mnemonics" else editor.settings[key]
-            host = _TILE_HOST.get(key)
-            inert = host is not None and not editor.settings[host]
-            for part in parts:
-                part.classes(add="rtt-part-on" if shown else "rtt-part-off",
-                             remove="rtt-part-off" if shown else "rtt-part-on")
-                part.classes(add="rtt-part-inert") if inert else part.classes(remove="rtt-part-inert")
-                if key == "mnemonics":
-                    part.classes(add="rtt-mnem-underline") if editor.settings["mnemonics"] \
-                        else part.classes(remove="rtt-mnem-underline")
-        # the master checkbox (checked when all available toggles are on, mixed when some are) and
-        # the per-row disabled state — both over the chapter-revealed, implemented set (see
-        # _sync_show_availability), so an unrevealed toggle is greyed and uncounted.
-        _sync_show_availability()
-        # persist the whole document so a browser refresh restores exactly this state — UNLESS a
-        # token gesture has the document in a temporarily-applied hypothetical state (a drag hover,
-        # a temperament grow-preview): persisting that would resurrect a never-committed document
-        # on refresh. The gesture's end always renders the real document, which persists then.
-        if rec.gesture is None or rec.gesture.token is None:
-            _doc_store()[_STORE_KEY] = editor.serialize()
-        building[0] = False
+            refs["undo"].set_enabled(editor.can_undo)
+            refs["redo"].set_enabled(editor.can_redo)
+            refs["reset"].set_enabled(editor.can_reset)
+            # the nonstandard-domain-approach radio: positioned over the reserved band inside the approach
+            # box (lay.approach_box, body coordinates → shift up by fy like any body cell) when the domain
+            # carries a nonprime element, hidden otherwise. The live approach's square is filled and the
+            # others hollow (the _update_rangemode pattern); this runs while building[0] is True, so the
+            # class toggle is a pure display sync, never re-firing as an edit.
+            if lay.approach_box is not None:
+                ax, ay, aw, ah = lay.approach_box
+                refs["approach"].style(f"position:absolute; left:{ax}px; top:{ay - fy}px; "
+                                       f"width:{aw}px; height:{ah}px")
+                refs["approach"].set_visibility(True)
+            else:
+                refs["approach"].set_visibility(False)
+            for key, opt in refs["approach_opts"].items():
+                (opt.classes(add="rtt-rangeopt-on") if key == editor.nonprime_basis_approach
+                 else opt.classes(remove="rtt-rangeopt-on"))
+            # reflect the document's Show settings into the panel (after undo/redo/reset/
+            # select-all/load). building[0] is still True, so these programmatic value writes
+            # are swallowed by on_show_toggle/on_select_all rather than re-firing as edits.
+            for key, box in boxes.items():
+                if box.value != editor.settings[key]:
+                    box.value = editor.settings[key]
+            # the general dummy tile: style each layer's part(s) by its live setting — black + opaque
+            # when shown, grey + dimmed when hidden — so the tile both mirrors and drives the grid. A
+            # value-cell part is inert (no click) until its host cell is shown (_TILE_HOST), mirroring
+            # the grid where the value/closed-form need the boxed cell to sit in. Mnemonics is special:
+            # it is an underline ON the name, so its COLOUR tracks the name (the layer it refines) while
+            # only the underline tracks mnemonics itself — else a name-shown/mnemonic-hidden state would
+            # grey just the one letter mid-word.
+            for key, parts in tile_parts.items():
+                shown = editor.settings["names"] if key == "mnemonics" else editor.settings[key]
+                host = _TILE_HOST.get(key)
+                inert = host is not None and not editor.settings[host]
+                for part in parts:
+                    part.classes(add="rtt-part-on" if shown else "rtt-part-off",
+                                 remove="rtt-part-off" if shown else "rtt-part-on")
+                    part.classes(add="rtt-part-inert") if inert else part.classes(remove="rtt-part-inert")
+                    if key == "mnemonics":
+                        part.classes(add="rtt-mnem-underline") if editor.settings["mnemonics"] \
+                            else part.classes(remove="rtt-mnem-underline")
+            # the master checkbox (checked when all available toggles are on, mixed when some are) and
+            # the per-row disabled state — both over the chapter-revealed, implemented set (see
+            # _sync_show_availability), so an unrevealed toggle is greyed and uncounted.
+            _sync_show_availability()
+            # persist the whole document so a browser refresh restores exactly this state — UNLESS a
+            # token gesture has the document in a temporarily-applied hypothetical state (a drag hover,
+            # a temperament grow-preview): persisting that would resurrect a never-committed document
+            # on refresh. The gesture's end always renders the real document, which persists then.
+            # ALSO held back while a load FAILED and the user hasn't yet edited (load_failed and not
+            # can_undo): the shown document is the fallback defaults, and overwriting the stored blob
+            # with them would silently destroy the user's still-valid fields. We keep their bytes for
+            # recovery until they deliberately change something, at which point persisting is intended.
+            gesture_idle = rec.gesture is None or rec.gesture.token is None
+            if gesture_idle and not (load_failed[0] and not editor.can_undo):
+                _doc_store()[_STORE_KEY] = editor.serialize()
+        finally:
+            building[0] = False
         # (the scrollbar-fit pass re-runs on its own when the grid resizes — the board's width/height
         # CSS transition fires the listener in freeze.js — so render needn't push any JS here.)
 
@@ -4187,6 +4241,10 @@ def index() -> None:
     ui.keyboard(on_key=on_key)
     render()
     apply_chapter()  # set the initial chapter-reveal visibility (the persisted slider position, default ch4)
+    # a persisted document that failed to load fell back to defaults: tell the user so a silent reset
+    # of their work is visible (their stored bytes are preserved — see the render() persist guard)
+    if load_failed[0]:
+        ui.notify(_LOAD_FAILED, type="warning", position="top", multi_line=True, close_button=True)
 
 
 def _reload_excludes(worktrees: Path) -> str:
