@@ -1411,12 +1411,14 @@ def test_mapped_list_rules_its_vector_columns_apart_clear_of_the_marks():
     top0, brace0 = cells["ebktop:mapped:0"], cells["ebkbrace:mapped:0"]
     assert top0.w < spreadsheet.COL_W and brace0.w < spreadsheet.COL_W  # inset, not full column
     assert top0.x + top0.w < sep.x  # the mark stops short of the bar to its right
-    # the rules span the matrix's full framed height — flush with the per-column top/bottom
-    # marks and the outer [ ] wrap — so every vertical rule encloses the marks rather than
-    # stopping at the value cells and letting them poke out past it
+    # the rules span the matrix's full framed height and OVERHANG the per-column top/bottom
+    # marks by FRAME_OVERHANG at each end — exactly like the outer [ ] wrap (and mirroring how
+    # the mapping's spanning bracket overhangs its per-row ⟨ ] in x) — so every vertical rule
+    # of the matrix clears the marks rather than stopping flush with (or short of) them
     outer = cells["bracket:mapped:l"]
-    assert sep.y == top0.y == outer.y
-    assert sep.y + sep.h == brace0.y + brace0.h == outer.y + outer.h
+    over = spreadsheet.FRAME_OVERHANG
+    assert sep.y == outer.y == top0.y - over            # top: overhang above the top marks
+    assert sep.y + sep.h == outer.y + outer.h == brace0.y + brace0.h + over  # below the bottom marks
 
 
 def test_maps_get_angle_brackets_and_lists_get_square_brackets():
@@ -4014,8 +4016,10 @@ def test_the_mapped_list_brackets_grow_to_enclose_the_draft_rows_placeholders():
     plain = {c.id: c for c in spreadsheet.build(base).cells}
     drafting = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[None, None, None]).cells}
     # the spanning [ ] wrap encloses the value rows AND the framing bands it spans (see
-    # bracket's fit branch), so its height is r·ROW_H plus that constant frame allowance...
-    frame = (spreadsheet.FRAME_H + spreadsheet.FRAME_GAP) + (spreadsheet.FRAME_GAP + spreadsheet.BRACE_H)
+    # bracket's fit branch), plus a FRAME_OVERHANG past the marks at each end, so its height is
+    # r·ROW_H plus that constant frame allowance...
+    frame = ((spreadsheet.FRAME_H + spreadsheet.FRAME_GAP) + (spreadsheet.FRAME_GAP + spreadsheet.BRACE_H)
+             + 2 * spreadsheet.FRAME_OVERHANG)
     for bid in ("bracket:mapped:l", "bracket:mapped_comma:l"):
         assert plain[bid].h == 2 * spreadsheet.ROW_H + frame        # committed: r rows
         # ...and grows by exactly one ROW_H when the draft row joins, enclosing its placeholder

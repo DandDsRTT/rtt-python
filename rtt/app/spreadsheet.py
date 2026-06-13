@@ -19,6 +19,7 @@ from rtt.app import ids
 from rtt.app import presets
 from rtt.app import service
 from rtt.app.layout import Block, CellBox, Layout, Line
+from rtt.app.marks import _BR_INSET, _BR_SERIF_L  # bracket-glyph insets, for FRAME_OVERHANG below
 from rtt.app.grid_tables import *  # noqa: F403  (semantic content tables, re-exported)
 from rtt.app.grid_tables import _FACTOR_GROUP  # build() reads it; import * skips the underscore name
 from rtt.app.settings import defaults as _default_settings
@@ -149,6 +150,13 @@ BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
 FRAME_GAP = 5  # gap between a framing band and the matrix cells, so they don't merge
 BRACKET_W = 16  # gutter inside a value group for an EBK bracket (one side)
+# How far a vector-list outer [ ] (and its column rules) overhangs the per-column marks at
+# top and bottom — equal to the margin by which the mapping's spanning top/bottom bracket
+# overhangs its per-row ⟨ ] in x. There the outer bracket reaches the gutter's outer edge
+# while the inner glyph sits _BR_INSET + _BR_SERIF_L in from it, so the overhang is the rest
+# of the gutter: BRACKET_W − (_BR_INSET + _BR_SERIF_L) = 7.5px. Tying it to the same glyph
+# insets keeps the vertical overhang exactly matched to the horizontal one if either is retuned.
+FRAME_OVERHANG = BRACKET_W - _BR_INSET - _BR_SERIF_L
 ROW_HANDLE_W = 14  # the per-mapping-row drag handle (drag a generator row onto another to add it)
 ROW_HANDLE_GAP = 4  # the gap it keeps from the matrix's opening bracket
 VAL_BRACKET_H = 16  # a single-row value bracket, kept short and centred in its
@@ -2611,12 +2619,15 @@ class _GridBuilder:
             # which stand FRAME_GAP off the cells — see vector_list_marks). This mirrors how a
             # covector matrix's spanning top bracket + brace enclose its per-row ⟨ … ] across
             # the full WIDTH: there the horizontal wrap reaches past the vertical inner marks;
-            # here the vertical wrap reaches past the horizontal ones. ``y`` is always the
-            # matrix's row_y, so y - (FRAME_H + FRAME_GAP) is exactly its frame_top_y (flush
-            # with the top marks) and the foot lands FRAME_GAP + BRACE_H below the cells (flush
-            # with the bottom marks). Without this the wrap spanned only the value cells, so the
-            # marks poked out above and below it and the [ ] hugged the gridded values.
-            by, bh = y - (FRAME_H + FRAME_GAP), h + (FRAME_H + FRAME_GAP) + (FRAME_GAP + BRACE_H)
+            # here the vertical wrap reaches past the horizontal ones — and, like the mapping's
+            # bracket, OVERHANGS them: it clears the marks' extreme y by FRAME_OVERHANG at each
+            # end, the same margin the mapping's bracket clears its inner ⟨ ] by in x. ``y`` is
+            # always the matrix's row_y, so y - (FRAME_H + FRAME_GAP) is its frame_top_y (the top
+            # marks' top edge) and FRAME_GAP + BRACE_H below the cells is the bottom marks' foot;
+            # the wrap then reaches FRAME_OVERHANG beyond each. Without the span the wrap covered
+            # only the value cells, so the marks poked out and the [ ] hugged the gridded values.
+            by = y - (FRAME_H + FRAME_GAP) - FRAME_OVERHANG
+            bh = h + (FRAME_H + FRAME_GAP) + (FRAME_GAP + BRACE_H) + 2 * FRAME_OVERHANG
         else:
             by, bh = y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H
         self.cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0], pending=pending))
@@ -2910,11 +2921,11 @@ class _GridBuilder:
         if not separators:
             return
         # the dividing rules span the matrix's full FRAMED height — the same extent as the
-        # outer [ ] wrap (see bracket's fit branch) — so every vertical rule of the matrix
-        # encloses the per-column top/bottom marks alike, rather than stopping at the value
-        # cells and letting the marks poke out past it.
-        sep_y = self.frame_top_y(rkey)
-        sep_h = self.frame_brace_y(rkey) + BRACE_H - sep_y
+        # outer [ ] wrap (see bracket's fit branch), FRAME_OVERHANG past the marks at each end —
+        # so every vertical rule of the matrix encloses the per-column top/bottom marks alike,
+        # rather than stopping at the value cells and letting the marks poke out past it.
+        sep_y = self.frame_top_y(rkey) - FRAME_OVERHANG
+        sep_h = self.frame_brace_y(rkey) + BRACE_H + FRAME_OVERHANG - sep_y
         for c in range(1, n_cols):  # a rule on each interior column boundary
             self.cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, sep_y, SEP_W, sep_h, "vbar"))
 
