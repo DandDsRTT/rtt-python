@@ -573,6 +573,34 @@ async def test_dummy_tile_parts_reflect_and_drive_the_live_show_state(user: User
     assert "rtt-mnem-underline" in _part_classes(user, "mnemonics")
 
 
+def _row_classes(user: User, key: str) -> list[str]:
+    """The CSS classes on the specific-group toggle row for ``key`` (the chapter slider hides a
+    row by adding ``rtt-chap-hidden``)."""
+    return next(iter(user.find(marker=f"showrow:{key}").elements))._classes
+
+
+async def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_default(user: User) -> None:
+    # the chapter slider opens at the default position (ch4) and reveal-gates the panel's controls:
+    # a control whose guide chapter is past the slider gets `rtt-chap-hidden` (display:none),
+    # independent of its on/off state. The hiding is a CSS class (the in-process User plugin reads
+    # the Python tree, not CSS), so this checks the class directly — what a real browser keys off.
+    await user.open("/")
+    slider = next(iter(user.find(marker="chapterslider").elements))
+    assert slider.value == show_settings.CHAPTER_DEFAULT  # the as-shipped slider position (ch4)
+    # ch2/3/4 specific rows are revealed at the default...
+    assert "rtt-chap-hidden" not in _row_classes(user, "counts")            # ch2
+    assert "rtt-chap-hidden" not in _row_classes(user, "tuning_boxes")      # ch3
+    assert "rtt-chap-hidden" not in _row_classes(user, "interest")          # ch4
+    # ...while ch5+ and the outside-guide (★) rows are hidden
+    assert "rtt-chap-hidden" in _row_classes(user, "domain_units")          # ch5
+    assert "rtt-chap-hidden" in _row_classes(user, "optimization")          # ch6
+    assert "rtt-chap-hidden" in _row_classes(user, "nonstandard_domain")    # ch9
+    assert "rtt-chap-hidden" in _row_classes(user, "projection")            # outside guide -> ★
+    # the dummy tile's parts are gated the same way: an early layer shows, a ch5 one is hidden
+    assert "rtt-chap-hidden" not in _part_classes(user, "gridded_values")   # ch2
+    assert "rtt-chap-hidden" in _part_classes(user, "math_expressions")     # ch5
+
+
 async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cells(user: User) -> None:
     # the user's own action: open the live page, then click the gridded-values part to turn it OFF.
     # The dummy-tile test above only checks the PART's class flips; this drives the whole reconcile

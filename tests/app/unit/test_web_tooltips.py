@@ -188,8 +188,10 @@ def test_every_rendered_cell_is_classified_for_tooltips():
 
 
 def test_chrome_help_covers_the_app_chrome_buttons():
-    # the always-present chrome: settings drawer, select-all, the dark-mode toggle, undo, redo, reset
-    assert set(tooltips.CHROME_HELP) == {"settings", "select_all", "dark_mode", "undo", "redo", "reset"}
+    # the always-present chrome: settings drawer, the guide-chapter reveal slider, select-all, the
+    # dark-mode toggle, undo, redo, reset
+    assert set(tooltips.CHROME_HELP) == {"settings", "chapter", "select_all", "dark_mode",
+                                         "undo", "redo", "reset"}
     assert all(text.strip() for text in tooltips.CHROME_HELP.values())
 
 

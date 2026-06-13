@@ -69,6 +69,7 @@ SHOW_HELP: dict[str, str] = {
 # Hover text for the always-present app chrome (the settings hamburger + the undo/redo/reset band).
 CHROME_HELP: dict[str, str] = {
     "settings": "Show or hide the Show settings panel.",
+    "chapter": "Reveal the Show controls chapter by chapter as they're introduced in D&D's guide — slide left for a simpler view, right to expose more. The ★ notch shows everything.",
     "select_all": "Turn every available Show toggle on, or all off.",
     "dark_mode": "Switch the whole app between the light and dark colour themes.",
     "undo": "Undo the last change.",

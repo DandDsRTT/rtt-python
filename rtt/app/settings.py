@@ -152,6 +152,74 @@ IMPLEMENTED: frozenset[str] = frozenset(
 GROUPING_PARENTS: frozenset[str] = frozenset({"temperament", "form", "tuning"})
 
 
+# ── The guide-chapter reveal ────────────────────────────────────────────────────────────────
+# The settings panel's chapter slider (see :mod:`rtt.app.app`) progressively reveals the Show
+# controls as a reader advances through *Dave Keenan & Douglas Blumeyer's guide to RTT*: each
+# control stays hidden until the slider reaches the chapter that control is introduced in. It is a
+# pure VIEWING preference — it shows/hides the panel's controls, never the grid (the toggle values,
+# and so the rendered grid, are untouched).
+#
+# :data:`CHAPTER` gives every toggle its home chapter (the same keys as :data:`DEFAULTS`). The
+# guide runs chapters 2–9 (chapter 1, "Introductions", has no app content); :data:`CHAPTER_STAR`
+# is the final "★" notch PAST the guide, which reveals the chapter-10 "Conventions…" controls and
+# every control whose subject lives outside the guide (form, projection, generator detempering,
+# identity objects). These numbers are a design call sourced from the mockup's blue-text chapter
+# transcription — edit one to move when its control appears; nothing else needs touching.
+CHAPTER_MIN = 2       # first notch — chapter 1 (Introductions) has no app content to reveal
+CHAPTER_STAR = 10     # the "★" notch: chapter-10 Conventions + every outside-the-guide control
+CHAPTER_DEFAULT = 4   # the slider's as-shipped position — the default-state design mockup
+
+CHAPTER: dict[str, int] = {
+    # general — the dummy tile's display layers
+    "gridded_values": 2, "quantities": 2, "names": 2, "symbols": 2, "plain_text_values": 2,
+    "equivalences": 3, "charts": 3,
+    "presets": 4, "drag_to_combine": 4,
+    "units": 5, "math_expressions": 5,
+    "mnemonics": CHAPTER_STAR,
+    # specific boxes & controls
+    "counts": 2, "temperament_boxes": 2, "temperament_colorization": 2,
+    "tuning_boxes": 3, "tuning_colorization": 3,
+    "interest": 4,
+    "domain_quantities": 5, "domain_units": 5,
+    "optimization": 6, "tuning_ranges": 6,
+    "all_interval": 7,
+    "weighting": 8, "alt_complexity": 8,
+    "nonstandard_domain": 9,
+    "form_controls": CHAPTER_STAR, "form_colorization": CHAPTER_STAR,
+    "projection": CHAPTER_STAR, "generator_detempering": CHAPTER_STAR,
+    "identity_objects": CHAPTER_STAR,
+}
+
+# The guide-article titles shown in the slider's live readout (keyed by chapter; CHAPTER_STAR is
+# the ★ notch). The reveal slider runs CHAPTER_MIN..CHAPTER_STAR, so only these need names.
+CHAPTER_TITLES: dict[int, str] = {
+    2: "Mappings",
+    3: "Tuning fundamentals",
+    4: "Exploring temperaments",
+    5: "Units analysis",
+    6: "Tuning computation",
+    7: "All-interval tuning schemes",
+    8: "Alternative complexities",
+    9: "Tuning in nonstandard domains",
+    CHAPTER_STAR: "Conventions, & topics beyond the guide",
+}
+
+
+def reveal_chapter(key: str) -> int:
+    """The slider chapter at which ``key``'s control first appears: the LATEST of its own
+    :data:`CHAPTER` and those of all its ancestors (:func:`ancestors_of`). Taking the max keeps a
+    sub-control from appearing before the layer it refines — whose row would still be hidden — so a
+    revealed child never strands above a hidden parent (e.g. all-interval, ch7, waits for its parent
+    weighting, ch8)."""
+    return max([CHAPTER[key]] + [CHAPTER[a] for a in ancestors_of(key)])
+
+
+def revealed(chapter: int) -> set[str]:
+    """The set of toggle keys visible at slider position ``chapter`` — those whose
+    :func:`reveal_chapter` is at or before it."""
+    return {key for key in DEFAULTS if reveal_chapter(key) <= chapter}
+
+
 def defaults() -> dict[str, bool]:
     return dict(DEFAULTS)
 

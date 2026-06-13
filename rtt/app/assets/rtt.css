@@ -768,6 +768,17 @@
    stacked vertically (general above specific) */
 .rtt-show-group { border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6;
                   padding:6px 8px; margin-top:8px; }
+/* the guide-chapter reveal slider's section (a .rtt-show-group card above the two toggle groups):
+   a short header — the "guide chapter" label and a live readout of the current chapter — over a
+   marked slider whose notches are the guide's chapters plus a final ★. */
+.rtt-chapter-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.rtt-chapter-title { font-size:14px; font-weight:bold; }
+.rtt-chapter-reading { font-family:'Cambria',Georgia,serif; font-size:12px; opacity:0.7; }
+.rtt-chapter-slider { padding:0 6px; }
+/* a control the chapter slider has not yet revealed (its chapter is past the slider): removed from
+   the panel entirely, independent of the dummy-tile part-on/off styling and the sub-control
+   parent-visibility binding (display:none beats both). */
+.rtt-chap-hidden { display:none !important; }
 /* one toggle row: the checkbox+label in the Show column, its sample in the example column */
 .rtt-show-row { display:grid; grid-template-columns:160px 1fr; align-items:center; min-height:26px; }
 .rtt-show-item .q-checkbox__label { font-family:'Cambria',Georgia,serif; font-size:13px;

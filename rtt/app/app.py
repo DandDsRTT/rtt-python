@@ -160,6 +160,9 @@ _TOOLTIP_DELAY_MS = 700  # hover delay before a tooltip appears — long enough 
 _STORE_KEY = "rtt_doc"  # store key holding the serialized document (survives refresh)
 _DARK_KEY = "rtt_dark"  # store key for the dark-mode preference — a global viewing choice kept
 # OUT of the serialized document, so it survives Reset and is independent of "select all / none"
+_CHAPTER_KEY = "rtt_chapter"  # store key for the guide-chapter reveal slider — like dark mode, a
+# global viewing choice kept out of the document, so Reset / select-all (which act on the document's
+# settings) never move it
 _STORAGE_SECRET = "dnd-rtt-app"  # signs the per-browser session cookie that keys app.storage.user
 # Under NiceGUI's in-process User test simulation, app.storage.user is file-backed: writing
 # it on every render both litters the tree and races the harness's teardown file-cleanup on
@@ -2172,6 +2175,46 @@ def index() -> None:
 
     apply_theme()  # paint the persisted theme up front, before the grid builds (no flash)
 
+    # The guide-chapter reveal slider is, like dark mode, a global VIEWING preference kept out of
+    # the document: it shows/hides which Show controls the panel offers (settings.CHAPTER) as a
+    # reader advances through D&D's guide, but never changes the grid. It persists under its own
+    # store key, so "select all / none" and Reset (which act only on editor.settings) leave it be.
+    def _clamp_chapter(v) -> int:
+        try:
+            v = int(v)
+        except (TypeError, ValueError):
+            return show_settings.CHAPTER_DEFAULT
+        return min(show_settings.CHAPTER_STAR, max(show_settings.CHAPTER_MIN, v))
+
+    chapter = [_clamp_chapter(_doc_store().get(_CHAPTER_KEY, show_settings.CHAPTER_DEFAULT))]
+
+    def _chapter_reading(ch: int) -> str:
+        title = show_settings.CHAPTER_TITLES[ch]
+        return f"★  {title}" if ch >= show_settings.CHAPTER_STAR else f"ch {ch} · {title}"
+
+    def apply_chapter():
+        # Show/hide each Show control by the slider: a control appears once the slider reaches its
+        # reveal chapter (its own, or a later ancestor's — settings.reveal_chapter). Hiding rides a
+        # dedicated class (display:none), independent of the dummy-tile part-on/off styling render()
+        # writes and of the sub-control parent-visibility binding, so all three coexist cleanly. The
+        # panel elements persist across renders (render rebuilds the GRID, not the toggle rows/tile
+        # parts), so this needs to run only when the slider moves — not on every render.
+        ch = chapter[0]
+        chapter_reading.set_text(_chapter_reading(ch))
+
+        def _gate(el, hidden):
+            el.classes(add="rtt-chap-hidden") if hidden else el.classes(remove="rtt-chap-hidden")
+        for key, parts in tile_parts.items():
+            for part in parts:
+                _gate(part, show_settings.reveal_chapter(key) > ch)
+        for key, row in show_rows.items():
+            _gate(row, show_settings.reveal_chapter(key) > ch)
+
+    def on_chapter_change(v):
+        chapter[0] = _clamp_chapter(v)
+        _doc_store()[_CHAPTER_KEY] = chapter[0]
+        apply_chapter()
+
     # The Editor owns the whole document — temperament, view selections, the Show
     # settings (editor.settings) and the folded rows/columns/tiles (editor.collapsed) —
     # and the undo/redo history over all of it. We persist that document per browser
@@ -3742,8 +3785,24 @@ def index() -> None:
                 # the panel outgrows the window (rather than spilling off the bottom of the screen)
                 boxes: dict = {}  # specific-group toggle key -> checkbox, so a sub-control row can bind to its parent
                 tile_parts: dict = {}  # general-group layer key -> its clickable dummy-tile part (render() styles these)
+                show_rows: dict = {}   # specific-group toggle key -> its row, so the chapter slider can hide it
                 show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
                 with show_scroll:
+                    # the guide-chapter reveal slider — a short section ABOVE the two toggle groups
+                    # (see apply_chapter): a notch per guide chapter (2–9) plus a final ★ notch.
+                    # Sliding it shows/hides the controls below by the chapter each is introduced in;
+                    # it's a viewing preference and never touches the grid. Reuses the group card.
+                    with ui.element("div").classes("rtt-show-group rtt-chapter-group"):
+                        with ui.element("div").classes("rtt-chapter-head"):
+                            ui.label("guide chapter").classes("rtt-chapter-title")
+                            chapter_reading = ui.label(_chapter_reading(chapter[0])) \
+                                .classes("rtt-chapter-reading")
+                        ui.slider(min=show_settings.CHAPTER_MIN, max=show_settings.CHAPTER_STAR,
+                                  step=1, value=chapter[0],
+                                  on_change=lambda e: on_chapter_change(e.value)) \
+                            .props("markers snap dense color=grey-8") \
+                            .classes("rtt-chapter-slider").mark("chapterslider") \
+                            .tooltip(tooltips.CHROME_HELP["chapter"])
                     for group_name, items in show_settings.SHOW_GROUPS:
                         with ui.element("div").classes("rtt-show-group"):
                             if group_name == "general":
@@ -3844,7 +3903,7 @@ def index() -> None:
                                 ui.label("show").classes("rtt-show-title")
                                 ui.label("example").classes("rtt-show-examplehdr")
                             for key, label, _ in items:
-                                row = ui.element("div").classes("rtt-show-row")
+                                row = ui.element("div").classes("rtt-show-row").mark(f"showrow:{key}")
                                 with row:
                                     box = ui.checkbox(label, value=editor.settings[key],
                                                       on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
@@ -3855,6 +3914,7 @@ def index() -> None:
                                         box.props("disable")  # not built yet -> greyed and inert
                                         example.classes(add="rtt-ex-disabled")  # ...and its sample greys to match
                                 boxes[key] = box
+                                show_rows[key] = row  # the chapter slider hides whole rows by key
                                 parent = show_settings.SUBCONTROLS.get(key)
                                 if parent:  # indent by nesting depth (so a grandchild sits further right
                                     # than its parent) and show the row only while the parent is on. Only the
@@ -3964,6 +4024,7 @@ def index() -> None:
 
     ui.keyboard(on_key=on_key)
     render()
+    apply_chapter()  # set the initial chapter-reveal visibility (the persisted slider position, default ch4)
 
 
 def _reload_excludes(worktrees: Path) -> str:
