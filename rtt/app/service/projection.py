@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import sympy as sp
 
 from rtt.library.generator_embedding import get_generator_embedding, get_tempering_projection
+from rtt.library.superspace import apply_matrix_to_vectors, greedy_independent_rows
 from rtt.library.temperament import Temperament, Variance
 
 from rtt.app.service.core import (
@@ -35,18 +36,12 @@ def held_basis_vectors(state: TemperamentState, held_ratios) -> tuple:
     rest of the projection undetermined (see :func:`unchanged_interval_basis`). The order of
     ``held_ratios`` is preserved (the held column reads left to right)."""
     vectors: list = []
-    rows: list = []
     for ratio in held_ratios:
-        if len(vectors) >= state.r:
-            break
         try:
-            vector = interval_vector(ratio, state.d, state.domain_basis)
+            vectors.append(interval_vector(ratio, state.d, state.domain_basis))
         except ValueError:
             continue
-        if sp.Matrix(rows + [list(vector)]).rank() == len(rows) + 1:  # independent of those so far
-            vectors.append(vector)
-            rows.append(list(vector))
-    return tuple(vectors)
+    return greedy_independent_rows(vectors, state.r)
 
 
 def _all_primes_held(state: TemperamentState) -> tuple:
@@ -134,13 +129,9 @@ def project_vectors(p_matrix, vectors):
     ``d``-tall vectors (one per input column), or ``()`` when there is no projection (``p_matrix``
     is ``None`` — the caller dashes the tile) or no vectors. Plain matrix·vector products, reused
     by the spreadsheet's projection-row tiles and the matching plain-text bands."""
-    if p_matrix is None or not vectors:
+    if p_matrix is None:
         return ()
-    d = len(p_matrix)
-    return tuple(
-        tuple(sum(p_matrix[i][j] * v[j] for j in range(d)) for i in range(d))
-        for v in vectors
-    )
+    return apply_matrix_to_vectors(p_matrix, vectors)
 
 
 def _integer_columns(vectors):

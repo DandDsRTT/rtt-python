@@ -8,8 +8,6 @@ import logging
 from dataclasses import replace
 from fractions import Fraction
 
-import sympy as sp
-
 from rtt.library.change_basis import change_domain_basis_for_c
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
@@ -19,6 +17,13 @@ from rtt.library.dual import dual
 from rtt.library.generator_detempering import get_generator_detempering
 from rtt.library.generator_embedding import get_generator_embedding, get_tempering_projection
 from rtt.library.matrix_utils import Matrix, matrix_multiply
+from rtt.library.superspace import (
+    apply_matrix_to_vectors,
+    compose_mapping_with_embedding,
+    extend_to_full_image_rank,
+    least_squares_left_factor,
+    lift_vectors,
+)
 from rtt.library.temperament import Temperament, Variance
 from rtt.library.tuning import (
     generator_tuning_map_from_t_and_tuning_map,
@@ -126,14 +131,7 @@ def lift_vectors_to_superspace(domain_basis, vectors) -> Matrix:
     dL long. The lifted comma/target lists C_L / T_L the superspace block renders. For BARBADOS
     over 2.3.13/5 a vector touching the domain element 13/5 spreads across the 5 and 13 columns
     of the superspace (2, 3, 5, 13)."""
-    bl = basis_in_superspace(domain_basis)  # d rows × dL: element e -> its superspace vector
-    if not bl:
-        return tuple(tuple() for _ in vectors)
-    dL = len(bl[0])
-    return tuple(
-        tuple(sum(v[e] * bl[e][p] for e in range(len(bl))) for p in range(dL))
-        for v in vectors
-    )
+    return lift_vectors(basis_in_superspace(domain_basis), vectors)
 
 
 def superspace_complexity_prescaler(
@@ -164,14 +162,8 @@ def mapping_to_superspace_generators(state: TemperamentState) -> Matrix:
     the rL superspace generators (composing the basis embedding B_L, domain → superspace primes,
     with the superspace mapping M_L, superspace primes → superspace generators). The
     ``(ss_mapping, primes)`` tile: "mapping from domain intervals to superspace generators"."""
-    ml = superspace_mapping(state)                 # rL × dL
-    bl = basis_in_superspace(state.domain_basis)   # d × dL
-    if not ml or not bl:
-        return tuple()
-    rL, dL, d = len(ml), len(ml[0]), len(bl)
-    return tuple(
-        tuple(sum(ml[g][p] * bl[e][p] for p in range(dL)) for e in range(d))
-        for g in range(rL)
+    return compose_mapping_with_embedding(
+        superspace_mapping(state), basis_in_superspace(state.domain_basis)
     )
 
 
@@ -180,14 +172,7 @@ def map_vectors_into_superspace_generators(state: TemperamentState, vectors) -> 
     vanish to 0 (parallel to the on-domain mapped comma basis); mapped targets give the
     superspace-generator counts Y_L. ``vectors`` is rows-as-intervals (length d); the result is
     rows-as-intervals, each length rL."""
-    msl = mapping_to_superspace_generators(state)  # rL × d
-    if not msl:
-        return tuple(tuple() for _ in vectors)
-    rL, d = len(msl), len(msl[0])
-    return tuple(
-        tuple(sum(msl[g][e] * v[e] for e in range(d)) for g in range(rL))
-        for v in vectors
-    )
+    return apply_matrix_to_vectors(mapping_to_superspace_generators(state), vectors)
 
 
 def superspace_self_map(state: TemperamentState) -> Matrix:
@@ -245,8 +230,7 @@ def project_superspace_generators_to_domain(state: TemperamentState, ss_generato
     ml_t = Temperament(_to_matrix(superspace_mapping(state)), Variance.ROW, superspace)
     tL = tuning_map_from_generators(ml_t, tuple(float(g) for g in ss_generators))  # over superspace primes
     bl = basis_in_superspace(state.domain_basis)  # d rows × dL
-    dL = len(superspace)
-    t_s = tuple(sum(tL[p] * bl[e][p] for p in range(dL)) for e in range(len(bl)))  # domain tuning map
+    t_s = apply_matrix_to_vectors(bl, (tL,))[0]  # B_Lᵀ·tL: the domain tuning map
     domain_t = Temperament(_to_matrix(state.mapping), Variance.ROW, state.domain_basis)
     return tuple(float(g) for g in generator_tuning_map_from_t_and_tuning_map(domain_t, t_s))
 
@@ -265,9 +249,7 @@ def superspace_generator_embedding(state: TemperamentState, held_ratios=()):
     if not msl:
         return None
     try:
-        g = sp.Matrix([list(r) for r in p_rat]) * sp.Matrix([list(r) for r in msl]).pinv()
-        return tuple(tuple(Fraction(g[i, j].p, g[i, j].q) for j in range(g.cols))
-                     for i in range(g.rows))
+        return least_squares_left_factor(p_rat, msl)
     except (ArithmeticError, ValueError, IndexError, TypeError, AttributeError) as exc:
         _log.debug("superspace_generator_embedding dashed: %r", exc)
         return None
@@ -316,21 +298,7 @@ def _superspace_held_basis(state: TemperamentState, held_ratios, ml):
     if len(domain_held) != state.r:
         return None
     lifted = lift_vectors_to_superspace(state.domain_basis, domain_held)  # r vectors, dL tall
-    rL, dL = len(ml), len(ml[0])
-    m = sp.Matrix([list(row) for row in ml])  # rL × dL
-    image_rank = lambda cols: (m * sp.Matrix.hstack(*cols)).rank() if cols else 0
-    columns = [sp.Matrix(dL, 1, list(v)) for v in lifted]  # the held intervals, mandatory
-    rank = image_rank(columns)
-    for j in range(dL):  # fill to rank rL with the lowest superspace primes that extend M_L's image
-        if len(columns) >= rL:
-            break
-        e = sp.Matrix(dL, 1, [1 if k == j else 0 for k in range(dL)])
-        if image_rank(columns + [e]) > rank:
-            columns.append(e)
-            rank += 1
-    if len(columns) != rL:
-        return None
-    return tuple(tuple(int(c[k]) for k in range(dL)) for c in columns)
+    return extend_to_full_image_rank(ml, lifted)
 
 
 def _superspace_projection_temperaments(state: TemperamentState, held_ratios):
