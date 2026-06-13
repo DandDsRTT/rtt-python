@@ -7,8 +7,11 @@ runs pins every core and *nobody* finishes — the suite that is supposed to be 
 merge gate becomes a CPU traffic jam.
 
 This conftest meters those runs through a **counting semaphore**: at most
-``RTT_RENDER_GATE_SLOTS`` render runs (default 3) execute at once; the rest queue
-and take turns. The metering lives *inside* pytest collection, so it catches a
+``RTT_RENDER_GATE_SLOTS`` render runs (default 1 — render runs are CPU-bound, so
+running several at once just multiplies everyone's wall-clock; one-at-a-time
+finishes each run fastest) execute at once; the rest queue and take turns.
+Raise ``RTT_RENDER_GATE_SLOTS`` if the machine genuinely has spare cores. The
+metering lives *inside* pytest collection, so it catches a
 render run no matter how it was launched — a direct ``pytest``, a ``-k`` subset
 that selects render tests, or an in-process ``pytest.main([...])`` wrapper.
 
@@ -27,7 +30,7 @@ scan, so a crashed/killed holder frees its slot automatically and the queue neve
 wedges.
 
 Env knobs:
-  * ``RTT_RENDER_GATE_SLOTS``  how many run concurrently (default 3)
+  * ``RTT_RENDER_GATE_SLOTS``  how many run concurrently (default 1)
   * ``RTT_RENDER_GATE_WAIT``   max seconds to queue before proceeding anyway (default 3600)
   * ``RTT_RENDER_GATE_NOLOCK`` set to ``1`` to opt a run out entirely
 """
@@ -38,7 +41,7 @@ import time
 
 _RENDER_FILE = "test_web_render.py"
 _GATE_DIR = "/tmp/rtt-render-gate.d"
-_SLOTS = max(1, int(os.environ.get("RTT_RENDER_GATE_SLOTS", "3")))
+_SLOTS = max(1, int(os.environ.get("RTT_RENDER_GATE_SLOTS", "1")))
 _WAIT_MAX = int(os.environ.get("RTT_RENDER_GATE_WAIT", "3600"))  # seconds willing to queue
 _POLL = 3  # seconds between attempts
 _REPORT_EVERY = 15  # seconds between "still waiting" lines

@@ -75,11 +75,13 @@ all the library, service, editor and spreadsheet-layout checks — finish in ~75
 **Render runs take turns automatically — let them queue, don't kill them.** With many agents
 in parallel, all firing the render gate at once pins every core and nobody ever finishes. So
 `tests/app/integration/conftest.py` meters render runs through a **counting semaphore**: at most
-`RTT_RENDER_GATE_SLOTS` of them (default **3**) run at once; the rest queue and take turns. Any
-pytest session that collected render tests drops a FIFO **ticket** (`/tmp/rtt-render-gate.d/`)
-and waits until it's among the N lowest live tickets, then runs and removes its ticket at the
-end. While queued you'll see `[render-gate] waiting our turn… position 2 of 5 queued (3 slots
-busy …)` on stderr — your **exact place in line** — then `[render-gate] slot acquired`. That
+`RTT_RENDER_GATE_SLOTS` of them (default **1** — render tests are CPU-bound, so running several
+at once just multiplies everyone's wall-clock; one-at-a-time finishes each run fastest) run at
+once; the rest queue and take turns. Any pytest session that collected render tests drops a FIFO
+**ticket** (`/tmp/rtt-render-gate.d/`) and waits until it's among the N lowest live tickets, then
+runs and removes its ticket at the end. While queued you'll see `[render-gate] waiting our turn…
+position 2 of 5 queued (1 slot busy …)` on stderr — your **exact place in line** — then
+`[render-gate] slot acquired`. That
 wait is correct and expected; **do not treat it as a hang, and do not `pkill` other agents'
 render runs to jump the queue** — ordering is FIFO/fair, so just wait your turn. The fast pass
 (`--ignore=…/test_web_render.py`) collects no render tests, so it never queues and stays fast.
