@@ -352,35 +352,73 @@ def identify(state) -> str | None:
 CURATED_COMMAS: tuple[tuple[str, str], ...] = (
     # 5-limit
     ("syntonic", "81/80"),
+    ("Pythagorean", "531441/524288"),
     ("diaschisma", "2048/2025"),
-    ("schisma", "32805/32768"),
     ("lesser diesis", "128/125"),
     ("greater diesis", "648/625"),
-    ("Pythagorean", "531441/524288"),
+    ("schisma", "32805/32768"),
+    ("kleisma", "15625/15552"),
+    ("magic", "3125/3072"),
+    ("würschmidt", "393216/390625"),
+    ("semicomma", "2109375/2097152"),
+    ("amity", "1600000/1594323"),
+    ("tetracot", "20000/19683"),
+    ("sensipent", "78732/78125"),
     # 7-limit
     ("Archytas'", "64/63"),
-    ("septimal kleisma", "225/224"),
     ("septimal diesis", "36/35"),
     ("jubilisma", "50/49"),
     ("slendro diesis", "49/48"),
+    ("marvel", "225/224"),
+    ("starling", "126/125"),
     ("sensamagic", "245/243"),
+    ("keema", "875/864"),
     ("gamelisma", "1029/1024"),
+    ("orwellisma", "1728/1715"),
+    ("hemifamity", "5120/5103"),
+    ("octagar", "4000/3969"),
+    ("hemimean", "3136/3125"),
+    ("porwell", "6144/6125"),
+    ("cataharry", "19683/19600"),
+    ("ragisma", "4375/4374"),
+    ("breedsma", "2401/2400"),
     # 11-limit
+    ("alpharabian", "33/32"),
     ("rastma", "243/242"),
+    ("ptolemisma", "100/99"),
     ("mothwellsma", "99/98"),
     ("biyatisma", "121/120"),
-    ("ptolemisma", "100/99"),
+    ("valinorsma", "176/175"),
+    ("keenanisma", "385/384"),
+    ("werckisma", "441/440"),
+    ("swetisma", "540/539"),
+    ("pentacircle", "896/891"),
+    ("kalisma", "9801/9800"),
     # 13-limit
     ("grossma", "144/143"),
+    ("dhanvantarisma", "169/168"),
     ("tridecimal", "1053/1024"),
+    ("island", "676/675"),
+    ("marveltwin", "325/324"),
+    ("minthma", "352/351"),
+    ("ratwolfsma", "351/350"),
+    ("small tridecimal", "105/104"),
+    ("mynucuma", "196/195"),
+    ("squbema", "729/728"),
+    ("animist", "364/363"),
+    ("ibnsinma", "2080/2079"),
+    ("tridecimal schisma", "4096/4095"),
 )
 
-# Notable equal temperaments, each as (N, warts) — ``warts == ""`` is the patent val. Their
-# val is recomputed over the current domain basis, so the same EDO shows a different map at a
-# different limit / nonstandard domain.
+# Equal temperaments, each as (N, warts) — ``warts == ""`` is the uniform (patent) val. Every
+# integer EDO 1–72, then notable higher EDOs up to 311. The val is recomputed over the current
+# domain basis, so the same EDO shows a different map at a different limit / nonstandard domain.
+_NOTABLE_EDOS_ABOVE_72: tuple[int, ...] = (
+    80, 87, 94, 99, 103, 111, 118, 130, 140, 152, 159, 171, 183, 190, 198, 207,
+    217, 224, 270, 282, 311,
+)
 CURATED_ETS: tuple[tuple[int, str], ...] = (
-    (5, ""), (7, ""), (12, ""), (15, ""), (19, ""), (22, ""), (26, ""), (27, ""),
-    (29, ""), (31, ""), (34, ""), (41, ""), (46, ""), (53, ""), (58, ""), (72, ""),
+    tuple((n, "") for n in range(1, 73)) + tuple((n, "") for n in _NOTABLE_EDOS_ABOVE_72)
 )
 
 
