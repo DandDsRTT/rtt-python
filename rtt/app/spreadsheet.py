@@ -114,7 +114,7 @@ OPT_COL_GAP = 8  # the standard gap between adjacent in-tile controls — sizes 
 OPT_POW_CAP_W = 90  # the "optimization power" caption cell (one line, centred under the ∞ cell)
 OPT_MEAN_DAMAGE_W = 64  # the mean damage's COLUMN: its value cell is COL_W centred within this, and its symbol
 # and caption span it, so the WIDEST mean damage label — the min()-wrapped symbol min(⟪𝐝⟫ₚ) (~69px) /
-# min(‖𝒓𝐿⁻¹‖dual(q)) — stays centred over the value without overflowing the box's left border or the
+# min(⟪𝒓𝐿⁻¹⟫dual(q)) — stays centred over the value without overflowing the box's left border or the
 # "optimization power" caption to its right. Also the caption's wrap width: "power mean" fits on one
 # line, while the wider "retuning magnitude" breaks at the space into the two lines cap_band reserves.
 # the narrowest the box can be and still seat its spread-out controls with the power's caption clear
@@ -2399,12 +2399,17 @@ class _GridBuilder:
             mx, mw = self.matrix_span(ckey)
             return mx + mw / 2
         if ckey == "commas" and self.show_unchanged:
-            # the + rides its ORDINARY stub — one slot past the last comma — which is exactly where the
-            # new comma's gridline lands when clicked (the pending draft pushes U right). Using
-            # nc_shown (not group_n = nv_shown) keeps it at the C boundary rather than out past U; the
-            # bus still spans all of V (see column_axis). This separates it from the − at the last
-            # comma's branch point (a COL_W to its left), which previously sat right on top of it.
-            return self.sub_axis_x("commas", self.nc_shown - 1) + COL_W
+            # the comma + / drop-zone stub rides the comma half's append point, kept CLEAR of the
+            # unchanged half U so it doesn't occlude U's first reorder grip (grip:unchanged:0):
+            #   • commas present → the V_SPLIT_GAP between C (incl. any pending draft) and U — the
+            #     visual "next comma" slot, where the new comma's gridline lands when clicked.
+            #   • full rank (no commas) → the reserved empty-comma nullity stub ("the space where the
+            #     commas were"), LEFT of U — NOT U's first sub-axis, where the old "one slot past the
+            #     last comma" arithmetic landed it (occluding grip:unchanged:0, exactly at full rank).
+            # The top bus still spans all of V either way; column_axis reaches it out to this stub.
+            if self.nc_shown == 0:
+                return self.commas_x + BRACKET_W + self.empty_comma_w / 2
+            return self.comma_left(self.nc_shown - 1) + COL_W + V_SPLIT_GAP / 2
         return self.sub_axis_x(ckey, n - 1) + COL_W  # one slot past the last branch point
 
     def _plus_shows(self, ckey):  # whether column ckey shows a + (and so where its fan bus ends).
@@ -2565,12 +2570,14 @@ class _GridBuilder:
         for i in range(n):
             self.gridline(f"v:{prefix}:{i}", "v", xs[i], self.fanout_y, self.bot_bus_y - self.fanout_y, dotted=dotted)
         bx, bw = _bus_span(xs)
-        # an addable column stretches its TOP bus out past the last sub-axis to the + stub, so the
-        # branching bar reaches the + (which rides plus_stub_x); the bottom bus just spans the data.
-        # max(…, bx + bw) keeps the bus spanning ALL sub-axes when the + rides INSIDE the data rather
-        # than past it (the consolidated V comma +, which sits on the rightmost comma, left of U).
+        # an addable column stretches its TOP bus out to the + stub, so the branching bar reaches the
+        # + (which rides plus_stub_x); the bottom bus just spans the data. max(…, bx + bw) keeps the
+        # bus spanning ALL sub-axes when the + rides INSIDE the data (the consolidated V comma +, in
+        # the C|U gap), and min(…, bx) reaches it the other way when the + rides LEFT of the data (the
+        # same comma + at full rank, on the reserved nullity stub left of the unchanged columns).
         top_end = max(self.plus_stub_x[key], bx + bw) if key in self.plus_stub_x else bx + bw
-        self.gridline(f"bus:{key}:top", "h", self.fanout_y, bx, top_end - bx, dotted=dotted)
+        bus_left = min(self.plus_stub_x[key], bx) if key in self.plus_stub_x else bx
+        self.gridline(f"bus:{key}:top", "h", self.fanout_y, bus_left, top_end - bus_left, dotted=dotted)
         self.gridline(f"bus:{key}:bot", "h", self.bot_bus_y, bx, bw, dotted=dotted)
         self.gridline(f"trunk:{key}", "v", cx, self.branch_top_y, self.fanout_y - self.branch_top_y, dotted=dotted)
         self.gridline(f"foot:{key}", "v", cx, self.bot_bus_y, self.total_h - self.bot_bus_y, dotted=dotted)
@@ -2936,7 +2943,9 @@ class _GridBuilder:
         matrix_units = {
             "vectors": (self.d, self.vec_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
             "projection": (self.d, self.proj_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
-            "mapping": (self.r, self.map_top, lambda i: f"g{_sub(i + 1)}/"),
+            # r_shown so a pending mapping-row draft's band carries its gₙ/ label too, matching every
+            # committed row (and the comma draft column's /1) — the draft row reads complete.
+            "mapping": (self.r_shown, self.map_top, lambda i: f"g{_sub(i + 1)}/"),
             "ss_vectors": (self.dL, self.ss_vec_top, lambda i: f"p{_sub(i + 1)}/"),
             "ss_mapping": (self.rL, self.ss_map_top, lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
             "ss_just_mapping": (self.dL, self.ss_just_map_top, lambda i: f"p{_sub(i + 1)}/"),
@@ -2977,11 +2986,13 @@ class _GridBuilder:
                 "primes": (self.d, self.prime_left, lambda i: f"/{self.domain_label}{_sub(i + 1)}"),
                 "ssgens": (self.rL, self.ss_gen_left, lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
                 "ssprimes": (self.dL, self.ss_prime_left, lambda i: f"/p{_sub(i + 1)}"),
+                # the *_shown counts so a pending draft column carries its /1 too — commas already did
+                # (nv_shown); targets/held/interest now match, the draft column reading complete.
                 "commas": (self.nv_shown, self.comma_left, lambda i: "/1"),
                 "detempering": (self.r, self.detempering_left, lambda i: "/1"),
-                "targets": (self.k, self.target_left, lambda i: "/1"),
-                "interest": (self.mi, self.interest_left, lambda i: "/1"),
-                "held": (self.nh, self.held_left, lambda i: "/1"),
+                "targets": (self.k_shown, self.target_left, lambda i: "/1"),
+                "interest": (self.mi_shown, self.interest_left, lambda i: "/1"),
+                "held": (self.nh_shown, self.held_left, lambda i: "/1"),
             }
             for key, (n, left, label) in column_units.items():
                 if not self.tile_open("units", key):
@@ -3155,8 +3166,14 @@ class _GridBuilder:
                                          grip_top, COL_W, GRIP_BAND, "colgrip", comma=i))
                 # the append / into-empty-list drop target, on the SAME band at the list's stub gridline
                 # (the trunk when empty) — so an empty list still has a gridline target, like the grips.
-                self.cells.append(CellBox(f"grip:{ckey}:add", self.plus_stub_x[ckey] - COL_W / 2,
-                                     grip_top, COL_W, GRIP_BAND, "colgrip"))
+                # Under the consolidated V the comma stub rides the C|U gap (or the nullity stub at full
+                # rank — see col_plus_x), so narrow the zone to that stub's width: a full COL_W zone
+                # would reach across the gap and occlude U's first grip (grip:unchanged:0).
+                add_w = COL_W
+                if ckey == "commas" and self.show_unchanged:
+                    add_w = self.empty_comma_w if self.nc_shown == 0 else V_SPLIT_GAP
+                self.cells.append(CellBox(f"grip:{ckey}:add", self.plus_stub_x[ckey] - add_w / 2,
+                                     grip_top, add_w, GRIP_BAND, "colgrip"))
 
             # the grips (and their drop zone) ride this quantities-row block, so they stay tied to it:
             # _plus_shows now also fires for a column shown only in the vectors row (so its + survives
@@ -4253,7 +4270,7 @@ class _GridBuilder:
             mean_damage_val_x = mean_damage_x + (OPT_MEAN_DAMAGE_W - COL_W) / 2  # the COL_W value cell, centred in the column
             pow_x = ((mean_damage_x + OPT_MEAN_DAMAGE_W) + (ox + box_w - OPT_PAD_R)) / 2 - COL_W / 2
             # the mean damage aggregates the damages at the power the optimizer MINIMIZED at — 𝑝 target-
-            # based, dual(𝑞) all-interval (the ‖𝒓𝑋⁻¹‖ symbol's dual(𝑞) subscript). The 𝑝 cell below
+            # based, dual(𝑞) all-interval (the ⟪𝒓𝑋⁻¹⟫ symbol's dual(𝑞) subscript). The 𝑝 cell below
             # keeps displayed_optimization_power() (∞ all-interval): power over intervals vs over primes.
             mean_damage = _power_mean(self.target_sizes.damage, self.displayed_mean_damage_power())
             power = _format_power(self.displayed_optimization_power())
@@ -4264,11 +4281,15 @@ class _GridBuilder:
             # same value/symbol/caption stack as the power beside it.
             self.cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COL_W, ROW_H, "tuningvalue",
                                  text=service.cents(mean_damage)))
-            # all-interval: the minimized mean damage IS the retuning magnitude ‖𝒓𝑋⁻¹‖ at the dual norm
-            # power (the mockup's "becomes 'retuning magnitude'") — relabel the symbol, with dual(q) as
-            # the norm subscript; its value already computes over the primes. The prescaler inverse
-            # carries the live glyph (𝐿⁻¹ for the log-prime matrix, else generic 𝑋⁻¹).
-            mean_damage_symbol = (f"‖𝒓{self.prescaler_symbol}⁻¹‖{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
+            # all-interval: the minimized mean damage is the all-interval retuning magnitude (the
+            # mockup's "becomes 'retuning magnitude'", named by the caption below). The VALUE is the
+            # dual-power MEAN of the retuning map 𝒓𝑋⁻¹'s per-prime damages — the same _power_mean (÷d
+            # inside the root) the value cell above and the damage chart's ⟪𝐝⟫ indicator both draw.
+            # So the symbol must be the double-angle power-MEAN ⟪…⟫ over 𝒓𝑋⁻¹ at dual(q) — NOT the
+            # single-bar NORM ‖…‖, which omits the /d and so reads √d too large (it would contradict
+            # both the value and the chart line; the mockup itself DRAWS this value with ⟪…⟫). The
+            # prescaler inverse carries the live glyph (𝐿⁻¹ for the log-prime matrix, else generic 𝑋⁻¹).
+            mean_damage_symbol = (f"⟪𝒓{self.prescaler_symbol}⁻¹⟫{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
                           if self.all_interval else "⟪𝐝⟫ₚ")
             # once the displayed tuning is the scheme's optimum, the value shown IS the minimized
             # mean damage, so wrap the symbol in min(…) (the mockup's "make ⟪𝐝⟫ₚ into min(⟪𝐝⟫ₚ)"); a
@@ -4619,9 +4640,15 @@ class _GridBuilder:
                     text = label(i) if callable(label) else f"{label}{_sub(i + 1)}"
                     if self.show_unchanged and ckey == "commas":  # the column's vectors are 𝐯, not 𝐜
                         text = text.replace("𝐜", "𝐯")
+                    # the consolidated V's value cells shift the U half right past any pending comma
+                    # draft (comma_value_pos); the column labels must track them so 𝐯ₙ sits over its
+                    # own column — else every U-half label lands one slot left (onto the draft) and the
+                    # last U column goes unlabelled. comma_value_pos is identity off-draft, so this is a
+                    # no-op without a pending comma (and for every non-comma group).
+                    x = left(self.comma_value_pos(i)) if ckey == "commas" else left(i)
                     self.cells.append(CellBox(
                         f"matlabel:col:{rkey}:{ckey}:{i}",
-                        left(i), y, COL_W, MATLABEL_H,
+                        x, y, COL_W, MATLABEL_H,
                         "matlabel", text=text,
                     ))
 

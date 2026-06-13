@@ -3153,15 +3153,20 @@ def test_all_interval_removes_the_superspace_target_lifts_too():
 
 
 def test_all_interval_relabels_the_optimization_mean_damage():
-    # the optimization mean damage ⟪𝐝⟫ₚ is the minimized total damage; when all-interval that quantity
-    # IS the retuning magnitude ‖𝒓𝐿⁻¹‖ at the dual norm power, so the symbol relabels with dual(q)
-    # as the norm subscript — a PLAIN subscript (SUB_*) so the function name "dual" stays upright and
-    # only the math-italic 𝑞 slants. A target-based scheme keeps ⟪𝐝⟫ₚ.
+    # the optimization mean damage ⟪𝐝⟫ₚ is the minimized total damage; all-interval it relabels to the
+    # retuning magnitude over the retuning map 𝒓𝐿⁻¹ at the dual norm power. The DISPLAYED VALUE is the
+    # dual-power MEAN (_power_mean, ÷d — see test_..._aggregates_at_the_dual_norm_power below), so the
+    # symbol must wear the double-angle power-MEAN brackets ⟪…⟫ — NOT the single-bar NORM ‖…‖, which
+    # omits the /d and reads √d too large for that value (and for the damage chart's ⟪𝐝⟫ line). The
+    # dual(q) subscript is PLAIN (SUB_*) so "dual" stays upright and only the math-italic 𝑞 slants.
     based = {c.id: c for c in _with(scheme="TILT minimax-S", optimization=True).cells}
     assert based["optimization:mean_damage:symbol"].text == "⟪𝐝⟫ₚ"
     allint = {c.id: c for c in _with(scheme="minimax-S", optimization=True).cells}
-    expected = "‖𝒓𝐿⁻¹‖" + spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE
+    expected = "⟪𝒓𝐿⁻¹⟫" + spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE
     assert allint["optimization:mean_damage:symbol"].text == expected
+    # the symbol denotes the SAME quantity as the value it labels: a power-MEAN (double-angle), not a
+    # norm (single bars). Guards the off-by-√d mean/norm confusion (tuning-core-6).
+    assert "⟪" in expected and "⟫" in expected and "‖" not in expected
 
 
 def test_optimization_mean_damage_carries_a_label_caption():
@@ -8753,9 +8758,10 @@ def test_projection_keeps_the_comma_add_remove_controls():
     # and each comma carries its own − hover zone. No +/− on the unchanged half.
     assert "comma_plus" in cells and "comma_minus:0" in cells
     assert cells["comma_plus"].x < cells["cell:unchanged:0:0"].x   # the + sits left of U
-    # the + rides its ORDINARY stub — one COL_W past the last comma's branch point — clear of the −
-    # (which sits ON that branch point), where the new column lands on click
-    assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet.COL_W * 1.5 - spreadsheet.BTN / 2)) < 0.51
+    # the + rides the C|U gap — the visual "next comma" slot between the comma half and U — kept clear
+    # of BOTH the − (on the lone comma's branch point) and U's first reorder grip, so it doesn't sit on
+    # U's gridline and occlude grip:unchanged:0 (layout-invariants-2)
+    assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet.COL_W + spreadsheet.V_SPLIT_GAP / 2 - spreadsheet.BTN / 2)) < 0.51
     # and a COL_W clear of the − hover zone on the lone comma (so the + is actually clickable)
     assert cells["comma_plus"].x - cells["comma_minus:0"].x >= spreadsheet.COL_W - spreadsheet.BTN
 
@@ -9020,3 +9026,137 @@ def test_ptext_band_matches_a_direct_derivation_over_the_superspace():
     pt = service.plain_text_values(_barbados_state(), service.DEFAULT_DOCUMENT_SCHEME,
                                    superspace=True)
     _assert_ptext_cells_match(lay, pt)
+
+
+# --- Audit fixes: draft-column holes, V-column label alignment, grip occlusion, mean-damage symbol ---
+
+
+def test_projection_row_grows_a_draft_column_for_target_held_interest_drafts():
+    # projection-4 / render-fiddle-7: a pending target/held/interest draft gets a blank GREEN
+    # placeholder in the projection row's P·T / P·H / P·interest tile, so the draft column reads green
+    # top-to-bottom (like P·V's comma draft and the mapped/tuning rows) instead of a hole.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "projection": True, "optimization": True}
+    k = _target_count()
+    pt = {c.id: c for c in spreadsheet.build(base, s, pending_target=[None, None, None]).cells}
+    assert all(pt[f"cell:proj_pt:draft:{p}"].pending and pt[f"cell:proj_pt:draft:{p}"].text == "" for p in range(3))
+    assert pt["cell:proj_pt:draft:0"].x == pt[f"cell:proj_pt:{k - 1}:0"].x + spreadsheet.COL_W  # one slot past committed P·T
+    ph = {c.id: c for c in spreadsheet.build(base, s, pending_held=[None, None, None]).cells}
+    assert all(ph[f"cell:proj_ph:draft:{p}"].pending and ph[f"cell:proj_ph:draft:{p}"].text == "" for p in range(3))
+    pi = {c.id: c for c in spreadsheet.build(base, s, interest=((1, 1, -1),), pending_interest=[None, None, None]).cells}
+    assert all(pi[f"cell:proj_pi:draft:{p}"].pending and pi[f"cell:proj_pi:draft:{p}"].text == "" for p in range(3))
+    # no draft → no draft column in the projection row (regression guard)
+    none = {c.id for c in spreadsheet.build(base, s, interest=((1, 1, -1),)).cells}
+    assert not any(i.startswith(("cell:proj_pt:draft", "cell:proj_ph:draft", "cell:proj_pi:draft")) for i in none)
+
+
+def test_scaling_factors_grows_a_green_draft_column_for_a_pending_comma():
+    # layout-invariants-3: the λ scaling-factors row gets a blank GREEN placeholder at the pending
+    # comma's draft slot (which comma_value_pos skips for the U half), so λ reads green top-to-bottom.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "projection": True}
+    c = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None]).cells}
+    assert c["cell:scaling:draft"].pending and c["cell:scaling:draft"].text == ""
+    assert c["cell:scaling:draft"].x == c["cell:proj_v:0:draft"].x   # aligned with the projection row's comma draft
+    assert "cell:scaling:draft" not in {cb.id for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
+
+
+def test_superspace_lifted_lists_grow_draft_columns_for_interval_drafts():
+    # layout-invariants-3: on a nonstandard domain the lifted ss_vectors / ss_mapping tiles get a blank
+    # GREEN placeholder for a pending interval draft, like the on-domain vectors/mapping rows — not a
+    # hole inside their list brackets.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")  # barbados: dL = 4, rL = 3
+    s = {**settings.defaults(), "nonstandard_domain": True}
+    ss = {c.id: c for c in spreadsheet.build(state, s, pending_target=[None, None, None]).cells}
+    vrows = sum(1 for i in ss if i.startswith("cell:ss_vectors:targets:") and i.endswith(":0"))  # dL committed rows
+    mrows = sum(1 for i in ss if i.startswith("cell:ss_mapping:targets:") and i.endswith(":0"))   # rL committed rows
+    assert vrows and mrows
+    assert all(ss[f"cell:ss_vectors:targets:{p}:draft"].pending and ss[f"cell:ss_vectors:targets:{p}:draft"].text == "" for p in range(vrows))
+    assert all(ss[f"cell:ss_mapping:targets:{g}:draft"].pending and ss[f"cell:ss_mapping:targets:{g}:draft"].text == "" for g in range(mrows))
+    # a pending comma fills the lifted comma tiles too
+    ssc = {c.id: c for c in spreadsheet.build(state, s, pending_comma=[None, None, None]).cells}
+    assert ssc["cell:ss_vectors:commas:0:draft"].pending and ssc["cell:ss_mapping:commas:0:draft"].pending
+    # no draft → no placeholder (regression guard)
+    plain = {c.id for c in spreadsheet.build(state, s).cells}
+    assert not any(i.startswith("cell:ss_vectors:targets") and i.endswith("draft") for i in plain)
+
+
+def test_v_column_labels_track_their_cells_during_a_pending_comma():
+    # layout-invariants-1 / projection-5 / render-fiddle-8: with a pending comma the consolidated V's
+    # U-half value cells shift right past the draft slot (comma_value_pos); the column labels must
+    # follow — else every U label sits a slot LEFT (over the draft) and the last U column is unlabelled.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "projection": True, "symbols": True}
+    c = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None]).cells}
+    # meantone, projection on: 1 comma + draft + 2 U → labels 0,1,2 (nc + nu = 3); the draft is unlabelled
+    assert c["matlabel:col:vectors:commas:0"].x == c["cell:comma:0:0"].x        # 𝐯₁ over the comma
+    assert c["matlabel:col:vectors:commas:1"].x == c["cell:unchanged:0:0"].x    # 𝐯₂ over U col 0 (NOT the draft)
+    assert c["matlabel:col:vectors:commas:2"].x == c["cell:unchanged:0:1"].x    # 𝐯₃ over the LAST U col (now labelled)
+    assert "matlabel:col:vectors:commas:3" not in c                            # exactly nc + nu labels
+    assert c["matlabel:col:vectors:commas:1"].x != c["cell:comma:0:1"].x        # no label over the draft column
+    assert c["matlabel:col:projection:commas:1"].x == c["cell:proj_v:0:u0"].x  # the whole V band tracks together
+    # off-draft this is a no-op: labels sit on their plain columns (regression guard)
+    rest = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
+    assert rest["matlabel:col:vectors:commas:1"].x == rest["cell:unchanged:0:0"].x
+
+
+def test_comma_add_drop_zone_does_not_occlude_the_unchanged_grips():
+    # layout-invariants-2: the comma list's "add" drop zone (grip:commas:add) overlapped U's reorder
+    # grips — 14px under V = C|U, EXACTLY coincident at full rank (where the comma drop target was then
+    # dead). It now rides the C|U gap (or the nullity stub at full rank), narrowed to that stub, clear of
+    # U's grips on their own sub-axes. (End-to-end drag behaviour should be re-checked in a real browser.)
+    def overlap(a, b):
+        return max(a.x, b.x) < min(a.x + a.w, b.x + b.w) - 0.01
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "projection": True, "drag_to_combine": True}
+    # n ≥ 1 (meantone, projection on, U held rational): add zone in the gap, left of U's first grip
+    on = {c.id: c for c in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
+    assert not overlap(on["grip:commas:add"], on["grip:unchanged:0"])
+    assert on["grip:commas:add"].x + on["grip:commas:add"].w <= on["grip:unchanged:0"].x + 0.51
+    # full rank (n = 0): the add zone rides the reserved nullity stub, NOT U's first sub-axis where it
+    # used to coincide EXACTLY with grip:unchanged:0
+    full = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1))), s).cells}
+    assert not overlap(full["grip:commas:add"], full["grip:unchanged:0"])
+    assert full["grip:commas:add"].x + full["grip:commas:add"].w <= full["grip:unchanged:0"].x + 0.51
+    assert full["comma_plus"].x < full["cell:unchanged:0:0"].x  # the + sits in the stub, left of U
+
+
+def test_units_row_draft_columns_match_across_the_interval_lists():
+    # layout-invariants-4: the units row's /1 (and the units column's gₙ/) over a pending draft column
+    # was emitted for the comma draft but not the target/held/interest drafts or the mapping-row draft.
+    # Now the *_shown counts include the draft, so every draft column reads complete.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "domain_units": True, "optimization": True}
+    k = _target_count()
+    ut = {c.id for c in spreadsheet.build(base, s, pending_target=[None, None, None]).cells}
+    assert f"urow:targets:{k}" in ut                       # the target draft column carries /1
+    ui = {c.id for c in spreadsheet.build(base, s, interest=((1, 1, -1),), pending_interest=[None, None, None]).cells}
+    assert "urow:interest:1" in ui                          # interest draft (1 committed + draft)
+    uh = {c.id for c in spreadsheet.build(base, s, held_vectors=((-1, 1, 0),), pending_held=[None, None, None]).cells}
+    assert "urow:held:1" in uh                              # held draft (1 committed + draft)
+    um = {c.id for c in spreadsheet.build(base, s, pending_mapping_row=[None, None, None]).cells}
+    assert "ucol:mapping:2" in um                           # the pending mapping-row's gₙ/ label (r = 2 → draft row 2)
+    rest = {c.id for c in spreadsheet.build(base, s).cells}  # no draft → no extra labels (regression guard)
+    assert f"urow:targets:{k}" not in rest and "ucol:mapping:2" not in rest
+
+
+def test_all_interval_mean_damage_value_and_symbol_denote_the_same_quantity():
+    # tuning-core-6 / all-interval-alt-complexity-5: the displayed value is the dual-power MEAN (RMS for
+    # ES — see test_..._aggregates_at_the_dual_norm_power), so its symbol must be the double-angle
+    # power-MEAN ⟪…⟫, NOT a single-bar NORM ‖…‖. The norm = sqrt(SUM of squares) is √d larger than the
+    # mean = sqrt(sum/d); labelling the mean with a norm symbol read √d too large (TE meantone: the
+    # value 1.582 under a symbol naming the 2.741 norm).
+    import math
+    from rtt.library import tuning
+    from rtt.library.parsing import parse_temperament_data
+    base = service.from_mapping(((1, 0, -4), (0, 1, 4)))  # meantone, d = 3
+    t = parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}")
+    cells = {c.id: c for c in spreadsheet.build(base, {**settings.defaults(), "optimization": True},
+                                                tuning_scheme="minimax-ES").cells}
+    sym = cells["optimization:mean_damage:symbol"].text
+    assert "⟪" in sym and "⟫" in sym and "‖" not in sym       # double-angle MEAN brackets, not a norm
+    val = float(cells["optimization:mean_damage"].text)
+    mean = tuning.get_tuning_map_mean_damage(t, tuning.optimize_tuning_map(t, "minimax-ES"), "minimax-ES")
+    assert val == pytest.approx(mean, abs=1e-3)               # the value IS that mean (matches the ⟪…⟫ symbol)
+    norm = val * math.sqrt(3)                                 # the single-bar NORM the OLD symbol named is √d larger
+    assert norm == pytest.approx(2.741, abs=1e-2) and abs(val - norm) > 1.0  # value is the mean, NOT the norm
