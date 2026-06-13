@@ -281,8 +281,11 @@ _INT_WHEEL_JS = ("(e) => { if (e.currentTarget.contains(document.activeElement))
 # grows, and grind the app). So the commit is debounced by this much, mirroring the limit input's
 # typing ``debounce=300``. See on_target_limit_wheel.
 _TARGET_LIMIT_DEBOUNCE = 0.3
-_BUSY_DELAY = 0.25  # s a commit's re-solve may run before the busy scrim is revealed — long enough
-# that the common fast edit never flashes it, short enough that a real wait shows feedback promptly
+_BUSY_DELAY_MS = 180  # ms a commit may run before the busy scrim is revealed (client-side; see
+# _BUSY_JS) — long enough that the common fast edit never flashes it, short enough that a real wait
+# shows feedback promptly
+_BUSY_SAFETY_MS = 12000  # ms after which the scrim self-clears if no render ever lands (a click that
+# commits nothing must never strand it); a real commit's render clears it far sooner via rttBusy.done
 
 
 class _GridValueSpec(NamedTuple):
@@ -645,6 +648,55 @@ _TOOLTIP_DISMISS_JS = """
   document.addEventListener('keydown', dropHovered, true);
   document.addEventListener('wheel', dropHovered, {capture: true, passive: true});
 })()
+"""
+
+# The client-driven busy scrim. After a committing interaction the app has to think — an off-loop
+# re-solve and/or the browser patching a big grid — for anything from nothing to a few seconds. With
+# no feedback a slow beat reads as "I crashed it", so the user keeps clicking a frozen-looking page.
+# This arms the scrim (`.rtt-busy`, a dim veil + spinner + "Computing…" + wait cursor that also
+# swallows clicks) the instant a control is used and reveals it if the work outlasts a short delay.
+# It is driven ENTIRELY client-side, which is the whole point: a *synchronous* re-render (a Show
+# toggle, a fold) holds the event loop until it finishes, so the server cannot send a "show scrim"
+# message mid-work — only the browser can show it in that window. Every server render() ends by
+# calling rttBusy.done(), so the scrim lifts exactly when the awaited grid lands.
+_BUSY_JS = f"""
+(() => {{
+  if (window.rttBusy) return;
+  let armTimer = null, safety = null;
+  const scrim = () => document.querySelector('.rtt-busy');
+  const reveal = () => {{ const o = scrim(); if (o) o.classList.add('rtt-busy-on'); }};
+  const clear = () => {{
+    if (armTimer) {{ clearTimeout(armTimer); armTimer = null; }}
+    if (safety) {{ clearTimeout(safety); safety = null; }}
+    const o = scrim(); if (o) o.classList.remove('rtt-busy-on');
+  }};
+  const arm = () => {{
+    if (armTimer) clearTimeout(armTimer);
+    if (safety) clearTimeout(safety);
+    armTimer = setTimeout(reveal, {_BUSY_DELAY_MS});   // a fast edit lands first and never flashes it
+    safety = setTimeout(clear, {_BUSY_SAFETY_MS});      // never strand if this click never re-renders
+  }};
+  window.rttBusy = {{ arm, done: clear }};
+
+  // Arm on any interaction that commits to the document (and so triggers a server re-render): the
+  // +/-/fold controls and undo/redo/reset (.rtt-iconbtn), the Show checkboxes / range radios, the
+  // scheme/target dropdowns and their option picks, a committed cell edit (Enter, or focus leaving
+  // the cell), a wheel on a value cell, and Ctrl/Cmd+Z/Y. NOT a click that merely focuses a cell to
+  // type into it — that commits later, on blur — so the scrim never covers a cell mid-edit.
+  const BTN = '.rtt-fanbtn,.rtt-minus-btn,.rtt-minus-btn-v,.rtt-toggle,.rtt-iconbtn';
+  const at = (e, sel) => e.target && e.target.closest && e.target.closest(sel);
+  document.addEventListener('pointerdown', (e) => {{ if (at(e, BTN)) window.rttBusy.arm(); }}, true);
+  document.addEventListener('click', (e) => {{ if (at(e, '[role=option],.q-item')) window.rttBusy.arm(); }}, true);
+  document.addEventListener('change', (e) => {{
+    if (at(e, '.q-select,.q-checkbox,.q-radio,input[type=checkbox],input[type=radio]')) window.rttBusy.arm();
+  }}, true);
+  document.addEventListener('focusout', (e) => {{ if (at(e, '.rtt-cell')) window.rttBusy.arm(); }}, true);
+  document.addEventListener('wheel', (e) => {{ if (at(e, '.rtt-cell')) window.rttBusy.arm(); }}, {{capture: true, passive: true}});
+  document.addEventListener('keydown', (e) => {{
+    if ((e.ctrlKey || e.metaKey) && /^[zyZY]$/.test(e.key)) window.rttBusy.arm();
+    else if (e.key === 'Enter' && at(e, '.rtt-cell')) window.rttBusy.arm();
+  }}, true);
+}})()
 """
 
 
@@ -2347,6 +2399,8 @@ def index() -> None:
     # dismiss any hover tooltip on pointerdown so it can't strand when the click removes/reflows its
     # anchor (the +/- buttons rebuild the grid out from under the cursor — see _TOOLTIP_DISMISS_JS)
     ui.run_javascript(_TOOLTIP_DISMISS_JS)
+    # install the client-driven "Computing…" busy scrim (inert until a committing control is used)
+    ui.run_javascript(_BUSY_JS)
 
     def col_tokens(name):
         # the previous render's id-tokens for a reorderable interval list, in column order — so an
@@ -3637,27 +3691,17 @@ def index() -> None:
     # websocket heartbeat — the client misses its ping, drops the socket ("lost connection"), and the
     # page looks crashed until a hard reload. So the retuning paths render through _request_render
     # instead of calling render() directly: the heavy solve runs in a worker thread (numpy/scipy
-    # release the GIL, so the loop keeps answering pings and the scrim can paint), warming the tuning
-    # memo; render() then rebuilds on the loop from that warm cache (fast). A scrim is revealed after
-    # a short delay so the common fast edit never flashes it, and swallows clicks while it's up.
+    # release the GIL, so the loop keeps answering pings), warming the tuning memo; render() then
+    # rebuilds on the loop from that warm cache (fast).
+    #
+    # The "Computing…" busy scrim is driven CLIENT-side (see _BUSY_JS), not from here: the moment a
+    # committing control is used the browser arms the scrim and reveals it if the work outlasts a
+    # short delay — so it appears even while the server's loop is busy (a *synchronous* re-render,
+    # e.g. a Show toggle, can't send a "show scrim" message until it has already finished) and while
+    # the browser is busy patching a big grid. render() ends by calling rttBusy.done() to clear it.
     render_inflight = [False]
     render_again = [False]
     render_after = [None]  # a continuation to run on the loop right after the offloaded render
-
-    async def _deferred_show():
-        # reveal the scrim only if the build is still running after _BUSY_DELAY (a fast edit
-        # cancels this first, so it never flashes). A plain asyncio task — NOT ui.timer, which
-        # needs a UI *slot* context that background_tasks.create doesn't carry into this coroutine
-        # (creating one here raised and aborted the whole offloaded render). Toggling a class on
-        # the already-built overlay needs only the client context, which IS carried over.
-        try:
-            await asyncio.sleep(_BUSY_DELAY)
-        except asyncio.CancelledError:
-            return
-        busy_overlay.classes(add="rtt-busy-on")
-
-    def _clear_busy():
-        busy_overlay.classes(remove="rtt-busy-on")
 
     def _request_render(after=None):
         # schedule an off-loop commit render; a request arriving while one is in flight collapses
@@ -3686,7 +3730,6 @@ def index() -> None:
             again = True
             cont = after
             while again:
-                show = asyncio.create_task(_deferred_show())  # arms the scrim after _BUSY_DELAY
                 prev = last_lay[0].identities if last_lay[0] is not None else None
                 try:
                     # warm the tuning memo off the loop; the result is discarded — render() below
@@ -3695,10 +3738,7 @@ def index() -> None:
                     await asyncio.to_thread(editor.layout, prev_ids=prev)
                 except Exception:
                     _log.exception("off-loop layout warm-up failed; rendering on the loop")
-                finally:
-                    show.cancel()
-                    _clear_busy()
-                render()
+                render()  # rebuilds on the loop from the warm cache, and clears the scrim (rttBusy.done)
                 if cont is not None:
                     cont()
                 again = render_again[0]
@@ -3707,7 +3747,6 @@ def index() -> None:
                 render_after[0] = None
         finally:
             render_inflight[0] = False
-            _clear_busy()
 
 
     def render():
@@ -3941,6 +3980,13 @@ def index() -> None:
                 _doc_store()[_STORE_KEY] = editor.serialize()
         finally:
             building[0] = False
+        # clear the busy scrim: this render is the result the user was waiting on, so whatever the
+        # client armed (see _BUSY_JS) comes down now. The message rides out with this render's DOM
+        # patch, so the scrim stays up across the patch and lifts once the new grid is on screen.
+        # Skipped under the User test harness, where there's no live client (and run_javascript from
+        # inside a handler-driven render hits a torn-down slot context); the scrim is browser-only.
+        if not helpers.is_user_simulation():
+            ui.run_javascript("window.rttBusy && window.rttBusy.done()")
         # (the scrollbar-fit pass re-runs on its own when the grid resizes — the board's width/height
         # CSS transition fires the listener in freeze.js — so render needn't push any JS here.)
 

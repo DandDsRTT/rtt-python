@@ -857,7 +857,7 @@
    removes it when the new grid lands), so the common fast edit never flashes it. Top of the stack
    (the open settings drawer / chooser popups sit below it), fixed to the viewport. */
 .rtt-busy { position:fixed; inset:0; z-index:10000; display:flex; align-items:center;
-            justify-content:center; background:rgba(255,255,255,0.45); cursor:progress;
+            justify-content:center; background:rgba(120,124,132,0.30); cursor:progress;
             opacity:0; pointer-events:none; transition:opacity 0.12s ease; }
 .rtt-busy-on { opacity:1; pointer-events:auto; }
 .rtt-busy-card { display:flex; align-items:center; gap:10px; padding:10px 16px; background:#fff;
