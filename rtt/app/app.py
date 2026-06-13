@@ -262,6 +262,8 @@ _INT_WHEEL_JS = ("(e) => { if (e.currentTarget.contains(document.activeElement))
 # grows, and grind the app). So the commit is debounced by this much, mirroring the limit input's
 # typing ``debounce=300``. See on_target_limit_wheel.
 _TARGET_LIMIT_DEBOUNCE = 0.3
+_BUSY_DELAY = 0.25  # s a commit's re-solve may run before the busy scrim is revealed — long enough
+# that the common fast edit never flashes it, short enough that a real wait shows feedback promptly
 
 
 class _GridValueSpec(NamedTuple):
@@ -2175,6 +2177,15 @@ def index() -> None:
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
     ui.query(".nicegui-content").style("padding:6px")
 
+    # the busy scrim (fixed, viewport-covering, hidden until revealed): shown while a heavy
+    # state change re-solves the tuning off the event loop, so the user sees "Computing…"
+    # rather than a frozen grid, and the clicks they'd otherwise pile up are swallowed. Built
+    # once, here, so it outlives every grid rebuild (see _request_render / _commit_render).
+    with ui.element("div").classes("rtt-busy") as busy_overlay:
+        with ui.element("div").classes("rtt-busy-card"):
+            ui.element("div").classes("rtt-busy-spin")
+            ui.label("Computing…")
+
     # Dark mode is a global VIEWING preference, kept out of the document's Show settings: it
     # persists under its own store key, so "select all / none" and Reset — which act only on
     # editor.settings — never touch it. apply_theme drives the CSS overlay (assets/rtt-dark.css)
@@ -2486,8 +2497,9 @@ def index() -> None:
                 return
             spec.set_pending(values)
             if spec.pending() is None:  # the draft materialized into a real column / row
-                render()
-                _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
+                # the change is applied (it retunes) — render OFF the loop, then rebase the gesture
+                # on the fresh layout so its rings go away NOW (no blur fires)
+                _request_render(after=_rebase_edit_gesture)
             # an uncommitted draft renders nothing: the DOM already shows the typed values, and in a
             # real browser this blur-commit can land mid-typing of the NEXT draft cell, so a render
             # here would push the stale pending back over the focused cell and wipe in-flight keys
@@ -2509,13 +2521,13 @@ def index() -> None:
                 _edit_candidate(None)  # an improper in-progress entry previews nothing (no toast)
                 return
             ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
-            render()  # revert the cells to the current temperament
+            render()  # revert the cells to the current temperament (no retune — synchronous)
             return
         if preview:
             _edit_candidate(lambda: spec.commit(vectors))
             return
         spec.commit(vectors)
-        render()
+        _request_render()  # a matrix/vector-list edit retunes — render off the loop
 
     _MAPPING_EDIT = _VecGridEdit(
         group="gens", count=lambda: len(editor.state.mapping),
@@ -2581,7 +2593,7 @@ def index() -> None:
             _edit_candidate(lambda: editor.set_unchanged_basis(ratios))
             return
         editor.set_unchanged_basis(ratios)
-        render()
+        _request_render()
 
     def on_interest_change(preview=False):
         _edit_vector_grid(_INTEREST_EDIT, preview)
@@ -2648,7 +2660,9 @@ def index() -> None:
                 editor.target_spec, editor.state.domain_basis)
             replace(service.target_interval_vectors(targets, editor.state.d, editor.state.domain_basis),
                     editor.set_target_override_vectors)
-        render()
+        # a quantities-row ratio edit routes into a retuning setter (comma/held/target/unchanged) —
+        # render off the loop. (An interest edit doesn't retune, but the warm build is cheap.)
+        _request_render()
 
     def on_element_change(cid):
         # a chapter-9 domain basis element committing on blur (nonstandard-domain box on). cid is
@@ -2676,17 +2690,17 @@ def index() -> None:
                 render()
                 return
             editor.set_pending_element(raw)  # valid -> commits and clears the draft
-            render()
+            _request_render()  # a new domain element retunes — render off the loop
             return
         index = int(tok)
         if parsed == editor.state.domain_basis[index]:
             return  # a no-op blur (the element is unchanged) — no undo step
         if not service.can_set_domain_element(editor.state, index, parsed):
             ui.notify(f"{raw} would make the basis dependent", type="negative", position="top")
-            render()  # revert the field to the current element
+            render()  # revert the field to the current element (no retune — synchronous)
             return
         editor.set_domain_element(index, raw)
-        render()
+        _request_render()  # relabelling a domain element retunes — render off the loop
 
     def on_element_preview(cid):
         # live edit preview: as a VALID element is typed into a domain cell, set the candidate the
@@ -2735,7 +2749,7 @@ def index() -> None:
             editor.set_complexity_norm_power(power)
         else:
             editor.set_optimization_power(power)
-        render()
+        _request_render()  # a new optimization / complexity power retunes — render off the loop
 
     def _gen_position(tok):
         # a tuning:gen cell id carries the row's id-TOKEN (== its index until a removal/re-rank
@@ -2760,7 +2774,7 @@ def index() -> None:
             editor.set_superspace_generator_tuning_component(i, cents)
         else:
             editor.set_generator_tuning_component(_gen_position(i), cents)
-        render()
+        _request_render()  # a manual generator override re-derives the maps — render off the loop
 
     def on_gentuning_wheel(cid, delta_y):
         # the genmap cell's hover-and-scroll fine-adjust: each wheel notch nudges this generator's
@@ -2773,7 +2787,8 @@ def index() -> None:
             editor.nudge_superspace_generator_tuning_component(i, steps)
         else:
             editor.nudge_generator_tuning_component(_gen_position(i), steps)
-        render()
+        # off the loop — rapid notches coalesce into one trailing rebuild at the value you land on
+        _request_render()
 
     def on_value_wheel(cid, delta_y):
         # step a focused numeric input by one notch — the per-kind amount in _WHEEL_STEPS (±1 for a
@@ -2881,7 +2896,7 @@ def index() -> None:
             return
         parts = cid.split(":")  # "cell:prescaling:primes:i:j" — row i, column j (the whole square edits)
         editor.set_custom_prescaler_entry(int(parts[3]), int(parts[4]), value)
-        render()
+        _request_render()  # the prescaler drives the weighted tuning solve — render off the loop
 
     def on_ptext_edit(cid, value):
         # the editable plain-text duals: a valid EBK string drives the grid (like
@@ -2913,7 +2928,7 @@ def index() -> None:
             return
         if ok:
             rec.ptext_inputs[cid].classes(remove="rtt-ptext-error")
-            render()
+            _request_render()  # a typed dual (mapping/commas/tuning/targets/P/G…) retunes — off the loop
         else:
             rec.ptext_inputs[cid].classes(add="rtt-ptext-error")
             # a string that PARSED but was rejected by the editor (a degenerate temperament, or a P/G
@@ -2936,7 +2951,7 @@ def index() -> None:
             if toast:
                 ui.notify(toast, type="negative", position="top")
 
-    def act(action):
+    def _end_commit_gestures():
         # a commit ends any hover-family gesture FIRST — its rings are previews of a click that
         # has now landed (or been superseded), and a token gesture must restore the real document
         # before the action mutates it (e.g. Ctrl+Z while a temperament hover holds a hypothetical
@@ -2944,8 +2959,14 @@ def index() -> None:
         if rec.gesture is not None and rec.gesture.kind in ("hover", "chooser", "temp", "drag"):
             end_gesture()
         rank_remove[0] = None  # a committed op supersedes any live rank-removal hover preview
+
+    def act(action):
+        # the universal click/keyboard commit: end gestures, mutate, then render OFF the loop
+        # (_request_render) — most of these actions retune (expand/shrink, undo/redo across an
+        # edit, a structural remove, back-to-scheme), so the heavy solve must not block the socket.
+        _end_commit_gestures()
         action()
-        render()
+        _request_render()
 
     # the draft-column + buttons (comma / target / held / interest, and the nonstandard-domain
     # element) drop the cursor straight into the new green column: the quantities-row ratio cell
@@ -2966,7 +2987,12 @@ def index() -> None:
     def add_interval(action, group):
         # add the draft column, then focus into it: the quantities ratio cell if its row is shown
         # (the layout emitted it), else the first gridded vector cell (prime 0) of the draft column.
-        act(action)
+        # A draft add doesn't retune (the pending green vector isn't committed), so its build is
+        # light — render SYNCHRONOUSLY (not the off-loop _request_render) so last_lay is current for
+        # the focus hand-off below, which reads the just-built layout.
+        _end_commit_gestures()
+        action()
+        render()
         quant_id, vec_kind = draft_focus[group]
         lay = last_lay[0]
         if any(cb.id == quant_id for cb in lay.cells):
@@ -3049,12 +3075,14 @@ def index() -> None:
                 end_gesture()  # a live hover preview reverts (its token restores the real document),
                 # so the load below is one clean undo step from the real base
                 editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
-            render()
+                _request_render()  # a loaded temperament retunes — render off the loop
+            else:
+                render()  # the prompt/divider: nothing loaded, just snap the box back (warm)
             return
         apply = _candidate_apply(cid, value)  # tuning / prescaler — the same option→edit map the hover uses
         if apply is not None:
             apply()
-            render()
+            _request_render()  # a tuning / prescaler preset re-solves — render off the loop
 
     def on_form_choose(cid, value):
         # the <choose form> control: selecting "canonical" re-stores that matrix in canonical form (an
@@ -3065,7 +3093,7 @@ def index() -> None:
         apply = _candidate_apply(cid, value)
         if apply is not None:
             apply()
-            render()
+            _request_render()  # canonicalizing re-keys the tuning solve — render off the loop
 
     def on_target_change(limit_changed=False):
         # the target chooser is a numeric limit + a TILT/OLD family; compose them into a spec
@@ -3101,7 +3129,7 @@ def index() -> None:
         if problem == "odd" and limit_changed:  # a typed even OLD limit toasts; a family switch only reddens
             ui.notify(tooltips.target_limit_help("odd"), type="negative", position="top")
         editor.set_target_spec(spec)  # commit (even an even OLD limit) so the pick sticks; render reddens it
-        render()
+        _request_render()  # a new target set re-weights the optimization (retunes) — render off the loop
 
     def on_control_select(cid, value):
         # the weighting controls: the box 𝒄 complexity / box 𝒘 weight-slope dropdowns swap a scheme
@@ -3119,7 +3147,7 @@ def index() -> None:
             editor.set_all_interval(bool(value))
         else:
             return  # the complexity "custom" off-preset state (no candidate) is a no-op — no re-render
-        render()
+        _request_render()  # a weighting / complexity / all-interval trait change retunes — off the loop
 
     def on_range_mode(value):
         # which generator tuning range the ranges chart shows. A re-render echo (the radio
@@ -3549,6 +3577,82 @@ def index() -> None:
         on_toggle=on_toggle,
         on_toggle_all=on_toggle_all,
     )
+
+    # ---- off-loop commit render + busy scrim ----------------------------------------------------
+    # A state change that retunes (raising the prime limit, adding/editing a comma or held interval,
+    # picking a scheme, undo/redo across such an edit…) re-solves the tuning. At a high prime limit
+    # that solve takes a few SECONDS, and run inline on the event loop it would block NiceGUI's
+    # websocket heartbeat — the client misses its ping, drops the socket ("lost connection"), and the
+    # page looks crashed until a hard reload. So the retuning paths render through _request_render
+    # instead of calling render() directly: the heavy solve runs in a worker thread (numpy/scipy
+    # release the GIL, so the loop keeps answering pings and the scrim can paint), warming the tuning
+    # memo; render() then rebuilds on the loop from that warm cache (fast). A scrim is revealed after
+    # a short delay so the common fast edit never flashes it, and swallows clicks while it's up.
+    busy_timer = [None]
+    render_inflight = [False]
+    render_again = [False]
+    render_after = [None]  # a continuation to run on the loop right after the offloaded render
+
+    def _arm_busy():
+        # reveal the scrim after _BUSY_DELAY unless the build lands first (the timer is cancelled)
+        if busy_timer[0] is None:
+            busy_timer[0] = ui.timer(
+                _BUSY_DELAY, lambda: busy_overlay.classes(add="rtt-busy-on"), once=True)
+
+    def _clear_busy():
+        if busy_timer[0] is not None:
+            busy_timer[0].cancel()
+            busy_timer[0] = None
+        busy_overlay.classes(remove="rtt-busy-on")
+
+    def _request_render(after=None):
+        # schedule an off-loop commit render; a request arriving while one is in flight collapses
+        # into a single trailing rebuild (the state it lands on is the only one that matters).
+        # ``after`` runs on the loop once render() has rebuilt — for the few commits with a
+        # synchronous tail that reads the fresh layout (a draft column materializing then rebasing
+        # its edit gesture off last_lay).
+        if helpers.is_user_simulation():
+            # the in-process User test harness drives clicks/edits and inspects the DOM right after,
+            # with no chance for a background task to run — and there is no real socket to protect.
+            # Render synchronously there: tests see the same immediate rebuild they always did, and
+            # the off-loop machinery (a production websocket concern) is exercised by the live probe.
+            render()
+            if after is not None:
+                after()
+            return
+        if render_inflight[0]:
+            render_again[0] = True
+            render_after[0] = after
+            return
+        background_tasks.create(_commit_render(after))
+
+    async def _commit_render(after=None):
+        render_inflight[0] = True
+        try:
+            again = True
+            cont = after
+            while again:
+                _arm_busy()
+                prev = last_lay[0].identities if last_lay[0] is not None else None
+                try:
+                    # warm the tuning memo off the loop; the result is discarded — render() below
+                    # recomputes the layout, now a cache hit. (editor.layout is read-only, and the
+                    # mutation that triggered this already ran synchronously in the handler.)
+                    await asyncio.to_thread(editor.layout, prev_ids=prev)
+                except Exception:
+                    _log.exception("off-loop layout warm-up failed; rendering on the loop")
+                finally:
+                    _clear_busy()
+                render()
+                if cont is not None:
+                    cont()
+                again = render_again[0]
+                render_again[0] = False
+                cont = render_after[0]
+                render_after[0] = None
+        finally:
+            render_inflight[0] = False
+            _clear_busy()
 
 
     def render():
@@ -4024,7 +4128,7 @@ def index() -> None:
                     if building[0] or value is None:
                         return
                     editor.set_nonprime_basis_approach(value)
-                    render()
+                    _request_render()  # the nonprime approach changes how the tuning solves — off the loop
 
                 def on_approach_hover(value):
                     # preview the hovered approach option: ring the cells reading the temperament that
@@ -4111,6 +4215,14 @@ def main() -> None:
         title="D&D's RTT App", favicon="https://github.com/DandDsRTT.png",
         show=False, port=port,
         storage_secret=os.environ.get("STORAGE_SECRET", _STORAGE_SECRET),
+        # The heavy retuning commits now render off the event loop (see _commit_render), so the
+        # websocket heartbeat keeps flowing through them. A few paths still build synchronously — the
+        # initial page (no socket yet), a structural hover PREVIEW the first time a high-limit state is
+        # seen (it warms the cache, so it's a one-off), a drag preview. Give the heartbeat generous
+        # headroom so one of those brief sync builds — slower still under parallel CPU load — can't trip
+        # the "lost connection" reload NiceGUI's default 3 s timeout caused. (Derived pings: interval
+        # max(0.8·t, 4) = 24 s, timeout max(0.4·t, 2) = 12 s.)
+        reconnect_timeout=30.0,
     )
     if hosted_port:
         run_kwargs.update(host="0.0.0.0", reload=False)

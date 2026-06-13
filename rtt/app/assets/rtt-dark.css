@@ -188,3 +188,8 @@ body.rtt-dark .rtt-select-popup .q-item.disabled .q-item__label::after { border-
 body.rtt-dark svg rect[fill="#fff"][stroke="#bbb"] { fill:#1b1f24; stroke:#4e555d; }
 body.rtt-dark .rtt-glyph { color:#9aa1a9; }
 body.rtt-dark .rtt-glyph:hover { color:#cfd4da; }
+
+/* the busy scrim: a dark veil + dark card (see .rtt-busy in rtt.css) */
+body.rtt-dark .rtt-busy { background:rgba(0,0,0,0.45); }
+body.rtt-dark .rtt-busy-card { background:#23272d; color:#cfd4da; border-color:#4e555d; }
+body.rtt-dark .rtt-busy-spin { border-color:#4e555d; border-top-color:#cfd4da; }

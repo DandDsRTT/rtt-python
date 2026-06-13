@@ -846,3 +846,23 @@
    The underline colour is independent of the letter's text colour (which tracks the name). */
 .rtt-tile-mnem { text-decoration:underline; text-decoration-color:#999; }
 .rtt-mnem-underline { text-decoration-color:#000; }
+
+/* ── the busy scrim ──────────────────────────────────────────────────────────────────────────
+   A state change that re-solves the tuning (e.g. raising the prime limit, or adding a high-limit
+   comma) can take a couple of seconds at the 13-limit. While that solve runs OFF the event loop
+   (so the websocket stays alive — see _commit_render), this translucent scrim covers the app: it
+   swallows pointer events so a pile of clicks can't queue up on a grid that's mid-recompute (the
+   pile-up is what read as "I crashed it"), shows a spinner + "Computing…" so the wait is legible,
+   and a progress cursor reinforces it. It is REVEALED on a short delay (render arms a timer and
+   removes it when the new grid lands), so the common fast edit never flashes it. Top of the stack
+   (the open settings drawer / chooser popups sit below it), fixed to the viewport. */
+.rtt-busy { position:fixed; inset:0; z-index:10000; display:flex; align-items:center;
+            justify-content:center; background:rgba(255,255,255,0.45); cursor:progress;
+            opacity:0; pointer-events:none; transition:opacity 0.12s ease; }
+.rtt-busy-on { opacity:1; pointer-events:auto; }
+.rtt-busy-card { display:flex; align-items:center; gap:10px; padding:10px 16px; background:#fff;
+                 border:1px solid #999; border-radius:6px; box-shadow:0 2px 12px rgba(0,0,0,0.18);
+                 font-size:13px; color:#333; }
+.rtt-busy-spin { width:18px; height:18px; flex:none; border:3px solid #d2d2d2;
+                 border-top-color:#555; border-radius:50%; animation:rtt-spin 0.8s linear infinite; }
+@keyframes rtt-spin { to { transform:rotate(360deg); } }
