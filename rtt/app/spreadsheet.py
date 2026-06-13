@@ -4991,6 +4991,11 @@ class _GridBuilder:
                 name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
             cy = self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey] + self.row_cpick[rkey]
             if (self.show_symbols or self.show_equiv) and rkey in SYMBOLED_ROWS:
+                # the symbol band reserves SYMBOL_H + BAND_GAP (see the row-height pass); spend that
+                # BAND_GAP ABOVE the glyph so the symbol/equivalence clears the values/EBK region above
+                # it, mirroring the gap the caption already gets below the symbol — the symbol cell is a
+                # fixed SYMBOL_H drawn flush, so without this offset the gap would all fall below it
+                cy += BAND_GAP
                 equiv = equivalences.get((rkey, ckey), "") if self.show_equiv else ""
                 base_symbol = self.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
                 if ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:  # e.g. the target list T → Tₚ

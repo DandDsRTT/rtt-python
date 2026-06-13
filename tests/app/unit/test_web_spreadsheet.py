@@ -4859,8 +4859,9 @@ def test_symbols_toggles_in_tile_symbol_glyphs_above_the_names():
 def test_symbol_takes_the_label_slot_and_pushes_the_name_down():
     both = {c.id: c for c in _with(symbols=True, names=True).cells}
     sym_only = {c.id: c for c in _with(symbols=True, names=False).cells}
-    # with names off, the lone symbol sits immediately below the (unframed) tuning row
-    assert sym_only["symbol:tuning:primes"].y == sym_only["tuning:prime:0"].y + spreadsheet.ROW_H
+    # with names off, the lone symbol sits below the (unframed) tuning row, cleared off the
+    # values by BAND_GAP (the in-tile breathing room) — like the gap below the symbol to the name
+    assert sym_only["symbol:tuning:primes"].y == sym_only["tuning:prime:0"].y + spreadsheet.ROW_H + spreadsheet.BAND_GAP
     assert not any(c.startswith("caption:") for c in sym_only)
     # with both on, the name sits exactly one symbol-height below the symbol
     assert both["caption:tuning:primes"].y == both["symbol:tuning:primes"].y + spreadsheet.SYMBOL_H
