@@ -20,6 +20,14 @@ their parent and hide while it is off. ``mnemonics`` refines ``names`` — it un
 name caption's symbol letter — so it only makes sense when names are shown. ``equivalences``
 refines ``symbols`` — it shows each symbol's defining equation (𝒕 = 𝒈M) rather than the bare
 glyph — so it only makes sense when symbols are shown.
+
+Three top-level toggles — ``temperament``, ``form`` and ``tuning`` — are *pure grouping
+parents*: they carry no grid layer of their own (the layout never reads them), existing only
+to expand/collapse the box toggle(s) nested beneath them (``temperament_boxes`` and its
+colorization, ``form_controls`` and its colorization, ``tuning_boxes`` and the whole tuning
+column). They use the same sub-control machinery as any other parent — so collapsing one
+turns its boxes off too — they just have nothing of their own to show. ``form`` is held out
+of :data:`IMPLEMENTED` for now, so it (and the form controls under it) renders greyed.
 """
 
 from __future__ import annotations
@@ -53,10 +61,16 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("counts", "counts", False),
             ("domain_quantities", "quantities", True),
             ("domain_units", "units", False),
+            # ``temperament`` / ``form`` / ``tuning`` are pure grouping parents (see the module
+            # docstring): each only expands the box toggle(s) beneath it; the layout reads the
+            # boxes, never the parent. ``form`` is held out of IMPLEMENTED for now, so it greys.
+            ("temperament", "temperament", True),
             ("temperament_boxes", "temperament boxes", True),
             ("temperament_colorization", "colorization", False),
+            ("form", "form", True),
             ("form_controls", "form controls", False),
             ("form_colorization", "colorization", False),
+            ("tuning", "tuning", True),
             ("tuning_boxes", "tuning boxes", True),
             ("optimization", "optimization", False),
             ("tuning_ranges", "tuning ranges", False),
@@ -82,8 +96,11 @@ DEFAULTS: dict[str, bool] = {
 SUBCONTROLS: dict[str, str] = {
     "mnemonics": "names",
     "equivalences": "symbols",
+    "temperament_boxes": "temperament",  # under the pure grouping parent (no grid layer of its own)
     "temperament_colorization": "temperament_boxes",
+    "form_controls": "form",  # under the pure grouping parent (greyed until "form" is built)
     "form_colorization": "form_controls",  # the magenta wash (deferred; greyed until built)
+    "tuning_boxes": "tuning",  # under the pure grouping parent (no grid layer of its own)
     "optimization": "tuning_boxes",
     "tuning_ranges": "tuning_boxes",
     "weighting": "tuning_boxes",
@@ -99,11 +116,18 @@ IMPLEMENTED: frozenset[str] = frozenset(
     {"drag_to_combine",
      "names", "symbols", "mnemonics", "equivalences", "gridded_values", "plain_text_values",
      "quantities", "domain_quantities", "units", "domain_units", "counts", "presets",
-     "temperament_boxes", "tuning_boxes", "math_expressions", "charts", "tuning_ranges",
+     "temperament", "temperament_boxes", "tuning", "tuning_boxes",
+     "math_expressions", "charts", "tuning_ranges",
      "tuning_colorization", "temperament_colorization", "weighting",
      "generator_detempering", "optimization", "interest", "all_interval", "alt_complexity",
-     "nonstandard_domain", "projection"}
+     "nonstandard_domain", "projection"}  # NB: "form" is deliberately absent — greyed for now
 )
+
+# The pure grouping parents (see the module docstring): top-level toggles that only expand the box
+# toggle(s) nested under them and carry no grid layer of their own — the layout never reads them.
+# So they have no example-column sample, and flipping one changes the grid only by cascading its
+# children off (Editor.set_show), never through spreadsheet.build directly.
+GROUPING_PARENTS: frozenset[str] = frozenset({"temperament", "form", "tuning"})
 
 
 def defaults() -> dict[str, bool]:
@@ -112,9 +136,9 @@ def defaults() -> dict[str, bool]:
 
 def depth_of(key: str) -> int:
     """How many levels ``key`` is nested under a top-level toggle (see :data:`SUBCONTROLS`):
-    0 for a top-level toggle, 1 for a sub-control, 2 for a sub-sub-control. The panel indents
-    each row by its depth, so a grandchild (all-interval, under weighting, under tuning boxes)
-    sits further right than its parent instead of level with it."""
+    0 for a top-level toggle, rising by one per nesting level. The panel indents each row by its
+    depth, so a great-grandchild (all-interval, under weighting, under tuning boxes, under the
+    tuning grouping parent) sits further right than its parent instead of level with it."""
     depth = 0
     parent = SUBCONTROLS.get(key)
     while parent is not None:

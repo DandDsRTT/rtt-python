@@ -1786,6 +1786,44 @@ def test_selecting_a_nested_subcontrol_pulls_its_whole_parent_chain_on():
         assert editor.settings[key] is True
 
 
+def test_temperament_grouping_parent_wraps_its_boxes():
+    # "temperament" is a pure grouping parent: it has no grid layer of its own, it just
+    # expands/collapses the temperament boxes (and their colorization) beneath it. So the
+    # box toggle is a sub-control of it — selecting the box pulls the parent on, and
+    # collapsing the parent cascades the box (and colorization) off.
+    editor = Editor()
+    editor.set_show("temperament", False)
+    editor.set_show("temperament_colorization", True)
+    assert editor.settings["temperament"] is True          # pulled on by its grandchild
+    assert editor.settings["temperament_boxes"] is True     # ...and its child
+    editor.set_show("temperament", False)
+    assert editor.settings["temperament_boxes"] is False    # collapse cascades the box off
+    assert editor.settings["temperament_colorization"] is False
+
+
+def test_tuning_grouping_parent_wraps_the_whole_tuning_column():
+    # "tuning" wraps the entire tuning subtree (tuning boxes + optimization/weighting/…),
+    # one level above where "tuning boxes" used to sit. Collapsing it cascades all of them off.
+    editor = Editor()
+    for key in ("weighting", "all_interval", "alt_complexity", "projection", "optimization"):
+        editor.set_show(key, True)
+    assert editor.settings["tuning"] is True                # the deep grandchildren pulled it on
+    editor.set_show("tuning", False)
+    for key in ("tuning_boxes", "weighting", "all_interval", "alt_complexity",
+                "projection", "optimization", "tuning_colorization"):
+        assert editor.settings[key] is False
+
+
+def test_form_grouping_parent_is_shelved_and_greyed():
+    # "form" is a grouping parent too, but disabled for now: it lives in DEFAULTS (on, so its
+    # greyed form controls stay visible beneath it) yet is held out of IMPLEMENTED, so the
+    # panel greys it and from_persisted pins it to its default whatever a saved blob says.
+    assert settings.DEFAULTS["form"] is True
+    assert "form" not in settings.IMPLEMENTED
+    assert {"temperament", "tuning"} <= settings.IMPLEMENTED   # ...the live ones are exposed
+    assert settings.from_persisted({"form": False})["form"] is True
+
+
 def test_expand_collapse_state_is_owned_and_undoable():
     editor = Editor()
     # nothing starts folded — the default view opens every row and column

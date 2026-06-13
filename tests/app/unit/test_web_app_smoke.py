@@ -597,11 +597,16 @@ def test_tooltip_dismiss_script_drops_hover_help_on_pointerdown():
 def test_every_show_toggle_has_a_non_empty_example():
     # every Show layer must have a sample render: the "specific boxes & controls" toggles in the
     # example column (_example_html), the "general" layers as parts of the dummy tile
-    # (_general_part_html). No layer may be missing its sample.
+    # (_general_part_html). No layer may be missing its sample — except the pure grouping
+    # parents (temperament / form / tuning), which carry no grid layer of their own and so
+    # deliberately render a blank example cell.
     groups = dict(show_settings.SHOW_GROUPS)
     for key, _l, _d in groups["general"]:
         assert app._general_part_html(key).strip(), f"no tile sample for {key}"
     for key, _l, _d in groups["specific boxes & controls"]:
+        if key in show_settings.GROUPING_PARENTS:
+            assert app._example_html(key) == "", f"grouping parent {key} should have a blank example"
+            continue
         assert app._example_html(key).strip(), f"no example for {key}"
 
 

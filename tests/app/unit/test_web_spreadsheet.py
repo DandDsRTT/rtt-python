@@ -3618,15 +3618,19 @@ def test_weighting_subcontrols_are_registered_under_weighting():
 
 
 def test_subcontrol_nesting_depth_drives_panel_indentation():
-    # the panel indents each row by its nesting depth, so a grandchild sits further right than
-    # its parent rather than level with it: all-interval / alt. complexity (under weighting,
-    # under tuning boxes) are depth 2 and indent twice as far as weighting (depth 1). A
-    # single-level sub-control is depth 1; a top-level toggle is depth 0.
-    assert settings.depth_of("tuning_boxes") == 0
-    assert settings.depth_of("weighting") == 1
-    assert settings.depth_of("all_interval") == 2
-    assert settings.depth_of("alt_complexity") == 2
-    assert settings.depth_of("mnemonics") == 1
+    # the panel indents each row by its nesting depth, so a child sits further right than its
+    # parent rather than level with it. "tuning boxes" now nests under the "tuning" grouping
+    # parent (depth 0), so it is depth 1, weighting depth 2, and all-interval / alt. complexity
+    # (under weighting, under tuning boxes, under tuning) depth 3.
+    assert settings.depth_of("tuning") == 0          # the pure grouping parent is top-level
+    assert settings.depth_of("tuning_boxes") == 1
+    assert settings.depth_of("weighting") == 2
+    assert settings.depth_of("all_interval") == 3
+    assert settings.depth_of("alt_complexity") == 3
+    assert settings.depth_of("temperament") == 0     # the other grouping parents are top-level too
+    assert settings.depth_of("temperament_boxes") == 1
+    assert settings.depth_of("temperament_colorization") == 2
+    assert settings.depth_of("mnemonics") == 1       # untouched by the regroup (still under names)
 
 
 def test_weight_equivalence_reflects_the_schemes_damage_slope():
@@ -4846,6 +4850,12 @@ def test_every_implemented_toggle_actually_changes_the_layout():
         return s
 
     for key in settings.IMPLEMENTED:
+        if key in settings.GROUPING_PARENTS:
+            # a pure grouping parent (temperament / tuning) carries no grid layer of its own —
+            # the build never reads it, so flipping it in isolation here changes nothing. Its
+            # grid effect is the child-cascade in Editor.set_show (collapsing it turns its boxes
+            # off), covered by the grouping-parent tests in test_web_editor.
+            continue
         on, off = with_parents_on(key), with_parents_on(key)
         on[key], off[key] = True, False
         assert snapshot(on) != snapshot(off), f"{key} is marked implemented but changes nothing"

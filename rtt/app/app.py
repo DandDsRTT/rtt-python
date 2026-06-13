@@ -785,6 +785,8 @@ def _example_html(key: str) -> str:
     """The example-column sample for one "specific boxes & controls" toggle, as an HTML string.
     (The "general" group is no longer a checkbox column — it is the clickable dummy tile, which
     renders its own samples; see _general_part_html.)"""
+    if key in show_settings.GROUPING_PARENTS:
+        return ""  # a pure grouping parent (temperament / form / tuning) — nothing of its own to illustrate
     if key in ("temperament_colorization", "tuning_colorization", "form_colorization"):
         # a swatch of the actual wash colour (one source of truth with _TINTS), stamped with
         # the fundamental matrix that drives it: 𝑀 (mapping), 𝐺 (generator embedding), 𝐹 (form)
