@@ -5088,18 +5088,21 @@ def test_col_labels_sit_inside_the_tile_centred_above_the_bracket():
         ("block:mapped_comma", "mapped_comma", "matlabel:col:mapping:commas:0"),
     ]:
         label = on[label_id]
-        ebktop = on[f"ebktop:{frame_id}:0"]
+        # the matrix's topmost frame element is the outer [ ]'s overhang top, which reaches
+        # FRAME_OVERHANG above the per-column ebktop marks — so the label is centred against THAT,
+        # not the marks (which now sit FRAME_OVERHANG lower, inside the wrap).
+        bracket_top = on[f"bracket:{frame_id}:l"].y
         tile_top = blocks[tile_block_id].y + spreadsheet.PAD  # logical top (panel overhangs by PAD)
         # the label sits INSIDE the tile (at or below tile_top), not above it in the GAP
         assert label.y >= tile_top - 1, \
             f"{label_id} (y={label.y}) must sit inside tile (top={tile_top}), not in the gap"
         # the label sits ABOVE the bracket (with the bracket clear below it)
-        assert label.y + label.h <= ebktop.y, \
-            f"{label_id} bottom y={label.y + label.h} must be at/above bracket y={ebktop.y}"
+        assert label.y + label.h <= bracket_top, \
+            f"{label_id} bottom y={label.y + label.h} must be at/above bracket y={bracket_top}"
         # equidistance: distance from tile_top to label-top ≈ distance from label-bottom
         # to bracket-top (within 1px tolerance for int rounding)
         dist_above = label.y - tile_top
-        dist_below = ebktop.y - (label.y + label.h)
+        dist_below = bracket_top - (label.y + label.h)
         assert abs(dist_above - dist_below) <= 1, \
             f"{label_id}: dist_above={dist_above}, dist_below={dist_below} should be ~equal"
 

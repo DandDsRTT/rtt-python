@@ -1924,9 +1924,12 @@ class _GridBuilder:
             base_head = 0 if folded else max(head_default, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else head_default)
             head = base_head + handle_band  # the handle band rides above the toggle/label head
             # framing bands stand off the cells by FRAME_GAP: a top bracket (FRAME_H)
-            # and a taller bottom curly brace (BRACE_H, with room for its spike)
-            top_frame = (FRAME_H + FRAME_GAP) if framed else 0
-            bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
+            # and a taller bottom curly brace (BRACE_H, with room for its spike). Each band
+            # also reserves FRAME_OVERHANG beyond the marks for the outer [ ] / column rules,
+            # which overhang the marks by that much (see bracket's fit branch) — without it the
+            # overhang would bleed into the toggle head above and the symbol/caption stack below.
+            top_frame = (FRAME_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
+            bot_frame = (BRACE_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
             # a charted row grows a chart band (above the values, below the top frame) — but ONLY when its
             # value band is a single row: a bar chart is one bar per column, so a matrix-valued charted row
             # would draw no chart and must reserve no band (else its tile's top third sits empty)
