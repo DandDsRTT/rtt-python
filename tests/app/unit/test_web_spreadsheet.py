@@ -1606,11 +1606,10 @@ def test_presets_on_adds_the_three_chooser_dropdowns_under_their_tiles():
     cells = {c.id: c for c in _with(presets=True).cells}
     assert {"preset:temperament", "preset:tuning", "preset:target"} <= set(cells)
     inset = spreadsheet.BOX_INNER  # the dropdown sits one inner-pad inside its tile-spanning box
-    # the temperament chooser sits under the mapping matrix, in its column — seated at the
-    # column's left edge (aligned with the per-row ET pickers above it). The header centres over
-    # the matrix, now inset by the ET-picker gutter, so it no longer shares the chooser's left.
+    # the temperament chooser sits under the mapping matrix, in its column (the ET picker now rides
+    # a RIGHT-only gutter past the ], so the column's left edge — and the header — are unaffected)
     temp, matrix = cells["preset:temperament"], cells["cell:mapping:0:0"]
-    assert temp.y > matrix.y and temp.x == cells["etpick:0"].x + inset
+    assert temp.y > matrix.y and temp.x == cells["header:primes"].x + inset
     # the target chooser sits under the target interval list, in its column
     assert cells["preset:target"].x == cells["header:targets"].x + inset
 
@@ -2879,7 +2878,7 @@ def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile():
     # it rides below the prescaling matrix, seated one inner pad into the primes column (like the
     # other presets, the dropdown sits inside a tile-spanning box at BOX_INNER off the edge)
     assert sel.y > on["cell:prescaling:primes:2:2"].y
-    assert sel.x == on["etpick:0"].x + spreadsheet.BOX_INNER  # the column's left edge (the ET-picker gutter)
+    assert sel.x == on["header:primes"].x + spreadsheet.BOX_INNER  # one inner pad into the primes column
     # gone without the prescaling tile (weighting off) or its column (temperament boxes off)
     assert "preset:prescaler" not in {c.id for c in _with(weighting=False, presets=True).cells}
     assert "preset:prescaler" not in {
@@ -9267,18 +9266,20 @@ def test_all_interval_mean_damage_value_and_symbol_denote_the_same_quantity():
 # --- per-sub-row ET picker / per-sub-column comma picker placement ---------------------
 
 
-def test_etpick_rides_the_left_gutter_of_each_mapping_row():
+def test_etpick_rides_the_right_gutter_of_each_mapping_row():
     cells = {c.id: c for c in _with(presets=True).cells}
     for i in range(2):  # meantone, rank 2
         ep = cells[f"etpick:{i}"]
         assert ep.kind == "etpick" and ep.gen == i
         assert ep.w == spreadsheet.COL_W and ep.h == spreadsheet.ROW_H
         assert ep.y == cells[f"cell:mapping:{i}:0"].y   # the picker shares the row
-        assert ep.x < cells[f"cell:mapping:{i}:0"].x    # and sits left of the matrix
-    # gone without presets, and the column sheds the reserved gutter (the matrix shifts back left)
+        # it sits to the RIGHT of the row, clearing the closing ] bracket (the analogue of the
+        # comma picker below each column; the crowded left — handles, 𝒎ᵢ labels — stays clear)
+        close_bracket = cells[f"bracket:map:{i}:r"]
+        assert ep.x >= close_bracket.x + close_bracket.w
+    # gone without presets
     off = {c.id: c for c in _with(presets=False).cells}
     assert not any(k.startswith("etpick:") for k in off)
-    assert off["cell:mapping:0:0"].x < cells["cell:mapping:0:0"].x
 
 
 def test_commapick_rides_below_each_real_comma_column():
@@ -9299,3 +9300,21 @@ def test_a_full_rank_temperament_has_no_comma_pickers():
                              {**settings.defaults(), "presets": True})
     assert not any(c.id.startswith("commapick:") for c in full.cells)
     assert any(c.id.startswith("etpick:") for c in full.cells)  # but still one ET picker per row
+
+
+def test_green_draft_row_and_column_get_their_own_pickers():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "presets": True}
+    # a pending comma draft gets a commapick under its (green) column
+    cc = {c.id: c for c in spreadsheet.build(base, s, pending_comma=[None, None, None]).cells}
+    assert "commapick:draft" in cc and cc["commapick:draft"].pending
+    draft_col = next(c for cid, c in cc.items() if cid.startswith("cell:comma:0:") and c.pending)
+    assert cc["commapick:draft"].x == draft_col.x   # aligned under the draft column
+    # a pending mapping row gets its own ET picker, to the right like the committed rows
+    mc = {c.id: c for c in spreadsheet.build(base, s, pending_mapping_row=[None, None, None]).cells}
+    assert "etpick:draft" in mc and mc["etpick:draft"].pending
+    assert mc["etpick:draft"].x == mc["etpick:0"].x   # same right gutter as the committed rows
+    # adding the FIRST comma to a full-rank temperament still reserves the band + draft picker
+    full = spreadsheet.build(service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1))),
+                             s, pending_comma=[None, None, None])
+    assert any(c.id == "commapick:draft" for c in full.cells)

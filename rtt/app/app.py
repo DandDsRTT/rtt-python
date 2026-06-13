@@ -1924,14 +1924,16 @@ class _Reconciler:
         self.selects[cb.id] = sel
 
     def _build_etpick(self, cb, wrap):
+        # cb.pending is the green draft row's picker — it's blank (nothing matched), and picking
+        # ADDS the chosen ET as a new generator (see on_subpick); a committed row's picker mirrors it.
         db = self._editor.state.domain_basis
-        self._build_subpick(cb, wrap, presets.et_options(db),
-                            presets.identify_et(self._editor.state.mapping[cb.gen], db))
+        value = None if cb.pending else presets.identify_et(self._editor.state.mapping[cb.gen], db)
+        self._build_subpick(cb, wrap, presets.et_options(db), value)
 
     def _build_commapick(self, cb, wrap):
         db = self._editor.state.domain_basis
-        self._build_subpick(cb, wrap, presets.comma_options(db),
-                            presets.identify_comma(self._editor.state.comma_basis[cb.comma], db))
+        value = None if cb.pending else presets.identify_comma(self._editor.state.comma_basis[cb.comma], db)
+        self._build_subpick(cb, wrap, presets.comma_options(db), value)
 
     def _update_subpick(self, cb):
         # recompute options + matched value from live state each render, so a pick (or any other edit /
@@ -1941,15 +1943,17 @@ class _Reconciler:
             return
         db = self._editor.state.domain_basis
         if cb.id.startswith("etpick:"):
-            if cb.gen >= len(self._editor.state.mapping):
-                return  # a transient reflow shrank the mapping past this row; the rebuild will catch up
             options = presets.et_options(db)
-            value = presets.identify_et(self._editor.state.mapping[cb.gen], db)
+            if cb.pending or cb.gen >= len(self._editor.state.mapping):
+                value = None  # the draft row's picker is always blank; or a reflow shrank past this row
+            else:
+                value = presets.identify_et(self._editor.state.mapping[cb.gen], db)
         else:
-            if cb.comma >= len(self._editor.state.comma_basis):
-                return
             options = presets.comma_options(db)
-            value = presets.identify_comma(self._editor.state.comma_basis[cb.comma], db)
+            if cb.pending or cb.comma >= len(self._editor.state.comma_basis):
+                value = None
+            else:
+                value = presets.identify_comma(self._editor.state.comma_basis[cb.comma], db)
         value = value if value in options else None
         sel.set_options(options, value=value)
         _set_offlist_prompt(sel, value)
@@ -3284,15 +3288,22 @@ def index() -> None:
             _request_render()  # a tuning / prescaler preset re-solves — render off the loop
 
     def on_subpick(cid, value):
-        # a per-sub-row ET picker / per-sub-column comma picker committed its option: REPLACE that
-        # mapping row / comma column with the chosen ET's val / comma's vector (an undoable edit that
-        # keeps the rank/nullity). A rejected pick (a dependent row/column) toasts and the re-render
-        # re-derives the box's value. building[0] guards the programmatic re-render echo.
+        # a per-sub-row ET picker / per-sub-column comma picker committed its option. A committed
+        # row/column picker REPLACES that row / column with the chosen ET's val / comma's vector; a
+        # green DRAFT picker (":draft") ADDS the choice as a new generator / comma (the + → pick flow).
+        # Either way an undoable edit; a rejected pick (a dependent row/column) toasts. building[0]
+        # guards the programmatic re-render echo.
         if building[0] or value is None:
             return
         end_gesture()  # revert any live preview first, so the edit is one clean undo step
         db = editor.state.domain_basis
-        if cid.startswith("etpick:"):
+        if cid == "etpick:draft":
+            editor.set_pending_mapping_row(list(presets.et_value_to_val(value, db)))
+            ok = editor.pending_mapping_row is None  # committed iff the draft cleared (independent row)
+        elif cid == "commapick:draft":
+            editor.set_pending_comma(list(presets.comma_value_to_vector(value, db)))
+            ok = editor.pending_comma is None
+        elif cid.startswith("etpick:"):
             i = _token_index(cid, "gens")
             ok = i is not None and editor.set_mapping_row(i, presets.et_value_to_val(value, db))
         else:  # commapick:

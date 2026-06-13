@@ -3698,3 +3698,23 @@ async def test_picking_a_comma_replaces_the_column_and_syncs(user: User) -> None
     # the column re-derives to the picked comma, and the temperament chooser follows (augmented)
     assert _cell_child(user, "commapick:0").value == "128/125"
     assert _cell_child(user, "preset:temperament").value == "5:Augmented"
+
+
+async def test_a_draft_comma_picker_adds_the_chosen_comma(user: User) -> None:
+    await _enable(user, "presets")
+    await user.should_see(marker="cell:mapping:1:0")   # meantone is rank 2 (two mapping rows)
+    _click_glyph(user, "comma_plus")                   # + opens a green comma draft column
+    await user.should_see(marker="commapick:draft")    # the draft column has its own picker
+    _cell_child(user, "commapick:draft").set_value("128/125")  # pick the diesis -> fills + commits it
+    # a second, independent comma was added: nullity rises, the rank drops to 1 (the 2nd row is gone)
+    await user.should_not_see(marker="cell:mapping:1:0")
+    await user.should_not_see(marker="commapick:draft")   # the draft committed and closed
+
+
+async def test_a_draft_et_picker_adds_a_generator(user: User) -> None:
+    await _enable(user, "presets")
+    _click_glyph(user, "map_plus")                     # + opens a green mapping-row draft (un-temper)
+    await user.should_see(marker="etpick:draft")       # the draft row has its own ET picker
+    _cell_child(user, "etpick:draft").set_value("22")  # 22-ET is independent of meantone -> commits
+    await user.should_see(marker="cell:mapping:2:0")   # a third generator row was added (rank rose)
+    await user.should_not_see(marker="etpick:draft")   # the draft committed and closed

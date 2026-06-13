@@ -162,8 +162,8 @@ FRAME_OVERHANG = BRACKET_W - _BR_INSET - _BR_SERIF_L
 ROW_HANDLE_W = 14  # the per-mapping-row drag handle (drag a generator row onto another to add it)
 ROW_HANDLE_GAP = 4  # the gap it keeps from the matrix's opening bracket
 ETPICK_W = COL_W  # the per-mapping-row ET picker (a compact chooser ~one gridded value wide, riding
-# the leftmost gutter of the primes column): pick a curated ET to set that row to its val
-ETPICK_GAP = 4  # the gap the ET picker keeps from the drag handle / row label / opening bracket
+# a RIGHT-only gutter of the primes column, past the ]): pick a curated ET to set that row to its val
+ETPICK_GAP = 4  # the gap the ET picker keeps from the row's closing ] bracket
 COMMAPICK_GAP = 4  # the gap a comma column's per-column comma picker keeps below the ⟩ foot
 VAL_BRACKET_H = 16  # a single-row value bracket, kept short and centred in its
 # ROW_H row so neighbouring rows' brackets keep a clear gap (the enclosing
@@ -1611,7 +1611,7 @@ class _GridBuilder:
             # standard EBK-gutter footprint like the gens/primes columns they parallel
             ("ssgens", 2 * BRACKET_W + self.rL * COL_W, self.show_superspace, True),
             ("ssprimes", 2 * BRACKET_W + self.dL * COL_W + 2 * self.matlabel_ssprimes_w, self.show_superspace, True),
-            ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w + 2 * self.etpick_w, show_temp, True),
+            ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w + self.etpick_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", self._commas_band_w(self.nc_shown), show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
@@ -1978,10 +1978,11 @@ class _GridBuilder:
             formctrl = self.formchooser_band_h(key) if (self.show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
             # the per-comma-column pickers ride a band just below the ⟩ foot of the comma matrix
             # (above the symbol/caption stack and the whole-temperament chooser): one compact comma
-            # chooser per real comma column. Reserved on the interval-vectors row when the preset
-            # choosers show and there are commas to pick (a full-rank temperament has none).
+            # chooser per real comma column, plus one on a green draft column being added. Reserved on
+            # the interval-vectors row when the preset choosers show and there's a comma (or a draft
+            # adding the first) to pick — a full-rank temperament with no draft has none.
             cpick = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and self.show_presets
-                                               and self.nc > 0 and not folded) else 0
+                                               and (self.nc > 0 or self.pending is not None) and not folded) else 0
             ptext = self.ptext_band(key, folded)
             # open a consistent gap between the stacked in-tile bands: pad each present one by BAND_GAP
             # (its content centres, so adjacent bands clear each other) — values, symbol/equivalence,
@@ -2373,17 +2374,12 @@ class _GridBuilder:
         left one carries the per-row handles; the right one balances them, like the matlabel gutter."""
         return self.row_handle_w if group_key == "primes" else 0
 
-    def etpick_gutter_w(self, group_key: str):
-        """The ET-picker gutter, reserved OUTSIDE the handle + row-label gutters (the leftmost slot
-        of the primes column) on each side for balance — only the primes column, only when the
-        preset pickers show. The left one carries the per-row ET pickers; the right one balances it."""
-        return self.etpick_w if group_key == "primes" else 0
-
     def outer_gutter_w(self, group_key: str):
-        """the full left/right reservation outside the cells: the ET-picker gutter, then the handle
-        gutter, then the row-label gutter. Used wherever the cells' true left edge matters
-        (prime_left, the EBK span, the header)."""
-        return self.etpick_gutter_w(group_key) + self.handle_gutter_w(group_key) + self.matlabel_gutter_w(group_key)
+        """the full left/right reservation outside the cells: the handle gutter then the row-label
+        gutter. Used wherever the cells' true left edge matters (prime_left, the EBK span, the header).
+        The ET-picker gutter is NOT here — it rides a RIGHT-only reservation past the ] (see
+        :meth:`matrix_span` / the etpick emission), so the matrix and its left furniture stay put."""
+        return self.handle_gutter_w(group_key) + self.matlabel_gutter_w(group_key)
 
     def matrix_span(self, group_key: str):
         """The (x, width) of a group's CELL matrix — its content_box minus the outer gutters, which
@@ -2395,6 +2391,11 @@ class _GridBuilder:
         x, w = self.content_box(group_key)
         mx = self.outer_gutter_w(group_key)
         x, w = x + mx, w - 2 * mx
+        # the primes column reserves a RIGHT-only ET-picker gutter past the ] (content_w carries it on
+        # the right only, NOT mirrored), so the EBK matrix hugs the cells — drop it from the span's
+        # right edge (left edge unchanged). The per-row ET pickers ride that reclaimed right gutter.
+        if group_key == "primes" and self.etpick_w:
+            w -= self.etpick_w
         # the consolidated V column reserves a comma-half stub on the LEFT (empty_comma_w, for the
         # nullity count/caption) when there are no comma columns; the EBK matrix hugs U, so the
         # bracket starts past that stub — drop it from the span's left edge (right edge unchanged).
@@ -2997,7 +2998,10 @@ class _GridBuilder:
         # column footprint — the gutters only frame the row labels, never the title.
         for key in self.col_x:
             hx = self.col_x[key] + self.outer_gutter_w(key)
-            hw = self.col_w[key] - 2 * self.outer_gutter_w(key)
+            # the header centres over the CELLS, so drop the primes column's right-only ET-picker
+            # gutter (col_w carries it past the ]) along with the symmetric handle/label gutters
+            etpick = self.etpick_w if key == "primes" else 0
+            hw = self.col_w[key] - 2 * self.outer_gutter_w(key) - etpick
             self.cells.append(CellBox(f"header:{key}", hx, self.header_y, hw, HEADER_H, "colheader", text=self.col_header[key]))
             if self.col_collapsible[key]:
                 glyph = _fold_glyph(f"col:{key}" in self.collapsed)
@@ -3420,14 +3424,17 @@ class _GridBuilder:
             # handles a sibling concern adds ride the branch points up top — deliberately separate.)
             if self.settings.get("drag_to_combine") and self.r > 1 and self.tile_open("mapping", "primes"):
                 for i in range(self.r):
-                    self.cells.append(CellBox(f"map_drag:{self.col_token('gens', i)}", self.primes_x + self.etpick_gutter_w("primes"), self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
+                    self.cells.append(CellBox(f"map_drag:{self.col_token('gens', i)}", self.primes_x, self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
+            mx, mw = self.matrix_span("primes")
+            etpick_x = mx + mw + ETPICK_GAP  # past the ] (the right gutter matrix_span reclaimed)
             for i in range(self.r):
                 rt = self.col_token("gens", i)  # the row's stable id-token (== i until a removal/re-rank)
                 if self.tile_open("mapping", "primes"):
-                    # the per-row ET picker rides the leftmost gutter (a compact chooser; pick a
-                    # curated ET to set this generator row to its val) — see etpick_gutter_w
+                    # the per-row ET picker rides the RIGHT gutter, past the ] (a compact chooser; pick
+                    # a curated ET to set this generator row to its val) — the analogue of the comma
+                    # picker below each comma column. The crowded left (handles, 𝒎ᵢ labels) stays clear.
                     if self.show_presets:
-                        self.cells.append(CellBox(f"etpick:{rt}", self.primes_x, self.map_top(i), ETPICK_W, ROW_H, "etpick", gen=i))
+                        self.cells.append(CellBox(f"etpick:{rt}", etpick_x, self.map_top(i), ETPICK_W, ROW_H, "etpick", gen=i))
                     for p in range(self.d):
                         # text carries the mapping entry into the CellBox content (like the comma /
                         # target / held / interest vector cells already do) so changed_cell_ids sees a
@@ -3494,6 +3501,12 @@ class _GridBuilder:
                         # the ghost shows the born generator's COMPUTED prime coords; a real draft is blank
                         v = self.ghost_row_map[p] if self.ghost_row else self.pending_mapping_row[p]
                         self.cells.append(CellBox(ids.mapping_cell(drt, p), self.prime_left(p), self.map_top(dr), COL_W, ROW_H, row_kind, text="" if v is None else str(v), gen=dr, prime=p, pending=True))
+                    # a real draft row gets its own ET picker too (right gutter, like the committed
+                    # rows): pick a curated ET to fill and commit it (add it as a generator). A hover
+                    # ghost (read-only) doesn't.
+                    if not self.ghost_row and self.show_presets:
+                        mx, mw = self.matrix_span("primes")
+                        self.cells.append(CellBox("etpick:draft", mx + mw + ETPICK_GAP, self.map_top(dr), ETPICK_W, ROW_H, "etpick", gen=dr, pending=True))
                 # the derived mapped tiles (M·target / M·interest / M·held / M·comma / M·U for the new
                 # generator). A real draft is blank (undefined until it commits); a − hover ghost shows
                 # the born generator's COMPUTED images (self.ghost_row_mapped), so the row reads green
@@ -3751,6 +3764,10 @@ class _GridBuilder:
                         v = self.ghost_comma_vec[p] if self.ghost_comma else self.pending[p]
                         self.cells.append(CellBox(ids.comma_cell(self.pending_col_token('commas'), p), self.comma_left(self.nc), self.vec_top(p), COL_W, ROW_H, col_kind,
                                              text="" if v is None else str(v), prime=p, comma=self.nc, pending=True, unit=self.cell_unit("vectors", "commas", prime=p)))
+                    # a real draft column gets its own picker too: pick a curated comma to fill and
+                    # commit it (add it to the basis). A hover ghost (read-only) doesn't.
+                    if self.pending is not None and self.show_presets:
+                        self.cells.append(CellBox("commapick:draft", self.comma_left(self.nc), self.cpick_band_y("vectors") + COMMAPICK_GAP, COL_W, ROW_H, "commapick", comma=self.nc, pending=True))
             if self.tile_open("vectors", "targets"):
                 # the target interval list as vector columns — an EDITABLE hybrid input like the comma
                 # basis (typing a column overrides the target set) — except the auto Tₚ = I list, which
@@ -4786,10 +4803,10 @@ class _GridBuilder:
                     text = "𝒛" if size_row else f"{glyph}{_sub(i + 1)}"
                     self.cells.append(CellBox(
                         f"matlabel:row:{rkey}:{ckey}:{i}",
-                        # past the ET-picker + drag-handle gutters (when present), so they sit to its
-                        # left; the box fills the column's row-label gutter (wider in the superspace
-                        # primes column, for M_s→L's 𝒎ₛ→ₗᵢ) so a wide label never overflows the ⟨ bracket
-                        self.content_x[ckey] + self.etpick_gutter_w(ckey) + self.handle_gutter_w(ckey), top(i),
+                        # past the drag-handle gutter (when present), so the handle sits to its left;
+                        # the box fills the column's row-label gutter (wider in the superspace primes
+                        # column, for M_s→L's 𝒎ₛ→ₗᵢ) so a wide label never overflows the ⟨ bracket
+                        self.content_x[ckey] + self.handle_gutter_w(ckey), top(i),
                         self.matlabel_gutter_w(ckey), ROW_H,
                         "matlabel", text=text,
                     ))
