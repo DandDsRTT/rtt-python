@@ -351,7 +351,7 @@ _GRIDVALUE_SPECS = {
 }
 
 
-def _vgroup_key(cb) -> str:
+def _vgroup_key(cb: spreadsheet.CellBox) -> str:
     """The vector/map a non-scalar gridded cell (a `cid_arg=False` _GRIDVALUE_SPECS kind) belongs to —
     its whole interval-vector COLUMN or mapping ROW, the unit the user fills in and submits as a whole
     (see `_GROUP_EXIT_JS`). All of one group's cells share this key, and DIFFERENT groups never collide,
@@ -742,7 +742,7 @@ def _projection_prompt(cid: str) -> str:
     return "<choose embedding>" if cid.endswith(":gens") else "<choose projection>"
 
 
-def _hover_index(detail):
+def _hover_index(detail) -> int | None:
     """Normalize an ``opthover`` payload — the hovered option's positional index, or -1 / None on a
     leave — to a 0-based index, or None for a leave. The delegation marshals the index in ``detail``;
     popup-hide passes None. Be defensive about the wrapper shape (a dict/list can slip through the
@@ -757,7 +757,7 @@ def _hover_index(detail):
     return index if index >= 0 else None
 
 
-def _option_key(select: ui.select, index):
+def _option_key(select: ui.select, index: int | None):
     """The option key (the value the select would commit) at a 0-based option index, or None when out
     of range / a leave. NiceGUI numbers each option's client-side value by POSITION (see
     ChoiceElement._update_options), so the hovered index maps back through the live option order —
@@ -806,7 +806,7 @@ class _Gesture:
 
 
 class _Reconciler:
-    def __init__(self, editor):
+    def __init__(self, editor: Editor) -> None:
         self._editor = editor
         self._cb = None  # callbacks (act, render, on_*) wired by index() after they are defined
         self._row_drag: int | None = None  # the mapping row a drag-to-add started on (dragstart → drop)
@@ -947,13 +947,13 @@ class _Reconciler:
         self.cell_kinds["target_plus"] = _KindHandlers(self._build_target_plus)
         self.cell_kinds["colgrip"] = _KindHandlers(self._build_colgrip)
 
-    def drop(self, eid):
+    def drop(self, eid: str) -> None:
         """Remove an entity's element and forget every per-id handle for it (see _handle_dicts)."""
         self.els[eid].delete()
         for d in self._handle_dicts:
             d.pop(eid, None)
 
-    def make_cell(self, cb):
+    def make_cell(self, cb: spreadsheet.CellBox) -> None:
         # build a cell's element in the active parent (the caller opens the freeze container),
         # register it + its kind (and audio key) so render() can place and reconcile it after.
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
@@ -1029,7 +1029,7 @@ class _Reconciler:
             wrap.on("wheel", lambda e, cid=cb.id: self._cb.on_value_wheel(cid, e.args.get("deltaY")),
                     args=["deltaY"], js_handler=_INT_WHEEL_JS)
 
-    def update_cell(self, cb):
+    def update_cell(self, cb: spreadsheet.CellBox) -> None:
         # reconcile a present cell: run its registered update (value/glyph in sync) then
         # add/refresh/remove the per-cell unit overlay (the `units` toggle).
         handlers = self.cell_kinds[cb.kind]  # registered for every kind (see make_cell); raises on drift
@@ -1055,14 +1055,14 @@ class _Reconciler:
         if cb.audio is not None:  # refresh the baked pitch / slot so a reorder or retune stays in sync
             self._tag_audio(self.els[cb.id], cb)
 
-    def _tag_audio(self, el, cb):
+    def _tag_audio(self, el, cb: spreadsheet.CellBox) -> None:
         """Tag a cell wrap as a click-to-play voice: the JS engine reads data-audio (its highlight /
         chord group), data-idx (its slot in that group) and data-cents (its pitch) off it, and lights
         it (.rtt-spk) while it sounds. Set on build, refreshed each render so reorder + retune stay live."""
         tile, idx, cents = cb.audio
         el.classes(add="rtt-spk").props(f'data-audio="{tile}" data-idx="{idx}" data-cents="{cents:.6f}"')
 
-    def _put_stacked_face(self, cid, cls, main, sub):
+    def _put_stacked_face(self, cid: str, cls: str, main: str, sub: str) -> None:
         """Build a stacked value face into the active cell — a big main glyph over a smaller
         sub-line (the read-only tuning value look) — and register the two labels so the update can
         re-sync them. Shared by the cents cells (whole part over .fraction) and the power cells
@@ -1073,7 +1073,7 @@ class _Reconciler:
         self.stacked_faces[cid] = (m, s)
         self._size_stacked_main(m, sub)
 
-    def _size_stacked_main(self, main_label, sub):
+    def _size_stacked_main(self, main_label, sub: str) -> None:
         """Size a stacked face's main glyph to its sub-line. With NO sub (a bare integer — a
         prescaler 0/1, a finite optimization/norm power) the value isn't a whole-part-over-
         .fraction at all: it renders at the full value-cell font (the `rtt-stacked-solo` class),
@@ -1084,7 +1084,7 @@ class _Reconciler:
         main_label.classes(add="rtt-stacked-solo" if solo else "",
                            remove="" if solo else "rtt-stacked-solo")
 
-    def _sync_stacked_face(self, cid, main, sub):
+    def _sync_stacked_face(self, cid: str, main: str, sub: str) -> None:
         """Re-sync a stacked face's two lines in place (the cell kind is unchanged across
         renders, so its labels persist)."""
         m, s = self.stacked_faces[cid]
@@ -1092,21 +1092,21 @@ class _Reconciler:
         s.set_text(sub)
         self._size_stacked_main(m, sub)  # a value that gained/lost its fraction flips solo too
 
-    def set_cents_face(self, cid, text):
+    def set_cents_face(self, cid: str, text: str) -> None:
         """Sync a cents cell's stacked face: the whole part over the dot-led fraction (the
         fraction blank when the value is an integer or the cell is blanked). Shared by the
         read-only tuning value cells and the editable cents cells (whose face overlays their input)."""
         whole, frac = _cents_parts(text)
         self._sync_stacked_face(cid, whole, f".{frac}" if frac else "")
 
-    def cents_face(self, cb, cls):
+    def cents_face(self, cb: spreadsheet.CellBox, cls: str) -> None:
         """Build the stacked int-over-fraction cents face (the read-only tuning value look: the whole
         part big over a smaller dot-led fraction). Shared by the read-only tuning value cell and the
         editable cents cells — the latter pass the overlay class and lay it over their input."""
         whole, frac = _cents_parts(cb.text)
         self._put_stacked_face(cb.id, cls, whole, f".{frac}" if frac else "")
 
-    def _ratio(self, cb, approx, overlay=False):
+    def _ratio(self, cb: spreadsheet.CellBox, approx: bool, overlay: bool = False) -> None:
         """A ratio rendered as a stacked fraction (with a ~ prefix when approximate). With
         ``overlay`` the fraction is an ``rtt-cellface`` laid over an editable input (the
         ratiocell) instead of a read-only cell — it shows when the cell isn't focused. The
@@ -1117,7 +1117,7 @@ class _Reconciler:
         with face:
             self._ratio_body(cb, approx)
 
-    def _ratio_body(self, cb, approx):
+    def _ratio_body(self, cb: spreadsheet.CellBox, approx: bool) -> None:
         """Fill the ``.rtt-ratio`` container: the ~approximate marker + stacked fraction for a real
         NUMERIC ratio; otherwise the bare value (empty when blanked, a lone ``—`` when dashed). The
         ~ and the fraction's bar are for numbers only — a dash or a blank gets neither (so a
@@ -1145,7 +1145,7 @@ class _Reconciler:
         else:
             self.labels[cb.id] = ui.label(cb.text).classes("rtt-value")
 
-    def _fit_ratio(self, cid, num, den, width, whole=False):
+    def _fit_ratio(self, cid: str, num: str, den: str, width: float, whole: bool = False) -> None:
         """Size a stacked fraction's two lines to fit its square: a long numerator/denominator
         would spill the cell at the comfortable face size, so num and den shrink together (see
         _ratio_font). A whole ratio (collapsed to a bare integer) fills the square at the big value
@@ -1156,7 +1156,7 @@ class _Reconciler:
         self.fracs[cid][0].style(font)
         self.fracs[cid][1].style(font)
 
-    def cell_value(self, cid):
+    def cell_value(self, cid: str) -> str:
         """The committed string a gridded ratio-or-integer cell currently holds, reassembled from
         its input(s). A fraction cell (``_build_gridvalue`` with ``ratio_allowed``) edits its
         numerator and denominator in two separate inputs (``inputs[cid]`` / ``den_inputs[cid]``);
@@ -1181,10 +1181,10 @@ class _Reconciler:
     # built-but-not-filled drift between the two ladders becomes structurally impossible ----
     # The html-content families build an empty ui.html; the update fills it (re-drawing only
     # when the cached key changes). The EBK marks, bar chart and range chart share the build.
-    def _build_svgfill(self, cb, wrap):
+    def _build_svgfill(self, cb: spreadsheet.CellBox, wrap) -> None:
         self.htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in the update from the cell's px box
 
-    def _update_ebk(self, cb):
+    def _update_ebk(self, cb: spreadsheet.CellBox) -> None:
         # the mark is drawn 1:1 to its px box, so redraw it whenever the box changes size (e.g.
         # the brace/top bracket as the domain grows) or its pending (green) state flips (a draft
         # comma's marks committing to black)
@@ -1192,7 +1192,7 @@ class _Reconciler:
             self.htmls[cb.id].set_content(_ebk_svg(cb))
             self.ebk_sizes[cb.id] = (cb.w, cb.h, cb.pending)
 
-    def _update_chart(self, cb):
+    def _update_chart(self, cb: spreadsheet.CellBox) -> None:
         # redraw when the box resizes OR the underlying data / indicator changes
         key = (cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label)
         if self.chart_keys.get(cb.id) != key:
@@ -1200,24 +1200,24 @@ class _Reconciler:
                 _bar_chart(cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label))
             self.chart_keys[cb.id] = key
 
-    def _update_rangechart(self, cb):
+    def _update_rangechart(self, cb: spreadsheet.CellBox) -> None:
         # redraw when the box resizes OR the ranges/live tuning change (mapping/mode edit)
         key = (cb.w, cb.h, cb.ranges, cb.values)
         if self.range_keys.get(cb.id) != key:
             self.htmls[cb.id].set_content(_range_chart(cb.w, cb.h, cb.ranges, cb.values))
             self.range_keys[cb.id] = key
 
-    def _build_count(self, cb, wrap):
+    def _build_count(self, cb: spreadsheet.CellBox, wrap) -> None:
         self.math_cells[cb.id] = ui.html("").classes("rtt-count")  # a scalar "symbol = value"; filled in update
 
-    def _build_symbol(self, cb, wrap):
+    def _build_symbol(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-symbol-cell")
         # the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) stay on one line (ₚ never wraps off)
         cls = "rtt-symbol rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-symbol"
         self.math_cells[cb.id] = ui.html("").classes(cls)
 
     @staticmethod
-    def _matlabel_classes(text):
+    def _matlabel_classes(text: str) -> str:
         # routed through _math_html so a label's bold-italic / bold-upright glyphs draw in the
         # same styled face as the tile symbol it indexes. A plain single-glyph label (𝒎ᵢ, 𝐜ᵢ, w)
         # fits the COL_W spine at the default size; any MULTI-TOKEN label — the complexity
@@ -1229,15 +1229,15 @@ class _Reconciler:
         # (overspilling) class.
         return "rtt-matlabel rtt-matlabel-norm" if ("‖" in text or " " in text) else "rtt-matlabel"
 
-    def _build_matlabel(self, cb, wrap):
+    def _build_matlabel(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-matlabel-cell")
         self.math_cells[cb.id] = ui.html("").classes(self._matlabel_classes(cb.text))
 
-    def _build_units(self, cb, wrap):
+    def _build_units(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-units-cell")
         self.math_cells[cb.id] = ui.html("").classes("rtt-units")
 
-    def _update_mathcell(self, cb):  # shared by symbol / count / units / matlabel
+    def _update_mathcell(self, cb: spreadsheet.CellBox) -> None:  # shared by symbol / count / units / matlabel
         # symbols/equivalence tails/counts and matrix row/col labels go through _math_html (styled
         # math glyphs); units use _units_html (a single-story-g sans value, serif label) and shrink
         # to fit their cell, so a long annotated unit (¢(E-sopfr-S)/) never spills its COL_W spine
@@ -1276,7 +1276,7 @@ class _Reconciler:
                     replace="rtt-symbol rtt-opt-1line rtt-opt-wide" if wide
                     else "rtt-symbol rtt-opt-1line")
 
-    def _build_caption(self, cb, wrap):
+    def _build_caption(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-caption-cell")
         # the optimization box's captions stay on one line (no wrap), unlike tile names; a caption
         # with align="left" reads left-justified under its control (e.g. a preset chooser's label).
@@ -1289,7 +1289,7 @@ class _Reconciler:
             cls += " rtt-caption-left"
         self.captions[cb.id] = ui.html("").classes(cls)
 
-    def _update_caption(self, cb):
+    def _update_caption(self, cb: spreadsheet.CellBox) -> None:
         html = _underline_html(cb.text, cb.underlines)
         if self.caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines
             self.captions[cb.id].set_content(html)
@@ -1299,12 +1299,12 @@ class _Reconciler:
         self.captions[cb.id].classes(add="rtt-caption-disabled" if cb.disabled else "",
                                      remove="" if cb.disabled else "rtt-caption-disabled")
 
-    def _build_ptextpending(self, cb, wrap):
+    def _build_ptextpending(self, cb: spreadsheet.CellBox, wrap) -> None:
         # an editable vector-list dual mid-draft (comma basis / target list): a static two-tone
         # box (the draft is typed into the green grid cells, not here); content set in the update
         self.htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
 
-    def _update_ptextpending(self, cb):
+    def _update_ptextpending(self, cb: spreadsheet.CellBox) -> None:
         # the committed part black and the draft entry green (same green as its grid cells)
         ed = self._editor
         if cb.id == "ptext:mapping:primes":
@@ -1326,10 +1326,10 @@ class _Reconciler:
             f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
         self.htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
 
-    def _build_mathexpr(self, cb, wrap):
+    def _build_mathexpr(self, cb: spreadsheet.CellBox, wrap) -> None:
         self.exprs[cb.id] = ui.html("").classes("rtt-mathexpr")  # a just value's stacked closed form; drawn in update
 
-    def _update_mathexpr(self, cb):
+    def _update_mathexpr(self, cb: spreadsheet.CellBox) -> None:
         # redraw (with refit fonts) whenever the expression text or cell width changes
         if self.expr_state.get(cb.id) != (cb.text, cb.w):
             self.exprs[cb.id].set_content(_mathexpr_html(cb.text, cb.w))
@@ -1340,7 +1340,7 @@ class _Reconciler:
     # ratio-capable kinds; behaviour driven by the cell's _GridValueSpec. prescalercell /
     # gentuningcell / powerinput are a DIFFERENT family (a decimal cents / power face overlaid on the
     # input) and keep their own builders. ----
-    def _build_gridvalue(self, cb, wrap):
+    def _build_gridvalue(self, cb: spreadsheet.CellBox, wrap) -> None:
         # PREVIEW the ripple as you type (the kinds that have a live preview) and COMMIT on Enter /
         # blur (Enter blurs via make_cell) — never re-solving on every keystroke. A per-cell unit
         # overlays inside the input box; drag-to-combine arming is per its spec. A ratio_allowed kind
@@ -1361,7 +1361,7 @@ class _Reconciler:
             self.inputs[cb.id] = inp
         self._arm_gridvalue(wrap, cb, spec)
 
-    def _build_fraction(self, cb, wrap, commit, preview):
+    def _build_fraction(self, cb: spreadsheet.CellBox, wrap, commit, preview) -> None:
         # the editable stacked fraction: a numerator input over a bar over a denominator input, edited
         # IN PLACE (no overlay face, no diagonal slash). The two are SEPARATE fields — Tab moves
         # num->den, the bar isn't selectable — and the cell collapses to the big-integer view when the
@@ -1381,7 +1381,7 @@ class _Reconciler:
         self.den_inputs[cb.id] = den
         self.frac_edits[cb.id] = box
 
-    def _gridvalue_handlers(self, cb, spec):
+    def _gridvalue_handlers(self, cb: spreadsheet.CellBox, spec: _GridValueSpec):
         """A gridded cell's (commit, preview) event handlers. The scalar ratio / domain-element
         cells pass the cell id and commit one at a time; the integer matrix/vector cells re-read the
         WHOLE matrix and take a ``preview=`` flag. ``preview`` is None for the ratiocell — it commits
@@ -1396,7 +1396,7 @@ class _Reconciler:
             preview = (lambda e=None: fn(preview=True)) if spec.preview else None
         return commit, preview
 
-    def _arm_gridvalue(self, wrap, cb, spec):  # drag-to-combine drop target, per the cell's spec
+    def _arm_gridvalue(self, wrap, cb: spreadsheet.CellBox, spec: _GridValueSpec) -> None:  # drag-to-combine drop target, per the cell's spec
         if spec.arm is None:
             return
         if spec.arm[0] == "row":  # a mapping row: drop a dragged generator row here to combine
@@ -1404,7 +1404,7 @@ class _Reconciler:
         else:  # ("col", group): drop a dragged interval onto this column (its product) to combine
             self._arm_col_target(wrap, spec.arm[1], cb.comma)
 
-    def _update_gridvalue(self, cb):
+    def _update_gridvalue(self, cb: spreadsheet.CellBox) -> None:
         spec = _GRIDVALUE_SPECS[cb.kind]
         text = self._gridvalue_text(cb)
         if spec.ratio_allowed:
@@ -1418,7 +1418,7 @@ class _Reconciler:
             target.classes(add="rtt-pending" if cb.pending else "",
                            remove="" if cb.pending else "rtt-pending")
 
-    def _update_fraction(self, cb, text):
+    def _update_fraction(self, cb: spreadsheet.CellBox, text: str) -> None:
         # split the committed value into the two fields and pick the view: a blank/1 denominator is the
         # big-integer view (collapse EVERYWHERE — a committed "2/1" rests as a big "2"), anything else
         # is the stacked fraction. _FRACTION_JS keeps data-fracmode live as you type; this is the
@@ -1430,7 +1430,7 @@ class _Reconciler:
         self.frac_edits[cb.id].props(f'data-fracmode={"ratio" if ratio else "int"}')
         self._fit_fraction(cb.id, num, den, cb.w, ratio)
 
-    def _fit_fraction(self, cid, num, den, width, ratio):
+    def _fit_fraction(self, cid: str, num: str, den: str, width: float, ratio: bool) -> None:
         # the stacked fraction shrinks both lines together to fit a long num/den (capped at the
         # comfortable ratio size); the integer view fills the square at the big value font, shrunk only
         # if a long integer (e.g. a target 65536) would spill. Both share _digit_fit_font. Set on both
@@ -1440,7 +1440,7 @@ class _Reconciler:
         self.inputs[cid].style(style)
         self.den_inputs[cid].style(style)
 
-    def _gridvalue_text(self, cb):
+    def _gridvalue_text(self, cb: spreadsheet.CellBox) -> str:
         """The string a gridded cell shows. A live DRAFT (a comma column / a mapping row being added)
         reads its typed component straight from the editor — it changes during a preview without a
         spreadsheet rebuild; every other cell already carries it in ``cb.text`` (blanked when
@@ -1451,7 +1451,7 @@ class _Reconciler:
             return "" if v is None else str(v)
         return "" if cb.blank else cb.text
 
-    def _build_prescalercell(self, cb, wrap):
+    def _build_prescalercell(self, cb: spreadsheet.CellBox, wrap) -> None:
         # a bare prescaler 𝐿 diagonal cell, the user's editable override (off-diagonal cells stay
         # tuning value "0" — 𝐿 is diagonal). Each input dispatches to set_custom_prescaler_entry; the cid
         # carries the diagonal slot, so the lambda closes over it (a free cb would be the LAST
@@ -1461,13 +1461,13 @@ class _Reconciler:
             .props("dense borderless").classes("rtt-cellinput")
         self.cents_face(cb, "rtt-tuning-value rtt-cellface")  # the stacked face overlaid on the input
 
-    def _update_prescalercell(self, cb):
+    def _update_prescalercell(self, cb: spreadsheet.CellBox) -> None:
         # reflect the live prescaler diagonal (the override if set, else the scheme-derived value —
         # spreadsheet.build emits the final text). Blank when quantities are off, like the other cells
         self.inputs[cb.id].value = cb.text
         self.set_cents_face(cb.id, cb.text)  # the overlaid stacked face mirrors the input
 
-    def _build_powerinput(self, cb, wrap):
+    def _build_powerinput(self, cb: spreadsheet.CellBox, wrap) -> None:
         # the optimization power 𝑝, the box-𝒄 norm power 𝑞, or its dual. The symbol label rides as
         # a separate cell below; the value carries a stacked gridded face overlaid on the editable
         # input (like a cents cell): ∞ shows a small "(max)" beneath it, a numeric power shows bare.
@@ -1476,7 +1476,7 @@ class _Reconciler:
             .props("dense borderless").classes("rtt-cellinput")
         self._put_stacked_face(cb.id, "rtt-tuning-value rtt-cellface", *_power_parts(cb.text))
 
-    def _update_powerinput(self, cb):
+    def _update_powerinput(self, cb: spreadsheet.CellBox) -> None:
         # mirror the raw value into the input (shown when focused) and re-sync the overlay face
         # (shown otherwise): ∞ stacks a small "(max)" below it, a numeric power shows bare. (Only the
         # editable powers run through here: the live optimization power 𝑝 and the box-𝒄 norm power 𝑞
@@ -1485,7 +1485,7 @@ class _Reconciler:
         self.inputs[cb.id].value = cb.text
         self._sync_stacked_face(cb.id, *_power_parts(cb.text))
 
-    def _build_powerdisplay(self, cb, wrap):
+    def _build_powerdisplay(self, cb: spreadsheet.CellBox, wrap) -> None:
         # a READ-ONLY power value: the all-interval-locked optimization power 𝑝, the box-𝒄 norm power 𝑞
         # when alt. complexity is off, or the derived dual norm power dual(𝑞). The SAME stacked
         # ∞-over-"(max)" face as the editable powerinput (_power_parts, same fonts, full-cell centred
@@ -1494,10 +1494,10 @@ class _Reconciler:
         # focus, and it keeps the per-cell-unit padding rule off a value that carries no unit.)
         self._put_stacked_face(cb.id, "rtt-tuning-value rtt-cellface", *_power_parts(cb.text))
 
-    def _update_powerdisplay(self, cb):
+    def _update_powerdisplay(self, cb: spreadsheet.CellBox) -> None:
         self._sync_stacked_face(cb.id, *_power_parts(cb.text))
 
-    def _build_gentuningcell(self, cb, wrap):
+    def _build_gentuningcell(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-cell-input rtt-cell-stacked")
         self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_gentuning_change(cid)) \
             .props("dense borderless").classes("rtt-cellinput")
@@ -1514,12 +1514,12 @@ class _Reconciler:
         wrap.on("mouseenter", lambda _=None, cid=cb.id: self._cb.gentuning_hover(cid))
         wrap.on("mouseleave", lambda _=None, cid=cb.id: self._cb.gentuning_unhover(cid))
 
-    def _update_gentuningcell(self, cb):
+    def _update_gentuningcell(self, cb: spreadsheet.CellBox) -> None:
         text = "" if cb.blank else cb.text  # blank when quantities off
         self.inputs[cb.id].value = text
         self._set_gentuning_face(cb.id, text)  # the overlaid signed face mirrors the input
 
-    def _gentuning_face(self, cb):
+    def _gentuning_face(self, cb: spreadsheet.CellBox) -> None:
         """The generator-tuning cell's signed, clickable cents face overlaid on its input: a sign
         glyph (the otherwise-assumed "+" of a positive generator, made visible — or "−") the user
         clicks to reverse the generator (negating its mapping row in lockstep, so the tuning map
@@ -1539,7 +1539,7 @@ class _Reconciler:
             sub = ui.label(f".{frac}" if frac else "").classes("rtt-stacked-sub")
         self.gensign_faces[cb.id] = (s, m, sub)
 
-    def _set_gentuning_face(self, cid, text):
+    def _set_gentuning_face(self, cid: str, text: str) -> None:
         """Re-sync a generator-tuning cell's signed face in place (the cell kind is unchanged
         across renders, so its sign/whole/fraction labels persist)."""
         sign, whole, frac = _gentuning_parts(text)
@@ -1548,7 +1548,7 @@ class _Reconciler:
         m.set_text(whole)
         sub.set_text(f".{frac}" if frac else "")
 
-    def _build_ptextedit(self, cb, wrap):
+    def _build_ptextedit(self, cb: spreadsheet.CellBox, wrap) -> None:
         # an editable dual: typing a valid EBK string drives the grid (its own ptext_inputs dict).
         # Most duals commit LIVE (on_change). The projection P / embedding G bands commit only on
         # SUBMIT (blur / Enter): you type the WHOLE matrix unmolested — no retune, no red box, no toast
@@ -1562,21 +1562,21 @@ class _Reconciler:
                 .props("dense borderless").classes("rtt-ptextedit")
         self.ptext_inputs[cb.id] = inp
 
-    def _update_ptextedit(self, cb):  # reflect the canonical string + its shrink-to-fit font
+    def _update_ptextedit(self, cb: spreadsheet.CellBox) -> None:  # reflect the canonical string + its shrink-to-fit font
         self.ptext_inputs[cb.id].value = cb.text
         self.ptext_inputs[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
 
     # ---- ratio faces (a stacked fraction via _ratio) + the read-only cents (tuning value) face ----
-    def _build_genratio(self, cb, wrap):
+    def _build_genratio(self, cb: spreadsheet.CellBox, wrap) -> None:
         if cb.pending:  # the draft row's generator ratio: a green "?" placeholder until the row commits
             self.labels[cb.id] = ui.label(cb.text).classes("rtt-value rtt-pending-q")
             return
         self._ratio(cb, approx=True)  # a generator ratio, shown ~approximate
 
-    def _build_commaratio(self, cb, wrap):
+    def _build_commaratio(self, cb: spreadsheet.CellBox, wrap) -> None:
         self._build_ratio_or_pending(cb)
 
-    def _build_ratio_or_pending(self, cb):
+    def _build_ratio_or_pending(self, cb: spreadsheet.CellBox) -> None:
         # a read-only comma ratio heading its column — the generator-detempering D ratio, or a
         # pending comma draft's green "?" placeholder (no value until the vector is filled in). The
         # editable comma/target/held/interest ratios are ratiocells (the shared _build_gridvalue).
@@ -1585,7 +1585,7 @@ class _Reconciler:
         else:
             self._ratio(cb, approx=False)
 
-    def _update_ratio(self, cb):  # genratio / commaratio (read-only): rebuild the stacked fraction face
+    def _update_ratio(self, cb: spreadsheet.CellBox) -> None:  # genratio / commaratio (read-only): rebuild the stacked fraction face
         # The value's SHAPE can flip between renders — a real numeric ratio <-> a blanked (quantities
         # off) or dashed value, or a whole "n/1" <-> a true fraction — and the ~approx + fraction
         # structure differs from a bare label / bare integer. Patching the fraction's numbers in
@@ -1603,10 +1603,10 @@ class _Reconciler:
         with face:
             self._ratio_body(cb, approx=(cb.kind == "genratio"))
 
-    def _build_tuning_value(self, cb, wrap):
+    def _build_tuning_value(self, cb: spreadsheet.CellBox, wrap) -> None:
         self.cents_face(cb, "rtt-tuning-value")  # the read-only stacked int-over-fraction cents face
 
-    def _update_tuning_value(self, cb):
+    def _update_tuning_value(self, cb: spreadsheet.CellBox) -> None:
         self.set_cents_face(cb.id, cb.text)
         # a blank pending PLACEHOLDER in a tuning-family row (tuning / just / retune / complexity /
         # …) of the draft column, ringed green by .rtt-cell:not(.rtt-cell-input).rtt-pending — the
@@ -1616,12 +1616,12 @@ class _Reconciler:
 
     # ---- plain label cells: a ui.label whose text the update keeps in sync (set_text). prime /
     # formcell sit in a white-bordered box; ptext also tracks a shrink-to-fit font; boxtitle is static ----
-    def _label_builder(self, cls):  # a build that drops a classed ui.label into the cell, registered in labels
+    def _label_builder(self, cls: str):  # a build that drops a classed ui.label into the cell, registered in labels
         def build(cb, wrap):
             self.labels[cb.id] = ui.label(cb.text).classes(cls)
         return build
 
-    def _update_label(self, cb):  # prime / formcell / colheader / rowlabel / mapped / vec
+    def _update_label(self, cb: spreadsheet.CellBox) -> None:  # prime / formcell / colheader / rowlabel / mapped / vec
         self.labels[cb.id].set_text(cb.text)
         # a blank pending PLACEHOLDER: the draft column's computed rows (mapping / tuning / …) are
         # filled with empty cells so the WHOLE draft column reads green, not just its editable cells.
@@ -1630,12 +1630,12 @@ class _Reconciler:
         self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
                                 remove="" if cb.pending else "rtt-pending")
 
-    def _update_ptext(self, cb):  # a read-only value: keep its text and shrink-to-fit font in sync
+    def _update_ptext(self, cb: spreadsheet.CellBox) -> None:  # a read-only value: keep its text and shrink-to-fit font in sync
         self.labels[cb.id].set_text(cb.text)
         self.labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
 
     # ---- interactive controls with an update: range-mode selector, fold toggles ----
-    def _build_rangemode(self, cb, wrap):
+    def _build_rangemode(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-rangemode")  # two square indicators side by side (the mockup style)
         opts = {}
         for mode in ("monotone", "tradeoff"):
@@ -1647,34 +1647,34 @@ class _Reconciler:
             opts[mode] = opt
         self.rangeopts[cb.id] = opts
 
-    def _update_rangemode(self, cb):  # fill the live mode's square (the other's is hollow)
+    def _update_rangemode(self, cb: spreadsheet.CellBox) -> None:  # fill the live mode's square (the other's is hollow)
         for mode, opt in self.rangeopts[cb.id].items():
             (opt.classes(add="rtt-rangeopt-on") if mode == cb.text
              else opt.classes(remove="rtt-rangeopt-on"))
 
-    def _build_scheme_button(self, cb, wrap):
+    def _build_scheme_button(self, cb: spreadsheet.CellBox, wrap) -> None:
         # single click hands the tuning back to the scheme + target list (back_to_scheme); always
         # present on the projection / embedding tiles, regardless of the presets toggle
         self.scheme_buttons[cb.id] = ui.button(cb.text, on_click=lambda: self._cb.act(self._editor.back_to_scheme),
                                                color=None).props("unelevated dense no-caps").classes("rtt-scheme-btn")
 
-    def _update_scheme_button(self, cb):  # grey it when the tuning is already scheme-driven (nothing to hand back)
+    def _update_scheme_button(self, cb: spreadsheet.CellBox) -> None:  # grey it when the tuning is already scheme-driven (nothing to hand back)
         btn = self.scheme_buttons[cb.id]
         (btn.classes(add="rtt-scheme-btn-idle") if not self._editor.manual_tuning
          else btn.classes(remove="rtt-scheme-btn-idle"))
 
-    def _build_foldtoggle(self, cb, wrap):  # rowtoggle / coltoggle / tiletoggle: a clickable chevron over its band
+    def _build_foldtoggle(self, cb: spreadsheet.CellBox, wrap) -> None:  # rowtoggle / coltoggle / tiletoggle: a clickable chevron over its band
         item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets" / "tile:mapping:primes"
         self.htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
         self.fold_state[cb.id] = cb.text  # the glyph swaps on collapse/expand (see _update_foldtoggle)
         wrap.on("click", lambda _=None, it=item: self._cb.on_toggle(it))
 
-    def _build_alltoggle(self, cb, wrap):  # the master expand/collapse-all control in the node corner
+    def _build_alltoggle(self, cb: spreadsheet.CellBox, wrap) -> None:  # the master expand/collapse-all control in the node corner
         self.htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
         self.fold_state[cb.id] = cb.text
         wrap.on("click", lambda _=None: self._cb.on_toggle_all())
 
-    def _update_foldtoggle(self, cb):  # swap the chevron SVG when the band folds / unfolds
+    def _update_foldtoggle(self, cb: spreadsheet.CellBox) -> None:  # swap the chevron SVG when the band folds / unfolds
         if self.fold_state.get(cb.id) != cb.text:
             self.htmls[cb.id].set_content(_control_svg(_FOLD_GLYPH[cb.text]))
             self.fold_state[cb.id] = cb.text
@@ -1697,7 +1697,7 @@ class _Reconciler:
                 family, self._editor.state.domain_basis)
         return limit, family
 
-    def _arm_option_hover(self, sel, wrap, cid):
+    def _arm_option_hover(self, sel, wrap, cid: str) -> None:
         """Arm a q-select for the shared option-hover preview (any chooser: temperament / tuning /
         prescaler / complexity / weight-slope / form). Hovering an option in the OPEN dropdown rings
         the cells selecting it would change, reverting on leave / popup-close. The teleported Quasar
@@ -1720,7 +1720,7 @@ class _Reconciler:
         sel.on("popup-show", lambda _=None: self._cb.on_popup(cid, True))
         sel.on("popup-hide", lambda _=None: self._cb.on_popup(cid, False))
 
-    def _build_preset(self, cb, wrap):
+    def _build_preset(self, cb: spreadsheet.CellBox, wrap) -> None:
         name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
         if name == "target":
             # a numeric limit override beside the TILT/OLD family select. Both fall back to "-"
@@ -1847,7 +1847,7 @@ class _Reconciler:
             self._arm_option_hover(sel, wrap, cb.id)  # hovering a scheme previews re-solving to it
             self.selects[cb.id] = sel
 
-    def _update_preset(self, cb):
+    def _update_preset(self, cb: spreadsheet.CellBox) -> None:
         # mirror the live selection: the temperament chooser shows the matched preset (or its
         # placeholder), the target chooser splits into limit + family, the tuning chooser shows its
         # scheme. building[0] guards echoes.
@@ -1895,7 +1895,7 @@ class _Reconciler:
             _set_offlist_prompt(self.selects[cb.id], scheme)
             self.selects[cb.id].set_enabled(not cb.disabled)  # greyed+locked when it's the lone scheme
 
-    def _sync_target_limit_error(self, num, family, limit):
+    def _sync_target_limit_error(self, num, family, limit) -> None:
         """Render-driven flag for the target chooser's limit field: when the DISPLAYED
         ``(family, limit)`` is invalid (an even limit for the odd-limit diamond), redden the field
         and point its tooltip at the reason; otherwise clear it and restore the normal help. Driven
@@ -1912,21 +1912,21 @@ class _Reconciler:
             self.target_limit_tip.classes(add="rtt-tip-error" if problem else "",
                                           remove="" if problem else "rtt-tip-error")
 
-    def _build_control_select(self, cb, wrap):  # a weighting chooser (complexity / weight slope)
+    def _build_control_select(self, cb: spreadsheet.CellBox, wrap) -> None:  # a weighting chooser (complexity / weight slope)
         sel = ui.select(list(cb.values), value=cb.text or None,
                 on_change=lambda e, cid=cb.id: self._cb.on_control_select(cid, e.value)) \
             .props(_select_props(cb.w)).classes("rtt-preset")
         self._arm_option_hover(sel, wrap, cb.id)  # hovering an option previews re-weighting to it
         self.selects[cb.id] = sel
 
-    def _update_control_select(self, cb):  # mirror the live choice; grey it when locked (box 𝒘 all-interval)
+    def _update_control_select(self, cb: spreadsheet.CellBox) -> None:  # mirror the live choice; grey it when locked (box 𝒘 all-interval)
         # the complexity chooser's option list widens/narrows as alt. complexity flips, so refresh the
         # options in place (not just the value) — otherwise the build-time list goes stale until the row
         # is rebuilt from hidden. A no-op for the fixed-option slope chooser, whose values never change.
         self.selects[cb.id].set_options(list(cb.values), value=cb.text or None)
         self.selects[cb.id].set_enabled(not cb.disabled)
 
-    def _build_control_check(self, cb, wrap):  # the box-𝐋 "replace diminuator" checkbox (size factor)
+    def _build_control_check(self, cb: spreadsheet.CellBox, wrap) -> None:  # the box-𝐋 "replace diminuator" checkbox (size factor)
         self.checks[cb.id] = ui.checkbox(cb.text, value=cb.checked,
                 on_change=lambda e, cid=cb.id: self._cb.on_control_select(cid, e.value)) \
             .props("dense").classes("rtt-control-check")
@@ -1934,7 +1934,7 @@ class _Reconciler:
         if apply is not None:  # hover-preview the cells the toggle would change (red/amber), like the +/-
             self._preview_control(wrap, apply)
 
-    def _control_check_preview(self, cb):
+    def _control_check_preview(self, cb: spreadsheet.CellBox):
         """The hover-preview op for a control checkbox: the SAME trait flip its click commits, toward the
         toggled state. The state is read live (not captured at build) so a re-render that updates the cell
         in place can't strand a stale target."""
@@ -1946,22 +1946,22 @@ class _Reconciler:
                 not service.is_all_interval(self._editor.tuning_scheme))
         return None
 
-    def _update_control_check(self, cb):  # mirror the live "replace diminuator" state
+    def _update_control_check(self, cb: spreadsheet.CellBox) -> None:  # mirror the live "replace diminuator" state
         self.checks[cb.id].value = cb.checked
 
-    def _build_formchooser(self, cb, wrap):  # the <choose form> control: canonicalizes its matrix on select
+    def _build_formchooser(self, cb: spreadsheet.CellBox, wrap) -> None:  # the <choose form> control: canonicalizes its matrix on select
         sel = ui.select({"": "choose form", "canonical": "canonical"}, value="",
                 on_change=lambda e, c=cb.id: self._cb.on_form_choose(c, e.value)) \
             .props(_select_props(cb.w)).classes("rtt-preset")
         self._arm_option_hover(sel, wrap, cb.id)  # hovering "canonical" previews canonicalizing in place
         self.selects[cb.id] = sel
 
-    def _update_formchooser(self, cb):  # a one-shot action: snap back to the placeholder
+    def _update_formchooser(self, cb: spreadsheet.CellBox) -> None:  # a one-shot action: snap back to the placeholder
         self.selects[cb.id].value = ""
 
     # ---- static controls (build only, no update): the domain/comma/interest/held ± buttons,
     # the speaker, and the audio bank glyphs. Their click / JS handlers are baked at build time. ----
-    def _preview_control(self, el, apply):
+    def _preview_control(self, el, apply) -> None:
         """Arm a control's hover preview: entering it rings the on-screen cells its click would change
         (control_hover) — red for what it removes, amber for what its re-solve moves — and leaving
         clears them. The click still commits via its own handler. Used by the add/remove +/- buttons
@@ -1970,7 +1970,7 @@ class _Reconciler:
         el.on("mouseenter", lambda _=None: self._cb.control_hover(apply))
         el.on("mouseleave", lambda _=None: self._cb.control_unhover())
 
-    def _preview_rank_remove(self, el, axis, idx):
+    def _preview_rank_remove(self, el, axis: str, idx: int) -> None:
         """Arm a comma−/mapping− hover's dual rank-change preview: a rank-changing removal reflows the
         grid (the born generator/comma ghosts green, the leaver reds, the survivors amber), so it
         routes through the builder (rank_remove_hover → render) rather than the no-reflow ring diff
@@ -1979,28 +1979,28 @@ class _Reconciler:
         el.on("mouseenter", lambda _=None: self._cb.rank_remove_hover(axis, idx))
         el.on("mouseleave", lambda _=None: self._cb.rank_remove_unhover())
 
-    def _build_minus(self, cb, wrap):  # remove the highest prime; a hover − centred on the last prime's branch point
+    def _build_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # remove the highest prime; a hover − centred on the last prime's branch point
         wrap.classes("rtt-minus-zone")  # clear of the editable cell below
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
         self._preview_control(wrap, self._editor.shrink)
 
-    def _build_plus(self, cb, wrap):  # add a prime; the always-shown + on the bus stub
+    def _build_plus(self, cb: spreadsheet.CellBox, wrap) -> None:  # add a prime; the always-shown + on the bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.expand))
         self._preview_control(wrap, self._editor.expand)
 
-    def _build_gen_minus(self, cb, wrap):  # drop the last generator (+n, −r); the mapping-row − reached from the column
+    def _build_gen_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # drop the last generator (+n, −r); the mapping-row − reached from the column
         wrap.classes("rtt-minus-zone")  # clear of the genmap cell below
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
         self._preview_rank_remove(wrap, "row", cb.gen)  # removing a generator is a rank change → dual preview
 
-    def _build_gen_plus(self, cb, wrap):  # add a generator: open a blank green draft mapping ROW (the bus stub)
+    def _build_gen_plus(self, cb: spreadsheet.CellBox, wrap) -> None:  # add a generator: open a blank green draft mapping ROW (the bus stub)
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_mapping_row, "mapping"))
 
-    def _build_map_minus(self, cb, wrap):  # remove generator cb.gen (a mapping row); a hover − on the left bus
+    def _build_map_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # remove generator cb.gen (a mapping row); a hover − on the left bus
         wrap.classes("rtt-minus-zone")  # clear of the generator-ratio spine it drops over
         if cb.pending:  # the draft row's −: cancel the add (nothing committed yet, so no preview)
             ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
@@ -2010,11 +2010,11 @@ class _Reconciler:
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
         self._preview_rank_remove(wrap, "row", cb.gen)  # removing a generator is a rank change → dual preview
 
-    def _build_map_plus(self, cb, wrap):  # add a generator: open a blank green draft mapping ROW (left-bus stub)
+    def _build_map_plus(self, cb: spreadsheet.CellBox, wrap) -> None:  # add a generator: open a blank green draft mapping ROW (left-bus stub)
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_mapping_row, "mapping"))
 
-    def _build_map_drag(self, cb, wrap):  # drag generator row cb.gen onto another row's grip to merge
+    def _build_map_drag(self, cb: spreadsheet.CellBox, wrap) -> None:  # drag generator row cb.gen onto another row's grip to merge
         # HTML5 drag-to-combine, built EXACTLY like the working column-reorder grip (_build_colgrip):
         # the grip is BOTH the drag SOURCE and a drop TARGET, with a per-element dragover preventDefault
         # marking it a valid drop target. This is the proven path — drop one row's GRIP onto another's
@@ -2035,7 +2035,7 @@ class _Reconciler:
         wrap.on("drop.prevent", lambda _=None, idx=cb.gen: self._drop_on_row(idx))
         ui.icon("drag_indicator").classes("rtt-grip")
 
-    def _arm_row_target(self, wrap, gen):  # make a mapping cell a drop target for its row (gen)
+    def _arm_row_target(self, wrap, gen: int) -> None:  # make a mapping cell a drop target for its row (gen)
         # the mapping row is the drop target for a dragged generator row: dragover keeps every cell a
         # droppable copy surface (preventDefault makes a drop land here; dropEffect='copy' gives the +
         # cursor), dragenter previews dropping the dragged row INTO this row, drop commits it. The py
@@ -2045,15 +2045,15 @@ class _Reconciler:
         wrap.on("dragenter.prevent", lambda _=None, idx=gen: self._preview_row_drop(idx))
         wrap.on("drop.prevent", lambda _=None, idx=gen: self._drop_on_row(idx))
 
-    def _begin_row_drag(self, idx):
+    def _begin_row_drag(self, idx: int) -> None:
         self._row_drag = idx
         self._cb.combine_begin()
 
-    def _end_row_drag(self):
+    def _end_row_drag(self) -> None:
         self._row_drag = None
         self._cb.combine_end()
 
-    def _preview_row_drop(self, idx):  # hovering target row idx: preview the would-be combine (else revert)
+    def _preview_row_drop(self, idx: int) -> None:  # hovering target row idx: preview the would-be combine (else revert)
         src = self._row_drag
         valid = src is not None and src != idx  # src == idx (the dragged row's own cells) previews nothing
         apply = (lambda: self._editor.add_mapping_row_to(src, idx)) if valid else None
@@ -2062,7 +2062,7 @@ class _Reconciler:
         target = (lambda cb: cb.kind == "mapping" and getattr(cb, "gen", None) == idx) if valid else None
         self._cb.combine_preview(apply, target)
 
-    def _drop_on_row(self, idx):  # add the dragged generator row into the DIFFERENT row dropped on
+    def _drop_on_row(self, idx: int) -> None:  # add the dragged generator row into the DIFFERENT row dropped on
         src = self._row_drag
         self._row_drag = None
         if src is not None and src != idx:
@@ -2080,7 +2080,7 @@ class _Reconciler:
         "held": "add_held_to", "interest": "add_interest_to",
     }
 
-    def _build_int_drag(self, cb, wrap):  # drag an interval's grip onto another's grip (same column) to merge
+    def _build_int_drag(self, cb: spreadsheet.CellBox, wrap) -> None:  # drag an interval's grip onto another's grip (same column) to merge
         group = cb.id.split(":")[1]  # int_drag:<group>:<index>
         # the column twin of _build_map_drag: the grip is BOTH source and drop target (drop grip-to-grip,
         # the proven path), and the interval cells are also armed (_arm_col_target) for hovering the column.
@@ -2092,7 +2092,7 @@ class _Reconciler:
         wrap.on("drop.prevent", lambda _=None, g=group, idx=cb.comma: self._drop_on_interval(g, idx))
         ui.icon("drag_indicator").classes("rtt-grip")
 
-    def _arm_col_target(self, wrap, group, idx):  # make an interval cell a drop target for its column
+    def _arm_col_target(self, wrap, group: str, idx: int) -> None:  # make an interval cell a drop target for its column
         # the column twin of _arm_row_target: dragover keeps the cell a droppable copy surface, the py
         # dragenter previews / drop commits the combine, gated server-side to the same column and a
         # DIFFERENT interval (see _int_combine), so a non-matching drag over the cell does nothing.
@@ -2100,7 +2100,7 @@ class _Reconciler:
         wrap.on("dragenter.prevent", lambda _=None, g=group, i=idx: self._preview_int_drop(g, i))
         wrap.on("drop.prevent", lambda _=None, g=group, i=idx: self._drop_on_interval(g, i))
 
-    def _int_combine(self, group, idx):  # the combine callable for dropping the dragged interval here, or None
+    def _int_combine(self, group: str, idx: int):  # the combine callable for dropping the dragged interval here, or None
         if self._col_drag is None:
             return None
         src_group, src = self._col_drag
@@ -2109,24 +2109,24 @@ class _Reconciler:
         combine = getattr(self._editor, self._INTERVAL_COMBINE[group])
         return lambda: combine(src, idx)
 
-    def _begin_col_drag(self, group, idx):
+    def _begin_col_drag(self, group: str, idx: int) -> None:
         self._col_drag = (group, idx)
         self._cb.combine_begin()
 
-    def _end_col_drag(self):
+    def _end_col_drag(self) -> None:
         self._col_drag = None
         self._cb.combine_end()
 
     _GROUP_CELL_KIND = {"comma": "commacell", "target": "targetcell",
                         "held": "heldcell", "interest": "interestcell"}
 
-    def _preview_int_drop(self, group, idx):  # hovering target (group, idx): preview the combine (else revert)
+    def _preview_int_drop(self, group: str, idx: int) -> None:  # hovering target (group, idx): preview the combine (else revert)
         apply = self._int_combine(group, idx)
         kind = self._GROUP_CELL_KIND[group]  # highlight the whole target COLUMN (its editable cells)
         target = (lambda cb: cb.kind == kind and getattr(cb, "comma", None) == idx) if apply is not None else None
         self._cb.combine_preview(apply, target)
 
-    def _drop_on_interval(self, group, idx):  # add the dragged interval into the one it was dropped on
+    def _drop_on_interval(self, group: str, idx: int) -> None:  # add the dragged interval into the one it was dropped on
         apply = self._int_combine(group, idx)
         self._col_drag = None
         if apply is not None:
@@ -2134,27 +2134,27 @@ class _Reconciler:
         else:
             self._cb.combine_end()
 
-    def _build_basis_minus(self, cb, wrap):  # the domain − on the interval-vectors row's left bus
+    def _build_basis_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # the domain − on the interval-vectors row's left bus
         wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
         self._preview_control(wrap, self._editor.shrink)
 
-    def _build_comma_minus(self, cb, wrap):  # each comma's − un-tempers just that comma; the draft's − cancels it
+    def _build_comma_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # each comma's − un-tempers just that comma; the draft's − cancels it
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_comma, self._editor.remove_comma, rank_axis="comma")
 
     # the + that opens a blank, off-screen draft column (comma / interest / held / target) gets NO
     # hover preview: the new column is empty and not yet placed, so nothing on screen would change —
     # only removes and the re-solving adds (a prime, un-tempering a comma) have on-screen cells to ring.
-    def _build_comma_plus(self, cb, wrap):
+    def _build_comma_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_comma, "comma"))
 
-    def _build_element_plus(self, cb, wrap):  # nonstandard-domain box on: open a blank ?/? element draft
+    def _build_element_plus(self, cb: spreadsheet.CellBox, wrap) -> None:  # nonstandard-domain box on: open a blank ?/? element draft
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_element, "element"))
 
-    def _build_element_minus(self, cb, wrap):  # nonstandard-domain box on: the domain − (both axes)
+    def _build_element_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # nonstandard-domain box on: the domain − (both axes)
         # one builder for every nonstandard-domain −, told apart by id (like _build_list_minus): a
         # ":pending" draft cancels the ?/? draft (remove_element), any other removes that committed
         # element (remove_domain_element, carrying its index as cb.prime). The ":basis" ids are the
@@ -2168,7 +2168,7 @@ class _Reconciler:
             .on("click", lambda _=None: self._cb.act(action))
         self._preview_control(wrap, action)
 
-    def _build_list_minus(self, cb, wrap, cancel, remove, rank_axis=None):
+    def _build_list_minus(self, cb: spreadsheet.CellBox, wrap, cancel, remove, rank_axis: str | None = None) -> None:
         # an interval-list column's − (interest / held / target / comma): the draft column's cancels
         # the draft, every other drops just its interval (cb.comma) — each is independently removable.
         # ``rank_axis`` is "comma" only for the comma basis, whose removal is a RANK change (it raises
@@ -2184,28 +2184,28 @@ class _Reconciler:
         else:
             self._preview_control(wrap, action)
 
-    def _build_interest_minus(self, cb, wrap):
+    def _build_interest_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_interest, self._editor.remove_interest)
 
-    def _build_interest_plus(self, cb, wrap):
+    def _build_interest_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_interest, "interest"))
 
-    def _build_held_minus(self, cb, wrap):
+    def _build_held_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_held, self._editor.remove_held)
 
-    def _build_held_plus(self, cb, wrap):
+    def _build_held_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_held, "held"))
 
-    def _build_target_minus(self, cb, wrap):
+    def _build_target_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_target, self._editor.remove_target)
 
-    def _build_target_plus(self, cb, wrap):
+    def _build_target_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_target, "target"))
 
-    def _build_colgrip(self, cb, wrap):  # a per-column drag handle / drop target on the fan gridline:
+    def _build_colgrip(self, cb: spreadsheet.CellBox, wrap) -> None:  # a per-column drag handle / drop target on the fan gridline:
         # drag one column's grip onto another to MOVE/reorder it; the per-list "grip:{list}:add" zone
         # is drop-only — the append / into-empty-list target on the stub gridline, so dropping into a
         # list is always "drop on the gridline" (no separate header/+ target). Mirrors the proven
