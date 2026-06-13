@@ -173,22 +173,24 @@ CHAPTER: dict[str, int] = {
     # general — the dummy tile's display layers
     "gridded_values": 2, "quantities": 2, "names": 2, "symbols": 2, "plain_text_values": 2,
     "math_expressions": 2, "presets": 2,
+    "header_symbols": 2,  # the matrix row/col header labels (𝒎₁, 𝐜₁, …) — a sibling of symbols
     # mnemonics is the underlinable LETTER of the name word, so it must reveal WITH names (its
     # ancestor, ch2) — a later chapter would blank a letter mid-word ("tile name" -> "tile  ame").
     "mnemonics": 2,
     "equivalences": 3, "charts": 3,
     "drag_to_combine": 4,
-    "units": 5,
-    # specific boxes & controls
-    "counts": 2, "temperament_boxes": 2, "temperament_colorization": 2,
-    "tuning_boxes": 3, "tuning_colorization": 3,
+    "units": 5, "cell_units": 5,  # the per-cell unit beneath each value — a sibling of units
+    # specific boxes & controls. The pure grouping parents (temperament / tuning / form) reveal with
+    # their EARLIEST child, so the group header never appears before anything it would expand to.
+    "counts": 2, "temperament": 2, "temperament_boxes": 2, "temperament_colorization": 2,
+    "tuning": 3, "tuning_boxes": 3, "tuning_colorization": 3,
     "optimization": 3, "tuning_ranges": 3, "weighting": 3,
     "interest": 4,
     "domain_quantities": 5, "domain_units": 5,
     "all_interval": 7,
     "alt_complexity": 8,
     "nonstandard_domain": 9,
-    "form_controls": CHAPTER_STAR, "form_colorization": CHAPTER_STAR,
+    "form": CHAPTER_STAR, "form_controls": CHAPTER_STAR, "form_colorization": CHAPTER_STAR,
     "projection": CHAPTER_STAR, "generator_detempering": CHAPTER_STAR,
     "identity_objects": CHAPTER_STAR,
 }
