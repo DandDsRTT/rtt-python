@@ -1,0 +1,204 @@
+#!/usr/bin/env python3
+"""Serialize the whole *land-on-main* critical section across parallel agents.
+
+The render gate (``tests/app/integration/conftest.py``) serializes the render
+*runs* but not the *merges*. So agents validate SPECULATIVELY in parallel — the
+render-gate queue grows 10+ deep — then race to ``git merge --ff-only``. Whoever
+loses the race has ``main`` move under them with an ``rtt/app/`` change, so the
+green render run they just finished no longer validates the exact merged state:
+they must re-rebase and re-run the ~5–6-min (plus long queue) gate. With ``main``
+moving every ~30 min this can fail to converge, and most of that deep render-gate
+queue is wasted speculative validation.
+
+The fix is a **merge lock**: an *exclusive* (single-holder) lock covering the
+whole ``rebase main → render gate → ff-merge → release`` critical section. Only
+the lock-holder validates-and-merges at a time, so the render-gate queue stays
+~1 deep instead of 10+, each agent validates the EXACT state it lands (no chase),
+and no speculative run is wasted. Throughput is unchanged — the render gate is
+1-slot either way — but the waste and the non-convergence disappear.
+
+Usage — wrap your whole landing sequence in one command so a failure at any step
+aborts the rest while you still hold the lock::
+
+    bin/with-merge-lock bash -c '
+      set -e
+      git rebase main
+      .venv/bin/python -m pytest -q                 # the render gate, exact merged state
+      git -C <main-checkout> merge --ff-only <your-branch>
+    '
+
+The lock is released the instant the wrapped command exits (success, failure, or
+signal), so a failed rebase/test run frees the lock immediately for the next
+agent — you fix up and re-acquire. The helper's own exit status is the wrapped
+command's exit status, so ``&&`` chains and CI behave normally.
+
+Mechanism — same family as the render gate, kept deliberately boring (no
+``flock``, which macOS lacks): on arrival drop a **ticket** file named
+``<wall-clock-ns>-<pid>`` in ``/tmp/rtt-merge-gate.d/``. The single live ticket
+with the lowest timestamp holds the lock; everyone else polls until the holders
+ahead of them finish (and remove their tickets). A ticket's timestamp is fixed at
+arrival, so ordering is **FIFO and fair** — new arrivals queue *behind* you, you
+can't be starved, and you can report exactly how many are ahead. Tickets from
+dead PIDs are reclaimed on every scan, so a crashed/killed holder frees the lock
+automatically and the queue never wedges. Unlike the render gate this lock is
+**exclusive** (one holder, by design — the merge must not race), so there is no
+``SLOTS`` knob to footgun the race back in.
+
+Env knobs (mirroring the render gate):
+  * ``RTT_MERGE_GATE_WAIT``    max seconds to queue before proceeding anyway (default 3600)
+  * ``RTT_MERGE_GATE_NOLOCK``  set to ``1`` to run the command without the lock
+  * ``RTT_MERGE_GATE_DIR``     ticket directory (default ``/tmp/rtt-merge-gate.d``)
+"""
+
+import atexit
+import os
+import signal
+import subprocess
+import sys
+import time
+
+_GATE_DIR = os.environ.get("RTT_MERGE_GATE_DIR", "/tmp/rtt-merge-gate.d")
+_WAIT_MAX = int(os.environ.get("RTT_MERGE_GATE_WAIT", "3600"))  # seconds willing to queue
+_DISABLED = os.environ.get("RTT_MERGE_GATE_NOLOCK") == "1"
+_POLL = 3  # seconds between attempts
+_REPORT_EVERY = 15  # seconds between "still waiting" lines
+
+_ticket = None  # path to this run's ticket file once created
+
+
+def _alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True  # exists, just not ours to signal
+    return True
+
+
+def _scan():
+    """Return live tickets as ``(ns, pid, filename)`` sorted FIFO, removing any
+    ticket whose PID is dead (reclaiming the lock)."""
+    live = []
+    try:
+        names = os.listdir(_GATE_DIR)
+    except OSError:
+        return live
+    for name in names:
+        try:
+            ns_s, pid_s = name.rsplit("-", 1)
+            ns, pid = int(ns_s), int(pid_s)
+        except ValueError:
+            continue
+        if _alive(pid):
+            live.append((ns, pid, name))
+        else:
+            try:
+                os.remove(os.path.join(_GATE_DIR, name))
+            except OSError:
+                pass
+    live.sort()
+    return live
+
+
+def _release():
+    global _ticket
+    if _ticket is None:
+        return
+    try:
+        os.remove(_ticket)
+    except OSError:
+        pass
+    _ticket = None
+    print("[merge-gate] released", file=sys.stderr)
+
+
+def _acquire():
+    global _ticket
+    os.makedirs(_GATE_DIR, exist_ok=True)
+    my_name = f"{time.time_ns()}-{os.getpid()}"
+    _ticket = os.path.join(_GATE_DIR, my_name)
+    try:
+        open(_ticket, "x").close()
+    except OSError:
+        pass
+
+    waited = 0
+    last_report = -_REPORT_EVERY
+    while True:
+        live = _scan()
+        names = [n for _, _, n in live]
+        if my_name not in names:  # got reclaimed under us; re-stake our place
+            try:
+                open(_ticket, "x").close()
+            except OSError:
+                pass
+            continue
+        idx = names.index(my_name)
+        if idx == 0:  # lowest live ticket → we hold the exclusive lock
+            extra = f" after waiting {waited}s" if waited else ""
+            print(
+                f"[merge-gate] lock acquired (PID {os.getpid()}){extra}; "
+                f"holding through rebase → render gate → ff-merge",
+                file=sys.stderr,
+            )
+            return
+        if waited >= _WAIT_MAX:
+            print(
+                f"[merge-gate] waited {_WAIT_MAX}s (still position {idx} in line); "
+                f"proceeding anyway",
+                file=sys.stderr,
+            )
+            return
+        if waited - last_report >= _REPORT_EVERY:
+            ahead = [p for _, p, _ in live[:idx]]
+            print(
+                f"[merge-gate] waiting our turn… position {idx} of {len(live) - 1} queued "
+                f"(lock held by PID {live[0][1]}; {waited}s elapsed). PIDs ahead: {ahead}",
+                file=sys.stderr,
+            )
+            last_report = waited
+        time.sleep(_POLL)
+        waited += _POLL
+
+
+def _install_signal_cleanup():
+    def _handler(signum, _frame):
+        _release()
+        # Restore default and re-raise so our exit status reflects the signal.
+        signal.signal(signum, signal.SIG_DFL)
+        os.kill(os.getpid(), signum)
+
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        try:
+            signal.signal(sig, _handler)
+        except (ValueError, OSError):
+            pass  # not on the main thread / unsupported — atexit still covers us
+
+
+def main(argv):
+    if not argv:
+        print(
+            "usage: bin/with-merge-lock <command> [args...]\n"
+            "  Runs <command> while holding the exclusive RTT merge lock.\n"
+            "  Wrap your whole rebase → render gate → ff-merge sequence in one command.",
+            file=sys.stderr,
+        )
+        return 2
+
+    if _DISABLED:
+        print("[merge-gate] disabled (RTT_MERGE_GATE_NOLOCK=1); running without the lock",
+              file=sys.stderr)
+        return subprocess.run(argv).returncode
+
+    atexit.register(_release)
+    _install_signal_cleanup()
+    _acquire()
+    try:
+        return subprocess.run(argv).returncode
+    finally:
+        _release()
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

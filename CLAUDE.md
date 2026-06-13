@@ -90,6 +90,57 @@ forever (`RTT_RENDER_GATE_WAIT`, default 3600s, then it proceeds anyway). Tune c
 `RTT_RENDER_GATE_SLOTS`; `RTT_RENDER_GATE_NOLOCK=1` opts a run out. Don't wrap the gate in `/tmp`
 scripts to dodge it or sibling kills — that's the dogpile this prevents.
 
+## Take the merge lock to land — validate the exact state you merge
+
+The render gate above serializes the render *runs*, but **not the merges**. Without more,
+agents validate speculatively in parallel (the render-gate queue grows 10+ deep) and then race
+to `git merge --ff-only`. Whoever loses the race has `main` move under them with an `rtt/app/`
+change, so the green render run they just finished no longer validates the exact merged state —
+they must re-rebase and re-run the ~5–6-min (plus queue) gate. With `main` moving every ~30 min
+this can fail to converge, and most of that deep queue is wasted speculative validation.
+
+So **wrap your whole landing sequence in the merge lock** — an *exclusive* (single-holder) lock,
+`bin/with-merge-lock`, covering the entire `rebase main → render gate → ff-merge → release`
+critical section. Only the lock-holder validates-and-merges at a time, so the render-gate queue
+stays ~1 deep, **you validate the exact state you land** (no chase), and no speculative run is
+wasted. Throughput is unchanged — the render gate is 1-slot either way — but the waste and the
+non-convergence disappear. Land like this:
+
+```bash
+bin/with-merge-lock bash -c '
+  set -e
+  git rebase main
+  .venv/bin/python -m pytest -q                              # render gate, exact merged state
+  git -C <main-checkout> merge --ff-only <your-branch>
+'
+```
+
+The lock releases the instant the wrapped command exits — success, failure, **or** signal — so a
+failed rebase/test frees it immediately for the next agent (fix up, then re-acquire). It's the
+same boring `/tmp` ticket mechanism as the render gate (`/tmp/rtt-merge-gate.d/`, FIFO/fair,
+self-healing if a holder dies, max-wait fallback), with `[merge-gate] waiting … / lock acquired /
+released` on stderr — **that wait is correct, not a hang; don't `pkill` to jump it.** Unlike the
+render gate it's exclusive by design (no `SLOTS` knob — the merge must not race). Knobs:
+`RTT_MERGE_GATE_WAIT` (default 3600s), `RTT_MERGE_GATE_NOLOCK=1` to opt out.
+
+**The orthogonal-files softener — skip a re-run when `main` moved harmlessly.** Even outside the
+lock, if your ff-merge is rejected because `main` moved, you do **not** always need to re-run the
+gate. If `main` advanced *only* in files that can't affect your change's rendered output, your
+prior green render run still validates the merged state. This generalizes the long-standing
+"test-only move → prior green run still validates" judgment. Check it mechanically from your
+worktree:
+
+```bash
+bin/merge-safe-check        # diffs merge-base(main,HEAD)..main; exit 0 = SAFE to ff-merge, 1 = RE-RUN
+```
+
+`merge-base(main, HEAD)` is exactly the old main tip your green run was built on, so the diff is
+precisely what landed under you. Render-**relevant** (forces a re-run) = the whole `rtt/` tree,
+`app.py`, the rootdir `conftest.py`, `pytest.ini`, `requirements.txt`, and — conservatively —
+anything else not on the irrelevant whitelist (`tests/**`, `guide/**`, `.claude/**`, `bin/**`,
+`*.md`, `*.png`/`*.csv`, a few top-level non-code files). The default is *relevant*: when unsure,
+re-run. (The lock makes this rare — it's the fallback for the occasional move that slips in.)
+
 ## Git: you're on a fast-moving team — rebase onto main, then ff-merge
 
 You work in your own worktree on a `claude/<name>` branch. Several agents run in parallel and
@@ -109,11 +160,13 @@ no fear:
   your commits on top of main's current tip and keeps you on your branch (it does NOT strand
   your worktree). Resolve the (superficial) conflicts and `git rebase --continue` — don't
   `--abort` and start over, don't `reset --hard` to escape. Rebase again whenever `main` moves.
-- **Land it when the task is done and tests pass.** A final `git rebase main` makes your branch
-  exactly `main + your commits`, so fast-forward main onto it:
-  `git -C <main-checkout> merge --ff-only <your-branch>`. The live app reloads and the user
-  validates on 8137. If the ff-merge is rejected because `main` moved again, just `git rebase
-  main` and retry — a teammate landed first, nothing more.
+- **Land it when the task is done and tests pass**, under the merge lock (see the section just
+  above). A final `git rebase main` makes your branch exactly `main + your commits`, so
+  fast-forward main onto it: `git -C <main-checkout> merge --ff-only <your-branch>`. The live app
+  reloads and the user validates on 8137. If the ff-merge is rejected because `main` moved again,
+  first try `bin/merge-safe-check` — if `main` moved only in render-orthogonal files your green
+  run still stands and you can ff-merge as-is; otherwise just `git rebase main`, re-run the gate,
+  and retry. A teammate landed first, nothing more.
 - **Never `reset --soft`/`--hard main`, `clean -fd`, or `stash` to "tidy" or "fix."**
   `reset --soft main` only does what you want when your base already IS `main`; once `main` has
   moved past your base it silently **reverts every teammate's commit since that base** into your

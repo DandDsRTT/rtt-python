@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""Can I ff-merge on my prior green render run, even though ``main`` moved?
+
+This is the *lighter* softener that complements ``bin/with-merge-lock``. It
+codifies — and mechanizes — the existing "test-only move → prior green run still
+validates" judgment, and generalizes it to **any orthogonal move**: if ``main``
+advanced *only* in files that cannot affect your change's rendered output, then
+the green ``test_web_render.py`` run you already finished still validates the
+exact state you're about to land, so you may ff-merge without re-running the gate.
+
+Usage (run from your worktree, after a green render run, when an ff-merge was
+rejected because ``main`` moved)::
+
+    bin/merge-safe-check            # base = merge-base(main, HEAD); tip = main
+    bin/merge-safe-check <base>     # explicit green-run base; tip = main
+    bin/merge-safe-check <base> <tip>
+
+Why ``merge-base(main, HEAD)`` is the right base: you rebased onto main and ran
+the gate green at HEAD = (old-main-tip + your commits). When ``main`` then moves
+to a descendant, ``git merge-base main HEAD`` is *exactly* that old main tip — so
+``<base>..main`` is precisely the set of commits that landed under you since your
+green run. This check asks whether *that* delta is render-orthogonal.
+
+Exit status:
+  * 0  SAFE  — every moved file is render-irrelevant; ff-merge on the green run.
+  * 1  RE-RUN — at least one moved file can affect render output; rebase + re-gate.
+  * 2  ERROR — couldn't compute the diff (bad ref, not a repo, …).
+
+Render-RELEVANT (forces a re-run) = anything the page build or the RTT math reads:
+the whole ``rtt/`` tree, ``app.py``, the rootdir ``conftest.py`` (loads the User
+plugin), ``pytest.ini``, ``requirements.txt`` — and, conservatively, anything not
+on the irrelevant whitelist below. The default is *relevant*: when unsure, re-run.
+
+Render-IRRELEVANT (safe) whitelist:
+  * ``tests/**``           — test-only; can't change shipped render output
+  * ``guide/**``           — guide prose; not read by the app at render time
+  * ``.claude/**``         — agent/harness config
+  * ``bin/**``             — these helpers
+  * ``*.md``               — docs (CLAUDE.md, README, audit notes, …)
+  * ``*.png`` / ``*.csv``  — design mockups & their transcriptions
+  * a few top-level non-code files (LICENSE, .gitignore, .python-version, render.yaml)
+"""
+
+import os
+import subprocess
+import sys
+
+
+def _is_irrelevant(path):
+    """True iff `path` cannot affect rendered output (safe to ignore)."""
+    prefixes = ("tests/", "guide/", ".claude/", "bin/")
+    if path.startswith(prefixes):
+        return True
+    if path.endswith((".md", ".png", ".csv")):
+        return True
+    if path in {"LICENSE", ".gitignore", ".python-version", "render.yaml"}:
+        return True
+    return False
+
+
+def _git(*args):
+    return subprocess.run(
+        ["git", *args], capture_output=True, text=True
+    )
+
+
+def main(argv):
+    base = argv[0] if len(argv) >= 1 else None
+    tip = argv[1] if len(argv) >= 2 else "main"
+
+    if base is None:
+        r = _git("merge-base", tip, "HEAD")
+        if r.returncode != 0:
+            print(f"[merge-safe] error: git merge-base {tip} HEAD failed:\n{r.stderr.strip()}",
+                  file=sys.stderr)
+            return 2
+        base = r.stdout.strip()
+
+    r = _git("diff", "--name-only", f"{base}..{tip}")
+    if r.returncode != 0:
+        print(f"[merge-safe] error: git diff {base}..{tip} failed:\n{r.stderr.strip()}",
+              file=sys.stderr)
+        return 2
+
+    files = [p for p in r.stdout.splitlines() if p.strip()]
+    if not files:
+        print(f"[merge-safe] SAFE: main ({tip}) has not moved past your green-run base "
+              f"({base[:12]}) — nothing to revalidate.")
+        return 0
+
+    relevant = sorted(p for p in files if not _is_irrelevant(p))
+    irrelevant = sorted(p for p in files if _is_irrelevant(p))
+
+    print(f"[merge-safe] {len(files)} file(s) moved on {tip} since your green-run base "
+          f"({base[:12]}):")
+    if irrelevant:
+        print("  render-irrelevant (safe to ignore):")
+        for p in irrelevant:
+            print(f"    · {p}")
+    if relevant:
+        print("  render-RELEVANT (can change rendered output):")
+        for p in relevant:
+            print(f"    ! {p}")
+
+    if relevant:
+        print("[merge-safe] RE-RUN: main moved in render-relevant files; rebase and re-run "
+              "the render gate before ff-merging.")
+        return 1
+
+    print("[merge-safe] SAFE: every moved file is render-orthogonal; your prior green render "
+          "run still validates the merged state — ff-merge without re-running the gate.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
