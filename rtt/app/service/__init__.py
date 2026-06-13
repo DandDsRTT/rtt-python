@@ -1,0 +1,200 @@
+"""The sole seam between the web UI and the RTT library.
+
+Everything the front end needs is expressed here in plain tuples/ints/strings so
+the UI never imports library types directly. A :class:`TemperamentState` bundles
+a temperament's mapping and its dual comma basis (kept in sync) plus dimensions.
+
+A package since the Phase-2 split, but still ONE flat namespace: every submodule's
+names are re-exported here, so callers keep reaching everything as ``service.<NAME>``
+(the grid_tables facade precedent). The submodules, in dependency order:
+
+  core        shared primitives + temperament-level tuning/size/complexity computations
+  state       TemperamentState, its constructors, and the state edit operations
+  schemes     tuning-scheme trait helpers and their tables
+  projection  the rational projection P = GM / embedding G / unchanged-interval math
+  superspace  the chapter-9 superspace math
+  text        plain_text_values and the EBK string builders
+  parse       the parse_* readers (text back to matrices/maps/states)
+
+The cycle the old single file hid (scheme helpers formatting via prescale_text; the
+text builders reading scheme traits) is broken by keeping the cents/prescale display
+formatters in ``core``, the bottom of the graph: schemes -> core and text -> schemes.
+"""
+
+from rtt.app.service.core import (
+    DEFAULT_DOCUMENT_SCHEME,
+    DEFAULT_TARGET_SPEC,
+    DEFAULT_TUNING_SCHEME,
+    IntervalSizes,
+    Tuning,
+    _domain_label,
+    _interval_vectors,
+    _is_matrix,
+    _map_through,
+    _over,
+    _temperament_spec_vectors,
+    _to_matrix,
+    _vectors,
+    _vectors_to_ratios,
+    canonical_comma_basis,
+    canonical_mapping,
+    cents,
+    comma_ratios,
+    default_target_limit,
+    domain_has_nonprimes,
+    element_ratio,
+    form_matrix,
+    generator_detempering,
+    generators,
+    get_generator_tuning_range,
+    interval_complexities,
+    interval_sizes,
+    interval_vector,
+    interval_weights,
+    is_proper_temperament,
+    is_standard_domain,
+    mapped_commas,
+    mapped_intervals,
+    prescale_text,
+    standard_primes,
+    target_interval_set,
+    target_interval_vectors,
+    target_limit_problem,
+    tuning,
+    tuning_from_generators,
+)
+from rtt.app.service.parse import (
+    _int_matrix_or_none,
+    _parse_float_list,
+    _rational_matrix_or_none,
+    parse_cents_map,
+    parse_comma_basis,
+    parse_embedding,
+    parse_mapping_state,
+    parse_prescaler_diagonal,
+    parse_projection,
+)
+from rtt.app.service.projection import (
+    UnchangedData,
+    _all_primes_held,
+    _held_for_projection,
+    _integer_columns,
+    _matrix_strings,
+    _projection_temperaments,
+    held_basis_vectors,
+    project_vectors,
+    projection_matrix_rationals,
+    tuning_embedding,
+    tuning_projection,
+    unchanged_basis_from_embedding,
+    unchanged_basis_from_projection,
+    unchanged_interval_basis,
+    unchanged_interval_data,
+    unchanged_interval_ratios,
+    unchanged_ratios_of_tuning,
+)
+from rtt.app.service.schemes import (
+    COMPLEXITY_DISPLAYS,
+    COMPLEXITY_NAMES,
+    PRESCALERS,
+    WEIGHT_SLOPES,
+    _WEIGHT_VARIANT_ORDER,
+    _complexity_signature,
+    base_scheme_name,
+    complexity_annotation,
+    complexity_name_of,
+    complexity_norm_power,
+    complexity_prescaler,
+    complexity_size_factor,
+    damage_weight_slope,
+    diminuator_replaced,
+    displayed_prescaler_name,
+    displayed_targets,
+    dual_norm_power,
+    held_intervals,
+    is_all_interval,
+    is_euclidean,
+    optimization_power,
+    prescaler_of,
+    scheme_from_json,
+    scheme_to_json,
+    scheme_with_complexity,
+    scheme_with_complexity_norm_power,
+    scheme_with_diminuator,
+    scheme_with_power,
+    scheme_with_prescaler,
+    scheme_with_targets,
+    scheme_with_weight_slope,
+    weight_annotation,
+    weight_slope_of,
+    weight_slope_variants,
+)
+from rtt.app.service.state import (
+    TemperamentState,
+    _as_basis_element,
+    _state,
+    add_comma_to,
+    add_domain_element,
+    add_mapping_row,
+    add_mapping_row_to,
+    can_add_domain_element,
+    can_remove_domain_element,
+    can_set_domain_element,
+    can_shrink_domain,
+    expand_domain,
+    from_comma_basis,
+    from_mapping,
+    from_temperament_data,
+    is_independent_domain_basis,
+    just_intonation,
+    mapping_ebk,
+    parse_domain_element,
+    remove_comma,
+    remove_domain_element,
+    remove_mapping_row,
+    set_domain_element,
+    shrink_domain,
+)
+from rtt.app.service.superspace import (
+    _superspace_held_basis,
+    _superspace_projection_temperaments,
+    basis_in_superspace,
+    lift_vectors_to_superspace,
+    map_vectors_into_superspace_generators,
+    mapping_to_superspace_generators,
+    project_superspace_generators_to_domain,
+    superspace_complexity_prescaler,
+    superspace_dimension,
+    superspace_generator_embedding,
+    superspace_generator_embedding_display,
+    superspace_generators,
+    superspace_just_mapping,
+    superspace_mapping,
+    superspace_prime_projection,
+    superspace_prime_projection_display,
+    superspace_primes,
+    superspace_projection_matrix_rationals,
+    superspace_rank,
+    superspace_self_map,
+    superspace_tuning,
+    superspace_tuning_embedding,
+    superspace_tuning_projection,
+)
+from rtt.app.service.text import (
+    _DASH,
+    _cents_genmap,
+    _cents_list,
+    _cents_map,
+    _ket_list,
+    _prescale_vector_list,
+    DerivedQuantities,
+    embedding_ebk,
+    mapping_pending_text,
+    plain_text_values,
+    projection_ebk,
+    vector_list_pending_text,
+)
+
+# Callers refine schemes through service.resolve_tuning_scheme (the old module imported it
+# at top level, making it part of the facade's surface) — keep it reachable here.
+from rtt.library.tuning_scheme_names import resolve_tuning_scheme
