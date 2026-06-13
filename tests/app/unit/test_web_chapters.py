@@ -55,10 +55,10 @@ def test_default_position_reveals_the_early_controls_and_hides_the_later_ones():
     # everything introduced by ch4: the ch2 display layers, the ch3 tuning boxes + their
     # sub-controls (optimization / tuning ranges / weighting), and ch4's intervals of interest
     assert {"counts", "temperament_boxes", "tuning_boxes", "gridded_values", "presets",
-            "math_expressions", "optimization", "tuning_ranges", "weighting", "interest"} <= shown
+            "math_expressions", "optimization", "tuning_ranges", "weighting", "interest",
+            "domain_quantities", "domain_units"} <= shown
     # ch5+ controls stay hidden at the default ch4
-    assert not ({"units", "domain_units", "domain_quantities", "all_interval",
-                 "alt_complexity", "nonstandard_domain"} & shown)
+    assert not ({"units", "all_interval", "alt_complexity", "nonstandard_domain"} & shown)
     # the outside-guide controls wait for the ★ notch
     for key in ("projection", "generator_detempering", "identity_objects",
                 "form_controls", "form_colorization"):

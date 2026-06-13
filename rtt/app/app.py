@@ -2352,6 +2352,8 @@ def index() -> None:
             else select_all_box.classes(remove="rtt-show-mixed")
 
     def on_chapter_change(v):
+        if building[0]:  # a programmatic thumb sync (render keeps it on chapter[0]; Reset moves it) —
+            return       # not a user drag, so don't re-fire the prune/render
         chapter[0] = _clamp_chapter(v)
         _doc_store()[_CHAPTER_KEY] = chapter[0]
         # a hidden setting is DISABLED, not just hidden: turn off any layer the new chapter no longer
@@ -2359,6 +2361,15 @@ def index() -> None:
         editor.disable_hidden_settings(chapter[0])
         apply_chapter()  # panel: reveal/hide + enable/disable the controls and sync the readout
         render()         # grid: drop the now-disabled layers' content (+ sync the checkboxes off)
+
+    def reset_everything():
+        # Reset restores the guide-chapter slider to its default too, not just the document — set the
+        # chapter first so act(editor.reset)'s render syncs the thumb and grid to it, then refresh the
+        # panel's reveal/disable state for the default chapter.
+        chapter[0] = show_settings.CHAPTER_DEFAULT
+        _doc_store()[_CHAPTER_KEY] = chapter[0]
+        act(editor.reset)
+        apply_chapter()
 
     # The Editor owns the whole document — temperament, view selections, the Show
     # settings (editor.settings) and the folded rows/columns/tiles (editor.collapsed) —
@@ -3926,7 +3937,12 @@ def index() -> None:
 
             refs["undo"].set_enabled(editor.can_undo)
             refs["redo"].set_enabled(editor.can_redo)
-            refs["reset"].set_enabled(editor.can_reset)
+            # Reset clears the document AND the guide-chapter slider, so it's live whenever either
+            # differs from the defaults; keep the thumb on chapter[0] (Reset moves it — building[0]
+            # guards the echo).
+            refs["reset"].set_enabled(editor.can_reset or chapter[0] != show_settings.CHAPTER_DEFAULT)
+            if chapter_slider.value != chapter[0]:
+                chapter_slider.value = chapter[0]
             # the nonstandard-domain-approach radio: positioned over the reserved band inside the approach
             # box (lay.approach_box, body coordinates → shift up by fy like any body cell) when the domain
             # carries a nonprime element, hidden otherwise. The live approach's square is filled and the
@@ -4062,9 +4078,10 @@ def index() -> None:
                             ui.label("guide chapter").classes("rtt-chapter-title")
                             chapter_reading = ui.label(_chapter_reading(chapter[0])) \
                                 .classes("rtt-chapter-reading").mark("chapterreading")
-                        ui.slider(min=show_settings.CHAPTER_MIN, max=show_settings.CHAPTER_STAR,
-                                  step=1, value=chapter[0],
-                                  on_change=lambda e: on_chapter_change(e.value)) \
+                        chapter_slider = ui.slider(
+                            min=show_settings.CHAPTER_MIN, max=show_settings.CHAPTER_STAR,
+                            step=1, value=chapter[0],
+                            on_change=lambda e: on_chapter_change(e.value)) \
                             .props("markers snap dense color=grey-8") \
                             .classes("rtt-chapter-slider").mark("chapterslider") \
                             .tooltip(tooltips.CHROME_HELP["chapter"])
@@ -4207,9 +4224,9 @@ def index() -> None:
                             .props("flat dense").classes("rtt-iconbtn").mark("undo").tooltip(tooltips.CHROME_HELP["undo"])
                         refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
                             .props("flat dense").classes("rtt-iconbtn").mark("redo").tooltip(tooltips.CHROME_HELP["redo"])
-                        # reset everything (settings, expand/collapse, values) to the
-                        # as-shipped defaults — itself an undoable action
-                        refs["reset"] = ui.button(icon="restart_alt", on_click=lambda: act(editor.reset), color=None) \
+                        # reset everything (settings, expand/collapse, values) to the as-shipped
+                        # defaults — plus the guide-chapter slider back to ch4 (reset_everything)
+                        refs["reset"] = ui.button(icon="restart_alt", on_click=lambda: reset_everything(), color=None) \
                             .props("flat dense").classes("rtt-iconbtn").mark("reset").tooltip(tooltips.CHROME_HELP["reset"])
 
                         # hovering a history button previews its effect: it rings exactly the cells one

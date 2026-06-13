@@ -4354,11 +4354,11 @@ def test_counts_present_keeps_the_column_fan_out_immediately_after_the_toggle():
     assert fan == {ln.id: ln for ln in _with(counts=False).lines}["bus:primes:top"].pos
 
 
-def test_counts_off_by_default_leaves_the_quantities_row_on_top():
-    # the default build target shows no counts row; quantities stays the top row
+def test_counts_on_by_default_shows_the_counts_row():
+    # counts ships ON now (a default-on toggle), so the default build shows the counts row + cells
     cells = {c.id for c in _layout().cells}
-    assert "label:counts" not in cells
-    assert not any(c.startswith("count:") for c in cells)
+    assert "label:counts" in cells
+    assert any(c.startswith("count:") for c in cells)
 
 
 def test_count_names_caption_each_count_only_when_names_is_on():

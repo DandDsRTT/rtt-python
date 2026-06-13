@@ -71,7 +71,7 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
     (
         "specific boxes & controls",
         (
-            ("counts", "counts", False),
+            ("counts", "counts", True),
             ("domain_quantities", "quantities", True),
             ("domain_units", "units", False),
             # ``temperament`` / ``form`` / ``tuning`` are pure grouping parents (see the module
@@ -183,10 +183,9 @@ CHAPTER: dict[str, int] = {
     # specific boxes & controls. The pure grouping parents (temperament / tuning / form) reveal with
     # their EARLIEST child, so the group header never appears before anything it would expand to.
     "counts": 2, "temperament": 2, "temperament_boxes": 2, "temperament_colorization": 2,
+    "interest": 2, "domain_quantities": 2, "domain_units": 2,
     "tuning": 3, "tuning_boxes": 3, "tuning_colorization": 3,
     "optimization": 3, "tuning_ranges": 3, "weighting": 3,
-    "interest": 4,
-    "domain_quantities": 5, "domain_units": 5,
     "all_interval": 7,
     "alt_complexity": 8,
     "nonstandard_domain": 9,

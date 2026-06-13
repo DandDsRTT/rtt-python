@@ -96,7 +96,8 @@ async def _enable(user: User, label: str) -> None:
 # (Show-toggle label, a cell id its render branch must produce). Each exercises a
 # _make_cell branch that is off in the default view.
 _FEATURE_CELLS = [
-    ("counts", "count:primes"),                      # the count scalar ("d = 3"), _math_html
+    # counts ships ON now, so it's no longer an enable-an-off-feature case (its render is covered
+    # by the default page + the spreadsheet tests).
     ("symbols", "symbol:mapping:primes"),            # the quantity-symbol glyph, _math_html
     ("row/col header symbols", "matlabel:row:mapping:primes:0"),  # the matrix row header label (header_symbols)
     ("plain text values", "ptext:mapping:primes"),   # the editable EBK dual input
@@ -631,6 +632,18 @@ async def test_sliding_the_chapter_down_disables_the_advanced_layers_in_the_grid
     await user.should_not_see(marker="units:mapping:primes")  # units (ch5) is disabled -> content gone
     # the readout tracked the move, and the master is still "all (available) on" for ch2
     assert next(iter(user.find(marker="chapterreading").elements)).text == "2: Mappings"
+
+
+async def test_reset_restores_the_guide_chapter_slider_to_the_default(user: User) -> None:
+    # Reset clears the document AND the guide-chapter slider — move the slider off ch4, hit Reset,
+    # and the thumb (and readout) return to the default chapter.
+    await user.open("/")
+    slider = next(iter(user.find(marker="chapterslider").elements))
+    slider.set_value(show_settings.CHAPTER_STAR)
+    assert slider.value == show_settings.CHAPTER_STAR
+    user.find(marker="reset").click()
+    assert slider.value == show_settings.CHAPTER_DEFAULT
+    assert next(iter(user.find(marker="chapterreading").elements)).text == "4: Exploring temperaments"
 
 
 async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cells(user: User) -> None:
@@ -2076,7 +2089,7 @@ async def test_dropping_a_row_on_its_own_cells_does_nothing(user: User) -> None:
 # representative cell's html actually carries content. Each exercises a distinct fill-in-render
 # path — _math_html (count/symbol), _units_html (units), _bar_chart / _range_chart SVGs.
 _ENABLE_HTML_CELLS = [
-    ("counts", "count:primes"),                   # _math_html "d = 3"
+    # counts ships ON now (its _math_html "d = 3" renders by default); symbols still covers _math_html
     ("symbols", "symbol:mapping:primes"),         # _math_html quantity glyph
     ("units", "units:mapping:primes"),            # _units_html "units: g/p"
     ("charts", "chart:retune:targets"),           # _bar_chart SVG
