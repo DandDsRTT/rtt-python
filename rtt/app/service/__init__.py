@@ -154,6 +154,7 @@ from rtt.app.service.state import (
     remove_mapping_row,
     set_domain_element,
     shrink_domain,
+    standardize_to_prime_limit,
 )
 from rtt.app.service.superspace import (
     _superspace_held_basis,

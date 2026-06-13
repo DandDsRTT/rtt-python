@@ -172,12 +172,12 @@ CHAPTER_DEFAULT = 4   # the slider's as-shipped position — the default-state d
 CHAPTER: dict[str, int] = {
     # general — the dummy tile's display layers
     "gridded_values": 2, "quantities": 2, "names": 2, "symbols": 2, "plain_text_values": 2,
-    "math_expressions": 2, "presets": 2,
+    "math_expressions": 2, "presets": 2, "equivalences": 2,
     "header_symbols": 2,  # the matrix row/col header labels (𝒎₁, 𝐜₁, …) — a sibling of symbols
     # mnemonics is the underlinable LETTER of the name word, so it must reveal WITH names (its
     # ancestor, ch2) — a later chapter would blank a letter mid-word ("tile name" -> "tile  ame").
     "mnemonics": 2,
-    "equivalences": 3, "charts": 3,
+    "charts": 3,
     "drag_to_combine": 4,
     "units": 5, "cell_units": 5,  # the per-cell unit beneath each value — a sibling of units
     # specific boxes & controls. The pure grouping parents (temperament / tuning / form) reveal with
@@ -206,7 +206,7 @@ CHAPTER_TITLES: dict[int, str] = {
     7: "All-interval tuning schemes",
     8: "Alternative complexities",
     9: "Tuning in nonstandard domains",
-    CHAPTER_STAR: "Conventions, & topics beyond the guide",
+    CHAPTER_STAR: "beyond the guide",
 }
 
 

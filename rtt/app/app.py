@@ -188,11 +188,6 @@ _INVALID_EMBEDDING = "That isn't a valid embedding — 𝑀𝐺 must equal the i
 
 # the toast shown when the "nonstandard domain" Show toggle is turned off while a nonstandard
 # basis is still live — the setting can't go off until the basis is back to a standard prime limit
-_NONSTANDARD_BASIS_IN_USE = (
-    "Can't turn off the nonstandard domain setting while a nonstandard basis is in use — "
-    "change the domain back to a standard prime limit first."
-)
-
 _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the scrolling body
 _PENDING_TEXT_COLOR = "color-mix(in srgb, var(--pending-color) 60%, black)"  # a draft cell's TEXT:
 # the green ring (_PENDING_COLOR, imported) DARKENED toward black — single-sourced from --pending-color
@@ -2217,8 +2212,8 @@ def index() -> None:
     chapter = [_clamp_chapter(_doc_store().get(_CHAPTER_KEY, show_settings.CHAPTER_DEFAULT))]
 
     def _chapter_reading(ch: int) -> str:
-        title = show_settings.CHAPTER_TITLES[ch]
-        return f"★  {title}" if ch >= show_settings.CHAPTER_STAR else f"ch {ch} · {title}"
+        label = "★" if ch >= show_settings.CHAPTER_STAR else str(ch)
+        return f"{label}: {show_settings.CHAPTER_TITLES[ch]}"
 
     def apply_chapter():
         # Show/hide each Show control by the slider: a control appears once the slider reaches its
@@ -2232,6 +2227,12 @@ def index() -> None:
         # across renders (render rebuilds the GRID, not these), so this runs only when the slider moves.
         ch = chapter[0]
         chapter_reading.set_text(_chapter_reading(ch))
+        # the longest readouts (ch7 "All-interval tuning schemes", ch9 "Tuning in nonstandard
+        # domains") spill onto a second line beside the "guide chapter" label, so shrink the font for
+        # those rather than wrap — the shorter titles keep the readable size.
+        chapter_reading.classes(add="rtt-chapter-reading-narrow") \
+            if len(show_settings.CHAPTER_TITLES[ch]) >= 25 \
+            else chapter_reading.classes(remove="rtt-chapter-reading-narrow")
 
         def _gate(el, cls, hidden):
             el.classes(add=cls) if hidden else el.classes(remove=cls)
@@ -2244,6 +2245,26 @@ def index() -> None:
         # it the same space-preserving way; it's available from the first notch (ch2 = CHAPTER_MIN).
         if "audio_bank" in refs:
             _gate(refs["audio_bank"], "rtt-chap-invisible", show_settings.CHAPTER_MIN > ch)
+        _sync_show_availability()  # an unrevealed toggle is disabled + left out of select-all
+
+    def _available_keys():
+        # the Show toggles the chapter slider has revealed AND the layout actually builds — the
+        # toggles select-all / the master checkbox act on, and the ones left enabled in the panel.
+        return [k for k in show_settings.IMPLEMENTED
+                if show_settings.reveal_chapter(k) <= chapter[0]]
+
+    def _sync_show_availability():
+        # A chapter-hidden toggle is disabled too, not merely hidden: its checkbox greys + goes inert
+        # (like a not-yet-built one), and it drops out of select-all / the master state, so sliding
+        # can't toggle or count an unrevealed control. Recomputed on every render and slider move.
+        for key, box in boxes.items():
+            disabled = key not in show_settings.IMPLEMENTED \
+                or show_settings.reveal_chapter(key) > chapter[0]
+            box.props("disable") if disabled else box.props(remove="disable")
+        states = [editor.settings[k] for k in _available_keys()]
+        select_all_box.value = bool(states) and all(states)
+        select_all_box.classes(add="rtt-show-mixed") if (any(states) and not all(states)) \
+            else select_all_box.classes(remove="rtt-show-mixed")
 
     def on_chapter_change(v):
         chapter[0] = _clamp_chapter(v)
@@ -2982,24 +3003,22 @@ def index() -> None:
         if building[0]:
             return
         if key == "nonstandard_domain" and not value and editor.basis_is_nonstandard:
-            # the setting can't go off while a nonstandard basis is live (its content would be
-            # stranded with nowhere to show). Toast and re-render to restore the checkbox to on.
-            ui.notify(_NONSTANDARD_BASIS_IN_USE, type="negative", position="top")
+            # turning the setting off LEAVES the nonstandard domain rather than being denied: convert
+            # it to the simplest standard prime limit that contains every prime it used (its content
+            # is no longer nonstandard, so the toggle has nothing left to strand). One undoable step.
+            editor.exit_nonstandard_domain()
             render()
             return
         editor.set_show(key, value)
         render()  # the reconciling renderer animates the affected rows/columns in or out
 
     def on_select_all(value):
-        # the settings panel's select-all/none: flip every implemented Show toggle at once
+        # the settings panel's select-all/none: flip every AVAILABLE toggle (implemented + revealed
+        # by the chapter slider) at once. Select-none over a nonstandard basis converts it to the
+        # prime limit, the same as the direct toggle (set_all_show handles it).
         if building[0]:
             return
-        if not value and editor.basis_is_nonstandard:
-            # select-none can't turn "nonstandard domain" off while a nonstandard basis is live —
-            # set_all_show keeps it on (its content would be stranded), leaving the master checkbox
-            # in its mixed/grey state. Toast to explain why, matching on_show_toggle's guard.
-            ui.notify(_NONSTANDARD_BASIS_IN_USE, type="negative", position="top")
-        editor.set_all_show(value)
+        editor.set_all_show(value, _available_keys())
         render()
 
     def on_part_click(key):
@@ -3745,14 +3764,10 @@ def index() -> None:
                 if key == "mnemonics":
                     part.classes(add="rtt-mnem-underline") if editor.settings["mnemonics"] \
                         else part.classes(remove="rtt-mnem-underline")
-        # the master checkbox: checked (true / black fill) when all on, unchecked (false /
-        # empty) when all off, MIXED (grey fill) when some-but-not-all are on
-        states = [editor.settings[k] for k in show_settings.IMPLEMENTED]
-        select_all_box.value = all(states)
-        if any(states) and not all(states):
-            select_all_box.classes(add="rtt-show-mixed")
-        else:
-            select_all_box.classes(remove="rtt-show-mixed")
+        # the master checkbox (checked when all available toggles are on, mixed when some are) and
+        # the per-row disabled state — both over the chapter-revealed, implemented set (see
+        # _sync_show_availability), so an unrevealed toggle is greyed and uncounted.
+        _sync_show_availability()
         # persist the whole document so a browser refresh restores exactly this state — UNLESS a
         # token gesture has the document in a temporarily-applied hypothetical state (a drag hover,
         # a temperament grow-preview): persisting that would resurrect a never-committed document
@@ -3831,7 +3846,7 @@ def index() -> None:
                         with ui.element("div").classes("rtt-chapter-head"):
                             ui.label("guide chapter").classes("rtt-chapter-title")
                             chapter_reading = ui.label(_chapter_reading(chapter[0])) \
-                                .classes("rtt-chapter-reading")
+                                .classes("rtt-chapter-reading").mark("chapterreading")
                         ui.slider(min=show_settings.CHAPTER_MIN, max=show_settings.CHAPTER_STAR,
                                   step=1, value=chapter[0],
                                   on_change=lambda e: on_chapter_change(e.value)) \
@@ -3943,7 +3958,7 @@ def index() -> None:
                                     box = ui.checkbox(label, value=editor.settings[key],
                                                       on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
                                         .props("dense size=xs color=grey-8").classes("rtt-show-item") \
-                                        .tooltip(tooltips.SHOW_HELP[key])
+                                        .mark(f"showbox:{key}").tooltip(tooltips.SHOW_HELP[key])
                                     example = ui.html(_example_html(key)).classes("rtt-ex-cell")
                                     if key not in show_settings.IMPLEMENTED:
                                         box.props("disable")  # not built yet -> greyed and inert

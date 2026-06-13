@@ -603,6 +603,15 @@ async def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_defaul
     assert "rtt-chap-invisible" in _part_classes(user, "units")               # ch5
     # the audio bank rides the tile and is available from the first notch, so it shows at the default
     assert "rtt-chap-invisible" not in next(iter(user.find(marker="audiobank").elements))._classes
+    # a hidden (unrevealed) toggle is DISABLED too, not merely hidden — its checkbox carries the
+    # `disable` prop; a revealed one does not.
+    def _box(key):
+        return next(iter(user.find(marker=f"showbox:{key}").elements))
+    assert "disable" in _box("domain_units")._props   # ch5 — hidden + disabled at ch4
+    assert "disable" not in _box("counts")._props      # ch2 — revealed + enabled
+    # the live readout reads "<n>: <title>" (no "ch " prefix)
+    reading = next(iter(user.find(marker="chapterreading").elements))
+    assert reading.text == "4: Exploring temperaments"
 
 
 async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cells(user: User) -> None:

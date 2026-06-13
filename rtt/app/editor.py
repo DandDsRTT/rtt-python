@@ -410,6 +410,26 @@ class Editor:
     def edit_comma_basis(self, comma_basis, domain_basis=None) -> None:
         self._apply(service.from_comma_basis(comma_basis, domain_basis))
 
+    def _standardize_domain_in_place(self) -> None:
+        """Re-express the temperament over the simplest standard prime limit covering every prime
+        the (nonstandard) basis uses, and drop the "nonstandard domain" setting — the state mutation
+        shared by the direct toggle and select-none. Snapshots are the caller's job (each does one)."""
+        ratios = service.comma_ratios(self.state.comma_basis, self.state.domain_basis)
+        self._clear_pending()
+        self.state = service.standardize_to_prime_limit(self.state.domain_basis, ratios)
+        self.settings["nonstandard_domain"] = False
+
+    def exit_nonstandard_domain(self) -> None:
+        """Leave a live nonstandard domain (the way to turn the "nonstandard domain" toggle off):
+        convert it to the simplest standard prime limit that contains every prime it used, then drop
+        the toggle — one undoable step. A no-op on an already-standard basis. The state setter forgets
+        the held intervals / intervals of interest / target list, which were vectors over the old
+        basis (a different dimension), reverting them to the new domain's defaults."""
+        if not self.basis_is_nonstandard:
+            return
+        self._snapshot()
+        self._standardize_domain_in_place()
+
     def canonicalize_mapping(self) -> None:
         """Re-store the mapping in canonical form (the mapping box's ``<choose form>``
         control) — an undoable edit, so an equivalent generating set can be normalized."""
@@ -1220,18 +1240,21 @@ class Editor:
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
 
-    def set_all_show(self, value: bool) -> None:
-        """The settings panel's select-all/none: turn every *implemented* Show toggle on
-        (``True``) or off (``False``) at once. The not-yet-built toggles are left at their
-        defaults (the user can't toggle them individually either)."""
+    def set_all_show(self, value: bool, keys=None) -> None:
+        """The settings panel's select-all/none: turn the given Show toggles on (``True``) or off
+        (``False``) at once. ``keys`` defaults to every *implemented* toggle; the panel narrows it
+        to the ones the chapter slider has revealed (an unrevealed toggle is disabled, so select-all
+        leaves it alone). The not-yet-built toggles are left at their defaults either way."""
+        keys = show_settings.IMPLEMENTED if keys is None else keys
         self._snapshot()
         had_alt_complexity = self.settings["alt_complexity"]
-        for key in show_settings.IMPLEMENTED:
+        for key in keys:
             self.settings[key] = value
-        # "nonstandard domain" can't go off while a nonstandard basis is live (see
-        # on_show_toggle's guard) — keep it on so select-none can't strand that content.
-        if not value and self.basis_is_nonstandard:
-            self.settings["nonstandard_domain"] = True
+        # turning "nonstandard domain" off via select-none leaves the nonstandard basis the same way
+        # the direct toggle does — convert it to the simplest standard prime limit (the setting stays
+        # off) rather than stranding its content with nowhere to show.
+        if not value and "nonstandard_domain" in keys and self.basis_is_nonstandard:
+            self._standardize_domain_in_place()
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
 

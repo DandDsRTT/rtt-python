@@ -136,7 +136,7 @@ def test_removing_the_last_comma_reaches_just_intonation_and_renders():
     assert _comma_basis(editor) == [[4, -4, 1]]  # one undoable edit restores meantone
 
 
-# --- the nonstandard-domain Show toggle can't go off while a nonstandard basis is live ---
+# --- turning the nonstandard-domain Show toggle off leaves the domain by standardizing it ---
 
 def test_basis_is_nonstandard_tracks_the_domain():
     editor = Editor()
@@ -145,23 +145,60 @@ def test_basis_is_nonstandard_tracks_the_domain():
     assert editor.basis_is_nonstandard is True  # 2.3.13/5 is a nonstandard subgroup
 
 
-def test_select_none_keeps_nonstandard_domain_on_while_the_basis_is_nonstandard():
-    # the bulk select-none path turns off every implemented Show toggle — but it must leave
-    # "nonstandard domain" on while the basis is nonstandard, so its content isn't stranded.
+def test_exit_nonstandard_domain_standardizes_to_the_simplest_prime_limit():
+    # turning the toggle off doesn't deny — it leaves the nonstandard basis by re-expressing the
+    # temperament over the simplest standard prime limit that contains every prime it used (2.3.13/5
+    # touches 2,3,5,13 -> the 13-limit), carrying the commas over, as one undoable step.
+    editor = Editor()
+    editor.set_show("nonstandard_domain", True)
+    assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
+    commas_before = service.comma_ratios(editor.state.comma_basis, editor.state.domain_basis)
+    editor.exit_nonstandard_domain()
+    assert editor.state.domain_basis == (2, 3, 5, 7, 11, 13)  # the simplest standard limit
+    assert editor.basis_is_nonstandard is False
+    assert editor.settings["nonstandard_domain"] is False
+    # the temperament's commas carry over (still tempered over the new domain)
+    assert service.comma_ratios(editor.state.comma_basis, editor.state.domain_basis) == commas_before
+    editor.undo()  # one step restores the whole thing — domain, setting and all
+    assert editor.basis_is_nonstandard is True
+    assert editor.settings["nonstandard_domain"] is True
+
+
+def test_exit_nonstandard_domain_is_a_noop_on_a_standard_basis():
+    editor = Editor()
+    assert editor.basis_is_nonstandard is False
+    editor.exit_nonstandard_domain()
+    assert editor.can_undo is False  # nothing happened, so nothing to undo
+
+
+def test_select_none_standardizes_a_nonstandard_basis_like_the_direct_toggle():
+    # the bulk select-none path turns off every available toggle — including "nonstandard domain",
+    # which it leaves the same way the direct toggle does: standardize the basis, setting off.
     editor = Editor()
     editor.set_show("nonstandard_domain", True)
     assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
     editor.set_all_show(False)
-    assert editor.settings["nonstandard_domain"] is True
+    assert editor.settings["nonstandard_domain"] is False
+    assert editor.basis_is_nonstandard is False
 
 
 def test_select_none_turns_nonstandard_domain_off_on_a_standard_basis():
-    # the guard is conditional: over a standard prime limit, select-none clears it like any other.
+    # over a standard prime limit there's nothing to standardize — select-none just clears it.
     editor = Editor()
     editor.set_show("nonstandard_domain", True)
     assert editor.basis_is_nonstandard is False
     editor.set_all_show(False)
     assert editor.settings["nonstandard_domain"] is False
+
+
+def test_set_all_show_only_flips_the_keys_it_is_given():
+    # the panel narrows select-all/none to the chapter-revealed toggles, so set_all_show flips only
+    # the keys it's handed — an unrevealed (hidden, disabled) toggle is left untouched.
+    editor = Editor()
+    editor.set_all_show(False)  # everything off
+    editor.set_all_show(True, ["names"])  # select-all over just one revealed key
+    assert editor.settings["names"] is True
+    assert editor.settings["symbols"] is False  # an unlisted implemented toggle stays put
 
 
 # --- inputting ---

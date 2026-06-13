@@ -61,6 +61,21 @@ def from_comma_basis(comma_basis, domain_basis=None) -> TemperamentState:
     return _state(mapping, comma_basis, domain_basis)
 
 
+def standardize_to_prime_limit(domain_basis, comma_ratios) -> TemperamentState:
+    """Re-express a temperament (given its commas as ratio strings) over the simplest STANDARD
+    prime-limit domain that contains every prime its (nonstandard) basis used — the natural
+    standard domain to fall back to when leaving a nonstandard basis. The simplest such limit is
+    the first k primes up to the largest prime the basis touches, so e.g. ``2.3.13/5`` (primes
+    2,3,5,13) standardizes to the 13-limit ``2.3.5.7.11.13``. The same commas carry over (now
+    expressed there); any primes the limit fills in that the basis didn't use (7, 11 here) the
+    commas don't touch, so they ride as their own untempered generators."""
+    used = get_simplest_prime_only_basis(domain_basis)  # the sorted primes the basis touches
+    k = int(sp.primepi(used[-1])) if used else len(tuple(domain_basis))  # # primes up to the largest
+    standard = standard_primes(k)
+    commas = express_quotients_in_domain_basis(comma_ratios, standard)
+    return from_comma_basis(commas, standard)
+
+
 def from_temperament_data(ebk: str) -> TemperamentState:
     """State parsed from an EBK string, honouring an optional domain-basis prefix
     (e.g. ``"2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"``). A map string is taken as the mapping,

@@ -66,6 +66,17 @@ def test_default_position_reveals_the_early_controls_and_hides_the_later_ones():
         assert key not in shown
 
 
+def test_equivalences_reveals_with_symbols_at_chapter_two():
+    # equivalences (the symbol's defining equation) is introduced alongside symbols, in ch2
+    assert show_settings.CHAPTER["equivalences"] == 2
+    assert show_settings.reveal_chapter("equivalences") == 2  # and its symbols ancestor is ch2 too
+
+
+def test_star_notch_title_is_short():
+    # the ★ notch reads just "beyond the guide" (a long title would wrap the readout)
+    assert show_settings.CHAPTER_TITLES[show_settings.CHAPTER_STAR] == "beyond the guide"
+
+
 def test_chapter_slider_is_a_standalone_preference_not_a_show_setting():
     # like dark mode: its own store key, separate from the serialized document, so "select all /
     # none" and Reset (which act only on editor.settings) never move it

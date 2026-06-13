@@ -772,8 +772,12 @@
    a short header — the "guide chapter" label and a live readout of the current chapter — over a
    marked slider whose notches are the guide's chapters plus a final ★. */
 .rtt-chapter-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
-.rtt-chapter-title { font-size:14px; font-weight:bold; }
-.rtt-chapter-reading { font-family:'Cambria',Georgia,serif; font-size:12px; opacity:0.7; }
+.rtt-chapter-title { font-size:14px; font-weight:bold; white-space:nowrap; }
+.rtt-chapter-reading { font-family:'Cambria',Georgia,serif; font-size:12px; opacity:0.7;
+                       white-space:nowrap; }
+/* the longest chapter titles (ch7, ch9) would wrap to a second line beside "guide chapter", so
+   they render a notch smaller (apply_chapter adds this class for long titles) — staying one line. */
+.rtt-chapter-reading.rtt-chapter-reading-narrow { font-size:10px; }
 .rtt-chapter-slider { padding:0 6px; }
 /* a control the chapter slider has not yet revealed (its chapter is past the slider) is made
    INVISIBLE, two ways: a show/example row COLLAPSES (display:none — no leftover gap), while a
