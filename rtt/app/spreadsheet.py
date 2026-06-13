@@ -2466,6 +2466,14 @@ class _GridBuilder:
         historical ``…:count`` draft-cell ids."""
         return pending_token([tok for tok, _ in self._col_ids[group]])
 
+    def _pending_draft_idx(self, group):
+        """The ``(draft-marker, committed-count)`` for an interval list's pending draft column,
+        or ``None`` for a group with no draft. Shared by the quantities/tuning rows and the
+        prescaling row, which each append one blank green slot one column past the committed
+        ones when the marker is set (the count is where that slot sits)."""
+        return {"commas": (self.comma_draft or None, self.nc), "targets": (self.pending_target, self.k),
+                "held": (self.pending_held, self.nh), "interest": (self.pending_interest, self.mi)}.get(group)
+
     def _voice(self, tile, idx, cents):
         """Make the just-built cell (``self.cells[-1]``) click-to-play: hovering it reveals a speaker
         that sounds ``cents``. ``tile`` + ``idx`` group a row's cells so the bank's arp / chord /
@@ -2506,8 +2514,7 @@ class _GridBuilder:
         # tuning-family row (tuning / just / retune / complexity / damage / weight), so the draft
         # column reads green top-to-bottom — not only at its editable vectors up top. The enclosing
         # bracket already spans the draft (content_w is _shown-wide), so only the cell is needed.
-        pending_idx = {"commas": (self.comma_draft or None, self.nc), "targets": (self.pending_target, self.k),
-                       "held": (self.pending_held, self.nh), "interest": (self.pending_interest, self.mi)}.get(group)
+        pending_idx = self._pending_draft_idx(group)
         if pending_idx is not None and pending_idx[0] is not None:
             self.cells.append(CellBox(f"{key}:{self.group_elem[group]}:draft", self.group_left[group](pending_idx[1]),
                                       y, COL_W, ROW_H, "tuningvalue", text="", pending=True))
@@ -4074,8 +4081,7 @@ class _GridBuilder:
             # complexity-prescaling matrix too — the multi-row twin of tuning_value_row's single-row
             # placeholder (lines ~2147). The enclosing bracket already spans the draft (content_w is
             # _shown-wide), so only the cells are needed. left() is this group's group_left.
-            pending_idx = {"commas": (self.comma_draft or None, self.nc), "targets": (self.pending_target, self.k),
-                           "held": (self.pending_held, self.nh), "interest": (self.pending_interest, self.mi)}.get(group)
+            pending_idx = self._pending_draft_idx(group)
             if pending_idx is not None and pending_idx[0] is not None:
                 for i in range(nrows + self.size_rows):
                     cy = self.row_y["prescaling"] + i * ROW_H
