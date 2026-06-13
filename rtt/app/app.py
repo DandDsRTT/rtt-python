@@ -2471,6 +2471,15 @@ class _Reconciler:
         el.on("mouseenter", lambda _=None: self._cb.control_hover(apply))
         el.on("mouseleave", lambda _=None: self._cb.control_unhover())
 
+    def _preview_rank_remove(self, el, axis, idx):
+        """Arm a comma−/mapping− hover's dual rank-change preview: a rank-changing removal reflows the
+        grid (the born generator/comma ghosts green, the leaver reds, the survivors amber), so it
+        routes through the builder (rank_remove_hover → render) rather than the no-reflow ring diff
+        control_hover uses. ``axis`` is "comma" (a comma −) or "row" (a mapping row −); ``idx`` the
+        committed entry the click removes. The click still commits via its own handler."""
+        el.on("mouseenter", lambda _=None: self._cb.rank_remove_hover(axis, idx))
+        el.on("mouseleave", lambda _=None: self._cb.rank_remove_unhover())
+
     def _build_minus(self, cb, wrap):  # remove the highest prime; a hover − centred on the last prime's branch point
         wrap.classes("rtt-minus-zone")  # clear of the editable cell below
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
@@ -2486,7 +2495,7 @@ class _Reconciler:
         wrap.classes("rtt-minus-zone")  # clear of the genmap cell below
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
-        self._preview_control(wrap, lambda i=cb.gen: self._editor.remove_mapping_row(i))
+        self._preview_rank_remove(wrap, "row", cb.gen)  # removing a generator is a rank change → dual preview
 
     def _build_gen_plus(self, cb, wrap):  # add a generator: open a blank green draft mapping ROW (the bus stub)
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
@@ -2500,7 +2509,7 @@ class _Reconciler:
             return
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
-        self._preview_control(wrap, lambda i=cb.gen: self._editor.remove_mapping_row(i))
+        self._preview_rank_remove(wrap, "row", cb.gen)  # removing a generator is a rank change → dual preview
 
     def _build_map_plus(self, cb, wrap):  # add a generator: open a blank green draft mapping ROW (left-bus stub)
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
@@ -2633,7 +2642,7 @@ class _Reconciler:
         self._preview_control(wrap, self._editor.shrink)
 
     def _build_comma_minus(self, cb, wrap):  # each comma's − un-tempers just that comma; the draft's − cancels it
-        self._build_list_minus(cb, wrap, self._editor.cancel_pending_comma, self._editor.remove_comma)
+        self._build_list_minus(cb, wrap, self._editor.cancel_pending_comma, self._editor.remove_comma, rank_axis="comma")
 
     # the + that opens a blank, off-screen draft column (comma / interest / held / target) gets NO
     # hover preview: the new column is empty and not yet placed, so nothing on screen would change —
@@ -2660,14 +2669,21 @@ class _Reconciler:
             .on("click", lambda _=None: self._cb.act(action))
         self._preview_control(wrap, action)
 
-    def _build_list_minus(self, cb, wrap, cancel, remove):
-        # an interval-list column's − (interest / held / target): the draft column's cancels the
-        # draft, every other drops just its interval (cb.comma) — each is independently removable
-        action = cancel if cb.id.endswith(":pending") else (lambda idx=cb.comma: remove(idx))
+    def _build_list_minus(self, cb, wrap, cancel, remove, rank_axis=None):
+        # an interval-list column's − (interest / held / target / comma): the draft column's cancels
+        # the draft, every other drops just its interval (cb.comma) — each is independently removable.
+        # ``rank_axis`` is "comma" only for the comma basis, whose removal is a RANK change (it raises
+        # the rank, birthing a generator), so a committed comma's − previews the dual via the builder
+        # reflow; the others (target/held/interest) and the draft-cancel use the plain ring preview.
+        pending = cb.id.endswith(":pending")
+        action = cancel if pending else (lambda idx=cb.comma: remove(idx))
         wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(action))
-        self._preview_control(wrap, action)
+        if rank_axis is not None and not pending:
+            self._preview_rank_remove(wrap, rank_axis, cb.comma)
+        else:
+            self._preview_control(wrap, action)
 
     def _build_interest_minus(self, cb, wrap):
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_interest, self._editor.remove_interest)
@@ -2813,6 +2829,14 @@ def index() -> None:
     # paths were the recurring stranded-highlight bugs.)
 
     gesture_rendering = [False]  # True while a gesture's OWN handler renders (drag hover, temp grow)
+    # a comma−/mapping− hover's transient rank-removal preview — None | ("comma", idx) | ("row", idx).
+    # Pure view state (not a gesture, not document state): render() threads it into the build so the
+    # builder reflows the dual axis (the born generator/comma ghosts green, the leaver reds, the
+    # survivors amber). Set on mouseenter, cleared on mouseleave and on any committing act().
+    rank_remove = [None]
+    rank_rendering = [False]  # True only during the rank-removal hover's OWN render (so a foreign
+    # render — a Show toggle, a commit — clears the preview instead of stranding it; mirrors how
+    # render() ends a foreign hover gesture)
 
     def gesture_render():
         # a render initiated by the live gesture itself (a drag's reflow preview, a temperament
@@ -3556,6 +3580,7 @@ def index() -> None:
         # doc). The edit/wheel gestures survive their own commits and end on blur/mouseleave.
         if rec.gesture is not None and rec.gesture.kind in ("hover", "chooser", "temp", "drag"):
             end_gesture()
+        rank_remove[0] = None  # a committed op supersedes any live rank-removal hover preview
         action()
         render()
 
@@ -3845,6 +3870,26 @@ def index() -> None:
         rec.gesture = g.prev
         paint_rings()
 
+    def rank_remove_hover(axis, idx):
+        # a comma−/mapping− hover: preview the dual rank change by reflowing — the builder reds the
+        # hovered leaver, ambers the recombining survivors, and ghosts the BORN generator/comma green
+        # (a comma − raises the rank, a mapping − raises the nullity). View state + a render, not a
+        # gesture (the builder must reflow to show the newborn, which a no-reflow ring diff can't).
+        # A live edit/drag owns the screen, so don't preview over it.
+        if rec.gesture is not None and rec.gesture.kind in ("edit", "drag"):
+            return
+        rank_remove[0] = (axis, idx)
+        rank_rendering[0] = True  # this render keeps the preview; any foreign one clears it
+        try:
+            render()
+        finally:
+            rank_rendering[0] = False
+
+    def rank_remove_unhover():
+        if rank_remove[0] is not None:
+            rank_remove[0] = None
+            render()
+
     def chooser_hover(apply):
         # a dropdown option hover previews applying its candidate, exactly like control_hover (the
         # CHOOSER gesture carries the option's op; compute_rings snapshots, diffs and reverts — no
@@ -4102,6 +4147,8 @@ def index() -> None:
         combine_end=combine_end,
         control_hover=control_hover,
         control_unhover=control_unhover,
+        rank_remove_hover=rank_remove_hover,
+        rank_remove_unhover=rank_remove_unhover,
         gentuning_hover=gentuning_hover,
         gentuning_unhover=gentuning_unhover,
         on_cell_blur=on_cell_blur,
@@ -4155,13 +4202,15 @@ def index() -> None:
                 end_gesture()
             else:
                 g.apply = None
+        if not rank_rendering[0]:  # a foreign render ends a live comma−/mapping− hover preview, the
+            rank_remove[0] = None  # view-state twin of ending a foreign hover gesture (no strand)
         building[0] = True
         st = editor.state
         # thread the previous render's interval-column identities so a within-list reorder keeps
         # each column's id-token: its cells then persist across the render and the CSS left/top
         # transition slides them to the new slot (rather than the old cells re-filling in place)
         prev = last_lay[0].identities if last_lay[0] is not None else None
-        lay = editor.layout(prev_ids=prev)
+        lay = editor.layout(prev_ids=prev, preview_remove=rank_remove[0])
         last_lay[0] = lay
         # The body scroller holds the grid shifted up by the column strip's height (freeze_y): the
         # board content is (total_h - fy) tall, its cells/lines/blocks placed at native coords minus

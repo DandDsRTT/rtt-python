@@ -328,14 +328,18 @@ class Editor:
             return f"{self.target_limit}-{self.target_family}"
         return self.target_family
 
-    def layout(self, prev_ids=None) -> Layout:
+    def layout(self, prev_ids=None, preview_remove=None) -> Layout:
         """Build the rendered spreadsheet model for the current document — the single
         source of how the editor's state maps to the grid. The page render and the render
         tests both go through here rather than re-spelling spreadsheet.build's arguments.
 
         ``prev_ids`` is the previous render's interval-column identities (``Layout.identities``):
         threading it through lets a within-list reorder keep each column's id-token so the
-        reconciler glides it. Omitted (the default) numbers the columns by index — a fresh build."""
+        reconciler glides it. Omitted (the default) numbers the columns by index — a fresh build.
+
+        ``preview_remove`` is a − hover's transient rank-removal preview (``("comma", idx)`` /
+        ``("row", idx)``) — a pure view overlay, not document state, so it rides as a layout
+        argument rather than on the editor."""
         return spreadsheet.build(
             self.state, self.settings, self.collapsed, self.tuning_scheme, self.target_spec,
             interest=self.interest_vectors, range_mode=self.range_mode,
@@ -355,7 +359,7 @@ class Editor:
             held_basis_ratios=self.unchanged_ratios,
             displayed_projection_name=self.displayed_projection_scheme_name,
             targets_in_use=self.targets_in_use,
-            prev_ids=prev_ids)
+            prev_ids=prev_ids, preview_remove=preview_remove)
 
     @property
     def can_expand(self) -> bool:

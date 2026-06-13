@@ -2137,6 +2137,42 @@ async def test_opening_a_mapping_row_draft_previews_the_dropped_comma(user: User
     assert "rtt-preview-remove" not in _wrap_classes(user, "cell:comma:0:0")
 
 
+async def test_hovering_a_comma_minus_previews_the_born_generator(user: User) -> None:
+    # removing a comma raises the rank: a generator is BORN and the surviving rows recombine.
+    # Hovering a comma − reflows that dual preview — the hovered comma reds, every mapping row ambers,
+    # and a new green ghost generator row appears below the matrix — without committing. (Bullet 2 of
+    # the QA report: the green newborn the no-reflow ring diff could never show.)
+    await user.open("/")
+    await user.should_not_see(marker="cell:mapping:2:0")                    # meantone is rank 2
+    btn = set(user.find(marker="comma_minus:0").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    await user.should_see(marker="cell:mapping:2:0")                        # the born generator row reflows in
+    assert "rtt-pending" in _wrap_classes(user, "cell:mapping:2:0")         # ...green (a newborn)
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")    # the hovered comma → red
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:0")  # a survivor recombines → amber
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:0")
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    await user.should_not_see(marker="cell:mapping:2:0")                    # the ghost clears on mouse-out
+    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:comma:0:0")
+
+
+async def test_hovering_a_mapping_minus_previews_the_born_comma(user: User) -> None:
+    # the dual (bullet 4): removing a generator raises the nullity — a comma is BORN, surviving commas
+    # recombine. Hovering a mapping row − reflows that — the hovered row reds, every comma ambers, and
+    # a new green ghost comma column appears to the right of the basis. Leaving clears it.
+    await user.open("/")
+    await user.should_not_see(marker="cell:comma:0:1")                      # meantone has one comma
+    btn = set(user.find(marker="map_minus:0").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    await user.should_see(marker="cell:comma:0:1")                          # the born comma column reflows in
+    assert "rtt-pending" in _wrap_classes(user, "cell:comma:0:1")           # ...green (a newborn)
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:0:0")  # the hovered row → red
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:comma:0:0")    # the survivor comma recombines → amber
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    await user.should_not_see(marker="cell:comma:0:1")                      # the ghost clears on mouse-out
+    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:mapping:0:0")
+
+
 async def test_blurring_an_incomplete_draft_cell_keeps_the_other_typed_cells(user: User) -> None:
     # tabbing between draft cells fires a non-committing blur each hop (the comma isn't complete yet).
     # That blur must NOT re-render: a render would push the still-blank editor draft back over the
@@ -2600,20 +2636,23 @@ async def test_hovering_a_same_count_target_family_rings_the_moved_rows_amber(us
     assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:1")
 
 
-async def test_hovering_a_structural_minus_rings_removed_cells_red_and_moved_cells_amber(user: User) -> None:
-    # hovering a structural − previews the click WITHOUT reflowing the grid (the generator is not
-    # actually dropped, so the button stays under the cursor): the cells it REMOVES ring RED — they
-    # are still on screen until the click commits, so the user sees exactly what goes away — while the
-    # cells whose value the re-solve MOVES ring amber. Leaving clears both.
+async def test_hovering_the_generator_minus_previews_the_dual_rank_change(user: User) -> None:
+    # gen_minus drops the LAST generator — a rank change, so it previews the comma↔mapping DUAL: the
+    # dropped generator row reds (held in place, no reflow of the mapping band), every comma
+    # recombines (amber), and the born comma ghosts green to the right of the basis. Leaving clears
+    # all three. (The bus-stub twin of the per-row map_minus; both route through the dual preview.)
     await user.open("/")
-    btn = set(user.find(marker="gen_minus").elements)               # drop the last generator
+    btn = set(user.find(marker="gen_minus").elements)               # drop the last generator (row 1)
     UserInteraction(user, btn, None).trigger("mouseenter")
-    assert "rtt-preview-remove" in _wrap_classes(user, "tuning:gen:1")     # the dropped generator → red
-    assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:0")  # the re-solved tuning → amber
-    await user.should_see(marker="tuning:gen:1")                          # ...still on screen (no reflow)
+    assert "rtt-preview-remove" in _wrap_classes(user, "tuning:gen:1")      # the dropped generator's row → red
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:1:0")
+    await user.should_see(marker="tuning:gen:1")                           # ...still on screen (no reflow of the row)
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:comma:0:0")    # the surviving comma recombines → amber
+    await user.should_see(marker="cell:comma:0:1")                         # the born comma ghosts in...
+    assert "rtt-pending" in _wrap_classes(user, "cell:comma:0:1")          # ...green
     UserInteraction(user, btn, None).trigger("mouseleave")
-    assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:gen:1")     # both cleared on mouse-out
-    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:0")
+    assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:gen:1")  # all cleared on mouse-out
+    await user.should_not_see(marker="cell:comma:0:1")
 
 
 async def test_hovering_a_column_minus_reddens_the_removed_column(user: User) -> None:
@@ -2869,12 +2908,12 @@ async def test_committing_a_ratio_clears_the_edit_preview(user: User) -> None:
 
 
 async def test_an_unrelated_render_does_not_strand_a_control_hovers_red_ring(user: User) -> None:
-    # a +/- hover reddens the cells its click would remove, in place (no reflow) — but that red must not
-    # outlive a render. If any unrelated render runs while the hover is up (here toggling a Show layer),
-    # the render ends the hover gesture (a hover never renders, so a render arriving mid-hover is by
-    # definition foreign) and repaints the rings from the now-empty gesture state — the red is stripped,
-    # not orphaned. Hover the generator − (reddens the doomed generator), toggle "counts", and the red
-    # is gone from the surviving cell — and stays gone after mouse-out.
+    # a − hover's preview must not outlive a foreign render. gen_minus' rank-removal preview is
+    # view-state threaded into the build (rank_remove), not a gesture — but render() clears it on any
+    # render that isn't the hover's own (a Show toggle, a commit), the view-state twin of ending a
+    # foreign hover gesture. So the red is stripped, never orphaned, even if the reflow removed the
+    # button from under the cursor. Hover the generator − (reddens the doomed generator), toggle
+    # "counts", and the red is gone from the surviving cell — and stays gone after mouse-out.
     await user.open("/")
     btn = set(user.find(marker="gen_minus").elements)
     UserInteraction(user, btn, None).trigger("mouseenter")
