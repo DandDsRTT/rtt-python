@@ -13,10 +13,14 @@ Python-side parallel of the data-eid the JS reconciler uses).
 """
 
 import asyncio
+import copy
+import logging
+import sys
 from fractions import Fraction
 
 import nicegui.ui as ui
 import pytest
+from nicegui import core
 from nicegui.elements.tooltip import Tooltip
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
@@ -3534,3 +3538,104 @@ async def test_hovering_a_nonstandard_approach_option_previews_setting_it(user: 
     assert "rtt-preview-change" in _wrap_classes(user, "tuning:prime:0")   # the prime-based retune rings
     UserInteraction(user, set(user.find(marker="approach").elements), None).trigger("mouseleave")  # leave
     assert "rtt-preview-change" not in _wrap_classes(user, "tuning:prime:0")  # cleared on mouse-out
+
+
+# --- tier 4: robustness — render-pipeline guards & invalid-input handlers (audit findings) ---
+#
+# These exercise the page's *failure* paths, which the in-process User sim can drive directly. Note
+# the render tests run the app from a freshly re-imported module (render_main.py evicts rtt.*), so the
+# live page's module is sys.modules["rtt.app.app"], NOT the test-module's top-level `web_app` alias —
+# tests that reach into the running app's internals must use _live().
+
+def _live():
+    """The module object the live page actually runs from (render_main re-imports rtt.app.app per
+    fixture, so the test's top-level `web_app` is a stale earlier copy)."""
+    return sys.modules["rtt.app.app"]
+
+
+async def test_a_mid_render_exception_restores_the_build_guard_so_handlers_stay_live(
+        user: User, monkeypatch) -> None:
+    # render() sets building[0]=True for its declarative pass, and EVERY commit/preview handler guards
+    # on `if building[0]: return`. Without a finally restoring the flag, one mid-render exception leaves
+    # building[0] stuck True and silently bricks every handler until an unguarded render heals it. Force
+    # a real mid-render crash (a one-shot boom inside the cell loop, reached via a fold toggle whose
+    # handler has no building[0] guard), then confirm a guarded mapping commit STILL lands — proof the
+    # finally restored building[0] to False.
+    await user.open("/")
+    live = _live()
+    caught = []
+    # swallow + record the render exception so it doesn't ERROR-log (which would fail the user fixture)
+    monkeypatch.setattr(core.app, "handle_exception", lambda e: caught.append(e))
+    orig = live._Reconciler.update_cell
+    fired = {"n": 0}
+
+    def boom(self, cb):
+        if fired["n"] == 0:
+            fired["n"] = 1
+            raise RuntimeError("mid-render boom")
+        return orig(self, cb)
+
+    monkeypatch.setattr(live._Reconciler, "update_cell", boom)
+    user.find(marker="toggle:row:tuning").click()   # a fold toggle re-renders; render raises once
+    assert caught and isinstance(caught[0], RuntimeError)   # the render really did blow up mid-pass
+    monkeypatch.setattr(live._Reconciler, "update_cell", orig)   # a clean renderer again
+    # the page must still be live: a guarded mapping commit reaches the document and persists
+    _cell_child(user, "cell:mapping:1:2").set_value("7")   # the fifth's prime-5 entry: 4 -> 7
+    _commit(user, "cell:mapping:1:2")
+    assert "7" in live._MEMORY_STORE[live._STORE_KEY]["mapping_ebk"]   # NOT swallowed by a stuck guard
+
+
+async def test_a_corrupt_persisted_field_keeps_the_saved_document_and_warns(
+        user: User, caplog) -> None:
+    # index() falls back to defaults when editor.load(stored) raises; render() must NOT then overwrite
+    # the stored blob with those defaults — that would silently wipe every other still-valid field the
+    # user had. Build a real doc, corrupt ONE field, refresh: the stored bytes survive and a notice is
+    # surfaced (rather than a silent reset). The app deliberately ERROR-logs the load failure (so the
+    # reset is visible in the server log); that log is EXPECTED here, so suppress just that logger for
+    # the refresh rather than letting the user fixture treat it as an unexpected error.
+    await user.open("/")
+    live = _live()
+    _cell_child(user, "cell:mapping:1:2").set_value("5")   # the fifth's prime-5 entry: 4 -> 5
+    _commit(user, "cell:mapping:1:2")
+    stored = live._MEMORY_STORE[live._STORE_KEY]
+    assert "5" in stored["mapping_ebk"]   # the user's edit persisted
+    corrupt = copy.deepcopy(stored)
+    corrupt["held_vectors"] = [["x", 0, 0]]   # one malformed field -> load() raises on the int() parse
+    live._MEMORY_STORE[live._STORE_KEY] = corrupt
+    with caplog.at_level(logging.CRITICAL, logger="rtt.app.app"):
+        await user.open("/")   # refresh: load fails -> defaults shown, but the stored blob must be kept
+    after = live._MEMORY_STORE[live._STORE_KEY]
+    assert "5" in after["mapping_ebk"]   # the user's bytes are NOT wiped to defaults
+    assert after["held_vectors"] == [["x", 0, 0]]   # the exact stored blob is preserved for recovery
+    assert user.notify.contains("Your saved data is kept")   # ...and the silent reset is surfaced
+
+
+async def test_a_zero_prescaler_diagonal_entry_is_rejected_not_committed(user: User) -> None:
+    # a 0 (or negative / non-finite) prescaler 𝐿 DIAGONAL entry can't be a complexity scale: under the
+    # all-interval simplicity weighting it makes a weight infinite and crashes the solve inside render(),
+    # and the bad value is committed so every later render re-crashes. on_prescaler_change must reject it
+    # at the edit seam — toast + revert, state untouched — like the ratio / mapping handlers.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()
+    user.find(kind=ui.checkbox, content="all-interval").click()
+    _cell_child(user, "control:all_interval").set_value(True)         # all-interval: simplicity weighting
+    user.find(kind=ui.checkbox, content="alt. complexity").click()    # make the prescaler square editable
+    await user.should_see(marker="cell:prescaling:primes:0:0")        # an editable DIAGONAL (i==j) entry
+    before = _cell_child(user, "cell:prescaling:primes:0:0").value
+    _cell_child(user, "cell:prescaling:primes:0:0").set_value("0")    # -> on_prescaler_change rejects it
+    assert _cell_child(user, "cell:prescaling:primes:0:0").value == before   # reverted, never committed
+    assert user.notify.contains("positive, finite number")           # ...with a toast explaining why
+
+
+async def test_an_invalid_unchanged_basis_cell_reverts_with_a_toast(user: User) -> None:
+    # on_unchanged_change's docstring promised a revert it never performed: a non-integer / garbage U
+    # cell hit an early `return` with no render, leaving the typed garbage in the box (the UI left
+    # lying). It must now toast + revert (render refills the live basis), like the ratio/mapping handlers.
+    await _enable(user, "projection")
+    await user.should_see(marker="cell:unchanged:0:0")
+    before = _cell_child(user, "cell:unchanged:0:0").value
+    _cell_child(user, "cell:unchanged:0:0").set_value("zz")   # unparseable -> not a whole number
+    _commit(user, "cell:unchanged:0:0")                        # blur commits (preview=False)
+    assert _cell_child(user, "cell:unchanged:0:0").value == before   # reverted: no garbage retained
+    assert _cell_child(user, "cell:unchanged:0:0").value != "zz"
+    assert user.notify.contains("valid unchanged-interval basis")    # ...with a toast explaining why

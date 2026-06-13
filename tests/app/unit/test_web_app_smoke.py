@@ -13,7 +13,35 @@ import rtt.app.app as app
 from rtt.app import service
 from rtt.app import settings as show_settings
 from rtt.app import spreadsheet
+from rtt.app.editor import Editor
 from rtt.app.layout import Line
+
+
+class _FakeElement:
+    """A stand-in for a ui element with just the .delete() drop() calls."""
+
+    def __init__(self):
+        self.deleted = False
+
+    def delete(self):
+        self.deleted = True
+
+
+def test_every_per_id_handle_dict_is_registered_for_drop():
+    # drop(eid) forgets an entity from every dict in _handle_dicts; a dict left out of that tuple
+    # leaks handles to a deleted element (the documented invariant in _Reconciler.__init__). The
+    # scheme_buttons dict (back-to-scheme buttons) was the one omitted — assert it (and the other
+    # per-id handle dicts) are all members, and that drop() actually purges scheme_buttons.
+    rec = app._Reconciler(Editor())
+    for name in ("els", "inputs", "selects", "checks", "rangeopts", "scheme_buttons",
+                 "mean_damage_tips", "fold_state"):
+        d = getattr(rec, name)
+        assert any(existing is d for existing in rec._handle_dicts), f"{name} missing from _handle_dicts"
+    # behavioural: a registered-then-dropped scheme button leaves no stale handle behind
+    rec.els["scheme:primes"] = _FakeElement()
+    rec.scheme_buttons["scheme:primes"] = "the-button"
+    rec.drop("scheme:primes")
+    assert "scheme:primes" not in rec.scheme_buttons  # purged by drop()'s sweep, not leaked
 
 
 def _bars(svg):
