@@ -1187,23 +1187,40 @@ _OPTION_HOVER_DELEGATION = """
 
 # A Quasar tooltip (ui.tooltip / .tooltip()) shows on its anchor element's `mouseenter` and hides on
 # the matching `mouseleave` (QTooltip.configureAnchorEl binds exactly those two on desktop). That
-# leaves it stranded whenever a click REMOVES or REFLOWS the anchor before the pointer leaves it: the
-# +/- buttons rebuild the grid and slide the pressed control out from under a stationary cursor, so no
-# `mouseleave` ever fires and the hover help hangs on screen with nothing to dismiss it. Pressing a
-# control should drop its tooltip regardless, so this one capture-phase `pointerdown` listener
-# synthesizes the `mouseleave` Quasar listens for, up the ancestor chain from the pressed node —
-# whichever ancestor is the anchor then hides its tooltip through Quasar's own delayHide, BEFORE the
-# click round-trips and the grid reflows. It fires `mouseleave` only (never `blur`): the editable
-# cells' blur-commit handlers must stay untouched, and QTooltip is hover-shown, so leave is enough.
+# leaves it stranded whenever the anchor is REMOVED or REFLOWED out from under a stationary cursor
+# before any `mouseleave` fires — the grid rebuilds and the hover help hangs on screen with nothing
+# to dismiss it. So anything that reflows the grid while a tooltip is up must drop it first: these
+# capture-phase listeners synthesize the `mouseleave` Quasar hides on, BEFORE the reflow round-trips.
+#
+#   - `pointerdown`: a click presses the anchor itself, so the pressed node sits UNDER the anchor —
+#     walk the `mouseleave` up the ancestor chain from the pressed node (covers every +/- button).
+#   - `keydown` / `wheel`: a keyboard commit (Enter/Tab re-solves the sheet) or a wheel-step reflows
+#     with NO pointerdown, so the pressed node isn't the anchor — the at-risk tooltip is on whatever
+#     the cursor RESTS on. Drop it from the deepest `:hover` element, and only when one is actually
+#     showing, so ordinary typing never perturbs the hover-preview rings (which share `mouseleave`).
+#
+# It fires `mouseleave` only (never `blur`): the editable cells' blur-commit handlers must stay
+# untouched, and QTooltip is hover-shown, so leave is enough.
 _TOOLTIP_DISMISS_JS = """
 (() => {
   if (window.__rttTipDismiss) return;
   window.__rttTipDismiss = true;
-  document.addEventListener('pointerdown', (e) => {
-    for (let el = e.target; el instanceof Element; el = el.parentElement) {
+  const dropFrom = (node) => {
+    for (let el = node; el instanceof Element; el = el.parentElement) {
       el.dispatchEvent(new MouseEvent('mouseleave', {bubbles: false}));
     }
-  }, true);
+  };
+  // a click presses the anchor: the pressed node is under it
+  document.addEventListener('pointerdown', (e) => dropFrom(e.target), true);
+  // a keystroke / wheel-step reflows with no pointerdown: drop the tooltip on whatever the cursor
+  // rests on, and only when one is actually showing (so typing never disturbs the preview rings)
+  const dropHovered = () => {
+    if (document.querySelector('.q-tooltip') === null) return;
+    const hov = document.querySelectorAll(':hover');
+    if (hov.length) dropFrom(hov[hov.length - 1]);
+  };
+  document.addEventListener('keydown', dropHovered, true);
+  document.addEventListener('wheel', dropHovered, {capture: true, passive: true});
 })()
 """
 

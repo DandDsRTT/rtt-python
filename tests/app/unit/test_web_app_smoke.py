@@ -580,15 +580,18 @@ def test_freeze_script_reserves_a_scrollbar_so_one_bar_never_forces_a_second():
     assert "ResizeObserver" not in js and "scroll-timeline" not in js  # still no fixed-box machinery
 
 
-def test_tooltip_dismiss_script_drops_hover_help_on_pointerdown():
-    # A Quasar tooltip shows on its anchor's mouseenter and hides on the matching mouseleave; when a
-    # click removes or reflows the anchor (every +/- button rebuilds or slides the grid) no mouseleave
-    # ever fires, so the tooltip is stranded. The dismiss script is a single capture-phase pointerdown
-    # listener that synthesizes that mouseleave up the ancestor chain from the pressed node, so
-    # whichever ancestor is the anchor hides its tooltip via Quasar's own handler before the reflow.
+def test_tooltip_dismiss_script_drops_hover_help_before_a_reflow():
+    # A Quasar tooltip shows on its anchor's mouseenter and hides on the matching mouseleave; when the
+    # anchor is removed or reflowed out from under a stationary cursor no mouseleave ever fires, so the
+    # tooltip is stranded. The dismiss script is capture-phase listeners that synthesize that mouseleave
+    # before the reflow: from the pressed node on pointerdown (a click presses the anchor), and from the
+    # hovered element on keydown / wheel (a keyboard commit or wheel-step reflows with no pointerdown,
+    # so the at-risk tooltip is on whatever the cursor rests on — dropped only when one is showing).
     js = app._TOOLTIP_DISMISS_JS
     assert "__rttTipDismiss" in js                                  # guarded so it installs only once
     assert "addEventListener('pointerdown'" in js and ", true)" in js  # capture phase, before the click
+    assert "keydown" in js and "wheel" in js                        # the pointerdown-free reflow triggers too
+    assert ":hover" in js and ".q-tooltip" in js                    # drop the HOVERED tooltip, only when showing
     assert "mouseleave" in js and "dispatchEvent" in js            # synthesizes the event Quasar hides on
     assert "parentElement" in js                                   # walks up to reach the tooltip's anchor
     assert "blur" not in js  # never blur — that would trip the editable cells' blur-commit handlers
