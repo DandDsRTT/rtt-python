@@ -377,7 +377,8 @@ class Editor:
         ``("row", idx)``) — a pure view overlay, not document state, so it rides as a layout
         argument rather than on the editor."""
         return spreadsheet.build(
-            self.state, self.settings, self.collapsed, self.tuning_scheme, self.target_spec,
+            self.state, self.settings, self.collapsed,
+            tuning_scheme=self.tuning_scheme, target_spec=self.target_spec,
             interest=self.interest_vectors, range_mode=self.range_mode,
             pending_comma=self.pending_comma, held_vectors=self.held_vectors,
             generator_tuning=self.effective_generator_tuning(),

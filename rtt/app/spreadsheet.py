@@ -5458,25 +5458,11 @@ class _GridBuilder:
                       approach_box=self.approach_box)
 
 
-def build(state, settings=None, collapsed=None,
-          tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
-          pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
-          custom_prescaler=None, tuning_optimized=False,
-          pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
-          pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
-          displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
-          targets_in_use=True, pending_mapping_row=None, preview_remove=None) -> Layout:
-    return _GridBuilder(
-        state, settings=settings, collapsed=collapsed, tuning_scheme=tuning_scheme,
-        target_spec=target_spec, interest=interest, range_mode=range_mode,
-        pending_comma=pending_comma, held_vectors=held_vectors,
-        generator_tuning=generator_tuning, target_override=target_override,
-        custom_prescaler=custom_prescaler, tuning_optimized=tuning_optimized,
-        pending_interest=pending_interest, pending_held=pending_held,
-        pending_target=pending_target, prev_ids=prev_ids, pending_element=pending_element,
-        nonprime_approach=nonprime_approach,
-        superspace_generator_tuning=superspace_generator_tuning,
-        displayed_tuning_name=displayed_tuning_name, held_basis_ratios=held_basis_ratios,
-        displayed_projection_name=displayed_projection_name, targets_in_use=targets_in_use,
-        pending_mapping_row=pending_mapping_row, preview_remove=preview_remove,
-    ).layout()
+def build(state, settings=None, collapsed=None, **inputs) -> Layout:
+    """Build the spreadsheet :class:`Layout` for ``state``. Every view/document input beyond
+    ``state`` / ``settings`` / ``collapsed`` (``tuning_scheme``, the ``pending_*`` drafts,
+    ``held_vectors``, ``custom_prescaler``, … and their defaults) is declared ONCE on
+    :class:`_GridBuilder` and forwarded here by keyword — so a new build input is added in a
+    single place instead of being re-spelled in this wrapper's signature too. No caller passes
+    a 4th positional argument (verified across all ~315 call sites), so ``**inputs`` is safe."""
+    return _GridBuilder(state, settings=settings, collapsed=collapsed, **inputs).layout()
