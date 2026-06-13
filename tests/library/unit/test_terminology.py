@@ -67,3 +67,60 @@ def test_no_disavowed_jargon_in_sources():
         "instead — '(prime-count) vector' not 'monzo', 'map' not 'val', 'multivector' not "
         "'wedgie'/'breed':\n  " + "\n  ".join(violations)
     )
+
+
+# --- Non-systematic tuning-scheme names ----------------------------------------------------------
+#
+# D&D's guide names every tuning scheme systematically (minimax-S, held-octave minimax-ES,
+# minimax-sopfr-S, …). The historical / community names (TOP, TE, CTE, POTE, BOP, Weil, Kees,
+# Frobenius, Tenney, …) are banned in this codebase — they used to live in a translation table in
+# tuning_scheme_names.py, which has been removed so those names no longer resolve. This guard fails
+# if any reappears in the library/app source, so a regression is caught by the normal test run.
+#
+# REPO_ROOT is computed correctly here (three parents up: unit -> library -> tests -> repo) so the
+# scan actually reaches rtt/.
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+# Banned scheme-name tokens. Spelled-out names are matched case-insensitively as substrings (their
+# letters never occur inside an ordinary English/code word). The distinctive uppercase acronyms are
+# matched as whole words, case-SENSITIVELY, so they catch the scheme name without flagging ordinary
+# prose. The two-letter acronyms (TE/BE/WE/KE) and bare "TOP" are deliberately omitted: they false-
+# positive too easily (TOP = "top of", BE = "must BE") — the distinctive tokens below plus
+# test_tuning_scheme_names.test_non_systematic_scheme_names_are_rejected cover the ban. "least
+# squares" is NOT banned: it is pervasive, legitimate linear-algebra terminology (the pseudoinverse
+# least-squares factor), unrelated to the tuning scheme of that old name.
+BANNED_SCHEME_NAME_PATTERNS = (
+    re.compile(r"tenney", re.IGNORECASE),
+    re.compile(r"benedetti", re.IGNORECASE),
+    re.compile(r"frobenius", re.IGNORECASE),
+    re.compile(r"weil", re.IGNORECASE),
+    re.compile(r"kees", re.IGNORECASE),
+    re.compile(r"\bTIPTOP\b"),
+    re.compile(r"\bTOP-max\b"),
+    re.compile(r"\bTOP-RMS\b"),
+    re.compile(r"\bCTE\b"),
+    re.compile(r"\bCWE\b"),
+    re.compile(r"\bBOP\b"),
+    re.compile(r"\bWOP\b"),
+    re.compile(r"\bKOP\b"),
+    re.compile(r"\bPOTE\b"),
+    re.compile(r"\bPOTOP\b"),
+    re.compile(r"\bPOTT\b"),
+    re.compile(r"\bPOWE\b"),
+    re.compile(r"\bPOWOP\b"),
+)
+
+
+def test_no_non_systematic_scheme_names_in_rtt_sources():
+    violations = []
+    for path in (REPO_ROOT / "rtt").rglob("*.py"):
+        rel = path.relative_to(REPO_ROOT).as_posix()
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            for pattern in BANNED_SCHEME_NAME_PATTERNS:
+                if pattern.search(line):
+                    violations.append(f"{rel}:{lineno}: {line.strip()}")
+    assert not violations, (
+        "Non-systematic / historical / community tuning-scheme names found in rtt/ source. Use "
+        "only D&D's systematic names (minimax-S, held-octave minimax-ES, minimax-sopfr-S, …):\n  "
+        + "\n  ".join(violations)
+    )

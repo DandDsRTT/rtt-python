@@ -2731,7 +2731,7 @@ def test_damage_weight_and_complexity_units_track_the_tuning_scheme():
         ("TILT minimax-sopfr-S", "¢(sopfr-S)", "(sopfr-S)", "(sopfr-C)"),            # sopfr, taxicab
         ("TILT minimax-E-sopfr-S", "¢(E-sopfr-S)", "(E-sopfr-S)", "(E-sopfr-C)"),    # sopfr, Euclidean
         ("TILT minimax-copfr-C", "¢(copfr-C)", "(copfr-C)", "(copfr-C)"),            # copfr, complexity-weight
-        ("TILT minimax-lils-S", "¢(lils-S)", "(lils-S)", "(lils-C)"),                # lils (Weil-style size factor)
+        ("TILT minimax-lils-S", "¢(lils-S)", "(lils-S)", "(lils-C)"),                # lils (size factor)
     ]
     for scheme, damage, weight, complexity in cases:
         cells = {c.id: c for c in _with(scheme, weighting=True, units=True, cell_units=True, domain_units=True).cells}
@@ -3310,7 +3310,7 @@ def test_all_interval_mean_damage_aggregates_at_the_dual_norm_power_not_infinity
             base, s, tuning_scheme=scheme, tuning_optimized=True).cells}
         return float(cells["optimization:mean_damage"].text)
 
-    # minimax-ES (TE): per-prime weighted damages [1.397, 2.214, 0.811]; the bug showed their MAX
+    # minimax-ES: per-prime weighted damages [1.397, 2.214, 0.811]; the bug showed their MAX
     # (2.214 — the ∞ aggregate), the fix shows their RMS (1.582 — the dual(𝑞)=2 aggregate)
     es = mean_damage("minimax-ES")
     assert es == pytest.approx(1.582, abs=1e-3)   # the dual-power mean (RMS)
@@ -3318,7 +3318,7 @@ def test_all_interval_mean_damage_aggregates_at_the_dual_norm_power_not_infinity
     assert es == pytest.approx(
         tuning.get_tuning_map_mean_damage(t, tuning.optimize_tuning_map(t, "minimax-ES"), "minimax-ES"),
         abs=1e-3)  # equals the optimizer's own minimized mean damage
-    # minimax-S (TOP): 𝑞=1 so dual(𝑞)=∞ — there the mean damage IS a max, so the value is unchanged
+    # minimax-S: 𝑞=1 so dual(𝑞)=∞ — there the mean damage IS a max, so the value is unchanged
     # by the fix (this is why the bug hid behind the default scheme)
     ss = mean_damage("minimax-S")
     assert ss == pytest.approx(1.699, abs=1e-3)
@@ -5388,12 +5388,11 @@ def test_optimization_box_sits_at_the_bottom_of_the_damage_tile():
 
 
 def test_optimization_power_field_reflects_the_current_scheme():
-    # the power field shows the *current* scheme's Lp order: ∞ for minimax, 2 for
-    # least-squares (miniRMS)
+    # the power field shows the *current* scheme's Lp order: ∞ for minimax, 2 for miniRMS
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["optimization"] = True
-    ls = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="least squares").cells}
+    ls = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="held-octave OLD miniRMS-U").cells}
     assert ls["optimization:power"].text == "2"  # miniRMS ⇒ p = 2
 
 
@@ -5602,11 +5601,11 @@ def test_optimization_indicator_carries_the_power_as_its_subscript_label():
     # renderer can draw the (bold 𝐝, double-angle) label breaking the line.
     on = {c.id: c for c in _with(optimization=True, charts=True).cells}
     assert on["chart:damage:targets"].indicator_label == "∞"
-    # a miniRMS (least-squares) scheme subscripts it with 2
+    # a miniRMS scheme subscripts it with 2
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["optimization"], s["charts"] = True, True
-    rms = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="least squares").cells}
+    rms = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="held-octave OLD miniRMS-U").cells}
     assert rms["chart:damage:targets"].indicator_label == "2"
     # ...and no label on a non-optimization chart (or with optimization off)
     off = {c.id: c for c in _with(optimization=False, charts=True).cells}
@@ -9218,7 +9217,7 @@ def test_all_interval_mean_damage_value_and_symbol_denote_the_same_quantity():
     # tuning-core-6 / all-interval-alt-complexity-5: the displayed value is the dual-power MEAN (RMS for
     # ES — see test_..._aggregates_at_the_dual_norm_power), so its symbol must be the double-angle
     # power-MEAN ⟪…⟫, NOT a single-bar NORM ‖…‖. The norm = sqrt(SUM of squares) is √d larger than the
-    # mean = sqrt(sum/d); labelling the mean with a norm symbol read √d too large (TE meantone: the
+    # mean = sqrt(sum/d); labelling the mean with a norm symbol read √d too large (minimax-ES meantone: the
     # value 1.582 under a symbol naming the 2.741 norm).
     import math
     from rtt.library import tuning

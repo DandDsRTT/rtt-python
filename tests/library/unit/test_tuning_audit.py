@@ -89,7 +89,7 @@ def test_destretch_by_a_tempered_out_interval_is_refused():
 
 
 def test_destretch_octave_still_works():
-    # the control: destretching by a non-tempered-out interval (the octave) is fine (POTE).
+    # the control: destretching by a non-tempered-out interval (the octave) is fine.
     meantone = parse_temperament_data(MEANTONE)
     assert optimize_tuning_map(meantone, "destretched-octave minimax-ES")[0] == pytest.approx(
         1200.0, abs=TOL

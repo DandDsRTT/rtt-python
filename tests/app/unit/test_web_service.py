@@ -36,10 +36,10 @@ def test_is_proper_temperament_rejects_degenerate_mappings():
 def test_optimization_power_is_the_schemes_lp_norm_order():
     # the optimization power p is trait 2 of the tuning scheme: the order of the
     # Lp norm minimized over the damages. minimax-S (the canonical scheme) is a minimax
-    # scheme, so p = ∞; miniRMS is least-squares (p = 2); miniaverage is p = 1.
+    # scheme, so p = ∞; miniRMS is p = 2; miniaverage is p = 1.
     assert service.optimization_power("minimax-S") == math.inf
     assert service.optimization_power() == math.inf  # defaults to the canonical scheme (minimax-S)
-    assert service.optimization_power("least squares") == 2
+    assert service.optimization_power("miniRMS-U") == 2
     assert service.optimization_power("miniaverage-U") == 1
 
 
@@ -800,14 +800,21 @@ def test_scheme_with_complexity_sets_the_prescaler_norm_and_size_factor():
     assert service.damage_weight_slope(service.scheme_with_complexity("miniRMS-C", "copfr")) == "complexityWeight"
 
 
-def test_scheme_with_complexity_lols_holds_the_octave_others_clear_it():
+def test_scheme_with_complexity_held_octave_handling():
     # lols (log-odd-limit) is lils plus a held octave (trait 0); selecting it tunes 2/1 just
     assert service.held_intervals(service.scheme_with_complexity("minimax-S", "lols")) == ("2/1",)
     assert service.held_intervals(service.scheme_with_complexity("minimax-S", "lols-E")) == ("2/1",)
     # lils does NOT hold the octave
     assert service.held_intervals(service.scheme_with_complexity("minimax-S", "lils")) == ()
-    # a non-lols complexity clears a previously-held octave (the held interval is its own)
-    assert service.held_intervals(service.scheme_with_complexity("held-octave minimax-ES", "lp")) == ()
+    # a SCHEME-level held octave (held-octave minimax-ES) SURVIVES a complexity swap, just as the
+    # destretched-octave modifier does: held-octave minimax-ES + sopfr -> held-octave minimax-sopfr-S
+    # (all-interval-alt-complexity-8 / presets-sweep-3).
+    swapped = service.scheme_with_complexity("held-octave minimax-ES", "sopfr")
+    assert service.held_intervals(swapped) == ("2/1",)
+    assert service.base_scheme_name(swapped) == "held-octave minimax-sopfr-S"
+    # but a held octave that was the OLD complexity's OWN internal fold (lols/ols) is cleared when
+    # swapping to a non-held complexity — that octave belonged to the complexity, not the scheme.
+    assert service.held_intervals(service.scheme_with_complexity("minimax-lols-S", "lp")) == ()
 
 
 def test_complexity_name_of_reports_the_named_complexity_else_custom():
@@ -819,8 +826,11 @@ def test_complexity_name_of_reports_the_named_complexity_else_custom():
     assert service.complexity_name_of("minimax-lols-S") == "lols"  # lils + held octave
     # it round-trips with scheme_with_complexity
     assert service.complexity_name_of(service.scheme_with_complexity("minimax-S", "sopfr-E")) == "sopfr-E"
-    # an lp shape that also holds the octave is no named complexity (lp clears the octave): custom
-    assert service.complexity_name_of("held-octave minimax-S") == "custom"
+    # a SCHEME-level held octave is a scheme modifier, NOT part of the complexity identity, so it
+    # must not push the chooser to "custom": held-octave minimax-ES still names its complexity lp-E,
+    # held-octave minimax-S still names lp (all-interval-alt-complexity-7).
+    assert service.complexity_name_of("held-octave minimax-ES") == "lp-E"
+    assert service.complexity_name_of("held-octave minimax-S") == "lp"
 
 
 def test_scheme_with_diminuator_toggles_the_size_factor_between_lp_and_lils():

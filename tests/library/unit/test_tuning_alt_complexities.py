@@ -1,6 +1,6 @@
 """Alternative interval-complexity names (tests.m 3388-3697): the full complexity-name
 grammar (copfr/lopfr/lp/sopfr/prod/ils/ols/lils/lols/limit/odd) and the size-factor
-augmentation (Weil/lils norms), driving non-all-interval and all-interval schemes."""
+augmentation (lils/ils norms), driving non-all-interval and all-interval schemes."""
 
 from dataclasses import replace
 from fractions import Fraction
@@ -48,7 +48,7 @@ def test_all_interval_size_factor_uses_the_scheme_prescaler_diagonal():
 
 
 # The lils family (log prescaler) is the case where the old log2(p) row was already correct — it
-# must be unchanged by the prescaler-diagonal generalization (the Weil meantone optimum).
+# must be unchanged by the prescaler-diagonal generalization (the minimax-lils-S meantone optimum).
 def test_all_interval_lils_size_factor_unchanged():
     t = parse_temperament_data(MEANTONE)
     assert optimize_generator_tuning_map(t, "minimax-lils-S") == pytest.approx(
@@ -57,7 +57,7 @@ def test_all_interval_lils_size_factor_unchanged():
 
 
 # tests.m 3392-3419: meantone over TILT, miniRMS, complexity-weighted, no size factor.
-# copfr (unweighted), lopfr (Tenney, the default), sopfr (Benedetti), each plain and
+# copfr (unweighted), lopfr (log-prime, the default), sopfr (prime), each plain and
 # Euclidean (E), plain and odd (octave held justly).
 NO_SIZE_FACTOR_NAMES = [
     ("TILT miniRMS-copfr-C", (1200.813, 696.570)),
@@ -150,7 +150,7 @@ def test_lils_vs_non_lils_over_explicit_target(name, expected):
     assert optimize_generator_tuning_map(t, name) == pytest.approx(expected, abs=TOL)
 
 
-# tests.m 3432-3457: synonym tokens. lp = lopfr = [blank] (Tenney); prod = sopfr.
+# tests.m 3432-3457: synonym tokens. lp = lopfr = [blank] (log-prime); prod = sopfr.
 @pytest.mark.parametrize(
     "name, expected",
     [

@@ -71,31 +71,35 @@ def test_annotation_code_matches_the_systematic_names_own_core(name):
     assert name == f"minimax-{own}"
 
 
-# Non-canonical / synonym / historical forms: the rendered name need not equal the input
-# string, but parsing the rendered name must recover the same spec (semantic round-trip).
+# Non-canonical / synonym forms: the rendered name need not equal the input string, but parsing
+# the rendered name must recover the same spec (semantic round-trip).
 SEMANTIC = [
     "held-2/1 minimax-U",          # held synonym for the octave
     "held-2 miniaverage-U",
     "minimax-E-lils-S",
     "TILT minimax-S",              # target-based simplicity
-    "TOP", "Tenney", "minimax",    # historical names (resolve to systematic specs)
 ]
 
 
 @pytest.mark.parametrize("name", SEMANTIC)
 def test_rendered_name_parses_back_to_the_same_spec(name):
-    spec = parse(name) if name not in ("TOP", "Tenney", "minimax") else _resolve(name)
+    spec = parse(name)
     rendered = systematic_name(spec)
     assert rendered is not None
     assert parse(rendered) == spec
 
 
-def _resolve(name):
-    # Use the module-level import (bound at collection), NOT a lazy re-import: the render
-    # tests evict and re-import rtt.* (tests/render_main.py), which mints a 2nd TuningSchemeSpec
-    # class. A lazy resolve here would return that new class, and `parse(rendered) == spec`
-    # would fail on the frozen dataclass's class-identity check despite identical fields.
-    return resolve_tuning_scheme(name)
+# Only systematic names resolve. Non-systematic / historical / community scheme names (TE, TOP,
+# CTE, POTE, BOP, Weil, Kees, "least squares", Tenney, …) are banned in this codebase and must
+# raise a clear error rather than silently resolving to some spec.
+@pytest.mark.parametrize(
+    "name",
+    ["TOP", "TIPTOP", "TE", "CTE", "POTE", "POTOP", "BOP", "Benedetti", "Weil", "Kees",
+     "Frobenius", "Tenney", "least squares", "minimax"],
+)
+def test_non_systematic_scheme_names_are_rejected(name):
+    with pytest.raises(ValueError):
+        resolve_tuning_scheme(name)
 
 
 def test_every_spec_field_survives_a_render_parse_round_trip():

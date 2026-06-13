@@ -405,7 +405,7 @@ def test_held_tilt(scheme, expected):
     assert optimize_generator_tuning_map(t, scheme) == pytest.approx(expected, abs=TOL)
 
 
-# "held-octave OLD minimax-U" (= the original "minimax"/Tenney-minimax), tests.m 2883-2901.
+# "held-octave OLD minimax-U", tests.m 2883-2901.
 HELD_OCTAVE_OLD_GENERATORS = [
     ("[⟨1 2 3] ⟨0 3 5]}", (1200.000, -162.737)),  # porcupine
     ("[⟨1 0 2] ⟨0 5 1]}", (1200.000, 380.391)),  # magic

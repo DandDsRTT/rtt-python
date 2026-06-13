@@ -33,8 +33,8 @@ from rtt.app.service.core import (
 
 def optimization_power(scheme: str = DEFAULT_TUNING_SCHEME) -> float:
     """The optimization power ``p`` the tuning scheme minimizes: the order of the Lp
-    norm taken over the damages — ∞ for a minimax scheme, 2 for least-squares
-    (miniRMS), 1 for miniaverage."""
+    norm taken over the damages — ∞ for a minimax scheme, 2 for miniRMS,
+    1 for miniaverage."""
     return resolve_tuning_scheme(scheme).optimization_power
 
 

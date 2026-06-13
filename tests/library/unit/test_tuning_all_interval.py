@@ -1,7 +1,6 @@
-"""All-interval tuning schemes (tests.m 3133-3228): TOP (minimax-S), TE (minimax-ES),
-CTE (held-octave minimax-ES), and their historical names. All-interval damage is
-minimized over every interval, which by duality is an optimization over the primes at
-the dual of the complexity norm power."""
+"""All-interval tuning schemes (tests.m 3133-3228): minimax-S, minimax-ES, and
+held-octave minimax-ES. All-interval damage is minimized over every interval, which by
+duality is an optimization over the primes at the dual of the complexity norm power."""
 
 from dataclasses import replace
 from fractions import Fraction
@@ -20,7 +19,7 @@ from rtt.library.tuning_scheme_names import (
 )
 
 TOL = 1e-3
-TOL_TOP = 1e-2  # the library uses accuracy=2 for the minimax-S generator forms
+TOL_MINIMAX_S = 1e-2  # the library uses accuracy=2 for the minimax-S generator forms
 
 TEMPERAMENTS = {
     "meantone": "[⟨1 1 0] ⟨0 1 4]}",
@@ -43,8 +42,8 @@ TEMPERAMENTS = {
 }
 
 
-# minimax-S = TOP, generator tuning maps (the second generator written as in the source).
-TOP_GENERATORS = {
+# minimax-S generator tuning maps (the second generator written as in the source).
+MINIMAX_S_GENERATORS = {
     "meantone": (1201.70, 1201.70 - 504.13),
     "blackwood": (238.87, 238.86 * 11.0003 + 158.78),
     "dicot": (1207.66, 353.22),
@@ -64,14 +63,14 @@ TOP_GENERATORS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", TOP_GENERATORS.items())
-def test_top_minimax_s(name, expected):
+@pytest.mark.parametrize("name, expected", MINIMAX_S_GENERATORS.items())
+def test_minimax_s(name, expected):
     t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_generator_tuning_map(t, "minimax-S") == pytest.approx(expected, abs=TOL_TOP)
+    assert optimize_generator_tuning_map(t, "minimax-S") == pytest.approx(expected, abs=TOL_MINIMAX_S)
 
 
-# minimax-ES = TE, tuning maps.
-TE_TUNING_MAPS = {
+# minimax-ES tuning maps.
+MINIMAX_ES_TUNING_MAPS = {
     "meantone": (1201.397, 1898.446, 2788.196),
     "blackwood": (1194.308, 1910.892, 2786.314),
     "dicot": (1206.410, 1907.322, 2763.276),
@@ -92,14 +91,14 @@ TE_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", TE_TUNING_MAPS.items())
-def test_te_minimax_es(name, expected):
+@pytest.mark.parametrize("name, expected", MINIMAX_ES_TUNING_MAPS.items())
+def test_minimax_es(name, expected):
     t = parse_temperament_data(TEMPERAMENTS[name])
     assert optimize_tuning_map(t, "minimax-ES") == pytest.approx(expected, abs=TOL)
 
 
-# held-octave minimax-ES = CTE, generator tuning maps.
-CTE_GENERATORS = {
+# held-octave minimax-ES generator tuning maps.
+HELD_OCTAVE_MINIMAX_ES_GENERATORS = {
     "meantone": (1200.000, 697.214),
     "blackwood": (240.000, 1200.000 * 2 + 386.314),
     "dicot": (1200.000, 354.664),
@@ -120,16 +119,16 @@ CTE_GENERATORS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", CTE_GENERATORS.items())
-def test_cte_held_octave_minimax_es(name, expected):
+@pytest.mark.parametrize("name, expected", HELD_OCTAVE_MINIMAX_ES_GENERATORS.items())
+def test_held_octave_minimax_es(name, expected):
     t = parse_temperament_data(TEMPERAMENTS[name])
     assert optimize_generator_tuning_map(t, "held-octave minimax-ES") == pytest.approx(
         expected, abs=TOL
     )
 
 
-# destretched-octave minimax-ES = POTE, tuning maps (tests.m 2998-3014).
-POTE_TUNING_MAPS = {
+# destretched-octave minimax-ES tuning maps (tests.m 2998-3014).
+DESTRETCHED_OCTAVE_MINIMAX_ES_TUNING_MAPS = {
     "meantone": (1200.000, 1896.239, 2784.955),
     "blackwood": (1200.000, 1920.000, 2799.594),
     "dicot": (1200.000, 1897.189, 2748.594),
@@ -150,14 +149,14 @@ POTE_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", POTE_TUNING_MAPS.items())
-def test_pote_destretched_octave_minimax_es(name, expected):
+@pytest.mark.parametrize("name, expected", DESTRETCHED_OCTAVE_MINIMAX_ES_TUNING_MAPS.items())
+def test_destretched_octave_minimax_es(name, expected):
     t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_tuning_map(t, "POTE") == pytest.approx(expected, abs=TOL)
+    assert optimize_tuning_map(t, "destretched-octave minimax-ES") == pytest.approx(expected, abs=TOL)
 
 
-# destretched-octave minimax-S = POTOP (tests.m 3024-3035); some use looser accuracy.
-POTOP_CASES = [
+# destretched-octave minimax-S (tests.m 3024-3035); some use looser accuracy.
+DESTRETCHED_OCTAVE_MINIMAX_S_CASES = [
     ("[⟨1 -1 0 1] ⟨0 10 9 7]}", (1200.000, 310.196), TOL),
     ("[⟨1 2 6 2 10] ⟨0 -1 -9 2 -16]}", (1200.0, 490.4), 0.1),
     ("[⟨1 2 6 2 1] ⟨0 -1 -9 2 6]}", (1200.0, 490.9), 0.1),
@@ -170,16 +169,17 @@ POTOP_CASES = [
 ]
 
 
-@pytest.mark.parametrize("ebk, expected, tol", POTOP_CASES)
-def test_potop_destretched_octave_minimax_s(ebk, expected, tol):
+@pytest.mark.parametrize("ebk, expected, tol", DESTRETCHED_OCTAVE_MINIMAX_S_CASES)
+def test_destretched_octave_minimax_s(ebk, expected, tol):
     t = parse_temperament_data(ebk)
-    assert optimize_generator_tuning_map(t, "POTOP") == pytest.approx(expected, abs=tol)
+    assert optimize_generator_tuning_map(t, "destretched-octave minimax-S") == pytest.approx(expected, abs=tol)
 
 
-def test_potop_locked_primes_tuning_map():
-    # tests.m 3027 (accuracy 1): an 11-limit POTOP whose minimax-S has a pair of locked primes.
+def test_destretched_octave_minimax_s_locked_primes_tuning_map():
+    # tests.m 3027 (accuracy 1): an 11-limit destretched-octave minimax-S whose minimax-S has a
+    # pair of locked primes.
     t = parse_temperament_data("[⟨1 3 0 0 3] ⟨0 -3 5 6 1]}")
-    assert optimize_tuning_map(t, "POTOP") == pytest.approx(
+    assert optimize_tuning_map(t, "destretched-octave minimax-S") == pytest.approx(
         (1200.00, 1915.81, 2806.98, 3368.38, 4161.40), abs=0.1
     )
 
@@ -208,45 +208,9 @@ def test_all_interval_explicit_specs():
     )
 
 
-# Historical scheme names resolve to their systematic equivalents.
-ORIGINAL_NAME_EQUIVALENCES = [
-    ("TOP", "minimax-S"),
-    ("T1", "minimax-S"),
-    ("TOP-max", "minimax-S"),
-    ("TIPTOP", "minimax-S"),
-    ("Tenney", "minimax-S"),
-    ("TE", "minimax-ES"),
-    ("T2", "minimax-ES"),
-    ("TOP-RMS", "minimax-ES"),
-    ("Tenney-Euclidean", "minimax-ES"),
-    ("CTE", "held-octave minimax-ES"),
-    ("Constrained Tenney-Euclidean", "held-octave minimax-ES"),
-    ("minimax", "held-octave OLD minimax-U"),
-    ("least squares", "held-octave OLD miniRMS-U"),
-    ("POTE", "destretched-octave minimax-ES"),
-    ("POTOP", "destretched-octave minimax-S"),
-    # Size-factor (Weil/Kees) historical names (tests.m 3564-3628).
-    ("Weil", "minimax-lils-S"),
-    ("WOP", "minimax-lils-S"),
-    ("WE", "minimax-E-lils-S"),
-    ("Weil-Euclidean", "minimax-E-lils-S"),
-    # 2024 convention: Kees/KE/CWE are HELD-octave (= the odd-limit lols/E-lols schemes), not
-    # destretched (now POWOP/POWE). minimax-lols-S ≡ held-octave minimax-lils-S.
-    ("Kees", "minimax-lols-S"),
-    ("KOP", "minimax-lols-S"),
-    ("KE", "minimax-E-lols-S"),
-    ("Kees-Euclidean", "minimax-E-lols-S"),
-    ("CWE", "minimax-E-lols-S"),
-    ("constrained Weil-Euclidean", "minimax-E-lols-S"),
-]
-
-
-@pytest.mark.parametrize("original, systematic", ORIGINAL_NAME_EQUIVALENCES)
-def test_original_name_equivalences(original, systematic):
-    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
-    assert optimize_tuning_map(meantone, original) == pytest.approx(
-        optimize_tuning_map(meantone, systematic), abs=TOL
-    )
+# Non-systematic / historical / community scheme names are banned in this codebase and no longer
+# resolve — `resolve_tuning_scheme` raises on them. That rejection is covered by
+# test_tuning_scheme_names.py; this file exercises only the systematic names.
 
 
 # Alternative-complexity all-interval families (tests.m 3470-3540), size factor 0 so they
@@ -254,8 +218,8 @@ def test_original_name_equivalences(original, systematic):
 # map) over the standard temperament set. A few use looser accuracy in the library (TOL_2).
 TOL_2 = 1e-2
 
-# minimax-E-copfr-S = "Frobenius" (tests.m 3472-3490).
-FROBENIUS_TUNING_MAPS = {
+# minimax-E-copfr-S (tests.m 3472-3490).
+MINIMAX_E_COPFR_S_TUNING_MAPS = {
     "meantone": (1202.6068, 1899.3482, 2786.9654),
     "blackwood": (1191.8899, 1907.0238, 2786.3137),
     "dicot": (1215.1441, 1907.0030, 2776.2177),
@@ -276,21 +240,14 @@ FROBENIUS_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", FROBENIUS_TUNING_MAPS.items())
-def test_frobenius_minimax_e_copfr_s(name, expected):
+@pytest.mark.parametrize("name, expected", MINIMAX_E_COPFR_S_TUNING_MAPS.items())
+def test_minimax_e_copfr_s(name, expected):
     t = parse_temperament_data(TEMPERAMENTS[name])
     assert optimize_tuning_map(t, "minimax-E-copfr-S") == pytest.approx(expected, abs=TOL)
 
 
-def test_frobenius_original_name():
-    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
-    assert optimize_generator_tuning_map(meantone, "Frobenius") == pytest.approx(
-        optimize_generator_tuning_map(meantone, "minimax-E-copfr-S"), abs=TOL
-    )
-
-
-# minimax-sopfr-S = "BOP"/"Benedetti" (tests.m 3494-3517). tetracot and magic7 use accuracy 2.
-BOP_TUNING_MAPS = {
+# minimax-sopfr-S (tests.m 3494-3517). tetracot and magic7 use accuracy 2.
+MINIMAX_SOPFR_S_TUNING_MAPS = {
     "meantone": ((1201.7205, 1899.3742, 2790.6150), TOL),
     "blackwood": ((1194.179, 1910.686, 2786.314), TOL),
     "dicot": ((1207.4392, 1913.1138, 2767.7157), TOL),
@@ -311,23 +268,15 @@ BOP_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected_tol", BOP_TUNING_MAPS.items())
-def test_bop_minimax_sopfr_s(name, expected_tol):
+@pytest.mark.parametrize("name, expected_tol", MINIMAX_SOPFR_S_TUNING_MAPS.items())
+def test_minimax_sopfr_s(name, expected_tol):
     expected, tol = expected_tol
     t = parse_temperament_data(TEMPERAMENTS[name])
     assert optimize_tuning_map(t, "minimax-sopfr-S") == pytest.approx(expected, abs=tol)
 
 
-@pytest.mark.parametrize("original", ["BOP", "Benedetti"])
-def test_bop_original_names(original):
-    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
-    assert optimize_generator_tuning_map(meantone, original) == pytest.approx(
-        optimize_generator_tuning_map(meantone, "minimax-sopfr-S"), abs=TOL
-    )
-
-
-# minimax-E-sopfr-S = "BE"/"Benedetti-Euclidean" (tests.m 3521-3540).
-BE_TUNING_MAPS = {
+# minimax-E-sopfr-S (tests.m 3521-3540).
+MINIMAX_E_SOPFR_S_TUNING_MAPS = {
     "meantone": (1201.4768, 1898.6321, 2788.6213),
     "blackwood": (1193.9975, 1910.3960, 2786.3137),
     "dicot": (1205.8488, 1906.3416, 2761.9439),
@@ -348,25 +297,17 @@ BE_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", BE_TUNING_MAPS.items())
-def test_be_minimax_e_sopfr_s(name, expected):
+@pytest.mark.parametrize("name, expected", MINIMAX_E_SOPFR_S_TUNING_MAPS.items())
+def test_minimax_e_sopfr_s(name, expected):
     t = parse_temperament_data(TEMPERAMENTS[name])
     assert optimize_tuning_map(t, "minimax-E-sopfr-S") == pytest.approx(expected, abs=TOL)
 
 
-@pytest.mark.parametrize("original", ["BE", "Benedetti-Euclidean"])
-def test_be_original_names(original):
-    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
-    assert optimize_generator_tuning_map(meantone, original) == pytest.approx(
-        optimize_generator_tuning_map(meantone, "minimax-E-sopfr-S"), abs=TOL
-    )
-
-
 # Size-factor (augmented) all-interval families. The phantom-prime augmentation handles the
-# Weil/lils norm; values match the library to <0.001 across the temperament set.
+# lils norm; values match the library to <0.001 across the temperament set.
 
-# minimax-lils-S = "Weil"/"WOP" (tests.m 3546-3561; no sensamagic example).
-WEIL_TUNING_MAPS = {
+# minimax-lils-S (tests.m 3546-3561; no sensamagic example).
+MINIMAX_LILS_S_TUNING_MAPS = {
     "meantone": (1200.000, 1896.578, 2786.314),
     "blackwood": (1188.722, 1901.955, 2773.22),
     "dicot": (1200.000, 1901.955, 2750.978),
@@ -386,14 +327,14 @@ WEIL_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", WEIL_TUNING_MAPS.items())
-def test_weil_minimax_lils_s(name, expected):
+@pytest.mark.parametrize("name, expected", MINIMAX_LILS_S_TUNING_MAPS.items())
+def test_minimax_lils_s(name, expected):
     t = parse_temperament_data(TEMPERAMENTS[name])
     assert optimize_tuning_map(t, "minimax-lils-S") == pytest.approx(expected, abs=TOL)
 
 
-# minimax-E-lils-S = "WE"/"Weil-Euclidean" (tests.m 3571-3587).
-WE_TUNING_MAPS = {
+# minimax-E-lils-S (tests.m 3571-3587).
+MINIMAX_E_LILS_S_TUNING_MAPS = {
     "meantone": (1201.3906, 1898.4361, 2788.1819),
     "blackwood": (1194.2544, 1910.8071, 2786.1895),
     "dicot": (1206.2832, 1907.1223, 2762.9860),
@@ -414,14 +355,14 @@ WE_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", WE_TUNING_MAPS.items())
-def test_we_minimax_e_lils_s(name, expected):
+@pytest.mark.parametrize("name, expected", MINIMAX_E_LILS_S_TUNING_MAPS.items())
+def test_minimax_e_lils_s(name, expected):
     t = parse_temperament_data(TEMPERAMENTS[name])
     assert optimize_tuning_map(t, "minimax-E-lils-S") == pytest.approx(expected, abs=TOL)
 
 
-# held-octave minimax-E-lils-S = minimax-E-lols-S = "CWE" (tests.m 3607-3623).
-HELD_OCTAVE_WE_TUNING_MAPS = {
+# held-octave minimax-E-lils-S = minimax-E-lols-S (tests.m 3607-3623).
+HELD_OCTAVE_MINIMAX_E_LILS_S_TUNING_MAPS = {
     "meantone": (1200.0000, 1896.6512, 2786.605),
     "blackwood": (1200.0000, 1920.0000, 2795.1253),
     "dicot": (1200.0000, 1902.1712, 2751.0856),
@@ -442,8 +383,8 @@ HELD_OCTAVE_WE_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", HELD_OCTAVE_WE_TUNING_MAPS.items())
-def test_cwe_held_octave_minimax_e_lils_s(name, expected):
+@pytest.mark.parametrize("name, expected", HELD_OCTAVE_MINIMAX_E_LILS_S_TUNING_MAPS.items())
+def test_held_octave_minimax_e_lils_s(name, expected):
     t = parse_temperament_data(TEMPERAMENTS[name])
     assert optimize_tuning_map(t, "held-octave minimax-E-lils-S") == pytest.approx(
         expected, abs=TOL
@@ -487,16 +428,16 @@ def test_held_non_octave_minimax_e_lils_s_tuning_map():
     )
 
 
-def test_kees_destretched_octave_minimax_lils_s():
-    # The only Kees tuning published by a human (tests.m 3596-3597), an 11-limit temperament
-    # the library checks at accuracy 0 (integer rounding); our values round to the same integers.
+def test_destretched_octave_minimax_lils_s():
+    # The only published human reference for this scheme (tests.m 3596-3597), an 11-limit
+    # temperament the library checks at accuracy 0 (integer rounding); our values round to the same.
     t = parse_temperament_data("[⟨1 3 0 0 3] ⟨0 -3 5 6 1]}")
     assert optimize_tuning_map(t, "destretched-octave minimax-lils-S") == pytest.approx(
         (1200.000, 1915.929, 2806.785, 3368.142, 4161.357), abs=0.5
     )
 
 
-# Continuum between minimax-S (k=0, TOP) and minimax-lils-S (k=1, Weil), and beyond
+# Continuum between minimax-S (k=0) and minimax-lils-S (k=1), and beyond
 # (tests.m 3651-3655): the size factor sweeps the interval-complexity norm pre-transformer.
 CONTINUUM = [
     (0.00, (1201.699, 1899.263, 2790.258)),
