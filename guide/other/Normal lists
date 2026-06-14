@@ -1,0 +1,321 @@
+Since a [[regular temperament]] can be represented by multiple equivalent [[vals and tuning space|val]] lists (a.k.a. [[mapping]]s) or [[monzos and interval space|monzo]] lists (a.k.a. [[comma basis|comma bases]]), it can be helpful – e.g. when comparing or cataloguing temperaments – to choose a single one of these equivalent lists to use as its unique identifier. A set of rules that are consistently able to narrow the full set of equivalent lists down to a single list for each temperament may be called a '''normal form''', and accordingly, a list which uniquely identifies a temperament in this way may be called a '''normal list'''.
+Because several different normal forms have been developed, each temperament has several different normal lists: one for each form. These normal lists are not all necessarily different; sometimes some or all of them may be the same.
+== Hermite normal form ==
+{{Wikipedia| Hermite normal form }}
+The '''Hermite normal form''', or HNF for short, is an important normal form that is defined for integer matrices in the mathematical field of linear algebra. An integer matrix is simply a 2D array of integers, and so we can easily think of lists of vals or commas as integer matrices and therefore leverage HNF in regular temperament theory.
+The Hermite normal form is unique. Besides that, it is also the integer analogue of the reduced echelon form, so it can be used to solve systems of equations in the integers by Gaussian elimination.
+There are slightly different definitions of HNF in use, and if you are using a computer program to compute it, you should take care that the same normal monzo or val list is finally achieved. The definition used by the Wikipedia article on Hermite form, probably the most standard, works as follows. An ''n''×''m'' integer matrix ''H'' is in (row-wise) HNF if it satisfies the following conditions:
+# ''H'' is upper triangular: the entries ''h<sub>ij</sub>'' = 0 for ''i'' > ''j'', and any rows of zeros are located below the other rows.
+# The first non-zero entry from the left (called the ''leading coefficient'') of any non-zero row is always stricly to the right of the leading coefficient of the row above it.
+# The leading coefficients are positive.
+# The elements below every leading coefficient are zero, and the entries above are strictly smaller than the leading coefficient.
+For more information, diagrams, an alternative articulation of the same definition, and comparisons with related integer matrix forms, see: [[Matrix echelon forms #HNF]].
+== Normal forms for mappings ==
+First we will review the set of normal forms that are defined for mapping matrices.
+=== Defactored Hermite form ===
+This is the "canonical form" for a temperament that was developed by [[Dave Keenan]] and [[Douglas Blumeyer]], formed from [[defactoring]] the matrix (a.k.a. removing [[contorsion]]) prior to putting it into Hermite form.
+We may write a list of vals (mapping) as a {{nowrap|(''k'', ''d'')}}-shaped matrix (read "k by d", i.e. with ''k'' rows and ''d'' columns), where the rows of the matrix are the vals (maps), and ''d'' is the dimensionality of the system<ref group="note">Calling the {{w|prime-counting function}}, written π(''x''), on the prime limit will give us this number. For examples, {{nowrap| π(2) {{=}} 1 }}, {{nowrap| π(3) {{=}} 2 }}, {{nowrap| π(5) {{=}} 3 }}, {{nowrap| π(7) {{=}} 4 }}, {{nowrap| π(11) {{=}} 5 }}, etc. </ref>. To get the '''defactored Hermite form''', we do the following:
+# First, defactor it (a.k.a. make sure it is [[saturated]]).<ref group="note">Historically, this step was not explicitly recognized as necessary for normal forms. The vast majority of normal forms catalogued on the wiki are not contorted/enfactored in the first place, but specifically defining this canonical form to include this requirement is an important step toward ensuring that, which will prevent redundant temperaments from being catalogued. In various domains, normal forms are often required to be unique, however, canonical forms are required to be unique even more often that normal forms are; according to [[Wikipedia: Canonical form]], 'the distinction between "canonical" and "normal" forms varies from subfield to subfield. In most fields, a canonical form specifies a unique representation for every object, while a normal form simply specifies its form, without the requirement of uniqueness.' This is the rationale behind defining ''canonical'' as opposed to merely ''normal''. To be more specific, The HNF does provide a unique representation of ''matrices'', i.e. from a perspective of pure mathematics, and so you will certainly find throughout mathematical literature that HNF is described as providing a unique representation, and this is correct. However, when applied to the RTT domain, i.e. to ''mappings'', the HNF sometimes fails to identify equivalent mappings as such. And the critical flaw with HNF is its failure to defactor matrices – meaning that a contorted mapping matrix has a different Hermite normal form than a non-contorted one with the same kernel – and this is because dividing rows is not a permitted elementary row operation when computing the HNF. See: [https://math.stackexchange.com/a/685922]. The canonical form as described here ''does'' defactor matrices, and therefore it delivers a truly canonical result.<br />
+There is also a rarely mentioned Hermite Canonical Form, or HCF, described here: [http://home.iitk.ac.in/~rksr/html/03CANONICALFACTORIZATIONS.htm], which sort of combines the HNF's constraint and the [[Matrix echelon forms#RREF|RREF]]'s reduced constraint (all pivots equal 1, all other entries in pivot columns are 0, both above and below the pivot), but this is not useful because due to its constraint that all pivots be 1, it does not preserve periods that are genuinely unit fractions of an octave (at first glance, when a pivot is not equal to 1, it might trigger you to think that the mapping is enfactored. But temperaments can legitimately have generators that divide primes evenly, such as 5-limit blackwood, {{rket|{{map| 5 8 0 }} {{map| 0 0 1 }}}}, which divides the octave into 5 parts. So any form that enforces pivots all be 1's, such as HCF and RREF, would fail this criteria.) It also does not qualify as an echelon form, which becomes apparent only when you use it on [[rank-deficient]] matrices, because it does not require the rows of all zeros to be at the bottom; instead it (bizarrely, though maybe it is related to how the SNF requires all pivots exactly along the main diagonal) requires the rows to be sorted so that all the pivots fall on the main diagonal.</ref>. Note that if the matrix was not [[full-rank]], this will result in the elimination of some rows<ref group="note">Note that canonicalizing a mapping does not remove trailing ''dimensions'' with only zeros.<br>
+In the case of a mapping, this would take the form of an extra column of all zeros to the right of any non-zero entries, or in other words, an unmapped prime higher than other mapped prime. For example you could have {{rket| {{map| 1 0 -4 0 }} {{map| 0 1 4 0 }} }} which is just 5-limit meantone but represented in the 7-limit even though prime 7 is not used.<br>
+And for a comma basis the form this would take is rotated 90 degrees: a row of all zeros below all other nonzero entries, e.g. [{{vector| 4 -4 1 0 }}].<br>
+The reason these additional zeros should be preserved and these temperaments be treated as different from their untrimmed counterparts is made clear when we consider the difference in the duals. For a comma basis, the extra dimension implies the presence of extra generators that are unbound to the other generators. For example, a basis for the nullspace of [{{vector| 4 -4 1 }}], or in other words its mapping, as we know well is {{rket| {{map| 1 0 -4 }} {{map| 0 1 4 }} }}. But that is not a basis for the nullspace of [{{vector| 4 -4 1 <span style{{=}}"color: red;">'''0'''</span> }}]; the mapping for that comma basis would have to be {{ket| {{map| 1 0 -4 <span style{{=}}"color: red;">'''0'''</span> }} {{map| 0 1 4 <span style{{=}}"color: red;">'''0'''</span> }} {{map| <span style{{=}}"color: red;">'''0 0 0 1'''</span> }} }}.</ref>. We now have an {{nowrap|(''r'', ''d'')}}-shaped matrix, with ''r'' rows where ''r''  is the ''rank''.
+# Then, put this result into HNF.
+For example, septimal meantone has the defactored Hermite form of {{rket| {{map| 1 0 -4 -13 }} {{map| 0 1 4 10 }} }}, corresponding to generators of ~2/1 and ~3/1.
+The HNF step is not necessary to defactor the mapping, but it is important for canonicalizing into a convenient form.
+The key advantage of the defactored Hermite form is its purity and simplicity, while sidestepping many of the issues with [[contorsion]]/[[enfactoring]] matrices. If your primary need is uniquely identifying temperaments, this is the ideal choice. The remaining normal forms each introduce further constraints on the sizes of the generators, which can be nice and convenient if that matters for your use case, but otherwise is unnecessary.
+=== Positive-generator forms ===
+Even though by using the HNF the defactored Hermite form ensures that the {{w|pivot element|pivot}} (first nonzero entry) of each mapping row is a positive ''number'', this does not necessarily mean that the corresponding generators are all positive ''in pitch''. For example, the defactored Hermite form of porcupine is the matrix {{rket| {{map| 1 2 3 }} {{map| 0 3 5 }} }}. The second column of this matrix tells us it takes 2 of the first generator and 3 of the second generator to reach its approximation of 3/1. But as we can tell from the first column of this matrix, it takes only 1 of the first generator and nothing else to reach its approximation of 2/1. Therefore, if we move by 2 of the first generator, we are already at this temperament's approximation of 4/1, and so if we still need to move by 3 of the second generator to reach its approximation of 3/1, then the second generator must be negative. Indeed, it is about 163 cents ''downward'' in pitch. Negative generators like this can be surprising and confusing, and so ''positive-generator forms'' were developed to address this concern.
+To obtain one of these forms, we first need to know whether each generator is positive or negative in pitch. This is conventionally found through the [[Frobenius generator]]s of the temperament, where we find the [[pseudoinverse]] of the mapping ''V'', which we notate ''V''<sup>+</sup>, and multiply this from the left by the just tuning map, {{nowrap| ''J'' {{=}} {{val| 1 log<sub>2</sub>3 log<sub>2</sub>5 … log<sub>2</sub>''p'' }} }}. Otherwise normed tunings technically do the same. [[Flora Canou]]'s [https://github.com/FloraCanou/temperament_evaluator Temperament Evaluator] has adopted a faster method called ''fast approximate tuning'' (''FX tuning''), which short-circuits the question of optimization and focuses on the abstract property of how a temperament splits intervals<ref>[https://github.com/FloraCanou/temperament_evaluator/wiki/FX-tuning Github | ''FX tuning'' · FloraCanou/temperament_evaluator Wiki]</ref>.
+The first positive-generator form, called <code>"flip"</code> in the Temperament Evaluator, changes the signs of every entry in a row if the corresponding generator is negative.
+Another form, called <code>"shift"</code>, also makes sure the generators are positive, but it maniplates the mapping to period-shift the negative generators instead, except when the temperament's generator is (''c'' - ''p'')-sheared where ''c'' is the cot (number of generators to reach the prime in question) and ''p'' is the ploid (number of periods per equave), in which case it uses the <code>"flip"</code> routine. This form may be more musically useful as the prime harmonics are more often in positive numbers of generator steps.
+{{Note| Most mappings (though not the "[[mapping to lattice]]") listed on temperament data pages of this wiki are in the <code>"shift"</code> form, though some are still in <code>"flip"</code> form. }}
+The generators in defactored Hermite form of septimal meantone is positive already, so its positive-generator forms are the same as its defactored Hermite form, {{mapping| 1 0 -4 -13 | 0 1 4 10 }}, corresponding to generators of ~2/1 and ~3/1. An example of positive-generator form that is different from the defactored Hermite form is the porcupine temperament, elaborated below.
+{{Databox| Positive-generator form example |
+The defactored Hermite form mapping matrix for porcupine is
+<math>
+\left[ \begin{array} {rrr}
+1 & 2 & 3 \\
+0 & 3 & 5 \\
+\end{array} \right]
+</math>
+Its pseudoinverse is
+<math>
+\left[ \begin{array} {rrr}
+\frac{34}{35} & -\frac{3}{5} \\
+\frac{1}{7} & 0 \\
+-\frac{3}{35} & \frac{1}{5} \\
+\end{array} \right]
+</math>
+Since we are in the 5-limit here, we want the 5-limit just tuning map:
+<math>
+\left[ \begin{array} {rrr}
+\log_2{2} & \log_2{3} & \log_2{5} \\
+\end{array} \right]
+</math>
+Multiplying those:
+<math>
+\begin{array} {l}
+\left[ \begin{array} {rrr}
+\log_2{2} & \log_2{3} & \log_2{5} \\
+\end{array} \right]
+& × &
+\left[ \begin{array} {rrr}
+\frac{34}{35} & -\frac{3}{5} \\
+\frac{1}{7} & 0 \\
+-\frac{3}{35} & \frac{1}{5} \\
+\end{array} \right]
+& = &
+\left[ \begin{array} {rr}
+0.998829 & -0.135614 \\
+\end{array} \right]
+\end{array}
+</math>
+Those results are in octaves. Multiplying by 1200 gives them in cents: 1198.5948 and -162.7368. So we can recognize these two values as porcupine's octave period and its neutral second generator. The concern here is that this mapping form results in the generator being a neutral second ''downward'', i.e. it has a negative value when measured logarithmically such as in octaves or cents as seen here.
+The solution is simply to change the signs of the corresponding row of the matrix, like so:
+<math>
+\begin{array} {lllllllll}
+\left[ \begin{array} {rrr}
+1 & 2 & 3 \\
+0 & 3 & 5 \\
+\end{array} \right]
+&
+\begin{array} {rrr}
++1198.5948 \\
+\style{background-color:#F2B2B4;padding:5px}{-}162.7368 \\
+\end{array}
+&
+→
+&
+\left[ \begin{array} {rrr}
+1 & 2 & 3 \\
+0 & \style{background-color:#FFF200;padding:5px}{-}3 & \style{background-color:#FFF200;padding:5px}{-}5 \\
+\end{array} \right]
+&
+\begin{array} {rrr}
++1198.5948 \\
+\style{background-color:#FFF200;padding:5px}{+}162.7368 \\
+\end{array}
+\end{array}
+</math>
+And the cents value of the generator flips accordingly.
+}}
+=== Equave-reduced-generator form ===
+The ''equave-reduced-generator form'' has the matrix modified from the defactored Hermite normal form so that each generator is equave-reduced, where the [[equave]] can be found as the formal prime represented by the first ''column'' of the matrix, which is usually the octave. For more information, see [[Octave reduction #Generalization]]. This form is closely related to [[ploidacot]]s, so it may be casually called the ''ploidacot form''. It is implemented in the Temperament Evaluator as <code>"reduce"</code>.
+Consider the case of septimal meantone. As we know, its defactored Hermite normal form is {{rket| {{map| 1 0 -4 -13 }} {{map| 0 1 4 10 }} }} which corresponds to generators of ~2/1 and ~3/1. In this case, as is typical, the formal prime represented by the first column of the matrix is 2, and so the equave is the octave. Therefore, all generators must be octave-reduced. But our second generator is ~3/1, which is not octave-reduced. We must alter the mapping in such a way that this row represents a generator of ~3/2 instead. We can do that here by adding the second row of the mapping to the first: {{rket| {{map| 1 1 0 -3 }} {{map| 0 1 4 10 }} }}. So that is septimal meantone's equave-reduced-generator form, corresponding to generators of ~2/1 and ~3/2.
+Probably the most reliable way to achieve equave-reduced-generator form in general, however, is not to work with a [[generator preimage]] such as ~3/1 and ~3/2. Instead the Frobenius generators may be used, as described in the positive-generator form section just above, and reduction can be accomplished by calling modulo on their cents. For a general discussion of how to manipulate the sizes of generators in this way, see [[Generator size manipulation]].
+A ''positive-equave-reduced-generator form'' is similar to the equave-reduced-generator form, but starts from a positive-generator form instead of the defactored Hermite normal form.
+=== Minimal-generator form ===
+The ''minimal-generator form'' (or '''mingen form''') is a form specific to [[rank-2 temperament]]s, where the generator is positive and no greater than half the period.<ref group="note">This is somewhat like octave reduction combined with octave inversion, because you can't just add or subtract half octaves until it's between 0 and 600 cents; you have to add or subtract octaves until it's between −600 and +600 cents, then multiply by −1 if it's negative.</ref><ref group="note">You could always find a smaller and smaller generator by going negative, so this assumes positive generators.</ref>
+[[Graham Breed]]'s [http://x31eq.com/temper/ Temperament Finder] uses this form for all rank-2 temperaments. Septimal meantone in minimal-generator form is {{mapping| 1 2 4 7 | 0 -1 -4 -10 }}, corresponding to generators of ~2/1 and ~4/3. [[Kite Giedraitis]]'s [[pergen]] also uses this form, except for when the generator is a perfect fifth.
+Beyond rank-2, the mingen form of a temperament is no longer unique. You can always get smaller and smaller generators. This is why on Graham Breed's temperament finding tool, beyond rank-2 he simply uses the Hermite Normal Form.
+Consider the example in the diagram given here: [[Generator form manipulation #Beyond rank-2]]. We begin with {{rket| {{map| 1 2 0 -1 }} {{map| 0 -1 6 10 }} {{map| 0 0 -1 -2 }} }} with generators of 1200.6{{c}}, 499.841{{c}}, and 214.024{{c}}, which therefore already satisfies the condition that each generator is less than half the previous generator. But we can transform it into {{rket| {{map| 1 2 2 3 }} {{map| 0 -1 1 0 }} {{map| 0 0 -1 -2 }} }} which has a third generator of 116.013¢ instead. This is accomplished by adding row 3 to row 2 five times, which decreases generator 3 by the size of five times row 2, from 214.024{{c}} by 5 × 499.841 = 2499.205{{c}} to -2285.18{{c}}; and then subtracting row 3 from row 1 twice, which increases generator 3 by the size of two times row 1, from −2285.18{{c}} by {{nowrap| 2 × 1200.6{{c}} {{=}} 2401.2{{c}} }} to 116.013{{c}}. And we can get that generator even smaller if we had instead moved up by 499.841 twice to 1213.71¢ and then down by 1200.6¢ once to 13.109¢ (that's a final mapping of {{rket| {{map| 1 2 -1 -3 }} {{map| 0 -1 8 14 }} {{map| 0 0 -1 -2 }} }}.
+You could find smaller and smaller generators if you wanted, by essentially finding increasingly small "commas" between the other generators' sizes (e.g. {{nowrap|5 × 1200.6{{c}} }} versus {{nowrap| 12 × 499.841{{c}} }} is a difference of only 4.908{{c}}) and then shifting generators by those commas.
+This problem also precludes the possibility of a definitive maximum generator which is still less than half of the previous generator.
+=== Reduced row echelon form (RREF) ===
+{{Main| Wikipedia: Row echelon form }}
+If you have a routine which will compute the reduced row echelon form of a matrix with rows consisting of vals using rational number arithmetic, this can be computed and any rows consisting of the zero val stripped off. The result is a unique identifier for the abstract temperament which is closely related to the normal val list. The intervals of the abstract temperament may be found in the same way, by applying the mappings (which are fractional vals) to monzos; or put in another way, by matrix multiplication of the monzos by the reduced row echelon form matrix.
+For example, if we feed {{mapping| 22 35 51 62 | 31 49 72 87 | 84 133 195 236 }} into a reduced row echelon form routine, we obtain {{mapping| 1 0 3 1 | 0 1 -3/7 8/7 | 0 0 0 0 }}. Stripping off the zero val in the final row, we get ''E'' = {{mapping| 1 0 3 1 | 0 1 -3/7 8/7 }}. The monzo for 7/6 is {{monzo| -1 -1 0 1 }}, and ''E''⋅{{monzo| -1 -1 0 1 }} = [0 1/7]. Multiply by {{monzo| 1 0 0 0 }}, the monzo for 2, and the result is ''E''⋅{{monzo| 1 0 0 0 }}, which is [1 0]. We have in fact 7-limit orwell temperament, with period 2 and generator approximately 7/6.
+For more information, see [[RREF]].
+== Normal forms for commas ==
+Because [[regular temperament]]s, where the prime mappings are known but not the specific tuning of the generators, are fully characterized by their kernel, the group of intervals they map to the unison, they can also be characterized by the regular interval list of a set of generators (called commas or unison vectors) for the kernel. A similar set of normal forms are defined for interval lists. The defactored Hermite form and positive forms parallel those for vals. However, the normal form defined for intervals which has "minimal" in its name is quite different conceptually than the normal form defined for vals which has "minimal" in its name. Also, there is no notion of an equave-reduced form for intervals.
+In the case of interval lists, the most common format they are presented in is as ratios, not vectors, e.g. [81/80, 64/63] rather than [{{vector|-4 4 1 0}} {{vector|-6 2 0 1}}]. So you may need to convert ratios to vectors and back when working with these forms.
+=== Minimal form ===
+The ''minimal form'', or ''reduced form'' shows the simplest comma list sufficient to define the temperament, where the commas are rated by a complexity measure such as the [[Tenney norm]], in which case it is called the ''Tenney-minimal form''. It is obvious why this form is useful, but unfortunately, it is not easy to find since it is equivalent to the ''shortest basis problem'', an NP-hard problem. The [[LLL reduction]] algorithm gives a good approximation. Otherwise, it is typically solved heuristically by hand.
+{{Note| This is the form shown in the "comma lists" of each temperament on this wiki. }}
+=== Antitransposed defactored Hermite form ===
+Given a matrix of ''p''-limit intervals, we can find its antitransposed defactored Hermite form in much the same way as we find the defactored Hermite form of a mapping. The only difference is that they must be put in an "antitranspose sandwich", or in other words, antitransposed once at the beginning, and then antitransposed again at the end.
+For example, suppose we have the comma basis for septimal meantone:
+<math>
+\left[ \begin{array} {rrr}
+-4 & 1 \\
+4 & 2 \\
+-1 & -3 \\
+0 & 1 \\
+\end{array} \right]
+</math>
+Note that the interval vectors are columns when put into matrix form like this.
+So now we antitranspose, or in other words, transpose the matrix but instead of across its main diagonal (top-left to bottom-right) as with the traditional transpose, across its antidiagonal (top-right to bottom-left).
+<math>
+\begin{array} {l}
+\left[ \begin{array} {rrr}
+\style{background-color: #46C5DD; padding: 5px;}{-4} & \style{background-color: #FFF200; padding: 5px;}{1} \\
+\style{background-color: #FFF200; padding: 5px;}{4} & \style{background-color: #F2B2B4; padding: 5px;}{2} \\
+\style{background-color: #C6DC67; padding: 5px;}{-1} & \style{background-color: #F2B2B4; padding: 5px;}{-3} \\
+\style{background-color: #C6DC67; padding: 5px;}{0} & \style{background-color: #F2B2B4; padding: 5px;}{1} \\
+\end{array} \right]
+& → &
+\left[ \begin{array} {rrr}
+\style{background-color: #F2B2B4; padding: 5px;}{1} & \style{background-color: #F2B2B4 ;padding: 5px;}{-3} & \style{background-color: #F2B2B4; padding: 5px;}{2} & \style{background-color: #FFF200; padding: 5px;}{1} \\
+\style{background-color: #C6DC67; padding: 5px;}{0} & \style{background-color: #C6DC67; padding: 5px;}{-1} & \style{background-color: #FFF200; padding: 5px;}{4} & \style{background-color: #46C5DD; padding: 5px;}{-4} \\
+\end{array} \right]
+\end{array}
+</math>
+This has the effect of both reversing the entries within each interval, as well as reversing the order of the intervals themselves. The purpose of these reversals is so that when the HNF tries to put all the zeros in the bottom-left corner, it gravitates them toward where we want them: the higher primes, and commas that will be earlier in the list after the second antitranspose<ref group="note">Because these are going to be put into HNF soon, the reversing of the order of the intervals themselves at the beginning is irrelevant. But it is important that the order of the intervals themselves reverses on the way out, in the second antitranspose. And so for simplicity of explanation's sake, we simply say to do an antitranspose at both the beginning and end of the operation.</ref>.
+Now we can defactor and HNF this as if it were a mapping.
+<math>
+\left[ \begin{array} {rrr}
+1 & 0 & -10 & 13 \\
+0 & 1 & -4 & 4 \\
+\end{array} \right]
+</math>
+Finally we antitranspose again:
+<math>
+\begin{array} {l}
+\left[ \begin{array} {rrr}
+\style{background-color: #F2B2B4; padding: 5px;}{1} & \style{background-color: #F2B2B4; padding: 5px;}{0} & \style{background-color: #F2B2B4; padding: 5px;}{-10} & \style{background-color: #FFF200; padding: 5px;}{13} \\
+\style{background-color: #C6DC67; padding: 5px;}{0} & \style{background-color: #C6DC67; padding: 5px;}{1} & \style{background-color: #FFF200; padding: 5px;}{-4} & \style{background-color: #46C5DD; padding: 5px;}{4} \\
+\end{array} \right]
+& → &
+\left[ \begin{array} {rrr}
+\style{background-color: #46C5DD; padding: 5px;}{4} & \style{background-color: #FFF200; padding: 5px;}{13} \\
+\style{background-color: #FFF200; padding: 5px;}{-4} & \style{background-color: #F2B2B4; padding: 5px;}{-10} \\
+\style{background-color: #C6DC67; padding: 5px;}{1} & \style{background-color: #F2B2B4; padding: 5px;}{0} \\
+\style{background-color: #C6DC67; padding: 5px;}{0} & \style{background-color: #F2B2B4; padding: 5px;}{1} \\
+\end{array} \right]
+\end{array}
+</math>
+And there is our canonical comma basis.
+The set of elements of the original list generates a finitely generated free abelian subgroup of the positive rationals under multiplication, and therefore of any ''p''-limit group it lives inside. The list in normal form contains a minimal set of ratios, in an ordering of nondecreasing prime limit which is parsimonious in its use of higher limits. For example, if we put [81/80, 126/125] into normal form we obtain [80/81, 57344/59049]. The first interval is 5-limit, which is as small as possible. The second is 7-limit, which must be the case because the group these two generate is 7-limit. However, it uses only 2, 3 and 7 in its prime factorization, parsimoniously rejecting 5 as the next highest prime limit. Such comma list that ordered in ascending prime limits was called [http://lumma.org/tuning/gws/commaseq.htm comma sequence].
+Note that the antitransposed defactored Hermite form of the comma list involves the list being defactored (e.g. torsion to be removed). For example, both [25/27, 35/36] and [25/27, 49/48] characterize beep. But the latter has torsion (i.e. is enfactored), so the former is beep's antitransposed defactored Hermite form.
+Normal interval lists can also be used to characterize the [[just intonation subgroups]] on which subgroup temperaments are defined and using which subgroup scales may be constructed. On the pages [[Subgroup temperaments]] and [[Just intonation subgroup]]s can be found many examples; the subgroup lists are given in a form where generators of the subgroup are separated by periods so as to flag the fact that the list defines a subgroup. An example would be the Barbados subgroup, 2.3.13/5.
+=== Positive-ratio form ===
+Similar to [[#Positive-generator form|the situation with mappings]], even though by using the HNF the antitransposed defactored Hermite form ensures that the first nonzero entry of each comma's [[prime-count vector]] is a positive ''number'', this does not necessarily mean that the corresponding commas are all positive ''in pitch''.
+For example, the antitransposed defactored Hermite form of meantone's comma basis is [{{vector| 4 -4 1 }}]. HNF has ensured that the first number is positive. But the vector {{vector| 4 -4 1 }} represents the ratio 80/81, which is less than unity; it is still the meantone comma, but it is the meantone comma ''downward'' in pitch.
+Having negative commas like this can be surprising or confusing, and so the ''positive-ratio form'' addresses this concern. To correct any negative comma, simply replace it with its reciprocal. In vector form, this can be done by changing the signs on every number; meantone can be put into positive ratio form as [{{vector| -4 4 -1 }}].
+The positive ratio form of septimal meantone is [81/80, 59049/57344].
+=== Integer reduced row echelon form (IRREF) ===
+Another important normal form for integer matrices is what Kite Giedraitis has dubbed the IRREF, the ''integer reduced row echelon form''. It is the {{w|Row echelon form|reduced row echelon form}} but with integer entries, found by multiplying each row of the matrix by the least common multiple of all denominators in that row. It differs from the Hermite normal form in that each pivot is the only nonzero entry in its column. For a monzo list, it has the advantage of limiting the appearance of the ''N'' highest primes to only one comma each (where ''N'' is the codimension), isolating each prime's effect on the [[pergen]], but has the disadvantage that the commas tend to have high odd limits, and the comma list may have torsion.
+Sometimes the IRREF is identical to the HNF. For more information, see [[IRREF]].
+== Maple code ==
+Below is [[Wikipedia:Maple (software)|Maple]] code for finding the normal interval and val list, given an interval list or a val list. Note that this code does not deal with torsion/enfactoring, so it assumes your lists have already been defactored.
+{{Databox| Code |
+<syntaxhighlight lang="mupad">
+log2 := proc(x) evalf(ln(x) / ln(2)) end:
+# transpose of listlist w
+transpos := proc(w)
+    local u;
+    u := Matrix(w);
+    u := LinearAlgebra[Transpose](u);
+    convert(u, listlist)
+end:
+# pseudoinverse of listlist w
+pseudo := proc(w)
+    local u;
+    u := Matrix(w);
+    u := LinearAlgebra[MatrixInverse](u, method='pseudo');
+    convert(u, listlist)
+end:
+psu := proc(w) transpos(pseudo(w)) end:
+# log2 of first n primes
+pril := proc(n)
+    local i, u;
+    u := NULL;
+    for i from 1 to n do
+        u := u, log2(ithprime(i))
+    od;
+    [u]
+end:
+# reverse of list
+revlist := proc(l)
+    local i, v, e;
+    e := nops(l);
+    for i from 1 to e do
+        v[i] := l[e - i + 1]
+    od;
+    convert(convert(v, array), list)
+end:
+orp := proc(w, p) padic[ordp](w, p) end:
+# rank of p-limit of q
+pim := proc(q)
+    local r, i, p;
+    r := 1;
+    i := 0;
+    while not (r = q) do
+        i := i + 1;
+        p := ithprime(i);
+        r := r * p ^ orp(q, p)
+    od;
+    if i = 0 then RETURN(0) fi;
+    i
+end:
+# prime limit of rational number q
+plim := proc(q)
+    ithprime(pim(q))
+end:
+# converts rational number q to monzo of length n
+rat2monz := proc(q, n)
+    local v, i;
+    for i from 1 to n do
+        v[i] := ordp(q, ithprime(i))
+    od;
+    convert(convert(v, array), list)
+end:
+# converts monzo to rational number
+monz2rat := proc(m)
+    local i, t;
+    t := 1;
+    for i from 1 to nops(m) do
+        t := t * ithprime(i) ^ m[i]
+    od;
+    t
+end:
+# hermite normal form of listlist l
+herm := proc(l)
+    local M;
+    M := Matrix(l);
+    convert(convert(HermiteForm[Z](M), array), listlist)
+end:
+# normal interval list from list of intervals l
+nori := proc(l)
+    local i, p, u, v, w;
+    p := 1;
+    for i from 1 to nops(l) do
+        p := max(p, plim(l[i]))
+    od;
+    u := [];
+    for i from 1 to nops(l) do
+        u := [op(u), revlist(rat2monz(l[i], p))]
+    od;
+    v := herm(u);
+    for i from 1 to nops(l) do
+        u := revlist(v[i]);
+        u := monz2rat(u);
+        w[i] := u
+    od;
+    u := [];
+    for i from 1 to nops(l) do
+        v := w[i];
+        if v < 1 then v := 1 / v fi;
+        if not v=1 then u := [op(u), v] fi
+    od;
+    revlist(u)
+end:
+norv := proc(l)
+    # normal val list from list of vals l
+    local u, v, w, i, n, a;
+    u := herm(l);
+    n := rnk(u);
+    v := NULL:
+    for i from 1 to n do
+        v := v, u[i]
+    od;
+    v := [v];
+    u := pseudo(v);
+    w := pril(nops(l[1]));
+    a := op(matmul(w, u));
+    u := NULL;
+    for i from 1 to n do
+        if a[i] < 0 then u := u, -v[i] fi;
+        if a[i] >= 0 then u := u, v[i] fi
+    od;
+    [u]
+end:
+</syntaxhighlight>
+}}
+== Footnotes ==
+<references group="note" />
+== References ==
+[[Category:Regular temperament theory]]
+[[Category:Math]]
+[[Category:Mapping]]
