@@ -6567,6 +6567,31 @@ def test_form_layer_subscripts_the_canonical_form_objects_in_equivalences():
     assert on["symbol:projection:gens"].text == f"G{C} = U(𝑀{C}U)⁻¹"
 
 
+def test_form_layer_subscripts_the_matrix_header_labels():
+    # "everywhere" includes the matrix row/column header labels (matlabels), not just the tile
+    # symbols: the mapping's row covectors 𝒎ᵢ → 𝒎_Cᵢ, the mapped products' leading 𝑀 — 𝑀𝐜ᵢ (mapped
+    # comma basis) and 𝑀𝐡ᵢ (mapped held basis) — the mapped target columns 𝐲ᵢ, the generator tuning
+    # map 𝒈ᵢ, and the projection embedding's 𝐠ᵢ all gain the subscript. Form-invariant labels (the
+    # prime tuning map's 𝒕𝐜ᵢ, the comma basis 𝐜ᵢ) stay bare.
+    C, s1 = spreadsheet.SUBSCRIPT_C, spreadsheet._sub(1)
+    on = {c.id: c for c in _with(symbols=True, header_symbols=True, form=True).cells}
+    assert on["matlabel:row:mapping:primes:0"].text == f"𝒎{C}{s1}"   # the mapping covector rows
+    assert on["matlabel:col:mapping:commas:0"].text == f"𝑀{C}𝐜{s1}"  # mapped comma basis
+    assert on["matlabel:col:mapping:targets:0"].text == f"𝐲{C}{s1}"  # mapped target list Y
+    assert on["matlabel:col:tuning:gens:0"].text == f"𝒈{C}{s1}"      # generator tuning map
+    # form-invariant header labels stay bare
+    assert on["matlabel:col:tuning:commas:0"].text == f"𝒕𝐜{s1}"      # the prime tuning map's 𝒕𝐜
+    assert on["matlabel:col:vectors:commas:0"].text == f"𝐜{s1}"      # the comma basis itself
+    # the mapped HELD interval basis (𝑀𝐡) — over a build with a held interval column
+    held = _held(symbols=True, header_symbols=True, form=True)
+    assert held["matlabel:col:mapping:held:0"].text == f"𝑀{C}𝐡{s1}"
+    # under unchanged the mapped comma column reads the mapped unrotated vector list 𝑀𝐯, and the
+    # projection embedding's generator columns are 𝐠 — both subscripted, over a projection build
+    proj = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, header_symbols=True, form=True).cells}
+    assert proj["matlabel:col:mapping:commas:0"].text.startswith(f"𝑀{C}𝐯")  # unrotated vector list 𝑀𝐯
+    assert proj["matlabel:col:projection:gens:0"].text == f"𝐠{C}{s1}"
+
+
 def test_interest_is_a_top_level_toggle_after_the_tuning_boxes_group():
     # "other intervals of interest" is a standalone grey column (not part of the cyan
     # tuning region), so it owns a top-level toggle: built (implemented), default on, and

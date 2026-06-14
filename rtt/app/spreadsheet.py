@@ -2231,10 +2231,20 @@ class _GridBuilder:
                     equiv = FORM_EQUIVALENCES[(rkey, ckey)]
                 if (rkey, ckey) == ("projection", "primes"):
                     equiv += self._projection_superspace_tail()
-            if self.show_form and (rkey, ckey) in FORM_SUBSCRIPT_CELLS:  # the subscripted symbol
-                glyph = glyph[:1] + SUBSCRIPT_C + glyph[1:]
+            glyph = self._form_subscripted(glyph, rkey, ckey)  # the subscripted symbol
             floor = max(floor, _min_width_for_lines(glyph + equiv, 1, SYMBOL_FONT))
         return floor
+
+    def _form_subscripted(self, glyph: str, rkey: str, ckey: str) -> str:
+        """Mark a canonical-form object's glyph with the subscript C when the form layer is on —
+        inserted after the leading glyph so it composes with any trailing column letter / index
+        (𝑀 → 𝑀_C, 𝑀𝐜 → 𝑀_C𝐜, 𝒈 → 𝒈_C). Applies to exactly the FORM_SUBSCRIPT_CELLS objects (the
+        mapping 𝑀 and its products, the generator tuning map 𝒈, the projection embedding G), in
+        their tile symbols AND their matrix row/column header labels; the form-invariant objects
+        (𝒕/𝒋/𝒓, the bases C/T/H, the detempering D) pass through untouched."""
+        if self.show_form and (rkey, ckey) in FORM_SUBSCRIPT_CELLS:
+            return glyph[:1] + SUBSCRIPT_C + glyph[1:]
+        return glyph
 
     def _control_floor(self, key: str):
         """the width an open column needs so its in-tile choosers fit without overhanging the
@@ -4899,7 +4909,8 @@ class _GridBuilder:
                     # the bare pretransformer 𝑋 = 𝑍𝐿's bottom (size-sensitizing) row is labelled 𝒛 (the
                     # size-sensitizing matrix 𝑍's row variable), NOT 𝒍₄ / 𝒙₄ — it isn't a fourth prime.
                     size_row = rkey == "prescaling" and i == self.prescale_rows and self.size_rows
-                    text = "𝒛" if size_row else f"{glyph}{_sub(i + 1)}"
+                    g = self._form_subscripted(glyph, rkey, ckey)  # 𝒎ᵢ → 𝒎_Cᵢ when the form layer is on
+                    text = "𝒛" if size_row else f"{g}{_sub(i + 1)}"
                     self.cells.append(CellBox(
                         f"matlabel:row:{rkey}:{ckey}:{i}",
                         # past the drag-handle gutter (when present), so the handle sits to its left;
@@ -4930,7 +4941,11 @@ class _GridBuilder:
                 left = self.group_left[ckey]
                 y = self.rows[rkey].matlabel_top
                 for i in range(group_count[ckey]):
-                    text = label(i) if callable(label) else f"{label}{_sub(i + 1)}"
+                    # the form layer subscripts the mapped products' leading glyph too — 𝑀𝐜ᵢ → 𝑀_C𝐜ᵢ,
+                    # 𝑀𝐡ᵢ → 𝑀_C𝐡ᵢ, 𝒈ᵢ → 𝒈_Cᵢ, 𝐠ᵢ → 𝐠_Cᵢ — matching the tile symbols (the form-invariant
+                    # 𝒕𝐜 / 𝒋𝐜 / P columns stay bare). Done on the bare glyph, BEFORE the index subscript.
+                    glyph = label if callable(label) else self._form_subscripted(label, rkey, ckey)
+                    text = glyph(i) if callable(glyph) else f"{glyph}{_sub(i + 1)}"
                     if self.show_unchanged and ckey == "commas":  # the column's vectors are 𝐯, not 𝐜
                         text = text.replace("𝐜", "𝐯")
                     # the consolidated V's value cells shift the U half right past any pending comma
@@ -5123,11 +5138,10 @@ class _GridBuilder:
                     base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
                 if self.show_unchanged and ckey == "commas":  # the whole column reads V, not C
                     base_symbol = base_symbol.replace("C", "V")
-                if self.show_form and (rkey, ckey) in FORM_SUBSCRIPT_CELLS:
-                    # mark the canonical form with a subscript C after the leading glyph (𝑀/Y/𝒈/G).
-                    # Inserted AFTER the unchanged C→V swap so the mapped-comma tile reads 𝑀C·V, and so
-                    # the subscript's own "C" (a SUB_OPEN…SUB_CLOSE sentinel) is never hit by that swap.
-                    base_symbol = base_symbol[:1] + SUBSCRIPT_C + base_symbol[1:]
+                # mark the canonical form with a subscript C after the leading glyph (𝑀/Y/𝒈/G), AFTER
+                # the unchanged C→V swap so the mapped-comma tile reads 𝑀_C·V and the subscript's own
+                # "C" sentinel is never hit by that swap. The matrix labels get the same treatment.
+                base_symbol = self._form_subscripted(base_symbol, rkey, ckey)
                 glyph = base_symbol if (self.show_symbols or equiv) else ""
                 if glyph or equiv:
                     self.cells.append(CellBox(f"symbol:{rkey}:{ckey}", self.col_x[ckey], cy, self.col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
