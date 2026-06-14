@@ -3267,15 +3267,29 @@ class _GridBuilder:
 
     def v_split_bars(self) -> None:
         """the single vertical rule dividing the comma half C from the unchanged half U, centred in
-        the V_SPLIT_GAP between them, down EVERY value tile of the consolidated unrotated-vector-
-        list column V = C|U (the mockup's V | divider). The per-column separators are off
-        throughout V, so this lone bar is its only divider. The counts tile is excluded — it holds
-        only the two scalar tallies (n, u), not a matrix, so a dividing rule there reads as noise."""
-        if not self.show_unchanged or self.commas_x is None or self.nc_shown == 0:
-            return  # no comma half (full rank, n = 0 → the whole column is U): nothing to divide
+        the V_SPLIT_GAP between them, down EVERY tile of the consolidated unrotated-vector-list
+        column V = C|U (the mockup's V | divider). The per-column separators are off throughout V,
+        so this lone bar is its only divider.
+
+        The bar is a property OF THE COLUMN, not of a named list of rows: any tile whose commas
+        cells actually reach into the unchanged half U gets it — discovered from the emitted cells
+        (this runs last, after every band is laid), so it can never drift as rows come and go. That
+        sweeps in the counts tile (its bar falls between the two scalar tallies, n | u) and any
+        future consolidating row automatically; it skips a tile whose comma half holds only C and
+        no U (the superspace B_L / M_L lists, which don't consolidate) — there's nothing to divide."""
+        if not self.show_unchanged or self.commas_x is None or self.nc_shown == 0 or self.nu == 0:
+            return  # no comma half (full rank, n = 0) or no unchanged half: nothing to divide
         x = self.comma_left(self.nc_shown) - V_SPLIT_GAP / 2 - SEP_W / 2  # mid-gap, between C (+ any draft) and U
-        for rkey in ("quantities", "units", "scaling_factors", "vectors", "projection",
-                     "mapping", "tuning", "just", "retune", "prescaling", "complexity"):
+        u_left = self.comma_left(self.nc_shown)         # first sub-column of the unchanged half
+        u_right = u_left + self.nu * COL_W              # past the last; bounds the U band, clear of the next column
+        rows_with_u = set()                             # row keys with a cell sitting in the U half of the V column
+        for cell in self.cells:
+            if u_left - 0.5 <= cell.x < u_right:
+                for rkey, band in self.rows.items():
+                    if band.y <= cell.y < band.y + band.h:
+                        rows_with_u.add(rkey)
+                        break
+        for rkey in rows_with_u:
             if self.tile_open(rkey, "commas"):
                 self.cells.append(CellBox(f"vsplit:{rkey}", x, self.rows[rkey].y, SEP_W, self.rows[rkey].h, "vbar"))
 

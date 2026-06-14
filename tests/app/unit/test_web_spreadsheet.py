@@ -9216,10 +9216,20 @@ def test_projection_v_column_has_one_c_u_divider_per_tile_and_no_stray_separator
     bar = cells["vsplit:vectors"]
     assert bar.x == cells["cell:unchanged:0:0"].x - spreadsheet.V_SPLIT_GAP / 2 - spreadsheet.SEP_W / 2
     assert {"vsplit:scaling_factors", "vsplit:mapping", "vsplit:tuning"} <= set(cells)
-    assert "vsplit:counts" not in cells  # the counts tile (two scalar tallies, not a matrix) gets none
     # the mapped unrotated vector list (M·V) draws NO inter-entry separator rules (the stray-
     # separator bug is fixed); the lone C|U bar is its only divider
     assert not any(c.startswith("sep:mapped_comma:") for c in cells)
+
+
+def test_projection_v_column_divider_is_set_for_the_whole_column_including_counts():
+    # the C|U bar is a property of the COLUMN, not a hand-kept row list: EVERY consolidating tile
+    # gets it — including the counts tile, whose bar falls between its two scalar tallies n | u.
+    cells = {c.id: c for c in _with(projection=True, counts=True).cells}
+    assert "vsplit:counts" in cells                                   # the counts tile now divides too
+    assert cells["vsplit:counts"].x == cells["vsplit:vectors"].x      # same C|U gap, down the whole column
+    assert cells["vsplit:counts"].y == cells["count:commas"].y        # rides the counts row band, between n and u
+    # the nc-only superspace lists (B_L / M_L over the comma half, no U) have nothing to divide → no bar
+    assert "vsplit:ss_vectors" not in cells and "vsplit:ss_mapping" not in cells
 
 
 def test_mapped_comma_basis_has_no_stray_separators_off_projection():
