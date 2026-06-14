@@ -58,7 +58,7 @@ SHOW_HELP: dict[str, str] = {
     "tuning_ranges": "Chart each generator's tuning range as an I-beam under the generator tuning map.",
     "weighting": "Show the weighting boxes — the prescaler, the complexity 𝒄, and the weight 𝒘.",
     "all_interval": "Optimize over every interval at once (an all-interval scheme) instead of a finite target list — simplicity-weighted by construction.",
-    "alt_complexity": "Show the alternate-complexity controls — the prescaler box 𝐋 and the wider choice of interval-complexity measures.",
+    "alt_complexity": "Show the alternative-complexity controls — the prescaler box 𝐋 and the wider choice of interval-complexity measures.",
     "custom_weights": "Type your own damage weight per target interval (the editable 𝒘 row), overriding the slope's complexity/simplicity/unity weighting.",
     "projection": "Show the projection box — the rational projection 𝑃 = 𝐺𝑀 holding the just primes.",
     "tuning_colorization": "Tint each cell by what derives it — the generator tuning map 𝒈. Refines “tuning boxes”.",

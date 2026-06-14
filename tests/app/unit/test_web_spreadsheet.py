@@ -3590,8 +3590,20 @@ def test_alt_complexity_is_implemented_now_that_its_controls_are_built():
     assert "alt_complexity" in settings.IMPLEMENTED
 
 
+def test_mutually_exclusive_toggles_disable_each_other():
+    # all-interval and custom weights both DEFINE the weighting, so at most one applies; the panel
+    # greys the other while one is on (Editor's reconciler turns the loser off)
+    assert {"all_interval", "custom_weights"} in settings.MUTUALLY_EXCLUSIVE
+    assert settings.disabled_by_exclusion("custom_weights", {"all_interval": True, "custom_weights": False})
+    assert settings.disabled_by_exclusion("all_interval", {"all_interval": False, "custom_weights": True})
+    # neither on -> neither greyed by exclusion
+    assert not settings.disabled_by_exclusion("custom_weights", {"all_interval": False, "custom_weights": False})
+    # a key in no exclusive group is never greyed by exclusion
+    assert not settings.disabled_by_exclusion("weighting", {"all_interval": True})
+
+
 def test_weighting_subcontrols_are_registered_under_weighting():
-    # all-interval (the all-interval mode), alt. complexity (controls in boxes 𝐋 and 𝒄) and
+    # all-interval (the all-interval mode), alternative complexity (controls in boxes 𝐋 and 𝒄) and
     # custom weights (the editable 𝒘 row) are the three sub-controls of weighting, so the panel
     # indents them and shows them only while weighting is on
     keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}

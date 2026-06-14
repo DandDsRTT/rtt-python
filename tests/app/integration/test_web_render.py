@@ -398,7 +398,7 @@ async def test_off_diagonal_pretransformer_edit_keeps_the_all_interval_weight_a_
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()       # show the weight row
     user.find(kind=ui.checkbox, content="all-interval").click()    # reveal the all-interval control
-    user.find(kind=ui.checkbox, content="alt. complexity").click()  # make the whole square editable
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # make the whole square editable
     await user.should_see(marker="cell:prescaling:primes:1:0")     # the editable off-diagonal cell
     await user.should_see(marker="weight:target:0")                # before: the per-target weight LIST
     _cell_child(user, "cell:prescaling:primes:1:0").set_value("0.3")  # type an off-diagonal entry → 𝑋 non-diagonal
@@ -878,7 +878,7 @@ async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(
     _toggle(user, "presets")  # show the chooser dropdowns
     user.find(kind=ui.checkbox, content="optimization").click()    # reveal weighting (nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()       # reveal the nested entries
-    user.find(kind=ui.checkbox, content="alt. complexity").click()  # ≥2 all-interval schemes -> stays a dropdown
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # ≥2 all-interval schemes -> stays a dropdown
     assert _cell_child(user, "preset:tuning").options["minimax-S"] == "T minimax-S"  # target-based default
     user.find(kind=ui.checkbox, content="all-interval").click()    # the toggle IS all-interval mode now
     await user.should_see(marker="preset:tuning")
@@ -952,7 +952,7 @@ async def test_scrolling_the_optimization_power_steps_a_finite_power_and_leaves_
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()
     user.find(kind=ui.checkbox, content="weighting").click()
-    user.find(kind=ui.checkbox, content="alt. complexity").click()
+    user.find(kind=ui.checkbox, content="alternative complexity").click()
     await user.should_see(marker="optimization:power")
     assert _cell_child(user, "optimization:power").value == "∞"
     user.find(marker="optimization:power").trigger("wheel", {"deltaY": -100})  # scroll up on ∞
@@ -1345,7 +1345,7 @@ async def test_a_finite_power_fills_the_cell_when_re_synced_from_infinity(user: 
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()
     user.find(kind=ui.checkbox, content="weighting").click()
-    user.find(kind=ui.checkbox, content="alt. complexity").click()
+    user.find(kind=ui.checkbox, content="alternative complexity").click()
     main, sub = _stacked_face(user, "optimization:power")
     assert (main.text, sub.text) == ("∞", "(max)")
     assert "rtt-stacked-solo" not in main._classes        # ∞ keeps its stacked "(max)" annotation
@@ -1433,7 +1433,7 @@ async def test_tuning_chooser_shows_the_prompt_as_a_placeholder_when_off_list(us
     _toggle(user, "presets")
     user.find(kind=ui.checkbox, content="optimization").click()
     user.find(kind=ui.checkbox, content="weighting").click()
-    user.find(kind=ui.checkbox, content="alt. complexity").click()  # 𝑝 editable (else read-only)
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # 𝑝 editable (else read-only)
     assert "display-value" not in _cell_child(user, "preset:tuning")._props
     _cell_child(user, "optimization:power").set_value("2")  # minimax (∞) -> a miniRMS spec (no name)
     await user.should_see(marker="preset:tuning")
@@ -1597,7 +1597,7 @@ async def test_alt_complexity_enables_and_widens_the_complexity_chooser(user: Us
     await user.should_see(marker="control:complexity")
     assert not _cell_child(user, "control:complexity").enabled  # one option -> disabled
     assert list(_cell_child(user, "control:complexity").options) == ["lp (log-product)"]
-    user.find(kind=ui.checkbox, content="alt. complexity").click()      # open the full measure list
+    user.find(kind=ui.checkbox, content="alternative complexity").click()      # open the full measure list
     await user.should_see(marker="control:complexity")
     widened = _cell_child(user, "control:complexity")
     assert widened.enabled                                              # now a live choice
@@ -1615,7 +1615,7 @@ async def test_typing_the_q_field_drives_the_complexity_norm(user: User) -> None
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()        # reveal the nested all-interval + alt entries
     user.find(kind=ui.checkbox, content="all-interval").click()     # show the target-controls checkbox
-    user.find(kind=ui.checkbox, content="alt. complexity").click()  # make q an editable powerinput
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # make q an editable powerinput
     await user.should_see(marker="control:dual")
     assert _cell_child(user, "control:q").value == "1"              # taxicab default
     assert _cell_child(user, "control:dual").default_slot.children[0].text == "∞"  # dual of taxicab (q=1), read-only face
@@ -1638,7 +1638,7 @@ async def test_q_norm_power_is_read_only_until_alt_complexity(user: User) -> Non
     await user.should_see(marker="control:q")
     assert "rtt-cell-input" not in _wrap_classes(user, "control:q")  # alt. complexity OFF -> read-only, no input
     assert _cell_child(user, "control:q").default_slot.children[0].text == "1"  # the read-only face shows q=1
-    user.find(kind=ui.checkbox, content="alt. complexity").click()  # turn it on -> q becomes editable
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # turn it on -> q becomes editable
     await user.should_see(marker="control:q")
     assert "rtt-cell-input" in _wrap_classes(user, "control:q")      # now an editable powerinput
     assert _cell_child(user, "control:q").value == "1"              # the input mirrors the same value
@@ -1699,6 +1699,26 @@ async def test_custom_weights_toggle_makes_the_weight_row_editable_and_retunes(u
     assert _cell_child(user, "weight:target:0").value == service.cents(3.0)  # the override stuck (re-formatted)
 
 
+async def test_all_interval_and_custom_weights_disable_each_other_in_the_panel(user: User) -> None:
+    # the two are mutually exclusive (both DEFINE the weighting), so turning one on greys the other's
+    # panel checkbox (and the editor turns the loser off). Symmetric.
+    def box(key):
+        return next(iter(user.find(marker=f"showbox:{key}").elements))
+    await user.open("/")
+    slider = next(iter(user.find(marker="chapterslider").elements))
+    slider.set_value(show_settings.CHAPTER_STAR)                  # reveal both (all-interval ch7, custom ★)
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (nested under it)
+    user.find(kind=ui.checkbox, content="weighting").click()     # reveal the all-interval + custom-weights entries
+    assert "disable" not in box("custom_weights")._props         # both free initially
+    assert "disable" not in box("all_interval")._props
+    user.find(kind=ui.checkbox, content="all-interval").click()  # enter all-interval mode
+    assert "disable" in box("custom_weights")._props             # ...greys custom weights
+    user.find(kind=ui.checkbox, content="all-interval").click()  # back off
+    assert "disable" not in box("custom_weights")._props         # ...re-enables it
+    user.find(kind=ui.checkbox, content="custom weights").click()  # enter custom-weight mode
+    assert "disable" in box("all_interval")._props               # ...greys all-interval (symmetric)
+
+
 async def test_all_interval_greys_and_locks_the_weight_slope_chooser(user: User) -> None:
     # in all-interval mode the weight is simplicity by construction, so the box-𝒘 slope chooser
     # is not a free choice: rather than vanish (reflowing the tile), it stays rendered but greys
@@ -1751,7 +1771,7 @@ async def test_minimax_power_stacks_a_max_annotation_below_infinity(user: User) 
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()
     user.find(kind=ui.checkbox, content="weighting").click()
-    user.find(kind=ui.checkbox, content="alt. complexity").click()
+    user.find(kind=ui.checkbox, content="alternative complexity").click()
     main, sub = _stacked_face(user, "optimization:power")
     assert (main.text, sub.text) == ("∞", "(max)")
     # a finite power (miniRMS, p = 2) shows bare — no annotation, like a plain numeric value
@@ -1768,7 +1788,7 @@ async def test_all_interval_renders_the_locked_power_as_a_read_only_value(user: 
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()     # reveal the power cell
     user.find(kind=ui.checkbox, content="weighting").click()        # reveal the all-interval + alt entries
-    user.find(kind=ui.checkbox, content="alt. complexity").click()  # 𝑝 editable while target-based
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # 𝑝 editable while target-based
     assert "rtt-cell-input" in _wrap_classes(user, "optimization:power")  # editable input while target-based
     edit_main, edit_sub = _stacked_face(user, "optimization:power")       # editable face: ∞ over (max)
     assert (edit_main.text, edit_sub.text) == ("∞", "(max)")
@@ -3033,7 +3053,7 @@ async def test_hovering_a_prescaler_option_previews_reselecting(user: User) -> N
     _toggle(user, "presets")
     _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")
-    _toggle(user, "alt. complexity")                           # >1 prescaler option
+    _toggle(user, "alternative complexity")                           # >1 prescaler option
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # make the prescaler reach the weights
     await user.should_see(marker="preset:prescaler")
     wrap = set(user.find(marker="preset:prescaler").elements)
@@ -3053,7 +3073,7 @@ async def test_hovering_a_complexity_option_previews_reselecting(user: User) -> 
     _toggle(user, "presets")
     _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")
-    _toggle(user, "alt. complexity")
+    _toggle(user, "alternative complexity")
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # make the complexity reach the weights
     await user.should_see(marker="control:complexity")
     wrap = set(user.find(marker="control:complexity").elements)
@@ -3295,7 +3315,7 @@ async def test_hovering_the_replace_diminuator_checkbox_previews_its_reweighting
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()       # reveal the weighting region (slope chooser)
-    user.find(kind=ui.checkbox, content="alt. complexity").click()  # ...and the size-factor checkbox
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # ...and the size-factor checkbox
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # complexity now drives the weights
     await user.should_see(marker="control:diminuator")
     btn = set(user.find(marker="control:diminuator").elements)
@@ -3703,7 +3723,7 @@ async def test_a_zero_prescaler_diagonal_entry_is_rejected_not_committed(user: U
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
     user.find(kind=ui.checkbox, content="all-interval").click()
-    user.find(kind=ui.checkbox, content="alt. complexity").click()    # make the prescaler square editable
+    user.find(kind=ui.checkbox, content="alternative complexity").click()    # make the prescaler square editable
     await user.should_see(marker="cell:prescaling:primes:0:0")        # an editable DIAGONAL (i==j) entry
     before = _cell_child(user, "cell:prescaling:primes:0:0").value
     _cell_child(user, "cell:prescaling:primes:0:0").set_value("0")    # -> on_prescaler_change rejects it

@@ -2469,7 +2469,8 @@ def index() -> None:
         # can't toggle or count an unrevealed control. Recomputed on every render and slider move.
         for key, box in boxes.items():
             disabled = key not in show_settings.IMPLEMENTED \
-                or show_settings.reveal_chapter(key) > chapter[0]
+                or show_settings.reveal_chapter(key) > chapter[0] \
+                or show_settings.disabled_by_exclusion(key, editor.settings)  # a mutually-exclusive sibling is on
             box.props("disable") if disabled else box.props(remove="disable")
         states = [editor.settings[k] for k in _available_keys()]
         # This is a programmatic sync of the master checkbox to the document, NOT a user click —
