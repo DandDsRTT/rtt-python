@@ -1683,13 +1683,18 @@ def test_presets_off_shows_no_chooser_dropdowns():
 
 
 def test_presets_on_adds_the_three_chooser_dropdowns_under_their_tiles():
-    cells = {c.id: c for c in _with(presets=True).cells}
+    lay = _with(presets=True)
+    cells = {c.id: c for c in lay.cells}
+    blocks = {b.id: b for b in lay.blocks}
     assert {"preset:temperament", "preset:tuning", "preset:target"} <= set(cells)
     inset = spreadsheet.BOX_INNER  # the dropdown sits one inner-pad inside its tile-spanning box
-    # the temperament chooser sits under the mapping matrix, in its column (the ET picker now rides
-    # a RIGHT-only gutter past the ], so the column's left edge — and the header — are unaffected)
+    # the temperament chooser sits under the mapping matrix, one inner pad into its tile-spanning box
+    # (which spans the primes column — NOT keyed off the header, which now centres over the matrix
+    # once the ET-picker right gutter is balanced by an equal left pad)
     temp, matrix = cells["preset:temperament"], cells["cell:mapping:0:0"]
-    assert temp.y > matrix.y and temp.x == cells["header:primes"].x + inset
+    box = blocks["block:preset:temperament"]
+    assert temp.y > matrix.y and temp.x == box.x + inset
+    assert box.x <= matrix.x and matrix.x + matrix.w <= box.x + box.w  # the box spans the matrix's column
     # the target chooser sits under the target interval list, in its column
     assert cells["preset:target"].x == cells["header:targets"].x + inset
 
@@ -2980,7 +2985,9 @@ def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile():
     # not on alt_complexity. It rides under the prescaling matrix tile (box 𝐋), which
     # exists only while weighting is on; the temperament tiles own the primes column it sits in.
     off = {c.id for c in _with("TILT minimax-S", weighting=True, presets=False).cells}  # non-unity slope reveals the prescaling tile
-    on = {c.id: c for c in _with("TILT minimax-S", weighting=True, presets=True).cells}
+    lay = _with("TILT minimax-S", weighting=True, presets=True)
+    on = {c.id: c for c in lay.cells}
+    blocks = {b.id: b for b in lay.blocks}
     assert "preset:prescaler" not in off  # no chooser unless presets is on
     sel = on["preset:prescaler"]
     # with alt. complexity off there is only one prescaler (log-prime), so the chooser has no real
@@ -2988,10 +2995,14 @@ def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile():
     assert sel.kind == "preset"
     assert sel.disabled is True
     assert sel.text == "log-prime"  # the default scheme's prescaler
-    # it rides below the prescaling matrix, seated one inner pad into the primes column (like the
-    # other presets, the dropdown sits inside a tile-spanning box at BOX_INNER off the edge)
-    assert sel.y > on["cell:prescaling:primes:2:2"].y
-    assert sel.x == on["header:primes"].x + spreadsheet.BOX_INNER  # one inner pad into the primes column
+    # it rides below the prescaling matrix, one inner pad into its tile-spanning box, which spans the
+    # primes column (NOT keyed off the header — that now centres over the matrix once the ET-picker
+    # right gutter is balanced by an equal left pad)
+    pre = on["cell:prescaling:primes:2:2"]
+    box = blocks["block:preset:prescaler"]
+    assert sel.y > pre.y
+    assert sel.x == box.x + spreadsheet.BOX_INNER  # one inner pad into the box
+    assert box.x <= pre.x and pre.x + pre.w <= box.x + box.w  # the box spans the prescaler's column
     # gone without the prescaling tile (weighting off) or its column (temperament tiles off)
     assert "preset:prescaler" not in {c.id for c in _with(weighting=False, presets=True).cells}
     assert "preset:prescaler" not in {
@@ -9509,6 +9520,29 @@ def test_etpick_rides_the_right_gutter_of_each_mapping_row():
     # gone without presets
     off = {c.id: c for c in _with(presets=False).cells}
     assert not any(k.startswith("etpick:") for k in off)
+
+
+def test_et_picker_keeps_the_mapping_matrix_centred_in_its_tile():
+    # the per-row ET pickers ride the primes column's RIGHT gutter (past the ]). That gutter REUSES
+    # the empty space that already balanced the left furniture (drag handles + 𝒎ᵢ row labels): the
+    # left is padded only enough to keep the two gutters EQUAL, so the matrix stays horizontally
+    # centred in its tile rather than being shoved left with a dead band on the right (the bug this
+    # guards). Exercised in the user's config — handles + row headers + pickers all on.
+    lay = _with(presets=True, drag_to_combine=True, header_symbols=True)
+    cells = {c.id: c for c in lay.cells}
+    tile = {b.id: b for b in lay.blocks}["block:primes"]  # the mapping·primes grey panel (spans the column)
+    lb, rb = cells["bracket:map:0:l"], cells["bracket:map:0:r"]
+    m_left, m_right = lb.x, rb.x + rb.w                   # the EBK matrix span (⟨ … ])
+    assert abs((m_left - tile.x) - ((tile.x + tile.w) - m_right)) < 0.51  # equal gutters → centred
+    # the picker fills that right gutter, past the ], reaching the tile edge — no dead band beyond it
+    ep = cells["etpick:0"]
+    assert ep.x >= m_right
+    assert abs((ep.x + ep.w) - (tile.x + tile.w - spreadsheet.PAD)) < 0.51
+    # the left furniture sits in the matching left gutter: the handle outside the row label, the
+    # label butting up against the matrix's opening ⟨
+    handle, label = cells["map_drag:0"], cells["matlabel:row:mapping:primes:0"]
+    assert tile.x <= handle.x and handle.x + handle.w <= label.x
+    assert abs((label.x + label.w) - m_left) < 0.51
 
 
 def test_commapick_rides_below_each_real_comma_column():

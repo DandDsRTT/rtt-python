@@ -1721,10 +1721,12 @@ class _GridBuilder:
         # the matlabel gutter) so the matrix stays centred in its tile.
         self.row_handle_w = (ROW_HANDLE_W + ROW_HANDLE_GAP) if (
             self.settings.get("drag_to_combine") and show_temp and self.r > 1) else 0
-        # the per-mapping-row ET pickers ride a gutter at the very LEFT of the primes column —
-        # outside the drag-handle and row-label gutters — one compact chooser per row. Reserved
-        # whenever the preset choosers show and the mapping renders; balanced by an equal empty
-        # right gutter (like the matlabel / handle gutters) so the matrix stays centred in its tile.
+        # the per-mapping-row ET pickers ride the primes column's RIGHT gutter, past each row's ]
+        # (one compact chooser per row — see the etpick emission). Reserved whenever the preset
+        # choosers show and the mapping renders. This right gutter REUSES the empty space that
+        # already balanced the left furniture (handles + 𝒎ᵢ labels); the left is padded out only if
+        # the picker is wider than that furniture (etpick_left_pad), so the two gutters stay equal
+        # and the matrix stays centred — the pickers take the balancing space, they don't add to it.
         self.etpick_w = (ETPICK_W + ETPICK_GAP) if (self.show_presets and show_temp) else 0
         # The complexity size factor (the box-𝐋 "replace diminuator" trait, lp→lils): a nonzero
         # factor makes the complexity pretransformer 𝑋 rectangular — the guide's 𝑋 = 𝑍𝐿, the
@@ -1756,7 +1758,7 @@ class _GridBuilder:
             # standard EBK-gutter footprint like the gens/primes columns they parallel
             ("ssgens", 2 * BRACKET_W + self.rL * COL_W, self.show_superspace, True),
             ("ssprimes", 2 * BRACKET_W + self.dL * COL_W + 2 * self.matlabel_ssprimes_w, self.show_superspace, True),
-            ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w + self.etpick_w, show_temp, True),
+            ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.outer_gutter_w("primes"), show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", self._commas_band_w(self.nc_shown), show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
@@ -2554,12 +2556,23 @@ class _GridBuilder:
         left one carries the per-row handles; the right one balances them, like the matlabel gutter."""
         return self.row_handle_w if group_key == "primes" else 0
 
+    def etpick_left_pad(self, group_key: str):
+        """Empty LEFT padding that balances the per-row ET-picker gutter. The pickers ride the
+        primes column's RIGHT gutter, past the ] (a compact chooser per mapping row, ETPICK_W
+        wide). That gutter must be at least etpick_w; the left furniture (handles + 𝒎ᵢ labels) is
+        usually narrower, so we pad the LEFT out to match — the matrix then stays centred with the
+        labels/handles hugging the ⟨ and the pickers hugging the ]. Zero unless the picker gutter
+        exceeds the furniture (and only on the primes column, the only one carrying pickers)."""
+        if group_key != "primes" or not self.etpick_w:
+            return 0
+        return max(0, self.etpick_w - self.handle_gutter_w(group_key) - self.matlabel_gutter_w(group_key))
+
     def outer_gutter_w(self, group_key: str):
-        """the full left/right reservation outside the cells: the handle gutter then the row-label
-        gutter. Used wherever the cells' true left edge matters (prime_left, the EBK span, the header).
-        The ET-picker gutter is NOT here — it rides a RIGHT-only reservation past the ] (see
-        :meth:`matrix_span` / the etpick emission), so the matrix and its left furniture stay put."""
-        return self.handle_gutter_w(group_key) + self.matlabel_gutter_w(group_key)
+        """the full left/right reservation outside the cells, EQUAL on both sides so the matrix
+        stays centred: the handle gutter, then the row-label gutter, plus (on the primes column,
+        when the ET pickers show) the pad that balances their right gutter against this furniture.
+        Used wherever the cells' true left edge matters (prime_left, the EBK span, the header)."""
+        return self.etpick_left_pad(group_key) + self.handle_gutter_w(group_key) + self.matlabel_gutter_w(group_key)
 
     def matrix_span(self, group_key: str):
         """The (x, width) of a group's CELL matrix — its content_box minus the outer gutters, which
@@ -2571,11 +2584,10 @@ class _GridBuilder:
         x, w = self.content_box(group_key)
         mx = self.outer_gutter_w(group_key)
         x, w = x + mx, w - 2 * mx
-        # the primes column reserves a RIGHT-only ET-picker gutter past the ] (content_w carries it on
-        # the right only, NOT mirrored), so the EBK matrix hugs the cells — drop it from the span's
-        # right edge (left edge unchanged). The per-row ET pickers ride that reclaimed right gutter.
-        if group_key == "primes" and self.etpick_w:
-            w -= self.etpick_w
+        # outer_gutter_w is now equal on both sides (the primes column pads its left to match the
+        # ET-picker right gutter — see etpick_left_pad), so dropping it from both edges already hugs
+        # the EBK to the cells: the labels/handles sit in the left gutter, the per-row ET pickers in
+        # the right one, and the matrix stays centred between them.
         # the consolidated V column reserves a comma-half stub on the LEFT (empty_comma_w, for the
         # nullity count/caption) when there are no comma columns; the EBK matrix hugs U, so the
         # bracket starts past that stub — drop it from the span's left edge (right edge unchanged).
@@ -3189,10 +3201,10 @@ class _GridBuilder:
         # column footprint — the gutters only frame the row labels, never the title.
         for key in self.col_x:
             hx = self.col_x[key] + self.outer_gutter_w(key)
-            # the header centres over the CELLS, so drop the primes column's right-only ET-picker
-            # gutter (col_w carries it past the ]) along with the symmetric handle/label gutters
-            etpick = self.etpick_w if key == "primes" else 0
-            hw = self.col_w[key] - 2 * self.outer_gutter_w(key) - etpick
+            # the header centres over the CELLS — drop the (now symmetric) outer gutters from both
+            # edges; on the primes column those already include the ET-picker balance, so the title
+            # stays centred over the matrix, not the wider footprint
+            hw = self.col_w[key] - 2 * self.outer_gutter_w(key)
             self.cells.append(CellBox(f"header:{key}", hx, self.header_y, hw, HEADER_H, "colheader", text=self.col_header[key]))
             if self.col_collapsible[key]:
                 glyph = _fold_glyph(f"col:{key}" in self.collapsed)
@@ -3596,7 +3608,7 @@ class _GridBuilder:
             # handles a sibling concern adds ride the branch points up top — deliberately separate.)
             if self.settings.get("drag_to_combine") and self.r > 1 and self.tile_open("mapping", "primes"):
                 for i in range(self.r):
-                    self.cells.append(CellBox(f"map_drag:{self.col_token('gens', i)}", self.primes_x, self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
+                    self.cells.append(CellBox(f"map_drag:{self.col_token('gens', i)}", self.primes_x + self.etpick_left_pad("primes"), self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
             mx, mw = self.matrix_span("primes")
             etpick_x = mx + mw + ETPICK_GAP  # past the ] (the right gutter matrix_span reclaimed)
             for i in range(self.r):
@@ -5011,10 +5023,11 @@ class _GridBuilder:
                     text = "𝒛" if size_row else f"{g}{_sub(i + 1)}"
                     self.cells.append(CellBox(
                         f"matlabel:row:{rkey}:{ckey}:{i}",
-                        # past the drag-handle gutter (when present), so the handle sits to its left;
-                        # the box fills the column's row-label gutter (wider in the superspace primes
-                        # column, for M_s→L's 𝒎ₛ→ₗᵢ) so a wide label never overflows the ⟨ bracket
-                        self.content_x[ckey] + self.handle_gutter_w(ckey), top(i),
+                        # past the etpick balance pad + the drag-handle gutter (when present), so the
+                        # handle sits to its left and the label still hugs the ⟨; the box fills the
+                        # column's row-label gutter (wider in the superspace primes column, for
+                        # M_s→L's 𝒎ₛ→ₗᵢ) so a wide label never overflows the ⟨ bracket
+                        self.content_x[ckey] + self.etpick_left_pad(ckey) + self.handle_gutter_w(ckey), top(i),
                         self.matlabel_gutter_w(ckey), ROW_H,
                         "matlabel", text=text,
                     ))
