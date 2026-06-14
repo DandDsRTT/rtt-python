@@ -2159,14 +2159,21 @@ class _Reconciler:
             self.selects[cb.id] = sel
 
     def _chooser_reflow_hold(self, cid: str) -> bool:
-        # True while a generic chooser hover's REFLOW preview is re-rendering the grid for exactly
-        # this chooser: its q-select value + open popup must stay steady across that re-render
-        # (re-setting a q-select's value / options would disrupt or close its open popup), so the
-        # cell's update is skipped while it holds. Keyed on the gesture's source (the hovered
-        # chooser's cell id) — the generic-chooser analogue of the temperament guard below, which is
-        # keyed on the temp gesture's kind+reflowed because it owns the (only) temperament chooser.
+        # True while a generic chooser hover's REFLOW preview is re-rendering the grid for THIS
+        # chooser: the hovered chooser's q-select value + open popup must stay steady across that
+        # re-render (re-setting a q-select's value / options would disrupt or close its open popup),
+        # so the cell's update is skipped while it holds. Held by chooser GROUP, not exact id: a
+        # preset and its copy (preset:tuning ⟷ preset:tuning:gens, preset:projection ⟷
+        # preset:projection:gens — one selection shown in two tiles) must move together, else the
+        # non-hovered twin would flip to the hypothetical value while the hovered one stays put, so
+        # the two faces would disagree mid-preview. The group is the cid's first two ":"-segments
+        # (the copy adds a 3rd), so the base + every copy share it. The generic-chooser analogue of
+        # the temperament guard below, which groups its own copies via the "preset:temperament" prefix.
         g = self.gesture
-        return g is not None and g.kind == "chooser" and g.reflowed and g.source == cid
+        if g is None or g.kind != "chooser" or not g.reflowed or g.source is None:
+            return False
+        group = lambda c: ":".join(c.split(":")[:2])
+        return group(cid) == group(g.source)
 
     def _update_preset(self, cb: spreadsheet.CellBox) -> None:
         # mirror the live selection: the temperament chooser shows the matched preset (or its
