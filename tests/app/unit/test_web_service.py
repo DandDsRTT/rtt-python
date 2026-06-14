@@ -934,6 +934,41 @@ def test_tuning_uses_the_prescaler_override():
     assert overridden.generator_map == pytest.approx(sopfr.generator_map, abs=1e-6)
 
 
+def test_interval_weights_return_the_weights_override_verbatim():
+    import pytest
+
+    # the manual weights override is the SAME the solve uses, so the displayed weight row IS it
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    targets = ("3/2", "5/4", "5/3")
+    got = service.interval_weights(mapping, "minimax-C", targets, weights_override=(1.0, 2.0, 5.0))
+    assert got == pytest.approx((1.0, 2.0, 5.0))
+
+
+def test_tuning_uses_the_weights_override_and_the_cache_distinguishes_it():
+    import pytest
+
+    # two DIFFERENT overrides must give two DIFFERENT tunings — guards the lru_cache key (a
+    # missing weights_override in the key would return the first solve for the second override)
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    scheme, targets = "TILT minimax-C", ("3/2", "5/4", "5/3")
+    a = service.tuning(mapping, scheme, targets=targets, weights_override=(1.0, 1.0, 1.0))
+    b = service.tuning(mapping, scheme, targets=targets, weights_override=(1.0, 50.0, 50.0))
+    assert a.generator_map != pytest.approx(b.generator_map, abs=1e-3)
+    # and an all-ones override over a complexity scheme matches the unity-weighted scheme
+    unity = service.tuning(mapping, "TILT minimax-U", targets=targets)
+    assert a.generator_map == pytest.approx(unity.generator_map, abs=1e-3)
+
+
+def test_all_interval_tuning_ignores_the_weights_override():
+    import pytest
+
+    # an all-interval scheme has no per-target weights, so the override must not change it
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    plain = service.tuning(mapping, "minimax-S")
+    overridden = service.tuning(mapping, "minimax-S", weights_override=(9.0, 0.1, 7.0))
+    assert overridden.generator_map == pytest.approx(plain.generator_map, abs=1e-3)
+
+
 def test_all_interval_solver_handles_a_non_diagonal_pretransformer():
     import numpy as np
     import pytest

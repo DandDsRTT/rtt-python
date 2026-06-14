@@ -432,6 +432,7 @@ def tuning(
     held=(),
     prescaler_override=None,
     targets=None,
+    weights_override=None,
 ) -> Tuning:
     """The temperament's maps and generator ranges (cents) under ``scheme`` — no
     interval set. Over a nonstandard ``domain_basis`` the maps run over its (possibly
@@ -449,18 +450,23 @@ def tuning(
     changing the target list retunes. An all-interval scheme keeps its empty set (every
     interval, by duality) and ignores the list.
 
+    ``weights_override`` (a per-target sequence) is the user's manual damage weights — one
+    per displayed target — which bypass the scheme's slope-derived weights and drive the
+    optimum directly. Target-mode only (an all-interval scheme ignores it). It joins the
+    memo key so a weight edit re-solves rather than returning a stale cached tuning.
+
     Memoized on the (frozen) arguments: the optimization is a pure function of them, and
     one page render asks for the same tuning several times (the grid build plus the
     editor's displayed-scheme / unchanged-interval reads) — as does every render after,
     until the document actually moves. The solves run once per distinct document state."""
     return _cached_tuning(_to_matrix(mapping), scheme, _hashable(domain_basis),
                           nonprime_approach, tuple(held), _hashable(prescaler_override),
-                          _hashable(targets))
+                          _hashable(targets), _hashable(weights_override))
 
 
 @lru_cache(maxsize=256)
 def _cached_tuning(mapping, scheme, domain_basis, nonprime_approach, held,
-                   prescaler_override, targets) -> Tuning:
+                   prescaler_override, targets, weights_override) -> Tuning:
     t = Temperament(mapping, Variance.ROW, domain_basis)
     spec = resolve_tuning_scheme(scheme)
     if targets is not None and (spec.target_intervals or "").strip() not in ("{}", ""):
@@ -483,7 +489,9 @@ def _cached_tuning(mapping, scheme, domain_basis, nonprime_approach, held,
         spec = replace(spec, held_intervals="{" + ", ".join(parts) + "}")
     # one solve serves both maps: the tuning map IS the generators applied to the mapping
     # (optimize_tuning_map re-runs the identical optimization just to take that product)
-    gmap = optimize_generator_tuning_map(t, spec, prescaler_override=prescaler_override)
+    gmap = optimize_generator_tuning_map(
+        t, spec, prescaler_override=prescaler_override, weights_override=weights_override
+    )
     tempered = tuple(float(x) for x in tuning_map_from_generators(t, gmap))
     just = get_just_tuning_map(t)
     return Tuning(
@@ -575,7 +583,7 @@ def interval_complexities(
 
 def interval_weights(
     mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=(), prescaler_override=None,
-    domain_basis=None,
+    domain_basis=None, weights_override=None,
 ) -> tuple[float, ...]:
     """Each interval's damage weight under ``scheme``: 1 (unity weight), its complexity,
     or 1/complexity, picked by the scheme's damage-weight slope.
@@ -583,10 +591,17 @@ def interval_weights(
     ``prescaler_override`` (a d-tuple) flows into each per-target complexity via
     :func:`damage_weights`, so a hand-edited diagonal reaches the weights row. Over a
     nonstandard ``domain_basis`` each ratio is expressed in that basis, like the complexity
-    row, so a nonprime target's weight derives from its full domain-basis vector."""
+    row, so a nonprime target's weight derives from its full domain-basis vector.
+
+    ``weights_override`` (the user's manual per-target weights) is returned verbatim when it
+    matches the target count — the SAME override that drives the solve (:func:`tuning`), so
+    the displayed weight row provably equals the weights the optimizer used."""
     t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios, domain_basis)
     return tuple(
-        float(w) for w in damage_weights(vectors, t, spec, prescaler_override=prescaler_override)
+        float(w) for w in damage_weights(
+            vectors, t, spec, prescaler_override=prescaler_override,
+            weights_override=weights_override,
+        )
     )
 
 
