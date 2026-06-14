@@ -1297,24 +1297,39 @@ class Editor:
         self.custom_weights = None
         self.settings["custom_weights"] = False
 
-    def _sync_mode_toggles(self) -> None:
-        """Reconcile each toggle-fused mode to its (just-mutated) Show flag, so flipping the panel
-        toggle — directly, or via a cascade / select-all / chapter prune — enters or exits the
-        matching mode in the SAME action. all-interval and custom weights are Show toggles that ARE
-        their mode (no separate in-grid control); this is the one place that keeps flag and mode in
-        step. Idempotent: each branch fires only on a genuine mismatch and leaves them consistent."""
-        if self.settings["all_interval"] != service.is_all_interval(self.tuning_scheme):
-            self._apply_all_interval(self.settings["all_interval"])
-        if self.settings["custom_weights"] != (self.custom_weights is not None):
-            self._apply_custom_weights(self.settings["custom_weights"])
+    def _mode_toggles(self):
+        """The Show toggles that ARE a tuning mode (no separate in-grid control): each as
+        ``(key, is-on probe, apply(on))``. all-interval and custom weights are mutually exclusive
+        (all-interval has no per-target weights), so at most one is ever on."""
+        return (
+            ("all_interval", lambda: service.is_all_interval(self.tuning_scheme), self._apply_all_interval),
+            ("custom_weights", lambda: self.custom_weights is not None, self._apply_custom_weights),
+        )
+
+    def _reconcile_mode_toggles(self, direct_key: str | None = None) -> None:
+        """Keep each mode-fused toggle's flag and its tuning mode in step after a Show change.
+
+        A DIRECT toggle of a mode key (``direct_key``) enters OR exits that mode to match its new
+        flag — this is the only way to ENTER a mode (you can't bulk "show all" into a specific,
+        mutually-exclusive mode). Any other path only EXITS a mode whose flag was just turned off
+        (a cascade hiding its region, select-none, the chapter prune) so a hidden region never
+        strands its mode. Finally every mode flag is re-derived from the actual mode, so a flag the
+        bulk op set that didn't take (e.g. select-all's True on a mode it can't enter) snaps back."""
+        for key, is_on, apply in self._mode_toggles():
+            if key == direct_key:
+                if is_on() != self.settings[key]:
+                    apply(self.settings[key])           # direct toggle: enter or exit
+            elif is_on() and not self.settings[key]:
+                apply(False)                            # flag turned off elsewhere: exit, don't strand
+        for key, is_on, _apply in self._mode_toggles():
+            self.settings[key] = is_on()                # flags mirror the final mode
 
     def _sync_mode_toggle_flags(self) -> None:
-        """Make each toggle-fused Show flag reflect the underlying state — the inverse of
-        :meth:`_sync_mode_toggles`. Used on load, where the scheme and the manual-weight field are
-        authoritative and the saved flag may be stale (or pinned to default by ``from_persisted``
-        for a not-yet-implemented toggle); this keeps flag == mode WITHOUT re-driving the mode."""
-        self.settings["all_interval"] = service.is_all_interval(self.tuning_scheme)
-        self.settings["custom_weights"] = self.custom_weights is not None
+        """Make each mode-fused Show flag reflect the underlying state, WITHOUT driving the mode.
+        Used on load, where the scheme and the manual-weight field are authoritative and the saved
+        flag may be stale (or pinned to default by ``from_persisted`` for a greyed toggle)."""
+        for key, is_on, _apply in self._mode_toggles():
+            self.settings[key] = is_on()
 
     def set_target_spec(self, spec: str) -> None:
         """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
@@ -1531,7 +1546,7 @@ class Editor:
                 self.settings[child] = False
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
-        self._sync_mode_toggles()  # all-interval / custom weights ARE their Show toggles: drive the mode
+        self._reconcile_mode_toggles(direct_key=key)  # a direct mode toggle enters/exits its mode
 
     def set_all_show(self, value: bool, keys=None) -> None:
         """The settings panel's select-all/none: turn the given Show toggles on (``True``) or off
@@ -1550,7 +1565,8 @@ class Editor:
             self._standardize_domain_in_place()
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
-        self._sync_mode_toggles()  # select-all/none also drives the all-interval / custom-weights modes
+        # a bulk select-all/none can't ENTER a mutually-exclusive mode; it only exits one it hid
+        self._reconcile_mode_toggles()
 
     def disable_hidden_settings(self, chapter: int) -> None:
         """Turn OFF every Show toggle the guide-chapter slider has hidden (its reveal chapter is past
@@ -1568,7 +1584,7 @@ class Editor:
             self._reset_to_basic_tuning()
         # the prune only turns settings OFF, so this only ever EXITS the fused modes (sliding below
         # ch7 leaves all-interval; below the ★ notch leaves custom weights) — never enters one
-        self._sync_mode_toggles()
+        self._reconcile_mode_toggles()
 
     def toggle_collapsed(self, item: str) -> None:
         """Fold or unfold one row, column, or tile (``"row:tuning"``, ``"col:targets"``,

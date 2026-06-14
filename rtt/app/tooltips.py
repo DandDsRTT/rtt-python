@@ -129,6 +129,7 @@ _KIND_HELP: dict[str, str] = {
     "heldcell": "Held interval entry — this prime's exponent in an interval held unchanged (pure) by the tuning. Type to edit, or scroll the wheel to step it by 1.",
     "targetcell": "Target interval entry — this prime's exponent in a target the tuning optimizes over. Type to override the chosen target set, or scroll the wheel to step it by 1.",
     "prescalercell": "Prescaler entry — the weight on this prime applied before optimizing. Type to override the scheme's value, or scroll the wheel to nudge it by 0.001.",
+    "weightcell": "Damage weight — this target interval's weight in the optimization. Type your own to override the slope's complexity/simplicity/unity weighting.",
     "gentuningcell": "Generator tuning — this generator's tuned size in cents. Type to override the optimum, click its sign to reverse the generator (its mapping row flips too, so the tuning is unchanged), or scroll the wheel to fine-tune by a thousandth of a cent.",
     "elementcell": "Domain basis element — a prime, or any rational (e.g. 13/5) for a nonstandard domain. Type to relabel this basis element; the ?/? draft adds a new one (held just). Valid if it's a positive rational that keeps the basis independent.",
     "elementratio": "Domain basis element — a prime, or any rational (e.g. 13/5) for a nonstandard domain. Type to relabel this basis element; the ?/? draft adds a new one (held just). Valid if it's a positive rational that keeps the basis independent.",

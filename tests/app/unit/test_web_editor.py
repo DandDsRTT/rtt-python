@@ -1848,13 +1848,19 @@ def test_show_settings_start_at_defaults_and_changes_are_undoable():
 
 
 def test_select_all_then_none_over_implemented_toggles():
+    # the mode-fused toggles (all-interval, custom weights) can't be bulk-entered — they're
+    # mutually-exclusive tuning modes, not visibility, so select-all turns on every VISIBILITY
+    # toggle but leaves the modes as they are (off by default).
+    modes = {"all_interval", "custom_weights"}
+    visibility = settings.IMPLEMENTED - modes
     editor = Editor()
     editor.set_all_show(True)  # the panel's select-all
-    assert all(editor.settings[k] for k in settings.IMPLEMENTED)
+    assert all(editor.settings[k] for k in visibility)
+    assert not any(editor.settings[k] for k in modes)  # select-all didn't enter a tuning mode
     editor.set_all_show(False)  # ...and select-none
     assert not any(editor.settings[k] for k in settings.IMPLEMENTED)
     editor.undo()  # one undo restores the whole all-on set (a single action)
-    assert all(editor.settings[k] for k in settings.IMPLEMENTED)
+    assert all(editor.settings[k] for k in visibility)
 
 
 def test_deselecting_a_parent_also_deselects_its_subcontrols():

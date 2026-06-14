@@ -882,7 +882,7 @@ class _GridBuilder:
         # rendered as a green draft row across the mapping band — the row mirror of pending_comma
         self.pending_mapping_row = pending_mapping_row
         self.custom_prescaler = custom_prescaler
-        self.custom_weights = custom_weights  # the user's manual per-target weights, or None (Task: editable 𝒘 row)
+        self.custom_weights = custom_weights  # the user's manual per-target weights, or None
         self.tuning_optimized = tuning_optimized
         self.nonprime_approach = nonprime_approach
         self.superspace_generator_tuning = superspace_generator_tuning  # manual 𝒈L (rL) in prime-based
@@ -990,6 +990,11 @@ class _GridBuilder:
         self.show_quantities = _f.quantities
         show_domain_quantities = _f.domain_quantities
         self.show_math = _f.math
+        # custom-weight mode is target-mode only AND not the math-expr view: there the 𝒘 row's cells
+        # are editable inputs and the slope chooser greys (the typed weights supersede the slope)
+        self.custom_weights_active = (self.custom_weights is not None
+                                      and not service.is_all_interval(self.tuning_scheme)
+                                      and not self.show_math)
         return (show_counts, show_charts, show_ranges, show_domain_units, show_temp,
                 show_tuning, show_interest, show_domain_quantities)
 
@@ -1925,11 +1930,13 @@ class _GridBuilder:
         # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
         # shows with WEIGHTING itself, not gated on the alt. complexity extra. In all-interval
         # mode the weight is simplicity by construction, not a free choice, so the chooser stays put
-        # but greys out (slope_locked), locked to its forced simplicity-weight value.
+        # but greys out (slope_locked), locked to its forced simplicity-weight value. Custom-weight
+        # mode greys it the same way — the typed 𝒘 cells supersede the slope, so it isn't a free choice.
         self.slope_ctrl = (self.show_weighting
                       and "row:weight" not in self.collapsed
                       and self.col_open("targets") and "tile:weight:targets" not in self.collapsed)
-        self.slope_locked = self.slope_ctrl and service.is_all_interval(self.tuning_scheme)
+        self.slope_locked = self.slope_ctrl and (service.is_all_interval(self.tuning_scheme)
+                                                 or self.custom_weights_active)
         self.slope_extra = (RANGE_GAP + self.control_region_band_h(PRESET_H + CAPTION_LINE)) if self.slope_ctrl else 0
         # Each of these nested controls lives at the bottom of one tile of its row, but its reserved
         # height (keyed here by row) is added to the whole row's tile_h: the rows below drop clear of
@@ -2729,7 +2736,8 @@ class _GridBuilder:
             if operand is not None:
                 self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities), unit=u))
             else:
-                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tuningvalue", text=service.cents(v), unit=u))
+                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, editable_kind or "tuningvalue",
+                                     text=service.cents(v), unit=u))
             if key in ("tuning", "just"):  # the tuning row sounds each interval's TEMPERED size, the
                 self._voice(f"{key}:{group}", i, v)  # just row its JUST size; retune (errors) is no pitch
         # a pending comma/target/held/interest draft also gets a blank GREEN placeholder in every
@@ -4472,7 +4480,11 @@ class _GridBuilder:
             # interval simplicity weight that has no concrete diagonal form (the size factor / a non-
             # diagonal 𝑋) still renders as this list — it just shows the generic 𝒘 = 𝒄⁻¹ symbol and per-
             # column cₙ⁻¹ headers instead of the concrete diag(𝐿)⁻¹ equivalence, never a matrix.
-            self.tuning_value_row("weight", "targets", self.target_weights)
+            # In custom-weight mode (target-based, plain-value view) the cells become editable inputs —
+            # the user's typed weights override the slope; all-interval keeps the read-only prime-proxy
+            # list (no per-target weights there) and the math-expr view stays read-only.
+            self.tuning_value_row("weight", "targets", self.target_weights,
+                                  editable_kind="weightcell" if self.custom_weights_active else None)
         if self.slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), in a bordered box at the bottom of the
             # weight list, with its "damage weight slope" caption beneath (the optimization box's caption pattern)
             box_top = self.rows["weight"].tile_top + self.rows["weight"].tile_h - self.slope_extra + RANGE_GAP
@@ -5073,7 +5085,9 @@ class _GridBuilder:
         # the "𝑋 = 𝐿" symbol-equivalence rides the BARE prescaler tile — which sits in ss-primes
         # once the superspace shows (the domain-primes tile is then the 𝐿·B_Ls product, no "= …").
         equivalences = {**EQUIVALENCES,
-                        ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
+                        # custom (manual) weights have no closed form — the 𝒘 row drops its "= 𝒄⁻¹"
+                        # slope equivalence (like a typed prescaler override drops "𝑋 = 𝐿")
+                        ("weight", "targets"): "" if self.custom_weights_active else WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
                         ("prescaling", "ssprimes" if self.show_superspace else "primes"): self.prescaler_equivalence,
                         **(ALL_INTERVAL_EQUIVALENCES if ai else {}),
                         # the form layer subscripts the canonical-form objects in their defining

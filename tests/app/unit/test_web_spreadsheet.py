@@ -3665,6 +3665,41 @@ def test_damage_equivalence_names_the_weight_only_when_the_weight_row_is_shown()
     assert equiv("TILT minimax-S", True) == "𝐝 = |𝐞|𝒘"
 
 
+def test_custom_weights_make_the_weight_row_editable():
+    # custom-weight mode (target-based, plain-value view): the per-target 𝒘 cells become editable
+    # weightcells (overriding the slope), and the slope chooser greys (the typed weights supersede it)
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "weighting": True, "custom_weights": True}
+    lay = spreadsheet.build(base, s, custom_weights=(1.0, 2.0, 3.0))
+    weight_cells = [c for c in lay.cells if c.id.startswith("weight:target:")]
+    assert weight_cells and all(c.kind == "weightcell" for c in weight_cells)
+    assert next(c for c in lay.cells if c.id == "control:slope").disabled
+
+
+def test_custom_weights_stay_read_only_in_all_interval_and_math_views():
+    # all-interval has structural per-prime weights (no per-target ones) and the math-expr view
+    # renders closed forms — so neither makes the weight cells editable even with an override present
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    ai = {**settings.defaults(), "weighting": True, "custom_weights": True}
+    lay = spreadsheet.build(base, ai, tuning_scheme="minimax-S", custom_weights=(1.0, 2.0, 3.0))
+    assert all(c.kind != "weightcell" for c in lay.cells if c.id.startswith("weight:target:"))
+    m = {**settings.defaults(), "weighting": True, "custom_weights": True, "math_expressions": True}
+    lay = spreadsheet.build(base, m, custom_weights=(1.0, 2.0, 3.0))
+    assert all(c.kind != "weightcell" for c in lay.cells if c.id.startswith("weight:target:"))
+
+
+def test_custom_weights_show_the_overridden_values_in_the_weight_row():
+    # the displayed 𝒘 row IS the override (same values that drive the solve) — sized to the live
+    # target count (a length mismatch would fall back to the slope, as the library guards)
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "weighting": True, "custom_weights": True}
+    n = len([c for c in spreadsheet.build(base, s).cells if c.id.startswith("weight:target:")])
+    override = tuple(1.0 + 0.5 * i for i in range(n))
+    lay = spreadsheet.build(base, s, custom_weights=override)
+    texts = [c.text for c in lay.cells if c.id.startswith("weight:target:")]
+    assert texts == [service.cents(w) for w in override]
+
+
 def test_commas_have_a_shared_vertical_axis_per_comma():
     ids = {ln.id for ln in _layout().lines}
     assert "v:comma:0" in ids  # one axis per comma, like the primes/targets
@@ -4933,8 +4968,9 @@ def test_every_implemented_toggle_actually_changes_the_layout():
     # the mode-toggles drive the grid through the SCHEME / a doc field (via Editor.set_show), not
     # through the settings dict the build reads — so flipping just the flag here is a build no-op,
     # like a grouping parent. all-interval's grid effect (Tₚ=I etc.) is keyed off the tuning scheme,
-    # covered by the all-interval display tests + the set_show fusion tests in test_web_editor.
-    MODE_TOGGLES = {"all_interval"}
+    # and custom-weights' editable 𝒘 row off the custom_weights field — both covered by their own
+    # display tests + the set_show fusion tests in test_web_editor.
+    MODE_TOGGLES = {"all_interval", "custom_weights"}
     for key in settings.IMPLEMENTED:
         if key in settings.GROUPING_PARENTS or key in MODE_TOGGLES:
             continue

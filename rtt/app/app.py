@@ -198,6 +198,8 @@ _INVALID_EMBEDDING = "That isn't a valid embedding — 𝑀𝐺 must equal the i
 # weight infinite and crashes the solve; a negative is a meaningless "complexity"). Off-diagonal
 # entries are unconstrained except that they too must be finite.
 _INVALID_PRESCALER = "A prescaler diagonal entry must be a positive, finite number."
+# a damage weight row-scales the solve, so a 0/negative/non-finite one would corrupt or crash it.
+_INVALID_WEIGHT = "A damage weight must be a positive, finite number."
 
 # the toast shown when an unchanged-basis (U) cell is committed with a value that can't drive the
 # projection — an unparseable / non-integer entry. Mirrors the ratio/mapping handlers: toast + revert.
@@ -886,6 +888,7 @@ class _Reconciler:
                          "interestcell", "heldcell", "targetcell"):
             self.cell_kinds[_gv_kind] = _gridvalue
         self.cell_kinds["prescalercell"] = _KindHandlers(self._build_prescalercell, self._update_prescalercell)
+        self.cell_kinds["weightcell"] = _KindHandlers(self._build_weightcell, self._update_weightcell)
         self.cell_kinds["powerinput"] = _KindHandlers(self._build_powerinput, self._update_powerinput)
         self.cell_kinds["powerdisplay"] = _KindHandlers(self._build_powerdisplay, self._update_powerdisplay)
         self.cell_kinds["gentuningcell"] = _KindHandlers(self._build_gentuningcell, self._update_gentuningcell)
@@ -1474,6 +1477,19 @@ class _Reconciler:
     def _update_prescalercell(self, cb: spreadsheet.CellBox) -> None:
         # reflect the live prescaler diagonal (the override if set, else the scheme-derived value —
         # spreadsheet.build emits the final text). Blank when quantities are off, like the other cells
+        self.inputs[cb.id].value = cb.text
+        self.set_cents_face(cb.id, cb.text)  # the overlaid stacked face mirrors the input
+
+    def _build_weightcell(self, cb: spreadsheet.CellBox, wrap) -> None:
+        # a manual damage-weight 𝒘 cell (custom-weight mode): the user's editable per-target weight,
+        # overriding the slope. The whole row commits together (on_weight_change re-reads every cell),
+        # so the cid need not encode an index. Mirrors the bare-prescaler cell's editable face.
+        wrap.classes("rtt-cell-input rtt-cell-stacked")
+        self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_weight_change(cid)) \
+            .props("dense borderless").classes("rtt-cellinput")
+        self.cents_face(cb, "rtt-tuning-value rtt-cellface")  # the stacked face overlaid on the input
+
+    def _update_weightcell(self, cb: spreadsheet.CellBox) -> None:
         self.inputs[cb.id].value = cb.text
         self.set_cents_face(cb.id, cb.text)  # the overlaid stacked face mirrors the input
 
@@ -3110,6 +3126,32 @@ def index() -> None:
         editor.set_custom_prescaler_entry(i, j, value)
         _request_render()  # the prescaler drives the weighted tuning solve — render off the loop
 
+    def on_weight_change(cid):
+        # a manual damage-weight 𝒘 cell committing. The override is position-keyed to the target list,
+        # and a column's id-TOKEN need not equal its position (a prior reorder decouples them), so
+        # rather than map one token back to an index we re-read the WHOLE row in column order (its
+        # cells were emitted left-to-right, so dict insertion order IS column order) and replace the
+        # override — the same whole-grid commit an edited target column uses. An unparseable entry
+        # mid-type is a silent no-op; a non-finite / ≤0 one toasts and snaps back (it would crash the
+        # weighted solve), like the prescaler handler.
+        if building[0] or cid not in rec.inputs:
+            return
+        weights = []
+        for other, inp in rec.inputs.items():
+            if not other.startswith("weight:"):
+                continue
+            try:
+                w = float(str(inp.value).strip())
+            except ValueError:
+                return  # an incomplete/cleared cell — don't commit a partial row mid-type
+            if not math.isfinite(w) or w <= 0:
+                ui.notify(_INVALID_WEIGHT, type="negative", position="top")
+                render()  # revert the cell (no retune — synchronous)
+                return
+            weights.append(w)
+        editor.set_custom_weights(weights)
+        _request_render()  # the weights drive the tuning solve — render off the loop
+
     def on_ptext_edit(cid, value):
         # the editable plain-text duals: a valid EBK string drives the grid (like
         # typing in a matrix cell); an unparseable one reddens the box and is ignored
@@ -3863,6 +3905,7 @@ def index() -> None:
         on_mapping_change=on_mapping_change,
         on_power_change=on_power_change,
         on_prescaler_change=on_prescaler_change,
+        on_weight_change=on_weight_change,
         on_preset=on_preset,
         on_subpick=on_subpick,
         on_ptext_edit=on_ptext_edit,

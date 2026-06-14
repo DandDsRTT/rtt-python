@@ -1648,6 +1648,24 @@ async def test_changing_the_weight_slope_renames_the_established_scheme_chooser(
     assert _cell_child(user, "preset:tuning").value == "minimax-S"
 
 
+async def test_custom_weights_toggle_makes_the_weight_row_editable_and_retunes(user: User) -> None:
+    # the custom-weights Show toggle (outside-guide, ★) IS its mode: turning it on makes the per-
+    # target 𝒘 cells editable inputs (overriding the slope), greys the slope chooser, and typing a
+    # weight routes input -> on_weight_change -> set_custom_weights -> re-render end-to-end.
+    await user.open("/")
+    slider = next(iter(user.find(marker="chapterslider").elements))
+    slider.set_value(show_settings.CHAPTER_STAR)  # reveal the outside-guide custom-weights entry
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (nested under it)
+    user.find(kind=ui.checkbox, content="weighting").click()     # reveal the weight row + custom-weights entry
+    user.find(kind=ui.checkbox, content="custom weights").click()  # enter custom-weight mode
+    await user.should_see(marker="weight:target:0")
+    assert "rtt-cell-input" in _wrap_classes(user, "weight:target:0")  # an editable input now
+    assert not _cell_child(user, "control:slope").enabled             # the slope chooser greys
+    _cell_child(user, "weight:target:0").set_value("3")               # type a weight -> on_weight_change
+    await user.should_see(marker="weight:target:0")                   # re-renders without error
+    assert _cell_child(user, "weight:target:0").value == service.cents(3.0)  # the override stuck (re-formatted)
+
+
 async def test_all_interval_greys_and_locks_the_weight_slope_chooser(user: User) -> None:
     # in all-interval mode the weight is simplicity by construction, so the box-𝒘 slope chooser
     # is not a free choice: rather than vanish (reflowing the tile), it stays rendered but greys
