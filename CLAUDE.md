@@ -38,13 +38,17 @@ the mockup:
 - **No optimize button / freeze-at-optimum state.** Optimization is always on (two states:
   scheme-driven and manual override; a scheme pick clears manual). The mockup still shows an
   optimize button; it was removed deliberately (see `rtt/app/editor.py` `generator_tuning` docs).
-- **No in-grid all-interval checkbox.** The mockup shows an "all-interval" checkbox in box 𝐓; it
-  was removed. The Show-panel **all-interval toggle now IS the mode** (it switches the scheme to
-  all-interval directly — `Editor.set_show` → `_reconcile_mode_toggles` → `_apply_all_interval`).
 - **Editable weight row + "custom weights" toggle.** Manual per-target damage weights (the
   mockup's "custom weight … interactive white boxes") are exposed as a **Show toggle** ("custom
   weights", a sibling of all-interval / alt. complexity under weighting), not as a 4th
-  damage-weight-slope dropdown option. Turning it on makes box 𝒘's cells editable.
+  damage-weight-slope dropdown option. Turning it on makes box 𝒘's cells editable. custom-weights is
+  the LONE "mode toggle" (a Show toggle that IS a tuning mode). **all-interval, by contrast, is a
+  two-step in-grid checkbox** (its Show toggle only reveals the box-𝐓 checkbox; the checkbox enters
+  the mode via `Editor.set_all_interval`) — it was briefly fused into a one-step mode toggle, but that
+  made all-interval + custom-weights a mutually-exclusive PAIR of mode toggles and **broke "select
+  all"**, so it was reverted. **Don't re-fuse it, and don't add a Show-toggle mutual-exclusion
+  mechanism:** all-interval ↔ custom-weights exclusivity is BEHAVIOR-level only (`set_all_interval`
+  drops custom weights; entering custom weights is a no-op while all-interval).
 - **Tuning-panel nesting.** weighting and tuning ranges nest under **optimization** (Mode A), so
   **projection** reads as the peer-alternative to the whole optimization branch (D&D's
   optimize-vs-construct fork). The mockup draws these flatter.
