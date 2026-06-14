@@ -773,6 +773,21 @@ class _QtyList(NamedTuple):
     minus_gate: bool                    # whether committed columns carry a − (always True except auto targets)
 
 
+class _MappedTile(NamedTuple):
+    """Per-list descriptor for the three cleanly-uniform read-only ("mapped") M·X tiles of the
+    mapping band's committed generator rows (M·target / M·interest / M·held). Each emits, in one
+    generator row, one CellBox per committed column carrying str(data[i][col]), plus a blank green
+    placeholder under the open draft column; only these parameters differ. (The commas mapped tile —
+    M·comma, with its mc_text ghost — and the pending-draft generator row are NOT in this family;
+    they stay inline.)"""
+    prefix: str                         # cell-id prefix ("mapped" / "imapped" / "hmapped")
+    group: str                          # tile/col-token/cell_unit group key ("targets" / "interest" / "held")
+    count: int                          # committed column count (k / mi / nh)
+    left_fn: Callable[[int], float]     # column-left x (self.target_left / interest_left / held_left)
+    data: object                        # the committed mapped columns (self.mapped / interest_mapped / held_mapped)
+    pending: object                     # the open draft, or None (self.pending_target / interest / held)
+
+
 class _GridBuilder:
     def __init__(self, state, settings=None, collapsed=None,
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
@@ -3460,20 +3475,11 @@ class _GridBuilder:
                         # temperament swap or a +/- rewrites. The input still shows it via _update_mapping.
                         self.cells.append(CellBox(ids.mapping_cell(rt, p), self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", text=str(self.state.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
                 if self.tile_open("mapping", "targets"):
-                    for j in range(self.k):
-                        self.cells.append(CellBox(f"cell:mapped:{rt}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped[i][j]), gen=i, unit=self.cell_unit("mapping", "targets", gen=i)))
-                    if self.pending_target is not None:  # blank green placeholder under the draft target
-                        self.cells.append(CellBox(f"cell:mapped:{rt}:draft", self.target_left(self.k), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+                    self._emit_mapped_tile(_MappedTile("mapped", "targets", self.k, self.target_left, self.mapped, self.pending_target), i, rt)
                 if self.tile_open("mapping", "interest"):  # interest mapped through M, like the targets
-                    for ii in range(self.mi):
-                        self.cells.append(CellBox(f"cell:imapped:{rt}:{self.col_token('interest', ii)}", self.interest_left(ii), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.interest_mapped[i][ii]), gen=i, unit=self.cell_unit("mapping", "interest", gen=i)))
-                    if self.pending_interest is not None:  # blank green placeholder under the draft interest interval
-                        self.cells.append(CellBox(f"cell:imapped:{rt}:draft", self.interest_left(self.mi), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+                    self._emit_mapped_tile(_MappedTile("imapped", "interest", self.mi, self.interest_left, self.interest_mapped, self.pending_interest), i, rt)
                 if self.tile_open("mapping", "held"):  # held mapped through M, like the targets / interest
-                    for hi in range(self.nh):
-                        self.cells.append(CellBox(f"cell:hmapped:{rt}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.held_mapped[i][hi]), gen=i, unit=self.cell_unit("mapping", "held", gen=i)))
-                    if self.pending_held is not None:  # blank green placeholder under the draft held interval
-                        self.cells.append(CellBox(f"cell:hmapped:{rt}:draft", self.held_left(self.nh), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+                    self._emit_mapped_tile(_MappedTile("hmapped", "held", self.nh, self.held_left, self.held_mapped, self.pending_held), i, rt)
                 # the comma basis mapped through M — it vanishes to 0 (parallel to the
                 # mapped target list); the raw basis lives in the interval-vectors row.
                 # Over V the unchanged basis maps too (M·U ≠ 0 — the held intervals in gen coords).
@@ -3548,6 +3554,16 @@ class _GridBuilder:
                         self.cells.append(CellBox(f"cell:mapped_comma:{drt}:{self.col_token('commas', c)}", self.comma_left(c), self.map_top(dr), COL_W, ROW_H, "mapped", text=gmap("commas", c), gen=dr, pending=True))
                     for j in range(self.nu):
                         self.cells.append(CellBox(f"cell:mapped_unchanged:{drt}:{j}", self.comma_left(self.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text=gmap("unchanged", j), gen=dr, pending=True))
+
+    def _emit_mapped_tile(self, m: _MappedTile, i: int, rt: str) -> None:
+        """Emit one committed-row read-only M·X tile (targets / interest / held) for generator row
+        `i` (id-token `rt`): one "mapped" CellBox per committed column carrying str(m.data[i][col]),
+        then a blank green placeholder under the open draft column. Caller has already gated on the
+        tile being open. Behaviour-identical to the former three inline blocks; only `m` differs."""
+        for col in range(m.count):
+            self.cells.append(CellBox(f"cell:{m.prefix}:{rt}:{self.col_token(m.group, col)}", m.left_fn(col), self.map_top(i), COL_W, ROW_H, "mapped", text=str(m.data[i][col]), gen=i, unit=self.cell_unit("mapping", m.group, gen=i)))
+        if m.pending is not None:  # blank green placeholder under the draft column
+            self.cells.append(CellBox(f"cell:{m.prefix}:{rt}:draft", m.left_fn(m.count), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
 
     def _emit_mapped_grid(self, tile, prefix, grid, n_cols, left, col_kw, *,
                           full=None, colwise=False, col_token_key=None, inset=0,
