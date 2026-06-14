@@ -2808,6 +2808,26 @@ async def test_an_invalid_target_limit_stays_reddened_through_the_edit_preview_g
     assert "rtt-limit-error" in num._classes               # ...and never strips the reddening
 
 
+async def test_switching_the_family_to_old_over_an_even_limit_toasts(user: User) -> None:
+    # switching the family to OLD while an even limit is shown lands an invalid even odd-limit. It
+    # commits (the pick sticks, the number stays) and reddens, AND toasts "needs an odd limit" — the
+    # family switch toasts like a typed even limit now, not redden-only. (The 5-limit default limit is
+    # 6, even, so the bare switch to OLD is already the even-OLD case.)
+    await _enable(user, "presets")
+    await user.should_see(marker="preset:target")
+    _num, sel = _target_preset(user)
+    sel.set_value("OLD")                                   # 6-OLD: even, invalid for the diamond
+    await user.should_see("needs an odd limit")            # the negative toast fires on the switch
+    num, _sel = _target_preset(user)
+    assert "rtt-limit-error" in num._classes               # ...and the field still reddens too
+    # NB: the WHEEL path (wheeling onto an even OLD limit) also toasts now, but it commits from an
+    # off-loop background task (_debounced_target_commit) — so its ui.notify is verified in a real
+    # browser, not here: the User harness monkeypatches ui.notify to a capture object that bypasses the
+    # slot/client resolution the off-loop path actually exercises, so an in-process assertion can neither
+    # observe the toast nor distinguish the with-page_client fix from its absence (the patched notify
+    # never raises). The gate logic this shares with the wheel is what's pinned above.
+
+
 # --- characterization net for the six interval-grid edit handlers (audit cluster C, Phase-2 Lane B) ---
 # Before the later phase consolidates on_mapping/comma/unchanged/interest/held/target_cells_change into
 # one factory, these lock the arms the rest of the suite leaves uncovered: the PREVIEW (no-commit) arm,

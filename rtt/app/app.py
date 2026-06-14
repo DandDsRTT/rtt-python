@@ -1977,14 +1977,12 @@ class _Reconciler:
                 # A TEXT input, not ui.number: a number input lets the browser swallow non-numeric
                 # keystrokes to empty, so "abc" would silently blank the limit with no way to toast
                 # it. As text, the raw entry reaches the handler, which validates it (whole number?
-                # odd for OLD?) and reddens/toasts a bad one. limit_changed tells the handler the
-                # user TYPED a limit (toast on a bad one) vs PICKED a family (a switch to OLD that
-                # turns an even limit invalid only reddens it). debounce collapses a multi-digit
+                # odd for OLD?) and reddens/toasts a bad one. debounce collapses a multi-digit
                 # entry into one settled event, so typing "21" never flashes a toast at the even
                 # intermediate "2" (the programmatic render echo is Python-side and stays inside the
                 # building[0] guard, so debounce can't leak it).
                 num = ui.input(value=_limit_text(limit),
-                        on_change=lambda e: self._cb.on_target_change(limit_changed=True)) \
+                        on_change=lambda e: self._cb.on_target_change()) \
                     .props('dense borderless hide-bottom-space placeholder="-" inputmode=numeric debounce=300').classes("rtt-preset-num")
                 # make the limit input CONTROLLED (ui.input defaults loopback off, leaving the box
                 # uncontrolled during typing). Off, the server can't overwrite what was typed, so a
@@ -2025,7 +2023,7 @@ class _Reconciler:
                 num.on("keyup", lambda e: self._cb.on_target_limit_preview(e.args),
                        js_handler="(e) => emit(e.target.value)")
                 sel = ui.select(list(presets.TARGET_SETS), value=family,
-                        on_change=lambda e: self._cb.on_target_change(limit_changed=False)) \
+                        on_change=lambda e: self._cb.on_target_change()) \
                     .props(_select_props(cb.w - 30)).classes("rtt-preset")  # field = cell − the 30px square (touching, no gap)
             _set_offlist_prompt(sel, family)
             # hovering TILT/OLD previews the family switch, like the other choosers: it rings the target
@@ -3303,14 +3301,18 @@ def index() -> None:
     async def _debounced_target_commit():
         # the tail of a target-limit wheel gesture: once the notches stop for _TARGET_LIMIT_DEBOUNCE,
         # commit the number now in the field with the one real solve + render. A new notch cancels
-        # this and arms a fresh one. limit_changed=False so landing on an even odd-limit (OLD) reddens
-        # the field rather than toasting once per gesture.
+        # this and arms a fresh one. The debounce collapses the whole gesture into one commit, so an
+        # even odd-limit (OLD) you land on toasts once here (not once per notch) and the render reddens it.
+        # We run off the loop (a background task), where the slot stack is empty — so enter the captured
+        # page client's context, or on_target_change's ui.notify can't resolve the client and the toast
+        # silently vanishes (render reaches its client the same captured-client way, see page_client above).
         try:
             await asyncio.sleep(_TARGET_LIMIT_DEBOUNCE)
         except asyncio.CancelledError:
             return
         target_limit_commit[0] = None
-        on_target_change(limit_changed=False)
+        with page_client:
+            on_target_change()
 
     def on_target_limit_preview(typed=None):
         # live edit preview for the TILT/OLD limit field, mirroring on_element_preview: as the shown
@@ -3629,16 +3631,18 @@ def index() -> None:
             apply()
             _request_render()  # canonicalizing re-keys the tuning solve — render off the loop
 
-    def on_target_change(limit_changed=False):
+    def on_target_change():
         # the target chooser is a numeric limit + a TILT/OLD family; compose them into a spec
         # ("9-TILT", or just "TILT" when the limit is blank). Two kinds of bad entry, handled
         # differently:
         #   - a NON-NUMBER ("whole") is never accepted: toast and re-render, which reverts the field
         #     to the last committed value (you can't end up with garbage in the box).
         #   - an EVEN limit for the odd-limit diamond ("odd") IS committed (so the family pick sticks
-        #     and the number stays put), but the field is reddened by the render (see
-        #     _sync_target_limit_error) with a tooltip saying it must be odd. A directly TYPED even
-        #     limit also toasts; merely switching the family to OLD over an even limit only reddens.
+        #     and the number stays put), but it toasts "needs an odd limit" and the render reddens the
+        #     field (see _sync_target_limit_error). EVERY path that lands an even OLD limit toasts —
+        #     typing it, wheeling onto it, or switching the family to OLD over it — because each fires
+        #     this once per settled gesture (typing and the wheel are debounced to a single commit), so
+        #     there's no toast-per-keystroke or toast-per-notch spam to suppress.
         if building[0]:
             return
         num, sel = rec.selects["preset:target"]
@@ -3660,7 +3664,7 @@ def index() -> None:
             valid = False
         if not valid:
             return
-        if problem == "odd" and limit_changed:  # a typed even OLD limit toasts; a family switch only reddens
+        if problem == "odd":  # an even OLD limit, however it was entered, toasts AND reddens
             ui.notify(tooltips.target_limit_help("odd"), type="negative", position="top")
         editor.set_target_spec(spec)  # commit (even an even OLD limit) so the pick sticks; render reddens it
         _request_render()  # a new target set re-weights the optimization (retunes) — render off the loop
