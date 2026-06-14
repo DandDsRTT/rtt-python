@@ -586,6 +586,15 @@
    preview-remove plain cells use. The placeholders are blank, so no text colour is needed. */
 .rtt-cell:not(.rtt-cell-input).rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
             background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
+/* selected text inside a green draft field: with no explicit ::selection the browser paints its
+   own default (a pale system blue) highlight, which all but vanishes over the faint 14% green wash —
+   you can't tell what is selected. Paint the selection in the pending green instead — darkened 80%
+   toward black so it stays opaque and white text reads on it (~AA), single-sourced from
+   --pending-color like the ring/wash/text, so the selection is the SAME "being created" hue. The
+   block is opaque, so it covers the wash/cell beneath identically in both themes; --pending-color is
+   the same value in light and dark, so this one rule serves both modes — no dark override needed. */
+.rtt-pending::selection,
+.rtt-pending ::selection { background:color-mix(in srgb, var(--pending-color) 80%, black); color:#fff; }
 /* the edit-preview highlight: while one cell is being edited, every OTHER cell whose value that
    edit moves wears an amber ring + faint wash, so the user previews the ripple before leaving the
    cell. INSET so it never bleeds onto the densely-packed neighbours; amber to stay clear of the green
