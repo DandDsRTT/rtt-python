@@ -1751,9 +1751,7 @@ def test_control_dropdowns_are_boxed_within_their_tiles():
     for cid, label, tile in (("preset:tuning", "established tuning scheme", "block:tuning:primes"),
                              ("preset:tuning:gens", "established tuning scheme", "block:tuning:gens"),
                              ("preset:temperament", "temperament", "block:mapping"),
-                             ("preset:target", "target interval set scheme", "block:vec:targets"),
-                             ("formchooser:mapping", "form", "block:mapping"),
-                             ("formchooser:comma_basis", "form", "block:vec:commas")):
+                             ("preset:target", "target interval set scheme", "block:vec:targets")):
         ctrl, box, panel = cells[cid], boxes[f"block:{cid}"], boxes[tile]
         assert box.boxed is True  # a bordered box, not a plain tile
         assert box.x <= ctrl.x and box.x + box.w >= ctrl.x + ctrl.w  # encloses the control
@@ -1764,6 +1762,17 @@ def test_control_dropdowns_are_boxed_within_their_tiles():
         # hugs the dropdown's bottom edge, like the box-𝐋/𝒄/𝒘 controls -- not a box title above
         lbl = cells[f"block:{cid}:label"]
         assert lbl.kind == "caption" and lbl.text == label and lbl.align == "left" and lbl.y > ctrl.y
+    # the <choose form> dropdowns DON'T get their own boxes (the user's rule): with presets on they
+    # ride INSIDE the temperament chooser's box, below its dropdown + caption, each with a "form" label
+    for fcid, tbox in (("formchooser:mapping", "block:preset:temperament"),
+                       ("formchooser:comma_basis", "block:preset:temperament:commas")):
+        assert f"block:{fcid}" not in boxes              # no separate box for the form chooser
+        ctrl, box = cells[fcid], boxes[tbox]
+        assert box.y <= ctrl.y and box.y + box.h >= ctrl.y + ctrl.h  # enclosed by the temperament box
+        tdrop = cells[tbox.removeprefix("block:")]       # the temperament dropdown it sits under
+        assert ctrl.y > tdrop.y                          # below the main chooser
+        flbl = cells[f"{fcid}:label"]
+        assert flbl.kind == "caption" and flbl.text == "form" and flbl.align == "left" and flbl.y > ctrl.y
 
 
 def test_a_long_control_label_widens_its_narrow_tile():
@@ -1792,9 +1801,7 @@ def test_chooser_boxes_span_the_full_width_of_their_tiles():
     for cid, tile in (("block:preset:temperament", "block:mapping"),
                       ("block:preset:tuning", "block:tuning:primes"),
                       ("block:preset:tuning:gens", "block:tuning:gens"),
-                      ("block:preset:target", "block:vec:targets"),
-                      ("block:formchooser:mapping", "block:mapping"),
-                      ("block:formchooser:comma_basis", "block:vec:commas")):
+                      ("block:preset:target", "block:vec:targets")):
         box, panel = boxes[cid], boxes[tile]
         left, right = box.x - panel.x, (panel.x + panel.w) - (box.x + box.w)
         assert abs(left - right) < 1  # equal insets == the box spans its tile's footprint

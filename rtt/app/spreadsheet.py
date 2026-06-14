@@ -2068,9 +2068,12 @@ class _GridBuilder:
             # no band here. With presets OFF there is no chooser, so it gets its own small box on this row.
             schemebtn = (self.control_region_band_h(SCHEME_BTN_SQ)
                          if (key == "projection" and self.settings["projection"] and not self.show_presets and not folded) else 0)
-            # the form chooser rides one box below the preset chooser, in the mapping and
-            # comma-basis boxes, when form controls are shown
-            formctrl = self.formchooser_band_h(key) if (self.show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
+            # the <choose form> dropdown rides INSIDE the temperament chooser's box (preset_band_h
+            # reserves the extra row via _preset_form_label), so it needs NO band of its own when
+            # presets are on. Only with presets OFF — no chooser box to ride in — does it get its own.
+            formctrl = (self.formchooser_band_h(key)
+                        if (self.show_form_controls and not self.show_presets
+                            and key in FORM_CHOOSER_ROWS and not folded) else 0)
             # the per-comma-column pickers ride a band just below the ⟩ foot of the comma matrix
             # (above the symbol/caption stack and the whole-temperament chooser): one compact comma
             # chooser per real comma column, plus one on a green draft column being added. Reserved on
@@ -2391,7 +2394,7 @@ class _GridBuilder:
     # and the dropdown keeps its NATURAL width (cap_w) seated at the box's left — only shrunk if a
     # tiny tile can't seat even that. The label is the standard one-line left-justified caption
     # hugging the dropdown's bottom (the .rtt-caption-left asset), overflowing right if long.
-    def control_dims(self, ckey: str, cap_w, label, scheme_btn: bool = False):
+    def control_dims(self, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):
         # the dropdown keeps a consistent capped width; the box spans the tile (see control_box) and
         # insets its content BOX_INNER off every border
         dropdown_w = max(40, min(self.col_w[ckey] - 2 * BOX_INNER, cap_w))
@@ -2400,16 +2403,21 @@ class _GridBuilder:
         # the established-projection chooser carries the ✕ "return to scheme" button on a row inside
         # its own box, ABOVE the dropdown + caption (so the button is NOT a separate control box)
         box_h += (SCHEME_BTN_SQ + CTRL_LABEL_GAP) if scheme_btn else 0
+        # the <choose form> dropdown rides in THIS box too — a second dropdown (+ its caption) BELOW
+        # the main one, so it is NOT a separate control box (like the scheme button above)
+        if form_label is not None:
+            box_h += CTRL_LABEL_GAP + PRESET_H + (CAPTION_LINE if form_label else 0)
         return dropdown_w, label_h, box_h
 
-    def control_band_h(self, ckey: str, cap_w, label, scheme_btn: bool = False):  # the box plus outer padding
-        return 2 * BOX_OUTER + self.control_dims(ckey, cap_w, label, scheme_btn)[2]
+    def control_band_h(self, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):  # box + outer padding
+        return 2 * BOX_OUTER + self.control_dims(ckey, cap_w, label, scheme_btn, form_label)[2]
 
     def preset_cap(self, name: str):
         return TARGET_PRESET_W if name == "target" else PRESET_W
 
     def preset_band_h(self, key: str):  # the tallest preset control box riding this row
-        return max((self.control_band_h(ckey, self.preset_cap(name), label, scheme_btn=(name == "projection"))
+        return max((self.control_band_h(ckey, self.preset_cap(name), label, scheme_btn=(name == "projection"),
+                                         form_label=self._preset_form_label(name, rk, ckey))
                     for name, rk, ckey, label in PRESETS + PRESET_COPIES
                     if rk == key and ckey in self.col_w), default=0)
 
@@ -2967,8 +2975,12 @@ class _GridBuilder:
     # other labelled control uses. Any sibling control (the target chooser's all-interval checkbox,
     # box 𝐓) rides the empty space to the dropdown's right, inside this same full-width box. Returns
     # the (x, width, y) to seat the dropdown at.
-    def control_box(self, box_id: str, ckey: str, top, cap_w, label, disabled: bool = False, scheme_btn: bool = False):
-        dropdown_w, label_h, box_h = self.control_dims(ckey, cap_w, label, scheme_btn)
+    def control_box(self, box_id: str, ckey: str, top, cap_w, label, disabled: bool = False,
+                    scheme_btn: bool = False, form_chooser=None):
+        # form_chooser, when set, is (cell_id, caption) for a <choose form> dropdown stacked inside
+        # this same box below the main chooser + its caption — never a separate box (the user's rule).
+        form_label = form_chooser[1] if form_chooser else None
+        dropdown_w, label_h, box_h = self.control_dims(ckey, cap_w, label, scheme_btn, form_label)
         box_x, box_y = self.col_x[ckey], top + BOX_OUTER  # the box spans the tile's full width (col_w)
         self.blocks.append(Block(box_id, box_x, box_y, self.col_w[ckey], box_h, boxed=True))
         ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER  # content inset BOX_INNER off every border
@@ -2978,7 +2990,22 @@ class _GridBuilder:
         if label:  # disabled greys the label with its control (a locked chooser, e.g. all-interval target)
             self.cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
                                  "caption", text=label, align="left", disabled=disabled))
+        if form_chooser:  # the <choose form> dropdown + its caption, below the main chooser, in this box
+            fid, fcap = form_chooser
+            form_y = ctrl_y + PRESET_H + label_h + CTRL_LABEL_GAP
+            self.cells.append(CellBox(fid, ctrl_x, form_y, dropdown_w, PRESET_H, "formchooser"))
+            self.cells.append(CellBox(f"{fid}:label", ctrl_x, form_y + PRESET_H, dropdown_w, CAPTION_LINE,
+                                 "caption", text=fcap, align="left"))
         return ctrl_x, dropdown_w, ctrl_y
+
+    def _preset_form_label(self, name: str, rkey: str, ckey: str):
+        """The "form" caption when the <choose form> dropdown embeds in this preset's box — i.e. the
+        temperament chooser on a form-chooser tile (mapping / comma basis) while form controls are
+        shown. Else None. Keeps :func:`preset_band_h` and :func:`_emit_presets` in step on the box's
+        height and contents, so the embedded dropdown is reserved for and drawn in the same box."""
+        embeds = (name == "temperament" and self.show_form_controls
+                  and any(rk == rkey and ck == ckey for _n, rk, ck, _l in FORM_CHOOSERS))
+        return "form" if embeds else None
 
     def control_region(self, box_id: str, ckey: str, top, content_h):
         """A bordered control box (boxed Block) spanning tile ``ckey`` from ``top``, enclosing
@@ -5213,8 +5240,13 @@ class _GridBuilder:
                 #    T minimax-U / log-prime) — see _preset_locked.
                 disabled = (name == "target" and service.is_all_interval(self.tuning_scheme)) \
                     or self._preset_locked(name)
+                # the <choose form> dropdown embeds in the temperament chooser's box (mapping / comma
+                # basis) while form controls show — same box, never a separate one
+                fc = next((fn for fn, rk, ck, _l in FORM_CHOOSERS if rk == rkey and ck == ckey), None)
+                form_chooser = (f"formchooser:{fc}", "form") if (fc and self._preset_form_label(name, rkey, ckey)) else None
                 cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preset_cap(name), label,
-                                              disabled=disabled, scheme_btn=(name == "projection"))
+                                              disabled=disabled, scheme_btn=(name == "projection"),
+                                              form_chooser=form_chooser)
                 self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
                                      disabled=disabled))
                 # the target chooser carries the all-interval checkbox to the dropdown's right, in the
@@ -5251,15 +5283,16 @@ class _GridBuilder:
             self.emit_all_interval_check(self.col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
 
     def _emit_form_choosers(self) -> None:
-        """The form choosers, one box below the preset choosers."""
-        # the form chooser, one box below the preset chooser: it canonicalizes the mapping /
-        # comma basis it rides (an undoable edit). A control, so it ignores the value-display
-        # toggles, like the preset choosers.
-        if self.show_form_controls:
+        """The <choose form> choosers when presets are OFF — in their own box (there is no chooser
+        box to ride in). With presets ON they embed in the temperament chooser's box instead (see
+        :func:`_emit_presets` / :func:`control_box`), never a separate box."""
+        # it canonicalizes the mapping / comma basis it rides (an undoable edit). A control, so it
+        # ignores the value-display toggles, like the preset choosers.
+        if self.show_form_controls and not self.show_presets:
             for name, rkey, ckey, label in FORM_CHOOSERS:
                 if not self.tile_open(rkey, ckey):
                     continue
-                top = self.ptext_band_y(rkey) + self.rows[rkey].ptext + self.rows[rkey].pre  # below the preset box
+                top = self.ptext_band_y(rkey) + self.rows[rkey].ptext + self.rows[rkey].pre
                 cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESET_W, label)
                 self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser"))
 
