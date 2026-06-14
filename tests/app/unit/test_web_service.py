@@ -1640,8 +1640,8 @@ def test_plain_text_values_includes_superspace_entries_when_superspace_on():
     ml = service.superspace_mapping(state)
     expected_ml = "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "}"
     assert pt[("ss_mapping", "ssprimes")] == expected_ml
-    # M_jL = I (dL × dL identity), same shape
-    assert pt[("ss_just_mapping", "ssprimes")] == (
+    # M_jL = I (dL × dL identity), same shape — a tile in the ss_vectors row
+    assert pt[("ss_vectors", "ssprimes")] == (
         "[⟨1 0 0 0]⟨0 1 0 0]⟨0 0 1 0]⟨0 0 0 1]}"
     )
     # the cyan tuning rows have entries
@@ -1655,7 +1655,7 @@ def test_plain_text_values_omits_superspace_entries_when_superspace_off():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     pt = service.plain_text_values(state)  # superspace=False (default)
     for key in (("ss_vectors", "primes"), ("ss_mapping", "ssprimes"),
-                ("ss_just_mapping", "ssprimes"), ("tuning", "ssgens"),
+                ("ss_vectors", "ssprimes"), ("tuning", "ssgens"),
                 ("tuning", "ssprimes"), ("just", "ssprimes"), ("retune", "ssprimes")):
         assert key not in pt
 

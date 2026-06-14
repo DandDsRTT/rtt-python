@@ -86,7 +86,7 @@ CAPTIONS = {
     # the chapter-9 superspace tiles — the basis-embedding matrix B_L lives in
     # (ss_vectors, primes), the temperament's superspace mapping M_L lives in
     # (ss_mapping, ssprimes), and the trivial superspace JI mapping M_jL = I lives in
-    # (ss_just_mapping, ssprimes). Phase 4 also adds 𝒈ₗ / 𝒕ₗ / 𝒋ₗ / 𝒓ₗ captions over the
+    # (ss_vectors, ssprimes). Phase 4 also adds 𝒈ₗ / 𝒕ₗ / 𝒋ₗ / 𝒓ₗ captions over the
     # superspace tuning rows when their cells are emitted.
     ("ss_vectors", "ssprimes"): "superspace JI mapping",
     ("ss_vectors", "primes"): "basis change matrix",
@@ -103,7 +103,6 @@ CAPTIONS = {
     ("ss_mapping", "targets"): "target interval list in superspace generators",
     ("ss_mapping", "interest"): "intervals in superspace generators",
     ("ss_mapping", "detempering"): "generator detempering in superspace generators",
-    ("ss_just_mapping", "ssprimes"): "superspace JI mapping",
     # the superspace tempering projection P_L = G_L·M_L (the chapter-9 analogue of the on-domain P)
     ("ss_projection", "ssprimes"): "superspace projection",
     # the rest of the superspace projection row — the embedding G_L and P_L applied to each column's
@@ -227,7 +226,6 @@ SYMBOLS = {
     # the just tuning map 𝒋). Phase 4F adds the cyan tuning row's superspace symbols.
     ("ss_vectors", "primes"): "BL",      # B (upright) + Unicode subscript L
     ("ss_mapping", "ssprimes"): "𝑀L",   # math-italic M (\U0001D440) + subscript L
-    ("ss_just_mapping", "ssprimes"): "𝑀ⱼL",  # math-italic M + Unicode subscript j (U+2C7C) + L
     ("tuning", "ssgens"): "𝒈L",
     ("tuning", "ssprimes"): "𝒕L",
     ("just", "ssprimes"): "𝒋L",
@@ -350,7 +348,7 @@ ROW_LABEL_LETTERS = {
     ("ss_mapping", "primes"): "𝒎ₛ→L",   # m_s→L subrow headers (mapping from domain intervals)
     # M_jL's identity rows likewise: each row labelled 𝒎ⱼₗᵢ — math-italic 𝒎 + subscript j
     # (U+2C7C) + subscript ₗ
-    ("ss_just_mapping", "ssprimes"): "𝒎ⱼL",
+    ("ss_vectors", "ssprimes"): "𝒎ⱼL",
     # the superspace projection P_L: each row a covector over the dL ss_primes, labelled 𝒑ₗᵢ —
     # math-bold-italic 𝒑 + subscript ₗ + index, parallel to the on-domain P's 𝒑ᵢ and M_L's 𝒎ₗᵢ
     ("ss_projection", "ssprimes"): f"𝒑{SUBSCRIPT_L}",
@@ -449,7 +447,7 @@ COL_LABEL_LETTERS = {
 # tiles when Phase 4 populates them — Phase 3 reserves the frame bands so the
 # row_axis fan splits into one rule per cell-row (dL / rL sub-rules).
 FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling",
-                         "ss_vectors", "ss_mapping", "ss_just_mapping", "ss_projection",
+                         "ss_vectors", "ss_mapping", "ss_projection",
                          "projection"})
 CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 # Value rows whose tiles carry per-column matrix labels (𝐜ᵢ, 𝒕ᵢ, 𝐲ᵢ, …) when symbols
@@ -603,7 +601,7 @@ SPINE_COLUMNS = frozenset({"quantities", "units"})
 # ssgens / ssprimes columns, the M_L mapping, the tuning maps (𝒈ₗ/𝒕ₗ/𝒋ₗ/𝒓ₗ) and the JI mapping M_jL
 # stay pure cyan. (tile_groups reads these, keying green off SPINE_COLUMN_GROUP's temperament cols.)
 SUPERSPACE_REGION_COLUMNS = frozenset({"ssgens", "ssprimes"})
-SUPERSPACE_REGION_ROWS = frozenset({"ss_vectors", "ss_mapping", "ss_just_mapping", "ss_projection"})
+SUPERSPACE_REGION_ROWS = frozenset({"ss_vectors", "ss_mapping", "ss_projection"})
 
 # The preset chooser dropdowns (settings["presets"]) as (name, row, column,
 # title): each is a quick menu for one of the things you actually choose, riding under
@@ -654,7 +652,7 @@ MNEMONICS = {
     # superspace anchors — underline the symbol-letter where it sits in the caption
     ("ss_vectors", "primes"): "basis",        # BL → underline the "b" in "basis embedding…"
     ("ss_mapping", "ssprimes"): "mapping",    # 𝑀L → underline the "m" in "superspace mapping"
-    ("ss_just_mapping", "ssprimes"): "mapping",  # 𝑀ⱼL → "m" in "superspace JI mapping"
+    ("ss_vectors", "ssprimes"): "mapping",  # 𝑀ⱼL → "m" in "superspace JI mapping"
     ("tuning", "ssgens"): "generator",        # 𝒈L → "g" in "superspace generator tuning map"
     ("tuning", "ssprimes"): "tuning",         # 𝒕L → "t" in "superspace tuning map"
     ("just", "ssprimes"): "just",             # 𝒋L → "j" in "superspace just tuning map"
@@ -692,7 +690,6 @@ EQUIVALENCES = {
     # the chapter-9 superspace M_jL is trivially the identity (each superspace prime is
     # its own basis element). 𝒕ₗ products parallel the existing 𝒕 = 𝒈𝑀 / 𝒓 = 𝒕 − 𝒋
     # chains; 𝒈ₗ and 𝒋ₗ are primary (no continuation).
-    ("ss_just_mapping", "ssprimes"): " = 𝐼",  # math-italic I
     ("tuning", "ssprimes"): " = 𝒈L𝑀L",
     ("retune", "ssprimes"): " = 𝒕L − 𝒋L",
     # the chapter-9 superspace block defining equations (each tile lifted through B_L / M_s→L,
@@ -828,7 +825,6 @@ UNITS = {
     ("ss_mapping", "targets"): f"g{SUBSCRIPT_L}",      # Y_L
     ("ss_mapping", "interest"): f"g{SUBSCRIPT_L}",
     ("ss_mapping", "detempering"): f"g{SUBSCRIPT_L}",
-    ("ss_just_mapping", "ssprimes"): "p/p",
     # P_L is a basis-element → basis-element operator (the projected superspace basis), so b/b — NOT
     # the gL/p or p/p of M_L / M_jL (the mockup labels its rows bᵢ; its spine α, β, γ … are
     # placeholders for the superspace primes the row's quantities spine actually lists)
@@ -988,12 +984,6 @@ SUPERSPACE_TILES = (
     ("block:ss_mapping:targets", "ss_mapping", "targets"),         # Y_L: targets mapped into superspace generators
     ("block:ss_mapping:interest", "ss_mapping", "interest"),       # intervals of interest mapped into superspace generators
     ("block:ss_mapping:detempering", "ss_mapping", "detempering"), # detempering mapped into superspace generators
-    # the deferred identity objects (gated on the not-yet-built identity_objects setting, off by
-    # default): the old M_L-over-its-own-generators self-map and the dedicated M_jL = I row band.
-    # The mockup's live M_jL / M_LgL are the always-on (ss_vectors, ssprimes) / (ss_mapping, ssgens)
-    # tiles above; these two stay only behind the identity_objects gate.
-    ("block:ss_mapping:gens", "ss_mapping", "gens"),               # M_L over its own generators (trivially identity)
-    ("block:ss_just_mapping:ssprimes", "ss_just_mapping", "ssprimes"),  # M_jL = I (dL × dL identity)
     # the superspace tempering projection P_L = G_L·M_L (gated on the projection toggle via its row band):
     # the dL × dL operator over the superspace primes, plus its quantities spine (the dL superspace primes)
     ("block:ss_projection:ssprimes", "ss_projection", "ssprimes"),     # P_L itself, the dL × dL projection
@@ -1037,7 +1027,6 @@ UNITS_TILES = (
     # ssprimes — true primes p, not the on-domain b)
     ("block:ucol:ss_vectors", "ss_vectors", "units"),
     ("block:ucol:ss_mapping", "ss_mapping", "units"),
-    ("block:ucol:ss_just_mapping", "ss_just_mapping", "units"),
     ("block:ucol:ss_projection", "ss_projection", "units"),   # P_L's rows are bᵢ/ (b/b operator)
     ("block:urow:ssgens", "units", "ssgens"),
     ("block:urow:ssprimes", "units", "ssprimes"),
@@ -1068,7 +1057,7 @@ PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "r
                         # the chapter-9 superspace matrices carry a plain-text EBK string too
                         # (B_L, M_L, M_jL, and the superspace projection P_L); listing them reserves
                         # the band height so the text doesn't spill past the tile into the row below
-                        "ss_vectors", "ss_mapping", "ss_just_mapping", "ss_projection"})
+                        "ss_vectors", "ss_mapping", "ss_projection"})
 
 # Cell kinds the value-display toggles filter out. "gridded values" hides
 # everything a tile holds besides its fold toggle, name caption and plain-text

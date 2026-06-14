@@ -364,7 +364,6 @@ def plain_text_values(
             ("ss_mapping", "commas"): _ket_list(mapped_C, "}"),     # mapped commas (→ 0)
             ("ss_mapping", "targets"): _ket_list(mapped_T, "}"),    # Y_L
             ("ss_mapping", "interest"): _ket_list(mapped_I, "}", wrap=False),
-            ("ss_just_mapping", "ssprimes"): _covector_stack(mjl),
             ("tuning", "ssgens"): _cents_genmap(ss_tun.generator_map),
             ("tuning", "ssprimes"): _cents_map(ss_tun.tuning_map),
             ("just", "ssprimes"): _cents_map(ss_tun.just_map),

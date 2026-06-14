@@ -1070,12 +1070,12 @@ class _GridBuilder:
         self.row_labels = _p.row_labels
         self.effective_captions = _p.effective_captions
         # identity objects — the trivial self-maps that equal 𝐼 (mapping over its own
-        # generators, domain primes as vectors over themselves, 𝑀·D, and in the superspace
-        # block M_L over its own generators and the JI mapping M_jL = I). They're deferred to
-        # the not-yet-built identity_objects feature, so this defaults off and stays out of
-        # settings.IMPLEMENTED; tests pass it through build's settings directly. Until then
-        # the two superspace identity tiles gate on it the way the standard-domain identity
-        # tiles are simply absent from the tile list.
+        # generators, domain primes as vectors over themselves, 𝑀·D, the form matrices
+        # cancelling 𝐹⁻¹𝐹, and in the superspace block M_L over its own generators and the JI
+        # mapping M_jL = I). A live, default-off Show toggle (settings.IMPLEMENTED) that gates
+        # the two tiles BUILT so far — the superspace M_jL = I (ss_vectors × ssprimes) and
+        # M_LgL = I (ss_mapping × ssgens); the standard-domain self-maps aren't in the tile list
+        # yet, so the gate has nothing to drop for them until they're built.
         self.show_identity_objects = self.settings.get("identity_objects", False)
         # the domain coordinate label that indexes each element in unit strings — 𝑝 (prime)
         # over a standard prime limit, 𝒃 (basis element) over a nonstandard subgroup, since
@@ -1602,15 +1602,14 @@ class _GridBuilder:
                                ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
                                ("ss_vectors", "targets"), ("ss_mapping", "targets")}
         if not self.show_identity_objects:
-            # the superspace identity objects — M_L over its own generators (ss_mapping × gens,
-            # trivially 𝐼) and the JI mapping M_jL = I (ss_just_mapping × ssprimes) — are deferred
-            # to the not-yet-built identity_objects feature, exactly like their standard-domain
-            # counterparts (mapping × gens, vectors × primes, mapping × detempering), which simply
-            # aren't in the tile list. Dropping them here clears their cells, brackets, captions,
-            # symbols, panels and fold toggles. (ss_just_mapping's whole row band is gated off too,
-            # above; ss_mapping's stays for the real M_L in its ssprimes column.)
-            self.declared_tiles -= {("ss_mapping", "gens"), ("ss_just_mapping", "ssprimes"),
-                                    ("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
+            # the two BUILT identity objects gate here: the superspace JI mapping M_jL = I
+            # (ss_vectors × ssprimes) and M_L over its own generators (ss_mapping × ssgens). Their
+            # standard-domain counterparts (mapping × gens = 𝑀𝐺, vectors × primes = 𝑀ⱼ, mapping ×
+            # detempering = 𝑀D, canon × gens = 𝐹⁻¹𝐹) aren't in the tile list yet, so the gate has
+            # nothing to drop for them. Dropping a tile clears its cells, brackets, caption, symbol,
+            # panel and fold toggle; the ss_vectors / ss_mapping rows stay for the real B_L / M_L in
+            # their other columns.
+            self.declared_tiles -= {("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
         # the superspace held / interest tiles only exist to lift an actual held / interest list (or
         # an open draft of one) — with none shown (nh_shown / mi_shown == 0) they'd be empty boxes,
         # so drop them (cells, panel, caption, brackets and fold toggle all go with the tile).
@@ -1754,20 +1753,14 @@ class _GridBuilder:
             ("canon", self.rc * ROW_H, self.show_form_boxes, True, "canonical mapping"),
             ("mapping", self.r_shown * ROW_H, show_temp, True, "mapping"),
             # the chapter-9 superspace rows sit between mapping and the projection row, the row
-            # counterparts of the ssgens / ssprimes columns: ss_vectors holds the dL-tall
-            # vector columns (B_L, target/comma vectors in the superspace); ss_mapping the
-            # rL × dL matrix M_L; ss_just_mapping the dL × dL identity M_jL (each
-            # superspace prime is its own basis element). All three gate on the same
-            # nonstandard_domain toggle as the columns, so the bands collapse to nothing
-            # whenever the toggle is off.
+            # counterparts of the ssgens / ssprimes columns: ss_vectors holds the dL-tall vector
+            # columns (B_L, target/comma vectors, and the JI mapping M_jL = I over its ssprimes
+            # column); ss_mapping the rL × dL matrix M_L (plus M_LgL = I over its ssgens column).
+            # Both gate on the same nonstandard_domain toggle as the columns, so the bands collapse
+            # to nothing whenever the toggle is off; M_jL / M_LgL gate further on identity_objects
+            # (see declared_tiles above), but their rows stay for B_L / M_L either way.
             ("ss_vectors", self.dL * ROW_H, self.show_superspace, True, "superspace\ninterval vectors"),
             ("ss_mapping", self.rL * ROW_H, self.show_superspace, True, "superspace\nmapping"),
-            # the M_jL = I band exists ONLY to hold that identity object, so it gates on
-            # identity_objects too (its sole tile is the deferred ss_just_mapping × ssprimes —
-            # see declared_tiles below). The ss_mapping band stays: it also carries the real
-            # rL × dL mapping M_L (ss_mapping × ssprimes), only its gens-column self-map drops.
-            ("ss_just_mapping", self.dL * ROW_H,
-             self.show_superspace and self.show_identity_objects, True, "superspace\nJI mapping"),
             # the superspace tempering projection P_L = G_L M_L, a dL × dL matrix over the superspace
             # primes — the chapter-9 analogue of the projection row, framed like M_L. Seats just below
             # the superspace mapping and above the on-domain projection (the mockup). Present with the
@@ -2608,9 +2601,6 @@ class _GridBuilder:
     def ss_map_top(self, i: int):  # the y of ss_mapping row i (the rL stacked superspace maps)
         return self.rows["ss_mapping"].y + i * ROW_H
 
-    def ss_just_map_top(self, i: int):  # the y of ss_just_mapping row i (the dL stacked superspace JI maps)
-        return self.rows["ss_just_mapping"].y + i * ROW_H
-
     def ss_proj_top(self, i: int):  # the y of ss_projection row i (the dL stacked maps of P_L = G_L M_L)
         return self.rows["ss_projection"].y + i * ROW_H
 
@@ -3242,7 +3232,6 @@ class _GridBuilder:
             "mapping": (self.r_shown, self.map_top, lambda i: f"g{_sub(i + 1)}/"),
             "ss_vectors": (self.dL, self.ss_vec_top, lambda i: f"p{_sub(i + 1)}/"),
             "ss_mapping": (self.rL, self.ss_map_top, lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
-            "ss_just_mapping": (self.dL, self.ss_just_map_top, lambda i: f"p{_sub(i + 1)}/"),
             "ss_projection": (self.dL, self.ss_proj_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
         }
         for key, (n, top, label) in matrix_units.items():
@@ -4108,24 +4097,6 @@ class _GridBuilder:
                     for g in range(self.rL):
                         self.cells.append(CellBox(f"cell:ss_mapping:{ckey}:{g}:draft", left(n), self.ss_map_top(g),
                                              COL_W, ROW_H, "mapped", text="", gen=g, pending=True))
-        # M_jL (superspace JI mapping): the dL × dL identity. Each superspace prime is its
-        # own basis element, so the just mapping is trivially I. Same read-only "mapped" kind
-        # and bracket convention as M_L; lives in its own row band ss_just_mapping below it.
-        # Units b/b — each cell's row dimension is the i-th basis element, its column the
-        # j-th, both subscripted via cell_unit. (Two prime subscripts on one unit don't
-        # collide because cell_unit subscripts ALL b's; the row index would only differ on
-        # an off-diagonal entry, and M_jL is the identity.)
-        if self.row_open("ss_just_mapping") and self.tile_open("ss_just_mapping", "ssprimes"):
-            mjl = service.superspace_just_mapping(self.superspace_primes)
-            for i in range(self.dL):
-                for j in range(self.dL):
-                    self.cells.append(CellBox(
-                        f"cell:ss_just_mapping:ssprimes:{i}:{j}",
-                        self.ss_prime_left(j), self.ss_just_map_top(i), COL_W, ROW_H,
-                        "mapped", text=str(mjl[i][j]),
-                        gen=i, prime=j,
-                        unit=self.cell_unit("ss_just_mapping", "ssprimes", prime=j),
-                    ))
         # P_L = G_L M_L (superspace projection): the dL × dL rational projection the tuning lifts to
         # over its superspace primes. Sits in (ss_projection, ssprimes), each row a covector over the
         # dL ss_primes — read-only "mapped" cells like M_L (P_L is DERIVED, edited only via the on-
@@ -4740,11 +4711,6 @@ class _GridBuilder:
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):
             for i in range(self.rL):
                 self.bracket(f"ss_map:{i}", MAP_BRACKETS, "ssprimes", self.ss_map_top(i), ROW_H)
-        # M_jL = I: a dL × dL identity, framed identically to M_L (per-row ⟨ … ] + frame)
-        if self.row_open("ss_just_mapping") and self.tile_open("ss_just_mapping", "ssprimes"):
-            for i in range(self.dL):
-                self.bracket(f"ss_just_map:{i}", MAP_BRACKETS, "ssprimes",
-                             self.ss_just_map_top(i), ROW_H)
         # P_L: a dL × dL covector stack over the ssprimes column, per-row ⟨ … ] like M_L / M_jL
         if self.row_open("ss_projection") and self.tile_open("ss_projection", "ssprimes"):
             for i in range(self.dL):
@@ -4920,7 +4886,7 @@ class _GridBuilder:
                 ("prescaling", "ssprimes"): _prescale_top,
                 ("ss_mapping", "ssprimes"): self.ss_map_top,
                 ("ss_mapping", "primes"): self.ss_map_top,
-                ("ss_just_mapping", "ssprimes"): self.ss_just_map_top,
+                ("ss_vectors", "ssprimes"): self.ss_vec_top,  # M_jL = I's dL rows of maps 𝒎ⱼₗᵢ
                 ("ss_projection", "ssprimes"): self.ss_proj_top,  # P_L's dL rows of maps 𝒑ₗᵢ
             }
             row_count = {("mapping", "primes"): self.r,
@@ -4931,7 +4897,7 @@ class _GridBuilder:
                          ("prescaling", "ssprimes"): self.prescale_rows + self.size_rows,
                          ("ss_mapping", "ssprimes"): self.rL,
                          ("ss_mapping", "primes"): self.rL,
-                         ("ss_just_mapping", "ssprimes"): self.dL,
+                         ("ss_vectors", "ssprimes"): self.dL,
                          ("ss_projection", "ssprimes"): self.dL}  # P_L is dL × dL (a covector per superspace prime)
             for (rkey, ckey), glyph in self.row_labels.items():
                 if not self.tile_open(rkey, ckey):
@@ -5372,8 +5338,6 @@ class _GridBuilder:
         # the chapter-9 superspace mapping M_L is M's parallel over the superspace primes,
         # framed the same way (top bracket + bottom curly brace spanning the rL × dL matrix)
         self.matrix_frame("ss_mapping", "ssprimes", "ss_mapping")
-        # M_jL = I rides the same matrix-frame pattern over its own dL × dL identity band
-        self.matrix_frame("ss_just_mapping", "ssprimes", "ss_just_mapping")
         # the superspace projection P_L = G_L M_L: a covector stack framed like P (the on-domain
         # projection), closing with the prime-coordinate angle ⟩ (ebkangle) — an operator, not a map
         self.matrix_frame("ss_projection", "ssprimes", "ss_proj", foot="ebkangle")

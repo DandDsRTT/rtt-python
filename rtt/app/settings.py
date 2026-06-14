@@ -153,7 +153,7 @@ IMPLEMENTED: frozenset[str] = frozenset(
      "math_expressions", "charts", "tuning_ranges",
      "tuning_colorization", "temperament_colorization", "weighting",
      "generator_detempering", "optimization", "interest", "all_interval", "alt_complexity",
-     "nonstandard_domain", "projection",
+     "nonstandard_domain", "projection", "identity_objects",
      # "form" IS live: unlike the pure grouping parents it carries a real layer (the canonical-
      # form subscript C). "form_controls" is live too — the <choose form> dropdowns (canonical only,
      # for now). Its other two sub-controls (form_boxes, form_colorization) stay greyed until built.
