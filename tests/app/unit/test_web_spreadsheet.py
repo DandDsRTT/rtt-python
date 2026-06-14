@@ -6515,12 +6515,11 @@ def test_every_interval_ratio_and_vector_is_click_to_play():
     assert dv.audio and dv.audio[0] == "vectors:detempering"
 
 
-def test_form_layer_is_a_live_parent_over_three_greyed_subcontrols():
+def test_form_layer_is_a_live_parent_with_live_controls_over_two_greyed_subcontrols():
     # the form layer is a live top-level toggle (it adds the canonical-form subscript C — so unlike
-    # the pure grouping parents temperament/tuning it is NOT in GROUPING_PARENTS) whose three
-    # sub-controls — the <choose form> dropdowns, the canonical-mapping / 𝐹 boxes, and the magenta
-    # wash — are all still greyed stubs: grouped directly under "form", default off, and NOT
-    # implemented, like the other deferred controls.
+    # the pure grouping parents temperament/tuning it is NOT in GROUPING_PARENTS). Two of its three
+    # sub-controls are now live too: "form_controls" (the <choose form> dropdowns), while the
+    # canonical-mapping / 𝐹 boxes and the magenta wash stay greyed stubs until their content ships.
     keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
     assert {"form", "form_controls", "form_boxes", "form_colorization"} <= keys
     assert settings.defaults()["form"] is False and "form" in settings.IMPLEMENTED  # live parent
@@ -6528,7 +6527,9 @@ def test_form_layer_is_a_live_parent_over_three_greyed_subcontrols():
     for child in ("form_controls", "form_boxes", "form_colorization"):
         assert settings.SUBCONTROLS[child] == "form"            # grouped under the form parent
         assert settings.defaults()[child] is False              # default off
-        assert child not in settings.IMPLEMENTED                # greyed (content not built yet)
+    assert "form_controls" in settings.IMPLEMENTED              # the dropdowns are live now (step 2)
+    assert "form_boxes" not in settings.IMPLEMENTED             # still greyed (content not built yet)
+    assert "form_colorization" not in settings.IMPLEMENTED      # still greyed
     # the parent precedes its children in the group (the panel requires it for indentation)
     specific = [k for k, *_ in dict(settings.SHOW_GROUPS)["specific boxes & controls"]]
     assert specific.index("form") < min(specific.index(c)

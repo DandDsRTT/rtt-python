@@ -155,8 +155,9 @@ IMPLEMENTED: frozenset[str] = frozenset(
      "generator_detempering", "optimization", "interest", "all_interval", "alt_complexity",
      "nonstandard_domain", "projection",
      # "form" IS live: unlike the pure grouping parents it carries a real layer (the canonical-
-     # form subscript C). Its three sub-controls stay greyed (absent here) until their content ships.
-     "form"}
+     # form subscript C). "form_controls" is live too — the <choose form> dropdowns (canonical only,
+     # for now). Its other two sub-controls (form_boxes, form_colorization) stay greyed until built.
+     "form", "form_controls"}
 )
 
 # The pure grouping parents: top-level toggles that only expand the box toggle(s) nested under them
