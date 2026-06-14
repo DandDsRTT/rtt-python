@@ -61,6 +61,8 @@ from rtt.app.service.core import (
     is_standard_domain,
     identify_comma_basis_form,
     identify_mapping_form,
+    resolve_comma_basis_form,
+    resolve_mapping_form,
     mapped_commas,
     mapped_intervals,
     MAPPING_FORM_KEYS,

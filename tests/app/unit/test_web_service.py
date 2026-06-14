@@ -1719,6 +1719,21 @@ def test_plain_text_all_interval_lils_weight_is_the_per_target_list():
     assert "|" not in w                                    # no size-augmentation divider
 # ── domain basis element editing (chapter-9 nonstandard-domain input) ────────────────────────
 
+def test_resolve_comma_basis_form_prefers_the_user_pick_when_forms_coincide():
+    # meantone's positive-ratio comma 81/80 is ALSO its minimal form (a single comma is already
+    # minimal), so the two options produce the same matrix. identify_* returns only the earliest
+    # (positive-ratio); resolve_* honors the user's actual pick as a tiebreaker.
+    positive = ((-4, 4, -1),)
+    assert service.identify_comma_basis_form(positive) == "positive-ratio"
+    assert service.resolve_comma_basis_form(positive, "minimal") == "minimal"
+    assert service.resolve_comma_basis_form(positive, "positive-ratio") == "positive-ratio"
+    # a preferred form the matrix is NOT in is ignored — falls back to the first real match
+    assert service.resolve_comma_basis_form(positive, "canonical") == "positive-ratio"
+    # no/unknown preference behaves exactly like identify (just never None — "" placeholder)
+    assert service.resolve_comma_basis_form(((4, -4, 1),), None) == "canonical"
+    assert service.resolve_mapping_form(((1, 1, 0), (0, 1, 4)), None) == "equave-reduced"
+
+
 def test_parse_domain_element_accepts_positive_rationals_and_rejects_junk():
     assert service.parse_domain_element("7") == 7  # an integer normalizes to a bare int
     assert service.parse_domain_element("13/5") == Fraction(13, 5)  # a nonprime stays a Fraction

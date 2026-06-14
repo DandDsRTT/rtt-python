@@ -849,8 +849,11 @@ class _GridBuilder:
                  pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
                  pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
                  displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
-                 targets_in_use=True, pending_mapping_row=None, preview_remove=None):
+                 targets_in_use=True, pending_mapping_row=None, preview_remove=None,
+                 mapping_form=None, comma_basis_form=None):
         self.prev_ids = prev_ids or {}
+        self.mapping_form = mapping_form          # the user's sticky <choose form> picks (tiebreakers
+        self.comma_basis_form = comma_basis_form  # when offered forms coincide — see resolve_*_form)
         # a − hover's transient rank-removal preview: None | ("comma", idx) | ("row", idx). Removing
         # a comma raises the rank (a generator is BORN — a green ghost mapping row) and recombines
         # the surviving rows; removing a generator raises the nullity (a comma is born — a green
@@ -1157,10 +1160,14 @@ class _GridBuilder:
         self.form_M = service.form_matrix(self.state.mapping)  # F: the generator form matrix (r×r), F·M = canonical
         # which generator form the STORED mapping currently is (so the <choose form> dropdown shows it
         # selected) — "" when it matches none of the offered forms (an unlisted equivalent generating set)
-        self.mapping_form_key = service.identify_mapping_form(self.state.mapping, self.state.domain_basis) or ""
-        # likewise for the comma-basis <choose form> dropdown (canonical / positive-ratio / minimal)
+        # honor the user's explicit <choose form> pick as a tiebreaker (mapping_form): forms can
+        # coincide, so deriving the selection from the matrix alone would snap off the chosen option
+        self.mapping_form_key = service.resolve_mapping_form(
+            self.state.mapping, self.mapping_form, self.state.domain_basis)
+        # likewise for the comma-basis <choose form> dropdown (canonical / positive-ratio / minimal),
+        # where a comma's minimal form commonly equals its positive-ratio form
         self.comma_basis_form_key = (
-            service.identify_comma_basis_form(self.state.comma_basis, self.state.domain_basis) or ""
+            service.resolve_comma_basis_form(self.state.comma_basis, self.comma_basis_form, self.state.domain_basis)
             if self.state.n else "")
         self.target_vectors = service.target_interval_vectors(self.targets, self.d, self.elements)  # k vectors, each d-tall
         # held intervals: the optimization box's held-just constraints — user-edited vectors in the

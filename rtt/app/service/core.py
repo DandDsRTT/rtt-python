@@ -429,6 +429,18 @@ def identify_mapping_form(mapping, domain_basis=None) -> str | None:
     return None
 
 
+def resolve_mapping_form(mapping, preferred, domain_basis=None) -> str:
+    """Which form key the mapping ``<choose form>`` dropdown shows selected, honoring the user's
+    explicitly ``preferred`` pick as a tiebreaker: when several offered forms coincide (produce the
+    same matrix), :func:`identify_mapping_form` returns only the earliest, which would snap the
+    dropdown off the option the user just chose. So if ``preferred`` is still a form this matrix is
+    in, keep it; otherwise fall back to the first match (``""`` when none match)."""
+    m = _to_matrix(mapping)
+    if preferred in MAPPING_FORM_KEYS and mapping_in_form(m, preferred, domain_basis) == m:
+        return preferred
+    return identify_mapping_form(m, domain_basis) or ""
+
+
 # The comma-basis <choose form> options, in dropdown order: the canonical (antitransposed defactored
 # Hermite) form plus the other comma normal forms from the Normal Lists page — "positive-ratio"
 # (every comma made positive in pitch) and "minimal" (the simplest comma list, the wiki's comma
@@ -475,6 +487,17 @@ def identify_comma_basis_form(comma_basis, domain_basis=None) -> str | None:
         if comma_basis_in_form(cb, key, domain_basis) == cb:
             return key
     return None
+
+
+def resolve_comma_basis_form(comma_basis, preferred, domain_basis=None) -> str:
+    """Which form key the comma-basis ``<choose form>`` dropdown shows selected — the comma
+    counterpart to :func:`resolve_mapping_form`, honoring the user's ``preferred`` pick when forms
+    coincide. A comma's minimal form often equals its positive-ratio form, so a pure
+    :func:`identify_comma_basis_form` would snap "minimal" back to the earlier "positive-ratio"."""
+    cb = _to_matrix(comma_basis)
+    if preferred in COMMA_BASIS_FORM_KEYS and comma_basis_in_form(cb, preferred, domain_basis) == cb:
+        return preferred
+    return identify_comma_basis_form(cb, domain_basis) or ""
 
 
 def form_matrix(mapping) -> Matrix:

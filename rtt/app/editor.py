@@ -106,6 +106,14 @@ class _Doc:
     projection_basis: tuple[str, ...]
     settings: tuple[tuple[str, bool], ...]
     collapsed: frozenset[str]
+    # The form the user explicitly picked from each <choose form> dropdown (keyed "mapping" /
+    # "comma_basis"), in immutable form. It rides in the document — not as a bare transient — so undo
+    # /redo return the chooser to the form chosen for THAT state. It only disambiguates the displayed
+    # selection when offered forms COINCIDE (a comma's minimal form can equal its positive-ratio
+    # form), where deriving the selection from the matrix alone (identify_*_form, first match) would
+    # snap off the user's pick. Stale the moment the matrix moves off the form, so the state setter
+    # drops the affected key on a live edit and the renderer re-validates it against the matrix.
+    preferred_form: tuple[tuple[str, str], ...]
 
 
 def _prescaler_to_json(p):
@@ -201,6 +209,7 @@ def _initial_doc() -> _Doc:
         projection_basis=(),  # no deliberate projection pinned by default — U/P/G read off the tuning
         settings=tuple(sorted(show_settings.defaults().items())),
         collapsed=INITIAL_COLLAPSED,
+        preferred_form=(),  # no <choose form> pick yet — the choosers derive their selection
     )
 
 
@@ -249,6 +258,10 @@ class Editor:
         # the undo document); cleared on any approach change, domain change, scheme pick,
         # back-to-scheme, or restore.
         self.superspace_generator_tuning: tuple[float, ...] | None = None
+        # The form the user explicitly picked from each <choose form> dropdown, keyed "mapping" /
+        # "comma_basis". A document field (see :class:`_Doc.preferred_form`) restored by undo/redo, so
+        # the chooser returns to the chosen form for each state; the working copy here is a dict.
+        self.preferred_form: dict[str, str] = {}
         self._restore(_initial_doc())
 
     # --- the document: capture / restore (the unit of undo, reset, persistence) ---
@@ -271,6 +284,7 @@ class Editor:
             projection_basis=self.projection_basis,
             settings=tuple(sorted(self.settings.items())),
             collapsed=frozenset(self.collapsed),
+            preferred_form=tuple(sorted(self.preferred_form.items())),
         )
 
     def _restore(self, doc: _Doc) -> None:
@@ -292,6 +306,7 @@ class Editor:
         self.projection_basis = doc.projection_basis
         self.settings = dict(doc.settings)
         self.collapsed = set(doc.collapsed)
+        self.preferred_form = dict(doc.preferred_form)  # the <choose form> pick rides with its state
         self._clear_pending()  # a draft never survives a document restore
         self._nudging_generator = None  # nor does an in-progress wheel gesture (undo/redo/reset/load)
         self.superspace_generator_tuning = None  # a manual 𝒈L doesn't survive a document restore either
@@ -367,6 +382,13 @@ class Editor:
                 or new_state.domain_basis != self._state.domain_basis):
             self.superspace_generator_tuning = None
             self.projection_basis = ()
+        # a sticky <choose form> pick only describes the CURRENT matrix; once that matrix moves the
+        # pick is stale, so drop it (set_mapping_form / set_comma_basis_form re-record it right after
+        # their own edit). Keyed per matrix: a comma-form pick survives a mapping-only change.
+        if new_state.mapping != self._state.mapping:
+            self.preferred_form.pop("mapping", None)
+        if new_state.comma_basis != self._state.comma_basis:
+            self.preferred_form.pop("comma_basis", None)
         self._state = new_state
 
     @property
@@ -434,6 +456,8 @@ class Editor:
             held_basis_ratios=self.unchanged_ratios,
             displayed_projection_name=self.displayed_projection_scheme_name,
             targets_in_use=self.targets_in_use,
+            mapping_form=self.preferred_form.get("mapping"),
+            comma_basis_form=self.preferred_form.get("comma_basis"),
             prev_ids=prev_ids, preview_remove=preview_remove)
 
     @property
@@ -574,6 +598,7 @@ class Editor:
         positive-generator — the mapping box's ``<choose form>`` control). An undoable edit: the
         same temperament, a differently-sized generating set."""
         self.edit_mapping(service.mapping_in_form(self.state.mapping, form, self.state.domain_basis))
+        self.preferred_form["mapping"] = form  # remember the pick (edit_mapping's setter cleared it)
 
     def canonicalize_comma_basis(self) -> None:
         """Re-store the comma basis in canonical form (the comma-basis box's
@@ -590,6 +615,7 @@ class Editor:
         self.edit_comma_basis(
             service.comma_basis_in_form(self.state.comma_basis, form, self.state.domain_basis),
             self.state.domain_basis)
+        self.preferred_form["comma_basis"] = form  # remember the pick (the setter cleared it)
 
     def _feed_draft(self, values, commit) -> list[int | None] | None:
         """Drive an interval-list draft (interest / held / target): store the entered
@@ -1896,6 +1922,9 @@ class Editor:
             projection_basis=tuple(data.get("projection_basis", ()) or ()),
             settings=tuple(sorted(show_settings.from_persisted(data.get("settings", {})).items())),
             collapsed=frozenset(data.get("collapsed", INITIAL_COLLAPSED)),
+            # a <choose form> pick is a transient view hint, not persisted across a refresh — a loaded
+            # doc derives the chooser from its matrix (the form is recoverable from the stored EBK)
+            preferred_form=(),
         )
         self._restore(doc)
         # the two toggle-fused mode flags follow the underlying state, not the saved flag: the

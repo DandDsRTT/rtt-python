@@ -76,6 +76,41 @@ def test_set_comma_basis_form_minimal_simplifies_septimal_meantone():
     assert editor.state.comma_basis == ((-4, 4, -1, 0), (1, 2, -3, 1))
 
 
+def _comma_form_cell(editor) -> str:
+    editor.settings["form_controls"] = True  # the <choose form> dropdowns are a Show toggle
+    return {c.id: c for c in editor.layout().cells}["formchooser:comma_basis"].text
+
+
+def test_chooser_shows_the_picked_form_even_when_forms_coincide():
+    # the reported bug: meantone's minimal comma form EQUALS its positive-ratio form (a single comma
+    # is already minimal), so picking "minimal" used to snap the dropdown to "positive-ratio" (the
+    # earlier coinciding option). The pick is now sticky — the chooser shows what the user chose.
+    editor = Editor()
+    editor.set_comma_basis_form("positive-ratio")
+    assert _comma_form_cell(editor) == "positive-ratio"
+    editor.set_comma_basis_form("minimal")  # same matrix, different intent
+    assert _comma_form_cell(editor) == "minimal"
+    # the sticky pick is per-matrix: a real edit elsewhere drops it back to the derived form
+    editor.edit_comma_basis([[4, -4, 1]])  # canonical 80/81
+    assert _comma_form_cell(editor) == "canonical"
+
+
+def test_chooser_form_pick_survives_undo_and_redo():
+    # the pick rides in the document, so undo/redo return the chooser to the form chosen for each
+    # state — even when forms coincide (positive-ratio and minimal share meantone's one comma)
+    editor = Editor()
+    editor.set_comma_basis_form("positive-ratio")
+    editor.set_comma_basis_form("minimal")   # coincides with positive-ratio
+    editor.set_comma_basis_form("canonical")
+    assert _comma_form_cell(editor) == "canonical"
+    editor.undo()
+    assert _comma_form_cell(editor) == "minimal"         # the most recent pick for this matrix
+    editor.undo()
+    assert _comma_form_cell(editor) == "positive-ratio"  # the pick before that
+    editor.redo()
+    assert _comma_form_cell(editor) == "minimal"         # redo restores it going forward
+
+
 def test_set_complexity_prescaler_swaps_the_weighting_prescaler_into_the_layout():
     editor = Editor()
     assert service.prescaler_of(editor.tuning_scheme) == "log-prime"  # the default
