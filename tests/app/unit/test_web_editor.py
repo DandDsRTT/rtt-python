@@ -395,6 +395,108 @@ def test_set_all_interval_toggles_the_scheme_target_set():
     assert service.is_all_interval(editor.tuning_scheme) is True
 
 
+def test_custom_weights_starts_off_and_the_toggle_drives_it():
+    # custom weights is a Show toggle that IS its mode (no separate in-grid control): selecting it
+    # seeds one weight per displayed target and makes the field non-None; the flag mirrors the field
+    editor = Editor()
+    assert editor.custom_weights is None
+    assert editor.settings["custom_weights"] is False
+    n = len(editor._current_targets())
+    editor.set_show("custom_weights", True)
+    assert editor.custom_weights is not None and len(editor.custom_weights) == n
+    assert editor.settings["custom_weights"] is True
+    # selecting the great-grandchild pulls its whole chain on (weighting -> optimization -> tuning)
+    for key in ("weighting", "optimization", "tuning"):
+        assert editor.settings[key] is True
+    editor.set_show("custom_weights", False)
+    assert editor.custom_weights is None
+    assert editor.settings["custom_weights"] is False
+
+
+def test_custom_weights_toggle_is_one_undoable_step():
+    editor = Editor()
+    editor.set_show("custom_weights", True)
+    editor.undo()
+    assert editor.custom_weights is None and editor.settings["custom_weights"] is False
+    editor.redo()
+    assert editor.custom_weights is not None and editor.settings["custom_weights"] is True
+
+
+def test_set_custom_weight_entry_seeds_then_edits_one_slot():
+    editor = Editor()
+    editor.set_show("custom_weights", True)
+    seeded = editor.custom_weights
+    editor.set_custom_weight_entry(1, 4.0)
+    assert editor.custom_weights[1] == 4.0
+    assert editor.custom_weights[0] == seeded[0]  # untouched slots keep their seeded values
+    editor.set_custom_weight_entry(0, 9.0)
+    assert editor.custom_weights[0] == 9.0
+    assert editor.custom_weights[1] == 4.0  # the earlier edit survives
+
+
+def test_picking_a_named_slope_clears_custom_weights():
+    # picking unity/complexity/simplicity is the reset path away from a manual override
+    editor = Editor()
+    editor.set_show("custom_weights", True)
+    editor.set_weight_slope("complexity-weight")
+    assert editor.custom_weights is None and editor.settings["custom_weights"] is False
+
+
+def test_a_complexity_or_prescaler_pick_clears_custom_weights():
+    # a re-derived complexity supersedes the manual weights, so both named picks clear them
+    for action in ("complexity", "prescaler"):
+        editor = Editor()
+        editor.set_show("custom_weights", True)
+        if action == "complexity":
+            editor.set_complexity_name("sopfr")
+        else:
+            editor.set_complexity_prescaler("prime")
+        assert editor.custom_weights is None, action
+        assert editor.settings["custom_weights"] is False, action
+
+
+def test_all_interval_and_custom_weights_are_mutually_exclusive():
+    # all-interval has structural per-prime weights, no per-target ones — so entering it clears any
+    # manual-weight override (and its toggle)
+    editor = Editor()
+    editor.set_show("custom_weights", True)
+    editor.set_all_interval(True)
+    assert editor.custom_weights is None and editor.settings["custom_weights"] is False
+
+
+def test_a_target_change_clears_stale_custom_weights():
+    # the override is position-keyed to the target list, so a target drop invalidates it
+    editor = Editor()
+    editor.set_show("custom_weights", True)
+    editor.remove_target(0)
+    assert editor.custom_weights is None and editor.settings["custom_weights"] is False
+
+
+def test_a_domain_change_clears_stale_custom_weights():
+    editor = Editor()
+    editor.set_show("custom_weights", True)
+    editor.expand()  # adds a prime (the target list is rebuilt over the new domain)
+    assert editor.custom_weights is None and editor.settings["custom_weights"] is False
+
+
+def test_custom_weights_round_trip_and_resync_the_toggle():
+    editor = Editor()
+    editor.set_show("custom_weights", True)
+    editor.set_custom_weight_entry(0, 7.0)
+    restored = Editor()
+    restored.load(editor.serialize())
+    assert restored.custom_weights == editor.custom_weights
+    assert restored.settings["custom_weights"] is True  # the toggle re-derived from the field
+
+
+def test_load_drops_a_bad_custom_weights_value():
+    editor = Editor()
+    data = editor.serialize()
+    data["custom_weights"] = [1.0, -2.0, 0.0]  # a non-positive weight is unusable
+    editor.load(data)
+    assert editor.custom_weights is None and editor.settings["custom_weights"] is False
+
+
 def test_displayed_scheme_name_names_a_control_refined_spec():
     # A scheme reached by ticking the Euclidean complexity control is stored as a refined spec, not
     # a name string — but it must still be NAMEABLE (the renderer names the spec) rather than

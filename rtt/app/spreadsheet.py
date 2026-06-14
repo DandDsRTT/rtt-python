@@ -841,7 +841,7 @@ class _GridBuilder:
     def __init__(self, state, settings=None, collapsed=None,
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
-                 custom_prescaler=None, tuning_optimized=False,
+                 custom_prescaler=None, custom_weights=None, tuning_optimized=False,
                  pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
                  pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
                  displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
@@ -882,6 +882,7 @@ class _GridBuilder:
         # rendered as a green draft row across the mapping band — the row mirror of pending_comma
         self.pending_mapping_row = pending_mapping_row
         self.custom_prescaler = custom_prescaler
+        self.custom_weights = custom_weights  # the user's manual per-target weights, or None (Task: editable 𝒘 row)
         self.tuning_optimized = tuning_optimized
         self.nonprime_approach = nonprime_approach
         self.superspace_generator_tuning = superspace_generator_tuning  # manual 𝒈L (rL) in prime-based
@@ -1166,10 +1167,12 @@ class _GridBuilder:
             # a typed target-list override retunes the optimum (minimize over THOSE intervals), so
             # the grid's auto-optimized tuning tracks the displayed targets, not just the named set
             self.tun = service.tuning(self.state.mapping, self.tuning_scheme, self.elements, self.nonprime_approach, held=self.held_ratios,
-                                 prescaler_override=self.custom_prescaler, targets=target_override)
+                                 prescaler_override=self.custom_prescaler, targets=target_override,
+                                 weights_override=self.custom_weights)
         self.target_weights = service.interval_weights(self.state.mapping, self.tuning_scheme, self.targets,
                                                   prescaler_override=self.custom_prescaler,
-                                                  domain_basis=self.elements)  # the damage row's 𝒘
+                                                  domain_basis=self.elements,
+                                                  weights_override=self.custom_weights)  # the damage row's 𝒘
         # the target damage list is the scheme-weighted 𝐝 = |𝐞|·W (the same weights shown in the
         # weight row and minimized by the optimizer), so it — and the optimization tile's mean damage
         # over it — tracks the unity/complexity/simplicity slope rather than staying plain |error|.

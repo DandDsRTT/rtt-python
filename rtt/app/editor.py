@@ -82,6 +82,17 @@ class _Doc:
     # alt complexity makes the whole square editable and an off-diagonal cell is touched, it becomes
     # a full d×d matrix (a non-diagonal pretransformer).
     custom_prescaler: tuple | None
+    # The user's manual per-target damage weights — one float per displayed target interval, or
+    # ``None`` (no override: the weight row falls back to the scheme's slope, unity / complexity /
+    # 1·complexity⁻¹, exactly as before). Once set it OVERRIDES the slope for BOTH the displayed
+    # weight row and the damage-weighted tuning solve (the single producer is ``damage_weights``).
+    # Keyed to the target LIST (not the domain d like custom_prescaler), so it goes stale on any
+    # target ±/reorder/spec/override change and on a domain change — the setters that do those clear
+    # it. A TARGET-MODE-ONLY override: all-interval schemes minimax over the primes with structural
+    # 1/Lᵢ weights and have no per-target weights, so it's cleared (and ignored) there. The
+    # ``custom_weights`` Show toggle mirrors ``custom_weights is not None`` — selecting it seeds the
+    # override from the current derived weights and makes the 𝒘 row editable; deselecting clears it.
+    custom_weights: tuple[float, ...] | None
     target_override: tuple[str, ...] | None  # a typed explicit target list, overriding the TILT/OLD spec
     # The exact rational basis a DELIBERATE projection pin holds — the ratios the user established by
     # picking a projection or hand-editing U / P / G (all via Editor._hold_as_manual_tuning). It does
@@ -141,6 +152,28 @@ def _prescaler_is_solvable(p) -> bool:
     return all(math.isfinite(x) and x > 0 for x in p)
 
 
+def _weights_to_json(w):
+    """The manual per-target weights as a JSON-safe flat list, or None."""
+    return list(w) if w is not None else None
+
+
+def _weights_from_json(w):
+    """Rebuild the manual per-target weights from :func:`_weights_to_json`. Honoured only if every
+    entry is finite and strictly positive (a weight row-scales the solve, so a 0/negative/non-finite
+    one would corrupt or crash it — the same rule the bare-weight UI handler enforces); an invalid
+    persisted value (a hand-edited document) drops to ``None`` so the scheme's slope is used."""
+    if w is None:
+        return None
+    weights = tuple(float(x) for x in w)
+    return weights if _weights_are_solvable(weights) else None
+
+
+def _weights_are_solvable(w) -> bool:
+    """Whether manual weights are safe to feed the tuning solve: non-empty, all finite and strictly
+    positive (see :func:`_weights_from_json`)."""
+    return bool(w) and all(math.isfinite(x) and x > 0 for x in w)
+
+
 @functools.lru_cache(maxsize=1)
 def _initial_doc() -> _Doc:
     """The default document — the state a fresh Editor and :meth:`Editor.reset` start
@@ -163,6 +196,7 @@ def _initial_doc() -> _Doc:
         generator_tuning=None,
         manual_tuning=False,
         custom_prescaler=None,
+        custom_weights=None,  # no manual weights by default — the weight row derives from the slope
         target_override=None,
         projection_basis=(),  # no deliberate projection pinned by default — U/P/G read off the tuning
         settings=tuple(sorted(show_settings.defaults().items())),
@@ -232,6 +266,7 @@ class Editor:
             generator_tuning=self.generator_tuning,
             manual_tuning=self.manual_tuning,
             custom_prescaler=self.custom_prescaler,
+            custom_weights=self.custom_weights,
             target_override=self.target_override,
             projection_basis=self.projection_basis,
             settings=tuple(sorted(self.settings.items())),
@@ -252,6 +287,7 @@ class Editor:
         self.generator_tuning = doc.generator_tuning
         self.manual_tuning = doc.manual_tuning
         self.custom_prescaler = doc.custom_prescaler
+        self.custom_weights = doc.custom_weights
         self.target_override = doc.target_override
         self.projection_basis = doc.projection_basis
         self.settings = dict(doc.settings)
@@ -316,6 +352,7 @@ class Editor:
             self.held_vectors = []
             self.interest_vectors = []
             self.custom_prescaler = None
+            self._invalidate_custom_weights()  # the target list is rebuilt — position-keyed weights are stale
         # the chapter-9 approach radio is hidden when the domain carries no nonprime element, so
         # a domain change that flips has-nonprimes False clears the selection back to neutral —
         # an invisible control would otherwise keep an off-screen non-default state. A move
@@ -384,6 +421,7 @@ class Editor:
             generator_tuning=self.effective_generator_tuning(),
             target_override=self.target_override,
             custom_prescaler=self.custom_prescaler,
+            custom_weights=self.custom_weights,
             tuning_optimized=self.tuning_is_optimized,
             pending_interest=self.pending_interest,
             pending_held=self.pending_held,
@@ -615,7 +653,8 @@ class Editor:
         return service.tuning(
             self.state.mapping, self.tuning_scheme, self.state.domain_basis,
             self.nonprime_basis_approach, held=held,
-            prescaler_override=self.custom_prescaler, targets=self.target_override)
+            prescaler_override=self.custom_prescaler, targets=self.target_override,
+            weights_override=self.custom_weights)
 
     def _optimum_generator_tuning(self) -> tuple[float, ...]:
         """The scheme's current optimal generator tuning, respecting any held intervals and a
@@ -669,7 +708,7 @@ class Editor:
         bare = service.tuning(
             self.state.mapping, self.tuning_scheme, self.state.domain_basis,
             self.nonprime_basis_approach, prescaler_override=self.custom_prescaler,
-            targets=self.target_override).generator_map
+            targets=self.target_override, weights_override=self.custom_weights).generator_map
         held_optimum = self._optimum_generator_tuning() if self.held_vectors else bare
         override = self.effective_generator_tuning()
         displayed = (override if override is not None and len(override) == len(self.state.mapping)
@@ -941,6 +980,7 @@ class Editor:
             self.state.mapping, self.tuning_scheme, self.state.domain_basis,
             self.nonprime_basis_approach, held=tuple(ratios),
             prescaler_override=self.custom_prescaler, targets=self.target_override,
+            weights_override=self.custom_weights,
         ).generator_map
         self.superspace_generator_tuning = None
         self.manual_tuning = True  # a deliberate tuning override (not the scheme optimum)
@@ -1087,6 +1127,7 @@ class Editor:
         self._snapshot()
         self.tuning_scheme = service.scheme_with_prescaler(self.tuning_scheme, prescaler)
         self.custom_prescaler = None
+        self._invalidate_custom_weights()  # a re-derived complexity supersedes any manual weights
 
     def set_complexity_norm_power(self, power: float) -> None:
         """Set the interval-complexity norm power q (the editable q field in box 𝒄) — which Lq
@@ -1102,9 +1143,12 @@ class Editor:
 
     def set_weight_slope(self, slope: str) -> None:
         """Swap the damage-weight slope (the weight box's chooser in box 𝒘) — whether each
-        target's weight is its complexity, 1, or 1/complexity — which retunes accordingly."""
+        target's weight is its complexity, 1, or 1/complexity — which retunes accordingly. Picking a
+        named slope is the reset path away from a manual-weight override, so it clears it (and turns
+        the custom-weights toggle off), snapping the 𝒘 row back to the slope-derived weights."""
         self._snapshot()
         self.tuning_scheme = service.scheme_with_weight_slope(self.tuning_scheme, slope)
+        self._invalidate_custom_weights()
 
     def set_nonprime_basis_approach(self, approach: str) -> None:
         """Set the chapter-9 nonstandard-domain-approach radio: ``""`` (neutral),
@@ -1133,6 +1177,7 @@ class Editor:
         self._snapshot()
         self.tuning_scheme = service.scheme_with_complexity(self.tuning_scheme, name)
         self.custom_prescaler = None
+        self._invalidate_custom_weights()  # a re-derived complexity supersedes any manual weights
 
     def set_custom_prescaler_entry(self, i: int, j: int, value: float) -> None:
         """Edit one entry (row ``i``, column ``j``) of the complexity pretransformer — the editable
@@ -1178,19 +1223,86 @@ class Editor:
         self.tuning_scheme = service.scheme_with_diminuator(self.tuning_scheme, replaced)
 
     def set_all_interval(self, all_interval: bool) -> None:
-        """Toggle the target-controls all-interval checkbox: checked targets every interval (the
-        empty set — an all-interval scheme), unchecked targets the displayed interval list (the
-        live target spec). Switches the scheme's target set accordingly (an undoable edit). The
-        weight slope flips with the mode: an all-interval scheme is simplicity-weighted by
-        construction, while the target-based default is unity weight — so checking forces
-        simplicity, unchecking forces unity."""
+        """Enter/exit all-interval mode: on targets every interval (the empty set — an all-interval
+        scheme), off targets the displayed interval list (the live target spec). An undoable edit.
+        The mode is now driven by the ``all_interval`` Show toggle (see :meth:`set_show`); this
+        public method snapshots and delegates to :meth:`_apply_all_interval` for direct callers."""
         self._snapshot()
+        self.settings["all_interval"] = all_interval  # keep the Show flag in step with the mode
+        self._apply_all_interval(all_interval)
+
+    def _apply_all_interval(self, all_interval: bool) -> None:
+        """The body of all-interval mode entry/exit, WITHOUT snapshotting (the caller has). Switches
+        the scheme's target set ({} vs the live target spec) and weight slope — an all-interval
+        scheme is simplicity-weighted by construction, the target-based default unity-weighted. The
+        slope and target set are swapped as structured TRAITS (no name surgery), so a
+        held-/destretched- modifier survives the toggle. Entering also clears any manual-weight
+        override: all-interval has structural per-prime simplicity weights, not per-target ones, so
+        the two modes are mutually exclusive."""
         slope = "simplicity-weight" if all_interval else "unity-weight"
-        # swap the slope and the target set as structured traits — no name surgery, so a
-        # held-/destretched- modifier survives the toggle (a glued prefix would drop it)
         scheme = service.scheme_with_weight_slope(self.tuning_scheme, slope)
         self.tuning_scheme = service.scheme_with_targets(
             scheme, "{}" if all_interval else self.target_spec)
+        if all_interval:
+            self.custom_weights = None
+            self.settings["custom_weights"] = False
+
+    def _apply_custom_weights(self, on: bool) -> None:
+        """The body of manual-weight mode entry/exit (the ``custom_weights`` Show toggle and its
+        cascade/prune paths), WITHOUT snapshotting. Entering seeds the override from the weights the
+        𝒘 row currently shows (so untouched cells keep their values); exiting clears it. A
+        target-mode feature — never entered while all-interval (the toggle greys there), so a stray
+        on-in-all-interval resolves to off, keeping the flag/field invariant."""
+        self.custom_weights = (tuple(self._displayed_target_weights())
+                               if on and not service.is_all_interval(self.tuning_scheme) else None)
+        self.settings["custom_weights"] = self.custom_weights is not None
+
+    def _displayed_target_weights(self) -> tuple[float, ...]:
+        """The slope-derived weights over the current displayed targets — what the 𝒘 row shows with
+        no override. Seeds a fresh custom-weight override so untouched cells keep their shown values."""
+        return tuple(service.interval_weights(
+            self.state.mapping, self.tuning_scheme, self._current_targets(),
+            prescaler_override=self.custom_prescaler, domain_basis=self.state.domain_basis))
+
+    def set_custom_weight_entry(self, i: int, value: float) -> None:
+        """Edit one cell of the manual weight row 𝒘 (the editable cells commit through this). In
+        custom-weight mode the override is already seeded from the displayed weights, so this just
+        replaces slot ``i``; a stale index (past a target change) is ignored. Seeds defensively if
+        somehow called with no override yet."""
+        self._snapshot()
+        if self.custom_weights is None:
+            self.custom_weights = tuple(self._displayed_target_weights())
+            self.settings["custom_weights"] = True
+        weights = list(self.custom_weights)
+        if 0 <= i < len(weights):
+            weights[i] = float(value)
+            self.custom_weights = tuple(weights)
+
+    def _invalidate_custom_weights(self) -> None:
+        """Drop a now-stale manual-weight override and turn its toggle off — called when the target
+        list changes length/order/membership (the override is position-keyed to it; clear, never
+        remap). The caller has already snapshotted (or it is the no-snapshot domain-change path)."""
+        self.custom_weights = None
+        self.settings["custom_weights"] = False
+
+    def _sync_mode_toggles(self) -> None:
+        """Reconcile each toggle-fused mode to its (just-mutated) Show flag, so flipping the panel
+        toggle — directly, or via a cascade / select-all / chapter prune — enters or exits the
+        matching mode in the SAME action. all-interval and custom weights are Show toggles that ARE
+        their mode (no separate in-grid control); this is the one place that keeps flag and mode in
+        step. Idempotent: each branch fires only on a genuine mismatch and leaves them consistent."""
+        if self.settings["all_interval"] != service.is_all_interval(self.tuning_scheme):
+            self._apply_all_interval(self.settings["all_interval"])
+        if self.settings["custom_weights"] != (self.custom_weights is not None):
+            self._apply_custom_weights(self.settings["custom_weights"])
+
+    def _sync_mode_toggle_flags(self) -> None:
+        """Make each toggle-fused Show flag reflect the underlying state — the inverse of
+        :meth:`_sync_mode_toggles`. Used on load, where the scheme and the manual-weight field are
+        authoritative and the saved flag may be stale (or pinned to default by ``from_persisted``
+        for a not-yet-implemented toggle); this keeps flag == mode WITHOUT re-driving the mode."""
+        self.settings["all_interval"] = service.is_all_interval(self.tuning_scheme)
+        self.settings["custom_weights"] = self.custom_weights is not None
 
     def set_target_spec(self, spec: str) -> None:
         """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
@@ -1203,6 +1315,7 @@ class Editor:
         self.target_family = family
         self.target_limit = int(n) if n else None
         self.target_override = None
+        self._invalidate_custom_weights()  # a new target set — position-keyed weights are stale
         # a target-based scheme tracks the displayed interval list: retarget it to the new
         # family/limit as a structured trait (an all-interval scheme ignores the list, so leave
         # it untouched). Setting the trait — not re-gluing a prefix — keeps any held-/destretched-
@@ -1220,6 +1333,7 @@ class Editor:
             return False
         self._snapshot()
         self.target_override = service.comma_ratios(vectors, self.state.domain_basis)
+        self._invalidate_custom_weights()  # a new target list — position-keyed weights are stale
         return True
 
     def set_target_override_vectors(self, vectors) -> None:
@@ -1228,6 +1342,7 @@ class Editor:
         self._snapshot()
         self.target_override = service.comma_ratios(
             [tuple(int(x) for x in m) for m in vectors], self.state.domain_basis)
+        self._invalidate_custom_weights()  # the target list changed — position-keyed weights are stale
 
     def _current_targets(self) -> list[str]:
         """The live target list as ratio strings — the manual override if set, else the
@@ -1250,6 +1365,7 @@ class Editor:
             targets = self._current_targets()
             targets.append(service.comma_ratios([vector], self.state.domain_basis)[0])
             self.target_override = tuple(targets)
+            self._invalidate_custom_weights()  # a target added — position-keyed weights are stale
         self.pending_target = self._feed_draft(values, commit)
 
     def cancel_pending_target(self) -> None:
@@ -1263,6 +1379,7 @@ class Editor:
         del targets[i]
         self._snapshot()
         self.target_override = tuple(targets)
+        self._invalidate_custom_weights()  # a target dropped — position-keyed weights are stale
 
     # --- drag-and-drop: move one interval column between or within the lists ---
     # The four interval lists are heterogeneous — targets ride as ratio strings off a
@@ -1356,6 +1473,8 @@ class Editor:
         self._snapshot()
         if "commas" in (src_list, dst_list):
             self._clear_pending()  # a rank change invalidates the per-list drafts
+        if "targets" in (src_list, dst_list):
+            self._invalidate_custom_weights()  # the target list's length/order changed — weights stale
         self._take_from(src_list, src_idx)
         self._put_into(dst_list, dst_idx, vector)  # land at the dropped-on column's index (insert clamps)
         return True
@@ -1380,7 +1499,15 @@ class Editor:
         without its base — equivalences needs symbols, mnemonics needs names), and deselecting a
         toggle deselects every sub-control nested under it (so a hidden parent never strands its
         sub-controls' content or panel rows on screen). Turning alt. complexity off (directly or by
-        deselecting a parent like weighting) also resets the tuning to basic minimax-lp."""
+        deselecting a parent like weighting or optimization) also resets the tuning to basic
+        minimax-lp.
+
+        Two sub-controls of weighting ARE their tuning mode rather than mere visibility — all-interval
+        and custom weights have no separate in-grid control — so this also drives the matching mode
+        via :meth:`_sync_mode_toggles`: toggling all-interval enters/exits the all-interval scheme,
+        toggling custom weights enters/exits the editable manual-weight row, and a cascade that turns
+        either off (e.g. deselecting optimization, the whole Mode-A branch) exits that mode too — all
+        in this one undo step."""
         self._snapshot()
         had_alt_complexity = self.settings["alt_complexity"]
         self.settings[key] = value
@@ -1392,6 +1519,7 @@ class Editor:
                 self.settings[child] = False
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
+        self._sync_mode_toggles()  # all-interval / custom weights ARE their Show toggles: drive the mode
 
     def set_all_show(self, value: bool, keys=None) -> None:
         """The settings panel's select-all/none: turn the given Show toggles on (``True``) or off
@@ -1410,6 +1538,7 @@ class Editor:
             self._standardize_domain_in_place()
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
+        self._sync_mode_toggles()  # select-all/none also drives the all-interval / custom-weights modes
 
     def disable_hidden_settings(self, chapter: int) -> None:
         """Turn OFF every Show toggle the guide-chapter slider has hidden (its reveal chapter is past
@@ -1425,6 +1554,9 @@ class Editor:
                 self.settings[key] = False
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
+        # the prune only turns settings OFF, so this only ever EXITS the fused modes (sliding below
+        # ch7 leaves all-interval; below the ★ notch leaves custom weights) — never enters one
+        self._sync_mode_toggles()
 
     def toggle_collapsed(self, item: str) -> None:
         """Fold or unfold one row, column, or tile (``"row:tuning"``, ``"col:targets"``,
@@ -1564,6 +1696,7 @@ class Editor:
         self._snapshot()
         targets[target] = f"{product.numerator}/{product.denominator}"
         self.target_override = tuple(targets)
+        self._invalidate_custom_weights()  # two targets combined — position-keyed weights are stale
 
     def add_comma(self) -> None:
         """Begin a pending comma: a blank draft column for the user to fill in. It is
@@ -1679,6 +1812,7 @@ class Editor:
             "generator_tuning": list(self.generator_tuning) if self.generator_tuning is not None else None,
             "manual_tuning": self.manual_tuning,
             "custom_prescaler": _prescaler_to_json(self.custom_prescaler),
+            "custom_weights": _weights_to_json(self.custom_weights),
             "target_override": list(self.target_override) if self.target_override is not None else None,
             "projection_basis": list(self.projection_basis),
             "settings": dict(self.settings),
@@ -1714,6 +1848,7 @@ class Editor:
             if data.get("generator_tuning") is not None and data.get("manual_tuning") else None,
             manual_tuning=bool(data.get("manual_tuning") and data.get("generator_tuning") is not None),
             custom_prescaler=_prescaler_from_json(data.get("custom_prescaler")),
+            custom_weights=_weights_from_json(data.get("custom_weights")),
             target_override=tuple(data["target_override"])
             if data.get("target_override") is not None else None,
             projection_basis=tuple(data.get("projection_basis", ()) or ()),
@@ -1721,5 +1856,9 @@ class Editor:
             collapsed=frozenset(data.get("collapsed", INITIAL_COLLAPSED)),
         )
         self._restore(doc)
+        # the two toggle-fused mode flags follow the underlying state, not the saved flag: the
+        # scheme and the manual-weight field are authoritative, so re-derive all_interval /
+        # custom_weights from them (a stale or from_persisted-pinned flag can't drift the panel).
+        self._sync_mode_toggle_flags()
         self._undo_stack.clear()
         self._redo_stack.clear()
