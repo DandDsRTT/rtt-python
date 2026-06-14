@@ -2481,7 +2481,12 @@ def index() -> None:
             target_limit_commit[0].cancel()
         end_gesture()
 
-    ui.context.client.on_disconnect(_on_disconnect)
+    # capture this page's Client now, while the slot context is valid. render() can run from an
+    # off-loop background task (_commit_render), where the slot stack is empty and ui.run_javascript
+    # — which finds its client via the current slot — would raise. Calling client.run_javascript on
+    # the captured client needs no slot, so the busy-scrim push works from the background task too.
+    page_client = ui.context.client
+    page_client.on_disconnect(_on_disconnect)
     # install the shared chooser-option hover delegation once per page (inert until a dropdown opens)
     ui.run_javascript(_OPTION_HOVER_DELEGATION)
     # dismiss any hover tooltip on pointerdown so it can't strand when the click removes/reflows its
@@ -4117,7 +4122,7 @@ def index() -> None:
         # Skipped under the User test harness, where there's no live client (and run_javascript from
         # inside a handler-driven render hits a torn-down slot context); the scrim is browser-only.
         if not helpers.is_user_simulation():
-            ui.run_javascript("window.rttBusy && window.rttBusy.done()")
+            page_client.run_javascript("window.rttBusy && window.rttBusy.done()")
         # (the scrollbar-fit pass re-runs on its own when the grid resizes — the board's width/height
         # CSS transition fires the listener in freeze.js — so render needn't push any JS here.)
 
