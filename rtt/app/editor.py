@@ -1278,6 +1278,18 @@ class Editor:
             weights[i] = float(value)
             self.custom_weights = tuple(weights)
 
+    def set_custom_weights(self, weights) -> None:
+        """Replace the whole manual weight row 𝒘 at once (the editable cells' commit re-reads every
+        cell in column order, the way an edited target column commits the whole vector grid). Stores
+        the typed weights as the override, turning custom-weight mode on. Ignored if any entry is
+        non-finite / ≤ 0 (the UI guards too, but this keeps a bad value off the solver)."""
+        weights = tuple(float(w) for w in weights)
+        if not _weights_are_solvable(weights):
+            return
+        self._snapshot()
+        self.custom_weights = weights
+        self.settings["custom_weights"] = True
+
     def _invalidate_custom_weights(self) -> None:
         """Drop a now-stale manual-weight override and turn its toggle off — called when the target
         list changes length/order/membership (the override is position-keyed to it; clear, never

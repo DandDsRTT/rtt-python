@@ -792,8 +792,8 @@ def test_show_toggle_labels_wrap_long_names_onto_two_lines():
 
 
 def test_every_option_square_renders_at_one_uniform_size():
-    # The settings-panel checkboxes, the box-𝐋 diminuator / target-controls all-interval
-    # checkboxes, and the tuning-ranges monotone/tradeoff radio boxes must all render as the
+    # The settings-panel checkboxes, the box-𝐋 diminuator checkbox, and the tuning-ranges
+    # monotone/tradeoff radio boxes must all render as the
     # SAME square. Previously the in-grid control checkboxes were forced larger (font-size:40px
     # → an 18px box) than the settings (13.5px) and range (16px) boxes; now every q-checkbox box
     # and the range box are pinned to the one shared option-box size so they read identically.

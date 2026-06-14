@@ -87,9 +87,23 @@ def _toggle(user: User, label: str) -> None:
         user.find(kind=ui.checkbox, content=label).click()
 
 
+_SPECIFIC_LABEL_BY_KEY = {key: label
+                          for key, label, _d in dict(show_settings.SHOW_GROUPS)["specific boxes & controls"]}
+
+
 async def _enable(user: User, label: str) -> None:
-    """Open the page and turn on the Show toggle carrying ``label``."""
+    """Open the page and turn on the Show toggle carrying ``label`` — first revealing its panel
+    ancestors (a nested control's row is hidden until its whole parent chain is on, e.g. weighting
+    and tuning ranges now nest under optimization)."""
     await user.open("/")
+    if label not in _GENERAL_KEY_BY_LABEL:  # a specific-group control may be nested
+        spec_key = next((k for k, lbl, _ in dict(show_settings.SHOW_GROUPS)["specific boxes & controls"]
+                         if lbl == label), None)
+        if spec_key is not None:
+            defaults = show_settings.defaults()
+            for anc in sorted(show_settings.ancestors_of(spec_key), key=show_settings.depth_of):
+                if not defaults.get(anc, False) and anc in _SPECIFIC_LABEL_BY_KEY:
+                    _toggle(user, _SPECIFIC_LABEL_BY_KEY[anc])  # reveal a default-off ancestor first
     _toggle(user, label)
 
 
@@ -363,15 +377,16 @@ async def test_optimization_with_charts_renders_the_damage_indicator(user: User)
     await user.should_see(marker="chart:damage:targets")
 
 
-async def test_enabling_all_interval_renders_the_target_controls_checkbox(user: User) -> None:
-    # the show-panel "all-interval" entry (now interactive, nested under weighting) reveals the
-    # target-controls "all-interval" checkbox — a control_check in the target list controls. Those
-    # ride the vectors row (open by default), so enable weighting (the entry's parent in the
-    # panel), then the entry itself, and drive the checkbox's render branch.
+async def test_the_all_interval_toggle_enters_all_interval_mode_with_no_in_grid_checkbox(user: User) -> None:
+    # the all-interval Show toggle (nested weighting -> optimization) now IS the all-interval mode —
+    # there is no separate in-grid checkbox. Clicking it switches the scheme to all-interval, which
+    # shows the dual(q) read-only cell; the old control:all_interval checkbox never renders.
     await user.open("/")
-    user.find(kind=ui.checkbox, content="weighting").click()  # reveal the nested all-interval entry
-    user.find(kind=ui.checkbox, content="all-interval").click()
-    await user.should_see(marker="control:all_interval")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
+    user.find(kind=ui.checkbox, content="weighting").click()     # reveal the all-interval entry
+    user.find(kind=ui.checkbox, content="all-interval").click()  # the toggle drives the mode directly
+    await user.should_see(marker="control:dual")                 # dual(q) shows only in all-interval mode
+    await user.should_not_see(marker="control:all_interval")     # the in-grid checkbox is gone
 
 
 async def test_off_diagonal_pretransformer_edit_keeps_the_all_interval_weight_a_list(user: User) -> None:
@@ -380,9 +395,9 @@ async def test_off_diagonal_pretransformer_edit_keeps_the_all_interval_weight_a_
     # matrix. The weight stays the per-target LIST (never a matrix) — only its tile symbol changes to
     # 𝑆 = 𝑋⁻¹. Exercises input → on_prescaler_change → set_custom_prescaler_entry → re-render end-to-end.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()       # show the weight row
     user.find(kind=ui.checkbox, content="all-interval").click()    # reveal the all-interval control
-    _cell_child(user, "control:all_interval").set_value(True)      # enter all-interval mode (targets = primes)
     user.find(kind=ui.checkbox, content="alt. complexity").click()  # make the whole square editable
     await user.should_see(marker="cell:prescaling:primes:1:0")     # the editable off-diagonal cell
     await user.should_see(marker="weight:target:0")                # before: the per-target weight LIST
@@ -594,8 +609,11 @@ async def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_defaul
     await user.open("/")
     slider = next(iter(user.find(marker="chapterslider").elements))
     assert slider.value == show_settings.CHAPTER_DEFAULT  # the as-shipped slider position (ch4)
-    # ch2/3/4 specific rows are revealed at the default (the ch3 tuning sub-controls included)...
-    for key in ("counts", "tuning_boxes", "optimization", "weighting", "interest",
+    # ch2/3/4 specific rows are revealed at the default (the ch3 tuning sub-controls included). Only
+    # rows whose parent chain is on by default are findable here: optimization (under the on-by-
+    # default tuning) is, but weighting now nests under the off-by-default optimization, so it's
+    # parent-hidden like all-interval and excluded (its chapter gating is unobservable until shown).
+    for key in ("counts", "tuning_boxes", "optimization", "interest",
                 "domain_quantities", "domain_units"):
         assert "rtt-chap-hidden" not in _row_classes(user, key), key
     # ...while the ch9 / outside-guide (★) rows are collapsed. (These are all top-level rows, or
@@ -825,12 +843,11 @@ async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(
     # than collapsing to a single hardcoded value, which is what we want to inspect here).
     await user.open("/")
     _toggle(user, "presets")  # show the chooser dropdowns
+    user.find(kind=ui.checkbox, content="optimization").click()    # reveal weighting (nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()       # reveal the nested entries
     user.find(kind=ui.checkbox, content="alt. complexity").click()  # ≥2 all-interval schemes -> stays a dropdown
-    user.find(kind=ui.checkbox, content="all-interval").click()    # show the target-controls checkbox
-    await user.should_see(marker="control:all_interval")
     assert _cell_child(user, "preset:tuning").options["minimax-S"] == "T minimax-S"  # target-based default
-    _cell_child(user, "control:all_interval").set_value(True)  # check the box -> all-interval
+    user.find(kind=ui.checkbox, content="all-interval").click()    # the toggle IS all-interval mode now
     await user.should_see(marker="preset:tuning")
     assert _cell_child(user, "preset:tuning").options["minimax-S"] == "minimax-S"  # T prefix dropped
 
@@ -920,6 +937,7 @@ async def test_scrolling_a_prescaler_weight_nudges_it_by_a_thousandth(user: User
     # its thousandths display) instead of 1 — the float counterpart to the integer cells, wired and
     # stepped by the one shared mechanism rather than a snowflake handler.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()              # gates the prescaling row
     _cell_child(user, "control:slope").set_value("simplicity-weight")     # a non-unity slope reveals it
     await user.should_see(marker="cell:prescaling:primes:1:1")
@@ -1197,6 +1215,7 @@ async def test_typing_the_prescaler_plain_text_overrides_the_scheme(user: User) 
     # drives every downstream consumer. The diagonal grid cell must reflect the typed value
     # on re-render — would otherwise be the scheme's log₂3 = 1.585 default.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()  # opens the prescaling row
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
     _toggle(user, "plain text values")  # the ptext band
@@ -1213,6 +1232,7 @@ async def test_unparseable_prescaler_plain_text_reddens_the_box(user: User) -> N
     # mapping / comma-basis duals' validation path. The override stays untouched (the editor
     # would otherwise have written a non-diagonal 𝐿, which the math layer can't honour).
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
     _toggle(user, "plain text values")
@@ -1233,6 +1253,7 @@ async def test_editing_a_prescaler_diagonal_cell_overrides_the_scheme(user: User
     # must survive the render in the diagonal cell AND retune the comma column's product tile
     # (𝐿C reads the same diagonal, so its prime-3 row goes from -4·1.585 = -6.340 to -4·4 = -16).
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()  # the prescaling row is gated on weighting
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
     await user.should_see(marker="cell:prescaling:primes:1:1")
@@ -1251,6 +1272,7 @@ async def test_editable_prescaler_cell_renders_a_stacked_cents_face(user: User) 
     # diagonal at log₂3 = 1.585, a 3-dp value that overflows the square as a single line. It must
     # read as the same stacked int-over-fraction face. Enable weighting (gates the prescaling row).
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
     await user.should_see(marker="cell:prescaling:primes:1:1")
@@ -1268,6 +1290,7 @@ async def test_a_bare_integer_value_fills_the_cell_not_the_reduced_whole_part_si
     # with empty space below — which made integers read as shrunken, "as if they had a decimal part".
     # The prescaler matrix is mostly integers: its off-diagonal 0s are read-only tuning value cells.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # reveal the prescaling row
     await user.should_see(marker="cell:prescaling:primes:0:1")
@@ -1327,6 +1350,7 @@ async def test_chooser_popups_open_wide_enough_for_one_line_entries(user: User) 
     # never narrower than the box it drops from. (Weighting on so the tuning chooser has its three
     # weight-slope variants — a real dropdown, not the single-option hardcoded value.)
     await _enable(user, "presets")
+    _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")
     for cell_id in ("preset:temperament", "preset:tuning"):
         style = _cell_child(user, cell_id)._props["popup-content-style"]
@@ -1419,6 +1443,7 @@ async def test_prescaler_chooser_shows_the_prompt_when_a_diagonal_is_overridden(
     # diagonal freezes a custom override deviating from it, so the closed box falls back to "-"
     # via Quasar's display-value — the same fallback the tuning chooser uses for a manual tuning.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()  # opens the prescaling row (box 𝐋)
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
     _toggle(user, "presets")  # the chooser dropdowns
@@ -1434,6 +1459,7 @@ async def test_picking_a_prescaler_clears_a_manual_diagonal_override(user: User)
     # from the chooser clears the override and snaps the diagonal back to the scheme's value —
     # set_complexity_prescaler is the reset path, like re-selecting a tuning scheme.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
     _toggle(user, "presets")
@@ -1454,6 +1480,7 @@ async def test_editing_the_prescaler_wipes_then_restores_the_complexity_chooser(
     # value flips from the named "lp (log-product)" to "custom". Re-picking "log-prime" snaps the
     # diagonal back, and the complexity recovers its name.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # reveals box 𝒄 + the prescaling row
     _toggle(user, "presets")  # the complexity + prescaler choosers are presets
@@ -1513,6 +1540,7 @@ async def test_weighting_complexity_chooser_is_disabled_when_lp_only(user: User)
     # chooser. (Its enabled multi-option form + option swap are the next test, with alt. complexity on.)
     await user.open("/")
     _toggle(user, "presets")  # the dropdown is a preset, so it needs the presets layer on
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()  # box 𝒘's slope chooser shows under weighting
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals box 𝒄
     await user.should_see(marker="control:complexity")
@@ -1530,6 +1558,7 @@ async def test_alt_complexity_enables_and_widens_the_complexity_chooser(user: Us
     # this guards. The live value is preserved across the change.
     await user.open("/")
     _toggle(user, "presets")  # the dropdown is a preset, so it needs the presets layer on
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals box 𝒄
     await user.should_see(marker="control:complexity")
@@ -1550,11 +1579,10 @@ async def test_typing_the_q_field_drives_the_complexity_norm(user: User) -> None
     # powerdisplay in all-interval mode, so switching q taxicab -> Euclidean must flip dual(q) ∞ -> 2,
     # proving the typed q drove the norm.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()        # reveal the nested all-interval + alt entries
     user.find(kind=ui.checkbox, content="all-interval").click()     # show the target-controls checkbox
     user.find(kind=ui.checkbox, content="alt. complexity").click()  # make q an editable powerinput
-    await user.should_see(marker="control:all_interval")
-    _cell_child(user, "control:all_interval").set_value(True)       # all-interval -> simplicity + dual(q) shown
     await user.should_see(marker="control:dual")
     assert _cell_child(user, "control:q").value == "1"              # taxicab default
     assert _cell_child(user, "control:dual").default_slot.children[0].text == "∞"  # dual of taxicab (q=1), read-only face
@@ -1571,6 +1599,7 @@ async def test_q_norm_power_is_read_only_until_alt_complexity(user: User) -> Non
     # input, no input element) — exactly like the all-interval-locked optimization power. Turning alt.
     # complexity on swaps it to the editable powerinput.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()           # box 𝒘's slope chooser shows
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals box 𝒄 + 𝑞
     await user.should_see(marker="control:q")
@@ -1588,6 +1617,7 @@ async def test_weight_slope_chooser_mirrors_a_scheme_change(user: User) -> None:
     # (minimax-U default -> minimax-C) must flip the slope chooser on re-render — without the user
     # touching that chooser. A dropped control_select update branch leaves it stale at the old slope.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()  # box 𝒘 (the slope chooser)
     _toggle(user, "presets")                                # the tuning scheme dropdown
     await user.should_see(marker="control:slope")
@@ -1605,6 +1635,7 @@ async def test_changing_the_weight_slope_renames_the_established_scheme_chooser(
     # same scheme trait, and the scheme-driven tuning retunes to the new variant's optimum.
     await user.open("/")
     _toggle(user, "presets")                                  # the established-scheme dropdown
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()  # the box-𝒘 slope chooser + the -S/-C variants
     await user.should_see(marker="control:slope")
     await user.should_see(marker="preset:tuning")
@@ -1623,11 +1654,11 @@ async def test_all_interval_greys_and_locks_the_weight_slope_chooser(user: User)
     # out, locked to simplicity. Target-based it is live; flipping all-interval on must disable it
     # in place and set its value — the _update_control_select branch that re-applies enabled state.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()    # box 𝒘 (the slope chooser) + the all-interval entry
-    user.find(kind=ui.checkbox, content="all-interval").click()  # reveal the target-controls checkbox
     await user.should_see(marker="control:slope")
-    assert _cell_child(user, "control:slope").enabled           # live while target-based
-    _cell_child(user, "control:all_interval").set_value(True)   # flip to all-interval
+    assert _cell_child(user, "control:slope").enabled           # live while target-based (before)
+    user.find(kind=ui.checkbox, content="all-interval").click()  # enter all-interval -> locks the slope chooser
     await user.should_see(marker="control:slope")
     chooser = _cell_child(user, "control:slope")
     assert not chooser.enabled                                  # greyed (locked, non-interactive)
@@ -1687,18 +1718,16 @@ async def test_all_interval_renders_the_locked_power_as_a_read_only_value(user: 
     user.find(kind=ui.checkbox, content="optimization").click()     # reveal the power cell
     user.find(kind=ui.checkbox, content="weighting").click()        # reveal the all-interval + alt entries
     user.find(kind=ui.checkbox, content="alt. complexity").click()  # 𝑝 editable while target-based
-    user.find(kind=ui.checkbox, content="all-interval").click()     # show the target-controls checkbox
-    await user.should_see(marker="control:all_interval")
     assert "rtt-cell-input" in _wrap_classes(user, "optimization:power")  # editable input while target-based
     edit_main, edit_sub = _stacked_face(user, "optimization:power")       # editable face: ∞ over (max)
     assert (edit_main.text, edit_sub.text) == ("∞", "(max)")
-    _cell_child(user, "control:all_interval").set_value(True)     # check it -> all-interval
+    user.find(kind=ui.checkbox, content="all-interval").click()     # enter all-interval -> locks the power
     await user.should_see(marker="optimization:power")
     assert "rtt-cell-input" not in _wrap_classes(user, "optimization:power")  # read-only value, no input
     face = _cell_child(user, "optimization:power")                # the .rtt-tuning-value stacked face div
     main, sub = face.default_slot.children[0], face.default_slot.children[1]
     assert (main.text, sub.text) == ("∞", "(max)")               # identical face: ∞ over (max), kept
-    _cell_child(user, "control:all_interval").set_value(False)    # back to target-based
+    user.find(kind=ui.checkbox, content="all-interval").click()  # toggle back to target-based
     await user.should_see(marker="optimization:power")
     assert "rtt-cell-input" in _wrap_classes(user, "optimization:power")  # editable input again
 
@@ -1721,8 +1750,6 @@ async def test_mean_damage_tooltip_tracks_the_all_interval_mode(user: User) -> N
 
     user.find(kind=ui.checkbox, content="weighting").click()          # reveal the all-interval entry
     user.find(kind=ui.checkbox, content="all-interval").click()       # show the target-controls checkbox
-    await user.should_see(marker="control:all_interval")
-    _cell_child(user, "control:all_interval").set_value(True)         # check it -> flip to all-interval
 
     assert any("retuning magnitude" in t.lower() for t in mean_damage_tips())   # the wording swapped in place
     assert not any("⟪𝐝⟫ₚ" in t for t in mean_damage_tips())
@@ -1733,17 +1760,16 @@ async def test_all_interval_disables_the_target_chooser_and_falls_back_to_dash(u
     # both parts fall back to "-" (the family select's display-value, the limit's "-" placeholder) and
     # the whole control greys out non-interactive. Unchecking restores the live family and interactivity.
     await _enable(user, "presets")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()     # reveal the all-interval entry
-    user.find(kind=ui.checkbox, content="all-interval").click()  # show the target-controls checkbox
-    await user.should_see(marker="control:all_interval")
     num, sel = _target_preset(user)
-    assert sel.enabled and "display-value" not in sel._props      # live family, interactive
-    _cell_child(user, "control:all_interval").set_value(True)     # check it -> all-interval
+    assert sel.enabled and "display-value" not in sel._props      # live family, interactive (before)
+    user.find(kind=ui.checkbox, content="all-interval").click()  # enter all-interval -> greys the chooser
     await user.should_see(marker="preset:target")
     num, sel = _target_preset(user)
     assert not sel.enabled and not num.enabled                    # greyed + locked
     assert sel._props.get("display-value") == "-" and num.value is None  # both fall back to "-"
-    _cell_child(user, "control:all_interval").set_value(False)    # back to target-based
+    user.find(kind=ui.checkbox, content="all-interval").click()  # toggle back to target-based
     await user.should_see(marker="preset:target")
     num, sel = _target_preset(user)
     assert sel.enabled and "display-value" not in sel._props      # restored & interactive
@@ -2935,6 +2961,7 @@ async def test_hovering_a_tuning_scheme_option_previews_reselecting(user: User) 
     from rtt.app import presets
     await user.open("/")
     _toggle(user, "presets")                                   # the tuning chooser is presets-gated
+    _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")                                 # >1 scheme variant (S/U/C) + the weight row
     await user.should_see(marker="preset:tuning")
     wrap = set(user.find(marker="preset:tuning").elements)
@@ -2953,6 +2980,7 @@ async def test_hovering_a_prescaler_option_previews_reselecting(user: User) -> N
     from rtt.app import presets
     await user.open("/")
     _toggle(user, "presets")
+    _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")
     _toggle(user, "alt. complexity")                           # >1 prescaler option
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # make the prescaler reach the weights
@@ -2972,6 +3000,7 @@ async def test_hovering_a_complexity_option_previews_reselecting(user: User) -> 
     # its internal key in _candidate_apply, mirroring the on-select commit.
     await user.open("/")
     _toggle(user, "presets")
+    _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")
     _toggle(user, "alt. complexity")
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # make the complexity reach the weights
@@ -2988,6 +3017,7 @@ async def test_hovering_a_weight_slope_option_previews_reselecting(user: User) -
     # the box-𝒘 weight-slope chooser previews its options: the slope is exactly what scales each
     # target's weight, so hovering a different slope rings the re-weighted targets.
     await user.open("/")
+    _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")                                # the slope chooser shows with weighting
     await user.should_see(marker="control:slope")
     wrap = set(user.find(marker="control:slope").elements)
@@ -3003,9 +3033,9 @@ async def test_hovering_a_locked_weight_slope_shows_no_preview(user: User) -> No
     # disabled / locked chooser must not preview — on_chooser_hover skips it on `sel.enabled`, so
     # hovering its options rings nothing even though the slope branch would otherwise re-weight.
     await user.open("/")
+    _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")
     _toggle(user, "all-interval")                                 # reveal the all-interval checkbox
-    _cell_child(user, "control:all_interval").set_value(True)     # all-interval -> the slope chooser locks
     await user.should_see(marker="control:slope")
     wrap = set(user.find(marker="control:slope").elements)
     idx = list(service.WEIGHT_SLOPES).index("complexity-weight")
@@ -3212,6 +3242,7 @@ async def test_hovering_the_replace_diminuator_checkbox_previews_its_reweighting
     # clears them, and the click still commits on its own. Under a simplicity-weighted scheme the
     # complexity drives the weights, so the change ripples to the weight/complexity columns.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()       # reveal the weighting region (slope chooser)
     user.find(kind=ui.checkbox, content="alt. complexity").click()  # ...and the size-factor checkbox
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # complexity now drives the weights
@@ -3221,24 +3252,6 @@ async def test_hovering_the_replace_diminuator_checkbox_previews_its_reweighting
     assert "rtt-preview-change" in _wrap_classes(user, "weight:target:2")   # the re-weighted column rings amber
     UserInteraction(user, btn, None).trigger("mouseleave")
     assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:2")  # cleared on mouse-out
-
-
-async def test_hovering_the_all_interval_checkbox_previews_collapsing_to_the_primes(user: User) -> None:
-    # the target-controls "all-interval" checkbox collapses the finite target list to the primes, so its
-    # hover is genuinely structural: the dropped target ratios still on screen ring RED (what the click
-    # removes) and the re-weighted survivors ring amber. Leaving clears both, and the click still commits.
-    await user.open("/")
-    user.find(kind=ui.checkbox, content="weighting").click()     # the weight columns + the entry's parent
-    user.find(kind=ui.checkbox, content="all-interval").click()  # reveal the target-controls checkbox
-    await user.should_see(marker="control:all_interval")
-    btn = set(user.find(marker="control:all_interval").elements)
-    UserInteraction(user, btn, None).trigger("mouseenter")
-    assert "rtt-preview-remove" in _wrap_classes(user, "target:2")     # a dropped non-prime target → red
-    assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")  # a survivor's re-weight → amber
-    await user.should_see(marker="target:2")                          # ...still on screen (no reflow)
-    UserInteraction(user, btn, None).trigger("mouseleave")
-    assert "rtt-preview-remove" not in _wrap_classes(user, "target:2")
-    assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
 
 
 async def test_hovering_undo_rings_what_reverting_the_last_edit_changes(user: User) -> None:
@@ -3479,6 +3492,7 @@ async def test_a_stale_opthover_after_popup_hide_is_dropped(user: User) -> None:
     from rtt.app import presets
     await user.open("/")
     _toggle(user, "presets")
+    _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")                                 # >1 tuning-scheme option (S/U/C)
     await user.should_see(marker="preset:tuning")
     sel = _cell_child(user, "preset:tuning")
@@ -3635,9 +3649,9 @@ async def test_a_zero_prescaler_diagonal_entry_is_rejected_not_committed(user: U
     # and the bad value is committed so every later render re-crashes. on_prescaler_change must reject it
     # at the edit seam — toast + revert, state untouched — like the ratio / mapping handlers.
     await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
     user.find(kind=ui.checkbox, content="all-interval").click()
-    _cell_child(user, "control:all_interval").set_value(True)         # all-interval: simplicity weighting
     user.find(kind=ui.checkbox, content="alt. complexity").click()    # make the prescaler square editable
     await user.should_see(marker="cell:prescaling:primes:0:0")        # an editable DIAGONAL (i==j) entry
     before = _cell_child(user, "cell:prescaling:primes:0:0").value

@@ -2007,9 +2007,6 @@ class _Reconciler:
         if cb.id == "control:diminuator":  # swap the complexity size factor (lp ↔ lils)
             return lambda: self._editor.set_diminuator_replaced(
                 not service.diminuator_replaced(self._editor.tuning_scheme))
-        if cb.id == "control:all_interval":  # collapse the targets to the primes (structural: red + amber)
-            return lambda: self._editor.set_all_interval(
-                not service.is_all_interval(self._editor.tuning_scheme))
         return None
 
     def _update_control_check(self, cb: spreadsheet.CellBox) -> None:  # mirror the live "replace diminuator" state
@@ -3384,11 +3381,9 @@ def index() -> None:
             apply()
         elif cid == "control:diminuator":  # the checkbox passes a bool (replace the diminuator?)
             editor.set_diminuator_replaced(bool(value))
-        elif cid == "control:all_interval":  # the target-controls checkbox: all-interval vs target-based
-            editor.set_all_interval(bool(value))
         else:
             return  # the complexity "custom" off-preset state (no candidate) is a no-op — no re-render
-        _request_render()  # a weighting / complexity / all-interval trait change retunes — off the loop
+        _request_render()  # a weighting / complexity trait change retunes — off the loop
 
     def on_range_mode(value):
         # which generator tuning range the ranges chart shows. A re-render echo (the radio
