@@ -546,7 +546,7 @@ _TILE_SYMBOL = "𝒏"              # the quantity symbol — a bold-italic n, ma
 _TILE_ROWLABEL = "𝒏₁"           # the matrix's row header (a matlabel) — its own header_symbols layer, like real row labels
 _TILE_EQUIV = " = 𝑒G"          # the symbol's defining-equation tail (𝒏 = 𝑒G — mixed object styling: italic scalar, upright matrix)
 _TILE_MATH = "1200·log₂(3/2) ="  # math_expressions: a value's closed form; the "=" belongs to the EXPRESSION, not the value
-_TILE_VALUE = "701.96"          # quantities: the bare value the form evaluates to (no "=" — that rides the expression)
+_TILE_VALUE = "701.955"         # quantities: the bare value the form evaluates to (no "=" — that rides the expression); 3 dp, the grid's cents precision
 _TILE_UNITS = "¢/p"             # units: the value's unit (cents per prime) — the "units: …" line AND the per-cell unit
 _TILE_PTEXT = "⟨1200 1902 2786]"  # plain_text_values: the same kind of value as a one-line EBK string
 
@@ -621,7 +621,13 @@ def _general_part_html(key: str) -> str:
     if key == "math_expressions":
         return _math_html(_TILE_MATH)
     if key == "quantities":
-        return _math_html(_TILE_VALUE)
+        # the bare value, drawn as a real gridded cents value is: the whole part big over the
+        # three-decimal .fraction stacked beneath it (the .rtt-tuning-value face — the very classes
+        # a live tuning cell uses, so the legend's value reads identically to one in the grid).
+        whole, frac = _cents_parts(_TILE_VALUE)
+        return ('<span class="rtt-tuning-value">'
+                f'<span class="rtt-stacked-main">{whole}</span>'
+                f'<span class="rtt-stacked-sub">.{frac}</span></span>')
     if key == "symbols":
         return _math_html(_TILE_SYMBOL)
     if key == "header_symbols":  # the matrix's row/col header label (matlabel), in the cell's left gutter

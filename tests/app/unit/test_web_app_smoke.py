@@ -675,7 +675,9 @@ def test_general_tile_renders_its_special_samples():
     assert "log" in app._general_part_html("math_expressions")  # 1200·log₂(3/2)
     # the "=" belongs to the math EXPRESSION, not the numeric value (so it shows only with the form)
     assert "=" in app._general_part_html("math_expressions")
-    assert "=" not in app._general_part_html("quantities")      # the value is the bare number
+    # the value is the bare number — no "=" in its VISIBLE text (the stacked face carries "=" only
+    # inside HTML attributes like class=, never as a displayed glyph)
+    assert "=" not in re.sub(r"<[^>]+>", "", app._general_part_html("quantities"))
     assert 'font-style:italic">n</span>' in app._general_part_html("symbols")  # the styled 𝒏
     # the units sample reads "units: ¢/p" — the "units:" prefix (as on a real tile) and a unit
     # naming what it is (cents per prime), the variable p bold like real units
@@ -687,6 +689,18 @@ def test_general_tile_renders_its_special_samples():
     assert "<svg" in chart                  # the sparkline...
     assert app._CHART_GRID in chart         # ...with at least one grey horizontal tick line
     assert "<svg" in app._tile_fold_html()  # the decorative top-left fold toggle (a boxed chevron)
+
+
+def test_general_tile_value_is_the_grids_stacked_three_decimal_face():
+    # a gridded cents value appears in the real grid as the whole integer part big over a
+    # three-decimal .fraction stacked BENEATH it (the .rtt-tuning-value face), not as a flat inline
+    # number. The dummy tile's value sample must read like a live cell: 701 over .955 (the pure
+    # fifth, 3 dp), built from the same stacked classes the grid uses.
+    assert app._TILE_VALUE == "701.955"                           # 3 dp, the grid's cents precision
+    html = app._general_part_html("quantities")
+    assert "rtt-tuning-value" in html                             # the live tuning-value face's container
+    assert 'class="rtt-stacked-main">701<' in html               # the big whole part on top
+    assert 'class="rtt-stacked-sub">.955<' in html               # the three decimals stacked below it
 
 
 def test_dummy_tile_chart_rides_the_themeable_mark_colors():

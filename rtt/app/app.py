@@ -4373,12 +4373,15 @@ def index() -> None:
                                                 part_el("math_expressions", size=_fit_font(_TILE_MATH, _TILE_CELL),
                                                         style=f"position:absolute;left:{cell_x}px;top:{cell_y + 1}px;"
                                                               f"width:{_TILE_CELL}px;height:9px;justify-content:center")
-                                                part_el("quantities", size=_fit_font(_TILE_VALUE, _TILE_CELL),
+                                                # the value renders as the real grid renders a gridded cents value: a
+                                                # stacked whole-part-over-.fraction face (sized by its own .rtt-stacked
+                                                # classes), so it needs the taller two-line slot the live cell gives it.
+                                                part_el("quantities",
                                                         style=f"position:absolute;left:{cell_x}px;top:{cell_y + 10}px;"
-                                                              f"width:{_TILE_CELL}px;height:10px;justify-content:center")
+                                                              f"width:{_TILE_CELL}px;height:18px;justify-content:center")
                                                 add_el("cell_units", _general_part_html("cell_units"), marked=True,
                                                        size=_TILE_FONT["cellunit"],
-                                                       style=f"position:absolute;left:{cell_x}px;top:{cell_y + 20}px;"
+                                                       style=f"position:absolute;left:{cell_x}px;top:{cell_y + 28}px;"
                                                              f"width:{_TILE_CELL}px;height:8px;justify-content:center;color:#555")
                                         elif "names" in line:
                                             # the name word, split so the mnemonic letter is its own target
