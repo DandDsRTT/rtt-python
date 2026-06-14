@@ -2026,6 +2026,9 @@ def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
 def test_interval_vectors_row_sits_between_quantities_and_mapping():
     cells = {c.id: c for c in _layout().cells}
     assert cells["label:vectors"].text == "interval vectors"
+    # the interval-ratios row title is forced onto two lines ("interval\nratios") so it reads as a
+    # two-line title matching "interval vectors" below it, rather than sitting on one line
+    assert cells["label:quantities"].text == "interval\nratios"
     assert "toggle:row:vectors" in cells  # collapsible like the other content rows
     assert cells["label:quantities"].y < cells["label:vectors"].y < cells["label:mapping"].y
 

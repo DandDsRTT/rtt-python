@@ -1789,8 +1789,9 @@ class _GridBuilder:
         row_bands = (
             ("counts", ROW_H, show_counts, True, "counts"),
             # the interval-ratios row (band key still "quantities") and its spine column ride
-            # interval_ratios; its title now reads "interval ratios".
-            ("quantities", ROW_H, show_interval_ratios, True, "interval ratios"),
+            # interval_ratios; its title now reads "interval ratios", forced onto two lines to match
+            # the two-line "interval vectors" row title just below it.
+            ("quantities", ROW_H, show_interval_ratios, True, "interval\nratios"),
             ("units", ROW_H, show_domain_units, True, "units"),
             # the scaling factors λ = diag(λ) — the projection's eigenvalue list (0 per comma,
             # vanished; 1 per unchanged, held) — a one-row scalar list over the consolidated V
