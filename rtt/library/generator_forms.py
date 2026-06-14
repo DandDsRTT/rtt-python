@@ -117,10 +117,56 @@ def equave_reduced_ma(matrix: Matrix, jip_octaves) -> Matrix:
 def positive_generator_ma(matrix: Matrix, jip_octaves) -> Matrix:
     """The positive-generator form, the "flip" variant (per the Normal Lists page): every non-period
     generator made positive by negating its row when the generator is negative — WITHOUT reducing a
-    positive-but-large generator below a period. (The other variant, "shift", is a separate follow-up.)"""
+    positive-but-large generator below a period. The other variant, "shift", is
+    :func:`positive_generator_shift_ma`."""
     rows = [list(r) for r in canonical_ma(matrix)]
     for i in range(len(rows) - 1):
         sizes = _generator_sizes_cents([tuple(r) for r in rows], jip_octaves)
         if sizes[i + 1] < 0:
             rows[i + 1] = [-b for b in rows[i + 1]]
+    return _as_matrix(rows)
+
+
+def _fx_generator_sizes_octaves(rows: list[list[int]], jip_octaves) -> np.ndarray:
+    """Flora Canou's "fast approximate" (FX) generator map, in OCTAVES — the tuning her Temperament
+    Evaluator uses for the positive-generator forms. The mapping must be canonical/HNF: for each row
+    take its pivot column (its first nonzero entry), invert the r×r submatrix of those pivot columns,
+    and read the generator sizes off the just map (``J[cols] · inv(M[:, cols])``). It "short-circuits
+    optimization" — a property of how the temperament splits intervals — and is what the (c−p)-shear
+    test in :func:`positive_generator_shift_ma` is defined against, so shift uses it rather than the
+    weighted pseudoinverse the other forms size with."""
+    m = np.array(rows, dtype=float)
+    jip = np.array(jip_octaves, dtype=float)
+    cols = [next(j for j, v in enumerate(r) if v != 0) for r in rows]  # each row's pivot column
+    return jip[cols] @ np.linalg.inv(m[:, cols])
+
+
+def positive_generator_shift_ma(matrix: Matrix, jip_octaves) -> Matrix:
+    """The positive-generator form, the "shift" variant (per the Normal Lists page): every non-period
+    generator made positive by period-SHIFTING a negative generator (adding whole periods into its
+    row's period) rather than negating it — EXCEPT when the generator is ``(c − p)``-sheared, where
+    ``c`` is the cot (generators to reach the prime, the row's pivot value) and ``p`` is the ploid
+    (periods per equave, the period row's leading entry), in which case it falls back to the "flip"
+    routine. This is the form most temperament mappings on the wiki are given in; it is often more
+    musically useful, since the prime harmonics then land on positive generator counts.
+
+    This mirrors Flora Canou's Temperament Evaluator ``form("shift")``: the sign test and the shear
+    are computed against the FX tuning (:func:`_fx_generator_sizes_octaves`), once, up front."""
+    rows = [list(r) for r in canonical_ma(matrix)]
+    gen = _fx_generator_sizes_octaves(rows, jip_octaves)
+    jip = np.array(jip_octaves, dtype=float)
+    ploid = rows[0][0]                                              # periods per equave
+    for i in range(1, len(rows)):
+        if gen[i] >= 0:                                            # already positive: leave it
+            continue
+        cot = next(b for b in rows[i] if b != 0)                  # generators to reach this prime
+        # shear: periods added to the equave-reduced prime to reach the generator stack, mod cot
+        whole_periods_in_gen = int(cot * gen[i] // gen[0])
+        whole_periods_in_prime = int((jip[i] % jip[0]) // gen[0])
+        shear = (whole_periods_in_gen - whole_periods_in_prime) % cot
+        if shear == cot - ploid:                                   # (c − p)-sheared → flip
+            rows[i] = [-b for b in rows[i]]
+        else:                                                      # otherwise shift by whole periods
+            k = int(gen[i] // gen[0])
+            rows[0] = [a + b * k for a, b in zip(rows[0], rows[i])]
     return _as_matrix(rows)
