@@ -469,11 +469,11 @@
 .rtt-zoom-clone { position:static !important; transition:none !important; }
 .rtt-zoom-clone.rtt-deccell, .rtt-zoom-clone.rtt-fraccell { background:transparent !important; border:none !important; }
 .rtt-zoom-clone .rtt-cellinput .q-field__control { background:transparent !important; border:none !important; }
-/* the folded hover help, styled exactly like a normal Quasar tooltip (the dark grey bubble, Roboto)
-   and sitting below the loupe -- so the value reads as a tile and its help reads as the usual hover
-   bubble. The app's tooltips are the same grey in both themes, so this needs no dark override. */
-.rtt-zoom-help { max-width:260px; background:#757575; color:#fafafa; border-radius:4px;
-            padding:8px 16px; font-size:14px; line-height:21px;
+/* the folded hover help: a normal-tooltip-style dark grey bubble (Roboto) sitting on the FAR side of
+   the loupe from the cursor (the engine flips the stacking). A compact 11px -- Quasar's own 14px reads
+   too big in this dense popup. The app's tooltips are the same grey in both themes, so no dark override. */
+.rtt-zoom-help { width:max-content; max-width:230px; background:#757575; color:#fafafa; border-radius:4px;
+            padding:5px 9px; font-size:11px; line-height:1.4;
             font-family:Roboto,-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif; }
 /* when the target chooser is LOCKED (all-interval), its numeric square greys with its family
    select -- the same flat #d6d6d6 disabled fill -- so the two parts read as one dead unit, not a

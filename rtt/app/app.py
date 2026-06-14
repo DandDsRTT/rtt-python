@@ -771,8 +771,12 @@ _ZOOM_JS = """
     const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
     let left = Math.max(4, Math.min(r.left + r.width / 2 - ow / 2, vw - ow - 4));
     let top = r.top - GAP - oh;                 // prefer above the cell
-    if (top < 4) top = r.bottom + GAP;          // not enough room: drop below
+    let above = true;
+    if (top < 4) { top = r.bottom + GAP; above = false; }   // not enough room: drop below
     top = Math.max(4, Math.min(top, vh - oh - 4));
+    // the loupe (the value) sits NEAREST the cell/cursor, the help tooltip on the far side: above the
+    // cell that means help-on-top / tile-on-bottom (column-reverse); below, tile-on-top (column)
+    overlay.style.flexDirection = above ? 'column-reverse' : 'column';
     overlay.style.left = left + 'px';
     overlay.style.top = top + 'px';
   };
