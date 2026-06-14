@@ -968,6 +968,7 @@ class _Reconciler:
         self.fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
         self.ratio_faces: dict = {}  # genratio/commaratio id -> its .rtt-ratio container (rebuilt in place)
         self.stacked_faces: dict = {}  # stacked-value cell id -> (main label, sub label): cents whole/.frac, power ∞/(max)
+        self.stacked_w: dict = {}      # stacked-value cell id -> its px width (to fit a solo big integer, decimals off)
         self.gensign_faces: dict = {}  # generator-tuning cell id -> its clickable +/− sign label (the generator-reversal control)
         self.htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
         self.ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
@@ -994,7 +995,7 @@ class _Reconciler:
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.scheme_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.stacked_w, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.scheme_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
         # The active preview gesture — the ONE record the ring highlights derive from (see
         # _Gesture). None when no gesture is live; every paint recomputes the rings from it.
         self.gesture: _Gesture | None = None
@@ -1225,27 +1226,32 @@ class _Reconciler:
         tile, idx, cents = cb.audio
         el.classes(add="rtt-spk").props(f'data-audio="{tile}" data-idx="{idx}" data-cents="{cents:.6f}"')
 
-    def _put_stacked_face(self, cid: str, cls: str, main: str, sub: str) -> None:
+    def _put_stacked_face(self, cid: str, cls: str, main: str, sub: str, width: float) -> None:
         """Build a stacked value face into the active cell — a big main glyph over a smaller
         sub-line (the read-only tuning value look) — and register the two labels so the update can
         re-sync them. Shared by the cents cells (whole part over .fraction) and the power cells
-        (∞ over "(max)")."""
+        (∞ over "(max)"). ``width`` is the cell's px box, used to shrink a solo big integer to fit."""
         with ui.element("div").classes(cls):
             m = ui.label(main).classes("rtt-stacked-main")
             s = ui.label(sub).classes("rtt-stacked-sub")
         self.stacked_faces[cid] = (m, s)
-        self._size_stacked_main(m, sub)
+        self.stacked_w[cid] = width
+        self._size_stacked_main(m, main, sub, width)
 
-    def _size_stacked_main(self, main_label, sub: str) -> None:
+    def _size_stacked_main(self, main_label, main: str, sub: str, width: float) -> None:
         """Size a stacked face's main glyph to its sub-line. With NO sub (a bare integer — a
-        prescaler 0/1, a finite optimization/norm power) the value isn't a whole-part-over-
-        .fraction at all: it renders at the full value-cell font (the `rtt-stacked-solo` class),
-        like the plain mapping/mapped integers, instead of the reduced whole-part size that
-        leaves room for a fraction. With a sub present (a cents decimal, or ∞ over "(max)") it
-        stays the smaller stacked size so the pair fits the square."""
+        prescaler 0/1, a finite optimization/norm power, or a cents value with decimals turned off)
+        the value isn't a whole-part-over-.fraction at all: it renders at the full value-cell font
+        (``rtt-stacked-solo``) — but a LONG integer (a 4-digit cents value like 2786, decimals off)
+        would spill the square at that size and butt against its neighbours, so it font-FITS to the
+        cell width, capped at the cell font, exactly like the mapping/mapped/whole-ratio integers
+        (``_digit_fit_font``). With a sub present (a cents decimal, ∞ over "(max)") the main stays the
+        smaller stacked size so the pair fits the square."""
         solo = not sub
         main_label.classes(add="rtt-stacked-solo" if solo else "",
                            remove="" if solo else "rtt-stacked-solo")
+        size = _digit_fit_font(len(main), width, float(_CELL_FONT)) if solo else float(_STACKED_MAIN_FONT)
+        main_label.style(f"font-size:{size:.2f}px")  # inline wins over the class — fits a long solo integer
 
     def _sync_stacked_face(self, cid: str, main: str, sub: str) -> None:
         """Re-sync a stacked face's two lines in place (the cell kind is unchanged across
@@ -1253,7 +1259,7 @@ class _Reconciler:
         m, s = self.stacked_faces[cid]
         m.set_text(main)
         s.set_text(sub)
-        self._size_stacked_main(m, sub)  # a value that gained/lost its fraction flips solo too
+        self._size_stacked_main(m, main, sub, self.stacked_w[cid])  # a value that gained/lost its fraction reflows + re-fits
 
     def set_cents_face(self, cid: str, text: str) -> None:
         """Sync a cents cell's stacked face: the whole part over the dot-led fraction (the
@@ -1267,7 +1273,7 @@ class _Reconciler:
         part big over a smaller dot-led fraction). Shared by the read-only tuning value cell and the
         editable cents cells — the latter pass the overlay class and lay it over their input."""
         whole, frac = _cents_parts(cb.text)
-        self._put_stacked_face(cb.id, cls, whole, f".{frac}" if frac else "")
+        self._put_stacked_face(cb.id, cls, whole, f".{frac}" if frac else "", cb.w)
 
     def _ratio(self, cb: spreadsheet.CellBox, approx: bool, overlay: bool = False) -> None:
         """A ratio rendered as a stacked fraction (with a ~ prefix when approximate). With
@@ -1696,6 +1702,11 @@ class _Reconciler:
         self.inputs[cb.id].value = whole
         self.den_inputs[cb.id].value = frac
         self.frac_edits[cb.id].props(f'data-decmode={"dec" if frac else "int"}')
+        # int mode shows the whole part big at the full cell font, but a long integer (a 4-digit
+        # cents value with decimals off) would spill the square and butt against its neighbours, so
+        # fit it to the box like the read-only solo face. The var drives the int-mode .q-field__native
+        # rule (ignored in dec mode, where the fraction keeps the whole part small).
+        self.frac_edits[cb.id].style(f"--dec-whole-font:{_digit_fit_font(len(whole), cb.w, float(_CELL_FONT)):.2f}px")
 
     def _build_prescalercell(self, cb: spreadsheet.CellBox, wrap) -> None:
         # a bare prescaler 𝐿 diagonal cell, the user's editable override (off-diagonal cells stay
@@ -1725,7 +1736,7 @@ class _Reconciler:
         wrap.classes("rtt-cell-input rtt-cell-stacked")
         self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_power_change(cid)) \
             .props("dense borderless").classes("rtt-cellinput")
-        self._put_stacked_face(cb.id, "rtt-tuning-value rtt-cellface", *_power_parts(cb.text))
+        self._put_stacked_face(cb.id, "rtt-tuning-value rtt-cellface", *_power_parts(cb.text), cb.w)
 
     def _update_powerinput(self, cb: spreadsheet.CellBox) -> None:
         # mirror the raw value into the input (shown when focused) and re-sync the overlay face
@@ -1743,7 +1754,7 @@ class _Reconciler:
         # via rtt-cellface), but with no input — so it looks identical to its editable twin minus the
         # white input box. (rtt-cell-stacked is omitted: with no input there's no face to hide on
         # focus, and it keeps the per-cell-unit padding rule off a value that carries no unit.)
-        self._put_stacked_face(cb.id, "rtt-tuning-value rtt-cellface", *_power_parts(cb.text))
+        self._put_stacked_face(cb.id, "rtt-tuning-value rtt-cellface", *_power_parts(cb.text), cb.w)
 
     def _update_powerdisplay(self, cb: spreadsheet.CellBox) -> None:
         self._sync_stacked_face(cb.id, *_power_parts(cb.text))

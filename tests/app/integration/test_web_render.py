@@ -886,6 +886,15 @@ def _stacked_face(user: User, cell_id: str):
     return face.default_slot.children[0], face.default_slot.children[1]
 
 
+def _ro_stacked_face(user: User, cell_id: str):
+    """The (main, sub) labels of a READ-ONLY stacked value face (a tuning value cell): the
+    .rtt-tuning-value div sits directly in the wrap (no input to overlay), main over sub. Located
+    by class so a per-cell unit riding the wrap doesn't shift the index."""
+    wrap = next(iter(user.find(marker=cell_id).elements))
+    face = next(c for c in wrap.default_slot.children if "rtt-tuning-value" in getattr(c, "_classes", []))
+    return face.default_slot.children[0], face.default_slot.children[1]
+
+
 def _dec_inputs(user: User, cell_id: str):
     """The (whole, fraction) input fields of an editable stacked-DECIMAL (cents) cell — the two
     separate fields that replaced the old overlaid whole-over-.fraction face, the decimal twin of
@@ -1325,6 +1334,27 @@ async def test_a_long_ratio_face_shrinks_to_fit_its_cell(user: User) -> None:
     small = float(num._style["font-size"].rstrip("px"))
     assert small < big                                            # the 5-digit value shrank to fit
     assert num._style["font-size"] == den._style["font-size"]     # num and den share one size
+
+
+async def test_decimals_off_shrinks_a_long_integer_to_fit_its_cell(user: User) -> None:
+    # Bug: with decimals off a cents value renders as a bare integer, but a LONG one (a 4-digit
+    # tuning value like 1200) rendered at the fixed full cell font and spilled the square, butting
+    # confusingly against its neighbours. The solo face now font-FITS to the box like the mapping /
+    # whole-ratio integers — and the fit is digit-aware, so a short value (a 1-digit retuning 0)
+    # keeps the full cell font. (The editable decimal cell's int view gets the same fit via
+    # --dec-whole-font; this guards the read-only stacked face.)
+    cell_font = float(web_app._CELL_FONT)
+    await user.open("/")
+    main_on, sub_on = _ro_stacked_face(user, "tuning:prime:0")
+    assert (main_on.text, sub_on.text) == ("1200", ".000")        # decimals on: whole over .fraction
+    _toggle(user, "decimals")                                     # turn decimals off (the dummy-tile .955 part)
+    long_main, long_sub = _ro_stacked_face(user, "tuning:prime:0")
+    assert (long_main.text, long_sub.text) == ("1200", "")        # decimals off: a bare integer, no .fraction
+    assert float(long_main._style["font-size"].rstrip("px")) < cell_font, \
+        "a 4-digit value must shrink below the full cell font so it fits its box"
+    short_main, short_sub = _ro_stacked_face(user, "retune:prime:0")  # the retuning octave is a pure 0 — one digit
+    assert (short_main.text, short_sub.text) == ("0", "")
+    assert float(short_main._style["font-size"].rstrip("px")) == cell_font  # short values keep the full font
 
 
 async def test_typing_the_prescaler_plain_text_overrides_the_scheme(user: User) -> None:

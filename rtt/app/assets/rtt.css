@@ -592,9 +592,11 @@
 .rtt-dec-frac-in .q-field__native { font-size:7px; }     /* the fraction small (the cents sub size) */
 .rtt-dec-dot { font-size:7px; user-select:none; pointer-events:none; }
 /* the int view: no fraction line, and the whole fills the square at the value-cell font (the read-only
-   solo-integer look) — the decimal twin of the fraction cell's data-fracmode="int" collapse. */
+   solo-integer look) — the decimal twin of the fraction cell's data-fracmode="int" collapse. A long
+   integer (a 4-digit cents value, decimals off) is shrunk to fit the square via --dec-whole-font, set
+   per cell by _update_decimal (the editable twin of the read-only solo face's _digit_fit_font). */
 .rtt-dec-edit[data-decmode="int"] .rtt-dec-sub { display:none; }
-.rtt-dec-edit[data-decmode="int"] .rtt-dec-whole-in .q-field__native { font-size:var(--cell-font); }
+.rtt-dec-edit[data-decmode="int"] .rtt-dec-whole-in .q-field__native { font-size:var(--dec-whole-font, var(--cell-font)); }
 /* decimal-cell state colours: the green draft (on the WRAP) reuses the blanket .q-field__native text
    rule (no overlay face to double), like the fraction cell. */
 .rtt-deccell.rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
