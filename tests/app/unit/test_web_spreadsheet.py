@@ -299,9 +299,9 @@ def test_generator_ratios_are_listed_in_the_quantities_column():
 
 def test_mapping_over_generators_identity_renders_with_identity_objects():
     # 𝑀𝐺 = 𝐼: the mapping over its own generators is the r × r identity (the embedding) — an
-    # identity object shown when identity_objects is on. A genmap stack { … ] over the gens
-    # column, the on-domain twin of the superspace M_LgL; no per-row labels (like M_LgL, per
-    # the mockup).
+    # identity object shown when identity_objects is on. A COLUMN-first vector list { … ] (each
+    # generator a ket [ … } in gen coords), the on-domain twin of the superspace M_LGL; no
+    # matlabels (like M_LGL, per the mockup).
     cells = {c.id: c for c in _with(identity_objects=True, names=True, symbols=True,
                                     equivalences=True, plain_text_values=True).cells}
     for i in range(2):  # r = 2
@@ -309,19 +309,23 @@ def test_mapping_over_generators_identity_renders_with_identity_objects():
             assert cells[f"cell:selfmap:{i}:{k}"].text == ("1" if i == k else "0")
             assert cells[f"cell:selfmap:{i}:{k}"].kind == "mapped"
     assert cells["symbol:mapping:gens"].text == "\U0001D440G = \U0001D43C"  # 𝑀G = 𝐼
-    assert cells["caption:mapping:gens"].text == "mapped generators"
-    assert cells["bracket:selfmap:0:l"].text == spreadsheet.GENMAP_BRACKETS[0]
-    assert cells["ebktop:selfmap"].kind == "ebktop"
-    assert cells["ptext:mapping:gens"].text == "[[1 0} [0 1}]"
-    assert not any(c.startswith("matlabel:row:mapping:gens") for c in cells)  # no row labels
+    assert cells["caption:mapping:gens"].text == "mapped generators"  # projection off (base caption)
+    # cols-first: an outer { … ] wrap, with per-column ket marks [ … } (NOT per-row covectors)
+    assert cells["bracket:selfmap:l"].text == spreadsheet.GENMAP_BRACKETS[0]  # {
+    assert cells["bracket:selfmap:r"].text == spreadsheet.GENMAP_BRACKETS[1]  # ]
+    assert cells["ebktop:selfmap:0"].kind == "ebktop"
+    assert cells["ebkbrace:selfmap:0"].kind == "ebkbrace"  # the ket's } foot
+    assert cells["ptext:mapping:gens"].text == "{[1 0} [0 1}]"
+    assert not any(c.startswith(("matlabel:row:mapping:gens", "matlabel:col:mapping:gens")) for c in cells)
 
 
 def test_mapping_over_generators_identity_gated_off_by_default():
     # off by default (identity_objects is in IMPLEMENTED but ships off): the generators column
     # carries no tile at the mapping row — no cells, brackets, framing marks or fold toggle.
     cells = {c.id for c in _layout().cells}
-    assert not any(c.startswith(("cell:selfmap", "bracket:selfmap")) for c in cells)
-    assert {"ebktop:selfmap", "ebkbrace:selfmap", "toggle:tile:mapping:gens"}.isdisjoint(cells)
+    assert not any(c.startswith(("cell:selfmap", "bracket:selfmap", "ebktop:selfmap",
+                                 "ebkbrace:selfmap")) for c in cells)
+    assert "toggle:tile:mapping:gens" not in cells
 
 
 def test_standard_identity_objects_wash_temperament_yellow():
@@ -2200,9 +2204,11 @@ def test_interval_vectors_show_targets_as_vectors():
 
 
 def test_interval_vectors_domain_primes_identity_renders_with_identity_objects():
-    # 𝑀ⱼ = 𝐼: the domain primes as vectors over themselves form the d × d identity (the JI
-    # mapping) — an identity object shown when identity_objects is on. A covector stack ⟨ … ]
-    # over the primes column, each row labelled 𝒎ⱼᵢ; the on-domain twin of the superspace M_jL.
+    # 𝑀ⱼ = 𝐼: the domain primes as vectors over themselves form the d × d identity (the p/p JI
+    # mapping) — an identity object shown when identity_objects is on. A covector stack ⟨ … ] over
+    # the primes column, each row labelled 𝒎ⱼᵢ, closing with the angle ⟩ (an operator, like P) —
+    # the on-domain twin of the superspace M_jL.
+    J = spreadsheet.SUB_OPEN + "j" + spreadsheet.SUB_CLOSE  # <sub>j</sub> (a tight j, not raw U+2C7C)
     cells = {c.id: c for c in _with(identity_objects=True, names=True, symbols=True,
                                     header_symbols=True, equivalences=True,
                                     plain_text_values=True).cells}
@@ -2210,12 +2216,13 @@ def test_interval_vectors_domain_primes_identity_renders_with_identity_objects()
         for k in range(3):
             assert cells[f"cell:vec:primes:{i}:{k}"].text == ("1" if i == k else "0")
             assert cells[f"cell:vec:primes:{i}:{k}"].kind == "mapped"
-    assert cells["symbol:vectors:primes"].text == "\U0001D440ⱼ = \U0001D43C"  # 𝑀ⱼ = 𝐼
+    assert cells["symbol:vectors:primes"].text == f"\U0001D440{J} = \U0001D43C"  # 𝑀ⱼ = 𝐼
     assert cells["caption:vectors:primes"].text == "JI mapping"
-    assert cells["matlabel:row:vectors:primes:0"].text == "\U0001D48Eⱼ₁"  # 𝒎ⱼ₁
+    assert cells["matlabel:row:vectors:primes:0"].text == f"\U0001D48E{J}₁"  # 𝒎ⱼ₁
     assert cells["ebktop:vec:primes"].kind == "ebktop"
+    assert cells["ebkangle:vec:primes"].kind == "ebkangle"  # the outer ⟩ foot (operator, not the } of M)
     assert cells["bracket:vec:primes:0:l"].text == spreadsheet.MAP_BRACKETS[0]
-    assert cells["ptext:vectors:primes"].text == "[⟨1 0 0]⟨0 1 0]⟨0 0 1]}"
+    assert cells["ptext:vectors:primes"].text == "[⟨1 0 0]⟨0 1 0]⟨0 0 1]⟩"
 
 
 def test_interval_vectors_domain_primes_identity_gated_off_by_default():
@@ -6140,8 +6147,8 @@ def test_generator_detempering_vectors_tile_carries_the_D_symbol():
 
 def test_mapped_generator_detempering_renders_with_identity_objects():
     # 𝑀D = 𝐼 (the detempering is M's right-inverse): the r × r identity = M·D in generator coords —
-    # an identity object shown with identity_objects AND the detempering column on. A genmap stack
-    # { … ] over the detempering column, its columns headed 𝑀𝐝ᵢ.
+    # an identity object shown with identity_objects AND the detempering column on. A COLUMN-first
+    # vector list { … ] (each detempering a ket [ … }), its columns headed 𝑀𝐝ᵢ.
     cells = {c.id: c for c in _with(identity_objects=True, generator_detempering=True, names=True,
                                     symbols=True, header_symbols=True, equivalences=True,
                                     plain_text_values=True).cells}
@@ -6152,8 +6159,11 @@ def test_mapped_generator_detempering_renders_with_identity_objects():
     assert cells["symbol:mapping:detempering"].text == "\U0001D440D = \U0001D43C"  # 𝑀D = 𝐼
     assert cells["caption:mapping:detempering"].text == "mapped generator detemperings"
     assert cells["matlabel:col:mapping:detempering:0"].text == "\U0001D440\U0001D41D₁"  # 𝑀𝐝₁
-    assert cells["ebktop:mapped_detempering"].kind == "ebktop"
-    assert cells["ptext:mapping:detempering"].text == "[[1 0} [0 1}]"
+    # cols-first: outer { … ] wrap + per-column ket marks [ … } (NOT a per-row covector frame)
+    assert cells["bracket:mapped_detempering:l"].text == spreadsheet.GENMAP_BRACKETS[0]  # {
+    assert cells["ebktop:mapped_detempering:0"].kind == "ebktop"
+    assert cells["ebkbrace:mapped_detempering:0"].kind == "ebkbrace"  # the ket's } foot
+    assert cells["ptext:mapping:detempering"].text == "{[1 0} [0 1}]"
 
 
 def test_mapped_generator_detempering_gated_off_by_default():
@@ -8143,7 +8153,7 @@ def test_M_jL_tile_has_brackets_and_matrix_frame():
         assert cells[f"bracket:ss_vec_jmap:{i}:l"].text == spreadsheet.MAP_BRACKETS[0]
         assert cells[f"bracket:ss_vec_jmap:{i}:r"].text == spreadsheet.MAP_BRACKETS[1]
     assert "ebktop:ss_vec_jmap" in cells
-    assert "ebkbrace:ss_vec_jmap" in cells
+    assert "ebkangle:ss_vec_jmap" in cells
 
 
 def test_M_jL_tile_carries_caption_and_symbol():
@@ -8152,7 +8162,7 @@ def test_M_jL_tile_carries_caption_and_symbol():
     cells = {c.id: c for c in _barbados_ss_identity(names=True, symbols=True).cells}
     assert cells["caption:ss_vectors:ssprimes"].text == "superspace JI mapping"
     # 𝑀 = U+1D440. Subscript j = U+2C7C. Subscript L = U+2097.
-    assert cells["symbol:ss_vectors:ssprimes"].text == "\U0001D440ⱼL"
+    assert cells["symbol:ss_vectors:ssprimes"].text == "\U0001D440jL"
 
 
 def test_M_jL_tile_row_labels_each_covector():
@@ -8160,14 +8170,14 @@ def test_M_jL_tile_row_labels_each_covector():
     cells = {c.id: c for c in _barbados_ss_identity(symbols=True, header_symbols=True).cells}
     for i in range(4):  # dL=4 rows
         sub_i = str(i + 1).translate(_SUBSCRIPT_DIGITS)
-        assert cells[f"matlabel:row:ss_vectors:ssprimes:{i}"].text == f"\U0001D48EⱼL{sub_i}"
+        assert cells[f"matlabel:row:ss_vectors:ssprimes:{i}"].text == f"\U0001D48EjL{sub_i}"
 
 
 def test_M_jL_tile_carries_identity_equivalence():
     # equivalences on adds " = 𝐼" after the 𝑀ⱼₗ symbol — the trivial-identity equation
     cells = {c.id: c for c in _barbados_ss_identity(symbols=True, equivalences=True).cells}
     sym = cells["symbol:ss_vectors:ssprimes"].text
-    assert sym == "\U0001D440ⱼL = \U0001D43C"  # "𝑀ⱼL = 𝐼" — math-italic I = U+1D43C
+    assert sym == "\U0001D440jL = \U0001D43C"  # "𝑀jL = 𝐼" — math-italic I = U+1D43C
 
 
 def test_superspace_identity_objects_gate_on_identity_objects():
@@ -8320,9 +8330,10 @@ def test_M_L_tile_has_a_plain_text_string():
 
 def test_M_jL_tile_has_a_plain_text_string():
     cells = {c.id: c for c in _barbados_ss_identity(plain_text_values=True).cells}
-    # the dL × dL identity rendered the same way as M_L
+    # the dL × dL identity — a covector stack closing with the angle ⟩ (the b/b JI mapping is an
+    # operator, like P_L), NOT the mapping's }
     assert cells["ptext:ss_vectors:ssprimes"].text == (
-        "[⟨1 0 0 0]⟨0 1 0 0]⟨0 0 1 0]⟨0 0 0 1]}")
+        "[⟨1 0 0 0]⟨0 1 0 0]⟨0 0 1 0]⟨0 0 0 1]⟩")
 
 
 def test_cyan_superspace_tuning_tiles_have_plain_text_strings():
@@ -8409,15 +8420,15 @@ def test_superspace_g_L_brackets_reuse_GENMAP_BRACKETS():
     assert cells["bracket:tuning:ssgenmap:r"].text == "]"
 
 
-def test_superspace_M_L_and_M_jL_outer_frame_uses_ebktop_ebkbrace():
-    # the spanning top + bottom frame is the existing ebktop / ebkbrace pair — same
-    # convention the on-domain mapping uses. The asymmetric "[ … ⟩" plain-text shape
-    # (square-open + ket-close) lives only on the bare prescaler 𝐿, not here.
+def test_superspace_M_L_and_M_jL_outer_frame_uses_ebktop_with_brace_or_angle():
+    # both M_L and M_jL frame with a spanning ebktop. M_L is the rL × dL mapping, so it closes with
+    # the curly } (ebkbrace), like the on-domain M. M_jL = I is the b/b JI mapping — an operator,
+    # so it closes with the angle ⟩ (ebkangle), like the projection P_L.
     cells = {c.id: c for c in _barbados_ss_identity().cells}
     assert cells["ebktop:ss_mapping"].kind == "ebktop"
-    assert cells["ebkbrace:ss_mapping"].kind == "ebkbrace"
+    assert cells["ebkbrace:ss_mapping"].kind == "ebkbrace"   # M_L: mapping → curly }
     assert cells["ebktop:ss_vec_jmap"].kind == "ebktop"
-    assert cells["ebkbrace:ss_vec_jmap"].kind == "ebkbrace"
+    assert cells["ebkangle:ss_vec_jmap"].kind == "ebkangle"  # M_jL: operator → angle ⟩
 
 
 def test_existing_bracket_constants_are_unchanged_by_superspace():

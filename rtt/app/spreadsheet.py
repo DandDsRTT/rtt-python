@@ -1524,6 +1524,14 @@ class _GridBuilder:
         # the optimum doesn't have. The band/tiles are present whenever the projection toggle is on
         # (self.show_projection), so the dashed P/G show — they aren't dropped, only dashed.
         self.show_projection = show_tuning and self.settings["projection"]
+        # MG = I (and superspace M_LGL = I) ALSO read as the generator embedding once the projection
+        # feature is on — P·D = GMD = G since M·D = I — so their caption gains "/ embedding":
+        # "mapped generators" → "mapped generator(s / embedding)" (the mockup's projection-on label).
+        if self.show_projection:
+            for rc in (("mapping", "gens"), ("ss_mapping", "ssgens")):
+                cap = self.effective_captions.get(rc)
+                if cap and cap.endswith("generators"):  # "…generators" → "…generator(s / embedding)"
+                    self.effective_captions[rc] = cap[:-1] + "(s / embedding)"
         self.projection_matrix = (service.tuning_projection(self.state, self.held_basis_ratios)
                                   if self.show_projection else None)
         self.embedding_matrix = (service.tuning_embedding(self.state, self.held_basis_ratios)
@@ -4973,21 +4981,26 @@ class _GridBuilder:
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "primes"):
             for i in range(self.rL):
                 self.bracket(f"ss_msl:{i}", MAP_BRACKETS, "primes", self.ss_map_top(i), ROW_H, stacked=True)
+        # M_LGL = I at (ss_mapping, ssgens): a COLUMN-first vector list — each superspace generator a
+        # ket [ … } in generator coords, wrapped in an outer { … ]. Per-column marks come from
+        # vector_list_marks below; here just the outer { … ] wrap (NOT a per-row covector stack).
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssgens"):
-            for i in range(self.rL):
-                self.bracket(f"ss_selfmap:{i}", GENMAP_BRACKETS, "ssgens", self.ss_map_top(i), ROW_H, stacked=True)
-        # the standard-domain identity objects (the on-domain twins of the two above): M_j = I a
-        # d × d covector stack ⟨ … ] over the primes column; MG = I / MD = I r × r genmap stacks
-        # { … ] over the gens / detempering columns. Same per-row-bracket + matrix_frame pattern.
+            self.bracket("ss_selfmap", GENMAP_BRACKETS, "ssgens",
+                         self.rows["ss_mapping"].y, self.rL * ROW_H, fit=True)
+        # the standard-domain identity objects (the on-domain twins of the two above). M_j = I is a
+        # d × d covector stack ⟨ … ] over the primes column (per-row brackets + matrix_frame, like M
+        # — but closing with the angle ⟩ since it's the p/p JI mapping, an operator like P). MG = I /
+        # MD = I are COLUMN-first vector lists { … ] (each generator/detempering a ket [ … }), like
+        # M_LGL — the outer wrap here, the per-column marks via vector_list_marks below.
         if self.tile_open("vectors", "primes"):
             for i in range(self.d):
                 self.bracket(f"vec:primes:{i}", MAP_BRACKETS, "primes", self.vec_top(i), ROW_H, stacked=True)
         if self.tile_open("mapping", "gens"):
-            for i in range(self.r):
-                self.bracket(f"selfmap:{i}", GENMAP_BRACKETS, "gens", self.map_top(i), ROW_H, stacked=True)
+            self.bracket("selfmap", GENMAP_BRACKETS, "gens",
+                         self.rows["mapping"].y, self.r * ROW_H, fit=True)
         if self.tile_open("mapping", "detempering"):
-            for i in range(self.r):
-                self.bracket(f"mapped_detempering:{i}", GENMAP_BRACKETS, "detempering", self.map_top(i), ROW_H, stacked=True)
+            self.bracket("mapped_detempering", GENMAP_BRACKETS, "detempering",
+                         self.rows["mapping"].y, self.r * ROW_H, fit=True)
         # the lifted interval lists: B_L over the primes column (the basis change matrix) and the
         # lifted C/T/H/detempering lists, each a [ … ] over the dL components in the ss_vectors row;
         # the mapped versions a [ … ] over the rL rows in the ss_mapping row (interest stands alone,
@@ -5594,16 +5607,15 @@ class _GridBuilder:
         # the superspace projection P_L = G_L M_L: a covector stack framed like P (the on-domain
         # projection), closing with the prime-coordinate angle ⟩ (ebkangle) — an operator, not a map
         self.matrix_frame("ss_projection", "ssprimes", "ss_proj", foot="ebkangle")
-        # the chapter-9 "new × new" covector stacks: M_jL = I in the ss_vectors row, M_s→L over
-        # the domain elements, and the gen-space self-map M_LgL = I — each framed like M_L
-        self.matrix_frame("ss_vectors", "ssprimes", "ss_vec_jmap")
+        # M_jL = I (ss_vectors, ssprimes): a covector stack like M_L, but it's the b/b JI mapping —
+        # an operator, so it closes with the angle ⟩ (ebkangle), like the projection P_L, NOT the
+        # mapping's curly }. M_s→L is the genuine rL × d mapping (framed like M_L, brace foot).
+        self.matrix_frame("ss_vectors", "ssprimes", "ss_vec_jmap", foot="ebkangle")
         self.matrix_frame("ss_mapping", "primes", "ss_msl")
-        self.matrix_frame("ss_mapping", "ssgens", "ss_selfmap")
-        # the standard-domain identity objects, framed like their superspace twins: M_j = I a
-        # covector stack ([ … } over ⟨ … ] rows), MG / MD genmap stacks ([ … } over { … ] rows)
-        self.matrix_frame("vectors", "primes", "vec:primes")
-        self.matrix_frame("mapping", "gens", "selfmap")
-        self.matrix_frame("mapping", "detempering", "mapped_detempering")
+        # M_j = I (vectors, primes): the on-domain twin of M_jL — a p/p covector stack closing with
+        # the angle ⟩ (ebkangle), like P. (MG / MD / M_LGL are COLUMN-first vector lists, framed by
+        # vector_list_marks below, NOT matrix_frame.)
+        self.matrix_frame("vectors", "primes", "vec:primes", foot="ebkangle")
 
         # the mapped comma basis is one bracketed list, NOT a matrix of separated columns — so no
         # dividing rules between its entries (a long-standing stray-separator bug); over V the single
@@ -5637,6 +5649,10 @@ class _GridBuilder:
         # the interest column's mapped images stand alone — no separator rules between columns
         self.vector_list_marks("mapping", "imapped", "interest", self.interest_left, self.mi, separators=False)
         self.vector_list_marks("mapping", "hmapped", "held", self.held_left, self.nh)
+        # MG = I / MD = I (identity objects): COLUMN-first vector lists in generator coords — each
+        # column a ket [ … } (the default ebkbrace foot), the outer { … ] wrap from the bracket pass.
+        self.vector_list_marks("mapping", "selfmap", "gens", self.gen_left, self.r, separators=False)
+        self.vector_list_marks("mapping", "mapped_detempering", "detempering", self.detempering_left, self.r, separators=False)
         # the interval-vectors row holds raw (untempered) vectors, so every column is a
         # ket — angle ⟩ feet, not braces. The comma basis is the editable bordered grid
         # (commacell), so it skips the separator rules (its cell borders divide the columns);
@@ -5670,6 +5686,9 @@ class _GridBuilder:
             self.vector_list_marks("prescaling", "prescaling:primes", "primes", self.prime_left, self.d, foot="ebkangle", separators=False)
         self.vector_list_marks("ss_mapping", "ss_mapped:interest", "interest", self.interest_left, self.mi, separators=False)
         self.vector_list_marks("ss_mapping", "ss_mapped:detempering", "detempering", self.detempering_left, self.r)
+        # M_LGL = I (identity object): a COLUMN-first vector list over the superspace generators —
+        # each a ket [ … } (default ebkbrace foot), the outer { … ] wrap from the bracket pass.
+        self.vector_list_marks("ss_mapping", "ss_selfmap", "ssgens", self.ss_gen_left, self.rL, separators=False)
         # the prescaling row's per-column marks read off as the same EBK its plain-text uses.
         # Every 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile is a matrix of prescaled
         # VECTORS, so each column is a ket ``[ … ⟩`` — top = ebktop (square open ⌐), foot =

@@ -1117,9 +1117,10 @@ def test_plain_text_interval_vectors_are_vector_lists():
     # (the bare default scheme is all-interval, which auto-replaces the list with the identity).
     pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]), "TILT minimax-S")
     assert pt[("vectors", "targets")].startswith("[[1 0 0⟩ [0 1 0⟩ [-1 1 0⟩")  # target vectors
-    # 𝑀ⱼ = 𝐼, the domain-basis identity, is a covector stack (the renderer gates it on
-    # identity_objects via tile_open; the string is always available here)
-    assert pt[("vectors", "primes")] == "[⟨1 0 0]⟨0 1 0]⟨0 0 1]}"
+    # 𝑀ⱼ = 𝐼, the domain-basis identity, is the p/p JI mapping — a covector stack closing with the
+    # angle ⟩ (an operator, like P), not the mapping's }. (Gated on identity_objects via tile_open;
+    # the string is always available here.)
+    assert pt[("vectors", "primes")] == "[⟨1 0 0]⟨0 1 0]⟨0 0 1]⟩"
 
 
 def test_plain_text_mapped_list_is_a_list_of_generator_coord_vectors():
@@ -1690,10 +1691,13 @@ def test_plain_text_values_includes_superspace_entries_when_superspace_on():
     ml = service.superspace_mapping(state)
     expected_ml = "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "}"
     assert pt[("ss_mapping", "ssprimes")] == expected_ml
-    # M_jL = I (dL × dL identity), same shape — a tile in the ss_vectors row
+    # M_jL = I (dL × dL identity) — the b/b JI mapping, a tile in the ss_vectors row. A covector
+    # stack closing with the angle ⟩ (an operator, like P_L), NOT the mapping's }.
     assert pt[("ss_vectors", "ssprimes")] == (
-        "[⟨1 0 0 0]⟨0 1 0 0]⟨0 0 1 0]⟨0 0 0 1]}"
+        "[⟨1 0 0 0]⟨0 1 0 0]⟨0 0 1 0]⟨0 0 0 1]⟩"
     )
+    # M_LGL = I (rL × rL identity) — a COLUMN-first vector list { … ] (kets [ … } in gen coords)
+    assert pt[("ss_mapping", "ssgens")] == "{[1 0 0} [0 1 0} [0 0 1}]"
     # the cyan tuning rows have entries
     assert ("tuning", "ssgens") in pt
     assert ("tuning", "ssprimes") in pt

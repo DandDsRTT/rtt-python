@@ -248,17 +248,18 @@ def plain_text_values(
         ("mapping", "primes"): mapping_ebk(state),
         ("mapping", "commas"): _ket_list(list(zip(*mapped_comma)) + u_mapped_cols, "}"),
         ("mapping", "targets"): _ket_list(zip(*mapped), "}"),
-        # the standard-domain identity objects (on-domain twins of M_jL / M_LgL). The renderer gates
+        # the standard-domain identity objects (on-domain twins of M_jL / M_LGL). The renderer gates
         # them on identity_objects via tile_open, so the strings can sit here unconditionally. M_j is
-        # a d × d covector stack (⟨ … ] rows, [ … } outer, like M); MG / MD the r × r identity M·D in
-        # generator coords ([ … } kets, like M_LgL). The two genmap forms are byte-identical.
+        # the p/p JI mapping — a d × d covector stack (⟨ … ] rows) closing with the angle ⟩ (an
+        # operator, like P), NOT the mapping's }. MG / MD are the r × r identity M·D as a COLUMN-first
+        # vector list in generator coords — kets [ … } inside an outer { … ], like M_LGL.
         ("vectors", "primes"): "[" + "".join(
             "⟨" + " ".join("1" if i == k else "0" for k in range(state.d)) + "]"
-            for i in range(state.d)) + "}",
-        ("mapping", "gens"): _ket_list([[1 if i == k else 0 for k in range(len(state.mapping))]
-                                        for i in range(len(state.mapping))], "}"),
-        ("mapping", "detempering"): _ket_list([[1 if i == k else 0 for k in range(len(state.mapping))]
-                                               for i in range(len(state.mapping))], "}"),
+            for i in range(state.d)) + "⟩",
+        ("mapping", "gens"): "{" + _ket_list([[1 if i == k else 0 for k in range(len(state.mapping))]
+                                              for i in range(len(state.mapping))], "}", wrap=False) + "]",
+        ("mapping", "detempering"): "{" + _ket_list([[1 if i == k else 0 for k in range(len(state.mapping))]
+                                                     for i in range(len(state.mapping))], "}", wrap=False) + "]",
         ("tuning", "gens"): _cents_genmap(tun.generator_map),
         ("tuning", "primes"): _cents_map(tun.tuning_map),
         ("tuning", "commas"): _cents_list(list(comma_sizes.tempered) + u_tempered),
@@ -384,14 +385,19 @@ def plain_text_values(
             # B_L (basis change matrix): the mockup wraps it ⟨ … ] (distinct from the plain
             # [ … ] lifted lists), its columns the domain-element kets [ … ⟩.
             ("ss_vectors", "primes"): "⟨" + _ket_list(bl, "⟩", wrap=False) + "]",
-            ("ss_vectors", "ssprimes"): _covector_stack(mjl),       # M_jL = I
+            # M_jL = I: the b/b JI mapping — a covector stack closing with the angle ⟩ (operator,
+            # like P_L), not the mapping's }. Matches matrix_frame(ss_vec_jmap, foot="ebkangle").
+            ("ss_vectors", "ssprimes"): "[" + "".join(
+                "⟨" + " ".join(str(x) for x in row) + "]" for row in mjl) + "⟩",
             ("ss_vectors", "commas"): _ket_list(C_L, "⟩"),          # C_L
             ("ss_vectors", "targets"): _ket_list(T_L, "⟩"),         # T_L
             ("ss_vectors", "detempering"): _ket_list(D_L, "⟩"),     # D_L (lifted detempering)
             ("ss_vectors", "interest"): _ket_list(I_L, "⟩", wrap=False),
             ("ss_mapping", "ssprimes"): _covector_stack(ml),        # M_L
             ("ss_mapping", "primes"): _covector_stack(msl),         # M_s→L
-            ("ss_mapping", "ssgens"): _ket_list(mlgl, "}"),         # M_LgL = I (gen coords)
+            # M_LGL = I: a COLUMN-first vector list — kets [ … } in an outer { … ] (gen coords),
+            # like MG / MD. Matches the grid's vector_list_marks + { … ] wrap.
+            ("ss_mapping", "ssgens"): "{" + _ket_list(mlgl, "}", wrap=False) + "]",
             ("ss_mapping", "commas"): _ket_list(mapped_C, "}"),     # mapped commas (→ 0)
             ("ss_mapping", "targets"): _ket_list(mapped_T, "}"),    # Y_L
             ("ss_mapping", "detempering"): _ket_list(mapped_D, "}"),  # detempering mapped into ss generators

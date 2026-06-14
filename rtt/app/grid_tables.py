@@ -19,6 +19,9 @@ SUB_CLOSE = chr(0xE004)
 # superspace" subscript). Unicode has no subscript-capital-L, so we render a capital "L" inside
 # <sub> rather than the lowercase ₗ (U+2097) the tables used to embed.
 SUBSCRIPT_L = SUB_OPEN + "L" + SUB_CLOSE
+# The just-intonation subscript j (𝑀ⱼ / 𝒎ⱼ). A real <sub>j</sub> via the sentinels, NOT the raw
+# Unicode subscript glyph U+2C7C — that renders with a gap, drifting the j away from the M.
+SUBSCRIPT_J = SUB_OPEN + "j" + SUB_CLOSE
 # The canonical-FORM marker: a subscript CAPITAL C (the form is canonical by default — when the
 # form layer is on we acknowledge that with this subscript on every generator-basis object). Like
 # SUBSCRIPT_L it renders a capital "C" inside <sub> (Unicode has no subscript-capital-C). NB it is
@@ -95,7 +98,7 @@ CAPTIONS = {
     ("ss_vectors", "targets"): "target interval list in superspace",
     ("ss_vectors", "interest"): "intervals in superspace",
     ("ss_vectors", "detempering"): "generator detempering in superspace",
-    ("ss_mapping", "ssgens"): "superspace mapping over its generators",
+    ("ss_mapping", "ssgens"): "superspace mapped generators",
     ("ss_mapping", "ssprimes"): "superspace mapping",
     ("ss_mapping", "primes"): "mapping from domain intervals to superspace generators",
     ("ss_mapping", "commas"): "comma basis in superspace generators",
@@ -235,12 +238,12 @@ SYMBOLS = {
     ("tuning", "ssprimes"): "𝒕L",
     ("just", "ssprimes"): "𝒋L",
     ("retune", "ssprimes"): "𝒓L",
-    ("ss_vectors", "ssprimes"): f"𝑀ⱼ{SUBSCRIPT_L}",  # M_jL = I (superspace JI mapping)
+    ("ss_vectors", "ssprimes"): f"𝑀{SUBSCRIPT_J}{SUBSCRIPT_L}",  # M_jL = I (superspace JI mapping)
     ("ss_vectors", "commas"): f"C{SUBSCRIPT_L}",      # C_L = B_L·C
     ("ss_vectors", "held"): f"H{SUBSCRIPT_L}",        # H_L = B_L·H
     ("ss_vectors", "targets"): f"T{SUBSCRIPT_L}",     # T_L = B_L·T
     ("ss_vectors", "detempering"): f"D{SUBSCRIPT_L}", # D_L = B_L·D
-    ("ss_mapping", "ssgens"): f"𝑀{SUBSCRIPT_L}g{SUBSCRIPT_L}",  # M_LgL = I
+    ("ss_mapping", "ssgens"): f"𝑀{SUBSCRIPT_L}G{SUBSCRIPT_L}",  # M_LGL = I
     ("ss_mapping", "primes"): f"𝑀ₛ→{SUBSCRIPT_L}",   # M_s→L = M_L·B_L
     ("ss_mapping", "commas"): f"𝑀ₛ→{SUBSCRIPT_L}C",  # mapped commas (vanish)
     ("ss_mapping", "held"): f"𝑀ₛ→{SUBSCRIPT_L}H",
@@ -276,7 +279,7 @@ SYMBOLS = {
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
-    ("vectors", "primes"): "𝑀ⱼ",      # 𝑀ⱼ = 𝐼 (the JI mapping; the domain twin of 𝑀ⱼL)
+    ("vectors", "primes"): "𝑀" + SUBSCRIPT_J,      # 𝑀ⱼ = 𝐼 (the JI mapping; the domain twin of 𝑀ⱼL)
     # the canonical-mapping row: the canonical mapping 𝑀_C over the primes (its subscript is BAKED in
     # — this row IS the canonical form, always, vs the main mapping's dynamic subscript) and the
     # generator form matrix 𝐹 over the (canonical) generators, with 𝐹·𝑀 = 𝑀_C.
@@ -353,7 +356,7 @@ ROW_LABEL_LETTERS = {
     ("canon", "gens"): "𝒇",
     # the JI mapping M_j = I rows (vectors × primes): each row a covector 𝒎ⱼᵢ (𝒎 + subscript j),
     # the domain twin of M_jL's 𝒎ⱼL — sits in the same primes-column gutter as the mapping's 𝒎ᵢ
-    ("vectors", "primes"): "𝒎ⱼ",
+    ("vectors", "primes"): "𝒎" + SUBSCRIPT_J,
     # the projection P = GM is a stack of maps like 𝑀 (each row a covector 𝒑ᵢ over the primes)
     ("projection", "primes"): "𝒑",
     # P_L→s is a covector stack like P (each row a covector 𝒑_L→sᵢ over the superspace primes)
@@ -371,7 +374,7 @@ ROW_LABEL_LETTERS = {
     ("ss_mapping", "primes"): "𝒎ₛ→L",   # m_s→L subrow headers (mapping from domain intervals)
     # M_jL's identity rows likewise: each row labelled 𝒎ⱼₗᵢ — math-italic 𝒎 + subscript j
     # (U+2C7C) + subscript ₗ
-    ("ss_vectors", "ssprimes"): "𝒎ⱼL",
+    ("ss_vectors", "ssprimes"): "𝒎" + SUBSCRIPT_J + SUBSCRIPT_L,
     # the superspace projection P_L: each row a covector over the dL ss_primes, labelled 𝒑ₗᵢ —
     # math-bold-italic 𝒑 + subscript ₗ + index, parallel to the on-domain P's 𝒑ᵢ and M_L's 𝒎ₗᵢ
     ("ss_projection", "ssprimes"): f"𝒑{SUBSCRIPT_L}",
@@ -847,7 +850,7 @@ UNITS = {
     # in output/input order, the superspace coordinate (p, gL) leading. Every other
     # superspace tile lives wholly in the superspace (p / gL only). The gL token uses the
     # SUBSCRIPT_L markup so cell_unit can subscript it per generator.
-    ("ss_vectors", "ssprimes"): "p/p",   # M_jL = I
+    ("ss_vectors", "ssprimes"): "b/b",   # M_jL = I
     ("vectors", "primes"): "p/p",            # 𝑀ⱼ = 𝐼
     # the canonical-mapping form box (the g_C token uses SUBSCRIPT_C so cell_unit subscripts it
     # per canonical generator): 𝑀_C maps domain primes to canonical generators (g_C/p), the form
@@ -863,7 +866,7 @@ UNITS = {
     ("ss_vectors", "targets"): "p",       # T_L
     ("ss_vectors", "interest"): "p",
     ("ss_vectors", "detempering"): "p",   # D_L
-    ("ss_mapping", "ssgens"): f"g{SUBSCRIPT_L}/g{SUBSCRIPT_L}",  # M_LgL = I
+    ("ss_mapping", "ssgens"): f"g{SUBSCRIPT_L}/g{SUBSCRIPT_L}",  # M_LGL = I
     ("ss_mapping", "ssprimes"): f"g{SUBSCRIPT_L}/p",   # M_L
     ("ss_mapping", "primes"): f"g{SUBSCRIPT_L}/b",     # M_s→L
     ("ss_mapping", "commas"): f"g{SUBSCRIPT_L}",
@@ -1029,7 +1032,7 @@ SUPERSPACE_TILES = (
     ("block:ss_vectors:interest", "ss_vectors", "interest"),       # the intervals of interest as superspace vectors
     ("block:ss_vectors:detempering", "ss_vectors", "detempering"), # D_L: the generator detempering as superspace vectors
     ("block:ss_mapping:quantities", "ss_mapping", "quantities"),   # the spine: the rL superspace generators as ~ratios
-    ("block:ss_mapping:ssgens", "ss_mapping", "ssgens"),           # M_LgL = I: the superspace mapping over its own generators
+    ("block:ss_mapping:ssgens", "ss_mapping", "ssgens"),           # M_LGL = I: the superspace mapping over its own generators
     ("block:ss_mapping:ssprimes", "ss_mapping", "ssprimes"),       # M_L itself, the rL × dL mapping
     ("block:ss_mapping:primes", "ss_mapping", "primes"),           # M_s→L: domain intervals mapped straight to superspace generators
     ("block:ss_mapping:commas", "ss_mapping", "commas"),           # mapped commas (vanish to 0)
