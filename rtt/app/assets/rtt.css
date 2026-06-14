@@ -507,11 +507,14 @@
 /* with the per-cell unit on, lift the face's centred value to clear the unit pinned at the
    cell's bottom (a read-only cents cell stacks value-over-unit; this overlay pads instead) */
 .rtt-cell-united.rtt-cell-stacked .rtt-cellface { padding-bottom:9px; }
-/* a just value's closed form, stacked as "1200 · log₂(3/2)" over "= 701.96"; each
-   line's font is scaled (inline) to fit the narrow value square, so it never overflows.
+/* a just value's closed form, stacked as "1200 · log₂(3/2)" over "= 701.96"; each line's font
+   is scaled (inline) to fit the narrow value square, and a giant target/comma ratio that can't
+   fit even at the floor font has its log₂ operand elided to (…/…) — so it never overflows.
+   overflow:hidden is the belt-and-suspenders: should a glyph-width estimate fall short, the line
+   is clipped to its cell rather than streaking across the page.
    No fixed height (like .rtt-tuning-value): the cell centres it, and when a per-cell unit is
    added the value+unit hug as one pair — height:100% would float the unit to the bottom. */
-.rtt-mathexpr { width:100%; display:flex; align-items:center; justify-content:center; }
+.rtt-mathexpr { width:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; }
 .rtt-mathexpr-stack { display:flex; flex-direction:column; align-items:center; justify-content:center;
                       line-height:1.1; color:#000; white-space:nowrap; }
 .rtt-cellinput { width:100% !important; height:100%; min-height:0; overflow:visible; }

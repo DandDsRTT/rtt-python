@@ -986,6 +986,47 @@ def test_fit_font_is_clamped_between_the_min_and_max():
     assert app._fit_font("x" * 100, 30) == app._EXPR_MIN_FONT  # a huge line floors at the min
 
 
+def test_mathexpr_elides_a_giant_ratio_operand_instead_of_streaking():
+    # a target / comma can be an astronomically large ratio; rendered literally,
+    # "1200 · log₂(N/D)" streaks clear across the page. When the line can't fit even at the
+    # minimum font, the operand is elided to "(…/…)" so it stays in its cell — the exact size
+    # still shows on the "= cents" line below. Built through the real _math_expr/_log_operand so
+    # the elision keys off the same "log₂" literal the renderer receives.
+    giant = spreadsheet._math_expr(
+        spreadsheet._log_operand("2" * 80 + "/" + "3" * 60), 240000.0, show_value=True)
+    html = app._mathexpr_html(giant, 37)
+    assert "1200 · log₂(…/…)" in html      # the giant ratio is elided, its ratio shape kept
+    assert "2" * 80 not in html            # the huge numerator is gone
+    assert "= " in html                    # the cents value line is untouched
+    assert _first_font(html) > app._EXPR_MIN_FONT  # the elided line now genuinely fits (off the floor)
+
+
+def test_mathexpr_elides_a_giant_bare_integer_operand_to_an_ellipsis():
+    # a whole-number target (denominator 1) has a bare operand, no parens; a giant one elides to a
+    # lone "…", matching the un-parenthesised form a small one (log₂65536) takes.
+    giant = spreadsheet._math_expr(
+        spreadsheet._log_operand("2" * 80 + "/1"), 96000.0, show_value=True)
+    html = app._mathexpr_html(giant, 37)
+    assert "1200 · log₂…" in html and "(…" not in html
+    assert "2" * 80 not in html
+
+
+def test_mathexpr_leaves_a_small_operand_intact():
+    # an operand that fits at the minimum font is never elided — no spurious "…"
+    html = app._mathexpr_html("1200 · log₂(3/2)\n= 701.96", 37)
+    assert "1200 · log₂(3/2)" in html and "…" not in html
+
+
+def test_elided_expr_line_fits_its_cell_at_the_fitted_font():
+    # the elided line is chosen so it fits the cell at the font the renderer then picks for it,
+    # using the same glyph-width estimate _fit_font uses — i.e. the elision actually resolves the
+    # overflow rather than merely shortening it.
+    raw = "1200 · log₂(" + "2" * 100 + "/" + "3" * 100 + ")"
+    elided = app._elide_expr_line(raw, 37)
+    assert elided == "1200 · log₂(…/…)"
+    assert len(elided) * app._EXPR_CHAR_W * app._fit_font(elided, 37) <= 37
+
+
 def test_plain_text_font_shrinks_to_fit_with_no_readability_floor():
     # the plain-text contract is fit-on-ONE-line, so the sizer has NO readability floor:
     # the denser the value the smaller the font (a prescaling ket-matrix at a high prime

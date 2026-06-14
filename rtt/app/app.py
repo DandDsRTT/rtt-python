@@ -104,6 +104,7 @@ from rtt.app.render_html import (
     _control_svg,
     _demath,
     _digit_fit_font,
+    _elide_expr_line,
     _example_chart,
     _example_html,
     _fit_font,

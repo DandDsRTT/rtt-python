@@ -162,12 +162,37 @@ def _fit_font(line: str, width: float, max_font: float = _EXPR_MAX_FONT,
     return max(min_font, min(max_font, fit))
 
 
+# The log₂ operand is the one part of an expression that can grow without bound: a target or
+# comma can be an astronomically large ratio (hundreds of digits), so a literal "1200 · log₂(N/D)"
+# would streak clear across the page. When even the minimum font can't fit the line in its cell we
+# elide that operand — the cents value on the second line still gives the exact size, so nothing the
+# cell actually conveys is lost. (The "1200 ·" prefix, the value line, and the small prime operands
+# of the prescaler are all short, so only a giant ratio is ever touched.)
+_LOG2 = "log₂"  # the operand follows this literal — must match spreadsheet._math_expr's
+
+
+def _elide_expr_line(line: str, width: float) -> str:
+    """``line`` with its log₂ operand elided iff the line can't fit ``width`` px even at the
+    minimum font: a ratio operand collapses to ``(…/…)``, a bare-integer one to ``…``. Lines that
+    already fit — and the short value / prescaler lines, which carry no over-long log₂ — pass
+    through unchanged. Keeps a huge target or comma ratio from spilling its cell across the page."""
+    max_chars = (width - 2) / (_EXPR_MIN_FONT * _EXPR_CHAR_W)  # glyphs that fit at the floor
+    if len(line) <= max_chars:
+        return line
+    cut = line.rfind(_LOG2)
+    if cut < 0:
+        return line  # no operand to elide (a value line) — already in-bounds in practice
+    head, operand = line[:cut + len(_LOG2)], line[cut + len(_LOG2):]
+    return head + ("(…/…)" if "/" in operand else "…")
+
+
 def _mathexpr_html(text: str, width: float) -> str:
-    """The stacked HTML for a math-expression cell: each newline-separated line on
-    its own row, its font shrunk to fit the cell so long expressions stay in-bounds."""
+    """The stacked HTML for a math-expression cell: each newline-separated line on its own row,
+    its log₂ operand elided if it would overflow even at the minimum font, then its font shrunk
+    to fit the cell so the expression always stays in-bounds."""
     lines = "".join(
         f'<div style="font-size:{_fit_font(line, width):.2f}px">{line}</div>'
-        for line in text.split("\n")
+        for line in (_elide_expr_line(raw, width) for raw in text.split("\n"))
     )
     return f'<div class="rtt-mathexpr-stack">{lines}</div>'
 
