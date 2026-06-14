@@ -494,7 +494,27 @@ _MATLABEL_MIN_FONT = 6.0  # px — floor for a wide column header shrunk to fit 
 # the rejected font glyph scaled its weight with its height, and a fixed viewBox
 # stretched to the cell sheared its serifs. Square/top brackets are crisp filled
 # rects; the calligraphic ⟨ and brace are filled variable-width ribbons (ribbon).
-_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "hbar"}
+_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "ebkbot", "vbar", "hbar"}
+
+# EBK-off square-brace swap for the two-tone DRAFT strings (the mapping / comma / target pending
+# text, split into coloured prefix/draft/suffix that ebk_to_simple_matrix can't take whole because
+# each piece is an unbalanced fragment): a 1:1 char swap, with the ᵀ appended to the suffix by the
+# caller per the dual's variance. The settled strings go through service.ebk_to_simple_matrix instead.
+_EBK_SQUARE = str.maketrans("⟨{⟩}", "[[]]")
+_TRANSPOSE_MARK = "ᵀ"  # MODIFIER LETTER CAPITAL T (U+1D40) — the plain-matrix mark of the vector kind
+
+# Each editable plain-text dual's variance, for the EBK-off edit round-trip (simple_matrix_to_ebk):
+# the comma basis / target list / generator embedding are the VECTOR kind (their plain matrix shows a
+# ᵀ); the mapping / projection / bare prescaler the MAP kind. The cents duals (tuning gens / ssgens)
+# are absent → the default False (their parser strips brackets, so either reconstruction parses).
+_PTEXT_DUAL_VECTOR_KIND = {
+    "ptext:vectors:commas": True,
+    "ptext:vectors:targets": True,
+    "ptext:projection:gens": True,
+    "ptext:mapping:primes": False,
+    "ptext:projection:primes": False,
+    "ptext:prescaling:primes": False,
+}
 
 
 # --- the "general" Show group's dummy tile ---------------------------------------------------
@@ -517,6 +537,7 @@ _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     ("drag_to_combine", "gridded_values", "math_expressions", "quantities", "decimals"),
     ("symbols", "equivalences"),
     ("mnemonics", "names"),
+    ("ebk",),
     ("units",),
     ("plain_text_values",),
     ("presets",),
@@ -549,7 +570,7 @@ _TILE_HOST: dict[str, str] = {
 _TILE_FONT = {
     "symbols": 15, "equivalences": 15, "rowlabel": spreadsheet.MATLABEL_H - 2,
     "names": spreadsheet.CAPTION_FONT, "mnemonics": spreadsheet.CAPTION_FONT,
-    "units": 10, "cellunit": 7, "plain_text_values": 11, "drag_to_combine": 18,
+    "units": 10, "cellunit": 7, "plain_text_values": 11, "ebk": 11, "drag_to_combine": 18,
 }
 
 
@@ -1066,6 +1087,9 @@ class _Reconciler:
         self.cell_kinds["colheader"] = _KindHandlers(self._label_builder("rtt-colheader"), self._update_label)
         self.cell_kinds["rowlabel"] = _KindHandlers(self._label_builder("rtt-rowlabel"), self._update_label)
         self.cell_kinds["ptext"] = _KindHandlers(self._label_builder("rtt-ptext"), self._update_ptext)
+        # the EBK-off transpose mark ᵀ, at the top-right of every vector-kind matrix (a plain text
+        # superscript, green on a draft column like its cells via _update_label's pending toggle)
+        self.cell_kinds["transpose"] = _KindHandlers(self._label_builder("rtt-transpose"), self._update_label)
         self.cell_kinds["boxtitle"] = _KindHandlers(self._label_builder("rtt-boxtitle"), None)  # a static in-tile title
 
         self.cell_kinds["rangemode"] = _KindHandlers(self._build_rangemode, self._update_rangemode)
@@ -1505,10 +1529,20 @@ class _Reconciler:
     def _update_ptextpending(self, cb: spreadsheet.CellBox) -> None:
         # the committed part black and the draft entry green (same green as its grid cells)
         ed = self._editor
+        off = not ed.settings.get("ebk", True)  # EBK off → square the draft pieces (a ᵀ on the vector kind)
+
+        def squared(prefix, draft, suffix, vector_based):
+            if not off:
+                return prefix, draft, suffix
+            return (prefix.translate(_EBK_SQUARE), draft.translate(_EBK_SQUARE),
+                    suffix.translate(_EBK_SQUARE) + (_TRANSPOSE_MARK if vector_based else ""))
+
         if cb.id == "ptext:mapping:primes":
             # the mapping draft is a ROW, not a column — splice the green draft map before the
-            # committed matrix's closing } (cb.text is the committed mapping plain text)
-            prefix, draft, suffix = service.mapping_pending_text(cb.text, ed.pending_mapping_row)
+            # committed matrix's closing } (cb.text is the committed mapping plain text). EBK off
+            # cb.text is already squared, so reconstruct its EBK so the splicer's bracket math holds.
+            committed = service.simple_matrix_to_ebk(cb.text, False) if off else cb.text
+            prefix, draft, suffix = squared(*service.mapping_pending_text(committed, ed.pending_mapping_row), False)
             self.htmls[cb.id].set_content(
                 f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
             self.htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
@@ -1519,7 +1553,7 @@ class _Reconciler:
             pending = ed.pending_target
         else:  # the comma basis
             committed, pending = ed.state.comma_basis, ed.pending_comma
-        prefix, draft, suffix = service.vector_list_pending_text(committed, pending)
+        prefix, draft, suffix = squared(*service.vector_list_pending_text(committed, pending), True)
         self.htmls[cb.id].set_content(
             f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
         self.htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
@@ -3413,6 +3447,13 @@ def index() -> None:
         # typing in a matrix cell); an unparseable one reddens the box and is ignored
         if building[0]:
             return
+        # EBK off: the box shows (and the user edits) plain matrix notation, so convert it back to EBK
+        # before the EBK parsers below read it. Each dual's variance is known here (a comma basis /
+        # target list / embedding is the vector kind; a mapping / projection / prescaler the map kind),
+        # so the round-trip doesn't depend on the user keeping the ᵀ. Cents duals pass through (their
+        # parser strips brackets anyway). On = passthrough.
+        if not editor.settings.get("ebk", True):
+            value = service.simple_matrix_to_ebk(value, _PTEXT_DUAL_VECTOR_KIND.get(cid, False))
         if cid == "ptext:mapping:primes":
             ok = editor.try_edit_mapping_text(value)
         elif cid == "ptext:vectors:commas":

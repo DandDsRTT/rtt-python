@@ -99,6 +99,7 @@ body.rtt-dark .rtt-ptext,
 body.rtt-dark .rtt-ratio,
 body.rtt-dark .rtt-tuning-value,
 body.rtt-dark .rtt-stacked-sub,
+body.rtt-dark .rtt-transpose,
 body.rtt-dark .rtt-mathexpr-stack { color:#e3e6ea; }
 body.rtt-dark .rtt-frac-num { border-bottom-color:#e3e6ea; }   /* the read-only fraction bar */
 /* the editable stacked fraction cells: the dark box rides the WRAP (the two inputs' controls stay

@@ -39,6 +39,7 @@ SHOW_HELP: dict[str, str] = {
     "presets": "Show the preset choosers — temperament, tuning scheme, and target set.",
     "quantities": "Show the numeric quantities inside the value cells.",
     "decimals": "Show the decimal fraction of each value (the .955 beneath the 701). Off rounds every value in the app to the nearest integer. Refines “quantities”.",
+    "ebk": "Frame every matrix and vector in EBK (Extended Bra-Ket) notation — the angle ⟨…] of a map, the ket […⟩, the curly { of a generator map. Off replaces it everywhere with plain matrix notation: square braces throughout, a superscript ᵀ marking the vector kind.",
     "units": "Show each box's “units: …” line beneath its caption (e.g. ¢/p, g/p).",
     "cell_units": "Show each value's unit beneath its own cell (e.g. ¢/p₁, 𝒈₁).",
     "math_expressions": "Show just values as closed-form expressions (e.g. 1200·log₂(3/2)).",
@@ -101,7 +102,7 @@ READONLY_KINDS: frozenset[str] = frozenset({
     "prime", "formcell", "colheader", "rowlabel", "mapped", "vec", "tuningvalue", "powerdisplay",
     "genratio", "commaratio", "mathexpr", "ptext", "ptextpending",
     "symbol", "matlabel", "units", "caption", "count", "boxtitle",
-    "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "chart", "rangechart",
+    "bracket", "ebktop", "ebkbrace", "ebkangle", "ebkbot", "transpose", "vbar", "chart", "rangechart",
 })
 
 # Read-only OUTPUT values that nonetheless carry hover help — exempt from the no-tooltip rule.

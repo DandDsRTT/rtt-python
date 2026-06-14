@@ -467,6 +467,99 @@ def plain_text_values(
 _DASH = "—"  # an em-dash column/value: an unknown the under-held tuning doesn't pin (matches the grid)
 
 
+# ── EBK ⇄ plain-matrix notation (the Show panel's "EBK" toggle, off) ──────────────────────────
+# EBK off rewrites every notation string into a plain matrix: each angle/curly brace becomes a
+# square brace, and a superscript ᵀ marks the VECTOR-based kind (a list of column vectors / kets)
+# apart from the MAP-based kind (a covector stack, or a single covector / scalar list). It is the
+# string twin of the gridded mark swap (square brackets + ᵀ) the spreadsheet builder makes, so the
+# two views stay identical off as on. A pure display transform — the underlying objects are untouched.
+_EBK_OPEN = "[⟨{"     # the three EBK openers: square ket-open, angle bra-open, curly genmap/list-open
+_EBK_CLOSE = "]⟩}"    # the three EBK closers: square bra-close, angle ket-close, curly ket-close
+_KET_CLOSE = "⟩}"     # a ket closes with the angle ⟩ (over d) or curly } (over generator coords)
+_TRANSPOSE = "ᵀ"      # MODIFIER LETTER CAPITAL T (U+1D40) — the plain-matrix mark of the vector kind
+
+
+def _flatten_brackets(group: str) -> str:
+    """Replace every EBK bracket in ``group`` with its square brace (openers → ``[``, closers → ``]``)."""
+    return "".join("[" if c in _EBK_OPEN else "]" if c in _EBK_CLOSE else c for c in group)
+
+
+def _group_is_vector_based(group: str) -> bool:
+    """Whether one top-level EBK group is the VECTOR kind (gets a ᵀ). A group that wraps sub-items is
+    vector-based when those items are KETS (open ``[``) rather than bras (open ``⟨``/``{``) — so the
+    mapping ``[⟨…]…}`` is map-based while the comma basis ``[[…⟩…]`` and the basis-change ``⟨[…⟩…]``
+    are vector-based, told apart by the CHILD opener, never the outer wrap. A bare group (numbers, no
+    sub-items) is vector-based when it CLOSES as a ket (``⟩`` / ``}``): a single ket ``[…⟩`` yes, a
+    single covector ``⟨…]`` / genmap ``{…]`` / scalar list ``[…]`` no."""
+    inner = group[1:-1].lstrip()
+    if inner and inner[0] in _EBK_OPEN:
+        return inner[0] == "["          # a ket child opens with [; a bra child with ⟨ or {
+    return group[-1] in _KET_CLOSE      # a single vector closes with ⟩ / }; a covector / list with ]
+
+
+def ebk_to_simple_matrix(text: str) -> str:
+    """Rewrite an EBK notation string into plain matrix notation (the EBK-toggle-off form): every
+    angle/curly brace → a square brace, and a trailing ``ᵀ`` on each top-level VECTOR-kind group
+    (:func:`_group_is_vector_based`). Inter-group text (a domain-basis prefix, the spaces between
+    standalone interest kets) is preserved verbatim, and a string with no brackets passes through.
+
+    Examples: ``[⟨1 0 -4] ⟨0 1 4]}`` → ``[[1 0 -4] [0 1 4]]`` (a mapping, map-based — no ᵀ);
+    ``[[-4 4 -1⟩]`` → ``[[-4 4 -1]]ᵀ`` (a comma basis, vector-based); ``⟨1200 1902]`` → ``[1200 1902]``
+    (a tuning map); ``[-4 4 -1⟩`` → ``[-4 4 -1]ᵀ`` (a lone ket)."""
+    out: list[str] = []
+    i, n = 0, len(text)
+    while i < n:
+        if text[i] in _EBK_OPEN:
+            depth, j = 0, i
+            while j < n:                       # scan to this group's matching close
+                if text[j] in _EBK_OPEN:
+                    depth += 1
+                elif text[j] in _EBK_CLOSE:
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            if depth != 0:                     # unbalanced (shouldn't happen) — leave the rest as-is
+                out.append(text[i:])
+                break
+            group = text[i:j + 1]
+            out.append(_flatten_brackets(group) + (_TRANSPOSE if _group_is_vector_based(group) else ""))
+            i = j + 1
+        else:
+            out.append(text[i])
+            i += 1
+    return "".join(out)
+
+
+def simple_matrix_to_ebk(text: str, vector_based: bool) -> str:
+    """Rewrite a plain-matrix notation string (an edited EBK-off dual) back into EBK so the existing
+    parsers read it. The inverse of :func:`ebk_to_simple_matrix` for ONE object whose variance the
+    caller knows (a comma basis / target list / embedding is ``vector_based=True``; a mapping /
+    projection / prescaler ``False``), so it need not rely on the user keeping the ``ᵀ``. A wrapped
+    matrix ``[[…] […]]`` restores its inner items to kets ``[…⟩`` (vector) or bras ``⟨…]`` (map),
+    the outer ``[ … ]`` kept; a bare ``[…]`` restores to a single ket / covector. Any ``ᵀ`` and a
+    leading domain-basis prefix are handled; a string with no bracket passes through unchanged (the
+    cents parsers strip brackets themselves)."""
+    text = text.replace(_TRANSPOSE, "")
+    start = text.find("[")
+    if start == -1:
+        return text
+    prefix, body = text[:start], text[start:]
+    open_ch, close_ch = ("[", "⟩") if vector_based else ("⟨", "]")
+    wrapped = body[1:].lstrip().startswith("[")   # an outer [ … ] around inner [ … ] items
+    out, depth = [], 0
+    for c in body:
+        if c == "[":
+            depth += 1
+            out.append("[" if (wrapped and depth == 1) else open_ch)
+        elif c == "]":
+            out.append("]" if (wrapped and depth == 1) else close_ch)
+            depth -= 1
+        else:
+            out.append(c)
+    return prefix + "".join(out)
+
+
 def _ket_list(vectors, close: str, wrap: bool = True) -> str:
     """A list of column vectors: ``[[1 0 0⟩ [0 1 0⟩]`` for vectors (close ``⟩``),
     ``[[1 0} [0 1}]`` for generator-coordinate vectors (close ``}``). The outer ``[ ]``

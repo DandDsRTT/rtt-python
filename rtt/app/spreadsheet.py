@@ -169,6 +169,7 @@ COMMAPICK_GAP = 4  # the gap a comma column's per-column comma picker keeps belo
 VAL_BRACKET_H = 16  # a single-row value bracket, kept short and centred in its
 # ROW_H row so neighbouring rows' brackets keep a clear gap (the enclosing
 # mapped-list [ ] is the tall exception and spans the whole matrix)
+TRANSPOSE_W = 9  # the EBK-off ᵀ superscript box at a vector matrix's top-right corner (just past its ])
 MARK_INSET = 8  # inset of a mapped column's top/bottom mark, so it clears the rules
 SEP_W = 2  # width of a vertical rule between vector columns (the renderer draws it
 # as thick as a square bracket's main bar; this is just the cell it centres in)
@@ -590,6 +591,7 @@ class _ShowFlags:
     gridded: bool
     quantities: bool
     decimals: bool
+    ebk: bool
     interval_ratios: bool
     interval_vectors: bool
     math: bool
@@ -652,6 +654,10 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         # decimals off rounds every shown value to the nearest integer (service.cents / prescale_text).
         # .get keeps old persisted/hand-built settings dicts (pre-decimals) reading at full precision.
         decimals=settings.get("decimals", True),
+        # ebk off rewrites every matrix/vector into plain matrix notation (square braces + a ᵀ on the
+        # vector kind), both the gridded marks and the plain-text strings. .get keeps old persisted
+        # dicts (pre-ebk) reading in full EBK notation, the as-shipped default.
+        ebk=settings.get("ebk", True),
         interval_ratios=settings["interval_ratios"],
         interval_vectors=settings["interval_vectors"],
         math=settings["math_expressions"],
@@ -999,6 +1005,10 @@ class _GridBuilder:
         self.gridded = _f.gridded
         self.show_quantities = _f.quantities
         self._decimals = _f.decimals  # False rounds every formatted value to the nearest integer
+        # False (EBK off) rewrites every gridded mark + plain-text string into plain matrix notation:
+        # square braces throughout, a ᵀ on the vector kind. Read by bracket()/matrix_frame()/
+        # vector_list_marks() (the marks) and _resolve_ptext_strings (the strings).
+        self.show_ebk = _f.ebk
         show_interval_ratios = _f.interval_ratios
         # the interval-vectors row's own toggle (it used to ride temperament_tiles); read in
         # _define_row_bands off self so the band-signature tuple stays unchanged.
@@ -2061,6 +2071,11 @@ class _GridBuilder:
                                                        superspace_tun=(self.superspace_tun()
                                                                        if self.show_superspace else None)))
                          if self.show_ptext else {})
+        # EBK off: rewrite every plain-text string into plain matrix notation (square braces + a ᵀ on
+        # the vector kind), the string twin of the gridded mark swap below — so the two views read
+        # identically off as on. A pure display transform on the assembled strings.
+        if not self.show_ebk:
+            self.ptext_strings = {k: service.ebk_to_simple_matrix(v) for k, v in self.ptext_strings.items()}
 
     def _layout_rows(self, row_bands, tile_extra, rows_top_y, show_charts) -> None:
         """Lay the row bands top-to-bottom (the running-cursor walk): row_y/tile_h/total_h + the fan-out bus."""
@@ -2853,6 +2868,8 @@ class _GridBuilder:
         the left ⟨ right past the matlabel gutter, so the row labels sit inside the
         panel left of the ⟨ rather than overflowing it. ``span`` overrides the default span.
         ``pending`` recolours the bracket green (via ebk_svg) to match a draft row's cells."""
+        if not self.show_ebk:  # EBK off: every left/right bracket squares (⟨ / { → [, ] stays ])
+            glyphs = ("[", "]")
         gx, gw = span if span else self.matrix_span(group_key)
         if fit:
             # A vector-list outer wrap [ … ] spans the matrix's full FRAMED height, so it
@@ -3158,6 +3175,8 @@ class _GridBuilder:
         plain-text bracket but with ⟩ in place of })."""
         if not self.tile_open(rkey, ckey):
             return
+        if not self.show_ebk:  # EBK off: a covector stack closes square (the brace / angle foot → a
+            foot = "ebkbot"    # plain bottom bracket). matrix_frame frames the MAP kind, so no ᵀ.
         gx, gw = span if span else self.matrix_span(ckey)  # ``span`` overrides the default cell-matrix span
         self.cells.append(CellBox(f"ebktop:{bid}", gx, self.frame_top_y(rkey), gw, FRAME_H, "ebktop"))
         self.cells.append(CellBox(f"{foot}:{bid}", gx, self.frame_brace_y(rkey), gw, BRACE_H, foot))
@@ -3177,12 +3196,24 @@ class _GridBuilder:
     def vector_list_marks(self, rkey, name, ckey, left, n_cols, top="ebktop", foot="ebkbrace", separators=True, pending_col=-1) -> None:
         if not self.tile_open(rkey, ckey):
             return
+        if not self.show_ebk:  # EBK off: each ket closes square (the curly / angle foot → a bottom bracket)
+            foot = "ebkbot"
         mark_w = COL_W - 2 * MARK_INSET
         for c in range(n_cols):
             mx = left(c) + MARK_INSET
             pend = (c == pending_col)  # the draft column's ket marks render green, like its cells
             self.cells.append(CellBox(f"{top}:{name}:{c}", mx, self.frame_top_y(rkey), mark_w, FRAME_H, top, pending=pend))
             self.cells.append(CellBox(f"{foot}:{name}:{c}", mx, self.frame_brace_y(rkey), mark_w, BRACE_H, foot, pending=pend))
+        # EBK off: vector_list_marks frames the VECTOR kind, so tag it ᵀ. A standalone collection
+        # (interest — no outer [ ] wrap) tags each column its own ᵀ, matching the plain text's per-ket
+        # [ … ]ᵀ; a wrapped matrix tags one ᵀ just past its outer ] (the matrix_span's right edge).
+        if not self.show_ebk and n_cols:
+            if ckey == "interest":
+                for c in range(n_cols):
+                    self.transpose_mark(f"{name}:{c}", left(c) + COL_W - MARK_INSET, rkey, pending=(c == pending_col))
+            else:
+                gx, gw = self.matrix_span(ckey)
+                self.transpose_mark(name, gx + gw, rkey)
         if not separators:
             return
         # the dividing rules span the matrix's full FRAMED height — the same extent as the
@@ -3193,6 +3224,13 @@ class _GridBuilder:
         sep_h = self.frame_brace_y(rkey) + BRACE_H + FRAME_OVERHANG - sep_y
         for c in range(1, n_cols):  # a rule on each interior column boundary
             self.cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, sep_y, SEP_W, sep_h, "vbar"))
+
+    def transpose_mark(self, name, x, rkey, pending: bool = False) -> None:
+        """The EBK-off ᵀ superscript marking a vector-kind matrix, seated in the top frame band at
+        ``x`` (a wrapped matrix's outer-] right edge, or a standalone ket's right). ``pending`` greens
+        it with its draft column's cells, via _update_label (like the brackets)."""
+        self.cells.append(CellBox(f"transpose:{name}", x, self.frame_top_y(rkey), TRANSPOSE_W, FRAME_H + ROW_H,
+                             "transpose", text="ᵀ", pending=pending))
 
     def v_split_bars(self) -> None:
         """the single vertical rule dividing the comma half C from the unchanged half U, centred in

@@ -69,6 +69,13 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             # Off rounds every displayed value to the nearest integer, app-wide (a display setting —
             # the underlying values keep full precision, so turning it back on restores the decimals).
             ("decimals", "decimals", True),
+            # EBK (Extended Bra-Ket) notation. On (default) frames every matrix/vector in its EBK
+            # brackets — the angle ⟨…] of a map, the ket […⟩, the curly { of a genmap. Off replaces
+            # all of it (the rendered grid marks AND the plain-text strings) with a plain matrix
+            # notation: every angle/curly brace becomes a square brace, and a superscript ᵀ marks the
+            # vector-based (column-vector-list) kind apart from the map-based (covector-stack) kind.
+            # A DISPLAY setting, like decimals — the underlying objects are untouched.
+            ("ebk", "EBK", True),
             ("units", "units", False),
             # the per-value unit beneath each gridded cell is its OWN toggle, independent of the
             # per-box "units: …" line above (the `units` key) — NOT a sub-control. Like
@@ -169,7 +176,7 @@ IMPLEMENTED: frozenset[str] = frozenset(
     {"drag_to_combine",
      "names", "symbols", "header_symbols", "mnemonics", "equivalences", "gridded_values",
      "plain_text_values",
-     "quantities", "decimals", "interval_ratios", "interval_vectors", "units", "cell_units", "domain_units", "counts", "presets",
+     "quantities", "decimals", "ebk", "interval_ratios", "interval_vectors", "units", "cell_units", "domain_units", "counts", "presets",
      "temperament", "temperament_tiles", "tuning", "tuning_tiles",
      "math_expressions", "charts", "tuning_ranges",
      "tuning_colorization", "temperament_colorization", "weighting",
@@ -223,6 +230,9 @@ CHAPTER: dict[str, int] = {
     # default slider position; a later reveal would let disable_hidden_settings turn it off on load,
     # silently rounding the whole app to integers before the user ever sees the toggle.
     "decimals": 2,
+    # EBK notation is introduced in chapter 2 (the first mappings are written in it), so the toggle
+    # reveals — and stays ON — by the default slider position, like decimals.
+    "ebk": 2,
     "math_expressions": 2, "presets": 2, "equivalences": 2,
     "header_symbols": 2,  # the matrix row/col header labels (𝒎₁, 𝐜₁, …) — a sibling of symbols
     # mnemonics is the underlinable LETTER of the name word, so it must reveal WITH names (its

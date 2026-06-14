@@ -202,10 +202,12 @@ from rtt.app.service.text import (
     _ket_list,
     _prescale_vector_list,
     DerivedQuantities,
+    ebk_to_simple_matrix,
     embedding_ebk,
     mapping_pending_text,
     plain_text_values,
     projection_ebk,
+    simple_matrix_to_ebk,
     vector_list_pending_text,
 )
 
