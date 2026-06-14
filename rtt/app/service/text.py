@@ -243,6 +243,17 @@ def plain_text_values(
         ("mapping", "primes"): mapping_ebk(state),
         ("mapping", "commas"): _ket_list(list(zip(*mapped_comma)) + u_mapped_cols, "}"),
         ("mapping", "targets"): _ket_list(zip(*mapped), "}"),
+        # the standard-domain identity objects (on-domain twins of M_jL / M_LgL). The renderer gates
+        # them on identity_objects via tile_open, so the strings can sit here unconditionally. M_j is
+        # a d × d covector stack (⟨ … ] rows, [ … } outer, like M); MG / MD the r × r identity M·D in
+        # generator coords ([ … } kets, like M_LgL). The two genmap forms are byte-identical.
+        ("vectors", "primes"): "[" + "".join(
+            "⟨" + " ".join("1" if i == k else "0" for k in range(state.d)) + "]"
+            for i in range(state.d)) + "}",
+        ("mapping", "gens"): _ket_list([[1 if i == k else 0 for k in range(len(state.mapping))]
+                                        for i in range(len(state.mapping))], "}"),
+        ("mapping", "detempering"): _ket_list([[1 if i == k else 0 for k in range(len(state.mapping))]
+                                               for i in range(len(state.mapping))], "}"),
         ("tuning", "gens"): _cents_genmap(tun.generator_map),
         ("tuning", "primes"): _cents_map(tun.tuning_map),
         ("tuning", "commas"): _cents_list(list(comma_sizes.tempered) + u_tempered),

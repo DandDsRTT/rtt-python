@@ -297,14 +297,42 @@ def test_generator_ratios_are_listed_in_the_quantities_column():
     assert cells["gen:1"].y == cells["cell:mapping:1:0"].y
 
 
-def test_mapping_over_generators_identity_is_deferred_to_identity_objects():
-    # M over its own generators is the identity — an "identity object" the grid
-    # won't show until the identity_objects setting is built. Until then the
-    # generators column carries no tile at the mapping row (no cells, brackets,
-    # framing marks or fold toggle).
+def test_mapping_over_generators_identity_renders_with_identity_objects():
+    # 𝑀𝐺 = 𝐼: the mapping over its own generators is the r × r identity (the embedding) — an
+    # identity object shown when identity_objects is on. A genmap stack { … ] over the gens
+    # column, the on-domain twin of the superspace M_LgL; no per-row labels (like M_LgL, per
+    # the mockup).
+    cells = {c.id: c for c in _with(identity_objects=True, names=True, symbols=True,
+                                    equivalences=True, plain_text_values=True).cells}
+    for i in range(2):  # r = 2
+        for k in range(2):
+            assert cells[f"cell:selfmap:{i}:{k}"].text == ("1" if i == k else "0")
+            assert cells[f"cell:selfmap:{i}:{k}"].kind == "mapped"
+    assert cells["symbol:mapping:gens"].text == "\U0001D440G = \U0001D43C"  # 𝑀G = 𝐼
+    assert cells["caption:mapping:gens"].text == "mapped generators"
+    assert cells["bracket:selfmap:0:l"].text == spreadsheet.GENMAP_BRACKETS[0]
+    assert cells["ebktop:selfmap"].kind == "ebktop"
+    assert cells["ptext:mapping:gens"].text == "[[1 0} [0 1}]"
+    assert not any(c.startswith("matlabel:row:mapping:gens") for c in cells)  # no row labels
+
+
+def test_mapping_over_generators_identity_gated_off_by_default():
+    # off by default (identity_objects is in IMPLEMENTED but ships off): the generators column
+    # carries no tile at the mapping row — no cells, brackets, framing marks or fold toggle.
     cells = {c.id for c in _layout().cells}
     assert not any(c.startswith(("cell:selfmap", "bracket:selfmap")) for c in cells)
-    assert {"ebktop:gens", "ebkbrace:gens", "toggle:tile:mapping:gens"}.isdisjoint(cells)
+    assert {"ebktop:selfmap", "ebkbrace:selfmap", "toggle:tile:mapping:gens"}.isdisjoint(cells)
+
+
+def test_standard_identity_objects_wash_temperament_yellow():
+    # the three identity tiles ride the mapping row / primes column, so under colorization they
+    # wash YELLOW (temperament) like their siblings — NOT colourless. Guards the CELL_FACTORS
+    # entries (𝑀ⱼ over P, 𝑀𝐺 over the generator basis B, 𝑀D over the neutral D — all 𝑀-family).
+    washes = {b.id for b in _with(identity_objects=True, generator_detempering=True,
+                                  temperament_colorization=True).blocks}
+    for key in ("vectors:primes", "mapping:gens", "mapping:detempering"):
+        assert f"wash:temperament:{key}" in washes
+        assert f"wash:tuning:{key}" not in washes  # not cyan
 
 
 def test_primes_sit_above_the_mapping_columns():
@@ -1965,15 +1993,30 @@ def test_interval_vectors_show_targets_as_vectors():
     assert cells["cell:vec:targets:0:1"].y - cells["cell:vec:targets:0:0"].y == spreadsheet.ROW_H
 
 
-def test_interval_vectors_domain_primes_identity_is_deferred_to_identity_objects():
-    # the domain primes as vectors over themselves are the d x d identity — an
-    # "identity object" the grid won't show until the identity_objects setting is
-    # built (the basis is already listed down the quantities spine). Until then the
-    # primes column carries NOTHING at the interval-vectors row: no cells, ket marks,
-    # separators, the enclosing [ ] bracket, fold toggle or caption.
+def test_interval_vectors_domain_primes_identity_renders_with_identity_objects():
+    # 𝑀ⱼ = 𝐼: the domain primes as vectors over themselves form the d × d identity (the JI
+    # mapping) — an identity object shown when identity_objects is on. A covector stack ⟨ … ]
+    # over the primes column, each row labelled 𝒎ⱼᵢ; the on-domain twin of the superspace M_jL.
+    cells = {c.id: c for c in _with(identity_objects=True, names=True, symbols=True,
+                                    header_symbols=True, equivalences=True,
+                                    plain_text_values=True).cells}
+    for i in range(3):  # d = 3
+        for k in range(3):
+            assert cells[f"cell:vec:primes:{i}:{k}"].text == ("1" if i == k else "0")
+            assert cells[f"cell:vec:primes:{i}:{k}"].kind == "mapped"
+    assert cells["symbol:vectors:primes"].text == "\U0001D440ⱼ = \U0001D43C"  # 𝑀ⱼ = 𝐼
+    assert cells["caption:vectors:primes"].text == "JI mapping"
+    assert cells["matlabel:row:vectors:primes:0"].text == "\U0001D48Eⱼ₁"  # 𝒎ⱼ₁
+    assert cells["ebktop:vec:primes"].kind == "ebktop"
+    assert cells["bracket:vec:primes:0:l"].text == spreadsheet.MAP_BRACKETS[0]
+    assert cells["ptext:vectors:primes"].text == "[⟨1 0 0]⟨0 1 0]⟨0 0 1]}"
+
+
+def test_interval_vectors_domain_primes_identity_gated_off_by_default():
+    # off by default: the primes column carries NOTHING at the interval-vectors row — no cells,
+    # ket marks, the enclosing bracket, fold toggle or caption.
     cells = {c.id for c in _with(names=True).cells}
     assert not any(c.startswith(("cell:vec:primes", "ebktop:vec:primes",
-                                 "ebkangle:vec:primes", "sep:vec:primes",
                                  "bracket:vec:primes")) for c in cells)
     assert {"toggle:tile:vectors:primes", "caption:vectors:primes"}.isdisjoint(cells)
 
@@ -4969,21 +5012,14 @@ def test_every_implemented_toggle_actually_changes_the_layout():
     # hold: a feature could be built yet held out of IMPLEMENTED (greyed), so it would
     # change the layout yet stay greyed — hence we only sweep the IMPLEMENTED toggles here.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    # identity_objects reveals only BUILT identity-object tiles, and the only ones built today are
-    # the superspace M_jL / M_LgL — which exist solely over a NONSTANDARD domain (a standard prime
-    # limit has a degenerate superspace = itself, so no superspace block at all). So it's swept
-    # against a nonstandard temperament with the superspace shown (rides_on nonstandard_domain),
-    # the way other refine-a-layer toggles ride the layer they touch.
-    nonstandard = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    state_for = {"identity_objects": nonstandard}
 
-    def snapshot(state, s):
+    def snapshot(s):
         # capture both cells and blocks: most toggles add/move cells, but colorization
         # is expressed purely through blocks (the colour washes), so a cells-only
         # snapshot would call it a no-op. Build under a non-unity slope so the slope-gated
         # weighting machinery (prescaling/complexity rows + box 𝐋's controls) is visible —
         # otherwise flipping alt_complexity changes nothing under the unity default.
-        lay = spreadsheet.build(state, s, tuning_scheme="TILT minimax-S")
+        lay = spreadsheet.build(base, s, tuning_scheme="TILT minimax-S")
         return (
             # c.unit is in the tuple so cell_units (which adds/removes the per-value unit beneath a
             # cell without changing the cell's id/geometry/text) registers as a real layout change
@@ -4994,9 +5030,9 @@ def test_every_implemented_toggle_actually_changes_the_layout():
     # a few toggles only refine a layer that isn't their hierarchy parent, so their effect is
     # invisible until that layer is shown — like the slope above, this is a visibility condition,
     # not a sub-control link. The form layer subscripts the canonical-form objects, so it only
-    # shows once the symbols layer is on; identity_objects gates the superspace self-maps, so it
-    # only shows once the superspace (nonstandard_domain) is on.
-    rides_on = {"form": "symbols", "identity_objects": "nonstandard_domain"}
+    # shows once the symbols layer is on. (identity_objects needs no such rider: its standard-domain
+    # tiles 𝑀ⱼ / 𝑀𝐺 show over the base temperament directly.)
+    rides_on = {"form": "symbols"}
 
     def with_parents_on(key):
         # a sub-control only takes effect while its parent chain is on (e.g. alt. complexity
@@ -5017,10 +5053,9 @@ def test_every_implemented_toggle_actually_changes_the_layout():
     for key in settings.IMPLEMENTED:
         if key in settings.GROUPING_PARENTS or key in MODE_TOGGLES:
             continue
-        state = state_for.get(key, base)
         on, off = with_parents_on(key), with_parents_on(key)
         on[key], off[key] = True, False
-        assert snapshot(state, on) != snapshot(state, off), f"{key} is marked implemented but changes nothing"
+        assert snapshot(on) != snapshot(off), f"{key} is marked implemented but changes nothing"
 
 
 def test_equivalences_extend_the_symbol_line_with_the_defining_equation():
@@ -5861,15 +5896,31 @@ def test_generator_detempering_vectors_tile_carries_the_D_symbol():
     assert cap.underlines == ((cap.text.index("detempering"), 1),)
 
 
-def test_mapped_generator_detempering_is_deferred_to_identity_objects():
-    # 𝑀·D = 𝐼 (the detempering is M's right-inverse) is a trivial "identity object", like the
-    # mapping-over-generators self-map and the domain-primes vectors identity — it won't show
-    # until the identity_objects setting is built. So even with the detempering column on, the
-    # mapping row over it carries NOTHING: no cells, framing kets / separators, enclosing
-    # bracket, fold toggle, caption, symbol or plain text.
+def test_mapped_generator_detempering_renders_with_identity_objects():
+    # 𝑀D = 𝐼 (the detempering is M's right-inverse): the r × r identity = M·D in generator coords —
+    # an identity object shown with identity_objects AND the detempering column on. A genmap stack
+    # { … ] over the detempering column, its columns headed 𝑀𝐝ᵢ.
+    cells = {c.id: c for c in _with(identity_objects=True, generator_detempering=True, names=True,
+                                    symbols=True, header_symbols=True, equivalences=True,
+                                    plain_text_values=True).cells}
+    for i in range(2):  # r = 2
+        for k in range(2):
+            assert cells[f"cell:mapped_detempering:{i}:{k}"].text == ("1" if i == k else "0")
+            assert cells[f"cell:mapped_detempering:{i}:{k}"].kind == "mapped"
+    assert cells["symbol:mapping:detempering"].text == "\U0001D440D = \U0001D43C"  # 𝑀D = 𝐼
+    assert cells["caption:mapping:detempering"].text == "mapped generator detemperings"
+    assert cells["matlabel:col:mapping:detempering:0"].text == "\U0001D440\U0001D41D₁"  # 𝑀𝐝₁
+    assert cells["ebktop:mapped_detempering"].kind == "ebktop"
+    assert cells["ptext:mapping:detempering"].text == "[[1 0} [0 1}]"
+
+
+def test_mapped_generator_detempering_gated_off_by_default():
+    # 𝑀D = 𝐼 is an identity object, so even with the detempering column on it carries NOTHING
+    # without identity_objects: no cells, framing kets, bracket, fold toggle, caption, symbol or
+    # plain text.
     cells = {c.id for c in _with(generator_detempering=True, names=True, symbols=True,
                                  equivalences=True, plain_text_values=True).cells}
-    assert not any("mapped_detempering" in c for c in cells)  # cells, ket marks, separators, bracket
+    assert not any("mapped_detempering" in c for c in cells)
     assert {"toggle:tile:mapping:detempering", "caption:mapping:detempering",
             "symbol:mapping:detempering", "ptext:mapping:detempering"}.isdisjoint(cells)
     # only the identity tile is deferred — the detempering column itself stays (its header, the

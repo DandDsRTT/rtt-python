@@ -124,7 +124,11 @@ CAPTIONS = {
     ("canon", "primes"): "canonical mapping",
     ("vectors", "held"): "held interval basis",
     ("vectors", "detempering"): "generator detempering",
+    ("vectors", "primes"): "JI mapping",                 # 𝑀ⱼ = 𝐼 (domain primes as vectors over themselves)
     ("mapping", "primes"): "(temperament) mapping",
+    # the standard-domain identity objects (gated on identity_objects, like the superspace pair):
+    ("mapping", "gens"): "mapped generators",            # 𝑀𝐺 = 𝐼 (M over its own generators)
+    ("mapping", "detempering"): "mapped generator detemperings",  # 𝑀D = 𝐼
     ("mapping", "commas"): "mapped comma basis (made to vanish!)",
     ("mapping", "targets"): "mapped target interval list",
     # the rational tempering projection P = GM (a d×d operator over the domain primes),
@@ -271,7 +275,10 @@ SYMBOLS = {
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
+    ("vectors", "primes"): "𝑀ⱼ",      # 𝑀ⱼ = 𝐼 (the JI mapping; the domain twin of 𝑀ⱼL)
     ("mapping", "primes"): "𝑀",
+    ("mapping", "gens"): "𝑀G",          # 𝑀𝐺 = 𝐼: M (italic) + the generator basis G (upright)
+    ("mapping", "detempering"): "𝑀D",   # 𝑀D = 𝐼: M (italic) + the detempering basis D (upright)
     ("mapping", "commas"): "𝑀C",
     ("mapping", "targets"): "Y",
     ("tuning", "gens"): "𝒈",
@@ -331,6 +338,9 @@ SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symb
 # list itself, the italic form its scalar entries.
 ROW_LABEL_LETTERS = {
     ("mapping", "primes"): "𝒎",      # 𝑀 → 𝒎: each row of the mapping is a covector 𝒎ᵢ
+    # the JI mapping M_j = I rows (vectors × primes): each row a covector 𝒎ⱼᵢ (𝒎 + subscript j),
+    # the domain twin of M_jL's 𝒎ⱼL — sits in the same primes-column gutter as the mapping's 𝒎ᵢ
+    ("vectors", "primes"): "𝒎ⱼ",
     # the projection P = GM is a stack of maps like 𝑀 (each row a covector 𝒑ᵢ over the primes)
     ("projection", "primes"): "𝒑",
     # P_L→s is a covector stack like P (each row a covector 𝒑_L→sᵢ over the superspace primes)
@@ -354,6 +364,8 @@ ROW_LABEL_LETTERS = {
     ("ss_projection", "ssprimes"): f"𝒑{SUBSCRIPT_L}",
 }
 COL_LABEL_LETTERS = {
+    # MD = I columns (mapping × detempering): each column M·𝐝ᵢ, headed 𝑀𝐝ᵢ (M + bold d + index)
+    ("mapping", "detempering"): "𝑀𝐝",
     # the scaling factors λ = diag(λ): one eigenvalue λᵢ per V sub-column (commas then unchanged),
     # the scalar entries in italic (𝜆ᵢ), like the other size lists' italic scalar headers
     ("scaling_factors", "commas"): "𝜆",
@@ -511,6 +523,12 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("mapping", "targets"): frozenset({"M", "T"}),     # 𝑀T (the mapping carries the cyan target list)
     ("mapping", "interest"): frozenset({"M"}),         # 𝑀·interest (other-intervals are colourless)
     ("mapping", "held"): frozenset({"M", "H"}),        # 𝑀H (the mapping carries the cyan held basis)
+    # the standard-domain identity objects (gated on identity_objects): all 𝑀-family, washed yellow
+    # like their mapping-row / primes-column siblings — M_j over the domain primes P, MG over the
+    # generator basis B (the generators column carries B in every tile), MD over the neutral D.
+    ("vectors", "primes"): frozenset({"M", "P"}),      # 𝑀ⱼ = 𝐼 (the JI mapping over the domain primes P)
+    ("mapping", "gens"): frozenset({"M", "B"}),        # 𝑀𝐺 = 𝐼 (over the generator basis B)
+    ("mapping", "detempering"): frozenset({"M"}),      # 𝑀D = 𝐼 (D is neutral, like the other detempering tiles)
     ("canon", "primes"): frozenset({"M", "P"}),        # the canonical mapping (𝑀 = 𝐅𝑀_c): 𝑀 family over P
     # the generator tuning map 𝒈 = G; the tempered family 𝒕 = 𝒈𝑀 etc. carry G and M (green).
     # the generators column carries the generator basis B in EVERY tile — like the domain
@@ -651,6 +669,9 @@ MNEMONICS = {
     ("ss_projection", "ssprimes"): "projection",  # 𝑃L → underline the "p" in "superspace projection"
     # superspace anchors — underline the symbol-letter where it sits in the caption
     ("ss_vectors", "primes"): "basis",        # BL → underline the "b" in "basis embedding…"
+    ("vectors", "primes"): "mapping",        # 𝑀ⱼ → underline the "m" in "JI mapping"
+    ("mapping", "gens"): "mapped",            # 𝑀𝐺 → underline the "m" in "mapped generators"
+    ("mapping", "detempering"): "mapped",     # 𝑀D → underline the "m" in "mapped generator detemperings"
     ("ss_mapping", "ssprimes"): "mapping",    # 𝑀L → underline the "m" in "superspace mapping"
     ("ss_vectors", "ssprimes"): "mapping",  # 𝑀ⱼL → "m" in "superspace JI mapping"
     ("tuning", "ssgens"): "generator",        # 𝒈L → "g" in "superspace generator tuning map"
@@ -705,6 +726,9 @@ EQUIVALENCES = {
     ("ss_mapping", "primes"): " = 𝑀LBL",
     ("ss_mapping", "targets"): " = 𝑀ₛ→LT",
     ("mapping", "commas"): " = 𝑂",
+    ("vectors", "primes"): " = 𝐼",       # M_j = I
+    ("mapping", "gens"): " = 𝐼",         # MG = I
+    ("mapping", "detempering"): " = 𝐼",  # MD = I
     ("mapping", "targets"): " = 𝑀T",
     # the rational tempering projection and generator embedding. G and V are bases (upright), P and M
     # operators (italic). The canonical-form decompositions (𝐺CᴹC / GCF⁻¹) wait for the form feature;
@@ -811,6 +835,9 @@ UNITS = {
     # superspace tile lives wholly in the superspace (p / gL only). The gL token uses the
     # SUBSCRIPT_L markup so cell_unit can subscript it per generator.
     ("ss_vectors", "ssprimes"): "p/p",   # M_jL = I
+    ("vectors", "primes"): "p/p",            # 𝑀ⱼ = 𝐼
+    ("mapping", "gens"): "g/g",              # 𝑀𝐺 = 𝐼
+    ("mapping", "detempering"): "g",         # 𝑀D = 𝐼
     ("ss_vectors", "primes"): "p/b",      # B_L basis change matrix (superspace prime p per domain element b)
     ("ss_vectors", "commas"): "p",        # C_L
     ("ss_vectors", "held"): "p",          # H_L
@@ -927,6 +954,10 @@ TILES = (
     ("block:canon", "canon", "primes"),
     ("block:gens", "mapping", "quantities"),
     ("block:mapping", "mapping", "primes"),
+    # the standard-domain identity objects, gated on identity_objects (dropped from declared_tiles
+    # when the toggle is off, like the superspace pair). MD = I rides detempering_tiles instead.
+    ("block:vec:primes", "vectors", "primes"),      # 𝑀ⱼ = 𝐼 (JI mapping)
+    ("block:selfmap", "mapping", "gens"),           # 𝑀𝐺 = 𝐼 (mapping over its own generators)
     ("block:projection", "projection", "primes"),
     ("block:projection_embedding", "projection", "gens"),  # the generator embedding G, beside P
     ("block:proj_v", "projection", "commas"),  # the projected unrotated vector list P·V over V

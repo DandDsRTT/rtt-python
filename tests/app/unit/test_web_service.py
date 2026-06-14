@@ -1117,7 +1117,9 @@ def test_plain_text_interval_vectors_are_vector_lists():
     # (the bare default scheme is all-interval, which auto-replaces the list with the identity).
     pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]), "TILT minimax-S")
     assert pt[("vectors", "targets")].startswith("[[1 0 0⟩ [0 1 0⟩ [-1 1 0⟩")  # target vectors
-    assert ("vectors", "primes") not in pt  # the domain-basis identity is deferred to identity_objects
+    # 𝑀ⱼ = 𝐼, the domain-basis identity, is a covector stack (the renderer gates it on
+    # identity_objects via tile_open; the string is always available here)
+    assert pt[("vectors", "primes")] == "[⟨1 0 0]⟨0 1 0]⟨0 0 1]}"
 
 
 def test_plain_text_mapped_list_is_a_list_of_generator_coord_vectors():

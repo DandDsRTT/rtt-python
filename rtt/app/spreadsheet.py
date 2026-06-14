@@ -1464,6 +1464,7 @@ class _GridBuilder:
         detempering_tiles = (
             ("block:detempering", "quantities", "detempering"),
             ("block:vec:detempering", "vectors", "detempering"),
+            ("block:mapped_detempering", "mapping", "detempering"),  # 𝑀D = 𝐼 (gated on identity_objects)
             ("block:tuning:detempering", "tuning", "detempering"),
             ("block:just:detempering", "just", "detempering"),
             ("block:retune:detempering", "retune", "detempering"),
@@ -1618,14 +1619,17 @@ class _GridBuilder:
                                ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
                                ("ss_vectors", "targets"), ("ss_mapping", "targets")}
         if not self.show_identity_objects:
-            # the two BUILT identity objects gate here: the superspace JI mapping M_jL = I
-            # (ss_vectors × ssprimes) and M_L over its own generators (ss_mapping × ssgens). Their
-            # standard-domain counterparts (mapping × gens = 𝑀𝐺, vectors × primes = 𝑀ⱼ, mapping ×
-            # detempering = 𝑀D, canon × gens = 𝐹⁻¹𝐹) aren't in the tile list yet, so the gate has
-            # nothing to drop for them. Dropping a tile clears its cells, brackets, caption, symbol,
-            # panel and fold toggle; the ss_vectors / ss_mapping rows stay for the real B_L / M_L in
-            # their other columns.
-            self.declared_tiles -= {("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
+            # the identity objects — the trivial self-maps that equal 𝐼 — gate here. Standard domain:
+            # the JI mapping 𝑀ⱼ (vectors × primes), 𝑀𝐺 = mapping over its own generators (mapping ×
+            # gens) and 𝑀D = the mapped generator detempering (mapping × detempering). Superspace: the
+            # JI mapping M_jL (ss_vectors × ssprimes) and M_LgL (ss_mapping × ssgens). (The remaining
+            # mockup identity object, 𝐹⁻¹𝐹 = 𝐼, needs the canonical-generators column + the form-boxes
+            # row, neither built yet.) Dropping a tile clears its cells, brackets, caption, symbol,
+            # panel and fold toggle; the rows themselves stay for the mapping / B_L / M_L in their
+            # other columns.
+            self.declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
+                                    ("mapping", "detempering"),
+                                    ("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
         # the superspace held / interest tiles only exist to lift an actual held / interest list (or
         # an open draft of one) — with none shown (nh_shown / mi_shown == 0) they'd be empty boxes,
         # so drop them (cells, panel, caption, brackets and fold toggle all go with the tile).
@@ -4168,6 +4172,35 @@ class _GridBuilder:
         self._emit_mapped_grid("interest", "ss_proj_pi", self.ss_proj_interest, self.mi, self.interest_left, "comma",
                                inset=KET_INSET, pending=self.pending_interest, **_ssp)  # P_L·interest
 
+    def _emit_identity_objects(self) -> None:
+        """The standard-domain identity objects — the trivial self-maps that equal 𝐼, each gated on
+        the identity_objects toggle (tile_open consults declared_tiles, from which the gate drops
+        them when the toggle is off). The on-domain twins of the superspace M_jL / M_LgL, built the
+        same way (read-only "mapped" cells + per-row brackets + a spanning matrix_frame):
+          • 𝑀ⱼ = 𝐼  (vectors × primes): the JI mapping, a d × d covector stack of the domain primes
+            over themselves — one ⟨ … ] per prime (rows labelled 𝒎ⱼᵢ in the primes gutter).
+          • 𝑀𝐺 = 𝐼  (mapping × gens): the r × r mapping over its own generators, a { … ] genmap stack.
+          • 𝑀D = 𝐼  (mapping × detempering): the SAME r × r identity = M·D, over the detempering
+            column (its columns headed 𝑀𝐝ᵢ). Rides the detempering toggle as well, via col_open."""
+        # M_j = I — d × d identity over the primes column, framed like the mapping it parallels
+        if self.tile_open("vectors", "primes"):
+            for i in range(self.d):
+                for k in range(self.d):
+                    self.cells.append(CellBox(
+                        f"cell:vec:primes:{i}:{k}", self.prime_left(k), self.vec_top(i), COL_W, ROW_H,
+                        "mapped", text="1" if i == k else "0", gen=i, prime=k,
+                        unit=self.cell_unit("vectors", "primes", prime=k)))
+        # 𝑀𝐺 = I (gens) and 𝑀D = I (detempering): the same r × r identity M·D, in generator coords
+        for ckey, prefix, left in (("gens", "selfmap", self.gen_left),
+                                   ("detempering", "mapped_detempering", self.detempering_left)):
+            if self.tile_open("mapping", ckey):
+                for i in range(self.r):
+                    for k in range(self.r):
+                        self.cells.append(CellBox(
+                            f"cell:{prefix}:{i}:{k}", left(k), self.map_top(i), COL_W, ROW_H,
+                            "mapped", text="1" if i == k else "0", gen=i,
+                            unit=self.cell_unit("mapping", ckey, gen=i)))
+
     def _emit_tuning_rows(self):
         """The tuning/just/retune rows; returns the chart_indicators dict the chart pass reads."""
         # tuning rows over the primes, commas and targets (cents); each can collapse on
@@ -4762,6 +4795,18 @@ class _GridBuilder:
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssgens"):
             for i in range(self.rL):
                 self.bracket(f"ss_selfmap:{i}", GENMAP_BRACKETS, "ssgens", self.ss_map_top(i), ROW_H)
+        # the standard-domain identity objects (the on-domain twins of the two above): M_j = I a
+        # d × d covector stack ⟨ … ] over the primes column; MG = I / MD = I r × r genmap stacks
+        # { … ] over the gens / detempering columns. Same per-row-bracket + matrix_frame pattern.
+        if self.tile_open("vectors", "primes"):
+            for i in range(self.d):
+                self.bracket(f"vec:primes:{i}", MAP_BRACKETS, "primes", self.vec_top(i), ROW_H)
+        if self.tile_open("mapping", "gens"):
+            for i in range(self.r):
+                self.bracket(f"selfmap:{i}", GENMAP_BRACKETS, "gens", self.map_top(i), ROW_H)
+        if self.tile_open("mapping", "detempering"):
+            for i in range(self.r):
+                self.bracket(f"mapped_detempering:{i}", GENMAP_BRACKETS, "detempering", self.map_top(i), ROW_H)
         # the lifted interval lists: B_L over the primes column (the basis change matrix) and the
         # lifted C/T/H/detempering lists, each a [ … ] over the dL components in the ss_vectors row;
         # the mapped versions a [ … ] over the rL rows in the ss_mapping row (interest stands alone,
@@ -4895,6 +4940,7 @@ class _GridBuilder:
             _prescale_top = lambda i: self.rows["prescaling"].y + i * ROW_H
             row_top = {
                 ("mapping", "primes"): self.map_top,
+                ("vectors", "primes"): self.vec_top,  # M_j = I's d covector rows 𝒎ⱼᵢ, in the primes gutter
                 ("projection", "primes"): self.proj_top,  # P's d rows of maps 𝒑ᵢ, like the mapping's 𝒎ᵢ
                 ("projection", "ssprimes"): self.proj_top,  # P_L→s's d rows of maps 𝒑_L→sᵢ
 
@@ -4906,6 +4952,7 @@ class _GridBuilder:
                 ("ss_projection", "ssprimes"): self.ss_proj_top,  # P_L's dL rows of maps 𝒑ₗᵢ
             }
             row_count = {("mapping", "primes"): self.r,
+                         ("vectors", "primes"): self.d,  # M_j = I is d × d
                          ("projection", "primes"): self.d,  # P is d×d (a map per domain prime)
                          ("projection", "ssprimes"): self.d,  # P_L→s is d×dL (a covector per domain prime)
 
@@ -5351,6 +5398,11 @@ class _GridBuilder:
         self.matrix_frame("ss_vectors", "ssprimes", "ss_vec_jmap")
         self.matrix_frame("ss_mapping", "primes", "ss_msl")
         self.matrix_frame("ss_mapping", "ssgens", "ss_selfmap")
+        # the standard-domain identity objects, framed like their superspace twins: M_j = I a
+        # covector stack ([ … } over ⟨ … ] rows), MG / MD genmap stacks ([ … } over { … ] rows)
+        self.matrix_frame("vectors", "primes", "vec:primes")
+        self.matrix_frame("mapping", "gens", "selfmap")
+        self.matrix_frame("mapping", "detempering", "mapped_detempering")
 
         # the mapped comma basis is one bracketed list, NOT a matrix of separated columns — so no
         # dividing rules between its entries (a long-standing stray-separator bug); over V the single
@@ -5557,6 +5609,7 @@ class _GridBuilder:
         self._emit_canon_band()
         self._emit_vectors_band()
         self._emit_superspace_rows()
+        self._emit_identity_objects()
         chart_indicators = self._emit_tuning_rows()
         self._emit_prescaling_band()
         self._emit_lbox_control()
