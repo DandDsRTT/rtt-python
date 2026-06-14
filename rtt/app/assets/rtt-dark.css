@@ -106,6 +106,12 @@ body.rtt-dark .rtt-frac-num { border-bottom-color:#e3e6ea; }   /* the read-only 
 body.rtt-dark .rtt-fraccell { background:#1b1f24; }
 body.rtt-dark .rtt-fraccell .rtt-cellinput .q-field__control { background:transparent; }
 body.rtt-dark .rtt-frac-bar { background:#e3e6ea; }
+/* the editable stacked decimal (cents) cells: same as the fraction cell — the dark box rides the
+   WRAP and the inputs' controls stay transparent so it shows through. The in-place fields show their
+   text directly (no transparent-while-unfocused face), so the blanket light-input rule above re-lights
+   it with no .rtt-cell-stacked exception needed. */
+body.rtt-dark .rtt-deccell { background:#1b1f24; }
+body.rtt-dark .rtt-deccell .rtt-cellinput .q-field__control { background:transparent; }
 /* the zoom-on-hover magnifier bubble (rtt.css .rtt-zoomtip): darken the card; the enlarged value
    face inside re-lights for free -- it carries the same rtt-value / rtt-tuning-value / rtt-ratio /
    rtt-mathexpr-stack / rtt-frac-num classes the dark value rules above already retint. */

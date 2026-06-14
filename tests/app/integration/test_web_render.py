@@ -749,16 +749,65 @@ async def test_quantities_off_at_runtime_does_not_strand_a_tilde_on_blanked_gene
 
 # --- tier 3: the edit -> render -> undo pipeline (input -> handler -> render) ---
 
+class _DecCellProxy:
+    """Makes an in-place stacked-DECIMAL (cents) cell read/write like the old single-input cell, so
+    the suite's ``_cell_child(...).value`` / ``.set_value(...)`` calls keep working across the split
+    into a whole-part field + a fraction field. ``.value`` rejoins them (and prepends "-" when the
+    generator-tuning cell's sign glyph shows "−", so it reads like the old signed cents string);
+    ``.set_value`` writes a full value through the whole field — decimal_value's "." passthrough
+    splits a decimal, and a bare integer clears the fraction first so no stale fraction rejoins.
+    Every other attribute (._props, .trigger, …) delegates to the whole-part input."""
+
+    def __init__(self, whole, frac, sign=None):
+        self._whole, self._frac, self._sign = whole, frac, sign
+
+    @property
+    def value(self):
+        whole = str(self._whole.value)
+        if "." in whole:  # passthrough: the whole field already carries a full decimal (mirrors decimal_value)
+            mag = whole
+        else:
+            f = str(self._frac.value).lstrip(".")
+            mag = whole if not f else f"{whole}.{f}"
+        if self._sign is not None and self._sign.text not in ("+", ""):
+            return f"-{mag}"  # the "−" glyph: read back the signed cents, like the old raw value
+        return mag
+
+    def set_value(self, v):
+        v = str(v)
+        if "." not in v:
+            self._frac.set_value("")  # an integer: drop any stale fraction before the whole commits
+        self._whole.set_value(v)
+
+    def __getattr__(self, name):
+        return getattr(self._whole, name)
+
+
 def _cell_child(user: User, cell_id: str):
     """The inner control of a grid cell (the marker rides its wrap). An editable stacked-fraction
     cell wraps its numerator + denominator inputs in a .rtt-frac-edit box; the NUMERATOR is the
     "primary" control the marker-based interactions drive (and, headless, a whole ``"3/2"`` typed
-    into it still commits — cell_value rejoins it with the empty denominator)."""
+    into it still commits — cell_value rejoins it with the empty denominator). An editable stacked-
+    decimal (cents) cell wraps a whole-part + fraction input in a .rtt-dec-edit box; a sign-aware
+    proxy makes it read/write like the old single input (see _DecCellProxy)."""
     wrap = next(iter(user.find(marker=cell_id).elements))
     child = wrap.default_slot.children[0]
     if "rtt-frac-edit" in getattr(child, "_classes", []):
         return child.default_slot.children[0]  # the numerator input
+    if "rtt-dec-edit" in getattr(child, "_classes", []):
+        whole, frac = _dec_inputs(user, cell_id)
+        main = child.default_slot.children[0]
+        sign = main.default_slot.children[0] if "rtt-gensign" in getattr(main.default_slot.children[0], "_classes", []) else None
+        return _DecCellProxy(whole, frac, sign)
     return child
+
+
+def _dec_mode(user: User, cell_id: str) -> str:
+    """An editable decimal cell's data-decmode ("int" — a bare whole, no fraction line — or "dec" —
+    the whole over a small .fraction), read off its .rtt-dec-edit box. The decimal twin of the
+    fraction cell's data-fracmode; the resting view the server sets from the committed value."""
+    box = next(iter(user.find(marker=cell_id).elements)).default_slot.children[0]
+    return box._props.get("data-decmode", "")
 
 
 def _frac_inputs(user: User, cell_id: str):
@@ -815,26 +864,51 @@ def _cell_text(user: User, cell_id: str) -> str:
 
 
 def _stacked_face(user: User, cell_id: str):
-    """The (main label, sub label) of an editable cell's stacked face — the overlay that makes
-    the value read like a read-only tuning value cell (the main glyph big, a small line below). A cents
-    cell stacks the whole part over the decimal; a power cell stacks ∞ over "(max)". The
-    editable input is child[0]; the face is child[1] (a .rtt-tuning-value div holding the
-    .rtt-stacked-main / .rtt-stacked-sub labels)."""
+    """The (main label, sub label) of an editable cell's stacked OVERLAY face — the overlay that makes
+    a value read like a read-only tuning value cell (the main glyph big, a small line below). Now used
+    only by the editable POWER cell (∞ over "(max)"): the input is child[0], the face child[1] (a
+    .rtt-tuning-value div holding the .rtt-stacked-main / .rtt-stacked-sub labels). The cents cells
+    (prescaler / weight / generator tuning) edit IN PLACE now — read them via _dec_inputs."""
     wrap = next(iter(user.find(marker=cell_id).elements))
     face = wrap.default_slot.children[1]
     return face.default_slot.children[0], face.default_slot.children[1]
 
 
-def _gentuning_face(user: User, cell_id: str):
-    """The (sign, whole, fraction) labels of a generator-tuning cell's signed cents face. Unlike
-    the other cents cells, the genmap shows an explicit, clickable sign glyph (+ ordinarily
-    assumed, − when negative) on a row with the big whole part, the small dot-led fraction
-    stacked below. The input is child[0]; the face (rtt-tuning-value.rtt-cellface) is child[1], holding
-    the sign+whole row (children[0]) over the fraction label (children[1])."""
+def _dec_inputs(user: User, cell_id: str):
+    """The (whole, fraction) input fields of an editable stacked-DECIMAL (cents) cell — the two
+    separate fields that replaced the old overlaid whole-over-.fraction face, the decimal twin of
+    _frac_inputs. The .rtt-dec-edit box is the wrap's first child; its children are the main row
+    ([sign?] + whole input) over the sub row (dot div + fraction input)."""
     wrap = next(iter(user.find(marker=cell_id).elements))
-    face = wrap.default_slot.children[1]
-    row = face.default_slot.children[0]
-    return row.default_slot.children[0], row.default_slot.children[1], face.default_slot.children[1]
+    box = wrap.default_slot.children[0]
+    main, sub = box.default_slot.children[0], box.default_slot.children[1]
+    whole = main.default_slot.children[-1]   # after the optional sign glyph
+    frac = sub.default_slot.children[1]       # after the dot div
+    return whole, frac
+
+
+def _dec_value(user: User, cell_id: str) -> str:
+    """The committed magnitude an editable decimal cell shows, rejoined from its whole + fraction
+    fields the way decimal_value does (a blank fraction is the big-integer view → the bare whole).
+    Unsigned — the generator cell's sign rides on its glyph (read it via _gentuning_face)."""
+    whole, frac = _dec_inputs(user, cell_id)
+    f = str(frac.value).lstrip(".")
+    return whole.value if not f else f"{whole.value}.{f}"
+
+
+def _gentuning_face(user: User, cell_id: str):
+    """The (sign, whole, fraction) of a generator-tuning cell's in-place signed cents editor. The
+    genmap shows an explicit, clickable sign glyph (+ ordinarily assumed, − when negative) left of the
+    big whole part, the small dot-led fraction stacked below. The sign is a label (its .text); the
+    whole + fraction are the two real input fields (their .value), now edited in place. Returns
+    (sign_label, whole_input, fraction_input)."""
+    wrap = next(iter(user.find(marker=cell_id).elements))
+    box = wrap.default_slot.children[0]
+    main, sub = box.default_slot.children[0], box.default_slot.children[1]
+    sign = main.default_slot.children[0]   # the .rtt-gensign label
+    whole = main.default_slot.children[1]  # the whole-part input
+    frac = sub.default_slot.children[1]    # the fraction input (after the dot div)
+    return sign, whole, frac
 
 
 def _ratio_face(user: User, cell_id: str):
@@ -1029,16 +1103,16 @@ async def test_clicking_the_sign_flips_the_generator_and_its_mapping_row(user: U
 
 
 async def test_editable_gen_tuning_cell_renders_a_stacked_cents_face(user: User) -> None:
-    # the generator tuning map cells are editable inputs, but a 3-dp cents value (e.g. 697.564)
-    # overflows the 30px square as a single line. They must show the same stacked int-over-
-    # fraction face as the read-only cents cells — the whole part big over a smaller dot-led
-    # fraction — so the value fits. Assert the live value splits across the two face labels.
+    # the generator tuning map cells are editable IN PLACE, but a 3-dp cents value (e.g. 697.564)
+    # overflows the 30px square as a single line. They split into a big whole-part field over a
+    # smaller fraction field (the editable twin of the read-only stacked cents face), so the value
+    # fits. Assert the live value splits across the two input fields.
     await user.open("/")
-    value = _cell_child(user, "tuning:gen:1").value  # the single-line cents value, e.g. "697.564"
-    _sign_lbl, int_lbl, frac_lbl = _gentuning_face(user, "tuning:gen:1")
-    assert "." not in int_lbl.text                  # the whole part stands alone (no decimal)
-    assert frac_lbl.text.startswith(".")            # the fraction stacks under, dot-led
-    assert int_lbl.text + frac_lbl.text == value    # and the two reconstruct the cell's value (sign aside)
+    value = _cell_child(user, "tuning:gen:1").value  # the signed cents value, e.g. "696.578" (default fifth +)
+    _sign, whole_in, frac_in = _gentuning_face(user, "tuning:gen:1")
+    assert "." not in whole_in.value                # the whole part stands alone (no decimal)
+    assert frac_in.value and "." not in frac_in.value  # the fraction is the bare digits (the dot is a sibling glyph)
+    assert f"{whole_in.value}.{frac_in.value}" == value  # the two reconstruct the magnitude (the default fifth is +)
 
 
 async def test_editing_a_target_cell_overrides_the_set(user: User) -> None:
@@ -1302,18 +1376,20 @@ async def test_editing_a_prescaler_diagonal_cell_overrides_the_scheme(user: User
 
 async def test_editable_prescaler_cell_renders_a_stacked_cents_face(user: User) -> None:
     # the bare prescaler 𝐋 diagonal cells are editable too; the 5-limit default seeds prime 3's
-    # diagonal at log₂3 = 1.585, a 3-dp value that overflows the square as a single line. It must
-    # read as the same stacked int-over-fraction face. Enable weighting (gates the prescaling row).
+    # diagonal at log₂3 = 1.585, a 3-dp value that overflows the square as a single line. It splits
+    # into a big whole-part field over a smaller fraction field (the in-place decimal editor). Enable
+    # weighting (gates the prescaling row).
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
     await user.should_see(marker="cell:prescaling:primes:1:1")
-    value = _cell_child(user, "cell:prescaling:primes:1:1").value  # the single-line value, e.g. "1.585"
-    int_lbl, frac_lbl = _stacked_face(user, "cell:prescaling:primes:1:1")
-    assert "." not in int_lbl.text                  # the whole part stands alone
-    assert frac_lbl.text.startswith(".")            # the fraction stacks under, dot-led
-    assert int_lbl.text + frac_lbl.text == value    # and the two reconstruct the cell's value
+    value = _cell_child(user, "cell:prescaling:primes:1:1").value  # the rejoined value, e.g. "1.585"
+    whole_in, frac_in = _dec_inputs(user, "cell:prescaling:primes:1:1")
+    assert "." not in whole_in.value                # the whole part stands alone
+    assert frac_in.value and "." not in frac_in.value  # the fraction is the bare digits below
+    assert f"{whole_in.value}.{frac_in.value}" == value  # and the two reconstruct the cell's value
+    assert _dec_mode(user, "cell:prescaling:primes:1:1") == "dec"  # a fractional value shows the decimal view
 
 
 async def test_a_bare_integer_value_fills_the_cell_not_the_reduced_whole_part_size(user: User) -> None:
@@ -1321,7 +1397,8 @@ async def test_a_bare_integer_value_fills_the_cell_not_the_reduced_whole_part_si
     # But a value with NO fractional part is a plain integer: it must fill the cell at the full
     # value-cell font (like the mapping / mapped integers), NOT sit at the reduced whole-part size
     # with empty space below — which made integers read as shrunken, "as if they had a decimal part".
-    # The prescaler matrix is mostly integers: its off-diagonal 0s are read-only tuning value cells.
+    # The READ-ONLY off-diagonal 0 carries this on the rtt-stacked-solo face class; the EDITABLE
+    # diagonal carries it as data-decmode (int = solo whole, no fraction line; dec = whole over .frac).
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
@@ -1331,9 +1408,10 @@ async def test_a_bare_integer_value_fills_the_cell_not_the_reduced_whole_part_si
     zero_main = zero_face.default_slot.children[0]
     assert zero_main.text == "0"
     assert "rtt-stacked-solo" in zero_main._classes    # the bare integer takes the full-size (solo) face
-    # the diagonal log₂3 = 1.585 keeps the stacked whole-over-.fraction face, so it is NOT solo
-    diag_main, _ = _stacked_face(user, "cell:prescaling:primes:1:1")
-    assert "rtt-stacked-solo" not in diag_main._classes
+    # the diagonal log₂3 = 1.585 keeps the stacked whole-over-.fraction view (dec mode, not solo)
+    assert _dec_mode(user, "cell:prescaling:primes:1:1") == "dec"
+    # prime 2's diagonal is log₂2 = 1, a bare integer: the editable cell collapses to the int view
+    assert _dec_mode(user, "cell:prescaling:primes:0:0") == "int"
 
 
 async def test_a_finite_power_fills_the_cell_when_re_synced_from_infinity(user: User) -> None:

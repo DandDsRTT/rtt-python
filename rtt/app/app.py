@@ -421,12 +421,19 @@ _FREEZE_JS = (_ASSETS / "freeze.js").read_text(encoding="utf-8")
 # still happen on blur (see _build_fraction / _build_gridvalue).
 _FRACTION_JS = (_ASSETS / "fraction.js").read_text(encoding="utf-8")
 
-# A fraction cell holds TWO inputs (numerator + denominator) in one cell. This client-side guard makes
+# Live int<->decimal mode-switching for the editable stacked DECIMAL cells (the "." key opens a
+# fraction, a blank fraction collapses to the big-integer view). The cents-family twin of
+# _FRACTION_JS — same delegated-listener shape, for the bare prescaler / weight / generator-tuning
+# cells (see _build_decimal).
+_DECIMAL_JS = (_ASSETS / "decimal.js").read_text(encoding="utf-8")
+
+# A multi-field stacked cell holds TWO inputs in one cell — a fraction's numerator + denominator
+# (.rtt-frac-edit), or a decimal's whole part + fraction (.rtt-dec-edit). This client-side guard makes
 # a focus/blur/commit handler fire only when focus crosses the WHOLE cell's boundary — not on the
-# num<->den Tab hop inside it — so the edit-preview baseline is taken once and the value commits only
-# when you truly leave. (relatedTarget is the element focus is moving to/from.)
-_FRAC_EXIT_JS = ("(e) => { const b = e.target.closest('.rtt-frac-edit'); "
-                 "if (!b || !b.contains(e.relatedTarget)) emit(); }")
+# field<->field Tab hop inside it — so the edit-preview baseline is taken once and the value commits
+# only when you truly leave. (relatedTarget is the element focus is moving to/from.)
+_STACKED_EXIT_JS = ("(e) => { const b = e.target.closest('.rtt-frac-edit, .rtt-dec-edit'); "
+                    "if (!b || !b.contains(e.relatedTarget)) emit(); }")
 
 # The same idea ONE LEVEL UP, for the integer interval-vector columns and mapping rows: an interval
 # vector / map is edited as a WHOLE — Tab/blur HOP between its sibling cells while you fill it in, and
@@ -838,14 +845,14 @@ class _Reconciler:
         self._row_drag: int | None = None  # the mapping row a drag-to-add started on (dragstart → drop)
         self._col_drag: tuple[str, int] | None = None  # the (interval group, index) a drag-to-add started on
         self.els: dict = {}  # entity id -> outer element (persists across renders)
-        self.inputs: dict = {}  # mapping cell id -> q-input (a fraction cell's NUMERATOR / its sole integer input)
-        self.den_inputs: dict = {}  # fraction cell id -> its DENOMINATOR q-input (ratio mode only; see _build_gridvalue)
-        self.frac_edits: dict = {}  # fraction cell id -> the .rtt-frac-edit box (its data-fracmode drives int/ratio view)
+        self.inputs: dict = {}  # mapping cell id -> q-input (a fraction's NUMERATOR / a decimal's WHOLE part / a sole integer input)
+        self.den_inputs: dict = {}  # multi-field cell id -> its SECOND q-input (a fraction's DENOMINATOR / a decimal's FRACTION; see _build_fraction / _build_decimal)
+        self.frac_edits: dict = {}  # multi-field cell id -> the .rtt-frac-edit / .rtt-dec-edit box (its data-fracmode/decmode drives the view)
         self.labels: dict = {}  # cell id -> the label whose text tracks state
         self.fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
         self.ratio_faces: dict = {}  # genratio/commaratio id -> its .rtt-ratio container (rebuilt in place)
         self.stacked_faces: dict = {}  # stacked-value cell id -> (main label, sub label): cents whole/.frac, power ∞/(max)
-        self.gensign_faces: dict = {}  # generator-tuning cell id -> (sign, whole, .frac) labels: the clickable signed cents face
+        self.gensign_faces: dict = {}  # generator-tuning cell id -> its clickable +/− sign label (the generator-reversal control)
         self.htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
         self.ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
         self.chart_keys: dict = {}  # chart cell id -> last (w, h, values) drawn, to redraw on resize/data change
@@ -1046,12 +1053,13 @@ class _Reconciler:
         # checkbox commits instantly, with no "while editing" window to preview).
         edit_input = self.inputs.get(cb.id) or self.ptext_inputs.get(cb.id)
         if edit_input is not None:
-            # a fraction cell holds TWO inputs (numerator + denominator) in one cell: wire BOTH, and
-            # gate the focus/blur with _FRAC_EXIT_JS so the edit-preview baseline is taken once (not
-            # re-snapshotted on the num<->den Tab hop) and on_cell_blur fires only when focus truly
-            # leaves the cell. A single-input cell has no den (guard None → fire on every focus/blur).
+            # a multi-field cell holds TWO inputs (a fraction's numerator + denominator, or a decimal's
+            # whole part + fraction) in one cell: wire BOTH, and gate the focus/blur with
+            # _STACKED_EXIT_JS so the edit-preview baseline is taken once (not re-snapshotted on the
+            # field<->field Tab hop) and on_cell_blur fires only when focus truly leaves the cell. A
+            # single-input cell has no second field (guard None → fire on every focus/blur).
             den = self.den_inputs.get(cb.id)
-            guard = _FRAC_EXIT_JS if den is not None else None
+            guard = _STACKED_EXIT_JS if den is not None else None
             for fld in (edit_input, den) if den is not None else (edit_input,):
                 fld.on("focus", lambda _=None, cid=cb.id: self._cb.on_cell_focus(cid), js_handler=guard)
                 fld.on("blur", lambda _=None, cid=cb.id: self._cb.on_cell_blur(cid), js_handler=guard)
@@ -1247,6 +1255,31 @@ class _Reconciler:
         # integer into a draft's "?/?" commits the integer, not "N/?"
         return num if den in ("", "1", "?") else f"{num}/{den}"
 
+    def decimal_value(self, cid: str) -> str:
+        """The committed cents string a stacked DECIMAL cell holds, reassembled from its whole-part
+        input (``inputs[cid]``) + fractional input (``den_inputs[cid]``) — the cents twin of
+        ``cell_value``. A blank fraction yields the bare whole; a blank whole yields ``""`` (a cleared
+        cell, a silent no-op). The fields carry the unsigned MAGNITUDE — the generator cell's sign
+        lives on its clickable glyph, re-applied by on_gentuning_change — so this never returns a sign
+        (a stray leading ``"."`` typed into the fraction is dropped). The single read every cents-cell
+        commit / wheel uses, so a split cell looks like one combined field to them."""
+        whole = str(self.inputs[cid].value).strip()
+        if not whole:
+            return ""
+        if "." in whole:  # the whole field already carries a full decimal (a paste / test set_value)
+            return whole
+        frac = str(self.den_inputs[cid].value).strip().lstrip(".") if cid in self.den_inputs else ""
+        return whole if not frac else f"{whole}.{frac}"
+
+    def set_decimal_value(self, cid: str, text: str) -> None:
+        """Split a ``"whole.frac"`` cents string into a decimal cell's two fields — the input-write
+        twin of ``decimal_value``, used by the wheel step (which computes the new full value, then
+        writes it back across the split)."""
+        whole, frac = _cents_parts(text)
+        self.inputs[cid].value = whole
+        if cid in self.den_inputs:
+            self.den_inputs[cid].value = frac
+
     # ---- cell-kind handlers (audit #3): each kind's build + update, co-located here so a
     # built-but-not-filled drift between the two ladders becomes structurally impossible ----
     # The html-content families build an empty ui.html; the update fills it (re-drawing only
@@ -1408,9 +1441,10 @@ class _Reconciler:
 
     # ---- the unified editable ratio-or-integer grid cell (was ~10 near-identical builders). One
     # q-input (the integer view / a fraction's numerator), plus a denominator input + bar for the
-    # ratio-capable kinds; behaviour driven by the cell's _GridValueSpec. prescalercell /
-    # gentuningcell / powerinput are a DIFFERENT family (a decimal cents / power face overlaid on the
-    # input) and keep their own builders. ----
+    # ratio-capable kinds; behaviour driven by the cell's _GridValueSpec. The editable cents cells
+    # (prescalercell / weightcell / gentuningcell) are the DECIMAL sibling — a stacked whole-over-
+    # .fraction edited in place via _build_decimal; powerinput alone still overlays a face on its
+    # input (∞ isn't a decimal you split). ----
     def _build_gridvalue(self, cb: spreadsheet.CellBox, wrap) -> None:
         # PREVIEW the ripple as you type (the kinds that have a live preview) and COMMIT on Enter /
         # blur (Enter blurs via make_cell) — never re-solving on every keystroke. A per-cell unit
@@ -1446,8 +1480,8 @@ class _Reconciler:
             num = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput rtt-frac-num-in")
             ui.element("div").classes("rtt-frac-bar")  # the horizontal rule — a div, so it is never selectable
             den = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput rtt-frac-den-in")
-        num.on("blur", commit, js_handler=_FRAC_EXIT_JS)  # commit only when focus leaves the whole cell
-        den.on("blur", commit, js_handler=_FRAC_EXIT_JS)
+        num.on("blur", commit, js_handler=_STACKED_EXIT_JS)  # commit only when focus leaves the whole cell
+        den.on("blur", commit, js_handler=_STACKED_EXIT_JS)
         self.inputs[cb.id] = num
         self.den_inputs[cb.id] = den
         self.frac_edits[cb.id] = box
@@ -1522,34 +1556,74 @@ class _Reconciler:
             return "" if v is None else str(v)
         return "" if cb.blank else cb.text
 
+    # ---- the editable stacked DECIMAL cell (the cents family: the bare prescaler 𝐿 diagonal, the
+    # custom-weight 𝒘 cells, the generator-tuning map 𝒈). The decimal twin of _build_fraction: a big
+    # whole-part input over a small dot-led fraction input, edited IN PLACE — replacing the old overlay
+    # face that swapped to a raw single line on focus. cents_text splits into the two fields; a blank
+    # fraction collapses to the big-integer view (data-decmode="int"); typing "." opens the fraction.
+    # _DECIMAL_JS drives the live switch; make_cell gates focus/blur (via the frac input in den_inputs)
+    # so the edit-preview baseline is taken once and on_cell_blur fires only on whole-cell exit. ----
+    def _build_decimal(self, cb: spreadsheet.CellBox, wrap, commit, *, gen_index=None) -> None:
+        # the value commits LIVE on each field's on_change (the cents cells re-solve as you type, as
+        # they always have); the wrap owns the white box + outline (one box around the two inputs). With
+        # gen_index a clickable +/− sign glyph rides left of the whole part (the generator-reversal
+        # control); the sign is changed by clicking the glyph, not typed, so the fields are the unsigned
+        # magnitude (on_gentuning_change re-applies the sign).
+        wrap.classes("rtt-cell-input rtt-deccell")
+        box = ui.element("div").classes("rtt-dec-edit")
+        with box:
+            with ui.element("div").classes("rtt-dec-main"):  # [sign?] whole part
+                if gen_index is not None:
+                    s = ui.label("").classes("rtt-gensign").mark(f"gensign:{gen_index}") \
+                        .on("click", lambda _=None, i=gen_index: self._cb.act(lambda: self._editor.flip_generator(i)))
+                    # hovering the sign previews REVERSING this generator (ring the cells the flip would
+                    # change — its tuning sign and its mapping row), the same ring-only hover the other
+                    # controls give. This is the "+/− in the generator tuning map" hover.
+                    self._preview_control(s, lambda gi=gen_index: self._editor.flip_generator(gi))
+                    self.gensign_faces[cb.id] = s
+                whole = ui.input(on_change=commit).props("dense borderless").classes("rtt-cellinput rtt-dec-whole-in")
+            with ui.element("div").classes("rtt-dec-sub"):  # . fraction
+                ui.label(".").classes("rtt-dec-dot")  # the leading "." — a label (non-input), never selectable/tabbable
+                frac = ui.input(on_change=commit).props("dense borderless").classes("rtt-cellinput rtt-dec-frac-in")
+        self.inputs[cb.id] = whole
+        self.den_inputs[cb.id] = frac
+        self.frac_edits[cb.id] = box
+
+    def _update_decimal(self, cb: spreadsheet.CellBox, text: str, *, signed=False) -> None:
+        # split the committed cents value into the two fields and pick the view: no fractional part is
+        # the big-integer view (data-decmode="int"), anything else the stacked decimal. A signed cell
+        # (the generator tuning) also syncs its +/− glyph from _gentuning_parts; the fields stay the
+        # unsigned magnitude. _DECIMAL_JS keeps the mode live as you type; this is the resting state.
+        if signed:
+            sign, whole, frac = _gentuning_parts(text)
+            if cb.id in self.gensign_faces:
+                self.gensign_faces[cb.id].set_text(sign)
+        else:
+            whole, frac = _cents_parts(text)
+        self.inputs[cb.id].value = whole
+        self.den_inputs[cb.id].value = frac
+        self.frac_edits[cb.id].props(f'data-decmode={"dec" if frac else "int"}')
+
     def _build_prescalercell(self, cb: spreadsheet.CellBox, wrap) -> None:
         # a bare prescaler 𝐿 diagonal cell, the user's editable override (off-diagonal cells stay
         # tuning value "0" — 𝐿 is diagonal). Each input dispatches to set_custom_prescaler_entry; the cid
         # carries the diagonal slot, so the lambda closes over it (a free cb would be the LAST
         # cell's id by the time the user types)
-        wrap.classes("rtt-cell-input rtt-cell-stacked")
-        self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_prescaler_change(cid)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        self.cents_face(cb, "rtt-tuning-value rtt-cellface")  # the stacked face overlaid on the input
+        self._build_decimal(cb, wrap, lambda e=None, cid=cb.id: self._cb.on_prescaler_change(cid))
 
     def _update_prescalercell(self, cb: spreadsheet.CellBox) -> None:
         # reflect the live prescaler diagonal (the override if set, else the scheme-derived value —
         # spreadsheet.build emits the final text). Blank when quantities are off, like the other cells
-        self.inputs[cb.id].value = cb.text
-        self.set_cents_face(cb.id, cb.text)  # the overlaid stacked face mirrors the input
+        self._update_decimal(cb, cb.text)
 
     def _build_weightcell(self, cb: spreadsheet.CellBox, wrap) -> None:
         # a manual damage-weight 𝒘 cell (custom-weight mode): the user's editable per-target weight,
         # overriding the slope. The whole row commits together (on_weight_change re-reads every cell),
-        # so the cid need not encode an index. Mirrors the bare-prescaler cell's editable face.
-        wrap.classes("rtt-cell-input rtt-cell-stacked")
-        self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_weight_change(cid)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        self.cents_face(cb, "rtt-tuning-value rtt-cellface")  # the stacked face overlaid on the input
+        # so the cid need not encode an index. The same in-place decimal editor as the bare prescaler.
+        self._build_decimal(cb, wrap, lambda e=None, cid=cb.id: self._cb.on_weight_change(cid))
 
     def _update_weightcell(self, cb: spreadsheet.CellBox) -> None:
-        self.inputs[cb.id].value = cb.text
-        self.set_cents_face(cb.id, cb.text)  # the overlaid stacked face mirrors the input
+        self._update_decimal(cb, cb.text)
 
     def _build_powerinput(self, cb: spreadsheet.CellBox, wrap) -> None:
         # the optimization power 𝑝, the box-𝒄 norm power 𝑞, or its dual. The symbol label rides as
@@ -1582,14 +1656,17 @@ class _Reconciler:
         self._sync_stacked_face(cb.id, *_power_parts(cb.text))
 
     def _build_gentuningcell(self, cb: spreadsheet.CellBox, wrap) -> None:
-        wrap.classes("rtt-cell-input rtt-cell-stacked")
-        self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_gentuning_change(cid)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        self._gentuning_face(cb)  # the clickable signed cents face overlaid on the input
-        # hover-and-scroll fine-adjust: each wheel notch nudges this generator by 1/1000 cent (the
-        # last digit the cents face shows). The listener rides the wrap, not the input, so a scroll
-        # over the overlaid signed face (a sibling of the input) still reaches it by bubbling;
-        # .prevent stops the grid scrolling out from under the cursor.
+        # the generator tuning map 𝒈 cell: the in-place stacked decimal editor with a clickable +/−
+        # sign glyph (gen_index) left of the whole part — the otherwise-assumed "+" of a positive
+        # generator, made visible (or "−"), that the user clicks to reverse the generator (negating its
+        # mapping row in lockstep, so the tuning map holds). The whole/fraction fields are the unsigned
+        # magnitude; on_gentuning_change re-applies the glyph's sign.
+        i = int(cb.id.rsplit(":", 1)[1])
+        self._build_decimal(cb, wrap, lambda e=None, cid=cb.id: self._cb.on_gentuning_change(cid), gen_index=i)
+        # hover-and-scroll fine-adjust: each wheel notch nudges this generator by 1/1000 cent (the last
+        # digit the cents value shows). The listener rides the wrap, not an input, so a scroll over the
+        # sign glyph or the fraction line still reaches it by bubbling; .prevent stops the grid scrolling
+        # out from under the cursor.
         wrap.on("wheel.prevent",
                 lambda e, cid=cb.id: self._cb.on_gentuning_wheel(cid, e.args.get("deltaY")),
                 args=["deltaY"])
@@ -1599,38 +1676,7 @@ class _Reconciler:
         wrap.on("mouseleave", lambda _=None, cid=cb.id: self._cb.gentuning_unhover(cid))
 
     def _update_gentuningcell(self, cb: spreadsheet.CellBox) -> None:
-        text = "" if cb.blank else cb.text  # blank when quantities off
-        self.inputs[cb.id].value = text
-        self._set_gentuning_face(cb.id, text)  # the overlaid signed face mirrors the input
-
-    def _gentuning_face(self, cb: spreadsheet.CellBox) -> None:
-        """The generator-tuning cell's signed, clickable cents face overlaid on its input: a sign
-        glyph (the otherwise-assumed "+" of a positive generator, made visible — or "−") the user
-        clicks to reverse the generator (negating its mapping row in lockstep, so the tuning map
-        holds), then the whole part big over a small dot-led fraction (the shared cents look). Only
-        the sign takes pointer events; a click elsewhere falls through to focus the input for typing."""
-        sign, whole, frac = _gentuning_parts(cb.text)
-        i = int(cb.id.rsplit(":", 1)[1])
-        with ui.element("div").classes("rtt-tuning-value rtt-cellface"):
-            with ui.element("div").classes("rtt-gentuning-main"):
-                s = ui.label(sign).classes("rtt-gensign").mark(f"gensign:{i}") \
-                    .on("click", lambda _=None, i=i: self._cb.act(lambda: self._editor.flip_generator(i)))
-                # hovering the sign previews REVERSING this generator (ring the cells the flip would
-                # change — its tuning sign and its mapping row), the same ring-only hover the other
-                # controls give. This is the "+/- in the generator tuning map" hover.
-                self._preview_control(s, lambda gi=i: self._editor.flip_generator(gi))
-                m = ui.label(whole).classes("rtt-stacked-main")
-            sub = ui.label(f".{frac}" if frac else "").classes("rtt-stacked-sub")
-        self.gensign_faces[cb.id] = (s, m, sub)
-
-    def _set_gentuning_face(self, cid: str, text: str) -> None:
-        """Re-sync a generator-tuning cell's signed face in place (the cell kind is unchanged
-        across renders, so its sign/whole/fraction labels persist)."""
-        sign, whole, frac = _gentuning_parts(text)
-        s, m, sub = self.gensign_faces[cid]
-        s.set_text(sign)
-        m.set_text(whole)
-        sub.set_text(f".{frac}" if frac else "")
+        self._update_decimal(cb, "" if cb.blank else cb.text, signed=True)  # blank when quantities off
 
     def _build_ptextedit(self, cb: spreadsheet.CellBox, wrap) -> None:
         # an editable dual: typing a valid EBK string drives the grid (its own ptext_inputs dict).
@@ -2388,6 +2434,8 @@ def index() -> None:
     ui.add_body_html(f"<script>{_FREEZE_JS}</script>")
     # live int<->ratio switching for the editable stacked fraction cells (see _FRACTION_JS)
     ui.add_body_html(f"<script>{_FRACTION_JS}</script>")
+    # live int<->decimal switching for the editable stacked cents cells (see _DECIMAL_JS)
+    ui.add_body_html(f"<script>{_DECIMAL_JS}</script>")
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
     ui.query(".nicegui-content").style("padding:6px")
 
@@ -3039,13 +3087,22 @@ def index() -> None:
 
     def on_gentuning_change(cid):
         # an editable generator-tuning-map cell: a valid cents number overrides that one
-        # generator's tuning (a per-number manual override); an unparseable entry is ignored
+        # generator's tuning (a per-number manual override); an unparseable entry is ignored. The
+        # whole/fraction fields carry the unsigned MAGNITUDE (decimal_value rejoins them); the sign is
+        # the clickable glyph's, re-applied here — so editing the magnitude keeps a negated generator
+        # negated, and the glyph (flip_generator) is the only way to change sign.
         if building[0] or cid not in rec.inputs:
             return
+        mag = rec.decimal_value(cid)
+        if not mag:
+            return  # a cleared cell mid-type: no-op (don't commit 0)
         try:
-            cents = float(str(rec.inputs[cid].value).strip())
+            cents = abs(float(mag))
         except ValueError:
             return
+        glyph = rec.gensign_faces.get(cid)
+        if glyph is not None and glyph.text not in ("+", ""):  # the "−" glyph: this generator is negated
+            cents = -cents
         i = int(cid.rsplit(":", 1)[1])
         # "tuning:ssgen:i" is a superspace generator 𝒈L cell (prime-based shift); "tuning:gen:i" the
         # on-domain 𝒈. Each routes to its own manual-tuning setter.
@@ -3082,10 +3139,19 @@ def index() -> None:
         step = _WHEEL_STEPS.get(rec.kinds.get(cid))
         if step is None:
             return
+        if cid in rec.den_inputs:
+            # a split DECIMAL cell (the prescaler): step the rejoined value, then write it back across
+            # the two fields. Guard the field writes so their per-field on_change doesn't fire on a stale
+            # half-set value; commit once explicitly below.
+            building[0] = True
+            rec.set_decimal_value(cid, _wheel_step(rec.decimal_value(cid), delta_y, step))
+            building[0] = False
+            on_prescaler_change(cid)
+            return
         rec.inputs[cid].value = _wheel_step(rec.inputs[cid].value, delta_y, step)
         # A wheel notch is a deliberate step, so it COMMITS. The matrix/vector cells now only PREVIEW on
         # their on_change (committing on Enter/blur), so the notch must commit them explicitly here; the
-        # other wheeled kinds (power / prescaler) still commit in their own on_change, so they don't.
+        # other wheeled kind (power) still commits in its own on_change, so it doesn't.
         commit = {"mapping": on_mapping_change, "commacell": on_comma_change,
                   "interestcell": on_interest_change, "heldcell": on_held_change,
                   "targetcell": on_target_cells_change}.get(rec.kinds.get(cid))
@@ -3166,11 +3232,15 @@ def index() -> None:
         # The first edit seeds the override from the scheme so the d-1 untouched cells keep
         # their displayed values (set_custom_prescaler_entry handles that). The bare prescaler
         # is a float diagonal (log_prime / prime / identity / typed), so parse as float — an
-        # unparseable entry leaves the scheme unchanged, like the other editable cells.
+        # unparseable entry leaves the scheme unchanged, like the other editable cells. The cell is the
+        # in-place stacked decimal editor, so decimal_value rejoins its whole + fraction fields.
         if building[0] or cid not in rec.inputs:
             return
+        raw = rec.decimal_value(cid)
+        if not raw:
+            return  # a cleared cell mid-type: leave the scheme unchanged
         try:
-            value = float(str(rec.inputs[cid].value).strip())
+            value = float(raw)
         except ValueError:
             return
         parts = cid.split(":")  # "cell:prescaling:primes:i:j" — row i, column j (the whole square edits)
@@ -3195,15 +3265,19 @@ def index() -> None:
         # cells were emitted left-to-right, so dict insertion order IS column order) and replace the
         # override — the same whole-grid commit an edited target column uses. An unparseable entry
         # mid-type is a silent no-op; a non-finite / ≤0 one toasts and snaps back (it would crash the
-        # weighted solve), like the prescaler handler.
+        # weighted solve), like the prescaler handler. Each cell is the in-place stacked decimal editor,
+        # so decimal_value rejoins its whole + fraction fields per column.
         if building[0] or cid not in rec.inputs:
             return
         weights = []
-        for other, inp in rec.inputs.items():
+        for other in rec.inputs:
             if not other.startswith("weight:"):
                 continue
+            raw = rec.decimal_value(other)
+            if not raw:
+                return  # an incomplete/cleared cell — don't commit a partial row mid-type
             try:
-                w = float(str(inp.value).strip())
+                w = float(raw)
             except ValueError:
                 return  # an incomplete/cleared cell — don't commit a partial row mid-type
             if not math.isfinite(w) or w <= 0:

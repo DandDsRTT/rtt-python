@@ -504,19 +504,16 @@
    whole-part-over-.fraction: it fills the square at the full value-cell font, like the mapping/
    mapped integers, rather than the reduced whole-part size that reserves room for a fraction. */
 .rtt-stacked-main.rtt-stacked-solo { font-size:var(--cell-font); }
-/* the generator tuning map's signed face: the clickable sign glyph and the whole part share
-   one row (the small ".fraction" stacks beneath, like every cents cell). The face ignores
-   pointer events, but the sign takes them back — the otherwise-assumed "+" of a positive
-   generator (or a "−") is shown so it can be clicked to reverse that generator (its mapping row
-   flips too). It reads as part of the value (black), with a faint hover box marking it clickable. */
-.rtt-gentuning-main { display:flex; align-items:baseline; justify-content:center; line-height:1; }
+/* the generator tuning map's clickable sign glyph, shown left of the whole part (the editable
+   cents cell builds it inside .rtt-dec-main): the otherwise-assumed "+" of a positive generator
+   (or a "−") that the user clicks to reverse that generator (its mapping row flips too). It reads
+   as part of the value (black), with a faint hover box marking it clickable. */
 .rtt-gensign { font-size:10px; pointer-events:auto; cursor:pointer; padding:0 1px; border-radius:2px; }
 .rtt-gensign:hover { background:#e0e0e0; }
-/* an editable cents cell (the generator tuning map 𝒈, the bare prescaler 𝐋 diagonal): a
-   single-line input overflows the square with a 3-dp value, so it carries the SAME stacked
-   int-over-fraction face as a read-only cents cell, overlaid on top of the input. The face
-   ignores pointer events (a click falls through and focuses the input); focusing the cell
-   then swaps to the raw single-line text for editing and hides the face. */
+/* the editable POWER cell (the optimization power 𝑝 / box-𝒄 norm power 𝑞): ∞ over a small "(max)"
+   is not a decimal you can split into two fields like a cents value, so it keeps the overlay-face
+   model — the stacked face laid over a single input, transparent until focused. (The cents cells —
+   prescaler / weight / generator tuning — moved to the in-place .rtt-deccell editor below.) */
 .rtt-cellface { position:absolute; top:0; left:0; width:100%; height:100%;
             pointer-events:none; z-index:1; }
 .rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent; font-size:10px; }
@@ -572,6 +569,41 @@
 .rtt-fraccell.rtt-pending .q-field__native { color:var(--pending-color) !important; }
 .rtt-fraccell.rtt-pending .rtt-frac-bar { background:var(--pending-color); }
 .rtt-cell.rtt-preview-change .rtt-frac-bar { background:var(--preview-text-color) !important; }
+/* ---- the editable stacked DECIMAL cells (the cents family: the bare prescaler 𝐋 diagonal, the
+   custom-weight 𝒘 cells, the generator tuning map 𝒈): a big whole-part input over a small dot-led
+   fraction input, edited IN PLACE — the decimal twin of the fraction cell above, replacing the old
+   overlay cents face that swapped to a raw single line on focus. The white box + outline rides the
+   WRAP (one box around both inputs). data-decmode flips the view: "int" (no fractional part) shows
+   just the big whole; "dec" shows the whole over a small ".fraction". _DECIMAL_JS keeps it live as you
+   type; the server sets it authoritatively from the committed value. field-sizing:content sizes each
+   field to its digits so the sign glyph hugs the whole and the dot hugs the fraction (Chrome's grid).
+   The generator cell adds a clickable +/− sign (.rtt-gensign) left of the whole part. ---- */
+.rtt-deccell { background:#fff; border:var(--cell-border); box-sizing:border-box; overflow:hidden; }
+.rtt-dec-edit { display:flex; flex-direction:column; align-items:center; justify-content:center;
+            width:100%; height:100%; line-height:1.04; }
+.rtt-dec-main, .rtt-dec-sub { display:flex; align-items:baseline; justify-content:center; line-height:1; }
+.rtt-deccell .rtt-cellinput { width:auto !important; height:auto; }
+.rtt-deccell .rtt-cellinput .q-field__control { position:static !important; background:transparent;
+            border:none !important; width:auto !important; height:auto !important; min-height:0 !important;
+            box-shadow:none !important; }  /* the WRAP owns the box + the pending/preview ring — not each input */
+.rtt-deccell .rtt-cellinput .q-field__native { padding:0 1px !important; min-height:0 !important;
+            line-height:1.04; text-align:center; field-sizing:content; min-width:1ch; }
+.rtt-dec-whole-in .q-field__native { font-size:10px; }   /* the whole part big (the cents main size) */
+.rtt-dec-frac-in .q-field__native { font-size:7px; }     /* the fraction small (the cents sub size) */
+.rtt-dec-dot { font-size:7px; user-select:none; pointer-events:none; }
+/* the int view: no fraction line, and the whole fills the square at the value-cell font (the read-only
+   solo-integer look) — the decimal twin of the fraction cell's data-fracmode="int" collapse. */
+.rtt-dec-edit[data-decmode="int"] .rtt-dec-sub { display:none; }
+.rtt-dec-edit[data-decmode="int"] .rtt-dec-whole-in .q-field__native { font-size:var(--cell-font); }
+/* decimal-cell state colours: the green draft (on the WRAP) reuses the blanket .q-field__native text
+   rule (no overlay face to double), like the fraction cell. */
+.rtt-deccell.rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
+            background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
+.rtt-deccell.rtt-pending .q-field__native { color:var(--pending-color) !important; }
+/* per-cell unit (the units toggle): lift the stacked value to clear the unit pinned at the cell's
+   bottom, and keep the unit's input-padding rule (above) off the dec fields' tight stack. */
+.rtt-cell-united.rtt-deccell .rtt-dec-edit { padding-bottom:9px; }
+.rtt-cell-united.rtt-deccell .rtt-cellinput .q-field__native { padding-bottom:0 !important; }
 /* a pending NEW-entry draft cell: a GREEN inset ring + faint green wash — the SAME highlight style
    as the amber edit-preview and the red remove-preview below, in green to read "being created".
    (Replaces the old red outline so the three highlight states share one visual language: green =
