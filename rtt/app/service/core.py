@@ -22,6 +22,7 @@ from rtt.library.generator_forms import (
     equave_reduced_ma,
     minimal_generator_ma,
     positive_generator_ma,
+    positive_generator_shift_ma,
     standard_jip_octaves,
 )
 from rtt.library.dimensions import get_d, get_r
@@ -385,19 +386,23 @@ def canonical_comma_basis(comma_basis) -> Matrix:
 
 
 # The mapping <choose form> options, in dropdown order: the canonical (defactored Hermite) form
-# plus the alternate generator forms from the Normal Lists page. "positive-generator" is the
-# "flip" variant (the "shift" variant is a separate follow-up).
-MAPPING_FORM_KEYS = ("canonical", "mingen", "equave-reduced", "positive-generator")
+# plus the alternate generator forms from the Normal Lists page. The positive-generator form has
+# two variants from that page, offered side by side: "flip" (negate a negative generator's row) and
+# "shift" (period-shift it positive, except a (c−p)-sheared generator, which falls back to flip).
+MAPPING_FORM_KEYS = ("canonical", "mingen", "equave-reduced",
+                     "positive-generator", "positive-generator-shift")
 MAPPING_FORM_LABELS = {
     "canonical": "canonical",
     "mingen": "minimal-generator",
     "equave-reduced": "equave-reduced",
-    "positive-generator": "positive-generator",
+    "positive-generator": "positive-generator (flip)",
+    "positive-generator-shift": "positive-generator (shift)",
 }
 _ALT_MAPPING_FORMS = {
     "mingen": minimal_generator_ma,
     "equave-reduced": equave_reduced_ma,
     "positive-generator": positive_generator_ma,
+    "positive-generator-shift": positive_generator_shift_ma,
 }
 
 
