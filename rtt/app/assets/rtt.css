@@ -429,6 +429,24 @@
 /* the matching red error tooltip (set on the target chooser's kept tooltip handle): a red box with
    white text, like a negative toast, instead of the default dark hover bubble. */
 .q-tooltip.rtt-tip-error { background:#d33 !important; color:#fff !important; }
+/* the zoom-on-hover magnifier (app._add_zoom_tooltip): hovering a read-only gridded value pops a
+   tooltip showing that SAME value face enlarged. Quasar's default hover bubble is a small dark box
+   with white text -- replaced here with a clean light card so the black value reads, sized to the
+   scaled face. The face markup carries the live cell's own classes (rtt-tuning-value, rtt-stacked-*,
+   rtt-ratio, ...), so .rtt-zoom-scale's transform enlarges the identical face -- a literal zoom. The
+   --zoom-box square (= COL_W * --zoom-factor) contains the centred, scaled copy: every value face
+   fits a COL_W cell, so the scaled copy fits the scaled box. --zoom-factor = --cell-font / 10px (the
+   stacked whole-part), so "1200.000" 's whole-part reaches a normal integer cell's size. */
+.q-tooltip.rtt-zoomtip { background:#fff; color:#000; border:1px solid var(--cell-border);
+            border-radius:2px; padding:0; max-width:none;
+            box-shadow:0 2px 8px rgba(0,0,0,.25); }
+.q-tooltip.rtt-zoomtip.rtt-zoomtip-off { display:none; }   /* a blank / dashed value: no bubble */
+.rtt-zoom-box { width:var(--zoom-box); height:var(--zoom-box); display:flex;
+            align-items:center; justify-content:center; overflow:hidden; }
+/* the unscaled face sits in a COL_W-wide slot (so a width:100% face -- the stacked cents/power --
+   fills and centres exactly as in a real cell), then scales from its centre to fill the box. */
+.rtt-zoom-scale { width:var(--col-w); transform:scale(var(--zoom-factor)); transform-origin:center;
+            display:flex; align-items:center; justify-content:center; }
 /* when the target chooser is LOCKED (all-interval), its numeric square greys with its family
    select -- the same flat #d6d6d6 disabled fill -- so the two parts read as one dead unit, not a
    grey dropdown beside a still-white box. (Matches the .rtt-preset disabled rule above.) */

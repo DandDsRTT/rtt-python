@@ -135,6 +135,9 @@ from rtt.app.render_html import (
     _units_html,
     _wave_svg,
     _wheel_step,
+    ZOOM_KINDS,
+    zoom_blank,
+    zoom_tip_html,
 )
 
 _log = logging.getLogger(__name__)
@@ -245,6 +248,9 @@ _PREVIEW_REMOVE_TEXT_COLOR = "color-mix(in srgb, var(--preview-remove-color) 60%
 _CELL_BORDER_W = 1  # px
 _CELL_BORDER = f"{_CELL_BORDER_W}px solid {BR_COLOR}"
 _CELL_FONT = 17  # px for the single-digit values in the square cells (≈0.37 of the cell)
+_STACKED_MAIN_FONT = 10  # px for a stacked cents/power whole-part (must match .rtt-stacked-main in
+# rtt.css). The zoom-on-hover magnifier scales by _CELL_FONT / _STACKED_MAIN_FONT, so the small
+# whole-part of "1200.000" reaches the size of a normal integer "1" gridded value (the calibration).
 # Colorization wash colours, keyed by the group the layout tags a wash with
 # (spreadsheet.CELL_FACTORS via _FACTOR_GROUP); a wash sits behind the grey tiles so the
 # colour reads through the gaps around them. The three are the muted-channel trio — each
@@ -439,6 +445,7 @@ _CSS_VARS = f""":root {{
   --c-gridline:#e0e0e0;
   --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
+  --col-w:{spreadsheet.COL_W}px; --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT}; --zoom-box:{spreadsheet.COL_W * _CELL_FONT / _STACKED_MAIN_FONT:.1f}px;
   --label-w:{spreadsheet.LABEL_W}px; --header-h:{spreadsheet.HEADER_H}px; --line-w:{spreadsheet.LINE_W}px;
   --ptext-edit-h:{spreadsheet.PTEXT_EDIT_H}px; --option-box:{spreadsheet.OPTION_BOX_PX}px; --btn:{spreadsheet.BTN}px;
   --option-box-unchecked:url("{_option_box_svg(None)}");
@@ -849,10 +856,13 @@ class _Reconciler:
         self.fold_state: dict = {}  # fold-toggle cell id -> last state token (unfold_more/less), to swap its SVG on change
         self.cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
         self.cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
+        self.zoom_tips: dict = {}  # read-only value cell id -> its zoom-on-hover magnifier ui.tooltip
+        self.zoom_faces: dict = {}  # ...and the ui.html inside it holding the enlarged value face
+        self.zoom_state: dict = {}  # ...and its last (text, w), to redraw the face only on a value/width change
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.scheme_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.scheme_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text, self.zoom_tips, self.zoom_faces, self.zoom_state)
         # The active preview gesture — the ONE record the ring highlights derive from (see
         # _Gesture). None when no gesture is live; every paint recomputes the rings from it.
         self.gesture: _Gesture | None = None
@@ -1000,6 +1010,13 @@ class _Reconciler:
                     self.target_limit_tip = ui.tooltip(help_text)
             else:
                 wrap.tooltip(help_text)
+        elif cb.kind in ZOOM_KINDS:
+            # a read-only gridded value (no help text): hover it for a zoom magnifier — the same
+            # value face enlarged so a small cents whole-part reaches the integer cell size. A
+            # SEPARATE tooltip mechanism (not control_help), so the read-only kinds keep returning
+            # None from control_help and the completeness sweep stays green. (The mean-damage
+            # tuningvalue carries help, so it took the branch above and never reaches here.)
+            self._add_zoom_tooltip(wrap, cb)
         self.els[cb.id] = wrap
         self.kinds[cb.id] = cb.kind
         # A fan + / − control must not blur a focused draft cell when clicked. The browser blurs the
@@ -1067,6 +1084,35 @@ class _Reconciler:
             self.els[cb.id].classes(remove="rtt-cell-united")
         if cb.audio is not None:  # refresh the baked pitch / slot so a reorder or retune stays in sync
             self._tag_audio(self.els[cb.id], cb)
+        if cb.id in self.zoom_faces:  # keep the hover magnifier's enlarged face in sync with the value
+            self._sync_zoom_tooltip(cb)
+
+    def _add_zoom_tooltip(self, wrap, cb: spreadsheet.CellBox) -> None:
+        """Hang a zoom-on-hover magnifier off a read-only value cell: a tooltip (appended as the
+        wrap's LAST child, so the cell's face stays children[0] for the render tests) holding the
+        value face enlarged by the .rtt-zoom-scale transform. It inherits the global 700 ms
+        delay + the strand-dismiss-on-reflow that every .q-tooltip gets. Built once; its face is
+        re-synced (and hidden when the value blanks) by :meth:`_sync_zoom_tooltip`."""
+        blank = zoom_blank(cb.text)
+        with wrap:
+            tip = ui.tooltip().classes("rtt-zoomtip")
+            with tip:
+                face = ui.html("" if blank else zoom_tip_html(cb.kind, cb.text, cb.w, _CELL_FONT))
+        if blank:
+            tip.classes(add="rtt-zoomtip-off")  # a blank / dashed value: suppress the empty bubble
+        self.zoom_tips[cb.id] = tip
+        self.zoom_faces[cb.id] = face
+        self.zoom_state[cb.id] = (cb.text, cb.w)
+
+    def _sync_zoom_tooltip(self, cb: spreadsheet.CellBox) -> None:
+        """Redraw the magnifier's enlarged face when the value or cell width changes, and hide the
+        bubble (rtt-zoomtip-off) when the value blanks (quantities off) or is a dashed placeholder."""
+        blank = zoom_blank(cb.text)
+        if self.zoom_state.get(cb.id) != (cb.text, cb.w):
+            self.zoom_faces[cb.id].set_content("" if blank else zoom_tip_html(cb.kind, cb.text, cb.w, _CELL_FONT))
+            self.zoom_state[cb.id] = (cb.text, cb.w)
+        self.zoom_tips[cb.id].classes(add="rtt-zoomtip-off" if blank else "",
+                                      remove="" if blank else "rtt-zoomtip-off")
 
     def _tag_audio(self, el, cb: spreadsheet.CellBox) -> None:
         """Tag a cell wrap as a click-to-play voice: the JS engine reads data-audio (its highlight /
