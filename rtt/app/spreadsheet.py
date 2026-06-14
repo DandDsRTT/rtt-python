@@ -755,6 +755,24 @@ class _VecGrid(NamedTuple):
     sizes: object                       # the size record whose .just[col] feeds _voice
 
 
+class _QtyList(NamedTuple):
+    """Per-list descriptor for the three cleanly-uniform editable interval-ratio columns of the
+    quantities row (targets, held, intervals of interest) emitted by _emit_quantities_row. Each
+    emits one ratio CellBox per committed column (+ a _voice and a branch_minus −), then a
+    pending-draft ratio cell with its own cancel −; only these parameters differ. (Commas, the
+    generator/domain/superspace lists and read-only detempering are NOT in this family — they
+    stay inline in the method.)"""
+    group: str                          # tile/col-token/_voice group key ("targets" / "held" / "interest")
+    singular: str                       # id + minus-id prefix ("target" / "held" / "interest")
+    count: int                          # committed column count (k / nh / mi)
+    left_fn: Callable[[int], float]     # column-left x (self.target_left / held_left / interest_left)
+    ratios: object                      # the committed ratio texts (self.targets / held_ratios / interest_ratios)
+    sizes: object                       # the size record whose .just[col] feeds _voice
+    pending: object                     # the open draft, or None (self.pending_target / held / interest)
+    kind: str                           # committed cell kind ("ratiocell"; targets: "commaratio" when read-only)
+    minus_gate: bool                    # whether committed columns carry a − (always True except auto targets)
+
+
 class _GridBuilder:
     def __init__(self, state, settings=None, collapsed=None,
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
@@ -3274,42 +3292,24 @@ class _GridBuilder:
                 for i in range(self.r):                       # derived from M like the comma ratios — no ± control)
                     self.cells.append(CellBox(f"detempering:{i}", self.detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=self.gens[i]))
                     self._voice("quantities:detempering", i, self.detempering_sizes.just[i])
+            # the three cleanly-uniform editable interval-ratio lists. Each heads its columns with an
+            # editable ratiocell (the scalar twin of the editable vector below), _voice's it, and rides
+            # a per-column − plus a pending-draft "?/?" cell with its own cancel −. The only per-list
+            # differences (count, left-x, ratio/size source, draft, kind, whether a − shows) live in
+            # the _QtyList descriptor. Targets are special only in that the auto Tₚ = I list is the
+            # read-only computed twin of its vectors column (commaratio, no −); user-curated targets,
+            # held and interest are all editable ratiocells, each column removable.
             if self.tile_open("quantities", "targets"):
-                # editable like the comma ratio (typing a fraction overrides the target set), but the
-                # auto Tₚ = I list is the read-only computed twin of its vectors column (commaratio, as D)
-                target_ratio_kind = "ratiocell" if self.targets_editable else "commaratio"
-                for j in range(self.k):
-                    self.cells.append(CellBox(f"target:{self.col_token('targets', j)}", self.target_left(j), qy, COL_W, ROW_H, target_ratio_kind, text=self.targets[j], comma=j))
-                    self._voice("quantities:targets", j, self.target_sizes.just[j])
-                    # each user-curated target carries its own − (like the intervals of interest); the
-                    # auto-generated all-interval list (Tₚ = I) is not editable, so it carries none
-                    if self.targets_editable:
-                        branch_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
-                if self.pending_target is not None:  # the draft column: an editable "?/?" ratio, blank green cells below, − to cancel
-                    self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.k, pending=True))
-                    branch_minus("target_minus:pending", "targets", self.k, "target_minus")
+                self._emit_qty_list(_QtyList("targets", "target", self.k, self.target_left, self.targets,
+                                             self.target_sizes, self.pending_target,
+                                             "ratiocell" if self.targets_editable else "commaratio",
+                                             self.targets_editable), qy, branch_minus)
             if self.tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
-                for i in range(self.nh):
-                    # the ratio heads each column and is editable too (a ratiocell, like the comma)
-                    self.cells.append(CellBox(f"held:{self.col_token('held', i)}", self.held_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.held_ratios[i], comma=i))
-                    self._voice("quantities:held", i, self.held_sizes.just[i])
-                    # each held interval carries its own − on its branch point (any one is removable)
-                    branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
-                if self.pending_held is not None:  # the draft column: an editable "?/?" ratio, blank green cells below, − to cancel
-                    self.cells.append(CellBox("held:pending", self.held_left(self.nh), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nh, pending=True))
-                    branch_minus("held_minus:pending", "held", self.nh, "held_minus")
+                self._emit_qty_list(_QtyList("held", "held", self.nh, self.held_left, self.held_ratios,
+                                             self.held_sizes, self.pending_held, "ratiocell", True), qy, branch_minus)
             if self.tile_open("quantities", "interest"):  # the user's other intervals of interest
-                for i in range(self.mi):
-                    # the ratio heads each column and is editable too (a ratiocell, like the comma)
-                    self.cells.append(CellBox(f"interest:{self.col_token('interest', i)}", self.interest_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.interest_ratios[i], comma=i))
-                    self._voice("quantities:interest", i, self.interest_sizes.just[i])
-                    # every interval carries its own − on its branch point: any one is removable,
-                    # unlike the domain/comma last-only −
-                    branch_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
-                if self.pending_interest is not None:  # the draft column: an editable "?/?" ratio,
-                    # blank green vector cells below, and a − on its branch point to cancel the draft
-                    self.cells.append(CellBox("interest:pending", self.interest_left(self.mi), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.mi, pending=True))
-                    branch_minus("interest_minus:pending", "interest", self.mi, "interest_minus")
+                self._emit_qty_list(_QtyList("interest", "interest", self.mi, self.interest_left, self.interest_ratios,
+                                             self.interest_sizes, self.pending_interest, "ratiocell", True), qy, branch_minus)
 
             # drag-and-drop reorder grips: a ⠿ on each interval column, riding the GRIP_BAND room on
             # the fan — along the column's sub-axis gridline, in the band BETWEEN the − above (at the
@@ -3694,6 +3694,21 @@ class _GridBuilder:
                 for i in range(len(self.form_M)):
                     for j in range(len(self.form_M)):
                         self.cells.append(CellBox(f"cell:form:{i}:{j}", self.gen_left(j), self.canon_top(i), COL_W, ROW_H, "formcell", text=str(self.form_M[i][j])))
+
+    def _emit_qty_list(self, q: _QtyList, qy: float, branch_minus) -> None:
+        """Emit one editable interval-ratio column-list of the quantities row (targets / held /
+        interest): per committed column a ratio CellBox, its _voice and (when minus_gate) its
+        branch_minus −, then the pending-draft ratio cell with its cancel −. Behaviour-identical
+        to the former three inline blocks; only `q`'s parameters differ. `branch_minus` and `qy`
+        are the method-local control closure / row-y the inline blocks used."""
+        for j in range(q.count):
+            self.cells.append(CellBox(f"{q.singular}:{self.col_token(q.group, j)}", q.left_fn(j), qy, COL_W, ROW_H, q.kind, text=q.ratios[j], comma=j))
+            self._voice(f"quantities:{q.group}", j, q.sizes.just[j])
+            if q.minus_gate:
+                branch_minus(f"{q.singular}_minus:{j}", q.group, j, f"{q.singular}_minus", comma=j)
+        if q.pending is not None:  # the draft column: an editable "?/?" ratio, blank green cells below, − to cancel
+            self.cells.append(CellBox(f"{q.singular}:pending", q.left_fn(q.count), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=q.count, pending=True))
+            branch_minus(f"{q.singular}_minus:pending", q.group, q.count, f"{q.singular}_minus")
 
     def _emit_vec_grid(self, g: _VecGrid) -> None:
         """Emit one editable interval-vector grid (targets / held / interest): the committed
