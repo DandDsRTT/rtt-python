@@ -3018,7 +3018,8 @@ async def test_hovering_the_form_canonical_option_previews_canonicalizing(user: 
     # "canonical" rings the mapping cells it would re-store (the default mapping is not canonical), and
     # leaving clears them. Amber only — the cells change value where they sit, no reflow.
     await user.open("/")
-    _toggle(user, "form controls")
+    _toggle(user, "form")            # the parent layer reveals its sub-controls (form controls is a child)
+    _toggle(user, "form controls")   # now visible: turn on the <choose form> dropdowns
     await user.should_see(marker="formchooser:mapping")
     wrap = set(user.find(marker="formchooser:mapping").elements)
     # options are {"": "choose form", "canonical": "canonical"}, so index 1 is the canonical entry
