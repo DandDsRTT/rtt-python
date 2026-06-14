@@ -276,6 +276,11 @@ SYMBOLS = {
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
     ("vectors", "primes"): "𝑀ⱼ",      # 𝑀ⱼ = 𝐼 (the JI mapping; the domain twin of 𝑀ⱼL)
+    # the canonical-mapping row: the canonical mapping 𝑀_C over the primes (its subscript is BAKED in
+    # — this row IS the canonical form, always, vs the main mapping's dynamic subscript) and the
+    # generator form matrix 𝐹 over the (canonical) generators, with 𝐹·𝑀 = 𝑀_C.
+    ("canon", "primes"): f"𝑀{SUBSCRIPT_C}",
+    ("canon", "gens"): "𝐹",
     ("mapping", "primes"): "𝑀",
     ("mapping", "gens"): "𝑀G",          # 𝑀𝐺 = 𝐼: M (italic) + the generator basis G (upright)
     ("mapping", "detempering"): "𝑀D",   # 𝑀D = 𝐼: M (italic) + the detempering basis D (upright)
@@ -338,6 +343,10 @@ SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symb
 # list itself, the italic form its scalar entries.
 ROW_LABEL_LETTERS = {
     ("mapping", "primes"): "𝒎",      # 𝑀 → 𝒎: each row of the mapping is a covector 𝒎ᵢ
+    # the canonical-mapping row's stacks: 𝑀_C's covector rows 𝒎_Cᵢ (𝒎 + the baked canonical
+    # subscript) and the generator form matrix 𝐹's rows 𝒇ᵢ
+    ("canon", "primes"): f"𝒎{SUBSCRIPT_C}",
+    ("canon", "gens"): "𝒇",
     # the JI mapping M_j = I rows (vectors × primes): each row a covector 𝒎ⱼᵢ (𝒎 + subscript j),
     # the domain twin of M_jL's 𝒎ⱼL — sits in the same primes-column gutter as the mapping's 𝒎ᵢ
     ("vectors", "primes"): "𝒎ⱼ",
@@ -774,14 +783,13 @@ ALL_INTERVAL_MNEMONICS = {("vectors", "targets"): ("prime", "proxy")}
 # stay bare. The symbol side is a cell SET (the subscript is inserted after the leading glyph at
 # render time, so it composes with the unchanged-intervals C→V swap on the mapped-comma tile); the
 # equivalence side is an explicit overlay, applied OVER EQUIVALENCES in build's caption loop.
-FORM_SUBSCRIPT_CELLS = frozenset({
-    ("mapping", "primes"),    # 𝑀  → 𝑀_C
-    ("mapping", "commas"),    # 𝑀C → 𝑀_C·C  (mapped comma basis; the trailing C is the comma basis)
-    ("mapping", "held"),      # 𝑀H → 𝑀_C·H
-    ("mapping", "targets"),   # Y  → Y_C   (the mapped target list Y = 𝑀T)
-    ("tuning", "gens"),       # 𝒈  → 𝒈_C
-    ("projection", "gens"),   # G  → G_C   (only shown when projection is on)
-})
+# Applied by ROW, not per tile, so EVERY tile of a form-dependent row inherits it — a new mapped
+# product (𝑀G mapped generators, 𝑀D mapped generator detemperings, …) needs no registration. The
+# whole mapping row is 𝑀-and-its-products; plus the two lone generator-basis cells in other rows
+# (the generator tuning map 𝒈, the projection embedding G). The canonical-mapping row is NOT here:
+# it is statically the canonical form (its SYMBOLS bake in the subscript), shown only when surfaced.
+FORM_SUBSCRIPT_ROWS = frozenset({"mapping"})
+FORM_SUBSCRIPT_GENS = frozenset({("tuning", "gens"), ("projection", "gens")})
 FORM_EQUIVALENCES = {
     ("mapping", "targets"):    f" = 𝑀{SUBSCRIPT_C}T",
     ("tuning", "detempering"): f" = 𝒈{SUBSCRIPT_C}",          # 𝒕D = the generator tuning map

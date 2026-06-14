@@ -2315,13 +2315,15 @@ class _GridBuilder:
         return floor
 
     def _form_subscripted(self, glyph: str, rkey: str, ckey: str) -> str:
-        """Mark a canonical-form object's glyph with the subscript C when the form layer is on —
-        inserted after the leading glyph so it composes with any trailing column letter / index
-        (𝑀 → 𝑀_C, 𝑀𝐜 → 𝑀_C𝐜, 𝒈 → 𝒈_C). Applies to exactly the FORM_SUBSCRIPT_CELLS objects (the
-        mapping 𝑀 and its products, the generator tuning map 𝒈, the projection embedding G), in
-        their tile symbols AND their matrix row/column header labels; the form-invariant objects
-        (𝒕/𝒋/𝒓, the bases C/T/H, the detempering D) pass through untouched."""
-        if self.show_form_subscript and (rkey, ckey) in FORM_SUBSCRIPT_CELLS:
+        """Mark a canonical-form object's glyph with the subscript C when the main mapping is in
+        canonical form — inserted after the leading glyph so it composes with any trailing column
+        letter / index (𝑀 → 𝑀_C, 𝑀𝐜 → 𝑀_C𝐜, 𝒈 → 𝒈_C), in both tile symbols and matrix row/column
+        header labels. Applies by ROW (see FORM_SUBSCRIPT_ROWS): the WHOLE mapping row — so every
+        mapped product, including new ones like 𝑀G / 𝑀D, inherits it without per-tile registration —
+        plus the two lone generator-basis cells (𝒈, G). Form-invariant rows pass through untouched;
+        the canonical-mapping row carries its own static 𝑀_C (its SYMBOLS), not this dynamic one."""
+        if (glyph and self.show_form_subscript
+                and (rkey in FORM_SUBSCRIPT_ROWS or (rkey, ckey) in FORM_SUBSCRIPT_GENS)):
             return glyph[:1] + SUBSCRIPT_C + glyph[1:]
         return glyph
 
@@ -5043,6 +5045,8 @@ class _GridBuilder:
             _prescale_top = lambda i: self.rows["prescaling"].y + i * ROW_H
             row_top = {
                 ("mapping", "primes"): self.map_top,
+                ("canon", "primes"): self.canon_top,  # 𝑀_C's rc covector rows 𝒎_Cᵢ
+                ("canon", "gens"): self.canon_top,    # the form matrix 𝐹's rc rows 𝒇ᵢ
                 ("vectors", "primes"): self.vec_top,  # M_j = I's d covector rows 𝒎ⱼᵢ, in the primes gutter
                 ("projection", "primes"): self.proj_top,  # P's d rows of maps 𝒑ᵢ, like the mapping's 𝒎ᵢ
                 ("projection", "ssprimes"): self.proj_top,  # P_L→s's d rows of maps 𝒑_L→sᵢ
@@ -5055,6 +5059,8 @@ class _GridBuilder:
                 ("ss_projection", "ssprimes"): self.ss_proj_top,  # P_L's dL rows of maps 𝒑ₗᵢ
             }
             row_count = {("mapping", "primes"): self.r,
+                         ("canon", "primes"): self.rc,  # 𝑀_C is rc × d
+                         ("canon", "gens"): self.rc,    # the form matrix 𝐹 is rc × rc
                          ("vectors", "primes"): self.d,  # M_j = I is d × d
                          ("projection", "primes"): self.d,  # P is d×d (a map per domain prime)
                          ("projection", "ssprimes"): self.d,  # P_L→s is d×dL (a covector per domain prime)

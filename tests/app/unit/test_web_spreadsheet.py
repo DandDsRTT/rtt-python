@@ -6827,6 +6827,30 @@ def test_form_layer_surfaces_the_canonical_form_when_a_non_canonical_form_is_act
     assert not any(cid.startswith("cell:canon:") for cid in canon)        # no redundant canonical row
 
 
+def test_form_subscript_covers_the_whole_mapping_row_including_new_tiles():
+    # the subscript-C applies by ROW, not per tile, so every mapped product in the mapping row —
+    # including the identity-object tiles 𝑀G (mapped generators) and 𝑀D (mapped generator
+    # detemperings) — inherits 𝑀 → 𝑀_C with no per-tile registration. Over a canonical mapping.
+    C, s1 = spreadsheet.SUBSCRIPT_C, spreadsheet._sub(1)
+    on = _canon_cells(symbols=True, header_symbols=True, form=True,
+                     generator_detempering=True, identity_objects=True)
+    assert on["symbol:mapping:gens"].text == f"𝑀{C}G"          # mapped generators 𝑀G → 𝑀_CG
+    assert on["symbol:mapping:detempering"].text == f"𝑀{C}D"   # mapped generator detemperings 𝑀D → 𝑀_CD
+    assert on["matlabel:col:mapping:detempering:0"].text == f"𝑀{C}𝐝{s1}"  # and its column header
+
+
+def test_canonical_mapping_row_carries_its_own_symbols_and_row_headers():
+    # the canonical-mapping row (surfaced when a non-canonical form is active) has its own symbols +
+    # row headers: the canonical mapping 𝑀_C over the primes (subscript baked — it IS the canonical
+    # form) and the generator form matrix 𝐹 over the canonical generators.
+    C, s1 = spreadsheet.SUBSCRIPT_C, spreadsheet._sub(1)
+    on = {c.id: c for c in _with(symbols=True, header_symbols=True, form=True).cells}  # default → canon surfaces
+    assert on["symbol:canon:primes"].text == f"𝑀{C}"               # the canonical mapping
+    assert on["symbol:canon:gens"].text == "𝐹"                     # the generator form matrix
+    assert on["matlabel:row:canon:primes:0"].text == f"𝒎{C}{s1}"   # 𝑀_C's covector rows 𝒎_Cᵢ
+    assert on["matlabel:row:canon:gens:0"].text == f"𝒇{s1}"        # 𝐹's rows 𝒇ᵢ
+
+
 def test_interest_is_a_top_level_toggle_after_the_tuning_tiles_group():
     # "other intervals of interest" is a standalone grey column (not part of the cyan
     # tuning region), so it owns a top-level toggle: built (implemented), default on, and
