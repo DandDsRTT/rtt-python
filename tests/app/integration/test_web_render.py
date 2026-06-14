@@ -3718,3 +3718,42 @@ async def test_a_draft_et_picker_adds_a_generator(user: User) -> None:
     _cell_child(user, "etpick:draft").set_value("22")  # 22-ET is independent of meantone -> commits
     await user.should_see(marker="cell:mapping:2:0")   # a third generator row was added (rank rose)
     await user.should_not_see(marker="etpick:draft")   # the draft committed and closed
+
+
+async def test_hovering_an_et_picker_option_previews_replacing_the_row(user: User) -> None:
+    # hovering an ET in a committed row's picker previews replacing that row with its val — the would-be
+    # mapping reflows and the changed cells ring amber, reverting on leave (like the temperament chooser).
+    await _enable(user, "presets")
+    et0 = _cell_child(user, "etpick:0")
+    wrap = set(user.find(marker="etpick:0").elements)
+    idx = list(et0.options).index("12")                                   # the slot dispatches the option index
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})  # hover 12-ET (row 0 is ⟨1 1 0])
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:0")   # 1 → 12 rings
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})    # leave the option
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:0")
+
+
+async def test_hovering_a_comma_picker_option_previews_replacing_the_column(user: User) -> None:
+    await _enable(user, "presets")
+    cp0 = _cell_child(user, "commapick:0")
+    wrap = set(user.find(marker="commapick:0").elements)
+    idx = list(cp0.options).index("128/125")                               # hover the diesis (augmented)
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:2")  # the mapping it'd load rings
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")
+
+
+async def test_hovering_a_draft_comma_picker_populates_the_green_column(user: User) -> None:
+    # hovering an option in a DRAFT picker fills the green draft with that comma's values (128/125 =
+    # vector (7, 0, -3)), reverting to blank on leave — so you see what you're about to add.
+    await _enable(user, "presets")
+    _click_glyph(user, "comma_plus")
+    await user.should_see(marker="commapick:draft")
+    dp = _cell_child(user, "commapick:draft")
+    wrap = set(user.find(marker="commapick:draft").elements)
+    idx = list(dp.options).index("128/125")
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
+    assert _cell_child(user, "cell:comma:0:1").value == "7"   # the draft column filled (prime-2 exponent)
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
+    assert _cell_child(user, "cell:comma:0:1").value == ""    # reverted to the blank draft

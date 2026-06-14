@@ -350,20 +350,30 @@ def identify(state) -> str | None:
 # basis via :func:`rtt.app.service.interval_vector`, which keeps only those expressible in
 # the current subgroup (so 81/80 drops out of 2.3.7, 64/63 out of 2.3.5, etc.).
 CURATED_COMMAS: tuple[tuple[str, str], ...] = (
-    # 5-limit
+    # 5-limit — every named single-comma temperament's comma (so each is pickable), plus more
+    ("father", "16/15"),
+    ("bug", "27/25"),
+    ("dicot", "25/24"),
+    ("mavila", "135/128"),
+    ("blackwood", "256/243"),
+    ("porcupine", "250/243"),
     ("syntonic", "81/80"),
-    ("Pythagorean", "531441/524288"),
     ("diaschisma", "2048/2025"),
+    ("magic", "3125/3072"),
     ("lesser diesis", "128/125"),
     ("greater diesis", "648/625"),
-    ("schisma", "32805/32768"),
-    ("kleisma", "15625/15552"),
-    ("magic", "3125/3072"),
-    ("würschmidt", "393216/390625"),
-    ("semicomma", "2109375/2097152"),
-    ("amity", "1600000/1594323"),
+    ("negri", "16875/16384"),
     ("tetracot", "20000/19683"),
+    ("superpyth", "20480/19683"),
+    ("kleisma", "15625/15552"),
+    ("amity", "1600000/1594323"),
+    ("ripple", "6561/6250"),
+    ("semicomma", "2109375/2097152"),
+    ("schisma", "32805/32768"),
     ("sensipent", "78732/78125"),
+    ("würschmidt", "393216/390625"),
+    ("passion", "262144/253125"),
+    ("Pythagorean", "531441/524288"),
     # 7-limit
     ("Archytas'", "64/63"),
     ("septimal diesis", "36/35"),

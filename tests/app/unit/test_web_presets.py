@@ -292,3 +292,25 @@ def test_curated_pickers_round_trip_through_their_value_keys():
         for value in presets.et_options(domain):
             val = presets.et_value_to_val(value, domain)
             assert presets.identify_et(val, domain) == value
+
+
+def test_curated_commas_cover_the_popular_temperament_commas():
+    # the commas defining the well-known rank-2 5-limit temperaments must be pickable (regression
+    # guard: don't pad the list with obscure commas while missing obvious ones like porcupine)
+    famous = {
+        "81/80",       # meantone
+        "250/243",     # porcupine
+        "128/125",     # augmented
+        "648/625",     # diminished
+        "135/128",     # mavila
+        "25/24",       # dicot
+        "256/243",     # blackwood
+        "3125/3072",   # magic
+        "15625/15552", # hanson / kleismic
+        "20000/19683", # tetracot
+        "16875/16384", # negri
+        "2048/2025",   # srutal / diaschismic
+        "32805/32768", # schismatic / helmholtz
+    }
+    have = {ratio for _, ratio in presets.CURATED_COMMAS}
+    assert famous <= have, f"missing popular commas: {sorted(famous - have)}"

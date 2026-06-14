@@ -1938,6 +1938,8 @@ class _Reconciler:
     def _update_subpick(self, cb):
         # recompute options + matched value from live state each render, so a pick (or any other edit /
         # a domain change) re-derives the displayed value and the whole-temperament chooser stays in sync
+        if self.gesture is not None and self.gesture.kind == "temp" and self.gesture.reflowed:
+            return  # a hover preview reflowed the GRID; leave the picker's value + open popup steady
         sel = self.selects.get(cb.id)
         if not isinstance(sel, ui.select):
             return
@@ -3598,6 +3600,64 @@ def index() -> None:
             g.reflowed = True                # keep the chooser's own value + popup steady (_update_preset)
             gesture_render()                 # reflow into the would-be grid
 
+    def _subpick_hover_preview(cid, value):
+        # hovering an option in a sub-row / sub-col picker previews it, like the temperament chooser
+        # (a sticky "temp" gesture, re-based per option, reverted on leave / commit):
+        #   • a COMMITTED row/col picker REPLACES that row/col — value-only, so it reflows the would-be
+        #     grid with the changed cells ringed amber (a rank-deficient pick is rejected → no preview).
+        #   • a green DRAFT picker fills the draft with the hovered values; the spreadsheet's pending-
+        #     draft render then shows the populated green cells AND the rank-change cascade (the doomed
+        #     column/row red, the surviving rows/commas amber — its builder-driven preview flags).
+        # Reverts on leave (_end_temperament_preview), commits on select (on_subpick's end_gesture).
+        if value is None:  # a leave / the popup closing
+            _end_temperament_preview()
+            return
+        db = editor.state.domain_basis
+        draft = cid in ("etpick:draft", "commapick:draft")
+        idx = None
+        if not draft:
+            idx = _token_index(cid, "gens" if cid.startswith("etpick:") else "commas")
+            if idx is None:
+                _end_temperament_preview()
+                return
+        g = rec.gesture
+        if g is None or g.kind != "temp":
+            if g is not None and g.kind in ("edit", "drag"):
+                return  # a keyboard edit / drag owns the grid
+            end_gesture()  # replace a plain hover/chooser outright
+            g = rec.gesture = _Gesture(kind="temp", token=editor.capture_for_preview(),
+                                       baseline=last_lay[0])
+        editor.restore_for_preview(g.token)  # re-base: each option evaluates from the real document
+        if g.reflowed:
+            g.reflowed = False
+            g.apply = None
+            gesture_render()
+        if draft:
+            # fill the green draft with the hovered values; the pending-draft render shows it + the cascade
+            if cid == "etpick:draft":
+                editor.pending_mapping_row = list(presets.et_value_to_val(value, db))
+            else:
+                editor.pending_comma = list(presets.comma_value_to_vector(value, db))
+            g.apply = None
+            g.reflowed = True
+            gesture_render()
+            return
+        if cid.startswith("etpick:"):
+            apply = lambda i=idx, v=value: editor.set_mapping_row(i, presets.et_value_to_val(v, db))
+        else:
+            apply = lambda c=idx, v=value: editor.set_comma(c, presets.comma_value_to_vector(v, db))
+        base = editor.state
+        apply()
+        hyp = editor.state
+        if hyp.d < base.d or hyp.r < base.r or hyp.n < base.n:  # (replaces don't shrink; here for safety)
+            editor.restore_for_preview(g.token)
+            g.apply = apply
+            paint_rings()
+        else:
+            g.apply = None      # the document now holds the hypothetical: baseline diff rings it amber
+            g.reflowed = True    # keep the picker's value + open popup steady (_update_subpick guard)
+            gesture_render()
+
     def _candidate_apply(cid, value):
         # the SINGLE map from a chooser option to the editor edit it commits, as a zero-arg thunk — or
         # None for a no-op (a leave / placeholder / the off-preset "custom" complexity). Keyed by chooser
@@ -3647,8 +3707,9 @@ def index() -> None:
         # e.g. the in-process tests, which drive `opthover` without opening a popup) allows.
         if index is not None and rec.popup_state.get(cid) == "closed":
             return
-        if cid.startswith(("etpick:", "commapick:")):
-            return  # v1: the sub-row/sub-col pickers commit on select; the hover preview is a later add
+        if cid.startswith(("etpick:", "commapick:")):  # the sub-row/sub-col pickers reflow like temperament
+            _subpick_hover_preview(cid, _option_key(sel, index) if index is not None else None)
+            return
         if cid.startswith("preset:temperament"):
             _temperament_hover_preview(_option_key(sel, index))
             return
