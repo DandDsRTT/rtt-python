@@ -1946,6 +1946,30 @@ def test_plain_text_values_adds_a_string_band_under_each_tile():
     assert on["ptext:tuning:primes"].text.startswith("⟨")  # a tuning map
 
 
+def test_every_open_value_tile_has_a_plain_text_string():
+    # The invariant that keeps the two views in lockstep: EVERY open value tile (a tile that renders
+    # gridded numbers) carries a matching plain-text EBK band. A grid tile added without a service/text
+    # entry shows numbers up top and a blank band below — the bug the generator-detempering and
+    # superspace-projection columns hit. This sweeps the WHOLE surface with every Show toggle on so a
+    # newly-added tile that forgets its plain text fails here, rather than slipping through to the user.
+    from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
+    s = settings.defaults()
+    for k, v in list(s.items()):
+        if isinstance(v, bool):
+            s[k] = True  # every Show toggle on, to open the maximum set of tiles
+    # a nonstandard-domain temperament (lights the chapter-9 superspace block) with held + interest +
+    # projection, so the detempering / held / superspace / projection columns are all in play at once
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
+                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    assert b.show_superspace and b.show_ptext  # the config really did light the superspace + plain text
+    value_rows = PTEXT_ROWS - {"quantities"}  # the quantities row's only band is the "2.3.5" primes string
+    missing = [(r, c) for (r, c) in sorted(b.declared_tiles)
+               if r in value_rows and c not in SPINE_COLUMNS and b.tile_open(r, c)
+               and (r, c) not in b.ptext_strings]
+    assert not missing, f"open value tiles with no plain-text band: {missing}"
+
+
 def test_quantities_interval_ratios_emit_no_redundant_plain_text():
     ids = {c.id for c in _with(plain_text_values=True).cells}
     # the quantities row's interval-ratio columns (commas, targets, held, …) already show the

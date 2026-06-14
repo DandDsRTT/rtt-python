@@ -47,8 +47,10 @@ from rtt.app.service.superspace import (
     map_vectors_into_superspace_generators,
     mapping_to_superspace_generators,
     superspace_complexity_prescaler,
+    superspace_generator_embedding_display,
     superspace_just_mapping,
     superspace_mapping,
+    superspace_prime_projection_display,
     superspace_primes,
     superspace_projection_matrix_rationals,
     superspace_rank,
@@ -240,6 +242,9 @@ def plain_text_values(
         # the scaling factors λ = diag(λ): 0 per comma (vanished), 1 per (known) unchanged, — if dashed
         ("scaling_factors", "commas"): "[" + " ".join(["0"] * len(commas) + u_scaling) + "]",
         ("vectors", "targets"): tp_text,  # Tₚ — the target identity
+        # D — the generator detempering as a vector list (r prime-count kets, close ⟩),
+        # matching its gridded matrix and the commas/targets columns it sits beside
+        ("vectors", "detempering"): _ket_list(detemper_vectors, "⟩"),
         ("mapping", "primes"): mapping_ebk(state),
         ("mapping", "commas"): _ket_list(list(zip(*mapped_comma)) + u_mapped_cols, "}"),
         ("mapping", "targets"): _ket_list(zip(*mapped), "}"),
@@ -370,9 +375,11 @@ def plain_text_values(
         C_L = lift_vectors_to_superspace(db, state.comma_basis)
         T_L = lift_vectors_to_superspace(db, target_vectors)
         I_L = lift_vectors_to_superspace(db, interest)
+        D_L = lift_vectors_to_superspace(db, detemper_vectors)
         mapped_C = map_vectors_into_superspace_generators(state, state.comma_basis)
         mapped_T = map_vectors_into_superspace_generators(state, target_vectors)
         mapped_I = map_vectors_into_superspace_generators(state, interest)
+        mapped_D = map_vectors_into_superspace_generators(state, detemper_vectors)
         values.update({
             # B_L (basis change matrix): the mockup wraps it ⟨ … ] (distinct from the plain
             # [ … ] lifted lists), its columns the domain-element kets [ … ⟩.
@@ -380,18 +387,26 @@ def plain_text_values(
             ("ss_vectors", "ssprimes"): _covector_stack(mjl),       # M_jL = I
             ("ss_vectors", "commas"): _ket_list(C_L, "⟩"),          # C_L
             ("ss_vectors", "targets"): _ket_list(T_L, "⟩"),         # T_L
+            ("ss_vectors", "detempering"): _ket_list(D_L, "⟩"),     # D_L (lifted detempering)
             ("ss_vectors", "interest"): _ket_list(I_L, "⟩", wrap=False),
             ("ss_mapping", "ssprimes"): _covector_stack(ml),        # M_L
             ("ss_mapping", "primes"): _covector_stack(msl),         # M_s→L
             ("ss_mapping", "ssgens"): _ket_list(mlgl, "}"),         # M_LgL = I (gen coords)
             ("ss_mapping", "commas"): _ket_list(mapped_C, "}"),     # mapped commas (→ 0)
             ("ss_mapping", "targets"): _ket_list(mapped_T, "}"),    # Y_L
+            ("ss_mapping", "detempering"): _ket_list(mapped_D, "}"),  # detempering mapped into ss generators
             ("ss_mapping", "interest"): _ket_list(mapped_I, "}", wrap=False),
             ("tuning", "ssgens"): _cents_genmap(ss_tun.generator_map),
             ("tuning", "ssprimes"): _cents_map(ss_tun.tuning_map),
             ("just", "ssprimes"): _cents_map(ss_tun.just_map),
             ("retune", "ssprimes"): _cents_map(ss_tun.retuning_map),
         })
+        # the held interval column's superspace tiles (declared only when held intervals exist,
+        # like its on-domain cousins): H_L the lifted held vectors, and the held mapped into the
+        # superspace generators — the same lift/map the commas/targets columns take above.
+        if held:
+            values[("ss_vectors", "held")] = _ket_list(lift_vectors_to_superspace(db, held), "⟩")
+            values[("ss_mapping", "held")] = _ket_list(map_vectors_into_superspace_generators(state, held), "}")
         # the superspace projection row's EBK bands — the plain-text twins of its grid tiles. P_L
         # itself is a covector stack closing with the angle ⟩ (the b/b operator, framed like the on-
         # domain P); the embedding G_L is a vector list ({…]); and each projected list is P_L applied
@@ -422,6 +437,15 @@ def plain_text_values(
                 values[("ss_projection", "held")] = _ket_list(_ssp_cols(held), "⟩")
             if interest:
                 values[("ss_projection", "interest")] = _ket_list(_ssp_cols(interest), "⟩", wrap=False)
+            # the ON-DOMAIN projection row's superspace-column tiles (G_L→s / P_L→s), which sit between
+            # G and P in that row but read superspace data, so they live here. G_L→s is the d×rL embedding
+            # from the superspace generators to the subspace — a vector list { … ] like G; P_L→s = G_L→s·M_L
+            # the d×dL projection from the superspace to the subspace — a covector stack ⟨ … ]⟩ like P. Built
+            # from the SAME display grids the grid cells use, dashed in lockstep when the tuning isn't rational.
+            values[("projection", "ssgens")] = embedding_ebk(
+                superspace_generator_embedding_display(state, held_basis_ratios), state.d, superspace_rank(state))
+            values[("projection", "ssprimes")] = projection_ebk(
+                superspace_prime_projection_display(state, held_basis_ratios), state.d, cols=dL)
         # the chapter-9 prescaler SHIFT (the plain-text twin of the gridded cells): the bare 𝐿
         # moves into the ss-primes column — the dL×dL log-prime diagonal over the TRUE primes, a
         # covector stack [ ⟨…] ⟨…] ⟩ that stays EDITABLE — while the domain-primes tile becomes the
@@ -575,14 +599,16 @@ def _ket_list(vectors, close: str, wrap: bool = True) -> str:
     return f"[{kets}]" if wrap else kets
 
 
-def projection_ebk(matrix, d: int) -> str:
+def projection_ebk(matrix, d: int, cols: int | None = None) -> str:
     """The rational tempering projection P as a map-list EBK string — a covector stack like the
     mapping (each row a map ``⟨ … ]``), but closing with the prime-coordinate ket ``⟩`` since P is
-    p/p: ``[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩``. ``matrix`` is the d×d grid of display strings from
+    p/p: ``[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩``. ``matrix`` is the d×``cols`` grid of display strings from
     :func:`tuning_projection`; ``None`` (not a full rational projection) dashes every entry to match
     the dashed grid. The editable dual the projection-primes plain text shows (parsed by
-    :func:`parse_projection`)."""
-    grid = matrix if matrix is not None else tuple((_DASH,) * d for _ in range(d))
+    :func:`parse_projection`). ``cols`` defaults to ``d`` (the square on-domain P); the superspace
+    P_L→s is the rectangular d×dL case (each row a covector over the dL superspace primes)."""
+    cols = d if cols is None else cols
+    grid = matrix if matrix is not None else tuple((_DASH,) * cols for _ in range(d))
     return "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in grid) + "⟩"
 
 
