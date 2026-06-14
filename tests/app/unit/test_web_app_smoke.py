@@ -693,14 +693,16 @@ def test_general_tile_renders_its_special_samples():
 
 def test_general_tile_value_is_the_grids_stacked_three_decimal_face():
     # a gridded cents value appears in the real grid as the whole integer part big over a
-    # three-decimal .fraction stacked BENEATH it (the .rtt-tuning-value face), not as a flat inline
-    # number. The dummy tile's value sample must read like a live cell: 701 over .955 (the pure
-    # fifth, 3 dp), built from the same stacked classes the grid uses.
+    # three-decimal .fraction stacked BENEATH it (the grid's .rtt-stacked-main / -sub classes), not
+    # as a flat inline number. The dummy tile reads like a live cell: 701 over .955 (the pure fifth,
+    # 3 dp). The whole part and its decimals are SEPARATE click targets (quantities / decimals), so
+    # the .fraction can be toggled on its own.
     assert app._TILE_VALUE == "701.955"                           # 3 dp, the grid's cents precision
-    html = app._general_part_html("quantities")
-    assert "rtt-tuning-value" in html                             # the live tuning-value face's container
-    assert 'class="rtt-stacked-main">701<' in html               # the big whole part on top
-    assert 'class="rtt-stacked-sub">.955<' in html               # the three decimals stacked below it
+    whole = app._general_part_html("quantities")
+    assert 'class="rtt-stacked-main">701<' in whole              # the big whole part, its own target
+    assert ".955" not in whole and "rtt-stacked-sub" not in whole  # the fraction is NOT here…
+    frac = app._general_part_html("decimals")
+    assert 'class="rtt-stacked-sub">.955<' in frac               # …it is the decimals part below
 
 
 def test_dummy_tile_chart_rides_the_themeable_mark_colors():
@@ -758,7 +760,8 @@ def test_general_tile_seats_the_value_layers_inside_the_gridded_cell():
     # the value and math expression live inside the boxed cell, so the three ride one line. The
     # drag-to-combine grip also rides this line (in a slot left of the row label, like the grid).
     value_line = next(line for line in app._GENERAL_TILE_LINES if "gridded_values" in line)
-    assert set(value_line) == {"gridded_values", "math_expressions", "quantities", "drag_to_combine"}
+    assert set(value_line) == {"gridded_values", "math_expressions", "quantities", "decimals",
+                               "drag_to_combine"}
 
 
 def test_general_tile_symbol_and_equivalence_read_as_one_equation():

@@ -1355,6 +1355,19 @@ def test_parse_rejects_unparseable_wrong_variance_or_non_integer():
     assert service.parse_comma_basis("nonsense") is None
 
 
+def test_cents_and_prescale_text_round_to_integer_when_decimals_off():
+    # the shared value formatters carry the Show panel's "decimals" setting: on (the default) they
+    # keep the 3-dp cents reading; off they round to the nearest integer — the single chokepoint the
+    # grid and plain-text views both route through, so turning decimals off rounds the whole app.
+    assert service.cents(701.955) == "701.955"            # default: 3 dp
+    assert service.cents(701.955, decimals=False) == "702"  # off: nearest integer, no point
+    assert service.cents(None, decimals=False) == "—"     # a dashed value is still an em-dash
+    # prescale_text keeps whole entries bare either way; a non-whole one rounds with decimals off
+    assert service.prescale_text(1.0, decimals=False) == "1"
+    assert service.prescale_text(1.585) == "1.585"
+    assert service.prescale_text(1.585, decimals=False) == "2"
+
+
 def test_parse_cents_map_reads_a_genmap_or_tuning_string():
     # the generator tuning map ({ … ]) and a prime tuning map (⟨ … ]), float-tolerant
     assert service.parse_cents_map("{1201.699 697.564]") == (1201.699, 697.564)

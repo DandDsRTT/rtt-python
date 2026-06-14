@@ -38,6 +38,7 @@ SHOW_HELP: dict[str, str] = {
     "charts": "Draw a bar chart over each charted row's values.",
     "presets": "Show the preset choosers — temperament, tuning scheme, and target set.",
     "quantities": "Show the numeric quantities inside the value cells.",
+    "decimals": "Show the decimal fraction of each value (the .955 beneath the 701). Off rounds every value in the app to the nearest integer. Refines “quantities”.",
     "units": "Show each box's “units: …” line beneath its caption (e.g. ¢/p, g/p).",
     "cell_units": "Show each value's unit beneath its own cell (e.g. ¢/p₁, 𝒈₁).",
     "math_expressions": "Show just values as closed-form expressions (e.g. 1200·log₂(3/2)).",

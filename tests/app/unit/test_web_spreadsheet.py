@@ -4531,6 +4531,23 @@ def test_populated_interest_renders_plain_text_for_all_its_value_tiles():
     assert cells["ptext:just:interest"].text == "701.955 203.910 182.404 813.686"
 
 
+def test_decimals_off_rounds_every_value_to_the_nearest_integer():
+    # the Show panel's "decimals" toggle (off) rounds every displayed cents value — grid cells AND
+    # the plain-text EBK strings — to the nearest integer, so the two views still agree. It is a
+    # DISPLAY setting: the underlying tuning is untouched, so the same build with decimals ON still
+    # shows the full 3-dp reading.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    on = {c.id: c for c in spreadsheet.build(base, settings.defaults(), interest=_INTEREST).cells}
+    assert on["just:interest:0"].text == "701.955"  # decimals on (default): full 3-dp
+
+    s = {**settings.defaults(), "plain_text_values": True, "decimals": False}
+    off = {c.id: c for c in spreadsheet.build(base, s, interest=_INTEREST).cells}
+    assert off["just:interest:0"].text == "702"     # 701.955 → 702, rounded, no decimal point
+    assert "." not in off["just:interest:0"].text
+    # the plain-text EBK string rounds in lockstep, so the grid and the inline notation still match
+    assert off["ptext:just:interest"].text == "702 204 182 814"
+
+
 def test_interest_intervals_are_editable_vectors_like_the_comma_basis():
     # in the interval-vectors row each interval is an editable d-tall vector column
     # (kind "interestcell", the comma-basis editing affordance), prime exponents down

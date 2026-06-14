@@ -280,7 +280,7 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="") -
     return svg(w, h, "".join(body))
 
 
-def _range_chart(w: float, h: float, ranges, tunings=()) -> str:
+def _range_chart(w: float, h: float, ranges, tunings=(), decimals: bool = True) -> str:
     """The generator tuning-ranges chart filling its 1:1 px box: one vertical I-beam per
     generator showing its [min, max] tuning in cents (max at the top cap, min at the
     bottom), with a shorter tick marking where the live tuning falls within that range. A
@@ -298,8 +298,9 @@ def _range_chart(w: float, h: float, ranges, tunings=()) -> str:
         return rect(cx - half, y - hw, 2 * half, _RANGE_MARK_W)
 
     def label(cx, y, v):
+        shown = strip_negative_zero(f"{v:.{3 if decimals else 0}f}")  # decimals off → integer cents
         return (f'<text x="{cx:.2f}" y="{y:.2f}" text-anchor="middle" '
-                f'font-size="{_RANGE_FONT}" fill="{BR_COLOR}">{strip_negative_zero(f"{v:.3f}")}</text>')
+                f'font-size="{_RANGE_FONT}" fill="{BR_COLOR}">{shown}</text>')
 
     body = []
     for i, (lo, hi) in enumerate(ranges):
@@ -699,13 +700,18 @@ def _general_part_html(key: str) -> str:
     if key == "math_expressions":
         return _math_html(_TILE_MATH)
     if key == "quantities":
-        # the bare value, drawn as a real gridded cents value is: the whole part big over the
-        # three-decimal .fraction stacked beneath it (the .rtt-tuning-value face — the very classes
-        # a live tuning cell uses, so the legend's value reads identically to one in the grid).
-        whole, frac = _cents_parts(_TILE_VALUE)
-        return ('<span class="rtt-tuning-value">'
-                f'<span class="rtt-stacked-main">{whole}</span>'
-                f'<span class="rtt-stacked-sub">.{frac}</span></span>')
+        # the value's whole part (the big "701"), drawn with the live grid's stacked-value main class
+        # so it reads at the size a real cents cell uses. Its three-decimal fraction is the SEPARATE
+        # `decimals` part stacked just beneath (so the value and its decimals are each their own click
+        # target) — the builder seats the two so they read as one whole-over-.fraction cents value.
+        whole, _frac = _cents_parts(_TILE_VALUE)
+        return f'<span class="rtt-stacked-main">{whole}</span>'
+    if key == "decimals":
+        # the value's three-decimal fraction (the small ".955" beneath the whole part) — the
+        # `decimals` sub-control's own click target, in the grid's stacked-value sub class. Turning
+        # it off rounds every value in the app to the nearest integer (see service.cents).
+        _whole, frac = _cents_parts(_TILE_VALUE)
+        return f'<span class="rtt-stacked-sub">.{frac}</span>'
     if key == "symbols":
         return _math_html(_TILE_SYMBOL)
     if key == "header_symbols":  # the matrix's row/col header label (matlabel), in the cell's left gutter

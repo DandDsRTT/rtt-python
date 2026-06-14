@@ -77,6 +77,8 @@ class CellBox:
     audio: tuple | None = None  # (tile, idx, cents): this cell is click-to-play — hovering it reveals
     # a speaker that sounds `cents`; `tile`+`idx` group a row's cells so the audio bank's arp/chord
     # modes can sweep the whole tile from the clicked note (the client derives the chord from siblings)
+    decimals: bool = True  # False rounds this cell's drawn values to integers (the decimals toggle) —
+    # used by the rangechart, whose cents labels are formatted in the renderer, not as `text`
 
 
 @dataclass(frozen=True)

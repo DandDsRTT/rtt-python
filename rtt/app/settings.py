@@ -64,6 +64,11 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("charts", "charts", False),
             ("presets", "presets", False),
             ("quantities", "quantities", True),
+            # the decimal fraction of every value (the ".955" beneath the "701"). A sub-control of
+            # quantities: its own clickable part in the dummy tile is the .fraction under the value.
+            # Off rounds every displayed value to the nearest integer, app-wide (a display setting —
+            # the underlying values keep full precision, so turning it back on restores the decimals).
+            ("decimals", "decimals", True),
             ("units", "units", False),
             # the per-value unit beneath each gridded cell is its OWN toggle, independent of the
             # per-box "units: …" line above (the `units` key) — NOT a sub-control. Like
@@ -120,6 +125,9 @@ DEFAULTS: dict[str, bool] = {
 SUBCONTROLS: dict[str, str] = {
     "mnemonics": "names",
     "equivalences": "symbols",
+    # the decimal fraction refines the value: with quantities off there is no value to carry a
+    # fraction, and clicking the ".955" part (decimals) pulls quantities on, like mnemonics ↔ names.
+    "decimals": "quantities",
     # Each grouping parent (temperament / form / tuning) directly holds everything that used to
     # nest under its box toggle: the box toggle itself AND its former direct children are now
     # direct children of the group (siblings of the box toggle). So "temperament boxes" and its
@@ -157,7 +165,7 @@ IMPLEMENTED: frozenset[str] = frozenset(
     {"drag_to_combine",
      "names", "symbols", "header_symbols", "mnemonics", "equivalences", "gridded_values",
      "plain_text_values",
-     "quantities", "domain_quantities", "units", "cell_units", "domain_units", "counts", "presets",
+     "quantities", "decimals", "domain_quantities", "units", "cell_units", "domain_units", "counts", "presets",
      "temperament", "temperament_boxes", "tuning", "tuning_boxes",
      "math_expressions", "charts", "tuning_ranges",
      "tuning_colorization", "temperament_colorization", "weighting",
@@ -217,6 +225,10 @@ CHAPTER_DEFAULT = 4   # the slider's as-shipped position — the default-state d
 CHAPTER: dict[str, int] = {
     # general — the dummy tile's display layers
     "gridded_values": 2, "quantities": 2, "names": 2, "symbols": 2, "plain_text_values": 2,
+    # decimals rides its parent quantities' chapter (2) so it reveals — and so stays ON — by the
+    # default slider position; a later reveal would let disable_hidden_settings turn it off on load,
+    # silently rounding the whole app to integers before the user ever sees the toggle.
+    "decimals": 2,
     "math_expressions": 2, "presets": 2, "equivalences": 2,
     "header_symbols": 2,  # the matrix row/col header labels (𝒎₁, 𝐜₁, …) — a sibling of symbols
     # mnemonics is the underlinable LETTER of the name word, so it must reveal WITH names (its

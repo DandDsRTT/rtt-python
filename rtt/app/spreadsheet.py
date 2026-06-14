@@ -304,17 +304,17 @@ def _log_operand(ratio: str) -> str:
     return num if den == "1" else f"({num}/{den})"
 
 
-def _math_expr(operand: str, value: float, show_value: bool) -> str:
+def _math_expr(operand: str, value: float, show_value: bool, decimals: bool = True) -> str:
     """A just value's exact closed form ``1200 · log₂{operand}`` — which *equals* the
     cents value, so the decimal stays in cents and is kept as a true ``= {cents}``.
     The two parts are newline-separated so the renderer stacks them (the ``=`` and
     the decimal on the second line), e.g. ``"1200 · log₂2\\n= 1200.00"``. With the
-    value (quantities) off, only the expression shows."""
+    value (quantities) off, only the expression shows; with decimals off the value rounds."""
     expr = f"1200 · log₂{operand}"
-    return f"{expr}\n= {service.cents(value)}" if show_value else expr
+    return f"{expr}\n= {service.cents(value, decimals)}" if show_value else expr
 
 
-def _prescale_math_expr(coeff, prime_term: str, value: float, show_value: bool) -> str:
+def _prescale_math_expr(coeff, prime_term: str, value: float, show_value: bool, decimals: bool = True) -> str:
     """A prescaling cell's exact closed form ``{coeff} · {prime_term}`` — where
     ``prime_term`` is what the active prescaler puts on the diagonal (``log₂{prime}`` for
     log-prime, ``{prime}`` for the prime prescaler; identity has no non-trivial closed
@@ -329,7 +329,7 @@ def _prescale_math_expr(coeff, prime_term: str, value: float, show_value: bool) 
         expr = f"-{prime_term}"
     else:
         expr = f"{coeff} · {prime_term}"
-    return f"{expr}\n= {service.prescale_text(value)}" if show_value else expr
+    return f"{expr}\n= {service.prescale_text(value, decimals)}" if show_value else expr
 
 
 def _format_power(power: float) -> str:
@@ -589,6 +589,7 @@ class _ShowFlags:
     interest: bool
     gridded: bool
     quantities: bool
+    decimals: bool
     domain_quantities: bool
     math: bool
 
@@ -646,6 +647,9 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         # quantities row and its spine column. "math" prefixes a tuning cent with its closed form.
         gridded=settings["gridded_values"],
         quantities=settings["quantities"],
+        # decimals off rounds every shown value to the nearest integer (service.cents / prescale_text).
+        # .get keeps old persisted/hand-built settings dicts (pre-decimals) reading at full precision.
+        decimals=settings.get("decimals", True),
         domain_quantities=settings["domain_quantities"],
         math=settings["math_expressions"],
     )
@@ -988,6 +992,7 @@ class _GridBuilder:
         show_interest = _f.interest
         self.gridded = _f.gridded
         self.show_quantities = _f.quantities
+        self._decimals = _f.decimals  # False rounds every formatted value to the nearest integer
         show_domain_quantities = _f.domain_quantities
         self.show_math = _f.math
         # custom-weight mode is target-mode only AND not the math-expr view: there the 𝒘 row's cells
@@ -2003,6 +2008,9 @@ class _GridBuilder:
                                                    # unchanged half U to every V tile, matching the grid
                                                    consolidate_v=self.show_unchanged,
                                                    held_basis_ratios=self.held_basis_ratios,
+                                                   # decimals off rounds every value in the EBK strings
+                                                   # too, so the plain text matches the rounded grid
+                                                   decimals=self._decimals,
                                                    # the bare prescaler tile's hand-edited diagonal /
                                                    # matrix override, threaded into the same tuning /
                                                    # weights / complexity / prescaling the grid builds
@@ -2737,10 +2745,10 @@ class _GridBuilder:
             u = self.cell_unit(key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
             operand = self.closed_form_operand(key, group, i) if self.show_math else None
             if operand is not None:
-                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities), unit=u))
+                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities, self._decimals), unit=u))
             else:
                 self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, editable_kind or "tuningvalue",
-                                     text=service.cents(v), unit=u))
+                                     text=service.cents(v, self._decimals), unit=u))
             if key in ("tuning", "just"):  # the tuning row sounds each interval's TEMPERED size, the
                 self._voice(f"{key}:{group}", i, v)  # just row its JUST size; retune (errors) is no pitch
         # a pending comma/target/held/interest draft also gets a blank GREEN placeholder in every
@@ -2757,7 +2765,7 @@ class _GridBuilder:
                 gsize = {"tuning": 0.0, "just": self.ghost_comma_just, "retune": -self.ghost_comma_just,
                          "complexity": self.ghost_comma_complexity}.get(key)
                 if gsize is not None:
-                    text = service.cents(gsize)
+                    text = service.cents(gsize, self._decimals)
             self.cells.append(CellBox(f"{key}:{self.group_elem[group]}:draft", self.group_left[group](pending_idx[1]),
                                       y, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
 
@@ -4202,7 +4210,7 @@ class _GridBuilder:
             gen_kind = "tuningvalue" if self.show_superspace_generators else "gentuningcell"
             for i, v in enumerate(self.tun.generator_map):
                 self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
-                                     gen_kind, text=service.cents(v), gen=i, unit=self.cell_unit("tuning", "gens", gen=i)))
+                                     gen_kind, text=service.cents(v, self._decimals), gen=i, unit=self.cell_unit("tuning", "gens", gen=i)))
                 self._voice("tuning:gens", i, v)  # the genmap sounds each generator's tuned size
         # the chapter-9 superspace tuning row: 𝒈ₗ over the ssgens column, 𝒕ₗ / 𝒋ₗ / 𝒓ₗ over ssprimes.
         # In the prime-based approach the optimization IS over the superspace generators, so 𝒈L is the
@@ -4215,7 +4223,7 @@ class _GridBuilder:
                 if self.show_superspace_generators:  # editable 𝒈L cells (the prime-based live map)
                     for i, v in enumerate(ss_tun.generator_map):
                         self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.rows["tuning"].y,
-                                             COL_W, ROW_H, "gentuningcell", text=service.cents(v),
+                                             COL_W, ROW_H, "gentuningcell", text=service.cents(v, self._decimals),
                                              unit=self.cell_unit("tuning", "ssgens", gen=i)))
                         self._voice("tuning:ssgens", i, v)
                 else:
@@ -4339,13 +4347,13 @@ class _GridBuilder:
                     # wired into the lifted optimization yet), so it skips the prescalercell branch.
                     if i < nrows and not self.show_superspace and group == "primes" and (i == c or self.show_alt_complexity):
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
-                                             text=service.prescale_text(value), prime=i, unit=u))
+                                             text=service.prescale_text(value, self._decimals), prime=i, unit=u))
                     elif i < nrows and self.show_math and vec[i] != 0 and i in prime_term:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
-                                             text=_prescale_math_expr(vec[i], prime_term[i], value, self.show_quantities), unit=u))
+                                             text=_prescale_math_expr(vec[i], prime_term[i], value, self.show_quantities, self._decimals), unit=u))
                     else:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue",
-                                             text=service.prescale_text(value), unit=u))
+                                             text=service.prescale_text(value, self._decimals), unit=u))
             # a pending comma/target/held/interest draft also gets a blank GREEN placeholder column,
             # stacked over every prescaled sub-row, so the draft reads green through the advanced
             # complexity-prescaling matrix too — the multi-row twin of tuning_value_row's single-row
@@ -4366,7 +4374,7 @@ class _GridBuilder:
                     text = ""
                     if ghost_pre is not None:
                         value = ghost_pre[i] if i < nrows else self.size_factor * sum(ghost_pre)
-                        text = service.prescale_text(value)
+                        text = service.prescale_text(value, self._decimals)
                     self.cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left(pending_idx[1]),
                                          cy, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
 
@@ -4545,7 +4553,8 @@ class _GridBuilder:
             chart_y = cy + BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP
             self.cells.append(CellBox("rangechart:tuning:gens", gx, chart_y, gw, RANGE_CHART_H, "rangechart",
                                  ranges=tuple(chosen) if chosen is not None else (),
-                                 values=tuple(self.tun.generator_map)))  # the live tuning, marked within each range
+                                 values=tuple(self.tun.generator_map),  # the live tuning, marked within each range
+                                 decimals=self._decimals))  # off → the I-beam's cents labels round to integers
             self.cells.append(CellBox("rangemode:tuning:gens", gx, chart_y + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
                                  "rangemode", text=self.range_mode))
             gtm_box = (gx, cy, gw, 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
@@ -4593,7 +4602,7 @@ class _GridBuilder:
             # value, the same COL_W cell as any damage value) over its symbol and a label caption, the
             # same value/symbol/caption stack as the power beside it.
             self.cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COL_W, ROW_H, "tuningvalue",
-                                 text=service.cents(mean_damage)))
+                                 text=service.cents(mean_damage, self._decimals)))
             # all-interval: the minimized mean damage is the all-interval retuning magnitude (the
             # mockup's "becomes 'retuning magnitude'", named by the caption below). The VALUE is the
             # dual-power MEAN of the retuning map 𝒓𝑋⁻¹'s per-prime damages — the same _power_mean (÷d

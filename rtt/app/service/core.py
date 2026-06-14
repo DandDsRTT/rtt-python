@@ -655,19 +655,23 @@ def interval_weights(
     )
 
 
-def cents(value) -> str:
+def cents(value, decimals: bool = True) -> str:
     """A cents quantity at the 3-dp the grid and plain-text views share, so the two displays
     always agree. ``None`` (a dashed value — e.g. the size of an unknown unchanged interval the
-    tuning doesn't pin) renders as an em-dash."""
+    tuning doesn't pin) renders as an em-dash.
+
+    With ``decimals`` off (the Show panel's "decimals" toggle), the value rounds to the nearest
+    integer instead — a display setting that rounds every shown value app-wide; the underlying
+    float is untouched, so turning decimals back on restores the full 3-dp reading."""
     if value is None:
         return "—"
-    return strip_negative_zero(f"{value:.3f}")
+    return strip_negative_zero(f"{value:.{3 if decimals else 0}f}")
 
 
-def prescale_text(value: float) -> str:
+def prescale_text(value: float, decimals: bool = True) -> str:
     """A complexity-prescaler matrix entry as BOTH the grid cell and the plain-text view
     render it: a whole number bare (the mostly-0 off-diagonal, and the log₂2 = 1 of an
     identity prescaler), else the 3-dp cents value (log₂3 = 1.585) — keeping the mostly-zero
     matrix clean. One formatter for both views, so the prescaling grid and its EBK string
-    can't disagree."""
-    return str(int(value)) if value == int(value) else cents(value)
+    can't disagree. ``decimals`` off rounds the non-whole entries to integers (see :func:`cents`)."""
+    return str(int(value)) if value == int(value) else cents(value, decimals)

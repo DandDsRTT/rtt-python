@@ -507,7 +507,7 @@ _EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "hbar"}
 _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     # the drag-to-combine grip rides the value line, in a slot to the LEFT of the row label —
     # mirroring where the real handle sits in the grid (left of the 𝒎ᵢ label).
-    ("drag_to_combine", "gridded_values", "math_expressions", "quantities"),
+    ("drag_to_combine", "gridded_values", "math_expressions", "quantities", "decimals"),
     ("symbols", "equivalences"),
     ("mnemonics", "names"),
     ("units",),
@@ -530,6 +530,7 @@ _TILE_IN_CELL_LAYERS: tuple[str, ...] = ("header_symbols", "cell_units")
 # they stay live and instead pull their base layer on when selected; see SUBCONTROLS / set_show.)
 _TILE_HOST: dict[str, str] = {
     "quantities": "gridded_values",
+    "decimals": "gridded_values",  # the .fraction sits inside the value cell, like the value itself
     "math_expressions": "gridded_values",
 }
 
@@ -1270,10 +1271,11 @@ class _Reconciler:
             self.chart_keys[cb.id] = key
 
     def _update_rangechart(self, cb: spreadsheet.CellBox) -> None:
-        # redraw when the box resizes OR the ranges/live tuning change (mapping/mode edit)
-        key = (cb.w, cb.h, cb.ranges, cb.values)
+        # redraw when the box resizes OR the ranges/live tuning change (mapping/mode edit) OR the
+        # decimals toggle flips (the I-beam's cents labels round to integers when it's off)
+        key = (cb.w, cb.h, cb.ranges, cb.values, cb.decimals)
         if self.range_keys.get(cb.id) != key:
-            self.htmls[cb.id].set_content(_range_chart(cb.w, cb.h, cb.ranges, cb.values))
+            self.htmls[cb.id].set_content(_range_chart(cb.w, cb.h, cb.ranges, cb.values, cb.decimals))
             self.range_keys[cb.id] = key
 
     def _build_count(self, cb: spreadsheet.CellBox, wrap) -> None:
@@ -4399,6 +4401,10 @@ def index() -> None:
                                 def part_el(key, *, size=None, style=""):  # the layer's primary (marked) element
                                     return add_el(key, _general_part_html(key), marked=True, size=size, style=style)
 
+                                # the section title for the dummy tile, the way "show | example" heads
+                                # the specific column. A user-directed addition — the mockup draws no
+                                # header over this group (see CLAUDE.md "Mockup deviations").
+                                ui.label("tile features").classes("rtt-show-tiletitle").mark("tiletitle")
                                 with ui.element("div").classes("rtt-show-tile"):
                                     # the head strip, like a real tile's: the decorative fold toggle on
                                     # the left, the single global audio bank on the right (the relocation
@@ -4435,12 +4441,16 @@ def index() -> None:
                                                 part_el("math_expressions", size=_fit_font(_TILE_MATH, _TILE_CELL),
                                                         style=f"position:absolute;left:{cell_x}px;top:{cell_y + 1}px;"
                                                               f"width:{_TILE_CELL}px;height:9px;justify-content:center")
-                                                # the value renders as the real grid renders a gridded cents value: a
-                                                # stacked whole-part-over-.fraction face (sized by its own .rtt-stacked
-                                                # classes), so it needs the taller two-line slot the live cell gives it.
+                                                # the value reads like a live gridded cents cell: the whole part big over
+                                                # its three decimals. They are TWO parts, though — quantities (the "701")
+                                                # and decimals (the ".955") — each its own click target, seated so the
+                                                # fraction sits just under the whole, exactly as the stacked face reads.
                                                 part_el("quantities",
                                                         style=f"position:absolute;left:{cell_x}px;top:{cell_y + 10}px;"
-                                                              f"width:{_TILE_CELL}px;height:18px;justify-content:center")
+                                                              f"width:{_TILE_CELL}px;height:11px;justify-content:center")
+                                                part_el("decimals",
+                                                        style=f"position:absolute;left:{cell_x}px;top:{cell_y + 20}px;"
+                                                              f"width:{_TILE_CELL}px;height:8px;justify-content:center")
                                                 add_el("cell_units", _general_part_html("cell_units"), marked=True,
                                                        size=_TILE_FONT["cellunit"],
                                                        style=f"position:absolute;left:{cell_x}px;top:{cell_y + 28}px;"

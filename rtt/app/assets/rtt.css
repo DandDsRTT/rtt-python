@@ -804,6 +804,9 @@
                  padding:0; }
 .rtt-show-title { font-size:13px; font-weight:bold; }
 .rtt-show-examplehdr { font-size:13px; font-weight:bold; }
+/* the general group's section title ("tile features"), heading the dummy tile the way the
+   "show" title heads the specific column — same weight/size, with a little breathing room. */
+.rtt-show-tiletitle { font-size:13px; font-weight:bold; display:block; margin-bottom:2px; }
 /* general and specific each sit in their own rounded, lightly-bordered sub-card,
    stacked vertically (general above specific) */
 .rtt-show-group { border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6;

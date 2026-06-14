@@ -6,6 +6,7 @@ hands the grid's own derivations in so the two views structurally cannot diverge
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 
 from rtt.app.service.core import (
     DEFAULT_TARGET_SPEC,
@@ -90,6 +91,7 @@ def plain_text_values(
     held_basis_ratios=(),
     custom_prescaler=None,
     derived: DerivedQuantities | None = None,
+    decimals: bool = True,
 ) -> dict[tuple[str, str], str]:
     """Each value group's natural plain-text form, keyed by its ``(row, column)``
     tile (the same vocabulary the spreadsheet layout uses). The grid and this text
@@ -101,7 +103,17 @@ def plain_text_values(
     are threaded into the same tuning/weights/complexity/prescaling the grid builds, so the
     two views can't diverge. The grid passes ``derived`` — its own already-computed
     :class:`DerivedQuantities` — making that guarantee structural; a direct caller may
-    omit it and this function derives the same quantities itself."""
+    omit it and this function derives the same quantities itself.
+
+    ``decimals`` (the Show panel's decimals toggle) off rounds every cents/prescale value in the
+    returned strings to the nearest integer, so the plain text matches the rounded grid. It is
+    bound onto the cents/prescale formatters here so the many call sites below need no threading."""
+    # rebind the shared formatters to this view's decimals setting (off → round to integers); the
+    # call sites below stay verbatim, and the module-level _cents_map/etc. keep their 3-dp default.
+    _cents_map = partial(_CENTS_MAP, decimals=decimals)
+    _cents_list = partial(_CENTS_LIST, decimals=decimals)
+    _cents_genmap = partial(_CENTS_GENMAP, decimals=decimals)
+    _prescale_vector_list = partial(_PRESCALE_VECTOR_LIST, decimals=decimals)
     db = state.domain_basis
     targets = derived.targets if derived else \
         displayed_targets(state, scheme, target_spec, target_override)  # all-interval-aware, like the grid
@@ -480,7 +492,7 @@ def embedding_ebk(matrix, d: int, r: int) -> str:
     return "{" + _ket_list(list(zip(*grid)), "⟩", wrap=False) + "]"  # transpose to the r ket columns
 
 
-def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]") -> str:
+def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]", decimals: bool = True) -> str:
     """A list of complexity-prescaler matrix columns — for the weighting prescaling matrices
     (the prescaled vectors 𝐿·v). A 𝐿·basis product is a matrix of prescaled VECTORS, so each
     column is a ket ``[ … ⟩`` (square open + angle close — the default ``col``); the OUTER
@@ -497,7 +509,7 @@ def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]") -> str:
     vectors = list(vectors)
     dim = next((len(v) for v in vectors if v is not None), 0)  # a dashed (None) column is all em-dashes
     def _col(v):
-        body = " ".join([_DASH] * dim if v is None else [prescale_text(x) for x in v])
+        body = " ".join([_DASH] * dim if v is None else [prescale_text(x, decimals) for x in v])
         return col[0] + body + col[1]
     cols = " ".join(_col(v) for v in vectors)
     if not outer:
@@ -527,19 +539,28 @@ def mapping_pending_text(committed_ebk, pending) -> tuple[str, str, str]:
     return committed_ebk[:-1] + " ", draft, "}"
 
 
-def _cents_map(values) -> str:
+def _cents_map(values, decimals: bool = True) -> str:
     """A tuning covector over the primes: ``⟨1200.000 1901.955 …]``."""
-    return "⟨" + " ".join(cents(v) for v in values) + "]"
+    return "⟨" + " ".join(cents(v, decimals) for v in values) + "]"
 
 
-def _cents_list(values, wrap: bool = True) -> str:
+def _cents_list(values, wrap: bool = True, decimals: bool = True) -> str:
     """A tuning list over the targets: ``[1200.000 1901.955 …]``. ``wrap=False`` drops the
     enclosing ``[ ]`` for the intervals-of-interest column, whose values stand bare."""
-    body = " ".join(_DASH if v is None else cents(v) for v in values)  # None → a dashed (unknown) entry
+    body = " ".join(_DASH if v is None else cents(v, decimals) for v in values)  # None → a dashed (unknown) entry
     return f"[{body}]" if wrap else body
 
 
-def _cents_genmap(values) -> str:
+def _cents_genmap(values, decimals: bool = True) -> str:
     """The generator tuning map: ``{1201.699 697.564]`` — curly open, square close,
     per the mockup (distinct from the primes' covector ``⟨ … ]``)."""
-    return "{" + " ".join(cents(v) for v in values) + "]"
+    return "{" + " ".join(cents(v, decimals) for v in values) + "]"
+
+
+# Module-level handles for the four cents/prescale formatters, so plain_text_values can rebind each
+# NAME to a decimals-bound partial without self-recursion (a function-local shadow can't reference
+# the global it shadows). The bare names keep their 3-dp default for the direct service.* callers.
+_CENTS_MAP = _cents_map
+_CENTS_LIST = _cents_list
+_CENTS_GENMAP = _cents_genmap
+_PRESCALE_VECTOR_LIST = _prescale_vector_list

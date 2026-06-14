@@ -48,6 +48,17 @@ the mockup:
 - **Tuning-panel nesting.** weighting and tuning ranges nest under **optimization** (Mode A), so
   **projection** reads as the peer-alternative to the whole optimization branch (D&D's
   optimize-vs-construct fork). The mockup draws these flatter.
+- **"tile features" title over the dummy tile.** The general Show group's dummy tile carries a
+  bold section title, **"tile features"** (`rtt-show-tiletitle`, built in `rtt/app/app.py`), the way
+  "show | example" heads the specific column. The mockup draws no header over this group — the user
+  asked for it after the fact. Don't remove it for "matching the mockup."
+- **"decimals" toggle + the stacked value's decimal sub-part.** A general Show layer, **`decimals`**
+  (sub-control of `quantities`), whose own clickable part in the dummy tile is the ".955" beneath the
+  "701" (the value renders as the grid's stacked whole-over-.fraction cents face; its whole part is
+  `quantities`, its fraction `decimals`). Off, **every displayed value in the app rounds to the
+  nearest integer** — a DISPLAY setting, threaded through the single `service.cents` / `prescale_text`
+  chokepoint (grid cells, plain-text EBK strings, range-chart labels); the underlying floats keep
+  full precision, so turning it back on restores 3-dp. Not in the mockup — user-requested.
 
 ## Use the persistent `.venv` — don't rebuild a throwaway one
 
