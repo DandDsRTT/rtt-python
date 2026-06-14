@@ -45,6 +45,19 @@ def test_set_mapping_form_restores_the_mapping_in_each_generator_form_undoably()
     assert editor.state.mapping == ((1, 2, 4), (0, -1, -4))
 
 
+def test_set_mapping_form_positive_generator_flip_and_shift_differ():
+    # sensi's canonical generator is negative, and it is NOT (c−p)-sheared, so its two
+    # positive-generator forms differ: flip negates the row, shift period-shifts it positive.
+    editor = Editor()
+    editor.edit_mapping([[1, 6, 8], [0, 7, 9]])  # sensi, canonical
+    editor.set_mapping_form("positive-generator")        # flip
+    assert editor.state.mapping == ((1, 6, 8), (0, -7, -9))
+    editor.set_mapping_form("positive-generator-shift")  # shift → the wiki's ~9/7-generator form
+    assert editor.state.mapping == ((1, -1, -1), (0, 7, 9))
+    editor.undo()  # each form choice is one undoable edit
+    assert editor.state.mapping == ((1, 6, 8), (0, -7, -9))
+
+
 def test_canonicalize_comma_basis_restores_canonical_form_undoably():
     editor = Editor()
     editor.edit_comma_basis([[-8, 8, -2]])  # a non-saturated basis (the syntonic comma doubled)
@@ -74,6 +87,24 @@ def test_set_comma_basis_form_minimal_simplifies_septimal_meantone():
     editor.set_comma_basis_form("minimal")
     # the wiki's comma list [81/80, 126/125] — simpler than the canonical [81/80, 57344/59049]
     assert editor.state.comma_basis == ((-4, 4, -1, 0), (1, 2, -3, 1))
+
+
+def _mapping_form_cell(editor) -> str:
+    editor.settings["form_controls"] = True  # the <choose form> dropdowns are a Show toggle
+    return {c.id: c for c in editor.layout().cells}["formchooser:mapping"].text
+
+
+def test_mapping_chooser_shows_the_picked_form_even_when_forms_coincide():
+    # the mapping analogue of the comma-basis coincidence bug: sensi's shift form ((1,-1,-1),(0,7,9))
+    # is ALSO its mingen form, so identify_mapping_form (earliest match wins) would snap the dropdown
+    # to "minimal-generator". The explicit pick is sticky — the chooser shows the shift form chosen.
+    editor = Editor()
+    editor.edit_mapping([[1, 6, 8], [0, 7, 9]])  # sensi, canonical
+    editor.set_mapping_form("positive-generator-shift")
+    assert editor.state.mapping == ((1, -1, -1), (0, 7, 9))
+    # the cell carries the resolved form KEY (the dropdown maps it to its "positive-generator
+    # (shift)" label for display); stickiness means it stays on shift, not the coinciding mingen
+    assert _mapping_form_cell(editor) == "positive-generator-shift"
 
 
 def _comma_form_cell(editor) -> str:
