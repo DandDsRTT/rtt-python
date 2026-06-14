@@ -1767,17 +1767,35 @@ def test_deselecting_a_parent_also_deselects_its_subcontrols():
 
 
 def test_deselecting_a_parent_cascades_through_nested_subcontrols():
-    # the cascade is transitive: "tuning" -> "weighting" -> "all-interval"/"alt. complexity",
-    # so deselecting the group turns the grandchildren off too (else their panel rows orphan
-    # and their content lingers when the group is hidden). The flat direct children of "tuning"
-    # (tuning boxes, optimization, …) go off with it as well.
+    # the cascade is transitive and now four deep: "tuning" -> "optimization" -> "weighting" ->
+    # "all-interval"/"alt. complexity"/"custom weights", so deselecting the group turns the
+    # grandchildren and great-grandchildren off too (else their panel rows orphan and their content
+    # lingers when the group is hidden).
     editor = Editor()
-    for key in ("weighting", "all_interval", "alt_complexity", "tuning_ranges", "optimization"):
+    for key in ("weighting", "all_interval", "alt_complexity", "custom_weights",
+                "tuning_ranges", "optimization"):
         editor.set_show(key, True)
     editor.set_show("tuning", False)
     for key in ("tuning", "tuning_boxes", "weighting", "all_interval", "alt_complexity",
-                "tuning_ranges", "optimization", "projection", "tuning_colorization"):
+                "custom_weights", "tuning_ranges", "optimization", "projection",
+                "tuning_colorization"):
         assert editor.settings[key] is False
+
+
+def test_deselecting_optimization_cascades_the_optimize_subaxes():
+    # "optimization" is now a content+parent: deselecting it (Mode A) turns off everything beneath
+    # it — weighting and its three refinements, plus tuning ranges — but leaves its siblings
+    # (tuning boxes, projection) alone.
+    editor = Editor()
+    for key in ("weighting", "all_interval", "alt_complexity", "custom_weights", "tuning_ranges"):
+        editor.set_show(key, True)
+    editor.set_show("projection", True)
+    editor.set_show("optimization", False)
+    for key in ("optimization", "weighting", "all_interval", "alt_complexity",
+                "custom_weights", "tuning_ranges"):
+        assert editor.settings[key] is False, key
+    assert editor.settings["tuning"] is True       # the grouping parent stays
+    assert editor.settings["projection"] is True   # a sibling, untouched
 
 
 def test_the_subcontrol_cascade_is_one_undoable_action():
@@ -1817,14 +1835,14 @@ def test_selecting_a_subcontrol_pulls_its_parent_on():
 
 def test_selecting_a_nested_subcontrol_pulls_its_whole_parent_chain_on():
     # the pull-on is transitive, mirroring the off-cascade: "all-interval" -> "weighting" ->
-    # "tuning" (the grouping parent), so selecting the grandchild pulls both ancestors on (else
-    # it would show while the group it lives in stays hidden). Note it pulls "tuning" on, NOT
-    # "tuning boxes" — that is now a sibling, not an ancestor.
+    # "optimization" -> "tuning", so selecting the great-grandchild pulls the whole chain on (else
+    # it would show while the branch it lives in stays hidden). Note it pulls "optimization"/"tuning"
+    # on, NOT "tuning boxes" — that is a sibling, not an ancestor.
     editor = Editor()
     editor.set_show("tuning", False)  # cascades the whole tuning group off
     assert editor.settings["weighting"] is False
     editor.set_show("all_interval", True)
-    for key in ("all_interval", "weighting", "tuning"):
+    for key in ("all_interval", "weighting", "optimization", "tuning"):
         assert editor.settings[key] is True
     assert editor.settings["tuning_boxes"] is False  # a sibling, not pulled on by all-interval
 
@@ -1836,13 +1854,16 @@ def test_grouping_parents_flatten_their_box_toggles_former_children():
     # "temperament boxes"), and the whole tuning column answers to "tuning" (not "tuning boxes").
     assert settings.SUBCONTROLS["temperament_colorization"] == "temperament"
     assert settings.SUBCONTROLS["temperament_boxes"] == "temperament"
-    for key in ("tuning_boxes", "optimization", "tuning_ranges", "weighting",
-                "projection", "tuning_colorization"):
+    # the tuning group's DIRECT children are the two modes' shared base + the two modes themselves
+    for key in ("tuning_boxes", "optimization", "projection", "tuning_colorization"):
         assert settings.SUBCONTROLS[key] == "tuning", key
-    # only the box toggles' grandchildren keep their old home: all-interval / alt. complexity
-    # were children of weighting, not of tuning boxes, so they still nest under weighting.
+    # "optimization" (Mode A) parents the optimize sub-axes — weighting and tuning ranges
+    assert settings.SUBCONTROLS["weighting"] == "optimization"
+    assert settings.SUBCONTROLS["tuning_ranges"] == "optimization"
+    # weighting's three refinements are siblings under it
     assert settings.SUBCONTROLS["all_interval"] == "weighting"
     assert settings.SUBCONTROLS["alt_complexity"] == "weighting"
+    assert settings.SUBCONTROLS["custom_weights"] == "weighting"
     # deselecting "tuning boxes" (now a leaf) strands nothing — it has no sub-controls of its own
     editor = Editor()
     editor.set_show("optimization", True)

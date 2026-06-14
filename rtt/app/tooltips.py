@@ -59,6 +59,7 @@ SHOW_HELP: dict[str, str] = {
     "weighting": "Show the weighting boxes — the prescaler, the complexity 𝒄, and the weight 𝒘.",
     "all_interval": "Show the all-interval control — optimize over every interval rather than a finite target list.",
     "alt_complexity": "Show the alternate-complexity controls — the prescaler box 𝐋 and the wider choice of interval-complexity measures.",
+    "custom_weights": "Type your own damage weight per target interval (the editable 𝒘 row), overriding the slope's complexity/simplicity/unity weighting.",
     "projection": "Show the projection box — the rational projection 𝑃 = 𝐺𝑀 holding the just primes.",
     "tuning_colorization": "Tint each cell by what derives it — the generator tuning map 𝒈. Refines “tuning boxes”.",
     "interest": "Show the “other intervals of interest” column.",

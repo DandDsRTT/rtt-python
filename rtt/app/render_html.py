@@ -490,6 +490,7 @@ _EXAMPLE_TEXT: dict[str, str] = {
     "weighting": "𝒘",
     "all_interval": "minimax-S",
     "alt_complexity": "E-lp",
+    "custom_weights": "1.5",
     "projection": "𝑃",
     "interest": "𝐢",
     "generator_detempering": "D",

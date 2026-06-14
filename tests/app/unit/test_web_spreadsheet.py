@@ -3634,29 +3634,32 @@ def test_alt_complexity_is_implemented_now_that_its_controls_are_built():
 
 
 def test_weighting_subcontrols_are_registered_under_weighting():
-    # all-interval (a control in box 𝐓) and alt. complexity (controls in boxes 𝐋 and 𝒄)
-    # are sub-controls of weighting, so the panel indents them and shows them only while
-    # weighting is on
+    # all-interval (the all-interval mode), alt. complexity (controls in boxes 𝐋 and 𝒄) and
+    # custom weights (the editable 𝒘 row) are the three sub-controls of weighting, so the panel
+    # indents them and shows them only while weighting is on
     keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
-    assert {"all_interval", "alt_complexity"} <= keys
+    assert {"all_interval", "alt_complexity", "custom_weights"} <= keys
     assert settings.SUBCONTROLS["all_interval"] == "weighting"
     assert settings.SUBCONTROLS["alt_complexity"] == "weighting"
+    assert settings.SUBCONTROLS["custom_weights"] == "weighting"
 
 
 def test_subcontrol_nesting_depth_drives_panel_indentation():
     # the panel indents each row by its nesting depth, so a child sits further right than its
-    # parent rather than level with it. The "tuning" grouping parent (depth 0) directly holds the
-    # whole tuning column flat — tuning boxes, optimization, weighting, projection, colorization
-    # are all depth 1 (siblings); only all-interval / alt. complexity stay nested under weighting
-    # (depth 2).
+    # parent. The "tuning" grouping parent (depth 0) holds the two modes' shared base (tuning
+    # boxes) plus the two modes — "optimization" (Mode A) and "projection" (Mode B) — at depth 1.
+    # "optimization" parents the optimize sub-axes (weighting, tuning ranges) at depth 2, and
+    # weighting's three refinements (all-interval, alt. complexity, custom weights) at depth 3.
     assert settings.depth_of("tuning") == 0          # the pure grouping parent is top-level
     assert settings.depth_of("tuning_boxes") == 1
-    assert settings.depth_of("optimization") == 1    # a former child of tuning boxes, now level with it
-    assert settings.depth_of("weighting") == 1
-    assert settings.depth_of("projection") == 1
+    assert settings.depth_of("optimization") == 1    # Mode A, a direct child of the tuning group
+    assert settings.depth_of("projection") == 1      # Mode B, optimization's peer
     assert settings.depth_of("tuning_colorization") == 1
-    assert settings.depth_of("all_interval") == 2    # still under weighting (not a former tuning-box child)
-    assert settings.depth_of("alt_complexity") == 2
+    assert settings.depth_of("weighting") == 2       # now nested under optimization
+    assert settings.depth_of("tuning_ranges") == 2
+    assert settings.depth_of("all_interval") == 3    # weighting's refinements, one deeper
+    assert settings.depth_of("alt_complexity") == 3
+    assert settings.depth_of("custom_weights") == 3
     assert settings.depth_of("temperament") == 0     # the other grouping parents are top-level too
     assert settings.depth_of("temperament_boxes") == 1
     assert settings.depth_of("temperament_colorization") == 1  # now level with the boxes, not under them

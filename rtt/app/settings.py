@@ -26,10 +26,12 @@ no grid layer of their own (the layout never reads them; see :data:`GROUPING_PAR
 only to expand/collapse the toggles grouped directly beneath them. Each group holds its box toggle
 plus everything that used to nest under that box toggle, now flattened up to be its direct
 children: ``temperament`` holds ``temperament_boxes`` and ``temperament_colorization``;
-``tuning`` holds the whole tuning column (``tuning_boxes``, ``optimization``, ``tuning_ranges``,
-``weighting``, ``projection``, ``tuning_colorization``). They use the same sub-control machinery
-as any other parent — so collapsing one turns its whole group off — they just have nothing of
-their own to show.
+``tuning`` holds ``tuning_boxes``, ``optimization``, ``projection`` and ``tuning_colorization``
+(``optimization`` in turn parents the optimize sub-axes — ``tuning_ranges`` and ``weighting``,
+the latter parenting ``all_interval`` / ``alt_complexity`` / ``custom_weights`` — so ``projection``
+reads as the peer-alternative to the whole optimization branch). They use the same sub-control
+machinery as any other parent — so collapsing one turns its whole group off — they just have
+nothing of their own to show.
 
 ``form`` is the third group header but NOT a pure grouping parent: like the other two it expands
 its sub-controls (``form_controls``, ``form_boxes``, ``form_colorization``), but it ALSO carries a
@@ -98,6 +100,7 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("weighting", "weighting", False),
             ("all_interval", "all-interval", False),
             ("alt_complexity", "alt. complexity", False),
+            ("custom_weights", "custom weights", False),
             ("projection", "projection", False),
             ("tuning_colorization", "colorization", False),
             ("interest", "other intervals\nof interest", True),
@@ -120,10 +123,15 @@ SUBCONTROLS: dict[str, str] = {
     # Each grouping parent (temperament / form / tuning) directly holds everything that used to
     # nest under its box toggle: the box toggle itself AND its former direct children are now
     # direct children of the group (siblings of the box toggle). So "temperament boxes" and its
-    # "colorization" both sit under "temperament"; the whole tuning column — tuning boxes,
-    # optimization, tuning ranges, weighting, projection, colorization — sits under "tuning".
-    # (Grandchildren stay put: all-interval / alt. complexity were children of weighting, not of
-    # tuning boxes, so they remain under weighting.)
+    # "colorization" both sit under "temperament".
+    #
+    # The tuning group mirrors the guide's two ways to SPECIFY a tuning: (A) by OPTIMIZATION and
+    # (B) by direct construction (a PROJECTION). So "optimization" is a content+parent — it reveals
+    # its own power/damage/held region AND parents the optimize sub-axes (weighting and its
+    # refinements, tuning ranges) — while "projection" sits as its peer directly under "tuning",
+    # reading as the alternative to the whole optimization branch. "tuning boxes" (the resulting
+    # 𝒕/𝒈 maps, shared by both modes) and "colorization" stay direct children of "tuning".
+    # Weighting's three refinements are siblings: all-interval, alt. complexity, and custom weights.
     "temperament_boxes": "temperament",
     "temperament_colorization": "temperament",
     # "form" is the odd group out: not a PURE grouping parent but a live layer (it adds the
@@ -134,10 +142,11 @@ SUBCONTROLS: dict[str, str] = {
     "form_colorization": "form",
     "tuning_boxes": "tuning",
     "optimization": "tuning",
-    "tuning_ranges": "tuning",
-    "weighting": "tuning",
-    "all_interval": "weighting",  # a control in box 𝐓 (still nested under weighting)
-    "alt_complexity": "weighting",  # controls in boxes 𝐋 and 𝒄 (still nested under weighting)
+    "tuning_ranges": "optimization",  # a refinement of the optimized generators (box 𝒈 ranges)
+    "weighting": "optimization",      # how the optimization weights its target damage
+    "all_interval": "weighting",   # the all-interval target-set mode (forces simplicity weight)
+    "alt_complexity": "weighting",  # controls in boxes 𝐋 and 𝒄
+    "custom_weights": "weighting",  # typed per-target weights override the slope (editable 𝒘 row)
     "projection": "tuning",
     "tuning_colorization": "tuning",
 }
@@ -157,6 +166,7 @@ IMPLEMENTED: frozenset[str] = frozenset(
      # "form" IS live: unlike the pure grouping parents it carries a real layer (the canonical-
      # form subscript C). "form_controls" is live too — the <choose form> dropdowns (canonical only,
      # for now). Its other two sub-controls (form_boxes, form_colorization) stay greyed until built.
+     # ("custom_weights" joins IMPLEMENTED once its editable 𝒘-row layout effect lands — see below.)
      "form", "form_controls"}
 )
 
@@ -206,6 +216,10 @@ CHAPTER: dict[str, int] = {
     "all_interval": 7,
     "alt_complexity": 8,
     "nonstandard_domain": 9,
+    # custom (manual) weights aren't covered by the guide ("there's no reason you couldn't just
+    # provide manual weights per target-interval"), so they reveal at the ★ notch like the other
+    # outside-the-guide controls (its weighting/optimization/tuning ancestors are all ch3).
+    "custom_weights": CHAPTER_STAR,
     "form": CHAPTER_STAR, "form_controls": CHAPTER_STAR, "form_boxes": CHAPTER_STAR,
     "form_colorization": CHAPTER_STAR,
     "projection": CHAPTER_STAR, "generator_detempering": CHAPTER_STAR,

@@ -59,9 +59,9 @@ def test_default_position_reveals_the_early_controls_and_hides_the_later_ones():
             "domain_quantities", "domain_units"} <= shown
     # ch5+ controls stay hidden at the default ch4
     assert not ({"units", "all_interval", "alt_complexity", "nonstandard_domain"} & shown)
-    # the outside-guide controls wait for the ★ notch
+    # the outside-guide controls wait for the ★ notch (custom weights aren't in the guide)
     for key in ("projection", "generator_detempering", "identity_objects",
-                "form_controls", "form_colorization"):
+                "form_controls", "form_colorization", "custom_weights"):
         assert show_settings.reveal_chapter(key) == show_settings.CHAPTER_STAR
         assert key not in shown
 
