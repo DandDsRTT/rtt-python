@@ -34,19 +34,19 @@ from rtt.app import spreadsheet
 from rtt.app import tooltips
 from rtt.app.editor import Editor
 from rtt.app.marks import (
-    _BR_COLOR,
-    _PENDING_COLOR,
-    _angle_bracket,
-    _angle_foot,
-    _brace,
-    _curly_bracket,
-    _ebk_svg,
-    _rect,
-    _ribbon,
-    _square_bracket,
-    _svg,
-    _top_bracket,
-    _vbar,
+    BR_COLOR,
+    PENDING_COLOR,
+    angle_bracket,
+    angle_foot,
+    brace,
+    curly_bracket,
+    ebk_svg,
+    rect,
+    ribbon,
+    square_bracket,
+    svg,
+    top_bracket,
+    vbar,
 )
 
 # The pure HTML / SVG / text / font-fit / chart string builders (and their constants) live in
@@ -214,20 +214,20 @@ _LOAD_FAILED = (
 # basis is still live — the setting can't go off until the basis is back to a standard prime limit
 _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the scrolling body
 _PENDING_TEXT_COLOR = "color-mix(in srgb, var(--pending-color) 60%, black)"  # a draft cell's TEXT:
-# the green ring (_PENDING_COLOR, imported) DARKENED toward black — single-sourced from --pending-color
+# the green ring (PENDING_COLOR, imported) DARKENED toward black — single-sourced from --pending-color
 # so the wash, the ring and the text are ONE green at three lightnesses (light wash / mid ring / dark
 # text). Mixing with black scales every channel equally, so the hue is preserved exactly and only the
 # lightness drops; the mid ring is too light to read as text on the pale wash, hence this darker shade.
 # The green analogue of the changing _PREVIEW_TEXT_COLOR and going-away _PREVIEW_REMOVE_TEXT_COLOR
 _PREVIEW_COLOR = "#e8c00a"  # yellow ring on a cell the in-progress edit moves (the edit-preview
 # highlight) — a clear "this changed" hue, kept distinct from the red remove-preview and the green
-# _PENDING_COLOR add-preview, so the three highlight hues read apart at a glance
+# PENDING_COLOR add-preview, so the three highlight hues read apart at a glance
 _PREVIEW_TEXT_COLOR = "color-mix(in srgb, var(--preview-color) 60%, black)"  # the "changing" cell's
 # TEXT: the yellow ring above DARKENED toward black — single-sourced from --preview-color so the wash,
 # the ring and the text are ONE golden-yellow hue at three lightnesses (light wash / mid ring / dark
 # text), never a mix of hues. Mixing with black scales every channel equally, so the hue is preserved
 # exactly — only the lightness drops. The bright ring itself is too light to read as text on the pale
-# wash, hence the dark shade. This is the changing analogue of a draft's green text (_PENDING_COLOR)
+# wash, hence the dark shade. This is the changing analogue of a draft's green text (PENDING_COLOR)
 # and the going-away red text of the remove-preview (_PREVIEW_REMOVE_TEXT_COLOR)
 _PREVIEW_REMOVE_COLOR = "#e53935"  # red ring on a cell a hovered +/- will REMOVE (the structural
 # remove-preview) — "this is going away", paired with the yellow "this value moved"
@@ -240,7 +240,7 @@ _PREVIEW_REMOVE_TEXT_COLOR = "color-mix(in srgb, var(--preview-remove-color) 60%
 # mockup): each cell draws a rule and overlaps its neighbour by exactly the rule
 # width, so two abutting borders coincide as ONE line — no doubled inner rules.
 _CELL_BORDER_W = 1  # px
-_CELL_BORDER = f"{_CELL_BORDER_W}px solid {_BR_COLOR}"
+_CELL_BORDER = f"{_CELL_BORDER_W}px solid {BR_COLOR}"
 _CELL_FONT = 17  # px for the single-digit values in the square cells (≈0.37 of the cell)
 # Colorization wash colours, keyed by the group the layout tags a wash with
 # (spreadsheet.CELL_FACTORS via _FACTOR_GROUP); a wash sits behind the grey tiles so the
@@ -432,7 +432,7 @@ _GROUP_EXIT_JS = ("(e) => { const g = e.target.closest('[data-vgroup]'), "
 
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --tab-w:{_TAB_W}px; --tab-h:{_TAB_H}px; --chrome-h:{_CHROME_H}px; --panel-w:{_PANEL_W}px;
-  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --pending-text-color:{_PENDING_TEXT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-text-color:{_PREVIEW_TEXT_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR}; --preview-remove-text-color:{_PREVIEW_REMOVE_TEXT_COLOR};
+  --seam:{_SEAM}; --pending-color:{PENDING_COLOR}; --pending-text-color:{_PENDING_TEXT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-text-color:{_PREVIEW_TEXT_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR}; --preview-remove-text-color:{_PREVIEW_REMOVE_TEXT_COLOR};
   --c-gridline:#e0e0e0;
   --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
@@ -476,7 +476,7 @@ _MATLABEL_MIN_FONT = 6.0  # px — floor for a wide column header shrunk to fit 
 # This is the single rule that keeps the brackets and brace a constant weight —
 # the rejected font glyph scaled its weight with its height, and a fixed viewBox
 # stretched to the cell sheared its serifs. Square/top brackets are crisp filled
-# rects; the calligraphic ⟨ and brace are filled variable-width ribbons (_ribbon).
+# rects; the calligraphic ⟨ and brace are filled variable-width ribbons (ribbon).
 _EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "hbar"}
 
 
@@ -1198,7 +1198,7 @@ class _Reconciler:
         # the brace/top bracket as the domain grows) or its pending (green) state flips (a draft
         # comma's marks committing to black)
         if self.ebk_sizes.get(cb.id) != (cb.w, cb.h, cb.pending):
-            self.htmls[cb.id].set_content(_ebk_svg(cb))
+            self.htmls[cb.id].set_content(ebk_svg(cb))
             self.ebk_sizes[cb.id] = (cb.w, cb.h, cb.pending)
 
     def _update_chart(self, cb: spreadsheet.CellBox) -> None:

@@ -263,21 +263,21 @@ def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
     # weight is a constant px count rather than a scaled stroke — that is what
     # keeps a 1-row and a many-row bracket the exact same thickness.
     marks = {
-        "[": app._square_bracket(16, 16, "left"),
-        "]2": app._square_bracket(16, 60, "right"),
-        "<": app._angle_bracket(16, 16),
-        "top": app._top_bracket(120, 9),
-        "angle": app._angle_foot(14, 7),  # the raw-vector column's ket foot (a down-chevron)
-        "vbar": app._vbar(2, 60),
+        "[": app.square_bracket(16, 16, "left"),
+        "]2": app.square_bracket(16, 60, "right"),
+        "<": app.angle_bracket(16, 16),
+        "top": app.top_bracket(120, 9),
+        "angle": app.angle_foot(14, 7),  # the raw-vector column's ket foot (a down-chevron)
+        "vbar": app.vbar(2, 60),
     }
     for svg in marks.values():
-        assert svg.startswith("<svg") and f'fill="{app._BR_COLOR}"' in svg
+        assert svg.startswith("<svg") and f'fill="{app.BR_COLOR}"' in svg
         assert "stroke-width" not in svg  # weight is the 1:1 viewBox, not a scaling stroke
     assert marks["angle"].count("<path") == 1 and "stroke" not in marks["angle"]  # one filled chevron
     # the down-chevron foot fits inside its oblong like every other mark — its whole
     # footprint (stroke included) stays within the 7px-tall box, never overshooting
     import re
-    ys = [float(y) for _x, y in re.findall(r"(-?\d+\.\d+),(-?\d+\.\d+)", app._angle_foot(14, 7))]
+    ys = [float(y) for _x, y in re.findall(r"(-?\d+\.\d+),(-?\d+\.\d+)", app.angle_foot(14, 7))]
     assert 0 <= min(ys) and max(ys) <= 7
     def _viewbox(svg):
         m = re.search(r'viewBox="0 0 ([\d.]+) ([\d.]+)"', svg)
@@ -690,12 +690,12 @@ def test_general_tile_renders_its_special_samples():
 
 
 def test_dummy_tile_chart_rides_the_themeable_mark_colors():
-    # the sample sparkline's bars + axes must ride the shared mark colour (_BR_COLOR) and its
+    # the sample sparkline's bars + axes must ride the shared mark colour (BR_COLOR) and its
     # gridlines the shared chart-grid colour — the same tokens the real chart and the EBK frame
     # use — so the dark overlay's attribute rules retint them. A hardcoded pure black would be
     # invisible on the dark pane (the bug: bars/axes that stay black in dark mode).
     chart = app._example_chart()
-    assert app._BR_COLOR in chart and app._CHART_GRID in chart
+    assert app.BR_COLOR in chart and app._CHART_GRID in chart
     assert "#000" not in chart
 
 
@@ -835,11 +835,11 @@ def test_brace_is_one_filled_path_with_width_independent_end_curls():
     # the brace is ONE filled variable-width ribbon computed from the width — no
     # composite pieces (so no seams/overshoot). Only the arm length tracks the
     # width; the end-curls/cusp are fixed px shapes identical at any width.
-    narrow, wide = app._brace(44, 14), app._brace(200, 14)
+    narrow, wide = app.brace(44, 14), app.brace(200, 14)
     for svg in (narrow, wide):
         assert svg.count("<path") == 1  # a single shape
         assert "stroke" not in svg  # filled, not stroked
-        assert f'fill="{app._BR_COLOR}"' in svg  # the one shared bracket colour
+        assert f'fill="{app.BR_COLOR}"' in svg  # the one shared bracket colour
     assert 'viewBox="0 0 200.00 14.00"' in wide
     prefix = 0  # the left end-curl is laid down before any arm, so the two paths...
     while narrow[prefix] == wide[prefix]:
@@ -851,10 +851,10 @@ def test_brace_is_one_filled_path_with_width_independent_end_curls():
 def test_curly_bracket_is_one_filled_ribbon_within_its_footprint():
     # the generator tuning map's { is a vertical calligraphic brace (the matrix brace
     # turned a quarter-turn): one filled ribbon, no stroke, staying inside its oblong
-    svg = app._curly_bracket(16, 30)
+    svg = app.curly_bracket(16, 30)
     assert svg.startswith("<svg") and 'viewBox="0 0 16.00 30.00"' in svg
     assert svg.count("<path") == 1 and "stroke" not in svg
-    assert f'fill="{app._BR_COLOR}"' in svg
+    assert f'fill="{app.BR_COLOR}"' in svg
     pts = re.findall(r"(-?\d+\.\d+),(-?\d+\.\d+)", svg)
     xs, ys = [float(x) for x, _y in pts], [float(y) for _x, y in pts]
     assert 0 <= min(xs) and max(xs) <= 16  # within the bracket-gutter width
@@ -864,7 +864,7 @@ def test_curly_bracket_is_one_filled_ribbon_within_its_footprint():
 def test_ebk_svg_routes_the_curly_open_brace_to_the_curly_bracket():
     from rtt.app.layout import CellBox
     cb = CellBox("bracket:tuning:genmap:l", 0, 0, 16, 30, "bracket", text="{")
-    assert app._ebk_svg(cb) == app._curly_bracket(16, 30)  # not the square/angle renderer
+    assert app.ebk_svg(cb) == app.curly_bracket(16, 30)  # not the square/angle renderer
 
 
 def test_bar_chart_draws_one_scaled_bar_per_value_from_the_baseline():

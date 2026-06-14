@@ -57,18 +57,18 @@ def test_dark_theme_relights_the_editable_cell_inputs():
 
 
 def test_dark_theme_retints_the_baked_in_marks_without_disturbing_the_pending_green():
-    # the EBK brackets bake _BR_COLOR into their SVG fill; the overlay retints exactly that
+    # the EBK brackets bake BR_COLOR into their SVG fill; the overlay retints exactly that
     # value via an attribute rule (CSS beats the presentation attribute). A pending comma's
     # green marks (#2e9e3f) don't match it, so they stay green — assert nothing retints that fill.
-    assert f'body.rtt-dark [fill="{app._BR_COLOR}"]' in app._CSS
-    assert f'[fill="{app._PENDING_COLOR}"]' not in app._CSS
+    assert f'body.rtt-dark [fill="{app.BR_COLOR}"]' in app._CSS
+    assert f'[fill="{app.PENDING_COLOR}"]' not in app._CSS
 
 
 def test_dark_theme_retints_stroke_drawn_marks_too():
-    # some _BR_COLOR marks are STROKE-drawn, not filled: the chart axes / zero baseline (and the
+    # some BR_COLOR marks are STROKE-drawn, not filled: the chart axes / zero baseline (and the
     # dummy tile's sample-chart axes). The fill attribute rule can't reach a stroke, so a parallel
     # stroke rule retints exactly that value — else those lines stay near-black on the dark pane.
-    assert f'body.rtt-dark [stroke="{app._BR_COLOR}"]' in app._CSS
+    assert f'body.rtt-dark [stroke="{app.BR_COLOR}"]' in app._CSS
 
 
 def test_dark_theme_overrides_the_themed_variables():

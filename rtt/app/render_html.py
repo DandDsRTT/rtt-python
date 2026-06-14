@@ -17,13 +17,13 @@ from rtt.app import service
 from rtt.app import settings as show_settings
 from rtt.app import spreadsheet
 from rtt.app.marks import (
-    _BR_COLOR,
-    _angle_bracket,
-    _brace,
-    _rect,
-    _square_bracket,
-    _svg,
-    _top_bracket,
+    BR_COLOR,
+    angle_bracket,
+    brace,
+    rect,
+    square_bracket,
+    svg,
+    top_bracket,
 )
 
 
@@ -222,11 +222,11 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="") -
         body.append(f'<line x1="{axis_x:.2f}" y1="{ty:.2f}" x2="{w:.2f}" y2="{ty:.2f}" '
                     f'stroke="{_CHART_GRID}" stroke-width="0.5"/>')
         body.append(f'<text x="{axis_x - 2:.2f}" y="{ty + 2.4:.2f}" text-anchor="end" '
-                    f'font-size="7" fill="{_BR_COLOR}">{tv:g}</text>')
+                    f'font-size="7" fill="{BR_COLOR}">{tv:g}</text>')
     zero_y = y_of(0)
     body.append(f'<line x1="{axis_x:.2f}" y1="{zero_y:.2f}" x2="{w:.2f}" y2="{zero_y:.2f}" '
-                f'stroke="{_BR_COLOR}" stroke-width="1"/>')
-    body.append(_rect(axis_x, plot_top, 0.8, plot_bot - plot_top))  # vertical y-axis
+                f'stroke="{BR_COLOR}" stroke-width="1"/>')
+    body.append(rect(axis_x, plot_top, 0.8, plot_bot - plot_top))  # vertical y-axis
     bw = col_w * _CHART_BAR_FRAC
     for i, v in enumerate(values):
         if v is None:  # a dashed cell has no bar
@@ -234,7 +234,7 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="") -
         cx = axis_x + i * col_w + col_w / 2
         yv = y_of(v)
         top, bot = min(zero_y, yv), max(zero_y, yv)
-        body.append(_rect(cx - bw / 2, top, bw, bot - top))
+        body.append(rect(cx - bw / 2, top, bw, bot - top))
     if indicator is not None:  # the minimized-damage level: a solid lighter-grey line BROKEN
         # by its ⟪𝐝⟫ label (a short stub from the axis, then the label in a gap, then the
         # rest of the rule), the scheme's Lp power as the label's subscript
@@ -252,7 +252,7 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="") -
         body.append(f'<text x="{lx:.2f}" y="{iy + lbl_font * 0.34:.2f}" font-size="{lbl_font}" '
                     f'fill="{_CHART_INDICATOR}"><tspan>⟪</tspan>'
                     f'<tspan font-weight="bold">d</tspan><tspan>⟫</tspan>{sub}</text>')
-    return _svg(w, h, "".join(body))
+    return svg(w, h, "".join(body))
 
 
 def _range_chart(w: float, h: float, ranges, tunings=()) -> str:
@@ -263,18 +263,18 @@ def _range_chart(w: float, h: float, ranges, tunings=()) -> str:
     range' placeholder. The 'tuning ranges' title is a boxtitle above the chart, not in the SVG."""
     cx0, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
     if not ranges:
-        return _svg(w, h, f'<text x="{w / 2:.2f}" y="{h / 2 + 2:.2f}" text-anchor="middle" '
-                    f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">no range</text>')
+        return svg(w, h, f'<text x="{w / 2:.2f}" y="{h / 2 + 2:.2f}" text-anchor="middle" '
+                    f'font-size="{_RANGE_FONT}" fill="{BR_COLOR}">no range</text>')
     plot_top, plot_bot = _RANGE_PLOT_T, h - _RANGE_PLOT_B
     mid, hw = (plot_top + plot_bot) / 2, _RANGE_MARK_W / 2
     cap_half, tick_half = _RANGE_CAP_W / 2, _RANGE_CAP_W / 2 - 3  # the live-tuning tick is shorter
 
     def bar(cx, y, half):
-        return _rect(cx - half, y - hw, 2 * half, _RANGE_MARK_W)
+        return rect(cx - half, y - hw, 2 * half, _RANGE_MARK_W)
 
     def label(cx, y, v):
         return (f'<text x="{cx:.2f}" y="{y:.2f}" text-anchor="middle" '
-                f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">{strip_negative_zero(f"{v:.3f}")}</text>')
+                f'font-size="{_RANGE_FONT}" fill="{BR_COLOR}">{strip_negative_zero(f"{v:.3f}")}</text>')
 
     body = []
     for i, (lo, hi) in enumerate(ranges):
@@ -283,13 +283,13 @@ def _range_chart(w: float, h: float, ranges, tunings=()) -> str:
             body.append(bar(cx, mid, cap_half) + label(cx, mid - 4, lo))
             continue
         # a vertical stem capped at the max (top) and min (bottom), labelled at each
-        body.append(_rect(cx - hw, plot_top, _RANGE_MARK_W, plot_bot - plot_top))
+        body.append(rect(cx - hw, plot_top, _RANGE_MARK_W, plot_bot - plot_top))
         body.append(bar(cx, plot_top, cap_half) + bar(cx, plot_bot, cap_half))
         body.append(label(cx, plot_top - 4, hi) + label(cx, plot_bot + 9, lo))
         if i < len(tunings):  # the live tuning, ticked where it falls within [min, max]
             frac = min(1.0, max(0.0, (hi - tunings[i]) / (hi - lo)))
             body.append(bar(cx, plot_top + frac * (plot_bot - plot_top), tick_half))
-    return _svg(w, h, "".join(body))
+    return svg(w, h, "".join(body))
 
 
 def _parse_int(text: str) -> int | None:
@@ -474,7 +474,7 @@ _EXAMPLE_TEXT: dict[str, str] = {
 def _example_chart() -> str:
     """The charts sample: a tiny signed bar sparkline — a 5 / −5 axis with grey horizontal
     gridlines (the chart's tick lines) and a bar dipping below the zero line, as the mockup's
-    legend shows. Bars + axes ride _BR_COLOR and the gridlines _CHART_GRID — the same tokens the
+    legend shows. Bars + axes ride BR_COLOR and the gridlines _CHART_GRID — the same tokens the
     real chart and the EBK frame use — so the dark overlay's [fill]/[stroke] rules retint them."""
     return ('<div style="position:relative;width:84px;height:34px">'
             '<span style="position:absolute;left:0;top:0;font-size:9px">5</span>'
@@ -484,11 +484,11 @@ def _example_chart() -> str:
             # grey horizontal tick lines at the ±5 levels (the chart's gridlines)
             f'<line x1="2" y1="5" x2="64" y2="5" stroke="{_CHART_GRID}" stroke-width="1"/>'
             f'<line x1="2" y1="29" x2="64" y2="29" stroke="{_CHART_GRID}" stroke-width="1"/>'
-            f'<line x1="2" y1="3" x2="2" y2="31" stroke="{_BR_COLOR}" stroke-width="1.4"/>'
-            f'<line x1="0" y1="5" x2="6" y2="5" stroke="{_BR_COLOR}" stroke-width="1.4"/>'
-            f'<line x1="0" y1="29" x2="6" y2="29" stroke="{_BR_COLOR}" stroke-width="1.4"/>'
-            f'<line x1="2" y1="17" x2="62" y2="17" stroke="{_BR_COLOR}" stroke-width="1"/>'
-            f'<rect x="16" y="17" width="22" height="6" fill="{_BR_COLOR}"/>'
+            f'<line x1="2" y1="3" x2="2" y2="31" stroke="{BR_COLOR}" stroke-width="1.4"/>'
+            f'<line x1="0" y1="5" x2="6" y2="5" stroke="{BR_COLOR}" stroke-width="1.4"/>'
+            f'<line x1="0" y1="29" x2="6" y2="29" stroke="{BR_COLOR}" stroke-width="1.4"/>'
+            f'<line x1="2" y1="17" x2="62" y2="17" stroke="{BR_COLOR}" stroke-width="1"/>'
+            f'<rect x="16" y="17" width="22" height="6" fill="{BR_COLOR}"/>'
             '</svg></div>')
 
 
@@ -540,7 +540,7 @@ def _tile_fold_html() -> str:
 
 # The value cell's geometry (px), built to read like the real mapping tile's NESTED EBK: an INNER
 # per-row covector ⟨ … ] HUGGING the COL_W×ROW_H square cell (the angle/square marks sit right
-# against the box, ~_BR_INSET≈2.5px off, exactly as the grid's per-row brackets do), enclosed by an
+# against the box, ~BR_INSET≈2.5px off, exactly as the grid's per-row brackets do), enclosed by an
 # OUTER frame — a top bracket + brace that SPAN the inner brackets and sit _TILE_ENCLOSE px above /
 # below the cell. (Earlier rounds wrongly pushed the brackets far horizontally; the real app hugs.)
 _TILE_CELL = spreadsheet.COL_W           # the square cell side (== ROW_H)
@@ -563,13 +563,13 @@ def _tile_grid_frame_html() -> str:
     span = _TILE_FRAME_W  # the outer top/brace run the full ⟨ … ] width
     return (f'<div style="position:relative;width:{_TILE_FRAME_W}px;height:{_TILE_FRAME_H}px">'
             # OUTER frame: top bracket + brace spanning the inner brackets, enclosing from above/below
-            + mark(0, 0, span, cap, _top_bracket(span, cap))
-            + mark(0, _TILE_FRAME_H - cap, span, cap, _brace(span, cap))
+            + mark(0, 0, span, cap, top_bracket(span, cap))
+            + mark(0, _TILE_FRAME_H - cap, span, cap, brace(span, cap))
             # INNER covector ⟨ … ] hugging the value box
-            + mark(0, cy, bw, cell, _angle_bracket(bw, cell))
+            + mark(0, cy, bw, cell, angle_bracket(bw, cell))
             + mark(cx, cy, cell, cell, '<div style="width:100%;height:100%;box-sizing:border-box;'
                                        'border:1px solid #555;background:#fff"></div>')
-            + mark(cx + cell, cy, bw, cell, _square_bracket(bw, cell, "right"))
+            + mark(cx + cell, cy, bw, cell, square_bracket(bw, cell, "right"))
             + '</div>')
 
 

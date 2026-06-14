@@ -20,7 +20,7 @@ from rtt.app import ids
 from rtt.app import presets
 from rtt.app import service
 from rtt.app.layout import Block, CellBox, Layout, Line
-from rtt.app.marks import _BR_INSET, _BR_SERIF_L  # bracket-glyph insets, for FRAME_OVERHANG below
+from rtt.app.marks import BR_INSET, BR_SERIF_L  # bracket-glyph insets, for FRAME_OVERHANG below
 from rtt.app.grid_tables import *  # noqa: F403  (semantic content tables, re-exported)
 from rtt.app.grid_tables import _FACTOR_GROUP  # build() reads it; import * skips the underscore name
 from rtt.app.settings import defaults as _default_settings
@@ -156,10 +156,10 @@ BRACKET_W = 16  # gutter inside a value group for an EBK bracket (one side)
 # How far a vector-list outer [ ] (and its column rules) overhangs the per-column marks at
 # top and bottom — equal to the margin by which the mapping's spanning top/bottom bracket
 # overhangs its per-row ⟨ ] in x. There the outer bracket reaches the gutter's outer edge
-# while the inner glyph sits _BR_INSET + _BR_SERIF_L in from it, so the overhang is the rest
-# of the gutter: BRACKET_W − (_BR_INSET + _BR_SERIF_L) = 7.5px. Tying it to the same glyph
+# while the inner glyph sits BR_INSET + BR_SERIF_L in from it, so the overhang is the rest
+# of the gutter: BRACKET_W − (BR_INSET + BR_SERIF_L) = 7.5px. Tying it to the same glyph
 # insets keeps the vertical overhang exactly matched to the horizontal one if either is retuned.
-FRAME_OVERHANG = BRACKET_W - _BR_INSET - _BR_SERIF_L
+FRAME_OVERHANG = BRACKET_W - BR_INSET - BR_SERIF_L
 ROW_HANDLE_W = 14  # the per-mapping-row drag handle (drag a generator row onto another to add it)
 ROW_HANDLE_GAP = 4  # the gap it keeps from the matrix's opening bracket
 ETPICK_W = COL_W  # the per-mapping-row ET picker (a compact chooser ~one gridded value wide, riding
@@ -2704,7 +2704,7 @@ class _GridBuilder:
         matrix_span hugs the cells (interest's content, not its footprint) and steps
         the left ⟨ right past the matlabel gutter, so the row labels sit inside the
         panel left of the ⟨ rather than overflowing it. ``span`` overrides the default span.
-        ``pending`` recolours the bracket green (via _ebk_svg) to match a draft row's cells."""
+        ``pending`` recolours the bracket green (via ebk_svg) to match a draft row's cells."""
         gx, gw = span if span else self.matrix_span(group_key)
         if fit:
             # A vector-list outer wrap [ … ] spans the matrix's full FRAMED height, so it

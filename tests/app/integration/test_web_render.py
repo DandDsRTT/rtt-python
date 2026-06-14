@@ -2108,7 +2108,7 @@ async def test_enabled_html_cell_renders_non_blank_content(user: User, label: st
 
 
 # On-by-default html kinds, present in the plain opened page: the tile-name captions
-# (_underline_html) and the matrix-frame EBK bracket SVGs (_ebk_svg, the most numerous kind).
+# (_underline_html) and the matrix-frame EBK bracket SVGs (ebk_svg, the most numerous kind).
 _DEFAULT_HTML_CELLS = ["caption:mapping:primes", "bracket:map:0:l"]
 
 
