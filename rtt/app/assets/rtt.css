@@ -436,23 +436,30 @@
    white text, like a negative toast, instead of the default dark hover bubble. */
 .q-tooltip.rtt-tip-error { background:#d33 !important; color:#fff !important; }
 /* the zoom-on-hover magnifier (app._ZOOM_JS): hovering ANY gridded value cell (.rtt-zoomable) pops a
-   floating card holding a LITERAL scaled clone of that cell -- everything visible in it (value, unit,
-   math expression, the editable box) in the same font + styling, enlarged by --zoom-factor (so the
-   small whole-part of "1200.000" reaches a normal integer "1" cell's size). The card is a clean light
-   panel; the cloned cell carries its own classes, so the value/dark cascades style it for free. The
-   serif matches the grid (the cloned faces inherit font-family from here, outside the grid tree). */
+   loupe -- a LITERAL scaled clone of that cell (value, unit, math expression) enlarged by --zoom-factor
+   (so the small whole-part of "1200.000" reaches a normal integer "1" cell's size). The clone is shown
+   NON-interactively: every editable-cell box is stripped, so an editable value reads like a read-only
+   one. The cell's own hover help sits BELOW the loupe, styled like a normal Quasar tooltip. The clone
+   carries its classes, so the value/dark cascades style it for free; the serif matches the grid. */
 .rtt-zoom-overlay { position:fixed; z-index:9000; pointer-events:none; display:flex;
-            flex-direction:column; align-items:center; gap:4px; padding:4px;
-            background:#fff; border:1px solid var(--cell-border); border-radius:3px;
-            box-shadow:0 2px 10px rgba(0,0,0,.28); font-family:'Cambria',Georgia,serif; }
+            flex-direction:column; align-items:center; gap:7px; font-family:'Cambria',Georgia,serif; }
+/* the loupe tile: the value on a grid-tile-grey panel (the non-interactive look — a read-only value
+   sits on the grey tile, not in a box), lifted off the page by a soft shadow. */
+.rtt-zoom-tile { background:#e0e0e0; border-radius:2px; padding:3px;
+            box-shadow:0 3px 12px rgba(0,0,0,.30); }
 .rtt-zoom-scale { position:relative; flex:none; overflow:hidden; }
-/* the clone is a real .rtt-cell, so neutralise its absolute grid positioning + transitions and let it
-   scale to fill the scale box (its size + transform are set inline by the engine). */
+/* the clone is a real .rtt-cell: neutralise its absolute grid positioning + transitions (size +
+   transform are set inline by the engine), and strip every editable-cell box -- the input fill +
+   border, the fraction / decimal cell box -- so the value always reads non-interactively. */
 .rtt-zoom-clone { position:static !important; transition:none !important; }
-/* the cell's own hover help, folded in beneath the magnified value (the editable cells' "type to
-   edit…"): small muted prose, wrapped to a readable width -- not part of the cell, a caption. */
-.rtt-zoom-help { max-width:240px; font-size:11px; line-height:1.25; color:#555;
-            text-align:center; border-top:1px solid #e0e0e0; padding-top:3px; }
+.rtt-zoom-clone.rtt-deccell, .rtt-zoom-clone.rtt-fraccell { background:transparent !important; border:none !important; }
+.rtt-zoom-clone .rtt-cellinput .q-field__control { background:transparent !important; border:none !important; }
+/* the folded hover help, styled exactly like a normal Quasar tooltip (the dark grey bubble, Roboto)
+   and sitting below the loupe -- so the value reads as a tile and its help reads as the usual hover
+   bubble. The app's tooltips are the same grey in both themes, so this needs no dark override. */
+.rtt-zoom-help { max-width:260px; background:#757575; color:#fafafa; border-radius:4px;
+            padding:8px 16px; font-size:14px; line-height:21px;
+            font-family:Roboto,-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif; }
 /* when the target chooser is LOCKED (all-interval), its numeric square greys with its family
    select -- the same flat #d6d6d6 disabled fill -- so the two parts read as one dead unit, not a
    grey dropdown beside a still-white box. (Matches the .rtt-preset disabled rule above.) */

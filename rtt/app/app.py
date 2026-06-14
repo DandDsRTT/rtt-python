@@ -780,8 +780,13 @@ _ZOOM_JS = """
     const cloneInputs = clone.querySelectorAll('input');
     srcInputs.forEach((s, i) => { if (cloneInputs[i]) cloneInputs[i].value = s.value; });
     scale.appendChild(clone);
-    overlay.appendChild(scale);
-    // the cell's own hover help, folded in beneath the value (the editable cells' "type to edit…")
+    // the loupe tile (the value on a grey grid-tile panel) — the magnified, non-interactive value
+    const tile = document.createElement('div');
+    tile.className = 'rtt-zoom-tile';
+    tile.appendChild(scale);
+    overlay.appendChild(tile);
+    // the cell's own hover help, below the loupe, styled like a normal tooltip (the editable cells'
+    // "type to edit…")
     const help = cell.getAttribute('data-zoomhelp');
     if (help) {
       const cap = document.createElement('div');
@@ -789,7 +794,7 @@ _ZOOM_JS = """
       cap.textContent = help;
       overlay.appendChild(cap);
     }
-    overlay.style.display = 'block';
+    overlay.style.display = 'flex';   // matches the CSS (gap + centering); 'block' would defeat them
     place(cell);
   };
 
