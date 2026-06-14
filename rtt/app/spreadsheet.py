@@ -1169,6 +1169,13 @@ class _GridBuilder:
         self.comma_basis_form_key = (
             service.resolve_comma_basis_form(self.state.comma_basis, self.comma_basis_form, self.state.domain_basis)
             if self.state.n else "")
+        # the form layer's two-faced display (step 3c): the subscript C marks the canonical form, so it
+        # rides the MAIN rows only when the stored mapping IS canonical. When it is a non-canonical form
+        # (incl. the default equave-reduced), the main rows stay bare and the canonical-mapping row + 𝐹
+        # surface instead, so the canonical form is always visible somewhere.
+        self.form_is_canonical = self.mapping_form_key == "canonical"
+        self.show_form_subscript = self.show_form and self.form_is_canonical  # subscript-C on the main rows
+        self.show_canon = self.show_form_boxes or (self.show_form and not self.form_is_canonical)
         self.target_vectors = service.target_interval_vectors(self.targets, self.d, self.elements)  # k vectors, each d-tall
         # held intervals: the optimization box's held-just constraints — user-edited vectors in the
         # held column (like the intervals of interest). The tuning holds each exactly just, so
@@ -1781,7 +1788,7 @@ class _GridBuilder:
             # projection toggle, exactly when V consolidates (show_unchanged).
             ("scaling_factors", ROW_H, self.show_unchanged, True, "scaling factors"),
             ("vectors", self.d * ROW_H, show_temp, True, "interval vectors"),
-            ("canon", self.rc * ROW_H, self.show_form_boxes, True, "canonical mapping"),
+            ("canon", self.rc * ROW_H, self.show_canon, True, "canonical mapping"),
             ("mapping", self.r_shown * ROW_H, show_temp, True, "mapping"),
             # the chapter-9 superspace rows sit between mapping and the projection row, the row
             # counterparts of the ssgens / ssprimes columns: ss_vectors holds the dL-tall vector
@@ -2259,7 +2266,7 @@ class _GridBuilder:
             equiv = ""
             if self.show_equiv:
                 equiv = EQUIVALENCES.get((rkey, ckey), "")
-                if self.show_form and (rkey, ckey) in FORM_EQUIVALENCES:  # the subscripted equation
+                if self.show_form_subscript and (rkey, ckey) in FORM_EQUIVALENCES:  # the subscripted equation
                     equiv = FORM_EQUIVALENCES[(rkey, ckey)]
                 if (rkey, ckey) == ("projection", "primes"):
                     equiv += self._projection_superspace_tail()
@@ -2274,7 +2281,7 @@ class _GridBuilder:
         mapping 𝑀 and its products, the generator tuning map 𝒈, the projection embedding G), in
         their tile symbols AND their matrix row/column header labels; the form-invariant objects
         (𝒕/𝒋/𝒓, the bases C/T/H, the detempering D) pass through untouched."""
-        if self.show_form and (rkey, ckey) in FORM_SUBSCRIPT_CELLS:
+        if self.show_form_subscript and (rkey, ckey) in FORM_SUBSCRIPT_CELLS:
             return glyph[:1] + SUBSCRIPT_C + glyph[1:]
         return glyph
 
@@ -5163,7 +5170,7 @@ class _GridBuilder:
                         **(ALL_INTERVAL_EQUIVALENCES if ai else {}),
                         # the form layer subscripts the canonical-form objects in their defining
                         # equations too (𝒕 = 𝒈C𝑀C, P = GC𝑀C, …); the form-invariant tails stay bare.
-                        **(FORM_EQUIVALENCES if self.show_form else {}),
+                        **(FORM_EQUIVALENCES if self.show_form_subscript else {}),
                         # the consolidated interval-vectors header: V = C|U (the comma basis and the
                         # unchanged basis concatenated). The mapped tile drops its "= 𝑂" (only the
                         # comma half of M·V vanishes; the unchanged half maps to the held generators).

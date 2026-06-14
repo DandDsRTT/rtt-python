@@ -6647,21 +6647,39 @@ def test_form_layer_is_a_live_parent_with_live_controls_over_two_greyed_subcontr
                                         for c in ("form_controls", "form_boxes", "form_colorization"))
 
 
+_CANON_MEANTONE = ((1, 0, -4), (0, 1, 4))  # meantone's canonical (defactored Hermite) form
+
+
+def _canon_cells(**overrides):
+    # build over a CANONICAL mapping, so the form layer's subscript C rides the MAIN rows (it marks
+    # the canonical form — on a non-canonical mapping the main rows stay bare; see step 3c below)
+    s = settings.defaults()
+    s.update(overrides)
+    held = s.pop("_held_vectors", None)
+    ratios = s.pop("_held_basis_ratios", None)
+    kw = {}
+    if held is not None:
+        kw["held_vectors"] = held
+    if ratios is not None:
+        kw["held_basis_ratios"] = ratios
+    return {c.id: c for c in spreadsheet.build(service.from_mapping(_CANON_MEANTONE), s, **kw).cells}
+
+
 def test_form_layer_subscripts_the_canonical_form_objects_in_symbols():
-    # the "form" layer marks the default (canonical) form with a subscript C after the leading
-    # glyph of every generator-basis object — the mapping 𝑀 and its products (mapped comma basis
-    # 𝑀C, mapped target list Y), the generator tuning map 𝒈, and the projection's generator
-    # embedding G. The form-INVARIANT objects (the prime tuning map 𝒕, the comma basis C) stay
-    # bare. The subscript is the SUBSCRIPT_C sentinel — distinct from the upright comma-basis C.
+    # over a CANONICAL mapping, the "form" layer marks the canonical form with a subscript C after
+    # the leading glyph of every generator-basis object — the mapping 𝑀 and its products (mapped
+    # comma basis 𝑀C, mapped target list Y), the generator tuning map 𝒈, and the projection's
+    # generator embedding G. The form-INVARIANT objects (the prime tuning map 𝒕, the comma basis C)
+    # stay bare. The subscript is the SUBSCRIPT_C sentinel — distinct from the upright comma-basis C.
     C = spreadsheet.SUBSCRIPT_C
-    on = {c.id: c for c in _with(symbols=True, form=True).cells}
-    off = {c.id: c for c in _with(symbols=True).cells}
+    on = _canon_cells(symbols=True, form=True)
+    off = _canon_cells(symbols=True)
     assert on["symbol:mapping:primes"].text == f"𝑀{C}"
     assert on["symbol:mapping:commas"].text == f"𝑀{C}C"   # 𝑀_C then the upright comma basis C
     assert on["symbol:mapping:targets"].text == f"Y{C}"
     assert on["symbol:tuning:gens"].text == f"𝒈{C}"
     # the projection's generator embedding G (only present when projection is on)
-    proj = {c.id: c for c in _with(symbols=True, projection=True, form=True).cells}
+    proj = _canon_cells(symbols=True, projection=True, form=True)
     assert proj["symbol:projection:gens"].text == f"G{C}"
     # form-invariant objects stay bare, and nothing is subscripted without the layer
     assert on["symbol:tuning:primes"].text == "𝒕"          # the prime tuning map is form-invariant
@@ -6673,7 +6691,7 @@ def test_form_layer_subscripts_the_canonical_form_objects_in_equivalences():
     # the subscript reaches inside the defining equations too: 𝒕 = 𝒈C𝑀C, Y = 𝑀C T, and the
     # projection's P = GC𝑀C — but 𝒕 (the form-invariant result) keeps its bare head.
     C = spreadsheet.SUBSCRIPT_C
-    on = {c.id: c for c in _with(symbols=True, equivalences=True, projection=True, form=True).cells}
+    on = _canon_cells(symbols=True, equivalences=True, projection=True, form=True)
     assert on["symbol:tuning:primes"].text == f"𝒕 = 𝒈{C}𝑀{C}"      # 𝒕 bare, 𝒈/𝑀 subscripted
     assert on["symbol:mapping:targets"].text == f"Y{C} = 𝑀{C}T"
     assert on["symbol:projection:gens"].text == f"G{C} = U(𝑀{C}U)⁻¹"
@@ -6684,9 +6702,9 @@ def test_form_layer_subscripts_the_matrix_header_labels():
     # symbols: the mapping's row covectors 𝒎ᵢ → 𝒎_Cᵢ, the mapped products' leading 𝑀 — 𝑀𝐜ᵢ (mapped
     # comma basis) and 𝑀𝐡ᵢ (mapped held basis) — the mapped target columns 𝐲ᵢ, the generator tuning
     # map 𝒈ᵢ, and the projection embedding's 𝐠ᵢ all gain the subscript. Form-invariant labels (the
-    # prime tuning map's 𝒕𝐜ᵢ, the comma basis 𝐜ᵢ) stay bare.
+    # prime tuning map's 𝒕𝐜ᵢ, the comma basis 𝐜ᵢ) stay bare. Over a CANONICAL mapping (subscript on main).
     C, s1 = spreadsheet.SUBSCRIPT_C, spreadsheet._sub(1)
-    on = {c.id: c for c in _with(symbols=True, header_symbols=True, form=True).cells}
+    on = _canon_cells(symbols=True, header_symbols=True, form=True)
     assert on["matlabel:row:mapping:primes:0"].text == f"𝒎{C}{s1}"   # the mapping covector rows
     assert on["matlabel:col:mapping:commas:0"].text == f"𝑀{C}𝐜{s1}"  # mapped comma basis
     assert on["matlabel:col:mapping:targets:0"].text == f"𝐲{C}{s1}"  # mapped target list Y
@@ -6695,13 +6713,29 @@ def test_form_layer_subscripts_the_matrix_header_labels():
     assert on["matlabel:col:tuning:commas:0"].text == f"𝒕𝐜{s1}"      # the prime tuning map's 𝒕𝐜
     assert on["matlabel:col:vectors:commas:0"].text == f"𝐜{s1}"      # the comma basis itself
     # the mapped HELD interval basis (𝑀𝐡) — over a build with a held interval column
-    held = _held(symbols=True, header_symbols=True, form=True)
+    held = _canon_cells(symbols=True, header_symbols=True, form=True, optimization=True,
+                        _held_vectors=[(-1, 1, 0)])
     assert held["matlabel:col:mapping:held:0"].text == f"𝑀{C}𝐡{s1}"
     # under unchanged the mapped comma column reads the mapped unrotated vector list 𝑀𝐯, and the
     # projection embedding's generator columns are 𝐠 — both subscripted, over a projection build
-    proj = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, header_symbols=True, form=True).cells}
+    proj = _canon_cells(symbols=True, header_symbols=True, form=True, projection=True,
+                        _held_basis_ratios=("2/1", "5/4"))
     assert proj["matlabel:col:mapping:commas:0"].text.startswith(f"𝑀{C}𝐯")  # unrotated vector list 𝑀𝐯
     assert proj["matlabel:col:projection:gens:0"].text == f"𝐠{C}{s1}"
+
+
+def test_form_layer_surfaces_the_canonical_form_when_a_non_canonical_form_is_active():
+    # step 3c: the subscript C marks the canonical form, so on a NON-canonical mapping (the default
+    # meantone is the equave-reduced form) the main rows stay BARE and the canonical-mapping row +
+    # 𝐹 surface instead — so the canonical form is always visible. Picking canonical moves the
+    # subscript onto the main rows and drops the (now redundant) canonical-mapping row.
+    C = spreadsheet.SUBSCRIPT_C
+    noncanon = {c.id: c for c in _with(symbols=True, form=True).cells}     # default = equave-reduced
+    assert noncanon["symbol:mapping:primes"].text == "𝑀"                  # bare: not the canonical form
+    assert any(cid.startswith("cell:canon:") for cid in noncanon)         # canonical mapping surfaced
+    canon = _canon_cells(symbols=True, form=True)
+    assert canon["symbol:mapping:primes"].text == f"𝑀{C}"                 # subscript on the main rows
+    assert not any(cid.startswith("cell:canon:") for cid in canon)        # no redundant canonical row
 
 
 def test_interest_is_a_top_level_toggle_after_the_tuning_boxes_group():
