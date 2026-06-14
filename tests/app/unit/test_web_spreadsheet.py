@@ -1970,6 +1970,67 @@ def test_every_open_value_tile_has_a_plain_text_string():
     assert not missing, f"open value tiles with no plain-text band: {missing}"
 
 
+def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
+    # The stronger half of the lockstep guard: a tile's plain-text band must show the SAME values as
+    # its gridded cells — not merely exist (the test above). A band built from a different derivation
+    # (the unlifted-vs-lifted / wrong-prescaler class of bug) would still have a band but disagree
+    # cell-for-cell; this catches that. We compare the multiset of numeric tokens (ints, fractions,
+    # decimals, em-dashes) the band emits against the multiset its grid cells carry — order-independent
+    # (the band is column- or row-major by tile; bracket shape is asserted by the per-tile tests), so
+    # this answers exactly "do the two views show the same numbers?". The shared DerivedQuantities makes
+    # the tuning solve identical, so cents strings match to the digit.
+    #
+    # Two by-design view differences are normalised away first (they are NOT disagreements): the grid's
+    # math-expression cells show the working AND the result ("1200 · log₂(15/13)\n= 247.741") while the
+    # band shows only the result (247.741) — so for a cell carrying "=" we read only the part after it;
+    # and the mapping band carries a leading domain-basis prefix ("2.3.13/5 [⟨…") the value cells don't,
+    # so the band is tokenised from its first EBK bracket on.
+    import re
+    from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
+    TOKEN = re.compile(r"—|-?\d+\.\d+|-?\d+/\d+|-?\d+")  # decimal before fraction before int
+
+    def cell_value(text):  # a math-expression cell shows "<working>\n= <result>"; take the result
+        return text.rsplit("=", 1)[-1] if "=" in text else text
+
+    def band_body(text):  # drop a leading domain-basis prefix ("2.3.13/5 ") before the first bracket
+        i = min((text.find(ch) for ch in "[⟨{" if ch in text), default=0)
+        return text[i:]
+
+    s = settings.defaults()
+    for k, v in list(s.items()):
+        if isinstance(v, bool):
+            s[k] = True
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
+                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    lay = b.layout()
+    value_rows = PTEXT_ROWS - {"quantities"}
+    mismatches = []
+    checked = 0
+    for (rkey, ckey) in sorted(b.declared_tiles):
+        if rkey not in value_rows or ckey in SPINE_COLUMNS or not b.tile_open(rkey, ckey):
+            continue
+        if (rkey, ckey) not in b.ptext_strings:
+            continue  # the presence test owns that failure
+        # the VALUE region of the tile only — the column's x-span × the row's value-area height
+        # (rows[rkey].y .. +h). NOT panel_rect, which spans the whole tile stack (symbol / caption /
+        # plain-text band / any overlapping control box) and would pull in the band itself and stray
+        # box values. Brackets / matlabels inside the value band carry no ascii-digit tokens.
+        rb, cx, cw = b.rows[rkey], b.col_x[ckey], b.col_w[ckey]
+        grid_tokens = []
+        for c in lay.cells:
+            if (c.text and not c.id.startswith("ptext:")
+                    and cx - 2 <= c.x <= cx + cw and rb.y - 2 <= c.y <= rb.y + rb.h + 2):
+                grid_tokens += TOKEN.findall(cell_value(c.text))
+        band_tokens = TOKEN.findall(band_body(b.ptext_strings[(rkey, ckey)]))
+        if sorted(grid_tokens) != sorted(band_tokens):
+            mismatches.append((rkey, ckey, sorted(band_tokens), sorted(grid_tokens)))
+        checked += 1
+    assert checked >= 60, f"config did not light enough value tiles ({checked})"
+    assert not mismatches, "plain text disagrees with the grid:\n" + "\n".join(
+        f"  {r}/{c}: band={bt} grid={gt}" for r, c, bt, gt in mismatches)
+
+
 def test_quantities_interval_ratios_emit_no_redundant_plain_text():
     ids = {c.id for c in _with(plain_text_values=True).cells}
     # the quantities row's interval-ratio columns (commas, targets, held, …) already show the
