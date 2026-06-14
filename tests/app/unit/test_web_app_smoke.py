@@ -626,7 +626,7 @@ def test_tooltip_dismiss_script_drops_hover_help_before_a_reflow():
 
 
 def test_every_show_toggle_has_a_non_empty_example():
-    # every Show layer must have a sample render: the "specific boxes & controls" toggles in the
+    # every Show layer must have a sample render: the "specific tiles & controls" toggles in the
     # example column (_example_html), the "general" layers as parts of the dummy tile
     # (_general_part_html). No layer may be missing its sample — except the pure grouping
     # parents (temperament / form / tuning), which carry no grid layer of their own and so
@@ -634,7 +634,7 @@ def test_every_show_toggle_has_a_non_empty_example():
     groups = dict(show_settings.SHOW_GROUPS)
     for key, _l, _d in groups["general"]:
         assert app._general_part_html(key).strip(), f"no tile sample for {key}"
-    for key, _l, _d in groups["specific boxes & controls"]:
+    for key, _l, _d in groups["specific tiles & controls"]:
         if key in show_settings.GROUPING_PARENTS:
             assert app._example_html(key) == "", f"grouping parent {key} should have a blank example"
             continue
@@ -642,7 +642,7 @@ def test_every_show_toggle_has_a_non_empty_example():
 
 
 def test_example_html_renders_each_specific_groups_special_sample_kind():
-    # the "specific boxes & controls" group's graphical samples carry their own markup: the
+    # the "specific tiles & controls" group's graphical samples carry their own markup: the
     # colorization swatches are wash-coloured chips stamped with their driving matrix (𝑀 mapping,
     # 𝐺 generator embedding, 𝐹 form), audio a speaker glyph, tuning ranges the min/max I-beam SVG.
     for key, letter, group in (("temperament_colorization", "𝑀", "temperament"),

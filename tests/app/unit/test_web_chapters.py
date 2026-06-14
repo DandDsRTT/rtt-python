@@ -52,11 +52,11 @@ def test_revealed_grows_monotonically_and_ends_complete():
 
 def test_default_position_reveals_the_early_controls_and_hides_the_later_ones():
     shown = show_settings.revealed(show_settings.CHAPTER_DEFAULT)
-    # everything introduced by ch4: the ch2 display layers, the ch3 tuning boxes + their
+    # everything introduced by ch4: the ch2 display layers, the ch3 tuning tiles + their
     # sub-controls (optimization / tuning ranges / weighting), and ch4's intervals of interest
-    assert {"counts", "temperament_boxes", "tuning_boxes", "gridded_values", "presets",
+    assert {"counts", "temperament_tiles", "tuning_tiles", "gridded_values", "presets",
             "math_expressions", "optimization", "tuning_ranges", "weighting", "interest",
-            "domain_quantities", "domain_units"} <= shown
+            "interval_ratios", "interval_vectors", "domain_units"} <= shown
     # ch5+ controls stay hidden at the default ch4
     assert not ({"units", "all_interval", "alt_complexity", "nonstandard_domain"} & shown)
     # the outside-guide controls wait for the ★ notch (custom weights aren't in the guide)

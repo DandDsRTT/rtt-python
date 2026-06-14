@@ -444,7 +444,7 @@ def test_interval_pluses_survive_hiding_the_quantities_row():
     assert quantities_only.isdisjoint(folded)            # ...the domain/generator + fold away with it
 
     off = settings.defaults()
-    off["domain_quantities"] = False                     # the setting drops the row from the layout
+    off["interval_ratios"] = False                     # the setting drops the row from the layout
     dropped = {c.id for c in spreadsheet.build(state, off).cells}
     assert interval_pluses <= dropped
     assert quantities_only.isdisjoint(dropped)
@@ -478,7 +478,7 @@ def test_interval_minuses_rehome_to_the_vectors_row_when_quantities_hidden():
         assert minus_id in cells
 
     # both interval rows hidden → nothing to remove from, so the re-homed − go too
-    off = settings.defaults(); off["domain_quantities"] = False
+    off = settings.defaults(); off["interval_ratios"] = False
     both_hidden = {c.id for c in spreadsheet.build(state, off, collapsed={"row:vectors"}).cells}
     assert {"comma_minus:0", "target_minus:0"}.isdisjoint(both_hidden)
 
@@ -984,8 +984,8 @@ def test_quantities_spine_column_is_present_with_a_vertical_gridline():
     lay = _layout()
     cells = {c.id: c for c in lay.cells}
     by_id = {ln.id: ln for ln in lay.lines}
-    # a "quantities" column header, leftmost of the data columns (before generators)
-    assert cells["header:quantities"].text == "quantities"
+    # an "interval ratios" column header, leftmost of the data columns (before generators)
+    assert cells["header:quantities"].text == "interval ratios"
     assert cells["header:quantities"].x < cells["header:gens"].x
     # ...carrying a single vertical gridline down the grid (the column spine)
     assert "trunk:quantities" in by_id
@@ -1047,8 +1047,8 @@ def test_interval_vectors_row_fans_into_per_component_axes():
     assert by_id["h:vectors:0"].start + by_id["h:vectors:0"].length >= cells["header:targets"].x
 
 
-def test_tuning_boxes_off_removes_the_tuning_rows_and_the_target_intervals_column():
-    off = {c.id for c in _with(tuning_boxes=False).cells}
+def test_tuning_tiles_off_removes_the_tuning_rows_and_the_target_intervals_column():
+    off = {c.id for c in _with(tuning_tiles=False).cells}
     # the tuning-family rows are gone
     assert not any(c.split(":")[0] in {"tuning", "just", "retune", "damage"} for c in off)
     assert {"label:tuning", "label:just", "label:retune", "label:damage"}.isdisjoint(off)
@@ -1138,47 +1138,81 @@ def test_gridded_values_off_also_empties_the_math_expression_cells():
     assert not any(c.startswith("just:") for c in off)  # gone when it is off
 
 
-def test_specific_quantities_off_removes_the_quantities_row_and_column():
-    on, off = _with(), _with(domain_quantities=False)
+def test_interval_ratios_off_removes_the_interval_ratios_row_and_column():
+    on, off = _with(), _with(interval_ratios=False)
     on_ids, off_ids = {c.id for c in on.cells}, {c.id for c in off.cells}
     assert {"label:quantities", "prime:0", "header:quantities"} <= on_ids  # present by default
-    # the quantities ROW -- its label, the domain-prime / target-ratio headers in
-    # it, the domain ± controls riding it, and its gridline -- is gone
+    # the interval-ratios ROW (band key still "quantities") -- its label, the domain-prime /
+    # target-ratio headers in it, the domain ± controls riding it, and its gridline -- is gone
     assert "label:quantities" not in off_ids
     assert not any(c.startswith(("prime:", "target:")) for c in off_ids)
     assert {"minus", "plus"}.isdisjoint(off_ids)
     assert "h:quantities" not in {ln.id for ln in off.lines}
-    # the quantities spine COLUMN goes with it: its header and its vertical gridline
+    # the interval-ratios spine COLUMN goes with it: its header and its vertical gridline
     assert "header:quantities" not in off_ids
     assert "trunk:quantities" not in {ln.id for ln in off.lines}
-    # the body quantities (mapping matrix, tuning rows) are untouched
+    # the body values (mapping matrix, tuning rows) are untouched
     assert {"cell:mapping:0:0", "tuning:target:0"} <= off_ids
 
 
-def test_temperament_boxes_off_removes_the_mapping_and_vectors_rows_and_domain_columns():
-    off = {c.id: c for c in _with(temperament_boxes=False).cells}
+def test_temperament_tiles_off_removes_the_mapping_row_and_domain_columns():
+    off = {c.id: c for c in _with(temperament_tiles=False).cells}
     on = {c.id: c for c in _with().cells}
     # the mapping quantities (matrix, mapped list, generator ratios) are gone
     assert "label:mapping" not in off
     assert not any(c.startswith(("cell:mapping:", "cell:mapped:", "gen:")) for c in off)
-    # the interval-vectors row is the temperament's too -- its vectors are read over the
-    # domain basis -- so it goes with the domain rather than lingering as a lone row when
-    # every specific box is off (it owned no toggle before, so it was the sole survivor)
-    assert "label:vectors" not in off
-    assert not any(c.startswith("cell:vec:") for c in off)
+    # the interval-vectors row owns its own toggle now (interval_vectors), so it does NOT go with
+    # the temperament tiles: it stays, still showing the target vectors over the surviving targets
+    # column. Only the cells in the now-gone temperament columns (the comma vectors) vanish.
+    assert "label:vectors" in off
+    assert "cell:vec:targets:0:0" in off
     # the whole domain-primes column goes with it: its header, the prime headers,
     # and every row's prime-side cells -- including the tuning maps over primes
     assert "header:primes" not in off
     assert not any(c.startswith(("prime:", "tuning:prime:", "just:prime:", "retune:prime:")) for c in off)
     # the commas column belongs to the temperament too, so it goes as well: header,
-    # comma headers, the comma basis, and the comma-size cells across the tuning rows
+    # comma headers, the comma basis (its vectors), and the comma-size cells across the tuning rows
     assert "header:commas" not in off
     assert not any(c.startswith(("comma:", "cell:comma:", "tuning:comma:", "just:comma:",
                                  "retune:comma:")) for c in off)
     assert {"comma_plus", "comma_minus:0"}.isdisjoint(off)
-    # tuning over the targets survives and rises into the freed space
+    # tuning over the targets survives and rises into the freed space (the mapping row vacated)
     assert "tuning:target:0" in off
     assert off["tuning:target:0"].y < on["tuning:target:0"].y
+
+
+def test_interval_vectors_off_removes_the_interval_vectors_row_only():
+    off = {c.id: c for c in _with(interval_vectors=False).cells}
+    on = {c.id: c for c in _with().cells}
+    # the interval-vectors row -- its label and every interval-as-vector cell (targets, commas,
+    # intervals of interest) -- is gone, since the row now answers to its own toggle
+    assert "label:vectors" not in off
+    assert not any(c.startswith(("cell:vec:", "cell:comma:", "cell:interest:", "cell:held:"))
+                   for c in off)
+    # ...but the temperament tiles are untouched: the mapping row, the domain columns, and the
+    # interval-ratios row (comma ratios / prime ratios) all stay
+    assert {"label:mapping", "cell:mapping:0:0", "header:primes", "header:commas",
+            "label:quantities"} <= set(off)
+    # the mapping row rises into the space the vectors row vacated
+    assert off["label:mapping"].y < on["label:mapping"].y
+
+
+def test_interval_vectors_row_reserves_no_phantom_picker_band_when_commas_column_hidden():
+    # the comma-picker band rides the interval-vectors row's head, but its picker cells only emit
+    # when the commas COLUMN is open (tile_open("vectors","commas")). Now the vectors row can show
+    # while the commas column is hidden (it answers to interval_vectors, the commas column to
+    # temperament_tiles), the band must NOT reserve empty space below the comma matrix.
+    s = settings.defaults()
+    s["temperament_tiles"], s["interval_vectors"], s["presets"] = False, True, True
+    meantone = service.from_mapping(((1, 1, 0), (0, 1, 4)))          # nc = 1 (a comma in state)
+    full = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))   # nc = 0 (no comma)
+    with_comma = {b.id: b for b in spreadsheet.build(meantone, s).blocks}
+    no_comma = {b.id: b for b in spreadsheet.build(full, s).blocks}
+    # with the commas column hidden, the comma in state must not grow the vectors row: its spine
+    # tile is the same height as the no-comma build (which reserves no band either way)
+    assert with_comma["block:vec:quantities"].h == no_comma["block:vec:quantities"].h
+    # and there are genuinely no picker cells to back a band (the commas column is gone)
+    assert not any(c.id.startswith("commapick") for c in spreadsheet.build(meantone, s).cells)
 
 
 def test_every_row_including_quantities_has_a_fold_toggle():
@@ -1266,7 +1300,7 @@ def test_a_collapsed_multiline_title_strip_fits_its_widest_line():
 def test_collapsing_a_spine_column_never_widens_it():
     # collapsing a column must never BALLOON it out to its title's strip width — a column should only
     # get narrower when folded. The overhanging "units" spine stays a COL_W strip; the leftmost
-    # "quantities" (floored wider so its title clears the frozen corner) keeps that floored width
+    # "interval ratios" (floored wider so its title clears the frozen corner) keeps that floored width
     # rather than the still-wider full-title strip.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults(); s["domain_units"] = True
@@ -1374,10 +1408,10 @@ def test_the_mapping_matrix_is_framed_top_and_bottom():
 
 
 def test_form_box_shows_the_canonical_mapping_over_the_primes():
-    # the "form boxes" toggle adds a "canonical mapping" row whose primes tile holds M in
+    # the "form tiles" toggle adds a "canonical mapping" row whose primes tile holds M in
     # canonical form (defactored + HNF) — for ((1,1,0),(0,1,4)) that is
     # ((1,0,-4),(0,1,4)), distinct from the stored matrix in the mapping row
-    cells = {c.id: c for c in _with(form_boxes=True).cells}
+    cells = {c.id: c for c in _with(form_tiles=True).cells}
     assert cells["cell:canon:0:0"].text == "1"
     assert cells["cell:canon:0:2"].text == "-4"
     assert cells["cell:canon:1:1"].text == "1"
@@ -1387,7 +1421,7 @@ def test_form_box_shows_the_canonical_mapping_over_the_primes():
 
 
 def test_canonical_mapping_row_is_framed_like_the_mapping_above_it():
-    cells = {c.id: c for c in _with(form_boxes=True).cells}
+    cells = {c.id: c for c in _with(form_tiles=True).cells}
     # a stack of maps (⟨ … ] per row), enclosed by its own top bracket + bottom brace
     assert cells["bracket:canon:map:0:l"].text == "⟨" and cells["bracket:canon:map:0:r"].text == "]"
     assert "ebktop:canon" in cells and "ebkbrace:canon" in cells
@@ -1401,7 +1435,7 @@ def test_canonical_mapping_row_is_framed_like_the_mapping_above_it():
 
 
 def test_form_box_shows_the_generator_form_matrix_over_the_gens():
-    cells = {c.id: c for c in _with(form_boxes=True).cells}
+    cells = {c.id: c for c in _with(form_tiles=True).cells}
     # F (generator form matrix, r×r) renders in the canon row's gens column as a
     # bordered grid: for ((1,1,0),(0,1,4)), F = ((1,-1),(0,1))
     assert cells["cell:form:0:0"].text == "1" and cells["cell:form:0:1"].text == "-1"
@@ -1420,7 +1454,7 @@ def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis
     assert cells["formchooser:mapping"].kind == "formchooser"
     assert cells["formchooser:comma_basis"].kind == "formchooser"
     # form CONTROLS (the dropdowns) does NOT reveal the canonical-mapping row / 𝐹 matrix — those
-    # belong to "form boxes" (greyed for now); the dropdowns appear without the boxes
+    # belong to "form tiles" (greyed for now); the dropdowns appear without the boxes
     assert not any(c.id.startswith(("cell:canon:", "cell:form:")) for c in cells.values())
     # each over its box's column (mapping over the primes, comma basis over the commas), seated
     # one BOX_INNER inside its tile-spanning box's left edge
@@ -1716,15 +1750,26 @@ def test_tuning_and_target_choosers_show_the_live_selection_temperament_is_a_pla
 def test_preset_choosers_follow_their_tiles_when_temperament_is_hidden():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["presets"], s["temperament_boxes"] = True, False
+    s["presets"], s["temperament_tiles"] = True, False
     cells = {c.id for c in spreadsheet.build(base, s).cells}
-    # every chooser rides a temperament-owned tile: the temperament + tuning choosers the
-    # domain-primes column (under the mapping matrix / tuning map), the target chooser the
-    # interval-vectors row (the target interval list tile) -- so hiding the temperament
-    # takes each chooser away with its tile
+    # the temperament + tuning choosers ride the domain-primes column (under the mapping matrix /
+    # tuning map), so hiding the temperament takes each away with that column
     assert "preset:temperament" not in cells
     assert "preset:tuning" not in cells
+    # but the target chooser rides the interval-vectors row's target tile, which now owns its own
+    # toggle (interval_vectors) rather than the temperament's -- so it stays with the temperament hidden
+    assert "preset:target" in cells
+
+
+def test_target_preset_chooser_follows_the_interval_vectors_row():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["presets"], s["interval_vectors"] = True, False
+    cells = {c.id for c in spreadsheet.build(base, s).cells}
+    # the target chooser rides the (interval-vectors, targets) tile, so hiding that row takes it
     assert "preset:target" not in cells
+    # ...while the temperament / tuning choosers (domain-primes column) are unaffected
+    assert {"preset:temperament", "preset:tuning"} <= cells
 
 
 def test_preset_dropdown_clears_the_row_below_it():
@@ -2933,7 +2978,7 @@ def test_weighting_is_implemented_now_that_its_region_builds():
 def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile():
     # the prescaler is a preset (like temperament / tuning / target), gated on PRESETS —
     # not on alt_complexity. It rides under the prescaling matrix tile (box 𝐋), which
-    # exists only while weighting is on; the temperament boxes own the primes column it sits in.
+    # exists only while weighting is on; the temperament tiles own the primes column it sits in.
     off = {c.id for c in _with("TILT minimax-S", weighting=True, presets=False).cells}  # non-unity slope reveals the prescaling tile
     on = {c.id: c for c in _with("TILT minimax-S", weighting=True, presets=True).cells}
     assert "preset:prescaler" not in off  # no chooser unless presets is on
@@ -2947,10 +2992,10 @@ def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile():
     # other presets, the dropdown sits inside a tile-spanning box at BOX_INNER off the edge)
     assert sel.y > on["cell:prescaling:primes:2:2"].y
     assert sel.x == on["header:primes"].x + spreadsheet.BOX_INNER  # one inner pad into the primes column
-    # gone without the prescaling tile (weighting off) or its column (temperament boxes off)
+    # gone without the prescaling tile (weighting off) or its column (temperament tiles off)
     assert "preset:prescaler" not in {c.id for c in _with(weighting=False, presets=True).cells}
     assert "preset:prescaler" not in {
-        c.id for c in _with(weighting=True, presets=True, temperament_boxes=False).cells}
+        c.id for c in _with(weighting=True, presets=True, temperament_tiles=False).cells}
 
 
 def test_prescaler_chooser_shows_dash_when_a_custom_diagonal_deviates():
@@ -3637,7 +3682,7 @@ def test_box_l_diminuator_needs_weighting_and_the_primes_column():
     # is gone if weighting is off or the temperament (primes) boxes are hidden
     assert "control:diminuator" not in {c.id for c in _with(weighting=False, alt_complexity=True).cells}
     assert "control:diminuator" not in {
-        c.id for c in _with(weighting=True, alt_complexity=True, temperament_boxes=False).cells
+        c.id for c in _with(weighting=True, alt_complexity=True, temperament_tiles=False).cells
     }
 
 
@@ -3678,7 +3723,7 @@ def test_subcontrol_nesting_depth_drives_panel_indentation():
     # "optimization" parents the optimize sub-axes (weighting, tuning ranges) at depth 2, and
     # weighting's three refinements (all-interval, alt. complexity, custom weights) at depth 3.
     assert settings.depth_of("tuning") == 0          # the pure grouping parent is top-level
-    assert settings.depth_of("tuning_boxes") == 1
+    assert settings.depth_of("tuning_tiles") == 1
     assert settings.depth_of("optimization") == 1    # Mode A, a direct child of the tuning group
     assert settings.depth_of("projection") == 1      # Mode B, optimization's peer
     assert settings.depth_of("tuning_colorization") == 1
@@ -3688,7 +3733,7 @@ def test_subcontrol_nesting_depth_drives_panel_indentation():
     assert settings.depth_of("alt_complexity") == 3
     assert settings.depth_of("custom_weights") == 3
     assert settings.depth_of("temperament") == 0     # the other grouping parents are top-level too
-    assert settings.depth_of("temperament_boxes") == 1
+    assert settings.depth_of("temperament_tiles") == 1
     assert settings.depth_of("temperament_colorization") == 1  # now level with the boxes, not under them
     assert settings.depth_of("mnemonics") == 1       # untouched by the regroup (still under names)
 
@@ -5037,7 +5082,7 @@ def test_every_implemented_toggle_actually_changes_the_layout():
 
     def with_parents_on(key):
         # a sub-control only takes effect while its parent chain is on (e.g. alt. complexity
-        # needs weighting, which needs tuning boxes), so enable that chain before flipping it
+        # needs weighting, which needs tuning tiles), so enable that chain before flipping it
         s = settings.defaults()
         for parent in settings.ancestors_of(key):
             s[parent] = True
@@ -5519,10 +5564,10 @@ def test_optimization_power_field_reflects_the_current_scheme():
     assert ls["optimization:power"].text == "2"  # miniRMS ⇒ p = 2
 
 
-def test_optimization_needs_its_parent_tuning_boxes():
-    # optimization is a sub-control of tuning boxes: with the tuning region hidden
+def test_optimization_needs_its_parent_tuning_tiles():
+    # optimization is a sub-control of tuning tiles: with the tuning region hidden
     # there is nothing to annotate, so the box stays away even when toggled on
-    cells = {c.id for c in _with(optimization=True, tuning_boxes=False).cells}
+    cells = {c.id for c in _with(optimization=True, tuning_tiles=False).cells}
     assert "optimization:power" not in cells
     assert "optimization:title" not in cells
 
@@ -6039,7 +6084,7 @@ def test_gridline_ids_are_unique_across_every_fan_and_spine():
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         {**settings.defaults(), "generator_detempering": True, "optimization": True,
-         "weighting": True, "form_boxes": True},  # form_boxes reveals the canonical-mapping row
+         "weighting": True, "form_tiles": True},  # form_tiles reveals the canonical-mapping row
         interest=((-1, 1, 0), (2, 0, -1)),
         held_vectors=((1, 0, 0), (-1, 1, 0)),
     )
@@ -6383,7 +6428,7 @@ def test_off_by_default_rows_colorize_by_content_too():
     s = settings.defaults()
     s["temperament_colorization"] = True
     s["tuning_colorization"] = True
-    s["form_boxes"] = True   # reveal the canonical-mapping row
+    s["form_tiles"] = True   # reveal the canonical-mapping row
     s["weighting"] = True       # reveal the prescaling + complexity rows (a tuning-boxes sub-control)
     s["optimization"] = True    # reveal the held column
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
@@ -6447,7 +6492,7 @@ def _spine_colormap():
     # spine intersection the continuity rule colours is present to probe
     s = settings.defaults()
     s["tuning_colorization"] = s["temperament_colorization"] = True
-    s["counts"] = s["domain_units"] = s["domain_quantities"] = True
+    s["counts"] = s["domain_units"] = s["interval_ratios"] = True
     s["weighting"] = s["optimization"] = s["generator_detempering"] = True
     return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                              tuning_scheme="TILT minimax-S",  # non-unity slope reveals the slope-gated prescaling/complexity rows
@@ -6632,19 +6677,19 @@ def test_form_layer_is_a_live_parent_with_live_controls_over_two_greyed_subcontr
     # sub-controls are now live too: "form_controls" (the <choose form> dropdowns), while the
     # canonical-mapping / 𝐹 boxes and the magenta wash stay greyed stubs until their content ships.
     keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
-    assert {"form", "form_controls", "form_boxes", "form_colorization"} <= keys
+    assert {"form", "form_controls", "form_tiles", "form_colorization"} <= keys
     assert settings.defaults()["form"] is False and "form" in settings.IMPLEMENTED  # live parent
     assert "form" not in settings.GROUPING_PARENTS  # it carries a real layer, unlike temperament/tuning
-    for child in ("form_controls", "form_boxes", "form_colorization"):
+    for child in ("form_controls", "form_tiles", "form_colorization"):
         assert settings.SUBCONTROLS[child] == "form"            # grouped under the form parent
         assert settings.defaults()[child] is False              # default off
     assert "form_controls" in settings.IMPLEMENTED              # the dropdowns are live now (step 2)
-    assert "form_boxes" not in settings.IMPLEMENTED             # still greyed (content not built yet)
+    assert "form_tiles" not in settings.IMPLEMENTED             # still greyed (content not built yet)
     assert "form_colorization" not in settings.IMPLEMENTED      # still greyed
     # the parent precedes its children in the group (the panel requires it for indentation)
-    specific = [k for k, *_ in dict(settings.SHOW_GROUPS)["specific boxes & controls"]]
+    specific = [k for k, *_ in dict(settings.SHOW_GROUPS)["specific tiles & controls"]]
     assert specific.index("form") < min(specific.index(c)
-                                        for c in ("form_controls", "form_boxes", "form_colorization"))
+                                        for c in ("form_controls", "form_tiles", "form_colorization"))
 
 
 _CANON_MEANTONE = ((1, 0, -4), (0, 1, 4))  # meantone's canonical (defactored Hermite) form
@@ -6738,13 +6783,13 @@ def test_form_layer_surfaces_the_canonical_form_when_a_non_canonical_form_is_act
     assert not any(cid.startswith("cell:canon:") for cid in canon)        # no redundant canonical row
 
 
-def test_interest_is_a_top_level_toggle_after_the_tuning_boxes_group():
+def test_interest_is_a_top_level_toggle_after_the_tuning_tiles_group():
     # "other intervals of interest" is a standalone grey column (not part of the cyan
     # tuning region), so it owns a top-level toggle: built (implemented), default on, and
     # NOT a sub-control of the tuning group. It sits just after that group (whose last
     # member is colorization) and before generator detempering, mirroring the grid where
     # the interest column lands just right of the target intervals.
-    items = dict(settings.SHOW_GROUPS)["specific boxes & controls"]
+    items = dict(settings.SHOW_GROUPS)["specific tiles & controls"]
     keys = [k for k, *_ in items]
     assert keys[keys.index("tuning_colorization") + 1] == "interest"
     assert keys[keys.index("interest") + 1] == "generator_detempering"
@@ -6757,10 +6802,10 @@ def test_interest_is_a_top_level_toggle_after_the_tuning_boxes_group():
     assert label == "other intervals\nof interest"
 
 
-def test_interest_column_follows_its_own_toggle_not_tuning_boxes():
-    # the interest column used to ride the tuning boxes toggle; now it has its own. Turning
-    # tuning boxes off drops the cyan tuning columns but leaves the interest column standing.
-    off_tuning = {c.id for c in _with(tuning_boxes=False).cells}
+def test_interest_column_follows_its_own_toggle_not_tuning_tiles():
+    # the interest column used to ride the tuning tiles toggle; now it has its own. Turning
+    # tuning tiles off drops the cyan tuning columns but leaves the interest column standing.
+    off_tuning = {c.id for c in _with(tuning_tiles=False).cells}
     assert "header:targets" not in off_tuning  # the tuning column goes...
     assert "header:interest" in off_tuning      # ...the interest column stays
     # and its own toggle hides it — header, axis and content — even when populated
@@ -6789,15 +6834,15 @@ def test_caption_widened_commas_tile_keeps_its_fold_toggle_on_the_panel_edge():
 
 def test_show_flags_gate_sub_controls_under_their_parent():
     # _resolve_show_flags (build's phase-1) ANDs each nested toggle with its parent: optimization /
-    # weighting nest under tuning_boxes, alt_complexity under weighting, mnemonics under names. So a
+    # weighting nest under tuning_tiles, alt_complexity under weighting, mnemonics under names. So a
     # sub-control can't render while its region is hidden, whatever its own toggle says.
     s = settings.defaults()
-    s.update(tuning_boxes=False, optimization=True, weighting=True, alt_complexity=True,
+    s.update(tuning_tiles=False, optimization=True, weighting=True, alt_complexity=True,
              names=False, mnemonics=True)
     f = spreadsheet._resolve_show_flags(s, frozenset())
-    assert not (f.optimization or f.weighting or f.alt_complexity)  # all gated off by tuning_boxes
+    assert not (f.optimization or f.weighting or f.alt_complexity)  # all gated off by tuning_tiles
     assert not f.mnemonics                                          # gated off by names
-    s.update(tuning_boxes=True, names=True)  # parents on -> sub-controls follow their own toggle
+    s.update(tuning_tiles=True, names=True)  # parents on -> sub-controls follow their own toggle
     f = spreadsheet._resolve_show_flags(s, frozenset())
     assert f.optimization and f.weighting and f.alt_complexity and f.mnemonics
 
@@ -6806,7 +6851,7 @@ def test_show_flags_box_choosers_gate_on_the_collapsed_state():
     # the box-𝐋 / box-𝒄 in-tile choosers (lbox/cbox) show only while their column + row + tile are
     # open; collapsing any of them hides the chooser even with every toggle on.
     s = settings.defaults()
-    s.update(tuning_boxes=True, weighting=True, alt_complexity=True, temperament_boxes=True)
+    s.update(tuning_tiles=True, weighting=True, alt_complexity=True, temperament_tiles=True)
     assert spreadsheet._resolve_show_flags(s, frozenset()).lbox  # all open -> box-𝐋 chooser shows
     assert spreadsheet._resolve_show_flags(s, frozenset()).cbox  # ...and box-𝒄
     assert not spreadsheet._resolve_show_flags(s, frozenset({"row:prescaling"})).lbox  # collapsed -> hidden
@@ -8591,10 +8636,10 @@ def test_projection_row_fans_a_gridline_per_subrow():
     assert {"h:projection:0", "h:projection:1", "h:projection:2"} <= lines
 
 
-def test_projection_hides_with_its_parent_tuning_boxes():
-    # projection is a sub-control of tuning boxes, so turning the parent off takes the
+def test_projection_hides_with_its_parent_tuning_tiles():
+    # projection is a sub-control of tuning tiles, so turning the parent off takes the
     # projection box with it (even when projection itself is on)
-    cells = {c.id for c in _with(projection=True, tuning_boxes=False).cells}
+    cells = {c.id for c in _with(projection=True, tuning_tiles=False).cells}
     assert "label:projection" not in cells
     assert not any(c.startswith("cell:proj:") for c in cells)
 
@@ -9210,9 +9255,9 @@ def test_no_scaling_factors_or_unchanged_columns_without_projection():
 
 
 def test_v_consolidation_needs_the_commas_column_present():
-    # V = C|U lives in the commas column; with the temperament boxes off that column is gone,
+    # V = C|U lives in the commas column; with the temperament tiles off that column is gone,
     # so projection-on adds no consolidation and no (empty) scaling-factors row
-    cells = {c.id for c in _with(projection=True, temperament_boxes=False).cells}
+    cells = {c.id for c in _with(projection=True, temperament_tiles=False).cells}
     assert "label:scaling_factors" not in cells
     assert not any(c.startswith(("cell:scaling:", "cell:unchanged:")) for c in cells)
 

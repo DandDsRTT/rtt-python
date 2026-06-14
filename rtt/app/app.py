@@ -2949,7 +2949,7 @@ def index() -> None:
         pending=lambda: editor.pending_mapping_row, set_pending=editor.set_pending_mapping_row,
         commit=editor.edit_mapping,
         validate=lambda rows: service.is_proper_temperament(rows),
-        guard=lambda: editor.settings["temperament_boxes"])  # no editable matrix when hidden
+        guard=lambda: editor.settings["temperament_tiles"])  # no editable matrix when hidden
     _COMMA_EDIT = _VecGridEdit(
         group="commas", count=lambda: len(editor.state.comma_basis),
         cell_id=ids.comma_cell,  # prime down the rows, comma across

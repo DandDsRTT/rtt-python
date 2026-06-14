@@ -578,7 +578,7 @@ class _ShowFlags:
     temp: bool
     form: bool
     form_controls: bool
-    form_boxes: bool
+    form_tiles: bool
     tuning: bool
     optimization: bool
     weighting: bool
@@ -590,7 +590,8 @@ class _ShowFlags:
     gridded: bool
     quantities: bool
     decimals: bool
-    domain_quantities: bool
+    interval_ratios: bool
+    interval_vectors: bool
     math: bool
 
 
@@ -598,9 +599,9 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
     """The first build phase: derive the view flags + their gating from the Show settings. Pure —
     depends only on the settings dict and the collapsed set (no geometry)."""
     captions = settings["names"]  # the in-tile quantity captions; row/col titles always show
-    temp = settings["temperament_boxes"]
-    tuning = settings["tuning_boxes"]
-    # optimization / weighting are sub-controls of tuning boxes: they annotate / open the tuning
+    temp = settings["temperament_tiles"]
+    tuning = settings["tuning_tiles"]
+    # optimization / weighting are sub-controls of tuning tiles: they annotate / open the tuning
     # region, so they only apply while that region (and its target column) shows. alt. complexity
     # is a sub-control of weighting: it adds the box-𝐋 "replace diminuator" checkbox.
     optimization = tuning and settings["optimization"]
@@ -623,7 +624,7 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         temp=temp,
         form=settings["form"],  # the canonical-form subscript C on 𝑀/𝒈/G (the parent layer)
         form_controls=settings["form_controls"],  # the <choose form> chooser dropdowns
-        form_boxes=settings["form_boxes"],  # the canonical-mapping row + 𝐹 matrix (greyed for now)
+        form_tiles=settings["form_tiles"],  # the canonical-mapping row + 𝐹 matrix (greyed for now)
         tuning=tuning,
         optimization=optimization,
         weighting=weighting,
@@ -633,24 +634,26 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         # primes / targets columns to fit the controls. box 𝒄 (the complexity chooser) shows with
         # WEIGHTING alone (the norm is core to weighting, not an alt.-complexity extra); only box 𝐋
         # (the prescaler controls) stays on alt_complexity.
-        lbox=(alt_complexity and settings["temperament_boxes"]
+        lbox=(alt_complexity and settings["temperament_tiles"]
               and "col:primes" not in collapsed and "row:prescaling" not in collapsed
               and "tile:prescaling:primes" not in collapsed),
         cbox=(weighting
               and "col:targets" not in collapsed and "row:complexity" not in collapsed
               and "tile:complexity:targets" not in collapsed),
         detempering=settings["generator_detempering"],  # the generator-detempering column (matrix D)
-        interest=settings["interest"],  # the other-intervals-of-interest column (its own box toggle)
+        interest=settings["interest"],  # the other-intervals-of-interest column (its own tiles toggle)
         # Value-display toggles. "gridded values" is the master switch: off filters every value a
         # tile holds (see GRIDDED_KINDS). "quantities" is gentler — it keeps boxes/EBK marks and
-        # only blanks the body numbers (BLANKED_NUMBER_KINDS); "domain_quantities" governs the
-        # quantities row and its spine column. "math" prefixes a tuning cent with its closed form.
+        # only blanks the body numbers (BLANKED_NUMBER_KINDS); "interval_ratios" governs the
+        # interval-ratios row and its spine column, and "interval_vectors" the interval-vectors row
+        # (which used to ride temperament_tiles). "math" prefixes a tuning cent with its closed form.
         gridded=settings["gridded_values"],
         quantities=settings["quantities"],
         # decimals off rounds every shown value to the nearest integer (service.cents / prescale_text).
         # .get keeps old persisted/hand-built settings dicts (pre-decimals) reading at full precision.
         decimals=settings.get("decimals", True),
-        domain_quantities=settings["domain_quantities"],
+        interval_ratios=settings["interval_ratios"],
+        interval_vectors=settings["interval_vectors"],
         math=settings["math_expressions"],
     )
 
@@ -915,7 +918,7 @@ class _GridBuilder:
             self.target_spec = service.DEFAULT_TARGET_SPEC
         self.collapsed = self.collapsed or frozenset()  # ids ("row:tuning", "col:targets") shown as strips
         (show_counts, show_charts, show_ranges, show_domain_units, show_temp,
-         show_tuning, show_interest, show_domain_quantities) = self._unpack_show_flags()
+         show_tuning, show_interest, show_interval_ratios) = self._unpack_show_flags()
         # Row labels and column headers (and their gutters) are always present.
         label_w = LABEL_W
         header_h = HEADER_H
@@ -928,10 +931,10 @@ class _GridBuilder:
         self._resolve_projection_data(show_tuning)
         self._declare_tiles(interest_tiles, held_tiles, detempering_tiles)
 
-        col_bands, content_x0 = self._define_col_bands(show_domain_quantities, show_domain_units,
+        col_bands, content_x0 = self._define_col_bands(show_interval_ratios, show_domain_units,
                                                        show_temp, show_tuning, show_interest, label_w)
 
-        row_bands = self._define_row_bands(show_counts, show_domain_quantities, show_domain_units,
+        row_bands = self._define_row_bands(show_counts, show_interval_ratios, show_domain_units,
                                            show_temp, show_tuning)
 
         self._layout_columns(col_bands, content_x0)
@@ -967,7 +970,7 @@ class _GridBuilder:
         show_temp = _f.temp
         self.show_form = _f.form  # the form layer: subscript-C the canonical-form objects (𝑀/𝒈/G)
         self.show_form_controls = _f.form_controls
-        self.show_form_boxes = _f.form_boxes  # the canonical-mapping row + 𝐹 matrix (greyed for now)
+        self.show_form_tiles = _f.form_tiles  # the canonical-mapping row + 𝐹 matrix (greyed for now)
         show_tuning = _f.tuning
         self.show_optimization = _f.optimization
         self.show_weighting = _f.weighting
@@ -996,7 +999,10 @@ class _GridBuilder:
         self.gridded = _f.gridded
         self.show_quantities = _f.quantities
         self._decimals = _f.decimals  # False rounds every formatted value to the nearest integer
-        show_domain_quantities = _f.domain_quantities
+        show_interval_ratios = _f.interval_ratios
+        # the interval-vectors row's own toggle (it used to ride temperament_tiles); read in
+        # _define_row_bands off self so the band-signature tuple stays unchanged.
+        self.show_interval_vectors = _f.interval_vectors
         self.show_math = _f.math
         # custom-weight mode is target-mode only AND not the math-expr view: there the 𝒘 row's cells
         # are editable inputs and the slope chooser greys (the typed weights supersede the slope)
@@ -1004,7 +1010,7 @@ class _GridBuilder:
                                       and not service.is_all_interval(self.tuning_scheme)
                                       and not self.show_math)
         return (show_counts, show_charts, show_ranges, show_domain_units, show_temp,
-                show_tuning, show_interest, show_domain_quantities)
+                show_tuning, show_interest, show_interval_ratios)
 
     def _resolve_superspace_dims(self) -> None:
         """Resolve the domain dims (d, r, elements) and the chapter-9 superspace dims + show flags."""
@@ -1175,7 +1181,7 @@ class _GridBuilder:
         # surface instead, so the canonical form is always visible somewhere.
         self.form_is_canonical = self.mapping_form_key == "canonical"
         self.show_form_subscript = self.show_form and self.form_is_canonical  # subscript-C on the main rows
-        self.show_canon = self.show_form_boxes or (self.show_form and not self.form_is_canonical)
+        self.show_canon = self.show_form_tiles or (self.show_form and not self.form_is_canonical)
         self.target_vectors = service.target_interval_vectors(self.targets, self.d, self.elements)  # k vectors, each d-tall
         # held intervals: the optimization box's held-just constraints — user-edited vectors in the
         # held column (like the intervals of interest). The tuning holds each exactly just, so
@@ -1473,7 +1479,7 @@ class _GridBuilder:
         # column above plus the power line below (held intervals are a subset of the unchanged ones).
         # the generator-detempering column holds the matrix D — one JI interval (a vector) per
         # generator that tempers to it (the mapping's right-inverse), framed like the comma
-        # basis / target list. An independent box toggle, riding between domain primes and commas.
+        # basis / target list. An independent tiles toggle, riding between domain primes and commas.
         self.detempering_vectors = service.generator_detempering(self.state.mapping) if self.show_detempering else ()
         # the detempering intervals' sizes under the tuning: the tempered sizes ARE the generator
         # tuning map (𝒕D = 𝒈, since each D tempers to its generator), with just and retuning sizes
@@ -1495,7 +1501,7 @@ class _GridBuilder:
     def _resolve_projection_data(self, show_tuning) -> None:
         """Resolve the projection/embedding matrices and the projected vector lists (domain + superspace)."""
         # the rational tempering projection P = GM and its generator embedding G (the projection
-        # sub-control of tuning boxes): P is a d×d operator over the domain primes, G a d×r matrix
+        # sub-control of tuning tiles): P is a d×d operator over the domain primes, G a d×r matrix
         # whose columns are the held tuning's generators as fractional vectors. Both are built from
         # the tuning's held interval basis (self.held_basis_ratios) — so P = GM. service returns None
         # when the tuning is NOT a full rational projection (it holds fewer than r rational intervals,
@@ -1656,14 +1662,14 @@ class _GridBuilder:
         if not self.mi_shown:
             self.declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
 
-    def _define_col_bands(self, show_domain_quantities, show_domain_units, show_temp,
+    def _define_col_bands(self, show_interval_ratios, show_domain_units, show_temp,
                           show_tuning, show_interest, label_w):
         """Define the column bands (key, natural width, present, collapsible) and the content origin."""
         # Column bands left-to-right: (key, natural width, present, collapsible).
-        # Each set-column belongs to a box toggle: generators, the domain primes and
-        # the commas are the temperament's (shown with temperament_boxes), target-
-        # intervals are the tuning's (shown with tuning_boxes), and the other-intervals-
-        # of-interest column has its own (shown with interest) -- turning a box off
+        # Each set-column belongs to a tiles toggle: generators, the domain primes and
+        # the commas are the temperament's (shown with temperament_tiles), target-
+        # intervals are the tuning's (shown with tuning_tiles), and the other-intervals-
+        # of-interest column has its own (shown with interest) -- turning a tile group off
         # takes its whole column with it, including the other family's cells that ride
         # in it (e.g. the tuning maps over primes, or the mapped target interval list
         # over targets). A collapsed column folds to a strip sized to read its title, but never
@@ -1680,7 +1686,7 @@ class _GridBuilder:
         domain_title = ("domain basis\nelements"
                         if service.domain_has_nonprimes(self.elements)
                         else "domain\nprimes")
-        self.col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
+        self.col_header = {"quantities": "interval ratios", "units": "units", "gens": "generators",
                       "ssgens": "superspace\ngenerators", "ssprimes": "superspace\nprimes",
                       "primes": domain_title, "detempering": "generator\ndetempering",
                       "commas": "commas",
@@ -1742,7 +1748,7 @@ class _GridBuilder:
         self.all_interval_simplicity_weight = self.all_interval and (
             bool(self.size_factor) or self.prescaler_is_matrix)
         col_bands = (
-            ("quantities", COL_W, show_domain_quantities, True),
+            ("quantities", COL_W, show_interval_ratios, True),
             ("units", COL_W, show_domain_units, True),
             ("gens", 2 * BRACKET_W + self.r * COL_W, show_temp, True),
             # the chapter-9 superspace columns ride between gens and the domain primes — rL
@@ -1772,7 +1778,7 @@ class _GridBuilder:
         content_x0 = self.node_x + TOGGLE + GAP
         return col_bands, content_x0
 
-    def _define_row_bands(self, show_counts, show_domain_quantities, show_domain_units,
+    def _define_row_bands(self, show_counts, show_interval_ratios, show_domain_units,
                           show_temp, show_tuning):
         """Define the row bands (key, natural height, present, collapsible, label) and the captioned-row set."""
         # Row bands top-to-bottom: (key, natural height, present, collapsible, label), laid
@@ -1780,14 +1786,18 @@ class _GridBuilder:
         # that layout, so each column's width can reserve room for its present rows' captions.
         row_bands = (
             ("counts", ROW_H, show_counts, True, "counts"),
-            ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
+            # the interval-ratios row (band key still "quantities") and its spine column ride
+            # interval_ratios; its title now reads "interval ratios".
+            ("quantities", ROW_H, show_interval_ratios, True, "interval ratios"),
             ("units", ROW_H, show_domain_units, True, "units"),
             # the scaling factors λ = diag(λ) — the projection's eigenvalue list (0 per comma,
             # vanished; 1 per unchanged, held) — a one-row scalar list over the consolidated V
             # column, riding just above the interval-vectors row (the mockup). Present with the
             # projection toggle, exactly when V consolidates (show_unchanged).
             ("scaling_factors", ROW_H, self.show_unchanged, True, "scaling factors"),
-            ("vectors", self.d * ROW_H, show_temp, True, "interval vectors"),
+            # the interval-vectors row now owns its own toggle (interval_vectors) rather than riding
+            # temperament_tiles, so it can show/hide independently of the mapping + domain columns.
+            ("vectors", self.d * ROW_H, self.show_interval_vectors, True, "interval vectors"),
             ("canon", self.rc * ROW_H, self.show_canon, True, "canonical mapping"),
             ("mapping", self.r_shown * ROW_H, show_temp, True, "mapping"),
             # the chapter-9 superspace rows sit between mapping and the projection row, the row
@@ -1807,7 +1817,7 @@ class _GridBuilder:
             # the rational tempering projection P = GM, a d×d matrix over the domain primes — d rows
             # tall like the interval-vectors row, framed like the mapping. Comes AFTER the superspace
             # rows (the mockup), so its superspace tiles G_L→s / P_L→s sit below B_L / M_L. Present only
-            # when service could build it (projection on, tuning boxes on); a None matrix drops the band.
+            # when service could build it (projection on, tuning tiles on); a None matrix drops the band.
             ("projection", self.d * ROW_H, self.show_projection, True, "projection"),
             ("tuning", ROW_H, show_tuning, True, "tuning"),
             ("just", ROW_H, show_tuning, True, "just tuning"),
@@ -2067,10 +2077,15 @@ class _GridBuilder:
             # the drag-to-combine handles ride a band at the TOP of the interval-vectors head, ABOVE
             # the column labels (so the grip sits OUTSIDE the c₁/𝒕ᵢ labels, mirroring the row handle
             # to the left of the 𝒎ᵢ labels). Present only when the feature is on and some interval
-            # column has ≥ 2 entries to combine — the head grows by the band so the tile is taller.
+            # column that is OPEN has ≥ 2 entries to combine — the head grows by the band so the tile
+            # is taller. The col_open guard matters now the interval-vectors row can show while a
+            # column is hidden (it answers to interval_vectors, not the columns' temperament/tuning
+            # toggles), so a closed column's count must not reserve an empty handle band.
             int_handle = (key == "vectors" and not folded and self.settings.get("drag_to_combine")
-                          and (self.nc >= 2 or (self.k >= 2 and not self.all_interval)
-                               or self.nh >= 2 or self.mi >= 2))
+                          and ((self.nc >= 2 and self.col_open("commas"))
+                               or (self.k >= 2 and not self.all_interval and self.col_open("targets"))
+                               or (self.nh >= 2 and self.col_open("held"))
+                               or (self.mi >= 2 and self.col_open("interest"))))
             handle_band = (ROW_HANDLE_W + ROW_HANDLE_GAP) if int_handle else 0
             # the matlabel needs MATLABEL_H + 2*PAD of head to sit centred with breathing room
             base_head = 0 if folded else max(head_default, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else head_default)
@@ -2113,9 +2128,13 @@ class _GridBuilder:
             # the per-comma-column pickers ride a band just below the ⟩ foot of the comma matrix
             # (above the symbol/caption stack and the whole-temperament chooser): one compact comma
             # chooser per real comma column, plus one on a green draft column being added. Reserved on
-            # the interval-vectors row when the preset choosers show and there's a comma (or a draft
-            # adding the first) to pick — a full-rank temperament with no draft has none.
+            # the interval-vectors row when the preset choosers show, the commas COLUMN is open, and
+            # there's a comma (or a draft adding the first) to pick — a full-rank temperament with no
+            # draft has none. The col_open guard matters now the interval-vectors row can show while
+            # the commas column is hidden (it answers to interval_vectors, not temperament_tiles): the
+            # picker cells (tile_open("vectors","commas")) would not emit, so reserve no empty band.
             cpick = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and self.show_presets
+                                               and self.col_open("commas")
                                                and (self.nc > 0 or self.pending is not None) and not folded) else 0
             ptext = self.ptext_band(key, folded)
             # open a consistent gap between the stacked in-tile bands: pad each present one by BAND_GAP

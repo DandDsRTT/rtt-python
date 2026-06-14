@@ -471,7 +471,7 @@ def _underline_html(text: str, spans) -> str:
     return "".join(out)
 
 
-# The "example" column of the Show panel's "specific boxes & controls" group: one illustrative
+# The "example" column of the Show panel's "specific tiles & controls" group: one illustrative
 # sample per toggle, read from the mockup's Show legend. Most are a glyph or short string (the
 # maps' bold-italic letters, the vectors/matrices' bold-upright ones, the plain captions); a few
 # (the colorization swatch, the audio speaker, the tuning-ranges I-beam) are graphical, built in
@@ -480,13 +480,14 @@ def _underline_html(text: str, spans) -> str:
 # this table holds only the specific-group keys.
 _EXAMPLE_TEXT: dict[str, str] = {
     "counts": "𝑑",
-    "domain_quantities": "2.3.5",
+    "interval_ratios": "2.3.5",
+    "interval_vectors": "[−4 4 −1⟩",          # an interval as a column vector (monzo) — the syntonic comma 81/80
     "domain_units": "p₁/",
-    "temperament_boxes": "𝑀",
+    "temperament_tiles": "𝑀",
     "form": "𝑀" + spreadsheet.SUBSCRIPT_C,  # the canonical-form subscript this layer adds (𝑀 → 𝑀_C)
     "form_controls": "canonical form",
-    "form_boxes": "𝐹",                       # the generator form matrix (the mockup's form-boxes example)
-    "tuning_boxes": "T",
+    "form_tiles": "𝐹",                       # the generator form matrix (the mockup's form-tiles example)
+    "tuning_tiles": "T",
     "optimization": "𝑝",
     "weighting": "𝒘",
     "all_interval": "minimax-S",
@@ -522,7 +523,7 @@ def _example_chart() -> str:
 
 
 def _example_html(key: str) -> str:
-    """The example-column sample for one "specific boxes & controls" toggle, as an HTML string.
+    """The example-column sample for one "specific tiles & controls" toggle, as an HTML string.
     (The "general" group is no longer a checkbox column — it is the clickable dummy tile, which
     renders its own samples; see _general_part_html.)"""
     if key in show_settings.GROUPING_PARENTS:

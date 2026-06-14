@@ -414,7 +414,7 @@ def test_turning_off_alt_complexity_resets_the_tuning_to_basic_minimax_lp():
     # 𝑞 ≠ 1) and a non-∞ optimization power 𝑝. Turning it off returns the tuning to plain minimax-lp
     # (𝑝 = ∞, the lp complexity with 𝑞 = 1), discarding the advanced choices as ONE undoable step.
     editor = Editor()
-    editor.set_show("alt_complexity", True)  # also enables its ancestors (weighting, tuning_boxes)
+    editor.set_show("alt_complexity", True)  # also enables its ancestors (weighting, tuning_tiles)
     editor.set_complexity_norm_power(2)       # Euclidean (q = 2) — an alternative complexity
     editor.set_optimization_power(2)          # miniRMS (p = 2) — an alternative power
     editor.set_show("alt_complexity", False)  # basic mode -> reset
@@ -1944,7 +1944,7 @@ def test_deselecting_a_parent_also_deselects_its_subcontrols():
     editor.set_show("temperament_colorization", True)
     assert editor.settings["temperament_colorization"] is True
     editor.set_show("temperament", False)
-    assert editor.settings["temperament_boxes"] is False
+    assert editor.settings["temperament_tiles"] is False
     assert editor.settings["temperament_colorization"] is False
 
 
@@ -1958,7 +1958,7 @@ def test_deselecting_a_parent_cascades_through_nested_subcontrols():
                 "tuning_ranges", "optimization"):
         editor.set_show(key, True)
     editor.set_show("tuning", False)
-    for key in ("tuning", "tuning_boxes", "weighting", "all_interval", "alt_complexity",
+    for key in ("tuning", "tuning_tiles", "weighting", "all_interval", "alt_complexity",
                 "custom_weights", "tuning_ranges", "optimization", "projection",
                 "tuning_colorization"):
         assert editor.settings[key] is False
@@ -1967,7 +1967,7 @@ def test_deselecting_a_parent_cascades_through_nested_subcontrols():
 def test_deselecting_optimization_cascades_the_optimize_subaxes():
     # "optimization" is now a content+parent: deselecting it (Mode A) turns off everything beneath
     # it — weighting and its three refinements, plus tuning ranges — but leaves its siblings
-    # (tuning boxes, projection) alone.
+    # (tuning tiles, projection) alone.
     editor = Editor()
     for key in ("weighting", "all_interval", "alt_complexity", "custom_weights", "tuning_ranges"):
         editor.set_show(key, True)
@@ -1987,7 +1987,7 @@ def test_the_subcontrol_cascade_is_one_undoable_action():
     assert editor.settings["temperament_colorization"] is False
     editor.undo()  # a single undo brings the group AND its sub-controls back
     assert editor.settings["temperament"] is True
-    assert editor.settings["temperament_boxes"] is True
+    assert editor.settings["temperament_tiles"] is True
     assert editor.settings["temperament_colorization"] is True
 
 
@@ -1997,7 +1997,7 @@ def test_selecting_a_parent_does_not_force_its_subcontrols_on():
     editor = Editor()
     editor.set_show("temperament", False)  # boxes + colorization off
     editor.set_show("temperament", True)   # re-expand the group
-    assert editor.settings["temperament_boxes"] is False
+    assert editor.settings["temperament_tiles"] is False
     assert editor.settings["temperament_colorization"] is False
 
 
@@ -2019,25 +2019,25 @@ def test_selecting_a_nested_subcontrol_pulls_its_whole_parent_chain_on():
     # the pull-on is transitive, mirroring the off-cascade: "all-interval" -> "weighting" ->
     # "optimization" -> "tuning", so selecting the great-grandchild pulls the whole chain on (else
     # it would show while the branch it lives in stays hidden). Note it pulls "optimization"/"tuning"
-    # on, NOT "tuning boxes" — that is a sibling, not an ancestor.
+    # on, NOT "tuning tiles" — that is a sibling, not an ancestor.
     editor = Editor()
     editor.set_show("tuning", False)  # cascades the whole tuning group off
     assert editor.settings["weighting"] is False
     editor.set_show("all_interval", True)
     for key in ("all_interval", "weighting", "optimization", "tuning"):
         assert editor.settings[key] is True
-    assert editor.settings["tuning_boxes"] is False  # a sibling, not pulled on by all-interval
+    assert editor.settings["tuning_tiles"] is False  # a sibling, not pulled on by all-interval
 
 
 def test_grouping_parents_flatten_their_box_toggles_former_children():
     # the regroup is a flatten, not an extra nesting level: what used to be a direct child of a
     # box toggle is now a direct child of the GROUP, level with the box toggle (a sibling), not
     # buried under it. So "temperament colorization" answers to "temperament" (not to
-    # "temperament boxes"), and the whole tuning column answers to "tuning" (not "tuning boxes").
+    # "temperament tiles"), and the whole tuning column answers to "tuning" (not "tuning tiles").
     assert settings.SUBCONTROLS["temperament_colorization"] == "temperament"
-    assert settings.SUBCONTROLS["temperament_boxes"] == "temperament"
+    assert settings.SUBCONTROLS["temperament_tiles"] == "temperament"
     # the tuning group's DIRECT children are the two modes' shared base + the two modes themselves
-    for key in ("tuning_boxes", "optimization", "projection", "tuning_colorization"):
+    for key in ("tuning_tiles", "optimization", "projection", "tuning_colorization"):
         assert settings.SUBCONTROLS[key] == "tuning", key
     # "optimization" (Mode A) parents the optimize sub-axes — weighting and tuning ranges
     assert settings.SUBCONTROLS["weighting"] == "optimization"
@@ -2046,10 +2046,10 @@ def test_grouping_parents_flatten_their_box_toggles_former_children():
     assert settings.SUBCONTROLS["all_interval"] == "weighting"
     assert settings.SUBCONTROLS["alt_complexity"] == "weighting"
     assert settings.SUBCONTROLS["custom_weights"] == "weighting"
-    # deselecting "tuning boxes" (now a leaf) strands nothing — it has no sub-controls of its own
+    # deselecting "tuning tiles" (now a leaf) strands nothing — it has no sub-controls of its own
     editor = Editor()
     editor.set_show("optimization", True)
-    editor.set_show("tuning_boxes", False)
+    editor.set_show("tuning_tiles", False)
     assert editor.settings["optimization"] is True  # the sibling is untouched by the box toggle
 
 

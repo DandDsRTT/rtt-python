@@ -72,7 +72,7 @@ async def test_grid_pane_publishes_its_base_size_for_the_scrollbar_fit(user: Use
 # --- tier 2: each Show feature's render branch (paths the default render never reaches) ---
 
 # The "general" Show layers are toggled by clicking their part of the dummy tile (located by
-# key); the "specific boxes & controls" group is still a checkbox column (located by label).
+# key); the "specific tiles & controls" group is still a checkbox column (located by label).
 # _toggle hides that split so a test just names the layer it wants and doesn't care which.
 _GENERAL_KEY_BY_LABEL = {label: key for key, label, _d in dict(show_settings.SHOW_GROUPS)["general"]}
 
@@ -88,7 +88,7 @@ def _toggle(user: User, label: str) -> None:
 
 
 _SPECIFIC_LABEL_BY_KEY = {key: label
-                          for key, label, _d in dict(show_settings.SHOW_GROUPS)["specific boxes & controls"]}
+                          for key, label, _d in dict(show_settings.SHOW_GROUPS)["specific tiles & controls"]}
 
 
 async def _enable(user: User, label: str) -> None:
@@ -97,7 +97,7 @@ async def _enable(user: User, label: str) -> None:
     and tuning ranges now nest under optimization)."""
     await user.open("/")
     if label not in _GENERAL_KEY_BY_LABEL:  # a specific-group control may be nested
-        spec_key = next((k for k, lbl, _ in dict(show_settings.SHOW_GROUPS)["specific boxes & controls"]
+        spec_key = next((k for k, lbl, _ in dict(show_settings.SHOW_GROUPS)["specific tiles & controls"]
                          if lbl == label), None)
         if spec_key is not None:
             defaults = show_settings.defaults()
@@ -656,11 +656,11 @@ async def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_defaul
     # rows whose parent chain is on by default are findable here: optimization (under the on-by-
     # default tuning) is, but weighting now nests under the off-by-default optimization, so it's
     # parent-hidden like all-interval and excluded (its chapter gating is unobservable until shown).
-    for key in ("counts", "tuning_boxes", "optimization", "interest",
-                "domain_quantities", "domain_units"):
+    for key in ("counts", "tuning_tiles", "optimization", "interest",
+                "interval_ratios", "domain_units"):
         assert "rtt-chap-hidden" not in _row_classes(user, key), key
     # ...while the ch9 / outside-guide (★) rows are collapsed. (These are all top-level rows, or
-    # — projection — a sub-control of the on-by-default tuning boxes, so they're present/findable;
+    # — projection — a sub-control of the on-by-default tuning tiles, so they're present/findable;
     # a sub-control of an OFF parent, like all-interval under weighting, is hidden by its own
     # visibility binding and so isn't found regardless of chapter.)
     for key in ("nonstandard_domain", "projection", "generator_detempering", "identity_objects"):
@@ -2811,7 +2811,7 @@ async def test_a_mapping_row_draft_commit_materializes_a_new_generator_row(user:
 async def test_a_comma_keystroke_preview_does_not_commit_until_blur(user: User) -> None:
     # on_comma_change(preview=True): the comma basis is the mapping's dual. A focused keystroke arms
     # the would-be change but does NOT commit — the mapped list (a comma-derived quantity) still reads
-    # the pre-edit value until blur. (The comma row is present independent of the temperament boxes.)
+    # the pre-edit value until blur. (The comma row is present independent of the temperament tiles.)
     await user.open("/")
     assert _cell_text(user, "cell:mapped:1:6") == "4"
     cell = _cell_child(user, "cell:comma:0:0")                 # the syntonic comma's prime-2 exponent (4)
@@ -3045,17 +3045,17 @@ async def test_a_mapping_draft_keystroke_preview_rings_nothing_from_the_value(us
     assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes  # the draft is still green — no commit
 
 
-async def test_the_mapping_matrix_is_inert_when_temperament_boxes_are_off(user: User) -> None:
-    # the GUARD only on_mapping_change carries: it returns early when settings["temperament_boxes"] is
+async def test_the_mapping_matrix_is_inert_when_temperament_tiles_are_off(user: User) -> None:
+    # the GUARD only on_mapping_change carries: it returns early when settings["temperament_tiles"] is
     # off (no editable matrix when the boxes are hidden). With the boxes off the matrix cells are not
     # rendered at all, so the handler can never edit — pin both halves: the editable mapping cells
     # vanish, and turning the boxes back on restores meantone (the document was never mutated).
     await user.open("/")
     assert user.find(marker="cell:mapping:0:0").elements        # the editable matrix is shown by default
     assert _cell_text(user, "cell:mapped:1:6") == "4"
-    user.find(kind=ui.checkbox, content="temperament boxes").click()  # turn the boxes OFF
+    user.find(kind=ui.checkbox, content="temperament tiles").click()  # turn the boxes OFF
     await user.should_not_see(marker="cell:mapping:0:0")        # no editable matrix -> on_mapping_change is inert
-    user.find(kind=ui.checkbox, content="temperament boxes").click()  # back ON
+    user.find(kind=ui.checkbox, content="temperament tiles").click()  # back ON
     await user.should_see(marker="cell:mapping:0:0")
     assert _cell_text(user, "cell:mapped:1:6") == "4"           # the mapping was never touched while hidden
 

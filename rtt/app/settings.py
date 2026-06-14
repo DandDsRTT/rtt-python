@@ -23,10 +23,10 @@ glyph — so it only makes sense when symbols are shown.
 
 Two top-level toggles — ``temperament`` and ``tuning`` — are *pure grouping parents*: they carry
 no grid layer of their own (the layout never reads them; see :data:`GROUPING_PARENTS`), existing
-only to expand/collapse the toggles grouped directly beneath them. Each group holds its box toggle
-plus everything that used to nest under that box toggle, now flattened up to be its direct
-children: ``temperament`` holds ``temperament_boxes`` and ``temperament_colorization``;
-``tuning`` holds ``tuning_boxes``, ``optimization``, ``projection`` and ``tuning_colorization``
+only to expand/collapse the toggles grouped directly beneath them. Each group holds its tiles toggle
+plus everything that used to nest under that tiles toggle, now flattened up to be its direct
+children: ``temperament`` holds ``temperament_tiles`` and ``temperament_colorization``;
+``tuning`` holds ``tuning_tiles``, ``optimization``, ``projection`` and ``tuning_colorization``
 (``optimization`` in turn parents the optimize sub-axes — ``tuning_ranges`` and ``weighting``,
 the latter parenting ``all_interval`` / ``alt_complexity`` / ``custom_weights`` — so ``projection``
 reads as the peer-alternative to the whole optimization branch). They use the same sub-control
@@ -34,7 +34,7 @@ machinery as any other parent — so collapsing one turns its whole group off �
 nothing of their own to show.
 
 ``form`` is the third group header but NOT a pure grouping parent: like the other two it expands
-its sub-controls (``form_controls``, ``form_boxes``, ``form_colorization``), but it ALSO carries a
+its sub-controls (``form_controls``, ``form_tiles``, ``form_colorization``), but it ALSO carries a
 real layer — checking it marks the default (canonical) form with a subscript C on the mapping 𝑀,
 the generator tuning map 𝒈 and the generator embedding G (across their symbols and equivalences).
 So ``form`` is live (in :data:`IMPLEMENTED`) and has an example sample; its three sub-controls stay
@@ -81,25 +81,29 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
         ),
     ),
     (
-        "specific boxes & controls",
+        "specific tiles & controls",
         (
             ("counts", "counts", True),
-            ("domain_quantities", "quantities", True),
+            # the interval set rows: each interval as a ratio (the interval-ratios row + its spine
+            # column) and as a column vector (the interval-vectors row). Two independent toggles —
+            # the interval-vectors row used to ride ``temperament_tiles`` but now owns its own.
+            ("interval_ratios", "interval ratios", True),
+            ("interval_vectors", "interval vectors", True),
             ("domain_units", "units", False),
             # ``temperament`` / ``tuning`` are pure grouping parents (see the module docstring): each
-            # only expands the toggles grouped directly beneath it (its box toggle and that box's
-            # former children, now flattened to siblings); the layout reads the boxes, never the
-            # parent. ``form`` is the exception — also a group header, but a LIVE layer (the
+            # only expands the toggles grouped directly beneath it (its tiles toggle and that tile
+            # group's former children, now flattened to siblings); the layout reads the tiles, never
+            # the parent. ``form`` is the exception — also a group header, but a LIVE layer (the
             # canonical-form subscript C), so default-off (opt-in) and in IMPLEMENTED.
             ("temperament", "temperament", True),
-            ("temperament_boxes", "temperament boxes", True),
+            ("temperament_tiles", "temperament tiles", True),
             ("temperament_colorization", "colorization", False),
             ("form", "form", False),
             ("form_controls", "form controls", False),
-            ("form_boxes", "form boxes", False),
+            ("form_tiles", "form tiles", False),
             ("form_colorization", "colorization", False),
             ("tuning", "tuning", True),
-            ("tuning_boxes", "tuning boxes", True),
+            ("tuning_tiles", "tuning tiles", True),
             ("optimization", "optimization", False),
             ("tuning_ranges", "tuning ranges", False),
             ("weighting", "weighting", False),
@@ -129,26 +133,26 @@ SUBCONTROLS: dict[str, str] = {
     # fraction, and clicking the ".955" part (decimals) pulls quantities on, like mnemonics ↔ names.
     "decimals": "quantities",
     # Each grouping parent (temperament / form / tuning) directly holds everything that used to
-    # nest under its box toggle: the box toggle itself AND its former direct children are now
-    # direct children of the group (siblings of the box toggle). So "temperament boxes" and its
+    # nest under its tiles toggle: the tiles toggle itself AND its former direct children are now
+    # direct children of the group (siblings of the tiles toggle). So "temperament tiles" and its
     # "colorization" both sit under "temperament".
     #
     # The tuning group mirrors the guide's two ways to SPECIFY a tuning: (A) by OPTIMIZATION and
     # (B) by direct construction (a PROJECTION). So "optimization" is a content+parent — it reveals
     # its own power/damage/held region AND parents the optimize sub-axes (weighting and its
     # refinements, tuning ranges) — while "projection" sits as its peer directly under "tuning",
-    # reading as the alternative to the whole optimization branch. "tuning boxes" (the resulting
+    # reading as the alternative to the whole optimization branch. "tuning tiles" (the resulting
     # 𝒕/𝒈 maps, shared by both modes) and "colorization" stay direct children of "tuning".
     # Weighting's three refinements are siblings: all-interval, alt. complexity, and custom weights.
-    "temperament_boxes": "temperament",
+    "temperament_tiles": "temperament",
     "temperament_colorization": "temperament",
     # "form" is the odd group out: not a PURE grouping parent but a live layer (it adds the
     # canonical-form subscript C — see GROUPING_PARENTS), which also holds its three sub-controls:
-    # the <choose form> dropdowns, the canonical-mapping / 𝐹 boxes, and the magenta wash.
+    # the <choose form> dropdowns, the canonical-mapping / 𝐹 tiles, and the magenta wash.
     "form_controls": "form",
-    "form_boxes": "form",
+    "form_tiles": "form",
     "form_colorization": "form",
-    "tuning_boxes": "tuning",
+    "tuning_tiles": "tuning",
     "optimization": "tuning",
     "tuning_ranges": "optimization",  # a refinement of the optimized generators (box 𝒈 ranges)
     "weighting": "optimization",      # how the optimization weights its target damage
@@ -165,19 +169,19 @@ IMPLEMENTED: frozenset[str] = frozenset(
     {"drag_to_combine",
      "names", "symbols", "header_symbols", "mnemonics", "equivalences", "gridded_values",
      "plain_text_values",
-     "quantities", "decimals", "domain_quantities", "units", "cell_units", "domain_units", "counts", "presets",
-     "temperament", "temperament_boxes", "tuning", "tuning_boxes",
+     "quantities", "decimals", "interval_ratios", "interval_vectors", "units", "cell_units", "domain_units", "counts", "presets",
+     "temperament", "temperament_tiles", "tuning", "tuning_tiles",
      "math_expressions", "charts", "tuning_ranges",
      "tuning_colorization", "temperament_colorization", "weighting",
      "generator_detempering", "optimization", "interest", "all_interval", "alt_complexity",
      "custom_weights", "nonstandard_domain", "projection", "identity_objects",
      # "form" IS live: unlike the pure grouping parents it carries a real layer (the canonical-
      # form subscript C). "form_controls" is live too — the <choose form> dropdowns (canonical only,
-     # for now). Its other two sub-controls (form_boxes, form_colorization) stay greyed until built.
+     # for now). Its other two sub-controls (form_tiles, form_colorization) stay greyed until built.
      "form", "form_controls"}
 )
 
-# The pure grouping parents: top-level toggles that only expand the box toggle(s) nested under them
+# The pure grouping parents: top-level toggles that only expand the tiles toggle(s) nested under them
 # and carry no grid layer of their own — the layout never reads them. So they have no example-column
 # sample, and flipping one changes the grid only by cascading its children off (Editor.set_show),
 # never through spreadsheet.build directly. "form" is deliberately NOT here: it groups its three
@@ -237,11 +241,11 @@ CHAPTER: dict[str, int] = {
     "charts": 3,
     "drag_to_combine": 4,
     "units": 5, "cell_units": 5,  # the per-cell unit beneath each value — a sibling of units
-    # specific boxes & controls. The pure grouping parents (temperament / tuning / form) reveal with
+    # specific tiles & controls. The pure grouping parents (temperament / tuning / form) reveal with
     # their EARLIEST child, so the group header never appears before anything it would expand to.
-    "counts": 2, "temperament": 2, "temperament_boxes": 2, "temperament_colorization": 2,
-    "interest": 2, "domain_quantities": 2, "domain_units": 2,
-    "tuning": 3, "tuning_boxes": 3, "tuning_colorization": 3,
+    "counts": 2, "temperament": 2, "temperament_tiles": 2, "temperament_colorization": 2,
+    "interest": 2, "interval_ratios": 2, "interval_vectors": 2, "domain_units": 2,
+    "tuning": 3, "tuning_tiles": 3, "tuning_colorization": 3,
     "optimization": 3, "tuning_ranges": 3, "weighting": 3,
     "all_interval": 7,
     "alt_complexity": 8,
@@ -250,7 +254,7 @@ CHAPTER: dict[str, int] = {
     # provide manual weights per target-interval"), so they reveal at the ★ notch like the other
     # outside-the-guide controls (its weighting/optimization/tuning ancestors are all ch3).
     "custom_weights": CHAPTER_STAR,
-    "form": CHAPTER_STAR, "form_controls": CHAPTER_STAR, "form_boxes": CHAPTER_STAR,
+    "form": CHAPTER_STAR, "form_controls": CHAPTER_STAR, "form_tiles": CHAPTER_STAR,
     "form_colorization": CHAPTER_STAR,
     "projection": CHAPTER_STAR, "generator_detempering": CHAPTER_STAR,
     "identity_objects": CHAPTER_STAR,
