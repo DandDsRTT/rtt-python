@@ -135,9 +135,6 @@ from rtt.app.render_html import (
     _units_html,
     _wave_svg,
     _wheel_step,
-    ZOOM_KINDS,
-    zoom_blank,
-    zoom_tip_html,
 )
 
 _log = logging.getLogger(__name__)
@@ -452,7 +449,7 @@ _CSS_VARS = f""":root {{
   --c-gridline:#e0e0e0;
   --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
-  --col-w:{spreadsheet.COL_W}px; --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT}; --zoom-box:{spreadsheet.COL_W * _CELL_FONT / _STACKED_MAIN_FONT:.1f}px;
+  --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT};
   --label-w:{spreadsheet.LABEL_W}px; --header-h:{spreadsheet.HEADER_H}px; --line-w:{spreadsheet.LINE_W}px;
   --ptext-edit-h:{spreadsheet.PTEXT_EDIT_H}px; --option-box:{spreadsheet.OPTION_BOX_PX}px; --btn:{spreadsheet.BTN}px;
   --option-box-unchecked:url("{_option_box_svg(None)}");
@@ -673,6 +670,125 @@ _TOOLTIP_DISMISS_JS = """
 })()
 """
 
+# The gridded-value cell kinds (read-only outputs AND editable inputs) — every cell that shows a
+# numeric quantity laid out in the grid. Hovering any of them pops the zoom magnifier (_ZOOM_JS).
+# Excludes the structural/label kinds (brackets, symbols, captions, row/col headers, charts), the
+# counts, and the plain-text value strings (ptext) — none of those are a gridded value cell.
+VALUE_KINDS: frozenset[str] = frozenset({
+    # read-only value faces
+    "prime", "formcell", "mapped", "vec", "tuningvalue", "genratio", "commaratio",
+    "powerdisplay", "mathexpr",
+    # editable value cells
+    "mapping", "commacell", "unchangedcell", "interestcell", "heldcell", "targetcell",
+    "prescalercell", "weightcell", "powerinput", "gentuningcell",
+    "ratiocell", "elementcell", "elementratio",
+})
+
+# The zoom-on-hover magnifier. Hovering any gridded value cell (.rtt-zoomable, every VALUE_KINDS
+# cell) pops a floating card showing a LITERAL, scaled clone of that cell — everything visible in it
+# (the value, its per-cell unit, a math expression, the editable box) in the SAME font and styling,
+# enlarged by --zoom-factor (= --cell-font / the 10px stacked whole-part), so the small whole-part of
+# "1200.000" reaches a normal integer "1" cell's size. Cloning the live cell — rather than rebuilding
+# a face from text — is what makes it faithful and keeps it in sync for free. The cell's own hover
+# help (the editable cells' "type to edit…") rides as data-zoomhelp and folds in beneath the value.
+# Dismissed on leave AND on any commit/reflow/scroll (the same strand guard the tooltips use), since
+# the overlay's anchor won't fire mouseout when the grid rebuilds out from under a still cursor.
+_ZOOM_JS = """
+(() => {
+  if (window.__rttZoom) return;
+  window.__rttZoom = true;
+  const F = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom-factor')) || 1.7;
+  const DELAY = 130;   // ms before it appears — quick, but not on every cursor that crosses a cell
+  const GAP = 8;       // px between the cell and the magnifier
+  let timer = null, anchor = null;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'rtt-zoom-overlay';
+  overlay.style.display = 'none';
+  document.body.appendChild(overlay);
+
+  const hide = () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (overlay.style.display !== 'none') { overlay.style.display = 'none'; overlay.innerHTML = ''; }
+    anchor = null;
+  };
+
+  const place = (cell) => {
+    const r = cell.getBoundingClientRect();
+    const ow = overlay.offsetWidth, oh = overlay.offsetHeight;
+    const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+    let left = Math.max(4, Math.min(r.left + r.width / 2 - ow / 2, vw - ow - 4));
+    let top = r.top - GAP - oh;                 // prefer above the cell
+    if (top < 4) top = r.bottom + GAP;          // not enough room: drop below
+    top = Math.max(4, Math.min(top, vh - oh - 4));
+    overlay.style.left = left + 'px';
+    overlay.style.top = top + 'px';
+  };
+
+  const build = (cell) => {
+    const w = cell.offsetWidth, h = cell.offsetHeight;
+    if (!w || !h) return;
+    // a blanked cell (quantities off) has nothing to magnify — bail before popping an empty card
+    const srcInputs = cell.querySelectorAll('input');
+    let hasContent = cell.textContent.trim();
+    srcInputs.forEach(i => { if (i.value && i.value.trim()) hasContent = true; });
+    if (!hasContent) return;
+
+    overlay.innerHTML = '';
+    // the scale box carries the magnified layout size; the clone scales 1:1 from its top-left to fill it
+    const scale = document.createElement('div');
+    scale.className = 'rtt-zoom-scale';
+    scale.style.width = (w * F) + 'px';
+    scale.style.height = (h * F) + 'px';
+    const clone = cell.cloneNode(true);
+    clone.classList.add('rtt-zoom-clone');
+    clone.removeAttribute('data-eid');
+    clone.style.position = 'static';
+    clone.style.left = clone.style.top = 'auto';
+    clone.style.width = w + 'px';
+    clone.style.height = h + 'px';
+    clone.style.transform = 'scale(' + F + ')';
+    clone.style.transformOrigin = 'top left';
+    clone.style.transition = 'none';
+    clone.querySelectorAll('.q-tooltip').forEach(n => n.remove());  // don't drag a nested tooltip along
+    // cloneNode does NOT copy a live input's typed value (it's a property, not an attribute), so the
+    // editable integer cells (value lives only in their input) would clone empty — copy it across
+    const cloneInputs = clone.querySelectorAll('input');
+    srcInputs.forEach((s, i) => { if (cloneInputs[i]) cloneInputs[i].value = s.value; });
+    scale.appendChild(clone);
+    overlay.appendChild(scale);
+    // the cell's own hover help, folded in beneath the value (the editable cells' "type to edit…")
+    const help = cell.getAttribute('data-zoomhelp');
+    if (help) {
+      const cap = document.createElement('div');
+      cap.className = 'rtt-zoom-help';
+      cap.textContent = help;
+      overlay.appendChild(cap);
+    }
+    overlay.style.display = 'block';
+    place(cell);
+  };
+
+  // hover in / out of a zoomable cell, delegated so it survives every grid rebuild
+  document.addEventListener('mouseover', (e) => {
+    const cell = e.target.closest && e.target.closest('.rtt-zoomable');
+    if (!cell || cell === anchor) return;
+    if (timer) clearTimeout(timer);
+    anchor = cell;
+    timer = setTimeout(() => { if (anchor === cell && cell.isConnected) build(cell); }, DELAY);
+  });
+  document.addEventListener('mouseout', (e) => {
+    const cell = e.target.closest && e.target.closest('.rtt-zoomable');
+    if (cell && cell === anchor && !cell.contains(e.relatedTarget)) hide();
+  });
+  // a commit / reflow / scroll yanks the cell out from under the cursor — drop the magnifier
+  document.addEventListener('pointerdown', hide, true);
+  document.addEventListener('keydown', hide, true);
+  document.addEventListener('wheel', hide, {capture: true, passive: true});
+  document.addEventListener('scroll', hide, {capture: true, passive: true});
+})()
+"""
+
 # The client-driven busy scrim. After a committing interaction the app has to think — an off-loop
 # re-solve and/or the browser patching a big grid — for anything from nothing to a few seconds. With
 # no feedback a slow beat reads as "I crashed it", so the user keeps clicking a frozen-looking page.
@@ -865,7 +981,8 @@ class _Reconciler:
         self.ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
         self.rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
         self.scheme_buttons: dict = {}  # back-to-scheme button cell id -> its ui.button (for the idle grey)
-        self.mean_damage_tips: dict = {}  # optimization-mean damage cell id -> its ui.tooltip (text swaps with all-interval mode)
+        self.mean_damage_tips: dict = {}  # mean damage SYMBOL cell id -> its ui.tooltip (the value cell folds its
+        # help into the zoom magnifier as data-zoomhelp; the symbol — not a value cell — keeps a swappable tooltip)
         self.target_limit_tip = None  # the target chooser's ui.tooltip (text swaps to an invalid-limit message)
         self.captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
         self.caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
@@ -874,13 +991,10 @@ class _Reconciler:
         self.fold_state: dict = {}  # fold-toggle cell id -> last state token (unfold_more/less), to swap its SVG on change
         self.cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
         self.cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
-        self.zoom_tips: dict = {}  # read-only value cell id -> its zoom-on-hover magnifier ui.tooltip
-        self.zoom_faces: dict = {}  # ...and the ui.html inside it holding the enlarged value face
-        self.zoom_state: dict = {}  # ...and its last (text, w), to redraw the face only on a value/width change
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.scheme_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text, self.zoom_tips, self.zoom_faces, self.zoom_state)
+        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.scheme_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
         # The active preview gesture — the ONE record the ring highlights derive from (see
         # _Gesture). None when no gesture is live; every paint recomputes the rings from it.
         self.gesture: _Gesture | None = None
@@ -1008,33 +1122,33 @@ class _Reconciler:
             # it lights the whole column segment on hover, floats a speaker over it, and derives the chord
             if cb.audio is not None:
                 self._tag_audio(wrap, cb)
-        # explanatory hover text for the interactive controls (read-only value cells get none).
-        # All wording lives in rtt.app.tooltips; a NEW cell kind must be classified there
-        # (in READONLY_KINDS or with a help entry) or test_web_tooltips' completeness sweep fails.
-        # The mark/data-eid ride the wrap, so the tooltip hangs off it too — one shared anchor.
+        # Hover affordances. A gridded VALUE cell (VALUE_KINDS) becomes .rtt-zoomable — hovering it
+        # pops the zoom magnifier (a client-side clone, _ZOOM_JS), and its own hover help (if any —
+        # the editable cells' "type to edit…", the mean damage / dual(𝑞) explanations) folds INTO that
+        # magnifier as data-zoomhelp rather than a separate tooltip, so value cells carry exactly one
+        # hover popup. Every other control keeps its plain help tooltip. All wording still lives in
+        # rtt.app.tooltips; a NEW kind must be classified there (READONLY_KINDS or a help entry) or
+        # test_web_tooltips' completeness sweep fails. The mark/data-eid ride the wrap, so the magnifier
+        # (which clones the wrap) and any tooltip hang off it too.
         help_text = tooltips.control_help(cb.kind, cb.id)
-        if help_text:
+        if cb.kind in VALUE_KINDS:
+            wrap.classes("rtt-zoomable")
+            if help_text:
+                # the mean damage's help swaps with all-interval mode; render() re-stamps this attribute
+                wrap._props["data-zoomhelp"] = help_text
+        elif help_text:
             if cb.id in tooltips.MEAN_DAMAGE_IDS:
-                # the read-only mean damage's help names a different quantity per mode (damage
-                # ⟪𝐝⟫ₚ vs the all-interval retuning magnitude); keep the Tooltip handle so
-                # render() can swap its wording in place when the mode flips, like the symbol glyph
+                # the mean damage SYMBOL cell (its value twin folds help into the magnifier instead);
+                # keep the Tooltip handle so render() can swap its wording when the mode flips
                 with wrap:
                     self.mean_damage_tips[cb.id] = ui.tooltip(help_text)
             elif cb.id == "preset:target":
                 # keep the target chooser's tooltip handle so the limit validator can swap in an
-                # invalid-limit message (an even OLD limit, or a non-whole number) and back — the
-                # same in-place relabel the mean damage uses
+                # invalid-limit message (an even OLD limit, or a non-whole number) and back
                 with wrap:
                     self.target_limit_tip = ui.tooltip(help_text)
             else:
                 wrap.tooltip(help_text)
-        elif cb.kind in ZOOM_KINDS:
-            # a read-only gridded value (no help text): hover it for a zoom magnifier — the same
-            # value face enlarged so a small cents whole-part reaches the integer cell size. A
-            # SEPARATE tooltip mechanism (not control_help), so the read-only kinds keep returning
-            # None from control_help and the completeness sweep stays green. (The mean-damage
-            # tuningvalue carries help, so it took the branch above and never reaches here.)
-            self._add_zoom_tooltip(wrap, cb)
         self.els[cb.id] = wrap
         self.kinds[cb.id] = cb.kind
         # A fan + / − control must not blur a focused draft cell when clicked. The browser blurs the
@@ -1103,35 +1217,6 @@ class _Reconciler:
             self.els[cb.id].classes(remove="rtt-cell-united")
         if cb.audio is not None:  # refresh the baked pitch / slot so a reorder or retune stays in sync
             self._tag_audio(self.els[cb.id], cb)
-        if cb.id in self.zoom_faces:  # keep the hover magnifier's enlarged face in sync with the value
-            self._sync_zoom_tooltip(cb)
-
-    def _add_zoom_tooltip(self, wrap, cb: spreadsheet.CellBox) -> None:
-        """Hang a zoom-on-hover magnifier off a read-only value cell: a tooltip (appended as the
-        wrap's LAST child, so the cell's face stays children[0] for the render tests) holding the
-        value face enlarged by the .rtt-zoom-scale transform. It inherits the global 700 ms
-        delay + the strand-dismiss-on-reflow that every .q-tooltip gets. Built once; its face is
-        re-synced (and hidden when the value blanks) by :meth:`_sync_zoom_tooltip`."""
-        blank = zoom_blank(cb.text)
-        with wrap:
-            tip = ui.tooltip().classes("rtt-zoomtip")
-            with tip:
-                face = ui.html("" if blank else zoom_tip_html(cb.kind, cb.text, cb.w, _CELL_FONT))
-        if blank:
-            tip.classes(add="rtt-zoomtip-off")  # a blank / dashed value: suppress the empty bubble
-        self.zoom_tips[cb.id] = tip
-        self.zoom_faces[cb.id] = face
-        self.zoom_state[cb.id] = (cb.text, cb.w)
-
-    def _sync_zoom_tooltip(self, cb: spreadsheet.CellBox) -> None:
-        """Redraw the magnifier's enlarged face when the value or cell width changes, and hide the
-        bubble (rtt-zoomtip-off) when the value blanks (quantities off) or is a dashed placeholder."""
-        blank = zoom_blank(cb.text)
-        if self.zoom_state.get(cb.id) != (cb.text, cb.w):
-            self.zoom_faces[cb.id].set_content("" if blank else zoom_tip_html(cb.kind, cb.text, cb.w, _CELL_FONT))
-            self.zoom_state[cb.id] = (cb.text, cb.w)
-        self.zoom_tips[cb.id].classes(add="rtt-zoomtip-off" if blank else "",
-                                      remove="" if blank else "rtt-zoomtip-off")
 
     def _tag_audio(self, el, cb: spreadsheet.CellBox) -> None:
         """Tag a cell wrap as a click-to-play voice: the JS engine reads data-audio (its highlight /
@@ -2436,6 +2521,8 @@ def index() -> None:
     ui.add_body_html(f"<script>{_FRACTION_JS}</script>")
     # live int<->decimal switching for the editable stacked cents cells (see _DECIMAL_JS)
     ui.add_body_html(f"<script>{_DECIMAL_JS}</script>")
+    # the zoom-on-hover magnifier: a scaled clone of any gridded value cell (see _ZOOM_JS)
+    ui.add_body_html(f"<script>{_ZOOM_JS}</script>")
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
     ui.query(".nicegui-content").style("padding:6px")
 
@@ -4291,14 +4378,19 @@ def index() -> None:
             for eid in [e for e in rec.els if e not in seen]:
                 rec.drop(eid)
 
-            # the optimization mean damage is read-only yet helped, and that help names a different
-            # quantity per mode — the minimized damage ⟪𝐝⟫ₚ over the targets, or (all-interval) the
-            # retuning magnitude. Swap its tooltip(s) to match the live scheme, the same in-place
-            # relabel the symbol glyph makes; set_text only pushes when the wording actually changes.
-            if rec.mean_damage_tips:
-                mean_damage_help_text = tooltips.mean_damage_help(service.is_all_interval(editor.tuning_scheme))
-                for tip in rec.mean_damage_tips.values():
-                    tip.set_text(mean_damage_help_text)
+            # the optimization mean damage's help names a different quantity per mode: the minimized
+            # damage ⟪𝐝⟫ₚ over the targets, or (all-interval) the retuning magnitude. The mean damage
+            # cells are NOT rebuilt when the mode flips, so swap the wording in place — on the VALUE
+            # cell it folds into the magnifier (data-zoomhelp), on the SYMBOL cell it's a tooltip.
+            mean_damage_help_text = tooltips.mean_damage_help(service.is_all_interval(editor.tuning_scheme))
+            for cid in tooltips.MEAN_DAMAGE_IDS:
+                if cid in rec.mean_damage_tips:                       # the symbol cell's swappable tooltip
+                    rec.mean_damage_tips[cid].set_text(mean_damage_help_text)
+                    continue
+                wrap = rec.els.get(cid)                               # the value cell's folded help
+                if wrap is not None and wrap._props.get("data-zoomhelp") != mean_damage_help_text:
+                    wrap._props["data-zoomhelp"] = mean_damage_help_text
+                    wrap.update()
 
             refs["undo"].set_enabled(editor.can_undo)
             refs["redo"].set_enabled(editor.can_redo)

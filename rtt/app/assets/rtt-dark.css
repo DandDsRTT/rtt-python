@@ -112,11 +112,12 @@ body.rtt-dark .rtt-frac-bar { background:#e3e6ea; }
    it with no .rtt-cell-stacked exception needed. */
 body.rtt-dark .rtt-deccell { background:#1b1f24; }
 body.rtt-dark .rtt-deccell .rtt-cellinput .q-field__control { background:transparent; }
-/* the zoom-on-hover magnifier bubble (rtt.css .rtt-zoomtip): darken the card; the enlarged value
-   face inside re-lights for free -- it carries the same rtt-value / rtt-tuning-value / rtt-ratio /
-   rtt-mathexpr-stack / rtt-frac-num classes the dark value rules above already retint. */
-body.rtt-dark .q-tooltip.rtt-zoomtip { background:#1b1f24; color:#e3e6ea; border-color:#4e555d;
-            box-shadow:0 2px 8px rgba(0,0,0,.5); }
+/* the zoom magnifier card (rtt.css .rtt-zoom-overlay): darken the panel; the cloned cell inside
+   re-lights for free -- it is a real .rtt-cell carrying the same value classes the dark rules above
+   retint (the overlay sits on body, so body.rtt-dark reaches the clone). */
+body.rtt-dark .rtt-zoom-overlay { background:#1b1f24; border-color:#4e555d;
+            box-shadow:0 2px 10px rgba(0,0,0,.55); }
+body.rtt-dark .rtt-zoom-help { color:#aab0b8; border-top-color:#3c424a; }
 /* the row/column titles, the per-value symbols & matrix labels, captions, units */
 body.rtt-dark .rtt-colheader,
 body.rtt-dark .rtt-rowlabel,

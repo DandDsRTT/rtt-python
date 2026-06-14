@@ -526,13 +526,16 @@ async def test_edge_washes_also_render_into_the_frozen_panes(user: User) -> None
 
 
 async def test_settings_and_controls_carry_hover_tooltips(user: User) -> None:
-    # the Show toggles and the interactive grid controls all get explanatory hover text
-    # (rtt.app.tooltips). A tooltip renders hidden until hover, so the User sim's visible-only
-    # search can't see one — scan the client's element registry for the attached Tooltips.
+    # the Show toggles and the non-value controls get explanatory hover text (rtt.app.tooltips) as a
+    # Tooltip; a value cell's help instead FOLDS into its zoom magnifier as data-zoomhelp (see
+    # test_value_cell_help_folds_into_the_zoom_magnifier). A tooltip renders hidden until hover, so the
+    # User sim's visible-only search can't see one — scan the client's element registry for the Tooltips.
     await user.open("/")
     tips = [el.text for el in user.client.elements.values() if isinstance(el, Tooltip)]
     assert any("name caption" in t for t in tips)       # the "names" Show toggle's help (now a tile part)
-    assert any("map to this prime" in t for t in tips)  # the always-present mapping cells' help
+    # the mapping cells' help ("map to this prime") rides as data-zoomhelp, not a Tooltip
+    mapping = next(iter(user.find(marker="cell:mapping:0:0").elements))
+    assert "map to this prime" in mapping._props.get("data-zoomhelp", "")
 
 
 async def test_hover_tooltips_wait_before_appearing(user: User) -> None:
@@ -547,37 +550,44 @@ async def test_hover_tooltips_wait_before_appearing(user: User) -> None:
     assert all(int(el._props.get("delay", 0)) >= 500 for el in tips)
 
 
-def _zoom_tips(wrap):
-    """The zoom-magnifier Tooltip(s) hanging off a grid cell's wrap. The magnifier is appended as a
-    CHILD of the wrap (so the cell's face stays children[0]); the controls' help tooltips ride as
-    SIBLINGS, so they never appear here — this finds only the value-zoom magnifier."""
-    return [c for c in wrap.default_slot.children
-            if isinstance(c, Tooltip) and "rtt-zoomtip" in c._classes]
+def _wrap(user: User, cell_id: str):
+    return next(iter(user.find(marker=cell_id).elements))
 
 
-async def test_readonly_gridded_values_carry_a_zoom_magnifier(user: User) -> None:
-    # hovering a read-only gridded value (cents, ratios, powers, math expressions) pops a magnifier:
-    # a tooltip showing the SAME value face enlarged to a normal integer cell's size. The octave's
-    # read-only tuning value (1200.000) is one. The magnifier's body carries the live face classes
-    # (.rtt-zoom-scale over .rtt-stacked-main) so the CSS transform enlarges the identical face.
+async def test_every_gridded_value_cell_is_zoomable(user: User) -> None:
+    # hovering ANY gridded value pops the zoom magnifier (_ZOOM_JS clones the cell, scaled): the cell
+    # wraps carry .rtt-zoomable for the engine to find them. Both a read-only value (the octave's
+    # 1200.000 tuning) and an editable one (a mapping entry) get it — the magnifier is for every value,
+    # not just the read-only ones. Structural cells (a row/column header) never become zoomable.
     await user.open("/")
-    octave = next(iter(user.find(marker="tuning:prime:0").elements))
-    zoom = _zoom_tips(octave)
-    assert len(zoom) == 1
-    assert int(zoom[0]._props.get("delay", 0)) >= 500   # inherits the deliberate-rest hover delay
-    body = zoom[0].default_slot.children[0].content     # the ui.html holding the enlarged face
-    assert "rtt-zoom-scale" in body and "rtt-stacked-main" in body and "1200" in body
+    assert "rtt-zoomable" in _wrap(user, "tuning:prime:0")._classes     # read-only cents value
+    assert "rtt-zoomable" in _wrap(user, "cell:mapping:0:0")._classes   # editable mapping entry
+    assert "rtt-zoomable" in _wrap(user, "qgen:0")._classes             # read-only generator ratio
+    # (the _ZOOM_JS engine that turns the class into a hover magnifier is a body <script>, verified
+    # in a real browser; in-process the User plugin runs no client JS — see the project's render-test notes)
 
 
-async def test_editable_value_cells_get_help_not_a_zoom_magnifier(user: User) -> None:
-    # the magnifier rides only the read-only "gridded values" (the outputs): an editable cell keeps
-    # its how-to-edit help tooltip (a sibling of the wrap) and gets NO zoom child. Checked across
-    # every editable cell on the page, so no editable kind can pick the magnifier up by accident.
+async def test_structural_cells_are_not_zoomable(user: User) -> None:
+    # only gridded VALUE cells zoom; a column header / row label / bracket is not a value, so it never
+    # becomes .rtt-zoomable (and keeps no data-zoomhelp).
     await user.open("/")
-    inputs = [e for e in user.client.elements.values()
-              if "rtt-cell-input" in getattr(e, "_classes", [])]
-    assert inputs  # the page has editable value cells
-    assert all(not _zoom_tips(w) for w in inputs)
+    for el in user.client.elements.values():
+        classes = getattr(el, "_classes", [])
+        if "rtt-zoomable" in classes:
+            # a zoomable cell is a value cell — never a header/label/symbol/bracket
+            assert not any(c in classes for c in
+                           ("rtt-colheader", "rtt-rowlabel", "rtt-symbol", "rtt-boxtitle"))
+
+
+async def test_value_cell_help_folds_into_the_zoom_magnifier(user: User) -> None:
+    # an editable value cell's how-to-edit help folds INTO its magnifier (data-zoomhelp) rather than a
+    # separate tooltip, so a value cell carries exactly one hover popup. The text still comes from
+    # tooltips.control_help, so the completeness sweep is unaffected; it just isn't a Tooltip element.
+    await user.open("/")
+    mapping = _wrap(user, "cell:mapping:0:0")
+    assert mapping._props.get("data-zoomhelp", "").startswith("Mapping entry")
+    # the value cell has no Tooltip of its own (its help folded in); only non-value controls do
+    assert not any(isinstance(c, Tooltip) for c in mapping.default_slot.children)
 
 
 def _part_classes(user: User, key: str) -> list[str]:
@@ -1884,27 +1894,25 @@ async def test_all_interval_renders_the_locked_power_as_a_read_only_value(user: 
     assert "rtt-cell-input" in _wrap_classes(user, "optimization:power")  # editable input again
 
 
-async def test_mean_damage_tooltip_tracks_the_all_interval_mode(user: User) -> None:
-    # the optimization mean damage is read-only but carries help, and that help names a different
-    # quantity per mode: target-based the minimized damage ⟪𝐝⟫ₚ, all-interval the retuning
-    # magnitude. The mean damage cells are NOT rebuilt when the mode flips, so render() must swap
-    # the tooltip text in place. Scan the client's Tooltip registry (it holds even un-hovered
-    # tooltips, which the visible-only search can't reach).
+async def test_mean_damage_help_tracks_the_all_interval_mode(user: User) -> None:
+    # the optimization mean damage is a gridded value, so its help folds into the zoom magnifier as
+    # data-zoomhelp, and that help names a different quantity per mode: target-based the minimized
+    # damage ⟪𝐝⟫ₚ, all-interval the retuning magnitude. The mean damage cell is NOT rebuilt when the
+    # mode flips, so render() must swap the attribute in place.
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal the mean damage box
 
-    def mean_damage_tips() -> list[str]:
-        return [el.text for el in user.client.elements.values()
-                if isinstance(el, Tooltip) and "the tuning minimizes over" in el.text]
+    def help_text() -> str:
+        return _wrap(user, "optimization:mean_damage")._props.get("data-zoomhelp", "")
 
-    assert any("⟪𝐝⟫ₚ" in t for t in mean_damage_tips())                 # the target-based wording
-    assert not any("retuning magnitude" in t.lower() for t in mean_damage_tips())
+    assert "⟪𝐝⟫ₚ" in help_text()                          # the target-based wording
+    assert "retuning magnitude" not in help_text().lower()
 
     user.find(kind=ui.checkbox, content="weighting").click()          # reveal the all-interval entry
-    user.find(kind=ui.checkbox, content="all-interval").click()       # show the target-controls checkbox
+    user.find(kind=ui.checkbox, content="all-interval").click()       # enter all-interval mode
 
-    assert any("retuning magnitude" in t.lower() for t in mean_damage_tips())   # the wording swapped in place
-    assert not any("⟪𝐝⟫ₚ" in t for t in mean_damage_tips())
+    assert "retuning magnitude" in help_text().lower()    # the wording swapped in place
+    assert "⟪𝐝⟫ₚ" not in help_text()
 
 
 async def test_all_interval_disables_the_target_chooser_and_falls_back_to_dash(user: User) -> None:
