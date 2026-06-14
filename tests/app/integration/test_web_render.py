@@ -1779,22 +1779,25 @@ async def test_custom_weights_toggle_makes_the_weight_row_editable_and_retunes(u
 
 async def test_all_interval_and_custom_weights_disable_each_other_in_the_panel(user: User) -> None:
     # the two are mutually exclusive (both DEFINE the weighting), so turning one on greys the other's
-    # panel checkbox (and the editor turns the loser off). Symmetric.
+    # panel checkbox AND its example sample — the ONE disabled styling, the same the example shows for
+    # a not-built / chapter-hidden toggle (the editor also turns the loser off). Symmetric.
     def box(key):
         return next(iter(user.find(marker=f"showbox:{key}").elements))
+    def example_greyed(key):  # the sample greys WITH the checkbox (reuses rtt-ex-disabled)
+        return "rtt-ex-disabled" in next(iter(user.find(marker=f"showexample:{key}").elements))._classes
     await user.open("/")
     slider = next(iter(user.find(marker="chapterslider").elements))
     slider.set_value(show_settings.CHAPTER_STAR)                  # reveal both (all-interval ch7, custom ★)
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (nested under it)
     user.find(kind=ui.checkbox, content="weighting").click()     # reveal the all-interval + custom-weights entries
-    assert "disable" not in box("custom_weights")._props         # both free initially
-    assert "disable" not in box("all_interval")._props
+    assert "disable" not in box("custom_weights")._props and not example_greyed("custom_weights")  # both free
+    assert "disable" not in box("all_interval")._props and not example_greyed("all_interval")
     user.find(kind=ui.checkbox, content="all-interval").click()  # enter all-interval mode
-    assert "disable" in box("custom_weights")._props             # ...greys custom weights
+    assert "disable" in box("custom_weights")._props and example_greyed("custom_weights")  # box AND sample grey
     user.find(kind=ui.checkbox, content="all-interval").click()  # back off
-    assert "disable" not in box("custom_weights")._props         # ...re-enables it
+    assert "disable" not in box("custom_weights")._props and not example_greyed("custom_weights")  # both restored
     user.find(kind=ui.checkbox, content="custom weights").click()  # enter custom-weight mode
-    assert "disable" in box("all_interval")._props               # ...greys all-interval (symmetric)
+    assert "disable" in box("all_interval")._props and example_greyed("all_interval")  # symmetric: box AND sample
 
 
 async def test_all_interval_greys_and_locks_the_weight_slope_chooser(user: User) -> None:

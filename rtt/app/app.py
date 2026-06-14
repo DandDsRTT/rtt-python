@@ -2535,6 +2535,10 @@ def index() -> None:
                 or show_settings.reveal_chapter(key) > chapter[0] \
                 or show_settings.disabled_by_exclusion(key, editor.settings)  # a mutually-exclusive sibling is on
             box.props("disable") if disabled else box.props(remove="disable")
+            # the example sample greys WITH the checkbox — the single disabled styling for every
+            # reason (the box's own label/glyph grey via Quasar's .disabled; this matches the sample)
+            examples[key].classes(add="rtt-ex-disabled") if disabled \
+                else examples[key].classes(remove="rtt-ex-disabled")
         states = [editor.settings[k] for k in _available_keys()]
         # This is a programmatic sync of the master checkbox to the document, NOT a user click —
         # so it must never cascade through on_select_all (which would flip every toggle to match).
@@ -4426,6 +4430,7 @@ def index() -> None:
                 # the scrolling body: the toggle groups, which scroll under the frozen header when
                 # the panel outgrows the window (rather than spilling off the bottom of the screen)
                 boxes: dict = {}  # specific-group toggle key -> checkbox, so a sub-control row can bind to its parent
+                examples: dict = {}  # specific-group toggle key -> its example cell, so _sync greys it with the box
                 tile_parts: dict = {}  # general-group layer key -> its clickable dummy-tile part (render() styles these)
                 show_rows: dict = {}   # specific-group toggle key -> its row, so the chapter slider can hide it
                 show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
@@ -4563,11 +4568,12 @@ def index() -> None:
                                                       on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
                                         .props("dense size=xs color=grey-8").classes("rtt-show-item") \
                                         .mark(f"showbox:{key}").tooltip(tooltips.SHOW_HELP[key])
-                                    example = ui.html(_example_html(key)).classes("rtt-ex-cell")
-                                    if key not in show_settings.IMPLEMENTED:
-                                        box.props("disable")  # not built yet -> greyed and inert
-                                        example.classes(add="rtt-ex-disabled")  # ...and its sample greys to match
+                                    example = ui.html(_example_html(key)).classes("rtt-ex-cell") \
+                                        .mark(f"showexample:{key}")
                                 boxes[key] = box
+                                examples[key] = example  # _sync_show_availability greys it with the box —
+                                # ONE disabled path for every reason (not-built / chapter-hidden / a
+                                # mutually-exclusive sibling on), so the sample always matches the checkbox
                                 show_rows[key] = row  # the chapter slider hides whole rows by key
                                 parent = show_settings.SUBCONTROLS.get(key)
                                 if parent:  # indent by nesting depth (so a grandchild sits further right
