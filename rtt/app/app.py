@@ -3942,22 +3942,22 @@ def index() -> None:
 
     def chooser_hover(cid, apply):
         # a dropdown option hover previews applying its candidate. How it previews depends on whether
-        # the pick keeps the user's owned intervals or DROPS some — the same fork the temperament
-        # chooser makes, only detected by whether interval DATA goes away (removed_interval_data),
-        # not by state dimensions:
-        #   • value-only (no owned interval is dropped — a re-solve, a re-formed matrix, a projection
-        #     that keeps the targets) — REFLOW: apply to the document under the gesture's token and
-        #     re-render the would-be grid, so the changed cells actually SHOW their NEW values (a bare
-        #     ring can't move a value), ringed amber against the pre-hover grid (the gesture
-        #     baseline). The hovered chooser's own value + open popup stay steady across that
-        #     re-render (_chooser_reflow_hold, keyed on this gesture's source). Derived/read-only
-        #     tiles that vanish on the way (the canonical-form box once the matrix IS canonical, a
-        #     prescaling tile a scheme hides) are not interval data, so they don't force a redden.
-        #   • interval-dropping (a target-set family that drops targets, a projection that makes every
-        #     target unchanged) — REDDEN, don't reflow: a reflow would just delete the doomed cells
-        #     mid-preview and the user wouldn't see what goes away. Hold the current grid and arm the
-        #     load as a hypothetical candidate — every dropped cell rings RED in place (removed_cell_ids,
-        #     the FULL removal incl. the derived rows), the surviving changed cells amber.
+        # the pick keeps every on-screen value cell or REMOVES some — the same fork the temperament
+        # chooser makes, detected by removed_cell_ids (any value cell the pick deletes), not by state
+        # dimensions:
+        #   • value-only (NOTHING removed — a re-solve, a re-formed matrix, a same-count target swap,
+        #     a projection that keeps the grid) — REFLOW: apply to the document under the gesture's
+        #     token and re-render the would-be grid, so the changed cells actually SHOW their NEW
+        #     values (a bare ring can't move a value), ringed amber against the pre-hover grid (the
+        #     gesture baseline). Cells are fixed-width, so a pure value change never shifts the grid;
+        #     the hovered chooser's own value + open popup stay steady across the re-render
+        #     (_chooser_reflow_hold, keyed on this gesture's source group).
+        #   • cell-removing (a target-set family that drops targets, a projection that makes every
+        #     target unchanged, a <choose form> pick that retires the now-redundant canonical-form
+        #     reference box) — REDDEN, don't reflow: reflowing the doomed cells AWAY would shift the
+        #     grid out from under the cursor (moving the open dropdown) AND hide what goes away. So
+        #     hold the current grid and arm the load as a hypothetical candidate — every dropped cell
+        #     rings RED in place, the surviving changed cells amber, all kept on screen until commit.
         # The token is captured ONCE per gesture and survives option-to-option moves; every option
         # re-bases on it. Reverts on leave / popup-close (chooser_unhover), commits on the chooser's
         # own select handler (on_preset / on_form_choose / on_control_select / on_target_change, each
@@ -3984,9 +3984,9 @@ def index() -> None:
         base = g.baseline
         apply()                              # evaluate the candidate on the real document...
         hyp = editor.layout(prev_ids=base.identities if base is not None else None)
-        if base is not None and spreadsheet.removed_interval_data(base, hyp):  # the pick drops owned
-            editor.restore_for_preview(g.token)  # intervals — back to the real doc; keep the grid shape
-            g.apply = apply                      # and redden the dropped cells in place, no reflow
+        if base is not None and spreadsheet.removed_cell_ids(base, hyp):  # the pick would DELETE cells —
+            editor.restore_for_preview(g.token)  # back to the real doc; keep the grid shape (no shift)
+            g.apply = apply                      # and redden the doomed cells in place, no reflow
             paint_rings()
         else:                                # value-only — reflow into the would-be grid, ringed amber
             g.apply = None                   # against the baseline (live-mode diff)
@@ -4032,7 +4032,7 @@ def index() -> None:
         #     shown); seeing what goes away is what was asked for.
         # Temperament keeps its OWN sticky TEMP gesture (it can change the grid's dimensionality, so
         # the shrink fork is detected by state dims here) — the generic dropdowns reflow the same way
-        # but through the CHOOSER gesture (chooser_hover), whose shrink fork is owned-interval removal.
+        # but through the CHOOSER gesture (chooser_hover), whose redden fork is any cell removal.
         # The token is captured ONCE per gesture and survives option-to-option moves (including
         # grow→shrink, which arrives with no leave in between); every option re-bases on it.
         # Reverts on leave / popup-close (_end_temperament_preview), commits on select (on_preset).
@@ -4163,7 +4163,7 @@ def index() -> None:
         # index in `detail` (-1 / None on leave). Map it back to the option's key through the live
         # select, then preview applying it. Temperament + the sub-pickers route to their own sticky
         # reflow path; the rest (including the TILT/OLD family) go through chooser_hover below, which
-        # reflows a value-only pick and reddens one that drops owned intervals.
+        # reflows a value-only pick and reddens one that would remove cells.
         entry = rec.selects.get(cid)
         sel = entry[1] if isinstance(entry, tuple) else entry  # the target chooser rides a (num, sel) tuple
         if not isinstance(sel, ui.select):

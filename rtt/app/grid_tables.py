@@ -1171,18 +1171,3 @@ RINGABLE_KINDS = BLANKED_NUMBER_KINDS | frozenset({
     # commaratio and the editable element / unchanged cells are now in BLANKED_NUMBER_KINDS above.)
     "mathexpr", "powerdisplay",
 })
-
-# The editable interval-data cell kinds the user directly OWNS: the temperament's mapping rows and
-# the domain elements, plus the target / held / interest interval lists (entered as ratios in the
-# quantities row or as vectors in the interval-vectors grid). When a chooser pick would DROP one of
-# these, the hover-preview reddens it in place so the user SEES the interval go away (a target-set
-# family that drops targets, a projection that makes every target unchanged). A pick that drops only
-# DERIVED, read-only display cells (the canonical-form box and its F matrix when the matrix adopts
-# canonical form, a prescaling tile a scheme hides) is NOT data loss, so the hover reflows instead —
-# the changed cells then show their new values. This is the narrow subset of RINGABLE_KINDS whose
-# disappearance gates the redden-vs-reflow fork; the read-only outputs (mapped / tuningvalue / vec /
-# genratio / commaratio / formcell / prescalercell / gentuningcell / …) are deliberately excluded.
-INTERVAL_DATA_KINDS = frozenset({
-    "mapping", "commacell", "unchangedcell", "interestcell", "heldcell", "targetcell",
-    "ratiocell", "elementcell", "elementratio",
-})

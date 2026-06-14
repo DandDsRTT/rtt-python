@@ -435,22 +435,6 @@ def removed_cell_ids(old: Layout, new: Layout) -> frozenset:
                      if c.kind in RINGABLE_KINDS and not c.pending and c.id not in after)
 
 
-def removed_interval_data(old: Layout, new: Layout) -> frozenset:
-    """The ids of editable INTERVAL-DATA cells (:data:`INTERVAL_DATA_KINDS` — the user's own mapping
-    rows, domain elements and target/held/interest interval lists) present in ``old`` but GONE from
-    ``new``. The narrowed counterpart to :func:`removed_cell_ids`: it gates a chooser hover's
-    redden-vs-reflow fork. A pick that drops owned interval data (a target-set family that drops
-    targets, a projection that makes every target unchanged) returns non-empty here, so the hover
-    REDDENS those cells in place — a reflow would just delete them mid-preview and the user wouldn't
-    see what goes away. A pick that only changes values, or drops DERIVED read-only display tiles (the
-    canonical-form box when the matrix becomes canonical, a prescaling tile a scheme hides), returns
-    empty here, so the hover REFLOWS and the changed cells show their new values. PENDING draft cells
-    never count (they are not committed interval data)."""
-    after = {c.id for c in new.cells}
-    return frozenset(c.id for c in old.cells
-                     if c.kind in INTERVAL_DATA_KINDS and not c.pending and c.id not in after)
-
-
 def assign_column_tokens(prev, keys, claim_unmatched=False):
     """Assign a stable id-token to each interval column, so a column keeps its cell ids across a
     render and the reconciler glides it to its new x (rather than re-filling a fixed-index cell).

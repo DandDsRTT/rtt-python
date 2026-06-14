@@ -3222,7 +3222,7 @@ async def test_hovering_a_temperament_option_previews_loading_it(user: User) -> 
 async def test_hovering_a_tuning_scheme_option_previews_reselecting(user: User) -> None:
     # the tuning-scheme chooser gets the same option-hover preview as the temperament chooser, through
     # the shared _arm_option_hover hook: hovering a scheme REFLOWS the would-be grid (a value-only
-    # re-solve drops no owned interval), so the cells reselecting it would move — here the damage
+    # re-solve removes no cell), so the cells reselecting it would move — here the damage
     # weights, which the weight slope (minimax-U → minimax-S) re-derives — actually SHOW their new
     # values, ringed amber; leaving reverts both the values and the rings.
     from rtt.app import presets
@@ -3324,40 +3324,42 @@ async def test_hovering_a_locked_weight_slope_shows_no_preview(user: User) -> No
 
 
 async def test_hovering_the_form_canonical_option_previews_canonicalizing(user: User) -> None:
-    # the mapping <choose form> control previews canonicalizing by REFLOWING: hovering "canonical"
-    # re-renders the would-be grid so the mapping cells it re-stores actually SHOW their canonical
-    # values, ringed amber — not just ringed while keeping their old entries (the reported bug). The
-    # default mapping is the fifth-form ⟨1 1 0]⟨0 1 4]; canonical HNF is ⟨1 0 -4]⟨0 1 4], so row-0
-    # col-2 reads 0 before the hover and -4 during it. Leaving reverts the value AND the ring. The
-    # canonical-form REFERENCE tile (cell:canon) vanishes as the mapping adopts canonical form, but
-    # that's a derived display, not owned interval data, so it doesn't trip the redden fallback.
+    # the mapping <choose form> control previews canonicalizing by REDDENING in place, NOT reflowing:
+    # picking canonical would retire the now-redundant canonical-form REFERENCE tile (the canonical
+    # mapping row + the F generator-form matrix), and reflowing those AWAY mid-hover would shift the
+    # grid out from under the cursor (moving the open dropdown). So the hover holds the grid steady and
+    # rings the doomed reference cells RED, keeping them on screen until the pick commits, while the
+    # main mapping cells the canonicalize would move ring amber (in place). The canon reference tile
+    # already shows the canonical values, so reddening it is the preview of what you're switching to.
     await user.open("/")
     _toggle(user, "form")            # the parent layer reveals its sub-controls (form controls is a child)
     _toggle(user, "form controls")   # now visible: turn on the <choose form> dropdowns
     await user.should_see(marker="formchooser:mapping")
-    assert _cell_child(user, "cell:mapping:0:2").value == "0"   # the fifth-form entry, pre-hover
+    await user.should_see(marker="cell:canon:0:2")             # the canonical-mapping reference row is on screen
     wrap = set(user.find(marker="formchooser:mapping").elements)
     # options are {"": "choose form", "canonical": "canonical"}, so index 1 is the canonical entry
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})
-    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")  # a re-stored mapping cell rings
-    assert _cell_child(user, "cell:mapping:0:2").value == "-4"  # ...and SHOWS its canonical value (reflow)
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:canon:0:2")    # the canonical mapping ROW → red
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:form:0:0")     # the canonical generators COL (F) → red
+    await user.should_see(marker="cell:canon:0:2")             # ...still on screen (NOT reflowed away — no shift)
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")  # the main mapping it'd move → amber, in place
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
+    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:canon:0:2")  # cleared on leave
     assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:2")
-    assert _cell_child(user, "cell:mapping:0:2").value == "0"   # reverts to the fifth-form entry on leave
 
 
 async def test_choosing_the_form_canonical_option_commits_canonicalizing(user: User) -> None:
-    # committing the <choose form> "canonical" pick (after the reflow preview machinery armed a
-    # gesture) re-stores the mapping in canonical form for real: on_form_choose end_gesture()s the
-    # live hover preview first (so the edit is one clean undo step off the REAL document, not stacked
-    # on the reflowed hypothetical), then applies. Row-0 col-2 lands at -4 and STAYS, and a single
-    # undo restores the fifth-form 0 — proving the commit was one clean step, not a doubled edit.
+    # committing the <choose form> "canonical" pick (after the hover preview armed a chooser gesture)
+    # re-stores the mapping in canonical form for real: on_form_choose end_chooser_gesture()s the live
+    # hover preview first (so the edit is one clean undo step off the REAL document), then applies.
+    # Row-0 col-2 lands at -4 and STAYS, and a single undo restores the fifth-form 0 — proving the
+    # commit was one clean step, not a doubled edit on top of the preview.
     await user.open("/")
     _toggle(user, "form")
     _toggle(user, "form controls")
     await user.should_see(marker="formchooser:mapping")
     wrap = set(user.find(marker="formchooser:mapping").elements)
-    UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})    # preview canonicalizing (reflow)
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})    # preview canonicalizing (redden)
     _cell_child(user, "formchooser:mapping").set_value("canonical")         # ...then commit it
     await user.should_see(marker="cell:mapping:0:2")
     assert _cell_child(user, "cell:mapping:0:2").value == "-4"  # committed canonical, value stuck
@@ -3411,7 +3413,7 @@ async def test_hovering_a_target_family_reddens_the_rows_it_drops(user: User) ->
 
 async def test_hovering_a_same_count_target_family_rings_the_moved_rows_amber(user: User) -> None:
     # when the hovered family keeps the SAME number of targets but different intervals (no net rows
-    # dropped → no owned interval removed), the preview REFLOWS in place: the rows whose value moves
+    # dropped → no cell removed), the preview REFLOWS in place: the rows whose value moves
     # ring amber AND show their new values, while the chooser's own value is held steady across the
     # re-render (no flip, like the other reflow choosers). From a committed 5-TILT, hovering 5-OLD
     # (both 7 targets, different intervals) shows the moved rows' new values amber; leaving reverts.
