@@ -547,6 +547,39 @@ async def test_hover_tooltips_wait_before_appearing(user: User) -> None:
     assert all(int(el._props.get("delay", 0)) >= 500 for el in tips)
 
 
+def _zoom_tips(wrap):
+    """The zoom-magnifier Tooltip(s) hanging off a grid cell's wrap. The magnifier is appended as a
+    CHILD of the wrap (so the cell's face stays children[0]); the controls' help tooltips ride as
+    SIBLINGS, so they never appear here — this finds only the value-zoom magnifier."""
+    return [c for c in wrap.default_slot.children
+            if isinstance(c, Tooltip) and "rtt-zoomtip" in c._classes]
+
+
+async def test_readonly_gridded_values_carry_a_zoom_magnifier(user: User) -> None:
+    # hovering a read-only gridded value (cents, ratios, powers, math expressions) pops a magnifier:
+    # a tooltip showing the SAME value face enlarged to a normal integer cell's size. The octave's
+    # read-only tuning value (1200.000) is one. The magnifier's body carries the live face classes
+    # (.rtt-zoom-scale over .rtt-stacked-main) so the CSS transform enlarges the identical face.
+    await user.open("/")
+    octave = next(iter(user.find(marker="tuning:prime:0").elements))
+    zoom = _zoom_tips(octave)
+    assert len(zoom) == 1
+    assert int(zoom[0]._props.get("delay", 0)) >= 500   # inherits the deliberate-rest hover delay
+    body = zoom[0].default_slot.children[0].content     # the ui.html holding the enlarged face
+    assert "rtt-zoom-scale" in body and "rtt-stacked-main" in body and "1200" in body
+
+
+async def test_editable_value_cells_get_help_not_a_zoom_magnifier(user: User) -> None:
+    # the magnifier rides only the read-only "gridded values" (the outputs): an editable cell keeps
+    # its how-to-edit help tooltip (a sibling of the wrap) and gets NO zoom child. Checked across
+    # every editable cell on the page, so no editable kind can pick the magnifier up by accident.
+    await user.open("/")
+    inputs = [e for e in user.client.elements.values()
+              if "rtt-cell-input" in getattr(e, "_classes", [])]
+    assert inputs  # the page has editable value cells
+    assert all(not _zoom_tips(w) for w in inputs)
+
+
 def _part_classes(user: User, key: str) -> list[str]:
     """The CSS classes render() has put on the general dummy tile's part for ``key``."""
     return next(iter(user.find(marker=f"showpart:{key}").elements))._classes
