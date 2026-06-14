@@ -377,16 +377,16 @@ async def test_optimization_with_charts_renders_the_damage_indicator(user: User)
     await user.should_see(marker="chart:damage:targets")
 
 
-async def test_the_all_interval_toggle_enters_all_interval_mode_with_no_in_grid_checkbox(user: User) -> None:
-    # the all-interval Show toggle (nested weighting -> optimization) now IS the all-interval mode —
-    # there is no separate in-grid checkbox. Clicking it switches the scheme to all-interval, which
-    # shows the dual(q) read-only cell; the old control:all_interval checkbox never renders.
+async def test_enabling_all_interval_renders_the_target_controls_checkbox(user: User) -> None:
+    # the show-panel "all-interval" entry (nested weighting -> optimization) reveals the in-grid
+    # target-controls "all-interval" checkbox — a control_check in box 𝐓 (a two-step process: the
+    # Show toggle shows the control, the control enters the mode). Drill through optimization and
+    # weighting to reach the entry, then enable it and drive the checkbox's render branch.
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()     # reveal the all-interval entry
-    user.find(kind=ui.checkbox, content="all-interval").click()  # the toggle drives the mode directly
-    await user.should_see(marker="control:dual")                 # dual(q) shows only in all-interval mode
-    await user.should_not_see(marker="control:all_interval")     # the in-grid checkbox is gone
+    user.find(kind=ui.checkbox, content="all-interval").click()  # reveal the in-grid checkbox
+    await user.should_see(marker="control:all_interval")
 
 
 async def test_off_diagonal_pretransformer_edit_keeps_the_all_interval_weight_a_list(user: User) -> None:
@@ -398,6 +398,7 @@ async def test_off_diagonal_pretransformer_edit_keeps_the_all_interval_weight_a_
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()       # show the weight row
     user.find(kind=ui.checkbox, content="all-interval").click()    # reveal the all-interval control
+    _cell_child(user, "control:all_interval").set_value(True)      # enter all-interval mode (targets = primes)
     user.find(kind=ui.checkbox, content="alternative complexity").click()  # make the whole square editable
     await user.should_see(marker="cell:prescaling:primes:1:0")     # the editable off-diagonal cell
     await user.should_see(marker="weight:target:0")                # before: the per-target weight LIST
@@ -975,7 +976,8 @@ async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(
     user.find(kind=ui.checkbox, content="weighting").click()       # reveal the nested entries
     user.find(kind=ui.checkbox, content="alternative complexity").click()  # ≥2 all-interval schemes -> stays a dropdown
     assert _cell_child(user, "preset:tuning").options["minimax-S"] == "T minimax-S"  # target-based default
-    user.find(kind=ui.checkbox, content="all-interval").click()    # the toggle IS all-interval mode now
+    user.find(kind=ui.checkbox, content="all-interval").click()    # reveal the in-grid checkbox
+    _cell_child(user, "control:all_interval").set_value(True)      # check it -> all-interval (drop the T prefix)
     await user.should_see(marker="preset:tuning")
     assert _cell_child(user, "preset:tuning").options["minimax-S"] == "minimax-S"  # T prefix dropped
 
@@ -1735,6 +1737,7 @@ async def test_typing_the_q_field_drives_the_complexity_norm(user: User) -> None
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()        # reveal the nested all-interval + alt entries
     user.find(kind=ui.checkbox, content="all-interval").click()     # show the target-controls checkbox
+    _cell_child(user, "control:all_interval").set_value(True)       # check it -> all-interval (dual(q) shows)
     user.find(kind=ui.checkbox, content="alternative complexity").click()  # make q an editable powerinput
     await user.should_see(marker="control:dual")
     assert _cell_child(user, "control:q").value == "1"              # taxicab default
@@ -1819,27 +1822,33 @@ async def test_custom_weights_toggle_makes_the_weight_row_editable_and_retunes(u
     assert _cell_child(user, "weight:target:0").value == service.cents(3.0)  # the override stuck (re-formatted)
 
 
-async def test_all_interval_and_custom_weights_disable_each_other_in_the_panel(user: User) -> None:
-    # the two are mutually exclusive (both DEFINE the weighting), so turning one on greys the other's
-    # panel checkbox AND its example sample — the ONE disabled styling, the same the example shows for
-    # a not-built / chapter-hidden toggle (the editor also turns the loser off). Symmetric.
+async def test_all_interval_and_custom_weights_do_not_disable_each_other(user: User) -> None:
+    # all-interval and custom weights are mutually-exclusive TUNINGS, but that's enforced at the
+    # behavior level (the in-grid checkbox / the editor) — NOT by disabling each other's Show toggle.
+    # So neither greys the other in the panel, and 'select all' stays possible (the reason all-interval
+    # was reverted to a two-step visibility toggle).
     def box(key):
         return next(iter(user.find(marker=f"showbox:{key}").elements))
-    def example_greyed(key):  # the sample greys WITH the checkbox (reuses rtt-ex-disabled)
-        return "rtt-ex-disabled" in next(iter(user.find(marker=f"showexample:{key}").elements))._classes
     await user.open("/")
     slider = next(iter(user.find(marker="chapterslider").elements))
     slider.set_value(show_settings.CHAPTER_STAR)                  # reveal both (all-interval ch7, custom ★)
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (nested under it)
     user.find(kind=ui.checkbox, content="weighting").click()     # reveal the all-interval + custom-weights entries
-    assert "disable" not in box("custom_weights")._props and not example_greyed("custom_weights")  # both free
-    assert "disable" not in box("all_interval")._props and not example_greyed("all_interval")
-    user.find(kind=ui.checkbox, content="all-interval").click()  # enter all-interval mode
-    assert "disable" in box("custom_weights")._props and example_greyed("custom_weights")  # box AND sample grey
-    user.find(kind=ui.checkbox, content="all-interval").click()  # back off
-    assert "disable" not in box("custom_weights")._props and not example_greyed("custom_weights")  # both restored
+    assert "disable" not in box("all_interval")._props and "disable" not in box("custom_weights")._props
     user.find(kind=ui.checkbox, content="custom weights").click()  # enter custom-weight mode
-    assert "disable" in box("all_interval")._props and example_greyed("all_interval")  # symmetric: box AND sample
+    assert "disable" not in box("all_interval")._props           # all-interval is NOT greyed by custom weights
+
+
+async def test_a_disabled_toggle_greys_its_box_and_its_example_together(user: User) -> None:
+    # the single disabled styling: an unavailable toggle greys BOTH its checkbox and its example
+    # sample (rtt-ex-disabled), never out of step. At the default chapter, generator detempering (the
+    # ★ notch) is chapter-disabled — so its box is disabled and its sample greys to match.
+    def box(key):
+        return next(iter(user.find(marker=f"showbox:{key}").elements))
+    def example_greyed(key):
+        return "rtt-ex-disabled" in next(iter(user.find(marker=f"showexample:{key}").elements))._classes
+    await user.open("/")
+    assert "disable" in box("generator_detempering")._props and example_greyed("generator_detempering")
 
 
 async def test_all_interval_greys_and_locks_the_weight_slope_chooser(user: User) -> None:
@@ -1852,7 +1861,8 @@ async def test_all_interval_greys_and_locks_the_weight_slope_chooser(user: User)
     user.find(kind=ui.checkbox, content="weighting").click()    # box 𝒘 (the slope chooser) + the all-interval entry
     await user.should_see(marker="control:slope")
     assert _cell_child(user, "control:slope").enabled           # live while target-based (before)
-    user.find(kind=ui.checkbox, content="all-interval").click()  # enter all-interval -> locks the slope chooser
+    user.find(kind=ui.checkbox, content="all-interval").click()  # reveal the in-grid checkbox
+    _cell_child(user, "control:all_interval").set_value(True)    # check it -> all-interval locks the slope chooser
     await user.should_see(marker="control:slope")
     chooser = _cell_child(user, "control:slope")
     assert not chooser.enabled                                  # greyed (locked, non-interactive)
@@ -1915,13 +1925,14 @@ async def test_all_interval_renders_the_locked_power_as_a_read_only_value(user: 
     assert "rtt-cell-input" in _wrap_classes(user, "optimization:power")  # editable input while target-based
     edit_main, edit_sub = _stacked_face(user, "optimization:power")       # editable face: ∞ over (max)
     assert (edit_main.text, edit_sub.text) == ("∞", "(max)")
-    user.find(kind=ui.checkbox, content="all-interval").click()     # enter all-interval -> locks the power
+    user.find(kind=ui.checkbox, content="all-interval").click()     # reveal the in-grid checkbox
+    _cell_child(user, "control:all_interval").set_value(True)       # check it -> all-interval locks the power
     await user.should_see(marker="optimization:power")
     assert "rtt-cell-input" not in _wrap_classes(user, "optimization:power")  # read-only value, no input
     face = _cell_child(user, "optimization:power")                # the .rtt-tuning-value stacked face div
     main, sub = face.default_slot.children[0], face.default_slot.children[1]
     assert (main.text, sub.text) == ("∞", "(max)")               # identical face: ∞ over (max), kept
-    user.find(kind=ui.checkbox, content="all-interval").click()  # toggle back to target-based
+    _cell_child(user, "control:all_interval").set_value(False)    # uncheck -> back to target-based
     await user.should_see(marker="optimization:power")
     assert "rtt-cell-input" in _wrap_classes(user, "optimization:power")  # editable input again
 
@@ -1941,7 +1952,8 @@ async def test_mean_damage_help_tracks_the_all_interval_mode(user: User) -> None
     assert "retuning magnitude" not in help_text().lower()
 
     user.find(kind=ui.checkbox, content="weighting").click()          # reveal the all-interval entry
-    user.find(kind=ui.checkbox, content="all-interval").click()       # enter all-interval mode
+    user.find(kind=ui.checkbox, content="all-interval").click()       # reveal the in-grid checkbox
+    _cell_child(user, "control:all_interval").set_value(True)         # check it -> enter all-interval mode
 
     assert "retuning magnitude" in help_text().lower()    # the wording swapped in place
     assert "⟪𝐝⟫ₚ" not in help_text()
@@ -1956,15 +1968,35 @@ async def test_all_interval_disables_the_target_chooser_and_falls_back_to_dash(u
     user.find(kind=ui.checkbox, content="weighting").click()     # reveal the all-interval entry
     num, sel = _target_preset(user)
     assert sel.enabled and "display-value" not in sel._props      # live family, interactive (before)
-    user.find(kind=ui.checkbox, content="all-interval").click()  # enter all-interval -> greys the chooser
+    user.find(kind=ui.checkbox, content="all-interval").click()  # reveal the in-grid checkbox
+    _cell_child(user, "control:all_interval").set_value(True)    # check it -> all-interval greys the chooser
     await user.should_see(marker="preset:target")
     num, sel = _target_preset(user)
     assert not sel.enabled and not num.enabled                    # greyed + locked
     assert sel._props.get("display-value") == "-" and num.value is None  # both fall back to "-"
-    user.find(kind=ui.checkbox, content="all-interval").click()  # toggle back to target-based
+    _cell_child(user, "control:all_interval").set_value(False)   # uncheck -> back to target-based
     await user.should_see(marker="preset:target")
     num, sel = _target_preset(user)
     assert sel.enabled and "display-value" not in sel._props      # restored & interactive
+
+
+async def test_hovering_the_all_interval_checkbox_previews_collapsing_to_the_primes(user: User) -> None:
+    # the target-controls "all-interval" checkbox collapses the finite target list to the primes, so its
+    # hover is genuinely structural: the dropped target ratios still on screen ring RED (what the click
+    # removes) and the re-weighted survivors ring amber. Leaving clears both, and the click still commits.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
+    user.find(kind=ui.checkbox, content="weighting").click()     # the weight columns + the entry's parent
+    user.find(kind=ui.checkbox, content="all-interval").click()  # reveal the target-controls checkbox
+    await user.should_see(marker="control:all_interval")
+    btn = set(user.find(marker="control:all_interval").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-remove" in _wrap_classes(user, "target:2")     # a dropped non-prime target → red
+    assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")  # a survivor's re-weight → amber
+    await user.should_see(marker="target:2")                          # ...still on screen (no reflow)
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-remove" not in _wrap_classes(user, "target:2")
+    assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
 
 
 async def test_optimization_renders_the_held_column_and_its_add_control(user: User) -> None:
@@ -3228,6 +3260,7 @@ async def test_hovering_a_locked_weight_slope_shows_no_preview(user: User) -> No
     _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")
     _toggle(user, "all-interval")                                 # reveal the all-interval checkbox
+    _cell_child(user, "control:all_interval").set_value(True)     # check it -> all-interval locks the slope
     await user.should_see(marker="control:slope")
     wrap = set(user.find(marker="control:slope").elements)
     idx = list(service.WEIGHT_SLOPES).index("complexity-weight")
@@ -3843,7 +3876,8 @@ async def test_a_zero_prescaler_diagonal_entry_is_rejected_not_committed(user: U
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
-    user.find(kind=ui.checkbox, content="all-interval").click()
+    user.find(kind=ui.checkbox, content="all-interval").click()              # reveal the in-grid checkbox
+    _cell_child(user, "control:all_interval").set_value(True)                # check it -> all-interval mode
     user.find(kind=ui.checkbox, content="alternative complexity").click()    # make the prescaler square editable
     await user.should_see(marker="cell:prescaling:primes:0:0")        # an editable DIAGONAL (i==j) entry
     before = _cell_child(user, "cell:prescaling:primes:0:0").value

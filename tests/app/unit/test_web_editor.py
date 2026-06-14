@@ -1922,15 +1922,16 @@ def test_show_settings_start_at_defaults_and_changes_are_undoable():
 
 
 def test_select_all_then_none_over_implemented_toggles():
-    # the mode-fused toggles (all-interval, custom weights) can't be bulk-entered — they're
-    # mutually-exclusive tuning modes, not visibility, so select-all turns on every VISIBILITY
-    # toggle but leaves the modes as they are (off by default).
-    modes = {"all_interval", "custom_weights"}
+    # custom weights is the lone mode-fused toggle (a tuning mode, not visibility), so select-all
+    # can't bulk-ENTER it; every other implemented toggle turns on — INCLUDING all-interval, which is
+    # a two-step visibility toggle again (it only reveals the in-grid checkbox). No toggle DISABLES
+    # another, so select-all is always possible (the reason all-interval was reverted from a mode).
+    modes = {"custom_weights"}
     visibility = settings.IMPLEMENTED - modes
     editor = Editor()
     editor.set_all_show(True)  # the panel's select-all
-    assert all(editor.settings[k] for k in visibility)
-    assert not any(editor.settings[k] for k in modes)  # select-all didn't enter a tuning mode
+    assert all(editor.settings[k] for k in visibility)  # all-interval (visibility) turns on too
+    assert not editor.settings["custom_weights"]  # select-all didn't enter the manual-weight mode
     editor.set_all_show(False)  # ...and select-none
     assert not any(editor.settings[k] for k in settings.IMPLEMENTED)
     editor.undo()  # one undo restores the whole all-on set (a single action)

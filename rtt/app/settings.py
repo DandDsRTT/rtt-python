@@ -190,23 +190,13 @@ IMPLEMENTED: frozenset[str] = frozenset(
 GROUPING_PARENTS: frozenset[str] = frozenset({"temperament", "tuning"})
 
 
-# Mutually-exclusive Show toggles: at most one per group can be ON, because they're competing
-# definitions of the SAME thing — all-interval (structural per-prime simplicity weights) and custom
-# weights (typed per-target weights) both DEFINE the weighting, so they can't both apply. Editor's
-# mode reconciler already turns the loser off when one is entered; the panel additionally DISABLES
-# (greys) the others while one is on (see :func:`disabled_by_exclusion`), so a mutually-exclusive
-# pair reads as a choice rather than two independent checkboxes. (Add a group here to make another
-# pair exclusive — e.g. nothing else is today.)
-MUTUALLY_EXCLUSIVE: tuple[frozenset[str], ...] = (
-    frozenset({"all_interval", "custom_weights"}),
-)
-
-
-def disabled_by_exclusion(key: str, settings: dict) -> bool:
-    """Whether ``key``'s checkbox should grey out because a mutually-exclusive sibling is currently
-    on (see :data:`MUTUALLY_EXCLUSIVE`). False for a key in no exclusive group."""
-    return any(key in group and any(other != key and settings.get(other) for other in group)
-               for group in MUTUALLY_EXCLUSIVE)
+# (No mutually-exclusive Show toggles. all-interval mode and custom weights ARE mutually exclusive
+# tunings — both define the weighting — but that's enforced at the BEHAVIOR level: the in-grid
+# box-𝐓 all-interval checkbox (Editor.set_all_interval) drops any custom weights, and entering
+# custom-weight mode is a no-op while all-interval. Keeping it OFF the Show toggles is deliberate —
+# a Show toggle that disabled a sibling made 'select all' impossible, so all-interval is a two-step
+# visibility toggle + in-grid checkbox, and custom weights is the lone mode toggle. Neither disables
+# the other in the panel.)
 
 
 # ── The guide-chapter reveal ────────────────────────────────────────────────────────────────

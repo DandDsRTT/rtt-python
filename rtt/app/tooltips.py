@@ -59,7 +59,7 @@ SHOW_HELP: dict[str, str] = {
     "optimization": "Show the optimization box — the mean damage and the power 𝑝.",
     "tuning_ranges": "Chart each generator's tuning range as an I-beam under the generator tuning map.",
     "weighting": "Show the weighting boxes — the prescaler, the complexity 𝒄, and the weight 𝒘.",
-    "all_interval": "Optimize over every interval at once (an all-interval scheme) instead of a finite target list — simplicity-weighted by construction.",
+    "all_interval": "Show the all-interval control — optimize over every interval rather than a finite target list.",
     "alt_complexity": "Show the alternative-complexity controls — the prescaler box 𝐋 and the wider choice of interval-complexity measures.",
     "custom_weights": "Type your own damage weight per target interval (the editable 𝒘 row), overriding the slope's complexity/simplicity/unity weighting.",
     "projection": "Show the projection box — the rational projection 𝑃 = 𝐺𝑀 holding the just primes.",
@@ -186,6 +186,7 @@ _ID_HELP: dict[str, str] = {
     "control:slope": "Choose the damage weight slope — how a target's weight scales with its complexity.",
     # control_check
     "control:diminuator": "Replace the diminuator — the smaller of each ratio's numerator and denominator — in the interval-complexity measure.",
+    "control:all_interval": "Optimize over every interval at once (an all-interval scheme) instead of a finite target list.",
     # formchooser
     "formchooser:mapping": "Rewrite the mapping into a canonical form (an undoable edit).",
     "formchooser:comma_basis": "Rewrite the comma basis into a canonical form (an undoable edit).",

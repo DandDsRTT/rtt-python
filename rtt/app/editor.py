@@ -1267,28 +1267,22 @@ class Editor:
 
     def set_all_interval(self, all_interval: bool) -> None:
         """Enter/exit all-interval mode: on targets every interval (the empty set — an all-interval
-        scheme), off targets the displayed interval list (the live target spec). An undoable edit.
-        The mode is now driven by the ``all_interval`` Show toggle (see :meth:`set_show`); this
-        public method snapshots and delegates to :meth:`_apply_all_interval` for direct callers."""
+        scheme), off targets the displayed interval list (the live target spec). An undoable edit
+        driven by the in-grid box-𝐓 checkbox (its ``all_interval`` Show toggle only reveals that
+        checkbox — a two-step process). Switches the scheme's target set ({} vs the live target spec)
+        and weight slope — an all-interval scheme is simplicity-weighted by construction, the
+        target-based default unity-weighted. The slope and target set are swapped as structured
+        TRAITS (no name surgery), so a held-/destretched- modifier survives the toggle. Entering also
+        clears any manual-weight override: all-interval has structural per-prime simplicity weights,
+        not per-target ones, so the two modes are mutually exclusive (handled here, at the behavior
+        level — the Show toggles are NOT mutually exclusive, so 'select all' stays possible)."""
         self._snapshot()
-        self.settings["all_interval"] = all_interval  # keep the Show flag in step with the mode
-        self._apply_all_interval(all_interval)
-
-    def _apply_all_interval(self, all_interval: bool) -> None:
-        """The body of all-interval mode entry/exit, WITHOUT snapshotting (the caller has). Switches
-        the scheme's target set ({} vs the live target spec) and weight slope — an all-interval
-        scheme is simplicity-weighted by construction, the target-based default unity-weighted. The
-        slope and target set are swapped as structured TRAITS (no name surgery), so a
-        held-/destretched- modifier survives the toggle. Entering also clears any manual-weight
-        override: all-interval has structural per-prime simplicity weights, not per-target ones, so
-        the two modes are mutually exclusive."""
         slope = "simplicity-weight" if all_interval else "unity-weight"
         scheme = service.scheme_with_weight_slope(self.tuning_scheme, slope)
         self.tuning_scheme = service.scheme_with_targets(
             scheme, "{}" if all_interval else self.target_spec)
-        if all_interval:
-            self.custom_weights = None
-            self.settings["custom_weights"] = False
+        if all_interval and self.custom_weights is not None:
+            self._invalidate_custom_weights()  # entering all-interval drops the per-target weights
 
     def _apply_custom_weights(self, on: bool) -> None:
         """The body of manual-weight mode entry/exit (the ``custom_weights`` Show toggle and its
@@ -1342,10 +1336,11 @@ class Editor:
 
     def _mode_toggles(self):
         """The Show toggles that ARE a tuning mode (no separate in-grid control): each as
-        ``(key, is-on probe, apply(on))``. all-interval and custom weights are mutually exclusive
-        (all-interval has no per-target weights), so at most one is ever on."""
+        ``(key, is-on probe, apply(on))``. Only custom weights is one — all-interval reverted to a
+        two-step (its Show toggle reveals the box-𝐓 checkbox, which drives the mode via
+        :meth:`set_all_interval`), so it is NOT here. With a single mode toggle there is no
+        mutually-exclusive Show-toggle pair, so 'select all' is always possible."""
         return (
-            ("all_interval", lambda: service.is_all_interval(self.tuning_scheme), self._apply_all_interval),
             ("custom_weights", lambda: self.custom_weights is not None, self._apply_custom_weights),
         )
 

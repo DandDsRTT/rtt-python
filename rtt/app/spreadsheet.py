@@ -2114,8 +2114,11 @@ class _GridBuilder:
             # for every united row, like the symbol slot above the caption
             uni = UNIT_H if (self.show_units and key in UNITED_ROWS and not folded) else 0
             # below the caption/units a tile reserves bands for the plain-text value box and
-            # the preset chooser (its row), stacked in that order.
-            pre = self.preset_band_h(key) if (self.show_presets and key in PRESET_ROWS
+            # the preset chooser (its row), stacked in that order. The all-interval checkbox rides
+            # the vectors row's band too, so the show-panel "all-interval" entry reserves it there even
+            # when presets is off (preset_band_h("vectors") gives the target chooser's box height).
+            pre = self.preset_band_h(key) if ((self.show_presets and key in PRESET_ROWS
+                                             or self.settings["all_interval"] and key == "vectors")
                                             and not folded) else 0
             # the ✕ "return to scheme" control. With presets ON it lives INSIDE the established-
             # projection chooser's box (preset_band_h already reserves the extra row via scheme_btn), so
@@ -2325,6 +2328,8 @@ class _GridBuilder:
             # preset, so it (and the width it needs) drops out when the presets layer is off.
             cbox_w = CBOX_W if self.show_presets else CBOX_NODROP_W
             floor = max(floor, cbox_w + 2 * BOX_INNER)
+        if key == "targets" and self.show_presets and self.settings["all_interval"]:
+            floor = max(floor, TBOX_W)  # box 𝐓: target chooser + all-interval checkbox, one box
         if (key == "targets" and self.show_optimization and "row:damage" not in self.collapsed
                 and "tile:damage:targets" not in self.collapsed):
             floor = max(floor, OPT_BOX_MIN_W)  # seat the box's spread-out controls (see opt_box)
@@ -3093,6 +3098,16 @@ class _GridBuilder:
         """The full band a :func:`control_region` of ``content_h`` reserves — the box plus its
         BOX_OUTER vertical padding above and below (the counterpart of :func:`control_band_h`)."""
         return 2 * BOX_OUTER + 2 * BOX_INNER + content_h
+
+    def emit_all_interval_check(self, check_x, ctrl_y) -> None:
+        """the all-interval checkbox + its caption, seated on a control row at ctrl_y: an OPTION_BOX_PX
+        square over an "all-interval" caption in an LBOX_DIM_W slot (the box-𝐋 diminuator's shape). It
+        reflects whether the scheme targets every interval (ticking it is wired in app.py)."""
+        check_y = ctrl_y + (PRESET_H - OPTION_BOX_PX) / 2  # centre the square on the control row
+        self.cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
+                             "control_check", text="", checked=service.is_all_interval(self.tuning_scheme)))
+        self.cells.append(CellBox("caption:all_interval", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
+                             CAPTION_LINE, "caption", text="all-interval"))
 
     def emit_scheme_button(self, x, y, ckey: str) -> None:
         """the square ✕ "return to scheme" button + a caption snug to its right (vertically centred on
@@ -5336,7 +5351,11 @@ class _GridBuilder:
                                               form_chooser=form_chooser)
                 self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
                                      disabled=disabled))
-                # the pretransformer chooser carries the "replace diminuator" checkbox to its
+                # the target chooser carries the all-interval checkbox to the dropdown's right, in the
+                # empty space of its now-tile-spanning box (box 𝐓); TBOX_W floors the column wide enough.
+                if name == "target" and self.settings["all_interval"]:
+                    self.emit_all_interval_check(cx + cw + OPT_COL_GAP, cy)
+                # the pretransformer chooser likewise carries the "replace diminuator" checkbox to its
                 # right (box 𝐋), in one box; PBOX_W floors the column. With presets off it falls back to
                 # its own box at the matrix bottom (lbox_ctrl), mirroring the all-interval checkbox.
                 if name == "prescaler" and self.settings["alt_complexity"]:
@@ -5354,6 +5373,16 @@ class _GridBuilder:
                 if name == "tuning" and ckey == "gens" and self.show_superspace_generators:
                     ckey = "ssgens"
                 emit_preset(f"preset:{name}:{ckey}", name, rkey, ckey, label)
+
+    def _emit_all_interval_check_fallback(self) -> None:
+        """The all-interval checkbox alone in the band when the presets layer is hidden."""
+        # the all-interval checkbox is revealed by the show-panel "all-interval" entry ALONE (not the
+        # presets toggle). When the target chooser is shown, emit_preset seats the checkbox inside
+        # the chooser's box (box 𝐓, above); when it is hidden the checkbox is the band's only target
+        # control, alone at the column's left. The vectors row reserves the band either way.
+        if self.settings["all_interval"] and not self.show_presets and self.tile_open("vectors", "targets"):
+            top = self.ptext_band_y("vectors") + self.rows["vectors"].ptext
+            self.emit_all_interval_check(self.col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
 
     def _emit_form_choosers(self) -> None:
         """The <choose form> choosers when presets are OFF — in their own box (there is no chooser
@@ -5679,6 +5708,7 @@ class _GridBuilder:
         self._emit_washes()
         self._emit_symbols_captions()
         self._emit_presets()
+        self._emit_all_interval_check_fallback()
         self._emit_form_choosers()
         self._emit_scheme_buttons()
         self._emit_ptext_band()

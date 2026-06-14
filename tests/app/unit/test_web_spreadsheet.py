@@ -3539,17 +3539,60 @@ def test_a_non_diagonal_pretransformer_drops_the_complexity_diag_equivalence():
     assert on["matlabel:col:weight:targets:0"].text == "w₁ = c₁⁻¹"  # reciprocal of the complexity column
 
 
+def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls():
+    # the show-panel "all-interval" entry ALONE adds an "all-interval" checkbox to the target-
+    # interval-list controls (it does NOT need the target chooser / presets): an OPTION_BOX_PX
+    # square over an "all-interval" caption. It reflects whether the scheme targets every interval —
+    # the default scheme is target-based, so it reads UNCHECKED; an all-interval scheme reads checked.
+    off = {c.id for c in _with().cells}  # entry off (default)
+    assert "control:all_interval" not in off and "caption:all_interval" not in off
+    on = {c.id: c for c in _with(all_interval=True).cells}  # entry on, default (target-based) scheme
+    chk = on["control:all_interval"]
+    assert chk.kind == "control_check"
+    assert chk.text == ""  # the square only — "all-interval" is a caption beneath
+    assert chk.checked is False  # all-interval OFF by default (the default scheme is target-based)
+    cap = on["caption:all_interval"]
+    assert cap.kind == "caption" and cap.text == "all-interval"
+    assert abs((chk.x + chk.w / 2) - (cap.x + cap.w / 2)) < 1  # square centred above its caption
+    assert cap.y == chk.y + chk.h  # the caption hugs the square's bottom
+    # an all-interval scheme reads the box checked
+    on_ai = {c.id: c for c in _with(scheme="minimax-S", all_interval=True).cells}
+    assert on_ai["control:all_interval"].checked is True
+
+
 def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
-    # the diminuator checkbox CELL is sized to the rendered square so its caption hugs it; that
-    # square is the SINGLE shared option-box size (OPTION_BOX_PX = 16), identical to the
-    # settings-panel checkboxes and the tuning-ranges monotone/tradeoff boxes.
-    chk = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}["control:diminuator"]
+    # the all-interval (and diminuator) checkbox CELL is sized to the rendered square so its
+    # caption hugs it; that square is the SINGLE shared option-box size (OPTION_BOX_PX = 16),
+    # identical to the settings-panel checkboxes and the tuning-ranges monotone/tradeoff boxes.
+    chk = {c.id: c for c in _with(all_interval=True).cells}["control:all_interval"]
     assert chk.h == spreadsheet.OPTION_BOX_PX  # tracks the one shared option-box constant
 
 
+def test_all_interval_checkbox_rides_right_of_the_target_chooser_when_shown():
+    # when the target interval set scheme chooser is shown (presets on), the checkbox sits to
+    # its RIGHT (the box-𝐋 checkbox-beside-dropdown layout); the chooser greys when it is checked
+    on = {c.id: c for c in _with(all_interval=True, presets=True).cells}
+    assert on["control:all_interval"].x > on["preset:target"].x
+
+
+def test_all_interval_checkbox_sits_inside_the_target_chooser_box():
+    # box 𝐓: the checkbox + its caption share the target chooser's box (to the dropdown's right),
+    # so the border encloses them rather than stranding them past its right edge — and the widened
+    # box still stays within the target column's tile (it never overhangs).
+    lay = _with(all_interval=True, presets=True)
+    cells = {c.id: c for c in lay.cells}
+    blocks = {b.id: b for b in lay.blocks}
+    box, tile = blocks["block:preset:target"], blocks["block:vec:targets"]
+    for cid in ("control:all_interval", "caption:all_interval"):
+        c = cells[cid]
+        assert box.x <= c.x and c.x + c.w <= box.x + box.w  # enclosed horizontally
+        assert box.y <= c.y and c.y + c.h <= box.y + box.h  # enclosed vertically
+    assert tile.x <= box.x and box.x + box.w <= tile.x + tile.w  # box stays within the tile
+
+
 def test_all_interval_show_entry_is_live_not_a_greyed_stub():
-    # the all-interval Show toggle now IS the all-interval mode (it drives the scheme directly — no
-    # separate in-grid checkbox), so the Show panel offers it live (interactive), not a greyed stub
+    # the all-interval Show toggle reveals the in-grid box-𝐓 checkbox (a two-step process); its
+    # content is built, so the Show panel offers it live (interactive), not greyed out as a stub
     assert "all_interval" in settings.IMPLEMENTED
 
 
@@ -3705,18 +3748,6 @@ def test_alt_complexity_is_implemented_now_that_its_controls_are_built():
     # predefined-complexity options, the alternative-complexity prescalers + tuning schemes) are
     # ready, so it rides in IMPLEMENTED as a live, interactive Show toggle rather than a greyed stub.
     assert "alt_complexity" in settings.IMPLEMENTED
-
-
-def test_mutually_exclusive_toggles_disable_each_other():
-    # all-interval and custom weights both DEFINE the weighting, so at most one applies; the panel
-    # greys the other while one is on (Editor's reconciler turns the loser off)
-    assert {"all_interval", "custom_weights"} in settings.MUTUALLY_EXCLUSIVE
-    assert settings.disabled_by_exclusion("custom_weights", {"all_interval": True, "custom_weights": False})
-    assert settings.disabled_by_exclusion("all_interval", {"all_interval": False, "custom_weights": True})
-    # neither on -> neither greyed by exclusion
-    assert not settings.disabled_by_exclusion("custom_weights", {"all_interval": False, "custom_weights": False})
-    # a key in no exclusive group is never greyed by exclusion
-    assert not settings.disabled_by_exclusion("weighting", {"all_interval": True})
 
 
 def test_weighting_subcontrols_are_registered_under_weighting():
@@ -5104,12 +5135,11 @@ def test_every_implemented_toggle_actually_changes_the_layout():
             s[rides_on[key]] = True
         return s
 
-    # the mode-toggles drive the grid through the SCHEME / a doc field (via Editor.set_show), not
-    # through the settings dict the build reads — so flipping just the flag here is a build no-op,
-    # like a grouping parent. all-interval's grid effect (Tₚ=I etc.) is keyed off the tuning scheme,
-    # and custom-weights' editable 𝒘 row off the custom_weights field — both covered by their own
-    # display tests + the set_show fusion tests in test_web_editor.
-    MODE_TOGGLES = {"all_interval", "custom_weights"}
+    # custom-weights drives the grid through a doc FIELD (custom_weights), not the settings dict the
+    # build reads — flipping just the flag is a build no-op, like a grouping parent. (all-interval is
+    # NOT here: its Show toggle reveals the in-grid checkbox, which IS a settings-driven layout change.
+    # Its mode effect — Tₚ=I etc. — is keyed off the scheme and covered by the all-interval tests.)
+    MODE_TOGGLES = {"custom_weights"}
     for key in settings.IMPLEMENTED:
         if key in settings.GROUPING_PARENTS or key in MODE_TOGGLES:
             continue

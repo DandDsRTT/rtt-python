@@ -66,6 +66,7 @@ _DISAMBIGUATED = [
     ("control_select", "control:complexity"),
     ("control_select", "control:slope"),
     ("control_check", "control:diminuator"),
+    ("control_check", "control:all_interval"),
     ("formchooser", "formchooser:mapping"),
     ("formchooser", "formchooser:comma_basis"),
     ("preset", "preset:temperament"),
@@ -101,6 +102,8 @@ def test_overloaded_kinds_resolve_to_distinct_text_per_role():
     # the two alt.-complexity choosers each describe their own dimension
     assert len({_help("control_select", "control:complexity"),
                 _help("control_select", "control:slope")}) == 2
+    # the two control_check boxes (diminuator, all-interval) describe different things
+    assert _help("control_check", "control:diminuator") != _help("control_check", "control:all_interval")
     assert _help("formchooser", "formchooser:mapping") != _help("formchooser", "formchooser:comma_basis")
     # the four preset choosers differ; a copied chooser reads like its base
     assert len({_help("preset", "preset:temperament"),
