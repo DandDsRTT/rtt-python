@@ -50,8 +50,29 @@ def _sanitized_prescaler_override(prescaler_override):
     return prescaler_override
 
 
+def _sanitized_weights_override(weights_override):
+    """Drop a manual per-target damage-weight override that would crash the solver, falling back to
+    the scheme's slope-derived weights (``None``).
+
+    A weight row-scales its target's tempered/just rows in :func:`_constrained_solve`, so every
+    entry must be finite and strictly positive — a 0/negative weight removes or inverts a target's
+    contribution and an inf/nan feeds garbage into scipy ``linprog`` (which raises *before*
+    returning, dodging ``.success``), exactly the failure mode :func:`_sanitized_prescaler_override`
+    guards for the prescaler. The UI handler and :func:`rtt.app.editor._weights_from_json` reject a
+    bad override upstream; this is the deeper net for any path (a persisted bad document, a direct
+    API call). Accepts a flat per-target sequence; an empty/None override means "no override"."""
+    if weights_override is None:
+        return None
+    arr = np.asarray(weights_override, dtype=float)
+    if arr.ndim != 1 or arr.size == 0:
+        return None
+    if not np.all(np.isfinite(arr)) or np.any(arr <= 0):
+        return None
+    return weights_override
+
+
 def optimize_generator_tuning_map(
-    t: Temperament, spec: TuningSchemeSpec | str, prescaler_override=None,
+    t: Temperament, spec: TuningSchemeSpec | str, prescaler_override=None, weights_override=None,
 ) -> tuple[float, ...]:
     """The generator tuning map minimizing target interval damage under the scheme.
 
@@ -60,8 +81,14 @@ def optimize_generator_tuning_map(
 
     ``prescaler_override`` (a d-tuple) bypasses the spec's trait-derived prescaler
     diagonal, riding through into the damage-weight complexities; ``None`` keeps the
-    existing behavior."""
+    existing behavior.
+
+    ``weights_override`` (a per-target sequence) bypasses the slope-derived damage weights
+    entirely — the user's typed weights drive the solve directly. It applies only to a
+    target-based scheme (an all-interval scheme has no per-target weights); ``None`` keeps
+    the slope-derived behavior."""
     prescaler_override = _sanitized_prescaler_override(prescaler_override)
+    weights_override = _sanitized_weights_override(weights_override)
     spec = resolve_tuning_scheme(spec)
     _validate_powers(spec)
     if spec.destretched_interval and spec.held_intervals:
@@ -79,7 +106,9 @@ def optimize_generator_tuning_map(
     solve_t = _change_to_simplest_prime_basis(t) if prime_based else t
     solve_spec = replace(spec, nonprime_basis_approach="") if prime_based else spec
 
-    generators = _solve_generators(solve_t, solve_spec, prescaler_override=prescaler_override)
+    generators = _solve_generators(
+        solve_t, solve_spec, prescaler_override=prescaler_override, weights_override=weights_override
+    )
     if prime_based:
         generators = _retrieve_prime_domain_basis_generators(generators, t, solve_t)
     generators = _default_free_generators_to_just(generators, t, spec, get_d(t))
@@ -93,16 +122,22 @@ def optimize_generator_tuning_map(
     return tuple(float(g) for g in generators)
 
 
-def _solve_generators(t: Temperament, spec: TuningSchemeSpec, prescaler_override=None) -> np.ndarray:
+def _solve_generators(
+    t: Temperament, spec: TuningSchemeSpec, prescaler_override=None, weights_override=None,
+) -> np.ndarray:
     """The optimum generators for a scheme over the temperament's own domain basis."""
     d = get_d(t)
     mapping = np.array(mapping_matrix(t), dtype=float)  # r x d
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)  # d
     if _is_all_interval(spec) and spec.complexity_size_factor != 0:
+        # an all-interval scheme has no per-target weights (it minimaxes over the primes with
+        # structural simplicity weights), so a manual weights_override doesn't apply here
         return _optimize_augmented_all_interval(
             t, spec, mapping, just_tuning_map, d, prescaler_override=prescaler_override,
         )
-    vectors, weights, power = _optimization_setup(t, spec, d, prescaler_override=prescaler_override)
+    vectors, weights, power = _optimization_setup(
+        t, spec, d, prescaler_override=prescaler_override, weights_override=weights_override
+    )
     return _constrained_solve(
         mapping, just_tuning_map, vectors, weights, power, _held_vectors(spec, t, d)
     )
@@ -287,7 +322,7 @@ def _destretch(
 
 
 def _optimization_setup(
-    t: Temperament, spec: TuningSchemeSpec, d: int, prescaler_override=None,
+    t: Temperament, spec: TuningSchemeSpec, d: int, prescaler_override=None, weights_override=None,
 ) -> tuple[tuple[tuple[int, ...], ...], np.ndarray, float]:
     """The (target vectors, per-target damage weights, optimization power) for the scheme.
 
@@ -318,15 +353,21 @@ def _optimization_setup(
         )
         return primes, weights, get_dual_power(spec.complexity_norm_power)
     vectors = resolve_target_intervals(spec.target_intervals, t, d)
-    return vectors, damage_weights(vectors, t, spec, prescaler_override=prescaler_override), spec.optimization_power
+    return (vectors,
+            damage_weights(vectors, t, spec, prescaler_override=prescaler_override,
+                           weights_override=weights_override),
+            spec.optimization_power)
 
 
 def optimize_tuning_map(
-    t: Temperament, spec: TuningSchemeSpec | str, prescaler_override=None,
+    t: Temperament, spec: TuningSchemeSpec | str, prescaler_override=None, weights_override=None,
 ) -> tuple[float, ...]:
     """The optimum tuning map (the generators applied to the mapping) under the scheme."""
     generators = np.array(
-        optimize_generator_tuning_map(t, spec, prescaler_override=prescaler_override), dtype=float,
+        optimize_generator_tuning_map(
+            t, spec, prescaler_override=prescaler_override, weights_override=weights_override
+        ),
+        dtype=float,
     )
     mapping = np.array(mapping_matrix(t), dtype=float)
     return tuple(float(x) for x in generators @ mapping)
@@ -446,12 +487,24 @@ def damage_weights(
     t: Temperament,
     spec: TuningSchemeSpec,
     prescaler_override=None,
+    weights_override=None,
 ) -> np.ndarray:
     """The per-target damage weights: 1 (unity), complexity, or 1/complexity.
 
     ``prescaler_override`` rides into each per-target complexity (the slope rolls off
     the same diagonal the matrix tile shows), so a custom diagonal reaches the tuning
-    solve too rather than only the displayed prescaler."""
+    solve too rather than only the displayed prescaler.
+
+    ``weights_override`` (the user's typed per-target weights) short-circuits the slope
+    derivation entirely when it matches the target count — the manual weights ARE the
+    weights. A length mismatch (a stale override left over a target ±/reorder) falls
+    through to the slope-derived weights, so a stale override degrades gracefully rather
+    than mis-pairing weights to intervals."""
+    if weights_override is not None and len(weights_override) == len(vectors):
+        weights = np.asarray(weights_override, dtype=float)
+        if np.all(np.isfinite(weights)) and np.all(weights > 0):
+            return weights
+        # a bad override never reaches the solver — fall through to the slope-derived weights
     if spec.damage_weight_slope == "unityWeight":
         return np.ones(len(vectors))
     complexities = np.array(
