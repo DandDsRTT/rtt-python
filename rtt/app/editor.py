@@ -1170,7 +1170,7 @@ class Editor:
         self._snapshot()
         self.tuning_scheme = service.scheme_with_prescaler(self.tuning_scheme, prescaler)
         self.custom_prescaler = None
-        self._invalidate_custom_weights()  # a re-derived complexity supersedes any manual weights
+        self._turn_off_custom_weights()  # a re-derived complexity supersedes any manual weights
 
     def set_complexity_norm_power(self, power: float) -> None:
         """Set the interval-complexity norm power q (the editable q field in box 𝒄) — which Lq
@@ -1191,7 +1191,7 @@ class Editor:
         the custom-weights toggle off), snapping the 𝒘 row back to the slope-derived weights."""
         self._snapshot()
         self.tuning_scheme = service.scheme_with_weight_slope(self.tuning_scheme, slope)
-        self._invalidate_custom_weights()
+        self._turn_off_custom_weights()
 
     def set_nonprime_basis_approach(self, approach: str) -> None:
         """Set the chapter-9 nonstandard-domain-approach radio: ``""`` (neutral),
@@ -1220,7 +1220,7 @@ class Editor:
         self._snapshot()
         self.tuning_scheme = service.scheme_with_complexity(self.tuning_scheme, name)
         self.custom_prescaler = None
-        self._invalidate_custom_weights()  # a re-derived complexity supersedes any manual weights
+        self._turn_off_custom_weights()  # a re-derived complexity supersedes any manual weights
 
     def set_custom_prescaler_entry(self, i: int, j: int, value: float) -> None:
         """Edit one entry (row ``i``, column ``j``) of the complexity pretransformer — the editable
@@ -1281,18 +1281,25 @@ class Editor:
         scheme = service.scheme_with_weight_slope(self.tuning_scheme, slope)
         self.tuning_scheme = service.scheme_with_targets(
             scheme, "{}" if all_interval else self.target_spec)
-        if all_interval and self.custom_weights is not None:
-            self._invalidate_custom_weights()  # entering all-interval drops the per-target weights
+        # the custom-weights SETTING is sticky (always checkable), but its override only applies in
+        # target mode — so reconcile the field: entering all-interval drops it, leaving re-seeds it
+        # when the setting is still on. The setting flag itself is untouched.
+        self._reconcile_custom_weights()
 
-    def _apply_custom_weights(self, on: bool) -> None:
-        """The body of manual-weight mode entry/exit (the ``custom_weights`` Show toggle and its
-        cascade/prune paths), WITHOUT snapshotting. Entering seeds the override from the weights the
-        𝒘 row currently shows (so untouched cells keep their values); exiting clears it. A
-        target-mode feature — never entered while all-interval (the toggle greys there), so a stray
-        on-in-all-interval resolves to off, keeping the flag/field invariant."""
-        self.custom_weights = (tuple(self._displayed_target_weights())
-                               if on and not service.is_all_interval(self.tuning_scheme) else None)
-        self.settings["custom_weights"] = self.custom_weights is not None
+    def _reconcile_custom_weights(self) -> None:
+        """Derive the manual-weight override field from the STICKY ``custom_weights`` Show setting and
+        the mode, WITHOUT touching the setting flag. The override applies only when the setting is on
+        AND the scheme is target-based — all-interval has structural per-prime simplicity weights, no
+        per-target ones. So: seed the field from the displayed weights when it should apply but is
+        empty (so the cells start at their shown values), and clear it when it shouldn't (setting off,
+        or all-interval). The setting flag stays exactly as the user left it — that's what keeps the
+        toggle always checkable (so 'select all' always works); checking it under all-interval simply
+        does nothing until the scheme returns to target mode."""
+        applies = self.settings["custom_weights"] and not service.is_all_interval(self.tuning_scheme)
+        if applies and self.custom_weights is None:
+            self.custom_weights = tuple(self._displayed_target_weights())
+        elif not applies:
+            self.custom_weights = None
 
     def _displayed_target_weights(self) -> tuple[float, ...]:
         """The slope-derived weights over the current displayed targets — what the 𝒘 row shows with
@@ -1328,46 +1335,21 @@ class Editor:
         self.settings["custom_weights"] = True
 
     def _invalidate_custom_weights(self) -> None:
-        """Drop a now-stale manual-weight override and turn its toggle off — called when the target
-        list changes length/order/membership (the override is position-keyed to it; clear, never
-        remap). The caller has already snapshotted (or it is the no-snapshot domain-change path)."""
+        """Drop a now-stale manual-weight override but KEEP the (sticky) setting — called when the
+        target list changes length/order/membership (the override is position-keyed to it; clear,
+        never remap). Re-seeds from the new displayed weights via :meth:`_reconcile_custom_weights`
+        when the setting is still on and the scheme is target-based, so the row's cells stay editable
+        (at the new derived values) rather than going read-only. The caller has already snapshotted
+        (or it is the no-snapshot domain-change path)."""
         self.custom_weights = None
+        self._reconcile_custom_weights()
+
+    def _turn_off_custom_weights(self) -> None:
+        """Turn the custom-weights setting fully off (flag + override) — the user's explicit reset
+        away from manual weights: picking a named damage-weight slope / complexity / prescaler means
+        "use the derived weights", so the manual override and its toggle both go off."""
         self.settings["custom_weights"] = False
-
-    def _mode_toggles(self):
-        """The Show toggles that ARE a tuning mode (no separate in-grid control): each as
-        ``(key, is-on probe, apply(on))``. Only custom weights is one — all-interval reverted to a
-        two-step (its Show toggle reveals the box-𝐓 checkbox, which drives the mode via
-        :meth:`set_all_interval`), so it is NOT here. With a single mode toggle there is no
-        mutually-exclusive Show-toggle pair, so 'select all' is always possible."""
-        return (
-            ("custom_weights", lambda: self.custom_weights is not None, self._apply_custom_weights),
-        )
-
-    def _reconcile_mode_toggles(self, direct_key: str | None = None) -> None:
-        """Keep each mode-fused toggle's flag and its tuning mode in step after a Show change.
-
-        A DIRECT toggle of a mode key (``direct_key``) enters OR exits that mode to match its new
-        flag — this is the only way to ENTER a mode (you can't bulk "show all" into a specific,
-        mutually-exclusive mode). Any other path only EXITS a mode whose flag was just turned off
-        (a cascade hiding its region, select-none, the chapter prune) so a hidden region never
-        strands its mode. Finally every mode flag is re-derived from the actual mode, so a flag the
-        bulk op set that didn't take (e.g. select-all's True on a mode it can't enter) snaps back."""
-        for key, is_on, apply in self._mode_toggles():
-            if key == direct_key:
-                if is_on() != self.settings[key]:
-                    apply(self.settings[key])           # direct toggle: enter or exit
-            elif is_on() and not self.settings[key]:
-                apply(False)                            # flag turned off elsewhere: exit, don't strand
-        for key, is_on, _apply in self._mode_toggles():
-            self.settings[key] = is_on()                # flags mirror the final mode
-
-    def _sync_mode_toggle_flags(self) -> None:
-        """Make each mode-fused Show flag reflect the underlying state, WITHOUT driving the mode.
-        Used on load, where the scheme and the manual-weight field are authoritative and the saved
-        flag may be stale (or pinned to default by ``from_persisted`` for a greyed toggle)."""
-        for key, is_on, _apply in self._mode_toggles():
-            self.settings[key] = is_on()
+        self.custom_weights = None
 
     def set_target_spec(self, spec: str) -> None:
         """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
@@ -1567,12 +1549,10 @@ class Editor:
         deselecting a parent like weighting or optimization) also resets the tuning to basic
         minimax-lp.
 
-        Two sub-controls of weighting ARE their tuning mode rather than mere visibility — all-interval
-        and custom weights have no separate in-grid control — so this also drives the matching mode
-        via :meth:`_sync_mode_toggles`: toggling all-interval enters/exits the all-interval scheme,
-        toggling custom weights enters/exits the editable manual-weight row, and a cascade that turns
-        either off (e.g. deselecting optimization, the whole Mode-A branch) exits that mode too — all
-        in this one undo step."""
+        ``custom_weights`` is a STICKY setting (always toggleable, so 'select all' always works), but
+        its editable-weight override only applies in target mode — so after any flag change this
+        reconciles the override field (:meth:`_reconcile_custom_weights`) without touching the flag.
+        all-interval is a two-step (its toggle only reveals the in-grid box-𝐓 checkbox)."""
         self._snapshot()
         had_alt_complexity = self.settings["alt_complexity"]
         self.settings[key] = value
@@ -1584,7 +1564,7 @@ class Editor:
                 self.settings[child] = False
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
-        self._reconcile_mode_toggles(direct_key=key)  # a direct mode toggle enters/exits its mode
+        self._reconcile_custom_weights()  # derive the override field from the (sticky) setting + mode
 
     def set_all_show(self, value: bool, keys=None) -> None:
         """The settings panel's select-all/none: turn the given Show toggles on (``True``) or off
@@ -1603,8 +1583,9 @@ class Editor:
             self._standardize_domain_in_place()
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
-        # a bulk select-all/none can't ENTER a mutually-exclusive mode; it only exits one it hid
-        self._reconcile_mode_toggles()
+        # select-all turns the (sticky) custom-weights setting on like any other; reconcile its
+        # override field — it applies only in target mode (a no-op under all-interval)
+        self._reconcile_custom_weights()
 
     def disable_hidden_settings(self, chapter: int) -> None:
         """Turn OFF every Show toggle the guide-chapter slider has hidden (its reveal chapter is past
@@ -1620,9 +1601,9 @@ class Editor:
                 self.settings[key] = False
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
-        # the prune only turns settings OFF, so this only ever EXITS the fused modes (sliding below
-        # ch7 leaves all-interval; below the ★ notch leaves custom weights) — never enters one
-        self._reconcile_mode_toggles()
+        # the prune only turns settings OFF; reconcile the custom-weights override (cleared when its
+        # setting is pruned below the ★ notch)
+        self._reconcile_custom_weights()
 
     def toggle_collapsed(self, item: str) -> None:
         """Fold or unfold one row, column, or tile (``"row:tuning"``, ``"col:targets"``,
@@ -1925,9 +1906,10 @@ class Editor:
             preferred_form=(),
         )
         self._restore(doc)
-        # the two toggle-fused mode flags follow the underlying state, not the saved flag: the
-        # scheme and the manual-weight field are authoritative, so re-derive all_interval /
-        # custom_weights from them (a stale or from_persisted-pinned flag can't drift the panel).
-        self._sync_mode_toggle_flags()
+        # reconcile the manual-weight override against the loaded (sticky) custom_weights setting and
+        # scheme: keep a saved override when it still applies (setting on + target mode), seed one if
+        # the setting is on but the field is empty, clear it under all-interval. (all_interval is now a
+        # plain visibility setting — the in-grid checkbox reflects the scheme — so it loads as saved.)
+        self._reconcile_custom_weights()
         self._undo_stack.clear()
         self._redo_stack.clear()

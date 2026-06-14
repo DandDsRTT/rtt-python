@@ -1831,11 +1831,11 @@ async def test_custom_weights_toggle_makes_the_weight_row_editable_and_retunes(u
     assert _cell_child(user, "weight:target:0").value == service.cents(3.0)  # the override stuck (re-formatted)
 
 
-async def test_all_interval_and_custom_weights_do_not_disable_each_other(user: User) -> None:
-    # all-interval and custom weights are mutually-exclusive TUNINGS, but that's enforced at the
-    # behavior level (the in-grid checkbox / the editor) — NOT by disabling each other's Show toggle.
-    # So neither greys the other in the panel, and 'select all' stays possible (the reason all-interval
-    # was reverted to a two-step visibility toggle).
+async def test_custom_weights_stays_checkable_under_all_interval_so_select_all_works(user: User) -> None:
+    # the user's bug: with all-interval MODE active, the custom-weights SETTING must stay checkable and
+    # STICK when checked (so 'select all' is always possible) — it just applies no override until the
+    # scheme returns to target mode. all-interval and custom weights are mutually-exclusive tunings, but
+    # that's enforced at the behavior level, NOT by disabling each other's Show toggle.
     def box(key):
         return next(iter(user.find(marker=f"showbox:{key}").elements))
     await user.open("/")
@@ -1844,8 +1844,11 @@ async def test_all_interval_and_custom_weights_do_not_disable_each_other(user: U
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (nested under it)
     user.find(kind=ui.checkbox, content="weighting").click()     # reveal the all-interval + custom-weights entries
     assert "disable" not in box("all_interval")._props and "disable" not in box("custom_weights")._props
-    user.find(kind=ui.checkbox, content="custom weights").click()  # enter custom-weight mode
-    assert "disable" not in box("all_interval")._props           # all-interval is NOT greyed by custom weights
+    user.find(kind=ui.checkbox, content="all-interval").click()  # reveal the in-grid checkbox
+    _cell_child(user, "control:all_interval").set_value(True)    # enter all-interval MODE
+    assert "disable" not in box("custom_weights")._props         # custom weights is NOT greyed under all-interval
+    user.find(kind=ui.checkbox, content="custom weights").click()  # check it WHILE all-interval is on
+    assert box("custom_weights").value is True                   # ...and it STICKS (doesn't snap back)
 
 
 async def test_a_disabled_toggle_greys_its_box_and_its_example_together(user: User) -> None:

@@ -560,28 +560,51 @@ def test_a_complexity_or_prescaler_pick_clears_custom_weights():
         assert editor.settings["custom_weights"] is False, action
 
 
-def test_all_interval_and_custom_weights_are_mutually_exclusive():
-    # all-interval has structural per-prime weights, no per-target ones — so entering it clears any
-    # manual-weight override (and its toggle)
+def test_all_interval_clears_the_override_but_keeps_the_custom_weights_setting():
+    # all-interval has structural per-prime weights, no per-target ones — so entering it clears the
+    # manual-weight OVERRIDE. But the custom-weights SETTING stays on (always checkable, so select-all
+    # works); the override just does nothing until the scheme returns to target mode, when it re-seeds.
     editor = Editor()
     editor.set_show("custom_weights", True)
+    assert editor.custom_weights is not None                  # seeded in target mode
     editor.set_all_interval(True)
-    assert editor.custom_weights is None and editor.settings["custom_weights"] is False
+    assert editor.custom_weights is None                      # override cleared (no per-target weights)
+    assert editor.settings["custom_weights"] is True          # ...but the setting stays checkable
+    editor.set_all_interval(False)                            # back to target mode
+    assert editor.custom_weights is not None                  # the override re-seeds
+    assert editor.settings["custom_weights"] is True
 
 
-def test_a_target_change_clears_stale_custom_weights():
-    # the override is position-keyed to the target list, so a target drop invalidates it
+def test_custom_weights_is_checkable_while_all_interval_is_on():
+    # the user's case: with all-interval mode already active, checking custom weights must STICK (so
+    # select-all is always possible) — it simply applies no override until the scheme returns to
+    # target mode, at which point it takes effect.
+    editor = Editor()
+    editor.set_all_interval(True)             # enter all-interval mode FIRST
+    editor.set_show("custom_weights", True)   # then check custom weights
+    assert editor.settings["custom_weights"] is True   # the setting sticks (checkable)
+    assert editor.custom_weights is None               # ...but no per-target override under all-interval
+    editor.set_all_interval(False)            # leave all-interval -> target mode
+    assert editor.custom_weights is not None           # now the override applies (the 𝒘 cells go editable)
+
+
+def test_a_target_change_re_seeds_custom_weights_keeping_the_setting():
+    # the override is position-keyed to the target list, so a target drop invalidates the typed values
+    # — but the (sticky) setting stays on and the override re-seeds for the new (shorter) list.
     editor = Editor()
     editor.set_show("custom_weights", True)
+    n_before = len(editor.custom_weights)
     editor.remove_target(0)
-    assert editor.custom_weights is None and editor.settings["custom_weights"] is False
+    assert editor.settings["custom_weights"] is True                              # setting stays on
+    assert editor.custom_weights is not None and len(editor.custom_weights) == n_before - 1  # re-seeded
 
 
-def test_a_domain_change_clears_stale_custom_weights():
+def test_a_domain_change_re_seeds_custom_weights_keeping_the_setting():
     editor = Editor()
     editor.set_show("custom_weights", True)
     editor.expand()  # adds a prime (the target list is rebuilt over the new domain)
-    assert editor.custom_weights is None and editor.settings["custom_weights"] is False
+    assert editor.settings["custom_weights"] is True       # setting stays on (sticky)
+    assert editor.custom_weights is not None               # re-seeded for the new domain's targets
 
 
 def test_custom_weights_round_trip_and_resync_the_toggle():
@@ -1953,20 +1976,16 @@ def test_show_settings_start_at_defaults_and_changes_are_undoable():
 
 
 def test_select_all_then_none_over_implemented_toggles():
-    # custom weights is the lone mode-fused toggle (a tuning mode, not visibility), so select-all
-    # can't bulk-ENTER it; every other implemented toggle turns on — INCLUDING all-interval, which is
-    # a two-step visibility toggle again (it only reveals the in-grid checkbox). No toggle DISABLES
-    # another, so select-all is always possible (the reason all-interval was reverted from a mode).
-    modes = {"custom_weights"}
-    visibility = settings.IMPLEMENTED - modes
+    # EVERY implemented toggle turns on with select-all — including custom weights (a sticky SETTING,
+    # always checkable) and all-interval (a two-step visibility toggle). No toggle disables or resists
+    # another, so select-all is always possible — and select-none turns them all back off.
     editor = Editor()
     editor.set_all_show(True)  # the panel's select-all
-    assert all(editor.settings[k] for k in visibility)  # all-interval (visibility) turns on too
-    assert not editor.settings["custom_weights"]  # select-all didn't enter the manual-weight mode
+    assert all(editor.settings[k] for k in settings.IMPLEMENTED)  # everything on, custom weights too
     editor.set_all_show(False)  # ...and select-none
     assert not any(editor.settings[k] for k in settings.IMPLEMENTED)
     editor.undo()  # one undo restores the whole all-on set (a single action)
-    assert all(editor.settings[k] for k in visibility)
+    assert all(editor.settings[k] for k in settings.IMPLEMENTED)
 
 
 def test_deselecting_a_parent_also_deselects_its_subcontrols():
