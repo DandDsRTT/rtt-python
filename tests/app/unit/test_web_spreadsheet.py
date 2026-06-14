@@ -1346,10 +1346,10 @@ def test_the_mapping_matrix_is_framed_top_and_bottom():
 
 
 def test_form_box_shows_the_canonical_mapping_over_the_primes():
-    # the "form" toggle adds a "canonical mapping" row whose primes tile holds M in
+    # the "form boxes" toggle adds a "canonical mapping" row whose primes tile holds M in
     # canonical form (defactored + HNF) — for ((1,1,0),(0,1,4)) that is
     # ((1,0,-4),(0,1,4)), distinct from the stored matrix in the mapping row
-    cells = {c.id: c for c in _with(form_controls=True).cells}
+    cells = {c.id: c for c in _with(form_boxes=True).cells}
     assert cells["cell:canon:0:0"].text == "1"
     assert cells["cell:canon:0:2"].text == "-4"
     assert cells["cell:canon:1:1"].text == "1"
@@ -1359,7 +1359,7 @@ def test_form_box_shows_the_canonical_mapping_over_the_primes():
 
 
 def test_canonical_mapping_row_is_framed_like_the_mapping_above_it():
-    cells = {c.id: c for c in _with(form_controls=True).cells}
+    cells = {c.id: c for c in _with(form_boxes=True).cells}
     # a stack of maps (⟨ … ] per row), enclosed by its own top bracket + bottom brace
     assert cells["bracket:canon:map:0:l"].text == "⟨" and cells["bracket:canon:map:0:r"].text == "]"
     assert "ebktop:canon" in cells and "ebkbrace:canon" in cells
@@ -1373,7 +1373,7 @@ def test_canonical_mapping_row_is_framed_like_the_mapping_above_it():
 
 
 def test_form_box_shows_the_generator_form_matrix_over_the_gens():
-    cells = {c.id: c for c in _with(form_controls=True).cells}
+    cells = {c.id: c for c in _with(form_boxes=True).cells}
     # F (generator form matrix, r×r) renders in the canon row's gens column as a
     # bordered grid: for ((1,1,0),(0,1,4)), F = ((1,-1),(0,1))
     assert cells["cell:form:0:0"].text == "1" and cells["cell:form:0:1"].text == "-1"
@@ -1391,6 +1391,9 @@ def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis
     # a "<choose form>" chooser rides in the mapping box and the comma-basis box
     assert cells["formchooser:mapping"].kind == "formchooser"
     assert cells["formchooser:comma_basis"].kind == "formchooser"
+    # form CONTROLS (the dropdowns) does NOT reveal the canonical-mapping row / 𝐹 matrix — those
+    # belong to "form boxes" (greyed for now); the dropdowns appear without the boxes
+    assert not any(c.id.startswith(("cell:canon:", "cell:form:")) for c in cells.values())
     # each over its box's column (mapping over the primes, comma basis over the commas), seated
     # one BOX_INNER inside its tile-spanning box's left edge
     inset = spreadsheet.BOX_INNER
@@ -5935,7 +5938,7 @@ def test_gridline_ids_are_unique_across_every_fan_and_spine():
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         {**settings.defaults(), "generator_detempering": True, "optimization": True,
-         "weighting": True, "form_controls": True},
+         "weighting": True, "form_boxes": True},  # form_boxes reveals the canonical-mapping row
         interest=((-1, 1, 0), (2, 0, -1)),
         held_vectors=((1, 0, 0), (-1, 1, 0)),
     )
@@ -6279,7 +6282,7 @@ def test_off_by_default_rows_colorize_by_content_too():
     s = settings.defaults()
     s["temperament_colorization"] = True
     s["tuning_colorization"] = True
-    s["form_controls"] = True   # reveal the canonical-mapping row
+    s["form_boxes"] = True   # reveal the canonical-mapping row
     s["weighting"] = True       # reveal the prescaling + complexity rows (a tuning-boxes sub-control)
     s["optimization"] = True    # reveal the held column
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,

@@ -578,6 +578,7 @@ class _ShowFlags:
     temp: bool
     form: bool
     form_controls: bool
+    form_boxes: bool
     tuning: bool
     optimization: bool
     weighting: bool
@@ -620,7 +621,8 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         domain_units=settings["domain_units"],  # the units row (spine) + units column
         temp=temp,
         form=settings["form"],  # the canonical-form subscript C on 𝑀/𝒈/G (the parent layer)
-        form_controls=settings["form_controls"],  # the canonical-mapping form row + <choose form> chooser
+        form_controls=settings["form_controls"],  # the <choose form> chooser dropdowns
+        form_boxes=settings["form_boxes"],  # the canonical-mapping row + 𝐹 matrix (greyed for now)
         tuning=tuning,
         optimization=optimization,
         weighting=weighting,
@@ -957,6 +959,7 @@ class _GridBuilder:
         show_temp = _f.temp
         self.show_form = _f.form  # the form layer: subscript-C the canonical-form objects (𝑀/𝒈/G)
         self.show_form_controls = _f.form_controls
+        self.show_form_boxes = _f.form_boxes  # the canonical-mapping row + 𝐹 matrix (greyed for now)
         show_tuning = _f.tuning
         self.show_optimization = _f.optimization
         self.show_weighting = _f.weighting
@@ -1748,7 +1751,7 @@ class _GridBuilder:
             # projection toggle, exactly when V consolidates (show_unchanged).
             ("scaling_factors", ROW_H, self.show_unchanged, True, "scaling factors"),
             ("vectors", self.d * ROW_H, show_temp, True, "interval vectors"),
-            ("canon", self.rc * ROW_H, self.show_form_controls, True, "canonical mapping"),
+            ("canon", self.rc * ROW_H, self.show_form_boxes, True, "canonical mapping"),
             ("mapping", self.r_shown * ROW_H, show_temp, True, "mapping"),
             # the chapter-9 superspace rows sit between mapping and the projection row, the row
             # counterparts of the ssgens / ssprimes columns: ss_vectors holds the dL-tall
@@ -2404,9 +2407,11 @@ class _GridBuilder:
         # its own box, ABOVE the dropdown + caption (so the button is NOT a separate control box)
         box_h += (SCHEME_BTN_SQ + CTRL_LABEL_GAP) if scheme_btn else 0
         # the <choose form> dropdown rides in THIS box too — a second dropdown (+ its caption) BELOW
-        # the main one, so it is NOT a separate control box (like the scheme button above)
+        # the main one, so it is NOT a separate control box (like the scheme button above). BAND_GAP
+        # (not the tight CTRL_LABEL_GAP) separates it from the main chooser's caption, so that caption
+        # reads as belonging to its OWN dropdown above, not to the form dropdown below it.
         if form_label is not None:
-            box_h += CTRL_LABEL_GAP + PRESET_H + (CAPTION_LINE if form_label else 0)
+            box_h += BAND_GAP + PRESET_H + (CAPTION_LINE if form_label else 0)
         return dropdown_w, label_h, box_h
 
     def control_band_h(self, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):  # box + outer padding
@@ -2992,7 +2997,7 @@ class _GridBuilder:
                                  "caption", text=label, align="left", disabled=disabled))
         if form_chooser:  # the <choose form> dropdown + its caption, below the main chooser, in this box
             fid, fcap = form_chooser
-            form_y = ctrl_y + PRESET_H + label_h + CTRL_LABEL_GAP
+            form_y = ctrl_y + PRESET_H + label_h + BAND_GAP
             self.cells.append(CellBox(fid, ctrl_x, form_y, dropdown_w, PRESET_H, "formchooser"))
             self.cells.append(CellBox(f"{fid}:label", ctrl_x, form_y + PRESET_H, dropdown_w, CAPTION_LINE,
                                  "caption", text=fcap, align="left"))
