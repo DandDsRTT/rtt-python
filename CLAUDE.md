@@ -29,6 +29,26 @@ nice-to-have:
   serious error here: it pollutes a carefully-designed surface and the user has to notice and
   demand its removal.
 
+### Mockup deviations (user-directed — do NOT "restore" to match the mockup)
+
+A few things in the running app deliberately diverge from the mockup because the user asked for
+the change after the mockup was drawn. They are NOT bugs or omissions — do not "fix" them back to
+the mockup:
+
+- **No optimize button / freeze-at-optimum state.** Optimization is always on (two states:
+  scheme-driven and manual override; a scheme pick clears manual). The mockup still shows an
+  optimize button; it was removed deliberately (see `rtt/app/editor.py` `generator_tuning` docs).
+- **No in-grid all-interval checkbox.** The mockup shows an "all-interval" checkbox in box 𝐓; it
+  was removed. The Show-panel **all-interval toggle now IS the mode** (it switches the scheme to
+  all-interval directly — `Editor.set_show` → `_reconcile_mode_toggles` → `_apply_all_interval`).
+- **Editable weight row + "custom weights" toggle.** Manual per-target damage weights (the
+  mockup's "custom weight … interactive white boxes") are exposed as a **Show toggle** ("custom
+  weights", a sibling of all-interval / alt. complexity under weighting), not as a 4th
+  damage-weight-slope dropdown option. Turning it on makes box 𝒘's cells editable.
+- **Tuning-panel nesting.** weighting and tuning ranges nest under **optimization** (Mode A), so
+  **projection** reads as the peer-alternative to the whole optimization branch (D&D's
+  optimize-vs-construct fork). The mockup draws these flatter.
+
 ## Use the persistent `.venv` — don't rebuild a throwaway one
 
 The repo keeps a persistent virtualenv at `.venv/` (gitignored). All deps (runtime **and**
