@@ -185,8 +185,20 @@ no fear:
 - **Commit as you go** (and `git add` new files) — always before you rebase or land. A commit
   on your branch is the safe, recoverable home for work; only uncommitted / untracked files in
   a worktree are fragile.
-- **Stay on your `claude/<name>` branch.** Never `git checkout` / `switch main`, and never
-  hand-edit the main checkout — it's the live app the user is using (a hook blocks such edits).
+- **Stay on your `claude/<name>` branch.** Never `git checkout` / `switch` / `reset` / `rebase` in
+  the **main checkout** (or any sibling worktree), and never hand-edit it — it's the live app the
+  user is using. A `git checkout <commit>` there *detaches the running app's HEAD* and hides
+  everyone's landed work (this has bitten us). Two hooks now enforce it: one blocks edits into the
+  main checkout, one blocks state-changing git aimed at it from a worktree — the only allowed
+  main-checkout write is the landing `git -C <main> merge --ff-only <your-branch>`. Inspect another
+  branch read-only (`git -C <main> show/diff/log`) or just build in your own worktree (it already
+  has your commit).
+- **Never hand subagents / Workflow agents the main-checkout path.** Give them THIS worktree's path
+  as cwd and tell them explicitly: read-only git, never `cd` into or `git checkout`/`reset` the main
+  checkout, validate by in-process builds in the worktree. A review agent once `cd`'d into the main
+  checkout to "validate" a branch and ran `git checkout`, detaching the live app. (Also: prefer
+  targeted `git add <paths>` over `git add -A` after running agents — they leave stray crop/temp
+  files in the worktree root that `-A` will sweep into your commit.)
 - **Sync by rebasing onto main.** On a clean (committed) tree: `git rebase main`. It replays
   your commits on top of main's current tip and keeps you on your branch (it does NOT strand
   your worktree). Resolve the (superficial) conflicts and `git rebase --continue` — don't
