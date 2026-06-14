@@ -569,6 +569,12 @@ class Editor:
         control) — an undoable edit, so an equivalent generating set can be normalized."""
         self.edit_mapping(service.canonical_mapping(self.state.mapping))
 
+    def set_mapping_form(self, form: str) -> None:
+        """Re-store the mapping in the named generator form (canonical / mingen / equave-reduced /
+        positive-generator — the mapping box's ``<choose form>`` control). An undoable edit: the
+        same temperament, a differently-sized generating set."""
+        self.edit_mapping(service.mapping_in_form(self.state.mapping, form, self.state.domain_basis))
+
     def canonicalize_comma_basis(self) -> None:
         """Re-store the comma basis in canonical form (the comma-basis box's
         ``<choose form>`` control) — an undoable edit, like :meth:`canonicalize_mapping`. Passes the

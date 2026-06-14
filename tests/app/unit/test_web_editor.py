@@ -33,6 +33,18 @@ def test_canonicalize_mapping_restores_canonical_form_undoably():
     assert editor.state.mapping == INITIAL_MAPPING  # the form choice is an undoable edit
 
 
+def test_set_mapping_form_restores_the_mapping_in_each_generator_form_undoably():
+    editor = Editor()  # default meantone ((1,1,0),(0,1,4)) — the equave-reduced form
+    editor.set_mapping_form("canonical")
+    assert editor.state.mapping == ((1, 0, -4), (0, 1, 4))
+    editor.set_mapping_form("mingen")
+    assert editor.state.mapping == ((1, 2, 4), (0, -1, -4))
+    editor.set_mapping_form("equave-reduced")
+    assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))
+    editor.undo()  # each form choice is one undoable edit
+    assert editor.state.mapping == ((1, 2, 4), (0, -1, -4))
+
+
 def test_canonicalize_comma_basis_restores_canonical_form_undoably():
     editor = Editor()
     editor.edit_comma_basis([[-8, 8, -2]])  # a non-saturated basis (the syntonic comma doubled)

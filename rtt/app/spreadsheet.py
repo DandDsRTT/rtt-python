@@ -1150,6 +1150,9 @@ class _GridBuilder:
         self.canon_mapping = service.canonical_mapping(self.state.mapping)  # M defactored + HNF (the form box)
         self.rc = len(self.canon_mapping)  # canonical rank (== r for a valid temperament)
         self.form_M = service.form_matrix(self.state.mapping)  # F: the generator form matrix (r×r), F·M = canonical
+        # which generator form the STORED mapping currently is (so the <choose form> dropdown shows it
+        # selected) — "" when it matches none of the offered forms (an unlisted equivalent generating set)
+        self.mapping_form_key = service.identify_mapping_form(self.state.mapping, self.state.domain_basis) or ""
         self.target_vectors = service.target_interval_vectors(self.targets, self.d, self.elements)  # k vectors, each d-tall
         # held intervals: the optimization box's held-just constraints — user-edited vectors in the
         # held column (like the intervals of interest). The tuning holds each exactly just, so
@@ -2997,7 +3000,8 @@ class _GridBuilder:
         if form_chooser:  # the <choose form> dropdown + its caption, below the main chooser, in this box
             fid, fcap = form_chooser
             form_y = ctrl_y + PRESET_H + label_h + BAND_GAP
-            self.cells.append(CellBox(fid, ctrl_x, form_y, dropdown_w, PRESET_H, "formchooser"))
+            self.cells.append(CellBox(fid, ctrl_x, form_y, dropdown_w, PRESET_H, "formchooser",
+                                 text=self.mapping_form_key if fid.endswith(":mapping") else ""))
             self.cells.append(CellBox(f"{fid}:label", ctrl_x, form_y + PRESET_H, dropdown_w, CAPTION_LINE,
                                  "caption", text=fcap, align="left"))
         return ctrl_x, dropdown_w, ctrl_y
@@ -5256,7 +5260,8 @@ class _GridBuilder:
                     continue
                 top = self.ptext_band_y(rkey) + self.rows[rkey].ptext + self.rows[rkey].pre
                 cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESET_W, label)
-                self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser"))
+                self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser",
+                                     text=self.mapping_form_key if name == "mapping" else ""))
 
     def _emit_scheme_buttons(self) -> None:
         """The return-to-scheme ✕ buttons in their own boxes when presets are off."""

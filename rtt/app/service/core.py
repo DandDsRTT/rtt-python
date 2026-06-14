@@ -16,6 +16,11 @@ import sympy as sp
 
 from rtt.library.addition import _get_greatest_factor
 from rtt.library.canonicalization import canonical_ca, canonical_ma
+from rtt.library.generator_forms import (
+    equave_reduced_ma,
+    minimal_generator_ma,
+    positive_generator_ma,
+)
 from rtt.library.dimensions import get_d, get_r
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
@@ -374,6 +379,51 @@ def canonical_comma_basis(comma_basis) -> Matrix:
     """The canonical form of a comma basis (the comma-column analogue of
     :func:`canonical_mapping`) — for the comma-basis box's ``<choose form>`` control."""
     return _to_matrix(canonical_ca(_to_matrix(comma_basis)))
+
+
+# The mapping <choose form> options, in dropdown order: the canonical (defactored Hermite) form
+# plus the alternate generator forms from the Normal Lists page. "positive-generator" is the
+# "flip" variant (the "shift" variant is a separate follow-up).
+MAPPING_FORM_KEYS = ("canonical", "mingen", "equave-reduced", "positive-generator")
+MAPPING_FORM_LABELS = {
+    "canonical": "canonical",
+    "mingen": "minimal-generator",
+    "equave-reduced": "equave-reduced",
+    "positive-generator": "positive-generator",
+}
+_ALT_MAPPING_FORMS = {
+    "mingen": minimal_generator_ma,
+    "equave-reduced": equave_reduced_ma,
+    "positive-generator": positive_generator_ma,
+}
+
+
+def _jip_octaves(mapping, domain_basis):
+    """The just tuning map in octaves (the log2 size of each domain element) — the generator-form
+    functions read generator sizes against it."""
+    t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
+    return tuple(c / 1200.0 for c in get_just_tuning_map(t))
+
+
+def mapping_in_form(mapping, form: str, domain_basis=None) -> Matrix:
+    """The mapping re-expressed in the named generator form (a key in :data:`MAPPING_FORM_KEYS`) —
+    what the ``<choose form>`` control re-stores the mapping as."""
+    m = _to_matrix(mapping)
+    if form == "canonical":
+        return _to_matrix(canonical_ma(m))
+    return _to_matrix(_ALT_MAPPING_FORMS[form](m, _jip_octaves(m, domain_basis)))
+
+
+def identify_mapping_form(mapping, domain_basis=None) -> str | None:
+    """Which offered form the STORED mapping currently is (its key in :data:`MAPPING_FORM_KEYS`),
+    so the ``<choose form>`` dropdown shows it selected — or ``None`` when the stored matrix matches
+    none of them (an equivalent but unlisted generating set; the dropdown then shows its
+    placeholder). The first matching key wins, so forms that coincide read as the earliest one."""
+    m = _to_matrix(mapping)
+    for key in MAPPING_FORM_KEYS:
+        if mapping_in_form(m, key, domain_basis) == m:
+            return key
+    return None
 
 
 def form_matrix(mapping) -> Matrix:

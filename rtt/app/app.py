@@ -757,6 +757,16 @@ def _projection_prompt(cid: str) -> str:
     return "<choose embedding>" if cid.endswith(":gens") else "<choose projection>"
 
 
+def _formchooser_options(cid: str) -> dict:
+    """The <choose form> dropdown options for a chooser cell id. The mapping box offers the generator
+    forms (canonical / minimal-generator / equave-reduced / positive-generator); the comma-basis box
+    offers only canonical for now (its other forms are a separate task). A leading "" placeholder
+    shows when the matrix matches no offered form."""
+    if cid.endswith(":mapping"):
+        return {"": "choose form", **{k: service.MAPPING_FORM_LABELS[k] for k in service.MAPPING_FORM_KEYS}}
+    return {"": "choose form", "canonical": "canonical"}
+
+
 def _hover_index(detail) -> int | None:
     """Normalize an ``opthover`` payload — the hovered option's positional index, or -1 / None on a
     leave — to a 0-based index, or None for a leave. The delegation marshals the index in ``detail``;
@@ -2074,15 +2084,18 @@ class _Reconciler:
     def _update_control_check(self, cb: spreadsheet.CellBox) -> None:  # mirror the live "replace diminuator" state
         self.checks[cb.id].value = cb.checked
 
-    def _build_formchooser(self, cb: spreadsheet.CellBox, wrap) -> None:  # the <choose form> control: canonicalizes its matrix on select
-        sel = ui.select({"": "choose form", "canonical": "canonical"}, value="",
+    def _build_formchooser(self, cb: spreadsheet.CellBox, wrap) -> None:  # the <choose form> control
+        # stateful: the dropdown shows the matrix's CURRENT form (cb.text) selected, and re-stores it
+        # in the picked form on select. The mapping box offers the generator forms; the comma-basis
+        # box offers only canonical for now (its other forms are a separate task).
+        sel = ui.select(_formchooser_options(cb.id), value=cb.text or "",
                 on_change=lambda e, c=cb.id: self._cb.on_form_choose(c, e.value)) \
             .props(_select_props(cb.w)).classes("rtt-preset")
-        self._arm_option_hover(sel, wrap, cb.id)  # hovering "canonical" previews canonicalizing in place
+        self._arm_option_hover(sel, wrap, cb.id)  # hovering a form previews re-storing the matrix in it
         self.selects[cb.id] = sel
 
-    def _update_formchooser(self, cb: spreadsheet.CellBox) -> None:  # a one-shot action: snap back to the placeholder
-        self.selects[cb.id].value = ""
+    def _update_formchooser(self, cb: spreadsheet.CellBox) -> None:  # reflect the matrix's current form
+        self.selects[cb.id].set_options(_formchooser_options(cb.id), value=cb.text or "")
 
     # ---- static controls (build only, no update): the domain/comma/interest/held ± buttons,
     # the speaker, and the audio bank glyphs. Their click / JS handlers are baked at build time. ----
@@ -3771,11 +3784,13 @@ def index() -> None:
             return lambda: editor.set_complexity_name(internal)
         if cid == "control:slope":
             return lambda: editor.set_weight_slope(value)
-        if cid.startswith("formchooser:"):  # the <choose form> control: only "canonical" acts
-            if value != "canonical":
-                return None
+        if cid.startswith("formchooser:"):  # the <choose form> control: re-store the matrix in the picked form
             name = cid.split(":", 1)[1]  # mapping / comma_basis
-            return editor.canonicalize_mapping if name == "mapping" else editor.canonicalize_comma_basis
+            if name == "mapping":
+                if value not in service.MAPPING_FORM_KEYS:  # the "" placeholder → no edit
+                    return None
+                return lambda: editor.set_mapping_form(value)
+            return editor.canonicalize_comma_basis if value == "canonical" else None  # comma basis: canonical only for now
         return None
 
     def on_chooser_hover(cid, detail):

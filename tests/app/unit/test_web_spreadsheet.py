@@ -1405,6 +1405,20 @@ def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis
     assert not any(c.id.startswith("formchooser:") for c in _layout().cells)
 
 
+def test_form_chooser_is_stateful_showing_the_mappings_current_form():
+    # the <choose form> dropdown shows the mapping's CURRENT generator form selected (its cell
+    # carries that form key). The default meantone ((1,1,0),(0,1,4)) is the equave-reduced form.
+    cells = {c.id: c for c in _with(form_controls=True).cells}
+    assert cells["formchooser:mapping"].text == "equave-reduced"
+    # a mapping stored in canonical form reads "canonical"
+    canon = {c.id: c for c in spreadsheet.build(
+        service.from_mapping(((1, 0, -4), (0, 1, 4))),
+        {**settings.defaults(), "form_controls": True}).cells}
+    assert canon["formchooser:mapping"].text == "canonical"
+    # the comma-basis chooser stays canonical-only for now — no current-form state (placeholder)
+    assert cells["formchooser:comma_basis"].text == ""
+
+
 def test_mapped_list_rules_its_vector_columns_apart_clear_of_the_marks():
     cells = {c.id: c for c in _layout().cells}
     # the mapped target interval list separates its vector columns with vertical
