@@ -102,7 +102,7 @@ READONLY_KINDS: frozenset[str] = frozenset({
     "prime", "formcell", "colheader", "rowlabel", "mapped", "vec", "tuningvalue", "powerdisplay",
     "genratio", "commaratio", "mathexpr", "ptext", "ptextpending",
     "symbol", "matlabel", "units", "caption", "count", "boxtitle",
-    "bracket", "ebktop", "ebkbrace", "ebkangle", "ebkbot", "transpose", "vbar", "chart", "rangechart",
+    "bracket", "ebktop", "ebkbrace", "ebkangle", "transpose", "vbar", "chart", "rangechart",
 })
 
 # Read-only OUTPUT values that nonetheless carry hover help — exempt from the no-tooltip rule.

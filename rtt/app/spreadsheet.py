@@ -2879,17 +2879,25 @@ class _GridBuilder:
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.
-    def bracket(self, bid: str, glyphs, group_key: str, y, h, *, fit=False, span=None, pending=False) -> None:
+    def bracket(self, bid: str, glyphs, group_key: str, y, h, *, fit=False, span=None, pending=False,
+                stacked=False) -> None:
         """value brackets are short and centred in their row (so stacked rows keep a
         gap); the enclosing vector-list [ ] passes fit=True to span the matrix.
         matrix_span hugs the cells (interest's content, not its footprint) and steps
         the left ⟨ right past the matlabel gutter, so the row labels sit inside the
         panel left of the ⟨ rather than overflowing it. ``span`` overrides the default span.
-        ``pending`` recolours the bracket green (via ebk_svg) to match a draft row's cells."""
-        if not self.show_ebk:  # EBK off: every left/right bracket squares (⟨ / { → [, ] stays ])
-            glyphs = ("[", "]")
+        ``pending`` recolours the bracket green (via ebk_svg) to match a draft row's cells.
+        ``stacked`` marks a per-ROW bracket of a covector stack (one ⟨ … ] per generator row):
+        with EBK off the stack collapses to ONE full-height square [ … ] (drawn by matrix_frame),
+        so a stacked per-row bracket emits nothing — only EBK shows a bracket per row."""
+        if not self.show_ebk:  # EBK off: a plain matrix wears ONE square [ … ] — see matrix_frame
+            if stacked:
+                return  # the single full-height bracket is matrix_frame's job; skip the per-row one
+            glyphs = ("[", "]")  # every other bracket just squares (⟨ / { → [, ] stays ])
         gx, gw = span if span else self.matrix_span(group_key)
-        if fit:
+        if fit and not self.show_ebk:
+            by, bh = y, h  # a plain matrix's outer [ ] hugs the cell matrix exactly (no frame bands)
+        elif fit:
             # A vector-list outer wrap [ … ] spans the matrix's full FRAMED height, so it
             # ENCLOSES the per-column top/bottom marks (each ket's ebktop + ebkbrace/angle,
             # which stand FRAME_GAP off the cells — see vector_list_marks). This mirrors how a
@@ -3193,9 +3201,15 @@ class _GridBuilder:
         plain-text bracket but with ⟩ in place of })."""
         if not self.tile_open(rkey, ckey):
             return
-        if not self.show_ebk:  # EBK off: a covector stack closes square (the brace / angle foot → a
-            foot = "ebkbot"    # plain bottom bracket). matrix_frame frames the MAP kind, so no ᵀ.
         gx, gw = span if span else self.matrix_span(ckey)  # ``span`` overrides the default cell-matrix span
+        if not self.show_ebk:
+            # EBK off: a plain matrix wears ONE pair of full-height square brackets — no top bar, no
+            # bottom brace, no per-row brackets (those are skipped, stacked=True). The covector stack
+            # is the MAP kind, so no ᵀ. Inner cell borders / gridlines stay (linear-algebra standard).
+            y, h = self.rows[rkey].y, self.rows[rkey].h
+            self.cells.append(CellBox(f"bracket:{bid}:l", gx, y, BRACKET_W, h, "bracket", text="["))
+            self.cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, y, BRACKET_W, h, "bracket", text="]"))
+            return
         self.cells.append(CellBox(f"ebktop:{bid}", gx, self.frame_top_y(rkey), gw, FRAME_H, "ebktop"))
         self.cells.append(CellBox(f"{foot}:{bid}", gx, self.frame_brace_y(rkey), gw, BRACE_H, foot))
     # the 𝐿·basis product matrices (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile use a
@@ -3214,18 +3228,17 @@ class _GridBuilder:
     def vector_list_marks(self, rkey, name, ckey, left, n_cols, top="ebktop", foot="ebkbrace", separators=True, pending_col=-1) -> None:
         if not self.tile_open(rkey, ckey):
             return
-        if not self.show_ebk:  # EBK off: each ket closes square (the curly / angle foot → a bottom bracket)
-            foot = "ebkbot"
-        mark_w = COL_W - 2 * MARK_INSET
-        for c in range(n_cols):
-            mx = left(c) + MARK_INSET
-            pend = (c == pending_col)  # the draft column's ket marks render green, like its cells
-            self.cells.append(CellBox(f"{top}:{name}:{c}", mx, self.frame_top_y(rkey), mark_w, FRAME_H, top, pending=pend))
-            self.cells.append(CellBox(f"{foot}:{name}:{c}", mx, self.frame_brace_y(rkey), mark_w, BRACE_H, foot, pending=pend))
-        # EBK off: vector_list_marks frames the VECTOR kind, so tag it ᵀ. A standalone collection
-        # (interest — no outer [ ] wrap) tags each column its own ᵀ, matching the plain text's per-ket
-        # [ … ]ᵀ; a wrapped matrix tags one ᵀ just past its outer ] (the matrix_span's right edge).
-        if not self.show_ebk and n_cols:
+        if self.show_ebk:
+            mark_w = COL_W - 2 * MARK_INSET
+            for c in range(n_cols):
+                mx = left(c) + MARK_INSET
+                pend = (c == pending_col)  # the draft column's ket marks render green, like its cells
+                self.cells.append(CellBox(f"{top}:{name}:{c}", mx, self.frame_top_y(rkey), mark_w, FRAME_H, top, pending=pend))
+                self.cells.append(CellBox(f"{foot}:{name}:{c}", mx, self.frame_brace_y(rkey), mark_w, BRACE_H, foot, pending=pend))
+        elif n_cols:
+            # EBK off: a plain matrix has NO per-column brackets — its single outer [ … ] (the fit
+            # bracket) frames the whole list. We only tag the VECTOR kind with ᵀ: a standalone
+            # collection (interest, no outer wrap) per column, a wrapped matrix once past its outer ].
             if ckey == "interest":
                 for c in range(n_cols):
                     self.transpose_mark(f"{name}:{c}", left(c) + COL_W - MARK_INSET, rkey, pending=(c == pending_col))
@@ -3234,20 +3247,22 @@ class _GridBuilder:
                 self.transpose_mark(name, gx + gw, rkey)
         if not separators:
             return
-        # the dividing rules span the matrix's full FRAMED height — the same extent as the
-        # outer [ ] wrap (see bracket's fit branch), FRAME_OVERHANG past the marks at each end —
-        # so every vertical rule of the matrix encloses the per-column top/bottom marks alike,
-        # rather than stopping at the value cells and letting the marks poke out past it.
-        sep_y = self.frame_top_y(rkey) - FRAME_OVERHANG
-        sep_h = self.frame_brace_y(rkey) + BRACE_H + FRAME_OVERHANG - sep_y
+        # the dividing rules (the matrix's inner vertical gridlines). With EBK on they span the full
+        # FRAMED height to enclose the per-column marks (FRAME_OVERHANG past them); with EBK off there
+        # are no marks, so they hug the cell matrix exactly — a plain matrix's inner lines, no overshoot.
+        if self.show_ebk:
+            sep_y = self.frame_top_y(rkey) - FRAME_OVERHANG
+            sep_h = self.frame_brace_y(rkey) + BRACE_H + FRAME_OVERHANG - sep_y
+        else:
+            sep_y, sep_h = self.rows[rkey].y, self.rows[rkey].h
         for c in range(1, n_cols):  # a rule on each interior column boundary
             self.cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, sep_y, SEP_W, sep_h, "vbar"))
 
     def transpose_mark(self, name, x, rkey, pending: bool = False) -> None:
-        """The EBK-off ᵀ superscript marking a vector-kind matrix, seated in the top frame band at
-        ``x`` (a wrapped matrix's outer-] right edge, or a standalone ket's right). ``pending`` greens
-        it with its draft column's cells, via _update_label (like the brackets)."""
-        self.cells.append(CellBox(f"transpose:{name}", x, self.frame_top_y(rkey), TRANSPOSE_W, FRAME_H + ROW_H,
+        """The EBK-off ᵀ superscript marking a vector-kind matrix, seated at its top-right corner at
+        ``x`` (the matrix's outer-] right edge, or a standalone ket's right). ``pending`` greens it
+        with its draft column's cells, via _update_label (like the brackets)."""
+        self.cells.append(CellBox(f"transpose:{name}", x, self.rows[rkey].y - FRAME_GAP, TRANSPOSE_W, ROW_H,
                              "transpose", text="ᵀ", pending=pending))
 
     def v_split_bars(self) -> None:
@@ -4824,13 +4839,13 @@ class _GridBuilder:
         """The per-row / per-list EBK brackets across all the bands."""
         if self.row_open("canon") and self.tile_open("canon", "primes"):  # canonical maps: ⟨ … ] per row
             for i in range(self.rc):
-                self.bracket(f"canon:map:{i}", MAP_BRACKETS, "primes", self.canon_top(i), ROW_H)
+                self.bracket(f"canon:map:{i}", MAP_BRACKETS, "primes", self.canon_top(i), ROW_H, stacked=True)
         if self.row_open("canon") and self.tile_open("canon", "gens"):  # the generator form matrix: { … ] per row
             for i in range(len(self.form_M)):
-                self.bracket(f"form:map:{i}", GENMAP_BRACKETS, "gens", self.canon_top(i), ROW_H)
+                self.bracket(f"form:map:{i}", GENMAP_BRACKETS, "gens", self.canon_top(i), ROW_H, stacked=True)
         if self.row_open("projection") and self.tile_open("projection", "primes"):  # P = GM: ⟨ … ] per row, like the mapping
             for i in range(self.d):
-                self.bracket(f"proj:{i}", MAP_BRACKETS, "primes", self.proj_top(i), ROW_H)
+                self.bracket(f"proj:{i}", MAP_BRACKETS, "primes", self.proj_top(i), ROW_H, stacked=True)
         if self.row_open("projection") and self.tile_open("projection", "gens"):
             # G is a vector LIST: each held generator a prime-count ket [ … ⟩ column (marks emitted by
             # vector_list_marks below) inside an outer { … ] (curly open, square close, generator
@@ -4842,7 +4857,7 @@ class _GridBuilder:
         if self.row_open("projection") and self.tile_open("projection", "ssprimes"):
             # P_L→s is a covector stack like P: ⟨ … ] per row over the superspace primes
             for i in range(self.d):
-                self.bracket(f"proj_sl:{i}", MAP_BRACKETS, "ssprimes", self.proj_top(i), ROW_H)
+                self.bracket(f"proj_sl:{i}", MAP_BRACKETS, "ssprimes", self.proj_top(i), ROW_H, stacked=True)
         if self.show_unchanged and self.row_open("projection") and self.tile_open("projection", "commas"):
             # P·V is a list of projected vectors (kets) — [ … ⟩ per column, [ ] outer, like V itself
             self.bracket("proj_v", LIST_BRACKETS, "commas", self.rows["projection"].y, self.d * ROW_H, fit=True)
@@ -4862,9 +4877,9 @@ class _GridBuilder:
             # the primes mapping is a stack of maps: ⟨ … ] per row
             if self.tile_open("mapping", "primes"):
                 for i in range(self.r):
-                    self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H)
+                    self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H, stacked=True)
                 if self.pending_mapping_row is not None:  # the draft row's own ⟨ … ] map brackets, green
-                    self.bracket("map:pending", MAP_BRACKETS, "primes", self.map_top(self.r), ROW_H, pending=True)
+                    self.bracket("map:pending", MAP_BRACKETS, "primes", self.map_top(self.r), ROW_H, pending=True, stacked=True)
             # the spanning derived [ ]s grow to r_shown — enclosing the (empty) draft-row slot at the
             # band floor, exactly as the comma-draft's mapped_comma [ ] grows over nc_shown to enclose
             # its empty draft-column slot. r_shown == r whenever no row is pending, so the resting
@@ -4880,11 +4895,11 @@ class _GridBuilder:
         # column, framed exactly like M (per-row ⟨ … ] brackets + top/bottom matrix_frame)
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):
             for i in range(self.rL):
-                self.bracket(f"ss_map:{i}", MAP_BRACKETS, "ssprimes", self.ss_map_top(i), ROW_H)
+                self.bracket(f"ss_map:{i}", MAP_BRACKETS, "ssprimes", self.ss_map_top(i), ROW_H, stacked=True)
         # P_L: a dL × dL covector stack over the ssprimes column, per-row ⟨ … ] like M_L / M_jL
         if self.row_open("ss_projection") and self.tile_open("ss_projection", "ssprimes"):
             for i in range(self.dL):
-                self.bracket(f"ss_proj:{i}", MAP_BRACKETS, "ssprimes", self.ss_proj_top(i), ROW_H)
+                self.bracket(f"ss_proj:{i}", MAP_BRACKETS, "ssprimes", self.ss_proj_top(i), ROW_H, stacked=True)
         # the rest of the superspace projection row's OUTER brackets (their inner per-column kets come
         # from vector_list_marks below), mirroring the on-domain G / P·D / P·V / P·T / P·H / P·interest:
         # the embedding G_L and P_L·D_L take the curly { … ] (generator coords); P_L·B_Ls the covector-
@@ -4909,25 +4924,25 @@ class _GridBuilder:
         # generator dimension, like the canonical generator form F and the genmap).
         if self.row_open("ss_vectors") and self.tile_open("ss_vectors", "ssprimes"):
             for i in range(self.dL):
-                self.bracket(f"ss_vec_jmap:{i}", MAP_BRACKETS, "ssprimes", self.ss_vec_top(i), ROW_H)
+                self.bracket(f"ss_vec_jmap:{i}", MAP_BRACKETS, "ssprimes", self.ss_vec_top(i), ROW_H, stacked=True)
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "primes"):
             for i in range(self.rL):
-                self.bracket(f"ss_msl:{i}", MAP_BRACKETS, "primes", self.ss_map_top(i), ROW_H)
+                self.bracket(f"ss_msl:{i}", MAP_BRACKETS, "primes", self.ss_map_top(i), ROW_H, stacked=True)
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssgens"):
             for i in range(self.rL):
-                self.bracket(f"ss_selfmap:{i}", GENMAP_BRACKETS, "ssgens", self.ss_map_top(i), ROW_H)
+                self.bracket(f"ss_selfmap:{i}", GENMAP_BRACKETS, "ssgens", self.ss_map_top(i), ROW_H, stacked=True)
         # the standard-domain identity objects (the on-domain twins of the two above): M_j = I a
         # d × d covector stack ⟨ … ] over the primes column; MG = I / MD = I r × r genmap stacks
         # { … ] over the gens / detempering columns. Same per-row-bracket + matrix_frame pattern.
         if self.tile_open("vectors", "primes"):
             for i in range(self.d):
-                self.bracket(f"vec:primes:{i}", MAP_BRACKETS, "primes", self.vec_top(i), ROW_H)
+                self.bracket(f"vec:primes:{i}", MAP_BRACKETS, "primes", self.vec_top(i), ROW_H, stacked=True)
         if self.tile_open("mapping", "gens"):
             for i in range(self.r):
-                self.bracket(f"selfmap:{i}", GENMAP_BRACKETS, "gens", self.map_top(i), ROW_H)
+                self.bracket(f"selfmap:{i}", GENMAP_BRACKETS, "gens", self.map_top(i), ROW_H, stacked=True)
         if self.tile_open("mapping", "detempering"):
             for i in range(self.r):
-                self.bracket(f"mapped_detempering:{i}", GENMAP_BRACKETS, "detempering", self.map_top(i), ROW_H)
+                self.bracket(f"mapped_detempering:{i}", GENMAP_BRACKETS, "detempering", self.map_top(i), ROW_H, stacked=True)
         # the lifted interval lists: B_L over the primes column (the basis change matrix) and the
         # lifted C/T/H/detempering lists, each a [ … ] over the dL components in the ss_vectors row;
         # the mapped versions a [ … ] over the rL rows in the ss_mapping row (interest stands alone,
@@ -4993,7 +5008,7 @@ class _GridBuilder:
                 pspan = self.matrix_span(bare_col)
                 for i in range(self.prescale_rows + self.size_rows):
                     self.bracket(f"prescaling:row:{i}", MAP_BRACKETS, bare_col,
-                            self.rows["prescaling"].y + i * ROW_H, ROW_H, span=pspan)
+                            self.rows["prescaling"].y + i * ROW_H, ROW_H, span=pspan, stacked=True)
                 if self.size_rows:  # the guide's \hline in 𝑋 = 𝑍𝐿: a horizontal rule separating the bottom
                     # size row from the top square
                     gx, gw = pspan

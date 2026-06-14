@@ -69,13 +69,6 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             # Off rounds every displayed value to the nearest integer, app-wide (a display setting —
             # the underlying values keep full precision, so turning it back on restores the decimals).
             ("decimals", "decimals", True),
-            # EBK (Extended Bra-Ket) notation. On (default) frames every matrix/vector in its EBK
-            # brackets — the angle ⟨…] of a map, the ket […⟩, the curly { of a genmap. Off replaces
-            # all of it (the rendered grid marks AND the plain-text strings) with a plain matrix
-            # notation: every angle/curly brace becomes a square brace, and a superscript ᵀ marks the
-            # vector-based (column-vector-list) kind apart from the map-based (covector-stack) kind.
-            # A DISPLAY setting, like decimals — the underlying objects are untouched.
-            ("ebk", "EBK", True),
             ("units", "units", False),
             # the per-value unit beneath each gridded cell is its OWN toggle, independent of the
             # per-box "units: …" line above (the `units` key) — NOT a sub-control. Like
@@ -96,6 +89,13 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             # the interval-vectors row used to ride ``temperament_tiles`` but now owns its own.
             ("interval_ratios", "interval ratios", True),
             ("interval_vectors", "interval vectors", True),
+            # EBK (Extended Bra-Ket) notation — a notation MODE for every matrix/vector, not a per-tile
+            # layer (so it's a show/example row, not a dummy-tile part). On (default) frames each value
+            # in its EBK brackets — the angle ⟨…] of a map, the ket […⟩, the curly { of a genmap. Off
+            # replaces it everywhere (the gridded marks AND the plain-text strings) with plain matrix
+            # notation: a single square [ … ] per matrix, and a superscript ᵀ marking the vector kind
+            # apart from the map kind. A DISPLAY setting, like decimals — the objects are untouched.
+            ("ebk", "EBK", True),
             ("domain_units", "units", False),
             # ``temperament`` / ``tuning`` are pure grouping parents (see the module docstring): each
             # only expands the toggles grouped directly beneath it (its tiles toggle and that tile
@@ -230,9 +230,6 @@ CHAPTER: dict[str, int] = {
     # default slider position; a later reveal would let disable_hidden_settings turn it off on load,
     # silently rounding the whole app to integers before the user ever sees the toggle.
     "decimals": 2,
-    # EBK notation is introduced in chapter 2 (the first mappings are written in it), so the toggle
-    # reveals — and stays ON — by the default slider position, like decimals.
-    "ebk": 2,
     "math_expressions": 2, "presets": 2, "equivalences": 2,
     "header_symbols": 2,  # the matrix row/col header labels (𝒎₁, 𝐜₁, …) — a sibling of symbols
     # mnemonics is the underlinable LETTER of the name word, so it must reveal WITH names (its
@@ -245,6 +242,9 @@ CHAPTER: dict[str, int] = {
     # their EARLIEST child, so the group header never appears before anything it would expand to.
     "counts": 2, "temperament": 2, "temperament_tiles": 2, "temperament_colorization": 2,
     "interest": 2, "interval_ratios": 2, "interval_vectors": 2, "domain_units": 2,
+    # EBK notation is introduced in chapter 2 (the first mappings are written in it), so the toggle
+    # reveals — and stays on — by the default slider position.
+    "ebk": 2,
     "tuning": 3, "tuning_tiles": 3, "tuning_colorization": 3,
     "optimization": 3, "tuning_ranges": 3, "weighting": 3,
     "all_interval": 7,

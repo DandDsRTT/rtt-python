@@ -96,18 +96,6 @@ def top_bracket(w, h):
         + rect(w - _BR_SERIF_T, 0, _BR_SERIF_T, BR_SERIF_L))
 
 
-def bottom_bracket(w, h):
-    """The matrix's spanning bottom bracket — a bar across the bottom with an up-foot at each end,
-    the vertical mirror of :func:`top_bracket`. The EBK-OFF replacement for the curly brace
-    (:func:`brace`) and the angle foot (:func:`angle_foot`): with EBK off a matrix closes square, so
-    its top bracket + this bottom bracket read as one plain ``[ … ]`` frame (same weights as the
-    square brackets)."""
-    return svg(w, h,
-        rect(0, h - _BR_BAR, w, _BR_BAR)
-        + rect(0, h - BR_SERIF_L, _BR_SERIF_T, BR_SERIF_L)
-        + rect(w - _BR_SERIF_T, h - BR_SERIF_L, _BR_SERIF_T, BR_SERIF_L))
-
-
 def angle_bracket(w, h):
     """``⟨`` drawn within the SAME oblong footprint as the square brackets — a
     serif-length wide and the full cell height — so every value bracket shares one
@@ -236,8 +224,6 @@ def ebk_svg(cb):
         svg = brace(cb.w, cb.h)
     elif cb.kind == "ebkangle":
         svg = angle_foot(cb.w, cb.h)
-    elif cb.kind == "ebkbot":  # EBK off: the square bottom replacing the brace / angle foot
-        svg = bottom_bracket(cb.w, cb.h)
     elif cb.kind == "hbar":
         svg = _hbar(cb.w, cb.h)
     else:

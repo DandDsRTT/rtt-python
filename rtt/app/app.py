@@ -522,7 +522,7 @@ _MATLABEL_MIN_FONT = 6.0  # px — floor for a wide column header shrunk to fit 
 # the rejected font glyph scaled its weight with its height, and a fixed viewBox
 # stretched to the cell sheared its serifs. Square/top brackets are crisp filled
 # rects; the calligraphic ⟨ and brace are filled variable-width ribbons (ribbon).
-_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "ebkbot", "vbar", "hbar"}
+_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "hbar"}
 
 # EBK-off square-brace swap for the two-tone DRAFT strings (the mapping / comma / target pending
 # text, split into coloured prefix/draft/suffix that ebk_to_simple_matrix can't take whole because
@@ -565,7 +565,6 @@ _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     ("drag_to_combine", "gridded_values", "math_expressions", "quantities", "decimals"),
     ("symbols", "equivalences"),
     ("mnemonics", "names"),
-    ("ebk",),
     ("units",),
     ("plain_text_values",),
     ("presets",),
@@ -598,7 +597,7 @@ _TILE_HOST: dict[str, str] = {
 _TILE_FONT = {
     "symbols": 15, "equivalences": 15, "rowlabel": spreadsheet.MATLABEL_H - 2,
     "names": spreadsheet.CAPTION_FONT, "mnemonics": spreadsheet.CAPTION_FONT,
-    "units": 10, "cellunit": 7, "plain_text_values": 11, "ebk": 11, "drag_to_combine": 18,
+    "units": 10, "cellunit": 7, "plain_text_values": 11, "drag_to_combine": 18,
 }
 
 

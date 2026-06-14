@@ -75,9 +75,12 @@ def test_ebk_toggle_is_registered_on_by_default_from_chapter_two():
     assert "ebk" in app_settings.IMPLEMENTED               # a live toggle, not greyed
     assert app_settings.CHAPTER["ebk"] == 2                # revealed by the default slider (ch4 ≥ 2)
     assert app_settings.reveal_chapter("ebk") == 2
-    # it sits in the general group, just above units (the user's placement)
+    # it's a show/example checkbox row (a notation MODE, not a per-tile dummy-tile layer), in the
+    # "specific tiles & controls" group just above its "units" (domain_units) row — the user's placement
+    specific = [k for k, *_ in dict(app_settings.SHOW_GROUPS)["specific tiles & controls"]]
+    assert specific.index("ebk") == specific.index("domain_units") - 1
     general = [k for k, *_ in dict(app_settings.SHOW_GROUPS)["general"]]
-    assert general.index("ebk") == general.index("units") - 1
+    assert "ebk" not in general                            # NOT a dummy-tile part
 
 
 # ── the gridded marks: square frame + ᵀ off, EBK brackets on ──────────────────────────────────
@@ -103,19 +106,24 @@ def test_ebk_on_keeps_angle_and_curly_marks_no_transpose():
     layout = _build(True)
     kinds = _mark_kinds(layout)
     assert {"ebkbrace", "ebkangle"} & kinds  # EBK feet present
-    assert "ebkbot" not in kinds             # no square bottom
     assert "transpose" not in kinds          # no ᵀ marks
     assert {"⟨", "{"} & _bracket_glyphs(layout)  # angle/curly side brackets present
 
 
-def test_ebk_off_squares_every_mark_and_tags_the_vector_kind():
+def test_ebk_off_is_a_single_square_bracket_per_matrix_no_nesting():
     layout = _build(False)
     kinds = _mark_kinds(layout)
-    assert "ebkbot" in kinds                              # the square bottom replaces the feet
-    assert not ({"ebkbrace", "ebkangle"} & kinds)         # no EBK feet remain
-    assert "transpose" in kinds                           # the vector matrices carry ᵀ
-    assert _bracket_glyphs(layout) <= {"[", "]"}          # every side bracket is square
+    # a plain matrix has NO EBK framing marks at all — no top bars, no braces, no angle feet
+    assert not ({"ebktop", "ebkbrace", "ebkangle"} & kinds)
+    assert _bracket_glyphs(layout) <= {"[", "]"}          # every bracket is square
+    # the mapping (a covector stack) collapses to ONE full-height [ ] pair — no per-row brackets
+    bracket_ids = {c.id for c in layout.cells if c.kind == "bracket"}
+    assert {"bracket:primes:l", "bracket:primes:r"} <= bracket_ids
+    assert not any(i.startswith("bracket:map:") for i in bracket_ids)  # the per-row ⟨…] are gone
+    # the vector kind still carries a ᵀ; the map kind (the mapping) does not
+    assert "transpose" in kinds
     assert all(c.text == "ᵀ" for c in layout.cells if c.kind == "transpose")
+    assert not any(c.id == "transpose:primes" for c in layout.cells)  # mapping = map kind, no ᵀ
 
 
 def test_ebk_off_transforms_the_plain_text_strings():

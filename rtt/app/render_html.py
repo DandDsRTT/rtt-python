@@ -484,6 +484,7 @@ _EXAMPLE_TEXT: dict[str, str] = {
     "counts": "𝑑",
     "interval_ratios": "2.3.5",
     "interval_vectors": "[−4 4 −1⟩",          # an interval as a column vector (monzo) — the syntonic comma 81/80
+    "ebk": "⟨1 0 -4]",                        # the bra-ket notation itself (a map ⟨…]); off → the plain [1 0 -4]
     "domain_units": "p₁/",
     "temperament_tiles": "𝑀",
     "form": "𝑀" + spreadsheet.SUBSCRIPT_C,  # the canonical-form subscript this layer adds (𝑀 → 𝑀_C)
@@ -553,8 +554,6 @@ _TILE_MATH = "1200·log₂(3/2) ="  # math_expressions: a value's closed form; t
 _TILE_VALUE = "701.955"         # quantities: the bare value the form evaluates to (no "=" — that rides the expression); 3 dp, the grid's cents precision
 _TILE_UNITS = "¢/p"             # units: the value's unit (cents per prime) — the "units: …" line AND the per-cell unit
 _TILE_PTEXT = "⟨1200 1902 2786]"  # plain_text_values: the same kind of value as a one-line EBK string
-_TILE_EBK = "[⟨1 0 -4]⟩"  # EBK: a mini mapping matrix showing the nested bracket structure EBK governs
-#                           (outer [ … ⟩ around an inner covector ⟨ … ]) — off, this would read [[1 0 -4]]
 
 _TILE_MNEMONIC_AT = _TILE_NAME.index("n")  # where the mnemonic underline falls (the symbol's letter)
 
@@ -655,8 +654,6 @@ def _general_part_html(key: str) -> str:
         return _units_html(_TILE_UNITS)
     if key == "plain_text_values":
         return _math_html(_TILE_PTEXT)
-    if key == "ebk":  # the EBK bracket notation — a mini matrix showing the angle/square nesting
-        return _math_html(_TILE_EBK)
     if key == "presets":
         return _tile_preset_html()
     if key == "charts":
