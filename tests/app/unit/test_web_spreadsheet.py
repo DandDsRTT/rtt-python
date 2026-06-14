@@ -6811,9 +6811,9 @@ def test_every_derived_matrix_row_greens_its_draft_column():
         dx = left(committed)
         checked = 0
         for rkey in VALUE_ROWS:
-            if rkey not in b.row_y or (rkey, lst) not in b.declared_tiles:
+            if rkey not in b.rows or (rkey, lst) not in b.declared_tiles:
                 continue
-            top, h = b.tile_top[rkey], b.tile_h[rkey]
+            top, h = b.rows[rkey].tile_top, b.rows[rkey].tile_h
             hit = any(abs(c.x - dx) < 7 and top - 1 <= c.y <= top + h + 1 and c.kind not in STRUCTURAL
                       for c in lay.cells)
             assert hit, f"first {lst} draft: row {rkey!r} is blank at the draft column (the bug)"
@@ -6824,7 +6824,7 @@ def test_every_derived_matrix_row_greens_its_draft_column():
     b = spreadsheet._GridBuilder(barb, s, tuning_scheme="minimax-ES",
                                  held_vectors=(), pending_held=[None, None, None],
                                  interest=(), pending_interest=[None, None, None])
-    assert b.show_superspace and "prescaling" in b.row_y and "complexity" in b.row_y
+    assert b.show_superspace and "prescaling" in b.rows and "complexity" in b.rows
     assert_draft_greened(b, "held", 0, minimum=10)
     assert_draft_greened(b, "interest", 0, minimum=10)
 
