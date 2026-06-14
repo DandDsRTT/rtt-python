@@ -4010,8 +4010,9 @@ def index() -> None:
         #     the load as a hypothetical candidate — the doomed cells ring RED in place, the
         #     surviving changed cells amber. In a mixed change the deletion wins (additions aren't
         #     shown); seeing what goes away is what was asked for.
-        # Temperament alone REFLOWS (it changes the grid's dimensionality), so it keeps this
-        # sticky TEMP gesture rather than the amber-only chooser_hover the other dropdowns use.
+        # Temperament keeps its OWN sticky TEMP gesture (it can change the grid's dimensionality, so
+        # the shrink fork is detected by state dims here) — the generic dropdowns reflow the same way
+        # but through the CHOOSER gesture (chooser_hover), whose shrink fork is owned-interval removal.
         # The token is captured ONCE per gesture and survives option-to-option moves (including
         # grow→shrink, which arrives with no leave in between); every option re-bases on it.
         # Reverts on leave / popup-close (_end_temperament_preview), commits on select (on_preset).
@@ -4104,10 +4105,10 @@ def index() -> None:
     def _candidate_apply(cid, value):
         # the SINGLE map from a chooser option to the editor edit it commits, as a zero-arg thunk — or
         # None for a no-op (a leave / placeholder / the off-preset "custom" complexity). Keyed by chooser
-        # id and shared by both sides: the hover preview (chooser_hover) runs it on a snapshot and
-        # reverts, while on_preset / on_control_select / on_form_choose run it for real and re-render. So
-        # an option's effect is defined once. (Temperament is not here — it reflows the grid, handled by
-        # _temperament_hover_preview / on_preset's own branch.)
+        # id and shared by both sides: the hover preview (chooser_hover) runs it under a revert token to
+        # reflow or redden, while on_preset / on_control_select / on_form_choose run it for real and
+        # re-render. So an option's effect is defined once. (Temperament is not here — it can change the
+        # grid's dimensionality, handled by _temperament_hover_preview / on_preset's own branch.)
         if value is None:
             return None
         if cid.startswith("preset:tuning"):
@@ -4140,8 +4141,9 @@ def index() -> None:
         # the shared option-hover preview entry for every q-select armed via _arm_option_hover: the
         # delegation fires `opthover` at the chooser's cell wrap carrying the hovered option's positional
         # index in `detail` (-1 / None on leave). Map it back to the option's key through the live
-        # select, then preview applying it. Temperament reflows the grid, so it routes to its own sticky
-        # path; the rest (including the TILT/OLD family) are amber-only re-solves handled below.
+        # select, then preview applying it. Temperament + the sub-pickers route to their own sticky
+        # reflow path; the rest (including the TILT/OLD family) go through chooser_hover below, which
+        # reflows a value-only pick and reddens one that drops owned intervals.
         entry = rec.selects.get(cid)
         sel = entry[1] if isinstance(entry, tuple) else entry  # the target chooser rides a (num, sel) tuple
         if not isinstance(sel, ui.select):
@@ -4165,9 +4167,10 @@ def index() -> None:
             return
         if cid == "preset:target":
             # the TILT/OLD family: preview switching to it. Compose the spec from the displayed limit +
-            # the hovered family, exactly what on_target_change commits, and ring in place — the target
-            # set re-derives, so rows the switch drops ring red and survivors that move ring amber, with
-            # no reflow (the chooser keeps its value + open popup, like the other amber-only choosers).
+            # the hovered family, exactly what on_target_change commits, and hand it to chooser_hover —
+            # which REDDENS in place when the switch drops targets (the common TILT↔OLD case: the
+            # dropped rows ring red, survivors amber, no reflow) and REFLOWS when it merely re-derives
+            # the same-count set (the moved rows show their new values). The chooser stays steady either way.
             family = _option_key(sel, index)
             if family not in presets.TARGET_SETS:
                 chooser_unhover()
