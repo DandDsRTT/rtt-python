@@ -245,6 +245,9 @@ _PREVIEW_REMOVE_TEXT_COLOR = "color-mix(in srgb, var(--preview-remove-color) 60%
 _CELL_BORDER_W = 1  # px
 _CELL_BORDER = f"{_CELL_BORDER_W}px solid {BR_COLOR}"
 _CELL_FONT = 17  # px for the single-digit values in the square cells (≈0.37 of the cell)
+_GENSIGN_W = 9   # px the clickable +/− sign glyph eats in a generator-tuning cell — reserved (on top
+# of the cell's own margin) when fitting the whole part, so a signed integer (decimals off) clears the
+# sign AND the right edge instead of butting it (the read-only cents face has no sign, so fits full-width).
 _STACKED_MAIN_FONT = 10  # px for a stacked cents/power whole-part (must match .rtt-stacked-main in
 # rtt.css). The zoom-on-hover magnifier scales by _CELL_FONT / _STACKED_MAIN_FONT, so the small
 # whole-part of "1200.000" reaches the size of a normal integer "1" gridded value (the calibration).
@@ -1705,8 +1708,11 @@ class _Reconciler:
         # int mode shows the whole part big at the full cell font, but a long integer (a 4-digit
         # cents value with decimals off) would spill the square and butt against its neighbours, so
         # fit it to the box like the read-only solo face. The var drives the int-mode .q-field__native
-        # rule (ignored in dec mode, where the fraction keeps the whole part small).
-        self.frac_edits[cb.id].style(f"--dec-whole-font:{_digit_fit_font(len(whole), cb.w, float(_CELL_FONT)):.2f}px")
+        # rule (ignored in dec mode, where the fraction keeps the whole part small). A SIGNED cell (the
+        # generator tuning map) shares the row with the clickable +/− glyph, so reserve its width too —
+        # else a 3-digit value at the full font + the sign overruns the box's right edge.
+        fit_w = cb.w - _GENSIGN_W if signed else cb.w
+        self.frac_edits[cb.id].style(f"--dec-whole-font:{_digit_fit_font(len(whole), fit_w, float(_CELL_FONT)):.2f}px")
 
     def _build_prescalercell(self, cb: spreadsheet.CellBox, wrap) -> None:
         # a bare prescaler 𝐿 diagonal cell, the user's editable override (off-diagonal cells stay

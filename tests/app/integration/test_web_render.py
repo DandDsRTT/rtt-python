@@ -1343,8 +1343,8 @@ async def test_decimals_off_shrinks_a_long_integer_to_fit_its_cell(user: User) -
     # tuning value like 1200) rendered at the fixed full cell font and spilled the square, butting
     # confusingly against its neighbours. The solo face now font-FITS to the box like the mapping /
     # whole-ratio integers — and the fit is digit-aware, so a short value (a 1-digit retuning 0)
-    # keeps the full cell font. (The editable decimal cell's int view gets the same fit via
-    # --dec-whole-font; this guards the read-only stacked face.)
+    # keeps the full cell font. Covers the read-only stacked face AND the editable generator-tuning
+    # cell, whose +/- sign glyph eats box width so even a 3-digit value must shrink to clear it.
     cell_font = float(web_app._CELL_FONT)
     await user.open("/")
     main_on, sub_on = _ro_stacked_face(user, "tuning:prime:0")
@@ -1357,6 +1357,15 @@ async def test_decimals_off_shrinks_a_long_integer_to_fit_its_cell(user: User) -
     short_main, short_sub = _ro_stacked_face(user, "retune:prime:0")  # the retuning octave is a pure 0 — one digit
     assert (short_main.text, short_sub.text) == ("0", "")
     assert float(short_main._style["font-size"].rstrip("px")) == cell_font  # short values keep the full font
+    # the editable generator-tuning cell shares its box with the clickable +/- sign glyph, so its
+    # solo integer fits a NARROWER width than the read-only face: a 3-digit generator (which would
+    # stay full-size read-only) shrinks below the cell font here, to clear the sign AND the box's
+    # right edge (the reported "3-digit numbers butting the generator tuning map's right edge").
+    gen_whole, _ = _dec_inputs(user, "tuning:gen:1")
+    assert len(str(gen_whole.value)) == 3                         # a 3-digit generator (e.g. 697)
+    gen_box = next(iter(user.find(marker="tuning:gen:1").elements)).default_slot.children[0]
+    assert float(gen_box._style["--dec-whole-font"].rstrip("px")) < cell_font, \
+        "a signed 3-digit generator must shrink below the full cell font to clear its sign + box edge"
 
 
 async def test_typing_the_prescaler_plain_text_overrides_the_scheme(user: User) -> None:
