@@ -396,9 +396,11 @@ def _power_parts(text) -> tuple[str, str]:
 # plain-text value's width without a browser. An EBK string mixes wide digits with narrow
 # punctuation and spaces, so a single average char width over-shrinks a punctuation-heavy
 # value (e.g. a prescaling ket-matrix, mostly 0s, dots and spaces); summing the real glyphs
-# lets each value fill its box. These are Cambria em-widths rounded up with a ~5% margin, so
-# the estimate never falls short of the render and the value never spills. 0.59 (the widest
-# glyph, a digit) is the fallback for any character not listed.
+# lets each value fill its box. These are conservative upper-bound em-widths (originally Cambria,
+# rounded up with a ~5% margin) — the self-hosted STIX Two Text body face (see app.py) is narrower
+# still (its digit is ~0.50 em vs the 0.59 here), so the estimate stays safely above the real
+# render and a value never spills; it just sizes a touch conservatively. 0.59 (a digit, the widest
+# common EBK glyph) is the fallback for any character not listed.
 _PTEXT_DEFAULT_EM = 0.59
 _PTEXT_GLYPH_EM = {
     **{d: 0.59 for d in "0123456789"},

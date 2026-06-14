@@ -57,7 +57,7 @@
    which barely moves — so it reads as one title turning, not two titles swapping. Noticeably larger
    than the 13px row/column titles. */
 .rtt-sidetitle { position:absolute; transform-origin:top left; left:31px; top:45px;
-                 transform:rotate(90deg); font-family:'Cambria',Georgia,serif; font-size:22px;
+                 transform:rotate(90deg); font-family:var(--rtt-serif); font-size:22px;
                  font-weight:bold; color:#000; white-space:nowrap; line-height:1;
                  transition:transform var(--t), left var(--t), top var(--t); }
 .rtt-panelgroup.rtt-open .rtt-sidetitle { left:42px; top:10px; transform:rotate(0deg); }
@@ -98,7 +98,7 @@
    panelgroup's (it spans the whole sidebar), so the inner needs none of its own. */
 .rtt-drawer-inner { width:var(--panel-w); box-sizing:border-box; overflow:hidden;
                     min-height:0; display:flex; flex-direction:column; padding-top:var(--pad);
-                    font-family:'Cambria',Georgia,serif; color:#000; }
+                    font-family:var(--rtt-serif); color:#000; }
 /* the grid pane sits right of the sidebar. It HUGS the grid (render() sizes it to the grid's full
    footprint + a _PAD margin on every side, plus the last column title's right overhang) so its grey
    backdrop frames the grid all round — white shows beyond it — rather than stretching into empty
@@ -107,7 +107,7 @@
    the positioning context for the frozen column strip, corner and body scroller (absolutely placed,
    so render() must size it explicitly); overflow:hidden clips them to the pane. */
 .rtt-app { flex:0 1 auto; min-width:0; max-width:100%; max-height:100%; position:relative;
-           overflow:hidden; background:#c0c0c0; font-family:'Cambria',Georgia,serif; }
+           overflow:hidden; background:#c0c0c0; font-family:var(--rtt-serif); }
 
 /* The grid pane is split so the body's scrollbars stop AT the frozen titles (like the settings
    pane): the column-title strip (.rtt-colhead) and the corner sit OUTSIDE the body scroller
@@ -207,13 +207,26 @@
 .rtt-transpose { width:100%; color:#1a1a1a; font-size:11px; line-height:1; white-space:nowrap;
                  display:flex; align-items:flex-start; justify-content:flex-start; pointer-events:none; }
 .rtt-transpose.rtt-pending { color:#2e9e3f; }
+/* Every numeric surface uses TABULAR, LINING figures, so a column of integers in a matrix shares
+   one baseline and one advance width and scans as data — the figure style a spreadsheet needs.
+   This was a silent no-op under the old Georgia fallback (its only figures are old-style
+   proportional); STIX Two Text ships both sets, so the request now takes effect. font-variant-
+   numeric inherits, so naming the value containers covers their nested faces (the stacked/frac/dec
+   parts, the per-value unit, the zoom clone — itself a .rtt-cell). The few SVG range labels carry
+   .rtt-rangelabel directly. */
+.rtt-cell, .rtt-value, .rtt-count, .rtt-matlabel, .rtt-symbol, .rtt-ptext, .rtt-ptextedit,
+.rtt-ratio, .rtt-frac, .rtt-stacked-main, .rtt-stacked-sub, .rtt-rangelabel, .rtt-preset-num,
+.rtt-caption, .rtt-ex-cell {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+}
 /* the in-tile quantity name: small (≈0.2 of the cell, per the mockup), capped at two
    lines (the column is widened to fit) and balanced across them by text-wrap:balance —
    an even split, not a long first line and a single trailing word. It centres in the
    row's caption band (the cell is the band's full height), so a one-line name sits
    half a line below a two-line sibling's top rather than hugging the cells. */
 .rtt-caption { width:100%; text-align:center; text-wrap:balance; font-size:9px; line-height:10px;
-               color:#333; overflow-wrap:break-word; font-family:'Cambria',Georgia,serif; }
+               color:#333; overflow-wrap:break-word; font-family:var(--rtt-serif); }
 /* a LOCKED control's caption (the disabled flag, app._update_caption) greys to the standard
    disabled #999, matching the locked control's value/caret, so the label is not darker than it.
    Compounded selector (0,2,0) to out-specify the base .rtt-caption #333. */
@@ -246,7 +259,7 @@
 /* a read-only plain-text value: serif text on ONE line, no box. Its font-size is set
    inline per box (shrunk to fit its column), so a long value never wraps or spills. */
 .rtt-ptext { width:100%; text-align:center; color:#000; white-space:nowrap; line-height:1;
-             font-family:'Cambria',Georgia,serif; }
+             font-family:var(--rtt-serif); }
 /* the two editable duals (mapping, comma basis): a white bordered input filling its
    cell; an unparseable entry turns the border red (rtt-ptext-error) and is not applied.
    Its font-size is set inline per box too, so the value stays on one line. */
@@ -256,7 +269,7 @@
 .rtt-ptextedit .q-field__control::before, .rtt-ptextedit .q-field__control::after { display:none !important; }
 .rtt-ptextedit .q-field__native { color:#000; min-height:0 !important; padding:0; text-align:center;
             line-height:var(--ptext-edit-h); white-space:nowrap; font-size:inherit !important;
-            font-family:'Cambria',Georgia,serif; }
+            font-family:var(--rtt-serif); }
 .rtt-ptextedit .q-field__marginal, .rtt-ptextedit .q-field__bottom { display:none !important; }
 .rtt-ptextedit.rtt-ptext-error .q-field__control { border-color:#d33; }
 /* the quantity symbol above the caption: _math_html renders the base letter in the
@@ -266,12 +279,12 @@
    The column floors its width to fit the widest symbol (spreadsheet._symbol_floor), so it shouldn't
    need to overflow; nowrap guarantees it never breaks onto a second line regardless. */
 .rtt-symbol { width:100%; text-align:center; font-size:15px; color:#000; line-height:1;
-              white-space:nowrap; overflow:visible; font-family:'Cambria',Georgia,serif; }
+              white-space:nowrap; overflow:visible; font-family:var(--rtt-serif); }
 /* the per-row / per-column matrix label (𝒎ᵢ at the left of each mapping row, 𝐜ᵢ
    above each comma, 𝒕ᵢ above each tuned prime, …): same _math_html serif as .rtt-symbol
    but smaller, so the subscript reads at a glance without dominating the value below */
 .rtt-matlabel { width:100%; text-align:center; font-size:11px; color:#000; line-height:1;
-              font-family:'Cambria',Georgia,serif; white-space:nowrap; }
+              font-family:var(--rtt-serif); white-space:nowrap; }
 /* the shrink/wrap variant for any multi-token column label — the complexity row's
    q-norms (‖L𝐜ᵢ‖q) and equation-form headers carrying a space (cₙ = ‖L𝐭ₙ‖q, the
    all-interval weight's wₙ = cₙ⁻¹) — all much wider than a plain subscripted letter.
@@ -285,12 +298,14 @@
 .rtt-matlabel sub { font-size:70%; vertical-align:sub; line-height:0; }
 /* the per-box "units: …" line below the caption, and the domain-units row/col labels.
    The unit VALUE is set in a single-story-g sans face (the mockup's distinct unit style):
-   Corbel (the ClearType sans companion to the body Cambria) has a single-story g —
-   Cambria, Calibri, Verdana, Segoe UI all draw a double-story g, so they're excluded.
-   The per-box "units:" label keeps the serif body face via .rtt-units-pre. */
+   Corbel has a single-story g — Cambria, Calibri, Verdana, Segoe UI all draw a double-story
+   g, so they're excluded. (NB this sans stack is still the un-shipped Corbel/Candara legacy
+   and falls back to Trebuchet MS — a follow-up could self-host a sans too; the body serif is
+   now the self-hosted STIX Two Text, see app.py.) The per-box "units:" label keeps the serif
+   body face via .rtt-units-pre. */
 .rtt-units { width:100%; text-align:center; font-size:10px; color:#333; line-height:1;
             white-space:nowrap; font-family:'Corbel','Candara','Trebuchet MS',sans-serif; }
-.rtt-units-pre { font-family:'Cambria',Georgia,serif; }
+.rtt-units-pre { font-family:var(--rtt-serif); }
 /* the per-value unit (the `units` toggle): a tiny line in the same single-story-g sans,
    stacked right beneath the value so the value + unit read as one centred pair — like the
    cents int-over-fraction stack, the unit hugging its value rather than floating away. */
@@ -317,7 +332,7 @@
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px 0 6px; }
 .rtt-preset .q-field__control::before, .rtt-preset .q-field__control::after { display:none !important; }
 .rtt-preset .q-field__native, .rtt-preset .q-field__input { font-size:13px; color:#000;
-            min-height:0 !important; padding:0; line-height:30px; font-family:'Cambria',Georgia,serif; }
+            min-height:0 !important; padding:0; line-height:30px; font-family:var(--rtt-serif); }
 .rtt-preset .q-field__marginal, .rtt-preset .q-field__append { height:30px; min-height:0 !important; }
 .rtt-preset .q-icon { font-size:15px; color:#555; }
 /* a LOCKED chooser -- set_enabled(False), so Quasar's `q-field--disabled` (the all-interval
@@ -387,13 +402,13 @@
    the indeterminate third state, via the .rtt-show-mixed class toggled in render(). */
 .rtt-show-mixed .q-checkbox__bg {
             background-image:var(--option-box-disabled) !important; }
-/* each chooser's dropdown popup matches the field's Cambria text, with compact items */
-.rtt-select-popup { font-family:'Cambria',Georgia,serif; }
+/* each chooser's dropdown popup matches the field's body-serif text, with compact items */
+.rtt-select-popup { font-family:var(--rtt-serif); }
 /* compact items; the popup grows to max-content (see _select_props), widening past
    the field so a long name (e.g. a systematic tuning) shows on one line */
 .rtt-select-popup .q-item { min-height:22px; padding:1px 8px; font-size:11px; }
 .rtt-select-popup .q-item__label { font-size:11px; white-space:normal;
-              font-family:'Cambria',Georgia,serif; }
+              font-family:var(--rtt-serif); }
 /* greyscale the selection (no Quasar primary blue): the chosen item keeps a steady
    light-grey wash so it stays visible, lighter than the darker grey hover/keyboard
    highlight (the focus-helper, at Quasar's own hover/focus opacity) */
@@ -442,7 +457,7 @@
    one. The cell's own hover help sits BELOW the loupe, styled like a normal Quasar tooltip. The clone
    carries its classes, so the value/dark cascades style it for free; the serif matches the grid. */
 .rtt-zoom-overlay { position:fixed; z-index:9000; pointer-events:none; display:flex;
-            flex-direction:column; align-items:center; gap:7px; font-family:'Cambria',Georgia,serif; }
+            flex-direction:column; align-items:center; gap:7px; font-family:var(--rtt-serif); }
 /* the loupe tile: the value on a grid-tile-grey panel (the non-interactive look — a read-only value
    sits on the grey tile, not in a box), lifted off the page by a soft shadow. */
 .rtt-zoom-tile { background:#e0e0e0; border-radius:2px; padding:3px;
@@ -470,14 +485,14 @@
 .rtt-preset-num.q-field--disabled, .rtt-preset-num.q-field--disabled * { user-select:none !important; }
 .rtt-preset-num .q-field__control::before, .rtt-preset-num .q-field__control::after { display:none !important; }
 .rtt-preset-num .q-field__native { font-size:var(--cell-font); color:#000; min-height:0 !important; padding:0;
-            line-height:30px; text-align:center; font-family:'Cambria',Georgia,serif; }
+            line-height:30px; text-align:center; font-family:var(--rtt-serif); }
 .rtt-preset-num .q-field__native::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 /* the "-" placeholder (shown when the limit blanks — an overridden target list) reads like a
    real value, matching the family select's display-value "-", not a greyed prompt */
 .rtt-preset-num .q-field__native::placeholder { color:#000; opacity:1; }
 .rtt-preset-num .q-field__marginal, .rtt-preset-num .q-field__append { display:none !important; }
 /* the monotone/tradeoff range selector under the ranges chart: two square indicators
-   stacked vertically (filled = selected), per the mockup, with small Cambria labels.
+   stacked vertically (filled = selected), per the mockup, with small serif labels.
    Vertical stack because the bumped 16px boxes don't fit side by side. Each row is
    LEFT-aligned (align-items:flex-start) so the two boxes line up at the same x, with
    their labels extending to the right — the labels have different widths and would look
@@ -492,7 +507,7 @@
 /* selected = a square "radio": the SAME SVG art with a centred black inner square (a radio dot,
    but square) — one vector, so it stays square with an even border at any zoom (see _option_box_svg) */
 .rtt-rangeopt-on .rtt-rangebox { background-image:var(--option-box-checked); }
-.rtt-rangelabel { font-family:'Cambria',Georgia,serif; font-size:10px; color:#000; white-space:nowrap; }
+.rtt-rangelabel { font-family:var(--rtt-serif); font-size:10px; color:#000; white-space:nowrap; }
 .rtt-ratio { display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }
 .rtt-approx { font-size:13px; align-self:center; }
@@ -553,7 +568,7 @@
             box-sizing:border-box; padding:0 !important; background:#fff; border:var(--cell-border); }
 .rtt-cellinput .q-field__control::before, .rtt-cellinput .q-field__control::after { display:none !important; }
 .rtt-cellinput .q-field__native { text-align:center; padding:0 !important; color:#000; font-size:var(--cell-font);
-            min-height:0; font-family:'Cambria',Georgia,serif; }
+            min-height:0; font-family:var(--rtt-serif); }
 .rtt-cellinput .q-field__bottom, .rtt-cellinput .q-field__marginal { display:none !important; }
 /* ---- the editable stacked fraction cells (the unified ratio-or-integer gridvalue, ratio_allowed):
    a numerator input over a bar over a denominator input, edited IN PLACE — no overlay face, no
@@ -707,7 +722,7 @@
 .rtt-ptextpending { width:100%; height:100%; box-sizing:border-box; display:flex;
             align-items:center; justify-content:center; background:#fff; border:1px solid #8a8a8a;
             border-radius:2px; padding:0 3px; color:#000; white-space:nowrap; overflow:hidden;
-            font-family:'Cambria',Georgia,serif; }
+            font-family:var(--rtt-serif); }
 /* the fan controls — the +/− add/remove buttons and the fold toggles — are inline-SVG glyphs
    (see _control_svg): a white #bbb-bordered square with a centred +/−/chevron in currentColor,
    one coherent vector that stays square and centred at any zoom. The element carries only the
@@ -751,7 +766,7 @@
    control box): left-aligned at the top-left of the box (its cell otherwise centres it),
    padded off the left border. One line that overhangs to the right rather than wrapping —
    the box is sized to seat it, so it never clips. */
-.rtt-boxtitle { font-family:'Cambria',Georgia,serif; font-size:11px; font-weight:bold;
+.rtt-boxtitle { font-family:var(--rtt-serif); font-size:11px; font-weight:bold;
                  color:#000; width:100%; text-align:left; padding-left:8px;
                  white-space:nowrap; overflow:visible; }
 /* a per-tile bank control square (waveform / play-mode / hold-loop / include-1/1), the same
@@ -785,7 +800,7 @@
 .rtt-spk-float:hover { color:#000; background:#f2f2f2; }
 .rtt-spk-float .material-icons { font-size:15px; }
 .material-icons.rtt-audio-glyph { font-size:12px; width:auto; height:auto; }
-.rtt-audio-rootglyph { font-size:8px; font-family:'Cambria',Georgia,serif; line-height:1; }
+.rtt-audio-rootglyph { font-size:8px; font-family:var(--rtt-serif); line-height:1; }
 /* the domain − is a hover affordance: an invisible zone dropping from the removable
    element's branch point (the column's top-bus split) down over its header reveals the
    button centred ON that branch point — up at the fan, clear of the editable cells below.
@@ -863,7 +878,7 @@
    marked slider whose notches are the guide's chapters plus a final ★. */
 .rtt-chapter-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
 .rtt-chapter-title { font-size:14px; font-weight:bold; white-space:nowrap; }
-.rtt-chapter-reading { font-family:'Cambria',Georgia,serif; font-size:12px; opacity:0.7;
+.rtt-chapter-reading { font-family:var(--rtt-serif); font-size:12px; opacity:0.7;
                        white-space:nowrap; }
 /* the longest chapter titles (ch7, ch9) would wrap to a second line beside "guide chapter", so
    they render a notch smaller (apply_chapter adds this class for long titles) — staying one line. */
@@ -878,7 +893,7 @@
 .rtt-chap-invisible { visibility:hidden !important; }
 /* one toggle row: the checkbox+label in the Show column, its sample in the example column */
 .rtt-show-row { display:grid; grid-template-columns:160px 1fr; align-items:center; min-height:26px; }
-.rtt-show-item .q-checkbox__label { font-family:'Cambria',Georgia,serif; font-size:13px;
+.rtt-show-item .q-checkbox__label { font-family:var(--rtt-serif); font-size:13px;
                                     color:#000; white-space:pre-line; line-height:1;
                                     /* hanging indent: a two-line name (e.g. "alternative
                                        complexity") indents its continuation line so it reads as
@@ -893,7 +908,7 @@
    far clearer "inactive" cue than Quasar's faint default opacity dim alone */
 .rtt-show-item.disabled .q-checkbox__label { color:#999; }
 .rtt-show-item.disabled .q-checkbox__inner { color:#999 !important; }
-.rtt-ex-cell { font-family:'Cambria',Georgia,serif; font-size:13px; color:#000;
+.rtt-ex-cell { font-family:var(--rtt-serif); font-size:13px; color:#000;
                display:flex; align-items:center; min-height:26px; }
 /* a disabled toggle's sample greys to match its label — color for the glyph examples,
    plus the same 0.75 dim Quasar puts on the checkbox so the two read as one shade */
@@ -907,7 +922,7 @@
 .rtt-show-tile { display:flex; flex-direction:column; align-items:center; gap:2px;
                  width:fit-content; min-width:240px; margin:8px auto; padding:12px;
                  background:#e0e0e0; border:1px solid #8a8a8a;
-                 box-sizing:border-box; font-family:'Cambria',Georgia,serif; }
+                 box-sizing:border-box; font-family:var(--rtt-serif); }
 /* the tile's head strip, like a real audio tile's: the decorative fold toggle on the left, the
    single global audio bank on the right, riding above the stacked content lines */
 .rtt-tile-head { align-self:stretch; display:flex; align-items:center; justify-content:space-between;

@@ -151,6 +151,16 @@ class _KindHandlers(NamedTuple):
 
 _ASSETS = Path(__file__).parent / "assets"  # CSS/JS asset files, loaded at import time
 
+# Self-host the body font as WOFF2 (assets/fonts/) and serve it same-origin, so every machine
+# renders the SAME face. The app used to declare 'Cambria' with no webfont, so on any box without
+# MS Office (macOS, Render/Linux, mobile) it silently fell back to Georgia — whose old-style
+# proportional digits are why matrix columns looked uneven. STIX Two Text is the OFL scientific
+# serif we ship instead (Text faces carry both figure sets; the hard-subset STIX Two Math face
+# supplies only the ⟨ ⟩ ⟪ ⟫ EBK brackets the Text face omits). The @font-face block below points
+# at this route. Registering at import is idempotent across the reload worker and the test
+# re-imports (a duplicate FastAPI route is harmless — first match wins).
+app.add_static_files("/rtt-fonts", _ASSETS / "fonts")
+
 _PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
 _PANEL_W = 330  # px width the settings drawer opens to (the Show + example columns)
@@ -458,8 +468,26 @@ _CSS_VARS = f""":root {{
   --option-box-unchecked:url("{_option_box_svg(None)}");
   --option-box-checked:url("{_option_box_svg('#000')}");
   --option-box-disabled:url("{_option_box_svg('#888')}");
+  --rtt-serif:'STIX Two Text','STIX Two Math',Georgia,serif;
 }}
 """
+
+# Self-hosted body face (see app.add_static_files("/rtt-fonts", …) above). Text supplies the latin /
+# digits / common symbols at four styles the app actually uses (the _math_html spans set weight and
+# slant via CSS); the subset Math face sits second in --rtt-serif purely to lend the ⟨ ⟩ ⟪ ⟫
+# brackets the Text face drops. Georgia,serif stays last so a failed asset load degrades to the old
+# look rather than a default sans. font-display:swap paints in the fallback immediately, then swaps.
+_FONT_FACE = "".join(
+    f"@font-face{{font-family:'{fam}';font-style:{style};font-weight:{weight};"
+    f"font-display:swap;src:url('/rtt-fonts/{file}') format('woff2');}}"
+    for fam, style, weight, file in (
+        ("STIX Two Text", "normal", 400, "STIXTwoText-Regular.woff2"),
+        ("STIX Two Text", "italic", 400, "STIXTwoText-Italic.woff2"),
+        ("STIX Two Text", "normal", 700, "STIXTwoText-Bold.woff2"),
+        ("STIX Two Text", "italic", 700, "STIXTwoText-BoldItalic.woff2"),
+        ("STIX Two Math", "normal", 400, "STIXTwoMath-subset.woff2"),
+    )
+)
 
 # The bulk stylesheet lives in assets/rtt.css; it references the CSS custom properties above,
 # which _CSS_VARS feeds the Python-side constants (sizes, colours, the option-box SVG data URIs).
@@ -474,7 +502,7 @@ _CSS_DARK_VARS = f"""body.rtt-dark {{
   --option-box-disabled:url("{_option_box_svg(_DARK_MUTED, box=_DARK_CELL, border=_DARK_MARK)}");
 }}
 """
-_CSS = (_CSS_VARS + (_ASSETS / "rtt.css").read_text(encoding="utf-8")
+_CSS = (_FONT_FACE + _CSS_VARS + (_ASSETS / "rtt.css").read_text(encoding="utf-8")
         + _CSS_DARK_VARS + (_ASSETS / "rtt-dark.css").read_text(encoding="utf-8"))
 
 
