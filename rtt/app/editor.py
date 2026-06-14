@@ -111,8 +111,11 @@ class _Doc:
     # /redo return the chooser to the form chosen for THAT state. It only disambiguates the displayed
     # selection when offered forms COINCIDE (a comma's minimal form can equal its positive-ratio
     # form), where deriving the selection from the matrix alone (identify_*_form, first match) would
-    # snap off the user's pick. Stale the moment the matrix moves off the form, so the state setter
-    # drops the affected key on a live edit and the renderer re-validates it against the matrix.
+    # snap off the user's pick. A standing preference: it persists across edits (never cleared on a
+    # matrix change) and merely lies dormant while the matrix isn't in it — the renderer validates it
+    # against the live matrix (resolve_*_form) and falls back to the derived form when it no longer
+    # applies, so returning the matrix to the form (e.g. flip every comma's sign and back) restores
+    # the pick rather than dropping to a form name the user never chose.
     preferred_form: tuple[tuple[str, str], ...]
 
 
@@ -382,13 +385,13 @@ class Editor:
                 or new_state.domain_basis != self._state.domain_basis):
             self.superspace_generator_tuning = None
             self.projection_basis = ()
-        # a sticky <choose form> pick only describes the CURRENT matrix; once that matrix moves the
-        # pick is stale, so drop it (set_mapping_form / set_comma_basis_form re-record it right after
-        # their own edit). Keyed per matrix: a comma-form pick survives a mapping-only change.
-        if new_state.mapping != self._state.mapping:
-            self.preferred_form.pop("mapping", None)
-        if new_state.comma_basis != self._state.comma_basis:
-            self.preferred_form.pop("comma_basis", None)
+        # NB: a <choose form> pick is deliberately NOT cleared here when the matrix moves. It is a
+        # standing preference ("show me this form"), kept until the user explicitly picks a different
+        # one, and merely lies dormant while the matrix isn't in it — the renderer re-validates it
+        # against the live matrix (resolve_*_form) and ignores it when it no longer applies. Clearing
+        # it on a matrix change would forget the intent across an edit that returns to the form (flip
+        # every comma's sign, then flip back → the pick must come back, not fall to a name never
+        # chosen), so the validation alone — not a clear — keeps it honest.
         self._state = new_state
 
     @property
@@ -598,7 +601,7 @@ class Editor:
         positive-generator — the mapping box's ``<choose form>`` control). An undoable edit: the
         same temperament, a differently-sized generating set."""
         self.edit_mapping(service.mapping_in_form(self.state.mapping, form, self.state.domain_basis))
-        self.preferred_form["mapping"] = form  # remember the pick (edit_mapping's setter cleared it)
+        self.preferred_form["mapping"] = form  # the standing form preference for the mapping chooser
 
     def canonicalize_comma_basis(self) -> None:
         """Re-store the comma basis in canonical form (the comma-basis box's
@@ -615,7 +618,7 @@ class Editor:
         self.edit_comma_basis(
             service.comma_basis_in_form(self.state.comma_basis, form, self.state.domain_basis),
             self.state.domain_basis)
-        self.preferred_form["comma_basis"] = form  # remember the pick (the setter cleared it)
+        self.preferred_form["comma_basis"] = form  # the standing form preference for this chooser
 
     def _feed_draft(self, values, commit) -> list[int | None] | None:
         """Drive an interval-list draft (interest / held / target): store the entered

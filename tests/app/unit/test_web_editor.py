@@ -90,9 +90,14 @@ def test_chooser_shows_the_picked_form_even_when_forms_coincide():
     assert _comma_form_cell(editor) == "positive-ratio"
     editor.set_comma_basis_form("minimal")  # same matrix, different intent
     assert _comma_form_cell(editor) == "minimal"
-    # the sticky pick is per-matrix: a real edit elsewhere drops it back to the derived form
-    editor.edit_comma_basis([[4, -4, 1]])  # canonical 80/81
+    # the pick lies DORMANT (not forgotten) while the matrix isn't in it: editing to the canonical
+    # 80/81 reads "canonical" because the matrix really is canonical there...
+    editor.edit_comma_basis([[4, -4, 1]])  # canonical 80/81 (each comma's sign flipped)
     assert _comma_form_cell(editor) == "canonical"
+    # ...and flipping every comma back to 81/80 — the minimal form again — RESTORES "minimal", not
+    # the coinciding "positive-ratio" the user never chose (the reported deeper bug)
+    editor.edit_comma_basis([[-4, 4, -1]])  # back to 81/80
+    assert _comma_form_cell(editor) == "minimal"
 
 
 def test_chooser_form_pick_survives_undo_and_redo():
