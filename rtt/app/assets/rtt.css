@@ -205,7 +205,7 @@
    sits in the top frame band, anchored at the matrix's right edge), top-left aligned so the glyph
    hugs the closing ] above the cells. Greens with a draft column (rtt-pending) like the brackets. */
 .rtt-transpose { width:100%; color:#1a1a1a; font-size:11px; line-height:1; white-space:nowrap;
-                 display:flex; align-items:flex-start; justify-content:flex-start; }
+                 display:flex; align-items:flex-start; justify-content:flex-start; pointer-events:none; }
 .rtt-transpose.rtt-pending { color:#2e9e3f; }
 /* the in-tile quantity name: small (≈0.2 of the cell, per the mockup), capped at two
    lines (the column is widened to fit) and balanced across them by text-wrap:balance —
