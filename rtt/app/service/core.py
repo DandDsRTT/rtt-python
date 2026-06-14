@@ -8,6 +8,7 @@ share them without a schemes<->text cycle)."""
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, replace
 from fractions import Fraction
 from functools import lru_cache
@@ -16,10 +17,12 @@ import sympy as sp
 
 from rtt.library.addition import _get_greatest_factor
 from rtt.library.canonicalization import canonical_ca, canonical_ma
+from rtt.library.comma_forms import minimal_ca, positive_ratio_ca
 from rtt.library.generator_forms import (
     equave_reduced_ma,
     minimal_generator_ma,
     positive_generator_ma,
+    standard_jip_octaves,
 )
 from rtt.library.dimensions import get_d, get_r
 from rtt.library.domain_basis import (
@@ -422,6 +425,54 @@ def identify_mapping_form(mapping, domain_basis=None) -> str | None:
     m = _to_matrix(mapping)
     for key in MAPPING_FORM_KEYS:
         if mapping_in_form(m, key, domain_basis) == m:
+            return key
+    return None
+
+
+# The comma-basis <choose form> options, in dropdown order: the canonical (antitransposed defactored
+# Hermite) form plus the other comma normal forms from the Normal Lists page — "positive-ratio"
+# (every comma made positive in pitch) and "minimal" (the simplest comma list, the wiki's comma
+# lists). The comma analogue of MAPPING_FORM_KEYS.
+COMMA_BASIS_FORM_KEYS = ("canonical", "positive-ratio", "minimal")
+COMMA_BASIS_FORM_LABELS = {
+    "canonical": "canonical",
+    "positive-ratio": "positive-ratio",
+    "minimal": "minimal",
+}
+_ALT_COMMA_BASIS_FORMS = {
+    "positive-ratio": positive_ratio_ca,
+    "minimal": minimal_ca,
+}
+
+
+def _comma_octaves(d: int, domain_basis=None):
+    """The just tuning map in octaves — ``log2`` of each of the ``d`` domain elements (the primes for
+    a standard prime-limit domain) — that the comma-form functions read each comma's pitch and
+    log-product complexity against."""
+    if domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis):
+        return standard_jip_octaves(d)
+    return tuple(math.log2(float(Fraction(e))) for e in domain_basis)
+
+
+def comma_basis_in_form(comma_basis, form: str, domain_basis=None) -> Matrix:
+    """The comma basis re-expressed in the named normal form (a key in
+    :data:`COMMA_BASIS_FORM_KEYS`) — what the comma-basis ``<choose form>`` control re-stores it as.
+    The mirror of :func:`mapping_in_form`."""
+    cb = _to_matrix(comma_basis)
+    if form == "canonical":
+        return _to_matrix(canonical_ca(cb))
+    d = len(cb[0]) if cb else (len(domain_basis) if domain_basis else 0)
+    return _to_matrix(_ALT_COMMA_BASIS_FORMS[form](cb, _comma_octaves(d, domain_basis)))
+
+
+def identify_comma_basis_form(comma_basis, domain_basis=None) -> str | None:
+    """Which offered form the STORED comma basis currently is (its key in
+    :data:`COMMA_BASIS_FORM_KEYS`), so the ``<choose form>`` dropdown shows it selected — or ``None``
+    when the stored basis matches none of them. The mirror of :func:`identify_mapping_form`; the first
+    matching key wins, so forms that coincide read as the earliest one."""
+    cb = _to_matrix(comma_basis)
+    for key in COMMA_BASIS_FORM_KEYS:
+        if comma_basis_in_form(cb, key, domain_basis) == cb:
             return key
     return None
 

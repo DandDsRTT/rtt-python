@@ -583,6 +583,14 @@ class Editor:
         self.edit_comma_basis(
             service.canonical_comma_basis(self.state.comma_basis), self.state.domain_basis)
 
+    def set_comma_basis_form(self, form: str) -> None:
+        """Re-store the comma basis in the named normal form (canonical / positive-ratio / minimal —
+        the comma-basis box's ``<choose form>`` control). An undoable edit, the comma-column analogue
+        of :meth:`set_mapping_form`. Passes the domain basis so a nonstandard temperament keeps it."""
+        self.edit_comma_basis(
+            service.comma_basis_in_form(self.state.comma_basis, form, self.state.domain_basis),
+            self.state.domain_basis)
+
     def _feed_draft(self, values, commit) -> list[int | None] | None:
         """Drive an interval-list draft (interest / held / target): store the entered
         components, and once every one is filled, snapshot and hand the completed vector to

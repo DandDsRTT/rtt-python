@@ -1443,8 +1443,9 @@ def test_form_chooser_is_stateful_showing_the_mappings_current_form():
         service.from_mapping(((1, 0, -4), (0, 1, 4))),
         {**settings.defaults(), "form_controls": True}).cells}
     assert canon["formchooser:mapping"].text == "canonical"
-    # the comma-basis chooser stays canonical-only for now — no current-form state (placeholder)
-    assert cells["formchooser:comma_basis"].text == ""
+    # the comma-basis chooser is stateful too: the default meantone's comma basis [⟨4 -4 1⟩] is the
+    # canonical (antitransposed defactored Hermite) form, so its cell reads "canonical"
+    assert cells["formchooser:comma_basis"].text == "canonical"
 
 
 def test_mapped_list_rules_its_vector_columns_apart_clear_of_the_marks():

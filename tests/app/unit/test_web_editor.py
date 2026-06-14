@@ -54,6 +54,28 @@ def test_canonicalize_comma_basis_restores_canonical_form_undoably():
     assert editor.state.comma_basis == ((-8, 8, -2),)  # undoable
 
 
+def test_set_comma_basis_form_restores_the_comma_basis_in_each_normal_form_undoably():
+    editor = Editor()  # default meantone — comma basis canonical [⟨4 -4 1⟩] (80/81, downward)
+    assert editor.state.comma_basis == ((4, -4, 1),)
+    editor.set_comma_basis_form("positive-ratio")  # flip to the upward 81/80
+    assert editor.state.comma_basis == ((-4, 4, -1),)
+    assert service.identify_comma_basis_form(editor.state.comma_basis) == "positive-ratio"
+    editor.set_comma_basis_form("minimal")  # a single comma's minimal form is itself, made positive
+    assert editor.state.comma_basis == ((-4, 4, -1),)
+    editor.set_comma_basis_form("canonical")
+    assert editor.state.comma_basis == ((4, -4, 1),)
+    editor.undo()  # each form choice is one undoable edit
+    assert editor.state.comma_basis == ((-4, 4, -1),)
+
+
+def test_set_comma_basis_form_minimal_simplifies_septimal_meantone():
+    editor = Editor()
+    editor.edit_comma_basis([[4, -4, 1, 0], [13, -10, 0, 1]])  # septimal meantone, canonical
+    editor.set_comma_basis_form("minimal")
+    # the wiki's comma list [81/80, 126/125] — simpler than the canonical [81/80, 57344/59049]
+    assert editor.state.comma_basis == ((-4, 4, -1, 0), (1, 2, -3, 1))
+
+
 def test_set_complexity_prescaler_swaps_the_weighting_prescaler_into_the_layout():
     editor = Editor()
     assert service.prescaler_of(editor.tuning_scheme) == "log-prime"  # the default

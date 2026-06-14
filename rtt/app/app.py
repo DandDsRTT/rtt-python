@@ -761,11 +761,11 @@ def _projection_prompt(cid: str) -> str:
 def _formchooser_options(cid: str) -> dict:
     """The <choose form> dropdown options for a chooser cell id. The mapping box offers the generator
     forms (canonical / minimal-generator / equave-reduced / positive-generator); the comma-basis box
-    offers only canonical for now (its other forms are a separate task). A leading "" placeholder
+    offers the comma normal forms (canonical / positive-ratio / minimal). A leading "" placeholder
     shows when the matrix matches no offered form."""
     if cid.endswith(":mapping"):
         return {"": "choose form", **{k: service.MAPPING_FORM_LABELS[k] for k in service.MAPPING_FORM_KEYS}}
-    return {"": "choose form", "canonical": "canonical"}
+    return {"": "choose form", **{k: service.COMMA_BASIS_FORM_LABELS[k] for k in service.COMMA_BASIS_FORM_KEYS}}
 
 
 def _hover_index(detail) -> int | None:
@@ -3792,7 +3792,9 @@ def index() -> None:
                 if value not in service.MAPPING_FORM_KEYS:  # the "" placeholder → no edit
                     return None
                 return lambda: editor.set_mapping_form(value)
-            return editor.canonicalize_comma_basis if value == "canonical" else None  # comma basis: canonical only for now
+            if value not in service.COMMA_BASIS_FORM_KEYS:  # the "" placeholder → no edit
+                return None
+            return lambda: editor.set_comma_basis_form(value)
         return None
 
     def on_chooser_hover(cid, detail):
