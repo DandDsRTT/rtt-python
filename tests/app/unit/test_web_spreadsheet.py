@@ -1448,6 +1448,73 @@ def test_form_box_shows_the_generator_form_matrix_over_the_gens():
     assert not any(c.id.startswith("cell:form:") for c in _layout().cells)
 
 
+def test_canonical_generators_column_sits_between_units_and_generators():
+    # the form layer surfaces a "canonical generators" column (the mockup), between the units
+    # spine and the generators column, gated on the canonical-mapping row (show_canon)
+    cells = {c.id: c for c in _with(form_tiles=True).cells}
+    assert cells["header:canongens"].text == "canonical\ngenerators"
+    # right of the quantities spine, left of the generators column (the mockup ordering)
+    assert cells["header:quantities"].x < cells["header:canongens"].x < cells["header:gens"].x
+    # and immediately right of the units spine when that column is shown
+    with_units = {c.id: c for c in _with(form_tiles=True, domain_units=True).cells}
+    assert with_units["header:units"].x < with_units["header:canongens"].x < with_units["header:gens"].x
+    # the column is absent without the form tiles
+    assert not any(c.id == "header:canongens" for c in _layout().cells)
+
+
+def test_canonical_generators_render_as_a_ratio_list_over_the_column_and_in_the_spine():
+    # the canonical generators (g_C) head their column over the quantities row (the dual of the
+    # generators column's qgen list) AND label the canon rows in the spine — for ((1,1,0),(0,1,4))
+    # the canonical generators are 2/1, 3/1 (vs the stored equave-reduced 2/1, 3/2)
+    cells = {c.id: c for c in _with(form_tiles=True).cells}
+    assert cells["cangen:0"].text == "2/1" and cells["cangen:1"].text == "3/1"
+    assert cells["cangen:0"].kind == "genratio"
+    # the spine twin (the canonical generators labelling the canon rows, like gens label the mapping)
+    assert cells["canon:gen:0"].text == "2/1" and cells["canon:gen:1"].text == "3/1"
+    assert cells["canon:gen:0"].x == cells["header:quantities"].x  # in the quantities spine column
+    # the horizontal ratios sit in the canonical-generators column, over the quantities row
+    assert cells["cangen:0"].x == cells["header:canongens"].x + spreadsheet.BRACKET_W
+    assert cells["cangen:0"].y < cells["canon:gen:0"].y  # the column header above the canon-row spine
+
+
+def test_form_matrices_canceling_out_is_an_identity_tile_in_the_canonical_generators_column():
+    # 𝐹⁻¹𝐹 = 𝐼 (rc×rc identity) renders in the canon row's canonical-generators column, gated on
+    # the identity_objects toggle (like 𝑀𝐺 = 𝐼), framed { … ] per row with an enclosing bracket/brace
+    cells = {c.id: c for c in _with(form_tiles=True, identity_objects=True).cells}
+    assert cells["cell:fcancel:0:0"].text == "1" and cells["cell:fcancel:0:1"].text == "0"
+    assert cells["cell:fcancel:1:0"].text == "0" and cells["cell:fcancel:1:1"].text == "1"
+    assert cells["bracket:fcancel:map:0:l"].text == "{" and cells["bracket:fcancel:map:0:r"].text == "]"
+    assert "ebktop:fcancel" in cells and "ebkbrace:fcancel" in cells
+    assert cells["caption:canon:canongens"].text == "form matrices canceling out"
+    # it sits in the canonical-generators column (left of the generators column's F)
+    assert cells["cell:fcancel:0:0"].x == cells["cangen:0"].x
+    assert cells["cell:fcancel:0:0"].x < cells["cell:form:0:0"].x
+    # gated on identity_objects: form tiles alone shows the column + its ratios but not 𝐹⁻¹𝐹
+    form_only = {c.id for c in _with(form_tiles=True).cells}
+    assert "cangen:0" in form_only and "cell:fcancel:0:0" not in form_only
+
+
+def test_form_box_symbols_and_units_match_the_canonical_notation():
+    from rtt.app.grid_tables import SUBSCRIPT_C
+    gc = f"g{SUBSCRIPT_C}"
+    cells = {c.id: c for c in _with(form_tiles=True, identity_objects=True,
+                                    symbols=True, equivalences=True, header_symbols=True,
+                                    units=True, domain_units=True).cells}
+    # the big symbols: 𝑀_C (canonical mapping), 𝐹 (form matrix), 𝐹⁻¹𝐹 = 𝐼 (canceling out)
+    assert cells["symbol:canon:primes"].text == f"𝑀{SUBSCRIPT_C}"
+    assert cells["symbol:canon:gens"].text == "𝐹"
+    assert cells["symbol:canon:canongens"].text == "𝐹⁻¹𝐹 = 𝐼"
+    # the canonical mapping's rows carry 𝒎_C row labels in the primes gutter (like 𝒎 on the mapping)
+    assert cells["matlabel:row:canon:primes:0"].text == f"𝒎{SUBSCRIPT_C}₁"
+    # the per-box "units:" lines: g_C/p, g_C/g, g_C/g_C
+    assert cells["units:canon:primes"].text == f"units: {gc}/p"
+    assert cells["units:canon:gens"].text == f"units: {gc}/g"
+    assert cells["units:canon:canongens"].text == f"units: {gc}/{gc}"
+    # the units row/column coordinate labels (the spine g_Cᵢ/ and the column's /g_Cᵢ)
+    assert cells["ucol:canon:0"].text == f"{gc}₁/"
+    assert cells["urow:canongens:0"].text == f"/{gc}₁"
+
+
 def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis_boxes():
     cells = {c.id: c for c in _with(form_controls=True).cells}
     # a "<choose form>" chooser rides in the mapping box and the comma-basis box

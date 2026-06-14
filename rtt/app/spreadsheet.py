@@ -1190,6 +1190,11 @@ class _GridBuilder:
         self.canon_mapping = service.canonical_mapping(self.state.mapping)  # M defactored + HNF (the form box)
         self.rc = len(self.canon_mapping)  # canonical rank (== r for a valid temperament)
         self.form_M = service.form_matrix(self.state.mapping)  # F: the generator form matrix (r×r), F·M = canonical
+        # the canonical generators as ratios (g_C) — the canonical mapping's detempering, the
+        # canonical-generators-column twin of self.gens (the stored mapping's generators). For
+        # 5-limit meantone the equave-reduced default gens are (2/1, 3/2) but the canonical ones
+        # are (2/1, 3/1) — the octave and the (non-equave-reduced) fifth-as-3.
+        self.canon_gens = service.generators(self.canon_mapping, self.elements)
         # which generator form the STORED mapping currently is (so the <choose form> dropdown shows it
         # selected) — "" when it matches none of the offered forms (an unlisted equivalent generating set)
         # honor the user's explicit <choose form> pick as a tiebreaker (mapping_form): forms can
@@ -1672,13 +1677,13 @@ class _GridBuilder:
             # the identity objects — the trivial self-maps that equal 𝐼 — gate here. Standard domain:
             # the JI mapping 𝑀ⱼ (vectors × primes), 𝑀𝐺 = mapping over its own generators (mapping ×
             # gens) and 𝑀D = the mapped generator detempering (mapping × detempering). Superspace: the
-            # JI mapping M_jL (ss_vectors × ssprimes) and M_LgL (ss_mapping × ssgens). (The remaining
-            # mockup identity object, 𝐹⁻¹𝐹 = 𝐼, needs the canonical-generators column + the form-boxes
-            # row, neither built yet.) Dropping a tile clears its cells, brackets, caption, symbol,
-            # panel and fold toggle; the rows themselves stay for the mapping / B_L / M_L in their
-            # other columns.
+            # JI mapping M_jL (ss_vectors × ssprimes) and M_LgL (ss_mapping × ssgens). The form box's
+            # 𝐹⁻¹𝐹 = 𝐼 (canon × canongens) joins them now that the canonical-generators column exists —
+            # it surfaces only with the canonical-mapping row (show_canon), the column gating it further.
+            # Dropping a tile clears its cells, brackets, caption, symbol, panel and fold toggle; the
+            # rows themselves stay for the mapping / B_L / M_L / canonical generators in their other columns.
             self.declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
-                                    ("mapping", "detempering"),
+                                    ("mapping", "detempering"), ("canon", "canongens"),
                                     ("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
         # the superspace held / interest tiles only exist to lift an actual held / interest list (or
         # an open draft of one) — with none shown (nh_shown / mi_shown == 0) they'd be empty boxes,
@@ -1712,7 +1717,8 @@ class _GridBuilder:
         domain_title = ("domain basis\nelements"
                         if service.domain_has_nonprimes(self.elements)
                         else "domain\nprimes")
-        self.col_header = {"quantities": "interval ratios", "units": "units", "gens": "generators",
+        self.col_header = {"quantities": "interval ratios", "units": "units",
+                      "canongens": "canonical\ngenerators", "gens": "generators",
                       "ssgens": "superspace\ngenerators", "ssprimes": "superspace\nprimes",
                       "primes": domain_title, "detempering": "generator\ndetempering",
                       "commas": "commas",
@@ -1778,6 +1784,11 @@ class _GridBuilder:
         col_bands = (
             ("quantities", COL_W, show_interval_ratios, True),
             ("units", COL_W, show_domain_units, True),
+            # the canonical-generators column rides between the units spine and the generators
+            # column (the mockup), surfaced with the canonical-mapping row (show_canon): rc cells
+            # wide in the standard EBK-gutter footprint, like the gens column it parallels. It holds
+            # the canonical generator ratios (over the quantities row) and 𝐅⁻¹𝐅 = 𝐼 (over the canon row).
+            ("canongens", 2 * BRACKET_W + self.rc * COL_W, self.show_canon, True),
             ("gens", 2 * BRACKET_W + self.r * COL_W, show_temp, True),
             # the chapter-9 superspace columns ride between gens and the domain primes — rL
             # cells (superspace generators) and dL cells (superspace primes), each in the
@@ -1932,6 +1943,7 @@ class _GridBuilder:
         self.interest_x = self.content_x.get("interest")  # None when the interest column is hidden
         self.held_x = self.content_x.get("held")  # None when the held intervals column is hidden
         self.detempering_x = self.content_x.get("detempering")  # None when the generator-detempering column is hidden
+        self.canongens_x = self.content_x.get("canongens")  # None when the canonical-generators column is hidden (show_canon off)
         self.ssgens_x = self.content_x.get("ssgens")  # None when the superspace generators column is hidden
         self.ssprimes_x = self.content_x.get("ssprimes")  # None when the superspace primes column is hidden
 
@@ -2234,10 +2246,10 @@ class _GridBuilder:
         # commas and targets interval lists.
         self.group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
                       "interest": "interest", "held": "held", "detempering": "detempering",
-                      "ssgens": "ssgen", "ssprimes": "ssprime"}
+                      "canongens": "cangen", "ssgens": "ssgen", "ssprimes": "ssprime"}
         self.group_left = {"gens": self.gen_left, "primes": self.prime_left, "commas": self.comma_left, "targets": self.target_left,
                       "interest": self.interest_left, "held": self.held_left, "detempering": self.detempering_left,
-                      "ssgens": self.ss_gen_left, "ssprimes": self.ss_prime_left}
+                      "canongens": self.canongen_left, "ssgens": self.ss_gen_left, "ssprimes": self.ss_prime_left}
         # how many side-by-side cells each group column carries: its element count, so the
         # gridline pass can fan every group column into that many vertical sub-axes (commas
         # count the shown columns, draft included). Keyed identically to group_left/group_elem
@@ -2245,7 +2257,7 @@ class _GridBuilder:
         self.group_n = {"gens": self.r, "primes": self.d_shown, "commas": self.nv_shown,
                    "targets": self.k_shown,
                    "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r,
-                   "ssgens": self.rL, "ssprimes": self.dL}
+                   "canongens": self.rc, "ssgens": self.rL, "ssprimes": self.dL}
         self.group_ratio = {  # the just interval ratio each value group is taken over
             "primes": lambda i: service.element_ratio(self.elements[i]),  # a prime "p/1", or a nonprime element "n/d"
             # over V = C|U the comma sub-columns index the comma ratios, the unchanged sub-columns
@@ -2564,6 +2576,11 @@ class _GridBuilder:
         if gen is not None:
             if superspace:  # the superspace generator coordinate gʟ (g + subscript-L marker)
                 u = u.replace(f"g{SUBSCRIPT_L}", f"g{SUBSCRIPT_L}{_sub(gen + 1)}")
+            elif f"g{SUBSCRIPT_C}" in u:  # the canonical generator coordinate g_C (form box) — subscript
+                # the g_C token, AND any bare input g (F's g_C/g denominator), without double-hitting
+                # the protected g_C (whose trailing sentinel would otherwise match the bare-g regex)
+                gc = f"g{SUBSCRIPT_C}"
+                u = _subscript_coord(u.replace(gc, "\x00"), "g", f"g{_sub(gen + 1)}").replace("\x00", f"{gc}{_sub(gen + 1)}")
             else:
                 u = _subscript_coord(u, "g", f"g{_sub(gen + 1)}")
         if prime is not None:
@@ -2684,6 +2701,9 @@ class _GridBuilder:
 
     def gen_left(self, g: int):  # the g-th generator column in the generators box (its tuning-map cells)
         return self.content_x["gens"] + BRACKET_W + g * COL_W
+
+    def canongen_left(self, g: int):  # the g-th canonical-generator column (the form box's F⁻¹F = I / canonical ratios)
+        return self.canongens_x + BRACKET_W + g * COL_W
 
     def ss_gen_left(self, g: int):  # the g-th superspace generator column (chapter-9)
         return self.ssgens_x + BRACKET_W + g * COL_W
@@ -3391,6 +3411,9 @@ class _GridBuilder:
         # M_L / M_jL above it.
         matrix_units = {
             "vectors": (self.d, self.vec_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
+            # the canonical-mapping row's coordinate is the canonical generator g_Cᵢ/ (the spine
+            # twin of the /g_Cᵢ units over the canonical-generators column), like the mapping's gᵢ/
+            "canon": (self.rc, self.canon_top, lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
             "projection": (self.d, self.proj_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
             # r_shown so a pending mapping-row draft's band carries its gₙ/ label too, matching every
             # committed row (and the comma draft column's /1) — the draft row reads complete.
@@ -3433,6 +3456,7 @@ class _GridBuilder:
             # consolidated V already does, via nv_shown) — otherwise the units row alone goes blank
             # under the draft while every other row greens it.
             column_units = {
+                "canongens": (self.rc, self.canongen_left, lambda i: f"/g{SUBSCRIPT_C}{_sub(i + 1)}"),
                 "gens": (self.r, self.gen_left, lambda i: f"/g{_sub(i + 1)}"),
                 "primes": (self.d, self.prime_left, lambda i: f"/{self.domain_label}{_sub(i + 1)}"),
                 "ssgens": (self.rL, self.ss_gen_left, lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
@@ -3479,6 +3503,9 @@ class _GridBuilder:
                 # branch point drops that row (+n, −r, hold d), removable when r > 1
                 if self.r > 1:
                     branch_minus("gen_minus", "gens", self.r - 1, "gen_minus", gen=self.r - 1)
+            if self.tile_open("quantities", "canongens"):  # the canonical generator ratios heading the
+                for g in range(self.rc):                   # canonical-generators column (read-only; no ±)
+                    self.cells.append(CellBox(f"cangen:{g}", self.canongen_left(g), qy, COL_W, ROW_H, "genratio", text=self.canon_gens[g]))
             if self.tile_open("quantities", "primes"):
                 # with the nonstandard-domain box on the domain elements are typeable — an editable
                 # elementcell (typing a rational relabels that basis element, holding the mapping
@@ -3952,16 +3979,22 @@ class _GridBuilder:
         """The canonical-mapping form box and the generator form matrix."""
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
         # read-only maps over the primes, framed like the mapping matrix one row above it; the
-        # generator form matrix F (units 𝒈/𝒈) rides its gens column as a bordered r×r grid
+        # generator form matrix F (units g_C/g) rides its gens column as a bordered r×r grid.
+        # The canonical generators ratio list (g_C) labels the canon rows in the quantities spine,
+        # exactly as the stored generators label the mapping rows one row below (𝐹⁻¹𝐹 = 𝐼 rides
+        # the canonical-generators column — see _emit_identity_objects).
         if self.row_open("canon"):
+            if self.tile_open("canon", "quantities"):  # the canonical generators in the spine, labelling the canon rows
+                for i in range(self.rc):
+                    self.cells.append(CellBox(f"canon:gen:{i}", self.col_x["quantities"], self.canon_top(i), self.col_w["quantities"], ROW_H, "genratio", text=self.canon_gens[i] if i < len(self.canon_gens) else ""))
             if self.tile_open("canon", "primes"):
                 for i in range(self.rc):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:canon:{i}:{p}", self.prime_left(p), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.canon_mapping[i][p])))
+                        self.cells.append(CellBox(f"cell:canon:{i}:{p}", self.prime_left(p), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.canon_mapping[i][p]), unit=self.cell_unit("canon", "primes", gen=i, prime=p)))
             if self.tile_open("canon", "gens"):
                 for i in range(len(self.form_M)):
                     for j in range(len(self.form_M)):
-                        self.cells.append(CellBox(f"cell:form:{i}:{j}", self.gen_left(j), self.canon_top(i), COL_W, ROW_H, "formcell", text=str(self.form_M[i][j])))
+                        self.cells.append(CellBox(f"cell:form:{i}:{j}", self.gen_left(j), self.canon_top(i), COL_W, ROW_H, "formcell", text=str(self.form_M[i][j]), unit=self.cell_unit("canon", "gens", gen=i)))
 
     def _emit_qty_list(self, q: _QtyList, qy: float, branch_minus) -> None:
         """Emit one editable interval-ratio column-list of the quantities row (targets / held /
@@ -4350,6 +4383,17 @@ class _GridBuilder:
                             f"cell:{prefix}:{i}:{k}", left(k), self.map_top(i), COL_W, ROW_H,
                             "mapped", text="1" if i == k else "0", gen=i,
                             unit=self.cell_unit("mapping", ckey, gen=i)))
+        # 𝐹⁻¹𝐹 = 𝐼 (canon × canongens): the rc × rc identity in canonical-generator coords, the form
+        # box's own self-map — F composed with its inverse cancels. Framed { … ] like 𝑀𝐺, in the
+        # canonical-generators column (g_C/g_C). Gated on identity_objects (declared_tiles), the
+        # canonical-generators column (show_canon) gating it further.
+        if self.tile_open("canon", "canongens"):
+            for i in range(self.rc):
+                for k in range(self.rc):
+                    self.cells.append(CellBox(
+                        f"cell:fcancel:{i}:{k}", self.canongen_left(k), self.canon_top(i), COL_W, ROW_H,
+                        "mapped", text="1" if i == k else "0", gen=i,
+                        unit=self.cell_unit("canon", "canongens", gen=i)))
 
     def _emit_tuning_rows(self):
         """The tuning/just/retune rows; returns the chart_indicators dict the chart pass reads."""
@@ -4857,6 +4901,9 @@ class _GridBuilder:
         if self.row_open("canon") and self.tile_open("canon", "gens"):  # the generator form matrix: { … ] per row
             for i in range(len(self.form_M)):
                 self.bracket(f"form:map:{i}", GENMAP_BRACKETS, "gens", self.canon_top(i), ROW_H, stacked=True)
+        if self.row_open("canon") and self.tile_open("canon", "canongens"):  # 𝐹⁻¹𝐹 = 𝐼: { … ] per row, like 𝑀𝐺
+            for i in range(self.rc):
+                self.bracket(f"fcancel:map:{i}", GENMAP_BRACKETS, "canongens", self.canon_top(i), ROW_H, stacked=True)
         if self.row_open("projection") and self.tile_open("projection", "primes"):  # P = GM: ⟨ … ] per row, like the mapping
             for i in range(self.d):
                 self.bracket(f"proj:{i}", MAP_BRACKETS, "primes", self.proj_top(i), ROW_H, stacked=True)
@@ -5549,6 +5596,7 @@ class _GridBuilder:
         self.matrix_frame("projection", "ssprimes", "proj_sl", foot="ebkangle")
         self.matrix_frame("canon", "primes", "canon")
         self.matrix_frame("canon", "gens", "form")
+        self.matrix_frame("canon", "canongens", "fcancel")  # 𝐹⁻¹𝐹 = 𝐼, framed { … ] like 𝑀𝐺
         # the BARE prescaler 𝐿 reads exactly like the mapping in plain text — outer
         # ``[ … ⟩`` with per-row ``⟨ … ]`` covectors — so its gridded EBK uses the SAME
         # matrix_frame + per-row bracket pattern the mapping uses, just with an angle ⟩

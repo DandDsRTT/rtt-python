@@ -121,6 +121,7 @@ CAPTIONS = {
     ("vectors", "commas"): "comma basis",
     ("vectors", "targets"): "target interval list",
     ("canon", "gens"): "generator form matrix",
+    ("canon", "canongens"): "form matrices canceling out",  # 𝐹⁻¹𝐹 = 𝐼 (gated on identity_objects)
     ("canon", "primes"): "canonical mapping",
     ("vectors", "held"): "held interval basis",
     ("vectors", "detempering"): "generator detempering",
@@ -282,6 +283,9 @@ SYMBOLS = {
     ("canon", "primes"): f"𝑀{SUBSCRIPT_C}",
     ("canon", "gens"): "𝐹",
     ("mapping", "primes"): "𝑀",
+    # 𝐅⁻¹𝐅 = 𝐼 over the canonical-generators column — the form matrices canceling out (the canon
+    # row's 𝑀_C / 𝐹 symbols are declared above, beside the JI mapping). Units g_C/g_C.
+    ("canon", "canongens"): "𝐹⁻¹𝐹",
     ("mapping", "gens"): "𝑀G",          # 𝑀𝐺 = 𝐼: M (italic) + the generator basis G (upright)
     ("mapping", "detempering"): "𝑀D",   # 𝑀D = 𝐼: M (italic) + the detempering basis D (upright)
     ("mapping", "commas"): "𝑀C",
@@ -738,6 +742,7 @@ EQUIVALENCES = {
     ("vectors", "primes"): " = 𝐼",       # M_j = I
     ("mapping", "gens"): " = 𝐼",         # MG = I
     ("mapping", "detempering"): " = 𝐼",  # MD = I
+    ("canon", "canongens"): " = 𝐼",      # 𝐅⁻¹𝐅 = 𝐼 (the form matrices canceling out)
     ("mapping", "targets"): " = 𝑀T",
     # the rational tempering projection and generator embedding. G and V are bases (upright), P and M
     # operators (italic). The canonical-form decompositions (𝐺CᴹC / GCF⁻¹) wait for the form feature;
@@ -844,6 +849,12 @@ UNITS = {
     # SUBSCRIPT_L markup so cell_unit can subscript it per generator.
     ("ss_vectors", "ssprimes"): "p/p",   # M_jL = I
     ("vectors", "primes"): "p/p",            # 𝑀ⱼ = 𝐼
+    # the canonical-mapping form box (the g_C token uses SUBSCRIPT_C so cell_unit subscripts it
+    # per canonical generator): 𝑀_C maps domain primes to canonical generators (g_C/p), the form
+    # matrix 𝐅 maps generators to canonical generators (g_C/g), and 𝐅⁻¹𝐅 = 𝐼 is g_C/g_C
+    ("canon", "primes"): f"g{SUBSCRIPT_C}/p",
+    ("canon", "gens"): f"g{SUBSCRIPT_C}/g",
+    ("canon", "canongens"): f"g{SUBSCRIPT_C}/g{SUBSCRIPT_C}",
     ("mapping", "gens"): "g/g",              # 𝑀𝐺 = 𝐼
     ("mapping", "detempering"): "g",         # 𝑀D = 𝐼
     ("ss_vectors", "primes"): "p/b",      # B_L basis change matrix (superspace prime p per domain element b)
@@ -958,7 +969,10 @@ TILES = (
     ("block:vec:quantities", "vectors", "quantities"),
     ("block:vec:commas", "vectors", "commas"),
     ("block:vec:targets", "vectors", "targets"),
+    ("block:cangens", "quantities", "canongens"),  # the canonical generator ratios heading the canonical-generators column
+    ("block:canonspine", "canon", "quantities"),   # the canonical generators as a ratio list in the spine (the dual of block:cangens)
     ("block:form", "canon", "gens"),
+    ("block:fcancel", "canon", "canongens"),       # 𝐹⁻¹𝐹 = 𝐼 (gated on identity_objects, like the other identity tiles)
     ("block:canon", "canon", "primes"),
     ("block:gens", "mapping", "quantities"),
     ("block:mapping", "mapping", "primes"),
@@ -1048,6 +1062,7 @@ SUPERSPACE_TILES = (
 # The interest column's units-row tile is appended dynamically (like its other tiles).
 UNITS_TILES = (
     ("block:ucol:vectors", "vectors", "units"),
+    ("block:ucol:canon", "canon", "units"),   # the canonical generators' g_Cᵢ/ unit labels in the spine
     ("block:ucol:mapping", "mapping", "units"),
     ("block:ucol:tuning", "tuning", "units"),
     ("block:ucol:just", "just", "units"),
@@ -1056,6 +1071,7 @@ UNITS_TILES = (
     ("block:ucol:complexity", "complexity", "units"),
     ("block:ucol:weight", "weight", "units"),
     ("block:ucol:damage", "damage", "units"),
+    ("block:urow:canongens", "units", "canongens"),  # the /g_Cᵢ unit labels over the canonical-generators column
     ("block:urow:gens", "units", "gens"),
     ("block:urow:primes", "units", "primes"),
     ("block:urow:commas", "units", "commas"),
