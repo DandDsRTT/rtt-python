@@ -2881,6 +2881,15 @@ def index() -> None:
             editor.restore_for_preview(g.token)
         return g
 
+    def end_chooser_gesture():
+        # end a live CHOOSER hover preview before a chooser commits, so the commit is one clean undo
+        # step off the real document (not the reflowed hypothetical) and a later popup-close leave
+        # can't restore the preview's token over the commit. ONLY a chooser gesture: an edit / wheel /
+        # temp / drag gesture is a different live interaction (e.g. the target-limit field's OWN typing
+        # preview, whose edit gesture must survive a sibling family-select commit) and is left alone.
+        if rec.gesture is not None and rec.gesture.kind == "chooser":
+            end_gesture()
+
     def compute_rings(lay):
         # the amber ("value would move" / "value moved") and red ("would be removed") cell-id sets
         # for the current gesture against layout `lay` — the pure function the painter applies.
@@ -3688,8 +3697,8 @@ def index() -> None:
             return
         apply = _candidate_apply(cid, value)  # tuning / prescaler / projection — the same option→edit map the hover uses
         if apply is not None:
-            end_gesture()  # a live hover preview reverts (its token restores the real document), so
-            # the commit below is one clean undo step off the real base, not on the reflowed hypothetical
+            end_chooser_gesture()  # a live chooser hover preview reverts (its token restores the real
+            # document), so the commit below is one clean undo step off the real base, not the reflowed hypothetical
             apply()
             _request_render()  # a tuning / prescaler preset re-solves — render off the loop
 
@@ -3727,8 +3736,8 @@ def index() -> None:
             return
         apply = _candidate_apply(cid, value)
         if apply is not None:
-            end_gesture()  # revert any live hover preview (its token restores the real document) so
-            # the canonicalize below is one clean undo step off the real base, not the reflowed hypothetical
+            end_chooser_gesture()  # revert any live chooser hover preview (its token restores the real
+            # document) so the canonicalize below is one clean undo step off the real base, not the hypothetical
             apply()
             _request_render()  # canonicalizing re-keys the tuning solve — render off the loop
 
@@ -3746,9 +3755,10 @@ def index() -> None:
         #     there's no toast-per-keystroke or toast-per-notch spam to suppress.
         if building[0]:
             return
-        end_gesture()  # revert any live family hover preview (its token restores the real document) so
-        # the commit below is one clean undo step — and so a later popup-close leave can't restore the
-        # now-stale pre-hover token over the committed spec (every chooser gesture now carries a token)
+        end_chooser_gesture()  # revert a live FAMILY hover preview (chooser gesture) so the commit is
+        # one clean undo step and a later popup-close leave can't restore its token over the spec. Only a
+        # chooser gesture — the limit field's OWN typing previews via an EDIT gesture, which must survive
+        # (a focused commit-then-preview, e.g. typing the limit up then back down, relies on it).
         num, sel = rec.selects["preset:target"]
         family = sel.value or "TILT"
         problem = service.target_limit_problem(family, num.value)
@@ -3782,8 +3792,8 @@ def index() -> None:
             return
         apply = _candidate_apply(cid, value)  # complexity / slope dropdowns
         if apply is not None:
-            end_gesture()  # revert any live hover preview (its token restores the real document) so
-            # the trait change below is one clean undo step off the real base, not the reflowed hypothetical
+            end_chooser_gesture()  # revert any live chooser hover preview (its token restores the real
+            # document) so the trait change below is one clean undo step off the real base, not the hypothetical
             apply()
         elif cid == "control:diminuator":  # the checkbox passes a bool (replace the diminuator?)
             editor.set_diminuator_replaced(bool(value))
