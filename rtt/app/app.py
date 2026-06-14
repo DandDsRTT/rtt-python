@@ -2562,7 +2562,11 @@ def index() -> None:
         static_red = frozenset(cb.id for cb in lay.cells if cb.preview_remove)
         static_amber = frozenset(cb.id for cb in lay.cells if cb.preview_change)
         amber, red = _gesture_rings(lay)
-        return amber | static_amber, red | static_red
+        # a green/pending DRAFT cell already shows its own (green) "being added" state — it must never
+        # ALSO carry a preview ring (the green-text-on-amber-background hybrid). Drop pending cells from
+        # both ring sets; the cascade still rings every committed cell the draft would move/remove.
+        pending = frozenset(cb.id for cb in lay.cells if cb.pending)
+        return (amber | static_amber) - pending, (red | static_red) - pending
 
     def _gesture_rings(lay):
         # the active gesture's contribution to the ring sets (empty when no gesture is live)

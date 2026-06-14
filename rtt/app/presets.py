@@ -420,9 +420,11 @@ CURATED_COMMAS: tuple[tuple[str, str], ...] = (
     ("tridecimal schisma", "4096/4095"),
 )
 
-# Equal temperaments, each as (N, warts) — ``warts == ""`` is the uniform (patent) val. Every
-# integer EDO 1–72, then notable higher EDOs up to 311. The val is recomputed over the current
-# domain basis, so the same EDO shows a different map at a different limit / nonstandard domain.
+# Equal temperaments, each as (N, warts) — ``warts == ""`` is N's INTEGER UNIFORM MAP (the "simple
+# map", the one map every EDO has; what's elsewhere called a patent val); warts pick the EDO's other
+# uniform maps (GPVs). EVERY integer 1–72 (so every integer uniform map up to 72 is offered), then
+# notable higher EDOs up to 311. The map is recomputed over the current domain basis, so the same EDO
+# shows a different map at a different limit / nonstandard domain.
 _NOTABLE_EDOS_ABOVE_72: tuple[int, ...] = (
     80, 87, 94, 99, 103, 111, 118, 130, 140, 152, 159, 171, 183, 190, 198, 207,
     217, 224, 270, 282, 311,

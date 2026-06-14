@@ -3755,5 +3755,18 @@ async def test_hovering_a_draft_comma_picker_populates_the_green_column(user: Us
     idx = list(dp.options).index("128/125")
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
     assert _cell_child(user, "cell:comma:0:1").value == "7"   # the draft column filled (prime-2 exponent)
+    # the filled draft cells stay plain GREEN (pending) — never the green-text-on-amber hybrid
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:comma:0:1")
+    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:comma:0:1")
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
     assert _cell_child(user, "cell:comma:0:1").value == ""    # reverted to the blank draft
+
+
+async def test_et_picker_offers_every_integer_uniform_map_through_72(user: User) -> None:
+    # the RENDERED ET picker (not just the data) must offer every EDO's integer uniform map / simple
+    # map for 1..72, plus notable higher EDOs — guards the "all integer uniform maps up to 72" ask
+    await _enable(user, "presets")
+    options = list(_cell_child(user, "etpick:0").options)
+    ints = sorted(int(v) for v in options if v.isdigit())
+    assert [n for n in range(1, 73) if n not in ints] == []   # 1..72 all present
+    assert max(ints) >= 311 and len(options) >= 90            # plus notable EDOs up to 311
