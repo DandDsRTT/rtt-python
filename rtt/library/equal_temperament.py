@@ -68,3 +68,43 @@ def parse_wart_name(value: str) -> tuple[int, str]:
     if not match:
         raise ValueError(f'"{value}" is not a valid wart name.')
     return int(match.group(1)), match.group(2)
+
+
+def _wart_string(n: int, val: tuple[int, ...], domain_basis: tuple) -> str:
+    """The position-based wart string for which ``warted_val(n, warts, domain_basis) == val``:
+    for each coordinate, how many integers off the patent rounding ``val`` lands, spelled as that
+    coordinate's letter (a/b/c/…) repeated that many times. The inverse of :func:`warted_val`
+    restricted to one ``n``. The equave coordinate is ``n`` itself, so it never warts."""
+    letters = []
+    for i, (x, vi) in enumerate(zip(_exact_steps(n, domain_basis), val)):
+        k = 0
+        while _kth_nearest_integer(x, k) != vi:
+            k += 1
+        letters.append(chr(ord("a") + i) * k)
+    return "".join(letters)
+
+
+def uniform_maps(domain_basis: tuple, max_n: int) -> list[tuple[int, str, tuple[int, ...]]]:
+    """Every uniform map (generalized patent val / GPV) of every EDO from 1 to ``max_n`` over
+    ``domain_basis``, in continuum order (EDO ascending, and within an EDO by ascending step
+    size). A uniform map is the JIP ``⟨log2(e) for e in domain_basis]`` scaled by some positive
+    real and rounded; an EDO's maps are exactly those whose multiplier lies in ``[n-0.5, n+0.5)``
+    (so it has finitely many at a given prime limit, the patent val — ``warts == ""`` — among
+    them). Each is returned as ``(n, warts, val)`` with ``n == val[0]`` the equave's step count
+    and ``warted_val(n, warts, domain_basis) == val``.
+
+    Found by walking the GPV sequence: from the all-zero map, repeatedly bump the coordinate whose
+    rounding flips next (smallest ``(val[i] + 0.5) / log2(basis[i])``), emitting each map until the
+    equave passes ``max_n``."""
+    logs = [math.log2(float(Fraction(e))) for e in domain_basis]
+    val = [0] * len(domain_basis)
+    out: list[tuple[int, str, tuple[int, ...]]] = []
+    while True:
+        i = min(range(len(val)), key=lambda j: (val[j] + 0.5) / logs[j])
+        val[i] += 1
+        n = val[0]
+        if n > max_n:
+            return out
+        if n >= 1:
+            frozen = tuple(val)
+            out.append((n, _wart_string(n, frozen, domain_basis), frozen))

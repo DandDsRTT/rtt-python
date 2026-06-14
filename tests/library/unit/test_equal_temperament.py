@@ -5,6 +5,7 @@ import pytest
 from rtt.library.equal_temperament import (
     parse_wart_name,
     patent_val,
+    uniform_maps,
     warted_val,
     wart_name,
 )
@@ -68,3 +69,36 @@ def test_parse_wart_name_rejects_junk():
         parse_wart_name("c12")
     with pytest.raises(ValueError):
         parse_wart_name("")
+
+
+def test_uniform_maps_enumerates_an_edos_warted_maps():
+    # 17edo in the 5-limit has six uniform maps — the patent (17 27 39) and its warted neighbours,
+    # in ascending-multiplier order. Both wiki examples ⟨17 27 39] and ⟨17 27 40] are among them.
+    maps = [(n, w, v) for n, w, v in uniform_maps((2, 3, 5), 72) if n == 17]
+    assert [v for _n, _w, v in maps] == [
+        (17, 26, 38), (17, 26, 39), (17, 27, 39), (17, 27, 40), (17, 28, 40), (17, 28, 41),
+    ]
+    assert [warts for _n, warts, _v in maps] == ["bcc", "b", "", "c", "bbc", "bbccc"]
+    # the patent val is the one with empty warts
+    assert (17, "", (17, 27, 39)) in maps
+
+
+def test_uniform_maps_every_edo_offers_its_patent_val_and_round_trips():
+    for basis in ((2, 3, 5), (2, 3, 5, 7), (2, 9, 5)):
+        maps = uniform_maps(basis, 72)
+        # every map reduces to a wart name that reproduces it exactly...
+        for n, warts, val in maps:
+            assert warted_val(n, warts, basis) == val
+        # ...the names are unique, every EDO 1..72 appears, and each offers its integer uniform map
+        names = {wart_name(n, w) for n, w, _v in maps}
+        assert len(names) == len(maps)
+        assert {n for n, _w, _v in maps} == set(range(1, 73))
+        for n in range(1, 73):
+            assert (n, "", patent_val(n, basis)) in maps
+
+
+def test_uniform_maps_count_grows_with_the_prime_limit():
+    # more primes -> more places to wart -> more uniform maps per EDO
+    assert (len(uniform_maps((2, 3, 5), 72))
+            < len(uniform_maps((2, 3, 5, 7), 72))
+            < len(uniform_maps((2, 3, 5, 7, 11), 72)))

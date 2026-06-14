@@ -420,17 +420,16 @@ CURATED_COMMAS: tuple[tuple[str, str], ...] = (
     ("tridecimal schisma", "4096/4095"),
 )
 
-# Equal temperaments, each as (N, warts) — ``warts == ""`` is N's INTEGER UNIFORM MAP (the "simple
-# map", the one map every EDO has; what's elsewhere called a patent val); warts pick the EDO's other
-# uniform maps (GPVs). EVERY integer 1–72 (so every integer uniform map up to 72 is offered), then
-# notable higher EDOs up to 311. The map is recomputed over the current domain basis, so the same EDO
-# shows a different map at a different limit / nonstandard domain.
+# The ETs offered: EVERY uniform map (GPV) of EVERY EDO from 1 to 72 — not just each EDO's integer
+# uniform map (its "simple map" / patent val, the ``warts == ""`` one), but all of its warted maps
+# too (so 5-limit 17edo offers 17b, 17, 17c, … — the maps at every multiplier in [16.5, 17.5)).
+# Then the notable higher EDOs up to 311, each as its integer uniform map. Because the set of uniform
+# maps depends on the domain's primes, the 1–72 block is enumerated per domain basis (see
+# :func:`_ets_in_domain`), not stored here; the same EDO shows different maps at a different limit.
+_MAX_UNIFORM_MAP_EDO = 72
 _NOTABLE_EDOS_ABOVE_72: tuple[int, ...] = (
     80, 87, 94, 99, 103, 111, 118, 130, 140, 152, 159, 171, 183, 190, 198, 207,
     217, 224, 270, 282, 311,
-)
-CURATED_ETS: tuple[tuple[int, str], ...] = (
-    tuple((n, "") for n in range(1, 73)) + tuple((n, "") for n in _NOTABLE_EDOS_ABOVE_72)
 )
 
 
@@ -457,13 +456,20 @@ def _commas_in_domain(domain_basis: tuple) -> tuple[tuple[str, str, tuple[int, .
 
 @functools.lru_cache(maxsize=None)
 def _ets_in_domain(domain_basis: tuple) -> tuple[tuple[str, tuple[int, ...]], ...]:
-    """The curated ETs as ``(wart_name, val)`` over ``domain_basis``. Every ET maps the whole
-    domain (a val is always defined), so unlike the commas there is no filtering — only the
-    val changes with the basis. Cached per domain basis; the result is immutable."""
-    return tuple(
-        (equal_temperament.wart_name(n, warts), equal_temperament.warted_val(n, warts, domain_basis))
-        for n, warts in CURATED_ETS
-    )
+    """The offered ETs as ``(wart_name, val)`` over ``domain_basis``: every uniform map of every
+    EDO 1–72 (warted maps and all, enumerated for this basis), then each notable higher EDO's
+    integer uniform map. Every ET maps the whole domain (a val is always defined), so unlike the
+    commas there is no filtering — only which maps exist, and their vals, change with the basis.
+    Cached per domain basis; the result is immutable."""
+    out = [
+        (equal_temperament.wart_name(n, warts), val)
+        for n, warts, val in equal_temperament.uniform_maps(domain_basis, _MAX_UNIFORM_MAP_EDO)
+    ]
+    out += [
+        (equal_temperament.wart_name(n), equal_temperament.patent_val(n, domain_basis))
+        for n in _NOTABLE_EDOS_ABOVE_72
+    ]
+    return tuple(out)
 
 
 def comma_options(domain_basis) -> dict[str, str]:
@@ -500,8 +506,8 @@ def identify_comma(vector, domain_basis) -> str | None:
 
 
 def identify_et(val, domain_basis) -> str | None:
-    """The :data:`CURATED_ETS` value whose val equals ``val`` exactly (a mapping row is stored
-    verbatim, no sign ambiguity), or None when the row matches no curated ET."""
+    """The offered ET value (wart name) whose val equals ``val`` exactly (a mapping row is stored
+    verbatim, no sign ambiguity), or None when the row matches no offered uniform map."""
     target = tuple(int(x) for x in val)
     for value, curated in _ets_in_domain(tuple(domain_basis)):
         if curated == target:

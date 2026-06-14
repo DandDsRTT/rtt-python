@@ -264,12 +264,18 @@ def test_comma_option_labels_show_the_vector_over_the_basis():
     assert presets.comma_options((2, 9, 7))["64/63"].endswith("[6 -1 -1⟩")
 
 
-def test_et_options_exist_for_every_domain_with_val_over_the_basis():
+def test_et_options_offer_every_uniform_map_to_72_then_notable_edos():
+    from rtt.library import equal_temperament
     for domain in ((2, 3, 5), (2, 3, 5, 7), (2, 9, 5)):
         options = presets.et_options(domain)
-        assert len(options) == len(presets.CURATED_ETS)
+        expected = len(equal_temperament.uniform_maps(domain, 72)) + len(presets._NOTABLE_EDOS_ABOVE_72)
+        assert len(options) == expected
+        for n in range(1, 73):                 # every EDO 1..72 at least offers its integer uniform map
+            assert str(n) in options
     assert presets.et_options((2, 3, 5))["12"].endswith("⟨12 19 28]")
     assert presets.et_options((2, 9, 5))["12"].endswith("⟨12 38 28]")  # 9 -> round(12·log2 9)=38
+    # warted uniform maps are offered too, not just the integer ones: 5-limit 17c is the famous ⟨17 27 40]
+    assert presets.et_options((2, 3, 5))["17c"].endswith("⟨17 27 40]")
 
 
 def test_identify_comma_matches_up_to_sign_else_none():
