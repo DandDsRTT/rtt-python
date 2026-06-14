@@ -764,12 +764,13 @@ class _DecCellProxy:
     the suite's ``_cell_child(...).value`` / ``.set_value(...)`` calls keep working across the split
     into a whole-part field + a fraction field. ``.value`` rejoins them (and prepends "-" when the
     generator-tuning cell's sign glyph shows "−", so it reads like the old signed cents string);
-    ``.set_value`` writes a full value through the whole field — decimal_value's "." passthrough
-    splits a decimal, and a bare integer clears the fraction first so no stale fraction rejoins.
-    Every other attribute (._props, .trigger, …) delegates to the whole-part input."""
+    ``.set_value`` writes a full value through the whole field (decimal_value's "." passthrough splits
+    a decimal, and a bare integer clears the fraction first so no stale fraction rejoins) and then
+    BLURS the cell — the cents cells commit on blur, not per keystroke, so setting the value alone
+    wouldn't retune. Every other attribute (._props, .trigger, …) delegates to the whole-part input."""
 
-    def __init__(self, whole, frac, sign=None):
-        self._whole, self._frac, self._sign = whole, frac, sign
+    def __init__(self, user, whole, frac, sign=None):
+        self._user, self._whole, self._frac, self._sign = user, whole, frac, sign
 
     @property
     def value(self):
@@ -788,6 +789,7 @@ class _DecCellProxy:
         if "." not in v:
             self._frac.set_value("")  # an integer: drop any stale fraction before the whole commits
         self._whole.set_value(v)
+        UserInteraction(self._user, {self._whole}, None).trigger("blur")  # commit on blur (not live)
 
     def __getattr__(self, name):
         return getattr(self._whole, name)
@@ -808,7 +810,7 @@ def _cell_child(user: User, cell_id: str):
         whole, frac = _dec_inputs(user, cell_id)
         main = child.default_slot.children[0]
         sign = main.default_slot.children[0] if "rtt-gensign" in getattr(main.default_slot.children[0], "_classes", []) else None
-        return _DecCellProxy(whole, frac, sign)
+        return _DecCellProxy(user, whole, frac, sign)
     return child
 
 

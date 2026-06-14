@@ -1644,16 +1644,22 @@ class _Reconciler:
     # ---- the editable stacked DECIMAL cell (the cents family: the bare prescaler 𝐿 diagonal, the
     # custom-weight 𝒘 cells, the generator-tuning map 𝒈). The decimal twin of _build_fraction: a big
     # whole-part input over a small dot-led fraction input, edited IN PLACE — replacing the old overlay
-    # face that swapped to a raw single line on focus. cents_text splits into the two fields; a blank
-    # fraction collapses to the big-integer view (data-decmode="int"); typing "." opens the fraction.
-    # _DECIMAL_JS drives the live switch; make_cell gates focus/blur (via the frac input in den_inputs)
-    # so the edit-preview baseline is taken once and on_cell_blur fires only on whole-cell exit. ----
+    # face that swapped to a raw single line on focus. _update_decimal splits into the two fields; a
+    # blank fraction collapses to the big-integer view (data-decmode="int"); typing "." opens the
+    # fraction. _DECIMAL_JS drives the live switch; make_cell gates focus/blur (via the frac input in
+    # den_inputs) so the edit-preview baseline is taken once and on_cell_blur fires only on whole-cell
+    # exit. ----
     def _build_decimal(self, cb: spreadsheet.CellBox, wrap, commit, *, gen_index=None) -> None:
-        # the value commits LIVE on each field's on_change (the cents cells re-solve as you type, as
-        # they always have); the wrap owns the white box + outline (one box around the two inputs). With
-        # gen_index a clickable +/− sign glyph rides left of the whole part (the generator-reversal
-        # control); the sign is changed by clicking the glyph, not typed, so the fields are the unsigned
-        # magnitude (on_gentuning_change re-applies the sign).
+        # the value commits on BLUR (whole-cell exit), NOT per keystroke — exactly like the fraction
+        # cells. Committing live would re-solve and RE-RENDER on every keystroke, and the render re-pads
+        # the value to 3 dp (you type "57" in the fraction, the solve commits 696.57, the render writes
+        # back "570") — which clobbers the field you're editing: the cursor jumps to the end and
+        # in-flight digits are dropped. Blur-commit leaves the field untouched while you type and applies
+        # the value once you leave (Enter blurs via make_cell; a wheel notch still commits in its own
+        # handler). The wrap owns the white box + outline (one box around the two inputs). With gen_index
+        # a clickable +/− sign glyph rides left of the whole part (the generator-reversal control); the
+        # sign is changed by clicking the glyph, not typed, so the fields hold the unsigned magnitude
+        # (on_gentuning_change re-applies the sign).
         wrap.classes("rtt-cell-input rtt-deccell")
         box = ui.element("div").classes("rtt-dec-edit")
         with box:
@@ -1666,10 +1672,12 @@ class _Reconciler:
                     # controls give. This is the "+/− in the generator tuning map" hover.
                     self._preview_control(s, lambda gi=gen_index: self._editor.flip_generator(gi))
                     self.gensign_faces[cb.id] = s
-                whole = ui.input(on_change=commit).props("dense borderless").classes("rtt-cellinput rtt-dec-whole-in")
+                whole = ui.input().props("dense borderless").classes("rtt-cellinput rtt-dec-whole-in")
             with ui.element("div").classes("rtt-dec-sub"):  # . fraction
                 ui.label(".").classes("rtt-dec-dot")  # the leading "." — a label (non-input), never selectable/tabbable
-                frac = ui.input(on_change=commit).props("dense borderless").classes("rtt-cellinput rtt-dec-frac-in")
+                frac = ui.input().props("dense borderless").classes("rtt-cellinput rtt-dec-frac-in")
+        whole.on("blur", commit, js_handler=_STACKED_EXIT_JS)  # commit only when focus leaves the whole cell
+        frac.on("blur", commit, js_handler=_STACKED_EXIT_JS)
         self.inputs[cb.id] = whole
         self.den_inputs[cb.id] = frac
         self.frac_edits[cb.id] = box
