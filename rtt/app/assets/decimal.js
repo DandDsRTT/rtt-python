@@ -18,6 +18,14 @@
 
   function boxOf(el) { return el && el.closest ? el.closest('.rtt-dec-edit') : null; }
 
+  // set a field's value AND tell Quasar/NiceGUI about it (the q-input's v-model only updates from the
+  // native "input" event; a bare .value would show but never reach the server). The fraction twin of
+  // fraction.js's setVal.
+  function setVal(input, v) {
+    input.value = v;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
   // the fraction line is shown (dec view) while it is being edited, or while it holds any digits;
   // otherwise the cell collapses to the big-integer (int) view.
   function sync(box) {
@@ -38,7 +46,19 @@
       e.preventDefault();
       box.dataset.decmode = 'dec';  // un-hide the frac line NOW so it is focusable in the same tick
       const frac = box.querySelector('.rtt-dec-frac-in input');
-      if (frac) frac.focus();
+      if (!frac) return;
+      // split the whole part at the caret: text BEFORE it stays in the whole, text AFTER it drops into
+      // the fraction — so clicking before the "01" and typing "7." yields 7.01, not 701 (the decimal
+      // analogue of fraction.js). Any selection is the dot's replacement target, so it is discarded.
+      const before = t.value.slice(0, t.selectionStart);
+      const after = t.value.slice(t.selectionEnd);
+      frac.focus();  // focus first so the document "input" sync below keeps us in dec view, not int
+      if (before !== t.value) setVal(t, before);  // trim the whole part to its pre-caret head
+      if (after !== '') {
+        // the moved tail becomes the fractional part; the caret rests at its end (Quasar restores it
+        // there after the re-render), so the next keystroke extends the fraction and Enter keeps it.
+        setVal(frac, after);
+      }
     }
   }, true);
 
