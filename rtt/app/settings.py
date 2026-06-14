@@ -21,17 +21,22 @@ name caption's symbol letter — so it only makes sense when names are shown. ``
 refines ``symbols`` — it shows each symbol's defining equation (𝒕 = 𝒈M) rather than the bare
 glyph — so it only makes sense when symbols are shown.
 
-Three top-level toggles — ``temperament``, ``form`` and ``tuning`` — are *pure grouping
-parents*: they carry no grid layer of their own (the layout never reads them), existing only
-to expand/collapse the toggles grouped directly beneath them. Each group holds its box toggle
+Two top-level toggles — ``temperament`` and ``tuning`` — are *pure grouping parents*: they carry
+no grid layer of their own (the layout never reads them; see :data:`GROUPING_PARENTS`), existing
+only to expand/collapse the toggles grouped directly beneath them. Each group holds its box toggle
 plus everything that used to nest under that box toggle, now flattened up to be its direct
 children: ``temperament`` holds ``temperament_boxes`` and ``temperament_colorization``;
 ``tuning`` holds the whole tuning column (``tuning_boxes``, ``optimization``, ``tuning_ranges``,
-``weighting``, ``projection``, ``tuning_colorization``); ``form`` holds ``form_controls`` and
-``form_colorization``. They use the same sub-control machinery as any other parent — so
-collapsing one turns its whole group off — they just have nothing of their own to show.
-``form`` is held out of :data:`IMPLEMENTED` for now, so it (and the form controls under it)
-renders greyed.
+``weighting``, ``projection``, ``tuning_colorization``). They use the same sub-control machinery
+as any other parent — so collapsing one turns its whole group off — they just have nothing of
+their own to show.
+
+``form`` is the third group header but NOT a pure grouping parent: like the other two it expands
+its sub-controls (``form_controls``, ``form_boxes``, ``form_colorization``), but it ALSO carries a
+real layer — checking it marks the default (canonical) form with a subscript C on the mapping 𝑀,
+the generator tuning map 𝒈 and the generator embedding G (across their symbols and equivalences).
+So ``form`` is live (in :data:`IMPLEMENTED`) and has an example sample; its three sub-controls stay
+greyed until their content ships.
 """
 
 from __future__ import annotations
@@ -74,15 +79,17 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("counts", "counts", True),
             ("domain_quantities", "quantities", True),
             ("domain_units", "units", False),
-            # ``temperament`` / ``form`` / ``tuning`` are pure grouping parents (see the module
-            # docstring): each only expands the toggles grouped directly beneath it (its box toggle
-            # and that box's former children, now flattened to siblings); the layout reads the
-            # boxes, never the parent. ``form`` is held out of IMPLEMENTED for now, so it greys.
+            # ``temperament`` / ``tuning`` are pure grouping parents (see the module docstring): each
+            # only expands the toggles grouped directly beneath it (its box toggle and that box's
+            # former children, now flattened to siblings); the layout reads the boxes, never the
+            # parent. ``form`` is the exception — also a group header, but a LIVE layer (the
+            # canonical-form subscript C), so default-off (opt-in) and in IMPLEMENTED.
             ("temperament", "temperament", True),
             ("temperament_boxes", "temperament boxes", True),
             ("temperament_colorization", "colorization", False),
-            ("form", "form", True),
+            ("form", "form", False),
             ("form_controls", "form controls", False),
+            ("form_boxes", "form boxes", False),
             ("form_colorization", "colorization", False),
             ("tuning", "tuning", True),
             ("tuning_boxes", "tuning boxes", True),
@@ -119,7 +126,11 @@ SUBCONTROLS: dict[str, str] = {
     # tuning boxes, so they remain under weighting.)
     "temperament_boxes": "temperament",
     "temperament_colorization": "temperament",
+    # "form" is the odd group out: not a PURE grouping parent but a live layer (it adds the
+    # canonical-form subscript C — see GROUPING_PARENTS), which also holds its three sub-controls:
+    # the <choose form> dropdowns, the canonical-mapping / 𝐹 boxes, and the magenta wash.
     "form_controls": "form",
+    "form_boxes": "form",
     "form_colorization": "form",
     "tuning_boxes": "tuning",
     "optimization": "tuning",
@@ -142,14 +153,19 @@ IMPLEMENTED: frozenset[str] = frozenset(
      "math_expressions", "charts", "tuning_ranges",
      "tuning_colorization", "temperament_colorization", "weighting",
      "generator_detempering", "optimization", "interest", "all_interval", "alt_complexity",
-     "nonstandard_domain", "projection"}  # NB: "form" is deliberately absent — greyed for now
+     "nonstandard_domain", "projection",
+     # "form" IS live: unlike the pure grouping parents it carries a real layer (the canonical-
+     # form subscript C). Its three sub-controls stay greyed (absent here) until their content ships.
+     "form"}
 )
 
-# The pure grouping parents (see the module docstring): top-level toggles that only expand the box
-# toggle(s) nested under them and carry no grid layer of their own — the layout never reads them.
-# So they have no example-column sample, and flipping one changes the grid only by cascading its
-# children off (Editor.set_show), never through spreadsheet.build directly.
-GROUPING_PARENTS: frozenset[str] = frozenset({"temperament", "form", "tuning"})
+# The pure grouping parents: top-level toggles that only expand the box toggle(s) nested under them
+# and carry no grid layer of their own — the layout never reads them. So they have no example-column
+# sample, and flipping one changes the grid only by cascading its children off (Editor.set_show),
+# never through spreadsheet.build directly. "form" is deliberately NOT here: it groups its three
+# sub-controls like temperament/tuning, but it ALSO carries a real layer (the canonical-form
+# subscript C), so it gets an example and the layout reads it — see the module docstring.
+GROUPING_PARENTS: frozenset[str] = frozenset({"temperament", "tuning"})
 
 
 # ── The guide-chapter reveal ────────────────────────────────────────────────────────────────
@@ -189,7 +205,8 @@ CHAPTER: dict[str, int] = {
     "all_interval": 7,
     "alt_complexity": 8,
     "nonstandard_domain": 9,
-    "form": CHAPTER_STAR, "form_controls": CHAPTER_STAR, "form_colorization": CHAPTER_STAR,
+    "form": CHAPTER_STAR, "form_controls": CHAPTER_STAR, "form_boxes": CHAPTER_STAR,
+    "form_colorization": CHAPTER_STAR,
     "projection": CHAPTER_STAR, "generator_detempering": CHAPTER_STAR,
     "identity_objects": CHAPTER_STAR,
 }

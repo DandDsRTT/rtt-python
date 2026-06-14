@@ -1850,14 +1850,16 @@ def test_grouping_parents_flatten_their_box_toggles_former_children():
     assert editor.settings["optimization"] is True  # the sibling is untouched by the box toggle
 
 
-def test_form_grouping_parent_is_shelved_and_greyed():
-    # "form" is a grouping parent too, but disabled for now: it lives in DEFAULTS (on, so its
-    # greyed form controls stay visible beneath it) yet is held out of IMPLEMENTED, so the
-    # panel greys it and from_persisted pins it to its default whatever a saved blob says.
-    assert settings.DEFAULTS["form"] is True
-    assert "form" not in settings.IMPLEMENTED
-    assert {"temperament", "tuning"} <= settings.IMPLEMENTED   # ...the live ones are exposed
-    assert settings.from_persisted({"form": False})["form"] is True
+def test_form_is_a_live_layer_not_a_pure_grouping_parent():
+    # "form" heads the form group like temperament/tuning, but unlike those pure grouping parents
+    # it carries a real grid layer (the canonical-form subscript C), so it is LIVE (in IMPLEMENTED)
+    # and NOT in GROUPING_PARENTS. It defaults OFF (the subscript is opt-in, and its group starts
+    # collapsed), and being implemented its saved value is honoured rather than pinned.
+    assert settings.DEFAULTS["form"] is False
+    assert "form" in settings.IMPLEMENTED
+    assert "form" not in settings.GROUPING_PARENTS
+    assert {"temperament", "tuning"} <= settings.GROUPING_PARENTS  # the pure grouping parents
+    assert settings.from_persisted({"form": True})["form"] is True  # honoured (it's implemented)
 
 
 def test_expand_collapse_state_is_owned_and_undoable():

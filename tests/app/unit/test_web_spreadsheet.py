@@ -4936,12 +4936,20 @@ def test_every_implemented_toggle_actually_changes_the_layout():
             frozenset((b.id, b.x, b.y, b.w, b.h, b.tint) for b in lay.blocks),
         )
 
+    # a few toggles only refine a layer that isn't their hierarchy parent, so their effect is
+    # invisible until that layer is shown — like the slope above, this is a visibility condition,
+    # not a sub-control link. The form layer subscripts the canonical-form objects, so it only
+    # shows once the symbols layer is on.
+    rides_on = {"form": "symbols"}
+
     def with_parents_on(key):
         # a sub-control only takes effect while its parent chain is on (e.g. alt. complexity
         # needs weighting, which needs tuning boxes), so enable that chain before flipping it
         s = settings.defaults()
         for parent in settings.ancestors_of(key):
             s[parent] = True
+        if key in rides_on:
+            s[rides_on[key]] = True
         return s
 
     for key in settings.IMPLEMENTED:
@@ -6507,17 +6515,56 @@ def test_every_interval_ratio_and_vector_is_click_to_play():
     assert dv.audio and dv.audio[0] == "vectors:detempering"
 
 
-def test_form_colorization_is_a_greyed_form_subcontrol():
-    # form colorization completes the M/G/F colour trio alongside temperament (𝑀) and
-    # tuning (G) colorization, but its content — the form matrix 𝐹 — isn't a built tile
-    # yet, so it rides as a greyed stub: registered and grouped directly under "form"
-    # (level with the form controls, since the regroup flattened the box toggle's children),
-    # default off, and NOT implemented (no wash to paint), like the other deferred controls.
+def test_form_layer_is_a_live_parent_over_three_greyed_subcontrols():
+    # the form layer is a live top-level toggle (it adds the canonical-form subscript C — so unlike
+    # the pure grouping parents temperament/tuning it is NOT in GROUPING_PARENTS) whose three
+    # sub-controls — the <choose form> dropdowns, the canonical-mapping / 𝐹 boxes, and the magenta
+    # wash — are all still greyed stubs: grouped directly under "form", default off, and NOT
+    # implemented, like the other deferred controls.
     keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
-    assert "form_colorization" in keys
-    assert settings.SUBCONTROLS["form_colorization"] == "form"
-    assert settings.defaults()["form_colorization"] is False
-    assert "form_colorization" not in settings.IMPLEMENTED
+    assert {"form", "form_controls", "form_boxes", "form_colorization"} <= keys
+    assert settings.defaults()["form"] is False and "form" in settings.IMPLEMENTED  # live parent
+    assert "form" not in settings.GROUPING_PARENTS  # it carries a real layer, unlike temperament/tuning
+    for child in ("form_controls", "form_boxes", "form_colorization"):
+        assert settings.SUBCONTROLS[child] == "form"            # grouped under the form parent
+        assert settings.defaults()[child] is False              # default off
+        assert child not in settings.IMPLEMENTED                # greyed (content not built yet)
+    # the parent precedes its children in the group (the panel requires it for indentation)
+    specific = [k for k, *_ in dict(settings.SHOW_GROUPS)["specific boxes & controls"]]
+    assert specific.index("form") < min(specific.index(c)
+                                        for c in ("form_controls", "form_boxes", "form_colorization"))
+
+
+def test_form_layer_subscripts_the_canonical_form_objects_in_symbols():
+    # the "form" layer marks the default (canonical) form with a subscript C after the leading
+    # glyph of every generator-basis object — the mapping 𝑀 and its products (mapped comma basis
+    # 𝑀C, mapped target list Y), the generator tuning map 𝒈, and the projection's generator
+    # embedding G. The form-INVARIANT objects (the prime tuning map 𝒕, the comma basis C) stay
+    # bare. The subscript is the SUBSCRIPT_C sentinel — distinct from the upright comma-basis C.
+    C = spreadsheet.SUBSCRIPT_C
+    on = {c.id: c for c in _with(symbols=True, form=True).cells}
+    off = {c.id: c for c in _with(symbols=True).cells}
+    assert on["symbol:mapping:primes"].text == f"𝑀{C}"
+    assert on["symbol:mapping:commas"].text == f"𝑀{C}C"   # 𝑀_C then the upright comma basis C
+    assert on["symbol:mapping:targets"].text == f"Y{C}"
+    assert on["symbol:tuning:gens"].text == f"𝒈{C}"
+    # the projection's generator embedding G (only present when projection is on)
+    proj = {c.id: c for c in _with(symbols=True, projection=True, form=True).cells}
+    assert proj["symbol:projection:gens"].text == f"G{C}"
+    # form-invariant objects stay bare, and nothing is subscripted without the layer
+    assert on["symbol:tuning:primes"].text == "𝒕"          # the prime tuning map is form-invariant
+    assert on["symbol:vectors:commas"].text == "C"         # the comma basis itself
+    assert off["symbol:mapping:primes"].text == "𝑀"        # no subscript when the form layer is off
+
+
+def test_form_layer_subscripts_the_canonical_form_objects_in_equivalences():
+    # the subscript reaches inside the defining equations too: 𝒕 = 𝒈C𝑀C, Y = 𝑀C T, and the
+    # projection's P = GC𝑀C — but 𝒕 (the form-invariant result) keeps its bare head.
+    C = spreadsheet.SUBSCRIPT_C
+    on = {c.id: c for c in _with(symbols=True, equivalences=True, projection=True, form=True).cells}
+    assert on["symbol:tuning:primes"].text == f"𝒕 = 𝒈{C}𝑀{C}"      # 𝒕 bare, 𝒈/𝑀 subscripted
+    assert on["symbol:mapping:targets"].text == f"Y{C} = 𝑀{C}T"
+    assert on["symbol:projection:gens"].text == f"G{C} = U(𝑀{C}U)⁻¹"
 
 
 def test_interest_is_a_top_level_toggle_after_the_tuning_boxes_group():

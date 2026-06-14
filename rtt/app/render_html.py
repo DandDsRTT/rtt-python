@@ -457,7 +457,9 @@ _EXAMPLE_TEXT: dict[str, str] = {
     "domain_quantities": "2.3.5",
     "domain_units": "p₁/",
     "temperament_boxes": "𝑀",
+    "form": "𝑀" + spreadsheet.SUBSCRIPT_C,  # the canonical-form subscript this layer adds (𝑀 → 𝑀_C)
     "form_controls": "canonical form",
+    "form_boxes": "𝐹",                       # the generator form matrix (the mockup's form-boxes example)
     "tuning_boxes": "T",
     "optimization": "𝑝",
     "weighting": "𝒘",

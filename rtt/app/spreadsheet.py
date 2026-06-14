@@ -576,6 +576,7 @@ class _ShowFlags:
     cell_units: bool
     domain_units: bool
     temp: bool
+    form: bool
     form_controls: bool
     tuning: bool
     optimization: bool
@@ -618,6 +619,7 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         cell_units=settings["cell_units"],  # the per-value unit beneath each gridded cell
         domain_units=settings["domain_units"],  # the units row (spine) + units column
         temp=temp,
+        form=settings["form"],  # the canonical-form subscript C on 𝑀/𝒈/G (the parent layer)
         form_controls=settings["form_controls"],  # the canonical-mapping form row + <choose form> chooser
         tuning=tuning,
         optimization=optimization,
@@ -953,6 +955,7 @@ class _GridBuilder:
         self.show_cell_units = _f.cell_units
         show_domain_units = _f.domain_units
         show_temp = _f.temp
+        self.show_form = _f.form  # the form layer: subscript-C the canonical-form objects (𝑀/𝒈/G)
         self.show_form_controls = _f.form_controls
         show_tuning = _f.tuning
         self.show_optimization = _f.optimization
@@ -2221,9 +2224,15 @@ class _GridBuilder:
             # exactly like _caption_floor
             if ckey != key or (rkey, ckey) not in self.declared_tiles:
                 continue
-            equiv = EQUIVALENCES.get((rkey, ckey), "") if self.show_equiv else ""
-            if self.show_equiv and (rkey, ckey) == ("projection", "primes"):
-                equiv += self._projection_superspace_tail()
+            equiv = ""
+            if self.show_equiv:
+                equiv = EQUIVALENCES.get((rkey, ckey), "")
+                if self.show_form and (rkey, ckey) in FORM_EQUIVALENCES:  # the subscripted equation
+                    equiv = FORM_EQUIVALENCES[(rkey, ckey)]
+                if (rkey, ckey) == ("projection", "primes"):
+                    equiv += self._projection_superspace_tail()
+            if self.show_form and (rkey, ckey) in FORM_SUBSCRIPT_CELLS:  # the subscripted symbol
+                glyph = glyph[:1] + SUBSCRIPT_C + glyph[1:]
             floor = max(floor, _min_width_for_lines(glyph + equiv, 1, SYMBOL_FONT))
         return floor
 
@@ -5063,14 +5072,19 @@ class _GridBuilder:
                         ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
                         ("prescaling", "ssprimes" if self.show_superspace else "primes"): self.prescaler_equivalence,
                         **(ALL_INTERVAL_EQUIVALENCES if ai else {}),
+                        # the form layer subscripts the canonical-form objects in their defining
+                        # equations too (𝒕 = 𝒈C𝑀C, P = GC𝑀C, …); the form-invariant tails stay bare.
+                        **(FORM_EQUIVALENCES if self.show_form else {}),
                         # the consolidated interval-vectors header: V = C|U (the comma basis and the
                         # unchanged basis concatenated). The mapped tile drops its "= 𝑂" (only the
                         # comma half of M·V vanishes; the unchanged half maps to the held generators).
                         **({("vectors", "commas"): " = C|U", ("mapping", "commas"): ""}
                            if self.show_unchanged else {})}
         if self.show_superspace:  # P's equivalence gains the superspace decomposition (per the mockup)
+            # append the superspace tail to the CURRENT base (form-subscripted when show_form), so the
+            # P = GC𝑀C decomposition keeps its subscripts ahead of the " = Gₛ→ₗ𝑀ₛ→ₗ" tail
             equivalences[("projection", "primes")] = (
-                EQUIVALENCES[("projection", "primes")] + self._projection_superspace_tail())
+                equivalences[("projection", "primes")] + self._projection_superspace_tail())
         if ai:
             # all-interval (Tₚ = I): the kept target tiles take prime-proxy closed forms in the live
             # prescaler glyph (X→L). The complexity list IS the prescaler diagonal; the (simplicity)
@@ -5109,6 +5123,11 @@ class _GridBuilder:
                     base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
                 if self.show_unchanged and ckey == "commas":  # the whole column reads V, not C
                     base_symbol = base_symbol.replace("C", "V")
+                if self.show_form and (rkey, ckey) in FORM_SUBSCRIPT_CELLS:
+                    # mark the canonical form with a subscript C after the leading glyph (𝑀/Y/𝒈/G).
+                    # Inserted AFTER the unchanged C→V swap so the mapped-comma tile reads 𝑀C·V, and so
+                    # the subscript's own "C" (a SUB_OPEN…SUB_CLOSE sentinel) is never hit by that swap.
+                    base_symbol = base_symbol[:1] + SUBSCRIPT_C + base_symbol[1:]
                 glyph = base_symbol if (self.show_symbols or equiv) else ""
                 if glyph or equiv:
                     self.cells.append(CellBox(f"symbol:{rkey}:{ckey}", self.col_x[ckey], cy, self.col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))

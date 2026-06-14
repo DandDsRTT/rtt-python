@@ -19,6 +19,12 @@ SUB_CLOSE = chr(0xE004)
 # superspace" subscript). Unicode has no subscript-capital-L, so we render a capital "L" inside
 # <sub> rather than the lowercase ₗ (U+2097) the tables used to embed.
 SUBSCRIPT_L = SUB_OPEN + "L" + SUB_CLOSE
+# The canonical-FORM marker: a subscript CAPITAL C (the form is canonical by default — when the
+# form layer is on we acknowledge that with this subscript on every generator-basis object). Like
+# SUBSCRIPT_L it renders a capital "C" inside <sub> (Unicode has no subscript-capital-C). NB it is
+# distinct from the upright comma-basis C the tables embed as a plain glyph (e.g. 𝑀C, the mapped
+# comma basis) — there the form subscript sits between: 𝑀{C-sub}C.
+SUBSCRIPT_C = SUB_OPEN + "C" + SUB_CLOSE
 
 # The counts row: each column's set cardinality, as (column key, symbol, name).
 # The symbol+value (e.g. "r = 2", the symbol rendered math-italic via _mathit) is
@@ -737,6 +743,31 @@ ALL_INTERVAL_EQUIVALENCES = {("vectors", "targets"): " = 𝐼"}
 # all-interval mnemonics: the Tₚ subscript's "p" underlines BOTH p's it stands for — "prime"
 # and "proxy" — on top of the base symbol-letter underline (the T's "target"). See the caption loop.
 ALL_INTERVAL_MNEMONICS = {("vectors", "targets"): ("prime", "proxy")}
+
+# When the form layer is on (the "form" Show toggle), the default form is acknowledged as the
+# CANONICAL one with a subscript C (SUBSCRIPT_C) on every generator-basis object, wherever it
+# appears as a symbol or inside a defining equation. The objects are the mapping 𝑀, the generator
+# tuning map 𝒈 and the projection's generator embedding G — each depends on the choice of generator
+# basis (the form), so the subscript marks "this is in canonical form". The form-INVARIANT objects
+# (the prime tuning maps 𝒕/𝒋/𝒓, the interval bases C/T/H, the detempering D) carry no form, so they
+# stay bare. The symbol side is a cell SET (the subscript is inserted after the leading glyph at
+# render time, so it composes with the unchanged-intervals C→V swap on the mapped-comma tile); the
+# equivalence side is an explicit overlay, applied OVER EQUIVALENCES in build's caption loop.
+FORM_SUBSCRIPT_CELLS = frozenset({
+    ("mapping", "primes"),    # 𝑀  → 𝑀_C
+    ("mapping", "commas"),    # 𝑀C → 𝑀_C·C  (mapped comma basis; the trailing C is the comma basis)
+    ("mapping", "held"),      # 𝑀H → 𝑀_C·H
+    ("mapping", "targets"),   # Y  → Y_C   (the mapped target list Y = 𝑀T)
+    ("tuning", "gens"),       # 𝒈  → 𝒈_C
+    ("projection", "gens"),   # G  → G_C   (only shown when projection is on)
+})
+FORM_EQUIVALENCES = {
+    ("mapping", "targets"):    f" = 𝑀{SUBSCRIPT_C}T",
+    ("tuning", "detempering"): f" = 𝒈{SUBSCRIPT_C}",          # 𝒕D = the generator tuning map
+    ("tuning", "primes"):      f" = 𝒈{SUBSCRIPT_C}𝑀{SUBSCRIPT_C}",
+    ("projection", "primes"):  f" = G{SUBSCRIPT_C}𝑀{SUBSCRIPT_C} = V·diag(𝝀)V⁻¹",
+    ("projection", "gens"):    f" = U(𝑀{SUBSCRIPT_C}U)⁻¹",
+}
 
 # Each box's "units:" annotation (the mockup's per-box unit line, shown below the name
 # caption when the general `units` toggle is on). The value is plain ASCII — a fraction
