@@ -896,6 +896,16 @@ def _ro_stacked_face(user: User, cell_id: str):
     return face.default_slot.children[0], face.default_slot.children[1]
 
 
+def _ro_value(user: User, cell_id: str) -> str:
+    """The displayed value of a READ-ONLY stacked value cell (a tuningvalue / read-only weight or
+    cents face): its big .rtt-stacked-main glyph joined with the small .rtt-stacked-sub line below
+    (e.g. "697" + ".564" -> "697.564"). The read-only twin of the editable cells' _dec_value /
+    .value — used to assert that a hover PREVIEW reflows a cell's value (shows the NEW number), not
+    just rings it."""
+    main, sub = _ro_stacked_face(user, cell_id)
+    return f"{main.text}{sub.text}"
+
+
 def _dec_inputs(user: User, cell_id: str):
     """The (whole, fraction) input fields of an editable stacked-DECIMAL (cents) cell — the two
     separate fields that replaced the old overlaid whole-over-.fraction face, the decimal twin of
@@ -3211,21 +3221,25 @@ async def test_hovering_a_temperament_option_previews_loading_it(user: User) -> 
 
 async def test_hovering_a_tuning_scheme_option_previews_reselecting(user: User) -> None:
     # the tuning-scheme chooser gets the same option-hover preview as the temperament chooser, through
-    # the shared _arm_option_hover hook: hovering a scheme rings the cells reselecting it would move —
-    # here the damage weights, which the weight slope (minimax-U → minimax-S) re-derives — and leaving
-    # clears them. Amber only: a re-solve moves values without reflowing the grid.
+    # the shared _arm_option_hover hook: hovering a scheme REFLOWS the would-be grid (a value-only
+    # re-solve drops no owned interval), so the cells reselecting it would move — here the damage
+    # weights, which the weight slope (minimax-U → minimax-S) re-derives — actually SHOW their new
+    # values, ringed amber; leaving reverts both the values and the rings.
     from rtt.app import presets
     await user.open("/")
     _toggle(user, "presets")                                   # the tuning chooser is presets-gated
     _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")                                 # >1 scheme variant (S/U/C) + the weight row
     await user.should_see(marker="preset:tuning")
+    before = _ro_value(user, "weight:target:1")                # the committed weight, pre-hover
     wrap = set(user.find(marker="preset:tuning").elements)
     idx = list(presets.tuning_scheme_options(False, False, True)).index("minimax-S")
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})  # hover the simplicity variant
     assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")   # a re-weighted target rings amber
+    assert _ro_value(user, "weight:target:1") != before                     # ...and SHOWS its new value (reflow)
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})   # leave the option
     assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
+    assert _ro_value(user, "weight:target:1") == before                     # value reverts on leave
 
 
 async def test_hovering_a_prescaler_option_previews_reselecting(user: User) -> None:
@@ -3241,12 +3255,15 @@ async def test_hovering_a_prescaler_option_previews_reselecting(user: User) -> N
     _toggle(user, "alternative complexity")                           # >1 prescaler option
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # make the prescaler reach the weights
     await user.should_see(marker="preset:prescaler")
+    before = _ro_value(user, "weight:target:1")
     wrap = set(user.find(marker="preset:prescaler").elements)
     idx = list(presets.prescaler_options(True)).index("identity")  # hover a prescaler other than log-prime
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
     assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
+    assert _ro_value(user, "weight:target:1") != before            # the re-weighted target SHOWS its new value
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
     assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
+    assert _ro_value(user, "weight:target:1") == before            # reverts on leave
 
 
 async def test_hovering_a_complexity_option_previews_reselecting(user: User) -> None:
@@ -3261,12 +3278,15 @@ async def test_hovering_a_complexity_option_previews_reselecting(user: User) -> 
     _toggle(user, "alternative complexity")
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # make the complexity reach the weights
     await user.should_see(marker="control:complexity")
+    before = _ro_value(user, "weight:target:1")
     wrap = set(user.find(marker="control:complexity").elements)
     idx = list(service.COMPLEXITY_DISPLAYS).index("sopfr")     # hover a measure other than the live lp
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
     assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
+    assert _ro_value(user, "weight:target:1") != before            # the re-weighted target SHOWS its new value
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
     assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
+    assert _ro_value(user, "weight:target:1") == before            # reverts on leave
 
 
 async def test_hovering_a_weight_slope_option_previews_reselecting(user: User) -> None:
@@ -3276,12 +3296,15 @@ async def test_hovering_a_weight_slope_option_previews_reselecting(user: User) -
     _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")                                # the slope chooser shows with weighting
     await user.should_see(marker="control:slope")
+    before = _ro_value(user, "weight:target:1")
     wrap = set(user.find(marker="control:slope").elements)
     idx = list(service.WEIGHT_SLOPES).index("simplicity-weight")  # default is unity-weight
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
     assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
+    assert _ro_value(user, "weight:target:1") != before            # the re-weighted target SHOWS its new value
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
     assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
+    assert _ro_value(user, "weight:target:1") == before            # reverts on leave
 
 
 async def test_hovering_a_locked_weight_slope_shows_no_preview(user: User) -> None:
@@ -3301,19 +3324,47 @@ async def test_hovering_a_locked_weight_slope_shows_no_preview(user: User) -> No
 
 
 async def test_hovering_the_form_canonical_option_previews_canonicalizing(user: User) -> None:
-    # the mapping/comma-basis <choose form> control previews canonicalizing IN PLACE: hovering
-    # "canonical" rings the mapping cells it would re-store (the default mapping is not canonical), and
-    # leaving clears them. Amber only — the cells change value where they sit, no reflow.
+    # the mapping <choose form> control previews canonicalizing by REFLOWING: hovering "canonical"
+    # re-renders the would-be grid so the mapping cells it re-stores actually SHOW their canonical
+    # values, ringed amber — not just ringed while keeping their old entries (the reported bug). The
+    # default mapping is the fifth-form ⟨1 1 0]⟨0 1 4]; canonical HNF is ⟨1 0 -4]⟨0 1 4], so row-0
+    # col-2 reads 0 before the hover and -4 during it. Leaving reverts the value AND the ring. The
+    # canonical-form REFERENCE tile (cell:canon) vanishes as the mapping adopts canonical form, but
+    # that's a derived display, not owned interval data, so it doesn't trip the redden fallback.
     await user.open("/")
     _toggle(user, "form")            # the parent layer reveals its sub-controls (form controls is a child)
     _toggle(user, "form controls")   # now visible: turn on the <choose form> dropdowns
     await user.should_see(marker="formchooser:mapping")
+    assert _cell_child(user, "cell:mapping:0:2").value == "0"   # the fifth-form entry, pre-hover
     wrap = set(user.find(marker="formchooser:mapping").elements)
     # options are {"": "choose form", "canonical": "canonical"}, so index 1 is the canonical entry
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})
     assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")  # a re-stored mapping cell rings
+    assert _cell_child(user, "cell:mapping:0:2").value == "-4"  # ...and SHOWS its canonical value (reflow)
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
     assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:2")
+    assert _cell_child(user, "cell:mapping:0:2").value == "0"   # reverts to the fifth-form entry on leave
+
+
+async def test_choosing_the_form_canonical_option_commits_canonicalizing(user: User) -> None:
+    # committing the <choose form> "canonical" pick (after the reflow preview machinery armed a
+    # gesture) re-stores the mapping in canonical form for real: on_form_choose end_gesture()s the
+    # live hover preview first (so the edit is one clean undo step off the REAL document, not stacked
+    # on the reflowed hypothetical), then applies. Row-0 col-2 lands at -4 and STAYS, and a single
+    # undo restores the fifth-form 0 — proving the commit was one clean step, not a doubled edit.
+    await user.open("/")
+    _toggle(user, "form")
+    _toggle(user, "form controls")
+    await user.should_see(marker="formchooser:mapping")
+    wrap = set(user.find(marker="formchooser:mapping").elements)
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})    # preview canonicalizing (reflow)
+    _cell_child(user, "formchooser:mapping").set_value("canonical")         # ...then commit it
+    await user.should_see(marker="cell:mapping:0:2")
+    assert _cell_child(user, "cell:mapping:0:2").value == "-4"  # committed canonical, value stuck
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:2")  # rings cleared on commit
+    user.find(marker="undo").click()                            # one undo step...
+    await user.should_see(marker="cell:mapping:0:2")
+    assert _cell_child(user, "cell:mapping:0:2").value == "0"   # ...restores the fifth form (one clean step)
 
 
 def test_option_hover_delegation_cancels_the_settle_timer_on_pointerdown() -> None:
@@ -3347,35 +3398,41 @@ async def test_hovering_a_target_family_reddens_the_rows_it_drops(user: User) ->
     from rtt.app import presets
     await _enable(user, "presets")
     await user.should_see(marker="preset:target")
+    before = _ro_value(user, "retune:target:1")                    # the dropped row's committed value
     wrap = set(user.find(marker="preset:target").elements)         # the cell wrap holds the opthover listener
     idx = list(presets.TARGET_SETS).index("OLD")
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})   # hover OLD over the live TILT
     assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:1")    # a dropped target row → red
     await user.should_see(marker="retune:target:1")                          # ...still on screen (not reflowed)
+    assert _ro_value(user, "retune:target:1") == before                      # ...keeping its OLD value (redden, no reflow)
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})    # leave the option
     assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:1")
 
 
 async def test_hovering_a_same_count_target_family_rings_the_moved_rows_amber(user: User) -> None:
     # when the hovered family keeps the SAME number of targets but different intervals (no net rows
-    # dropped), the preview rings the rows whose value moves amber, in place, and keeps the chooser's own
-    # value steady (no reflow, like the other amber-only choosers). From a committed 5-TILT, hovering
-    # 5-OLD (both 7 targets, different intervals) rings the moved rows amber; leaving clears them.
+    # dropped → no owned interval removed), the preview REFLOWS in place: the rows whose value moves
+    # ring amber AND show their new values, while the chooser's own value is held steady across the
+    # re-render (no flip, like the other reflow choosers). From a committed 5-TILT, hovering 5-OLD
+    # (both 7 targets, different intervals) shows the moved rows' new values amber; leaving reverts.
     from rtt.app import presets
     await _enable(user, "presets")
     await user.should_see(marker="preset:target")
     num, _sel = _target_preset(user)
     num.set_value("5")                                                       # commit 5-TILT (default is 6)
     await user.should_see(marker="retune:target:1")
+    before = _ro_value(user, "retune:target:1")
     wrap = set(user.find(marker="preset:target").elements)
     idx = list(presets.TARGET_SETS).index("OLD")
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})   # hover 5-OLD (same count)
     assert "rtt-preview-change" in _wrap_classes(user, "retune:target:1")    # a moved row rings amber
     assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:1")  # nothing net-dropped → no red
+    assert _ro_value(user, "retune:target:1") != before                     # ...and SHOWS its new value (reflow)
     _num, sel = _target_preset(user)
     assert sel.value == "TILT"                                               # chooser held steady, not flipped
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})    # leave the option
     assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:1")
+    assert _ro_value(user, "retune:target:1") == before                     # value reverts on leave
 
 
 async def test_hovering_the_generator_minus_previews_the_dual_rank_change(user: User) -> None:

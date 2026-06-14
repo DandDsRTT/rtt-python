@@ -2158,10 +2158,22 @@ class _Reconciler:
             self._arm_option_hover(sel, wrap, cb.id)  # hovering a scheme previews re-solving to it
             self.selects[cb.id] = sel
 
+    def _chooser_reflow_hold(self, cid: str) -> bool:
+        # True while a generic chooser hover's REFLOW preview is re-rendering the grid for exactly
+        # this chooser: its q-select value + open popup must stay steady across that re-render
+        # (re-setting a q-select's value / options would disrupt or close its open popup), so the
+        # cell's update is skipped while it holds. Keyed on the gesture's source (the hovered
+        # chooser's cell id) — the generic-chooser analogue of the temperament guard below, which is
+        # keyed on the temp gesture's kind+reflowed because it owns the (only) temperament chooser.
+        g = self.gesture
+        return g is not None and g.kind == "chooser" and g.reflowed and g.source == cid
+
     def _update_preset(self, cb: spreadsheet.CellBox) -> None:
         # mirror the live selection: the temperament chooser shows the matched preset (or its
         # placeholder), the target chooser splits into limit + family, the tuning chooser shows its
         # scheme. building[0] guards echoes.
+        if self._chooser_reflow_hold(cb.id):
+            return  # a generic chooser hover is reflowing the grid for THIS chooser — hold it steady
         if cb.id.startswith("preset:temperament"):  # base + the comma-basis copy
             if self.gesture is not None and self.gesture.kind == "temp" and self.gesture.reflowed:
                 return  # a hover preview reflows the GRID; leave the chooser's value + open popup steady
@@ -2284,6 +2296,8 @@ class _Reconciler:
         # the complexity chooser's option list widens/narrows as alt. complexity flips, so refresh the
         # options in place (not just the value) — otherwise the build-time list goes stale until the row
         # is rebuilt from hidden. A no-op for the fixed-option slope chooser, whose values never change.
+        if self._chooser_reflow_hold(cb.id):
+            return  # a hover preview is reflowing the grid for THIS chooser — hold its value + popup steady
         self.selects[cb.id].set_options(list(cb.values), value=cb.text or None)
         self.selects[cb.id].set_enabled(not cb.disabled)
 
@@ -2321,6 +2335,8 @@ class _Reconciler:
         self.selects[cb.id] = sel
 
     def _update_formchooser(self, cb: spreadsheet.CellBox) -> None:  # reflect the matrix's current form
+        if self._chooser_reflow_hold(cb.id):
+            return  # a hover preview is reflowing the grid for THIS chooser — hold its value + popup steady
         self.selects[cb.id].set_options(_formchooser_options(cb.id), value=cb.text or "")
 
     # ---- static controls (build only, no update): the domain/comma/interest/held ± buttons,
@@ -3663,8 +3679,10 @@ def index() -> None:
             else:
                 render()  # the prompt/divider: nothing loaded, just snap the box back (warm)
             return
-        apply = _candidate_apply(cid, value)  # tuning / prescaler — the same option→edit map the hover uses
+        apply = _candidate_apply(cid, value)  # tuning / prescaler / projection — the same option→edit map the hover uses
         if apply is not None:
+            end_gesture()  # a live hover preview reverts (its token restores the real document), so
+            # the commit below is one clean undo step off the real base, not on the reflowed hypothetical
             apply()
             _request_render()  # a tuning / prescaler preset re-solves — render off the loop
 
@@ -3702,6 +3720,8 @@ def index() -> None:
             return
         apply = _candidate_apply(cid, value)
         if apply is not None:
+            end_gesture()  # revert any live hover preview (its token restores the real document) so
+            # the canonicalize below is one clean undo step off the real base, not the reflowed hypothetical
             apply()
             _request_render()  # canonicalizing re-keys the tuning solve — render off the loop
 
@@ -3719,6 +3739,9 @@ def index() -> None:
         #     there's no toast-per-keystroke or toast-per-notch spam to suppress.
         if building[0]:
             return
+        end_gesture()  # revert any live family hover preview (its token restores the real document) so
+        # the commit below is one clean undo step — and so a later popup-close leave can't restore the
+        # now-stale pre-hover token over the committed spec (every chooser gesture now carries a token)
         num, sel = rec.selects["preset:target"]
         family = sel.value or "TILT"
         problem = service.target_limit_problem(family, num.value)
@@ -3752,6 +3775,8 @@ def index() -> None:
             return
         apply = _candidate_apply(cid, value)  # complexity / slope dropdowns
         if apply is not None:
+            end_gesture()  # revert any live hover preview (its token restores the real document) so
+            # the trait change below is one clean undo step off the real base, not the reflowed hypothetical
             apply()
         elif cid == "control:diminuator":  # the checkbox passes a bool (replace the diminuator?)
             editor.set_diminuator_replaced(bool(value))
@@ -3895,29 +3920,71 @@ def index() -> None:
             rank_remove[0] = None
             render()
 
-    def chooser_hover(apply):
-        # a dropdown option hover previews applying its candidate, exactly like control_hover (the
-        # CHOOSER gesture carries the option's op; compute_rings snapshots, diffs and reverts — no
-        # reflow, so the open popup and the chooser's own value stay put). Its own kind so
-        # leaving/closing ends only its rings.
+    def chooser_hover(cid, apply):
+        # a dropdown option hover previews applying its candidate. How it previews depends on whether
+        # the pick keeps the user's owned intervals or DROPS some — the same fork the temperament
+        # chooser makes, only detected by whether interval DATA goes away (removed_interval_data),
+        # not by state dimensions:
+        #   • value-only (no owned interval is dropped — a re-solve, a re-formed matrix, a projection
+        #     that keeps the targets) — REFLOW: apply to the document under the gesture's token and
+        #     re-render the would-be grid, so the changed cells actually SHOW their NEW values (a bare
+        #     ring can't move a value), ringed amber against the pre-hover grid (the gesture
+        #     baseline). The hovered chooser's own value + open popup stay steady across that
+        #     re-render (_chooser_reflow_hold, keyed on this gesture's source). Derived/read-only
+        #     tiles that vanish on the way (the canonical-form box once the matrix IS canonical, a
+        #     prescaling tile a scheme hides) are not interval data, so they don't force a redden.
+        #   • interval-dropping (a target-set family that drops targets, a projection that makes every
+        #     target unchanged) — REDDEN, don't reflow: a reflow would just delete the doomed cells
+        #     mid-preview and the user wouldn't see what goes away. Hold the current grid and arm the
+        #     load as a hypothetical candidate — every dropped cell rings RED in place (removed_cell_ids,
+        #     the FULL removal incl. the derived rows), the surviving changed cells amber.
+        # The token is captured ONCE per gesture and survives option-to-option moves; every option
+        # re-bases on it. Reverts on leave / popup-close (chooser_unhover), commits on the chooser's
+        # own select handler (on_preset / on_form_choose / on_control_select / on_target_change, each
+        # of which end_gesture()s first so the click is one clean undo step off the real document).
         g = rec.gesture
         if g is not None and g.kind in ("edit", "drag"):
-            return
-        if g is not None and g.kind != "chooser":
-            take_over_gesture()  # a hover/wheel/temp gives way (a temp's token restores the doc,
-            # and a reflowed temp preview rebuilds the real grid)
+            return  # a keyboard edit / drag owns the grid
+        if g is not None and (g.kind != "chooser" or g.source != cid):
+            take_over_gesture()  # a hover/wheel/temp — or a different chooser — gives way (its token
+            # restores the doc; a reflowed preview rebuilds the real grid)
         if rec.gesture is None:
-            rec.gesture = _Gesture(kind="chooser")
-        rec.gesture.apply = apply
-        paint_rings()
+            rec.gesture = _Gesture(kind="chooser", source=cid,
+                                   token=editor.capture_for_preview(), baseline=last_lay[0])
+        g = rec.gesture
+        editor.restore_for_preview(g.token)  # re-base: each option evaluates from the real document
+        if g.reflowed:                       # a prior option reflowed the DOM — rebuild the real grid
+            g.reflowed = False
+            g.apply = None
+            gesture_render()
+        if apply is None:                    # a placeholder / no-op option: clear any rings, no preview
+            g.apply = None
+            paint_rings()
+            return
+        base = g.baseline
+        apply()                              # evaluate the candidate on the real document...
+        hyp = editor.layout(prev_ids=base.identities if base is not None else None)
+        if base is not None and spreadsheet.removed_interval_data(base, hyp):  # the pick drops owned
+            editor.restore_for_preview(g.token)  # intervals — back to the real doc; keep the grid shape
+            g.apply = apply                      # and redden the dropped cells in place, no reflow
+            paint_rings()
+        else:                                # value-only — reflow into the would-be grid, ringed amber
+            g.apply = None                   # against the baseline (live-mode diff)
+            g.reflowed = True                # keep the chooser's value + open popup steady (_chooser_reflow_hold)
+            gesture_render()
 
     def chooser_unhover():
-        # leaving an option / closing the popup ends only the chooser hover's rings
+        # leaving an option / closing the popup ends the chooser hover: end_gesture restores the real
+        # document (the token), and a REFLOW preview also rebuilds the real grid (its cells reverting
+        # to their pre-hover values), while a redden/amber ring preview just drops its rings.
         g = rec.gesture
         if g is None or g.kind != "chooser":
             return
-        end_gesture()
-        paint_rings()
+        was = end_gesture()
+        if was is not None and was.reflowed:
+            render()       # a reflow preview rebuilds the real grid
+        else:
+            paint_rings()  # a ring-only preview just drops its rings
 
     def _end_temperament_preview():
         # revert a live temperament hover preview (pointer left an option / popup closed):
@@ -4110,13 +4177,13 @@ def index() -> None:
                 spec = f"{int(float(text))}-{family}" if text else family
             except ValueError:
                 spec = family
-            chooser_hover(lambda: editor.set_target_spec(spec))
+            chooser_hover(cid, lambda: editor.set_target_spec(spec))
             return
         apply = _candidate_apply(cid, _option_key(sel, index))
         if apply is None:                          # a placeholder / no-op option
             chooser_unhover()
             return
-        chooser_hover(apply)
+        chooser_hover(cid, apply)
 
     def on_popup(cid, is_open):
         # a chooser's Quasar popup opened/closed: feed the server-side gate (see on_chooser_hover)
