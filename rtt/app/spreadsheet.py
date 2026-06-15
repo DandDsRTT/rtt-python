@@ -3111,14 +3111,21 @@ class _GridBuilder:
         C — temperament/yellow) with the unchanged half (the held/unchanged intervals — tuning/cyan),
         so EVERY tile of the column reads GREEN (the darken blend of the two washes). This overrides
         the per-tile factors: off projection each commas tile keeps its own colour (C-yellow, etc.)."""
+        # The canonical-form reference is a temperament + FORM region: the whole canonical-mapping ROW
+        # and the canonical-generators COLUMN. The mapping these tiles carry is temperament (yellow), so
+        # yellow + the form magenta darken to RED across the region — and where it crosses a cyan
+        # (tuning) column or row, red + cyan = WHITE. Like the superspace region below, it is a BAND the
+        # tiles inherit — add a new column/row through it and the colour comes for free, no per-tile
+        # entry — composing (set-union) with the spine / V-column / per-tile colour the crossing adds.
+        region = {"temperament", "form"} if (rkey == "canon" or ckey == "canongens") else set()
         if self.show_unchanged and ckey == "commas":
-            return {"temperament", "tuning"}
+            return {"temperament", "tuning"} | region
         # a spine family may be one string or a set of families (a both-families band reads green)
         as_groups = lambda g: {g} if isinstance(g, str) else set(g)
         if rkey in SPINE_ROWS and ckey in SPINE_COLUMN_GROUP:
-            return as_groups(SPINE_COLUMN_GROUP[ckey])  # a counts/units row cell: its column's family
+            return as_groups(SPINE_COLUMN_GROUP[ckey]) | region  # a counts/units row cell: its column's family
         if ckey in SPINE_COLUMNS and rkey in SPINE_ROW_GROUP:
-            return as_groups(SPINE_ROW_GROUP[rkey])     # a quantities/units column cell: its row's family
+            return as_groups(SPINE_ROW_GROUP[rkey]) | region     # a quantities/units column cell: its row's family
         # the chapter-9 superspace block is a cyan (tuning) REGION, green only where it crosses a
         # yellow temperament COLUMN (the domain-basis elements / commas, carrying P / C) — a coarse
         # region tint, not the per-object CELL_FACTORS scheme (see SUPERSPACE_REGION_* in grid_tables).
@@ -3128,8 +3135,8 @@ class _GridBuilder:
             groups = {"tuning"}
             if SPINE_COLUMN_GROUP.get(ckey) == "temperament":
                 groups.add("temperament")
-            return groups
-        return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((rkey, ckey), ())}
+            return groups | region
+        return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((rkey, ckey), ())} | region
 
     def cpick_band_y(self, rkey):
         # the per-comma-column picker band, just below the ⟩ foot (above the symbol/caption stack)
@@ -5482,14 +5489,23 @@ class _GridBuilder:
             for _bid, rkey, ckey in self.tiles:
                 if (rkey, ckey) not in self.declared_tiles or not self.tile_open(rkey, ckey):
                     continue
-                groups = sorted(g for g in self.tile_groups(rkey, ckey) if self.settings.get(f"{g}_colorization"))
-                if not groups:
-                    continue
-                tile_x, tile_w = self.tile_span_box(rkey, ckey)  # the merged rank wash spans canon+gens
-                x, w = tile_x - WASH_PAD, tile_w + 2 * WASH_PAD
                 y, h = self.rows[rkey].tile_top - WASH_PAD, self.rows[rkey].tile_h + 2 * WASH_PAD
-                for group in groups:
-                    bands.append((f"{group}:{rkey}:{ckey}", x, y, w, h, group))
+                # the counts "rank" tile is ONE tile spanning the canon-gens + gens columns, but its two
+                # halves colour SEPARATELY — red over the canonical generators (the form region), yellow
+                # over the generators — so wash each column half on its OWN groups, not the merged span.
+                # Every other tile is a single segment over its (possibly caption-widened) tile box.
+                if (rkey, ckey) == ("counts", "gens") and "canongens" in self.col_x:
+                    segments = [("gens", self.tile_box("gens"), self.tile_groups("counts", "gens")),
+                                ("canongens", self.tile_box("canongens"), self.tile_groups("counts", "canongens"))]
+                else:
+                    segments = [(ckey, self.tile_span_box(rkey, ckey), self.tile_groups(rkey, ckey))]
+                for seg_key, (tile_x, tile_w), seg_groups in segments:
+                    groups = sorted(g for g in seg_groups if self.settings.get(f"{g}_colorization"))
+                    if not groups:
+                        continue
+                    x, w = tile_x - WASH_PAD, tile_w + 2 * WASH_PAD
+                    for group in groups:
+                        bands.append((f"{group}:{rkey}:{seg_key}", x, y, w, h, group))
             for bid, x, y, w, h, _ in bands:  # white bases (a layer below the colour bands)
                 self.blocks.append(Block(f"washbase:{bid}", x, y, w, h, tint="base"))
             for bid, x, y, w, h, group in bands:  # the darken colour bands over them

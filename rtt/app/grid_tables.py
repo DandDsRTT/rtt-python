@@ -587,19 +587,16 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("vectors", "primes"): frozenset({"M", "P"}),      # 𝑀ⱼ = 𝐼 (the JI mapping over the domain primes P)
     ("mapping", "gens"): frozenset({"M", "B"}),        # 𝑀𝐺 = 𝐼 (over the generator basis B)
     ("mapping", "detempering"): frozenset({"M"}),      # 𝑀D = 𝐼 (D is neutral, like the other detempering tiles)
-    # the canonical-mapping row + the canonical-generators column: the MAGENTA form family (F), washing
-    # the canonical-form reference. Each tile carries F plus its column's basis, so the darken blend reads
-    # RED over the yellow primes/gens/comma columns (form×temperament) and BLUE over the cyan target/held
-    # columns (form×tuning); the neutral detempering/interest/canon-gens columns stay pure magenta.
-    ("canon", "primes"): frozenset({"F", "P"}),        # 𝑀_C (the canonical mapping) over the yellow primes P → red
-    ("canon", "gens"): frozenset({"F", "B"}),          # 𝐹 (the form matrix) over the yellow generator basis B → red
-    ("canon", "canongens"): frozenset({"F"}),          # 𝐹⁻¹𝐹 = 𝐼, in the magenta canonical-generators column
-    ("canon", "detempering"): frozenset({"F"}),        # 𝑀_C·D = 𝐹 (D is neutral, like the other detempering tiles)
-    ("canon", "commas"): frozenset({"F", "C"}),        # 𝑀_C·C over the yellow comma basis C → red
-    ("canon", "targets"): frozenset({"F", "T"}),       # Y_C = 𝑀_C·T over the cyan target list → blue
-    ("canon", "held"): frozenset({"F", "H"}),          # 𝑀_C·H over the cyan held basis → blue
-    ("canon", "interest"): frozenset({"F"}),           # 𝑀_C·interest (other-intervals are colourless, so bare magenta)
-    ("quantities", "canongens"): frozenset({"F"}),     # the canonical generator ratios heading the magenta column
+    # The canonical-mapping row + the canonical-generators column are a temperament + form REGION (red),
+    # applied to EVERY tile by tile_groups (rkey=="canon" / ckey=="canongens") — NOT listed tile by tile.
+    # So these tiles register ONLY the extra cyan their crossing carries, which darkens the red to WHITE:
+    # the canon row's cyan target / held columns (T / H), and the canon-gens column's tuning maps over the
+    # tuning / projection rows (the embedding G_C and genmap 𝒈_C both carry the cyan G). Every other canon
+    # tile — 𝑀_C, 𝐹, 𝑀_C·D, 𝑀_C·C, 𝐹⁻¹, 𝐹⁻¹𝐹, the g_C ratios — needs no entry: the region alone reds it.
+    ("canon", "targets"): frozenset({"T"}),            # Y_C = 𝑀_C·T: the region's red + the cyan target list → white
+    ("canon", "held"): frozenset({"H"}),               # 𝑀_C·H: the region's red + the cyan held basis → white
+    ("projection", "canongens"): frozenset({"G"}),     # G_C the canonical generator embedding: red + cyan G → white
+    ("tuning", "canongens"): frozenset({"G"}),         # 𝒈_C the canonical generator tuning map: red + cyan G → white
     # the generator tuning map 𝒈 = G; the tempered family 𝒕 = 𝒈𝑀 etc. carry G and M (green).
     # the generators column carries the generator basis B in EVERY tile — like the domain
     # primes column carries P — since every generators-column quantity is over the generators
@@ -667,11 +664,13 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
 SPINE_COLUMN_GROUP = {
     "gens": "temperament", "primes": "temperament", "commas": "temperament",
     "held": "tuning", "targets": "tuning",
-    "canongens": "form",  # the magenta canonical-generators column (its counts/units spine cells)
+    # the canon-gens column needs NO entry — the temperament+form REGION (see tile_groups) reds its
+    # spine cells too; the counts "rank" tile that spans gens+canon-gens splits its wash so the gens
+    # half stays yellow and the canon-gens half goes red (see _emit_washes).
 }
 SPINE_ROW_GROUP = {
     "mapping": "temperament",
-    "canon": "form",  # the magenta canonical-mapping row (its quantities/units spine cells — the g_C ratios)
+    # the canon row needs NO entry — the temperament+form region reds its quantities/units spine cells.
     "tuning": "tuning", "just": "tuning", "retune": "tuning",
     "prescaling": "tuning", "complexity": "tuning",
     "weight": "tuning",                                  # the cyan weight band 𝒘
