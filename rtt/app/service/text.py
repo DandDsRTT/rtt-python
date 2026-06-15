@@ -406,7 +406,9 @@ def plain_text_values(
             ("ss_mapping", "ssgens"): "{" + _ket_list(mlgl, "}", wrap=False) + "]",
             ("ss_mapping", "commas"): _ket_list(list(mapped_C) + ss_u_mapped, "}"),  # M_s→L·C (→ 0) then M_s→L·U over V
             ("ss_mapping", "targets"): _ket_list(mapped_T, "}"),    # Y_L
-            ("ss_mapping", "detempering"): _ket_list(mapped_D, "}"),  # detempering mapped into ss generators
+            # detempering mapped into ss generators: a column-first list in an outer { … ] (gen
+            # coords), matching the grid's { … ] wrap and its row-sibling M_LGL above — not [ … ]
+            ("ss_mapping", "detempering"): "{" + _ket_list(mapped_D, "}", wrap=False) + "]",
             ("ss_mapping", "interest"): _ket_list(mapped_I, "}", wrap=False),
             ("tuning", "ssgens"): _cents_genmap(ss_tun.generator_map),
             ("tuning", "ssprimes"): _cents_map(ss_tun.tuning_map),

@@ -2112,17 +2112,6 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
 # lets the two drift fails here rather than reaching the user.
 _EBK_OPEN, _EBK_CLOSE = "[⟨{", "]⟩}"
 
-# Four tiles whose two views currently DISAGREE and are being brought into line by a parallel
-# identity-object EBK correction (the three M·X = I self-maps render a covector stack in the grid
-# but a vectors/cols-first list in the band; ss_mapping/detempering wraps [ … ] in the band but
-# { … ] in the grid). Their settled target conventions (per the user): the three self-maps are
-# vector lists of generator-coordinate kets ([ […} …]); ss_mapping/detempering keeps the grid's
-# curly { … ] outer. Drop each from this set as its two views converge — this guard then locks it.
-_EBK_CONVENTION_IN_FLIGHT = frozenset({
-    ("mapping", "gens"), ("mapping", "detempering"),       # MG = I, MD = I
-    ("ss_mapping", "ssgens"), ("ss_mapping", "detempering"),  # M_LgL = I, mapped detempering
-})
-
 
 def _ebk_text_convention(text):
     """The bracket convention a plain-text EBK band declares, as
@@ -2241,8 +2230,8 @@ def test_every_plain_text_band_uses_the_same_brackets_as_its_grid_tile():
     for (rkey, ckey) in sorted(b.declared_tiles):
         if rkey not in value_rows or ckey in SPINE_COLUMNS or not b.tile_open(rkey, ckey):
             continue
-        if (rkey, ckey) not in b.ptext_strings or (rkey, ckey) in _EBK_CONVENTION_IN_FLIGHT:
-            continue  # presence is the other guard's job; the in-flight tiles are being converged
+        if (rkey, ckey) not in b.ptext_strings:
+            continue  # presence is the other guard's job
         text_conv = _ebk_canonical(_ebk_text_convention(b.ptext_strings[(rkey, ckey)]))
         grid_conv = _ebk_canonical(_ebk_grid_convention(b, lay, rkey, ckey))
         if text_conv != grid_conv:
