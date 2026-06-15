@@ -126,6 +126,13 @@ CAPTIONS = {
     ("canon", "gens"): "generator form matrix",
     ("canon", "canongens"): "form matrices canceling out",  # 𝐹⁻¹𝐹 = 𝐼 (gated on identity_objects)
     ("canon", "primes"): "canonical mapping",
+    # the canonical-mapping row's mapped lists — the canonical-form twins of the mapping row's
+    # M·X tiles (mapped through 𝑀_C instead of 𝑀), surfaced when a non-canonical form is chosen
+    ("canon", "detempering"): "canonically mapped generator detemperings",
+    ("canon", "commas"): "canonically mapped comma basis (made to vanish!)",
+    ("canon", "held"): "canonically mapped held interval basis",
+    ("canon", "targets"): "canonically mapped target interval list",
+    ("canon", "interest"): "canonically mapped intervals",
     ("vectors", "held"): "held interval basis",
     ("vectors", "detempering"): "generator detempering",
     ("vectors", "primes"): "JI mapping",                 # 𝑀ⱼ = 𝐼 (domain primes as vectors over themselves)
@@ -285,6 +292,12 @@ SYMBOLS = {
     # generator form matrix 𝐹 over the (canonical) generators, with 𝐹·𝑀 = 𝑀_C.
     ("canon", "primes"): f"𝑀{SUBSCRIPT_C}",
     ("canon", "gens"): "𝐹",
+    # the canonical-mapping row's mapped products (𝑀_C-baked twins of 𝑀D / 𝑀C / 𝑀H / Y); the
+    # canonically mapped intervals carry none, like the mapping row's loose interest collection
+    ("canon", "detempering"): f"𝑀{SUBSCRIPT_C}D",
+    ("canon", "commas"): f"𝑀{SUBSCRIPT_C}C",
+    ("canon", "held"): f"𝑀{SUBSCRIPT_C}H",
+    ("canon", "targets"): f"Y{SUBSCRIPT_C}",
     ("mapping", "primes"): "𝑀",
     # 𝐅⁻¹𝐅 = 𝐼 over the canonical-generators column — the form matrices canceling out (the canon
     # row's 𝑀_C / 𝐹 symbols are declared above, beside the JI mapping). Units g_C/g_C.
@@ -430,6 +443,14 @@ COL_LABEL_LETTERS = {
     ("mapping", "commas"): "𝑀𝐜",
     ("mapping", "targets"): "𝐲",
     ("mapping", "held"): "𝑀𝐡",
+    # the canonical-mapping row's mapped lists — the 𝑀_C-baked twins of the mapping row's column
+    # labels (𝑀𝐝 / 𝑀𝐜 / 𝐲 / 𝑀𝐡 / 𝑀𝐢 → 𝑀_C𝐝 / 𝑀_C𝐜 / 𝐲_C / 𝑀_C𝐡 / 𝑀_C𝐢). The commas 𝐜 swaps to 𝐯
+    # with the V = C|U consolidation, exactly like the mapping row's (see the 𝐜 → 𝐯 rule below).
+    ("canon", "detempering"): f"𝑀{SUBSCRIPT_C}𝐝",
+    ("canon", "commas"): f"𝑀{SUBSCRIPT_C}𝐜",
+    ("canon", "targets"): f"𝐲{SUBSCRIPT_C}",
+    ("canon", "held"): f"𝑀{SUBSCRIPT_C}𝐡",
+    ("canon", "interest"): f"𝑀{SUBSCRIPT_C}𝐢",
     # tuning row — single covector applied to each column set; the tempered target
     # list 𝐚 is bold-upright as a list, but each cell is a SCALAR so its index reads
     # as plain "a" (neither bold nor italic) — same for the other scalar lists below
@@ -688,6 +709,13 @@ MNEMONICS = {
     ("vectors", "primes"): "mapping",        # 𝑀ⱼ → underline the "m" in "JI mapping"
     ("mapping", "gens"): "mapped",            # 𝑀𝐺 → underline the "m" in "mapped generators"
     ("mapping", "detempering"): "mapped",     # 𝑀D → underline the "m" in "mapped generator detemperings"
+    # the canonical-mapping row: 𝑀_C → "mapping" in "canonical mapping"; 𝐹 → "form"; the mapped
+    # products' 𝑀_C → the "m" of "mapped" (the canonically MAPPED … captions). Y_C / interest carry none.
+    ("canon", "primes"): "mapping",
+    ("canon", "gens"): "form",
+    ("canon", "detempering"): "mapped",
+    ("canon", "commas"): "mapped",
+    ("canon", "held"): "mapped",
     ("ss_mapping", "ssprimes"): "mapping",    # 𝑀L → underline the "m" in "superspace mapping"
     ("ss_vectors", "ssprimes"): "mapping",  # 𝑀ⱼL → "m" in "superspace JI mapping"
     ("tuning", "ssgens"): "generator",        # 𝒈L → "g" in "superspace generator tuning map"
@@ -742,6 +770,12 @@ EQUIVALENCES = {
     ("ss_mapping", "primes"): " = 𝑀LBL",
     ("ss_mapping", "targets"): " = 𝑀ₛ→LT",
     ("mapping", "commas"): " = 𝑂",
+    # the canonical-mapping row's mapped products: 𝑀_C D = 𝐹 (since 𝐅·𝑀 = 𝑀_C and 𝑀·D = 𝐼, so
+    # 𝑀_C·D = 𝐅𝑀·D = 𝐅 — verified against the library), the mapped comma basis vanishes to 𝑂,
+    # and Y_C is 𝑀_C·T
+    ("canon", "detempering"): " = 𝐹",
+    ("canon", "commas"): " = 𝑂",
+    ("canon", "targets"): f" = 𝑀{SUBSCRIPT_C}T",
     ("vectors", "primes"): " = 𝐼",       # M_j = I
     ("mapping", "gens"): " = 𝐼",         # MG = I
     ("mapping", "detempering"): " = 𝐼",  # MD = I
@@ -897,6 +931,17 @@ UNITS = {
     ("mapping", "commas"): "g",
     ("mapping", "targets"): "g",
     ("mapping", "interest"): "g",
+    # the canonical-mapping row runs into the CANONICAL generators g_C (not the current form's g):
+    # 𝑀_C is g_C/p, the form matrix 𝐹 is g_C/g (current generators → canonical), and every mapped
+    # list (𝑀_C D / 𝑀_C C / 𝑀_C H / Y_C / 𝑀_C·interest) is plain g_C — the g_C twins of the mapping
+    # row's g/p, g/g and g. cell_unit subscripts the g_C token per canonical row (like the gL token).
+    ("canon", "primes"): f"g{SUBSCRIPT_C}/p",
+    ("canon", "gens"): f"g{SUBSCRIPT_C}/g",
+    ("canon", "detempering"): f"g{SUBSCRIPT_C}",
+    ("canon", "commas"): f"g{SUBSCRIPT_C}",
+    ("canon", "held"): f"g{SUBSCRIPT_C}",
+    ("canon", "targets"): f"g{SUBSCRIPT_C}",
+    ("canon", "interest"): f"g{SUBSCRIPT_C}",
     ("tuning", "gens"): "¢/g",
     ("tuning", "primes"): "¢/p",
     ("tuning", "commas"): "¢",

@@ -7013,6 +7013,76 @@ def test_canonical_mapping_row_carries_its_own_symbols_and_row_headers():
     assert on["matlabel:row:canon:gens:0"].text == f"𝒇{s1}"        # 𝐹's rows 𝒇ᵢ
 
 
+def test_canonical_mapping_row_renders_its_mapped_product_tiles():
+    # the canonical-mapping row carries 𝑀_C's mapped lists — the canonical-form twins of the
+    # mapping row's read-only M·X tiles, over the rc canonical rows: 𝑀_C·D = 𝐹 (the generator form
+    # matrix), 𝑀_C·C = 𝑂 (the comma basis vanishes), and 𝑀_C·H / 𝑀_C·interest. Built over the app
+    # default (a NON-canonical fifth form), so 𝑀_C genuinely differs from the stored mapping 𝑀.
+    M = ((1, 1, 0), (0, 1, 4))
+    Mc = service.canonical_mapping(M)                 # ((1, 0, -4), (0, 1, 4))
+    F = service.form_matrix(M)                        # 𝑀_C·D = 𝐹
+    held = [(-1, 1, 0)]                               # one held interval (3/2)
+    interest = ((1, -2, 1),)                          # one interval of interest
+    s = settings.defaults()
+    s.update(form=True, generator_detempering=True, optimization=True)
+    cells = {c.id: c for c in spreadsheet.build(
+        service.from_mapping(M), s, held_vectors=held, interest=interest).cells}
+    rc, r = len(Mc), len(M)
+    # the canonical mapping 𝑀_C itself (differs from the stored fifth-form 𝑀)
+    assert [[cells[f"cell:canon:{i}:{p}"].text for p in range(3)] for i in range(rc)] == \
+        [[str(x) for x in row] for row in Mc]
+    # 𝑀_C·D = 𝐹
+    assert [[cells[f"cell:canon_detempering:{i}:{c}"].text for c in range(r)] for i in range(rc)] == \
+        [[str(x) for x in row] for row in F]
+    # 𝑀_C·C = 𝑂 — the lone comma maps to a zero column
+    assert all(cells[f"cell:canon_mapped_comma:{i}:0"].text == "0" for i in range(rc))
+    # 𝑀_C·H and 𝑀_C·interest — 𝑀_C applied to each column vector
+    mc_dot = lambda v: [str(sum(Mc[i][p] * v[p] for p in range(3))) for i in range(rc)]
+    assert [cells[f"cell:canon_hmapped:{i}:0"].text for i in range(rc)] == mc_dot(held[0])
+    assert [cells[f"cell:canon_imapped:{i}:0"].text for i in range(rc)] == mc_dot(interest[0])
+
+
+def test_canonical_mapping_row_tile_symbols_units_and_equivalences():
+    # full parity for the mapped tiles: 𝑀_C-baked symbols + their defining equations, the canonical-
+    # generator units g_C (g_C/p for 𝑀_C, g_C/g for 𝐹, plain g_C for the mapped lists), and the
+    # 𝑀_C-baked column headers (𝑀_C𝐝 / 𝑀_C𝐜 / 𝐲_C / 𝑀_C𝐡).
+    C, s1 = spreadsheet.SUBSCRIPT_C, spreadsheet._sub(1)
+    s = settings.defaults()
+    s.update(form=True, symbols=True, equivalences=True, units=True, header_symbols=True,
+             generator_detempering=True, optimization=True)
+    cells = {c.id: c for c in spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), s, held_vectors=[(-1, 1, 0)]).cells}
+    assert cells["symbol:canon:detempering"].text == f"𝑀{C}D = 𝐹"
+    assert cells["symbol:canon:commas"].text == f"𝑀{C}C = 𝑂"
+    assert cells["symbol:canon:targets"].text == f"Y{C} = 𝑀{C}T"
+    assert cells["symbol:canon:held"].text == f"𝑀{C}H"
+    assert cells["units:canon:primes"].text == f"units: g{C}/p"
+    assert cells["units:canon:gens"].text == f"units: g{C}/g"
+    assert cells["units:canon:detempering"].text == f"units: g{C}"
+    assert cells["units:canon:targets"].text == f"units: g{C}"
+    assert cells["matlabel:col:canon:detempering:0"].text == f"𝑀{C}𝐝{s1}"
+    assert cells["matlabel:col:canon:commas:0"].text == f"𝑀{C}𝐜{s1}"
+    assert cells["matlabel:col:canon:targets:0"].text == f"𝐲{C}{s1}"
+    assert cells["matlabel:col:canon:held:0"].text == f"𝑀{C}𝐡{s1}"
+
+
+def test_canonical_mapping_row_commas_symbol_keeps_subscript_under_unchanged():
+    # under the V = C|U consolidation (projection on) the mapped-comma tile reads the mapped
+    # UNROTATED vector list: the comma-basis C swaps to V, but the canonical subscript's own "C"
+    # sentinel must survive the swap — 𝑀_C C → 𝑀_C V, never 𝑀_V V (the bug this guards).
+    C = spreadsheet.SUBSCRIPT_C
+    s = settings.defaults()
+    s.update(form=True, symbols=True, header_symbols=True, projection=True, optimization=True)
+    cells = {c.id: c for c in spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+        held_basis_ratios=("2/1", "5/4")).cells}
+    # the "= 𝑂" equivalence drops under V (the column is no longer the bare vanishing comma basis),
+    # for both rows; what matters here is the subscript-C surviving the comma C → V swap
+    assert cells["symbol:canon:commas"].text == f"𝑀{C}V"           # subscript-C survives, comma C → V
+    assert cells["symbol:mapping:commas"].text == "𝑀V"             # the main (non-canonical) row swaps, no subscript
+    assert cells["matlabel:col:canon:commas:0"].text.startswith(f"𝑀{C}𝐯")  # the bold 𝐜 → 𝐯 in the header too
+
+
 def test_interest_is_a_top_level_toggle_after_the_tuning_tiles_group():
     # "other intervals of interest" is a standalone grey column (not part of the cyan
     # tuning region), so it owns a top-level toggle: built (implemented), default on, and

@@ -1511,6 +1511,23 @@ class _GridBuilder:
             ("block:complexity:detempering", "complexity", "detempering"),
             ("block:urow:detempering", "units", "detempering"),
         ) if self.show_detempering else ()
+        # the canonical-mapping row's mapped lists — 𝑀_C applied to each column's basis, the
+        # canonical-form twins of the mapping row's 𝑀·X tiles (read-only, surfaced when a non-
+        # canonical form is chosen). 𝑀_C·D = 𝐹 (𝐅𝑀 = 𝑀_C and 𝑀D = 𝐼); 𝑀_C·C vanishes to 𝑂; Y_C = 𝑀_C·T.
+        self.canon_mapped = service.mapped_intervals(self.canon_mapping, self.targets, self.elements)
+        self.canon_held_mapped = service.mapped_intervals(self.canon_mapping, self.held_ratios, self.elements)
+        self.canon_interest_mapped = service.mapped_intervals(self.canon_mapping, self.interest_ratios, self.elements)
+        self.canon_mapped_commas = service.mapped_commas(self.canon_mapping, self.state.comma_basis)
+        self.canon_mapped_detempering = (service.mapped_commas(self.canon_mapping, self.detempering_vectors)
+                                         if self.show_detempering else ())
+        # 𝑀_C·U for the consolidated V = C|U column's unchanged half (None where U is dashed), shaped
+        # [canon row][U column] like the mapping row's unchanged_mapped
+        _canon_u = [None if (self.unchanged_basis is None or self.unchanged_basis[j] is None)
+                    else tuple(row[0] for row in service.mapped_commas(self.canon_mapping, (self.unchanged_basis[j],)))
+                    for j in range(self.nu)]
+        self.canon_unchanged_mapped = tuple(
+            tuple((None if _canon_u[j] is None else _canon_u[j][i]) for j in range(self.nu))
+            for i in range(self.rc))
         return interest_tiles, held_tiles, detempering_tiles
 
     def _resolve_projection_data(self, show_tuning) -> None:
@@ -1640,13 +1657,28 @@ class _GridBuilder:
                 ss_projection_col_tiles += (("block:ssproj:held", "ss_projection", "held"),)
             if self.mi_shown:
                 ss_projection_col_tiles += (("block:ssproj:interest", "ss_projection", "interest"),)
+        # the canonical-mapping row's column tiles (the mapped 𝑀_C·X lists), gated on the canon row
+        # being surfaced and each on its column being present — exactly like projection_col_tiles, so a
+        # conditional column drops its canon tile with it. (canon × primes / gens are the static
+        # block:canon / block:form; col_open gates display, this gates declaration off when form is canonical.)
+        canon_col_tiles = ()
+        if self.show_canon:
+            canon_col_tiles += (("block:canon_comma", "canon", "commas"),)  # 𝑀_C·C = 𝑂 (+ V's unchanged half)
+            if self.show_detempering:
+                canon_col_tiles += (("block:canon_detempering", "canon", "detempering"),)  # 𝑀_C·D = 𝐹
+            if self.targets_editable:
+                canon_col_tiles += (("block:canon_mapped", "canon", "targets"),)  # Y_C = 𝑀_C·T
+            if self.nh_shown:
+                canon_col_tiles += (("block:canon_held", "canon", "held"),)  # 𝑀_C·H
+            if self.mi_shown:
+                canon_col_tiles += (("block:canon_interest", "canon", "interest"),)  # 𝑀_C·interest
         # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
         # tile (see opt_box below), not in a tile/row of their own
         self.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
                  + SUPERSPACE_COUNTS_TILES
                  + TILES + UNITS_TILES + SUPERSPACE_TILES
                  + interest_tiles + held_tiles + detempering_tiles + projection_col_tiles
-                 + ss_projection_col_tiles)
+                 + ss_projection_col_tiles + canon_col_tiles)
         # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
         # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
         # vanishes everywhere — panels, toggles, cells, brackets and marks — with no chance
@@ -3968,13 +4000,15 @@ class _GridBuilder:
                                      COL_W, ROW_H, "mapped", text="0" if self.ghost_comma else "", pending=True))
 
     def _emit_canon_band(self) -> None:
-        """The canonical-mapping form box and the generator form matrix."""
+        """The canonical-mapping row: 𝑀_C, the generator form matrix 𝐹, and 𝑀_C's mapped lists."""
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
         # read-only maps over the primes, framed like the mapping matrix one row above it; the
         # generator form matrix F (units g_C/g) rides its gens column as a bordered r×r grid.
         # The canonical generators ratio list (g_C) labels the canon rows in the quantities spine,
         # exactly as the stored generators label the mapping rows one row below (𝐹⁻¹𝐹 = 𝐼 rides
-        # the canonical-generators column — see _emit_identity_objects).
+        # the canonical-generators column — see _emit_identity_objects). The remaining tiles are
+        # 𝑀_C's mapped lists (𝑀_C·D / 𝑀_C·C / 𝑀_C·H / Y_C / 𝑀_C·interest) — the canonical-form twins
+        # of the mapping row's read-only M·X tiles, emitted the same way (gen=i over the rc rows).
         if self.row_open("canon"):
             if self.tile_open("canon", "quantities"):  # the canonical generators in the spine, labelling the canon rows
                 for i in range(self.rc):
@@ -3982,11 +4016,39 @@ class _GridBuilder:
             if self.tile_open("canon", "primes"):
                 for i in range(self.rc):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:canon:{i}:{p}", self.prime_left(p), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.canon_mapping[i][p]), unit=self.cell_unit("canon", "primes", gen=i, prime=p)))
+                        self.cells.append(CellBox(f"cell:canon:{i}:{p}", self.prime_left(p), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.canon_mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("canon", "primes", gen=i, prime=p)))
             if self.tile_open("canon", "gens"):
                 for i in range(len(self.form_M)):
                     for j in range(len(self.form_M)):
                         self.cells.append(CellBox(f"cell:form:{i}:{j}", self.gen_left(j), self.canon_top(i), COL_W, ROW_H, "formcell", text=str(self.form_M[i][j]), unit=self.cell_unit("canon", "gens", gen=i)))
+            # 𝑀_C's mapped lists — the canonical-form twins of the mapping row's read-only M·X tiles
+            for i in range(self.rc):
+                if self.tile_open("canon", "detempering"):  # 𝑀_C·D = 𝐹, an rc × r genmap like 𝑀D = 𝐼
+                    for c in range(self.r):
+                        self.cells.append(CellBox(f"cell:canon_detempering:{i}:{self.col_token('detempering', c)}", self.detempering_left(c), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.canon_mapped_detempering[i][c]), gen=i, unit=self.cell_unit("canon", "detempering", gen=i)))
+                if self.tile_open("canon", "targets"):  # Y_C = 𝑀_C·T
+                    self._emit_canon_mapped_tile("canon_mapped", "targets", self.k, self.target_left, self.canon_mapped, self.pending_target, i)
+                if self.tile_open("canon", "interest"):  # 𝑀_C·interest (stands alone, no outer bracket)
+                    self._emit_canon_mapped_tile("canon_imapped", "interest", self.mi, self.interest_left, self.canon_interest_mapped, self.pending_interest, i)
+                if self.tile_open("canon", "held"):  # 𝑀_C·H
+                    self._emit_canon_mapped_tile("canon_hmapped", "held", self.nh, self.held_left, self.canon_held_mapped, self.pending_held, i)
+                if self.tile_open("canon", "commas"):  # 𝑀_C·C vanishes to 𝑂; the V = C|U unchanged half maps too
+                    for c in range(self.nc):
+                        self.cells.append(CellBox(f"cell:canon_mapped_comma:{i}:{self.col_token('commas', c)}", self.comma_left(c), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.canon_mapped_commas[i][c]), gen=i, unit=self.cell_unit("canon", "commas", gen=i)))
+                    if self.comma_draft:  # green the draft comma column through the canon row too
+                        self.cells.append(CellBox(f"cell:canon_mapped_comma:{i}:{self.pending_col_token('commas')}", self.comma_left(self.nc), self.canon_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+                    for j in range(self.nu):
+                        ut = DASH if self.canon_unchanged_mapped[i][j] is None else str(self.canon_unchanged_mapped[i][j])
+                        self.cells.append(CellBox(f"cell:canon_mapped_unchanged:{i}:{j}", self.comma_left(self.nc_shown + j), self.canon_top(i), COL_W, ROW_H, "mapped", text=ut, gen=i, unit=self.cell_unit("canon", "commas", gen=i)))
+
+    def _emit_canon_mapped_tile(self, prefix, group, count, left_fn, data, pending, i) -> None:
+        """One canon-row read-only 𝑀_C·X tile (targets / interest / held) for canonical row i: a
+        "mapped" CellBox per committed column carrying str(data[i][col]), then a green placeholder
+        under the open draft column — the canon-row twin of _emit_mapped_tile."""
+        for col in range(count):
+            self.cells.append(CellBox(f"cell:{prefix}:{i}:{self.col_token(group, col)}", left_fn(col), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(data[i][col]), gen=i, unit=self.cell_unit("canon", group, gen=i)))
+        if pending is not None:  # blank green placeholder under the draft column
+            self.cells.append(CellBox(f"cell:{prefix}:{i}:draft", left_fn(count), self.canon_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
 
     def _emit_qty_list(self, q: _QtyList, qy: float, branch_minus) -> None:
         """Emit one editable interval-ratio column-list of the quantities row (targets / held /
@@ -4890,12 +4952,24 @@ class _GridBuilder:
         if self.row_open("canon") and self.tile_open("canon", "primes"):  # canonical maps: ⟨ … ] per row
             for i in range(self.rc):
                 self.bracket(f"canon:map:{i}", MAP_BRACKETS, "primes", self.canon_top(i), ROW_H, stacked=True)
-        if self.row_open("canon") and self.tile_open("canon", "gens"):  # the generator form matrix: { … ] per row
-            for i in range(len(self.form_M)):
                 self.bracket(f"form:map:{i}", GENMAP_BRACKETS, "gens", self.canon_top(i), ROW_H, stacked=True)
         if self.row_open("canon") and self.tile_open("canon", "canongens"):  # 𝐹⁻¹𝐹 = 𝐼: { … ] per row, like 𝑀𝐺
             for i in range(self.rc):
                 self.bracket(f"fcancel:map:{i}", GENMAP_BRACKETS, "canongens", self.canon_top(i), ROW_H, stacked=True)
+        # the canonical-mapping row's mapped lists, framed like their mapping-row twins: 𝑀_C·D = 𝐹 a
+        # per-row genmap { … ] (stacked, like 𝑀D); 𝑀_C·C / Y_C / 𝑀_C·H a [ ] over the rc rows;
+        # 𝑀_C·interest stands alone (no outer wrap), mirroring the mapping row's interest.
+        if self.row_open("canon"):
+            canon_y, canon_h = (self.rows["canon"].y if "canon" in self.rows else 0), self.rc * ROW_H
+            if self.tile_open("canon", "detempering"):
+                for i in range(self.rc):
+                    self.bracket(f"canon_detempering:{i}", GENMAP_BRACKETS, "detempering", self.canon_top(i), ROW_H, stacked=True)
+            if self.tile_open("canon", "commas"):
+                self.bracket("canon_comma", LIST_BRACKETS, "commas", canon_y, canon_h, fit=True)
+            if self.tile_open("canon", "targets"):
+                self.bracket("canon_mapped", LIST_BRACKETS, "targets", canon_y, canon_h, fit=True)
+            if self.nh and self.tile_open("canon", "held"):
+                self.bracket("canon_hmapped", LIST_BRACKETS, "held", canon_y, canon_h, fit=True)
         if self.row_open("projection") and self.tile_open("projection", "primes"):  # P = GM: ⟨ … ] per row, like the mapping
             for i in range(self.d):
                 self.bracket(f"proj:{i}", MAP_BRACKETS, "primes", self.proj_top(i), ROW_H, stacked=True)
@@ -5399,7 +5473,10 @@ class _GridBuilder:
                 if ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:  # e.g. the target list T → Tₚ
                     base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
                 if self.show_unchanged and ckey == "commas":  # the whole column reads V, not C
-                    base_symbol = base_symbol.replace("C", "V")
+                    # swap the comma-basis C → V, but PROTECT a baked-in subscript-C marker (the canon
+                    # row's symbols carry it already, e.g. 𝑀_C C) so the swap never turns its sentinel
+                    # "C" into "V" — the main mapping row instead gets its subscript added just below.
+                    base_symbol = base_symbol.replace(SUBSCRIPT_C, "\x00").replace("C", "V").replace("\x00", SUBSCRIPT_C)
                 # mark the canonical form with a subscript C after the leading glyph (𝑀/Y/𝒈/G), AFTER
                 # the unchanged C→V swap so the mapped-comma tile reads 𝑀_C·V and the subscript's own
                 # "C" sentinel is never hit by that swap. The matrix labels get the same treatment.
