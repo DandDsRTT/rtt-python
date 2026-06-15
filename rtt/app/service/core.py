@@ -536,12 +536,12 @@ def inverse_form_matrix(mapping) -> Matrix:
 
 
 def mapping_from_form_matrix(mapping, form_rows) -> Matrix | None:
-    """The mapping re-stored in the generator basis named by the form matrix ``F`` — what editing the
-    interactive ``𝐹`` tile does: ``M = F⁻¹·M_C`` (the SAME temperament, ``M_C = canonical(M)``, a new
-    generating set), so ``F·M = M_C`` holds for the typed ``F``. The mirror of the ``<choose form>``
-    control, but for an arbitrary typed matrix rather than a named form. ``None`` when ``F`` isn't a
-    valid form matrix: not square ``r×r``, non-integer, or not unimodular (``det ≠ ±1`` — then ``F⁻¹``
-    isn't integer and ``M`` wouldn't be an integer mapping)."""
+    """The mapping re-stored in the generator basis named by the generator form matrix ``F`` — what
+    editing the interactive ``𝐹`` tile does: ``M = F·M_C`` (the SAME temperament, ``M_C = canonical(M)``,
+    a new generating set), so the typed ``F`` reads back as the form matrix of the new mapping. The
+    mirror of the ``<choose form>`` control, but for an arbitrary typed matrix rather than a named form.
+    ``None`` when ``F`` isn't a valid form matrix: not square ``r×r``, non-integer, or not unimodular
+    (``det ≠ ±1`` — then ``F·M_C`` wouldn't be a generating set of the same temperament)."""
     m = _to_matrix(mapping)
     r = len(m)
     f = _to_matrix(form_rows)
@@ -552,9 +552,9 @@ def mapping_from_form_matrix(mapping, form_rows) -> Matrix | None:
     except (TypeError, ValueError):
         return None  # a non-integer entry
     if fm.det() not in (1, -1):
-        return None  # not unimodular — F⁻¹ wouldn't be an integer matrix
+        return None  # not unimodular — F·M_C wouldn't be the same temperament (a new HNF)
     canon = sp.Matrix([list(row) for row in canonical_ma(m)])
-    new = fm.inv() * canon
+    new = fm * canon
     return tuple(tuple(int(new[i, j]) for j in range(new.cols)) for i in range(new.rows))
 
 

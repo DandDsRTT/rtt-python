@@ -22,8 +22,10 @@ def mapping_cell(token, prime):
 
 
 def form_cell(row, col):
-    """A generator form matrix 𝐹 cell { … ] — canonical-generator row, stored-generator column."""
-    return f"cell:form:{row}:{col}"
+    """A generator form matrix 𝐹 cell { … ] — stored-generator row, canonical-generator column (the
+    EDITABLE 𝐹, 𝑀 = 𝐹𝑀_C, which rides the mapping row's canonical-generators column). The id keeps
+    the historical "cell:finv" prefix from before the 𝐹/𝐹⁻¹ tiles were swapped to match the convention."""
+    return f"cell:finv:{row}:{col}"
 
 
 def comma_cell(token, prime):

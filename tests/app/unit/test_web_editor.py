@@ -59,21 +59,22 @@ def test_set_mapping_form_positive_generator_flip_and_shift_differ():
 
 
 def test_edit_form_matrix_restores_the_mapping_in_the_typed_generating_set_undoably():
-    # editing the interactive 𝐹 tile re-stores M = F⁻¹·M_C: the SAME temperament in a new generating
-    # set, so the canonical mapping (and comma basis) is unchanged and 𝐹 reads back what was typed.
+    # editing the interactive 𝐹 tile re-stores M = F·M_C: the SAME temperament in a new generating set,
+    # so the canonical mapping (and comma basis) is unchanged and 𝐹 reads back what was typed. Use a
+    # non-involution 𝐹 = ((1,2),(0,1)) so F ≠ F⁻¹ (a real round-trip, not a coincidence).
     editor = Editor()  # default meantone ((1,1,0),(0,1,4)), canonical ((1,0,-4),(0,1,4))
     canon, commas = service.canonical_mapping(editor.state.mapping), editor.state.comma_basis
-    assert editor.edit_form_matrix(((1, 1), (0, -1))) is True
-    assert editor.state.mapping == ((1, 1, 0), (0, -1, -4))            # M = F⁻¹·M_C
+    assert editor.edit_form_matrix(((1, 2), (0, 1))) is True
+    assert editor.state.mapping == ((1, 2, 4), (0, 1, 4))             # M = F·M_C
     assert service.canonical_mapping(editor.state.mapping) == canon    # same temperament...
     assert editor.state.comma_basis == commas                         # ...same commas
-    assert service.form_matrix(editor.state.mapping) == ((1, 1), (0, -1))  # 𝐹 reads back the typed matrix
+    assert service.inverse_form_matrix(editor.state.mapping) == ((1, 2), (0, 1))  # the 𝐹 tile reads back the typed matrix
     editor.undo()  # one undoable edit
     assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))
 
 
 def test_edit_form_matrix_rejects_a_non_unimodular_matrix():
-    # a typed 𝐹 with det ≠ ±1 has no integer inverse, so it can't define an integer mapping — rejected,
+    # a typed 𝐹 with det ≠ ±1 isn't a generator-basis change of the same temperament — rejected,
     # leaving the state (and undo stack) untouched, so the caller can redden the box / toast
     editor = Editor()
     before = editor.state
@@ -86,8 +87,8 @@ def test_edit_form_matrix_rejects_a_non_unimodular_matrix():
 
 def test_try_edit_form_matrix_text_parses_and_applies():
     editor = Editor()
-    assert editor.try_edit_form_matrix_text("[{1 1]{0 -1]}") is True
-    assert editor.state.mapping == ((1, 1, 0), (0, -1, -4))
+    assert editor.try_edit_form_matrix_text("[{1 2]{0 1]}") is True
+    assert editor.state.mapping == ((1, 2, 4), (0, 1, 4))  # M = F·M_C
 
 
 def test_canonicalize_comma_basis_restores_canonical_form_undoably():

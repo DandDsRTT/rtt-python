@@ -390,7 +390,7 @@ def _vgroup_key(cb: spreadsheet.CellBox) -> str:
     if cb.kind in ("mapping", "targetcell"):
         return cb.id.rsplit(":", 1)[0]
     if cb.kind == "formcell":  # the WHOLE 𝐹 matrix is one group — it commits only when focus leaves
-        return "cell:form"     # the whole tile (a single cell mid-edit can break F's unimodularity)
+        return "cell:finv"     # the whole tile (a single cell mid-edit can break F's unimodularity)
     parts = cb.id.split(":")
     return ":".join(parts[:2] + parts[3:])
 
@@ -3110,19 +3110,19 @@ def index() -> None:
         _edit_vector_grid(_MAPPING_EDIT, preview)
 
     def on_form_change(preview=False):
-        # the interactive generator form matrix 𝐹: read the WHOLE rc×r grid (over the generators, NOT
-        # the d primes — so it can't ride the _edit_vector_grid factory), and re-store M = F⁻¹·M_C. An
+        # the interactive generator form matrix 𝐹: read the WHOLE r×rc grid (over the generators, NOT
+        # the d primes — so it can't ride the _edit_vector_grid factory), and re-store M = F·M_C. An
         # invalid 𝐹 (non-integer mid-edit → preview nothing; a complete but non-unimodular one → toast
         # + revert) leaves the mapping untouched, like on_mapping_change. Gated on the form-tiles layer.
         if building[0] or not editor.settings.get("form_tiles"):
             return
         r = len(editor.state.mapping)
         rc = len(service.canonical_mapping(editor.state.mapping))
-        if any(ids.form_cell(i, j) not in rec.inputs for i in range(rc) for j in range(r)):
+        if any(ids.form_cell(i, j) not in rec.inputs for i in range(r) for j in range(rc)):
             if preview:
                 _edit_candidate(None)
             return  # the 𝐹 cells aren't shown (folded away)
-        rows = [[_parse_int(rec.inputs[ids.form_cell(i, j)].value) for j in range(r)] for i in range(rc)]
+        rows = [[_parse_int(rec.inputs[ids.form_cell(i, j)].value) for j in range(rc)] for i in range(r)]
         if any(v is None for row in rows for v in row):
             if preview:
                 _edit_candidate(None)
@@ -3567,7 +3567,7 @@ def index() -> None:
             value = service.simple_matrix_to_ebk(value, _PTEXT_DUAL_VECTOR_KIND.get(cid, False))
         if cid == "ptext:mapping:primes":
             ok = editor.try_edit_mapping_text(value)
-        elif cid == "ptext:canon:gens":  # a typed generator form matrix 𝐹 re-stores M as F⁻¹·M_C
+        elif cid == "ptext:mapping:canongens":  # a typed generator form matrix 𝐹 re-stores M as F·M_C
             ok = editor.try_edit_form_matrix_text(value)
         elif cid == "ptext:vectors:commas":
             ok = editor.try_edit_comma_basis_text(value)

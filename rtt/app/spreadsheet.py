@@ -4084,10 +4084,10 @@ class _GridBuilder:
                 for i in range(self.rc):
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:canon:{i}:{p}", self.prime_left(p), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.canon_mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("canon", "primes", gen=i, prime=p)))
-            if self.tile_open("canon", "gens"):
-                for i in range(len(self.form_M)):
+            if self.tile_open("canon", "gens"):  # 𝐹⁻¹ (g_C/g, 𝑀_C = 𝐹⁻¹𝑀): read-only (the EDITABLE form
+                for i in range(len(self.form_M)):  # matrix 𝐹 is its dual, in the mapping row's canongens column)
                     for j in range(len(self.form_M)):
-                        self.cells.append(CellBox(f"cell:form:{i}:{j}", self.gen_left(j), self.canon_top(i), COL_W, ROW_H, "formcell", text=str(self.form_M[i][j]), unit=self.cell_unit("canon", "gens", gen=i)))
+                        self.cells.append(CellBox(f"cell:form:{i}:{j}", self.gen_left(j), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.form_M[i][j]), unit=self.cell_unit("canon", "gens", gen=i)))
             # 𝑀_C's mapped lists — the canonical-form twins of the mapping row's read-only M·X tiles
             for i in range(self.rc):
                 if self.tile_open("canon", "detempering"):  # 𝑀_C·D = 𝐹, an rc × r genmap like 𝑀D = 𝐼
@@ -4107,14 +4107,16 @@ class _GridBuilder:
                     for j in range(self.nu):
                         ut = DASH if self.canon_unchanged_mapped[i][j] is None else str(self.canon_unchanged_mapped[i][j])
                         self.cells.append(CellBox(f"cell:canon_mapped_unchanged:{i}:{j}", self.comma_left(self.nc_shown + j), self.canon_top(i), COL_W, ROW_H, "mapped", text=ut, gen=i, unit=self.cell_unit("canon", "commas", gen=i)))
-        # the inverse generator form matrix 𝐹⁻¹ (r×rc) rides the MAPPING row in the canonical-generators
-        # column — the dual of 𝐹 (canon row) above it: 𝑀 = 𝐹⁻¹𝑀_C, so 𝐹⁻¹ takes the canonical generators
-        # back to the stored ones (units g/g_C). Read-only integer cells, framed { … ] like 𝐹.
+        # the generator form matrix 𝐹 (r×rc) rides the MAPPING row in the canonical-generators column:
+        # 𝑀 = 𝐹𝑀_C, so 𝐹 builds the stored generators from the canonical ones (units g/g_C). EDITABLE
+        # (formcell, like the mapping matrix) — typing a unimodular 𝐹 re-stores M = F·M_C; framed { … ].
+        # (Its read-only inverse 𝐹⁻¹ is the canon row's gens tile above. Cell id stays "cell:finv" —
+        # the historical name from before the 𝐹/𝐹⁻¹ swap; the EDITABLE form matrix is now here.)
         if self.tile_open("mapping", "canongens"):
             for i in range(self.r):
                 for j in range(self.rc):
                     self.cells.append(CellBox(f"cell:finv:{i}:{j}", self.canongen_left(j), self.map_top(i), COL_W, ROW_H,
-                                         "mapped", text=str(self.inverse_form_M[i][j]), unit=self.cell_unit("mapping", "canongens", gen=i)))
+                                         "formcell", text=str(self.inverse_form_M[i][j]), unit=self.cell_unit("mapping", "canongens", gen=i)))
 
     def _emit_canon_mapped_tile(self, prefix, group, count, left_fn, data, pending, i) -> None:
         """One canon-row read-only 𝑀_C·X tile (targets / interest / held) for canonical row i: a
@@ -5324,7 +5326,7 @@ class _GridBuilder:
             row_top = {
                 ("mapping", "primes"): self.map_top,
                 ("canon", "primes"): self.canon_top,  # 𝑀_C's rc covector rows 𝒎_Cᵢ
-                ("canon", "gens"): self.canon_top,    # the form matrix 𝐹's rc rows 𝒇ᵢ
+                ("mapping", "canongens"): self.map_top,  # 𝐹 (generator form matrix)'s r rows 𝒇ᵢ
                 ("vectors", "primes"): self.vec_top,  # M_j = I's d covector rows 𝒎ⱼᵢ, in the primes gutter
                 ("projection", "primes"): self.proj_top,  # P's d rows of maps 𝒑ᵢ, like the mapping's 𝒎ᵢ
                 ("projection", "ssprimes"): self.proj_top,  # P_L→s's d rows of maps 𝒑_L→sᵢ
@@ -5338,7 +5340,7 @@ class _GridBuilder:
             }
             row_count = {("mapping", "primes"): self.r,
                          ("canon", "primes"): self.rc,  # 𝑀_C is rc × d
-                         ("canon", "gens"): self.rc,    # the form matrix 𝐹 is rc × rc
+                         ("mapping", "canongens"): self.r,  # 𝐹 is r × rc (one 𝒇ᵢ per stored generator)
                          ("vectors", "primes"): self.d,  # M_j = I is d × d
                          ("projection", "primes"): self.d,  # P is d×d (a map per domain prime)
                          ("projection", "ssprimes"): self.d,  # P_L→s is d×dL (a covector per domain prime)
@@ -5559,6 +5561,11 @@ class _GridBuilder:
                         # the form layer subscripts the canonical-form objects in their defining
                         # equations too (𝒕 = 𝒈C𝑀C, P = GC𝑀C, …); the form-invariant tails stay bare.
                         **(FORM_EQUIVALENCES if self.show_form_subscript else {}),
+                        # the stored mapping's form decomposition 𝑀 = 𝐹𝑀_C — shown when the form box
+                        # surfaces a NON-trivial form (the canon row is on AND 𝑀 ≠ 𝑀_C, i.e. 𝐹 ≠ 𝐼).
+                        # When 𝑀 is already canonical it is trivially 𝐼·𝑀_C, so the tail is suppressed.
+                        **({("mapping", "primes"): f" = 𝐹𝑀{SUBSCRIPT_C}"}
+                           if (self.show_canon and not self.form_is_canonical) else {}),
                         # the consolidated interval-vectors header: V = C|U (the comma basis and the
                         # unchanged basis concatenated). The mapped tile drops its "= 𝑂" (only the
                         # comma half of M·V vanishes; the unchanged half maps to the held generators).

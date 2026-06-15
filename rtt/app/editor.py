@@ -605,7 +605,7 @@ class Editor:
 
     def edit_form_matrix(self, form_rows) -> bool:
         """Re-store the mapping in the generator basis given by the (typed/edited) generator form
-        matrix ``𝐹`` — the interactive 𝐹 tile's commit. ``M = F⁻¹·M_C``: the SAME temperament in a new
+        matrix ``𝐹`` — the interactive 𝐹 tile's commit. ``M = F·M_C``: the SAME temperament in a new
         generating set, so the canonical mapping is unchanged and the 𝐹 tile reads back the typed ``F``.
         An undoable edit, the free-form sibling of :meth:`set_mapping_form` (any unimodular ``F``, not
         just a named form). Returns False (state untouched) when ``F`` isn't valid (not square /

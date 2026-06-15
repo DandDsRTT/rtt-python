@@ -126,7 +126,7 @@ _KIND_HELP: dict[str, str] = {
     # wheel notch once the cell is focused (the coarse-integer analogue of the generator-tuning
     # cell's thousandth-cent wheel fine-adjust).
     "mapping": "Mapping entry — how many of this generator map to this prime. Type to edit the temperament, or scroll the wheel to step it by 1.",
-    "formcell": "Generator form matrix entry — how this canonical generator is built from the stored ones. Type to re-store the mapping in a new generating set (same temperament), or scroll the wheel to step it by 1; the whole 𝐹 must stay unimodular.",
+    "formcell": "Generator form matrix entry — how this stored generator is built from the canonical ones (𝑀 = 𝐹𝑀ᴄ). Type to re-store the mapping in a new generating set (same temperament), or scroll the wheel to step it by 1; the whole 𝐹 must stay unimodular.",
     "commacell": "Comma-vector entry — this prime's exponent in a comma the temperament tempers out. Type to edit, or scroll the wheel to step it by 1.",
     "unchangedcell": "Unchanged interval entry — this prime's exponent in an interval the tuning holds just. Type a new basis to retune to the projection that holds it.",
     "interestcell": "Interval-of-interest entry — this prime's exponent in an interval you're tracking. Type to edit, or scroll the wheel to step it by 1.",
@@ -221,7 +221,7 @@ _PTEXT_HELP: dict[str, str] = {
     "ptext:mapping:primes": "Type the mapping as a plain-text string (e.g. ⟨⟨1 0 -4]]) to drive the grid.",
     "ptext:vectors:commas": "Type the comma basis as a plain-text string to drive the grid.",
     "ptext:tuning:gens": "Type the generator tuning map as a plain-text string to drive the grid.",
-    "ptext:canon:gens": "Type the generator form matrix 𝐹 as a plain-text string to re-store the mapping in that generating set (same temperament); rejected unless 𝐹 is square and unimodular.",
+    "ptext:mapping:canongens": "Type the generator form matrix 𝐹 as a plain-text string to re-store the mapping in that generating set (same temperament); rejected unless 𝐹 is square and unimodular.",
     "ptext:vectors:targets": "Type the target interval list as a plain-text string to drive the grid.",
     "ptext:prescaling:primes": "Type the prescaler as a plain-text string to drive the grid.",
     # P and G are edited only here (the gridded cells are read-only — a single entry can't keep P

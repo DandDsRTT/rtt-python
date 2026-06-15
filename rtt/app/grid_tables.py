@@ -123,11 +123,13 @@ CAPTIONS = {
     ("retune", "ssprimes"): "superspace retuning map",
     ("vectors", "commas"): "comma basis",
     ("vectors", "targets"): "target interval list",
-    ("canon", "gens"): "generator form matrix",
+    # the canon row's gens tile is 𝐹⁻¹ (g_C/g, 𝑀_C = 𝐹⁻¹𝑀); the generator form matrix 𝐹 itself
+    # (g/g_C, 𝑀 = 𝐹𝑀_C) rides the mapping row's canongens column — see ("mapping", "canongens")
+    ("canon", "gens"): "inverse generator form matrix",
     ("canon", "canongens"): "form matrices canceling out",  # 𝐹⁻¹𝐹 = 𝐼 (gated on identity_objects)
     ("canon", "primes"): "canonical mapping",
     # the rest of the canonical-generators column (canonical twins of the generators column's tiles)
-    ("mapping", "canongens"): "inverse generator form matrix",   # 𝐹⁻¹
+    ("mapping", "canongens"): "generator form matrix",   # 𝐹 (𝑀 = 𝐹𝑀_C)
     ("projection", "canongens"): "canonical generator embedding", # G_C
     ("tuning", "canongens"): "canonical generator tuning map",    # 𝒈_C
     # the canonical-mapping row's mapped lists — the canonical-form twins of the mapping row's
@@ -293,9 +295,10 @@ SYMBOLS = {
     ("vectors", "primes"): "𝑀" + SUBSCRIPT_J,      # 𝑀ⱼ = 𝐼 (the JI mapping; the domain twin of 𝑀ⱼL)
     # the canonical-mapping row: the canonical mapping 𝑀_C over the primes (its subscript is BAKED in
     # — this row IS the canonical form, always, vs the main mapping's dynamic subscript) and the
-    # generator form matrix 𝐹 over the (canonical) generators, with 𝐹·𝑀 = 𝑀_C.
+    # 𝐹⁻¹ over the (canonical) generators, with 𝑀_C = 𝐹⁻¹𝑀 (g_C/g). The generator form matrix 𝐹
+    # itself (𝑀 = 𝐹𝑀_C, g/g_C) rides the mapping row's canongens column, NOT here.
     ("canon", "primes"): f"𝑀{SUBSCRIPT_C}",
-    ("canon", "gens"): "𝐹",
+    ("canon", "gens"): "𝐹⁻¹",
     # the canonical-mapping row's mapped products (𝑀_C-baked twins of 𝑀D / 𝑀C / 𝑀H / Y); the
     # canonically mapped intervals carry none, like the mapping row's loose interest collection
     ("canon", "detempering"): f"𝑀{SUBSCRIPT_C}D",
@@ -306,11 +309,11 @@ SYMBOLS = {
     # 𝐅⁻¹𝐅 = 𝐼 over the canonical-generators column — the form matrices canceling out (the canon
     # row's 𝑀_C / 𝐹 symbols are declared above, beside the JI mapping). Units g_C/g_C.
     ("canon", "canongens"): "𝐹⁻¹𝐹",
-    # the rest of the canonical-generators column (the mockup): the inverse generator form matrix
-    # 𝐹⁻¹ (mapping row, 𝑀 = 𝐹⁻¹𝑀_C), the canonical generator embedding G_C and the canonical
-    # generator tuning map 𝒈_C — each the canonical (subscript-C) twin of the generators column's
-    # 𝑀G / G / 𝒈, with the subscript baked in (this column IS the canonical generators, always).
-    ("mapping", "canongens"): "𝐹⁻¹",
+    # the rest of the canonical-generators column (the mockup): the generator form matrix 𝐹 (mapping
+    # row, 𝑀 = 𝐹𝑀_C — its INVERSE 𝐹⁻¹ rides the canon row over the gens column), the canonical
+    # generator embedding G_C and the canonical generator tuning map 𝒈_C — each the canonical
+    # (subscript-C) twin of the generators column's 𝑀G / G / 𝒈.
+    ("mapping", "canongens"): "𝐹",
     ("projection", "canongens"): f"G{SUBSCRIPT_C}",
     ("tuning", "canongens"): f"𝒈{SUBSCRIPT_C}",
     ("mapping", "gens"): "𝑀G",          # 𝑀𝐺 = 𝐼: M (italic) + the generator basis G (upright)
@@ -374,10 +377,11 @@ SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symb
 # list itself, the italic form its scalar entries.
 ROW_LABEL_LETTERS = {
     ("mapping", "primes"): "𝒎",      # 𝑀 → 𝒎: each row of the mapping is a covector 𝒎ᵢ
-    # the canonical-mapping row's stacks: 𝑀_C's covector rows 𝒎_Cᵢ (𝒎 + the baked canonical
-    # subscript) and the generator form matrix 𝐹's rows 𝒇ᵢ
+    # the canonical mapping 𝑀_C's covector rows 𝒎_Cᵢ (𝒎 + the baked canonical subscript). The
+    # generator form matrix 𝐹's rows 𝒇ᵢ ride its own tile, the mapping row's canongens column (below).
     ("canon", "primes"): f"𝒎{SUBSCRIPT_C}",
-    ("canon", "gens"): "𝒇",
+    # 𝐹 (generator form matrix, mapping row × canonical generators): each row a covector 𝒇ᵢ
+    ("mapping", "canongens"): "𝒇",
     # the JI mapping M_j = I rows (vectors × primes): each row a covector 𝒎ⱼᵢ (𝒎 + subscript j),
     # the domain twin of M_jL's 𝒎ⱼL — sits in the same primes-column gutter as the mapping's 𝒎ᵢ
     ("vectors", "primes"): "𝒎" + SUBSCRIPT_J,
@@ -744,10 +748,12 @@ MNEMONICS = {
     ("vectors", "primes"): "mapping",        # 𝑀ⱼ → underline the "m" in "JI mapping"
     ("mapping", "gens"): "mapped",            # 𝑀𝐺 → underline the "m" in "mapped generators"
     ("mapping", "detempering"): "mapped",     # 𝑀D → underline the "m" in "mapped generator detemperings"
-    # the canonical-mapping row: 𝑀_C → "mapping" in "canonical mapping"; 𝐹 → "form"; the mapped
-    # products' 𝑀_C → the "m" of "mapped" (the canonically MAPPED … captions). Y_C / interest carry none.
+    # the canonical-mapping row: 𝑀_C → "mapping" in "canonical mapping"; 𝐹⁻¹ → "form" (inverse
+    # generator FORM matrix); 𝐹 (mapping row) → "form" too; the mapped products' 𝑀_C → the "m" of
+    # "mapped" (the canonically MAPPED … captions). Y_C / interest carry none.
     ("canon", "primes"): "mapping",
     ("canon", "gens"): "form",
+    ("mapping", "canongens"): "form",   # 𝐹 → "form" in "generator form matrix"
     ("canon", "detempering"): "mapped",
     ("canon", "commas"): "mapped",
     ("canon", "held"): "mapped",
@@ -1194,9 +1200,10 @@ UNITS_TILES = (
 EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas"), ("tuning", "gens"),
                             ("vectors", "targets"), ("prescaling", "primes"),
                             # the generator form matrix 𝐹 is editable (its plain text AND its gridded
-                            # cells): a typed unimodular 𝐹 re-stores the mapping as 𝐹⁻¹𝑀_C, the same
-                            # temperament in a new generating set — staying in sync with <choose form>
-                            ("canon", "gens"),
+                            # cells): a typed unimodular 𝐹 re-stores the mapping as 𝑀 = 𝐹𝑀_C, the same
+                            # temperament in a new generating set — staying in sync with <choose form>.
+                            # (Its INVERSE 𝐹⁻¹, in the canon row, is read-only.)
+                            ("mapping", "canongens"),
                             # P and G aren't per-cell editable (a single entry can't keep P
                             # idempotent / 𝑀𝐺 = 𝐼), so the whole-matrix EBK string is the only edit path
                             ("projection", "primes"), ("projection", "gens")})

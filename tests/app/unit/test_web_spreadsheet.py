@@ -1438,13 +1438,14 @@ def test_canonical_mapping_row_is_framed_like_the_mapping_above_it():
     assert "ebktop:primes" in cells and cells["ebktop:primes"].y > cells["cell:canon:1:0"].y
 
 
-def test_form_box_shows_the_generator_form_matrix_over_the_gens():
+def test_form_box_shows_the_inverse_form_matrix_over_the_gens():
     cells = {c.id: c for c in _with(form_tiles=True).cells}
-    # F (generator form matrix, r×r) renders in the canon row's gens column as a
-    # bordered grid: for ((1,1,0),(0,1,4)), F = ((1,-1),(0,1))
+    # the canon row's gens tile is 𝐹⁻¹ (𝑀_C = 𝐹⁻¹𝑀, g_C/g) — read-only; the EDITABLE 𝐹 (𝑀 = 𝐹𝑀_C)
+    # rides the mapping row's canonical-generators column instead. For ((1,1,0),(0,1,4)), 𝐹⁻¹ = ((1,-1),(0,1))
     assert cells["cell:form:0:0"].text == "1" and cells["cell:form:0:1"].text == "-1"
     assert cells["cell:form:1:0"].text == "0" and cells["cell:form:1:1"].text == "1"
-    assert cells["cell:form:0:0"].kind == "formcell"  # a read-only bordered cell
+    assert cells["cell:form:0:0"].kind == "mapped"  # read-only (the inverse is derived)
+    assert cells["caption:canon:gens"].text == "inverse generator form matrix"
     # framed { … ] per row (the generator-map brackets) plus an enclosing top bracket/brace
     assert cells["bracket:form:map:0:l"].text == "{" and cells["bracket:form:map:0:r"].text == "]"
     assert "ebktop:form" in cells and "ebkbrace:form" in cells
@@ -1504,9 +1505,11 @@ def test_form_box_symbols_and_units_match_the_canonical_notation():
     cells = {c.id: c for c in _with(form_tiles=True, identity_objects=True,
                                     symbols=True, equivalences=True, header_symbols=True,
                                     units=True, domain_units=True).cells}
-    # the big symbols: 𝑀_C (canonical mapping), 𝐹 (form matrix), 𝐹⁻¹𝐹 = 𝐼 (canceling out)
+    # the big symbols: 𝑀_C (canonical mapping), 𝐹⁻¹ (inverse form matrix, over the gens column),
+    # 𝐹 (the form matrix itself, over the canonical-generators column), 𝐹⁻¹𝐹 = 𝐼 (canceling out)
     assert cells["symbol:canon:primes"].text == f"𝑀{SUBSCRIPT_C}"
-    assert cells["symbol:canon:gens"].text == "𝐹"
+    assert cells["symbol:canon:gens"].text == "𝐹⁻¹"
+    assert cells["symbol:mapping:canongens"].text == "𝐹"
     assert cells["symbol:canon:canongens"].text == "𝐹⁻¹𝐹 = 𝐼"
     # the canonical mapping's rows carry 𝒎_C row labels in the primes gutter (like 𝒎 on the mapping)
     assert cells["matlabel:row:canon:primes:0"].text == f"𝒎{SUBSCRIPT_C}₁"
@@ -1533,10 +1536,12 @@ def test_rank_count_merges_across_the_canonical_generators_and_generators_column
 
 
 def test_form_matrix_row_labels_get_a_balanced_matlabel_gutter():
-    # the form matrix 𝐹's 𝒇 row labels (generators column) must reserve the same balanced gutter
-    # the mapping's 𝒎 labels do — seated in a gutter LEFT of the EBK, not crammed against it
+    # the form matrix 𝐹's 𝒇 row labels (its own tile, the mapping row's canonical-generators column)
+    # must reserve the same balanced gutter the mapping's 𝒎 labels do — in a gutter LEFT of the EBK,
+    # not crammed against it. (The gutter generalizes to ANY column carrying per-row matrix labels.)
     cells = {c.id: c for c in _with(form_tiles=True, header_symbols=True).cells}
-    flabel, fbracket = cells["matlabel:row:canon:gens:0"], cells["bracket:form:map:0:l"]
+    flabel, fbracket = cells["matlabel:row:mapping:canongens:0"], cells["bracket:finv:map:0:l"]
+    assert flabel.text == "𝒇₁"
     assert flabel.x + flabel.w <= fbracket.x  # the label sits left of (or up to) the { bracket, not over it
     assert flabel.w > 0 and fbracket.x - flabel.x >= flabel.w  # a real gutter, ≥ the label's own width
 
@@ -1545,10 +1550,11 @@ def test_canonical_generators_column_builds_finv_embedding_and_tuning_tiles():
     from rtt.app.grid_tables import SUBSCRIPT_C
     cells = {c.id: c for c in _proj_build(("2/1", "5/4"),
                                           form_tiles=True, symbols=True, header_symbols=True).cells}
-    # 𝐹⁻¹ (inverse generator form matrix) over the mapping row: M = F⁻¹·M_C, so F⁻¹ = ((1,1),(0,1))
+    # 𝐹 (generator form matrix) over the mapping row: M = F·M_C, so F = ((1,1),(0,1)) (cell id is the
+    # historical "cell:finv" from before the 𝐹/𝐹⁻¹ swap)
     assert cells["cell:finv:0:0"].text == "1" and cells["cell:finv:0:1"].text == "1"
     assert cells["cell:finv:1:0"].text == "0" and cells["cell:finv:1:1"].text == "1"
-    assert cells["symbol:mapping:canongens"].text == "𝐹⁻¹"
+    assert cells["symbol:mapping:canongens"].text == "𝐹"
     assert "bracket:finv:map:0:l" in cells
     # G_C (canonical generator embedding) = G·F⁻¹ — for quarter-comma meantone [[1 1],[0 0],[0 1/4]]:
     # column 0 the octave [1 0 0⟩, column 1 the canonical fifth [1 0 1/4⟩ (cell ids are :row:col)
@@ -1566,9 +1572,9 @@ def test_canonical_generators_column_builds_finv_embedding_and_tuning_tiles():
 def test_canonical_generators_column_tiles_carry_plain_text_matching_their_grids():
     cells = {c.id: c for c in _proj_build(("2/1", "5/4"), form_tiles=True, plain_text_values=True).cells}
     # the three new tiles' EBK strings read in the same brackets as their grids (the lockstep guard
-    # enforces this globally; here we pin the exact strings): 𝐹⁻¹ a covector stack, G_C a vector list,
+    # enforces this globally; here we pin the exact strings): 𝐹 a covector stack, G_C a vector list,
     # 𝒈_C a cents genmap
-    assert cells["ptext:mapping:canongens"].text == "[{1 1] {0 1]}"          # 𝐹⁻¹
+    assert cells["ptext:mapping:canongens"].text == "[{1 1] {0 1]}"          # 𝐹 (𝑀 = 𝐹𝑀_C)
     assert cells["ptext:projection:canongens"].text == "{[1 0 0⟩ [1 0 1/4⟩]"  # G_C
     assert cells["ptext:tuning:canongens"].text.startswith("{1200")          # 𝒈_C
 
@@ -1584,13 +1590,16 @@ def test_canonical_embedding_and_tuning_tiles_carry_their_column_index_headers()
 
 
 def test_generator_form_matrix_is_interactive():
-    # the 𝐹 tile is editable — its gridded cells AND its plain-text band (so the user can re-store the
-    # mapping in any generating set, in sync with <choose form>)
+    # the 𝐹 tile (mapping row × canonical generators) is editable — its gridded cells AND its
+    # plain-text band — so the user can re-store the mapping in any generating set, in sync with
+    # <choose form>. Its read-only inverse 𝐹⁻¹ (canon row × gens) is NOT editable.
     cells = {c.id: c for c in _with(form_tiles=True, plain_text_values=True).cells}
-    assert cells["cell:form:0:0"].kind == "formcell"      # routed to the editable gridvalue component
-    assert cells["ptext:canon:gens"].kind == "ptextedit"  # an editable plain-text input, not read-only
+    assert cells["cell:finv:0:0"].kind == "formcell"            # 𝐹: routed to the editable gridvalue component
+    assert cells["ptext:mapping:canongens"].kind == "ptextedit"  # 𝐹's editable plain-text input
+    assert cells["cell:form:0:0"].kind == "mapped"              # 𝐹⁻¹: read-only
+    assert cells["ptext:canon:gens"].kind == "ptext"           # 𝐹⁻¹'s plain text is read-only
     from rtt.app.grid_tables import EDITABLE_PTEXT
-    assert ("canon", "gens") in EDITABLE_PTEXT
+    assert ("mapping", "canongens") in EDITABLE_PTEXT and ("canon", "gens") not in EDITABLE_PTEXT
 
 
 def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis_boxes():
@@ -7307,13 +7316,15 @@ def test_form_subscript_covers_the_whole_mapping_row_including_new_tiles():
 def test_canonical_mapping_row_carries_its_own_symbols_and_row_headers():
     # the canonical-mapping row (surfaced when a non-canonical form is active) has its own symbols +
     # row headers: the canonical mapping 𝑀_C over the primes (subscript baked — it IS the canonical
-    # form) and the generator form matrix 𝐹 over the canonical generators.
+    # form) and the INVERSE generator form matrix 𝐹⁻¹ over the gens column (𝑀_C = 𝐹⁻¹𝑀). The generator
+    # form matrix 𝐹 itself (𝑀 = 𝐹𝑀_C), with its 𝒇 row labels, rides the mapping row's canongens column.
     C, s1 = spreadsheet.SUBSCRIPT_C, spreadsheet._sub(1)
     on = {c.id: c for c in _with(symbols=True, header_symbols=True, form=True, form_tiles=True).cells}  # form_tiles → canon surfaces
     assert on["symbol:canon:primes"].text == f"𝑀{C}"               # the canonical mapping
-    assert on["symbol:canon:gens"].text == "𝐹"                     # the generator form matrix
+    assert on["symbol:canon:gens"].text == "𝐹⁻¹"                   # the inverse generator form matrix
+    assert on["symbol:mapping:canongens"].text == "𝐹"             # the generator form matrix itself
     assert on["matlabel:row:canon:primes:0"].text == f"𝒎{C}{s1}"   # 𝑀_C's covector rows 𝒎_Cᵢ
-    assert on["matlabel:row:canon:gens:0"].text == f"𝒇{s1}"        # 𝐹's rows 𝒇ᵢ
+    assert on["matlabel:row:mapping:canongens:0"].text == f"𝒇{s1}"  # 𝐹's rows 𝒇ᵢ
 
 
 def test_canonical_mapping_row_renders_its_mapped_product_tiles():
