@@ -7301,6 +7301,21 @@ def test_form_subscript_is_two_faced_and_the_canon_row_gates_solely_on_form_tile
     assert any(cid.startswith("cell:canon:") for cid in tiles)
 
 
+def test_form_box_shows_the_mapping_decomposition_equivalence_only_when_noncanonical():
+    # with the form box up, the mapping tile's symbol line gains the decomposition 𝑀 = 𝐹𝑀_C — but
+    # only while 𝑀 ≠ 𝑀_C (a non-trivial 𝐹). The default meantone ((1,1,0),(0,1,4)) is equave-reduced,
+    # so 𝐹 ≠ 𝐼 and the tail shows; over the canonical mapping it would be trivially 𝐼·𝑀_C, suppressed.
+    C = spreadsheet.SUBSCRIPT_C
+    on = {c.id: c for c in _with(symbols=True, equivalences=True, form_tiles=True).cells}
+    assert on["symbol:mapping:primes"].text == f"𝑀 = 𝐹𝑀{C}"   # bare 𝑀 head (non-canonical) + the 𝐹𝑀_C tail
+    # over a CANONICAL mapping (form box still up) the decomposition is trivial (𝐹 = 𝐼) — no tail
+    canon = _canon_cells(symbols=True, equivalences=True, form=True, form_tiles=True)
+    assert canon["symbol:mapping:primes"].text == f"𝑀{C}"     # subscript head, NO " = 𝐹𝑀_C" tail
+    # the tail needs the form box: without form_tiles the canon row is gone and the tail can't appear
+    off = {c.id: c for c in _with(symbols=True, equivalences=True).cells}
+    assert off["symbol:mapping:primes"].text == "𝑀"           # no decomposition without the form box
+
+
 def test_form_subscript_covers_the_whole_mapping_row_including_new_tiles():
     # the subscript-C applies by ROW, not per tile, so every mapped product in the mapping row —
     # including the identity-object tiles 𝑀G (mapped generators) and 𝑀D (mapped generator
