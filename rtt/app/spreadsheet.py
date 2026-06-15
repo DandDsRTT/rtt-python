@@ -5145,10 +5145,16 @@ class _GridBuilder:
             # other products. Every product list grows to prescale_rows (dL over the superspace).
             ph = (self.prescale_rows + self.size_rows) * ROW_H
             bare_col = "ssprimes" if self.show_superspace else "primes"
-            list_groups = [("commas", self.nc), ("detempering", self.r),
-                           ("targets", self.k), ("held", self.nh)]
-            for group, n_cols in list_groups:
-                if n_cols and self.tile_open("prescaling", group):
+            # gate the outer [ … ] on tile_open ALONE, never on the column count — an OPEN tile
+            # always wears its wrap, even with zero columns (an empty target list reads as [],
+            # like the vectors / mapping rows it parallels). An empty-but-open tile is real here:
+            # the targets column stays open with k = 0 (it's addable), and the V column at full
+            # rank has nc = 0 yet shows the unchanged half. The held / detempering / superspace
+            # tiles instead vanish entirely when empty (they're undeclared, so tile_open is False),
+            # so this gate handles them too. (Gating on the count once dropped the [] from the
+            # empty 𝐿T tile — see test_empty_open_list_tiles_keep_their_outer_ebk.)
+            for group in ("commas", "detempering", "targets", "held"):
+                if self.tile_open("prescaling", group):
                     self.bracket(f"prescaling:{group}", LIST_BRACKETS, group,
                             self.rows["prescaling"].y, ph, fit=True)
             # 𝐿·B_Ls is the prescaled basis-change matrix, so it wraps ⟨ … ] like B_L (not the
