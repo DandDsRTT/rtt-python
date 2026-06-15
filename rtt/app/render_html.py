@@ -404,8 +404,13 @@ def _power_parts(text) -> tuple[str, str]:
 _PTEXT_DEFAULT_EM = 0.59
 _PTEXT_GLYPH_EM = {
     **{d: 0.59 for d in "0123456789"},
-    ".": 0.22, "-": 0.35, "/": 0.52, " ": 0.24,
-    "[": 0.37, "]": 0.37, "{": 0.41, "}": 0.41, "⟨": 0.38, "⟩": 0.38,
+    ".": 0.25, "-": 0.35, "/": 0.52, " ": 0.24,
+    "[": 0.37, "]": 0.37, "{": 0.41, "}": 0.41, "⟨": 0.38, "⟩": 0.38, "⟪": 0.58, "⟫": 0.58,
+    # the em-dash that fills a DASHED column (an unknown the under-held tuning doesn't pin —
+    # see service.text._DASH). It is a FULL em wide (1.0 in STIX Two Text), not a digit's ~0.5,
+    # so omitting it estimated an all-dashes value (e.g. a dashed superspace generator embedding)
+    # at ~60% of its real width and _ptext_font left it too big to fit → it spilled the box.
+    "—": 1.0,
 }
 
 
