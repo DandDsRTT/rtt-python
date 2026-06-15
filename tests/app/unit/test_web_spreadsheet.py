@@ -5402,14 +5402,19 @@ def test_every_implemented_toggle_actually_changes_the_layout():
     # hold: a feature could be built yet held out of IMPLEMENTED (greyed), so it would
     # change the layout yet stay greyed — hence we only sweep the IMPLEMENTED toggles here.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    # the form layer's own grid mark — the subscript C — rides the main rows only when the mapping IS
+    # canonical (the default is the equave-reduced form), and its canon row/column gate on form_tiles.
+    # So sweep `form` over the CANONICAL mapping, where flipping it adds/removes the subscript; every
+    # other toggle keeps the default base. (form_tiles itself surfaces the canon row over either base.)
+    base_for = {"form": service.from_mapping(((1, 0, -4), (0, 1, 4)))}
 
-    def snapshot(s):
+    def snapshot(s, key_base=base):
         # capture both cells and blocks: most toggles add/move cells, but colorization
         # is expressed purely through blocks (the colour washes), so a cells-only
         # snapshot would call it a no-op. Build under a non-unity slope so the slope-gated
         # weighting machinery (prescaling/complexity rows + box 𝐋's controls) is visible —
         # otherwise flipping alt_complexity changes nothing under the unity default.
-        lay = spreadsheet.build(base, s, tuning_scheme="TILT minimax-S")
+        lay = spreadsheet.build(key_base, s, tuning_scheme="TILT minimax-S")
         return (
             # c.unit is in the tuple so cell_units (which adds/removes the per-value unit beneath a
             # cell without changing the cell's id/geometry/text) registers as a real layout change
@@ -5442,9 +5447,10 @@ def test_every_implemented_toggle_actually_changes_the_layout():
     for key in settings.IMPLEMENTED:
         if key in settings.GROUPING_PARENTS or key in MODE_TOGGLES:
             continue
+        kb = base_for.get(key, base)
         on, off = with_parents_on(key), with_parents_on(key)
         on[key], off[key] = True, False
-        assert snapshot(on) != snapshot(off), f"{key} is marked implemented but changes nothing"
+        assert snapshot(on, kb) != snapshot(off, kb), f"{key} is marked implemented but changes nothing"
 
 
 def test_equivalences_extend_the_symbol_line_with_the_defining_equation():
@@ -7017,11 +7023,11 @@ def test_every_interval_ratio_and_vector_is_click_to_play():
     assert dv.audio and dv.audio[0] == "vectors:detempering"
 
 
-def test_form_layer_is_a_live_parent_with_live_controls_over_two_greyed_subcontrols():
+def test_form_layer_is_a_live_parent_with_live_controls_over_one_greyed_subcontrol():
     # the form layer is a live top-level toggle (it adds the canonical-form subscript C — so unlike
     # the pure grouping parents temperament/tuning it is NOT in GROUPING_PARENTS). Two of its three
-    # sub-controls are now live too: "form_controls" (the <choose form> dropdowns), while the
-    # canonical-mapping / 𝐹 boxes and the magenta wash stay greyed stubs until their content ships.
+    # sub-controls are live too: "form_controls" (the <choose form> dropdowns) and "form_tiles" (the
+    # canonical-mapping row + canonical-generators column); only the magenta wash stays a greyed stub.
     keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
     assert {"form", "form_controls", "form_tiles", "form_colorization"} <= keys
     assert settings.defaults()["form"] is False and "form" in settings.IMPLEMENTED  # live parent
@@ -7030,7 +7036,7 @@ def test_form_layer_is_a_live_parent_with_live_controls_over_two_greyed_subcontr
         assert settings.SUBCONTROLS[child] == "form"            # grouped under the form parent
         assert settings.defaults()[child] is False              # default off
     assert "form_controls" in settings.IMPLEMENTED              # the dropdowns are live now (step 2)
-    assert "form_tiles" not in settings.IMPLEMENTED             # still greyed (content not built yet)
+    assert "form_tiles" in settings.IMPLEMENTED                 # the canon row + column are live now (step 4)
     assert "form_colorization" not in settings.IMPLEMENTED      # still greyed
     # the parent precedes its children in the group (the panel requires it for indentation)
     specific = [k for k, *_ in dict(settings.SHOW_GROUPS)["specific tiles & controls"]]
@@ -7115,18 +7121,21 @@ def test_form_layer_subscripts_the_matrix_header_labels():
     assert proj["matlabel:col:projection:gens:0"].text == f"𝐠{C}{s1}"
 
 
-def test_form_layer_surfaces_the_canonical_form_when_a_non_canonical_form_is_active():
-    # step 3c: the subscript C marks the canonical form, so on a NON-canonical mapping (the default
-    # meantone is the equave-reduced form) the main rows stay BARE and the canonical-mapping row +
-    # 𝐹 surface instead — so the canonical form is always visible. Picking canonical moves the
-    # subscript onto the main rows and drops the (now redundant) canonical-mapping row.
+def test_form_subscript_is_two_faced_and_the_canon_row_gates_solely_on_form_tiles():
+    # the subscript C marks the canonical form: on a NON-canonical mapping (the default equave-reduced
+    # meantone) the main rows stay BARE; on a canonical one the subscript rides them. The canonical-
+    # mapping row + 𝐹 (which display the canonical form) appear ONLY with the form-tiles toggle — off,
+    # they cannot appear, even under a non-canonical form.
     C = spreadsheet.SUBSCRIPT_C
     noncanon = {c.id: c for c in _with(symbols=True, form=True).cells}     # default = equave-reduced
     assert noncanon["symbol:mapping:primes"].text == "𝑀"                  # bare: not the canonical form
-    assert any(cid.startswith("cell:canon:") for cid in noncanon)         # canonical mapping surfaced
-    canon = _canon_cells(symbols=True, form=True)
+    assert not any(cid.startswith("cell:canon:") for cid in noncanon)     # canon row gated off (no form_tiles)
+    canon = _canon_cells(symbols=True, form=True)                          # canonical mapping
     assert canon["symbol:mapping:primes"].text == f"𝑀{C}"                 # subscript on the main rows
-    assert not any(cid.startswith("cell:canon:") for cid in canon)        # no redundant canonical row
+    assert not any(cid.startswith("cell:canon:") for cid in canon)        # still no canon row without form_tiles
+    # form_tiles is the sole gate: turning it on surfaces the canonical-mapping row
+    tiles = {c.id: c for c in _with(symbols=True, form=True, form_tiles=True).cells}
+    assert any(cid.startswith("cell:canon:") for cid in tiles)
 
 
 def test_form_subscript_covers_the_whole_mapping_row_including_new_tiles():
@@ -7146,7 +7155,7 @@ def test_canonical_mapping_row_carries_its_own_symbols_and_row_headers():
     # row headers: the canonical mapping 𝑀_C over the primes (subscript baked — it IS the canonical
     # form) and the generator form matrix 𝐹 over the canonical generators.
     C, s1 = spreadsheet.SUBSCRIPT_C, spreadsheet._sub(1)
-    on = {c.id: c for c in _with(symbols=True, header_symbols=True, form=True).cells}  # default → canon surfaces
+    on = {c.id: c for c in _with(symbols=True, header_symbols=True, form=True, form_tiles=True).cells}  # form_tiles → canon surfaces
     assert on["symbol:canon:primes"].text == f"𝑀{C}"               # the canonical mapping
     assert on["symbol:canon:gens"].text == "𝐹"                     # the generator form matrix
     assert on["matlabel:row:canon:primes:0"].text == f"𝒎{C}{s1}"   # 𝑀_C's covector rows 𝒎_Cᵢ
@@ -7164,7 +7173,7 @@ def test_canonical_mapping_row_renders_its_mapped_product_tiles():
     held = [(-1, 1, 0)]                               # one held interval (3/2)
     interest = ((1, -2, 1),)                          # one interval of interest
     s = settings.defaults()
-    s.update(form=True, generator_detempering=True, optimization=True)
+    s.update(form=True, form_tiles=True, generator_detempering=True, optimization=True)
     cells = {c.id: c for c in spreadsheet.build(
         service.from_mapping(M), s, held_vectors=held, interest=interest).cells}
     rc, r = len(Mc), len(M)
@@ -7188,7 +7197,7 @@ def test_canonical_mapping_row_tile_symbols_units_and_equivalences():
     # 𝑀_C-baked column headers (𝑀_C𝐝 / 𝑀_C𝐜 / 𝐲_C / 𝑀_C𝐡).
     C, s1 = spreadsheet.SUBSCRIPT_C, spreadsheet._sub(1)
     s = settings.defaults()
-    s.update(form=True, symbols=True, equivalences=True, units=True, header_symbols=True,
+    s.update(form=True, form_tiles=True, symbols=True, equivalences=True, units=True, header_symbols=True,
              generator_detempering=True, optimization=True)
     cells = {c.id: c for c in spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), s, held_vectors=[(-1, 1, 0)]).cells}
@@ -7212,7 +7221,7 @@ def test_canonical_mapping_row_commas_symbol_keeps_subscript_under_unchanged():
     # sentinel must survive the swap — 𝑀_C C → 𝑀_C V, never 𝑀_V V (the bug this guards).
     C = spreadsheet.SUBSCRIPT_C
     s = settings.defaults()
-    s.update(form=True, symbols=True, header_symbols=True, projection=True, optimization=True)
+    s.update(form=True, form_tiles=True, symbols=True, header_symbols=True, projection=True, optimization=True)
     cells = {c.id: c for c in spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
         held_basis_ratios=("2/1", "5/4")).cells}
@@ -7221,6 +7230,25 @@ def test_canonical_mapping_row_commas_symbol_keeps_subscript_under_unchanged():
     assert cells["symbol:canon:commas"].text == f"𝑀{C}V"           # subscript-C survives, comma C → V
     assert cells["symbol:mapping:commas"].text == "𝑀V"             # the main (non-canonical) row swaps, no subscript
     assert cells["matlabel:col:canon:commas:0"].text.startswith(f"𝑀{C}𝐯")  # the bold 𝐜 → 𝐯 in the header too
+
+
+def test_canonical_mapping_row_carries_plain_text():
+    # the canon row's EBK strings mirror the mapping row's notation with the canonical values: 𝑀_C a
+    # covector stack (⟨ … ] rows, brace close), 𝐹 / 𝐹⁻¹𝐹 = 𝐼 genmap covector stacks, and the mapped
+    # lists ket-lists (generator coords). The whole row must carry plain text (the gap this guards).
+    s = settings.defaults()
+    s.update(form=True, form_tiles=True, plain_text_values=True, ebk=True,
+             generator_detempering=True, identity_objects=True, optimization=True)
+    cells = {c.id: c for c in spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+        held_vectors=[(-1, 1, 0)], interest=((1, -2, 1),)).cells}
+    assert cells["ptext:canon:primes"].text == "[⟨1 0 -4] ⟨0 1 4]}"   # 𝑀_C
+    assert cells["ptext:canon:gens"].text == "[{1 -1] {0 1]}"          # 𝐹
+    assert cells["ptext:canon:canongens"].text == "[{1 0] {0 1]}"      # 𝐹⁻¹𝐹 = 𝐼
+    assert cells["ptext:canon:detempering"].text == "{[1 0} [-1 1}]"   # 𝑀_C·D = 𝐹 (a vector list)
+    assert cells["ptext:canon:commas"].text == "[[0 0}]"               # 𝑀_C·C vanishes to 𝑂
+    assert cells["ptext:canon:held"].text == "[[-1 1}]"                # 𝑀_C·H
+    assert cells["ptext:canon:interest"].text == "[-3 2}"              # 𝑀_C·interest (stands alone)
 
 
 def test_interest_is_a_top_level_toggle_after_the_tuning_tiles_group():

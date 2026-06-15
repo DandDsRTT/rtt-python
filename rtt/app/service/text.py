@@ -13,9 +13,11 @@ from rtt.app.service.core import (
     DEFAULT_TUNING_SCHEME,
     IntervalSizes,
     Tuning,
+    canonical_mapping,
     cents,
     comma_ratios,
     element_ratio,
+    form_matrix,
     generator_detempering,
     generators,
     interval_complexities,
@@ -223,6 +225,23 @@ def plain_text_values(
         u_scaling = [_DASH if v is None else "1" for v in udata.basis]  # λ = 1 (held) / — (dashed)
     else:
         u_basis = u_mapped_cols = u_prescaled = u_tempered = u_just = u_errors = u_comps = u_scaling = []
+    # the canonical-mapping row's plain text — 𝑀_C and its mapped lists (the canonical-form twins of
+    # the mapping row's strings), surfaced by the form-tiles layer. 𝑀_C·D = 𝐹 (the form matrix); the
+    # mapped comma basis vanishes; 𝐹⁻¹𝐹 = 𝐼. The renderer gates these on form_tiles / identity_objects
+    # via tile_open, so they can sit in the dict unconditionally, like the standard identity objects.
+    canon_mapping = canonical_mapping(state.mapping)
+    rc = len(canon_mapping)
+    canon_form = form_matrix(state.mapping)                                   # 𝐹
+    canon_mapped = mapped_intervals(canon_mapping, targets, db)              # Y_C = 𝑀_C·T
+    canon_mapped_comma = mapped_commas(canon_mapping, comma_basis)           # 𝑀_C·C = 𝑂
+    canon_mapped_detempering = mapped_commas(canon_mapping, detemper_vectors)  # 𝑀_C·D = 𝐹
+    # 𝑀_C·U for the consolidated V column's unchanged half (None → dashed, like u_mapped_cols)
+    canon_u_mapped_cols = [None if u is None else tuple(sum(canon_mapping[i][p] * u[p] for p in range(state.d))
+                                                        for i in range(rc)) for u in u_basis]
+
+    def _canon_stack(rows, op):  # a covector stack [ op…] op…] } — per-row op-open + ], brace close (𝑀_C / 𝐹 / 𝐹⁻¹𝐹)
+        return "[" + " ".join(op + " ".join(str(x) for x in r) + "]" for r in rows) + "}"
+
     # Keyed by the tile each value group occupies. The interval-vectors row holds the
     # vector lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
     # and the mapped lists (generator-coordinate vectors, close }). The editable duals
@@ -260,6 +279,15 @@ def plain_text_values(
                                               for i in range(len(state.mapping))], "}", wrap=False) + "]",
         ("mapping", "detempering"): "{" + _ket_list([[1 if i == k else 0 for k in range(len(state.mapping))]
                                                      for i in range(len(state.mapping))], "}", wrap=False) + "]",
+        # the canonical-mapping row: 𝑀_C a covector stack (map rows ⟨ … ], brace close) like 𝑀; 𝐹 and
+        # 𝐹⁻¹𝐹 = 𝐼 genmap covector stacks ({ … ] rows); the mapped lists ket lists like the mapping
+        # row's (𝑀_C·D = 𝐹 a generator-coord vector list { … ]; 𝑀_C·C vanishes; Y_C = 𝑀_C·T).
+        ("canon", "primes"): _canon_stack(canon_mapping, "⟨"),
+        ("canon", "gens"): _canon_stack(canon_form, "{"),
+        ("canon", "canongens"): _canon_stack([[1 if i == k else 0 for k in range(rc)] for i in range(rc)], "{"),
+        ("canon", "detempering"): "{" + _ket_list(zip(*canon_mapped_detempering), "}", wrap=False) + "]",
+        ("canon", "commas"): _ket_list(list(zip(*canon_mapped_comma)) + canon_u_mapped_cols, "}"),
+        ("canon", "targets"): _ket_list(zip(*canon_mapped), "}"),
         ("tuning", "gens"): _cents_genmap(tun.generator_map),
         ("tuning", "primes"): _cents_map(tun.tuning_map),
         ("tuning", "commas"): _cents_list(list(comma_sizes.tempered) + u_tempered),
@@ -298,9 +326,11 @@ def plain_text_values(
     if held:
         held_sizes = interval_sizes(tun, held_ratios, db)
         held_mapped = mapped_intervals(state.mapping, held_ratios, db)
+        canon_held_mapped = mapped_intervals(canon_mapping, held_ratios, db)  # 𝑀_C·H
         values.update({
             ("vectors", "held"): _ket_list(held, "⟩"),
             ("mapping", "held"): _ket_list(zip(*held_mapped), "}"),
+            ("canon", "held"): _ket_list(zip(*canon_held_mapped), "}"),
             ("tuning", "held"): _cents_list(held_sizes.tempered),
             ("just", "held"): _cents_list(held_sizes.just),
             ("retune", "held"): _cents_list(held_sizes.errors),
@@ -314,10 +344,12 @@ def plain_text_values(
     if interest:
         interest_ratios = comma_ratios(interest, db)
         interest_mapped = mapped_intervals(state.mapping, interest_ratios, db)
+        canon_interest_mapped = mapped_intervals(canon_mapping, interest_ratios, db)  # 𝑀_C·interest
         interest_sizes = interval_sizes(tun, interest_ratios, db)
         values.update({
             ("vectors", "interest"): _ket_list(interest, "⟩", wrap=False),
             ("mapping", "interest"): _ket_list(zip(*interest_mapped), "}", wrap=False),
+            ("canon", "interest"): _ket_list(zip(*canon_interest_mapped), "}", wrap=False),
             ("tuning", "interest"): _cents_list(interest_sizes.tempered, wrap=False),
             ("just", "interest"): _cents_list(interest_sizes.just, wrap=False),
             ("retune", "interest"): _cents_list(interest_sizes.errors, wrap=False),

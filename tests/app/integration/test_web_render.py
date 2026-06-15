@@ -3326,27 +3326,26 @@ async def test_hovering_a_locked_weight_slope_shows_no_preview(user: User) -> No
 
 
 async def test_hovering_the_form_canonical_option_previews_canonicalizing(user: User) -> None:
-    # the mapping <choose form> control previews canonicalizing by REDDENING in place, NOT reflowing:
-    # picking canonical would retire the now-redundant canonical-form REFERENCE tile (the canonical
-    # mapping row + the F generator-form matrix), and reflowing those AWAY mid-hover would shift the
-    # grid out from under the cursor (moving the open dropdown). So the hover holds the grid steady and
-    # rings the doomed reference cells RED, keeping them on screen until the pick commits, while the
-    # main mapping cells the canonicalize would move ring amber (in place). The canon reference tile
-    # already shows the canonical values, so reddening it is the preview of what you're switching to.
+    # the mapping <choose form> control previews canonicalizing by REFLOWING the main mapping to its
+    # canonical values, ringed amber vs the pre-hover grid. The canonical-form reference tile (the canon
+    # mapping row + the F column) gates SOLELY on the form-tiles toggle, NOT on whether the matrix is
+    # canonical — so the form choice never adds or removes it, nothing shifts the dropdown, and the
+    # hover is a pure value-only reflow. (form_tiles is off here, so the reference tile is absent.)
     await user.open("/")
     _toggle(user, "form")            # the parent layer reveals its sub-controls (form controls is a child)
     _toggle(user, "form controls")   # now visible: turn on the <choose form> dropdowns
     await user.should_see(marker="formchooser:mapping")
-    await user.should_see(marker="cell:canon:0:2")             # the canonical-mapping reference row is on screen
+    await user.should_not_see(marker="cell:canon:0:2")         # canon reference tile gated on form_tiles (off) → absent
     wrap = set(user.find(marker="formchooser:mapping").elements)
     # options are {"": "choose form", "canonical": "canonical"}, so index 1 is the canonical entry
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})
-    assert "rtt-preview-remove" in _wrap_classes(user, "cell:canon:0:2")    # the canonical mapping ROW → red
-    assert "rtt-preview-remove" in _wrap_classes(user, "cell:form:0:0")     # the canonical generators COL (F) → red
-    await user.should_see(marker="cell:canon:0:2")             # ...still on screen (NOT reflowed away — no shift)
-    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")  # the main mapping it'd move → amber, in place
+    await user.should_see(marker="cell:mapping:0:2")
+    assert _cell_child(user, "cell:mapping:0:2").value == "-4"              # reflowed to the canonical value
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")  # ringed amber vs the pre-hover grid
+    await user.should_not_see(marker="cell:canon:0:2")         # the reference tile is NOT added by the form choice
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
-    assert "rtt-preview-remove" not in _wrap_classes(user, "cell:canon:0:2")  # cleared on leave
+    await user.should_see(marker="cell:mapping:0:2")
+    assert _cell_child(user, "cell:mapping:0:2").value == "0"               # back to the fifth form on leave
     assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:2")
 
 
@@ -3361,7 +3360,7 @@ async def test_choosing_the_form_canonical_option_commits_canonicalizing(user: U
     _toggle(user, "form controls")
     await user.should_see(marker="formchooser:mapping")
     wrap = set(user.find(marker="formchooser:mapping").elements)
-    UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})    # preview canonicalizing (redden)
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})    # preview canonicalizing (reflow)
     _cell_child(user, "formchooser:mapping").set_value("canonical")         # ...then commit it
     await user.should_see(marker="cell:mapping:0:2")
     assert _cell_child(user, "cell:mapping:0:2").value == "-4"  # committed canonical, value stuck
@@ -3371,28 +3370,24 @@ async def test_choosing_the_form_canonical_option_commits_canonicalizing(user: U
     assert _cell_child(user, "cell:mapping:0:2").value == "0"   # ...restores the fifth form (one clean step)
 
 
-async def test_hovering_a_form_away_from_canonical_does_not_preview_the_reappearing_rows(user: User) -> None:
-    # the inverse of the canonicalize preview: from a CANONICAL mapping, the canonical-form reference
-    # tile (the canon mapping row + the F generator-form column) is hidden — it only shows while the
-    # matrix is non-canonical. Hovering a non-canonical <choose form> option (equave-reduced) would
-    # bring that reference tile BACK, inserting rows/cols right where the dropdown sits and shoving it
-    # out from under the cursor (and the appearing rows wrongly rang amber). So the hover must NOT
-    # reflow: the reference tile stays absent (not previewed), and the main mapping cells the re-form
-    # would move ring amber IN PLACE (their value unchanged, no reflow). Leaving clears the rings.
+async def test_hovering_a_form_away_from_canonical_leaves_the_canon_tile_gated_on_form_tiles(user: User) -> None:
+    # the inverse of the canonicalize preview: from a CANONICAL mapping, hovering a non-canonical
+    # <choose form> option (equave-reduced) REFLOWS the main mapping to that form's values (amber). The
+    # canonical-form reference tile gates SOLELY on form-tiles (off here), so the form choice never
+    # brings it back — it stays absent across the hover, and nothing shifts the dropdown. Leaving clears.
     await user.open("/")
     _toggle(user, "form")
     _toggle(user, "form controls")
     await user.should_see(marker="formchooser:mapping")
     _cell_child(user, "formchooser:mapping").set_value("canonical")   # commit canonical first
     await user.should_see(marker="cell:mapping:0:2")
-    await user.should_not_see(marker="cell:canon:0:2")               # canonical ⇒ the reference tile is hidden
-    before = _cell_child(user, "cell:mapping:0:2").value             # the canonical entry (-4)
+    await user.should_not_see(marker="cell:canon:0:2")               # form_tiles off ⇒ the reference tile is absent
     wrap = set(user.find(marker="formchooser:mapping").elements)
     eq_idx = 1 + list(service.MAPPING_FORM_KEYS).index("equave-reduced")  # 1 for the "" placeholder
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": eq_idx})  # hover a non-canonical form
-    await user.should_not_see(marker="cell:canon:0:2")              # the reappearing reference row is NOT previewed
-    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")  # the main mapping it'd move → amber
-    assert _cell_child(user, "cell:mapping:0:2").value == before    # ...in place (no reflow → value unchanged)
+    await user.should_not_see(marker="cell:canon:0:2")              # the form choice does NOT add the reference tile
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")  # the main mapping reflows → amber
+    assert _cell_child(user, "cell:mapping:0:2").value == "0"        # ...showing the equave-reduced value
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
     assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:2")  # cleared on leave
     await user.should_not_see(marker="cell:canon:0:2")

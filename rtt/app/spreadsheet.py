@@ -1192,11 +1192,13 @@ class _GridBuilder:
             if self.state.n else "")
         # the form layer's two-faced display (step 3c): the subscript C marks the canonical form, so it
         # rides the MAIN rows only when the stored mapping IS canonical. When it is a non-canonical form
-        # (incl. the default equave-reduced), the main rows stay bare and the canonical-mapping row + 𝐹
-        # surface instead, so the canonical form is always visible somewhere.
+        # (incl. the default equave-reduced), the main rows stay bare — and the canonical form is then
+        # seen via the canonical-mapping row + 𝐹 column, which the user reveals with the form-tiles toggle.
         self.form_is_canonical = self.mapping_form_key == "canonical"
         self.show_form_subscript = self.show_form and self.form_is_canonical  # subscript-C on the main rows
-        self.show_canon = self.show_form_tiles or (self.show_form and not self.form_is_canonical)
+        # the canonical-mapping row + the canonical-generators column are gated SOLELY on form_tiles:
+        # off → NEITHER can appear (even under a non-canonical form); on → both surface.
+        self.show_canon = self.show_form_tiles
         self.target_vectors = service.target_interval_vectors(self.targets, self.d, self.elements)  # k vectors, each d-tall
         # held intervals: the optimization box's held-just constraints — user-edited vectors in the
         # held column (like the intervals of interest). The tuning holds each exactly just, so
@@ -4980,14 +4982,14 @@ class _GridBuilder:
         if self.row_open("canon") and self.tile_open("canon", "canongens"):  # 𝐹⁻¹𝐹 = 𝐼: { … ] per row, like 𝑀𝐺
             for i in range(self.rc):
                 self.bracket(f"fcancel:map:{i}", GENMAP_BRACKETS, "canongens", self.canon_top(i), ROW_H, stacked=True)
-        # the canonical-mapping row's mapped lists, framed like their mapping-row twins: 𝑀_C·D = 𝐹 a
-        # per-row genmap { … ] (stacked, like 𝑀D); 𝑀_C·C / Y_C / 𝑀_C·H a [ ] over the rc rows;
-        # 𝑀_C·interest stands alone (no outer wrap), mirroring the mapping row's interest.
+        # the canonical-mapping row's mapped lists, framed like their mapping-row twins (a single OUTER
+        # wrap + per-column ket marks from vector_list_marks below): 𝑀_C·D = 𝐹 a vector list { … ]
+        # (generator coords, like P·D = G); 𝑀_C·C / Y_C / 𝑀_C·H a [ … ] over the rc rows; 𝑀_C·interest
+        # stands alone (no outer wrap), mirroring the mapping row's interest.
         if self.row_open("canon"):
             canon_y, canon_h = (self.rows["canon"].y if "canon" in self.rows else 0), self.rc * ROW_H
             if self.tile_open("canon", "detempering"):
-                for i in range(self.rc):
-                    self.bracket(f"canon_detempering:{i}", GENMAP_BRACKETS, "detempering", self.canon_top(i), ROW_H, stacked=True)
+                self.bracket("canon_detempering", GENMAP_BRACKETS, "detempering", canon_y, canon_h, fit=True)
             if self.tile_open("canon", "commas"):
                 self.bracket("canon_comma", LIST_BRACKETS, "commas", canon_y, canon_h, fit=True)
             if self.tile_open("canon", "targets"):
@@ -5763,6 +5765,15 @@ class _GridBuilder:
         # column a ket [ … } (the default ebkbrace foot), the outer { … ] wrap from the bracket pass.
         self.vector_list_marks("mapping", "selfmap", "gens", self.gen_left, self.r, separators=False)
         self.vector_list_marks("mapping", "mapped_detempering", "detempering", self.detempering_left, self.r, separators=False)
+        # the canonical-mapping row's mapped lists — per-column ket marks mirroring the mapping row's
+        # (default ebkbrace foot, generator coords; the outer { … ] / [ … ] wraps come from the bracket
+        # pass above). 𝑀_C·D = 𝐹 is a vector list like MD; 𝑀_C·V's lone C|U bar is _v_split's job; the
+        # 𝑀_C·interest kets stand alone (no separators, no outer wrap), like the mapping interest.
+        self.vector_list_marks("canon", "canon_detempering", "detempering", self.detempering_left, self.r, separators=False)
+        self.vector_list_marks("canon", "canon_comma", "commas", self.comma_left, self.nc + self.nu, separators=False)
+        self.vector_list_marks("canon", "canon_mapped", "targets", self.target_left, self.k)
+        self.vector_list_marks("canon", "canon_imapped", "interest", self.interest_left, self.mi, separators=False)
+        self.vector_list_marks("canon", "canon_hmapped", "held", self.held_left, self.nh)
         # the interval-vectors row holds raw (untempered) vectors, so every column is a
         # ket — angle ⟩ feet, not braces. The comma basis is the editable bordered grid
         # (commacell), so it skips the separator rules (its cell borders divide the columns);

@@ -37,8 +37,8 @@ nothing of their own to show.
 its sub-controls (``form_controls``, ``form_tiles``, ``form_colorization``), but it ALSO carries a
 real layer — checking it marks the default (canonical) form with a subscript C on the mapping 𝑀,
 the generator tuning map 𝒈 and the generator embedding G (across their symbols and equivalences).
-So ``form`` is live (in :data:`IMPLEMENTED`) and has an example sample; its three sub-controls stay
-greyed until their content ships.
+So ``form`` is live (in :data:`IMPLEMENTED`) and has an example sample; two of its three sub-controls
+(``form_controls``, ``form_tiles``) are live too, leaving only ``form_colorization`` greyed.
 """
 
 from __future__ import annotations
@@ -184,8 +184,9 @@ IMPLEMENTED: frozenset[str] = frozenset(
      "custom_weights", "nonstandard_domain", "projection", "identity_objects",
      # "form" IS live: unlike the pure grouping parents it carries a real layer (the canonical-
      # form subscript C). "form_controls" is live too — the <choose form> dropdowns (canonical only,
-     # for now). Its other two sub-controls (form_tiles, form_colorization) stay greyed until built.
-     "form", "form_controls"}
+     # for now). "form_tiles" is live now too — it surfaces the canonical-mapping row + the canonical-
+     # generators column (off → neither can appear). Only "form_colorization" stays greyed until built.
+     "form", "form_controls", "form_tiles"}
 )
 
 # The pure grouping parents: top-level toggles that only expand the tiles toggle(s) nested under them

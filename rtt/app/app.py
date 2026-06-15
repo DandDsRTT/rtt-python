@@ -3962,16 +3962,17 @@ def index() -> None:
         # cursor is on; otherwise it rings the change IN PLACE on the current grid (no reflow). Two
         # things force the in-place path — both would yank the grid out from under the user:
         #   • the pick REMOVES on-screen cells (a target-set family that drops targets, a projection
-        #     that makes every target unchanged, a <choose form> canonical pick that retires the now-
-        #     redundant canonical-form reference box). Reflowing would delete them mid-preview, so
-        #     instead they ring RED in place and stay on screen until commit (seeing what goes away).
-        #   • the pick would MOVE the hovered chooser's own cell (it ADDS rows/cols above it — e.g.
-        #     switching the matrix AWAY from canonical brings the canonical-form reference box back
-        #     right where the <choose form> dropdown sits, shoving it out from under the cursor). The
+        #     that makes every target unchanged). Reflowing would delete them mid-preview, so instead
+        #     they ring RED in place and stay on screen until commit (seeing what goes away).
+        #   • the pick would MOVE the hovered chooser's own cell (it ADDS rows/cols above it). The
         #     added cells are NOT shown (a reflow is what would add them); the existing changed cells
         #     ring amber in place. So the dropdown never jumps — you can still click your option.
-        # A pure value-only pick (a re-solve, a same-count target swap, a re-form that adds nothing
-        # above its dropdown — tuning scheme / prescaler / complexity) keeps NOTHING shifting, so it
+        # The <choose form> picks are NOT in either case: the canonical-mapping row + 𝐹 column gate
+        # solely on the form-tiles toggle, NOT on whether the matrix is canonical, so re-forming never
+        # adds or removes them. So a form pick is a pure value-only reflow (below) — its main mapping
+        # cells show their re-formed values, ringed amber, with nothing shifting the dropdown.
+        # A pure value-only pick (a re-solve, a same-count target swap, a re-form — tuning scheme /
+        # prescaler / complexity / choose-form) keeps NOTHING shifting, so it
         # REFLOWS: changed cells show new values, ringed amber vs the pre-hover grid (the gesture
         # baseline), the hovered chooser's value + open popup held steady across the re-render
         # (_chooser_reflow_hold, keyed on this gesture's source group).
