@@ -381,6 +381,12 @@ def plain_text_values(
         mapped_T = map_vectors_into_superspace_generators(state, target_vectors)
         mapped_I = map_vectors_into_superspace_generators(state, interest)
         mapped_D = map_vectors_into_superspace_generators(state, detemper_vectors)
+        # the unchanged half U of the consolidated V = C|U column, lifted into the superspace (B_L·𝐮)
+        # and mapped into the superspace generators (M_s→L·𝐮) — the superspace twins of the on-domain
+        # u_basis / u_mapped_cols, appended to the comma half so the two ss tiles read C|U like the grid.
+        # u_basis is empty off projection, so these collapse to nothing and each tile is C alone.
+        ss_u = [None if u is None else lift_vectors_to_superspace(db, (u,))[0] for u in u_basis]
+        ss_u_mapped = [None if u is None else map_vectors_into_superspace_generators(state, (u,))[0] for u in u_basis]
         values.update({
             # B_L (basis change matrix): the mockup wraps it ⟨ … ] (distinct from the plain
             # [ … ] lifted lists), its columns the domain-element kets [ … ⟩.
@@ -389,7 +395,7 @@ def plain_text_values(
             # like P_L), not the mapping's }. Matches matrix_frame(ss_vec_jmap, foot="ebkangle").
             ("ss_vectors", "ssprimes"): "[" + "".join(
                 "⟨" + " ".join(str(x) for x in row) + "]" for row in mjl) + "⟩",
-            ("ss_vectors", "commas"): _ket_list(C_L, "⟩"),          # C_L
+            ("ss_vectors", "commas"): _ket_list(list(C_L) + ss_u, "⟩"),  # C_L then B_L·U over V
             ("ss_vectors", "targets"): _ket_list(T_L, "⟩"),         # T_L
             ("ss_vectors", "detempering"): _ket_list(D_L, "⟩"),     # D_L (lifted detempering)
             ("ss_vectors", "interest"): _ket_list(I_L, "⟩", wrap=False),
@@ -398,7 +404,7 @@ def plain_text_values(
             # M_LGL = I: a COLUMN-first vector list — kets [ … } in an outer { … ] (gen coords),
             # like MG / MD. Matches the grid's vector_list_marks + { … ] wrap.
             ("ss_mapping", "ssgens"): "{" + _ket_list(mlgl, "}", wrap=False) + "]",
-            ("ss_mapping", "commas"): _ket_list(mapped_C, "}"),     # mapped commas (→ 0)
+            ("ss_mapping", "commas"): _ket_list(list(mapped_C) + ss_u_mapped, "}"),  # M_s→L·C (→ 0) then M_s→L·U over V
             ("ss_mapping", "targets"): _ket_list(mapped_T, "}"),    # Y_L
             ("ss_mapping", "detempering"): _ket_list(mapped_D, "}"),  # detempering mapped into ss generators
             ("ss_mapping", "interest"): _ket_list(mapped_I, "}", wrap=False),
@@ -428,7 +434,6 @@ def plain_text_values(
                 return list(cols) if cols else [tuple(_DASH for _ in range(dL)) for _ in vectors]
 
             proj_bl = project_vectors(p_L, bl) or [tuple(_DASH for _ in range(dL)) for _ in bl]
-            ss_u = [None if u is None else lift_vectors_to_superspace(db, (u,))[0] for u in u_basis]
             values[("ss_projection", "ssprimes")] = projection_ebk(
                 superspace_tuning_projection(state, held_basis_ratios), dL)
             values[("ss_projection", "ssgens")] = embedding_ebk(

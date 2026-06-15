@@ -1607,6 +1607,13 @@ class _GridBuilder:
         self.ss_unchanged = tuple(
             (service.lift_vectors_to_superspace(self.elements, (ub,))[0] if ub is not None else None)
             for ub in (self.unchanged_basis if self.show_unchanged else ()))
+        # the same unchanged half mapped into the superspace GENERATORS (M_s→L·𝐮) — the ss_mapping row's
+        # share of the consolidated V column, the superspace twin of the on-domain unchanged_mapped
+        # (M·𝐮). The comma half maps to 𝟎 (handled in the lists loop); this fills the U half. None
+        # (a dashed unchanged direction) passes through as None, exactly like ss_unchanged above.
+        self.ss_unchanged_mapped = tuple(
+            (service.map_vectors_into_superspace_generators(self.state, (ub,))[0] if ub is not None else None)
+            for ub in (self.unchanged_basis if self.show_unchanged else ()))
 
     def _declare_tiles(self, interest_tiles, held_tiles, detempering_tiles) -> None:
         """Declare the projection-row column tiles and assemble the authoritative tile set."""
@@ -3318,9 +3325,10 @@ class _GridBuilder:
         The bar is a property OF THE COLUMN, not of a named list of rows: any tile whose commas
         cells actually reach into the unchanged half U gets it — discovered from the emitted cells
         (this runs last, after every band is laid), so it can never drift as rows come and go. That
-        sweeps in the counts tile (its bar falls between the two scalar tallies, n | u) and any
-        future consolidating row automatically; it skips a tile whose comma half holds only C and
-        no U (the superspace B_L / M_L lists, which don't consolidate) — there's nothing to divide."""
+        picks up any future consolidating row automatically (and the superspace B_L / M_L lists,
+        now that they render their U half too); it skips a tile whose comma half holds only C and
+        no U — there's nothing to divide. The counts tile is the lone exclusion: it holds two
+        scalar tallies (n, u), not a matrix, and the user didn't want a rule sitting between them."""
         if not self.show_unchanged or self.commas_x is None or self.nc_shown == 0 or self.nu == 0:
             return  # no comma half (full rank, n = 0) or no unchanged half: nothing to divide
         x = self.comma_left(self.nc_shown) - V_SPLIT_GAP / 2 - SEP_W / 2  # mid-gap, between C (+ any draft) and U
@@ -3334,7 +3342,7 @@ class _GridBuilder:
                         rows_with_u.add(rkey)
                         break
         for rkey in rows_with_u:
-            if self.tile_open(rkey, "commas"):
+            if rkey != "counts" and self.tile_open(rkey, "commas"):  # counts holds only the n | u tallies — no rule
                 self.cells.append(CellBox(f"vsplit:{rkey}", x, self.rows[rkey].y, SEP_W, self.rows[rkey].h, "vbar"))
 
     def _emit_headers(self) -> None:
@@ -4337,6 +4345,14 @@ class _GridBuilder:
                     for p in range(self.dL):
                         self.cells.append(CellBox(f"cell:ss_vectors:{ckey}:{p}:draft", left(n), self.ss_vec_top(p),
                                              COL_W, ROW_H, "vec", text="", prime=p, pending=True))
+                if ckey == "commas":  # consolidated V = C|U: the unchanged half, lifted (B_L·𝐮)
+                    for j in range(self.nu):
+                        uj = self.ss_unchanged[j]
+                        for p in range(self.dL):
+                            self.cells.append(CellBox(
+                                f"cell:ss_vectors:commas:{p}:u{j}", self.comma_left(self.nc_shown + j), self.ss_vec_top(p),
+                                COL_W, ROW_H, "vec", text=DASH if uj is None else str(uj[p]), prime=p, comma=self.nc + j,
+                                unit=self.cell_unit("ss_vectors", "commas", prime=p)))
             if self.row_open("ss_mapping") and self.tile_open("ss_mapping", ckey):
                 mapped = service.map_vectors_into_superspace_generators(self.state, cols)
                 for c in range(len(mapped)):
@@ -4349,6 +4365,14 @@ class _GridBuilder:
                     for g in range(self.rL):
                         self.cells.append(CellBox(f"cell:ss_mapping:{ckey}:{g}:draft", left(n), self.ss_map_top(g),
                                              COL_W, ROW_H, "mapped", text="", gen=g, pending=True))
+                if ckey == "commas":  # consolidated V = C|U: the unchanged half mapped into ss generators (M_s→L·𝐮)
+                    for j in range(self.nu):
+                        uj = self.ss_unchanged_mapped[j]
+                        for g in range(self.rL):
+                            self.cells.append(CellBox(
+                                f"cell:ss_mapping:commas:{g}:u{j}", self.comma_left(self.nc_shown + j), self.ss_map_top(g),
+                                COL_W, ROW_H, "mapped", text=DASH if uj is None else str(uj[g]), gen=g, comma=self.nc + j,
+                                unit=self.cell_unit("ss_mapping", "commas", gen=g)))
         # P_L = G_L M_L (superspace projection): the dL × dL rational projection the tuning lifts to
         # over its superspace primes. Sits in (ss_projection, ssprimes), each row a covector over the
         # dL ss_primes — read-only "mapped" cells like M_L (P_L is DERIVED, edited only via the on-
@@ -5749,12 +5773,12 @@ class _GridBuilder:
         # like the on-domain vectors row; interest stands alone (no separators). The mapped
         # versions in the ss_mapping row take curly-brace feet (} ) like the on-domain mapped lists.
         self.vector_list_marks("ss_vectors", "ss_vec:primes", "primes", self.prime_left, self.d, foot="ebkangle", separators=False)
-        self.vector_list_marks("ss_vectors", "ss_vec:commas", "commas", self.comma_left, self.nc, foot="ebkangle", separators=False)
+        self.vector_list_marks("ss_vectors", "ss_vec:commas", "commas", self.comma_left, self.nc + self.nu, foot="ebkangle", separators=False)  # B_L·C then B_L·U over V
         self.vector_list_marks("ss_vectors", "ss_vec:targets", "targets", self.target_left, self.k, foot="ebkangle")
         self.vector_list_marks("ss_vectors", "ss_vec:held", "held", self.held_left, self.nh, foot="ebkangle")
         self.vector_list_marks("ss_vectors", "ss_vec:interest", "interest", self.interest_left, self.mi, foot="ebkangle", separators=False)
         self.vector_list_marks("ss_vectors", "ss_vec:detempering", "detempering", self.detempering_left, self.r, foot="ebkangle")
-        self.vector_list_marks("ss_mapping", "ss_mapped:commas", "commas", self.comma_left, self.nc)
+        self.vector_list_marks("ss_mapping", "ss_mapped:commas", "commas", self.comma_left, self.nc + self.nu, separators=False)  # M_s→L·C then M_s→L·U over V
         self.vector_list_marks("ss_mapping", "ss_mapped:targets", "targets", self.target_left, self.k)
         self.vector_list_marks("ss_mapping", "ss_mapped:held", "held", self.held_left, self.nh)
         # 𝐿·B_Ls (the prescaled basis-change matrix in the domain-primes column once the superspace
