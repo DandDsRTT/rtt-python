@@ -469,6 +469,7 @@ _CSS_VARS = f""":root {{
   --option-box-checked:url("{_option_box_svg('#000')}");
   --option-box-disabled:url("{_option_box_svg('#888')}");
   --rtt-serif:'STIX Two Text','STIX Two Math',Georgia,serif;
+  --rtt-units-sans:'Jost','Corbel','Candara','Trebuchet MS',sans-serif;
 }}
 """
 
@@ -486,6 +487,12 @@ _FONT_FACE = "".join(
         ("STIX Two Text", "normal", 700, "STIXTwoText-Bold.woff2"),
         ("STIX Two Text", "italic", 700, "STIXTwoText-BoldItalic.woff2"),
         ("STIX Two Math", "normal", 400, "STIXTwoMath-subset.woff2"),
+        # The unit labels' sans (see --rtt-units-sans): Jost, a geometric face with the
+        # SINGLE-STORY g the mockup's unit style calls for. The un-shipped Corbel/Candara had
+        # it; their Trebuchet MS fallback draws a double-story g. Regular + bold — the variable
+        # symbols (g/p/…) in a unit render bold via _bold_units.
+        ("Jost", "normal", 400, "Jost-Regular.woff2"),
+        ("Jost", "normal", 700, "Jost-Bold.woff2"),
     )
 )
 

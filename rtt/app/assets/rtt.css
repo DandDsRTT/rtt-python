@@ -297,20 +297,20 @@
 .rtt-matlabel-norm { font-size:8px; overflow:visible; white-space:normal; }
 .rtt-matlabel sub { font-size:70%; vertical-align:sub; line-height:0; }
 /* the per-box "units: …" line below the caption, and the domain-units row/col labels.
-   The unit VALUE is set in a single-story-g sans face (the mockup's distinct unit style):
-   Corbel has a single-story g — Cambria, Calibri, Verdana, Segoe UI all draw a double-story
-   g, so they're excluded. (NB this sans stack is still the un-shipped Corbel/Candara legacy
-   and falls back to Trebuchet MS — a follow-up could self-host a sans too; the body serif is
-   now the self-hosted STIX Two Text, see app.py.) The per-box "units:" label keeps the serif
+   The unit VALUE is set in a SINGLE-STORY-g sans face (the mockup's distinct unit style):
+   --rtt-units-sans self-hosts Jost (a geometric single-story-g face, see app.py) ahead of the
+   legacy Corbel/Candara — those are un-shipped on macOS/Linux and fell back to Trebuchet MS,
+   which draws a DOUBLE-story g (the bug this fixes). Cambria/Calibri/Verdana/Segoe UI are
+   double-story too, so they stay out of the stack. The per-box "units:" label keeps the serif
    body face via .rtt-units-pre. */
 .rtt-units { width:100%; text-align:center; font-size:10px; color:#333; line-height:1;
-            white-space:nowrap; font-family:'Corbel','Candara','Trebuchet MS',sans-serif; }
+            white-space:nowrap; font-family:var(--rtt-units-sans); }
 .rtt-units-pre { font-family:var(--rtt-serif); }
 /* the per-value unit (the `units` toggle): a tiny line in the same single-story-g sans,
    stacked right beneath the value so the value + unit read as one centred pair — like the
    cents int-over-fraction stack, the unit hugging its value rather than floating away. */
 .rtt-cellunit { font-size:7px; line-height:1; color:#555; white-space:nowrap; text-align:center;
-            font-family:'Corbel','Candara','Trebuchet MS',sans-serif; }
+            font-family:var(--rtt-units-sans); }
 /* a read-only value cell simply stacks [value, unit] in a centred column; the value's
    line-height is tightened so the value + unit pair fits the square and stays centred */
 .rtt-cell-united:not(.rtt-cell-input) { flex-direction:column; line-height:1; }
