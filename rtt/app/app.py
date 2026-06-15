@@ -3947,24 +3947,38 @@ def index() -> None:
             rank_remove[0] = None
             render()
 
+    def _cell_xy(lay, eid):
+        # a cell's (x, y) in a layout, or None if it isn't there — used to tell whether a candidate
+        # would SHIFT the hovered dropdown (cells are fixed-size, so a cell only moves when rows /
+        # columns are added or removed above / left of it)
+        for c in lay.cells:
+            if c.id == eid:
+                return (round(c.x), round(c.y))
+        return None
+
     def chooser_hover(cid, apply):
-        # a dropdown option hover previews applying its candidate. How it previews depends on whether
-        # the pick keeps every on-screen value cell or REMOVES some — the same fork the temperament
-        # chooser makes, detected by removed_cell_ids (any value cell the pick deletes), not by state
-        # dimensions:
-        #   • value-only (NOTHING removed — a re-solve, a re-formed matrix, a same-count target swap,
-        #     a projection that keeps the grid) — REFLOW: apply to the document under the gesture's
-        #     token and re-render the would-be grid, so the changed cells actually SHOW their NEW
-        #     values (a bare ring can't move a value), ringed amber against the pre-hover grid (the
-        #     gesture baseline). Cells are fixed-width, so a pure value change never shifts the grid;
-        #     the hovered chooser's own value + open popup stay steady across the re-render
-        #     (_chooser_reflow_hold, keyed on this gesture's source group).
-        #   • cell-removing (a target-set family that drops targets, a projection that makes every
-        #     target unchanged, a <choose form> pick that retires the now-redundant canonical-form
-        #     reference box) — REDDEN, don't reflow: reflowing the doomed cells AWAY would shift the
-        #     grid out from under the cursor (moving the open dropdown) AND hide what goes away. So
-        #     hold the current grid and arm the load as a hypothetical candidate — every dropped cell
-        #     rings RED in place, the surviving changed cells amber, all kept on screen until commit.
+        # a dropdown option hover previews applying its candidate. It REFLOWS (re-renders the would-be
+        # grid so the changed cells SHOW their new values) only when that won't disturb the grid the
+        # cursor is on; otherwise it rings the change IN PLACE on the current grid (no reflow). Two
+        # things force the in-place path — both would yank the grid out from under the user:
+        #   • the pick REMOVES on-screen cells (a target-set family that drops targets, a projection
+        #     that makes every target unchanged, a <choose form> canonical pick that retires the now-
+        #     redundant canonical-form reference box). Reflowing would delete them mid-preview, so
+        #     instead they ring RED in place and stay on screen until commit (seeing what goes away).
+        #   • the pick would MOVE the hovered chooser's own cell (it ADDS rows/cols above it — e.g.
+        #     switching the matrix AWAY from canonical brings the canonical-form reference box back
+        #     right where the <choose form> dropdown sits, shoving it out from under the cursor). The
+        #     added cells are NOT shown (a reflow is what would add them); the existing changed cells
+        #     ring amber in place. So the dropdown never jumps — you can still click your option.
+        # A pure value-only pick (a re-solve, a same-count target swap, a re-form that adds nothing
+        # above its dropdown — tuning scheme / prescaler / complexity) keeps NOTHING shifting, so it
+        # REFLOWS: changed cells show new values, ringed amber vs the pre-hover grid (the gesture
+        # baseline), the hovered chooser's value + open popup held steady across the re-render
+        # (_chooser_reflow_hold, keyed on this gesture's source group).
+        # The token is captured ONCE per gesture and survives option-to-option moves; every option
+        # re-bases on it. Reverts on leave / popup-close (chooser_unhover), commits on the chooser's
+        # own select handler (on_preset / on_form_choose / on_control_select / on_target_change, each
+        # of which end_gesture()s first so the click is one clean undo step off the real document).
         # The token is captured ONCE per gesture and survives option-to-option moves; every option
         # re-bases on it. Reverts on leave / popup-close (chooser_unhover), commits on the chooser's
         # own select handler (on_preset / on_form_choose / on_control_select / on_target_change, each
@@ -3991,12 +4005,16 @@ def index() -> None:
         base = g.baseline
         apply()                              # evaluate the candidate on the real document...
         hyp = editor.layout(prev_ids=base.identities if base is not None else None)
-        if base is not None and spreadsheet.removed_cell_ids(base, hyp):  # the pick would DELETE cells —
+        # ring in place (no reflow) when reflowing would yank the grid: the pick DELETES on-screen
+        # cells (redden them), or it would MOVE the hovered dropdown by adding rows/cols above it.
+        disturbs = base is not None and (
+            spreadsheet.removed_cell_ids(base, hyp) or _cell_xy(base, cid) != _cell_xy(hyp, cid))
+        if disturbs:
             editor.restore_for_preview(g.token)  # back to the real doc; keep the grid shape (no shift)
-            g.apply = apply                      # and redden the doomed cells in place, no reflow
-            paint_rings()
-        else:                                # value-only — reflow into the would-be grid, ringed amber
-            g.apply = None                   # against the baseline (live-mode diff)
+            g.apply = apply                      # red the removed cells / amber the changed ones in
+            paint_rings()                        # place; added cells aren't shown (a reflow would add them)
+        else:                                # value-only, dropdown stays put — reflow into the would-be
+            g.apply = None                   # grid, changed cells ringed amber against the baseline
             g.reflowed = True                # keep the chooser's value + open popup steady (_chooser_reflow_hold)
             gesture_render()
 

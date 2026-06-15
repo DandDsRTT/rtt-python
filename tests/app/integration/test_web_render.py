@@ -3290,8 +3290,11 @@ async def test_hovering_a_complexity_option_previews_reselecting(user: User) -> 
 
 
 async def test_hovering_a_weight_slope_option_previews_reselecting(user: User) -> None:
-    # the box-𝒘 weight-slope chooser previews its options: the slope is exactly what scales each
-    # target's weight, so hovering a different slope rings the re-weighted targets.
+    # the box-𝒘 weight-slope chooser previews its options: the slope scales each target's weight, so
+    # hovering a different slope rings the re-weighted targets amber. RING-ONLY here (no reflow): a
+    # non-unity slope brings the complexity-prescaling tile in ABOVE the slope chooser, which would
+    # shove the open dropdown out from under the cursor — so the preview holds the grid steady and
+    # rings the change in place (the weight keeps its old value, lit amber) rather than reflowing.
     await user.open("/")
     _toggle(user, "optimization")  # reveal weighting (now nested under optimization)
     _toggle(user, "weighting")                                # the slope chooser shows with weighting
@@ -3300,11 +3303,10 @@ async def test_hovering_a_weight_slope_option_previews_reselecting(user: User) -
     wrap = set(user.find(marker="control:slope").elements)
     idx = list(service.WEIGHT_SLOPES).index("simplicity-weight")  # default is unity-weight
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
-    assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
-    assert _ro_value(user, "weight:target:1") != before            # the re-weighted target SHOWS its new value
+    assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")   # the re-weighted target rings amber
+    assert _ro_value(user, "weight:target:1") == before            # ...in place (no reflow → value unchanged)
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
     assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
-    assert _ro_value(user, "weight:target:1") == before            # reverts on leave
 
 
 async def test_hovering_a_locked_weight_slope_shows_no_preview(user: User) -> None:
@@ -3367,6 +3369,33 @@ async def test_choosing_the_form_canonical_option_commits_canonicalizing(user: U
     user.find(marker="undo").click()                            # one undo step...
     await user.should_see(marker="cell:mapping:0:2")
     assert _cell_child(user, "cell:mapping:0:2").value == "0"   # ...restores the fifth form (one clean step)
+
+
+async def test_hovering_a_form_away_from_canonical_does_not_preview_the_reappearing_rows(user: User) -> None:
+    # the inverse of the canonicalize preview: from a CANONICAL mapping, the canonical-form reference
+    # tile (the canon mapping row + the F generator-form column) is hidden — it only shows while the
+    # matrix is non-canonical. Hovering a non-canonical <choose form> option (equave-reduced) would
+    # bring that reference tile BACK, inserting rows/cols right where the dropdown sits and shoving it
+    # out from under the cursor (and the appearing rows wrongly rang amber). So the hover must NOT
+    # reflow: the reference tile stays absent (not previewed), and the main mapping cells the re-form
+    # would move ring amber IN PLACE (their value unchanged, no reflow). Leaving clears the rings.
+    await user.open("/")
+    _toggle(user, "form")
+    _toggle(user, "form controls")
+    await user.should_see(marker="formchooser:mapping")
+    _cell_child(user, "formchooser:mapping").set_value("canonical")   # commit canonical first
+    await user.should_see(marker="cell:mapping:0:2")
+    await user.should_not_see(marker="cell:canon:0:2")               # canonical ⇒ the reference tile is hidden
+    before = _cell_child(user, "cell:mapping:0:2").value             # the canonical entry (-4)
+    wrap = set(user.find(marker="formchooser:mapping").elements)
+    eq_idx = 1 + list(service.MAPPING_FORM_KEYS).index("equave-reduced")  # 1 for the "" placeholder
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": eq_idx})  # hover a non-canonical form
+    await user.should_not_see(marker="cell:canon:0:2")              # the reappearing reference row is NOT previewed
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")  # the main mapping it'd move → amber
+    assert _cell_child(user, "cell:mapping:0:2").value == before    # ...in place (no reflow → value unchanged)
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:2")  # cleared on leave
+    await user.should_not_see(marker="cell:canon:0:2")
 
 
 def test_option_hover_delegation_cancels_the_settle_timer_on_pointerdown() -> None:
