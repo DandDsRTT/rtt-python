@@ -21,6 +21,7 @@ from rtt.app.service.core import (
     interval_complexities,
     interval_sizes,
     interval_vector,
+    inverse_form_matrix,
     mapped_commas,
 )
 from rtt.app.service.state import TemperamentState
@@ -106,6 +107,28 @@ def tuning_embedding(state: TemperamentState, held_ratios=()):
         return _matrix_strings(get_generator_embedding(*inputs))
     except (ArithmeticError, ValueError, IndexError, TypeError) as exc:
         _log.debug("tuning_embedding dashed: %r", exc)
+        return None
+
+
+def canonical_generator_embedding(state: TemperamentState, held_ratios=()):
+    """The canonical generator embedding ``G_C = G·F⁻¹`` as a ``d×rc`` grid of display strings — the
+    generator embedding ``G`` re-expressed over the CANONICAL generators (since ``M = F⁻¹·M_C``, the
+    embedding that pins ``P = G_C·M_C`` is ``G·F⁻¹``). Its columns are the canonical generators as
+    fractional prime vectors — for quarter-comma meantone the octave ``[1 0 0⟩`` and the canonical
+    fifth ``[1 0 1/4⟩``. ``None`` in lockstep with :func:`tuning_embedding` (an under-held /
+    degenerate tuning is no rational projection, so neither is its canonical re-expression)."""
+    try:
+        inputs = _projection_temperaments(state, _held_for_projection(state, held_ratios))
+        if inputs is None:
+            return None
+        g = get_generator_embedding(*inputs)             # d×r Fraction
+        f_inv = inverse_form_matrix(state.mapping)        # r×rc int
+        r, rc = len(f_inv), len(f_inv[0]) if f_inv else 0
+        gc = tuple(tuple(sum(g[i][k] * f_inv[k][j] for k in range(r)) for j in range(rc))
+                   for i in range(len(g)))
+        return _matrix_strings(gc)
+    except (ArithmeticError, ValueError, IndexError, TypeError) as exc:
+        _log.debug("canonical_generator_embedding dashed: %r", exc)
         return None
 
 

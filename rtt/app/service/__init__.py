@@ -50,6 +50,7 @@ from rtt.app.service.core import (
     form_matrix,
     generator_detempering,
     generators,
+    inverse_form_matrix,
     get_generator_tuning_range,
     greatest_factor,
     interval_complexities,
@@ -90,6 +91,7 @@ from rtt.app.service.parse import (
 from rtt.app.service.projection import (
     UnchangedData,
     _all_primes_held,
+    canonical_generator_embedding,
     _held_for_projection,
     _integer_columns,
     _matrix_strings,

@@ -1179,6 +1179,9 @@ class _GridBuilder:
         # 5-limit meantone the equave-reduced default gens are (2/1, 3/2) but the canonical ones
         # are (2/1, 3/1) — the octave and the (non-equave-reduced) fifth-as-3.
         self.canon_gens = service.generators(self.canon_mapping, self.elements)
+        # F⁻¹ (r×rc): the inverse generator form matrix, M = F⁻¹·M_C — the mapping-row tile in the
+        # canonical-generators column (units g/g_C), the dual of F (canon row, g_C/g) above it
+        self.inverse_form_M = service.inverse_form_matrix(self.state.mapping)
         # which generator form the STORED mapping currently is (so the <choose form> dropdown shows it
         # selected) — "" when it matches none of the offered forms (an unlisted equivalent generating set)
         # honor the user's explicit <choose form> pick as a tiebreaker (mapping_form): forms can
@@ -1555,6 +1558,11 @@ class _GridBuilder:
                                   if self.show_projection else None)
         self.embedding_matrix = (service.tuning_embedding(self.state, self.held_basis_ratios)
                                  if self.show_projection else None)
+        # G_C = G·F⁻¹ (d×rc): the canonical generator embedding, the projection-row tile in the
+        # canonical-generators column (units p/g_C) — G re-expressed over the canonical generators.
+        # Dashes in lockstep with G (None ⟺ the tuning isn't a full rational projection).
+        self.canon_embedding_matrix = (service.canonical_generator_embedding(self.state, self.held_basis_ratios)
+                                       if self.show_projection else None)
         # the projected vector lists riding the projection row band: P applied to each column's
         # interval vectors. P·D is the generator embedding G (P·D = GMD = G, since M·D = I); P·H = H
         # (the held intervals are P's eigenvalue-1 directions); P·T / P·interest send each target /
@@ -3975,6 +3983,10 @@ class _GridBuilder:
         # only via the plain-text band, since 𝑀𝐺 = 𝐼 couples every entry), over the r generator columns
         # rather than the d primes. Dashed in lockstep with P (embedding_matrix None ⟺ not a full rational projection).
         self._emit_mapped_grid("gens", "embed", self.embedding_matrix, self.r, self.gen_left, "gen")
+        # the canonical generator embedding G_C = G·F⁻¹ (d×rc), in the canonical-generators column —
+        # G re-expressed over the canonical generators (units p/g_C). A vector list like G, dashed in
+        # lockstep with it (canon_embedding_matrix None ⟺ the tuning isn't a full rational projection).
+        self._emit_mapped_grid("canongens", "embed_c", self.canon_embedding_matrix, self.rc, self.canongen_left, "gen")
         # the chapter-9 superspace projection tiles (between G and P): G_L→s a d×rL vector list over the
         # superspace-generator columns, P_L→s a d×dL covector stack over the superspace-prime columns —
         # read-only ("mapped"), dashed in lockstep with P/G when the tuning isn't a full rational projection.
@@ -4081,6 +4093,14 @@ class _GridBuilder:
                     for j in range(self.nu):
                         ut = DASH if self.canon_unchanged_mapped[i][j] is None else str(self.canon_unchanged_mapped[i][j])
                         self.cells.append(CellBox(f"cell:canon_mapped_unchanged:{i}:{j}", self.comma_left(self.nc_shown + j), self.canon_top(i), COL_W, ROW_H, "mapped", text=ut, gen=i, unit=self.cell_unit("canon", "commas", gen=i)))
+        # the inverse generator form matrix 𝐹⁻¹ (r×rc) rides the MAPPING row in the canonical-generators
+        # column — the dual of 𝐹 (canon row) above it: 𝑀 = 𝐹⁻¹𝑀_C, so 𝐹⁻¹ takes the canonical generators
+        # back to the stored ones (units g/g_C). Read-only integer cells, framed { … ] like 𝐹.
+        if self.tile_open("mapping", "canongens"):
+            for i in range(self.r):
+                for j in range(self.rc):
+                    self.cells.append(CellBox(f"cell:finv:{i}:{j}", self.canongen_left(j), self.map_top(i), COL_W, ROW_H,
+                                         "mapped", text=str(self.inverse_form_M[i][j]), unit=self.cell_unit("mapping", "canongens", gen=i)))
 
     def _emit_canon_mapped_tile(self, prefix, group, count, left_fn, data, pending, i) -> None:
         """One canon-row read-only 𝑀_C·X tile (targets / interest / held) for canonical row i: a
@@ -4550,6 +4570,16 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
                                      gen_kind, text=service.cents(v, self._decimals), gen=i, unit=self.cell_unit("tuning", "gens", gen=i)))
                 self._voice("tuning:gens", i, v)  # the genmap sounds each generator's tuned size
+        # the canonical generator tuning map 𝒈_C = 𝒈·F⁻¹, in the canonical-generators column — the
+        # generator tuning map re-expressed over the canonical generators (units ¢/g_C). Read-only
+        # computed values (the editable map is 𝒈 over the gens column; 𝒈_C is its form-invariant twin).
+        if self.row_open("tuning") and self.tile_open("tuning", "canongens"):
+            gm = self.tun.generator_map
+            for j in range(self.rc):
+                v = sum(gm[k] * self.inverse_form_M[k][j] for k in range(self.r))
+                self.cells.append(CellBox(f"tuning:cangen:{j}", self.canongen_left(j), self.rows["tuning"].y, COL_W, ROW_H,
+                                     "tuningvalue", text=service.cents(v, self._decimals), gen=j, unit=self.cell_unit("tuning", "canongens", gen=j)))
+                self._voice("tuning:canongens", j, v)
         # the chapter-9 superspace tuning row: 𝒈ₗ over the ssgens column, 𝒕ₗ / 𝒋ₗ / 𝒓ₗ over ssprimes.
         # In the prime-based approach the optimization IS over the superspace generators, so 𝒈L is the
         # EDITABLE generator map (gentuningcell, the editing 𝒈 gave up above) — a manual 𝒈L freezes
@@ -5013,6 +5043,9 @@ class _GridBuilder:
         if self.row_open("canon") and self.tile_open("canon", "canongens"):  # 𝐹⁻¹𝐹 = 𝐼: { … ] per row, like 𝑀𝐺
             for i in range(self.rc):
                 self.bracket(f"fcancel:map:{i}", GENMAP_BRACKETS, "canongens", self.canon_top(i), ROW_H, stacked=True)
+        if self.tile_open("mapping", "canongens"):  # 𝐹⁻¹: { … ] per row (like 𝐹), over the mapping rows
+            for i in range(self.r):
+                self.bracket(f"finv:map:{i}", GENMAP_BRACKETS, "canongens", self.map_top(i), ROW_H, stacked=True)
         # the canonical-mapping row's mapped lists, framed like their mapping-row twins (a single OUTER
         # wrap + per-column ket marks from vector_list_marks below): 𝑀_C·D = 𝐹 a vector list { … ]
         # (generator coords, like P·D = G); 𝑀_C·C / Y_C / 𝑀_C·H a [ … ] over the rc rows; 𝑀_C·interest
@@ -5035,6 +5068,9 @@ class _GridBuilder:
             # vector_list_marks below) inside an outer { … ] (curly open, square close, generator
             # coords) — matching its plain text {[…⟩…], NOT a covector stack
             self.bracket("embed", GENMAP_BRACKETS, "gens", self.rows["projection"].y, self.d * ROW_H, fit=True)
+        if self.row_open("projection") and self.tile_open("projection", "canongens"):
+            # G_C is a vector LIST like G — outer { … ] over the canonical-generator columns
+            self.bracket("embed_c", GENMAP_BRACKETS, "canongens", self.rows["projection"].y, self.d * ROW_H, fit=True)
         if self.row_open("projection") and self.tile_open("projection", "ssgens"):
             # G_L→s is a vector LIST like G — outer { … ] over the superspace-generator columns
             self.bracket("embed_sl", GENMAP_BRACKETS, "ssgens", self.rows["projection"].y, self.d * ROW_H, fit=True)
@@ -5211,6 +5247,8 @@ class _GridBuilder:
                                          gw, SEP_W, "hbar"))
         if self.tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
             self.bracket("tuning:genmap", GENMAP_BRACKETS, "gens", self.rows["tuning"].y, ROW_H)
+        if self.tile_open("tuning", "canongens"):  # 𝒈_C the canonical generator tuning map, framed { … ] like 𝒈
+            self.bracket("tuning:cangenmap", GENMAP_BRACKETS, "canongens", self.rows["tuning"].y, ROW_H)
         # the detempering tuning row IS the generator tuning map (𝒕D = 𝒈), so it too is framed
         # { … ]; its just/retune rows are ordinary interval lists, framed below with the rest
         if self.tile_open("tuning", "detempering"):
@@ -5739,6 +5777,7 @@ class _GridBuilder:
         self.matrix_frame("canon", "primes", "canon")
         self.matrix_frame("canon", "gens", "form")
         self.matrix_frame("canon", "canongens", "fcancel")  # 𝐹⁻¹𝐹 = 𝐼, framed { … ] like 𝑀𝐺
+        self.matrix_frame("mapping", "canongens", "finv")   # 𝐹⁻¹, framed { … ] like 𝐹 (per-row covector stack)
         # the BARE prescaler 𝐿 reads exactly like the mapping in plain text — outer
         # ``[ … ⟩`` with per-row ``⟨ … ]`` covectors — so its gridded EBK uses the SAME
         # matrix_frame + per-row bracket pattern the mapping uses, just with an angle ⟩
@@ -5771,6 +5810,8 @@ class _GridBuilder:
         # the generator embedding G: each held generator a prime-count ket [ … ⟩ column over the gens
         # columns (the outer { … ] is the bracket() call above), no dividing rules
         self.vector_list_marks("projection", "embed", "gens", self.gen_left, self.r, foot="ebkangle", separators=False)
+        # G_C the canonical generator embedding: a vector list like G over the canonical-generator columns
+        self.vector_list_marks("projection", "embed_c", "canongens", self.canongen_left, self.rc, foot="ebkangle", separators=False)
         # G_L→s the superspace generator embedding: a vector list like G over the ssgens columns
         self.vector_list_marks("projection", "embed_sl", "ssgens", self.ss_gen_left, self.rL, foot="ebkangle", separators=False)
         # the projected vector lists' per-column ket marks (P·D / P·T / P·H / P·interest): [ … ⟩ feet

@@ -20,6 +20,7 @@ from rtt.app.service.core import (
     form_matrix,
     generator_detempering,
     generators,
+    inverse_form_matrix,
     interval_complexities,
     interval_sizes,
     interval_weights,
@@ -31,6 +32,7 @@ from rtt.app.service.core import (
     tuning_from_generators,
 )
 from rtt.app.service.projection import (
+    canonical_generator_embedding,
     project_vectors,
     projection_matrix_rationals,
     tuning_embedding,
@@ -232,6 +234,7 @@ def plain_text_values(
     canon_mapping = canonical_mapping(state.mapping)
     rc = len(canon_mapping)
     canon_form = form_matrix(state.mapping)                                   # 𝐹
+    canon_inverse_form = inverse_form_matrix(state.mapping)                    # 𝐹⁻¹ (mapping row, 𝑀 = 𝐹⁻¹𝑀_C)
     canon_mapped = mapped_intervals(canon_mapping, targets, db)              # Y_C = 𝑀_C·T
     canon_mapped_comma = mapped_commas(canon_mapping, comma_basis)           # 𝑀_C·C = 𝑂
     canon_mapped_detempering = mapped_commas(canon_mapping, detemper_vectors)  # 𝑀_C·D = 𝐹
@@ -288,6 +291,13 @@ def plain_text_values(
         ("canon", "detempering"): "{" + _ket_list(zip(*canon_mapped_detempering), "}", wrap=False) + "]",
         ("canon", "commas"): _ket_list(list(zip(*canon_mapped_comma)) + canon_u_mapped_cols, "}"),
         ("canon", "targets"): _ket_list(zip(*canon_mapped), "}"),
+        # the canonical-generators column's mapping/tuning-row tiles: 𝐹⁻¹ a genmap covector stack like
+        # 𝐹 (𝑀 = 𝐹⁻¹𝑀_C), and 𝒈_C = 𝒈·F⁻¹ the canonical generator tuning map (a cents genmap like 𝒈).
+        # G_C (projection row) is conditional below, with G.
+        ("mapping", "canongens"): _canon_stack(canon_inverse_form, "{"),
+        ("tuning", "canongens"): _cents_genmap(
+            [sum(tun.generator_map[k] * canon_inverse_form[k][j] for k in range(len(state.mapping)))
+             for j in range(rc)]),
         ("tuning", "gens"): _cents_genmap(tun.generator_map),
         ("tuning", "primes"): _cents_map(tun.tuning_map),
         ("tuning", "commas"): _cents_list(list(comma_sizes.tempered) + u_tempered),
@@ -363,6 +373,10 @@ def plain_text_values(
     if consolidate_v:
         values[("projection", "primes")] = projection_ebk(tuning_projection(state, held_basis_ratios), state.d)
         values[("projection", "gens")] = embedding_ebk(tuning_embedding(state, held_basis_ratios), state.d, len(state.mapping))
+        # G_C the canonical generator embedding (= G·F⁻¹), a vector list like G over the rc canonical
+        # generators — dashed in lockstep with G when the tuning isn't a full rational projection
+        values[("projection", "canongens")] = embedding_ebk(
+            canonical_generator_embedding(state, held_basis_ratios), state.d, rc)
         # the projected vector lists' read-only EBK bands (P·D / P·T / P·H / P·interest), the projection-
         # row counterparts of the interval-vectors row's strings. P·D = the embedding G takes the curly
         # { … ] (generator-coordinate columns, like G); P·T / P·H the plain [ … ]; P·interest stands

@@ -1519,6 +1519,60 @@ def test_form_box_symbols_and_units_match_the_canonical_notation():
     assert cells["urow:canongens:0"].text == f"/{gc}₁"
 
 
+def test_rank_count_merges_across_the_canonical_generators_and_generators_columns():
+    # the mockup draws ONE "rank / r = 2" tile spanning both the canonical-generators and the
+    # generators columns (the rank is the shared cardinality of both generator bases)
+    cells = {c.id: c for c in _with(form_tiles=True).cells}
+    rank, hcan, hgen = cells["count:gens"], cells["header:canongens"], cells["header:gens"]
+    assert rank.text.endswith(" = 2")  # the rank r = 2 (math-italic r glyph + " = 2")
+    assert rank.x <= hcan.x and rank.x + rank.w >= hgen.x  # the cell spans both column headers
+    assert cells["caption:counts:gens"].text == "rank"
+    assert "count:canongens" not in cells  # no separate canonical-generators count — it's merged
+    plain = {c.id: c for c in _layout().cells}  # hugs the generators column alone without the form layer
+    assert plain["count:gens"].x == plain["header:gens"].x
+
+
+def test_form_matrix_row_labels_get_a_balanced_matlabel_gutter():
+    # the form matrix 𝐹's 𝒇 row labels (generators column) must reserve the same balanced gutter
+    # the mapping's 𝒎 labels do — seated in a gutter LEFT of the EBK, not crammed against it
+    cells = {c.id: c for c in _with(form_tiles=True, header_symbols=True).cells}
+    flabel, fbracket = cells["matlabel:row:canon:gens:0"], cells["bracket:form:map:0:l"]
+    assert flabel.x + flabel.w <= fbracket.x  # the label sits left of (or up to) the { bracket, not over it
+    assert flabel.w > 0 and fbracket.x - flabel.x >= flabel.w  # a real gutter, ≥ the label's own width
+
+
+def test_canonical_generators_column_builds_finv_embedding_and_tuning_tiles():
+    from rtt.app.grid_tables import SUBSCRIPT_C
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"),
+                                          form_tiles=True, symbols=True, header_symbols=True).cells}
+    # 𝐹⁻¹ (inverse generator form matrix) over the mapping row: M = F⁻¹·M_C, so F⁻¹ = ((1,1),(0,1))
+    assert cells["cell:finv:0:0"].text == "1" and cells["cell:finv:0:1"].text == "1"
+    assert cells["cell:finv:1:0"].text == "0" and cells["cell:finv:1:1"].text == "1"
+    assert cells["symbol:mapping:canongens"].text == "𝐹⁻¹"
+    assert "bracket:finv:map:0:l" in cells
+    # G_C (canonical generator embedding) = G·F⁻¹ — for quarter-comma meantone [[1 1],[0 0],[0 1/4]]:
+    # column 0 the octave [1 0 0⟩, column 1 the canonical fifth [1 0 1/4⟩ (cell ids are :row:col)
+    assert cells["cell:embed_c:0:0"].text == "1" and cells["cell:embed_c:0:1"].text == "1"
+    assert cells["cell:embed_c:2:1"].text == "1/4"
+    assert cells["symbol:projection:canongens"].text == f"G{SUBSCRIPT_C}"
+    # 𝒈_C (canonical generator tuning map) = 𝒈·F⁻¹ — the octave and the canonical (~3/1) fifth
+    assert cells["tuning:cangen:0"].text.startswith("1200")
+    assert cells["tuning:cangen:1"].text.startswith("1896")
+    assert cells["symbol:tuning:canongens"].text == f"𝒈{SUBSCRIPT_C}"
+    # the three tiles are absent without the form layer / projection
+    assert not any(c.id.startswith(("cell:finv:", "cell:embed_c:")) for c in _layout().cells)
+
+
+def test_canonical_generators_column_tiles_carry_plain_text_matching_their_grids():
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), form_tiles=True, plain_text_values=True).cells}
+    # the three new tiles' EBK strings read in the same brackets as their grids (the lockstep guard
+    # enforces this globally; here we pin the exact strings): 𝐹⁻¹ a covector stack, G_C a vector list,
+    # 𝒈_C a cents genmap
+    assert cells["ptext:mapping:canongens"].text == "[{1 1] {0 1]}"          # 𝐹⁻¹
+    assert cells["ptext:projection:canongens"].text == "{[1 0 0⟩ [1 0 1/4⟩]"  # G_C
+    assert cells["ptext:tuning:canongens"].text.startswith("{1200")          # 𝒈_C
+
+
 def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis_boxes():
     cells = {c.id: c for c in _with(form_controls=True).cells}
     # a "<choose form>" chooser rides in the mapping box and the comma-basis box

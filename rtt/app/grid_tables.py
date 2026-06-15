@@ -126,6 +126,10 @@ CAPTIONS = {
     ("canon", "gens"): "generator form matrix",
     ("canon", "canongens"): "form matrices canceling out",  # 𝐹⁻¹𝐹 = 𝐼 (gated on identity_objects)
     ("canon", "primes"): "canonical mapping",
+    # the rest of the canonical-generators column (canonical twins of the generators column's tiles)
+    ("mapping", "canongens"): "inverse generator form matrix",   # 𝐹⁻¹
+    ("projection", "canongens"): "canonical generator embedding", # G_C
+    ("tuning", "canongens"): "canonical generator tuning map",    # 𝒈_C
     # the canonical-mapping row's mapped lists — the canonical-form twins of the mapping row's
     # M·X tiles (mapped through 𝑀_C instead of 𝑀), surfaced when a non-canonical form is chosen
     ("canon", "detempering"): "canonically mapped generator detemperings",
@@ -302,6 +306,13 @@ SYMBOLS = {
     # 𝐅⁻¹𝐅 = 𝐼 over the canonical-generators column — the form matrices canceling out (the canon
     # row's 𝑀_C / 𝐹 symbols are declared above, beside the JI mapping). Units g_C/g_C.
     ("canon", "canongens"): "𝐹⁻¹𝐹",
+    # the rest of the canonical-generators column (the mockup): the inverse generator form matrix
+    # 𝐹⁻¹ (mapping row, 𝑀 = 𝐹⁻¹𝑀_C), the canonical generator embedding G_C and the canonical
+    # generator tuning map 𝒈_C — each the canonical (subscript-C) twin of the generators column's
+    # 𝑀G / G / 𝒈, with the subscript baked in (this column IS the canonical generators, always).
+    ("mapping", "canongens"): "𝐹⁻¹",
+    ("projection", "canongens"): f"G{SUBSCRIPT_C}",
+    ("tuning", "canongens"): f"𝒈{SUBSCRIPT_C}",
     ("mapping", "gens"): "𝑀G",          # 𝑀𝐺 = 𝐼: M (italic) + the generator basis G (upright)
     ("mapping", "detempering"): "𝑀D",   # 𝑀D = 𝐼: M (italic) + the detempering basis D (upright)
     ("mapping", "commas"): "𝑀C",
@@ -402,6 +413,10 @@ COL_LABEL_LETTERS = {
     ("projection", "commas"): "𝑃𝐯",
     # the generator embedding G is a vector list (each column a held generator 𝐠ᵢ as a prime vector)
     ("projection", "gens"): "𝐠",
+    # the canonical-generators column's column-headed tiles: the canonical embedding G_C's columns
+    # (each a canonical generator 𝐠_Cᵢ as a prime vector) and the canonical tuning map 𝒈_C's entries
+    ("projection", "canongens"): f"𝐠{SUBSCRIPT_C}",
+    ("tuning", "canongens"): f"𝒈{SUBSCRIPT_C}",
     # G_L→s is a vector list too (each column a superspace generator 𝐠_L→sᵢ as a domain prime vector)
     ("projection", "ssgens"): f"𝐠{SUBSCRIPT_L}→ₛ",
     # the projected vector lists' columns: 𝑃 (italic operator) + the bold column letter of the list it
@@ -895,6 +910,11 @@ UNITS = {
     ("canon", "primes"): f"g{SUBSCRIPT_C}/p",
     ("canon", "gens"): f"g{SUBSCRIPT_C}/g",
     ("canon", "canongens"): f"g{SUBSCRIPT_C}/g{SUBSCRIPT_C}",
+    # the rest of the canonical-generators column: 𝐹⁻¹ maps canonical generators back to generators
+    # (g/g_C), the canonical embedding G_C is p/g_C (like G's p/g), the tuning map 𝒈_C is ¢/g_C
+    ("mapping", "canongens"): f"g/g{SUBSCRIPT_C}",
+    ("projection", "canongens"): f"p/g{SUBSCRIPT_C}",
+    ("tuning", "canongens"): f"¢/g{SUBSCRIPT_C}",
     ("mapping", "gens"): "g/g",              # 𝑀𝐺 = 𝐼
     ("mapping", "detempering"): "g",         # 𝑀D = 𝐼
     ("ss_vectors", "primes"): "p/b",      # B_L basis change matrix (superspace prime p per domain element b)
@@ -1028,6 +1048,9 @@ TILES = (
     ("block:canonspine", "canon", "quantities"),   # the canonical generators as a ratio list in the spine (the dual of block:cangens)
     ("block:form", "canon", "gens"),
     ("block:fcancel", "canon", "canongens"),       # 𝐹⁻¹𝐹 = 𝐼 (gated on identity_objects, like the other identity tiles)
+    ("block:finv", "mapping", "canongens"),         # 𝐹⁻¹ the inverse generator form matrix (𝑀 = 𝐹⁻¹𝑀_C)
+    ("block:embed_c", "projection", "canongens"),   # G_C the canonical generator embedding (projection on)
+    ("block:tuning:canongens", "tuning", "canongens"),  # 𝒈_C the canonical generator tuning map
     ("block:canon", "canon", "primes"),
     ("block:gens", "mapping", "quantities"),
     ("block:mapping", "mapping", "primes"),

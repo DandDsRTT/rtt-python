@@ -519,6 +519,22 @@ def form_matrix(mapping) -> Matrix:
     )
 
 
+def inverse_form_matrix(mapping) -> Matrix:
+    """The inverse generator form matrix ``F⁻¹`` (r×rc): the unimodular change of generator basis
+    BACK from the canonical generators to the stored ones, with ``M = F⁻¹·canonical(M)``. Computed
+    as ``F⁻¹ = M·D_Cᵀ`` where ``D_C`` is the CANONICAL mapping's generator detempering (its rows the
+    canonical generators as vectors), since ``canonical(M)·D_Cᵀ = I`` — the mirror of
+    :func:`form_matrix` (``F = canonical(M)·Dᵀ``). For 5-limit meantone ``F⁻¹ = ((1,1),(0,1))``."""
+    m = _to_matrix(mapping)
+    canon = canonical_ma(m)
+    canon_detemper = get_generator_detempering(Temperament(_to_matrix(canon), Variance.ROW)).matrix
+    return tuple(
+        tuple(sum(m[i][p] * canon_detemper[j][p] for p in range(len(m[0])))
+              for j in range(len(canon_detemper)))
+        for i in range(len(m))
+    )
+
+
 def target_interval_vectors(ratios, d: int, domain_basis=None) -> Matrix:
     """Each target interval as a vector — its interval-vector form over the d domain
     elements (expressed in the basis when it is nonstandard)."""
