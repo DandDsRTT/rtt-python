@@ -155,6 +155,21 @@ def parse_mapping_state(text: str) -> TemperamentState | None:
         return None
 
 
+def parse_form_matrix(text: str) -> Matrix | None:
+    """Read an EBK genmap string (e.g. ``[{1 -1]{0 1]}``) back to the generator form matrix ``𝐹``'s
+    integer rows, or None if unparseable, the wrong variance (a vector list, not a map), or
+    non-integer. The inverse of the ``("canon", "gens")`` plain text — what the interactive 𝐹 tile
+    parses a typed/edited matrix as (then :func:`mapping_from_form_matrix` re-stores the mapping)."""
+    try:
+        t = parse_temperament_data(text)
+    except Exception as exc:
+        _log.debug("parse_form_matrix rejected %.80r: %r", text, exc)
+        return None
+    if t.variance is not Variance.ROW:
+        return None
+    return _int_matrix_or_none(t.matrix)
+
+
 def parse_comma_basis(text: str) -> Matrix | None:
     """Read an EBK *vector* string (e.g. ``[4 -4 1⟩``) back to a comma basis, or
     None if unparseable, the wrong variance (a map, not a vector), or non-integer.

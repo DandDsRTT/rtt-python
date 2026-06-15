@@ -191,6 +191,7 @@ def _doc_store() -> dict:
 # the toast shown when an edit would make a degenerate (improper) temperament — dependent
 # generators, or a prime tempered to a unison (see service.is_proper_temperament)
 _INVALID_TEMPERAMENT = "Not a valid temperament: the generators must be independent and every prime reached."
+_INVALID_FORM = "Not a valid generator form: 𝐹 must be a square matrix with determinant ±1 (unimodular)."
 
 # the open-popup min width for the compact sub-row/sub-col pickers (etpick / commapick): their CLOSED
 # trigger is pinned to ~one gridded value (so the selection isn't readable there — by design), but the
@@ -367,6 +368,9 @@ _GRIDVALUE_SPECS = {
     "elementcell":   _GridValueSpec(True,  True,  "on_element_change",      "on_element_preview",  True),
     "elementratio":  _GridValueSpec(True,  True,  "on_element_change",      "on_element_preview",  True),
     "mapping":       _GridValueSpec(False, True,  "on_mapping_change",      "on_mapping_change",   False, ("row",)),
+    # the generator form matrix 𝐹: an integer rc×r matrix, edited as a WHOLE (a single cell can break
+    # unimodularity), re-storing M = F⁻¹·M_C. No draft column (𝐹's shape is fixed at the rank).
+    "formcell":      _GridValueSpec(False, False, "on_form_change",         "on_form_change",      False),
     "commacell":     _GridValueSpec(False, True,  "on_comma_change",        "on_comma_change",     False, ("col", "comma")),
     "unchangedcell": _GridValueSpec(False, False, "on_unchanged_change",    "on_unchanged_change", False),
     "interestcell":  _GridValueSpec(False, True,  "on_interest_change",     "on_interest_change",  False, ("col", "interest")),
@@ -385,6 +389,8 @@ def _vgroup_key(cb: spreadsheet.CellBox) -> str:
     column-keyed ones (`cell:{name}:{p}:{col}`)."""
     if cb.kind in ("mapping", "targetcell"):
         return cb.id.rsplit(":", 1)[0]
+    if cb.kind == "formcell":  # the WHOLE 𝐹 matrix is one group — it commits only when focus leaves
+        return "cell:form"     # the whole tile (a single cell mid-edit can break F's unimodularity)
     parts = cb.id.split(":")
     return ":".join(parts[:2] + parts[3:])
 
@@ -1095,7 +1101,7 @@ class _Reconciler:
         # each kind's _GridValueSpec); the kind strings stay (load-bearing for wheel/drag/tooltips).
         _gridvalue = _KindHandlers(self._build_gridvalue, self._update_gridvalue)
         for _gv_kind in ("mapping", "commacell", "unchangedcell",
-                         "interestcell", "heldcell", "targetcell"):
+                         "interestcell", "heldcell", "targetcell", "formcell"):
             self.cell_kinds[_gv_kind] = _gridvalue
         self.cell_kinds["prescalercell"] = _KindHandlers(self._build_prescalercell, self._update_prescalercell)
         self.cell_kinds["weightcell"] = _KindHandlers(self._build_weightcell, self._update_weightcell)
@@ -1124,7 +1130,6 @@ class _Reconciler:
         # style — there is deliberately no second "boxed read-only" treatment.
         _value_builder = self._label_builder("rtt-value")
         self.cell_kinds["prime"] = _KindHandlers(_value_builder, self._update_label)
-        self.cell_kinds["formcell"] = _KindHandlers(_value_builder, self._update_label)
         self.cell_kinds["mapped"] = _KindHandlers(_value_builder, self._update_label)
         self.cell_kinds["vec"] = _KindHandlers(_value_builder, self._update_label)
         self.cell_kinds["colheader"] = _KindHandlers(self._label_builder("rtt-colheader"), self._update_label)
@@ -3104,6 +3109,37 @@ def index() -> None:
     def on_mapping_change(preview=False):
         _edit_vector_grid(_MAPPING_EDIT, preview)
 
+    def on_form_change(preview=False):
+        # the interactive generator form matrix 𝐹: read the WHOLE rc×r grid (over the generators, NOT
+        # the d primes — so it can't ride the _edit_vector_grid factory), and re-store M = F⁻¹·M_C. An
+        # invalid 𝐹 (non-integer mid-edit → preview nothing; a complete but non-unimodular one → toast
+        # + revert) leaves the mapping untouched, like on_mapping_change. Gated on the form-tiles layer.
+        if building[0] or not editor.settings.get("form_tiles"):
+            return
+        r = len(editor.state.mapping)
+        rc = len(service.canonical_mapping(editor.state.mapping))
+        if any(ids.form_cell(i, j) not in rec.inputs for i in range(rc) for j in range(r)):
+            if preview:
+                _edit_candidate(None)
+            return  # the 𝐹 cells aren't shown (folded away)
+        rows = [[_parse_int(rec.inputs[ids.form_cell(i, j)].value) for j in range(r)] for i in range(rc)]
+        if any(v is None for row in rows for v in row):
+            if preview:
+                _edit_candidate(None)
+            return  # an in-progress / non-integer edit
+        if service.mapping_from_form_matrix(editor.state.mapping, rows) is None:
+            if preview:
+                _edit_candidate(None)  # a non-unimodular in-progress 𝐹 previews nothing (no toast)
+                return
+            ui.notify(_INVALID_FORM, type="negative", position="top")
+            render()  # revert the cells to the current form matrix (synchronous, no retune)
+            return
+        if preview:
+            _edit_candidate(lambda: editor.edit_form_matrix(rows))
+            return
+        editor.edit_form_matrix(rows)
+        _request_render()  # a form change re-stores the mapping (a new generating set) — render off the loop
+
     def on_comma_change(preview=False):
         _edit_vector_grid(_COMMA_EDIT, preview)
 
@@ -3379,7 +3415,7 @@ def index() -> None:
         # other wheeled kind (power) still commits in its own on_change, so it doesn't.
         commit = {"mapping": on_mapping_change, "commacell": on_comma_change,
                   "interestcell": on_interest_change, "heldcell": on_held_change,
-                  "targetcell": on_target_cells_change}.get(rec.kinds.get(cid))
+                  "targetcell": on_target_cells_change, "formcell": on_form_change}.get(rec.kinds.get(cid))
         if commit is not None:
             commit()
 
@@ -3531,6 +3567,8 @@ def index() -> None:
             value = service.simple_matrix_to_ebk(value, _PTEXT_DUAL_VECTOR_KIND.get(cid, False))
         if cid == "ptext:mapping:primes":
             ok = editor.try_edit_mapping_text(value)
+        elif cid == "ptext:canon:gens":  # a typed generator form matrix 𝐹 re-stores M as F⁻¹·M_C
+            ok = editor.try_edit_form_matrix_text(value)
         elif cid == "ptext:vectors:commas":
             ok = editor.try_edit_comma_basis_text(value)
         elif cid == "ptext:tuning:gens":  # a typed cents tuning freezes the generator tuning map
@@ -4357,6 +4395,7 @@ def index() -> None:
         on_held_change=on_held_change,
         on_interest_change=on_interest_change,
         on_mapping_change=on_mapping_change,
+        on_form_change=on_form_change,
         on_power_change=on_power_change,
         on_prescaler_change=on_prescaler_change,
         on_weight_change=on_weight_change,

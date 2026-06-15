@@ -5305,7 +5305,7 @@ class _GridBuilder:
             # (rkey, ckey) without re-deriving the loop bounds each time
             group_count = {"gens": self.r, "primes": self.d, "commas": self.nc + self.nu, "targets": self.k,
                            "held": self.nh, "detempering": self.r, "interest": self.mi,
-                           "ssgens": self.rL, "ssprimes": self.dL}
+                           "canongens": self.rc, "ssgens": self.rL, "ssprimes": self.dL}
             # the y of the i-th row inside a row-labelled tile: the mapping stacks under
             # row_y["mapping"]; the prescaler stacks d rows under row_y["prescaling"]; the
             # chapter-9 superspace mapping M_L stacks rL rows under row_y["ss_mapping"]

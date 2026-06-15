@@ -535,6 +535,29 @@ def inverse_form_matrix(mapping) -> Matrix:
     )
 
 
+def mapping_from_form_matrix(mapping, form_rows) -> Matrix | None:
+    """The mapping re-stored in the generator basis named by the form matrix ``F`` — what editing the
+    interactive ``𝐹`` tile does: ``M = F⁻¹·M_C`` (the SAME temperament, ``M_C = canonical(M)``, a new
+    generating set), so ``F·M = M_C`` holds for the typed ``F``. The mirror of the ``<choose form>``
+    control, but for an arbitrary typed matrix rather than a named form. ``None`` when ``F`` isn't a
+    valid form matrix: not square ``r×r``, non-integer, or not unimodular (``det ≠ ±1`` — then ``F⁻¹``
+    isn't integer and ``M`` wouldn't be an integer mapping)."""
+    m = _to_matrix(mapping)
+    r = len(m)
+    f = _to_matrix(form_rows)
+    if len(f) != r or any(len(row) != r for row in f):
+        return None
+    try:
+        fm = sp.Matrix([[sp.Integer(int(x)) for x in row] for row in f])
+    except (TypeError, ValueError):
+        return None  # a non-integer entry
+    if fm.det() not in (1, -1):
+        return None  # not unimodular — F⁻¹ wouldn't be an integer matrix
+    canon = sp.Matrix([list(row) for row in canonical_ma(m)])
+    new = fm.inv() * canon
+    return tuple(tuple(int(new[i, j]) for j in range(new.cols)) for i in range(new.rows))
+
+
 def target_interval_vectors(ratios, d: int, domain_basis=None) -> Matrix:
     """Each target interval as a vector — its interval-vector form over the d domain
     elements (expressed in the basis when it is nonstandard)."""

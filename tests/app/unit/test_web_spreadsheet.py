@@ -1573,6 +1573,26 @@ def test_canonical_generators_column_tiles_carry_plain_text_matching_their_grids
     assert cells["ptext:tuning:canongens"].text.startswith("{1200")          # 𝒈_C
 
 
+def test_canonical_embedding_and_tuning_tiles_carry_their_column_index_headers():
+    from rtt.app.grid_tables import SUBSCRIPT_C
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), form_tiles=True, header_symbols=True).cells}
+    # G_C / 𝒈_C head each canonical-generator column with its index (𝐠_Cᵢ / 𝒈_Cᵢ), like G / 𝒈 do
+    assert cells["matlabel:col:projection:canongens:0"].text == f"𝐠{SUBSCRIPT_C}₁"
+    assert cells["matlabel:col:projection:canongens:1"].text == f"𝐠{SUBSCRIPT_C}₂"
+    assert cells["matlabel:col:tuning:canongens:0"].text == f"𝒈{SUBSCRIPT_C}₁"
+    assert cells["matlabel:col:tuning:canongens:1"].text == f"𝒈{SUBSCRIPT_C}₂"
+
+
+def test_generator_form_matrix_is_interactive():
+    # the 𝐹 tile is editable — its gridded cells AND its plain-text band (so the user can re-store the
+    # mapping in any generating set, in sync with <choose form>)
+    cells = {c.id: c for c in _with(form_tiles=True, plain_text_values=True).cells}
+    assert cells["cell:form:0:0"].kind == "formcell"      # routed to the editable gridvalue component
+    assert cells["ptext:canon:gens"].kind == "ptextedit"  # an editable plain-text input, not read-only
+    from rtt.app.grid_tables import EDITABLE_PTEXT
+    assert ("canon", "gens") in EDITABLE_PTEXT
+
+
 def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis_boxes():
     cells = {c.id: c for c in _with(form_controls=True).cells}
     # a "<choose form>" chooser rides in the mapping box and the comma-basis box

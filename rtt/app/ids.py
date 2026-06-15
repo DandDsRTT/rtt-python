@@ -21,6 +21,11 @@ def mapping_cell(token, prime):
     return f"cell:mapping:{token}:{prime}"
 
 
+def form_cell(row, col):
+    """A generator form matrix 𝐹 cell { … ] — canonical-generator row, stored-generator column."""
+    return f"cell:form:{row}:{col}"
+
+
 def comma_cell(token, prime):
     """A comma-basis vector cell [..⟩ — prime down the rows, comma column across."""
     return f"cell:comma:{prime}:{token}"

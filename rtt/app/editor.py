@@ -603,6 +603,29 @@ class Editor:
         self.edit_mapping(service.mapping_in_form(self.state.mapping, form, self.state.domain_basis))
         self.preferred_form["mapping"] = form  # the standing form preference for the mapping chooser
 
+    def edit_form_matrix(self, form_rows) -> bool:
+        """Re-store the mapping in the generator basis given by the (typed/edited) generator form
+        matrix ``𝐹`` — the interactive 𝐹 tile's commit. ``M = F⁻¹·M_C``: the SAME temperament in a new
+        generating set, so the canonical mapping is unchanged and the 𝐹 tile reads back the typed ``F``.
+        An undoable edit, the free-form sibling of :meth:`set_mapping_form` (any unimodular ``F``, not
+        just a named form). Returns False (state untouched) when ``F`` isn't valid (not square /
+        non-integer / not unimodular), so the caller can flag the input rather than mangle the mapping."""
+        new = service.mapping_from_form_matrix(self.state.mapping, form_rows)
+        if new is None:
+            return False
+        self.edit_mapping(new)
+        self.preferred_form["mapping"] = ""  # a typed F is a custom form — let the chooser auto-identify it
+        return True
+
+    def try_edit_form_matrix_text(self, text: str) -> bool:
+        """Parse an EBK genmap string and re-store the mapping in that form (the 𝐹 tile's plain-text
+        dual, the form-box twin of :meth:`try_edit_mapping_text`). False when the text isn't a valid
+        form matrix, so the caller reddens the box rather than committing garbage."""
+        rows = service.parse_form_matrix(text)
+        if rows is None:
+            return False
+        return self.edit_form_matrix(rows)
+
     def canonicalize_comma_basis(self) -> None:
         """Re-store the comma basis in canonical form (the comma-basis box's
         ``<choose form>`` control) — an undoable edit, like :meth:`canonicalize_mapping`. Passes the

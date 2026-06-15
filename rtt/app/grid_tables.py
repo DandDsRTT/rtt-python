@@ -1192,6 +1192,10 @@ UNITS_TILES = (
 # value is a computed read-only display.
 EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas"), ("tuning", "gens"),
                             ("vectors", "targets"), ("prescaling", "primes"),
+                            # the generator form matrix 𝐹 is editable (its plain text AND its gridded
+                            # cells): a typed unimodular 𝐹 re-stores the mapping as 𝐹⁻¹𝑀_C, the same
+                            # temperament in a new generating set — staying in sync with <choose form>
+                            ("canon", "gens"),
                             # P and G aren't per-cell editable (a single entry can't keep P
                             # idempotent / 𝑀𝐺 = 𝐼), so the whole-matrix EBK string is the only edit path
                             ("projection", "primes"), ("projection", "gens")})

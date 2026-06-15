@@ -58,6 +58,38 @@ def test_set_mapping_form_positive_generator_flip_and_shift_differ():
     assert editor.state.mapping == ((1, 6, 8), (0, -7, -9))
 
 
+def test_edit_form_matrix_restores_the_mapping_in_the_typed_generating_set_undoably():
+    # editing the interactive 𝐹 tile re-stores M = F⁻¹·M_C: the SAME temperament in a new generating
+    # set, so the canonical mapping (and comma basis) is unchanged and 𝐹 reads back what was typed.
+    editor = Editor()  # default meantone ((1,1,0),(0,1,4)), canonical ((1,0,-4),(0,1,4))
+    canon, commas = service.canonical_mapping(editor.state.mapping), editor.state.comma_basis
+    assert editor.edit_form_matrix(((1, 1), (0, -1))) is True
+    assert editor.state.mapping == ((1, 1, 0), (0, -1, -4))            # M = F⁻¹·M_C
+    assert service.canonical_mapping(editor.state.mapping) == canon    # same temperament...
+    assert editor.state.comma_basis == commas                         # ...same commas
+    assert service.form_matrix(editor.state.mapping) == ((1, 1), (0, -1))  # 𝐹 reads back the typed matrix
+    editor.undo()  # one undoable edit
+    assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))
+
+
+def test_edit_form_matrix_rejects_a_non_unimodular_matrix():
+    # a typed 𝐹 with det ≠ ±1 has no integer inverse, so it can't define an integer mapping — rejected,
+    # leaving the state (and undo stack) untouched, so the caller can redden the box / toast
+    editor = Editor()
+    before = editor.state
+    assert editor.edit_form_matrix(((2, 0), (0, 1))) is False  # det 2 — not unimodular
+    assert editor.state is before and editor.can_undo is False
+    assert editor.try_edit_form_matrix_text("[{2 0]{0 1]}") is False  # the plain-text path rejects too
+    assert editor.try_edit_form_matrix_text("garble") is False        # unparseable
+    assert editor.state is before
+
+
+def test_try_edit_form_matrix_text_parses_and_applies():
+    editor = Editor()
+    assert editor.try_edit_form_matrix_text("[{1 1]{0 -1]}") is True
+    assert editor.state.mapping == ((1, 1, 0), (0, -1, -4))
+
+
 def test_canonicalize_comma_basis_restores_canonical_form_undoably():
     editor = Editor()
     editor.edit_comma_basis([[-8, 8, -2]])  # a non-saturated basis (the syntonic comma doubled)
