@@ -1645,7 +1645,7 @@ def test_superspace_tuning_projection_is_none_when_under_held():
 def test_plain_text_values_includes_the_superspace_projection_when_projection_on():
     # parity with the on-domain projection P and the sibling superspace matrices (B_L, M_L, M_jL):
     # P_L gets a plain-text EBK band too — a covector stack closing with the prime-coordinate angle ⟩
-    # (the b/b operator, framed like P), gated on the projection toggle (consolidate_v) like P. Dashed
+    # (a p/p operator over the superspace primes, framed like P), gated on the projection toggle (consolidate_v) like P. Dashed
     # in lockstep when the tuning isn't a full rational projection.
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     pt = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=("2", "13/5"))

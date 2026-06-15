@@ -3437,10 +3437,10 @@ class _GridBuilder:
         # the /pᵢ denominators ride the units row over the primes columns). The chapter-9 superspace
         # rows label their coordinate too: B_L's components and M_jL's identity are superspace primes
         # (pᵢ/), M_L's rows are superspace generators (gLᵢ/) — true primes / superspace generators,
-        # never the on-domain b/g. But the superspace projection P_L is a b/b operator (each row a
-        # projected basis element), so its units-column numerator reads bᵢ/ — the basis label (b for
-        # a nonstandard subgroup), like the on-domain projection's, NOT the true-prime pᵢ/ of
-        # M_L / M_jL above it.
+        # never the on-domain b/g. The superspace projection P_L = G_L·M_L is likewise a superspace-
+        # prime → superspace-prime operator (dL × dL, NOT a basis-element operator), so its units-
+        # column numerator reads pᵢ/ — true primes, exactly like the M_L / M_jL / B_L rows above it,
+        # NEVER the on-domain b.
         matrix_units = {
             "vectors": (self.d, self.vec_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
             # the canonical-mapping row's coordinate is the canonical generator g_Cᵢ/ (the spine
@@ -3452,7 +3452,7 @@ class _GridBuilder:
             "mapping": (self.r_shown, self.map_top, lambda i: f"g{_sub(i + 1)}/"),
             "ss_vectors": (self.dL, self.ss_vec_top, lambda i: f"p{_sub(i + 1)}/"),
             "ss_mapping": (self.rL, self.ss_map_top, lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
-            "ss_projection": (self.dL, self.ss_proj_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
+            "ss_projection": (self.dL, self.ss_proj_top, lambda i: f"p{_sub(i + 1)}/"),
         }
         for key, (n, top, label) in matrix_units.items():
             if not self.tile_open(key, "units"):
@@ -5539,7 +5539,10 @@ class _GridBuilder:
             unit = self.tile_unit(rkey, ckey)
             # the on-domain coordinate p reads b (basis element) over a nonstandard subgroup —
             # consistently with the gridded cells and the units row/column, so the whole column
-            # swaps together (the superspace tiles keep p, true primes; see cell_unit)
+            # swaps together. Superspace tiles are excluded (their p is a TRUE prime, kept): a wholly-
+            # superspace tile (ss_ row) keeps every p, and a superspace COLUMN protects its p
+            # denominator — which is why the projection row's bridge tiles into that column (P_L→s
+            # b/p, G_L→s b/gL) carry their domain numerator as a literal b, not a swapped p.
             if unit and not (rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")):
                 unit = _subscript_coord(unit, "p", self.domain_label)
             if self.show_units and unit:

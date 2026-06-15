@@ -7718,13 +7718,13 @@ def test_superspace_projection_quantities_spine_lists_the_superspace_primes():
     assert cells["ss_proj_basis:0"].w == spreadsheet.COL_W
 
 
-def test_superspace_projection_units_column_reads_basis_element():
-    # P_L is a b/b operator (basis element → basis element), so its units column reads bᵢ/ down the
-    # dL rows — the numerator side, like the on-domain projection's, with b the nonstandard basis label.
-    # The units COLUMN rides the domain_units toggle (the units-line below the tile is the units toggle).
+def test_superspace_projection_units_column_reads_superspace_prime():
+    # P_L = G_L·M_L is a superspace-prime → superspace-prime operator (dL × dL), so its units column
+    # reads pᵢ/ down the dL rows — true primes, exactly like the M_jL / B_L rows above it, NEVER the
+    # on-domain basis element b. The units COLUMN rides the domain_units toggle.
     cells = {c.id: c for c in _barbados_proj(domain_units=True).cells}
-    assert cells["ucol:ss_projection:0"].text == "b₁/"
-    assert cells["ucol:ss_projection:3"].text == "b₄/"
+    assert cells["ucol:ss_projection:0"].text == "p₁/"
+    assert cells["ucol:ss_projection:3"].text == "p₄/"
 
 
 def test_superspace_projection_row_carries_the_full_projected_tile_set():
@@ -7769,9 +7769,9 @@ def test_superspace_projection_extra_tiles_carry_captions_symbols_and_units():
     assert cells["caption:ss_projection:commas"].text == "projected unrotated vector list in superspace"
     assert cells["symbol:ss_projection:ssgens"].text == "GL"                  # G_L
     assert cells["symbol:ss_projection:primes"].text == spreadsheet.SYMBOLS[("ss_projection", "primes")]  # P_L B_L (no trailing s)
-    assert cells["units:ss_projection:ssgens"].text == "units: b/gL"            # b/gL
-    assert cells["units:ss_projection:primes"].text == "units: b/p"
-    assert cells["units:ss_projection:detempering"].text == "units: b"
+    assert cells["units:ss_projection:ssgens"].text == "units: p/gL"            # G_L: superspace prime per superspace gen
+    assert cells["units:ss_projection:primes"].text == "units: p/b"
+    assert cells["units:ss_projection:detempering"].text == "units: p"
 
 
 def test_superspace_projection_extra_tiles_dash_when_under_held():
@@ -7812,12 +7812,12 @@ def test_superspace_projection_every_tile_emits_a_plain_text_band():
 
 def test_superspace_projection_caption_symbol_and_units_when_named():
     # names + symbols + units on: the tile carries the "superspace projection" caption, the in-tile
-    # 𝒑Lᵢ covector row labels, the b/b units line, and the P_L = G_L M_L symbol/equivalence
+    # 𝒑Lᵢ covector row labels, the p/p units line, and the P_L = G_L M_L symbol/equivalence
     cells = {c.id: c for c in _barbados_proj(names=True, symbols=True, header_symbols=True, units=True).cells}
     assert cells["caption:ss_projection:ssprimes"].text == "superspace projection"
     assert "matlabel:row:ss_projection:ssprimes:0" in cells  # 𝒑L₁ row label
-    # the units line under the tile reads b/b (a basis-element operator)
-    assert cells["units:ss_projection:ssprimes"].text == "units: b/b"
+    # the units line under the tile reads p/p (a superspace-prime operator, like M_jL above it)
+    assert cells["units:ss_projection:ssprimes"].text == "units: p/p"
 
 
 def test_superspace_rows_get_their_fold_toggles_in_the_label_gutter():
@@ -9161,8 +9161,8 @@ def test_projection_superspace_tiles_carry_chrome():
     assert cells["caption:projection:ssprimes"].text == "projection from superspace to subspace"
     assert cells["symbol:projection:ssgens"].text == f"G{SUBSCRIPT_L}→ₛ"
     assert cells["symbol:projection:ssprimes"].text == f"𝑃{SUBSCRIPT_L}→ₛ = G{SUBSCRIPT_L}→ₛ𝑀{SUBSCRIPT_L}"
-    assert cells["units:projection:ssgens"].text == f"units: p/g{SUBSCRIPT_L}"
-    assert cells["units:projection:ssprimes"].text == "units: p/b"
+    assert cells["units:projection:ssgens"].text == f"units: b/g{SUBSCRIPT_L}"
+    assert cells["units:projection:ssprimes"].text == "units: b/p"
     assert cells["matlabel:col:projection:ssgens:0"].text == f"𝐠{SUBSCRIPT_L}→ₛ₁"     # G_L→s columns
     assert cells["matlabel:row:projection:ssprimes:0"].text == f"𝒑{SUBSCRIPT_L}→ₛ₁"   # P_L→s covector rows
     # G_L→s the genmap { … ] (a vector list, like G); P_L→s a covector stack ⟨ … ] per row (like P)

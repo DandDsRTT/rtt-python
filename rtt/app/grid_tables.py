@@ -857,10 +857,13 @@ UNITS = {
     # P = GM maps prime-count vectors to prime-count vectors (p/p); G embeds the generators as
     # prime-count vectors (p/g, the mapping's reciprocal)
     ("projection", "primes"): "p/p",
-    # the superspace projection tiles: G_L→s embeds the superspace generators in domain primes (p/g_L),
-    # P_L→s projects superspace basis elements to domain primes (p/b — per the mockup)
-    ("projection", "ssgens"): f"p/g{SUBSCRIPT_L}",
-    ("projection", "ssprimes"): "p/b",
+    # the superspace projection tiles bridge the two spaces, mapping OUT of the superspace and INTO
+    # the on-domain subspace — so (like the whole on-domain projection row) their numerator is the
+    # domain output b, their denominator the superspace input: G_L→s sends a superspace generator to a
+    # domain element (b/gL), P_L→s a superspace prime to a domain element (b/p). The b is written
+    # literally (not p-then-swapped) because these tiles exist only over a nonprime domain.
+    ("projection", "ssgens"): f"b/g{SUBSCRIPT_L}",
+    ("projection", "ssprimes"): "b/p",
     ("projection", "gens"): "p/g",
     # the projected vector lists are prime-count vectors (p), like the interval-vectors lists they project
     ("projection", "detempering"): "p",
@@ -908,19 +911,23 @@ UNITS = {
     ("ss_mapping", "targets"): f"g{SUBSCRIPT_L}",      # Y_L
     ("ss_mapping", "interest"): f"g{SUBSCRIPT_L}",
     ("ss_mapping", "detempering"): f"g{SUBSCRIPT_L}",
-    # P_L is a basis-element → basis-element operator (the projected superspace basis), so b/b — NOT
-    # the gL/p or p/p of M_L / M_jL (the mockup labels its rows bᵢ; its spine α, β, γ … are
-    # placeholders for the superspace primes the row's quantities spine actually lists)
-    ("ss_projection", "ssprimes"): "b/b",
-    # the rest of the superspace projection row's tiles (the mockup): the embedding G_L is b/gL, the
-    # projected subspace basis P_L·B_Ls is b/p, and every projected lifted list is b (a basis vector)
-    ("ss_projection", "ssgens"): f"b/g{SUBSCRIPT_L}",
-    ("ss_projection", "primes"): "b/p",
-    ("ss_projection", "detempering"): "b",
-    ("ss_projection", "commas"): "b",
-    ("ss_projection", "targets"): "b",
-    ("ss_projection", "held"): "b",
-    ("ss_projection", "interest"): "b",
+    # P_L = G_L·M_L is a superspace-prime → superspace-prime operator (the projected superspace, dL×dL),
+    # so p/p — exactly like the M_jL = I and the superspace interval-vectors row above it: the whole
+    # superspace block lives over TRUE primes p (the superspace is prime by construction), NEVER the
+    # on-domain basis element b. (The mockup's α, β, γ … row labels are placeholders for the dL
+    # superspace primes the quantities spine actually lists.)
+    ("ss_projection", "ssprimes"): "p/p",
+    # the rest of the row mirrors the superspace interval-vectors row exactly (same p numerator, same
+    # per-column denominator): G_L embeds a superspace generator as a superspace prime (p/gL), the
+    # projected subspace basis P_L·B_Ls is a superspace prime per domain element (p/b), and every
+    # projected lifted list is a superspace vector (p).
+    ("ss_projection", "ssgens"): f"p/g{SUBSCRIPT_L}",
+    ("ss_projection", "primes"): "p/b",
+    ("ss_projection", "detempering"): "p",
+    ("ss_projection", "commas"): "p",
+    ("ss_projection", "targets"): "p",
+    ("ss_projection", "held"): "p",
+    ("ss_projection", "interest"): "p",
     # the cyan superspace tuning row mirrors the on-domain tuning row over the superspace
     # primes (p, true primes); 𝒈ₗ is ¢ per superspace generator gL.
     ("tuning", "ssgens"): f"¢/g{SUBSCRIPT_L}",
