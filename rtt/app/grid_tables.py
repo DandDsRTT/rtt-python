@@ -1158,7 +1158,7 @@ EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)  # rows whose band
 # quantities row's band holds only the domain-primes basis string ("2.3.5"); its interval-
 # ratio columns show no plain text (the gridded ratio is already the formatted value). Every
 # other row shows one EBK string per tile.
-PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "retune", "damage",
+PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "canon", "tuning", "just", "retune", "damage",
                         "prescaling", "complexity", "weight",
                         # the projection row (P·V) and the scaling-factors row (λ) each carry a
                         # plain-text EBK string over the consolidated V column; reserving the bands

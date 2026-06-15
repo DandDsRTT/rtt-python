@@ -2041,6 +2041,26 @@ def test_every_open_value_tile_has_a_plain_text_string():
     assert not missing, f"open value tiles with no plain-text band: {missing}"
 
 
+def test_every_row_that_produces_plain_text_reserves_its_band():
+    # the CONVERSE of the lockstep guard above, and the invariant the canonical-mapping row broke: a row
+    # that PRODUCES a plain-text EBK string must also be in PTEXT_ROWS, so its tiles reserve the band
+    # height for it. A row that emits text but isn't listed reserves ZERO band — the text then spills
+    # past the bottom of the tile into the row below. Sweeping every Show toggle on (which surfaces the
+    # canon row via form_tiles) catches any such row generically, before it reaches the user.
+    from rtt.app.grid_tables import PTEXT_ROWS
+    s = settings.defaults()
+    for k, v in list(s.items()):
+        if isinstance(v, bool):
+            s[k] = True
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
+                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    assert b.show_ptext and b.show_canon  # the config really did light the plain text + the canon row
+    rows_with_text = {r for (r, _c) in b.ptext_strings}
+    spill = sorted(rows_with_text - PTEXT_ROWS)
+    assert not spill, f"rows produce plain text but reserve no band (it will spill past the tile): {spill}"
+
+
 def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
     # The stronger half of the lockstep guard: a tile's plain-text band must show the SAME values as
     # its gridded cells — not merely exist (the test above). A band built from a different derivation
