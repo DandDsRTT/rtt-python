@@ -1780,6 +1780,22 @@ class _GridBuilder:
         # the same MATLABEL_W gutter the primes column reserves — without it the labels collide
         # with each row's ⟨ bracket and first cell
         self.matlabel_ssprimes_w = MATLABEL_W_SSPRIMES if (self.show_header_symbols and self.show_superspace) else 0
+        # EVERY OTHER column that carries per-row matrix labels reserves the SAME balanced MATLABEL_W
+        # gutter the primes column does (left holds the labels, right mirrors it so the matrix stays
+        # centred) — so a row-labelled tile never crams its labels against the EBK. Derived from
+        # row_labels, NOT a hand-kept column list, so a present/future row-labelled tile in ANY column
+        # auto-reserves the gutter (today: 𝒇 on the canonical-mapping row's form matrix 𝐹, in the
+        # generators column). primes / ssprimes are excluded — they have their own (specially-sized)
+        # gutters above. matlabel_gutter_w / outer_gutter_w / the column widths all read this map.
+        _label_row_present = {"mapping": show_temp, "vectors": self.show_interval_vectors,
+                              "canon": self.show_canon, "projection": self.show_projection,
+                              "prescaling": self._complexity_shown, "ss_mapping": self.show_superspace,
+                              "ss_vectors": self.show_superspace, "ss_projection": self.show_ss_projection}
+        self.matlabel_other_w = {}
+        if self.show_header_symbols:
+            for (rk, ck) in self.row_labels:
+                if ck not in ("primes", "ssprimes") and _label_row_present.get(rk) and (rk, ck) in self.declared_tiles:
+                    self.matlabel_other_w[ck] = MATLABEL_W
         # the drag-to-combine row handles ride a gutter to the LEFT of the row labels (the 𝒎ᵢ
         # matlabels), so the primes column reserves room for them — present when the feature is on
         # and there are ≥ 2 generator rows to combine. Balanced by an equal empty right gutter (like
@@ -1821,8 +1837,8 @@ class _GridBuilder:
             # column (the mockup), surfaced with the canonical-mapping row (show_canon): rc cells
             # wide in the standard EBK-gutter footprint, like the gens column it parallels. It holds
             # the canonical generator ratios (over the quantities row) and 𝐅⁻¹𝐅 = 𝐼 (over the canon row).
-            ("canongens", 2 * BRACKET_W + self.rc * COL_W, self.show_canon, True),
-            ("gens", 2 * BRACKET_W + self.r * COL_W, show_temp, True),
+            ("canongens", 2 * BRACKET_W + self.rc * COL_W + 2 * self.matlabel_gutter_w("canongens"), self.show_canon, True),
+            ("gens", 2 * BRACKET_W + self.r * COL_W + 2 * self.matlabel_gutter_w("gens"), show_temp, True),
             # the chapter-9 superspace columns ride between gens and the domain primes — rL
             # cells (superspace generators) and dL cells (superspace primes), each in the
             # standard EBK-gutter footprint like the gens/primes columns they parallel
@@ -2434,6 +2450,17 @@ class _GridBuilder:
         and overhangs by PAD). The caption stack rides this width; content centres within."""
         return self.col_x[key], self.col_w[key]
 
+    def tile_span_box(self, rkey: str, ckey: str):
+        """the (x, width) a TILE spans — its column's tile_box, except the counts 'rank' tile, which
+        spans BOTH the canonical-generators and generators columns as one wide tile when the
+        canonical-generators column shows (the mockup): the rank r is the shared cardinality of both
+        generator bases, so the single ``r = 2`` reads over the pair. Panel, cell, caption, fold
+        toggle and wash all read this so the merged tile is one coherent box."""
+        if (rkey, ckey) == ("counts", "gens") and "canongens" in self.col_x:
+            x = self.col_x["canongens"]
+            return x, self.col_x["gens"] + self.col_w["gens"] - x
+        return self.tile_box(ckey)
+
     def displayed_optimization_power(self) -> float:
         """the optimization power 𝑝 as shown: ∞ in all-interval mode, the scheme's stored power
         otherwise. All-interval tuning minimaxes over every interval (it optimizes the primes at
@@ -2637,7 +2664,7 @@ class _GridBuilder:
             return self.matlabel_primes_w
         if group_key == "ssprimes":
             return self.matlabel_ssprimes_w
-        return 0
+        return self.matlabel_other_w.get(group_key, 0)
 
     def handle_gutter_w(self, group_key: str):
         """The drag-handle gutter reserved OUTSIDE the row-label gutter (further from the matrix),
@@ -2733,10 +2760,10 @@ class _GridBuilder:
         return self.detempering_x + BRACKET_W + i * COL_W
 
     def gen_left(self, g: int):  # the g-th generator column in the generators box (its tuning-map cells)
-        return self.content_x["gens"] + BRACKET_W + g * COL_W
+        return self.content_x["gens"] + self.outer_gutter_w("gens") + BRACKET_W + g * COL_W
 
     def canongen_left(self, g: int):  # the g-th canonical-generator column (the form box's F⁻¹F = I / canonical ratios)
-        return self.canongens_x + BRACKET_W + g * COL_W
+        return self.canongens_x + self.outer_gutter_w("canongens") + BRACKET_W + g * COL_W
 
     def ss_gen_left(self, g: int):  # the g-th superspace generator column (chapter-9)
         return self.ssgens_x + BRACKET_W + g * COL_W
@@ -3046,7 +3073,7 @@ class _GridBuilder:
         tile_c = f"tile:{rkey}:{ckey}" in self.collapsed
         col_c = f"col:{ckey}" in self.collapsed or tile_c
         row_c = f"row:{rkey}" in self.collapsed or tile_c
-        cx, cw = self.tile_box(ckey)  # the tile widens for a long caption; content centres within it
+        cx, cw = self.tile_span_box(rkey, ckey)  # the tile widens for a long caption (or spans the canon+gens rank merge)
         ch, cy = self.rows[rkey].tile_h, self.rows[rkey].tile_top
         w, px = (0, 0) if col_c else (cw, PAD)
         h, py = (0, 0) if row_c else (ch, PAD)
@@ -3422,7 +3449,11 @@ class _GridBuilder:
                     self.cells.append(CellBox("count:commas:u", self.comma_left(self.nc_shown), self.rows["counts"].y, self.nu * COL_W, ROW_H,
                                          "count", text=f"{_count_sym('u')} = {self.nu}"))
                     continue
-                self.cells.append(CellBox(f"count:{ckey}", self.col_x[ckey], self.rows["counts"].y, self.col_w[ckey], ROW_H,
+                # the rank count spans the canonical-generators + generators columns as one merged
+                # tile when the canonical-generators column shows (tile_span_box); every other count
+                # hugs its own column
+                cnt_x, cnt_w = self.tile_span_box("counts", ckey)
+                self.cells.append(CellBox(f"count:{ckey}", cnt_x, self.rows["counts"].y, cnt_w, ROW_H,
                                      "count", text=f"{_count_sym(sym)} = {cardinality[ckey]}"))
 
     def _emit_units(self) -> None:
@@ -5416,7 +5447,8 @@ class _GridBuilder:
                 groups = sorted(g for g in self.tile_groups(rkey, ckey) if self.settings.get(f"{g}_colorization"))
                 if not groups:
                     continue
-                x, w = self.col_x[ckey] - WASH_PAD, self.col_w[ckey] + 2 * WASH_PAD
+                tile_x, tile_w = self.tile_span_box(rkey, ckey)  # the merged rank wash spans canon+gens
+                x, w = tile_x - WASH_PAD, tile_w + 2 * WASH_PAD
                 y, h = self.rows[rkey].tile_top - WASH_PAD, self.rows[rkey].tile_h + 2 * WASH_PAD
                 for group in groups:
                     bands.append((f"{group}:{rkey}:{ckey}", x, y, w, h, group))
@@ -5539,7 +5571,8 @@ class _GridBuilder:
                 # name in the row), and the CSS centres the text within it. So a one-line name
                 # sits centred (half a blank line above and below) against a two-line sibling,
                 # rather than hugging the cells with all the slack below.
-                self.cells.append(CellBox(f"caption:{rkey}:{ckey}", self.col_x[ckey], cy, self.col_w[ckey], self.rows[rkey].cap,
+                cap_x, cap_w = self.tile_span_box(rkey, ckey)  # the merged rank caption spans canon+gens
+                self.cells.append(CellBox(f"caption:{rkey}:{ckey}", cap_x, cy, cap_w, self.rows[rkey].cap,
                                      "caption", text=name, underlines=underlines))
             # the "units: …" line sits below the caption band (independent of names/symbols),
             # reading the box's entry from tile_unit (UNITS, with the damage/weight/complexity
@@ -5840,8 +5873,9 @@ class _GridBuilder:
             if ((rkey, ckey) in self.declared_tiles  # a dropped tile (e.g. all-interval's retune×targets) takes its toggle too
                     and rkey in self.rows and ckey in self.col_x and self.row_open(rkey) and self.col_open(ckey)):
                 glyph = _fold_glyph(f"tile:{rkey}:{ckey}" in self.collapsed)
+                tog_x, _tw = self.tile_span_box(rkey, ckey)  # the merged rank toggle sits at the span's left
                 self.cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}",
-                                     self.col_x[ckey] - PAD + TOGGLE_INSET, self.rows[rkey].tile_top - PAD + TOGGLE_INSET,
+                                     tog_x - PAD + TOGGLE_INSET, self.rows[rkey].tile_top - PAD + TOGGLE_INSET,
                                      TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
     def _apply_value_display_filters(self) -> None:
