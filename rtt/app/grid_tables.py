@@ -537,6 +537,7 @@ COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS) | {"prescali
 #   "B" — the generator basis (the generators column's codomain basis)     → temperament (yellow)
 #   "M" — the (temperament) mapping                                        → temperament (yellow)
 #   "C" — the comma basis                                                  → temperament (yellow)
+#   "F" — the generator form matrix 𝐹 (the canonical-form reference)        → form (magenta)
 # Colourless: the other-intervals of interest AND the generator detempering list (both are
 # chosen interval lists, carrying no basis colour). (The weight 𝒘 is NOT colourless — it
 # incorporates the cyan complexity list; see its entry. The domain basis P and generator
@@ -552,9 +553,14 @@ COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS) | {"prescali
 # quantities) are a chosen input, neither the embedding G nor the tuning map 𝒈 — so by
 # CONTENT they'd be uncoloured; the spine-band rule (see SPINE_*) tints them by the mapping
 # row instead. The genmap 𝒈 (tuning × generators) reads green: its cyan G over the yellow
-# generator basis B. The embedding G awaits the deferred form box (𝐹).
+# generator basis B. The MAGENTA form family (F) washes the canonical-form reference — the
+# canonical-mapping row + the canonical-generators column. Like green (tuning×temperament), the
+# _TINTS are chosen so the darken blend gives the other two secondaries: form×tuning (magenta over
+# cyan) reads BLUE — 𝑀_C·T / 𝑀_C·H over the cyan target/held columns — and form×temperament
+# (magenta over yellow) reads RED — 𝑀_C / 𝐹 / 𝑀_C·C over the yellow primes/gens/comma columns.
 _FACTOR_GROUP = {"G": "tuning", "J": "tuning", "X": "tuning", "T": "tuning", "H": "tuning",
-                 "P": "temperament", "B": "temperament", "M": "temperament", "C": "temperament"}
+                 "P": "temperament", "B": "temperament", "M": "temperament", "C": "temperament",
+                 "F": "form"}
 CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     # interval-vectors / quantities headers: the domain basis is P (yellow) and the comma
     # basis is C (yellow); the target list T and the held basis H are cyan; the other-intervals
@@ -581,7 +587,19 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("vectors", "primes"): frozenset({"M", "P"}),      # 𝑀ⱼ = 𝐼 (the JI mapping over the domain primes P)
     ("mapping", "gens"): frozenset({"M", "B"}),        # 𝑀𝐺 = 𝐼 (over the generator basis B)
     ("mapping", "detempering"): frozenset({"M"}),      # 𝑀D = 𝐼 (D is neutral, like the other detempering tiles)
-    ("canon", "primes"): frozenset({"M", "P"}),        # the canonical mapping (𝑀 = 𝐅𝑀_c): 𝑀 family over P
+    # the canonical-mapping row + the canonical-generators column: the MAGENTA form family (F), washing
+    # the canonical-form reference. Each tile carries F plus its column's basis, so the darken blend reads
+    # RED over the yellow primes/gens/comma columns (form×temperament) and BLUE over the cyan target/held
+    # columns (form×tuning); the neutral detempering/interest/canon-gens columns stay pure magenta.
+    ("canon", "primes"): frozenset({"F", "P"}),        # 𝑀_C (the canonical mapping) over the yellow primes P → red
+    ("canon", "gens"): frozenset({"F", "B"}),          # 𝐹 (the form matrix) over the yellow generator basis B → red
+    ("canon", "canongens"): frozenset({"F"}),          # 𝐹⁻¹𝐹 = 𝐼, in the magenta canonical-generators column
+    ("canon", "detempering"): frozenset({"F"}),        # 𝑀_C·D = 𝐹 (D is neutral, like the other detempering tiles)
+    ("canon", "commas"): frozenset({"F", "C"}),        # 𝑀_C·C over the yellow comma basis C → red
+    ("canon", "targets"): frozenset({"F", "T"}),       # Y_C = 𝑀_C·T over the cyan target list → blue
+    ("canon", "held"): frozenset({"F", "H"}),          # 𝑀_C·H over the cyan held basis → blue
+    ("canon", "interest"): frozenset({"F"}),           # 𝑀_C·interest (other-intervals are colourless, so bare magenta)
+    ("quantities", "canongens"): frozenset({"F"}),     # the canonical generator ratios heading the magenta column
     # the generator tuning map 𝒈 = G; the tempered family 𝒕 = 𝒈𝑀 etc. carry G and M (green).
     # the generators column carries the generator basis B in EVERY tile — like the domain
     # primes column carries P — since every generators-column quantity is over the generators
@@ -649,9 +667,11 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
 SPINE_COLUMN_GROUP = {
     "gens": "temperament", "primes": "temperament", "commas": "temperament",
     "held": "tuning", "targets": "tuning",
+    "canongens": "form",  # the magenta canonical-generators column (its counts/units spine cells)
 }
 SPINE_ROW_GROUP = {
     "mapping": "temperament",
+    "canon": "form",  # the magenta canonical-mapping row (its quantities/units spine cells — the g_C ratios)
     "tuning": "tuning", "just": "tuning", "retune": "tuning",
     "prescaling": "tuning", "complexity": "tuning",
     "weight": "tuning",                                  # the cyan weight band 𝒘

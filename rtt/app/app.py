@@ -264,10 +264,10 @@ _STACKED_MAIN_FONT = 10  # px for a stacked cents/power whole-part (must match .
 # Colorization wash colours, keyed by the group the layout tags a wash with
 # (spreadsheet.CELL_FACTORS via _FACTOR_GROUP); a wash sits behind the grey tiles so the
 # colour reads through the gaps around them. The three are the muted-channel trio — each
-# dims ONE RGB channel to 0x9a — so their darken blends stay clean (tuning ⊓ temperament =
-# #9acd9a, the mockup's green). cyan = tuning (the generator embedding G), khaki =
-# temperament (the mapping 𝑀 / comma basis C), magenta = form (the form matrix 𝐹 — its
-# wash is deferred; the palette entry feeds the greyed Show-panel swatch for now).
+# dims ONE RGB channel to 0x9a — so their darken blends stay clean and give all three secondary
+# hues: tuning ⊓ temperament = #9acd9a (green), tuning ⊓ form = #9a9acd (blue), temperament ⊓ form
+# = #cd9a9a (red). cyan = tuning (the generator embedding G), khaki = temperament (the mapping 𝑀 /
+# comma basis C), magenta = form (the form matrix 𝐹 — the canonical-mapping row + canon-gens column).
 _TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a", "form": "#cd9acd"}
 
 # Dark-theme palette anchors that have to exist Python-side: the option-box indicator is a baked

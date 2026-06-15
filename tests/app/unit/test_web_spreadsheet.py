@@ -5499,9 +5499,10 @@ def test_every_implemented_toggle_actually_changes_the_layout():
     # a few toggles only refine a layer that isn't their hierarchy parent, so their effect is
     # invisible until that layer is shown — like the slope above, this is a visibility condition,
     # not a sub-control link. The form layer subscripts the canonical-form objects, so it only
-    # shows once the symbols layer is on. (identity_objects needs no such rider: its standard-domain
-    # tiles 𝑀ⱼ / 𝑀𝐺 show over the base temperament directly.)
-    rides_on = {"form": "symbols"}
+    # shows once the symbols layer is on; the form colorization washes the canonical-mapping row +
+    # canon-gens column, so it only shows once form_tiles surfaces them. (identity_objects needs no
+    # such rider: its standard-domain tiles 𝑀ⱼ / 𝑀𝐺 show over the base temperament directly.)
+    rides_on = {"form": "symbols", "form_colorization": "form_tiles"}
 
     def with_parents_on(key):
         # a sub-control only takes effect while its parent chain is on (e.g. alt. complexity
@@ -6847,8 +6848,10 @@ def test_colorization_follows_the_content_map():
 
 
 def test_off_by_default_rows_colorize_by_content_too():
-    # the rows hidden by default follow the same content rule when revealed: the canonical
-    # mapping is the 𝑀 family (𝑀 = 𝐅𝑀_c → yellow). The prescaler 𝑋 is cyan, so the prescaling
+    # the rows hidden by default follow the same content rule when revealed: the canonical-mapping
+    # row carries the magenta FORM family plus its columns' bases, but form_colorization is OFF here,
+    # so its primes tile shows only the yellow domain basis P (the magenta 𝐹 layer is gated away —
+    # see test_form_colorization_washes_the_canon_row_and_column). The prescaler 𝑋 is cyan, so the prescaling
     # and complexity rows carry it everywhere; a column that also bears a yellow object (the
     # domain primes P or the comma basis C) greens, while the cyan target list 𝑋T stays cyan.
     s = settings.defaults()
@@ -6863,7 +6866,7 @@ def test_off_by_default_rows_colorize_by_content_too():
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
-    assert at("cell:canon:0:0") == Y                       # the canonical mapping (𝑀 family)
+    assert at("cell:canon:0:0") == Y                       # 𝑀_C over the yellow domain basis P (form layer off)
     # the prescaling row 𝑋 is cyan; the primes (P) and comma (C) columns add yellow (green);
     # T / H ride cyan-only
     assert at("cell:prescaling:primes:0:0") == G           # 𝑋 over the yellow domain basis P (green)
@@ -6880,6 +6883,44 @@ def test_off_by_default_rows_colorize_by_content_too():
     # the weight 𝒘 incorporates the target complexity list (𝒘 = 𝒄 / 1 / 1∕𝒄), so it inherits
     # that list's cyan 𝑋 (and rides the cyan target column T) → cyan
     assert at("weight:target:0") == C                      # 𝒘 (built from the cyan complexity 𝒄)
+
+
+def test_form_colorization_washes_the_canon_row_and_column():
+    # step 5: the form_colorization setting washes the canonical-form reference — the canonical-mapping
+    # row and the canonical-generators column — in MAGENTA. Each canon tile carries the form factor 𝐹
+    # PLUS its column's basis, so with temperament + tuning colorization also on the darken blend gives
+    # the secondaries the user specified: form alone = magenta; form over the yellow primes/gens/comma
+    # columns = RED; form over the cyan target/held columns = BLUE. (cyan + yellow = green, as before.)
+    s = settings.defaults()
+    s["form_tiles"] = True            # surface the canon row + canon-gens column
+    s["form_colorization"] = True     # the magenta form wash
+    s["temperament_colorization"] = True
+    s["tuning_colorization"] = True
+    s["generator_detempering"] = True  # the neutral detempering column
+    s["optimization"] = True           # the held column
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),))
+    cells = {c.id: c for c in lay.cells}
+
+    def groups_at(cid):  # which colorization groups' bands cover the cell's midpoint (incl. form)
+        c = cells[cid]
+        x, y = c.x + c.w / 2, c.y + c.h / 2
+        return {b.tint for b in lay.blocks if b.tint in ("temperament", "tuning", "form")
+                and b.x <= x <= b.x + b.w and b.y <= y <= b.y + b.h}
+    MAGENTA, RED, BLUE = {"form"}, {"form", "temperament"}, {"form", "tuning"}
+    # the canonical mapping 𝑀_C and the form matrix 𝐹 sit over the yellow primes / generator columns → RED
+    assert groups_at("cell:canon:0:0") == RED              # 𝑀_C over the domain primes P
+    assert groups_at("cell:form:0:0") == RED               # 𝐹 over the generator basis B
+    assert groups_at("cell:canon_mapped_comma:0:0") == RED  # 𝑀_C·C over the comma basis C
+    # 𝑀_C's mapped target / held lists sit over the cyan columns → BLUE
+    assert groups_at("cell:canon_mapped:0:0") == BLUE      # Y_C = 𝑀_C·T over the target list T
+    assert groups_at("cell:canon_hmapped:0:0") == BLUE     # 𝑀_C·H over the held basis H
+    # the neutral columns (generator detempering, the canon-gens column) stay pure MAGENTA
+    assert groups_at("cell:canon_detempering:0:0") == MAGENTA  # 𝑀_C·D = 𝐹 (D neutral)
+    # the canonical generators in the spine (the magenta row's quantities cell)
+    assert groups_at("canon:gen:0") == MAGENTA             # the g_C ratios labelling the canon rows
+    # the MAIN mapping row is unchanged — temperament yellow, never the form magenta
+    assert groups_at("cell:mapping:0:0") == {"temperament"}  # 𝑀 stays yellow (not a form-family tile)
 
 
 def test_generator_detempering_column_colorizes_by_content():
@@ -7097,11 +7138,11 @@ def test_every_interval_ratio_and_vector_is_click_to_play():
     assert dv.audio and dv.audio[0] == "vectors:detempering"
 
 
-def test_form_layer_is_a_live_parent_with_live_controls_over_one_greyed_subcontrol():
+def test_form_layer_is_a_live_parent_with_three_live_subcontrols():
     # the form layer is a live top-level toggle (it adds the canonical-form subscript C — so unlike
-    # the pure grouping parents temperament/tuning it is NOT in GROUPING_PARENTS). Two of its three
-    # sub-controls are live too: "form_controls" (the <choose form> dropdowns) and "form_tiles" (the
-    # canonical-mapping row + canonical-generators column); only the magenta wash stays a greyed stub.
+    # the pure grouping parents temperament/tuning it is NOT in GROUPING_PARENTS). All THREE of its
+    # sub-controls are live: "form_controls" (the <choose form> dropdowns), "form_tiles" (the
+    # canonical-mapping row + canonical-generators column) and "form_colorization" (the magenta wash).
     keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
     assert {"form", "form_controls", "form_tiles", "form_colorization"} <= keys
     assert settings.defaults()["form"] is False and "form" in settings.IMPLEMENTED  # live parent
@@ -7109,9 +7150,7 @@ def test_form_layer_is_a_live_parent_with_live_controls_over_one_greyed_subcontr
     for child in ("form_controls", "form_tiles", "form_colorization"):
         assert settings.SUBCONTROLS[child] == "form"            # grouped under the form parent
         assert settings.defaults()[child] is False              # default off
-    assert "form_controls" in settings.IMPLEMENTED              # the dropdowns are live now (step 2)
-    assert "form_tiles" in settings.IMPLEMENTED                 # the canon row + column are live now (step 4)
-    assert "form_colorization" not in settings.IMPLEMENTED      # still greyed
+        assert child in settings.IMPLEMENTED                    # all three live now (steps 2, 4, 5)
     # the parent precedes its children in the group (the panel requires it for indentation)
     specific = [k for k, *_ in dict(settings.SHOW_GROUPS)["specific tiles & controls"]]
     assert specific.index("form") < min(specific.index(c)

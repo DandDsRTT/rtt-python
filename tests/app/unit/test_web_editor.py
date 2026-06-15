@@ -2227,15 +2227,15 @@ def test_load_tolerates_a_state_saved_before_a_setting_existed():
     assert restored.settings["charts"] is settings.defaults()["charts"]
 
 
-def test_load_pins_a_shelved_toggle_to_its_default():
+def test_load_pins_a_shelved_toggle_to_its_default(monkeypatch):
     # a saved document can carry a toggle that has since been shelved (pulled from
     # IMPLEMENTED because the feature isn't ready to expose). Loading it must not
     # resurrect that feature: greyed toggles are pinned to their defaults whatever the
     # blob says, so IMPLEMENTED stays the single source of truth for what the grid shows.
-    # Use whichever toggle is currently shelved, so this survives features going live.
-    shelved = sorted(set(settings.DEFAULTS) - settings.IMPLEMENTED)
-    assert shelved, "this test needs at least one not-yet-implemented toggle"
-    key = shelved[0]
+    # Every real toggle is live now, so simulate a shelved one by dropping a toggle from
+    # IMPLEMENTED for this test (from_persisted reads the module global at call time).
+    key = "form_colorization"  # any implemented, non-grouping-parent toggle
+    monkeypatch.setattr(settings, "IMPLEMENTED", settings.IMPLEMENTED - {key})
     editor = Editor()
     data = editor.serialize()
     data["settings"][key] = not settings.DEFAULTS[key]  # a value the panel can no longer set
