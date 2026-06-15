@@ -1,0 +1,376 @@
+#!/usr/bin/env python3
+"""Isolated concurrency self-test for ``bin/with-merge-lock``.
+
+Validates the lock's correctness BEFORE anyone relies on it for landing, without
+ever touching the real ``/tmp/rtt-merge-gate.d/`` (each scenario uses a fresh
+``mktemp`` gate dir with tiny TTLs) — so running it can't disturb the live agents
+holding the production lock. Spawns real processes/daemons, so it is deliberately
+NOT a pytest test (timing under a CPU-pinned box would flake the merge gate);
+run it by hand or in CI::
+
+    /usr/bin/python3 bin/with-merge-lock-selftest          # or .venv/bin/python — pure stdlib
+
+Exits 0 iff every scenario passes; prints PASS/FAIL per scenario.
+
+Scenarios:
+  1. happy path (acquire/renew/release; clean teardown)
+  2. mutual exclusion under contention (N agents, never two in the critical section)
+  3. dead-daemon reclaim (SIGKILL the holder daemon → next agent takes over, new epoch)
+  4. abandonment self-exit (agent never renews → daemon frees the lock within HARD_GAP)
+  5. stale-state recovery (daemon killed → re-acquire does NOT short-circuit to 'already held')
+  6. back-compat: a live OLD-style ticket (lower ns) makes a new acquirer WAIT, then proceed
+  7. mtime reclaim (a live-PID but ancient ticket is reclaimed — the PID-reuse wedge bound)
+  8. WAIT_MAX → FAIL, never proceed-unlocked
+"""
+
+import json
+import os
+import signal
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+
+SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "with-merge-lock")
+PY = sys.executable
+
+_results = []
+
+
+def _env(d, lock_id=None, **over):
+    e = dict(os.environ)
+    e["RTT_MERGE_GATE_DIR"] = d
+    # Each simulated agent gets a distinct identity (real agents live in distinct
+    # worktrees; here they share a cwd, so make the lock identity explicit).
+    e["RTT_MERGE_LOCK_ID"] = lock_id or ("selftest-" + os.path.basename(d))
+    # tiny, test-only timings
+    e.setdefault("RTT_MERGE_GATE_LEASE", "4")
+    e.setdefault("RTT_MERGE_GATE_GRACE", "1")
+    e.setdefault("RTT_MERGE_GATE_RENEW", "1")
+    e.setdefault("RTT_MERGE_GATE_GAP", "6")
+    e.setdefault("RTT_MERGE_GATE_TTL", "30")
+    e.setdefault("RTT_MERGE_GATE_READY", "10")
+    e.setdefault("RTT_MERGE_GATE_WAIT", "3600")
+    for k, v in over.items():
+        e["RTT_MERGE_GATE_" + k] = str(v)
+    return e
+
+
+def run(d, *args, env=None, timeout=30):
+    return subprocess.run([PY, SCRIPT, *args], env=env or _env(d),
+                          capture_output=True, text=True, timeout=timeout)
+
+
+def marker(d):
+    try:
+        with open(os.path.join(d, ".holder")) as f:
+            return json.loads(f.read())
+    except (OSError, ValueError):
+        return None
+
+
+def alive(pid):
+    if not pid:
+        return False
+    try:
+        os.kill(int(pid), 0)
+    except OSError:
+        return False
+    return True
+
+
+def kill_daemons(d):
+    """Best-effort: kill any daemon recorded for this dir, then rm the dir (which
+    makes any straggler self-exit on its next loop)."""
+    m = marker(d)
+    if m and m.get("daemon_pid"):
+        try:
+            os.kill(int(m["daemon_pid"]), signal.SIGKILL)
+        except OSError:
+            pass
+    try:
+        for name in os.listdir(d):
+            if name.startswith(".state-"):
+                try:
+                    with open(os.path.join(d, name)) as f:
+                        dp = json.loads(f.read()).get("daemon_pid")
+                    if dp:
+                        os.kill(int(dp), signal.SIGKILL)
+                except (OSError, ValueError):
+                    pass
+    except OSError:
+        pass
+    subprocess.run(["rm", "-rf", d])
+    time.sleep(1.5)  # let any straggler notice its dir/marker vanished and exit
+
+
+def record(name, ok, detail=""):
+    _results.append((name, ok))
+    print("%s  %s%s" % ("PASS" if ok else "FAIL", name, ("  — " + detail) if detail else ""))
+
+
+# --------------------------------------------------------------------------- #
+def t_happy():
+    d = tempfile.mkdtemp(prefix="rtt-mlock-1.")
+    try:
+        r = run(d, "acquire")
+        ok = r.returncode == 0 and marker(d) is not None
+        r2 = run(d, "renew")
+        ok = ok and r2.returncode == 0
+        r3 = run(d, "release")
+        ok = ok and r3.returncode == 0 and marker(d) is None
+        # nothing left behind
+        left = [n for n in os.listdir(d)]
+        ok = ok and left == []
+        r4 = run(d, "renew")  # nothing to renew
+        ok = ok and r4.returncode == 1
+        record("happy path", ok, "leftover=%s" % left if left else "")
+    finally:
+        kill_daemons(d)
+
+
+def t_mutex():
+    d = tempfile.mkdtemp(prefix="rtt-mlock-2.")
+    log = os.path.join(d, "cs.log")
+    N = 6
+    open(log, "w").close()
+
+    def agent(i):
+        e = _env(d, lock_id="agent-%d" % i)
+        r = subprocess.run([PY, SCRIPT, "acquire"], env=e, capture_output=True,
+                           text=True, timeout=120)
+        if r.returncode != 0:
+            with open(log, "a") as f:
+                f.write("FAILACQ %d\n" % i)
+            return
+        t0 = time.time()
+        with open(log, "a") as f:
+            f.write("ENTER %d %.6f\n" % (i, t0))
+        time.sleep(0.4)  # hold the critical section
+        with open(log, "a") as f:
+            f.write("EXIT %d %.6f\n" % (i, time.time()))
+        subprocess.run([PY, SCRIPT, "release"], env=e, capture_output=True, timeout=30)
+
+    threads = [threading.Thread(target=agent, args=(i,)) for i in range(N)]
+    # stagger slightly so arrival order is well-defined-ish
+    for t in threads:
+        t.start()
+        time.sleep(0.05)
+    for t in threads:
+        t.join(timeout=120)
+
+    # Parse the critical-section intervals and assert NO overlap.
+    enters, exits, fails = {}, {}, 0
+    for line in open(log):
+        parts = line.split()
+        if parts[0] == "ENTER":
+            enters[int(parts[1])] = float(parts[2])
+        elif parts[0] == "EXIT":
+            exits[int(parts[1])] = float(parts[2])
+        elif parts[0] == "FAILACQ":
+            fails += 1
+    intervals = sorted((enters[i], exits[i]) for i in enters if i in exits)
+    overlap = any(intervals[k + 1][0] < intervals[k][1] for k in range(len(intervals) - 1))
+    ok = (not overlap) and fails == 0 and len(intervals) == N
+    record("mutual exclusion (%d agents)" % N, ok,
+           "overlap=%s acquired=%d/%d fails=%d" % (overlap, len(intervals), N, fails))
+    kill_daemons(d)
+
+
+def t_dead_daemon():
+    d = tempfile.mkdtemp(prefix="rtt-mlock-3.")
+    try:
+        r = run(d, "acquire", env=_env(d, lock_id="A"))
+        m1 = marker(d)
+        ok = r.returncode == 0 and m1 is not None
+        dpid = int(m1["daemon_pid"])
+        os.kill(dpid, signal.SIGKILL)  # holder daemon dies WITHOUT cleanup
+        # A DISTINCT new acquirer must take over (pid-death → immediately stale).
+        r2 = run(d, "acquire", env=_env(d, lock_id="B"), timeout=40)
+        m2 = marker(d)
+        ok = ok and r2.returncode == 0 and m2 is not None
+        ok = ok and m2.get("epoch") != m1.get("epoch")
+        ok = ok and int(m2.get("daemon_pid")) != dpid and alive(m2.get("daemon_pid"))
+        record("dead-daemon reclaim", ok,
+               "old=%s new=%s" % (m1.get("epoch"), m2.get("epoch")))
+    finally:
+        kill_daemons(d)
+
+
+def t_abandon():
+    d = tempfile.mkdtemp(prefix="rtt-mlock-4.")
+    try:
+        r = run(d, "acquire", env=_env(d, GAP=4, TTL=30))
+        ok = r.returncode == 0 and marker(d) is not None
+        # Never renew. The daemon must self-exit within ~GAP and free the marker.
+        freed = False
+        deadline = time.time() + 12
+        while time.time() < deadline:
+            if marker(d) is None:
+                freed = True
+                break
+            time.sleep(0.3)
+        ok = ok and freed
+        record("abandonment self-exit (HARD_GAP)", ok,
+               "freed=%s" % freed)
+    finally:
+        kill_daemons(d)
+
+
+def t_stale_state():
+    d = tempfile.mkdtemp(prefix="rtt-mlock-5.")
+    try:
+        r = run(d, "acquire")
+        m1 = marker(d)
+        ok = r.returncode == 0 and m1 is not None
+        os.kill(int(m1["daemon_pid"]), signal.SIGKILL)  # daemon dies; .state now stale
+        # Re-acquire must NOT short-circuit to 'already held'; it must acquire fresh.
+        r2 = run(d, "acquire", timeout=40)
+        ok = ok and r2.returncode == 0 and "already held" not in r2.stderr
+        m2 = marker(d)
+        ok = ok and m2 is not None and m2.get("epoch") != m1.get("epoch")
+        record("stale-state recovery", ok,
+               "msg=%s" % r2.stderr.strip().splitlines()[-1] if r2.stderr.strip() else "")
+    finally:
+        kill_daemons(d)
+
+
+def t_backcompat_old_ticket():
+    d = tempfile.mkdtemp(prefix="rtt-mlock-6.")
+    sleeper = subprocess.Popen(["sleep", "30"])
+    try:
+        os.makedirs(d, exist_ok=True)
+        # An OLD-style empty ticket with a LOWER ns and a LIVE pid → a legit old holder.
+        old_ns = time.time_ns() - 10_000_000_000
+        old_ticket = os.path.join(d, "%d-%d" % (old_ns, sleeper.pid))
+        open(old_ticket, "x").close()
+        # A new acquirer arrives behind it; it must BLOCK (not steal the lock).
+        e = _env(d)
+        p = subprocess.Popen([PY, SCRIPT, "acquire"], env=e,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        time.sleep(5)
+        blocked = (p.poll() is None) and (marker(d) is None)
+        # Now the old holder finishes → its ticket is reclaimed (pid dead) → new acquirer proceeds.
+        sleeper.terminate()
+        sleeper.wait(timeout=5)
+        try:
+            p.wait(timeout=40)
+        except subprocess.TimeoutExpired:
+            p.kill()
+        proceeded = (p.returncode == 0) and (marker(d) is not None)
+        record("back-compat: waits behind live old ticket", blocked and proceeded,
+               "blocked=%s proceeded=%s" % (blocked, proceeded))
+    finally:
+        if sleeper.poll() is None:
+            sleeper.kill()
+        kill_daemons(d)
+
+
+def t_mtime_reclaim():
+    d = tempfile.mkdtemp(prefix="rtt-mlock-7.")
+    try:
+        os.makedirs(d, exist_ok=True)
+        # A ticket whose PID is alive (our own) but whose mtime is ancient → must be
+        # reclaimed (this is the PID-reuse wedge bound that pure PID-liveness misses).
+        ns = time.time_ns()
+        tk = os.path.join(d, "%d-%d" % (ns, os.getpid()))
+        open(tk, "x").close()
+        old = time.time() - 10_000  # >> ABS_MAX (30s in test env)
+        os.utime(tk, (old, old))
+        run(d, "status")  # status calls _scan(), which reclaims
+        ok = not os.path.exists(tk)
+        record("mtime reclaim (PID-reuse bound)", ok, "ticket_gone=%s" % ok)
+    finally:
+        kill_daemons(d)
+
+
+def t_hung_daemon():
+    """A holder daemon that is alive but STUCK (SIGSTOP) stops renewing; its lease
+    goes stale and another agent takes over via lease+grace (not PID death). When
+    the stuck daemon resumes it must see the marker is no longer its, and exit
+    WITHOUT re-staking (the no-re-stake-on-loss path)."""
+    d = tempfile.mkdtemp(prefix="rtt-mlock-9.")
+    try:
+        r = run(d, "acquire", env=_env(d, lock_id="A", LEASE=3, GRACE=1, GAP=120, TTL=120))
+        m1 = marker(d)
+        ok = r.returncode == 0 and m1 is not None
+        dpid = int(m1["daemon_pid"])
+        os.kill(dpid, signal.SIGSTOP)          # alive but frozen — stops renewing
+        time.sleep(6)                          # > LEASE(3) + GRACE(1)
+        rb = run(d, "acquire", env=_env(d, lock_id="B", LEASE=3, GRACE=1, GAP=120, TTL=120),
+                 timeout=40)
+        m2 = marker(d)
+        took_over = (rb.returncode == 0 and m2 is not None
+                     and m2.get("epoch") != m1.get("epoch")
+                     and int(m2.get("daemon_pid")) != dpid)
+        os.kill(dpid, signal.SIGCONT)          # resume the stuck daemon
+        time.sleep(3)                          # let it notice it lost the marker and exit
+        a_exited = not alive(dpid)
+        b_still = marker(d) is not None and int(marker(d).get("daemon_pid")) == int(m2.get("daemon_pid"))
+        record("hung-daemon lease takeover + no-re-stake", ok and took_over and a_exited and b_still,
+               "took_over=%s A_exited=%s B_still_holds=%s" % (took_over, a_exited, b_still))
+    finally:
+        kill_daemons(d)
+
+
+def t_abs_cap():
+    """ABS_MAX (birth ceiling) is un-bumpable: even with constant renews the daemon
+    must self-exit by birth+TTL (the immortal-daemon backstop, ttl-1)."""
+    d = tempfile.mkdtemp(prefix="rtt-mlock-10.")
+    try:
+        e = _env(d, lock_id="A", TTL=4, GAP=120, LEASE=10, GRACE=2)
+        r = subprocess.run([PY, SCRIPT, "acquire"], env=e, capture_output=True,
+                           text=True, timeout=30)
+        ok = r.returncode == 0 and marker(d) is not None
+        # Spam renew faster than TTL; the daemon must STILL exit by ~birth+TTL.
+        t0 = time.time()
+        freed = False
+        while time.time() - t0 < 10:
+            subprocess.run([PY, SCRIPT, "renew"], env=e, capture_output=True, timeout=10)
+            if marker(d) is None:
+                freed = True
+                break
+            time.sleep(0.5)
+        elapsed = time.time() - t0
+        # Must have freed despite renews, and roughly within the cap (not GAP=120).
+        ok = ok and freed and elapsed < 9
+        record("ABS_MAX un-bumpable cap (immortal-daemon backstop)", ok,
+               "freed=%s after %.1fs (cap=4s)" % (freed, elapsed))
+    finally:
+        kill_daemons(d)
+
+
+def t_wait_max_fail():
+    d = tempfile.mkdtemp(prefix="rtt-mlock-8.")
+    try:
+        r = run(d, "acquire", env=_env(d, lock_id="A"))  # agent A holds
+        ok = r.returncode == 0 and marker(d) is not None
+        # a DISTINCT agent B with a tiny WAIT_MAX must FAIL (exit 1), never proceed unlocked.
+        rb = run(d, "acquire", env=_env(d, lock_id="B", WAIT=2), timeout=30)
+        ok = ok and rb.returncode == 1 and "FAILING" in rb.stderr
+        # A still holds; B did not create a second marker / steal it.
+        m = marker(d)
+        ok = ok and m is not None and alive(m.get("daemon_pid"))
+        record("WAIT_MAX → fail, not proceed-unlocked", ok,
+               "B_exit=%d" % rb.returncode)
+    finally:
+        kill_daemons(d)
+
+
+def main():
+    print("== with-merge-lock self-test (interpreter: %s) ==" % PY)
+    for fn in (t_happy, t_mutex, t_dead_daemon, t_abandon, t_stale_state,
+               t_backcompat_old_ticket, t_mtime_reclaim, t_hung_daemon, t_abs_cap,
+               t_wait_max_fail):
+        try:
+            fn()
+        except Exception as e:  # noqa: BLE001 — a crashed scenario is a failure
+            record(fn.__name__, False, "EXCEPTION %r" % e)
+    npass = sum(1 for _, ok in _results if ok)
+    print("\n%d/%d scenarios passed" % (npass, len(_results)))
+    return 0 if npass == len(_results) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

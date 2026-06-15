@@ -1,72 +1,164 @@
 #!/usr/bin/env python3
 """Serialize the whole *land-on-main* critical section across parallel agents.
 
+WHY THIS EXISTS
+===============
 The render gate (``tests/app/integration/conftest.py``) serializes the render
-*runs* but not the *merges*. So agents validate SPECULATIVELY in parallel — the
-render-gate queue grows 10+ deep — then race to ``git merge --ff-only``. Whoever
-loses the race has ``main`` move under them with an ``rtt/app/`` change, so the
-green render run they just finished no longer validates the exact merged state:
-they must re-rebase and re-run the ~5–6-min (plus long queue) gate. With ``main``
-moving every ~30 min this can fail to converge, and most of that deep render-gate
-queue is wasted speculative validation.
+*runs* but not the *merges*. So agents would validate SPECULATIVELY in parallel —
+the render-gate queue grows 10+ deep — then race to ``git merge --ff-only``.
+Whoever loses the race has ``main`` move under them with an ``rtt/app/`` change, so
+the green render run they just finished no longer validates the exact merged state.
+The fix is a single-holder **merge lock** that covers the whole
+``rebase main → render gate → ff-merge`` critical section, so only the lock-holder
+validates-and-merges at a time, the render-gate queue stays ~1 deep, and the
+holder validates the EXACT state it lands. Throughput is unchanged (the render
+gate is still 1-slot) — the *wasted speculative validation* disappears.
 
-The fix is a **merge lock**: an *exclusive* (single-holder) lock covering the
-whole ``rebase main → render gate → ff-merge → release`` critical section. Only
-the lock-holder validates-and-merges at a time, so the render-gate queue stays
-~1 deep instead of 10+, each agent validates the EXACT state it lands (no chase),
-and no speculative run is wasted. Throughput is unchanged — the render gate is
-1-slot either way — but the waste and the non-convergence disappear.
+THE HOLE WE CLOSED, AND THE LEASE REDESIGN
+==========================================
+The first version wrapped one ``bash -c 'rebase; gate; ff-merge'`` and released
+when that command exited. It held the lock across all three steps, so the gate was
+never wasted — BUT a conflicting ``git rebase main`` (``main`` moved while we were
+queued; the wait can be 400s+) can't be resolved inside a single wrapped command:
+``set -e`` exits, the lock releases, and the *entire long queue-wait is burned
+before ever reaching the gate*. Under constant contention that thrashes.
 
-Usage — wrap your whole landing sequence in one command so a failure at any step
-aborts the rest while you still hold the lock::
+So the lock now also exposes **subcommands** that hold it CONTINUOUSLY across many
+independent tool calls, backed by a detached, lease-renewing **holder daemon**::
 
-    bin/with-merge-lock bash -c '
-      set -e
-      git rebase main
-      .venv/bin/python -m pytest -q                 # the render gate, exact merged state
-      git -C <main-checkout> merge --ff-only <your-branch>
-    '
+    bin/with-merge-lock acquire     # blocks ONCE until held; spawns the daemon, returns
+    git rebase main                 # main is frozen (we hold it) — resolve conflicts at leisure
+    bin/with-merge-lock renew       # before the gate: extend the hold, verify we still hold
+    .venv/bin/python -m pytest -q   # the render gate, on the EXACT state we will land
+    bin/with-merge-lock renew       # verify we STILL hold (aborts if we lost it)
+    git -C <main-checkout> merge --ff-only <branch>     # guaranteed: nothing moved
+    bin/with-merge-lock release     # free it for the next agent
 
-The lock is released the instant the wrapped command exits (success, failure, or
-signal), so a failed rebase/test run frees the lock immediately for the next
-agent — you fix up and re-acquire. The helper's own exit status is the wrapped
-command's exit status, so ``&&`` chains and CI behave normally.
+The legacy single-command form still works for back-compat and CI::
 
-Mechanism — same family as the render gate, kept deliberately boring (no
-``flock``, which macOS lacks): on arrival drop a **ticket** file named
-``<wall-clock-ns>-<pid>`` in ``/tmp/rtt-merge-gate.d/``. The single live ticket
-with the lowest timestamp holds the lock; everyone else polls until the holders
-ahead of them finish (and remove their tickets). A ticket's timestamp is fixed at
-arrival, so ordering is **FIFO and fair** — new arrivals queue *behind* you, you
-can't be starved, and you can report exactly how many are ahead. Tickets from
-dead PIDs are reclaimed on every scan, so a crashed/killed holder frees the lock
-automatically and the queue never wedges. Unlike the render gate this lock is
-**exclusive** (one holder, by design — the merge must not race), so there is no
-``SLOTS`` knob to footgun the race back in.
+    bin/with-merge-lock bash -c 'set -e; git rebase main; pytest -q; git merge --ff-only ...'
 
-Env knobs (mirroring the render gate):
-  * ``RTT_MERGE_GATE_WAIT``    max seconds to queue before proceeding anyway (default 3600)
-  * ``RTT_MERGE_GATE_NOLOCK``  set to ``1`` to run the command without the lock
-  * ``RTT_MERGE_GATE_DIR``     ticket directory (default ``/tmp/rtt-merge-gate.d``)
+ARCHITECTURE (and the failure modes it was hardened against)
+============================================================
+Two artifacts live in ``$GATE_DIR`` (default ``/tmp/rtt-merge-gate.d/``):
+
+* **Fairness tickets** ``<arrival_ns>-<pid>`` (empty files) — FIFO *ordering only*,
+  identical in format to the render gate and to this lock's previous version, so
+  old and new versions interoperate during a rollout. ``arrival_ns`` is fixed at
+  arrival (FIFO, fair, no starvation). A ticket is live iff its PID is alive AND it
+  was touched within ``ABS_MAX`` (live owners ``os.utime`` their ticket every poll;
+  the mtime bound finally reclaims a *PID-reused* stale ticket, which pure
+  PID-liveness can NEVER reclaim — we have observed those wedge the lock in the wild).
+
+* **The holder marker** ``.holder`` (a dotfile, so the ``<ns>-<pid>`` ticket parser
+  in BOTH versions and the render gate ignore it). This — NOT ticket order — is the
+  real mutual-exclusion authority. ``time.time_ns()`` is only microsecond-granular
+  on this macOS box, so ``(ns,pid)`` is not a reliable total order (~8.5% collisions);
+  the marker is claimed by an **atomic ``O_EXCL`` create**, so two colliding-ns
+  front-runners can't both hold — exactly one wins the create. Contents (atomically
+  rewritten): ``{epoch, daemon_pid, lease_expiry, ...}``. ``epoch`` is a unique claim
+  id (``time_ns`` at claim); the owning daemon and ``renew``/``release`` match BOTH
+  ``epoch`` and ``daemon_pid``, so PID reuse alone can't impersonate a holder.
+
+Holder daemon (detached via ``start_new_session``; survives the spawning tool call,
+the parent bash, and SIGHUP):
+  * Renews the marker lease every ``RENEW`` seconds (loop-driven, NOT signal-driven —
+    PEP 475 means a signal does not wake ``time.sleep``, so lease freshness must not
+    depend on signals).
+  * **Self-fences**: if it ever finds wall-clock past its own ``lease_expiry`` it
+    EXITS without rewriting the marker. Takeover by anyone else is only permitted at
+    ``lease_expiry + LEASE_GRACE``. So a stale marker has NO live writer by the time
+    it can be taken over — the renew-resurrects-a-released-marker race is impossible.
+  * Verifies it still owns the marker (epoch+pid) each loop; if taken over, it exits
+    WITHOUT re-creating anything (there is deliberately NO ticket/marker "re-stake" —
+    re-staking a lost lock was the core double-holder bug in the lease-on-ticket
+    design).
+  * Backstops, three non-overlapping layers: PID-death (fast — daemon crashed) ·
+    lease+grace (daemon hung but alive) · ``last_renew + HARD_GAP`` self-exit, hard-
+    capped by an un-bumpable ``birth + ABS_MAX`` (agent abandoned the hold / forgot
+    ``release``; the cap prevents an immortal re-armed daemon).
+  * Signal handlers ONLY set a flag / stamp a time / poke a self-pipe (to make the
+    sleep interruptible) — never touch files — so a SIGTERM can't interrupt a marker
+    rewrite mid-flight; all file mutation happens in the loop body.
+  * ``watch_parent`` (legacy mode only): also exits if the wrapping process dies, for
+    today's fast SIGKILL recovery. Subcommand mode leaves it unset (the Claude session
+    is unwatchable) and relies on ``HARD_GAP`` for abandonment recovery.
+
+Correctness backstop of last resort: even if a pathology ever produces two
+simultaneous "holders", ``git merge --ff-only`` is an atomic ref CAS — at most one
+ff succeeds, the other fails cleanly, and ``main`` is NEVER corrupted or
+double-landed. The lock's job is to make a wasted gate RARE; ``--ff-only`` makes a
+race SAFE.
+
+A deliberately NON-feature: ``acquire`` does NOT touch ``git config`` / rerere.
+``rerere.enabled`` is already on repo-wide and records resolutions you still review;
+flipping ``rerere.autoupdate`` on globally would let a textually-identical conflict
+preimage recorded on a DIFFERENT branch auto-stage a wrong resolution into your
+held-lock rebase (the ``rr-cache`` is shared across all worktrees). So we leave git
+config alone.
+
+Env knobs:
+  * ``RTT_MERGE_GATE_DIR``    ticket/marker directory (default ``/tmp/rtt-merge-gate.d``)
+  * ``RTT_MERGE_GATE_WAIT``   max seconds to queue before giving up (default 3600; on
+                              timeout we FAIL — we never "proceed unlocked", which
+                              would be a routine double-holder path)
+  * ``RTT_MERGE_GATE_LEASE``  marker lease seconds (default 300)
+  * ``RTT_MERGE_GATE_GRACE``  extra seconds before a stale marker may be taken over (default 60)
+  * ``RTT_MERGE_GATE_RENEW``  daemon renew interval (default 15)
+  * ``RTT_MERGE_GATE_GAP``    self-exit if no agent ``renew`` within this many seconds (default 900)
+  * ``RTT_MERGE_GATE_TTL``    absolute, un-bumpable daemon lifetime cap from birth (default 2400)
+  * ``RTT_MERGE_GATE_READY``  seconds ``acquire`` waits for its daemon to take the lock (default 30)
+  * ``RTT_MERGE_GATE_NOLOCK`` set to ``1`` to run the wrapped command without the lock
+  * ``RTT_MERGE_GATE_DEBUG``  set to ``1`` to log daemon activity to ``$GATE_DIR/.daemon-<pid>.log``
+
+Pure stdlib, Python 3.7+ (runs under the shebang ``python3`` = system 3.9 here; it
+must NOT depend on the repo ``.venv``). Single machine, single wall clock.
 """
 
 import atexit
+import errno
+import hashlib
+import json
 import os
+import select
 import signal
 import subprocess
 import sys
 import time
 
-_GATE_DIR = os.environ.get("RTT_MERGE_GATE_DIR", "/tmp/rtt-merge-gate.d")
-_WAIT_MAX = int(os.environ.get("RTT_MERGE_GATE_WAIT", "3600"))  # seconds willing to queue
+# --------------------------------------------------------------------------- #
+# Configuration
+# --------------------------------------------------------------------------- #
+_DIR = os.environ.get("RTT_MERGE_GATE_DIR", "/tmp/rtt-merge-gate.d")
+_WAIT_MAX = int(os.environ.get("RTT_MERGE_GATE_WAIT", "3600"))
+_LEASE = int(os.environ.get("RTT_MERGE_GATE_LEASE", "300"))
+_GRACE = int(os.environ.get("RTT_MERGE_GATE_GRACE", "60"))
+_RENEW = int(os.environ.get("RTT_MERGE_GATE_RENEW", "15"))
+_GAP = int(os.environ.get("RTT_MERGE_GATE_GAP", "900"))
+_ABS_MAX = int(os.environ.get("RTT_MERGE_GATE_TTL", "2400"))
+_READY = int(os.environ.get("RTT_MERGE_GATE_READY", "30"))
 _DISABLED = os.environ.get("RTT_MERGE_GATE_NOLOCK") == "1"
-_POLL = 3  # seconds between attempts
-_REPORT_EVERY = 15  # seconds between "still waiting" lines
+_DEBUG = os.environ.get("RTT_MERGE_GATE_DEBUG") == "1"
 
-_ticket = None  # path to this run's ticket file once created
+_POLL = 3            # seconds between FIFO-wait scans
+_REPORT_EVERY = 15   # seconds between "still waiting" lines
+
+_MARKER = os.path.join(_DIR, ".holder")
+_SUBCOMMANDS = {"acquire", "renew", "release", "status", "__daemon"}
 
 
+def _log(msg):
+    sys.stderr.write("[merge-gate] %s\n" % msg)
+    sys.stderr.flush()
+
+
+# --------------------------------------------------------------------------- #
+# Low-level helpers (shared by every mode)
+# --------------------------------------------------------------------------- #
 def _alive(pid):
+    """True iff `pid` names a live process."""
+    if pid <= 0:
+        return False
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -76,128 +168,682 @@ def _alive(pid):
     return True
 
 
-def _scan():
-    """Return live tickets as ``(ns, pid, filename)`` sorted FIFO, removing any
-    ticket whose PID is dead (reclaiming the lock)."""
-    live = []
+def _write_atomic(path, text):
+    """Write `text` to `path` atomically (temp in the same dir + os.replace), so a
+    concurrent reader never sees a half-written or empty file."""
+    tmp = "%s.tmp-%d-%d" % (path, os.getpid(), time.time_ns())
+    with open(tmp, "w") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+def _read_json(path):
+    """Return the parsed JSON dict at `path`, or None on any problem (missing,
+    empty, mid-write garbage). Callers must treat None as 'no usable info'."""
     try:
-        names = os.listdir(_GATE_DIR)
+        with open(path) as f:
+            data = f.read()
+    except OSError:
+        return None
+    if not data.strip():
+        return None
+    try:
+        obj = json.loads(data)
+    except ValueError:
+        return None
+    return obj if isinstance(obj, dict) else None
+
+
+def _token():
+    """Stable per-worktree identifier — which worktree's hold this is, so
+    ``renew``/``release`` find their own daemon and a second ``acquire`` from the
+    same worktree is idempotent. ``RTT_MERGE_LOCK_ID`` overrides it (distinct
+    identities without distinct worktrees — used by the self-test and any
+    non-git context). Otherwise the git worktree top-level (stable across subdirs
+    and mid-rebase); falls back to realpath(cwd)."""
+    explicit = os.environ.get("RTT_MERGE_LOCK_ID")
+    if explicit:
+        return hashlib.sha1(explicit.encode("utf-8")).hexdigest()[:16]
+    root = None
+    try:
+        r = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if r.returncode == 0:
+            root = r.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        root = None
+    if not root:
+        root = os.path.realpath(os.getcwd())
+    return hashlib.sha1(root.encode("utf-8")).hexdigest()[:16]
+
+
+def _state_path(token):
+    return os.path.join(_DIR, ".state-%s" % token)
+
+
+# --------------------------------------------------------------------------- #
+# Fairness tickets (FIFO ordering only — NOT the mutex)
+# --------------------------------------------------------------------------- #
+def _scan():
+    """Live tickets as ``(ns, pid, name)`` sorted FIFO. Reclaims (removes) a ticket if:
+      * its PID is dead (fast — the common crash case), OR
+      * it belongs to the holder of a STALE marker (a hung-but-alive NEW holder: the
+        marker lease, not the ticket, is the liveness signal, so clearing its ticket
+        lets a waiter advance and take over within ~lease+grace rather than ABS_MAX), OR
+      * its mtime is older than ABS_MAX (bounds the PID-reuse / leaked-ticket wedge that
+        pure PID-liveness can never reclaim; this is the ONLY bound an OLD-version
+        holder's ticket is subject to, since old holders have no marker — so it must
+        stay long enough not to evict a legit old-version hold mid-gate).
+    Live owners keep their ticket fresh with os.utime every poll, so only dead/defunct/
+    leaked tickets are removed."""
+    live = []
+    now = time.time()
+    m = _read_json(_MARKER)
+    defunct_pid = None
+    if m is not None and _marker_stale(m, now):
+        try:
+            defunct_pid = int(m.get("daemon_pid", 0)) or None
+        except (TypeError, ValueError):
+            defunct_pid = None
+    try:
+        names = os.listdir(_DIR)
     except OSError:
         return live
     for name in names:
+        if name.startswith("."):
+            continue  # marker, state, temp files — never tickets
         try:
             ns_s, pid_s = name.rsplit("-", 1)
             ns, pid = int(ns_s), int(pid_s)
         except ValueError:
             continue
-        if _alive(pid):
-            live.append((ns, pid, name))
-        else:
+        path = os.path.join(_DIR, name)
+        dead = not _alive(pid)
+        if not dead and defunct_pid is not None and pid == defunct_pid:
+            dead = True  # holder of a stale marker — its ticket is defunct
+        stale = False
+        if not dead:
             try:
-                os.remove(os.path.join(_GATE_DIR, name))
+                stale = (now - os.path.getmtime(path)) > _ABS_MAX
+            except OSError:
+                stale = True
+        if dead or stale:
+            try:
+                os.remove(path)
             except OSError:
                 pass
+        else:
+            live.append((ns, pid, name))
     live.sort()
     return live
 
 
-def _release():
-    global _ticket
-    if _ticket is None:
-        return
+def _touch(path):
     try:
-        os.remove(_ticket)
+        os.utime(path, None)
     except OSError:
         pass
-    _ticket = None
-    print("[merge-gate] released", file=sys.stderr)
 
 
-def _acquire():
-    global _ticket
-    os.makedirs(_GATE_DIR, exist_ok=True)
-    my_name = f"{time.time_ns()}-{os.getpid()}"
-    _ticket = os.path.join(_GATE_DIR, my_name)
+def _make_ticket(ns, pid):
+    name = "%d-%d" % (ns, pid)
+    path = os.path.join(_DIR, name)
     try:
-        open(_ticket, "x").close()
+        open(path, "x").close()
+    except FileExistsError:
+        pass
     except OSError:
         pass
+    return name, path
+
+
+# --------------------------------------------------------------------------- #
+# The holder marker (the real mutual-exclusion authority)
+# --------------------------------------------------------------------------- #
+def _marker_stale(m, now=None):
+    """True iff marker dict `m` may be taken over: its daemon is dead, or its lease
+    expired more than GRACE ago (by which point a live daemon has self-fenced)."""
+    if m is None:
+        return True
+    if now is None:
+        now = time.time()
+    pid = m.get("daemon_pid", 0)
+    if not _alive(int(pid) if pid else 0):
+        return True
+    return now >= float(m.get("lease_expiry", 0)) + _GRACE
+
+
+def _marker_content(epoch, daemon_pid, token, lease_expiry):
+    return json.dumps({
+        "kind": "merge-holder",
+        "epoch": epoch,
+        "daemon_pid": daemon_pid,
+        "token": token,
+        "lease_expiry": lease_expiry,
+    })
+
+
+def _claim_fresh(epoch, daemon_pid, token, lease_expiry):
+    """Atomically create the marker iff it does not exist (O_EXCL). Returns True if
+    we won the claim. This is the actual mutex — colliding-ns front-runners cannot
+    both succeed here."""
+    try:
+        fd = os.open(_MARKER, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    except FileExistsError:
+        return False
+    except OSError:
+        return False
+    try:
+        os.write(fd, _marker_content(epoch, daemon_pid, token, lease_expiry).encode())
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    return True
+
+
+def _claim_or_takeover(epoch, daemon_pid, token):
+    """Try to become the marker holder. Returns True on success.
+
+    Fresh claim (no marker) is a single O_EXCL winner. Stale takeover grabs the
+    stale marker with an atomic rename (exactly one racer wins the rename — the
+    rest get ENOENT) and then O_EXCL-creates a new marker; if some third party
+    created a fresh marker in between, our create fails and we lose cleanly. A
+    *fresh* marker owned by someone else means we lost — return False (do NOT
+    disturb a live holder)."""
+    lease = time.time() + _LEASE
+    if _claim_fresh(epoch, daemon_pid, token, lease):
+        return True
+    # Marker exists. Take over only if it is stale.
+    m = _read_json(_MARKER)
+    if not _marker_stale(m):
+        return False
+    taking = os.path.join(_DIR, ".taking-%d-%d" % (daemon_pid, time.time_ns()))
+    try:
+        os.rename(_MARKER, taking)
+    except OSError:
+        return False  # another racer grabbed the stale marker first
+    try:
+        os.remove(taking)
+    except OSError:
+        pass
+    lease = time.time() + _LEASE
+    return _claim_fresh(epoch, daemon_pid, token, lease)
+
+
+def _i_hold(epoch, daemon_pid):
+    """Authoritative 'do I hold the lock?' check: the marker exists, names my epoch
+    and daemon, and that daemon is alive."""
+    m = _read_json(_MARKER)
+    if m is None:
+        return False
+    return (
+        m.get("epoch") == epoch
+        and int(m.get("daemon_pid", 0)) == daemon_pid
+        and _alive(daemon_pid)
+    )
+
+
+# --------------------------------------------------------------------------- #
+# The detached holder daemon
+# --------------------------------------------------------------------------- #
+_d_terminating = False
+_d_last_renew = None   # monotonic time of the last agent renew (SIGUSR1)
+_d_wake_w = None       # self-pipe write fd
+
+
+def _d_install_signals(wake_w):
+    global _d_wake_w
+    _d_wake_w = wake_w
+
+    def on_term(_sig, _frame):
+        global _d_terminating
+        _d_terminating = True  # flag only — file ops happen in the loop
+
+    def on_usr1(_sig, _frame):
+        global _d_last_renew
+        _d_last_renew = time.monotonic()  # stamp only
+
+    signal.signal(signal.SIGTERM, on_term)
+    signal.signal(signal.SIGINT, on_term)
+    signal.signal(signal.SIGUSR1, on_usr1)
+    try:
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
+    except (ValueError, OSError):
+        pass
+    # Make select() return the moment any handled signal fires (PEP 475-proof).
+    signal.set_wakeup_fd(wake_w)
+
+
+def _d_sleep(read_fd, seconds):
+    try:
+        r, _, _ = select.select([read_fd], [], [], seconds)
+        if r:
+            try:
+                os.read(read_fd, 65536)  # drain
+            except OSError:
+                pass
+    except (OSError, select.error):
+        pass
+
+
+def _d_log(logf, msg):
+    if logf:
+        try:
+            logf.write("%.3f %s\n" % (time.time(), msg))
+            logf.flush()
+        except OSError:
+            pass
+
+
+def _daemon(cfg):
+    """Run as the detached holder. cfg keys: epoch, ns, token, watch_parent."""
+    global _d_last_renew
+    epoch = cfg["epoch"]
+    ns = cfg["ns"]
+    token = cfg["token"]
+    watch_parent = cfg.get("watch_parent") or 0
+    pid = os.getpid()
+
+    logf = None
+    if _DEBUG:
+        try:
+            logf = open(os.path.join(_DIR, ".daemon-%d.log" % pid), "a")
+        except OSError:
+            logf = None
+
+    r_fd, w_fd = os.pipe()
+    os.set_blocking(r_fd, False)
+    os.set_blocking(w_fd, False)
+    _d_install_signals(w_fd)
+
+    ticket_name, ticket_path = _make_ticket(ns, pid)
+    state_path = _state_path(token)
+
+    # Take the lock. If we lose the marker race, exit so acquire re-queues.
+    if not _claim_or_takeover(epoch, pid, token):
+        _d_log(logf, "lost marker race at startup; exiting")
+        try:
+            os.remove(ticket_path)
+        except OSError:
+            pass
+        return 0
+
+    _write_atomic(state_path, json.dumps({
+        "daemon_pid": pid, "epoch": epoch, "ticket": ticket_name, "token": token,
+    }))
+    _d_log(logf, "daemon holds marker (epoch=%s pid=%d)" % (epoch, pid))
+
+    birth = time.monotonic()
+    _d_last_renew = birth
+
+    def cleanup():
+        m = _read_json(_MARKER)
+        if m is not None and m.get("epoch") == epoch and int(m.get("daemon_pid", 0)) == pid:
+            try:
+                os.remove(_MARKER)
+            except OSError:
+                pass
+        for p in (ticket_path, state_path):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+        _d_log(logf, "cleaned up; exiting")
+
+    while True:
+        now_mono = time.monotonic()
+        now_wall = time.time()
+
+        if _d_terminating:
+            _d_log(logf, "SIGTERM/release")
+            cleanup()
+            return 0
+
+        # Abandonment / immortal-daemon backstops.
+        deadline = min(_d_last_renew + _GAP, birth + _ABS_MAX)
+        if now_mono >= deadline:
+            reason = "abs-cap" if now_mono >= birth + _ABS_MAX else "renew-gap"
+            _d_log(logf, "%s deadline; releasing" % reason)
+            cleanup()
+            return 0
+
+        # Legacy fast recovery: wrapping process gone.
+        if watch_parent and not _alive(watch_parent):
+            _d_log(logf, "watched parent %d gone; releasing" % watch_parent)
+            cleanup()
+            return 0
+
+        # Did we lose the marker (taken over)? Then stop WITHOUT re-staking it.
+        m = _read_json(_MARKER)
+        if m is None or m.get("epoch") != epoch or int(m.get("daemon_pid", 0)) != pid:
+            _d_log(logf, "marker no longer ours; exiting (no re-stake)")
+            try:
+                os.remove(ticket_path)
+                os.remove(state_path)
+            except OSError:
+                pass
+            return 0
+
+        # Self-fence: if we overran our own lease we may already be reclaimable —
+        # do NOT rewrite the marker (would clobber a successor). Exit instead.
+        if now_wall >= float(m.get("lease_expiry", 0)):
+            _d_log(logf, "overran own lease; self-fencing")
+            try:
+                os.remove(ticket_path)
+                os.remove(state_path)
+            except OSError:
+                pass
+            return 0
+
+        # Healthy: renew the lease (fresh clock read, to minimise the window between
+        # the self-fence check above and this write), keep the fairness ticket fresh.
+        _write_atomic(_MARKER, _marker_content(epoch, pid, token, time.time() + _LEASE))
+        if not os.path.exists(ticket_path):
+            _make_ticket(ns, pid)  # keep our FIFO place visible to old-version waiters
+        _touch(ticket_path)
+
+        _d_sleep(r_fd, _RENEW)
+
+
+def _spawn_daemon(epoch, ns, token, watch_parent):
+    """Spawn the detached holder daemon; return its PID."""
+    cfg = {"epoch": epoch, "ns": ns, "token": token, "watch_parent": watch_parent}
+    devnull = open(os.devnull, "r+b")
+    p = subprocess.Popen(
+        [sys.executable, os.path.abspath(__file__), "__daemon", json.dumps(cfg)],
+        stdin=devnull, stdout=devnull, stderr=devnull,
+        start_new_session=True, close_fds=True,
+    )
+    return p.pid
+
+
+# --------------------------------------------------------------------------- #
+# acquire / renew / release / status
+# --------------------------------------------------------------------------- #
+def _existing_live_holder(token):
+    """If this worktree already holds (or is bringing up) the lock, return its
+    state dict; else None. Verifies the recorded daemon is alive AND owns the
+    marker, so a stale state file from a crashed prior acquire is ignored."""
+    st = _read_json(_state_path(token))
+    if st is None:
+        return None
+    dpid = int(st.get("daemon_pid", 0))
+    if _alive(dpid) and _i_hold(st.get("epoch"), dpid):
+        return st
+    return None
+
+
+def _acquire(watch_parent=0):
+    """Block until we hold the lock; spawn the daemon that keeps holding it.
+    Returns (ok, token). Idempotent per worktree."""
+    os.makedirs(_DIR, exist_ok=True)
+    token = _token()
+
+    held = _existing_live_holder(token)
+    if held is not None:
+        _log("already held by this worktree (daemon PID %s); reusing" % held.get("daemon_pid"))
+        return True, token
+
+    arrival_ns = time.time_ns()
+    my_pid = os.getpid()
+    my_name, my_path = _make_ticket(arrival_ns, my_pid)
 
     waited = 0
     last_report = -_REPORT_EVERY
     while True:
+        _touch(my_path)
         live = _scan()
         names = [n for _, _, n in live]
-        if my_name not in names:  # got reclaimed under us; re-stake our place
-            try:
-                open(_ticket, "x").close()
-            except OSError:
-                pass
+        if my_name not in names:
+            _make_ticket(arrival_ns, my_pid)  # alive but reclaimed under us; re-place
             continue
         idx = names.index(my_name)
-        if idx == 0:  # lowest live ticket → we hold the exclusive lock
-            extra = f" after waiting {waited}s" if waited else ""
-            print(
-                f"[merge-gate] lock acquired (PID {os.getpid()}){extra}; "
-                f"holding through rebase → render gate → ff-merge",
-                file=sys.stderr,
-            )
-            return
+
+        if idx == 0:  # front of the FIFO — attempt the marker (the real mutex)
+            m = _read_json(_MARKER)
+            if m is None or _marker_stale(m):
+                epoch = time.time_ns()
+                dpid = _spawn_daemon(epoch, arrival_ns, token, watch_parent)
+                if _await_daemon(token, epoch):
+                    try:
+                        os.remove(my_path)  # daemon has its own ticket now
+                    except OSError:
+                        pass
+                    st = _read_json(_state_path(token)) or {}
+                    extra = " after %ds" % waited if waited else ""
+                    _log("lock acquired (daemon PID %s)%s; holding through "
+                         "rebase → render gate → ff-merge" % (st.get("daemon_pid"), extra))
+                    return True, token
+                # Daemon did not confirm holding. If it merely LOST a collision race
+                # it has already exited; if it is alive (slow startup) it might still
+                # hold — SIGTERM it so we never leave an orphan holding while we
+                # report failure, then fall through and keep waiting.
+                if _alive(dpid):
+                    try:
+                        os.kill(dpid, signal.SIGTERM)
+                    except OSError:
+                        pass
+            # else: someone holds a FRESH marker; just wait for them.
+
         if waited >= _WAIT_MAX:
-            print(
-                f"[merge-gate] waited {_WAIT_MAX}s (still position {idx} in line); "
-                f"proceeding anyway",
-                file=sys.stderr,
-            )
-            return
+            _log("waited %ds without acquiring; FAILING (not proceeding unlocked). Retry."
+                 % _WAIT_MAX)
+            try:
+                os.remove(my_path)
+            except OSError:
+                pass
+            return False, token
+
         if waited - last_report >= _REPORT_EVERY:
+            mk = _read_json(_MARKER)
+            hp = mk.get("daemon_pid") if mk else None
             ahead = [p for _, p, _ in live[:idx]]
-            print(
-                f"[merge-gate] waiting our turn… position {idx} of {len(live) - 1} queued "
-                f"(lock held by PID {live[0][1]}; {waited}s elapsed). PIDs ahead: {ahead}",
-                file=sys.stderr,
-            )
+            _log("waiting our turn… position %d of %d queued "
+                 "(holder daemon PID %s; %ds elapsed). PIDs ahead: %s"
+                 % (idx, max(0, len(live) - 1), hp, waited, ahead))
             last_report = waited
         time.sleep(_POLL)
         waited += _POLL
 
 
-def _install_signal_cleanup():
-    def _handler(signum, _frame):
-        _release()
-        # Restore default and re-raise so our exit status reflects the signal.
+def _await_daemon(token, epoch):
+    """Wait up to READY for the spawned daemon to actually take the marker."""
+    deadline = time.monotonic() + _READY
+    while time.monotonic() < deadline:
+        st = _read_json(_state_path(token))
+        if st is not None and st.get("epoch") == epoch:
+            dpid = int(st.get("daemon_pid", 0))
+            if _alive(dpid) and _i_hold(epoch, dpid):
+                return True
+            if not _alive(dpid):
+                return False  # daemon exited (lost the marker race)
+        time.sleep(0.2)
+    return False
+
+
+def cmd_acquire(_args):
+    ok, _ = _acquire(watch_parent=0)
+    return 0 if ok else 1
+
+
+def cmd_renew(_args):
+    token = _token()
+    st = _read_json(_state_path(token))
+    if st is None:
+        _log("renew: no lock recorded for this worktree — nothing to renew")
+        return 1
+    dpid = int(st.get("daemon_pid", 0))
+    epoch = st.get("epoch")
+    if not (_alive(dpid) and _i_hold(epoch, dpid)):
+        _log("renew: LOCK LOST (daemon gone or marker taken over) — re-acquire before merging")
+        return 1
+    try:
+        os.kill(dpid, signal.SIGUSR1)
+    except OSError as e:
+        _log("renew: could not signal daemon %d (%s)" % (dpid, e))
+        return 1
+    _log("renewed (daemon PID %d still holds the lock)" % dpid)
+    return 0
+
+
+def cmd_release(_args):
+    token = _token()
+    st = _read_json(_state_path(token))
+    if st is None:
+        _log("release: nothing held by this worktree")
+        return 0
+    dpid = int(st.get("daemon_pid", 0))
+    epoch = st.get("epoch")
+    if _alive(dpid):
+        try:
+            os.kill(dpid, signal.SIGTERM)
+        except OSError:
+            pass
+        # Give the daemon a moment to clean up its own marker/ticket/state.
+        for _ in range(20):
+            if not _alive(dpid):
+                break
+            time.sleep(0.1)
+    # Safety net if the daemon was already dead / didn't clean up: remove the
+    # marker ONLY if it is still ours (epoch+pid match — PID reuse can't match).
+    m = _read_json(_MARKER)
+    if m is not None and m.get("epoch") == epoch and int(m.get("daemon_pid", 0)) == dpid:
+        try:
+            os.remove(_MARKER)
+        except OSError:
+            pass
+    tk = st.get("ticket")
+    if tk:
+        try:
+            os.remove(os.path.join(_DIR, tk))
+        except OSError:
+            pass
+    try:
+        os.remove(_state_path(token))
+    except OSError:
+        pass
+    _log("released")
+    return 0
+
+
+def cmd_status(_args):
+    os.makedirs(_DIR, exist_ok=True)
+    live = _scan()
+    m = _read_json(_MARKER)
+    now = time.time()
+    print("merge-gate dir: %s" % _DIR)
+    if m is None:
+        print("holder marker: (none — lock is free)")
+    else:
+        age = now - float(m.get("lease_expiry", now)) + _LEASE
+        print("holder marker: daemon PID %s epoch %s  lease_age=%.0fs alive=%s stale=%s"
+              % (m.get("daemon_pid"), m.get("epoch"), age,
+                 _alive(int(m.get("daemon_pid", 0))), _marker_stale(m, now)))
+    if not live:
+        print("fairness queue: (empty)")
+    else:
+        for i, (ns, pid, name) in enumerate(live):
+            print("  %s %s (pid %d)" % ("HOLD/FRONT" if i == 0 else "wait %d " % i, name, pid))
+    token = _token()
+    st = _read_json(_state_path(token))
+    if st is not None:
+        print("this worktree (token %s): daemon PID %s epoch %s held=%s"
+              % (token, st.get("daemon_pid"), st.get("epoch"),
+                 _i_hold(st.get("epoch"), int(st.get("daemon_pid", 0)))))
+    else:
+        print("this worktree (token %s): not holding" % token)
+    return 0
+
+
+# --------------------------------------------------------------------------- #
+# Legacy single-command mode (back-compat): acquire → run → release in-process
+# --------------------------------------------------------------------------- #
+def _legacy(argv):
+    ok, token = _acquire(watch_parent=os.getpid())
+    if not ok:
+        _log("could not acquire the merge lock; aborting")
+        return 1
+    released = {"done": False}
+
+    def do_release():
+        if released["done"]:
+            return
+        released["done"] = True
+        try:
+            cmd_release(None)
+        except Exception:
+            pass
+
+    atexit.register(do_release)
+
+    def on_signal(signum, _frame):
+        do_release()
         signal.signal(signum, signal.SIG_DFL)
         os.kill(os.getpid(), signum)
 
     for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         try:
-            signal.signal(sig, _handler)
+            signal.signal(sig, on_signal)
         except (ValueError, OSError):
-            pass  # not on the main thread / unsupported — atexit still covers us
+            pass
+
+    try:
+        return subprocess.run(argv).returncode
+    finally:
+        do_release()
+
+
+# --------------------------------------------------------------------------- #
+# Entry point
+# --------------------------------------------------------------------------- #
+_USAGE = """usage:
+  bin/with-merge-lock acquire     # block until held; spawn the holder daemon; return
+  bin/with-merge-lock renew       # extend the hold AND verify we still hold (else exit 1)
+  bin/with-merge-lock release     # release the lock for the next agent
+  bin/with-merge-lock status      # show the holder + FIFO queue
+  bin/with-merge-lock <cmd...>    # legacy: hold the lock while <cmd> runs, release on exit
+
+Hold the lock across the WHOLE landing sequence:
+  bin/with-merge-lock acquire
+  git rebase main                 # resolve any conflicts at leisure — main is frozen
+  bin/with-merge-lock renew && .venv/bin/python -m pytest -q   # render gate, exact state
+  bin/with-merge-lock renew && git -C <main-checkout> merge --ff-only <branch>
+  bin/with-merge-lock release
+"""
 
 
 def main(argv):
     if not argv:
-        print(
-            "usage: bin/with-merge-lock <command> [args...]\n"
-            "  Runs <command> while holding the exclusive RTT merge lock.\n"
-            "  Wrap your whole rebase → render gate → ff-merge sequence in one command.",
-            file=sys.stderr,
-        )
+        sys.stderr.write(_USAGE)
         return 2
 
-    if _DISABLED:
-        print("[merge-gate] disabled (RTT_MERGE_GATE_NOLOCK=1); running without the lock",
-              file=sys.stderr)
-        return subprocess.run(argv).returncode
+    if argv[0] == "__daemon":
+        try:
+            cfg = json.loads(argv[1])
+        except (IndexError, ValueError):
+            return 2
+        return _daemon(cfg)
 
-    atexit.register(_release)
-    _install_signal_cleanup()
-    _acquire()
-    try:
+    if argv[0] in _SUBCOMMANDS:
+        if _DISABLED and argv[0] in ("acquire", "renew", "release"):
+            _log("disabled (RTT_MERGE_GATE_NOLOCK=1); %s is a no-op" % argv[0])
+            return 0
+        return {
+            "acquire": cmd_acquire,
+            "renew": cmd_renew,
+            "release": cmd_release,
+            "status": cmd_status,
+        }[argv[0]](argv[1:])
+
+    # Legacy: wrap a command.
+    if _DISABLED:
+        _log("disabled (RTT_MERGE_GATE_NOLOCK=1); running without the lock")
         return subprocess.run(argv).returncode
-    finally:
-        _release()
+    return _legacy(argv)
 
 
 if __name__ == "__main__":

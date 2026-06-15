@@ -125,38 +125,69 @@ forever (`RTT_RENDER_GATE_WAIT`, default 3600s, then it proceeds anyway). Tune c
 `RTT_RENDER_GATE_SLOTS`; `RTT_RENDER_GATE_NOLOCK=1` opts a run out. Don't wrap the gate in `/tmp`
 scripts to dodge it or sibling kills — that's the dogpile this prevents.
 
-## Take the merge lock to land — validate the exact state you merge
+## Take the merge lock to land — hold it across the WHOLE critical section
 
-The render gate above serializes the render *runs*, but **not the merges**. Without more,
-agents validate speculatively in parallel (the render-gate queue grows 10+ deep) and then race
-to `git merge --ff-only`. Whoever loses the race has `main` move under them with an `rtt/app/`
-change, so the green render run they just finished no longer validates the exact merged state —
-they must re-rebase and re-run the ~5–6-min (plus queue) gate. With `main` moving every ~30 min
-this can fail to converge, and most of that deep queue is wasted speculative validation.
+The render gate above serializes the render *runs*, but **not the merges**. Without a merge lock,
+agents validate speculatively in parallel (the render-gate queue grows 10+ deep) and then race to
+`git merge --ff-only`. Whoever loses the race has `main` move under them with an `rtt/app/` change,
+so the green render run they just finished no longer validates the exact merged state. The fix is
+an **exclusive (single-holder) merge lock**, `bin/with-merge-lock`, covering the whole
+`rebase main → render gate → ff-merge → release` critical section: only the lock-holder
+validates-and-merges at a time, so the render-gate queue stays ~1 deep, **you validate the exact
+state you land** (no chase), and no speculative run is wasted.
 
-So **wrap your whole landing sequence in the merge lock** — an *exclusive* (single-holder) lock,
-`bin/with-merge-lock`, covering the entire `rebase main → render gate → ff-merge → release`
-critical section. Only the lock-holder validates-and-merges at a time, so the render-gate queue
-stays ~1 deep, **you validate the exact state you land** (no chase), and no speculative run is
-wasted. Throughput is unchanged — the render gate is 1-slot either way — but the waste and the
-non-convergence disappear. Land like this:
+**Hold the lock continuously across separate tool calls — do NOT wrap it around one `bash -c`.**
+The earlier one-command form had a hole: if the queued `git rebase main` hits a conflict (because
+`main` moved while you were queued — the wait can be 400s+), you can't resolve it inside the single
+wrapped command, so `set -e` exits, the lock releases, and **the entire long queue-wait is burned
+before reaching the gate**. Instead `acquire` once, then run each step as its own tool call while
+you keep holding:
 
 ```bash
-bin/with-merge-lock bash -c '
-  set -e
-  git rebase main
-  .venv/bin/python -m pytest -q                              # render gate, exact merged state
-  git -C <main-checkout> merge --ff-only <your-branch>
-'
+# 1. CHEAP pre-checks FIRST, OUTSIDE the lock — don't burn a held slot on a run you could have
+#    known would fail. The fast pass (touches no render tests, so it never queues):
+.venv/bin/python -m pytest -q --ignore=tests/app/integration/test_web_render.py
+
+# 2. Take the lock. Blocks ONCE until held; main is now frozen for everyone else.
+bin/with-merge-lock acquire
+
+git rebase main          # resolve any conflict at leisure, across as many tool calls as you need —
+                         # nobody can move main while you hold the lock
+
+bin/with-merge-lock renew && .venv/bin/python -m pytest -q   # the render gate, on the EXACT state
+                         # you will land. Run the FULL gate ONLY here, under the lock.
+
+bin/with-merge-lock renew && \
+  git -C <main-checkout> merge --ff-only <your-branch>       # guaranteed: nothing moved
+
+bin/with-merge-lock release        # free it for the next agent
 ```
 
-The lock releases the instant the wrapped command exits — success, failure, **or** signal — so a
-failed rebase/test frees it immediately for the next agent (fix up, then re-acquire). It's the
-same boring `/tmp` ticket mechanism as the render gate (`/tmp/rtt-merge-gate.d/`, FIFO/fair,
-self-healing if a holder dies, max-wait fallback), with `[merge-gate] waiting … / lock acquired /
-released` on stderr — **that wait is correct, not a hang; don't `pkill` to jump it.** Unlike the
-render gate it's exclusive by design (no `SLOTS` knob — the merge must not race). Knobs:
-`RTT_MERGE_GATE_WAIT` (default 3600s), `RTT_MERGE_GATE_NOLOCK=1` to opt out.
+- **`renew` before the gate and before the ff-merge.** `renew` both extends your hold *and verifies
+  you still hold it* — it exits non-zero if you somehow lost the lock, so you re-`acquire` instead
+  of merging on a stale hold. Renew again during a long conflict resolution if it drags past ~10 min.
+- **Run the FULL render gate ONLY under the lock**, as your land-time validation; the fast pass is
+  the inner loop. Don't run the full gate speculatively outside the lock — it's redundant with the
+  guaranteed-exact under-lock run and just re-creates the contention the lock exists to kill.
+- **Always `release`** when you finish or abandon the attempt.
+- The legacy single-command form still works (and CI uses it): `bin/with-merge-lock bash -c '…'`
+  holds the lock for the wrapped command and releases on exit / failure / signal.
+
+How it holds across tool calls: `acquire` spawns a detached, lease-renewing **holder daemon**; an
+atomic `.holder` marker (NOT ticket order — `time_ns` is only µs-granular here and collides) is the
+real mutex, with FIFO fairness tickets in `/tmp/rtt-merge-gate.d/` (the same boring no-`flock` `/tmp`
+mechanism as the render gate). Three self-heal backstops free a wedged lock automatically: a crashed
+daemon (PID death, seconds), a hung daemon (lease + grace, ~minutes), and an **abandoned** hold —
+agent/session gone without `release` — frees within `RTT_MERGE_GATE_GAP` (15 min) of the last
+`renew`, hard-capped at `RTT_MERGE_GATE_TTL` (40 min) from acquisition. `[merge-gate] waiting …` on
+stderr is your place in line — **that wait is correct, not a hang; don't `pkill` to jump it.**
+`bin/with-merge-lock status` shows the holder + queue. The lock is exclusive by design (no `SLOTS`
+knob — the merge must not race); even so, `git merge --ff-only` is the atomic ref-CAS backstop that
+keeps `main` safe if anything ever slips. Validate the lock itself in isolation with
+`bin/with-merge-lock-selftest` (spawns real daemons in throwaway dirs; not a pytest test). Knobs:
+`RTT_MERGE_GATE_WAIT` (3600s, then it FAILS — it never "proceeds unlocked"), `RTT_MERGE_GATE_LEASE`/
+`GRACE`/`RENEW`/`GAP`/`TTL`/`READY`, `RTT_MERGE_GATE_NOLOCK=1` to opt out, `RTT_MERGE_LOCK_ID` for an
+explicit lock identity.
 
 **The orthogonal-files softener — skip a re-run when `main` moved harmlessly.** Even outside the
 lock, if your ff-merge is rejected because `main` moved, you do **not** always need to re-run the
@@ -207,13 +238,14 @@ no fear:
   your commits on top of main's current tip and keeps you on your branch (it does NOT strand
   your worktree). Resolve the (superficial) conflicts and `git rebase --continue` — don't
   `--abort` and start over, don't `reset --hard` to escape. Rebase again whenever `main` moves.
-- **Land it when the task is done and tests pass**, under the merge lock (see the section just
-  above). A final `git rebase main` makes your branch exactly `main + your commits`, so
-  fast-forward main onto it: `git -C <main-checkout> merge --ff-only <your-branch>`. The live app
-  reloads and the user validates on 8137. If the ff-merge is rejected because `main` moved again,
-  first try `bin/merge-safe-check` — if `main` moved only in render-orthogonal files your green
-  run still stands and you can ff-merge as-is; otherwise just `git rebase main`, re-run the gate,
-  and retry. A teammate landed first, nothing more.
+- **Land it when the task is done and tests pass**, holding the merge lock across the whole
+  `acquire → rebase → renew+gate → renew+ff-merge → release` sequence (see "Take the merge lock to
+  land" above). Because `main` is frozen while you hold the lock, the final
+  `git -C <main-checkout> merge --ff-only <your-branch>` is *guaranteed* to fast-forward — no chase.
+  The live app reloads and the user validates on 8137. (If you ever ff-merge *without* holding the
+  lock and it's rejected because `main` moved, `bin/merge-safe-check` is the fallback: if `main`
+  moved only in render-orthogonal files your green run still stands and you can ff-merge as-is;
+  otherwise `git rebase main`, re-run the gate, retry. A teammate landed first, nothing more.)
 - **Never `reset --soft`/`--hard main`, `clean -fd`, or `stash` to "tidy" or "fix."**
   `reset --soft main` only does what you want when your base already IS `main`; once `main` has
   moved past your base it silently **reverts every teammate's commit since that base** into your
