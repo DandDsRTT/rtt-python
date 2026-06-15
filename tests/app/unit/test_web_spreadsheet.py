@@ -6906,77 +6906,62 @@ def test_off_by_default_rows_colorize_by_content_too():
 
 
 def test_form_colorization_washes_the_canon_row_and_column():
-    # step 5: the canonical-mapping ROW and the canonical-generators COLUMN are a temperament + FORM
-    # REGION — every tile inherits {temperament, form} from tile_groups (no per-tile entry), and since the
-    # mapping they carry is temperament (yellow), yellow + the form magenta darken to RED across the whole
-    # region. Where the region crosses a cyan (tuning) column or row it darkens once more to WHITE: the
-    # row's target / held columns, and the column's tuning / projection rows (the canonical generator
-    # tuning map / embedding). The counts "rank" tile spanning both generator columns splits yellow | red.
+    # step 5: the colour BANDS — the canonical-mapping ROW + canonical-generators COLUMN are a temperament
+    # + form region (red); the projection + tuning ROWS are a tuning region (cyan). Every tile inherits its
+    # row/column bands (tile_groups, no per-tile entry) and the darken-blend composes them: red alone, red +
+    # the cyan target/held columns = white, the projection row's cyan + the yellow primes/gens basis = green.
     s = settings.defaults()
-    s["form_tiles"] = True
-    s["form_colorization"] = True
-    s["temperament_colorization"] = True
-    s["tuning_colorization"] = True
-    s["generator_detempering"] = True
-    s["optimization"] = True
-    s["projection"] = True            # the canonical generator embedding / tuning map in the canon-gens col
-    s["identity_objects"] = True      # 𝐹⁻¹𝐹 = 𝐼
-    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
-                            interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),),
-                            held_basis_ratios=("2/1", "5/4"))
-    cells = {c.id: c for c in lay.cells}
-
-    def groups_at(cid):  # which colorization groups' bands cover the cell's midpoint
-        c = cells[cid]
-        x, y = c.x + c.w / 2, c.y + c.h / 2
-        return {b.tint for b in lay.blocks if b.tint in ("temperament", "tuning", "form")
-                and b.x <= x <= b.x + b.w and b.y <= y <= b.y + b.h}
-    RED, WHITE = {"form", "temperament"}, {"form", "temperament", "tuning"}
-    # the canon ROW is RED everywhere it doesn't cross a cyan column...
-    assert groups_at("cell:canon:0:0") == RED              # 𝑀_C
-    assert groups_at("cell:form:0:0") == RED               # 𝐹 (the form matrix)
-    assert groups_at("cell:canon_detempering:0:0") == RED  # 𝑀_C·D = 𝐹 (a neutral column, still red)
-    assert groups_at("canon:gen:0") == RED                 # the g_C ratios in the spine
-    # ...and WHITE where it crosses the cyan target / held columns
-    assert groups_at("cell:canon_mapped:0:0") == WHITE     # Y_C = 𝑀_C·T over the target list
-    assert groups_at("cell:canon_hmapped:0:0") == WHITE    # 𝑀_C·H over the held basis
-    # the canon-gens COLUMN is likewise RED, going WHITE over the cyan tuning / projection rows
-    assert groups_at("cell:finv:0:0") == RED               # 𝐹⁻¹ (the inverse form matrix, mapping row)
-    assert groups_at("cell:embed_c:0:0") == WHITE          # G_C the canonical generator embedding (projection)
-    assert groups_at("tuning:cangen:0") == WHITE           # 𝒈_C the canonical generator tuning map
-    # the MAIN mapping row is unchanged — temperament yellow, never the form region
-    assert groups_at("cell:mapping:0:0") == {"temperament"}  # 𝑀 stays yellow
-    # the counts "rank" tile spans BOTH generator columns but its halves wash separately:
-    # yellow over the generators (just temperament), red over the canonical generators (the region)
-    rank = cells["count:gens"]  # the rank r tile, spanning the generators + canonical-generators columns
-    gens_x = cells["cell:form:0:0"].x + 5    # a point in the generators column (the 𝐹 tile sits there)
-    cgens_x = cells["cell:fcancel:0:0"].x + 5  # a point in the canonical-generators column (𝐹⁻¹𝐹)
-    in_band = lambda x, tint: any(b.tint == tint and b.x <= x <= b.x + b.w
-                                  and b.y <= rank.y + rank.h / 2 <= b.y + b.h for b in lay.blocks)
-    assert in_band(gens_x, "temperament") and not in_band(gens_x, "form")   # generators half: yellow only
-    assert in_band(cgens_x, "temperament") and in_band(cgens_x, "form")     # canon-gens half: red (temperament + form)
+    s.update(form_tiles=True, form_colorization=True, temperament_colorization=True, tuning_colorization=True,
+             generator_detempering=True, optimization=True, projection=True, identity_objects=True)
+    b = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), settings=s,
+                                 interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),), held_basis_ratios=("2/1", "5/4"))
+    b.layout()
+    tg = b.tile_groups
+    RED, WHITE, GREEN = {"form", "temperament"}, {"form", "temperament", "tuning"}, {"temperament", "tuning"}
+    # the canon ROW + canon-gens COLUMN: red, going white where they cross a cyan column / row
+    assert tg("canon", "primes") == RED and tg("canon", "gens") == RED and tg("canon", "detempering") == RED
+    assert tg("canon", "targets") == WHITE and tg("canon", "held") == WHITE      # cyan target / held columns
+    assert tg("mapping", "canongens") == RED                                     # 𝐹⁻¹ (a non-cyan row)
+    assert tg("projection", "canongens") == WHITE and tg("tuning", "canongens") == WHITE  # the cyan rows
+    # the PROJECTION row: cyan, green over its yellow primes / generators columns
+    assert tg("projection", "primes") == GREEN and tg("projection", "gens") == GREEN
+    assert tg("projection", "detempering") == {"tuning"} and tg("projection", "targets") == {"tuning"}
+    # the MAIN mapping row is untouched — temperament yellow, never the form region
+    assert tg("mapping", "primes") == {"temperament"}
+    # the THREE-way (white) intersection RENDERS as the bare white base — no colour band, so it reads
+    # white (lighter than the board), not the muddy darken-grey three colour bands would give.
+    cells = {c.id: c for c in b.cells}
+    yc = cells["cell:canon_mapped:0:0"]   # Y_C, a white tile
+    x, y = yc.x + yc.w / 2, yc.y + yc.h / 2
+    over = lambda pred: any(pred(bl) and bl.x <= x <= bl.x + bl.w and bl.y <= y <= bl.y + bl.h for bl in b.blocks)
+    assert over(lambda bl: bl.id.startswith("washbase:"))                    # a white base IS laid
+    assert not over(lambda bl: bl.tint in ("temperament", "tuning", "form"))  # but NO colour band → white
+    # the counts "rank" tile spans both generator columns but splits: yellow generators | red canon-gens
+    rank = cells["count:gens"]
+    gx, cgx = cells["cell:form:0:0"].x + 5, cells["cell:fcancel:0:0"].x + 5
+    in_band = lambda bx, tint: any(bl.tint == tint and bl.x <= bx <= bl.x + bl.w
+                                   and bl.y <= rank.y + rank.h / 2 <= bl.y + bl.h for bl in b.blocks)
+    assert in_band(gx, "temperament") and not in_band(gx, "form")   # generators half: yellow
+    assert in_band(cgx, "temperament") and in_band(cgx, "form")     # canon-gens half: red
 
 
 def test_form_colorization_is_a_layer_the_other_colorizations_compose_with():
     # the colorizations stack like coloured FILTERS (darken blend): each {group}_colorization lays its
-    # colour and they compose, so the SAME tile reads different secondaries by which layers are on. The
+    # colour and they compose, so the SAME tile reads different colours by which layers are on. The
     # canonical generator tuning map (tuning row × canon-gens column) is the witness: with only tuning on
     # it is its row's cyan; add temperament → green; add form → white. No per-tile colour was set — it
-    # inherits its row's cyan and the canon-gens region, and the filters do the rest.
-    def groups(**toggles):
+    # inherits its row's cyan band and the canon-gens region, and the filters do the rest.
+    def active(**toggles):  # the wash groups actually painted: tile_groups filtered by the live toggles
         s = settings.defaults()
         s.update(form=True, form_tiles=True, projection=True, **toggles)
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
-                                held_basis_ratios=("2/1", "5/4"))
-        cells = {c.id: c for c in lay.cells}
-        c = cells["tuning:cangen:0"]
-        x, y = c.x + c.w / 2, c.y + c.h / 2
-        return {b.tint for b in lay.blocks if b.tint in ("temperament", "tuning", "form")
-                and b.x <= x <= b.x + b.w and b.y <= y <= b.y + b.h}
-    assert groups(tuning_colorization=True) == {"tuning"}                                    # cyan
-    assert groups(tuning_colorization=True, temperament_colorization=True) == {"tuning", "temperament"}  # green
-    assert groups(tuning_colorization=True, temperament_colorization=True,
-                  form_colorization=True) == {"tuning", "temperament", "form"}               # white
+        b = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), settings=s,
+                                     held_basis_ratios=("2/1", "5/4"))
+        b.layout()
+        return {g for g in b.tile_groups("tuning", "canongens") if s.get(f"{g}_colorization")}
+    assert active(tuning_colorization=True) == {"tuning"}                                     # cyan
+    assert active(tuning_colorization=True, temperament_colorization=True) == {"tuning", "temperament"}  # green
+    assert active(tuning_colorization=True, temperament_colorization=True,
+                  form_colorization=True) == {"tuning", "temperament", "form"}                # white (base-only render)
 
 
 def test_generator_detempering_column_colorizes_by_content():

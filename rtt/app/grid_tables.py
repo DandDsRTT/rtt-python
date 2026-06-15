@@ -588,15 +588,16 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("mapping", "gens"): frozenset({"M", "B"}),        # 𝑀𝐺 = 𝐼 (over the generator basis B)
     ("mapping", "detempering"): frozenset({"M"}),      # 𝑀D = 𝐼 (D is neutral, like the other detempering tiles)
     # The canonical-mapping row + the canonical-generators column are a temperament + form REGION (red),
-    # applied to EVERY tile by tile_groups (rkey=="canon" / ckey=="canongens") — NOT listed tile by tile.
-    # So these tiles register ONLY the extra cyan their crossing carries, which darkens the red to WHITE:
-    # the canon row's cyan target / held columns (T / H), and the canon-gens column's tuning maps over the
-    # tuning / projection rows (the embedding G_C and genmap 𝒈_C both carry the cyan G). Every other canon
-    # tile — 𝑀_C, 𝐹, 𝑀_C·D, 𝑀_C·C, 𝐹⁻¹, 𝐹⁻¹𝐹, the g_C ratios — needs no entry: the region alone reds it.
+    # the projection + tuning rows a tuning REGION (cyan) — both applied by tile_groups, NOT listed tile by
+    # tile. So these tiles register ONLY the extra colour their CROSSING carries. The canon row needs its
+    # cyan target / held columns (T / H → white); the projection row needs its yellow primes / generators
+    # columns (P / B → green). Everything else — 𝑀_C, 𝐹, the mapped lists, 𝐹⁻¹, 𝐹⁻¹𝐹, the g_C ratios, the
+    # canon-gens column's embedding G_C / tuning map 𝒈_C (red region + the rows' cyan band → white) — comes
+    # for free from the bands, no entry needed.
     ("canon", "targets"): frozenset({"T"}),            # Y_C = 𝑀_C·T: the region's red + the cyan target list → white
     ("canon", "held"): frozenset({"H"}),               # 𝑀_C·H: the region's red + the cyan held basis → white
-    ("projection", "canongens"): frozenset({"G"}),     # G_C the canonical generator embedding: red + cyan G → white
-    ("tuning", "canongens"): frozenset({"G"}),         # 𝒈_C the canonical generator tuning map: red + cyan G → white
+    ("projection", "primes"): frozenset({"P"}),        # P = G𝑀: the row's cyan + the yellow domain basis P → green
+    ("projection", "gens"): frozenset({"B"}),          # G the generator embedding: the row's cyan + the yellow basis B → green
     # the generator tuning map 𝒈 = G; the tempered family 𝒕 = 𝒈𝑀 etc. carry G and M (green).
     # the generators column carries the generator basis B in EVERY tile — like the domain
     # primes column carries P — since every generators-column quantity is over the generators

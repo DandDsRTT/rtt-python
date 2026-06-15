@@ -3111,13 +3111,20 @@ class _GridBuilder:
         C — temperament/yellow) with the unchanged half (the held/unchanged intervals — tuning/cyan),
         so EVERY tile of the column reads GREEN (the darken blend of the two washes). This overrides
         the per-tile factors: off projection each commas tile keeps its own colour (C-yellow, etc.)."""
-        # The canonical-form reference is a temperament + FORM region: the whole canonical-mapping ROW
-        # and the canonical-generators COLUMN. The mapping these tiles carry is temperament (yellow), so
-        # yellow + the form magenta darken to RED across the region — and where it crosses a cyan
-        # (tuning) column or row, red + cyan = WHITE. Like the superspace region below, it is a BAND the
-        # tiles inherit — add a new column/row through it and the colour comes for free, no per-tile
-        # entry — composing (set-union) with the spine / V-column / per-tile colour the crossing adds.
-        region = {"temperament", "form"} if (rkey == "canon" or ckey == "canongens") else set()
+        # Colour by BAND, not tile by tile: a row or column sets a colour every tile crossing it inherits,
+        # composing (set-union) with the spine / V-column / per-tile colour the crossing adds, so a NEW
+        # row/column through a band picks up the colour for free. The bands:
+        #   • temperament + FORM (red): the canonical-mapping ROW + the canonical-generators COLUMN — the
+        #     form reference. The mapping these carry is temperament (yellow), so yellow + the form magenta
+        #     darken to red; where the band crosses a cyan (tuning) column/row, red + cyan = white.
+        #   • tuning (cyan): the projection and tuning ROWS (the embedding / generator maps). Their primes /
+        #     generators tiles carry their column's yellow basis, so cyan + yellow = green there.
+        # (Like the chapter-9 superspace cyan region below — a band, not the per-object CELL_FACTORS scheme.)
+        region = set()
+        if rkey == "canon" or ckey == "canongens":
+            region |= {"temperament", "form"}
+        if rkey in ("projection", "tuning"):
+            region |= {"tuning"}
         if self.show_unchanged and ckey == "commas":
             return {"temperament", "tuning"} | region
         # a spine family may be one string or a set of families (a both-families band reads green)
@@ -5504,12 +5511,20 @@ class _GridBuilder:
                     if not groups:
                         continue
                     x, w = tile_x - WASH_PAD, tile_w + 2 * WASH_PAD
-                    for group in groups:
-                        bands.append((f"{group}:{rkey}:{seg_key}", x, y, w, h, group))
+                    # all THREE colorization layers on one tile darken-blend to a muddy mid-grey, not the
+                    # clean secondaries a pair gives (green / blue / red). The triple intersection should read
+                    # WHITE — lighter than the grey board — but darken can only DARKEN, never lighten past it.
+                    # So drop the colour bands and keep just the white base (#fff): the bare base IS the white.
+                    if len(groups) == 3:
+                        bands.append((f"white:{rkey}:{seg_key}", x, y, w, h, None))  # None group → base only
+                    else:
+                        for group in groups:
+                            bands.append((f"{group}:{rkey}:{seg_key}", x, y, w, h, group))
             for bid, x, y, w, h, _ in bands:  # white bases (a layer below the colour bands)
                 self.blocks.append(Block(f"washbase:{bid}", x, y, w, h, tint="base"))
-            for bid, x, y, w, h, group in bands:  # the darken colour bands over them
-                self.blocks.append(Block(f"wash:{bid}", x, y, w, h, tint=group))
+            for bid, x, y, w, h, group in bands:  # the darken colour bands over them (None = white: base only)
+                if group is not None:
+                    self.blocks.append(Block(f"wash:{bid}", x, y, w, h, tint=group))
 
     def _emit_symbols_captions(self) -> None:
         """Quantity symbols, equivalences, captions and units lines inside each tile."""
