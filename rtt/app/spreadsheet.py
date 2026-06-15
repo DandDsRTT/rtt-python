@@ -5717,8 +5717,8 @@ class _GridBuilder:
         # the superspace projection P_L = G_L M_L: a covector stack framed like P (the on-domain
         # projection), closing with the prime-coordinate angle ⟩ (ebkangle) — an operator, not a map
         self.matrix_frame("ss_projection", "ssprimes", "ss_proj", foot="ebkangle")
-        # M_jL = I (ss_vectors, ssprimes): a covector stack like M_L, but it's the b/b JI mapping —
-        # an operator, so it closes with the angle ⟩ (ebkangle), like the projection P_L, NOT the
+        # M_jL = I (ss_vectors, ssprimes): a covector stack like M_L, but it's the p/p JI mapping over
+        # the superspace primes — an operator, so it closes with the angle ⟩ (ebkangle), like P_L, NOT the
         # mapping's curly }. M_s→L is the genuine rL × d mapping (framed like M_L, brace foot).
         self.matrix_frame("ss_vectors", "ssprimes", "ss_vec_jmap", foot="ebkangle")
         self.matrix_frame("ss_mapping", "primes", "ss_msl")

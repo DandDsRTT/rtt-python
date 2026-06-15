@@ -1691,7 +1691,7 @@ def test_plain_text_values_includes_superspace_entries_when_superspace_on():
     ml = service.superspace_mapping(state)
     expected_ml = "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "}"
     assert pt[("ss_mapping", "ssprimes")] == expected_ml
-    # M_jL = I (dL × dL identity) — the b/b JI mapping, a tile in the ss_vectors row. A covector
+    # M_jL = I (dL × dL identity) — the p/p JI mapping over the superspace primes, a tile in the ss_vectors row. A covector
     # stack closing with the angle ⟩ (an operator, like P_L), NOT the mapping's }.
     assert pt[("ss_vectors", "ssprimes")] == (
         "[⟨1 0 0 0]⟨0 1 0 0]⟨0 0 1 0]⟨0 0 0 1]⟩"

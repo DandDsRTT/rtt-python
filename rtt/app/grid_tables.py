@@ -887,7 +887,7 @@ UNITS = {
     # in output/input order, the superspace coordinate (p, gL) leading. Every other
     # superspace tile lives wholly in the superspace (p / gL only). The gL token uses the
     # SUBSCRIPT_L markup so cell_unit can subscript it per generator.
-    ("ss_vectors", "ssprimes"): "b/b",   # M_jL = I
+    ("ss_vectors", "ssprimes"): "p/p",   # M_jL = I (superspace JI mapping over superspace primes — like M_j = I below)
     ("vectors", "primes"): "p/p",            # 𝑀ⱼ = 𝐼
     # the canonical-mapping form box (the g_C token uses SUBSCRIPT_C so cell_unit subscripts it
     # per canonical generator): 𝑀_C maps domain primes to canonical generators (g_C/p), the form

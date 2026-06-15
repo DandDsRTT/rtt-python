@@ -391,7 +391,7 @@ def plain_text_values(
             # B_L (basis change matrix): the mockup wraps it ⟨ … ] (distinct from the plain
             # [ … ] lifted lists), its columns the domain-element kets [ … ⟩.
             ("ss_vectors", "primes"): "⟨" + _ket_list(bl, "⟩", wrap=False) + "]",
-            # M_jL = I: the b/b JI mapping — a covector stack closing with the angle ⟩ (operator,
+            # M_jL = I: the p/p JI mapping over the superspace primes — a covector stack closing with the angle ⟩ (operator,
             # like P_L), not the mapping's }. Matches matrix_frame(ss_vec_jmap, foot="ebkangle").
             ("ss_vectors", "ssprimes"): "[" + "".join(
                 "⟨" + " ".join(str(x) for x in row) + "]" for row in mjl) + "⟩",

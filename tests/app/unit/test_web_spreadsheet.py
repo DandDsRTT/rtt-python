@@ -8012,6 +8012,11 @@ def test_B_L_units_line_reads_superspace_prime_over_domain_element():
     # gL/b of its M_s→L sibling (the superspace coordinate leads), NOT the reversed b/p.
     cells = {c.id: c for c in _barbados_ss(units=True).cells}
     assert cells["units:ss_vectors:primes"].text == "units: p/b"
+    # M_jL = I lives wholly in the superspace (the dL×dL identity over superspace primes), so it
+    # reads p/p — like the on-domain M_j = I, NEVER the on-domain basis element b (the tile is gated
+    # on identity_objects, so opt in via _barbados_ss_identity)
+    id_cells = {c.id: c for c in _barbados_ss_identity(units=True).cells}
+    assert id_cells["units:ss_vectors:ssprimes"].text == "units: p/p"
 
 
 def test_nonstandard_domain_off_leaves_no_superspace_trace():
@@ -8632,7 +8637,7 @@ def test_superspace_g_L_brackets_reuse_GENMAP_BRACKETS():
 
 def test_superspace_M_L_and_M_jL_outer_frame_uses_ebktop_with_brace_or_angle():
     # both M_L and M_jL frame with a spanning ebktop. M_L is the rL × dL mapping, so it closes with
-    # the curly } (ebkbrace), like the on-domain M. M_jL = I is the b/b JI mapping — an operator,
+    # the curly } (ebkbrace), like the on-domain M. M_jL = I is the p/p JI mapping — an operator,
     # so it closes with the angle ⟩ (ebkangle), like the projection P_L.
     cells = {c.id: c for c in _barbados_ss_identity().cells}
     assert cells["ebktop:ss_mapping"].kind == "ebktop"
