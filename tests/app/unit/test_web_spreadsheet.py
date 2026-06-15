@@ -7284,21 +7284,27 @@ def test_form_layer_subscripts_the_matrix_header_labels():
     assert proj["matlabel:col:projection:gens:0"].text == f"𝐠{C}{s1}"
 
 
-def test_form_subscript_is_two_faced_and_the_canon_row_gates_solely_on_form_tiles():
+def test_form_subscript_is_two_faced_and_the_canon_row_needs_a_noncanonical_form():
     # the subscript C marks the canonical form: on a NON-canonical mapping (the default equave-reduced
     # meantone) the main rows stay BARE; on a canonical one the subscript rides them. The canonical-
-    # mapping row + 𝐹 (which display the canonical form) appear ONLY with the form-tiles toggle — off,
-    # they cannot appear, even under a non-canonical form.
+    # mapping row + 𝐹 (which display the canonical form) need BOTH the form-tiles toggle AND a
+    # non-canonical stored form — over a canonical 𝑀 they would just duplicate the main rows, so they hide.
     C = spreadsheet.SUBSCRIPT_C
     noncanon = {c.id: c for c in _with(symbols=True, form=True).cells}     # default = equave-reduced
     assert noncanon["symbol:mapping:primes"].text == "𝑀"                  # bare: not the canonical form
     assert not any(cid.startswith("cell:canon:") for cid in noncanon)     # canon row gated off (no form_tiles)
-    canon = _canon_cells(symbols=True, form=True)                          # canonical mapping
+    canon = _canon_cells(symbols=True, form=True)                          # canonical mapping, no form_tiles
     assert canon["symbol:mapping:primes"].text == f"𝑀{C}"                 # subscript on the main rows
-    assert not any(cid.startswith("cell:canon:") for cid in canon)        # still no canon row without form_tiles
-    # form_tiles is the sole gate: turning it on surfaces the canonical-mapping row
+    assert not any(cid.startswith("cell:canon:") for cid in canon)        # no canon row without form_tiles
+    # turning form_tiles on surfaces the canonical-mapping row — but ONLY over a non-canonical form
     tiles = {c.id: c for c in _with(symbols=True, form=True, form_tiles=True).cells}
     assert any(cid.startswith("cell:canon:") for cid in tiles)
+    # over a CANONICAL mapping the form box has nothing non-trivial to show (𝑀 = 𝑀_C, 𝐹 = 𝐼): the
+    # canonical-mapping row AND the canonical-generators column both stay hidden even with form_tiles on
+    canon_tiles = _canon_cells(symbols=True, form=True, form_tiles=True)
+    assert not any(cid.startswith("cell:canon:") for cid in canon_tiles)       # no canonical-mapping row
+    assert not any(cid.startswith("cell:finv:") for cid in canon_tiles)        # no editable 𝐹 tile
+    assert not any(":canongens" in cid for cid in canon_tiles)                 # no canonical-generators column
 
 
 def test_form_box_shows_the_mapping_decomposition_equivalence_only_when_noncanonical():

@@ -1199,9 +1199,12 @@ class _GridBuilder:
         # seen via the canonical-mapping row + 𝐹 column, which the user reveals with the form-tiles toggle.
         self.form_is_canonical = self.mapping_form_key == "canonical"
         self.show_form_subscript = self.show_form and self.form_is_canonical  # subscript-C on the main rows
-        # the canonical-mapping row + the canonical-generators column are gated SOLELY on form_tiles:
-        # off → NEITHER can appear (even under a non-canonical form); on → both surface.
-        self.show_canon = self.show_form_tiles
+        # the canonical-mapping row + the canonical-generators column surface only when the form box is up
+        # (form_tiles) AND the stored mapping is NOT already canonical. When it IS canonical, 𝑀 = 𝑀_C and
+        # 𝐹 = 𝐼, so the canon row/column would merely duplicate the main rows (which already wear the 𝑀_C
+        # subscript) — there is no non-trivial form to display, so they stay hidden (mirroring how the
+        # 𝑀 = 𝐹𝑀_C equivalence tail self-suppresses). They return the moment the form goes non-canonical.
+        self.show_canon = self.show_form_tiles and not self.form_is_canonical
         self.target_vectors = service.target_interval_vectors(self.targets, self.d, self.elements)  # k vectors, each d-tall
         # held intervals: the optimization box's held-just constraints — user-edited vectors in the
         # held column (like the intervals of interest). The tuning holds each exactly just, so
@@ -5561,11 +5564,11 @@ class _GridBuilder:
                         # the form layer subscripts the canonical-form objects in their defining
                         # equations too (𝒕 = 𝒈C𝑀C, P = GC𝑀C, …); the form-invariant tails stay bare.
                         **(FORM_EQUIVALENCES if self.show_form_subscript else {}),
-                        # the stored mapping's form decomposition 𝑀 = 𝐹𝑀_C — shown when the form box
-                        # surfaces a NON-trivial form (the canon row is on AND 𝑀 ≠ 𝑀_C, i.e. 𝐹 ≠ 𝐼).
-                        # When 𝑀 is already canonical it is trivially 𝐼·𝑀_C, so the tail is suppressed.
-                        **({("mapping", "primes"): f" = 𝐹𝑀{SUBSCRIPT_C}"}
-                           if (self.show_canon and not self.form_is_canonical) else {}),
+                        # the stored mapping's form decomposition 𝑀 = 𝐹𝑀_C — shown whenever the form box
+                        # surfaces a NON-trivial form. show_canon already encodes that (form_tiles on AND
+                        # 𝑀 ≠ 𝑀_C, i.e. 𝐹 ≠ 𝐼); over a canonical 𝑀 the canon row is gone and 𝑀 = 𝐼·𝑀_C
+                        # is trivial, so the tail rides exactly the same gate.
+                        **({("mapping", "primes"): f" = 𝐹𝑀{SUBSCRIPT_C}"} if self.show_canon else {}),
                         # the consolidated interval-vectors header: V = C|U (the comma basis and the
                         # unchanged basis concatenated). The mapped tile drops its "= 𝑂" (only the
                         # comma half of M·V vanishes; the unchanged half maps to the held generators).
