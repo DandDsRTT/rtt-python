@@ -2102,6 +2102,157 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
         f"  {r}/{c}: band={bt} grid={gt}" for r, c, bt, gt in mismatches)
 
 
+# ── the EBK BRACKET-convention lockstep guard ────────────────────────────────────────────────
+# The two guards above check that the two views EXIST and show the same NUMBERS. This third one
+# closes the remaining gap the same way for the bracket NOTATION: a tile declares its EBK variance
+# (vector-list ⟩ / genmap-coord } / covector-stack ⟨…] / …) independently in spreadsheet.py (the
+# frame + marks drawn around the grid) and in service/text.py (the plain-text band), and nothing
+# forced the two to agree — a tile could read { … ] in the grid but [ … ⟩ in the band. This test
+# reconstructs each view's convention and asserts they match, so a future tile (or an edit) that
+# lets the two drift fails here rather than reaching the user.
+_EBK_OPEN, _EBK_CLOSE = "[⟨{", "]⟩}"
+
+# Four tiles whose two views currently DISAGREE and are being brought into line by a parallel
+# identity-object EBK correction (the three M·X = I self-maps render a covector stack in the grid
+# but a vectors/cols-first list in the band; ss_mapping/detempering wraps [ … ] in the band but
+# { … ] in the grid). Their settled target conventions (per the user): the three self-maps are
+# vector lists of generator-coordinate kets ([ […} …]); ss_mapping/detempering keeps the grid's
+# curly { … ] outer. Drop each from this set as its two views converge — this guard then locks it.
+_EBK_CONVENTION_IN_FLIGHT = frozenset({
+    ("mapping", "gens"), ("mapping", "detempering"),       # MG = I, MD = I
+    ("ss_mapping", "ssgens"), ("ss_mapping", "detempering"),  # M_LgL = I, mapped detempering
+})
+
+
+def _ebk_text_convention(text):
+    """The bracket convention a plain-text EBK band declares, as
+    ``(structure, outer_open, outer_close, inner_open, inner_close)`` — structure ∈
+    ``stack`` (covector stack), ``list`` (vector list / kets), ``row`` (single line), ``none``."""
+    i = min((text.find(ch) for ch in _EBK_OPEN if ch in text), default=-1)
+    if i == -1:
+        return ("none", "", "", "", "")  # the quantities "2.3.5" primes string carries no EBK bracket
+    s = text[i:]  # drop a leading domain-basis prefix ("2.3.13/5 ") before the first bracket
+    groups, depth, start = [], 0, 0
+    for j, c in enumerate(s):  # the top-level bracket groups (a no-wrap list has more than one)
+        if c in _EBK_OPEN:
+            if depth == 0:
+                start = j
+            depth += 1
+        elif c in _EBK_CLOSE:
+            depth -= 1
+            if depth == 0:
+                groups.append(s[start:j + 1])
+    multi = len(groups) > 1
+    g = groups[0]
+    inner = g[1:-1].strip()
+    if inner and inner[0] in _EBK_OPEN:  # wraps sub-items: a vector list (kets) or a covector stack
+        io, depth, ic = inner[0], 0, ""
+        for c in inner:  # this first sub-item's close char
+            depth += c in _EBK_OPEN
+            depth -= c in _EBK_CLOSE
+            if depth == 0 and c in _EBK_CLOSE:
+                ic = c
+                break
+        structure = "list" if io == "[" else "stack"
+        return (structure, "", "", io, ic) if multi else (structure, g[0], g[-1], io, ic)
+    if multi:  # bare standalone kets, space-separated (the intervals-of-interest column)
+        return ("list", "", "", "[", g[-1])
+    return ("row", g[0], g[-1], "", "")  # one bare group: a scalar list / map / genmap / lone ket
+
+
+def _ebk_grid_convention(b, lay, rkey, ckey):
+    """The bracket convention the GRID draws around a tile's cells, reconstructed from its frame
+    bands (matrix_frame's ebktop/ebkbrace/ebkangle), per-column ket marks and bracket glyphs.
+    Cell-id shape disambiguates: a per-column mark / per-row stacked bracket ends in ``:<int>``,
+    a spanning matrix_frame band or an outer list wrap does not."""
+    cx, cw = b.col_x[ckey], b.col_w[ckey]
+
+    def in_tile(c):  # x-centre inside the column, and this row is the nearest row band
+        if not (cx - 2 <= c.x + c.w / 2 <= cx + cw + 2):
+            return False
+        ccy = c.y + c.h / 2
+        return min(b.rows, key=lambda k: abs(b.rows[k].y + b.rows[k].h / 2 - ccy)) == rkey
+
+    frame_top = col_marks = False
+    brace = angle = False
+    outer, perrow = [], []
+    for c in lay.cells:
+        if not in_tile(c):
+            continue
+        digit = c.id.rsplit(":", 1)[-1].isdigit()
+        if c.id.startswith("ebktop:"):
+            col_marks |= digit  # ebktop:<name>:<c> is a per-column mark; ebktop:<bid> a frame band
+            frame_top |= not digit
+        elif c.id.startswith("ebkbrace:"):
+            col_marks |= digit
+            brace = True
+        elif c.id.startswith("ebkangle:"):
+            col_marks |= digit
+            angle = True
+        elif c.id.startswith("bracket:") and c.id.endswith(":l"):
+            base = c.id[:-2]
+            if base.rsplit(":", 1)[-1].isdigit():  # bracket:<bid>:<i>:l is a per-row stacked bracket
+                perrow.append(c.text)
+            else:  # bracket:<bid>:l is an outer (single-row or list-wrap) bracket
+                r = next((x for x in lay.cells if x.id == base + ":r"), None)
+                outer.append((c.text, r.text if r else "]"))
+    foot = "}" if brace else "⟩" if angle else ""
+    if frame_top:  # matrix_frame present ⇒ a covector / genmap stack (top bar + foot + per-row brackets)
+        io = sorted(set(perrow))[0] if perrow else "⟨"
+        return ("stack", "[", foot, io, "]")
+    if col_marks:  # per-column ket marks ⇒ a vector list
+        if outer:
+            oo, oc = sorted(outer)[0]
+            return ("list", oo, oc, "[", foot)
+        return ("list", "", "", "[", foot)  # interest: standalone kets, no outer wrap
+    if outer:  # a lone bracket pair ⇒ a single-row map / genmap / scalar list
+        oo, oc = sorted(outer)[0]
+        return ("row", oo, oc, "", "")
+    return ("none", "", "", "", "")
+
+
+def _ebk_canonical(conv):
+    """Fold the one harmless ambiguity away before comparing: a single ket (a no-wrap list of one
+    interval, ``[…⟩`` / ``[…}``) reads as a bare ``row`` by the close char but IS a 1-item list."""
+    structure, oo, oc, io, ic = conv
+    if structure == "row" and oo == "[" and oc in "⟩}":
+        return ("list", "", "", "[", oc)
+    return conv
+
+
+def test_every_plain_text_band_uses_the_same_brackets_as_its_grid_tile():
+    # The bracket-notation half of the lockstep guard (numbers are covered by the test above). The
+    # grid frame (spreadsheet.py) and the plain-text band (service/text.py) each declare a tile's
+    # EBK variance independently; this asserts the two declarations agree for every open value tile,
+    # so the views can't read e.g. { … ] in the grid and [ … ⟩ in the band. Same all-on /
+    # nonstandard-domain + held + interest + projection config the two guards above use, so the
+    # whole surface (detempering / held / superspace / projection columns) is in play at once.
+    from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
+    s = settings.defaults()
+    for k, v in list(s.items()):
+        if isinstance(v, bool):
+            s[k] = True
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
+                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    lay = b.layout()
+    value_rows = PTEXT_ROWS - {"quantities"}
+    mismatches, checked = [], 0
+    for (rkey, ckey) in sorted(b.declared_tiles):
+        if rkey not in value_rows or ckey in SPINE_COLUMNS or not b.tile_open(rkey, ckey):
+            continue
+        if (rkey, ckey) not in b.ptext_strings or (rkey, ckey) in _EBK_CONVENTION_IN_FLIGHT:
+            continue  # presence is the other guard's job; the in-flight tiles are being converged
+        text_conv = _ebk_canonical(_ebk_text_convention(b.ptext_strings[(rkey, ckey)]))
+        grid_conv = _ebk_canonical(_ebk_grid_convention(b, lay, rkey, ckey))
+        if text_conv != grid_conv:
+            mismatches.append((rkey, ckey, text_conv, grid_conv, b.ptext_strings[(rkey, ckey)]))
+        checked += 1
+    assert checked >= 60, f"config did not light enough value tiles ({checked})"
+    assert not mismatches, "grid and plain-text EBK brackets disagree:\n" + "\n".join(
+        f"  {r}/{c}: band={t} grid={g}  ({txt!r})" for r, c, t, g, txt in mismatches)
+
+
 def test_quantities_interval_ratios_emit_no_redundant_plain_text():
     ids = {c.id for c in _with(plain_text_values=True).cells}
     # the quantities row's interval-ratio columns (commas, targets, held, …) already show the
