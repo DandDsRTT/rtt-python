@@ -278,7 +278,7 @@ def _fmt_components(components) -> str:
     return " ".join(str(int(x)) for x in components)
 
 
-@functools.lru_cache(maxsize=None)
+@functools.lru_cache(maxsize=64)
 def _commas_in_domain(domain_basis: tuple) -> tuple[tuple[str, str, tuple[int, ...]], ...]:
     d = len(domain_basis)
     out: list[tuple[str, str, tuple[int, ...]]] = []
@@ -291,7 +291,7 @@ def _commas_in_domain(domain_basis: tuple) -> tuple[tuple[str, str, tuple[int, .
     return tuple(out)
 
 
-@functools.lru_cache(maxsize=None)
+@functools.lru_cache(maxsize=64)
 def _ets_in_domain(domain_basis: tuple) -> tuple[tuple[str, tuple[int, ...]], ...]:
     out = [
         (equal_temperament.wart_name(n, warts), val)
