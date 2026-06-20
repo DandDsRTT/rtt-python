@@ -1,3 +1,8 @@
+/* Disable the browser's horizontal-overscroll back/forward swipe page-wide: leftward scrolling is
+   constant in this grid, and a stray overscroll outside the board (margins, sidebar) must not
+   navigate away. The board's own scroller adds overscroll-behavior-x:contain (see .rtt-gridbody). */
+html, body { overscroll-behavior-x: none; }
+
 /* the grid's empty top-left corner cell now holds only the undo/redo buttons (the app
    title moved to the settings sidebar). It fills the corner exactly — LABEL_W wide so its right
    edge meets the row-label column, HEADER_H tall so its bottom meets the column-header row
@@ -128,8 +133,11 @@
 .rtt-colhead-inner { position:absolute; top:0; left:0; will-change:transform; }
 .rtt-corner { position:absolute; top:var(--pad); left:var(--pad); z-index:6; background:#c0c0c0;
               box-sizing:border-box; box-shadow:0 1px 0 var(--seam-y,transparent), 1px 0 0 var(--seam-x,transparent); }
+/* overscroll-behavior-x:contain keeps a leftward scroll/swipe inside the board from chaining out to
+   the page and triggering the browser's back-navigation gesture — horizontal scrolling happens
+   constantly in this grid. */
 .rtt-gridbody { position:absolute; left:var(--pad); right:0; bottom:0; overflow:auto;
-                padding:0 var(--pad) var(--pad) 0; }
+                overscroll-behavior-x:contain; padding:0 var(--pad) var(--pad) 0; }
 /* isolate the board so the washes' mix-blend-mode composes only with the board's own layers
    (the white wash bases), not the grey pane behind it */
 .rtt-gridcontent { position:relative; isolation:isolate; transition:width var(--t), height var(--t); }
