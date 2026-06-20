@@ -2562,8 +2562,18 @@ class _GridBuilder:
 
     def ptext_band(self, key: str, folded: bool):
         """a single-line band for every value row's plain text (taller for the rows whose
-        band holds an editable input); the font auto-fits so nothing wraps or spills"""
-        if not (self.show_ptext and key in PTEXT_ROWS and not folded):
+        band holds an editable input); the font auto-fits so nothing wraps or spills.
+
+        CONTENT-FIRST: the band is reserved iff this row actually emits a plain-text string
+        (its key appears in ``self.ptext_strings`` — the assembled EBK strings, built at
+        :meth:`_resolve_ptext_strings` BEFORE this height pass, and already empty when
+        plain text is off). So a row physically cannot emit text while reserving zero band
+        (the canon-row spill): the reservation IS the emission, not a parallel hand-kept
+        ``PTEXT_ROWS`` membership the renderer must remember to update. ``PTEXT_ROWS``
+        survives only as the static *enumeration* of value rows the tests sweep over; the
+        ``test_every_in_tile_band_reserves_for_what_it_emits`` guard keeps it (and every
+        other band's reservation set) honest against the content actually emitted."""
+        if folded or not any(rk == key for rk, _ck in self.ptext_strings):
             return 0
         return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
 

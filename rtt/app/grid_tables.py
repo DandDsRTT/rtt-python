@@ -508,6 +508,29 @@ COL_LABEL_LETTERS = {
     # equivalence tail. So the complexity row carries no static entry — it is registered in
     # COL_LABELED_ROWS explicitly (like the prescaling row, also built per-render).
 }
+# ─── BAND-RESERVATION AUDIT (chip task_75d713e3: "tiles don't auto-size to content") ───
+# A tile does not measure itself: each horizontal BAND a row can carry reserves height via
+# one of these per-row sets, consulted by the height pass in spreadsheet._layout_rows BEFORE
+# any content is emitted. A row that EMITS a band's content but is absent from that band's
+# set reserves ZERO height — the content then spills past the bottom of the tile (the canon
+# row's plain-text spill). Two ways a set stays honest:
+#   DERIVED-FROM-CONTENT (cannot drift — the set IS the content table's row projection):
+#     SYMBOLED_ROWS←SYMBOLS, UNITED_ROWS←UNITS, CAPTIONED_ROWS←CAPTIONS,
+#     COL_LABELED_ROWS←COL_LABEL_LETTERS (+ a per-render tail, see below),
+#     EDITABLE_PTEXT_ROWS←EDITABLE_PTEXT, PRESET_ROWS←PRESETS, FORM_CHOOSER_ROWS←FORM_CHOOSERS.
+#   CONTENT-FIRST AT RESERVATION TIME (cannot drift — the height pass reads the live emitted
+#     content directly): the plain-text band. ptext_band() reserves iff the row appears in the
+#     builder's ptext_strings (the assembled EBK strings), so PTEXT_ROWS is now only a static
+#     ENUMERATION the tests sweep, never the reservation source. This is the fix for the bug
+#     class — the worked example the chip was spun out of.
+#   HAND-MAINTAINED LITERALS that CAN still drift — kept literal because their "emit?" is a
+#     display CHOICE with no independent content table to derive from: FRAMED_ROWS (which rows
+#     get EBK bracket+brace framing) and CHARTED_ROWS (which rows grow a bar chart). Adding a
+#     matrix/charted row means registering it here by hand. The generic guard
+#     test_every_in_tile_band_reserves_for_what_it_emits backstops every band's emit⊆reserve
+#     invariant so such drift fails a test before it reaches the user; FRAMED/CHARTED have no
+#     content source to cross-check, so they additionally lean on the render gate + the mockup.
+#
 # multi-row matrices reserve top/bottom frame bands for their EBK marks: the mapping,
 # the canonical mapping and the complexity-prescaling matrix for their spanning
 # bracket+brace, the interval vectors for the per-column ket marks. The chapter-9
@@ -1212,6 +1235,10 @@ EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)  # rows whose band
 # quantities row's band holds only the domain-primes basis string ("2.3.5"); its interval-
 # ratio columns show no plain text (the gridded ratio is already the formatted value). Every
 # other row shows one EBK string per tile.
+# NOTE: this is now a static ENUMERATION only — the tests sweep it as "the value rows", and it
+# documents the expected set. It is NOT the reservation source: ptext_band() reserves height
+# content-first off the builder's live ptext_strings, so a row added to plain_text_values but
+# forgotten here still reserves its band and cannot spill (see the band-reservation audit above).
 PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "canon", "tuning", "just", "retune", "damage",
                         "prescaling", "complexity", "weight",
                         # the projection row (P·V) and the scaling-factors row (λ) each carry a

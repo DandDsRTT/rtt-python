@@ -2126,11 +2126,11 @@ def test_every_open_value_tile_has_a_plain_text_string():
 
 def test_every_row_that_produces_plain_text_reserves_its_band():
     # the CONVERSE of the lockstep guard above, and the invariant the canonical-mapping row broke: a row
-    # that PRODUCES a plain-text EBK string must also be in PTEXT_ROWS, so its tiles reserve the band
-    # height for it. A row that emits text but isn't listed reserves ZERO band — the text then spills
-    # past the bottom of the tile into the row below. Sweeping every Show toggle on (which surfaces the
-    # canon row via form_tiles) catches any such row generically, before it reaches the user.
-    from rtt.app.grid_tables import PTEXT_ROWS
+    # that PRODUCES a plain-text EBK string must RESERVE band height for it, or the text spills past the
+    # bottom of the tile into the row below. ptext_band() is now CONTENT-FIRST — it reserves iff the row
+    # appears in ptext_strings — so this asserts the real reservation (height > 0), not a proxy set
+    # membership. Sweeping every Show toggle on (which surfaces the canon row via form_tiles) catches any
+    # such row generically, before it reaches the user.
     s = settings.defaults()
     for k, v in list(s.items()):
         if isinstance(v, bool):
@@ -2140,8 +2140,40 @@ def test_every_row_that_produces_plain_text_reserves_its_band():
                                  held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
     assert b.show_ptext and b.show_canon  # the config really did light the plain text + the canon row
     rows_with_text = {r for (r, _c) in b.ptext_strings}
-    spill = sorted(rows_with_text - PTEXT_ROWS)
+    spill = sorted(r for r in rows_with_text if b.ptext_band(r, folded=False) <= 0)
     assert not spill, f"rows produce plain text but reserve no band (it will spill past the tile): {spill}"
+
+
+def test_every_in_tile_band_reserves_for_what_it_emits():
+    # The GENERALIZED tile-holds-its-content guard (chip task_75d713e3): a tile must reserve a band for
+    # EVERY band whose content it emits, or that content spills past the tile. Each in-tile band pairs a
+    # CONTENT source (what gets drawn) with a RESERVATION set/predicate (what the height pass reserves);
+    # the canon-row spill was these two disagreeing for the plain-text band. This sweeps every Show toggle
+    # on over a rich nonstandard-domain temperament and asserts, for every band, that the set of rows
+    # EMITTING content is contained in the set of rows RESERVING it — so a future row that emits into a
+    # band but is forgotten in its reservation set fails here, for ANY band, not just plain text.
+    from rtt.app.grid_tables import (SYMBOLED_ROWS, UNITED_ROWS, CAPTIONED_ROWS,
+                                     COL_LABELED_ROWS, SYMBOLS, UNITS)
+    s = settings.defaults()
+    for k, v in list(s.items()):
+        if isinstance(v, bool):
+            s[k] = True
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
+                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    # (band name, rows that EMIT its content, rows that RESERVE its height). The emit side reads the
+    # LIVE per-render content where one exists (col_labels/effective_captions/ptext_strings are rebuilt
+    # each render — exactly where drift hides), and the static content table otherwise.
+    bands = {
+        "plain text":   ({r for (r, _c) in b.ptext_strings},
+                         {r for (r, _c) in b.ptext_strings if b.ptext_band(r, folded=False) > 0}),
+        "symbol":       ({r for (r, _c) in SYMBOLS}, set(SYMBOLED_ROWS)),
+        "units":        ({r for (r, _c) in UNITS}, set(UNITED_ROWS)),
+        "caption":      ({r for (r, _c) in b.effective_captions}, set(CAPTIONED_ROWS)),
+        "column label": ({r for (r, _c) in b.col_labels}, set(COL_LABELED_ROWS)),
+    }
+    spills = {name: sorted(emit - reserve) for name, (emit, reserve) in bands.items() if emit - reserve}
+    assert not spills, f"rows emit a band's content but reserve no height for it (it will spill): {spills}"
 
 
 def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
