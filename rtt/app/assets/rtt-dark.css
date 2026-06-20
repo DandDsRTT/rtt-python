@@ -26,14 +26,23 @@
 
 /* the colours that already gate behind a custom property: retint once, every consumer follows */
 body.rtt-dark {
-  --c-gridline:#363c44;            /* the shared-axis gridlines, visible on the dark pane */
+  /* the shared-axis gridlines. NOT an opaque grey: a translucent WHITE overlay, the dark-theme
+     divider recipe (Material / HIG). Compositing white-alpha over ANY darker surface lightens it,
+     so the line is guaranteed lighter than whatever sits beneath it — the bare pane OR a
+     colorization wash — with no luminance coordination to maintain. (An opaque #363c44 grey read
+     fine on the pane but DROPPED OUT against the lighter washes; this self-adapts.) The line paints
+     on a layer ABOVE the wash (rtt.css .rtt-line z-index:1 vs .rtt-wash z-index:0), so it composites
+     over the wash colour cleanly. ~0.13 ≈ the old #363c44 lightness on the bare pane. */
+  --c-gridline:rgba(255,255,255,0.13);
   --cell-border:1px solid #8d949d; /* the value cells' shared rule — matched by the marks below */
   --seam:#3c424a;                  /* the frozen-pane / scrolling seam */
-  /* the colorization washes, dark-toned. The darken blend (kept from light) mins the tints over
-     this base, so the subtractive overlaps survive: a base with three equal channels and tints
-     that each drop ONE to #1e give clean dark secondaries — tuning ⊓ temperament = #1e451e (green),
-     mirroring the light cyan ⊓ yellow = green. */
-  --wash-base:#454545; --wash-tuning:#1e4545; --wash-temperament:#45451e; --wash-form:#451e45;
+  /* the colorization washes, dark-toned — a low-luminance TONAL tint of the dark surface (what dark
+     mode wants), not the old mid-grey that out-lit everything around it. The darken blend (kept from
+     light) mins the tints over this base, so the subtractive overlaps survive: a base with three
+     equal channels and tints that each drop ONE to #16 give clean dark secondaries — tuning ⊓
+     temperament = #163636 (green), mirroring the light cyan ⊓ yellow = green. (Gridline visibility no
+     longer depends on these values — the translucent line above rides over whatever they are.) */
+  --wash-base:#363636; --wash-tuning:#163636; --wash-temperament:#363616; --wash-form:#361636;
   /* the preview-highlight TEXT colours. Light mode shows three lightnesses of one accent hue per
      state — a pale wash, the mid ring, and TEXT darkened toward black so it reads on the near-white
      wash (--*-text-color = color-mix(accent 60%, black), in app._CSS_VARS). On a dark cell that
