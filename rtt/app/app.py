@@ -1714,8 +1714,8 @@ class _Reconciler:
         if cb.kind != "ratiocell" or cb.pending or cb.id.split(":", 1)[0] not in ("target", "held", "interest"):
             return
         with wrap:
-            reduce_btn = ui.html(_control_svg("reduce")).classes("rtt-glyph rtt-ratio-op rtt-ratio-op-reduce")
-            recip_btn = ui.html(_control_svg("reciprocate")).classes("rtt-glyph rtt-ratio-op rtt-ratio-op-recip")
+            reduce_btn = ui.html(_control_svg("reduce")).classes("rtt-glyph rtt-ratio-op rtt-ratio-op-reduce").mark(f"{cb.id}:reduce")
+            recip_btn = ui.html(_control_svg("reciprocate")).classes("rtt-glyph rtt-ratio-op rtt-ratio-op-recip").mark(f"{cb.id}:reciprocate")
         reduce_btn.on("click", lambda _=None, cid=cb.id: self._cb.transform_interval(cid, "reduce"))
         recip_btn.on("click", lambda _=None, cid=cb.id: self._cb.transform_interval(cid, "reciprocate"))
         self.ratio_ops[cb.id] = (reduce_btn, recip_btn)

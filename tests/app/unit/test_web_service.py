@@ -342,6 +342,39 @@ def test_target_interval_vectors_over_a_nonstandard_domain():
     assert vectors == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
 
 
+def test_equave_quotient_is_the_first_basis_element():
+    assert service.equave_quotient() == Fraction(2)              # standard prime limit
+    assert service.equave_quotient((2, 3, 5)) == Fraction(2)
+    assert service.equave_quotient((3, 5, 7)) == Fraction(3)     # a tritave-equave subgroup
+    assert service.equave_quotient((2, 3, Fraction(13, 5))) == Fraction(2)
+
+
+def test_equave_reduce_vector_folds_only_the_equave_coordinate():
+    assert service.equave_reduce_vector((-2, 2, 0)) == (-3, 2, 0)   # 9/4 -> 9/8
+    assert service.equave_reduce_vector((-2, 0, 1)) == (-2, 0, 1)   # 5/4 already reduced, unchanged
+    assert service.equave_reduce_vector((0, 0, 1)) == (-2, 0, 1)    # 5/1 -> 5/4
+    assert service.equave_reduce_vector((1, 0, 0)) == (0, 0, 0)     # the octave -> the unison
+
+
+def test_equave_reduce_vector_over_a_nonstandard_domain():
+    # 2.3.13/5: the equave is still 2, so folding the lifted 13/5 keeps it in [1, 2)
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    octave = service.interval_vector("2/1", state.d, state.domain_basis)
+    assert service.equave_reduce_vector(octave, state.domain_basis) == (0, 0, 0)
+
+
+def test_interval_op_availability_gates_the_two_buttons():
+    # (can_reduce, can_reciprocate): reduce only when outside [1, equave), reciprocate only off 1/1
+    assert service.interval_op_availability("9/4") == (True, True)   # a major ninth: both apply
+    assert service.interval_op_availability("5/4") == (False, True)  # already reduced, still flippable
+    assert service.interval_op_availability("2") == (True, True)     # the octave reduces to a unison
+    assert service.interval_op_availability("1") == (False, False)   # a unison: neither op does anything
+    assert service.interval_op_availability("?/?") == (False, False) # a blank draft: neither
+    assert service.interval_op_availability("") == (False, False)
+    # a tritave-equave subgroup widens the reduce window: 5/2 is still inside [1, 3)
+    assert service.interval_op_availability("5/2", (3, 5, 7)) == (False, True)
+
+
 def test_interval_vector_parses_a_ratio_into_its_vector():
     # the inverse of comma_ratios, for the editable quantities-row ratio cells: one ratio
     # string back to its interval vector over the d domain primes (a round trip)

@@ -329,6 +329,43 @@ async def test_editing_the_projection_matrix_retunes(user: User) -> None:
     assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
 
 
+def _op_classes(user: User, marker: str) -> list[str]:
+    """The CSS classes on a ratio-op button (the reduce/reciprocate glyphs flanking an interval's bar)."""
+    return next(iter(user.find(marker=marker).elements))._classes
+
+
+async def test_interval_ratios_carry_reduce_and_reciprocate_buttons(user: User) -> None:
+    # every editable target/held/interest ratio gets the two hover buttons flanking its bar, each
+    # greyed when its op is a no-op. The default TILT targets over 2.3.5 are 2/1, 3/1, 3/2, 4/3, 5/2,
+    # 5/3, 5/4, 6/5 (columns 0..7).
+    await user.open("/")
+    await user.should_see(marker="target:0:reduce")
+    await user.should_see(marker="target:0:reciprocate")
+    # 2/1 is outside [1, 2): reduce is live. 3/2 is already reduced: reduce is greyed.
+    assert "rtt-op-disabled" not in _op_classes(user, "target:0:reduce")
+    assert "rtt-op-disabled" in _op_classes(user, "target:2:reduce")
+    # reciprocate is live on any non-unison
+    assert "rtt-op-disabled" not in _op_classes(user, "target:0:reciprocate")
+    assert "rtt-op-disabled" not in _op_classes(user, "target:2:reciprocate")
+
+
+async def test_clicking_reduce_folds_the_interval_into_one_equave(user: User) -> None:
+    # target:4 is 5/2; clicking its reduce button folds it to 5/4 — already reduced, so the same
+    # button reads disabled afterwards (exercising click → setter → render → re-sync end to end).
+    await user.open("/")
+    assert "rtt-op-disabled" not in _op_classes(user, "target:4:reduce")
+    UserInteraction(user, set(user.find(marker="target:4:reduce").elements), None).trigger("click")
+    assert _cell_child(user, "target:4").value == "5"                  # numerator unchanged (5/2 → 5/4)...
+    assert "rtt-op-disabled" in _op_classes(user, "target:4:reduce")   # ...but 5/4 no longer reduces
+
+
+async def test_clicking_reciprocate_flips_the_interval(user: User) -> None:
+    # target:2 is 3/2; reciprocate flips it to 2/3 (numerator 3 → 2)
+    await user.open("/")
+    UserInteraction(user, set(user.find(marker="target:2:reciprocate").elements), None).trigger("click")
+    assert _cell_child(user, "target:2").value == "2"
+
+
 async def test_a_projection_plain_text_edit_is_unmolested_until_submit(user: User) -> None:
     # the whole point of the plain-text edit: while you TYPE (before blur/Enter) an in-progress string
     # neither retunes, reddens, nor toasts — only SUBMITTING validates. An invalid value left
