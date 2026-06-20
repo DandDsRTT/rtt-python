@@ -238,6 +238,18 @@ no fear:
   your commits on top of main's current tip and keeps you on your branch (it does NOT strand
   your worktree). Resolve the (superficial) conflicts and `git rebase --continue` — don't
   `--abort` and start over, don't `reset --hard` to escape. Rebase again whenever `main` moves.
+- **If a teammate landed overlapping work, resolve it INSIDE the rebase — never reset-and-reapply.**
+  When someone got there first, your `git rebase main` may conflict, or your version may now be
+  redundant. The fix is *always* to resolve it within the rebase: keep what's still unique, take
+  theirs where they landed it first (`git checkout --theirs <file>` then `git add <file>`), or
+  `git rebase --continue` past a commit that rebase has made empty (it drops it for you; use
+  `git rebase --skip` if it doesn't). Do **NOT** "reset my branch to main and re-apply only my
+  unique contributions" — that is a manual, error-prone reinvention of what rebase already does
+  for you (replay *only* your changes on top of their work), it throws away your commits, and it
+  is exactly the `reset`-to-dig-out move this section forbids. **No matter how deep the collision
+  looks, rebase and resolve — never merge to sync and never reset to escape.** An agent once hit a
+  deep second collision, judged the merge "error-prone," and reset-to-main + cherry-picked its
+  unique work; that detour is the bug this bullet exists to prevent.
 - **Land it when the task is done and tests pass**, holding the merge lock across the whole
   `acquire → rebase → renew+gate → renew+ff-merge → release` sequence (see "Take the merge lock to
   land" above). Because `main` is frozen while you hold the lock, the final
