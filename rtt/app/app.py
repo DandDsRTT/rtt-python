@@ -911,6 +911,19 @@ _BUSY_JS = f"""
     if ((e.ctrlKey || e.metaKey) && /^[zyZY]$/.test(e.key)) window.rttBusy.arm();
     else if (e.key === 'Enter' && e.target.closest && e.target.closest('.rtt-cell')) window.rttBusy.arm();
   }}, true);
+
+  // The shown scrim swallows pointer events so a pile of clicks can't land on the mid-recompute
+  // grid — but the user should still be able to SCROLL it to read while it computes. Its
+  // pointer-events:auto veil eats the wheel along with the clicks, so while it's up we forward
+  // wheel deltas to the grid's own scroller by hand (freeze.js's scroll listener then re-pins the
+  // frozen header/column bands). Gated on rtt-busy-on so normal-state scrolling stays native.
+  document.addEventListener('wheel', (e) => {{
+    const o = scrim(); if (!o || !o.classList.contains('rtt-busy-on')) return;
+    const body = document.querySelector('.rtt-gridbody'); if (!body) return;
+    const f = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? body.clientHeight : 1;
+    body.scrollTop += e.deltaY * f;
+    body.scrollLeft += e.deltaX * f;
+  }}, {{capture: true, passive: true}});
 }})()
 """
 
