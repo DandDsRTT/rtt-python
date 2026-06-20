@@ -6,7 +6,7 @@ commas it tempers out, and the app derives the rest — canonical form, generato
 tunings under dozens of schemes, and the damage each does to your target intervals — and
 lays it all out as an interactive spreadsheet you can edit cell by cell.
 
-**▶ Try it live at [danddsrtt.github.io](https://danddsrtt.github.io/)** — no
+**▶ Try it live at [danddsrtt.onrender.com](https://danddsrtt.onrender.com)** — no
 install required. It's hosted on a free tier that spins down after about 15
 minutes idle, so the first load after a quiet spell can take up to a minute to wake.
 
@@ -33,7 +33,7 @@ puts a visual editor on top of it.
 
 ## Quick start
 
-The app is hosted live at **[danddsrtt.github.io](https://danddsrtt.github.io/)** —
+The app is hosted live at **[danddsrtt.onrender.com](https://danddsrtt.onrender.com)** —
 no install needed. To run it locally you'll need **Python 3.10+**:
 
 ```bash
