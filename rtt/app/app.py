@@ -443,6 +443,12 @@ _FRACTION_JS = (_ASSETS / "fraction.js").read_text(encoding="utf-8")
 # cells (see _build_decimal).
 _DECIMAL_JS = (_ASSETS / "decimal.js").read_text(encoding="utf-8")
 
+# Predictable Tab / Shift+Tab across the editable grid cells. The cells are absolutely positioned, so
+# native Tab follows DOM build order (erratic on screen); this walks them in reading order instead,
+# keeping each interval-vector / mapping group (a [data-vgroup]) contiguous — same delegated-listener
+# shape as _FRACTION_JS, and it relies on the same display:none collapse to skip hidden sub-fields.
+_TABNAV_JS = (_ASSETS / "tabnav.js").read_text(encoding="utf-8")
+
 # A multi-field stacked cell holds TWO inputs in one cell — a fraction's numerator + denominator
 # (.rtt-frac-edit), or a decimal's whole part + fraction (.rtt-dec-edit). This client-side guard makes
 # a focus/blur/commit handler fire only when focus crosses the WHOLE cell's boundary — not on the
@@ -2665,6 +2671,8 @@ def index() -> None:
     ui.add_body_html(f"<script>{_FRACTION_JS}</script>")
     # live int<->decimal switching for the editable stacked cents cells (see _DECIMAL_JS)
     ui.add_body_html(f"<script>{_DECIMAL_JS}</script>")
+    # predictable Tab order across the editable grid cells (see _TABNAV_JS)
+    ui.add_body_html(f"<script>{_TABNAV_JS}</script>")
     # the zoom-on-hover magnifier: a scaled clone of any gridded value cell (see _ZOOM_JS)
     ui.add_body_html(f"<script>{_ZOOM_JS}</script>")
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
