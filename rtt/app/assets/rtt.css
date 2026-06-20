@@ -586,15 +586,23 @@ html, body { overscroll-behavior-x: none; }
    "ratio" shows num over bar over den. _FRACTION_JS keeps it live as you type; the server sets it
    authoritatively from the committed value. ---- */
 .rtt-fraccell { background:#fff; border:var(--cell-border); box-sizing:border-box; overflow:hidden; }
+/* width:max-content so the column hugs its widest input (num/den) — the parent .rtt-fraccell is a
+   centred flexbox, so it keeps the hugged stack centred in the cell. This lets the bar's
+   align-self:stretch fill the CONTENT width (not the whole cell), matching the read-only ratios.
+   max-content (not fit-content, which a flex item resolves to its fill-available cell width here)
+   is safe because _fit_fraction already shrinks the font so the digits fit the cell. */
 .rtt-frac-edit { display:flex; flex-direction:column; align-items:center; justify-content:center;
-            width:100%; height:100%; line-height:1.04; font-size:var(--cell-font); }
-.rtt-fraccell .rtt-cellinput { height:auto; }
+            width:max-content; height:100%; line-height:1.04; font-size:var(--cell-font); }
+.rtt-fraccell .rtt-cellinput { width:auto !important; height:auto; }
 .rtt-fraccell .rtt-cellinput .q-field__control { position:static !important; background:transparent;
-            border:none !important; width:100% !important; height:auto !important; min-height:0 !important;
+            border:none !important; width:auto !important; height:auto !important; min-height:0 !important;
             box-shadow:none !important; }  /* the WRAP owns the box + the pending/preview ring — not each input */
 .rtt-fraccell .rtt-cellinput .q-field__native { font-size:inherit; line-height:1.04; padding:0 3px !important;
-            min-height:0 !important; }
-.rtt-frac-bar { height:1px; background:#000; align-self:stretch; margin:0 4px; user-select:none; pointer-events:none; }
+            min-height:0 !important; field-sizing:content; min-width:1ch; text-align:center; }
+/* the bar hugs the digits (align-self:stretch spans the wider input's content-width box, since the
+   inputs above field-size to their text) — the editable twin of the read-only .rtt-frac-num overhang,
+   so it reads as wide as it needs to be, like the generators' ~ratios, not the full cell. */
+.rtt-frac-bar { height:1px; background:#000; align-self:stretch; margin:0; user-select:none; pointer-events:none; }
 .rtt-frac-edit[data-fracmode="int"] .rtt-frac-den-in,
 .rtt-frac-edit[data-fracmode="int"] .rtt-frac-bar { display:none; }
 /* fraction-cell state colours: the green draft (on the WRAP) and the amber edit-preview reuse the
