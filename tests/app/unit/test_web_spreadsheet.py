@@ -6484,7 +6484,7 @@ def test_mapped_generator_detempering_renders_with_identity_objects():
             assert cells[f"cell:mapped_detempering:{i}:{k}"].text == ("1" if i == k else "0")
             assert cells[f"cell:mapped_detempering:{i}:{k}"].kind == "mapped"
     assert cells["symbol:mapping:detempering"].text == "\U0001D440D = \U0001D43C"  # 𝑀D = 𝐼
-    assert cells["caption:mapping:detempering"].text == "mapped generator detemperings"
+    assert cells["caption:mapping:detempering"].text == "mapped generator detempering"
     assert cells["matlabel:col:mapping:detempering:0"].text == "\U0001D440\U0001D41D₁"  # 𝑀𝐝₁
     # cols-first: outer { … ] wrap + per-column ket marks [ … } (NOT a per-row covector frame)
     assert cells["bracket:mapped_detempering:l"].text == spreadsheet.GENMAP_BRACKETS[0]  # {
@@ -6526,7 +6526,7 @@ def test_generator_detempering_size_rows_are_just_and_retuning_lists():
     assert cells["bracket:retune:detemperinglist:l"].text == "["
     assert {f"retune:detempering:{i}" for i in range(2)} <= set(cells)
     # captions per the mockup; every size row is in cents
-    assert cells["caption:tuning:detempering"].text == "tempered generator detempering tuning map"
+    assert cells["caption:tuning:detempering"].text == "(retempered) generator tuning map"
     assert cells["caption:just:detempering"].text == "(just) generator detempering interval size list"
     assert cells["caption:retune:detempering"].text == "generator detempering interval retuning list"
     for key in ("tuning", "just", "retune"):
@@ -7407,7 +7407,7 @@ def test_form_subscript_covers_the_whole_mapping_row_including_new_tiles():
     on = _canon_cells(symbols=True, header_symbols=True, form=True,
                      generator_detempering=True, identity_objects=True)
     assert on["symbol:mapping:gens"].text == f"𝑀{C}G"          # mapped generators 𝑀G → 𝑀_CG
-    assert on["symbol:mapping:detempering"].text == f"𝑀{C}D"   # mapped generator detemperings 𝑀D → 𝑀_CD
+    assert on["symbol:mapping:detempering"].text == f"𝑀{C}D"   # mapped generator detempering 𝑀D → 𝑀_CD
     assert on["matlabel:col:mapping:detempering:0"].text == f"𝑀{C}𝐝{s1}"  # and its column header
 
 

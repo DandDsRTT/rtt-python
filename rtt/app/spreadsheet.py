@@ -235,9 +235,10 @@ def _count_sym(sym: str) -> str:
 
 
 def _pretransform_label(text: str) -> str:
-    """A rendered label with "prescal…" swapped to the "pretransform…" stem — the guide's term for
-    the rectangular (size-factored) 𝑋, which shears rather than scales, so "prescaler" is a misnomer.
-    Applied to every prescaling label (caption, row title, preset) while the size factor is on.
+    """A rendered label with "prescal…" swapped to the "pretransform…" stem — the guide's term for a
+    𝑋 that shears rather than scales (so "prescaler" is a misnomer): the rectangular size-factored 𝑋,
+    OR a non-diagonal square one (off-diagonal entries typed in). Applied to every prescaling label
+    (caption, row title, preset) whenever 𝑋 is non-scaling (size factor on OR prescaler_is_matrix).
     "prescaled"/"prescaling" are swapped before "prescaler" (which also fixes the plural prescalers).
     "prescaling" → "pretransforming" stays parallel to the un-swapped "complexity prescaling" row
     title; the row title then hard-wraps the long word (".. pre-" / "transforming") rather than shrink."""
@@ -695,6 +696,13 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     # cell to its shown value and back recovers the named prescaler (and the 𝑋 = 𝐿 awareness)
     realized = service.displayed_prescaler_name(state.mapping, tuning_scheme, custom_prescaler)
     size_factor = service.complexity_size_factor(tuning_scheme)
+    # 𝑋 is a "pretransformer", not a "prescaler", whenever it stops being a plain per-prime diagonal —
+    # i.e. when the size factor makes it rectangular (𝑋 = 𝑍𝐿) OR a non-diagonal square is typed in
+    # (off-diagonal entries). Both shear rather than scale, so "scaler" is a misnomer (guide ch8). Same
+    # isinstance test build() uses for self.prescaler_is_matrix.
+    prescaler_is_matrix = isinstance(
+        service.complexity_prescaler(state.mapping, tuning_scheme, override=custom_prescaler)[0], (tuple, list))
+    non_scaling = bool(size_factor) or prescaler_is_matrix
     is_log_prime = realized == "log-prime"
     symbol = "𝐿" if is_log_prime else "𝑋"
     # the bare tile's SYMBOL equivalence names the realised prescaler concretely; a real deviation
@@ -745,7 +753,7 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
                 " = size-sensitizing matrix" + ("" if realized == "identity" else f" × {base}"))
         elif is_log_prime:
             effective_captions[("prescaling", bare_col)] += f" = {_BASE_MATRIX_NAME['log-prime']}"
-    if size_factor:  # the rectangular 𝑋 is a "pretransformer", not a "prescaler" (guide terminology)
+    if non_scaling:  # a rectangular OR non-diagonal 𝑋 is a "pretransformer", not a "prescaler" (guide ch8)
         effective_captions = {k: _pretransform_label(v) for k, v in effective_captions.items()}
     return _PrescalerLabels(
         scheme_prescaler=scheme_prescaler, realized=realized, symbol=symbol, equivalence=equivalence,
@@ -3456,7 +3464,7 @@ class _GridBuilder:
         # plus a fold toggle in the gutter for the collapsible ones
         for key in self.rows:
             label = self.rows[key].label
-            if self.size_factor:
+            if self.size_factor or self.prescaler_is_matrix:
                 label = _pretransform_label(label)
                 # "complexity pretransforming" is too long for the gutter; hyphenate the word at "pre-"
                 # and hard-break before "transforming" (full font, no shrink). The nbsp keeps "complexity
@@ -4353,7 +4361,7 @@ class _GridBuilder:
             for p in range(self.dL):
                 self.cells.append(CellBox(f"ss_proj_basis:{p}", bx, self.ss_proj_top(p), COL_W, ROW_H, "prime",
                                           text=str(self.superspace_primes[p]), prime=p))
-        # B_L (basis-embedding matrix): each domain element as a dL-tall vector of integer
+        # B_L (basis change matrix): each domain element as a dL-tall vector of integer
         # vector coefficients over the superspace primes. The cells form a dL × d grid sharing
         # the prime-column gridlines with the existing vectors row above (the same prime_left
         # x-axis, the ss_vec_top y-axis) — a read-only "vec" cell per (ss_prime_row, element_col).
@@ -4373,7 +4381,7 @@ class _GridBuilder:
         # M_L (superspace mapping): the rL × dL covector stack the temperament lifts to over its
         # superspace primes. Sits in (ss_mapping, ssprimes), each row a covector over the dL
         # ss_primes — read-only "mapped" cells (the kind the canonical-form row and mapped-target
-        # tiles use), since M_L is DERIVED from M via the basis embedding B_L; the user edits the
+        # tiles use), since M_L is DERIVED from M via the basis change matrix B_L; the user edits the
         # on-domain M and M_L follows. Editable "mapping" cells would crash the renderer too —
         # _update_mapping reads state.mapping[cb.gen][cb.prime], and rL can exceed r / dL exceed d.
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):
@@ -4675,7 +4683,7 @@ class _GridBuilder:
         # rows. The bare 𝐿 moves one column LEFT into ss-primes as the (superspace) complexity
         # prescaler (the dL×dL log-prime diagonal over the TRUE primes); the domain-primes tile
         # becomes 𝐿·B_Ls, the prescaled subspace basis elements (each domain element lifted through
-        # the basis-embedding B_L, then prescaled); and every product 𝐿·v is taken over the lifted
+        # the basis change matrix B_L, then prescaled); and every product 𝐿·v is taken over the lifted
         # vector B_L·v. The displayed cells are exactly the operand the corrected get_complexity
         # norms — ‖𝐿·(B_L·v)‖ — so the tiles and the optimization stay in lockstep.
         nrows = self.prescale_rows
@@ -5721,7 +5729,7 @@ class _GridBuilder:
             def emit_preset(cid, name, rkey, ckey, label):
                 if not self.tile_open(rkey, ckey):
                     return
-                if self.size_factor:  # "predefined prescalers" → "…pretransformers" (guide terminology)
+                if self.size_factor or self.prescaler_is_matrix:  # "predefined prescalers" → "…pretransformers" (guide ch8)
                     label = _pretransform_label(label)
                 top = self.ptext_band_y(rkey) + self.rows[rkey].ptext  # below the plain-text band
                 # a chooser with no real choice renders as a DISABLED dropdown (greyed, non-interactive,

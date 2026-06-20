@@ -86,7 +86,7 @@ SUPERSPACE_COUNTS_TILES = tuple(
 # (𝑀C), tempered (𝒕C) and retuned (𝒓C) — append "(made to vanish!)"; the just row
 # shows the comma's genuine untempered size, so it omits the note.
 CAPTIONS = {
-    # the chapter-9 superspace tiles — the basis-embedding matrix B_L lives in
+    # the chapter-9 superspace tiles — the basis change matrix B_L lives in
     # (ss_vectors, primes), the temperament's superspace mapping M_L lives in
     # (ss_mapping, ssprimes), and the trivial superspace JI mapping M_jL = I lives in
     # (ss_vectors, ssprimes). Phase 4 also adds 𝒈ₗ / 𝒕ₗ / 𝒋ₗ / 𝒓ₗ captions over the
@@ -134,7 +134,7 @@ CAPTIONS = {
     ("tuning", "canongens"): "canonical generator tuning map",    # 𝒈_C
     # the canonical-mapping row's mapped lists — the canonical-form twins of the mapping row's
     # M·X tiles (mapped through 𝑀_C instead of 𝑀), surfaced when a non-canonical form is chosen
-    ("canon", "detempering"): "canonically mapped generator detemperings",
+    ("canon", "detempering"): "canonically mapped generator detempering",
     ("canon", "commas"): "canonically mapped comma basis (made to vanish!)",
     ("canon", "held"): "canonically mapped held interval basis",
     ("canon", "targets"): "canonically mapped target interval list",
@@ -145,7 +145,7 @@ CAPTIONS = {
     ("mapping", "primes"): "(temperament) mapping",
     # the standard-domain identity objects (gated on identity_objects, like the superspace pair):
     ("mapping", "gens"): "mapped generators",            # 𝑀𝐺 = 𝐼 (M over its own generators)
-    ("mapping", "detempering"): "mapped generator detemperings",  # 𝑀D = 𝐼
+    ("mapping", "detempering"): "mapped generator detempering",  # 𝑀D = 𝐼
     ("mapping", "commas"): "mapped comma basis (made to vanish!)",
     ("mapping", "targets"): "mapped target interval list",
     # the rational tempering projection P = GM (a d×d operator over the domain primes),
@@ -177,7 +177,9 @@ CAPTIONS = {
     ("tuning", "gens"): "generator tuning map",
     ("tuning", "primes"): "tuning map",
     ("tuning", "commas"): "tempered comma basis interval size list (made to vanish!)",
-    ("tuning", "detempering"): "tempered generator detempering tuning map",
+    # 𝒕D = 𝒈: tempering the generator detempering D back through the tuning re-derives the generator
+    # tuning map — a detempering that has been (re)tempered. Named for what it IS, not the column pattern.
+    ("tuning", "detempering"): "(retempered) generator tuning map",
     ("tuning", "targets"): "tempered target interval size list",
     ("just", "primes"): "just tuning map",
     ("just", "commas"): "(just) comma basis interval size list",
@@ -241,7 +243,7 @@ CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # a target-only row, so the comma column ends there). The "other intervals of
 # interest" carry none.
 SYMBOLS = {
-    # the chapter-9 superspace anchors: B_L the basis-embedding matrix (upright capital,
+    # the chapter-9 superspace anchors: B_L the basis change matrix (upright capital,
     # parallel to C/T/D — an interval basis), 𝑀ₗ the temperament's superspace mapping
     # (math-italic M, parallel to 𝑀), 𝑀ⱼₗ the trivial superspace JI mapping (parallel to
     # the just tuning map 𝒋). Phase 4F adds the cyan tuning row's superspace symbols.
@@ -767,10 +769,10 @@ FORM_CHOOSER_ROWS = frozenset(row for _, row, _, _ in FORM_CHOOSERS)
 MNEMONICS = {
     ("ss_projection", "ssprimes"): "projection",  # 𝑃L → underline the "p" in "superspace projection"
     # superspace anchors — underline the symbol-letter where it sits in the caption
-    ("ss_vectors", "primes"): "basis",        # BL → underline the "b" in "basis embedding…"
+    ("ss_vectors", "primes"): "basis",        # BL → underline the "b" in "basis change…"
     ("vectors", "primes"): "mapping",        # 𝑀ⱼ → underline the "m" in "JI mapping"
     ("mapping", "gens"): "mapped",            # 𝑀𝐺 → underline the "m" in "mapped generators"
-    ("mapping", "detempering"): "mapped",     # 𝑀D → underline the "m" in "mapped generator detemperings"
+    ("mapping", "detempering"): "mapped",     # 𝑀D → underline the "m" in "mapped generator detempering"
     # the canonical-mapping row: 𝑀_C → "mapping" in "canonical mapping"; 𝐹⁻¹ → "form" (inverse
     # generator FORM matrix); 𝐹 (mapping row) → "form" too; the mapped products' 𝑀_C → the "m" of
     # "mapped" (the canonically MAPPED … captions). Y_C / interest carry none.
@@ -890,7 +892,7 @@ ALL_INTERVAL_MNEMONICS = {("vectors", "targets"): ("prime", "proxy")}
 # render time, so it composes with the unchanged-intervals C→V swap on the mapped-comma tile); the
 # equivalence side is an explicit overlay, applied OVER EQUIVALENCES in build's caption loop.
 # Applied by ROW, not per tile, so EVERY tile of a form-dependent row inherits it — a new mapped
-# product (𝑀G mapped generators, 𝑀D mapped generator detemperings, …) needs no registration. The
+# product (𝑀G mapped generators, 𝑀D mapped generator detempering, …) needs no registration. The
 # whole mapping row is 𝑀-and-its-products; plus the two lone generator-basis cells in other rows
 # (the generator tuning map 𝒈, the projection embedding G). The canonical-mapping row is NOT here:
 # it is statically the canonical form (its SYMBOLS bake in the subscript), shown only when surfaced.
