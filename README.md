@@ -6,8 +6,8 @@ commas it tempers out, and the app derives the rest — canonical form, generato
 tunings under dozens of schemes, and the damage each does to your target intervals — and
 lays it all out as an interactive spreadsheet you can edit cell by cell.
 
-**▶ Try it live at [rtt-python.onrender.com](https://rtt-python.onrender.com)** — no
-install required. It's hosted on Render's free tier, which spins down after about 15
+**▶ Try it live at [danddsrtt.github.io](https://danddsrtt.github.io/)** — no
+install required. It's hosted on a free tier that spins down after about 15
 minutes idle, so the first load after a quiet spell can take up to a minute to wake.
 
 It is the working companion to *[Dave Keenan & Douglas Blumeyer's guide to
@@ -33,7 +33,7 @@ puts a visual editor on top of it.
 
 ## Quick start
 
-The app is hosted live at **[rtt-python.onrender.com](https://rtt-python.onrender.com)** —
+The app is hosted live at **[danddsrtt.github.io](https://danddsrtt.github.io/)** —
 no install needed. To run it locally you'll need **Python 3.10+**:
 
 ```bash
