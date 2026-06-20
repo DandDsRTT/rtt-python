@@ -5,6 +5,7 @@ hands the grid's own derivations in so the two views structurally cannot diverge
 
 from __future__ import annotations
 
+from collections import namedtuple
 from dataclasses import dataclass
 from functools import partial
 
@@ -65,6 +66,128 @@ from rtt.app.service.superspace import (
 )
 
 
+# ── the single per-tile EBK bracket descriptor ───────────────────────────────────────────────
+# Every value tile's EBK bracket convention is declared ONCE here and consumed by both views:
+# the plain-text band (this module's render_ebk) and the grid frame (spreadsheet.py reads the
+# same conventions for its bracket/foot glyphs). render_ebk OWNS every bracket — a tile names
+# its convention and never writes a bracket itself — so an outer wrap can be neither forgotten
+# nor mismatched (the ss_mapping/detempering class of bug becomes unrepresentable), and a new
+# tile only adds one table row.
+EbkConvention = namedtuple("EbkConvention",
+                           "structure outer_open outer_close inner_open inner_close sep")
+# structure: "row" (one line of scalars), "list" (a row of column vectors / kets), or "stack"
+#            (a column of covector rows).
+# outer_open/close: the wrap around the whole group; "" both = standalone, no wrap (the loose
+#            intervals-of-interest columns).
+# inner_open/close: the per-item brackets — kets "[ … ⟩" / "[ … }" for a list, covector rows
+#            "⟨ … ]" / "{ … ]" for a stack; unused ("") for a row.
+# sep: the separator between items — " " for most, "" for the covector stacks (P / M_j / M_L)
+#            whose reviewed plain text packs the rows tight. (The grid ignores sep; it only reads
+#            the bracket glyphs + structure.)
+
+_MAP             = EbkConvention("row", "⟨", "]", "", "", " ")    # a tuning covector over primes
+_GENMAP          = EbkConvention("row", "{", "]", "", "", " ")    # a generator tuning map
+_SCALARS         = EbkConvention("row", "[", "]", "", "", " ")    # a plain cents / weight list
+_SCALARS_BARE    = EbkConvention("row", "",  "",  "", "", " ")    # the loose interest size list
+_VEC             = EbkConvention("list", "[", "]", "[", "⟩", " ")  # a list of prime-count kets
+_VEC_BARE        = EbkConvention("list", "",  "",  "[", "⟩", " ")  # loose interest kets, no wrap
+_MAPPED          = EbkConvention("list", "[", "]", "[", "}", " ")  # generator-coordinate kets
+_MAPPED_BARE     = EbkConvention("list", "",  "",  "[", "}", " ")  # loose interest gen-coord kets
+_EMBED           = EbkConvention("list", "{", "]", "[", "⟩", " ")  # the embedding G ({ … ] kets)
+_GENMAPPED       = EbkConvention("list", "{", "]", "[", "}", " ")  # M·G / M·D self-maps ({ … ] gen kets)
+_BASIS           = EbkConvention("list", "⟨", "]", "[", "⟩", " ")  # the basis change B_L (⟨ … ] kets)
+_STACK_BRACE     = EbkConvention("stack", "[", "}", "⟨", "]", "")   # a mapping covector stack (tight)
+_STACK_BRACE_SP  = EbkConvention("stack", "[", "}", "⟨", "]", " ")  # the mapping M (spaced, via to_ebk)
+_STACK_ANGLE     = EbkConvention("stack", "[", "⟩", "⟨", "]", "")   # an operator stack P / M_j (tight)
+_BARE_PRESCALER  = EbkConvention("stack", "[", "⟩", "⟨", "]", " ")  # the bare prescaler 𝐿 (spaced)
+_CANON_STACK     = EbkConvention("stack", "[", "}", "⟨", "]", " ")  # the canonical mapping 𝑀_C (spaced)
+_CANON_GEN_STACK = EbkConvention("stack", "[", "}", "{", "]", " ")  # 𝐹 / 𝐹⁻¹ / 𝐹⁻¹𝐹 genmap stacks
+
+# (row, column) → convention. The renderer / grid look this up; nothing else declares brackets.
+EBK_CONVENTIONS = {
+    ("vectors", "commas"): _VEC, ("vectors", "targets"): _VEC,
+    ("vectors", "detempering"): _VEC, ("vectors", "held"): _VEC,
+    ("vectors", "interest"): _VEC_BARE, ("vectors", "primes"): _STACK_ANGLE,  # M_j
+    ("mapping", "primes"): _STACK_BRACE_SP, ("mapping", "commas"): _MAPPED,
+    ("mapping", "targets"): _MAPPED, ("mapping", "held"): _MAPPED,
+    ("mapping", "interest"): _MAPPED_BARE, ("mapping", "gens"): _GENMAPPED,       # MG
+    ("mapping", "detempering"): _GENMAPPED, ("mapping", "canongens"): _CANON_GEN_STACK,  # MD, 𝐹⁻¹
+    ("canon", "primes"): _CANON_STACK, ("canon", "gens"): _CANON_GEN_STACK,
+    ("canon", "canongens"): _CANON_GEN_STACK, ("canon", "detempering"): _GENMAPPED,
+    ("canon", "commas"): _MAPPED, ("canon", "targets"): _MAPPED, ("canon", "held"): _MAPPED,
+    ("canon", "interest"): _MAPPED_BARE,
+    ("scaling_factors", "commas"): _SCALARS,
+    ("projection", "commas"): _VEC, ("projection", "targets"): _VEC,
+    ("projection", "held"): _VEC, ("projection", "interest"): _VEC_BARE,
+    ("projection", "detempering"): _EMBED, ("projection", "primes"): _STACK_ANGLE,  # P
+    ("projection", "gens"): _EMBED, ("projection", "canongens"): _EMBED,            # G, G_C
+    ("projection", "ssgens"): _EMBED, ("projection", "ssprimes"): _STACK_ANGLE,     # G_L→s, P_L→s
+    ("tuning", "gens"): _GENMAP, ("tuning", "canongens"): _GENMAP, ("tuning", "primes"): _MAP,
+    ("tuning", "commas"): _SCALARS, ("tuning", "detempering"): _GENMAP,
+    ("tuning", "targets"): _SCALARS, ("tuning", "held"): _SCALARS,
+    ("tuning", "interest"): _SCALARS_BARE, ("tuning", "ssgens"): _GENMAP, ("tuning", "ssprimes"): _MAP,
+    ("just", "primes"): _MAP, ("just", "commas"): _SCALARS, ("just", "detempering"): _SCALARS,
+    ("just", "targets"): _SCALARS, ("just", "held"): _SCALARS,
+    ("just", "interest"): _SCALARS_BARE, ("just", "ssprimes"): _MAP,
+    ("retune", "primes"): _MAP, ("retune", "commas"): _SCALARS, ("retune", "detempering"): _SCALARS,
+    ("retune", "targets"): _SCALARS, ("retune", "held"): _SCALARS,
+    ("retune", "interest"): _SCALARS_BARE, ("retune", "ssprimes"): _MAP,
+    ("damage", "targets"): _SCALARS, ("weight", "targets"): _SCALARS,
+    ("complexity", "primes"): _MAP, ("complexity", "commas"): _SCALARS,
+    ("complexity", "detempering"): _SCALARS, ("complexity", "targets"): _SCALARS,
+    ("complexity", "held"): _SCALARS, ("complexity", "interest"): _SCALARS_BARE,
+    ("complexity", "ssprimes"): _MAP,
+    # prescaling row: the 𝐿·basis products are ket lists; ("prescaling","primes") is
+    # context-dependent (see ebk_convention) and ("prescaling","ssprimes") is the bare 𝐿.
+    ("prescaling", "commas"): _VEC, ("prescaling", "detempering"): _VEC,
+    ("prescaling", "targets"): _VEC, ("prescaling", "held"): _VEC,
+    ("prescaling", "interest"): _VEC_BARE, ("prescaling", "ssprimes"): _BARE_PRESCALER,
+    # the chapter-9 superspace block
+    ("ss_vectors", "primes"): _BASIS, ("ss_vectors", "ssprimes"): _STACK_ANGLE,  # B_L, M_jL
+    ("ss_vectors", "commas"): _VEC, ("ss_vectors", "targets"): _VEC,
+    ("ss_vectors", "detempering"): _VEC, ("ss_vectors", "held"): _VEC,
+    ("ss_vectors", "interest"): _VEC_BARE,
+    ("ss_mapping", "ssprimes"): _STACK_BRACE, ("ss_mapping", "primes"): _STACK_BRACE,  # M_L, M_s→L
+    ("ss_mapping", "ssgens"): _GENMAPPED, ("ss_mapping", "commas"): _MAPPED,           # M_LGL
+    ("ss_mapping", "targets"): _MAPPED, ("ss_mapping", "detempering"): _GENMAPPED,
+    ("ss_mapping", "held"): _MAPPED, ("ss_mapping", "interest"): _MAPPED_BARE,
+    ("ss_projection", "ssprimes"): _STACK_ANGLE, ("ss_projection", "ssgens"): _EMBED,  # P_L, G_L
+    ("ss_projection", "primes"): _BASIS, ("ss_projection", "detempering"): _EMBED,     # P_L·B_Ls
+    ("ss_projection", "commas"): _VEC, ("ss_projection", "targets"): _VEC,
+    ("ss_projection", "held"): _VEC, ("ss_projection", "interest"): _VEC_BARE,
+}
+
+
+def ebk_convention(rkey: str, ckey: str, *, superspace: bool = False) -> EbkConvention:
+    """The EBK bracket convention for one ``(row, column)`` value tile — the single source of
+    truth both views consume. ``superspace`` flips the one context-dependent tile: with the
+    chapter-9 block shown the bare prescaler 𝐿 moves to the ss-primes column and
+    ``(prescaling, primes)`` becomes the prescaled basis-change 𝐿·B_Ls (a B_L-style ⟨ … ] list);
+    off, it is the bare prescaler covector stack."""
+    if (rkey, ckey) == ("prescaling", "primes"):
+        return _BASIS if superspace else _BARE_PRESCALER
+    return EBK_CONVENTIONS[(rkey, ckey)]
+
+
+def render_ebk(conv: EbkConvention, items, fmt=str) -> str:
+    """Wrap a tile's values in its EBK brackets — the SOLE place EBK brackets are produced. ``conv``
+    is the tile's :class:`EbkConvention`; ``items`` is the value matrix — a flat sequence for a
+    ``row``, a sequence of column/row vectors for a ``list`` / ``stack``; ``fmt`` formats each scalar.
+    Every bracket (outer wrap + per-item) comes from ``conv``, so a caller can neither forget the
+    outer wrap nor mismatch it; it only names the convention. A ``None`` item is a dashed
+    column / value (em-dashes, width-matched to the known items)."""
+    oo, oc, io, ic, sep = (conv.outer_open, conv.outer_close, conv.inner_open,
+                           conv.inner_close, conv.sep)
+    if conv.structure == "row":
+        return oo + sep.join(_DASH if v is None else fmt(v) for v in items) + oc
+    vectors = list(items)
+    dim = next((len(v) for v in vectors if v is not None), 0)  # a None column is dashed, width-matched
+    pieces = [io + " ".join([_DASH] * dim if v is None
+                            else [_DASH if x is None else fmt(x) for x in v]) + ic
+              for v in vectors]
+    return oo + sep.join(pieces) + oc
+
+
 @dataclass(frozen=True)
 class DerivedQuantities:
     """The displayed quantities the grid has already derived, handed into
@@ -120,6 +243,13 @@ def plain_text_values(
     _cents_list = partial(_CENTS_LIST, decimals=decimals)
     _cents_genmap = partial(_CENTS_GENMAP, decimals=decimals)
     _prescale_vector_list = partial(_PRESCALE_VECTOR_LIST, decimals=decimals)
+
+    def _R(key, data, fmt=str):
+        """Render a tile's value matrix through its DECLARED EBK convention (the EBK_CONVENTIONS
+        table). The brackets come entirely from the table — this is how a tile names its
+        convention without ever writing a bracket, so an outer wrap can't be forgotten."""
+        return render_ebk(ebk_convention(*key, superspace=superspace), data, fmt)
+
     db = state.domain_basis
     targets = derived.targets if derived else \
         displayed_targets(state, scheme, target_spec, target_override)  # all-interval-aware, like the grid
@@ -242,8 +372,8 @@ def plain_text_values(
     canon_u_mapped_cols = [None if u is None else tuple(sum(canon_mapping[i][p] * u[p] for p in range(state.d))
                                                         for i in range(rc)) for u in u_basis]
 
-    def _canon_stack(rows, op):  # a covector stack [ op…] op…] } — per-row op-open + ], brace close (𝑀_C / 𝐹 / 𝐹⁻¹𝐹)
-        return "[" + " ".join(op + " ".join(str(x) for x in r) + "]" for r in rows) + "}"
+    def _identity(n):  # the n × n identity, for the M·G / M·D / 𝐹⁻¹𝐹 self-map tiles
+        return [[1 if i == k else 0 for k in range(n)] for i in range(n)]
 
     # Keyed by the tile each value group occupies. The interval-vectors row holds the
     # vector lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
@@ -262,7 +392,7 @@ def plain_text_values(
         # is the zero comma columns followed by the unchanged vectors themselves — prime-count (⟩)
         ("projection", "commas"): _ket_list([(0,) * state.d for _ in commas] + u_basis, "⟩"),
         # the scaling factors λ = diag(λ): 0 per comma (vanished), 1 per (known) unchanged, — if dashed
-        ("scaling_factors", "commas"): "[" + " ".join(["0"] * len(commas) + u_scaling) + "]",
+        ("scaling_factors", "commas"): _R(("scaling_factors", "commas"), ["0"] * len(commas) + u_scaling),
         ("vectors", "targets"): tp_text,  # Tₚ — the target identity
         # D — the generator detempering as a vector list (r prime-count kets, close ⟩),
         # matching its gridded matrix and the commas/targets columns it sits beside
@@ -275,26 +405,22 @@ def plain_text_values(
         # the p/p JI mapping — a d × d covector stack (⟨ … ] rows) closing with the angle ⟩ (an
         # operator, like P), NOT the mapping's }. MG / MD are the r × r identity M·D as a COLUMN-first
         # vector list in generator coords — kets [ … } inside an outer { … ], like M_LGL.
-        ("vectors", "primes"): "[" + "".join(
-            "⟨" + " ".join("1" if i == k else "0" for k in range(state.d)) + "]"
-            for i in range(state.d)) + "⟩",
-        ("mapping", "gens"): "{" + _ket_list([[1 if i == k else 0 for k in range(len(state.mapping))]
-                                              for i in range(len(state.mapping))], "}", wrap=False) + "]",
-        ("mapping", "detempering"): "{" + _ket_list([[1 if i == k else 0 for k in range(len(state.mapping))]
-                                                     for i in range(len(state.mapping))], "}", wrap=False) + "]",
+        ("vectors", "primes"): _R(("vectors", "primes"), _identity(state.d)),
+        ("mapping", "gens"): _R(("mapping", "gens"), _identity(len(state.mapping))),
+        ("mapping", "detempering"): _R(("mapping", "detempering"), _identity(len(state.mapping))),
         # the canonical-mapping row: 𝑀_C a covector stack (map rows ⟨ … ], brace close) like 𝑀; 𝐹 and
         # 𝐹⁻¹𝐹 = 𝐼 genmap covector stacks ({ … ] rows); the mapped lists ket lists like the mapping
         # row's (𝑀_C·D = 𝐹 a generator-coord vector list { … ]; 𝑀_C·C vanishes; Y_C = 𝑀_C·T).
-        ("canon", "primes"): _canon_stack(canon_mapping, "⟨"),
-        ("canon", "gens"): _canon_stack(canon_form, "{"),
-        ("canon", "canongens"): _canon_stack([[1 if i == k else 0 for k in range(rc)] for i in range(rc)], "{"),
-        ("canon", "detempering"): "{" + _ket_list(zip(*canon_mapped_detempering), "}", wrap=False) + "]",
+        ("canon", "primes"): _R(("canon", "primes"), canon_mapping),
+        ("canon", "gens"): _R(("canon", "gens"), canon_form),
+        ("canon", "canongens"): _R(("canon", "canongens"), _identity(rc)),
+        ("canon", "detempering"): _R(("canon", "detempering"), list(zip(*canon_mapped_detempering))),
         ("canon", "commas"): _ket_list(list(zip(*canon_mapped_comma)) + canon_u_mapped_cols, "}"),
         ("canon", "targets"): _ket_list(zip(*canon_mapped), "}"),
         # the canonical-generators column's mapping/tuning-row tiles: 𝐹⁻¹ a genmap covector stack like
         # 𝐹 (𝑀 = 𝐹⁻¹𝑀_C), and 𝒈_C = 𝒈·F⁻¹ the canonical generator tuning map (a cents genmap like 𝒈).
         # G_C (projection row) is conditional below, with G.
-        ("mapping", "canongens"): _canon_stack(canon_inverse_form, "{"),
+        ("mapping", "canongens"): _R(("mapping", "canongens"), canon_inverse_form),
         ("tuning", "canongens"): _cents_genmap(
             [sum(tun.generator_map[k] * canon_inverse_form[k][j] for k in range(len(state.mapping)))
              for j in range(rc)]),
@@ -387,7 +513,7 @@ def plain_text_values(
             cols = project_vectors(p_rat, vectors)
             return list(cols) if cols else [tuple(_DASH for _ in range(state.d)) for _ in vectors]
 
-        values[("projection", "detempering")] = "{" + _ket_list(_proj_cols(detemper_vectors), "⟩", wrap=False) + "]"
+        values[("projection", "detempering")] = _R(("projection", "detempering"), _proj_cols(detemper_vectors))
         values[("projection", "targets")] = _ket_list(_proj_cols(target_vectors), "⟩")
         if held:
             values[("projection", "held")] = _ket_list(_proj_cols(held), "⟩")
@@ -414,9 +540,6 @@ def plain_text_values(
                   superspace_tuning(state, scheme, nonprime_approach,
                                     generator_override=superspace_generator_override))
 
-        def _covector_stack(rows):  # mapping-style: each row ⟨ … ], outer [ … }
-            return "[" + "".join("⟨" + " ".join(str(x) for x in r) + "]" for r in rows) + "}"
-
         # the lifted interval lists (B_L · each column) over the superspace primes, and the
         # mapped versions (M_s→L · each column) over the superspace generators
         C_L = lift_vectors_to_superspace(db, state.comma_basis)
@@ -436,25 +559,24 @@ def plain_text_values(
         values.update({
             # B_L (basis change matrix): the mockup wraps it ⟨ … ] (distinct from the plain
             # [ … ] lifted lists), its columns the domain-element kets [ … ⟩.
-            ("ss_vectors", "primes"): "⟨" + _ket_list(bl, "⟩", wrap=False) + "]",
+            ("ss_vectors", "primes"): _R(("ss_vectors", "primes"), bl),  # B_L (⟨ … ] over [ … ⟩ kets)
             # M_jL = I: the p/p JI mapping over the superspace primes — a covector stack closing with the angle ⟩ (operator,
             # like P_L), not the mapping's }. Matches matrix_frame(ss_vec_jmap, foot="ebkangle").
-            ("ss_vectors", "ssprimes"): "[" + "".join(
-                "⟨" + " ".join(str(x) for x in row) + "]" for row in mjl) + "⟩",
+            ("ss_vectors", "ssprimes"): _R(("ss_vectors", "ssprimes"), mjl),
             ("ss_vectors", "commas"): _ket_list(list(C_L) + ss_u, "⟩"),  # C_L then B_L·U over V
             ("ss_vectors", "targets"): _ket_list(T_L, "⟩"),         # T_L
             ("ss_vectors", "detempering"): _ket_list(D_L, "⟩"),     # D_L (lifted detempering)
             ("ss_vectors", "interest"): _ket_list(I_L, "⟩", wrap=False),
-            ("ss_mapping", "ssprimes"): _covector_stack(ml),        # M_L
-            ("ss_mapping", "primes"): _covector_stack(msl),         # M_s→L
+            ("ss_mapping", "ssprimes"): _R(("ss_mapping", "ssprimes"), ml),  # M_L
+            ("ss_mapping", "primes"): _R(("ss_mapping", "primes"), msl),     # M_s→L
             # M_LGL = I: a COLUMN-first vector list — kets [ … } in an outer { … ] (gen coords),
             # like MG / MD. Matches the grid's vector_list_marks + { … ] wrap.
-            ("ss_mapping", "ssgens"): "{" + _ket_list(mlgl, "}", wrap=False) + "]",
+            ("ss_mapping", "ssgens"): _R(("ss_mapping", "ssgens"), mlgl),  # M_LGL = I
             ("ss_mapping", "commas"): _ket_list(list(mapped_C) + ss_u_mapped, "}"),  # M_s→L·C (→ 0) then M_s→L·U over V
             ("ss_mapping", "targets"): _ket_list(mapped_T, "}"),    # Y_L
             # detempering mapped into ss generators: a column-first list in an outer { … ] (gen
             # coords), matching the grid's { … ] wrap and its row-sibling M_LGL above — not [ … ]
-            ("ss_mapping", "detempering"): "{" + _ket_list(mapped_D, "}", wrap=False) + "]",
+            ("ss_mapping", "detempering"): _R(("ss_mapping", "detempering"), mapped_D),
             ("ss_mapping", "interest"): _ket_list(mapped_I, "}", wrap=False),
             ("tuning", "ssgens"): _cents_genmap(ss_tun.generator_map),
             ("tuning", "ssprimes"): _cents_map(ss_tun.tuning_map),
@@ -487,8 +609,8 @@ def plain_text_values(
             values[("ss_projection", "ssgens")] = embedding_ebk(
                 superspace_tuning_embedding(state, held_basis_ratios), dL, superspace_rank(state))
             # P_L·B_Ls keeps B_L's outer ⟨ … ] (covector-style) around its per-element kets [ … ⟩
-            values[("ss_projection", "primes")] = "⟨" + _ket_list(proj_bl, "⟩", wrap=False) + "]"
-            values[("ss_projection", "detempering")] = "{" + _ket_list(_ssp_cols(detemper_vectors), "⟩", wrap=False) + "]"
+            values[("ss_projection", "primes")] = _R(("ss_projection", "primes"), proj_bl)
+            values[("ss_projection", "detempering")] = _R(("ss_projection", "detempering"), _ssp_cols(detemper_vectors))
             # P_L·V: the comma half vanishes (P_L·𝐜 = 𝟎) then the unchanged half held, lifted (like on-domain P·V)
             values[("ss_projection", "commas")] = _ket_list([(0,) * dL for _ in commas] + ss_u, "⟩")
             values[("ss_projection", "targets")] = _ket_list(_ssp_cols(target_vectors), "⟩")
@@ -648,14 +770,10 @@ def _ket_list(vectors, close: str, wrap: bool = True) -> str:
     ``[[1 0} [0 1}]`` for generator-coordinate vectors (close ``}``). The outer ``[ ]``
     wraps the whole list (a matrix presentation, even a single vector); ``wrap=False``
     drops it for the intervals-of-interest column, whose intervals stand alone. A ``None``
-    column is a DASHED unchanged vector — all em-dashes, width matched to the known columns."""
-    vectors = list(vectors)
-    dim = next((len(v) for v in vectors if v is not None), 0)
-    def _ket(v):
-        comps = [_DASH] * dim if v is None else [str(x) for x in v]
-        return "[" + " ".join(comps) + close
-    kets = " ".join(_ket(v) for v in vectors)
-    return f"[{kets}]" if wrap else kets
+    column is a DASHED unchanged vector — all em-dashes, width matched to the known columns.
+    A thin convention over :func:`render_ebk` (kept for the pending-draft / parse callers)."""
+    return render_ebk(EbkConvention("list", "[" if wrap else "", "]" if wrap else "",
+                                    "[", close, " "), vectors)
 
 
 def projection_ebk(matrix, d: int, cols: int | None = None) -> str:
@@ -667,8 +785,8 @@ def projection_ebk(matrix, d: int, cols: int | None = None) -> str:
     :func:`parse_projection`). ``cols`` defaults to ``d`` (the square on-domain P); the superspace
     P_L→s is the rectangular d×dL case (each row a covector over the dL superspace primes)."""
     cols = d if cols is None else cols
-    grid = matrix if matrix is not None else tuple((_DASH,) * cols for _ in range(d))
-    return "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in grid) + "⟩"
+    grid = matrix if matrix is not None else [(_DASH,) * cols for _ in range(d)]
+    return render_ebk(_STACK_ANGLE, grid)
 
 
 def embedding_ebk(matrix, d: int, r: int) -> str:
@@ -677,8 +795,8 @@ def embedding_ebk(matrix, d: int, r: int) -> str:
     columns): ``{[1 0 0⟩ [0 0 1/4⟩]``. ``matrix`` is the d×r grid of display strings from
     :func:`tuning_embedding`; ``None`` dashes every entry. The editable dual the projection-gens plain
     text shows (parsed by :func:`parse_embedding`)."""
-    grid = matrix if matrix is not None else tuple((_DASH,) * r for _ in range(d))  # d×r
-    return "{" + _ket_list(list(zip(*grid)), "⟩", wrap=False) + "]"  # transpose to the r ket columns
+    grid = matrix if matrix is not None else [(_DASH,) * r for _ in range(d)]  # d×r
+    return render_ebk(_EMBED, list(zip(*grid)))  # transpose to the r ket columns
 
 
 def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]", decimals: bool = True) -> str:
@@ -694,16 +812,12 @@ def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]", decimal
         the mapping's ``[ … }`` but with the angle ⟩ instead of the curly }).
 
     Each value is formatted with prescale_text, so the string shows exactly the grid's
-    numbers (whole numbers bare, else 3-dp) rather than a denser all-3-dp form."""
-    vectors = list(vectors)
-    dim = next((len(v) for v in vectors if v is not None), 0)  # a dashed (None) column is all em-dashes
-    def _col(v):
-        body = " ".join([_DASH] * dim if v is None else [prescale_text(x, decimals) for x in v])
-        return col[0] + body + col[1]
-    cols = " ".join(_col(v) for v in vectors)
-    if not outer:
-        return cols
-    return f"{outer[0]}{cols}{outer[1]}"
+    numbers (whole numbers bare, else 3-dp). A thin convention over :func:`render_ebk`: the
+    ``col`` glyphs are the per-item brackets (``⟨``-open ⇒ a covector stack), ``outer`` the wrap."""
+    oo, oc = (outer[0], outer[1]) if outer else ("", "")
+    structure = "stack" if col[0] == "⟨" else "list"
+    conv = EbkConvention(structure, oo, oc, col[0], col[1], " ")
+    return render_ebk(conv, vectors, fmt=lambda x: prescale_text(x, decimals))
 
 
 def vector_list_pending_text(committed_vectors, pending) -> tuple[str, str, str]:
@@ -730,20 +844,19 @@ def mapping_pending_text(committed_ebk, pending) -> tuple[str, str, str]:
 
 def _cents_map(values, decimals: bool = True) -> str:
     """A tuning covector over the primes: ``⟨1200.000 1901.955 …]``."""
-    return "⟨" + " ".join(cents(v, decimals) for v in values) + "]"
+    return render_ebk(_MAP, values, fmt=lambda v: cents(v, decimals))
 
 
 def _cents_list(values, wrap: bool = True, decimals: bool = True) -> str:
     """A tuning list over the targets: ``[1200.000 1901.955 …]``. ``wrap=False`` drops the
     enclosing ``[ ]`` for the intervals-of-interest column, whose values stand bare."""
-    body = " ".join(_DASH if v is None else cents(v, decimals) for v in values)  # None → a dashed (unknown) entry
-    return f"[{body}]" if wrap else body
+    return render_ebk(_SCALARS if wrap else _SCALARS_BARE, values, fmt=lambda v: cents(v, decimals))
 
 
 def _cents_genmap(values, decimals: bool = True) -> str:
     """The generator tuning map: ``{1201.699 697.564]`` — curly open, square close,
     per the mockup (distinct from the primes' covector ``⟨ … ]``)."""
-    return "{" + " ".join(cents(v, decimals) for v in values) + "]"
+    return render_ebk(_GENMAP, values, fmt=lambda v: cents(v, decimals))
 
 
 # Module-level handles for the four cents/prescale formatters, so plain_text_values can rebind each

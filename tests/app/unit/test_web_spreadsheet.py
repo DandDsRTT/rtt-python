@@ -2377,6 +2377,51 @@ def test_every_plain_text_band_uses_the_same_brackets_as_its_grid_tile():
         f"  {r}/{c}: band={t} grid={g}  ({txt!r})" for r, c, t, g, txt in mismatches)
 
 
+def _ebk_table_canonical(conv):
+    """Reduce an EBK_CONVENTIONS row to the 5-tuple the band parser yields: drop the (text-only)
+    separator, and fold a bracket-less ``row`` to ``none`` (a bare scalar list reads as ``none``)."""
+    structure, oo, oc, io, ic, _sep = conv
+    if structure == "row" and not oo and not oc:
+        return ("none", "", "", "", "")
+    return (structure, oo, oc, io, ic)
+
+
+def test_every_open_value_tile_declares_an_ebk_convention():
+    # The single-source-of-truth guard: the plain-text band is now BUILT from the per-tile
+    # EBK_CONVENTIONS table (service/text.render_ebk owns every bracket), and the grid frame is held
+    # to it by the grid↔band guard above. This pins both views to the table: every open value tile
+    # must declare a convention there, and its rendered band must match what it declared — so a new
+    # tile can't ship without a convention, and can't drift from the one it names.
+    from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
+    from rtt.app.service.text import ebk_convention, EBK_CONVENTIONS
+    s = settings.defaults()
+    for k, v in list(s.items()):
+        if isinstance(v, bool):
+            s[k] = True
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
+                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    value_rows = PTEXT_ROWS - {"quantities"}
+    undeclared, mismatches, checked = [], [], 0
+    for (rkey, ckey) in sorted(b.declared_tiles):
+        if rkey not in value_rows or ckey in SPINE_COLUMNS or not b.tile_open(rkey, ckey):
+            continue
+        if (rkey, ckey) not in b.ptext_strings:
+            continue
+        if (rkey, ckey) not in EBK_CONVENTIONS and (rkey, ckey) != ("prescaling", "primes"):
+            undeclared.append((rkey, ckey))
+            continue
+        declared = _ebk_table_canonical(ebk_convention(rkey, ckey, superspace=b.show_superspace))
+        rendered = _ebk_canonical(_ebk_text_convention(b.ptext_strings[(rkey, ckey)]))
+        if declared != rendered:
+            mismatches.append((rkey, ckey, declared, rendered, b.ptext_strings[(rkey, ckey)]))
+        checked += 1
+    assert checked >= 60, f"config did not light enough value tiles ({checked})"
+    assert not undeclared, f"open value tiles with no EBK_CONVENTIONS entry: {undeclared}"
+    assert not mismatches, "rendered band disagrees with its declared EBK convention:\n" + "\n".join(
+        f"  {r}/{c}: declared={d} rendered={g}  ({txt!r})" for r, c, d, g, txt in mismatches)
+
+
 def test_quantities_interval_ratios_emit_no_redundant_plain_text():
     ids = {c.id for c in _with(plain_text_values=True).cells}
     # the quantities row's interval-ratio columns (commas, targets, held, …) already show the
