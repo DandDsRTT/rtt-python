@@ -5250,8 +5250,15 @@ def main() -> None:
         port = int(hosted_port)
     else:
         port = 8137
+    # Serve the DandDsRTT org icon as a LOCAL file (assets/favicon.png — the org's GitHub avatar,
+    # vendored). A remote URL would let NiceGUI emit it into the page <link rel=icon> (the tab still
+    # works) but registers /favicon.ico → get_favicon_response(), which raises ValueError on any
+    # remote URL — every browser/bot/health-check hit on /favicon.ico then 500s. A local file routes
+    # /favicon.ico to a working FileResponse (NiceGUI gates on helpers.is_file), so the icon serves
+    # and the route stops erroring.
+    favicon = str(Path(__file__).parent / "assets" / "favicon.png")
     run_kwargs = dict(
-        title="D&D's RTT App", favicon="https://github.com/DandDsRTT.png",
+        title="D&D's RTT App", favicon=favicon,
         show=False, port=port,
         storage_secret=os.environ.get("STORAGE_SECRET", _STORAGE_SECRET),
         # The heavy retuning commits now render off the event loop (see _commit_render), so the

@@ -79,13 +79,56 @@ def test_main_runs_server_with_reload_enabled(monkeypatch):
     assert (captured["reload"], captured["port"], captured["show"]) == (True, 8137, False)
 
 
-def test_main_sets_browser_tab_title_and_org_favicon(monkeypatch):
-    # the browser tab reads "D&D's RTT App" and shows the DandDsRTT GitHub org avatar;
-    # NiceGUI takes a remote URL for favicon verbatim, and github.com/<org>.png is the
-    # canonical redirect to the org's current icon, so the tab always matches the org.
+def test_main_sets_browser_tab_title_and_local_favicon(monkeypatch):
+    # the browser tab reads "D&D's RTT App" and shows the DandDsRTT org avatar, served from a
+    # LOCAL file vendored under assets/. It must NOT be a remote URL: NiceGUI registers
+    # /favicon.ico -> get_favicon_response() for a non-local favicon, which raises ValueError on
+    # any remote URL, so every hit on that route 500s (the production bug). A local file gates into
+    # NiceGUI's FileResponse branch instead — see test_favicon_route_returns_200_for_local_file.
+    from nicegui import helpers
     captured = _capture_main_run(monkeypatch)
     assert captured["title"] == "D&D's RTT App"
-    assert captured["favicon"] == "https://github.com/DandDsRTT.png"
+    favicon = captured["favicon"]
+    assert not favicon.startswith(("http://", "https://"))  # NOT remote — that 500s /favicon.ico
+    assert helpers.is_file(favicon)                          # a real local file NiceGUI will serve
+    assert Path(favicon).name == "favicon.png" and Path(favicon).parent.name == "assets"
+
+
+def test_favicon_route_returns_200_for_local_file(monkeypatch):
+    # Regression for the production 500 on /favicon.ico. Drive NiceGUI's OWN route-registration
+    # decision (the helpers.is_file gate in nicegui._startup) and the resulting handler through a
+    # real request: main()'s local file takes the FileResponse branch and serves 200, whereas the
+    # old remote URL falls to get_favicon_response(), which raises ValueError and 500s every hit.
+    from nicegui import core, helpers
+    from nicegui.favicon import get_favicon_response
+    from starlette.applications import Starlette
+    from starlette.responses import FileResponse
+    from starlette.testclient import TestClient
+
+    # the remote branch reads core.app.config.favicon (an init=False field, unset until ui.run); set
+    # it for the duration and restore the prior state so the shared config isn't left polluted.
+    sentinel = object()
+    saved = getattr(core.app.config, "favicon", sentinel)
+
+    def status_for(favicon):
+        # mirror nicegui._startup exactly: pick the branch by is_file, off core.app.config.favicon
+        core.app.config.favicon = favicon
+        api = Starlette()
+        if helpers.is_file(core.app.config.favicon):
+            api.add_route("/favicon.ico", lambda _: FileResponse(core.app.config.favicon))
+        else:
+            api.add_route("/favicon.ico", lambda _: get_favicon_response())
+        client = TestClient(api, raise_server_exceptions=False)
+        return client.get("/favicon.ico").status_code
+
+    try:
+        assert status_for(_capture_main_run(monkeypatch)["favicon"]) == 200  # main()'s local file works
+        assert status_for("https://github.com/DandDsRTT.png") == 500         # the old remote URL: the bug
+    finally:
+        if saved is sentinel:
+            del core.app.config.favicon
+        else:
+            core.app.config.favicon = saved
 
 
 def test_main_production_launch_when_platform_sets_port(monkeypatch):
