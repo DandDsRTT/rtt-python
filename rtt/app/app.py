@@ -925,7 +925,11 @@ _BUSY_JS = f"""
   // mostly with no commit) — those were the spurious-trigger / stuck-spinner sources.
   const BTN = '.rtt-fanbtn,.rtt-minus-btn,.rtt-minus-btn-v,.rtt-toggle,.rtt-iconbtn';
   const at = (e, sel) => e.isTrusted && e.target && e.target.closest && e.target.closest(sel);
-  document.addEventListener('pointerdown', (e) => {{ if (at(e, BTN)) window.rttBusy.arm(); }}, true);
+  // .rtt-noarm opts a button out: share is an .rtt-iconbtn for styling but only copies a link — it
+  // never re-renders, so nothing would ever call rttBusy.done() and the scrim would linger the full
+  // safety timeout. Excluding it here keeps it from arming in the first place.
+  document.addEventListener('pointerdown',
+    (e) => {{ if (at(e, BTN) && !e.target.closest('.rtt-noarm')) window.rttBusy.arm(); }}, true);
   document.addEventListener('click', (e) => {{ if (at(e, '[role=option],.q-item')) window.rttBusy.arm(); }}, true);
   document.addEventListener('change', (e) => {{
     if (at(e, '.q-select,.q-checkbox,.q-radio,input[type=checkbox],input[type=radio]')) window.rttBusy.arm();
@@ -5063,7 +5067,7 @@ def index(state: str | None = None) -> None:
                                 "document.execCommand('copy');t.remove();}})()")
                             ui.notify("Shareable link copied to clipboard")
                         refs["share"] = ui.button(icon="share", on_click=share_link, color=None) \
-                            .props("flat dense").classes("rtt-iconbtn").mark("share").tooltip(tooltips.CHROME_HELP["share"])
+                            .props("flat dense").classes("rtt-iconbtn rtt-noarm").mark("share").tooltip(tooltips.CHROME_HELP["share"])
 
                         # hovering a history button previews its effect: it rings exactly the cells one
                         # undo/redo/reset would move (red for a removal, amber for the re-solve) and clears
