@@ -87,6 +87,8 @@ _CONTROL_GLYPHS = {
     "minus":    "M3 6H9",
     "expand":   "M3.5 4.7L6 2.6L8.5 4.7M3.5 7.3L6 9.4L8.5 7.3",   # ∧ over ∨ — chevrons point OUT
     "collapse": "M3.5 2.6L6 4.7L8.5 2.6M3.5 9.4L6 7.3L8.5 9.4",   # ∨ over ∧ — chevrons point IN
+    "reduce":      "M6 2.8L6 8.6M3.8 6.2L6 8.8L8.2 6.2",          # ↓ — fold the interval down into the equave
+    "reciprocate": "M6 3L6 9M4.2 4.6L6 3L7.8 4.6M4.2 7.4L6 9L7.8 7.4",  # ↕ — swap numerator and denominator
 }
 # a fold toggle's state token (spreadsheet._fold_glyph) -> its chevron glyph: a collapsed band
 # offers to expand out, an open one to collapse in.

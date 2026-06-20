@@ -62,11 +62,17 @@ def pad_vectors_with_zeros_up_to_d(
     return tuple(tuple(row) + (0,) * (d - len(row)) for row in matrix)
 
 
+def equave_reduce(quotient: Fraction | int, equave: Fraction | int = 2) -> Fraction:
+    """Multiply/divide by ``equave`` until the quotient lands in the equave [1, equave)."""
+    q = Fraction(quotient)
+    e = Fraction(equave)
+    while q >= e:
+        q /= e
+    while q < 1:
+        q *= e
+    return q
+
+
 def octave_reduce(quotient: Fraction | int) -> Fraction:
     """Multiply/divide by 2 until the quotient lands in the octave [1, 2)."""
-    q = Fraction(quotient)
-    while q >= 2:
-        q /= 2
-    while q < 1:
-        q *= 2
-    return q
+    return equave_reduce(quotient, 2)

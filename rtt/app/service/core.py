@@ -33,7 +33,7 @@ from rtt.library.domain_basis import (
 )
 from rtt.library.formatting import strip_negative_zero
 from rtt.library.generator_detempering import get_generator_detempering
-from rtt.library.math_utils import get_primes, pcv_to_quotient, quotient_to_pcv
+from rtt.library.math_utils import equave_reduce, get_primes, pcv_to_quotient, quotient_to_pcv
 from rtt.library.matrix_utils import Matrix
 from rtt.library.parsing import parse_quotient_list
 from rtt.library.target_intervals import (
@@ -590,6 +590,34 @@ def interval_vector(ratio: str, d: int, domain_basis=None) -> tuple[int, ...]:
     if not vector or Fraction(_vectors_to_ratios((vector,), domain_basis)[0]) != target:
         raise ValueError(f'"{text}" is outside the {_domain_label(d, domain_basis)} domain.')
     return vector
+
+
+def equave_quotient(domain_basis=None) -> Fraction:
+    """The domain's equave (period): its first basis element, or 2 for a standard prime limit."""
+    return Fraction(domain_basis[0]) if domain_basis else Fraction(2)
+
+
+def equave_reduce_vector(vector, domain_basis=None) -> tuple[int, ...]:
+    """``vector`` (over the domain) folded into one equave [1, equave) — the interval-vector form
+    of :func:`equave_reduce`, returned unchanged when it is already reduced. Only the equave's own
+    coordinate moves, so the result stays expressible over the same domain basis."""
+    v = tuple(int(x) for x in vector)
+    q = Fraction(comma_ratios((v,), domain_basis)[0])
+    reduced = equave_reduce(q, equave_quotient(domain_basis))
+    return v if reduced == q else interval_vector(str(reduced), len(v), domain_basis)
+
+
+def interval_op_availability(ratio: str, domain_basis=None) -> tuple[bool, bool]:
+    """Whether ``ratio`` can be (equave-reduced, reciprocated): reducible iff it is not already in
+    [1, equave); reciprocable iff it is not the unison. A non-numeric / non-positive value (a blank
+    or ``?/?`` draft) is neither — both buttons read disabled."""
+    try:
+        q = Fraction(str(ratio))
+    except (ValueError, ZeroDivisionError):
+        return (False, False)
+    if q <= 0:
+        return (False, False)
+    return (equave_reduce(q, equave_quotient(domain_basis)) != q, q != 1)
 
 
 def tuning(

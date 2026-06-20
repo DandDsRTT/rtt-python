@@ -1078,6 +1078,7 @@ class _Reconciler:
         self.inputs: dict = {}  # mapping cell id -> q-input (a fraction's NUMERATOR / a decimal's WHOLE part / a sole integer input)
         self.den_inputs: dict = {}  # multi-field cell id -> its SECOND q-input (a fraction's DENOMINATOR / a decimal's FRACTION; see _build_fraction / _build_decimal)
         self.frac_edits: dict = {}  # multi-field cell id -> the .rtt-frac-edit / .rtt-dec-edit box (its data-fracmode/decmode drives the view)
+        self.ratio_ops: dict = {}  # target/held/interest ratiocell id -> (reduce button, reciprocate button) flanking its bar
         self.labels: dict = {}  # cell id -> the label whose text tracks state
         self.fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
         self.ratio_faces: dict = {}  # genratio/commaratio id -> its .rtt-ratio container (rebuilt in place)
@@ -1109,7 +1110,7 @@ class _Reconciler:
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.stacked_w, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.scheme_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.ratio_ops, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.stacked_w, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.scheme_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
         # The active preview gesture — the ONE record the ring highlights derive from (see
         # _Gesture). None when no gesture is live; every paint recomputes the rings from it.
         self.gesture: _Gesture | None = None
@@ -1702,6 +1703,34 @@ class _Reconciler:
         self.inputs[cb.id] = num
         self.den_inputs[cb.id] = den
         self.frac_edits[cb.id] = box
+        self._arm_ratio_ops(cb, wrap)
+
+    def _arm_ratio_ops(self, cb: spreadsheet.CellBox, wrap) -> None:
+        # the equave-reduce + reciprocate buttons flanking the bar of an editable interval ratio —
+        # targets / held / intervals of interest only (never commas, generators or the derived
+        # unchanged column). Each reveals on hover, hides while the cell is edited, and reads disabled
+        # when its op is a no-op: an interval already inside [1, equave) can't reduce, a unison can't
+        # reciprocate. They commit through transform_interval, one undo step like a manual edit.
+        if cb.kind != "ratiocell" or cb.pending or cb.id.split(":", 1)[0] not in ("target", "held", "interest"):
+            return
+        with wrap:
+            reduce_btn = ui.html(_control_svg("reduce")).classes("rtt-glyph rtt-ratio-op rtt-ratio-op-reduce")
+            recip_btn = ui.html(_control_svg("reciprocate")).classes("rtt-glyph rtt-ratio-op rtt-ratio-op-recip")
+        reduce_btn.on("click", lambda _=None, cid=cb.id: self._cb.transform_interval(cid, "reduce"))
+        recip_btn.on("click", lambda _=None, cid=cb.id: self._cb.transform_interval(cid, "reciprocate"))
+        self.ratio_ops[cb.id] = (reduce_btn, recip_btn)
+        self._sync_ratio_ops(cb.id, cb.text)
+
+    def _sync_ratio_ops(self, cid: str, text: str) -> None:
+        # grey the buttons whose op would be a no-op for the cell's current value (a non-ratiocell
+        # cell isn't in ratio_ops, so this no-ops for it)
+        ops = self.ratio_ops.get(cid)
+        if ops is None:
+            return
+        availability = service.interval_op_availability(text, self._editor.state.domain_basis)
+        for btn, enabled in zip(ops, availability):
+            btn.classes(add="" if enabled else "rtt-op-disabled",
+                        remove="rtt-op-disabled" if enabled else "")
 
     def _gridvalue_handlers(self, cb: spreadsheet.CellBox, spec: _GridValueSpec):
         """A gridded cell's (commit, preview) event handlers. The scalar ratio / domain-element
@@ -1751,6 +1780,7 @@ class _Reconciler:
         self.den_inputs[cb.id].value = den if ratio else ""
         self.frac_edits[cb.id].props(f'data-fracmode={"ratio" if ratio else "int"}')
         self._fit_fraction(cb.id, num, den, cb.w, ratio)
+        self._sync_ratio_ops(cb.id, text)
 
     def _fit_fraction(self, cid: str, num: str, den: str, width: float, ratio: bool) -> None:
         # the stacked fraction shrinks both lines together to fit a long num/den (capped at the
@@ -3316,6 +3346,42 @@ def index(state: str | None = None) -> None:
         # render off the loop. (An interest edit doesn't retune, but the warm build is cheap.)
         _request_render()
 
+    def transform_interval(cid, op):
+        # the equave-reduce / reciprocate buttons flanking an editable interval ratio (targets / held
+        # / interest). Resolve the column's live vector, apply the op, and route it through the SAME
+        # per-list setter a vector edit uses — one undo step, every dependent row recomputed. A no-op
+        # (already reduced, or a unison reciprocated) commits nothing, so a disabled button is safe.
+        if building[0] or cid not in rec.inputs:
+            return
+        group, tok = cid.split(":")
+        if group not in ("target", "held", "interest") or tok == "pending":
+            return
+        _end_commit_gestures()
+        if group == "target":
+            targets = editor.target_override or service.target_interval_set(
+                editor.target_spec, editor.state.domain_basis)
+            current = service.target_interval_vectors(targets, editor.state.d, editor.state.domain_basis)
+            setter, list_name = editor.set_target_override_vectors, "targets"
+        elif group == "held":
+            current, setter, list_name = editor.held_vectors, editor.set_held_vectors, "held"
+        else:
+            current, setter, list_name = editor.interest_vectors, editor.set_interest_vectors, "interest"
+        toks = col_tokens(list_name)
+        pos = toks.index(int(tok)) if int(tok) in toks else int(tok)
+        if not 0 <= pos < len(current):
+            return
+        v = tuple(int(x) for x in current[pos])
+        if op == "reciprocate":
+            new_v = tuple(-x for x in v)
+        else:
+            new_v = tuple(int(x) for x in service.equave_reduce_vector(v, editor.state.domain_basis))
+        if list(new_v) == list(v):
+            return  # no-op — no undo step
+        vectors = [list(x) for x in current]
+        vectors[pos] = list(new_v)
+        setter(vectors)
+        _request_render()
+
     def on_element_change(cid):
         # a chapter-9 domain basis element committing on blur (nonstandard-domain box on). cid is
         # "prime:{index}" (a relabel) or "prime:pending" (the ?/? draft -> add held just). render()
@@ -4476,6 +4542,7 @@ def index(state: str | None = None) -> None:
         on_subpick=on_subpick,
         on_ptext_edit=on_ptext_edit,
         on_ratio_change=on_ratio_change,
+        transform_interval=transform_interval,
         on_element_change=on_element_change,
         on_element_preview=on_element_preview,
         on_range_mode=on_range_mode,
