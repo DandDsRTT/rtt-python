@@ -4626,11 +4626,17 @@ def index(state: str | None = None) -> None:
         # render() re-applies them after any toggle (and on the initial build, before cells animate in).
         # The third behaviour, preview_highlighting, has no body class: it's gated in Python at the
         # preview source (compute_rings + the hover handlers) so no ring or reflow is even produced.
-        body = ui.query("body")
-        body.classes(add="rtt-no-anim") if not editor.settings["animations"] \
-            else body.classes(remove="rtt-no-anim")
-        body.classes(add="rtt-no-tooltips") if not editor.settings["tooltips"] \
-            else body.classes(remove="rtt-no-tooltips")
+        # render() can run OFF the loop (the _commit_render background task — every act()-driven commit:
+        # reset, undo/redo, a structural edit), where the slot stack is empty and ui.query would raise
+        # "slot stack ... is empty", aborting the whole render (grid never updates, busy scrim never
+        # clears). Enter the captured page client so the <body> query resolves; in the synchronous /
+        # test path this just nests harmlessly inside the already-live slot.
+        with page_client:
+            body = ui.query("body")
+            body.classes(add="rtt-no-anim") if not editor.settings["animations"] \
+                else body.classes(remove="rtt-no-anim")
+            body.classes(add="rtt-no-tooltips") if not editor.settings["tooltips"] \
+                else body.classes(remove="rtt-no-tooltips")
 
     def render():
         # Renders end gestures that don't render: a render arriving while a hover / chooser /
