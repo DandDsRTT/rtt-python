@@ -536,6 +536,31 @@ def _example_html(key: str) -> str:
     renders its own samples; see _general_part_html.)"""
     if key in show_settings.GROUPING_PARENTS:
         return ""  # a pure grouping parent (temperament / form / tuning) — nothing of its own to illustrate
+    if key == "animations":
+        # a cell mid-slide: a faded ghost trailing a solid box with a motion arrow — the slide/fade
+        # the reconciling renderer plays as content moves. Off, every change snaps with no transition.
+        return ('<span style="position:relative;display:inline-block;width:34px;height:16px">'
+                '<span style="position:absolute;left:0;top:1px;width:13px;height:13px;'
+                'border:1px solid #999;background:#fff;opacity:0.35"></span>'
+                '<span style="position:absolute;left:11px;top:1px;width:13px;height:13px;'
+                'border:1px solid #555;background:#fff"></span>'
+                '<span class="material-icons" style="position:absolute;right:-3px;top:1px;'
+                'font-size:13px;color:#777">east</span></span>')
+    if key == "preview_highlighting":
+        # a cell wearing the amber preview ring (the rtt-preview-change look, sharing --preview-color
+        # so it retints with the grid) — the highlight a hovered control paints on what it would change.
+        return ('<span style="display:inline-flex;align-items:center;justify-content:center;'
+                'width:22px;height:16px;background:#fff;'
+                'box-shadow:inset 0 0 0 2px var(--preview-color);'
+                'color:var(--preview-text-color);font-size:10px">3</span>')
+    if key == "tooltips":
+        # a little tooltip bubble (a dark rounded chip with a downward pointer) — the hover help these
+        # toggle on and off, drawn the way a real tooltip looks.
+        return ('<span style="position:relative;display:inline-block;background:#444;color:#fff;'
+                'font-size:9px;line-height:1;padding:3px 5px;border-radius:3px">help'
+                '<span style="position:absolute;left:6px;bottom:-3px;width:0;height:0;'
+                'border-left:3px solid transparent;border-right:3px solid transparent;'
+                'border-top:3px solid #444"></span></span>')
     if key in ("temperament_colorization", "tuning_colorization", "form_colorization"):
         # a swatch of the actual wash colour (one source of truth with _TINTS), stamped with
         # the fundamental matrix that drives it: 𝑀 (mapping), 𝐺 (generator embedding), 𝐹 (form)

@@ -48,6 +48,20 @@ from __future__ import annotations
 # match (``SHOW_HELP`` == ``DEFAULTS``), so adding a toggle without its help text fails the suite.
 SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
     (
+        # app-wide interaction behaviours (not grid layers): each is a global on/off for one piece of
+        # the app's live feel — the reconciling renderer's slide/fade animations, the hover-preview
+        # highlighting (the amber/red rings and reflow that show what a control would do), and the
+        # hover tooltips. They ride the very top of the panel, ABOVE the tile-features dummy tile and
+        # the specific-tile checkboxes, and render as a checkbox + example column like the specific
+        # group. All three ship ON (the app's default feel) and reveal at chapter 2 (the first notch).
+        "interface",
+        (
+            ("animations", "animations", True),
+            ("preview_highlighting", "preview highlighting", True),
+            ("tooltips", "tooltips", True),
+        ),
+    ),
+    (
         "general",
         (
             ("names", "names", True),
@@ -173,7 +187,8 @@ SUBCONTROLS: dict[str, str] = {
 # Toggles whose behaviour the layout actually builds today; the panel disables
 # (greys out) the rest until their content exists.
 IMPLEMENTED: frozenset[str] = frozenset(
-    {"drag_to_combine",
+    {"animations", "preview_highlighting", "tooltips",
+     "drag_to_combine",
      "names", "symbols", "header_symbols", "mnemonics", "equivalences", "gridded_values",
      "plain_text_values",
      "quantities", "decimals", "ebk", "interval_ratios", "interval_vectors", "units", "cell_units", "domain_units", "counts", "presets",
@@ -226,6 +241,8 @@ CHAPTER_STAR = 10     # the "★" notch: chapter-10 Conventions + every outside-
 CHAPTER_DEFAULT = 4   # the slider's as-shipped position — the default-state design mockup
 
 CHAPTER: dict[str, int] = {
+    # interface — the app-wide interaction behaviours, present from the very first notch
+    "animations": 2, "preview_highlighting": 2, "tooltips": 2,
     # general — the dummy tile's display layers
     "gridded_values": 2, "quantities": 2, "names": 2, "symbols": 2, "plain_text_values": 2,
     # decimals rides its parent quantities' chapter (2) so it reveals — and so stays ON — by the

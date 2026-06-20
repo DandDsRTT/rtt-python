@@ -25,6 +25,10 @@ from __future__ import annotations
 # Hover text per Show toggle (settings.SHOW_GROUPS key). Every toggle is covered,
 # greyed-out ones included — the text explains what the toggle would reveal.
 SHOW_HELP: dict[str, str] = {
+    # interface — app-wide interaction behaviours
+    "animations": "Animate grid changes — slide and fade rows, columns and cells in and out as they appear, move or leave. Off makes every change snap instantly.",
+    "preview_highlighting": "Highlight what a control would do before you click it — hovering a +/− or a chooser option rings the cells it would change (amber), remove (red) or add (green). Off hides the preview.",
+    "tooltips": "Show the hover tooltips that explain each control, value and setting (like this one).",
     # interaction
     "drag_to_combine": "Show drag handles for combining basis elements: drag one generator row (or one interval) onto another to add it in.",
     # general

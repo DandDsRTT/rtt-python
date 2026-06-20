@@ -626,19 +626,36 @@ def test_tooltip_dismiss_script_drops_hover_help_before_a_reflow():
 
 
 def test_every_show_toggle_has_a_non_empty_example():
-    # every Show layer must have a sample render: the "specific tiles & controls" toggles in the
-    # example column (_example_html), the "general" layers as parts of the dummy tile
-    # (_general_part_html). No layer may be missing its sample — except the pure grouping
-    # parents (temperament / form / tuning), which carry no grid layer of their own and so
-    # deliberately render a blank example cell.
-    groups = dict(show_settings.SHOW_GROUPS)
-    for key, _l, _d in groups["general"]:
-        assert app._general_part_html(key).strip(), f"no tile sample for {key}"
-    for key, _l, _d in groups["specific tiles & controls"]:
-        if key in show_settings.GROUPING_PARENTS:
-            assert app._example_html(key) == "", f"grouping parent {key} should have a blank example"
-            continue
-        assert app._example_html(key).strip(), f"no example for {key}"
+    # every Show layer must have a sample render: the "general" layers as parts of the dummy tile
+    # (_general_part_html), every OTHER group's toggles in the example column (_example_html) — the
+    # "specific tiles & controls" grid layers and the "interface" app-wide behaviours alike. No layer
+    # may be missing its sample — except the pure grouping parents (temperament / form / tuning),
+    # which carry no grid layer of their own and so deliberately render a blank example cell.
+    for group_name, items in show_settings.SHOW_GROUPS:
+        for key, _l, _d in items:
+            if group_name == "general":
+                assert app._general_part_html(key).strip(), f"no tile sample for {key}"
+            elif key in show_settings.GROUPING_PARENTS:
+                assert app._example_html(key) == "", f"grouping parent {key} should have a blank example"
+            else:
+                assert app._example_html(key).strip(), f"no example for {key}"
+
+
+def test_interface_behaviours_lead_the_show_panel_as_live_default_on_ch2_toggles():
+    # the three app-wide interaction behaviours (animations / preview highlighting / tooltips) are a
+    # group of their own at the very TOP of the panel — above the general tile-features tile and the
+    # specific-tile checkboxes — and each ships ON, is live (not greyed), reveals at chapter 2, and
+    # carries an example sample. They have no sub-controls (each is a flat top-level on/off).
+    keys = ("animations", "preview_highlighting", "tooltips")
+    assert show_settings.SHOW_GROUPS[0][0] == "interface"  # the very first group
+    assert [k for k, *_ in show_settings.SHOW_GROUPS[0][1]] == list(keys)
+    for key in keys:
+        assert show_settings.DEFAULTS[key] is True          # ships on (the app's default feel)
+        assert key in show_settings.IMPLEMENTED             # live, not greyed
+        assert show_settings.CHAPTER[key] == 2              # present from the first notch
+        assert show_settings.reveal_chapter(key) == 2       # no later ancestor gates it
+        assert key not in show_settings.SUBCONTROLS         # a flat top-level toggle
+        assert app._example_html(key).strip()               # an example sample in the column
 
 
 def test_example_html_renders_each_specific_groups_special_sample_kind():

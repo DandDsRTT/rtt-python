@@ -2966,6 +2966,11 @@ def index(state: str | None = None) -> None:
     def compute_rings(lay):
         # the amber ("value would move" / "value moved") and red ("would be removed") cell-id sets
         # for the current gesture against layout `lay` — the pure function the painter applies.
+        # With the `preview_highlighting` behaviour off, no ring is ever painted — neither the gesture
+        # rings nor the layout's own steady reds/ambers — so the cells stay plain (the hover handlers
+        # also stand down, so nothing reflows either; the two gates together fully suppress the preview).
+        if not editor.settings["preview_highlighting"]:
+            return frozenset(), frozenset()
         # The layout contributes its OWN steady reds AND ambers independent of any gesture: the
         # builder-driven cb.preview_remove (red: the doomed unchanged interval / the mapping row a
         # comma-add drops / the comma a generator-add drops) and cb.preview_change (amber: the
@@ -4003,6 +4008,8 @@ def index(state: str | None = None) -> None:
     # (the generator-sign control rides inside the gentuning cell) is suspended under the hover
     # and re-armed when it ends.
     def control_hover(apply):
+        if not editor.settings["preview_highlighting"]:
+            return  # the `preview_highlighting` behaviour is off — arm no hover preview
         g = rec.gesture
         if g is not None and g.kind in ("edit", "drag"):
             return
@@ -4029,6 +4036,8 @@ def index(state: str | None = None) -> None:
         # (a comma − raises the rank, a mapping − raises the nullity). View state + a render, not a
         # gesture (the builder must reflow to show the newborn, which a no-reflow ring diff can't).
         # A live edit/drag owns the screen, so don't preview over it.
+        if not editor.settings["preview_highlighting"]:
+            return  # the `preview_highlighting` behaviour is off — no rank-removal reflow preview
         if rec.gesture is not None and rec.gesture.kind in ("edit", "drag"):
             return
         rank_remove[0] = (axis, idx)
@@ -4080,6 +4089,8 @@ def index(state: str | None = None) -> None:
         # re-bases on it. Reverts on leave / popup-close (chooser_unhover), commits on the chooser's
         # own select handler (on_preset / on_form_choose / on_control_select / on_target_change, each
         # of which end_gesture()s first so the click is one clean undo step off the real document).
+        if not editor.settings["preview_highlighting"]:
+            return  # the `preview_highlighting` behaviour is off — no chooser-option preview
         g = rec.gesture
         if g is not None and g.kind in ("edit", "drag"):
             return  # a keyboard edit / drag owns the grid
@@ -4535,6 +4546,21 @@ def index(state: str | None = None) -> None:
             render_inflight[0] = False
 
 
+    def apply_view_classes():
+        # Two of the `interface` Show behaviours gate the whole app through a single <body> class each,
+        # so one CSS rule (assets/rtt.css) handles every element: `animations` off adds rtt-no-anim
+        # (which zeroes the --t transition var, so every change snaps instead of sliding/fading) and
+        # `tooltips` off adds rtt-no-tooltips (which hides every .q-tooltip). Unlike dark mode these
+        # live in editor.settings — toggled in the Show panel, so select-all / Reset reach them — so
+        # render() re-applies them after any toggle (and on the initial build, before cells animate in).
+        # The third behaviour, preview_highlighting, has no body class: it's gated in Python at the
+        # preview source (compute_rings + the hover handlers) so no ring or reflow is even produced.
+        body = ui.query("body")
+        body.classes(add="rtt-no-anim") if not editor.settings["animations"] \
+            else body.classes(remove="rtt-no-anim")
+        body.classes(add="rtt-no-tooltips") if not editor.settings["tooltips"] \
+            else body.classes(remove="rtt-no-tooltips")
+
     def render():
         # Renders end gestures that don't render: a render arriving while a hover / chooser /
         # temp / drag gesture is live — and NOT initiated by that gesture's own handler
@@ -4555,6 +4581,7 @@ def index(state: str | None = None) -> None:
             rank_remove[0] = None  # view-state twin of ending a foreign hover gesture (no strand)
         building[0] = True
         try:
+            apply_view_classes()  # re-sync the animations / tooltips <body> classes to editor.settings
             st = editor.state
             # thread the previous render's interval-column identities so a within-list reorder keeps
             # each column's id-token: its cells then persist across the render and the CSS left/top
