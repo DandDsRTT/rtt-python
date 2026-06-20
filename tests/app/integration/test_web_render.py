@@ -52,6 +52,33 @@ async def test_default_page_renders_without_error(user: User) -> None:
     await user.should_see("tuning")
 
 
+async def test_share_button_renders_in_the_corner_bank(user: User) -> None:
+    # the share button sits beside undo/redo/reset; it copies a ?state=… link to the live document
+    await user.open("/")
+    assert user.find(marker="share").elements
+
+
+async def test_state_query_param_loads_a_shared_document(user: User) -> None:
+    # a ?state=… link round-trips a whole document: open it and the editor loads exactly that state
+    # (here a non-default Show setting), which render then persists — so the store reflects the link.
+    live = _live()   # render_main re-imports rtt.app.app, so the store lives on this copy, not web_app
+    doc = Editor().serialize()
+    doc["settings"]["counts"] = not doc["settings"]["counts"]
+    token = live._encode_state(doc)
+    await user.open(f"/?{live._STATE_PARAM}={token}")
+    stored = live._doc_store()[live._STORE_KEY]
+    assert stored["settings"]["counts"] == doc["settings"]["counts"]
+
+
+async def test_a_corrupt_state_query_param_falls_back_to_defaults(user: User, caplog) -> None:
+    # a mangled/old link must not 500 or strand the user — it falls through to the default document.
+    # index() deliberately ERROR-logs the decode failure (so a broken link is visible server-side);
+    # that log is EXPECTED here, so suppress just that logger rather than failing the user fixture.
+    with caplog.at_level(logging.CRITICAL, logger="rtt.app.app"):
+        await user.open(f"/?{web_app._STATE_PARAM}=not-a-real-token")
+    await user.should_see("quantities")
+
+
 async def test_grid_pane_publishes_its_base_size_for_the_scrollbar_fit(user: User) -> None:
     # the scrollbar-fit pass (rttFreeze.fit) reserves a scrollbar's width so one bar never forces a
     # second; to do that it must reset the pane to its UN-reserved size before measuring the window

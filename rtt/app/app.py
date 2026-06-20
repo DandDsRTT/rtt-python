@@ -11,11 +11,13 @@ in-process; domain expand/shrink and undo are available. No HTTP layer.
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import logging
 import math
 import os
 import sys
+import zlib
 from dataclasses import dataclass
 from html import escape as _escape
 from pathlib import Path
@@ -170,6 +172,7 @@ _CHROME_H = 40  # px height of the open pane's horizontal title bar (hamburger +
 _TOOLTIP_DELAY_MS = 700  # hover delay before a tooltip appears — long enough that the dense grid's
 # help waits for a deliberate rest instead of popping on every passing cursor (Quasar defaults to 0)
 _STORE_KEY = "rtt_doc"  # store key holding the serialized document (survives refresh)
+_STATE_PARAM = "state"  # ?state=… query param carrying a whole document for a shareable link
 _DARK_KEY = "rtt_dark"  # store key for the dark-mode preference — a global viewing choice kept
 # OUT of the serialized document, so it survives Reset and is independent of "select all / none"
 _CHAPTER_KEY = "rtt_chapter"  # store key for the guide-chapter reveal slider — like dark mode, a
@@ -187,6 +190,21 @@ def _doc_store() -> dict:
     """Where the serialized document is persisted: the per-browser ``app.storage.user`` in
     production, an in-process dict under the test simulation (see :data:`_MEMORY_STORE`)."""
     return _MEMORY_STORE if helpers.is_user_simulation() else app.storage.user
+
+
+def _encode_state(data: dict) -> str:
+    """Pack a serialized document (see ``Editor.serialize``) into one URL-safe token for a
+    shareable ``?state=`` link: compact JSON → deflate → url-safe base64. The deflate keeps the
+    link short for the common small documents and survives the big nonstandard-domain ones."""
+    raw = json.dumps(data, separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(zlib.compress(raw, 9)).decode("ascii")
+
+
+def _decode_state(token: str) -> dict:
+    """Inverse of :func:`_encode_state`. Raises on any malformed token, so the page-load caller
+    falls back to the persisted document just as it does for a corrupt stored blob."""
+    raw = zlib.decompress(base64.urlsafe_b64decode(token.encode("ascii")))
+    return json.loads(raw.decode("utf-8"))
 
 # the toast shown when an edit would make a degenerate (improper) temperament — dependent
 # generators, or a prime tempered to a unison (see service.is_proper_temperament)
@@ -2655,7 +2673,7 @@ class _Reconciler:
 
 
 @ui.page("/")
-def index() -> None:
+def index(state: str | None = None) -> None:
     ui.add_css(_CSS)
     # Give every tooltip a show delay so the dense grid's hover help waits for a deliberate rest
     # rather than popping the instant the cursor crosses a control. Setting it on the Tooltip
@@ -2819,20 +2837,34 @@ def index() -> None:
     # (app.storage.user) so a refresh restores exactly where the user left off; a
     # corrupt/old blob is ignored, falling back to the as-shipped defaults.
     editor = Editor()
-    stored = _doc_store().get(_STORE_KEY)
     # True when a persisted blob existed but failed to load: render() must then NOT overwrite the
     # stored bytes with the fallback defaults (which would silently wipe every other still-valid
     # field the user had), so they survive for recovery. Cleared the moment the user makes a real
     # edit (editor.can_undo) — at which point persisting their freshly-built document IS intended.
     load_failed = [False]
-    if stored:
+    # A ?state=… shared link wins over the persisted document: open it and you get exactly the
+    # sharer's state (Editor.load clears the undo/redo history, so none of their edit trail rides
+    # along). The URL token is stripped client-side once loaded (see below), so a later refresh
+    # falls back to this freshly-persisted document rather than re-resetting to the shared state.
+    loaded_from_url = False
+    if state:
         try:
-            editor.load(stored)
+            editor.load(_decode_state(state))
+            loaded_from_url = True
         except Exception:
-            # still fall back to the as-shipped defaults, but leave a trace: a load-path
-            # regression silently resetting every returning user's document must be visible
-            _log.exception("stored document failed to load; using defaults: %.200r", stored)
-            load_failed[0] = True
+            # a mangled/old shared link must not strand the user: fall through to their persisted
+            # document (or the defaults), exactly as a corrupt stored blob does
+            _log.exception("shared URL state failed to load; falling back: %.200r", state)
+    if not loaded_from_url:
+        stored = _doc_store().get(_STORE_KEY)
+        if stored:
+            try:
+                editor.load(stored)
+            except Exception:
+                # still fall back to the as-shipped defaults, but leave a trace: a load-path
+                # regression silently resetting every returning user's document must be visible
+                _log.exception("stored document failed to load; using defaults: %.200r", stored)
+                load_failed[0] = True
     rec = _Reconciler(editor)
     building = [False]
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
@@ -2862,6 +2894,11 @@ def index() -> None:
     ui.run_javascript(_TOOLTIP_DISMISS_JS)
     # install the client-driven "Computing…" busy scrim (inert until a committing control is used)
     ui.run_javascript(_BUSY_JS)
+    # a shared ?state=… link has now been loaded into the document; drop the param from the address
+    # bar (without a reload) so the URL reads clean and a later refresh restores the user's own
+    # edited/persisted document rather than snapping back to the shared starting state
+    if loaded_from_url:
+        ui.run_javascript("window.history.replaceState({}, '', window.location.pathname)")
 
     def col_tokens(name):
         # the previous render's id-tokens for a reorderable interval list, in column order — so an
@@ -4981,6 +5018,25 @@ def index() -> None:
                         # defaults — plus the guide-chapter slider back to ch4 (reset_everything)
                         refs["reset"] = ui.button(icon="restart_alt", on_click=lambda: reset_everything(), color=None) \
                             .props("flat dense").classes("rtt-iconbtn").mark("reset").tooltip(tooltips.CHROME_HELP["reset"])
+
+                        # copy a shareable link: the whole document packed into a ?state=… URL.
+                        # Open it and the app loads exactly this state (Editor.load clears history,
+                        # so the link carries the state, never the undo trail). We pack the state
+                        # here and hand the token to the client, which builds the absolute URL from
+                        # its own location (so it's right behind any host/proxy) and copies it.
+                        def share_link():
+                            _end_commit_gestures()
+                            token = _encode_state(editor.serialize())
+                            ui.run_javascript(
+                                "(async function(){"
+                                f"var u=location.origin+location.pathname+'?{_STATE_PARAM}='+{json.dumps(token)};"
+                                "try{await navigator.clipboard.writeText(u);}"
+                                "catch(e){var t=document.createElement('textarea');t.value=u;"
+                                "document.body.appendChild(t);t.select();"
+                                "document.execCommand('copy');t.remove();}})()")
+                            ui.notify("Shareable link copied to clipboard")
+                        refs["share"] = ui.button(icon="share", on_click=share_link, color=None) \
+                            .props("flat dense").classes("rtt-iconbtn").mark("share").tooltip(tooltips.CHROME_HELP["share"])
 
                         # hovering a history button previews its effect: it rings exactly the cells one
                         # undo/redo/reset would move (red for a removal, amber for the re-solve) and clears

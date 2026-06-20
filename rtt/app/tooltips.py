@@ -80,6 +80,7 @@ CHROME_HELP: dict[str, str] = {
     "undo": "Undo the last change.",
     "redo": "Redo the change you undid.",
     "reset": "Reset everything — settings, layout, and values — to the defaults.",
+    "share": "Copy a shareable link to this exact state — open it to load the app right here (its undo history isn't included).",
 }
 
 # Hover text for the audio control bank (see :func:`rtt.app.app._audio_bank`). The bank is no
