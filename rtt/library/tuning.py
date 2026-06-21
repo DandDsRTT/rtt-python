@@ -26,17 +26,6 @@ from rtt.library.tuning_solvers import solve_optimum
 
 
 def _sanitized_prescaler_override(prescaler_override):
-    """Drop a complexity-prescaler override that would crash the solver, falling back to the
-    scheme's own trait-derived prescaler (``None``).
-
-    A complexity is a norm, so the prescaler 𝐿 must be invertible with strictly-positive diagonal
-    entries and every entry finite. A 0 (or negative) diagonal makes a prime's complexity 0 and its
-    simplicity weight infinite; an inf/nan entry is equally meaningless. Either feeds inf/nan into
-    scipy ``linprog``, which raises an opaque ``ValueError`` *before* returning (so the usual
-    ``.success`` check can't catch it) — hence this input guard. The UI handler and
-    :func:`rtt.app.editor._prescaler_from_json` already reject such a prescaler upstream; this is the
-    deeper net so no code path (a persisted bad document, a direct API call) can reach the solver
-    with one. Accepts a flat diagonal d-tuple or a full d×d matrix."""
     if prescaler_override is None:
         return None
     arr = np.asarray(prescaler_override, dtype=float)
@@ -46,21 +35,11 @@ def _sanitized_prescaler_override(prescaler_override):
     if np.any(diagonal <= 0):
         return None
     if arr.ndim == 2 and not np.isfinite(np.linalg.cond(arr)):
-        return None  # singular matrix — non-invertible, so no usable complexity norm
+        return None
     return prescaler_override
 
 
 def _sanitized_weights_override(weights_override):
-    """Drop a manual per-target damage-weight override that would crash the solver, falling back to
-    the scheme's slope-derived weights (``None``).
-
-    A weight row-scales its target's tempered/just rows in :func:`_constrained_solve`, so every
-    entry must be finite and strictly positive — a 0/negative weight removes or inverts a target's
-    contribution and an inf/nan feeds garbage into scipy ``linprog`` (which raises *before*
-    returning, dodging ``.success``), exactly the failure mode :func:`_sanitized_prescaler_override`
-    guards for the prescaler. The UI handler and :func:`rtt.app.editor._weights_from_json` reject a
-    bad override upstream; this is the deeper net for any path (a persisted bad document, a direct
-    API call). Accepts a flat per-target sequence; an empty/None override means "no override"."""
     if weights_override is None:
         return None
     arr = np.asarray(weights_override, dtype=float)
@@ -74,19 +53,6 @@ def _sanitized_weights_override(weights_override):
 def optimize_generator_tuning_map(
     t: Temperament, spec: TuningSchemeSpec | str, prescaler_override=None, weights_override=None,
 ) -> tuple[float, ...]:
-    """The generator tuning map minimizing target interval damage under the scheme.
-
-    ``spec`` may be a :class:`TuningSchemeSpec` or a systematic tuning-scheme name string
-    (e.g. ``"minimax-S"``, ``"held-octave minimax-ES"``).
-
-    ``prescaler_override`` (a d-tuple) bypasses the spec's trait-derived prescaler
-    diagonal, riding through into the damage-weight complexities; ``None`` keeps the
-    existing behavior.
-
-    ``weights_override`` (a per-target sequence) bypasses the slope-derived damage weights
-    entirely — the user's typed weights drive the solve directly. It applies only to a
-    target-based scheme (an all-interval scheme has no per-target weights); ``None`` keeps
-    the slope-derived behavior."""
     prescaler_override = _sanitized_prescaler_override(prescaler_override)
     weights_override = _sanitized_weights_override(weights_override)
     spec = resolve_tuning_scheme(spec)
@@ -98,8 +64,6 @@ def optimize_generator_tuning_map(
             "MUST-GET-RIGHT 13 — the two cannot be combined)"
         )
 
-    # trait 7, prime-based: re-express the temperament over its simplest prime-only basis,
-    # optimize there, then map the generators back to the original (nonprime) basis.
     prime_based = spec.nonprime_basis_approach == "prime-based" and not (
         is_standard_prime_limit_domain_basis(get_domain_basis(t))
     )
@@ -125,13 +89,10 @@ def optimize_generator_tuning_map(
 def _solve_generators(
     t: Temperament, spec: TuningSchemeSpec, prescaler_override=None, weights_override=None,
 ) -> np.ndarray:
-    """The optimum generators for a scheme over the temperament's own domain basis."""
     d = get_d(t)
-    mapping = np.array(mapping_matrix(t), dtype=float)  # r x d
-    just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)  # d
+    mapping = np.array(mapping_matrix(t), dtype=float)
+    just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)
     if _is_all_interval(spec) and spec.complexity_size_factor != 0:
-        # an all-interval scheme has no per-target weights (it minimaxes over the primes with
-        # structural simplicity weights), so a manual weights_override doesn't apply here
         return _optimize_augmented_all_interval(
             t, spec, mapping, just_tuning_map, d, prescaler_override=prescaler_override,
         )
@@ -144,8 +105,6 @@ def _solve_generators(
 
 
 def _change_to_simplest_prime_basis(t: Temperament) -> Temperament:
-    """Re-express a temperament over the simplest prime-only basis containing its subgroup,
-    by embedding its comma basis into that prime superspace."""
     comma_basis = t if t.variance is Variance.COL else dual(t)
     prime_basis = get_simplest_prime_only_basis(get_domain_basis(t))
     return dual(change_domain_basis_for_c(comma_basis, prime_basis))
@@ -154,9 +113,6 @@ def _change_to_simplest_prime_basis(t: Temperament) -> Temperament:
 def _retrieve_prime_domain_basis_generators(
     generators: np.ndarray, original_t: Temperament, prime_t: Temperament
 ) -> np.ndarray:
-    """Convert generators optimized over the prime basis back to the original (nonprime)
-    basis: re-derive the prime tuning map, restrict it to the original basis elements, then
-    recover the original temperament's generators from that tuning map."""
     prime_mapping = np.array(mapping_matrix(prime_t), dtype=float)
     tuning_over_primes = np.asarray(generators) @ prime_mapping
     basis_change = np.array(
@@ -164,7 +120,7 @@ def _retrieve_prime_domain_basis_generators(
             get_domain_basis(original_t), get_domain_basis(prime_t)
         ),
         dtype=float,
-    )  # original-basis elements as prime-basis vectors
+    )
     tuning_over_original = tuning_over_primes @ basis_change.T
     return np.array(
         generator_tuning_map_from_t_and_tuning_map(original_t, tuple(tuning_over_original))
@@ -172,8 +128,6 @@ def _retrieve_prime_domain_basis_generators(
 
 
 def _is_all_interval(spec: TuningSchemeSpec) -> bool:
-    """Whether the scheme targets every interval (an empty target set), which by duality
-    becomes an optimization over the primes (or the size-augmented primes)."""
     return spec.target_intervals is not None and spec.target_intervals.strip() in ("{}", "")
 
 
@@ -185,19 +139,16 @@ def _constrained_solve(
     power: float,
     held_vectors: np.ndarray | None,
 ) -> np.ndarray:
-    """The generators minimizing the weighted ``power``-norm of the target damages, holding
-    any ``held_vectors`` exactly justly (reparameterizing onto the held-justly subspace)."""
-    targets = np.array(vectors, dtype=float).reshape(-1, mapping.shape[1])  # k x d
-    tempered = (targets @ mapping.T) * weights[:, None]  # k x r
-    just = (targets @ just_tuning_map) * weights  # k
+    targets = np.array(vectors, dtype=float).reshape(-1, mapping.shape[1])
+    tempered = (targets @ mapping.T) * weights[:, None]
+    just = (targets @ just_tuning_map) * weights
     if held_vectors is None:
         return solve_optimum(tempered, just, power, mapping.shape[0])
-    tempered_side = held_vectors @ mapping.T  # n_held x r
+    tempered_side = held_vectors @ mapping.T
     held_generators, *_ = np.linalg.lstsq(tempered_side, held_vectors @ just_tuning_map, rcond=None)
     held_null = null_space(tempered_side)
     if held_null.shape[1] == 0:
-        return held_generators  # held intervals pin the tuning
-    # g = held_generators + held_null @ y, optimizing only the held-justly subspace
+        return held_generators
     free = solve_optimum(
         tempered @ held_null, just - tempered @ held_generators, power, held_null.shape[1]
     )
@@ -207,16 +158,6 @@ def _constrained_solve(
 def _default_free_generators_to_just(
     generators: np.ndarray, t: Temperament, spec: TuningSchemeSpec, d: int
 ) -> np.ndarray:
-    """When the held intervals and targets leave a generator direction unconstrained (an
-    underdetermined optimization — k + h < r, or a prime unrepresented in the targets), the solvers
-    leave that free direction at 0 cents — a silent 0¢ fifth, a prime tuned hundreds of cents flat.
-    Default those free directions to the JUST tuning instead (tuning-fundamentals 'Every prime must
-    be represented', O24: 'a human would default to tuning the unrepresented prime justly') rather
-    than to 0. A no-op when the optimization is fully determined (the common case) — the free
-    subspace is then empty, so the result is returned bit-for-bit unchanged.
-
-    Measured over the temperament's OWN rank r — never a lifted prime-based superspace, where the
-    determined original system makes this a no-op anyway."""
     mapping = np.array(mapping_matrix(t), dtype=float)
     rank = mapping.shape[0]
     rows = []
@@ -225,7 +166,7 @@ def _default_free_generators_to_just(
         rows.append(held @ mapping.T)
     if spec.target_intervals is not None:
         if spec.target_intervals.strip() in ("{}", ""):
-            target_vectors = np.eye(d)  # all-interval: the primes span the generators
+            target_vectors = np.eye(d)
         else:
             target_vectors = np.array(
                 resolve_target_intervals(spec.target_intervals, t, d), dtype=float
@@ -233,9 +174,9 @@ def _default_free_generators_to_just(
         if target_vectors.size:
             rows.append(target_vectors @ mapping.T)
     determining = np.vstack(rows) if rows else np.zeros((0, rank))
-    free = null_space(determining)  # r × f: the generator directions the optimization leaves free
+    free = null_space(determining)
     if free.shape[1] == 0:
-        return generators  # fully determined: exact no-op
+        return generators
     just_generators = np.array(get_just_tuning_map(t), dtype=float) @ np.linalg.pinv(mapping)
     g = np.array(generators, dtype=float)
     return g + free @ (free.T @ (just_generators - g))
@@ -249,15 +190,8 @@ def _optimize_augmented_all_interval(
     d: int,
     prescaler_override=None,
 ) -> np.ndarray:
-    """All-interval schemes with a size factor (the lils/ils family) augment the system with a
-    phantom prime: an extra generator and a mapping row ``(size_factor·log2(p), -1)``, the
-    phantom tuned justly to 0 and weighted 1. After solving, the phantom generator is dropped."""
     rank = mapping.shape[0]
     size_factor = spec.complexity_size_factor
-    # The size row must use the SCHEME's prescaler, not a hard-coded log2(p): the displayed
-    # complexity is ‖[𝑋v | k·∑(𝑋v)]‖/(1+k), whose size axis is k·∑(𝑋v) = k·(column-sums of 𝑋)·v.
-    # For the lils family 𝑋 = diag(log2 p) and this reduces to the old log_primes; for a prime/
-    # identity/custom prescaler it differs, and hard-coding log2(p) minimized the wrong objective.
     prescaler = np.asarray(
         get_complexity_prescaler(
             t,
@@ -281,22 +215,16 @@ def _optimize_augmented_all_interval(
         prescaler_override=prescaler_override,
     )
     aug_vectors = np.eye(d + 1)
-    weights = np.append(prime_weights, 1.0)  # phantom prime weighted 1
+    weights = np.append(prime_weights, 1.0)
 
     held = _held_vectors(spec, t, d)
-    # Each held vector's phantom component is size_factor · (size_coeffs · v) — its just
-    # size under the prescaler — mirroring the size-stretch row of the mapping augmentation.
-    # That makes the phantom generator's stretch cancel out of the held constraint, so the held
-    # interval's real tempered size equals its just size. (For lils, size_coeffs = log2(p), whose
-    # octave component is size_factor·log2(2) = 1, which a bare constant 1 matched only by
-    # coincidence — silently mistuning every non-octave held interval under a non-log prescaler.)
     aug_held = (
         None if held is None
         else np.hstack([held, size_factor * (held @ size_coeffs)[:, None]])
     )
 
     generators = _constrained_solve(aug_mapping, aug_just, aug_vectors, weights, power, aug_held)
-    return generators[:rank]  # drop the phantom generator
+    return generators[:rank]
 
 
 def _destretch(
@@ -307,12 +235,9 @@ def _destretch(
     just_tuning_map: np.ndarray,
     d: int,
 ) -> np.ndarray:
-    """Rescale the whole tuning so the destretched interval comes out exactly just."""
     interval = np.array(_interval_spec_vectors(destretched_interval, t, d)[0], dtype=float)
     just_size = just_tuning_map @ interval
     tempered_size = (generators @ mapping) @ interval
-    # Destretching multiplies by just/tempered of the chosen interval — undefined when that
-    # interval is tempered out (tempered size ≈ 0), where the ratio blows up to ~1e16 garbage.
     if abs(tempered_size) < 1e-6:
         raise ValueError(
             "cannot destretch by an interval the temperament tempers out: its tempered size "
@@ -324,29 +249,14 @@ def _destretch(
 def _optimization_setup(
     t: Temperament, spec: TuningSchemeSpec, d: int, prescaler_override=None, weights_override=None,
 ) -> tuple[tuple[tuple[int, ...], ...], np.ndarray, float]:
-    """The (target vectors, per-target damage weights, optimization power) for the scheme.
-
-    An all-interval scheme (empty target set) instead optimizes over the primes with
-    simplicity weighting, at the dual of the interval-complexity norm power — minimax
-    over every interval is, by duality, this optimization over the primes.
-
-    A non-diagonal pretransformer 𝑋 (a hand-edited matrix override) generalizes that duality:
-    minimax over every interval of ``|𝒓v| / ‖𝑋v‖`` equals ``‖𝒓𝑋⁻¹‖`` at the dual norm power, which
-    is the unit-weighted minimax over the COLUMNS of 𝑋⁻¹ (each ``𝒓·colⱼ`` is a component of
-    ``𝒓𝑋⁻¹``). For a diagonal 𝑋 those columns are ``(1/𝐿ᵢ)·eᵢ``, reproducing the per-prime path —
-    so this is taken only when the override is an actual matrix, keeping the integer-prime targets
-    (and their quotient labels) for every diagonal scheme."""
     if spec.target_intervals is None:
-        return (), np.array([]), spec.optimization_power  # held intervals alone pin the tuning
+        return (), np.array([]), spec.optimization_power
     if spec.target_intervals.strip() in ("{}", ""):
         if prescaler_override is not None and np.ndim(prescaler_override) == 2:
             inverse_columns = np.linalg.inv(np.asarray(prescaler_override, dtype=float)).T
             return (tuple(map(tuple, inverse_columns)), np.ones(d),
                     get_dual_power(spec.complexity_norm_power))
         primes = tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
-        # Clear complexity_rough here: an all-interval odd-limit scheme (minimax-lols-S) is, by
-        # construction, held-octave minimax-lils-S — its prime simplicity weights are the lils ones,
-        # NOT the 2-less lols ones (rough is the complexity FUNCTION's job, applied in target mode).
         weights = damage_weights(
             primes, t, replace(spec, damage_weight_slope="simplicityWeight", complexity_rough=0),
             prescaler_override=prescaler_override,
@@ -362,7 +272,6 @@ def _optimization_setup(
 def optimize_tuning_map(
     t: Temperament, spec: TuningSchemeSpec | str, prescaler_override=None, weights_override=None,
 ) -> tuple[float, ...]:
-    """The optimum tuning map (the generators applied to the mapping) under the scheme."""
     generators = np.array(
         optimize_generator_tuning_map(
             t, spec, prescaler_override=prescaler_override, weights_override=weights_override
@@ -376,8 +285,6 @@ def optimize_tuning_map(
 def get_tuning_map_damages(
     t: Temperament, tuning_map: tuple, spec: TuningSchemeSpec | str
 ) -> dict:
-    """Each target interval's damage under a *given* tuning map (not an optimization):
-    the scheme-weighted absolute error, keyed by the interval's quotient."""
     vectors, damages, _ = _evaluate_damages(t, tuning_map, spec)
     return {pcv_to_quotient(vector): float(damage) for vector, damage in zip(vectors, damages)}
 
@@ -385,18 +292,15 @@ def get_tuning_map_damages(
 def get_generator_tuning_map_damages(
     t: Temperament, generator_tuning_map: tuple, spec: TuningSchemeSpec | str
 ) -> dict:
-    """Each target interval's damage under a given *generator* tuning map."""
     return get_tuning_map_damages(t, tuning_map_from_generators(t, generator_tuning_map), spec)
 
 
 def get_tuning_map_mean_damage(
     t: Temperament, tuning_map: tuple, spec: TuningSchemeSpec | str
 ) -> float:
-    """The scheme's mean damage of a given tuning map: the power-mean of the target damages
-    at the optimization power (the max for minimax, RMS for miniRMS, and so on)."""
     _, damages, power = _evaluate_damages(t, tuning_map, spec)
     if len(damages) == 0:
-        return 0.0  # a held-only spec (no targets) has nothing to damage
+        return 0.0
     if power == inf:
         return float(np.max(damages))
     return float((np.sum(damages**power) / len(damages)) ** (1 / power))
@@ -405,21 +309,16 @@ def get_tuning_map_mean_damage(
 def get_generator_tuning_map_mean_damage(
     t: Temperament, generator_tuning_map: tuple, spec: TuningSchemeSpec | str
 ) -> float:
-    """The scheme's mean damage of a given generator tuning map."""
     return get_tuning_map_mean_damage(t, tuning_map_from_generators(t, generator_tuning_map), spec)
 
 
 def tuning_map_from_generators(t: Temperament, generator_tuning_map: tuple) -> np.ndarray:
-    """The tuning map a generator tuning produces: the generators applied to the mapping
-    (``generators @ M``). The manual-tuning counterpart of an optimized tuning map."""
     return np.array(generator_tuning_map, dtype=float) @ np.array(mapping_matrix(t), dtype=float)
 
 
 def _evaluate_damages(
     t: Temperament, tuning_map: tuple, spec: TuningSchemeSpec | str
 ) -> tuple[tuple[tuple[int, ...], ...], np.ndarray, float]:
-    """The (target vectors, per-target damages, mean power) for a given tuning map: each
-    damage is the scheme's weight times the absolute mistuning of that target."""
     spec = resolve_tuning_scheme(spec)
     d = get_d(t)
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)
@@ -433,13 +332,6 @@ def _evaluate_damages(
 def resolve_target_intervals(
     target_spec: str, t: Temperament, d: int
 ) -> tuple[tuple[int, ...], ...]:
-    """Resolve a target interval spec to vectors: an explicit ``{...}`` quotient list, a
-    TILT/OLD named scheme, or ``"primes"`` (the identity).
-
-    Intervals outside the domain are dropped — over a standard prime limit, a quotient needing a
-    prime beyond the d-th (a target limit raised past the domain); over a nonstandard basis, a
-    quotient outside the subgroup. Unisons are dropped too: a unison has no mistuning to optimize,
-    and its zero complexity would make a simplicity weight infinite."""
     domain_basis = get_domain_basis(t)
     if target_spec == "primes":
         return tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
@@ -455,17 +347,10 @@ def resolve_target_intervals(
     else:
         in_basis = filter_target_intervals_for_nonstandard_domain_basis(quotients, domain_basis)
         vectors = express_quotients_in_domain_basis(in_basis, domain_basis)
-    return tuple(v for v in vectors if any(v))  # drop the unison (an all-zero vector)
+    return tuple(v for v in vectors if any(v))
 
 
 def _interval_spec_vectors(text: str, t: Temperament, d: int) -> tuple[tuple[int, ...], ...]:
-    """Parse an interval-set spec (``"octave"``, ``"2/1"``, ``"{2/1, 3/2}"``) into vectors over
-    the temperament's OWN domain basis — the same expression :func:`resolve_target_intervals`
-    uses for targets. On a standard prime limit this is the prime-count vector padded to ``d``;
-    on a nonstandard basis the quotients are expressed over the basis elements, so a held 13/5
-    over 2.3.13/5 is ``(0, 0, 1)`` rather than a prime-count vector longer than ``d`` (which would
-    crash ``held @ mapping.T``) or, when the lengths coincide, a silently wrong interval
-    (9/8 reinterpreted as 81/8 over 2.9.7)."""
     quotients = parse_quotients(text.replace("octave", "2"))
     domain_basis = get_domain_basis(t)
     if is_standard_prime_limit_domain_basis(domain_basis):
@@ -476,7 +361,6 @@ def _interval_spec_vectors(text: str, t: Temperament, d: int) -> tuple[tuple[int
 
 
 def _held_vectors(spec: TuningSchemeSpec, t: Temperament, d: int) -> np.ndarray | None:
-    """The vectors of the scheme's held intervals (tuned exactly justly), or ``None``."""
     if not spec.held_intervals:
         return None
     return np.array(_interval_spec_vectors(spec.held_intervals, t, d), dtype=float)
@@ -489,22 +373,10 @@ def damage_weights(
     prescaler_override=None,
     weights_override=None,
 ) -> np.ndarray:
-    """The per-target damage weights: 1 (unity), complexity, or 1/complexity.
-
-    ``prescaler_override`` rides into each per-target complexity (the slope rolls off
-    the same diagonal the matrix tile shows), so a custom diagonal reaches the tuning
-    solve too rather than only the displayed prescaler.
-
-    ``weights_override`` (the user's typed per-target weights) short-circuits the slope
-    derivation entirely when it matches the target count — the manual weights ARE the
-    weights. A length mismatch (a stale override left over a target ±/reorder) falls
-    through to the slope-derived weights, so a stale override degrades gracefully rather
-    than mis-pairing weights to intervals."""
     if weights_override is not None and len(weights_override) == len(vectors):
         weights = np.asarray(weights_override, dtype=float)
         if np.all(np.isfinite(weights)) and np.all(weights > 0):
             return weights
-        # a bad override never reaches the solver — fall through to the slope-derived weights
     if spec.damage_weight_slope == "unityWeight":
         return np.ones(len(vectors))
     complexities = np.array(
@@ -532,21 +404,11 @@ def damage_weights(
 
 def get_complexity_prescaler(
     t: Temperament,
-    log_prime_power,  # trait 5a
-    prime_power,  # trait 5b
-    nonprime_basis_approach: str,  # trait 7
+    log_prime_power,
+    prime_power,
+    nonprime_basis_approach: str,
     override=None,
 ) -> list[float]:
-    """The diagonal of the complexity prescaler L: each domain basis element's pre-norm
-    weight, log2(prime)**a · prime**b (log-prime by default, a=1, b=0). An interval's
-    complexity is a norm of L applied to its vector, so this is the matrix that defines it.
-
-    ``override`` is a per-call escape hatch: when set, the four trait arguments are
-    ignored and the override is returned verbatim. It is either a d-tuple diagonal OR a full
-    d×d matrix (the editable pretransformer tile, once alt-complexity makes the whole square
-    editable) — :func:`get_complexity` applies a 2-D override as a matrix-vector product. Threaded
-    through the optimization and complexity / weight paths so the web app's bare pretransformer
-    tile can hand-edit it without inventing a synthetic spec or monkey-patching every consumer."""
     if override is not None:
         return override
     return _prescaler_diagonal(
@@ -557,11 +419,6 @@ def get_complexity_prescaler(
 def _prescaler_diagonal(
     domain_basis, log_prime_power, prime_power, nonprime_basis_approach: str
 ) -> list[float]:
-    """The log2(prime)**a · prime**b pre-norm weight for each basis element of ``domain_basis``.
-    For a nonprime element the base is its log-product complexity numerator·denominator (e.g.
-    7/3 → 7·3) — UNLESS the nonprime-based approach is in force, which treats the element as an
-    atom protected against factoring (7/3 → 7/3). Kept basis-parameterized (not temperament-
-    parameterized) so :func:`get_complexity` can build it over a lifted prime basis."""
     diagonal = []
     for q in domain_basis:
         fraction = Fraction(q)
@@ -582,38 +439,14 @@ def _prescaler_diagonal(
 def get_complexity(
     pcv: tuple,
     t: Temperament,
-    norm_power,  # trait 4
-    log_prime_power,  # trait 5a
-    prime_power,  # trait 5b
-    size_factor,  # trait 5c
-    nonprime_basis_approach: str,  # trait 7
-    complexity_rough: int = 0,  # trait 5d
+    norm_power,
+    log_prime_power,
+    prime_power,
+    size_factor,
+    nonprime_basis_approach: str,
+    complexity_rough: int = 0,
     prescaler_override=None,
 ) -> float:
-    """An interval's complexity: a (pre-transformed) norm of its vector.
-
-    A nonzero ``complexity_rough`` (= k, in practice 3) applies rough(·,k) — dropping the entries
-    for primes below k (k = 3 strips the 2's), the odd-limit (lols/ols) families: lols-C is lils-C
-    on the vector with its prime-2 entry zeroed. Applied after any nonprime lift, so the entry
-    dropped is the prime-2 entry of the lifted prime-count vector.
-
-    A nonzero ``size_factor`` augments the pre-transformed vector with one extra entry
-    (the size-weighted sum, ``size_factor`` times the interval's log size), then divides
-    the norm by ``1 + size_factor`` — the lils/ils family of complexities.
-
-    ``prescaler_override`` bypasses the trait-driven prescaler — a d-tuple diagonal, or a full
-    d×d matrix (a non-diagonal pretransformer) the web app's editable tile rides in. A diagonal
-    pre-transforms element-wise (𝐿ᵢvᵢ); a matrix as a matrix-vector product (𝑋·v).
-
-    Over a NONPRIME basis the default (non-override) neutral path lifts the interval into the
-    simplest prime-only basis (the superspace) and prescales THERE, because log-product
-    complexity is defined on the prime factorization: its quotient form log2(n·d) equals the
-    vector form only when the vector is the PRIME-COUNT vector. A per-basis-element diagonal
-    would instead double-count a prime shared across two elements that cancels in the true
-    quotient (the 3 in 7/3 and 11/3 of 2.7/3.11/3: 11/7 is log2(11·7), not log2(11·3·7·3)).
-    The nonprime-based approach deliberately keeps the atomic basis (it redefines complexity);
-    prime-based already arrives here over its prime superspace, so the lift is a no-op; an
-    override pins the diagonal by hand; coprime and standard bases lift to themselves."""
     domain_basis = get_domain_basis(t)
     if (
         prescaler_override is None
@@ -622,17 +455,14 @@ def get_complexity(
         and not is_standard_prime_limit_domain_basis(domain_basis)
     ):
         prime_basis = get_simplest_prime_only_basis(domain_basis)
-        if tuple(prime_basis) != tuple(domain_basis):  # there really is a nonprime to factor
-            lift = express_quotients_in_domain_basis(domain_basis, prime_basis)  # d rows × dL
+        if tuple(prime_basis) != tuple(domain_basis):
+            lift = express_quotients_in_domain_basis(domain_basis, prime_basis)
             pcv = tuple(
                 sum(pcv[e] * lift[e][p] for e in range(len(lift)))
                 for p in range(len(prime_basis))
             )
             domain_basis = prime_basis
     if complexity_rough:
-        # rough(·,k): zero the entries for primes below k. k = 3 (the only value used, for the
-        # odd-limit lols/ols) strips the octave's prime, prime 2 — so lols-C is lils-C on the
-        # 2-less vector. Done over the (possibly lifted) prime basis, where 2 is a basis element.
         pcv = tuple(
             0 if Fraction(q).denominator == 1 and Fraction(q).numerator < complexity_rough else x
             for q, x in zip(domain_basis, pcv)
@@ -644,10 +474,9 @@ def get_complexity(
             domain_basis, log_prime_power, prime_power, nonprime_basis_approach
         )
     )
-    if np.ndim(prescaler) == 2:  # a full (non-diagonal) pretransformer matrix: 𝑋·v
+    if np.ndim(prescaler) == 2:
         transformed = list(np.asarray(prescaler, dtype=float) @ np.asarray(pcv, dtype=float))
-    else:  # a diagonal: element-wise 𝐿ᵢvᵢ. zip truncates to the shorter — a nonstandard domain's
-        # prescaler can be shorter than the over-primes vector, and only the basis elements count
+    else:
         transformed = [w * x for w, x in zip(prescaler, pcv)]
     if size_factor != 0:
         transformed.append(size_factor * sum(transformed))
@@ -656,9 +485,6 @@ def get_complexity(
 
 
 def get_dual_power(power):
-    """The Hölder-conjugate (dual) norm power: 1 <-> inf, 2 <-> 2. A norm power below 1 is not a
-    norm; refuse it rather than return a negative dual power that drives the all-interval solve
-    to ~1e308-cent generators (alternative-complexities: norm powers exist only for 1 ≤ q ≤ ∞)."""
     if power < 1:
         raise ValueError(f"a norm power must be ≥ 1; got {power}")
     if power == 1:
@@ -667,9 +493,6 @@ def get_dual_power(power):
 
 
 def _validate_powers(spec: TuningSchemeSpec) -> None:
-    """Reject optimization / complexity-norm powers outside [1, ∞]. Below 1 the power mean is not
-    a damage mean and the Nelder-Mead / dual-norm solves diverge to ~1e308 cents — the guide
-    bounds both powers to [1, ∞] (alternative-complexities, 'Alternative optimization powers')."""
     if spec.optimization_power < 1:
         raise ValueError(f"optimization power must be ≥ 1; got {spec.optimization_power}")
     if spec.complexity_norm_power < 1:
@@ -677,15 +500,12 @@ def _validate_powers(spec: TuningSchemeSpec) -> None:
 
 
 def get_just_tuning_map(t: Temperament) -> tuple[float, ...]:
-    """The just tuning map: the size in cents (1200·log2) of each basis element."""
     return tuple(1200.0 * log2(float(q)) for q in get_domain_basis(t))
 
 
 def generator_tuning_map_from_t_and_tuning_map(
     t: Temperament, tuning_map: tuple
 ) -> tuple[float, ...]:
-    """Recover the generator tuning map from a temperament and a tuning map,
-    via a right-inverse of the mapping (the tuning map is generators · mapping)."""
     mapping = np.array(mapping_matrix(t), dtype=float)
     generators = np.array(tuning_map, dtype=float) @ np.linalg.pinv(mapping)
     return tuple(float(x) for x in generators)

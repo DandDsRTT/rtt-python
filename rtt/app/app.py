@@ -1,13 +1,3 @@
-"""NiceGUI front end for the RTT monolith.
-
-The layout is the spreadsheet coordinate model (:mod:`rtt.app.spreadsheet`): rows
-are the temperament's quantities, columns the sets they're shown over, cells on
-shared prime/generator axes. The renderer is persistent and reconciling — one
-element per entity id, moved/updated on each state change rather than rebuilt —
-so rows/columns animate via CSS transitions. Editing the mapping recomputes
-in-process; domain expand/shrink and undo are available. No HTTP layer.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -51,10 +41,6 @@ from rtt.app.marks import (
     vbar,
 )
 
-# The pure HTML / SVG / text / font-fit / chart string builders (and their constants) live in
-# rtt.app.render_html (audit Phase 2, cluster C — a behaviour-preserving extraction). They are
-# imported back here so every existing app.<name> reference (production code and tests) resolves
-# unchanged; render_html holds the single definition and never imports app.py (no cycle).
 from rtt.app.render_html import (
     _CHART_BAR_FRAC,
     _CHART_GRID,
@@ -143,15 +129,11 @@ _log = logging.getLogger(__name__)
 
 
 class _KindHandlers(NamedTuple):
-    """The build + update pair for one cell kind — the unified replacement for the two
-    parallel ``if/elif cb.kind`` ladders (audit #3). ``build(cb, wrap)`` creates the cell's
-    child element(s) and registers their per-id handles; ``update(cb)`` refreshes the live
-    element from the cell box. ``update`` is None for static kinds (built once, never refilled)."""
     build: Callable
     update: Callable | None = None
 
 
-_ASSETS = Path(__file__).parent / "assets"  # CSS/JS asset files, loaded at import time
+_ASSETS = Path(__file__).parent / "assets"
 
 # Self-host the body font as WOFF2 (assets/fonts/) and serve it same-origin, so every machine
 # renders the SAME face. The app used to declare 'Cambria' with no webfont, so on any box without
@@ -163,21 +145,18 @@ _ASSETS = Path(__file__).parent / "assets"  # CSS/JS asset files, loaded at impo
 # re-imports (a duplicate FastAPI route is harmless — first match wins).
 app.add_static_files("/rtt-fonts", _ASSETS / "fonts")
 
-_PAD = 12  # px margin of #c0c0c0 around the coordinate space
-_T = "0.25s"  # transition duration
-_PANEL_W = 330  # px width the settings drawer opens to (the Show + example columns)
-_TAB_W = 40  # px width of the collapsed settings tab (the hamburger over the quarter-turned title)
-_TAB_H = 218  # px height of the collapsed tab's chrome (room for the title turned a quarter-turn, ~13px below the 'p')
-_CHROME_H = 40  # px height of the open pane's horizontal title bar (hamburger + upright title)
-_TOOLTIP_DELAY_MS = 700  # hover delay before a tooltip appears — long enough that the dense grid's
+_PAD = 12
+_T = "0.25s"
+_PANEL_W = 330
+_TAB_W = 40
+_TAB_H = 218
+_CHROME_H = 40
+_TOOLTIP_DELAY_MS = 700
 # help waits for a deliberate rest instead of popping on every passing cursor (Quasar defaults to 0)
-_STORE_KEY = "rtt_doc"  # store key holding the serialized document (survives refresh)
-_STATE_PARAM = "state"  # ?state=… query param carrying a whole document for a shareable link
-_DARK_KEY = "rtt_dark"  # store key for the dark-mode preference — a global viewing choice kept
-# OUT of the serialized document, so it survives Reset and is independent of "select all / none"
-_CHAPTER_KEY = "rtt_chapter"  # store key for the guide-chapter reveal slider — like dark mode, a
-# global viewing choice kept out of the document, so Reset / select-all (which act on the document's
-# settings) never move it
+_STORE_KEY = "rtt_doc"
+_STATE_PARAM = "state"
+_DARK_KEY = "rtt_dark"
+_CHAPTER_KEY = "rtt_chapter"
 _STORAGE_SECRET = "dnd-rtt-app"  # signs the per-browser session cookie that keys app.storage.user
 # Under NiceGUI's in-process User test simulation, app.storage.user is file-backed: writing
 # it on every render both litters the tree and races the harness's teardown file-cleanup on
@@ -187,134 +166,59 @@ _MEMORY_STORE: dict = {}
 
 
 def _doc_store() -> dict:
-    """Where the serialized document is persisted: the per-browser ``app.storage.user`` in
-    production, an in-process dict under the test simulation (see :data:`_MEMORY_STORE`)."""
     return _MEMORY_STORE if helpers.is_user_simulation() else app.storage.user
 
 
 def _encode_state(data: dict) -> str:
-    """Pack a serialized document (see ``Editor.serialize``) into one URL-safe token for a
-    shareable ``?state=`` link: compact JSON → deflate → url-safe base64. The deflate keeps the
-    link short for the common small documents and survives the big nonstandard-domain ones."""
     raw = json.dumps(data, separators=(",", ":")).encode("utf-8")
     return base64.urlsafe_b64encode(zlib.compress(raw, 9)).decode("ascii")
 
 
 def _decode_state(token: str) -> dict:
-    """Inverse of :func:`_encode_state`. Raises on any malformed token, so the page-load caller
-    falls back to the persisted document just as it does for a corrupt stored blob."""
     raw = zlib.decompress(base64.urlsafe_b64decode(token.encode("ascii")))
     return json.loads(raw.decode("utf-8"))
 
-# the toast shown when an edit would make a degenerate (improper) temperament — dependent
-# generators, or a prime tempered to a unison (see service.is_proper_temperament)
 _INVALID_TEMPERAMENT = "Not a valid temperament: the generators must be independent and every prime reached."
 _INVALID_FORM = "Not a valid generator form: 𝐹 must be a square matrix with determinant ±1 (unimodular)."
 
-# the open-popup min width for the compact sub-row/sub-col pickers (etpick / commapick): their CLOSED
-# trigger is pinned to ~one gridded value (so the selection isn't readable there — by design), but the
-# OPEN popup must be wide enough to read each option's full "name ratio [vector⟩" / "wart ⟨val]" label
 _SUBPICK_POPUP_W = 220
 
-# the toasts shown when an edited projection P / generator embedding G plain-text string parses but
-# isn't a valid projection of this temperament (P must be idempotent with the commas in its kernel;
-# 𝑀𝐺 must be the identity). A string that doesn't even parse just reddens the box (no toast).
 _INVALID_PROJECTION = "That isn't a valid projection — 𝑃 must be idempotent (𝑃² = 𝑃) with the commas in its kernel."
 _INVALID_EMBEDDING = "That isn't a valid embedding — 𝑀𝐺 must equal the identity."
 
-# the toast shown when a prescaler 𝐿 diagonal entry is edited to a value that can't be a complexity
-# scale: a complexity is a norm, so a diagonal entry must be a positive, finite number (a 0 makes a
-# weight infinite and crashes the solve; a negative is a meaningless "complexity"). Off-diagonal
-# entries are unconstrained except that they too must be finite.
 _INVALID_PRESCALER = "A prescaler diagonal entry must be a positive, finite number."
-# a damage weight row-scales the solve, so a 0/negative/non-finite one would corrupt or crash it.
 _INVALID_WEIGHT = "A damage weight must be a positive, finite number."
 
-# the toast shown when an unchanged-basis (U) cell is committed with a value that can't drive the
-# projection — an unparseable / non-integer entry. Mirrors the ratio/mapping handlers: toast + revert.
 _INVALID_UNCHANGED = "That isn't a valid unchanged-interval basis — each entry must be a whole number."
 
-# the toast shown when a persisted document fails to load on page open — the page falls back to the
-# shipped defaults, but the stored bytes are KEPT (not overwritten) so the user's work can be
-# recovered (e.g. by an older client) rather than being silently wiped to defaults on this refresh.
 _LOAD_FAILED = (
     "Couldn’t restore your saved document — showing the defaults. Your saved data is kept; "
     "editing anything here will replace it."
 )
 
-# the toast shown when the "nonstandard domain" Show toggle is turned off while a nonstandard
-# basis is still live — the setting can't go off until the basis is back to a standard prime limit
-_SEAM = "#999"  # the thin grey rule separating the frozen title panes from the scrolling body
-_PENDING_TEXT_COLOR = "color-mix(in srgb, var(--pending-color) 60%, black)"  # a draft cell's TEXT:
-# the green ring (PENDING_COLOR, imported) DARKENED toward black — single-sourced from --pending-color
-# so the wash, the ring and the text are ONE green at three lightnesses (light wash / mid ring / dark
-# text). Mixing with black scales every channel equally, so the hue is preserved exactly and only the
-# lightness drops; the mid ring is too light to read as text on the pale wash, hence this darker shade.
-# The green analogue of the changing _PREVIEW_TEXT_COLOR and going-away _PREVIEW_REMOVE_TEXT_COLOR
-_PREVIEW_COLOR = "#e8c00a"  # yellow ring on a cell the in-progress edit moves (the edit-preview
-# highlight) — a clear "this changed" hue, kept distinct from the red remove-preview and the green
-# PENDING_COLOR add-preview, so the three highlight hues read apart at a glance
-_PREVIEW_TEXT_COLOR = "color-mix(in srgb, var(--preview-color) 60%, black)"  # the "changing" cell's
-# TEXT: the yellow ring above DARKENED toward black — single-sourced from --preview-color so the wash,
-# the ring and the text are ONE golden-yellow hue at three lightnesses (light wash / mid ring / dark
-# text), never a mix of hues. Mixing with black scales every channel equally, so the hue is preserved
-# exactly — only the lightness drops. The bright ring itself is too light to read as text on the pale
-# wash, hence the dark shade. This is the changing analogue of a draft's green text (PENDING_COLOR)
-# and the going-away red text of the remove-preview (_PREVIEW_REMOVE_TEXT_COLOR)
-_PREVIEW_REMOVE_COLOR = "#e53935"  # red ring on a cell a hovered +/- will REMOVE (the structural
-# remove-preview) — "this is going away", paired with the yellow "this value moved"
-_PREVIEW_REMOVE_TEXT_COLOR = "color-mix(in srgb, var(--preview-remove-color) 60%, black)"  # a going-
-# away cell's TEXT: the red remove-ring above DARKENED toward black, single-sourced from
-# --preview-remove-color so the wash, ring and text are one red at three lightnesses — the removing
-# analogue of the green _PENDING_TEXT_COLOR and changing _PREVIEW_TEXT_COLOR, so a cell a hovered +/-
-# will delete reads dark red (not plain black) while it is still on screen
-# the value cells tile into a shared-border grid (a ruled spreadsheet, per the
-# mockup): each cell draws a rule and overlaps its neighbour by exactly the rule
-# width, so two abutting borders coincide as ONE line — no doubled inner rules.
-_CELL_BORDER_W = 1  # px
+_SEAM = "#999"
+_PENDING_TEXT_COLOR = "color-mix(in srgb, var(--pending-color) 60%, black)"
+_PREVIEW_COLOR = "#e8c00a"
+_PREVIEW_TEXT_COLOR = "color-mix(in srgb, var(--preview-color) 60%, black)"
+_PREVIEW_REMOVE_COLOR = "#e53935"
+_PREVIEW_REMOVE_TEXT_COLOR = "color-mix(in srgb, var(--preview-remove-color) 60%, black)"
+_CELL_BORDER_W = 1
 _CELL_BORDER = f"{_CELL_BORDER_W}px solid {BR_COLOR}"
-_CELL_FONT = 17  # px for the single-digit values in the square cells (≈0.37 of the cell)
-_GENSIGN_W = 9   # px the clickable +/− sign glyph eats in a generator-tuning cell — reserved (on top
-# of the cell's own margin) when fitting the whole part, so a signed integer (decimals off) clears the
-# sign AND the right edge instead of butting it (the read-only cents face has no sign, so fits full-width).
-_STACKED_MAIN_FONT = 10  # px for a stacked cents/power whole-part (must match .rtt-stacked-main in
-# rtt.css). The zoom-on-hover magnifier scales by _CELL_FONT / _STACKED_MAIN_FONT, so the small
-# whole-part of "1200.000" reaches the size of a normal integer "1" gridded value (the calibration).
-# Colorization wash colours, keyed by the group the layout tags a wash with
-# (spreadsheet.CELL_FACTORS via _FACTOR_GROUP); a wash sits behind the grey tiles so the
-# colour reads through the gaps around them. The three are the muted-channel trio — each
-# dims ONE RGB channel to 0x9a — so their darken blends stay clean and give all three secondary
-# hues: tuning ⊓ temperament = #9acd9a (green), tuning ⊓ form = #9a9acd (blue), temperament ⊓ form
-# = #cd9a9a (red). cyan = tuning (the generator embedding G), khaki = temperament (the mapping 𝑀 /
-# comma basis C), magenta = form (the form matrix 𝐹 — the canonical-mapping row + canon-gens column).
+_CELL_FONT = 17
+_GENSIGN_W = 9
+_STACKED_MAIN_FONT = 10
 _TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a", "form": "#cd9acd"}
 
-# Dark-theme palette anchors that have to exist Python-side: the option-box indicator is a baked
-# SVG data-URI (which can't read a CSS variable, so its dark variant is generated here), and
-# apply_theme paints the body's margin frame inline. The full dark palette lives in
-# assets/rtt-dark.css; these few values mirror it (kept in step by eye — they only set the
-# checkbox art and the frame, both visible right beside the css-driven surfaces).
-_DARK_FRAME = "#15171a"   # the body margin framing the whole app
-_DARK_CELL = "#1b1f24"    # value-cell / input fill — and the option-box's own box
-_DARK_MARK = "#8d949d"    # the cell rule, the EBK brackets, and the option-box outline
-_DARK_TEXT = "#e3e6ea"    # primary text — and the checked option-box's inner fill
-_DARK_MUTED = "#71777f"   # disabled text — and the indeterminate option-box's inner fill
+_DARK_FRAME = "#15171a"
+_DARK_CELL = "#1b1f24"
+_DARK_MARK = "#8d949d"
+_DARK_TEXT = "#e3e6ea"
+_DARK_MUTED = "#71777f"
 
-# Every editable numeric input maps here to the amount one wheel notch nudges it: ±1 for a
-# matrix/vector or power entry, ±0.001 for a complexity-prescaler weight (matching its thousandths
-# display). The make_cell listener and on_value_wheel both read this one table, so a NEW numeric
-# input gets scroll-to-step by adding a row here — there is no per-input wheel handler. (The
-# generator-tuning cell and the target-limit square scroll through their own handlers instead: the
-# first fine-tunes by 1/1000 cent with hover + grouped undo, the second debounces its costly commit.)
 _WHEEL_STEPS = {
     "mapping": 1, "commacell": 1, "interestcell": 1, "heldcell": 1, "targetcell": 1,
     "powerinput": 1, "prescalercell": 0.001,
 }
-# The client-side gate for the integer wheel step, shared by every gridded integer input (the
-# matrix/vector cells and the TILT/OLD target-limit square): only step (and swallow the scroll) when
-# the input holds focus — otherwise let the event through so the grid/panel scrolls as usual. So a
-# notch nudges only the input you have clicked into, and an idle scroll never fires a server round-
-# trip. ``emit`` ships deltaY to that input's handler (on_value_wheel / on_target_limit_wheel).
 _INT_WHEEL_JS = ("(e) => { if (e.currentTarget.contains(document.activeElement)) "
                  "{ e.preventDefault(); emit(e); } }")
 # How long after the last target-limit wheel notch to run the commit. Each notch cheaply steps the
@@ -324,23 +228,11 @@ _INT_WHEEL_JS = ("(e) => { if (e.currentTarget.contains(document.activeElement))
 # grows, and grind the app). So the commit is debounced by this much, mirroring the limit input's
 # typing ``debounce=300``. See on_target_limit_wheel.
 _TARGET_LIMIT_DEBOUNCE = 0.3
-_BUSY_DELAY_MS = 180  # ms a commit may run before the busy scrim is revealed (client-side; see
-# _BUSY_JS) — long enough that the common fast edit never flashes it, short enough that a real wait
-# shows feedback promptly
-_BUSY_SAFETY_MS = 6000  # ms after which the scrim self-clears if no render ever lands (a backstop;
-# every armed interaction commits and re-renders, clearing it far sooner via rttBusy.done)
+_BUSY_DELAY_MS = 180
+_BUSY_SAFETY_MS = 6000
 
 
 class _GridValueSpec(NamedTuple):
-    """How one editable ratio-or-integer cell kind drives the shared ``_build_gridvalue`` /
-    ``_update_gridvalue`` component — the unified replacement for the ~10 near-identical builders.
-    ``ratio_allowed`` cells can hold a ``"num/den"`` fraction (a numerator over a denominator
-    input, the ``/`` key splits a bare integer, a ``1``/blank denominator collapses back to the
-    big-integer view); integer-only cells are a single field. ``commit``/``preview`` name the
-    handlers on ``self._cb``; ``cid_arg`` is True when they take the cell id (the scalar ratio +
-    domain-element cells, committed one at a time) and False when they re-read the WHOLE matrix /
-    column and take a ``preview=`` flag (the integer matrix/vector cells). ``arm`` makes the cell a
-    drag-to-combine drop target: ``("row",)`` a mapping row, ``("col", group)`` an interval column."""
     ratio_allowed: bool
     pending: bool
     commit: str
@@ -351,18 +243,6 @@ class _GridValueSpec(NamedTuple):
 
 
 class _VecGridEdit(NamedTuple):
-    """Per-list spec driving the shared ``_edit_vector_grid`` factory. The five matrix/vector
-    column editors — mapping, comma basis, intervals of interest, held intervals, targets — are
-    one 8-step state machine that differ ONLY in these fields, so they route through one body
-    instead of five near-clones. ``cell_id(token, prime)`` mints the cell id (capturing each
-    list's id-axis order — targets is reversed, token before prime); ``count`` is the shown
-    column/row count; ``pending``/``set_pending`` drive the green draft column; ``commit`` folds
-    the read vectors into the document; ``validate`` (mapping/comma only) rejects an improper
-    temperament with a toast, ``None`` skips the check; ``guard`` (mapping only) gates the whole
-    handler on a setting; ``draft_arms`` is True when an in-progress draft previews its would-be
-    commit (interest/held/target) and False when the rank-change preview is builder-driven and
-    value-independent (mapping/comma). ``on_unchanged_change`` is deliberately NOT one of these —
-    it has no draft column and silently transforms its vectors to ratios (see its own def)."""
     group: str
     count: "Callable[[], int]"
     cell_id: "Callable[[object, int], str]"
@@ -375,19 +255,11 @@ class _VecGridEdit(NamedTuple):
 
 
 
-# Every editable ratio-or-integer kind, routed to the one shared builder/update via the registry
-# (the kind strings stay — they are load-bearing in _WHEEL_STEPS, the drag predicates, tooltips and
-# the cell-kind tests).
 _GRIDVALUE_SPECS = {
     "ratiocell":     _GridValueSpec(True,  True,  "on_ratio_change",        None,                 True),
-    # the chapter-9 domain basis elements (prime:i): an integer prime shows the big-number view, a
-    # nonprime the stacked fraction, the kind following the value's shape (so an int↔fraction relabel
-    # rebuilds the cell).
     "elementcell":   _GridValueSpec(True,  True,  "on_element_change",      "on_element_preview",  True),
     "elementratio":  _GridValueSpec(True,  True,  "on_element_change",      "on_element_preview",  True),
     "mapping":       _GridValueSpec(False, True,  "on_mapping_change",      "on_mapping_change",   False, ("row",)),
-    # the generator form matrix 𝐹: an integer rc×r matrix, edited as a WHOLE (a single cell can break
-    # unimodularity), re-storing M = F⁻¹·M_C. No draft column (𝐹's shape is fixed at the rank).
     "formcell":      _GridValueSpec(False, False, "on_form_change",         "on_form_change",      False),
     "commacell":     _GridValueSpec(False, True,  "on_comma_change",        "on_comma_change",     False, ("col", "comma")),
     "unchangedcell": _GridValueSpec(False, False, "on_unchanged_change",    "on_unchanged_change", False),
@@ -398,34 +270,23 @@ _GRIDVALUE_SPECS = {
 
 
 def _vgroup_key(cb: spreadsheet.CellBox) -> str:
-    """The vector/map a non-scalar gridded cell (a `cid_arg=False` _GRIDVALUE_SPECS kind) belongs to —
-    its whole interval-vector COLUMN or mapping ROW, the unit the user fills in and submits as a whole
-    (see `_GROUP_EXIT_JS`). All of one group's cells share this key, and DIFFERENT groups never collide,
-    because it is the cell id with only its PRIME coordinate dropped: the rest is the column/row's stable
-    id-token, so the key survives reorder/removal exactly as the id does. The prime sits LAST for the
-    row-keyed kinds (`cell:mapping:{row}:{p}`, `cell:vec:targets:{col}:{p}`) and as the 3rd segment for the
-    column-keyed ones (`cell:{name}:{p}:{col}`)."""
     if cb.kind in ("mapping", "targetcell"):
         return cb.id.rsplit(":", 1)[0]
-    if cb.kind == "formcell":  # the WHOLE 𝐹 matrix is one group — it commits only when focus leaves
-        return "cell:finv"     # the whole tile (a single cell mid-edit can break F's unimodularity)
+    if cb.kind == "formcell":
+        return "cell:finv"
     parts = cb.id.split(":")
     return ":".join(parts[:2] + parts[3:])
 
 
-# the four play modes' 3×3 glyphs: 1 one-off (centre), 2 arpeggiate (bottom-left→top-right
-# diagonal), 3 chord (centre column), 4 rolled chord (diagonal + the bottom-right triangle)
 _MODE_FILLS = (
     frozenset({(1, 1)}),
     frozenset({(2, 0), (1, 1), (0, 2)}),
     frozenset({(0, 1), (1, 1), (2, 1)}),
     frozenset({(2, 0), (1, 1), (0, 2), (1, 2), (2, 1), (2, 2)}),
 )
-# Glyph variants the bank cycles through. Generated once in Python and shared with the JS
-# (injected as rttAudio.glyphs) so the click-side redraw uses the very same markup.
 _AUDIO_GLYPHS = {
-    "mute": ['<span class="material-icons rtt-audio-glyph">volume_up</span>',    # [0] unmuted: plain speaker
-             '<span class="material-icons rtt-audio-glyph">volume_off</span>'],  # [1] muted: speaker with a slash
+    "mute": ['<span class="material-icons rtt-audio-glyph">volume_up</span>',
+             '<span class="material-icons rtt-audio-glyph">volume_off</span>'],
     "wave": [_wave_svg(w) for w in ("sine", "square", "triangle", "sawtooth")],
     "mode": [_mode_svg(f) for f in _MODE_FILLS],
     "lock": ['<span class="material-icons rtt-audio-glyph">lock_open</span>',
@@ -433,13 +294,6 @@ _AUDIO_GLYPHS = {
     "root": '<span class="rtt-audio-rootglyph">1/1</span>',
 }
 
-# The Web Audio engine. ONE global config (waveform, play-mode, hold/loop, include-1/1) drives
-# every speaker — the single bank on the dummy tile (see _audio_bank) cycles it and redraws its
-# glyphs client-side, and a speaker calls rttAudio.hit(tile, idx, [cents…]) to sound per that
-# config; `tile` only picks which speakers to highlight while they ring. All CLIENT-side (no server
-# round-trip). 1/1 (root) sounds UNDERNEATH as a drone. freq = 261.626·2^(¢/1200) (1/1 = middle C).
-# Modes (0..3): one-off, arpeggiate from the clicked note, chord, rolled chord; hold sustains
-# (mode 0 stacks notes, keyed by tile:idx) or loops (2 & 4).
 _AUDIO_JS = (_ASSETS / "audio.js").read_text(encoding="utf-8")
 
 # Frozen-pane support. The row band freezes by position:sticky (zero JS on its scroll path), but the
@@ -450,26 +304,12 @@ _AUDIO_JS = (_ASSETS / "audio.js").read_text(encoding="utf-8")
 # doesn't bubble → capture phase, so the body's scroll events are still caught here.
 _FREEZE_JS = (_ASSETS / "freeze.js").read_text(encoding="utf-8")
 
-# Live int<->ratio mode-switching for the editable stacked fraction cells (the "/" key opens a
-# denominator, a blank/1 denominator collapses to the big-integer view). Pure client-side — commits
-# still happen on blur (see _build_fraction / _build_gridvalue).
 _FRACTION_JS = (_ASSETS / "fraction.js").read_text(encoding="utf-8")
 
-# Live int<->decimal mode-switching for the editable stacked DECIMAL cells (the "." key opens a
-# fraction, a blank fraction collapses to the big-integer view). The cents-family twin of
-# _FRACTION_JS — same delegated-listener shape, for the bare prescaler / weight / generator-tuning
-# cells (see _build_decimal).
 _DECIMAL_JS = (_ASSETS / "decimal.js").read_text(encoding="utf-8")
 
-# Predictable Tab / Shift+Tab across the editable grid cells. The cells are absolutely positioned, so
-# native Tab follows DOM build order (erratic on screen); this walks them in reading order instead,
-# keeping each interval-vector / mapping group (a [data-vgroup]) contiguous — same delegated-listener
-# shape as _FRACTION_JS, and it relies on the same display:none collapse to skip hidden sub-fields.
 _TABNAV_JS = (_ASSETS / "tabnav.js").read_text(encoding="utf-8")
 
-# The first-run guided tour: a self-contained spotlight walkthrough of the default app (see
-# assets/tour.js). index() feeds it the step list as window.rttTour before injecting this; it
-# auto-runs once per browser (a localStorage flag) and replays from the corner tour button.
 _TOUR_JS = (_ASSETS / "tour.js").read_text(encoding="utf-8")
 
 # The tour steps, walking the app in its DEFAULT state (drawer closed, no extra Show layers on).
@@ -523,20 +363,9 @@ _TOUR_STEPS = [
              "controls. Happy tempering!"},
 ]
 
-# A multi-field stacked cell holds TWO inputs in one cell — a fraction's numerator + denominator
-# (.rtt-frac-edit), or a decimal's whole part + fraction (.rtt-dec-edit). This client-side guard makes
-# a focus/blur/commit handler fire only when focus crosses the WHOLE cell's boundary — not on the
-# field<->field Tab hop inside it — so the edit-preview baseline is taken once and the value commits
-# only when you truly leave. (relatedTarget is the element focus is moving to/from.)
 _STACKED_EXIT_JS = ("(e) => { const b = e.target.closest('.rtt-frac-edit, .rtt-dec-edit'); "
                     "if (!b || !b.contains(e.relatedTarget)) emit(); }")
 
-# The same idea ONE LEVEL UP, for the integer interval-vector columns and mapping rows: an interval
-# vector / map is edited as a WHOLE — Tab/blur HOP between its sibling cells while you fill it in, and
-# it must not submit on each hop. So its commit fires only when focus leaves the whole group (a
-# DIFFERENT vector/map, a non-grid control, or nothing — an Enter blurs the input, so relatedTarget is
-# null and this emits, committing). Each such cell's wrap carries a `data-vgroup` shared by exactly its
-# column/row siblings (see `_vgroup_key`); a hop to a sibling carries the SAME group and is held.
 _GROUP_EXIT_JS = ("(e) => { const g = e.target.closest('[data-vgroup]'), "
                   "t = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('[data-vgroup]'); "
                   "if (!g || !t || g.getAttribute('data-vgroup') !== t.getAttribute('data-vgroup')) emit(); }")
@@ -559,11 +388,6 @@ _CSS_VARS = f""":root {{
 }}
 """
 
-# Self-hosted body face (see app.add_static_files("/rtt-fonts", …) above). Text supplies the latin /
-# digits / common symbols at four styles the app actually uses (the _math_html spans set weight and
-# slant via CSS); the subset Math face sits second in --rtt-serif purely to lend the ⟨ ⟩ ⟪ ⟫
-# brackets the Text face drops. Georgia,serif stays last so a failed asset load degrades to the old
-# look rather than a default sans. font-display:swap paints in the fallback immediately, then swaps.
 _FONT_FACE = "".join(
     f"@font-face{{font-family:'{fam}';font-style:{style};font-weight:{weight};"
     f"font-display:swap;src:url('/rtt-fonts/{file}') format('woff2');}}"
@@ -573,22 +397,11 @@ _FONT_FACE = "".join(
         ("STIX Two Text", "normal", 700, "STIXTwoText-Bold.woff2"),
         ("STIX Two Text", "italic", 700, "STIXTwoText-BoldItalic.woff2"),
         ("STIX Two Math", "normal", 400, "STIXTwoMath-subset.woff2"),
-        # The unit labels' sans (see --rtt-units-sans): Jost, a geometric face with the
-        # SINGLE-STORY g the mockup's unit style calls for. The un-shipped Corbel/Candara had
-        # it; their Trebuchet MS fallback draws a double-story g. Regular + bold — the variable
-        # symbols (g/p/…) in a unit render bold via _bold_units.
         ("Jost", "normal", 400, "Jost-Regular.woff2"),
         ("Jost", "normal", 700, "Jost-Bold.woff2"),
     )
 )
 
-# The bulk stylesheet lives in assets/rtt.css; it references the CSS custom properties above,
-# which _CSS_VARS feeds the Python-side constants (sizes, colours, the option-box SVG data URIs).
-#
-# Dark theme: a palette overlay in assets/rtt-dark.css, gated on the `rtt-dark` body class (the
-# settings drawer's toggle — see apply_theme), so it stays inert in the default light render. Its
-# checkbox art can't ride a CSS variable (a data-URI is opaque to the cascade), so the dark
-# option-box SVGs are rebaked here onto the --option-box-* properties under body.rtt-dark.
 _CSS_DARK_VARS = f"""body.rtt-dark {{
   --option-box-unchecked:url("{_option_box_svg(None, box=_DARK_CELL, border=_DARK_MARK)}");
   --option-box-checked:url("{_option_box_svg(_DARK_TEXT, box=_DARK_CELL, border=_DARK_MARK)}");
@@ -600,35 +413,17 @@ _CSS = (_FONT_FACE + _CSS_VARS + (_ASSETS / "rtt.css").read_text(encoding="utf-8
         + (_ASSETS / "tour.css").read_text(encoding="utf-8"))
 
 
-# the units labels (the domain-units column/row and the per-box "units:" line) and the per-value
-# unit overlay shrink to fit their cell, like the math-expression cells — so a long annotated unit
-# (¢(E-sopfr-S)/, (E-sopfr-C)) fits its narrow COL_W spine instead of spilling the tile.
-_UNITS_MAX_FONT = 10.0    # px — the comfortable units-label size (matches .rtt-units in rtt.css)
-_CELLUNIT_MAX_FONT = 7.0  # px — the per-value unit overlay (matches .rtt-cellunit)
-_MATLABEL_FONT = 11.0     # px — the default column/row matrix-label size (matches .rtt-matlabel)
-_MATLABEL_MIN_FONT = 6.0  # px — floor for a wide column header shrunk to fit its COL_W slot
+_UNITS_MAX_FONT = 10.0
+_CELLUNIT_MAX_FONT = 7.0
+_MATLABEL_FONT = 11.0
+_MATLABEL_MIN_FONT = 6.0
 
 
-# Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
-# cell's own px box (0 0 w h), so one viewBox unit == one px: a stroke we declare
-# as N px renders exactly N px wide regardless of how tall/long the mark spans.
-# This is the single rule that keeps the brackets and brace a constant weight —
-# the rejected font glyph scaled its weight with its height, and a fixed viewBox
-# stretched to the cell sheared its serifs. Square/top brackets are crisp filled
-# rects; the calligraphic ⟨ and brace are filled variable-width ribbons (ribbon).
 _EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "hbar"}
 
-# EBK-off square-brace swap for the two-tone DRAFT strings (the mapping / comma / target pending
-# text, split into coloured prefix/draft/suffix that ebk_to_simple_matrix can't take whole because
-# each piece is an unbalanced fragment): a 1:1 char swap, with the ᵀ appended to the suffix by the
-# caller per the dual's variance. The settled strings go through service.ebk_to_simple_matrix instead.
 _EBK_SQUARE = str.maketrans("⟨{⟩}", "[[]]")
-_TRANSPOSE_MARK = "ᵀ"  # MODIFIER LETTER CAPITAL T (U+1D40) — the plain-matrix mark of the vector kind
+_TRANSPOSE_MARK = "ᵀ"
 
-# Each editable plain-text dual's variance, for the EBK-off edit round-trip (simple_matrix_to_ebk):
-# the comma basis / target list / generator embedding are the VECTOR kind (their plain matrix shows a
-# ᵀ); the mapping / projection / bare prescaler the MAP kind. The cents duals (tuning gens / ssgens)
-# are absent → the default False (their parser strips brackets, so either reconstruction parses).
 _PTEXT_DUAL_VECTOR_KIND = {
     "ptext:vectors:commas": True,
     "ptext:vectors:targets": True,
@@ -639,23 +434,7 @@ _PTEXT_DUAL_VECTOR_KIND = {
 }
 
 
-# --- the "general" Show group's dummy tile ---------------------------------------------------
-# The general layers render as ONE clickable dummy value tile (the alternative to a checkbox
-# column), laid out as a real tile reads: the boxed value cell on top — with its closed form and
-# value INSIDE the box, the way they appear on a tile rather than as rows of their own — then the
-# symbol, the name, units, the plain-text value, the presets chooser, and a chart. Each part is a
-# dummy sample shown black when its layer is shown and grey when hidden; clicking it flips the
-# layer in the live grid. The tile carries its OWN sample content (below); the specific group's
-# example column still uses _example_html / _EXAMPLE_TEXT.
-# The tile's stacked lines, top to bottom, by their PRIMARY layer keys (left-to-right render
-# order). The value cell additionally hosts two layers that have no line of their own — the
-# header_symbols row header and the cell_units per-cell unit (added in the builder, each its own
-# independent key) — and seats math_expressions / quantities INSIDE its box rather than on rows of
-# their own. The symbol line seats the symbol + its equivalence tail; the name line the mnemonic
-# letter + the rest of the name.
 _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
-    # the drag-to-combine grip rides the value line, in a slot to the LEFT of the row label —
-    # mirroring where the real handle sits in the grid (left of the 𝒎ᵢ label).
     ("drag_to_combine", "gridded_values", "math_expressions", "quantities", "decimals"),
     ("symbols", "equivalences"),
     ("mnemonics", "names"),
@@ -665,29 +444,14 @@ _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     ("charts",),
 )
 
-# The two general layers that render INSIDE the value cell rather than on a line of their own (the
-# builder hand-places them in the value-line block): the row/col header symbol (header_symbols, in
-# the left gutter) and the per-cell unit (cell_units, beneath the value). They are independent
-# toggles, NOT sub-controls — splitting them out unbound the matlabel from the in-tile symbol and
-# the per-cell unit from the per-box "units:" line. Together with _GENERAL_TILE_LINES they cover
-# every general key exactly once (see test_general_tile_covers_every_general_layer_exactly_once).
 _TILE_IN_CELL_LAYERS: tuple[str, ...] = ("header_symbols", "cell_units")
 
-# A tile part that renders INSIDE another's cell is inert (greyed, unclickable) until that host
-# cell is shown — the dummy mirrors the grid, where the value and its closed form have nowhere to
-# sit without the boxed cell. (The refinement layers — equivalences, mnemonics — are NOT here:
-# they stay live and instead pull their base layer on when selected; see SUBCONTROLS / set_show.)
 _TILE_HOST: dict[str, str] = {
     "quantities": "gridded_values",
-    "decimals": "gridded_values",  # the .fraction sits inside the value cell, like the value itself
+    "decimals": "gridded_values",
     "math_expressions": "gridded_values",
 }
 
-# Per-layer font size in the tile (px), matched to the real tile constants so the dummy's
-# proportions read like an actual tile: the symbol/equivalence glyph, the name caption, the row
-# header (matlabel), the units line, and the per-cell unit (6px grey, like .rtt-cellunit). The
-# closed form and value inside the cell are font-FITTED to the COL_W square (see the builder), so
-# they aren't listed here.
 _TILE_FONT = {
     "symbols": 15, "equivalences": 15, "rowlabel": spreadsheet.MATLABEL_H - 2,
     "names": spreadsheet.CAPTION_FONT, "mnemonics": spreadsheet.CAPTION_FONT,
@@ -695,11 +459,6 @@ _TILE_FONT = {
 }
 
 
-# The audio control bank — the single, global home for the shared playback config (window.rttAudio).
-# It sits in the dummy tile's head strip opposite the fold toggle. (ctrl, initial glyph, engine fn)
-# left-to-right: mute, waveform, play-mode, hold/loop, include-1/1. Mute LEADS and doubles as the
-# kill switch: it stops everything sounding and gates whether a clicked cell can play at all. Audio
-# starts MUTED, so mute's initial glyph is the slashed one (index 1); the rest start at index 0.
 _AUDIO_BANK = (
     ("mute", _AUDIO_GLYPHS["mute"][1], "toggleMute"),
     ("wave", _AUDIO_GLYPHS["wave"][0], "cycleWave"),
@@ -710,9 +469,6 @@ _AUDIO_BANK = (
 
 
 def _audio_bank() -> "ui.element":
-    """Build the dummy tile's audio control bank — the five glyph controls (mute leads), each wired to
-    the global Web Audio engine (it cycles its state + redraws its glyph with no server round-trip).
-    The bank is always live now: mute is itself the on/off gate, so there is no greyed state."""
     bank = ui.element("div").classes("rtt-tile-bank").mark("audiobank")
     with bank:
         for ctrl, glyph, fn in _AUDIO_BANK:
@@ -815,29 +571,14 @@ _TOOLTIP_DISMISS_JS = """
 })()
 """
 
-# The gridded-value cell kinds (read-only outputs AND editable inputs) — every cell that shows a
-# numeric quantity laid out in the grid. Hovering any of them pops the zoom magnifier (_ZOOM_JS).
-# Excludes the structural/label kinds (brackets, symbols, captions, row/col headers, charts), the
-# counts, and the plain-text value strings (ptext) — none of those are a gridded value cell.
 VALUE_KINDS: frozenset[str] = frozenset({
-    # read-only value faces
     "prime", "formcell", "mapped", "vec", "tuningvalue", "genratio", "commaratio",
     "powerdisplay", "mathexpr",
-    # editable value cells
     "mapping", "commacell", "unchangedcell", "interestcell", "heldcell", "targetcell",
     "prescalercell", "weightcell", "powerinput", "gentuningcell",
     "ratiocell", "elementcell", "elementratio",
 })
 
-# The zoom-on-hover magnifier. Hovering any gridded value cell (.rtt-zoomable, every VALUE_KINDS
-# cell) pops a floating card showing a LITERAL, scaled clone of that cell — everything visible in it
-# (the value, its per-cell unit, a math expression, the editable box) in the SAME font and styling,
-# enlarged by --zoom-factor (= --cell-font / the 10px stacked whole-part), so the small whole-part of
-# "1200.000" reaches a normal integer "1" cell's size. Cloning the live cell — rather than rebuilding
-# a face from text — is what makes it faithful and keeps it in sync for free. The cell's own hover
-# help (the editable cells' "type to edit…") rides as data-zoomhelp and folds in beneath the value.
-# Dismissed on leave AND on any commit/reflow/scroll (the same strand guard the tooltips use), since
-# the overlay's anchor won't fire mouseout when the grid rebuilds out from under a still cursor.
 _ZOOM_JS = """
 (() => {
   if (window.__rttZoom) return;
@@ -1040,11 +781,6 @@ _BUSY_JS = f"""
 
 
 class _GroupedSelect(ui.select):
-    """A chooser whose group-divider rows are non-selectable. Each option whose value
-    satisfies ``is_divider`` is handed to Quasar with ``disable=True``, so its q-item
-    takes no hover highlight, can't be picked, and a click on it leaves the popup open —
-    it reads purely as a section header among the selectable entries."""
-
     def __init__(self, options, *, is_divider, **kwargs) -> None:
         self._is_divider = is_divider
         super().__init__(options, **kwargs)
@@ -1060,12 +796,6 @@ class _GroupedSelect(ui.select):
 
 
 def _set_offlist_prompt(select: ui.select, value, prompt: str = "-") -> None:
-    """Show a ``prompt`` in a preset chooser's closed box when its current state matches
-    no named entry (``value`` is None) — the temperament chooser with no matching preset, or
-    the tuning chooser on a control-refined scheme with no name. It is a Quasar display-value
-    placeholder, so it never appears as a pickable row in the open list; when a named entry
-    matches, the override is cleared and Quasar shows its label. ``prompt`` defaults to "-"; the
-    established-projection / -embedding choosers pass "<choose projection>" / "<choose embedding>"."""
     if value is None:
         select.props(f'display-value="{prompt}"')
     else:
@@ -1073,26 +803,16 @@ def _set_offlist_prompt(select: ui.select, value, prompt: str = "-") -> None:
 
 
 def _projection_prompt(cid: str) -> str:
-    """The placeholder for an established-projection / -embedding chooser when nothing matches:
-    the gens copy (under G) reads "<choose embedding>", the base (under P) "<choose projection>"."""
     return "<choose embedding>" if cid.endswith(":gens") else "<choose projection>"
 
 
 def _formchooser_options(cid: str) -> dict:
-    """The <choose form> dropdown options for a chooser cell id. The mapping box offers the generator
-    forms (canonical / minimal-generator / equave-reduced / positive-generator); the comma-basis box
-    offers the comma normal forms (canonical / positive-ratio / minimal). A leading "" placeholder
-    shows when the matrix matches no offered form."""
     if cid.endswith(":mapping"):
         return {"": "choose form", **{k: service.MAPPING_FORM_LABELS[k] for k in service.MAPPING_FORM_KEYS}}
     return {"": "choose form", **{k: service.COMMA_BASIS_FORM_LABELS[k] for k in service.COMMA_BASIS_FORM_KEYS}}
 
 
 def _hover_index(detail) -> int | None:
-    """Normalize an ``opthover`` payload — the hovered option's positional index, or -1 / None on a
-    leave — to a 0-based index, or None for a leave. The delegation marshals the index in ``detail``;
-    popup-hide passes None. Be defensive about the wrapper shape (a dict/list can slip through the
-    event plumbing)."""
     if isinstance(detail, dict):
         detail = next(iter(detail.values()), None)
     if isinstance(detail, (list, tuple)):
@@ -1104,10 +824,6 @@ def _hover_index(detail) -> int | None:
 
 
 def _option_key(select: ui.select, index: int | None):
-    """The option key (the value the select would commit) at a 0-based option index, or None when out
-    of range / a leave. NiceGUI numbers each option's client-side value by POSITION (see
-    ChoiceElement._update_options), so the hovered index maps back through the live option order —
-    the keys of a dict, the items of a list."""
     if index is None:
         return None
     keys = list(select.options)
@@ -1116,31 +832,6 @@ def _option_key(select: ui.select, index: int | None):
 
 @dataclass
 class _Gesture:
-    """The ONE record of the active preview gesture — the single source of truth the ring
-    highlights are computed from. The DOM's ring classes are a pure function of (document,
-    gesture): ``compute_rings`` derives the amber/red sets from this record on every paint, and
-    the one idempotent painter applies them — nothing else ever touches the ring classes, so a
-    ring structurally cannot outlive its gesture (the stranded-highlight bug class).
-
-    kind        'edit' (a focused editable cell), 'wheel' (gentuning hover-scroll), 'hover'
-                (a +/-, history, checkbox, approach or gensign control), 'chooser' (a dropdown
-                option), 'temp' (the temperament chooser — its own kind because it may REFLOW),
-                or 'drag' (combine / reorder).
-    source      the focused/scrolled cell's id — never rung (the user is already looking at it).
-    apply       the hypothetical op (a zero-arg editor thunk) the gesture previews WITHOUT
-                committing; None = no candidate (invalid/incomplete entry previews nothing).
-    baseline    the layout snapshotted when the gesture armed — the diff base for gestures whose
-                document MOVES mid-gesture (committed keystrokes / wheel notches / a temporarily
-                applied drag or temperament-grow).
-    target_pred a drag-combine extra: also ring the dropped-on row/column's editable cells
-                (their input values aren't part of the layout content signature).
-    token       an editor snapshot held while the DOCUMENT temporarily carries a hypothetical
-                state between events (drag, temperament-grow). Ending such a gesture always
-                restores the token first (see end_gesture), and render() skips persistence
-                while one is held — a hypothetical doc must never reach storage.
-    reflowed    temp only: the doc currently holds an applied (grid-reflowing) hypothetical.
-    prev        a one-deep suspend: the wheel gesture displaced by the in-cell generator-sign
-                hover, re-armed when that hover ends."""
     kind: str
     source: str | None = None
     apply: Callable | None = None
@@ -1154,61 +845,46 @@ class _Gesture:
 class _Reconciler:
     def __init__(self, editor: Editor) -> None:
         self._editor = editor
-        self._cb = None  # callbacks (act, render, on_*) wired by index() after they are defined
-        self._row_drag: int | None = None  # the mapping row a drag-to-add started on (dragstart → drop)
-        self._col_drag: tuple[str, int] | None = None  # the (interval group, index) a drag-to-add started on
-        self.els: dict = {}  # entity id -> outer element (persists across renders)
-        self.inputs: dict = {}  # mapping cell id -> q-input (a fraction's NUMERATOR / a decimal's WHOLE part / a sole integer input)
-        self.den_inputs: dict = {}  # multi-field cell id -> its SECOND q-input (a fraction's DENOMINATOR / a decimal's FRACTION; see _build_fraction / _build_decimal)
-        self.frac_edits: dict = {}  # multi-field cell id -> the .rtt-frac-edit / .rtt-dec-edit box (its data-fracmode/decmode drives the view)
-        self.ratio_ops: dict = {}  # target/held/interest ratiocell id -> (reduce button, reciprocate button) flanking its bar
-        self.labels: dict = {}  # cell id -> the label whose text tracks state
-        self.fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
-        self.ratio_faces: dict = {}  # genratio/commaratio id -> its .rtt-ratio container (rebuilt in place)
-        self.stacked_faces: dict = {}  # stacked-value cell id -> (main label, sub label): cents whole/.frac, power ∞/(max)
-        self.stacked_w: dict = {}      # stacked-value cell id -> its px width (to fit a solo big integer, decimals off)
-        self.gensign_faces: dict = {}  # generator-tuning cell id -> its clickable +/− sign label (the generator-reversal control)
-        self.htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
-        self.ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
-        self.chart_keys: dict = {}  # chart cell id -> last (w, h, values) drawn, to redraw on resize/data change
-        self.range_keys: dict = {}  # range-chart cell id -> last (w, h, ranges) drawn, to redraw on resize/data change
-        self.exprs: dict = {}  # math-expression cell id -> the ui.html holding its stacked lines
-        self.expr_state: dict = {}  # math-expression cell id -> last (text, w) rendered, to redraw on change
-        self.kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
+        self._cb = None
+        self._row_drag: int | None = None
+        self._col_drag: tuple[str, int] | None = None
+        self.els: dict = {}
+        self.inputs: dict = {}
+        self.den_inputs: dict = {}
+        self.frac_edits: dict = {}
+        self.ratio_ops: dict = {}
+        self.labels: dict = {}
+        self.fracs: dict = {}
+        self.ratio_faces: dict = {}
+        self.stacked_faces: dict = {}
+        self.stacked_w: dict = {}
+        self.gensign_faces: dict = {}
+        self.htmls: dict = {}
+        self.ebk_sizes: dict = {}
+        self.chart_keys: dict = {}
+        self.range_keys: dict = {}
+        self.exprs: dict = {}
+        self.expr_state: dict = {}
+        self.kinds: dict = {}
         self.selects: dict = {}  # preset cell id -> its q-select
-        self.checks: dict = {}  # control_check cell id -> its q-checkbox (the box-𝐋 "replace diminuator")
-        self.ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
-        self.rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
-        self.scheme_buttons: dict = {}  # back-to-scheme button cell id -> its ui.button (for the idle grey)
-        self.mean_damage_tips: dict = {}  # mean damage SYMBOL cell id -> its ui.tooltip (the value cell folds its
-        # help into the zoom magnifier as data-zoomhelp; the symbol — not a value cell — keeps a swappable tooltip)
-        self.target_limit_tip = None  # the target chooser's ui.tooltip (text swaps to an invalid-limit message)
-        self.captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
-        self.caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
-        self.math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
-        self.math_rendered: dict = {}  # ...and its last html, to rewrite on an equivalences toggle / value change
-        self.fold_state: dict = {}  # fold-toggle cell id -> last state token (unfold_more/less), to swap its SVG on change
-        self.cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
-        self.cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
-        # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
-        # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
-        # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
+        self.checks: dict = {}
+        self.ptext_inputs: dict = {}
+        self.rangeopts: dict = {}
+        self.scheme_buttons: dict = {}
+        self.mean_damage_tips: dict = {}
+        self.target_limit_tip = None
+        self.captions: dict = {}
+        self.caption_html: dict = {}
+        self.math_cells: dict = {}
+        self.math_rendered: dict = {}
+        self.fold_state: dict = {}
+        self.cell_units: dict = {}
+        self.cell_unit_text: dict = {}
         self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.ratio_ops, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.stacked_w, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.scheme_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
-        # The active preview gesture — the ONE record the ring highlights derive from (see
-        # _Gesture). None when no gesture is live; every paint recomputes the rings from it.
         self.gesture: _Gesture | None = None
-        # The server-side popup gate: chooser cell id -> 'open' | 'closed' (absent = never
-        # tracked, which ALLOWS — the in-process tests drive `opthover` without a popup). An
-        # option-hover ARM is dropped when its chooser's popup is 'closed': the client's 90 ms
-        # settle-timer can fire AFTER a commit closed the popup, and the socket's FIFO order
-        # guarantees that stale arm is seen after the popup-hide — so it can no longer strand a
-        # ring (the bug documented on _OPTION_HOVER_DELEGATION). Leaves/popup-hide are ungated.
         self.popup_state: dict = {}
-        # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build[, update]).
-        # Every kind is registered below; make_cell/update_cell index it directly (no fallback),
-        # so an unregistered kind raises loudly rather than rendering a silent blank cell.
         self.cell_kinds: dict[str, _KindHandlers] = {}
-        for _ebk_kind in _EBK_SVG_KINDS:  # bracket / ebktop / ebkbrace / ebkangle / vbar
+        for _ebk_kind in _EBK_SVG_KINDS:
             self.cell_kinds[_ebk_kind] = _KindHandlers(self._build_svgfill, self._update_ebk)
         self.cell_kinds["chart"] = _KindHandlers(self._build_svgfill, self._update_chart)
         self.cell_kinds["rangechart"] = _KindHandlers(self._build_svgfill, self._update_rangechart)
@@ -1222,8 +898,6 @@ class _Reconciler:
         self.cell_kinds["ptextpending"] = _KindHandlers(self._build_ptextpending, self._update_ptextpending)
         self.cell_kinds["mathexpr"] = _KindHandlers(self._build_mathexpr, self._update_mathexpr)
 
-        # the unified ratio-or-integer cells all route to one shared builder/update (behaviour per
-        # each kind's _GridValueSpec); the kind strings stay (load-bearing for wheel/drag/tooltips).
         _gridvalue = _KindHandlers(self._build_gridvalue, self._update_gridvalue)
         for _gv_kind in ("mapping", "commacell", "unchangedcell",
                          "interestcell", "heldcell", "targetcell", "formcell"):
@@ -1237,22 +911,12 @@ class _Reconciler:
         self.cell_kinds["ptextedit"] = _KindHandlers(self._build_ptextedit, self._update_ptextedit)
 
         self.cell_kinds["genratio"] = _KindHandlers(self._build_genratio, self._update_ratio)
-        # the editable quantities-row ratios (comma / target / held / interest): a fraction face
-        # the scalar twin of the interval-vectors row's editable column cells — an editable stacked
-        # fraction (the shared gridvalue component, ratio_allowed)
         self.cell_kinds["ratiocell"] = _gridvalue
-        # a chapter-9 domain basis element (nonstandard-domain box on), and the projection P /
-        # embedding G matrix entries — the shared stacked-fraction component. An integer prime shows
-        # the big-number view, a nonprime the stacked fraction; the spreadsheet picks elementcell vs
-        # elementratio by the value's shape, so a relabel that crosses int↔fraction rebuilds the cell.
         self.cell_kinds["elementcell"] = _gridvalue
         self.cell_kinds["elementratio"] = _gridvalue
         self.cell_kinds["commaratio"] = _KindHandlers(self._build_commaratio, self._update_ratio)
         self.cell_kinds["tuningvalue"] = _KindHandlers(self._build_tuning_value, self._update_tuning_value)
 
-        # every non-interactive gridded value renders as plain rtt-value text (no box): a box
-        # always means editable. prime / formcell / mapped / vec all share this one read-only
-        # style — there is deliberately no second "boxed read-only" treatment.
         _value_builder = self._label_builder("rtt-value")
         self.cell_kinds["prime"] = _KindHandlers(_value_builder, self._update_label)
         self.cell_kinds["mapped"] = _KindHandlers(_value_builder, self._update_label)
@@ -1260,10 +924,8 @@ class _Reconciler:
         self.cell_kinds["colheader"] = _KindHandlers(self._label_builder("rtt-colheader"), self._update_label)
         self.cell_kinds["rowlabel"] = _KindHandlers(self._label_builder("rtt-rowlabel"), self._update_label)
         self.cell_kinds["ptext"] = _KindHandlers(self._label_builder("rtt-ptext"), self._update_ptext)
-        # the EBK-off transpose mark ᵀ, at the top-right of every vector-kind matrix (a plain text
-        # superscript, green on a draft column like its cells via _update_label's pending toggle)
         self.cell_kinds["transpose"] = _KindHandlers(self._label_builder("rtt-transpose"), self._update_label)
-        self.cell_kinds["boxtitle"] = _KindHandlers(self._label_builder("rtt-boxtitle"), None)  # a static in-tile title
+        self.cell_kinds["boxtitle"] = _KindHandlers(self._label_builder("rtt-boxtitle"), None)
 
         self.cell_kinds["rangemode"] = _KindHandlers(self._build_rangemode, self._update_rangemode)
         self.cell_kinds["scheme_button"] = _KindHandlers(self._build_scheme_button, self._update_scheme_button)
@@ -1273,8 +935,6 @@ class _Reconciler:
         self.cell_kinds["alltoggle"] = _KindHandlers(self._build_alltoggle, self._update_foldtoggle)
 
         self.cell_kinds["preset"] = _KindHandlers(self._build_preset, self._update_preset)
-        # the per-sub-row ET picker / per-sub-column comma picker — compact choosers that build a
-        # temperament one ET row / one comma column at a time (a shared _build_subpick + _update_subpick)
         self.cell_kinds["etpick"] = _KindHandlers(self._build_etpick, self._update_subpick)
         self.cell_kinds["commapick"] = _KindHandlers(self._build_commapick, self._update_subpick)
         self.cell_kinds["control_select"] = _KindHandlers(self._build_control_select, self._update_control_select)
@@ -1292,7 +952,6 @@ class _Reconciler:
         self.cell_kinds["basis_minus"] = _KindHandlers(self._build_basis_minus)
         self.cell_kinds["comma_minus"] = _KindHandlers(self._build_comma_minus)
         self.cell_kinds["comma_plus"] = _KindHandlers(self._build_comma_plus)
-        # the chapter-9 domain basis element draft +/- (nonstandard-domain box on)
         self.cell_kinds["element_plus"] = _KindHandlers(self._build_element_plus)
         self.cell_kinds["element_minus"] = _KindHandlers(self._build_element_minus)
         self.cell_kinds["interest_minus"] = _KindHandlers(self._build_interest_minus)
@@ -1304,7 +963,6 @@ class _Reconciler:
         self.cell_kinds["colgrip"] = _KindHandlers(self._build_colgrip)
 
     def drop(self, eid: str) -> None:
-        """Remove an entity's element and forget every per-id handle for it (see _handle_dicts)."""
         self.els[eid].delete()
         for d in self._handle_dicts:
             d.pop(eid, None)
@@ -1316,11 +974,7 @@ class _Reconciler:
         # letting the User-fixture render tests locate a cell by its stable id
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
         with wrap:
-            # every cell kind is registered (audit #3); indexing rather than .get means an
-            # unregistered kind raises loudly here — drift surfaces as a crash, not a silent blank cell
             self.cell_kinds[cb.kind].build(cb, wrap)
-            # a click-to-play interval cell (cb.audio set): tag the wrap so the JS engine can find it —
-            # it lights the whole column segment on hover, floats a speaker over it, and derives the chord
             if cb.audio is not None:
                 self._tag_audio(wrap, cb)
         # Hover affordances. A gridded VALUE cell (VALUE_KINDS) becomes .rtt-zoomable — hovering it
@@ -1335,79 +989,42 @@ class _Reconciler:
         if cb.kind in VALUE_KINDS:
             wrap.classes("rtt-zoomable")
             if help_text:
-                # the mean damage's help swaps with all-interval mode; render() re-stamps this attribute
                 wrap._props["data-zoomhelp"] = help_text
         elif help_text:
             if cb.id in tooltips.MEAN_DAMAGE_IDS:
-                # the mean damage SYMBOL cell (its value twin folds help into the magnifier instead);
-                # keep the Tooltip handle so render() can swap its wording when the mode flips
                 with wrap:
                     self.mean_damage_tips[cb.id] = ui.tooltip(help_text)
             elif cb.id == "preset:target":
-                # keep the target chooser's tooltip handle so the limit validator can swap in an
-                # invalid-limit message (an even OLD limit, or a non-whole number) and back
                 with wrap:
                     self.target_limit_tip = ui.tooltip(help_text)
             else:
                 wrap.tooltip(help_text)
         self.els[cb.id] = wrap
         self.kinds[cb.id] = cb.kind
-        # A fan + / − control must not blur a focused draft cell when clicked. The browser blurs the
-        # active input on mousedown of another element, and that blur COMMITS the draft's typed value
-        # (its blur handler) BEFORE the control's own click action runs — so clicking a draft's − to
-        # cancel it first committed the typed comma (re-ranking), then removed a column: the "− kills
-        # the draft AND the column to its left" bug. Swallowing the control's mousedown default keeps
-        # the input focused (no commit); the click still fires, the action runs, and the draft cell's
-        # later removal-blur is a guarded no-op (on_ratio_change/on_*_change bail on building / a
-        # dropped cell). colgrip is excluded — it needs mousedown to start an HTML5 drag.
         if cb.kind.endswith(("plus", "minus")):
             wrap.on("mousedown", js_handler="(e) => e.preventDefault()")
-        # an editable text cell drives the edit-preview highlight: focusing it snapshots the grid as
-        # the baseline, leaving it clears the rings. Every such cell registers its q-input in `inputs`
-        # or `ptext_inputs`, so wiring here covers all of them at once (and no others — a dropdown /
-        # checkbox commits instantly, with no "while editing" window to preview).
         edit_input = self.inputs.get(cb.id) or self.ptext_inputs.get(cb.id)
         if edit_input is not None:
-            # a multi-field cell holds TWO inputs (a fraction's numerator + denominator, or a decimal's
-            # whole part + fraction) in one cell: wire BOTH, and gate the focus/blur with
-            # _STACKED_EXIT_JS so the edit-preview baseline is taken once (not re-snapshotted on the
-            # field<->field Tab hop) and on_cell_blur fires only when focus truly leaves the cell. A
-            # single-input cell has no second field (guard None → fire on every focus/blur).
             den = self.den_inputs.get(cb.id)
             guard = _STACKED_EXIT_JS if den is not None else None
             for fld in (edit_input, den) if den is not None else (edit_input,):
                 fld.on("focus", lambda _=None, cid=cb.id: self._cb.on_cell_focus(cid), js_handler=guard)
                 fld.on("blur", lambda _=None, cid=cb.id: self._cb.on_cell_blur(cid), js_handler=guard)
-                # Enter just BLURS the input (client-side) — it does not commit on its own. Blurring routes
-                # Enter through the proven blur path: the cell's own blur handler commits the value and
-                # on_cell_blur ends the edit-preview. This matches the expected UX (the cursor leaves the box)
-                # and, crucially, avoids the bug where committing + re-rendering an input's value WHILE it
-                # stays focused desynced it so the browser stopped firing on_change — leaving the live preview
-                # working only on the first edit until the cell was left and re-entered (or the tab refreshed).
                 fld.on("keydown.enter", js_handler="(e) => e.target.blur()")
-        # every editable numeric input steps by its _WHEEL_STEPS amount on a wheel notch while
-        # focused. The listener rides the wrap (so a scroll anywhere in the cell counts) and its
-        # js_handler only emits when the cell holds focus, so an unfocused scroll just pages the grid
-        # (see _INT_WHEEL_JS). One wiring for every kind in the table — no per-input special-casing.
         if cb.kind in _WHEEL_STEPS:
             wrap.on("wheel", lambda e, cid=cb.id: self._cb.on_value_wheel(cid, e.args.get("deltaY")),
                     args=["deltaY"], js_handler=_INT_WHEEL_JS)
 
     def update_cell(self, cb: spreadsheet.CellBox) -> None:
-        # reconcile a present cell: run its registered update (value/glyph in sync) then
-        # add/refresh/remove the per-cell unit overlay (the `units` toggle).
-        handlers = self.cell_kinds[cb.kind]  # registered for every kind (see make_cell); raises on drift
+        handlers = self.cell_kinds[cb.kind]
         if handlers.update is not None:
             handlers.update(cb)
-        # per-cell unit (the `units` toggle): a tiny line at the bottom of the value
-        # cell, the value lifted to stay centred. cb.unit is "" unless units is on, so
-        # this adds/updates/removes the overlay as the toggle (or the domain) changes.
         if cb.unit:
             if cb.id not in self.cell_units:
                 with self.els[cb.id]:
                     self.cell_units[cb.id] = ui.html("").classes("rtt-cellunit")
                 self.els[cb.id].classes(add="rtt-cell-united")
-            if self.cell_unit_text.get(cb.id) != (cb.unit, cb.w):  # re-fit on a value or width change
+            if self.cell_unit_text.get(cb.id) != (cb.unit, cb.w):
                 self.cell_units[cb.id].set_content(_bold_units(cb.unit))
                 self.cell_units[cb.id].style(f"font-size:{_units_font(cb.unit, cb.w, _CELLUNIT_MAX_FONT):.2f}px")
                 self.cell_unit_text[cb.id] = (cb.unit, cb.w)
@@ -1416,21 +1033,14 @@ class _Reconciler:
             self.cell_units.pop(cb.id, None)
             self.cell_unit_text.pop(cb.id, None)
             self.els[cb.id].classes(remove="rtt-cell-united")
-        if cb.audio is not None:  # refresh the baked pitch / slot so a reorder or retune stays in sync
+        if cb.audio is not None:
             self._tag_audio(self.els[cb.id], cb)
 
     def _tag_audio(self, el, cb: spreadsheet.CellBox) -> None:
-        """Tag a cell wrap as a click-to-play voice: the JS engine reads data-audio (its highlight /
-        chord group), data-idx (its slot in that group) and data-cents (its pitch) off it, and lights
-        it (.rtt-spk) while it sounds. Set on build, refreshed each render so reorder + retune stay live."""
         tile, idx, cents = cb.audio
         el.classes(add="rtt-spk").props(f'data-audio="{tile}" data-idx="{idx}" data-cents="{cents:.6f}"')
 
     def _put_stacked_face(self, cid: str, cls: str, main: str, sub: str, width: float) -> None:
-        """Build a stacked value face into the active cell — a big main glyph over a smaller
-        sub-line (the read-only tuning value look) — and register the two labels so the update can
-        re-sync them. Shared by the cents cells (whole part over .fraction) and the power cells
-        (∞ over "(max)"). ``width`` is the cell's px box, used to shrink a solo big integer to fit."""
         with ui.element("div").classes(cls):
             m = ui.label(main).classes("rtt-stacked-main")
             s = ui.label(sub).classes("rtt-stacked-sub")
@@ -1439,71 +1049,38 @@ class _Reconciler:
         self._size_stacked_main(m, main, sub, width)
 
     def _size_stacked_main(self, main_label, main: str, sub: str, width: float) -> None:
-        """Size a stacked face's main glyph to its sub-line. With NO sub (a bare integer — a
-        prescaler 0/1, a finite optimization/norm power, or a cents value with decimals turned off)
-        the value isn't a whole-part-over-.fraction at all: it renders at the full value-cell font
-        (``rtt-stacked-solo``) — but a LONG integer (a 4-digit cents value like 2786, decimals off)
-        would spill the square at that size and butt against its neighbours, so it font-FITS to the
-        cell width, capped at the cell font, exactly like the mapping/mapped/whole-ratio integers
-        (``_digit_fit_font``). With a sub present (a cents decimal, ∞ over "(max)") the main stays the
-        smaller stacked size so the pair fits the square."""
         solo = not sub
         main_label.classes(add="rtt-stacked-solo" if solo else "",
                            remove="" if solo else "rtt-stacked-solo")
         size = _digit_fit_font(len(main), width, float(_CELL_FONT)) if solo else float(_STACKED_MAIN_FONT)
-        main_label.style(f"font-size:{size:.2f}px")  # inline wins over the class — fits a long solo integer
+        main_label.style(f"font-size:{size:.2f}px")
 
     def _sync_stacked_face(self, cid: str, main: str, sub: str) -> None:
-        """Re-sync a stacked face's two lines in place (the cell kind is unchanged across
-        renders, so its labels persist)."""
         m, s = self.stacked_faces[cid]
         m.set_text(main)
         s.set_text(sub)
-        self._size_stacked_main(m, main, sub, self.stacked_w[cid])  # a value that gained/lost its fraction reflows + re-fits
+        self._size_stacked_main(m, main, sub, self.stacked_w[cid])
 
     def set_cents_face(self, cid: str, text: str) -> None:
-        """Sync a cents cell's stacked face: the whole part over the dot-led fraction (the
-        fraction blank when the value is an integer or the cell is blanked). Shared by the
-        read-only tuning value cells and the editable cents cells (whose face overlays their input)."""
         whole, frac = _cents_parts(text)
         self._sync_stacked_face(cid, whole, f".{frac}" if frac else "")
 
     def cents_face(self, cb: spreadsheet.CellBox, cls: str) -> None:
-        """Build the stacked int-over-fraction cents face (the read-only tuning value look: the whole
-        part big over a smaller dot-led fraction). Shared by the read-only tuning value cell and the
-        editable cents cells — the latter pass the overlay class and lay it over their input."""
         whole, frac = _cents_parts(cb.text)
         self._put_stacked_face(cb.id, cls, whole, f".{frac}" if frac else "", cb.w)
 
     def _ratio(self, cb: spreadsheet.CellBox, approx: bool, overlay: bool = False) -> None:
-        """A ratio rendered as a stacked fraction (with a ~ prefix when approximate). With
-        ``overlay`` the fraction is an ``rtt-cellface`` laid over an editable input (the
-        ratiocell) instead of a read-only cell — it shows when the cell isn't focused. The
-        ``.rtt-ratio`` container is kept (``ratio_faces``) so _update_ratio can rebuild its
-        contents in place when the value's shape flips between a fraction and a blank/dash."""
         face = ui.element("div").classes("rtt-ratio rtt-cellface" if overlay else "rtt-ratio")
         self.ratio_faces[cb.id] = face
         with face:
             self._ratio_body(cb, approx)
 
     def _ratio_body(self, cb: spreadsheet.CellBox, approx: bool) -> None:
-        """Fill the ``.rtt-ratio`` container: the ~approximate marker + stacked fraction for a real
-        NUMERIC ratio; otherwise the bare value (empty when blanked, a lone ``—`` when dashed). The
-        ~ and the fraction's bar are for numbers only — a dash or a blank gets neither (so a
-        quantities-off cell goes truly empty, never leaving a stranded ``~`` over an empty bar).
-
-        A WHOLE numeric ratio (``"n/1"``) collapses to a bare big integer ``n`` — no bar, no
-        denominator (``rtt-frac-whole`` hides both) — the read-only twin of the editable cell's int
-        view (``_update_fraction``), so a generator-detempering / unrotated-vector-list / generator
-        value of ``2/1`` reads "2", not "2 over 1". The ~approximate marker STILL rides a collapsed
-        integer in an approximate tile (the generators show "~2", not "2") — it approximates the
-        whole VALUE, not just a fraction; only a non-number (dash / blank) drops it. _update_ratio
-        rebuilds this body on every render, so the collapse follows the value with no patching."""
         parts = _ratio_parts(cb.text)
         if parts and not all(p.lstrip("-").isdigit() for p in parts):
-            parts = None  # a dashed "—/—" isn't a number — render it bare, no ~ / fraction bar
-        whole = bool(parts) and parts[1] == "1"  # "n/1" -> the bare integer "n" (collapse like the editable cell)
-        if approx and parts:  # ~ marks an approximate NUMBER (integer or fraction); only a dash / blank gets none
+            parts = None
+        whole = bool(parts) and parts[1] == "1"
+        if approx and parts:
             ui.label("~").classes("rtt-approx")
         if parts:
             with ui.element("div").classes("rtt-frac rtt-frac-whole" if whole else "rtt-frac"):
@@ -1515,79 +1092,46 @@ class _Reconciler:
             self.labels[cb.id] = ui.label(cb.text).classes("rtt-value")
 
     def _fit_ratio(self, cid: str, num: str, den: str, width: float, whole: bool = False) -> None:
-        """Size a stacked fraction's two lines to fit its square: a long numerator/denominator
-        would spill the cell at the comfortable face size, so num and den shrink together (see
-        _ratio_font). A whole ratio (collapsed to a bare integer) fills the square at the big value
-        font instead — the read-only twin of the editable int view (_fit_fraction). Shared by the
-        build and the in-place update so a re-vectored ratio re-fits."""
         size = _digit_fit_font(len(num), width, float(_CELL_FONT)) if whole else _ratio_font(num, den, width)
         font = f"font-size:{size:.2f}px"
         self.fracs[cid][0].style(font)
         self.fracs[cid][1].style(font)
 
     def cell_value(self, cid: str) -> str:
-        """The committed string a gridded ratio-or-integer cell currently holds, reassembled from
-        its input(s). A fraction cell (``_build_gridvalue`` with ``ratio_allowed``) edits its
-        numerator and denominator in two separate inputs (``inputs[cid]`` / ``den_inputs[cid]``);
-        this rejoins them into the ``"num/den"`` the commit/parse callbacks expect — collapsing a
-        blank/``1`` denominator to a bare ``"num"`` (so ``2/1`` reads as ``2``), and a blank
-        numerator to ``""`` (a cleared cell, a silent no-op). An integer-mode cell has no
-        denominator input, so this is just its sole input's value. The single read every commit /
-        whole-matrix callback uses, so a split cell looks like one combined field to them."""
         num = str(self.inputs[cid].value).strip()
         if not num:
             return ""
-        if num == "?":  # an untouched draft numerator: the "?/?" no-op sentinel (a blank/cleared draft)
+        if num == "?":
             return "?/?"
-        if "/" in num:  # the numerator already carries a whole ratio (a paste, or a test set_value)
+        if "/" in num:
             return num
         den = str(self.den_inputs[cid].value).strip() if cid in self.den_inputs else ""
-        # a blank/1/"?" (untouched draft) denominator is the big-integer view — so typing a bare
-        # integer into a draft's "?/?" commits the integer, not "N/?"
         return num if den in ("", "1", "?") else f"{num}/{den}"
 
     def decimal_value(self, cid: str) -> str:
-        """The committed cents string a stacked DECIMAL cell holds, reassembled from its whole-part
-        input (``inputs[cid]``) + fractional input (``den_inputs[cid]``) — the cents twin of
-        ``cell_value``. A blank fraction yields the bare whole; a blank whole yields ``""`` (a cleared
-        cell, a silent no-op). The fields carry the unsigned MAGNITUDE — the generator cell's sign
-        lives on its clickable glyph, re-applied by on_gentuning_change — so this never returns a sign
-        (a stray leading ``"."`` typed into the fraction is dropped). The single read every cents-cell
-        commit / wheel uses, so a split cell looks like one combined field to them."""
         whole = str(self.inputs[cid].value).strip()
         if not whole:
             return ""
-        if "." in whole:  # the whole field already carries a full decimal (a paste / test set_value)
+        if "." in whole:
             return whole
         frac = str(self.den_inputs[cid].value).strip().lstrip(".") if cid in self.den_inputs else ""
         return whole if not frac else f"{whole}.{frac}"
 
     def set_decimal_value(self, cid: str, text: str) -> None:
-        """Split a ``"whole.frac"`` cents string into a decimal cell's two fields — the input-write
-        twin of ``decimal_value``, used by the wheel step (which computes the new full value, then
-        writes it back across the split)."""
         whole, frac = _cents_parts(text)
         self.inputs[cid].value = whole
         if cid in self.den_inputs:
             self.den_inputs[cid].value = frac
 
-    # ---- cell-kind handlers (audit #3): each kind's build + update, co-located here so a
-    # built-but-not-filled drift between the two ladders becomes structurally impossible ----
-    # The html-content families build an empty ui.html; the update fills it (re-drawing only
-    # when the cached key changes). The EBK marks, bar chart and range chart share the build.
     def _build_svgfill(self, cb: spreadsheet.CellBox, wrap) -> None:
-        self.htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in the update from the cell's px box
+        self.htmls[cb.id] = ui.html("").classes("rtt-svgfill")
 
     def _update_ebk(self, cb: spreadsheet.CellBox) -> None:
-        # the mark is drawn 1:1 to its px box, so redraw it whenever the box changes size (e.g.
-        # the brace/top bracket as the domain grows) or its pending (green) state flips (a draft
-        # comma's marks committing to black)
         if self.ebk_sizes.get(cb.id) != (cb.w, cb.h, cb.pending):
             self.htmls[cb.id].set_content(ebk_svg(cb))
             self.ebk_sizes[cb.id] = (cb.w, cb.h, cb.pending)
 
     def _update_chart(self, cb: spreadsheet.CellBox) -> None:
-        # redraw when the box resizes OR the underlying data / indicator changes
         key = (cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label)
         if self.chart_keys.get(cb.id) != key:
             self.htmls[cb.id].set_content(
@@ -1595,33 +1139,21 @@ class _Reconciler:
             self.chart_keys[cb.id] = key
 
     def _update_rangechart(self, cb: spreadsheet.CellBox) -> None:
-        # redraw when the box resizes OR the ranges/live tuning change (mapping/mode edit) OR the
-        # decimals toggle flips (the I-beam's cents labels round to integers when it's off)
         key = (cb.w, cb.h, cb.ranges, cb.values, cb.decimals)
         if self.range_keys.get(cb.id) != key:
             self.htmls[cb.id].set_content(_range_chart(cb.w, cb.h, cb.ranges, cb.values, cb.decimals))
             self.range_keys[cb.id] = key
 
     def _build_count(self, cb: spreadsheet.CellBox, wrap) -> None:
-        self.math_cells[cb.id] = ui.html("").classes("rtt-count")  # a scalar "symbol = value"; filled in update
+        self.math_cells[cb.id] = ui.html("").classes("rtt-count")
 
     def _build_symbol(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-symbol-cell")
-        # the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) stay on one line (ₚ never wraps off)
         cls = "rtt-symbol rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-symbol"
         self.math_cells[cb.id] = ui.html("").classes(cls)
 
     @staticmethod
     def _matlabel_classes(text: str) -> str:
-        # routed through _math_html so a label's bold-italic / bold-upright glyphs draw in the
-        # same styled face as the tile symbol it indexes. A plain single-glyph label (𝒎ᵢ, 𝐜ᵢ, w)
-        # fits the COL_W spine at the default size; any MULTI-TOKEN label — the complexity
-        # norms (‖L𝐜ᵢ‖q) or an equation-form header carrying a space (cₙ = ‖L𝐭ₙ‖q, the
-        # all-interval weight's wₙ = cₙ⁻¹) — takes the smaller shrink/wrap variant so it can
-        # never outgrow its column and collide with its neighbours. A header can change shape
-        # in place (a bare wₙ becoming wₙ = cₙ⁻¹ as all-interval toggles on), so _update_mathcell
-        # re-derives this on every relabel, not just at build — else the new text keeps the old
-        # (overspilling) class.
         return "rtt-matlabel rtt-matlabel-norm" if ("‖" in text or " " in text) else "rtt-matlabel"
 
     def _build_matlabel(self, cb: spreadsheet.CellBox, wrap) -> None:
@@ -1632,40 +1164,28 @@ class _Reconciler:
         wrap.classes("rtt-units-cell")
         self.math_cells[cb.id] = ui.html("").classes("rtt-units")
 
-    def _update_mathcell(self, cb: spreadsheet.CellBox) -> None:  # shared by symbol / count / units / matlabel
-        # symbols/equivalence tails/counts and matrix row/col labels go through _math_html (styled
-        # math glyphs); units use _units_html (a single-story-g sans value, serif label) and shrink
-        # to fit their cell, so a long annotated unit (¢(E-sopfr-S)/) never spills its COL_W spine
+    def _update_mathcell(self, cb: spreadsheet.CellBox) -> None:
         if cb.kind == "units":
             html = _units_html(cb.text)
-            if self.math_rendered.get(cb.id) != (html, cb.w):  # rewrite on a toggle / value / width change
+            if self.math_rendered.get(cb.id) != (html, cb.w):
                 self.math_cells[cb.id].set_content(html)
                 self.math_cells[cb.id].style(f"font-size:{_units_font(cb.text, cb.w, _UNITS_MAX_FONT):.2f}px")
                 self.math_rendered[cb.id] = (html, cb.w)
             return
         html = _math_html(cb.text)
-        # a wide COLUMN header (the superspace / projection labels 𝐠_L→sᵢ, 𝐜ʟᵢ … carrying an arrow +
-        # subscript markup) shrinks to fit its COL_W slot rather than overlapping its neighbours —
-        # sized off the layout's own width model (_min_width_for_lines) so the fit matches the column.
-        # ROW labels keep full size (their gutter widens to hold them); the ‖…‖q / spaced norm labels
-        # wrap via their CSS class, so they keep the default size too.
         font = None
         if cb.kind == "matlabel" and ":col:" in cb.id and "‖" not in cb.text and " " not in cb.text:
             w = spreadsheet._min_width_for_lines(cb.text, 1, _MATLABEL_FONT)
-            if w > cb.w - 2:  # overflows its slot → shrink to fit (never enlarges; floored for legibility)
+            if w > cb.w - 2:
                 font = max(_MATLABEL_MIN_FONT, _MATLABEL_FONT * (cb.w - 2) / w)
-        if self.math_rendered.get(cb.id) != (html, font):  # rewrite on a toggle / value / fit change
+        if self.math_rendered.get(cb.id) != (html, font):
             self.math_cells[cb.id].set_content(html)
             if font is not None:
                 self.math_cells[cb.id].style(f"font-size:{font:.2f}px")
             self.math_rendered[cb.id] = (html, font)
             if cb.kind == "matlabel":
-                # the label may have changed shape (bare wₙ → wₙ = cₙ⁻¹); re-pick its size class
-                # so a now-wider header takes the shrink/wrap variant instead of overspilling.
                 self.math_cells[cb.id].classes(replace=self._matlabel_classes(cb.text))
             if cb.id == "optimization:mean_damage:symbol":
-                # all-interval relabels this to the wide retuning magnitude ‖𝒓𝐿⁻¹‖dual(q); shrink
-                # it (rtt-opt-wide) so it stays centred over its COL_W value
                 wide = "‖" in cb.text
                 self.math_cells[cb.id].classes(
                     replace="rtt-symbol rtt-opt-1line rtt-opt-wide" if wide
@@ -1673,11 +1193,6 @@ class _Reconciler:
 
     def _build_caption(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-caption-cell")
-        # the optimization box's captions stay on one line (no wrap), unlike tile names; a caption
-        # with align="left" reads left-justified under its control (e.g. a preset chooser's label).
-        # The lone exception is the mean damage's own label, whose wide all-interval "retuning
-        # magnitude" must wrap to two lines (its slot is too narrow to spread it on one) — it wraps
-        # at the space like a tile name, while the short "power mean" still fits on a single line.
         one_line = cb.id.startswith("optimization:") and cb.id != "optimization:mean_damage:caption"
         cls = "rtt-caption rtt-opt-1line" if one_line else "rtt-caption"
         if cb.align == "left":
@@ -1686,23 +1201,18 @@ class _Reconciler:
 
     def _update_caption(self, cb: spreadsheet.CellBox) -> None:
         html = _underline_html(cb.text, cb.underlines)
-        if self.caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines
+        if self.caption_html.get(cb.id) != html:
             self.captions[cb.id].set_content(html)
             self.caption_html[cb.id] = html
-        # a locked control's caption greys with it (the disabled flag), so the label reads in the
-        # same disabled grey as the control rather than the caption's darker default
         self.captions[cb.id].classes(add="rtt-caption-disabled" if cb.disabled else "",
                                      remove="" if cb.disabled else "rtt-caption-disabled")
 
     def _build_ptextpending(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # an editable vector-list dual mid-draft (comma basis / target list): a static two-tone
-        # box (the draft is typed into the green grid cells, not here); content set in the update
         self.htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
 
     def _update_ptextpending(self, cb: spreadsheet.CellBox) -> None:
-        # the committed part black and the draft entry green (same green as its grid cells)
         ed = self._editor
-        off = not ed.settings.get("ebk", True)  # EBK off → square the draft pieces (a ᵀ on the vector kind)
+        off = not ed.settings.get("ebk", True)
 
         def squared(prefix, draft, suffix, vector_based):
             if not off:
@@ -1711,9 +1221,6 @@ class _Reconciler:
                     suffix.translate(_EBK_SQUARE) + (_TRANSPOSE_MARK if vector_based else ""))
 
         if cb.id == "ptext:mapping:primes":
-            # the mapping draft is a ROW, not a column — splice the green draft map before the
-            # committed matrix's closing } (cb.text is the committed mapping plain text). EBK off
-            # cb.text is already squared, so reconstruct its EBK so the splicer's bracket math holds.
             committed = service.simple_matrix_to_ebk(cb.text, False) if off else cb.text
             prefix, draft, suffix = squared(*service.mapping_pending_text(committed, ed.pending_mapping_row), False)
             self.htmls[cb.id].set_content(
@@ -1724,7 +1231,7 @@ class _Reconciler:
             targets = ed.target_override or service.target_interval_set(ed.target_spec, ed.state.domain_basis)
             committed = service.target_interval_vectors(targets, ed.state.d, ed.state.domain_basis)
             pending = ed.pending_target
-        else:  # the comma basis
+        else:
             committed, pending = ed.state.comma_basis, ed.pending_comma
         prefix, draft, suffix = squared(*service.vector_list_pending_text(committed, pending), True)
         self.htmls[cb.id].set_content(
@@ -1732,35 +1239,19 @@ class _Reconciler:
         self.htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
 
     def _build_mathexpr(self, cb: spreadsheet.CellBox, wrap) -> None:
-        self.exprs[cb.id] = ui.html("").classes("rtt-mathexpr")  # a just value's stacked closed form; drawn in update
+        self.exprs[cb.id] = ui.html("").classes("rtt-mathexpr")
 
     def _update_mathexpr(self, cb: spreadsheet.CellBox) -> None:
-        # redraw (with refit fonts) whenever the expression text or cell width changes
         if self.expr_state.get(cb.id) != (cb.text, cb.w):
             self.exprs[cb.id].set_content(_mathexpr_html(cb.text, cb.w))
             self.expr_state[cb.id] = (cb.text, cb.w)
 
-    # ---- the unified editable ratio-or-integer grid cell (was ~10 near-identical builders). One
-    # q-input (the integer view / a fraction's numerator), plus a denominator input + bar for the
-    # ratio-capable kinds; behaviour driven by the cell's _GridValueSpec. The editable cents cells
-    # (prescalercell / weightcell / gentuningcell) are the DECIMAL sibling — a stacked whole-over-
-    # .fraction edited in place via _build_decimal; powerinput alone still overlays a face on its
-    # input (∞ isn't a decimal you split). ----
     def _build_gridvalue(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # PREVIEW the ripple as you type (the kinds that have a live preview) and COMMIT on Enter /
-        # blur (Enter blurs via make_cell) — never re-solving on every keystroke. A per-cell unit
-        # overlays inside the input box; drag-to-combine arming is per its spec. A ratio_allowed kind
-        # is an editable stacked fraction (numerator over bar over denominator, two fields); an
-        # integer-only kind is one input.
         spec = _GRIDVALUE_SPECS[cb.kind]
         commit, preview = self._gridvalue_handlers(cb, spec)
         if spec.ratio_allowed:
             self._build_fraction(cb, wrap, commit, preview)
         else:
-            # an integer interval-vector / mapping cell: tag the wrap with the column/row group it shares
-            # with its siblings, and commit only when focus leaves that WHOLE group (Tab/blur between
-            # siblings keeps filling it in — see _GROUP_EXIT_JS). Enter blurs the input (make_cell), so it
-            # exits with no relatedTarget and commits, as does a blur to anything outside the group.
             wrap.classes("rtt-cell-input").props(f'data-vgroup="{_vgroup_key(cb)}"')
             inp = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput")
             inp.on("blur", commit, js_handler=_GROUP_EXIT_JS)
@@ -1779,9 +1270,9 @@ class _Reconciler:
         box = ui.element("div").classes("rtt-frac-edit")
         with box:
             num = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput rtt-frac-num-in")
-            ui.element("div").classes("rtt-frac-bar")  # the horizontal rule — a div, so it is never selectable
+            ui.element("div").classes("rtt-frac-bar")
             den = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput rtt-frac-den-in")
-        num.on("blur", commit, js_handler=_STACKED_EXIT_JS)  # commit only when focus leaves the whole cell
+        num.on("blur", commit, js_handler=_STACKED_EXIT_JS)
         den.on("blur", commit, js_handler=_STACKED_EXIT_JS)
         self.inputs[cb.id] = num
         self.den_inputs[cb.id] = den
@@ -1789,15 +1280,9 @@ class _Reconciler:
         self._arm_ratio_ops(cb, wrap)
 
     def _arm_ratio_ops(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # the equave-reduce + reciprocate buttons flanking the bar of an editable interval ratio —
-        # any editable interval ratiocell (commas / targets / held / intervals of interest), but NOT
-        # the read-only derived faces (the ~generator ratios, a non-projection unchanged column),
-        # which carry no value to edit in place. Each reveals on hover, hides while the cell is edited,
-        # and reads disabled when its op is a no-op: an interval already inside [1, equave) can't
-        # reduce, a unison can't reciprocate. They commit through transform_interval, one undo step.
         if cb.kind != "ratiocell" or cb.pending or cb.id.split(":", 1)[0] not in ("comma", "target", "held", "interest"):
             return
-        wrap.classes("rtt-ratioed")  # overflow:visible so the (larger, overhanging) buttons aren't clipped
+        wrap.classes("rtt-ratioed")
         with wrap:
             reduce_btn = ui.html(_control_svg("reduce")).classes("rtt-glyph rtt-ratio-op rtt-ratio-op-reduce") \
                 .mark(f"{cb.id}:reduce").tooltip(tooltips.RATIO_REDUCE_HELP)
@@ -1809,8 +1294,6 @@ class _Reconciler:
         self._sync_ratio_ops(cb.id, cb.text)
 
     def _sync_ratio_ops(self, cid: str, text: str) -> None:
-        # grey the buttons whose op would be a no-op for the cell's current value (a non-ratiocell
-        # cell isn't in ratio_ops, so this no-ops for it)
         ops = self.ratio_ops.get(cid)
         if ops is None:
             return
@@ -1820,10 +1303,6 @@ class _Reconciler:
                         remove="rtt-op-disabled" if enabled else "")
 
     def _gridvalue_handlers(self, cb: spreadsheet.CellBox, spec: _GridValueSpec):
-        """A gridded cell's (commit, preview) event handlers. The scalar ratio / domain-element
-        cells pass the cell id and commit one at a time; the integer matrix/vector cells re-read the
-        WHOLE matrix and take a ``preview=`` flag. ``preview`` is None for the ratiocell — it commits
-        on blur with no live keystroke preview (parsing a half-typed fraction would mis-retune)."""
         fn = getattr(self._cb, spec.commit)
         if spec.cid_arg:
             commit = lambda _=None, cid=cb.id: fn(cid)
@@ -1834,12 +1313,12 @@ class _Reconciler:
             preview = (lambda e=None: fn(preview=True)) if spec.preview else None
         return commit, preview
 
-    def _arm_gridvalue(self, wrap, cb: spreadsheet.CellBox, spec: _GridValueSpec) -> None:  # drag-to-combine drop target, per the cell's spec
+    def _arm_gridvalue(self, wrap, cb: spreadsheet.CellBox, spec: _GridValueSpec) -> None:
         if spec.arm is None:
             return
-        if spec.arm[0] == "row":  # a mapping row: drop a dragged generator row here to combine
+        if spec.arm[0] == "row":
             self._arm_row_target(wrap, cb.gen)
-        else:  # ("col", group): drop a dragged interval onto this column (its product) to combine
+        else:
             self._arm_col_target(wrap, spec.arm[1], cb.comma)
 
     def _update_gridvalue(self, cb: spreadsheet.CellBox) -> None:
@@ -1849,18 +1328,12 @@ class _Reconciler:
             self._update_fraction(cb, text)
         else:
             self.inputs[cb.id].value = text
-        if spec.pending:  # the green draft ring/wash + text (a comma/target/held/interest being added)
-            # the fraction cells carry it on the WRAP (it rings the whole box + colours both fields and
-            # the bar); the single-input cells carry it on the input
+        if spec.pending:
             target = self.els[cb.id] if spec.ratio_allowed else self.inputs[cb.id]
             target.classes(add="rtt-pending" if cb.pending else "",
                            remove="" if cb.pending else "rtt-pending")
 
     def _update_fraction(self, cb: spreadsheet.CellBox, text: str) -> None:
-        # split the committed value into the two fields and pick the view: a blank/1 denominator is the
-        # big-integer view (collapse EVERYWHERE — a committed "2/1" rests as a big "2"), anything else
-        # is the stacked fraction. _FRACTION_JS keeps data-fracmode live as you type; this is the
-        # authoritative resting state (and the den is cleared in integer view so "/" reopens it empty).
         num, den = _ratio_parts(text) or (text, "")
         ratio = den not in ("", "1")
         self.inputs[cb.id].value = num
@@ -1870,72 +1343,39 @@ class _Reconciler:
         self._sync_ratio_ops(cb.id, text)
 
     def _fit_fraction(self, cid: str, num: str, den: str, width: float, ratio: bool) -> None:
-        # the stacked fraction shrinks both lines together to fit a long num/den (capped at the
-        # comfortable ratio size); the integer view fills the square at the big value font, shrunk only
-        # if a long integer (e.g. a target 65536) would spill. Both share _digit_fit_font. Set on both
-        # inputs (the __native font inherits), so they share one size and the fit is readable per field.
         size = _ratio_font(num, den, width) if ratio else _digit_fit_font(len(num), width, float(_CELL_FONT))
         style = f"font-size:{size:.2f}px"
         self.inputs[cid].style(style)
         self.den_inputs[cid].style(style)
 
     def _gridvalue_text(self, cb: spreadsheet.CellBox) -> str:
-        """The string a gridded cell shows. A live DRAFT (a comma column / a mapping row being added)
-        reads its typed component straight from the editor — it changes during a preview without a
-        spreadsheet rebuild; every other cell already carries it in ``cb.text`` (blanked when
-        ``quantities`` is off)."""
         if cb.pending and cb.kind in ("commacell", "mapping"):
             draft = self._editor.pending_comma if cb.kind == "commacell" else self._editor.pending_mapping_row
             v = draft[cb.prime] if draft is not None else None
             return "" if v is None else str(v)
         return "" if cb.blank else cb.text
 
-    # ---- the editable stacked DECIMAL cell (the cents family: the bare prescaler 𝐿 diagonal, the
-    # custom-weight 𝒘 cells, the generator-tuning map 𝒈). The decimal twin of _build_fraction: a big
-    # whole-part input over a small dot-led fraction input, edited IN PLACE — replacing the old overlay
-    # face that swapped to a raw single line on focus. _update_decimal splits into the two fields; a
-    # blank fraction collapses to the big-integer view (data-decmode="int"); typing "." opens the
-    # fraction. _DECIMAL_JS drives the live switch; make_cell gates focus/blur (via the frac input in
-    # den_inputs) so the edit-preview baseline is taken once and on_cell_blur fires only on whole-cell
-    # exit. ----
     def _build_decimal(self, cb: spreadsheet.CellBox, wrap, commit, *, gen_index=None) -> None:
-        # the value commits on BLUR (whole-cell exit), NOT per keystroke — exactly like the fraction
-        # cells. Committing live would re-solve and RE-RENDER on every keystroke, and the render re-pads
-        # the value to 3 dp (you type "57" in the fraction, the solve commits 696.57, the render writes
-        # back "570") — which clobbers the field you're editing: the cursor jumps to the end and
-        # in-flight digits are dropped. Blur-commit leaves the field untouched while you type and applies
-        # the value once you leave (Enter blurs via make_cell; a wheel notch still commits in its own
-        # handler). The wrap owns the white box + outline (one box around the two inputs). With gen_index
-        # a clickable +/− sign glyph rides left of the whole part (the generator-reversal control); the
-        # sign is changed by clicking the glyph, not typed, so the fields hold the unsigned magnitude
-        # (on_gentuning_change re-applies the sign).
         wrap.classes("rtt-cell-input rtt-deccell")
         box = ui.element("div").classes("rtt-dec-edit")
         with box:
-            with ui.element("div").classes("rtt-dec-main"):  # [sign?] whole part
+            with ui.element("div").classes("rtt-dec-main"):
                 if gen_index is not None:
                     s = ui.label("").classes("rtt-gensign").mark(f"gensign:{gen_index}") \
                         .on("click", lambda _=None, i=gen_index: self._cb.act(lambda: self._editor.flip_generator(i)))
-                    # hovering the sign previews REVERSING this generator (ring the cells the flip would
-                    # change — its tuning sign and its mapping row), the same ring-only hover the other
-                    # controls give. This is the "+/− in the generator tuning map" hover.
                     self._preview_control(s, lambda gi=gen_index: self._editor.flip_generator(gi))
                     self.gensign_faces[cb.id] = s
                 whole = ui.input().props("dense borderless").classes("rtt-cellinput rtt-dec-whole-in")
-            with ui.element("div").classes("rtt-dec-sub"):  # . fraction
-                ui.label(".").classes("rtt-dec-dot")  # the leading "." — a label (non-input), never selectable/tabbable
+            with ui.element("div").classes("rtt-dec-sub"):
+                ui.label(".").classes("rtt-dec-dot")
                 frac = ui.input().props("dense borderless").classes("rtt-cellinput rtt-dec-frac-in")
-        whole.on("blur", commit, js_handler=_STACKED_EXIT_JS)  # commit only when focus leaves the whole cell
+        whole.on("blur", commit, js_handler=_STACKED_EXIT_JS)
         frac.on("blur", commit, js_handler=_STACKED_EXIT_JS)
         self.inputs[cb.id] = whole
         self.den_inputs[cb.id] = frac
         self.frac_edits[cb.id] = box
 
     def _update_decimal(self, cb: spreadsheet.CellBox, text: str, *, signed=False) -> None:
-        # split the committed cents value into the two fields and pick the view: no fractional part is
-        # the big-integer view (data-decmode="int"), anything else the stacked decimal. A signed cell
-        # (the generator tuning) also syncs its +/− glyph from _gentuning_parts; the fields stay the
-        # unsigned magnitude. _DECIMAL_JS keeps the mode live as you type; this is the resting state.
         if signed:
             sign, whole, frac = _gentuning_parts(text)
             if cb.id in self.gensign_faces:
@@ -1945,94 +1385,50 @@ class _Reconciler:
         self.inputs[cb.id].value = whole
         self.den_inputs[cb.id].value = frac
         self.frac_edits[cb.id].props(f'data-decmode={"dec" if frac else "int"}')
-        # int mode shows the whole part big at the full cell font, but a long integer (a 4-digit
-        # cents value with decimals off) would spill the square and butt against its neighbours, so
-        # fit it to the box like the read-only solo face. The var drives the int-mode .q-field__native
-        # rule (ignored in dec mode, where the fraction keeps the whole part small). A SIGNED cell (the
-        # generator tuning map) shares the row with the clickable +/− glyph, so reserve its width too —
-        # else a 3-digit value at the full font + the sign overruns the box's right edge.
         fit_w = cb.w - _GENSIGN_W if signed else cb.w
         self.frac_edits[cb.id].style(f"--dec-whole-font:{_digit_fit_font(len(whole), fit_w, float(_CELL_FONT)):.2f}px")
 
     def _build_prescalercell(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # a bare prescaler 𝐿 diagonal cell, the user's editable override (off-diagonal cells stay
-        # tuning value "0" — 𝐿 is diagonal). Each input dispatches to set_custom_prescaler_entry; the cid
-        # carries the diagonal slot, so the lambda closes over it (a free cb would be the LAST
-        # cell's id by the time the user types)
         self._build_decimal(cb, wrap, lambda e=None, cid=cb.id: self._cb.on_prescaler_change(cid))
 
     def _update_prescalercell(self, cb: spreadsheet.CellBox) -> None:
-        # reflect the live prescaler diagonal (the override if set, else the scheme-derived value —
-        # spreadsheet.build emits the final text). Blank when quantities are off, like the other cells
         self._update_decimal(cb, cb.text)
 
     def _build_weightcell(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # a manual damage-weight 𝒘 cell (custom-weight mode): the user's editable per-target weight,
-        # overriding the slope. The whole row commits together (on_weight_change re-reads every cell),
-        # so the cid need not encode an index. The same in-place decimal editor as the bare prescaler.
         self._build_decimal(cb, wrap, lambda e=None, cid=cb.id: self._cb.on_weight_change(cid))
 
     def _update_weightcell(self, cb: spreadsheet.CellBox) -> None:
         self._update_decimal(cb, cb.text)
 
     def _build_powerinput(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # the optimization power 𝑝, the box-𝒄 norm power 𝑞, or its dual. The symbol label rides as
-        # a separate cell below; the value carries a stacked gridded face overlaid on the editable
-        # input (like a cents cell): ∞ shows a small "(max)" beneath it, a numeric power shows bare.
         wrap.classes("rtt-cell-input rtt-cell-stacked")
         self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_power_change(cid)) \
             .props("dense borderless").classes("rtt-cellinput")
         self._put_stacked_face(cb.id, "rtt-tuning-value rtt-cellface", *_power_parts(cb.text), cb.w)
 
     def _update_powerinput(self, cb: spreadsheet.CellBox) -> None:
-        # mirror the raw value into the input (shown when focused) and re-sync the overlay face
-        # (shown otherwise): ∞ stacks a small "(max)" below it, a numeric power shows bare. (Only the
-        # editable powers run through here: the live optimization power 𝑝 and the box-𝒄 norm power 𝑞
-        # with alt. complexity on. A locked 𝑝 (all-interval) or 𝑞 (alt. complexity off) and the
-        # derived dual(𝑞) are read-only powerdisplays — a different kind — so they never reach here.)
         self.inputs[cb.id].value = cb.text
         self._sync_stacked_face(cb.id, *_power_parts(cb.text))
 
     def _build_powerdisplay(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # a READ-ONLY power value: the all-interval-locked optimization power 𝑝, the box-𝒄 norm power 𝑞
-        # when alt. complexity is off, or the derived dual norm power dual(𝑞). The SAME stacked
-        # ∞-over-"(max)" face as the editable powerinput (_power_parts, same fonts, full-cell centred
-        # via rtt-cellface), but with no input — so it looks identical to its editable twin minus the
-        # white input box. (rtt-cell-stacked is omitted: with no input there's no face to hide on
-        # focus, and it keeps the per-cell-unit padding rule off a value that carries no unit.)
         self._put_stacked_face(cb.id, "rtt-tuning-value rtt-cellface", *_power_parts(cb.text), cb.w)
 
     def _update_powerdisplay(self, cb: spreadsheet.CellBox) -> None:
         self._sync_stacked_face(cb.id, *_power_parts(cb.text))
 
     def _build_gentuningcell(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # the generator tuning map 𝒈 cell: the in-place stacked decimal editor with a clickable +/−
-        # sign glyph (gen_index) left of the whole part — the otherwise-assumed "+" of a positive
-        # generator, made visible (or "−"), that the user clicks to reverse the generator (negating its
-        # mapping row in lockstep, so the tuning map holds). The whole/fraction fields are the unsigned
-        # magnitude; on_gentuning_change re-applies the glyph's sign.
         i = int(cb.id.rsplit(":", 1)[1])
         self._build_decimal(cb, wrap, lambda e=None, cid=cb.id: self._cb.on_gentuning_change(cid), gen_index=i)
-        # hover-and-scroll fine-adjust: each wheel notch nudges this generator by 1/1000 cent (the last
-        # digit the cents value shows). The listener rides the wrap, not an input, so a scroll over the
-        # sign glyph or the fraction line still reaches it by bubbling; .prevent stops the grid scrolling
-        # out from under the cursor.
         wrap.on("wheel.prevent",
                 lambda e, cid=cb.id: self._cb.on_gentuning_wheel(cid, e.args.get("deltaY")),
                 args=["deltaY"])
-        # hovering arms the wheel preview: a baseline is snapshotted so each notch rings the cells it
-        # moves; leaving the cell clears the rings (the committed nudge stays).
         wrap.on("mouseenter", lambda _=None, cid=cb.id: self._cb.gentuning_hover(cid))
         wrap.on("mouseleave", lambda _=None, cid=cb.id: self._cb.gentuning_unhover(cid))
 
     def _update_gentuningcell(self, cb: spreadsheet.CellBox) -> None:
-        self._update_decimal(cb, "" if cb.blank else cb.text, signed=True)  # blank when quantities off
+        self._update_decimal(cb, "" if cb.blank else cb.text, signed=True)
 
     def _build_ptextedit(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # an editable dual: typing a valid EBK string drives the grid (its own ptext_inputs dict).
-        # Most duals commit LIVE (on_change). The projection P / embedding G bands commit only on
-        # SUBMIT (blur / Enter): you type the WHOLE matrix unmolested — no retune, no red box, no toast
-        # — until you're done, then it validates (a single partial keystroke can't be a valid matrix).
         if cb.id.startswith("ptext:projection:"):
             inp = ui.input(value=cb.text).props("dense borderless").classes("rtt-ptextedit")
             inp.on("blur", lambda e=None, cid=cb.id: self._cb.on_ptext_edit(cid, self.ptext_inputs[cid].value))
@@ -2042,24 +1438,17 @@ class _Reconciler:
                 .props("dense borderless").classes("rtt-ptextedit")
         self.ptext_inputs[cb.id] = inp
 
-    def _update_ptextedit(self, cb: spreadsheet.CellBox) -> None:  # reflect the canonical string + its shrink-to-fit font
+    def _update_ptextedit(self, cb: spreadsheet.CellBox) -> None:
         self.ptext_inputs[cb.id].value = cb.text
         self.ptext_inputs[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
 
-    # ---- ratio faces (a stacked fraction via _ratio) + the read-only cents (tuning value) face ----
     def _build_genratio(self, cb: spreadsheet.CellBox, wrap) -> None:
-        self._build_ratio_face(cb, wrap, approx=True)  # a generator ratio, shown ~approximate
+        self._build_ratio_face(cb, wrap, approx=True)
 
     def _build_commaratio(self, cb: spreadsheet.CellBox, wrap) -> None:
         self._build_ratio_face(cb, wrap, approx=False)
 
     def _build_ratio_face(self, cb: spreadsheet.CellBox, wrap, approx: bool) -> None:
-        # a read-only ratio face — the generator/detempering ratio, a comma/unchanged ratio heading
-        # its column, or a − hover GHOST's computed ratio. A pending cell is a draft/ghost: ring the
-        # wrap green so it matches its sibling value cells down the column (the same
-        # .rtt-cell:not(.rtt-cell-input).rtt-pending ring _update_label gives them). A ghost carries a
-        # real value, shown as the normal face; only a bare "?" placeholder (a fresh draft with
-        # nothing typed yet) drops to the flat green-text label, with no value to face.
         if cb.pending:
             wrap.classes(add="rtt-pending")
         if cb.pending and cb.text in ("?", "?/?", ""):
@@ -2067,19 +1456,9 @@ class _Reconciler:
         else:
             self._ratio(cb, approx=approx)
 
-    def _update_ratio(self, cb: spreadsheet.CellBox) -> None:  # genratio / commaratio (read-only): rebuild the stacked fraction face
-        # keep the draft/ghost green ring on the wrap in sync (committed cells clear it — no-op), the
-        # ratio twin of _update_label's toggle, so a − hover ghost ratio greens like its column siblings
+    def _update_ratio(self, cb: spreadsheet.CellBox) -> None:
         self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
                                 remove="" if cb.pending else "rtt-pending")
-        # The value's SHAPE can flip between renders — a real numeric ratio <-> a blanked (quantities
-        # off) or dashed value, or a whole "n/1" <-> a true fraction — and the ~approx + fraction
-        # structure differs from a bare label / bare integer. Patching the fraction's numbers in
-        # place (the old path) would strand a ~ over an empty fraction bar when the value blanks (the
-        # reported "~-"), so rebuild the container's contents from the current value instead — which
-        # also re-applies the whole-number collapse for free. The .rtt-ratio container itself (and
-        # the per-cell unit that rides the wrap beside it) are untouched. A pending "?" cell has no
-        # container — it's static.
         face = self.ratio_faces.get(cb.id)
         if face is None:
             return
@@ -2090,137 +1469,94 @@ class _Reconciler:
             self._ratio_body(cb, approx=(cb.kind == "genratio"))
 
     def _build_tuning_value(self, cb: spreadsheet.CellBox, wrap) -> None:
-        self.cents_face(cb, "rtt-tuning-value")  # the read-only stacked int-over-fraction cents face
+        self.cents_face(cb, "rtt-tuning-value")
 
     def _update_tuning_value(self, cb: spreadsheet.CellBox) -> None:
         self.set_cents_face(cb.id, cb.text)
-        # a blank pending PLACEHOLDER in a tuning-family row (tuning / just / retune / complexity /
-        # …) of the draft column, ringed green by .rtt-cell:not(.rtt-cell-input).rtt-pending — the
-        # tuningvalue twin of the _update_label toggle. Committed cells are pending=False (no-op).
         self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
                                 remove="" if cb.pending else "rtt-pending")
 
-    # ---- plain label cells: a ui.label whose text the update keeps in sync (set_text). prime /
-    # formcell sit in a white-bordered box; ptext also tracks a shrink-to-fit font; boxtitle is static ----
-    def _label_builder(self, cls: str):  # a build that drops a classed ui.label into the cell, registered in labels
+    def _label_builder(self, cls: str):
         def build(cb, wrap):
             self.labels[cb.id] = ui.label(cb.text).classes(cls)
         return build
 
-    def _update_label(self, cb: spreadsheet.CellBox) -> None:  # prime / formcell / colheader / rowlabel / mapped / vec
+    def _update_label(self, cb: spreadsheet.CellBox) -> None:
         self.labels[cb.id].set_text(cb.text)
-        # a blank pending PLACEHOLDER: the draft column's computed rows (mapping / tuning / …) are
-        # filled with empty cells so the WHOLE draft column reads green, not just its editable cells.
-        # Toggle rtt-pending on the wrap; .rtt-cell:not(.rtt-cell-input).rtt-pending rings it green.
-        # Committed cells are pending=False, so this just keeps the class cleared for them.
         self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
                                 remove="" if cb.pending else "rtt-pending")
 
-    def _update_ptext(self, cb: spreadsheet.CellBox) -> None:  # a read-only value: keep its text and shrink-to-fit font in sync
+    def _update_ptext(self, cb: spreadsheet.CellBox) -> None:
         self.labels[cb.id].set_text(cb.text)
         self.labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
 
-    # ---- interactive controls with an update: range-mode selector, fold toggles ----
     def _build_rangemode(self, cb: spreadsheet.CellBox, wrap) -> None:
-        wrap.classes("rtt-rangemode")  # two square indicators side by side (the mockup style)
+        wrap.classes("rtt-rangemode")
         opts = {}
         for mode in ("monotone", "tradeoff"):
             opt = ui.element("div").classes("rtt-rangeopt")
             with opt:
-                ui.element("span").classes("rtt-rangebox")  # the square (filled when selected)
+                ui.element("span").classes("rtt-rangebox")
                 ui.label(mode).classes("rtt-rangelabel")
             opt.on("click", lambda _=None, m=mode: self._cb.on_range_mode(m))
             opts[mode] = opt
         self.rangeopts[cb.id] = opts
 
-    def _update_rangemode(self, cb: spreadsheet.CellBox) -> None:  # fill the live mode's square (the other's is hollow)
+    def _update_rangemode(self, cb: spreadsheet.CellBox) -> None:
         for mode, opt in self.rangeopts[cb.id].items():
             (opt.classes(add="rtt-rangeopt-on") if mode == cb.text
              else opt.classes(remove="rtt-rangeopt-on"))
 
     def _build_scheme_button(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # single click hands the tuning back to the scheme + target list (back_to_scheme); always
-        # present on the projection / embedding tiles, regardless of the presets toggle
         self.scheme_buttons[cb.id] = ui.button(cb.text, on_click=lambda: self._cb.act(self._editor.back_to_scheme),
                                                color=None).props("unelevated dense no-caps").classes("rtt-scheme-btn")
 
-    def _update_scheme_button(self, cb: spreadsheet.CellBox) -> None:  # grey it when the tuning is already scheme-driven (nothing to hand back)
+    def _update_scheme_button(self, cb: spreadsheet.CellBox) -> None:
         btn = self.scheme_buttons[cb.id]
         (btn.classes(add="rtt-scheme-btn-idle") if not self._editor.manual_tuning
          else btn.classes(remove="rtt-scheme-btn-idle"))
 
-    def _build_foldtoggle(self, cb: spreadsheet.CellBox, wrap) -> None:  # rowtoggle / coltoggle / tiletoggle: a clickable chevron over its band
-        item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets" / "tile:mapping:primes"
+    def _build_foldtoggle(self, cb: spreadsheet.CellBox, wrap) -> None:
+        item = cb.id.split("toggle:", 1)[1]
         self.htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
-        self.fold_state[cb.id] = cb.text  # the glyph swaps on collapse/expand (see _update_foldtoggle)
+        self.fold_state[cb.id] = cb.text
         wrap.on("click", lambda _=None, it=item: self._cb.on_toggle(it))
 
-    def _build_alltoggle(self, cb: spreadsheet.CellBox, wrap) -> None:  # the master expand/collapse-all control in the node corner
+    def _build_alltoggle(self, cb: spreadsheet.CellBox, wrap) -> None:
         self.htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
         self.fold_state[cb.id] = cb.text
         wrap.on("click", lambda _=None: self._cb.on_toggle_all())
 
-    def _update_foldtoggle(self, cb: spreadsheet.CellBox) -> None:  # swap the chevron SVG when the band folds / unfolds
+    def _update_foldtoggle(self, cb: spreadsheet.CellBox) -> None:
         if self.fold_state.get(cb.id) != cb.text:
             self.htmls[cb.id].set_content(_control_svg(_FOLD_GLYPH[cb.text]))
             self.fold_state[cb.id] = cb.text
 
-    # ---- chooser dropdowns + the diminuator checkbox ----
     def _target_preset_values(self):
-        """The numeric limit + TILT/OLD family the target chooser shows, or ``(None, None)``
-        when no named family applies — a typed/edited target list overriding it, or all-interval
-        mode (every interval, so no target set scheme). Then both parts fall back to "-" (the
-        select via display-value, the number via its "-" placeholder); all-interval also greys+locks
-        the chooser (the cell's ``disabled`` flag, applied in :meth:`_update_preset`). A ``None``
-        family is also what makes re-picking TILT/OLD a real value change the handler acts on, so the
-        chooser doubles as the reset back to a named list — not a same-value no-op Quasar would swallow."""
         if self._editor.target_override is not None or service.is_all_interval(self._editor.tuning_scheme):
             return None, None
         family = self._editor.target_family
         limit = self._editor.target_limit
-        if limit is None:  # no manual limit: show the family's domain default
+        if limit is None:
             limit = service.default_target_limit(
                 family, self._editor.state.domain_basis)
         return limit, family
 
     def _arm_option_hover(self, sel, wrap, cid: str) -> None:
-        """Arm a q-select for the shared option-hover preview (any chooser: temperament / tuning /
-        prescaler / complexity / weight-slope / form). Hovering an option in the OPEN dropdown rings
-        the cells selecting it would change, reverting on leave / popup-close. The teleported Quasar
-        popup blocks both a slot ``$emit`` and any ``document`` use inside the slot, so the option slot
-        only STAMPS each option's positional index (``:data-optidx``) and this chooser's cell id
-        (``data-optcid``); the one document-level delegation (``_OPTION_HOVER_DELEGATION``) reads them
-        on hover and fires ``opthover`` at this cell wrap, handled by ``on_chooser_hover``. ``v-bind
-        itemProps`` keeps each option clickable and carries a divider's disabled state. Reusable by any
-        q-select — a sibling chooser need only call this."""
         sel.add_slot("option", f"""
             <q-item v-bind="props.itemProps" :data-optidx="props.opt.value" data-optcid="{cid}">
                 <q-item-section><q-item-label>{{{{ props.opt.label }}}}</q-item-label></q-item-section>
             </q-item>
         """)
         wrap.on("opthover", lambda e: self._cb.on_chooser_hover(cid, e.args), args=["detail"])
-        # the popup events feed the server-side gate (popup_state): an option-hover ARM that
-        # arrives while this chooser's popup is 'closed' is a stale debounce-timer fire from a
-        # popup that already committed/closed — dropped, so it can never strand a ring. The hide
-        # also ends a live chooser/temperament gesture (the leave path), ungated.
         sel.on("popup-show", lambda _=None: self._cb.on_popup(cid, True))
         sel.on("popup-hide", lambda _=None: self._cb.on_popup(cid, False))
 
     def _build_preset(self, cb: spreadsheet.CellBox, wrap) -> None:
-        name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
+        name = cb.id.split(":")[1]
         if name == "target":
-            # a numeric limit override beside the TILT/OLD family select. Both fall back to "-"
-            # when a typed/edited target list overrides the family (see _target_preset_values):
-            # the select via display-value, the number via its "-" placeholder.
             limit, family = self._target_preset_values()
             with ui.element("div").classes("rtt-preset-target"):
-                # A TEXT input, not ui.number: a number input lets the browser swallow non-numeric
-                # keystrokes to empty, so "abc" would silently blank the limit with no way to toast
-                # it. As text, the raw entry reaches the handler, which validates it (whole number?
-                # odd for OLD?) and reddens/toasts a bad one. debounce collapses a multi-digit
-                # entry into one settled event, so typing "21" never flashes a toast at the even
-                # intermediate "2" (the programmatic render echo is Python-side and stays inside the
-                # building[0] guard, so debounce can't leak it).
                 num = ui.input(value=_limit_text(limit),
                         on_change=lambda e: self._cb.on_target_change()) \
                     .props('dense borderless hide-bottom-space placeholder="-" inputmode=numeric debounce=300').classes("rtt-preset-num")
@@ -2230,18 +1566,8 @@ class _Reconciler:
                 # server's value always wins — debounce keeps the echo to once-per-settled-entry.
                 num.LOOPBACK = True
                 num._props['loopback'] = True
-                # scroll the focused limit square to step it by ±1, like the integer matrix/vector
-                # cells (focus-gated via _INT_WHEEL_JS). Each notch cheaply steps the shown number;
-                # the heavy commit (target-set rebuild + solve) is debounced so a fast scroll can't
-                # grind the app (see on_target_limit_wheel).
                 num.on("wheel", lambda e: self._cb.on_target_limit_wheel(e.args.get("deltaY")),
                        args=["deltaY"], js_handler=_INT_WHEEL_JS)
-                # the limit field drives the grid's edit-preview, like an editable matrix/vector cell:
-                # focusing it snapshots the baseline, so each committed change (a typed or wheeled limit,
-                # both via on_target_change) rings the target rows it moves, and leaving clears them. It
-                # lives in `selects` not `inputs`, so make_cell's generic focus/blur wiring misses it.
-                # The invalid-limit reddening (_sync_target_limit_error) rides the field itself, a
-                # different signal that coexists with the rings (which ride OTHER cells).
                 num.on("focus", lambda _=None: self._cb.on_cell_focus(cb.id))
                 num.on("blur", lambda _=None, cid=cb.id: self._cb.on_cell_blur(cid))
                 # Enter commits the typed limit. The field is debounce=300 + loopback-controlled, so its
@@ -2264,31 +1590,20 @@ class _Reconciler:
                        js_handler="(e) => emit(e.target.value)")
                 sel = ui.select(list(presets.TARGET_SETS), value=family,
                         on_change=lambda e: self._cb.on_target_change()) \
-                    .props(_select_props(cb.w - 30)).classes("rtt-preset")  # field = cell − the 30px square (touching, no gap)
+                    .props(_select_props(cb.w - 30)).classes("rtt-preset")
             _set_offlist_prompt(sel, family)
-            # hovering TILT/OLD previews the family switch, like the other choosers: it rings the target
-            # rows the switch would drop (red) / move (amber) in place (see on_chooser_hover's target
-            # branch). Same shared option-hover hook; the family select rides the (num, sel) tuple.
             self._arm_option_hover(sel, wrap, cb.id)
             self.selects[cb.id] = (num, sel)
         elif name == "temperament":
-            # a normal dropdown listing only the rank/limit section dividers and their presets
-            # (grouped in the open list). The chosen preset shows in the box; when none matches, a "-" prompt
-            # shows there as a display-value placeholder — never a pickable row in the list.
             value = presets.identify(self._editor.state)
             sel = _GroupedSelect(presets.temperament_options(), value=value,
                     is_divider=presets.is_divider,
                     on_change=lambda e: self._cb.on_preset(cb.id, e.value)) \
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, value)
-            # hovering an option in the OPEN dropdown previews loading that temperament (reflow the
-            # would-be grid, or redden what it would drop — see on_chooser_hover's temperament branch)
             self._arm_option_hover(sel, wrap, cb.id)
             self.selects[cb.id] = sel
         elif name == "prescaler":
-            # the predefined-prescalers chooser: log-prime always, the rest (identity / prime) gated
-            # behind alt-complexities. "-" when a manual diagonal edit deviates from the named
-            # prescaler (editor.displayed_prescaler_name returns None then).
             options = list(presets.prescaler_options(self._editor.settings["alt_complexity"]))
             value = self._editor.displayed_prescaler_name
             value = value if value in options else None
@@ -2296,14 +1611,9 @@ class _Reconciler:
                     on_change=lambda e: self._cb.on_preset(cb.id, e.value)) \
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, value)
-            self._arm_option_hover(sel, wrap, cb.id)  # hovering a prescaler previews re-solving to it
+            self._arm_option_hover(sel, wrap, cb.id)
             self.selects[cb.id] = sel
         elif name == "projection":
-            # the established projection / embedding chooser: the temperament's named rational
-            # tunings (its held intervals drive P = GM and G). The base (primes) rides P, the copy
-            # (gens) rides G; both show the SAME selection — the chosen tuning's name, or the named
-            # tuning matching the auto-picked default — under their own placeholder. "-"-style "off
-            # list" shows when the temperament has no established rational tuning (a disabled chooser).
             options = presets.projection_options(self._editor.state)
             value = self._editor.displayed_projection_scheme_name
             value = value if value in options else None
@@ -2311,24 +1621,19 @@ class _Reconciler:
                     on_change=lambda e: self._cb.on_preset(cb.id, e.value)) \
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, value, prompt=_projection_prompt(cb.id))
-            self._arm_option_hover(sel, wrap, cb.id)  # hovering a tuning previews re-forming P/G to it
+            self._arm_option_hover(sel, wrap, cb.id)
             self.selects[cb.id] = sel
-        else:  # tuning — systematic scheme names, T-prefixed when targeting a list (not all-interval);
-            # a control-refined scheme has no name, shown as the "-" placeholder. Alternative-
-            # complexity schemes are gated behind the alt. complexity setting.
+        else:
             options = presets.tuning_scheme_options(
                 service.is_all_interval(self._editor.tuning_scheme),
                 self._editor.settings["alt_complexity"], self._editor.settings["weighting"])
-            # the established scheme's name, or "-" — off the offered list (a finite-power spec the
-            # lp-only list omits, or an unnameable one), or a hand-edited / held-off tuning that
-            # leaves the scheme (displayed_tuning_scheme_name None). A plain scheme pick stays named.
             name = self._editor.displayed_tuning_scheme_name
             scheme = name if name in options else None
             sel = ui.select(options, value=scheme,
                     on_change=lambda e: self._cb.on_preset(cb.id, e.value)) \
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, scheme)
-            self._arm_option_hover(sel, wrap, cb.id)  # hovering a scheme previews re-solving to it
+            self._arm_option_hover(sel, wrap, cb.id)
             self.selects[cb.id] = sel
 
     def _chooser_reflow_hold(self, cid: str) -> bool:
@@ -2349,71 +1654,56 @@ class _Reconciler:
         return group(cid) == group(g.source)
 
     def _update_preset(self, cb: spreadsheet.CellBox) -> None:
-        # mirror the live selection: the temperament chooser shows the matched preset (or its
-        # placeholder), the target chooser splits into limit + family, the tuning chooser shows its
-        # scheme. building[0] guards echoes.
         if self._chooser_reflow_hold(cb.id):
-            return  # a generic chooser hover is reflowing the grid for THIS chooser — hold it steady
-        if cb.id.startswith("preset:temperament"):  # base + the comma-basis copy
+            return
+        if cb.id.startswith("preset:temperament"):
             if self.gesture is not None and self.gesture.kind == "temp" and self.gesture.reflowed:
-                return  # a hover preview reflows the GRID; leave the chooser's value + open popup steady
+                return
             value = presets.identify(self._editor.state)
             self.selects[cb.id].value = value
             _set_offlist_prompt(self.selects[cb.id], value)
         elif cb.id == "preset:target":
             num, sel = self.selects[cb.id]
-            limit, family = self._target_preset_values()  # (None, None) -> both show "-"
-            num.value = _limit_text(limit)  # the text field shows the number (or "-" placeholder)
+            limit, family = self._target_preset_values()
+            num.value = _limit_text(limit)
             sel.value = family
             _set_offlist_prompt(sel, family)
-            num.set_enabled(not cb.disabled)  # all-interval greys+locks the chooser (it also shows "-")
+            num.set_enabled(not cb.disabled)
             sel.set_enabled(not cb.disabled)
-            self._sync_target_limit_error(num, family, limit)  # red iff the shown limit is invalid (even OLD)
-        elif cb.id == "preset:prescaler":  # the scheme's prescaler, "-" on a deviating edit; the
-            # option list widens/narrows as alt-complexities flips, so refresh it too
+            self._sync_target_limit_error(num, family, limit)
+        elif cb.id == "preset:prescaler":
             options = list(presets.prescaler_options(self._editor.settings["alt_complexity"]))
             value = self._editor.displayed_prescaler_name
             value = value if value in options else None
             self.selects[cb.id].set_options(options, value=value)
             _set_offlist_prompt(self.selects[cb.id], value)
-            self.selects[cb.id].set_enabled(not cb.disabled)  # greyed+locked when it's the lone prescaler
-        elif cb.id.startswith("preset:projection"):  # base (P) + the embedding (G) copy share one selection
+            self.selects[cb.id].set_enabled(not cb.disabled)
+        elif cb.id.startswith("preset:projection"):
             options = presets.projection_options(self._editor.state)
             value = self._editor.displayed_projection_scheme_name
             value = value if value in options else None
             self.selects[cb.id].set_options(options, value=value)
             _set_offlist_prompt(self.selects[cb.id], value, prompt=_projection_prompt(cb.id))
-            self.selects[cb.id].set_enabled(not cb.disabled)  # disabled when no established tuning exists
-        else:  # tuning — an off-list spec or a hand-edited / held-off tuning shows "-"; a pick stays named
+            self.selects[cb.id].set_enabled(not cb.disabled)
+        else:
             name = self._editor.displayed_tuning_scheme_name
-            # the option LABELS T-prefix only while target-based, so recompute them as the all-
-            # interval checkbox flips (set once at creation, they would otherwise go stale)
             options = presets.tuning_scheme_options(
                 service.is_all_interval(self._editor.tuning_scheme),
                 self._editor.settings["alt_complexity"], self._editor.settings["weighting"])
-            # a name off the offered list (e.g. a finite-power miniRMS scheme — nameable, but not in
-            # the lp-only list) falls back to the "-" placeholder, matching the build path
             scheme = name if name in options else None
             self.selects[cb.id].set_options(options, value=scheme)
             _set_offlist_prompt(self.selects[cb.id], scheme)
-            self.selects[cb.id].set_enabled(not cb.disabled)  # greyed+locked when it's the lone scheme
+            self.selects[cb.id].set_enabled(not cb.disabled)
 
-    # The per-sub-row ET picker (one per mapping row) and per-sub-column comma picker (one per comma
-    # column): compact choosers, styled like the temperament chooser but pinned to ~one gridded value
-    # wide (the selection isn't readable closed — the open popup carries the full label). Each derives
-    # its value from state every render (the matched ET / comma, else the "-" placeholder), and on a
-    # pick REPLACES that row / column verbatim (editor.set_mapping_row / set_comma) — see on_subpick.
     def _build_subpick(self, cb, wrap, options, value):
         sel = ui.select(options, value=value if value in options else None,
                 on_change=lambda e, cid=cb.id: self._cb.on_subpick(cid, e.value)) \
             .props(_select_props(_SUBPICK_POPUP_W)).classes("rtt-preset rtt-subpick")
         _set_offlist_prompt(sel, value if value in options else None)
-        self._arm_option_hover(sel, wrap, cb.id)  # stamps the option plumbing; hover-preview deferred (on_chooser_hover early-returns)
+        self._arm_option_hover(sel, wrap, cb.id)
         self.selects[cb.id] = sel
 
     def _build_etpick(self, cb, wrap):
-        # cb.pending is the green draft row's picker — it's blank (nothing matched), and picking
-        # ADDS the chosen ET as a new generator (see on_subpick); a committed row's picker mirrors it.
         db = self._editor.state.domain_basis
         value = None if cb.pending else presets.identify_et(self._editor.state.mapping[cb.gen], db)
         self._build_subpick(cb, wrap, presets.et_options(db), value)
@@ -2424,10 +1714,8 @@ class _Reconciler:
         self._build_subpick(cb, wrap, presets.comma_options(db), value)
 
     def _update_subpick(self, cb):
-        # recompute options + matched value from live state each render, so a pick (or any other edit /
-        # a domain change) re-derives the displayed value and the whole-temperament chooser stays in sync
         if self.gesture is not None and self.gesture.kind == "temp" and self.gesture.reflowed:
-            return  # a hover preview reflowed the GRID; leave the picker's value + open popup steady
+            return
         sel = self.selects.get(cb.id)
         if not isinstance(sel, ui.select):
             return
@@ -2435,7 +1723,7 @@ class _Reconciler:
         if cb.id.startswith("etpick:"):
             options = presets.et_options(db)
             if cb.pending or cb.gen >= len(self._editor.state.mapping):
-                value = None  # the draft row's picker is always blank; or a reflow shrank past this row
+                value = None
             else:
                 value = presets.identify_et(self._editor.state.mapping[cb.gen], db)
         else:
@@ -2449,11 +1737,6 @@ class _Reconciler:
         _set_offlist_prompt(sel, value)
 
     def _sync_target_limit_error(self, num, family, limit) -> None:
-        """Render-driven flag for the target chooser's limit field: when the DISPLAYED
-        ``(family, limit)`` is invalid (an even limit for the odd-limit diamond), redden the field
-        and point its tooltip at the reason; otherwise clear it and restore the normal help. Driven
-        from the render (not set imperatively in the handler) so it survives every re-render — an
-        imperative flag was wiped the moment anything re-rendered (e.g. ui.select's own validation)."""
         problem = service.target_limit_problem(family, limit)
         num.classes(add="rtt-limit-error" if problem else "",
                     remove="" if problem else "rtt-limit-error")
@@ -2461,120 +1744,98 @@ class _Reconciler:
             self.target_limit_tip.set_text(
                 tooltips.target_limit_help(problem) if problem
                 else tooltips.control_help("preset", "preset:target"))
-            # the explaining tooltip goes red (a red box) while invalid, plain dark otherwise
             self.target_limit_tip.classes(add="rtt-tip-error" if problem else "",
                                           remove="" if problem else "rtt-tip-error")
 
-    def _build_control_select(self, cb: spreadsheet.CellBox, wrap) -> None:  # a weighting chooser (complexity / weight slope)
+    def _build_control_select(self, cb: spreadsheet.CellBox, wrap) -> None:
         sel = ui.select(list(cb.values), value=cb.text or None,
                 on_change=lambda e, cid=cb.id: self._cb.on_control_select(cid, e.value)) \
             .props(_select_props(cb.w)).classes("rtt-preset")
-        self._arm_option_hover(sel, wrap, cb.id)  # hovering an option previews re-weighting to it
+        self._arm_option_hover(sel, wrap, cb.id)
         self.selects[cb.id] = sel
 
-    def _update_control_select(self, cb: spreadsheet.CellBox) -> None:  # mirror the live choice; grey it when locked (box 𝒘 all-interval)
-        # the complexity chooser's option list widens/narrows as alt. complexity flips, so refresh the
-        # options in place (not just the value) — otherwise the build-time list goes stale until the row
-        # is rebuilt from hidden. A no-op for the fixed-option slope chooser, whose values never change.
+    def _update_control_select(self, cb: spreadsheet.CellBox) -> None:
         if self._chooser_reflow_hold(cb.id):
-            return  # a hover preview is reflowing the grid for THIS chooser — hold its value + popup steady
+            return
         self.selects[cb.id].set_options(list(cb.values), value=cb.text or None)
         self.selects[cb.id].set_enabled(not cb.disabled)
 
-    def _build_control_check(self, cb: spreadsheet.CellBox, wrap) -> None:  # the box-𝐋 "replace diminuator" checkbox (size factor)
+    def _build_control_check(self, cb: spreadsheet.CellBox, wrap) -> None:
         self.checks[cb.id] = ui.checkbox(cb.text, value=cb.checked,
                 on_change=lambda e, cid=cb.id: self._cb.on_control_select(cid, e.value)) \
             .props("dense").classes("rtt-control-check")
         apply = self._control_check_preview(cb)
-        if apply is not None:  # hover-preview the cells the toggle would change (red/amber), like the +/-
+        if apply is not None:
             self._preview_control(wrap, apply)
 
     def _control_check_preview(self, cb: spreadsheet.CellBox):
-        """The hover-preview op for a control checkbox: the SAME trait flip its click commits, toward the
-        toggled state. The state is read live (not captured at build) so a re-render that updates the cell
-        in place can't strand a stale target."""
-        if cb.id == "control:diminuator":  # swap the complexity size factor (lp ↔ lils)
+        if cb.id == "control:diminuator":
             return lambda: self._editor.set_diminuator_replaced(
                 not service.diminuator_replaced(self._editor.tuning_scheme))
-        if cb.id == "control:all_interval":  # collapse the targets to the primes (structural: red + amber)
+        if cb.id == "control:all_interval":
             return lambda: self._editor.set_all_interval(
                 not service.is_all_interval(self._editor.tuning_scheme))
         return None
 
-    def _update_control_check(self, cb: spreadsheet.CellBox) -> None:  # mirror the live "replace diminuator" state
+    def _update_control_check(self, cb: spreadsheet.CellBox) -> None:
         self.checks[cb.id].value = cb.checked
 
-    def _build_formchooser(self, cb: spreadsheet.CellBox, wrap) -> None:  # the <choose form> control
-        # stateful: the dropdown shows the matrix's CURRENT form (cb.text) selected, and re-stores it
-        # in the picked form on select. The mapping box offers the generator forms; the comma-basis
-        # box offers only canonical for now (its other forms are a separate task).
+    def _build_formchooser(self, cb: spreadsheet.CellBox, wrap) -> None:
         sel = ui.select(_formchooser_options(cb.id), value=cb.text or "",
                 on_change=lambda e, c=cb.id: self._cb.on_form_choose(c, e.value)) \
             .props(_select_props(cb.w)).classes("rtt-preset")
-        self._arm_option_hover(sel, wrap, cb.id)  # hovering a form previews re-storing the matrix in it
+        self._arm_option_hover(sel, wrap, cb.id)
         self.selects[cb.id] = sel
 
-    def _update_formchooser(self, cb: spreadsheet.CellBox) -> None:  # reflect the matrix's current form
+    def _update_formchooser(self, cb: spreadsheet.CellBox) -> None:
         if self._chooser_reflow_hold(cb.id):
-            return  # a hover preview is reflowing the grid for THIS chooser — hold its value + popup steady
+            return
         self.selects[cb.id].set_options(_formchooser_options(cb.id), value=cb.text or "")
 
-    # ---- static controls (build only, no update): the domain/comma/interest/held ± buttons,
-    # the speaker, and the audio bank glyphs. Their click / JS handlers are baked at build time. ----
     def _preview_control(self, el, apply) -> None:
-        """Arm a control's hover preview: entering it rings the on-screen cells its click would change
-        (control_hover) — red for what it removes, amber for what its re-solve moves — and leaving
-        clears them. The click still commits via its own handler. Used by the add/remove +/- buttons
-        (each passes the editor op its click runs) and by the generator-tuning sign (previewing
-        reversing that generator)."""
         el.on("mouseenter", lambda _=None: self._cb.control_hover(apply))
         el.on("mouseleave", lambda _=None: self._cb.control_unhover())
 
     def _preview_rank_remove(self, el, axis: str, idx: int) -> None:
-        """Arm a comma−/mapping− hover's dual rank-change preview: a rank-changing removal reflows the
-        grid (the born generator/comma ghosts green, the leaver reds, the survivors amber), so it
-        routes through the builder (rank_remove_hover → render) rather than the no-reflow ring diff
-        control_hover uses. ``axis`` is "comma" (a comma −) or "row" (a mapping row −); ``idx`` the
-        committed entry the click removes. The click still commits via its own handler."""
         el.on("mouseenter", lambda _=None: self._cb.rank_remove_hover(axis, idx))
         el.on("mouseleave", lambda _=None: self._cb.rank_remove_unhover())
 
-    def _build_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # remove the highest prime; a hover − centred on the last prime's branch point
-        wrap.classes("rtt-minus-zone")  # clear of the editable cell below
+    def _build_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
+        wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
         self._preview_control(wrap, self._editor.shrink)
 
-    def _build_plus(self, cb: spreadsheet.CellBox, wrap) -> None:  # add a prime; the always-shown + on the bus stub
+    def _build_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.expand))
         self._preview_control(wrap, self._editor.expand)
 
-    def _build_gen_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # drop the last generator (+n, −r); the mapping-row − reached from the column
-        wrap.classes("rtt-minus-zone")  # clear of the genmap cell below
+    def _build_gen_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
+        wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
-        self._preview_rank_remove(wrap, "row", cb.gen)  # removing a generator is a rank change → dual preview
+        self._preview_rank_remove(wrap, "row", cb.gen)
 
-    def _build_gen_plus(self, cb: spreadsheet.CellBox, wrap) -> None:  # add a generator: open a blank green draft mapping ROW (the bus stub)
+    def _build_gen_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-mapping") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_mapping_row, "mapping"))
 
-    def _build_map_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # remove generator cb.gen (a mapping row); a hover − on the left bus
-        wrap.classes("rtt-minus-zone")  # clear of the generator-ratio spine it drops over
-        if cb.pending:  # the draft row's −: cancel the add (nothing committed yet, so no preview)
+    def _build_map_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
+        wrap.classes("rtt-minus-zone")
+        if cb.pending:
             ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
                 .on("click", lambda _=None: self._cb.act(self._editor.cancel_pending_mapping_row))
             return
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
-        self._preview_rank_remove(wrap, "row", cb.gen)  # removing a generator is a rank change → dual preview
+        self._preview_rank_remove(wrap, "row", cb.gen)
 
-    def _build_map_plus(self, cb: spreadsheet.CellBox, wrap) -> None:  # add a generator: open a blank green draft mapping ROW (left-bus stub)
+    def _build_map_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-mapping") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_mapping_row, "mapping"))
 
-    def _build_map_drag(self, cb: spreadsheet.CellBox, wrap) -> None:  # drag generator row cb.gen onto another row's grip to merge
+    def _build_map_drag(self, cb: spreadsheet.CellBox, wrap) -> None:
         # HTML5 drag-to-combine, built EXACTLY like the working column-reorder grip (_build_colgrip):
         # the grip is BOTH the drag SOURCE and a drop TARGET, with a per-element dragover preventDefault
         # marking it a valid drop target. This is the proven path — drop one row's GRIP onto another's
@@ -2595,7 +1856,7 @@ class _Reconciler:
         wrap.on("drop.prevent", lambda _=None, idx=cb.gen: self._drop_on_row(idx))
         ui.icon("drag_indicator").classes("rtt-grip")
 
-    def _arm_row_target(self, wrap, gen: int) -> None:  # make a mapping cell a drop target for its row (gen)
+    def _arm_row_target(self, wrap, gen: int) -> None:
         # the mapping row is the drop target for a dragged generator row: dragover keeps every cell a
         # droppable copy surface (preventDefault makes a drop land here; dropEffect='copy' gives the +
         # cursor), dragenter previews dropping the dragged row INTO this row, drop commits it. The py
@@ -2613,37 +1874,28 @@ class _Reconciler:
         self._row_drag = None
         self._cb.combine_end()
 
-    def _preview_row_drop(self, idx: int) -> None:  # hovering target row idx: preview the would-be combine (else revert)
+    def _preview_row_drop(self, idx: int) -> None:
         src = self._row_drag
-        valid = src is not None and src != idx  # src == idx (the dragged row's own cells) previews nothing
+        valid = src is not None and src != idx
         apply = (lambda: self._editor.add_mapping_row_to(src, idx)) if valid else None
-        # highlight the whole target ROW (its editable mapping cells, which change value but don't ring
-        # on their own — they're input cells), so the row being dropped onto is clearly marked.
         target = (lambda cb: cb.kind == "mapping" and getattr(cb, "gen", None) == idx) if valid else None
         self._cb.combine_preview(apply, target)
 
-    def _drop_on_row(self, idx: int) -> None:  # add the dragged generator row into the DIFFERENT row dropped on
+    def _drop_on_row(self, idx: int) -> None:
         src = self._row_drag
         self._row_drag = None
         if src is not None and src != idx:
             self._cb.combine_commit(lambda: self._editor.add_mapping_row_to(src, idx))
         else:
-            self._cb.combine_end()  # dropped on its own row / nothing: just revert the preview
+            self._cb.combine_end()
 
-    # the interval-column twin of the mapping-row drag. The grip is the SOURCE; the DROP TARGETS are
-    # the interval cells in the SAME column (each armed by _arm_col_target). Drag one interval onto a
-    # DIFFERENT interval in its column to ADD it in (their product). The source's (group, index) is
-    # held server-side; _int_combine enforces the same-column, distinct-interval rule and the
-    # dragenter preview shows what a drop will do.
     _INTERVAL_COMBINE = {
         "comma": "add_comma_to", "target": "add_target_to",
         "held": "add_held_to", "interest": "add_interest_to",
     }
 
-    def _build_int_drag(self, cb: spreadsheet.CellBox, wrap) -> None:  # drag an interval's grip onto another's grip (same column) to merge
-        group = cb.id.split(":")[1]  # int_drag:<group>:<index>
-        # the column twin of _build_map_drag: the grip is BOTH source and drop target (drop grip-to-grip,
-        # the proven path), and the interval cells are also armed (_arm_col_target) for hovering the column.
+    def _build_int_drag(self, cb: spreadsheet.CellBox, wrap) -> None:
+        group = cb.id.split(":")[1]
         wrap.classes("rtt-drag-handle rtt-col-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, g=group, idx=cb.comma: self._begin_col_drag(g, idx))
         wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
@@ -2652,19 +1904,16 @@ class _Reconciler:
         wrap.on("drop.prevent", lambda _=None, g=group, idx=cb.comma: self._drop_on_interval(g, idx))
         ui.icon("drag_indicator").classes("rtt-grip")
 
-    def _arm_col_target(self, wrap, group: str, idx: int) -> None:  # make an interval cell a drop target for its column
-        # the column twin of _arm_row_target: dragover keeps the cell a droppable copy surface, the py
-        # dragenter previews / drop commits the combine, gated server-side to the same column and a
-        # DIFFERENT interval (see _int_combine), so a non-matching drag over the cell does nothing.
+    def _arm_col_target(self, wrap, group: str, idx: int) -> None:
         wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
         wrap.on("dragenter.prevent", lambda _=None, g=group, i=idx: self._preview_int_drop(g, i))
         wrap.on("drop.prevent", lambda _=None, g=group, i=idx: self._drop_on_interval(g, i))
 
-    def _int_combine(self, group: str, idx: int):  # the combine callable for dropping the dragged interval here, or None
+    def _int_combine(self, group: str, idx: int):
         if self._col_drag is None:
             return None
         src_group, src = self._col_drag
-        if src_group != group or src == idx:  # same column only, and onto a DIFFERENT interval
+        if src_group != group or src == idx:
             return None
         combine = getattr(self._editor, self._INTERVAL_COMBINE[group])
         return lambda: combine(src, idx)
@@ -2680,13 +1929,13 @@ class _Reconciler:
     _GROUP_CELL_KIND = {"comma": "commacell", "target": "targetcell",
                         "held": "heldcell", "interest": "interestcell"}
 
-    def _preview_int_drop(self, group: str, idx: int) -> None:  # hovering target (group, idx): preview the combine (else revert)
+    def _preview_int_drop(self, group: str, idx: int) -> None:
         apply = self._int_combine(group, idx)
-        kind = self._GROUP_CELL_KIND[group]  # highlight the whole target COLUMN (its editable cells)
+        kind = self._GROUP_CELL_KIND[group]
         target = (lambda cb: cb.kind == kind and getattr(cb, "comma", None) == idx) if apply is not None else None
         self._cb.combine_preview(apply, target)
 
-    def _drop_on_interval(self, group: str, idx: int) -> None:  # add the dragged interval into the one it was dropped on
+    def _drop_on_interval(self, group: str, idx: int) -> None:
         apply = self._int_combine(group, idx)
         self._col_drag = None
         if apply is not None:
@@ -2694,32 +1943,24 @@ class _Reconciler:
         else:
             self._cb.combine_end()
 
-    def _build_basis_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # the domain − on the interval-vectors row's left bus
+    def _build_basis_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
         self._preview_control(wrap, self._editor.shrink)
 
-    def _build_comma_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # each comma's − un-tempers just that comma; the draft's − cancels it
+    def _build_comma_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_comma, self._editor.remove_comma, rank_axis="comma")
 
-    # the + that opens a blank, off-screen draft column (comma / interest / held / target) gets NO
-    # hover preview: the new column is empty and not yet placed, so nothing on screen would change —
-    # only removes and the re-solving adds (a prime, un-tempering a comma) have on-screen cells to ring.
     def _build_comma_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-comma") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_comma, "comma"))
 
-    def _build_element_plus(self, cb: spreadsheet.CellBox, wrap) -> None:  # nonstandard-domain box on: open a blank ?/? element draft
+    def _build_element_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-element") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_element, "element"))
 
-    def _build_element_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # nonstandard-domain box on: the domain − (both axes)
-        # one builder for every nonstandard-domain −, told apart by id (like _build_list_minus): a
-        # ":pending" draft cancels the ?/? draft (remove_element), any other removes that committed
-        # element (remove_domain_element, carrying its index as cb.prime). The ":basis" ids are the
-        # interval-vectors spine's, revealed vertically on the left bus (rtt-minus-btn-v) like
-        # _build_basis_minus; the quantities-row ids reveal above the header (rtt-minus-btn).
+    def _build_element_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
         action = self._editor.remove_element if cb.id.endswith(":pending") \
             else (lambda idx=cb.prime: self._editor.remove_domain_element(idx))
         btn = "rtt-minus-btn-v" if ":basis" in cb.id else "rtt-minus-btn"
@@ -2729,11 +1970,6 @@ class _Reconciler:
         self._preview_control(wrap, action)
 
     def _build_list_minus(self, cb: spreadsheet.CellBox, wrap, cancel, remove, rank_axis: str | None = None) -> None:
-        # an interval-list column's − (interest / held / target / comma): the draft column's cancels
-        # the draft, every other drops just its interval (cb.comma) — each is independently removable.
-        # ``rank_axis`` is "comma" only for the comma basis, whose removal is a RANK change (it raises
-        # the rank, birthing a generator), so a committed comma's − previews the dual via the builder
-        # reflow; the others (target/held/interest) and the draft-cancel use the plain ring preview.
         pending = cb.id.endswith(":pending")
         action = cancel if pending else (lambda idx=cb.comma: remove(idx))
         wrap.classes("rtt-minus-zone")
@@ -2765,7 +2001,7 @@ class _Reconciler:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-target") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_target, "target"))
 
-    def _build_colgrip(self, cb: spreadsheet.CellBox, wrap) -> None:  # a per-column drag handle / drop target on the fan gridline:
+    def _build_colgrip(self, cb: spreadsheet.CellBox, wrap) -> None:
         # drag one column's grip onto another to MOVE/reorder it; the per-list "grip:{list}:add" zone
         # is drop-only — the append / into-empty-list target on the stub gridline, so dropping into a
         # list is always "drop on the gridline" (no separate header/+ target). Mirrors the proven
@@ -2773,20 +2009,16 @@ class _Reconciler:
         # drag.js / dragging-class: a grip is BOTH source AND drop target, with a per-element dragover
         # preventDefault (client-side, so it doesn't round-trip per move) marking it a valid target.
         # The dragged column's (list, idx) is held server-side from dragstart through drop.
-        _, lst, tail = cb.id.split(":")  # "grip:{list}:{idx}" — idx is "add" for the append/empty zone
-        wrap.on("dragover", js_handler="(e) => e.preventDefault()")  # mark a valid drop target
-        if tail == "add":  # drop-only: an empty list still gets a gridline target (nothing to drag here)
+        _, lst, tail = cb.id.split(":")
+        wrap.on("dragover", js_handler="(e) => e.preventDefault()")
+        if tail == "add":
             wrap.classes("rtt-colgrip rtt-coldrop")
-            # hovering the gridline previews appending the dragged column here; dropping commits it
             wrap.on("dragenter.prevent", lambda _=None, l=lst: self._cb.on_drag_enter(l, None))
             wrap.on("drop.prevent", lambda _=None, l=lst: self._cb.on_drop(l, None))
             return
-        idx = cb.comma  # the grip is index-keyed (slot-bound): it stays at its slot while a reorder
-        # glides the value columns, so its slot index never goes stale and it doesn't move under the cursor
+        idx = cb.comma
         wrap.classes("rtt-drag-handle rtt-colgrip").props("draggable=true")
         wrap.on("dragstart", lambda _=None, l=lst, i=idx: self._cb.on_drag_start(l, i))
-        # hovering a column previews the would-be move (the columns slide to open the drop slot) before
-        # the drop commits it — so you see where the column will land while still dragging
         wrap.on("dragenter.prevent", lambda _=None, l=lst, i=idx: self._cb.on_drag_enter(l, i))
         wrap.on("dragend", lambda _=None: self._cb.on_drag_end())
         wrap.on("drop.prevent", lambda _=None, l=lst, i=idx: self._cb.on_drop(l, i))
@@ -2796,26 +2028,13 @@ class _Reconciler:
 @ui.page("/")
 def index(state: str | None = None) -> None:
     ui.add_css(_CSS)
-    # Give every tooltip a show delay so the dense grid's hover help waits for a deliberate rest
-    # rather than popping the instant the cursor crosses a control. Setting it on the Tooltip
-    # element's default props covers the whole population at once — chrome, Show toggles, grid
-    # controls and any future tooltip — with no per-call wiring to keep in sync. Idempotent: it
-    # re-sets the same class default each page build.
     ui.tooltip.default_props(f"delay={_TOOLTIP_DELAY_MS}")
-    # the audio rows' Web Audio engine + its glyph variants (shared markup for click redraws)
     ui.add_body_html(f"<script>{_AUDIO_JS}\nwindow.rttAudio.glyphs = {json.dumps(_AUDIO_GLYPHS)};</script>")
-    # keep the frozen title bands pinned to the scrolling grid pane (see _FREEZE_JS)
     ui.add_body_html(f"<script>{_FREEZE_JS}</script>")
-    # live int<->ratio switching for the editable stacked fraction cells (see _FRACTION_JS)
     ui.add_body_html(f"<script>{_FRACTION_JS}</script>")
-    # live int<->decimal switching for the editable stacked cents cells (see _DECIMAL_JS)
     ui.add_body_html(f"<script>{_DECIMAL_JS}</script>")
-    # predictable Tab order across the editable grid cells (see _TABNAV_JS)
     ui.add_body_html(f"<script>{_TABNAV_JS}</script>")
-    # the zoom-on-hover magnifier: a scaled clone of any gridded value cell (see _ZOOM_JS)
     ui.add_body_html(f"<script>{_ZOOM_JS}</script>")
-    # the first-run guided tour: feed it the steps, then load the engine (auto-runs once per
-    # browser, replays from the corner tour button — see _TOUR_JS / _TOUR_STEPS)
     ui.add_body_html(
         f"<script>window.rttTour={{steps:{json.dumps(_TOUR_STEPS)},autostart:true}};\n"
         f"{_TOUR_JS}</script>")
@@ -2838,8 +2057,8 @@ def index(state: str | None = None) -> None:
     # beats Quasar's body background the same way the static "#fff" did before).
     dark_mode = [bool(_doc_store().get(_DARK_KEY, False))]
 
-    def _dark_icon():  # the sun/moon glyph shows the theme a click will switch TO
-        return "light_mode" if dark_mode[0] else "dark_mode"  # a sun to go light, a moon to go dark
+    def _dark_icon():
+        return "light_mode" if dark_mode[0] else "dark_mode"
 
     def apply_theme():
         body = ui.query("body")
@@ -2850,14 +2069,10 @@ def index(state: str | None = None) -> None:
         dark_mode[0] = not dark_mode[0]
         _doc_store()[_DARK_KEY] = dark_mode[0]
         apply_theme()
-        dark_btn.props(f"icon={_dark_icon()}")  # swap the glyph to the new target theme
+        dark_btn.props(f"icon={_dark_icon()}")
 
-    apply_theme()  # paint the persisted theme up front, before the grid builds (no flash)
+    apply_theme()
 
-    # The guide-chapter reveal slider is, like dark mode, a global VIEWING preference kept out of
-    # the document: it shows/hides which Show controls the panel offers (settings.CHAPTER) as a
-    # reader advances through D&D's guide, but never changes the grid. It persists under its own
-    # store key, so "select all / none" and Reset (which act only on editor.settings) leave it be.
     def _clamp_chapter(v) -> int:
         try:
             v = int(v)
@@ -2872,20 +2087,8 @@ def index(state: str | None = None) -> None:
         return f"{label}: {show_settings.CHAPTER_TITLES[ch]}"
 
     def apply_chapter():
-        # Show/hide each Show control by the slider: a control appears once the slider reaches its
-        # reveal chapter (its own, or a later ancestor's — settings.reveal_chapter). An unrevealed
-        # control isn't merely disabled, it's made INVISIBLE — but the two sections do it differently:
-        #   • the dummy tile keeps the tile's shape, so its parts go visibility:hidden (invisible but
-        #     still occupying their slot — rtt-chap-invisible);
-        #   • the show/example rows collapse, so they go display:none (no leftover gap — rtt-chap-hidden).
-        # Both ride dedicated classes, independent of the part-on/off styling render() writes and of
-        # the sub-control parent-visibility binding, so they coexist. The panel elements persist
-        # across renders (render rebuilds the GRID, not these), so this runs only when the slider moves.
         ch = chapter[0]
         chapter_reading.set_text(_chapter_reading(ch))
-        # the longest readouts (ch7 "All-interval tuning schemes", ch9 "Tuning in nonstandard
-        # domains") spill onto a second line beside the "guide chapter" label, so shrink the font for
-        # those rather than wrap — the shorter titles keep the readable size.
         chapter_reading.classes(add="rtt-chapter-reading-narrow") \
             if len(show_settings.CHAPTER_TITLES[ch]) >= 25 \
             else chapter_reading.classes(remove="rtt-chapter-reading-narrow")
@@ -2897,22 +2100,15 @@ def index(state: str | None = None) -> None:
                 _gate(part, "rtt-chap-invisible", show_settings.reveal_chapter(key) > ch)
         for key, row in show_rows.items():
             _gate(row, "rtt-chap-hidden", show_settings.reveal_chapter(key) > ch)
-        # the dummy tile's audio bank isn't a Show layer, but it rides the tile, so the slider gates
-        # it the same space-preserving way; it's available from the first notch (ch2 = CHAPTER_MIN).
         if "audio_bank" in refs:
             _gate(refs["audio_bank"], "rtt-chap-invisible", show_settings.CHAPTER_MIN > ch)
-        _sync_show_availability()  # an unrevealed toggle is disabled + left out of select-all
+        _sync_show_availability()
 
     def _available_keys():
-        # the Show toggles the chapter slider has revealed AND the layout actually builds — the
-        # toggles select-all / the master checkbox act on, and the ones left enabled in the panel.
         return [k for k in show_settings.IMPLEMENTED
                 if show_settings.reveal_chapter(k) <= chapter[0]]
 
     def _sync_show_availability():
-        # A chapter-hidden toggle is disabled too, not merely hidden: its checkbox greys + goes inert
-        # (like a not-yet-built one), and it drops out of select-all / the master state, so sliding
-        # can't toggle or count an unrevealed control. Recomputed on every render and slider move.
         for key, box in boxes.items():
             disabled = key not in show_settings.IMPLEMENTED \
                 or show_settings.reveal_chapter(key) > chapter[0]
@@ -2922,12 +2118,6 @@ def index(state: str | None = None) -> None:
             examples[key].classes(add="rtt-ex-disabled") if disabled \
                 else examples[key].classes(remove="rtt-ex-disabled")
         states = [editor.settings[k] for k in _available_keys()]
-        # This is a programmatic sync of the master checkbox to the document, NOT a user click —
-        # so it must never cascade through on_select_all (which would flip every toggle to match).
-        # render() already runs us under building[0]; but the direct apply_chapter() callers (Reset
-        # and the chapter slider) don't, and there a real value CHANGE here (e.g. select-all was on,
-        # Reset drops it to the mixed defaults) fires on_select_all synchronously and turns every
-        # setting off. Guard the write itself so every caller is covered.
         was_building = building[0]
         building[0] = True
         try:
@@ -2938,20 +2128,15 @@ def index(state: str | None = None) -> None:
             else select_all_box.classes(remove="rtt-show-mixed")
 
     def on_chapter_change(v):
-        if building[0]:  # a programmatic thumb sync (render keeps it on chapter[0]; Reset moves it) —
-            return       # not a user drag, so don't re-fire the prune/render
+        if building[0]:
+            return
         chapter[0] = _clamp_chapter(v)
         _doc_store()[_CHAPTER_KEY] = chapter[0]
-        # a hidden setting is DISABLED, not just hidden: turn off any layer the new chapter no longer
-        # reveals so its grid content drops out (raising the slider re-reveals the control, left off).
         editor.disable_hidden_settings(chapter[0])
-        apply_chapter()  # panel: reveal/hide + enable/disable the controls and sync the readout
-        render()         # grid: drop the now-disabled layers' content (+ sync the checkboxes off)
+        apply_chapter()
+        render()
 
     def reset_everything():
-        # Reset restores the guide-chapter slider to its default too, not just the document — set the
-        # chapter first so act(editor.reset)'s render syncs the thumb and grid to it, then refresh the
-        # panel's reveal/disable state for the default chapter.
         chapter[0] = show_settings.CHAPTER_DEFAULT
         _doc_store()[_CHAPTER_KEY] = chapter[0]
         act(editor.reset)
@@ -2963,23 +2148,13 @@ def index(state: str | None = None) -> None:
     # (app.storage.user) so a refresh restores exactly where the user left off; a
     # corrupt/old blob is ignored, falling back to the as-shipped defaults.
     editor = Editor()
-    # True when a persisted blob existed but failed to load: render() must then NOT overwrite the
-    # stored bytes with the fallback defaults (which would silently wipe every other still-valid
-    # field the user had), so they survive for recovery. Cleared the moment the user makes a real
-    # edit (editor.can_undo) — at which point persisting their freshly-built document IS intended.
     load_failed = [False]
-    # A ?state=… shared link wins over the persisted document: open it and you get exactly the
-    # sharer's state (Editor.load clears the undo/redo history, so none of their edit trail rides
-    # along). The URL token is stripped client-side once loaded (see below), so a later refresh
-    # falls back to this freshly-persisted document rather than re-resetting to the shared state.
     loaded_from_url = False
     if state:
         try:
             editor.load(_decode_state(state))
             loaded_from_url = True
         except Exception:
-            # a mangled/old shared link must not strand the user: fall through to their persisted
-            # document (or the defaults), exactly as a corrupt stored blob does
             _log.exception("shared URL state failed to load; falling back: %.200r", state)
     if not loaded_from_url:
         stored = _doc_store().get(_STORE_KEY)
@@ -2987,22 +2162,15 @@ def index(state: str | None = None) -> None:
             try:
                 editor.load(stored)
             except Exception:
-                # still fall back to the as-shipped defaults, but leave a trace: a load-path
-                # regression silently resetting every returning user's document must be visible
                 _log.exception("stored document failed to load; using defaults: %.200r", stored)
                 load_failed[0] = True
     rec = _Reconciler(editor)
     building = [False]
-    last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
+    last_lay = [None]
     refs: dict = {}
-    target_limit_commit = [None]  # pending debounced commit task for the target-limit wheel
+    target_limit_commit = [None]
 
     def _on_disconnect():
-        # a pending target-limit debounce must not outlive the page: if the user leaves mid-
-        # gesture, cancel it so the commit never renders into a gone client (which would just log
-        # an error). And a gesture holding the document in a hypothetical state (a drag / temp-grow
-        # whose dragend/popup-hide was lost with the socket) must restore the real document, or it
-        # would block persistence indefinitely (see render's persist guard).
         if target_limit_commit[0] is not None:
             target_limit_commit[0].cancel()
         end_gesture()
@@ -3013,57 +2181,33 @@ def index(state: str | None = None) -> None:
     # the captured client needs no slot, so the busy-scrim push works from the background task too.
     page_client = ui.context.client
     page_client.on_disconnect(_on_disconnect)
-    # install the shared chooser-option hover delegation once per page (inert until a dropdown opens)
     ui.run_javascript(_OPTION_HOVER_DELEGATION)
-    # dismiss any hover tooltip on pointerdown so it can't strand when the click removes/reflows its
-    # anchor (the +/- buttons rebuild the grid out from under the cursor — see _TOOLTIP_DISMISS_JS)
     ui.run_javascript(_TOOLTIP_DISMISS_JS)
-    # install the client-driven "Computing…" busy scrim (inert until a committing control is used)
     ui.run_javascript(_BUSY_JS)
-    # a shared ?state=… link has now been loaded into the document; drop the param from the address
-    # bar (without a reload) so the URL reads clean and a later refresh restores the user's own
-    # edited/persisted document rather than snapping back to the shared starting state
     if loaded_from_url:
         ui.run_javascript("window.history.replaceState({}, '', window.location.pathname)")
 
     def col_tokens(name):
-        # the previous render's id-tokens for a reorderable interval list, in column order — so an
-        # edit handler reads each column's cells by the token its id actually carries (== the index
-        # until the list is reordered), not the bare index
         ids = last_lay[0].identities if last_lay[0] is not None else None
         return [tok for tok, _ in (ids or {}).get(name, [])]
 
     def _token_index(cid, name):
-        # map a sub-picker cell id ("etpick:{token}" / "commapick:{token}") back to its live row /
-        # column index, by the same id-token the cells carry (== the index until a reorder/removal)
         token = cid.split(":", 1)[1]
         for i, tok in enumerate(col_tokens(name)):
             if str(tok) == token:
                 return i
         return None
 
-    # ---- The declarative preview-ring core ------------------------------------------------------
-    # The ring highlights (amber rtt-preview-change / red rtt-preview-remove) are a PURE FUNCTION
-    # of (document, rec.gesture), recomputed and repainted in full on every paint — render() ends
-    # with a paint, and gesture transitions that don't move the document paint directly. Nothing
-    # else ever touches the ring classes, so a ring structurally cannot survive its gesture: every
-    # commit renders, every render repaints from state. (This replaced two parallel mechanisms — a
-    # direct class-poke and a baseline render-diff — coordinated by ~10 flags, whose missed clear
-    # paths were the recurring stranded-highlight bugs.)
 
-    gesture_rendering = [False]  # True while a gesture's OWN handler renders (drag hover, temp grow)
+    gesture_rendering = [False]
     # a comma−/mapping− hover's transient rank-removal preview — None | ("comma", idx) | ("row", idx).
     # Pure view state (not a gesture, not document state): render() threads it into the build so the
     # builder reflows the dual axis (the born generator/comma ghosts green, the leaver reds, the
     # survivors amber). Set on mouseenter, cleared on mouseleave and on any committing act().
     rank_remove = [None]
-    rank_rendering = [False]  # True only during the rank-removal hover's OWN render (so a foreign
-    # render — a Show toggle, a commit — clears the preview instead of stranding it; mirrors how
-    # render() ends a foreign hover gesture)
+    rank_rendering = [False]
 
     def gesture_render():
-        # a render initiated by the live gesture itself (a drag's reflow preview, a temperament
-        # grow), exempt from render()'s ends-foreign-gestures guard
         gesture_rendering[0] = True
         try:
             render()
@@ -3071,84 +2215,42 @@ def index(state: str | None = None) -> None:
             gesture_rendering[0] = False
 
     def end_gesture():
-        # The ONE way a gesture dies. A gesture holding a token has the document in a hypothetical
-        # state (drag hover, temperament grow) — restore it FIRST, so whatever runs next (a commit,
-        # a render) acts on the real document. Returns the ended gesture (or None) so callers can
-        # ask whether it had reflowed. Never null rec.gesture directly.
         g, rec.gesture = rec.gesture, None
         if g is not None and g.token is not None:
             editor.restore_for_preview(g.token)
         return g
 
     def end_chooser_gesture():
-        # end a live CHOOSER hover preview before a chooser commits, so the commit is one clean undo
-        # step off the real document (not the reflowed hypothetical) and a later popup-close leave
-        # can't restore the preview's token over the commit. ONLY a chooser gesture: an edit / wheel /
-        # temp / drag gesture is a different live interaction (e.g. the target-limit field's OWN typing
-        # preview, whose edit gesture must survive a sibling family-select commit) and is left alone.
         if rec.gesture is not None and rec.gesture.kind == "chooser":
             end_gesture()
 
     def compute_rings(lay):
-        # the amber ("value would move" / "value moved") and red ("would be removed") cell-id sets
-        # for the current gesture against layout `lay` — the pure function the painter applies.
-        # With the `preview_highlighting` behaviour off, no ring is ever painted — neither the gesture
-        # rings nor the layout's own steady reds/ambers — so the cells stay plain (the hover handlers
-        # also stand down, so nothing reflows either; the two gates together fully suppress the preview).
         if not editor.settings["preview_highlighting"]:
             return frozenset(), frozenset()
-        # The layout contributes its OWN steady reds AND ambers independent of any gesture: the
-        # builder-driven cb.preview_remove (red: the doomed unchanged interval / the mapping row a
-        # comma-add drops / the comma a generator-add drops) and cb.preview_change (amber: the
-        # surviving rows/commas a rank change recombines) are render-state, painted with the same
-        # look and kept until the draft / hover closes (the next build without the flags drops them).
         static_red = frozenset(cb.id for cb in lay.cells if cb.preview_remove)
         static_amber = frozenset(cb.id for cb in lay.cells if cb.preview_change)
         amber, red = _gesture_rings(lay)
-        # a green/pending DRAFT cell already shows its own (green) "being added" state — it must never
-        # ALSO carry a preview ring (the green-text-on-amber-background hybrid). Drop pending cells from
-        # both ring sets; the cascade still rings every committed cell the draft would move/remove.
         pending = frozenset(cb.id for cb in lay.cells if cb.pending)
         return (amber | static_amber) - pending, (red | static_red) - pending
 
     def _gesture_rings(lay):
-        # the active gesture's contribution to the ring sets (empty when no gesture is live)
         g = rec.gesture
         if g is None:
             return frozenset(), frozenset()
         if g.apply is not None:
-            # hypothetical mode: the document is unchanged; diff the gesture's base (the focus-time
-            # baseline for an edit, else the current grid) against the would-be layout, painting on
-            # the CURRENT grid — no reflow, so a hovered control never slides from under the cursor.
-            # Cells the op would ADD exist only in `hyp`, so they can't ring (off-screen until
-            # committed); cells it would REMOVE are still on screen, so red can mark them.
             base = g.baseline if g.baseline is not None else lay
             token = editor.capture_for_preview()
             try:
                 g.apply()
                 hyp = editor.layout(prev_ids=base.identities)
                 amber = spreadsheet.changed_cell_ids(base, hyp)
-                # RED marks the rows ON SCREEN NOW that the op would remove, so it must diff the
-                # CURRENT layout (`lay`) against `hyp`, NOT the focus-time `base`. An edit gesture
-                # commits in place while still focused (a wheeled / typed target limit lands and
-                # reflows the grid without ending the gesture), so the on-screen grid can differ
-                # from the focus snapshot: e.g. focus at 6-TILT, commit UP to 8-TILT (rows 8/9
-                # appear), then preview back DOWN — rows 8/9 are on screen and dropped, but they're
-                # absent from the stale `base`, so `removed_cell_ids(base, hyp)` would miss them
-                # (and symmetrically a shrunk grid would mark rows no longer present). `lay` is the
-                # truth for what's paintable. AMBER stays against `base` — it's the "what your edit
-                # moved since you focused" feedback, which is exactly the focus-relative diff.
                 red = spreadsheet.removed_cell_ids(lay, hyp)
             finally:
-                editor.restore_for_preview(token)  # leave no trace
+                editor.restore_for_preview(token)
             return amber - {g.source}, red
         if g.baseline is not None:
-            # live mode: the document has moved (committed keystrokes / wheel notches / a
-            # temporarily-applied drag or temperament-grow) — diff the arm-time baseline against
-            # the current grid. Red never applies here: anything removed is already off-screen.
             amber = spreadsheet.changed_cell_ids(g.baseline, lay) - {g.source}
-            if g.target_pred is not None:  # drag-combine: also ring the dropped-on row/column's
-                # editable cells (their input values aren't in the layout content signature)
+            if g.target_pred is not None:
                 amber |= frozenset(cb.id for cb in lay.cells if g.target_pred(cb))
             return amber, frozenset()
         return frozenset(), frozenset()
@@ -3158,16 +2260,13 @@ def index(state: str | None = None) -> None:
         # change-detected, so a no-op repaint sends nothing over the socket)
         el = rec.els.get(eid)
         if el is None:
-            return  # a ring id with no DOM element (nothing on screen to mark) — skip
+            return
         el.classes(add="rtt-preview-change" if eid in amber else "",
                    remove="" if eid in amber else "rtt-preview-change")
         el.classes(add="rtt-preview-remove" if eid in red else "",
                    remove="" if eid in red else "rtt-preview-remove")
 
     def paint_rings():
-        # repaint every cell's rings from the current gesture WITHOUT a render — the path for
-        # gesture transitions that don't move the document (hover arm/disarm, a keystroke's new
-        # candidate, blur). render() does the same sweep itself at the end of its cell pass.
         lay = last_lay[0]
         if lay is None:
             return
@@ -3176,16 +2275,11 @@ def index(state: str | None = None) -> None:
             paint_cell(cb.id, amber, red)
 
     def take_over_gesture():
-        # end the live gesture so a new one can arm: the token (if any) restores the real
-        # document, and a temperament grow-preview that had REFLOWED the grid rebuilds it
         was = end_gesture()
         if was is not None and was.reflowed:
             gesture_render()
 
     def _edit_candidate(apply):
-        # a keystroke's new preview candidate for the focused cell: the editor thunk the typed
-        # value WOULD commit, or None when the entry is invalid/incomplete/a draft (previews
-        # nothing). NO commit — the value lands only on Enter/blur.
         g = rec.gesture
         if g is None or g.kind != "edit":
             return
@@ -3193,69 +2287,51 @@ def index(state: str | None = None) -> None:
         paint_rings()
 
     def _rebase_edit_gesture():
-        # a DRAFT column just materialized under the focused cell (the green pending vector
-        # committed the moment its last value was typed — no blur fires, so the edit gesture
-        # stays armed). The change is APPLIED, so its rings must go away immediately: rebase the
-        # gesture on the just-rendered grid — the diff against the new reality is empty, and any
-        # CONTINUED typing previews against the committed state. (Without this, the commit's
-        # render rings everything the new column moved, stranded until the user clicks elsewhere
-        # — the reported submit-a-held-interval bug.)
         g = rec.gesture
         if g is not None and g.kind == "edit":
             g.baseline = last_lay[0]
             paint_rings()
 
     def _edit_vector_grid(spec, preview=False):
-        # the shared state machine behind on_mapping/comma/interest/held/target_cells_change:
-        # a building-echo guard (+ spec.guard — mapping's temperament-boxes gate), then either
-        # the green draft column's commit-once-complete, or read the whole grid and preview/commit.
         if building[0] or (spec.guard is not None and not spec.guard()):
             return
         d = editor.state.d
         toks = col_tokens(spec.group)
         cell_id = spec.cell_id
         if spec.pending() is not None:
-            # the draft column rides one token past the committed ones; hand its cells to the
-            # editor, which commits (and re-ranks) once they form a valid independent entry
             pt = spreadsheet.pending_token(toks)
             if any(cell_id(pt, p) not in rec.inputs for p in range(d)):
                 if preview:
                     _edit_candidate(None)
-                return  # the draft cells aren't shown (folded away)
+                return
             values = [_parse_int(rec.inputs[cell_id(pt, p)].value) for p in range(d)]
             if preview:
-                # interest/held/target arm the draft's would-be commit (set_pending_* itself
-                # decides whether anything lands); mapping/comma's rank-change preview is
-                # builder-driven from the open draft — value-independent — so they arm nothing
                 _edit_candidate((lambda v=values: spec.set_pending(v)) if spec.draft_arms else None)
                 return
             spec.set_pending(values)
-            if spec.pending() is None:  # the draft materialized into a real column / row
+            if spec.pending() is None:
                 # the change is applied (it retunes) — render OFF the loop, then rebase the gesture
                 # on the fresh layout so its rings go away NOW (no blur fires)
                 _request_render(after=_rebase_edit_gesture)
-            # an uncommitted draft renders nothing: the DOM already shows the typed values, and in a
-            # real browser this blur-commit can land mid-typing of the NEXT draft cell, so a render
-            # here would push the stale pending back over the focused cell and wipe in-flight keys
             return
         count = spec.count()
         if len(toks) != count or any(
                 cell_id(toks[i], p) not in rec.inputs for i in range(count) for p in range(d)):
             if preview:
                 _edit_candidate(None)
-            return  # the cells aren't currently shown (folded away)
+            return
         vectors = [[_parse_int(rec.inputs[cell_id(toks[i], p)].value) for p in range(d)]
                    for i in range(count)]
         if any(v is None for vec in vectors for v in vec):
             if preview:
                 _edit_candidate(None)
-            return  # an in-progress / non-integer edit
+            return
         if spec.validate is not None and not spec.validate(vectors):
             if preview:
-                _edit_candidate(None)  # an improper in-progress entry previews nothing (no toast)
+                _edit_candidate(None)
                 return
             ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
-            render()  # revert the cells to the current temperament (no retune — synchronous)
+            render()
             return
         if preview:
             _edit_candidate(lambda: spec.commit(vectors))
@@ -3265,14 +2341,14 @@ def index(state: str | None = None) -> None:
 
     _MAPPING_EDIT = _VecGridEdit(
         group="gens", count=lambda: len(editor.state.mapping),
-        cell_id=ids.mapping_cell,  # row-major: token (row) before prime
+        cell_id=ids.mapping_cell,
         pending=lambda: editor.pending_mapping_row, set_pending=editor.set_pending_mapping_row,
         commit=editor.edit_mapping,
         validate=lambda rows: service.is_proper_temperament(rows),
-        guard=lambda: editor.settings["temperament_tiles"])  # no editable matrix when hidden
+        guard=lambda: editor.settings["temperament_tiles"])
     _COMMA_EDIT = _VecGridEdit(
         group="commas", count=lambda: len(editor.state.comma_basis),
-        cell_id=ids.comma_cell,  # prime down the rows, comma across
+        cell_id=ids.comma_cell,
         pending=lambda: editor.pending_comma, set_pending=editor.set_pending_comma,
         commit=editor.edit_comma_basis,
         validate=lambda basis: service.is_proper_temperament(service.from_comma_basis(basis).mapping))
@@ -3290,7 +2366,7 @@ def index(state: str | None = None) -> None:
         group="targets",
         count=lambda: len(editor.target_override or service.target_interval_set(
             editor.target_spec, editor.state.domain_basis)),
-        cell_id=ids.target_cell,  # REVERSED: token (column) before prime
+        cell_id=ids.target_cell,
         pending=lambda: editor.pending_target, set_pending=editor.set_pending_target,
         commit=editor.set_target_override_vectors, draft_arms=True)
 
@@ -3299,10 +2375,6 @@ def index(state: str | None = None) -> None:
         _edit_vector_grid(_MAPPING_EDIT, preview)
 
     def on_form_change(preview=False):
-        # the interactive generator form matrix 𝐹: read the WHOLE r×rc grid (over the generators, NOT
-        # the d primes — so it can't ride the _edit_vector_grid factory), and re-store M = F·M_C. An
-        # invalid 𝐹 (non-integer mid-edit → preview nothing; a complete but non-unimodular one → toast
-        # + revert) leaves the mapping untouched, like on_mapping_change. Gated on the form-tiles layer.
         if building[0] or not editor.settings.get("form_tiles"):
             return
         r = len(editor.state.mapping)
@@ -3310,18 +2382,18 @@ def index(state: str | None = None) -> None:
         if any(ids.form_cell(i, j) not in rec.inputs for i in range(r) for j in range(rc)):
             if preview:
                 _edit_candidate(None)
-            return  # the 𝐹 cells aren't shown (folded away)
+            return
         rows = [[_parse_int(rec.inputs[ids.form_cell(i, j)].value) for j in range(rc)] for i in range(r)]
         if any(v is None for row in rows for v in row):
             if preview:
                 _edit_candidate(None)
-            return  # an in-progress / non-integer edit
+            return
         if service.mapping_from_form_matrix(editor.state.mapping, rows) is None:
             if preview:
-                _edit_candidate(None)  # a non-unimodular in-progress 𝐹 previews nothing (no toast)
+                _edit_candidate(None)
                 return
             ui.notify(_INVALID_FORM, type="negative", position="top")
-            render()  # revert the cells to the current form matrix (synchronous, no retune)
+            render()
             return
         if preview:
             _edit_candidate(lambda: editor.edit_form_matrix(rows))
@@ -3333,26 +2405,20 @@ def index(state: str | None = None) -> None:
         _edit_vector_grid(_COMMA_EDIT, preview)
 
     def on_unchanged_change(preview=False):
-        # the unchanged basis U is editable when it is a full rational projection (like the comma
-        # basis): read its d-tall columns and set the tuning to the projection that holds them. On
-        # COMMIT (preview=False), an entry that can't drive the projection — a non-integer / garbage
-        # value, or one comma_ratios rejects — toasts WHY and reverts the cell (render() refills it
-        # from the live basis), matching on_ratio_change / on_mapping_change; while PREVIEWING it just
-        # rings nothing. Mirrors on_comma_change.
         if building[0]:
             return
         d, r = editor.state.d, editor.state.r
         if any(ids.unchanged_cell(j, p) not in rec.inputs for j in range(r) for p in range(d)):
             if preview:
                 _edit_candidate(None)
-            return  # U isn't editable (under-rank) or not shown — nothing on screen to revert
+            return
         vectors = [[_parse_int(rec.inputs[ids.unchanged_cell(j, p)].value) for p in range(d)] for j in range(r)]
         if any(v is None for vec in vectors for v in vec):
             if preview:
                 _edit_candidate(None)
-                return  # an in-progress / non-integer edit previews nothing (no toast)
+                return
             ui.notify(_INVALID_UNCHANGED, type="negative", position="top")
-            render()  # revert the cell to the live unchanged basis
+            render()
             return
         try:
             ratios = service.comma_ratios(tuple(tuple(v) for v in vectors), editor.state.domain_basis)
@@ -3361,7 +2427,7 @@ def index(state: str | None = None) -> None:
                 _edit_candidate(None)
                 return
             ui.notify(_INVALID_UNCHANGED, type="negative", position="top")
-            render()  # revert the cell to the live unchanged basis
+            render()
             return
         if preview:
             _edit_candidate(lambda: editor.set_unchanged_basis(ratios))
@@ -3379,30 +2445,21 @@ def index(state: str | None = None) -> None:
         _edit_vector_grid(_TARGET_EDIT, preview)
 
     def on_ratio_change(cid):
-        # a quantities-row ratio cell committing on blur (comma / target / held / interest) — the
-        # scalar twin of the interval-vectors row's column edit. The typed fraction parses to a
-        # vector and routes through the SAME setter the vector edit uses; a ":pending" draft fills
-        # that column's draft instead (like typing its vector cells). render() always runs: a valid
-        # edit shows the new value, an invalid one snaps the field back — and a bad fraction also
-        # toasts WHY (unparseable vs outside the prime limit). An untouched "?/?" draft or a cleared
-        # cell is a silent no-op (no toast), not an error.
         if building[0] or cid not in rec.inputs:
             return
-        group, tok = cid.split(":")  # the column's id-TOKEN, not its index — a reorder decouples them
-        raw = rec.cell_value(cid)  # the cell's "num/den" (a fraction cell rejoins its two fields)
-        if raw in ("", "?/?"):  # an untouched draft placeholder or a cleared cell
+        group, tok = cid.split(":")
+        raw = rec.cell_value(cid)
+        if raw in ("", "?/?"):
             render()
             return
         try:
             vector = service.interval_vector(raw, editor.state.d, editor.state.domain_basis)
         except ValueError as exc:
             ui.notify(str(exc), type="negative", position="top")
-            render()  # revert the field to its current value
+            render()
             return
 
-        def replace(current, setter):  # swap the edited column in, skipping a no-op blur (no undo step)
-            # the token's CURRENT list index: identity-keyed columns may have been reordered (or a
-            # removal decoupled token from slot), so map the token through the live identities
+        def replace(current, setter):
             list_name = {"target": "targets", "held": "held", "interest": "interest",
                          "comma": "commas"}.get(group)
             toks = col_tokens(list_name) if list_name else []
@@ -3412,7 +2469,7 @@ def index(state: str | None = None) -> None:
                 vectors[pos] = vector
                 setter(vectors)
 
-        if tok == "pending":  # fill the draft column, committing it like its vector cells do
+        if tok == "pending":
             {"comma": editor.set_pending_comma, "interest": editor.set_pending_interest,
              "held": editor.set_pending_held, "target": editor.set_pending_target}[group](vector)
         elif group == "comma":
@@ -3422,14 +2479,11 @@ def index(state: str | None = None) -> None:
         elif group == "held":
             replace(editor.held_vectors, editor.set_held_vectors)
         elif group == "unchanged":
-            # the unchanged interval ratios drive the projection as a WHOLE: read the full basis (this
-            # column's new ratio + the others) and retune to the projection that holds it — the scalar
-            # twin of editing the U vectors (on_unchanged_change)
             ratios = [rec.cell_value(f"unchanged:{j}") for j in range(editor.state.r)
                       if f"unchanged:{j}" in rec.inputs]
             if len(ratios) == editor.state.r and all(ratios):
                 editor.set_unchanged_basis(tuple(ratios))
-        else:  # target
+        else:
             targets = editor.target_override or service.target_interval_set(
                 editor.target_spec, editor.state.domain_basis)
             replace(service.target_interval_vectors(targets, editor.state.d, editor.state.domain_basis),
@@ -3439,10 +2493,6 @@ def index(state: str | None = None) -> None:
         _request_render()
 
     def transform_interval(cid, op):
-        # the equave-reduce / reciprocate buttons flanking an editable interval ratio (commas / targets
-        # / held / interest). Resolve the column's live vector, apply the op, and route it through the
-        # SAME setter a vector edit uses — one undo step, every dependent row recomputed. A no-op
-        # (already reduced, or a unison reciprocated) commits nothing, so a disabled button is safe.
         if building[0] or cid not in rec.inputs:
             return
         group, tok = cid.split(":")
@@ -3470,59 +2520,49 @@ def index(state: str | None = None) -> None:
         else:
             new_v = tuple(int(x) for x in service.equave_reduce_vector(v, editor.state.domain_basis))
         if list(new_v) == list(v):
-            return  # no-op — no undo step
+            return
         vectors = [list(x) for x in current]
         vectors[pos] = list(new_v)
         setter(vectors)
         _request_render()
 
     def on_element_change(cid):
-        # a chapter-9 domain basis element committing on blur (nonstandard-domain box on). cid is
-        # "prime:{index}" (a relabel) or "prime:pending" (the ?/? draft -> add held just). render()
-        # always runs: a valid relabel/add shows the new basis, an invalid entry snaps the field
-        # back and toasts why. A cleared / unchanged cell is a silent no-op (no toast, no undo step).
         if building[0] or cid not in rec.inputs:
             return
-        raw = rec.cell_value(cid)  # the cell's "num/den" (a fraction cell rejoins its two fields)
+        raw = rec.cell_value(cid)
         tok = cid.split(":")[1]
-        if raw in ("", "?/?"):  # an untouched draft placeholder or a cleared cell
+        if raw in ("", "?/?"):
             render()
             return
-        # parse first, toasting why on failure — the same parse-then-act pattern the interval ratio
-        # cells use (on_ratio_change), so the ?/? draft and a relabel report invalid input alike
         parsed = service.parse_domain_element(raw)
         if parsed is None:
             ui.notify(f"“{raw}” is not a positive rational basis element (≠ 1)",
                       type="negative", position="top")
             render()
             return
-        if tok == "pending":  # the draft column -> add a new element held just
+        if tok == "pending":
             if not service.can_add_domain_element(editor.state, parsed):
                 ui.notify(f"{raw} isn’t independent of the existing basis", type="negative", position="top")
                 render()
                 return
-            editor.set_pending_element(raw)  # valid -> commits and clears the draft
+            editor.set_pending_element(raw)
             _request_render()  # a new domain element retunes — render off the loop
             return
         index = int(tok)
         if parsed == editor.state.domain_basis[index]:
-            return  # a no-op blur (the element is unchanged) — no undo step
+            return
         if not service.can_set_domain_element(editor.state, index, parsed):
             ui.notify(f"{raw} would make the basis dependent", type="negative", position="top")
-            render()  # revert the field to the current element (no retune — synchronous)
+            render()
             return
         editor.set_domain_element(index, raw)
         _request_render()  # relabelling a domain element retunes — render off the loop
 
     def on_element_preview(cid):
-        # live edit preview: as a VALID element is typed into a domain cell, set the candidate the
-        # relabel / held-just add would commit — the rings paint from it WITHOUT committing (the
-        # scalar ratio cells commit on blur, so they don't get the per-keystroke vector cells'
-        # preview for free). An invalid / unchanged value previews nothing.
         g = rec.gesture
         if building[0] or g is None or g.kind != "edit" or g.source != cid or cid not in rec.inputs:
             return
-        raw = rec.cell_value(cid)  # the cell's "num/den" (a fraction cell rejoins its two fields)
+        raw = rec.cell_value(cid)
         tok = cid.split(":")[1]
         parsed = service.parse_domain_element(raw) if raw not in ("", "?/?") else None
         if tok == "pending":
@@ -3531,69 +2571,53 @@ def index(state: str | None = None) -> None:
             valid = (parsed is not None and parsed != editor.state.domain_basis[int(tok)]
                      and service.can_set_domain_element(editor.state, int(tok), parsed))
         if not valid:
-            _edit_candidate(None)  # nothing valid to preview (yet)
+            _edit_candidate(None)
         elif tok == "pending":
-            _edit_candidate(lambda: editor.set_pending_element(raw))  # the held-just add
+            _edit_candidate(lambda: editor.set_pending_element(raw))
         else:
-            _edit_candidate(lambda: editor.set_domain_element(int(tok), raw))  # the relabel
+            _edit_candidate(lambda: editor.set_domain_element(int(tok), raw))
 
     def on_power_change(cid):
-        # editable power inputs share this kind: optimization:power drives the Lp optimization
-        # power; control:q drives the interval-complexity norm power (box 𝒄). Same parse (∞ or a
-        # positive number); an unparseable / out-of-range entry leaves the scheme unchanged.
         if building[0] or cid not in rec.inputs:
             return
         if cid not in ("optimization:power", "control:q"):
             return
         raw = str(rec.inputs[cid].value).strip().lower()
         if raw in ("∞", "inf", "max", "minimax"):
-            power = float("inf")  # ∞ (minimax / max-norm) is the one legitimate non-finite power
+            power = float("inf")
         else:
             try:
                 power = float(raw)
             except ValueError:
-                return  # leave the scheme unchanged on unparseable input
-            # reject nan and a numeric that overflows to ±inf ("1e999"): a power must be a finite
-            # positive number (type ∞/inf/max for minimax). nan slips past `<= 0` (every nan
-            # comparison is False), so it would otherwise commit and crash the solve/format.
+                return
             if not math.isfinite(power) or power <= 0:
                 return
         if cid == "control:q":
             if power < 1:
-                return  # an Lq norm power must be ≥ 1
+                return
             editor.set_complexity_norm_power(power)
         else:
             editor.set_optimization_power(power)
         _request_render()  # a new optimization / complexity power retunes — render off the loop
 
     def _gen_position(tok):
-        # a tuning:gen cell id carries the row's id-TOKEN (== its index until a removal/re-rank
-        # decouples them); the editor's per-generator setters take the POSITION, so map the token
-        # through the live row identities. (The superspace ssgen cells stay position-keyed.)
         toks = col_tokens("gens")
         return toks.index(tok) if tok in toks else tok
 
     def on_gentuning_change(cid):
-        # an editable generator-tuning-map cell: a valid cents number overrides that one
-        # generator's tuning (a per-number manual override); an unparseable entry is ignored. The
-        # whole/fraction fields carry the unsigned MAGNITUDE (decimal_value rejoins them); the sign is
-        # the clickable glyph's, re-applied here — so editing the magnitude keeps a negated generator
-        # negated, and the glyph (flip_generator) is the only way to change sign.
         if building[0] or cid not in rec.inputs:
             return
         mag = rec.decimal_value(cid)
         if not mag:
-            return  # a cleared cell mid-type: no-op (don't commit 0)
+            return
         try:
             cents = abs(float(mag))
         except ValueError:
             return
         glyph = rec.gensign_faces.get(cid)
-        if glyph is not None and glyph.text not in ("+", ""):  # the "−" glyph: this generator is negated
+        if glyph is not None and glyph.text not in ("+", ""):
             cents = -cents
         i = int(cid.rsplit(":", 1)[1])
-        # "tuning:ssgen:i" is a superspace generator 𝒈L cell (prime-based shift); "tuning:gen:i" the
-        # on-domain 𝒈. Each routes to its own manual-tuning setter.
         if ":ssgen:" in cid:
             editor.set_superspace_generator_tuning_component(i, cents)
         else:
@@ -3601,13 +2625,10 @@ def index(state: str | None = None) -> None:
         _request_render()  # a manual generator override re-derives the maps — render off the loop
 
     def on_gentuning_wheel(cid, delta_y):
-        # the genmap cell's hover-and-scroll fine-adjust: each wheel notch nudges this generator's
-        # tuning by a thousandth of a cent — scroll up (deltaY < 0) raises it, down lowers it. The
-        # cents face shows 3 dp, so one notch moves the last shown digit by one.
         if building[0] or not delta_y:
             return
         i, steps = int(cid.rsplit(":", 1)[1]), (1 if delta_y < 0 else -1)
-        if ":ssgen:" in cid:  # a superspace generator 𝒈L cell (prime-based shift)
+        if ":ssgen:" in cid:
             editor.nudge_superspace_generator_tuning_component(i, steps)
         else:
             editor.nudge_generator_tuning_component(_gen_position(i), steps)
@@ -3615,31 +2636,18 @@ def index(state: str | None = None) -> None:
         _request_render()
 
     def on_value_wheel(cid, delta_y):
-        # step a focused numeric input by one notch — the per-kind amount in _WHEEL_STEPS (±1 for a
-        # matrix/vector or power entry, ±0.001 for a prescaler weight). Setting the input's value
-        # fires its OWN on_change (on_mapping_change / on_power_change / on_prescaler_change / …),
-        # which validates, applies, and re-renders — so a notch travels the exact path a typed value
-        # does, with no per-kind dispatch here. A blank cell starts from 0. The client only emits for
-        # the focused cell (see _INT_WHEEL_JS), so this is always a deliberate edit, never a stray
-        # scroll. Generic over kind: a new numeric input scrolls the moment it is added to _WHEEL_STEPS.
         if building[0] or not delta_y or cid not in rec.inputs:
             return
         step = _WHEEL_STEPS.get(rec.kinds.get(cid))
         if step is None:
             return
         if cid in rec.den_inputs:
-            # a split DECIMAL cell (the prescaler): step the rejoined value, then write it back across
-            # the two fields. Guard the field writes so their per-field on_change doesn't fire on a stale
-            # half-set value; commit once explicitly below.
             building[0] = True
             rec.set_decimal_value(cid, _wheel_step(rec.decimal_value(cid), delta_y, step))
             building[0] = False
             on_prescaler_change(cid)
             return
         rec.inputs[cid].value = _wheel_step(rec.inputs[cid].value, delta_y, step)
-        # A wheel notch is a deliberate step, so it COMMITS. The matrix/vector cells now only PREVIEW on
-        # their on_change (committing on Enter/blur), so the notch must commit them explicitly here; the
-        # other wheeled kind (power) still commits in its own on_change, so it doesn't.
         commit = {"mapping": on_mapping_change, "commacell": on_comma_change,
                   "interestcell": on_interest_change, "heldcell": on_held_change,
                   "targetcell": on_target_cells_change, "formcell": on_form_change}.get(rec.kinds.get(cid))
@@ -3658,15 +2666,12 @@ def index(state: str | None = None) -> None:
         if building[0] or not delta_y:
             return
         num = rec.selects["preset:target"][0]
-        building[0] = True  # advance the shown number without committing it
+        building[0] = True
         num.value = _wheel_step(num.value, delta_y)
         building[0] = False
-        # redden what the stepped limit would drop, in place, NOW — before the debounced commit reflows
-        # them away. Each notch repaints against the focus baseline, so scrolling down lights up exactly
-        # the intervals it's shedding while they're still on screen; the commit then deletes them.
         on_target_limit_preview()
         if target_limit_commit[0] is not None:
-            target_limit_commit[0].cancel()  # a fresh notch restarts the debounce window
+            target_limit_commit[0].cancel()
         target_limit_commit[0] = background_tasks.create(
             _debounced_target_commit(), name="target-limit-commit")
 
@@ -3703,10 +2708,10 @@ def index(state: str | None = None) -> None:
         family = sel.value or "TILT"
         raw = num.value if typed is None else typed
         if service.target_limit_problem(family, raw) == "whole":
-            _edit_candidate(None)  # a non-number isn't a previewable limit (yet); the commit toasts it
+            _edit_candidate(None)
             return
         text = (str(raw) if raw is not None else "").strip()
-        spec = f"{int(float(text))}-{family}" if text else family  # blank -> the bare family (domain default)
+        spec = f"{int(float(text))}-{family}" if text else family
         try:
             valid = bool(service.target_interval_set(spec, editor.state.domain_basis))
         except Exception as exc:
@@ -3715,50 +2720,28 @@ def index(state: str | None = None) -> None:
         if not valid:
             _edit_candidate(None)
             return
-        _edit_candidate(lambda: editor.set_target_spec(spec))  # the same edit on_target_change commits
+        _edit_candidate(lambda: editor.set_target_spec(spec))
 
     def on_prescaler_change(cid):
-        # a bare prescaler 𝐿 diagonal cell (cid "cell:prescaling:primes:i:i"): a valid float
-        # overrides that one diagonal entry (which then drives EVERY downstream consumer — the
-        # product tiles, complexity, weights, the tuning solve and its retunings/damages).
-        # The first edit seeds the override from the scheme so the d-1 untouched cells keep
-        # their displayed values (set_custom_prescaler_entry handles that). The bare prescaler
-        # is a float diagonal (log_prime / prime / identity / typed), so parse as float — an
-        # unparseable entry leaves the scheme unchanged, like the other editable cells. The cell is the
-        # in-place stacked decimal editor, so decimal_value rejoins its whole + fraction fields.
         if building[0] or cid not in rec.inputs:
             return
         raw = rec.decimal_value(cid)
         if not raw:
-            return  # a cleared cell mid-type: leave the scheme unchanged
+            return
         try:
             value = float(raw)
         except ValueError:
             return
-        parts = cid.split(":")  # "cell:prescaling:primes:i:j" — row i, column j (the whole square edits)
+        parts = cid.split(":")
         i, j = int(parts[3]), int(parts[4])
-        # A complexity is a norm, so a DIAGONAL prescaler entry must be a positive, finite number — a 0
-        # makes the prime's complexity 0 and its simplicity weight infinite, which crashes the solver
-        # (linprog rejects inf), and a negative is a meaningless "complexity". An off-diagonal entry is
-        # unconstrained except that it too must be finite. Reject invalid input here — toast + revert,
-        # state untouched — like the ratio / mapping handlers, rather than committing it and crashing
-        # the next render. (Keeping the resulting matrix invertible is the solver's deeper guard.)
         if not math.isfinite(value) or (i == j and value <= 0):
             ui.notify(_INVALID_PRESCALER, type="negative", position="top")
-            render()  # revert the cell to its current value (no retune — synchronous)
+            render()
             return
         editor.set_custom_prescaler_entry(i, j, value)
         _request_render()  # the prescaler drives the weighted tuning solve — render off the loop
 
     def on_weight_change(cid):
-        # a manual damage-weight 𝒘 cell committing. The override is position-keyed to the target list,
-        # and a column's id-TOKEN need not equal its position (a prior reorder decouples them), so
-        # rather than map one token back to an index we re-read the WHOLE row in column order (its
-        # cells were emitted left-to-right, so dict insertion order IS column order) and replace the
-        # override — the same whole-grid commit an edited target column uses. An unparseable entry
-        # mid-type is a silent no-op; a non-finite / ≤0 one toasts and snaps back (it would crash the
-        # weighted solve), like the prescaler handler. Each cell is the in-place stacked decimal editor,
-        # so decimal_value rejoins its whole + fraction fields per column.
         if building[0] or cid not in rec.inputs:
             return
         weights = []
@@ -3767,53 +2750,41 @@ def index(state: str | None = None) -> None:
                 continue
             raw = rec.decimal_value(other)
             if not raw:
-                return  # an incomplete/cleared cell — don't commit a partial row mid-type
+                return
             try:
                 w = float(raw)
             except ValueError:
-                return  # an incomplete/cleared cell — don't commit a partial row mid-type
+                return
             if not math.isfinite(w) or w <= 0:
                 ui.notify(_INVALID_WEIGHT, type="negative", position="top")
-                render()  # revert the cell (no retune — synchronous)
+                render()
                 return
             weights.append(w)
         editor.set_custom_weights(weights)
         _request_render()  # the weights drive the tuning solve — render off the loop
 
     def on_ptext_edit(cid, value):
-        # the editable plain-text duals: a valid EBK string drives the grid (like
-        # typing in a matrix cell); an unparseable one reddens the box and is ignored
         if building[0]:
             return
-        # EBK off: the box shows (and the user edits) plain matrix notation, so convert it back to EBK
-        # before the EBK parsers below read it. Each dual's variance is known here (a comma basis /
-        # target list / embedding is the vector kind; a mapping / projection / prescaler the map kind),
-        # so the round-trip doesn't depend on the user keeping the ᵀ. Cents duals pass through (their
-        # parser strips brackets anyway). On = passthrough.
         if not editor.settings.get("ebk", True):
             value = service.simple_matrix_to_ebk(value, _PTEXT_DUAL_VECTOR_KIND.get(cid, False))
         if cid == "ptext:mapping:primes":
             ok = editor.try_edit_mapping_text(value)
-        elif cid == "ptext:mapping:canongens":  # a typed generator form matrix 𝐹 re-stores M as F·M_C
+        elif cid == "ptext:mapping:canongens":
             ok = editor.try_edit_form_matrix_text(value)
         elif cid == "ptext:vectors:commas":
             ok = editor.try_edit_comma_basis_text(value)
-        elif cid == "ptext:tuning:gens":  # a typed cents tuning freezes the generator tuning map
+        elif cid == "ptext:tuning:gens":
             ok = editor.set_generator_tuning_text(value)
-        elif cid == "ptext:tuning:ssgens":  # a typed 𝒈L freezes the superspace generator tuning
+        elif cid == "ptext:tuning:ssgens":
             ok = editor.set_superspace_generator_tuning_text(value)
-        elif cid == "ptext:vectors:targets":  # a typed vector list overrides the target interval set
+        elif cid == "ptext:vectors:targets":
             ok = editor.set_target_override_text(value)
-        elif cid == "ptext:prescaling:primes":  # a typed d×d matrix overrides the prescaler 𝐿's
-            # diagonal — the alternative to per-cell edits in the same tile, and the only path
-            # for typing the WHOLE diagonal at once. An invalid shape (non-diagonal, wrong size)
-            # reddens the box rather than mangling 𝐿, like the mapping / comma-basis duals.
+        elif cid == "ptext:prescaling:primes":
             ok = editor.set_custom_prescaler_text(value)
-        elif cid == "ptext:projection:primes":  # a typed d×d map string retunes to the projection P it
-            # defines — the only P edit path (the gridded cells are read-only, since a single entry
-            # can't keep P idempotent). Rejected (reddens, toasts) unless it's a valid projection.
+        elif cid == "ptext:projection:primes":
             ok = editor.try_edit_projection_text(value)
-        elif cid == "ptext:projection:gens":  # a typed vector-list string retunes to the embedding G
+        elif cid == "ptext:projection:gens":
             ok = editor.try_edit_embedding_text(value)
         else:
             return
@@ -3822,9 +2793,6 @@ def index(state: str | None = None) -> None:
             _request_render()  # a typed dual (mapping/commas/tuning/targets/P/G…) retunes — off the loop
         else:
             rec.ptext_inputs[cid].classes(add="rtt-ptext-error")
-            # a string that PARSED but was rejected by the editor (a degenerate temperament, or a P/G
-            # that isn't a valid projection / embedding) toasts WHY, like the ratio cells; an
-            # unparseable string just reddens (its shape is the feedback)
             toast = None
             if cid == "ptext:mapping:primes":
                 st = service.parse_mapping_state(value)
@@ -3835,10 +2803,10 @@ def index(state: str | None = None) -> None:
                 if b is not None and not service.is_proper_temperament(service.from_comma_basis(b).mapping):
                     toast = _INVALID_TEMPERAMENT
             elif cid == "ptext:projection:primes" and service.parse_projection(value) is not None:
-                toast = _INVALID_PROJECTION  # parsed as a d×d map, but P² ≠ P / commas not in its kernel
+                toast = _INVALID_PROJECTION
             elif cid == "ptext:projection:gens" and \
                     service.parse_embedding(value, editor.state.d, len(editor.state.mapping)) is not None:
-                toast = _INVALID_EMBEDDING  # parsed as a vector list, but 𝑀𝐺 ≠ 𝐼
+                toast = _INVALID_EMBEDDING
             if toast:
                 ui.notify(toast, type="negative", position="top")
 
@@ -3849,7 +2817,7 @@ def index(state: str | None = None) -> None:
         # doc). The edit/wheel gestures survive their own commits and end on blur/mouseleave.
         if rec.gesture is not None and rec.gesture.kind in ("hover", "chooser", "temp", "drag"):
             end_gesture()
-        rank_remove[0] = None  # a committed op supersedes any live rank-removal hover preview
+        rank_remove[0] = None
 
     def act(action):
         # the universal click/keyboard commit: end gestures, mutate, then render OFF the loop
@@ -3859,19 +2827,12 @@ def index(state: str | None = None) -> None:
         action()
         _request_render()
 
-    # the draft-column + buttons (comma / target / held / interest, and the nonstandard-domain
-    # element) drop the cursor straight into the new green column: the quantities-row ratio cell
-    # when that row is shown, else the first gridded value of the interval-vectors column. The map
-    # gives each group its (quantities draft-cell id, vectors draft-cell kind); the element draft
-    # lives only in the header row, so it has no vectors fallback (None).
     draft_focus = {
         "comma":    ("comma:pending",    "commacell"),
         "target":   ("target:pending",   "targetcell"),
         "held":     ("held:pending",     "heldcell"),
         "interest": ("interest:pending", "interestcell"),
         "element":  ("prime:pending",    None),
-        # a draft mapping ROW has no editable ratio cell (the generator ratio is read-only) — so it
-        # has no quantities-cell target; focus drops straight into the first matrix cell (prime 0)
         "mapping":  (None,               "mapping"),
     }
 
@@ -3893,8 +2854,7 @@ def index(state: str | None = None) -> None:
                            if cb.pending and cb.prime == 0 and cb.kind == vec_kind), None)
         else:
             target = None
-        if target is None and group == "element":  # quantities row folded: focus the interval-vectors
-            # spine draft instead (basis:pending, the row twin of prime:pending), so the + always lands
+        if target is None and group == "element":
             target = next((cb.id for cb in lay.cells if cb.id == "basis:pending"), None)
         inp = rec.inputs.get(target) if target is not None else None
         if inp is not None:
@@ -3915,36 +2875,22 @@ def index(state: str | None = None) -> None:
                 f"if(n++<60)setTimeout(go,16);}}setTimeout(go,0);}})()")
 
     def on_show_toggle(key, value):
-        # building[0] guards the echo when render() syncs a checkbox to the document
-        # (e.g. after undo/redo/reset/select-all) rather than a real user toggle
         if building[0]:
             return
         if key == "nonstandard_domain" and not value and editor.basis_is_nonstandard:
-            # turning the setting off LEAVES the nonstandard domain rather than being denied: convert
-            # it to the simplest standard prime limit that contains every prime it used (its content
-            # is no longer nonstandard, so the toggle has nothing left to strand). One undoable step.
             editor.exit_nonstandard_domain()
             render()
             return
         editor.set_show(key, value)
-        render()  # the reconciling renderer animates the affected rows/columns in or out
+        render()
 
     def on_select_all(value):
-        # the settings panel's select-all/none: flip every AVAILABLE toggle (implemented + revealed
-        # by the chapter slider) at once. Select-none over a nonstandard basis converts it to the
-        # prime limit, the same as the direct toggle (set_all_show handles it).
         if building[0]:
             return
         editor.set_all_show(value, _available_keys())
         render()
 
     def on_part_click(key):
-        # a click on one part of the general dummy tile flips that layer's toggle (the tile is the
-        # checkbox column's alternative). A value-cell part (the value, its closed form) is inert
-        # until its host cell is shown — there's nowhere to draw it otherwise — so a click while
-        # gridded values is off does nothing (the CSS also makes it unclickable; this guards the
-        # state too). A refinement (equivalences, mnemonics) stays live and, via set_show, pulls
-        # its base layer on when selected. render() then re-styles the tile and animates the grid.
         if building[0]:
             return
         host = _TILE_HOST.get(key)
@@ -3954,49 +2900,37 @@ def index(state: str | None = None) -> None:
         render()
 
     def on_preset(cid, value):
-        # a preset chooser commits its option: temperament loads a comma basis (an undoable edit), the
-        # tuning / prescaler presets re-solve. building[0] guards the re-render echo.
         if building[0]:
             return
         if cid.startswith("preset:temperament"):
-            # the divider rows are disabled and the prompt is a display-value placeholder (not a row),
-            # so only a real preset reaches here; load its comma basis (undoable), then re-render to
-            # snap the box onto the now-matching preset.
             if value in presets.TEMPERAMENT_COMMAS:
-                end_gesture()  # a live hover preview reverts (its token restores the real document),
-                # so the load below is one clean undo step from the real base
+                end_gesture()
                 editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
                 _request_render()  # a loaded temperament retunes — render off the loop
             else:
-                render()  # the prompt/divider: nothing loaded, just snap the box back (warm)
+                render()
             return
-        apply = _candidate_apply(cid, value)  # tuning / prescaler / projection — the same option→edit map the hover uses
+        apply = _candidate_apply(cid, value)
         if apply is not None:
-            end_chooser_gesture()  # a live chooser hover preview reverts (its token restores the real
-            # document), so the commit below is one clean undo step off the real base, not the reflowed hypothetical
+            end_chooser_gesture()
             apply()
             _request_render()  # a tuning / prescaler preset re-solves — render off the loop
 
     def on_subpick(cid, value):
-        # a per-sub-row ET picker / per-sub-column comma picker committed its option. A committed
-        # row/column picker REPLACES that row / column with the chosen ET's val / comma's vector; a
-        # green DRAFT picker (":draft") ADDS the choice as a new generator / comma (the + → pick flow).
-        # Either way an undoable edit; a rejected pick (a dependent row/column) toasts. building[0]
-        # guards the programmatic re-render echo.
         if building[0] or value is None:
             return
-        end_gesture()  # revert any live preview first, so the edit is one clean undo step
+        end_gesture()
         db = editor.state.domain_basis
         if cid == "etpick:draft":
             editor.set_pending_mapping_row(list(presets.et_value_to_val(value, db)))
-            ok = editor.pending_mapping_row is None  # committed iff the draft cleared (independent row)
+            ok = editor.pending_mapping_row is None
         elif cid == "commapick:draft":
             editor.set_pending_comma(list(presets.comma_value_to_vector(value, db)))
             ok = editor.pending_comma is None
         elif cid.startswith("etpick:"):
             i = _token_index(cid, "gens")
             ok = i is not None and editor.set_mapping_row(i, presets.et_value_to_val(value, db))
-        else:  # commapick:
+        else:
             c = _token_index(cid, "commas")
             ok = c is not None and editor.set_comma(c, presets.comma_value_to_vector(value, db))
         if not ok:
@@ -4004,36 +2938,18 @@ def index(state: str | None = None) -> None:
         render()
 
     def on_form_choose(cid, value):
-        # the <choose form> control: selecting "canonical" re-stores that matrix in canonical form (an
-        # undoable edit); the placeholder "choose form" yields no edit. The select snaps back to the
-        # placeholder on the re-render; building[0] guards that echo.
         if building[0]:
             return
         apply = _candidate_apply(cid, value)
         if apply is not None:
-            end_chooser_gesture()  # revert any live chooser hover preview (its token restores the real
-            # document) so the canonicalize below is one clean undo step off the real base, not the hypothetical
+            end_chooser_gesture()
             apply()
             _request_render()  # canonicalizing re-keys the tuning solve — render off the loop
 
     def on_target_change():
-        # the target chooser is a numeric limit + a TILT/OLD family; compose them into a spec
-        # ("9-TILT", or just "TILT" when the limit is blank). Two kinds of bad entry, handled
-        # differently:
-        #   - a NON-NUMBER ("whole") is never accepted: toast and re-render, which reverts the field
-        #     to the last committed value (you can't end up with garbage in the box).
-        #   - an EVEN limit for the odd-limit diamond ("odd") IS committed (so the family pick sticks
-        #     and the number stays put), but it toasts "needs an odd limit" and the render reddens the
-        #     field (see _sync_target_limit_error). EVERY path that lands an even OLD limit toasts —
-        #     typing it, wheeling onto it, or switching the family to OLD over it — because each fires
-        #     this once per settled gesture (typing and the wheel are debounced to a single commit), so
-        #     there's no toast-per-keystroke or toast-per-notch spam to suppress.
         if building[0]:
             return
-        end_chooser_gesture()  # revert a live FAMILY hover preview (chooser gesture) so the commit is
-        # one clean undo step and a later popup-close leave can't restore its token over the spec. Only a
-        # chooser gesture — the limit field's OWN typing previews via an EDIT gesture, which must survive
-        # (a focused commit-then-preview, e.g. typing the limit up then back down, relies on it).
+        end_chooser_gesture()
         num, sel = rec.selects["preset:target"]
         family = sel.value or "TILT"
         problem = service.target_limit_problem(family, num.value)
@@ -4043,7 +2959,6 @@ def index(state: str | None = None) -> None:
             ui.notify(tooltips.target_limit_help("whole"), type="negative", position="top")
             render()
             return
-        # blank or a whole number (possibly "6.0"): float→int is safe past the validator
         text = (num.value or "").strip()
         spec = f"{int(float(text))}-{family}" if text else family
         try:
@@ -4053,84 +2968,56 @@ def index(state: str | None = None) -> None:
             valid = False
         if not valid:
             return
-        if problem == "odd":  # an even OLD limit, however it was entered, toasts AND reddens
+        if problem == "odd":
             ui.notify(tooltips.target_limit_help("odd"), type="negative", position="top")
-        editor.set_target_spec(spec)  # commit (even an even OLD limit) so the pick sticks; render reddens it
+        editor.set_target_spec(spec)
         _request_render()  # a new target set re-weights the optimization (retunes) — render off the loop
 
     def on_control_select(cid, value):
-        # the weighting controls: the box 𝒄 complexity / box 𝒘 weight-slope dropdowns swap a scheme
-        # trait (the same option→edit map the hover preview uses, via _candidate_apply), while the box 𝐋
-        # / 𝐓 checkboxes pass a bool. The re-render echo is ignored via the guards. (The prescaler
-        # chooser is a preset now — see on_preset.)
         if building[0] or value is None:
             return
-        apply = _candidate_apply(cid, value)  # complexity / slope dropdowns
+        apply = _candidate_apply(cid, value)
         if apply is not None:
-            end_chooser_gesture()  # revert any live chooser hover preview (its token restores the real
-            # document) so the trait change below is one clean undo step off the real base, not the hypothetical
+            end_chooser_gesture()
             apply()
-        elif cid == "control:diminuator":  # the checkbox passes a bool (replace the diminuator?)
+        elif cid == "control:diminuator":
             editor.set_diminuator_replaced(bool(value))
-        elif cid == "control:all_interval":  # the target-controls checkbox: all-interval vs target-based
+        elif cid == "control:all_interval":
             editor.set_all_interval(bool(value))
         else:
-            return  # the complexity "custom" off-preset state (no candidate) is a no-op — no re-render
+            return
         _request_render()  # a weighting / complexity / all-interval trait change retunes — off the loop
 
     def on_range_mode(value):
-        # which generator tuning range the ranges chart shows. A re-render echo (the radio
-        # mirroring editor.range_mode) is ignored via the building/None guards, like the presets.
         if building[0] or value is None:
             return
         editor.set_range_mode(value)
         render()
 
-    def on_toggle(item):  # fold/unfold one row, column, or tile ("row:tuning", "tile:mapping:primes")
+    def on_toggle(item):
         editor.toggle_collapsed(item)
         render()
 
-    def on_toggle_all():  # the master node-corner toggle: fold the whole grid, or expand it all back
+    def on_toggle_all():
         editor.set_collapsed(spreadsheet.toggle_all_collapsed(last_lay[0], editor.collapsed))
         render()
 
     def on_cell_focus(cid):
-        # an editable cell took focus: arm the EDIT gesture — its baseline is the on-screen grid,
-        # so every live candidate (and every commit while focused) rings exactly the cells it
-        # moves, until the cell is left. Focus takes over from whatever gesture was live (a hover
-        # or wheel stands down; a token gesture's document restores first). No paint needed —
-        # nothing has changed against itself yet.
         take_over_gesture()
         rec.gesture = _Gesture(kind="edit", source=cid, baseline=last_lay[0])
 
     def on_cell_blur(cid=None):
-        # leaving the cell ends the edit (or a lingering wheel) gesture; the repaint strips its
-        # rings. Scoped to the blurred CELL: in a real browser the messages of a cell-to-cell hop
-        # can arrive out of DOM order (the value sync is throttled, blur/focus are not), so the
-        # PREVIOUS cell's blur routinely lands AFTER the next cell's focus has armed a fresh
-        # gesture — an unscoped blur then killed that new gesture and the draft preview never
-        # showed (the in-process tests replay events in order, so only the live app hit it).
         g = rec.gesture
         if g is not None and g.kind in ("edit", "wheel") and (cid is None or g.source == cid):
             end_gesture()
             paint_rings()
 
-    # drag-to-combine preview: while a row/interval is dragged onto another, show what the drop
-    # would do — ring the cells it moves and show their would-be values — by applying the combine
-    # to the document under the gesture's token and reverting when the hover moves on or the drag
-    # ends. The rings are the baseline diff (pickup grid vs the temporarily-applied grid); the
-    # actual drop commits it as one undo step.
     def combine_begin():
-        end_gesture()  # a stale token gesture (e.g. stranded by a disconnect) dies first
+        end_gesture()
         rec.gesture = _Gesture(kind="drag", token=editor.capture_for_preview(),
                                baseline=last_lay[0])
 
     def combine_preview(apply, target_pred=None):
-        # hovering a target: revert to the picked-up state, apply the hypothetical combine (when
-        # valid; apply is None for an invalid/self target), and render — the moved cells ring +
-        # show their would-be values. target_pred marks the dropped-on row/column's editable cells
-        # so they ring too (their input values aren't in the layout content signature).
-        # Re-entrant: each enter resets first.
         g = rec.gesture
         if g is None or g.kind != "drag":
             return
@@ -4141,8 +3028,6 @@ def index(state: str | None = None) -> None:
         gesture_render()
 
     def combine_commit(apply):
-        # the drop: revert the preview (end_gesture restores the picked-up state), then apply the
-        # combine for real — one undo step — and render.
         g = rec.gesture
         if g is None or g.kind != "drag":
             return
@@ -4150,44 +3035,27 @@ def index(state: str | None = None) -> None:
         act(apply)
 
     def combine_end():
-        # the drag ended off a target (no drop): revert any live preview and clear the drag state.
         g = rec.gesture
         if g is None or g.kind != "drag":
             return
         end_gesture()
         render()
 
-    # +/- control hover preview: hovering a structural +/- (add/remove a prime, generator, comma or
-    # interval) previews its click before committing — the cells it REMOVES ring red, the cells
-    # whose value the re-solve MOVES ring amber. Unlike the drag preview it does NOT reflow the
-    # grid: an add/remove would slide the very button being hovered out from under the cursor (and
-    # flicker enter/leave), so the HOVER gesture carries the click's op as a hypothetical candidate
-    # — compute_rings applies it to a snapshot, diffs, and reverts, painting the on-screen cells in
-    # place. The removed cells are still on screen at hover time (the click hasn't landed), so red
-    # shows what goes away; a brand-new column the click would ADD lives off-screen until
-    # committed, so it can't ring. The click then commits for real via the control's own handler —
-    # and because every render repaints the rings from the gesture (which any commit/foreign
-    # render ends), the rings structurally cannot survive the click. A keyboard edit or a drag
-    # owns the grid while active, so the control hover stands down for them; a live WHEEL gesture
-    # (the generator-sign control rides inside the gentuning cell) is suspended under the hover
-    # and re-armed when it ends.
     def control_hover(apply):
         if not editor.settings["preview_highlighting"]:
-            return  # the `preview_highlighting` behaviour is off — arm no hover preview
+            return
         g = rec.gesture
         if g is not None and g.kind in ("edit", "drag"):
             return
         prev = None
         if g is not None and g.kind == "wheel":
-            prev = g  # the in-cell gensign hover displaces the wheel gesture — remember it
+            prev = g
         elif g is not None:
-            take_over_gesture()  # replace a stale hover/chooser/temp outright
+            take_over_gesture()
         rec.gesture = _Gesture(kind="hover", apply=apply, prev=prev)
         paint_rings()
 
     def control_unhover():
-        # leaving the control ends only ITS hover (not a live edit's or drag's rings); a wheel
-        # gesture it displaced comes back as-is
         g = rec.gesture
         if g is None or g.kind != "hover":
             return
@@ -4195,17 +3063,12 @@ def index(state: str | None = None) -> None:
         paint_rings()
 
     def rank_remove_hover(axis, idx):
-        # a comma−/mapping− hover: preview the dual rank change by reflowing — the builder reds the
-        # hovered leaver, ambers the recombining survivors, and ghosts the BORN generator/comma green
-        # (a comma − raises the rank, a mapping − raises the nullity). View state + a render, not a
-        # gesture (the builder must reflow to show the newborn, which a no-reflow ring diff can't).
-        # A live edit/drag owns the screen, so don't preview over it.
         if not editor.settings["preview_highlighting"]:
-            return  # the `preview_highlighting` behaviour is off — no rank-removal reflow preview
+            return
         if rec.gesture is not None and rec.gesture.kind in ("edit", "drag"):
             return
         rank_remove[0] = (axis, idx)
-        rank_rendering[0] = True  # this render keeps the preview; any foreign one clears it
+        rank_rendering[0] = True
         try:
             render()
         finally:
@@ -4217,160 +3080,96 @@ def index(state: str | None = None) -> None:
             render()
 
     def _cell_xy(lay, eid):
-        # a cell's (x, y) in a layout, or None if it isn't there — used to tell whether a candidate
-        # would SHIFT the hovered dropdown (cells are fixed-size, so a cell only moves when rows /
-        # columns are added or removed above / left of it)
         for c in lay.cells:
             if c.id == eid:
                 return (round(c.x), round(c.y))
         return None
 
     def chooser_hover(cid, apply):
-        # a dropdown option hover previews applying its candidate. It REFLOWS (re-renders the would-be
-        # grid so the changed cells SHOW their new values) only when that won't disturb the grid the
-        # cursor is on; otherwise it rings the change IN PLACE on the current grid (no reflow). Two
-        # things force the in-place path — both would yank the grid out from under the user:
-        #   • the pick REMOVES on-screen cells (a target-set family that drops targets, a projection
-        #     that makes every target unchanged). Reflowing would delete them mid-preview, so instead
-        #     they ring RED in place and stay on screen until commit (seeing what goes away).
-        #   • the pick would MOVE the hovered chooser's own cell (it ADDS rows/cols above it). The
-        #     added cells are NOT shown (a reflow is what would add them); the existing changed cells
-        #     ring amber in place. So the dropdown never jumps — you can still click your option.
-        # The <choose form> picks are NOT in either case: the canonical-mapping row + 𝐹 column gate
-        # solely on the form-tiles toggle, NOT on whether the matrix is canonical, so re-forming never
-        # adds or removes them. So a form pick is a pure value-only reflow (below) — its main mapping
-        # cells show their re-formed values, ringed amber, with nothing shifting the dropdown.
-        # A pure value-only pick (a re-solve, a same-count target swap, a re-form — tuning scheme /
-        # prescaler / complexity / choose-form) keeps NOTHING shifting, so it
-        # REFLOWS: changed cells show new values, ringed amber vs the pre-hover grid (the gesture
-        # baseline), the hovered chooser's value + open popup held steady across the re-render
-        # (_chooser_reflow_hold, keyed on this gesture's source group).
-        # The token is captured ONCE per gesture and survives option-to-option moves; every option
-        # re-bases on it. Reverts on leave / popup-close (chooser_unhover), commits on the chooser's
-        # own select handler (on_preset / on_form_choose / on_control_select / on_target_change, each
-        # of which end_gesture()s first so the click is one clean undo step off the real document).
-        # The token is captured ONCE per gesture and survives option-to-option moves; every option
-        # re-bases on it. Reverts on leave / popup-close (chooser_unhover), commits on the chooser's
-        # own select handler (on_preset / on_form_choose / on_control_select / on_target_change, each
-        # of which end_gesture()s first so the click is one clean undo step off the real document).
         if not editor.settings["preview_highlighting"]:
-            return  # the `preview_highlighting` behaviour is off — no chooser-option preview
+            return
         g = rec.gesture
         if g is not None and g.kind in ("edit", "drag"):
-            return  # a keyboard edit / drag owns the grid
+            return
         if g is not None and (g.kind != "chooser" or g.source != cid):
-            take_over_gesture()  # a hover/wheel/temp — or a different chooser — gives way (its token
-            # restores the doc; a reflowed preview rebuilds the real grid)
+            take_over_gesture()
         if rec.gesture is None:
             rec.gesture = _Gesture(kind="chooser", source=cid,
                                    token=editor.capture_for_preview(), baseline=last_lay[0])
         g = rec.gesture
-        editor.restore_for_preview(g.token)  # re-base: each option evaluates from the real document
-        if g.reflowed:                       # a prior option reflowed the DOM — rebuild the real grid
+        editor.restore_for_preview(g.token)
+        if g.reflowed:
             g.reflowed = False
             g.apply = None
             gesture_render()
-        if apply is None:                    # a placeholder / no-op option: clear any rings, no preview
+        if apply is None:
             g.apply = None
             paint_rings()
             return
         base = g.baseline
-        apply()                              # evaluate the candidate on the real document...
+        apply()
         hyp = editor.layout(prev_ids=base.identities if base is not None else None)
-        # ring in place (no reflow) when reflowing would yank the grid: the pick DELETES on-screen
-        # cells (redden them), or it would MOVE the hovered dropdown by adding rows/cols above it.
         disturbs = base is not None and (
             spreadsheet.removed_cell_ids(base, hyp) or _cell_xy(base, cid) != _cell_xy(hyp, cid))
         if disturbs:
-            editor.restore_for_preview(g.token)  # back to the real doc; keep the grid shape (no shift)
-            g.apply = apply                      # red the removed cells / amber the changed ones in
-            paint_rings()                        # place; added cells aren't shown (a reflow would add them)
-        else:                                # value-only, dropdown stays put — reflow into the would-be
-            g.apply = None                   # grid, changed cells ringed amber against the baseline
-            g.reflowed = True                # keep the chooser's value + open popup steady (_chooser_reflow_hold)
+            editor.restore_for_preview(g.token)
+            g.apply = apply
+            paint_rings()
+        else:
+            g.apply = None
+            g.reflowed = True
             gesture_render()
 
     def chooser_unhover():
-        # leaving an option / closing the popup ends the chooser hover: end_gesture restores the real
-        # document (the token), and a REFLOW preview also rebuilds the real grid (its cells reverting
-        # to their pre-hover values), while a redden/amber ring preview just drops its rings.
         g = rec.gesture
         if g is None or g.kind != "chooser":
             return
         was = end_gesture()
         if was is not None and was.reflowed:
-            render()       # a reflow preview rebuilds the real grid
+            render()
         else:
-            paint_rings()  # a ring-only preview just drops its rings
+            paint_rings()
 
     def _end_temperament_preview():
-        # revert a live temperament hover preview (pointer left an option / popup closed):
-        # end_gesture restores the real document; a REFLOW preview also rebuilds the real grid
         g = rec.gesture
         if g is None or g.kind != "temp":
             return
         was = end_gesture()
         if was.reflowed:
-            render()    # only a reflow changed the DOM shape
+            render()
         else:
-            paint_rings()  # a redden preview just drops its rings
+            paint_rings()
 
     def _temperament_hover_preview(key):
-        # hovering a temperament option in the open dropdown previews loading it. How it previews
-        # depends on whether the temperament GROWS/keeps the grid or SHRINKS it:
-        #   • grow / value-only — REFLOW: apply to the document (under the gesture's token) and
-        #     re-render the whole would-be grid, so a new prime / comma / generator actually
-        #     APPEARS (a bare ring can't show a cell that isn't there yet), the changed cells
-        #     ringed amber against the pre-hover grid (the gesture baseline).
-        #   • shrink (fewer primes / commas / generators) — REDDEN, don't reflow: a reflow would
-        #     just delete the doomed column/row mid-preview. Instead hold the current grid and arm
-        #     the load as a hypothetical candidate — the doomed cells ring RED in place, the
-        #     surviving changed cells amber. In a mixed change the deletion wins (additions aren't
-        #     shown); seeing what goes away is what was asked for.
-        # Temperament keeps its OWN sticky TEMP gesture (it can change the grid's dimensionality, so
-        # the shrink fork is detected by state dims here) — the generic dropdowns reflow the same way
-        # but through the CHOOSER gesture (chooser_hover), whose redden fork is any cell removal.
-        # The token is captured ONCE per gesture and survives option-to-option moves (including
-        # grow→shrink, which arrives with no leave in between); every option re-bases on it.
-        # Reverts on leave / popup-close (_end_temperament_preview), commits on select (on_preset).
-        if key not in presets.TEMPERAMENT_COMMAS:  # a divider header, null, or the mouse leaving
+        if key not in presets.TEMPERAMENT_COMMAS:
             _end_temperament_preview()
             return
         g = rec.gesture
         if g is None or g.kind != "temp":
             if g is not None and g.kind in ("edit", "drag"):
-                return  # a keyboard edit / drag owns the grid
-            end_gesture()  # replace a plain hover/chooser outright
+                return
+            end_gesture()
             g = rec.gesture = _Gesture(kind="temp", token=editor.capture_for_preview(),
                                        baseline=last_lay[0])
-        editor.restore_for_preview(g.token)  # re-base: each option evaluates from the real document
-        if g.reflowed:                       # a prior option reflowed the DOM — rebuild the real grid
+        editor.restore_for_preview(g.token)
+        if g.reflowed:
             g.reflowed = False
             g.apply = None
             gesture_render()
-        base = editor.state                  # its dimensions, before the temperament...
+        base = editor.state
         editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[key])
-        hyp = editor.state                   # ...and after, to spot a shrink (state dims only — no
-        # probe layout; the one hypothetical layout runs in compute_rings / the reflow render)
-        if hyp.d < base.d or hyp.r < base.r or hyp.n < base.n:   # drops a prime / comma / generator
-            editor.restore_for_preview(g.token)  # back to the real doc; the grid keeps its shape
+        hyp = editor.state
+        if hyp.d < base.d or hyp.r < base.r or hyp.n < base.n:
+            editor.restore_for_preview(g.token)
             g.apply = lambda: editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[key])
-            paint_rings()                    # redden the doomed cells in place, no reflow
+            paint_rings()
         else:
-            g.apply = None                   # the document now holds the hypothetical: baseline diff
-            g.reflowed = True                # keep the chooser's own value + popup steady (_update_preset)
-            gesture_render()                 # reflow into the would-be grid
+            g.apply = None
+            g.reflowed = True
+            gesture_render()
 
     def _subpick_hover_preview(cid, value):
-        # hovering an option in a sub-row / sub-col picker previews it, like the temperament chooser
-        # (a sticky "temp" gesture, re-based per option, reverted on leave / commit):
-        #   • a COMMITTED row/col picker REPLACES that row/col — value-only, so it reflows the would-be
-        #     grid with the changed cells ringed amber (a rank-deficient pick is rejected → no preview).
-        #   • a green DRAFT picker fills the draft with the hovered values; the spreadsheet's pending-
-        #     draft render then shows the populated green cells AND the rank-change cascade (the doomed
-        #     column/row red, the surviving rows/commas amber — its builder-driven preview flags).
-        # Reverts on leave (_end_temperament_preview), commits on select (on_subpick's end_gesture).
-        if value is None:  # a leave / the popup closing
+        if value is None:
             _end_temperament_preview()
             return
         db = editor.state.domain_basis
@@ -4384,17 +3183,16 @@ def index(state: str | None = None) -> None:
         g = rec.gesture
         if g is None or g.kind != "temp":
             if g is not None and g.kind in ("edit", "drag"):
-                return  # a keyboard edit / drag owns the grid
-            end_gesture()  # replace a plain hover/chooser outright
+                return
+            end_gesture()
             g = rec.gesture = _Gesture(kind="temp", token=editor.capture_for_preview(),
                                        baseline=last_lay[0])
-        editor.restore_for_preview(g.token)  # re-base: each option evaluates from the real document
+        editor.restore_for_preview(g.token)
         if g.reflowed:
             g.reflowed = False
             g.apply = None
             gesture_render()
         if draft:
-            # fill the green draft with the hovered values; the pending-draft render shows it + the cascade
             if cid == "etpick:draft":
                 editor.pending_mapping_row = list(presets.et_value_to_val(value, db))
             else:
@@ -4410,46 +3208,38 @@ def index(state: str | None = None) -> None:
         base = editor.state
         apply()
         hyp = editor.state
-        if hyp.d < base.d or hyp.r < base.r or hyp.n < base.n:  # (replaces don't shrink; here for safety)
+        if hyp.d < base.d or hyp.r < base.r or hyp.n < base.n:
             editor.restore_for_preview(g.token)
             g.apply = apply
             paint_rings()
         else:
-            g.apply = None      # the document now holds the hypothetical: baseline diff rings it amber
-            g.reflowed = True    # keep the picker's value + open popup steady (_update_subpick guard)
+            g.apply = None
+            g.reflowed = True
             gesture_render()
 
     def _candidate_apply(cid, value):
-        # the SINGLE map from a chooser option to the editor edit it commits, as a zero-arg thunk — or
-        # None for a no-op (a leave / placeholder / the off-preset "custom" complexity). Keyed by chooser
-        # id and shared by both sides: the hover preview (chooser_hover) runs it under a revert token to
-        # reflow or redden, while on_preset / on_control_select / on_form_choose run it for real and
-        # re-render. So an option's effect is defined once. (Temperament is not here — it can change the
-        # grid's dimensionality, handled by _temperament_hover_preview / on_preset's own branch.)
         if value is None:
             return None
         if cid.startswith("preset:tuning"):
             return lambda: editor.set_tuning_scheme(value)
         if cid.startswith("preset:prescaler"):
             return lambda: editor.set_complexity_prescaler(value)
-        if cid.startswith("preset:projection"):  # base (P) + the embedding (G) copy — one selection
+        if cid.startswith("preset:projection"):
             return lambda: editor.set_established_projection(value)
         if cid == "control:complexity":
-            if value == "custom":  # the off-preset display state — selecting it is a no-op, so is a hover
+            if value == "custom":
                 return None
-            # the dropdown presents the friendly display name ("lp (log-product)"); map it back to the
-            # internal complexity key the editor takes ("lp"), exactly as on_control_select commits it
             internal = next((k for k, v in service.COMPLEXITY_DISPLAYS.items() if v == value), value)
             return lambda: editor.set_complexity_name(internal)
         if cid == "control:slope":
             return lambda: editor.set_weight_slope(value)
-        if cid.startswith("formchooser:"):  # the <choose form> control: re-store the matrix in the picked form
-            name = cid.split(":", 1)[1]  # mapping / comma_basis
+        if cid.startswith("formchooser:"):
+            name = cid.split(":", 1)[1]
             if name == "mapping":
-                if value not in service.MAPPING_FORM_KEYS:  # the "" placeholder → no edit
+                if value not in service.MAPPING_FORM_KEYS:
                     return None
                 return lambda: editor.set_mapping_form(value)
-            if value not in service.COMMA_BASIS_FORM_KEYS:  # the "" placeholder → no edit
+            if value not in service.COMMA_BASIS_FORM_KEYS:
                 return None
             return lambda: editor.set_comma_basis_form(value)
         return None
@@ -4462,37 +3252,27 @@ def index(state: str | None = None) -> None:
         # reflow path; the rest (including the TILT/OLD family) go through chooser_hover below, which
         # reflows a value-only pick and reddens one that would remove cells.
         entry = rec.selects.get(cid)
-        sel = entry[1] if isinstance(entry, tuple) else entry  # the target chooser rides a (num, sel) tuple
+        sel = entry[1] if isinstance(entry, tuple) else entry
         if not isinstance(sel, ui.select):
-            return  # the chooser is gone
+            return
         index = _hover_index(detail)
-        # The server-side popup gate: a positive ARM for a chooser whose popup is 'closed' is a
-        # stale client debounce-fire from a popup that already committed/closed (the socket's FIFO
-        # order puts it after the popup-hide) — drop it, so it can never strand a ring. Leaves
-        # (index None) pass through to the unhover path ungated; an untracked chooser (absent —
-        # e.g. the in-process tests, which drive `opthover` without opening a popup) allows.
         if index is not None and rec.popup_state.get(cid) == "closed":
             return
-        if cid.startswith(("etpick:", "commapick:")):  # the sub-row/sub-col pickers reflow like temperament
+        if cid.startswith(("etpick:", "commapick:")):
             _subpick_hover_preview(cid, _option_key(sel, index) if index is not None else None)
             return
         if cid.startswith("preset:temperament"):
             _temperament_hover_preview(_option_key(sel, index))
             return
-        if index is None or not sel.enabled:       # a leave, or a disabled / locked chooser → no preview
+        if index is None or not sel.enabled:
             chooser_unhover()
             return
         if cid == "preset:target":
-            # the TILT/OLD family: preview switching to it. Compose the spec from the displayed limit +
-            # the hovered family, exactly what on_target_change commits, and hand it to chooser_hover —
-            # which REDDENS in place when the switch drops targets (the common TILT↔OLD case: the
-            # dropped rows ring red, survivors amber, no reflow) and REFLOWS when it merely re-derives
-            # the same-count set (the moved rows show their new values). The chooser stays steady either way.
             family = _option_key(sel, index)
             if family not in presets.TARGET_SETS:
                 chooser_unhover()
                 return
-            text = (entry[0].value or "").strip()  # the displayed limit (entry[0] is the num input)
+            text = (entry[0].value or "").strip()
             try:
                 spec = f"{int(float(text))}-{family}" if text else family
             except ValueError:
@@ -4500,7 +3280,7 @@ def index(state: str | None = None) -> None:
             chooser_hover(cid, lambda: editor.set_target_spec(spec))
             return
         apply = _candidate_apply(cid, _option_key(sel, index))
-        if apply is None:                          # a placeholder / no-op option
+        if apply is None:
             chooser_unhover()
             return
         chooser_hover(cid, apply)
@@ -4513,62 +3293,41 @@ def index(state: str | None = None) -> None:
         if not is_open:
             on_chooser_hover(cid, None)
 
-    # generator-tuning wheel preview: hovering the cell arms the WHEEL gesture, whose baseline is
-    # the grid at hover time, so each wheel notch (a real, committed nudge — handled by
-    # on_gentuning_wheel, which re-renders) rings the OTHER cells it moves against that baseline.
-    # Leaving the cell drops the rings; the nudge itself stays. The scrolled cell is the gesture
-    # source, so it is never rung. A keyboard edit, a drag, or the in-cell sign's control hover
-    # owns the grid while active, so the wheel hover stands down for them (the sign hover SUSPENDS
-    # an already-armed wheel gesture and hands it back — see control_hover).
     def gentuning_hover(cid):
         g = rec.gesture
         if g is not None and g.kind in ("edit", "drag", "hover"):
             return
-        take_over_gesture()  # replace a stale wheel/chooser/temp arm outright
+        take_over_gesture()
         rec.gesture = _Gesture(kind="wheel", source=cid, baseline=last_lay[0])
 
     def gentuning_unhover(cid):
         g = rec.gesture
         if g is None or g.kind != "wheel" or g.source != cid:
-            return  # not our gesture (a keyboard edit / the sign hover took it over) — leave it be
+            return
         end_gesture()
         paint_rings()
 
-    # drag-and-drop reorder: a grip's dragstart records the column it picked up; dropping it onto
-    # another column's grip (drop reads the recorded source) moves it to that column's slot, or onto a
-    # list's gridline "add" zone appends it (into an empty list or at the end). One editor edit = one
-    # undo step. Same proven per-element pattern as drag-to-combine — no global script, no dragging-class.
-    drag_src = [None]     # (list, idx) of the column being dragged, or None
-    reorder_dst = [None]  # the (list, idx|None) currently previewed, so a repeat dragenter is a no-op
+    drag_src = [None]
+    reorder_dst = [None]
 
     def on_drag_start(lst, idx):
         drag_src[0] = (lst, idx)
-        reorder_dst[0] = (lst, idx)  # pick-up == dropping on itself: no move previewed yet
-        end_gesture()  # a stale token gesture (e.g. stranded by a disconnect) dies first
+        reorder_dst[0] = (lst, idx)
+        end_gesture()
         rec.gesture = _Gesture(kind="drag", token=editor.capture_for_preview(),
                                baseline=last_lay[0])
 
     def on_drag_enter(dst_list, dst_idx):
-        # hovering a target column (or a list's gridline "add" zone, dst_idx=None) while dragging:
-        # preview the move from the picked-up state so the columns slide open to show where the drop
-        # will land — before releasing. The grips are index-keyed (slot-bound), so they stay put under
-        # the cursor while the value columns glide, keeping the previewed target stable. The hover
-        # preview is reverted on dragend / re-applied on each new target, and committed on drop.
-        # Rings: a move that CHANGES THE SET — across lists, or into/out of the commas (temper out /
-        # un-temper) — re-optimizes the temperament, so the baseline diff rings the cells whose value
-        # it moves. A pure within-list reorder changes no values (only positions — the columns are
-        # content-keyed, so the diff is empty): it just glides, no rings.
         g = rec.gesture
         if g is None or g.kind != "drag" or drag_src[0] is None or (dst_list, dst_idx) == reorder_dst[0]:
             return
         reorder_dst[0] = (dst_list, dst_idx)
-        editor.restore_for_preview(g.token)  # back to the picked-up state...
+        editor.restore_for_preview(g.token)
         idx = dst_idx if dst_idx is not None else (1 << 30)
-        editor.move_interval(drag_src[0][0], drag_src[0][1], dst_list, idx)  # ...then the hypothetical move
+        editor.move_interval(drag_src[0][0], drag_src[0][1], dst_list, idx)
         gesture_render()
 
     def on_drag_end():
-        # released off a target (no drop): revert any live preview to the picked-up state
         if rec.gesture is not None and rec.gesture.kind == "drag":
             end_gesture()
             render()
@@ -4576,10 +3335,6 @@ def index(state: str | None = None) -> None:
         reorder_dst[0] = None
 
     def on_drop(dst_list, dst_idx):
-        # dst_idx is the dropped-on column's index (insert there), or None from a list's "add" zone
-        # (append). Revert the live preview first (end_gesture) so the move is snapshotted from the
-        # picked-up state — one undo step — then commit it (the screen is already in the previewed
-        # shape, so it doesn't move).
         src = drag_src[0]
         drag_src[0] = None
         reorder_dst[0] = None
@@ -4588,13 +3343,11 @@ def index(state: str | None = None) -> None:
             end_gesture()
         if not src:
             if had_preview:
-                render()  # clear the reverted preview
+                render()
             return
-        idx = dst_idx if dst_idx is not None else (1 << 30)  # None = append (insert clamps to the end)
+        idx = dst_idx if dst_idx is not None else (1 << 30)
         if editor.move_interval(src[0], src[1], dst_list, idx) or had_preview:
-            render()  # reflow into the committed shape, or (a no-op drop) clear the reverted preview
-    # wire the reconciler's callbacks now that the event handlers exist: the cell
-    # builders fire these (a control's on_change/on_click -> an editor edit + re-render)
+            render()
     rec._cb = SimpleNamespace(
         act=act,
         add_interval=add_interval,
@@ -4663,7 +3416,7 @@ def index(state: str | None = None) -> None:
     # the browser is busy patching a big grid. render() ends by calling rttBusy.done() to clear it.
     render_inflight = [False]
     render_again = [False]
-    render_after = [None]  # a continuation to run on the loop right after the offloaded render
+    render_after = [None]
 
     def _request_render(after=None):
         # schedule an off-loop commit render; a request arriving while one is in flight collapses
@@ -4700,7 +3453,7 @@ def index(state: str | None = None) -> None:
                     await asyncio.to_thread(editor.layout, prev_ids=prev)
                 except Exception:
                     _log.exception("off-loop layout warm-up failed; rendering on the loop")
-                render()  # rebuilds on the loop from the warm cache, and clears the scrim (rttBusy.done)
+                render()
                 if cont is not None:
                     cont()
                 again = render_again[0]
@@ -4748,41 +3501,19 @@ def index(state: str | None = None) -> None:
                 end_gesture()
             else:
                 g.apply = None
-        if not rank_rendering[0]:  # a foreign render ends a live comma−/mapping− hover preview, the
-            rank_remove[0] = None  # view-state twin of ending a foreign hover gesture (no strand)
+        if not rank_rendering[0]:
+            rank_remove[0] = None
         building[0] = True
         try:
-            apply_view_classes()  # re-sync the animations / tooltips <body> classes to editor.settings
+            apply_view_classes()
             st = editor.state
-            # thread the previous render's interval-column identities so a within-list reorder keeps
-            # each column's id-token: its cells then persist across the render and the CSS left/top
-            # transition slides them to the new slot (rather than the old cells re-filling in place)
             prev = last_lay[0].identities if last_lay[0] is not None else None
             lay = editor.layout(prev_ids=prev, preview_remove=rank_remove[0])
             last_lay[0] = lay
-            # The body scroller holds the grid shifted up by the column strip's height (freeze_y): the
-            # board content is (total_h - fy) tall, its cells/lines/blocks placed at native coords minus
-            # fy, so they land where they always did with the column-title rows now lifted into the strip
-            # above. The strip (its inner is full grid width, translated horizontally by _FREEZE_JS) and
-            # the corner keep native coords. gridbody drops below the strip (top = _PAD + fy).
             fx, fy = lay.freeze_x, lay.freeze_y
-            # the grid pane is sized to enclose the grid + the column strip, a _PAD margin on every side,
-            # and the last column title's right overhang (right_overhang — the interest title renders
-            # unwrapped past its narrow column, so the pane widens to show it instead of clipping). Its
-            # grey backdrop then frames the gridlines all round, white beyond, rather than filling the
-            # window. The top/left margin is the frozen regions' _PAD inset; the right/bottom margin is the
-            # body's own scroll padding, so it survives scrolling to the end (see .rtt-gridbody). The CSS
-            # caps the pane at the window, past which the body scrolls.
             base_w = lay.width + lay.right_overhang + 2 * _PAD
             base_h = lay.height + 2 * _PAD
             grid_pane.style(f"width:{base_w}px; height:{base_h}px")
-            # publish sizes for the scrollbar-fit pass (rttFreeze.fit): it resets the pane to the base size,
-            # sees which axis the window caps, then grows the pane by a scrollbar width on the PERPENDICULAR
-            # axis so a vertical scrollbar never tips a spurious horizontal one (and the grid never reflows
-            # when a bar appears). base-w/-h are the pane's footprint (incl. the right_overhang the last
-            # column title spills); fit-w is the gridlines' own width — the pane width below which the BODY
-            # must scroll horizontally. They differ by the overhang, which lives in the frozen colhead (not
-            # the body scroller), so it must not count toward needing a body h-scrollbar. See freeze.js.
             fit_w = lay.width + 2 * _PAD
             grid_pane.props(f'data-base-w="{base_w}" data-base-h="{base_h}" data-fit-w="{fit_w}"')
             board.style(f"width:{lay.width}px; height:{lay.height - fy}px")
@@ -4791,24 +3522,10 @@ def index(state: str | None = None) -> None:
             corner.style(f"width:{fx}px; height:{fy}px")
             gridbody.style(f"top:{_PAD + fy}px")
             rowband.style(f"width:{fx}px; height:{lay.height - fy}px")
-            # the chrome title bar + the settings frozen header below it together span the grid's frozen
-            # column-strip height (freeze_y), so the settings and grid frozen/scrolling seams line up
-            # across the app. The header itself is therefore freeze_y minus the chrome bar.
             show_frozen.style(f"height:{max(0, fy - _CHROME_H)}px")
-            # the settings body sizes to its own content but caps at the window less the inset and that
-            # combined frozen band (which equals the inset + freeze_y), so a tall toggle list scrolls
-            # there instead of off-screen
             show_scroll.style(f"max-height:calc(100vh - {_PAD + fy}px)")
             seen = set()
 
-            # Each gridline renders into every pane its extent reaches, so the branching stays put in
-            # the frozen header / row band while the body scrolls beneath. The scrolling body holds
-            # the copy shifted up by fy; a line rising above freeze_y also draws into the column strip
-            # (at native y), and one reaching left of freeze_x into the sticky row band (body space) —
-            # each clipped to its band by the pane's overflow:hidden, meeting the body copy
-            # continuously at the seam. No gridline falls in the corner (column lines sit right of
-            # freeze_x, row lines below freeze_y), so it's skipped. Copies are keyed #col / #row, each
-            # added to `seen`, so the orphan sweep below drops one whose line later stops reaching it.
             def place_line(ln, suffix, parent, shift):
                 eid = ln.id + suffix
                 seen.add(eid)
@@ -4822,21 +3539,12 @@ def index(state: str | None = None) -> None:
                 x0, x1 = (ln.pos, ln.pos) if ln.orientation == "v" else (ln.start, ln.start + ln.length)
                 y0, y1 = (ln.start, ln.start + ln.length) if ln.orientation == "v" else (ln.pos, ln.pos)
                 if x1 >= fx and y1 >= fy:
-                    place_line(ln, "", board, fy)              # the scrolling body
+                    place_line(ln, "", board, fy)
                 if x1 >= fx and y0 < fy:
-                    place_line(ln, "#col", colhead_inner, 0)   # the frozen column strip (native y)
+                    place_line(ln, "#col", colhead_inner, 0)
                 if x0 < fx and y1 >= fy:
-                    place_line(ln, "#row", rowband, fy)        # the frozen row band (body scroll space)
+                    place_line(ln, "#row", rowband, fy)
 
-            # A block renders into each pane _block_panes routes it to. A grey tile (tint "") or a
-            # thin-bordered box (boxed, the nested tuning-ranges / optimization frame) clears both seams,
-            # so it gets the body alone; a colorization wash's white base (tint "base") or coloured layer
-            # (tint = group name) overhangs the seam, so a top-row / left-column one also rides the frozen
-            # strip / band / corner it spills into (suffix #col/#row/#corner), each copy clipped to its
-            # pane so the colour fills the inter-title gap rather than being shaved off there. Native y in
-            # the column strip + corner, body scroll space (shifted up by freeze_y) in the body + row band,
-            # mirroring place_line; the orphan sweep drops a copy a wash later stops needing. The class is
-            # chosen once per copy (fixed for its lifetime).
             def place_block(bl, pane):
                 suffix = "" if pane == "body" else "#" + pane
                 shift = 0 if pane in ("col", "corner") else fy
@@ -4849,9 +3557,7 @@ def index(state: str | None = None) -> None:
                                else "rtt-wash" if bl.tint else "rtt-block")
                         rec.els[eid] = ui.element("div").classes(cls).props(f'data-eid="{eid}"').mark(eid)
                 style = f"left:{bl.x}px; top:{bl.y - shift}px; width:{bl.w}px; height:{bl.h}px"
-                if bl.tint in _TINTS:  # the coloured layer (the base draws --wash-base from CSS). The
-                    # tint rides a --wash-<group> variable so dark mode can retint the whole palette;
-                    # :root defines each to its _TINTS value, so light renders unchanged.
+                if bl.tint in _TINTS:
                     style += f"; background:var(--wash-{bl.tint})"
                 rec.els[eid].style(style)
 
@@ -4859,35 +3565,21 @@ def index(state: str | None = None) -> None:
                 for pane in _block_panes(bl, fx, fy):
                     place_block(bl, pane)
 
-            # Source-cell-gone guard: if this render DROPS or REBUILDS the very cell anchoring the
-            # gesture — the id vanished (e.g. committing the held:pending ratio cell replaces it with
-            # held:{tok}) or its kind flipped (a domain element relabelled int↔fraction,
-            # elementcell↔elementratio) — end the gesture now. The blur listeners that would normally
-            # end it ride that cell's input, so when the rebuild destroys it they never fire; without
-            # this guard the gesture (and its rings) would strand until a later blur landed elsewhere
-            # (both the historical "lingers until I click another cell" bug and the reported
-            # held-interval-submit one).
             g = rec.gesture
             if g is not None and g.source is not None:
                 src_kind = next((cb.kind for cb in lay.cells if cb.id == g.source), None)
                 if src_kind is None or (g.source in rec.kinds and rec.kinds[g.source] != src_kind):
                     end_gesture()
-            # the ring highlights: a pure function of (document, gesture), recomputed every render —
-            # so any commit's render structurally repaints/strips them, whatever path it came from.
-            # While a gesture is live the renders that reach here are doc-moving (guard at the top
-            # nulled any edit candidate), so this is always the cheap baseline diff — never a solve.
             amber, red = compute_rings(lay)
 
             for cb in lay.cells:
                 seen.add(cb.id)
                 if cb.id in rec.els and rec.kinds[cb.id] != cb.kind:
-                    rec.drop(cb.id)  # a cell changed kind (e.g. cents <-> math expression): rebuild it
+                    rec.drop(cb.id)
                 container = _freeze_container(cb, fx, fy)
                 if cb.id not in rec.els:
                     with cell_parents[container]:
                         rec.make_cell(cb)
-                # body + row cells live in the scroll space (shifted up by fy); column + corner cells
-                # keep native coords in their frozen strip / corner
                 top = cb.y - (fy if container in ("body", "row") else 0)
                 rec.els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
                 rec.update_cell(cb)
@@ -4896,33 +3588,21 @@ def index(state: str | None = None) -> None:
             for eid in [e for e in rec.els if e not in seen]:
                 rec.drop(eid)
 
-            # the optimization mean damage's help names a different quantity per mode: the minimized
-            # damage ⟪𝐝⟫ₚ over the targets, or (all-interval) the retuning magnitude. The mean damage
-            # cells are NOT rebuilt when the mode flips, so swap the wording in place — on the VALUE
-            # cell it folds into the magnifier (data-zoomhelp), on the SYMBOL cell it's a tooltip.
             mean_damage_help_text = tooltips.mean_damage_help(service.is_all_interval(editor.tuning_scheme))
             for cid in tooltips.MEAN_DAMAGE_IDS:
-                if cid in rec.mean_damage_tips:                       # the symbol cell's swappable tooltip
+                if cid in rec.mean_damage_tips:
                     rec.mean_damage_tips[cid].set_text(mean_damage_help_text)
                     continue
-                wrap = rec.els.get(cid)                               # the value cell's folded help
+                wrap = rec.els.get(cid)
                 if wrap is not None and wrap._props.get("data-zoomhelp") != mean_damage_help_text:
                     wrap._props["data-zoomhelp"] = mean_damage_help_text
                     wrap.update()
 
             refs["undo"].set_enabled(editor.can_undo)
             refs["redo"].set_enabled(editor.can_redo)
-            # Reset clears the document AND the guide-chapter slider, so it's live whenever either
-            # differs from the defaults; keep the thumb on chapter[0] (Reset moves it — building[0]
-            # guards the echo).
             refs["reset"].set_enabled(editor.can_reset or chapter[0] != show_settings.CHAPTER_DEFAULT)
             if chapter_slider.value != chapter[0]:
                 chapter_slider.value = chapter[0]
-            # the nonstandard-domain-approach radio: positioned over the reserved band inside the approach
-            # box (lay.approach_box, body coordinates → shift up by fy like any body cell) when the domain
-            # carries a nonprime element, hidden otherwise. The live approach's square is filled and the
-            # others hollow (the _update_rangemode pattern); this runs while building[0] is True, so the
-            # class toggle is a pure display sync, never re-firing as an edit.
             if lay.approach_box is not None:
                 ax, ay, aw, ah = lay.approach_box
                 refs["approach"].style(f"position:absolute; left:{ax}px; top:{ay - fy}px; "
@@ -4933,19 +3613,9 @@ def index(state: str | None = None) -> None:
             for key, opt in refs["approach_opts"].items():
                 (opt.classes(add="rtt-rangeopt-on") if key == editor.nonprime_basis_approach
                  else opt.classes(remove="rtt-rangeopt-on"))
-            # reflect the document's Show settings into the panel (after undo/redo/reset/
-            # select-all/load). building[0] is still True, so these programmatic value writes
-            # are swallowed by on_show_toggle/on_select_all rather than re-firing as edits.
             for key, box in boxes.items():
                 if box.value != editor.settings[key]:
                     box.value = editor.settings[key]
-            # the general dummy tile: style each layer's part(s) by its live setting — black + opaque
-            # when shown, grey + dimmed when hidden — so the tile both mirrors and drives the grid. A
-            # value-cell part is inert (no click) until its host cell is shown (_TILE_HOST), mirroring
-            # the grid where the value/closed-form need the boxed cell to sit in. Mnemonics is special:
-            # it is an underline ON the name, so its COLOUR tracks the name (the layer it refines) while
-            # only the underline tracks mnemonics itself — else a name-shown/mnemonic-hidden state would
-            # grey just the one letter mid-word.
             for key, parts in tile_parts.items():
                 shown = editor.settings["names"] if key == "mnemonics" else editor.settings[key]
                 host = _TILE_HOST.get(key)
@@ -4957,18 +3627,7 @@ def index(state: str | None = None) -> None:
                     if key == "mnemonics":
                         part.classes(add="rtt-mnem-underline") if editor.settings["mnemonics"] \
                             else part.classes(remove="rtt-mnem-underline")
-            # the master checkbox (checked when all available toggles are on, mixed when some are) and
-            # the per-row disabled state — both over the chapter-revealed, implemented set (see
-            # _sync_show_availability), so an unrevealed toggle is greyed and uncounted.
             _sync_show_availability()
-            # persist the whole document so a browser refresh restores exactly this state — UNLESS a
-            # token gesture has the document in a temporarily-applied hypothetical state (a drag hover,
-            # a temperament grow-preview): persisting that would resurrect a never-committed document
-            # on refresh. The gesture's end always renders the real document, which persists then.
-            # ALSO held back while a load FAILED and the user hasn't yet edited (load_failed and not
-            # can_undo): the shown document is the fallback defaults, and overwriting the stored blob
-            # with them would silently destroy the user's still-valid fields. We keep their bytes for
-            # recovery until they deliberately change something, at which point persisting is intended.
             gesture_idle = rec.gesture is None or rec.gesture.token is None
             if gesture_idle and not (load_failed[0] and not editor.can_undo):
                 _doc_store()[_STORE_KEY] = editor.serialize()
@@ -4981,49 +3640,27 @@ def index(state: str | None = None) -> None:
         # inside a handler-driven render hits a torn-down slot context); the scrim is browser-only.
         if not helpers.is_user_simulation():
             page_client.run_javascript("window.rttBusy && window.rttBusy.done()")
-        # (the scrollbar-fit pass re-runs on its own when the grid resizes — the board's width/height
-        # CSS transition fires the listener in freeze.js — so render needn't push any JS here.)
 
-    # the hamburger toggles the settings pane. Opening (panelgroup gets .rtt-open) collapses the
-    # closed-state tab and slides the drawer out, the app reflowing to its right.
     drawer_open = [False]
 
     def toggle_drawer():
         drawer_open[0] = not drawer_open[0]
         panelgroup.classes(add="rtt-open") if drawer_open[0] else panelgroup.classes(remove="rtt-open")
-        # (opening/closing narrows the grid pane via the panelgroup's width transition, which fires the
-        # scrollbar-fit listener in freeze.js once it settles — no JS push needed here.)
 
     def _pane_chrome():
-        """The settings hamburger + the app title — one each, rendered once. CSS pins the hamburger
-        (absolute, top-left) so it never moves between states, and swings the title (animated
-        transform) from a quarter-turn down the closed tab to upright across the open bar."""
         ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense") \
             .classes("rtt-hamburger").tooltip(tooltips.CHROME_HELP["settings"])
         ui.label("D&D's RTT app").classes("rtt-sidetitle")
 
     with ui.element("div").classes("rtt-shell"):
-        # the sidebar is ONE element that widens from a tab into the settings pane (.rtt-panelgroup, a
-        # column), the grid to its right. Its chrome sits on top and morphs in place — the hamburger
-        # pinned, the title swinging from a quarter-turn to upright — while the drawer below reveals
-        # the settings. Opening just widens the panelgroup, so the tab becomes the pane (no swap).
         panelgroup = ui.element("div").classes("rtt-panelgroup")
         with panelgroup:
-            # the chrome: one hamburger + one title, pinned/swung by CSS (see _pane_chrome).
             with ui.element("div").classes("rtt-chrome"):
                 _pane_chrome()
             drawer = ui.element("div").classes("rtt-drawer")
             with drawer, ui.element("div").classes("rtt-drawer-inner"):
-                # the frozen header: just the select-all/none master, pinned above the scrolling
-                # groups (render() sizes it to the layout's freeze_y, matching the main app's frozen
-                # band). Its bottom border is the frozen/scrolling seam. The show/example column
-                # titles are NOT here — they describe only the specific-group checkbox column now
-                # (the general group is the dummy tile), so they ride that group's head below.
                 show_frozen = ui.element("div").classes("rtt-show-frozen").mark("showfrozen")
                 with show_frozen:
-                    # the select-all/none master checkbox: one click flips every implemented Show
-                    # toggle on or off. Its checked state (all on) is kept in sync by render();
-                    # the not-yet-built toggles are left untouched.
                     with ui.element("div").classes("rtt-show-all"):
                         select_all_box = ui.checkbox(
                             "select all / none",
@@ -5031,24 +3668,16 @@ def index(state: str | None = None) -> None:
                             on_change=lambda e: on_select_all(e.value)) \
                             .props("dense size=xs color=grey-8").classes("rtt-show-item") \
                             .mark("showall").tooltip(tooltips.CHROME_HELP["select_all"])
-                        # the dark-mode toggle rides beside select-all (both are app chrome, not Show
-                        # layers): a sun/moon icon button showing the theme a click would switch to.
                         dark_btn = ui.button(on_click=on_dark_toggle, color=None) \
                             .props(f"flat dense round icon={_dark_icon()}") \
                             .classes("rtt-darktoggle").mark("darkmode") \
                             .tooltip(tooltips.CHROME_HELP["dark_mode"])
-                # the scrolling body: the toggle groups, which scroll under the frozen header when
-                # the panel outgrows the window (rather than spilling off the bottom of the screen)
-                boxes: dict = {}  # specific-group toggle key -> checkbox, so a sub-control row can bind to its parent
-                examples: dict = {}  # specific-group toggle key -> its example cell, so _sync greys it with the box
-                tile_parts: dict = {}  # general-group layer key -> its clickable dummy-tile part (render() styles these)
-                show_rows: dict = {}   # specific-group toggle key -> its row, so the chapter slider can hide it
+                boxes: dict = {}
+                examples: dict = {}
+                tile_parts: dict = {}
+                show_rows: dict = {}
                 show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
                 with show_scroll:
-                    # the guide-chapter reveal slider — a short section ABOVE the two toggle groups
-                    # (see apply_chapter): a notch per guide chapter (2–9) plus a final ★ notch.
-                    # Sliding it shows/hides the controls below by the chapter each is introduced in;
-                    # it's a viewing preference and never touches the grid. Reuses the group card.
                     with ui.element("div").classes("rtt-show-group rtt-chapter-group"):
                         with ui.element("div").classes("rtt-chapter-head"):
                             ui.label("guide chapter").classes("rtt-chapter-title")
@@ -5064,23 +3693,12 @@ def index(state: str | None = None) -> None:
                     for group_name, items in show_settings.SHOW_GROUPS:
                         with ui.element("div").classes("rtt-show-group"):
                             if group_name == "general":
-                                # the general layers render as ONE clickable dummy value tile rather
-                                # than a checkbox column — laid out and proportioned like a real value
-                                # tile. Each part is a sample of that layer, clicked directly to show/
-                                # hide it; render() styles it by the live setting. A layer's PRIMARY
-                                # element carries the showpart:<key> marker + hover help. Two layers
-                                # live INSIDE the value cell rather than on a line of their own — the
-                                # row/col header symbols (header_symbols, its 𝒏₁ sample in the left
-                                # gutter) and the per-cell unit (cell_units, beneath the value); each
-                                # is its OWN key, independent of the in-tile symbol / "units:" line
-                                # above. The name layer also splits in two (around its mnemonic letter),
-                                # those two halves riding the names key's list.
                                 def add_el(key, html, *, marked=False, size=None, style=""):
                                     fs = size if size is not None else _TILE_FONT.get(key)
                                     css = (f"font-size:{fs}px;" if fs else "") + style
                                     el = ui.html(html).classes("rtt-tile-part").tooltip(tooltips.SHOW_HELP[key])
                                     if key == "mnemonics":
-                                        el.classes(add="rtt-tile-mnem")  # always underlined; render() colours it
+                                        el.classes(add="rtt-tile-mnem")
                                     if marked:
                                         el.mark(f"showpart:{key}")
                                     if css:
@@ -5089,38 +3707,24 @@ def index(state: str | None = None) -> None:
                                     tile_parts.setdefault(key, []).append(el)
                                     return el
 
-                                def part_el(key, *, size=None, style=""):  # the layer's primary (marked) element
+                                def part_el(key, *, size=None, style=""):
                                     return add_el(key, _general_part_html(key), marked=True, size=size, style=style)
 
-                                # the section title for the dummy tile, the way "show | example" heads
-                                # the specific column. A user-directed addition — the mockup draws no
-                                # header over this group (see CLAUDE.md "Mockup deviations").
                                 ui.label("tile features").classes("rtt-show-tiletitle").mark("tiletitle")
                                 with ui.element("div").classes("rtt-show-tile"):
-                                    # the head strip, like a real tile's: the decorative fold toggle on
-                                    # the left, the single global audio bank on the right (the relocation
-                                    # of the per-tile banks). render() greys the bank while audio is off.
                                     with ui.element("div").classes("rtt-tile-head"):
                                         ui.html(_tile_fold_html()).classes("rtt-tile-fold")
                                         refs["audio_bank"] = _audio_bank()
                                     for line in _GENERAL_TILE_LINES:
                                         if "gridded_values" in line:
-                                            # the value cell, like a real gridded cell: a square box (the
-                                            # gridded_values frame) holding the closed form (math_expressions)
-                                            # over "= value" (quantities) over the unit (rides the units layer)
-                                            # — all stacked INSIDE the box, as on a real tile, the form/value
-                                            # font-FITTED to the square so they don't spill. A row-header
-                                            # matlabel (rides the symbol layer) sits in a left gutter; an EQUAL
-                                            # empty gutter on the right keeps the boxed cell centred in the tile.
-                                            gut = 20  # the row-label gutter, mirrored on the right for centring
-                                            hgut = 18  # the drag-handle grip slot, left of the row label (mirrors the grid)
-                                            cell_x = hgut + gut + _TILE_CELL_X  # the cell's left within the container
-                                            cell_y = _TILE_CELL_Y        # the cell's top within the frame (below the outer top)
-                                            row_y = cell_y + (_TILE_CELL - 13) // 2  # row label centred on the cell
+                                            gut = 20
+                                            hgut = 18
+                                            cell_x = hgut + gut + _TILE_CELL_X
+                                            cell_y = _TILE_CELL_Y
+                                            row_y = cell_y + (_TILE_CELL - 13) // 2
                                             with ui.element("div").classes("rtt-tile-line"), \
                                                     ui.element("div").style(f"position:relative;"
                                                         f"width:{hgut + gut + _TILE_FRAME_W + gut + hgut}px;height:{_TILE_FRAME_H}px"):
-                                                # the drag-to-combine grip, in its own slot LEFT of the row label
                                                 part_el("drag_to_combine", size=15,
                                                         style=f"position:absolute;left:0;top:{cell_y}px;width:{hgut}px;"
                                                               f"height:{_TILE_CELL}px;justify-content:center")
@@ -5132,10 +3736,6 @@ def index(state: str | None = None) -> None:
                                                 part_el("math_expressions", size=_fit_font(_TILE_MATH, _TILE_CELL),
                                                         style=f"position:absolute;left:{cell_x}px;top:{cell_y + 1}px;"
                                                               f"width:{_TILE_CELL}px;height:9px;justify-content:center")
-                                                # the value reads like a live gridded cents cell: the whole part big over
-                                                # its three decimals. They are TWO parts, though — quantities (the "701")
-                                                # and decimals (the ".955") — each its own click target, seated so the
-                                                # fraction sits just under the whole, exactly as the stacked face reads.
                                                 part_el("quantities",
                                                         style=f"position:absolute;left:{cell_x}px;top:{cell_y + 10}px;"
                                                               f"width:{_TILE_CELL}px;height:11px;justify-content:center")
@@ -5147,17 +3747,12 @@ def index(state: str | None = None) -> None:
                                                        style=f"position:absolute;left:{cell_x}px;top:{cell_y + 28}px;"
                                                              f"width:{_TILE_CELL}px;height:8px;justify-content:center;color:#555")
                                         elif "names" in line:
-                                            # the name word, split so the mnemonic letter is its own target
-                                            # while the word still reads whole: "tile " + "n" + "ame". Only
-                                            # the first piece is marked, so a test click lands one toggle.
                                             before, _letter, after = _tile_name_pieces()
                                             with ui.element("div").classes("rtt-tile-line"):
                                                 add_el("names", _escape(before), marked=True)
                                                 part_el("mnemonics")
                                                 add_el("names", _escape(after))
                                         elif "presets" in line:
-                                            # the presets chooser sits in a control box (bordered, spanning the
-                                            # full tile width like a real tile's control boxes); no label.
                                             with ui.element("div").classes("rtt-tile-line rtt-tile-line-wide"), \
                                                     ui.element("div").classes("rtt-tile-cbox"):
                                                 part_el("presets")
@@ -5166,8 +3761,6 @@ def index(state: str | None = None) -> None:
                                                 for key in line:
                                                     part_el(key)
                                 continue
-                            # the specific group keeps the show | example column header (moved here from
-                            # the frozen band — it describes only this checkbox column now).
                             with ui.element("div").classes("rtt-show-head"):
                                 ui.label("show").classes("rtt-show-title")
                                 ui.label("example").classes("rtt-show-examplehdr")
@@ -5181,47 +3774,29 @@ def index(state: str | None = None) -> None:
                                     example = ui.html(_example_html(key)).classes("rtt-ex-cell") \
                                         .mark(f"showexample:{key}")
                                 boxes[key] = box
-                                examples[key] = example  # _sync_show_availability greys it with the box —
-                                # ONE disabled path for every reason (not-built / chapter-hidden / a
-                                # mutually-exclusive sibling on), so the sample always matches the checkbox
-                                show_rows[key] = row  # the chapter slider hides whole rows by key
+                                examples[key] = example
+                                show_rows[key] = row
                                 parent = show_settings.SUBCONTROLS.get(key)
-                                if parent:  # indent by nesting depth (so a grandchild sits further right
-                                    # than its parent) and show the row only while the parent is on. Only the
-                                    # checkbox shifts within its grid column, so the example column stays aligned.
+                                if parent:
                                     box.style(f"margin-left:{show_settings.depth_of(key) * 18}px")
                                     row.bind_visibility_from(boxes[parent], "value")
 
         grid_pane = ui.element("div").classes("rtt-app").mark("gridpane")
         with grid_pane:
-            # the grid pane splits into frozen title regions OUTSIDE the body scroller (so the body's
-            # scrollbars stop at the titles): the column-title strip (scrolls horizontally in sync via
-            # _FREEZE_JS), the corner (frozen both), and the body scroller .rtt-gridbody — which holds
-            # the value cells, lines and blocks (on .rtt-gridcontent) plus the sticky-left row band.
-            # Sizes/positions are set in render() from the layout's freeze_x/freeze_y. Column/corner
-            # cells keep native coords; body/row cells shift up by freeze_y into the body's scroll space.
             colhead = ui.element("div").classes("rtt-colhead").mark("colhead")
             with colhead:
                 colhead_inner = ui.element("div").classes("rtt-colhead-inner").mark("colheadinner")
             corner = ui.element("div").classes("rtt-corner").mark("corner")
             with corner:
-                # the corner holds the undo/redo title tile (the app title is on the rail)
                 with ui.element("div").classes("rtt-titletile").mark("titletile"):
                     with ui.element("div").classes("rtt-tile-btns"):
                         refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
                             .props("flat dense").classes("rtt-iconbtn rtt-hk-undo").mark("undo").tooltip(tooltips.CHROME_HELP["undo"])
                         refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
                             .props("flat dense").classes("rtt-iconbtn rtt-hk-redo").mark("redo").tooltip(tooltips.CHROME_HELP["redo"])
-                        # reset everything (settings, expand/collapse, values) to the as-shipped
-                        # defaults — plus the guide-chapter slider back to ch4 (reset_everything)
                         refs["reset"] = ui.button(icon="restart_alt", on_click=lambda: reset_everything(), color=None) \
                             .props("flat dense").classes("rtt-iconbtn").mark("reset").tooltip(tooltips.CHROME_HELP["reset"])
 
-                        # copy a shareable link: the whole document packed into a ?state=… URL.
-                        # Open it and the app loads exactly this state (Editor.load clears history,
-                        # so the link carries the state, never the undo trail). We pack the state
-                        # here and hand the token to the client, which builds the absolute URL from
-                        # its own location (so it's right behind any host/proxy) and copies it.
                         def share_link():
                             _end_commit_gestures()
                             token = _encode_state(editor.serialize())
@@ -5236,8 +3811,6 @@ def index(state: str | None = None) -> None:
                         refs["share"] = ui.button(icon="share", on_click=share_link, color=None) \
                             .props("flat dense").classes("rtt-iconbtn rtt-noarm").mark("share").tooltip(tooltips.CHROME_HELP["share"])
 
-                        # replay the guided first-run tour (it also auto-runs once per browser — see
-                        # _TOUR_JS). A ? icon, the "the ? button" the tour's closing step points at.
                         refs["tour"] = ui.button(
                             icon="help_outline",
                             on_click=lambda: ui.run_javascript("window.rttTour && window.rttTour.start()"),
@@ -5245,11 +3818,6 @@ def index(state: str | None = None) -> None:
                             .props("flat dense").classes("rtt-iconbtn rtt-noarm").mark("tour") \
                             .tooltip(tooltips.CHROME_HELP["tour"])
 
-                        # hovering a history button previews its effect: it rings exactly the cells one
-                        # undo/redo/reset would move (red for a removal, amber for the re-solve) and clears
-                        # on leave, like the +/- buttons — the op still fires only on the click. A disabled
-                        # button (history at its end, or nothing to reset) shows no preview, matching its
-                        # greyed state; the enabled flag is read live, mirroring set_enabled in render().
                         def arm_history_preview(btn, can, op):
                             btn.on("mouseenter", lambda _=None: control_hover(op) if can() else None)
                             btn.on("mouseleave", lambda _=None: control_unhover())
@@ -5266,9 +3834,6 @@ def index(state: str | None = None) -> None:
                                     "nonprime-based": "nonprime-based", "": "neutral"}
 
                 def on_approach_change(value):
-                    # building[0] is True while render() programmatically syncs the radio to
-                    # editor.nonprime_basis_approach (after an undo, a domain change that reset the
-                    # field to "", etc.); that sync toggles the option classes directly, never here.
                     if building[0] or value is None:
                         return
                     editor.set_nonprime_basis_approach(value)
@@ -5283,19 +3848,17 @@ def index(state: str | None = None) -> None:
                         return
                     control_hover(lambda a=value: editor.set_nonprime_basis_approach(a))
 
-                # a square option per approach, stacked vertically (the _build_rangemode shape): a
-                # .rtt-rangebox square the live class fills + its label; click sets it, hover previews.
                 refs["approach"] = ui.element("div").classes("rtt-approach rtt-rangemode").mark("approach")
                 refs["approach_opts"] = {}
                 with refs["approach"]:
                     for key, label in approach_options.items():
                         opt = ui.element("div").classes("rtt-rangeopt")
                         with opt:
-                            ui.element("span").classes("rtt-rangebox")  # the square (filled when selected)
+                            ui.element("span").classes("rtt-rangebox")
                             ui.label(label).classes("rtt-rangelabel")
                         opt.on("click", lambda _=None, k=key: on_approach_change(k))
                         opt.on("mouseenter", lambda _=None, k=key: on_approach_hover(k))
-                        opt.mark(f"approach-{label}")  # each option its own hover/click target
+                        opt.mark(f"approach-{label}")
                         refs["approach_opts"][key] = opt
                 refs["approach"].on("mouseleave", lambda _=None: on_approach_hover(None))
             gridbody = ui.element("div").classes("rtt-gridbody").mark("gridbody")
@@ -5303,12 +3866,7 @@ def index(state: str | None = None) -> None:
                 board = ui.element("div").classes("rtt-gridcontent").mark("board")
                 with board, ui.element("div").classes("rtt-band"):
                     rowband = ui.element("div").classes("rtt-rowband").mark("rowband")
-            # the chapter-9 approach radio was created in the corner (where the closures it needs
-            # live), but the corner is clipped to freeze_x×freeze_y and overlaid by the title tile,
-            # so re-home it onto the scrolling board — render() positions it over lay.approach_box
-            # (the reserved band at the bottom of the damage tile) in body coordinates.
             refs["approach"].move(board)
-            # where each cell renders: a frozen region (corner/column strip/row band) or the body board
             cell_parents = {"corner": corner, "col": colhead_inner, "row": rowband, "body": board}
 
     def on_key(e):
@@ -5322,22 +3880,12 @@ def index(state: str | None = None) -> None:
 
     ui.keyboard(on_key=on_key)
     render()
-    apply_chapter()  # set the initial chapter-reveal visibility (the persisted slider position, default ch4)
-    # a persisted document that failed to load fell back to defaults: tell the user so a silent reset
-    # of their work is visible (their stored bytes are preserved — see the render() persist guard)
+    apply_chapter()
     if load_failed[0]:
         ui.notify(_LOAD_FAILED, type="warning", position="top", multi_line=True, close_button=True)
 
 
 def _reload_excludes(worktrees: Path) -> str:
-    """The uvicorn ``reload_excludes`` string: NiceGUI's default ignore globs plus the
-    agent-worktrees subtree, but only when it exists. An existing directory becomes a
-    watchfiles ``exclude_dir`` (every change under it is dropped by path-parent
-    containment), the only way to ignore a subtree of unknown depth — uvicorn's glob
-    matcher has no ``**`` and a relative dir never matches the absolute change paths. The
-    path must therefore be absolute AND exist: uvicorn globs any non-dir exclude relative
-    to cwd, and on Python 3.14 pathlib rejects an absolute glob pattern
-    (NotImplementedError), crashing the server at startup. Absent, there's nothing to skip."""
     excludes = [".*", ".py[cod]", ".sw.*", "~*"]
     if worktrees.is_dir():
         excludes.append(str(worktrees))
@@ -5345,13 +3893,6 @@ def _reload_excludes(worktrees: Path) -> str:
 
 
 def main() -> None:
-    """Launch the NiceGUI server.
-
-    Bare ``python app.py`` is local dev: port 8137 with hot-reload (the user keeps an
-    instance running there to use the app). A hosting platform — Render — sets ``PORT``,
-    which switches to a production launch: bind every interface on that port, no
-    file-watching reloader, and sign sessions with the secret from the environment.
-    """
     hosted_port = os.environ.get("PORT")
     if len(sys.argv) > 1:
         port = int(sys.argv[1])

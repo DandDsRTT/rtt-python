@@ -64,6 +64,51 @@ the mockup:
   chokepoint (grid cells, plain-text EBK strings, range-chart labels); the underlying floats keep
   full precision, so turning it back on restores 3-dp. Not in the mockup — user-requested.
 
+## Only tests and names document — no comments, no docstrings
+
+**Tests and object names are the only documentation allowed in this project.** Comments and
+docstrings both rot: the code changes and the prose silently keeps its old claim, becoming a lie.
+A test can't do that — when behavior changes the test fails — and a name can't drift from the thing
+it names. So knowledge lives in exactly two places, plus the guide for the math:
+
+- **What the code does and must keep doing** lives in `tests/` — the executable specification,
+  named and asserted. This is *the* documentation of behavior.
+- **What every value, function, class, module, and file IS** lives in its **name**, chosen per the
+  guide's conventions so a reader recognizes `superspace_rank`, `raises_the_nullity`, `M_jL`
+  without a gloss. A good name is documentation that can't go stale.
+- **The RTT math, units, notation, and naming conventions** live in the guide —
+  `guide/Dave Keenan & Douglas Blumeyer's guide to RTT/` (esp. ch. 10). The guide — not a
+  docstring — is where the domain is explained.
+
+**No docstrings.** Module, class, and function docstrings are banned for the same reason as
+comments: they are prose that drifts out of sync with the code. If a function needs a docstring to
+be understood, it needs a clearer name, smaller scope, or a test that demonstrates it — not a
+paragraph that will later mislead. When you remove a docstring that described behavior, first make
+sure a test pins that behavior (write it if it's missing); then the name + the test carry it.
+
+**No explanatory comments.** If you reach for a comment to explain a value, a formula, a matrix, a
+unit, or a step, that is a **smell that the code is not yet clear enough** — rename, restructure, or
+extract until the comment is unnecessary. A comment that re-derives `rL = r + (dL − d)` belongs in
+the guide; the code should read so the identity is obvious from the names, and a test pins the value.
+
+**The one narrow exception.** A short comment is allowed *only* when a limitation of the language,
+the browser, NiceGUI, or another critical dependency *forces* code to be written in a way that is
+not clean, and a reader would otherwise reasonably "fix" it back and break something — e.g.
+*"NiceGUI re-imports rtt.\* on reload, so importing at module top duplicates the class."* That names
+an external constraint; it is not documentation of our own behavior. If the awkwardness is ours and
+not the platform's, fix the code instead of annotating it.
+
+**Never write change-narration.** The *story of an edit* belongs in the **commit message**, never in
+code — *"this aligns the value with the documented intent"*, *"the bug this fixes"*, *"the merge
+regression"*, *"X used to ride Y but now owns its own"*. A past mistake worth warning about is a sign
+the code should make the wrong path impossible (a type, an assertion, a single source of truth), not
+a sign to leave a war story.
+
+**The workflow this implies (TDD).** Lock behavior with a test first or alongside the change, let
+the test name + assertions carry the spec, point domain knowledge at the guide, and let names carry
+the rest. When you feel the urge to write a comment or docstring, improve the code and the tests
+until the urge is gone.
+
 ## Use the persistent `.venv` — don't rebuild a throwaway one
 
 The repo keeps a persistent virtualenv at `.venv/` (gitignored). All deps (runtime **and**

@@ -2291,3 +2291,68 @@ def test_plain_text_superspace_prescaling_lifts_like_the_grid():
     assert len(expected_cols[0]) == len(ss_pre) == 4
     # the band agrees with the lifted-and-prescaled basis the grid renders for the same tile
     assert " 7.401" in pt[("prescaling", "commas")]   # 2·log₂13 — the lifted 13-coordinate, never log₂5
+
+
+def test_standardize_to_prime_limit_fills_the_limit_up_to_the_largest_prime():
+    state = service.standardize_to_prime_limit((2, 3, Fraction(13, 5)), ("13/5",))
+    assert state.domain_basis == (2, 3, 5, 7, 11, 13)
+
+
+def test_scheme_with_targets_flips_between_all_interval_and_target_based():
+    assert service.is_all_interval(service.scheme_with_targets("minimax-S", "{}"))
+    assert not service.is_all_interval(service.scheme_with_targets("minimax-S", "TILT"))
+
+
+def test_weight_slope_variants_offers_three_with_weighting_and_only_unity_without():
+    assert service.weight_slope_variants("minimax-S", True) == ("minimax-S", "minimax-U", "minimax-C")
+    assert service.weight_slope_variants("minimax-S", False) == ("minimax-U",)
+
+
+def test_scheme_json_round_trips_through_the_inf_optimization_power_sentinel():
+    encoded = service.scheme_to_json("minimax-S")
+    assert encoded["optimization_power"] == "inf"
+    assert service.optimization_power(service.scheme_from_json(encoded)) == float("inf")
+
+
+def test_unchanged_interval_data_dashes_the_directions_an_under_held_tuning_leaves_free():
+    from rtt.app.service.projection import unchanged_interval_data
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone, r = 2
+    tun = service.tuning(state.mapping, "minimax-S", state.domain_basis)
+    data = unchanged_interval_data(state, ("2/1",), tun, "minimax-S", state.domain_basis)
+    assert data.basis == ((1, 0, 0), None)            # one held direction known, one left dashed
+    assert data.ratios == ("2/1", None)
+    assert data.mapped == ((1, None), (0, None))       # M·U scattered back, dashed column None
+    assert data.complexities[1] is None and data.complexities[0] is not None
+
+
+def _barbados_state():
+    return service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+
+
+def test_superspace_generators_are_the_lifted_mappings_detempering():
+    from rtt.app.service import superspace as ss
+    assert ss.superspace_generators(_barbados_state()) == ("2/1", "26/3", "130/3")
+
+
+def test_superspace_self_map_is_the_rank_L_identity():
+    from rtt.app.service import superspace as ss
+    state = _barbados_state()
+    rl = ss.superspace_rank(state)
+    assert ss.superspace_self_map(state) == tuple(
+        tuple(1 if i == j else 0 for j in range(rl)) for i in range(rl))
+
+
+def test_mapping_into_superspace_generators_sends_the_commas_to_zero():
+    from rtt.app.service import superspace as ss
+    state = _barbados_state()
+    mapped = ss.map_vectors_into_superspace_generators(state, state.comma_basis)
+    assert all(all(x == 0 for x in row) for row in mapped)
+
+
+def test_projecting_superspace_generators_to_domain_recovers_the_on_domain_tuning():
+    from rtt.app.service import superspace as ss
+    state = _barbados_state()
+    ss_optimum = ss.superspace_tuning(state, "minimax-S").generator_map
+    projected = ss.project_superspace_generators_to_domain(state, ss_optimum)
+    on_domain = service.tuning(state.mapping, "minimax-S", state.domain_basis).generator_map
+    assert projected == pytest.approx(tuple(on_domain))

@@ -1,26 +1,3 @@
-"""The sole seam between the web UI and the RTT library.
-
-Everything the front end needs is expressed here in plain tuples/ints/strings so
-the UI never imports library types directly. A :class:`TemperamentState` bundles
-a temperament's mapping and its dual comma basis (kept in sync) plus dimensions.
-
-A package since the Phase-2 split, but still ONE flat namespace: every submodule's
-names are re-exported here, so callers keep reaching everything as ``service.<NAME>``
-(the grid_tables facade precedent). The submodules, in dependency order:
-
-  core        shared primitives + temperament-level tuning/size/complexity computations
-  state       TemperamentState, its constructors, and the state edit operations
-  schemes     tuning-scheme trait helpers and their tables
-  projection  the rational projection P = GM / embedding G / unchanged-interval math
-  superspace  the chapter-9 superspace math
-  text        plain_text_values and the EBK string builders
-  parse       the parse_* readers (text back to matrices/maps/states)
-
-The cycle the old single file hid (scheme helpers formatting via prescale_text; the
-text builders reading scheme traits) is broken by keeping the cents/prescale display
-formatters in ``core``, the bottom of the graph: schemes -> core and text -> schemes.
-"""
-
 from rtt.app.service.core import (
     DEFAULT_DOCUMENT_SCHEME,
     DEFAULT_TARGET_SPEC,
@@ -222,6 +199,4 @@ from rtt.app.service.text import (
     vector_list_pending_text,
 )
 
-# Callers refine schemes through service.resolve_tuning_scheme (the old module imported it
-# at top level, making it part of the facade's surface) — keep it reachable here.
 from rtt.library.tuning_scheme_names import resolve_tuning_scheme

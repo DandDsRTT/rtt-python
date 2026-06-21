@@ -1,28 +1,16 @@
-"""EBK mark SVGs — the bracket/brace/rule glyphs that frame the spreadsheet's value
-matrices. Each is one SVG whose viewBox maps 1:1 to the cell's px box (see :func:`svg`),
-so a stroke specified as N px is exactly N px tall AND wide at any span — no scaling, so a
-1-row and a many-row bracket read at the exact same weight. Pure string builders, shared by
-the renderer (app.py) so the page module doesn't carry the geometry."""
-
 import math
 
 BR_COLOR = "#1a1a1a"
-PENDING_COLOR = "#2e9e3f"  # green for a NEW (pending) entry's draft cells, brackets and "?" —
-# the additive "being created" hue, a peer to the amber edit-preview and the red remove-preview:
-# a draft cell wears a green ring + wash (see rtt.css), its marks and "?" the same green
-_BR_BAR = 2  # main bar / vector-rule / square-bracket bar thickness (px)
-_BR_SERIF_T = 0.9  # square + top bracket serif thickness — a thin foot, well under the bar
-BR_SERIF_L = 6  # square + top bracket serif length (how far the foot reaches) — also
-# the shared footprint width every value bracket (square AND angle) draws within
-BR_INSET = 2.5  # gap from a bracket's open side to the value cells it hugs
-# The ⟨ and the brace are filled ribbons of varying width (see ribbon): a calligraphic
-# pen lays a LONG stroke down THICK and a SHORT one THIN. The thin ends stay delicate so
-# the thick/thin taper reads clearly.
-_BR_ANGLE_THICK = 1.1  # ⟨ half-width at the vertex (heavier)
-_BR_ANGLE_THIN = 0.45  # ⟨ half-width at the open tips (much lighter) — a pronounced taper
-_BR_BRACE_THICK = 1.15  # brace arm half-width: the long horizontal stroke is thick
-_BR_BRACE_THIN = 0.4  # brace end-serif half-width: the short upturn is thin
-_BR_BRACE_CUSP = 0.2  # brace central-cusp half-width: the short dip is a near point
+PENDING_COLOR = "#2e9e3f"
+_BR_BAR = 2
+_BR_SERIF_T = 0.9
+BR_SERIF_L = 6
+BR_INSET = 2.5
+_BR_ANGLE_THICK = 1.1
+_BR_ANGLE_THIN = 0.45
+_BR_BRACE_THICK = 1.15
+_BR_BRACE_THIN = 0.4
+_BR_BRACE_CUSP = 0.2
 
 
 def svg(w, h, body):
@@ -35,11 +23,6 @@ def rect(x, y, w, h):
 
 
 def ribbon(pts):
-    """One filled path tracing a variable-width stroke down a centreline. ``pts``
-    is a list of ``(x, y, half_width)``; the outline runs up one offset edge and
-    back down the other. A long run can be laid thick and a short turn thin, and
-    the centreline may double back (the brace cusp, the ⟨ vertex) — the offsets
-    meet at a clean point there, and any inner overlap fills solid (nonzero)."""
     edge_a, edge_b = [], []
     n = len(pts)
     for i in range(n):
@@ -48,7 +31,7 @@ def ribbon(pts):
         nx, ny = pts[i + 1][:2] if i < n - 1 else pts[i][:2]
         tx, ty = nx - px, ny - py
         length = math.hypot(tx, ty) or 1.0
-        ox, oy = -ty / length * hw, tx / length * hw  # normal * half-width
+        ox, oy = -ty / length * hw, tx / length * hw
         edge_a.append((x + ox, y + oy))
         edge_b.append((x - ox, y - oy))
     outline = edge_a + edge_b[::-1]
@@ -57,8 +40,6 @@ def ribbon(pts):
 
 
 def _qbez(p0, ctrl, p1, w0, w1, n, *, skip_first=False):
-    """Sample a quadratic Bézier from ``p0`` to ``p1`` into ``(x, y, half_width)``
-    centreline points, the width lerped ``w0``->``w1`` along it."""
     out = []
     for i in range(n + 1):
         if skip_first and i == 0:
@@ -72,13 +53,11 @@ def _qbez(p0, ctrl, p1, w0, w1, n, *, skip_first=False):
 
 
 def square_bracket(w, h, side):
-    """``[`` or ``]`` as a bar + two perpendicular feet, hugging the value cells
-    (open side ``BR_INSET`` from them). Constant weight at 1 row or many."""
-    if side == "left":  # bar on the left, feet reaching right toward the cells
+    if side == "left":
         x_in = w - BR_INSET
         x_out = x_in - BR_SERIF_L
         bar_x = x_out
-    else:  # "right": bar on the right, feet reaching left toward the cells
+    else:
         x_out = BR_INSET
         bar_x = x_out + BR_SERIF_L - _BR_BAR
     return svg(w, h,
@@ -88,8 +67,6 @@ def square_bracket(w, h, side):
 
 
 def top_bracket(w, h):
-    """The matrix's spanning top bracket: a bar across the top with a down-foot at
-    each end. Same weights as the square brackets, so the frame reads as one font."""
     return svg(w, h,
         rect(0, 0, w, _BR_BAR)
         + rect(0, 0, _BR_SERIF_T, BR_SERIF_L)
@@ -97,13 +74,8 @@ def top_bracket(w, h):
 
 
 def angle_bracket(w, h):
-    """``⟨`` drawn within the SAME oblong footprint as the square brackets — a
-    serif-length wide and the full cell height — so every value bracket shares one
-    rectangle. A filled ribbon, subtly heavier at the vertex than the open tips.
-    The centreline insets (vertex by the thick half-width, tips by the thin one)
-    land the ribbon's outer edge on that footprint, vertex hugging the far side."""
-    bx1 = w - BR_INSET  # open tips, nearest the value cells
-    bx0 = bx1 - BR_SERIF_L  # vertex, at the far edge — width matches the square's reach
+    bx1 = w - BR_INSET
+    bx0 = bx1 - BR_SERIF_L
     cy = h / 2
     vx, tx = bx0 + _BR_ANGLE_THICK, bx1 - 0.4
     top, vertex, bot = (tx, 0.2), (vx, cy), (tx, h - 0.2)
@@ -116,26 +88,14 @@ def angle_bracket(w, h):
 
 
 def brace(w, h):
-    """The matrix's bottom curly brace as ONE variable-width ribbon computed from
-    the width: long horizontal arms (THICK) sweeping from upturned end-serifs
-    (THIN) into a central downward cusp (a THIN near-point). The main (arm) stroke
-    runs through the vertical CENTRE of the box, with the end-serifs rising and the
-    cusp dipping by the SAME amount, so the brace is balanced about its main stroke
-    (not top-heavy). Its depth (the short bounding dimension) matches the value
-    brackets' footprint. On a wide span the curls keep a fixed shape and only the
-    arm grows; on a narrow span (the per-column braces) the curls shrink together
-    so a short arm always survives. One outline, so no seams or overshoot."""
     cx = w / 2
     end_x, serif_dx, cusp_dx = 2.0, 3.2, 5.5
-    span = end_x + serif_dx + cusp_dx + 1.0  # the curls plus a reserved minimal arm
-    if span > cx:  # too narrow to fit full curls — shrink them together to fit
+    span = end_x + serif_dx + cusp_dx + 1.0
+    if span > cx:
         s = cx / span
         end_x, serif_dx, cusp_dx = end_x * s, serif_dx * s, cusp_dx * s
-    arm_y = h / 2  # the main stroke runs through the box's vertical centre...
-    reach = h / 2 - 0.5  # ...with the serifs rising this far above it. The cusp
-    # centreline stops a touch short because its pointed tip's fill overshoots
-    # downward, so this lands the cusp's fill symmetric to the serif tips — i.e.
-    # the arm ends up at the bounding box's exact centre, not above it.
+    arm_y = h / 2
+    reach = h / 2 - 0.5
     tip_y, cusp_y = arm_y - reach, arm_y + reach - 0.3
     thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
     n = 10
@@ -150,21 +110,15 @@ def brace(w, h):
 
 
 def curly_bracket(w, h):
-    """A left curly brace ``{`` for the generator tuning map's frame (it reads ``{ … ]`` —
-    curly open, square close — per the mockup). The matrix brace (:func:`brace`) turned a
-    quarter-turn: ONE variable-width ribbon with a vertical spine, the two ends curling
-    toward the value cells (thin tips) and a central cusp poking to the far edge (a thin
-    near-point). Shares the value brackets' oblong footprint, so the cusp sits where a ``⟨``
-    vertex would. The curls keep a fixed shape; only the spine grows with the cell height."""
     cy = h / 2
     end_y, serif_dy, cusp_dy = 2.0, 3.2, 5.5
-    span = end_y + serif_dy + cusp_dy + 1.0  # the curls plus a reserved minimal spine
-    if span > cy:  # too short to fit full curls — shrink them together to fit
+    span = end_y + serif_dy + cusp_dy + 1.0
+    if span > cy:
         s = cy / span
         end_y, serif_dy, cusp_dy = end_y * s, serif_dy * s, cusp_dy * s
-    tip_x = w - BR_INSET  # the end-tips curl in toward the value cells
-    cusp_x = tip_x - BR_SERIF_L  # the cusp pokes to the far edge (width matches the ⟨ reach)
-    arm_x = (tip_x + cusp_x) / 2  # the spine runs midway between
+    tip_x = w - BR_INSET
+    cusp_x = tip_x - BR_SERIF_L
+    arm_x = (tip_x + cusp_x) / 2
     thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
     n = 10
     pts = _qbez((tip_x, end_y), (arm_x, end_y), (arm_x, end_y + serif_dy), thin, thick, n)
@@ -178,15 +132,7 @@ def curly_bracket(w, h):
 
 
 def angle_foot(w, h):
-    """The ket's ``⟩`` turned a quarter-turn to close a raw (untempered) vector column:
-    a shallow downward chevron from the top corners to a centre vertex, the calligraphic
-    weight of the ⟨ angle bracket (heavier at the vertex than the open tips). A vector
-    thus reads ``[ … ⟩`` down its column — square top, angle foot — telling it apart
-    from a tempered column, which closes with the curly brace (:func:`brace`)."""
     cx = w / 2
-    # the vertex's outer (thick) edge must land inside the box, not poke past it, so
-    # the chevron's footprint matches the other marks' shared short dimension — hence
-    # the vertex centreline sits a thick-half-width-plus-margin up from the bottom
     ty, vy = 0.85, h - 0.5 - _BR_ANGLE_THICK
     left, vertex, right = (0.8, ty), (cx, vy), (w - 0.8, ty)
     n = 8
@@ -198,19 +144,14 @@ def angle_foot(w, h):
 
 
 def vbar(w, h):
-    """A vertical rule between the mapped list's vector columns, the bar's weight."""
     return svg(w, h, rect((w - _BR_BAR) / 2, 0, _BR_BAR, h))
 
 
 def _hbar(w, h):
-    """A horizontal rule — the size-sensitizing matrix's \\hline, separating 𝑋 = 𝑍𝐿's bottom size row
-    from its top square (the mirror of the vertical size bar in the inverse 𝑊 = 𝑋⁻)."""
     return svg(w, h, rect(0, (h - _BR_BAR) / 2, w, _BR_BAR))
 
 
 def ebk_svg(cb):
-    """The SVG for one EBK cell, generated from its current px box (cb.w, cb.h). A
-    pending comma's marks are recoloured green to match its draft cells."""
     if cb.kind == "bracket":
         if cb.text == "⟨":
             svg = angle_bracket(cb.w, cb.h)
@@ -227,5 +168,5 @@ def ebk_svg(cb):
     elif cb.kind == "hbar":
         svg = _hbar(cb.w, cb.h)
     else:
-        svg = vbar(cb.w, cb.h)  # "vbar"
+        svg = vbar(cb.w, cb.h)
     return svg.replace(BR_COLOR, PENDING_COLOR) if cb.pending else svg

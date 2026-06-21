@@ -4687,6 +4687,18 @@ def test_a_comma_minus_hover_fills_the_born_generator_rows_derived_cells():
     assert all(f"cell:mapped:2:{j}" in cells and cells[f"cell:mapped:2:{j}"].text != "" for j in range(2))
 
 
+def test_a_comma_minus_hover_ambers_the_surviving_mapping_rows_as_preview_change():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone r=2, nc=1
+    cells = {c.id: c for c in spreadsheet.build(base, preview_remove=("comma", 0)).cells}
+    for row in (0, 1):                                                # the surviving mapping rows recombine → amber
+        for p in range(3):
+            cell = cells[f"cell:mapping:{row}:{p}"]
+            assert cell.preview_change and not cell.preview_remove and not cell.pending
+    assert all(cells[f"cell:mapping:2:{p}"].pending for p in range(3))            # the born generator row stays green
+    assert not any(cells[f"cell:mapping:2:{p}"].preview_change for p in range(3))
+    assert cells["cell:comma:0:0"].preview_remove                                 # the removed comma column stays red
+
+
 def test_a_mapping_minus_hover_fills_the_born_commas_derived_cells():
     # the dual: the green ghost comma column is a COMPLETE comma column — its vector, and down the
     # mapping band M[surviving row]·newborn = 0 (the rank-reduced mapping tempers it out), and its
@@ -6758,6 +6770,15 @@ def test_tuning_ranges_on_adds_a_generator_tuning_range_chart_in_the_generators_
     assert ch.x == on["header:gens"].x and ch.w == on["header:gens"].w
 
 
+def test_generator_range_chart_carries_the_decimals_toggle():
+    # the I-beam cents labels are formatted in the renderer from this flag, not in `text`, so the
+    # decimals toggle reaches them only through the cell's `decimals` field
+    on = {c.id: c for c in _with(tuning_ranges=True).cells}["rangechart:tuning:gens"]
+    off = {c.id: c for c in _with(tuning_ranges=True, decimals=False).cells}["rangechart:tuning:gens"]
+    assert on.decimals is True
+    assert off.decimals is False
+
+
 def test_the_ranges_chart_answers_to_tuning_ranges_not_charts():
     # the ranges chart is the tuning-ranges box's content (mockup: "controls in box g"),
     # not the (bar-)charts toggle's: turning charts on alone must not summon it, and
@@ -7538,8 +7559,8 @@ def test_interest_is_a_top_level_toggle_after_the_tuning_tiles_group():
 
 
 def test_interest_column_follows_its_own_toggle_not_tuning_tiles():
-    # the interest column used to ride the tuning tiles toggle; now it has its own. Turning
-    # tuning tiles off drops the cyan tuning columns but leaves the interest column standing.
+    # the interest column follows its own toggle, not tuning tiles: turning tuning tiles off drops
+    # the cyan tuning columns but leaves the interest column standing.
     off_tuning = {c.id for c in _with(tuning_tiles=False).cells}
     assert "header:targets" not in off_tuning  # the tuning column goes...
     assert "header:interest" in off_tuning      # ...the interest column stays

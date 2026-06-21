@@ -9,12 +9,10 @@ _OUTPUT_ACCURACY = 3
 
 
 def format_output(output: Temperament, fmt: str = "wolfram") -> Temperament | str:
-    """Return the structured temperament (``wolfram``) or its EBK string (``ebk``)."""
     return to_ebk(output) if fmt == "ebk" else output
 
 
 def to_ebk(t: Temperament) -> str:
-    """Format a whole temperament as an EBK string (the inverse of parsing)."""
     rows = t.matrix
     if t.variance is Variance.COL:
         if len(rows) == 1:
@@ -40,7 +38,6 @@ def _outer_brackets(
 
 
 def vector_to_ebk(vector: tuple, t: Temperament) -> str:
-    """Format one vector as EBK, bracketed per its length vs d/r."""
     body = " ".join(_format_number(x) for x in vector)
     n = len(vector)
     if n == get_d(t):
@@ -51,7 +48,6 @@ def vector_to_ebk(vector: tuple, t: Temperament) -> str:
 
 
 def covector_to_ebk(covector: tuple, t: Temperament) -> str:
-    """Format one covector (map) as EBK, bracketed per its length vs d/r."""
     body = " ".join(_format_number(x) for x in covector)
     n = len(covector)
     if n == get_d(t):
@@ -62,9 +58,6 @@ def covector_to_ebk(covector: tuple, t: Temperament) -> str:
 
 
 def strip_negative_zero(text: str) -> str:
-    """Drop a leading minus from a fixed-point number that displays as zero: ``-0.000`` → ``0.000``.
-    Negative zero carries no meaning here, so a value whose shown digits are all zero should read
-    without the sign. A string with any nonzero digit is left untouched (``-0.001`` stays signed)."""
     if text.startswith("-") and not any(ch in "123456789" for ch in text):
         return text[1:]
     return text
@@ -74,9 +67,6 @@ def _format_number(entry) -> str:
     if isinstance(entry, int):
         return str(entry)
     if isinstance(entry, Fraction):
-        # A whole fraction collapses to its integer (2/1 → 2); a non-whole one keeps its
-        # exact ``numerator/denominator`` form so to_ebk stays the inverse of parsing —
-        # printing 1/3 as a 3-dp float would re-parse as 0.333, degrading the rational.
         if entry.denominator == 1:
             return str(entry.numerator)
         return f"{entry.numerator}/{entry.denominator}"

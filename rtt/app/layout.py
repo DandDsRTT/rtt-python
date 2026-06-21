@@ -1,30 +1,17 @@
-"""Coordinate-space entities for the temperament grid.
-
-The layout (:mod:`rtt.app.spreadsheet`) produces these positioned entities with
-*stable, semantic ids* so the reconciling renderer can keep them across state
-changes and animate add/remove/move:
-
-* :class:`Line` — one entity per coordinate axis (``v:prime:2``, ``h:mapping:0``), a
-  continuous line, not per-cell segments.
-* :class:`Block` — an #e0e0e0 panel rectangle (``block:mapping`` ...).
-* :class:`CellBox` — an input / label / button / caption (``cell:mapping:0:1``,
-  ``prime:2``, ``header:primes`` ...).
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 
 @dataclass(frozen=True)
 class Line:
     id: str
-    orientation: str  # "v" | "h"
-    pos: float  # cross-axis position (x for v, y for h)
-    start: float  # along-axis start (y for v, x for h)
+    orientation: Literal["v", "h"]
+    pos: float
+    start: float
     length: float
-    dotted: bool = False  # a folded row/column converges to one rule; dot it so the
-    # collapsed band reads as a dotted placeholder for its hidden content
+    dotted: bool = False
 
 
 @dataclass(frozen=True)
@@ -34,8 +21,8 @@ class Block:
     y: float
     w: float
     h: float
-    tint: str = ""  # colour-group name for a colorization wash ("tuning"); "" for a plain grey tile
-    boxed: bool = False  # render a thin-bordered box (the nested tuning-ranges box) rather than a plain tile
+    tint: str = ""
+    boxed: bool = False
 
 
 @dataclass(frozen=True)
@@ -50,35 +37,21 @@ class CellBox:
     gen: int = -1
     prime: int = -1
     comma: int = -1
-    underlines: tuple[tuple[int, int], ...] = ()  # (start, len) spans of text to underline (mnemonics)
-    values: tuple[float, ...] = ()  # per-column data for a "chart" cell's bars
-    ranges: tuple[tuple[float, float], ...] = ()  # per-generator (low, high) for a "rangechart" cell's I-beams
-    indicator: float | None = None  # a "chart" cell's horizontal indicator level (the optimization
-    # mean damage ⟪𝐝⟫ₚ on the damage chart), drawn as a line across the plot when set
-    indicator_label: str = ""  # the subscript on that indicator's ⟪𝐝⟫ label — the scheme's Lp
-    # power (∞ / 2 / 1) — so the renderer can letter the line-breaking label
-    pending: bool = False  # a not-yet-valid comma draft cell — rendered blank with a green ring + wash
-    preview_remove: bool = False  # a value cell a pending edit will DELETE (e.g. the unchanged
-    # interval a comma-being-added will drop): the renderer rings it red with the standard
-    # remove-preview look (rtt-preview-remove), persistently while the draft is open
-    preview_change: bool = False  # a value cell a pending rank-change will RECOMBINE (the surviving
-    # mapping rows when a comma is added, the surviving commas when a generator is added): the
-    # renderer rings it amber (rtt-preview-change), the builder-driven twin of preview_remove. The
-    # dual newborn (a generator born from removing a comma, vice versa) rides `pending` (green).
-    checked: bool = False  # a "control_check" checkbox's state (the box-𝐋 "replace diminuator")
-    blank: bool = False  # a value cell kept (its box/brackets stay) but emptied of its
-    # number -- how "quantities" off shows the bare gridded structure
-    unit: str = ""  # the cell's per-value unit (e.g. "g₁/p₁"), shown small beneath the value
-    # when the general `units` toggle is on -- the tile's unit with its variables indexed
-    align: str = ""  # horizontal text alignment for a caption (default centred; "left" left-justifies
-    # it under the control it labels, like a preset chooser's "predefined prescalers" label)
-    disabled: bool = False  # a "control_select" rendered greyed and non-interactive: the box-𝒘
-    # weight-slope chooser in all-interval mode, locked to its forced simplicity-weight value
-    audio: tuple | None = None  # (tile, idx, cents): this cell is click-to-play — hovering it reveals
-    # a speaker that sounds `cents`; `tile`+`idx` group a row's cells so the audio bank's arp/chord
-    # modes can sweep the whole tile from the clicked note (the client derives the chord from siblings)
-    decimals: bool = True  # False rounds this cell's drawn values to integers (the decimals toggle) —
-    # used by the rangechart, whose cents labels are formatted in the renderer, not as `text`
+    underlines: tuple[tuple[int, int], ...] = ()
+    values: tuple[float, ...] = ()
+    ranges: tuple[tuple[float, float], ...] = ()
+    indicator: float | None = None
+    indicator_label: str = ""
+    pending: bool = False
+    preview_remove: bool = False
+    preview_change: bool = False
+    checked: bool = False
+    blank: bool = False
+    unit: str = ""
+    align: str = ""
+    disabled: bool = False
+    audio: tuple | None = None
+    decimals: bool = True
 
 
 @dataclass(frozen=True)
@@ -88,15 +61,8 @@ class Layout:
     lines: tuple[Line, ...]
     blocks: tuple[Block, ...]
     cells: tuple[CellBox, ...]
-    freeze_x: float  # left edge of the first value tile: the row titles/toggles AND the row
-    # branching (trunks, left buses, the ± controls) freeze left of here against horizontal scroll
-    freeze_y: float  # top edge of the first value tile: the column titles/toggles AND the column
-    # branching (trunks, fan-out buses, the ± controls) freeze above here against vertical scroll
-    right_overhang: float = 0.0  # how far the widest column title spills past `width` (titles render
-    # unwrapped and centred on their gridline, so the narrow last column's long title reaches beyond
-    # the grid's right edge); the renderer widens the grey pane by this so the title isn't clipped
-    identities: dict | None = None  # per reorderable interval list, the [(token, vector), …] this
-    # build assigned its columns — fed back as the next build's prev_ids so a reorder keeps a
-    # column's id-token (its cells glide) and the change handlers can map a column index to its token
-    approach_box: tuple | None = None  # (x, y, w, h) the chapter-9 approach radio is positioned over
-    # (a reserved band at the bottom of the damage tile); None when the basis has no nonprime element
+    freeze_x: float
+    freeze_y: float
+    right_overhang: float = 0.0
+    identities: dict | None = None
+    approach_box: tuple | None = None

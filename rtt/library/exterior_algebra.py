@@ -15,10 +15,6 @@ from rtt.library.temperament import Temperament, Variance
 
 @dataclass(frozen=True)
 class Multivector:
-    """A temperament as a multivector: the rank-order minors
-    (Plücker coordinates), the grade, the variance, and d (needed only when
-    grade == 0, where d can't be inferred from the coordinate count)."""
-
     coords: tuple
     grade: int
     variance: Variance
@@ -70,7 +66,6 @@ def _ea_get_decomposable_d(u: Multivector) -> int:
 
 
 def ea_indices(d: int, grade: int) -> tuple:
-    """The grade-subsets of the d dimensions, in lexicographic order."""
     return tuple(combinations(range(d), grade))
 
 
@@ -110,13 +105,12 @@ def _mc_to_c(u: Multivector) -> Temperament | None:
 
 
 def _flattened_antisymmetric_matrix(u: Multivector) -> tuple:
-    """The antisymmetric grade-tensor flattened to a (d^(grade-1)) x d matrix."""
     d = _ea_get_decomposable_d(u)
     index_to_coord = dict(zip(combinations(range(d), u.grade), u.coords))
     rows = [[0] * d for _ in range(d ** (u.grade - 1))]
     for full_index in product(range(d), repeat=u.grade):
         if len(set(full_index)) < u.grade:
-            continue  # repeated index -> antisymmetric entry is zero
+            continue
         value = _permutation_sign(full_index) * index_to_coord[tuple(sorted(full_index))]
         if value:
             row = 0
@@ -156,7 +150,6 @@ def _decomposable_ea_canonical_form(u: Multivector) -> Multivector:
 
 
 def ea_dual(u: Multivector) -> Multivector:
-    """The dual multivector (the Hodge dual), in canonical form."""
     if is_nondecomposable(u):
         raise ValueError("nondecomposable multivector has no dual")
     dual_variance = Variance.COL if u.variance is Variance.ROW else Variance.ROW
@@ -178,13 +171,9 @@ def ea_dual(u: Multivector) -> Multivector:
 
 
 def progressive_product(u1: Multivector, u2: Multivector) -> Multivector:
-    """The wedge product (join): grades add; inputs must share variance."""
     if u1.variance is not u2.variance:
         raise ValueError("progressive product requires matching variance")
     d = ea_get_d(u1)
-    # d is inferred from u1 alone; without this check a higher-d u2 is silently
-    # truncated (zip drops its trailing coords -> a false all-zero "linear
-    # dependence" wedge) and a lower-d u2 dies with a bare KeyError.
     if _ea_get_decomposable_d(u2) != d:
         raise ValueError("progressive product requires matching dimensionality")
     grade = u1.grade + u2.grade
@@ -203,7 +192,6 @@ def progressive_product(u1: Multivector, u2: Multivector) -> Multivector:
 
 
 def regressive_product(u1: Multivector, u2: Multivector) -> Multivector:
-    """The vee product (meet): the dual of the wedge of the duals."""
     return ea_dual(progressive_product(ea_dual(u1), ea_dual(u2)))
 
 
@@ -216,14 +204,12 @@ def left_interior_product(u1: Multivector, u2: Multivector) -> Multivector:
 
 
 def interior_product(u1: Multivector, u2: Multivector) -> Multivector:
-    """The symmetric interior product (right or left, by the inputs' grades)."""
     if u1.grade >= u2.grade:
         return right_interior_product(u1, u2)
     return left_interior_product(u1, u2)
 
 
 def ea_sum(u1: Multivector, u2: Multivector) -> Multivector:
-    """Sum two addable multivectors (entry-wise on coordinates, canonicalized)."""
     return _ea_addition(u1, u2, is_sum=True)
 
 
@@ -236,28 +222,12 @@ def _ea_addition(u1: Multivector, u2: Multivector, is_sum: bool) -> Multivector:
     second = ea_dual(u2) if u2.variance is not first.variance else ea_canonical_form(u2)
     if ea_get_r(first) != ea_get_r(second) or ea_get_d(first) != ea_get_d(second):
         raise ValueError("multivectors not addable: dimensions differ")
-    # Match the matrix layer (addition.py): a temperament minus itself is undefined,
-    # not the all-zero multivector that ea_canonical_form's zero short-circuit would
-    # otherwise hand back as if it were a result. The EA-for-RTT guide's addition
-    # section doesn't cover T-T; the "T1 minus T1 is undefined" rule lives in the
-    # companion "Temperament addition" guide, which the EA section defers to.
     if not is_sum and first == second:
         raise ValueError("cannot diff a temperament with itself")
     combined = tuple(
         a + b if is_sum else a - b for a, b in zip(first.coords, second.coords)
     )
     result = Multivector(combined, first.grade, first.variance)
-    # A non-addable pair sums to a nondecomposable multivector -- "the way that
-    # multivectors convey ... there is no true temperament sum" (EA-for-RTT guide).
-    # Report that as non-addability, as addition.sum_ does, rather than letting
-    # canonicalization complain about an internal "no canonical form".
-    #
-    # CAVEAT: the guide states/proves the "indecomposable <=> not addable"
-    # equivalence for BIVECTORS (grade 2). For higher grades a decomposable-but-
-    # not-addable sum is theoretically possible, which this check would accept where
-    # addition.py's explicit-L_dep (linear-dependence-basis) test would reject it.
-    # No such case is known/tested; this is the one spot where the EA-side and the
-    # LA-side (addition.py) addability tests are not provably identical.
     if is_nondecomposable(result):
         raise ValueError("multivectors not addable")
     return ea_canonical_form(result)
@@ -265,12 +235,6 @@ def _ea_addition(u1: Multivector, u2: Multivector, is_sum: bool) -> Multivector:
 
 def matrix_to_multivector(t: Temperament) -> Multivector:
     grade = get_n(t) if t.variance is Variance.COL else get_r(t)
-    # get_largest_minors_l takes its minors from the FIRST grade-many rows, so a
-    # valid temperament whose leading rows happen to be linearly dependent (e.g. a
-    # mapping with a doubled first row) would yield all-zero minors -- the EA layer's
-    # "not a temperament" signal -- for a real temperament. HNF first so the leading
-    # rows are an independent basis of the row space (a unimodular transform, so the
-    # multivector is unchanged up to the canonical sign/scale ea_canonical_form fixes).
     independent_rows = hnf(t.matrix)[:grade]
     return ea_canonical_form(
         Multivector(get_largest_minors_l(independent_rows), grade, t.variance, get_d(t))
@@ -278,16 +242,13 @@ def matrix_to_multivector(t: Temperament) -> Multivector:
 
 
 def u_to_tensor(u: Multivector):
-    """The fully antisymmetric grade-tensor (``d`` in each of the ``grade`` modes) built
-    from the multivector's Plücker coordinates; for grade 2 this is the antisymmetric
-    ``d × d`` matrix, returned as nested tuples."""
     d = _ea_get_decomposable_d(u)
     index_to_coord = dict(zip(combinations(range(d), u.grade), u.coords))
 
     def build(prefix: tuple) -> object:
         if len(prefix) == u.grade:
             if len(set(prefix)) < u.grade:
-                return 0  # repeated index -> antisymmetric entry is zero
+                return 0
             return _permutation_sign(prefix) * index_to_coord[tuple(sorted(prefix))]
         return tuple(build(prefix + (axis,)) for axis in range(d))
 

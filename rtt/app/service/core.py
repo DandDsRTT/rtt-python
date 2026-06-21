@@ -1,11 +1,3 @@
-"""Shared service primitives: the facade's tuple-first vocabulary.
-
-The :class:`Tuning` / :class:`IntervalSizes` bundles, the tuple<->matrix/ratio/vector
-converters every sibling shares, the temperament-level computations (tuning, sizes,
-complexities, weights), and the cents/prescale display formatters (defined here, at the
-bottom of the import graph, so both the scheme helpers and the plain-text builders can
-share them without a schemes<->text cycle)."""
-
 from __future__ import annotations
 
 import math
@@ -56,53 +48,33 @@ from rtt.library.tuning_scheme_names import resolve_tuning_scheme
 
 
 def get_generator_tuning_range(t, mode):
-    """The generator tuning range for the I-beam range chart, or ``None`` when the range solver
-    can't measure this basis. The odd-limit diamond it works over isn't defined for every
-    nonstandard subgroup — a mixed basis like ``2.3.5.13/5`` (where 5 and 13/5 share the prime 5)
-    yields 0-width diamond vectors and the projection through the mapping fails. The range is a
-    chart-only nicety with no bearing on the tuning itself, so a basis it can't measure simply
-    shows no range — the same ``None`` the superspace tuning already uses for its (range-less) maps."""
     try:
         return _get_generator_tuning_range(t, mode)
     except (ValueError, IndexError):
         return None
 
 
-DEFAULT_TUNING_SCHEME = "minimax-S"  # the canonical all-interval scheme — the compute/helper
-# default (where a complete self-contained scheme is wanted) and the all-interval form the chooser
-# anchors on. NOT the as-shipped document scheme (see DEFAULT_DOCUMENT_SCHEME).
-DEFAULT_TARGET_SPEC = "TILT"  # the default target interval set family (tracks the domain)
-# The as-shipped document scheme the editor and a fresh build start from: target-based (the
-# default TILT family) and UNITY-weighted. All-interval schemes are simplicity-weighted by
-# construction, but the target-based default is plain unity weight (minimax-U, not minimax-S).
+DEFAULT_TUNING_SCHEME = "minimax-S"
+DEFAULT_TARGET_SPEC = "TILT"
 DEFAULT_DOCUMENT_SCHEME = f"{DEFAULT_TARGET_SPEC} minimax-U"
 
 
 @dataclass(frozen=True)
 class Tuning:
-    """The temperament-level tuning — prime maps and generator ranges, independent
-    of any interval set."""
-
-    generator_map: tuple[float, ...]  # cents, over the generators
-    tuning_map: tuple[float, ...]  # cents, over the domain primes
-    just_map: tuple[float, ...]  # cents, over the domain primes
-    retuning_map: tuple[float, ...]  # tempered - just, over the primes
-    monotone_generator_range: tuple[tuple[float, float], ...] | None  # per generator; None if none exists
-    tradeoff_generator_range: tuple[tuple[float, float], ...] | None  # (low, high) cents/gen; None if octave tempers out
+    generator_map: tuple[float, ...]
+    tuning_map: tuple[float, ...]
+    just_map: tuple[float, ...]
+    retuning_map: tuple[float, ...]
+    monotone_generator_range: tuple[tuple[float, float], ...] | None
+    tradeoff_generator_range: tuple[tuple[float, float], ...] | None
 
 
 @dataclass(frozen=True)
 class IntervalSizes:
-    """An interval set's sizes under a tuning; each list runs over the intervals.
-
-    Used for every interval column (targets, commas, other intervals of interest):
-    project the set once through the shared prime maps rather than recomputing the
-    optimization per set."""
-
-    tempered: tuple[float, ...]  # cents
-    just: tuple[float, ...]  # cents
-    errors: tuple[float, ...]  # tempered - just
-    damage: tuple[float, ...]  # 𝐝 = |error|·weight (|error| when no weights passed: unity)
+    tempered: tuple[float, ...]
+    just: tuple[float, ...]
+    errors: tuple[float, ...]
+    damage: tuple[float, ...]
 
 
 def _to_matrix(rows) -> Matrix:
@@ -110,38 +82,24 @@ def _to_matrix(rows) -> Matrix:
 
 
 def _hashable(value):
-    """A hashable (tuple-frozen) copy of an optional sequence argument, for memoization
-    keys: handles a flat sequence (a domain basis, a target list, a prescaler diagonal)
-    and a nested one (a full prescaler matrix); ``None`` passes through."""
     if value is None:
         return None
     return tuple(tuple(row) if isinstance(row, (tuple, list)) else row for row in value)
 
 
 def _is_matrix(x) -> bool:
-    """Whether a complexity-pretransformer override is a full d×d matrix (a sequence of rows) rather
-    than a flat diagonal d-tuple — the editable square's non-diagonal form. Plain-Python (no numpy,
-    keeping this module's tuple-only surface): a matrix's first entry is itself a sequence."""
     return bool(x) and isinstance(x[0], (tuple, list))
 
 
 def standard_primes(d: int) -> tuple[int, ...]:
-    """The first ``d`` primes — the standard prime-limit domain basis (header labels)."""
     return get_primes(d)
 
 
 def is_standard_domain(domain_basis) -> bool:
-    """Whether a domain basis is a standard prime limit (the first d primes) — so the
-    prime-walking domain ± controls apply, as opposed to a nonstandard subgroup."""
     return is_standard_prime_limit_domain_basis(tuple(domain_basis))
 
 
 def domain_has_nonprimes(domain_basis) -> bool:
-    """Whether the domain basis contains any nonprime element (a composite integer or a
-    Fraction with a denominator > 1, like ``13/5``) — the gate for the nonprime-basis-approach
-    mode radio, which is only meaningful when there is a nonprime to embed differently. Finer
-    than :func:`is_standard_domain`: a reordered prime limit (``3.2.5``) still has the
-    prime-only structure, so this returns False where ``is_standard_domain`` does."""
     for element in domain_basis:
         fraction = Fraction(element)
         if fraction.denominator != 1 or not sp.isprime(fraction.numerator):
@@ -150,28 +108,17 @@ def domain_has_nonprimes(domain_basis) -> bool:
 
 
 def is_proper_temperament(mapping) -> bool:
-    """Whether ``mapping`` is a proper temperament: its rows are independent (full row rank — not a
-    dependent or zero row), and every domain element is reached by some generator (no all-zero
-    column — an element mapped to nothing is tempered to a unison, a degenerate temperament).
-    Improper mappings break the detempering identity (M·Dᵀ = I) and don't round-trip, so the editor
-    rejects an edit that would produce one."""
     rows = _to_matrix(mapping)
     if not rows or not rows[0]:
         return False
-    if get_r(Temperament(rows, Variance.ROW)) < len(rows):  # a dependent / zero row
+    rank = get_r(Temperament(rows, Variance.ROW))
+    if rank < len(rows):
         return False
-    return all(any(row[p] for row in rows) for p in range(len(rows[0])))  # every element reached
+    every_element_reached = all(any(row[p] for row in rows) for p in range(len(rows[0])))
+    return every_element_reached
 
 
 def greatest_factor(mapping) -> int:
-    """The mapping's greatest enfactoring — the defactoring digest: the |det| of the square
-    Hermite form of its saturated row space (equivalently the product of its column-HNF pivots).
-    ``1`` for a defactored (proper) temperament; ``> 1`` marks an *enfactored* temperoid, e.g.
-    ``⟨24 38 56]`` = 2·``⟨12 19 28]`` (greatest factor 2) or the hidden ``[⟨2 0 0] ⟨0 1 4]]``.
-
-    Enfactoring is the column-HNF pivot product, NOT a row GCD — a row GCD misses hidden
-    enfactoring where no single row is divisible. A dependent / empty mapping (which
-    :func:`is_proper_temperament` already rejects) has no well-defined enfactoring, reported as 1."""
     rows = _to_matrix(mapping)
     if not rows or not rows[0] or get_r(Temperament(rows, Variance.ROW)) < len(rows):
         return 1
@@ -179,67 +126,32 @@ def greatest_factor(mapping) -> int:
 
 
 def is_enfactored(mapping) -> bool:
-    """Whether ``mapping`` is enfactored (:func:`greatest_factor` ``> 1``) — a temperoid whose
-    generator detempering ``D`` does NOT satisfy the defining identity ``M·Dᵀ = I``, so the
-    generators / detempering / ``𝒕D``-vs-``𝒈`` rows :func:`generators` and
-    :func:`generator_detempering` produce for it are confidently wrong (they only hold for a
-    defactored mapping).
-
-    Deliberately distinct from :func:`is_proper_temperament`, which *accepts* enfactored full-rank
-    mappings (canonicalization and temperament identification reduce them, and the canonical-form box
-    shows the defactored form): a temperoid is a legitimate thing to enter and inspect. The renderer
-    uses this to DASH the detempering-derived rows when the mapping isn't defactored, rather than
-    presenting numeric noise as a working tuning. (canonical-defactor-4.)"""
     return greatest_factor(mapping) > 1
 
 
 def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
-    """Resolve a target interval set spec against a domain basis, as ratio strings.
-
-    ``spec`` selects the family — a truncated integer-limit triangle (``"TILT"`` /
-    ``"N-TILT"``) or an odd-limit diamond (``"OLD"`` / ``"N-OLD"``). With no explicit
-    limit the set tracks the domain. ``"TILT"`` is the as-shipped default.
-    """
     domain = tuple(domain_basis)
     quotients = process_old(spec, domain) if "OLD" in spec else process_tilt(spec, domain)
     if is_standard_prime_limit_domain_basis(domain):
-        # a limit raised past the domain's prime limit reaches intervals needing a prime the domain
-        # lacks (e.g. 7/4 over a 5-limit) — drop them, matching the optimizer (resolve_target_intervals)
         quotients = tuple(q for q in quotients if len(quotient_to_pcv(q)) <= len(domain))
     else:
-        # a nonstandard subgroup can't voice every interval the prime-limit triangle spans
-        # (e.g. 5/4 over 2.3.13/5, where 5 isn't reachable) — keep only those it contains
         quotients = filter_target_intervals_for_nonstandard_domain_basis(quotients, domain)
     return tuple(f"{q.numerator}/{q.denominator}" for q in quotients)
 
 
 def element_ratio(element) -> str:
-    """A domain element as a ``"num/den"`` ratio: a prime ``p`` → ``"p/1"``, a nonprime
-    element (a Fraction like ``13/5``) → ``"13/5"`` — the operand its just log₂ is taken over."""
     fraction = Fraction(element)
     return f"{fraction.numerator}/{fraction.denominator}"
 
 
 def default_target_limit(family: str, domain_basis) -> int:
-    """The limit a bare TILT/OLD family resolves to for this domain — the number the
-    target chooser shows when no manual limit is set (so it never reads as 'auto')."""
     domain = tuple(domain_basis)
     return default_old_limit(domain) if "OLD" in family else default_tilt_limit(domain)
 
 
 def target_limit_problem(family: str | None, limit_value) -> str | None:
-    """Classify a target-limit chooser entry against its family, returning an error key, or
-    ``None`` when the value is acceptable:
-
-      - ``"whole"`` — the value isn't a whole number (a decimal, or unparseable text).
-      - ``"odd"``   — an even limit for the odd-limit diamond (``OLD``), which is odd by construction;
-        the truncated integer-limit triangle (``TILT``) takes any whole number.
-
-    A blank or zero value reads as "no manual limit" (the family tracks the domain default),
-    matching the chooser handler that treats a falsy entry as the bare family. A ``None`` family
-    (a typed override / all-interval chooser) has no parity rule, so only the whole-number check
-    applies."""
-    if not limit_value:  # None / "" / 0 -> no manual limit (the bare family)
+    no_manual_limit = not limit_value
+    if no_manual_limit:
         return None
     try:
         number = float(limit_value)
@@ -252,43 +164,24 @@ def target_limit_problem(family: str | None, limit_value) -> str | None:
     return None
 
 
-# A generator/comma ratio whose numerator or denominator runs past this many decimal digits is
-# flagged with the sentinel below instead of being rendered. CPython refuses to stringify an int
-# past ~4300 digits (a quadratic-time DoS guard) — so a ratio that large would crash the formatter
-# (and, with no try/finally around render(), brick the page); and a ratio even close to it is the
-# noise of a degenerate near-full-rank or enfactored mapping (whose generator detempering is
-# astronomically complex), not a musical interval. The threshold sits far below the 4300 crash
-# ceiling and far above any real interval, so it only ever intercepts meaningless ratios.
-_OVER_COMPLEX_RATIO = "⋯"  # a ratio too complex to render (a degenerate mapping's noise); see below
-_MAX_RATIO_DIGITS = 1000  # decimal digits a renderable ratio component may reach (editor-state-machine-1)
+# CPython raises when stringifying an int past ~4300 digits (its int->str DoS guard), so a ratio
+# component that large would crash the formatter; flag anything past this far-lower ceiling instead.
+_OVER_COMPLEX_RATIO = "⋯"
+_MAX_RATIO_DIGITS = 1000
 
 
 def _ratio_too_complex(quotient) -> bool:
-    """Whether a Fraction's numerator or denominator is too large to render as a ratio string —
-    its decimal length, bounded from its bit length (an ``n``-bit int has about ``n·log₁₀2`` digits,
-    so this never invokes the very int→str conversion that would crash), exceeds
-    :data:`_MAX_RATIO_DIGITS`. The cheap guard that keeps a degenerate mapping's vast generator /
-    comma ratios from crashing the render (:func:`_vectors_to_ratios`)."""
     bits = max(quotient.numerator.bit_length(), quotient.denominator.bit_length())
     return bits * 0.30103 > _MAX_RATIO_DIGITS
 
 
 def _vectors_to_ratios(vectors, domain_basis=None) -> tuple[str, ...]:
-    """Each vector as a ``"num/den"`` ratio string (the shared rendering for generators
-    and commas). A vector's components are exponents on the domain basis: the standard
-    primes (``pcv_to_quotient``) or, for a nonstandard basis, its (nonprime) elements —
-    so a comma over ``2.3.13/5`` multiplies those out (676/675), not the primes (100/27).
-
-    A component too large to stringify (a degenerate / enfactored mapping's astronomical
-    generator ratio) is flagged :data:`_OVER_COMPLEX_RATIO` rather than crashing the formatter;
-    the read-only ratio face renders the sentinel as a plain label, and :func:`_interval_vectors`
-    reads it back as a unison so the dependent size/complexity rows stay finite."""
     standard = domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis)
     elements = None if standard else tuple(Fraction(e) for e in domain_basis)
     ratios = []
     for vector in vectors:
         if standard:
-            quotient = pcv_to_quotient(vector)  # exponents on the standard primes
+            quotient = pcv_to_quotient(vector)
         else:
             quotient = Fraction(1)
             for element, exponent in zip(elements, vector):
@@ -301,41 +194,24 @@ def _vectors_to_ratios(vectors, domain_basis=None) -> tuple[str, ...]:
 
 
 def generators(mapping, domain_basis=None) -> tuple[str, ...]:
-    """Each generator as an approximate ratio string, e.g. ``('2/1', '2/3')``. The
-    detempering's vectors are over the domain basis, so a nonstandard one multiplies out
-    its (nonprime) elements rather than reading the vector over primes."""
     m = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
     return _vectors_to_ratios(get_generator_detempering(m).matrix, domain_basis)
 
 
 def generator_detempering(mapping) -> Matrix:
-    """The generator detempering ``D``: one JI interval per generator that tempers to it
-    (the mapping's right-inverse), as ``r`` vectors over the ``d`` primes. The vector form
-    of :func:`generators` — for 5-limit meantone, the octave and fifth ``((1,0,0),(-1,1,0))``."""
     m = Temperament(_to_matrix(mapping), Variance.ROW)
     return _to_matrix(get_generator_detempering(m).matrix)
 
 
 def comma_ratios(comma_basis, domain_basis=None) -> tuple[str, ...]:
-    """Each comma in the basis as a ratio string, e.g. ``('80/81',)`` — the
-    comma-column analogue of :func:`generators`. Rendered as-is (the canonical
-    dual's sign), so the syntonic comma reads ``80/81`` (a descending interval).
-    Over a nonstandard ``domain_basis`` the vector is multiplied out over its elements."""
     return _vectors_to_ratios(comma_basis, domain_basis)
 
 
 def _vectors(ratios, d) -> tuple:
-    """Parse a ratio list into vectors over the first ``d`` primes (``()`` if empty)."""
     return parse_quotient_list("{" + ", ".join(ratios) + "}", d)
 
 
 def _interval_vectors(ratios, domain_basis, d) -> tuple:
-    """Each ratio as a vector over the domain basis: parsed over the first ``d`` primes for a
-    standard basis, or expressed over the (possibly nonprime) elements for a nonstandard one
-    (so e.g. ``13/5`` keeps its 13 over ``2.3.13/5`` instead of being truncated to the d primes)."""
-    # a ratio :func:`_vectors_to_ratios` flagged as over-complex (a degenerate mapping's vast
-    # generator/comma ratio) has no renderable string to parse — read it back as a unison so the
-    # size/complexity rows that round-trip these ratios stay finite rather than crash (editor-state-machine-1)
     ratios = tuple("1/1" if r == _OVER_COMPLEX_RATIO else r for r in ratios)
     if domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis):
         return _vectors(ratios, d)
@@ -343,12 +219,10 @@ def _interval_vectors(ratios, domain_basis, d) -> tuple:
 
 
 def _over(prime_map, vector):
-    """Project a vector through a prime map (their dot product)."""
     return sum(prime_map[p] * vector[p] for p in range(len(prime_map)))
 
 
 def _map_through(mapping, vectors) -> Matrix:
-    """Map each vector through ``M`` — columns of vectors taken to generator coords."""
     d = len(mapping[0])
     return tuple(
         tuple(sum(mapping[i][p] * vector[p] for p in range(d)) for vector in vectors)
@@ -357,38 +231,23 @@ def _map_through(mapping, vectors) -> Matrix:
 
 
 def mapped_intervals(mapping, ratios, domain_basis=None) -> Matrix:
-    """A ratio-string interval set mapped through ``M`` — the intervals in generator
-    coords (r x m). Works for any such set (targets or other intervals of interest);
-    the empty set yields one empty generator row per mapping row, keeping the shape.
-    Over a nonstandard ``domain_basis`` each ratio is expressed in that basis first."""
     mapping = _to_matrix(mapping)
     return _map_through(mapping, _interval_vectors(ratios, domain_basis, len(mapping[0])))
 
 
 def mapped_commas(mapping, comma_basis) -> Matrix:
-    """Each comma mapped through ``M`` — the comma basis in generator coords (r x nc).
-    Every comma the temperament tempers out maps to zero: it vanishes."""
     mapping = _to_matrix(mapping)
     return _map_through(mapping, _to_matrix(comma_basis))
 
 
 def canonical_mapping(mapping) -> Matrix:
-    """The canonical form of ``M`` — defactored, then Hermite Normal Form — as shown
-    in the ``canonical mapping`` form box. May differ from the stored matrix (which the
-    user can enter in any equivalent form)."""
     return _to_matrix(canonical_ma(_to_matrix(mapping)))
 
 
 def canonical_comma_basis(comma_basis) -> Matrix:
-    """The canonical form of a comma basis (the comma-column analogue of
-    :func:`canonical_mapping`) — for the comma-basis box's ``<choose form>`` control."""
     return _to_matrix(canonical_ca(_to_matrix(comma_basis)))
 
 
-# The mapping <choose form> options, in dropdown order: the canonical (defactored Hermite) form
-# plus the alternate generator forms from the Normal Lists page. The positive-generator form has
-# two variants from that page, offered side by side: "flip" (negate a negative generator's row) and
-# "shift" (period-shift it positive, except a (c−p)-sheared generator, which falls back to flip).
 MAPPING_FORM_KEYS = ("canonical", "mingen", "equave-reduced",
                      "positive-generator", "positive-generator-shift")
 MAPPING_FORM_LABELS = {
@@ -407,15 +266,11 @@ _ALT_MAPPING_FORMS = {
 
 
 def _jip_octaves(mapping, domain_basis):
-    """The just tuning map in octaves (the log2 size of each domain element) — the generator-form
-    functions read generator sizes against it."""
     t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
     return tuple(c / 1200.0 for c in get_just_tuning_map(t))
 
 
 def mapping_in_form(mapping, form: str, domain_basis=None) -> Matrix:
-    """The mapping re-expressed in the named generator form (a key in :data:`MAPPING_FORM_KEYS`) —
-    what the ``<choose form>`` control re-stores the mapping as."""
     m = _to_matrix(mapping)
     if form == "canonical":
         return _to_matrix(canonical_ma(m))
@@ -423,10 +278,6 @@ def mapping_in_form(mapping, form: str, domain_basis=None) -> Matrix:
 
 
 def identify_mapping_form(mapping, domain_basis=None) -> str | None:
-    """Which offered form the STORED mapping currently is (its key in :data:`MAPPING_FORM_KEYS`),
-    so the ``<choose form>`` dropdown shows it selected — or ``None`` when the stored matrix matches
-    none of them (an equivalent but unlisted generating set; the dropdown then shows its
-    placeholder). The first matching key wins, so forms that coincide read as the earliest one."""
     m = _to_matrix(mapping)
     for key in MAPPING_FORM_KEYS:
         if mapping_in_form(m, key, domain_basis) == m:
@@ -435,21 +286,12 @@ def identify_mapping_form(mapping, domain_basis=None) -> str | None:
 
 
 def resolve_mapping_form(mapping, preferred, domain_basis=None) -> str:
-    """Which form key the mapping ``<choose form>`` dropdown shows selected, honoring the user's
-    explicitly ``preferred`` pick as a tiebreaker: when several offered forms coincide (produce the
-    same matrix), :func:`identify_mapping_form` returns only the earliest, which would snap the
-    dropdown off the option the user just chose. So if ``preferred`` is still a form this matrix is
-    in, keep it; otherwise fall back to the first match (``""`` when none match)."""
     m = _to_matrix(mapping)
     if preferred in MAPPING_FORM_KEYS and mapping_in_form(m, preferred, domain_basis) == m:
         return preferred
     return identify_mapping_form(m, domain_basis) or ""
 
 
-# The comma-basis <choose form> options, in dropdown order: the canonical (antitransposed defactored
-# Hermite) form plus the other comma normal forms from the Normal Lists page — "positive-ratio"
-# (every comma made positive in pitch) and "minimal" (the simplest comma list, the wiki's comma
-# lists). The comma analogue of MAPPING_FORM_KEYS.
 COMMA_BASIS_FORM_KEYS = ("canonical", "positive-ratio", "minimal")
 COMMA_BASIS_FORM_LABELS = {
     "canonical": "canonical",
@@ -463,18 +305,12 @@ _ALT_COMMA_BASIS_FORMS = {
 
 
 def _comma_octaves(d: int, domain_basis=None):
-    """The just tuning map in octaves — ``log2`` of each of the ``d`` domain elements (the primes for
-    a standard prime-limit domain) — that the comma-form functions read each comma's pitch and
-    log-product complexity against."""
     if domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis):
         return standard_jip_octaves(d)
     return tuple(math.log2(float(Fraction(e))) for e in domain_basis)
 
 
 def comma_basis_in_form(comma_basis, form: str, domain_basis=None) -> Matrix:
-    """The comma basis re-expressed in the named normal form (a key in
-    :data:`COMMA_BASIS_FORM_KEYS`) — what the comma-basis ``<choose form>`` control re-stores it as.
-    The mirror of :func:`mapping_in_form`."""
     cb = _to_matrix(comma_basis)
     if form == "canonical":
         return _to_matrix(canonical_ca(cb))
@@ -483,10 +319,6 @@ def comma_basis_in_form(comma_basis, form: str, domain_basis=None) -> Matrix:
 
 
 def identify_comma_basis_form(comma_basis, domain_basis=None) -> str | None:
-    """Which offered form the STORED comma basis currently is (its key in
-    :data:`COMMA_BASIS_FORM_KEYS`), so the ``<choose form>`` dropdown shows it selected — or ``None``
-    when the stored basis matches none of them. The mirror of :func:`identify_mapping_form`; the first
-    matching key wins, so forms that coincide read as the earliest one."""
     cb = _to_matrix(comma_basis)
     for key in COMMA_BASIS_FORM_KEYS:
         if comma_basis_in_form(cb, key, domain_basis) == cb:
@@ -495,10 +327,6 @@ def identify_comma_basis_form(comma_basis, domain_basis=None) -> str | None:
 
 
 def resolve_comma_basis_form(comma_basis, preferred, domain_basis=None) -> str:
-    """Which form key the comma-basis ``<choose form>`` dropdown shows selected — the comma
-    counterpart to :func:`resolve_mapping_form`, honoring the user's ``preferred`` pick when forms
-    coincide. A comma's minimal form often equals its positive-ratio form, so a pure
-    :func:`identify_comma_basis_form` would snap "minimal" back to the earlier "positive-ratio"."""
     cb = _to_matrix(comma_basis)
     if preferred in COMMA_BASIS_FORM_KEYS and comma_basis_in_form(cb, preferred, domain_basis) == cb:
         return preferred
@@ -506,9 +334,6 @@ def resolve_comma_basis_form(comma_basis, preferred, domain_basis=None) -> str:
 
 
 def form_matrix(mapping) -> Matrix:
-    """The generator form matrix ``F``: the unimodular r×r change of generator basis with
-    ``F·M = canonical(M)``. Computed as ``F = canonical(M)·Dᵀ`` where ``D`` is the
-    generator detempering (its rows the generators as vectors), since ``M·Dᵀ = I``."""
     m = _to_matrix(mapping)
     canon = canonical_ma(m)
     detemper = get_generator_detempering(Temperament(m, Variance.ROW)).matrix
@@ -520,11 +345,6 @@ def form_matrix(mapping) -> Matrix:
 
 
 def inverse_form_matrix(mapping) -> Matrix:
-    """The inverse generator form matrix ``F⁻¹`` (r×rc): the unimodular change of generator basis
-    BACK from the canonical generators to the stored ones, with ``M = F⁻¹·canonical(M)``. Computed
-    as ``F⁻¹ = M·D_Cᵀ`` where ``D_C`` is the CANONICAL mapping's generator detempering (its rows the
-    canonical generators as vectors), since ``canonical(M)·D_Cᵀ = I`` — the mirror of
-    :func:`form_matrix` (``F = canonical(M)·Dᵀ``). For 5-limit meantone ``F⁻¹ = ((1,1),(0,1))``."""
     m = _to_matrix(mapping)
     canon = canonical_ma(m)
     canon_detemper = get_generator_detempering(Temperament(_to_matrix(canon), Variance.ROW)).matrix
@@ -536,12 +356,6 @@ def inverse_form_matrix(mapping) -> Matrix:
 
 
 def mapping_from_form_matrix(mapping, form_rows) -> Matrix | None:
-    """The mapping re-stored in the generator basis named by the generator form matrix ``F`` — what
-    editing the interactive ``𝐹`` tile does: ``M = F·M_C`` (the SAME temperament, ``M_C = canonical(M)``,
-    a new generating set), so the typed ``F`` reads back as the form matrix of the new mapping. The
-    mirror of the ``<choose form>`` control, but for an arbitrary typed matrix rather than a named form.
-    ``None`` when ``F`` isn't a valid form matrix: not square ``r×r``, non-integer, or not unimodular
-    (``det ≠ ±1`` — then ``F·M_C`` wouldn't be a generating set of the same temperament)."""
     m = _to_matrix(mapping)
     r = len(m)
     f = _to_matrix(form_rows)
@@ -550,32 +364,24 @@ def mapping_from_form_matrix(mapping, form_rows) -> Matrix | None:
     try:
         fm = sp.Matrix([[sp.Integer(int(x)) for x in row] for row in f])
     except (TypeError, ValueError):
-        return None  # a non-integer entry
+        return None
     if fm.det() not in (1, -1):
-        return None  # not unimodular — F·M_C wouldn't be the same temperament (a new HNF)
+        return None
     canon = sp.Matrix([list(row) for row in canonical_ma(m)])
     new = fm * canon
     return tuple(tuple(int(new[i, j]) for j in range(new.cols)) for i in range(new.rows))
 
 
 def target_interval_vectors(ratios, d: int, domain_basis=None) -> Matrix:
-    """Each target interval as a vector — its interval-vector form over the d domain
-    elements (expressed in the basis when it is nonstandard)."""
     return tuple(tuple(int(x) for x in vector) for vector in _interval_vectors(ratios, domain_basis, d))
 
 
 def _domain_label(d: int, domain_basis=None) -> str:
-    """The domain as a dotted basis string (``"2.3.5"`` / ``"2.3.13/5"``) for error messages."""
     standard = domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis)
     return ".".join(str(e) for e in (standard_primes(d) if standard else domain_basis))
 
 
 def interval_vector(ratio: str, d: int, domain_basis=None) -> tuple[int, ...]:
-    """Parse one ratio string (e.g. ``"80/81"``) into its interval vector over the d domain
-    elements — the inverse of :func:`comma_ratios`, for the editable quantities-row ratio cells.
-    Raises :class:`ValueError` with a user-facing message (the cell shows it as a toast) when the
-    text isn't a single positive quotient (unparseable or non-positive) or carries a prime beyond
-    the d-element domain (out of limit) — the two failure modes read differently."""
     text = str(ratio).strip()
     try:
         target = Fraction(text)
@@ -585,22 +391,16 @@ def interval_vector(ratio: str, d: int, domain_basis=None) -> tuple[int, ...]:
         raise ValueError(f'"{text}" is not a positive ratio.')
     vectors = _interval_vectors((text,), domain_basis, d)
     vector = tuple(int(x) for x in vectors[0]) if len(vectors) == 1 and len(vectors[0]) == d else ()
-    # a prime past the domain leaves an over-long vector; a within-limit interval outside a
-    # nonstandard subgroup parses to one that no longer reproduces the ratio — both are out of limit
     if not vector or Fraction(_vectors_to_ratios((vector,), domain_basis)[0]) != target:
         raise ValueError(f'"{text}" is outside the {_domain_label(d, domain_basis)} domain.')
     return vector
 
 
 def equave_quotient(domain_basis=None) -> Fraction:
-    """The domain's equave (period): its first basis element, or 2 for a standard prime limit."""
     return Fraction(domain_basis[0]) if domain_basis else Fraction(2)
 
 
 def equave_reduce_vector(vector, domain_basis=None) -> tuple[int, ...]:
-    """``vector`` (over the domain) folded into one equave [1, equave) — the interval-vector form
-    of :func:`equave_reduce`, returned unchanged when it is already reduced. Only the equave's own
-    coordinate moves, so the result stays expressible over the same domain basis."""
     v = tuple(int(x) for x in vector)
     q = Fraction(comma_ratios((v,), domain_basis)[0])
     reduced = equave_reduce(q, equave_quotient(domain_basis))
@@ -608,9 +408,6 @@ def equave_reduce_vector(vector, domain_basis=None) -> tuple[int, ...]:
 
 
 def interval_op_availability(ratio: str, domain_basis=None) -> tuple[bool, bool]:
-    """Whether ``ratio`` can be (equave-reduced, reciprocated): reducible iff it is not already in
-    [1, equave); reciprocable iff it is not the unison. A non-numeric / non-positive value (a blank
-    or ``?/?`` draft) is neither — both buttons read disabled."""
     try:
         q = Fraction(str(ratio))
     except (ValueError, ZeroDivisionError):
@@ -630,31 +427,6 @@ def tuning(
     targets=None,
     weights_override=None,
 ) -> Tuning:
-    """The temperament's maps and generator ranges (cents) under ``scheme`` — no
-    interval set. Over a nonstandard ``domain_basis`` the maps run over its (possibly
-    nonprime) elements; ``nonprime_approach`` ("" neutral, "nonprime-based",
-    "prime-based") picks how the optimization treats a nonprime basis (trait 7).
-    ``held`` is the user's held interval constraints (ratio strings from the held column):
-    the optimization holds each exactly just, on top of any the scheme itself holds.
-
-    ``prescaler_override`` (a d-tuple) drives the complexity-prescaler diagonal directly,
-    overriding the scheme's log-prime / prime / identity diagonal — the bare prescaler
-    tile's hand-edited values flow through here into the damage-weighted optimum.
-
-    ``targets`` (ratio strings) is a typed explicit target interval list overriding the
-    scheme's named TILT/OLD set, so the optimum minimizes damage over THOSE intervals —
-    changing the target list retunes. An all-interval scheme keeps its empty set (every
-    interval, by duality) and ignores the list.
-
-    ``weights_override`` (a per-target sequence) is the user's manual damage weights — one
-    per displayed target — which bypass the scheme's slope-derived weights and drive the
-    optimum directly. Target-mode only (an all-interval scheme ignores it). It joins the
-    memo key so a weight edit re-solves rather than returning a stale cached tuning.
-
-    Memoized on the (frozen) arguments: the optimization is a pure function of them, and
-    one page render asks for the same tuning several times (the grid build plus the
-    editor's displayed-scheme / unchanged-interval reads) — as does every render after,
-    until the document actually moves. The solves run once per distinct document state."""
     return _cached_tuning(_to_matrix(mapping), scheme, _hashable(domain_basis),
                           nonprime_approach, tuple(held), _hashable(prescaler_override),
                           _hashable(targets), _hashable(weights_override))
@@ -666,25 +438,16 @@ def _cached_tuning(mapping, scheme, domain_basis, nonprime_approach, held,
     t = Temperament(mapping, Variance.ROW, domain_basis)
     spec = resolve_tuning_scheme(scheme)
     if targets is not None and (spec.target_intervals or "").strip() not in ("{}", ""):
-        # an EXPLICIT target override on a target-based scheme replaces its named TILT/OLD set.
-        # An EMPTY override (the user deleted every target) means no target intervals — the
-        # underdetermined empty set, NOT "all intervals". ``{}`` would read as all-interval (by
-        # duality, optimizing over the primes), so instead route it through the family's 1-limit:
-        # the same resolved-empty target list the N-TILT/N-OLD limit chooser produces, so deleting
-        # all targets and picking 1-TILT reach the identical (degenerate, zero-generator) optimum
-        # rather than silently optimizing the full default set behind an empty list. (tuning-core-10.)
         if targets:
             spec = replace(spec, target_intervals="{" + ", ".join(targets) + "}")
         else:
             spec = replace(spec, target_intervals="1-OLD" if "OLD" in (spec.target_intervals or "") else "1-TILT")
     if nonprime_approach:
         spec = replace(spec, nonprime_basis_approach=nonprime_approach)
-    if held:  # fold the user's held intervals into the scheme's own (its bare tokens, brace-free)
+    if held:
         own = (spec.held_intervals or "").strip().strip("{}").strip()
         parts = ([own] if own else []) + [r for r in held]
         spec = replace(spec, held_intervals="{" + ", ".join(parts) + "}")
-    # one solve serves both maps: the tuning map IS the generators applied to the mapping
-    # (optimize_tuning_map re-runs the identical optimization just to take that product)
     gmap = optimize_generator_tuning_map(
         t, spec, prescaler_override=prescaler_override, weights_override=weights_override
     )
@@ -701,11 +464,6 @@ def _cached_tuning(mapping, scheme, domain_basis, nonprime_approach, held,
 
 
 def tuning_from_generators(mapping, generators, domain_basis=None) -> Tuning:
-    """The Tuning produced by a manually-set generator tuning (cents per generator):
-    ``tuning_map = generators · mapping``, rather than the scheme's optimum. Backs a manual
-    generator-tuning override (a typed/nudged/projection-picked tuning). Just map and
-    generator ranges are temperament properties, computed as for the optimum.
-    Memoized like :func:`tuning` (the ranges are the expensive part here)."""
     return _cached_tuning_from_generators(
         _to_matrix(mapping), tuple(float(g) for g in generators), _hashable(domain_basis))
 
@@ -726,14 +484,6 @@ def _cached_tuning_from_generators(mapping, generators, domain_basis) -> Tuning:
 
 
 def interval_sizes(tun: Tuning, ratios, domain_basis=None, weights=None) -> IntervalSizes:
-    """Project an interval set through ``tun`` — its tempered/just sizes, error, damage.
-    Over a nonstandard ``domain_basis`` each ratio is expressed in that basis (matching the
-    basis ``tun`` runs over).
-
-    ``weights`` (a per-interval list aligned to ``ratios``, e.g. the scheme's damage weights
-    from :func:`interval_weights`) scales each |error| into the scheme-weighted damage
-    ``𝐝 = |𝐞|·W`` — the displayed damage list and the minimized mean damage the optimizer
-    actually targets. Default ``None`` is unity weight (``|error|×1 = |error|``)."""
     vectors = _interval_vectors(ratios, domain_basis, len(tun.tuning_map))
     tempered = tuple(_over(tun.tuning_map, m) for m in vectors)
     just = tuple(_over(tun.just_map, m) for m in vectors)
@@ -746,11 +496,6 @@ def interval_sizes(tun: Tuning, ratios, domain_basis=None, weights=None) -> Inte
 
 
 def _temperament_spec_vectors(mapping, scheme, ratios, domain_basis=None):
-    """The (Temperament, resolved spec, vectors-over-the-domain) triple the complexity and
-    weight projections share — both norm a set of vectors through the scheme's complexity.
-    Over a nonstandard ``domain_basis`` the temperament and the vectors run over its
-    (possibly nonprime) elements, mirroring :func:`interval_sizes` — so e.g. ``13/5`` over
-    ``2.3.13/5`` keeps its basis vector instead of truncating to the d primes."""
     t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
     return t, resolve_tuning_scheme(scheme), _interval_vectors(ratios, domain_basis, get_d(t))
 
@@ -759,13 +504,6 @@ def interval_complexities(
     mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=(), prescaler_override=None,
     domain_basis=None,
 ) -> tuple[float, ...]:
-    """Each interval's complexity under ``scheme``'s complexity norm — the (pre-transformed)
-    norm of its vector (log-prime by default). Independent of the damage slope, which
-    only decides how complexity becomes a weight.
-
-    ``prescaler_override`` (a d-tuple) replaces the trait-derived diagonal — the seam the
-    bare prescaler tile rides into the complexity row. Over a nonstandard ``domain_basis``
-    each ratio is expressed in that basis (so a nonprime target keeps its full vector)."""
     t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios, domain_basis)
     return tuple(
         get_complexity(
@@ -781,17 +519,6 @@ def interval_weights(
     mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=(), prescaler_override=None,
     domain_basis=None, weights_override=None,
 ) -> tuple[float, ...]:
-    """Each interval's damage weight under ``scheme``: 1 (unity weight), its complexity,
-    or 1/complexity, picked by the scheme's damage-weight slope.
-
-    ``prescaler_override`` (a d-tuple) flows into each per-target complexity via
-    :func:`damage_weights`, so a hand-edited diagonal reaches the weights row. Over a
-    nonstandard ``domain_basis`` each ratio is expressed in that basis, like the complexity
-    row, so a nonprime target's weight derives from its full domain-basis vector.
-
-    ``weights_override`` (the user's manual per-target weights) is returned verbatim when it
-    matches the target count — the SAME override that drives the solve (:func:`tuning`), so
-    the displayed weight row provably equals the weights the optimizer used."""
     t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios, domain_basis)
     return tuple(
         float(w) for w in damage_weights(
@@ -802,22 +529,10 @@ def interval_weights(
 
 
 def cents(value, decimals: bool = True) -> str:
-    """A cents quantity at the 3-dp the grid and plain-text views share, so the two displays
-    always agree. ``None`` (a dashed value — e.g. the size of an unknown unchanged interval the
-    tuning doesn't pin) renders as an em-dash.
-
-    With ``decimals`` off (the Show panel's "decimals" toggle), the value rounds to the nearest
-    integer instead — a display setting that rounds every shown value app-wide; the underlying
-    float is untouched, so turning decimals back on restores the full 3-dp reading."""
     if value is None:
         return "—"
     return strip_negative_zero(f"{value:.{3 if decimals else 0}f}")
 
 
 def prescale_text(value: float, decimals: bool = True) -> str:
-    """A complexity-prescaler matrix entry as BOTH the grid cell and the plain-text view
-    render it: a whole number bare (the mostly-0 off-diagonal, and the log₂2 = 1 of an
-    identity prescaler), else the 3-dp cents value (log₂3 = 1.585) — keeping the mostly-zero
-    matrix clean. One formatter for both views, so the prescaling grid and its EBK string
-    can't disagree. ``decimals`` off rounds the non-whole entries to integers (see :func:`cents`)."""
     return str(int(value)) if value == int(value) else cents(value, decimals)

@@ -14,9 +14,6 @@ MAX_SIZE = Fraction(13, 4)
 
 @lru_cache(maxsize=64)
 def get_tilt(integer_limit: int) -> tuple[Fraction, ...]:
-    """Truncated integer-limit triangle: the reduced quotients ``n/d`` with ``1 < n/d``
-    and ``n <= integer_limit`` that fall within ``[15/13, 13/4]`` and whose ``n*d`` does
-    not exceed ``13 * integer_limit``."""
     diamond = _dedup(
         Fraction(numerator, denominator)
         for numerator in range(2, integer_limit + 1)
@@ -33,8 +30,6 @@ def get_tilt(integer_limit: int) -> tuple[Fraction, ...]:
 
 @lru_cache(maxsize=64)
 def get_old(odd_limit: int) -> tuple[Fraction, ...]:
-    """Odd-limit diamond: every octave-reduced reduced quotient among odd/odd ratios
-    (excluding 1/1), with 2/1 prepended (Partch's tonality diamond, 2/1 for 1/1)."""
     odds = range(1, odd_limit + 1, 2)
     quotients = _dedup(
         Fraction(numerator, denominator) for numerator in odds for denominator in odds
@@ -44,7 +39,6 @@ def get_old(odd_limit: int) -> tuple[Fraction, ...]:
 
 
 def get_otonal_chord(harmonics: tuple[int, ...]) -> tuple[Fraction, ...]:
-    """The intervals between each pair of harmonics (each later harmonic over an earlier one)."""
     return _dedup(
         Fraction(harmonics[higher], harmonics[lower])
         for lower in range(len(harmonics))
@@ -53,22 +47,16 @@ def get_otonal_chord(harmonics: tuple[int, ...]) -> tuple[Fraction, ...]:
 
 
 def default_tilt_limit(domain_basis: tuple) -> int:
-    """The default TILT integer limit for a domain: the integer just below the next
-    prime past the domain basis's greatest numerator."""
     greatest = max(Fraction(q).numerator for q in domain_basis)
     return int(sp.nextprime(greatest)) - 1
 
 
 def default_old_limit(domain_basis: tuple) -> int:
-    """The default OLD odd limit for a domain: the odd just below the next prime past
-    the domain basis's greatest odd part."""
     greatest = max(_odd_part(Fraction(q).numerator) for q in domain_basis)
     return int(sp.nextprime(greatest)) - 2
 
 
 def process_tilt(target_spec: str, domain_basis: tuple) -> tuple[Fraction, ...]:
-    """Resolve a TILT target interval spec (``"TILT"`` or ``"N-TILT"``) to its quotients.
-    With no explicit limit, default to :func:`default_tilt_limit`."""
     spec = target_spec.replace("truncated integer limit triangle", "TILT")
     match = re.search(r"(\d*)-?TILT", spec)
     given = match.group(1) if match else ""
@@ -76,8 +64,6 @@ def process_tilt(target_spec: str, domain_basis: tuple) -> tuple[Fraction, ...]:
 
 
 def process_old(target_spec: str, domain_basis: tuple) -> tuple[Fraction, ...]:
-    """Resolve an OLD target interval spec (``"OLD"`` or ``"N-OLD"``) to its quotients.
-    With no explicit limit, default to :func:`default_old_limit`."""
     spec = target_spec.replace("odd limit diamond", "OLD")
     match = re.search(r"(\d*)-?OLD", spec)
     given = match.group(1) if match else ""
@@ -85,12 +71,10 @@ def process_old(target_spec: str, domain_basis: tuple) -> tuple[Fraction, ...]:
 
 
 def _odd_part(n: int) -> int:
-    """The largest odd divisor of ``n`` (its value with all factors of 2 removed)."""
     while n % 2 == 0:
         n //= 2
     return n
 
 
 def _dedup(values) -> tuple:
-    """Deduplicate, preserving first-seen order."""
     return tuple(dict.fromkeys(values))

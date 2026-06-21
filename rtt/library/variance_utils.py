@@ -6,10 +6,6 @@ from rtt.library.temperament import Temperament, Variance
 
 
 def multiply(temperaments: list[Temperament], variance: Variance):
-    """Matrix-product a list of temperaments; result carries the given variance.
-
-    A 1x1 result is returned as a bare scalar (variance is irrelevant).
-    """
     matrices = [
         _transpose_matrix(t.matrix) if t.variance is Variance.COL else t.matrix
         for t in temperaments
@@ -52,13 +48,5 @@ def subtract_t(t1: Temperament, t2: Temperament) -> Temperament:
 
 
 def reinterpret_as_dual_variance(t: Temperament) -> Temperament:
-    """Re-tag a temperament with its dual variance, leaving the matrix untouched
-    (mapping <-> comma basis).
-
-    NOT a transpose and NOT the dual temperament: it does no math at all, it only
-    flips the variance label, so the same numbers are re-read as the opposite kind
-    of (co)vector. It was named ``transpose`` before, which is a trap -- callers
-    expecting a real transpose (or ``dual.dual``) got silently wrong-shaped data.
-    Use ``dual.dual`` for the actual dual temperament."""
     flipped = Variance.COL if t.variance is Variance.ROW else Variance.ROW
     return Temperament(t.matrix, flipped, t.domain_basis)

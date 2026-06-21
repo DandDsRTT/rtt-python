@@ -2970,3 +2970,39 @@ def test_set_mapping_row_preserves_a_nonstandard_domain():
     val = presets.et_value_to_val("12", (2, 9, 7))  # (12,38,34)
     assert editor.set_mapping_row(0, val) is True
     assert editor.state.domain_basis == (2, 9, 7)
+
+
+def test_set_projection_matrix_retunes_to_a_valid_projection_and_rejects_an_invalid_one():
+    editor = Editor()  # meantone
+    valid = service.tuning_projection(editor.state, ("2/1", "5/4"))  # a full rational projection
+    assert editor.set_projection_matrix(valid) is True
+    assert editor.can_undo is True
+    not_idempotent = (("1", "0", "0"), ("0", "1", "0"), ("0", "0", "2"))
+    fresh = Editor()
+    assert fresh.set_projection_matrix(not_idempotent) is False
+    assert fresh.can_undo is False  # rejected edits leave the state untouched
+
+
+def test_set_embedding_matrix_retunes_to_a_valid_embedding_and_rejects_an_invalid_one():
+    editor = Editor()  # meantone
+    valid = service.tuning_embedding(editor.state, ("2/1", "5/4"))
+    assert editor.set_embedding_matrix(valid) is True
+    fresh = Editor()
+    assert fresh.set_embedding_matrix((("0", "0"), ("0", "0"), ("0", "0"))) is False  # M·G ≠ I
+    assert fresh.can_undo is False
+
+
+def test_set_superspace_generator_tuning_text_holds_rl_cents_and_rejects_a_wrong_count():
+    editor = Editor()
+    editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")  # BARBADOS, rL = 3
+    assert editor.set_superspace_generator_tuning_text("1200 700 400") is True
+    assert editor.superspace_generator_tuning == (1200.0, 700.0, 400.0)
+    assert editor.set_superspace_generator_tuning_text("1200 700") is False  # not rL values
+
+
+def test_nudge_superspace_generator_tuning_component_steps_by_thousandths_of_a_cent():
+    editor = Editor()
+    editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    seed = editor._optimum_superspace_generator_tuning()[0]
+    editor.nudge_superspace_generator_tuning_component(0, 7)
+    assert editor.superspace_generator_tuning[0] == round(round(seed, 3) + 7 * 0.001, 3)

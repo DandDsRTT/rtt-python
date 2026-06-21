@@ -1,8 +1,3 @@
-"""Tuning-scheme name parsing: the systematic (and historical) scheme names and the
-:class:`TuningSchemeSpec` traits they decode to. Pure string handling — no numpy, no
-temperament — so the optimizer (rtt.library.tuning) and the web service can resolve a scheme
-without pulling in the solve machinery."""
-
 from __future__ import annotations
 
 import re
@@ -12,23 +7,17 @@ from math import inf
 
 @dataclass(frozen=True)
 class TuningSchemeSpec:
-    """A tuning scheme's traits: how the optimum generator tuning is chosen.
-
-    ``target_intervals`` is a quotient-list string (the intervals whose mistuning
-    is minimized); the complexity traits describe the norm used to weight damage.
-    """
-
-    optimization_power: float  # trait 2: inf = minimax, 2 = miniRMS, 1 = miniaverage
-    target_intervals: str | None = None  # trait 1
-    damage_weight_slope: str = "unityWeight"  # trait 3
-    complexity_norm_power: float = 1  # trait 4
-    complexity_log_prime_power: float = 1  # trait 5a
-    complexity_prime_power: float = 0  # trait 5b
-    complexity_size_factor: float = 0  # trait 5c
-    complexity_rough: int = 0  # trait 5d: rough(·,k) drops primes < k (k=3 = odd-limit: drop 2)
-    nonprime_basis_approach: str = ""  # trait 7
-    held_intervals: str | None = None  # trait 0: intervals tuned exactly justly
-    destretched_interval: str | None = None  # trait 6: interval rescaled to be just
+    optimization_power: float
+    target_intervals: str | None = None
+    damage_weight_slope: str = "unityWeight"
+    complexity_norm_power: float = 1
+    complexity_log_prime_power: float = 1
+    complexity_prime_power: float = 0
+    complexity_size_factor: float = 0
+    complexity_rough: int = 0
+    nonprime_basis_approach: str = ""
+    held_intervals: str | None = None
+    destretched_interval: str | None = None
 
 
 _SLOPE_BY_LETTER = {
@@ -38,14 +27,9 @@ _SLOPE_BY_LETTER = {
 }
 _LETTER_BY_SLOPE = {slope: letter for letter, slope in _SLOPE_BY_LETTER.items()}
 
-# The complexity family token each (log-prime power, prime power, size factor) triple names —
-# the inverse of the prescaler/size assignments in :func:`_complexity_traits_from_name`. The
-# log-product (lp) default contributes no token (it is the bare ``minimax-S``). The size-factor
-# families (lils/ils) become their octave-holding forms (lols/ols) when the octave is held — see
-# :func:`systematic_name`. A triple absent here is no named complexity (rendered as unnamed).
 _COMPLEXITY_FAMILY = {
     (0, 0, 0): "copfr",
-    (1, 0, 0): "",  # log-product (lp): the default, no token
+    (1, 0, 0): "",
     (0, 1, 0): "sopfr",
     (1, 0, 1): "lils",
     (0, 1, 1): "ils",
@@ -54,12 +38,6 @@ _OCTAVE_HOLDING_FAMILY = {"lils": "lols", "ils": "ols"}
 
 
 def _complexity_traits_from_name(name: str) -> dict:
-    """The complexity traits (4, 5a, 5b, 5c) and any held interval injection an interval-
-    complexity name encodes, following source.m's sequential dash-delimited token overrides.
-
-    ``E`` = Euclidean (norm power 2); ``copfr`` = unweighted, ``lopfr``/``lp``/[blank] =
-    log-prime, ``sopfr``/``prod`` = prime; ``ils``/``ols``/``lils``/``lols``/``limit`` add
-    the size factor; ``ols``/``lols``/``odd`` also hold the octave justly."""
     padded = "-" + name.replace(" ", "-") + "-"
 
     def has(token: str) -> bool:
@@ -82,7 +60,7 @@ def _complexity_traits_from_name(name: str) -> dict:
     if has("ils"):
         traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 0, 1
         traits["complexity_size_factor"] = 1
-    if has("ols"):  # integer-odd-limit: integer-limit with the 2's roughed out, octave held
+    if has("ols"):
         traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 0, 1
         traits["complexity_size_factor"], traits["complexity_rough"], held = 1, 3, "octave"
     if has("lils"):
@@ -90,7 +68,7 @@ def _complexity_traits_from_name(name: str) -> dict:
         traits["complexity_size_factor"] = 1
     if has("limit"):
         traits["complexity_size_factor"] = 1
-    if has("lols"):  # log-odd-limit: lils with the 2's roughed out, octave held
+    if has("lols"):
         traits["complexity_size_factor"], traits["complexity_rough"], held = 1, 3, "octave"
     if has("odd"):
         held = "octave"
@@ -100,10 +78,6 @@ def _complexity_traits_from_name(name: str) -> dict:
 
 
 def _norm_power_from_name(padded: str) -> float:
-    """The complexity norm power (trait 4) a name's annotated token encodes: ``E`` = 2
-    (Euclidean), ``M`` = ∞ (maxized), an explicit number = that power, else 1 (taxicab). Parsing
-    the ``M``/numeric tokens stops ``minimax-MS`` / ``minimax-1.5-S`` from silently resolving to a
-    *different* scheme (plain ``minimax-S``, q = 1)."""
     if "-E" in padded:
         return 2
     if "-M" in padded:
@@ -113,8 +87,6 @@ def _norm_power_from_name(padded: str) -> float:
 
 
 def damage_name_traits(name: str) -> dict:
-    """Traits a damage systematic name encodes, e.g. ``"E-copfr-S-damage"``: the slope
-    (final letter) plus the complexity traits."""
     core = name.replace("-damage", "")
     return {
         "damage_weight_slope": _SLOPE_BY_LETTER[core[-1]],
@@ -123,29 +95,13 @@ def damage_name_traits(name: str) -> dict:
 
 
 def complexity_name_traits(name: str) -> tuple[dict, str | None]:
-    """The complexity traits an interval-complexity systematic name encodes (e.g.
-    ``"copfr-E-complexity"``) and, separately, any interval it holds justly — only the
-    ``ols``/``lols`` (log-odd-limit) family hold the octave. Surfacing held on its own keeps
-    it out of the trait dict, so a caller applies it explicitly rather than popping it."""
     traits = _complexity_traits_from_name(name)
     held = traits.pop("held_intervals", None)
     return traits, held
 
 
 def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
-    """Build a spec from a systematic tuning-scheme name like ``"{2/1, ...} minimax-E-copfr-S"``:
-    the ``mini{max,RMS,average}`` prefix gives the optimization power, an optional ``{...}``
-    gives the target intervals, and the trailing ``U``/``S``/``C`` plus complexity tokens
-    give the damage weighting. An optional ``held-<interval(s)>`` prefix names intervals
-    to tune justly.
-
-    Only systematic names resolve. A non-systematic / historical / community scheme name
-    (these are banned in this codebase) ends in something other than a weight-slope letter,
-    so it is rejected with a clear error rather than silently mis-resolving."""
     original = name
-    # Peel ``held-X`` / ``destretched-X`` prefixes in EITHER order (and any number) — reading them
-    # order-dependently silently dropped a held- token written after a destretched- one, hiding a
-    # combination the optimizer must instead refuse (destretching breaks a held interval).
     held = destretched = None
     while True:
         prefix = re.match(r"\s*(held|destretched)-(\{[^}]*\}|[\w/]+)\s+(.*)", name, re.DOTALL)
@@ -161,18 +117,10 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
         r"\{[\d/,\s]*\}|\d*-?TILT|\d*-?OLD|primes", name
     )
     target = target_match.group(0) if target_match else None
-    # a bare name with no target-set prefix and a SIMPLICITY slope is an all-interval scheme — its
-    # damage is minimized over every interval, which by duality is a dual-norm optimization over the
-    # primes (minimax-S, minimax-ES, and likewise miniRMS-S / miniaverage-S, all of whose
-    # over-all-intervals optima are well-defined). Test the trailing slope letter, NOT "S" anywhere:
-    # "miniRMS" contains an S of its own, so the old `"minimax" in name and "S" in name` test caught
-    # only the minimax forms and left miniRMS-S / miniaverage-S resolving to a target-less spec the
-    # solver couldn't pin — a degenerate all-zero tuning map (nan mean damage).
     if target is None and ("all-interval" in name or name.strip().endswith("S")):
         target = "{}"
     complexity_traits = _complexity_traits_from_name(name)
-    held = complexity_traits.pop("held_intervals", None) or held  # odd/ols/lols hold the octave
-    # trait 7: "nonprime-based" is checked first since it contains "prime-based" as a substring
+    held = complexity_traits.pop("held_intervals", None) or held
     nonprime_approach = (
         "nonprime-based"
         if "nonprime-based" in name
@@ -198,17 +146,12 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
 
 
 def resolve_tuning_scheme(spec: TuningSchemeSpec | str) -> TuningSchemeSpec:
-    """A scheme given as a :class:`TuningSchemeSpec` or a systematic name (e.g. ``"minimax-S"``,
-    ``"held-octave minimax-ES"``) resolved to a :class:`TuningSchemeSpec`. Only systematic names
-    resolve — a non-systematic / historical / community name raises a clear error."""
     if isinstance(spec, str):
         return tuning_scheme_from_systematic_name(spec)
     return spec
 
 
 def _optimization_power_from_name(name: str) -> float:
-    """The optimization power (trait 2) a systematic name encodes: ``minimax`` = ∞,
-    ``miniRMS`` = 2, ``miniaverage`` = 1, ``mini-N-mean`` = N."""
     if "minimax" in name:
         return inf
     if "miniRMS" in name:
@@ -220,24 +163,12 @@ def _optimization_power_from_name(name: str) -> float:
 
 
 def _annotation_token(family: str, euclidean: bool, letter: str) -> str:
-    """The complexity+slope token a systematic name carries after its ``mini…`` power word —
-    also the unit the guide parenthesizes as an annotated unit (ch.10 "Annotated units"; see
-    :func:`annotation_code`). For the log-product default (no ``family``) the Euclidean ``E``
-    glues straight to the slope ``letter`` (``"ES"``); a named family dash-delimits it
-    (``"E-sopfr-S"``). ``letter`` is the slope position — ``"S"`` / ``"C"`` / ``"U"``."""
     if family:
         return "-".join((["E"] if euclidean else []) + [family, letter])
     return ("E" if euclidean else "") + letter
 
 
 def systematic_name(spec: TuningSchemeSpec) -> str | None:
-    """The canonical systematic name of a tuning scheme — the inverse of
-    :func:`tuning_scheme_from_systematic_name`. ``None`` when the spec corresponds to no
-    systematic name (a non-integer optimization power, or a complexity outside the named
-    families), for which a chooser shows "-".
-
-    The grammar mirrors the parser's reading order: ``[held-X ][destretched-X ][TARGET ]
-    [nonprime ]mini{max,RMS,average,-N-mean}[complexity][SLOPE]``."""
     power = _power_word(spec.optimization_power)
     if power is None:
         return None
@@ -251,8 +182,6 @@ def systematic_name(spec: TuningSchemeSpec) -> str | None:
 
 
 def _power_word(power: float) -> str | None:
-    """The ``mini…`` token an optimization power renders to, or ``None`` if the power has no
-    systematic name (a non-integer power other than ∞)."""
     if power == inf:
         return "minimax"
     if power == 2:
@@ -265,10 +194,6 @@ def _power_word(power: float) -> str | None:
 
 
 def _complexity_part(spec: TuningSchemeSpec) -> tuple[str, bool] | None:
-    """The complexity family token and whether it consumes the held octave (the lols/ols
-    log-/integer-odd-limit forms), or ``None`` if the complexity is outside the named families.
-    The empty token is the log-product default. Only norm powers 1 (taxicab) and 2 (Euclidean)
-    are named."""
     if spec.complexity_norm_power not in (1, 2):
         return None
     family = _COMPLEXITY_FAMILY.get(
@@ -277,35 +202,24 @@ def _complexity_part(spec: TuningSchemeSpec) -> tuple[str, bool] | None:
     if family is None:
         return None
     if family in _OCTAVE_HOLDING_FAMILY and spec.complexity_rough:
-        # lils->lols / ils->ols: the odd-limit form roughs out the 2's (complexity_rough) and
-        # folds in the held octave, so the held-octave token is not separately re-emitted.
         return _OCTAVE_HOLDING_FAMILY[family], True
     return family, False
 
 
 def annotation_code(spec: TuningSchemeSpec, letter: str) -> str:
-    """The annotated-unit token the guide parenthesizes for a damage / weight / complexity
-    quantity (ch.10 "Annotated units") — the systematic name's complexity+slope core sans the
-    ``mini…`` power word: ``"S"`` / ``"ES"`` for the log-product default, ``"sopfr-S"`` /
-    ``"E-sopfr-S"`` for a named family. ``letter`` selects the slope position (``"S"`` / ``"C"`` /
-    ``"U"``); the complexity quantity itself always passes ``"C"``. A complexity outside the named
-    families falls back to the bare log-product form (just the slope, E-prefixed when Euclidean)."""
     complexity = _complexity_part(spec)
     family = complexity[0] if complexity else ""
     return _annotation_token(family, spec.complexity_norm_power == 2, letter)
 
 
 def _scheme_prefix(spec: TuningSchemeSpec, octave_held_by_complexity: bool) -> str:
-    """The ``held-X destretched-X TARGET nonprime `` prefix in front of the ``mini…`` core, in
-    the parser's reading order. A held octave the complexity already encodes (lols/ols) is not
-    re-emitted as a ``held-`` token."""
     prefix = ""
     if spec.held_intervals and not octave_held_by_complexity:
         prefix += f"held-{spec.held_intervals} "
     if spec.destretched_interval:
         prefix += f"destretched-{spec.destretched_interval} "
     target = (spec.target_intervals or "").strip()
-    if target and target != "{}":  # an all-interval ({}/empty) scheme carries no target prefix
+    if target and target != "{}":
         prefix += f"{target} "
     if spec.nonprime_basis_approach:
         prefix += f"{spec.nonprime_basis_approach} "

@@ -11,8 +11,6 @@ Matrix = tuple[tuple[int, ...], ...]
 
 
 def inverse(x):
-    """Polymorphic inverse: a 2D matrix becomes its exact rational matrix inverse, a 1D
-    vector its element-wise reciprocals, and a scalar its reciprocal."""
     if not isinstance(x, (list, tuple)):
         return Fraction(1) / Fraction(x)
     if x and isinstance(x[0], (list, tuple)):
@@ -25,22 +23,18 @@ def inverse(x):
 
 
 def reverse_inner_l(matrix: Matrix) -> Matrix:
-    """Reverse the entries within each row."""
     return tuple(tuple(reversed(row)) for row in matrix)
 
 
 def reverse_outer_l(matrix: Matrix) -> Matrix:
-    """Reverse the order of the rows."""
     return tuple(reversed(matrix))
 
 
 def rotate_180(matrix: Matrix) -> Matrix:
-    """Rotate the matrix 180° (reverse both rows and the entries within them)."""
     return reverse_inner_l(reverse_outer_l(matrix))
 
 
 def inner_l_length(matrix: Matrix) -> int:
-    """The number of columns (length of each row)."""
     return len(matrix[0])
 
 
@@ -49,12 +43,10 @@ def all_zeros(matrix: Matrix) -> bool:
 
 
 def remove_all_zero_lists(matrix: Matrix) -> Matrix:
-    """Drop every all-zero row (may yield an empty matrix)."""
     return tuple(row for row in matrix if any(x != 0 for x in row))
 
 
 def remove_unneeded_zero_lists(matrix: Matrix) -> Matrix:
-    """Drop all-zero rows, but keep a single zero row if the matrix is all zeros."""
     if not matrix:
         return matrix
     if all_zeros(matrix):
@@ -74,7 +66,6 @@ def matrix_multiply(a: Matrix, b: Matrix) -> Matrix:
 
 
 def get_largest_minors_l(matrix: Matrix) -> tuple[int, ...]:
-    """The rank-order minors (first row-subset, all column-subsets), gcd divided out."""
     m = sp.Matrix(matrix)
     rank = m.rank()
     row_subset = next(iter(combinations(range(m.rows), rank)))
@@ -86,16 +77,10 @@ def get_largest_minors_l(matrix: Matrix) -> tuple[int, ...]:
 
 
 def hnf(matrix: Matrix) -> Matrix:
-    """Row-style Hermite Normal Form (Wolfram convention)."""
     return hnf_with_transform(matrix)[1]
 
 
 def hnf_with_transform(matrix: Matrix) -> tuple[Matrix, Matrix]:
-    """Row HNF plus the unimodular transform U such that ``U @ matrix == H``.
-
-    H is in echelon form with pivots descending left-to-right, positive pivots,
-    and entries strictly above each pivot reduced into ``[0, pivot)``.
-    """
     rows = [list(row) for row in matrix]
     size = len(rows)
     transform = [[int(i == j) for j in range(size)] for i in range(size)]
@@ -123,7 +108,6 @@ def hnf_with_transform(matrix: Matrix) -> tuple[Matrix, Matrix]:
 
 
 def smith_normal_form_with_transforms(matrix: Matrix) -> tuple[Matrix, Matrix, Matrix]:
-    """Smith Normal Form with the unimodular transforms U, V s.t. U @ matrix @ V == S."""
     rows = [list(row) for row in matrix]
     m = len(rows)
     n = len(rows[0]) if rows else 0
@@ -154,11 +138,11 @@ def smith_normal_form_with_transforms(matrix: Matrix) -> tuple[Matrix, Matrix, M
     while t < min(m, n):
         if all(rows[i][j] == 0 for i in range(t, m) for j in range(t, n)):
             break
-        if rows[t][t] == 0:  # bring some nonzero into the pivot position
+        if rows[t][t] == 0:
             spot = next((i, j) for i in range(t, m) for j in range(t, n) if rows[i][j])
             swap_rows(t, spot[0])
             swap_cols(t, spot[1])
-        while True:  # isolate (t, t) by alternating column/row reduction
+        while True:
             pivot = min((i for i in range(t, m) if rows[i][t]), key=lambda i: abs(rows[i][t]))
             swap_rows(t, pivot)
             for i in range(t + 1, m):
@@ -196,7 +180,6 @@ def smith_normal_form_with_transforms(matrix: Matrix) -> tuple[Matrix, Matrix, M
 def _reduce_column_to_pivot(
     rows: list[list[int]], transform: list[list[int]], pivot_row: int, col: int
 ) -> None:
-    """Euclidean-reduce ``col`` so only ``rows[pivot_row]`` is nonzero at/below it."""
     while True:
         nonzero = [r for r in range(pivot_row, len(rows)) if rows[r][col] != 0]
         if not nonzero:

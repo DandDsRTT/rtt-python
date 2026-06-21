@@ -12,14 +12,12 @@ from rtt.library.temperament import Temperament, Variance
 
 
 def change_domain_basis(t: Temperament, target_domain_basis: tuple) -> Temperament:
-    """Re-express a temperament in a different domain basis (by its variance)."""
     if t.variance is Variance.COL:
         return change_domain_basis_for_c(t, target_domain_basis)
     return change_domain_basis_for_m(t, target_domain_basis)
 
 
 def change_domain_basis_for_m(m: Temperament, target_subspace: tuple) -> Temperament:
-    """Restrict a mapping onto a sub-basis of its current domain basis."""
     target = tuple(target_subspace)
     if get_domain_basis(m) == target:
         return m
@@ -31,7 +29,6 @@ def change_domain_basis_for_m(m: Temperament, target_subspace: tuple) -> Tempera
 
 
 def change_domain_basis_for_c(c: Temperament, target_superspace: tuple) -> Temperament:
-    """Embed a comma basis into a super-basis of its current domain basis."""
     target = tuple(target_superspace)
     if get_domain_basis(c) == target:
         return c

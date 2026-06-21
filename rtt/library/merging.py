@@ -12,10 +12,6 @@ from rtt.library.temperament import Temperament, Variance
 
 
 def map_merge(*temperaments: Temperament) -> Temperament:
-    """The join: stack the temperaments' mappings and canonicalize.
-
-    Inputs may be mappings or comma bases; the result is a mapping.
-    """
     mappings = [t if t.variance is Variance.ROW else dual(t) for t in temperaments]
     basis = domain_basis_intersection(*(get_domain_basis(t) for t in temperaments))
     rebased = [change_domain_basis_for_m(m, basis) for m in mappings]
@@ -24,10 +20,6 @@ def map_merge(*temperaments: Temperament) -> Temperament:
 
 
 def comma_merge(*temperaments: Temperament) -> Temperament:
-    """The meet: stack the temperaments' comma bases and canonicalize.
-
-    Inputs may be mappings or comma bases; the result is a comma basis.
-    """
     comma_bases = [t if t.variance is Variance.COL else dual(t) for t in temperaments]
     basis = domain_basis_merge(*(get_domain_basis(t) for t in temperaments))
     rebased = [change_domain_basis_for_c(c, basis) for c in comma_bases]
