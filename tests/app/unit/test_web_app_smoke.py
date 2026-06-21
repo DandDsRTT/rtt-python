@@ -13,6 +13,7 @@ import rtt.app.app as app
 from rtt.app import service
 from rtt.app import settings as show_settings
 from rtt.app import spreadsheet
+from rtt.app import tooltips
 from rtt.app.editor import Editor
 from rtt.app.layout import Line
 
@@ -1187,3 +1188,20 @@ def test_units_fit_their_cell_for_long_alternative_complexity_annotations():
             assert len(c.unit) * app._EXPR_CHAR_W * font <= c.w, f"cellunit {c.id}={c.unit!r}"
     # the long annotation actually triggered a shrink (the fit engaged — not a trivial pass)
     assert shrunk, "no units cell shrank — the long-annotation fit never engaged"
+
+
+def test_tour_steps_are_well_formed_and_assets_wired():
+    # the guided-tour steps drive the client engine (assets/tour.js); each must carry the copy the
+    # card renders, and a non-empty selector must look like a CSS selector (a region class), never a
+    # NiceGUI .mark() name (which is test-only and never reaches the DOM the tour queries).
+    assert app._TOUR_STEPS, "no tour steps defined"
+    for step in app._TOUR_STEPS:
+        assert step["title"] and step["body"], f"empty copy: {step}"
+        sel = step["sel"]
+        assert isinstance(sel, str)
+        assert sel == "" or sel.startswith("."), f"selector should be a class, got {sel!r}"
+    # the engine + styles are bundled the same way the other assets are
+    assert app._TOUR_JS.strip(), "tour.js not loaded"
+    assert ".rtt-tour-card" in app._CSS, "tour.css not folded into the page stylesheet"
+    # the corner replay button has its hover help
+    assert "tour" in tooltips.CHROME_HELP

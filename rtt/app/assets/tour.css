@@ -1,0 +1,157 @@
+/* ── Guided tour overlay ─────────────────────────────────────────────────────────────────────
+   The first-run walkthrough (see assets/tour.js, app._TOUR_JS). The tour builds its own DOM under
+   <body> on demand — a click-blocking scrim, a spotlight ring cut around the step's target, and a
+   floating card with the copy + Back/Next/Skip — so nothing here exists until the tour runs.
+
+   The dim is the SPOTLIGHT's own huge box-shadow (a transparent box with a 9999px shadow darkens
+   everything around its rect while leaving the rect itself clear), so there is no separate mask to
+   keep aligned with the hole. A flat full-screen .rtt-tour-block sits beneath it purely to swallow
+   clicks on the rest of the page while the tour is up. Dark theme retints the card below. */
+
+.rtt-tour-block {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: transparent;          /* the dim comes from the spotlight's box-shadow, not here */
+  cursor: default;
+}
+
+/* the spotlight ring: positioned/sized to the target's rect each step. The enormous spread shadow
+   IS the page dim; the thin ring marks what the step is pointing at. pointer-events:none so it
+   never eats a click (the block beneath handles those). */
+.rtt-tour-spot {
+  position: fixed;
+  z-index: 4001;
+  border-radius: 6px;
+  box-shadow: 0 0 0 3px var(--accent-pending, #2e7d32),
+              0 0 0 9999px rgba(15, 18, 22, 0.55);
+  pointer-events: none;
+  transition: top 0.2s, left 0.2s, width 0.2s, height 0.2s;
+}
+
+/* a centred step (no target): the spot collapses to nothing in the middle and the shadow dims the
+   whole viewport evenly. */
+.rtt-tour-spot.rtt-tour-spot-center {
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 0;
+}
+
+.rtt-tour-card {
+  position: fixed;
+  z-index: 4002;
+  width: 290px;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
+  padding: 14px 16px 12px;
+  background: #fff;
+  color: #1d2025;
+  border: 1px solid #c9ced4;
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  font-family: var(--rtt-serif, Georgia, serif);
+  transition: top 0.2s, left 0.2s;
+}
+
+.rtt-tour-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.rtt-tour-body {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #3a3f46;
+}
+
+.rtt-tour-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.rtt-tour-count {
+  font-size: 11px;
+  color: #8a9099;
+  letter-spacing: 0.02em;
+}
+
+.rtt-tour-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.rtt-tour-btns button {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 5px;
+  border: 1px solid #c9ced4;
+  background: #f4f5f7;
+  color: #3a3f46;
+  cursor: pointer;
+}
+
+.rtt-tour-btns button:hover {
+  background: #e9ebee;
+}
+
+.rtt-tour-btns button.rtt-tour-next {
+  border-color: var(--accent-pending, #2e7d32);
+  background: var(--accent-pending, #2e7d32);
+  color: #fff;
+}
+
+.rtt-tour-btns button.rtt-tour-next:hover {
+  filter: brightness(1.08);
+}
+
+.rtt-tour-btns button.rtt-tour-skip {
+  border-color: transparent;
+  background: transparent;
+  color: #8a9099;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.rtt-tour-btns button.rtt-tour-skip:hover {
+  background: transparent;
+  color: #3a3f46;
+  text-decoration: underline;
+}
+
+/* dark theme: retint the card to match the rest of the dark overlay (the scrim + ring read fine
+   as-is). Mirrors the palette anchors in rtt-dark.css. */
+body.rtt-dark .rtt-tour-card {
+  background: #272c33;
+  color: #e3e6ea;
+  border-color: #454c54;
+}
+
+body.rtt-dark .rtt-tour-body {
+  color: #aeb4bc;
+}
+
+body.rtt-dark .rtt-tour-btns button {
+  background: #31373f;
+  border-color: #4e555d;
+  color: #e3e6ea;
+}
+
+body.rtt-dark .rtt-tour-btns button:hover {
+  background: #3a414a;
+}
+
+body.rtt-dark .rtt-tour-btns button.rtt-tour-skip {
+  background: transparent;
+  border-color: transparent;
+  color: #71777f;
+}
+
+body.rtt-dark .rtt-tour-btns button.rtt-tour-skip:hover {
+  color: #e3e6ea;
+}

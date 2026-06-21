@@ -58,6 +58,13 @@ async def test_share_button_renders_in_the_corner_bank(user: User) -> None:
     assert user.find(marker="share").elements
 
 
+async def test_tour_button_renders_in_the_corner_bank(user: User) -> None:
+    # the guided-tour replay button sits beside undo/redo/reset/share; clicking it starts the
+    # client-side walkthrough (see assets/tour.js)
+    await user.open("/")
+    assert user.find(marker="tour").elements
+
+
 async def test_state_query_param_loads_a_shared_document(user: User) -> None:
     # a ?state=… link round-trips a whole document: open it and the editor loads exactly that state
     # (here a non-default Show setting), which render then persists — so the store reflects the link.

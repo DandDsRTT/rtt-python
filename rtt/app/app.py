@@ -467,6 +467,62 @@ _DECIMAL_JS = (_ASSETS / "decimal.js").read_text(encoding="utf-8")
 # shape as _FRACTION_JS, and it relies on the same display:none collapse to skip hidden sub-fields.
 _TABNAV_JS = (_ASSETS / "tabnav.js").read_text(encoding="utf-8")
 
+# The first-run guided tour: a self-contained spotlight walkthrough of the default app (see
+# assets/tour.js). index() feeds it the step list as window.rttTour before injecting this; it
+# auto-runs once per browser (a localStorage flag) and replays from the corner tour button.
+_TOUR_JS = (_ASSETS / "tour.js").read_text(encoding="utf-8")
+
+# The tour steps, walking the app in its DEFAULT state (drawer closed, no extra Show layers on).
+# Each step spotlights the element its CSS selector matches (a region class that reaches the DOM —
+# NOT a NiceGUI .mark(), which is test-only) and floats the card on `place` side. `open` opens the
+# settings drawer first, so the steps that point inside it have their target on screen. An empty
+# `sel` is a centred slide. Keep these anchored to real, default-present regions — a missing target
+# degrades to a centred card (see tour.js), but the copy would then point at nothing.
+_TOUR_STEPS = [
+    {"sel": "", "title": "Welcome to D&D's RTT app",
+     "body": "A spreadsheet for exploring regular temperaments. Here's a quick tour of what's on "
+             "screen — use <b>Next</b> / <b>Back</b> (or the arrow keys), and <b>Skip</b> to leave "
+             "anytime."},
+    {"sel": ".rtt-app", "place": "left", "title": "The spreadsheet",
+     "body": "Everything lives in this grid. Each <b>column</b> is an interval or a whole "
+             "temperament, and each <b>row</b> is a quantity computed about it — mappings, "
+             "generators, tunings, errors, and more."},
+    {"sel": ".rtt-rowband", "place": "right", "title": "Rows — the quantities",
+     "body": "The left band names each row. By default you see the core temperament data; the "
+             "settings panel can reveal many more rows as you go."},
+    {"sel": ".rtt-colhead-inner", "place": "bottom", "title": "Columns — the intervals",
+     "body": "Across the top sit the columns. The temperament's mapping and generators get their "
+             "own columns; target intervals each get one too."},
+    {"sel": ".rtt-cell", "place": "right", "title": "The value cells",
+     "body": "Cells with a box are editable — click to type a new value and the whole temperament "
+             "re-solves. <b>Hover</b> any value to magnify it, and click a cell's speaker to "
+             "<b>hear</b> the pitch."},
+    {"sel": ".rtt-titletile", "place": "bottom", "title": "Undo, reset & share",
+     "body": "Up here: <b>undo</b> / <b>redo</b> your edits, <b>reset</b> everything to defaults, "
+             "and <b>share</b> a link that reopens the app in exactly this state."},
+    {"sel": ".rtt-hamburger", "place": "right", "open": True, "title": "The settings panel",
+     "body": "This hamburger opens the Show panel — the control room for the whole grid. Let's "
+             "open it up."},
+    {"sel": ".rtt-show-all", "place": "right", "open": True, "title": "Select all & dark mode",
+     "body": "<b>Select all / none</b> turns every available row on or off at once, and the "
+             "sun/moon button switches between the light and dark themes."},
+    {"sel": ".rtt-chapter-slider", "place": "right", "open": True, "title": "Guide chapters",
+     "body": "New to the theory? This slider reveals the controls chapter by chapter, the way "
+             "D&D's guide introduces them — slide left for a simpler view, right (to ★) for "
+             "everything."},
+    {"sel": ".rtt-show-tile", "place": "right", "open": True, "title": "Tile features",
+     "body": "This sample tile is a live menu: click any part of it — the name, the symbol, the "
+             "closed form, the units — to show or hide that feature across the whole grid. The "
+             "audio controls up top drive every speaker."},
+    {"sel": ".rtt-show-scroll", "place": "right", "open": True, "title": "The Show toggles",
+     "body": "Below the sample tile, these checkboxes switch each kind of row on and off. Turn "
+             "things on as you need them — start small and build up."},
+    {"sel": "", "title": "That's the tour",
+     "body": "Explore freely — nothing here is permanent, and <b>reset</b> always brings back the "
+             "defaults. Replay this tour anytime from the <b>?</b> button by the undo/redo "
+             "controls. Happy tempering!"},
+]
+
 # A multi-field stacked cell holds TWO inputs in one cell — a fraction's numerator + denominator
 # (.rtt-frac-edit), or a decimal's whole part + fraction (.rtt-dec-edit). This client-side guard makes
 # a focus/blur/commit handler fire only when focus crosses the WHOLE cell's boundary — not on the
@@ -540,7 +596,8 @@ _CSS_DARK_VARS = f"""body.rtt-dark {{
 }}
 """
 _CSS = (_FONT_FACE + _CSS_VARS + (_ASSETS / "rtt.css").read_text(encoding="utf-8")
-        + _CSS_DARK_VARS + (_ASSETS / "rtt-dark.css").read_text(encoding="utf-8"))
+        + _CSS_DARK_VARS + (_ASSETS / "rtt-dark.css").read_text(encoding="utf-8")
+        + (_ASSETS / "tour.css").read_text(encoding="utf-8"))
 
 
 # the units labels (the domain-units column/row and the per-box "units:" line) and the per-value
@@ -2727,6 +2784,11 @@ def index(state: str | None = None) -> None:
     ui.add_body_html(f"<script>{_TABNAV_JS}</script>")
     # the zoom-on-hover magnifier: a scaled clone of any gridded value cell (see _ZOOM_JS)
     ui.add_body_html(f"<script>{_ZOOM_JS}</script>")
+    # the first-run guided tour: feed it the steps, then load the engine (auto-runs once per
+    # browser, replays from the corner tour button — see _TOUR_JS / _TOUR_STEPS)
+    ui.add_body_html(
+        f"<script>window.rttTour={{steps:{json.dumps(_TOUR_STEPS)},autostart:true}};\n"
+        f"{_TOUR_JS}</script>")
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
     ui.query(".nicegui-content").style("padding:6px")
 
@@ -5141,6 +5203,15 @@ def index(state: str | None = None) -> None:
                             ui.notify("Shareable link copied to clipboard")
                         refs["share"] = ui.button(icon="share", on_click=share_link, color=None) \
                             .props("flat dense").classes("rtt-iconbtn rtt-noarm").mark("share").tooltip(tooltips.CHROME_HELP["share"])
+
+                        # replay the guided first-run tour (it also auto-runs once per browser — see
+                        # _TOUR_JS). A ? icon, the "the ? button" the tour's closing step points at.
+                        refs["tour"] = ui.button(
+                            icon="help_outline",
+                            on_click=lambda: ui.run_javascript("window.rttTour && window.rttTour.start()"),
+                            color=None) \
+                            .props("flat dense").classes("rtt-iconbtn rtt-noarm").mark("tour") \
+                            .tooltip(tooltips.CHROME_HELP["tour"])
 
                         # hovering a history button previews its effect: it rings exactly the cells one
                         # undo/redo/reset would move (red for a removal, amber for the re-solve) and clears
