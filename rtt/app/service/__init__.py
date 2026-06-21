@@ -17,6 +17,8 @@ from rtt.app.service.core import (
     canonical_comma_basis,
     canonical_mapping,
     cents,
+    ClosedFormTuning,
+    closed_form_tuning,
     COMMA_BASIS_FORM_KEYS,
     COMMA_BASIS_FORM_LABELS,
     comma_basis_in_form,

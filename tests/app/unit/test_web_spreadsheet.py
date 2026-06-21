@@ -4807,6 +4807,74 @@ def test_math_expressions_without_quantities_show_only_the_expression():
     assert cells["just:prime:1"].text == "1200 · log₂3"
 
 
+# --- math expressions: the computed power-2 (RMS) optimum's exact closed forms ---
+
+def test_math_expressions_render_rms_generators_as_prime_power_logs():
+    # the power-2 unity-weighted optimum is an exact rational pseudoinverse solution, so
+    # each generator is 1200·log₂ of a prime-power product; meantone miniRMS-U over 2.3.5
+    cells = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
+    assert cells["tuning:gen:0"].kind == "mathexpr"
+    assert cells["tuning:gen:0"].text == "1200 · log₂(2^(17/33)·3^(16/33)·5^(-4/33))\n= 1202.607"
+    assert cells["tuning:gen:1"].text == "1200 · log₂(2^(-1/33)·3^(1/33)·5^(8/33))\n= 696.741"
+
+
+def test_math_expressions_render_rms_tempered_primes_as_prime_power_logs():
+    cells = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
+    assert cells["tuning:prime:0"].kind == "mathexpr"
+    assert cells["tuning:prime:0"].text == "1200 · log₂(2^(17/33)·3^(16/33)·5^(-4/33))\n= 1202.607"
+    assert cells["tuning:prime:2"].text == "1200 · log₂(2^(-4/33)·3^(4/33)·5^(32/33))\n= 2786.965"
+
+
+def test_math_expressions_closed_form_value_equals_the_plain_cents():
+    # the symbolic closed form must agree with the numeric optimizer to display precision:
+    # the "= value" tail of each math cell equals the plain cents the same cell shows when
+    # math expressions is off
+    off = {c.id: c for c in _with(scheme="miniRMS-U").cells}
+    on = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
+    for cid in ("tuning:gen:0", "tuning:gen:1", "tuning:prime:0", "tuning:prime:1", "tuning:prime:2"):
+        assert on[cid].kind == "mathexpr"
+        assert on[cid].text.endswith("= " + off[cid].text)
+
+
+def test_math_expressions_held_octave_rms_shows_the_octave_pure():
+    # held-octave forces the octave's tempered size to its just size: 1200·log₂2
+    cells = {c.id: c for c in _with(scheme="held-octave miniRMS-U", math_expressions=True).cells}
+    assert cells["tuning:prime:0"].text == "1200 · log₂2\n= 1200.000"
+
+
+def test_math_expressions_skip_minimax_optimum_no_closed_form():
+    # the power-∞ (minimax) family has no closed form, so its computed optimum stays the
+    # plain numeric cents — math expressions adds nothing to the tempered row or generators
+    off = {c.id: c for c in _with(scheme="minimax-S").cells}
+    on = {c.id: c for c in _with(scheme="minimax-S", math_expressions=True).cells}
+    for cid in ("tuning:gen:0", "tuning:gen:1", "tuning:prime:0", "tuning:prime:1"):
+        assert on[cid].kind != "mathexpr"
+        assert on[cid].text == off[cid].text
+
+
+def test_math_expressions_skip_weighted_rms_optimum_irrational():
+    # the simplicity/complexity-weighted power-2 optimum is exact but irrational (its prime
+    # exponents involve logs), so it has no tidy closed form and falls back to plain cents
+    off = {c.id: c for c in _with(scheme="miniRMS-S").cells}
+    on = {c.id: c for c in _with(scheme="miniRMS-S", math_expressions=True).cells}
+    for cid in ("tuning:gen:0", "tuning:prime:0"):
+        assert on[cid].kind != "mathexpr"
+        assert on[cid].text == off[cid].text
+
+
+def test_math_expressions_skip_manual_generator_override():
+    # a manual generator override is not the scheme optimum, so even a power-2 scheme shows
+    # no closed form — the displayed generators are whatever the user set
+    lay = spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        {**settings.defaults(), "math_expressions": True},
+        tuning_scheme="miniRMS-U", generator_tuning=(1200.0, 700.0),
+    )
+    cells = {c.id: c for c in lay.cells}
+    assert cells["tuning:gen:0"].kind != "mathexpr"
+    assert cells["tuning:gen:1"].text == "700.000"
+
+
 def test_math_expressions_is_an_interactive_toggle():
     # it now builds content, so the panel must offer it live rather than greyed out
     assert "math_expressions" in settings.IMPLEMENTED

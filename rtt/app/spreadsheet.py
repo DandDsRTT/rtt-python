@@ -712,10 +712,13 @@ class _GridBuilder:
         self.held_ratios = service.comma_ratios(self.held, self.elements)
         if generator_tuning is not None and len(generator_tuning) == len(self.state.mapping):
             self.tun = service.tuning_from_generators(self.state.mapping, generator_tuning, self.elements)
+            self._tun_from_generators = True
         else:
             self.tun = service.tuning(self.state.mapping, self.tuning_scheme, self.elements, self.nonprime_approach, held=self.held_ratios,
                                  prescaler_override=self.custom_prescaler, targets=target_override,
                                  weights_override=self.custom_weights)
+            self._tun_from_generators = False
+        self._optimum_target_override = target_override
         self.target_weights = service.interval_weights(self.state.mapping, self.tuning_scheme, self.targets,
                                                   prescaler_override=self.custom_prescaler,
                                                   domain_basis=self.elements,
@@ -1591,13 +1594,49 @@ class _GridBuilder:
             return self.tile_open("quantities", "commas") or self.tile_open("vectors", "commas")
         return self.tile_open("quantities", ckey) or self.tile_open("vectors", ckey)
 
-    def closed_form_operand(self, key, group, i):
+    def closed_form_operand(self, key, group, i, value=None):
         if key == "just":
             ratio = self.group_ratio[group](i)
             return _log_operand(ratio) if ratio is not None else None
         if group == "commas" and key == "retune" and i < self.nc:
             recip = 1 / Fraction(self.comma_ratios[i])
             return _log_operand(f"{recip.numerator}/{recip.denominator}")
+        if key == "tuning" and value is not None:
+            closed_form = self._closed_form()
+            if closed_form is None:
+                return None
+            vector = self._tempered_vector(group, i)
+            return None if vector is None else closed_form.tempered_operand(vector, value)
+        return None
+
+    def _closed_form(self):
+        if not hasattr(self, "_closed_form_cache"):
+            self._closed_form_cache = (
+                None
+                if not self.show_math or self._tun_from_generators
+                else service.closed_form_tuning(
+                    self.state.mapping, self.tuning_scheme, self.elements, self.nonprime_approach,
+                    held=self.held_ratios, prescaler_override=self.custom_prescaler,
+                    targets=self._optimum_target_override, weights_override=self.custom_weights)
+            )
+        return self._closed_form_cache
+
+    def _tempered_vector(self, group, i):
+        if group == "primes":
+            return tuple(1 if k == i else 0 for k in range(self.d))
+        if group == "commas":
+            if i < self.nc:
+                return self.state.comma_basis[i]
+            j = i - self.nc
+            return self.unchanged_basis[j] if self.unchanged_basis and j < len(self.unchanged_basis) else None
+        if group == "targets":
+            return self.target_vectors[i] if i < len(self.target_vectors) else None
+        if group == "interest":
+            return self.interest[i] if i < len(self.interest) else None
+        if group == "held":
+            return self.held[i] if i < len(self.held) else None
+        if group == "detempering":
+            return self.detempering_vectors[i] if i < len(self.detempering_vectors) else None
         return None
 
     def col_token(self, group: str, i: int):
@@ -1631,7 +1670,7 @@ class _GridBuilder:
             cid = f"{key}:{self.group_elem[group]}:{self.col_token(group, i)}"
             x = self.group_left[group](self.comma_value_pos(i) if group == "commas" else i)
             u = self.cell_unit(key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
-            operand = self.closed_form_operand(key, group, i) if self.show_math else None
+            operand = self.closed_form_operand(key, group, i, v) if self.show_math else None
             if operand is not None:
                 self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities, self._decimals), unit=u))
             else:
@@ -2651,8 +2690,16 @@ class _GridBuilder:
         if self.row_open("tuning") and self.tile_open("tuning", "gens"):
             gen_kind = "tuningvalue" if self.show_superspace_generators else "gentuningcell"
             for i, v in enumerate(self.tun.generator_map):
-                self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
-                                     gen_kind, text=service.cents(v, self._decimals), gen=i, unit=self.cell_unit("tuning", "gens", gen=i)))
+                operand = None
+                if self.show_math and not self.show_superspace_generators:
+                    closed_form = self._closed_form()
+                    operand = closed_form.generator_operand(i, v) if closed_form is not None else None
+                if operand is not None:
+                    self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
+                                         "mathexpr", text=_math_expr(operand, v, self.show_quantities, self._decimals), unit=self.cell_unit("tuning", "gens", gen=i)))
+                else:
+                    self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
+                                         gen_kind, text=service.cents(v, self._decimals), gen=i, unit=self.cell_unit("tuning", "gens", gen=i)))
                 self._voice("tuning:gens", i, v)
         if self.row_open("tuning") and self.tile_open("tuning", "canongens"):
             gm = self.tun.generator_map
