@@ -101,6 +101,9 @@
     var el = step.sel ? document.querySelector(step.sel) : null;
 
     if (!el || !el.getClientRects().length) {                          // centred / missing target
+      // clear any inline rect from a previous anchored step — inline styles beat the
+      // .rtt-tour-spot-center CSS, so without this the spotlight stays on the prior target
+      spot.style.top = spot.style.left = spot.style.width = spot.style.height = "";
       spot.classList.add("rtt-tour-spot-center");
       card.style.top = Math.max(12, (window.innerHeight - card.offsetHeight) / 2) + "px";
       card.style.left = Math.max(12, (window.innerWidth - card.offsetWidth) / 2) + "px";
