@@ -3559,6 +3559,8 @@ def index(state: str | None = None) -> None:
             apply_view_classes()
             st = editor.state
             prev = last_lay[0].identities if last_lay[0] is not None else None
+            cold = last_lay[0] is None          # the first render: every cell is new, so it must NOT
+            #                                     stagger (no room to make yet) — the whole grid paints at once
             lay = editor.layout(prev_ids=prev, preview_remove=rank_remove[0])
             last_lay[0] = lay
             fx, fy = lay.freeze_x, lay.freeze_y
@@ -3636,6 +3638,15 @@ def index(state: str | None = None) -> None:
                 if cb.id not in rec.els:
                     with cell_parents[container]:
                         rec.make_cell(cb)
+                    # two-step entrance: a cell BORN on an incremental render (not the cold first paint)
+                    # holds its fade-in for one beat (rtt-enter → animation-delay) so the existing cells
+                    # finish sliding to OPEN the room before the new content appears in it — instead of
+                    # popping in over a grid that is still reflowing. The cold paint has no room to make,
+                    # so it skips the stagger and shows everything at once; and a PENDING draft cell (the
+                    # green input the + button just opened to be typed into) appears immediately, since a
+                    # beat's delay before you can focus/type it would read as lag, not polish.
+                    if not cold and not cb.pending:
+                        rec.els[cb.id].classes(add="rtt-enter")
                 # body + row cells live in the scroll space (shifted up by fy); column + corner cells
                 # keep native coords in their frozen strip / corner. Each of the three reconcile steps —
                 # reposition, refresh content, repaint rings — runs ONLY when its own signature changed

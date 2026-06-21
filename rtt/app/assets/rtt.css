@@ -175,6 +175,12 @@ html, body { overscroll-behavior-x: none; }
 .rtt-app.rtt-scrolled-x .rtt-corner .rtt-wash, .rtt-app.rtt-scrolled-x .rtt-corner .rtt-washbase { display:none; }
 @keyframes rtt-in { from { opacity:0; } to { opacity:1; } }
 .rtt-line, .rtt-block, .rtt-block-boxed, .rtt-cell, .rtt-wash, .rtt-washbase { animation:rtt-in var(--t) ease; }
+/* Two-step entrance. A cell BORN on an incremental render (app.py tags it .rtt-enter; the cold first
+   paint does not) holds its fade-in for one beat — animation-delay var(--t), with fill-mode backwards
+   so it stays at opacity 0 through the delay — so the existing cells finish their left/top slide and
+   OPEN the room before the new content fades into it, instead of popping in over a still-reflowing grid.
+   (The caption/symbol/units/matlabel annotations below already stagger this way unconditionally.) */
+.rtt-enter { animation-delay:var(--t); animation-fill-mode:backwards; }
 
 /* The two `interface` Show behaviours that gate the whole app from a <body> class (set by
    app.apply_view_classes from editor.settings). `animations` off zeroes the transition var, so
