@@ -59,7 +59,7 @@ def _equave_reduce_pair(rows: list[list[int]], i: int, jip_octaves) -> None:
 
 
 def _as_matrix(rows: list[list[int]]) -> Matrix:
-    return tuple(tuple(int(round(x)) for x in r) for r in rows)
+    return tuple(tuple(round(x) for x in r) for r in rows)
 
 
 def minimal_generator_ma(matrix: Matrix, jip_octaves) -> Matrix:

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from functools import reduce
+from math import gcd
 
 import sympy as sp
 
@@ -113,9 +115,6 @@ def project_vectors(p_matrix, vectors):
 
 
 def _integer_columns(vectors):
-    from functools import reduce
-    from math import gcd
-
     out = []
     for v in vectors:
         entries = [sp.Rational(x) for x in v]

@@ -567,8 +567,6 @@ UNITS = {
     ("mapping", "commas"): "g",
     ("mapping", "targets"): "g",
     ("mapping", "interest"): "g",
-    ("canon", "primes"): f"g{SUBSCRIPT_C}/p",
-    ("canon", "gens"): f"g{SUBSCRIPT_C}/g",
     ("canon", "detempering"): f"g{SUBSCRIPT_C}",
     ("canon", "commas"): f"g{SUBSCRIPT_C}",
     ("canon", "held"): f"g{SUBSCRIPT_C}",

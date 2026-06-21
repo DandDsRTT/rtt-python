@@ -82,7 +82,7 @@ def _build_generator_operator(t: Temperament, spec: TuningSchemeSpec) -> sp.Matr
         None
         if spec.target_intervals is None
         else _integer_matrix(
-            [v for v in _reshaped(resolve_target_intervals(spec.target_intervals, t, d), d)]
+            list(_reshaped(resolve_target_intervals(spec.target_intervals, t, d), d))
         )
     )
     held_raw = _held_vectors(spec, t, d)

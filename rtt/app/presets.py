@@ -361,7 +361,7 @@ def identify_comma(vector, domain_basis) -> str | None:
     target = tuple(int(x) for x in vector)
     negated = tuple(-x for x in target)
     for _name, ratio, curated in _commas_in_domain(tuple(domain_basis)):
-        if curated == target or curated == negated:
+        if curated in (target, negated):
             return ratio
     return None
 

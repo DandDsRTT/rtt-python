@@ -21,7 +21,7 @@ def _prime_limit(comma) -> int:
 
 
 def _as_matrix(rows) -> Matrix:
-    return tuple(tuple(int(round(x)) for x in r) for r in rows)
+    return tuple(tuple(round(x) for x in r) for r in rows)
 
 
 def positive_ratio_ca(matrix: Matrix, jip_octaves) -> Matrix:

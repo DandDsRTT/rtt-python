@@ -116,8 +116,7 @@ def is_proper_temperament(mapping) -> bool:
     rank = get_r(Temperament(rows, Variance.ROW))
     if rank < len(rows):
         return False
-    every_element_reached = all(any(row[p] for row in rows) for p in range(len(rows[0])))
-    return every_element_reached
+    return all(any(row[p] for row in rows) for p in range(len(rows[0])))
 
 
 def greatest_factor(mapping) -> int:
@@ -495,7 +494,7 @@ def _cached_tuning(
         spec = replace(spec, nonprime_basis_approach=nonprime_approach)
     if held:
         own = (spec.held_intervals or "").strip().strip("{}").strip()
-        parts = ([own] if own else []) + [r for r in held]
+        parts = ([own] if own else []) + list(held)
         spec = replace(spec, held_intervals="{" + ", ".join(parts) + "}")
     gmap = optimize_generator_tuning_map(
         t, spec, prescaler_override=prescaler_override, weights_override=weights_override
@@ -699,7 +698,7 @@ def _cached_closed_form(
         spec = replace(spec, nonprime_basis_approach=nonprime_approach)
     if held:
         own = (spec.held_intervals or "").strip().strip("{}").strip()
-        parts = ([own] if own else []) + [r for r in held]
+        parts = ([own] if own else []) + list(held)
         spec = replace(spec, held_intervals="{" + ", ".join(parts) + "}")
     return closed_form_from_temperament(t, spec)
 
