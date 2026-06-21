@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 
 import rtt.app.app as app
+from rtt.app import marks
+from rtt.app import render_html
 from rtt.app import service
 from rtt.app import settings as show_settings
 from rtt.app import spreadsheet
@@ -306,28 +308,28 @@ def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
     # every EBK mark is one SVG whose viewBox is the cell's own px box, so its
     # weight is a constant px count rather than a scaled stroke — that is what
     # keeps a 1-row and a many-row bracket the exact same thickness.
-    marks = {
-        "[": app.square_bracket(16, 16, "left"),
-        "]2": app.square_bracket(16, 60, "right"),
-        "<": app.angle_bracket(16, 16),
-        "top": app.top_bracket(120, 9),
-        "angle": app.angle_foot(14, 7),  # the raw-vector column's ket foot (a down-chevron)
-        "vbar": app.vbar(2, 60),
+    mark_svgs = {
+        "[": marks.square_bracket(16, 16, "left"),
+        "]2": marks.square_bracket(16, 60, "right"),
+        "<": marks.angle_bracket(16, 16),
+        "top": marks.top_bracket(120, 9),
+        "angle": marks.angle_foot(14, 7),  # the raw-vector column's ket foot (a down-chevron)
+        "vbar": marks.vbar(2, 60),
     }
-    for svg in marks.values():
+    for svg in mark_svgs.values():
         assert svg.startswith("<svg") and f'fill="{app.BR_COLOR}"' in svg
         assert "stroke-width" not in svg  # weight is the 1:1 viewBox, not a scaling stroke
-    assert marks["angle"].count("<path") == 1 and "stroke" not in marks["angle"]  # one filled chevron
+    assert mark_svgs["angle"].count("<path") == 1 and "stroke" not in mark_svgs["angle"]  # one filled chevron
     # the down-chevron foot fits inside its oblong like every other mark — its whole
     # footprint (stroke included) stays within the 7px-tall box, never overshooting
     import re
-    ys = [float(y) for _x, y in re.findall(r"(-?\d+\.\d+),(-?\d+\.\d+)", app.angle_foot(14, 7))]
+    ys = [float(y) for _x, y in re.findall(r"(-?\d+\.\d+),(-?\d+\.\d+)", marks.angle_foot(14, 7))]
     assert 0 <= min(ys) and max(ys) <= 7
     def _viewbox(svg):
         m = re.search(r'viewBox="0 0 ([\d.]+) ([\d.]+)"', svg)
         return float(m.group(1)), float(m.group(2))
-    assert _viewbox(marks["["]) == (16, 16)
-    assert _viewbox(marks["]2"]) == (16, 60)  # 1 row vs many: same generator, viewBox == the cell box
+    assert _viewbox(mark_svgs["["]) == (16, 16)
+    assert _viewbox(mark_svgs["]2"]) == (16, 60)  # 1 row vs many: same generator, viewBox == the cell box
 
 
 def test_units_html_bolds_variables_but_not_cents_oct_or_slash():
@@ -387,8 +389,8 @@ def test_line_style_dots_a_collapsed_bands_rule_and_restores_it_when_open():
     assert "border-top-color:var(--c-gridline)" in h_solid and "background:none" in h_solid
     # the dots are sparse: the transparent gap runs well past the dot's far edge (a LINE_W
     # dot then a gap several times wider), unlike CSS `dotted`'s ~one-width packing
-    assert f"transparent {spreadsheet.LINE_W}px {app._DOT_PITCH}px" in v_dotted
-    assert app._DOT_PITCH >= 3 * spreadsheet.LINE_W
+    assert f"transparent {spreadsheet.LINE_W}px {render_html._DOT_PITCH}px" in v_dotted
+    assert render_html._DOT_PITCH >= 3 * spreadsheet.LINE_W
 
 
 def test_shared_axis_gridlines_render_two_pixels_thick():
@@ -748,7 +750,7 @@ def test_general_tile_renders_its_special_samples():
     assert "arrow_drop_down" in app._general_part_html("presets")  # ...and the dropdown caret
     chart = app._general_part_html("charts")
     assert "<svg" in chart                  # the sparkline...
-    assert app._CHART_GRID in chart         # ...with at least one grey horizontal tick line
+    assert render_html._CHART_GRID in chart         # ...with at least one grey horizontal tick line
     assert "<svg" in app._tile_fold_html()  # the decorative top-left fold toggle (a boxed chevron)
 
 
@@ -758,7 +760,7 @@ def test_general_tile_value_is_the_grids_stacked_three_decimal_face():
     # as a flat inline number. The dummy tile reads like a live cell: 701 over .955 (the pure fifth,
     # 3 dp). The whole part and its decimals are SEPARATE click targets (quantities / decimals), so
     # the .fraction can be toggled on its own.
-    assert app._TILE_VALUE == "701.955"                           # 3 dp, the grid's cents precision
+    assert render_html._TILE_VALUE == "701.955"                           # 3 dp, the grid's cents precision
     whole = app._general_part_html("quantities")
     assert 'class="rtt-stacked-main">701<' in whole              # the big whole part, its own target
     assert ".955" not in whole and "rtt-stacked-sub" not in whole  # the fraction is NOT here…
@@ -771,8 +773,8 @@ def test_dummy_tile_chart_rides_the_themeable_mark_colors():
     # gridlines the shared chart-grid colour — the same tokens the real chart and the EBK frame
     # use — so the dark overlay's attribute rules retint them. A hardcoded pure black would be
     # invisible on the dark pane (the bug: bars/axes that stay black in dark mode).
-    chart = app._example_chart()
-    assert app.BR_COLOR in chart and app._CHART_GRID in chart
+    chart = render_html._example_chart()
+    assert app.BR_COLOR in chart and render_html._CHART_GRID in chart
     assert "#000" not in chart
 
 
@@ -828,16 +830,16 @@ def test_general_tile_seats_the_value_layers_inside_the_gridded_cell():
 def test_general_tile_symbol_and_equivalence_read_as_one_equation():
     # the symbol part is the bold-italic n; the equivalence part is its defining-equation tail,
     # so the two joined read 𝒏 = 𝑒G (the symbol's equation), one source of truth with _TILE_*.
-    assert app._general_part_html("symbols") == app._math_html(app._TILE_SYMBOL)
+    assert app._general_part_html("symbols") == app._math_html(render_html._TILE_SYMBOL)
     assert app._general_part_html("symbols") + app._general_part_html("equivalences") \
-        == app._math_html(app._TILE_SYMBOL + app._TILE_EQUIV)
+        == app._math_html(render_html._TILE_SYMBOL + render_html._TILE_EQUIV)
 
 
 def test_general_tile_name_exposes_its_mnemonic_letter_as_a_separate_target():
     # the name word is split at its symbol-spelling letter so that letter (the mnemonics target)
     # is distinct from the rest of the word (names); the three pieces rejoin to exactly the name.
     before, letter, after = app._tile_name_pieces()
-    assert before + letter + after == app._TILE_NAME
+    assert before + letter + after == render_html._TILE_NAME
     assert letter == "n"  # the letter the symbol 𝒏 spells, underlined for mnemonics
 
 
@@ -913,7 +915,7 @@ def test_brace_is_one_filled_path_with_width_independent_end_curls():
     # the brace is ONE filled variable-width ribbon computed from the width — no
     # composite pieces (so no seams/overshoot). Only the arm length tracks the
     # width; the end-curls/cusp are fixed px shapes identical at any width.
-    narrow, wide = app.brace(44, 14), app.brace(200, 14)
+    narrow, wide = marks.brace(44, 14), marks.brace(200, 14)
     for svg in (narrow, wide):
         assert svg.count("<path") == 1  # a single shape
         assert "stroke" not in svg  # filled, not stroked
@@ -929,7 +931,7 @@ def test_brace_is_one_filled_path_with_width_independent_end_curls():
 def test_curly_bracket_is_one_filled_ribbon_within_its_footprint():
     # the generator tuning map's { is a vertical calligraphic brace (the matrix brace
     # turned a quarter-turn): one filled ribbon, no stroke, staying inside its oblong
-    svg = app.curly_bracket(16, 30)
+    svg = marks.curly_bracket(16, 30)
     assert svg.startswith("<svg") and 'viewBox="0 0 16.00 30.00"' in svg
     assert svg.count("<path") == 1 and "stroke" not in svg
     assert f'fill="{app.BR_COLOR}"' in svg
@@ -942,7 +944,7 @@ def test_curly_bracket_is_one_filled_ribbon_within_its_footprint():
 def test_ebk_svg_routes_the_curly_open_brace_to_the_curly_bracket():
     from rtt.app.layout import CellBox
     cb = CellBox("bracket:tuning:genmap:l", 0, 0, 16, 30, "bracket", text="{")
-    assert app.ebk_svg(cb) == app.curly_bracket(16, 30)  # not the square/angle renderer
+    assert app.ebk_svg(cb) == marks.curly_bracket(16, 30)  # not the square/angle renderer
 
 
 def test_bar_chart_draws_one_scaled_bar_per_value_from_the_baseline():
@@ -960,7 +962,7 @@ def test_bar_chart_extends_its_axis_past_the_tallest_bar_for_a_top_gridline():
     svg = app._bar_chart(272, 64, (0.0, 5.0, 10.0))
     bar_tops = [y for y, ht in _bars(svg) if ht > 0]  # the drawn bars' top edges
     gridlines = [float(y) for y in re.findall(
-        rf'<line x1="[\d.]+" y1="([\d.]+)"[^>]*stroke="{app._CHART_GRID}"', svg)]
+        rf'<line x1="[\d.]+" y1="([\d.]+)"[^>]*stroke="{render_html._CHART_GRID}"', svg)]
     assert gridlines and bar_tops
     assert min(gridlines) < min(bar_tops)  # the top gridline is above the tallest bar
 
@@ -978,13 +980,13 @@ def test_bar_chart_indicator_line_is_broken_by_its_power_labelled_mean_damage():
     svg = app._bar_chart(272, 64, (0.0, 10.0, 26.385), indicator=26.385, indicator_label="∞")
     # the line is drawn in two segments (a stub left of the label, the rest to its right),
     # leaving the gap the label fills — not one unbroken rule
-    assert svg.count(f'stroke="{app._CHART_INDICATOR}"') == 2
+    assert svg.count(f'stroke="{render_html._CHART_INDICATOR}"') == 2
     # the label reads ⟪𝐝⟫ with the power (∞) as a subscript, the 𝐝 bold
     assert "⟪" in svg and "⟫" in svg and "∞" in svg
     assert 'font-weight="bold"' in svg
     # ...and a plain chart (no indicator) draws no such line or label
     plain = app._bar_chart(272, 64, (0.0, 10.0, 26.385))
-    assert f'stroke="{app._CHART_INDICATOR}"' not in plain
+    assert f'stroke="{render_html._CHART_INDICATOR}"' not in plain
     assert "⟪" not in plain
 
 
@@ -1060,8 +1062,8 @@ def test_mathexpr_font_shrinks_for_longer_expressions():
 
 
 def test_fit_font_is_clamped_between_the_min_and_max():
-    assert app._fit_font("x", 30) == app._EXPR_MAX_FONT  # a tiny line caps at the max
-    assert app._fit_font("x" * 100, 30) == app._EXPR_MIN_FONT  # a huge line floors at the min
+    assert app._fit_font("x", 30) == render_html._EXPR_MAX_FONT  # a tiny line caps at the max
+    assert app._fit_font("x" * 100, 30) == render_html._EXPR_MIN_FONT  # a huge line floors at the min
 
 
 def test_mathexpr_elides_a_giant_ratio_operand_instead_of_streaking():
@@ -1076,7 +1078,7 @@ def test_mathexpr_elides_a_giant_ratio_operand_instead_of_streaking():
     assert "1200 · log₂(…/…)" in html      # the giant ratio is elided, its ratio shape kept
     assert "2" * 80 not in html            # the huge numerator is gone
     assert "= " in html                    # the cents value line is untouched
-    assert _first_font(html) > app._EXPR_MIN_FONT  # the elided line now genuinely fits (off the floor)
+    assert _first_font(html) > render_html._EXPR_MIN_FONT  # the elided line now genuinely fits (off the floor)
 
 
 def test_mathexpr_elides_a_giant_bare_integer_operand_to_an_ellipsis():
@@ -1100,9 +1102,9 @@ def test_elided_expr_line_fits_its_cell_at_the_fitted_font():
     # using the same glyph-width estimate _fit_font uses — i.e. the elision actually resolves the
     # overflow rather than merely shortening it.
     raw = "1200 · log₂(" + "2" * 100 + "/" + "3" * 100 + ")"
-    elided = app._elide_expr_line(raw, 37)
+    elided = render_html._elide_expr_line(raw, 37)
     assert elided == "1200 · log₂(…/…)"
-    assert len(elided) * app._EXPR_CHAR_W * app._fit_font(elided, 37) <= 37
+    assert len(elided) * render_html._EXPR_CHAR_W * app._fit_font(elided, 37) <= 37
 
 
 def test_plain_text_font_shrinks_to_fit_with_no_readability_floor():
@@ -1134,10 +1136,10 @@ def test_approach_radio_is_visible_iff_the_domain_has_nonprime_elements():
     from rtt.app.editor import Editor
 
     editor = Editor()  # 2.3.5 standard prime limit — no nonprimes
-    assert app._approach_visible(editor) is False
+    assert render_html._approach_visible(editor) is False
     # BARBADOS over 2.3.13/5: 13/5 is a nonprime element, so the radio appears
     assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
-    assert app._approach_visible(editor) is True
+    assert render_html._approach_visible(editor) is True
 
 
 def test_target_chooser_default_limit_uses_the_nonstandard_basis():
@@ -1164,7 +1166,7 @@ def test_dense_prescaling_plain_text_fits_its_cell():
                                                 tuning_scheme="TILT minimax-S").cells}
     for cid in ("ptext:prescaling:primes", "ptext:prescaling:targets"):
         c = cells[cid]
-        assert app._ptext_units(c.text) * app._ptext_font(c.text, c.w) <= c.w, cid
+        assert render_html._ptext_units(c.text) * app._ptext_font(c.text, c.w) <= c.w, cid
 
 
 def test_units_fit_their_cell_for_long_alternative_complexity_annotations():
@@ -1181,11 +1183,11 @@ def test_units_fit_their_cell_for_long_alternative_complexity_annotations():
     for c in cells:
         if c.kind == "units":
             font = app._units_font(c.text, c.w, app._UNITS_MAX_FONT)
-            assert len(c.text) * app._EXPR_CHAR_W * font <= c.w, f"units {c.id}={c.text!r}"
+            assert len(c.text) * render_html._EXPR_CHAR_W * font <= c.w, f"units {c.id}={c.text!r}"
             shrunk = shrunk or font < app._UNITS_MAX_FONT
         if c.unit:
             font = app._units_font(c.unit, c.w, app._CELLUNIT_MAX_FONT)
-            assert len(c.unit) * app._EXPR_CHAR_W * font <= c.w, f"cellunit {c.id}={c.unit!r}"
+            assert len(c.unit) * render_html._EXPR_CHAR_W * font <= c.w, f"cellunit {c.id}={c.unit!r}"
     # the long annotation actually triggered a shrink (the fit engaged — not a trivial pass)
     assert shrunk, "no units cell shrank — the long-annotation fit never engaged"
 

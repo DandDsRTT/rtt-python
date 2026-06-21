@@ -43,7 +43,6 @@ from rtt.library.tuning import (
     get_complexity,
     get_just_tuning_map,
     optimize_generator_tuning_map,
-    optimize_tuning_map,
     tuning_map_from_generators,
 )
 from rtt.library.tuning_ranges import get_generator_tuning_range as _get_generator_tuning_range
