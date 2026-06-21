@@ -4,6 +4,7 @@ import functools
 import logging
 import math
 import re
+from collections import deque
 from dataclasses import dataclass
 from fractions import Fraction
 
@@ -112,10 +113,14 @@ def _initial_doc() -> _Doc:
     )
 
 
+# deque(maxlen) bounds the undo depth so a marathon session can't grow _Doc snapshots forever
+_UNDO_HISTORY_MAX = 500
+
+
 class Editor:
     def __init__(self) -> None:
-        self._undo_stack: list[_Doc] = []
-        self._redo_stack: list[_Doc] = []
+        self._undo_stack: deque[_Doc] = deque(maxlen=_UNDO_HISTORY_MAX)
+        self._redo_stack: deque[_Doc] = deque(maxlen=_UNDO_HISTORY_MAX)
         self.pending_comma: list[int | None] | None = None
         self.pending_interest: list[int | None] | None = None
         self.pending_held: list[int | None] | None = None
@@ -180,8 +185,12 @@ class Editor:
     def restore_for_preview(self, token: tuple) -> None:
         doc, undo, redo, transients = token
         self._restore(doc)
-        self._undo_stack[:] = undo
-        self._redo_stack[:] = redo
+        # deque has no slice assignment; clear + extend keeps the maxlen cap (the snapshot
+        # came from a capped stack, so this never overfills, but extend would trim if it did)
+        self._undo_stack.clear()
+        self._undo_stack.extend(undo)
+        self._redo_stack.clear()
+        self._redo_stack.extend(redo)
         (self.pending_comma, self.pending_interest, self.pending_held, self.pending_target,
          self.pending_element, self.pending_mapping_row, self._nudging_generator,
          self.superspace_generator_tuning, self.nonprime_basis_approach) = transients
