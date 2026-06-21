@@ -242,7 +242,7 @@ def unchanged_ratios_of_tuning(state: TemperamentState, retuning_map, candidate_
         damage = abs(sum(retuning_map[p] * vector[p] for p in range(d)))
         if damage >= tol:
             continue
-        is_independent_of_those_found = sp.Matrix(rows + [list(vector)]).rank() == len(rows) + 1
+        is_independent_of_those_found = sp.Matrix([*rows, list(vector)]).rank() == len(rows) + 1
         if is_independent_of_those_found:
             rows.append(list(vector))
             ratios.append(ratio)

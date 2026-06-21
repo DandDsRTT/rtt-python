@@ -99,7 +99,7 @@ def minimal_ca(matrix: Matrix, jip_octaves) -> Matrix:
     for vec in candidates:
         if len(picked) == rank:
             break
-        if np.linalg.matrix_rank(np.array(picked + [vec])) > len(picked):
+        if np.linalg.matrix_rank(np.array([*picked, vec])) > len(picked):
             picked.append(vec)
 
     chosen = (

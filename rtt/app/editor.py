@@ -989,7 +989,7 @@ class Editor:
         if dst == "commas":
             domain_basis = self.state.domain_basis if len(vector) == self.state.d else None
             extended = service.from_comma_basis(
-                self._real_comma_basis + (tuple(vector),), domain_basis
+                (*self._real_comma_basis, tuple(vector)), domain_basis
             )
             if extended.n <= self.state.n:
                 return False
@@ -1021,7 +1021,7 @@ class Editor:
         else:
             domain_basis = self.state.domain_basis if len(vector) == self.state.d else None
             self.state = service.from_comma_basis(
-                self._real_comma_basis + (tuple(vector),), domain_basis
+                (*self._real_comma_basis, tuple(vector)), domain_basis
             )
 
     def move_interval(self, src_list: str, src_idx: int, dst_list: str, dst_idx: int) -> bool:
@@ -1194,7 +1194,7 @@ class Editor:
             return
         new_comma = tuple(int(v) for v in values)
         domain_basis = self.state.domain_basis if len(new_comma) == self.state.d else None
-        extended = service.from_comma_basis(self._real_comma_basis + (new_comma,), domain_basis)
+        extended = service.from_comma_basis((*self._real_comma_basis, new_comma), domain_basis)
         if extended.n > self.state.n:
             self._snapshot()
             self.state = extended

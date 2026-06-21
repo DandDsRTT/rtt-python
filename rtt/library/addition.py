@@ -44,7 +44,7 @@ def _addition(t1: Temperament, t2: Temperament, is_sum: bool) -> Temperament:
     v1 = _linear_independence_basis_vector(t1, ldb)
     v2 = _linear_independence_basis_vector(t2, ldb)
     combined = tuple(a + b if is_sum else a - b for a, b in zip(v1, v2, strict=False))
-    result = canonical_form(Temperament(tuple(ldb) + (combined,), t1.variance, t1.domain_basis))
+    result = canonical_form(Temperament((*tuple(ldb), combined), t1.variance, t1.domain_basis))
     return result if result.variance is output_variance else dual(result)
 
 
@@ -87,7 +87,7 @@ def _addabilization_defactor(t: Temperament, ldb: tuple) -> tuple:
 def _initial_explicit_ldb_form(t: Temperament, ldb: tuple, grade: int) -> tuple:
     result = list(ldb)
     for candidate in t.matrix:
-        if len(result) < grade and sp.Matrix(list(ldb) + [candidate]).rank() > len(ldb):
+        if len(result) < grade and sp.Matrix([*list(ldb), candidate]).rank() > len(ldb):
             result.append(candidate)
     return tuple(result[:grade])
 
@@ -98,7 +98,7 @@ def _defactor_with_nonempty_ldb(t, ldb, grade, initial):
     multiples = _find_modular_solution(ldb, base, enfactoring)
     combination = (sum(multiples[i] * ldb[i][j] for i in range(len(ldb))) for j in range(len(base)))
     new_last = divide_out_gcd(tuple(b + c for b, c in zip(base, combination, strict=False)))
-    return tuple(initial[:-1]) + (new_last,)
+    return (*tuple(initial[:-1]), new_last)
 
 
 def _get_greatest_factor(a: tuple) -> int:

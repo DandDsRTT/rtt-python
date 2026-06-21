@@ -29,7 +29,7 @@ def greedy_independent_rows(vectors, limit: int) -> tuple:
     for vector in vectors:
         if len(kept) >= limit:
             break
-        if sp.Matrix(rows + [list(vector)]).rank() == len(rows) + 1:
+        if sp.Matrix([*rows, list(vector)]).rank() == len(rows) + 1:
             kept.append(vector)
             rows.append(list(vector))
     return tuple(kept)
@@ -38,14 +38,17 @@ def greedy_independent_rows(vectors, limit: int) -> tuple:
 def extend_to_full_image_rank(mapping: Matrix, vectors) -> Matrix | None:
     rL, dL = len(mapping), len(mapping[0])
     m = sp.Matrix([list(row) for row in mapping])
-    image_rank = lambda cols: (m * sp.Matrix.hstack(*cols)).rank() if cols else 0
+
+    def image_rank(cols):
+        return (m * sp.Matrix.hstack(*cols)).rank() if cols else 0
+
     columns = [sp.Matrix(dL, 1, list(v)) for v in vectors]
     rank = image_rank(columns)
     for j in range(dL):
         if len(columns) >= rL:
             break
         e = sp.Matrix(dL, 1, [1 if k == j else 0 for k in range(dL)])
-        if image_rank(columns + [e]) > rank:
+        if image_rank([*columns, e]) > rank:
             columns.append(e)
             rank += 1
     if len(columns) != rL:

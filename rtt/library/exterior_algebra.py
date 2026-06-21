@@ -250,6 +250,6 @@ def u_to_tensor(u: Multivector):
             if len(set(prefix)) < u.grade:
                 return 0
             return _permutation_sign(prefix) * index_to_coord[tuple(sorted(prefix))]
-        return tuple(build(prefix + (axis,)) for axis in range(d))
+        return tuple(build((*prefix, axis)) for axis in range(d))
 
     return build(())

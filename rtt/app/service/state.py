@@ -72,14 +72,14 @@ def mapping_ebk(state: TemperamentState) -> str:
 
 
 def expand_domain(state: TemperamentState) -> TemperamentState:
-    expanded = tuple(comma + (0,) for comma in state.comma_basis)
+    expanded = tuple((*comma, 0) for comma in state.comma_basis)
     return from_comma_basis(expanded)
 
 
 def shrink_domain(state: TemperamentState) -> TemperamentState:
     independent: list[tuple[int, ...]] = []
     for comma in (c[:-1] for c in state.comma_basis):
-        trial = independent + [comma]
+        trial = [*independent, comma]
         raises_the_nullity = from_comma_basis(tuple(trial)).n == len(trial)
         if raises_the_nullity:
             independent.append(comma)
@@ -147,14 +147,18 @@ def can_set_domain_element(state: TemperamentState, index: int, element) -> bool
     if parsed is None:
         return False
     trial = (
-        state.domain_basis[:index] + (_as_basis_element(parsed),) + state.domain_basis[index + 1 :]
+        *state.domain_basis[:index],
+        _as_basis_element(parsed),
+        *state.domain_basis[index + 1 :],
     )
     return is_independent_domain_basis(trial)
 
 
 def set_domain_element(state: TemperamentState, index: int, element) -> TemperamentState:
     new_basis = (
-        state.domain_basis[:index] + (_as_basis_element(element),) + state.domain_basis[index + 1 :]
+        *state.domain_basis[:index],
+        _as_basis_element(element),
+        *state.domain_basis[index + 1 :],
     )
     return from_mapping(state.mapping, new_basis)
 
@@ -163,14 +167,14 @@ def can_add_domain_element(state: TemperamentState, element) -> bool:
     parsed = parse_domain_element(element) if isinstance(element, str) else element
     if parsed is None:
         return False
-    return is_independent_domain_basis(tuple(state.domain_basis) + (_as_basis_element(parsed),))
+    return is_independent_domain_basis((*tuple(state.domain_basis), _as_basis_element(parsed)))
 
 
 def add_domain_element(state: TemperamentState, element) -> TemperamentState:
-    new_basis = tuple(state.domain_basis) + (_as_basis_element(element),)
-    extended = tuple(tuple(row) + (0,) for row in state.mapping)
-    new_generator = tuple(0 for _ in range(state.d)) + (1,)
-    return from_mapping(extended + (new_generator,), new_basis)
+    new_basis = (*tuple(state.domain_basis), _as_basis_element(element))
+    extended = tuple((*tuple(row), 0) for row in state.mapping)
+    new_generator = (*tuple(0 for _ in range(state.d)), 1)
+    return from_mapping((*extended, new_generator), new_basis)
 
 
 def can_remove_domain_element(state: TemperamentState) -> bool:
@@ -182,7 +186,7 @@ def remove_domain_element(state: TemperamentState, index: int) -> TemperamentSta
     new_basis = state.domain_basis[:i] + state.domain_basis[i + 1 :]
     independent: list[tuple[int, ...]] = []
     for comma in (c[:i] + c[i + 1 :] for c in state.comma_basis):
-        trial = independent + [comma]
+        trial = [*independent, comma]
         raises_the_nullity = from_comma_basis(tuple(trial), new_basis).n == len(trial)
         if raises_the_nullity:
             independent.append(comma)

@@ -1419,11 +1419,17 @@ class _Reconciler:
     def _gridvalue_handlers(self, cb: spreadsheet.CellBox, spec: _GridValueSpec):
         fn = getattr(self._cb, spec.commit)
         if spec.cid_arg:
-            commit = lambda _=None, cid=cb.id: fn(cid)
+
+            def commit(_=None, cid=cb.id):
+                return fn(cid)
+
             pv = getattr(self._cb, spec.preview) if spec.preview else None
             preview = (lambda e=None, cid=cb.id: pv(cid)) if pv else None
         else:
-            commit = lambda _=None: fn()
+
+            def commit(_=None):
+                return fn()
+
             preview = (lambda e=None: fn(preview=True)) if spec.preview else None
         return commit, preview
 
@@ -1764,7 +1770,10 @@ class _Reconciler:
         g = self.gesture
         if g is None or g.kind != "chooser" or not g.reflowed or g.source is None:
             return False
-        group = lambda c: ":".join(c.split(":")[:2])
+
+        def group(c):
+            return ":".join(c.split(":")[:2])
+
         return group(cid) == group(g.source)
 
     def _update_preset(self, cb: spreadsheet.CellBox) -> None:
@@ -2127,15 +2136,15 @@ class _Reconciler:
         wrap.on("dragover", js_handler="(e) => e.preventDefault()")
         if tail == "add":
             wrap.classes("rtt-colgrip rtt-coldrop")
-            wrap.on("dragenter.prevent", lambda _=None, l=lst: self._cb.on_drag_enter(l, None))
-            wrap.on("drop.prevent", lambda _=None, l=lst: self._cb.on_drop(l, None))
+            wrap.on("dragenter.prevent", lambda _=None, lst=lst: self._cb.on_drag_enter(lst, None))
+            wrap.on("drop.prevent", lambda _=None, lst=lst: self._cb.on_drop(lst, None))
             return
         idx = cb.comma
         wrap.classes("rtt-drag-handle rtt-colgrip").props("draggable=true")
-        wrap.on("dragstart", lambda _=None, l=lst, i=idx: self._cb.on_drag_start(l, i))
-        wrap.on("dragenter.prevent", lambda _=None, l=lst, i=idx: self._cb.on_drag_enter(l, i))
+        wrap.on("dragstart", lambda _=None, lst=lst, i=idx: self._cb.on_drag_start(lst, i))
+        wrap.on("dragenter.prevent", lambda _=None, lst=lst, i=idx: self._cb.on_drag_enter(lst, i))
         wrap.on("dragend", lambda _=None: self._cb.on_drag_end())
-        wrap.on("drop.prevent", lambda _=None, l=lst, i=idx: self._cb.on_drop(l, i))
+        wrap.on("drop.prevent", lambda _=None, lst=lst, i=idx: self._cb.on_drop(lst, i))
         ui.icon("drag_indicator").classes("rtt-grip")
 
 
@@ -3358,9 +3367,14 @@ def index(state: str | None = None) -> None:
             gesture_render()
             return
         if cid.startswith("etpick:"):
-            apply = lambda i=idx, v=value: editor.set_mapping_row(i, presets.et_value_to_val(v, db))
+
+            def apply(i=idx, v=value):
+                return editor.set_mapping_row(i, presets.et_value_to_val(v, db))
         else:
-            apply = lambda c=idx, v=value: editor.set_comma(c, presets.comma_value_to_vector(v, db))
+
+            def apply(c=idx, v=value):
+                return editor.set_comma(c, presets.comma_value_to_vector(v, db))
+
         base = editor.state
         apply()
         hyp = editor.state

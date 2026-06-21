@@ -307,7 +307,7 @@ def plain_text_values(
     def _sized(cols):
         if not size_factor:
             return cols
-        return tuple(col + (size_factor * sum(col),) for col in cols)
+        return tuple((*col, size_factor * sum(col)) for col in cols)
 
     if prescaler_is_matrix:
         bare_rows = [tuple(prescaler[i]) for i in range(state.d)]
@@ -659,7 +659,10 @@ def plain_text_values(
                 ),
             }
         )
-        _ss_prod = lambda vs: _sized(_prescaled_ss(lift_vectors_to_superspace(db, vs)))
+
+        def _ss_prod(vs):
+            return _sized(_prescaled_ss(lift_vectors_to_superspace(db, vs)))
+
         ss_u_prescaled = [
             None if u is None else _sized(_prescaled_ss(lift_vectors_to_superspace(db, (u,))))[0]
             for u in u_basis

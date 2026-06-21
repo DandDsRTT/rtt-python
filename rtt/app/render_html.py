@@ -170,7 +170,7 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="") -
     axis_x, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
     values = tuple(values)
     present = tuple(v for v in values if v is not None)
-    ticks = _chart_ticks(min(present + (0.0,)), max(present + (0.0,)))
+    ticks = _chart_ticks(min((*present, 0.0)), max((*present, 0.0)))
     axis_lo, axis_hi = ticks[0], ticks[-1]
     plot_top, plot_bot = _CHART_PAD_T, h - _CHART_PAD_B
     span = axis_hi - axis_lo
