@@ -2865,9 +2865,21 @@ def index(state: str | None = None) -> None:
             # returns the ref once it exists). setTimeout works whether the page is visible or hidden —
             # requestAnimationFrame would be paused while hidden (e.g. the render tests / a backgrounded
             # tab), so it is the wrong tool here.
+            # The draft cell can be off-screen — a + at a far edge, or an add fired by keyboard while
+            # scrolled away. So after focusing, scroll the grid body the minimum that brings the cell
+            # fully into view (past the frozen left rowband, clear of the top edge). Setting scrollLeft/
+            # Top fires the body's own scroll listener, which re-pins the frozen header (see freeze.js).
             ui.run_javascript(
-                f"(function(){{var id={inp.id},n=0;function go(){{"
-                f"if(getElement(id)){{runMethod(id,'focus',[]);runMethod(id,'select',[]);return;}}"
+                f"(function(){{var id={inp.id},n=0;function go(){{var c=getElement(id);"
+                f"if(c){{runMethod(id,'focus',[]);runMethod(id,'select',[]);"
+                f"var el=document.activeElement,cell=el&&el.closest&&el.closest('.rtt-cell'),"
+                f"body=cell&&cell.closest('.rtt-gridbody');"
+                f"if(body){{var cr=cell.getBoundingClientRect(),br=body.getBoundingClientRect(),"
+                f"band=body.querySelector('.rtt-rowband'),bw=band?band.getBoundingClientRect().width:0,pl=24,pt=8;"
+                f"if(cr.left<br.left+bw+pl)body.scrollLeft-=br.left+bw+pl-cr.left;"
+                f"else if(cr.right>br.right-pl)body.scrollLeft+=cr.right-br.right+pl;"
+                f"if(cr.top<br.top+pt)body.scrollTop-=br.top+pt-cr.top;"
+                f"else if(cr.bottom>br.bottom-pt)body.scrollTop+=cr.bottom-br.bottom+pt;}}return;}}"
                 f"if(n++<60)setTimeout(go,16);}}setTimeout(go,0);}})()")
 
     def on_show_toggle(key, value):
@@ -3865,16 +3877,6 @@ def index(state: str | None = None) -> None:
             refs["approach"].move(board)
             cell_parents = {"corner": corner, "col": colhead_inner, "row": rowband, "body": board}
 
-    def on_key(e):
-        if not (e.action.keydown and e.modifiers.ctrl):
-            return
-        is_z = e.key == "z" or e.key == "Z"
-        if e.key == "y" or (is_z and e.modifiers.shift):
-            act(editor.redo)
-        elif is_z:
-            act(editor.undo)
-
-    ui.keyboard(on_key=on_key)
     render()
     apply_chapter()
     if load_failed[0]:
