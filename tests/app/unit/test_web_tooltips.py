@@ -1,11 +1,27 @@
 """Hover-text (tooltip) help for the Show settings and the interactive controls."""
 
+import re
+from pathlib import Path
+
 import pytest
 
 from rtt.app import settings as show_settings
 from rtt.app import spreadsheet
 from rtt.app import tooltips
 from rtt.app.editor import Editor
+
+_GUIDE_DIR = Path(__file__).resolve().parents[3] / "guide" / \
+    "Dave Keenan & Douglas Blumeyer's guide to RTT"
+
+
+def _chapter_text(chapter: str) -> str:
+    matches = [f for f in _GUIDE_DIR.iterdir() if f.name.endswith(chapter)]
+    assert len(matches) == 1, f"no unique guide file for chapter {chapter!r}: {matches}"
+    return matches[0].read_text(encoding="utf-8")
+
+
+def _strip_markup(text: str) -> str:
+    return text.replace("'''", "").replace("''", "").replace("[[", "").replace("]]", "")
 
 
 def test_show_help_covers_every_toggle_with_nonempty_text():
@@ -204,3 +220,60 @@ def test_audio_help_covers_the_five_bank_controls_with_global_wording():
     assert len(set(tooltips.AUDIO_HELP.values())) == 5
     for text in tooltips.AUDIO_HELP.values():
         assert text.strip() and "this tile" not in text
+
+
+def test_guide_url_builds_wiki_subpage_and_section_anchor():
+    # chapter → subpage (spaces → underscores); section → MediaWiki #anchor (spaces → underscores)
+    assert tooltips.guide_url("Tuning fundamentals", "Damage, error, and weight") == (
+        tooltips.GUIDE_BASE + "/Tuning_fundamentals#Damage,_error,_and_weight")
+    assert tooltips.guide_url("Mappings", "") == tooltips.GUIDE_BASE + "/Mappings"
+    for gh in tooltips.GUIDE_HELP.values():
+        assert gh.url.startswith(tooltips.GUIDE_BASE + "/")
+        assert " " not in gh.url
+
+
+@pytest.mark.parametrize("key,gh", sorted(tooltips.GUIDE_HELP.items()))
+def test_guide_help_quote_is_verbatim_from_its_chapter(key, gh):
+    # every tooltip quote is a direct, unaltered quote from the named guide chapter (modulo the
+    # chapter's wiki bold/link markup) — so a quote can't silently drift from the source text
+    assert gh.quote.strip() == gh.quote and gh.quote
+    assert gh.quote in _strip_markup(_chapter_text(gh.chapter))
+
+
+@pytest.mark.parametrize("key,gh", sorted(tooltips.GUIDE_HELP.items()))
+def test_guide_help_section_is_a_real_heading_in_its_chapter(key, gh):
+    # the linked section anchor resolves: a == heading == with that exact text exists in the chapter
+    heading = re.compile(rf"^=+\s*{re.escape(gh.section)}\s*=+\s*$", re.MULTILINE)
+    assert heading.search(_chapter_text(gh.chapter)), f"no heading {gh.section!r} in {gh.chapter!r}"
+
+
+def test_tile_guide_help_for_cell_only_fires_on_three_part_tile_ids():
+    # the make_cell hook keys off a cell id; control cells share the "caption"/"symbol" kinds but
+    # carry non-tile ids of 2 parts (caption:q, symbol:dual) or 4 (caption:counts:commas:u), and the
+    # optimization tiles put the kind LAST (optimization:power:symbol). None of these may be parsed
+    # as a (row, col) tile — only a real symbol:row:col / caption:row:col resolves.
+    assert tooltips.tile_guide_help_for_cell("caption:mapping:primes") is \
+        tooltips.GUIDE_HELP[("mapping", "primes")]
+    assert tooltips.tile_guide_help_for_cell("symbol:tuning:gens") is \
+        tooltips.GUIDE_HELP[("tuning", "gens")]
+    for non_tile in ("caption:q", "symbol:dual", "caption:slope", "caption:all_interval",
+                     "caption:counts:commas:u", "optimization:power:symbol",
+                     "optimization:mean_damage:caption", "caption:counts:commas"):
+        assert tooltips.tile_guide_help_for_cell(non_tile) is None
+
+
+def test_every_rendered_caption_and_symbol_cell_id_parses_without_error():
+    # a full build's caption/symbol cells all flow through tile_guide_help_for_cell in make_cell;
+    # every one must parse safely (a 2-part control id once unpacked into 3 and crashed render)
+    for cb in _rendered_cells():
+        if cb.kind in ("symbol", "caption"):
+            tooltips.tile_guide_help_for_cell(cb.id)  # must not raise
+
+
+def test_guide_help_covers_only_real_tiles_and_resolves_by_tile_key():
+    # every registry key is a real (row, col) tile, and tile_guide_help round-trips it
+    captioned = {(r, c) for r, c in spreadsheet.CAPTIONS}
+    for (rkey, ckey), gh in tooltips.GUIDE_HELP.items():
+        assert (rkey, ckey) in captioned, f"{(rkey, ckey)} is not a captioned tile"
+        assert tooltips.tile_guide_help(rkey, ckey) is gh
+    assert tooltips.tile_guide_help("mapping", "nonsense") is None

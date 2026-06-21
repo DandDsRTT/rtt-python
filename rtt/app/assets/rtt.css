@@ -194,6 +194,13 @@ body.rtt-no-anim { --t:0s; }
 body.rtt-no-tooltips .q-tooltip,
 body.rtt-no-tooltips .rtt-zoom-help { display:none !important; }
 
+.rtt-guide-link { cursor:pointer; }
+.q-tooltip.rtt-guide-tip { max-width:22rem; font-family:var(--rtt-serif); font-size:12px;
+                           line-height:1.45; padding:8px 10px; }
+.rtt-guide-tip .rtt-guide-quote { font-style:italic; }
+.rtt-guide-tip .rtt-guide-readmore { display:block; margin-top:6px; font-style:normal;
+                                     text-decoration:underline; opacity:0.85; }
+
 .rtt-line { position:absolute; z-index:1; opacity:1; transition:left var(--t), top var(--t),
             width var(--t), height var(--t), opacity var(--t); }
 .rtt-line-v { border-left:var(--line-w) solid var(--c-gridline); width:0; }

@@ -1,5 +1,68 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
+GUIDE_BASE = "https://en.xen.wiki/w/Dave_Keenan_%26_Douglas_Blumeyer%27s_guide_to_RTT"
+
+
+def guide_url(chapter: str, section: str) -> str:
+    anchor = "#" + section.replace(" ", "_") if section else ""
+    return f"{GUIDE_BASE}/{chapter.replace(' ', '_')}{anchor}"
+
+
+@dataclass(frozen=True)
+class GuideHelp:
+    quote: str
+    chapter: str
+    section: str
+
+    @property
+    def location(self) -> str:
+        return f"{self.chapter} › {self.section}" if self.section else self.chapter
+
+    @property
+    def url(self) -> str:
+        return guide_url(self.chapter, self.section)
+
+
+GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
+    ("mapping", "primes"): GuideHelp(
+        "A temperament can be represented by an object called a mapping, which contains "
+        "one map for each generator of the temperament.",
+        "Mappings", "Mappings"),
+    ("vectors", "commas"): GuideHelp(
+        "This type of JI interval is called a comma, and this particular one is called "
+        "the meantone comma.",
+        "Mappings", "Making commas vanish"),
+    ("tuning", "gens"): GuideHelp(
+        "a list of generator tunings (in units of cents per generator) such as those noted "
+        "here, which we'd call a generator tuning map.",
+        "Tuning fundamentals", "Tuning"),
+    ("vectors", "targets"): GuideHelp(
+        "These are a set of intervals of our choosing, whose damage we seek to minimize, "
+        "and we can call them our target-intervals.",
+        "Tuning fundamentals", "Target-intervals"),
+    ("damage", "targets"): GuideHelp(
+        "We accomplish this using a quantity called damage.",
+        "Tuning fundamentals", "Damage, error, and weight"),
+    ("weight", "targets"): GuideHelp(
+        "frequently choose to weight these absolute errors, in order to capture how some "
+        "intervals are more important to tune accurately than others.",
+        "Tuning fundamentals", "Damage, error, and weight"),
+}
+
+
+def tile_guide_help(rkey: str, ckey: str) -> GuideHelp | None:
+    return GUIDE_HELP.get((rkey, ckey))
+
+
+def tile_guide_help_for_cell(cell_id: str) -> GuideHelp | None:
+    parts = cell_id.split(":")
+    if len(parts) == 3 and parts[0] in ("symbol", "caption"):
+        return tile_guide_help(parts[1], parts[2])
+    return None
+
+
 SHOW_HELP: dict[str, str] = {
     "animations": "Animate grid changes — slide and fade rows, columns and cells in and out as they appear, move or leave. Off makes every change snap instantly.",
     "preview_highlighting": "Highlight what a control would do before you click it — hovering a +/− or a chooser option rings the cells it would change (amber), remove (red) or add (green). Off hides the preview.",

@@ -974,6 +974,16 @@ class _Reconciler:
         for d in self._handle_dicts:
             d.pop(eid, None)
 
+    def _attach_guide_link(self, wrap, gh: tooltips.GuideHelp) -> None:
+        wrap.classes("rtt-guide-link")
+        with wrap:
+            with ui.tooltip().classes("rtt-guide-tip"):
+                ui.html(
+                    f'<span class="rtt-guide-quote">“{_escape(gh.quote)}”</span>'
+                    f'<span class="rtt-guide-readmore">Read in the Guide: '
+                    f'{_escape(gh.location)} →</span>')
+        wrap.on("click", js_handler=f"() => window.open({json.dumps(gh.url)}, '_blank', 'noopener')")
+
     def make_cell(self, cb: spreadsheet.CellBox) -> None:
         # build a cell's element in the active parent (the caller opens the freeze container),
         # register it + its kind (and audio key) so render() can place and reconcile it after.
@@ -1006,6 +1016,10 @@ class _Reconciler:
                     self.target_limit_tip = ui.tooltip(help_text)
             else:
                 wrap.tooltip(help_text)
+        if cb.kind in ("symbol", "caption"):
+            gh = tooltips.tile_guide_help_for_cell(cb.id)
+            if gh is not None:
+                self._attach_guide_link(wrap, gh)
         self.els[cb.id] = wrap
         self.kinds[cb.id] = cb.kind
         if cb.kind.endswith(("plus", "minus")):
