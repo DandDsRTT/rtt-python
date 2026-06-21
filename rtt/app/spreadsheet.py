@@ -598,6 +598,7 @@ class _GridBuilder:
         show_charts = _f.charts
         show_ranges = _f.ranges
         self.show_symbols = _f.symbols
+        self.ctrl_symbol_h = SYMBOL_H if self.show_symbols else 0
         self.show_header_symbols = _f.header_symbols
         self.show_units = _f.units
         self.show_cell_units = _f.cell_units
@@ -1124,14 +1125,14 @@ class _GridBuilder:
         self.lbox_ctrl = self._lbox_show and self.col_open("ssprimes" if self.show_superspace else "primes") and not self.show_presets
         self.lbox_extra = (RANGE_GAP + self.control_region_band_h(OPTION_BOX_PX + CAPTION_LINE)) if self.lbox_ctrl else 0
         self.cbox_ctrl = self._cbox_show and self.col_open("targets")
-        self.cbox_extra = (RANGE_GAP + self.control_region_band_h(ROW_H + SYMBOL_H + 3 * CAPTION_LINE)) if self.cbox_ctrl else 0
+        self.cbox_extra = (RANGE_GAP + self.control_region_band_h(ROW_H + self.ctrl_symbol_h + 3 * CAPTION_LINE)) if self.cbox_ctrl else 0
         self.opt_ctrl = (self.show_optimization and "row:damage" not in self.collapsed
                     and self.col_open("targets") and "tile:damage:targets" not in self.collapsed)
         self.mean_damage_caption = "retuning magnitude" if self.all_interval else "power mean"
         if self.tuning_optimized:
             self.mean_damage_caption = f"minimized {self.mean_damage_caption}"
         self.opt_cap_lines = _wrap_lines(self.mean_damage_caption, OPT_MEAN_DAMAGE_W) if self.opt_ctrl else 1
-        self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
+        self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + self.ctrl_symbol_h
                       + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
         self.show_approach = (service.domain_has_nonprimes(self.elements)
                           and "row:damage" not in self.collapsed and self.col_open("targets")
@@ -2865,9 +2866,9 @@ class _GridBuilder:
     def _emit_cbox_controls(self) -> None:
         if self.cbox_ctrl:
             box_top = self.rows["complexity"].tile_top + self.rows["complexity"].tile_h - self.cbox_extra + RANGE_GAP
-            tx, cy = self.control_region("block:complexity", "targets", box_top, ROW_H + SYMBOL_H + 3 * CAPTION_LINE)
+            tx, cy = self.control_region("block:complexity", "targets", box_top, ROW_H + self.ctrl_symbol_h + 3 * CAPTION_LINE)
             sym_y = cy + ROW_H
-            cap_y = sym_y + SYMBOL_H
+            cap_y = sym_y + self.ctrl_symbol_h
             cap_h = 3 * CAPTION_LINE
             slot_w = CBOX_SLOT_W
             q_slot_x = tx
@@ -2891,7 +2892,8 @@ class _GridBuilder:
             q_text = _format_power(service.complexity_norm_power(self.tuning_scheme))
             q_kind = "powerinput" if self.show_alt_complexity else "powerdisplay"
             self.cells.append(CellBox("control:q", q_x, cy, COL_W, ROW_H, q_kind, text=q_text))
-            self.cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
+            if self.show_symbols:
+                self.cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
             self.cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
                                  text="interval complexity norm power"))
             if service.is_all_interval(self.tuning_scheme):
@@ -2899,8 +2901,9 @@ class _GridBuilder:
                 dual_x = dual_slot_x + (slot_w - COL_W) / 2
                 dual_text = _format_power(service.dual_norm_power(self.tuning_scheme))
                 self.cells.append(CellBox("control:dual", dual_x, cy, COL_W, ROW_H, "powerdisplay", text=dual_text))
-                self.cells.append(CellBox("symbol:dual", dual_slot_x, sym_y, slot_w, SYMBOL_H,
-                                     "symbol", text="dual(𝑞)"))
+                if self.show_symbols:
+                    self.cells.append(CellBox("symbol:dual", dual_slot_x, sym_y, slot_w, SYMBOL_H,
+                                         "symbol", text="dual(𝑞)"))
                 self.cells.append(CellBox("caption:dual", dual_slot_x, cap_y, slot_w, cap_h, "caption",
                                      text="dual norm power"))
 
@@ -2969,9 +2972,9 @@ class _GridBuilder:
             title_top = box_top + OPT_PAD_T
             content_top = title_top + OPT_TITLE_H + OPT_TITLE_GAP
             sym_top = content_top + ROW_H
-            cap_top = sym_top + SYMBOL_H
+            cap_top = sym_top + self.ctrl_symbol_h
             cap_band = self.opt_cap_lines * CAPTION_LINE
-            body_h = ROW_H + SYMBOL_H + cap_band + OPT_PAD_B
+            body_h = ROW_H + self.ctrl_symbol_h + cap_band + OPT_PAD_B
             mean_damage_x = ox + OPT_PAD_L
             mean_damage_val_x = mean_damage_x + (OPT_MEAN_DAMAGE_W - COL_W) / 2
             pow_x = ((mean_damage_x + OPT_MEAN_DAMAGE_W) + (ox + box_w - OPT_PAD_R)) / 2 - COL_W / 2
@@ -2985,15 +2988,17 @@ class _GridBuilder:
                           if self.all_interval else "⟪𝐝⟫ₚ")
             if self.tuning_optimized:
                 mean_damage_symbol = f"min({mean_damage_symbol})"
-            self.cells.append(CellBox("optimization:mean_damage:symbol", mean_damage_x, sym_top, OPT_MEAN_DAMAGE_W, SYMBOL_H,
-                                 "symbol", text=mean_damage_symbol))
+            if self.show_symbols:
+                self.cells.append(CellBox("optimization:mean_damage:symbol", mean_damage_x, sym_top, OPT_MEAN_DAMAGE_W, SYMBOL_H,
+                                     "symbol", text=mean_damage_symbol))
             self.cells.append(CellBox("optimization:mean_damage:caption", mean_damage_x, cap_top, OPT_MEAN_DAMAGE_W, cap_band,
                                  "caption", text=self.mean_damage_caption))
             power_locked = self.all_interval or not self.show_alt_complexity
             self.cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
                                  "powerdisplay" if power_locked else "powerinput", text=power))
-            self.cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
-                                 "symbol", text="𝑝"))
+            if self.show_symbols:
+                self.cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
+                                     "symbol", text="𝑝"))
             self.cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,
                                  OPT_POW_CAP_W, CAPTION_LINE, "caption", text="optimization power"))
             opt_box = (ox, box_top, box_w, OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + body_h)

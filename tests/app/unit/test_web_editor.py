@@ -1946,6 +1946,46 @@ def test_layout_wraps_the_mean_damage_symbol_in_min_while_optimized():
     assert mean_damage_symbol() == "⟪𝐝⟫ₚ"
 
 
+def test_symbols_toggle_gates_the_control_label_symbols():
+    # the math symbols that label the tuning-panel controls — 𝑝 over the optimization power,
+    # min(⟪𝐝⟫ₚ) over the mean damage, 𝑞 over the complexity norm power — belong to the symbols
+    # Show layer exactly like the grid's symbol row. Turning symbols off drops the symbol cells;
+    # the word captions beneath them stay.
+    editor = Editor()
+    editor.set_show("optimization", True)
+    editor.set_show("weighting", True)
+    editor.set_weight_slope("complexity-weight")  # a non-unity slope reveals the complexity box
+
+    def ids() -> set[str]:
+        return {c.id for c in editor.layout().cells}
+
+    symbol_ids = {"optimization:power:symbol", "optimization:mean_damage:symbol", "symbol:q"}
+    caption_ids = {"optimization:power:caption", "optimization:mean_damage:caption", "caption:q"}
+
+    on = ids()
+    assert symbol_ids <= on
+    assert caption_ids <= on
+
+    editor.set_show("symbols", False)
+    off = ids()
+    assert symbol_ids.isdisjoint(off)  # every control symbol disappears
+    assert caption_ids <= off          # but its word caption remains
+
+
+def test_hiding_control_symbols_collapses_the_symbol_band():
+    # the symbol band isn't merely hidden — it collapses, so the caption rides up directly under
+    # its control (matching how the grid's symbol row collapses when symbols are off).
+    editor = Editor()
+    editor.set_show("optimization", True)
+
+    def caption_top() -> float:
+        return {c.id: c for c in editor.layout().cells}["optimization:power:caption"].y
+
+    with_symbols = caption_top()
+    editor.set_show("symbols", False)
+    assert caption_top() < with_symbols
+
+
 def test_set_target_override_text_and_vectors():
     editor = Editor()
     # typing a vector list overrides the target set with those intervals, stored as ratios
