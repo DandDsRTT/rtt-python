@@ -54,6 +54,30 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "The weights set how much each target's damage counts in the optimization, so the "
         "intervals you care about most pull the tuning hardest toward serving them.",
         "Tuning fundamentals", "Damage, error, and weight"),
+    ("vectors", "held"): GuideHelp(
+        "The held intervals are the ones the tuning keeps pure — each dealt absolutely zero "
+        "damage, most often the octave. Each column is one held interval.",
+        "Tuning fundamentals", "Held-intervals"),
+    ("tuning", "primes"): GuideHelp(
+        "The tuning map gives the tempered size, in cents, of each prime — the generator "
+        "sizes pushed through the mapping (𝒕 = 𝒈𝑀).",
+        "Tuning fundamentals", "Tuning"),
+    ("just", "primes"): GuideHelp(
+        "The just tuning map gives each prime's pure size in cents — the just-intonation "
+        "values the tempered tuning is measured against.",
+        "Tuning fundamentals", "Tuning"),
+    ("retune", "primes"): GuideHelp(
+        "The retuning map is each prime's error: how far its tempered size lands from just "
+        "(𝒓 = 𝒕 − 𝒋). The damage is the size of that error.",
+        "Tuning fundamentals", "Damage, error, and weight"),
+    ("complexity", "targets"): GuideHelp(
+        "Each target interval's complexity — a ranking of how complex the ratio is, with a "
+        "larger value meaning more complex. It is what the damage weighting scales with.",
+        "Tuning fundamentals", "Complexity"),
+    ("mapping", "commas"): GuideHelp(
+        "The comma basis sent through the mapping — all zeros, because the temperament makes "
+        "exactly these commas vanish.",
+        "Mappings", "Making commas vanish"),
 }
 
 
