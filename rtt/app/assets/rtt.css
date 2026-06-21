@@ -12,10 +12,12 @@ html, body { overscroll-behavior-x: none; }
 .rtt-titletile { position:absolute; top:0; left:0; box-sizing:border-box;
                  width:var(--label-w); height:var(--header-h); background:#e0e0e0;
                  display:flex; align-items:center; justify-content:center; }
-.rtt-tile-btns { display:flex; gap:2px; }
-/* square bordered icon buttons (undo/redo), matching the mockup's framed glyphs */
-.rtt-iconbtn { width:15px !important; min-width:15px !important; height:15px !important;
-            min-height:15px !important; padding:0 !important; background:#fff !important;
+.rtt-tile-btns { display:flex; gap:1.5px; }
+/* square bordered icon buttons (undo/redo), matching the mockup's framed glyphs — sized to the
+   same --option-box as every checkbox so the two button families never drift apart */
+.rtt-iconbtn { width:var(--option-box) !important; min-width:var(--option-box) !important;
+            height:var(--option-box) !important;
+            min-height:var(--option-box) !important; padding:0 !important; background:#fff !important;
             border:1px solid #000; border-radius:2px !important; box-shadow:none !important; }
 .rtt-iconbtn .q-icon { color:#000 !important; font-size:13px; }
 /* a disabled undo/redo button greys out like the disabled Show toggles. NiceGUI marks a
