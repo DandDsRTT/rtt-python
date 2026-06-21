@@ -844,15 +844,16 @@ body.rtt-no-tooltips .q-tooltip { display:none !important; }
 .rtt-minus-zone:hover .rtt-minus-btn-v { opacity:1; pointer-events:auto; }
 
 /* the equave-reduce (↓) and reciprocate (↕) buttons flanking an editable interval ratio's bar
-   (targets / held / interest). They reveal on hover of the cell, hide while it's being edited, and
-   grey out when their op is a no-op (already reduced / a unison). Sitting on the bar's mid-line at
-   the cell's left/right edges, a bare-integer "n" (no visible bar) is flanked as if the vinculum
-   were there. */
-.rtt-ratio-op { position:absolute !important; top:50%; transform:translateY(-50%);
-           width:var(--btn); height:var(--btn); z-index:4;
+   (commas / targets / held / interest). They reveal on hover of the cell, hide while it's being
+   edited, and grey out when their op is a no-op (already reduced / a unison). Centred ON the cell's
+   left/right edges at the bar's mid-line — bigger than the +/− and free to overhang into the
+   neighbouring cells (the cell turns overflow:visible via .rtt-ratioed so they aren't clipped). A
+   bare-integer "n" (no visible bar) is flanked as if the vinculum were there. */
+.rtt-fraccell.rtt-ratioed { overflow:visible; }
+.rtt-ratio-op { position:absolute !important; top:50%; width:18px; height:18px; z-index:6;
            opacity:0; pointer-events:none; transition:opacity var(--t); }
-.rtt-ratio-op-reduce { left:0; }
-.rtt-ratio-op-recip { right:0; }
+.rtt-ratio-op-reduce { left:0; transform:translate(-50%,-50%); }
+.rtt-ratio-op-recip { right:0; transform:translate(50%,-50%); }
 .rtt-fraccell:hover .rtt-ratio-op { opacity:1; pointer-events:auto; }
 .rtt-fraccell:focus-within .rtt-ratio-op { display:none; }
 .rtt-fraccell:hover .rtt-ratio-op.rtt-op-disabled { opacity:.3; pointer-events:none; cursor:default; }

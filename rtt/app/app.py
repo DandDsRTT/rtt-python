@@ -1764,15 +1764,19 @@ class _Reconciler:
 
     def _arm_ratio_ops(self, cb: spreadsheet.CellBox, wrap) -> None:
         # the equave-reduce + reciprocate buttons flanking the bar of an editable interval ratio —
-        # targets / held / intervals of interest only (never commas, generators or the derived
-        # unchanged column). Each reveals on hover, hides while the cell is edited, and reads disabled
-        # when its op is a no-op: an interval already inside [1, equave) can't reduce, a unison can't
-        # reciprocate. They commit through transform_interval, one undo step like a manual edit.
-        if cb.kind != "ratiocell" or cb.pending or cb.id.split(":", 1)[0] not in ("target", "held", "interest"):
+        # any editable interval ratiocell (commas / targets / held / intervals of interest), but NOT
+        # the read-only derived faces (the ~generator ratios, a non-projection unchanged column),
+        # which carry no value to edit in place. Each reveals on hover, hides while the cell is edited,
+        # and reads disabled when its op is a no-op: an interval already inside [1, equave) can't
+        # reduce, a unison can't reciprocate. They commit through transform_interval, one undo step.
+        if cb.kind != "ratiocell" or cb.pending or cb.id.split(":", 1)[0] not in ("comma", "target", "held", "interest"):
             return
+        wrap.classes("rtt-ratioed")  # overflow:visible so the (larger, overhanging) buttons aren't clipped
         with wrap:
-            reduce_btn = ui.html(_control_svg("reduce")).classes("rtt-glyph rtt-ratio-op rtt-ratio-op-reduce").mark(f"{cb.id}:reduce")
-            recip_btn = ui.html(_control_svg("reciprocate")).classes("rtt-glyph rtt-ratio-op rtt-ratio-op-recip").mark(f"{cb.id}:reciprocate")
+            reduce_btn = ui.html(_control_svg("reduce")).classes("rtt-glyph rtt-ratio-op rtt-ratio-op-reduce") \
+                .mark(f"{cb.id}:reduce").tooltip(tooltips.RATIO_REDUCE_HELP)
+            recip_btn = ui.html(_control_svg("reciprocate")).classes("rtt-glyph rtt-ratio-op rtt-ratio-op-recip") \
+                .mark(f"{cb.id}:reciprocate").tooltip(tooltips.RATIO_RECIPROCATE_HELP)
         reduce_btn.on("click", lambda _=None, cid=cb.id: self._cb.transform_interval(cid, "reduce"))
         recip_btn.on("click", lambda _=None, cid=cb.id: self._cb.transform_interval(cid, "reciprocate"))
         self.ratio_ops[cb.id] = (reduce_btn, recip_btn)
@@ -3409,17 +3413,19 @@ def index(state: str | None = None) -> None:
         _request_render()
 
     def transform_interval(cid, op):
-        # the equave-reduce / reciprocate buttons flanking an editable interval ratio (targets / held
-        # / interest). Resolve the column's live vector, apply the op, and route it through the SAME
-        # per-list setter a vector edit uses — one undo step, every dependent row recomputed. A no-op
+        # the equave-reduce / reciprocate buttons flanking an editable interval ratio (commas / targets
+        # / held / interest). Resolve the column's live vector, apply the op, and route it through the
+        # SAME setter a vector edit uses — one undo step, every dependent row recomputed. A no-op
         # (already reduced, or a unison reciprocated) commits nothing, so a disabled button is safe.
         if building[0] or cid not in rec.inputs:
             return
         group, tok = cid.split(":")
-        if group not in ("target", "held", "interest") or tok == "pending":
+        if group not in ("comma", "target", "held", "interest") or tok == "pending":
             return
         _end_commit_gestures()
-        if group == "target":
+        if group == "comma":
+            current, setter, list_name = editor.state.comma_basis, editor.edit_comma_basis, "commas"
+        elif group == "target":
             targets = editor.target_override or service.target_interval_set(
                 editor.target_spec, editor.state.domain_basis)
             current = service.target_interval_vectors(targets, editor.state.d, editor.state.domain_basis)

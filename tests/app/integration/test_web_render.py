@@ -342,12 +342,14 @@ def _op_classes(user: User, marker: str) -> list[str]:
 
 
 async def test_interval_ratios_carry_reduce_and_reciprocate_buttons(user: User) -> None:
-    # every editable target/held/interest ratio gets the two hover buttons flanking its bar, each
-    # greyed when its op is a no-op. The default TILT targets over 2.3.5 are 2/1, 3/1, 3/2, 4/3, 5/2,
-    # 5/3, 5/4, 6/5 (columns 0..7).
+    # every editable interval ratio (commas as well as targets/held/interest) gets the two hover
+    # buttons flanking its bar, each greyed when its op is a no-op. The default TILT targets over
+    # 2.3.5 are 2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5 (columns 0..7); the comma is 80/81.
     await user.open("/")
     await user.should_see(marker="target:0:reduce")
     await user.should_see(marker="target:0:reciprocate")
+    await user.should_see(marker="comma:0:reduce")            # commas are in scope too
+    await user.should_see(marker="comma:0:reciprocate")
     # 2/1 is outside [1, 2): reduce is live. 3/2 is already reduced: reduce is greyed.
     assert "rtt-op-disabled" not in _op_classes(user, "target:0:reduce")
     assert "rtt-op-disabled" in _op_classes(user, "target:2:reduce")
@@ -371,6 +373,15 @@ async def test_clicking_reciprocate_flips_the_interval(user: User) -> None:
     await user.open("/")
     UserInteraction(user, set(user.find(marker="target:2:reciprocate").elements), None).trigger("click")
     assert _cell_child(user, "target:2").value == "2"
+
+
+async def test_clicking_reciprocate_on_a_comma_flips_its_sign(user: User) -> None:
+    # the default comma is 80/81; reciprocate flips it to 81/80 (numerator 80 → 81) — the same
+    # temperament, the dual just shown the other way (commas route through edit_comma_basis).
+    await user.open("/")
+    assert _cell_child(user, "comma:0").value == "80"
+    UserInteraction(user, set(user.find(marker="comma:0:reciprocate").elements), None).trigger("click")
+    assert _cell_child(user, "comma:0").value == "81"
 
 
 async def test_a_projection_plain_text_edit_is_unmolested_until_submit(user: User) -> None:

@@ -99,6 +99,11 @@ AUDIO_HELP: dict[str, str] = {
     "root": "Toggle the 1/1 root drone sounding underneath.",
 }
 
+# The two hover buttons flanking an editable interval ratio's bar (targets / held / interest /
+# commas). Disabled — and greyed — when the op would be a no-op for the current value.
+RATIO_REDUCE_HELP = "Reduce this interval into one equave (the octave by default) — fold it by the equave until it lands in [1, equave)."
+RATIO_RECIPROCATE_HELP = "Reciprocate this interval — swap its numerator and denominator (3/2 → 2/3)."
+
 
 # The read-only OUTPUT kinds — value cells, labels, symbols, captions, brackets, charts.
 # They are not controls, so control_help returns None for them. Declared here (not only in
