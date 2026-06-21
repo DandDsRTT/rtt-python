@@ -56,9 +56,10 @@ def test_default_position_reveals_the_early_controls_and_hides_the_later_ones():
     # sub-controls (optimization / tuning ranges / weighting), and ch4's intervals of interest
     assert {"counts", "temperament_tiles", "tuning_tiles", "gridded_values", "presets",
             "math_expressions", "optimization", "tuning_ranges", "weighting", "interest",
-            "interval_ratios", "interval_vectors", "domain_units"} <= shown
-    # ch5+ controls stay hidden at the default ch4
-    assert not ({"units", "all_interval", "alt_complexity", "nonstandard_domain"} & shown)
+            "interval_ratios", "interval_vectors"} <= shown
+    # ch5+ controls stay hidden at the default ch4 — the units-analysis layers (units, cell_units
+    # and the domain-basis unit labels, domain_units) all wait for ch5
+    assert not ({"units", "domain_units", "all_interval", "alt_complexity", "nonstandard_domain"} & shown)
     # the outside-guide controls wait for the ★ notch (custom weights aren't in the guide)
     for key in ("projection", "generator_detempering", "identity_objects",
                 "form_controls", "form_colorization", "custom_weights"):

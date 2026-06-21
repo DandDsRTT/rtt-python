@@ -323,6 +323,12 @@ _TOUR_STEPS = [
      "body": "A grid for exploring regular temperaments. Here's a quick tour of what's on "
              "screen — use <b>Next</b> / <b>Back</b> (or the arrow keys), and <b>Skip</b> to leave "
              "anytime."},
+    {"sel": "", "title": "Reading the grid",
+     "body": "The grid sets intervals alongside the temperament objects that act on them, so you "
+             "can see how they relate. Follow a column down to watch an interval flow through the "
+             "temperament — the mapping 𝑀 sends it to a count of generators, then the tuning turns "
+             "that into cents. Each value's symbol and its equation (like 𝒕 = 𝒈𝑀) name the product "
+             "behind it."},
     {"sel": ".rtt-zoomable", "place": "right", "title": "The value cells",
      "body": "Most of the grid is computed values. Cells drawn with a box are editable — type a "
              "new value and the whole grid recomputes."},

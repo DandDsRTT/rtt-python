@@ -144,9 +144,9 @@ async def _enable(user: User, label: str) -> None:
 # (Show-toggle label, a cell id its render branch must produce). Each exercises a
 # _make_cell branch that is off in the default view.
 _FEATURE_CELLS = [
-    # counts ships ON now, so it's no longer an enable-an-off-feature case (its render is covered
-    # by the default page + the spreadsheet tests).
-    ("symbols", "symbol:mapping:primes"),            # the quantity-symbol glyph, _math_html
+    # counts and symbols (with its equivalences refinement) ship ON now, so they're no longer
+    # enable-an-off-feature cases — their render is covered by the default page + the spreadsheet
+    # tests.
     ("row/col header symbols", "matlabel:row:mapping:primes:0"),  # the matrix row header label (header_symbols)
     ("plain text values", "ptext:mapping:primes"),   # the editable EBK dual input
     ("presets", "preset:temperament"),         # the chooser dropdowns (q-select)
@@ -700,7 +700,10 @@ async def test_dummy_tile_parts_reflect_and_drive_the_live_show_state(user: User
     # the mnemonics toggle (so a shown name with mnemonics off isn't greyed mid-word). A click on
     # a part flips that layer; a refinement (equivalences/mnemonics) also pulls its base layer on.
     await user.open("/")
-    # default view: names + gridded values shown, symbols hidden
+    # symbols + equivalences ship ON now; turn symbols off (cascades equivalences off) to exercise
+    # the off→on refinement pull-on this test covers
+    user.find(marker="showpart:symbols").click()
+    # names + gridded values shown, symbols now hidden
     assert "rtt-part-on" in _part_classes(user, "names")
     assert "rtt-part-on" in _part_classes(user, "gridded_values")
     assert "rtt-part-off" in _part_classes(user, "symbols")
@@ -755,8 +758,10 @@ async def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_defaul
     # default tuning) is, but weighting now nests under the off-by-default optimization, so it's
     # parent-hidden like all-interval and excluded (its chapter gating is unobservable until shown).
     for key in ("counts", "tuning_tiles", "optimization", "interest",
-                "interval_ratios", "domain_units"):
+                "interval_ratios"):
         assert "rtt-chap-hidden" not in _row_classes(user, key), key
+    # domain_units moved to ch5 (units analysis), so its row is collapsed at the default ch4
+    assert "rtt-chap-hidden" in _row_classes(user, "domain_units")
     # ...while the ch9 / outside-guide (★) rows are collapsed. (These are all top-level rows, or
     # — projection — a sub-control of the on-by-default tuning tiles, so they're present/findable;
     # a sub-control of an OFF parent, like all-interval under weighting, is hidden by its own
@@ -2460,8 +2465,7 @@ async def test_dropping_a_row_on_its_own_cells_does_nothing(user: User) -> None:
 # representative cell's html actually carries content. Each exercises a distinct fill-in-render
 # path — _math_html (count/symbol), _units_html (units), _bar_chart / _range_chart SVGs.
 _ENABLE_HTML_CELLS = [
-    # counts ships ON now (its _math_html "d = 3" renders by default); symbols still covers _math_html
-    ("symbols", "symbol:mapping:primes"),         # _math_html quantity glyph
+    # counts and symbols ship ON now (their _math_html renders by default — see _DEFAULT_HTML_CELLS)
     ("units", "units:mapping:primes"),            # _units_html "units: g/p"
     ("charts", "chart:retune:targets"),           # _bar_chart SVG
     ("tuning ranges", "rangechart:tuning:gens"),  # _range_chart SVG
@@ -2478,7 +2482,7 @@ async def test_enabled_html_cell_renders_non_blank_content(user: User, label: st
 
 # On-by-default html kinds, present in the plain opened page: the tile-name captions
 # (_underline_html) and the matrix-frame EBK bracket SVGs (ebk_svg, the most numerous kind).
-_DEFAULT_HTML_CELLS = ["caption:mapping:primes", "bracket:map:0:l"]
+_DEFAULT_HTML_CELLS = ["caption:mapping:primes", "bracket:map:0:l", "symbol:mapping:primes"]
 
 
 @pytest.mark.parametrize("cell_id", _DEFAULT_HTML_CELLS)
@@ -3429,6 +3433,9 @@ async def test_hovering_the_form_canonical_option_previews_canonicalizing(user: 
     # canonical — so the form choice never adds or removes it, nothing shifts the dropdown, and the
     # hover is a pure value-only reflow. (form_tiles is off here, so the reference tile is absent.)
     await user.open("/")
+    _toggle(user, "equivalences")    # equivalences ships ON now; turn it off so canonicalizing is a
+    # non-disturbing value-only reflow (its "= …" equations don't reflow widths and shift the
+    # dropdown) rather than the ring-only fallback chooser_hover takes for a disturbing pick
     _toggle(user, "form")            # the parent layer reveals its sub-controls (form controls is a child)
     _toggle(user, "form controls")   # now visible: turn on the <choose form> dropdowns
     await user.should_see(marker="formchooser:mapping")
@@ -3473,6 +3480,7 @@ async def test_hovering_a_form_away_from_canonical_leaves_the_canon_tile_gated_o
     # canonical-form reference tile gates SOLELY on form-tiles (off here), so the form choice never
     # brings it back — it stays absent across the hover, and nothing shifts the dropdown. Leaving clears.
     await user.open("/")
+    _toggle(user, "equivalences")    # off so the form reflow isn't the ring-only disturbing-pick path
     _toggle(user, "form")
     _toggle(user, "form controls")
     await user.should_see(marker="formchooser:mapping")

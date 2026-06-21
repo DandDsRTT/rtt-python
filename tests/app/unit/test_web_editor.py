@@ -2090,7 +2090,9 @@ def test_selecting_a_subcontrol_pulls_its_parent_on():
     # selecting it pulls the parent on too (equivalences shows symbols as equations, mnemonics
     # underlines a name). Enabling equivalences/mnemonics therefore enables symbols/names.
     editor = Editor()
-    assert editor.settings["symbols"] is False
+    editor.set_show("symbols", False)  # symbols ships ON now (cascades equivalences off); turn it
+    assert editor.settings["symbols"] is False  # off so the pull-on below is observable
+    assert editor.settings["equivalences"] is False
     editor.set_show("equivalences", True)
     assert editor.settings["equivalences"] is True
     assert editor.settings["symbols"] is True  # pulled on with its refinement
