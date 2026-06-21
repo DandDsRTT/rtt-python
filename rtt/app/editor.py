@@ -113,7 +113,6 @@ def _initial_doc() -> _Doc:
     )
 
 
-# deque(maxlen) bounds the undo depth so a marathon session can't grow _Doc snapshots forever
 _UNDO_HISTORY_MAX = 500
 
 
