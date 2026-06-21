@@ -493,10 +493,10 @@ _TOUR_STEPS = [
     {"sel": ".rtt-colhead-inner", "place": "bottom", "title": "Columns — the intervals",
      "body": "Across the top sit the columns. The temperament's mapping and generators get their "
              "own columns; target intervals each get one too."},
-    {"sel": ".rtt-cell", "place": "right", "title": "The value cells",
-     "body": "Cells with a box are editable — click to type a new value and the whole temperament "
-             "re-solves. <b>Hover</b> any value to magnify it, and click a cell's speaker to "
-             "<b>hear</b> the pitch."},
+    {"sel": ".rtt-zoomable", "place": "right", "title": "The value cells",
+     "body": "Most of the grid is computed values. <b>Hover</b> any value to magnify it, and click "
+             "a cell's speaker to <b>hear</b> its pitch. Cells drawn with a box are editable — type "
+             "a new value and the whole temperament re-solves."},
     {"sel": ".rtt-titletile", "place": "bottom", "title": "Undo, reset & share",
      "body": "Up here: <b>undo</b> / <b>redo</b> your edits, <b>reset</b> everything to defaults, "
              "and <b>share</b> a link that reopens the app in exactly this state."},
