@@ -6248,22 +6248,25 @@ def test_optimization_box_lays_out_mean_damage_and_power():
     # centred like any other value cell (not stretched/left-justified within the control)
     assert on["optimization:mean_damage"].w == spreadsheet.COL_W
     assert on["optimization:power"].w == spreadsheet.COL_W
-    # the controls DISTRIBUTE across the full-width box (no longer packed left): the mean damage is a
-    # COLUMN hugging the left edge — its symbol and caption span the column width and its COL_W value
-    # cell is centred within it, so a wide min()-wrapped symbol overflows evenly and stays inside the
-    # box. The power sits centered in the gap between the column and the box's right inner edge.
+    # the controls are PACKED LEFT, not distributed across the wide box: the mean damage is a COLUMN
+    # hugging the left inner edge (its symbol and caption span the column width and its COL_W value
+    # cell is centred within it), and the power column sits immediately to its right, one OPT_COL_GAP
+    # away — so when the damage tile is wide the controls stay together at the left instead of drifting
+    # apart. (Same packing as the complexity/slope control regions in this column.)
     mean_damage_col_x = box.x + spreadsheet.OPT_PAD_L
     assert on["optimization:mean_damage:symbol"].x == mean_damage_col_x
     assert on["optimization:mean_damage:symbol"].w == spreadsheet.OPT_MEAN_DAMAGE_W
     assert on["optimization:mean_damage:caption"].x == mean_damage_col_x
     assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet.OPT_MEAN_DAMAGE_W - spreadsheet.COL_W) / 2
     mean_damage_r = mean_damage_col_x + spreadsheet.OPT_MEAN_DAMAGE_W  # the mean damage column's right edge
-    box_inner_r = box.x + box.w - spreadsheet.OPT_PAD_R               # the box's right inner edge
-    # power centered in the gap to the column's right: its COL_W value cell straddles the midpoint
-    assert on["optimization:power"].x == (mean_damage_r + box_inner_r) / 2 - spreadsheet.COL_W / 2
+    # the power column begins one gap past the mean damage column; its caption hugs that left edge and
+    # its COL_W value cell is centred within the (wider) caption width
+    pow_col_x = mean_damage_r + spreadsheet.OPT_COL_GAP
+    assert on["optimization:power:caption"].x == pow_col_x
+    assert on["optimization:power"].x == pow_col_x + (spreadsheet.OPT_POW_CAP_W - spreadsheet.COL_W) / 2
     cap = on["optimization:power:caption"]
     assert cap.x > mean_damage_r and cap.x + cap.w < box.x + box.w  # ...and its caption clears both sides
-    # the box is floored wide enough to seat the spread-out controls
+    # the box is still floored wide enough to seat the controls and their captions
     assert box.w >= spreadsheet.OPT_BOX_MIN_W
     # the caption occupies a single line (so "optimization power" sits right under 𝑝, not a
     # two-line band that floats it lower)
@@ -6279,9 +6282,9 @@ def test_optimization_box_lays_out_mean_damage_and_power():
 
 
 def test_optimization_box_fills_the_full_width_of_the_damage_tile():
-    # the box no longer hugs its controls — it spans the entire target interval damage list
-    # tile (like the tuning-ranges box spans the generator tuning map tile), giving the
-    # controls room to spread out across it
+    # the box spans the entire target interval damage list tile (like the tuning-ranges box spans
+    # the generator tuning map tile, and like the complexity/slope control regions span this column);
+    # its left-packed controls just hug the box's left edge rather than filling it
     lay = _with(optimization=True)
     blk = {b.id: b for b in lay.blocks}
     box = blk["block:optimization:box"]
@@ -6292,14 +6295,14 @@ def test_optimization_box_fills_the_full_width_of_the_damage_tile():
 
 def test_a_narrow_damage_tile_widens_to_seat_the_optimization_box():
     # a 3-limit temperament targets few intervals, so its damage tile would be narrower than
-    # the optimization box's spread-out controls; turning optimization on floors the targets
+    # the optimization box's controls + captions; turning optimization on floors the targets
     # column so the box (and thus the whole tile) is wide enough to seat them
     base = service.from_mapping(((1, 1), (0, 1)))
     s = settings.defaults()
     s["optimization"] = True
     blk = {b.id: b for b in spreadsheet.build(base, s).blocks}
     box = blk["block:optimization:box"]
-    assert box.w >= spreadsheet.OPT_BOX_MIN_W  # wide enough to seat mean damage | power | button
+    assert box.w >= spreadsheet.OPT_BOX_MIN_W  # wide enough to seat mean damage | power
     assert box.w == blk["block:damage:targets"].w - 2 * spreadsheet.PAD  # still fills its tile
 
 

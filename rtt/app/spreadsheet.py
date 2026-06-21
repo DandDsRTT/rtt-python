@@ -2977,7 +2977,8 @@ class _GridBuilder:
             body_h = ROW_H + self.ctrl_symbol_h + cap_band + OPT_PAD_B
             mean_damage_x = ox + OPT_PAD_L
             mean_damage_val_x = mean_damage_x + (OPT_MEAN_DAMAGE_W - COL_W) / 2
-            pow_x = ((mean_damage_x + OPT_MEAN_DAMAGE_W) + (ox + box_w - OPT_PAD_R)) / 2 - COL_W / 2
+            pow_slot_x = mean_damage_x + OPT_MEAN_DAMAGE_W + OPT_COL_GAP
+            pow_x = pow_slot_x + (OPT_POW_CAP_W - COL_W) / 2
             mean_damage = _power_mean(self.target_sizes.damage, self.displayed_mean_damage_power())
             power = _format_power(self.displayed_optimization_power())
             self.cells.append(CellBox("optimization:title", ox, title_top, box_w, OPT_TITLE_H, "boxtitle",
