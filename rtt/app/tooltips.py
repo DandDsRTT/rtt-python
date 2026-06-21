@@ -78,6 +78,30 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "The comma basis sent through the mapping — all zeros, because the temperament makes "
         "exactly these commas vanish.",
         "Mappings", "Making commas vanish"),
+    ("vectors", "primes"): GuideHelp(
+        "The trivial JI mapping — each prime maps to itself, untempered. It is the identity "
+        "every temperament departs from.",
+        "Mappings", "Representing JI"),
+    ("mapping", "targets"): GuideHelp(
+        "Each target interval mapped through 𝑀 (Y = 𝑀T) — how many of each generator it "
+        "takes to reach the temperament's version of that interval.",
+        "Mappings", "The dot product"),
+    ("canon", "primes"): GuideHelp(
+        "The mapping rewritten into its one canonical form, so the same temperament always "
+        "looks the same no matter how it was entered.",
+        "Mappings", "Standard forms"),
+    ("tuning", "targets"): GuideHelp(
+        "Each target interval's size in cents under this tempered tuning (𝐚 = 𝒕T) — what the "
+        "tuning actually delivers, set against its just size.",
+        "Tuning fundamentals", "Tuning"),
+    ("retune", "targets"): GuideHelp(
+        "Each target interval's error: how many cents its tempered size lands from just "
+        "(𝐞 = 𝒓T). The absolute value of that error is the damage.",
+        "Tuning fundamentals", "Damage, error, and weight"),
+    ("tuning", "commas"): GuideHelp(
+        "The comma basis sized under the tempered tuning — all zero cents, because the "
+        "temperament makes exactly these commas vanish.",
+        "Mappings", "Making commas vanish"),
 }
 
 
