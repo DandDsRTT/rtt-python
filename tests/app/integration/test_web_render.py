@@ -528,8 +528,11 @@ async def test_dragging_a_target_onto_the_held_columns_gridline_moves_it_in(user
 
 
 def _cell_left(user: User, cell_id: str) -> float:
-    """A grid cell's current x (the inline left the reconciler placed it at), in px."""
-    return float(next(iter(user.find(marker=cell_id).elements))._style["left"].rstrip("px"))
+    """A grid cell's current x — the translate offset the reconciler placed it at, in px. Cells are
+    positioned by transform:translate(Xpx,Ypx) (so a reflow rides the compositor, not left/top), so x
+    is the first translate argument; the inline left is pinned to 0."""
+    tf = next(iter(user.find(marker=cell_id).elements))._style["transform"]
+    return float(tf.split("translate(", 1)[1].split("px", 1)[0])
 
 
 async def test_hovering_a_reorder_target_previews_the_move_then_reverts(user: User) -> None:

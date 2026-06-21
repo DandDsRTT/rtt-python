@@ -225,7 +225,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
              opacity:1;
              transition:left var(--t), top var(--t), width var(--t), height var(--t), opacity var(--t); }
 .rtt-cell { position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
-            opacity:1; transition:left var(--t), top var(--t), opacity var(--t); }
+            opacity:1; transition:transform var(--t), opacity var(--t); }
 /* titles carry explicit "\n" breaks (col_header) so a multi-word header stacks to two
    lines (e.g. "domain" / "primes"); `pre` honors them AND never auto-wraps, so a title
    wider than its (content-hugging) column overflows it rather than rewrapping. It is

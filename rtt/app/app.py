@@ -3760,7 +3760,11 @@ def index(state: str | None = None) -> None:
                 # of how few actually changed). make_cell/drop above clear these caches via _handle_dicts,
                 # so a freshly built or rebuilt cell has no cached signature and renders unconditionally.
                 top = cb.y - (fy if container in ("body", "row") else 0)
-                geo = f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px"
+                # position via transform:translate (anchored at the container origin) rather than left/top,
+                # so a reflow animates on the COMPOSITOR (the .rtt-cell transition rides `transform`) instead
+                # of left/top — which would re-run layout every frame for every moving cell, the jank when a
+                # basis/column change shifts most of the grid at once. Size still rides width/height.
+                geo = f"left:0; top:0; transform:translate({cb.x}px,{top}px); width:{cb.w}px; height:{cb.h}px"
                 if rec.styled.get(cb.id) != geo:
                     rec.els[cb.id].style(geo)
                     rec.styled[cb.id] = geo
