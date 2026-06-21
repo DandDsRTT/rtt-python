@@ -178,9 +178,13 @@ html, body { overscroll-behavior-x: none; }
    app.apply_view_classes from editor.settings). `animations` off zeroes the transition var, so
    every slide/fade/grow that rides var(--t) — the cell/line position transitions, the rtt-in
    fade, the drawer slide — collapses to an instant snap (the var inherits into body's whole
-   subtree, which is everything). `tooltips` off hides every Quasar hover tooltip outright. */
+   subtree, which is everything). `tooltips` off hides every hover-help surface: the Quasar
+   tooltips (.q-tooltip — chrome buttons, the Show-panel rows) AND the grid value cells' help
+   caption (.rtt-zoom-help, the text below the zoom-hover loupe). The magnifier loupe itself is a
+   separate feature (the zoom-hover), so it keeps popping — only its help caption is suppressed. */
 body.rtt-no-anim { --t:0s; }
-body.rtt-no-tooltips .q-tooltip { display:none !important; }
+body.rtt-no-tooltips .q-tooltip,
+body.rtt-no-tooltips .rtt-zoom-help { display:none !important; }
 
 .rtt-line { position:absolute; z-index:1; opacity:1; transition:left var(--t), top var(--t),
             width var(--t), height var(--t), opacity var(--t); }

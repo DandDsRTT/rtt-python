@@ -2,14 +2,6 @@ from __future__ import annotations
 
 SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
     (
-        "interface",
-        (
-            ("animations", "animations", True),
-            ("preview_highlighting", "preview highlighting", True),
-            ("tooltips", "tooltips", True),
-        ),
-    ),
-    (
         "general",
         (
             ("names", "names", True),
@@ -32,6 +24,9 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
     (
         "specific tiles & controls",
         (
+            ("animations", "animations", True),
+            ("preview_highlighting", "preview highlighting", True),
+            ("tooltips", "tooltips", True),
             ("counts", "counts", True),
             ("interval_ratios", "interval ratios", True),
             ("interval_vectors", "interval vectors", True),
