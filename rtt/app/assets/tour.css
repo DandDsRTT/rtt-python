@@ -23,7 +23,9 @@
   position: fixed;
   z-index: 4001;
   border-radius: 6px;
-  box-shadow: 0 0 0 3px var(--accent-pending, #2e7d32),
+  /* greyscale to match the app (no colour anywhere): a near-white ring reads against the dark
+     scrim, and the scrim itself frames the lit target. The huge spread shadow IS the page dim. */
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92),
               0 0 0 9999px rgba(15, 18, 22, 0.55);
   pointer-events: none;
   transition: top 0.2s, left 0.2s, width 0.2s, height 0.2s;
@@ -101,13 +103,14 @@
 }
 
 .rtt-tour-btns button.rtt-tour-next {
-  border-color: var(--accent-pending, #2e7d32);
-  background: var(--accent-pending, #2e7d32);
+  border-color: #3a3f46;
+  background: #3a3f46;          /* a dark-grey "primary" — emphasis without any colour */
   color: #fff;
 }
 
 .rtt-tour-btns button.rtt-tour-next:hover {
-  filter: brightness(1.08);
+  background: #2b2f35;
+  border-color: #2b2f35;
 }
 
 .rtt-tour-btns button.rtt-tour-skip {
@@ -154,4 +157,16 @@ body.rtt-dark .rtt-tour-btns button.rtt-tour-skip {
 
 body.rtt-dark .rtt-tour-btns button.rtt-tour-skip:hover {
   color: #e3e6ea;
+}
+
+/* on the dark card a dark "primary" would vanish — flip it to a light grey with dark text */
+body.rtt-dark .rtt-tour-btns button.rtt-tour-next {
+  background: #aeb4bc;
+  border-color: #aeb4bc;
+  color: #1b1f24;
+}
+
+body.rtt-dark .rtt-tour-btns button.rtt-tour-next:hover {
+  background: #c4cad1;
+  border-color: #c4cad1;
 }

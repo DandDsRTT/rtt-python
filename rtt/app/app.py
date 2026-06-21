@@ -320,33 +320,23 @@ _TOUR_JS = (_ASSETS / "tour.js").read_text(encoding="utf-8")
 # degrades to a centred card (see tour.js), but the copy would then point at nothing.
 _TOUR_STEPS = [
     {"sel": "", "title": "Welcome to D&D's RTT app",
-     "body": "A spreadsheet for exploring regular temperaments. Here's a quick tour of what's on "
+     "body": "A grid for exploring regular temperaments. Here's a quick tour of what's on "
              "screen — use <b>Next</b> / <b>Back</b> (or the arrow keys), and <b>Skip</b> to leave "
              "anytime."},
-    {"sel": ".rtt-app", "place": "left", "title": "The spreadsheet",
-     "body": "Everything lives in this grid. Each <b>column</b> is an interval or a whole "
-             "temperament, and each <b>row</b> is a quantity computed about it — mappings, "
-             "generators, tunings, errors, and more."},
-    {"sel": ".rtt-rowband", "place": "right", "title": "Rows — the quantities",
-     "body": "The left band names each row. By default you see the core temperament data; the "
-             "settings panel can reveal many more rows as you go."},
-    {"sel": ".rtt-colhead-inner", "place": "bottom", "title": "Columns — the intervals",
-     "body": "Across the top sit the columns. The temperament's mapping and generators get their "
-             "own columns; target intervals each get one too."},
     {"sel": ".rtt-zoomable", "place": "right", "title": "The value cells",
-     "body": "Most of the grid is computed values. <b>Hover</b> any value to magnify it, and click "
-             "a cell's speaker to <b>hear</b> its pitch. Cells drawn with a box are editable — type "
-             "a new value and the whole temperament re-solves."},
+     "body": "Most of the grid is computed values. Cells drawn with a box are editable — type a "
+             "new value and the whole grid recomputes."},
+    {"sel": ".rtt-fanbtn", "place": "bottom", "title": "Reshaping the grid",
+     "body": "The grid grows and shrinks with you. A <b>+</b> button adds a column or row — a new "
+             "interval or mapping row; hovering a column or row reveals a <b>−</b> to remove it. "
+             "The little chevrons expand or collapse a tile."},
     {"sel": ".rtt-titletile", "place": "bottom", "title": "Undo, reset & share",
      "body": "Up here: <b>undo</b> / <b>redo</b> your edits, <b>reset</b> everything to defaults, "
              "and <b>share</b> a link that reopens the app in exactly this state."},
     {"sel": ".rtt-hamburger", "place": "right", "open": True, "title": "The settings panel",
      "body": "This hamburger opens the Show panel — the control room for the whole grid. Let's "
              "open it up."},
-    {"sel": ".rtt-show-all", "place": "right", "open": True, "title": "Select all & dark mode",
-     "body": "<b>Select all / none</b> turns every available row on or off at once, and the "
-             "sun/moon button switches between the light and dark themes."},
-    {"sel": ".rtt-chapter-slider", "place": "right", "open": True, "title": "Guide chapters",
+    {"sel": ".rtt-chapter-group", "place": "right", "open": True, "title": "Guide chapters",
      "body": "New to the theory? This slider reveals the controls chapter by chapter, the way "
              "D&D's guide introduces them — slide left for a simpler view, right (to ★) for "
              "everything."},
@@ -354,9 +344,11 @@ _TOUR_STEPS = [
      "body": "This sample tile is a live menu: click any part of it — the name, the symbol, the "
              "closed form, the units — to show or hide that feature across the whole grid. The "
              "audio controls up top drive every speaker."},
-    {"sel": ".rtt-show-scroll", "place": "right", "open": True, "title": "The Show toggles",
-     "body": "Below the sample tile, these checkboxes switch each kind of row on and off. Turn "
-             "things on as you need them — start small and build up."},
+    {"sel": ".rtt-show-scroll .rtt-show-group:last-child", "place": "right", "open": True,
+     "title": "The Show toggles",
+     "body": "These checkboxes reveal each kind of feature — not only extra rows and columns, but "
+             "the controls that come with them and which cells you can edit. Turn things on as you "
+             "need them — start small and build up."},
     {"sel": "", "title": "That's the tour",
      "body": "Explore freely — nothing here is permanent, and <b>reset</b> always brings back the "
              "defaults. Replay this tour anytime from the <b>?</b> button by the undo/redo "
