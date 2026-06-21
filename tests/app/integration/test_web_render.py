@@ -4055,6 +4055,35 @@ async def test_a_mid_render_exception_restores_the_build_guard_so_handlers_stay_
     assert "7" in live._MEMORY_STORE[live._STORE_KEY]["mapping_ebk"]   # NOT swallowed by a stuck guard
 
 
+async def test_the_reconcile_updates_only_changed_cells_not_the_whole_page(
+        user: User, monkeypatch) -> None:
+    # PERF GUARD (the change-guarded reconcile). render() once swept update_cell over EVERY cell on every
+    # interaction, so changing one value re-ran the whole page's per-cell work (~1.4s on a dense grid).
+    # It now re-asserts a cell ONLY when its content/size signature changed since the last render. Count
+    # update_cell calls: a cold full build touches every cell, but a following fold of a single row — which
+    # leaves every other row's content intact — must update only a fraction. A regression to the
+    # unconditional sweep would update ~every cell again, tripping this bound.
+    await user.open("/")
+    live = _live()
+    calls: list = []
+    orig = live._Reconciler.update_cell
+
+    def counting(self, cb):
+        calls.append(cb.id)
+        return orig(self, cb)
+
+    monkeypatch.setattr(live._Reconciler, "update_cell", counting)
+    await user.open("/")                                   # a fresh page = cold caches = full build
+    full = len(calls)
+    assert full > 50                                       # the build really did render a full grid
+    calls.clear()
+    user.find(marker="toggle:row:tuning").click()          # fold ONE row; the rest of the grid is unchanged
+    folded = len(calls)
+    # the fold re-asserts only the folded row's cells + the always-updated interactive cells — far short
+    # of the whole page. The unconditional-sweep regression would make this ≈ full.
+    assert folded < full * 0.6, f"a one-row fold updated {folded} of {full} cells — reconcile not skipping unchanged"
+
+
 async def test_a_corrupt_persisted_field_keeps_the_saved_document_and_warns(
         user: User, caplog) -> None:
     # index() falls back to defaults when editor.load(stored) raises; render() must NOT then overwrite

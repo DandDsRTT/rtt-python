@@ -855,20 +855,33 @@ class _Reconciler:
         self.expr_state: dict = {}
         self.kinds: dict = {}
         self.selects: dict = {}  # preset cell id -> its q-select
-        self.checks: dict = {}
-        self.ptext_inputs: dict = {}
-        self.rangeopts: dict = {}
-        self.scheme_buttons: dict = {}
-        self.mean_damage_tips: dict = {}
-        self.target_limit_tip = None
-        self.captions: dict = {}
-        self.caption_html: dict = {}
-        self.math_cells: dict = {}
-        self.math_rendered: dict = {}
-        self.fold_state: dict = {}
-        self.cell_units: dict = {}
-        self.cell_unit_text: dict = {}
-        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.ratio_ops, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.stacked_w, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.scheme_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self.checks: dict = {}  # control_check cell id -> its q-checkbox (the box-𝐋 "replace diminuator")
+        self.ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
+        self.rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
+        self.scheme_buttons: dict = {}  # back-to-scheme button cell id -> its ui.button (for the idle grey)
+        self.mean_damage_tips: dict = {}  # mean damage SYMBOL cell id -> its ui.tooltip (the value cell folds its
+        # help into the zoom magnifier as data-zoomhelp; the symbol — not a value cell — keeps a swappable tooltip)
+        self.target_limit_tip = None  # the target chooser's ui.tooltip (text swaps to an invalid-limit message)
+        self.captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
+        self.caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
+        self.math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
+        self.math_rendered: dict = {}  # ...and its last html, to rewrite on an equivalences toggle / value change
+        self.fold_state: dict = {}  # fold-toggle cell id -> last state token (unfold_more/less), to swap its SVG on change
+        self.cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
+        self.cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
+        # Change-guard caches: the last applied (geometry string / content signature / ring state) per
+        # entity, so render() reapplies an element's style/content/rings ONLY when it actually changed
+        # — most cells are untouched between renders, so the reconcile skips them instead of re-running
+        # the per-cell work over the whole page on every interaction.
+        self.styled: dict = {}       # entity id -> last applied position/size style string
+        self.content_sig: dict = {}  # cell id -> last (content fields, w, h, audio) it was updated for
+        self.ring_sig: dict = {}     # cell id -> last (in-amber, in-red) ring state it was painted for
+        # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
+        # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
+        # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
+        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.ratio_ops, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.stacked_w, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.scheme_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text, self.styled, self.content_sig, self.ring_sig)
+        # The active preview gesture — the ONE record the ring highlights derive from (see
+        # _Gesture). None when no gesture is live; every paint recomputes the rings from it.
         self.gesture: _Gesture | None = None
         self.popup_state: dict = {}
         self.cell_kinds: dict[str, _KindHandlers] = {}
@@ -2253,15 +2266,22 @@ def index(state: str | None = None) -> None:
         return frozenset(), frozenset()
 
     def paint_cell(eid, amber, red):
-        # idempotently set one cell's ring classes from the computed sets (NiceGUI's classes() is
-        # change-detected, so a no-op repaint sends nothing over the socket)
+        # idempotently set one cell's ring classes from the computed sets. Self-guarded on the cached
+        # ring state so an unchanged cell is skipped entirely (the common case — rings move only around
+        # the gesture); both render()'s sweep and paint_rings()'s hover sweep go through here, so the
+        # cache stays consistent whichever path painted last. (NiceGUI's classes() is itself change-
+        # detected, so even an un-guarded no-op sends nothing over the socket — this skips the Python.)
         el = rec.els.get(eid)
         if el is None:
+            return  # a ring id with no DOM element (nothing on screen to mark) — skip
+        rsig = (eid in amber, eid in red)
+        if rec.ring_sig.get(eid) == rsig:
             return
         el.classes(add="rtt-preview-change" if eid in amber else "",
                    remove="" if eid in amber else "rtt-preview-change")
         el.classes(add="rtt-preview-remove" if eid in red else "",
                    remove="" if eid in red else "rtt-preview-remove")
+        rec.ring_sig[eid] = rsig
 
     def paint_rings():
         lay = last_lay[0]
@@ -3564,7 +3584,10 @@ def index(state: str | None = None) -> None:
                     with parent:
                         cls = "rtt-line " + ("rtt-line-v" if ln.orientation == "v" else "rtt-line-h")
                         rec.els[eid] = ui.element("div").classes(cls).props(f'data-eid="{eid}"')
-                rec.els[eid].style(_line_style(ln, shift))
+                sty = _line_style(ln, shift)
+                if rec.styled.get(eid) != sty:  # only restyle a line that actually moved
+                    rec.els[eid].style(sty)
+                    rec.styled[eid] = sty
 
             for ln in lay.lines:
                 x0, x1 = (ln.pos, ln.pos) if ln.orientation == "v" else (ln.start, ln.start + ln.length)
@@ -3590,7 +3613,9 @@ def index(state: str | None = None) -> None:
                 style = f"left:{bl.x}px; top:{bl.y - shift}px; width:{bl.w}px; height:{bl.h}px"
                 if bl.tint in _TINTS:
                     style += f"; background:var(--wash-{bl.tint})"
-                rec.els[eid].style(style)
+                if rec.styled.get(eid) != style:  # only restyle a block that actually moved/recoloured
+                    rec.els[eid].style(style)
+                    rec.styled[eid] = style
 
             for bl in lay.blocks:
                 for pane in _block_panes(bl, fx, fy):
@@ -3611,10 +3636,33 @@ def index(state: str | None = None) -> None:
                 if cb.id not in rec.els:
                     with cell_parents[container]:
                         rec.make_cell(cb)
+                # body + row cells live in the scroll space (shifted up by fy); column + corner cells
+                # keep native coords in their frozen strip / corner. Each of the three reconcile steps —
+                # reposition, refresh content, repaint rings — runs ONLY when its own signature changed
+                # since the last render, so an interaction that moves a handful of cells doesn't re-run
+                # the whole page's per-cell work (the reconcile was ~1.4s sweeping all cells regardless
+                # of how few actually changed). make_cell/drop above clear these caches via _handle_dicts,
+                # so a freshly built or rebuilt cell has no cached signature and renders unconditionally.
                 top = cb.y - (fy if container in ("body", "row") else 0)
-                rec.els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
-                rec.update_cell(cb)
-                paint_cell(cb.id, amber, red)
+                geo = f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px"
+                if rec.styled.get(cb.id) != geo:
+                    rec.els[cb.id].style(geo)
+                    rec.styled[cb.id] = geo
+                # content depends on the cell's value fields AND its w/h (width-fitted faces re-fit on
+                # resize), so the signature carries both; audio rides along (a retune rebakes the pitch).
+                # BUT an interactive cell — one carrying an input, select, checkbox or fraction-mode box —
+                # can have its DOM changed by the USER (typing) or hover JS between renders, so its cached
+                # signature no longer reflects the live DOM. Such a cell is always re-asserted, so an
+                # improper-commit REVERT restores the box even though its value is unchanged from the last
+                # render (the bug that surfaced here). Read-only display cells — the vast majority — are
+                # only the server's to change, so the cache safely skips them.
+                csig = (spreadsheet._cell_content(cb), cb.w, cb.h, cb.audio)
+                volatile = any(cb.id in d for d in (rec.inputs, rec.den_inputs, rec.ptext_inputs,
+                                                    rec.selects, rec.checks, rec.frac_edits, rec.ratio_ops))
+                if volatile or rec.content_sig.get(cb.id) != csig:
+                    rec.update_cell(cb)
+                    rec.content_sig[cb.id] = csig
+                paint_cell(cb.id, amber, red)  # self-guards on ring_sig (cheap no-op when unchanged)
 
             for eid in [e for e in rec.els if e not in seen]:
                 rec.drop(eid)
