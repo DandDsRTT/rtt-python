@@ -1,0 +1,20 @@
+# Fast pre-commit subset (runs on staged files). The full hard gate — including
+# the 95% coverage run — is `bin/lint --cov`; coverage is too slow for a hook.
+# Install once:  .venv/bin/pre-commit install
+minimum_pre_commit_version: "4.0.0"
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.18
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: local
+    hooks:
+      - id: quality-metrics
+        name: structural metrics (file/function length, docstring ban)
+        entry: .venv/bin/python -m tools.quality_checks
+        language: system
+        args: [rtt, tools]
+        pass_filenames: false
+        types: [python]

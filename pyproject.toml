@@ -1,0 +1,63 @@
+# Code-quality configuration. The enforced gate is `bin/lint` (and the
+# pre-commit hooks); see CODE_QUALITY.md for the threshold ratchet plan.
+#
+# Structural thresholds live here where the tool reads them:
+#   - complexity (mccabe C901)        : pylint/mccabe sections below
+#   - arguments / statements / nesting: [tool.ruff.lint.pylint] below
+#   - file length / function length   : tools/quality_checks.py (ruff has no rule)
+# Current strict-but-staged values are 50-line functions / 500-line files / args<=4,
+# ratcheting toward 10-line functions / 100-line files. Tighten in lockstep.
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["guide", ".venv"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",      # pycodestyle
+    "F",           # pyflakes
+    "I",           # isort
+    "UP",          # pyupgrade
+    "B",           # flake8-bugbear
+    "C4",          # flake8-comprehensions
+    "SIM",         # flake8-simplify
+    "RET",         # flake8-return
+    "ARG",         # flake8-unused-arguments
+    "PIE",         # flake8-pie
+    "RUF",         # ruff-specific
+    "C901",        # mccabe cyclomatic complexity
+    "PLC", "PLE", "PLR", "PLW",  # pylint
+]
+ignore = [
+    "PLR2004",     # magic-value-comparison — pervasive and meaningful in RTT math
+    "RUF001", "RUF002", "RUF003",  # "ambiguous" unicode: the math notation (𝒈 ⟨ ⟩ …) is intentional
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-args = 4
+max-nested-blocks = 4
+max-statements = 50
+max-branches = 12
+max-returns = 6
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401", "F403", "F405"]
+"tests/**/*.py" = ["ARG", "PLR0913", "PLR0915", "C901", "PLR0912", "E501", "SIM", "B011"]
+
+[tool.coverage.run]
+branch = true
+source = ["rtt"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@(abc\\.)?abstractmethod",
+]

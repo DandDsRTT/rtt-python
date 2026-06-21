@@ -1,0 +1,7 @@
+# Development-only tooling: lint, format, complexity, coverage, git hooks.
+# Kept OUT of requirements.txt so the Render production build stays lean.
+# Install into the persistent venv:  .venv/bin/pip install -r requirements-dev.txt
+ruff==0.15.18
+coverage==7.14.2
+radon==6.0.1
+pre-commit==4.6.0

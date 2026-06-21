@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# The code-quality hard gate. Runs every check and reports them all (it does NOT
+# stop at the first failure), then exits non-zero if any check failed.
+#
+#   bin/lint          lint + format-check + structural metrics + complexity report
+#   bin/lint --cov    all of the above PLUS the 95% branch-coverage gate (slow:
+#                     it runs the full test suite, including the render gate)
+#
+# Interpreter: defaults to the persistent ./.venv; override with RTT_PY for a
+# worktree (which has no local .venv), e.g.
+#   RTT_PY=/path/to/main-checkout/.venv/bin/python bin/lint
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+PY="${RTT_PY:-.venv/bin/python}"
+
+rc=0
+step() {
+    local title="$1"; shift
+    echo "== ${title} =="
+    if "$@"; then
+        echo "   ok"
+    else
+        echo "   FAILED"
+        rc=1
+    fi
+}
+
+step "ruff lint"               "$PY" -m ruff check rtt tools
+step "ruff format (check)"     "$PY" -m ruff format --check rtt tools
+step "structural metrics"      "$PY" -m tools.quality_checks rtt tools
+
+echo "== complexity (radon, report-only) =="
+"$PY" -m radon cc rtt tools -s -n C || true
+
+if [[ "${1:-}" == "--cov" ]]; then
+    step "coverage 95% branch gate" bash -c \
+        "'$PY' -m coverage run --branch --source=rtt -m pytest -q && '$PY' -m coverage report"
+fi
+
+if [[ $rc -eq 0 ]]; then
+    echo "== lint: PASS =="
+else
+    echo "== lint: FAIL =="
+fi
+exit $rc
