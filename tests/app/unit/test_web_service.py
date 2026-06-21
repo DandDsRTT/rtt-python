@@ -375,6 +375,17 @@ def test_interval_op_availability_gates_the_two_buttons():
     assert service.interval_op_availability("5/2", (3, 5, 7)) == (False, True)
 
 
+def test_transform_ratio_reduces_or_reciprocates_a_ratio_string():
+    # the ratio-string form used to relabel a domain basis element through set_domain_element
+    assert service.transform_ratio("13/5", "reduce", (2, 3, Fraction(13, 5))) == "13/10"
+    assert service.transform_ratio("13/5", "reciprocate") == "5/13"
+    assert service.transform_ratio("9/4", "reduce") == "9/8"
+    assert service.transform_ratio("2", "reduce") == "1"            # the equave folds to a bare integer
+    assert service.transform_ratio("5/4", "reduce") is None         # already reduced — a no-op
+    assert service.transform_ratio("1", "reciprocate") is None      # a unison — a no-op
+    assert service.transform_ratio("?/?", "reduce") is None         # a blank draft
+
+
 def test_interval_vector_parses_a_ratio_into_its_vector():
     # the inverse of comma_ratios, for the editable quantities-row ratio cells: one ratio
     # string back to its interval vector over the d domain primes (a round trip)

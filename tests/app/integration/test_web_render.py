@@ -384,6 +384,21 @@ async def test_clicking_reciprocate_on_a_comma_flips_its_sign(user: User) -> Non
     assert _cell_child(user, "comma:0").value == "81"
 
 
+async def test_editable_domain_basis_elements_get_the_buttons(user: User) -> None:
+    # with nonstandard-domain on, the basis elements become editable (elementcell/elementratio) and
+    # carry the buttons too — reducing element 3 relabels it to 3/2 (then already reduced). The
+    # read-only standard primes (box off) get nothing. nonstandard-domain is a ch9 control, so the
+    # chapter slider must be pushed up to reveal it first.
+    await user.open("/")
+    slider = next(iter(user.find(marker="chapterslider").elements))
+    slider.set_value(show_settings.CHAPTER_STAR)             # reveal the ch9 control
+    _toggle(user, "nonstandard domain")                      # make the 2.3.5 elements editable
+    await user.should_see(marker="prime:1:reduce")           # element 3 now carries the buttons
+    assert "rtt-op-disabled" not in _op_classes(user, "prime:1:reduce")   # 3 reduces to 3/2
+    UserInteraction(user, set(user.find(marker="prime:1:reduce").elements), None).trigger("click")
+    assert "rtt-op-disabled" in _op_classes(user, "prime:1:reduce")       # 3/2 is already reduced
+
+
 async def test_a_projection_plain_text_edit_is_unmolested_until_submit(user: User) -> None:
     # the whole point of the plain-text edit: while you TYPE (before blur/Enter) an in-progress string
     # neither retunes, reddens, nor toasts — only SUBMITTING validates. An invalid value left

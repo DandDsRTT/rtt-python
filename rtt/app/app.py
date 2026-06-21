@@ -1276,7 +1276,16 @@ class _Reconciler:
         self._arm_ratio_ops(cb, wrap)
 
     def _arm_ratio_ops(self, cb: spreadsheet.CellBox, wrap) -> None:
-        if cb.kind != "ratiocell" or cb.pending or cb.id.split(":", 1)[0] not in ("comma", "target", "held", "interest"):
+        # the equave-reduce + reciprocate buttons flanking the bar of an editable interval ratio —
+        # any editable interval ratiocell (commas / targets / held / intervals of interest) AND the
+        # editable domain basis elements (nonstandard-domain box on: elementcell / elementratio). NOT
+        # the read-only derived faces (the ~generator ratios, a non-projection unchanged column, the
+        # standard read-only domain primes), which carry no value to edit in place. Each reveals on
+        # hover, hides while the cell is edited, and reads disabled when its op is a no-op: an interval
+        # already inside [1, equave) can't reduce, a unison can't reciprocate. They commit through
+        # transform_interval, one undo step.
+        if cb.kind not in ("ratiocell", "elementcell", "elementratio") or cb.pending \
+                or cb.id.split(":", 1)[0] not in ("comma", "target", "held", "interest", "prime"):
             return
         wrap.classes("rtt-ratioed")
         with wrap:
@@ -2489,12 +2498,34 @@ def index(state: str | None = None) -> None:
         _request_render()
 
     def transform_interval(cid, op):
+        # the equave-reduce / reciprocate buttons flanking an editable interval ratio (commas / targets
+        # / held / interest) or an editable domain basis element (prime). Resolve the cell's value,
+        # apply the op, and route it through the SAME setter a manual edit uses — one undo step, every
+        # dependent row recomputed. A no-op (already reduced, or a unison reciprocated) commits nothing,
+        # so a disabled button is safe.
         if building[0] or cid not in rec.inputs:
             return
         group, tok = cid.split(":")
-        if group not in ("comma", "target", "held", "interest") or tok == "pending":
+        if group not in ("comma", "target", "held", "interest", "prime") or tok == "pending":
             return
         _end_commit_gestures()
+        if group == "prime":  # relabel a domain basis element to its reduced / reciprocated ratio
+            new_raw = service.transform_ratio(rec.cell_value(cid), op, editor.state.domain_basis)
+            if new_raw is None:
+                return  # no-op / unparseable
+            index = int(tok)
+            parsed = service.parse_domain_element(new_raw)
+            if parsed is None:
+                ui.notify(f"“{new_raw}” is not a valid basis element (≠ 1)", type="negative", position="top")
+                render()
+                return
+            if not service.can_set_domain_element(editor.state, index, parsed):
+                ui.notify(f"{new_raw} would make the basis dependent", type="negative", position="top")
+                render()
+                return
+            editor.set_domain_element(index, new_raw)
+            _request_render()
+            return
         if group == "comma":
             current, setter, list_name = editor.state.comma_basis, editor.edit_comma_basis, "commas"
         elif group == "target":

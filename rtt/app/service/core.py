@@ -417,6 +417,19 @@ def interval_op_availability(ratio: str, domain_basis=None) -> tuple[bool, bool]
     return (equave_reduce(q, equave_quotient(domain_basis)) != q, q != 1)
 
 
+def transform_ratio(ratio: str, op: str, domain_basis=None) -> str | None:
+    try:
+        q = Fraction(str(ratio))
+    except (ValueError, ZeroDivisionError):
+        return None
+    if q <= 0:
+        return None
+    new = (1 / q) if op == "reciprocate" else equave_reduce(q, equave_quotient(domain_basis))
+    if new == q:
+        return None
+    return str(new.numerator) if new.denominator == 1 else f"{new.numerator}/{new.denominator}"
+
+
 def tuning(
     mapping,
     scheme: str = DEFAULT_TUNING_SCHEME,
