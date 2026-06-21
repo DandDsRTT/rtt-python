@@ -28,82 +28,90 @@ def prescaler_options(include_alternatives: bool) -> tuple[str, ...]:
         return tuple(service.PRESCALERS)
     return ("log-prime",)
 
+
 TARGET_SETS: tuple[str, ...] = ("TILT", "OLD")
 
-TEMPERAMENTS_BY_LIMIT: tuple[tuple[int, tuple[tuple[str, tuple[tuple[int, ...], ...]], ...]], ...] = (
-    (5, (
-        ("Dicot", ((-3, -1, 2),)),
-        ("Meantone", ((-4, 4, -1),)),
-        ("Augmented", ((7, 0, -3),)),
-        ("Mavila", ((-7, 3, 1),)),
-        ("Porcupine", ((1, -5, 3),)),
-        ("Blackwood", ((8, -5, 0),)),
-        ("Diminished", ((3, 4, -4),)),
-        ("Srutal", ((11, -4, -2),)),
-        ("Magic", ((-10, -1, 5),)),
-        ("Ripple", ((-1, 8, -5),)),
-        ("Hanson", ((-6, -5, 6),)),
-        ("Negri", ((-14, 3, 4),)),
-        ("Tetracot", ((5, -9, 4),)),
-        ("Superpyth", ((12, -9, 1),)),
-        ("Helmholtz", ((-15, 8, 1),)),
-        ("Sensi", ((2, 9, -7),)),
-        ("Passion", ((18, -4, -5),)),
-        ("Würschmidt", ((17, 1, -8),)),
-        ("Compton", ((-19, 12, 0),)),
-        ("Amity", ((9, -13, 5),)),
-        ("Orson", ((-21, 3, 7),)),
-        ("Father", ((4, -1, -1),)),
-        ("Bug", ((0, 3, -2),)),
-        ("Vishnu", ((23, 6, -14),)),
-        ("Luna", ((38, -2, -15),)),
-    )),
-    (7, (
-        ("Blacksmith", ((2, -3, 0, 1), (-4, -1, 0, 2))),
-        ("Diminished", ((2, 2, -1, -1), (1, 0, 2, -2))),
-        ("Dominant", ((2, 2, -1, -1), (6, -2, 0, -1))),
-        ("August", ((2, 2, -1, -1), (7, 0, -3, 0))),
-        ("Pajara", ((1, 0, 2, -2), (6, -2, 0, -1))),
-        ("Semaphore", ((-4, -1, 0, 2), (-4, 4, -1, 0))),
-        ("Septimal Meantone", ((-4, 4, -1, 0), (1, 2, -3, 1))),
-        ("Injera", ((1, 0, 2, -2), (-4, 4, -1, 0))),
-        ("Negri", ((-4, -1, 0, 2), (-5, 2, 2, -1))),
-        ("Augene", ((6, -2, 0, -1), (1, 2, -3, 1))),
-        ("Keemun", ((-4, -1, 0, 2), (1, 2, -3, 1))),
-        ("Catler", ((-4, 4, -1, 0), (7, 0, -3, 0))),
-        ("Hedgehog", ((1, 0, 2, -2), (0, -5, 1, 2))),
-        ("Superpyth", ((6, -2, 0, -1), (0, -5, 1, 2))),
-        ("Sensi", ((1, 2, -3, 1), (0, -5, 1, 2))),
-        ("Lemba", ((1, 0, 2, -2), (-9, 1, 2, 1))),
-        ("Porcupine", ((6, -2, 0, -1), (1, -5, 3, 0))),
-        ("Flattone", ((-4, 4, -1, 0), (-9, 1, 2, 1))),
-        ("Magic", ((-5, 2, 2, -1), (0, -5, 1, 2))),
-        ("Doublewide", ((1, 0, 2, -2), (-5, -3, 3, 1))),
-        ("Nautilus", ((-4, -1, 0, 2), (1, -5, 3, 0))),
-        ("Beatles", ((6, -2, 0, -1), (1, -3, -2, 3))),
-        ("Liese", ((-4, 4, -1, 0), (1, -3, -2, 3))),
-        ("Mothra", ((-4, 4, -1, 0), (-10, 1, 0, 3))),
-        ("Orwell", ((-5, 2, 2, -1), (6, 3, -1, -3))),
-        ("Garibaldi", ((-5, 2, 2, -1), (0, -2, 5, -3))),
-        ("Myna", ((1, 2, -3, 1), (6, 3, -1, -3))),
-        ("Miracle", ((-5, 2, 2, -1), (-10, 1, 0, 3))),
-        ("Ennealimmal", ((-5, -1, -2, 4), (-1, -7, 4, 1))),
-        ("Marvel", ((-5, 2, 2, -1),)),
-        ("Starling", ((1, 2, -3, 1),)),
-    )),
-    (11, (
-        ("Miracle", ((-5, 2, 2, -1, 0), (-10, 1, 0, 3, 0), (-7, -1, 1, 1, 1))),
-        ("Marvel", ((-5, 2, 2, -1, 0), (-7, -1, 1, 1, 1))),
-    )),
-    (13, (
-        ("Marvel", ((-5, 2, 2, -1, 0, 0), (-7, -1, 1, 1, 1, 0), (-2, -4, 2, 0, 0, 1))),
-    )),
+TEMPERAMENTS_BY_LIMIT: tuple[
+    tuple[int, tuple[tuple[str, tuple[tuple[int, ...], ...]], ...]], ...
+] = (
+    (
+        5,
+        (
+            ("Dicot", ((-3, -1, 2),)),
+            ("Meantone", ((-4, 4, -1),)),
+            ("Augmented", ((7, 0, -3),)),
+            ("Mavila", ((-7, 3, 1),)),
+            ("Porcupine", ((1, -5, 3),)),
+            ("Blackwood", ((8, -5, 0),)),
+            ("Diminished", ((3, 4, -4),)),
+            ("Srutal", ((11, -4, -2),)),
+            ("Magic", ((-10, -1, 5),)),
+            ("Ripple", ((-1, 8, -5),)),
+            ("Hanson", ((-6, -5, 6),)),
+            ("Negri", ((-14, 3, 4),)),
+            ("Tetracot", ((5, -9, 4),)),
+            ("Superpyth", ((12, -9, 1),)),
+            ("Helmholtz", ((-15, 8, 1),)),
+            ("Sensi", ((2, 9, -7),)),
+            ("Passion", ((18, -4, -5),)),
+            ("Würschmidt", ((17, 1, -8),)),
+            ("Compton", ((-19, 12, 0),)),
+            ("Amity", ((9, -13, 5),)),
+            ("Orson", ((-21, 3, 7),)),
+            ("Father", ((4, -1, -1),)),
+            ("Bug", ((0, 3, -2),)),
+            ("Vishnu", ((23, 6, -14),)),
+            ("Luna", ((38, -2, -15),)),
+        ),
+    ),
+    (
+        7,
+        (
+            ("Blacksmith", ((2, -3, 0, 1), (-4, -1, 0, 2))),
+            ("Diminished", ((2, 2, -1, -1), (1, 0, 2, -2))),
+            ("Dominant", ((2, 2, -1, -1), (6, -2, 0, -1))),
+            ("August", ((2, 2, -1, -1), (7, 0, -3, 0))),
+            ("Pajara", ((1, 0, 2, -2), (6, -2, 0, -1))),
+            ("Semaphore", ((-4, -1, 0, 2), (-4, 4, -1, 0))),
+            ("Septimal Meantone", ((-4, 4, -1, 0), (1, 2, -3, 1))),
+            ("Injera", ((1, 0, 2, -2), (-4, 4, -1, 0))),
+            ("Negri", ((-4, -1, 0, 2), (-5, 2, 2, -1))),
+            ("Augene", ((6, -2, 0, -1), (1, 2, -3, 1))),
+            ("Keemun", ((-4, -1, 0, 2), (1, 2, -3, 1))),
+            ("Catler", ((-4, 4, -1, 0), (7, 0, -3, 0))),
+            ("Hedgehog", ((1, 0, 2, -2), (0, -5, 1, 2))),
+            ("Superpyth", ((6, -2, 0, -1), (0, -5, 1, 2))),
+            ("Sensi", ((1, 2, -3, 1), (0, -5, 1, 2))),
+            ("Lemba", ((1, 0, 2, -2), (-9, 1, 2, 1))),
+            ("Porcupine", ((6, -2, 0, -1), (1, -5, 3, 0))),
+            ("Flattone", ((-4, 4, -1, 0), (-9, 1, 2, 1))),
+            ("Magic", ((-5, 2, 2, -1), (0, -5, 1, 2))),
+            ("Doublewide", ((1, 0, 2, -2), (-5, -3, 3, 1))),
+            ("Nautilus", ((-4, -1, 0, 2), (1, -5, 3, 0))),
+            ("Beatles", ((6, -2, 0, -1), (1, -3, -2, 3))),
+            ("Liese", ((-4, 4, -1, 0), (1, -3, -2, 3))),
+            ("Mothra", ((-4, 4, -1, 0), (-10, 1, 0, 3))),
+            ("Orwell", ((-5, 2, 2, -1), (6, 3, -1, -3))),
+            ("Garibaldi", ((-5, 2, 2, -1), (0, -2, 5, -3))),
+            ("Myna", ((1, 2, -3, 1), (6, 3, -1, -3))),
+            ("Miracle", ((-5, 2, 2, -1), (-10, 1, 0, 3))),
+            ("Ennealimmal", ((-5, -1, -2, 4), (-1, -7, 4, 1))),
+            ("Marvel", ((-5, 2, 2, -1),)),
+            ("Starling", ((1, 2, -3, 1),)),
+        ),
+    ),
+    (
+        11,
+        (
+            ("Miracle", ((-5, 2, 2, -1, 0), (-10, 1, 0, 3, 0), (-7, -1, 1, 1, 1))),
+            ("Marvel", ((-5, 2, 2, -1, 0), (-7, -1, 1, 1, 1))),
+        ),
+    ),
+    (13, (("Marvel", ((-5, 2, 2, -1, 0, 0), (-7, -1, 1, 1, 1, 0), (-2, -4, 2, 0, 0, 1))),)),
 )
 
 TEMPERAMENT_COMMAS: dict[str, tuple[tuple[int, ...], ...]] = {
-    f"{limit}:{name}": commas
-    for limit, group in TEMPERAMENTS_BY_LIMIT
-    for name, commas in group
+    f"{limit}:{name}": commas for limit, group in TEMPERAMENTS_BY_LIMIT for name, commas in group
 }
 
 
@@ -116,9 +124,11 @@ def is_divider(value: str) -> bool:
 
 def temperament_options() -> dict[str, str]:
     entries = sorted(
-        ((len(commas[0]) - len(commas), limit, name)
-         for limit, group in TEMPERAMENTS_BY_LIMIT
-         for name, commas in group),
+        (
+            (len(commas[0]) - len(commas), limit, name)
+            for limit, group in TEMPERAMENTS_BY_LIMIT
+            for name, commas in group
+        ),
         key=lambda e: (e[0], e[1]),
     )
     options: dict[str, str] = {}
@@ -131,7 +141,9 @@ def temperament_options() -> dict[str, str]:
     return options
 
 
-def tuning_scheme_options(all_interval: bool, include_alternatives: bool, weighting: bool) -> dict[str, str]:
+def tuning_scheme_options(
+    all_interval: bool, include_alternatives: bool, weighting: bool
+) -> dict[str, str]:
     families = tuning_schemes(include_alternatives)
     if all_interval:
         return {name: name for name in families}
@@ -166,8 +178,11 @@ def projection_candidate_ratios(state) -> tuple[str, ...]:
 
 def established_projections(state) -> dict[str, tuple[str, ...]]:
     candidates = ESTABLISHED_PROJECTIONS.get(identify(state), {})
-    return {name: ratios for name, ratios in candidates.items()
-            if service.tuning_projection(state, ratios) is not None}
+    return {
+        name: ratios
+        for name, ratios in candidates.items()
+        if service.tuning_projection(state, ratios) is not None
+    }
 
 
 def projection_options(state) -> dict[str, str]:
@@ -182,8 +197,14 @@ def identify_established_projection(state, held_ratios) -> str | None:
     current = service.tuning_projection(state, held_ratios)
     if current is None:
         return None
-    return next((name for name, ratios in established_projections(state).items()
-                 if service.tuning_projection(state, ratios) == current), None)
+    return next(
+        (
+            name
+            for name, ratios in established_projections(state).items()
+            if service.tuning_projection(state, ratios) == current
+        ),
+        None,
+    )
 
 
 @functools.lru_cache(maxsize=1)
@@ -197,7 +218,6 @@ def _signature_to_value() -> dict[tuple[tuple[int, ...], ...], str]:
 def identify(state) -> str | None:
     signature = service.from_mapping(state.mapping).comma_basis
     return _signature_to_value().get(signature)
-
 
 
 CURATED_COMMAS: tuple[tuple[str, str], ...] = (
@@ -269,8 +289,27 @@ CURATED_COMMAS: tuple[tuple[str, str], ...] = (
 
 _MAX_UNIFORM_MAP_EDO = 72
 _NOTABLE_EDOS_ABOVE_72: tuple[int, ...] = (
-    80, 87, 94, 99, 103, 111, 118, 130, 140, 152, 159, 171, 183, 190, 198, 207,
-    217, 224, 270, 282, 311,
+    80,
+    87,
+    94,
+    99,
+    103,
+    111,
+    118,
+    130,
+    140,
+    152,
+    159,
+    171,
+    183,
+    190,
+    198,
+    207,
+    217,
+    224,
+    270,
+    282,
+    311,
 )
 
 

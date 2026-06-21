@@ -34,16 +34,12 @@ def scale(t: Temperament, scalar) -> Temperament:
 
 
 def add_t(t1: Temperament, t2: Temperament) -> Temperament:
-    matrix = tuple(
-        tuple(a + b for a, b in zip(r1, r2)) for r1, r2 in zip(t1.matrix, t2.matrix)
-    )
+    matrix = tuple(tuple(a + b for a, b in zip(r1, r2)) for r1, r2 in zip(t1.matrix, t2.matrix))
     return Temperament(matrix, t1.variance, t1.domain_basis)
 
 
 def subtract_t(t1: Temperament, t2: Temperament) -> Temperament:
-    matrix = tuple(
-        tuple(a - b for a, b in zip(r1, r2)) for r1, r2 in zip(t1.matrix, t2.matrix)
-    )
+    matrix = tuple(tuple(a - b for a, b in zip(r1, r2)) for r1, r2 in zip(t1.matrix, t2.matrix))
     return Temperament(matrix, t1.variance, t1.domain_basis)
 
 

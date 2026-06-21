@@ -102,6 +102,10 @@ def minimal_ca(matrix: Matrix, jip_octaves) -> Matrix:
         if np.linalg.matrix_rank(np.array(picked + [vec])) > len(picked):
             picked.append(vec)
 
-    chosen = picked if len(picked) == rank and canonical_ca(_as_matrix(picked)) == tuple(
-        tuple(c) for c in commas) else seed
+    chosen = (
+        picked
+        if len(picked) == rank
+        and canonical_ca(_as_matrix(picked)) == tuple(tuple(c) for c in commas)
+        else seed
+    )
     return _as_matrix(_positive_and_order(chosen, jip_octaves))

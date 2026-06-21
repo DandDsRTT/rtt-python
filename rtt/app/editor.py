@@ -132,7 +132,6 @@ class Editor:
         self.preferred_form: dict[str, str] = {}
         self._restore(_initial_doc())
 
-
     def _capture(self) -> _Doc:
         return _Doc(
             state=self._state,
@@ -175,10 +174,17 @@ class Editor:
         self.superspace_generator_tuning = None
 
     def capture_for_preview(self) -> tuple:
-        transients = (self.pending_comma, self.pending_interest, self.pending_held,
-                      self.pending_target, self.pending_element, self.pending_mapping_row,
-                      self._nudging_generator, self.superspace_generator_tuning,
-                      self.nonprime_basis_approach)
+        transients = (
+            self.pending_comma,
+            self.pending_interest,
+            self.pending_held,
+            self.pending_target,
+            self.pending_element,
+            self.pending_mapping_row,
+            self._nudging_generator,
+            self.superspace_generator_tuning,
+            self.nonprime_basis_approach,
+        )
         return (self._capture(), list(self._undo_stack), list(self._redo_stack), transients)
 
     def restore_for_preview(self, token: tuple) -> None:
@@ -190,9 +196,17 @@ class Editor:
         self._undo_stack.extend(undo)
         self._redo_stack.clear()
         self._redo_stack.extend(redo)
-        (self.pending_comma, self.pending_interest, self.pending_held, self.pending_target,
-         self.pending_element, self.pending_mapping_row, self._nudging_generator,
-         self.superspace_generator_tuning, self.nonprime_basis_approach) = transients
+        (
+            self.pending_comma,
+            self.pending_interest,
+            self.pending_held,
+            self.pending_target,
+            self.pending_element,
+            self.pending_mapping_row,
+            self._nudging_generator,
+            self.superspace_generator_tuning,
+            self.nonprime_basis_approach,
+        ) = transients
 
     def _clear_pending(self) -> None:
         self.pending_comma = None
@@ -217,8 +231,10 @@ class Editor:
             self._invalidate_custom_weights()
         if not service.domain_has_nonprimes(new_state.domain_basis):
             self.nonprime_basis_approach = ""
-        if (new_state.mapping != self._state.mapping
-                or new_state.domain_basis != self._state.domain_basis):
+        if (
+            new_state.mapping != self._state.mapping
+            or new_state.domain_basis != self._state.domain_basis
+        ):
             self.superspace_generator_tuning = None
             self.projection_basis = ()
         self._state = new_state
@@ -247,10 +263,15 @@ class Editor:
 
     def layout(self, prev_ids=None, preview_remove=None) -> Layout:
         return spreadsheet.build(
-            self.state, self.settings, self.collapsed,
-            tuning_scheme=self.tuning_scheme, target_spec=self.target_spec,
-            interest=self.interest_vectors, range_mode=self.range_mode,
-            pending_comma=self.pending_comma, held_vectors=self.held_vectors,
+            self.state,
+            self.settings,
+            self.collapsed,
+            tuning_scheme=self.tuning_scheme,
+            target_spec=self.target_spec,
+            interest=self.interest_vectors,
+            range_mode=self.range_mode,
+            pending_comma=self.pending_comma,
+            held_vectors=self.held_vectors,
             generator_tuning=self.effective_generator_tuning(),
             target_override=self.target_override,
             custom_prescaler=self.custom_prescaler,
@@ -269,7 +290,9 @@ class Editor:
             targets_in_use=self.targets_in_use,
             mapping_form=self.preferred_form.get("mapping"),
             comma_basis_form=self.preferred_form.get("comma_basis"),
-            prev_ids=prev_ids, preview_remove=preview_remove)
+            prev_ids=prev_ids,
+            preview_remove=preview_remove,
+        )
 
     @property
     def can_expand(self) -> bool:
@@ -308,7 +331,9 @@ class Editor:
             self.manual_tuning = False
 
     def edit_mapping(self, mapping) -> None:
-        domain_basis = self.state.domain_basis if mapping and len(mapping[0]) == self.state.d else None
+        domain_basis = (
+            self.state.domain_basis if mapping and len(mapping[0]) == self.state.d else None
+        )
         self._apply(service.from_mapping(mapping, domain_basis))
 
     def edit_comma_basis(self, comma_basis, domain_basis=None) -> None:
@@ -354,7 +379,9 @@ class Editor:
         self.edit_mapping(service.canonical_mapping(self.state.mapping))
 
     def set_mapping_form(self, form: str) -> None:
-        self.edit_mapping(service.mapping_in_form(self.state.mapping, form, self.state.domain_basis))
+        self.edit_mapping(
+            service.mapping_in_form(self.state.mapping, form, self.state.domain_basis)
+        )
         self.preferred_form["mapping"] = form
 
     def edit_form_matrix(self, form_rows) -> bool:
@@ -373,12 +400,14 @@ class Editor:
 
     def canonicalize_comma_basis(self) -> None:
         self.edit_comma_basis(
-            service.canonical_comma_basis(self.state.comma_basis), self.state.domain_basis)
+            service.canonical_comma_basis(self.state.comma_basis), self.state.domain_basis
+        )
 
     def set_comma_basis_form(self, form: str) -> None:
         self.edit_comma_basis(
             service.comma_basis_in_form(self.state.comma_basis, form, self.state.domain_basis),
-            self.state.domain_basis)
+            self.state.domain_basis,
+        )
         self.preferred_form["comma_basis"] = form
 
     def _feed_draft(self, values, commit) -> list[int | None] | None:
@@ -426,12 +455,21 @@ class Editor:
         self.held_vectors = [tuple(int(x) for x in m) for m in vectors]
 
     def _optimum_tuning(self) -> service.Tuning:
-        held = service.comma_ratios(self.held_vectors, self.state.domain_basis) if self.held_vectors else ()
+        held = (
+            service.comma_ratios(self.held_vectors, self.state.domain_basis)
+            if self.held_vectors
+            else ()
+        )
         return service.tuning(
-            self.state.mapping, self.tuning_scheme, self.state.domain_basis,
-            self.nonprime_basis_approach, held=held,
-            prescaler_override=self.custom_prescaler, targets=self.target_override,
-            weights_override=self.custom_weights)
+            self.state.mapping,
+            self.tuning_scheme,
+            self.state.domain_basis,
+            self.nonprime_basis_approach,
+            held=held,
+            prescaler_override=self.custom_prescaler,
+            targets=self.target_override,
+            weights_override=self.custom_weights,
+        )
 
     def _optimum_generator_tuning(self) -> tuple[float, ...]:
         return self._optimum_tuning().generator_map
@@ -446,22 +484,34 @@ class Editor:
         self.projection_basis = ()
 
     def effective_generator_tuning(self) -> tuple[float, ...] | None:
-        if self.superspace_generator_tuning is not None \
-                and self.nonprime_basis_approach == "prime-based" \
-                and service.domain_has_nonprimes(self.state.domain_basis):
-            return service.project_superspace_generators_to_domain(self.state, self.superspace_generator_tuning)
+        if (
+            self.superspace_generator_tuning is not None
+            and self.nonprime_basis_approach == "prime-based"
+            and service.domain_has_nonprimes(self.state.domain_basis)
+        ):
+            return service.project_superspace_generators_to_domain(
+                self.state, self.superspace_generator_tuning
+            )
         return self.generator_tuning
 
     @property
     def displayed_tuning_scheme_name(self) -> str | None:
         bare = service.tuning(
-            self.state.mapping, self.tuning_scheme, self.state.domain_basis,
-            self.nonprime_basis_approach, prescaler_override=self.custom_prescaler,
-            targets=self.target_override, weights_override=self.custom_weights).generator_map
+            self.state.mapping,
+            self.tuning_scheme,
+            self.state.domain_basis,
+            self.nonprime_basis_approach,
+            prescaler_override=self.custom_prescaler,
+            targets=self.target_override,
+            weights_override=self.custom_weights,
+        ).generator_map
         held_optimum = self._optimum_generator_tuning() if self.held_vectors else bare
         override = self.effective_generator_tuning()
-        displayed = (override if override is not None and len(override) == len(self.state.mapping)
-                     else held_optimum)
+        displayed = (
+            override
+            if override is not None and len(override) == len(self.state.mapping)
+            else held_optimum
+        )
         if not _same_cents_map(displayed, held_optimum):
             if self.manual_tuning:
                 return None
@@ -479,7 +529,8 @@ class Editor:
     @property
     def displayed_prescaler_name(self) -> str | None:
         return service.displayed_prescaler_name(
-            self.state.mapping, self.tuning_scheme, self.custom_prescaler)
+            self.state.mapping, self.tuning_scheme, self.custom_prescaler
+        )
 
     def set_generator_tuning_text(self, text: str) -> bool:
         gens = service.parse_cents_map(text, len(self.state.mapping))
@@ -493,8 +544,11 @@ class Editor:
 
     def _override_generator(self, i: int, transform, *, snapshot: bool = True) -> None:
         override = self.effective_generator_tuning()
-        base = list(override if override is not None and len(override) == len(self.state.mapping)
-                    else self._optimum_generator_tuning())
+        base = list(
+            override
+            if override is not None and len(override) == len(self.state.mapping)
+            else self._optimum_generator_tuning()
+        )
         if not 0 <= i < len(base):
             return
         base[i] = float(transform(base[i]))
@@ -508,7 +562,9 @@ class Editor:
         self._override_generator(i, lambda _current: cents)
 
     def _optimum_superspace_generator_tuning(self) -> tuple[float, ...]:
-        return service.superspace_tuning(self.state, self.tuning_scheme, "prime-based").generator_map
+        return service.superspace_tuning(
+            self.state, self.tuning_scheme, "prime-based"
+        ).generator_map
 
     def set_superspace_generator_tuning_text(self, text: str) -> bool:
         gens = service.parse_cents_map(text, service.superspace_rank(self.state))
@@ -522,8 +578,11 @@ class Editor:
     def set_superspace_generator_tuning_component(self, i: int, cents: float) -> None:
         manual = self.superspace_generator_tuning
         rL = service.superspace_rank(self.state)
-        base = list(manual if manual is not None and len(manual) == rL
-                    else self._optimum_superspace_generator_tuning())
+        base = list(
+            manual
+            if manual is not None and len(manual) == rL
+            else self._optimum_superspace_generator_tuning()
+        )
         base[i] = float(cents)
         self._snapshot()
         self.superspace_generator_tuning = tuple(base)
@@ -532,10 +591,14 @@ class Editor:
     def nudge_superspace_generator_tuning_component(self, i: int, steps: int) -> None:
         rL = service.superspace_rank(self.state)
         manual = self.superspace_generator_tuning
-        base = list(manual if manual is not None and len(manual) == rL
-                    else self._optimum_superspace_generator_tuning())
+        base = list(
+            manual
+            if manual is not None and len(manual) == rL
+            else self._optimum_superspace_generator_tuning()
+        )
         self.set_superspace_generator_tuning_component(
-            i, round(round(base[i], 3) + steps * _GENERATOR_NUDGE_CENTS, 3))
+            i, round(round(base[i], 3) + steps * _GENERATOR_NUDGE_CENTS, 3)
+        )
 
     def flip_generator(self, i: int) -> None:
         override = self.effective_generator_tuning()
@@ -550,8 +613,10 @@ class Editor:
 
     def nudge_generator_tuning_component(self, i: int, steps: int) -> None:
         self._override_generator(
-            i, lambda current: round(round(current, 3) + steps * _GENERATOR_NUDGE_CENTS, 3),
-            snapshot=self._nudging_generator != i)
+            i,
+            lambda current: round(round(current, 3) + steps * _GENERATOR_NUDGE_CENTS, 3),
+            snapshot=self._nudging_generator != i,
+        )
         self._nudging_generator = i
 
     @staticmethod
@@ -582,7 +647,9 @@ class Editor:
             return False
         domain_basis = self.state.domain_basis if len(basis[0]) == self.state.d else None
         try:
-            if not service.is_proper_temperament(service.from_comma_basis(basis, domain_basis).mapping):
+            if not service.is_proper_temperament(
+                service.from_comma_basis(basis, domain_basis).mapping
+            ):
                 return False
             self.edit_comma_basis(basis, domain_basis)
         except Exception:
@@ -620,9 +687,13 @@ class Editor:
     def _hold_as_manual_tuning(self, ratios) -> None:
         self._snapshot()
         self.generator_tuning = service.tuning(
-            self.state.mapping, self.tuning_scheme, self.state.domain_basis,
-            self.nonprime_basis_approach, held=tuple(ratios),
-            prescaler_override=self.custom_prescaler, targets=self.target_override,
+            self.state.mapping,
+            self.tuning_scheme,
+            self.state.domain_basis,
+            self.nonprime_basis_approach,
+            held=tuple(ratios),
+            prescaler_override=self.custom_prescaler,
+            targets=self.target_override,
             weights_override=self.custom_weights,
         ).generator_map
         self.superspace_generator_tuning = None
@@ -655,7 +726,8 @@ class Editor:
                 optimum = self._optimum_tuning()
                 if not _same_cents_map(generators, optimum.generator_map):
                     return service.tuning_from_generators(
-                        self.state.mapping, generators, self.state.domain_basis).retuning_map
+                        self.state.mapping, generators, self.state.domain_basis
+                    ).retuning_map
                 return optimum.retuning_map
             return self._optimum_tuning().retuning_map
         except (ValueError, ArithmeticError, IndexError, TypeError) as exc:
@@ -667,11 +739,17 @@ class Editor:
         retuning = self._displayed_retuning_map()
         if retuning is None:
             return ()
-        held = tuple(service.comma_ratios(self.held_vectors, self.state.domain_basis)) if self.held_vectors else ()
-        candidates = (held
-                      + self.projection_basis
-                      + presets.projection_candidate_ratios(self.state)
-                      + tuple(service.target_interval_set(self.target_spec, self.state.domain_basis)))
+        held = (
+            tuple(service.comma_ratios(self.held_vectors, self.state.domain_basis))
+            if self.held_vectors
+            else ()
+        )
+        candidates = (
+            held
+            + self.projection_basis
+            + presets.projection_candidate_ratios(self.state)
+            + tuple(service.target_interval_set(self.target_spec, self.state.domain_basis))
+        )
         return service.unchanged_ratios_of_tuning(self.state, retuning, candidates)
 
     @property
@@ -690,7 +768,9 @@ class Editor:
         except (ValueError, ArithmeticError, IndexError, TypeError) as exc:
             _log.debug("optimum solve failed; treating displayed tuning as optimal: %r", exc)
             return True
-        return len(displayed) == len(optimum) and all(abs(a - b) < 1e-6 for a, b in zip(displayed, optimum))
+        return len(displayed) == len(optimum) and all(
+            abs(a - b) < 1e-6 for a, b in zip(displayed, optimum)
+        )
 
     @property
     def displayed_projection_scheme_name(self) -> str | None:
@@ -732,7 +812,9 @@ class Editor:
     def set_custom_prescaler_entry(self, i: int, j: int, value: float) -> None:
         self._snapshot()
         if self.custom_prescaler is None:
-            self.custom_prescaler = tuple(service.complexity_prescaler(self.state.mapping, self.tuning_scheme))
+            self.custom_prescaler = tuple(
+                service.complexity_prescaler(self.state.mapping, self.tuning_scheme)
+            )
         is_matrix = isinstance(self.custom_prescaler[0], (tuple, list))
         if i == j and not is_matrix:
             diag = list(self.custom_prescaler)
@@ -740,8 +822,14 @@ class Editor:
             self.custom_prescaler = tuple(diag)
         else:
             d = self.state.d
-            rows = ([list(r) for r in self.custom_prescaler] if is_matrix
-                    else [[self.custom_prescaler[r] if r == c else 0.0 for c in range(d)] for r in range(d)])
+            rows = (
+                [list(r) for r in self.custom_prescaler]
+                if is_matrix
+                else [
+                    [self.custom_prescaler[r] if r == c else 0.0 for c in range(d)]
+                    for r in range(d)
+                ]
+            )
             rows[i][j] = float(value)
             self.custom_prescaler = tuple(tuple(r) for r in rows)
 
@@ -762,20 +850,29 @@ class Editor:
         slope = "simplicity-weight" if all_interval else "unity-weight"
         scheme = service.scheme_with_weight_slope(self.tuning_scheme, slope)
         self.tuning_scheme = service.scheme_with_targets(
-            scheme, "{}" if all_interval else self.target_spec)
+            scheme, "{}" if all_interval else self.target_spec
+        )
         self._reconcile_custom_weights()
 
     def _reconcile_custom_weights(self) -> None:
-        applies = self.settings["custom_weights"] and not service.is_all_interval(self.tuning_scheme)
+        applies = self.settings["custom_weights"] and not service.is_all_interval(
+            self.tuning_scheme
+        )
         if applies and self.custom_weights is None:
             self.custom_weights = tuple(self._displayed_target_weights())
         elif not applies:
             self.custom_weights = None
 
     def _displayed_target_weights(self) -> tuple[float, ...]:
-        return tuple(service.interval_weights(
-            self.state.mapping, self.tuning_scheme, self._current_targets(),
-            prescaler_override=self.custom_prescaler, domain_basis=self.state.domain_basis))
+        return tuple(
+            service.interval_weights(
+                self.state.mapping,
+                self.tuning_scheme,
+                self._current_targets(),
+                prescaler_override=self.custom_prescaler,
+                domain_basis=self.state.domain_basis,
+            )
+        )
 
     def set_custom_weight_entry(self, i: int, value: float) -> None:
         self._snapshot()
@@ -826,7 +923,8 @@ class Editor:
     def set_target_override_vectors(self, vectors) -> None:
         self._snapshot()
         self.target_override = service.comma_ratios(
-            [tuple(int(x) for x in m) for m in vectors], self.state.domain_basis)
+            [tuple(int(x) for x in m) for m in vectors], self.state.domain_basis
+        )
         self._invalidate_custom_weights()
 
     def _current_targets(self) -> list[str]:
@@ -844,6 +942,7 @@ class Editor:
             targets.append(service.comma_ratios([vector], self.state.domain_basis)[0])
             self.target_override = tuple(targets)
             self._invalidate_custom_weights()
+
         self.pending_target = self._feed_draft(values, commit)
 
     def cancel_pending_target(self) -> None:
@@ -860,8 +959,12 @@ class Editor:
 
     def _list_vectors(self, name: str) -> list[tuple[int, ...]]:
         if name == "targets":
-            return [tuple(v) for v in service.target_interval_vectors(
-                self._current_targets(), self.state.d, self.state.domain_basis)]
+            return [
+                tuple(v)
+                for v in service.target_interval_vectors(
+                    self._current_targets(), self.state.d, self.state.domain_basis
+                )
+            ]
         if name == "held":
             return [tuple(v) for v in self.held_vectors]
         if name == "interest":
@@ -885,7 +988,9 @@ class Editor:
             return False
         if dst == "commas":
             domain_basis = self.state.domain_basis if len(vector) == self.state.d else None
-            extended = service.from_comma_basis(self._real_comma_basis + (tuple(vector),), domain_basis)
+            extended = service.from_comma_basis(
+                self._real_comma_basis + (tuple(vector),), domain_basis
+            )
             if extended.n <= self.state.n:
                 return False
         return True
@@ -915,7 +1020,9 @@ class Editor:
             self.interest_vectors.insert(i, tuple(vector))
         else:
             domain_basis = self.state.domain_basis if len(vector) == self.state.d else None
-            self.state = service.from_comma_basis(self._real_comma_basis + (tuple(vector),), domain_basis)
+            self.state = service.from_comma_basis(
+                self._real_comma_basis + (tuple(vector),), domain_basis
+            )
 
     def move_interval(self, src_list: str, src_idx: int, dst_list: str, dst_idx: int) -> bool:
         vector = self._peek_vector(src_list, src_idx)
@@ -938,7 +1045,8 @@ class Editor:
 
     def _reset_to_basic_tuning(self) -> None:
         self.tuning_scheme = service.scheme_with_power(
-            service.scheme_with_complexity(self.tuning_scheme, "lp"), float("inf"))
+            service.scheme_with_complexity(self.tuning_scheme, "lp"), float("inf")
+        )
         self.custom_prescaler = None
 
     def set_show(self, key: str, value: bool) -> None:
@@ -1098,7 +1206,9 @@ class Editor:
         self.pending_element = "" if text is None else str(text)
         if service.can_add_domain_element(self.state, self.pending_element):
             self._snapshot()
-            self.state = service.add_domain_element(self.state, service.parse_domain_element(self.pending_element))
+            self.state = service.add_domain_element(
+                self.state, service.parse_domain_element(self.pending_element)
+            )
             self.pending_element = None
 
     def remove_element(self) -> None:
@@ -1115,7 +1225,9 @@ class Editor:
         if not service.can_set_domain_element(self.state, index, str(text)):
             return
         self._snapshot()
-        self.state = service.set_domain_element(self.state, index, service.parse_domain_element(str(text)))
+        self.state = service.set_domain_element(
+            self.state, index, service.parse_domain_element(str(text))
+        )
 
     def cancel_pending_comma(self) -> None:
         self.pending_comma = None
@@ -1150,11 +1262,15 @@ class Editor:
             "interest_vectors": [list(m) for m in self.interest_vectors],
             "held_vectors": [list(m) for m in self.held_vectors],
             "range_mode": self.range_mode,
-            "generator_tuning": list(self.generator_tuning) if self.generator_tuning is not None else None,
+            "generator_tuning": list(self.generator_tuning)
+            if self.generator_tuning is not None
+            else None,
             "manual_tuning": self.manual_tuning,
             "custom_prescaler": _prescaler_to_json(self.custom_prescaler),
             "custom_weights": _weights_to_json(self.custom_weights),
-            "target_override": list(self.target_override) if self.target_override is not None else None,
+            "target_override": list(self.target_override)
+            if self.target_override is not None
+            else None,
             "projection_basis": list(self.projection_basis),
             "settings": dict(self.settings),
             "collapsed": sorted(self.collapsed),
@@ -1167,19 +1283,26 @@ class Editor:
         doc = _Doc(
             state=state,
             tuning_scheme=service.scheme_from_json(
-                data.get("tuning_scheme", service.DEFAULT_DOCUMENT_SCHEME)),
+                data.get("tuning_scheme", service.DEFAULT_DOCUMENT_SCHEME)
+            ),
             target_family=data.get("target_family", service.DEFAULT_TARGET_SPEC),
             target_limit=data.get("target_limit"),
-            interest_vectors=tuple(tuple(int(x) for x in m) for m in data.get("interest_vectors", ())),
+            interest_vectors=tuple(
+                tuple(int(x) for x in m) for m in data.get("interest_vectors", ())
+            ),
             held_vectors=tuple(tuple(int(x) for x in m) for m in data.get("held_vectors", ())),
             range_mode=data.get("range_mode", "monotone"),
             generator_tuning=tuple(data["generator_tuning"])
-            if data.get("generator_tuning") is not None and data.get("manual_tuning") else None,
-            manual_tuning=bool(data.get("manual_tuning") and data.get("generator_tuning") is not None),
+            if data.get("generator_tuning") is not None and data.get("manual_tuning")
+            else None,
+            manual_tuning=bool(
+                data.get("manual_tuning") and data.get("generator_tuning") is not None
+            ),
             custom_prescaler=_prescaler_from_json(data.get("custom_prescaler")),
             custom_weights=_weights_from_json(data.get("custom_weights")),
             target_override=tuple(data["target_override"])
-            if data.get("target_override") is not None else None,
+            if data.get("target_override") is not None
+            else None,
             projection_basis=tuple(data.get("projection_basis", ()) or ()),
             settings=tuple(sorted(show_settings.from_persisted(data.get("settings", {})).items())),
             collapsed=frozenset(data.get("collapsed", INITIAL_COLLAPSED)),

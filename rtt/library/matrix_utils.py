@@ -159,12 +159,7 @@ def smith_normal_form_with_transforms(matrix: Matrix) -> tuple[Matrix, Matrix, M
                 continue
             break
         offending = next(
-            (
-                i
-                for i in range(t + 1, m)
-                for j in range(t + 1, n)
-                if rows[i][j] % rows[t][t]
-            ),
+            (i for i in range(t + 1, m) for j in range(t + 1, n) if rows[i][j] % rows[t][t]),
             None,
         )
         if offending is not None:

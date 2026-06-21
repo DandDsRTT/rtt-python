@@ -14,15 +14,11 @@ COUNTS = (
 )
 COUNTS_TILES = tuple((f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in COUNTS)
 
-OPTIMIZATION_COUNTS = (
-    ("held", "h", "held interval count"),
-)
+OPTIMIZATION_COUNTS = (("held", "h", "held interval count"),)
 OPTIMIZATION_COUNTS_TILES = tuple(
     (f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in OPTIMIZATION_COUNTS
 )
-DETEMPERING_COUNTS = (
-    ("detempering", "r", "rank"),
-)
+DETEMPERING_COUNTS = (("detempering", "r", "rank"),)
 DETEMPERING_COUNTS_TILES = tuple(
     (f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in DETEMPERING_COUNTS
 )
@@ -119,8 +115,13 @@ CAPTIONS = {
     ("complexity", "targets"): "target interval complexity list",
     ("weight", "targets"): "target interval weight list",
     ("damage", "targets"): "target interval damage list",
-    **{("counts", ckey): name for ckey, _sym, name in
-       COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS},
+    **{
+        ("counts", ckey): name
+        for ckey, _sym, name in COUNTS
+        + OPTIMIZATION_COUNTS
+        + DETEMPERING_COUNTS
+        + SUPERSPACE_COUNTS
+    },
     ("vectors", "interest"): "intervals of interest",
     ("mapping", "interest"): "mapped intervals",
     ("tuning", "interest"): "tempered interval sizes",
@@ -295,15 +296,33 @@ COL_LABEL_LETTERS = {
     ("just", "ssprimes"): f"𝒋{SUBSCRIPT_L}",
     ("retune", "ssprimes"): f"𝒓{SUBSCRIPT_L}",
 }
-FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling",
-                         "ss_vectors", "ss_mapping", "ss_projection",
-                         "projection"})
+FRAMED_ROWS = frozenset(
+    {
+        "mapping",
+        "canon",
+        "vectors",
+        "prescaling",
+        "ss_vectors",
+        "ss_mapping",
+        "ss_projection",
+        "projection",
+    }
+)
 CHARTED_ROWS = frozenset({"retune", "weight", "damage"})
 COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS) | {"prescaling", "complexity"}
 
-_FACTOR_GROUP = {"G": "tuning", "J": "tuning", "X": "tuning", "T": "tuning", "H": "tuning",
-                 "P": "temperament", "B": "temperament", "M": "temperament", "C": "temperament",
-                 "F": "form"}
+_FACTOR_GROUP = {
+    "G": "tuning",
+    "J": "tuning",
+    "X": "tuning",
+    "T": "tuning",
+    "H": "tuning",
+    "P": "temperament",
+    "B": "temperament",
+    "M": "temperament",
+    "C": "temperament",
+    "F": "form",
+}
 CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("quantities", "gens"): frozenset({"B"}),
     ("quantities", "primes"): frozenset({"P"}),
@@ -363,13 +382,19 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
 }
 
 SPINE_COLUMN_GROUP = {
-    "gens": "temperament", "primes": "temperament", "commas": "temperament",
-    "held": "tuning", "targets": "tuning",
+    "gens": "temperament",
+    "primes": "temperament",
+    "commas": "temperament",
+    "held": "tuning",
+    "targets": "tuning",
 }
 SPINE_ROW_GROUP = {
     "mapping": "temperament",
-    "tuning": "tuning", "just": "tuning", "retune": "tuning",
-    "prescaling": "tuning", "complexity": "tuning",
+    "tuning": "tuning",
+    "just": "tuning",
+    "retune": "tuning",
+    "prescaling": "tuning",
+    "complexity": "tuning",
     "weight": "tuning",
     "damage": frozenset({"tuning", "temperament"}),
 }
@@ -480,11 +505,11 @@ ALL_INTERVAL_MNEMONICS = {("vectors", "targets"): ("prime", "proxy")}
 FORM_SUBSCRIPT_ROWS = frozenset({"mapping"})
 FORM_SUBSCRIPT_GENS = frozenset({("tuning", "gens"), ("projection", "gens")})
 FORM_EQUIVALENCES = {
-    ("mapping", "targets"):    f" = 𝑀{SUBSCRIPT_C}T",
+    ("mapping", "targets"): f" = 𝑀{SUBSCRIPT_C}T",
     ("tuning", "detempering"): f" = 𝒈{SUBSCRIPT_C}",
-    ("tuning", "primes"):      f" = 𝒈{SUBSCRIPT_C}𝑀{SUBSCRIPT_C}",
-    ("projection", "primes"):  f" = G{SUBSCRIPT_C}𝑀{SUBSCRIPT_C} = V·diag(𝝀)V⁻¹",
-    ("projection", "gens"):    f" = U(𝑀{SUBSCRIPT_C}U)⁻¹",
+    ("tuning", "primes"): f" = 𝒈{SUBSCRIPT_C}𝑀{SUBSCRIPT_C}",
+    ("projection", "primes"): f" = G{SUBSCRIPT_C}𝑀{SUBSCRIPT_C} = V·diag(𝝀)V⁻¹",
+    ("projection", "gens"): f" = U(𝑀{SUBSCRIPT_C}U)⁻¹",
 }
 
 UNITS = {
@@ -696,34 +721,117 @@ UNITS_TILES = (
     ("block:urow:ssprimes", "units", "ssprimes"),
 )
 
-EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas"), ("tuning", "gens"),
-                            ("vectors", "targets"), ("prescaling", "primes"),
-                            ("mapping", "canongens"),
-                            ("projection", "primes"), ("projection", "gens")})
+EDITABLE_PTEXT = frozenset(
+    {
+        ("mapping", "primes"),
+        ("vectors", "commas"),
+        ("tuning", "gens"),
+        ("vectors", "targets"),
+        ("prescaling", "primes"),
+        ("mapping", "canongens"),
+        ("projection", "primes"),
+        ("projection", "gens"),
+    }
+)
 EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)
-PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "canon", "tuning", "just", "retune", "damage",
-                        "prescaling", "complexity", "weight",
-                        "projection", "scaling_factors",
-                        "ss_vectors", "ss_mapping", "ss_projection"})
+PTEXT_ROWS = frozenset(
+    {
+        "quantities",
+        "vectors",
+        "mapping",
+        "canon",
+        "tuning",
+        "just",
+        "retune",
+        "damage",
+        "prescaling",
+        "complexity",
+        "weight",
+        "projection",
+        "scaling_factors",
+        "ss_vectors",
+        "ss_mapping",
+        "ss_projection",
+    }
+)
 
-GRIDDED_KINDS = frozenset({
-    "prime", "ratiocell", "commaratio", "genratio", "mapping", "mapped", "commacell",
-    "vec", "tuningvalue", "mathexpr", "interestcell", "formcell", "heldcell", "gentuningcell", "targetcell",
-    "prescalercell",
-    "elementcell", "elementratio", "unchangedcell",
-    "bracket", "ebktop", "ebkbrace", "ebkangle", "transpose", "vbar", "matlabel",
-    "minus", "plus", "gen_minus", "gen_plus", "map_minus", "map_plus", "comma_minus", "comma_plus", "basis_minus",
-    "element_minus", "element_plus",
-    "interest_minus", "interest_plus", "held_minus", "held_plus", "target_minus", "target_plus",
-    "colgrip",
-    "boxtitle", "powerinput", "powerdisplay",
-})
-BLANKED_NUMBER_KINDS = frozenset({
-    "genratio", "mapping", "mapped", "commacell", "vec", "tuningvalue", "interestcell", "formcell", "heldcell",
-    "gentuningcell", "targetcell", "prescalercell",
-    "prime", "elementcell", "elementratio", "ratiocell", "commaratio", "unchangedcell",
-})
+GRIDDED_KINDS = frozenset(
+    {
+        "prime",
+        "ratiocell",
+        "commaratio",
+        "genratio",
+        "mapping",
+        "mapped",
+        "commacell",
+        "vec",
+        "tuningvalue",
+        "mathexpr",
+        "interestcell",
+        "formcell",
+        "heldcell",
+        "gentuningcell",
+        "targetcell",
+        "prescalercell",
+        "elementcell",
+        "elementratio",
+        "unchangedcell",
+        "bracket",
+        "ebktop",
+        "ebkbrace",
+        "ebkangle",
+        "transpose",
+        "vbar",
+        "matlabel",
+        "minus",
+        "plus",
+        "gen_minus",
+        "gen_plus",
+        "map_minus",
+        "map_plus",
+        "comma_minus",
+        "comma_plus",
+        "basis_minus",
+        "element_minus",
+        "element_plus",
+        "interest_minus",
+        "interest_plus",
+        "held_minus",
+        "held_plus",
+        "target_minus",
+        "target_plus",
+        "colgrip",
+        "boxtitle",
+        "powerinput",
+        "powerdisplay",
+    }
+)
+BLANKED_NUMBER_KINDS = frozenset(
+    {
+        "genratio",
+        "mapping",
+        "mapped",
+        "commacell",
+        "vec",
+        "tuningvalue",
+        "interestcell",
+        "formcell",
+        "heldcell",
+        "gentuningcell",
+        "targetcell",
+        "prescalercell",
+        "prime",
+        "elementcell",
+        "elementratio",
+        "ratiocell",
+        "commaratio",
+        "unchangedcell",
+    }
+)
 
-RINGABLE_KINDS = BLANKED_NUMBER_KINDS | frozenset({
-    "mathexpr", "powerdisplay",
-})
+RINGABLE_KINDS = BLANKED_NUMBER_KINDS | frozenset(
+    {
+        "mathexpr",
+        "powerdisplay",
+    }
+)

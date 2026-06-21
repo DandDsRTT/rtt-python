@@ -86,8 +86,10 @@ def canonical_generator_embedding(state: TemperamentState, held_ratios=()):
         g = get_generator_embedding(*inputs)
         f_inv = inverse_form_matrix(state.mapping)
         r, rc = len(f_inv), len(f_inv[0]) if f_inv else 0
-        gc = tuple(tuple(sum(g[i][k] * f_inv[k][j] for k in range(r)) for j in range(rc))
-                   for i in range(len(g)))
+        gc = tuple(
+            tuple(sum(g[i][k] * f_inv[k][j] for k in range(r)) for j in range(rc))
+            for i in range(len(g))
+        )
         return _matrix_strings(gc)
     except (ArithmeticError, ValueError, IndexError, TypeError) as exc:
         _log.debug("canonical_generator_embedding dashed: %r", exc)
@@ -114,6 +116,7 @@ def project_vectors(p_matrix, vectors):
 def _integer_columns(vectors):
     from math import gcd
     from functools import reduce
+
     out = []
     for v in vectors:
         entries = [sp.Rational(x) for x in v]
@@ -183,8 +186,14 @@ class UnchangedData:
     complexities: tuple
 
 
-def unchanged_interval_data(state: TemperamentState, held_ratios, tun: Tuning, scheme,
-                            domain_basis=None, prescaler_override=None) -> UnchangedData | None:
+def unchanged_interval_data(
+    state: TemperamentState,
+    held_ratios,
+    tun: Tuning,
+    scheme,
+    domain_basis=None,
+    prescaler_override=None,
+) -> UnchangedData | None:
     basis = unchanged_interval_basis(state, held_ratios)
     if basis is None:
         return None
@@ -202,11 +211,20 @@ def unchanged_interval_data(state: TemperamentState, held_ratios, tun: Tuning, s
     mapped = mapped_commas(state.mapping, known) if known else ()
     mapped_rows = tuple(scatter(mapped[i] if known else ()) for i in range(len(state.mapping)))
     sizes = interval_sizes(tun, ratios, domain_basis)
-    sized = IntervalSizes(scatter(sizes.tempered), scatter(sizes.just),
-                          scatter(sizes.errors), scatter(sizes.damage))
-    comps = (interval_complexities(state.mapping, scheme, ratios,
-                                   prescaler_override=prescaler_override, domain_basis=domain_basis)
-             if known else ())
+    sized = IntervalSizes(
+        scatter(sizes.tempered), scatter(sizes.just), scatter(sizes.errors), scatter(sizes.damage)
+    )
+    comps = (
+        interval_complexities(
+            state.mapping,
+            scheme,
+            ratios,
+            prescaler_override=prescaler_override,
+            domain_basis=domain_basis,
+        )
+        if known
+        else ()
+    )
     return UnchangedData(basis, scatter(ratios), mapped_rows, sized, scatter(comps))
 
 

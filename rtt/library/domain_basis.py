@@ -41,12 +41,8 @@ def _domain_basis_intersection_binary(basis1: tuple, basis2: tuple) -> tuple:
     dimension = max(get_domain_basis_dimension(basis1), get_domain_basis_dimension(basis2))
     a1 = pad_vectors_with_zeros_up_to_d(tuple(quotient_to_pcv(q) for q in basis1), dimension)
     a2 = pad_vectors_with_zeros_up_to_d(tuple(quotient_to_pcv(q) for q in basis2), dimension)
-    block = hnf(
-        tuple(row + row for row in a1) + tuple(row + (0,) * dimension for row in a2)
-    )
-    intersected = [
-        row[dimension:] for row in block if all(x == 0 for x in row[:dimension])
-    ]
+    block = hnf(tuple(row + row for row in a1) + tuple(row + (0,) * dimension for row in a2))
+    intersected = [row[dimension:] for row in block if all(x == 0 for x in row[:dimension])]
     if not intersected:
         intersected = [(0,) * dimension]
     return canonical_domain_basis_private(tuple(pcv_to_quotient(row) for row in intersected))
@@ -70,15 +66,13 @@ def _factorization_acceptable(a: int, b: int) -> bool:
 
 def is_numerator_factor(subspace_entry: tuple, superspace_entry: tuple) -> bool:
     return all(
-        _factorization_acceptable(s, s - sup)
-        for s, sup in zip(subspace_entry, superspace_entry)
+        _factorization_acceptable(s, s - sup) for s, sup in zip(subspace_entry, superspace_entry)
     )
 
 
 def is_denominator_factor(subspace_entry: tuple, superspace_entry: tuple) -> bool:
     return all(
-        _factorization_acceptable(s, s + sup)
-        for s, sup in zip(subspace_entry, superspace_entry)
+        _factorization_acceptable(s, s + sup) for s, sup in zip(subspace_entry, superspace_entry)
     )
 
 
@@ -129,9 +123,7 @@ def get_simplest_prime_only_basis(domain_basis: tuple) -> tuple[int, ...]:
 def express_quotients_in_domain_basis(quotients: tuple, domain_basis: tuple) -> tuple:
     dimension = get_domain_basis_dimension(domain_basis)
     basis_a = sp.Matrix(
-        pad_vectors_with_zeros_up_to_d(
-            tuple(quotient_to_pcv(b) for b in domain_basis), dimension
-        )
+        pad_vectors_with_zeros_up_to_d(tuple(quotient_to_pcv(b) for b in domain_basis), dimension)
     )
     gram = basis_a * basis_a.T
     vectors = []

@@ -224,9 +224,7 @@ def _ea_addition(u1: Multivector, u2: Multivector, is_sum: bool) -> Multivector:
         raise ValueError("multivectors not addable: dimensions differ")
     if not is_sum and first == second:
         raise ValueError("cannot diff a temperament with itself")
-    combined = tuple(
-        a + b if is_sum else a - b for a, b in zip(first.coords, second.coords)
-    )
+    combined = tuple(a + b if is_sum else a - b for a, b in zip(first.coords, second.coords))
     result = Multivector(combined, first.grade, first.variance)
     if is_nondecomposable(result):
         raise ValueError("multivectors not addable")

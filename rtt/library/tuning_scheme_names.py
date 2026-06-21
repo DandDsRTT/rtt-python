@@ -113,9 +113,7 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
             destretched = prefix.group(2)
         name = prefix.group(3)
     power = _optimization_power_from_name(name)
-    target_match = re.search(
-        r"\{[\d/,\s]*\}|\d*-?TILT|\d*-?OLD|primes", name
-    )
+    target_match = re.search(r"\{[\d/,\s]*\}|\d*-?TILT|\d*-?OLD|primes", name)
     target = target_match.group(0) if target_match else None
     if target is None and ("all-interval" in name or name.strip().endswith("S")):
         target = "{}"
@@ -124,7 +122,9 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
     nonprime_approach = (
         "nonprime-based"
         if "nonprime-based" in name
-        else "prime-based" if "prime-based" in name else ""
+        else "prime-based"
+        if "prime-based" in name
+        else ""
     )
     slope_letter = name.strip()[-1:]
     if slope_letter not in _SLOPE_BY_LETTER:

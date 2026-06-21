@@ -4,9 +4,7 @@ import numpy as np
 from scipy.optimize import linprog, minimize
 
 
-def solve_optimum(
-    tempered: np.ndarray, just: np.ndarray, power: float, rank: int
-) -> np.ndarray:
+def solve_optimum(tempered: np.ndarray, just: np.ndarray, power: float, rank: int) -> np.ndarray:
     if power == 2:
         generators, *_ = np.linalg.lstsq(tempered, just, rcond=None)
         return generators
@@ -128,9 +126,7 @@ def _minisum_lp(tempered: np.ndarray, just: np.ndarray, rank: int) -> tuple[np.n
     k = len(just)
     cost = np.concatenate([np.zeros(rank), np.ones(k)])
     identity = np.eye(k)
-    a_ub = np.vstack(
-        [np.hstack([tempered, -identity]), np.hstack([-tempered, -identity])]
-    )
+    a_ub = np.vstack([np.hstack([tempered, -identity]), np.hstack([-tempered, -identity])])
     b_ub = np.concatenate([just, -just])
     bounds = [(None, None)] * rank + [(0, None)] * k
     result = linprog(cost, A_ub=a_ub, b_ub=b_ub, bounds=bounds)
@@ -144,11 +140,13 @@ def _minisum_optimum_is_unique(
 ) -> bool:
     k = len(just)
     identity = np.eye(k)
-    a_ub = np.vstack([
-        np.hstack([tempered, -identity]),
-        np.hstack([-tempered, -identity]),
-        np.concatenate([np.zeros(rank), np.ones(k)]),
-    ])
+    a_ub = np.vstack(
+        [
+            np.hstack([tempered, -identity]),
+            np.hstack([-tempered, -identity]),
+            np.concatenate([np.zeros(rank), np.ones(k)]),
+        ]
+    )
     b_ub = np.concatenate([just, -just, [optimum + tol]])
     bounds = [(None, None)] * rank + [(0, None)] * k
     for axis in range(rank):
@@ -169,7 +167,7 @@ def _power_limit(
     generators = np.array(start, dtype=float)
     scale = max(float(np.max(np.abs(tempered @ generators - just))), 1.0)
     for k in range(1, steps + 1):
-        power = 1.0 + 2.0 ** -k
+        power = 1.0 + 2.0**-k
         result = minimize(
             lambda g: float(np.sum((np.abs(tempered @ g - just) / scale) ** power)),
             generators,

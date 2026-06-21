@@ -102,12 +102,16 @@ def just_intonation(domain_basis) -> TemperamentState:
 def remove_comma(state: TemperamentState, index: int = -1) -> TemperamentState:
     basis = state.comma_basis
     i = index % len(basis)
-    remaining = basis[:i] + basis[i + 1:]
-    return from_comma_basis(remaining, state.domain_basis) if remaining else just_intonation(state.domain_basis)
+    remaining = basis[:i] + basis[i + 1 :]
+    return (
+        from_comma_basis(remaining, state.domain_basis)
+        if remaining
+        else just_intonation(state.domain_basis)
+    )
 
 
 def remove_mapping_row(state: TemperamentState, i: int) -> TemperamentState:
-    kept = state.mapping[:i] + state.mapping[i + 1:]
+    kept = state.mapping[:i] + state.mapping[i + 1 :]
     return from_mapping(kept, state.domain_basis)
 
 
@@ -143,12 +147,16 @@ def can_set_domain_element(state: TemperamentState, index: int, element) -> bool
     parsed = parse_domain_element(element) if isinstance(element, str) else element
     if parsed is None:
         return False
-    trial = state.domain_basis[:index] + (_as_basis_element(parsed),) + state.domain_basis[index + 1:]
+    trial = (
+        state.domain_basis[:index] + (_as_basis_element(parsed),) + state.domain_basis[index + 1 :]
+    )
     return is_independent_domain_basis(trial)
 
 
 def set_domain_element(state: TemperamentState, index: int, element) -> TemperamentState:
-    new_basis = state.domain_basis[:index] + (_as_basis_element(element),) + state.domain_basis[index + 1:]
+    new_basis = (
+        state.domain_basis[:index] + (_as_basis_element(element),) + state.domain_basis[index + 1 :]
+    )
     return from_mapping(state.mapping, new_basis)
 
 
@@ -172,9 +180,9 @@ def can_remove_domain_element(state: TemperamentState) -> bool:
 
 def remove_domain_element(state: TemperamentState, index: int) -> TemperamentState:
     i = index % state.d
-    new_basis = state.domain_basis[:i] + state.domain_basis[i + 1:]
+    new_basis = state.domain_basis[:i] + state.domain_basis[i + 1 :]
     independent: list[tuple[int, ...]] = []
-    for comma in (c[:i] + c[i + 1:] for c in state.comma_basis):
+    for comma in (c[:i] + c[i + 1 :] for c in state.comma_basis):
         trial = independent + [comma]
         raises_the_nullity = from_comma_basis(tuple(trial), new_basis).n == len(trial)
         if raises_the_nullity:

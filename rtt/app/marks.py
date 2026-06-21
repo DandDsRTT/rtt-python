@@ -14,8 +14,10 @@ _BR_BRACE_CUSP = 0.2
 
 
 def svg(w, h, body):
-    return (f'<svg width="100%" height="100%" viewBox="0 0 {w:.2f} {h:.2f}" '
-            f'preserveAspectRatio="none" style="display:block;overflow:visible">{body}</svg>')
+    return (
+        f'<svg width="100%" height="100%" viewBox="0 0 {w:.2f} {h:.2f}" '
+        f'preserveAspectRatio="none" style="display:block;overflow:visible">{body}</svg>'
+    )
 
 
 def rect(x, y, w, h):
@@ -35,8 +37,13 @@ def ribbon(pts):
         edge_a.append((x + ox, y + oy))
         edge_b.append((x - ox, y - oy))
     outline = edge_a + edge_b[::-1]
-    return ('<path fill="' + BR_COLOR + '" d="M'
-            + ' '.join(f'{x:.2f},{y:.2f}' for x, y in outline) + ' Z"/>')
+    return (
+        '<path fill="'
+        + BR_COLOR
+        + '" d="M'
+        + " ".join(f"{x:.2f},{y:.2f}" for x, y in outline)
+        + ' Z"/>'
+    )
 
 
 def _qbez(p0, ctrl, p1, w0, w1, n, *, skip_first=False):
@@ -60,17 +67,23 @@ def square_bracket(w, h, side):
     else:
         x_out = BR_INSET
         bar_x = x_out + BR_SERIF_L - _BR_BAR
-    return svg(w, h,
+    return svg(
+        w,
+        h,
         rect(bar_x, 0, _BR_BAR, h)
         + rect(x_out, 0, BR_SERIF_L, _BR_SERIF_T)
-        + rect(x_out, h - _BR_SERIF_T, BR_SERIF_L, _BR_SERIF_T))
+        + rect(x_out, h - _BR_SERIF_T, BR_SERIF_L, _BR_SERIF_T),
+    )
 
 
 def top_bracket(w, h):
-    return svg(w, h,
+    return svg(
+        w,
+        h,
         rect(0, 0, w, _BR_BAR)
         + rect(0, 0, _BR_SERIF_T, BR_SERIF_L)
-        + rect(w - _BR_SERIF_T, 0, _BR_SERIF_T, BR_SERIF_L))
+        + rect(w - _BR_SERIF_T, 0, _BR_SERIF_T, BR_SERIF_L),
+    )
 
 
 def angle_bracket(w, h):
@@ -80,10 +93,22 @@ def angle_bracket(w, h):
     vx, tx = bx0 + _BR_ANGLE_THICK, bx1 - 0.4
     top, vertex, bot = (tx, 0.2), (vx, cy), (tx, h - 0.2)
     n = 10
-    pts = [(top[0] + (vertex[0] - top[0]) * i / n, top[1] + (vertex[1] - top[1]) * i / n,
-            _BR_ANGLE_THIN + (_BR_ANGLE_THICK - _BR_ANGLE_THIN) * i / n) for i in range(n + 1)]
-    pts += [(vertex[0] + (bot[0] - vertex[0]) * i / n, vertex[1] + (bot[1] - vertex[1]) * i / n,
-             _BR_ANGLE_THICK + (_BR_ANGLE_THIN - _BR_ANGLE_THICK) * i / n) for i in range(1, n + 1)]
+    pts = [
+        (
+            top[0] + (vertex[0] - top[0]) * i / n,
+            top[1] + (vertex[1] - top[1]) * i / n,
+            _BR_ANGLE_THIN + (_BR_ANGLE_THICK - _BR_ANGLE_THIN) * i / n,
+        )
+        for i in range(n + 1)
+    ]
+    pts += [
+        (
+            vertex[0] + (bot[0] - vertex[0]) * i / n,
+            vertex[1] + (bot[1] - vertex[1]) * i / n,
+            _BR_ANGLE_THICK + (_BR_ANGLE_THIN - _BR_ANGLE_THICK) * i / n,
+        )
+        for i in range(1, n + 1)
+    ]
     return svg(w, h, ribbon(pts))
 
 
@@ -104,8 +129,15 @@ def brace(w, h):
     pts += _qbez((cx - cusp_dx, arm_y), (cx, arm_y), (cx, cusp_y), thick, cusp, n, skip_first=True)
     pts += _qbez((cx, cusp_y), (cx, arm_y), (cx + cusp_dx, arm_y), cusp, thick, n, skip_first=True)
     pts.append((w - end_x - serif_dx, arm_y, thick))
-    pts += _qbez((w - end_x - serif_dx, arm_y), (w - end_x, arm_y), (w - end_x, tip_y),
-                 thick, thin, n, skip_first=True)
+    pts += _qbez(
+        (w - end_x - serif_dx, arm_y),
+        (w - end_x, arm_y),
+        (w - end_x, tip_y),
+        thick,
+        thin,
+        n,
+        skip_first=True,
+    )
     return svg(w, h, ribbon(pts))
 
 
@@ -126,8 +158,15 @@ def curly_bracket(w, h):
     pts += _qbez((arm_x, cy - cusp_dy), (arm_x, cy), (cusp_x, cy), thick, cusp, n, skip_first=True)
     pts += _qbez((cusp_x, cy), (arm_x, cy), (arm_x, cy + cusp_dy), cusp, thick, n, skip_first=True)
     pts.append((arm_x, h - end_y - serif_dy, thick))
-    pts += _qbez((arm_x, h - end_y - serif_dy), (arm_x, h - end_y), (tip_x, h - end_y),
-                 thick, thin, n, skip_first=True)
+    pts += _qbez(
+        (arm_x, h - end_y - serif_dy),
+        (arm_x, h - end_y),
+        (tip_x, h - end_y),
+        thick,
+        thin,
+        n,
+        skip_first=True,
+    )
     return svg(w, h, ribbon(pts))
 
 
@@ -136,10 +175,22 @@ def angle_foot(w, h):
     ty, vy = 0.85, h - 0.5 - _BR_ANGLE_THICK
     left, vertex, right = (0.8, ty), (cx, vy), (w - 0.8, ty)
     n = 8
-    pts = [(left[0] + (vertex[0] - left[0]) * i / n, left[1] + (vertex[1] - left[1]) * i / n,
-            _BR_ANGLE_THIN + (_BR_ANGLE_THICK - _BR_ANGLE_THIN) * i / n) for i in range(n + 1)]
-    pts += [(vertex[0] + (right[0] - vertex[0]) * i / n, vertex[1] + (right[1] - vertex[1]) * i / n,
-             _BR_ANGLE_THICK + (_BR_ANGLE_THIN - _BR_ANGLE_THICK) * i / n) for i in range(1, n + 1)]
+    pts = [
+        (
+            left[0] + (vertex[0] - left[0]) * i / n,
+            left[1] + (vertex[1] - left[1]) * i / n,
+            _BR_ANGLE_THIN + (_BR_ANGLE_THICK - _BR_ANGLE_THIN) * i / n,
+        )
+        for i in range(n + 1)
+    ]
+    pts += [
+        (
+            vertex[0] + (right[0] - vertex[0]) * i / n,
+            vertex[1] + (right[1] - vertex[1]) * i / n,
+            _BR_ANGLE_THICK + (_BR_ANGLE_THIN - _BR_ANGLE_THICK) * i / n,
+        )
+        for i in range(1, n + 1)
+    ]
     return svg(w, h, ribbon(pts))
 
 

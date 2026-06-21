@@ -70,7 +70,9 @@ def parse_domain_basis(text: str) -> tuple:
 
 
 def parse_ebk_vector(text: str) -> tuple:
-    return tuple(_to_number(token) for token in _SPLIT_RE.split(_expand_secor_elisions(text.strip())))
+    return tuple(
+        _to_number(token) for token in _SPLIT_RE.split(_expand_secor_elisions(text.strip()))
+    )
 
 
 def _expand_secor_elisions(text: str) -> str:

@@ -51,7 +51,10 @@ def _sanitized_weights_override(weights_override):
 
 
 def optimize_generator_tuning_map(
-    t: Temperament, spec: TuningSchemeSpec | str, prescaler_override=None, weights_override=None,
+    t: Temperament,
+    spec: TuningSchemeSpec | str,
+    prescaler_override=None,
+    weights_override=None,
 ) -> tuple[float, ...]:
     prescaler_override = _sanitized_prescaler_override(prescaler_override)
     weights_override = _sanitized_weights_override(weights_override)
@@ -71,7 +74,10 @@ def optimize_generator_tuning_map(
     solve_spec = replace(spec, nonprime_basis_approach="") if prime_based else spec
 
     generators = _solve_generators(
-        solve_t, solve_spec, prescaler_override=prescaler_override, weights_override=weights_override
+        solve_t,
+        solve_spec,
+        prescaler_override=prescaler_override,
+        weights_override=weights_override,
     )
     if prime_based:
         generators = _retrieve_prime_domain_basis_generators(generators, t, solve_t)
@@ -87,14 +93,22 @@ def optimize_generator_tuning_map(
 
 
 def _solve_generators(
-    t: Temperament, spec: TuningSchemeSpec, prescaler_override=None, weights_override=None,
+    t: Temperament,
+    spec: TuningSchemeSpec,
+    prescaler_override=None,
+    weights_override=None,
 ) -> np.ndarray:
     d = get_d(t)
     mapping = np.array(mapping_matrix(t), dtype=float)
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)
     if _is_all_interval(spec) and spec.complexity_size_factor != 0:
         return _optimize_augmented_all_interval(
-            t, spec, mapping, just_tuning_map, d, prescaler_override=prescaler_override,
+            t,
+            spec,
+            mapping,
+            just_tuning_map,
+            d,
+            prescaler_override=prescaler_override,
         )
     vectors, weights, power = _optimization_setup(
         t, spec, d, prescaler_override=prescaler_override, weights_override=weights_override
@@ -116,9 +130,7 @@ def _retrieve_prime_domain_basis_generators(
     prime_mapping = np.array(mapping_matrix(prime_t), dtype=float)
     tuning_over_primes = np.asarray(generators) @ prime_mapping
     basis_change = np.array(
-        express_quotients_in_domain_basis(
-            get_domain_basis(original_t), get_domain_basis(prime_t)
-        ),
+        express_quotients_in_domain_basis(get_domain_basis(original_t), get_domain_basis(prime_t)),
         dtype=float,
     )
     tuning_over_original = tuning_over_primes @ basis_change.T
@@ -211,7 +223,9 @@ def _optimize_augmented_all_interval(
     aug_just = np.append(just_tuning_map, 0.0)
 
     primes, prime_weights, power = _optimization_setup(
-        t, replace(spec, complexity_size_factor=0), d,
+        t,
+        replace(spec, complexity_size_factor=0),
+        d,
         prescaler_override=prescaler_override,
     )
     aug_vectors = np.eye(d + 1)
@@ -219,8 +233,7 @@ def _optimize_augmented_all_interval(
 
     held = _held_vectors(spec, t, d)
     aug_held = (
-        None if held is None
-        else np.hstack([held, size_factor * (held @ size_coeffs)[:, None]])
+        None if held is None else np.hstack([held, size_factor * (held @ size_coeffs)[:, None]])
     )
 
     generators = _constrained_solve(aug_mapping, aug_just, aug_vectors, weights, power, aug_held)
@@ -247,30 +260,49 @@ def _destretch(
 
 
 def _optimization_setup(
-    t: Temperament, spec: TuningSchemeSpec, d: int, prescaler_override=None, weights_override=None,
+    t: Temperament,
+    spec: TuningSchemeSpec,
+    d: int,
+    prescaler_override=None,
+    weights_override=None,
 ) -> tuple[tuple[tuple[int, ...], ...], np.ndarray, float]:
     if spec.target_intervals is None:
         return (), np.array([]), spec.optimization_power
     if spec.target_intervals.strip() in ("{}", ""):
         if prescaler_override is not None and np.ndim(prescaler_override) == 2:
             inverse_columns = np.linalg.inv(np.asarray(prescaler_override, dtype=float)).T
-            return (tuple(map(tuple, inverse_columns)), np.ones(d),
-                    get_dual_power(spec.complexity_norm_power))
+            return (
+                tuple(map(tuple, inverse_columns)),
+                np.ones(d),
+                get_dual_power(spec.complexity_norm_power),
+            )
         primes = tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
         weights = damage_weights(
-            primes, t, replace(spec, damage_weight_slope="simplicityWeight", complexity_rough=0),
+            primes,
+            t,
+            replace(spec, damage_weight_slope="simplicityWeight", complexity_rough=0),
             prescaler_override=prescaler_override,
         )
         return primes, weights, get_dual_power(spec.complexity_norm_power)
     vectors = resolve_target_intervals(spec.target_intervals, t, d)
-    return (vectors,
-            damage_weights(vectors, t, spec, prescaler_override=prescaler_override,
-                           weights_override=weights_override),
-            spec.optimization_power)
+    return (
+        vectors,
+        damage_weights(
+            vectors,
+            t,
+            spec,
+            prescaler_override=prescaler_override,
+            weights_override=weights_override,
+        ),
+        spec.optimization_power,
+    )
 
 
 def optimize_tuning_map(
-    t: Temperament, spec: TuningSchemeSpec | str, prescaler_override=None, weights_override=None,
+    t: Temperament,
+    spec: TuningSchemeSpec | str,
+    prescaler_override=None,
+    weights_override=None,
 ) -> tuple[float, ...]:
     generators = np.array(
         optimize_generator_tuning_map(
@@ -282,9 +314,7 @@ def optimize_tuning_map(
     return tuple(float(x) for x in generators @ mapping)
 
 
-def get_tuning_map_damages(
-    t: Temperament, tuning_map: tuple, spec: TuningSchemeSpec | str
-) -> dict:
+def get_tuning_map_damages(t: Temperament, tuning_map: tuple, spec: TuningSchemeSpec | str) -> dict:
     vectors, damages, _ = _evaluate_damages(t, tuning_map, spec)
     return {pcv_to_quotient(vector): float(damage) for vector, damage in zip(vectors, damages)}
 
@@ -354,9 +384,7 @@ def _interval_spec_vectors(text: str, t: Temperament, d: int) -> tuple[tuple[int
     quotients = parse_quotients(text.replace("octave", "2"))
     domain_basis = get_domain_basis(t)
     if is_standard_prime_limit_domain_basis(domain_basis):
-        return pad_vectors_with_zeros_up_to_d(
-            tuple(quotient_to_pcv(q) for q in quotients), d
-        )
+        return pad_vectors_with_zeros_up_to_d(tuple(quotient_to_pcv(q) for q in quotients), d)
     return express_quotients_in_domain_basis(quotients, domain_basis)
 
 
@@ -458,8 +486,7 @@ def get_complexity(
         if tuple(prime_basis) != tuple(domain_basis):
             lift = express_quotients_in_domain_basis(domain_basis, prime_basis)
             pcv = tuple(
-                sum(pcv[e] * lift[e][p] for e in range(len(lift)))
-                for p in range(len(prime_basis))
+                sum(pcv[e] * lift[e][p] for e in range(len(lift))) for p in range(len(prime_basis))
             )
             domain_basis = prime_basis
     if complexity_rough:

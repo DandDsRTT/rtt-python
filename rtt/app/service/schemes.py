@@ -123,8 +123,9 @@ def is_all_interval(scheme) -> bool:
     return targets is not None and targets.strip() in ("{}", "")
 
 
-def displayed_targets(state, scheme=DEFAULT_TUNING_SCHEME, target_spec=DEFAULT_TARGET_SPEC,
-                      target_override=None) -> tuple[str, ...]:
+def displayed_targets(
+    state, scheme=DEFAULT_TUNING_SCHEME, target_spec=DEFAULT_TARGET_SPEC, target_override=None
+) -> tuple[str, ...]:
     db = state.domain_basis
     if is_all_interval(scheme):
         return tuple(element_ratio(e) for e in db)
@@ -166,8 +167,10 @@ def scheme_with_complexity(scheme, name: str):
 
 def _complexity_signature(spec) -> tuple:
     return (
-        spec.complexity_norm_power, spec.complexity_log_prime_power,
-        spec.complexity_prime_power, spec.complexity_size_factor,
+        spec.complexity_norm_power,
+        spec.complexity_log_prime_power,
+        spec.complexity_prime_power,
+        spec.complexity_size_factor,
         bool(spec.complexity_rough),
     )
 
@@ -218,7 +221,10 @@ def scheme_from_json(data):
 
 
 def complexity_prescaler(
-    mapping, scheme: str = DEFAULT_TUNING_SCHEME, override=None, domain_basis=None,
+    mapping,
+    scheme: str = DEFAULT_TUNING_SCHEME,
+    override=None,
+    domain_basis=None,
     nonprime_approach: str = "",
 ) -> tuple[float, ...]:
     if override is not None:
@@ -229,21 +235,30 @@ def complexity_prescaler(
     spec = resolve_tuning_scheme(scheme)
     return tuple(
         get_complexity_prescaler(
-            t, spec.complexity_log_prime_power, spec.complexity_prime_power,
+            t,
+            spec.complexity_log_prime_power,
+            spec.complexity_prime_power,
             nonprime_approach or spec.nonprime_basis_approach,
         )
     )
 
 
-def displayed_prescaler_name(mapping, scheme=DEFAULT_TUNING_SCHEME, custom_prescaler=None,
-                             domain_basis=None, nonprime_approach: str = "") -> str | None:
+def displayed_prescaler_name(
+    mapping,
+    scheme=DEFAULT_TUNING_SCHEME,
+    custom_prescaler=None,
+    domain_basis=None,
+    nonprime_approach: str = "",
+) -> str | None:
     if custom_prescaler is not None:
         if _is_matrix(custom_prescaler):
             return None
-        computed = complexity_prescaler(mapping, scheme, domain_basis=domain_basis,
-                                        nonprime_approach=nonprime_approach)
+        computed = complexity_prescaler(
+            mapping, scheme, domain_basis=domain_basis, nonprime_approach=nonprime_approach
+        )
         shown = tuple(float(x) for x in custom_prescaler)
         if len(shown) != len(computed) or any(
-                prescale_text(a) != prescale_text(b) for a, b in zip(shown, computed)):
+            prescale_text(a) != prescale_text(b) for a, b in zip(shown, computed)
+        ):
             return None
     return prescaler_of(scheme)

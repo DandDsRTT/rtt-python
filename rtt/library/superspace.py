@@ -9,8 +9,7 @@ from rtt.library.matrix_utils import Matrix, matrix_multiply, transpose
 
 def apply_matrix_to_vectors(matrix, vectors) -> tuple:
     return tuple(
-        tuple(sum(row[j] * v[j] for j in range(len(row))) for row in matrix)
-        for v in vectors
+        tuple(sum(row[j] * v[j] for j in range(len(row))) for row in matrix) for v in vectors
     )
 
 
@@ -55,9 +54,10 @@ def extend_to_full_image_rank(mapping: Matrix, vectors) -> Matrix | None:
 
 
 def least_squares_left_factor(product, right_factor) -> tuple:
-    x = (sp.Matrix([list(row) for row in product])
-         * sp.Matrix([list(row) for row in right_factor]).pinv())
+    x = (
+        sp.Matrix([list(row) for row in product])
+        * sp.Matrix([list(row) for row in right_factor]).pinv()
+    )
     return tuple(
-        tuple(Fraction(x[i, j].p, x[i, j].q) for j in range(x.cols))
-        for i in range(x.rows)
+        tuple(Fraction(x[i, j].p, x[i, j].q) for j in range(x.cols)) for i in range(x.rows)
     )

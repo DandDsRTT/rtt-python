@@ -95,9 +95,7 @@ def _build_generator_operator(t: Temperament, spec: TuningSchemeSpec) -> sp.Matr
         determining_rows.append(held * mapping.T)
     if targets is not None and targets.rows > 0:
         determining_rows.append(targets * mapping.T)
-    determining = (
-        sp.Matrix.vstack(*determining_rows) if determining_rows else sp.zeros(0, rank)
-    )
+    determining = sp.Matrix.vstack(*determining_rows) if determining_rows else sp.zeros(0, rank)
     projector = _column_space_projector(determining, rank)
     if projector is not None:
         just_operator = mapping.pinv()

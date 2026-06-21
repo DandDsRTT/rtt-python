@@ -57,9 +57,7 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
     ),
 )
 
-DEFAULTS: dict[str, bool] = {
-    key: default for _, items in SHOW_GROUPS for key, _, default in items
-}
+DEFAULTS: dict[str, bool] = {key: default for _, items in SHOW_GROUPS for key, _, default in items}
 
 SUBCONTROLS: dict[str, str] = {
     "mnemonics": "names",
@@ -82,22 +80,55 @@ SUBCONTROLS: dict[str, str] = {
 }
 
 IMPLEMENTED: frozenset[str] = frozenset(
-    {"animations", "preview_highlighting", "tooltips",
-     "drag_to_combine",
-     "names", "symbols", "header_symbols", "mnemonics", "equivalences", "gridded_values",
-     "plain_text_values",
-     "quantities", "decimals", "ebk", "interval_ratios", "interval_vectors", "units", "cell_units", "domain_units", "counts", "presets",
-     "temperament", "temperament_tiles", "tuning", "tuning_tiles",
-     "math_expressions", "charts", "tuning_ranges",
-     "tuning_colorization", "temperament_colorization", "weighting",
-     "generator_detempering", "optimization", "interest", "all_interval", "alt_complexity",
-     "custom_weights", "nonstandard_domain", "projection", "identity_objects",
-     "form", "form_controls", "form_tiles", "form_colorization"}
+    {
+        "animations",
+        "preview_highlighting",
+        "tooltips",
+        "drag_to_combine",
+        "names",
+        "symbols",
+        "header_symbols",
+        "mnemonics",
+        "equivalences",
+        "gridded_values",
+        "plain_text_values",
+        "quantities",
+        "decimals",
+        "ebk",
+        "interval_ratios",
+        "interval_vectors",
+        "units",
+        "cell_units",
+        "domain_units",
+        "counts",
+        "presets",
+        "temperament",
+        "temperament_tiles",
+        "tuning",
+        "tuning_tiles",
+        "math_expressions",
+        "charts",
+        "tuning_ranges",
+        "tuning_colorization",
+        "temperament_colorization",
+        "weighting",
+        "generator_detempering",
+        "optimization",
+        "interest",
+        "all_interval",
+        "alt_complexity",
+        "custom_weights",
+        "nonstandard_domain",
+        "projection",
+        "identity_objects",
+        "form",
+        "form_controls",
+        "form_tiles",
+        "form_colorization",
+    }
 )
 
 GROUPING_PARENTS: frozenset[str] = frozenset({"temperament", "tuning"})
-
-
 
 
 CHAPTER_MIN = 2
@@ -105,27 +136,49 @@ CHAPTER_STAR = 10
 CHAPTER_DEFAULT = 4
 
 CHAPTER: dict[str, int] = {
-    "animations": 2, "preview_highlighting": 2, "tooltips": 2,
-    "gridded_values": 2, "quantities": 2, "names": 2, "symbols": 2, "plain_text_values": 2,
+    "animations": 2,
+    "preview_highlighting": 2,
+    "tooltips": 2,
+    "gridded_values": 2,
+    "quantities": 2,
+    "names": 2,
+    "symbols": 2,
+    "plain_text_values": 2,
     "decimals": 2,
-    "math_expressions": 2, "presets": 2, "equivalences": 2,
+    "math_expressions": 2,
+    "presets": 2,
+    "equivalences": 2,
     "header_symbols": 2,
     "mnemonics": 2,
     "charts": 3,
     "drag_to_combine": 4,
-    "units": 5, "cell_units": 5,
-    "counts": 2, "temperament": 2, "temperament_tiles": 2, "temperament_colorization": 2,
-    "interest": 2, "interval_ratios": 2, "interval_vectors": 2, "domain_units": 5,
+    "units": 5,
+    "cell_units": 5,
+    "counts": 2,
+    "temperament": 2,
+    "temperament_tiles": 2,
+    "temperament_colorization": 2,
+    "interest": 2,
+    "interval_ratios": 2,
+    "interval_vectors": 2,
+    "domain_units": 5,
     "ebk": 2,
-    "tuning": 3, "tuning_tiles": 3, "tuning_colorization": 3,
-    "optimization": 3, "tuning_ranges": 3, "weighting": 3,
+    "tuning": 3,
+    "tuning_tiles": 3,
+    "tuning_colorization": 3,
+    "optimization": 3,
+    "tuning_ranges": 3,
+    "weighting": 3,
     "all_interval": 7,
     "alt_complexity": 8,
     "nonstandard_domain": 9,
     "custom_weights": CHAPTER_STAR,
-    "form": CHAPTER_STAR, "form_controls": CHAPTER_STAR, "form_tiles": CHAPTER_STAR,
+    "form": CHAPTER_STAR,
+    "form_controls": CHAPTER_STAR,
+    "form_tiles": CHAPTER_STAR,
     "form_colorization": CHAPTER_STAR,
-    "projection": CHAPTER_STAR, "generator_detempering": CHAPTER_STAR,
+    "projection": CHAPTER_STAR,
+    "generator_detempering": CHAPTER_STAR,
     "identity_objects": CHAPTER_STAR,
 }
 
@@ -185,5 +238,7 @@ def ancestors_of(key: str) -> set[str]:
 
 
 def from_persisted(stored: dict) -> dict[str, bool]:
-    return {key: (stored.get(key, default) if key in IMPLEMENTED else default)
-            for key, default in DEFAULTS.items()}
+    return {
+        key: (stored.get(key, default) if key in IMPLEMENTED else default)
+        for key, default in DEFAULTS.items()
+    }

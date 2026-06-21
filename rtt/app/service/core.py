@@ -218,7 +218,9 @@ def _interval_vectors(ratios, domain_basis, d) -> tuple:
     ratios = tuple("1/1" if r == _OVER_COMPLEX_RATIO else r for r in ratios)
     if domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis):
         return _vectors(ratios, d)
-    return express_quotients_in_domain_basis(tuple(Fraction(r) for r in ratios), tuple(domain_basis))
+    return express_quotients_in_domain_basis(
+        tuple(Fraction(r) for r in ratios), tuple(domain_basis)
+    )
 
 
 def _over(prime_map, vector):
@@ -251,8 +253,13 @@ def canonical_comma_basis(comma_basis) -> Matrix:
     return _to_matrix(canonical_ca(_to_matrix(comma_basis)))
 
 
-MAPPING_FORM_KEYS = ("canonical", "mingen", "equave-reduced",
-                     "positive-generator", "positive-generator-shift")
+MAPPING_FORM_KEYS = (
+    "canonical",
+    "mingen",
+    "equave-reduced",
+    "positive-generator",
+    "positive-generator-shift",
+)
 MAPPING_FORM_LABELS = {
     "canonical": "canonical",
     "mingen": "minimal-generator",
@@ -331,7 +338,10 @@ def identify_comma_basis_form(comma_basis, domain_basis=None) -> str | None:
 
 def resolve_comma_basis_form(comma_basis, preferred, domain_basis=None) -> str:
     cb = _to_matrix(comma_basis)
-    if preferred in COMMA_BASIS_FORM_KEYS and comma_basis_in_form(cb, preferred, domain_basis) == cb:
+    if (
+        preferred in COMMA_BASIS_FORM_KEYS
+        and comma_basis_in_form(cb, preferred, domain_basis) == cb
+    ):
         return preferred
     return identify_comma_basis_form(cb, domain_basis) or ""
 
@@ -341,8 +351,10 @@ def form_matrix(mapping) -> Matrix:
     canon = canonical_ma(m)
     detemper = get_generator_detempering(Temperament(m, Variance.ROW)).matrix
     return tuple(
-        tuple(sum(canon[i][p] * detemper[j][p] for p in range(len(m[0])))
-              for j in range(len(detemper)))
+        tuple(
+            sum(canon[i][p] * detemper[j][p] for p in range(len(m[0])))
+            for j in range(len(detemper))
+        )
         for i in range(len(canon))
     )
 
@@ -352,8 +364,10 @@ def inverse_form_matrix(mapping) -> Matrix:
     canon = canonical_ma(m)
     canon_detemper = get_generator_detempering(Temperament(_to_matrix(canon), Variance.ROW)).matrix
     return tuple(
-        tuple(sum(m[i][p] * canon_detemper[j][p] for p in range(len(m[0])))
-              for j in range(len(canon_detemper)))
+        tuple(
+            sum(m[i][p] * canon_detemper[j][p] for p in range(len(m[0])))
+            for j in range(len(canon_detemper))
+        )
         for i in range(len(m))
     )
 
@@ -376,7 +390,9 @@ def mapping_from_form_matrix(mapping, form_rows) -> Matrix | None:
 
 
 def target_interval_vectors(ratios, d: int, domain_basis=None) -> Matrix:
-    return tuple(tuple(int(x) for x in vector) for vector in _interval_vectors(ratios, domain_basis, d))
+    return tuple(
+        tuple(int(x) for x in vector) for vector in _interval_vectors(ratios, domain_basis, d)
+    )
 
 
 def _domain_label(d: int, domain_basis=None) -> str:
@@ -443,21 +459,39 @@ def tuning(
     targets=None,
     weights_override=None,
 ) -> Tuning:
-    return _cached_tuning(_to_matrix(mapping), scheme, _hashable(domain_basis),
-                          nonprime_approach, tuple(held), _hashable(prescaler_override),
-                          _hashable(targets), _hashable(weights_override))
+    return _cached_tuning(
+        _to_matrix(mapping),
+        scheme,
+        _hashable(domain_basis),
+        nonprime_approach,
+        tuple(held),
+        _hashable(prescaler_override),
+        _hashable(targets),
+        _hashable(weights_override),
+    )
 
 
 @lru_cache(maxsize=256)
-def _cached_tuning(mapping, scheme, domain_basis, nonprime_approach, held,
-                   prescaler_override, targets, weights_override) -> Tuning:
+def _cached_tuning(
+    mapping,
+    scheme,
+    domain_basis,
+    nonprime_approach,
+    held,
+    prescaler_override,
+    targets,
+    weights_override,
+) -> Tuning:
     t = Temperament(mapping, Variance.ROW, domain_basis)
     spec = resolve_tuning_scheme(scheme)
     if targets is not None and (spec.target_intervals or "").strip() not in ("{}", ""):
         if targets:
             spec = replace(spec, target_intervals="{" + ", ".join(targets) + "}")
         else:
-            spec = replace(spec, target_intervals="1-OLD" if "OLD" in (spec.target_intervals or "") else "1-TILT")
+            spec = replace(
+                spec,
+                target_intervals="1-OLD" if "OLD" in (spec.target_intervals or "") else "1-TILT",
+            )
     if nonprime_approach:
         spec = replace(spec, nonprime_basis_approach=nonprime_approach)
     if held:
@@ -481,7 +515,8 @@ def _cached_tuning(mapping, scheme, domain_basis, nonprime_approach, held,
 
 def tuning_from_generators(mapping, generators, domain_basis=None) -> Tuning:
     return _cached_tuning_from_generators(
-        _to_matrix(mapping), tuple(float(g) for g in generators), _hashable(domain_basis))
+        _to_matrix(mapping), tuple(float(g) for g in generators), _hashable(domain_basis)
+    )
 
 
 @lru_cache(maxsize=256)
@@ -517,14 +552,22 @@ def _temperament_spec_vectors(mapping, scheme, ratios, domain_basis=None):
 
 
 def interval_complexities(
-    mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=(), prescaler_override=None,
+    mapping,
+    scheme: str = DEFAULT_TUNING_SCHEME,
+    ratios=(),
+    prescaler_override=None,
     domain_basis=None,
 ) -> tuple[float, ...]:
     t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios, domain_basis)
     return tuple(
         get_complexity(
-            m, t, spec.complexity_norm_power, spec.complexity_log_prime_power,
-            spec.complexity_prime_power, spec.complexity_size_factor, spec.nonprime_basis_approach,
+            m,
+            t,
+            spec.complexity_norm_power,
+            spec.complexity_log_prime_power,
+            spec.complexity_prime_power,
+            spec.complexity_size_factor,
+            spec.nonprime_basis_approach,
             prescaler_override=prescaler_override,
         )
         for m in vectors
@@ -532,13 +575,21 @@ def interval_complexities(
 
 
 def interval_weights(
-    mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=(), prescaler_override=None,
-    domain_basis=None, weights_override=None,
+    mapping,
+    scheme: str = DEFAULT_TUNING_SCHEME,
+    ratios=(),
+    prescaler_override=None,
+    domain_basis=None,
+    weights_override=None,
 ) -> tuple[float, ...]:
     t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios, domain_basis)
     return tuple(
-        float(w) for w in damage_weights(
-            vectors, t, spec, prescaler_override=prescaler_override,
+        float(w)
+        for w in damage_weights(
+            vectors,
+            t,
+            spec,
+            prescaler_override=prescaler_override,
             weights_override=weights_override,
         )
     )
@@ -621,20 +672,30 @@ def closed_form_tuning(
 ) -> ClosedFormTuning | None:
     if prescaler_override is not None or weights_override is not None:
         return None
-    return _cached_closed_form(_to_matrix(mapping), scheme, _hashable(domain_basis),
-                               nonprime_approach, tuple(held), _hashable(targets))
+    return _cached_closed_form(
+        _to_matrix(mapping),
+        scheme,
+        _hashable(domain_basis),
+        nonprime_approach,
+        tuple(held),
+        _hashable(targets),
+    )
 
 
 @lru_cache(maxsize=256)
-def _cached_closed_form(mapping, scheme, domain_basis, nonprime_approach, held,
-                        targets) -> ClosedFormTuning | None:
+def _cached_closed_form(
+    mapping, scheme, domain_basis, nonprime_approach, held, targets
+) -> ClosedFormTuning | None:
     t = Temperament(mapping, Variance.ROW, domain_basis)
     spec = resolve_tuning_scheme(scheme)
     if targets is not None and (spec.target_intervals or "").strip() not in ("{}", ""):
         if targets:
             spec = replace(spec, target_intervals="{" + ", ".join(targets) + "}")
         else:
-            spec = replace(spec, target_intervals="1-OLD" if "OLD" in (spec.target_intervals or "") else "1-TILT")
+            spec = replace(
+                spec,
+                target_intervals="1-OLD" if "OLD" in (spec.target_intervals or "") else "1-TILT",
+            )
     if nonprime_approach:
         spec = replace(spec, nonprime_basis_approach=nonprime_approach)
     if held:

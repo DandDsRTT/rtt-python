@@ -29,9 +29,7 @@ def warted_val(n: int, warts: str, domain_basis: tuple) -> tuple[int, ...]:
         i = ord(letter) - ord("a")
         if 0 <= i < len(exact):
             counts[i] = counts.get(i, 0) + 1
-    return tuple(
-        _kth_nearest_integer(x, counts.get(i, 0)) for i, x in enumerate(exact)
-    )
+    return tuple(_kth_nearest_integer(x, counts.get(i, 0)) for i, x in enumerate(exact))
 
 
 def wart_name(n: int, warts: str = "") -> str:

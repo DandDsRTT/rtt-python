@@ -23,8 +23,7 @@ def get_tilt(integer_limit: int) -> tuple[Fraction, ...]:
     return tuple(
         q
         for q in diamond
-        if MIN_SIZE <= q <= MAX_SIZE
-        and q.numerator * q.denominator <= max_complexity
+        if MIN_SIZE <= q <= MAX_SIZE and q.numerator * q.denominator <= max_complexity
     )
 
 

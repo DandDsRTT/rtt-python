@@ -62,8 +62,7 @@ def basis_in_superspace(domain_basis) -> Matrix:
     superspace = superspace_primes(domain_basis)
     elements = tuple(Fraction(e) for e in domain_basis)
     return tuple(
-        tuple(int(x) for x in v)
-        for v in express_quotients_in_domain_basis(elements, superspace)
+        tuple(int(x) for x in v) for v in express_quotients_in_domain_basis(elements, superspace)
     )
 
 
@@ -94,7 +93,8 @@ def lift_vectors_to_superspace(domain_basis, vectors) -> Matrix:
 
 
 def superspace_complexity_prescaler(
-    state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME,
+    state: TemperamentState,
+    scheme: str = DEFAULT_TUNING_SCHEME,
 ) -> tuple[float, ...]:
     superspace = superspace_primes(state.domain_basis)
     t = Temperament(_to_matrix(superspace_mapping(state)), Variance.ROW, superspace)
@@ -122,7 +122,9 @@ def superspace_self_map(state: TemperamentState) -> Matrix:
 
 
 def superspace_tuning(
-    state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME, nonprime_approach: str = "",
+    state: TemperamentState,
+    scheme: str = DEFAULT_TUNING_SCHEME,
+    nonprime_approach: str = "",
     generator_override=None,
 ) -> Tuning:
     superspace = superspace_primes(state.domain_basis)
@@ -149,7 +151,8 @@ def superspace_tuning(
 
 
 def closed_form_superspace_tuning(
-    state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME,
+    state: TemperamentState,
+    scheme: str = DEFAULT_TUNING_SCHEME,
 ) -> ClosedFormTuning | None:
     return _cached_closed_form_superspace_tuning(
         _to_matrix(superspace_mapping(state)), superspace_primes(state.domain_basis), scheme
@@ -162,14 +165,18 @@ def _cached_closed_form_superspace_tuning(ml, superspace, scheme) -> ClosedFormT
     return closed_form_from_temperament(t, resolve_tuning_scheme(scheme))
 
 
-def project_superspace_generators_to_domain(state: TemperamentState, ss_generators) -> tuple[float, ...]:
+def project_superspace_generators_to_domain(
+    state: TemperamentState, ss_generators
+) -> tuple[float, ...]:
     superspace = superspace_primes(state.domain_basis)
     ml_t = Temperament(_to_matrix(superspace_mapping(state)), Variance.ROW, superspace)
     ss_tuning_map = tuning_map_from_generators(ml_t, tuple(float(g) for g in ss_generators))
     bl = basis_in_superspace(state.domain_basis)
     domain_tuning_map = apply_matrix_to_vectors(bl, (ss_tuning_map,))[0]
     domain_t = Temperament(_to_matrix(state.mapping), Variance.ROW, state.domain_basis)
-    return tuple(float(g) for g in generator_tuning_map_from_t_and_tuning_map(domain_t, domain_tuning_map))
+    return tuple(
+        float(g) for g in generator_tuning_map_from_t_and_tuning_map(domain_t, domain_tuning_map)
+    )
 
 
 def superspace_generator_embedding(state: TemperamentState, held_ratios=()):
@@ -219,8 +226,10 @@ def _superspace_projection_temperaments(state: TemperamentState, held_ratios):
     if held_L is None:
         return None
     superspace = superspace_primes(state.domain_basis)
-    return (Temperament(ml, Variance.ROW, superspace),
-            Temperament(held_L, Variance.COL, superspace))
+    return (
+        Temperament(ml, Variance.ROW, superspace),
+        Temperament(held_L, Variance.COL, superspace),
+    )
 
 
 def superspace_tuning_projection(state: TemperamentState, held_ratios=()):

@@ -30,45 +30,60 @@ _RANGE_PLOT_T = 11
 _RANGE_PLOT_B = 12
 _RANGE_FONT = 7
 
+
 def _wave_svg(kind: str) -> str:
-    paths = {"sine": "M1,6 Q3,1 5.5,6 T11,6", "square": "M1,9 V3 H6 V9 H11 V3",
-             "triangle": "M1,9 L3.5,3 L6,9 L8.5,3 L11,9", "sawtooth": "M1,9 L6,3 L6,9 L11,3 L11,9"}
-    return (f'<svg viewBox="0 0 12 12" class="rtt-audio-glyph"><path d="{paths[kind]}" '
-            f'fill="none" stroke="currentColor" stroke-width="1.1"/></svg>')
+    paths = {
+        "sine": "M1,6 Q3,1 5.5,6 T11,6",
+        "square": "M1,9 V3 H6 V9 H11 V3",
+        "triangle": "M1,9 L3.5,3 L6,9 L8.5,3 L11,9",
+        "sawtooth": "M1,9 L6,3 L6,9 L11,3 L11,9",
+    }
+    return (
+        f'<svg viewBox="0 0 12 12" class="rtt-audio-glyph"><path d="{paths[kind]}" '
+        f'fill="none" stroke="currentColor" stroke-width="1.1"/></svg>'
+    )
 
 
 def _mode_svg(filled) -> str:
-    rects = [f'<rect x="{1 + c * 3.7:.1f}" y="{1 + r * 3.7:.1f}" width="2.6" height="2.6" '
-             f'fill="{"currentColor" if (r, c) in filled else "none"}" stroke="currentColor" '
-             f'stroke-width="0.5"/>' for r in range(3) for c in range(3)]
+    rects = [
+        f'<rect x="{1 + c * 3.7:.1f}" y="{1 + r * 3.7:.1f}" width="2.6" height="2.6" '
+        f'fill="{"currentColor" if (r, c) in filled else "none"}" stroke="currentColor" '
+        f'stroke-width="0.5"/>'
+        for r in range(3)
+        for c in range(3)
+    ]
     return f'<svg viewBox="0 0 12 12" class="rtt-audio-glyph">{"".join(rects)}</svg>'
 
 
 def _option_box_svg(fill: str | None, *, box: str = "#fff", border: str = "#555") -> str:
     n = spreadsheet.OPTION_BOX_PX
     inner = f"<rect x='3' y='3' width='{n - 6}' height='{n - 6}' fill='{fill}'/>" if fill else ""
-    svg = (f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {n} {n}'>"
-           f"<rect x='.5' y='.5' width='{n - 1}' height='{n - 1}' fill='{box}' stroke='{border}' stroke-width='1'/>"
-           f"{inner}</svg>")
+    svg = (
+        f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {n} {n}'>"
+        f"<rect x='.5' y='.5' width='{n - 1}' height='{n - 1}' fill='{box}' stroke='{border}' stroke-width='1'/>"
+        f"{inner}</svg>"
+    )
     return "data:image/svg+xml," + quote(svg)
 
 
 _CONTROL_GLYPHS = {
-    "plus":     "M6 3V9M3 6H9",
-    "minus":    "M3 6H9",
-    "expand":   "M3.5 4.7L6 2.6L8.5 4.7M3.5 7.3L6 9.4L8.5 7.3",
+    "plus": "M6 3V9M3 6H9",
+    "minus": "M3 6H9",
+    "expand": "M3.5 4.7L6 2.6L8.5 4.7M3.5 7.3L6 9.4L8.5 7.3",
     "collapse": "M3.5 2.6L6 4.7L8.5 2.6M3.5 9.4L6 7.3L8.5 9.4",
-    "reduce":      "M6 2.8L6 8.6M3.8 6.2L6 8.8L8.2 6.2",
+    "reduce": "M6 2.8L6 8.6M3.8 6.2L6 8.8L8.2 6.2",
     "reciprocate": "M6 3L6 9M4.2 4.6L6 3L7.8 4.6M4.2 7.4L6 9L7.8 7.4",
 }
 _FOLD_GLYPH = {"unfold_more": "expand", "unfold_less": "collapse"}
 
 
 def _control_svg(glyph: str) -> str:
-    return (f"<svg viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'>"
-            f"<rect x='.5' y='.5' width='11' height='11' fill='#fff' stroke='#bbb' stroke-width='1'/>"
-            f"<path d='{_CONTROL_GLYPHS[glyph]}' fill='none' stroke='currentColor' stroke-width='1.2'"
-            f" stroke-linecap='round' stroke-linejoin='round'/></svg>")
+    return (
+        f"<svg viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'>"
+        f"<rect x='.5' y='.5' width='11' height='11' fill='#fff' stroke='#bbb' stroke-width='1'/>"
+        f"<path d='{_CONTROL_GLYPHS[glyph]}' fill='none' stroke='currentColor' stroke-width='1.2'"
+        f" stroke-linecap='round' stroke-linejoin='round'/></svg>"
+    )
 
 
 def _freeze_container(cb, fx: float, fy: float) -> str:
@@ -80,6 +95,7 @@ def _freeze_container(cb, fx: float, fy: float) -> str:
         return "row"
     return "body"
 
+
 def _block_panes(bl, fx: float, fy: float) -> tuple[str, ...]:
     panes = ["body"]
     if bl.y < fy:
@@ -90,13 +106,19 @@ def _block_panes(bl, fx: float, fy: float) -> tuple[str, ...]:
         panes.append("corner")
     return tuple(panes)
 
+
 _EXPR_MAX_FONT = 9.0
 _EXPR_MIN_FONT = 3.5
 _EXPR_CHAR_W = 0.5
 
 
-def _fit_font(line: str, width: float, max_font: float = _EXPR_MAX_FONT,
-              min_font: float = _EXPR_MIN_FONT, char_w: float = _EXPR_CHAR_W) -> float:
+def _fit_font(
+    line: str,
+    width: float,
+    max_font: float = _EXPR_MAX_FONT,
+    min_font: float = _EXPR_MIN_FONT,
+    char_w: float = _EXPR_CHAR_W,
+) -> float:
     if not line:
         return max_font
     fit = (width - 2) / (len(line) * char_w)
@@ -113,7 +135,7 @@ def _elide_expr_line(line: str, width: float) -> str:
     cut = line.rfind(_LOG2)
     if cut < 0:
         return line
-    head, operand = line[:cut + len(_LOG2)], line[cut + len(_LOG2):]
+    head, operand = line[: cut + len(_LOG2)], line[cut + len(_LOG2) :]
     return head + ("(…/…)" if "/" in operand else "…")
 
 
@@ -127,6 +149,7 @@ def _mathexpr_html(text: str, width: float) -> str:
 
 def _units_font(text: str, width: float, max_font: float) -> float:
     return _fit_font(text, width, max_font=max_font)
+
 
 def _chart_ticks(lo: float, hi: float) -> list[float]:
     span = hi - lo
@@ -160,13 +183,19 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="") -
     body = []
     for tv in ticks:
         ty = y_of(tv)
-        body.append(f'<line x1="{axis_x:.2f}" y1="{ty:.2f}" x2="{w:.2f}" y2="{ty:.2f}" '
-                    f'stroke="{_CHART_GRID}" stroke-width="0.5"/>')
-        body.append(f'<text x="{axis_x - 2:.2f}" y="{ty + 2.4:.2f}" text-anchor="end" '
-                    f'font-size="7" fill="{BR_COLOR}">{tv:g}</text>')
+        body.append(
+            f'<line x1="{axis_x:.2f}" y1="{ty:.2f}" x2="{w:.2f}" y2="{ty:.2f}" '
+            f'stroke="{_CHART_GRID}" stroke-width="0.5"/>'
+        )
+        body.append(
+            f'<text x="{axis_x - 2:.2f}" y="{ty + 2.4:.2f}" text-anchor="end" '
+            f'font-size="7" fill="{BR_COLOR}">{tv:g}</text>'
+        )
     zero_y = y_of(0)
-    body.append(f'<line x1="{axis_x:.2f}" y1="{zero_y:.2f}" x2="{w:.2f}" y2="{zero_y:.2f}" '
-                f'stroke="{BR_COLOR}" stroke-width="1"/>')
+    body.append(
+        f'<line x1="{axis_x:.2f}" y1="{zero_y:.2f}" x2="{w:.2f}" y2="{zero_y:.2f}" '
+        f'stroke="{BR_COLOR}" stroke-width="1"/>'
+    )
     body.append(rect(axis_x, plot_top, 0.8, plot_bot - plot_top))
     bw = col_w * _CHART_BAR_FRAC
     for i, v in enumerate(values):
@@ -181,23 +210,36 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="") -
         lbl_font, sub_font, stub = 9, 6, 8
         lbl_w = 3 * lbl_font * 0.62 + len(indicator_label) * sub_font * 0.62 + 3
         lx = axis_x + stub
-        body.append(f'<line x1="{axis_x:.2f}" y1="{iy:.2f}" x2="{lx - 2:.2f}" y2="{iy:.2f}" '
-                    f'stroke="{_CHART_INDICATOR}" stroke-width="1.5"/>')
-        body.append(f'<line x1="{lx + lbl_w + 2:.2f}" y1="{iy:.2f}" x2="{w:.2f}" y2="{iy:.2f}" '
-                    f'stroke="{_CHART_INDICATOR}" stroke-width="1.5"/>')
-        sub = (f'<tspan font-size="{sub_font}" dy="2">{_escape(indicator_label)}</tspan>'
-               if indicator_label else "")
-        body.append(f'<text x="{lx:.2f}" y="{iy + lbl_font * 0.34:.2f}" font-size="{lbl_font}" '
-                    f'fill="{_CHART_INDICATOR}"><tspan>⟪</tspan>'
-                    f'<tspan font-weight="bold">d</tspan><tspan>⟫</tspan>{sub}</text>')
+        body.append(
+            f'<line x1="{axis_x:.2f}" y1="{iy:.2f}" x2="{lx - 2:.2f}" y2="{iy:.2f}" '
+            f'stroke="{_CHART_INDICATOR}" stroke-width="1.5"/>'
+        )
+        body.append(
+            f'<line x1="{lx + lbl_w + 2:.2f}" y1="{iy:.2f}" x2="{w:.2f}" y2="{iy:.2f}" '
+            f'stroke="{_CHART_INDICATOR}" stroke-width="1.5"/>'
+        )
+        sub = (
+            f'<tspan font-size="{sub_font}" dy="2">{_escape(indicator_label)}</tspan>'
+            if indicator_label
+            else ""
+        )
+        body.append(
+            f'<text x="{lx:.2f}" y="{iy + lbl_font * 0.34:.2f}" font-size="{lbl_font}" '
+            f'fill="{_CHART_INDICATOR}"><tspan>⟪</tspan>'
+            f'<tspan font-weight="bold">d</tspan><tspan>⟫</tspan>{sub}</text>'
+        )
     return svg(w, h, "".join(body))
 
 
 def _range_chart(w: float, h: float, ranges, tunings=(), decimals: bool = True) -> str:
     cx0, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
     if not ranges:
-        return svg(w, h, f'<text x="{w / 2:.2f}" y="{h / 2 + 2:.2f}" text-anchor="middle" '
-                    f'font-size="{_RANGE_FONT}" fill="{BR_COLOR}">no range</text>')
+        return svg(
+            w,
+            h,
+            f'<text x="{w / 2:.2f}" y="{h / 2 + 2:.2f}" text-anchor="middle" '
+            f'font-size="{_RANGE_FONT}" fill="{BR_COLOR}">no range</text>',
+        )
     plot_top, plot_bot = _RANGE_PLOT_T, h - _RANGE_PLOT_B
     mid, hw = (plot_top + plot_bot) / 2, _RANGE_MARK_W / 2
     cap_half, tick_half = _RANGE_CAP_W / 2, _RANGE_CAP_W / 2 - 3
@@ -207,8 +249,10 @@ def _range_chart(w: float, h: float, ranges, tunings=(), decimals: bool = True) 
 
     def label(cx, y, v):
         shown = strip_negative_zero(f"{v:.{3 if decimals else 0}f}")
-        return (f'<text x="{cx:.2f}" y="{y:.2f}" text-anchor="middle" '
-                f'font-size="{_RANGE_FONT}" fill="{BR_COLOR}">{shown}</text>')
+        return (
+            f'<text x="{cx:.2f}" y="{y:.2f}" text-anchor="middle" '
+            f'font-size="{_RANGE_FONT}" fill="{BR_COLOR}">{shown}</text>'
+        )
 
     body = []
     for i, (lo, hi) in enumerate(ranges):
@@ -289,8 +333,18 @@ def _power_parts(text) -> tuple[str, str]:
 _PTEXT_DEFAULT_EM = 0.59
 _PTEXT_GLYPH_EM = {
     **{d: 0.59 for d in "0123456789"},
-    ".": 0.25, "-": 0.35, "/": 0.52, " ": 0.24,
-    "[": 0.37, "]": 0.37, "{": 0.41, "}": 0.41, "⟨": 0.38, "⟩": 0.38, "⟪": 0.58, "⟫": 0.58,
+    ".": 0.25,
+    "-": 0.35,
+    "/": 0.52,
+    " ": 0.24,
+    "[": 0.37,
+    "]": 0.37,
+    "{": 0.41,
+    "}": 0.41,
+    "⟨": 0.38,
+    "⟩": 0.38,
+    "⟪": 0.58,
+    "⟫": 0.58,
     "—": 1.0,
 }
 
@@ -327,7 +381,7 @@ _DESCENDERS = "gjpqy"
 def _underline_html(text: str, spans) -> str:
     out, i = [], 0
     for start, length in sorted(spans):
-        seg = text[start:start + length]
+        seg = text[start : start + length]
         tag = '<u class="rtt-desc">' if any(c in _DESCENDERS for c in seg) else "<u>"
         out.append(_escape(text[i:start]) + tag + _escape(seg) + "</u>")
         i = start + length
@@ -360,53 +414,65 @@ _EXAMPLE_TEXT: dict[str, str] = {
 
 
 def _example_chart() -> str:
-    return ('<div style="position:relative;width:84px;height:34px">'
-            '<span style="position:absolute;left:0;top:0;font-size:9px">5</span>'
-            '<span style="position:absolute;left:0;bottom:0;font-size:9px">-5</span>'
-            '<svg width="66" height="34" viewBox="0 0 66 34" '
-            'style="position:absolute;left:16px;top:0">'
-            f'<line x1="2" y1="5" x2="64" y2="5" stroke="{_CHART_GRID}" stroke-width="1"/>'
-            f'<line x1="2" y1="29" x2="64" y2="29" stroke="{_CHART_GRID}" stroke-width="1"/>'
-            f'<line x1="2" y1="3" x2="2" y2="31" stroke="{BR_COLOR}" stroke-width="1.4"/>'
-            f'<line x1="0" y1="5" x2="6" y2="5" stroke="{BR_COLOR}" stroke-width="1.4"/>'
-            f'<line x1="0" y1="29" x2="6" y2="29" stroke="{BR_COLOR}" stroke-width="1.4"/>'
-            f'<line x1="2" y1="17" x2="62" y2="17" stroke="{BR_COLOR}" stroke-width="1"/>'
-            f'<rect x="16" y="17" width="22" height="6" fill="{BR_COLOR}"/>'
-            '</svg></div>')
+    return (
+        '<div style="position:relative;width:84px;height:34px">'
+        '<span style="position:absolute;left:0;top:0;font-size:9px">5</span>'
+        '<span style="position:absolute;left:0;bottom:0;font-size:9px">-5</span>'
+        '<svg width="66" height="34" viewBox="0 0 66 34" '
+        'style="position:absolute;left:16px;top:0">'
+        f'<line x1="2" y1="5" x2="64" y2="5" stroke="{_CHART_GRID}" stroke-width="1"/>'
+        f'<line x1="2" y1="29" x2="64" y2="29" stroke="{_CHART_GRID}" stroke-width="1"/>'
+        f'<line x1="2" y1="3" x2="2" y2="31" stroke="{BR_COLOR}" stroke-width="1.4"/>'
+        f'<line x1="0" y1="5" x2="6" y2="5" stroke="{BR_COLOR}" stroke-width="1.4"/>'
+        f'<line x1="0" y1="29" x2="6" y2="29" stroke="{BR_COLOR}" stroke-width="1.4"/>'
+        f'<line x1="2" y1="17" x2="62" y2="17" stroke="{BR_COLOR}" stroke-width="1"/>'
+        f'<rect x="16" y="17" width="22" height="6" fill="{BR_COLOR}"/>'
+        "</svg></div>"
+    )
 
 
 def _example_html(key: str) -> str:
     if key in show_settings.GROUPING_PARENTS:
         return ""
     if key == "animations":
-        return ('<span style="position:relative;display:inline-block;width:34px;height:16px">'
-                '<span style="position:absolute;left:0;top:1px;width:13px;height:13px;'
-                'border:1px solid #999;background:#fff;opacity:0.35"></span>'
-                '<span style="position:absolute;left:11px;top:1px;width:13px;height:13px;'
-                'border:1px solid #555;background:#fff"></span>'
-                '<span class="material-icons" style="position:absolute;right:-3px;top:1px;'
-                'font-size:13px;color:#777">east</span></span>')
+        return (
+            '<span style="position:relative;display:inline-block;width:34px;height:16px">'
+            '<span style="position:absolute;left:0;top:1px;width:13px;height:13px;'
+            'border:1px solid #999;background:#fff;opacity:0.35"></span>'
+            '<span style="position:absolute;left:11px;top:1px;width:13px;height:13px;'
+            'border:1px solid #555;background:#fff"></span>'
+            '<span class="material-icons" style="position:absolute;right:-3px;top:1px;'
+            'font-size:13px;color:#777">east</span></span>'
+        )
     if key == "preview_highlighting":
-        return ('<span style="display:inline-flex;align-items:center;justify-content:center;'
-                'width:22px;height:16px;background:#fff;'
-                'box-shadow:inset 0 0 0 2px var(--preview-color);'
-                'color:var(--preview-text-color);font-size:10px">3</span>')
+        return (
+            '<span style="display:inline-flex;align-items:center;justify-content:center;'
+            "width:22px;height:16px;background:#fff;"
+            "box-shadow:inset 0 0 0 2px var(--preview-color);"
+            'color:var(--preview-text-color);font-size:10px">3</span>'
+        )
     if key == "tooltips":
-        return ('<span style="position:relative;display:inline-block;background:#444;color:#fff;'
-                'font-size:9px;line-height:1;padding:3px 5px;border-radius:3px">help'
-                '<span style="position:absolute;left:6px;bottom:-3px;width:0;height:0;'
-                'border-left:3px solid transparent;border-right:3px solid transparent;'
-                'border-top:3px solid #444"></span></span>')
+        return (
+            '<span style="position:relative;display:inline-block;background:#444;color:#fff;'
+            'font-size:9px;line-height:1;padding:3px 5px;border-radius:3px">help'
+            '<span style="position:absolute;left:6px;bottom:-3px;width:0;height:0;'
+            "border-left:3px solid transparent;border-right:3px solid transparent;"
+            'border-top:3px solid #444"></span></span>'
+        )
     if key in ("temperament_colorization", "tuning_colorization", "form_colorization"):
         group = key.split("_")[0]
         letter = {"temperament": "𝑀", "tuning": "𝐺", "form": "𝐹"}[group]
-        return (f'<span style="display:inline-flex;align-items:center;justify-content:center;'
-                f'width:36px;height:14px;background:var(--wash-{group})">{_math_html(letter)}</span>')
+        return (
+            f'<span style="display:inline-flex;align-items:center;justify-content:center;'
+            f'width:36px;height:14px;background:var(--wash-{group})">{_math_html(letter)}</span>'
+        )
     if key == "tuning_ranges":
-        return ('<svg width="14" height="20" viewBox="0 0 14 20" style="display:block">'
-                '<rect x="6" y="2" width="2" height="16" fill="#000"/>'
-                '<rect x="2" y="2" width="10" height="2" fill="#000"/>'
-                '<rect x="2" y="16" width="10" height="2" fill="#000"/></svg>')
+        return (
+            '<svg width="14" height="20" viewBox="0 0 14 20" style="display:block">'
+            '<rect x="6" y="2" width="2" height="16" fill="#000"/>'
+            '<rect x="2" y="2" width="10" height="2" fill="#000"/>'
+            '<rect x="2" y="16" width="10" height="2" fill="#000"/></svg>'
+        )
     return f'<span class="rtt-ex">{_math_html(_EXAMPLE_TEXT[key])}</span>'
 
 
@@ -421,9 +487,10 @@ _TILE_PTEXT = "⟨1200 1902 2786]"
 
 _TILE_MNEMONIC_AT = _TILE_NAME.index("n")
 
+
 def _tile_name_pieces() -> tuple[str, str, str]:
     i = _TILE_MNEMONIC_AT
-    return _TILE_NAME[:i], _TILE_NAME[i], _TILE_NAME[i + 1:]
+    return _TILE_NAME[:i], _TILE_NAME[i], _TILE_NAME[i + 1 :]
 
 
 def _tile_fold_html() -> str:
@@ -443,23 +510,34 @@ _TILE_CELL_Y = _TILE_CAP + _TILE_ENCLOSE
 def _tile_grid_frame_html() -> str:
     def mark(x, y, w, h, inner):
         return f'<div style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px">{inner}</div>'
+
     cell, cap, bw, cx, cy = _TILE_CELL, _TILE_CAP, _TILE_BR_W, _TILE_CELL_X, _TILE_CELL_Y
     span = _TILE_FRAME_W
-    return (f'<div style="position:relative;width:{_TILE_FRAME_W}px;height:{_TILE_FRAME_H}px">'
-            + mark(0, 0, span, cap, top_bracket(span, cap))
-            + mark(0, _TILE_FRAME_H - cap, span, cap, brace(span, cap))
-            + mark(0, cy, bw, cell, angle_bracket(bw, cell))
-            + mark(cx, cy, cell, cell, '<div style="width:100%;height:100%;box-sizing:border-box;'
-                                       'border:1px solid #555;background:#fff"></div>')
-            + mark(cx + cell, cy, bw, cell, square_bracket(bw, cell, "right"))
-            + '</div>')
+    return (
+        f'<div style="position:relative;width:{_TILE_FRAME_W}px;height:{_TILE_FRAME_H}px">'
+        + mark(0, 0, span, cap, top_bracket(span, cap))
+        + mark(0, _TILE_FRAME_H - cap, span, cap, brace(span, cap))
+        + mark(0, cy, bw, cell, angle_bracket(bw, cell))
+        + mark(
+            cx,
+            cy,
+            cell,
+            cell,
+            '<div style="width:100%;height:100%;box-sizing:border-box;'
+            'border:1px solid #555;background:#fff"></div>',
+        )
+        + mark(cx + cell, cy, bw, cell, square_bracket(bw, cell, "right"))
+        + "</div>"
+    )
 
 
 def _tile_preset_html() -> str:
-    return ('<span style="display:flex;align-items:center;justify-content:space-between;'
-            'gap:4px;width:100%;height:22px;box-sizing:border-box;background:#fff;border:1px solid #999;'
-            'border-radius:2px;padding:0 2px 0 6px;font-size:13px;color:#000">(presets)'
-            '<span class="material-icons" style="font-size:16px;color:#555">arrow_drop_down</span></span>')
+    return (
+        '<span style="display:flex;align-items:center;justify-content:space-between;'
+        "gap:4px;width:100%;height:22px;box-sizing:border-box;background:#fff;border:1px solid #999;"
+        'border-radius:2px;padding:0 2px 0 6px;font-size:13px;color:#000">(presets)'
+        '<span class="material-icons" style="font-size:16px;color:#555">arrow_drop_down</span></span>'
+    )
 
 
 def _general_part_html(key: str) -> str:
@@ -524,13 +602,13 @@ def _math_html(text: str) -> str:
             out.append('<sub style="font-style:italic">')
             continue
         if ch == spreadsheet.NORM_SUB_CLOSE:
-            out.append('</sub>')
+            out.append("</sub>")
             continue
         if ch == spreadsheet.SUB_OPEN:
-            out.append('<sub>')
+            out.append("<sub>")
             continue
         if ch == spreadsheet.SUB_CLOSE:
-            out.append('</sub>')
+            out.append("</sub>")
             continue
         styled = _demath(ch)
         if styled is None:
@@ -546,8 +624,10 @@ _UNIT_PLAIN = ("oct", "¢", "/", " ")
 
 
 _SUB_TAGS = {
-    spreadsheet.SUB_OPEN: "<sub>", spreadsheet.SUB_CLOSE: "</sub>",
-    spreadsheet.NORM_SUB_OPEN: '<sub style="font-style:italic">', spreadsheet.NORM_SUB_CLOSE: "</sub>",
+    spreadsheet.SUB_OPEN: "<sub>",
+    spreadsheet.SUB_CLOSE: "</sub>",
+    spreadsheet.NORM_SUB_OPEN: '<sub style="font-style:italic">',
+    spreadsheet.NORM_SUB_CLOSE: "</sub>",
 }
 
 
@@ -580,7 +660,7 @@ def _bold_units(value) -> str:
 def _units_html(text: str) -> str:
     prefix = "units: "
     if text.startswith(prefix):
-        return f'<span class="rtt-units-pre">{prefix}</span>{_bold_units(text[len(prefix):])}'
+        return f'<span class="rtt-units-pre">{prefix}</span>{_bold_units(text[len(prefix) :])}'
     return _bold_units(text)
 
 
@@ -593,17 +673,29 @@ _DOT_PITCH = 8
 def _line_style(ln, y_shift: float = 0) -> str:
     half = spreadsheet.LINE_W / 2
     if ln.orientation == "v":
-        pos, edge, sweep = f"left:{ln.pos - half}px; top:{ln.start - y_shift}px; height:{ln.length}px", "left", "to bottom"
+        pos, edge, sweep = (
+            f"left:{ln.pos - half}px; top:{ln.start - y_shift}px; height:{ln.length}px",
+            "left",
+            "to bottom",
+        )
     else:
-        pos, edge, sweep = f"top:{ln.pos - half - y_shift}px; left:{ln.start}px; width:{ln.length}px", "top", "to right"
+        pos, edge, sweep = (
+            f"top:{ln.pos - half - y_shift}px; left:{ln.start}px; width:{ln.length}px",
+            "top",
+            "to right",
+        )
     if ln.dotted:
-        dots = (f"repeating-linear-gradient({sweep},var(--c-gridline) 0 {spreadsheet.LINE_W}px,"
-                f"transparent {spreadsheet.LINE_W}px {_DOT_PITCH}px) border-box")
+        dots = (
+            f"repeating-linear-gradient({sweep},var(--c-gridline) 0 {spreadsheet.LINE_W}px,"
+            f"transparent {spreadsheet.LINE_W}px {_DOT_PITCH}px) border-box"
+        )
         return f"{pos}; border-{edge}-color:transparent; background:{dots}"
     return f"{pos}; border-{edge}-color:var(--c-gridline); background:none"
 
 
 def _select_props(min_width: float) -> str:
-    return ("dense options-dense borderless hide-bottom-space "
-            "popup-content-class=rtt-select-popup "
-            f"popup-content-style=min-width:{min_width}px;width:max-content")
+    return (
+        "dense options-dense borderless hide-bottom-space "
+        "popup-content-class=rtt-select-popup "
+        f"popup-content-style=min-width:{min_width}px;width:max-content"
+    )
