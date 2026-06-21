@@ -736,11 +736,12 @@ _BUSY_JS = f"""
   // it, so the action runs through the very same handler the mouse uses (act()/add_interval/
   // toggle_drawer) — no parallel server path — and a shortcut is inert exactly when its button isn't
   // on screen (e.g. Alt+C does nothing while the commas column is hidden, because no .rtt-hk-comma
-  // exists to click). Per-action modifier choices: Ctrl/Cmd for the edit-history pair, Alt for the
-  // "add a row" family, and a bare ',' for the settings pane (the one bare key — gated below to fire
-  // only when you're NOT typing in a cell, and ',' is never valid in a number/ratio cell anyway).
-  // Letter shortcuts key off e.code (the physical key) so a Mac's Option+letter dead-keys/special
-  // glyphs still match. preventDefault stops the browser's own Ctrl+Z / Alt-mnemonic / comma.
+  // exists to click). Per-action modifier choices: Ctrl/Cmd for the edit-history pair (Z/Y) and the
+  // settings pane (Ctrl/Cmd+, — the standard Preferences shortcut), Alt for the "add a row" family.
+  // Every shortcut takes a modifier, so they all fire even while a cell is focused and bare typing is
+  // never intercepted. Keys match on e.code (the physical key) so a Mac's Option+letter dead-keys/
+  // special glyphs (and Cmd+, vs Cmd+;) still match. preventDefault stops the browser's own Ctrl+Z /
+  // Alt-mnemonic / Cmd+, from also firing.
   document.addEventListener('keydown', (e) => {{
     if (!e.isTrusted) return;
     const mod = e.ctrlKey || e.metaKey;
@@ -751,12 +752,7 @@ _BUSY_JS = f"""
       const k = {{KeyC: 'comma', KeyM: 'mapping', KeyT: 'target', KeyH: 'held', KeyI: 'interest', KeyE: 'element'}}[e.code];
       if (k) sel = '.rtt-hk-' + k;
     }}
-    else if (e.key === ',' && !mod && !e.altKey && !e.shiftKey) {{
-      const a = document.activeElement;
-      const inField = (e.target.closest && e.target.closest('.rtt-cell'))
-          || (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
-      if (!inField) {{ sel = '.rtt-hamburger'; arm = false; }}  // pane toggle is pure CSS — don't flash the scrim
-    }}
+    else if (mod && !e.altKey && !e.shiftKey && e.code === 'Comma') {{ sel = '.rtt-hamburger'; arm = false; }}  // pane toggle is pure CSS — don't flash the scrim
     if (sel) {{
       const el = document.querySelector(sel);
       if (el) {{ e.preventDefault(); if (arm) window.rttBusy.arm(); el.click(); return; }}
