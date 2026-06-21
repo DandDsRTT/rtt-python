@@ -3,7 +3,7 @@
 # Docs: https://render.com/docs/blueprint-spec
 services:
   - type: web
-    name: danddsrtt                # → https://danddsrtt.onrender.com (Render appends a suffix if the name is taken)
+    name: danddsrtt-app            # → https://danddsrtt-app.onrender.com (Render appends a suffix if the name is taken)
     runtime: python
     plan: free                     # ~1 min cold start after 15 min idle; switch to "starter" ($7/mo) for always-on
     region: oregon                 # change to a region nearer you if preferred
