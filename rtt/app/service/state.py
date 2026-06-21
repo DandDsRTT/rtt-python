@@ -5,6 +5,7 @@ from fractions import Fraction
 
 import sympy as sp
 
+from rtt.app.service.core import _to_matrix, is_standard_domain, standard_primes
 from rtt.library.dimensions import get_d, get_n, get_r
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
@@ -17,8 +18,6 @@ from rtt.library.formatting import to_ebk
 from rtt.library.matrix_utils import Matrix
 from rtt.library.parsing import parse_temperament_data
 from rtt.library.temperament import Temperament, Variance
-
-from rtt.app.service.core import _to_matrix, is_standard_domain, standard_primes
 
 
 @dataclass(frozen=True)
@@ -194,11 +193,11 @@ def remove_domain_element(state: TemperamentState, index: int) -> TemperamentSta
 
 def add_mapping_row_to(state: TemperamentState, source: int, target: int) -> TemperamentState:
     rows = [list(row) for row in state.mapping]
-    rows[target] = [t + s for t, s in zip(rows[target], rows[source])]
+    rows[target] = [t + s for t, s in zip(rows[target], rows[source], strict=False)]
     return from_mapping(rows, state.domain_basis)
 
 
 def add_comma_to(state: TemperamentState, source: int, target: int) -> TemperamentState:
     commas = [list(comma) for comma in state.comma_basis]
-    commas[target] = [t + s for t, s in zip(commas[target], commas[source])]
+    commas[target] = [t + s for t, s in zip(commas[target], commas[source], strict=False)]
     return from_comma_basis(commas, state.domain_basis)

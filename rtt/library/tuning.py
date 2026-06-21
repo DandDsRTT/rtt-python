@@ -7,8 +7,8 @@ from math import inf, log2
 import numpy as np
 from scipy.linalg import null_space
 
-from rtt.library.dimensions import get_d
 from rtt.library.change_basis import change_domain_basis_for_c
+from rtt.library.dimensions import get_d
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
     filter_target_intervals_for_nonstandard_domain_basis,
@@ -316,7 +316,10 @@ def optimize_tuning_map(
 
 def get_tuning_map_damages(t: Temperament, tuning_map: tuple, spec: TuningSchemeSpec | str) -> dict:
     vectors, damages, _ = _evaluate_damages(t, tuning_map, spec)
-    return {pcv_to_quotient(vector): float(damage) for vector, damage in zip(vectors, damages)}
+    return {
+        pcv_to_quotient(vector): float(damage)
+        for vector, damage in zip(vectors, damages, strict=False)
+    }
 
 
 def get_generator_tuning_map_damages(
@@ -492,7 +495,7 @@ def get_complexity(
     if complexity_rough:
         pcv = tuple(
             0 if Fraction(q).denominator == 1 and Fraction(q).numerator < complexity_rough else x
-            for q, x in zip(domain_basis, pcv)
+            for q, x in zip(domain_basis, pcv, strict=False)
         )
     prescaler = (
         prescaler_override
@@ -504,7 +507,7 @@ def get_complexity(
     if np.ndim(prescaler) == 2:
         transformed = list(np.asarray(prescaler, dtype=float) @ np.asarray(pcv, dtype=float))
     else:
-        transformed = [w * x for w, x in zip(prescaler, pcv)]
+        transformed = [w * x for w, x in zip(prescaler, pcv, strict=False)]
     if size_factor != 0:
         transformed.append(size_factor * sum(transformed))
     ord_ = np.inf if norm_power == float("inf") else norm_power

@@ -106,7 +106,7 @@ def _mc_to_c(u: Multivector) -> Temperament | None:
 
 def _flattened_antisymmetric_matrix(u: Multivector) -> tuple:
     d = _ea_get_decomposable_d(u)
-    index_to_coord = dict(zip(combinations(range(d), u.grade), u.coords))
+    index_to_coord = dict(zip(combinations(range(d), u.grade), u.coords, strict=False))
     rows = [[0] * d for _ in range(d ** (u.grade - 1))]
     for full_index in product(range(d), repeat=u.grade):
         if len(set(full_index)) < u.grade:
@@ -158,7 +158,7 @@ def ea_dual(u: Multivector) -> Multivector:
         return Multivector((1,), d, dual_variance)
     if u.grade == d:
         return Multivector((1,), 0, dual_variance, d)
-    index_to_coord = dict(zip(combinations(range(d), u.grade), u.coords))
+    index_to_coord = dict(zip(combinations(range(d), u.grade), u.coords, strict=False))
     dual_grade = d - u.grade
     dual_coords = []
     for indices in combinations(range(d), dual_grade):
@@ -179,8 +179,8 @@ def progressive_product(u1: Multivector, u2: Multivector) -> Multivector:
     grade = u1.grade + u2.grade
     if grade > d:
         raise ValueError("progressive product grade exceeds dimensionality")
-    coords1 = dict(zip(combinations(range(d), u1.grade), u1.coords))
-    coords2 = dict(zip(combinations(range(d), u2.grade), u2.coords))
+    coords1 = dict(zip(combinations(range(d), u1.grade), u1.coords, strict=False))
+    coords2 = dict(zip(combinations(range(d), u2.grade), u2.coords, strict=False))
     result = []
     for indices in combinations(range(d), grade):
         total = 0
@@ -224,7 +224,9 @@ def _ea_addition(u1: Multivector, u2: Multivector, is_sum: bool) -> Multivector:
         raise ValueError("multivectors not addable: dimensions differ")
     if not is_sum and first == second:
         raise ValueError("cannot diff a temperament with itself")
-    combined = tuple(a + b if is_sum else a - b for a, b in zip(first.coords, second.coords))
+    combined = tuple(
+        a + b if is_sum else a - b for a, b in zip(first.coords, second.coords, strict=False)
+    )
     result = Multivector(combined, first.grade, first.variance)
     if is_nondecomposable(result):
         raise ValueError("multivectors not addable")
@@ -241,7 +243,7 @@ def matrix_to_multivector(t: Temperament) -> Multivector:
 
 def u_to_tensor(u: Multivector):
     d = _ea_get_decomposable_d(u)
-    index_to_coord = dict(zip(combinations(range(d), u.grade), u.coords))
+    index_to_coord = dict(zip(combinations(range(d), u.grade), u.coords, strict=False))
 
     def build(prefix: tuple) -> object:
         if len(prefix) == u.grade:

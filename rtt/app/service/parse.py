@@ -3,11 +3,10 @@ from __future__ import annotations
 import logging
 from fractions import Fraction
 
+from rtt.app.service.state import TemperamentState, from_temperament_data
 from rtt.library.matrix_utils import Matrix
 from rtt.library.parsing import parse_temperament_data
 from rtt.library.temperament import Variance
-
-from rtt.app.service.state import TemperamentState, from_temperament_data
 
 _log = logging.getLogger(__name__)
 

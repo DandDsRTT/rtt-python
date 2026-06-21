@@ -9,11 +9,11 @@ from rtt.library.matrix_utils import Matrix, all_zeros
 
 
 def _pitch(comma, jip_octaves) -> float:
-    return sum(c * j for c, j in zip(comma, jip_octaves))
+    return sum(c * j for c, j in zip(comma, jip_octaves, strict=False))
 
 
 def _complexity(comma, jip_octaves) -> float:
-    return sum(abs(c) * j for c, j in zip(comma, jip_octaves))
+    return sum(abs(c) * j for c, j in zip(comma, jip_octaves, strict=False))
 
 
 def _prime_limit(comma) -> int:
@@ -33,7 +33,7 @@ def positive_ratio_ca(matrix: Matrix, jip_octaves) -> Matrix:
 
 
 def _weighted_dot(u, v, w) -> float:
-    return sum((wi * wi) * ui * vi for ui, vi, wi in zip(u, v, w))
+    return sum((wi * wi) * ui * vi for ui, vi, wi in zip(u, v, w, strict=False))
 
 
 def _gram_schmidt(basis, w):
@@ -43,7 +43,7 @@ def _gram_schmidt(basis, w):
         vec = [float(x) for x in b]
         for j in range(i):
             mu[i][j] = _weighted_dot(b, bstar[j], w) / _weighted_dot(bstar[j], bstar[j], w)
-            vec = [v - mu[i][j] * s for v, s in zip(vec, bstar[j])]
+            vec = [v - mu[i][j] * s for v, s in zip(vec, bstar[j], strict=False)]
         bstar.append(vec)
     return bstar, mu
 
@@ -57,7 +57,7 @@ def _lll_reduce(basis, w, delta: float = 0.75):
         for j in range(k - 1, -1, -1):
             if abs(mu[k][j]) > 0.5:
                 q = round(mu[k][j])
-                basis[k] = [a - q * b for a, b in zip(basis[k], basis[j])]
+                basis[k] = [a - q * b for a, b in zip(basis[k], basis[j], strict=False)]
                 bstar, mu = _gram_schmidt(basis, w)
         lhs = _weighted_dot(bstar[k], bstar[k], w)
         rhs = (delta - mu[k][k - 1] ** 2) * _weighted_dot(bstar[k - 1], bstar[k - 1], w)

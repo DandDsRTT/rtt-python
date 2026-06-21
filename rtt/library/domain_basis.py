@@ -66,13 +66,15 @@ def _factorization_acceptable(a: int, b: int) -> bool:
 
 def is_numerator_factor(subspace_entry: tuple, superspace_entry: tuple) -> bool:
     return all(
-        _factorization_acceptable(s, s - sup) for s, sup in zip(subspace_entry, superspace_entry)
+        _factorization_acceptable(s, s - sup)
+        for s, sup in zip(subspace_entry, superspace_entry, strict=False)
     )
 
 
 def is_denominator_factor(subspace_entry: tuple, superspace_entry: tuple) -> bool:
     return all(
-        _factorization_acceptable(s, s + sup) for s, sup in zip(subspace_entry, superspace_entry)
+        _factorization_acceptable(s, s + sup)
+        for s, sup in zip(subspace_entry, superspace_entry, strict=False)
     )
 
 
@@ -92,10 +94,10 @@ def get_domain_basis_change_for_m(original_superspace: tuple, target_subspace: t
             count = 0
             while is_numerator_factor(remaining, superspace_entry):
                 count += 1
-                remaining = [r - s for r, s in zip(remaining, superspace_entry)]
+                remaining = [r - s for r, s in zip(remaining, superspace_entry, strict=False)]
             while is_denominator_factor(remaining, superspace_entry):
                 count -= 1
-                remaining = [r + s for r, s in zip(remaining, superspace_entry)]
+                remaining = [r + s for r, s in zip(remaining, superspace_entry, strict=False)]
             column.append(count)
         change.append(tuple(column))
     return tuple(change)

@@ -308,5 +308,5 @@ def control_help(kind: str, cid: str) -> str | None:
     if kind == "ptextedit":
         return _PTEXT_HELP.get(cid)
     if kind == "ratiocell":
-        return _RATIO_HELP.get(cid.split(":")[0])
+        return _RATIO_HELP.get(cid.split(":", maxsplit=1)[0])
     return _ID_HELP.get(cid) or _KIND_HELP.get(kind)

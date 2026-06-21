@@ -27,9 +27,9 @@ def _fix_mingen_pair(rows: list[list[int]], i: int, jip_octaves) -> None:
         p, g = sizes[i], sizes[i + 1]
         rp, rg = rows[i], rows[i + 1]
         if g < -p:
-            rows[i] = [a - 2 * b for a, b in zip(rp, rg)]
+            rows[i] = [a - 2 * b for a, b in zip(rp, rg, strict=False)]
         elif g < -p / 2:
-            rows[i] = [a - b for a, b in zip(rp, rg)]
+            rows[i] = [a - b for a, b in zip(rp, rg, strict=False)]
             return
         elif g < 0:
             rows[i + 1] = [-b for b in rg]
@@ -37,11 +37,11 @@ def _fix_mingen_pair(rows: list[list[int]], i: int, jip_octaves) -> None:
         elif g <= p / 2:
             return
         elif g <= p:
-            rows[i] = [a + b for a, b in zip(rp, rg)]
+            rows[i] = [a + b for a, b in zip(rp, rg, strict=False)]
             rows[i + 1] = [-b for b in rg]
             return
         else:
-            rows[i] = [a + 2 * b for a, b in zip(rp, rg)]
+            rows[i] = [a + 2 * b for a, b in zip(rp, rg, strict=False)]
             rows[i + 1] = [-b for b in rg]
 
 
@@ -51,9 +51,9 @@ def _equave_reduce_pair(rows: list[list[int]], i: int, jip_octaves) -> None:
         p, g = sizes[i], sizes[i + 1]
         rp, rg = rows[i], rows[i + 1]
         if g >= p:
-            rows[i] = [a + b for a, b in zip(rp, rg)]
+            rows[i] = [a + b for a, b in zip(rp, rg, strict=False)]
         elif g < 0:
-            rows[i] = [a - b for a, b in zip(rp, rg)]
+            rows[i] = [a - b for a, b in zip(rp, rg, strict=False)]
         else:
             return
 
@@ -108,5 +108,5 @@ def positive_generator_shift_ma(matrix: Matrix, jip_octaves) -> Matrix:
             rows[i] = [-b for b in rows[i]]
         else:
             k = int(gen[i] // gen[0])
-            rows[0] = [a + b * k for a, b in zip(rows[0], rows[i])]
+            rows[0] = [a + b * k for a, b in zip(rows[0], rows[i], strict=False)]
     return _as_matrix(rows)

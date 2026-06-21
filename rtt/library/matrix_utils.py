@@ -55,7 +55,7 @@ def remove_unneeded_zero_lists(matrix: Matrix) -> Matrix:
 
 
 def transpose(matrix: Matrix) -> Matrix:
-    return tuple(zip(*matrix)) if matrix else ()
+    return tuple(zip(*matrix, strict=False)) if matrix else ()
 
 
 def matrix_multiply(a: Matrix, b: Matrix) -> Matrix:
@@ -101,8 +101,10 @@ def hnf_with_transform(matrix: Matrix) -> tuple[Matrix, Matrix]:
         for r in range(pivot_row):
             q = rows[r][col] // pivot
             if q:
-                rows[r] = [a - q * b for a, b in zip(rows[r], rows[pivot_row])]
-                transform[r] = [a - q * b for a, b in zip(transform[r], transform[pivot_row])]
+                rows[r] = [a - q * b for a, b in zip(rows[r], rows[pivot_row], strict=False)]
+                transform[r] = [
+                    a - q * b for a, b in zip(transform[r], transform[pivot_row], strict=False)
+                ]
         pivot_row += 1
     return _to_matrix(transform), _to_matrix(rows)
 
@@ -115,8 +117,8 @@ def smith_normal_form_with_transforms(matrix: Matrix) -> tuple[Matrix, Matrix, M
     right = [[int(i == j) for j in range(n)] for i in range(n)]
 
     def add_row(target, source, q):
-        rows[target] = [a + q * b for a, b in zip(rows[target], rows[source])]
-        left[target] = [a + q * b for a, b in zip(left[target], left[source])]
+        rows[target] = [a + q * b for a, b in zip(rows[target], rows[source], strict=False)]
+        left[target] = [a + q * b for a, b in zip(left[target], left[source], strict=False)]
 
     def add_col(target, source, q):
         for row in rows:
@@ -187,8 +189,10 @@ def _reduce_column_to_pivot(
         for r in range(pivot_row + 1, len(rows)):
             if rows[r][col] != 0:
                 q = rows[r][col] // rows[pivot_row][col]
-                rows[r] = [a - q * b for a, b in zip(rows[r], rows[pivot_row])]
-                transform[r] = [a - q * b for a, b in zip(transform[r], transform[pivot_row])]
+                rows[r] = [a - q * b for a, b in zip(rows[r], rows[pivot_row], strict=False)]
+                transform[r] = [
+                    a - q * b for a, b in zip(transform[r], transform[pivot_row], strict=False)
+                ]
                 reduced = True
         if not reduced:
             return

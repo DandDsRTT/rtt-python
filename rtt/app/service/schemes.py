@@ -2,17 +2,6 @@ from __future__ import annotations
 
 from dataclasses import asdict, replace
 
-from rtt.library.parsing import parse_quotient_list
-from rtt.library.temperament import Temperament, Variance
-from rtt.library.tuning import get_complexity_prescaler, get_dual_power
-from rtt.library.tuning_scheme_names import (
-    TuningSchemeSpec,
-    annotation_code,
-    complexity_name_traits,
-    resolve_tuning_scheme,
-    systematic_name,
-)
-
 from rtt.app.service.core import (
     DEFAULT_TARGET_SPEC,
     DEFAULT_TUNING_SCHEME,
@@ -22,6 +11,16 @@ from rtt.app.service.core import (
     element_ratio,
     prescale_text,
     target_interval_set,
+)
+from rtt.library.parsing import parse_quotient_list
+from rtt.library.temperament import Temperament, Variance
+from rtt.library.tuning import get_complexity_prescaler, get_dual_power
+from rtt.library.tuning_scheme_names import (
+    TuningSchemeSpec,
+    annotation_code,
+    complexity_name_traits,
+    resolve_tuning_scheme,
+    systematic_name,
 )
 
 
@@ -258,7 +257,7 @@ def displayed_prescaler_name(
         )
         shown = tuple(float(x) for x in custom_prescaler)
         if len(shown) != len(computed) or any(
-            prescale_text(a) != prescale_text(b) for a, b in zip(shown, computed)
+            prescale_text(a) != prescale_text(b) for a, b in zip(shown, computed, strict=False)
         ):
             return None
     return prescaler_of(scheme)

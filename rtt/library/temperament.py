@@ -9,7 +9,7 @@ class Variance(Enum):
     COL = "col"
 
     @classmethod
-    def from_string(cls, text: str) -> "Variance":
+    def from_string(cls, text: str) -> Variance:
         if text in _COL_SYNONYMS:
             return cls.COL
         if text in _ROW_SYNONYMS:

@@ -43,7 +43,7 @@ def _addition(t1: Temperament, t2: Temperament, is_sum: bool) -> Temperament:
     ldb = _get_linear_dependence_basis(t1, t2)
     v1 = _linear_independence_basis_vector(t1, ldb)
     v2 = _linear_independence_basis_vector(t2, ldb)
-    combined = tuple(a + b if is_sum else a - b for a, b in zip(v1, v2))
+    combined = tuple(a + b if is_sum else a - b for a, b in zip(v1, v2, strict=False))
     result = canonical_form(Temperament(tuple(ldb) + (combined,), t1.variance, t1.domain_basis))
     return result if result.variance is output_variance else dual(result)
 
@@ -97,7 +97,7 @@ def _defactor_with_nonempty_ldb(t, ldb, grade, initial):
     enfactoring = abs(_get_greatest_factor(initial))
     multiples = _find_modular_solution(ldb, base, enfactoring)
     combination = (sum(multiples[i] * ldb[i][j] for i in range(len(ldb))) for j in range(len(base)))
-    new_last = divide_out_gcd(tuple(b + c for b, c in zip(base, combination)))
+    new_last = divide_out_gcd(tuple(b + c for b, c in zip(base, combination, strict=False)))
     return tuple(initial[:-1]) + (new_last,)
 
 

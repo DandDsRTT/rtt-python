@@ -5,10 +5,6 @@ from dataclasses import dataclass
 
 import sympy as sp
 
-from rtt.library.generator_embedding import get_generator_embedding, get_tempering_projection
-from rtt.library.superspace import apply_matrix_to_vectors, greedy_independent_rows
-from rtt.library.temperament import Temperament, Variance
-
 from rtt.app.service.core import (
     IntervalSizes,
     Tuning,
@@ -21,6 +17,9 @@ from rtt.app.service.core import (
     mapped_commas,
 )
 from rtt.app.service.state import TemperamentState
+from rtt.library.generator_embedding import get_generator_embedding, get_tempering_projection
+from rtt.library.superspace import apply_matrix_to_vectors, greedy_independent_rows
+from rtt.library.temperament import Temperament, Variance
 
 _log = logging.getLogger(__name__)
 
@@ -114,8 +113,8 @@ def project_vectors(p_matrix, vectors):
 
 
 def _integer_columns(vectors):
-    from math import gcd
     from functools import reduce
+    from math import gcd
 
     out = []
     for v in vectors:
@@ -150,7 +149,7 @@ def unchanged_basis_from_embedding(state: TemperamentState, embedding):
         d, r = state.d, state.r
         G = sp.Matrix([[sp.Rational(x) for x in row] for row in embedding])
         M = sp.Matrix([list(row) for row in state.mapping])
-        if G.shape != (d, r) or M * G != sp.eye(r):
+        if G.shape != (d, r) or sp.eye(r) != M * G:
             return None
         U = _integer_columns(G.columnspace())
         return tuple(U) if len(U) == r else None

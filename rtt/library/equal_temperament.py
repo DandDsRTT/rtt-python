@@ -45,7 +45,7 @@ def parse_wart_name(value: str) -> tuple[int, str]:
 
 def _wart_string(n: int, val: tuple[int, ...], domain_basis: tuple) -> str:
     letters = []
-    for i, (x, vi) in enumerate(zip(_exact_steps(n, domain_basis), val)):
+    for i, (x, vi) in enumerate(zip(_exact_steps(n, domain_basis), val, strict=False)):
         k = 0
         while _kth_nearest_integer(x, k) != vi:
             k += 1

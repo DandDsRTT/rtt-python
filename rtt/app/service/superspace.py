@@ -5,6 +5,20 @@ from dataclasses import replace
 from fractions import Fraction
 from functools import lru_cache
 
+from rtt.app.service.core import (
+    DEFAULT_TUNING_SCHEME,
+    ClosedFormTuning,
+    Tuning,
+    _to_matrix,
+    _vectors_to_ratios,
+    closed_form_from_temperament,
+)
+from rtt.app.service.projection import (
+    _held_for_projection,
+    _matrix_strings,
+    projection_matrix_rationals,
+)
+from rtt.app.service.state import TemperamentState
 from rtt.library.change_basis import change_domain_basis_for_c
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
@@ -31,21 +45,6 @@ from rtt.library.tuning import (
     tuning_map_from_generators,
 )
 from rtt.library.tuning_scheme_names import resolve_tuning_scheme
-
-from rtt.app.service.core import (
-    ClosedFormTuning,
-    DEFAULT_TUNING_SCHEME,
-    Tuning,
-    _to_matrix,
-    _vectors_to_ratios,
-    closed_form_from_temperament,
-)
-from rtt.app.service.projection import (
-    _held_for_projection,
-    _matrix_strings,
-    projection_matrix_rationals,
-)
-from rtt.app.service.state import TemperamentState
 
 _log = logging.getLogger(__name__)
 
@@ -144,7 +143,7 @@ def superspace_tuning(
         generator_map=generator_map,
         tuning_map=tempered,
         just_map=just,
-        retuning_map=tuple(t_ - j for t_, j in zip(tempered, just)),
+        retuning_map=tuple(t_ - j for t_, j in zip(tempered, just, strict=False)),
         monotone_generator_range=None,
         tradeoff_generator_range=None,
     )

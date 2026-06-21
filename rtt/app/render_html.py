@@ -4,10 +4,8 @@ import math
 from html import escape as _escape
 from urllib.parse import quote
 
-from rtt.library.formatting import strip_negative_zero
-from rtt.app import service
+from rtt.app import service, spreadsheet
 from rtt.app import settings as show_settings
-from rtt.app import spreadsheet
 from rtt.app.marks import (
     BR_COLOR,
     angle_bracket,
@@ -17,7 +15,7 @@ from rtt.app.marks import (
     svg,
     top_bracket,
 )
-
+from rtt.library.formatting import strip_negative_zero
 
 _CHART_PAD_T = 9
 _CHART_PAD_B = 2
@@ -332,7 +330,7 @@ def _power_parts(text) -> tuple[str, str]:
 # common EBK glyph) is the fallback for any character not listed.
 _PTEXT_DEFAULT_EM = 0.59
 _PTEXT_GLYPH_EM = {
-    **{d: 0.59 for d in "0123456789"},
+    **dict.fromkeys("0123456789", 0.59),
     ".": 0.25,
     "-": 0.35,
     "/": 0.52,
@@ -460,7 +458,7 @@ def _example_html(key: str) -> str:
             'border-top:3px solid #444"></span></span>'
         )
     if key in ("temperament_colorization", "tuning_colorization", "form_colorization"):
-        group = key.split("_")[0]
+        group = key.split("_", maxsplit=1)[0]
         letter = {"temperament": "𝑀", "tuning": "𝐺", "form": "𝐹"}[group]
         return (
             f'<span style="display:inline-flex;align-items:center;justify-content:center;'

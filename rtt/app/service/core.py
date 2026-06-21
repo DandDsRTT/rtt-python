@@ -10,13 +10,6 @@ import sympy as sp
 from rtt.library.addition import _get_greatest_factor
 from rtt.library.canonicalization import canonical_ca, canonical_ma
 from rtt.library.comma_forms import minimal_ca, positive_ratio_ca
-from rtt.library.generator_forms import (
-    equave_reduced_ma,
-    minimal_generator_ma,
-    positive_generator_ma,
-    positive_generator_shift_ma,
-    standard_jip_octaves,
-)
 from rtt.library.dimensions import get_d, get_r
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
@@ -24,11 +17,18 @@ from rtt.library.domain_basis import (
     get_domain_basis,
     is_standard_prime_limit_domain_basis,
 )
+from rtt.library.dual import mapping_matrix
 from rtt.library.formatting import strip_negative_zero
 from rtt.library.generator_detempering import get_generator_detempering
+from rtt.library.generator_forms import (
+    equave_reduced_ma,
+    minimal_generator_ma,
+    positive_generator_ma,
+    positive_generator_shift_ma,
+    standard_jip_octaves,
+)
 from rtt.library.math_utils import equave_reduce, get_primes, pcv_to_quotient, quotient_to_pcv
 from rtt.library.matrix_utils import Matrix
-from rtt.library.dual import mapping_matrix
 from rtt.library.parsing import parse_quotient_list
 from rtt.library.symbolic_tuning import closed_form_generator_operator
 from rtt.library.target_intervals import (
@@ -186,7 +186,7 @@ def _vectors_to_ratios(vectors, domain_basis=None) -> tuple[str, ...]:
             quotient = pcv_to_quotient(vector)
         else:
             quotient = Fraction(1)
-            for element, exponent in zip(elements, vector):
+            for element, exponent in zip(elements, vector, strict=False):
                 quotient *= element**exponent
         if _ratio_too_complex(quotient):
             ratios.append(_OVER_COMPLEX_RATIO)
@@ -506,7 +506,7 @@ def _cached_tuning(
         generator_map=gmap,
         tuning_map=tempered,
         just_map=just,
-        retuning_map=tuple(t_ - j for t_, j in zip(tempered, just)),
+        retuning_map=tuple(t_ - j for t_, j in zip(tempered, just, strict=False)),
         monotone_generator_range=get_generator_tuning_range(t, "monotone"),
         tradeoff_generator_range=get_generator_tuning_range(t, "tradeoff"),
     )
@@ -527,7 +527,7 @@ def _cached_tuning_from_generators(mapping, generators, domain_basis) -> Tuning:
         generator_map=tuple(generators),
         tuning_map=tempered,
         just_map=just,
-        retuning_map=tuple(t_ - j for t_, j in zip(tempered, just)),
+        retuning_map=tuple(t_ - j for t_, j in zip(tempered, just, strict=False)),
         monotone_generator_range=get_generator_tuning_range(t, "monotone"),
         tradeoff_generator_range=get_generator_tuning_range(t, "tradeoff"),
     )
@@ -537,11 +537,11 @@ def interval_sizes(tun: Tuning, ratios, domain_basis=None, weights=None) -> Inte
     vectors = _interval_vectors(ratios, domain_basis, len(tun.tuning_map))
     tempered = tuple(_over(tun.tuning_map, m) for m in vectors)
     just = tuple(_over(tun.just_map, m) for m in vectors)
-    errors = tuple(t_ - j for t_, j in zip(tempered, just))
+    errors = tuple(t_ - j for t_, j in zip(tempered, just, strict=False))
     if weights is None:
         damage = tuple(abs(e) for e in errors)
     else:
-        damage = tuple(abs(e) * w for e, w in zip(errors, weights))
+        damage = tuple(abs(e) * w for e, w in zip(errors, weights, strict=False))
     return IntervalSizes(tempered, just, errors, damage)
 
 
@@ -637,13 +637,13 @@ class ClosedFormTuning:
 
 
 def _closed_form_matches(exponents, primes, value: float, tolerance: float = 1e-6) -> bool:
-    closed = 1200 * sum(float(e) * math.log2(p) for e, p in zip(exponents, primes))
+    closed = 1200 * sum(float(e) * math.log2(p) for e, p in zip(exponents, primes, strict=False))
     return abs(closed - value) < tolerance
 
 
 def _power_product_operand(exponents, primes) -> str:
     terms = []
-    for prime, exponent in zip(primes, exponents):
+    for prime, exponent in zip(primes, exponents, strict=False):
         if exponent == 0:
             continue
         if exponent == 1:

@@ -8,10 +8,8 @@ from collections import deque
 from dataclasses import dataclass
 from fractions import Fraction
 
-from rtt.app import presets
-from rtt.app import service
+from rtt.app import presets, service, spreadsheet
 from rtt.app import settings as show_settings
-from rtt.app import spreadsheet
 from rtt.app.layout import Layout
 from rtt.app.service import TemperamentState
 
@@ -23,7 +21,9 @@ _GENERATOR_NUDGE_CENTS = 0.001
 
 
 def _same_cents_map(a, b) -> bool:
-    return len(a) == len(b) and all(service.cents(x) == service.cents(y) for x, y in zip(a, b))
+    return len(a) == len(b) and all(
+        service.cents(x) == service.cents(y) for x, y in zip(a, b, strict=False)
+    )
 
 
 @dataclass(frozen=True)
@@ -769,7 +769,7 @@ class Editor:
             _log.debug("optimum solve failed; treating displayed tuning as optimal: %r", exc)
             return True
         return len(displayed) == len(optimum) and all(
-            abs(a - b) < 1e-6 for a, b in zip(displayed, optimum)
+            abs(a - b) < 1e-6 for a, b in zip(displayed, optimum, strict=False)
         )
 
     @property
@@ -1164,7 +1164,9 @@ class Editor:
         if source == target or not (0 <= source < len(vectors) and 0 <= target < len(vectors)):
             return
         self._snapshot()
-        vectors[target] = tuple(a + b for a, b in zip(vectors[target], vectors[source]))
+        vectors[target] = tuple(
+            a + b for a, b in zip(vectors[target], vectors[source], strict=False)
+        )
 
     def add_interest_to(self, source: int, target: int) -> None:
         self._combine_interval_vectors(self.interest_vectors, source, target)

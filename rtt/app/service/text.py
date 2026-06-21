@@ -16,10 +16,10 @@ from rtt.app.service.core import (
     form_matrix,
     generator_detempering,
     generators,
-    inverse_form_matrix,
     interval_complexities,
     interval_sizes,
     interval_weights,
+    inverse_form_matrix,
     mapped_commas,
     mapped_intervals,
     prescale_text,
@@ -59,7 +59,6 @@ from rtt.app.service.superspace import (
     superspace_tuning_embedding,
     superspace_tuning_projection,
 )
-
 
 EbkConvention = namedtuple(
     "EbkConvention", "structure outer_open outer_close inner_open inner_close sep"
@@ -317,7 +316,9 @@ def plain_text_values(
             tuple(prescaler[i] if k == i else 0 for k in range(state.d)) for i in range(state.d)
         ]
     bare_size_row = (
-        (tuple(size_factor * sum(col) for col in zip(*bare_rows)),) if size_factor else ()
+        (tuple(size_factor * sum(col) for col in zip(*bare_rows, strict=False)),)
+        if size_factor
+        else ()
     )
     weight_text = _cents_list(target_damage_weights)
     tp_text = _ket_list(target_vectors, "⟩")
@@ -379,8 +380,10 @@ def plain_text_values(
         ("vectors", "targets"): tp_text,
         ("vectors", "detempering"): _ket_list(detemper_vectors, "⟩"),
         ("mapping", "primes"): mapping_ebk(state),
-        ("mapping", "commas"): _ket_list(list(zip(*mapped_comma)) + u_mapped_cols, "}"),
-        ("mapping", "targets"): _ket_list(zip(*mapped), "}"),
+        ("mapping", "commas"): _ket_list(
+            list(zip(*mapped_comma, strict=False)) + u_mapped_cols, "}"
+        ),
+        ("mapping", "targets"): _ket_list(zip(*mapped, strict=False), "}"),
         ("vectors", "primes"): _R(("vectors", "primes"), _identity(state.d)),
         ("mapping", "gens"): _R(("mapping", "gens"), _identity(len(state.mapping))),
         ("mapping", "detempering"): _R(("mapping", "detempering"), _identity(len(state.mapping))),
@@ -388,10 +391,12 @@ def plain_text_values(
         ("canon", "gens"): _R(("canon", "gens"), canon_form),
         ("canon", "canongens"): _R(("canon", "canongens"), _identity(rc)),
         ("canon", "detempering"): _R(
-            ("canon", "detempering"), list(zip(*canon_mapped_detempering))
+            ("canon", "detempering"), list(zip(*canon_mapped_detempering, strict=False))
         ),
-        ("canon", "commas"): _ket_list(list(zip(*canon_mapped_comma)) + canon_u_mapped_cols, "}"),
-        ("canon", "targets"): _ket_list(zip(*canon_mapped), "}"),
+        ("canon", "commas"): _ket_list(
+            list(zip(*canon_mapped_comma, strict=False)) + canon_u_mapped_cols, "}"
+        ),
+        ("canon", "targets"): _ket_list(zip(*canon_mapped, strict=False), "}"),
         ("mapping", "canongens"): _R(("mapping", "canongens"), canon_inverse_form),
         ("tuning", "canongens"): _cents_genmap(
             [
@@ -462,8 +467,8 @@ def plain_text_values(
         values.update(
             {
                 ("vectors", "held"): _ket_list(held, "⟩"),
-                ("mapping", "held"): _ket_list(zip(*held_mapped), "}"),
-                ("canon", "held"): _ket_list(zip(*canon_held_mapped), "}"),
+                ("mapping", "held"): _ket_list(zip(*held_mapped, strict=False), "}"),
+                ("canon", "held"): _ket_list(zip(*canon_held_mapped, strict=False), "}"),
                 ("tuning", "held"): _cents_list(held_sizes.tempered),
                 ("just", "held"): _cents_list(held_sizes.just),
                 ("retune", "held"): _cents_list(held_sizes.errors),
@@ -487,8 +492,12 @@ def plain_text_values(
         values.update(
             {
                 ("vectors", "interest"): _ket_list(interest, "⟩", wrap=False),
-                ("mapping", "interest"): _ket_list(zip(*interest_mapped), "}", wrap=False),
-                ("canon", "interest"): _ket_list(zip(*canon_interest_mapped), "}", wrap=False),
+                ("mapping", "interest"): _ket_list(
+                    zip(*interest_mapped, strict=False), "}", wrap=False
+                ),
+                ("canon", "interest"): _ket_list(
+                    zip(*canon_interest_mapped, strict=False), "}", wrap=False
+                ),
                 ("tuning", "interest"): _cents_list(interest_sizes.tempered, wrap=False),
                 ("just", "interest"): _cents_list(interest_sizes.just, wrap=False),
                 ("retune", "interest"): _cents_list(interest_sizes.errors, wrap=False),
@@ -750,7 +759,7 @@ def projection_ebk(matrix, d: int, cols: int | None = None) -> str:
 
 def embedding_ebk(matrix, d: int, r: int) -> str:
     grid = matrix if matrix is not None else [(_DASH,) * r for _ in range(d)]
-    return render_ebk(_EMBED, list(zip(*grid)))
+    return render_ebk(_EMBED, list(zip(*grid, strict=False)))
 
 
 def _prescale_vector_list(
