@@ -4862,6 +4862,34 @@ def test_math_expressions_skip_weighted_rms_optimum_irrational():
         assert on[cid].text == off[cid].text
 
 
+def test_math_expressions_show_exact_zero_as_bare_zero():
+    # a tempered-out comma vanishes exactly, so its closed form is an empty prime-power
+    # product (value exactly 0); show a bare "0", not "0.000" (which would read as merely
+    # near-zero) and not the degenerate "1200·log₂1"
+    cells = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
+    assert cells["tuning:comma:0"].kind == "mathexpr"
+    assert cells["tuning:comma:0"].text == "0"
+
+
+def test_math_expressions_render_rms_retuning_map_as_prime_power_logs():
+    # the retuning map (tempered − just) is also an exact rational closed form for the
+    # power-2 optimum: a prime-power product per cell, matching its plain cents
+    off = {c.id: c for c in _with(scheme="miniRMS-U").cells}
+    on = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
+    assert on["retune:prime:0"].kind == "mathexpr"
+    assert on["retune:prime:0"].text == "1200 · log₂(2^(-16/33)·3^(16/33)·5^(-4/33))\n= " + off["retune:prime:0"].text
+    # a tempered-out comma's error keeps the readable inverted-ratio form, not prime powers
+    assert on["retune:comma:0"].text == "1200 · log₂(81/80)\n= 21.506"
+
+
+def test_math_expressions_render_rms_canonical_generators_as_logs():
+    off = {c.id: c for c in _with(scheme="miniRMS-U", form_tiles=True).cells}
+    on = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True, form_tiles=True).cells}
+    for cid in ("tuning:cangen:0", "tuning:cangen:1"):
+        assert on[cid].kind == "mathexpr"
+        assert on[cid].text.endswith("= " + off[cid].text)
+
+
 def test_math_expressions_skip_manual_generator_override():
     # a manual generator override is not the scheme optimum, so even a power-2 scheme shows
     # no closed form — the displayed generators are whatever the user set

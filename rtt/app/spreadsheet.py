@@ -168,6 +168,8 @@ def _log_operand(ratio: str) -> str:
 
 
 def _math_expr(operand: str, value: float, show_value: bool, decimals: bool = True) -> str:
+    if operand == "1":
+        return "0"
     expr = f"1200 · log₂{operand}"
     return f"{expr}\n= {service.cents(value, decimals)}" if show_value else expr
 
@@ -1601,12 +1603,12 @@ class _GridBuilder:
         if group == "commas" and key == "retune" and i < self.nc:
             recip = 1 / Fraction(self.comma_ratios[i])
             return _log_operand(f"{recip.numerator}/{recip.denominator}")
-        if key == "tuning" and value is not None:
+        if key in ("tuning", "retune") and value is not None:
             closed_form = self._closed_form()
-            if closed_form is None:
-                return None
-            vector = self._tempered_vector(group, i)
-            return None if vector is None else closed_form.tempered_operand(vector, value)
+            vector = self._tempered_vector(group, i) if closed_form is not None else None
+            if vector is not None:
+                return (closed_form.tempered_operand(vector, value) if key == "tuning"
+                        else closed_form.retune_operand(vector, value))
         return None
 
     def _closed_form(self):
@@ -2705,8 +2707,18 @@ class _GridBuilder:
             gm = self.tun.generator_map
             for j in range(self.rc):
                 v = sum(gm[k] * self.inverse_form_M[k][j] for k in range(self.r))
-                self.cells.append(CellBox(f"tuning:cangen:{j}", self.canongen_left(j), self.rows["tuning"].y, COL_W, ROW_H,
-                                     "tuningvalue", text=service.cents(v, self._decimals), gen=j, unit=self.cell_unit("tuning", "canongens", gen=j)))
+                operand = None
+                if self.show_math:
+                    closed_form = self._closed_form()
+                    if closed_form is not None:
+                        coefficients = [self.inverse_form_M[k][j] for k in range(self.r)]
+                        operand = closed_form.canonical_generator_operand(coefficients, v)
+                if operand is not None:
+                    self.cells.append(CellBox(f"tuning:cangen:{j}", self.canongen_left(j), self.rows["tuning"].y, COL_W, ROW_H,
+                                         "mathexpr", text=_math_expr(operand, v, self.show_quantities, self._decimals), unit=self.cell_unit("tuning", "canongens", gen=j)))
+                else:
+                    self.cells.append(CellBox(f"tuning:cangen:{j}", self.canongen_left(j), self.rows["tuning"].y, COL_W, ROW_H,
+                                         "tuningvalue", text=service.cents(v, self._decimals), gen=j, unit=self.cell_unit("tuning", "canongens", gen=j)))
                 self._voice("tuning:canongens", j, v)
         if self.show_superspace and self.row_open("tuning"):
             ss_tun = self.superspace_tun()

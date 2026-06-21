@@ -556,12 +556,29 @@ class ClosedFormTuning:
         return self._operand(self.generator_exponents[generator], value)
 
     def tempered_operand(self, vector, value: float) -> str | None:
+        return self._operand(self._tempered_exponents(vector), value)
+
+    def retune_operand(self, vector, value: float) -> str | None:
         d = len(self.primes)
+        tempered = self._tempered_exponents(vector)
         padded = tuple((vector[p] if p < len(vector) else 0) for p in range(d))
+        exponents = tuple(tempered[i] - padded[i] for i in range(d))
+        return self._operand(exponents, value)
+
+    def canonical_generator_operand(self, coefficients, value: float) -> str | None:
+        d = len(self.primes)
         exponents = tuple(
-            sum(self.tempered_matrix[i][p] * padded[p] for p in range(d)) for i in range(d)
+            sum(coefficients[k] * self.generator_exponents[k][i] for k in range(len(coefficients)))
+            for i in range(d)
         )
         return self._operand(exponents, value)
+
+    def _tempered_exponents(self, vector):
+        d = len(self.primes)
+        padded = tuple((vector[p] if p < len(vector) else 0) for p in range(d))
+        return tuple(
+            sum(self.tempered_matrix[i][p] * padded[p] for p in range(d)) for i in range(d)
+        )
 
     def _operand(self, exponents, value: float) -> str | None:
         if not _closed_form_matches(exponents, self.primes, value):
