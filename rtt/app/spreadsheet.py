@@ -1604,6 +1604,15 @@ class _GridBuilder:
             recip = 1 / Fraction(self.comma_ratios[i])
             return _log_operand(f"{recip.numerator}/{recip.denominator}")
         if key in ("tuning", "retune") and value is not None:
+            if group in ("ssprimes", "ssgens"):
+                ss = self._ss_closed_form()
+                if ss is None:
+                    return None
+                if group == "ssgens":
+                    return ss.generator_operand(i, value) if key == "tuning" else None
+                vector = tuple(1 if k == i else 0 for k in range(len(ss.primes)))
+                return (ss.tempered_operand(vector, value) if key == "tuning"
+                        else ss.retune_operand(vector, value))
             closed_form = self._closed_form()
             vector = self._tempered_vector(group, i) if closed_form is not None else None
             if vector is not None:
@@ -1622,6 +1631,14 @@ class _GridBuilder:
                     targets=self._optimum_target_override, weights_override=self.custom_weights)
             )
         return self._closed_form_cache
+
+    def _ss_closed_form(self):
+        if not hasattr(self, "_ss_closed_form_cache"):
+            self._ss_closed_form_cache = (
+                service.closed_form_superspace_tuning(self.state, self.tuning_scheme)
+                if self.show_math and self.show_superspace else None
+            )
+        return self._ss_closed_form_cache
 
     def _tempered_vector(self, group, i):
         if group == "primes":
@@ -2724,10 +2741,17 @@ class _GridBuilder:
             ss_tun = self.superspace_tun()
             if self.tile_open("tuning", "ssgens"):
                 if self.show_superspace_generators:
+                    ss_cf = self._ss_closed_form() if self.show_math else None
                     for i, v in enumerate(ss_tun.generator_map):
-                        self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.rows["tuning"].y,
-                                             COL_W, ROW_H, "gentuningcell", text=service.cents(v, self._decimals),
-                                             unit=self.cell_unit("tuning", "ssgens", gen=i)))
+                        operand = ss_cf.generator_operand(i, v) if ss_cf is not None else None
+                        if operand is not None:
+                            self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.rows["tuning"].y,
+                                                 COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities, self._decimals),
+                                                 unit=self.cell_unit("tuning", "ssgens", gen=i)))
+                        else:
+                            self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.rows["tuning"].y,
+                                                 COL_W, ROW_H, "gentuningcell", text=service.cents(v, self._decimals),
+                                                 unit=self.cell_unit("tuning", "ssgens", gen=i)))
                         self._voice("tuning:ssgens", i, v)
                 else:
                     self.tuning_value_row("tuning", "ssgens", ss_tun.generator_map)

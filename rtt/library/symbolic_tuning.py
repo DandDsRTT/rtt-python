@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+from fractions import Fraction
+
 import sympy as sp
 
 from rtt.library.dimensions import get_d
-from rtt.library.domain_basis import get_domain_basis, is_standard_prime_limit_domain_basis
+from rtt.library.domain_basis import get_domain_basis
 from rtt.library.dual import mapping_matrix
 from rtt.library.temperament import Temperament
 from rtt.library.tuning import _held_vectors, resolve_target_intervals
 from rtt.library.tuning_scheme_names import TuningSchemeSpec, resolve_tuning_scheme
+
+
+def _is_prime_only_basis(domain_basis) -> bool:
+    fractions = [Fraction(element) for element in domain_basis]
+    return all(f.denominator == 1 and sp.isprime(f.numerator) for f in fractions)
 
 
 def has_rational_closed_form(spec: TuningSchemeSpec, t: Temperament) -> bool:
@@ -18,7 +25,7 @@ def has_rational_closed_form(spec: TuningSchemeSpec, t: Temperament) -> bool:
         and spec.destretched_interval is None
         and not spec.nonprime_basis_approach
         and spec.complexity_size_factor == 0
-        and is_standard_prime_limit_domain_basis(get_domain_basis(t))
+        and _is_prime_only_basis(get_domain_basis(t))
     )
 
 

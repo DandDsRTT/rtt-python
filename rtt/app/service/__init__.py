@@ -160,6 +160,7 @@ from rtt.app.service.superspace import (
     _superspace_held_basis,
     _superspace_projection_temperaments,
     basis_in_superspace,
+    closed_form_superspace_tuning,
     lift_vectors_to_superspace,
     map_vectors_into_superspace_generators,
     mapping_to_superspace_generators,

@@ -4890,6 +4890,24 @@ def test_math_expressions_render_rms_canonical_generators_as_logs():
         assert on[cid].text.endswith("= " + off[cid].text)
 
 
+def test_math_expressions_render_superspace_rms_tuning_as_logs():
+    # the superspace tuning lives over the true primes (here 2.3.5.13, skipping 7 & 11), which
+    # is still a prime-only basis, so its power-2 optimum has the same exact prime-power closed
+    # form — its tempered primes, generators and retuning map all get math expressions
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()
+    s.update(nonstandard_domain=True, math_expressions=True)
+    off = {c.id: c for c in spreadsheet.build(state, {**s, "math_expressions": False}, tuning_scheme="miniRMS-U").cells}
+    on = {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="miniRMS-U").cells}
+    for cid in ("tuning:ssprime:0", "tuning:ssgen:0", "retune:ssprime:1"):
+        assert on[cid].kind == "mathexpr"
+        assert "log₂" in on[cid].text
+        assert on[cid].text.endswith("= " + off[cid].text)
+    # minimax (power-∞) over the superspace has no closed form — stays numeric
+    mini = {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="minimax-S").cells}
+    assert mini["tuning:ssprime:0"].kind == "tuningvalue"
+
+
 def test_math_expressions_skip_manual_generator_override():
     # a manual generator override is not the scheme optimum, so even a power-2 scheme shows
     # no closed form — the displayed generators are whatever the user set

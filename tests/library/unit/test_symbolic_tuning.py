@@ -99,10 +99,26 @@ def test_no_closed_form_for_minimax_weighted_and_destretched():
         assert closed_form_generator_operator(t, name) is None, name
 
 
-def test_no_closed_form_for_nonstandard_domain():
-    t = Temperament(MEANTONE_5, Variance.ROW, ("2", "3", "7"))
+def test_no_closed_form_for_nonprime_domain():
+    # a non-prime domain element (here 9 = 3²) breaks the prime-power-product form, so no
+    # tidy closed form — even though the optimum is still an exact rational solution
+    t = Temperament(MEANTONE_5, Variance.ROW, ("2", "9", "5"))
     assert closed_form_generator_operator(t, "miniRMS-U") is None
     assert not has_rational_closed_form(resolve_tuning_scheme("miniRMS-U"), t)
+
+
+def test_closed_form_for_non_consecutive_prime_domain():
+    # a prime-only basis that skips a prime (2.3.7, no 5) still yields an exact prime-power
+    # closed form — this is what the superspace tuning rows rely on (their primes can skip)
+    t = Temperament(((1, 1, 0), (0, 1, 4)), Variance.ROW, ("2", "3", "7"))
+    operator = closed_form_generator_operator(t, "miniRMS-U")
+    assert operator is not None and _is_rational_operator(operator)
+    primes = [int(p) for p in get_domain_basis(t)]
+    just = sp.Matrix([[1200 * sp.log(p, 2) for p in primes]])
+    symbolic = [float(sp.N((just * operator)[0, k])) for k in range(operator.cols)]
+    numeric = optimize_generator_tuning_map(t, resolve_tuning_scheme("miniRMS-U"))
+    for s, n in zip(symbolic, numeric):
+        assert abs(s - n) < 1e-9
 
 
 def test_held_octave_makes_octave_pure():

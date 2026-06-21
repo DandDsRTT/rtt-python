@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 from fractions import Fraction
+from functools import lru_cache
 
 from rtt.library.change_basis import change_domain_basis_for_c
 from rtt.library.domain_basis import (
@@ -32,10 +33,12 @@ from rtt.library.tuning import (
 from rtt.library.tuning_scheme_names import resolve_tuning_scheme
 
 from rtt.app.service.core import (
+    ClosedFormTuning,
     DEFAULT_TUNING_SCHEME,
     Tuning,
     _to_matrix,
     _vectors_to_ratios,
+    closed_form_from_temperament,
 )
 from rtt.app.service.projection import (
     _held_for_projection,
@@ -143,6 +146,20 @@ def superspace_tuning(
         monotone_generator_range=None,
         tradeoff_generator_range=None,
     )
+
+
+def closed_form_superspace_tuning(
+    state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME,
+) -> ClosedFormTuning | None:
+    return _cached_closed_form_superspace_tuning(
+        _to_matrix(superspace_mapping(state)), superspace_primes(state.domain_basis), scheme
+    )
+
+
+@lru_cache(maxsize=256)
+def _cached_closed_form_superspace_tuning(ml, superspace, scheme) -> ClosedFormTuning | None:
+    t = Temperament(ml, Variance.ROW, superspace)
+    return closed_form_from_temperament(t, resolve_tuning_scheme(scheme))
 
 
 def project_superspace_generators_to_domain(state: TemperamentState, ss_generators) -> tuple[float, ...]:

@@ -641,6 +641,10 @@ def _cached_closed_form(mapping, scheme, domain_basis, nonprime_approach, held,
         own = (spec.held_intervals or "").strip().strip("{}").strip()
         parts = ([own] if own else []) + [r for r in held]
         spec = replace(spec, held_intervals="{" + ", ".join(parts) + "}")
+    return closed_form_from_temperament(t, spec)
+
+
+def closed_form_from_temperament(t, spec) -> ClosedFormTuning | None:
     operator = closed_form_generator_operator(t, spec)
     if operator is None:
         return None
