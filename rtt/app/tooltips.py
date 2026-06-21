@@ -152,11 +152,11 @@ HELPED_READONLY_IDS: frozenset[str] = MEAN_DAMAGE_IDS | frozenset({"control:dual
 _KIND_HELP: dict[str, str] = {
     "mapping": "Mapping entry — how many of this generator map to this prime. Type to edit the temperament, or scroll the wheel to step it by 1.",
     "formcell": "Generator form matrix entry — how this stored generator is built from the canonical ones (𝑀 = 𝐹𝑀ᴄ). Type to re-store the mapping in a new generating set (same temperament), or scroll the wheel to step it by 1; the whole 𝐹 must stay unimodular.",
-    "commacell": "Comma-vector entry — this prime's exponent in a comma the temperament tempers out. Type to edit, or scroll the wheel to step it by 1.",
+    "commacell": "One prime's exponent in a comma the temperament makes vanish — a small interval that maps to nothing. Type to edit, or scroll the wheel to step it by 1.",
     "unchangedcell": "Unchanged interval entry — this prime's exponent in an interval the tuning holds just. Type a new basis to retune to the projection that holds it.",
     "interestcell": "Interval-of-interest entry — this prime's exponent in an interval you're tracking. Type to edit, or scroll the wheel to step it by 1.",
-    "heldcell": "Held interval entry — this prime's exponent in an interval held unchanged (pure) by the tuning. Type to edit, or scroll the wheel to step it by 1.",
-    "targetcell": "Target interval entry — this prime's exponent in a target the tuning optimizes over. Type to override the chosen target set, or scroll the wheel to step it by 1.",
+    "heldcell": "One prime's exponent in a held interval — one the tuning keeps pure, dealt absolutely zero damage. Type to edit, or scroll the wheel to step it by 1.",
+    "targetcell": "One prime's exponent in a target interval, whose damage the tuning works to keep low. Type to override the chosen target set, or scroll the wheel to step it by 1.",
     "prescalercell": "Prescaler entry — the weight on this prime applied before optimizing. Type to override the scheme's value, or scroll the wheel to nudge it by 0.001.",
     "weightcell": "Damage weight — this target interval's weight in the optimization. Type your own to override the slope's complexity/simplicity/unity weighting.",
     "gentuningcell": "Generator tuning — this generator's tuned size in cents. Type to override the optimum, click its sign to reverse the generator (its mapping row flips too, so the tuning is unchanged), or scroll the wheel to fine-tune by a thousandth of a cent.",
@@ -216,9 +216,9 @@ _PRESET_HELP: dict[str, str] = {
 }
 
 _RATIO_HELP: dict[str, str] = {
-    "comma": "Comma ratio — an interval this temperament tempers out. Type a fraction (e.g. 81/80) to edit the comma.",
-    "target": "Target ratio — an interval the tuning optimizes over. Type a fraction to override the chosen target set.",
-    "held": "Held interval ratio — an interval held unchanged (pure) by the tuning. Type a fraction to edit it.",
+    "comma": "A comma this temperament makes vanish — a small JI interval it tempers out, so moving by it lands you nowhere new. Type a fraction (e.g. 81/80) to set it.",
+    "target": "A target interval — one of the consonances you want tuned well, whose damage the tuning works to keep as low as possible. Type a fraction to override the chosen target set.",
+    "held": "A held interval — one the tuning keeps pure, dealt absolutely zero damage (most often the octave). Type a fraction to edit it.",
     "interest": "Interval-of-interest ratio — an interval you're tracking. Type a fraction to edit it.",
     "unchanged": "Unchanged interval ratio — an interval the tuning holds just. Type a fraction to retune to the projection that holds it.",
 }
