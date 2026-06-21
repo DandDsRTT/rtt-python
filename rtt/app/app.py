@@ -991,10 +991,36 @@ _BUSY_JS = f"""
   document.addEventListener('change', (e) => {{
     if (at(e, '.q-select,.q-checkbox,.q-radio,input[type=checkbox],input[type=radio]')) window.rttBusy.arm();
   }}, true);
+  // Keyboard shortcuts. Each one resolves to an existing on-screen control and synthetically clicks
+  // it, so the action runs through the very same handler the mouse uses (act()/add_interval/
+  // toggle_drawer) — no parallel server path — and a shortcut is inert exactly when its button isn't
+  // on screen (e.g. Alt+C does nothing while the commas column is hidden, because no .rtt-hk-comma
+  // exists to click). Per-action modifier choices: Ctrl/Cmd for the edit-history pair, Alt for the
+  // "add a row" family, and a bare ',' for the settings pane (the one bare key — gated below to fire
+  // only when you're NOT typing in a cell, and ',' is never valid in a number/ratio cell anyway).
+  // Letter shortcuts key off e.code (the physical key) so a Mac's Option+letter dead-keys/special
+  // glyphs still match. preventDefault stops the browser's own Ctrl+Z / Alt-mnemonic / comma.
   document.addEventListener('keydown', (e) => {{
     if (!e.isTrusted) return;
-    if ((e.ctrlKey || e.metaKey) && /^[zyZY]$/.test(e.key)) window.rttBusy.arm();
-    else if (e.key === 'Enter' && e.target.closest && e.target.closest('.rtt-cell')) window.rttBusy.arm();
+    const mod = e.ctrlKey || e.metaKey;
+    let sel = null, arm = true;
+    if (mod && !e.altKey && e.code === 'KeyZ') sel = e.shiftKey ? '.rtt-hk-redo' : '.rtt-hk-undo';
+    else if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyY') sel = '.rtt-hk-redo';
+    else if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {{
+      const k = {{KeyC: 'comma', KeyM: 'mapping', KeyT: 'target', KeyH: 'held', KeyI: 'interest', KeyE: 'element'}}[e.code];
+      if (k) sel = '.rtt-hk-' + k;
+    }}
+    else if (e.key === ',' && !mod && !e.altKey && !e.shiftKey) {{
+      const a = document.activeElement;
+      const inField = (e.target.closest && e.target.closest('.rtt-cell'))
+          || (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
+      if (!inField) {{ sel = '.rtt-hamburger'; arm = false; }}  // pane toggle is pure CSS — don't flash the scrim
+    }}
+    if (sel) {{
+      const el = document.querySelector(sel);
+      if (el) {{ e.preventDefault(); if (arm) window.rttBusy.arm(); el.click(); return; }}
+    }}
+    if (e.key === 'Enter' && e.target.closest && e.target.closest('.rtt-cell')) window.rttBusy.arm();
   }}, true);
 
   // The shown scrim swallows pointer events so a pile of clicks can't land on the mid-recompute
@@ -2531,7 +2557,7 @@ class _Reconciler:
         self._preview_rank_remove(wrap, "row", cb.gen)  # removing a generator is a rank change → dual preview
 
     def _build_gen_plus(self, cb: spreadsheet.CellBox, wrap) -> None:  # add a generator: open a blank green draft mapping ROW (the bus stub)
-        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-mapping") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_mapping_row, "mapping"))
 
     def _build_map_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # remove generator cb.gen (a mapping row); a hover − on the left bus
@@ -2545,7 +2571,7 @@ class _Reconciler:
         self._preview_rank_remove(wrap, "row", cb.gen)  # removing a generator is a rank change → dual preview
 
     def _build_map_plus(self, cb: spreadsheet.CellBox, wrap) -> None:  # add a generator: open a blank green draft mapping ROW (left-bus stub)
-        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-mapping") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_mapping_row, "mapping"))
 
     def _build_map_drag(self, cb: spreadsheet.CellBox, wrap) -> None:  # drag generator row cb.gen onto another row's grip to merge
@@ -2681,11 +2707,11 @@ class _Reconciler:
     # hover preview: the new column is empty and not yet placed, so nothing on screen would change —
     # only removes and the re-solving adds (a prime, un-tempering a comma) have on-screen cells to ring.
     def _build_comma_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
-        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-comma") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_comma, "comma"))
 
     def _build_element_plus(self, cb: spreadsheet.CellBox, wrap) -> None:  # nonstandard-domain box on: open a blank ?/? element draft
-        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-element") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_element, "element"))
 
     def _build_element_minus(self, cb: spreadsheet.CellBox, wrap) -> None:  # nonstandard-domain box on: the domain − (both axes)
@@ -2722,21 +2748,21 @@ class _Reconciler:
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_interest, self._editor.remove_interest)
 
     def _build_interest_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
-        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-interest") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_interest, "interest"))
 
     def _build_held_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_held, self._editor.remove_held)
 
     def _build_held_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
-        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-held") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_held, "held"))
 
     def _build_target_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_target, self._editor.remove_target)
 
     def _build_target_plus(self, cb: spreadsheet.CellBox, wrap) -> None:
-        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-target") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_target, "target"))
 
     def _build_colgrip(self, cb: spreadsheet.CellBox, wrap) -> None:  # a per-column drag handle / drop target on the fan gridline:
@@ -5183,9 +5209,9 @@ def index(state: str | None = None) -> None:
                 with ui.element("div").classes("rtt-titletile").mark("titletile"):
                     with ui.element("div").classes("rtt-tile-btns"):
                         refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
-                            .props("flat dense").classes("rtt-iconbtn").mark("undo").tooltip(tooltips.CHROME_HELP["undo"])
+                            .props("flat dense").classes("rtt-iconbtn rtt-hk-undo").mark("undo").tooltip(tooltips.CHROME_HELP["undo"])
                         refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
-                            .props("flat dense").classes("rtt-iconbtn").mark("redo").tooltip(tooltips.CHROME_HELP["redo"])
+                            .props("flat dense").classes("rtt-iconbtn rtt-hk-redo").mark("redo").tooltip(tooltips.CHROME_HELP["redo"])
                         # reset everything (settings, expand/collapse, values) to the as-shipped
                         # defaults — plus the guide-chapter slider back to ch4 (reset_everything)
                         refs["reset"] = ui.button(icon="restart_alt", on_click=lambda: reset_everything(), color=None) \
