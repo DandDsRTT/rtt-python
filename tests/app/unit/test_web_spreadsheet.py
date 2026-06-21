@@ -7318,7 +7318,7 @@ def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():
     # |𝐞|); the bold-italic 𝒘 — matching the maps, not the bold-upright list glyphs — is the check
     on = {c.id: c for c in _with(weighting=True, symbols=True, equivalences=True).cells}
     # the mapped comma basis is exactly the zero matrix
-    assert on["symbol:mapping:commas"].text == "𝑀C = 𝑂"
+    assert on["symbol:mapping:commas"].text == "𝑀C = O"
     # the damage weight w is bold-italic (matching the maps), not bold-upright
     assert on["symbol:damage:targets"].text == "𝐝 = |𝐞|𝒘"
 
@@ -7567,7 +7567,7 @@ def test_canonical_mapping_row_carries_its_own_symbols_and_row_headers():
 def test_canonical_mapping_row_renders_its_mapped_product_tiles():
     # the canonical-mapping row carries 𝑀_C's mapped lists — the canonical-form twins of the
     # mapping row's read-only M·X tiles, over the rc canonical rows: 𝑀_C·D = 𝐹 (the generator form
-    # matrix), 𝑀_C·C = 𝑂 (the comma basis vanishes), and 𝑀_C·H / 𝑀_C·interest. Built over the app
+    # matrix), 𝑀_C·C = O (the comma basis vanishes), and 𝑀_C·H / 𝑀_C·interest. Built over the app
     # default (a NON-canonical fifth form), so 𝑀_C genuinely differs from the stored mapping 𝑀.
     M = ((1, 1, 0), (0, 1, 4))
     Mc = service.canonical_mapping(M)                 # ((1, 0, -4), (0, 1, 4))
@@ -7585,7 +7585,7 @@ def test_canonical_mapping_row_renders_its_mapped_product_tiles():
     # 𝑀_C·D = 𝐹
     assert [[cells[f"cell:canon_detempering:{i}:{c}"].text for c in range(r)] for i in range(rc)] == \
         [[str(x) for x in row] for row in F]
-    # 𝑀_C·C = 𝑂 — the lone comma maps to a zero column
+    # 𝑀_C·C = O — the lone comma maps to a zero column
     assert all(cells[f"cell:canon_mapped_comma:{i}:0"].text == "0" for i in range(rc))
     # 𝑀_C·H and 𝑀_C·interest — 𝑀_C applied to each column vector
     mc_dot = lambda v: [str(sum(Mc[i][p] * v[p] for p in range(3))) for i in range(rc)]
@@ -7604,7 +7604,7 @@ def test_canonical_mapping_row_tile_symbols_units_and_equivalences():
     cells = {c.id: c for c in spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), s, held_vectors=[(-1, 1, 0)]).cells}
     assert cells["symbol:canon:detempering"].text == f"𝑀{C}D = 𝐹"
-    assert cells["symbol:canon:commas"].text == f"𝑀{C}C = 𝑂"
+    assert cells["symbol:canon:commas"].text == f"𝑀{C}C = O"
     assert cells["symbol:canon:targets"].text == f"Y{C} = 𝑀{C}T"
     assert cells["symbol:canon:held"].text == f"𝑀{C}H"
     assert cells["units:canon:primes"].text == f"units: g{C}/p"
@@ -7627,7 +7627,7 @@ def test_canonical_mapping_row_commas_symbol_keeps_subscript_under_unchanged():
     cells = {c.id: c for c in spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
         held_basis_ratios=("2/1", "5/4")).cells}
-    # the "= 𝑂" equivalence drops under V (the column is no longer the bare vanishing comma basis),
+    # the "= O" equivalence drops under V (the column is no longer the bare vanishing comma basis),
     # for both rows; what matters here is the subscript-C surviving the comma C → V swap
     assert cells["symbol:canon:commas"].text == f"𝑀{C}V"           # subscript-C survives, comma C → V
     assert cells["symbol:mapping:commas"].text == "𝑀V"             # the main (non-canonical) row swaps, no subscript
@@ -7648,7 +7648,7 @@ def test_canonical_mapping_row_carries_plain_text():
     assert cells["ptext:canon:gens"].text == "[{1 -1] {0 1]}"          # 𝐹
     assert cells["ptext:canon:canongens"].text == "[{1 0] {0 1]}"      # 𝐹⁻¹𝐹 = 𝐼
     assert cells["ptext:canon:detempering"].text == "{[1 0} [-1 1}]"   # 𝑀_C·D = 𝐹 (a vector list)
-    assert cells["ptext:canon:commas"].text == "[[0 0}]"               # 𝑀_C·C vanishes to 𝑂
+    assert cells["ptext:canon:commas"].text == "[[0 0}]"               # 𝑀_C·C vanishes to O
     assert cells["ptext:canon:held"].text == "[[-1 1}]"                # 𝑀_C·H
     assert cells["ptext:canon:interest"].text == "[-3 2}"              # 𝑀_C·interest (stands alone)
 
@@ -10180,7 +10180,7 @@ def test_projection_relabels_the_whole_column_as_the_unrotated_vector_list():
     assert named["caption:just:commas"].text == "(just) unrotated vector interval size list"
     symd = {c.id: c for c in _with(projection=True, symbols=True, equivalences=True).cells}
     assert symd["symbol:vectors:commas"].text == "V = C|U"
-    assert symd["symbol:mapping:commas"].text == "𝑀V"   # C → V; the "= 𝑂" vanish-equivalence dropped
+    assert symd["symbol:mapping:commas"].text == "𝑀V"   # C → V; the "= O" vanish-equivalence dropped
     assert symd["symbol:tuning:commas"].text == "𝒕V"
     # off projection it stays the plain comma basis C
     plain = {c.id: c for c in _with(symbols=True).cells}
