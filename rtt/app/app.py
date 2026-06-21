@@ -682,6 +682,91 @@ _ZOOM_JS = """
 })()
 """
 
+# The Guide hover-card. A tile's name/symbol cell (.rtt-guide-link) carries a plain-language blurb
+# and a link to the matching section of D&D's guide, stashed in data-guide-* attributes by
+# _attach_guide_link. On hover this pops a small card with that blurb and an actual <a> link. Unlike
+# a Quasar tooltip (pointer-events:none, hides the instant the cursor leaves its anchor), this card
+# is a real, hoverable element: moving the cursor onto it keeps it open, so the link is clickable. It
+# closes on a short delay once the cursor has left BOTH the cell and the card. `tooltips` off
+# (body.rtt-no-tooltips) suppresses it, same as every other hover help.
+_GUIDE_JS = """
+(() => {
+  if (window.__rttGuide) return;
+  window.__rttGuide = true;
+  const DELAY = 200;   // ms before it appears
+  const HIDE = 160;    // ms grace to cross the gap from cell to card
+  const GAP = 6;
+  let showTimer = null, hideTimer = null, anchor = null;
+
+  const card = document.createElement('div');
+  card.className = 'rtt-guide-card';
+  card.style.display = 'none';
+  document.body.appendChild(card);
+
+  const reallyHide = () => { card.style.display = 'none'; card.innerHTML = ''; anchor = null; };
+  const scheduleHide = () => { clearTimeout(hideTimer); hideTimer = setTimeout(reallyHide, HIDE); };
+  const cancelHide = () => { clearTimeout(hideTimer); };
+
+  const place = (cell) => {
+    const r = cell.getBoundingClientRect();
+    const cw = card.offsetWidth, ch = card.offsetHeight;
+    const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+    let left = Math.max(4, Math.min(r.left, vw - cw - 4));
+    let top = r.bottom + GAP;                       // prefer below the cell
+    if (top + ch > vh - 4) top = Math.max(4, r.top - GAP - ch);   // no room: flip above
+    card.style.left = left + 'px';
+    card.style.top = top + 'px';
+  };
+
+  const show = (cell) => {
+    if (document.body.classList.contains('rtt-no-tooltips')) return;
+    const text = cell.getAttribute('data-guide-text');
+    const loc = cell.getAttribute('data-guide-loc');
+    const url = cell.getAttribute('data-guide-url');
+    if (!text || !url) return;
+    card.innerHTML = '';
+    const body = document.createElement('div');
+    body.className = 'rtt-guide-card-text';
+    body.textContent = text;
+    card.appendChild(body);
+    const a = document.createElement('a');
+    a.className = 'rtt-guide-card-link';
+    a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = 'Read in the Guide: ' + loc + ' →';
+    card.appendChild(a);
+    card.style.display = 'block';
+    place(cell);
+  };
+
+  card.addEventListener('mouseenter', cancelHide);
+  card.addEventListener('mouseleave', scheduleHide);
+
+  document.addEventListener('mouseover', (e) => {
+    const cell = e.target.closest && e.target.closest('.rtt-guide-link');
+    if (!cell) return;
+    cancelHide();
+    if (cell === anchor) return;
+    if (showTimer) clearTimeout(showTimer);
+    anchor = cell;
+    showTimer = setTimeout(() => { if (anchor === cell && cell.isConnected) show(cell); }, DELAY);
+  });
+  document.addEventListener('mouseout', (e) => {
+    const cell = e.target.closest && e.target.closest('.rtt-guide-link');
+    if (!cell || cell !== anchor) return;
+    const to = e.relatedTarget;
+    if (to && (cell.contains(to) || card.contains(to))) return;   // moved onto the card or within
+    if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+    scheduleHide();
+  });
+  // a commit / reflow / scroll / keypress yanks the anchor out — drop the card, but never swallow a
+  // click that lands inside the card itself (that's the user reaching for the link)
+  document.addEventListener('pointerdown', (e) => { if (!card.contains(e.target)) reallyHide(); }, true);
+  document.addEventListener('keydown', reallyHide, true);
+  document.addEventListener('wheel', reallyHide, {capture: true, passive: true});
+  document.addEventListener('scroll', reallyHide, {capture: true, passive: true});
+})()
+"""
+
 # The client-driven busy scrim. After a committing interaction the app has to think — an off-loop
 # re-solve and/or the browser patching a big grid — for anything from nothing to a few seconds. With
 # no feedback a slow beat reads as "I crashed it", so the user keeps clicking a frozen-looking page.
@@ -975,14 +1060,13 @@ class _Reconciler:
             d.pop(eid, None)
 
     def _attach_guide_link(self, wrap, gh: tooltips.GuideHelp) -> None:
+        # the hover-card (a body-level div built by _GUIDE_JS) reads these and renders a card that
+        # stays open while hovered, so its "Read in the Guide" link is actually clickable — a Quasar
+        # tooltip can't be (it hides the moment the cursor leaves the cell toward it)
         wrap.classes("rtt-guide-link")
-        with wrap:
-            with ui.tooltip().classes("rtt-guide-tip"):
-                ui.html(
-                    f'<span class="rtt-guide-quote">“{_escape(gh.quote)}”</span>'
-                    f'<span class="rtt-guide-readmore">Read in the Guide: '
-                    f'{_escape(gh.location)} →</span>')
-        wrap.on("click", js_handler=f"() => window.open({json.dumps(gh.url)}, '_blank', 'noopener')")
+        wrap._props["data-guide-text"] = gh.text
+        wrap._props["data-guide-loc"] = gh.location
+        wrap._props["data-guide-url"] = gh.url
 
     def make_cell(self, cb: spreadsheet.CellBox) -> None:
         # build a cell's element in the active parent (the caller opens the freeze container),
@@ -2065,6 +2149,7 @@ def index(state: str | None = None) -> None:
     ui.add_body_html(f"<script>{_DECIMAL_JS}</script>")
     ui.add_body_html(f"<script>{_TABNAV_JS}</script>")
     ui.add_body_html(f"<script>{_ZOOM_JS}</script>")
+    ui.add_body_html(f"<script>{_GUIDE_JS}</script>")
     ui.add_body_html(
         f"<script>window.rttTour={{steps:{json.dumps(_TOUR_STEPS)},autostart:true}};\n"
         f"{_TOUR_JS}</script>")

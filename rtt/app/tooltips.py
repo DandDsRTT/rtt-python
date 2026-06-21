@@ -12,7 +12,7 @@ def guide_url(chapter: str, section: str) -> str:
 
 @dataclass(frozen=True)
 class GuideHelp:
-    quote: str
+    text: str
     chapter: str
     section: str
 
@@ -27,27 +27,32 @@ class GuideHelp:
 
 GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
     ("mapping", "primes"): GuideHelp(
-        "A temperament can be represented by an object called a mapping, which contains "
-        "one map for each generator of the temperament.",
+        "A mapping captures a temperament: one map per generator, each counting how many "
+        "of that generator it takes to reach every prime. It is the central object of RTT — "
+        "everything else follows from it.",
         "Mappings", "Mappings"),
     ("vectors", "commas"): GuideHelp(
-        "This type of JI interval is called a comma, and this particular one is called "
-        "the meantone comma.",
+        "The comma basis collects the commas this temperament tempers out: small JI "
+        "intervals it makes vanish, so that moving by one of them changes nothing. Each "
+        "column is one vanishing comma.",
         "Mappings", "Making commas vanish"),
     ("tuning", "gens"): GuideHelp(
-        "a list of generator tunings (in units of cents per generator) such as those noted "
-        "here, which we'd call a generator tuning map.",
+        "The generator tuning map gives the size, in cents, of each generator. The mapping "
+        "says how the generators build the primes; this says how large the generators "
+        "actually are, which is what pins down the tuning.",
         "Tuning fundamentals", "Tuning"),
     ("vectors", "targets"): GuideHelp(
-        "These are a set of intervals of our choosing, whose damage we seek to minimize, "
-        "and we can call them our target-intervals.",
+        "The target intervals are the ones you want tuned well — usually the consonances "
+        "your music leans on. The tuning is chosen to keep their combined damage as low as "
+        "possible.",
         "Tuning fundamentals", "Target-intervals"),
     ("damage", "targets"): GuideHelp(
-        "We accomplish this using a quantity called damage.",
+        "Damage measures how badly the tuning serves an interval: how far its tempered size "
+        "lands from just intonation, scaled by how much that interval matters.",
         "Tuning fundamentals", "Damage, error, and weight"),
     ("weight", "targets"): GuideHelp(
-        "frequently choose to weight these absolute errors, in order to capture how some "
-        "intervals are more important to tune accurately than others.",
+        "The weights set how much each target's damage counts in the optimization, so the "
+        "intervals you care about most pull the tuning hardest toward serving them.",
         "Tuning fundamentals", "Damage, error, and weight"),
 }
 

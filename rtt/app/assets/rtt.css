@@ -194,12 +194,14 @@ body.rtt-no-anim { --t:0s; }
 body.rtt-no-tooltips .q-tooltip,
 body.rtt-no-tooltips .rtt-zoom-help { display:none !important; }
 
-.rtt-guide-link { cursor:pointer; }
-.q-tooltip.rtt-guide-tip { max-width:22rem; font-family:var(--rtt-serif); font-size:12px;
-                           line-height:1.45; padding:8px 10px; }
-.rtt-guide-tip .rtt-guide-quote { font-style:italic; }
-.rtt-guide-tip .rtt-guide-readmore { display:block; margin-top:6px; font-style:normal;
-                                     text-decoration:underline; opacity:0.85; }
+.rtt-guide-link { cursor:help; }
+body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
+.rtt-guide-card { position:fixed; z-index:6000; max-width:23rem; padding:9px 11px; border-radius:4px;
+                  background:#4a4a4a; color:#fff; font-family:var(--rtt-serif); font-size:12px;
+                  line-height:1.5; box-shadow:0 2px 12px rgba(0,0,0,0.3); }
+.rtt-guide-card-link { display:block; margin-top:7px; color:#9ec5ff; text-decoration:underline;
+                       cursor:pointer; }
+.rtt-guide-card-link:hover { color:#c4ddff; }
 
 .rtt-line { position:absolute; z-index:1; opacity:1; transition:left var(--t), top var(--t),
             width var(--t), height var(--t), opacity var(--t); }

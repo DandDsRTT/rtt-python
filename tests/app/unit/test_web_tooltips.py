@@ -20,10 +20,6 @@ def _chapter_text(chapter: str) -> str:
     return matches[0].read_text(encoding="utf-8")
 
 
-def _strip_markup(text: str) -> str:
-    return text.replace("'''", "").replace("''", "").replace("[[", "").replace("]]", "")
-
-
 def test_show_help_covers_every_toggle_with_nonempty_text():
     # every Show toggle (live or greyed) carries explanatory hover text, and no extras
     assert set(tooltips.SHOW_HELP) == set(show_settings.DEFAULTS)
@@ -233,11 +229,12 @@ def test_guide_url_builds_wiki_subpage_and_section_anchor():
 
 
 @pytest.mark.parametrize("key,gh", sorted(tooltips.GUIDE_HELP.items()))
-def test_guide_help_quote_is_verbatim_from_its_chapter(key, gh):
-    # every tooltip quote is a direct, unaltered quote from the named guide chapter (modulo the
-    # chapter's wiki bold/link markup) — so a quote can't silently drift from the source text
-    assert gh.quote.strip() == gh.quote and gh.quote
-    assert gh.quote in _strip_markup(_chapter_text(gh.chapter))
+def test_guide_help_text_is_a_clean_general_blurb(key, gh):
+    # the blurb is Guide-voiced prose describing the object in general — NOT a verbatim quote and
+    # NOT tied to whatever temperament happens to be loaded (the comma basis once read "the meantone
+    # comma", which only held for the default)
+    assert gh.text.strip() == gh.text and gh.text.endswith(".")
+    assert "meantone" not in gh.text.lower(), f"{key} blurb names a specific temperament"
 
 
 @pytest.mark.parametrize("key,gh", sorted(tooltips.GUIDE_HELP.items()))
