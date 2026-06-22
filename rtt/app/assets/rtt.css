@@ -182,7 +182,7 @@ html, body { overscroll-behavior-x: none; }
    popping in mid-expansion. The withhold carries a long fallback animation (fill backwards+forwards)
    so a cell can never stay stuck hidden if the JS reveal is ever missed; the JS adds .rtt-reveal to
    fade it in immediately when the debounce fires (overriding the fallback's wait). */
-.rtt-withhold { opacity:0; animation:rtt-in var(--t) ease 1.5s backwards forwards; }
+.rtt-withhold { opacity:0; animation:rtt-in var(--t) ease 1.5s both; }
 .rtt-reveal { opacity:1; animation:rtt-in var(--t) ease; }
 
 /* The two `interface` Show behaviours that gate the whole app from a <body> class (set by
