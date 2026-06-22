@@ -109,6 +109,19 @@ class _BracketsMixin:
                 self.cells.append(CellBox(f"vsplit:{rkey}", x, self.rows[rkey].y, SEP_W, self.rows[rkey].h, "vbar"))
 
     def _emit_brackets(self) -> None:
+        self._emit_canon_brackets()
+        self._emit_projection_brackets()
+        self._emit_mapping_brackets()
+        self._emit_ss_matrix_brackets()
+        self._emit_vector_brackets()
+        self._emit_prescaling_brackets()
+        self._emit_scalar_row_brackets()
+
+    def _emit_canon_brackets(self) -> None:
+        self._emit_canon_stacked_brackets()
+        self._emit_canon_fit_brackets()
+
+    def _emit_canon_stacked_brackets(self) -> None:
         if self.row_open("canon") and self.tile_open("canon", "primes"):
             for i in range(self.rc):
                 self.bracket(f"canon:map:{i}", "canon", "primes", self.canon_top(i), ROW_H, stacked=True)
@@ -119,36 +132,53 @@ class _BracketsMixin:
         if self.tile_open("mapping", "canongens"):
             for i in range(self.r):
                 self.bracket(f"finv:map:{i}", "mapping", "canongens", self.map_top(i), ROW_H, stacked=True)
-        if self.row_open("canon"):
-            canon_y, canon_h = (self.rows["canon"].y if "canon" in self.rows else 0), self.rc * ROW_H
-            if self.tile_open("canon", "detempering"):
-                self.bracket("canon_detempering", "canon", "detempering", canon_y, canon_h, fit=True)
-            if self.tile_open("canon", "commas"):
-                self.bracket("canon_comma", "canon", "commas", canon_y, canon_h, fit=True)
-            if self.tile_open("canon", "targets"):
-                self.bracket("canon_mapped", "canon", "targets", canon_y, canon_h, fit=True)
-            if self.nh and self.tile_open("canon", "held"):
-                self.bracket("canon_hmapped", "canon", "held", canon_y, canon_h, fit=True)
-        if self.row_open("projection") and self.tile_open("projection", "primes"):
+
+    def _emit_canon_fit_brackets(self) -> None:
+        if not self.row_open("canon"):
+            return
+        canon_y, canon_h = (self.rows["canon"].y if "canon" in self.rows else 0), self.rc * ROW_H
+        if self.tile_open("canon", "detempering"):
+            self.bracket("canon_detempering", "canon", "detempering", canon_y, canon_h, fit=True)
+        if self.tile_open("canon", "commas"):
+            self.bracket("canon_comma", "canon", "commas", canon_y, canon_h, fit=True)
+        if self.tile_open("canon", "targets"):
+            self.bracket("canon_mapped", "canon", "targets", canon_y, canon_h, fit=True)
+        if self.nh and self.tile_open("canon", "held"):
+            self.bracket("canon_hmapped", "canon", "held", canon_y, canon_h, fit=True)
+
+    def _emit_projection_brackets(self) -> None:
+        if not self.row_open("projection"):
+            return
+        self._emit_projection_embed_brackets()
+        self._emit_projection_list_brackets()
+
+    def _emit_projection_embed_brackets(self) -> None:
+        py, ph = self.rows["projection"].y, self.d * ROW_H
+        if self.tile_open("projection", "primes"):
             for i in range(self.d):
                 self.bracket(f"proj:{i}", "projection", "primes", self.proj_top(i), ROW_H, stacked=True)
-        if self.row_open("projection") and self.tile_open("projection", "gens"):
-            self.bracket("embed", "projection", "gens", self.rows["projection"].y, self.d * ROW_H, fit=True)
-        if self.row_open("projection") and self.tile_open("projection", "canongens"):
-            self.bracket("embed_c", "projection", "canongens", self.rows["projection"].y, self.d * ROW_H, fit=True)
-        if self.row_open("projection") and self.tile_open("projection", "ssgens"):
-            self.bracket("embed_sl", "projection", "ssgens", self.rows["projection"].y, self.d * ROW_H, fit=True)
-        if self.row_open("projection") and self.tile_open("projection", "ssprimes"):
+        if self.tile_open("projection", "gens"):
+            self.bracket("embed", "projection", "gens", py, ph, fit=True)
+        if self.tile_open("projection", "canongens"):
+            self.bracket("embed_c", "projection", "canongens", py, ph, fit=True)
+        if self.tile_open("projection", "ssgens"):
+            self.bracket("embed_sl", "projection", "ssgens", py, ph, fit=True)
+
+    def _emit_projection_list_brackets(self) -> None:
+        py, ph = self.rows["projection"].y, self.d * ROW_H
+        if self.tile_open("projection", "ssprimes"):
             for i in range(self.d):
                 self.bracket(f"proj_sl:{i}", "projection", "ssprimes", self.proj_top(i), ROW_H, stacked=True)
-        if self.show_unchanged and self.row_open("projection") and self.tile_open("projection", "commas"):
-            self.bracket("proj_v", "projection", "commas", self.rows["projection"].y, self.d * ROW_H, fit=True)
-        if self.row_open("projection") and self.tile_open("projection", "detempering"):
-            self.bracket("proj_pd", "projection", "detempering", self.rows["projection"].y, self.d * ROW_H, fit=True)
-        if self.row_open("projection") and self.tile_open("projection", "targets"):
-            self.bracket("proj_pt", "projection", "targets", self.rows["projection"].y, self.d * ROW_H, fit=True)
-        if self.row_open("projection") and self.tile_open("projection", "held"):
-            self.bracket("proj_ph", "projection", "held", self.rows["projection"].y, self.d * ROW_H, fit=True)
+        if self.show_unchanged and self.tile_open("projection", "commas"):
+            self.bracket("proj_v", "projection", "commas", py, ph, fit=True)
+        if self.tile_open("projection", "detempering"):
+            self.bracket("proj_pd", "projection", "detempering", py, ph, fit=True)
+        if self.tile_open("projection", "targets"):
+            self.bracket("proj_pt", "projection", "targets", py, ph, fit=True)
+        if self.tile_open("projection", "held"):
+            self.bracket("proj_ph", "projection", "held", py, ph, fit=True)
+
+    def _emit_mapping_brackets(self) -> None:
         if self.row_open("scaling_factors") and self.tile_open("scaling_factors", "commas"):
             self.bracket("scaling", "scaling_factors", "commas", self.rows["scaling_factors"].y, ROW_H)
         if self.row_open("mapping"):
@@ -163,12 +193,21 @@ class _BracketsMixin:
                 self.bracket("mapped", "mapping", "targets", self.rows["mapping"].y, self.r_shown * ROW_H, fit=True)
             if self.nh and self.tile_open("mapping", "held"):
                 self.bracket("hmapped", "mapping", "held", self.rows["mapping"].y, self.r_shown * ROW_H, fit=True)
+
+    def _emit_ss_matrix_brackets(self) -> None:
+        self._emit_ss_stacked_brackets()
+        self._emit_ss_proj_fit_brackets()
+        self._emit_ss_rest_brackets()
+
+    def _emit_ss_stacked_brackets(self) -> None:
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):
             for i in range(self.rL):
                 self.bracket(f"ss_map:{i}", "ss_mapping", "ssprimes", self.ss_map_top(i), ROW_H, stacked=True)
         if self.row_open("ss_projection") and self.tile_open("ss_projection", "ssprimes"):
             for i in range(self.dL):
                 self.bracket(f"ss_proj:{i}", "ss_projection", "ssprimes", self.ss_proj_top(i), ROW_H, stacked=True)
+
+    def _emit_ss_proj_fit_brackets(self) -> None:
         ssp_top, ssp_h = (self.rows["ss_projection"].y if "ss_projection" in self.rows else 0), self.dL * ROW_H
         if self.row_open("ss_projection"):
             if self.tile_open("ss_projection", "ssgens"):
@@ -183,6 +222,8 @@ class _BracketsMixin:
                 self.bracket("ss_proj_pt", "ss_projection", "targets", ssp_top, ssp_h, fit=True)
             if self.tile_open("ss_projection", "held"):
                 self.bracket("ss_proj_ph", "ss_projection", "held", ssp_top, ssp_h, fit=True)
+
+    def _emit_ss_rest_brackets(self) -> None:
         if self.row_open("ss_vectors") and self.tile_open("ss_vectors", "ssprimes"):
             for i in range(self.dL):
                 self.bracket(f"ss_vec_jmap:{i}", "ss_vectors", "ssprimes", self.ss_vec_top(i), ROW_H, stacked=True)
@@ -192,6 +233,14 @@ class _BracketsMixin:
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssgens"):
             self.bracket("ss_selfmap", "ss_mapping", "ssgens",
                          self.rows["ss_mapping"].y, self.rL * ROW_H, fit=True)
+
+    def _emit_vector_brackets(self) -> None:
+        self._emit_vector_stacked_brackets()
+        self._emit_ss_vectors_list_brackets()
+        self._emit_ss_mapped_list_brackets()
+        self._emit_vec_list_brackets()
+
+    def _emit_vector_stacked_brackets(self) -> None:
         if self.tile_open("vectors", "primes"):
             for i in range(self.d):
                 self.bracket(f"vec:primes:{i}", "vectors", "primes", self.vec_top(i), ROW_H, stacked=True)
@@ -201,6 +250,8 @@ class _BracketsMixin:
         if self.tile_open("mapping", "detempering"):
             self.bracket("mapped_detempering", "mapping", "detempering",
                          self.rows["mapping"].y, self.r * ROW_H, fit=True)
+
+    def _emit_ss_vectors_list_brackets(self) -> None:
         if self.row_open("ss_vectors"):
             if self.tile_open("ss_vectors", "primes"):
                 self.bracket("ss_vec:primes", "ss_vectors", "primes", self.rows["ss_vectors"].y, self.dL * ROW_H, fit=True)
@@ -211,6 +262,8 @@ class _BracketsMixin:
                 self.bracket("ss_vec:held", "ss_vectors", "held", self.rows["ss_vectors"].y, self.dL * ROW_H, fit=True)
             if self.tile_open("ss_vectors", "detempering"):
                 self.bracket("ss_vec:detempering", "ss_vectors", "detempering", self.rows["ss_vectors"].y, self.dL * ROW_H, fit=True)
+
+    def _emit_ss_mapped_list_brackets(self) -> None:
         if self.row_open("ss_mapping"):
             for group in ("commas", "targets"):
                 if self.tile_open("ss_mapping", group):
@@ -219,6 +272,8 @@ class _BracketsMixin:
                 self.bracket("ss_mapped:held", "ss_mapping", "held", self.rows["ss_mapping"].y, self.rL * ROW_H, fit=True)
             if self.tile_open("ss_mapping", "detempering"):
                 self.bracket("ss_mapped:detempering", "ss_mapping", "detempering", self.rows["ss_mapping"].y, self.rL * ROW_H, fit=True)
+
+    def _emit_vec_list_brackets(self) -> None:
         if self.row_open("vectors"):
             for group in ("commas", "targets"):
                 if self.tile_open("vectors", group):
@@ -227,6 +282,8 @@ class _BracketsMixin:
                 self.bracket("vec:held", "vectors", "held", self.rows["vectors"].y, self.d * ROW_H, fit=True)
             if self.tile_open("vectors", "detempering"):
                 self.bracket("vec:detempering", "vectors", "detempering", self.rows["vectors"].y, self.d * ROW_H, fit=True)
+
+    def _emit_prescaling_brackets(self) -> None:
         if self.row_open("prescaling"):
             ph = (self.prescale_rows + self.size_rows) * ROW_H
             bare_col = "ssprimes" if self.show_superspace else "primes"
@@ -246,6 +303,18 @@ class _BracketsMixin:
                     gx, gw = pspan
                     self.cells.append(CellBox("bar:prescaling", gx, self.rows["prescaling"].y + self.prescale_rows * ROW_H - SEP_W / 2,
                                          gw, SEP_W, "hbar"))
+
+    def _emit_scalar_row_brackets(self) -> None:
+        self._emit_tuning_map_brackets()
+        for key in ("tuning", "just", "retune", "complexity"):
+            if self.row_open(key):
+                self._emit_list_row_brackets(key)
+        if self.tile_open("weight", "targets"):
+            self.bracket("weight", "weight", "targets", self.rows["weight"].y, ROW_H)
+        if self.tile_open("damage", "targets"):
+            self.bracket("damage", "damage", "targets", self.rows["damage"].y, ROW_H)
+
+    def _emit_tuning_map_brackets(self) -> None:
         if self.tile_open("tuning", "gens"):
             self.bracket("tuning:genmap", "tuning", "gens", self.rows["tuning"].y, ROW_H)
         if self.tile_open("tuning", "canongens"):
@@ -254,26 +323,26 @@ class _BracketsMixin:
             self.bracket("tuning:detempering", "tuning", "detempering", self.rows["tuning"].y, ROW_H)
         if self.tile_open("tuning", "ssgens"):
             self.bracket("tuning:ssgenmap", "tuning", "ssgens", self.rows["tuning"].y, ROW_H)
-        for key in ("tuning", "just", "retune", "complexity"):
-            if self.row_open(key):
-                if self.tile_open(key, "primes"):
-                    self.bracket(f"{key}:map", key, "primes", self.rows[key].y, ROW_H)
-                if self.tile_open(key, "commas"):
-                    self.bracket(f"{key}:commalist", key, "commas", self.rows[key].y, ROW_H)
-                if self.tile_open(key, "targets"):
-                    self.bracket(f"{key}:list", key, "targets", self.rows[key].y, ROW_H)
-                if self.nh and self.tile_open(key, "held"):
-                    self.bracket(f"{key}:hlist", key, "held", self.rows[key].y, ROW_H)
-                if key != "tuning" and self.tile_open(key, "detempering"):
-                    self.bracket(f"{key}:detemperinglist", key, "detempering", self.rows[key].y, ROW_H)
-                if (key != "complexity" or self.show_superspace) and self.tile_open(key, "ssprimes"):
-                    self.bracket(f"{key}:ssprimes", key, "ssprimes", self.rows[key].y, ROW_H)
-        if self.tile_open("weight", "targets"):
-            self.bracket("weight", "weight", "targets", self.rows["weight"].y, ROW_H)
-        if self.tile_open("damage", "targets"):
-            self.bracket("damage", "damage", "targets", self.rows["damage"].y, ROW_H)
+
+    def _emit_list_row_brackets(self, key: str) -> None:
+        if self.tile_open(key, "primes"):
+            self.bracket(f"{key}:map", key, "primes", self.rows[key].y, ROW_H)
+        if self.tile_open(key, "commas"):
+            self.bracket(f"{key}:commalist", key, "commas", self.rows[key].y, ROW_H)
+        if self.tile_open(key, "targets"):
+            self.bracket(f"{key}:list", key, "targets", self.rows[key].y, ROW_H)
+        if self.nh and self.tile_open(key, "held"):
+            self.bracket(f"{key}:hlist", key, "held", self.rows[key].y, ROW_H)
+        if key != "tuning" and self.tile_open(key, "detempering"):
+            self.bracket(f"{key}:detemperinglist", key, "detempering", self.rows[key].y, ROW_H)
+        if (key != "complexity" or self.show_superspace) and self.tile_open(key, "ssprimes"):
+            self.bracket(f"{key}:ssprimes", key, "ssprimes", self.rows[key].y, ROW_H)
 
     def _emit_ebk_frames_and_marks(self) -> None:
+        self._emit_ebk_frames()
+        self._emit_ebk_marks()
+
+    def _emit_ebk_frames(self) -> None:
         self.matrix_frame("mapping", "primes", "primes")
         self.matrix_frame("projection", "primes", "proj")
         self.matrix_frame("projection", "ssprimes", "proj_sl")
@@ -288,6 +357,11 @@ class _BracketsMixin:
         self.matrix_frame("ss_mapping", "primes", "ss_msl")
         self.matrix_frame("vectors", "primes", "vec:primes")
 
+    def _emit_ebk_marks(self) -> None:
+        self._emit_ebk_marks()
+        self._emit_ebk_vector_marks()
+
+    def _emit_ebk_marks(self) -> None:
         self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, self.nc + self.nu, separators=False)
         self.vector_list_marks("projection", "proj_v", "commas", self.comma_left, self.nc + self.nu, separators=False)
         self.vector_list_marks("projection", "embed", "gens", self.gen_left, self.r, separators=False)
@@ -314,6 +388,8 @@ class _BracketsMixin:
         self.vector_list_marks("canon", "canon_mapped", "targets", self.target_left, self.k)
         self.vector_list_marks("canon", "canon_imapped", "interest", self.interest_left, self.mi, separators=False)
         self.vector_list_marks("canon", "canon_hmapped", "held", self.held_left, self.nh)
+
+    def _emit_ebk_vector_marks(self) -> None:
         self.vector_list_marks("vectors", "vec:commas", "commas", self.comma_left, self.nv_shown, separators=False,
                          pending_col=(self.nc if self.pending is not None else -1))
         self.vector_list_marks("vectors", "vec:targets", "targets", self.target_left, self.k_shown,
@@ -343,3 +419,4 @@ class _BracketsMixin:
         self.vector_list_marks("prescaling", "prescaling:held", "held", self.held_left, self.nh, separators=True)
         self.vector_list_marks("prescaling", "prescaling:interest", "interest", self.interest_left, self.mi, separators=False)
         self.v_split_bars()
+
