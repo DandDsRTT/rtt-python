@@ -113,8 +113,11 @@ def test_every_spec_field_survives_a_render_parse_round_trip():
         complexity_size_factor=0,
         held_intervals="octave",
         destretched_interval=None,
+        nonprime_basis_approach="prime-based",
     )
     rendered = systematic_name(spec)
+    # the nonprime-basis approach rides in the prefix, between the target set and the core name
+    assert "prime-based " in rendered
     assert parse(rendered) == spec
 
 

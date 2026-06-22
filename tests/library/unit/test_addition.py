@@ -392,6 +392,23 @@ def test_find_modular_solution_is_bounded_and_correct():
     assert all(value % modulus == 0 for value in combined)
 
 
+@pytest.mark.parametrize(
+    "ldb, base, modulus",
+    [
+        # the dependence basis spans only the first coordinate, so coordinate 1 demands
+        # 0·x ≡ -1 (mod 4) — unsolvable: a zero pivot against a nonzero residual
+        (((1, 0),), (0, 1), 4),
+        # the span reaches coordinate 0 only in even steps (2·x), so an odd residual there
+        # is not divisible by the pivot — the other unsolvable shape
+        (((2, 0),), (1, 0), 4),
+    ],
+)
+def test_find_modular_solution_raises_when_no_solution_exists(ldb, base, modulus):
+    # defactoring must report an unaddable system, not return a bogus (non-congruent) answer
+    with pytest.raises(ValueError, match="no modular solution"):
+        _find_modular_solution(ldb, base, modulus)
+
+
 def test_heavy_13_limit_sum_is_fast_and_consistent():
     # monzisma (13-limit) + 123201/123200: the old modulus ** (grade-1) brute
     # force took ~16 s here; bound the whole sum_ call well under that.
