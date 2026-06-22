@@ -73,11 +73,29 @@ The gate is being driven to green in phases (tooling first):
 
 1. **Tooling + mechanical fixes** — DONE. Config, `bin/lint`, checker, `ruff format`,
    explicit imports, and every non-structural ruff rule cleared (lint went from
-   ~2,592 → 385). The remaining 385 are **only** E501 (255) and the structural
-   rules (complexity/args/length, 130).
-2. **Complexity / params / function length** — IN PROGRESS. Real extractions,
-   concentrated in `rtt/app/spreadsheet.py` and `rtt/app/app.py`.
-3. **File splits + coupling/cohesion metrics**, then ratchet to 10 / 100.
+   ~2,592 → ~336). `args<=4` is met (relaxed per-file for the math/render-dense modules).
+2. **Complexity / function length** — IN PROGRESS. Real extractions.
+   - DONE: the whole library (`get_complexity`, `smith_normal_form_with_transforms` via
+     a `_SmithReduction` class, `_complexity_traits_from_name` via a token table) and
+     `rtt/app/render_html.py` (dispatch functions → data tables).
+   - TODO: `rtt/app/service/text.py` (`plain_text_values`, ~370 lines), `rtt/app/app.py`
+     (35 items), `rtt/app/spreadsheet.py` (85 items, the bulk).
+   - Note for extractions: ruff's mccabe counts **nested** functions toward the parent,
+     so reduce CC by extracting **module-level functions or class methods**, not closures.
+3. **File decomposition + coupling/cohesion metrics**, then ratchet to 10 / 100.
+
+### Phase 3 file decomposition — architecture, not line-count chopping
+
+`ruff format` inflated the data-dense modules ~2× by exploding tuples/dicts to one item
+per line (`spreadsheet.py` 3,648 → 7,166; `app.py` 4,036 → 4,702). That growth is a
+symptom: these files were already doing too much. Phase 3 must **decompose them into
+cohesive, well-named logical modules** — by concern, not by line count. A pure data-table
+module (`grid_tables`, the EBK conventions) still groups by *what the tables describe*,
+never sliced arbitrarily to hit a number. If a file cannot be organized into clean modules
+by extraction, prefer a **clean rewrite against the existing tests** over mechanical
+splitting. The cap is the goal; readable architecture is the constraint — a split that
+makes the app harder to follow is wrong even if it passes the gate. (For genuinely
+irreducible data modules, an explicit per-file exemption is acceptable, documented here.)
 
 ### E501 (line length) is deferred *by design*, not skipped
 
