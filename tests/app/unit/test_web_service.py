@@ -896,6 +896,9 @@ def test_complexity_name_of_reports_the_named_complexity_else_custom():
     # held-octave minimax-S still names lp (all-interval-alt-complexity-7).
     assert service.complexity_name_of("held-octave minimax-ES") == "lp-E"
     assert service.complexity_name_of("held-octave minimax-S") == "lp"
+    # a complexity whose norm power is neither 1 (taxicab) nor 2 (Euclidean) matches none of the
+    # named complexities, so the chooser falls back to "custom"
+    assert service.complexity_name_of(service.scheme_with_complexity_norm_power("minimax-S", 3.0)) == "custom"
 
 
 def test_scheme_with_diminuator_toggles_the_size_factor_between_lp_and_lils():
