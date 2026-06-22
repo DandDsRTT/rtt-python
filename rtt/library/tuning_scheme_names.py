@@ -37,12 +37,37 @@ _COMPLEXITY_FAMILY = {
 _OCTAVE_HOLDING_FAMILY = {"lils": "lols", "ils": "ols"}
 
 
+_COMPLEXITY_TOKEN_TRAITS = {
+    "copfr": {"complexity_log_prime_power": 0, "complexity_prime_power": 0},
+    "lopfr": {"complexity_log_prime_power": 1, "complexity_prime_power": 0},
+    "lp": {"complexity_log_prime_power": 1, "complexity_prime_power": 0},
+    "sopfr": {"complexity_log_prime_power": 0, "complexity_prime_power": 1},
+    "prod": {"complexity_log_prime_power": 0, "complexity_prime_power": 1},
+    "ils": {
+        "complexity_log_prime_power": 0,
+        "complexity_prime_power": 1,
+        "complexity_size_factor": 1,
+    },
+    "ols": {
+        "complexity_log_prime_power": 0,
+        "complexity_prime_power": 1,
+        "complexity_size_factor": 1,
+        "complexity_rough": 3,
+        "held_intervals": "octave",
+    },
+    "lils": {
+        "complexity_log_prime_power": 1,
+        "complexity_prime_power": 0,
+        "complexity_size_factor": 1,
+    },
+    "limit": {"complexity_size_factor": 1},
+    "lols": {"complexity_size_factor": 1, "complexity_rough": 3, "held_intervals": "octave"},
+    "odd": {"held_intervals": "octave"},
+}
+
+
 def _complexity_traits_from_name(name: str) -> dict:
     padded = "-" + name.replace(" ", "-") + "-"
-
-    def has(token: str) -> bool:
-        return f"-{token}-" in padded
-
     traits = {
         "complexity_norm_power": _norm_power_from_name(padded),
         "complexity_log_prime_power": 1,
@@ -50,30 +75,9 @@ def _complexity_traits_from_name(name: str) -> dict:
         "complexity_size_factor": 0,
         "complexity_rough": 0,
     }
-    held = None
-    if has("copfr"):
-        traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 0, 0
-    if has("lopfr") or has("lp"):
-        traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 1, 0
-    if has("sopfr") or has("prod"):
-        traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 0, 1
-    if has("ils"):
-        traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 0, 1
-        traits["complexity_size_factor"] = 1
-    if has("ols"):
-        traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 0, 1
-        traits["complexity_size_factor"], traits["complexity_rough"], held = 1, 3, "octave"
-    if has("lils"):
-        traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 1, 0
-        traits["complexity_size_factor"] = 1
-    if has("limit"):
-        traits["complexity_size_factor"] = 1
-    if has("lols"):
-        traits["complexity_size_factor"], traits["complexity_rough"], held = 1, 3, "octave"
-    if has("odd"):
-        held = "octave"
-    if held is not None:
-        traits["held_intervals"] = held
+    for token, overrides in _COMPLEXITY_TOKEN_TRAITS.items():
+        if f"-{token}-" in padded:
+            traits.update(overrides)
     return traits
 
 

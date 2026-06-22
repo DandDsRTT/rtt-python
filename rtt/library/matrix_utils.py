@@ -109,69 +109,97 @@ def hnf_with_transform(matrix: Matrix) -> tuple[Matrix, Matrix]:
     return _to_matrix(transform), _to_matrix(rows)
 
 
-def smith_normal_form_with_transforms(matrix: Matrix) -> tuple[Matrix, Matrix, Matrix]:
-    rows = [list(row) for row in matrix]
-    m = len(rows)
-    n = len(rows[0]) if rows else 0
-    left = [[int(i == j) for j in range(m)] for i in range(m)]
-    right = [[int(i == j) for j in range(n)] for i in range(n)]
+class _SmithReduction:
+    def __init__(self, matrix: Matrix):
+        self.rows = [list(row) for row in matrix]
+        self.m = len(self.rows)
+        self.n = len(self.rows[0]) if self.rows else 0
+        self.left = [[int(i == j) for j in range(self.m)] for i in range(self.m)]
+        self.right = [[int(i == j) for j in range(self.n)] for i in range(self.n)]
 
-    def add_row(target, source, q):
-        rows[target] = [a + q * b for a, b in zip(rows[target], rows[source], strict=False)]
-        left[target] = [a + q * b for a, b in zip(left[target], left[source], strict=False)]
+    def _add_row(self, target, source, q):
+        r, ll = self.rows, self.left
+        r[target] = [a + q * b for a, b in zip(r[target], r[source], strict=False)]
+        ll[target] = [a + q * b for a, b in zip(ll[target], ll[source], strict=False)]
 
-    def add_col(target, source, q):
-        for row in rows:
+    def _add_col(self, target, source, q):
+        for row in self.rows:
             row[target] += q * row[source]
-        for row in right:
+        for row in self.right:
             row[target] += q * row[source]
 
-    def swap_rows(a, b):
-        rows[a], rows[b] = rows[b], rows[a]
-        left[a], left[b] = left[b], left[a]
+    def _swap_rows(self, a, b):
+        self.rows[a], self.rows[b] = self.rows[b], self.rows[a]
+        self.left[a], self.left[b] = self.left[b], self.left[a]
 
-    def swap_cols(a, b):
-        for row in rows:
+    def _swap_cols(self, a, b):
+        for row in self.rows:
             row[a], row[b] = row[b], row[a]
-        for row in right:
+        for row in self.right:
             row[a], row[b] = row[b], row[a]
 
-    t = 0
-    while t < min(m, n):
-        if all(rows[i][j] == 0 for i in range(t, m) for j in range(t, n)):
-            break
-        if rows[t][t] == 0:
-            spot = next((i, j) for i in range(t, m) for j in range(t, n) if rows[i][j])
-            swap_rows(t, spot[0])
-            swap_cols(t, spot[1])
-        while True:
-            pivot = min((i for i in range(t, m) if rows[i][t]), key=lambda i: abs(rows[i][t]))
-            swap_rows(t, pivot)
-            for i in range(t + 1, m):
-                if rows[i][t]:
-                    add_row(i, t, -(rows[i][t] // rows[t][t]))
-            if any(rows[i][t] for i in range(t + 1, m)):
-                continue
-            pivot = min((j for j in range(t, n) if rows[t][j]), key=lambda j: abs(rows[t][j]))
-            swap_cols(t, pivot)
-            for j in range(t + 1, n):
-                if rows[t][j]:
-                    add_col(j, t, -(rows[t][j] // rows[t][t]))
-            if any(rows[t][j] for j in range(t + 1, n)):
-                continue
-            break
-        offending = next(
-            (i for i in range(t + 1, m) for j in range(t + 1, n) if rows[i][j] % rows[t][t]),
-            None,
+    def _bring_nonzero_to_corner(self, t):
+        if self.rows[t][t] != 0:
+            return
+        spot = next((i, j) for i in range(t, self.m) for j in range(t, self.n) if self.rows[i][j])
+        self._swap_rows(t, spot[0])
+        self._swap_cols(t, spot[1])
+
+    def _clear_below_pivot(self, t):
+        pivot = min(
+            (i for i in range(t, self.m) if self.rows[i][t]), key=lambda i: abs(self.rows[i][t])
         )
-        if offending is not None:
-            add_row(t, offending, 1)
-            continue
-        if rows[t][t] < 0:
-            rows[t] = [-x for x in rows[t]]
-            left[t] = [-x for x in left[t]]
-        t += 1
-    return _to_matrix(left), _to_matrix(rows), _to_matrix(right)
+        self._swap_rows(t, pivot)
+        for i in range(t + 1, self.m):
+            if self.rows[i][t]:
+                self._add_row(i, t, -(self.rows[i][t] // self.rows[t][t]))
+        return any(self.rows[i][t] for i in range(t + 1, self.m))
+
+    def _clear_right_of_pivot(self, t):
+        pivot = min(
+            (j for j in range(t, self.n) if self.rows[t][j]), key=lambda j: abs(self.rows[t][j])
+        )
+        self._swap_cols(t, pivot)
+        for j in range(t + 1, self.n):
+            if self.rows[t][j]:
+                self._add_col(j, t, -(self.rows[t][j] // self.rows[t][t]))
+        return any(self.rows[t][j] for j in range(t + 1, self.n))
+
+    def _reduce_pivot_cross(self, t):
+        while self._clear_below_pivot(t) or self._clear_right_of_pivot(t):
+            pass
+
+    def _offending_row(self, t):
+        cross = ((i, j) for i in range(t + 1, self.m) for j in range(t + 1, self.n))
+        return next((i for i, j in cross if self.rows[i][j] % self.rows[t][t]), None)
+
+    def _normalize_pivot_sign(self, t):
+        if self.rows[t][t] < 0:
+            self.rows[t] = [-x for x in self.rows[t]]
+            self.left[t] = [-x for x in self.left[t]]
+
+    def _all_zero_from(self, t):
+        return all(self.rows[i][j] == 0 for i in range(t, self.m) for j in range(t, self.n))
+
+    def reduce(self):
+        t = 0
+        while t < min(self.m, self.n):
+            if self._all_zero_from(t):
+                break
+            self._bring_nonzero_to_corner(t)
+            self._reduce_pivot_cross(t)
+            offending = self._offending_row(t)
+            if offending is not None:
+                self._add_row(t, offending, 1)
+                continue
+            self._normalize_pivot_sign(t)
+            t += 1
+        return self
+
+
+def smith_normal_form_with_transforms(matrix: Matrix) -> tuple[Matrix, Matrix, Matrix]:
+    reduction = _SmithReduction(matrix).reduce()
+    return _to_matrix(reduction.left), _to_matrix(reduction.rows), _to_matrix(reduction.right)
 
 
 def _reduce_column_to_pivot(
