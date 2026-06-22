@@ -85,7 +85,14 @@ class _EmitTuningMixin:
     def _emit_tuning_rows(self):
         self.chart_tiles = []
         chart_indicators = {}
+        self._emit_tuning_prime_rows()
+        self._emit_tuning_gen_row()
+        self._emit_tuning_canongen_row()
+        self._emit_tuning_superspace_rows()
+        self._emit_tuning_detempering_rows()
+        return chart_indicators
 
+    def _emit_tuning_prime_rows(self):
         tuning_data = {
             "tuning": (self.tun.tuning_map, self.comma_sizes.tempered + self.unchanged_sizes.tempered, self.target_sizes.tempered, self.interest_sizes.tempered, self.held_sizes.tempered),
             "just": (self.tun.just_map, self.comma_sizes.just + self.unchanged_sizes.just, self.target_sizes.just, self.interest_sizes.just, self.held_sizes.just),
@@ -98,84 +105,100 @@ class _EmitTuningMixin:
                 self.tuning_value_row(key, "targets", target_vals)
                 self.tuning_value_row(key, "interest", interest_vals)
                 self.tuning_value_row(key, "held", held_vals)
-        if self.row_open("tuning") and self.tile_open("tuning", "gens"):
-            gen_kind = "tuningvalue" if self.show_superspace_generators else "gentuningcell"
-            for i, v in enumerate(self.tun.generator_map):
-                operand = None
-                if self.show_math and not self.show_superspace_generators:
-                    closed_form = self._closed_form()
-                    operand = closed_form.generator_operand(i, v) if closed_form is not None else None
-                if operand is not None:
-                    self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
-                                         "mathexpr", text=_math_expr(operand, v, self.show_quantities, self._decimals), unit=self.cell_unit("tuning", "gens", gen=i)))
-                else:
-                    self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
-                                         gen_kind, text=service.cents(v, self._decimals), gen=i, unit=self.cell_unit("tuning", "gens", gen=i)))
-                self._voice("tuning:gens", i, v)
-        if self.row_open("tuning") and self.tile_open("tuning", "canongens"):
-            gm = self.tun.generator_map
-            for j in range(self.rc):
-                v = sum(gm[k] * self.inverse_form_M[k][j] for k in range(self.r))
-                operand = None
-                if self.show_math:
-                    closed_form = self._closed_form()
-                    if closed_form is not None:
-                        coefficients = [self.inverse_form_M[k][j] for k in range(self.r)]
-                        operand = closed_form.canonical_generator_operand(coefficients, v)
-                if operand is not None:
-                    self.cells.append(CellBox(f"tuning:cangen:{j}", self.canongen_left(j), self.rows["tuning"].y, COL_W, ROW_H,
-                                         "mathexpr", text=_math_expr(operand, v, self.show_quantities, self._decimals), unit=self.cell_unit("tuning", "canongens", gen=j)))
-                else:
-                    self.cells.append(CellBox(f"tuning:cangen:{j}", self.canongen_left(j), self.rows["tuning"].y, COL_W, ROW_H,
-                                         "tuningvalue", text=service.cents(v, self._decimals), gen=j, unit=self.cell_unit("tuning", "canongens", gen=j)))
-                self._voice("tuning:canongens", j, v)
-        if self.show_superspace and self.row_open("tuning"):
-            ss_tun = self.superspace_tun()
-            if self.tile_open("tuning", "ssgens"):
-                if self.show_superspace_generators:
-                    ss_cf = self._ss_closed_form() if self.show_math else None
-                    for i, v in enumerate(ss_tun.generator_map):
-                        operand = ss_cf.generator_operand(i, v) if ss_cf is not None else None
-                        if operand is not None:
-                            self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.rows["tuning"].y,
-                                                 COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities, self._decimals),
-                                                 unit=self.cell_unit("tuning", "ssgens", gen=i)))
-                        else:
-                            self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.rows["tuning"].y,
-                                                 COL_W, ROW_H, "gentuningcell", text=service.cents(v, self._decimals),
-                                                 unit=self.cell_unit("tuning", "ssgens", gen=i)))
-                        self._voice("tuning:ssgens", i, v)
-                else:
-                    self.tuning_value_row("tuning", "ssgens", ss_tun.generator_map)
-            self.tuning_value_row("tuning", "ssprimes", ss_tun.tuning_map)
-            if self.row_open("just"):
-                self.tuning_value_row("just", "ssprimes", ss_tun.just_map)
-            if self.row_open("retune"):
-                self.tuning_value_row("retune", "ssprimes", ss_tun.retuning_map)
-        if self.show_detempering:
-            for key, values in (("tuning", self.detempering_sizes.tempered),
-                                ("just", self.detempering_sizes.just),
-                                ("retune", self.detempering_sizes.errors)):
-                if self.row_open(key):
-                    self.tuning_value_row(key, "detempering", values)
-        return chart_indicators
 
-    def _emit_prescaling_band(self) -> None:
-        nrows = self.prescale_rows
+    def _emit_tuning_gen_row(self):
+        if not (self.row_open("tuning") and self.tile_open("tuning", "gens")):
+            return
+        gen_kind = "tuningvalue" if self.show_superspace_generators else "gentuningcell"
+        for i, v in enumerate(self.tun.generator_map):
+            operand = None
+            if self.show_math and not self.show_superspace_generators:
+                closed_form = self._closed_form()
+                operand = closed_form.generator_operand(i, v) if closed_form is not None else None
+            if operand is not None:
+                self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
+                                     "mathexpr", text=_math_expr(operand, v, self.show_quantities, self._decimals), unit=self.cell_unit("tuning", "gens", gen=i)))
+            else:
+                self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
+                                     gen_kind, text=service.cents(v, self._decimals), gen=i, unit=self.cell_unit("tuning", "gens", gen=i)))
+            self._voice("tuning:gens", i, v)
+
+    def _emit_tuning_canongen_row(self):
+        if not (self.row_open("tuning") and self.tile_open("tuning", "canongens")):
+            return
+        gm = self.tun.generator_map
+        for j in range(self.rc):
+            v = sum(gm[k] * self.inverse_form_M[k][j] for k in range(self.r))
+            operand = None
+            if self.show_math:
+                closed_form = self._closed_form()
+                if closed_form is not None:
+                    coefficients = [self.inverse_form_M[k][j] for k in range(self.r)]
+                    operand = closed_form.canonical_generator_operand(coefficients, v)
+            if operand is not None:
+                self.cells.append(CellBox(f"tuning:cangen:{j}", self.canongen_left(j), self.rows["tuning"].y, COL_W, ROW_H,
+                                     "mathexpr", text=_math_expr(operand, v, self.show_quantities, self._decimals), unit=self.cell_unit("tuning", "canongens", gen=j)))
+            else:
+                self.cells.append(CellBox(f"tuning:cangen:{j}", self.canongen_left(j), self.rows["tuning"].y, COL_W, ROW_H,
+                                     "tuningvalue", text=service.cents(v, self._decimals), gen=j, unit=self.cell_unit("tuning", "canongens", gen=j)))
+            self._voice("tuning:canongens", j, v)
+
+    def _emit_tuning_superspace_rows(self):
+        if not (self.show_superspace and self.row_open("tuning")):
+            return
+        ss_tun = self.superspace_tun()
+        if self.tile_open("tuning", "ssgens"):
+            self._emit_tuning_ssgen_row(ss_tun)
+        self.tuning_value_row("tuning", "ssprimes", ss_tun.tuning_map)
+        if self.row_open("just"):
+            self.tuning_value_row("just", "ssprimes", ss_tun.just_map)
+        if self.row_open("retune"):
+            self.tuning_value_row("retune", "ssprimes", ss_tun.retuning_map)
+
+    def _emit_tuning_ssgen_row(self, ss_tun):
+        if not self.show_superspace_generators:
+            self.tuning_value_row("tuning", "ssgens", ss_tun.generator_map)
+            return
+        ss_cf = self._ss_closed_form() if self.show_math else None
+        for i, v in enumerate(ss_tun.generator_map):
+            operand = ss_cf.generator_operand(i, v) if ss_cf is not None else None
+            if operand is not None:
+                self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.rows["tuning"].y,
+                                     COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities, self._decimals),
+                                     unit=self.cell_unit("tuning", "ssgens", gen=i)))
+            else:
+                self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.rows["tuning"].y,
+                                     COL_W, ROW_H, "gentuningcell", text=service.cents(v, self._decimals),
+                                     unit=self.cell_unit("tuning", "ssgens", gen=i)))
+            self._voice("tuning:ssgens", i, v)
+
+    def _emit_tuning_detempering_rows(self):
+        if not self.show_detempering:
+            return
+        for key, values in (("tuning", self.detempering_sizes.tempered),
+                            ("just", self.detempering_sizes.just),
+                            ("retune", self.detempering_sizes.errors)):
+            if self.row_open(key):
+                self.tuning_value_row(key, "detempering", values)
+
+    def _lift_to_superspace(self, vs):
+        return tuple(None if v is None else service.lift_vectors_to_superspace(self.elements, (v,))[0]
+                     for v in vs)
+
+    def _prescale_setup(self, nrows):
         if self.show_superspace:
             prescaler_diag = service.superspace_complexity_prescaler(self.state, self.tuning_scheme)
             prescaler_is_matrix = False
             ss_elements = service.superspace_primes(self.elements)
-            _lift = lambda vs: tuple(None if v is None else service.lift_vectors_to_superspace(self.elements, (v,))[0]
-                                     for v in vs)
+            lift = self._lift_to_superspace
             prescale_vectors = {
                 "ssprimes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
                 "primes": service.basis_in_superspace(self.elements),
-                "commas": _lift(self.state.comma_basis) + (_lift(self.unchanged_basis) if self.show_unchanged else ()),
-                "targets": _lift(self.target_vectors),
-                "interest": _lift(self.interest),
-                "held": _lift(self.held),
-                "detempering": _lift(self.detempering_vectors),
+                "commas": lift(self.state.comma_basis) + (lift(self.unchanged_basis) if self.show_unchanged else ()),
+                "targets": lift(self.target_vectors),
+                "interest": lift(self.interest),
+                "held": lift(self.held),
+                "detempering": lift(self.detempering_vectors),
             }
             groups = ("ssprimes", "primes", "commas", "targets", "interest", "held", "detempering")
             bare_group = "ssprimes"
@@ -193,55 +216,76 @@ class _EmitTuningMixin:
             }
             groups = ("primes", "commas", "targets", "interest", "held", "detempering")
             bare_group = "primes"
+        return prescaler_diag, prescaler_is_matrix, ss_elements, prescale_vectors, groups, bare_group
+
+    def _prescale_prime_terms(self, ss_elements):
         if self._scheme_prescaler == "log-prime":
-            prime_term = {i: f"log₂{p}" for i, p in enumerate(ss_elements)}
-        elif self._scheme_prescaler == "prime":
-            prime_term = {i: str(p) for i, p in enumerate(ss_elements)}
-        else:
-            prime_term = {}
+            return {i: f"log₂{p}" for i, p in enumerate(ss_elements)}
+        if self._scheme_prescaler == "prime":
+            return {i: str(p) for i, p in enumerate(ss_elements)}
+        return {}
+
+    def _emit_prescaling_band(self) -> None:
+        nrows = self.prescale_rows
+        prescaler_diag, prescaler_is_matrix, ss_elements, prescale_vectors, groups, bare_group = self._prescale_setup(nrows)
+        prime_term = self._prescale_prime_terms(ss_elements)
         for group in groups:
             if not self.tile_open("prescaling", group):
                 continue
-            left = self.group_left[group]
-            for c, vec in enumerate(prescale_vectors[group]):
-                u = self.cell_unit("prescaling", group, prime=c if group == bare_group else None)
-                if vec is None:
-                    for i in range(nrows + self.size_rows):
-                        cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
-                        cx, cy = left(self.comma_value_pos(c) if group == "commas" else c), self.rows["prescaling"].y + i * ROW_H
-                        self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue", text=DASH, unit=u))
-                    continue
-                prescaled = ([sum(prescaler_diag[i][k] * vec[k] for k in range(nrows)) for i in range(nrows)]
-                             if prescaler_is_matrix
-                             else [prescaler_diag[i] * vec[i] for i in range(nrows)])
+            self._emit_prescale_group(group, prescale_vectors[group], prescaler_diag,
+                                      prescaler_is_matrix, prime_term, bare_group, nrows)
+            self._emit_prescale_draft(group, prescaler_diag, prescaler_is_matrix, nrows)
+
+    def _emit_prescale_group(self, group, vectors, prescaler_diag, prescaler_is_matrix, prime_term, bare_group, nrows):
+        left = self.group_left[group]
+        for c, vec in enumerate(vectors):
+            u = self.cell_unit("prescaling", group, prime=c if group == bare_group else None)
+            if vec is None:
                 for i in range(nrows + self.size_rows):
-                    value = prescaled[i] if i < nrows else self.size_factor * sum(prescaled)
                     cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
                     cx, cy = left(self.comma_value_pos(c) if group == "commas" else c), self.rows["prescaling"].y + i * ROW_H
-                    if i < nrows and not self.show_superspace and group == "primes" and (i == c or self.show_alt_complexity):
-                        self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
-                                             text=service.prescale_text(value, self._decimals), prime=i, unit=u))
-                    elif i < nrows and self.show_math and vec[i] != 0 and i in prime_term:
-                        self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
-                                             text=_prescale_math_expr(vec[i], prime_term[i], value, self.show_quantities, self._decimals), unit=u))
-                    else:
-                        self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue",
-                                             text=service.prescale_text(value, self._decimals), unit=u))
-            pending_idx = self._pending_draft_idx(group)
-            if pending_idx is not None and pending_idx[0] is not None:
-                ghost_pre = None
-                if self.ghost_comma and group == "commas" and self.ghost_comma_vec is not None:
-                    gvec = _lift((self.ghost_comma_vec,))[0] if self.show_superspace else self.ghost_comma_vec
-                    ghost_pre = ([sum(prescaler_diag[i][k] * gvec[k] for k in range(nrows)) for i in range(nrows)]
-                                 if prescaler_is_matrix else [prescaler_diag[i] * gvec[i] for i in range(nrows)])
-                for i in range(nrows + self.size_rows):
-                    cy = self.rows["prescaling"].y + i * ROW_H
-                    text = ""
-                    if ghost_pre is not None:
-                        value = ghost_pre[i] if i < nrows else self.size_factor * sum(ghost_pre)
-                        text = service.prescale_text(value, self._decimals)
-                    self.cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left(pending_idx[1]),
-                                         cy, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
+                    self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue", text=DASH, unit=u))
+                continue
+            prescaled = self._prescale_vector(vec, prescaler_diag, prescaler_is_matrix, nrows)
+            self._emit_prescale_cells(group, c, vec, prescaled, prime_term, left, u, nrows)
+
+    def _prescale_vector(self, vec, prescaler_diag, prescaler_is_matrix, nrows):
+        return ([sum(prescaler_diag[i][k] * vec[k] for k in range(nrows)) for i in range(nrows)]
+                if prescaler_is_matrix
+                else [prescaler_diag[i] * vec[i] for i in range(nrows)])
+
+    def _emit_prescale_cells(self, group, c, vec, prescaled, prime_term, left, u, nrows):
+        for i in range(nrows + self.size_rows):
+            value = prescaled[i] if i < nrows else self.size_factor * sum(prescaled)
+            cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
+            cx, cy = left(self.comma_value_pos(c) if group == "commas" else c), self.rows["prescaling"].y + i * ROW_H
+            if i < nrows and not self.show_superspace and group == "primes" and (i == c or self.show_alt_complexity):
+                self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
+                                     text=service.prescale_text(value, self._decimals), prime=i, unit=u))
+            elif i < nrows and self.show_math and vec[i] != 0 and i in prime_term:
+                self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
+                                     text=_prescale_math_expr(vec[i], prime_term[i], value, self.show_quantities, self._decimals), unit=u))
+            else:
+                self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue",
+                                     text=service.prescale_text(value, self._decimals), unit=u))
+
+    def _emit_prescale_draft(self, group, prescaler_diag, prescaler_is_matrix, nrows):
+        pending_idx = self._pending_draft_idx(group)
+        if pending_idx is None or pending_idx[0] is None:
+            return
+        left = self.group_left[group]
+        ghost_pre = None
+        if self.ghost_comma and group == "commas" and self.ghost_comma_vec is not None:
+            gvec = self._lift_to_superspace((self.ghost_comma_vec,))[0] if self.show_superspace else self.ghost_comma_vec
+            ghost_pre = self._prescale_vector(gvec, prescaler_diag, prescaler_is_matrix, nrows)
+        for i in range(nrows + self.size_rows):
+            cy = self.rows["prescaling"].y + i * ROW_H
+            text = ""
+            if ghost_pre is not None:
+                value = ghost_pre[i] if i < nrows else self.size_factor * sum(ghost_pre)
+                text = service.prescale_text(value, self._decimals)
+            self.cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left(pending_idx[1]),
+                                 cy, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
 
     def _emit_lbox_control(self) -> None:
         if self.lbox_ctrl:
@@ -269,7 +313,7 @@ class _EmitTuningMixin:
                 if self._realized_prescaler is None:
                     complexity_key = "custom"
                 complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
-                complexity_values = ((tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",))
+                complexity_values = (((*tuple(service.COMPLEXITY_DISPLAYS.values()), "custom"))
                                      if self.show_alt_complexity else (complexity_text,))
                 complexity_locked = self._is_sole_option(complexity_values, complexity_text)
                 self.cells.append(CellBox("control:complexity", tx, cy, drop_w, PRESET_H,

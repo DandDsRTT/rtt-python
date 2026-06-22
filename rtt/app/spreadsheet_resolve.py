@@ -276,14 +276,14 @@ class _ResolveMixin:
             if ud_new is not None and len(ud_new.basis) > self.nu:
                 bratio = ud_new.ratios[-1]
                 bm = service.mapped_intervals(self.state.mapping, (bratio,), self.elements) if bratio is not None else None
-                self.unchanged_basis = tuple(self.unchanged_basis) + (ud_new.basis[-1],)
-                self.unchanged_ratios = tuple(self.unchanged_ratios) + (bratio,)
-                self.unchanged_mapped = tuple(tuple(row) + (bm[i][0] if bm is not None else None,) for i, row in enumerate(self.unchanged_mapped))
-                self.unchanged_complexities = tuple(self.unchanged_complexities) + (ud_new.complexities[-1],)
+                self.unchanged_basis = (*tuple(self.unchanged_basis), ud_new.basis[-1])
+                self.unchanged_ratios = (*tuple(self.unchanged_ratios), bratio)
+                self.unchanged_mapped = tuple((*tuple(row), bm[i][0] if bm is not None else None) for i, row in enumerate(self.unchanged_mapped))
+                self.unchanged_complexities = (*tuple(self.unchanged_complexities), ud_new.complexities[-1])
                 s, n = self.unchanged_sizes, ud_new.sizes
                 self.unchanged_sizes = service.IntervalSizes(
-                    tuple(s.tempered) + (n.tempered[-1],), tuple(s.just) + (n.just[-1],),
-                    tuple(s.errors) + (n.errors[-1],), tuple(s.damage) + (n.damage[-1],))
+                    (*tuple(s.tempered), n.tempered[-1]), (*tuple(s.just), n.just[-1]),
+                    (*tuple(s.errors), n.errors[-1]), (*tuple(s.damage), n.damage[-1]))
                 self.nu += 1
             else:
                 self.born_u = False
@@ -425,14 +425,13 @@ class _ResolveMixin:
         self.slope_locked = self.slope_ctrl and (service.is_all_interval(self.tuning_scheme)
                                                  or self.custom_weights_active)
         self.slope_extra = (RANGE_GAP + self.control_region_band_h(PRESET_H + CAPTION_LINE)) if self.slope_ctrl else 0
-        tile_extra = {
+        return {
             "tuning": self.gtm_extra,
             "prescaling": self.lbox_extra,
             "complexity": self.cbox_extra,
             "weight": self.slope_extra,
             "damage": self.opt_extra + self.approach_extra,
         }
-        return tile_extra
 
     def _resolve_ptext_strings(self, generator_tuning, target_override) -> None:
         self.ptext_strings = (service.plain_text_values(self.state, self.tuning_scheme, self.target_spec,

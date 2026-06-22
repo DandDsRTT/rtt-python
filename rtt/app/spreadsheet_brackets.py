@@ -341,6 +341,7 @@ class _BracketsMixin:
     def _emit_ebk_frames_and_marks(self) -> None:
         self._emit_ebk_frames()
         self._emit_ebk_marks()
+        self._emit_ebk_vector_marks()
 
     def _emit_ebk_frames(self) -> None:
         self.matrix_frame("mapping", "primes", "primes")
@@ -356,10 +357,6 @@ class _BracketsMixin:
         self.matrix_frame("ss_vectors", "ssprimes", "ss_vec_jmap")
         self.matrix_frame("ss_mapping", "primes", "ss_msl")
         self.matrix_frame("vectors", "primes", "vec:primes")
-
-    def _emit_ebk_marks(self) -> None:
-        self._emit_ebk_marks()
-        self._emit_ebk_vector_marks()
 
     def _emit_ebk_marks(self) -> None:
         self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, self.nc + self.nu, separators=False)

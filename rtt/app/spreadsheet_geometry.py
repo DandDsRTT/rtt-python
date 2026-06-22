@@ -91,8 +91,8 @@ class _GeometryMixin:
                     equiv = FORM_EQUIVALENCES[(rkey, ckey)]
                 if (rkey, ckey) == ("projection", "primes"):
                     equiv += self._projection_superspace_tail()
-            glyph = self._form_subscripted(glyph, rkey, ckey)
-            floor = max(floor, _min_width_for_lines(glyph + equiv, 1, SYMBOL_FONT))
+            sub_glyph = self._form_subscripted(glyph, rkey, ckey)
+            floor = max(floor, _min_width_for_lines(sub_glyph + equiv, 1, SYMBOL_FONT))
         return floor
 
     def _form_subscripted(self, glyph: str, rkey: str, ckey: str) -> str:
@@ -113,10 +113,10 @@ class _GeometryMixin:
         if (key == "targets" and self.show_optimization and "row:damage" not in self.collapsed
                 and "tile:damage:targets" not in self.collapsed):
             floor = max(floor, OPT_BOX_MIN_W)
-        labels = ([l for _n, _r, c, l in PRESETS + PRESET_COPIES if c == key and l] if self.show_presets else [])
-        labels += [l for _n, _r, c, l in FORM_CHOOSERS if c == key and l] if self.show_form_controls else []
+        labels = ([lbl for _n, _r, c, lbl in PRESETS + PRESET_COPIES if c == key and lbl] if self.show_presets else [])
+        labels += [lbl for _n, _r, c, lbl in FORM_CHOOSERS if c == key and lbl] if self.show_form_controls else []
         if labels:
-            floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(l, 1) for l in labels))
+            floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(lbl, 1) for lbl in labels))
         if key in ("primes", "gens") and self.settings["projection"]:
             floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_W)
         return floor
@@ -376,20 +376,23 @@ class _GeometryMixin:
             return _log_operand(f"{recip.numerator}/{recip.denominator}")
         if key in ("tuning", "retune") and value is not None:
             if group in ("ssprimes", "ssgens"):
-                ss = self._ss_closed_form()
-                if ss is None:
-                    return None
-                if group == "ssgens":
-                    return ss.generator_operand(i, value) if key == "tuning" else None
-                vector = tuple(1 if k == i else 0 for k in range(len(ss.primes)))
-                return (ss.tempered_operand(vector, value) if key == "tuning"
-                        else ss.retune_operand(vector, value))
+                return self._ss_closed_form_operand(key, group, i, value)
             closed_form = self._closed_form()
             vector = self._tempered_vector(group, i) if closed_form is not None else None
             if vector is not None:
                 return (closed_form.tempered_operand(vector, value) if key == "tuning"
                         else closed_form.retune_operand(vector, value))
         return None
+
+    def _ss_closed_form_operand(self, key, group, i, value):
+        ss = self._ss_closed_form()
+        if ss is None:
+            return None
+        if group == "ssgens":
+            return ss.generator_operand(i, value) if key == "tuning" else None
+        vector = tuple(1 if k == i else 0 for k in range(len(ss.primes)))
+        return (ss.tempered_operand(vector, value) if key == "tuning"
+                else ss.retune_operand(vector, value))
 
     def _closed_form(self):
         if not hasattr(self, "_closed_form_cache"):
@@ -415,19 +418,19 @@ class _GeometryMixin:
         if group == "primes":
             return tuple(1 if k == i else 0 for k in range(self.d))
         if group == "commas":
-            if i < self.nc:
-                return self.state.comma_basis[i]
-            j = i - self.nc
-            return self.unchanged_basis[j] if self.unchanged_basis and j < len(self.unchanged_basis) else None
-        if group == "targets":
-            return self.target_vectors[i] if i < len(self.target_vectors) else None
-        if group == "interest":
-            return self.interest[i] if i < len(self.interest) else None
-        if group == "held":
-            return self.held[i] if i < len(self.held) else None
-        if group == "detempering":
-            return self.detempering_vectors[i] if i < len(self.detempering_vectors) else None
-        return None
+            return self._comma_tempered_vector(i)
+        seqs = {"targets": self.target_vectors, "interest": self.interest,
+                "held": self.held, "detempering": self.detempering_vectors}
+        seq = seqs.get(group)
+        if seq is None:
+            return None
+        return seq[i] if i < len(seq) else None
+
+    def _comma_tempered_vector(self, i):
+        if i < self.nc:
+            return self.state.comma_basis[i]
+        j = i - self.nc
+        return self.unchanged_basis[j] if self.unchanged_basis and j < len(self.unchanged_basis) else None
 
     def col_token(self, group: str, i: int):
         if group == "commas" and i >= self.nc:

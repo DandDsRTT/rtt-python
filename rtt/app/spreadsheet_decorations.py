@@ -76,74 +76,87 @@ class _DecorationsMixin:
             return
         self.blocks.append(Block(bid, *self.panel_rect(ckey, rkey)))
 
+    def _prescale_matlabel_top(self, i: int):
+        return self.rows["prescaling"].y + i * ROW_H
+
+    def _matlabel_group_count(self):
+        return {"gens": self.r, "primes": self.d, "commas": self.nc + self.nu, "targets": self.k,
+                "held": self.nh, "detempering": self.r, "interest": self.mi,
+                "canongens": self.rc, "ssgens": self.rL, "ssprimes": self.dL}
+
+    def _emit_matrix_row_labels(self) -> None:
+        row_top = {
+            ("mapping", "primes"): self.map_top,
+            ("canon", "primes"): self.canon_top,
+            ("mapping", "canongens"): self.map_top,
+            ("vectors", "primes"): self.vec_top,
+            ("projection", "primes"): self.proj_top,
+            ("projection", "ssprimes"): self.proj_top,
+
+            ("prescaling", "primes"): self._prescale_matlabel_top,
+            ("prescaling", "ssprimes"): self._prescale_matlabel_top,
+            ("ss_mapping", "ssprimes"): self.ss_map_top,
+            ("ss_mapping", "primes"): self.ss_map_top,
+            ("ss_vectors", "ssprimes"): self.ss_vec_top,
+            ("ss_projection", "ssprimes"): self.ss_proj_top,
+        }
+        row_count = {("mapping", "primes"): self.r,
+                     ("canon", "primes"): self.rc,
+                     ("mapping", "canongens"): self.r,
+                     ("vectors", "primes"): self.d,
+                     ("projection", "primes"): self.d,
+                     ("projection", "ssprimes"): self.d,
+
+                     ("prescaling", "primes"): self.prescale_rows + self.size_rows,
+                     ("prescaling", "ssprimes"): self.prescale_rows + self.size_rows,
+                     ("ss_mapping", "ssprimes"): self.rL,
+                     ("ss_mapping", "primes"): self.rL,
+                     ("ss_vectors", "ssprimes"): self.dL,
+                     ("ss_projection", "ssprimes"): self.dL}
+        for (rkey, ckey), glyph in self.row_labels.items():
+            if not self.tile_open(rkey, ckey):
+                continue
+            top = row_top[(rkey, ckey)]
+            for i in range(row_count[(rkey, ckey)]):
+                size_row = rkey == "prescaling" and i == self.prescale_rows and self.size_rows
+                g = self._form_subscripted(glyph, rkey, ckey)
+                text = "𝒛" if size_row else f"{g}{_sub(i + 1)}"
+                self.cells.append(CellBox(
+                    f"matlabel:row:{rkey}:{ckey}:{i}",
+                    self.content_x[ckey] + self.etpick_left_pad(ckey) + self.handle_gutter_w(ckey), top(i),
+                    self.matlabel_gutter_w(ckey), ROW_H,
+                    "matlabel", text=text,
+                ))
+
+    def _emit_matrix_col_labels(self) -> None:
+        group_count = self._matlabel_group_count()
+        for (rkey, ckey), label in self.col_labels.items():
+            if ckey not in group_count or rkey not in self.rows or self.rows[rkey].matlabel_top is None:
+                continue
+            if not self.tile_open(rkey, ckey):
+                continue
+            col_label = label
+            if (rkey, ckey) == ("weight", "targets") and self.all_interval_simplicity_weight:
+                col_label = self._weight_simplicity_header
+            left = self.group_left[ckey]
+            y = self.rows[rkey].matlabel_top
+            for i in range(group_count[ckey]):
+                glyph = col_label if callable(col_label) else self._form_subscripted(col_label, rkey, ckey)
+                text = glyph(i) if callable(glyph) else f"{glyph}{_sub(i + 1)}"
+                if self.show_unchanged and ckey == "commas":
+                    text = text.replace("𝐜", "𝐯")
+                x = left(self.comma_value_pos(i)) if ckey == "commas" else left(i)
+                self.cells.append(CellBox(
+                    f"matlabel:col:{rkey}:{ckey}:{i}",
+                    x, y, COL_W, MATLABEL_H,
+                    "matlabel", text=text,
+                ))
+
     def _emit_matrix_labels(self) -> None:
-        if self.show_header_symbols:
-            group_count = {"gens": self.r, "primes": self.d, "commas": self.nc + self.nu, "targets": self.k,
-                           "held": self.nh, "detempering": self.r, "interest": self.mi,
-                           "canongens": self.rc, "ssgens": self.rL, "ssprimes": self.dL}
-            _prescale_top = lambda i: self.rows["prescaling"].y + i * ROW_H
-            row_top = {
-                ("mapping", "primes"): self.map_top,
-                ("canon", "primes"): self.canon_top,
-                ("mapping", "canongens"): self.map_top,
-                ("vectors", "primes"): self.vec_top,
-                ("projection", "primes"): self.proj_top,
-                ("projection", "ssprimes"): self.proj_top,
-
-                ("prescaling", "primes"): _prescale_top,
-                ("prescaling", "ssprimes"): _prescale_top,
-                ("ss_mapping", "ssprimes"): self.ss_map_top,
-                ("ss_mapping", "primes"): self.ss_map_top,
-                ("ss_vectors", "ssprimes"): self.ss_vec_top,
-                ("ss_projection", "ssprimes"): self.ss_proj_top,
-            }
-            row_count = {("mapping", "primes"): self.r,
-                         ("canon", "primes"): self.rc,
-                         ("mapping", "canongens"): self.r,
-                         ("vectors", "primes"): self.d,
-                         ("projection", "primes"): self.d,
-                         ("projection", "ssprimes"): self.d,
-
-                         ("prescaling", "primes"): self.prescale_rows + self.size_rows,
-                         ("prescaling", "ssprimes"): self.prescale_rows + self.size_rows,
-                         ("ss_mapping", "ssprimes"): self.rL,
-                         ("ss_mapping", "primes"): self.rL,
-                         ("ss_vectors", "ssprimes"): self.dL,
-                         ("ss_projection", "ssprimes"): self.dL}
-            for (rkey, ckey), glyph in self.row_labels.items():
-                if not self.tile_open(rkey, ckey):
-                    continue
-                top = row_top[(rkey, ckey)]
-                for i in range(row_count[(rkey, ckey)]):
-                    size_row = rkey == "prescaling" and i == self.prescale_rows and self.size_rows
-                    g = self._form_subscripted(glyph, rkey, ckey)
-                    text = "𝒛" if size_row else f"{g}{_sub(i + 1)}"
-                    self.cells.append(CellBox(
-                        f"matlabel:row:{rkey}:{ckey}:{i}",
-                        self.content_x[ckey] + self.etpick_left_pad(ckey) + self.handle_gutter_w(ckey), top(i),
-                        self.matlabel_gutter_w(ckey), ROW_H,
-                        "matlabel", text=text,
-                    ))
-            for (rkey, ckey), label in self.col_labels.items():
-                if ckey not in group_count or rkey not in self.rows or self.rows[rkey].matlabel_top is None:
-                    continue
-                if not self.tile_open(rkey, ckey):
-                    continue
-                if (rkey, ckey) == ("weight", "targets") and self.all_interval_simplicity_weight:
-                    label = self._weight_simplicity_header
-                left = self.group_left[ckey]
-                y = self.rows[rkey].matlabel_top
-                for i in range(group_count[ckey]):
-                    glyph = label if callable(label) else self._form_subscripted(label, rkey, ckey)
-                    text = glyph(i) if callable(glyph) else f"{glyph}{_sub(i + 1)}"
-                    if self.show_unchanged and ckey == "commas":
-                        text = text.replace("𝐜", "𝐯")
-                    x = left(self.comma_value_pos(i)) if ckey == "commas" else left(i)
-                    self.cells.append(CellBox(
-                        f"matlabel:col:{rkey}:{ckey}:{i}",
-                        x, y, COL_W, MATLABEL_H,
-                        "matlabel", text=text,
-                    ))
+        if not self.show_header_symbols:
+            return
+        self._emit_matrix_row_labels()
+        self._emit_matrix_col_labels()
 
     def _emit_axes(self) -> None:
         self.bot_bus_y = self.total_h - self.FAN
@@ -182,37 +195,41 @@ class _DecorationsMixin:
         if approach_frame is not None:
             self.blocks.append(Block("block:optimization:approach:box", *approach_frame, boxed=True))
 
-    def _emit_washes(self) -> None:
-        if self.col_x and self.rows:
-            bands = []
-            for _bid, rkey, ckey in self.tiles:
-                if (rkey, ckey) not in self.declared_tiles or not self.tile_open(rkey, ckey):
-                    continue
-                y, h = self.rows[rkey].tile_top - WASH_PAD, self.rows[rkey].tile_h + 2 * WASH_PAD
-                if (rkey, ckey) == ("counts", "gens") and "canongens" in self.col_x:
-                    segments = [("gens", self.tile_box("gens"), self.tile_groups("counts", "gens")),
-                                ("canongens", self.tile_box("canongens"), self.tile_groups("counts", "canongens"))]
-                else:
-                    segments = [(ckey, self.tile_span_box(rkey, ckey), self.tile_groups(rkey, ckey))]
-                for seg_key, (tile_x, tile_w), seg_groups in segments:
-                    groups = sorted(g for g in seg_groups if self.settings.get(f"{g}_colorization"))
-                    if not groups:
-                        continue
-                    x, w = tile_x - WASH_PAD, tile_w + 2 * WASH_PAD
-                    if len(groups) == 3:
-                        bands.append((f"white:{rkey}:{seg_key}", x, y, w, h, None))
-                    else:
-                        for group in groups:
-                            bands.append((f"{group}:{rkey}:{seg_key}", x, y, w, h, group))
-            for bid, x, y, w, h, _ in bands:
-                self.blocks.append(Block(f"washbase:{bid}", x, y, w, h, tint="base"))
-            for bid, x, y, w, h, group in bands:
-                if group is not None:
-                    self.blocks.append(Block(f"wash:{bid}", x, y, w, h, tint=group))
+    def _wash_segments(self, rkey: str, ckey: str):
+        if (rkey, ckey) == ("counts", "gens") and "canongens" in self.col_x:
+            return [("gens", self.tile_box("gens"), self.tile_groups("counts", "gens")),
+                    ("canongens", self.tile_box("canongens"), self.tile_groups("counts", "canongens"))]
+        return [(ckey, self.tile_span_box(rkey, ckey), self.tile_groups(rkey, ckey))]
 
-    def _emit_symbols_captions(self) -> None:
-        ai = service.is_all_interval(self.tuning_scheme)
-        slope = service.damage_weight_slope(self.tuning_scheme)
+    def _wash_bands(self):
+        bands = []
+        for _bid, rkey, ckey in self.tiles:
+            if (rkey, ckey) not in self.declared_tiles or not self.tile_open(rkey, ckey):
+                continue
+            y, h = self.rows[rkey].tile_top - WASH_PAD, self.rows[rkey].tile_h + 2 * WASH_PAD
+            for seg_key, (tile_x, tile_w), seg_groups in self._wash_segments(rkey, ckey):
+                groups = sorted(g for g in seg_groups if self.settings.get(f"{g}_colorization"))
+                if not groups:
+                    continue
+                x, w = tile_x - WASH_PAD, tile_w + 2 * WASH_PAD
+                if len(groups) == 3:
+                    bands.append((f"white:{rkey}:{seg_key}", x, y, w, h, None))
+                else:
+                    for group in groups:
+                        bands.append((f"{group}:{rkey}:{seg_key}", x, y, w, h, group))
+        return bands
+
+    def _emit_washes(self) -> None:
+        if not (self.col_x and self.rows):
+            return
+        bands = self._wash_bands()
+        for bid, x, y, w, h, _ in bands:
+            self.blocks.append(Block(f"washbase:{bid}", x, y, w, h, tint="base"))
+        for bid, x, y, w, h, group in bands:
+            if group is not None:
+                self.blocks.append(Block(f"wash:{bid}", x, y, w, h, tint=group))
+
+    def _caption_equivalences(self, ai: bool, slope) -> dict:
         equivalences = {**EQUIVALENCES,
                         ("weight", "targets"): "" if self.custom_weights_active else WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
                         ("prescaling", "ssprimes" if self.show_superspace else "primes"): self.prescaler_equivalence,
@@ -231,49 +248,70 @@ class _DecorationsMixin:
             equivalences[("damage", "targets")] = f" = |𝒓|{self.prescaler_symbol}⁻¹"
         if not self.show_weighting:
             equivalences[("damage", "targets")] = " = |𝒓|" if ai else " = |𝐞|"
+        return equivalences
+
+    def _emit_tile_symbol(self, rkey: str, ckey: str, cy: float) -> float:
+        cy += BAND_GAP
+        equiv = self._caption_equivs.get((rkey, ckey), "") if self.show_equiv else ""
+        base_symbol = self.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
+        if self._caption_ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:
+            base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
+        if self.show_unchanged and ckey == "commas":
+            base_symbol = base_symbol.replace(SUBSCRIPT_C, "\x00").replace("C", "V").replace("\x00", SUBSCRIPT_C)
+        base_symbol = self._form_subscripted(base_symbol, rkey, ckey)
+        glyph = base_symbol if (self.show_symbols or equiv) else ""
+        if glyph or equiv:
+            self.cells.append(CellBox(f"symbol:{rkey}:{ckey}", self.col_x[ckey], cy, self.col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
+        return cy + SYMBOL_H
+
+    def _emit_unchanged_counts_caption(self, rkey: str, cy: float) -> None:
+        comma_half_w = self.nc * COL_W + self.empty_comma_w
+        if comma_half_w:
+            comma_half_x = self.commas_x if self.empty_comma_w else self.comma_left(0)
+            self.cells.append(CellBox("caption:counts:commas", comma_half_x, cy, comma_half_w,
+                                 self.rows[rkey].cap, "caption", text="nullity"))
+        self.cells.append(CellBox("caption:counts:commas:u", self.comma_left(self.nc_shown), cy, self.nu * COL_W,
+                             self.rows[rkey].cap, "caption", text="unchanged interval count"))
+
+    def _emit_tile_caption(self, rkey: str, ckey: str, name: str, cy: float) -> None:
+        kw = MNEMONICS.get((rkey, ckey)) if self.show_mnemonics else None
+        underlines = ((name.index(kw), 1),) if (kw and kw in name) else ()
+        if self.show_mnemonics and self._caption_ai:
+            underlines += tuple((name.index(w), 1)
+                                for w in ALL_INTERVAL_MNEMONICS.get((rkey, ckey), ()) if w in name)
+        cap_x, cap_w = self.tile_span_box(rkey, ckey)
+        self.cells.append(CellBox(f"caption:{rkey}:{ckey}", cap_x, cy, cap_w, self.rows[rkey].cap,
+                             "caption", text=name, underlines=underlines))
+
+    def _emit_tile_units(self, rkey: str, ckey: str) -> None:
+        unit = self.tile_unit(rkey, ckey)
+        if unit and not (rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")):
+            unit = _subscript_coord(unit, "p", self.domain_label)
+        if self.show_units and unit:
+            uy = self.rows[rkey].y + self.rows[rkey].h + self.rows[rkey].frame + self.row_cpick[rkey] + self.rows[rkey].sym + self.rows[rkey].cap
+            self.cells.append(CellBox(f"units:{rkey}:{ckey}", self.col_x[ckey], uy, self.col_w[ckey], UNIT_H,
+                                 "units", text=f"units: {unit}"))
+
+    def _emit_tile_symbols_captions(self, rkey: str, ckey: str, name: str) -> None:
+        if self._caption_ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:
+            name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
+        cy = self.rows[rkey].y + self.rows[rkey].h + self.rows[rkey].frame + self.row_cpick[rkey]
+        if (self.show_symbols or self.show_equiv) and rkey in SYMBOLED_ROWS:
+            cy = self._emit_tile_symbol(rkey, ckey, cy)
+        if self.show_captions and self.show_unchanged and (rkey, ckey) == ("counts", "commas"):
+            self._emit_unchanged_counts_caption(rkey, cy)
+            return
+        if self.show_captions:
+            self._emit_tile_caption(rkey, ckey, name, cy)
+        self._emit_tile_units(rkey, ckey)
+
+    def _emit_symbols_captions(self) -> None:
+        self._caption_ai = service.is_all_interval(self.tuning_scheme)
+        slope = service.damage_weight_slope(self.tuning_scheme)
+        self._caption_equivs = self._caption_equivalences(self._caption_ai, slope)
         for (rkey, ckey), name in self.effective_captions.items():
             if ckey == "interest" and not self.interest:
                 continue
             if not self.tile_open(rkey, ckey):
                 continue
-            if ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:
-                name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
-            cy = self.rows[rkey].y + self.rows[rkey].h + self.rows[rkey].frame + self.row_cpick[rkey]
-            if (self.show_symbols or self.show_equiv) and rkey in SYMBOLED_ROWS:
-                cy += BAND_GAP
-                equiv = equivalences.get((rkey, ckey), "") if self.show_equiv else ""
-                base_symbol = self.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
-                if ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:
-                    base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
-                if self.show_unchanged and ckey == "commas":
-                    base_symbol = base_symbol.replace(SUBSCRIPT_C, "\x00").replace("C", "V").replace("\x00", SUBSCRIPT_C)
-                base_symbol = self._form_subscripted(base_symbol, rkey, ckey)
-                glyph = base_symbol if (self.show_symbols or equiv) else ""
-                if glyph or equiv:
-                    self.cells.append(CellBox(f"symbol:{rkey}:{ckey}", self.col_x[ckey], cy, self.col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
-                cy += SYMBOL_H
-            if self.show_captions and self.show_unchanged and (rkey, ckey) == ("counts", "commas"):
-                comma_half_w = self.nc * COL_W + self.empty_comma_w
-                if comma_half_w:
-                    comma_half_x = self.commas_x if self.empty_comma_w else self.comma_left(0)
-                    self.cells.append(CellBox("caption:counts:commas", comma_half_x, cy, comma_half_w,
-                                         self.rows[rkey].cap, "caption", text="nullity"))
-                self.cells.append(CellBox("caption:counts:commas:u", self.comma_left(self.nc_shown), cy, self.nu * COL_W,
-                                     self.rows[rkey].cap, "caption", text="unchanged interval count"))
-                continue
-            if self.show_captions:
-                kw = MNEMONICS.get((rkey, ckey)) if self.show_mnemonics else None
-                underlines = ((name.index(kw), 1),) if (kw and kw in name) else ()
-                if self.show_mnemonics and ai:
-                    underlines += tuple((name.index(w), 1)
-                                        for w in ALL_INTERVAL_MNEMONICS.get((rkey, ckey), ()) if w in name)
-                cap_x, cap_w = self.tile_span_box(rkey, ckey)
-                self.cells.append(CellBox(f"caption:{rkey}:{ckey}", cap_x, cy, cap_w, self.rows[rkey].cap,
-                                     "caption", text=name, underlines=underlines))
-            unit = self.tile_unit(rkey, ckey)
-            if unit and not (rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")):
-                unit = _subscript_coord(unit, "p", self.domain_label)
-            if self.show_units and unit:
-                uy = self.rows[rkey].y + self.rows[rkey].h + self.rows[rkey].frame + self.row_cpick[rkey] + self.rows[rkey].sym + self.rows[rkey].cap
-                self.cells.append(CellBox(f"units:{rkey}:{ckey}", self.col_x[ckey], uy, self.col_w[ckey], UNIT_H,
-                                     "units", text=f"units: {unit}"))
+            self._emit_tile_symbols_captions(rkey, ckey, name)

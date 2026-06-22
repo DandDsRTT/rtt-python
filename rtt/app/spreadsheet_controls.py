@@ -50,17 +50,20 @@ class _ControlsMixin:
             region |= {"tuning"}
         if self.show_unchanged and ckey == "commas":
             return {"temperament", "tuning"} | region
-        as_groups = lambda g: {g} if isinstance(g, str) else set(g)
         if rkey in SPINE_ROWS and ckey in SPINE_COLUMN_GROUP:
-            return as_groups(SPINE_COLUMN_GROUP[ckey]) | region
+            return self._as_groups(SPINE_COLUMN_GROUP[ckey]) | region
         if ckey in SPINE_COLUMNS and rkey in SPINE_ROW_GROUP:
-            return as_groups(SPINE_ROW_GROUP[rkey]) | region
+            return self._as_groups(SPINE_ROW_GROUP[rkey]) | region
         if ckey in SUPERSPACE_REGION_COLUMNS or rkey in SUPERSPACE_REGION_ROWS:
             groups = {"tuning"}
             if SPINE_COLUMN_GROUP.get(ckey) == "temperament":
                 groups.add("temperament")
             return groups | region
         return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((rkey, ckey), ())} | region
+
+    @staticmethod
+    def _as_groups(g):
+        return {g} if isinstance(g, str) else set(g)
 
     @staticmethod
     def _is_sole_option(options, value) -> bool:
@@ -136,41 +139,40 @@ class _ControlsMixin:
         self.cells.append(CellBox("caption:diminuator", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
                              CAPTION_LINE, "caption", text="replace diminuator"))
 
+    def _emit_preset(self, preset_text, cid, name, rkey, ckey, label):
+        if not self.tile_open(rkey, ckey):
+            return
+        if self.size_factor or self.prescaler_is_matrix:
+            label = _pretransform_label(label)
+        top = self.ptext_band_y(rkey) + self.rows[rkey].ptext
+        disabled = (name == "target" and service.is_all_interval(self.tuning_scheme)) \
+            or self._preset_locked(name)
+        fc = next((fn for fn, rk, ck, _l in FORM_CHOOSERS if rk == rkey and ck == ckey), None)
+        form_chooser = (f"formchooser:{fc}", "form") if (fc and self._preset_form_label(name, rkey, ckey)) else None
+        cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preset_cap(name), label,
+                                      disabled=disabled, scheme_btn=(name == "projection"),
+                                      form_chooser=form_chooser)
+        self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
+                             disabled=disabled))
+        if name == "target" and self.settings["all_interval"]:
+            self.emit_all_interval_check(cx + cw + OPT_COL_GAP, cy)
+        if name == "prescaler" and self.settings["alt_complexity"]:
+            self.emit_diminuator_check(cx + cw + OPT_COL_GAP, cy)
+
     def _emit_presets(self) -> None:
-        if self.show_presets:
-            preset_text = {"temperament": "", "target": self.target_spec,
-                              "tuning": service.base_scheme_name(self.tuning_scheme) or "",
-                              "prescaler": self._realized_prescaler or "",
-                              "projection": self.displayed_projection_name or ""}
-
-            def emit_preset(cid, name, rkey, ckey, label):
-                if not self.tile_open(rkey, ckey):
-                    return
-                if self.size_factor or self.prescaler_is_matrix:
-                    label = _pretransform_label(label)
-                top = self.ptext_band_y(rkey) + self.rows[rkey].ptext
-                disabled = (name == "target" and service.is_all_interval(self.tuning_scheme)) \
-                    or self._preset_locked(name)
-                fc = next((fn for fn, rk, ck, _l in FORM_CHOOSERS if rk == rkey and ck == ckey), None)
-                form_chooser = (f"formchooser:{fc}", "form") if (fc and self._preset_form_label(name, rkey, ckey)) else None
-                cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preset_cap(name), label,
-                                              disabled=disabled, scheme_btn=(name == "projection"),
-                                              form_chooser=form_chooser)
-                self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
-                                     disabled=disabled))
-                if name == "target" and self.settings["all_interval"]:
-                    self.emit_all_interval_check(cx + cw + OPT_COL_GAP, cy)
-                if name == "prescaler" and self.settings["alt_complexity"]:
-                    self.emit_diminuator_check(cx + cw + OPT_COL_GAP, cy)
-
-            for name, rkey, ckey, label in PRESETS:
-                if name == "prescaler" and self.show_superspace:
-                    ckey = "ssprimes"
-                emit_preset(f"preset:{name}", name, rkey, ckey, label)
-            for name, rkey, ckey, label in PRESET_COPIES:
-                if name == "tuning" and ckey == "gens" and self.show_superspace_generators:
-                    ckey = "ssgens"
-                emit_preset(f"preset:{name}:{ckey}", name, rkey, ckey, label)
+        if not self.show_presets:
+            return
+        preset_text = {"temperament": "", "target": self.target_spec,
+                          "tuning": service.base_scheme_name(self.tuning_scheme) or "",
+                          "prescaler": self._realized_prescaler or "",
+                          "projection": self.displayed_projection_name or ""}
+        for name, rkey, ckey, label in PRESETS:
+            col = "ssprimes" if name == "prescaler" and self.show_superspace else ckey
+            self._emit_preset(preset_text, f"preset:{name}", name, rkey, col, label)
+        for name, rkey, ckey, label in PRESET_COPIES:
+            col = "ssgens" if (name == "tuning" and ckey == "gens"
+                               and self.show_superspace_generators) else ckey
+            self._emit_preset(preset_text, f"preset:{name}:{col}", name, rkey, col, label)
 
     def _emit_all_interval_check_fallback(self) -> None:
         if self.settings["all_interval"] and not self.show_presets and self.tile_open("vectors", "targets"):
@@ -203,9 +205,9 @@ class _ControlsMixin:
             for (rkey, ckey), text in self.ptext_strings.items():
                 if not self.tile_open(rkey, ckey):
                     continue
-                if (rkey, ckey) == ("vectors", "commas") and self.pending is not None \
-                        or (rkey, ckey) == ("vectors", "targets") and self.pending_target is not None \
-                        or (rkey, ckey) == ("mapping", "primes") and self.pending_mapping_row is not None:
+                if ((rkey, ckey) == ("vectors", "commas") and self.pending is not None) \
+                        or ((rkey, ckey) == ("vectors", "targets") and self.pending_target is not None) \
+                        or ((rkey, ckey) == ("mapping", "primes") and self.pending_mapping_row is not None):
                     kind = "ptextpending"
                 elif self.ptext_editable(rkey, ckey) and (ckey != "targets" or self.targets_editable):
                     kind = "ptextedit"
@@ -224,13 +226,14 @@ class _ControlsMixin:
                                      tog_x - PAD + TOGGLE_INSET, self.rows[rkey].tile_top - PAD + TOGGLE_INSET,
                                      TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
-    def _apply_value_display_filters(self) -> None:
+    def _filter_gridded_quantities(self) -> None:
         if not self.gridded:
             self.cells = [cb for cb in self.cells if cb.kind not in GRIDDED_KINDS]
         elif not self.show_quantities:
             self.cells = [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
                      for cb in self.cells]
 
+    def _mark_doomed_unchanged_column(self) -> None:
         if (self.pending is not None or self.ghost_comma) and self.show_unchanged and self.nu:
             doomed_x = self.comma_left(self.nc_shown + self.nu - 1)
             self.cells = [replace(cb, preview_remove=True)
@@ -239,6 +242,7 @@ class _ControlsMixin:
                           else cb
                           for cb in self.cells]
 
+    def _mark_born_column(self) -> None:
         if self.born_u:
             born_x = self.comma_left(self.nc_shown + self.nu - 1)
             self.cells = [replace(cb, pending=True)
@@ -247,6 +251,20 @@ class _ControlsMixin:
                           else cb
                           for cb in self.cells]
 
+    @staticmethod
+    def _dual_preview(cb, axes):
+        remove_rows, red_xs, change_rows, amber_xs = axes
+        if cb.kind not in RINGABLE_KINDS or cb.preview_remove:
+            return cb
+        if cb.gen in remove_rows or cb.x in red_xs:
+            return replace(cb, preview_remove=True, pending=False)
+        if cb.pending:
+            return cb
+        if cb.gen in change_rows or cb.x in amber_xs:
+            return replace(cb, preview_change=True)
+        return cb
+
+    def _mark_dual_axis_previews(self) -> None:
         remove_rows = change_rows = remove_commas = change_commas = frozenset()
         if self.pending is not None and self.r:
             remove_rows, change_rows = frozenset({self.r - 1}), frozenset(range(self.r - 1))
@@ -261,14 +279,11 @@ class _ControlsMixin:
         if remove_rows or change_rows or remove_commas or change_commas:
             red_xs = frozenset(self.comma_left(c) for c in remove_commas)
             amber_xs = frozenset(self.comma_left(c) for c in change_commas)
-            def _dual(cb):
-                if cb.kind not in RINGABLE_KINDS or cb.preview_remove:
-                    return cb
-                if cb.gen in remove_rows or cb.x in red_xs:
-                    return replace(cb, preview_remove=True, pending=False)
-                if cb.pending:
-                    return cb
-                if cb.gen in change_rows or cb.x in amber_xs:
-                    return replace(cb, preview_change=True)
-                return cb
-            self.cells = [_dual(cb) for cb in self.cells]
+            axes = (remove_rows, red_xs, change_rows, amber_xs)
+            self.cells = [self._dual_preview(cb, axes) for cb in self.cells]
+
+    def _apply_value_display_filters(self) -> None:
+        self._filter_gridded_quantities()
+        self._mark_doomed_unchanged_column()
+        self._mark_born_column()
+        self._mark_dual_axis_previews()
