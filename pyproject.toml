@@ -48,6 +48,17 @@ max-returns = 6
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401", "F403", "F405"]
 "tests/**/*.py" = ["ARG", "PLR0913", "PLR0915", "C901", "PLR0912", "E501", "SIM", "B011"]
+# args<=4 is the default, but the math/geometry/compute-dense modules legitimately take
+# several scalar/array/flag params; bundling them into objects obscures rather than clarifies
+# (and threading objects through the delicate renderer is riskier than it's worth). So PLR0913
+# is relaxed per-file here, NOT globally — a plain new module is still held to <=4.
+"rtt/library/tuning*.py" = ["PLR0913"]
+"rtt/library/matrix_utils.py" = ["PLR0913"]
+"rtt/app/spreadsheet.py" = ["PLR0913"]
+"rtt/app/app.py" = ["PLR0913"]
+"rtt/app/render_html.py" = ["PLR0913"]
+"rtt/app/marks.py" = ["PLR0913"]
+"rtt/app/service/*.py" = ["PLR0913"]
 
 [tool.coverage.run]
 branch = true
