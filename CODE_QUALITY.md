@@ -71,8 +71,25 @@ Status of every architectural metric requested:
 
 The gate is being driven to green in phases (tooling first):
 
-1. **Tooling + mechanical fixes** — config, `bin/lint`, checker, `ruff --fix`,
-   `ruff format`, explicit imports.
-2. **Complexity / params / function length** — real extractions, concentrated in
-   `rtt/app/spreadsheet.py` and `rtt/app/app.py`.
+1. **Tooling + mechanical fixes** — DONE. Config, `bin/lint`, checker, `ruff format`,
+   explicit imports, and every non-structural ruff rule cleared (lint went from
+   ~2,592 → 385). The remaining 385 are **only** E501 (255) and the structural
+   rules (complexity/args/length, 130).
+2. **Complexity / params / function length** — IN PROGRESS. Real extractions,
+   concentrated in `rtt/app/spreadsheet.py` and `rtt/app/app.py`.
 3. **File splits + coupling/cohesion metrics**, then ratchet to 10 / 100.
+
+### E501 (line length) is deferred *by design*, not skipped
+
+The 255 long lines split into three groups, none of which is a mechanical reflow:
+
+- **~113 are comments.** They belong to the separate comment scrub (this project
+  treats a comment as a smell; see CLAUDE.md). Reflowing lines that are slated for
+  deletion is wasted work, so E501-in-comments closes *with* that scrub.
+- **~108 are inside strings** — mostly the EBK/notation lines that must **never
+  wrap** (CLAUDE.md) and tooltip help text. These resolve by value-preserving
+  implicit-string-concatenation splits, handled with the notation in view.
+- **~34 are code** — these shorten naturally as the oversized functions in phase 2
+  are extracted, so they are folded into that refactor rather than touched twice.
+
+So E501 reaches zero alongside phases 2–3 and the comment scrub, not before.
