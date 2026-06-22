@@ -795,6 +795,21 @@ _BUSY_JS = f"""
   }};
   window.rttBusy = {{ arm, done: clear }};
 
+  // Debounced reveal of withheld new content: every render calls this; the timer RESETS each time, so
+  // it fires one beat after renders STOP (a retuning commit can render in stages). Reading the live --t
+  // makes it instant when animations are off. The 1.3x lets the last slide finish before the fade.
+  window.rttScheduleReveal = () => {{
+    const t = getComputedStyle(document.documentElement).getPropertyValue('--t').trim();
+    const ms = (t.endsWith('ms') ? parseFloat(t) : parseFloat(t) * 1000) * 1.3;
+    clearTimeout(window.__rttReveal);
+    window.__rttReveal = setTimeout(() => {{
+      document.querySelectorAll('.rtt-withhold').forEach(el => {{
+        el.classList.remove('rtt-withhold');
+        el.classList.add('rtt-reveal');
+      }});
+    }}, ms);
+  }};
+
   // Arm ONLY on a real (e.isTrusted) user interaction that commits to the document and so triggers
   // a server re-render: the +/-/fold controls and undo/redo/reset (.rtt-iconbtn), the Show checkboxes
   // / range radios, the scheme/target dropdowns and their option picks, Enter committing a cell edit,
@@ -3747,14 +3762,14 @@ def index(state: str | None = None) -> None:
                     with cell_parents[container]:
                         rec.make_cell(cb)
                     # two-step entrance: a cell BORN on an incremental render (not the cold first paint)
-                    # holds its fade-in for one beat (rtt-enter → animation-delay) so the existing cells
-                    # finish sliding to OPEN the room before the new content appears in it — instead of
-                    # popping in over a grid that is still reflowing. The cold paint has no room to make,
-                    # so it skips the stagger and shows everything at once; and a PENDING draft cell (the
-                    # green input the + button just opened to be typed into) appears immediately, since a
-                    # beat's delay before you can focus/type it would read as lag, not polish.
+                    # is WITHHELD (.rtt-withhold → opacity 0) while the existing cells slide to open the
+                    # room, and only fades in once the reflow has SETTLED. A retuning commit can render in
+                    # stages (the handler's render, then the off-loop retune render), so a fixed delay
+                    # would reveal it mid-expansion — instead rttScheduleReveal (pushed at the end of every
+                    # render) debounces the reveal, firing one beat after renders STOP. The cold paint has
+                    # no room to make, and a PENDING draft must be typeable at once, so neither is withheld.
                     if not cold and not cb.pending:
-                        rec.els[cb.id].classes(add="rtt-enter")
+                        rec.els[cb.id].classes(add="rtt-withhold")
                 # body + row cells live in the scroll space (shifted up by fy); column + corner cells
                 # keep native coords in their frozen strip / corner. Each of the three reconcile steps —
                 # reposition, refresh content, repaint rings — runs ONLY when its own signature changed
@@ -3841,7 +3856,8 @@ def index(state: str | None = None) -> None:
         # Skipped under the User test harness, where there's no live client (and run_javascript from
         # inside a handler-driven render hits a torn-down slot context); the scrim is browser-only.
         if not helpers.is_user_simulation():
-            page_client.run_javascript("window.rttBusy && window.rttBusy.done()")
+            page_client.run_javascript("window.rttBusy && window.rttBusy.done();"
+                                       " window.rttScheduleReveal && window.rttScheduleReveal()")
 
     drawer_open = [False]
 

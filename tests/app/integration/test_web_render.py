@@ -4005,21 +4005,21 @@ async def test_gensign_hover_hands_the_wheel_preview_back(user: User) -> None:
     assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:0")
 
 
-async def test_added_cells_stagger_their_entrance_while_the_cold_paint_and_drafts_do_not(
+async def test_added_cells_are_withheld_until_the_reflow_settles_but_the_cold_paint_and_drafts_are_not(
         user: User) -> None:
-    # the two-step ENTRANCE: a cell born on an incremental render waits one beat (the .rtt-enter
-    # animation-delay) so the existing cells slide to OPEN the room before the new content fades into
-    # it. Two cases must NOT stagger: the cold first paint (no room to make — the whole grid shows at
-    # once) and a pending DRAFT (a beat's delay before you can focus/type it would read as lag).
+    # the two-step ENTRANCE: a cell born on an incremental render is WITHHELD (.rtt-withhold → opacity 0)
+    # while the existing cells slide to OPEN the room, then faded in once the reflow settles (the debounced
+    # rttScheduleReveal). Two cases must NOT be withheld: the cold first paint (no room to make — the whole
+    # grid shows at once) and a pending DRAFT (a beat's delay before you can focus/type it would read as lag).
     await user.open("/")
-    assert "rtt-enter" not in _wrap_classes(user, "cell:mapping:0:0")    # cold first paint: no stagger
-    _toggle(user, "presets")                                            # an incremental render adds the chooser
+    assert "rtt-withhold" not in _wrap_classes(user, "cell:mapping:0:0")  # cold first paint: shown at once
+    _toggle(user, "presets")                                             # an incremental render adds the chooser
     await user.should_see(marker="preset:tuning")
-    assert "rtt-enter" in _wrap_classes(user, "preset:tuning")          # the new cell waits for the room
-    _click_glyph(user, "interest_plus")                                # open a green draft to type into
+    assert "rtt-withhold" in _wrap_classes(user, "preset:tuning")        # the new cell waits for the room
+    _click_glyph(user, "interest_plus")                                 # open a green draft to type into
     await user.should_see(marker="cell:interest:0:0")
-    assert "rtt-cell-input" in _wrap_classes(user, "cell:interest:0:0")  # the just-opened draft input...
-    assert "rtt-enter" not in _wrap_classes(user, "cell:interest:0:0")   # ...appears at once, no stagger wait
+    assert "rtt-cell-input" in _wrap_classes(user, "cell:interest:0:0")   # the just-opened draft input...
+    assert "rtt-withhold" not in _wrap_classes(user, "cell:interest:0:0") # ...appears at once, not withheld
 
 
 async def test_hovering_a_nonstandard_approach_option_previews_setting_it(user: User) -> None:
