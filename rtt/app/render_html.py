@@ -429,48 +429,56 @@ def _example_chart() -> str:
     )
 
 
+_EXAMPLE_HTML = {
+    "animations": (
+        '<span style="position:relative;display:inline-block;width:34px;height:16px">'
+        '<span style="position:absolute;left:0;top:1px;width:13px;height:13px;'
+        'border:1px solid #999;background:#fff;opacity:0.35"></span>'
+        '<span style="position:absolute;left:11px;top:1px;width:13px;height:13px;'
+        'border:1px solid #555;background:#fff"></span>'
+        '<span class="material-icons" style="position:absolute;right:-3px;top:1px;'
+        'font-size:13px;color:#777">east</span></span>'
+    ),
+    "preview_highlighting": (
+        '<span style="display:inline-flex;align-items:center;justify-content:center;'
+        "width:22px;height:16px;background:#fff;"
+        "box-shadow:inset 0 0 0 2px var(--preview-color);"
+        'color:var(--preview-text-color);font-size:10px">3</span>'
+    ),
+    "tooltips": (
+        '<span style="position:relative;display:inline-block;background:#444;color:#fff;'
+        'font-size:9px;line-height:1;padding:3px 5px;border-radius:3px">help'
+        '<span style="position:absolute;left:6px;bottom:-3px;width:0;height:0;'
+        "border-left:3px solid transparent;border-right:3px solid transparent;"
+        'border-top:3px solid #444"></span></span>'
+    ),
+    "tuning_ranges": (
+        '<svg width="14" height="20" viewBox="0 0 14 20" style="display:block">'
+        '<rect x="6" y="2" width="2" height="16" fill="#000"/>'
+        '<rect x="2" y="2" width="10" height="2" fill="#000"/>'
+        '<rect x="2" y="16" width="10" height="2" fill="#000"/></svg>'
+    ),
+}
+
+_COLORIZATION_LETTER = {"temperament": "𝑀", "tuning": "𝐺", "form": "𝐹"}
+
+
+def _colorization_example_html(key: str) -> str:
+    group = key.split("_", maxsplit=1)[0]
+    letter = _COLORIZATION_LETTER[group]
+    return (
+        f'<span style="display:inline-flex;align-items:center;justify-content:center;'
+        f'width:36px;height:14px;background:var(--wash-{group})">{_math_html(letter)}</span>'
+    )
+
+
 def _example_html(key: str) -> str:
     if key in show_settings.GROUPING_PARENTS:
         return ""
-    if key == "animations":
-        return (
-            '<span style="position:relative;display:inline-block;width:34px;height:16px">'
-            '<span style="position:absolute;left:0;top:1px;width:13px;height:13px;'
-            'border:1px solid #999;background:#fff;opacity:0.35"></span>'
-            '<span style="position:absolute;left:11px;top:1px;width:13px;height:13px;'
-            'border:1px solid #555;background:#fff"></span>'
-            '<span class="material-icons" style="position:absolute;right:-3px;top:1px;'
-            'font-size:13px;color:#777">east</span></span>'
-        )
-    if key == "preview_highlighting":
-        return (
-            '<span style="display:inline-flex;align-items:center;justify-content:center;'
-            "width:22px;height:16px;background:#fff;"
-            "box-shadow:inset 0 0 0 2px var(--preview-color);"
-            'color:var(--preview-text-color);font-size:10px">3</span>'
-        )
-    if key == "tooltips":
-        return (
-            '<span style="position:relative;display:inline-block;background:#444;color:#fff;'
-            'font-size:9px;line-height:1;padding:3px 5px;border-radius:3px">help'
-            '<span style="position:absolute;left:6px;bottom:-3px;width:0;height:0;'
-            "border-left:3px solid transparent;border-right:3px solid transparent;"
-            'border-top:3px solid #444"></span></span>'
-        )
-    if key in ("temperament_colorization", "tuning_colorization", "form_colorization"):
-        group = key.split("_", maxsplit=1)[0]
-        letter = {"temperament": "𝑀", "tuning": "𝐺", "form": "𝐹"}[group]
-        return (
-            f'<span style="display:inline-flex;align-items:center;justify-content:center;'
-            f'width:36px;height:14px;background:var(--wash-{group})">{_math_html(letter)}</span>'
-        )
-    if key == "tuning_ranges":
-        return (
-            '<svg width="14" height="20" viewBox="0 0 14 20" style="display:block">'
-            '<rect x="6" y="2" width="2" height="16" fill="#000"/>'
-            '<rect x="2" y="2" width="10" height="2" fill="#000"/>'
-            '<rect x="2" y="16" width="10" height="2" fill="#000"/></svg>'
-        )
+    if key in _EXAMPLE_HTML:
+        return _EXAMPLE_HTML[key]
+    if key.split("_", maxsplit=1)[0] in _COLORIZATION_LETTER and key.endswith("_colorization"):
+        return _colorization_example_html(key)
     return f'<span class="rtt-ex">{_math_html(_EXAMPLE_TEXT[key])}</span>'
 
 
@@ -538,58 +546,49 @@ def _tile_preset_html() -> str:
     )
 
 
+_GENERAL_PART_BUILDERS = {
+    "gridded_values": lambda: _tile_grid_frame_html(),
+    "math_expressions": lambda: _math_html(_TILE_MATH),
+    "quantities": lambda: f'<span class="rtt-stacked-main">{_cents_parts(_TILE_VALUE)[0]}</span>',
+    "decimals": lambda: f'<span class="rtt-stacked-sub">.{_cents_parts(_TILE_VALUE)[1]}</span>',
+    "symbols": lambda: _math_html(_TILE_SYMBOL),
+    "header_symbols": lambda: _math_html(_TILE_ROWLABEL),
+    "equivalences": lambda: _math_html(_TILE_EQUIV),
+    "names": lambda: _escape(_TILE_NAME),
+    "mnemonics": lambda: _escape(_tile_name_pieces()[1]),
+    "units": lambda: f'<span class="rtt-units-pre">units: </span>{_units_html(_TILE_UNITS)}',
+    "cell_units": lambda: _units_html(_TILE_UNITS),
+    "plain_text_values": lambda: _math_html(_TILE_PTEXT),
+    "presets": lambda: _tile_preset_html(),
+    "charts": lambda: _example_chart(),
+    "drag_to_combine": lambda: (
+        '<span class="material-icons" style="color:#444">drag_indicator</span>'
+    ),
+}
+
+
 def _general_part_html(key: str) -> str:
-    if key == "gridded_values":
-        return _tile_grid_frame_html()
-    if key == "math_expressions":
-        return _math_html(_TILE_MATH)
-    if key == "quantities":
-        whole, _frac = _cents_parts(_TILE_VALUE)
-        return f'<span class="rtt-stacked-main">{whole}</span>'
-    if key == "decimals":
-        _whole, frac = _cents_parts(_TILE_VALUE)
-        return f'<span class="rtt-stacked-sub">.{frac}</span>'
-    if key == "symbols":
-        return _math_html(_TILE_SYMBOL)
-    if key == "header_symbols":
-        return _math_html(_TILE_ROWLABEL)
-    if key == "equivalences":
-        return _math_html(_TILE_EQUIV)
-    if key == "names":
-        return _escape(_TILE_NAME)
-    if key == "mnemonics":
-        return _escape(_tile_name_pieces()[1])
-    if key == "units":
-        return f'<span class="rtt-units-pre">units: </span>{_units_html(_TILE_UNITS)}'
-    if key == "cell_units":
-        return _units_html(_TILE_UNITS)
-    if key == "plain_text_values":
-        return _math_html(_TILE_PTEXT)
-    if key == "presets":
-        return _tile_preset_html()
-    if key == "charts":
-        return _example_chart()
-    if key == "drag_to_combine":
-        return '<span class="material-icons" style="color:#444">drag_indicator</span>'
-    raise KeyError(key)
+    if key not in _GENERAL_PART_BUILDERS:
+        raise KeyError(key)
+    return _GENERAL_PART_BUILDERS[key]()
+
+
+_MATH_ALPHABET_RANGES = (
+    (0x1D7CE, 0x1D7D7, "0", True, False),
+    (0x1D400, 0x1D419, "A", True, False),
+    (0x1D41A, 0x1D433, "a", True, False),
+    (0x1D434, 0x1D44D, "A", False, True),
+    (0x1D44E, 0x1D467, "a", False, True),
+    (0x1D468, 0x1D481, "A", True, True),
+    (0x1D482, 0x1D49B, "a", True, True),
+)
 
 
 def _demath(ch: str) -> tuple[str, bool, bool] | None:
     cp = ord(ch)
-    if 0x1D7CE <= cp <= 0x1D7D7:
-        return chr(ord("0") + cp - 0x1D7CE), True, False
-    if 0x1D400 <= cp <= 0x1D419:
-        return chr(ord("A") + cp - 0x1D400), True, False
-    if 0x1D41A <= cp <= 0x1D433:
-        return chr(ord("a") + cp - 0x1D41A), True, False
-    if 0x1D434 <= cp <= 0x1D44D:
-        return chr(ord("A") + cp - 0x1D434), False, True
-    if 0x1D44E <= cp <= 0x1D467:
-        return chr(ord("a") + cp - 0x1D44E), False, True
-    if 0x1D468 <= cp <= 0x1D481:
-        return chr(ord("A") + cp - 0x1D468), True, True
-    if 0x1D482 <= cp <= 0x1D49B:
-        return chr(ord("a") + cp - 0x1D482), True, True
+    for lo, hi, base, bold, italic in _MATH_ALPHABET_RANGES:
+        if lo <= cp <= hi:
+            return chr(ord(base) + cp - lo), bold, italic
     return None
 
 
