@@ -1,510 +1,200 @@
 from __future__ import annotations
 
-import re
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from fractions import Fraction
-from typing import Callable, NamedTuple
 
-from rtt.app import ids
-from rtt.app import presets
-from rtt.app import service
+from rtt.app import ids, presets, service
+from rtt.app.grid_tables import (
+    _FACTOR_GROUP,
+    ALL_INTERVAL_CAPTIONS,
+    ALL_INTERVAL_EQUIVALENCES,
+    ALL_INTERVAL_MNEMONICS,
+    ALL_INTERVAL_SYMBOLS,
+    BLANKED_NUMBER_KINDS,
+    CAPTIONED_ROWS,
+    CAPTIONS,
+    CELL_FACTORS,
+    CHARTED_ROWS,
+    COL_LABELED_ROWS,
+    COUNTS,
+    COUNTS_TILES,
+    DETEMPERING_COUNTS,
+    DETEMPERING_COUNTS_TILES,
+    EDITABLE_PTEXT,
+    EDITABLE_PTEXT_ROWS,
+    EQUIVALENCES,
+    FORM_CHOOSER_ROWS,
+    FORM_CHOOSERS,
+    FORM_EQUIVALENCES,
+    FORM_SUBSCRIPT_GENS,
+    FORM_SUBSCRIPT_ROWS,
+    FRAMED_ROWS,
+    GRIDDED_KINDS,
+    MNEMONICS,
+    NORM_SUB_CLOSE,
+    NORM_SUB_OPEN,
+    OPTIMIZATION_COUNTS,
+    OPTIMIZATION_COUNTS_TILES,
+    PRESET_COPIES,
+    PRESET_ROWS,
+    PRESETS,
+    RINGABLE_KINDS,
+    SPINE_COLUMN_GROUP,
+    SPINE_COLUMNS,
+    SPINE_ROW_GROUP,
+    SPINE_ROWS,
+    SUB_CLOSE,
+    SUB_OPEN,
+    SUBSCRIPT_C,
+    SUBSCRIPT_L,
+    SUPERSPACE_COUNTS,
+    SUPERSPACE_COUNTS_TILES,
+    SUPERSPACE_REGION_COLUMNS,
+    SUPERSPACE_REGION_ROWS,
+    SUPERSPACE_TILES,
+    SYMBOLED_ROWS,
+    SYMBOLS,
+    TILES,
+    UNITED_ROWS,
+    UNITS,
+    UNITS_TILES,
+    WEIGHT_EQUIVALENCE_BY_SLOPE,
+)
 from rtt.app.layout import Block, CellBox, Layout, Line
-from rtt.app.marks import BR_INSET, BR_SERIF_L
-from rtt.app.grid_tables import *
-from rtt.app.grid_tables import _FACTOR_GROUP
 from rtt.app.settings import defaults as _default_settings
-
-ROW_H = 37
-COL_W = 37
-GAP = 28
-PAD = 4
-TITLE_MARGIN = 8
-WASH_PAD = GAP / 2
-LABEL_W = 106
-HEADER_H = 36
-STRIP = 16
-TOGGLE = 12
-BTN = TOGGLE
-GRIP_BAND = 16
-TOGGLE_INSET = 3
-CAPTION_FONT = 9
-CAPTION_LINE = 10
-CAPTION_CHAR_W = 0.52
-MAX_CAPTION_LINES = 2
-PRESET_H = 30
-LBOX_DIM_W = 80
-CBOX_DROP_W = 170
-CBOX_SLOT_W = 60
-CBOX_NODROP_W = CBOX_SLOT_W + 8 + CBOX_SLOT_W
-CBOX_W = CBOX_DROP_W + 8 + CBOX_NODROP_W
-OPTION_BOX_PX = 16
-PRESET_W = 124
-SCHEME_BTN_SQ = 22
-SCHEME_LABEL_W = 92
-SCHEME_CTRL_W = SCHEME_BTN_SQ + 2 + SCHEME_LABEL_W
-TARGET_PRESET_W = 144
-PTEXT_MAX_FONT = 10
-PTEXT_H = 13
-PTEXT_EDIT_H = 16
-SYMBOL_H = 18
-BAND_GAP = 6
-SYMBOL_FONT = 15
-MATLABEL_H = 13
-MATLABEL_PAD = 4
-MATLABEL_W = 22
-MATLABEL_W_SS = 64
-MATLABEL_W_SSPRIMES = 56
-UNIT_H = 12
-CHART_H = 64
-CHART_GAP = 4
-RANGE_CHART_H = 58
-RANGE_MODE_H = 46
-RANGE_GAP = 2
-OPT_TITLE_H = 14
-OPT_PAD_T = 8
-OPT_PAD_B = 8
-OPT_PAD_L = 8
-OPT_PAD_R = 8
-OPT_TITLE_GAP = 4
-OPT_COL_GAP = 8
-OPT_POW_CAP_W = 90
-OPT_MEAN_DAMAGE_W = 64
-OPT_BOX_MIN_W = OPT_PAD_L + OPT_MEAN_DAMAGE_W + OPT_COL_GAP + OPT_POW_CAP_W + OPT_PAD_R
-BOX_OUTER = 4
-BOX_INNER = 8
-CTRL_LABEL_GAP = 2
-TBOX_W = 2 * BOX_OUTER + 2 * BOX_INNER + TARGET_PRESET_W + 8 + LBOX_DIM_W
-PBOX_W = 2 * BOX_OUTER + 2 * BOX_INNER + PRESET_W + 8 + LBOX_DIM_W
-BOX_TITLE_H = 14
-BOX_TITLE_GAP = 4
-APPROACH_RADIO_H = 64
-FRAME_H = 9
-BRACE_H = 7
-FRAME_GAP = 5
-BRACKET_W = 16
-FRAME_OVERHANG = BRACKET_W - BR_INSET - BR_SERIF_L
-ROW_HANDLE_W = 14
-ROW_HANDLE_GAP = 4
-ETPICK_W = COL_W
-ETPICK_GAP = 4
-COMMAPICK_GAP = 4
-VAL_BRACKET_H = 16
-TRANSPOSE_W = 9
-MARK_INSET = 8
-SEP_W = 2
-V_SPLIT_GAP = 16
-KET_INSET = 4
-LINE_W = 2
-MAP_BRACKETS = ("⟨", "]")
-LIST_BRACKETS = ("[", "]")
-GENMAP_BRACKETS = ("{", "]")
-DASH = "—"
-
-
-
-def _mathit(letter: str) -> str:
-    return "ℎ" if letter == "h" else chr(0x1D44E + ord(letter) - ord("a"))
-
-
-_SUBSCRIPTS = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
-
-
-def _sub(n: int) -> str:
-    return str(n).translate(_SUBSCRIPTS)
-
-
-def _subscript_coord(text: str, letter: str, replacement: str) -> str:
-    return re.sub(rf"(?<![A-Za-z]){letter}(?![A-Za-z])", replacement, text)
-
-
-def _count_sym(sym: str) -> str:
-    head = _mathit(sym[0])
-    if len(sym) == 1:
-        return head
-    if sym[1:] == "L":
-        return head + SUBSCRIPT_L
-    raise ValueError(f"unknown counts symbol: {sym!r}")
-
-
-def _pretransform_label(text: str) -> str:
-    for old, new in (("prescaled", "pretransformed"), ("prescaling", "pretransforming"),
-                     ("prescaler", "pretransformer")):
-        text = text.replace(old, new)
-    return text
-
-
-def _prescaler_col_labels(letter: str, show_equiv: bool, all_interval: bool, show_superspace: bool = False) -> dict:
-    def norm(inner):
-        return lambda i: f"‖{inner(i)}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}"
-
-    def complexity_target(i):
-        symbol = f"c{_sub(i + 1)}"
-        if not show_equiv:
-            return symbol
-        inner = f"{letter}[{i + 1}]" if all_interval else f"{letter}𝐭{_sub(i + 1)}"
-        return f"{symbol} = ‖{inner}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}"
-
-    labels = {
-        ("prescaling", "commas"): letter + "𝐜",
-        ("prescaling", "targets"): letter + "𝐭",
-        ("prescaling", "held"): letter + "𝐡",
-        ("prescaling", "detempering"): letter + "𝐝",
-        ("complexity", "primes"): norm(lambda i: f"{letter}[{i + 1}]"),
-        ("complexity", "commas"): norm(lambda i: f"{letter}𝐜{_sub(i + 1)}"),
-        ("complexity", "held"): norm(lambda i: f"{letter}𝐡{_sub(i + 1)}"),
-        ("complexity", "detempering"): norm(lambda i: f"{letter}𝐝{_sub(i + 1)}"),
-        ("complexity", "targets"): complexity_target,
-    }
-    if show_superspace:
-        labels[("prescaling", "primes")] = letter + "𝐛" + SUBSCRIPT_L + "ₛ"
-        labels[("complexity", "ssprimes")] = norm(lambda i: f"{letter}[{i + 1}]")
-        labels[("complexity", "primes")] = norm(lambda i: f"{letter}𝐛{SUBSCRIPT_L}ₛ{_sub(i + 1)}")
-    return labels
-
-
-def _log_operand(ratio: str) -> str:
-    num, _, den = ratio.partition("/")
-    return num if den == "1" else f"({num}/{den})"
-
-
-def _math_expr(operand: str, value: float, show_value: bool, decimals: bool = True) -> str:
-    if operand == "1":
-        return "0"
-    expr = f"1200 · log₂{operand}"
-    return f"{expr}\n= {service.cents(value, decimals)}" if show_value else expr
-
-
-def _prescale_math_expr(coeff, prime_term: str, value: float, show_value: bool, decimals: bool = True) -> str:
-    if coeff == 1:
-        expr = prime_term
-    elif coeff == -1:
-        expr = f"-{prime_term}"
-    else:
-        expr = f"{coeff} · {prime_term}"
-    return f"{expr}\n= {service.prescale_text(value, decimals)}" if show_value else expr
-
-
-def _format_power(power: float) -> str:
-    if power == float("inf"):
-        return "∞"
-    return str(int(power)) if power == int(power) else str(power)
-
-
-def _power_mean(damages, power: float) -> float:
-    ds = [abs(d) for d in damages]
-    if not ds:
-        return 0.0
-    if power == float("inf"):
-        return max(ds)
-    return (sum(d ** power for d in ds) / len(ds)) ** (1 / power)
-
-
-def _title_w(title: str) -> int:
-    widest = max(len(line) for line in title.splitlines())
-    return max(STRIP, widest * 8 + 10)
-
-
-def _fold_glyph(is_collapsed: bool) -> str:
-    return "unfold_more" if is_collapsed else "unfold_less"
-
-
-def _foldable_ids(cells) -> set:
-    return {c.id.split("toggle:", 1)[1] for c in cells
-            if c.kind in ("rowtoggle", "coltoggle")}
-
-
-def toggle_all_collapsed(layout, collapsed) -> set:
-    foldable = _foldable_ids(layout.cells)
-    if foldable and foldable <= collapsed:
-        return set()
-    return set(collapsed) | foldable
-
-
-_CONTENT_FIELDS = ("kind", "text", "values", "ranges", "indicator", "indicator_label",
-                   "pending", "checked", "blank", "unit", "underlines")
-
-
-def _cell_content(cell: CellBox) -> tuple:
-    return tuple(getattr(cell, field) for field in _CONTENT_FIELDS)
-
-
-def changed_cell_ids(old: Layout, new: Layout) -> frozenset:
-    before = {c.id: _cell_content(c) for c in old.cells}
-    return frozenset(c.id for c in new.cells
-                     if c.kind in RINGABLE_KINDS
-                     and (c.id not in before or before[c.id] != _cell_content(c)))
-
-
-def removed_cell_ids(old: Layout, new: Layout) -> frozenset:
-    after = {c.id for c in new.cells}
-    return frozenset(c.id for c in old.cells
-                     if c.kind in RINGABLE_KINDS and not c.pending and c.id not in after)
-
-
-def assign_column_tokens(prev, keys, claim_unmatched=False):
-    keys = list(keys)
-    prev = list(prev or [])
-    tokens = [None] * len(keys)
-    if len(keys) == len(prev) and sorted(keys) != sorted(k for _, k in prev):
-        for j in range(len(keys)):
-            tokens[j] = prev[j][0]
-    else:
-        claimed = [False] * len(prev)
-        for j, key in enumerate(keys):
-            for pi, (tok, pkey) in enumerate(prev):
-                if not claimed[pi] and pkey == key:
-                    tokens[j], claimed[pi] = tok, True
-                    break
-        if claim_unmatched:
-            unclaimed = iter([pi for pi in range(len(prev)) if not claimed[pi]])
-            for j in range(len(keys)):
-                if tokens[j] is None:
-                    pi = next(unclaimed, None)
-                    if pi is None:
-                        break
-                    tokens[j] = prev[pi][0]
-    nxt = max([t for t in tokens if t is not None] + [tok for tok, _ in prev] + [-1]) + 1
-    for j in range(len(keys)):
-        if tokens[j] is None:
-            tokens[j], nxt = nxt, nxt + 1
-    return list(zip(tokens, keys))
-
-
-def pending_token(tokens) -> int:
-    return max(tokens, default=-1) + 1
-
-
-def _wrap_chars(words: list[str], max_chars: int) -> int:
-    lines, cur = 1, 0
-    for word in words:
-        wlen = len(word)
-        if cur and cur + 1 + wlen > max_chars:
-            lines, cur = lines + 1, 0
-        if cur == 0 and wlen > max_chars:
-            lines += (wlen - 1) // max_chars
-            cur = (wlen - 1) % max_chars + 1
-        else:
-            cur += (1 if cur else 0) + wlen
-    return lines
-
-
-def _chars_per_line(width: float, font: float = CAPTION_FONT) -> int:
-    return max(1, int((width - 4) / (font * CAPTION_CHAR_W)))
-
-
-def _wrap_lines(text: str, width: float, font: float = CAPTION_FONT) -> int:
-    return _wrap_chars(text.split(), _chars_per_line(width, font))
-
-
-def _min_width_for_lines(text: str, max_lines: int, font: float = CAPTION_FONT) -> int:
-    words = text.split()
-    for chars in range(1, len(text) + 1):
-        if _wrap_chars(words, chars) <= max_lines:
-            return int(chars * font * CAPTION_CHAR_W + 4) + 1
-    return int(len(text) * font * CAPTION_CHAR_W + 4) + 1
-
-
-def _bus_span(positions) -> tuple[float, float]:
-    ext = LINE_W if positions[-1] != positions[0] else 0
-    return positions[0] - ext / 2, (positions[-1] - positions[0]) + ext
-
-
-@dataclass(frozen=True)
-class _ShowFlags:
-    captions: bool
-    mnemonics: bool
-    equiv: bool
-    presets: bool
-    counts: bool
-    ptext: bool
-    charts: bool
-    ranges: bool
-    symbols: bool
-    header_symbols: bool
-    units: bool
-    cell_units: bool
-    domain_units: bool
-    temp: bool
-    form: bool
-    form_controls: bool
-    form_tiles: bool
-    tuning: bool
-    optimization: bool
-    weighting: bool
-    alt_complexity: bool
-    lbox: bool
-    cbox: bool
-    detempering: bool
-    interest: bool
-    gridded: bool
-    quantities: bool
-    decimals: bool
-    ebk: bool
-    interval_ratios: bool
-    interval_vectors: bool
-    math: bool
-
-
-def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
-    captions = settings["names"]
-    temp = settings["temperament_tiles"]
-    tuning = settings["tuning_tiles"]
-    optimization = tuning and settings["optimization"]
-    weighting = tuning and settings["weighting"]
-    alt_complexity = weighting and settings["alt_complexity"]
-    return _ShowFlags(
-        captions=captions,
-        mnemonics=captions and settings["mnemonics"],
-        equiv=settings["equivalences"],
-        presets=settings["presets"],
-        counts=settings["counts"],
-        ptext=settings["plain_text_values"],
-        charts=settings["charts"],
-        ranges=settings["tuning_ranges"],
-        symbols=settings["symbols"],
-        header_symbols=settings["header_symbols"],
-        units=settings["units"],
-        cell_units=settings["cell_units"],
-        domain_units=settings["domain_units"],
-        temp=temp,
-        form=settings["form"],
-        form_controls=settings["form_controls"],
-        form_tiles=settings["form_tiles"],
-        tuning=tuning,
-        optimization=optimization,
-        weighting=weighting,
-        alt_complexity=alt_complexity,
-        lbox=(alt_complexity and settings["temperament_tiles"]
-              and "col:primes" not in collapsed and "row:prescaling" not in collapsed
-              and "tile:prescaling:primes" not in collapsed),
-        cbox=(weighting
-              and "col:targets" not in collapsed and "row:complexity" not in collapsed
-              and "tile:complexity:targets" not in collapsed),
-        detempering=settings["generator_detempering"],
-        interest=settings["interest"],
-        gridded=settings["gridded_values"],
-        quantities=settings["quantities"],
-        decimals=settings.get("decimals", True),
-        ebk=settings.get("ebk", True),
-        interval_ratios=settings["interval_ratios"],
-        interval_vectors=settings["interval_vectors"],
-        math=settings["math_expressions"],
-    )
-
-
-@dataclass(frozen=True)
-class _PrescalerLabels:
-    scheme_prescaler: object
-    realized: object
-    symbol: str
-    equivalence: str
-    prescaling_symbols: dict
-    col_labels: dict
-    row_labels: dict
-    effective_captions: dict
-
-
-def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv, show_superspace=False) -> _PrescalerLabels:
-    all_interval = service.is_all_interval(tuning_scheme)
-    scheme_prescaler = service.prescaler_of(tuning_scheme)
-    realized = service.displayed_prescaler_name(state.mapping, tuning_scheme, custom_prescaler)
-    size_factor = service.complexity_size_factor(tuning_scheme)
-    prescaler_is_matrix = isinstance(
-        service.complexity_prescaler(state.mapping, tuning_scheme, override=custom_prescaler)[0], (tuple, list))
-    non_scaling = bool(size_factor) or prescaler_is_matrix
-    is_log_prime = realized == "log-prime"
-    symbol = "𝐿" if is_log_prime else "𝑋"
-    if size_factor and realized:
-        base = "" if realized == "identity" else PRESCALER_LETTER[realized]
-        sep = "·" if base.startswith("diag") else ""
-        equivalence = f" = 𝑍{sep}{base}"
-    elif realized:
-        equivalence = f" = {PRESCALER_LETTER[realized]}"
-    else:
-        equivalence = ""
-    prescaling_symbols = {(r, c): symbol + s[1:] for (r, c), s in SYMBOLS.items()
-                          if r == "prescaling" and s.startswith("L")}
-    effective_captions = dict(CAPTIONS)
-    bare_col = "ssprimes" if show_superspace else "primes"
-    row_labels = dict(ROW_LABEL_LETTERS)
-    row_labels.pop(("prescaling", "primes"), None)
-    row_labels.pop(("prescaling", "ssprimes"), None)
-    row_labels[("prescaling", bare_col)] = "𝒍" if is_log_prime else "𝒙"
-    if show_superspace:
-        prescaling_symbols[("prescaling", "primes")] = f"{symbol}B{SUBSCRIPT_L}ₛ"
-        effective_captions[("prescaling", "primes")] = "complexity prescaled subspace basis elements"
-        effective_captions[("complexity", "primes")] = "subspace basis element complexity map"
-    _BASE_MATRIX_NAME = {"log-prime": "log-prime matrix", "prime": "diagonal matrix of primes", "identity": "identity matrix"}
-    if show_equiv and realized:
-        if size_factor:
-            base = _BASE_MATRIX_NAME[realized]
-            effective_captions[("prescaling", bare_col)] += (
-                " = size-sensitizing matrix" + ("" if realized == "identity" else f" × {base}"))
-        elif is_log_prime:
-            effective_captions[("prescaling", bare_col)] += f" = {_BASE_MATRIX_NAME['log-prime']}"
-    if non_scaling:
-        effective_captions = {k: _pretransform_label(v) for k, v in effective_captions.items()}
-    return _PrescalerLabels(
-        scheme_prescaler=scheme_prescaler, realized=realized, symbol=symbol, equivalence=equivalence,
-        prescaling_symbols=prescaling_symbols,
-        col_labels={**COL_LABEL_LETTERS, **_prescaler_col_labels(symbol, show_equiv, all_interval, show_superspace)},
-        row_labels=row_labels, effective_captions=effective_captions,
-    )
-
-
-class _VecGrid(NamedTuple):
-    group: str
-    count: int
-    id_fn: Callable[[str, int], str]
-    left_fn: Callable[[int], float]
-    inset: float
-    committed_kind: str
-    pending_kind: str
-    data: object
-    pending: object
-    sizes: object
-
-
-class _QtyList(NamedTuple):
-    group: str
-    singular: str
-    count: int
-    left_fn: Callable[[int], float]
-    ratios: object
-    sizes: object
-    pending: object
-    kind: str
-    minus_gate: bool
-
-
-class _MappedTile(NamedTuple):
-    prefix: str
-    group: str
-    count: int
-    left_fn: Callable[[int], float]
-    data: object
-    pending: object
-
-
-@dataclass
-class RowBand:
-    y: float
-    h: float
-    label: str
-    collapsible: bool
-    tile_h: float
-    tile_top: float
-    frame: float
-    sym: float
-    cap: float
-    units: float
-    ptext: float
-    pre: float
-    schemebtn: float
-    nsub: int
-    chart_top: float | None = None
-    int_handle_top: float | None = None
-    matlabel_top: float | None = None
+from rtt.app.spreadsheet_constants import (
+    APPROACH_RADIO_H,
+    BAND_GAP,
+    BOX_INNER,
+    BOX_OUTER,
+    BOX_TITLE_GAP,
+    BOX_TITLE_H,
+    BRACE_H,
+    BRACKET_W,
+    BTN,
+    CAPTION_FONT,
+    CAPTION_LINE,
+    CBOX_DROP_W,
+    CBOX_NODROP_W,
+    CBOX_SLOT_W,
+    CBOX_W,
+    CHART_GAP,
+    CHART_H,
+    COL_W,
+    COMMAPICK_GAP,
+    CTRL_LABEL_GAP,
+    DASH,
+    ETPICK_GAP,
+    ETPICK_W,
+    FRAME_GAP,
+    FRAME_H,
+    FRAME_OVERHANG,
+    GAP,
+    GENMAP_BRACKETS,
+    GRIP_BAND,
+    HEADER_H,
+    KET_INSET,
+    LABEL_W,
+    LBOX_DIM_W,
+    LINE_W,
+    LIST_BRACKETS,
+    MAP_BRACKETS,
+    MARK_INSET,
+    MATLABEL_H,
+    MATLABEL_PAD,
+    MATLABEL_W,
+    MATLABEL_W_SS,
+    MATLABEL_W_SSPRIMES,
+    MAX_CAPTION_LINES,
+    OPT_BOX_MIN_W,
+    OPT_COL_GAP,
+    OPT_MEAN_DAMAGE_W,
+    OPT_PAD_B,
+    OPT_PAD_L,
+    OPT_PAD_R,
+    OPT_PAD_T,
+    OPT_POW_CAP_W,
+    OPT_TITLE_GAP,
+    OPT_TITLE_H,
+    OPTION_BOX_PX,
+    PAD,
+    PBOX_W,
+    PRESET_H,
+    PRESET_W,
+    PTEXT_EDIT_H,
+    PTEXT_H,
+    PTEXT_MAX_FONT,
+    RANGE_CHART_H,
+    RANGE_GAP,
+    RANGE_MODE_H,
+    ROW_H,
+    ROW_HANDLE_GAP,
+    ROW_HANDLE_W,
+    SCHEME_BTN_SQ,
+    SCHEME_CTRL_W,
+    SCHEME_LABEL_W,
+    SEP_W,
+    STRIP,
+    SYMBOL_FONT,
+    SYMBOL_H,
+    TARGET_PRESET_W,
+    TBOX_W,
+    TITLE_MARGIN,
+    TOGGLE,
+    TOGGLE_INSET,
+    TRANSPOSE_W,
+    UNIT_H,
+    V_SPLIT_GAP,
+    VAL_BRACKET_H,
+    WASH_PAD,
+)
+from rtt.app.spreadsheet_models import (
+    RowBand,
+    _MappedTile,
+    _QtyList,
+    _resolve_prescaler_labels,
+    _resolve_show_flags,
+    _VecGrid,
+)
+from rtt.app.spreadsheet_text import (
+    _bus_span,
+    _cell_content,
+    _count_sym,
+    _fold_glyph,
+    _foldable_ids,
+    _format_power,
+    _log_operand,
+    _math_expr,
+    _min_width_for_lines,
+    _power_mean,
+    _prescale_math_expr,
+    _pretransform_label,
+    _sub,
+    _subscript_coord,
+    _title_w,
+    _wrap_lines,
+    assign_column_tokens,
+    changed_cell_ids,
+    pending_token,
+    removed_cell_ids,
+    toggle_all_collapsed,
+)
+
+__all__ = [
+    "CAPTIONS",
+    "CAPTION_FONT",
+    "GENMAP_BRACKETS",
+    "LINE_W",
+    "LIST_BRACKETS",
+    "MAP_BRACKETS",
+    "NORM_SUB_CLOSE",
+    "NORM_SUB_OPEN",
+    "PTEXT_MAX_FONT",
+    "_cell_content",
+    "changed_cell_ids",
+    "removed_cell_ids",
+    "toggle_all_collapsed",
+]
 
 
 class _GridBuilder:
