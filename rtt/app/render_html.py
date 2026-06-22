@@ -157,12 +157,11 @@ def _chart_ticks(lo: float, hi: float) -> list[float]:
     raw = span / 4
     mag = 10 ** math.floor(math.log10(raw))
     step = next(m * mag for m in (1, 2, 2.5, 5, 10) if raw <= m * mag)
+    start = math.floor(lo / step) * step
     stop = (math.floor(hi / step) + 1) * step
-    ticks, v = [], math.floor(lo / step) * step
-    while v <= stop + step * 1e-9:
-        ticks.append(round(v, 6))
-        v += step
-    if ticks[-1] == ticks[0]:  # a sub-precision span (floating-point dust ~1e-13, e.g. a
+    count = int(round((stop - start) / step))
+    ticks = [round(start + i * step, 6) for i in range(count + 1)]
+    if len(ticks) < 2 or ticks[-1] == ticks[0]:
         return [ticks[0], ticks[0] + 1.0]
     return ticks
 
