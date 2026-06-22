@@ -48,9 +48,13 @@ CLOSED_FORM_CASES = [
     (MEANTONE_5, BASIS_5, "held-octave miniRMS-U"),
     (MEANTONE_5, BASIS_5, "{2, 3/2} miniRMS-U"),
     (MEANTONE_5, BASIS_5, "{2, 3/2, 5/4} miniRMS-U"),
+    # held AND targeted at once: the octave is pinned pure while a finite target set is
+    # least-squares-fit in the held interval's null space (the mixed closed-form branch)
+    (MEANTONE_5, BASIS_5, "held-octave {5/4, 3/2} miniRMS-U"),
     (MEANTONE_7, BASIS_7, "miniRMS-U"),
     (MEANTONE_7, BASIS_7, "held-octave miniRMS-U"),
     (MEANTONE_7, BASIS_7, "{2, 3/2, 7/4} miniRMS-U"),
+    (MEANTONE_7, BASIS_7, "held-octave {5/4, 7/4} miniRMS-U"),
     (ET12_5, BASIS_5, "miniRMS-U"),
     (ET12_5, BASIS_5, "held-octave miniRMS-U"),
 ]
