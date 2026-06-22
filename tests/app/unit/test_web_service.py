@@ -1461,6 +1461,11 @@ def test_parse_prescaler_diagonal_rejects_unparseable_or_non_diagonal_or_wrong_s
     # a covector list rather than a covector matrix (one ⟨…] only) — wrong shape for the
     # bare prescaler tile, even if the d numbers parse as floats
     assert service.parse_prescaler_diagonal("⟨1 1.585 2.322]", 3) is None
+    # a 3-wide matrix read as d == 2 clears the row-count gate (3 ∈ {2, 3}) but every row is too
+    # wide for d == 2, so the per-row width check rejects it
+    assert service.parse_prescaler_diagonal("[⟨1 0 0] ⟨0 1 0] ⟨0 0 1]⟩", 2) is None
+    # a fractional diagonal entry is not a real (float) scaling factor — 𝐿's diagonal is sizes
+    assert service.parse_prescaler_diagonal("[⟨1/2 0 0] ⟨0 1 0] ⟨0 0 1]⟩", 3) is None
 
 
 def test_parse_prescaler_diagonal_accepts_the_optional_size_row():
@@ -2367,3 +2372,22 @@ def test_projecting_superspace_generators_to_domain_recovers_the_on_domain_tunin
     projected = ss.project_superspace_generators_to_domain(state, ss_optimum)
     on_domain = service.tuning(state.mapping, "minimax-S", state.domain_basis).generator_map
     assert projected == pytest.approx(tuple(on_domain))
+
+
+# ── service.parse rejection branches (every parser returns None, never raises, on bad input) ──
+def test_int_matrix_or_none_rejects_empty_and_ragged_matrices():
+    from rtt.app.service.parse import _int_matrix_or_none
+
+    assert _int_matrix_or_none(()) is None  # no rows
+    assert _int_matrix_or_none(((),)) is None  # an empty row
+    assert _int_matrix_or_none(((1, 2), (3,))) is None  # rows of unequal width
+
+
+def test_parse_embedding_returns_none_on_unparseable_text():
+    # the parser swallows the underlying ValueError and reports "not an embedding" as None
+    assert service.parse_embedding("not a matrix !!", 3, 2) is None
+
+
+def test_parse_form_matrix_rejects_a_contravariant_input():
+    # a form matrix is map-kind (ROW); a lone ket is contravariant, so it is not a form
+    assert service.parse_form_matrix("[-4 4 -1⟩") is None

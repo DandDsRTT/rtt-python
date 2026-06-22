@@ -19,3 +19,9 @@ from rtt.library.temperament import Variance
 )
 def test_variance_from_string(text, expected):
     assert Variance.from_string(text) == expected
+
+
+def test_variance_from_string_rejects_an_unrecognized_word():
+    # only the row/col synonym sets resolve; anything else is a hard error, not a silent default
+    with pytest.raises(ValueError, match="Unrecognized variance"):
+        Variance.from_string("sideways")

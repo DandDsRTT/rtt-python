@@ -39,6 +39,12 @@ def test_tradeoff_range_is_none_when_the_octave_tempers_out():
     assert get_generator_tuning_range(t, "tradeoff") is None
 
 
+def test_unknown_range_mode_is_rejected():
+    # only "monotone" and "tradeoff" are valid diamond modes; a typo is a hard error
+    with pytest.raises(ValueError, match="unknown mode"):
+        get_generator_tuning_range(MEANTONE, "tradoff")
+
+
 def test_octave_generator_is_pinned_pure_in_both_modes():
     # The normalization holds 2/1 pure, so the period (octave) generator collapses
     # to a single point at 1200 cents in either mode -- only the fifth has a range.

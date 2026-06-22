@@ -63,6 +63,7 @@ def test_inner_l_length(matrix, expected):
     [
         (((5, 8, 12), (7, 11, 16)), ((1, 0, -4), (0, 1, 4))),
         (((3, 0, -1), (0, 3, 5)), ((3, 0, -1), (0, 3, 5))),
+        ((), ()),
     ],
 )
 def test_hnf(matrix, expected):
@@ -101,6 +102,7 @@ def test_remove_all_zero_lists(matrix, expected):
         (((1, 0, 1), (0, 0, 2), (0, 0, 3)), ((1, 0, 1), (0, 0, 2), (0, 0, 3))),
         (((12, 19, 28), (24, 38, 56)), ((12, 19, 28), (24, 38, 56))),
         (((0, 0), (0, 0)), ((0, 0),)),
+        ((), ()),
     ],
 )
 def test_remove_unneeded_zero_lists(matrix, expected):

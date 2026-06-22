@@ -81,6 +81,20 @@ def test_ea_dimensions():
     assert ea_get_n(MEANTONE_MM) == 1
 
 
+def test_ea_nullity_of_a_contravariant_multivector_is_its_grade():
+    # for a comma (COL) multivector the nullity is read straight off the grade, not d - grade:
+    # meantone's single comma 81/80 is grade 1, so nullity 1.
+    assert ea_get_n(MEANTONE_MC) == 1
+
+
+@pytest.mark.parametrize("accessor", [ea_get_d, ea_get_r, ea_get_n])
+def test_ea_dimensions_undefined_for_a_nondecomposable_multivector(accessor):
+    # d, r and n are all properties of a real (decomposable) temperament; a nondecomposable
+    # multivector is not one, so each accessor refuses rather than returning a meaningless number.
+    with pytest.raises(ValueError):
+        accessor(NONDECOMPOSABLE)
+
+
 def test_ea_accessors():
     assert ea_get_largest_minors_l(MEANTONE_MM) == (1, 4, 4)
     assert ea_get_grade(MEANTONE_MM) == 2
