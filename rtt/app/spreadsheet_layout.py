@@ -95,6 +95,10 @@ class _LayoutMixin:
             ("block:complexity:detempering", "complexity", "detempering"),
             ("block:urow:detempering", "units", "detempering"),
         ) if self.show_detempering else ()
+        self._resolve_canon_mapped()
+        return interest_tiles, held_tiles, detempering_tiles
+
+    def _resolve_canon_mapped(self) -> None:
         self.canon_mapped = service.mapped_intervals(self.canon_mapping, self.targets, self.elements)
         self.canon_held_mapped = service.mapped_intervals(self.canon_mapping, self.held_ratios, self.elements)
         self.canon_interest_mapped = service.mapped_intervals(self.canon_mapping, self.interest_ratios, self.elements)
@@ -107,61 +111,72 @@ class _LayoutMixin:
         self.canon_unchanged_mapped = tuple(
             tuple((None if _canon_u[j] is None else _canon_u[j][i]) for j in range(self.nu))
             for i in range(self.rc))
-        return interest_tiles, held_tiles, detempering_tiles
 
     def _declare_tiles(self, interest_tiles, held_tiles, detempering_tiles) -> None:
-        projection_col_tiles = ()
-        if self.show_projection:
-            projection_col_tiles += (
-                ("block:proj:quantities", "projection", "quantities"),
-                ("block:proj:units", "projection", "units"),
-            )
-            if self.show_detempering:
-                projection_col_tiles += (("block:proj:detempering", "projection", "detempering"),)
-            if self.targets_editable:
-                projection_col_tiles += (("block:proj:targets", "projection", "targets"),)
-            if self.nh_shown:
-                projection_col_tiles += (("block:proj:held", "projection", "held"),)
-            if self.mi_shown:
-                projection_col_tiles += (("block:proj:interest", "projection", "interest"),)
-            if self.show_superspace:
-                projection_col_tiles += (
-                    ("block:proj:ssgens", "projection", "ssgens"),
-                    ("block:proj:ssprimes", "projection", "ssprimes"),
-                )
-        ss_projection_col_tiles = ()
-        if self.show_ss_projection:
-            ss_projection_col_tiles += (
-                ("block:ssproj:ssgens", "ss_projection", "ssgens"),
-                ("block:ssproj:primes", "ss_projection", "primes"),
-            )
-            if self.show_unchanged:
-                ss_projection_col_tiles += (("block:ssproj:commas", "ss_projection", "commas"),)
-            if self.show_detempering:
-                ss_projection_col_tiles += (("block:ssproj:detempering", "ss_projection", "detempering"),)
-            if self.targets_editable:
-                ss_projection_col_tiles += (("block:ssproj:targets", "ss_projection", "targets"),)
-            if self.nh_shown:
-                ss_projection_col_tiles += (("block:ssproj:held", "ss_projection", "held"),)
-            if self.mi_shown:
-                ss_projection_col_tiles += (("block:ssproj:interest", "ss_projection", "interest"),)
-        canon_col_tiles = ()
-        if self.show_canon:
-            canon_col_tiles += (("block:canon_comma", "canon", "commas"),)
-            if self.show_detempering:
-                canon_col_tiles += (("block:canon_detempering", "canon", "detempering"),)
-            if self.targets_editable:
-                canon_col_tiles += (("block:canon_mapped", "canon", "targets"),)
-            if self.nh_shown:
-                canon_col_tiles += (("block:canon_held", "canon", "held"),)
-            if self.mi_shown:
-                canon_col_tiles += (("block:canon_interest", "canon", "interest"),)
         self.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
                  + SUPERSPACE_COUNTS_TILES
                  + TILES + UNITS_TILES + SUPERSPACE_TILES
-                 + interest_tiles + held_tiles + detempering_tiles + projection_col_tiles
-                 + ss_projection_col_tiles + canon_col_tiles)
+                 + interest_tiles + held_tiles + detempering_tiles + self._projection_col_tiles()
+                 + self._ss_projection_col_tiles() + self._canon_col_tiles())
         self.declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in self.tiles}
+        self._prune_declared_tiles()
+
+    def _projection_col_tiles(self):
+        if not self.show_projection:
+            return ()
+        tiles = (
+            ("block:proj:quantities", "projection", "quantities"),
+            ("block:proj:units", "projection", "units"),
+        )
+        if self.show_detempering:
+            tiles += (("block:proj:detempering", "projection", "detempering"),)
+        if self.targets_editable:
+            tiles += (("block:proj:targets", "projection", "targets"),)
+        if self.nh_shown:
+            tiles += (("block:proj:held", "projection", "held"),)
+        if self.mi_shown:
+            tiles += (("block:proj:interest", "projection", "interest"),)
+        if self.show_superspace:
+            tiles += (
+                ("block:proj:ssgens", "projection", "ssgens"),
+                ("block:proj:ssprimes", "projection", "ssprimes"),
+            )
+        return tiles
+
+    def _ss_projection_col_tiles(self):
+        if not self.show_ss_projection:
+            return ()
+        tiles = (
+            ("block:ssproj:ssgens", "ss_projection", "ssgens"),
+            ("block:ssproj:primes", "ss_projection", "primes"),
+        )
+        if self.show_unchanged:
+            tiles += (("block:ssproj:commas", "ss_projection", "commas"),)
+        if self.show_detempering:
+            tiles += (("block:ssproj:detempering", "ss_projection", "detempering"),)
+        if self.targets_editable:
+            tiles += (("block:ssproj:targets", "ss_projection", "targets"),)
+        if self.nh_shown:
+            tiles += (("block:ssproj:held", "ss_projection", "held"),)
+        if self.mi_shown:
+            tiles += (("block:ssproj:interest", "ss_projection", "interest"),)
+        return tiles
+
+    def _canon_col_tiles(self):
+        if not self.show_canon:
+            return ()
+        tiles = (("block:canon_comma", "canon", "commas"),)
+        if self.show_detempering:
+            tiles += (("block:canon_detempering", "canon", "detempering"),)
+        if self.targets_editable:
+            tiles += (("block:canon_mapped", "canon", "targets"),)
+        if self.nh_shown:
+            tiles += (("block:canon_held", "canon", "held"),)
+        if self.mi_shown:
+            tiles += (("block:canon_interest", "canon", "interest"),)
+        return tiles
+
+    def _prune_declared_tiles(self) -> None:
         if service.is_all_interval(self.tuning_scheme):
             self.declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
                                ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
@@ -175,8 +190,7 @@ class _LayoutMixin:
         if not self.mi_shown:
             self.declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
 
-    def _define_col_bands(self, show_interval_ratios, show_domain_units, show_temp,
-                          show_tuning, show_interest, label_w):
+    def _resolve_col_headers(self) -> None:
         domain_title = ("domain basis\nelements"
                         if service.domain_has_nonprimes(self.elements)
                         else "domain\nprimes")
@@ -189,6 +203,10 @@ class _LayoutMixin:
                       "interest": "other intervals\nof interest"}
         if self.show_unchanged:
             self.col_header["commas"] = "unrotated\nvector list"
+
+    def _define_col_bands(self, show_interval_ratios, show_domain_units, show_temp,
+                          show_tuning, show_interest, label_w):
+        self._resolve_col_headers()
         self.matlabel_primes_w = ((MATLABEL_W_SS if self.show_superspace else MATLABEL_W)
                                   if (self.show_header_symbols and show_temp) else 0)
         self.matlabel_ssprimes_w = MATLABEL_W_SSPRIMES if (self.show_header_symbols and self.show_superspace) else 0
@@ -310,71 +328,64 @@ class _LayoutMixin:
         for key, natural, present, collapsible, label in row_bands:
             if not present:
                 continue
-            folded = f"row:{key}" in self.collapsed
-            framed = key in FRAMED_ROWS and not folded
-            has_matlabel = (self.show_header_symbols and key in COL_LABELED_ROWS and not folded)
-            head_default = TOGGLE + 2 * TOGGLE_INSET - PAD
-            int_handle = (key == "vectors" and not folded and self.settings.get("drag_to_combine")
-                          and ((self.nc >= 2 and self.col_open("commas"))
-                               or (self.k >= 2 and not self.all_interval and self.col_open("targets"))
-                               or (self.nh >= 2 and self.col_open("held"))
-                               or (self.mi >= 2 and self.col_open("interest"))))
-            handle_band = (ROW_HANDLE_W + ROW_HANDLE_GAP) if int_handle else 0
-            base_head = 0 if folded else max(head_default, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else head_default)
-            head = base_head + handle_band
-            top_frame = (FRAME_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
-            bot_frame = (BRACE_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
-            charted = show_charts and key in CHARTED_ROWS and not folded and natural == ROW_H
-            chart_band = (CHART_H + CHART_GAP) if charted else 0
-            cap = self.caption_band(key, folded)
-            sym = SYMBOL_H if ((self.show_symbols or self.show_equiv) and key in SYMBOLED_ROWS and not folded) else 0
-            uni = UNIT_H if (self.show_units and key in UNITED_ROWS and not folded) else 0
-            pre = self.preset_band_h(key) if ((self.show_presets and key in PRESET_ROWS
-                                             or self.settings["all_interval"] and key == "vectors")
-                                            and not folded) else 0
-            schemebtn = (self.control_region_band_h(SCHEME_BTN_SQ)
-                         if (key == "projection" and self.settings["projection"] and not self.show_presets and not folded) else 0)
-            formctrl = (self.formchooser_band_h(key)
-                        if (self.show_form_controls and not self.show_presets
-                            and key in FORM_CHOOSER_ROWS and not folded) else 0)
-            cpick = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and self.show_presets
-                                               and self.col_open("commas")
-                                               and (self.nc > 0 or self.pending is not None) and not folded) else 0
-            ptext = self.ptext_band(key, folded)
-            if sym:   sym += BAND_GAP
-            if cap:   cap += BAND_GAP
-            if uni:   uni += BAND_GAP
-            if ptext: ptext += BAND_GAP
-            row_h = STRIP if folded else natural
-            chart_top = (y + head + top_frame) if charted else None
-            int_handle_top = (y + (handle_band - ROW_HANDLE_W) // 2) if int_handle else None
-            matlabel_top = (y + handle_band + (base_head - MATLABEL_H) // 2) if has_matlabel else None
-            self.row_cpick[key] = cpick
-            tile_h = head + top_frame + chart_band + row_h + bot_frame + cpick + sym + cap + uni + pre + ptext + formctrl + schemebtn
-            tile_h += tile_extra.get(key, 0)
-            self.rows[key] = RowBand(
-                y=y + head + top_frame + chart_band,
-                h=row_h,
-                label=label,
-                collapsible=collapsible,
-                tile_h=tile_h,
-                tile_top=y,
-                frame=bot_frame,
-                sym=sym,
-                cap=cap,
-                units=uni,
-                ptext=ptext,
-                pre=pre,
-                schemebtn=schemebtn,
-                nsub=round(natural / ROW_H),
-                chart_top=chart_top,
-                int_handle_top=int_handle_top,
-                matlabel_top=matlabel_top,
-            )
-            y += tile_h + GAP
+            band = self._compute_row_band(key, natural, collapsible, label, tile_extra, show_charts, y)
+            self.rows[key] = band
+            y += band.tile_h + GAP
         self.total_h = y
 
         self.fanout_y = self.branch_top_y + self.FAN
+
+    def _row_int_handle(self, key, folded):
+        return (key == "vectors" and not folded and self.settings.get("drag_to_combine")
+                and ((self.nc >= 2 and self.col_open("commas"))
+                     or (self.k >= 2 and not self.all_interval and self.col_open("targets"))
+                     or (self.nh >= 2 and self.col_open("held"))
+                     or (self.mi >= 2 and self.col_open("interest"))))
+
+    def _compute_row_band(self, key, natural, collapsible, label, tile_extra, show_charts, y) -> RowBand:
+        folded = f"row:{key}" in self.collapsed
+        framed = key in FRAMED_ROWS and not folded
+        has_matlabel = (self.show_header_symbols and key in COL_LABELED_ROWS and not folded)
+        head_default = TOGGLE + 2 * TOGGLE_INSET - PAD
+        int_handle = self._row_int_handle(key, folded)
+        handle_band = (ROW_HANDLE_W + ROW_HANDLE_GAP) if int_handle else 0
+        base_head = 0 if folded else max(head_default, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else head_default)
+        head = base_head + handle_band
+        top_frame = (FRAME_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
+        bot_frame = (BRACE_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
+        charted = show_charts and key in CHARTED_ROWS and not folded and natural == ROW_H
+        chart_band = (CHART_H + CHART_GAP) if charted else 0
+        cap = self.caption_band(key, folded)
+        sym = SYMBOL_H if ((self.show_symbols or self.show_equiv) and key in SYMBOLED_ROWS and not folded) else 0
+        uni = UNIT_H if (self.show_units and key in UNITED_ROWS and not folded) else 0
+        pre = self.preset_band_h(key) if (((self.show_presets and key in PRESET_ROWS)
+                                         or (self.settings["all_interval"] and key == "vectors"))
+                                        and not folded) else 0
+        schemebtn = (self.control_region_band_h(SCHEME_BTN_SQ)
+                     if (key == "projection" and self.settings["projection"] and not self.show_presets and not folded) else 0)
+        formctrl = (self.formchooser_band_h(key)
+                    if (self.show_form_controls and not self.show_presets
+                        and key in FORM_CHOOSER_ROWS and not folded) else 0)
+        cpick = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and self.show_presets
+                                           and self.col_open("commas")
+                                           and (self.nc > 0 or self.pending is not None) and not folded) else 0
+        ptext = self.ptext_band(key, folded)
+        sym += BAND_GAP if sym else 0
+        cap += BAND_GAP if cap else 0
+        uni += BAND_GAP if uni else 0
+        ptext += BAND_GAP if ptext else 0
+        row_h = STRIP if folded else natural
+        chart_top = (y + head + top_frame) if charted else None
+        int_handle_top = (y + (handle_band - ROW_HANDLE_W) // 2) if int_handle else None
+        matlabel_top = (y + handle_band + (base_head - MATLABEL_H) // 2) if has_matlabel else None
+        self.row_cpick[key] = cpick
+        tile_h = (head + top_frame + chart_band + row_h + bot_frame + cpick + sym + cap + uni
+                  + pre + ptext + formctrl + schemebtn + tile_extra.get(key, 0))
+        return RowBand(
+            y=y + head + top_frame + chart_band, h=row_h, label=label, collapsible=collapsible,
+            tile_h=tile_h, tile_top=y, frame=bot_frame, sym=sym, cap=cap, units=uni, ptext=ptext,
+            pre=pre, schemebtn=schemebtn, nsub=round(natural / ROW_H),
+            chart_top=chart_top, int_handle_top=int_handle_top, matlabel_top=matlabel_top)
 
     def _init_group_geometry(self) -> None:
         self.group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",

@@ -76,6 +76,9 @@ class _ResolveMixin:
         if self.target_spec is None:
             self.target_spec = service.DEFAULT_TARGET_SPEC
         self.collapsed = self.collapsed or frozenset()
+        self._build(generator_tuning, target_override, held_vectors, pending_comma)
+
+    def _build(self, generator_tuning, target_override, held_vectors, pending_comma) -> None:
         (show_counts, show_charts, show_ranges, show_domain_units, show_temp,
          show_tuning, show_interest, show_interval_ratios) = self._unpack_show_flags()
         label_w = LABEL_W
@@ -189,6 +192,18 @@ class _ResolveMixin:
 
     def _resolve_interval_sets(self, generator_tuning, target_override, held_vectors, pending_comma,
                                show_temp, show_tuning) -> None:
+        self._resolve_ghost_previews()
+        self._resolve_targets(target_override)
+        self._resolve_canon_form()
+        self._resolve_held(held_vectors)
+        self._resolve_tuning(generator_tuning, target_override)
+        self._resolve_commas()
+        self._resolve_unchanged(pending_comma, show_temp, show_tuning)
+        self._resolve_interest()
+        self._resolve_ghost_mapped()
+        self._resolve_col_ids()
+
+    def _resolve_ghost_previews(self) -> None:
         self.gens = service.generators(self.state.mapping, self.elements)
         self.ghost_new = None
         self.ghost_row_map = self.ghost_row_ratio = None
@@ -207,6 +222,8 @@ class _ResolveMixin:
             self.ghost_comma_vec = self.ghost_new.comma_basis[-1] if self.ghost_new.comma_basis else None
             born_crs = service.comma_ratios(self.ghost_new.comma_basis, self.elements) if self.ghost_new.comma_basis else ()
             self.ghost_comma_ratio = born_crs[-1] if born_crs else ""
+
+    def _resolve_targets(self, target_override) -> None:
         self.targets = service.displayed_targets(self.state, self.tuning_scheme, self.target_spec, target_override)
         self.all_interval = service.is_all_interval(self.tuning_scheme)
         self.targets_editable = not self.all_interval
@@ -214,6 +231,8 @@ class _ResolveMixin:
         self.pending_target = list(self.pending_target) if (self.pending_target is not None and self.targets_editable) else None
         self.k_shown = self.k + (1 if self.pending_target is not None else 0)
         self.mapped = service.mapped_intervals(self.state.mapping, self.targets, self.elements)
+
+    def _resolve_canon_form(self) -> None:
         self.canon_mapping = service.canonical_mapping(self.state.mapping)
         self.rc = len(self.canon_mapping)
         self.form_M = service.form_matrix(self.state.mapping)
@@ -227,12 +246,16 @@ class _ResolveMixin:
         self.form_is_canonical = self.mapping_form_key == "canonical"
         self.show_form_subscript = self.show_form and self.form_is_canonical
         self.show_canon = self.show_form_tiles and not self.form_is_canonical
+
+    def _resolve_held(self, held_vectors) -> None:
         self.target_vectors = service.target_interval_vectors(self.targets, self.d, self.elements)
         self.held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(self.d)) for m in held_vectors) if self.show_optimization else ()
         self.nh = len(self.held)
         self.pending_held = list(self.pending_held) if (self.pending_held is not None and self.show_optimization) else None
         self.nh_shown = self.nh + (1 if self.pending_held is not None else 0)
         self.held_ratios = service.comma_ratios(self.held, self.elements)
+
+    def _resolve_tuning(self, generator_tuning, target_override) -> None:
         if generator_tuning is not None and len(generator_tuning) == len(self.state.mapping):
             self.tun = service.tuning_from_generators(self.state.mapping, generator_tuning, self.elements)
             self._tun_from_generators = True
@@ -249,10 +272,14 @@ class _ResolveMixin:
         self.target_sizes = service.interval_sizes(self.tun, self.targets, self.elements, weights=self.target_weights)
         self.held_mapped = service.mapped_intervals(self.state.mapping, self.held_ratios, self.elements)
         self.held_sizes = service.interval_sizes(self.tun, self.held_ratios, self.elements)
+
+    def _resolve_commas(self) -> None:
         self.comma_ratios = service.comma_ratios(self.state.comma_basis, self.elements) if self.state.n else ()
         self.nc = len(self.comma_ratios)
         self.mapped_commas = service.mapped_commas(self.state.mapping, self.state.comma_basis)
         self.comma_sizes = service.interval_sizes(self.tun, self.comma_ratios, self.elements)
+
+    def _resolve_unchanged(self, pending_comma, show_temp, show_tuning) -> None:
         _udata = (service.unchanged_interval_data(self.state, self.held_basis_ratios, self.tun,
                                                   self.tuning_scheme, self.elements, self.custom_prescaler)
                   if (show_temp and show_tuning and self.settings["projection"]) else None)
@@ -301,6 +328,8 @@ class _ResolveMixin:
                     if renamed.count("list") > 1:
                         renamed = renamed.replace("unrotated vector list", "unrotated vector", 1)
                     self.effective_captions[(rk, ck)] = renamed
+
+    def _resolve_interest(self) -> None:
         self.interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(self.d)) for m in self.interest)
         self.mi = len(self.interest)
         self.pending_interest = list(self.pending_interest) if self.pending_interest is not None else None
@@ -310,6 +339,8 @@ class _ResolveMixin:
         self.interest_ratios = service.comma_ratios(self.interest, self.elements)
         self.interest_mapped = service.mapped_intervals(self.state.mapping, self.interest_ratios, self.elements)
         self.interest_sizes = service.interval_sizes(self.tun, self.interest_ratios, self.elements)
+
+    def _resolve_ghost_mapped(self) -> None:
         if self.ghost_row and self.ghost_new is not None:
             nm = self.ghost_new.mapping
             def _newborn_mapped(ratios):
@@ -327,6 +358,8 @@ class _ResolveMixin:
             self.ghost_comma_complexity = service.interval_complexities(
                 self.state.mapping, self.tuning_scheme, (self.ghost_comma_ratio,),
                 prescaler_override=self.custom_prescaler, domain_basis=self.elements)[0]
+
+    def _resolve_col_ids(self) -> None:
         self._col_ids = {
             name: assign_column_tokens(self.prev_ids.get(name), keys, claim_unmatched=claim)
             for name, keys, claim in (("targets", self.targets, False),
@@ -385,7 +418,8 @@ class _ResolveMixin:
                                     if self.show_ss_projection else None)
         self.ss_projection_rationals = (service.superspace_projection_matrix_rationals(self.state, self.held_basis_ratios)
                                         if self.show_ss_projection else None)
-        _lift = lambda vs: service.lift_vectors_to_superspace(self.elements, vs)
+        def _lift(vs):
+            return service.lift_vectors_to_superspace(self.elements, vs)
         _ssp = self.ss_projection_rationals
         self.ss_proj_basis = service.project_vectors(_ssp, service.basis_in_superspace(self.elements))
         self.ss_proj_detempering = service.project_vectors(_ssp, _lift(self.detempering_vectors))

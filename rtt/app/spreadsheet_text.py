@@ -147,6 +147,26 @@ def removed_cell_ids(old: Layout, new: Layout) -> frozenset:
                      if c.kind in RINGABLE_KINDS and not c.pending and c.id not in after)
 
 
+def _match_tokens_by_key(tokens, prev, keys) -> list[bool]:
+    claimed = [False] * len(prev)
+    for j, key in enumerate(keys):
+        for pi, (tok, pkey) in enumerate(prev):
+            if not claimed[pi] and pkey == key:
+                tokens[j], claimed[pi] = tok, True
+                break
+    return claimed
+
+
+def _claim_unmatched_tokens(tokens, prev, claimed, keys) -> None:
+    unclaimed = iter([pi for pi in range(len(prev)) if not claimed[pi]])
+    for j in range(len(keys)):
+        if tokens[j] is None:
+            pi = next(unclaimed, None)
+            if pi is None:
+                break
+            tokens[j] = prev[pi][0]
+
+
 def assign_column_tokens(prev, keys, claim_unmatched=False):
     keys = list(keys)
     prev = list(prev or [])
@@ -155,20 +175,9 @@ def assign_column_tokens(prev, keys, claim_unmatched=False):
         for j in range(len(keys)):
             tokens[j] = prev[j][0]
     else:
-        claimed = [False] * len(prev)
-        for j, key in enumerate(keys):
-            for pi, (tok, pkey) in enumerate(prev):
-                if not claimed[pi] and pkey == key:
-                    tokens[j], claimed[pi] = tok, True
-                    break
+        claimed = _match_tokens_by_key(tokens, prev, keys)
         if claim_unmatched:
-            unclaimed = iter([pi for pi in range(len(prev)) if not claimed[pi]])
-            for j in range(len(keys)):
-                if tokens[j] is None:
-                    pi = next(unclaimed, None)
-                    if pi is None:
-                        break
-                    tokens[j] = prev[pi][0]
+            _claim_unmatched_tokens(tokens, prev, claimed, keys)
     nxt = max([t for t in tokens if t is not None] + [tok for tok, _ in prev] + [-1]) + 1
     for j in range(len(keys)):
         if tokens[j] is None:
