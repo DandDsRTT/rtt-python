@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import namedtuple
 from dataclasses import dataclass
-from functools import partial
 
 from rtt.app.service.core import (
     DEFAULT_TARGET_SPEC,
@@ -218,6 +217,730 @@ class DerivedQuantities:
     superspace_tun: Tuning | None = None
 
 
+@dataclass(frozen=True)
+class _Fmt:
+    decimals: bool
+    superspace: bool
+
+    def r(self, key, data, fmt=str) -> str:
+        return render_ebk(ebk_convention(*key, superspace=self.superspace), data, fmt)
+
+    def cents_map(self, values) -> str:
+        return _cents_map(values, self.decimals)
+
+    def cents_list(self, values, wrap: bool = True) -> str:
+        return _cents_list(values, wrap, self.decimals)
+
+    def cents_genmap(self, values) -> str:
+        return _cents_genmap(values, self.decimals)
+
+    def prescale(self, vectors, col: str = "[⟩", outer: str = "[]") -> str:
+        return _prescale_vector_list(vectors, col, outer, self.decimals)
+
+
+@dataclass(frozen=True)
+class _Core:
+    targets: tuple
+    comma_basis: tuple
+    commas: tuple
+    mapped: tuple
+    mapped_comma: tuple
+    target_vectors: tuple
+    held_ratios: tuple
+    tun: Tuning
+    target_weights: tuple
+    target_sizes: IntervalSizes
+    comma_sizes: IntervalSizes
+    detemper_ratios: tuple
+    detemper_sizes: IntervalSizes
+    detemper_vectors: tuple
+    prime_ratios: tuple
+
+
+@dataclass(frozen=True)
+class _Prescale:
+    prescaler: object
+    is_matrix: bool
+    size_factor: object
+    bare_rows: list
+    bare_size_row: tuple
+
+
+@dataclass(frozen=True)
+class _Unchanged:
+    basis: list
+    mapped_cols: list
+    prescaled: list
+    tempered: list
+    just: list
+    errors: list
+    comps: list
+    scaling: list
+
+
+@dataclass(frozen=True)
+class _Canon:
+    mapping: tuple
+    rc: int
+    form: tuple
+    inverse_form: tuple
+    mapped: tuple
+    mapped_comma: tuple
+    mapped_detempering: tuple
+    u_mapped_cols: list
+
+
+@dataclass(frozen=True)
+class _Inputs:
+    state: TemperamentState
+    scheme: str
+    target_spec: str
+    held: tuple
+    interest: tuple
+    generator_tuning: object
+    target_override: object
+    nonprime_approach: str
+    superspace: bool
+    superspace_generator_override: object
+    consolidate_v: bool
+    held_basis_ratios: tuple
+    custom_prescaler: object
+    derived: DerivedQuantities | None
+    decimals: bool
+
+    @property
+    def db(self) -> tuple:
+        return self.state.domain_basis
+
+
+@dataclass(frozen=True)
+class _Ctx:
+    inp: _Inputs
+    fmt: _Fmt
+    core: _Core
+    prescale: _Prescale
+    unchanged: _Unchanged
+    canon: _Canon
+
+    @property
+    def state(self) -> TemperamentState:
+        return self.inp.state
+
+    @property
+    def scheme(self) -> str:
+        return self.inp.scheme
+
+    @property
+    def db(self) -> tuple:
+        return self.inp.state.domain_basis
+
+    @property
+    def d(self) -> int:
+        return self.inp.state.d
+
+    @property
+    def held(self) -> tuple:
+        return self.inp.held
+
+    @property
+    def interest(self) -> tuple:
+        return self.inp.interest
+
+    @property
+    def consolidate_v(self) -> bool:
+        return self.inp.consolidate_v
+
+    @property
+    def superspace(self) -> bool:
+        return self.inp.superspace
+
+    @property
+    def held_basis_ratios(self) -> tuple:
+        return self.inp.held_basis_ratios
+
+    @property
+    def custom_prescaler(self) -> object:
+        return self.inp.custom_prescaler
+
+    @property
+    def nonprime_approach(self) -> str:
+        return self.inp.nonprime_approach
+
+    @property
+    def superspace_generator_override(self) -> object:
+        return self.inp.superspace_generator_override
+
+    @property
+    def derived(self) -> DerivedQuantities | None:
+        return self.inp.derived
+
+    def r(self, key, data, fmt=str) -> str:
+        return self.fmt.r(key, data, fmt)
+
+    def prescaled(self, vectors):
+        return _apply_prescaler(self.prescale, self.state.d, vectors)
+
+    def sized(self, cols):
+        return _apply_size(self.prescale, cols)
+
+    def complexities(self, ratios):
+        return interval_complexities(
+            self.state.mapping,
+            self.scheme,
+            ratios,
+            domain_basis=self.db,
+            prescaler_override=self.custom_prescaler,
+        )
+
+
+def _identity(n: int) -> list:
+    return [[1 if i == k else 0 for k in range(n)] for i in range(n)]
+
+
+def _apply_prescaler(prescale: _Prescale, d: int, vectors):
+    p = prescale.prescaler
+    if prescale.is_matrix:
+        return tuple(
+            tuple(sum(p[i][k] * v[k] for k in range(d)) for i in range(d)) for v in vectors
+        )
+    return tuple(tuple(p[i] * v[i] for i in range(d)) for v in vectors)
+
+
+def _apply_size(prescale: _Prescale, cols):
+    if not prescale.size_factor:
+        return cols
+    return tuple((*col, prescale.size_factor * sum(col)) for col in cols)
+
+
+def _derive_tuning(inp: _Inputs, held_ratios):
+    if inp.derived is not None:
+        return inp.derived.tun
+    state = inp.state
+    if inp.generator_tuning is not None and len(inp.generator_tuning) == len(state.mapping):
+        return tuning_from_generators(state.mapping, inp.generator_tuning, inp.db)
+    return tuning(
+        state.mapping,
+        inp.scheme,
+        inp.db,
+        inp.nonprime_approach,
+        held=held_ratios,
+        prescaler_override=inp.custom_prescaler,
+        targets=inp.target_override,
+    )
+
+
+def _derive_core(inp: _Inputs, targets, held_ratios) -> _Core:
+    state, db = inp.state, inp.db
+    comma_basis = state.comma_basis if state.n else ()
+    commas = comma_ratios(comma_basis, db)
+    tun = _derive_tuning(inp, held_ratios)
+    weights = (
+        inp.derived.target_weights
+        if inp.derived
+        else interval_weights(
+            state.mapping,
+            inp.scheme,
+            targets,
+            domain_basis=db,
+            prescaler_override=inp.custom_prescaler,
+        )
+    )
+    target_sizes = (
+        inp.derived.target_sizes
+        if inp.derived
+        else interval_sizes(tun, targets, db, weights=weights)
+    )
+    comma_sizes = inp.derived.comma_sizes if inp.derived else interval_sizes(tun, commas, db)
+    detemper_ratios = generators(state.mapping, db)
+    return _Core(
+        targets,
+        comma_basis,
+        commas,
+        mapped_intervals(state.mapping, targets, db),
+        mapped_commas(state.mapping, comma_basis),
+        target_interval_vectors(targets, state.d, db),
+        held_ratios,
+        tun,
+        weights,
+        target_sizes,
+        comma_sizes,
+        detemper_ratios,
+        interval_sizes(tun, detemper_ratios, db),
+        generator_detempering(state.mapping),
+        tuple(element_ratio(e) for e in db),
+    )
+
+
+def _derive_prescale(inp: _Inputs) -> _Prescale:
+    state, db = inp.state, inp.db
+    prescaler = complexity_prescaler(
+        state.mapping,
+        inp.scheme,
+        override=inp.custom_prescaler,
+        domain_basis=db,
+        nonprime_approach=inp.nonprime_approach,
+    )
+    is_matrix = bool(prescaler) and isinstance(prescaler[0], (tuple, list))
+    size_factor = complexity_size_factor(inp.scheme)
+    if is_matrix:
+        bare_rows = [tuple(prescaler[i]) for i in range(state.d)]
+    else:
+        bare_rows = [
+            tuple(prescaler[i] if k == i else 0 for k in range(state.d)) for i in range(state.d)
+        ]
+    bare_size_row = (
+        (tuple(size_factor * sum(col) for col in zip(*bare_rows, strict=False)),)
+        if size_factor
+        else ()
+    )
+    return _Prescale(prescaler, is_matrix, size_factor, bare_rows, bare_size_row)
+
+
+def _derive_unchanged(inp: _Inputs, core: _Core, prescale: _Prescale) -> _Unchanged:
+    state, db = inp.state, inp.db
+    udata = (
+        unchanged_interval_data(
+            state, inp.held_basis_ratios, core.tun, inp.scheme, db, inp.custom_prescaler
+        )
+        if inp.consolidate_v
+        else None
+    )
+    if udata is None:
+        return _Unchanged([], [], [], [], [], [], [], [])
+    nrow = len(state.mapping)
+    mapped_cols = [
+        None if udata.basis[j] is None else tuple(udata.mapped[i][j] for i in range(nrow))
+        for j in range(len(udata.basis))
+    ]
+    prescaled = [
+        None if u is None else _apply_size(prescale, _apply_prescaler(prescale, state.d, (u,)))[0]
+        for u in udata.basis
+    ]
+    return _Unchanged(
+        list(udata.basis),
+        mapped_cols,
+        prescaled,
+        list(udata.sizes.tempered),
+        list(udata.sizes.just),
+        list(udata.sizes.errors),
+        list(udata.complexities),
+        [_DASH if v is None else "1" for v in udata.basis],
+    )
+
+
+def _derive_canon(inp: _Inputs, targets, core: _Core, unchanged: _Unchanged) -> _Canon:
+    state, db = inp.state, inp.db
+    mapping = canonical_mapping(state.mapping)
+    rc = len(mapping)
+    u_mapped_cols = [
+        None
+        if u is None
+        else tuple(sum(mapping[i][p] * u[p] for p in range(state.d)) for i in range(rc))
+        for u in unchanged.basis
+    ]
+    return _Canon(
+        mapping,
+        rc,
+        form_matrix(state.mapping),
+        inverse_form_matrix(state.mapping),
+        mapped_intervals(mapping, targets, db),
+        mapped_commas(mapping, core.comma_basis),
+        mapped_commas(mapping, core.detemper_vectors),
+        u_mapped_cols,
+    )
+
+
+def _resolve_targets(inp: _Inputs):
+    if inp.derived:
+        return inp.derived.targets
+    return displayed_targets(inp.state, inp.scheme, inp.target_spec, inp.target_override)
+
+
+def _build_context(inp: _Inputs) -> _Ctx:
+    targets = _resolve_targets(inp)
+    held_ratios = comma_ratios(inp.held, inp.db) if inp.held else ()
+    core = _derive_core(inp, targets, held_ratios)
+    prescale = _derive_prescale(inp)
+    unchanged = _derive_unchanged(inp, core, prescale)
+    canon = _derive_canon(inp, targets, core, unchanged)
+    fmt = _Fmt(inp.decimals, inp.superspace)
+    return _Ctx(inp, fmt, core, prescale, unchanged, canon)
+
+
+def _base_structural(ctx: _Ctx) -> dict:
+    s = ctx.state
+    db = ctx.db
+    core = ctx.core
+    canon = ctx.canon
+    un = ctx.unchanged
+    return {
+        ("quantities", "primes"): ".".join(str(e) for e in db),
+        ("vectors", "commas"): _ket_list(list(core.comma_basis) + un.basis, "⟩"),
+        ("projection", "commas"): _ket_list([(0,) * s.d for _ in core.commas] + un.basis, "⟩"),
+        ("scaling_factors", "commas"): ctx.r(
+            ("scaling_factors", "commas"), ["0"] * len(core.commas) + un.scaling
+        ),
+        ("vectors", "targets"): _ket_list(core.target_vectors, "⟩"),
+        ("vectors", "detempering"): _ket_list(core.detemper_vectors, "⟩"),
+        ("mapping", "primes"): mapping_ebk(s),
+        ("mapping", "commas"): _ket_list(
+            list(zip(*core.mapped_comma, strict=False)) + un.mapped_cols, "}"
+        ),
+        ("mapping", "targets"): _ket_list(zip(*core.mapped, strict=False), "}"),
+        ("vectors", "primes"): ctx.r(("vectors", "primes"), _identity(s.d)),
+        ("mapping", "gens"): ctx.r(("mapping", "gens"), _identity(len(s.mapping))),
+        ("mapping", "detempering"): ctx.r(("mapping", "detempering"), _identity(len(s.mapping))),
+        ("canon", "primes"): ctx.r(("canon", "primes"), canon.mapping),
+        ("canon", "gens"): ctx.r(("canon", "gens"), canon.form),
+        ("canon", "canongens"): ctx.r(("canon", "canongens"), _identity(canon.rc)),
+        ("canon", "detempering"): ctx.r(
+            ("canon", "detempering"), list(zip(*canon.mapped_detempering, strict=False))
+        ),
+        ("canon", "commas"): _ket_list(
+            list(zip(*canon.mapped_comma, strict=False)) + canon.u_mapped_cols, "}"
+        ),
+        ("canon", "targets"): _ket_list(zip(*canon.mapped, strict=False), "}"),
+        ("mapping", "canongens"): ctx.r(("mapping", "canongens"), canon.inverse_form),
+    }
+
+
+def _canon_gen_sizes(ctx: _Ctx) -> list:
+    tun = ctx.core.tun
+    inverse_form = ctx.canon.inverse_form
+    nrow = len(ctx.state.mapping)
+    return [
+        sum(tun.generator_map[k] * inverse_form[k][j] for k in range(nrow))
+        for j in range(ctx.canon.rc)
+    ]
+
+
+def _base_sizes(ctx: _Ctx) -> dict:
+    core = ctx.core
+    un = ctx.unchanged
+    tun = core.tun
+    fmt = ctx.fmt
+    return {
+        ("tuning", "canongens"): fmt.cents_genmap(_canon_gen_sizes(ctx)),
+        ("tuning", "gens"): fmt.cents_genmap(tun.generator_map),
+        ("tuning", "primes"): fmt.cents_map(tun.tuning_map),
+        ("tuning", "commas"): fmt.cents_list(list(core.comma_sizes.tempered) + un.tempered),
+        ("tuning", "detempering"): fmt.cents_genmap(core.detemper_sizes.tempered),
+        ("tuning", "targets"): fmt.cents_list(core.target_sizes.tempered),
+        ("just", "primes"): fmt.cents_map(tun.just_map),
+        ("just", "commas"): fmt.cents_list(list(core.comma_sizes.just) + un.just),
+        ("just", "detempering"): fmt.cents_list(core.detemper_sizes.just),
+        ("just", "targets"): fmt.cents_list(core.target_sizes.just),
+        ("retune", "primes"): fmt.cents_map(tun.retuning_map),
+        ("retune", "commas"): fmt.cents_list(list(core.comma_sizes.errors) + un.errors),
+        ("retune", "detempering"): fmt.cents_list(core.detemper_sizes.errors),
+        ("retune", "targets"): fmt.cents_list(core.target_sizes.errors),
+        ("damage", "targets"): fmt.cents_list(core.target_sizes.damage),
+    }
+
+
+def _base_prescale_complexity(ctx: _Ctx) -> dict:
+    core = ctx.core
+    un = ctx.unchanged
+    pre = ctx.prescale
+    fmt = ctx.fmt
+    return {
+        ("prescaling", "primes"): fmt.prescale(
+            pre.bare_rows + list(pre.bare_size_row), col="⟨]", outer="[⟩"
+        ),
+        ("prescaling", "commas"): fmt.prescale(
+            list(ctx.sized(ctx.prescaled(core.comma_basis))) + un.prescaled
+        ),
+        ("prescaling", "detempering"): fmt.prescale(
+            ctx.sized(ctx.prescaled(core.detemper_vectors))
+        ),
+        ("prescaling", "targets"): fmt.prescale(ctx.sized(ctx.prescaled(core.target_vectors))),
+        ("complexity", "primes"): fmt.cents_map(ctx.complexities(core.prime_ratios)),
+        ("complexity", "commas"): fmt.cents_list(list(ctx.complexities(core.commas)) + un.comps),
+        ("complexity", "detempering"): fmt.cents_list(ctx.complexities(core.detemper_ratios)),
+        ("complexity", "targets"): fmt.cents_list(ctx.complexities(core.targets)),
+        ("weight", "targets"): fmt.cents_list(core.target_weights),
+    }
+
+
+def _held_values(ctx: _Ctx) -> dict:
+    s = ctx.state
+    db = ctx.db
+    held = ctx.held
+    held_ratios = ctx.core.held_ratios
+    fmt = ctx.fmt
+    held_sizes = interval_sizes(ctx.core.tun, held_ratios, db)
+    held_mapped = mapped_intervals(s.mapping, held_ratios, db)
+    canon_held_mapped = mapped_intervals(ctx.canon.mapping, held_ratios, db)
+    return {
+        ("vectors", "held"): _ket_list(held, "⟩"),
+        ("mapping", "held"): _ket_list(zip(*held_mapped, strict=False), "}"),
+        ("canon", "held"): _ket_list(zip(*canon_held_mapped, strict=False), "}"),
+        ("tuning", "held"): fmt.cents_list(held_sizes.tempered),
+        ("just", "held"): fmt.cents_list(held_sizes.just),
+        ("retune", "held"): fmt.cents_list(held_sizes.errors),
+        ("prescaling", "held"): fmt.prescale(ctx.sized(ctx.prescaled(held))),
+        ("complexity", "held"): fmt.cents_list(ctx.complexities(held_ratios)),
+    }
+
+
+def _interest_values(ctx: _Ctx) -> dict:
+    s = ctx.state
+    db = ctx.db
+    interest = ctx.interest
+    fmt = ctx.fmt
+    interest_ratios = comma_ratios(interest, db)
+    interest_mapped = mapped_intervals(s.mapping, interest_ratios, db)
+    canon_interest_mapped = mapped_intervals(ctx.canon.mapping, interest_ratios, db)
+    interest_sizes = interval_sizes(ctx.core.tun, interest_ratios, db)
+    return {
+        ("vectors", "interest"): _ket_list(interest, "⟩", wrap=False),
+        ("mapping", "interest"): _ket_list(zip(*interest_mapped, strict=False), "}", wrap=False),
+        ("canon", "interest"): _ket_list(
+            zip(*canon_interest_mapped, strict=False), "}", wrap=False
+        ),
+        ("tuning", "interest"): fmt.cents_list(interest_sizes.tempered, wrap=False),
+        ("just", "interest"): fmt.cents_list(interest_sizes.just, wrap=False),
+        ("retune", "interest"): fmt.cents_list(interest_sizes.errors, wrap=False),
+        ("prescaling", "interest"): fmt.prescale(ctx.sized(ctx.prescaled(interest)), outer=""),
+        ("complexity", "interest"): fmt.cents_list(ctx.complexities(interest_ratios), wrap=False),
+    }
+
+
+def _proj_cols(ctx: _Ctx, p_rat, vectors):
+    cols = project_vectors(p_rat, vectors)
+    return list(cols) if cols else [tuple(_DASH for _ in range(ctx.d)) for _ in vectors]
+
+
+def _projection_values(ctx: _Ctx) -> dict:
+    s = ctx.state
+    hbr = ctx.held_basis_ratios
+    p_rat = projection_matrix_rationals(s, hbr)
+    out = {
+        ("projection", "primes"): projection_ebk(tuning_projection(s, hbr), s.d),
+        ("projection", "gens"): embedding_ebk(tuning_embedding(s, hbr), s.d, len(s.mapping)),
+        ("projection", "canongens"): embedding_ebk(
+            canonical_generator_embedding(s, hbr), s.d, ctx.canon.rc
+        ),
+        ("projection", "detempering"): ctx.r(
+            ("projection", "detempering"), _proj_cols(ctx, p_rat, ctx.core.detemper_vectors)
+        ),
+        ("projection", "targets"): _ket_list(_proj_cols(ctx, p_rat, ctx.core.target_vectors), "⟩"),
+    }
+    if ctx.held:
+        out[("projection", "held")] = _ket_list(_proj_cols(ctx, p_rat, ctx.held), "⟩")
+    if ctx.interest:
+        out[("projection", "interest")] = _ket_list(
+            _proj_cols(ctx, p_rat, ctx.interest), "⟩", wrap=False
+        )
+    return out
+
+
+@dataclass(frozen=True)
+class _SsCtx:
+    ml: tuple
+    ss_primes: tuple
+    mjl: tuple
+    mlgl: tuple
+    msl: tuple
+    bl: tuple
+    ss_tun: Tuning
+    dL: int
+    ss_prescaler: object
+
+
+def _superspace_tuning(ctx: _Ctx) -> Tuning:
+    derived = ctx.derived
+    if derived is not None and derived.superspace_tun is not None:
+        return derived.superspace_tun
+    return superspace_tuning(
+        ctx.state,
+        ctx.scheme,
+        ctx.nonprime_approach,
+        generator_override=ctx.superspace_generator_override,
+    )
+
+
+def _derive_superspace(ctx: _Ctx) -> _SsCtx:
+    s = ctx.state
+    ss_primes = superspace_primes(ctx.db)
+    return _SsCtx(
+        superspace_mapping(s),
+        ss_primes,
+        superspace_just_mapping(ss_primes),
+        superspace_self_map(s),
+        mapping_to_superspace_generators(s),
+        basis_in_superspace(ctx.db),
+        _superspace_tuning(ctx),
+        len(ss_primes),
+        superspace_complexity_prescaler(s, ctx.scheme),
+    )
+
+
+def _ss_u(ctx: _Ctx) -> list:
+    db = ctx.db
+    return [
+        None if u is None else lift_vectors_to_superspace(db, (u,))[0] for u in ctx.unchanged.basis
+    ]
+
+
+def _prescaled_ss(ssc: _SsCtx, vectors):
+    return tuple(tuple(ssc.ss_prescaler[i] * v[i] for i in range(ssc.dL)) for v in vectors)
+
+
+def _ss_prod(ctx: _Ctx, ssc: _SsCtx, vs):
+    return ctx.sized(_prescaled_ss(ssc, lift_vectors_to_superspace(ctx.db, vs)))
+
+
+def _ssp_cols(ctx: _Ctx, p_L, dL: int, vectors):
+    cols = project_vectors(p_L, lift_vectors_to_superspace(ctx.db, vectors))
+    return list(cols) if cols else [tuple(_DASH for _ in range(dL)) for _ in vectors]
+
+
+def _ss_base(ctx: _Ctx, ssc: _SsCtx) -> dict:
+    s = ctx.state
+    db = ctx.db
+    core = ctx.core
+    ss_u = _ss_u(ctx)
+    ss_u_mapped = [
+        None if u is None else map_vectors_into_superspace_generators(s, (u,))[0]
+        for u in ctx.unchanged.basis
+    ]
+    return {
+        ("ss_vectors", "primes"): ctx.r(("ss_vectors", "primes"), ssc.bl),
+        ("ss_vectors", "ssprimes"): ctx.r(("ss_vectors", "ssprimes"), ssc.mjl),
+        ("ss_vectors", "commas"): _ket_list(
+            list(lift_vectors_to_superspace(db, s.comma_basis)) + ss_u, "⟩"
+        ),
+        ("ss_vectors", "targets"): _ket_list(
+            lift_vectors_to_superspace(db, core.target_vectors), "⟩"
+        ),
+        ("ss_vectors", "detempering"): _ket_list(
+            lift_vectors_to_superspace(db, core.detemper_vectors), "⟩"
+        ),
+        ("ss_vectors", "interest"): _ket_list(
+            lift_vectors_to_superspace(db, ctx.interest), "⟩", wrap=False
+        ),
+        ("ss_mapping", "ssprimes"): ctx.r(("ss_mapping", "ssprimes"), ssc.ml),
+        ("ss_mapping", "primes"): ctx.r(("ss_mapping", "primes"), ssc.msl),
+        ("ss_mapping", "ssgens"): ctx.r(("ss_mapping", "ssgens"), ssc.mlgl),
+        ("ss_mapping", "commas"): _ket_list(
+            list(map_vectors_into_superspace_generators(s, s.comma_basis)) + ss_u_mapped, "}"
+        ),
+        ("ss_mapping", "targets"): _ket_list(
+            map_vectors_into_superspace_generators(s, core.target_vectors), "}"
+        ),
+        ("ss_mapping", "detempering"): ctx.r(
+            ("ss_mapping", "detempering"),
+            map_vectors_into_superspace_generators(s, core.detemper_vectors),
+        ),
+        ("ss_mapping", "interest"): _ket_list(
+            map_vectors_into_superspace_generators(s, ctx.interest), "}", wrap=False
+        ),
+        ("tuning", "ssgens"): ctx.fmt.cents_genmap(ssc.ss_tun.generator_map),
+        ("tuning", "ssprimes"): ctx.fmt.cents_map(ssc.ss_tun.tuning_map),
+        ("just", "ssprimes"): ctx.fmt.cents_map(ssc.ss_tun.just_map),
+        ("retune", "ssprimes"): ctx.fmt.cents_map(ssc.ss_tun.retuning_map),
+    }
+
+
+def _ss_held(ctx: _Ctx) -> dict:
+    db = ctx.db
+    held = ctx.held
+    return {
+        ("ss_vectors", "held"): _ket_list(lift_vectors_to_superspace(db, held), "⟩"),
+        ("ss_mapping", "held"): _ket_list(
+            map_vectors_into_superspace_generators(ctx.state, held), "}"
+        ),
+    }
+
+
+def _ss_projection(ctx: _Ctx, ssc: _SsCtx) -> dict:
+    s = ctx.state
+    hbr = ctx.held_basis_ratios
+    dL = ssc.dL
+    core = ctx.core
+    p_L = superspace_projection_matrix_rationals(s, hbr)
+    proj_bl = project_vectors(p_L, ssc.bl) or [tuple(_DASH for _ in range(dL)) for _ in ssc.bl]
+    out = {
+        ("ss_projection", "ssprimes"): projection_ebk(superspace_tuning_projection(s, hbr), dL),
+        ("ss_projection", "ssgens"): embedding_ebk(
+            superspace_tuning_embedding(s, hbr), dL, superspace_rank(s)
+        ),
+        ("ss_projection", "primes"): ctx.r(("ss_projection", "primes"), proj_bl),
+        ("ss_projection", "detempering"): ctx.r(
+            ("ss_projection", "detempering"), _ssp_cols(ctx, p_L, dL, core.detemper_vectors)
+        ),
+        ("ss_projection", "commas"): _ket_list([(0,) * dL for _ in core.commas] + _ss_u(ctx), "⟩"),
+        ("ss_projection", "targets"): _ket_list(_ssp_cols(ctx, p_L, dL, core.target_vectors), "⟩"),
+    }
+    if ctx.held:
+        out[("ss_projection", "held")] = _ket_list(_ssp_cols(ctx, p_L, dL, ctx.held), "⟩")
+    if ctx.interest:
+        out[("ss_projection", "interest")] = _ket_list(
+            _ssp_cols(ctx, p_L, dL, ctx.interest), "⟩", wrap=False
+        )
+    out[("projection", "ssgens")] = embedding_ebk(
+        superspace_generator_embedding_display(s, hbr), s.d, superspace_rank(s)
+    )
+    out[("projection", "ssprimes")] = projection_ebk(
+        superspace_prime_projection_display(s, hbr), s.d, cols=dL
+    )
+    return out
+
+
+def _ss_units(dL: int) -> tuple:
+    return tuple(tuple(1 if i == p else 0 for i in range(dL)) for p in range(dL))
+
+
+def _ss_u_prescaled(ctx: _Ctx, ssc: _SsCtx) -> list:
+    db = ctx.db
+    return [
+        None
+        if u is None
+        else ctx.sized(_prescaled_ss(ssc, lift_vectors_to_superspace(db, (u,))))[0]
+        for u in ctx.unchanged.basis
+    ]
+
+
+def _ss_prescaling(ctx: _Ctx, ssc: _SsCtx) -> dict:
+    fmt = ctx.fmt
+    core = ctx.core
+    dL = ssc.dL
+    sf = ctx.prescale.size_factor
+    ss_bare_size = (tuple(sf * w for w in ssc.ss_prescaler),) if sf else ()
+    out = {
+        ("prescaling", "ssprimes"): fmt.prescale(
+            _prescaled_ss(ssc, _ss_units(dL)) + ss_bare_size, col="⟨]", outer="[⟩"
+        ),
+        ("prescaling", "primes"): fmt.prescale(
+            ctx.sized(_prescaled_ss(ssc, ssc.bl)), col="[⟩", outer="⟨]"
+        ),
+        ("complexity", "ssprimes"): fmt.cents_map(ssc.ss_prescaler),
+        ("complexity", "primes"): fmt.cents_map(ctx.complexities(core.prime_ratios)),
+        ("prescaling", "commas"): fmt.prescale(
+            list(_ss_prod(ctx, ssc, core.comma_basis)) + _ss_u_prescaled(ctx, ssc)
+        ),
+        ("prescaling", "detempering"): fmt.prescale(_ss_prod(ctx, ssc, core.detemper_vectors)),
+        ("prescaling", "targets"): fmt.prescale(_ss_prod(ctx, ssc, core.target_vectors)),
+    }
+    if ctx.held:
+        out[("prescaling", "held")] = fmt.prescale(_ss_prod(ctx, ssc, ctx.held))
+    if ctx.interest:
+        out[("prescaling", "interest")] = fmt.prescale(_ss_prod(ctx, ssc, ctx.interest), outer="")
+    return out
+
+
+def _superspace_values(ctx: _Ctx) -> dict:
+    ssc = _derive_superspace(ctx)
+    out = _ss_base(ctx, ssc)
+    if ctx.held:
+        out.update(_ss_held(ctx))
+    if ctx.consolidate_v:
+        out.update(_ss_projection(ctx, ssc))
+    out.update(_ss_prescaling(ctx, ssc))
+    return out
+
+
 def plain_text_values(
     state: TemperamentState,
     scheme: str = DEFAULT_TUNING_SCHEME,
@@ -235,447 +958,35 @@ def plain_text_values(
     derived: DerivedQuantities | None = None,
     decimals: bool = True,
 ) -> dict[tuple[str, str], str]:
-    _cents_map = partial(_CENTS_MAP, decimals=decimals)
-    _cents_list = partial(_CENTS_LIST, decimals=decimals)
-    _cents_genmap = partial(_CENTS_GENMAP, decimals=decimals)
-    _prescale_vector_list = partial(_PRESCALE_VECTOR_LIST, decimals=decimals)
-
-    def _R(key, data, fmt=str):
-        return render_ebk(ebk_convention(*key, superspace=superspace), data, fmt)
-
-    db = state.domain_basis
-    targets = (
-        derived.targets
-        if derived
-        else displayed_targets(state, scheme, target_spec, target_override)
-    )
-    comma_basis = state.comma_basis if state.n else ()
-    commas = comma_ratios(comma_basis, db)
-    mapped = mapped_intervals(state.mapping, targets, db)
-    mapped_comma = mapped_commas(state.mapping, comma_basis)
-    target_vectors = target_interval_vectors(targets, state.d, db)
-    held_ratios = comma_ratios(held, db) if held else ()
-    if derived is not None:
-        tun = derived.tun
-    elif generator_tuning is not None and len(generator_tuning) == len(state.mapping):
-        tun = tuning_from_generators(state.mapping, generator_tuning, db)
-    else:
-        tun = tuning(
-            state.mapping,
-            scheme,
-            db,
-            nonprime_approach,
-            held=held_ratios,
-            prescaler_override=custom_prescaler,
-            targets=target_override,
-        )
-    target_damage_weights = (
-        derived.target_weights
-        if derived
-        else interval_weights(
-            state.mapping, scheme, targets, domain_basis=db, prescaler_override=custom_prescaler
-        )
-    )
-    target_sizes = (
-        derived.target_sizes
-        if derived
-        else interval_sizes(tun, targets, db, weights=target_damage_weights)
-    )
-    comma_sizes = derived.comma_sizes if derived else interval_sizes(tun, commas, db)
-    detemper_ratios = generators(state.mapping, db)
-    detemper_sizes = interval_sizes(tun, detemper_ratios, db)
-    detemper_vectors = generator_detempering(state.mapping)
-    prime_ratios = tuple(element_ratio(e) for e in db)
-    prescaler = complexity_prescaler(
-        state.mapping,
+    inp = _Inputs(
+        state,
         scheme,
-        override=custom_prescaler,
-        domain_basis=db,
-        nonprime_approach=nonprime_approach,
+        target_spec,
+        held,
+        interest,
+        generator_tuning,
+        target_override,
+        nonprime_approach,
+        superspace,
+        superspace_generator_override,
+        consolidate_v,
+        held_basis_ratios,
+        custom_prescaler,
+        derived,
+        decimals,
     )
-    prescaler_is_matrix = bool(prescaler) and isinstance(prescaler[0], (tuple, list))
-    size_factor = complexity_size_factor(scheme)
-
-    def _prescaled(vectors):
-        if prescaler_is_matrix:
-            return tuple(
-                tuple(sum(prescaler[i][k] * v[k] for k in range(state.d)) for i in range(state.d))
-                for v in vectors
-            )
-        return tuple(tuple(prescaler[i] * v[i] for i in range(state.d)) for v in vectors)
-
-    def _sized(cols):
-        if not size_factor:
-            return cols
-        return tuple((*col, size_factor * sum(col)) for col in cols)
-
-    if prescaler_is_matrix:
-        bare_rows = [tuple(prescaler[i]) for i in range(state.d)]
-    else:
-        bare_rows = [
-            tuple(prescaler[i] if k == i else 0 for k in range(state.d)) for i in range(state.d)
-        ]
-    bare_size_row = (
-        (tuple(size_factor * sum(col) for col in zip(*bare_rows, strict=False)),)
-        if size_factor
-        else ()
-    )
-    weight_text = _cents_list(target_damage_weights)
-    tp_text = _ket_list(target_vectors, "⟩")
-    bare_x_text = _prescale_vector_list(bare_rows + list(bare_size_row), col="⟨]", outer="[⟩")
-    complexity_text = _cents_list(
-        interval_complexities(
-            state.mapping, scheme, targets, domain_basis=db, prescaler_override=custom_prescaler
-        )
-    )
-    damage_text = _cents_list(target_sizes.damage)
-    udata = (
-        unchanged_interval_data(state, held_basis_ratios, tun, scheme, db, custom_prescaler)
-        if consolidate_v
-        else None
-    )
-    if udata is not None:
-        nrow = len(state.mapping)
-        u_basis = list(udata.basis)
-        u_mapped_cols = [
-            None if udata.basis[j] is None else tuple(udata.mapped[i][j] for i in range(nrow))
-            for j in range(len(udata.basis))
-        ]
-        u_prescaled = [None if u is None else _sized(_prescaled((u,)))[0] for u in udata.basis]
-        u_tempered, u_just, u_errors = (
-            list(udata.sizes.tempered),
-            list(udata.sizes.just),
-            list(udata.sizes.errors),
-        )
-        u_comps = list(udata.complexities)
-        u_scaling = [_DASH if v is None else "1" for v in udata.basis]
-    else:
-        u_basis = u_mapped_cols = u_prescaled = u_tempered = u_just = u_errors = u_comps = (
-            u_scaling
-        ) = []
-    canon_mapping = canonical_mapping(state.mapping)
-    rc = len(canon_mapping)
-    canon_form = form_matrix(state.mapping)
-    canon_inverse_form = inverse_form_matrix(state.mapping)
-    canon_mapped = mapped_intervals(canon_mapping, targets, db)
-    canon_mapped_comma = mapped_commas(canon_mapping, comma_basis)
-    canon_mapped_detempering = mapped_commas(canon_mapping, detemper_vectors)
-    canon_u_mapped_cols = [
-        None
-        if u is None
-        else tuple(sum(canon_mapping[i][p] * u[p] for p in range(state.d)) for i in range(rc))
-        for u in u_basis
-    ]
-
-    def _identity(n):
-        return [[1 if i == k else 0 for k in range(n)] for i in range(n)]
-
-    values = {
-        ("quantities", "primes"): ".".join(str(e) for e in db),
-        ("vectors", "commas"): _ket_list(list(comma_basis) + u_basis, "⟩"),
-        ("projection", "commas"): _ket_list([(0,) * state.d for _ in commas] + u_basis, "⟩"),
-        ("scaling_factors", "commas"): _R(
-            ("scaling_factors", "commas"), ["0"] * len(commas) + u_scaling
-        ),
-        ("vectors", "targets"): tp_text,
-        ("vectors", "detempering"): _ket_list(detemper_vectors, "⟩"),
-        ("mapping", "primes"): mapping_ebk(state),
-        ("mapping", "commas"): _ket_list(
-            list(zip(*mapped_comma, strict=False)) + u_mapped_cols, "}"
-        ),
-        ("mapping", "targets"): _ket_list(zip(*mapped, strict=False), "}"),
-        ("vectors", "primes"): _R(("vectors", "primes"), _identity(state.d)),
-        ("mapping", "gens"): _R(("mapping", "gens"), _identity(len(state.mapping))),
-        ("mapping", "detempering"): _R(("mapping", "detempering"), _identity(len(state.mapping))),
-        ("canon", "primes"): _R(("canon", "primes"), canon_mapping),
-        ("canon", "gens"): _R(("canon", "gens"), canon_form),
-        ("canon", "canongens"): _R(("canon", "canongens"), _identity(rc)),
-        ("canon", "detempering"): _R(
-            ("canon", "detempering"), list(zip(*canon_mapped_detempering, strict=False))
-        ),
-        ("canon", "commas"): _ket_list(
-            list(zip(*canon_mapped_comma, strict=False)) + canon_u_mapped_cols, "}"
-        ),
-        ("canon", "targets"): _ket_list(zip(*canon_mapped, strict=False), "}"),
-        ("mapping", "canongens"): _R(("mapping", "canongens"), canon_inverse_form),
-        ("tuning", "canongens"): _cents_genmap(
-            [
-                sum(
-                    tun.generator_map[k] * canon_inverse_form[k][j]
-                    for k in range(len(state.mapping))
-                )
-                for j in range(rc)
-            ]
-        ),
-        ("tuning", "gens"): _cents_genmap(tun.generator_map),
-        ("tuning", "primes"): _cents_map(tun.tuning_map),
-        ("tuning", "commas"): _cents_list(list(comma_sizes.tempered) + u_tempered),
-        ("tuning", "detempering"): _cents_genmap(detemper_sizes.tempered),
-        ("tuning", "targets"): _cents_list(target_sizes.tempered),
-        ("just", "primes"): _cents_map(tun.just_map),
-        ("just", "commas"): _cents_list(list(comma_sizes.just) + u_just),
-        ("just", "detempering"): _cents_list(detemper_sizes.just),
-        ("just", "targets"): _cents_list(target_sizes.just),
-        ("retune", "primes"): _cents_map(tun.retuning_map),
-        ("retune", "commas"): _cents_list(list(comma_sizes.errors) + u_errors),
-        ("retune", "detempering"): _cents_list(detemper_sizes.errors),
-        ("retune", "targets"): _cents_list(target_sizes.errors),
-        ("damage", "targets"): damage_text,
-        ("prescaling", "primes"): bare_x_text,
-        ("prescaling", "commas"): _prescale_vector_list(
-            list(_sized(_prescaled(comma_basis))) + u_prescaled
-        ),
-        ("prescaling", "detempering"): _prescale_vector_list(_sized(_prescaled(detemper_vectors))),
-        ("prescaling", "targets"): _prescale_vector_list(_sized(_prescaled(target_vectors))),
-        ("complexity", "primes"): _cents_map(
-            interval_complexities(
-                state.mapping,
-                scheme,
-                prime_ratios,
-                domain_basis=db,
-                prescaler_override=custom_prescaler,
-            )
-        ),
-        ("complexity", "commas"): _cents_list(
-            list(
-                interval_complexities(
-                    state.mapping,
-                    scheme,
-                    commas,
-                    domain_basis=db,
-                    prescaler_override=custom_prescaler,
-                )
-            )
-            + u_comps
-        ),
-        ("complexity", "detempering"): _cents_list(
-            interval_complexities(
-                state.mapping,
-                scheme,
-                detemper_ratios,
-                domain_basis=db,
-                prescaler_override=custom_prescaler,
-            )
-        ),
-        ("complexity", "targets"): complexity_text,
-        ("weight", "targets"): weight_text,
-    }
-    if held:
-        held_sizes = interval_sizes(tun, held_ratios, db)
-        held_mapped = mapped_intervals(state.mapping, held_ratios, db)
-        canon_held_mapped = mapped_intervals(canon_mapping, held_ratios, db)
-        values.update(
-            {
-                ("vectors", "held"): _ket_list(held, "⟩"),
-                ("mapping", "held"): _ket_list(zip(*held_mapped, strict=False), "}"),
-                ("canon", "held"): _ket_list(zip(*canon_held_mapped, strict=False), "}"),
-                ("tuning", "held"): _cents_list(held_sizes.tempered),
-                ("just", "held"): _cents_list(held_sizes.just),
-                ("retune", "held"): _cents_list(held_sizes.errors),
-                ("prescaling", "held"): _prescale_vector_list(_sized(_prescaled(held))),
-                ("complexity", "held"): _cents_list(
-                    interval_complexities(
-                        state.mapping,
-                        scheme,
-                        held_ratios,
-                        domain_basis=db,
-                        prescaler_override=custom_prescaler,
-                    )
-                ),
-            }
-        )
-    if interest:
-        interest_ratios = comma_ratios(interest, db)
-        interest_mapped = mapped_intervals(state.mapping, interest_ratios, db)
-        canon_interest_mapped = mapped_intervals(canon_mapping, interest_ratios, db)
-        interest_sizes = interval_sizes(tun, interest_ratios, db)
-        values.update(
-            {
-                ("vectors", "interest"): _ket_list(interest, "⟩", wrap=False),
-                ("mapping", "interest"): _ket_list(
-                    zip(*interest_mapped, strict=False), "}", wrap=False
-                ),
-                ("canon", "interest"): _ket_list(
-                    zip(*canon_interest_mapped, strict=False), "}", wrap=False
-                ),
-                ("tuning", "interest"): _cents_list(interest_sizes.tempered, wrap=False),
-                ("just", "interest"): _cents_list(interest_sizes.just, wrap=False),
-                ("retune", "interest"): _cents_list(interest_sizes.errors, wrap=False),
-                ("prescaling", "interest"): _prescale_vector_list(
-                    _sized(_prescaled(interest)), outer=""
-                ),
-                ("complexity", "interest"): _cents_list(
-                    interval_complexities(
-                        state.mapping,
-                        scheme,
-                        interest_ratios,
-                        domain_basis=db,
-                        prescaler_override=custom_prescaler,
-                    ),
-                    wrap=False,
-                ),
-            }
-        )
-    if consolidate_v:
-        values[("projection", "primes")] = projection_ebk(
-            tuning_projection(state, held_basis_ratios), state.d
-        )
-        values[("projection", "gens")] = embedding_ebk(
-            tuning_embedding(state, held_basis_ratios), state.d, len(state.mapping)
-        )
-        values[("projection", "canongens")] = embedding_ebk(
-            canonical_generator_embedding(state, held_basis_ratios), state.d, rc
-        )
-        p_rat = projection_matrix_rationals(state, held_basis_ratios)
-
-        def _proj_cols(vectors):
-            cols = project_vectors(p_rat, vectors)
-            return list(cols) if cols else [tuple(_DASH for _ in range(state.d)) for _ in vectors]
-
-        values[("projection", "detempering")] = _R(
-            ("projection", "detempering"), _proj_cols(detemper_vectors)
-        )
-        values[("projection", "targets")] = _ket_list(_proj_cols(target_vectors), "⟩")
-        if held:
-            values[("projection", "held")] = _ket_list(_proj_cols(held), "⟩")
-        if interest:
-            values[("projection", "interest")] = _ket_list(_proj_cols(interest), "⟩", wrap=False)
-    if superspace:
-        db = state.domain_basis
-        ml = superspace_mapping(state)
-        ss_primes = superspace_primes(db)
-        mjl = superspace_just_mapping(ss_primes)
-        mlgl = superspace_self_map(state)
-        msl = mapping_to_superspace_generators(state)
-        bl = basis_in_superspace(db)
-        ss_tun = (
-            derived.superspace_tun
-            if derived is not None and derived.superspace_tun is not None
-            else superspace_tuning(
-                state, scheme, nonprime_approach, generator_override=superspace_generator_override
-            )
-        )
-
-        C_L = lift_vectors_to_superspace(db, state.comma_basis)
-        T_L = lift_vectors_to_superspace(db, target_vectors)
-        I_L = lift_vectors_to_superspace(db, interest)
-        D_L = lift_vectors_to_superspace(db, detemper_vectors)
-        mapped_C = map_vectors_into_superspace_generators(state, state.comma_basis)
-        mapped_T = map_vectors_into_superspace_generators(state, target_vectors)
-        mapped_I = map_vectors_into_superspace_generators(state, interest)
-        mapped_D = map_vectors_into_superspace_generators(state, detemper_vectors)
-        ss_u = [None if u is None else lift_vectors_to_superspace(db, (u,))[0] for u in u_basis]
-        ss_u_mapped = [
-            None if u is None else map_vectors_into_superspace_generators(state, (u,))[0]
-            for u in u_basis
-        ]
-        values.update(
-            {
-                ("ss_vectors", "primes"): _R(("ss_vectors", "primes"), bl),
-                ("ss_vectors", "ssprimes"): _R(("ss_vectors", "ssprimes"), mjl),
-                ("ss_vectors", "commas"): _ket_list(list(C_L) + ss_u, "⟩"),
-                ("ss_vectors", "targets"): _ket_list(T_L, "⟩"),
-                ("ss_vectors", "detempering"): _ket_list(D_L, "⟩"),
-                ("ss_vectors", "interest"): _ket_list(I_L, "⟩", wrap=False),
-                ("ss_mapping", "ssprimes"): _R(("ss_mapping", "ssprimes"), ml),
-                ("ss_mapping", "primes"): _R(("ss_mapping", "primes"), msl),
-                ("ss_mapping", "ssgens"): _R(("ss_mapping", "ssgens"), mlgl),
-                ("ss_mapping", "commas"): _ket_list(list(mapped_C) + ss_u_mapped, "}"),
-                ("ss_mapping", "targets"): _ket_list(mapped_T, "}"),
-                ("ss_mapping", "detempering"): _R(("ss_mapping", "detempering"), mapped_D),
-                ("ss_mapping", "interest"): _ket_list(mapped_I, "}", wrap=False),
-                ("tuning", "ssgens"): _cents_genmap(ss_tun.generator_map),
-                ("tuning", "ssprimes"): _cents_map(ss_tun.tuning_map),
-                ("just", "ssprimes"): _cents_map(ss_tun.just_map),
-                ("retune", "ssprimes"): _cents_map(ss_tun.retuning_map),
-            }
-        )
-        if held:
-            values[("ss_vectors", "held")] = _ket_list(lift_vectors_to_superspace(db, held), "⟩")
-            values[("ss_mapping", "held")] = _ket_list(
-                map_vectors_into_superspace_generators(state, held), "}"
-            )
-        if consolidate_v:
-            dL = len(ss_primes)
-            p_L = superspace_projection_matrix_rationals(state, held_basis_ratios)
-
-            def _ssp_cols(vectors):
-                cols = project_vectors(p_L, lift_vectors_to_superspace(db, vectors))
-                return list(cols) if cols else [tuple(_DASH for _ in range(dL)) for _ in vectors]
-
-            proj_bl = project_vectors(p_L, bl) or [tuple(_DASH for _ in range(dL)) for _ in bl]
-            values[("ss_projection", "ssprimes")] = projection_ebk(
-                superspace_tuning_projection(state, held_basis_ratios), dL
-            )
-            values[("ss_projection", "ssgens")] = embedding_ebk(
-                superspace_tuning_embedding(state, held_basis_ratios), dL, superspace_rank(state)
-            )
-            values[("ss_projection", "primes")] = _R(("ss_projection", "primes"), proj_bl)
-            values[("ss_projection", "detempering")] = _R(
-                ("ss_projection", "detempering"), _ssp_cols(detemper_vectors)
-            )
-            values[("ss_projection", "commas")] = _ket_list([(0,) * dL for _ in commas] + ss_u, "⟩")
-            values[("ss_projection", "targets")] = _ket_list(_ssp_cols(target_vectors), "⟩")
-            if held:
-                values[("ss_projection", "held")] = _ket_list(_ssp_cols(held), "⟩")
-            if interest:
-                values[("ss_projection", "interest")] = _ket_list(
-                    _ssp_cols(interest), "⟩", wrap=False
-                )
-            values[("projection", "ssgens")] = embedding_ebk(
-                superspace_generator_embedding_display(state, held_basis_ratios),
-                state.d,
-                superspace_rank(state),
-            )
-            values[("projection", "ssprimes")] = projection_ebk(
-                superspace_prime_projection_display(state, held_basis_ratios), state.d, cols=dL
-            )
-        ss_prescaler = superspace_complexity_prescaler(state, scheme)
-        dL = len(ss_primes)
-        ss_units = tuple(tuple(1 if i == p else 0 for i in range(dL)) for p in range(dL))
-
-        def _prescaled_ss(vectors):
-            return tuple(tuple(ss_prescaler[i] * v[i] for i in range(dL)) for v in vectors)
-
-        ss_bare_size = (tuple(size_factor * w for w in ss_prescaler),) if size_factor else ()
-        elem_ratios = tuple(element_ratio(e) for e in db)
-        values.update(
-            {
-                ("prescaling", "ssprimes"): _prescale_vector_list(
-                    _prescaled_ss(ss_units) + ss_bare_size, col="⟨]", outer="[⟩"
-                ),
-                ("prescaling", "primes"): _prescale_vector_list(
-                    _sized(_prescaled_ss(bl)), col="[⟩", outer="⟨]"
-                ),
-                ("complexity", "ssprimes"): _cents_map(ss_prescaler),
-                ("complexity", "primes"): _cents_map(
-                    interval_complexities(
-                        state.mapping,
-                        scheme,
-                        elem_ratios,
-                        domain_basis=db,
-                        prescaler_override=custom_prescaler,
-                    )
-                ),
-            }
-        )
-
-        def _ss_prod(vs):
-            return _sized(_prescaled_ss(lift_vectors_to_superspace(db, vs)))
-
-        ss_u_prescaled = [
-            None if u is None else _sized(_prescaled_ss(lift_vectors_to_superspace(db, (u,))))[0]
-            for u in u_basis
-        ]
-        values[("prescaling", "commas")] = _prescale_vector_list(
-            list(_ss_prod(comma_basis)) + ss_u_prescaled
-        )
-        values[("prescaling", "detempering")] = _prescale_vector_list(_ss_prod(detemper_vectors))
-        values[("prescaling", "targets")] = _prescale_vector_list(_ss_prod(target_vectors))
-        if held:
-            values[("prescaling", "held")] = _prescale_vector_list(_ss_prod(held))
-        if interest:
-            values[("prescaling", "interest")] = _prescale_vector_list(_ss_prod(interest), outer="")
+    ctx = _build_context(inp)
+    values = _base_structural(ctx)
+    values.update(_base_sizes(ctx))
+    values.update(_base_prescale_complexity(ctx))
+    if ctx.held:
+        values.update(_held_values(ctx))
+    if ctx.interest:
+        values.update(_interest_values(ctx))
+    if ctx.consolidate_v:
+        values.update(_projection_values(ctx))
+    if ctx.superspace:
+        values.update(_superspace_values(ctx))
     return values
 
 
@@ -795,13 +1106,3 @@ def _cents_list(values, wrap: bool = True, decimals: bool = True) -> str:
 
 def _cents_genmap(values, decimals: bool = True) -> str:
     return render_ebk(_GENMAP, values, fmt=lambda v: cents(v, decimals))
-
-
-# Python treats a name assigned anywhere in a function as local throughout it, so
-# plain_text_values can't write `_cents_map = partial(_cents_map, ...)` (the right-hand
-# _cents_map would be the as-yet-unbound local). These distinct global aliases give that
-# rebinding something to read.
-_CENTS_MAP = _cents_map
-_CENTS_LIST = _cents_list
-_CENTS_GENMAP = _cents_genmap
-_PRESCALE_VECTOR_LIST = _prescale_vector_list
