@@ -66,7 +66,7 @@ def _solve_unity_operator(targets, held, mapping):
     return (held_operator + free_space * free_operator).T
 
 
-def _column_space_projector(determining, rank):
+def _column_space_projector(determining, _rank):
     null_basis = determining.nullspace()
     if not null_basis:
         return None

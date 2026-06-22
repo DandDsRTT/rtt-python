@@ -92,7 +92,7 @@ def _initial_explicit_ldb_form(t: Temperament, ldb: tuple, grade: int) -> tuple:
     return tuple(result[:grade])
 
 
-def _defactor_with_nonempty_ldb(t, ldb, grade, initial):
+def _defactor_with_nonempty_ldb(_t, ldb, _grade, initial):
     base = initial[-1]
     enfactoring = abs(_get_greatest_factor(initial))
     multiples = _find_modular_solution(ldb, base, enfactoring)

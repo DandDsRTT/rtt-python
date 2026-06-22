@@ -32,6 +32,7 @@ select = [
 ignore = [
     "PLR2004",     # magic-value-comparison — pervasive and meaningful in RTT math
     "RUF001", "RUF002", "RUF003",  # "ambiguous" unicode: the math notation (𝒈 ⟨ ⟩ …) is intentional
+    "SIM117",      # nested `with` expresses NiceGUI parent/child element context — clearer nested
 ]
 
 [tool.ruff.lint.mccabe]

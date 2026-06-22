@@ -2053,11 +2053,11 @@ class _GridBuilder:
                 "primes": (self.d, self.prime_left, lambda i: f"/{self.domain_label}{_sub(i + 1)}"),
                 "ssgens": (self.rL, self.ss_gen_left, lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
                 "ssprimes": (self.dL, self.ss_prime_left, lambda i: f"/p{_sub(i + 1)}"),
-                "commas": (self.nv_shown, self.comma_left, lambda i: "/1"),
-                "detempering": (self.r, self.detempering_left, lambda i: "/1"),
-                "targets": (self.k_shown, self.target_left, lambda i: "/1"),
-                "interest": (self.mi_shown, self.interest_left, lambda i: "/1"),
-                "held": (self.nh_shown, self.held_left, lambda i: "/1"),
+                "commas": (self.nv_shown, self.comma_left, lambda _i: "/1"),
+                "detempering": (self.r, self.detempering_left, lambda _i: "/1"),
+                "targets": (self.k_shown, self.target_left, lambda _i: "/1"),
+                "interest": (self.mi_shown, self.interest_left, lambda _i: "/1"),
+                "held": (self.nh_shown, self.held_left, lambda _i: "/1"),
             }
             for key, (n, left, label) in column_units.items():
                 if not self.tile_open("units", key):
