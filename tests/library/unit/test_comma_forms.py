@@ -52,6 +52,13 @@ def test_minimal_matches_the_wiki_comma_lists():
     assert _ratios(cf.minimal_ca(SEPTIMAL_MEANTONE, JIP4)) == [Fraction(81, 80), Fraction(126, 125)]
 
 
+def test_minimal_ca_of_a_commaless_basis_short_circuits():
+    # a JI / contorted basis with no real commas has nothing to LLL-reduce: an empty basis
+    # stays empty, and an all-zero comma row passes straight through (no enumeration).
+    assert cf.minimal_ca((), JIP3) == ()
+    assert cf.minimal_ca(((0, 0, 0),), JIP3) == ((0, 0, 0),)
+
+
 def test_minimal_is_simpler_than_canonical():
     # the whole point of the minimal form: no comma is more complex than the canonical's
     minimal = cf.minimal_ca(SEPTIMAL_MEANTONE, JIP4)
