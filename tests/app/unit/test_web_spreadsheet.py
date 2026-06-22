@@ -5789,6 +5789,10 @@ def test_equivalences_extend_the_symbol_line_with_the_defining_equation():
     assert on["symbol:tuning:primes"].text == "𝒕 = 𝒈𝑀"
     assert on["symbol:retune:primes"].text == "𝒓 = 𝒕 − 𝒋"
     assert on["symbol:mapping:targets"].text == "Y = 𝑀T"
+    # the target-interval size/error lists carry every equivalent form the guide's
+    # appendix lists: 𝐚 = 𝒕T = 𝒈𝑀T, and 𝐞 = 𝒕T − 𝒋T = 𝐚 − 𝐨 = 𝒓T
+    assert on["symbol:tuning:targets"].text == "𝐚 = 𝒕T = 𝒈𝑀T"
+    assert on["symbol:retune:targets"].text == "𝐞 = 𝒕T − 𝒋T = 𝐚 − 𝐨 = 𝒓T"
     assert not any(c.startswith("equivalence:") for c in on)
 
 
