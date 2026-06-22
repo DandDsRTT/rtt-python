@@ -218,6 +218,26 @@ bin/with-merge-lock release        # free it for the next agent
 - The legacy single-command form still works (and CI uses it): `bin/with-merge-lock bash -c '…'`
   holds the lock for the wrapped command and releases on exit / failure / signal.
 
+**Don't surface the wait — collapse the no-conflict path into ONE silent background job.** Each
+time you end a turn to "check the queue" or report "still running", the user's Desktop sidebar
+dot flips yellow (= *I'm prompting him*) for a point where he can take no action — and the
+lock-wait + render gate is minutes long, so a step-per-tool-call landing pings him repeatedly
+over a pure wait. So after the cheap pre-checks and `acquire` (which spawns the **persistent**
+holder daemon — it keeps the lock independently of any job), run the rest —
+`rebase → renew+gate → renew+ff-merge → release` — as a **single plain `run_in_background`
+script** whose only completion notification is the land result. Report *that*; don't poll it
+from other turns, don't narrate "still queued / still running".
+  - This does **not** reintroduce the release-on-exit hole the bullet above guards against,
+    **as long as the job is a plain script, NOT `with-merge-lock bash -c '… && release'`.** A
+    plain script that aborts (e.g. on a rebase conflict) exits **without releasing** — the daemon
+    keeps the lock, the queue-wait is preserved — so on conflict the job exits with a marker and
+    you break OUT to the existing separate-tool-call path to resolve it interactively, still
+    holding. The single-job form is the **common no-conflict default**; the multi-call dance
+    above is the **conflict exception**, not the everyday shape.
+  - Wrapping it as `with-merge-lock bash -c '… && release'` WOULD re-break it (releases on the
+    conflict exit, burning the wait) — don't. Keep `acquire`/`release` as the plain script's first
+    and last steps, with `release` reached only on the success path.
+
 How it holds across tool calls: `acquire` spawns a detached, lease-renewing **holder daemon**; an
 atomic `.holder` marker (NOT ticket order — `time_ns` is only µs-granular here and collides) is the
 real mutex, with FIFO fairness tickets in `/tmp/rtt-merge-gate.d/` (the same boring no-`flock` `/tmp`
