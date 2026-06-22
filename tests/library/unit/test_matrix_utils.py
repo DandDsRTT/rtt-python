@@ -8,11 +8,13 @@ from rtt.library.matrix_utils import (
     hnf,
     inner_l_length,
     inverse,
+    matrix_multiply,
     remove_all_zero_lists,
     remove_unneeded_zero_lists,
     reverse_inner_l,
     reverse_outer_l,
     rotate_180,
+    smith_normal_form_with_transforms,
 )
 
 
@@ -72,6 +74,17 @@ def test_hnf(matrix, expected):
 
 def test_get_largest_minors_l():
     assert get_largest_minors_l(((17, 16, -4), (4, -4, 1))) == (-4, 1, 0)
+
+
+def test_smith_normal_form_factors_a_matrix_into_left_diagonal_right():
+    # L·A·R = D with D the Smith normal form. diag(2, 3) forces the offending-row step: its
+    # off-pivot entry 3 is not divisible by the pivot 2, so the reduction folds the coprime rows
+    # together to surface gcd(2, 3) = 1, leaving the invariant factors diag(1, 6) (1, then 2·3).
+    a = ((2, 0), (0, 3))
+    left, diagonal, right = smith_normal_form_with_transforms(a)
+    assert diagonal == ((1, 0), (-3, 6))  # an SNF up to the unimodular L, R
+    assert matrix_multiply(matrix_multiply(left, a), right) == diagonal
+    assert abs(diagonal[0][0]) == 1 and abs(diagonal[1][1]) == 6  # invariant factors 1 | 6
 
 
 @pytest.mark.parametrize(
