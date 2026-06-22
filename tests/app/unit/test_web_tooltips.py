@@ -223,6 +223,9 @@ def test_guide_url_builds_wiki_subpage_and_section_anchor():
         tooltips.GUIDE_BASE + "/Tuning_fundamentals#Damage,_error,_and_weight")
     assert tooltips.guide_url("Mappings", "") == tooltips.GUIDE_BASE + "/Mappings"
     for gh in tooltips.GUIDE_HELP.values():
+        if not gh.chapter:           # some tiles carry a blurb with no Guide section to link
+            assert gh.url == ""
+            continue
         assert gh.url.startswith(tooltips.GUIDE_BASE + "/")
         assert " " not in gh.url
 
@@ -239,6 +242,8 @@ def test_guide_help_text_is_a_clean_general_blurb(key, gh):
 @pytest.mark.parametrize("key,gh", sorted(tooltips.GUIDE_HELP.items()))
 def test_guide_help_section_is_a_real_heading_in_its_chapter(key, gh):
     # the linked section anchor resolves: a == heading == with that exact text exists in the chapter
+    if not gh.chapter:               # link-less tile: nothing to resolve
+        return
     heading = re.compile(rf"^=+\s*{re.escape(gh.section)}\s*=+\s*$", re.MULTILINE)
     assert heading.search(_chapter_text(gh.chapter)), f"no heading {gh.section!r} in {gh.chapter!r}"
 

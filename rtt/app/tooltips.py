@@ -13,8 +13,8 @@ def guide_url(chapter: str, section: str) -> str:
 @dataclass(frozen=True)
 class GuideHelp:
     text: str
-    chapter: str
-    section: str
+    chapter: str = ""
+    section: str = ""
 
     @property
     def location(self) -> str:
@@ -22,33 +22,33 @@ class GuideHelp:
 
     @property
     def url(self) -> str:
-        return guide_url(self.chapter, self.section)
+        return guide_url(self.chapter, self.section) if self.chapter else ""
 
 
 GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
     ("mapping", "primes"): GuideHelp(
-        "A mapping captures a temperament: one map per generator, each counting how many "
-        "of that generator it takes to reach every prime. It is the central object of RTT — "
-        "everything else follows from it.",
+        "A mapping represents a temperament: one map per generator, each counting how many "
+        "of that generator are used to approximate each prime. It is the central object of "
+        "RTT — everything else follows from it.",
         "Mappings", "Mappings"),
     ("vectors", "commas"): GuideHelp(
-        "The comma basis collects the commas this temperament tempers out: small JI "
-        "intervals it makes vanish, so that moving by one of them changes nothing. Each "
-        "column is one vanishing comma.",
-        "Mappings", "Making commas vanish"),
+        "The comma basis is a basis for all the commas this temperament tempers out — the "
+        "small JI intervals it makes vanish. Intervals differing by a tempered comma are "
+        "thereby tempered together.",
+        "Exploring temperaments", "Mapping-row-bases and comma bases"),
     ("tuning", "gens"): GuideHelp(
-        "The generator tuning map gives the size, in cents, of each generator. The mapping "
-        "says how the generators build the primes; this says how large the generators "
+        "The generator tuning map gives the size in cents of each generator. The mapping "
+        "shows how the generators build the primes; this shows how large the generators "
         "actually are, which is what pins down the tuning.",
         "Tuning fundamentals", "Tuning"),
     ("vectors", "targets"): GuideHelp(
         "The target intervals are the ones you want tuned well — usually the consonances "
-        "your music leans on. The tuning is chosen to keep their combined damage as low as "
+        "your music leans on. The tuning is chosen to keep the damage across them as low as "
         "possible.",
         "Tuning fundamentals", "Target-intervals"),
     ("damage", "targets"): GuideHelp(
         "Damage measures how badly the tuning serves an interval: how far its tempered size "
-        "lands from just intonation, scaled by how much that interval matters.",
+        "lands from just intonation, weighted by how much that interval matters.",
         "Tuning fundamentals", "Damage, error, and weight"),
     ("weight", "targets"): GuideHelp(
         "The weights set how much each target's damage counts in the optimization, so the "
@@ -59,48 +59,43 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "damage, most often the octave. Each column is one held interval.",
         "Tuning fundamentals", "Held-intervals"),
     ("tuning", "primes"): GuideHelp(
-        "The tuning map gives the tempered size, in cents, of each prime — the generator "
-        "sizes pushed through the mapping (𝒕 = 𝒈𝑀).",
-        "Tuning fundamentals", "Tuning"),
+        "The tuning map gives the tempered size in cents of each prime.",
+        "Tuning fundamentals", "Temperament"),
     ("just", "primes"): GuideHelp(
-        "The just tuning map gives each prime's pure size in cents — the just-intonation "
-        "values the tempered tuning is measured against.",
-        "Tuning fundamentals", "Tuning"),
+        "The just tuning map gives each prime's justly-intoned size in cents.",
+        "Tuning fundamentals", "Primes"),
     ("retune", "primes"): GuideHelp(
-        "The retuning map is each prime's error: how far its tempered size lands from just "
-        "(𝒓 = 𝒕 − 𝒋). The damage is the size of that error.",
-        "Tuning fundamentals", "Damage, error, and weight"),
+        "The retuning map gives each prime's retuning — the change the temperament makes to "
+        "its tuning, from just to tempered.",
+        "Tuning fundamentals", "Retuning map"),
     ("complexity", "targets"): GuideHelp(
-        "Each target interval's complexity — a ranking of how complex the ratio is, with a "
+        "Each target interval's complexity — a measure of how complex the ratio is, with a "
         "larger value meaning more complex. It is what the damage weighting scales with.",
         "Tuning fundamentals", "Complexity"),
     ("mapping", "commas"): GuideHelp(
-        "The comma basis sent through the mapping — all zeros, because the temperament makes "
-        "exactly these commas vanish.",
+        "The comma basis sent through the mapping — all zeros, demonstrating how it tempers "
+        "out each of these commas.",
         "Mappings", "Making commas vanish"),
     ("vectors", "primes"): GuideHelp(
         "The trivial JI mapping — each prime maps to itself, untempered. It is the identity "
         "every temperament departs from.",
-        "Mappings", "Representing JI"),
+        "Exploring temperaments", "JI as a temperament"),
     ("mapping", "targets"): GuideHelp(
-        "Each target interval mapped through 𝑀 (Y = 𝑀T) — how many of each generator it "
-        "takes to reach the temperament's version of that interval.",
-        "Mappings", "The dot product"),
+        "Each target interval mapped through the mapping — how many of each generator it "
+        "takes to reach the temperament's version of that interval."),
     ("canon", "primes"): GuideHelp(
-        "The mapping rewritten into its one canonical form, so the same temperament always "
+        "The mapping rewritten into its canonical form, so the same temperament always "
         "looks the same no matter how it was entered.",
         "Mappings", "Standard forms"),
     ("tuning", "targets"): GuideHelp(
-        "Each target interval's size in cents under this tempered tuning (𝐚 = 𝒕T) — what the "
-        "tuning actually delivers, set against its just size.",
-        "Tuning fundamentals", "Tuning"),
+        "Each target interval's size in cents under this tempered tuning.",
+        "Tuning fundamentals", "Temperament"),
     ("retune", "targets"): GuideHelp(
-        "Each target interval's error: how many cents its tempered size lands from just "
-        "(𝐞 = 𝒓T). The absolute value of that error is the damage.",
-        "Tuning fundamentals", "Damage, error, and weight"),
+        "Each target interval's error: the difference between its tempered and just tunings.",
+        "Tuning fundamentals", "Errors"),
     ("tuning", "commas"): GuideHelp(
         "The comma basis sized under the tempered tuning — all zero cents, because the "
-        "temperament makes exactly these commas vanish.",
+        "temperament makes all of these commas vanish.",
         "Mappings", "Making commas vanish"),
 }
 

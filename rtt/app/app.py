@@ -699,14 +699,16 @@ _GUIDE_JS = """
   const DELAY = 200;   // ms before it appears
   const HIDE = 160;    // ms grace to cross the gap from cell to card
   const GAP = 6;
-  let showTimer = null, hideTimer = null, anchor = null;
+  let showTimer = null, hideTimer = null, anchor = null, shownTile = null;
 
   const card = document.createElement('div');
   card.className = 'rtt-guide-card';
   card.style.display = 'none';
   document.body.appendChild(card);
 
-  const reallyHide = () => { card.style.display = 'none'; card.innerHTML = ''; anchor = null; };
+  const reallyHide = () => {
+    card.style.display = 'none'; card.innerHTML = ''; anchor = null; shownTile = null;
+  };
   const scheduleHide = () => { clearTimeout(hideTimer); hideTimer = setTimeout(reallyHide, HIDE); };
   const cancelHide = () => { clearTimeout(hideTimer); };
 
@@ -724,19 +726,22 @@ _GUIDE_JS = """
   const show = (cell) => {
     if (document.body.classList.contains('rtt-no-tooltips')) return;
     const text = cell.getAttribute('data-guide-text');
+    if (!text) return;
     const loc = cell.getAttribute('data-guide-loc');
     const url = cell.getAttribute('data-guide-url');
-    if (!text || !url) return;
     card.innerHTML = '';
     const body = document.createElement('div');
     body.className = 'rtt-guide-card-text';
     body.textContent = text;
     card.appendChild(body);
-    const a = document.createElement('a');
-    a.className = 'rtt-guide-card-link';
-    a.href = url; a.target = '_blank'; a.rel = 'noopener';
-    a.textContent = 'Read in the Guide: ' + loc + ' →';
-    card.appendChild(a);
+    if (url) {                                       // some tiles have a blurb but no Guide section
+      const a = document.createElement('a');
+      a.className = 'rtt-guide-card-link';
+      a.href = url; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = 'Read in the Guide: ' + loc + ' →';
+      card.appendChild(a);
+    }
+    shownTile = cell.getAttribute('data-guide-tile');
     card.style.display = 'block';
     place(cell);
   };
@@ -748,6 +753,9 @@ _GUIDE_JS = """
     const cell = e.target.closest && e.target.closest('.rtt-guide-link');
     if (!cell) return;
     cancelHide();
+    // a tile's name + symbol cells share one data-guide-tile: while the card is up for that tile,
+    // moving between them must NOT rebuild/reposition it (else the link runs away from the cursor)
+    if (card.style.display === 'block' && cell.getAttribute('data-guide-tile') === shownTile) return;
     if (cell === anchor) return;
     if (showTimer) clearTimeout(showTimer);
     anchor = cell;
@@ -755,9 +763,12 @@ _GUIDE_JS = """
   });
   document.addEventListener('mouseout', (e) => {
     const cell = e.target.closest && e.target.closest('.rtt-guide-link');
-    if (!cell || cell !== anchor) return;
+    if (!cell) return;
     const to = e.relatedTarget;
-    if (to && (cell.contains(to) || card.contains(to))) return;   // moved onto the card or within
+    const toCell = to && to.closest && to.closest('.rtt-guide-link');
+    // staying within the same tile (name ↔ symbol) or moving onto the card: keep it open
+    if (to && (card.contains(to) ||
+               (toCell && toCell.getAttribute('data-guide-tile') === cell.getAttribute('data-guide-tile')))) return;
     if (showTimer) { clearTimeout(showTimer); showTimer = null; }
     scheduleHide();
   });
@@ -1077,14 +1088,18 @@ class _Reconciler:
         for d in self._handle_dicts:
             d.pop(eid, None)
 
-    def _attach_guide_link(self, wrap, gh: tooltips.GuideHelp) -> None:
+    def _attach_guide_link(self, wrap, gh: tooltips.GuideHelp, tile: str) -> None:
         # the hover-card (a body-level div built by _GUIDE_JS) reads these and renders a card that
         # stays open while hovered, so its "Read in the Guide" link is actually clickable — a Quasar
-        # tooltip can't be (it hides the moment the cursor leaves the cell toward it)
+        # tooltip can't be (it hides the moment the cursor leaves the cell toward it). data-guide-tile
+        # ties a tile's name + symbol cells into ONE hover zone so the card doesn't jump (the link
+        # doesn't run away) when the cursor crosses from one to the other.
         wrap.classes("rtt-guide-link")
         wrap._props["data-guide-text"] = gh.text
-        wrap._props["data-guide-loc"] = gh.location
-        wrap._props["data-guide-url"] = gh.url
+        wrap._props["data-guide-tile"] = tile
+        if gh.url:
+            wrap._props["data-guide-loc"] = gh.location
+            wrap._props["data-guide-url"] = gh.url
 
     def make_cell(self, cb: spreadsheet.CellBox) -> None:
         # build a cell's element in the active parent (the caller opens the freeze container),
@@ -1121,7 +1136,7 @@ class _Reconciler:
         if cb.kind in ("symbol", "caption"):
             gh = tooltips.tile_guide_help_for_cell(cb.id)
             if gh is not None:
-                self._attach_guide_link(wrap, gh)
+                self._attach_guide_link(wrap, gh, cb.id.split(":", 1)[1])
         self.els[cb.id] = wrap
         self.kinds[cb.id] = cb.kind
         if cb.kind.endswith(("plus", "minus")):
