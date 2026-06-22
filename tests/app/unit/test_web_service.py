@@ -73,6 +73,27 @@ def test_from_temperament_data_reads_a_standard_temperament_too():
     assert state.mapping == ((1, 1, 0), (0, 1, 4))
 
 
+def test_from_temperament_data_reads_a_comma_basis_too():
+    # a contravariant (ket / comma-basis) input is routed through from_comma_basis, not the
+    # mapping path: meantone's 81/80 comma reconstructs the same rank-2 5-limit temperament
+    state = service.from_temperament_data("[-4 4 -1⟩")
+    assert (state.d, state.r, state.n) == (3, 2, 1)
+    assert state.comma_basis == ((-4, 4, -1),)
+
+
+def test_shrink_domain_falls_back_to_just_intonation_when_no_comma_survives():
+    from rtt.app.service.state import from_comma_basis, shrink_domain
+
+    # the lone comma lives entirely in the top prime, so dropping that domain coordinate leaves
+    # nothing independent to temper — the shrunk domain is plain JI over the remaining primes.
+    shrunk = shrink_domain(from_comma_basis(((0, 0, 1),)))
+    assert (shrunk.d, shrunk.n) == (2, 0)
+
+
+def test_is_independent_domain_basis_rejects_the_empty_basis():
+    assert service.is_independent_domain_basis(()) is False
+
+
 def test_from_mapping_preserves_noncanonical_input():
     # A non-canonical generating set for meantone stays verbatim as typed,
     # while its dual (the comma basis) is canonical.
