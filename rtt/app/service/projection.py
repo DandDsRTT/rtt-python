@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from functools import reduce
+from functools import lru_cache, reduce
 from math import gcd
 
 import sympy as sp
@@ -57,6 +57,7 @@ def _matrix_strings(matrix):
     return tuple(tuple(str(entry) for entry in row) for row in matrix)
 
 
+@lru_cache(maxsize=512)
 def tuning_projection(state: TemperamentState, held_ratios=()):
     try:
         inputs = _projection_temperaments(state, _held_for_projection(state, held_ratios))
