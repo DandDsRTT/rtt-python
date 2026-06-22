@@ -58,7 +58,8 @@ def _option_box_svg(fill: str | None, *, box: str = "#fff", border: str = "#555"
     inner = f"<rect x='3' y='3' width='{n - 6}' height='{n - 6}' fill='{fill}'/>" if fill else ""
     svg = (
         f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {n} {n}'>"
-        f"<rect x='.5' y='.5' width='{n - 1}' height='{n - 1}' fill='{box}' stroke='{border}' stroke-width='1'/>"
+        f"<rect x='.5' y='.5' width='{n - 1}' height='{n - 1}' "
+        f"fill='{box}' stroke='{border}' stroke-width='1'/>"
         f"{inner}</svg>"
     )
     return "data:image/svg+xml," + quote(svg)
@@ -515,7 +516,10 @@ _TILE_CELL_Y = _TILE_CAP + _TILE_ENCLOSE
 
 def _tile_grid_frame_html() -> str:
     def mark(x, y, w, h, inner):
-        return f'<div style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px">{inner}</div>'
+        return (
+            f'<div style="position:absolute;left:{x}px;top:{y}px;'
+            f'width:{w}px;height:{h}px">{inner}</div>'
+        )
 
     cell, cap, bw, cx, cy = _TILE_CELL, _TILE_CAP, _TILE_BR_W, _TILE_CELL_X, _TILE_CELL_Y
     span = _TILE_FRAME_W
@@ -540,9 +544,11 @@ def _tile_grid_frame_html() -> str:
 def _tile_preset_html() -> str:
     return (
         '<span style="display:flex;align-items:center;justify-content:space-between;'
-        "gap:4px;width:100%;height:22px;box-sizing:border-box;background:#fff;border:1px solid #999;"
+        "gap:4px;width:100%;height:22px;box-sizing:border-box;background:#fff;border:1px solid "
+        "#999;"
         'border-radius:2px;padding:0 2px 0 6px;font-size:13px;color:#000">(presets)'
-        '<span class="material-icons" style="font-size:16px;color:#555">arrow_drop_down</span></span>'
+        '<span class="material-icons" '
+        'style="font-size:16px;color:#555">arrow_drop_down</span></span>'
     )
 
 
@@ -669,19 +675,17 @@ _DOT_PITCH = 8
 
 def _line_style(ln, y_shift: float = 0) -> str:
     half = spreadsheet.LINE_W / 2
-    # position via transform:translate (anchored at left:0;top:0) so a reflow that shifts the rule
-    # animates on the compositor, not by re-laying-out left/top every frame (the grid-wide jank). The
-    # rule's LENGTH stays on height/width — a size change isn't a compositor op, but far fewer lines
-    # change length than shift, so the dominant movement rides the GPU.
     if ln.orientation == "v":
         pos, edge, sweep = (
-            f"left:0; top:0; transform:translate({ln.pos - half}px,{ln.start - y_shift}px); height:{ln.length}px",
+            f"left:0; top:0; transform:translate({ln.pos - half}px,{ln.start - y_shift}px); "
+            f"height:{ln.length}px",
             "left",
             "to bottom",
         )
     else:
         pos, edge, sweep = (
-            f"left:0; top:0; transform:translate({ln.start}px,{ln.pos - half - y_shift}px); width:{ln.length}px",
+            f"left:0; top:0; transform:translate({ln.start}px,{ln.pos - half - y_shift}px); "
+            f"width:{ln.length}px",
             "top",
             "to right",
         )
