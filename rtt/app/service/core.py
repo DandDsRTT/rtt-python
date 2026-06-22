@@ -403,7 +403,7 @@ def interval_vector(ratio: str, d: int, domain_basis=None) -> tuple[int, ...]:
     try:
         target = Fraction(text)
     except (ValueError, ZeroDivisionError):
-        raise ValueError(f'"{text}" is not a valid ratio.')
+        raise ValueError(f'"{text}" is not a valid ratio.') from None
     if target <= 0:
         raise ValueError(f'"{text}" is not a positive ratio.')
     vectors = _interval_vectors((text,), domain_basis, d)

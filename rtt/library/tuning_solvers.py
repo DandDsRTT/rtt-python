@@ -169,7 +169,7 @@ def _power_limit(
     for k in range(1, steps + 1):
         power = 1.0 + 2.0**-k
         result = minimize(
-            lambda g: float(np.sum((np.abs(tempered @ g - just) / scale) ** power)),
+            lambda g, power=power: float(np.sum((np.abs(tempered @ g - just) / scale) ** power)),
             generators,
             method="Nelder-Mead",
             options={"xatol": 1e-10, "fatol": 1e-14, "maxiter": 20000},

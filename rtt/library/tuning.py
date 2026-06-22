@@ -222,7 +222,7 @@ def _optimize_augmented_all_interval(
     aug_mapping[rank, d] = -1.0
     aug_just = np.append(just_tuning_map, 0.0)
 
-    primes, prime_weights, power = _optimization_setup(
+    _primes, prime_weights, power = _optimization_setup(
         t,
         replace(spec, complexity_size_factor=0),
         d,
