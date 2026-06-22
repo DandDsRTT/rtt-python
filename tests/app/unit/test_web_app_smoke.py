@@ -363,12 +363,14 @@ def test_line_style_centres_the_rule_on_its_coordinate():
     # offsets the box by half the width to seat the rule centred on its coordinate -- the
     # toggle-node / cell-column centre -- rather than leaning a full width off to one side
     half = spreadsheet.LINE_W / 2
+    # the rule is positioned by transform:translate (so a reflow shift rides the compositor); the box is
+    # anchored at left:0;top:0 and translated to (centred coordinate, start), its LENGTH on height/width
     v = app._line_style(Line("trunk:x", "v", 100, 50, 200))
-    assert f"left:{100 - half}px" in v  # centred on x=100, not flush at 100
-    assert "top:50px" in v and "height:200px" in v  # the length runs unchanged
+    assert f"transform:translate({100 - half}px,50px)" in v  # centred on x=100 (not flush), seated at y=50
+    assert "height:200px" in v and "left:0; top:0" in v       # the length runs unchanged; box anchored at origin
     h = app._line_style(Line("h:x", "h", 60, 10, 300))
-    assert f"top:{60 - half}px" in h  # centred on y=60
-    assert "left:10px" in h and "width:300px" in h
+    assert f"transform:translate(10px,{60 - half}px)" in h    # seated at x=10, centred on y=60
+    assert "width:300px" in h and "left:0; top:0" in h
 
 
 def test_line_style_dots_a_collapsed_bands_rule_and_restores_it_when_open():

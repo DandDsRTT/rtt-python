@@ -3717,7 +3717,10 @@ def index(state: str | None = None) -> None:
                                else "rtt-washbase" if bl.tint == "base"
                                else "rtt-wash" if bl.tint else "rtt-block")
                         rec.els[eid] = ui.element("div").classes(cls).props(f'data-eid="{eid}"').mark(eid)
-                style = f"left:{bl.x}px; top:{bl.y - shift}px; width:{bl.w}px; height:{bl.h}px"
+                # position via transform:translate (anchored at left:0;top:0), so a wash/box that SHIFTS
+                # on a reflow rides the compositor like the cells; its size (a wash growing to cover a new
+                # column) stays on width/height — unavoidably a layout op, but the shift is the common case.
+                style = f"left:0; top:0; transform:translate({bl.x}px,{bl.y - shift}px); width:{bl.w}px; height:{bl.h}px"
                 if bl.tint in _TINTS:
                     style += f"; background:var(--wash-{bl.tint})"
                 if rec.styled.get(eid) != style:  # only restyle a block that actually moved/recoloured

@@ -669,15 +669,19 @@ _DOT_PITCH = 8
 
 def _line_style(ln, y_shift: float = 0) -> str:
     half = spreadsheet.LINE_W / 2
+    # position via transform:translate (anchored at left:0;top:0) so a reflow that shifts the rule
+    # animates on the compositor, not by re-laying-out left/top every frame (the grid-wide jank). The
+    # rule's LENGTH stays on height/width — a size change isn't a compositor op, but far fewer lines
+    # change length than shift, so the dominant movement rides the GPU.
     if ln.orientation == "v":
         pos, edge, sweep = (
-            f"left:{ln.pos - half}px; top:{ln.start - y_shift}px; height:{ln.length}px",
+            f"left:0; top:0; transform:translate({ln.pos - half}px,{ln.start - y_shift}px); height:{ln.length}px",
             "left",
             "to bottom",
         )
     else:
         pos, edge, sweep = (
-            f"top:{ln.pos - half - y_shift}px; left:{ln.start}px; width:{ln.length}px",
+            f"left:0; top:0; transform:translate({ln.start}px,{ln.pos - half - y_shift}px); width:{ln.length}px",
             "top",
             "to right",
         )

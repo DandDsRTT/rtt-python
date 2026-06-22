@@ -203,7 +203,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
                        cursor:pointer; }
 .rtt-guide-card-link:hover { color:#c4ddff; }
 
-.rtt-line { position:absolute; z-index:1; opacity:1; transition:left var(--t), top var(--t),
+.rtt-line { position:absolute; z-index:1; opacity:1; transition:transform var(--t),
             width var(--t), height var(--t), opacity var(--t); }
 .rtt-line-v { border-left:var(--line-w) solid var(--c-gridline); width:0; }
 .rtt-line-h { border-top:var(--line-w) solid var(--c-gridline); height:0; }
@@ -214,16 +214,16 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    cross, the darken min's them over white into the mockup's blend (cyan ⊓ yellow =
    green), independent of which group was toggled on first. */
 .rtt-washbase, .rtt-wash { position:absolute; opacity:1;
-            transition:left var(--t), top var(--t), width var(--t), height var(--t), opacity var(--t); }
+            transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
 .rtt-washbase { z-index:-1; background:var(--wash-base); }
 .rtt-wash { z-index:0; mix-blend-mode:darken; }
 .rtt-block { position:absolute; z-index:2; background:#e0e0e0; opacity:1;
-             transition:left var(--t), top var(--t), width var(--t), height var(--t), opacity var(--t); }
+             transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
 /* the nested tuning-ranges box: a thin-bordered frame on the generator tuning map tile
    (per the mockup), above the grey tile but below the chart/selector cells */
 .rtt-block-boxed { position:absolute; z-index:2; background:#e8e8e8; border:1px solid #8a8a8a;
              opacity:1;
-             transition:left var(--t), top var(--t), width var(--t), height var(--t), opacity var(--t); }
+             transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
 .rtt-cell { position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
             opacity:1; transition:transform var(--t), opacity var(--t); }
 /* titles carry explicit "\n" breaks (col_header) so a multi-word header stacks to two
