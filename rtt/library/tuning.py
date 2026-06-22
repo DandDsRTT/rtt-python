@@ -467,6 +467,33 @@ def _prescaler_diagonal(
     return diagonal
 
 
+def _should_lift_pcv_to_prime_basis(pcv, domain_basis, nonprime_basis_approach, prescaler_override):
+    return (
+        prescaler_override is None
+        and nonprime_basis_approach != "nonprime-based"
+        and len(pcv) == len(domain_basis)
+        and not is_standard_prime_limit_domain_basis(domain_basis)
+    )
+
+
+def _lift_pcv_to_prime_basis(pcv, domain_basis):
+    prime_basis = get_simplest_prime_only_basis(domain_basis)
+    if tuple(prime_basis) == tuple(domain_basis):
+        return pcv, domain_basis
+    lift = express_quotients_in_domain_basis(domain_basis, prime_basis)
+    lifted = tuple(
+        sum(pcv[e] * lift[e][p] for e in range(len(lift))) for p in range(len(prime_basis))
+    )
+    return lifted, prime_basis
+
+
+def _zero_rough_primes(pcv, domain_basis, complexity_rough):
+    return tuple(
+        0 if Fraction(q).denominator == 1 and Fraction(q).numerator < complexity_rough else x
+        for q, x in zip(domain_basis, pcv, strict=False)
+    )
+
+
 def get_complexity(
     pcv: tuple,
     t: Temperament,
@@ -479,24 +506,12 @@ def get_complexity(
     prescaler_override=None,
 ) -> float:
     domain_basis = get_domain_basis(t)
-    if (
-        prescaler_override is None
-        and nonprime_basis_approach != "nonprime-based"
-        and len(pcv) == len(domain_basis)
-        and not is_standard_prime_limit_domain_basis(domain_basis)
+    if _should_lift_pcv_to_prime_basis(
+        pcv, domain_basis, nonprime_basis_approach, prescaler_override
     ):
-        prime_basis = get_simplest_prime_only_basis(domain_basis)
-        if tuple(prime_basis) != tuple(domain_basis):
-            lift = express_quotients_in_domain_basis(domain_basis, prime_basis)
-            pcv = tuple(
-                sum(pcv[e] * lift[e][p] for e in range(len(lift))) for p in range(len(prime_basis))
-            )
-            domain_basis = prime_basis
+        pcv, domain_basis = _lift_pcv_to_prime_basis(pcv, domain_basis)
     if complexity_rough:
-        pcv = tuple(
-            0 if Fraction(q).denominator == 1 and Fraction(q).numerator < complexity_rough else x
-            for q, x in zip(domain_basis, pcv, strict=False)
-        )
+        pcv = _zero_rough_primes(pcv, domain_basis, complexity_rough)
     prescaler = (
         prescaler_override
         if prescaler_override is not None
