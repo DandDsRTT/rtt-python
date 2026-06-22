@@ -10,12 +10,17 @@ import sys
 from pathlib import Path
 
 import rtt.app.app as app
-from rtt.app import marks
-from rtt.app import render_html
-from rtt.app import service
+from rtt.app import (
+    grid_tables,
+    marks,
+    render_html,
+    service,
+    spreadsheet,
+    spreadsheet_constants,
+    spreadsheet_text,
+    tooltips,
+)
 from rtt.app import settings as show_settings
-from rtt.app import spreadsheet
-from rtt.app import tooltips
 from rtt.app.editor import Editor
 from rtt.app.layout import Line
 
@@ -298,9 +303,9 @@ def test_math_html_styles_products_per_letter_and_honours_the_subscript_sentinel
     assert app._math_html(" = 𝒈𝑀") == " = " + app._math_html("𝒈") + app._math_html("𝑀")
     # NORM_SUB forces an italic subscript (the complexity row's trailing q); SUB is a PLAIN
     # subscript where only the math-italic 𝑞 slants (the dual(q) mean damage: "dual" upright)
-    assert app._math_html(spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE) == \
+    assert app._math_html(grid_tables.NORM_SUB_OPEN + "q" + grid_tables.NORM_SUB_CLOSE) == \
         '<sub style="font-style:italic">q</sub>'
-    plain = app._math_html(spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE)
+    plain = app._math_html(grid_tables.SUB_OPEN + "dual(𝑞)" + grid_tables.SUB_CLOSE)
     assert plain.startswith("<sub>dual(") and plain.endswith(")</sub>") and "font-style:italic" in plain
 
 
@@ -362,7 +367,7 @@ def test_line_style_centres_the_rule_on_its_coordinate():
     # a gridline's W-px border grows off one edge of its zero-size box, so the renderer
     # offsets the box by half the width to seat the rule centred on its coordinate -- the
     # toggle-node / cell-column centre -- rather than leaning a full width off to one side
-    half = spreadsheet.LINE_W / 2
+    half = spreadsheet_constants.LINE_W / 2
     # the rule is positioned by transform:translate (so a reflow shift rides the compositor); the box is
     # anchored at left:0;top:0 and translated to (centred coordinate, start), its LENGTH on height/width
     v = app._line_style(Line("trunk:x", "v", 100, 50, 200))
@@ -391,16 +396,16 @@ def test_line_style_dots_a_collapsed_bands_rule_and_restores_it_when_open():
     assert "border-top-color:var(--c-gridline)" in h_solid and "background:none" in h_solid
     # the dots are sparse: the transparent gap runs well past the dot's far edge (a LINE_W
     # dot then a gap several times wider), unlike CSS `dotted`'s ~one-width packing
-    assert f"transparent {spreadsheet.LINE_W}px {render_html._DOT_PITCH}px" in v_dotted
-    assert render_html._DOT_PITCH >= 3 * spreadsheet.LINE_W
+    assert f"transparent {spreadsheet_constants.LINE_W}px {render_html._DOT_PITCH}px" in v_dotted
+    assert render_html._DOT_PITCH >= 3 * spreadsheet_constants.LINE_W
 
 
 def test_shared_axis_gridlines_render_two_pixels_thick():
     # the shared coordinate axes (.rtt-line, the rules the cells sit on, threading the
     # gaps between tiles) are the board's gridlines; doubled from 1px to 2px so they read
     # clearly. Both orientations carry the same #e0e0e0 weight.
-    assert spreadsheet.LINE_W == 2
-    assert f"--line-w:{spreadsheet.LINE_W}px" in app._CSS  # the gridline weight, set in :root
+    assert spreadsheet_constants.LINE_W == 2
+    assert f"--line-w:{spreadsheet_constants.LINE_W}px" in app._CSS  # the gridline weight, set in :root
     assert "--c-gridline:#e0e0e0" in app._CSS  # the gridline colour, set in :root so dark mode can retint it
     assert "border-left:var(--line-w) solid var(--c-gridline)" in app._CSS  # the vertical gridlines
     assert "border-top:var(--line-w) solid var(--c-gridline)" in app._CSS   # the horizontal gridlines
@@ -879,8 +884,8 @@ def test_every_option_square_renders_at_one_uniform_size():
     # SAME square. Previously the in-grid control checkboxes were forced larger (font-size:40px
     # → an 18px box) than the settings (13.5px) and range (16px) boxes; now every q-checkbox box
     # and the range box are pinned to the one shared option-box size so they read identically.
-    assert spreadsheet.OPTION_BOX_PX == 16
-    assert f"--option-box:{spreadsheet.OPTION_BOX_PX}px" in app._CSS  # the one shared size, set in :root
+    assert spreadsheet_constants.OPTION_BOX_PX == 16
+    assert f"--option-box:{spreadsheet_constants.OPTION_BOX_PX}px" in app._CSS  # the one shared size, set in :root
     box = "var(--option-box)"
     bg = _css_rule(".q-checkbox__bg")
     assert f"width:{box}" in bg and f"height:{box}" in bg  # the visible bordered square
@@ -1074,8 +1079,8 @@ def test_mathexpr_elides_a_giant_ratio_operand_instead_of_streaking():
     # minimum font, the operand is elided to "(…/…)" so it stays in its cell — the exact size
     # still shows on the "= cents" line below. Built through the real _math_expr/_log_operand so
     # the elision keys off the same "log₂" literal the renderer receives.
-    giant = spreadsheet._math_expr(
-        spreadsheet._log_operand("2" * 80 + "/" + "3" * 60), 240000.0, show_value=True)
+    giant = spreadsheet_text._math_expr(
+        spreadsheet_text._log_operand("2" * 80 + "/" + "3" * 60), 240000.0, show_value=True)
     html = app._mathexpr_html(giant, 37)
     assert "1200 · log₂(…/…)" in html      # the giant ratio is elided, its ratio shape kept
     assert "2" * 80 not in html            # the huge numerator is gone
@@ -1086,8 +1091,8 @@ def test_mathexpr_elides_a_giant_ratio_operand_instead_of_streaking():
 def test_mathexpr_elides_a_giant_bare_integer_operand_to_an_ellipsis():
     # a whole-number target (denominator 1) has a bare operand, no parens; a giant one elides to a
     # lone "…", matching the un-parenthesised form a small one (log₂65536) takes.
-    giant = spreadsheet._math_expr(
-        spreadsheet._log_operand("2" * 80 + "/1"), 96000.0, show_value=True)
+    giant = spreadsheet_text._math_expr(
+        spreadsheet_text._log_operand("2" * 80 + "/1"), 96000.0, show_value=True)
     html = app._mathexpr_html(giant, 37)
     assert "1200 · log₂…" in html and "(…" not in html
     assert "2" * 80 not in html
@@ -1116,8 +1121,8 @@ def test_plain_text_font_shrinks_to_fit_with_no_readability_floor():
     dense = app._ptext_font("9.999 " * 40, 120)    # ~240 chars in a narrow box
     denser = app._ptext_font("9.999 " * 80, 120)   # twice as long → smaller still
     assert denser < dense < 5.0                     # keeps shrinking past the old 5px floor
-    assert app._ptext_font("1 0 0", 120) == spreadsheet.PTEXT_MAX_FONT  # short value hits the cap
-    assert app._ptext_font("x" * 9, 30) <= spreadsheet.PTEXT_MAX_FONT   # never exceeds the cap
+    assert app._ptext_font("1 0 0", 120) == spreadsheet_constants.PTEXT_MAX_FONT  # short value hits the cap
+    assert app._ptext_font("x" * 9, 30) <= spreadsheet_constants.PTEXT_MAX_FONT   # never exceeds the cap
 
 
 def test_plain_text_font_is_glyph_aware_not_uniform_width():

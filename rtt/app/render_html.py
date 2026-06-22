@@ -4,7 +4,7 @@ import math
 from html import escape as _escape
 from urllib.parse import quote
 
-from rtt.app import service, spreadsheet
+from rtt.app import grid_tables, service, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.marks import (
     BR_COLOR,
@@ -54,7 +54,7 @@ def _mode_svg(filled) -> str:
 
 
 def _option_box_svg(fill: str | None, *, box: str = "#fff", border: str = "#555") -> str:
-    n = spreadsheet.OPTION_BOX_PX
+    n = spreadsheet_constants.OPTION_BOX_PX
     inner = f"<rect x='3' y='3' width='{n - 6}' height='{n - 6}' fill='{fill}'/>" if fill else ""
     svg = (
         f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {n} {n}'>"
@@ -168,7 +168,7 @@ def _chart_ticks(lo: float, hi: float) -> list[float]:
 
 
 def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="") -> str:
-    axis_x, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
+    axis_x, col_w = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COL_W
     values = tuple(values)
     present = tuple(v for v in values if v is not None)
     ticks = _chart_ticks(min((*present, 0.0)), max((*present, 0.0)))
@@ -231,7 +231,7 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="") -
 
 
 def _range_chart(w: float, h: float, ranges, tunings=(), decimals: bool = True) -> str:
-    cx0, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
+    cx0, col_w = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COL_W
     if not ranges:
         return svg(
             w,
@@ -354,8 +354,8 @@ def _ptext_units(text: str) -> float:
 
 def _ptext_font(text: str, width: float) -> float:
     units = _ptext_units(text)
-    fit = (width - 2) / units if units else spreadsheet.PTEXT_MAX_FONT
-    return int(min(spreadsheet.PTEXT_MAX_FONT, fit) * 10) / 10
+    fit = (width - 2) / units if units else spreadsheet_constants.PTEXT_MAX_FONT
+    return int(min(spreadsheet_constants.PTEXT_MAX_FONT, fit) * 10) / 10
 
 
 _RATIO_MAX_FONT = 13.0
@@ -395,7 +395,7 @@ _EXAMPLE_TEXT: dict[str, str] = {
     "ebk": "⟨1 0 -4]",
     "domain_units": "p₁/",
     "temperament_tiles": "𝑀",
-    "form": "𝑀" + spreadsheet.SUBSCRIPT_C,
+    "form": "𝑀" + grid_tables.SUBSCRIPT_C,
     "form_controls": "canonical form",
     "form_tiles": "𝐹",
     "tuning_tiles": "T",
@@ -504,7 +504,7 @@ def _tile_fold_html() -> str:
     return _control_svg(_FOLD_GLYPH["unfold_less"])
 
 
-_TILE_CELL = spreadsheet.COL_W
+_TILE_CELL = spreadsheet_constants.COL_W
 _TILE_BR_W = 9
 _TILE_ENCLOSE = 5
 _TILE_CAP = 5
@@ -601,16 +601,16 @@ def _demath(ch: str) -> tuple[str, bool, bool] | None:
 def _math_html(text: str) -> str:
     out = []
     for ch in text:
-        if ch == spreadsheet.NORM_SUB_OPEN:
+        if ch == grid_tables.NORM_SUB_OPEN:
             out.append('<sub style="font-style:italic">')
             continue
-        if ch == spreadsheet.NORM_SUB_CLOSE:
+        if ch == grid_tables.NORM_SUB_CLOSE:
             out.append("</sub>")
             continue
-        if ch == spreadsheet.SUB_OPEN:
+        if ch == grid_tables.SUB_OPEN:
             out.append("<sub>")
             continue
-        if ch == spreadsheet.SUB_CLOSE:
+        if ch == grid_tables.SUB_CLOSE:
             out.append("</sub>")
             continue
         styled = _demath(ch)
@@ -627,10 +627,10 @@ _UNIT_PLAIN = ("oct", "¢", "/", " ")
 
 
 _SUB_TAGS = {
-    spreadsheet.SUB_OPEN: "<sub>",
-    spreadsheet.SUB_CLOSE: "</sub>",
-    spreadsheet.NORM_SUB_OPEN: '<sub style="font-style:italic">',
-    spreadsheet.NORM_SUB_CLOSE: "</sub>",
+    grid_tables.SUB_OPEN: "<sub>",
+    grid_tables.SUB_CLOSE: "</sub>",
+    grid_tables.NORM_SUB_OPEN: '<sub style="font-style:italic">',
+    grid_tables.NORM_SUB_CLOSE: "</sub>",
 }
 
 
@@ -674,7 +674,7 @@ _DOT_PITCH = 8
 
 
 def _line_style(ln, y_shift: float = 0) -> str:
-    half = spreadsheet.LINE_W / 2
+    half = spreadsheet_constants.LINE_W / 2
     if ln.orientation == "v":
         pos, edge, sweep = (
             f"left:0; top:0; transform:translate({ln.pos - half}px,{ln.start - y_shift}px); "
@@ -691,8 +691,8 @@ def _line_style(ln, y_shift: float = 0) -> str:
         )
     if ln.dotted:
         dots = (
-            f"repeating-linear-gradient({sweep},var(--c-gridline) 0 {spreadsheet.LINE_W}px,"
-            f"transparent {spreadsheet.LINE_W}px {_DOT_PITCH}px) border-box"
+            f"repeating-linear-gradient({sweep},var(--c-gridline) 0 {spreadsheet_constants.LINE_W}px,"
+            f"transparent {spreadsheet_constants.LINE_W}px {_DOT_PITCH}px) border-box"
         )
         return f"{pos}; border-{edge}-color:transparent; background:{dots}"
     return f"{pos}; border-{edge}-color:var(--c-gridline); background:none"

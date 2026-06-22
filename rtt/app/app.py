@@ -17,13 +17,16 @@ from urllib.parse import quote
 
 from nicegui import app, background_tasks, helpers, ui
 
-from rtt.library.formatting import strip_negative_zero
-from rtt.app import ids
-from rtt.app import presets
-from rtt.app import service
+from rtt.app import (
+    ids,
+    presets,
+    service,
+    spreadsheet,
+    spreadsheet_constants,
+    spreadsheet_text,
+    tooltips,
+)
 from rtt.app import settings as show_settings
-from rtt.app import spreadsheet
-from rtt.app import tooltips
 from rtt.app.editor import Editor
 from rtt.app.marks import (
     BR_COLOR,
@@ -40,7 +43,6 @@ from rtt.app.marks import (
     top_bracket,
     vbar,
 )
-
 from rtt.app.render_html import (
     _CHART_BAR_FRAC,
     _CHART_GRID,
@@ -124,6 +126,7 @@ from rtt.app.render_html import (
     _wave_svg,
     _wheel_step,
 )
+from rtt.library.formatting import strip_negative_zero
 
 _log = logging.getLogger(__name__)
 
@@ -376,8 +379,8 @@ _CSS_VARS = f""":root {{
   --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
   --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT};
-  --label-w:{spreadsheet.LABEL_W}px; --header-h:{spreadsheet.HEADER_H}px; --line-w:{spreadsheet.LINE_W}px;
-  --ptext-edit-h:{spreadsheet.PTEXT_EDIT_H}px; --option-box:{spreadsheet.OPTION_BOX_PX}px; --btn:{spreadsheet.BTN}px;
+  --label-w:{spreadsheet_constants.LABEL_W}px; --header-h:{spreadsheet_constants.HEADER_H}px; --line-w:{spreadsheet_constants.LINE_W}px;
+  --ptext-edit-h:{spreadsheet_constants.PTEXT_EDIT_H}px; --option-box:{spreadsheet_constants.OPTION_BOX_PX}px; --btn:{spreadsheet_constants.BTN}px;
   --option-box-unchecked:url("{_option_box_svg(None)}");
   --option-box-checked:url("{_option_box_svg('#000')}");
   --option-box-disabled:url("{_option_box_svg('#888')}");
@@ -451,8 +454,8 @@ _TILE_HOST: dict[str, str] = {
 }
 
 _TILE_FONT = {
-    "symbols": 15, "equivalences": 15, "rowlabel": spreadsheet.MATLABEL_H - 2,
-    "names": spreadsheet.CAPTION_FONT, "mnemonics": spreadsheet.CAPTION_FONT,
+    "symbols": 15, "equivalences": 15, "rowlabel": spreadsheet_constants.MATLABEL_H - 2,
+    "names": spreadsheet_constants.CAPTION_FONT, "mnemonics": spreadsheet_constants.CAPTION_FONT,
     "units": 10, "cellunit": 7, "plain_text_values": 11, "drag_to_combine": 18,
 }
 
@@ -1295,7 +1298,7 @@ class _Reconciler:
         html = _math_html(cb.text)
         font = None
         if cb.kind == "matlabel" and ":col:" in cb.id and "‖" not in cb.text and " " not in cb.text:
-            w = spreadsheet._min_width_for_lines(cb.text, 1, _MATLABEL_FONT)
+            w = spreadsheet_text._min_width_for_lines(cb.text, 1, _MATLABEL_FONT)
             if w > cb.w - 2:
                 font = max(_MATLABEL_MIN_FONT, _MATLABEL_FONT * (cb.w - 2) / w)
         if self.math_rendered.get(cb.id) != (html, font):
@@ -2373,13 +2376,13 @@ def index(state: str | None = None) -> None:
             try:
                 g.apply()
                 hyp = editor.layout(prev_ids=base.identities)
-                amber = spreadsheet.changed_cell_ids(base, hyp)
-                red = spreadsheet.removed_cell_ids(lay, hyp)
+                amber = spreadsheet_text.changed_cell_ids(base, hyp)
+                red = spreadsheet_text.removed_cell_ids(lay, hyp)
             finally:
                 editor.restore_for_preview(token)
             return amber - {g.source}, red
         if g.baseline is not None:
-            amber = spreadsheet.changed_cell_ids(g.baseline, lay) - {g.source}
+            amber = spreadsheet_text.changed_cell_ids(g.baseline, lay) - {g.source}
             if g.target_pred is not None:
                 amber |= frozenset(cb.id for cb in lay.cells if g.target_pred(cb))
             return amber, frozenset()
@@ -2436,7 +2439,7 @@ def index(state: str | None = None) -> None:
         toks = col_tokens(spec.group)
         cell_id = spec.cell_id
         if spec.pending() is not None:
-            pt = spreadsheet.pending_token(toks)
+            pt = spreadsheet_text.pending_token(toks)
             if any(cell_id(pt, p) not in rec.inputs for p in range(d)):
                 if preview:
                     _edit_candidate(None)
@@ -3170,7 +3173,7 @@ def index(state: str | None = None) -> None:
         render()
 
     def on_toggle_all():
-        editor.set_collapsed(spreadsheet.toggle_all_collapsed(last_lay[0], editor.collapsed))
+        editor.set_collapsed(spreadsheet_text.toggle_all_collapsed(last_lay[0], editor.collapsed))
         render()
 
     def on_cell_focus(cid):
@@ -3281,7 +3284,7 @@ def index(state: str | None = None) -> None:
         apply()
         hyp = editor.layout(prev_ids=base.identities if base is not None else None)
         disturbs = base is not None and (
-            spreadsheet.removed_cell_ids(base, hyp) or _cell_xy(base, cid) != _cell_xy(hyp, cid))
+            spreadsheet_text.removed_cell_ids(base, hyp) or _cell_xy(base, cid) != _cell_xy(hyp, cid))
         if disturbs:
             editor.restore_for_preview(g.token)
             g.apply = apply
@@ -3794,7 +3797,7 @@ def index(state: str | None = None) -> None:
                 # improper-commit REVERT restores the box even though its value is unchanged from the last
                 # render (the bug that surfaced here). Read-only display cells — the vast majority — are
                 # only the server's to change, so the cache safely skips them.
-                csig = (spreadsheet._cell_content(cb), cb.w, cb.h, cb.audio)
+                csig = (spreadsheet_text._cell_content(cb), cb.w, cb.h, cb.audio)
                 volatile = any(cb.id in d for d in (rec.inputs, rec.den_inputs, rec.ptext_inputs,
                                                     rec.selects, rec.checks, rec.frac_edits, rec.ratio_ops))
                 if volatile or rec.content_sig.get(cb.id) != csig:

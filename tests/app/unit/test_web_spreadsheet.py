@@ -2,7 +2,15 @@ import pickle
 
 import pytest
 
-from rtt.app import service, settings, spreadsheet
+from rtt.app import (
+    grid_tables,
+    service,
+    settings,
+    spreadsheet,
+    spreadsheet_constants,
+    spreadsheet_models,
+    spreadsheet_text,
+)
 from rtt.app.editor import Editor
 from rtt.app.layout import CellBox, Layout
 
@@ -104,7 +112,7 @@ def test_the_first_columns_title_clears_the_frozen_corner():
     # titles still overhang freely into the inter-column gaps (no corner there to clip them).
     lay = _layout()
     h = {c.id: c for c in lay.cells}["header:quantities"]
-    title_left = (h.x + h.w / 2) - spreadsheet._title_w(h.text) / 2  # the centred, unwrapped title
+    title_left = (h.x + h.w / 2) - spreadsheet_text._title_w(h.text) / 2  # the centred, unwrapped title
     assert title_left >= lay.freeze_x - 0.51  # not tucked under the frozen corner
 
 
@@ -131,7 +139,7 @@ def test_layout_reports_the_rightmost_title_overhang():
     # hug-to-content panes introduced). Titles never overhang the bottom, so only the right is
     # reported.
     lay = _layout()
-    rightmost = max(c.x + c.w / 2 + spreadsheet._title_w(c.text) / 2
+    rightmost = max(c.x + c.w / 2 + spreadsheet_text._title_w(c.text) / 2
                     for c in lay.cells if c.kind == "colheader")
     assert lay.right_overhang == rightmost - lay.width  # the interest title's reach past total_w
     assert lay.right_overhang > 0  # it really does overhang (else there'd be nothing to fix)
@@ -144,7 +152,7 @@ def test_no_title_overhang_reports_zero():
     # below the grid. Hiding the long-titled interest column leaves "target intervals" last,
     # whose title sits well within total_w.
     lay = _with(interest=False)
-    rightmost = max(c.x + c.w / 2 + spreadsheet._title_w(c.text) / 2
+    rightmost = max(c.x + c.w / 2 + spreadsheet_text._title_w(c.text) / 2
                     for c in lay.cells if c.kind == "colheader")
     assert rightmost < lay.width  # no title reaches past the grid's right edge
     assert lay.right_overhang == 0
@@ -154,8 +162,8 @@ def _title_edges(lay):
     # each column header's (key, title-left, title-right) for its unwrapped title centred on its
     # gridline, left to right
     return [(c.id.split("header:", 1)[1],
-             c.x + c.w / 2 - spreadsheet._title_w(c.text) / 2,
-             c.x + c.w / 2 + spreadsheet._title_w(c.text) / 2)
+             c.x + c.w / 2 - spreadsheet_text._title_w(c.text) / 2,
+             c.x + c.w / 2 + spreadsheet_text._title_w(c.text) / 2)
             for c in sorted((c for c in lay.cells if c.kind == "colheader"), key=lambda c: c.x)]
 
 
@@ -173,7 +181,7 @@ def test_adjacent_column_titles_keep_a_margin():
     edges = _title_edges(lay)
     assert [k for k, _l, _r in edges][-2:] == ["held", "interest"]  # the colliding pair, now adjacent
     for (lk, _ll, lr), (rk, rl, _rr) in zip(edges, edges[1:]):
-        assert rl - lr >= spreadsheet.TITLE_MARGIN - 0.5, f"{lk}->{rk} titles only {rl - lr:.1f}px apart"
+        assert rl - lr >= spreadsheet_constants.TITLE_MARGIN - 0.5, f"{lk}->{rk} titles only {rl - lr:.1f}px apart"
 
 
 def test_title_clearance_leaves_shielded_columns_untouched():
@@ -185,7 +193,7 @@ def test_title_clearance_leaves_shielded_columns_untouched():
     lay = _layout()
     interest = {c.id: c for c in lay.cells}["header:interest"]
     targets = {c.id: c for c in lay.cells}["header:targets"]
-    assert interest.x == targets.x + targets.w + spreadsheet.GAP  # plain GAP, not widened
+    assert interest.x == targets.x + targets.w + spreadsheet_constants.GAP  # plain GAP, not widened
     assert lay.right_overhang > 0  # interest's title still overhangs the right edge (pane widens to show it)
 
 
@@ -311,8 +319,8 @@ def test_mapping_over_generators_identity_renders_with_identity_objects():
     assert cells["symbol:mapping:gens"].text == "\U0001D440G = \U0001D43C"  # 𝑀G = 𝐼
     assert cells["caption:mapping:gens"].text == "mapped generators"  # projection off (base caption)
     # cols-first: an outer { … ] wrap, with per-column ket marks [ … } (NOT per-row covectors)
-    assert cells["bracket:selfmap:l"].text == spreadsheet.GENMAP_BRACKETS[0]  # {
-    assert cells["bracket:selfmap:r"].text == spreadsheet.GENMAP_BRACKETS[1]  # ]
+    assert cells["bracket:selfmap:l"].text == spreadsheet_constants.GENMAP_BRACKETS[0]  # {
+    assert cells["bracket:selfmap:r"].text == spreadsheet_constants.GENMAP_BRACKETS[1]  # ]
     assert cells["ebktop:selfmap:0"].kind == "ebktop"
     assert cells["ebkbrace:selfmap:0"].kind == "ebkbrace"  # the ket's } foot
     assert cells["ptext:mapping:gens"].text == "{[1 0} [0 1}]"
@@ -423,7 +431,7 @@ def test_quantities_row_pluses_ride_the_bus_stub_past_the_last_branch_point():
                                    ("comma_plus", "commas", "v:comma:0"),
                                    ("interest_plus", "interest", "v:interest:0")):
         plus, bus = cells[plus_id], by_id[f"bus:{col}:top"]
-        stub = by_id[last_sub].pos + spreadsheet.COL_W  # one slot past the last sub-axis
+        stub = by_id[last_sub].pos + spreadsheet_constants.COL_W  # one slot past the last sub-axis
         assert abs((plus.x + plus.w / 2) - stub) < 0.51     # the + centres on the stub
         assert abs((plus.y + plus.h / 2) - bus.pos) < 0.51  # ...up on the top bus
         assert abs((bus.start + bus.length) - stub) < 0.51  # and the bus reaches it
@@ -495,7 +503,7 @@ def test_generators_plus_and_minus_ride_the_generators_fan():
     cells = {c.id: c for c in lay.cells}
     by_id = {ln.id: ln for ln in lay.lines}
     plus, bus, last_sub = cells["gen_plus"], by_id["bus:gens:top"], by_id["v:gen:1"]
-    stub = last_sub.pos + spreadsheet.COL_W
+    stub = last_sub.pos + spreadsheet_constants.COL_W
     assert abs((plus.x + plus.w / 2) - stub) < 0.51      # the + centres on the stub
     assert abs((plus.y + plus.h / 2) - bus.pos) < 0.51   # ...up on the top bus
     assert abs((bus.start + bus.length) - stub) < 0.51   # and the bus reaches it
@@ -542,7 +550,7 @@ def test_target_list_carries_a_per_entry_minus_and_a_plus():
     assert all(f"target_minus:{j}" in cells for j in range(k))  # a − per target
     # the + rides the stub one COL_W past the last target's branch point, bus stretched to reach it
     plus, bus, last_sub = cells["target_plus"], by_id["bus:targets:top"], by_id[f"v:target:{k - 1}"]
-    stub = last_sub.pos + spreadsheet.COL_W
+    stub = last_sub.pos + spreadsheet_constants.COL_W
     assert abs((plus.x + plus.w / 2) - stub) < 0.51
     assert abs((bus.start + bus.length) - stub) < 0.51
 
@@ -633,7 +641,7 @@ def _tokens(pairs):
 def test_fresh_column_tokens_number_the_columns_by_index():
     # with no previous render, each column is numbered 0,1,2,… in order — so every cell id keeps
     # its index until the first reorder (the whole existing test surface is index-keyed)
-    pairs = spreadsheet.assign_column_tokens(None, [(-1, 1, 0), (2, 0, -1), (1, 1, -1)])
+    pairs = spreadsheet_text.assign_column_tokens(None, [(-1, 1, 0), (2, 0, -1), (1, 1, -1)])
     assert _tokens(pairs) == [0, 1, 2]
 
 
@@ -641,8 +649,8 @@ def test_reordered_column_keeps_its_token():
     # a reorder is matched by CONTENT: each moved column carries its token to its new slot, so its
     # cell ids persist and only their x changes — the reconciler then slides them across
     a, b, c = (-1, 1, 0), (2, 0, -1), (1, 1, -1)
-    prev = spreadsheet.assign_column_tokens(None, [a, b, c])   # tokens 0,1,2
-    moved = spreadsheet.assign_column_tokens(prev, [c, a, b])  # drag c to the front
+    prev = spreadsheet_text.assign_column_tokens(None, [a, b, c])   # tokens 0,1,2
+    moved = spreadsheet_text.assign_column_tokens(prev, [c, a, b])  # drag c to the front
     assert _tokens(moved) == [2, 0, 1]
 
 
@@ -651,8 +659,8 @@ def test_edited_column_keeps_its_token_by_position():
     # the token at its index — its cell ids persist, so the focused input is reused (not rebuilt,
     # which would drop focus mid-keystroke) and its unchanged siblings keep their ids too
     a, b = (-1, 1, 0), (2, 0, -1)
-    prev = spreadsheet.assign_column_tokens(None, [a, b])     # tokens 0,1
-    edited = spreadsheet.assign_column_tokens(prev, [(-1, 2, 0), b])  # edit column 0's content
+    prev = spreadsheet_text.assign_column_tokens(None, [a, b])     # tokens 0,1
+    edited = spreadsheet_text.assign_column_tokens(prev, [(-1, 2, 0), b])  # edit column 0's content
     assert _tokens(edited) == [0, 1]
 
 
@@ -661,8 +669,8 @@ def test_editing_a_column_to_a_value_already_in_the_list_keeps_its_position_toke
     # be read as a move into that duplicate (which would steal its token and orphan column 0's id) —
     # a membership change is matched by position, so column 0 keeps token 0 and its cell id survives
     a, b, c = (-1, 1, 0), (2, 0, -1), (1, 1, -1)
-    prev = spreadsheet.assign_column_tokens(None, [a, b, c])   # tokens 0,1,2
-    edited = spreadsheet.assign_column_tokens(prev, [c, b, c])  # edit column 0 from a to c (== column 2)
+    prev = spreadsheet_text.assign_column_tokens(None, [a, b, c])   # tokens 0,1,2
+    edited = spreadsheet_text.assign_column_tokens(prev, [c, b, c])  # edit column 0 from a to c (== column 2)
     assert _tokens(edited) == [0, 1, 2]                         # every column keeps its slot's token
 
 
@@ -670,8 +678,8 @@ def test_duplicate_columns_get_distinct_tokens():
     # two equal vectors in one list must not collide on one id: each claims a distinct previous
     # column in order, so a reorder of the pair still keeps every id unique
     a, b = (-1, 1, 0), (2, 0, -1)
-    prev = spreadsheet.assign_column_tokens(None, [a, a, b])   # tokens 0,1,2 (the dup is 0 and 1)
-    moved = spreadsheet.assign_column_tokens(prev, [a, b, a])  # move b between the two equal a's
+    prev = spreadsheet_text.assign_column_tokens(None, [a, a, b])   # tokens 0,1,2 (the dup is 0 and 1)
+    moved = spreadsheet_text.assign_column_tokens(prev, [a, b, a])  # move b between the two equal a's
     assert _tokens(moved) == [0, 2, 1]
     assert len(set(_tokens(moved))) == 3                       # still three distinct ids
 
@@ -680,9 +688,9 @@ def test_pending_token_never_collides_with_a_live_column():
     # the draft column's token is one past every committed column's, so it can't clash with a
     # surviving column even after a removal leaves a gap in the token sequence; an empty list's
     # draft is 0 (so a first pending vector cell is …:0, as the index-keyed tests expect)
-    assert spreadsheet.pending_token([]) == 0
-    assert spreadsheet.pending_token([0, 1, 2]) == 3          # a fresh list: == the column count
-    assert spreadsheet.pending_token([2]) == 3               # after removals: clears the survivor
+    assert spreadsheet_text.pending_token([]) == 0
+    assert spreadsheet_text.pending_token([0, 1, 2]) == 3          # a fresh list: == the column count
+    assert spreadsheet_text.pending_token([2]) == 3               # after removals: clears the survivor
 
 
 def test_mid_list_removal_keeps_every_survivors_token():
@@ -690,8 +698,8 @@ def test_mid_list_removal_keeps_every_survivors_token():
     # simply vanishes, so the remove-preview diff blames the REMOVED column/row, not whichever one
     # slides into its slot (the reported hover-the-first-comma's-minus-reds-the-last bug)
     a, b, c = "81/80", "128/125", "64/63"
-    prev = spreadsheet.assign_column_tokens(None, [a, b, c])   # tokens 0,1,2
-    removed = spreadsheet.assign_column_tokens(prev, [b, c])   # drop the FIRST entry
+    prev = spreadsheet_text.assign_column_tokens(None, [a, b, c])   # tokens 0,1,2
+    removed = spreadsheet_text.assign_column_tokens(prev, [b, c])   # drop the FIRST entry
     assert _tokens(removed) == [1, 2]                          # survivors keep their ids; 0 is gone
 
 
@@ -702,11 +710,11 @@ def test_basis_groups_claim_freed_slots_positionally_on_a_resolve():
     # surplus last row goes (red)" — not every row removed-plus-recreated (which would paint the
     # whole matrix red and ring nothing as moved).
     r0, r1 = (1, 1, 0), (0, 1, 4)
-    prev = spreadsheet.assign_column_tokens(None, [r0, r1])    # rank 2: tokens 0,1
-    dropped = spreadsheet.assign_column_tokens(prev, [(12, 19, 28)], claim_unmatched=True)
+    prev = spreadsheet_text.assign_column_tokens(None, [r0, r1])    # rank 2: tokens 0,1
+    dropped = spreadsheet_text.assign_column_tokens(prev, [(12, 19, 28)], claim_unmatched=True)
     assert _tokens(dropped) == [0]                             # the survivor claims slot 0; 1 is the red row
     # but a survivor-verbatim removal still matches by content first: removing row 0 keeps row 1's id
-    removed = spreadsheet.assign_column_tokens(prev, [r1], claim_unmatched=True)
+    removed = spreadsheet_text.assign_column_tokens(prev, [r1], claim_unmatched=True)
     assert _tokens(removed) == [1]                             # row 0's id vanishes with it → row 0 reds
 
 
@@ -714,8 +722,8 @@ def test_interval_sets_never_relabel_a_dropped_column_as_a_new_one():
     # the independent interval SETS (targets/held/interest) leave claim_unmatched off: a brand-new
     # ratio is genuinely new, never "the same column as" a dropped one — so a family switch reds the
     # dropped ratios (still on screen) and the new ones arrive with fresh ids (off-screen, no ring)
-    prev = spreadsheet.assign_column_tokens(None, ["3/2", "6/5", "5/4"])  # tokens 0,1,2
-    switched = spreadsheet.assign_column_tokens(prev, ["3/2", "7/4"])     # 3/2 survives; 6/5+5/4 drop; 7/4 new
+    prev = spreadsheet_text.assign_column_tokens(None, ["3/2", "6/5", "5/4"])  # tokens 0,1,2
+    switched = spreadsheet_text.assign_column_tokens(prev, ["3/2", "7/4"])     # 3/2 survives; 6/5+5/4 drop; 7/4 new
     assert _tokens(switched) == [0, 3]                         # 7/4 is FRESH (3), not relabelled 1 or 2
 
 
@@ -769,7 +777,7 @@ def test_reordering_held_rekeys_every_column_cell_not_just_the_vectors():
     lay1 = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
     lay2 = spreadsheet.build(_held_state(), _all_on(),
                              held_vectors=[held[2], held[0], held[1]], prev_ids=lay1.identities)
-    moved = {cid for cid in spreadsheet.changed_cell_ids(lay1, lay2) if not _reorder_volatile(cid)}
+    moved = {cid for cid in spreadsheet_text.changed_cell_ids(lay1, lay2) if not _reorder_volatile(cid)}
     assert moved == set(), f"these cells re-filled in place instead of gliding: {sorted(moved)}"
 
 
@@ -795,7 +803,7 @@ def test_reordering_interest_rekeys_its_column_cells():
     lay1 = spreadsheet.build(_held_state(), _all_on(), interest=interest)
     lay2 = spreadsheet.build(_held_state(), _all_on(),
                              interest=[interest[2], interest[0], interest[1]], prev_ids=lay1.identities)
-    moved = {cid for cid in spreadsheet.changed_cell_ids(lay1, lay2) if not _reorder_volatile(cid)}
+    moved = {cid for cid in spreadsheet_text.changed_cell_ids(lay1, lay2) if not _reorder_volatile(cid)}
     assert moved == set(), f"interest cells re-filled in place instead of gliding: {sorted(moved)}"
 
 
@@ -806,7 +814,7 @@ def test_reordering_targets_rekeys_its_column_cells():
     lay1 = spreadsheet.build(_held_state(), _all_on(), target_override=targets)
     lay2 = spreadsheet.build(_held_state(), _all_on(),
                              target_override=(targets[2], targets[0], targets[1]), prev_ids=lay1.identities)
-    moved = {cid for cid in spreadsheet.changed_cell_ids(lay1, lay2)
+    moved = {cid for cid in spreadsheet_text.changed_cell_ids(lay1, lay2)
              if not _reorder_volatile(cid) and not cid.startswith("damage:")}
     assert moved == set(), f"target cells re-filled in place instead of gliding: {sorted(moved)}"
 
@@ -820,7 +828,7 @@ def test_removing_a_column_keeps_the_survivors_identity_so_they_do_not_ring():
     interest = [(1, 1, -1), (-1, 1, 0), (2, 0, -1)]  # 6/5, 3/2, 9/8
     lay1 = spreadsheet.build(_held_state(), _all_on(), interest=interest)
     lay2 = spreadsheet.build(_held_state(), _all_on(), interest=interest[1:], prev_ids=lay1.identities)
-    assert spreadsheet.changed_cell_ids(lay1, lay2) == frozenset()
+    assert spreadsheet_text.changed_cell_ids(lay1, lay2) == frozenset()
 
 
 def test_editable_vector_tiles_get_editable_quantities_ratios():
@@ -882,14 +890,14 @@ def test_mapping_cells_form_a_square_touching_grid():
     cells = {c.id: c for c in _layout().cells}
     c00 = cells["cell:mapping:0:0"]
     # each cell is square, so the matrix reads as a grid of squares (mockup z_map2)
-    assert c00.w == c00.h == spreadsheet.ROW_H
+    assert c00.w == c00.h == spreadsheet_constants.ROW_H
     # consecutive cells in a row/column abut exactly — shared borders, no gaps
     assert cells["cell:mapping:0:1"].x == c00.x + c00.w
     assert cells["cell:mapping:0:2"].x == c00.x + 2 * c00.w
     assert cells["cell:mapping:1:0"].y == c00.y + c00.h
     # the mapped target interval list sits on the same square columns
     m00 = cells["cell:mapped:0:0"]
-    assert m00.w == m00.h == spreadsheet.ROW_H
+    assert m00.w == m00.h == spreadsheet_constants.ROW_H
     assert cells["cell:mapped:0:1"].x == m00.x + m00.w
 
 
@@ -931,7 +939,7 @@ def test_convergence_buses_keep_solid_corners_and_the_top_bus_reaches_the_plus()
     lay = _layout()  # 2.3.5 -> primes fan to 3 columns
     by = {ln.id: ln for ln in lay.lines}
     cells = {c.id: c for c in lay.cells}
-    half = spreadsheet.LINE_W / 2
+    half = spreadsheet_constants.LINE_W / 2
     v0, vlast = by["v:prime:0"], by["v:prime:2"]
     assert by["bus:primes:top"].start == v0.pos - half  # both fan out from half before the first...
     assert by["bus:primes:bot"].start == v0.pos - half
@@ -947,7 +955,7 @@ def test_mapping_rejoin_bars_span_the_full_generator_fan():
     # shares that top but stretches further DOWN to the mapping-row + stub (the row mirror of the
     # basis +), so it only matches the fan at its top end (its reach to the + is tested separately).
     by = {ln.id: ln for ln in _layout().lines}  # rank-2 -> 2 generator rows
-    half = spreadsheet.LINE_W / 2
+    half = spreadsheet_constants.LINE_W / 2
     g0, glast = by["h:mapping:0"], by["h:mapping:1"]
     right = by["vbar:mapping:right"]
     assert right.start == g0.pos - half and right.start + right.length == glast.pos + half
@@ -962,7 +970,7 @@ def test_adjacent_tiles_keep_a_roomy_minimum_gap():
     blocks = {b.id: b for b in _layout().blocks}
     top, bot = blocks["block:tuning:targets"], blocks["block:just:targets"]
     assert (top.x, top.w) == (bot.x, bot.w)  # the same column, stacked vertically
-    assert bot.y - (top.y + top.h) == spreadsheet.GAP - 2 * spreadsheet.PAD  # the visible gap between the two tiles
+    assert bot.y - (top.y + top.h) == spreadsheet_constants.GAP - 2 * spreadsheet_constants.PAD  # the visible gap between the two tiles
 
 
 def test_quantities_spine_row_has_a_horizontal_gridline():
@@ -1008,8 +1016,8 @@ def test_a_spine_hugs_col_w_and_overhangs_its_title_unless_it_is_leftmost():
     # its left overhang would vanish under the frozen corner, so it's floored wider to hold its title
     # (see test_the_first_columns_title_clears_the_frozen_corner).
     cells = {c.id: c for c in _with(domain_units=True).cells}
-    assert cells["header:units"].w == spreadsheet.COL_W             # hugs the COL_W content...
-    assert cells["header:units"].w < spreadsheet._title_w("units")  # ...the title overhanging it
+    assert cells["header:units"].w == spreadsheet_constants.COL_W             # hugs the COL_W content...
+    assert cells["header:units"].w < spreadsheet_text._title_w("units")  # ...the title overhanging it
     assert cells["header:quantities"].w > cells["header:units"].w   # but the leftmost is floored wider
 
 
@@ -1272,7 +1280,7 @@ def test_collapsed_column_keeps_its_title_at_a_width_that_fits_it():
     coll = {c.id: c for c in spreadsheet.build(base, collapsed={"col:targets"}).cells}["header:targets"]
     full = {c.id: c for c in spreadsheet.build(base).cells}["header:targets"]
     assert coll.text == "target\nintervals"  # the title stays put (not blanked, not rotated)
-    assert spreadsheet.STRIP < coll.w < full.w  # folded narrower, but wide enough to read the title
+    assert spreadsheet_constants.STRIP < coll.w < full.w  # folded narrower, but wide enough to read the title
 
 
 def test_collapsed_column_gridline_stays_centred_in_its_fold_node():
@@ -1312,7 +1320,7 @@ def test_collapsing_a_spine_column_never_widens_it():
     collapsed = {c.id: c for c in spreadsheet.build(base, s, collapsed={"col:quantities", "col:units"}).cells}
     for key in ("quantities", "units"):
         assert collapsed[f"header:{key}"].w <= opened[f"header:{key}"].w  # collapse never widens
-    assert collapsed["header:units"].w == spreadsheet.COL_W  # the overhanging spine stays one COL_W
+    assert collapsed["header:units"].w == spreadsheet_constants.COL_W  # the overhanging spine stays one COL_W
 
 
 def test_a_rows_nested_control_grows_every_tile_in_that_row_uniformly():
@@ -1478,7 +1486,7 @@ def test_canonical_generators_render_as_a_ratio_list_over_the_column_and_in_the_
     assert cells["canon:gen:0"].text == "2/1" and cells["canon:gen:1"].text == "3/1"
     assert cells["canon:gen:0"].x == cells["header:quantities"].x  # in the quantities spine column
     # the horizontal ratios sit in the canonical-generators column, over the quantities row
-    assert cells["cangen:0"].x == cells["header:canongens"].x + spreadsheet.BRACKET_W
+    assert cells["cangen:0"].x == cells["header:canongens"].x + spreadsheet_constants.BRACKET_W
     assert cells["cangen:0"].y < cells["canon:gen:0"].y  # the column header above the canon-row spine
 
 
@@ -1612,7 +1620,7 @@ def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis
     assert not any(c.id.startswith(("cell:canon:", "cell:form:")) for c in cells.values())
     # each over its box's column (mapping over the primes, comma basis over the commas), seated
     # one BOX_INNER inside its tile-spanning box's left edge
-    inset = spreadsheet.BOX_INNER
+    inset = spreadsheet_constants.BOX_INNER
     assert cells["formchooser:mapping"].x == cells["header:primes"].x + inset
     assert cells["formchooser:comma_basis"].x == cells["header:commas"].x + inset
     # seated below the tile's value rows, never over the matrix
@@ -1643,14 +1651,14 @@ def test_mapped_list_rules_its_vector_columns_apart_clear_of_the_marks():
     assert "sep:mapped:1" in cells  # a bar between columns 0 and 1
     sep = cells["sep:mapped:1"]
     top0, brace0 = cells["ebktop:mapped:0"], cells["ebkbrace:mapped:0"]
-    assert top0.w < spreadsheet.COL_W and brace0.w < spreadsheet.COL_W  # inset, not full column
+    assert top0.w < spreadsheet_constants.COL_W and brace0.w < spreadsheet_constants.COL_W  # inset, not full column
     assert top0.x + top0.w < sep.x  # the mark stops short of the bar to its right
     # the rules span the matrix's full framed height and OVERHANG the per-column top/bottom
     # marks by FRAME_OVERHANG at each end — exactly like the outer [ ] wrap (and mirroring how
     # the mapping's spanning bracket overhangs its per-row ⟨ ] in x) — so every vertical rule
     # of the matrix clears the marks rather than stopping flush with (or short of) them
     outer = cells["bracket:mapped:l"]
-    over = spreadsheet.FRAME_OVERHANG
+    over = spreadsheet_constants.FRAME_OVERHANG
     assert sep.y == outer.y == top0.y - over            # top: overhang above the top marks
     assert sep.y + sep.h == outer.y + outer.h == brace0.y + brace0.h + over  # below the bottom marks
 
@@ -1674,7 +1682,7 @@ def test_per_row_brackets_are_short_and_centred_leaving_a_gap_between_rows():
     l0, l1 = cells["bracket:map:0:l"], cells["bracket:map:1:l"]
     row0 = cells["cell:mapping:0:0"]
     # each per-row bracket is much shorter than the ROW_H row it sits in...
-    assert l0.h < spreadsheet.ROW_H
+    assert l0.h < spreadsheet_constants.ROW_H
     assert l0.h == l1.h
     # ...and centred within its row
     assert abs((l0.y + l0.h / 2) - (row0.y + row0.h / 2)) < 0.51
@@ -1688,7 +1696,7 @@ def test_mapped_list_outer_bracket_still_spans_the_whole_matrix():
     b = cells["bracket:mapped:l"]
     first, last = cells["cell:mapped:0:0"], cells["cell:mapped:1:0"]
     # the enclosing [ ] is the tall exception: it spans both mapping rows
-    assert b.h > spreadsheet.ROW_H
+    assert b.h > spreadsheet_constants.ROW_H
     assert b.y <= first.y and b.y + b.h >= last.y + last.h
 
 
@@ -1806,7 +1814,7 @@ def test_master_toggle_glyph_reflects_whether_the_whole_grid_is_collapsed():
 def test_toggle_all_collapses_every_band_when_any_is_open():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     lay = spreadsheet.build(base)  # fully open
-    after = spreadsheet.toggle_all_collapsed(lay, set())
+    after = spreadsheet_text.toggle_all_collapsed(lay, set())
     assert after == _foldable(lay)  # exactly every present row & column, nothing more
     assert {"row:mapping", "col:primes", "col:targets"} <= after
 
@@ -1816,13 +1824,13 @@ def test_toggle_all_expands_everything_when_fully_collapsed():
     lay = spreadsheet.build(base)
     every = _foldable(lay)
     # already fully folded (with a stray individually-folded tile too) -> expand clears it all
-    assert spreadsheet.toggle_all_collapsed(lay, every | {"tile:mapping:primes"}) == set()
+    assert spreadsheet_text.toggle_all_collapsed(lay, every | {"tile:mapping:primes"}) == set()
 
 
 def test_collapsing_all_folds_the_whole_grid_down_to_its_strips():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     full = spreadsheet.build(base)
-    shut = spreadsheet.build(base, collapsed=spreadsheet.toggle_all_collapsed(full, set()))
+    shut = spreadsheet.build(base, collapsed=spreadsheet_text.toggle_all_collapsed(full, set()))
     # no content survives: every value group has folded into its row/column strip
     assert not any(c.id.startswith(("cell:", "tuning:", "just:", "retune:", "damage:", "prime:"))
                    for c in shut.cells)
@@ -1841,7 +1849,7 @@ def test_presets_on_adds_the_three_chooser_dropdowns_under_their_tiles():
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
     assert {"preset:temperament", "preset:tuning", "preset:target"} <= set(cells)
-    inset = spreadsheet.BOX_INNER  # the dropdown sits one inner-pad inside its tile-spanning box
+    inset = spreadsheet_constants.BOX_INNER  # the dropdown sits one inner-pad inside its tile-spanning box
     # the temperament chooser sits under the mapping matrix, one inner pad into its tile-spanning box
     # (which spans the primes column — NOT keyed off the header, which now centres over the matrix
     # once the ET-picker right gutter is balanced by an equal left pad)
@@ -1963,7 +1971,7 @@ def test_tuning_and_temperament_dropdowns_are_copied_into_more_tiles():
     # a copy of the tuning chooser rides the generator tuning map tile (gens column),
     # mirroring the live scheme like the tuning map copy in the primes column. The dropdown seats
     # at the box's left inset (the box spans the tile, so the dropdown is one BOX_INNER off it)
-    inset = spreadsheet.BOX_INNER
+    inset = spreadsheet_constants.BOX_INNER
     gt = cells["preset:tuning:gens"]
     assert gt.x == cells["header:gens"].x + inset and gt.text == "destretched-octave minimax-ES"
     # it shares the tuning row's control band with the tuning map dropdown (primes box)
@@ -1982,7 +1990,7 @@ def test_target_preset_now_lives_in_the_target_interval_list_tile():
     cells = {c.id: c for c in spreadsheet.build(base, s).cells}
     target = cells["preset:target"]
     # still under the targets column, seated one BOX_INNER inside its tile-spanning box
-    assert target.x == cells["header:targets"].x + spreadsheet.BOX_INNER
+    assert target.x == cells["header:targets"].x + spreadsheet_constants.BOX_INNER
     # it now sits in the interval-vectors row (the target interval list), below those cells
     assert target.y > cells["cell:vec:targets:0:0"].y
     # and below the quantities-row target ratios it used to sit under
@@ -2035,7 +2043,7 @@ def test_a_long_control_label_widens_its_narrow_tile():
     gens_on = {b.id: b for b in lay.blocks}["block:tuning:gens"]
     box = {b.id: b for b in lay.blocks}["block:preset:tuning:gens"]
     assert gens_on.w > gens_off.w  # the tile widened for the label
-    assert gens_on.w >= spreadsheet._min_width_for_lines("established tuning scheme", 1)  # fits it on one line
+    assert gens_on.w >= spreadsheet_text._min_width_for_lines("established tuning scheme", 1)  # fits it on one line
     assert box.x >= gens_on.x and box.x + box.w <= gens_on.x + gens_on.w  # the box stays inside the widened tile
 
 
@@ -2152,8 +2160,14 @@ def test_every_in_tile_band_reserves_for_what_it_emits():
     # on over a rich nonstandard-domain temperament and asserts, for every band, that the set of rows
     # EMITTING content is contained in the set of rows RESERVING it — so a future row that emits into a
     # band but is forgotten in its reservation set fails here, for ANY band, not just plain text.
-    from rtt.app.grid_tables import (SYMBOLED_ROWS, UNITED_ROWS, CAPTIONED_ROWS,
-                                     COL_LABELED_ROWS, SYMBOLS, UNITS)
+    from rtt.app.grid_tables import (
+        CAPTIONED_ROWS,
+        COL_LABELED_ROWS,
+        SYMBOLED_ROWS,
+        SYMBOLS,
+        UNITED_ROWS,
+        UNITS,
+    )
     s = settings.defaults()
     for k, v in list(s.items()):
         if isinstance(v, bool):
@@ -2192,6 +2206,7 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
     # and the mapping band carries a leading domain-basis prefix ("2.3.13/5 [⟨…") the value cells don't,
     # so the band is tokenised from its first EBK bracket on.
     import re
+
     from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
     TOKEN = re.compile(r"—|-?\d+\.\d+|-?\d+/\d+|-?\d+")  # decimal before fraction before int
 
@@ -2393,7 +2408,7 @@ def test_every_open_value_tile_declares_an_ebk_convention():
     # must declare a convention there, and its rendered band must match what it declared — so a new
     # tile can't ship without a convention, and can't drift from the one it names.
     from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
-    from rtt.app.service.text import ebk_convention, EBK_CONVENTIONS
+    from rtt.app.service.text import EBK_CONVENTIONS, ebk_convention
     s = settings.defaults()
     for k, v in list(s.items()):
         if isinstance(v, bool):
@@ -2479,11 +2494,11 @@ def test_plain_text_values_are_a_single_line_within_their_column():
     # every read-only value is one line tall and no wider than its column — the app
     # shrinks the font to fit, so a long tuning row never wraps or spills
     long, header = cells["ptext:tuning:targets"], cells["header:targets"]
-    assert long.h == spreadsheet.PTEXT_H  # one line, even for the longest size list...
+    assert long.h == spreadsheet_constants.PTEXT_H  # one line, even for the longest size list...
     assert long.w == header.w  # ...spanning exactly its column, never wider
-    assert cells["ptext:just:targets"].h == spreadsheet.PTEXT_H
+    assert cells["ptext:just:targets"].h == spreadsheet_constants.PTEXT_H
     # the editable duals are one (slightly taller) input line
-    assert cells["ptext:mapping:primes"].h == spreadsheet.PTEXT_EDIT_H
+    assert cells["ptext:mapping:primes"].h == spreadsheet_constants.PTEXT_EDIT_H
 
 
 def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
@@ -2520,7 +2535,7 @@ def test_interval_vectors_show_targets_as_vectors():
     v, hdr = cells["cell:vec:targets:2:0"], cells["target:2"]
     assert v.x + v.w / 2 == hdr.x + hdr.w / 2  # column centred on its target axis
     # the d components stack downward, one ROW_H apart
-    assert cells["cell:vec:targets:0:1"].y - cells["cell:vec:targets:0:0"].y == spreadsheet.ROW_H
+    assert cells["cell:vec:targets:0:1"].y - cells["cell:vec:targets:0:0"].y == spreadsheet_constants.ROW_H
 
 
 def test_interval_vectors_domain_primes_identity_renders_with_identity_objects():
@@ -2528,7 +2543,7 @@ def test_interval_vectors_domain_primes_identity_renders_with_identity_objects()
     # mapping) — an identity object shown when identity_objects is on. A covector stack ⟨ … ] over
     # the primes column, each row labelled 𝒎ⱼᵢ, closing with the angle ⟩ (an operator, like P) —
     # the on-domain twin of the superspace M_jL.
-    J = spreadsheet.SUB_OPEN + "j" + spreadsheet.SUB_CLOSE  # <sub>j</sub> (a tight j, not raw U+2C7C)
+    J = grid_tables.SUB_OPEN + "j" + grid_tables.SUB_CLOSE  # <sub>j</sub> (a tight j, not raw U+2C7C)
     cells = {c.id: c for c in _with(identity_objects=True, names=True, symbols=True,
                                     header_symbols=True, equivalences=True,
                                     plain_text_values=True).cells}
@@ -2541,7 +2556,7 @@ def test_interval_vectors_domain_primes_identity_renders_with_identity_objects()
     assert cells["matlabel:row:vectors:primes:0"].text == f"\U0001D48E{J}₁"  # 𝒎ⱼ₁
     assert cells["ebktop:vec:primes"].kind == "ebktop"
     assert cells["ebkangle:vec:primes"].kind == "ebkangle"  # the outer ⟩ foot (operator, not the } of M)
-    assert cells["bracket:vec:primes:0:l"].text == spreadsheet.MAP_BRACKETS[0]
+    assert cells["bracket:vec:primes:0:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
     assert cells["ptext:vectors:primes"].text == "[⟨1 0 0]⟨0 1 0]⟨0 0 1]⟩"
 
 
@@ -2560,11 +2575,11 @@ def test_interval_vectors_quantities_tile_shows_the_domain_basis_as_row_index():
     # row-index, stacked vertically — dual to the generators indexing the mapping rows
     assert [cells[f"basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
     # boxed COL_W squares like the domain primes, centred in the wider spine column
-    assert cells["basis:0"].w == spreadsheet.COL_W == cells["prime:0"].w
+    assert cells["basis:0"].w == spreadsheet_constants.COL_W == cells["prime:0"].w
     gen0 = cells["gen:0"]  # the generators span the full spine; the basis is centred in it
     assert cells["basis:0"].x + cells["basis:0"].w / 2 == gen0.x + gen0.w / 2
     assert cells["basis:0"].y == cells["cell:comma:0:0"].y  # aligned with the top component
-    assert cells["basis:1"].y - cells["basis:0"].y == spreadsheet.ROW_H  # stacked down its column
+    assert cells["basis:1"].y - cells["basis:0"].y == spreadsheet_constants.ROW_H  # stacked down its column
 
 
 def test_interval_vectors_basis_controls_ride_the_rows_left_bus():
@@ -2680,7 +2695,7 @@ def test_interval_drag_handles_sit_above_the_column_labels_in_the_vectors_row():
         assert handle.y + handle.h <= label.y  # ABOVE the column label...
         assert label.y < vec0.y  # ...which is above the vector cells (handle / label / vector)
     # the interest column carries no column label, but still gets handles above its vectors
-    assert cells["int_drag:interest:0"].y + spreadsheet.ROW_HANDLE_W <= cells["cell:interest:0:0"].y
+    assert cells["int_drag:interest:0"].y + spreadsheet_constants.ROW_HANDLE_W <= cells["cell:interest:0:0"].y
     assert "int_drag:target:0" in cells  # the default target list (many) gets them too
 
 
@@ -2741,7 +2756,7 @@ def test_comma_basis_renders_as_raw_vectors_in_the_interval_vectors_row():
     assert cells["cell:comma:1:0"].text == "-4"
     assert cells["cell:comma:2:0"].text == "1"
     c00 = cells["cell:comma:0:0"]
-    assert c00.w == c00.h == spreadsheet.ROW_H  # square grid cells
+    assert c00.w == c00.h == spreadsheet_constants.ROW_H  # square grid cells
     assert cells["cell:comma:1:0"].y == c00.y + c00.h  # stacked down its column
     assert c00.x == cells["comma:0"].x  # on the commas axis
     assert c00.y == cells["cell:vec:targets:0:0"].y  # top-aligned across the vectors row
@@ -2901,7 +2916,7 @@ def test_weight_row_carries_its_symbol_and_caption():
     on = {c.id: c for c in _with(weighting=True, symbols=True, names=True, equivalences=False).cells}
     # 𝒘 (bold italic, the same glyph the damage equivalence's 𝒘 factor uses)
     assert on["symbol:weight:targets"].text == "𝒘"
-    assert spreadsheet.EQUIVALENCES[("damage", "targets")].endswith("𝒘")  # same 𝒘
+    assert grid_tables.EQUIVALENCES[("damage", "targets")].endswith("𝒘")  # same 𝒘
     assert on["caption:weight:targets"].text == "target interval weight list"
 
 
@@ -3006,7 +3021,7 @@ def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes():
     # column p sits under prime p; rows stack one ROW_H apart (a d-tall matrix)
     assert on["cell:prescaling:primes:0:0"].x == on["prime:0"].x
     assert on["cell:prescaling:primes:1:1"].x == on["prime:1"].x
-    assert on["cell:prescaling:primes:1:0"].y == on["cell:prescaling:primes:0:0"].y + spreadsheet.ROW_H
+    assert on["cell:prescaling:primes:1:0"].y == on["cell:prescaling:primes:0:0"].y + spreadsheet_constants.ROW_H
 
 
 def test_size_factor_grows_the_prescaler_into_the_rectangular_ZL_matrix():
@@ -3025,7 +3040,7 @@ def test_size_factor_grows_the_prescaler_into_the_rectangular_ZL_matrix():
     # the diagonal rows are unchanged (still the editable prescalercell)
     assert lils["cell:prescaling:primes:0:0"].kind == "prescalercell"
     # the size row sits one ROW_H below the last diagonal row, with its own per-row ⟨ … ] bracket
-    assert lils["cell:prescaling:primes:3:0"].y == lils["cell:prescaling:primes:2:0"].y + spreadsheet.ROW_H
+    assert lils["cell:prescaling:primes:3:0"].y == lils["cell:prescaling:primes:2:0"].y + spreadsheet_constants.ROW_H
     assert lils["bracket:prescaling:row:3:l"].text == "⟨" and lils["bracket:prescaling:row:3:r"].text == "]"
 
 
@@ -3375,7 +3390,7 @@ def test_every_present_row_and_column_has_a_gridline():
     line_ids = {ln.id for ln in lay.lines}
     rows = {c.id.split("label:", 1)[1] for c in lay.cells if c.id.startswith("label:")}
     for key in rows:
-        if key in spreadsheet.FRAMED_ROWS:
+        if key in grid_tables.FRAMED_ROWS:
             assert f"h:{key}:0" in line_ids, f"matrix row {key!r} has no fanned gridline"
         else:
             assert f"h:{key}" in line_ids, f"row {key!r} has no gridline"
@@ -3483,7 +3498,7 @@ def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile():
     pre = on["cell:prescaling:primes:2:2"]
     box = blocks["block:preset:prescaler"]
     assert sel.y > pre.y
-    assert sel.x == box.x + spreadsheet.BOX_INNER  # one inner pad into the box
+    assert sel.x == box.x + spreadsheet_constants.BOX_INNER  # one inner pad into the box
     assert box.x <= pre.x and pre.x + pre.w <= box.x + box.w  # the box spans the prescaler's column
     # gone without the prescaling tile (weighting off) or its column (temperament tiles off)
     assert "preset:prescaler" not in {c.id for c in _with(weighting=False, presets=True).cells}
@@ -3561,7 +3576,7 @@ def test_box_c_complexity_chooser_is_disabled_until_alt_complexity():
     assert ctrl.values == ("lp (log-product)",)
     # it sits below the complexity list, inset within box 𝒄's border (BOX_INNER)
     assert ctrl.y > on["complexity:target:0"].y
-    assert ctrl.x == on["header:targets"].x + spreadsheet.BOX_INNER
+    assert ctrl.x == on["header:targets"].x + spreadsheet_constants.BOX_INNER
     # turning alt. complexity on enables the dropdown with the full preset list + custom
     full = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True).cells}
     assert full["control:complexity"].disabled is False
@@ -3755,7 +3770,7 @@ def test_all_interval_relabels_the_optimization_mean_damage():
     based = {c.id: c for c in _with(scheme="TILT minimax-S", optimization=True).cells}
     assert based["optimization:mean_damage:symbol"].text == "⟪𝐝⟫ₚ"
     allint = {c.id: c for c in _with(scheme="minimax-S", optimization=True).cells}
-    expected = "⟪𝒓𝐿⁻¹⟫" + spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE
+    expected = "⟪𝒓𝐿⁻¹⟫" + grid_tables.SUB_OPEN + "dual(𝑞)" + grid_tables.SUB_CLOSE
     assert allint["optimization:mean_damage:symbol"].text == expected
     # the symbol denotes the SAME quantity as the value it labels: a power-MEAN (double-angle), not a
     # norm (single bars). Guards the off-by-√d mean/norm confusion (tuning-core-6).
@@ -3782,11 +3797,11 @@ def test_optimization_mean_damage_carries_a_label_caption():
     assert abs((cap.x + cap.w / 2) - (mean_damage.x + mean_damage.w / 2)) < 0.5
     # target-based the short label is one line; all-interval the wide label reserves two, so the
     # box (and thus the damage tile) grows by exactly that extra line
-    assert on_based["optimization:mean_damage:caption"].h == spreadsheet.CAPTION_LINE
-    assert on_allint["optimization:mean_damage:caption"].h == 2 * spreadsheet.CAPTION_LINE
+    assert on_based["optimization:mean_damage:caption"].h == spreadsheet_constants.CAPTION_LINE
+    assert on_allint["optimization:mean_damage:caption"].h == 2 * spreadsheet_constants.CAPTION_LINE
     box_based = {b.id: b for b in based.blocks}["block:optimization:box"]
     box_allint = {b.id: b for b in allint.blocks}["block:optimization:box"]
-    assert box_allint.h == box_based.h + spreadsheet.CAPTION_LINE
+    assert box_allint.h == box_based.h + spreadsheet_constants.CAPTION_LINE
 
 
 def test_all_interval_locks_the_optimization_power_to_infinity():
@@ -3846,7 +3861,7 @@ def test_optimized_tuning_wraps_the_mean_damage_symbol_in_min():
     assert symbol("TILT minimax-S", False) == "⟪𝐝⟫ₚ"
     # all-interval: the retuning-magnitude relabel (double-angle power-MEAN ⟪…⟫, not a norm) wraps in
     # min() the same way
-    inner = "⟪𝒓𝐿⁻¹⟫" + spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE
+    inner = "⟪𝒓𝐿⁻¹⟫" + grid_tables.SUB_OPEN + "dual(𝑞)" + grid_tables.SUB_CLOSE
     assert symbol("minimax-S", True) == "min(" + inner + ")"
     assert symbol("minimax-S", False) == inner
 
@@ -3870,10 +3885,10 @@ def test_minimized_mean_damage_prefixes_its_label_with_minimized():
     assert cap("minimax-S", True).text == "minimized retuning magnitude"
     assert cap("minimax-S", False).text == "retuning magnitude"
     # the reserved caption band grows by the wrapped "minimized" line
-    assert cap("TILT minimax-S", True).h == 2 * spreadsheet.CAPTION_LINE   # "minimized" / "power mean"
-    assert cap("TILT minimax-S", False).h == spreadsheet.CAPTION_LINE      # "power mean"
-    assert cap("minimax-S", True).h == 3 * spreadsheet.CAPTION_LINE         # + "retuning" / "magnitude"
-    assert cap("minimax-S", False).h == 2 * spreadsheet.CAPTION_LINE
+    assert cap("TILT minimax-S", True).h == 2 * spreadsheet_constants.CAPTION_LINE   # "minimized" / "power mean"
+    assert cap("TILT minimax-S", False).h == spreadsheet_constants.CAPTION_LINE      # "power mean"
+    assert cap("minimax-S", True).h == 3 * spreadsheet_constants.CAPTION_LINE         # + "retuning" / "magnitude"
+    assert cap("minimax-S", False).h == 2 * spreadsheet_constants.CAPTION_LINE
 
 
 def test_all_interval_mean_damage_aggregates_at_the_dual_norm_power_not_infinity():
@@ -3883,6 +3898,7 @@ def test_all_interval_mean_damage_aggregates_at_the_dual_norm_power_not_infinity
     # scheme dual(𝑞)=2, so the mean damage is the RMS of the per-prime weighted damages, not their max:
     # the value must equal tuning.get_tuning_map_mean_damage, the optimizer's own minimized quantity.
     import pytest
+
     from rtt.library import tuning
     from rtt.library.parsing import parse_temperament_data
 
@@ -4044,7 +4060,7 @@ def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
     # caption hugs it; that square is the SINGLE shared option-box size (OPTION_BOX_PX = 16),
     # identical to the settings-panel checkboxes and the tuning-ranges monotone/tradeoff boxes.
     chk = {c.id: c for c in _with(all_interval=True).cells}["control:all_interval"]
-    assert chk.h == spreadsheet.OPTION_BOX_PX  # tracks the one shared option-box constant
+    assert chk.h == spreadsheet_constants.OPTION_BOX_PX  # tracks the one shared option-box constant
 
 
 def test_all_interval_checkbox_rides_right_of_the_target_chooser_when_shown():
@@ -4091,7 +4107,7 @@ def test_alt_complexity_lays_box_l_out_with_just_the_diminuator_checkbox():
     # the square sits inset within box 𝐋's border (BOX_INNER off the column's left), its caption
     # hugging its bottom (the cell is sized to the rendered square, OPTION_BOX_PX, so its bottom IS
     # the square's bottom)
-    assert dim.x == on["header:primes"].x + spreadsheet.BOX_INNER
+    assert dim.x == on["header:primes"].x + spreadsheet_constants.BOX_INNER
     assert cap_d.y == dim.y + dim.h
     # ...and is horizontally CENTRED above its caption slot (both at the column's left edge)
     assert abs((dim.x + dim.w / 2) - (cap_d.x + cap_d.w / 2)) < 1
@@ -4164,7 +4180,7 @@ def test_weighting_captions_the_weight_slope_chooser():
     cap = on["caption:slope"]
     assert cap.kind == "caption"
     assert cap.text == "damage weight slope"
-    assert cap.h == spreadsheet.CAPTION_LINE
+    assert cap.h == spreadsheet_constants.CAPTION_LINE
     assert cap.y > on["control:slope"].y  # sits below the chooser
 
 
@@ -4181,8 +4197,8 @@ def test_weighting_adds_a_weight_slope_chooser_to_the_weight_box():
     assert ctrl.values == ("complexity-weight", "unity-weight", "simplicity-weight")
     # it rides below the weight list, filling box 𝒘's interior (the targets column inset by its border)
     assert ctrl.y > on["weight:target:0"].y
-    assert ctrl.x == on["header:targets"].x + spreadsheet.BOX_INNER
-    assert ctrl.w == on["header:targets"].w - 2 * spreadsheet.BOX_INNER
+    assert ctrl.x == on["header:targets"].x + spreadsheet_constants.BOX_INNER
+    assert ctrl.w == on["header:targets"].w - 2 * spreadsheet_constants.BOX_INNER
 
 
 def test_all_interval_greys_and_locks_the_weight_slope_chooser():
@@ -4415,9 +4431,9 @@ def test_comma_basis_grid_has_no_separator_rules_that_double_its_cell_borders():
 
 def test_caption_line_estimate_wraps_a_long_name_in_a_narrow_column():
     # a wide column fits the whole name on one line...
-    assert spreadsheet._wrap_lines("tempered target interval size list", 272) == 1
+    assert spreadsheet_text._wrap_lines("tempered target interval size list", 272) == 1
     # ...but the narrow one-comma column forces it to several lines
-    assert spreadsheet._wrap_lines("tempered comma basis interval size list (made to vanish!)", 62) >= 3
+    assert spreadsheet_text._wrap_lines("tempered comma basis interval size list (made to vanish!)", 62) >= 3
 
 
 def test_a_long_caption_widens_its_tile_to_stay_within_two_lines():
@@ -4428,16 +4444,16 @@ def test_a_long_caption_widens_its_tile_to_stay_within_two_lines():
     cap = cells["caption:tuning:commas"]
     # the name never wraps past two lines: the column is floored wide enough to hold it,
     # rather than the font shrinking or the name spilling tall down a narrow column
-    assert spreadsheet._wrap_lines(name, cap.w) <= spreadsheet.MAX_CAPTION_LINES
+    assert spreadsheet_text._wrap_lines(name, cap.w) <= spreadsheet_constants.MAX_CAPTION_LINES
     # the caption band is its wrapped lines plus BAND_GAP (the in-tile breathing room)
-    assert cap.h == spreadsheet._wrap_lines(name, cap.w) * spreadsheet.CAPTION_LINE + spreadsheet.BAND_GAP
-    assert cap.h <= spreadsheet.MAX_CAPTION_LINES * spreadsheet.CAPTION_LINE + spreadsheet.BAND_GAP
+    assert cap.h == spreadsheet_text._wrap_lines(name, cap.w) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
+    assert cap.h <= spreadsheet_constants.MAX_CAPTION_LINES * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
     # the tile widened to make that fit: the commas column is wider than its lone value
     # cell + brackets alone would make it (a narrow one-comma content width)
-    content_w = 2 * spreadsheet.BRACKET_W + spreadsheet.COL_W
+    content_w = 2 * spreadsheet_constants.BRACKET_W + spreadsheet_constants.COL_W
     assert cells["header:commas"].w > content_w
     assert cap.w == cells["header:commas"].w  # the caption spans the (widened) column
-    assert cap.y >= cells["tuning:comma:0"].y + spreadsheet.ROW_H  # below the value cell
+    assert cap.y >= cells["tuning:comma:0"].y + spreadsheet_constants.ROW_H  # below the value cell
     # the grey tile widened with it, so the caption sits within the tile, never beyond it
     panel = blocks["block:tuning:commas"]
     assert panel.x <= cap.x and cap.x + cap.w <= panel.x + panel.w
@@ -4455,7 +4471,7 @@ def test_a_widened_caption_tile_keeps_the_add_control_on_its_fan_stub():
     by_id = {ln.id: ln for ln in lay.lines}
     assert blocks["block:commas"].w > narrow["block:commas"].w  # commas tile widened by its caption
     plus, bus = cells["comma_plus"], by_id["bus:commas:top"]
-    stub = by_id["v:comma:0"].pos + spreadsheet.COL_W  # one slot past the (re-centred) comma
+    stub = by_id["v:comma:0"].pos + spreadsheet_constants.COL_W  # one slot past the (re-centred) comma
     assert abs((plus.x + plus.w / 2) - stub) < 0.51     # the + tracks the fan, not the tile edge
     assert abs((bus.start + bus.length) - stub) < 0.51  # and the bus reaches it
 
@@ -4466,9 +4482,9 @@ def test_min_width_for_lines_floors_a_column_to_keep_a_name_within_two_lines():
     for name in ("tempered comma basis interval size list (made to vanish!)",
                  "comma basis interval retuning list (made to vanish!)",
                  "(just) comma basis interval size list"):
-        w = spreadsheet._min_width_for_lines(name, 2)
-        assert spreadsheet._wrap_lines(name, w) <= 2
-        assert spreadsheet._wrap_lines(name, 2 * spreadsheet.BRACKET_W + spreadsheet.COL_W) > 2
+        w = spreadsheet_text._min_width_for_lines(name, 2)
+        assert spreadsheet_text._wrap_lines(name, w) <= 2
+        assert spreadsheet_text._wrap_lines(name, 2 * spreadsheet_constants.BRACKET_W + spreadsheet_constants.COL_W) > 2
 
 
 def test_short_captions_span_the_full_band_so_css_can_centre_them():
@@ -4479,9 +4495,9 @@ def test_short_captions_span_the_full_band_so_css_can_centre_them():
     cells = {c.id: c for c in _with(names=True).cells}
     short = cells["caption:tuning:primes"]  # "tuning map" — one line in its column
     tall = cells["caption:tuning:commas"]   # "tempered ... (made to vanish!)" — two lines
-    assert spreadsheet._wrap_lines(short.text, short.w) == 1
-    assert spreadsheet._wrap_lines(tall.text, tall.w) == 2
-    assert short.h == tall.h == spreadsheet._wrap_lines(tall.text, tall.w) * spreadsheet.CAPTION_LINE + spreadsheet.BAND_GAP
+    assert spreadsheet_text._wrap_lines(short.text, short.w) == 1
+    assert spreadsheet_text._wrap_lines(tall.text, tall.w) == 2
+    assert short.h == tall.h == spreadsheet_text._wrap_lines(tall.text, tall.w) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
     assert short.y == tall.y  # both start at the band top; the CSS centres within the band
 
 
@@ -4606,7 +4622,7 @@ def test_adding_a_mapping_row_starts_a_pending_draft_row_that_does_not_re_rank()
     # the two committed generator rows stay; a draft row rides ONE ROW_H below them (at index r=2)
     assert "cell:mapping:1:0" in cells and not cells["cell:mapping:1:0"].pending
     assert cells["cell:mapping:2:0"].text == "" and cells["cell:mapping:2:0"].pending  # blank, green-flagged
-    assert cells["cell:mapping:2:0"].y - cells["cell:mapping:1:0"].y == spreadsheet.ROW_H
+    assert cells["cell:mapping:2:0"].y - cells["cell:mapping:1:0"].y == spreadsheet_constants.ROW_H
     assert "cell:mapping:3:0" not in cells  # exactly one draft row
     # a "?" generator ratio on the spine, the draft's own ⟨ … ] map brackets, and a − to cancel it
     assert cells["gen:pending"].text == "?" and cells["gen:pending"].pending
@@ -4633,7 +4649,7 @@ def test_a_pending_mapping_row_grows_only_the_mapping_band_by_one_row():
     plain = spreadsheet.build(base)
     drafting = spreadsheet.build(base, pending_mapping_row=[None, None, None])
     # the draft adds exactly one ROW_H to the grid (the extra mapping row) — no other band changes
-    assert drafting.height - plain.height == spreadsheet.ROW_H
+    assert drafting.height - plain.height == spreadsheet_constants.ROW_H
 
 
 def test_the_mapping_plain_text_becomes_a_two_tone_draft_box_while_a_row_is_pending():
@@ -4664,12 +4680,12 @@ def test_the_mapped_list_brackets_grow_to_enclose_the_draft_rows_placeholders():
     # the spanning [ ] wrap encloses the value rows AND the framing bands it spans (see
     # bracket's fit branch), plus a FRAME_OVERHANG past the marks at each end, so its height is
     # r·ROW_H plus that constant frame allowance...
-    frame = ((spreadsheet.FRAME_H + spreadsheet.FRAME_GAP) + (spreadsheet.FRAME_GAP + spreadsheet.BRACE_H)
-             + 2 * spreadsheet.FRAME_OVERHANG)
+    frame = ((spreadsheet_constants.FRAME_H + spreadsheet_constants.FRAME_GAP) + (spreadsheet_constants.FRAME_GAP + spreadsheet_constants.BRACE_H)
+             + 2 * spreadsheet_constants.FRAME_OVERHANG)
     for bid in ("bracket:mapped:l", "bracket:mapped_comma:l"):
-        assert plain[bid].h == 2 * spreadsheet.ROW_H + frame        # committed: r rows
+        assert plain[bid].h == 2 * spreadsheet_constants.ROW_H + frame        # committed: r rows
         # ...and grows by exactly one ROW_H when the draft row joins, enclosing its placeholder
-        assert drafting[bid].h == plain[bid].h + spreadsheet.ROW_H  # draft: r_shown rows
+        assert drafting[bid].h == plain[bid].h + spreadsheet_constants.ROW_H  # draft: r_shown rows
     # the draft row's mapped-target cell is a blank green placeholder the grown bracket now encloses
     assert drafting["cell:mapped:2:0"].pending and drafting["cell:mapped:2:0"].text == ""
     # ...but its cell over the doomed comma is red (the draft generator un-tempers it away), enclosed all the same
@@ -5218,8 +5234,8 @@ def test_empty_interest_columns_footprint_hugs_its_content_the_title_overhangs()
     # that and overhangs the column (rendered without wrapping), rather than forcing the
     # footprint out to the title's strip width and leaving the narrow content adrift in it.
     cells = {c.id: c for c in _layout().cells}  # default build => interest empty
-    assert cells["header:interest"].w == 2 * spreadsheet.BRACKET_W
-    assert cells["header:interest"].w < spreadsheet._title_w("other intervals\nof interest")
+    assert cells["header:interest"].w == 2 * spreadsheet_constants.BRACKET_W
+    assert cells["header:interest"].w < spreadsheet_text._title_w("other intervals\nof interest")
 
 
 def test_empty_interest_column_is_just_a_header_and_axis():
@@ -5479,16 +5495,16 @@ def test_interest_tiles_and_footprint_hug_their_content_the_title_overhangs():
     lay = _with_interest(_INTEREST[:1])  # a single interval
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
-    content_w = 2 * spreadsheet.BRACKET_W + 1 * spreadsheet.COL_W  # the two gutters + one cell
+    content_w = 2 * spreadsheet_constants.BRACKET_W + 1 * spreadsheet_constants.COL_W  # the two gutters + one cell
     # one interval's content is narrow, so its captions' 2-line floor sets the (still modest) width
-    floor = max(spreadsheet._min_width_for_lines(spreadsheet.CAPTIONS[(rk, "interest")], spreadsheet.MAX_CAPTION_LINES)
+    floor = max(spreadsheet_text._min_width_for_lines(grid_tables.CAPTIONS[(rk, "interest")], spreadsheet_constants.MAX_CAPTION_LINES)
                 for rk in ("vectors", "mapping", "tuning", "just", "retune"))
     hug_w = max(content_w, floor)
     # the tile hugs that width — just its PAD overhang each side (the + rides the fan, not the tile)
-    assert blocks["block:interest"].w == hug_w + 2 * spreadsheet.PAD
+    assert blocks["block:interest"].w == hug_w + 2 * spreadsheet_constants.PAD
     # the footprint hugs content/captions (no title reservation); the wider title overhangs it
     assert cells["header:interest"].w == hug_w
-    assert cells["header:interest"].w < spreadsheet._title_w("other intervals\nof interest")
+    assert cells["header:interest"].w < spreadsheet_text._title_w("other intervals\nof interest")
 
 
 def test_interest_title_overhangs_symmetrically_centred_on_the_gridline():
@@ -5497,7 +5513,7 @@ def test_interest_title_overhangs_symmetrically_centred_on_the_gridline():
     # box symmetrically (centred on the gridline), never floated to one side the way a
     # right-aligned header would. The tiles sit centred on that same gridline.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    title_w = spreadsheet._title_w("other intervals\nof interest")
+    title_w = spreadsheet_text._title_w("other intervals\nof interest")
     for mi in range(3):  # a handful of intervals: at COL_W the content stays narrower than the title
         lay = spreadsheet.build(base, collapsed=frozenset(), interest=[(0, 0, 0)] * mi)
         cells = {c.id: c for c in lay.cells}
@@ -5526,7 +5542,7 @@ def test_per_tile_fold_toggle_hugs_its_tile_corner():
     for toggle_id, block_id in (("toggle:tile:vectors:interest", "block:vec:interest"),
                                 ("toggle:tile:mapping:primes", "block:mapping")):
         toggle, tile = cells[toggle_id], blocks[block_id]
-        assert toggle.x == tile.x + spreadsheet.TOGGLE_INSET  # hugs the tile's corner
+        assert toggle.x == tile.x + spreadsheet_constants.TOGGLE_INSET  # hugs the tile's corner
         assert tile.x <= toggle.x <= tile.x + tile.w          # ...so it sits within the tile
 
 
@@ -5647,10 +5663,10 @@ def test_symbol_takes_the_label_slot_and_pushes_the_name_down():
     sym_only = {c.id: c for c in _with(symbols=True, names=False).cells}
     # with names off, the lone symbol sits below the (unframed) tuning row, cleared off the
     # values by BAND_GAP (the in-tile breathing room) — like the gap below the symbol to the name
-    assert sym_only["symbol:tuning:primes"].y == sym_only["tuning:prime:0"].y + spreadsheet.ROW_H + spreadsheet.BAND_GAP
+    assert sym_only["symbol:tuning:primes"].y == sym_only["tuning:prime:0"].y + spreadsheet_constants.ROW_H + spreadsheet_constants.BAND_GAP
     assert not any(c.startswith("caption:") for c in sym_only)
     # with both on, the name sits exactly one symbol-height below the symbol
-    assert both["caption:tuning:primes"].y == both["symbol:tuning:primes"].y + spreadsheet.SYMBOL_H
+    assert both["caption:tuning:primes"].y == both["symbol:tuning:primes"].y + spreadsheet_constants.SYMBOL_H
 
 
 def test_folding_a_row_drops_its_symbols_with_the_rest_of_its_content():
@@ -5920,7 +5936,7 @@ def test_col_labels_sit_inside_the_tile_centred_above_the_bracket():
         # FRAME_OVERHANG above the per-column ebktop marks — so the label is centred against THAT,
         # not the marks (which now sit FRAME_OVERHANG lower, inside the wrap).
         bracket_top = on[f"bracket:{frame_id}:l"].y
-        tile_top = blocks[tile_block_id].y + spreadsheet.PAD  # logical top (panel overhangs by PAD)
+        tile_top = blocks[tile_block_id].y + spreadsheet_constants.PAD  # logical top (panel overhangs by PAD)
         # the label sits INSIDE the tile (at or below tile_top), not above it in the GAP
         assert label.y >= tile_top - 1, \
             f"{label_id} (y={label.y}) must sit inside tile (top={tile_top}), not in the gap"
@@ -5985,7 +6001,7 @@ def test_row_labels_balance_the_primes_tile_with_an_equal_right_gutter():
     left = on["bracket:map:0:l"].x - panel.x
     right = (panel.x + panel.w) - (on["bracket:map:0:r"].x + on["bracket:map:0:r"].w)
     assert abs(left - right) < 0.01, f"primes matrix off-centre in its tile: left={left}, right={right}"
-    assert left >= spreadsheet.MATLABEL_W  # the label gutter (and its mirror) reserve real room
+    assert left >= spreadsheet_constants.MATLABEL_W  # the label gutter (and its mirror) reserve real room
 
 
 def test_complexity_col_labels_spell_out_the_norm_definition():
@@ -6009,7 +6025,7 @@ def test_complexity_col_labels_spell_out_the_norm_definition():
     ).cells}
     # The trailing q is italic-subscripted (per the mockup) — emitted with sentinel
     # markers around it that the matlabel renderer converts to <sub><i>q</i></sub>.
-    q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
+    q = grid_tables.NORM_SUB_OPEN + "q" + grid_tables.NORM_SUB_CLOSE
     assert on["matlabel:col:complexity:primes:0"].text == f"‖𝐿[1]‖{q}"
     assert on["matlabel:col:complexity:primes:2"].text == f"‖𝐿[3]‖{q}"
     assert on["matlabel:col:complexity:commas:0"].text == f"‖𝐿𝐜₁‖{q}"
@@ -6029,7 +6045,7 @@ def test_complexity_target_col_headers_gain_the_norm_equivalence():
     # vector 𝐭ₙ with the n-th prime — the n-th column 𝐿[n] — so each header IS the domain prime
     # complexity map's per-column ‖𝐿[n]‖q. Without equivalences only the bare cₙ shows.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
+    q = grid_tables.NORM_SUB_OPEN + "q" + grid_tables.NORM_SUB_CLOSE
     s = {**settings.defaults(), "header_symbols": True, "weighting": True, "equivalences": True}
     # non-unity slope reveals the complexity row (the prescaler is the log-prime matrix)
     on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
@@ -6246,31 +6262,31 @@ def test_optimization_box_lays_out_mean_damage_and_power():
             < on["optimization:power:caption"].y)
     # the min-damage and the power are ordinary gridded cells (COL_W wide); their contents are
     # centred like any other value cell (not stretched/left-justified within the control)
-    assert on["optimization:mean_damage"].w == spreadsheet.COL_W
-    assert on["optimization:power"].w == spreadsheet.COL_W
+    assert on["optimization:mean_damage"].w == spreadsheet_constants.COL_W
+    assert on["optimization:power"].w == spreadsheet_constants.COL_W
     # the controls are PACKED LEFT, not distributed across the wide box: the mean damage is a COLUMN
     # hugging the left inner edge (its symbol and caption span the column width and its COL_W value
     # cell is centred within it), and the power column sits immediately to its right, one OPT_COL_GAP
     # away — so when the damage tile is wide the controls stay together at the left instead of drifting
     # apart. (Same packing as the complexity/slope control regions in this column.)
-    mean_damage_col_x = box.x + spreadsheet.OPT_PAD_L
+    mean_damage_col_x = box.x + spreadsheet_constants.OPT_PAD_L
     assert on["optimization:mean_damage:symbol"].x == mean_damage_col_x
-    assert on["optimization:mean_damage:symbol"].w == spreadsheet.OPT_MEAN_DAMAGE_W
+    assert on["optimization:mean_damage:symbol"].w == spreadsheet_constants.OPT_MEAN_DAMAGE_W
     assert on["optimization:mean_damage:caption"].x == mean_damage_col_x
-    assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet.OPT_MEAN_DAMAGE_W - spreadsheet.COL_W) / 2
-    mean_damage_r = mean_damage_col_x + spreadsheet.OPT_MEAN_DAMAGE_W  # the mean damage column's right edge
+    assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet_constants.OPT_MEAN_DAMAGE_W - spreadsheet_constants.COL_W) / 2
+    mean_damage_r = mean_damage_col_x + spreadsheet_constants.OPT_MEAN_DAMAGE_W  # the mean damage column's right edge
     # the power column begins one gap past the mean damage column; its caption hugs that left edge and
     # its COL_W value cell is centred within the (wider) caption width
-    pow_col_x = mean_damage_r + spreadsheet.OPT_COL_GAP
+    pow_col_x = mean_damage_r + spreadsheet_constants.OPT_COL_GAP
     assert on["optimization:power:caption"].x == pow_col_x
-    assert on["optimization:power"].x == pow_col_x + (spreadsheet.OPT_POW_CAP_W - spreadsheet.COL_W) / 2
+    assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPT_POW_CAP_W - spreadsheet_constants.COL_W) / 2
     cap = on["optimization:power:caption"]
     assert cap.x > mean_damage_r and cap.x + cap.w < box.x + box.w  # ...and its caption clears both sides
     # the box is still floored wide enough to seat the controls and their captions
-    assert box.w >= spreadsheet.OPT_BOX_MIN_W
+    assert box.w >= spreadsheet_constants.OPT_BOX_MIN_W
     # the caption occupies a single line (so "optimization power" sits right under 𝑝, not a
     # two-line band that floats it lower)
-    assert on["optimization:power:caption"].h == spreadsheet.CAPTION_LINE
+    assert on["optimization:power:caption"].h == spreadsheet_constants.CAPTION_LINE
     # the title sits inside the box (below its top border) with a gap before the controls
     assert on["optimization:title"].y > box.y
     assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].h
@@ -6289,8 +6305,8 @@ def test_optimization_box_fills_the_full_width_of_the_damage_tile():
     blk = {b.id: b for b in lay.blocks}
     box = blk["block:optimization:box"]
     panel = blk["block:damage:targets"]  # the damage tile's grey panel
-    assert box.x == panel.x + spreadsheet.PAD  # the box starts at the tile's content left edge
-    assert box.w == panel.w - 2 * spreadsheet.PAD  # ...and fills the tile's content width
+    assert box.x == panel.x + spreadsheet_constants.PAD  # the box starts at the tile's content left edge
+    assert box.w == panel.w - 2 * spreadsheet_constants.PAD  # ...and fills the tile's content width
 
 
 def test_a_narrow_damage_tile_widens_to_seat_the_optimization_box():
@@ -6302,8 +6318,8 @@ def test_a_narrow_damage_tile_widens_to_seat_the_optimization_box():
     s["optimization"] = True
     blk = {b.id: b for b in spreadsheet.build(base, s).blocks}
     box = blk["block:optimization:box"]
-    assert box.w >= spreadsheet.OPT_BOX_MIN_W  # wide enough to seat mean damage | power
-    assert box.w == blk["block:damage:targets"].w - 2 * spreadsheet.PAD  # still fills its tile
+    assert box.w >= spreadsheet_constants.OPT_BOX_MIN_W  # wide enough to seat mean damage | power
+    assert box.w == blk["block:damage:targets"].w - 2 * spreadsheet_constants.PAD  # still fills its tile
 
 
 def test_a_manual_generator_tuning_drives_the_displayed_maps():
@@ -6621,7 +6637,7 @@ def test_mapped_generator_detempering_renders_with_identity_objects():
     assert cells["caption:mapping:detempering"].text == "mapped generator detempering"
     assert cells["matlabel:col:mapping:detempering:0"].text == "\U0001D440\U0001D41D₁"  # 𝑀𝐝₁
     # cols-first: outer { … ] wrap + per-column ket marks [ … } (NOT a per-row covector frame)
-    assert cells["bracket:mapped_detempering:l"].text == spreadsheet.GENMAP_BRACKETS[0]  # {
+    assert cells["bracket:mapped_detempering:l"].text == spreadsheet_constants.GENMAP_BRACKETS[0]  # {
     assert cells["ebktop:mapped_detempering:0"].kind == "ebktop"
     assert cells["ebkbrace:mapped_detempering:0"].kind == "ebkbrace"  # the ket's } foot
     assert cells["ptext:mapping:detempering"].text == "{[1 0} [0 1}]"
@@ -6789,7 +6805,7 @@ def test_the_damage_chart_sits_above_its_values_and_reserves_row_space():
     assert ch.y + ch.h <= v0.y  # the chart sits fully above the value cells, clear of them
     assert on["damage:target:0"].y > off["damage:target:0"].y  # values pushed down to make room
     # the chart spans the target columns (so its bars can align with them)
-    assert ch.x <= on["target:0"].x and ch.x + ch.w >= on["target:7"].x + spreadsheet.COL_W
+    assert ch.x <= on["target:0"].x and ch.x + ch.w >= on["target:7"].x + spreadsheet_constants.COL_W
 
 
 def test_charts_on_adds_signed_retuning_charts_over_primes_and_targets():
@@ -6836,7 +6852,7 @@ def test_chart_bars_centre_on_their_value_gridlines():
         interest=((-3, 2, 0),), held_vectors=((-1, 1, 0),))
     on = {c.id: c for c in lay.cells}
     gridline = {ln.id: ln.pos for ln in lay.lines if ln.orientation == "v"}
-    bw, cw = spreadsheet.BRACKET_W, spreadsheet.COL_W
+    bw, cw = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COL_W
     elem = {"primes": "prime", "commas": "comma", "targets": "target",
             "interest": "interest", "held": "held", "detempering": "detempering"}
     for group, e in elem.items():
@@ -6856,7 +6872,7 @@ def test_generator_tuning_map_tile_shows_the_generator_map_cents_in_the_default_
     assert cells["tuning:gen:1"].text == service.cents(tun.generator_map[1])
     # one cents cell per generator, in the generators column, one COL_W apart
     assert cells["header:gens"].x <= cells["tuning:gen:0"].x < cells["header:primes"].x
-    assert cells["tuning:gen:1"].x == cells["tuning:gen:0"].x + spreadsheet.COL_W
+    assert cells["tuning:gen:1"].x == cells["tuning:gen:0"].x + spreadsheet_constants.COL_W
     assert cells["tuning:gen:0"].y == cells["tuning:prime:0"].y  # in the tuning row
     # framed { … ] (a curly open, square close) per the mockup — distinct from the
     # ⟨ … ] prime maps — and named by its caption
@@ -6946,7 +6962,7 @@ def test_range_chart_nests_below_the_generator_map_values_inside_the_tile():
     # not floating over them
     assert ch.y > on["tuning:gen:0"].y
     # ...and below the mapping row (whose generators-column tile is empty), so they never overlap
-    mapping_bottom = on["cell:mapping:1:0"].y + spreadsheet.ROW_H
+    mapping_bottom = on["cell:mapping:1:0"].y + spreadsheet_constants.ROW_H
     assert ch.y >= mapping_bottom
 
 
@@ -7451,7 +7467,7 @@ def test_form_layer_subscripts_the_canonical_form_objects_in_symbols():
     # comma basis 𝑀C, mapped target list Y), the generator tuning map 𝒈, and the projection's
     # generator embedding G. The form-INVARIANT objects (the prime tuning map 𝒕, the comma basis C)
     # stay bare. The subscript is the SUBSCRIPT_C sentinel — distinct from the upright comma-basis C.
-    C = spreadsheet.SUBSCRIPT_C
+    C = grid_tables.SUBSCRIPT_C
     on = _canon_cells(symbols=True, form=True, equivalences=False)
     off = _canon_cells(symbols=True, equivalences=False)
     assert on["symbol:mapping:primes"].text == f"𝑀{C}"
@@ -7470,7 +7486,7 @@ def test_form_layer_subscripts_the_canonical_form_objects_in_symbols():
 def test_form_layer_subscripts_the_canonical_form_objects_in_equivalences():
     # the subscript reaches inside the defining equations too: 𝒕 = 𝒈C𝑀C, Y = 𝑀C T, and the
     # projection's P = GC𝑀C — but 𝒕 (the form-invariant result) keeps its bare head.
-    C = spreadsheet.SUBSCRIPT_C
+    C = grid_tables.SUBSCRIPT_C
     on = _canon_cells(symbols=True, equivalences=True, projection=True, form=True)
     assert on["symbol:tuning:primes"].text == f"𝒕 = 𝒈{C}𝑀{C}"      # 𝒕 bare, 𝒈/𝑀 subscripted
     assert on["symbol:mapping:targets"].text == f"Y{C} = 𝑀{C}T"
@@ -7483,7 +7499,7 @@ def test_form_layer_subscripts_the_matrix_header_labels():
     # comma basis) and 𝑀𝐡ᵢ (mapped held basis) — the mapped target columns 𝐲ᵢ, the generator tuning
     # map 𝒈ᵢ, and the projection embedding's 𝐠ᵢ all gain the subscript. Form-invariant labels (the
     # prime tuning map's 𝒕𝐜ᵢ, the comma basis 𝐜ᵢ) stay bare. Over a CANONICAL mapping (subscript on main).
-    C, s1 = spreadsheet.SUBSCRIPT_C, spreadsheet._sub(1)
+    C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
     on = _canon_cells(symbols=True, header_symbols=True, form=True)
     assert on["matlabel:row:mapping:primes:0"].text == f"𝒎{C}{s1}"   # the mapping covector rows
     assert on["matlabel:col:mapping:commas:0"].text == f"𝑀{C}𝐜{s1}"  # mapped comma basis
@@ -7509,7 +7525,7 @@ def test_form_subscript_is_two_faced_and_the_canon_row_needs_a_noncanonical_form
     # meantone) the main rows stay BARE; on a canonical one the subscript rides them. The canonical-
     # mapping row + 𝐹 (which display the canonical form) need BOTH the form-tiles toggle AND a
     # non-canonical stored form — over a canonical 𝑀 they would just duplicate the main rows, so they hide.
-    C = spreadsheet.SUBSCRIPT_C
+    C = grid_tables.SUBSCRIPT_C
     noncanon = {c.id: c for c in _with(symbols=True, form=True).cells}     # default = equave-reduced
     assert noncanon["symbol:mapping:primes"].text == "𝑀"                  # bare: not the canonical form
     assert not any(cid.startswith("cell:canon:") for cid in noncanon)     # canon row gated off (no form_tiles)
@@ -7531,7 +7547,7 @@ def test_form_box_shows_the_mapping_decomposition_equivalence_only_when_noncanon
     # with the form box up, the mapping tile's symbol line gains the decomposition 𝑀 = 𝐹𝑀_C — but
     # only while 𝑀 ≠ 𝑀_C (a non-trivial 𝐹). The default meantone ((1,1,0),(0,1,4)) is equave-reduced,
     # so 𝐹 ≠ 𝐼 and the tail shows; over the canonical mapping it would be trivially 𝐼·𝑀_C, suppressed.
-    C = spreadsheet.SUBSCRIPT_C
+    C = grid_tables.SUBSCRIPT_C
     on = {c.id: c for c in _with(symbols=True, equivalences=True, form_tiles=True).cells}
     assert on["symbol:mapping:primes"].text == f"𝑀 = 𝐹𝑀{C}"   # bare 𝑀 head (non-canonical) + the 𝐹𝑀_C tail
     # over a CANONICAL mapping (form box still up) the decomposition is trivial (𝐹 = 𝐼) — no tail
@@ -7546,7 +7562,7 @@ def test_form_subscript_covers_the_whole_mapping_row_including_new_tiles():
     # the subscript-C applies by ROW, not per tile, so every mapped product in the mapping row —
     # including the identity-object tiles 𝑀G (mapped generators) and 𝑀D (mapped generator
     # detemperings) — inherits 𝑀 → 𝑀_C with no per-tile registration. Over a canonical mapping.
-    C, s1 = spreadsheet.SUBSCRIPT_C, spreadsheet._sub(1)
+    C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
     on = _canon_cells(symbols=True, header_symbols=True, form=True, equivalences=False,
                      generator_detempering=True, identity_objects=True)
     assert on["symbol:mapping:gens"].text == f"𝑀{C}G"          # mapped generators 𝑀G → 𝑀_CG
@@ -7559,7 +7575,7 @@ def test_canonical_mapping_row_carries_its_own_symbols_and_row_headers():
     # row headers: the canonical mapping 𝑀_C over the primes (subscript baked — it IS the canonical
     # form) and the INVERSE generator form matrix 𝐹⁻¹ over the gens column (𝑀_C = 𝐹⁻¹𝑀). The generator
     # form matrix 𝐹 itself (𝑀 = 𝐹𝑀_C), with its 𝒇 row labels, rides the mapping row's canongens column.
-    C, s1 = spreadsheet.SUBSCRIPT_C, spreadsheet._sub(1)
+    C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
     on = {c.id: c for c in _with(symbols=True, header_symbols=True, form=True, form_tiles=True).cells}  # form_tiles → canon surfaces
     assert on["symbol:canon:primes"].text == f"𝑀{C}"               # the canonical mapping
     assert on["symbol:canon:gens"].text == "𝐹⁻¹"                   # the inverse generator form matrix
@@ -7601,7 +7617,7 @@ def test_canonical_mapping_row_tile_symbols_units_and_equivalences():
     # full parity for the mapped tiles: 𝑀_C-baked symbols + their defining equations, the canonical-
     # generator units g_C (g_C/p for 𝑀_C, g_C/g for 𝐹, plain g_C for the mapped lists), and the
     # 𝑀_C-baked column headers (𝑀_C𝐝 / 𝑀_C𝐜 / 𝐲_C / 𝑀_C𝐡).
-    C, s1 = spreadsheet.SUBSCRIPT_C, spreadsheet._sub(1)
+    C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
     s = settings.defaults()
     s.update(form=True, form_tiles=True, symbols=True, equivalences=True, units=True, header_symbols=True,
              generator_detempering=True, optimization=True)
@@ -7625,7 +7641,7 @@ def test_canonical_mapping_row_commas_symbol_keeps_subscript_under_unchanged():
     # under the V = C|U consolidation (projection on) the mapped-comma tile reads the mapped
     # UNROTATED vector list: the comma-basis C swaps to V, but the canonical subscript's own "C"
     # sentinel must survive the swap — 𝑀_C C → 𝑀_C V, never 𝑀_V V (the bug this guards).
-    C = spreadsheet.SUBSCRIPT_C
+    C = grid_tables.SUBSCRIPT_C
     s = settings.defaults()
     s.update(form=True, form_tiles=True, symbols=True, header_symbols=True, projection=True, optimization=True, equivalences=False)
     cells = {c.id: c for c in spreadsheet.build(
@@ -7703,7 +7719,7 @@ def test_caption_widened_commas_tile_keeps_its_fold_toggle_on_the_panel_edge():
     panel = blocks["block:vec:commas"]
     assert panel.w > narrow["block:vec:commas"].w           # the caption really did widen it
     fold = cells["toggle:tile:vectors:commas"]
-    assert fold.x == panel.x + spreadsheet.TOGGLE_INSET     # the fold hugs the panel's left edge
+    assert fold.x == panel.x + spreadsheet_constants.TOGGLE_INSET     # the fold hugs the panel's left edge
 
 
 def test_show_flags_gate_sub_controls_under_their_parent():
@@ -7713,11 +7729,11 @@ def test_show_flags_gate_sub_controls_under_their_parent():
     s = settings.defaults()
     s.update(tuning_tiles=False, optimization=True, weighting=True, alt_complexity=True,
              names=False, mnemonics=True)
-    f = spreadsheet._resolve_show_flags(s, frozenset())
+    f = spreadsheet_models._resolve_show_flags(s, frozenset())
     assert not (f.optimization or f.weighting or f.alt_complexity)  # all gated off by tuning_tiles
     assert not f.mnemonics                                          # gated off by names
     s.update(tuning_tiles=True, names=True)  # parents on -> sub-controls follow their own toggle
-    f = spreadsheet._resolve_show_flags(s, frozenset())
+    f = spreadsheet_models._resolve_show_flags(s, frozenset())
     assert f.optimization and f.weighting and f.alt_complexity and f.mnemonics
 
 
@@ -7726,10 +7742,10 @@ def test_show_flags_box_choosers_gate_on_the_collapsed_state():
     # open; collapsing any of them hides the chooser even with every toggle on.
     s = settings.defaults()
     s.update(tuning_tiles=True, weighting=True, alt_complexity=True, temperament_tiles=True)
-    assert spreadsheet._resolve_show_flags(s, frozenset()).lbox  # all open -> box-𝐋 chooser shows
-    assert spreadsheet._resolve_show_flags(s, frozenset()).cbox  # ...and box-𝒄
-    assert not spreadsheet._resolve_show_flags(s, frozenset({"row:prescaling"})).lbox  # collapsed -> hidden
-    assert not spreadsheet._resolve_show_flags(s, frozenset({"row:complexity"})).cbox
+    assert spreadsheet_models._resolve_show_flags(s, frozenset()).lbox  # all open -> box-𝐋 chooser shows
+    assert spreadsheet_models._resolve_show_flags(s, frozenset()).cbox  # ...and box-𝒄
+    assert not spreadsheet_models._resolve_show_flags(s, frozenset({"row:prescaling"})).lbox  # collapsed -> hidden
+    assert not spreadsheet_models._resolve_show_flags(s, frozenset({"row:complexity"})).cbox
 
 
 def test_prescaler_labels_resolve_the_log_prime_glyph_and_gated_name():
@@ -7737,10 +7753,10 @@ def test_prescaler_labels_resolve_the_log_prime_glyph_and_gated_name():
     # matrix, so products/headers carry the concrete 𝐿 (not the abstract 𝑋), and the bare tile's
     # NAME gains "= log-prime matrix" — but only with the equivalences layer on.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    p = spreadsheet._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equiv=True)
+    p = spreadsheet_models._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equiv=True)
     assert p.symbol == "𝐿"  # the concrete log-prime glyph (not the abstract 𝑋)
     assert p.effective_captions[("prescaling", "primes")].endswith("= log-prime matrix")
-    bare = spreadsheet._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equiv=False)
+    bare = spreadsheet_models._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equiv=False)
     assert "log-prime matrix" not in bare.effective_captions[("prescaling", "primes")]  # gated on equivalences
 
 
@@ -7760,33 +7776,33 @@ def _diff_cell(cid, text, **kw):
 
 def test_changed_cell_ids_is_empty_for_an_unchanged_layout():
     lay = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
-    assert spreadsheet.changed_cell_ids(lay, lay) == frozenset()
+    assert spreadsheet_text.changed_cell_ids(lay, lay) == frozenset()
 
 
 def test_changed_cell_ids_flags_a_cell_whose_text_changed():
     old = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
     new = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "9"))
-    assert spreadsheet.changed_cell_ids(old, new) == frozenset({"b"})
+    assert spreadsheet_text.changed_cell_ids(old, new) == frozenset({"b"})
 
 
 def test_changed_cell_ids_ignores_a_cell_that_only_moved():
     # a cell shifted because a neighbour widened — same text, new box — has not changed value
     old = _diff_layout(CellBox("a", 0, 0, 10, 10, "tuningvalue", text="1"))
     new = _diff_layout(CellBox("a", 99, 50, 20, 20, "tuningvalue", text="1"))
-    assert spreadsheet.changed_cell_ids(old, new) == frozenset()
+    assert spreadsheet_text.changed_cell_ids(old, new) == frozenset()
 
 
 def test_changed_cell_ids_flags_a_newly_added_cell():
     old = _diff_layout(_diff_cell("a", "1"))
     new = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
-    assert spreadsheet.changed_cell_ids(old, new) == frozenset({"b"})
+    assert spreadsheet_text.changed_cell_ids(old, new) == frozenset({"b"})
 
 
 def test_changed_cell_ids_omits_a_removed_cell():
     # a cell dropped in the new layout has nothing on screen left to highlight
     old = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
     new = _diff_layout(_diff_cell("a", "1"))
-    assert spreadsheet.changed_cell_ids(old, new) == frozenset()
+    assert spreadsheet_text.changed_cell_ids(old, new) == frozenset()
 
 
 def test_changed_cell_ids_flags_a_value_flag_change_not_just_text():
@@ -7794,7 +7810,7 @@ def test_changed_cell_ids_flags_a_value_flag_change_not_just_text():
     # unchanged; the signature must compare content flags, not text alone, so the highlight catches it
     old = _diff_layout(_diff_cell("a", "701.955"))
     new = _diff_layout(_diff_cell("a", "701.955", blank=True))
-    assert spreadsheet.changed_cell_ids(old, new) == frozenset({"a"})
+    assert spreadsheet_text.changed_cell_ids(old, new) == frozenset({"a"})
 
 
 def test_changed_cell_ids_tracks_a_mapping_edit_through_a_real_layout():
@@ -7803,7 +7819,7 @@ def test_changed_cell_ids_tracks_a_mapping_edit_through_a_real_layout():
     ed = Editor()
     before = ed.layout()
     ed.edit_mapping([[1, 1, 0], [0, 1, 7]])  # the fifth's prime-5 entry: 4 -> 7
-    changed = spreadsheet.changed_cell_ids(before, ed.layout())
+    changed = spreadsheet_text.changed_cell_ids(before, ed.layout())
     assert "cell:mapped:1:6" in changed   # the mapped list recomputed
     assert "cell:mapping:1:2" in changed  # the mapping cell ITSELF — an input cell whose value must
                                           # live in the CellBox content, or the diff is blind to the
@@ -7826,7 +7842,7 @@ def test_changed_cell_ids_rings_only_value_cells_not_marks_or_controls():
         CellBox("grip:targets:0", 0, 0, 10, 10, "colgrip"),     # a drag grip
         CellBox("comma_minus:0", 0, 0, 10, 10, "comma_minus"),  # a - control
     )
-    assert spreadsheet.changed_cell_ids(old, new) == frozenset({"v"})
+    assert spreadsheet_text.changed_cell_ids(old, new) == frozenset({"v"})
 
 
 # --- removed_cell_ids: the structural remove-preview (red) diff ------------------------------
@@ -7838,7 +7854,7 @@ def test_changed_cell_ids_rings_only_value_cells_not_marks_or_controls():
 def test_removed_cell_ids_flags_a_value_cell_gone_from_the_new_layout():
     old = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
     new = _diff_layout(_diff_cell("a", "1"))
-    assert spreadsheet.removed_cell_ids(old, new) == frozenset({"b"})
+    assert spreadsheet_text.removed_cell_ids(old, new) == frozenset({"b"})
 
 
 def test_removed_cell_ids_ignores_survivors_added_cells_and_removed_scaffolding():
@@ -7854,7 +7870,7 @@ def test_removed_cell_ids_ignores_survivors_added_cells_and_removed_scaffolding(
         CellBox("comma_minus:1", 0, 0, 10, 10, "comma_minus"),
     )
     new = _diff_layout(_diff_cell("survivor", "1"), _diff_cell("added", "9"))
-    assert spreadsheet.removed_cell_ids(old, new) == frozenset({"value"})
+    assert spreadsheet_text.removed_cell_ids(old, new) == frozenset({"value"})
 
 
 def test_a_domain_change_keeps_target_columns_shared_by_ratio():
@@ -7879,7 +7895,7 @@ def test_a_domain_change_keeps_target_columns_shared_by_ratio():
     assert shared and dropped  # the two TILTs genuinely overlap AND differ (so the test bites both ways)
     shared_tok = next(tok for tok, r in base.identities["targets"] if r in shared)
     dropped_tok = next(tok for tok, r in base.identities["targets"] if r in dropped)
-    removed = spreadsheet.removed_cell_ids(base, shrunk)
+    removed = spreadsheet_text.removed_cell_ids(base, shrunk)
     assert f"target:{shared_tok}" not in removed   # a shared target's ratio cell SURVIVES (not red)
     assert f"target:{dropped_tok}" in removed       # a prime-5 target's ratio cell is removed (red)
 
@@ -7993,8 +8009,8 @@ def test_nonstandard_domain_superspace_columns_size_to_rL_dL():
     cells = {c.id: c for c in lay.cells}
     # BARBADOS: r = 2 + (dL − d) = 3, dL = 4
     rL, dL = 3, 4
-    expected_ssgens_w = 2 * spreadsheet.BRACKET_W + rL * spreadsheet.COL_W
-    expected_ssprimes_w = 2 * spreadsheet.BRACKET_W + dL * spreadsheet.COL_W
+    expected_ssgens_w = 2 * spreadsheet_constants.BRACKET_W + rL * spreadsheet_constants.COL_W
+    expected_ssprimes_w = 2 * spreadsheet_constants.BRACKET_W + dL * spreadsheet_constants.COL_W
     # the header spans the column; the column's content footprint matches
     # (no caption widening here — Phase 3 declares no captioned tiles in the new columns
     # so the natural width drives the footprint)
@@ -8065,8 +8081,8 @@ def test_nonstandard_domain_superspace_rows_size_to_dL_rL():
     cells = {c.id: c for c in _barbados_ss().cells}
     # BARBADOS: dL = 4, rL = 3
     dL, rL = 4, 3
-    assert cells["label:ss_vectors"].h == dL * spreadsheet.ROW_H
-    assert cells["label:ss_mapping"].h == rL * spreadsheet.ROW_H
+    assert cells["label:ss_vectors"].h == dL * spreadsheet_constants.ROW_H
+    assert cells["label:ss_mapping"].h == rL * spreadsheet_constants.ROW_H
 
 
 def test_nonstandard_domain_off_omits_the_superspace_rows():
@@ -8122,7 +8138,7 @@ def test_ss_vectors_spine_is_centred_in_the_quantities_column():
     # the domain basis directly above
     cells = {c.id: c for c in _barbados_ss().cells}
     assert cells["ss_basis:0"].x == cells["basis:0"].x      # both spine-centred
-    assert cells["ss_basis:0"].w == cells["basis:0"].w == spreadsheet.COL_W
+    assert cells["ss_basis:0"].w == cells["basis:0"].w == spreadsheet_constants.COL_W
 
 
 def test_nonstandard_domain_off_omits_the_spine_basis_index():
@@ -8190,7 +8206,7 @@ def test_superspace_projection_row_renders_PL_over_the_superspace_primes():
     cells = {c.id: c for c in _barbados_proj().cells}
     assert cells["label:ss_projection"].text == "superspace\nprojection"
     # dL = 4 rows tall (one covector per superspace prime)
-    assert cells["label:ss_projection"].h == 4 * spreadsheet.ROW_H
+    assert cells["label:ss_projection"].h == 4 * spreadsheet_constants.ROW_H
     # ordered: ss_mapping < ss_projection < projection
     assert cells["label:ss_mapping"].y < cells["label:ss_projection"].y < cells["label:projection"].y
     # the full 4 × 4 P_L grid renders over the ssprimes column
@@ -8221,7 +8237,7 @@ def test_superspace_projection_row_renders_the_embedding_and_projected_lists():
     assert [cells[f"cell:ss_proj_v:{p}:0"].text for p in range(4)] == ["0", "0", "0", "0"]  # P_L·comma = 0
     # P_L·T_L the projected target list, dL-tall over the targets, not dashed (a full rational projection)
     assert any(c.startswith("cell:ss_proj_pt:") for c in cells)
-    assert cells["cell:ss_proj_pt:0:0"].text != spreadsheet.DASH
+    assert cells["cell:ss_proj_pt:0:0"].text != spreadsheet_constants.DASH
     # the tiles carry their mockup captions
     assert cells["caption:ss_projection:ssgens"].text == "superspace generator embedding"
     assert cells["caption:ss_projection:primes"].text == "superspace projected subspace basis elements"
@@ -8232,7 +8248,7 @@ def test_superspace_projection_detempering_tile_renders_when_shown():
     # the chapter-9 analogue of the on-domain P·D — shown only when that column is on, dashed-aware.
     cells = {c.id: c for c in _barbados_proj(generator_detempering=True).cells}
     assert {f"cell:ss_proj_pd:{i}:{p}" for i in range(2) for p in range(4)} <= set(cells)  # dL × r = 4 × 2
-    assert cells["cell:ss_proj_pd:0:0"].text != spreadsheet.DASH  # a full rational projection, not dashed
+    assert cells["cell:ss_proj_pd:0:0"].text != spreadsheet_constants.DASH  # a full rational projection, not dashed
     assert cells["caption:ss_projection:detempering"].text == "projected generator detempering in superspace"
     # absent when the generator-detempering column is off (parity with the on-domain P·D)
     off = {c.id for c in _barbados_proj().cells}
@@ -8242,8 +8258,8 @@ def test_superspace_projection_detempering_tile_renders_when_shown():
 def test_superspace_projection_extra_tiles_dash_when_under_held():
     # every projected tile dashes in lockstep with P_L when the tuning isn't a full rational projection
     cells = {c.id: c for c in _barbados_proj(held_basis_ratios=()).cells}
-    assert cells["cell:ss_embed:0:0"].text == spreadsheet.DASH       # G_L dashed
-    assert cells["cell:ss_proj_bls:0:0"].text == spreadsheet.DASH    # P_L·B_Ls dashed
+    assert cells["cell:ss_embed:0:0"].text == spreadsheet_constants.DASH       # G_L dashed
+    assert cells["cell:ss_proj_bls:0:0"].text == spreadsheet_constants.DASH    # P_L·B_Ls dashed
 
 
 def test_superspace_projection_extra_tiles_absent_without_projection():
@@ -8257,8 +8273,8 @@ def test_superspace_projection_row_dashes_when_under_held():
     # under-held (P_L undetermined, service returns None): every cell an em-dash — in lockstep with
     # the on-domain projection P, never asserting a projection the optimum doesn't have.
     cells = {c.id: c for c in _barbados_proj(held_basis_ratios=()).cells}
-    assert cells["cell:ss_projection:ssprimes:0:0"].text == spreadsheet.DASH
-    assert cells["cell:ss_projection:ssprimes:3:3"].text == spreadsheet.DASH
+    assert cells["cell:ss_projection:ssprimes:0:0"].text == spreadsheet_constants.DASH
+    assert cells["cell:ss_projection:ssprimes:3:3"].text == spreadsheet_constants.DASH
 
 
 def test_superspace_projection_row_absent_without_the_projection_toggle():
@@ -8289,7 +8305,7 @@ def test_superspace_projection_quantities_spine_lists_the_superspace_primes():
     assert [cells[f"ss_proj_basis:{p}"].text for p in range(4)] == [cells[f"ss_basis:{p}"].text for p in range(4)]
     # spine-centred in the quantities column, sharing its x with the superspace mapping spine above
     assert cells["ss_proj_basis:0"].x == cells["ss_basis:0"].x
-    assert cells["ss_proj_basis:0"].w == spreadsheet.COL_W
+    assert cells["ss_proj_basis:0"].w == spreadsheet_constants.COL_W
 
 
 def test_superspace_projection_units_column_reads_superspace_prime():
@@ -8342,7 +8358,7 @@ def test_superspace_projection_extra_tiles_carry_captions_symbols_and_units():
     # the commas tile reads as the consolidated V (unrotated vector list) under the projection view
     assert cells["caption:ss_projection:commas"].text == "projected unrotated vector list in superspace"
     assert cells["symbol:ss_projection:ssgens"].text == "GL"                  # G_L
-    assert cells["symbol:ss_projection:primes"].text == spreadsheet.SYMBOLS[("ss_projection", "primes")]  # P_L B_L (no trailing s)
+    assert cells["symbol:ss_projection:primes"].text == grid_tables.SYMBOLS[("ss_projection", "primes")]  # P_L B_L (no trailing s)
     assert cells["units:ss_projection:ssgens"].text == "units: p/gL"            # G_L: superspace prime per superspace gen
     assert cells["units:ss_projection:primes"].text == "units: p/b"
     assert cells["units:ss_projection:detempering"].text == "units: p"
@@ -8351,10 +8367,10 @@ def test_superspace_projection_extra_tiles_carry_captions_symbols_and_units():
 def test_superspace_projection_extra_tiles_dash_when_under_held():
     # the whole row dashes in lockstep with P_L when the tuning isn't a full rational projection
     cells = {c.id: c for c in _barbados_proj(held_basis_ratios=(), generator_detempering=True).cells}
-    assert cells["cell:ss_embed:0:0"].text == spreadsheet.DASH        # G_L
-    assert cells["cell:ss_proj_bls:0:0"].text == spreadsheet.DASH     # P_L·B_Ls
-    assert cells["cell:ss_proj_pd:0:0"].text == spreadsheet.DASH      # P_L·D_L
-    assert cells["cell:ss_proj_pt:0:0"].text == spreadsheet.DASH      # P_L·T_L
+    assert cells["cell:ss_embed:0:0"].text == spreadsheet_constants.DASH        # G_L
+    assert cells["cell:ss_proj_bls:0:0"].text == spreadsheet_constants.DASH     # P_L·B_Ls
+    assert cells["cell:ss_proj_pd:0:0"].text == spreadsheet_constants.DASH      # P_L·D_L
+    assert cells["cell:ss_proj_pt:0:0"].text == spreadsheet_constants.DASH      # P_L·T_L
 
 
 def test_superspace_projection_extra_tiles_absent_without_projection():
@@ -8746,8 +8762,8 @@ def test_M_L_tile_carries_per_row_map_brackets_and_a_matrix_frame():
     # (matrix_frame, like mapping/canon)
     cells = {c.id: c for c in _barbados_ss().cells}
     for i in range(3):
-        assert cells[f"bracket:ss_map:{i}:l"].text == spreadsheet.MAP_BRACKETS[0]
-        assert cells[f"bracket:ss_map:{i}:r"].text == spreadsheet.MAP_BRACKETS[1]
+        assert cells[f"bracket:ss_map:{i}:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
+        assert cells[f"bracket:ss_map:{i}:r"].text == spreadsheet_constants.MAP_BRACKETS[1]
     # top/bottom spanning frame, like the existing M tile (ebktop:primes / ebkbrace:primes)
     assert "ebktop:ss_mapping" in cells
     assert "ebkbrace:ss_mapping" in cells
@@ -8799,8 +8815,8 @@ def test_M_L_and_M_jL_cells_are_read_only_mapped_kind():
 def test_M_jL_tile_has_brackets_and_matrix_frame():
     cells = {c.id: c for c in _barbados_ss_identity().cells}
     for i in range(4):  # dL=4 covector rows
-        assert cells[f"bracket:ss_vec_jmap:{i}:l"].text == spreadsheet.MAP_BRACKETS[0]
-        assert cells[f"bracket:ss_vec_jmap:{i}:r"].text == spreadsheet.MAP_BRACKETS[1]
+        assert cells[f"bracket:ss_vec_jmap:{i}:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
+        assert cells[f"bracket:ss_vec_jmap:{i}:r"].text == spreadsheet_constants.MAP_BRACKETS[1]
     assert "ebktop:ss_vec_jmap" in cells
     assert "ebkangle:ss_vec_jmap" in cells
 
@@ -8912,12 +8928,12 @@ def test_superspace_tuning_tiles_carry_their_brackets():
     # 𝒈, 𝒕, 𝒋, 𝒓 cousins per the rendered mockup.
     cells = {c.id: c for c in _barbados_ss().cells}
     # 𝒈ₗ — genmap brackets { … ]
-    assert cells["bracket:tuning:ssgenmap:l"].text == spreadsheet.GENMAP_BRACKETS[0]
-    assert cells["bracket:tuning:ssgenmap:r"].text == spreadsheet.GENMAP_BRACKETS[1]
+    assert cells["bracket:tuning:ssgenmap:l"].text == spreadsheet_constants.GENMAP_BRACKETS[0]
+    assert cells["bracket:tuning:ssgenmap:r"].text == spreadsheet_constants.GENMAP_BRACKETS[1]
     # 𝒕ₗ, 𝒋ₗ, 𝒓ₗ — map brackets ⟨ … ]
     for key in ("tuning", "just", "retune"):
-        assert cells[f"bracket:{key}:ssprimes:l"].text == spreadsheet.MAP_BRACKETS[0]
-        assert cells[f"bracket:{key}:ssprimes:r"].text == spreadsheet.MAP_BRACKETS[1]
+        assert cells[f"bracket:{key}:ssprimes:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
+        assert cells[f"bracket:{key}:ssprimes:r"].text == spreadsheet_constants.MAP_BRACKETS[1]
 
 
 def test_superspace_tuning_row_captions_and_symbols():
@@ -9083,9 +9099,9 @@ def test_superspace_M_L_and_M_jL_outer_frame_uses_ebktop_with_brace_or_angle():
 def test_existing_bracket_constants_are_unchanged_by_superspace():
     # the new superspace tiles reuse the existing constants — no new bracket-pair
     # constant was introduced, and the existing constants stay as they are
-    assert spreadsheet.MAP_BRACKETS == ("⟨", "]")
-    assert spreadsheet.LIST_BRACKETS == ("[", "]")
-    assert spreadsheet.GENMAP_BRACKETS == ("{", "]")
+    assert spreadsheet_constants.MAP_BRACKETS == ("⟨", "]")
+    assert spreadsheet_constants.LIST_BRACKETS == ("[", "]")
+    assert spreadsheet_constants.GENMAP_BRACKETS == ("{", "]")
 
 
 # ---------------------------------------------------------------------------
@@ -9203,8 +9219,8 @@ def test_superspace_units_off_without_domain_units():
 def test_superspace_L_marker_is_a_capital_subscript():
     # the superspace "L" subscript is a real CAPITAL L wrapped in the <sub> sentinels (rendered
     # <sub>L</sub> by app), not the lowercase ₗ — consistently across counts, symbols and units.
-    L = spreadsheet.SUBSCRIPT_L
-    assert L == spreadsheet.SUB_OPEN + "L" + spreadsheet.SUB_CLOSE  # capital L, subscript-wrapped
+    L = grid_tables.SUBSCRIPT_L
+    assert L == grid_tables.SUB_OPEN + "L" + grid_tables.SUB_CLOSE  # capital L, subscript-wrapped
     cells = {c.id: c for c in _barbados_ss(counts=True, symbols=True, domain_units=True).cells}
     assert cells["count:ssgens"].text == f"\U0001D45F{L} = 3"        # 𝑟ʟ = 3 (not 𝑟ₗ)
     assert cells["symbol:tuning:ssgens"].text == f"\U0001D488{L}"    # 𝒈ʟ
@@ -9240,14 +9256,14 @@ def test_nonstandard_domain_uses_b_throughout_the_basis_column_not_just_units():
     assert cells["units:mapping:primes"].text == "units: g/b"        # 𝑔/𝑝 → 𝑔/𝒃
     assert cells["units:tuning:primes"].text == "units: ¢/b"
     # the superspace mapping's tile-level unit is unchanged (gʟ/p, true primes)
-    assert cells["units:ss_mapping:ssprimes"].text == f"units: g{spreadsheet.SUBSCRIPT_L}/p"
+    assert cells["units:ss_mapping:ssprimes"].text == f"units: g{grid_tables.SUBSCRIPT_L}/p"
 
 
 def test_superspace_tuning_tiles_get_subcolumn_headers():
     # the superspace tuning-family covectors head each column with 𝒈ʟᵢ / 𝒕ʟᵢ / 𝒋ʟᵢ / 𝒓ʟᵢ
     # (the issue-4 fix — they were missing while the on-domain 𝒕ᵢ etc. had them). M_L / M_jL
     # head their ROWS (𝒎ʟᵢ) instead, like the on-domain mapping, so they carry no col header.
-    L = spreadsheet.SUBSCRIPT_L
+    L = grid_tables.SUBSCRIPT_L
     cells = {c.id: c for c in _barbados_ss(symbols=True, header_symbols=True).cells}
     assert cells["matlabel:col:tuning:ssgens:0"].text == f"\U0001D488{L}₁"   # 𝒈ʟ₁
     assert cells["matlabel:col:tuning:ssprimes:0"].text == f"\U0001D495{L}₁"  # 𝒕ʟ₁
@@ -9321,7 +9337,7 @@ def test_a_non_diagonal_pretransformer_all_interval_weight_is_a_reciprocal_list(
     assert on["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹"                 # the generic reciprocal, no matrix inverse
     assert on["matlabel:col:weight:targets:0"].text == "w₁ = c₁⁻¹"       # references the complexity column, not the norm
     # the complexity tile keeps the per-column norm detail
-    assert on["matlabel:col:complexity:targets:0"].text == f"c₁ = ‖𝑋[1]‖{spreadsheet.NORM_SUB_OPEN}q{spreadsheet.NORM_SUB_CLOSE}"
+    assert on["matlabel:col:complexity:targets:0"].text == f"c₁ = ‖𝑋[1]‖{grid_tables.NORM_SUB_OPEN}q{grid_tables.NORM_SUB_CLOSE}"
 
 
 def test_a_matrix_row_carries_a_unit_on_every_subrow_not_just_the_first():
@@ -9342,7 +9358,7 @@ def test_read_only_target_vectors_stay_full_width():
     cells = {c.id: c for c in _with(scheme="minimax-lils-S").cells}
     real = cells["cell:vec:targets:0:0"]
     assert real.kind == "vec"            # read-only (not the editable targetcell)
-    assert real.w == spreadsheet.COL_W   # full width, no inset
+    assert real.w == spreadsheet_constants.COL_W   # full width, no inset
 # ── chapter-9 domain basis elements become editable with the nonstandard-domain box ──────────
 
 def _nonstd_on(state):
@@ -9440,7 +9456,7 @@ def test_pending_element_renders_drafts_on_both_axes():
         assert draft.kind == "elementratio" and draft.pending and draft.text == "?/?"
         assert minus_id in cells  # its − cancels the draft (the ":pending" id steers it to remove_element)
     # the spine draft sits one ROW_H below the basis stack, past which the spine + has dropped
-    assert cells["basis:pending"].y == cells["basis:2"].y + spreadsheet.ROW_H
+    assert cells["basis:pending"].y == cells["basis:2"].y + spreadsheet_constants.ROW_H
     assert cells["basis_plus"].y > cells["basis:pending"].y  # the + rides the stub below the draft
     # a partially-typed draft shows the raw text on both axes
     typed = {c.id: c for c in spreadsheet.build(state, s, pending_element="9").cells}
@@ -9474,8 +9490,8 @@ def test_projection_on_adds_a_dxd_matrix_between_mapping_and_tuning():
     assert cells["label:mapping"].y < cells["label:projection"].y < cells["label:tuning"].y
     # square grid cells stacked one ROW_H apart, like the other matrices
     c00 = cells["cell:proj:0:0"]
-    assert c00.w == c00.h == spreadsheet.ROW_H
-    assert cells["cell:proj:1:0"].y == c00.y + spreadsheet.ROW_H
+    assert c00.w == c00.h == spreadsheet_constants.ROW_H
+    assert cells["cell:proj:1:0"].y == c00.y + spreadsheet_constants.ROW_H
 
 
 def test_projection_box_is_dashed_until_the_tuning_is_a_rational_projection():
@@ -9784,7 +9800,8 @@ def test_projection_symbol_floor_widens_the_tile_so_the_equivalence_never_wraps(
     # P's equivalence (𝑃 = G𝑀 = V·diag(𝝀)V⁻¹) is wider than the bare 3-column matrix, so the column
     # widens (the _symbol_floor) to fit it on ONE line — the symbol/equivalence must never wrap. The
     # matrix then centres in the widened column.
-    from rtt.app.spreadsheet import _min_width_for_lines, SYMBOL_FONT
+    from rtt.app.spreadsheet_constants import SYMBOL_FONT
+    from rtt.app.spreadsheet_text import _min_width_for_lines
     cells = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, equivalences=True, names=True).cells}
     sym = cells["symbol:projection:primes"]
     assert sym.w >= _min_width_for_lines(sym.text, 1, SYMBOL_FONT)   # the cell is wide enough — no wrap
@@ -9865,7 +9882,7 @@ def test_projection_adds_a_scaling_factors_row_over_v():
     assert cells["label:scaling_factors"].y < cells["label:vectors"].y
     # a one-ROW_H scalar list, on the same V sub-axes as the vectors below it
     s0 = cells["cell:scaling:0"]
-    assert s0.h == spreadsheet.ROW_H
+    assert s0.h == spreadsheet_constants.ROW_H
     assert s0.x == cells["cell:comma:0:0"].x
 
 
@@ -9878,8 +9895,8 @@ def test_projection_consolidates_commas_and_unchanged_into_v():
     assert u_first.kind == "unchangedcell"               # U is editable when it's a full projection
     # the unchanged half U is pushed right of the comma half by the extra C|U gap (so the divider
     # clears the cells); within U the columns stay one COL_W apart
-    assert u_first.x == cells["cell:comma:0:0"].x + spreadsheet.COL_W + spreadsheet.V_SPLIT_GAP
-    assert cells["cell:unchanged:0:1"].x == u_first.x + spreadsheet.COL_W
+    assert u_first.x == cells["cell:comma:0:0"].x + spreadsheet_constants.COL_W + spreadsheet_constants.V_SPLIT_GAP
+    assert cells["cell:unchanged:0:1"].x == u_first.x + spreadsheet_constants.COL_W
     # U is the held basis as entered — u₁ = 2/1 = (1,0,0), u₂ = 5/4 = (-2,0,1)
     assert [cells[f"cell:unchanged:{p}:0"].text for p in range(3)] == ["1", "0", "0"]
     assert [cells[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["-2", "0", "1"]
@@ -9941,7 +9958,7 @@ def test_projection_v_column_has_one_c_u_divider_per_tile_and_no_stray_separator
     cells = {c.id: c for c in _with(projection=True).cells}
     # one vertical bar centred in the C|U gap (left of the first unchanged column) down each V tile
     bar = cells["vsplit:vectors"]
-    assert bar.x == cells["cell:unchanged:0:0"].x - spreadsheet.V_SPLIT_GAP / 2 - spreadsheet.SEP_W / 2
+    assert bar.x == cells["cell:unchanged:0:0"].x - spreadsheet_constants.V_SPLIT_GAP / 2 - spreadsheet_constants.SEP_W / 2
     assert {"vsplit:scaling_factors", "vsplit:mapping", "vsplit:tuning"} <= set(cells)
     assert "vsplit:counts" not in cells  # the counts tile (two scalar tallies, not a matrix) gets none
     # the mapped unrotated vector list (M·V) draws NO inter-entry separator rules (the stray-
@@ -10000,9 +10017,9 @@ def test_projection_keeps_the_comma_add_remove_controls():
     # the + rides the C|U gap — the visual "next comma" slot between the comma half and U — kept clear
     # of BOTH the − (on the lone comma's branch point) and U's first reorder grip, so it doesn't sit on
     # U's gridline and occlude grip:unchanged:0 (layout-invariants-2)
-    assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet.COL_W + spreadsheet.V_SPLIT_GAP / 2 - spreadsheet.BTN / 2)) < 0.51
+    assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet_constants.COL_W + spreadsheet_constants.V_SPLIT_GAP / 2 - spreadsheet_constants.BTN / 2)) < 0.51
     # and a COL_W clear of the − hover zone on the lone comma (so the + is actually clickable)
-    assert cells["comma_plus"].x - cells["comma_minus:0"].x >= spreadsheet.COL_W - spreadsheet.BTN
+    assert cells["comma_plus"].x - cells["comma_minus:0"].x >= spreadsheet_constants.COL_W - spreadsheet_constants.BTN
 
 
 def test_projection_at_full_rank_shows_the_complete_unchanged_basis():
@@ -10019,7 +10036,7 @@ def test_projection_at_full_rank_shows_the_complete_unchanged_basis():
     assert not any(c.startswith("comma_minus") for c in cells)  # nothing to remove
     # no comma half, so no C|U divider and no wasted gap — U starts at the column's left and runs flush
     assert not any(c.startswith("vsplit:") for c in cells)
-    assert cells["cell:unchanged:0:1"].x - cells["cell:unchanged:0:0"].x == spreadsheet.COL_W
+    assert cells["cell:unchanged:0:1"].x - cells["cell:unchanged:0:0"].x == spreadsheet_constants.COL_W
 
 
 def test_projection_at_full_rank_keeps_the_nullity_count_in_a_readable_stub():
@@ -10035,12 +10052,12 @@ def test_projection_at_full_rank_keeps_the_nullity_count_in_a_readable_stub():
     assert n_count.text.endswith("= 0")
     cap = cells["caption:counts:commas"]         # …and "nullity" fits on a single line in the stub
     assert cap.text == "nullity"
-    assert spreadsheet._wrap_lines("nullity", cap.w) == 1
+    assert spreadsheet_text._wrap_lines("nullity", cap.w) == 1
     # the stub sits LEFT of the bracket; the unchanged count + first U cell sit to its right
     assert n_count.x == cap.x < cells["bracket:vec:commas:l"].x <= cells["cell:unchanged:0:0"].x
     assert cells["count:commas:u"].x == cells["cell:unchanged:0:0"].x   # u tally over U
     # the bracket still hugs U on both sides — the stub is OUTSIDE the matrix (no gap inside the EBK)
-    assert cells["bracket:vec:commas:l"].x + spreadsheet.BRACKET_W == cells["cell:unchanged:0:0"].x
+    assert cells["bracket:vec:commas:l"].x + spreadsheet_constants.BRACKET_W == cells["cell:unchanged:0:0"].x
 
 
 def test_projection_pending_comma_reddens_the_unchanged_interval_it_will_delete():
@@ -10097,7 +10114,7 @@ def test_projection_pending_comma_pushes_the_unchanged_half_past_the_draft():
     cells = {c.id: c for c in lay.cells}
     draft = cells["cell:comma:0:1"]            # the draft column rides at nc = 1
     u_first = cells["cell:unchanged:0:0"]      # the first unchanged column
-    assert u_first.x > draft.x + spreadsheet.COL_W   # U is past the draft (with the gap between)
+    assert u_first.x > draft.x + spreadsheet_constants.COL_W   # U is past the draft (with the gap between)
 
 
 def test_projection_v_column_counts_both_nullity_and_unchanged():
@@ -10279,7 +10296,7 @@ def test_projection_row_grows_a_draft_column_for_target_held_interest_drafts():
     k = _target_count()
     pt = {c.id: c for c in spreadsheet.build(base, s, pending_target=[None, None, None]).cells}
     assert all(pt[f"cell:proj_pt:draft:{p}"].pending and pt[f"cell:proj_pt:draft:{p}"].text == "" for p in range(3))
-    assert pt["cell:proj_pt:draft:0"].x == pt[f"cell:proj_pt:{k - 1}:0"].x + spreadsheet.COL_W  # one slot past committed P·T
+    assert pt["cell:proj_pt:draft:0"].x == pt[f"cell:proj_pt:{k - 1}:0"].x + spreadsheet_constants.COL_W  # one slot past committed P·T
     ph = {c.id: c for c in spreadsheet.build(base, s, pending_held=[None, None, None]).cells}
     assert all(ph[f"cell:proj_ph:draft:{p}"].pending and ph[f"cell:proj_ph:draft:{p}"].text == "" for p in range(3))
     pi = {c.id: c for c in spreadsheet.build(base, s, interest=((1, 1, -1),), pending_interest=[None, None, None]).cells}
@@ -10386,6 +10403,7 @@ def test_all_interval_mean_damage_value_and_symbol_denote_the_same_quantity():
     # mean = sqrt(sum/d); labelling the mean with a norm symbol read √d too large (minimax-ES meantone: the
     # value 1.582 under a symbol naming the 2.741 norm).
     import math
+
     from rtt.library import tuning
     from rtt.library.parsing import parse_temperament_data
     base = service.from_mapping(((1, 0, -4), (0, 1, 4)))  # meantone, d = 3
@@ -10409,7 +10427,7 @@ def test_etpick_rides_the_right_gutter_of_each_mapping_row():
     for i in range(2):  # meantone, rank 2
         ep = cells[f"etpick:{i}"]
         assert ep.kind == "etpick" and ep.gen == i
-        assert ep.w == spreadsheet.COL_W and ep.h == spreadsheet.ROW_H
+        assert ep.w == spreadsheet_constants.COL_W and ep.h == spreadsheet_constants.ROW_H
         assert ep.y == cells[f"cell:mapping:{i}:0"].y   # the picker shares the row
         # it sits to the RIGHT of the row, clearing the closing ] bracket (the analogue of the
         # comma picker below each column; the crowded left — handles, 𝒎ᵢ labels — stays clear)
@@ -10435,7 +10453,7 @@ def test_et_picker_keeps_the_mapping_matrix_centred_in_its_tile():
     # the picker fills that right gutter, past the ], reaching the tile edge — no dead band beyond it
     ep = cells["etpick:0"]
     assert ep.x >= m_right
-    assert abs((ep.x + ep.w) - (tile.x + tile.w - spreadsheet.PAD)) < 0.51
+    assert abs((ep.x + ep.w) - (tile.x + tile.w - spreadsheet_constants.PAD)) < 0.51
     # the left furniture sits in the matching left gutter: the handle outside the row label, the
     # label butting up against the matrix's opening ⟨
     handle, label = cells["map_drag:0"], cells["matlabel:row:mapping:primes:0"]
@@ -10447,7 +10465,7 @@ def test_commapick_rides_below_each_real_comma_column():
     cells = {c.id: c for c in _with(presets=True).cells}
     cp = cells["commapick:0"]  # meantone has one comma
     assert cp.kind == "commapick" and cp.comma == 0
-    assert cp.w == spreadsheet.COL_W and cp.h == spreadsheet.ROW_H
+    assert cp.w == spreadsheet_constants.COL_W and cp.h == spreadsheet_constants.ROW_H
     column_cell = next(c for cid, c in cells.items()
                        if cid.startswith("cell:comma:0:") and c.comma == 0)
     assert cp.x == column_cell.x   # aligned under its column

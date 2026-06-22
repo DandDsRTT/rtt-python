@@ -26,9 +26,8 @@ from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
 
 from rtt.app import app as web_app
-from rtt.app import service
+from rtt.app import service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
-from rtt.app import spreadsheet
 from rtt.app.editor import Editor
 
 
@@ -1417,9 +1416,10 @@ def test_ratio_font_shrinks_a_long_fraction_to_fit_its_square() -> None:
     # square. _ratio_font caps a short fraction at the comfortable size and shrinks a long one
     # until its longer line plus the fraction-bar padding fits the cell — num and den scaled together.
     import math
+
     from rtt.app.app import _ratio_font
     from rtt.app.render_html import _RATIO_DIGIT_EM, _RATIO_MAX_FONT, _RATIO_PAD
-    cell = spreadsheet.COL_W
+    cell = spreadsheet_constants.COL_W
     assert _ratio_font("2", "1", cell) == _RATIO_MAX_FONT          # 1-digit: sits at the cap
     assert _ratio_font("128", "125", cell) == _RATIO_MAX_FONT      # 3-digit still fits the cap
     # the fewest digits whose line can't fit the cell at the comfortable cap — so it MUST shrink

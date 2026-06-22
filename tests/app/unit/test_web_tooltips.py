@@ -5,9 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from rtt.app import grid_tables, tooltips
 from rtt.app import settings as show_settings
-from rtt.app import spreadsheet
-from rtt.app import tooltips
 from rtt.app.editor import Editor
 
 _GUIDE_DIR = Path(__file__).resolve().parents[3] / "guide" / \
@@ -165,7 +164,7 @@ def test_target_limit_help_distinguishes_the_two_errors():
 def test_every_editable_dual_has_a_distinct_tooltip():
     # the editable plain-text duals are exactly EDITABLE_PTEXT (the layout's source of truth);
     # each must carry its own hover text so no editable value is left unexplained
-    ids = [f"ptext:{rkey}:{ckey}" for rkey, ckey in spreadsheet.EDITABLE_PTEXT]
+    ids = [f"ptext:{rkey}:{ckey}" for rkey, ckey in grid_tables.EDITABLE_PTEXT]
     texts = [tooltips.control_help("ptextedit", cid) for cid in ids]
     assert all((t or "").strip() for t in texts)
     assert len(set(texts)) == len(ids)
@@ -269,7 +268,7 @@ def test_every_rendered_caption_and_symbol_cell_id_parses_without_error():
 
 def test_guide_help_covers_only_real_tiles_and_resolves_by_tile_key():
     # every registry key is a real (row, col) tile, and tile_guide_help round-trips it
-    captioned = {(r, c) for r, c in spreadsheet.CAPTIONS}
+    captioned = {(r, c) for r, c in grid_tables.CAPTIONS}
     for (rkey, ckey), gh in tooltips.GUIDE_HELP.items():
         assert (rkey, ckey) in captioned, f"{(rkey, ckey)} is not a captioned tile"
         assert tooltips.tile_guide_help(rkey, ckey) is gh
