@@ -391,6 +391,41 @@ stalls for everyone behind you.
   Say that **once**, plainly, and spin a task chip to evolve it. Calm and accurate — neither panic
   nor false reassurance.
 
+### The green-gate guard — the ff-merge is MECHANICALLY gated, not trusted
+
+Everything above serializes *who* validates and merges, but for a long time nothing actually
+**proved** a green full render gate had run on the EXACT tree being landed — the protocol
+*trusted* the landing agent to have run `.venv/bin/python -m pytest -q` green. That trust failed
+once: a tooltip reword in `rtt/app/tooltips.py` landed on the **fast pass**, with the two render
+tests that pinned the old wording still red on its own tree. A red web change reached `main`.
+
+So the green evidence is now mechanical:
+
+- **The render gate mints a green token.** When a full `pytest` session that *collected the render
+  file* finishes green over a clean tracked worktree, `tests/app/integration/conftest.py` writes an
+  empty file named by the exact **git tree sha** it validated into `$RTT_RENDER_GREEN_DIR` (default
+  `/tmp/rtt-render-green.d/`). A token means "the rendered output of this exact tree passed the full
+  gate." A partial run (`-k`/`-m`/`--lf`/a `::node-id`) or the fast pass mints **nothing** — so a
+  fast-pass land can never produce evidence.
+- **`bin/merge-green-check <old> <new>`** answers "may `main` advance old→new?": SAFE iff the move is
+  render-orthogonal (`bin/_render_relevance` whitelist, shared with `merge-safe-check`) **or** a green
+  token validated a render-equivalent tree; UNSAFE for a render-relevant tree with no token.
+- **A `reference-transaction` git hook enforces it at the ref update itself** (`bin/merge-guard-hook`,
+  installed into the shared hooks dir by `bin/install-merge-guard-hook`). A render-relevant
+  fast-forward of `refs/heads/main` with no matching green token is **rejected** — even a raw
+  `git -C <main> merge --ff-only`. It only ever blocks a confident render-relevant-without-token
+  fast-forward (rewinds/resets and orthogonal moves pass; any internal error fails OPEN), so it
+  cannot wedge the live checkout. `bin/land` installs/refreshes the hook on every run, so the normal
+  path self-deploys; install it by hand once with `bin/install-merge-guard-hook` for the manual flow.
+- **Human escape hatch:** `RTT_FFMERGE_GUARD_OFF=1` disables the guard for one command (for the
+  user's own out-of-band `main` operations). Agents should never need it — land via `bin/land`, or
+  run the full gate under the lock so the token is minted for the tree you land.
+- **CI is the visible backstop:** `.github/workflows/merge-gate.yml` re-runs the whole suite on every
+  push to `main`, so if a red tree ever does reach `main` it goes red where everyone can see it.
+- Validate the guard in isolation (throwaway repos, never the live lock/checkout) with
+  `bin/merge-guard-selftest` — it proves an ungated/stale-tree ff-merge is rejected and the
+  legitimate paths pass.
+
 ## Git: you're on a fast-moving team — rebase onto main, then ff-merge
 
 You work in your own worktree on a `claude/<name>` branch. Several agents run in parallel and
