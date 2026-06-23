@@ -381,6 +381,21 @@ rebase conflict. Both keep the atomic `--ff-only` backstop, so neither can corru
 
 ### A queue wait is NORMAL — don't catastrophize it, and never NOLOCK to skip it
 
+**Be patient and DON'T GIVE UP on a land.** Under fleet load the queue can be 10+ deep and a
+`bin/land` run can even get **SIGKILLed** by the oversubscribed machine — that is the system under
+load, **not** a verdict that the land is impossible. Your fix is committed safely on the branch, so
+the only real failure mode is *abandoning* it. Specifically, do **not**:
+- give up and punt the land back to the user ("the machine's too busy, you land it") — Douglas
+  (2026-06-23): *"y'all agents just need to be patient. sometimes the queue is long. get back in
+  there and don't give up!"*;
+- let a single attempt die at the **1-hour wait cap** — set a long wait so it rides the queue out:
+  `RTT_MERGE_GATE_WAIT=21600 RTT_RENDER_GATE_WAIT=21600 bin/land -- <abs-main-venv-python> -m pytest -q`;
+- treat a SIGKILL as terminal — **rebase onto `main` (it moved) and relaunch `bin/land`**, as many
+  times as it takes, until it lands.
+Keep the patience *quiet*: block on ONE silent watcher and surface only the terminal result
+(landed / conflict / fail) — don't churn the user with per-tick status (see the "Don't surface the
+wait" guidance above).
+
 The merge lock and the render gate are **FIFO-fair**, and the queue normally **drains** — a queue
 several deep clears as teammates land, and `main` advancing while you wait is the system **working**,
 not failing. So a `[merge-gate] waiting our turn… position N of M` / `[render-gate] waiting our turn…`
