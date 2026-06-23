@@ -2428,7 +2428,7 @@ def test_every_open_value_tile_declares_an_ebk_convention():
     # must declare a convention there, and its rendered band must match what it declared — so a new
     # tile can't ship without a convention, and can't drift from the one it names.
     from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
-    from rtt.app.service.text import EBK_CONVENTIONS, ebk_convention
+    from rtt.app.service.text_conventions import EBK_CONVENTIONS, ebk_convention
     s = settings.defaults()
     for k, v in list(s.items()):
         if isinstance(v, bool):
