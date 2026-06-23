@@ -44,8 +44,8 @@ class _EmitVectorsMixin:
         if self.tile_open("vectors", "commas"):
             self._emit_vectors_commas_col()
         if self.tile_open("vectors", "targets"):
-            target_kind = "targetcell" if self.targets_editable else "vec"
-            cell_inset = KET_INSET if self.targets_editable else 0
+            target_kind = "targetcell" if self.resolved.scalars.targets_editable else "vec"
+            cell_inset = KET_INSET if self.resolved.scalars.targets_editable else 0
             self._emit_vec_grid(_VecGrid("targets", self.resolved.dims.k, ids.target_cell, self.target_left,
                 cell_inset, target_kind, "targetcell", self.resolved.targets.vectors, self.resolved.targets.pending, self.resolved.tuning.target_sizes))
         if self.tile_open("vectors", "held"):
@@ -74,7 +74,7 @@ class _EmitVectorsMixin:
             text = str(self.resolved.dims.elements[p])
             kind = self._element_cell_kind(text) if self.resolved.flags.nonstandard_domain else "prime"
             self.cells.append(CellBox(f"basis:{p}", bx, self.vec_top(p), COL_W, ROW_H, kind, text=text, prime=p))
-        if self.element_draft:
+        if self.resolved.scalars.element_draft:
             draft_text = self.pending_element or "?/?"
             self.cells.append(CellBox("basis:pending", bx, self.vec_top(self.resolved.dims.d), COL_W, ROW_H,
                                       self._element_cell_kind(draft_text), text=draft_text, prime=self.resolved.dims.d, pending=True))
@@ -83,7 +83,7 @@ class _EmitVectorsMixin:
             if self.resolved.dims.d > 1:
                 for p in range(self.resolved.dims.d):
                     self._emit_basis_minus(f"element_minus:basis:{p}", p, "element_minus", prime=p)
-        elif self.domain_can_shrink:
+        elif self.resolved.scalars.domain_can_shrink:
             self._emit_basis_minus("basis_minus", self.resolved.dims.d - 1, "basis_minus")
         if "vectors" in self.row_plus_y:
             plus_kind = "element_plus" if self.resolved.flags.nonstandard_domain else "plus"
@@ -107,7 +107,7 @@ class _EmitVectorsMixin:
                                      "unchangedcell" if (full_u and not doomed and not born) else "vec", text=vec_text, prime=p, comma=self.resolved.dims.nc + j,
                                      unit=self.cell_unit("vectors", "commas", prime=p)))
             self._voice("vectors:commas", self.resolved.dims.nc + j, self.resolved.unchanged.sizes.just[j])
-        if self.comma_draft:
+        if self.resolved.scalars.comma_draft:
             col_kind = "vec" if self.resolved.ghosts.comma else "commacell"
             for p in range(self.resolved.dims.d):
                 v = self.resolved.ghosts.comma_vec[p] if self.resolved.ghosts.comma else self.resolved.commas.pending[p]
@@ -129,7 +129,7 @@ class _EmitVectorsMixin:
                                                  ("target", self.resolved.dims.k, self.target_left, "targets"),
                                                  ("held", self.resolved.dims.nh, self.held_left, "held"),
                                                  ("interest", self.resolved.dims.mi, self.interest_left, "interest")):
-                if count >= 2 and self.tile_open("vectors", ckey) and (ckey != "targets" or self.targets_editable):
+                if count >= 2 and self.tile_open("vectors", ckey) and (ckey != "targets" or self.resolved.scalars.targets_editable):
                     for i in range(count):
                         self.cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), hy, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
 
@@ -215,7 +215,7 @@ class _EmitVectorsMixin:
                         unit=self.cell_unit("ss_mapping", "primes", gen=i, elem=e)))
 
     def _emit_ss_vector_lists(self) -> None:
-        ss_lists = (("commas", self.state.comma_basis, self.resolved.dims.nc, self.comma_left, self.comma_draft),
+        ss_lists = (("commas", self.state.comma_basis, self.resolved.dims.nc, self.comma_left, self.resolved.scalars.comma_draft),
                     ("targets", self.resolved.targets.vectors, self.resolved.dims.k, self.target_left, self.resolved.targets.pending is not None),
                     ("held", self.resolved.held.vectors, self.resolved.dims.nh, self.held_left, self.resolved.held.pending is not None),
                     ("interest", self.resolved.interest.vectors, self.resolved.dims.mi, self.interest_left, self.resolved.interest.pending is not None),

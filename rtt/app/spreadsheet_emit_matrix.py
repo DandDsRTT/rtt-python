@@ -48,7 +48,7 @@ class _EmitMatrixMixin:
 
         for key in self.rows:
             label = self.rows[key].label
-            if self.size_factor or self.prescaler_is_matrix:
+            if self.size_factor or self.resolved.scalars.prescaler_is_matrix:
                 label = _pretransform_label(label)
                 label = label.replace(" pretransforming", chr(160) + "pre-" + chr(10) + "transforming")
             self.cells.append(CellBox(f"label:{key}", 0, self.rows[key].y, LABEL_W, self.rows[key].h, "rowlabel", text=label))
@@ -107,8 +107,8 @@ class _EmitMatrixMixin:
 
     def _emit_units_const(self) -> None:
         const_units = {"tuning": "¢/", "just": "¢/", "retune": "¢/", "prescaling": "oct/",
-                       "complexity": f"{self.complexity_unit}/", "weight": f"{self.weight_unit}/",
-                       "damage": f"{self.damage_unit}/"}
+                       "complexity": f"{self.resolved.scalars.complexity_unit}/", "weight": f"{self.resolved.scalars.weight_unit}/",
+                       "damage": f"{self.resolved.scalars.damage_unit}/"}
         for key, text in const_units.items():
             if not self.tile_open(key, "units"):
                 continue
@@ -163,7 +163,7 @@ class _EmitMatrixMixin:
     def _emit_qty_gens(self, qy, branch_minus) -> None:
         if self.tile_open("quantities", "gens"):
             for g in range(self.resolved.dims.r):
-                self.cells.append(CellBox(f"qgen:{g}", self.gen_left(g), qy, COL_W, ROW_H, "genratio", text=self.gens[g], gen=g))
+                self.cells.append(CellBox(f"qgen:{g}", self.gen_left(g), qy, COL_W, ROW_H, "genratio", text=self.resolved.scalars.gens[g], gen=g))
             if self.resolved.dims.r > 1:
                 branch_minus("gen_minus", "gens", self.resolved.dims.r - 1, "gen_minus", gen=self.resolved.dims.r - 1)
 
@@ -180,7 +180,7 @@ class _EmitMatrixMixin:
             kind = self._element_cell_kind(text) if self.resolved.flags.nonstandard_domain else "prime"
             self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, kind, text=text, prime=p))
             self._voice("quantities:primes", p, self.resolved.tuning.tun.just_map[p])
-        if self.element_draft:
+        if self.resolved.scalars.element_draft:
             draft_text = self.pending_element or "?/?"
             self.cells.append(CellBox("prime:pending", self.prime_left(self.resolved.dims.d), qy, COL_W, ROW_H,
                                       self._element_cell_kind(draft_text), text=draft_text, prime=self.resolved.dims.d, pending=True))
@@ -189,7 +189,7 @@ class _EmitMatrixMixin:
             if self.resolved.dims.d > 1:
                 for p in range(self.resolved.dims.d):
                     branch_minus(f"element_minus:{p}", "primes", p, "element_minus", prime=p)
-        elif self.domain_can_shrink:
+        elif self.resolved.scalars.domain_can_shrink:
             branch_minus("minus", "primes", self.resolved.dims.d - 1, "minus")
 
     def _emit_qty_ssgens(self, qy) -> None:
@@ -209,7 +209,7 @@ class _EmitMatrixMixin:
         for c in range(self.resolved.dims.nc):
             self.cells.append(CellBox(f"comma:{self.col_token('commas', c)}", self.comma_left(c), qy, COL_W, ROW_H, "ratiocell", text=self.resolved.commas.ratios[c], comma=c))
             self._voice("quantities:commas", c, self.resolved.tuning.comma_sizes.just[c])
-        if self.comma_draft:
+        if self.resolved.scalars.comma_draft:
             self.cells.append(CellBox("comma:pending", self.comma_left(self.resolved.dims.nc), qy, COL_W, ROW_H,
                                  "commaratio" if self.resolved.ghosts.comma else "ratiocell",
                                  text=(self.resolved.ghosts.comma_ratio or DASH) if self.resolved.ghosts.comma else "?/?",
@@ -230,15 +230,15 @@ class _EmitMatrixMixin:
     def _emit_qty_detempering(self, qy) -> None:
         if self.tile_open("quantities", "detempering"):
             for i in range(self.resolved.dims.r):
-                self.cells.append(CellBox(f"detempering:{i}", self.detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=self.gens[i]))
+                self.cells.append(CellBox(f"detempering:{i}", self.detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=self.resolved.scalars.gens[i]))
                 self._voice("quantities:detempering", i, self.resolved.detempering.sizes.just[i])
 
     def _emit_qty_interests(self, qy, branch_minus) -> None:
         if self.tile_open("quantities", "targets"):
             self._emit_qty_list(_QtyList("targets", "target", self.resolved.dims.k, self.target_left, self.resolved.targets.ratios,
                                          self.resolved.tuning.target_sizes, self.resolved.targets.pending,
-                                         "ratiocell" if self.targets_editable else "commaratio",
-                                         self.targets_editable), qy, branch_minus)
+                                         "ratiocell" if self.resolved.scalars.targets_editable else "commaratio",
+                                         self.resolved.scalars.targets_editable), qy, branch_minus)
         if self.tile_open("quantities", "held"):
             self._emit_qty_list(_QtyList("held", "held", self.resolved.dims.nh, self.held_left, self.resolved.held.ratios,
                                          self.resolved.tuning.held_sizes, self.resolved.held.pending, "ratiocell", True), qy, branch_minus)
@@ -297,7 +297,7 @@ class _EmitMatrixMixin:
 
     def _emit_rehomed_targets(self, vtop) -> None:
         if self.tile_open("vectors", "targets"):
-            if self.targets_editable:
+            if self.resolved.scalars.targets_editable:
                 for j in range(self.resolved.dims.k):
                     self._vec_minus(vtop, f"target_minus:{j}", "targets", j, "target_minus", comma=j)
             if self.resolved.targets.pending is not None:

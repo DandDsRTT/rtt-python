@@ -75,7 +75,7 @@ class _ControlsMixin:
             options = presets.tuning_scheme_options(
                 service.is_all_interval(self.tuning_scheme),
                 self.settings["alt_complexity"], self.settings["weighting"])
-            return self._is_sole_option(options, self.displayed_tuning_name)
+            return self._is_sole_option(options, self.resolved.scalars.displayed_tuning_name)
         if name == "prescaler":
             return self._is_sole_option(presets.prescaler_options(self.settings["alt_complexity"]),
                                         self.resolved.labels.realized_prescaler)
@@ -142,7 +142,7 @@ class _ControlsMixin:
     def _emit_preset(self, preset_text, cid, name, rkey, ckey, label):
         if not self.tile_open(rkey, ckey):
             return
-        if self.size_factor or self.prescaler_is_matrix:
+        if self.size_factor or self.resolved.scalars.prescaler_is_matrix:
             label = _pretransform_label(label)
         top = self.ptext_band_y(rkey) + self.rows[rkey].ptext
         disabled = (name == "target" and service.is_all_interval(self.tuning_scheme)) \
@@ -165,7 +165,7 @@ class _ControlsMixin:
         preset_text = {"temperament": "", "target": self.target_spec,
                           "tuning": service.base_scheme_name(self.tuning_scheme) or "",
                           "prescaler": self.resolved.labels.realized_prescaler or "",
-                          "projection": self.displayed_projection_name or ""}
+                          "projection": self.resolved.scalars.displayed_projection_name or ""}
         for name, rkey, ckey, label in PRESETS:
             col = "ssprimes" if name == "prescaler" and self.resolved.flags.superspace else ckey
             self._emit_preset(preset_text, f"preset:{name}", name, rkey, col, label)
@@ -209,7 +209,7 @@ class _ControlsMixin:
                         or ((rkey, ckey) == ("vectors", "targets") and self.resolved.targets.pending is not None) \
                         or ((rkey, ckey) == ("mapping", "primes") and self.pending_mapping_row is not None):
                     kind = "ptextpending"
-                elif self.ptext_editable(rkey, ckey) and (ckey != "targets" or self.targets_editable):
+                elif self.ptext_editable(rkey, ckey) and (ckey != "targets" or self.resolved.scalars.targets_editable):
                     kind = "ptextedit"
                 else:
                     kind = "ptext"

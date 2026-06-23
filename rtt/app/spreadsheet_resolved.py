@@ -144,6 +144,27 @@ class Flags:
 
 
 @dataclass(frozen=True)
+class Scalars:
+    all_interval: bool
+    comma_draft: bool
+    targets_editable: bool
+    element_draft: bool
+    row_draft: bool
+    domain_can_shrink: bool
+    standard_domain: bool
+    custom_weights_active: bool
+    prescaler_is_matrix: bool
+    gens: object
+    prescaler: object
+    complexity_unit: str
+    weight_unit: str
+    damage_unit: str
+    ctrl_symbol_h: float
+    displayed_projection_name: object
+    displayed_tuning_name: object
+
+
+@dataclass(frozen=True)
 class Labels:
     col_labels: object
     row_labels: object
@@ -171,6 +192,7 @@ class Resolved:
     unchanged: Unchanged
     labels: Labels
     flags: Flags
+    scalars: Scalars
     complexities: object
     col_ids: object
 
@@ -249,6 +271,16 @@ def _flags(b) -> Flags:
                  symbols=b.show_symbols, units=b.show_units, weighting=b.show_weighting, decimals=b._decimals)
 
 
+def _scalars(b) -> Scalars:
+    return Scalars(all_interval=b.all_interval, comma_draft=b.comma_draft, targets_editable=b.targets_editable,
+                   element_draft=b.element_draft, row_draft=b.row_draft, domain_can_shrink=b.domain_can_shrink,
+                   standard_domain=b.standard_domain, custom_weights_active=b.custom_weights_active,
+                   prescaler_is_matrix=b.prescaler_is_matrix, gens=b.gens, prescaler=b.prescaler,
+                   complexity_unit=b.complexity_unit, weight_unit=b.weight_unit, damage_unit=b.damage_unit,
+                   ctrl_symbol_h=b.ctrl_symbol_h, displayed_projection_name=b.displayed_projection_name,
+                   displayed_tuning_name=b.displayed_tuning_name)
+
+
 def from_builder(b) -> Resolved:
     return Resolved(
         dims=_dims(b),
@@ -259,5 +291,5 @@ def from_builder(b) -> Resolved:
         detempering=_interval_set(b, "detempering_ratios", "detempering_sizes", "detempering_mapped",
                                   "detempering_vectors", "detempering_pending"),
         tuning=_tuning(b), canon=_canon(b), projection=_projection(b), ghosts=_ghosts(b),
-        unchanged=_unchanged(b), labels=_labels(b), flags=_flags(b),
+        unchanged=_unchanged(b), labels=_labels(b), flags=_flags(b), scalars=_scalars(b),
         complexities=b.complexities, col_ids=b._col_ids)

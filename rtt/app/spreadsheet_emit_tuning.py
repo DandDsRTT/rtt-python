@@ -203,8 +203,8 @@ class _EmitTuningMixin:
             groups = ("ssprimes", "primes", "commas", "targets", "interest", "held", "detempering")
             bare_group = "ssprimes"
         else:
-            prescaler_diag = self.prescaler
-            prescaler_is_matrix = self.prescaler_is_matrix
+            prescaler_diag = self.resolved.scalars.prescaler
+            prescaler_is_matrix = self.resolved.scalars.prescaler_is_matrix
             ss_elements = self.resolved.dims.elements
             prescale_vectors = {
                 "primes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
@@ -301,9 +301,9 @@ class _EmitTuningMixin:
     def _emit_cbox_controls(self) -> None:
         if self.cbox_ctrl:
             box_top = self.rows["complexity"].tile_top + self.rows["complexity"].tile_h - self.cbox_extra + RANGE_GAP
-            tx, cy = self.control_region("block:complexity", "targets", box_top, ROW_H + self.ctrl_symbol_h + 3 * CAPTION_LINE)
+            tx, cy = self.control_region("block:complexity", "targets", box_top, ROW_H + self.resolved.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)
             sym_y = cy + ROW_H
-            cap_y = sym_y + self.ctrl_symbol_h
+            cap_y = sym_y + self.resolved.scalars.ctrl_symbol_h
             cap_h = 3 * CAPTION_LINE
             slot_w = CBOX_SLOT_W
             q_slot_x = tx
@@ -354,7 +354,7 @@ class _EmitTuningMixin:
     def _emit_weight_row(self) -> None:
         if self.row_open("weight") and self.tile_open("weight", "targets"):
             self.tuning_value_row("weight", "targets", self.resolved.tuning.target_weights,
-                                  editable_kind="weightcell" if self.custom_weights_active else None)
+                                  editable_kind="weightcell" if self.resolved.scalars.custom_weights_active else None)
         if self.slope_ctrl:
             box_top = self.rows["weight"].tile_top + self.rows["weight"].tile_h - self.slope_extra + RANGE_GAP
             bx, by = self.control_region("block:slope", "targets", box_top, PRESET_H + CAPTION_LINE)
@@ -407,9 +407,9 @@ class _EmitTuningMixin:
             title_top = box_top + OPT_PAD_T
             content_top = title_top + OPT_TITLE_H + OPT_TITLE_GAP
             sym_top = content_top + ROW_H
-            cap_top = sym_top + self.ctrl_symbol_h
+            cap_top = sym_top + self.resolved.scalars.ctrl_symbol_h
             cap_band = self.opt_cap_lines * CAPTION_LINE
-            body_h = ROW_H + self.ctrl_symbol_h + cap_band + OPT_PAD_B
+            body_h = ROW_H + self.resolved.scalars.ctrl_symbol_h + cap_band + OPT_PAD_B
             mean_damage_x = ox + OPT_PAD_L
             mean_damage_val_x = mean_damage_x + (OPT_MEAN_DAMAGE_W - COL_W) / 2
             pow_slot_x = mean_damage_x + OPT_MEAN_DAMAGE_W + OPT_COL_GAP
@@ -421,7 +421,7 @@ class _EmitTuningMixin:
             self.cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COL_W, ROW_H, "tuningvalue",
                                  text=service.cents(mean_damage, self.resolved.flags.decimals)))
             mean_damage_symbol = (f"⟪𝒓{self.resolved.labels.prescaler_symbol}⁻¹⟫{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
-                          if self.all_interval else "⟪𝐝⟫ₚ")
+                          if self.resolved.scalars.all_interval else "⟪𝐝⟫ₚ")
             if self.tuning_optimized:
                 mean_damage_symbol = f"min({mean_damage_symbol})"
             if self.resolved.flags.symbols:
@@ -429,7 +429,7 @@ class _EmitTuningMixin:
                                      "symbol", text=mean_damage_symbol))
             self.cells.append(CellBox("optimization:mean_damage:caption", mean_damage_x, cap_top, OPT_MEAN_DAMAGE_W, cap_band,
                                  "caption", text=self.mean_damage_caption))
-            power_locked = self.all_interval or not self.resolved.flags.alt_complexity
+            power_locked = self.resolved.scalars.all_interval or not self.resolved.flags.alt_complexity
             self.cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
                                  "powerdisplay" if power_locked else "powerinput", text=power))
             if self.resolved.flags.symbols:

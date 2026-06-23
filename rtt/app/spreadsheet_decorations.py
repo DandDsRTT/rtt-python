@@ -231,7 +231,7 @@ class _DecorationsMixin:
 
     def _caption_equivalences(self, ai: bool, slope) -> dict:
         equivalences = {**EQUIVALENCES,
-                        ("weight", "targets"): "" if self.custom_weights_active else WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
+                        ("weight", "targets"): "" if self.resolved.scalars.custom_weights_active else WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
                         ("prescaling", "ssprimes" if self.resolved.flags.superspace else "primes"): self.resolved.labels.prescaler_equivalence,
                         **(ALL_INTERVAL_EQUIVALENCES if ai else {}),
                         **(FORM_EQUIVALENCES if self.resolved.flags.form_subscript else {}),
@@ -242,7 +242,7 @@ class _DecorationsMixin:
             equivalences[("projection", "primes")] = (
                 equivalences[("projection", "primes")] + self._projection_superspace_tail())
         if ai:
-            if not self.prescaler_is_matrix and not self.size_factor:
+            if not self.resolved.scalars.prescaler_is_matrix and not self.size_factor:
                 equivalences[("complexity", "targets")] = f" = diag({self.resolved.labels.prescaler_symbol})"
                 equivalences[("weight", "targets")] = f" = diag({self.resolved.labels.prescaler_symbol})⁻¹"
             equivalences[("damage", "targets")] = f" = |𝒓|{self.resolved.labels.prescaler_symbol}⁻¹"

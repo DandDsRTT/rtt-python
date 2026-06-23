@@ -22,14 +22,14 @@ class _EmitMappingMixin:
         self._emit_mapping_gens()
         self._emit_mapping_drag()
         self._emit_mapping_rows()
-        if self.row_draft:
+        if self.resolved.scalars.row_draft:
             self._emit_mapping_draft_row()
 
     def _emit_mapping_gens(self) -> None:
         if not self.tile_open("mapping", "quantities"):
             return
         for i in range(self.resolved.dims.r):
-            self.cells.append(CellBox(f"gen:{self.col_token('gens', i)}", self.col_x["quantities"], self.map_top(i), self.col_w["quantities"], ROW_H, "genratio", text=self.gens[i] if i < len(self.gens) else "", gen=i))
+            self.cells.append(CellBox(f"gen:{self.col_token('gens', i)}", self.col_x["quantities"], self.map_top(i), self.col_w["quantities"], ROW_H, "genratio", text=self.resolved.scalars.gens[i] if i < len(self.resolved.scalars.gens) else "", gen=i))
         map_bus_x = self.node_edge + self.FAN if self._row_fans("mapping") else self.node_edge
         gen_right = self.col_x["quantities"] + self.col_w["quantities"]
         if self.resolved.dims.r > 1:
@@ -65,7 +65,7 @@ class _EmitMappingMixin:
     def _emit_mapping_comma_row(self, i: int, rt: str) -> None:
         for c in range(self.resolved.dims.nc):
             self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.col_token('commas', c)}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.resolved.commas.mapped[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
-        if self.comma_draft:
+        if self.resolved.scalars.comma_draft:
             mc_text = str(self.resolved.ghosts.comma_mapped[i]) if (self.resolved.ghosts.comma and i < len(self.resolved.ghosts.comma_mapped)) else ""
             self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.pending_col_token('commas')}", self.comma_left(self.resolved.dims.nc), self.map_top(i), COL_W, ROW_H, "mapped", text=mc_text, gen=i, pending=True))
         for j in range(self.resolved.dims.nu):
@@ -187,7 +187,7 @@ class _EmitMappingMixin:
             for p in range(self.resolved.dims.d):
                 self.cells.append(CellBox(f"cell:proj_v:{p}:{self.col_token('commas', c)}", self.comma_left(c), self.proj_top(p),
                                      COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
-        if self.comma_draft:
+        if self.resolved.scalars.comma_draft:
             for p in range(self.resolved.dims.d):
                 self.cells.append(CellBox(f"cell:proj_v:{p}:draft", self.comma_left(self.resolved.dims.nc), self.proj_top(p),
                                      COL_W, ROW_H, "mapped", text="0" if self.resolved.ghosts.comma else "", prime=p, pending=True))
@@ -210,7 +210,7 @@ class _EmitMappingMixin:
             for c, lam in enumerate(scaling):
                 self.cells.append(CellBox(f"cell:scaling:{self.col_token('commas', c)}", self.comma_left(self.comma_value_pos(c)), self.rows["scaling_factors"].y,
                                      COL_W, ROW_H, "mapped", text=lam, comma=c))
-            if self.comma_draft:
+            if self.resolved.scalars.comma_draft:
                 self.cells.append(CellBox("cell:scaling:draft", self.comma_left(self.resolved.dims.nc), self.rows["scaling_factors"].y,
                                      COL_W, ROW_H, "mapped", text="0" if self.resolved.ghosts.comma else "", pending=True))
 
@@ -256,7 +256,7 @@ class _EmitMappingMixin:
     def _emit_canon_comma_row(self, i: int) -> None:
         for c in range(self.resolved.dims.nc):
             self.cells.append(CellBox(f"cell:canon_mapped_comma:{i}:{self.col_token('commas', c)}", self.comma_left(c), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.resolved.canon.mapped_commas[i][c]), gen=i, unit=self.cell_unit("canon", "commas", gen=i)))
-        if self.comma_draft:
+        if self.resolved.scalars.comma_draft:
             self.cells.append(CellBox(f"cell:canon_mapped_comma:{i}:{self.pending_col_token('commas')}", self.comma_left(self.resolved.dims.nc), self.canon_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
         for j in range(self.resolved.dims.nu):
             ut = DASH if self.resolved.canon.unchanged_mapped[i][j] is None else str(self.resolved.canon.unchanged_mapped[i][j])
