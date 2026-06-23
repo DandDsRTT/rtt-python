@@ -397,13 +397,12 @@ HELPED_READONLY_IDS: frozenset[str] = MEAN_DAMAGE_IDS | frozenset({"control:dual
 
 _KIND_HELP: dict[str, str] = {
     "mapping": (
-        "Mapping entry — how many of this generator map to this prime. Type to edit the "
+        "How many of this generator are used to approximate this prime. Type to edit the "
         "temperament, or scroll the wheel to step it by 1."
     ),
     "formcell": (
-        "Generator form matrix entry — how this stored generator is built from the canonical ones "
-        "(𝑀 = 𝐹𝑀ᴄ). Type to re-store the mapping in a new generating set (same temperament), or "
-        "scroll the wheel to step it by 1; the whole 𝐹 must stay unimodular."
+        "Type to re-store the mapping in a new generating set (same temperament), or "
+        "scroll the wheel to step it by 1; the whole form matrix must stay unimodular."
     ),
     "commacell": (
         "One prime's exponent in a comma the temperament makes vanish — a small interval that maps "
@@ -426,17 +425,16 @@ _KIND_HELP: dict[str, str] = {
         "Type to override the chosen target set, or scroll the wheel to step it by 1."
     ),
     "prescalercell": (
-        "Prescaler entry — the weight on this prime applied before optimizing. Type to override "
-        "the scheme's value, or scroll the wheel to nudge it by 0.001."
+        "Type to override the scheme's value, or scroll the wheel to nudge it by 0.001."
     ),
     "weightcell": (
-        "Damage weight — this target interval's weight in the optimization. Type your own to "
+        "How much this target interval's damage counts relative to the others. Type your own to "
         "override the slope's complexity/simplicity/unity weighting."
     ),
     "gentuningcell": (
-        "Generator tuning — this generator's tuned size in cents. Type to override the optimum, "
-        "click its sign to reverse the generator (its mapping row flips too, so the tuning is "
-        "unchanged), or scroll the wheel to fine-tune by a thousandth of a cent."
+        "This generator's tuned size in cents. Type to set it by hand, click its sign to reverse "
+        "the generator (its mapping row flips too, so the tuning is unchanged), or scroll the "
+        "wheel to fine-tune by a thousandth of a cent."
     ),
     "elementcell": (
         "Domain basis element — a prime, or any rational (e.g. 13/5) for a nonstandard domain. "
