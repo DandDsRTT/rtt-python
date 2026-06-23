@@ -876,11 +876,12 @@ _BUSY_JS = f"""
   }};
 
   // Arm ONLY on a real (e.isTrusted) user interaction that commits to the document and so triggers
-  // a server re-render: the +/-/fold controls and undo/redo/reset (.rtt-iconbtn), the Show checkboxes
-  // / range radios, the scheme/target dropdowns and their option picks, Enter committing a cell edit,
-  // and Ctrl/Cmd+Z/Y. The isTrusted gate is essential: render() re-syncs control values
-  // programmatically (e.g. box.value = …), which fires SYNTHETIC change events — without the gate
-  // those would re-arm the scrim after the render, so it would flash "Computing…" for no reason and
+  // a server re-render: the +/-/fold controls and undo/redo/reset (.rtt-iconbtn), the Show
+  // checkboxes / grid control checkboxes (.q-checkbox), the range options (.rtt-rangeopt), the
+  // scheme/target dropdowns and their option picks ([role=option]/.q-item), Enter committing a cell
+  // edit, and Ctrl/Cmd+Z/Y. The isTrusted gate is essential: render() re-syncs control values
+  // programmatically (e.g. box.value = …), which can fire SYNTHETIC events — without the gate those
+  // would re-arm the scrim after the render, so it would flash "Computing…" for no reason and
   // linger. We deliberately do NOT arm on wheel (it fires on every scroll over the grid, and the
   // shown scrim would then eat the scroll) or on focus leaving a cell (fires on any focus change,
   // mostly with no commit) — those were the spurious-trigger / stuck-spinner sources.
@@ -891,9 +892,11 @@ _BUSY_JS = f"""
   // safety timeout. Excluding it here keeps it from arming in the first place.
   document.addEventListener('pointerdown',
     (e) => {{ if (at(e, BTN) && !e.target.closest('.rtt-noarm')) window.rttBusy.arm(); }}, true);
-  document.addEventListener('click', (e) => {{ if (at(e, '[role=option],.q-item')) window.rttBusy.arm(); }}, true);
-  document.addEventListener('change', (e) => {{
-    if (at(e, '.q-select,.q-checkbox,.q-radio,input[type=checkbox],input[type=radio]')) window.rttBusy.arm();
+  // Quasar's QCheckbox/QRadio commit on a CLICK of their role= div and never emit a DOM `change`,
+  // and the range options are our own .rtt-rangeopt divs — so every committing settings control is
+  // reached here, on click, not on a `change` event.
+  document.addEventListener('click', (e) => {{
+    if (at(e, '[role=option],.q-item,.q-checkbox,.q-radio,.rtt-rangeopt')) window.rttBusy.arm();
   }}, true);
   // Keyboard shortcuts. Each one resolves to an existing on-screen control and synthetically clicks
   // it, so the action runs through the very same handler the mouse uses (act()/add_interval/
