@@ -41,4 +41,18 @@ class CellHandles:
     guide_help_text: object = None
 
 
-EMPTY = CellHandles()
+class _ReadOnlyCellHandles(CellHandles):
+    def __setattr__(self, name, value):
+        raise AttributeError(
+            f"the empty-cell handle sentinel is read-only ({name!r} assignment): rec.handles(id) "
+            "returned it because the cell id is not live — route writes through rec.cells[id]"
+        )
+
+
+def _empty_sentinel() -> CellHandles:
+    sentinel = CellHandles()
+    sentinel.__class__ = _ReadOnlyCellHandles
+    return sentinel
+
+
+EMPTY = _empty_sentinel()
