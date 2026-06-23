@@ -134,13 +134,16 @@ def _scan():
 
 
 def _classify(live, my_name, now):
-    """Split the FIFO queue around me. Returns (running_fresh, waiters_ahead),
-    where a *running* ticket holds a slot (has a fresh heartbeat), a heartbeat
-    older than STUCK is a wedged holder counted as neither (bypassed), and a
-    ticket with no heartbeat yet is a true waiter."""
+    """Split the FIFO queue around me. Returns (running_fresh, waiters_ahead, wedged):
+    a *running* ticket holds a slot (fresh heartbeat), a *wedged* one has a heartbeat
+    older than STUCK (a stuck holder we bypass — counted toward neither the slot budget
+    nor my position), and a ticket with no heartbeat yet is a true waiter. `wedged` is
+    counted directly (NOT derived by subtraction), so a later-arriving true waiter is
+    never miscounted as stuck."""
     my_key = next(((ns, pid) for ns, pid, name in live if name == my_name), None)
     running_fresh = 0
     waiters_ahead = 0
+    wedged = 0
     for ns, pid, name in live:
         try:
             age = now - os.path.getmtime(_hb_path(name))
@@ -150,10 +153,11 @@ def _classify(live, my_name, now):
             age = 0
         if has_hb and age <= _STUCK:
             running_fresh += 1
-        elif not has_hb and name != my_name and my_key is not None and (ns, pid) < my_key:
+        elif has_hb:
+            wedged += 1  # stale heartbeat → stuck holder, bypassed
+        elif name != my_name and my_key is not None and (ns, pid) < my_key:
             waiters_ahead += 1
-        # else: wedged holder (stale heartbeat) — bypassed, counts toward nothing
-    return running_fresh, waiters_ahead
+    return running_fresh, waiters_ahead, wedged
 
 
 def _take_slot():
@@ -184,7 +188,7 @@ def _acquire():
             except OSError:
                 pass
             continue
-        running_fresh, waiters_ahead = _classify(live, _ticket_name, now)
+        running_fresh, waiters_ahead, wedged = _classify(live, _ticket_name, now)
         free = _SLOTS - running_fresh
         if free > 0 and waiters_ahead < free:
             _take_slot()
@@ -204,8 +208,7 @@ def _acquire():
             )
             return
         if waited - last_report >= _REPORT_EVERY:
-            bypassed = max(0, len(live) - running_fresh - waiters_ahead - 1)
-            note = f"; bypassing {bypassed} stuck" if bypassed else ""
+            note = f"; bypassing {wedged} stuck" if wedged else ""
             print(
                 f"[render-gate] waiting our turn… position {waiters_ahead + 1} "
                 f"({running_fresh}/{_SLOTS} slots busy{note}; {waited}s elapsed)",
