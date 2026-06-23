@@ -139,6 +139,18 @@ _GREEN_TTL = int(os.environ.get("RTT_RENDER_GREEN_TTL", str(7 * 24 * 3600)))
 _MERGE_GATE_DIR = os.environ.get("RTT_MERGE_GATE_DIR", "/tmp/rtt-merge-gate.d")
 _MERGE_MARKER = os.path.join(_MERGE_GATE_DIR, ".holder")
 
+# Resource governance, delegated to the shared bin helpers so the policy lives in ONE place
+# (and so a stale conftest can't carry a divergent copy): before queuing we sweep orphaned
+# gate trees a SIGKILLed run left behind (they pin slots because their PID is still alive —
+# `_scan` reclaims only DEAD pids), and a non-holder gate WAITS for machine capacity rather
+# than piling onto a saturated box. The merge-lock holder skips the admission wait — its gate
+# is the critical path and must never queue behind load (the priority inversion fix). See
+# RESOURCE_GOVERNANCE_DIAGNOSIS.md and bin/{reap-orphan-gates,gate-load}.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_REAPER = os.path.join(_REPO_ROOT, "bin", "reap-orphan-gates")
+_GATE_LOAD = os.path.join(_REPO_ROOT, "bin", "gate-load")
+_NOADMIT = os.environ.get("RTT_RENDER_GATE_NOADMIT") == "1"
+
 _ticket = None       # path to this run's ticket file once created
 _ticket_name = None  # its <ns>-<pid> basename
 _heartbeat = None    # path to this run's heartbeat file once it holds a slot
@@ -288,9 +300,33 @@ def _take_slot():
     _bump(_heartbeat)
 
 
+def _reap_orphans():
+    """Sweep orphaned gate trees a SIGKILLed/abandoned run left behind, so their slots free
+    up before we count how many are busy. Best-effort and quiet — never blocks the gate."""
+    try:
+        subprocess.run([sys.executable, _REAPER, "--quiet"], timeout=60,
+                       stdout=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+def _admit():
+    """Machine-wide admission: wait until the box has CPU/memory capacity before starting this
+    suite. Delegated to bin/gate-load so the policy is shared and stale-base-robust. Bounded by
+    RTT_RENDER_GATE_WAIT inside gate-load, so it can never deadlock. Skipped for the merge-lock
+    holder (handled by the caller) and when RTT_RENDER_GATE_NOADMIT=1."""
+    if _NOADMIT:
+        return
+    try:
+        subprocess.run([sys.executable, _GATE_LOAD, "wait"], timeout=_WAIT_MAX + 120)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
 def _acquire():
     global _ticket, _ticket_name
     os.makedirs(_GATE_DIR, exist_ok=True)
+    _reap_orphans()  # clear abandoned suites that pin slots (alive PID → _scan won't reclaim)
     _ticket_name = f"{time.time_ns()}-{os.getpid()}"
     _ticket = os.path.join(_GATE_DIR, _ticket_name)
     try:
@@ -306,6 +342,8 @@ def _acquire():
             file=sys.stderr,
         )
         return
+
+    _admit()  # non-holder: don't pile onto a saturated box — wait for machine capacity first
 
     waited = 0
     last_report = -_REPORT_EVERY
