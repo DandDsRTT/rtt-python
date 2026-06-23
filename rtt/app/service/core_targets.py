@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
+from rtt.app.service import outcome
+from rtt.app.service.outcome import Outcome, Reason
 from rtt.library.domain_basis import (
     filter_target_intervals_for_nonstandard_domain_basis,
     is_standard_prime_limit_domain_basis,
@@ -45,13 +45,6 @@ def target_limit_problem(family: str | None, limit_value) -> str | None:
     return None
 
 
-@dataclass(frozen=True)
-class TargetLimitResolution:
-    problem: str | None
-    spec: str | None
-    valid: bool
-
-
 def target_spec(family: str, limit_value) -> str:
     text = (str(limit_value) if limit_value is not None else "").strip()
     if not text:
@@ -62,14 +55,18 @@ def target_spec(family: str, limit_value) -> str:
         return family
 
 
-def resolve_target_limit(family: str | None, limit_value, domain_basis) -> TargetLimitResolution:
+def resolve_target_limit(family: str | None, limit_value, domain_basis) -> Outcome:
     family = family or "TILT"
     problem = target_limit_problem(family, limit_value)
     if problem == "whole":
-        return TargetLimitResolution("whole", None, False)
+        return outcome.reject(reason=Reason.TARGET_WHOLE)
     spec = target_spec(family, limit_value)
     try:
         valid = bool(target_interval_set(spec, domain_basis))
     except Exception:
         valid = False
-    return TargetLimitResolution(problem, spec, valid)
+    if not valid:
+        return outcome.IGNORE
+    if problem == "odd":
+        return outcome.accept(spec, reason=Reason.TARGET_ODD)
+    return outcome.accept(spec)

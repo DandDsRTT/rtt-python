@@ -530,48 +530,44 @@ def test_target_spec_builds_leniently_falling_back_to_the_bare_family():
     assert service.target_spec("TILT", "8.5") == "8-TILT"  # truncates like int(float(...))
 
 
-def test_resolve_target_limit_builds_the_spec_from_family_and_limit():
-    # a whole manual limit over a named family resolves to a "{n}-{family}" spec that produces a
-    # non-empty target set; the resolution carries no problem.
-    res = service.resolve_target_limit("OLD", "9", (2, 3, 5))
-    assert res.spec == "9-OLD"
-    assert res.problem is None
-    assert res.valid is True
+def test_resolve_target_limit_accepts_the_spec_from_family_and_limit():
+    # a whole manual limit over a named family resolves to an ACCEPT whose value is the
+    # "{n}-{family}" spec; no reason (no warning).
+    out = service.resolve_target_limit("OLD", "9", (2, 3, 5))
+    assert out.effect is service.Effect.ACCEPT
+    assert out.value == "9-OLD"
+    assert out.reason is None
 
 
 def test_resolve_target_limit_defaults_a_blank_family_to_tilt():
     # the chooser passes the select's value, which is None/blank for the unnamed default
-    res = service.resolve_target_limit(None, None, (2, 3, 5))
-    assert res.spec == "TILT"
-    assert res.problem is None
-    assert res.valid is True
-    assert bool(service.target_interval_set(res.spec, (2, 3, 5)))
+    out = service.resolve_target_limit(None, None, (2, 3, 5))
+    assert out.effect is service.Effect.ACCEPT
+    assert out.value == "TILT"
+    assert bool(service.target_interval_set(out.value, (2, 3, 5)))
 
 
-def test_resolve_target_limit_flags_a_non_whole_limit_and_builds_no_spec():
-    # a decimal/unparseable limit is the "whole" problem: there is no spec to commit and it is invalid
-    res = service.resolve_target_limit("TILT", "8.5", (2, 3, 5))
-    assert res.problem == "whole"
-    assert res.spec is None
-    assert res.valid is False
+def test_resolve_target_limit_rejects_a_non_whole_limit_with_the_whole_reason():
+    # a decimal/unparseable limit is rejected; the view maps the TARGET_WHOLE reason to its toast
+    out = service.resolve_target_limit("TILT", "8.5", (2, 3, 5))
+    assert out.effect is service.Effect.REJECT
+    assert out.reason is service.Reason.TARGET_WHOLE
 
 
-def test_resolve_target_limit_keeps_the_odd_problem_but_still_builds_a_valid_spec():
-    # an even OLD limit is the parity ("odd") problem — the caller warns but still commits, so the
-    # spec is built and valid, unlike the "whole" case which builds nothing
-    res = service.resolve_target_limit("OLD", "8", (2, 3, 5))
-    assert res.problem == "odd"
-    assert res.spec == "8-OLD"
-    assert res.valid is True
+def test_resolve_target_limit_accepts_an_even_old_limit_with_the_odd_warning():
+    # an even OLD limit still commits, but carries the TARGET_ODD reason so the view warns —
+    # unlike the "whole" case, which rejects outright
+    out = service.resolve_target_limit("OLD", "8", (2, 3, 5))
+    assert out.effect is service.Effect.ACCEPT
+    assert out.value == "8-OLD"
+    assert out.reason is service.Reason.TARGET_ODD
 
 
-def test_resolve_target_limit_marks_an_unproducible_spec_invalid():
-    # a spec the domain can't realize (a 1-limit triangle has no target intervals) is reported
-    # invalid rather than raising, so the caller can silently decline it
-    res = service.resolve_target_limit("TILT", "1", (2, 3, 5))
-    assert res.problem is None
-    assert res.spec == "1-TILT"
-    assert res.valid is False
+def test_resolve_target_limit_ignores_an_unproducible_spec():
+    # a spec the domain can't realize (a 1-limit triangle has no target intervals) is silently
+    # ignored (no toast, no commit) rather than raising
+    out = service.resolve_target_limit("TILT", "1", (2, 3, 5))
+    assert out.effect is service.Effect.IGNORE
 
 
 def test_custom_prescaler_entry_accepts_a_finite_number():

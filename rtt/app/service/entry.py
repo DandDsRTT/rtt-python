@@ -4,7 +4,7 @@ import math
 
 from rtt.app.service import outcome
 from rtt.app.service.core_intervals import interval_vector
-from rtt.app.service.outcome import Outcome
+from rtt.app.service.outcome import Outcome, Reason
 
 
 def resolve_ratio_edit(raw, d: int, domain_basis=None) -> Outcome:
@@ -31,7 +31,7 @@ def custom_prescaler_entry(raw, on_diagonal: bool) -> Outcome:
     if value is None:
         return outcome.IGNORE
     if not math.isfinite(value) or (on_diagonal and value <= 0):
-        return outcome.reject()
+        return outcome.reject(reason=Reason.INVALID_PRESCALER)
     return outcome.accept(value)
 
 
@@ -55,6 +55,6 @@ def custom_weights(raws) -> Outcome:
         if value is None:
             return outcome.IGNORE
         if not math.isfinite(value) or value <= 0:
-            return outcome.reject()
+            return outcome.reject(reason=Reason.INVALID_WEIGHT)
         weights.append(value)
     return outcome.accept(tuple(weights))
