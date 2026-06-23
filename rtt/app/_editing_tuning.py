@@ -15,6 +15,7 @@ from rtt.app.page_assets import (
     _PTEXT_DUAL_VECTOR_KIND,
     _TARGET_LIMIT_DEBOUNCE,
     _WHEEL_STEPS,
+    cb_method,
 )
 from rtt.app.render_html import (
     _wheel_step,
@@ -39,6 +40,7 @@ class _TuningEdits:
         self.page = e.page
         self.target_limit_commit = None
 
+    @cb_method
     def on_power_change(self, cid):
         if self.page.building or self.page.rec.handles(cid).input is None:
             return
@@ -58,6 +60,7 @@ class _TuningEdits:
         toks = self.page.col_tokens("gens")
         return toks.index(tok) if tok in toks else tok
 
+    @cb_method
     def on_gentuning_change(self, cid):
         if self.page.building or self.page.rec.handles(cid).input is None:
             return
@@ -78,6 +81,7 @@ class _TuningEdits:
             self.page.editor.set_generator_tuning_component(self._gen_position(i), cents)
         self.page.renderer.request_render()  # a manual generator override re-derives the maps — render off the loop
 
+    @cb_method
     def on_gentuning_wheel(self, cid, delta_y):
         if self.page.building or not delta_y:
             return
@@ -89,6 +93,7 @@ class _TuningEdits:
         # off the loop — rapid notches coalesce into one trailing rebuild at the value you land on
         self.page.renderer.request_render()
 
+    @cb_method
     def on_value_wheel(self, cid, delta_y):
         if self.page.building or not delta_y or self.page.rec.handles(cid).input is None:
             return
@@ -113,6 +118,7 @@ class _TuningEdits:
         if commit is not None:
             commit()
 
+    @cb_method
     def on_target_limit_wheel(self, delta_y):
         # step the TILT/OLD limit by ±1 per wheel notch. Unlike a matrix/vector cell, COMMITTING a
         # new limit rebuilds the whole target interval set, re-solves the tuning and re-renders the
@@ -151,6 +157,7 @@ class _TuningEdits:
         with self.page.page_client:
             self.e.on_target_change()
 
+    @cb_method
     def on_target_limit_preview(self, typed=None):
         # live edit preview for the TILT/OLD limit field, mirroring on_element_preview: as the shown
         # limit changes (a wheel notch steps it, a keystroke types it) but BEFORE the debounced commit
@@ -169,6 +176,7 @@ class _TuningEdits:
         out = service.resolve_target_limit(sel.value, raw, self.page.editor.state.domain_basis)
         self.e._preview_outcome(out, lambda: self.page.editor.set_target_spec(out.value))
 
+    @cb_method
     def on_prescaler_change(self, cid):
         if self.page.building or self.page.rec.handles(cid).input is None:
             return
@@ -182,6 +190,7 @@ class _TuningEdits:
 
         self.e._commit_outcome(out, apply)
 
+    @cb_method
     def on_weight_change(self, cid):
         if self.page.building or self.page.rec.handles(cid).input is None:
             return
@@ -196,6 +205,7 @@ class _TuningEdits:
 
         self.e._commit_outcome(out, apply)
 
+    @cb_method
     def on_ptext_edit(self, cid, value):
         if self.page.building:
             return

@@ -1233,3 +1233,34 @@ def test_tour_steps_are_well_formed_and_assets_wired():
     assert ".rtt-tour-card" in app._CSS, "tour.css not folded into the page stylesheet"
     # the corner replay button has its hover help
     assert "tour" in tooltips.CHROME_HELP
+
+
+def test_reconciler_callbacks_are_derived_from_cb_method_marks():
+    # rec._cb is DERIVED from @cb_method marks (no hand-maintained name list), so a callback that
+    # lost its mark — a control that would silently do nothing in prod — is caught here instead.
+    from rtt.app._editing_tuning import _TuningEdits
+    from rtt.app._editing_vectors import _VectorEdits
+    from rtt.app.editing import EditController
+    from rtt.app.gestures import GestureController
+
+    marked = {
+        name
+        for cls in (EditController, _VectorEdits, _TuningEdits, GestureController)
+        for name in dir(cls)
+        if getattr(getattr(cls, name, None), "_rtt_cb", False)
+    }
+    # representative callbacks from each of the four controllers must keep their mark
+    for name in (
+        "act",
+        "transform_interval",
+        "on_ratio_change",
+        "on_mapping_change",
+        "on_power_change",
+        "on_target_change",
+        "combine_commit",
+        "control_hover",
+    ):
+        assert name in marked, f"{name} lost its @cb_method mark"
+    assert len(marked) >= 40
+    # a private helper must never be marked — only frontend entry points are callbacks
+    assert not any(n.startswith("_") for n in marked)

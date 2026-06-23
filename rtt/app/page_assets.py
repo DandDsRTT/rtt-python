@@ -76,6 +76,16 @@ from rtt.app.render_html import (
 
 _log = logging.getLogger(__name__)
 
+
+def cb_method(fn):
+    # Mark a method as a reconciler callback (a frontend event entry point). _wire_reconciler
+    # DERIVES the rec._cb namespace by scanning the edit/gesture controllers for methods carrying
+    # this mark, so the registry can never drift from the methods: rename one and it follows, add
+    # one by decorating it, and there is no parallel hand-maintained name list to forget.
+    fn._rtt_cb = True
+    return fn
+
+
 class _KindHandlers(NamedTuple):
     build: Callable
     update: Callable | None = None
