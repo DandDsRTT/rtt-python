@@ -141,6 +141,18 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "yields a map identical to the generator tuning map."),
     ("just", "detempering"): GuideHelp(
         "The justly-intoned size of the intervals chosen for this generator detempering."),
+    ("mapping", "gens"): GuideHelp(
+        "The generators mapped through the mapping — the identity, since each generator "
+        "maps to exactly itself."),
+    ("canon", "gens"): GuideHelp(
+        "The inverse of the form matrix — it converts your mapping's generators back to the "
+        "canonical ones.",
+        page="Projection", anchor="Form matrix"),
+    ("canon", "canongens"): GuideHelp(
+        "The form matrix times its inverse — the identity, since changing to your form and "
+        "back leaves things unchanged."),
+    ("tuning", "canongens"): GuideHelp(
+        "The generator tuning map for the canonical form's generators."),
 }
 
 
