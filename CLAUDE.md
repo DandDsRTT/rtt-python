@@ -355,11 +355,22 @@ lease has held the lock **~55 min, past the TTL, without being reclaimed**, stal
 until they hit the 1-hour wait cap and *fail*. So there is a real distinction:
 
 - **A deep but MOVING queue** → normal; wait it out; do not catastrophize.
-- **A SINGLE holder stuck past ~40 min** (position not advancing, holder daemon's hold age > TTL)
-  → this is a **genuine liveness bug**, not something that "clears on its own." Surface it to the
-  human **once, plainly** — name the wedged holder (PID + its worktree, from `bin/with-merge-lock
-  status`) so they can intervene — and don't pretend patience will fix it. Still do **not** `pkill`
-  another agent's process yourself, and do **not** NOLOCK around it (see below).
+- **A CONFIRMED-WEDGED holder** (position not advancing for many minutes; `bin/with-merge-lock
+  status` shows a high `hold_age` and `over_cap`, or you can see the holder making no progress)
+  → this is a **genuine liveness bug**, not something that "clears on its own." Two backstops now
+  exist, so you do **not** have to wait it out or hand-`pkill` blindly:
+  - **Automatic:** a front waiter reclaims a holder once `hold_age ≥ TTL + GRACE` (~41 min),
+    regardless of lease freshness — so the worst case is bounded even if the holder never self-exits.
+  - **Manual, when you don't want to wait ~41 min:** run **`bin/with-merge-lock evict`**. It
+    force-reclaims the current holder (SIGKILLs its daemon, clears its marker + ticket, frees the
+    lock for the next FIFO waiter) **but is gated**: it REFUSES unless the holder's `hold_age`
+    exceeds `RTT_MERGE_GATE_EVICT` (default 1500s / 25 min), which is well above a healthy or even
+    dogpiled land cycle — so it can **never** be used to jump a moving queue or kill a live land.
+    Only run it on a holder you have CONFIRMED is wedged (queue not advancing). It is the sanctioned
+    replacement for hand-`pkill`-ing another agent's daemon; prefer it over a raw `kill`.
+  Still do **not** raw-`pkill` another agent's *land/gate* processes (only its lock daemon, via
+  `evict`), do **not** NOLOCK around a wedge (see below), and surface a persistent wedge to the
+  human once, plainly — name the holder (PID + worktree) — so they know the fleet hit one.
 
 Don't hold the merge lock yourself for long, either — validate in the shortest critical section you
 can; a land that holds the lock through a 9-min (or dogpiled, hours-long) gate is what *creates* these

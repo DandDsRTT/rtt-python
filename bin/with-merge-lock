@@ -157,6 +157,12 @@ _GRACE = int(os.environ.get("RTT_MERGE_GATE_GRACE", "60"))
 _RENEW = int(os.environ.get("RTT_MERGE_GATE_RENEW", "15"))
 _GAP = int(os.environ.get("RTT_MERGE_GATE_GAP", "900"))
 _ABS_MAX = int(os.environ.get("RTT_MERGE_GATE_TTL", "2400"))
+# Manual `evict` floor: the minimum hold age at which an agent may force-reclaim a holder it
+# has CONFIRMED is wedged. Below this, evict refuses (a healthy land can legitimately hold the
+# lock this long), so it can never be abused to jump a moving queue. Sits below the automatic
+# abs-cap reclaim (_ABS_MAX + _GRACE, ~41 min) so a human/agent need not wait that long on a
+# visibly-stuck holder, but well above a normal/dogpiled land cycle.
+_EVICT_MIN = int(os.environ.get("RTT_MERGE_GATE_EVICT", "1500"))
 _READY = int(os.environ.get("RTT_MERGE_GATE_READY", "30"))
 _DISABLED = os.environ.get("RTT_MERGE_GATE_NOLOCK") == "1"
 _DEBUG = os.environ.get("RTT_MERGE_GATE_DEBUG") == "1"
@@ -176,7 +182,7 @@ _POLL = 3            # seconds between FIFO-wait scans
 _REPORT_EVERY = 15   # seconds between "still waiting" lines
 
 _MARKER = os.path.join(_DIR, ".holder")
-_SUBCOMMANDS = {"acquire", "renew", "release", "status", "__daemon"}
+_SUBCOMMANDS = {"acquire", "renew", "release", "status", "evict", "__daemon"}
 
 
 def _log(msg):
@@ -882,6 +888,52 @@ def cmd_release(_args):
     return 0
 
 
+def cmd_evict(_args):
+    """Force-reclaim a CONFIRMED-WEDGED holder without waiting out the ~41-min automatic
+    abs-cap reclaim. Gated by `_EVICT_MIN`: refuses if the holder's hold age is under the
+    floor (a healthy land can legitimately hold the lock that long), so it can never be used
+    to jump a moving queue. Kills the holder's daemon, removes its marker + ticket, and frees
+    the lock for the next FIFO waiter. Use only on a holder you have observed NOT advancing."""
+    os.makedirs(_DIR, exist_ok=True)
+    m = _read_json(_MARKER)
+    if m is None:
+        _log("evict: lock is free — nothing to evict")
+        return 0
+    now = time.time()
+    age = _hold_age(m, now)
+    dpid = int(m.get("daemon_pid", 0))
+    if age is None:
+        _log("evict: holder marker has no readable hold age — refusing")
+        return 1
+    if age < _EVICT_MIN:
+        _log("evict: REFUSED — holder daemon PID %d hold_age=%.0fs is under the evict floor "
+             "%ds. A healthy land can hold the lock this long; only evict a holder you have "
+             "CONFIRMED is wedged (queue not advancing). Raise the floor or wait it out."
+             % (dpid, age, _EVICT_MIN))
+        return 1
+    _log("evict: reclaiming wedged holder daemon PID %d (hold_age=%.0fs >= floor %ds)"
+         % (dpid, age, _EVICT_MIN))
+    if _alive(dpid):
+        try:
+            os.kill(dpid, signal.SIGKILL)
+        except OSError as e:
+            _log("evict: could not kill daemon %d (%s) — continuing to clear its marker" % (dpid, e))
+    cur = _read_json(_MARKER)
+    if cur is not None and cur.get("epoch") == m.get("epoch") and int(cur.get("daemon_pid", 0)) == dpid:
+        try:
+            os.remove(_MARKER)
+        except OSError:
+            pass
+    for f in os.listdir(_DIR):
+        if f.endswith("-%d" % dpid):
+            try:
+                os.remove(os.path.join(_DIR, f))
+            except OSError:
+                pass
+    _log("evict: lock freed; next FIFO waiter may proceed")
+    return 0
+
+
 def cmd_status(_args):
     os.makedirs(_DIR, exist_ok=True)
     live = _scan()
@@ -960,7 +1012,8 @@ _USAGE = """usage:
   bin/with-merge-lock acquire     # block until held; spawn the holder daemon; return
   bin/with-merge-lock renew       # extend the hold AND verify we still hold (else exit 1)
   bin/with-merge-lock release     # release the lock for the next agent
-  bin/with-merge-lock status      # show the holder + FIFO queue
+  bin/with-merge-lock status      # show the holder + FIFO queue (incl. hold_age / over_cap)
+  bin/with-merge-lock evict       # force-reclaim a CONFIRMED-wedged holder (gated by hold age)
   bin/with-merge-lock <cmd...>    # legacy: hold the lock while <cmd> runs, release on exit
 
 Hold the lock across the WHOLE landing sequence:
@@ -993,6 +1046,7 @@ def main(argv):
             "renew": cmd_renew,
             "release": cmd_release,
             "status": cmd_status,
+            "evict": cmd_evict,
         }[argv[0]](argv[1:])
 
     # Legacy: wrap a command.
