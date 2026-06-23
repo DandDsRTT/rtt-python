@@ -9,7 +9,6 @@ from rtt.app.service.core import (
     MAPPING_FORM_LABELS,
     ClosedFormTuning,
     IntervalSizes,
-    RatioEdit,
     TargetLimitResolution,
     Tuning,
     _domain_label,
@@ -55,7 +54,6 @@ from rtt.app.service.core import (
     prescale_text,
     resolve_comma_basis_form,
     resolve_mapping_form,
-    resolve_ratio_edit,
     resolve_target_limit,
     standard_primes,
     target_interval_set,
@@ -68,10 +66,10 @@ from rtt.app.service.core import (
     tuning_from_generators,
 )
 from rtt.app.service.entry import (
-    EntryResolution,
     custom_prescaler_entry,
     custom_weights,
     parse_power,
+    resolve_ratio_edit,
 )
 from rtt.app.service.parse import (
     _int_matrix_or_none,
@@ -141,9 +139,11 @@ from rtt.app.service.schemes import (
     weight_slope_of,
     weight_slope_variants,
 )
+from rtt.app.service.outcome import (
+    Effect,
+    Outcome,
+)
 from rtt.app.service.state import (
-    ElementEdit,
-    ElementTransform,
     TemperamentState,
     _as_basis_element,
     _state,

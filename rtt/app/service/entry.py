@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+
+from rtt.app.service import outcome
+from rtt.app.service.core import interval_vector
+from rtt.app.service.outcome import Outcome
 
 
-@dataclass(frozen=True)
-class EntryResolution:
-    value: object
-    problem: str | None
+def resolve_ratio_edit(raw, d: int, domain_basis=None) -> Outcome:
+    if raw in ("", "?/?"):
+        return outcome.RERENDER
+    try:
+        vector = interval_vector(raw, d, domain_basis)
+    except ValueError as exc:
+        return outcome.reject(str(exc))
+    return outcome.accept(vector)
 
 
 def _parse(raw) -> float | None:
@@ -19,13 +26,13 @@ def _parse(raw) -> float | None:
         return None
 
 
-def custom_prescaler_entry(raw, on_diagonal: bool) -> EntryResolution:
+def custom_prescaler_entry(raw, on_diagonal: bool) -> Outcome:
     value = _parse(raw)
     if value is None:
-        return EntryResolution(None, "skip")
+        return outcome.IGNORE
     if not math.isfinite(value) or (on_diagonal and value <= 0):
-        return EntryResolution(None, "invalid")
-    return EntryResolution(value, None)
+        return outcome.reject()
+    return outcome.accept(value)
 
 
 def parse_power(raw, minimum: float = 0.0) -> float | None:
@@ -41,13 +48,13 @@ def parse_power(raw, minimum: float = 0.0) -> float | None:
     return value
 
 
-def custom_weights(raws) -> EntryResolution:
+def custom_weights(raws) -> Outcome:
     weights = []
     for raw in raws:
         value = _parse(raw)
         if value is None:
-            return EntryResolution(None, "skip")
+            return outcome.IGNORE
         if not math.isfinite(value) or value <= 0:
-            return EntryResolution(None, "invalid")
+            return outcome.reject()
         weights.append(value)
-    return EntryResolution(tuple(weights), None)
+    return outcome.accept(tuple(weights))

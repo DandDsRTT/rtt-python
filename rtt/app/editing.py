@@ -292,22 +292,19 @@ class EditController:
         if self.page.building or cid not in self.page.rec.inputs:
             return
         group, tok = cid.split(":")
-        res = service.resolve_ratio_edit(
+        out = service.resolve_ratio_edit(
             self.page.rec.cell_value(cid),
             self.page.editor.state.d,
             self.page.editor.state.domain_basis,
         )
-        if res.problem == "blank":
-            self.page.renderer.render()
-            return
-        if res.problem == "invalid":
-            ui.notify(res.message, type="negative", position="top")
-            self.page.renderer.render()
-            return
-        self._apply_ratio_edit(group, tok, res.vector)
-        # a quantities-row ratio edit routes into a retuning setter (comma/held/target/unchanged) —
-        # render off the loop. (An interest edit doesn't retune, but the warm build is cheap.)
-        self.page.renderer.request_render()
+
+        def apply():
+            self._apply_ratio_edit(group, tok, out.value)
+            # a quantities-row ratio edit routes into a retuning setter (comma/held/target/unchanged)
+            # — render off the loop. (An interest edit doesn't retune, but the warm build is cheap.)
+            self.page.renderer.request_render()
+
+        self._commit_outcome(out, apply)
 
     def _replace_interval_vector(self, group, tok, vector, current, setter) -> None:
         list_name = {
@@ -365,26 +362,28 @@ class EditController:
                 self.page.editor.set_target_override_vectors,
             )
 
+    def _commit_outcome(self, out, apply, reject_message=None) -> None:
+        if out.effect is service.Effect.IGNORE:
+            return
+        if out.effect is service.Effect.RERENDER:
+            self.page.renderer.render()
+            return
+        if out.effect is service.Effect.REJECT:
+            ui.notify(out.message or reject_message, type="negative", position="top")
+            self.page.renderer.render()
+            return
+        if out.message:
+            ui.notify(out.message, type="negative", position="top")
+        apply()
+
+    def _preview_outcome(self, out, apply) -> None:
+        self.page.gestures.edit_candidate(apply if out.effect is service.Effect.ACCEPT else None)
+
     def _transform_domain_element(self, cid, op, index) -> None:
-        res = service.resolve_domain_element_transform(
+        out = service.resolve_domain_element_transform(
             self.page.editor.state, index, self.page.rec.cell_value(cid), op
         )
-        if res.problem == "noop":
-            return
-        if res.problem == "invalid":
-            ui.notify(
-                f"“{res.value}” is not a valid basis element (≠ 1)",
-                type="negative",
-                position="top",
-            )
-            self.page.renderer.render()
-            return
-        if res.problem == "dependent":
-            ui.notify(f"{res.value} would make the basis dependent", type="negative", position="top")
-            self.page.renderer.render()
-            return
-        self.page.editor.set_domain_element(index, res.value)
-        self.page.renderer.request_render()
+        self._commit_outcome(out, lambda: self._apply_domain_element(str(index), out.value))
 
     def _interval_group_state(self, group):
         if group == "comma":
@@ -441,30 +440,8 @@ class EditController:
             return
         raw = self.page.rec.cell_value(cid)
         tok = cid.split(":")[1]
-        res = service.resolve_domain_element_edit(self.page.editor.state, tok, raw)
-        if res.problem == "noop":
-            return
-        if res.problem == "blank":
-            self.page.renderer.render()
-            return
-        if res.problem == "invalid":
-            ui.notify(
-                f"“{raw}” is not a positive rational basis element (≠ 1)",
-                type="negative",
-                position="top",
-            )
-            self.page.renderer.render()
-            return
-        if res.problem == "dependent":
-            msg = (
-                f"{raw} isn’t independent of the existing basis"
-                if tok == "pending"
-                else f"{raw} would make the basis dependent"
-            )
-            ui.notify(msg, type="negative", position="top")
-            self.page.renderer.render()
-            return
-        self._apply_domain_element(tok, raw)
+        out = service.resolve_domain_element_edit(self.page.editor.state, tok, raw)
+        self._commit_outcome(out, lambda: self._apply_domain_element(tok, raw))
 
     def on_element_preview(self, cid):
         g = self.page.gestures.gesture
@@ -478,13 +455,15 @@ class EditController:
             return
         raw = self.page.rec.cell_value(cid)
         tok = cid.split(":")[1]
-        res = service.resolve_domain_element_edit(self.page.editor.state, tok, raw)
-        if res.problem is not None:
-            self.page.gestures.edit_candidate(None)
-        elif tok == "pending":
-            self.page.gestures.edit_candidate(lambda: self.page.editor.set_pending_element(raw))
-        else:
-            self.page.gestures.edit_candidate(lambda: self.page.editor.set_domain_element(int(tok), raw))
+        out = service.resolve_domain_element_edit(self.page.editor.state, tok, raw)
+
+        def apply():
+            if tok == "pending":
+                self.page.editor.set_pending_element(raw)
+            else:
+                self.page.editor.set_domain_element(int(tok), raw)
+
+        self._preview_outcome(out, apply)
 
     def on_power_change(self, cid):
         if self.page.building or cid not in self.page.rec.inputs:
@@ -624,15 +603,13 @@ class EditController:
             return
         parts = cid.split(":")
         i, j = int(parts[3]), int(parts[4])
-        res = service.custom_prescaler_entry(self.page.rec.decimal_value(cid), i == j)
-        if res.problem == "skip":
-            return
-        if res.problem == "invalid":
-            ui.notify(_INVALID_PRESCALER, type="negative", position="top")
-            self.page.renderer.render()
-            return
-        self.page.editor.set_custom_prescaler_entry(i, j, res.value)
-        self.page.renderer.request_render()  # the prescaler drives the weighted tuning solve — render off the loop
+        out = service.custom_prescaler_entry(self.page.rec.decimal_value(cid), i == j)
+
+        def apply():
+            self.page.editor.set_custom_prescaler_entry(i, j, out.value)
+            self.page.renderer.request_render()  # the prescaler drives the weighted solve — off the loop
+
+        self._commit_outcome(out, apply, _INVALID_PRESCALER)
 
     def on_weight_change(self, cid):
         if self.page.building or cid not in self.page.rec.inputs:
@@ -640,15 +617,13 @@ class EditController:
         raws = [
             self.page.rec.decimal_value(o) for o in self.page.rec.inputs if o.startswith("weight:")
         ]
-        res = service.custom_weights(raws)
-        if res.problem == "skip":
-            return
-        if res.problem == "invalid":
-            ui.notify(_INVALID_WEIGHT, type="negative", position="top")
-            self.page.renderer.render()
-            return
-        self.page.editor.set_custom_weights(list(res.value))
-        self.page.renderer.request_render()  # the weights drive the tuning solve — render off the loop
+        out = service.custom_weights(raws)
+
+        def apply():
+            self.page.editor.set_custom_weights(list(out.value))
+            self.page.renderer.request_render()  # the weights drive the tuning solve — off the loop
+
+        self._commit_outcome(out, apply, _INVALID_WEIGHT)
 
     _PTEXT_EDITORS: ClassVar[dict[str, str]] = {
         "ptext:mapping:primes": "try_edit_mapping_text",

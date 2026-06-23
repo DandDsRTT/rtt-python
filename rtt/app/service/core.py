@@ -443,23 +443,6 @@ def interval_vector(ratio: str, d: int, domain_basis=None) -> tuple[int, ...]:
     return vector
 
 
-@dataclass(frozen=True)
-class RatioEdit:
-    vector: tuple[int, ...] | None
-    problem: str | None
-    message: str
-
-
-def resolve_ratio_edit(raw, d: int, domain_basis=None) -> RatioEdit:
-    if raw in ("", "?/?"):
-        return RatioEdit(None, "blank", "")
-    try:
-        vector = interval_vector(raw, d, domain_basis)
-    except ValueError as exc:
-        return RatioEdit(None, "invalid", str(exc))
-    return RatioEdit(vector, None, "")
-
-
 def equave_quotient(domain_basis=None) -> Fraction:
     return Fraction(domain_basis[0]) if domain_basis else Fraction(2)
 

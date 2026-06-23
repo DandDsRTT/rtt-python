@@ -575,44 +575,44 @@ def test_resolve_target_limit_marks_an_unproducible_spec_invalid():
 
 
 def test_custom_prescaler_entry_accepts_a_finite_number():
-    res = service.custom_prescaler_entry("2.5", on_diagonal=True)
-    assert res.value == 2.5
-    assert res.problem is None
+    out = service.custom_prescaler_entry("2.5", on_diagonal=True)
+    assert out.effect is service.Effect.ACCEPT
+    assert out.value == 2.5
 
 
 def test_custom_prescaler_entry_skips_a_blank_or_partial_field():
     # a blank or mid-edit (unparseable) field commits nothing and shows no toast — the user is typing
-    assert service.custom_prescaler_entry("", on_diagonal=True).problem == "skip"
-    assert service.custom_prescaler_entry(None, on_diagonal=False).problem == "skip"
-    assert service.custom_prescaler_entry("1.2.3", on_diagonal=True).problem == "skip"
+    assert service.custom_prescaler_entry("", on_diagonal=True).effect is service.Effect.IGNORE
+    assert service.custom_prescaler_entry(None, on_diagonal=False).effect is service.Effect.IGNORE
+    assert service.custom_prescaler_entry("1.2.3", on_diagonal=True).effect is service.Effect.IGNORE
 
 
 def test_custom_prescaler_entry_rejects_a_nonpositive_diagonal_but_allows_it_off_diagonal():
     # the prescaler's diagonal scales a coordinate, so it must be positive; an off-diagonal shear
     # entry may be zero or negative
-    assert service.custom_prescaler_entry("0", on_diagonal=True).problem == "invalid"
-    assert service.custom_prescaler_entry("-1", on_diagonal=True).problem == "invalid"
+    assert service.custom_prescaler_entry("0", on_diagonal=True).effect is service.Effect.REJECT
+    assert service.custom_prescaler_entry("-1", on_diagonal=True).effect is service.Effect.REJECT
     assert service.custom_prescaler_entry("-1", on_diagonal=False).value == -1.0
-    assert service.custom_prescaler_entry("inf", on_diagonal=False).problem == "invalid"
+    assert service.custom_prescaler_entry("inf", on_diagonal=False).effect is service.Effect.REJECT
 
 
 def test_custom_weights_collects_a_full_row_of_positive_numbers():
-    res = service.custom_weights(["1", "2.5", "3"])
-    assert res.value == (1.0, 2.5, 3.0)
-    assert res.problem is None
+    out = service.custom_weights(["1", "2.5", "3"])
+    assert out.effect is service.Effect.ACCEPT
+    assert out.value == (1.0, 2.5, 3.0)
 
 
 def test_custom_weights_skips_until_every_field_is_filled():
     # any blank/partial field leaves the whole row uncommitted with no toast
-    assert service.custom_weights(["1", "", "3"]).problem == "skip"
-    assert service.custom_weights(["1", "2x", "3"]).problem == "skip"
+    assert service.custom_weights(["1", "", "3"]).effect is service.Effect.IGNORE
+    assert service.custom_weights(["1", "2x", "3"]).effect is service.Effect.IGNORE
 
 
 def test_custom_weights_rejects_a_nonpositive_or_nonfinite_weight():
     # a damage weight must be a positive finite number
-    assert service.custom_weights(["1", "0", "3"]).problem == "invalid"
-    assert service.custom_weights(["1", "-2", "3"]).problem == "invalid"
-    assert service.custom_weights(["1", "nan", "3"]).problem == "invalid"
+    assert service.custom_weights(["1", "0", "3"]).effect is service.Effect.REJECT
+    assert service.custom_weights(["1", "-2", "3"]).effect is service.Effect.REJECT
+    assert service.custom_weights(["1", "nan", "3"]).effect is service.Effect.REJECT
 
 
 def test_transformed_vector_reciprocates_and_reduces():
@@ -630,69 +630,77 @@ def test_transformed_vector_reports_a_unison_reciprocation_as_no_op():
 def test_resolve_domain_element_transform_applies_a_valid_relabel():
     st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     # reducing the prime-3 basis element down an octave to 3/2 keeps the basis independent
-    res = service.resolve_domain_element_transform(st, 1, "3", "reduce")
-    assert res.value == "3/2"
-    assert res.problem is None
+    out = service.resolve_domain_element_transform(st, 1, "3", "reduce")
+    assert out.effect is service.Effect.ACCEPT
+    assert out.value == "3/2"
 
 
 def test_resolve_domain_element_transform_flags_a_no_op():
     st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     # 3/2 is already octave-reduced, so reducing it again changes nothing
-    assert service.resolve_domain_element_transform(st, 1, "3/2", "reduce").problem == "noop"
+    assert service.resolve_domain_element_transform(st, 1, "3/2", "reduce").effect is service.Effect.IGNORE
 
 
 def test_resolve_domain_element_transform_rejects_a_unison_result():
     st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     # reducing 2 by its own equave lands on 1, which is not a valid basis element
-    res = service.resolve_domain_element_transform(st, 0, "2", "reduce")
-    assert res.value == "1"
-    assert res.problem == "invalid"
+    out = service.resolve_domain_element_transform(st, 0, "2", "reduce")
+    assert out.effect is service.Effect.REJECT
+    assert "1" in out.message
 
 
 def test_resolve_domain_element_transform_rejects_a_dependent_result():
     st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     # relabeling the prime-3 slot to 1/4 (a power of 2) makes it dependent on the 2 already present
-    res = service.resolve_domain_element_transform(st, 1, "4", "reciprocate")
-    assert res.value == "1/4"
-    assert res.problem == "dependent"
+    out = service.resolve_domain_element_transform(st, 1, "4", "reciprocate")
+    assert out.effect is service.Effect.REJECT
+    assert "1/4" in out.message
 
 
 def test_resolve_domain_element_edit_classifies_a_blank_or_placeholder_field():
     st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
-    assert service.resolve_domain_element_edit(st, "1", "").problem == "blank"
-    assert service.resolve_domain_element_edit(st, "1", "?/?").problem == "blank"
+    assert service.resolve_domain_element_edit(st, "1", "").effect is service.Effect.RERENDER
+    assert service.resolve_domain_element_edit(st, "1", "?/?").effect is service.Effect.RERENDER
 
 
 def test_resolve_domain_element_edit_rejects_an_unparseable_element():
     st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
-    assert service.resolve_domain_element_edit(st, "1", "1").problem == "invalid"  # the unison
-    assert service.resolve_domain_element_edit(st, "1", "x").problem == "invalid"
+    assert service.resolve_domain_element_edit(st, "1", "1").effect is service.Effect.REJECT  # the unison
+    assert service.resolve_domain_element_edit(st, "1", "x").effect is service.Effect.REJECT
 
 
 def test_resolve_domain_element_edit_reports_an_unchanged_index_as_no_op():
     st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     # typing the value already in the slot commits nothing
-    assert service.resolve_domain_element_edit(st, "1", "3").problem == "noop"
+    assert service.resolve_domain_element_edit(st, "1", "3").effect is service.Effect.IGNORE
 
 
 def test_resolve_domain_element_edit_accepts_a_fresh_relabel():
     st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
-    res = service.resolve_domain_element_edit(st, "1", "7")
-    assert res.value == "7"
-    assert res.problem is None
+    out = service.resolve_domain_element_edit(st, "1", "7")
+    assert out.effect is service.Effect.ACCEPT
+    assert out.value == "7"
 
 
 def test_resolve_domain_element_edit_flags_a_dependent_relabel():
     st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     # relabeling the prime-3 slot to 4 (a power of the 2 already present) is dependent
-    assert service.resolve_domain_element_edit(st, "1", "4").problem == "dependent"
+    out = service.resolve_domain_element_edit(st, "1", "4")
+    assert out.effect is service.Effect.REJECT
+    assert "dependent" in out.message
+
+
+def test_resolve_domain_element_edit_distinguishes_the_pending_dependent_message():
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    # the pending-add rejection wording differs from the relabel one — the service owns both now
+    assert "independent" in service.resolve_domain_element_edit(st, "pending", "9").message
 
 
 def test_resolve_domain_element_edit_checks_a_pending_addition_for_independence():
     st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     # a pending element extends the basis, so it must be independent of all existing primes
-    assert service.resolve_domain_element_edit(st, "pending", "7").problem is None
-    assert service.resolve_domain_element_edit(st, "pending", "9").problem == "dependent"
+    assert service.resolve_domain_element_edit(st, "pending", "7").effect is service.Effect.ACCEPT
+    assert service.resolve_domain_element_edit(st, "pending", "9").effect is service.Effect.REJECT
 
 
 def test_parse_power_reads_the_minimax_keywords_as_infinity():
@@ -722,24 +730,23 @@ def test_parse_power_enforces_a_minimum_for_the_complexity_norm():
 
 def test_resolve_ratio_edit_parses_a_ratio_into_a_domain_vector():
     # 3/2 over 2.3.5 is the prime-count vector (-1, 1, 0)
-    res = service.resolve_ratio_edit("3/2", 3, (2, 3, 5))
-    assert res.vector == (-1, 1, 0)
-    assert res.problem is None
+    out = service.resolve_ratio_edit("3/2", 3, (2, 3, 5))
+    assert out.effect is service.Effect.ACCEPT
+    assert out.value == (-1, 1, 0)
 
 
-def test_resolve_ratio_edit_treats_blank_and_placeholder_as_blank():
-    assert service.resolve_ratio_edit("", 3, (2, 3, 5)).problem == "blank"
-    assert service.resolve_ratio_edit("?/?", 3, (2, 3, 5)).problem == "blank"
+def test_resolve_ratio_edit_treats_blank_and_placeholder_as_rerender():
+    assert service.resolve_ratio_edit("", 3, (2, 3, 5)).effect is service.Effect.RERENDER
+    assert service.resolve_ratio_edit("?/?", 3, (2, 3, 5)).effect is service.Effect.RERENDER
 
 
 def test_resolve_ratio_edit_reports_an_invalid_ratio_with_the_parser_message():
     # an out-of-domain prime (7 is not in 2.3.5) is rejected with the parser's own message text
-    res = service.resolve_ratio_edit("7/4", 3, (2, 3, 5))
-    assert res.vector is None
-    assert res.problem == "invalid"
-    assert res.message  # the ValueError text is surfaced for the toast
+    out = service.resolve_ratio_edit("7/4", 3, (2, 3, 5))
+    assert out.effect is service.Effect.REJECT
+    assert out.message  # the ValueError text is surfaced for the toast
     # a non-ratio is invalid too
-    assert service.resolve_ratio_edit("x", 3, (2, 3, 5)).problem == "invalid"
+    assert service.resolve_ratio_edit("x", 3, (2, 3, 5)).effect is service.Effect.REJECT
 
 
 def test_tuning_maps_under_top():

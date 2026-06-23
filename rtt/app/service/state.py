@@ -5,12 +5,14 @@ from fractions import Fraction
 
 import sympy as sp
 
+from rtt.app.service import outcome
 from rtt.app.service.core import (
     _to_matrix,
     is_standard_domain,
     standard_primes,
     transform_ratio,
 )
+from rtt.app.service.outcome import Outcome
 from rtt.library.dimensions import get_d, get_n, get_r
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
@@ -168,47 +170,40 @@ def set_domain_element(state: TemperamentState, index: int, element) -> Temperam
     return from_mapping(state.mapping, new_basis)
 
 
-@dataclass(frozen=True)
-class ElementTransform:
-    value: str | None
-    problem: str | None
+def _not_a_basis_element(raw: str) -> Outcome:
+    return outcome.reject(f"“{raw}” is not a valid basis element (≠ 1)")
 
 
 def resolve_domain_element_transform(
     state: TemperamentState, index: int, current_text: str, op: str
-) -> ElementTransform:
+) -> Outcome:
     new_raw = transform_ratio(current_text, op, state.domain_basis)
     if new_raw is None:
-        return ElementTransform(None, "noop")
+        return outcome.IGNORE
     parsed = parse_domain_element(new_raw)
     if parsed is None:
-        return ElementTransform(new_raw, "invalid")
+        return _not_a_basis_element(new_raw)
     if not can_set_domain_element(state, index, parsed):
-        return ElementTransform(new_raw, "dependent")
-    return ElementTransform(new_raw, None)
+        return outcome.reject(f"{new_raw} would make the basis dependent")
+    return outcome.accept(new_raw)
 
 
-@dataclass(frozen=True)
-class ElementEdit:
-    value: str | None
-    problem: str | None
-
-
-def resolve_domain_element_edit(state: TemperamentState, tok: str, raw: str) -> ElementEdit:
+def resolve_domain_element_edit(state: TemperamentState, tok: str, raw: str) -> Outcome:
     if raw in ("", "?/?"):
-        return ElementEdit(None, "blank")
+        return outcome.RERENDER
     parsed = parse_domain_element(raw)
     if parsed is None:
-        return ElementEdit(raw, "invalid")
+        return outcome.reject(f"“{raw}” is not a positive rational basis element (≠ 1)")
     if tok == "pending":
-        ok = can_add_domain_element(state, parsed)
-        return ElementEdit(raw, None if ok else "dependent")
+        if not can_add_domain_element(state, parsed):
+            return outcome.reject(f"{raw} isn’t independent of the existing basis")
+        return outcome.accept(raw)
     index = int(tok)
     if parsed == state.domain_basis[index]:
-        return ElementEdit(raw, "noop")
+        return outcome.IGNORE
     if not can_set_domain_element(state, index, parsed):
-        return ElementEdit(raw, "dependent")
-    return ElementEdit(raw, None)
+        return outcome.reject(f"{raw} would make the basis dependent")
+    return outcome.accept(raw)
 
 
 def can_add_domain_element(state: TemperamentState, element) -> bool:
