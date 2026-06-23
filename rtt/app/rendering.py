@@ -1,0 +1,370 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+
+from nicegui import background_tasks, helpers, ui
+
+from rtt.app import (
+    service,
+    spreadsheet_text,
+    tooltips,
+)
+from rtt.app import settings as show_settings
+from rtt.app.render_html import (
+    _block_panes,
+    _freeze_container,
+    _line_style,
+)
+
+
+from rtt.app.page_assets import (
+    _PAD,
+    _CHROME_H,
+    _STORE_KEY,
+    _doc_store,
+    _TINTS,
+    _TILE_HOST,
+)
+
+_log = logging.getLogger(__name__)
+
+
+class Renderer:
+    def __init__(self, page) -> None:
+        self.page = page
+        self.render_inflight = False
+        self.render_again = False
+        self.render_after = None
+
+    def _request_render(self, after=None):
+        # schedule an off-loop commit render; a request arriving while one is in flight collapses
+        # into a single trailing rebuild (the state it lands on is the only one that matters).
+        # ``after`` runs on the loop once render() has rebuilt — for the few commits with a
+        # synchronous tail that reads the fresh layout (a draft column materializing then rebasing
+        # its edit gesture off last_lay).
+        if helpers.is_user_simulation():
+            # the in-process User test harness drives clicks/edits and inspects the DOM right after,
+            # with no chance for a background task to run — and there is no real socket to protect.
+            # Render synchronously there: tests see the same immediate rebuild they always did, and
+            # the off-loop machinery (a production websocket concern) is exercised by the live probe.
+            self.render()
+            if after is not None:
+                after()
+            return
+        if self.render_inflight:
+            self.render_again = True
+            self.render_after = after
+            return
+        background_tasks.create(self._commit_render(after))
+
+    async def _commit_render(self, after=None):
+        self.render_inflight = True
+        try:
+            again = True
+            cont = after
+            while again:
+                prev = self.page.last_lay.identities if self.page.last_lay is not None else None
+                try:
+                    # warm the tuning memo off the loop; the result is discarded — render() below
+                    # recomputes the layout, now a cache hit. (editor.layout is read-only, and the
+                    # mutation that triggered this already ran synchronously in the handler.)
+                    await asyncio.to_thread(self.page.editor.layout, prev_ids=prev)
+                except Exception:
+                    _log.exception("off-loop layout warm-up failed; rendering on the loop")
+                self.render()
+                if cont is not None:
+                    cont()
+                again = self.render_again
+                self.render_again = False
+                cont = self.render_after
+                self.render_after = None
+        finally:
+            self.render_inflight = False
+
+    def apply_view_classes(self):
+        # Two of the `interface` Show behaviours gate the whole app through a single <body> class each,
+        # so one CSS rule (assets/rtt.css) handles every element: `animations` off adds rtt-no-anim
+        # (which zeroes the --t transition var, so every change snaps instead of sliding/fading) and
+        # `tooltips` off adds rtt-no-tooltips (which hides every .q-tooltip). Unlike dark mode these
+        # live in editor.settings — toggled in the Show panel, so select-all / Reset reach them — so
+        # render() re-applies them after any toggle (and on the initial build, before cells animate in).
+        # The third behaviour, preview_highlighting, has no body class: it's gated in Python at the
+        # preview source (compute_rings + the hover handlers) so no ring or reflow is even produced.
+        # render() can run OFF the loop (the _commit_render background task — every act()-driven commit:
+        # reset, undo/redo, a structural edit), where the slot stack is empty and ui.query would raise
+        # "slot stack ... is empty", aborting the whole render (grid never updates, busy scrim never
+        # clears). Enter the captured page client so the <body> query resolves; in the synchronous /
+        # test path this just nests harmlessly inside the already-live slot.
+        with self.page.page_client:
+            body = ui.query("body")
+            body.classes(add="rtt-no-anim") if not self.page.editor.settings[
+                "animations"
+            ] else body.classes(remove="rtt-no-anim")
+            body.classes(add="rtt-no-tooltips") if not self.page.editor.settings[
+                "tooltips"
+            ] else body.classes(remove="rtt-no-tooltips")
+
+    def _size_panes(self, lay, fx, fy) -> None:
+        base_w = lay.width + lay.right_overhang + 2 * _PAD
+        base_h = lay.height + 2 * _PAD
+        self.page.grid_pane.style(f"width:{base_w}px; height:{base_h}px")
+        fit_w = lay.width + 2 * _PAD
+        self.page.grid_pane.props(f'data-base-w="{base_w}" data-base-h="{base_h}" data-fit-w="{fit_w}"')
+        self.page.board.style(f"width:{lay.width}px; height:{lay.height - fy}px")
+        self.page.colhead.style(f"height:{fy}px")
+        self.page.colhead_inner.style(f"width:{lay.width}px; height:{fy}px")
+        self.page.corner.style(f"width:{fx}px; height:{fy}px")
+        self.page.gridbody.style(f"top:{_PAD + fy}px")
+        self.page.rowband.style(f"width:{fx}px; height:{lay.height - fy}px")
+        self.page.show_frozen.style(f"height:{max(0, fy - _CHROME_H)}px")
+        self.page.show_scroll.style(f"max-height:calc(100vh - {_PAD + fy}px)")
+
+    def _render_lines(self, lay, fx, fy, seen) -> None:
+        def place_line(ln, suffix, parent, shift):
+            eid = ln.id + suffix
+            seen.add(eid)
+            if eid not in self.page.rec.els:
+                with parent:
+                    cls = "rtt-line " + ("rtt-line-v" if ln.orientation == "v" else "rtt-line-h")
+                    self.page.rec.els[eid] = ui.element("div").classes(cls).props(f'data-eid="{eid}"')
+            sty = _line_style(ln, shift)
+            if self.page.rec.styled.get(eid) != sty:  # only restyle a line that actually moved
+                self.page.rec.els[eid].style(sty)
+                self.page.rec.styled[eid] = sty
+
+        for ln in lay.lines:
+            x0, x1 = (ln.pos, ln.pos) if ln.orientation == "v" else (ln.start, ln.start + ln.length)
+            y0, y1 = (ln.start, ln.start + ln.length) if ln.orientation == "v" else (ln.pos, ln.pos)
+            if x1 >= fx and y1 >= fy:
+                place_line(ln, "", self.page.board, fy)
+            if x1 >= fx and y0 < fy:
+                place_line(ln, "#col", self.page.colhead_inner, 0)
+            if x0 < fx and y1 >= fy:
+                place_line(ln, "#row", self.page.rowband, fy)
+
+    def _render_blocks(self, lay, fx, fy, seen) -> None:
+        def place_block(bl, pane):
+            suffix = "" if pane == "body" else "#" + pane
+            shift = 0 if pane in ("col", "corner") else fy
+            eid = bl.id + suffix
+            seen.add(eid)
+            if eid not in self.page.rec.els:
+                with self.page.cell_parents[pane]:
+                    cls = (
+                        "rtt-block-boxed"
+                        if bl.boxed
+                        else "rtt-washbase"
+                        if bl.tint == "base"
+                        else "rtt-wash"
+                        if bl.tint
+                        else "rtt-block"
+                    )
+                    self.page.rec.els[eid] = (
+                        ui.element("div").classes(cls).props(f'data-eid="{eid}"').mark(eid)
+                    )
+            # position via transform:translate (anchored at left:0;top:0), so a wash/box that SHIFTS
+            # on a reflow rides the compositor like the cells; its size (a wash growing to cover a new
+            # column) stays on width/height — unavoidably a layout op, but the shift is the common case.
+            style = f"left:0; top:0; transform:translate({bl.x}px,{bl.y - shift}px); width:{bl.w}px; height:{bl.h}px"
+            if bl.tint in _TINTS:
+                style += f"; background:var(--wash-{bl.tint})"
+            if (
+                self.page.rec.styled.get(eid) != style
+            ):  # only restyle a block that actually moved/recoloured
+                self.page.rec.els[eid].style(style)
+                self.page.rec.styled[eid] = style
+
+        for bl in lay.blocks:
+            for pane in _block_panes(bl, fx, fy):
+                place_block(bl, pane)
+
+    def _sync_mean_damage_tips(self) -> None:
+        mean_damage_help_text = tooltips.mean_damage_help(
+            service.is_all_interval(self.page.editor.tuning_scheme)
+        )
+        for cid in tooltips.MEAN_DAMAGE_IDS:
+            if cid in self.page.rec.mean_damage_tips:
+                self.page.rec.mean_damage_tips[cid].set_text(mean_damage_help_text)
+                continue
+            wrap = self.page.rec.els.get(cid)
+            if wrap is not None and wrap._props.get("data-zoomhelp") != mean_damage_help_text:
+                wrap._props["data-zoomhelp"] = mean_damage_help_text
+                wrap.update()
+
+    def _sync_chrome(self, lay, fy) -> None:
+        self.page.refs["undo"].set_enabled(self.page.editor.can_undo)
+        self.page.refs["redo"].set_enabled(self.page.editor.can_redo)
+        self.page.refs["reset"].set_enabled(
+            self.page.editor.can_reset or self.page.chapter != show_settings.CHAPTER_DEFAULT
+        )
+        if self.page.chapter_slider.value != self.page.chapter:
+            self.page.chapter_slider.value = self.page.chapter
+        if lay.approach_box is not None:
+            ax, ay, aw, ah = lay.approach_box
+            self.page.refs["approach"].style(
+                f"position:absolute; left:{ax}px; top:{ay - fy}px; width:{aw}px; height:{ah}px"
+            )
+            self.page.refs["approach"].set_visibility(True)
+        else:
+            self.page.refs["approach"].set_visibility(False)
+        for key, opt in self.page.refs["approach_opts"].items():
+            (
+                opt.classes(add="rtt-rangeopt-on")
+                if key == self.page.editor.nonprime_basis_approach
+                else opt.classes(remove="rtt-rangeopt-on")
+            )
+        for key, box in self.page.boxes.items():
+            if box.value != self.page.editor.settings[key]:
+                box.value = self.page.editor.settings[key]
+        for key, parts in self.page.tile_parts.items():
+            shown = (
+                self.page.editor.settings["names"] if key == "mnemonics" else self.page.editor.settings[key]
+            )
+            host = _TILE_HOST.get(key)
+            inert = host is not None and not self.page.editor.settings[host]
+            for part in parts:
+                part.classes(
+                    add="rtt-part-on" if shown else "rtt-part-off",
+                    remove="rtt-part-off" if shown else "rtt-part-on",
+                )
+                part.classes(add="rtt-part-inert") if inert else part.classes(
+                    remove="rtt-part-inert"
+                )
+                if key == "mnemonics":
+                    part.classes(add="rtt-mnem-underline") if self.page.editor.settings[
+                        "mnemonics"
+                    ] else part.classes(remove="rtt-mnem-underline")
+        self.page._sync_show_availability()
+        gesture_idle = self.page.rec.gesture is None or self.page.rec.gesture.token is None
+        if gesture_idle and not (self.page.load_failed and not self.page.editor.can_undo):
+            _doc_store()[_STORE_KEY] = self.page.editor.serialize()
+
+    def _make_cell_if_new(self, cb, fx, fy, cold) -> str:
+        if cb.id in self.page.rec.els and self.page.rec.kinds[cb.id] != cb.kind:
+            self.page.rec.drop(cb.id)
+        container = _freeze_container(cb, fx, fy)
+        if cb.id not in self.page.rec.els:
+            with self.page.cell_parents[container]:
+                self.page.rec.make_cell(cb)
+            # two-step entrance: a cell BORN on an incremental render (not the cold first paint)
+            # is WITHHELD (.rtt-withhold → opacity 0) while the existing cells slide to open the
+            # room, and only fades in once the reflow has SETTLED. A retuning commit can render in
+            # stages (the handler's render, then the off-loop retune render), so a fixed delay
+            # would reveal it mid-expansion — instead rttScheduleReveal (pushed at the end of every
+            # render) debounces the reveal, firing one beat after renders STOP. The cold paint has
+            # no room to make, and a PENDING draft must be typeable at once, so neither is withheld.
+            if not cold and not cb.pending:
+                self.page.rec.els[cb.id].classes(add="rtt-withhold")
+        return container
+
+    def _update_cell_content(self, cb) -> None:
+        # content depends on the cell's value fields AND its w/h (width-fitted faces re-fit on
+        # resize), so the signature carries both; audio rides along (a retune rebakes the pitch).
+        # BUT an interactive cell — one carrying an input, select, checkbox or fraction-mode box —
+        # can have its DOM changed by the USER (typing) or hover JS between renders, so its cached
+        # signature no longer reflects the live DOM. Such a cell is always re-asserted, so an
+        # improper-commit REVERT restores the box even though its value is unchanged from the last
+        # render (the bug that surfaced here). Read-only display cells — the vast majority — are
+        # only the server's to change, so the cache safely skips them.
+        csig = (spreadsheet_text._cell_content(cb), cb.w, cb.h, cb.audio)
+        volatile = any(
+            cb.id in d
+            for d in (
+                self.page.rec.inputs,
+                self.page.rec.den_inputs,
+                self.page.rec.ptext_inputs,
+                self.page.rec.selects,
+                self.page.rec.checks,
+                self.page.rec.frac_edits,
+                self.page.rec.ratio_ops,
+            )
+        )
+        if volatile or self.page.rec.content_sig.get(cb.id) != csig:
+            self.page.rec.update_cell(cb)
+            self.page.rec.content_sig[cb.id] = csig
+
+    def _render_cells(self, lay, fx, fy, seen, amber, red, cold) -> None:
+        for cb in lay.cells:
+            seen.add(cb.id)
+            container = self._make_cell_if_new(cb, fx, fy, cold)
+            # body + row cells live in the scroll space (shifted up by fy); column + corner cells
+            # keep native coords in their frozen strip / corner. Each reconcile step (reposition,
+            # refresh content, repaint rings) runs only when its own signature changed, so an
+            # interaction that moves a handful of cells doesn't re-run the whole page's per-cell work.
+            top = cb.y - (fy if container in ("body", "row") else 0)
+            # position via transform:translate (anchored at the container origin) rather than left/top,
+            # so a reflow animates on the COMPOSITOR (the .rtt-cell transition rides `transform`) instead
+            # of left/top — which would re-run layout every frame for every moving cell, the jank when a
+            # basis/column change shifts most of the grid at once. Size still rides width/height.
+            geo = f"left:0; top:0; transform:translate({cb.x}px,{top}px); width:{cb.w}px; height:{cb.h}px"
+            if self.page.rec.styled.get(cb.id) != geo:
+                self.page.rec.els[cb.id].style(geo)
+                self.page.rec.styled[cb.id] = geo
+            self._update_cell_content(cb)
+            self.page.gestures.paint_cell(cb.id, amber, red)  # self-guards on ring_sig (no-op when unchanged)
+
+        for eid in [e for e in self.page.rec.els if e not in seen]:
+            self.page.rec.drop(eid)
+
+    def _end_stale_gestures(self) -> None:
+        # Renders end gestures that don't render: a render arriving while a hover / chooser /
+        # temp / drag gesture is live — and NOT initiated by that gesture's own handler
+        # (gesture_render) — is by definition an external commit or unrelated rebuild, so the
+        # gesture ends here, structurally, whatever path the commit took (act, a chooser's
+        # on_change, a Show toggle, the debounced target commit...). end_gesture restores a held
+        # token FIRST, so the layout below builds from the real document. The edit/wheel gestures
+        # legitimately render mid-gesture (their commits) and end on blur/mouseleave instead —
+        # but any doc-moving render consumes a pending edit candidate (it is stale once the doc
+        # moves; the baseline diff takes over, and no hypothetical solve runs inside a commit).
+        g = self.page.rec.gesture
+        if g is not None and not self.page.gestures.gesture_rendering:
+            if g.kind in ("hover", "chooser", "temp", "drag"):
+                self.page.gestures.end_gesture()
+            else:
+                g.apply = None
+        if not self.page.gestures.rank_rendering:
+            self.page.gestures.rank_remove = None
+
+    def _validate_gesture_source(self, lay) -> None:
+        g = self.page.rec.gesture
+        if g is not None and g.source is not None:
+            src_kind = next((cb.kind for cb in lay.cells if cb.id == g.source), None)
+            if src_kind is None or (
+                g.source in self.page.rec.kinds and self.page.rec.kinds[g.source] != src_kind
+            ):
+                self.page.gestures.end_gesture()
+
+    def render(self):
+        self._end_stale_gestures()
+        self.page.building = True
+        try:
+            self.apply_view_classes()
+            prev = self.page.last_lay.identities if self.page.last_lay is not None else None
+            cold = self.page.last_lay is None  # the first render: every cell is new, so it must NOT
+            #                                     stagger (no room to make yet) — the whole grid paints at once
+            lay = self.page.editor.layout(prev_ids=prev, preview_remove=self.page.gestures.rank_remove)
+            self.page.last_lay = lay
+            fx, fy = lay.freeze_x, lay.freeze_y
+            self._size_panes(lay, fx, fy)
+            seen = set()
+
+            self._render_lines(lay, fx, fy, seen)
+            self._render_blocks(lay, fx, fy, seen)
+            self._validate_gesture_source(lay)
+            amber, red = self.page.gestures.compute_rings(lay)
+            self._render_cells(lay, fx, fy, seen, amber, red, cold)
+            self._sync_mean_damage_tips()
+            self._sync_chrome(lay, fy)
+        finally:
+            self.page.building = False
+        # clear the busy scrim: this render is the result the user was waiting on, so whatever the
+        # client armed (see _BUSY_JS) comes down now. The message rides out with this render's DOM
+        # patch, so the scrim stays up across the patch and lifts once the new grid is on screen.
+        # Skipped under the User test harness, where there's no live client (and run_javascript from
+        # inside a handler-driven render hits a torn-down slot context); the scrim is browser-only.
+        if not helpers.is_user_simulation():
+            self.page.page_client.run_javascript(
+                "window.rttBusy && window.rttBusy.done();"
+                " window.rttScheduleReveal && window.rttScheduleReveal()"
+            )

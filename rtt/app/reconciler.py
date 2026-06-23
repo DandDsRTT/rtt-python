@@ -1,150 +1,57 @@
 from __future__ import annotations
 
-import asyncio
-import base64
-import json
 import logging
-import math
-import os
-import sys
-import zlib
-from collections.abc import Callable
-from dataclasses import dataclass
-from html import escape as _escape
-from pathlib import Path
-from types import SimpleNamespace
-from typing import ClassVar, NamedTuple
+from typing import ClassVar
 
-from nicegui import app, background_tasks, helpers, ui
+from nicegui import ui
 
 from rtt.app import (
-    ids,
     presets,
     service,
     spreadsheet,
-    spreadsheet_constants,
     spreadsheet_text,
     tooltips,
 )
-from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
 from rtt.app.marks import (
-    BR_COLOR,
-    PENDING_COLOR,
     ebk_svg,
 )
 from rtt.app.render_html import (
     _FOLD_GLYPH,
-    _TILE_CELL,
-    _TILE_CELL_X,
-    _TILE_CELL_Y,
-    _TILE_FRAME_H,
-    _TILE_FRAME_W,
-    _TILE_MATH,
     _bar_chart,
-    _block_panes,
     _bold_units,
     _cents_parts,
     _control_svg,
     _digit_fit_font,
-    _example_html,
-    _fit_font,
-    _freeze_container,
-    _general_part_html,
     _gentuning_parts,
     _limit_text,
-    _line_style,
     _math_html,
     _mathexpr_html,
-    _mode_svg,
-    _option_box_svg,
-    _parse_int,
     _power_parts,
     _ptext_font,
     _range_chart,
     _ratio_font,
     _ratio_parts,
     _select_props,
-    _tile_fold_html,
-    _tile_name_pieces,
     _underline_html,
     _units_font,
     _units_html,
-    _wave_svg,
-    _wheel_step,
 )
 
-_log = logging.getLogger(__name__)
 
 from rtt.app.page_assets import (
     _KindHandlers,
-    _ASSETS,
-    _PAD,
-    _T,
-    _PANEL_W,
-    _TAB_W,
-    _TAB_H,
-    _CHROME_H,
-    _TOOLTIP_DELAY_MS,
-    _STORE_KEY,
-    _STATE_PARAM,
-    _DARK_KEY,
-    _CHAPTER_KEY,
-    _STORAGE_SECRET,
-    _MEMORY_STORE,
-    _doc_store,
-    _encode_state,
-    _decode_state,
-    _INVALID_TEMPERAMENT,
-    _INVALID_FORM,
     _SUBPICK_POPUP_W,
-    _INVALID_PROJECTION,
-    _INVALID_EMBEDDING,
-    _INVALID_PRESCALER,
-    _INVALID_WEIGHT,
-    _INVALID_UNCHANGED,
-    _LOAD_FAILED,
-    _SEAM,
-    _PENDING_TEXT_COLOR,
-    _PREVIEW_COLOR,
-    _PREVIEW_TEXT_COLOR,
-    _PREVIEW_REMOVE_COLOR,
-    _PREVIEW_REMOVE_TEXT_COLOR,
-    _CELL_BORDER_W,
-    _CELL_BORDER,
     _CELL_FONT,
     _GENSIGN_W,
     _STACKED_MAIN_FONT,
-    _TINTS,
-    _DARK_FRAME,
-    _DARK_CELL,
-    _DARK_MARK,
-    _DARK_TEXT,
-    _DARK_MUTED,
     _WHEEL_STEPS,
     _INT_WHEEL_JS,
-    _TARGET_LIMIT_DEBOUNCE,
-    _BUSY_DELAY_MS,
-    _BUSY_SAFETY_MS,
     _GridValueSpec,
-    _VecGridEdit,
     _GRIDVALUE_SPECS,
     _vgroup_key,
-    _MODE_FILLS,
-    _AUDIO_GLYPHS,
-    _AUDIO_JS,
-    _FREEZE_JS,
-    _FRACTION_JS,
-    _DECIMAL_JS,
-    _TABNAV_JS,
-    _TOUR_JS,
-    _TOUR_STEPS,
     _STACKED_EXIT_JS,
     _GROUP_EXIT_JS,
-    _CSS_VARS,
-    _FONT_FACE,
-    _CSS_DARK_VARS,
-    _CSS,
     _UNITS_MAX_FONT,
     _CELLUNIT_MAX_FONT,
     _MATLABEL_FONT,
@@ -152,27 +59,15 @@ from rtt.app.page_assets import (
     _EBK_SVG_KINDS,
     _EBK_SQUARE,
     _TRANSPOSE_MARK,
-    _PTEXT_DUAL_VECTOR_KIND,
-    _GENERAL_TILE_LINES,
-    _TILE_IN_CELL_LAYERS,
-    _TILE_HOST,
-    _TILE_FONT,
-    _AUDIO_BANK,
-    _audio_bank,
-    _OPTION_HOVER_DELEGATION,
-    _TOOLTIP_DISMISS_JS,
     VALUE_KINDS,
-    _ZOOM_JS,
-    _GUIDE_JS,
-    _BUSY_JS,
     _GroupedSelect,
     _set_offlist_prompt,
     _projection_prompt,
     _formchooser_options,
-    _hover_index,
-    _option_key,
     _Gesture,
 )
+
+_log = logging.getLogger(__name__)
 
 
 class _Reconciler:
