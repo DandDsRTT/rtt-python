@@ -365,8 +365,8 @@ class _Page:
         self.apply_chapter()
 
     def _on_disconnect(self):
-        if self.edits.target_limit_commit is not None:
-            self.edits.target_limit_commit.cancel()
+        if self.edits.tuning.target_limit_commit is not None:
+            self.edits.tuning.target_limit_commit.cancel()
         self.gestures.end_gesture()
 
     def col_tokens(self, name):
