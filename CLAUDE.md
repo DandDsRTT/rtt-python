@@ -181,7 +181,33 @@ an **exclusive (single-holder) merge lock**, `bin/with-merge-lock`, covering the
 validates-and-merges at a time, so the render-gate queue stays ~1 deep, **you validate the exact
 state you land** (no chase), and no speculative run is wasted.
 
-**Hold the lock continuously across separate tool calls — do NOT wrap it around one `bash -c`.**
+### Default: `bin/land` — validate lockless, hold the lock only for the ff-merge
+
+Holding the lock across the whole ~9-min render gate makes EVERY merge — even a docs- or
+`bin/`-only change that can't affect rendered output — queue behind the slowest render run. So
+the default landing tool is **`bin/land`**, which keeps the same correctness guarantee while
+holding the lock for *seconds*, not minutes:
+
+```bash
+bin/land -- .venv/bin/python -m pytest -q     # from your worktree, on your claude/<name> branch
+```
+
+It (1) rebases onto `main` and runs the gate **without** the lock (still serialized by the
+render-gate semaphore, so CPU is never oversubscribed) — and **skips the gate entirely** if your
+own diff is render-orthogonal (`bin/merge-safe-check` on your commits); then (2) takes the lock
+**only** for the ff-merge, using `merge-safe-check` to confirm `main` moved only in
+render-orthogonal files since the base you validated — if so it rebases (no re-gate) and
+`--ff-only`; if `main` moved render-relevant, it **releases and re-validates lockless**, never
+holding the lock across a gate. After `--max-optimistic` rounds of being outrun it falls back to
+the held-lock flow below for one final guaranteed land. You still **validate the exact state you
+land** (the under-lock `merge-safe-check` proves it), `--ff-only` is still the atomic backstop, and
+FIFO fairness is unchanged. Orthogonal changes stop waiting behind render-gate holders entirely.
+
+### Fallback: hold the lock across the whole critical section (conflicts / manual)
+
+Use the manual held-lock flow below when you must resolve a rebase conflict by hand, or when
+`bin/land` reports it gave up. **Hold the lock continuously across separate tool calls — do NOT
+wrap it around one `bash -c`.**
 The earlier one-command form had a hole: if the queued `git rebase main` hits a conflict (because
 `main` moved while you were queued — the wait can be 400s+), you can't resolve it inside the single
 wrapped command, so `set -e` exits, the lock releases, and **the entire long queue-wait is burned
