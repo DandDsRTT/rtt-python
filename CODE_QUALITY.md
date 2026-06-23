@@ -31,11 +31,23 @@ in lockstep with the refactors so the gate stays green at every step.
 | Statements per function | ≤ 50 | ≤ 10 | ruff `PLR0915` |
 | Branches per function | ≤ 12 | ≤ 8 | ruff `PLR0912` |
 | Nesting depth | ≤ 4 | ≤ 3 | ruff `PLR1702` |
+| Efferent coupling (fan-out) | ≤ 18 | ↓ | `tools/quality_checks.py` |
+| Class cohesion (LCOM4) | ≤ 10 | ↓ | `tools/quality_checks.py` |
+| Depth of inheritance (DIT) | ≤ 2 | ≤ 2 | `tools/quality_checks.py` |
+| Number of children (NOC) | ≤ 3 | ≤ 3 | `tools/quality_checks.py` |
 | Branch coverage | ≥ 95% | ≥ 95% | `coverage` (`fail_under`) |
 | Docstrings | banned | banned | `tools/quality_checks.py` |
 
+The architectural rails (coupling / LCOM4 / DIT / NOC) are calibrated to the
+current worst value so they pass today and **ratchet down** as the oversized modules
+split — exactly like file/function length. Afferent coupling (fan-in) is reported,
+not gated: a high fan-in is the heavily-used shared core (e.g. `library.temperament`),
+which is healthy, not a smell.
+
 To ratchet: lower the values in `pyproject.toml` (`[tool.ruff.lint.*]`) and the
-two constants in `tools/quality_checks.py`, after the corresponding refactor lands.
+constants in `tools/quality_checks.py` (`MAX_FILE_LINES`, `MAX_FUNCTION_LINES`,
+`MAX_EFFERENT_COUPLING`, `MAX_LCOM4`, `MAX_DIT`, `MAX_NOC`), after the corresponding
+refactor lands.
 
 ## The metric wishlist
 
@@ -46,15 +58,17 @@ Status of every architectural metric requested:
 - **Function length, file length, docstring ban** — enforced now
   (`tools/quality_checks.py`, our own AST checker, because ruff has no rule for
   physical line spans).
-- **Afferent / efferent coupling, fan-in / fan-out (module level)** — planned for
-  Phase 3 via `import-linter` contracts (clean module-dependency boundaries) plus a
-  fan-in/out report. Deferred because it only becomes meaningful after the oversized
-  modules are split.
-- **LCOM (class cohesion)** — planned for Phase 3 in `tools/quality_checks.py`
-  (LCOM4 over the method/attribute graph). No mature off-the-shelf gating tool, so
-  we own it.
-- **Depth of inheritance (DIT) / number of children (NOC)** — trivially satisfied
-  today (the codebase barely uses inheritance); a cheap guard rail in Phase 3.
+- **Afferent / efferent coupling, fan-in / fan-out (module level)** — enforced now
+  (`tools/quality_checks.py`). We build the internal import graph ourselves rather
+  than add an `import-linter` dependency, so the whole structural gate stays in one
+  tested module. Efferent coupling (fan-out) is gated; afferent (fan-in) is reported.
+- **LCOM (class cohesion)** — enforced now (`tools/quality_checks.py`, LCOM4 over the
+  per-class method/attribute graph: two methods are linked when they share an instance
+  attribute or one calls the other; LCOM4 is the number of connected components).
+- **Depth of inheritance (DIT) / number of children (NOC)** — enforced now
+  (`tools/quality_checks.py`). Trivially satisfied — the codebase's deepest hierarchy
+  is one level and no class has more than one direct subclass — so these are cheap
+  guard rails against an accidental inheritance sprawl.
 
 ## What is NOT auto-gated, and why
 
@@ -83,6 +97,13 @@ The gate is being driven to green in phases (tooling first):
    - Note for extractions: ruff's mccabe counts **nested** functions toward the parent,
      so reduce CC by extracting **module-level functions or class methods**, not closures.
 3. **File decomposition + coupling/cohesion metrics**, then ratchet to 10 / 100.
+   - DONE: the architectural metrics (efferent coupling, LCOM4, DIT, NOC) are added,
+     calibrated to current worst-case, and gated via `tools/quality_checks.py`.
+   - PENDING: the file/function ratchet (50 → 25 → 10, 500 → 250 → 100). It can only
+     advance as the remaining oversized files split — `app.py`, `editor.py`,
+     `service/text.py`, `service/core.py`, `render_html.py`, `library/tuning.py`,
+     `grid_tables.py`, `tooltips.py` still exceed 500 — and the ~90 functions in the
+     26–50 range shrink. Lower the constants in lockstep, never ahead of the code.
 
 ### Phase 3 file decomposition — architecture, not line-count chopping
 

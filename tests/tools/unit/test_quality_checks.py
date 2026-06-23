@@ -1,4 +1,5 @@
 import ast
+from pathlib import Path
 
 from tools import quality_checks as qc
 
@@ -38,6 +39,110 @@ def test_docstring_violation_flags_module_class_function():
 
 def test_no_docstring_is_clean():
     assert docstring_violations("def f():\n    return 1\n") == []
+
+
+def test_module_name_drops_init_and_suffix():
+    assert qc.module_name(Path("pkg/sub/__init__.py")) == "pkg.sub"
+    assert qc.module_name(Path("pkg/mod.py")) == "pkg.mod"
+
+
+def test_efferent_coupling_counts_internal_package_imports(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    pkg = tmp_path / "pkg"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("")
+    (pkg / "hub.py").write_text("from pkg import a\nfrom pkg import b\n")
+    (pkg / "a.py").write_text("x = 1\n")
+    (pkg / "b.py").write_text("y = 1\n")
+    fanout = qc.efferent_coupling(qc.python_files(("pkg",)))
+    assert {"pkg.a", "pkg.b"} <= fanout["pkg.hub"]
+    assert fanout["pkg.a"] == set()
+
+
+def test_coupling_violation_fires_above_threshold(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(qc, "MAX_EFFERENT_COUPLING", 1)
+    pkg = tmp_path / "pkg"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("")
+    (pkg / "hub.py").write_text("from pkg import a\nfrom pkg import b\n")
+    (pkg / "a.py").write_text("x = 1\n")
+    (pkg / "b.py").write_text("y = 1\n")
+    messages = [v.message for v in qc.coupling_violations(qc.python_files(("pkg",)))]
+    assert any("efferent coupling" in m for m in messages)
+
+
+def test_lcom4_one_when_methods_share_an_attribute():
+    cls = ast.parse(
+        "class C:\n    def a(self):\n        self.x = 1\n    def b(self):\n        return self.x\n"
+    ).body[0]
+    assert qc.lcom4(cls) == 1
+
+
+def test_lcom4_one_when_a_method_calls_another():
+    cls = ast.parse(
+        "class C:\n    def a(self):\n        return self.b()\n    def b(self):\n        return 1\n"
+    ).body[0]
+    assert qc.lcom4(cls) == 1
+
+
+def test_lcom4_two_when_methods_are_disjoint():
+    cls = ast.parse(
+        "class C:\n    def a(self):\n        return self.x\n    def b(self):\n        return self.y\n"
+    ).body[0]
+    assert qc.lcom4(cls) == 2
+
+
+def test_lcom4_one_for_single_method_class():
+    cls = ast.parse("class C:\n    def a(self):\n        return self.x\n").body[0]
+    assert qc.lcom4(cls) == 1
+
+
+def test_cohesion_violation_fires_above_threshold(tmp_path, monkeypatch):
+    monkeypatch.setattr(qc, "MAX_LCOM4", 1)
+    (tmp_path / "m.py").write_text(
+        "class C:\n    def a(self):\n        return self.x\n    def b(self):\n        return self.y\n"
+    )
+    messages = [v.message for v in qc.cohesion_violations(qc.python_files((str(tmp_path),)))]
+    assert any("LCOM4 2" in m for m in messages)
+
+
+def test_depth_of_inheritance_follows_internal_bases():
+    bases = {"A": [], "B": ["A"], "C": ["B"], "D": ["A", "Outside"]}
+    assert qc.depth_of_inheritance("A", bases) == 0
+    assert qc.depth_of_inheritance("C", bases) == 2
+    assert qc.depth_of_inheritance("D", bases) == 1
+
+
+def test_number_of_children_counts_internal_subclasses():
+    children = qc.number_of_children({"A": [], "B": ["A"], "C": ["A"], "D": ["B"]})
+    assert children["A"] == 2
+    assert children["B"] == 1
+
+
+def test_inheritance_violation_flags_deep_dit(tmp_path, monkeypatch):
+    monkeypatch.setattr(qc, "MAX_DIT", 1)
+    (tmp_path / "m.py").write_text(
+        "class A:\n    pass\n\n\nclass B(A):\n    pass\n\n\nclass C(B):\n    pass\n"
+    )
+    messages = [v.message for v in qc.inheritance_violations(qc.python_files((str(tmp_path),)))]
+    assert any("DIT 2" in m for m in messages)
+
+
+def test_inheritance_violation_flags_high_noc(tmp_path, monkeypatch):
+    monkeypatch.setattr(qc, "MAX_NOC", 1)
+    (tmp_path / "m.py").write_text(
+        "class P:\n    pass\n\n\nclass X(P):\n    pass\n\n\nclass Y(P):\n    pass\n"
+    )
+    messages = [v.message for v in qc.inheritance_violations(qc.python_files((str(tmp_path),)))]
+    assert any("NOC 2" in m for m in messages)
+
+
+def test_live_tree_passes_the_architectural_guard_rails():
+    files = qc.python_files(qc._DEFAULT_ROOTS)
+    assert qc.coupling_violations(files) == []
+    assert qc.cohesion_violations(files) == []
+    assert qc.inheritance_violations(files) == []
 
 
 def test_collect_and_main_over_a_tree(tmp_path, capsys):
