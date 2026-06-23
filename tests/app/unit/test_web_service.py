@@ -710,6 +710,28 @@ def test_parse_power_enforces_a_minimum_for_the_complexity_norm():
     assert service.parse_power("minimax", minimum=1.0) == float("inf")
 
 
+def test_resolve_ratio_edit_parses_a_ratio_into_a_domain_vector():
+    # 3/2 over 2.3.5 is the prime-count vector (-1, 1, 0)
+    res = service.resolve_ratio_edit("3/2", 3, (2, 3, 5))
+    assert res.vector == (-1, 1, 0)
+    assert res.problem is None
+
+
+def test_resolve_ratio_edit_treats_blank_and_placeholder_as_blank():
+    assert service.resolve_ratio_edit("", 3, (2, 3, 5)).problem == "blank"
+    assert service.resolve_ratio_edit("?/?", 3, (2, 3, 5)).problem == "blank"
+
+
+def test_resolve_ratio_edit_reports_an_invalid_ratio_with_the_parser_message():
+    # an out-of-domain prime (7 is not in 2.3.5) is rejected with the parser's own message text
+    res = service.resolve_ratio_edit("7/4", 3, (2, 3, 5))
+    assert res.vector is None
+    assert res.problem == "invalid"
+    assert res.message  # the ValueError text is surfaced for the toast
+    # a non-ratio is invalid too
+    assert service.resolve_ratio_edit("x", 3, (2, 3, 5)).problem == "invalid"
+
+
 def test_tuning_maps_under_top():
     import pytest
 
