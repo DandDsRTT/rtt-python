@@ -61,6 +61,7 @@ from rtt.app.service.core import (
     target_interval_set,
     target_interval_vectors,
     target_limit_problem,
+    target_spec,
     transform_ratio,
     transformed_vector,
     tuning,

@@ -172,9 +172,14 @@ class TargetLimitResolution:
     valid: bool
 
 
-def _target_spec(family: str, limit_value) -> str:
+def target_spec(family: str, limit_value) -> str:
     text = (str(limit_value) if limit_value is not None else "").strip()
-    return f"{int(float(text))}-{family}" if text else family
+    if not text:
+        return family
+    try:
+        return f"{int(float(text))}-{family}"
+    except ValueError:
+        return family
 
 
 def resolve_target_limit(family: str | None, limit_value, domain_basis) -> TargetLimitResolution:
@@ -182,7 +187,7 @@ def resolve_target_limit(family: str | None, limit_value, domain_basis) -> Targe
     problem = target_limit_problem(family, limit_value)
     if problem == "whole":
         return TargetLimitResolution("whole", None, False)
-    spec = _target_spec(family, limit_value)
+    spec = target_spec(family, limit_value)
     try:
         valid = bool(target_interval_set(spec, domain_basis))
     except Exception:

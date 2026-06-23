@@ -520,6 +520,16 @@ def test_target_limit_problem_validates_the_chooser_entry():
     assert service.target_limit_problem("TILT", "8.5") == "whole"
 
 
+def test_target_spec_builds_leniently_falling_back_to_the_bare_family():
+    # a whole limit prefixes the family; blank/None and unparseable text fall back to the bare family
+    # (used by the hover preview, which tolerates mid-edit text rather than rejecting it)
+    assert service.target_spec("TILT", "9") == "9-TILT"
+    assert service.target_spec("OLD", "") == "OLD"
+    assert service.target_spec("OLD", None) == "OLD"
+    assert service.target_spec("TILT", "abc") == "TILT"
+    assert service.target_spec("TILT", "8.5") == "8-TILT"  # truncates like int(float(...))
+
+
 def test_resolve_target_limit_builds_the_spec_from_family_and_limit():
     # a whole manual limit over a named family resolves to a "{n}-{family}" spec that produces a
     # non-empty target set; the resolution carries no problem.
