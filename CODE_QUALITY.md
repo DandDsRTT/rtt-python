@@ -81,6 +81,31 @@ Status of every architectural metric requested:
   conventional names), which would fight the no-docstring rule and the math notation
   (`M_jL`, `B_L`, …).
 
+## Coverage gate scope — logic tiers only (PLANNED change)
+
+The 95% branch-coverage gate currently runs over the **whole** of `rtt/`. That is the wrong
+shape. It forces the slow NiceGUI page-render integration tests
+(`tests/app/integration/test_web_render.py`) to carry *line* coverage for the **view layer**
+(`app.py`, `render_html.py`, the `spreadsheet_*` modules, `marks.py`, `tooltips.py`) — which
+is exactly what makes a coverage run slow and profiler-fragile (see the
+`coverage-gate-local-blockers` memory: render-under-coverage is ~15 s/test on the local 3.14
+venv, deadlocks in NiceGUI's fixture teardown, and dogpiles across parallel agents).
+
+Line coverage is a meaningful signal for branchy **logic**; it is noise for SVG/DOM
+string-assembly. So:
+
+- **Scope the `fail_under = 95` gate to the logic tiers** — `rtt/library/**` and
+  `rtt/app/service/**` — which are exercised by fast, deterministic **unit** tests.
+- **Drop the line-coverage requirement on the view layer.** The view stays guarded by the
+  render integration tests as **behaviour** tests (build the page, assert it renders and
+  behaves), not by a line percentage.
+
+Mechanically: narrow `[tool.coverage.run] source` (or `omit` the view files) so `fail_under`
+is computed over the logic tiers only; keep the render tests in the suite (they must stay
+green) but run them **without** the profiler. `bin/lint --cov` then becomes fast and
+reliable. This pairs with the `app.py` logic-extraction item below — together they move the
+view's *logic* into a place the scoped gate covers cheaply. PENDING — see the chip.
+
 ## Cleanup status
 
 The gate is being driven to green in phases (tooling first):
@@ -96,6 +121,13 @@ The gate is being driven to green in phases (tooling first):
      (35 items), `rtt/app/spreadsheet.py` (85 items, the bulk).
    - Note for extractions: ruff's mccabe counts **nested** functions toward the parent,
      so reduce CC by extracting **module-level functions or class methods**, not closures.
+   - PLANNED — **extract logic out of the view layer into `service/`.** Much of `app.py`'s
+     bulk is *logic* (state transitions, value derivation, event handling) entangled with
+     NiceGUI wiring, with no unit-testable seam — which is why it is reachable only by the
+     slow render integration tests. Pull that logic down into `service/` (fast unit tests)
+     so the view files shrink to thin wiring AND the scoped coverage gate above covers the
+     logic cheaply. This is the **testability** counterpart to the structural decomposition
+     (which only moves view code between files); the two are orthogonal. NOT yet underway.
 3. **File decomposition + coupling/cohesion metrics**, then ratchet to 10 / 100.
    - DONE: the architectural metrics (efferent coupling, LCOM4, DIT, NOC) are added,
      calibrated to current worst-case, and gated via `tools/quality_checks.py`.
