@@ -43,12 +43,13 @@ from rtt.app.spreadsheet_text import _fold_glyph, _pretransform_label
 
 class _ControlsMixin:
     def tile_groups(self, rkey: str, ckey: str):
+        _r = self.resolved
         region = set()
         if rkey == "canon" or ckey == "canongens":
             region |= {"temperament", "form"}
         if rkey in ("projection", "tuning"):
             region |= {"tuning"}
-        if self.resolved.unchanged.shown and ckey == "commas":
+        if _r.unchanged.shown and ckey == "commas":
             return {"temperament", "tuning"} | region
         if rkey in SPINE_ROWS and ckey in SPINE_COLUMN_GROUP:
             return self._as_groups(SPINE_COLUMN_GROUP[ckey]) | region
@@ -71,20 +72,22 @@ class _ControlsMixin:
         return len(opts) == 1 and value in opts
 
     def _preset_locked(self, name: str) -> bool:
+        _r = self.resolved
         if name == "tuning":
             options = presets.tuning_scheme_options(
                 service.is_all_interval(self.tuning_scheme),
                 self.settings["alt_complexity"], self.settings["weighting"])
-            return self._is_sole_option(options, self.resolved.scalars.displayed_tuning_name)
+            return self._is_sole_option(options, _r.scalars.displayed_tuning_name)
         if name == "prescaler":
             return self._is_sole_option(presets.prescaler_options(self.settings["alt_complexity"]),
-                                        self.resolved.labels.realized_prescaler)
+                                        _r.labels.realized_prescaler)
         if name == "projection":
             return not presets.projection_options(self.state)
         return False
 
     def control_box(self, box_id: str, ckey: str, top, cap_w, label, disabled: bool = False,
                     scheme_btn: bool = False, form_chooser=None):
+        _r = self.resolved
         form_label = form_chooser[1] if form_chooser else None
         dropdown_w, label_h, box_h = self.control_dims(ckey, cap_w, label, scheme_btn, form_label)
         box_x, box_y = self.col_x[ckey], top + BOX_OUTER
@@ -100,13 +103,14 @@ class _ControlsMixin:
             fid, fcap = form_chooser
             form_y = ctrl_y + PRESET_H + label_h + BAND_GAP
             self.cells.append(CellBox(fid, ctrl_x, form_y, dropdown_w, PRESET_H, "formchooser",
-                                 text=self.resolved.canon.mapping_form_key if fid.endswith(":mapping") else self.resolved.canon.comma_basis_form_key))
+                                 text=_r.canon.mapping_form_key if fid.endswith(":mapping") else _r.canon.comma_basis_form_key))
             self.cells.append(CellBox(f"{fid}:label", ctrl_x, form_y + PRESET_H, dropdown_w, CAPTION_LINE,
                                  "caption", text=fcap, align="left"))
         return ctrl_x, dropdown_w, ctrl_y
 
     def _preset_form_label(self, name: str, rkey: str, ckey: str):
-        embeds = (name == "temperament" and self.resolved.flags.form_controls
+        _r = self.resolved
+        embeds = (name == "temperament" and _r.flags.form_controls
                   and any(rk == rkey and ck == ckey for _n, rk, ck, _l in FORM_CHOOSERS))
         return "form" if embeds else None
 
@@ -140,9 +144,10 @@ class _ControlsMixin:
                              CAPTION_LINE, "caption", text="replace diminuator"))
 
     def _emit_preset(self, preset_text, cid, name, rkey, ckey, label):
+        _r = self.resolved
         if not self.tile_open(rkey, ckey):
             return
-        if self.size_factor or self.resolved.scalars.prescaler_is_matrix:
+        if self.size_factor or _r.scalars.prescaler_is_matrix:
             label = _pretransform_label(label)
         top = self.ptext_band_y(rkey) + self.rows[rkey].ptext
         disabled = (name == "target" and service.is_all_interval(self.tuning_scheme)) \
@@ -160,37 +165,41 @@ class _ControlsMixin:
             self.emit_diminuator_check(cx + cw + OPT_COL_GAP, cy)
 
     def _emit_presets(self) -> None:
-        if not self.resolved.flags.presets:
+        _r = self.resolved
+        if not _r.flags.presets:
             return
         preset_text = {"temperament": "", "target": self.target_spec,
                           "tuning": service.base_scheme_name(self.tuning_scheme) or "",
-                          "prescaler": self.resolved.labels.realized_prescaler or "",
-                          "projection": self.resolved.scalars.displayed_projection_name or ""}
+                          "prescaler": _r.labels.realized_prescaler or "",
+                          "projection": _r.scalars.displayed_projection_name or ""}
         for name, rkey, ckey, label in PRESETS:
-            col = "ssprimes" if name == "prescaler" and self.resolved.flags.superspace else ckey
+            col = "ssprimes" if name == "prescaler" and _r.flags.superspace else ckey
             self._emit_preset(preset_text, f"preset:{name}", name, rkey, col, label)
         for name, rkey, ckey, label in PRESET_COPIES:
             col = "ssgens" if (name == "tuning" and ckey == "gens"
-                               and self.resolved.flags.superspace_generators) else ckey
+                               and _r.flags.superspace_generators) else ckey
             self._emit_preset(preset_text, f"preset:{name}:{col}", name, rkey, col, label)
 
     def _emit_all_interval_check_fallback(self) -> None:
-        if self.settings["all_interval"] and not self.resolved.flags.presets and self.tile_open("vectors", "targets"):
+        _r = self.resolved
+        if self.settings["all_interval"] and not _r.flags.presets and self.tile_open("vectors", "targets"):
             top = self.ptext_band_y("vectors") + self.rows["vectors"].ptext
             self.emit_all_interval_check(self.col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
 
     def _emit_form_choosers(self) -> None:
-        if self.resolved.flags.form_controls and not self.resolved.flags.presets:
+        _r = self.resolved
+        if _r.flags.form_controls and not _r.flags.presets:
             for name, rkey, ckey, label in FORM_CHOOSERS:
                 if not self.tile_open(rkey, ckey):
                     continue
                 top = self.ptext_band_y(rkey) + self.rows[rkey].ptext + self.rows[rkey].pre
                 cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESET_W, label)
                 self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser",
-                                     text=self.resolved.canon.mapping_form_key if name == "mapping" else self.resolved.canon.comma_basis_form_key))
+                                     text=_r.canon.mapping_form_key if name == "mapping" else _r.canon.comma_basis_form_key))
 
     def _emit_scheme_buttons(self) -> None:
-        if self.settings["projection"] and not self.resolved.flags.presets:
+        _r = self.resolved
+        if self.settings["projection"] and not _r.flags.presets:
             for ckey in ("primes", "gens"):
                 if not self.tile_open("projection", ckey):
                     continue
@@ -201,15 +210,16 @@ class _ControlsMixin:
                 self.emit_scheme_button(self.col_x[ckey] + BOX_INNER, box_y + BOX_INNER, ckey)
 
     def _emit_ptext_band(self) -> None:
-        if self.resolved.flags.ptext:
+        _r = self.resolved
+        if _r.flags.ptext:
             for (rkey, ckey), text in self.ptext_strings.items():
                 if not self.tile_open(rkey, ckey):
                     continue
-                if ((rkey, ckey) == ("vectors", "commas") and self.resolved.commas.pending is not None) \
-                        or ((rkey, ckey) == ("vectors", "targets") and self.resolved.targets.pending is not None) \
+                if ((rkey, ckey) == ("vectors", "commas") and _r.commas.pending is not None) \
+                        or ((rkey, ckey) == ("vectors", "targets") and _r.targets.pending is not None) \
                         or ((rkey, ckey) == ("mapping", "primes") and self.pending_mapping_row is not None):
                     kind = "ptextpending"
-                elif self.ptext_editable(rkey, ckey) and (ckey != "targets" or self.resolved.scalars.targets_editable):
+                elif self.ptext_editable(rkey, ckey) and (ckey != "targets" or _r.scalars.targets_editable):
                     kind = "ptextedit"
                 else:
                     kind = "ptext"
@@ -227,15 +237,17 @@ class _ControlsMixin:
                                      TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
     def _filter_gridded_quantities(self) -> None:
+        _r = self.resolved
         if not self.gridded:
             self.cells = [cb for cb in self.cells if cb.kind not in GRIDDED_KINDS]
-        elif not self.resolved.flags.quantities:
+        elif not _r.flags.quantities:
             self.cells = [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
                      for cb in self.cells]
 
     def _mark_doomed_unchanged_column(self) -> None:
-        if (self.resolved.commas.pending is not None or self.resolved.ghosts.comma) and self.resolved.unchanged.shown and self.resolved.dims.nu:
-            doomed_x = self.comma_left(self.resolved.dims.nc_shown + self.resolved.dims.nu - 1)
+        _r = self.resolved
+        if (_r.commas.pending is not None or _r.ghosts.comma) and _r.unchanged.shown and _r.dims.nu:
+            doomed_x = self.comma_left(_r.dims.nc_shown + _r.dims.nu - 1)
             self.cells = [replace(cb, preview_remove=True)
                           if (cb.w == COL_W and cb.x == doomed_x
                               and cb.kind not in ("count", "caption", "colgrip"))
@@ -243,8 +255,9 @@ class _ControlsMixin:
                           for cb in self.cells]
 
     def _mark_born_column(self) -> None:
-        if self.resolved.unchanged.born:
-            born_x = self.comma_left(self.resolved.dims.nc_shown + self.resolved.dims.nu - 1)
+        _r = self.resolved
+        if _r.unchanged.born:
+            born_x = self.comma_left(_r.dims.nc_shown + _r.dims.nu - 1)
             self.cells = [replace(cb, pending=True)
                           if (cb.w == COL_W and cb.x == born_x
                               and cb.kind not in ("count", "caption", "colgrip"))
@@ -265,17 +278,18 @@ class _ControlsMixin:
         return cb
 
     def _mark_dual_axis_previews(self) -> None:
+        _r = self.resolved
         remove_rows = change_rows = remove_commas = change_commas = frozenset()
-        if self.resolved.commas.pending is not None and self.resolved.dims.r:
-            remove_rows, change_rows = frozenset({self.resolved.dims.r - 1}), frozenset(range(self.resolved.dims.r - 1))
-        if self.pending_mapping_row is not None and self.resolved.dims.nc:
-            remove_commas, change_commas = frozenset({self.resolved.dims.nc - 1}), frozenset(range(self.resolved.dims.nc - 1))
+        if _r.commas.pending is not None and _r.dims.r:
+            remove_rows, change_rows = frozenset({_r.dims.r - 1}), frozenset(range(_r.dims.r - 1))
+        if self.pending_mapping_row is not None and _r.dims.nc:
+            remove_commas, change_commas = frozenset({_r.dims.nc - 1}), frozenset(range(_r.dims.nc - 1))
         if self.preview_remove is not None:
             axis, idx = self.preview_remove
             if axis == "comma":
-                remove_commas, change_rows = frozenset({idx}), frozenset(range(self.resolved.dims.r))
+                remove_commas, change_rows = frozenset({idx}), frozenset(range(_r.dims.r))
             else:
-                remove_rows, change_commas = frozenset({idx}), frozenset(range(self.resolved.dims.nc))
+                remove_rows, change_commas = frozenset({idx}), frozenset(range(_r.dims.nc))
         if remove_rows or change_rows or remove_commas or change_commas:
             red_xs = frozenset(self.comma_left(c) for c in remove_commas)
             amber_xs = frozenset(self.comma_left(c) for c in change_commas)

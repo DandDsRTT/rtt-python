@@ -43,6 +43,7 @@ from rtt.app.spreadsheet_text import (
 
 class _EmitTuningMixin:
     def tuning_value_row(self, key: str, group: str, values, editable_kind=None) -> None:
+        _r = self.resolved
         if not self.tile_open(key, group):
             return
         values = tuple(values)
@@ -55,22 +56,22 @@ class _EmitTuningMixin:
             cid = f"{key}:{self.group_elem[group]}:{self.col_token(group, i)}"
             x = self.group_left[group](self.comma_value_pos(i) if group == "commas" else i)
             u = self.cell_unit(key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
-            operand = self.closed_form_operand(key, group, i, v) if self.resolved.flags.math else None
+            operand = self.closed_form_operand(key, group, i, v) if _r.flags.math else None
             if operand is not None:
-                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.resolved.flags.quantities, self.resolved.flags.decimals), unit=u))
+                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, _r.flags.quantities, _r.flags.decimals), unit=u))
             else:
                 self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, editable_kind or "tuningvalue",
-                                     text=service.cents(v, self.resolved.flags.decimals), unit=u))
+                                     text=service.cents(v, _r.flags.decimals), unit=u))
             if key in ("tuning", "just"):
                 self._voice(f"{key}:{group}", i, v)
         pending_idx = self._pending_draft_idx(group)
         if pending_idx is not None and pending_idx[0] is not None:
             text = ""
-            if self.resolved.ghosts.comma and group == "commas":
-                gsize = {"tuning": 0.0, "just": self.resolved.ghosts.comma_just, "retune": -self.resolved.ghosts.comma_just,
-                         "complexity": self.resolved.ghosts.comma_complexity}.get(key)
+            if _r.ghosts.comma and group == "commas":
+                gsize = {"tuning": 0.0, "just": _r.ghosts.comma_just, "retune": -_r.ghosts.comma_just,
+                         "complexity": _r.ghosts.comma_complexity}.get(key)
                 if gsize is not None:
-                    text = service.cents(gsize, self.resolved.flags.decimals)
+                    text = service.cents(gsize, _r.flags.decimals)
             self.cells.append(CellBox(f"{key}:{self.group_elem[group]}:draft", self.group_left[group](pending_idx[1]),
                                       y, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
 
@@ -93,10 +94,11 @@ class _EmitTuningMixin:
         return chart_indicators
 
     def _emit_tuning_prime_rows(self):
+        _r = self.resolved
         tuning_data = {
-            "tuning": (self.resolved.tuning.tun.tuning_map, self.resolved.tuning.comma_sizes.tempered + self.resolved.unchanged.sizes.tempered, self.resolved.tuning.target_sizes.tempered, self.resolved.tuning.interest_sizes.tempered, self.resolved.tuning.held_sizes.tempered),
-            "just": (self.resolved.tuning.tun.just_map, self.resolved.tuning.comma_sizes.just + self.resolved.unchanged.sizes.just, self.resolved.tuning.target_sizes.just, self.resolved.tuning.interest_sizes.just, self.resolved.tuning.held_sizes.just),
-            "retune": (self.resolved.tuning.tun.retuning_map, self.resolved.tuning.comma_sizes.errors + self.resolved.unchanged.sizes.errors, self.resolved.tuning.target_sizes.errors, self.resolved.tuning.interest_sizes.errors, self.resolved.tuning.held_sizes.errors),
+            "tuning": (_r.tuning.tun.tuning_map, _r.tuning.comma_sizes.tempered + _r.unchanged.sizes.tempered, _r.tuning.target_sizes.tempered, _r.tuning.interest_sizes.tempered, _r.tuning.held_sizes.tempered),
+            "just": (_r.tuning.tun.just_map, _r.tuning.comma_sizes.just + _r.unchanged.sizes.just, _r.tuning.target_sizes.just, _r.tuning.interest_sizes.just, _r.tuning.held_sizes.just),
+            "retune": (_r.tuning.tun.retuning_map, _r.tuning.comma_sizes.errors + _r.unchanged.sizes.errors, _r.tuning.target_sizes.errors, _r.tuning.interest_sizes.errors, _r.tuning.held_sizes.errors),
         }
         for key, (prime_vals, comma_vals, target_vals, interest_vals, held_vals) in tuning_data.items():
             if self.row_open(key):
@@ -107,44 +109,47 @@ class _EmitTuningMixin:
                 self.tuning_value_row(key, "held", held_vals)
 
     def _emit_tuning_gen_row(self):
+        _r = self.resolved
         if not (self.row_open("tuning") and self.tile_open("tuning", "gens")):
             return
-        gen_kind = "tuningvalue" if self.resolved.flags.superspace_generators else "gentuningcell"
-        for i, v in enumerate(self.resolved.tuning.tun.generator_map):
+        gen_kind = "tuningvalue" if _r.flags.superspace_generators else "gentuningcell"
+        for i, v in enumerate(_r.tuning.tun.generator_map):
             operand = None
-            if self.resolved.flags.math and not self.resolved.flags.superspace_generators:
+            if _r.flags.math and not _r.flags.superspace_generators:
                 closed_form = self._closed_form()
                 operand = closed_form.generator_operand(i, v) if closed_form is not None else None
             if operand is not None:
                 self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
-                                     "mathexpr", text=_math_expr(operand, v, self.resolved.flags.quantities, self.resolved.flags.decimals), unit=self.cell_unit("tuning", "gens", gen=i)))
+                                     "mathexpr", text=_math_expr(operand, v, _r.flags.quantities, _r.flags.decimals), unit=self.cell_unit("tuning", "gens", gen=i)))
             else:
                 self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
-                                     gen_kind, text=service.cents(v, self.resolved.flags.decimals), gen=i, unit=self.cell_unit("tuning", "gens", gen=i)))
+                                     gen_kind, text=service.cents(v, _r.flags.decimals), gen=i, unit=self.cell_unit("tuning", "gens", gen=i)))
             self._voice("tuning:gens", i, v)
 
     def _emit_tuning_canongen_row(self):
+        _r = self.resolved
         if not (self.row_open("tuning") and self.tile_open("tuning", "canongens")):
             return
-        gm = self.resolved.tuning.tun.generator_map
-        for j in range(self.resolved.dims.rc):
-            v = sum(gm[k] * self.resolved.canon.inverse_form_M[k][j] for k in range(self.resolved.dims.r))
+        gm = _r.tuning.tun.generator_map
+        for j in range(_r.dims.rc):
+            v = sum(gm[k] * _r.canon.inverse_form_M[k][j] for k in range(_r.dims.r))
             operand = None
-            if self.resolved.flags.math:
+            if _r.flags.math:
                 closed_form = self._closed_form()
                 if closed_form is not None:
-                    coefficients = [self.resolved.canon.inverse_form_M[k][j] for k in range(self.resolved.dims.r)]
+                    coefficients = [_r.canon.inverse_form_M[k][j] for k in range(_r.dims.r)]
                     operand = closed_form.canonical_generator_operand(coefficients, v)
             if operand is not None:
                 self.cells.append(CellBox(f"tuning:cangen:{j}", self.canongen_left(j), self.rows["tuning"].y, COL_W, ROW_H,
-                                     "mathexpr", text=_math_expr(operand, v, self.resolved.flags.quantities, self.resolved.flags.decimals), unit=self.cell_unit("tuning", "canongens", gen=j)))
+                                     "mathexpr", text=_math_expr(operand, v, _r.flags.quantities, _r.flags.decimals), unit=self.cell_unit("tuning", "canongens", gen=j)))
             else:
                 self.cells.append(CellBox(f"tuning:cangen:{j}", self.canongen_left(j), self.rows["tuning"].y, COL_W, ROW_H,
-                                     "tuningvalue", text=service.cents(v, self.resolved.flags.decimals), gen=j, unit=self.cell_unit("tuning", "canongens", gen=j)))
+                                     "tuningvalue", text=service.cents(v, _r.flags.decimals), gen=j, unit=self.cell_unit("tuning", "canongens", gen=j)))
             self._voice("tuning:canongens", j, v)
 
     def _emit_tuning_superspace_rows(self):
-        if not (self.resolved.flags.superspace and self.row_open("tuning")):
+        _r = self.resolved
+        if not (_r.flags.superspace and self.row_open("tuning")):
             return
         ss_tun = self.superspace_tun()
         if self.tile_open("tuning", "ssgens"):
@@ -156,72 +161,77 @@ class _EmitTuningMixin:
             self.tuning_value_row("retune", "ssprimes", ss_tun.retuning_map)
 
     def _emit_tuning_ssgen_row(self, ss_tun):
-        if not self.resolved.flags.superspace_generators:
+        _r = self.resolved
+        if not _r.flags.superspace_generators:
             self.tuning_value_row("tuning", "ssgens", ss_tun.generator_map)
             return
-        ss_cf = self._ss_closed_form() if self.resolved.flags.math else None
+        ss_cf = self._ss_closed_form() if _r.flags.math else None
         for i, v in enumerate(ss_tun.generator_map):
             operand = ss_cf.generator_operand(i, v) if ss_cf is not None else None
             if operand is not None:
                 self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.rows["tuning"].y,
-                                     COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.resolved.flags.quantities, self.resolved.flags.decimals),
+                                     COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, _r.flags.quantities, _r.flags.decimals),
                                      unit=self.cell_unit("tuning", "ssgens", gen=i)))
             else:
                 self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.rows["tuning"].y,
-                                     COL_W, ROW_H, "gentuningcell", text=service.cents(v, self.resolved.flags.decimals),
+                                     COL_W, ROW_H, "gentuningcell", text=service.cents(v, _r.flags.decimals),
                                      unit=self.cell_unit("tuning", "ssgens", gen=i)))
             self._voice("tuning:ssgens", i, v)
 
     def _emit_tuning_detempering_rows(self):
-        if not self.resolved.flags.detempering:
+        _r = self.resolved
+        if not _r.flags.detempering:
             return
-        for key, values in (("tuning", self.resolved.detempering.sizes.tempered),
-                            ("just", self.resolved.detempering.sizes.just),
-                            ("retune", self.resolved.detempering.sizes.errors)):
+        for key, values in (("tuning", _r.detempering.sizes.tempered),
+                            ("just", _r.detempering.sizes.just),
+                            ("retune", _r.detempering.sizes.errors)):
             if self.row_open(key):
                 self.tuning_value_row(key, "detempering", values)
 
     def _lift_to_superspace(self, vs):
-        return tuple(None if v is None else service.lift_vectors_to_superspace(self.resolved.dims.elements, (v,))[0]
+        _r = self.resolved
+        return tuple(None if v is None else service.lift_vectors_to_superspace(_r.dims.elements, (v,))[0]
                      for v in vs)
 
     def _prescale_setup(self, nrows):
-        if self.resolved.flags.superspace:
+        _r = self.resolved
+        if _r.flags.superspace:
             prescaler_diag = service.superspace_complexity_prescaler(self.state, self.tuning_scheme)
             prescaler_is_matrix = False
-            ss_elements = service.superspace_primes(self.resolved.dims.elements)
+            ss_elements = service.superspace_primes(_r.dims.elements)
             lift = self._lift_to_superspace
             prescale_vectors = {
                 "ssprimes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
-                "primes": service.basis_in_superspace(self.resolved.dims.elements),
-                "commas": lift(self.state.comma_basis) + (lift(self.resolved.unchanged.basis) if self.resolved.unchanged.shown else ()),
-                "targets": lift(self.resolved.targets.vectors),
-                "interest": lift(self.resolved.interest.vectors),
-                "held": lift(self.resolved.held.vectors),
-                "detempering": lift(self.resolved.detempering.vectors),
+                "primes": service.basis_in_superspace(_r.dims.elements),
+                "commas": lift(self.state.comma_basis) + (lift(_r.unchanged.basis) if _r.unchanged.shown else ()),
+                "targets": lift(_r.targets.vectors),
+                "interest": lift(_r.interest.vectors),
+                "held": lift(_r.held.vectors),
+                "detempering": lift(_r.detempering.vectors),
             }
             groups = ("ssprimes", "primes", "commas", "targets", "interest", "held", "detempering")
             bare_group = "ssprimes"
         else:
-            prescaler_diag = self.resolved.scalars.prescaler
-            prescaler_is_matrix = self.resolved.scalars.prescaler_is_matrix
-            ss_elements = self.resolved.dims.elements
+            prescaler_diag = _r.scalars.prescaler
+            prescaler_is_matrix = _r.scalars.prescaler_is_matrix
+            ss_elements = _r.dims.elements
             prescale_vectors = {
                 "primes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
-                "commas": self.state.comma_basis + (self.resolved.unchanged.basis if self.resolved.unchanged.shown else ()),
-                "targets": self.resolved.targets.vectors,
-                "interest": self.resolved.interest.vectors,
-                "held": self.resolved.held.vectors,
-                "detempering": self.resolved.detempering.vectors,
+                "commas": self.state.comma_basis + (_r.unchanged.basis if _r.unchanged.shown else ()),
+                "targets": _r.targets.vectors,
+                "interest": _r.interest.vectors,
+                "held": _r.held.vectors,
+                "detempering": _r.detempering.vectors,
             }
             groups = ("primes", "commas", "targets", "interest", "held", "detempering")
             bare_group = "primes"
         return prescaler_diag, prescaler_is_matrix, ss_elements, prescale_vectors, groups, bare_group
 
     def _prescale_prime_terms(self, ss_elements):
-        if self.resolved.labels.scheme_prescaler == "log-prime":
+        _r = self.resolved
+        if _r.labels.scheme_prescaler == "log-prime":
             return {i: f"log₂{p}" for i, p in enumerate(ss_elements)}
-        if self.resolved.labels.scheme_prescaler == "prime":
+        if _r.labels.scheme_prescaler == "prime":
             return {i: str(p) for i, p in enumerate(ss_elements)}
         return {}
 
@@ -255,42 +265,45 @@ class _EmitTuningMixin:
                 else [prescaler_diag[i] * vec[i] for i in range(nrows)])
 
     def _emit_prescale_cells(self, group, c, vec, prescaled, prime_term, left, u, nrows):
+        _r = self.resolved
         for i in range(nrows + self.size_rows):
             value = prescaled[i] if i < nrows else self.size_factor * sum(prescaled)
             cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
             cx, cy = left(self.comma_value_pos(c) if group == "commas" else c), self.rows["prescaling"].y + i * ROW_H
-            if i < nrows and not self.resolved.flags.superspace and group == "primes" and (i == c or self.resolved.flags.alt_complexity):
+            if i < nrows and not _r.flags.superspace and group == "primes" and (i == c or _r.flags.alt_complexity):
                 self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
-                                     text=service.prescale_text(value, self.resolved.flags.decimals), prime=i, unit=u))
-            elif i < nrows and self.resolved.flags.math and vec[i] != 0 and i in prime_term:
+                                     text=service.prescale_text(value, _r.flags.decimals), prime=i, unit=u))
+            elif i < nrows and _r.flags.math and vec[i] != 0 and i in prime_term:
                 self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
-                                     text=_prescale_math_expr(vec[i], prime_term[i], value, self.resolved.flags.quantities, self.resolved.flags.decimals), unit=u))
+                                     text=_prescale_math_expr(vec[i], prime_term[i], value, _r.flags.quantities, _r.flags.decimals), unit=u))
             else:
                 self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue",
-                                     text=service.prescale_text(value, self.resolved.flags.decimals), unit=u))
+                                     text=service.prescale_text(value, _r.flags.decimals), unit=u))
 
     def _emit_prescale_draft(self, group, prescaler_diag, prescaler_is_matrix, nrows):
+        _r = self.resolved
         pending_idx = self._pending_draft_idx(group)
         if pending_idx is None or pending_idx[0] is None:
             return
         left = self.group_left[group]
         ghost_pre = None
-        if self.resolved.ghosts.comma and group == "commas" and self.resolved.ghosts.comma_vec is not None:
-            gvec = self._lift_to_superspace((self.resolved.ghosts.comma_vec,))[0] if self.resolved.flags.superspace else self.resolved.ghosts.comma_vec
+        if _r.ghosts.comma and group == "commas" and _r.ghosts.comma_vec is not None:
+            gvec = self._lift_to_superspace((_r.ghosts.comma_vec,))[0] if _r.flags.superspace else _r.ghosts.comma_vec
             ghost_pre = self._prescale_vector(gvec, prescaler_diag, prescaler_is_matrix, nrows)
         for i in range(nrows + self.size_rows):
             cy = self.rows["prescaling"].y + i * ROW_H
             text = ""
             if ghost_pre is not None:
                 value = ghost_pre[i] if i < nrows else self.size_factor * sum(ghost_pre)
-                text = service.prescale_text(value, self.resolved.flags.decimals)
+                text = service.prescale_text(value, _r.flags.decimals)
             self.cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left(pending_idx[1]),
                                  cy, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
 
     def _emit_lbox_control(self) -> None:
+        _r = self.resolved
         if self.lbox_ctrl:
             box_top = self.rows["prescaling"].tile_top + self.rows["prescaling"].tile_h - self.lbox_extra + RANGE_GAP
-            bx, by = self.control_region("block:diminuator", "ssprimes" if self.resolved.flags.superspace else "primes",
+            bx, by = self.control_region("block:diminuator", "ssprimes" if _r.flags.superspace else "primes",
                                          box_top, OPTION_BOX_PX + CAPTION_LINE)
             self.cells.append(CellBox("control:diminuator", bx, by, LBOX_DIM_W, OPTION_BOX_PX,
                                  "control_check", text="",
@@ -299,22 +312,23 @@ class _EmitTuningMixin:
                                  CAPTION_LINE, "caption", text="replace diminuator"))
 
     def _emit_cbox_controls(self) -> None:
+        _r = self.resolved
         if self.cbox_ctrl:
             box_top = self.rows["complexity"].tile_top + self.rows["complexity"].tile_h - self.cbox_extra + RANGE_GAP
-            tx, cy = self.control_region("block:complexity", "targets", box_top, ROW_H + self.resolved.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)
+            tx, cy = self.control_region("block:complexity", "targets", box_top, ROW_H + _r.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)
             sym_y = cy + ROW_H
-            cap_y = sym_y + self.resolved.scalars.ctrl_symbol_h
+            cap_y = sym_y + _r.scalars.ctrl_symbol_h
             cap_h = 3 * CAPTION_LINE
             slot_w = CBOX_SLOT_W
             q_slot_x = tx
-            if self.resolved.flags.presets:
+            if _r.flags.presets:
                 drop_w = CBOX_DROP_W
                 complexity_key = service.complexity_name_of(self.tuning_scheme)
-                if self.resolved.labels.realized_prescaler is None:
+                if _r.labels.realized_prescaler is None:
                     complexity_key = "custom"
                 complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
                 complexity_values = (((*tuple(service.COMPLEXITY_DISPLAYS.values()), "custom"))
-                                     if self.resolved.flags.alt_complexity else (complexity_text,))
+                                     if _r.flags.alt_complexity else (complexity_text,))
                 complexity_locked = self._is_sole_option(complexity_values, complexity_text)
                 self.cells.append(CellBox("control:complexity", tx, cy, drop_w, PRESET_H,
                                      "control_select", text=complexity_text, values=complexity_values,
@@ -325,9 +339,9 @@ class _EmitTuningMixin:
                 q_slot_x = tx + drop_w + OPT_COL_GAP
             q_x = q_slot_x + (slot_w - COL_W) / 2
             q_text = _format_power(service.complexity_norm_power(self.tuning_scheme))
-            q_kind = "powerinput" if self.resolved.flags.alt_complexity else "powerdisplay"
+            q_kind = "powerinput" if _r.flags.alt_complexity else "powerdisplay"
             self.cells.append(CellBox("control:q", q_x, cy, COL_W, ROW_H, q_kind, text=q_text))
-            if self.resolved.flags.symbols:
+            if _r.flags.symbols:
                 self.cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
             self.cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
                                  text="interval complexity norm power"))
@@ -336,25 +350,27 @@ class _EmitTuningMixin:
                 dual_x = dual_slot_x + (slot_w - COL_W) / 2
                 dual_text = _format_power(service.dual_norm_power(self.tuning_scheme))
                 self.cells.append(CellBox("control:dual", dual_x, cy, COL_W, ROW_H, "powerdisplay", text=dual_text))
-                if self.resolved.flags.symbols:
+                if _r.flags.symbols:
                     self.cells.append(CellBox("symbol:dual", dual_slot_x, sym_y, slot_w, SYMBOL_H,
                                          "symbol", text="dual(𝑞)"))
                 self.cells.append(CellBox("caption:dual", dual_slot_x, cap_y, slot_w, cap_h, "caption",
                                      text="dual norm power"))
 
     def _emit_complexity_row(self) -> None:
+        _r = self.resolved
         if self.row_open("complexity"):
             for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
-                values = self.resolved.complexities[group] + (self.resolved.unchanged.complexities if group == "commas" else ())
+                values = _r.complexities[group] + (_r.unchanged.complexities if group == "commas" else ())
                 self.tuning_value_row("complexity", group, values)
-            if self.resolved.flags.superspace and self.tile_open("complexity", "ssprimes"):
+            if _r.flags.superspace and self.tile_open("complexity", "ssprimes"):
                 self.tuning_value_row("complexity", "ssprimes",
                               service.superspace_complexity_prescaler(self.state, self.tuning_scheme))
 
     def _emit_weight_row(self) -> None:
+        _r = self.resolved
         if self.row_open("weight") and self.tile_open("weight", "targets"):
-            self.tuning_value_row("weight", "targets", self.resolved.tuning.target_weights,
-                                  editable_kind="weightcell" if self.resolved.scalars.custom_weights_active else None)
+            self.tuning_value_row("weight", "targets", _r.tuning.target_weights,
+                                  editable_kind="weightcell" if _r.scalars.custom_weights_active else None)
         if self.slope_ctrl:
             box_top = self.rows["weight"].tile_top + self.rows["weight"].tile_h - self.slope_extra + RANGE_GAP
             bx, by = self.control_region("block:slope", "targets", box_top, PRESET_H + CAPTION_LINE)
@@ -367,12 +383,13 @@ class _EmitTuningMixin:
                                  text="damage weight slope", align="left", disabled=self.slope_locked))
 
     def _emit_damage_row(self, chart_indicators) -> None:
+        _r = self.resolved
         if self.row_open("damage"):
-            self.tuning_value_row("damage", "targets", self.resolved.tuning.target_sizes.damage)
-            if self.resolved.flags.optimization:
+            self.tuning_value_row("damage", "targets", _r.tuning.target_sizes.damage)
+            if _r.flags.optimization:
                 power = self.displayed_mean_damage_power()
                 chart_indicators[("damage", "targets")] = (
-                    _power_mean(self.resolved.tuning.target_sizes.damage, power), _format_power(power))
+                    _power_mean(_r.tuning.target_sizes.damage, power), _format_power(power))
 
     def _emit_charts(self, chart_indicators) -> None:
         for rkey, ckey, values in self.chart_tiles:
@@ -380,9 +397,10 @@ class _EmitTuningMixin:
             self.chart(rkey, ckey, values, indicator=indicator, indicator_label=label)
 
     def _emit_tuning_ranges_box(self):
+        _r = self.resolved
         gtm_box = None
         if self.gtm_chart:
-            chosen = self.resolved.tuning.tun.monotone_generator_range if self.range_mode == "monotone" else self.resolved.tuning.tun.tradeoff_generator_range
+            chosen = _r.tuning.tun.monotone_generator_range if self.range_mode == "monotone" else _r.tuning.tun.tradeoff_generator_range
             gx, gw = self.col_x["gens"], self.col_w["gens"]
             cy = self.rows["tuning"].tile_top + self.rows["tuning"].tile_h - self.gtm_extra + RANGE_GAP
             self.cells.append(CellBox("rangetitle:tuning:gens", gx, cy + BOX_INNER, gw, BOX_TITLE_H, "boxtitle",
@@ -390,14 +408,15 @@ class _EmitTuningMixin:
             chart_y = cy + BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP
             self.cells.append(CellBox("rangechart:tuning:gens", gx, chart_y, gw, RANGE_CHART_H, "rangechart",
                                  ranges=tuple(chosen) if chosen is not None else (),
-                                 values=tuple(self.resolved.tuning.tun.generator_map),
-                                 decimals=self.resolved.flags.decimals))
+                                 values=tuple(_r.tuning.tun.generator_map),
+                                 decimals=_r.flags.decimals))
             self.cells.append(CellBox("rangemode:tuning:gens", gx, chart_y + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
                                  "rangemode", text=self.range_mode))
             gtm_box = (gx, cy, gw, 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
         return gtm_box
 
     def _emit_optimization_box(self):
+        _r = self.resolved
         opt_box = None
         if self.opt_ctrl:
             ox = self.col_x["targets"]
@@ -407,32 +426,32 @@ class _EmitTuningMixin:
             title_top = box_top + OPT_PAD_T
             content_top = title_top + OPT_TITLE_H + OPT_TITLE_GAP
             sym_top = content_top + ROW_H
-            cap_top = sym_top + self.resolved.scalars.ctrl_symbol_h
+            cap_top = sym_top + _r.scalars.ctrl_symbol_h
             cap_band = self.opt_cap_lines * CAPTION_LINE
-            body_h = ROW_H + self.resolved.scalars.ctrl_symbol_h + cap_band + OPT_PAD_B
+            body_h = ROW_H + _r.scalars.ctrl_symbol_h + cap_band + OPT_PAD_B
             mean_damage_x = ox + OPT_PAD_L
             mean_damage_val_x = mean_damage_x + (OPT_MEAN_DAMAGE_W - COL_W) / 2
             pow_slot_x = mean_damage_x + OPT_MEAN_DAMAGE_W + OPT_COL_GAP
             pow_x = pow_slot_x + (OPT_POW_CAP_W - COL_W) / 2
-            mean_damage = _power_mean(self.resolved.tuning.target_sizes.damage, self.displayed_mean_damage_power())
+            mean_damage = _power_mean(_r.tuning.target_sizes.damage, self.displayed_mean_damage_power())
             power = _format_power(self.displayed_optimization_power())
             self.cells.append(CellBox("optimization:title", ox, title_top, box_w, OPT_TITLE_H, "boxtitle",
                                  text="optimization"))
             self.cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COL_W, ROW_H, "tuningvalue",
-                                 text=service.cents(mean_damage, self.resolved.flags.decimals)))
-            mean_damage_symbol = (f"⟪𝒓{self.resolved.labels.prescaler_symbol}⁻¹⟫{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
-                          if self.resolved.scalars.all_interval else "⟪𝐝⟫ₚ")
+                                 text=service.cents(mean_damage, _r.flags.decimals)))
+            mean_damage_symbol = (f"⟪𝒓{_r.labels.prescaler_symbol}⁻¹⟫{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
+                          if _r.scalars.all_interval else "⟪𝐝⟫ₚ")
             if self.tuning_optimized:
                 mean_damage_symbol = f"min({mean_damage_symbol})"
-            if self.resolved.flags.symbols:
+            if _r.flags.symbols:
                 self.cells.append(CellBox("optimization:mean_damage:symbol", mean_damage_x, sym_top, OPT_MEAN_DAMAGE_W, SYMBOL_H,
                                      "symbol", text=mean_damage_symbol))
             self.cells.append(CellBox("optimization:mean_damage:caption", mean_damage_x, cap_top, OPT_MEAN_DAMAGE_W, cap_band,
                                  "caption", text=self.mean_damage_caption))
-            power_locked = self.resolved.scalars.all_interval or not self.resolved.flags.alt_complexity
+            power_locked = _r.scalars.all_interval or not _r.flags.alt_complexity
             self.cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
                                  "powerdisplay" if power_locked else "powerinput", text=power))
-            if self.resolved.flags.symbols:
+            if _r.flags.symbols:
                 self.cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
                                      "symbol", text="𝑝"))
             self.cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,

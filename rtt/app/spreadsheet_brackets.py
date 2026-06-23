@@ -21,7 +21,8 @@ from rtt.app.spreadsheet_constants import (
 class _BracketsMixin:
     def bracket(self, bid: str, rkey: str, ckey: str, y, h, *, fit=False, span=None, pending=False,
                 stacked=False) -> None:
-        if not self.resolved.flags.ebk:
+        _r = self.resolved
+        if not _r.flags.ebk:
             if stacked:
                 return
             glyphs = ("[", "]")
@@ -29,7 +30,7 @@ class _BracketsMixin:
             c = self._ebk(rkey, ckey)
             glyphs = (c.inner_open, c.inner_close) if stacked else (c.outer_open, c.outer_close)
         gx, gw = span if span else self.matrix_span(ckey)
-        if fit and not self.resolved.flags.ebk:
+        if fit and not _r.flags.ebk:
             by, bh = y, h
         elif fit:
             by = y - (FRAME_H + FRAME_GAP) - FRAME_OVERHANG
@@ -40,18 +41,20 @@ class _BracketsMixin:
         self.cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1], pending=pending))
 
     def _ebk(self, rkey, ckey):
-        return service.ebk_convention(rkey, ckey, superspace=self.resolved.flags.superspace)
+        _r = self.resolved
+        return service.ebk_convention(rkey, ckey, superspace=_r.flags.superspace)
 
     def _ebk_foot(self, rkey, ckey, *, outer: bool) -> str:
         c = self._ebk(rkey, ckey)
         return "ebkbrace" if (c.outer_close if outer else c.inner_close) == "}" else "ebkangle"
 
     def matrix_frame(self, rkey: str, ckey: str, bid: str, span=None) -> None:
+        _r = self.resolved
         if not self.tile_open(rkey, ckey):
             return
         foot = self._ebk_foot(rkey, ckey, outer=True)
         gx, gw = span if span else self.matrix_span(ckey)
-        if not self.resolved.flags.ebk:
+        if not _r.flags.ebk:
             y, h = self.rows[rkey].y, self.rows[rkey].h
             self.cells.append(CellBox(f"bracket:{bid}:l", gx, y, BRACKET_W, h, "bracket", text="["))
             self.cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, y, BRACKET_W, h, "bracket", text="]"))
@@ -60,10 +63,11 @@ class _BracketsMixin:
         self.cells.append(CellBox(f"{foot}:{bid}", gx, self.frame_brace_y(rkey), gw, BRACE_H, foot))
 
     def vector_list_marks(self, rkey, name, ckey, left, n_cols, top="ebktop", separators=True, pending_col=-1) -> None:
+        _r = self.resolved
         if not self.tile_open(rkey, ckey):
             return
         foot = self._ebk_foot(rkey, ckey, outer=False)
-        if self.resolved.flags.ebk:
+        if _r.flags.ebk:
             mark_w = COL_W - 2 * MARK_INSET
             for c in range(n_cols):
                 mx = left(c) + MARK_INSET
@@ -79,7 +83,7 @@ class _BracketsMixin:
                 self.transpose_mark(name, gx + gw, rkey)
         if not separators:
             return
-        if self.resolved.flags.ebk:
+        if _r.flags.ebk:
             sep_y = self.frame_top_y(rkey) - FRAME_OVERHANG
             sep_h = self.frame_brace_y(rkey) + BRACE_H + FRAME_OVERHANG - sep_y
         else:
@@ -92,11 +96,12 @@ class _BracketsMixin:
                              "transpose", text="ᵀ", pending=pending))
 
     def v_split_bars(self) -> None:
-        if not self.resolved.unchanged.shown or self.commas_x is None or self.resolved.dims.nc_shown == 0 or self.resolved.dims.nu == 0:
+        _r = self.resolved
+        if not _r.unchanged.shown or self.commas_x is None or _r.dims.nc_shown == 0 or _r.dims.nu == 0:
             return
-        x = self.comma_left(self.resolved.dims.nc_shown) - V_SPLIT_GAP / 2 - SEP_W / 2
-        u_left = self.comma_left(self.resolved.dims.nc_shown)
-        u_right = u_left + self.resolved.dims.nu * COL_W
+        x = self.comma_left(_r.dims.nc_shown) - V_SPLIT_GAP / 2 - SEP_W / 2
+        u_left = self.comma_left(_r.dims.nc_shown)
+        u_right = u_left + _r.dims.nu * COL_W
         rows_with_u = set()
         for cell in self.cells:
             if u_left - 0.5 <= cell.x < u_right:
@@ -122,28 +127,30 @@ class _BracketsMixin:
         self._emit_canon_fit_brackets()
 
     def _emit_canon_stacked_brackets(self) -> None:
+        _r = self.resolved
         if self.row_open("canon") and self.tile_open("canon", "primes"):
-            for i in range(self.resolved.dims.rc):
+            for i in range(_r.dims.rc):
                 self.bracket(f"canon:map:{i}", "canon", "primes", self.canon_top(i), ROW_H, stacked=True)
                 self.bracket(f"form:map:{i}", "canon", "gens", self.canon_top(i), ROW_H, stacked=True)
         if self.row_open("canon") and self.tile_open("canon", "canongens"):
-            for i in range(self.resolved.dims.rc):
+            for i in range(_r.dims.rc):
                 self.bracket(f"fcancel:map:{i}", "canon", "canongens", self.canon_top(i), ROW_H, stacked=True)
         if self.tile_open("mapping", "canongens"):
-            for i in range(self.resolved.dims.r):
+            for i in range(_r.dims.r):
                 self.bracket(f"finv:map:{i}", "mapping", "canongens", self.map_top(i), ROW_H, stacked=True)
 
     def _emit_canon_fit_brackets(self) -> None:
+        _r = self.resolved
         if not self.row_open("canon"):
             return
-        canon_y, canon_h = (self.rows["canon"].y if "canon" in self.rows else 0), self.resolved.dims.rc * ROW_H
+        canon_y, canon_h = (self.rows["canon"].y if "canon" in self.rows else 0), _r.dims.rc * ROW_H
         if self.tile_open("canon", "detempering"):
             self.bracket("canon_detempering", "canon", "detempering", canon_y, canon_h, fit=True)
         if self.tile_open("canon", "commas"):
             self.bracket("canon_comma", "canon", "commas", canon_y, canon_h, fit=True)
         if self.tile_open("canon", "targets"):
             self.bracket("canon_mapped", "canon", "targets", canon_y, canon_h, fit=True)
-        if self.resolved.dims.nh and self.tile_open("canon", "held"):
+        if _r.dims.nh and self.tile_open("canon", "held"):
             self.bracket("canon_hmapped", "canon", "held", canon_y, canon_h, fit=True)
 
     def _emit_projection_brackets(self) -> None:
@@ -153,9 +160,10 @@ class _BracketsMixin:
         self._emit_projection_list_brackets()
 
     def _emit_projection_embed_brackets(self) -> None:
-        py, ph = self.rows["projection"].y, self.resolved.dims.d * ROW_H
+        _r = self.resolved
+        py, ph = self.rows["projection"].y, _r.dims.d * ROW_H
         if self.tile_open("projection", "primes"):
-            for i in range(self.resolved.dims.d):
+            for i in range(_r.dims.d):
                 self.bracket(f"proj:{i}", "projection", "primes", self.proj_top(i), ROW_H, stacked=True)
         if self.tile_open("projection", "gens"):
             self.bracket("embed", "projection", "gens", py, ph, fit=True)
@@ -165,11 +173,12 @@ class _BracketsMixin:
             self.bracket("embed_sl", "projection", "ssgens", py, ph, fit=True)
 
     def _emit_projection_list_brackets(self) -> None:
-        py, ph = self.rows["projection"].y, self.resolved.dims.d * ROW_H
+        _r = self.resolved
+        py, ph = self.rows["projection"].y, _r.dims.d * ROW_H
         if self.tile_open("projection", "ssprimes"):
-            for i in range(self.resolved.dims.d):
+            for i in range(_r.dims.d):
                 self.bracket(f"proj_sl:{i}", "projection", "ssprimes", self.proj_top(i), ROW_H, stacked=True)
-        if self.resolved.unchanged.shown and self.tile_open("projection", "commas"):
+        if _r.unchanged.shown and self.tile_open("projection", "commas"):
             self.bracket("proj_v", "projection", "commas", py, ph, fit=True)
         if self.tile_open("projection", "detempering"):
             self.bracket("proj_pd", "projection", "detempering", py, ph, fit=True)
@@ -179,20 +188,21 @@ class _BracketsMixin:
             self.bracket("proj_ph", "projection", "held", py, ph, fit=True)
 
     def _emit_mapping_brackets(self) -> None:
+        _r = self.resolved
         if self.row_open("scaling_factors") and self.tile_open("scaling_factors", "commas"):
             self.bracket("scaling", "scaling_factors", "commas", self.rows["scaling_factors"].y, ROW_H)
         if self.row_open("mapping"):
             if self.tile_open("mapping", "primes"):
-                for i in range(self.resolved.dims.r):
+                for i in range(_r.dims.r):
                     self.bracket(f"map:{i}", "mapping", "primes", self.map_top(i), ROW_H, stacked=True)
                 if self.pending_mapping_row is not None:
-                    self.bracket("map:pending", "mapping", "primes", self.map_top(self.resolved.dims.r), ROW_H, pending=True, stacked=True)
+                    self.bracket("map:pending", "mapping", "primes", self.map_top(_r.dims.r), ROW_H, pending=True, stacked=True)
             if self.tile_open("mapping", "commas"):
-                self.bracket("mapped_comma", "mapping", "commas", self.rows["mapping"].y, self.resolved.dims.r_shown * ROW_H, fit=True)
+                self.bracket("mapped_comma", "mapping", "commas", self.rows["mapping"].y, _r.dims.r_shown * ROW_H, fit=True)
             if self.tile_open("mapping", "targets"):
-                self.bracket("mapped", "mapping", "targets", self.rows["mapping"].y, self.resolved.dims.r_shown * ROW_H, fit=True)
-            if self.resolved.dims.nh and self.tile_open("mapping", "held"):
-                self.bracket("hmapped", "mapping", "held", self.rows["mapping"].y, self.resolved.dims.r_shown * ROW_H, fit=True)
+                self.bracket("mapped", "mapping", "targets", self.rows["mapping"].y, _r.dims.r_shown * ROW_H, fit=True)
+            if _r.dims.nh and self.tile_open("mapping", "held"):
+                self.bracket("hmapped", "mapping", "held", self.rows["mapping"].y, _r.dims.r_shown * ROW_H, fit=True)
 
     def _emit_ss_matrix_brackets(self) -> None:
         self._emit_ss_stacked_brackets()
@@ -200,15 +210,17 @@ class _BracketsMixin:
         self._emit_ss_rest_brackets()
 
     def _emit_ss_stacked_brackets(self) -> None:
+        _r = self.resolved
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):
-            for i in range(self.resolved.dims.rL):
+            for i in range(_r.dims.rL):
                 self.bracket(f"ss_map:{i}", "ss_mapping", "ssprimes", self.ss_map_top(i), ROW_H, stacked=True)
         if self.row_open("ss_projection") and self.tile_open("ss_projection", "ssprimes"):
-            for i in range(self.resolved.dims.dL):
+            for i in range(_r.dims.dL):
                 self.bracket(f"ss_proj:{i}", "ss_projection", "ssprimes", self.ss_proj_top(i), ROW_H, stacked=True)
 
     def _emit_ss_proj_fit_brackets(self) -> None:
-        ssp_top, ssp_h = (self.rows["ss_projection"].y if "ss_projection" in self.rows else 0), self.resolved.dims.dL * ROW_H
+        _r = self.resolved
+        ssp_top, ssp_h = (self.rows["ss_projection"].y if "ss_projection" in self.rows else 0), _r.dims.dL * ROW_H
         if self.row_open("ss_projection"):
             if self.tile_open("ss_projection", "ssgens"):
                 self.bracket("ss_embed", "ss_projection", "ssgens", ssp_top, ssp_h, fit=True)
@@ -216,7 +228,7 @@ class _BracketsMixin:
                 self.bracket("ss_proj_bls", "ss_projection", "primes", ssp_top, ssp_h, fit=True)
             if self.tile_open("ss_projection", "detempering"):
                 self.bracket("ss_proj_pd", "ss_projection", "detempering", ssp_top, ssp_h, fit=True)
-            if self.resolved.unchanged.shown and self.tile_open("ss_projection", "commas"):
+            if _r.unchanged.shown and self.tile_open("ss_projection", "commas"):
                 self.bracket("ss_proj_v", "ss_projection", "commas", ssp_top, ssp_h, fit=True)
             if self.tile_open("ss_projection", "targets"):
                 self.bracket("ss_proj_pt", "ss_projection", "targets", ssp_top, ssp_h, fit=True)
@@ -224,15 +236,16 @@ class _BracketsMixin:
                 self.bracket("ss_proj_ph", "ss_projection", "held", ssp_top, ssp_h, fit=True)
 
     def _emit_ss_rest_brackets(self) -> None:
+        _r = self.resolved
         if self.row_open("ss_vectors") and self.tile_open("ss_vectors", "ssprimes"):
-            for i in range(self.resolved.dims.dL):
+            for i in range(_r.dims.dL):
                 self.bracket(f"ss_vec_jmap:{i}", "ss_vectors", "ssprimes", self.ss_vec_top(i), ROW_H, stacked=True)
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "primes"):
-            for i in range(self.resolved.dims.rL):
+            for i in range(_r.dims.rL):
                 self.bracket(f"ss_msl:{i}", "ss_mapping", "primes", self.ss_map_top(i), ROW_H, stacked=True)
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssgens"):
             self.bracket("ss_selfmap", "ss_mapping", "ssgens",
-                         self.rows["ss_mapping"].y, self.resolved.dims.rL * ROW_H, fit=True)
+                         self.rows["ss_mapping"].y, _r.dims.rL * ROW_H, fit=True)
 
     def _emit_vector_brackets(self) -> None:
         self._emit_vector_stacked_brackets()
@@ -241,57 +254,62 @@ class _BracketsMixin:
         self._emit_vec_list_brackets()
 
     def _emit_vector_stacked_brackets(self) -> None:
+        _r = self.resolved
         if self.tile_open("vectors", "primes"):
-            for i in range(self.resolved.dims.d):
+            for i in range(_r.dims.d):
                 self.bracket(f"vec:primes:{i}", "vectors", "primes", self.vec_top(i), ROW_H, stacked=True)
         if self.tile_open("mapping", "gens"):
             self.bracket("selfmap", "mapping", "gens",
-                         self.rows["mapping"].y, self.resolved.dims.r * ROW_H, fit=True)
+                         self.rows["mapping"].y, _r.dims.r * ROW_H, fit=True)
         if self.tile_open("mapping", "detempering"):
             self.bracket("mapped_detempering", "mapping", "detempering",
-                         self.rows["mapping"].y, self.resolved.dims.r * ROW_H, fit=True)
+                         self.rows["mapping"].y, _r.dims.r * ROW_H, fit=True)
 
     def _emit_ss_vectors_list_brackets(self) -> None:
+        _r = self.resolved
         if self.row_open("ss_vectors"):
             if self.tile_open("ss_vectors", "primes"):
-                self.bracket("ss_vec:primes", "ss_vectors", "primes", self.rows["ss_vectors"].y, self.resolved.dims.dL * ROW_H, fit=True)
+                self.bracket("ss_vec:primes", "ss_vectors", "primes", self.rows["ss_vectors"].y, _r.dims.dL * ROW_H, fit=True)
             for group in ("commas", "targets"):
                 if self.tile_open("ss_vectors", group):
-                    self.bracket(f"ss_vec:{group}", "ss_vectors", group, self.rows["ss_vectors"].y, self.resolved.dims.dL * ROW_H, fit=True)
-            if self.resolved.dims.nh and self.tile_open("ss_vectors", "held"):
-                self.bracket("ss_vec:held", "ss_vectors", "held", self.rows["ss_vectors"].y, self.resolved.dims.dL * ROW_H, fit=True)
+                    self.bracket(f"ss_vec:{group}", "ss_vectors", group, self.rows["ss_vectors"].y, _r.dims.dL * ROW_H, fit=True)
+            if _r.dims.nh and self.tile_open("ss_vectors", "held"):
+                self.bracket("ss_vec:held", "ss_vectors", "held", self.rows["ss_vectors"].y, _r.dims.dL * ROW_H, fit=True)
             if self.tile_open("ss_vectors", "detempering"):
-                self.bracket("ss_vec:detempering", "ss_vectors", "detempering", self.rows["ss_vectors"].y, self.resolved.dims.dL * ROW_H, fit=True)
+                self.bracket("ss_vec:detempering", "ss_vectors", "detempering", self.rows["ss_vectors"].y, _r.dims.dL * ROW_H, fit=True)
 
     def _emit_ss_mapped_list_brackets(self) -> None:
+        _r = self.resolved
         if self.row_open("ss_mapping"):
             for group in ("commas", "targets"):
                 if self.tile_open("ss_mapping", group):
-                    self.bracket(f"ss_mapped:{group}", "ss_mapping", group, self.rows["ss_mapping"].y, self.resolved.dims.rL * ROW_H, fit=True)
-            if self.resolved.dims.nh and self.tile_open("ss_mapping", "held"):
-                self.bracket("ss_mapped:held", "ss_mapping", "held", self.rows["ss_mapping"].y, self.resolved.dims.rL * ROW_H, fit=True)
+                    self.bracket(f"ss_mapped:{group}", "ss_mapping", group, self.rows["ss_mapping"].y, _r.dims.rL * ROW_H, fit=True)
+            if _r.dims.nh and self.tile_open("ss_mapping", "held"):
+                self.bracket("ss_mapped:held", "ss_mapping", "held", self.rows["ss_mapping"].y, _r.dims.rL * ROW_H, fit=True)
             if self.tile_open("ss_mapping", "detempering"):
-                self.bracket("ss_mapped:detempering", "ss_mapping", "detempering", self.rows["ss_mapping"].y, self.resolved.dims.rL * ROW_H, fit=True)
+                self.bracket("ss_mapped:detempering", "ss_mapping", "detempering", self.rows["ss_mapping"].y, _r.dims.rL * ROW_H, fit=True)
 
     def _emit_vec_list_brackets(self) -> None:
+        _r = self.resolved
         if self.row_open("vectors"):
             for group in ("commas", "targets"):
                 if self.tile_open("vectors", group):
-                    self.bracket(f"vec:{group}", "vectors", group, self.rows["vectors"].y, self.resolved.dims.d * ROW_H, fit=True)
-            if self.resolved.dims.nh and self.tile_open("vectors", "held"):
-                self.bracket("vec:held", "vectors", "held", self.rows["vectors"].y, self.resolved.dims.d * ROW_H, fit=True)
+                    self.bracket(f"vec:{group}", "vectors", group, self.rows["vectors"].y, _r.dims.d * ROW_H, fit=True)
+            if _r.dims.nh and self.tile_open("vectors", "held"):
+                self.bracket("vec:held", "vectors", "held", self.rows["vectors"].y, _r.dims.d * ROW_H, fit=True)
             if self.tile_open("vectors", "detempering"):
-                self.bracket("vec:detempering", "vectors", "detempering", self.rows["vectors"].y, self.resolved.dims.d * ROW_H, fit=True)
+                self.bracket("vec:detempering", "vectors", "detempering", self.rows["vectors"].y, _r.dims.d * ROW_H, fit=True)
 
     def _emit_prescaling_brackets(self) -> None:
+        _r = self.resolved
         if self.row_open("prescaling"):
             ph = (self.prescale_rows + self.size_rows) * ROW_H
-            bare_col = "ssprimes" if self.resolved.flags.superspace else "primes"
+            bare_col = "ssprimes" if _r.flags.superspace else "primes"
             for group in ("commas", "detempering", "targets", "held"):
                 if self.tile_open("prescaling", group):
                     self.bracket(f"prescaling:{group}", "prescaling", group,
                             self.rows["prescaling"].y, ph, fit=True)
-            if self.resolved.flags.superspace and self.tile_open("prescaling", "primes"):
+            if _r.flags.superspace and self.tile_open("prescaling", "primes"):
                 self.bracket("prescaling:primes", "prescaling", "primes",
                         self.rows["prescaling"].y, ph, fit=True)
             if self.tile_open("prescaling", bare_col):
@@ -325,17 +343,18 @@ class _BracketsMixin:
             self.bracket("tuning:ssgenmap", "tuning", "ssgens", self.rows["tuning"].y, ROW_H)
 
     def _emit_list_row_brackets(self, key: str) -> None:
+        _r = self.resolved
         if self.tile_open(key, "primes"):
             self.bracket(f"{key}:map", key, "primes", self.rows[key].y, ROW_H)
         if self.tile_open(key, "commas"):
             self.bracket(f"{key}:commalist", key, "commas", self.rows[key].y, ROW_H)
         if self.tile_open(key, "targets"):
             self.bracket(f"{key}:list", key, "targets", self.rows[key].y, ROW_H)
-        if self.resolved.dims.nh and self.tile_open(key, "held"):
+        if _r.dims.nh and self.tile_open(key, "held"):
             self.bracket(f"{key}:hlist", key, "held", self.rows[key].y, ROW_H)
         if key != "tuning" and self.tile_open(key, "detempering"):
             self.bracket(f"{key}:detemperinglist", key, "detempering", self.rows[key].y, ROW_H)
-        if (key != "complexity" or self.resolved.flags.superspace) and self.tile_open(key, "ssprimes"):
+        if (key != "complexity" or _r.flags.superspace) and self.tile_open(key, "ssprimes"):
             self.bracket(f"{key}:ssprimes", key, "ssprimes", self.rows[key].y, ROW_H)
 
     def _emit_ebk_frames_and_marks(self) -> None:
@@ -344,6 +363,7 @@ class _BracketsMixin:
         self._emit_ebk_vector_marks()
 
     def _emit_ebk_frames(self) -> None:
+        _r = self.resolved
         self.matrix_frame("mapping", "primes", "primes")
         self.matrix_frame("projection", "primes", "proj")
         self.matrix_frame("projection", "ssprimes", "proj_sl")
@@ -351,7 +371,7 @@ class _BracketsMixin:
         self.matrix_frame("canon", "gens", "form")
         self.matrix_frame("canon", "canongens", "fcancel")
         self.matrix_frame("mapping", "canongens", "finv")
-        self.matrix_frame("prescaling", "ssprimes" if self.resolved.flags.superspace else "primes", "prescaling")
+        self.matrix_frame("prescaling", "ssprimes" if _r.flags.superspace else "primes", "prescaling")
         self.matrix_frame("ss_mapping", "ssprimes", "ss_mapping")
         self.matrix_frame("ss_projection", "ssprimes", "ss_proj")
         self.matrix_frame("ss_vectors", "ssprimes", "ss_vec_jmap")
@@ -359,61 +379,63 @@ class _BracketsMixin:
         self.matrix_frame("vectors", "primes", "vec:primes")
 
     def _emit_ebk_marks(self) -> None:
-        self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, self.resolved.dims.nc + self.resolved.dims.nu, separators=False)
-        self.vector_list_marks("projection", "proj_v", "commas", self.comma_left, self.resolved.dims.nc + self.resolved.dims.nu, separators=False)
-        self.vector_list_marks("projection", "embed", "gens", self.gen_left, self.resolved.dims.r, separators=False)
-        self.vector_list_marks("projection", "embed_c", "canongens", self.canongen_left, self.resolved.dims.rc, separators=False)
-        self.vector_list_marks("projection", "embed_sl", "ssgens", self.ss_gen_left, self.resolved.dims.rL, separators=False)
-        self.vector_list_marks("projection", "proj_pd", "detempering", self.detempering_left, self.resolved.dims.r, separators=False)
-        self.vector_list_marks("projection", "proj_pt", "targets", self.target_left, self.resolved.dims.k)
-        self.vector_list_marks("projection", "proj_ph", "held", self.held_left, self.resolved.dims.nh)
-        self.vector_list_marks("projection", "proj_pi", "interest", self.interest_left, self.resolved.dims.mi, separators=False)
-        self.vector_list_marks("ss_projection", "ss_embed", "ssgens", self.ss_gen_left, self.resolved.dims.rL, separators=False)
-        self.vector_list_marks("ss_projection", "ss_proj_bls", "primes", self.prime_left, self.resolved.dims.d, separators=False)
-        self.vector_list_marks("ss_projection", "ss_proj_pd", "detempering", self.detempering_left, self.resolved.dims.r, separators=False)
-        self.vector_list_marks("ss_projection", "ss_proj_v", "commas", self.comma_left, self.resolved.dims.nc + self.resolved.dims.nu, separators=False)
-        self.vector_list_marks("ss_projection", "ss_proj_pt", "targets", self.target_left, self.resolved.dims.k)
-        self.vector_list_marks("ss_projection", "ss_proj_ph", "held", self.held_left, self.resolved.dims.nh)
-        self.vector_list_marks("ss_projection", "ss_proj_pi", "interest", self.interest_left, self.resolved.dims.mi, separators=False)
-        self.vector_list_marks("mapping", "mapped", "targets", self.target_left, self.resolved.dims.k)
-        self.vector_list_marks("mapping", "imapped", "interest", self.interest_left, self.resolved.dims.mi, separators=False)
-        self.vector_list_marks("mapping", "hmapped", "held", self.held_left, self.resolved.dims.nh)
-        self.vector_list_marks("mapping", "selfmap", "gens", self.gen_left, self.resolved.dims.r, separators=False)
-        self.vector_list_marks("mapping", "mapped_detempering", "detempering", self.detempering_left, self.resolved.dims.r, separators=False)
-        self.vector_list_marks("canon", "canon_detempering", "detempering", self.detempering_left, self.resolved.dims.r, separators=False)
-        self.vector_list_marks("canon", "canon_comma", "commas", self.comma_left, self.resolved.dims.nc + self.resolved.dims.nu, separators=False)
-        self.vector_list_marks("canon", "canon_mapped", "targets", self.target_left, self.resolved.dims.k)
-        self.vector_list_marks("canon", "canon_imapped", "interest", self.interest_left, self.resolved.dims.mi, separators=False)
-        self.vector_list_marks("canon", "canon_hmapped", "held", self.held_left, self.resolved.dims.nh)
+        _r = self.resolved
+        self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, _r.dims.nc + _r.dims.nu, separators=False)
+        self.vector_list_marks("projection", "proj_v", "commas", self.comma_left, _r.dims.nc + _r.dims.nu, separators=False)
+        self.vector_list_marks("projection", "embed", "gens", self.gen_left, _r.dims.r, separators=False)
+        self.vector_list_marks("projection", "embed_c", "canongens", self.canongen_left, _r.dims.rc, separators=False)
+        self.vector_list_marks("projection", "embed_sl", "ssgens", self.ss_gen_left, _r.dims.rL, separators=False)
+        self.vector_list_marks("projection", "proj_pd", "detempering", self.detempering_left, _r.dims.r, separators=False)
+        self.vector_list_marks("projection", "proj_pt", "targets", self.target_left, _r.dims.k)
+        self.vector_list_marks("projection", "proj_ph", "held", self.held_left, _r.dims.nh)
+        self.vector_list_marks("projection", "proj_pi", "interest", self.interest_left, _r.dims.mi, separators=False)
+        self.vector_list_marks("ss_projection", "ss_embed", "ssgens", self.ss_gen_left, _r.dims.rL, separators=False)
+        self.vector_list_marks("ss_projection", "ss_proj_bls", "primes", self.prime_left, _r.dims.d, separators=False)
+        self.vector_list_marks("ss_projection", "ss_proj_pd", "detempering", self.detempering_left, _r.dims.r, separators=False)
+        self.vector_list_marks("ss_projection", "ss_proj_v", "commas", self.comma_left, _r.dims.nc + _r.dims.nu, separators=False)
+        self.vector_list_marks("ss_projection", "ss_proj_pt", "targets", self.target_left, _r.dims.k)
+        self.vector_list_marks("ss_projection", "ss_proj_ph", "held", self.held_left, _r.dims.nh)
+        self.vector_list_marks("ss_projection", "ss_proj_pi", "interest", self.interest_left, _r.dims.mi, separators=False)
+        self.vector_list_marks("mapping", "mapped", "targets", self.target_left, _r.dims.k)
+        self.vector_list_marks("mapping", "imapped", "interest", self.interest_left, _r.dims.mi, separators=False)
+        self.vector_list_marks("mapping", "hmapped", "held", self.held_left, _r.dims.nh)
+        self.vector_list_marks("mapping", "selfmap", "gens", self.gen_left, _r.dims.r, separators=False)
+        self.vector_list_marks("mapping", "mapped_detempering", "detempering", self.detempering_left, _r.dims.r, separators=False)
+        self.vector_list_marks("canon", "canon_detempering", "detempering", self.detempering_left, _r.dims.r, separators=False)
+        self.vector_list_marks("canon", "canon_comma", "commas", self.comma_left, _r.dims.nc + _r.dims.nu, separators=False)
+        self.vector_list_marks("canon", "canon_mapped", "targets", self.target_left, _r.dims.k)
+        self.vector_list_marks("canon", "canon_imapped", "interest", self.interest_left, _r.dims.mi, separators=False)
+        self.vector_list_marks("canon", "canon_hmapped", "held", self.held_left, _r.dims.nh)
 
     def _emit_ebk_vector_marks(self) -> None:
-        self.vector_list_marks("vectors", "vec:commas", "commas", self.comma_left, self.resolved.dims.nv_shown, separators=False,
-                         pending_col=(self.resolved.dims.nc if self.resolved.commas.pending is not None else -1))
-        self.vector_list_marks("vectors", "vec:targets", "targets", self.target_left, self.resolved.dims.k_shown,
-                         pending_col=(self.resolved.dims.k if self.resolved.targets.pending is not None else -1))
-        self.vector_list_marks("vectors", "vec:interest", "interest", self.interest_left, self.resolved.dims.mi_shown, separators=False,
-                         pending_col=(self.resolved.dims.mi if self.resolved.interest.pending is not None else -1))
-        self.vector_list_marks("vectors", "vec:held", "held", self.held_left, self.resolved.dims.nh_shown,
-                         pending_col=(self.resolved.dims.nh if self.resolved.held.pending is not None else -1))
-        self.vector_list_marks("vectors", "vec:detempering", "detempering", self.detempering_left, self.resolved.dims.r)
-        self.vector_list_marks("ss_vectors", "ss_vec:primes", "primes", self.prime_left, self.resolved.dims.d, separators=False)
-        self.vector_list_marks("ss_vectors", "ss_vec:commas", "commas", self.comma_left, self.resolved.dims.nc + self.resolved.dims.nu, separators=False)
-        self.vector_list_marks("ss_vectors", "ss_vec:targets", "targets", self.target_left, self.resolved.dims.k)
-        self.vector_list_marks("ss_vectors", "ss_vec:held", "held", self.held_left, self.resolved.dims.nh)
-        self.vector_list_marks("ss_vectors", "ss_vec:interest", "interest", self.interest_left, self.resolved.dims.mi, separators=False)
-        self.vector_list_marks("ss_vectors", "ss_vec:detempering", "detempering", self.detempering_left, self.resolved.dims.r)
-        self.vector_list_marks("ss_mapping", "ss_mapped:commas", "commas", self.comma_left, self.resolved.dims.nc + self.resolved.dims.nu, separators=False)
-        self.vector_list_marks("ss_mapping", "ss_mapped:targets", "targets", self.target_left, self.resolved.dims.k)
-        self.vector_list_marks("ss_mapping", "ss_mapped:held", "held", self.held_left, self.resolved.dims.nh)
-        if self.resolved.flags.superspace:
-            self.vector_list_marks("prescaling", "prescaling:primes", "primes", self.prime_left, self.resolved.dims.d, separators=False)
-        self.vector_list_marks("ss_mapping", "ss_mapped:interest", "interest", self.interest_left, self.resolved.dims.mi, separators=False)
-        self.vector_list_marks("ss_mapping", "ss_mapped:detempering", "detempering", self.detempering_left, self.resolved.dims.r)
-        self.vector_list_marks("ss_mapping", "ss_selfmap", "ssgens", self.ss_gen_left, self.resolved.dims.rL, separators=False)
-        self.vector_list_marks("prescaling", "prescaling:commas", "commas", self.comma_left, self.resolved.dims.nc + self.resolved.dims.nu, separators=False)
-        self.vector_list_marks("prescaling", "prescaling:detempering", "detempering", self.detempering_left, self.resolved.dims.r, separators=False)
-        self.vector_list_marks("prescaling", "prescaling:targets", "targets", self.target_left, self.resolved.dims.k, separators=True)
-        self.vector_list_marks("prescaling", "prescaling:held", "held", self.held_left, self.resolved.dims.nh, separators=True)
-        self.vector_list_marks("prescaling", "prescaling:interest", "interest", self.interest_left, self.resolved.dims.mi, separators=False)
+        _r = self.resolved
+        self.vector_list_marks("vectors", "vec:commas", "commas", self.comma_left, _r.dims.nv_shown, separators=False,
+                         pending_col=(_r.dims.nc if _r.commas.pending is not None else -1))
+        self.vector_list_marks("vectors", "vec:targets", "targets", self.target_left, _r.dims.k_shown,
+                         pending_col=(_r.dims.k if _r.targets.pending is not None else -1))
+        self.vector_list_marks("vectors", "vec:interest", "interest", self.interest_left, _r.dims.mi_shown, separators=False,
+                         pending_col=(_r.dims.mi if _r.interest.pending is not None else -1))
+        self.vector_list_marks("vectors", "vec:held", "held", self.held_left, _r.dims.nh_shown,
+                         pending_col=(_r.dims.nh if _r.held.pending is not None else -1))
+        self.vector_list_marks("vectors", "vec:detempering", "detempering", self.detempering_left, _r.dims.r)
+        self.vector_list_marks("ss_vectors", "ss_vec:primes", "primes", self.prime_left, _r.dims.d, separators=False)
+        self.vector_list_marks("ss_vectors", "ss_vec:commas", "commas", self.comma_left, _r.dims.nc + _r.dims.nu, separators=False)
+        self.vector_list_marks("ss_vectors", "ss_vec:targets", "targets", self.target_left, _r.dims.k)
+        self.vector_list_marks("ss_vectors", "ss_vec:held", "held", self.held_left, _r.dims.nh)
+        self.vector_list_marks("ss_vectors", "ss_vec:interest", "interest", self.interest_left, _r.dims.mi, separators=False)
+        self.vector_list_marks("ss_vectors", "ss_vec:detempering", "detempering", self.detempering_left, _r.dims.r)
+        self.vector_list_marks("ss_mapping", "ss_mapped:commas", "commas", self.comma_left, _r.dims.nc + _r.dims.nu, separators=False)
+        self.vector_list_marks("ss_mapping", "ss_mapped:targets", "targets", self.target_left, _r.dims.k)
+        self.vector_list_marks("ss_mapping", "ss_mapped:held", "held", self.held_left, _r.dims.nh)
+        if _r.flags.superspace:
+            self.vector_list_marks("prescaling", "prescaling:primes", "primes", self.prime_left, _r.dims.d, separators=False)
+        self.vector_list_marks("ss_mapping", "ss_mapped:interest", "interest", self.interest_left, _r.dims.mi, separators=False)
+        self.vector_list_marks("ss_mapping", "ss_mapped:detempering", "detempering", self.detempering_left, _r.dims.r)
+        self.vector_list_marks("ss_mapping", "ss_selfmap", "ssgens", self.ss_gen_left, _r.dims.rL, separators=False)
+        self.vector_list_marks("prescaling", "prescaling:commas", "commas", self.comma_left, _r.dims.nc + _r.dims.nu, separators=False)
+        self.vector_list_marks("prescaling", "prescaling:detempering", "detempering", self.detempering_left, _r.dims.r, separators=False)
+        self.vector_list_marks("prescaling", "prescaling:targets", "targets", self.target_left, _r.dims.k, separators=True)
+        self.vector_list_marks("prescaling", "prescaling:held", "held", self.held_left, _r.dims.nh, separators=True)
+        self.vector_list_marks("prescaling", "prescaling:interest", "interest", self.interest_left, _r.dims.mi, separators=False)
         self.v_split_bars()
 
