@@ -9,7 +9,6 @@ from rtt.app import (
 )
 
 
-
 class _ReconDrag:
     _INTERVAL_COMBINE: ClassVar[dict[str, str]] = {
         "comma": "add_comma_to",

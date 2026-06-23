@@ -42,12 +42,12 @@ class _TuningEdits:
         self.target_limit_commit = None
 
     def on_power_change(self, cid):
-        if self.page.building or cid not in self.page.rec.inputs:
+        if self.page.building or self.page.rec.handles(cid).input is None:
             return
         if cid not in ("optimization:power", "control:q"):
             return
         is_q = cid == "control:q"
-        power = service.parse_power(self.page.rec.inputs[cid].value, minimum=1.0 if is_q else 0.0)
+        power = service.parse_power(self.page.rec.cells[cid].input.value, minimum=1.0 if is_q else 0.0)
         if power is None:
             return
         if is_q:
@@ -61,7 +61,7 @@ class _TuningEdits:
         return toks.index(tok) if tok in toks else tok
 
     def on_gentuning_change(self, cid):
-        if self.page.building or cid not in self.page.rec.inputs:
+        if self.page.building or self.page.rec.handles(cid).input is None:
             return
         mag = self.page.rec.decimal_value(cid)
         if not mag:
@@ -70,7 +70,7 @@ class _TuningEdits:
             cents = abs(float(mag))
         except ValueError:
             return
-        glyph = self.page.rec.gensign_faces.get(cid)
+        glyph = self.page.rec.handles(cid).gensign_face
         if glyph is not None and glyph.text not in ("+", ""):
             cents = -cents
         i = int(cid.rsplit(":", 1)[1])
@@ -92,18 +92,18 @@ class _TuningEdits:
         self.page.renderer.request_render()
 
     def on_value_wheel(self, cid, delta_y):
-        if self.page.building or not delta_y or cid not in self.page.rec.inputs:
+        if self.page.building or not delta_y or self.page.rec.handles(cid).input is None:
             return
-        step = _WHEEL_STEPS.get(self.page.rec.kinds.get(cid))
+        step = _WHEEL_STEPS.get(self.page.rec.handles(cid).kind)
         if step is None:
             return
-        if cid in self.page.rec.den_inputs:
+        if self.page.rec.handles(cid).den_input is not None:
             self.page.building = True
             self.page.rec.set_decimal_value(cid, _wheel_step(self.page.rec.decimal_value(cid), delta_y, step))
             self.page.building = False
             self.on_prescaler_change(cid)
             return
-        self.page.rec.inputs[cid].value = _wheel_step(self.page.rec.inputs[cid].value, delta_y, step)
+        self.page.rec.cells[cid].input.value = _wheel_step(self.page.rec.cells[cid].input.value, delta_y, step)
         commit = {
             "mapping": self.e.vectors.on_mapping_change,
             "commacell": self.e.vectors.on_comma_change,
@@ -111,7 +111,7 @@ class _TuningEdits:
             "heldcell": self.e.vectors.on_held_change,
             "targetcell": self.e.vectors.on_target_cells_change,
             "formcell": self.e.vectors.on_form_change,
-        }.get(self.page.rec.kinds.get(cid))
+        }.get(self.page.rec.handles(cid).kind)
         if commit is not None:
             commit()
 
@@ -126,7 +126,7 @@ class _TuningEdits:
         # gesture into ONE solve at the limit you land on. Focus-gated client-side (see _INT_WHEEL_JS).
         if self.page.building or not delta_y:
             return
-        num = self.page.rec.selects["preset:target"][0]
+        num = self.page.rec.cells["preset:target"].select[0]
         self.page.building = True
         num.value = _wheel_step(num.value, delta_y)
         self.page.building = False
@@ -166,7 +166,7 @@ class _TuningEdits:
         g = self.page.gestures.gesture
         if self.page.building or g is None or g.kind != "edit" or g.source != "preset:target":
             return
-        num, sel = self.page.rec.selects["preset:target"]
+        num, sel = self.page.rec.cells["preset:target"].select
         raw = num.value if typed is None else typed
         res = service.resolve_target_limit(sel.value, raw, self.page.editor.state.domain_basis)
         if res.problem == "whole" or not res.valid:
@@ -175,7 +175,7 @@ class _TuningEdits:
         self.page.gestures.edit_candidate(lambda: self.page.editor.set_target_spec(res.spec))
 
     def on_prescaler_change(self, cid):
-        if self.page.building or cid not in self.page.rec.inputs:
+        if self.page.building or self.page.rec.handles(cid).input is None:
             return
         parts = cid.split(":")
         i, j = int(parts[3]), int(parts[4])
@@ -188,10 +188,10 @@ class _TuningEdits:
         self.e._commit_outcome(out, apply, _INVALID_PRESCALER)
 
     def on_weight_change(self, cid):
-        if self.page.building or cid not in self.page.rec.inputs:
+        if self.page.building or self.page.rec.handles(cid).input is None:
             return
         raws = [
-            self.page.rec.decimal_value(o) for o in self.page.rec.inputs if o.startswith("weight:")
+            self.page.rec.decimal_value(o) for o in self.page.rec.cells if o.startswith("weight:") and self.page.rec.cells[o].input is not None
         ]
         out = service.custom_weights(raws)
 
@@ -210,10 +210,10 @@ class _TuningEdits:
         if not self.page.editor.settings.get("ebk", True):
             value = service.simple_matrix_to_ebk(value, _PTEXT_DUAL_VECTOR_KIND.get(cid, False))
         if getattr(self.page.editor, editor_method)(value):
-            self.page.rec.ptext_inputs[cid].classes(remove="rtt-ptext-error")
+            self.page.rec.cells[cid].ptext_input.classes(remove="rtt-ptext-error")
             self.page.renderer.request_render()  # a typed dual (mapping/commas/tuning/targets/P/G…) retunes — off the loop
             return
-        self.page.rec.ptext_inputs[cid].classes(add="rtt-ptext-error")
+        self.page.rec.cells[cid].ptext_input.classes(add="rtt-ptext-error")
         toast = self._ptext_error_toast(cid, value)
         if toast:
             ui.notify(toast, type="negative", position="top")
