@@ -163,6 +163,13 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
     ("retune", "held"): GuideHelp(
         "Each held interval's retuning — zero, because the tuning holds these intervals pure.",
         "Tuning fundamentals", "Held-intervals"),
+    ("just", "commas"): GuideHelp(
+        "Each comma's just size in cents.",
+        "Mappings", "Making commas vanish"),
+    ("retune", "commas"): GuideHelp(
+        "Each comma's retuning — the negative of its just size, since the tuning shrinks it "
+        "away to nothing.",
+        "Mappings", "Making commas vanish"),
 }
 
 
