@@ -106,7 +106,7 @@ class _ControlsMixin:
         return ctrl_x, dropdown_w, ctrl_y
 
     def _preset_form_label(self, name: str, rkey: str, ckey: str):
-        embeds = (name == "temperament" and self.show_form_controls
+        embeds = (name == "temperament" and self.resolved.flags.form_controls
                   and any(rk == rkey and ck == ckey for _n, rk, ck, _l in FORM_CHOOSERS))
         return "form" if embeds else None
 
@@ -160,27 +160,27 @@ class _ControlsMixin:
             self.emit_diminuator_check(cx + cw + OPT_COL_GAP, cy)
 
     def _emit_presets(self) -> None:
-        if not self.show_presets:
+        if not self.resolved.flags.presets:
             return
         preset_text = {"temperament": "", "target": self.target_spec,
                           "tuning": service.base_scheme_name(self.tuning_scheme) or "",
                           "prescaler": self.resolved.labels.realized_prescaler or "",
                           "projection": self.displayed_projection_name or ""}
         for name, rkey, ckey, label in PRESETS:
-            col = "ssprimes" if name == "prescaler" and self.show_superspace else ckey
+            col = "ssprimes" if name == "prescaler" and self.resolved.flags.superspace else ckey
             self._emit_preset(preset_text, f"preset:{name}", name, rkey, col, label)
         for name, rkey, ckey, label in PRESET_COPIES:
             col = "ssgens" if (name == "tuning" and ckey == "gens"
-                               and self.show_superspace_generators) else ckey
+                               and self.resolved.flags.superspace_generators) else ckey
             self._emit_preset(preset_text, f"preset:{name}:{col}", name, rkey, col, label)
 
     def _emit_all_interval_check_fallback(self) -> None:
-        if self.settings["all_interval"] and not self.show_presets and self.tile_open("vectors", "targets"):
+        if self.settings["all_interval"] and not self.resolved.flags.presets and self.tile_open("vectors", "targets"):
             top = self.ptext_band_y("vectors") + self.rows["vectors"].ptext
             self.emit_all_interval_check(self.col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
 
     def _emit_form_choosers(self) -> None:
-        if self.show_form_controls and not self.show_presets:
+        if self.resolved.flags.form_controls and not self.resolved.flags.presets:
             for name, rkey, ckey, label in FORM_CHOOSERS:
                 if not self.tile_open(rkey, ckey):
                     continue
@@ -190,7 +190,7 @@ class _ControlsMixin:
                                      text=self.resolved.canon.mapping_form_key if name == "mapping" else self.resolved.canon.comma_basis_form_key))
 
     def _emit_scheme_buttons(self) -> None:
-        if self.settings["projection"] and not self.show_presets:
+        if self.settings["projection"] and not self.resolved.flags.presets:
             for ckey in ("primes", "gens"):
                 if not self.tile_open("projection", ckey):
                     continue
@@ -201,7 +201,7 @@ class _ControlsMixin:
                 self.emit_scheme_button(self.col_x[ckey] + BOX_INNER, box_y + BOX_INNER, ckey)
 
     def _emit_ptext_band(self) -> None:
-        if self.show_ptext:
+        if self.resolved.flags.ptext:
             for (rkey, ckey), text in self.ptext_strings.items():
                 if not self.tile_open(rkey, ckey):
                     continue
@@ -229,7 +229,7 @@ class _ControlsMixin:
     def _filter_gridded_quantities(self) -> None:
         if not self.gridded:
             self.cells = [cb for cb in self.cells if cb.kind not in GRIDDED_KINDS]
-        elif not self.show_quantities:
+        elif not self.resolved.flags.quantities:
             self.cells = [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
                      for cb in self.cells]
 

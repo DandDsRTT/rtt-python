@@ -177,7 +177,7 @@ class _EmitMatrixMixin:
             return
         for p in range(self.resolved.dims.d):
             text = str(self.resolved.dims.elements[p])
-            kind = self._element_cell_kind(text) if self.show_nonstandard_domain else "prime"
+            kind = self._element_cell_kind(text) if self.resolved.flags.nonstandard_domain else "prime"
             self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, kind, text=text, prime=p))
             self._voice("quantities:primes", p, self.resolved.tuning.tun.just_map[p])
         if self.element_draft:
@@ -185,7 +185,7 @@ class _EmitMatrixMixin:
             self.cells.append(CellBox("prime:pending", self.prime_left(self.resolved.dims.d), qy, COL_W, ROW_H,
                                       self._element_cell_kind(draft_text), text=draft_text, prime=self.resolved.dims.d, pending=True))
             branch_minus("element_minus:pending", "primes", self.resolved.dims.d, "element_minus")
-        if self.show_nonstandard_domain:
+        if self.resolved.flags.nonstandard_domain:
             if self.resolved.dims.d > 1:
                 for p in range(self.resolved.dims.d):
                     branch_minus(f"element_minus:{p}", "primes", p, "element_minus", prime=p)
@@ -269,7 +269,7 @@ class _EmitMatrixMixin:
                                          grip_top, COL_W, GRIP_BAND, "colgrip", comma=j))
 
     def _emit_column_plus_controls(self) -> None:
-        primes_plus = "element_plus" if self.show_nonstandard_domain else "plus"
+        primes_plus = "element_plus" if self.resolved.flags.nonstandard_domain else "plus"
         for ckey, cid in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
                           ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
             if ckey in self.plus_stub_x:

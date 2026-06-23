@@ -49,7 +49,7 @@ class _EmitMappingMixin:
         for i in range(self.resolved.dims.r):
             rt = self.col_token("gens", i)
             if self.tile_open("mapping", "primes"):
-                if self.show_presets:
+                if self.resolved.flags.presets:
                     self.cells.append(CellBox(f"etpick:{rt}", etpick_x, self.map_top(i), ETPICK_W, ROW_H, "etpick", gen=i))
                 for p in range(self.resolved.dims.d):
                     self.cells.append(CellBox(ids.mapping_cell(rt, p), self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", text=str(self.state.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
@@ -87,7 +87,7 @@ class _EmitMappingMixin:
             for p in range(self.resolved.dims.d):
                 v = self.resolved.ghosts.row_map[p] if self.resolved.ghosts.row else self.pending_mapping_row[p]
                 self.cells.append(CellBox(ids.mapping_cell(drt, p), self.prime_left(p), self.map_top(dr), COL_W, ROW_H, row_kind, text="" if v is None else str(v), gen=dr, prime=p, pending=True))
-            if not self.resolved.ghosts.row and self.show_presets:
+            if not self.resolved.ghosts.row and self.resolved.flags.presets:
                 mx, mw = self.matrix_span("primes")
                 self.cells.append(CellBox("etpick:draft", mx + mw + ETPICK_GAP, self.map_top(dr), ETPICK_W, ROW_H, "etpick", gen=dr, pending=True))
         self._emit_mapping_draft_mapped(dr, drt)

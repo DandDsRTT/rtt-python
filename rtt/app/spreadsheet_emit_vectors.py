@@ -72,21 +72,21 @@ class _EmitVectorsMixin:
         bx, basis_bus_x = self._basis_col_x()
         for p in range(self.resolved.dims.d):
             text = str(self.resolved.dims.elements[p])
-            kind = self._element_cell_kind(text) if self.show_nonstandard_domain else "prime"
+            kind = self._element_cell_kind(text) if self.resolved.flags.nonstandard_domain else "prime"
             self.cells.append(CellBox(f"basis:{p}", bx, self.vec_top(p), COL_W, ROW_H, kind, text=text, prime=p))
         if self.element_draft:
             draft_text = self.pending_element or "?/?"
             self.cells.append(CellBox("basis:pending", bx, self.vec_top(self.resolved.dims.d), COL_W, ROW_H,
                                       self._element_cell_kind(draft_text), text=draft_text, prime=self.resolved.dims.d, pending=True))
             self._emit_basis_minus("element_minus:basis:pending", self.resolved.dims.d, "element_minus")
-        if self.show_nonstandard_domain:
+        if self.resolved.flags.nonstandard_domain:
             if self.resolved.dims.d > 1:
                 for p in range(self.resolved.dims.d):
                     self._emit_basis_minus(f"element_minus:basis:{p}", p, "element_minus", prime=p)
         elif self.domain_can_shrink:
             self._emit_basis_minus("basis_minus", self.resolved.dims.d - 1, "basis_minus")
         if "vectors" in self.row_plus_y:
-            plus_kind = "element_plus" if self.show_nonstandard_domain else "plus"
+            plus_kind = "element_plus" if self.resolved.flags.nonstandard_domain else "plus"
             self.cells.append(CellBox("basis_plus", basis_bus_x - BTN / 2, self.row_plus_y["vectors"] - BTN / 2,
                                  BTN, BTN, plus_kind))
 
@@ -95,7 +95,7 @@ class _EmitVectorsMixin:
             for p in range(self.resolved.dims.d):
                 self.cells.append(CellBox(ids.comma_cell(self.col_token('commas', c), p), self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
                 self._voice("vectors:commas", c, self.resolved.tuning.comma_sizes.just[c])
-            if self.show_presets:
+            if self.resolved.flags.presets:
                 self.cells.append(CellBox(f"commapick:{self.col_token('commas', c)}", self.comma_left(c), self.cpick_band_y("vectors") + COMMAPICK_GAP, COL_W, ROW_H, "commapick", comma=c))
         full_u = self.resolved.unchanged.basis is not None and all(v is not None for v in self.resolved.unchanged.basis)
         for j in range(self.resolved.dims.nu):
@@ -113,7 +113,7 @@ class _EmitVectorsMixin:
                 v = self.resolved.ghosts.comma_vec[p] if self.resolved.ghosts.comma else self.resolved.commas.pending[p]
                 self.cells.append(CellBox(ids.comma_cell(self.pending_col_token('commas'), p), self.comma_left(self.resolved.dims.nc), self.vec_top(p), COL_W, ROW_H, col_kind,
                                      text="" if v is None else str(v), prime=p, comma=self.resolved.dims.nc, pending=True, unit=self.cell_unit("vectors", "commas", prime=p)))
-            if self.resolved.commas.pending is not None and self.show_presets:
+            if self.resolved.commas.pending is not None and self.resolved.flags.presets:
                 self.cells.append(CellBox("commapick:draft", self.comma_left(self.resolved.dims.nc), self.cpick_band_y("vectors") + COMMAPICK_GAP, COL_W, ROW_H, "commapick", comma=self.resolved.dims.nc, pending=True))
 
     def _emit_vectors_detempering_col(self) -> None:

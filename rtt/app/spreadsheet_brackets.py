@@ -21,7 +21,7 @@ from rtt.app.spreadsheet_constants import (
 class _BracketsMixin:
     def bracket(self, bid: str, rkey: str, ckey: str, y, h, *, fit=False, span=None, pending=False,
                 stacked=False) -> None:
-        if not self.show_ebk:
+        if not self.resolved.flags.ebk:
             if stacked:
                 return
             glyphs = ("[", "]")
@@ -29,7 +29,7 @@ class _BracketsMixin:
             c = self._ebk(rkey, ckey)
             glyphs = (c.inner_open, c.inner_close) if stacked else (c.outer_open, c.outer_close)
         gx, gw = span if span else self.matrix_span(ckey)
-        if fit and not self.show_ebk:
+        if fit and not self.resolved.flags.ebk:
             by, bh = y, h
         elif fit:
             by = y - (FRAME_H + FRAME_GAP) - FRAME_OVERHANG
@@ -40,7 +40,7 @@ class _BracketsMixin:
         self.cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1], pending=pending))
 
     def _ebk(self, rkey, ckey):
-        return service.ebk_convention(rkey, ckey, superspace=self.show_superspace)
+        return service.ebk_convention(rkey, ckey, superspace=self.resolved.flags.superspace)
 
     def _ebk_foot(self, rkey, ckey, *, outer: bool) -> str:
         c = self._ebk(rkey, ckey)
@@ -51,7 +51,7 @@ class _BracketsMixin:
             return
         foot = self._ebk_foot(rkey, ckey, outer=True)
         gx, gw = span if span else self.matrix_span(ckey)
-        if not self.show_ebk:
+        if not self.resolved.flags.ebk:
             y, h = self.rows[rkey].y, self.rows[rkey].h
             self.cells.append(CellBox(f"bracket:{bid}:l", gx, y, BRACKET_W, h, "bracket", text="["))
             self.cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, y, BRACKET_W, h, "bracket", text="]"))
@@ -63,7 +63,7 @@ class _BracketsMixin:
         if not self.tile_open(rkey, ckey):
             return
         foot = self._ebk_foot(rkey, ckey, outer=False)
-        if self.show_ebk:
+        if self.resolved.flags.ebk:
             mark_w = COL_W - 2 * MARK_INSET
             for c in range(n_cols):
                 mx = left(c) + MARK_INSET
@@ -79,7 +79,7 @@ class _BracketsMixin:
                 self.transpose_mark(name, gx + gw, rkey)
         if not separators:
             return
-        if self.show_ebk:
+        if self.resolved.flags.ebk:
             sep_y = self.frame_top_y(rkey) - FRAME_OVERHANG
             sep_h = self.frame_brace_y(rkey) + BRACE_H + FRAME_OVERHANG - sep_y
         else:
@@ -286,12 +286,12 @@ class _BracketsMixin:
     def _emit_prescaling_brackets(self) -> None:
         if self.row_open("prescaling"):
             ph = (self.prescale_rows + self.size_rows) * ROW_H
-            bare_col = "ssprimes" if self.show_superspace else "primes"
+            bare_col = "ssprimes" if self.resolved.flags.superspace else "primes"
             for group in ("commas", "detempering", "targets", "held"):
                 if self.tile_open("prescaling", group):
                     self.bracket(f"prescaling:{group}", "prescaling", group,
                             self.rows["prescaling"].y, ph, fit=True)
-            if self.show_superspace and self.tile_open("prescaling", "primes"):
+            if self.resolved.flags.superspace and self.tile_open("prescaling", "primes"):
                 self.bracket("prescaling:primes", "prescaling", "primes",
                         self.rows["prescaling"].y, ph, fit=True)
             if self.tile_open("prescaling", bare_col):
@@ -335,7 +335,7 @@ class _BracketsMixin:
             self.bracket(f"{key}:hlist", key, "held", self.rows[key].y, ROW_H)
         if key != "tuning" and self.tile_open(key, "detempering"):
             self.bracket(f"{key}:detemperinglist", key, "detempering", self.rows[key].y, ROW_H)
-        if (key != "complexity" or self.show_superspace) and self.tile_open(key, "ssprimes"):
+        if (key != "complexity" or self.resolved.flags.superspace) and self.tile_open(key, "ssprimes"):
             self.bracket(f"{key}:ssprimes", key, "ssprimes", self.rows[key].y, ROW_H)
 
     def _emit_ebk_frames_and_marks(self) -> None:
@@ -351,7 +351,7 @@ class _BracketsMixin:
         self.matrix_frame("canon", "gens", "form")
         self.matrix_frame("canon", "canongens", "fcancel")
         self.matrix_frame("mapping", "canongens", "finv")
-        self.matrix_frame("prescaling", "ssprimes" if self.show_superspace else "primes", "prescaling")
+        self.matrix_frame("prescaling", "ssprimes" if self.resolved.flags.superspace else "primes", "prescaling")
         self.matrix_frame("ss_mapping", "ssprimes", "ss_mapping")
         self.matrix_frame("ss_projection", "ssprimes", "ss_proj")
         self.matrix_frame("ss_vectors", "ssprimes", "ss_vec_jmap")
@@ -405,7 +405,7 @@ class _BracketsMixin:
         self.vector_list_marks("ss_mapping", "ss_mapped:commas", "commas", self.comma_left, self.resolved.dims.nc + self.resolved.dims.nu, separators=False)
         self.vector_list_marks("ss_mapping", "ss_mapped:targets", "targets", self.target_left, self.resolved.dims.k)
         self.vector_list_marks("ss_mapping", "ss_mapped:held", "held", self.held_left, self.resolved.dims.nh)
-        if self.show_superspace:
+        if self.resolved.flags.superspace:
             self.vector_list_marks("prescaling", "prescaling:primes", "primes", self.prime_left, self.resolved.dims.d, separators=False)
         self.vector_list_marks("ss_mapping", "ss_mapped:interest", "interest", self.interest_left, self.resolved.dims.mi, separators=False)
         self.vector_list_marks("ss_mapping", "ss_mapped:detempering", "detempering", self.detempering_left, self.resolved.dims.r)

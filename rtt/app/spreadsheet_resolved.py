@@ -118,6 +118,32 @@ class Unchanged:
 
 
 @dataclass(frozen=True)
+class Flags:
+    alt_complexity: bool
+    canon: bool
+    captions: bool
+    detempering: bool
+    ebk: bool
+    equiv: bool
+    form_controls: bool
+    form_subscript: bool
+    header_symbols: bool
+    math: bool
+    mnemonics: bool
+    nonstandard_domain: bool
+    optimization: bool
+    presets: bool
+    ptext: bool
+    quantities: bool
+    superspace: bool
+    superspace_generators: bool
+    symbols: bool
+    units: bool
+    weighting: bool
+    decimals: bool
+
+
+@dataclass(frozen=True)
 class Labels:
     col_labels: object
     row_labels: object
@@ -144,6 +170,7 @@ class Resolved:
     ghosts: Ghosts
     unchanged: Unchanged
     labels: Labels
+    flags: Flags
     complexities: object
     col_ids: object
 
@@ -155,47 +182,82 @@ def _interval_set(b, ratios, sizes, mapped, vectors, pending) -> IntervalSet:
         pending=getattr(b, pending, None))
 
 
+def _dims(b) -> Dims:
+    return Dims(d=b.d, dL=b.dL, r=b.r, rL=b.rL, rc=b.rc, k=b.k, nc=b.nc, nh=b.nh,
+                mi=b.mi, nu=b.nu, k_shown=b.k_shown, nh_shown=b.nh_shown, mi_shown=b.mi_shown,
+                nc_shown=b.nc_shown, nv_shown=b.nv_shown, d_shown=b.d_shown, r_shown=b.r_shown,
+                elements=b.elements, superspace_primes=b.superspace_primes)
+
+
+def _tuning(b) -> Tuning:
+    return Tuning(tun=b.tun, ss_tun=b._ss_tun, from_generators=b._tun_from_generators,
+                  target_weights=b.target_weights, target_sizes=b.target_sizes, held_sizes=b.held_sizes,
+                  held_mapped=b.held_mapped, comma_sizes=b.comma_sizes, interest_sizes=b.interest_sizes,
+                  optimum_target_override=b._optimum_target_override)
+
+
+def _canon(b) -> Canon:
+    return Canon(mapping=b.canon_mapping, gens=b.canon_gens, form_M=b.form_M,
+                 inverse_form_M=b.inverse_form_M, mapping_form_key=b.mapping_form_key,
+                 comma_basis_form_key=b.comma_basis_form_key, form_is_canonical=b.form_is_canonical,
+                 embedding_matrix=b.canon_embedding_matrix, mapped=b.canon_mapped,
+                 held_mapped=b.canon_held_mapped, interest_mapped=b.canon_interest_mapped,
+                 mapped_commas=b.canon_mapped_commas, mapped_detempering=b.canon_mapped_detempering,
+                 unchanged_mapped=b.canon_unchanged_mapped)
+
+
+def _projection(b) -> Projection:
+    return Projection(matrix=b.projection_matrix, rationals=b.projection_rationals,
+                      superspace=b.projection_superspace, embedding_matrix=b.embedding_matrix,
+                      embedding_superspace=b.embedding_superspace, detempering=b.proj_detempering,
+                      targets=b.proj_targets, held=b.proj_held, interest=b.proj_interest,
+                      ss_matrix=b.ss_projection_matrix, ss_rationals=b.ss_projection_rationals,
+                      ss_embedding_matrix=b.ss_embedding_matrix, ss_basis=b.ss_proj_basis,
+                      ss_detempering=b.ss_proj_detempering, ss_targets=b.ss_proj_targets,
+                      ss_held=b.ss_proj_held, ss_interest=b.ss_proj_interest,
+                      ss_unchanged=b.ss_unchanged, ss_unchanged_mapped=b.ss_unchanged_mapped)
+
+
+def _ghosts(b) -> Ghosts:
+    return Ghosts(row=b.ghost_row, comma=b.ghost_comma, new=b.ghost_new, row_map=b.ghost_row_map,
+                  row_ratio=b.ghost_row_ratio, row_mapped=b.ghost_row_mapped, comma_vec=b.ghost_comma_vec,
+                  comma_ratio=b.ghost_comma_ratio, comma_mapped=b.ghost_comma_mapped,
+                  comma_just=b.ghost_comma_just, comma_complexity=b.ghost_comma_complexity)
+
+
+def _unchanged(b) -> Unchanged:
+    return Unchanged(shown=b.show_unchanged, basis=b.unchanged_basis, ratios=b.unchanged_ratios,
+                     mapped=b.unchanged_mapped, sizes=b.unchanged_sizes,
+                     complexities=b.unchanged_complexities, born=b.born_u, empty_comma_w=b.empty_comma_w)
+
+
+def _labels(b) -> Labels:
+    return Labels(col_labels=b.col_labels, row_labels=b.row_labels, captions=b.effective_captions,
+                  prescaling_symbols=b.prescaling_symbols, prescaler_symbol=b.prescaler_symbol,
+                  prescaler_equivalence=b.prescaler_equivalence, domain_label=b.domain_label,
+                  realized_prescaler=b._realized_prescaler, scheme_prescaler=b._scheme_prescaler)
+
+
+def _flags(b) -> Flags:
+    return Flags(alt_complexity=b.show_alt_complexity, canon=b.show_canon, captions=b.show_captions,
+                 detempering=b.show_detempering, ebk=b.show_ebk, equiv=b.show_equiv,
+                 form_controls=b.show_form_controls, form_subscript=b.show_form_subscript,
+                 header_symbols=b.show_header_symbols, math=b.show_math, mnemonics=b.show_mnemonics,
+                 nonstandard_domain=b.show_nonstandard_domain, optimization=b.show_optimization,
+                 presets=b.show_presets, ptext=b.show_ptext, quantities=b.show_quantities,
+                 superspace=b.show_superspace, superspace_generators=b.show_superspace_generators,
+                 symbols=b.show_symbols, units=b.show_units, weighting=b.show_weighting, decimals=b._decimals)
+
+
 def from_builder(b) -> Resolved:
     return Resolved(
-        dims=Dims(d=b.d, dL=b.dL, r=b.r, rL=b.rL, rc=b.rc, k=b.k, nc=b.nc, nh=b.nh,
-                  mi=b.mi, nu=b.nu, k_shown=b.k_shown, nh_shown=b.nh_shown, mi_shown=b.mi_shown,
-                  nc_shown=b.nc_shown, nv_shown=b.nv_shown, d_shown=b.d_shown, r_shown=b.r_shown,
-                  elements=b.elements, superspace_primes=b.superspace_primes),
+        dims=_dims(b),
         targets=_interval_set(b, "targets", "target_sizes", "mapped", "target_vectors", "pending_target"),
         held=_interval_set(b, "held_ratios", "held_sizes", "held_mapped", "held", "pending_held"),
         commas=_interval_set(b, "comma_ratios", "comma_sizes", "mapped_commas", "comma_vectors", "pending"),
         interest=_interval_set(b, "interest_ratios", "interest_sizes", "interest_mapped", "interest", "pending_interest"),
         detempering=_interval_set(b, "detempering_ratios", "detempering_sizes", "detempering_mapped",
                                   "detempering_vectors", "detempering_pending"),
-        tuning=Tuning(tun=b.tun, ss_tun=b._ss_tun, from_generators=b._tun_from_generators,
-                      target_weights=b.target_weights, target_sizes=b.target_sizes, held_sizes=b.held_sizes,
-                      held_mapped=b.held_mapped, comma_sizes=b.comma_sizes, interest_sizes=b.interest_sizes,
-                      optimum_target_override=b._optimum_target_override),
-        canon=Canon(mapping=b.canon_mapping, gens=b.canon_gens, form_M=b.form_M,
-                    inverse_form_M=b.inverse_form_M, mapping_form_key=b.mapping_form_key,
-                    comma_basis_form_key=b.comma_basis_form_key, form_is_canonical=b.form_is_canonical,
-                    embedding_matrix=b.canon_embedding_matrix, mapped=b.canon_mapped,
-                    held_mapped=b.canon_held_mapped, interest_mapped=b.canon_interest_mapped,
-                    mapped_commas=b.canon_mapped_commas, mapped_detempering=b.canon_mapped_detempering,
-                    unchanged_mapped=b.canon_unchanged_mapped),
-        projection=Projection(matrix=b.projection_matrix, rationals=b.projection_rationals,
-                              superspace=b.projection_superspace, embedding_matrix=b.embedding_matrix,
-                              embedding_superspace=b.embedding_superspace, detempering=b.proj_detempering,
-                              targets=b.proj_targets, held=b.proj_held, interest=b.proj_interest,
-                              ss_matrix=b.ss_projection_matrix, ss_rationals=b.ss_projection_rationals,
-                              ss_embedding_matrix=b.ss_embedding_matrix, ss_basis=b.ss_proj_basis,
-                              ss_detempering=b.ss_proj_detempering, ss_targets=b.ss_proj_targets,
-                              ss_held=b.ss_proj_held, ss_interest=b.ss_proj_interest,
-                              ss_unchanged=b.ss_unchanged, ss_unchanged_mapped=b.ss_unchanged_mapped),
-        ghosts=Ghosts(row=b.ghost_row, comma=b.ghost_comma, new=b.ghost_new, row_map=b.ghost_row_map,
-                      row_ratio=b.ghost_row_ratio, row_mapped=b.ghost_row_mapped, comma_vec=b.ghost_comma_vec,
-                      comma_ratio=b.ghost_comma_ratio, comma_mapped=b.ghost_comma_mapped,
-                      comma_just=b.ghost_comma_just, comma_complexity=b.ghost_comma_complexity),
-        unchanged=Unchanged(shown=b.show_unchanged, basis=b.unchanged_basis, ratios=b.unchanged_ratios,
-                            mapped=b.unchanged_mapped, sizes=b.unchanged_sizes,
-                            complexities=b.unchanged_complexities, born=b.born_u, empty_comma_w=b.empty_comma_w),
-        labels=Labels(col_labels=b.col_labels, row_labels=b.row_labels, captions=b.effective_captions,
-                      prescaling_symbols=b.prescaling_symbols, prescaler_symbol=b.prescaler_symbol,
-                      prescaler_equivalence=b.prescaler_equivalence, domain_label=b.domain_label,
-                      realized_prescaler=b._realized_prescaler, scheme_prescaler=b._scheme_prescaler),
+        tuning=_tuning(b), canon=_canon(b), projection=_projection(b), ghosts=_ghosts(b),
+        unchanged=_unchanged(b), labels=_labels(b), flags=_flags(b),
         complexities=b.complexities, col_ids=b._col_ids)
