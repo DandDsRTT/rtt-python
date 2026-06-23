@@ -133,6 +133,14 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
     ("vectors", "interest"): GuideHelp(
         "Other intervals you'd like to keep an eye on — neither targeted nor held, just "
         "tracked so you can watch how the temperament and tuning treat them."),
+    ("mapping", "detempering"): GuideHelp(
+        "When the generator detempering is mapped we get an identity matrix, because (by "
+        "definition) each of the detempering's intervals maps to exactly its own generator."),
+    ("tuning", "detempering"): GuideHelp(
+        "Detempering generators and then retempering them with the tuning map naturally "
+        "yields a map identical to the generator tuning map."),
+    ("just", "detempering"): GuideHelp(
+        "The justly-intoned size of the intervals chosen for this generator detempering."),
 }
 
 
