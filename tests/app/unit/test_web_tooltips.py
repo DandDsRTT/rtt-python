@@ -178,7 +178,7 @@ def _rendered_cells():
     full = Editor()
     for key in full.settings:
         full.settings[key] = key in show_settings.IMPLEMENTED
-    full.collapsed = set()  # expand every row / column / tile so all their cells render
+    full.set_collapsed(set())  # expand every row / column / tile so all their cells render
     cells += full.layout().cells
     return cells
 
