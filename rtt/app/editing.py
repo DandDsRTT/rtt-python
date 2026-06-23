@@ -20,6 +20,7 @@ from rtt.app.page_assets import (
     _INVALID_WEIGHT,
     _TILE_HOST,
     _VecGridEdit,
+    cb_method,
 )
 
 _log = logging.getLogger(__name__)
@@ -97,57 +98,6 @@ class EditController:
             "mapping": (None, "mapping"),
         }
 
-    _CB_METHODS: ClassVar[tuple[str, ...]] = (
-        "act",
-        "add_interval",
-        "combine_begin",
-        "combine_preview",
-        "combine_commit",
-        "combine_end",
-        "control_hover",
-        "control_unhover",
-        "rank_remove_hover",
-        "rank_remove_unhover",
-        "gentuning_hover",
-        "gentuning_unhover",
-        "on_cell_blur",
-        "on_cell_focus",
-        "on_popup",
-        "on_comma_change",
-        "on_unchanged_change",
-        "on_drag_start",
-        "on_drag_enter",
-        "on_drag_end",
-        "on_drop",
-        "on_control_select",
-        "on_form_choose",
-        "on_gentuning_change",
-        "on_gentuning_wheel",
-        "on_value_wheel",
-        "on_target_limit_wheel",
-        "on_target_limit_preview",
-        "on_chooser_hover",
-        "on_held_change",
-        "on_interest_change",
-        "on_mapping_change",
-        "on_form_change",
-        "on_power_change",
-        "on_prescaler_change",
-        "on_weight_change",
-        "on_preset",
-        "on_subpick",
-        "on_ptext_edit",
-        "on_ratio_change",
-        "transform_interval",
-        "on_element_change",
-        "on_element_preview",
-        "on_range_mode",
-        "on_target_cells_change",
-        "on_target_change",
-        "on_toggle",
-        "on_toggle_all",
-    )
-
     def _reason_message(self, reason):
         # the ONE place the view phrases a service Reason — fixed view copy (page_assets constants)
         # or view-layer help text (tooltips) the service must not import. Decisions whose wording is
@@ -181,6 +131,7 @@ class EditController:
     def _preview_outcome(self, out, apply) -> None:
         self.page.gestures.edit_candidate(apply if out.effect is service.Effect.ACCEPT else None)
 
+    @cb_method
     def act(self, action):
         # the universal click/keyboard commit: end gestures, mutate, then render OFF the loop
         # (_request_render) — most of these actions retune (expand/shrink, undo/redo across an
@@ -189,6 +140,7 @@ class EditController:
         action()
         self.page.renderer.request_render()
 
+    @cb_method
     def add_interval(self, action, group):
         # add the draft column, then focus into it: the quantities ratio cell if its row is shown
         # (the layout emitted it), else the first gridded vector cell (prime 0) of the draft column.
@@ -270,6 +222,7 @@ class EditController:
         self.page.editor.set_show(key, not self.page.editor.settings[key])
         self.page.renderer.render()
 
+    @cb_method
     def on_preset(self, cid, value):
         if self.page.building:
             return
@@ -287,6 +240,7 @@ class EditController:
             apply()
             self.page.renderer.request_render()  # a tuning / prescaler preset re-solves — render off the loop
 
+    @cb_method
     def on_subpick(self, cid, value):
         if self.page.building or value is None:
             return
@@ -312,6 +266,7 @@ class EditController:
             ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
         self.page.renderer.render()
 
+    @cb_method
     def on_form_choose(self, cid, value):
         if self.page.building:
             return
@@ -321,6 +276,7 @@ class EditController:
             apply()
             self.page.renderer.request_render()  # canonicalizing re-keys the tuning solve — render off the loop
 
+    @cb_method
     def on_target_change(self):
         if self.page.building:
             return
@@ -336,6 +292,7 @@ class EditController:
 
         self._commit_outcome(out, apply)
 
+    @cb_method
     def on_control_select(self, cid, value):
         if self.page.building or value is None:
             return
@@ -351,16 +308,19 @@ class EditController:
             return
         self.page.renderer.request_render()  # a weighting / complexity / all-interval trait change retunes — off the loop
 
+    @cb_method
     def on_range_mode(self, value):
         if self.page.building or value is None:
             return
         self.page.editor.set_range_mode(value)
         self.page.renderer.render()
 
+    @cb_method
     def on_toggle(self, item):
         self.page.editor.toggle_collapsed(item)
         self.page.renderer.render()
 
+    @cb_method
     def on_toggle_all(self):
         self.page.editor.set_collapsed(
             spreadsheet_text.toggle_all_collapsed(self.page.last_lay, self.page.editor.collapsed)

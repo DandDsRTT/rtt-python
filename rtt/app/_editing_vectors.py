@@ -11,6 +11,7 @@ from rtt.app.page_assets import (
     _INVALID_FORM,
     _INVALID_TEMPERAMENT,
     _INVALID_UNCHANGED,
+    cb_method,
 )
 from rtt.app.render_html import (
     _parse_int,
@@ -82,9 +83,11 @@ class _VectorEdits:
             return
         self._finish_edit(preview, service.accept(lambda: spec.commit(vectors)))
 
+    @cb_method
     def on_mapping_change(self, preview=False):
         self._edit_vector_grid(self.e._MAPPING_EDIT, preview)
 
+    @cb_method
     def on_form_change(self, preview=False):
         if self.page.building or not self.page.editor.settings.get("form_tiles"):
             return
@@ -115,9 +118,11 @@ class _VectorEdits:
         self.page.editor.edit_form_matrix(rows)
         self.page.renderer.request_render()  # a form change re-stores the mapping (a new generating set) — render off the loop
 
+    @cb_method
     def on_comma_change(self, preview=False):
         self._edit_vector_grid(self.e._COMMA_EDIT, preview)
 
+    @cb_method
     def on_unchanged_change(self, preview=False):
         if self.page.building:
             return
@@ -141,15 +146,19 @@ class _VectorEdits:
             return
         self._finish_edit(preview, service.accept(lambda: self.page.editor.set_unchanged_basis(ratios)))
 
+    @cb_method
     def on_interest_change(self, preview=False):
         self._edit_vector_grid(self.e._INTEREST_EDIT, preview)
 
+    @cb_method
     def on_held_change(self, preview=False):
         self._edit_vector_grid(self.e._HELD_EDIT, preview)
 
+    @cb_method
     def on_target_cells_change(self, preview=False):
         self._edit_vector_grid(self.e._TARGET_EDIT, preview)
 
+    @cb_method
     def on_ratio_change(self, cid):
         if self.page.building or self.page.rec.handles(cid).input is None:
             return
@@ -245,6 +254,7 @@ class _VectorEdits:
             return self.page.editor.held_vectors, self.page.editor.set_held_vectors, "held"
         return self.page.editor.interest_vectors, self.page.editor.set_interest_vectors, "interest"
 
+    @cb_method
     def transform_interval(self, cid, op):
         # the equave-reduce / reciprocate buttons flanking an editable interval ratio (commas / targets
         # / held / interest) or an editable domain basis element (prime). Resolve the cell's value,
@@ -280,6 +290,7 @@ class _VectorEdits:
             self.page.editor.set_domain_element(int(tok), raw)
         self.page.renderer.request_render()  # a new / relabelled domain element retunes — off the loop
 
+    @cb_method
     def on_element_change(self, cid):
         if self.page.building or self.page.rec.handles(cid).input is None:
             return
@@ -288,6 +299,7 @@ class _VectorEdits:
         out = service.resolve_domain_element_edit(self.page.editor.state, tok, raw)
         self.e._commit_outcome(out, lambda: self._apply_domain_element(tok, raw))
 
+    @cb_method
     def on_element_preview(self, cid):
         g = self.page.gestures.gesture
         if (

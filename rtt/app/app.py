@@ -267,11 +267,15 @@ class _Page:
             ui.run_javascript("window.history.replaceState({}, '', window.location.pathname)")
 
     def _wire_reconciler(self) -> None:
+        # DERIVE the reconciler's callback namespace from the @cb_method marks on the edit/gesture
+        # controllers — there is no hand-maintained name list to drift from the actual methods.
         sources = (self.edits, self.edits.vectors, self.edits.tuning, self.gestures)
         self.rec._cb = SimpleNamespace(
             **{
-                n: getattr(next(s for s in sources if hasattr(s, n)), n)
-                for n in EditController._CB_METHODS
+                name: method
+                for s in sources
+                for name in dir(s)
+                if getattr((method := getattr(s, name)), "_rtt_cb", False)
             }
         )
 
