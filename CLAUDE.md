@@ -229,6 +229,33 @@ the held-lock flow below for one final guaranteed land. You still **validate the
 land** (the under-lock `merge-safe-check` proves it), `--ff-only` is still the atomic backstop, and
 FIFO fairness is unchanged. Orthogonal changes stop waiting behind render-gate holders entirely.
 
+### Under sustained load: `bin/persistent-land` — relaunch `bin/land` until it lands
+
+This machine runs **a dozen+ agents at all times**, so the box is frequently saturated (loadavg
+has hit 64 on 6 cores) and the OS **SIGKILLs heavy processes under memory pressure** (exit 137 —
+see `RESOURCE_GOVERNANCE_DIAGNOSIS.md`). `bin/land` is a *single* process: if it's killed mid-gate,
+nothing relaunches it. So the default landing tool under this steady-state contention is
+**`bin/persistent-land`**, which relaunches `bin/land` until the branch is on `main`, surviving
+kills:
+
+```bash
+bin/persistent-land -- .venv/bin/python -m pytest -q     # from your worktree, on your branch
+```
+
+It adds **only** persistence — every attempt is a plain `bin/land`, so all load admission
+(`bin/gate-load`), orphan-reaping, locking, and the green-token guard are unchanged and there is no
+new load threshold to drift. It exits immediately if the branch is already landed, and it is itself
+light enough (a git check + a sleep) to survive the pressure that kills the gate it supervises; if
+`bin/persistent-land` is *itself* killed, just run it again — it's idempotent. Run it as ONE
+backgrounded job and surface only the terminal `PERSISTENT_LAND:` result; don't narrate the wait.
+
+**NEVER hand-roll a land script that holds the merge lock across the render gate.** A
+`with-merge-lock acquire … pytest … ff-merge` shell loop that doesn't `renew` every few minutes
+gets its lock reclaimed by the 15-min self-heal mid-gate, and a `bash -c '… && release'` wrapper
+releases the lock on a rebase-conflict exit — both burn the entire queue wait. `bin/land` /
+`bin/persistent-land` already handle renewal, conflicts, and kills correctly; use them instead of
+reinventing the critical section.
+
 ### Fallback: hold the lock across the whole critical section (conflicts / manual)
 
 Use the manual held-lock flow below when you must resolve a rebase conflict by hand, or when
