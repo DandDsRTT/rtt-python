@@ -847,12 +847,23 @@ class Editor:
 
     def set_all_interval(self, all_interval: bool) -> None:
         self._snapshot()
+        self._apply_all_interval(all_interval)
+
+    def _apply_all_interval(self, all_interval: bool) -> None:
         slope = "simplicity-weight" if all_interval else "unity-weight"
         scheme = service.scheme_with_weight_slope(self.tuning_scheme, slope)
         self.tuning_scheme = service.scheme_with_targets(
             scheme, "{}" if all_interval else self.target_spec
         )
         self._reconcile_custom_weights()
+
+    def _exit_all_interval_if_hidden(self, had_all_interval: bool) -> None:
+        if (
+            had_all_interval
+            and not self.settings["all_interval"]
+            and service.is_all_interval(self.tuning_scheme)
+        ):
+            self._apply_all_interval(False)
 
     def _reconcile_custom_weights(self) -> None:
         applies = self.settings["custom_weights"] and not service.is_all_interval(
@@ -1052,6 +1063,7 @@ class Editor:
     def set_show(self, key: str, value: bool) -> None:
         self._snapshot()
         had_alt_complexity = self.settings["alt_complexity"]
+        had_all_interval = self.settings["all_interval"]
         self.settings[key] = value
         if value:
             for parent in show_settings.ancestors_of(key):
@@ -1061,27 +1073,32 @@ class Editor:
                 self.settings[child] = False
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
+        self._exit_all_interval_if_hidden(had_all_interval)
         self._reconcile_custom_weights()
 
     def set_all_show(self, value: bool, keys=None) -> None:
         keys = show_settings.IMPLEMENTED if keys is None else keys
         self._snapshot()
         had_alt_complexity = self.settings["alt_complexity"]
+        had_all_interval = self.settings["all_interval"]
         for key in keys:
             self.settings[key] = value
         if not value and "nonstandard_domain" in keys and self.basis_is_nonstandard:
             self._standardize_domain_in_place()
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
+        self._exit_all_interval_if_hidden(had_all_interval)
         self._reconcile_custom_weights()
 
     def disable_hidden_settings(self, chapter: int) -> None:
         had_alt_complexity = self.settings["alt_complexity"]
+        had_all_interval = self.settings["all_interval"]
         for key in self.settings:
             if self.settings[key] and show_settings.reveal_chapter(key) > chapter:
                 self.settings[key] = False
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
+        self._exit_all_interval_if_hidden(had_all_interval)
         self._reconcile_custom_weights()
 
     def toggle_collapsed(self, item: str) -> None:

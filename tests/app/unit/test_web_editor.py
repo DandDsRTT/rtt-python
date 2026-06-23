@@ -533,6 +533,33 @@ def test_set_all_interval_toggles_the_scheme_target_set():
     assert service.is_all_interval(editor.tuning_scheme) is True
 
 
+def test_turning_off_all_interval_show_exits_all_interval_mode():
+    # the all-interval Show toggle reveals the in-grid box-𝐓 checkbox; that checkbox enters the mode.
+    # Hiding the toggle while the mode is on must also LEAVE the mode — otherwise the app stays
+    # all-interval with no visible control left to turn it back off.
+    editor = Editor()
+    editor.set_show("all_interval", True)
+    editor.set_all_interval(True)
+    assert service.is_all_interval(editor.tuning_scheme) is True
+    editor.set_show("all_interval", False)
+    assert editor.settings["all_interval"] is False
+    assert service.is_all_interval(editor.tuning_scheme) is False
+    assert service.base_scheme_name(editor.tuning_scheme) == "minimax-U"
+    editor.undo()  # the show-toggle AND the mode exit undo together as one step
+    assert editor.settings["all_interval"] is True
+    assert service.is_all_interval(editor.tuning_scheme) is True
+
+
+def test_deselecting_weighting_also_exits_all_interval_mode():
+    # turning off the PARENT (weighting) deselects all_interval beneath it, so the same exit fires.
+    editor = Editor()
+    editor.set_show("all_interval", True)
+    editor.set_all_interval(True)
+    editor.set_show("weighting", False)  # deselects all_interval (a sub-control) -> exit mode
+    assert editor.settings["all_interval"] is False
+    assert service.is_all_interval(editor.tuning_scheme) is False
+
+
 def test_custom_weights_starts_off_and_the_toggle_drives_it():
     # custom weights is a Show toggle that IS its mode (no separate in-grid control): selecting it
     # seeds one weight per displayed target and makes the field non-None; the flag mirrors the field
