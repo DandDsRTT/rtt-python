@@ -188,6 +188,16 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
     ("ss_vectors", "ssprimes"): GuideHelp(
         "The trivial JI mapping over the superspace's primes — the identity, since each "
         "superspace prime maps to itself."),
+    ("tuning", "ssprimes"): GuideHelp(
+        "The superspace tuning map gives the tempered size in cents of each superspace prime."),
+    ("tuning", "ssgens"): GuideHelp(
+        "The size in cents of each superspace generator."),
+    ("just", "ssprimes"): GuideHelp(
+        "The superspace just tuning map gives each superspace prime's justly-intoned size "
+        "in cents."),
+    ("retune", "ssprimes"): GuideHelp(
+        "Each superspace prime's retuning — the change the temperament makes to its tuning, "
+        "from just to tempered."),
 }
 
 
