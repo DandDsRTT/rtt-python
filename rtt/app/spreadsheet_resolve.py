@@ -37,7 +37,8 @@ class _ResolveMixin:
                  pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
                  displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
                  targets_in_use=True, pending_mapping_row=None, preview_remove=None,
-                 mapping_form=None, comma_basis_form=None):
+                 mapping_form=None, comma_basis_form=None, resolve_only=False):
+        self._resolve_only = resolve_only
         self.prev_ids = prev_ids or {}
         self.mapping_form = mapping_form
         self.comma_basis_form = comma_basis_form
@@ -93,6 +94,8 @@ class _ResolveMixin:
         self._resolve_projection_data(show_tuning)
         self._declare_tiles(interest_tiles, held_tiles, detempering_tiles)
         self.resolved = from_builder(self)
+        if self._resolve_only:
+            return
 
         col_bands, content_x0 = self._define_col_bands(show_interval_ratios, show_domain_units,
                                                        show_temp, show_tuning, show_interest, label_w)

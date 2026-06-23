@@ -96,4 +96,4 @@ def build(state, settings=None, collapsed=None, **inputs) -> Layout:
 
 
 def resolve(state, settings=None, collapsed=None, **inputs) -> Resolved:
-    return _GridBuilder(state, settings=settings, collapsed=collapsed, **inputs).resolved
+    return _GridBuilder(state, settings=settings, collapsed=collapsed, resolve_only=True, **inputs).resolved
