@@ -19,6 +19,13 @@ def test_file_length_violation_only_over_limit():
     assert "file is" in flagged[0].message
 
 
+def test_file_length_exempt_data_module_is_not_flagged():
+    over = "x = 1\n" * (qc.MAX_FILE_LINES + 1)
+    exempt = next(iter(qc.FILE_LENGTH_EXEMPT))
+    assert qc.file_length_violations(exempt, over) == []
+    assert qc.file_length_violations("rtt/app/not_exempt.py", over) != []
+
+
 def test_function_length_violation_reports_name_and_span():
     body = "\n".join(f"    x{i} = {i}" for i in range(qc.MAX_FUNCTION_LINES + 5))
     source = f"def big():\n{body}\n"

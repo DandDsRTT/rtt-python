@@ -152,6 +152,20 @@ splitting. The cap is the goal; readable architecture is the constraint — a sp
 makes the app harder to follow is wrong even if it passes the gate. (For genuinely
 irreducible data modules, an explicit per-file exemption is acceptable, documented here.)
 
+#### File-length exemptions for irreducible data modules
+
+`tools/quality_checks.py` carries a `FILE_LENGTH_EXEMPT` set of paths excused from the
+file-length cap, for modules that are **predominantly static data** (lookup dicts of
+strings) with only thin lookup logic — splitting them buys no readability, only an extra
+import hop, and the "cohesive logical module" rule has nothing to cut along. Each exemption
+is listed here with its justification:
+
+- **`rtt/app/tooltips.py`** — almost the whole file is help-text dictionaries
+  (`GUIDE_HELP`, `SHOW_HELP`, `_KIND_HELP`, …) keyed by tile/control id; the handful of
+  functions are one-line lookups over them. It is a data module by the same standard as
+  `grid_tables.py`, and it is hot (the guide-tooltip work edits these dicts continually),
+  so prying the data into a sibling file would only churn merge conflicts.
+
 ### E501 (line length) is deferred *by design*, not skipped
 
 The 255 long lines split into three groups, none of which is a mechanical reflow:

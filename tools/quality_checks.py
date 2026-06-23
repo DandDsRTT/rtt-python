@@ -12,6 +12,8 @@ MAX_LCOM4 = 10
 MAX_DIT = 2
 MAX_NOC = 3
 
+FILE_LENGTH_EXEMPT = frozenset({"rtt/app/tooltips.py"})
+
 _DEFAULT_ROOTS = ("rtt", "tools")
 _DEFINITION = (ast.FunctionDef, ast.AsyncFunctionDef)
 _DOCSTRING_OWNER = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
@@ -36,6 +38,8 @@ def span(node: ast.AST) -> int:
 
 
 def file_length_violations(path: str, text: str) -> list[Violation]:
+    if path in FILE_LENGTH_EXEMPT:
+        return []
     lines = line_count(text)
     if lines <= MAX_FILE_LINES:
         return []
