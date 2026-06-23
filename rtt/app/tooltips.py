@@ -158,7 +158,7 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "it pure.",
         "Tuning fundamentals", "Held-intervals"),
     ("just", "held"): GuideHelp(
-        "Each held interval at its just size in cents.",
+        "Each held interval's just size in cents.",
         "Tuning fundamentals", "Held-intervals"),
     ("retune", "held"): GuideHelp(
         "Each held interval's retuning — zero, because the tuning holds these intervals pure.",
@@ -170,6 +170,17 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "Each comma's retuning — the negative of its just size, since the tuning shrinks it "
         "away to nothing.",
         "Mappings", "Making commas vanish"),
+    ("just", "targets"): GuideHelp(
+        "Each target interval's just size in cents.",
+        "Tuning fundamentals", "Primes"),
+    ("prescaling", "primes"): GuideHelp(
+        "The complexity prescaler — the per-prime weighting applied before the optimization "
+        "measures damage.",
+        page="All-interval tuning schemes", anchor="Dual-norm prescalers"),
+    ("scaling_factors", "commas"): GuideHelp(
+        "The scaling factors for the unrotated intervals of the projection — one for an "
+        "unchanged interval, and zero for a comma.",
+        page="Projection", anchor="Unrotated vectors and scaling factors"),
 }
 
 
