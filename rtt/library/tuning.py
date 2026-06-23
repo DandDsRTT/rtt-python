@@ -205,13 +205,7 @@ def _optimize_augmented_all_interval(
     rank = mapping.shape[0]
     size_factor = spec.complexity_size_factor
     prescaler = np.asarray(
-        get_complexity_prescaler(
-            t,
-            spec.complexity_log_prime_power,
-            spec.complexity_prime_power,
-            spec.nonprime_basis_approach,
-            override=prescaler_override,
-        ),
+        get_complexity_prescaler(t, spec.complexity, override=prescaler_override),
         dtype=float,
     )
     size_coeffs = prescaler.sum(axis=0) if prescaler.ndim == 2 else prescaler
@@ -412,17 +406,7 @@ def damage_weights(
         return np.ones(len(vectors))
     complexities = np.array(
         [
-            get_complexity(
-                vector,
-                t,
-                spec.complexity_norm_power,
-                spec.complexity_log_prime_power,
-                spec.complexity_prime_power,
-                spec.complexity_size_factor,
-                spec.nonprime_basis_approach,
-                complexity_rough=spec.complexity_rough,
-                prescaler_override=prescaler_override,
-            )
+            get_complexity(vector, t, spec.complexity, prescaler_override=prescaler_override)
             for vector in vectors
         ]
     )

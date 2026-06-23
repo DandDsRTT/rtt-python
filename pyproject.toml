@@ -53,7 +53,6 @@ max-returns = 6
 # (and threading objects through the delicate renderer is riskier than it's worth). So PLR0913
 # is relaxed per-file here, NOT globally — a plain new module is still held to <=4.
 "rtt/library/tuning*.py" = ["PLR0913"]
-"rtt/library/complexity.py" = ["PLR0913"]
 "rtt/library/matrix_utils.py" = ["PLR0913"]
 "rtt/app/spreadsheet*.py" = ["PLR0913"]
 "rtt/app/app.py" = ["PLR0913"]

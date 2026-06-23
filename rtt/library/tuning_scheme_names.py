@@ -6,6 +6,16 @@ from math import inf
 
 
 @dataclass(frozen=True)
+class ComplexitySpec:
+    norm_power: float = 1
+    log_prime_power: float = 1
+    prime_power: float = 0
+    size_factor: float = 0
+    rough: int = 0
+    nonprime_basis_approach: str = ""
+
+
+@dataclass(frozen=True)
 class TuningSchemeSpec:
     optimization_power: float
     target_intervals: str | None = None
@@ -18,6 +28,17 @@ class TuningSchemeSpec:
     nonprime_basis_approach: str = ""
     held_intervals: str | None = None
     destretched_interval: str | None = None
+
+    @property
+    def complexity(self) -> ComplexitySpec:
+        return ComplexitySpec(
+            self.complexity_norm_power,
+            self.complexity_log_prime_power,
+            self.complexity_prime_power,
+            self.complexity_size_factor,
+            self.complexity_rough,
+            self.nonprime_basis_approach,
+        )
 
 
 _SLOPE_BY_LETTER = {

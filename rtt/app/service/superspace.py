@@ -97,11 +97,7 @@ def superspace_complexity_prescaler(
     superspace = superspace_primes(state.domain_basis)
     t = Temperament(_to_matrix(superspace_mapping(state)), Variance.ROW, superspace)
     spec = resolve_tuning_scheme(scheme)
-    return tuple(
-        get_complexity_prescaler(
-            t, spec.complexity_log_prime_power, spec.complexity_prime_power, ""
-        )
-    )
+    return tuple(get_complexity_prescaler(t, replace(spec.complexity, nonprime_basis_approach="")))
 
 
 def mapping_to_superspace_generators(state: TemperamentState) -> Matrix:
