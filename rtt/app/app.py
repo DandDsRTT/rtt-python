@@ -267,7 +267,7 @@ class _Page:
             ui.run_javascript("window.history.replaceState({}, '', window.location.pathname)")
 
     def _wire_reconciler(self) -> None:
-        sources = (self.edits, self.gestures)
+        sources = (self.edits, self.edits.vectors, self.edits.tuning, self.gestures)
         self.rec._cb = SimpleNamespace(
             **{
                 n: getattr(next(s for s in sources if hasattr(s, n)), n)
