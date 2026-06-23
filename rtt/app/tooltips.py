@@ -198,6 +198,15 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
     ("retune", "ssprimes"): GuideHelp(
         "Each superspace prime's retuning — the change the temperament makes to its tuning, "
         "from just to tempered."),
+    ("projection", "primes"): GuideHelp(
+        "Uniquely identifies a specific tuning of a specific temperament — a rational map "
+        "holding its unchanged intervals exactly just.",
+        page="Projection matrix"),
+    ("projection", "gens"): GuideHelp(
+        "The rational JI interval each generator is tuned to.",
+        page="Generator embedding matrix"),
+    ("projection", "canongens"): GuideHelp(
+        "The generator embedding for the canonical form's generators."),
 }
 
 
