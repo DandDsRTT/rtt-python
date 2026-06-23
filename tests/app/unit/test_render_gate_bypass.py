@@ -13,6 +13,7 @@ live gate is exercised by running the real suite, like the merge lock's self-tes
 """
 
 import importlib.util
+import json
 import os
 
 import pytest
@@ -134,3 +135,59 @@ def test_bypass_allowed_fails_open_without_loadavg(gate, monkeypatch):
         raise OSError("no loadavg")
     monkeypatch.setattr(gate.os, "getloadavg", _boom)
     assert gate._bypass_allowed() is True   # can't measure → preserve original behavior
+
+
+# --- merge-lock holder priority (fixes the priority inversion) ----------------------------
+
+def _write_marker(gate, tmp_path, token, daemon_pid):
+    marker = tmp_path / "holder"
+    gate._MERGE_MARKER = str(marker)
+    marker.write_text(json.dumps({"token": token, "daemon_pid": daemon_pid}))
+    return marker
+
+
+def test_holds_merge_lock_true_for_matching_live_marker(gate, tmp_path, monkeypatch):
+    monkeypatch.setattr(gate, "_my_merge_lock_id", lambda: "abc123")
+    monkeypatch.setattr(gate, "_alive", lambda pid: True)
+    _write_marker(gate, tmp_path, token="abc123", daemon_pid=999)
+    assert gate._holds_merge_lock() is True
+
+
+def test_holds_merge_lock_false_for_a_different_worktrees_token(gate, tmp_path, monkeypatch):
+    monkeypatch.setattr(gate, "_my_merge_lock_id", lambda: "mine")
+    monkeypatch.setattr(gate, "_alive", lambda pid: True)
+    _write_marker(gate, tmp_path, token="theirs", daemon_pid=999)
+    assert gate._holds_merge_lock() is False  # someone else holds it → no priority for us
+
+
+def test_holds_merge_lock_false_when_daemon_is_dead(gate, tmp_path, monkeypatch):
+    monkeypatch.setattr(gate, "_my_merge_lock_id", lambda: "mine")
+    monkeypatch.setattr(gate, "_alive", lambda pid: False)
+    _write_marker(gate, tmp_path, token="mine", daemon_pid=999)
+    assert gate._holds_merge_lock() is False  # stale marker never grants false priority
+
+
+def test_holds_merge_lock_false_without_a_marker(gate, tmp_path, monkeypatch):
+    gate._MERGE_MARKER = str(tmp_path / "absent")
+    monkeypatch.setattr(gate, "_my_merge_lock_id", lambda: "mine")
+    assert gate._holds_merge_lock() is False
+
+
+def test_merge_lock_holder_takes_priority_slot_without_waiting(gate, monkeypatch):
+    # A fresh non-holder already occupies the only slot; a NORMAL run would block forever.
+    # The merge-lock holder must take a slot immediately so the lock never idles.
+    holder = _ticket(gate, 100, 1)
+    _heartbeat(gate, holder[2], age=1)
+    monkeypatch.setattr(gate, "_holds_merge_lock", lambda: True)
+    monkeypatch.setattr(gate, "_SLOTS", 1)
+    gate._acquire()  # returns immediately via the priority short-circuit (no wait loop)
+    assert gate._heartbeat is not None
+    assert os.path.exists(gate._heartbeat)  # we stamped our own heartbeat → visible to others
+
+
+def test_non_holder_does_not_get_priority(gate, monkeypatch):
+    # Sanity: when we do NOT hold the merge lock, the lone-waiter path still runs normally.
+    monkeypatch.setattr(gate, "_holds_merge_lock", lambda: False)
+    monkeypatch.setattr(gate, "_SLOTS", 1)
+    gate._acquire()  # lone waiter, no one ahead → takes the slot the normal way
+    assert gate._heartbeat is not None

@@ -63,12 +63,28 @@ above it we WAIT for the holder instead of piling on. A genuinely hung holder is
 bypassed once load drops (CPU is then free, so a flat heartbeat really is wedged), and a
 DEAD holder is reclaimed by ``_scan`` regardless of load — so crash recovery is unaffected.
 
+MERGE-LOCK HOLDER PRIORITY — fixes the priority inversion
+=========================================================
+A held-lock land runs the render gate AS its validation *while holding the exclusive merge
+lock*. If that gate queues here behind speculative non-holder runs, the merge lock sits
+IDLE for the whole wait — stalling every other agent's merge (observed: a holder pinned the
+lock ~19 min while its gate sat at 0% CPU, queued behind a non-holder's gate). That is a
+priority inversion: the critical-path run (the lock holder, serializing everyone) waits on
+lower-priority speculative work. So a run that holds the merge lock — detected by reading
+the lock marker in ``RTT_MERGE_GATE_DIR`` and matching this worktree's token against a LIVE
+holder daemon — takes a slot IMMEDIATELY instead of queuing. It is bounded to exactly +1
+over ``SLOTS`` because the merge lock is exclusive (one holder ever), and it still registers
+a heartbeat so other runs count it and don't pile on. This is the automatic, verified
+replacement for the old manual ``RTT_RENDER_GATE_NOLOCK=1`` on the under-lock gate.
+
 Env knobs:
   * ``RTT_RENDER_GATE_SLOTS``  how many run concurrently (default 1)
   * ``RTT_RENDER_GATE_WAIT``   max seconds to queue before proceeding anyway (default 3600)
   * ``RTT_RENDER_GATE_STUCK``  no-progress seconds after which a holder is bypassed (default 240)
   * ``RTT_RENDER_GATE_BYPASS_MAXLOAD``  bypass a stuck holder only while loadavg/core is
                               below this (default 1.0); above it, wait instead of piling on
+  * ``RTT_MERGE_GATE_DIR``    merge-lock marker dir, read to grant the holder a priority slot
+                              (default ``/tmp/rtt-merge-gate.d``; matches ``bin/with-merge-lock``)
   * ``RTT_RENDER_GATE_NOLOCK`` set to ``1`` to opt a run out entirely
 
 ``RTT_MERGE_PROGRESS_FILE`` (optional): when the land protocol exports it, this
@@ -77,6 +93,7 @@ daemon can tell a crawling-but-progressing gate from a wedged one and reclaim on
 the latter (see ``bin/with-merge-lock``). Unset → ignored; this gate is unaffected.
 """
 
+import hashlib
 import json
 import os
 import subprocess
@@ -110,6 +127,18 @@ _MERGE_PROGRESS_FILE = os.environ.get("RTT_MERGE_PROGRESS_FILE") or None
 _GREEN_DIR = os.environ.get("RTT_RENDER_GREEN_DIR", "/tmp/rtt-render-green.d")
 _GREEN_TTL = int(os.environ.get("RTT_RENDER_GREEN_TTL", str(7 * 24 * 3600)))
 
+# Priority for the merge-lock HOLDER's gate (fixes the priority inversion). A held-lock
+# land runs the render gate AS its validation while holding the exclusive merge lock; if
+# that gate queues in this semaphore behind speculative non-holder runs, the merge lock
+# sits IDLE for the whole wait, stalling every other agent's merge. So a run that holds
+# the merge lock takes a slot IMMEDIATELY (it is the critical path — finishing it unblocks
+# all merges), bounded to exactly +1 over SLOTS because the merge lock is exclusive (one
+# holder ever). This replaces the old manual ``RTT_RENDER_GATE_NOLOCK=1`` convention for
+# the under-lock gate: automatic, verified against the lock marker, and still VISIBLE to
+# other runs (so they count it and don't pile on), unlike NOLOCK which hid the run entirely.
+_MERGE_GATE_DIR = os.environ.get("RTT_MERGE_GATE_DIR", "/tmp/rtt-merge-gate.d")
+_MERGE_MARKER = os.path.join(_MERGE_GATE_DIR, ".holder")
+
 _ticket = None       # path to this run's ticket file once created
 _ticket_name = None  # its <ns>-<pid> basename
 _heartbeat = None    # path to this run's heartbeat file once it holds a slot
@@ -124,6 +153,47 @@ def _alive(pid):
     except PermissionError:
         return True  # exists, just not ours to signal
     return True
+
+
+def _my_merge_lock_id():
+    """This worktree's merge-lock token — sha1 of the git top-level (or of an explicit
+    ``RTT_MERGE_LOCK_ID``), IDENTICAL to ``bin/with-merge-lock``'s ``_token`` so we can
+    tell whether the marker on disk names US. None if it can't be determined."""
+    explicit = os.environ.get("RTT_MERGE_LOCK_ID")
+    if explicit:
+        return hashlib.sha1(explicit.encode("utf-8")).hexdigest()[:16]
+    try:
+        r = subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                           capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    root = r.stdout.strip() if r.returncode == 0 else None
+    if not root:
+        return None
+    return hashlib.sha1(root.encode("utf-8")).hexdigest()[:16]
+
+
+def _holds_merge_lock():
+    """True iff THIS worktree currently holds the merge lock — so its gate is the critical
+    path that the exclusive merge lock is blocking everyone else on, and must not queue
+    behind speculative non-holder runs. Reads the merge-lock marker directly (no dependency
+    on ``bin/with-merge-lock``); matches BOTH the token and a live daemon, so a stale marker
+    never grants false priority."""
+    mine = _my_merge_lock_id()
+    if not mine:
+        return False
+    try:
+        with open(_MERGE_MARKER) as f:
+            m = json.loads(f.read() or "{}")
+    except (OSError, ValueError):
+        return False
+    if not isinstance(m, dict) or m.get("token") != mine:
+        return False
+    pid = m.get("daemon_pid", 0)
+    try:
+        return _alive(int(pid)) if pid else False
+    except (TypeError, ValueError):
+        return False
 
 
 def _hb_path(name):
@@ -227,6 +297,15 @@ def _acquire():
         open(_ticket, "x").close()
     except OSError:
         pass
+
+    if _holds_merge_lock():
+        _take_slot()  # register a fresh heartbeat so other runs count us and don't pile on
+        print(
+            f"[render-gate] merge-lock holder (PID {os.getpid()}) — taking a priority slot "
+            f"now; the merge lock must not idle queued behind speculative runs",
+            file=sys.stderr,
+        )
+        return
 
     waited = 0
     last_report = -_REPORT_EVERY
