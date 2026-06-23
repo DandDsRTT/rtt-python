@@ -97,6 +97,21 @@ def test_uniform_maps_every_edo_offers_its_patent_val_and_round_trips():
             assert (n, "", patent_val(n, basis)) in maps
 
 
+def test_uniform_maps_terminates_on_a_subunison_basis_element():
+    # A domain-basis element below 1/1 (a descending interval, e.g. a directly-entered 7/11) has a
+    # negative log size; the sweep must select by magnitude so it still terminates, while the emitted
+    # map entries carry the descending element's sign — matching the patent val and round-tripping.
+    basis = (2, Fraction(7, 11), 5)
+    maps = uniform_maps(basis, 24)
+    assert {n for n, _w, _v in maps} == set(range(1, 25))
+    for n, warts, val in maps:
+        assert warted_val(n, warts, basis) == val
+    for n in range(1, 25):
+        patent = patent_val(n, basis)
+        assert patent[1] <= 0  # the sub-unison element maps to non-ascending steps
+        assert (n, "", patent) in maps
+
+
 def test_uniform_maps_count_grows_with_the_prime_limit():
     # more primes -> more places to wart -> more uniform maps per EDO
     assert (len(uniform_maps((2, 3, 5), 72))
