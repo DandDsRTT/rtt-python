@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 
 from nicegui import background_tasks, helpers, ui
 
@@ -15,6 +16,7 @@ from rtt.app.render_html import (
     _block_panes,
     _freeze_container,
     _line_style,
+    _rect_in_view,
 )
 
 
@@ -29,6 +31,30 @@ from rtt.app.page_assets import (
 
 _log = logging.getLogger(__name__)
 
+# Viewport virtualization: only body-pane cells/lines/blocks whose geometry intersects the visible
+# scroll rectangle (inflated by _VIRT_OVERSCAN on every edge) are materialized; off-screen ones are
+# released by render()'s existing drop sweep and rebuilt when scrolled back. _VIRT_VIEWPORT0 is the
+# assumed viewport for the cold paint, before the client has reported its real one — bounded so the
+# initial paint builds only the top-left region, then a real-viewport report fills the rest. Tests run
+# with no live browser (no scroll events fire), so the render harness sets RTT_VIRT_VIEWPORT to a huge
+# size: the filter still runs, but admits the whole grid, keeping the element-tree assertions intact.
+_VIRT_OVERSCAN = 600.0
+_VIRT_VIEWPORT0 = (1680.0, 1050.0)
+_VIRT_REVIRT_STEP = 200.0  # ignore scroll deltas smaller than this — the overscan already covers them
+
+
+def _initial_viewport() -> tuple[float, float, float, float]:
+    # the cold-paint viewport (scrollLeft, scrollTop, clientW, clientH), before the client reports its
+    # real one. RTT_VIRT_VIEWPORT="WxH" overrides the assumed size — the render-test harness sets it
+    # huge so the whole grid materializes; production uses the bounded default so the cold paint is
+    # cheap and a real-viewport report fills the rest.
+    spec = os.environ.get("RTT_VIRT_VIEWPORT", "")
+    if spec:
+        w, h = (float(n) for n in spec.lower().split("x"))
+    else:
+        w, h = _VIRT_VIEWPORT0
+    return (0.0, 0.0, w, h)
+
 
 class Renderer:
     def __init__(self, page) -> None:
@@ -36,6 +62,19 @@ class Renderer:
         self.render_inflight = False
         self.render_again = False
         self.render_after = None
+        # Viewport virtualization state. _viewport is the visible scroll rectangle the client last
+        # reported (assumed for the cold paint until then); _virt_for is the viewport the body cells
+        # were last materialized against, so a scroll within the overscan margin skips revirtualizing.
+        # _newborn_ids are the cells born by the latest structural render (layout-diff) — only those
+        # take the withhold→reveal entrance, never a cell merely scrolled into view. _last_rings caches
+        # the rings so a scroll revirtualize repaints without re-running the (state-mutating) gesture
+        # hypotheticals. _revirtualizing tags scrolled-in cells so they appear at once (no rtt-in fade).
+        self._viewport = _initial_viewport()
+        self._virt_for: tuple | None = None
+        self._revirtualizing = False
+        self._newborn_ids: frozenset[str] = frozenset()
+        self._prev_cell_ids: frozenset[str] = frozenset()
+        self._last_rings: tuple = (frozenset(), frozenset())
 
     def _request_render(self, after=None):
         # schedule an off-loop commit render; a request arriving while one is in flight collapses
@@ -127,6 +166,8 @@ class Renderer:
             if eid not in self.page.rec.els:
                 with parent:
                     cls = "rtt-line " + ("rtt-line-v" if ln.orientation == "v" else "rtt-line-h")
+                    if self._revirtualizing:
+                        cls += " rtt-noentry"
                     self.page.rec.els[eid] = ui.element("div").classes(cls).props(f'data-eid="{eid}"')
             sty = _line_style(ln, shift)
             if self.page.rec.styled.get(eid) != sty:  # only restyle a line that actually moved
@@ -136,7 +177,7 @@ class Renderer:
         for ln in lay.lines:
             x0, x1 = (ln.pos, ln.pos) if ln.orientation == "v" else (ln.start, ln.start + ln.length)
             y0, y1 = (ln.start, ln.start + ln.length) if ln.orientation == "v" else (ln.pos, ln.pos)
-            if x1 >= fx and y1 >= fy:
+            if x1 >= fx and y1 >= fy and self._body_visible(x0, y0, x1 - x0, y1 - y0, fy):
                 place_line(ln, "", self.page.board, fy)
             if x1 >= fx and y0 < fy:
                 place_line(ln, "#col", self.page.colhead_inner, 0)
@@ -160,6 +201,8 @@ class Renderer:
                         if bl.tint
                         else "rtt-block"
                     )
+                    if self._revirtualizing:
+                        cls += " rtt-noentry"
                     self.page.rec.els[eid] = (
                         ui.element("div").classes(cls).props(f'data-eid="{eid}"').mark(eid)
                     )
@@ -177,6 +220,8 @@ class Renderer:
 
         for bl in lay.blocks:
             for pane in _block_panes(bl, fx, fy):
+                if pane == "body" and not self._body_visible(bl.x, bl.y, bl.w, bl.h, fy):
+                    continue
                 place_block(bl, pane)
 
     def _sync_mean_damage_tips(self) -> None:
@@ -240,23 +285,28 @@ class Renderer:
         if gesture_idle and not (self.page.load_failed and not self.page.editor.can_undo):
             _doc_store()[_STORE_KEY] = self.page.editor.serialize()
 
-    def _make_cell_if_new(self, cb, fx, fy, cold) -> str:
+    def _body_visible(self, x, y, w, h, fy) -> bool:
+        return _rect_in_view(x, y, w, h, fy, self._viewport, _VIRT_OVERSCAN)
+
+    def _make_cell_if_new(self, cb, container, cold, structural) -> None:
         if cb.id in self.page.rec.els and self.page.rec.kinds[cb.id] != cb.kind:
             self.page.rec.drop(cb.id)
-        container = _freeze_container(cb, fx, fy)
         if cb.id not in self.page.rec.els:
             with self.page.cell_parents[container]:
                 self.page.rec.make_cell(cb)
-            # two-step entrance: a cell BORN on an incremental render (not the cold first paint)
-            # is WITHHELD (.rtt-withhold → opacity 0) while the existing cells slide to open the
-            # room, and only fades in once the reflow has SETTLED. A retuning commit can render in
-            # stages (the handler's render, then the off-loop retune render), so a fixed delay
-            # would reveal it mid-expansion — instead rttScheduleReveal (pushed at the end of every
-            # render) debounces the reveal, firing one beat after renders STOP. The cold paint has
-            # no room to make, and a PENDING draft must be typeable at once, so neither is withheld.
-            if not cold and not cb.pending:
+            if self._revirtualizing:
+                self.page.rec.els[cb.id].classes(add="rtt-noentry")  # scrolled-in: appear at once
+            # two-step entrance: a cell BORN by a STRUCTURAL render — present in the new layout, absent
+            # from the previous one (_newborn_ids) — is WITHHELD (.rtt-withhold → opacity 0) while the
+            # existing cells slide to open the room, and only fades in once the reflow has SETTLED. A
+            # retuning commit can render in stages (the handler's render, then the off-loop retune
+            # render), so a fixed delay would reveal it mid-expansion — instead rttScheduleReveal
+            # (pushed at the end of every render) debounces the reveal, firing one beat after renders
+            # STOP. A cell merely SCROLLED into view is not new content (it existed, just unmaterialized
+            # under virtualization), so it appears at once; so do a PENDING draft (typeable immediately)
+            # and the cold first paint (no room to make yet).
+            if structural and not cold and not cb.pending and cb.id in self._newborn_ids:
                 self.page.rec.els[cb.id].classes(add="rtt-withhold")
-        return container
 
     def _update_cell_content(self, cb) -> None:
         # content depends on the cell's value fields AND its w/h (width-fitted faces re-fit on
@@ -284,10 +334,22 @@ class Renderer:
             self.page.rec.update_cell(cb)
             self.page.rec.content_sig[cb.id] = csig
 
-    def _render_cells(self, lay, fx, fy, seen, amber, red, cold) -> None:
+    def _render_cells(self, lay, fx, fy, seen, amber, red, cold, structural) -> None:
         for cb in lay.cells:
+            container = _freeze_container(cb, fx, fy)
+            # virtualize the body pane: skip a body cell whose geometry is outside the visible scroll
+            # rectangle (plus overscan). Left out of `seen`, it is released by the drop sweep below if it
+            # was materialized, and rebuilt when scrolled back. A PENDING draft is always materialized —
+            # it must be focusable/typeable even just off-screen (the add-then-scroll-into-view path).
+            # The frozen corner/col/row strips are small and stay fully built.
+            if (
+                container == "body"
+                and not cb.pending
+                and not self._body_visible(cb.x, cb.y, cb.w, cb.h, fy)
+            ):
+                continue
             seen.add(cb.id)
-            container = self._make_cell_if_new(cb, fx, fy, cold)
+            self._make_cell_if_new(cb, container, cold, structural)
             # body + row cells live in the scroll space (shifted up by fy); column + corner cells
             # keep native coords in their frozen strip / corner. Each reconcile step (reposition,
             # refresh content, repaint rings) runs only when its own signature changed, so an
@@ -345,6 +407,8 @@ class Renderer:
             #                                     stagger (no room to make yet) — the whole grid paints at once
             lay = self.page.editor.layout(prev_ids=prev, preview_remove=self.page.gestures.rank_remove)
             self.page.last_lay = lay
+            cur_ids = frozenset(cb.id for cb in lay.cells)
+            self._newborn_ids = cur_ids - self._prev_cell_ids
             fx, fy = lay.freeze_x, lay.freeze_y
             self._size_panes(lay, fx, fy)
             seen = set()
@@ -353,9 +417,12 @@ class Renderer:
             self._render_blocks(lay, fx, fy, seen)
             self._validate_gesture_source(lay)
             amber, red = self.page.gestures.compute_rings(lay)
-            self._render_cells(lay, fx, fy, seen, amber, red, cold)
+            self._last_rings = (amber, red)
+            self._render_cells(lay, fx, fy, seen, amber, red, cold, structural=True)
             self._sync_mean_damage_tips()
             self._sync_chrome(lay, fy)
+            self._prev_cell_ids = cur_ids
+            self._virt_for = self._viewport
         finally:
             self.page.building = False
         # clear the busy scrim: this render is the result the user was waiting on, so whatever the
@@ -368,3 +435,49 @@ class Renderer:
                 "window.rttBusy && window.rttBusy.done();"
                 " window.rttScheduleReveal && window.rttScheduleReveal()"
             )
+
+    def _scrolled_past_overscan(self, vp, ref) -> bool:
+        # the viewport moved or resized enough that the materialized band may no longer cover it. A
+        # scroll within _VIRT_REVIRT_STEP is already absorbed by the overscan, so it skips the rebuild;
+        # any size change re-materializes (a resize changes which cells fit).
+        return (
+            abs(vp[0] - ref[0]) >= _VIRT_REVIRT_STEP
+            or abs(vp[1] - ref[1]) >= _VIRT_REVIRT_STEP
+            or vp[2] != ref[2]
+            or vp[3] != ref[3]
+        )
+
+    def _on_viewport(self, e) -> None:
+        a = e.args
+        try:
+            vp = (float(a["l"]), float(a["t"]), float(a["w"]), float(a["h"]))
+        except (KeyError, TypeError, ValueError):
+            return
+        self._viewport = vp
+        if self._virt_for is None or self._scrolled_past_overscan(vp, self._virt_for):
+            with self.page.page_client:
+                self._revirtualize()
+
+    def _revirtualize(self) -> None:
+        # re-materialize the body pane for the current viewport against the CACHED layout — a scroll
+        # must never re-run the RTT solve (editor.layout). Reuses the cached rings, since recomputing
+        # them would re-run the gesture hypotheticals (which mutate and restore editor state). Newly
+        # visible cells appear at once (structural=False → never withheld); cells dragged past their
+        # overscan margin are released by _render_cells' drop sweep. The frozen strips are rebuilt into
+        # `seen` unconditionally (only the body pane is filtered), so the sweep never drops them.
+        lay = self.page.last_lay
+        if lay is None:
+            return
+        self.page.building = True
+        self._revirtualizing = True
+        try:
+            fx, fy = lay.freeze_x, lay.freeze_y
+            seen: set = set()
+            amber, red = self._last_rings
+            self._render_lines(lay, fx, fy, seen)
+            self._render_blocks(lay, fx, fy, seen)
+            self._render_cells(lay, fx, fy, seen, amber, red, cold=False, structural=False)
+        finally:
+            self.page.building = False
+            self._revirtualizing = False
+        self._virt_for = self._viewport

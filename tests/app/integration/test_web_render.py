@@ -17,6 +17,7 @@ import copy
 import logging
 import sys
 from fractions import Fraction
+from types import SimpleNamespace
 
 import nicegui.ui as ui
 import pytest
@@ -26,6 +27,7 @@ from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
 
 from rtt.app import app as web_app
+from rtt.app import rendering as web_rendering
 from rtt.app import service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
@@ -4283,3 +4285,113 @@ async def test_et_picker_offers_every_uniform_map_through_72(user: User) -> None
     assert [n for n in range(1, 73) if n not in ints] == []   # every EDO's integer uniform map, 1..72
     assert "17c" in options                                   # and its warted maps: 5-limit 17c = ⟨17 27 40]
     assert max(ints) >= 311 and len(options) >= 300           # warts swell the list well past 90
+
+
+# --- viewport virtualization -------------------------------------------------------------------
+# Only body-pane cells whose geometry intersects the visible scroll rectangle (plus overscan) are
+# materialized; the rest are elided and rebuilt when scrolled into view. The render harness has no
+# browser, so render_main.py re-imports rtt.app.app into a fresh module: the live _Page lands in THAT
+# module's _SIMULATED_PAGES, reachable only via sys.modules after the page is built (the test file's
+# own top-level web_app is the pre-eviction copy). A small RTT_VIRT_VIEWPORT forces real elision; the
+# rest of the suite runs with the huge default (conftest) so every cell stays present.
+
+
+def _live_page():
+    live = sys.modules["rtt.app.app"]
+    return live, live._SIMULATED_PAGES[-1]
+
+
+def _body_cells(live, page):
+    lay = page.last_lay
+    fx, fy = lay.freeze_x, lay.freeze_y
+    body = [c for c in lay.cells if live._freeze_container(c, fx, fy) == "body" and not c.pending]
+    return lay, fx, fy, body
+
+
+async def test_virtualization_elides_offscreen_body_cells(user: User, monkeypatch) -> None:
+    monkeypatch.setenv("RTT_VIRT_VIEWPORT", "320x320")
+    await user.open("/")
+    live, page = _live_page()
+    lay, fx, fy, body = _body_cells(live, page)
+
+    visible = {c.id for c in body if page.renderer._body_visible(c.x, c.y, c.w, c.h, fy)}
+    offscreen = {c.id for c in body} - visible
+    assert offscreen, "a 320x320 viewport must leave some body cells off-screen to elide"
+
+    for cid in offscreen:
+        assert cid not in page.rec.els           # an off-screen body cell is never built
+    for cid in visible:
+        assert cid in page.rec.els               # a visible body cell is built
+    # the frozen corner/col/row strips stay fully materialized regardless of the viewport
+    for c in lay.cells:
+        if live._freeze_container(c, fx, fy) != "body":
+            assert c.id in page.rec.els
+
+
+async def test_scrolling_reveals_and_releases_body_cells(user: User, monkeypatch) -> None:
+    monkeypatch.setenv("RTT_VIRT_VIEWPORT", "320x320")
+    await user.open("/")
+    live, page = _live_page()
+    lay, fx, fy, body = _body_cells(live, page)
+
+    far = max(body, key=lambda c: c.y)           # the bottom-most body cell — off-screen at cold paint
+    near = min(body, key=lambda c: c.x + c.y)    # a top-left body cell — visible at cold paint
+    assert far.id not in page.rec.els
+    assert near.id in page.rec.els
+
+    # scroll so the far cell sits at the top-left of the viewport: it materializes...
+    page.renderer._on_viewport(SimpleNamespace(args={"l": far.x, "t": far.y - fy, "w": 320, "h": 320}))
+    assert far.id in page.rec.els
+    # ...and the top-left cell, now far above the window, is released
+    if not page.renderer._body_visible(near.x, near.y, near.w, near.h, fy):
+        assert near.id not in page.rec.els
+
+
+async def test_revirtualize_keeps_offscreen_scroll_within_overscan_cheap(user: User, monkeypatch) -> None:
+    # a tiny scroll (inside the overscan band) must NOT rebuild — _virt_for is unchanged so the
+    # materialized set is identical, no churn on the common small-scroll path.
+    monkeypatch.setenv("RTT_VIRT_VIEWPORT", "320x320")
+    await user.open("/")
+    live, page = _live_page()
+    before = set(page.rec.els)
+    page.renderer._on_viewport(SimpleNamespace(args={"l": 4, "t": 4, "w": 320, "h": 320}))
+    assert set(page.rec.els) == before
+
+
+def test_scrolled_past_overscan_only_fires_past_the_step_or_on_resize() -> None:
+    P = web_rendering.Renderer
+    dummy = object.__new__(P)
+    step = web_rendering._VIRT_REVIRT_STEP
+    ref = (0.0, 0.0, 400.0, 300.0)
+    assert P._scrolled_past_overscan(dummy, (step + 1, 0.0, 400.0, 300.0), ref) is True
+    assert P._scrolled_past_overscan(dummy, (0.0, step + 1, 400.0, 300.0), ref) is True
+    assert P._scrolled_past_overscan(dummy, (0.0, 0.0, 401.0, 300.0), ref) is True   # width resized
+    assert P._scrolled_past_overscan(dummy, (0.0, 0.0, 400.0, 299.0), ref) is True   # height resized
+    assert P._scrolled_past_overscan(dummy, (5.0, 5.0, 400.0, 300.0), ref) is False  # within the step
+
+
+def test_on_viewport_ignores_a_malformed_payload() -> None:
+    P = web_rendering.Renderer
+    dummy = object.__new__(P)
+    # a missing key / non-mapping payload returns early, before touching any page state
+    assert P._on_viewport(dummy, SimpleNamespace(args={})) is None
+    assert P._on_viewport(dummy, SimpleNamespace(args=None)) is None
+
+
+async def test_structural_newborns_are_withheld_scroll_materializations_are_not(user: User) -> None:
+    # the entrance fork virtualization must preserve: a cell BORN by a structural change takes the
+    # withhold->reveal entrance; a cell merely scrolled into view appears at once (rtt-noentry). Runs
+    # under the huge default viewport so every cell is materialized — this isolates the entrance logic
+    # from elision. The reveal JS (rttScheduleReveal) is skipped under the User simulation, so the
+    # withhold class persists for inspection.
+    await user.open("/")
+    live, page = _live_page()
+    before = set(page.rec.els)
+    _toggle(user, "charts")                                   # a structural change that borns cells
+    await user.should_see(marker="chart:retune:targets")
+    newborns = set(page.rec.els) - before
+    assert newborns, "enabling charts must add cells"
+    assert any("rtt-withhold" in page.rec.els[cid]._classes for cid in newborns), \
+        "a structurally-born cell must be withheld for the two-step entrance"
+    assert all("rtt-noentry" not in page.rec.els[cid]._classes for cid in newborns), \
+        "rtt-noentry is only for scroll materialization, never a structural newborn"

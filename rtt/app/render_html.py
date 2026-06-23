@@ -106,6 +106,25 @@ def _block_panes(bl, fx: float, fy: float) -> tuple[str, ...]:
     return tuple(panes)
 
 
+def _rect_in_view(x, y, w, h, fy, view, overscan) -> bool:
+    # whether a grid rect's body-pane placement intersects the visible scroll rectangle (inflated by
+    # overscan). view is the gridbody's (scrollLeft, scrollTop, clientW, clientH) in its own scrolled
+    # coordinates; a body item sits at board-local (x, y - fy), the same frame the scroll metrics use.
+    # view is None before the client reports its viewport (and whenever virtualization is off), meaning
+    # "materialize everything". A zero-width/height edge (a gridline) still tests correctly: x..x and
+    # the overscan band give it a one-axis interval.
+    if view is None:
+        return True
+    left, top, vw, vh = view
+    by = y - fy
+    return (
+        x < left + vw + overscan
+        and x + w > left - overscan
+        and by < top + vh + overscan
+        and by + h > top - overscan
+    )
+
+
 _EXPR_MAX_FONT = 9.0
 _EXPR_MIN_FONT = 3.5
 _EXPR_CHAR_W = 0.5

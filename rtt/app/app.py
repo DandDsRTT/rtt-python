@@ -179,6 +179,13 @@ from rtt.app.rendering import Renderer
 from rtt.app.editing import EditController
 from rtt.app.building import PageBuilder
 
+# NiceGUI's User test simulation builds the real page but hands the test no reference to the _Page
+# object (only its ui elements), so the virtualization tests — which must call the renderer's
+# _on_viewport / inspect the materialized set on the live page — have no other way to reach it.
+# Recorded only under the simulation; production never appends here. Re-imported fresh per render
+# test, so it stays a singleton.
+_SIMULATED_PAGES: list = []
+
 
 class _Page:
     def __init__(self, state: str | None = None) -> None:
@@ -248,6 +255,11 @@ class _Page:
         # the captured client needs no slot, so the busy-scrim push works from the background task too.
         self.page_client = ui.context.client
         self.page_client.on_disconnect(self._on_disconnect)
+        if helpers.is_user_simulation():
+            _SIMULATED_PAGES.append(self)
+        # the client reports its visible scroll rectangle here (freeze.js emits it on scroll/resize/
+        # boot); the renderer re-materializes the virtualized body pane against the cached layout.
+        ui.on("rtt_viewport", self.renderer._on_viewport, throttle=0.05)
         ui.run_javascript(_OPTION_HOVER_DELEGATION)
         ui.run_javascript(_TOOLTIP_DISMISS_JS)
         ui.run_javascript(_BUSY_JS)

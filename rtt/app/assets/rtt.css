@@ -184,6 +184,9 @@ html, body { overscroll-behavior-x: none; }
    fade it in immediately when the debounce fires (overriding the fallback's wait). */
 .rtt-withhold { opacity:0; animation:rtt-in var(--t) ease 1.5s both; }
 .rtt-reveal { opacity:1; animation:rtt-in var(--t) ease; }
+/* Scrolled into view under viewport virtualization: existing content the body just materialized, not
+   a newborn — so it skips the rtt-in fade and appears at once (no fade trail at the scroll edge). */
+.rtt-noentry { animation:none; }
 
 /* The two `interface` Show behaviours that gate the whole app from a <body> class (set by
    app.apply_view_classes from editor.settings). `animations` off zeroes the transition var, so

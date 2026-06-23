@@ -9,6 +9,26 @@ window.rttFreeze = (function () {
       app.classList.toggle('rtt-scrolled-y', b.scrollTop > 0);
       app.classList.toggle('rtt-scrolled-x', b.scrollLeft > 0);
     }
+    reportViewport();
+  }
+
+  // Viewport virtualization: tell the server the body scroller's visible rectangle so it materializes
+  // only the cells in view (plus overscan). Coalesced through a short trailing timer (one emit per
+  // burst of scroll/resize events) and skipped when nothing moved, so the scroll path stays cheap; the
+  // server further throttles and ignores sub-overscan deltas. A timer — not requestAnimationFrame — so
+  // the report still fires in a backgrounded tab (rAF is paused there) and under headless automation.
+  // emitEvent is NiceGUI's global (absent until the socket is up — guarded).
+  var lastVp = '', pendingVp = null, vpTimer = null;
+  function reportViewport() {
+    var b = document.querySelector('.rtt-gridbody');
+    if (!b || typeof emitEvent !== 'function') return;
+    var vp = { l: b.scrollLeft, t: b.scrollTop, w: b.clientWidth, h: b.clientHeight };
+    var key = vp.l + ',' + vp.t + ',' + vp.w + ',' + vp.h;
+    if (key === lastVp) return;
+    lastVp = key;
+    pendingVp = vp;
+    if (vpTimer) return;
+    vpTimer = setTimeout(function () { vpTimer = null; emitEvent('rtt_viewport', pendingVp); }, 60);
   }
 
   // The body scroller fills the pane, which HUGS the grid with only a _PAD (12px) grey margin — narrower

@@ -4,7 +4,7 @@ import signal
 
 import pytest
 
-from rtt.app.render_html import _chart_ticks
+from rtt.app.render_html import _chart_ticks, _rect_in_view
 
 
 @pytest.mark.parametrize(
@@ -45,3 +45,41 @@ def test_chart_ticks_terminates_on_a_large_value_with_a_sub_ulp_span():
 
     assert not timed_out, "_chart_ticks must not loop forever on a sub-ULP span"
     assert len(ticks) >= 2
+
+
+# Viewport virtualization predicate: which body rects intersect the visible scroll rectangle. The
+# view is (scrollLeft, scrollTop, clientW, clientH); a body item sits at board-local (x, y - fy), the
+# frame the scroll metrics use. Overscan inflates the rectangle on every edge. fy=50 throughout, so a
+# cell's grid-y is shifted up by 50 before testing.
+_VIEW = (100.0, 200.0, 400.0, 300.0)  # visible x:[100,500] board-y:[200,500]
+
+
+@pytest.mark.parametrize(
+    "x, y, w, h, overscan, expected",
+    [
+        # squarely inside the visible window (grid-y 260 → board-y 210, within [200,500])
+        (200.0, 260.0, 30.0, 20.0, 0.0, True),
+        # far below the window with no overscan — elided
+        (200.0, 5000.0, 30.0, 20.0, 0.0, False),
+        # far to the right of the window — elided
+        (5000.0, 260.0, 30.0, 20.0, 0.0, False),
+        # just past the right edge (board x starts at 520 > 500) with no overscan — elided
+        (520.0, 260.0, 30.0, 20.0, 0.0, False),
+        # ...but overscan of 600 pulls it back in
+        (520.0, 260.0, 30.0, 20.0, 600.0, True),
+        # a zero-width vertical gridline whose x sits inside the window is kept
+        (300.0, 250.0, 0.0, 100.0, 0.0, True),
+        # a zero-width gridline outside the window (with no overscan) is elided
+        (900.0, 250.0, 0.0, 100.0, 0.0, False),
+        # touching the left edge exactly: x+w == left is NOT an intersection (strict >)
+        (60.0, 260.0, 40.0, 20.0, 0.0, False),
+    ],
+)
+def test_rect_in_view_intersects_the_visible_window(x, y, w, h, overscan, expected):
+    assert _rect_in_view(x, y, w, h, 50.0, _VIEW, overscan) is expected
+
+
+def test_rect_in_view_with_no_viewport_admits_everything():
+    # view is None before the client reports its scroll rectangle (and when virtualization is off):
+    # every rect, however far out, is materialized.
+    assert _rect_in_view(99999.0, 99999.0, 10.0, 10.0, 50.0, None, 0.0) is True
