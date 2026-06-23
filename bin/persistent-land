@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""Persistent landing — relaunch ``bin/land`` until the branch is on ``main``, surviving SIGKILLs.
+
+WHY THIS EXISTS
+===============
+``bin/land`` already does the hard, correct thing: validate lockless under the render-gate
+semaphore (consulting ``bin/gate-load`` for machine-wide load admission), then hold the merge
+lock only for the seconds-long ff-merge. But it is a SINGLE attempt in a SINGLE process. Under a
+permanently busy box (a dozen+ parallel agents — the steady state here) the OS SIGKILLs heavy
+processes under memory pressure (exit 137; see ``RESOURCE_GOVERNANCE_DIAGNOSIS.md``), so a
+``bin/land`` can die mid-gate and NOTHING relaunches it. Agents then hand-roll fragile retry
+loops at the terminal — one such loop held the merge lock across the whole render gate without
+renewing and lost it to the 15-min self-heal, burning a long queue wait.
+
+This is the one missing piece: relaunch-until-landed. It adds ONLY persistence — it does NOT
+re-implement the load policy. Every attempt is a plain ``bin/land``, which already waits on
+``bin/gate-load`` for a calm window and reaps orphans, so this wrapper never needs its own load
+threshold and can never dogpile. Because it is lightweight (a git check plus a sleep between
+attempts), it survives the memory pressure that kills the heavy gate it supervises; if THIS
+process is itself killed, just run it again — it is idempotent and exits immediately if the
+branch is already landed.
+
+WHAT IT IS NOT
+==============
+Not a way to jump the queue, skip the gate, or bypass any lock — it is exactly ``bin/land`` in a
+loop. All correctness guarantees (atomic ``--ff-only``, the green-token merge guard, FIFO
+fairness) are ``bin/land``'s; this only decides WHEN to try again after a non-landing exit.
+
+Pure stdlib; runs under any Python (system 3.9 or the .venv). Run from your worktree, on your
+``claude/<name>`` branch:
+
+    bin/persistent-land -- .venv/bin/python -m pytest -q
+
+Env / flags:
+  * ``--backoff S``      seconds to sleep after a non-landing attempt (default 60)
+  * ``--max-rounds N``   give up after N attempts (default 60; 0 = unbounded)
+  * everything after ``--`` is forwarded verbatim to ``bin/land`` as the gate command
+"""
+
+import os
+import subprocess
+import sys
+import time
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_LAND = os.path.join(_HERE, "land")
+
+
+def _log(msg):
+    sys.stderr.write("[persistent-land] %s\n" % msg)
+    sys.stderr.flush()
+
+
+def _git(*args):
+    return subprocess.run(
+        ["git", *args], capture_output=True, text=True, cwd=os.getcwd()
+    )
+
+
+def _landed():
+    """True when nothing of HEAD remains outside main — i.e. the branch has landed."""
+    out = _git("rev-list", "--count", "main..HEAD")
+    return out.returncode == 0 and out.stdout.strip() == "0"
+
+
+def main(argv):
+    backoff = 60
+    max_rounds = 60
+    land_args = []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--backoff":
+            backoff = int(argv[i + 1])
+            i += 2
+        elif a == "--max-rounds":
+            max_rounds = int(argv[i + 1])
+            i += 2
+        elif a == "--":
+            land_args = argv[i + 1 :]
+            break
+        else:
+            _log("unknown argument %r (gate command goes after --)" % a)
+            return 2
+
+    if _landed():
+        _log("already landed — nothing to do")
+        print("PERSISTENT_LAND: ALREADY_LANDED")
+        return 0
+
+    rounds = 0
+    while max_rounds == 0 or rounds < max_rounds:
+        rounds += 1
+        _log("round %d: launching bin/land" % rounds)
+        rc = subprocess.call([_LAND, "--", *land_args])
+        if _landed():
+            head = _git("rev-parse", "--short", "HEAD").stdout.strip()
+            _log("LANDED on round %d (main now %s)" % (rounds, head))
+            print("PERSISTENT_LAND: LANDED %s" % head)
+            return 0
+        _log("round %d: bin/land rc=%d, not landed; backing off %ds" % (rounds, rc, backoff))
+        time.sleep(backoff)
+
+    _log("gave up after %d rounds without landing" % rounds)
+    print("PERSISTENT_LAND: GAVE_UP")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
