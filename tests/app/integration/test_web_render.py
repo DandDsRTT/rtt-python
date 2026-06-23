@@ -635,9 +635,9 @@ async def test_settings_and_controls_carry_hover_tooltips(user: User) -> None:
     await user.open("/")
     tips = [el.text for el in user.client.elements.values() if isinstance(el, Tooltip)]
     assert any("name caption" in t for t in tips)       # the "names" Show toggle's help (now a tile part)
-    # the mapping cells' help ("map to this prime") rides as data-zoomhelp, not a Tooltip
+    # the mapping cells' help ("approximate this prime") rides as data-zoomhelp, not a Tooltip
     mapping = next(iter(user.find(marker="cell:mapping:0:0").elements))
-    assert "map to this prime" in mapping._props.get("data-zoomhelp", "")
+    assert "approximate this prime" in mapping._props.get("data-zoomhelp", "")
 
 
 async def test_hover_tooltips_wait_before_appearing(user: User) -> None:
@@ -687,7 +687,7 @@ async def test_value_cell_help_folds_into_the_zoom_magnifier(user: User) -> None
     # tooltips.control_help, so the completeness sweep is unaffected; it just isn't a Tooltip element.
     await user.open("/")
     mapping = _wrap(user, "cell:mapping:0:0")
-    assert mapping._props.get("data-zoomhelp", "").startswith("Mapping entry")
+    assert mapping._props.get("data-zoomhelp", "").startswith("How many of this generator")
     # the value cell has no Tooltip of its own (its help folded in); only non-value controls do
     assert not any(isinstance(c, Tooltip) for c in mapping.default_slot.children)
 
@@ -1734,6 +1734,38 @@ async def test_prescaler_chooser_shows_the_prompt_when_a_diagonal_is_overridden(
     _cell_child(user, "cell:prescaling:primes:1:1").set_value("4.0")  # deviate from log₂3 = 1.585
     await user.should_see(marker="preset:prescaler")
     assert _cell_child(user, "preset:prescaler")._props.get("display-value") == "-"
+
+
+def _preset_tooltip_text(user: User, cell_id: str):
+    wrap = next(iter(user.find(marker=cell_id).elements))
+    tips = [c for c in wrap.default_slot.children if isinstance(c, Tooltip)]
+    return tips[0].text if tips else None
+
+
+async def test_pretransform_mode_relabels_the_prescaler_help_live(user: User) -> None:
+    # the grid relabels "prescaler" → "pretransformer" in a matrix-prescaler scheme (effective_captions);
+    # the HELP wording must follow LIVE, on the same cells (they persist the scheme change → update_cell,
+    # not make_cell). Promote 𝑋 to a non-diagonal matrix and confirm both the 𝑋 tile's guide card and the
+    # prescaler-preset tooltip swap their wording, end-to-end through _sync_pretransform_help.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (nested under optimization)
+    user.find(kind=ui.checkbox, content="weighting").click()
+    user.find(kind=ui.checkbox, content="all-interval").click()
+    _cell_child(user, "control:all_interval").set_value(True)     # all-interval: the prescaler tile shows
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # the whole square is editable
+    _toggle(user, "presets")  # the prescaler chooser
+    await user.should_see(marker="preset:prescaler")
+    guide = next(iter(user.find(marker="caption:prescaling:primes").elements))
+    # before: a diagonal log-prime prescaler — "prescaler" everywhere
+    assert "prescaler" in guide._props.get("data-guide-text", "")
+    assert "pretransformer" not in guide._props.get("data-guide-text", "")
+    assert "prescaler" in _preset_tooltip_text(user, "preset:prescaler")
+    # promote 𝑋 to a non-diagonal matrix → pretransform mode
+    _cell_child(user, "cell:prescaling:primes:1:0").set_value("0.3")
+    await user.should_see(marker="preset:prescaler")
+    assert "pretransformer" in guide._props.get("data-guide-text", "")
+    assert "prescaler" not in guide._props.get("data-guide-text", "")
+    assert "pretransformer" in _preset_tooltip_text(user, "preset:prescaler")
 
 
 async def test_picking_a_prescaler_clears_a_manual_diagonal_override(user: User) -> None:

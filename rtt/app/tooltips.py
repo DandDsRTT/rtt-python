@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+
+from rtt.app.spreadsheet_text import _pretransform_label
 
 GUIDE_BASE = "https://en.xen.wiki/w/Dave_Keenan_%26_Douglas_Blumeyer%27s_guide_to_RTT"
 
@@ -218,10 +220,15 @@ def tile_guide_help(rkey: str, ckey: str) -> GuideHelp | None:
     return GUIDE_HELP.get((rkey, ckey))
 
 
-def tile_guide_help_for_cell(cell_id: str) -> GuideHelp | None:
+def tile_guide_help_for_cell(cell_id: str, *, pretransform: bool = False) -> GuideHelp | None:
     parts = cell_id.split(":")
     if len(parts) == 3 and parts[0] in ("symbol", "caption"):
-        return tile_guide_help(parts[1], parts[2])
+        gh = tile_guide_help(parts[1], parts[2])
+        if gh is not None and pretransform:
+            relabeled = _pretransform_label(gh.text)
+            if relabeled != gh.text:
+                return replace(gh, text=relabeled)
+        return gh
     return None
 
 
@@ -618,7 +625,12 @@ def mean_damage_help(all_interval: bool) -> str:
             "list: the targets' damage combined by the optimization power 𝑝.")
 
 
-def control_help(kind: str, cid: str) -> str | None:
+def control_help(kind: str, cid: str, *, pretransform: bool = False) -> str | None:
+    text = _control_help(kind, cid)
+    return _pretransform_label(text) if (pretransform and text) else text
+
+
+def _control_help(kind: str, cid: str) -> str | None:
     if cid in MEAN_DAMAGE_IDS:
         return mean_damage_help(all_interval=False)
     if kind in READONLY_KINDS:

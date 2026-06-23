@@ -237,6 +237,22 @@ class Renderer:
                 wrap._props["data-zoomhelp"] = mean_damage_help_text
                 wrap.update()
 
+    def _sync_pretransform_help(self, pretransform: bool) -> None:
+        # a size-sensitizing / matrix-prescaler scheme relabels "prescaler" → "pretransformer" in the
+        # grid (effective_captions). The same relabel must reach the help wording: the prescaler-preset
+        # tooltip and the 𝑋 tile's guide card. These cells persist across a scheme switch (same id →
+        # update_cell, not make_cell), so the relabel is re-applied here every render, mirroring
+        # _sync_mean_damage_tips' swap of the mean-damage wording.
+        rec = self.page.rec
+        for tip, plain, relabeled in rec.help_tips.values():
+            tip.set_text(relabeled if pretransform else plain)
+        for cid, (plain, relabeled) in rec.guide_help_texts.items():
+            wrap = rec.els.get(cid)
+            text = relabeled if pretransform else plain
+            if wrap is not None and wrap._props.get("data-guide-text") != text:
+                wrap._props["data-guide-text"] = text
+                wrap.update()
+
     def _sync_chrome(self, lay, fy) -> None:
         self.page.refs["undo"].set_enabled(self.page.editor.can_undo)
         self.page.refs["redo"].set_enabled(self.page.editor.can_redo)
@@ -407,6 +423,7 @@ class Renderer:
             #                                     stagger (no room to make yet) — the whole grid paints at once
             lay = self.page.editor.layout(prev_ids=prev, preview_remove=self.page.gestures.rank_remove)
             self.page.last_lay = lay
+            self.page.rec.pretransform = lay.pretransform
             cur_ids = frozenset(cb.id for cb in lay.cells)
             self._newborn_ids = cur_ids - self._prev_cell_ids
             fx, fy = lay.freeze_x, lay.freeze_y
@@ -420,6 +437,7 @@ class Renderer:
             self._last_rings = (amber, red)
             self._render_cells(lay, fx, fy, seen, amber, red, cold, structural=True)
             self._sync_mean_damage_tips()
+            self._sync_pretransform_help(lay.pretransform)
             self._sync_chrome(lay, fy)
             self._prev_cell_ids = cur_ids
             self._virt_for = self._viewport
@@ -468,6 +486,7 @@ class Renderer:
         lay = self.page.last_lay
         if lay is None:
             return
+        self.page.rec.pretransform = lay.pretransform
         self.page.building = True
         self._revirtualizing = True
         try:

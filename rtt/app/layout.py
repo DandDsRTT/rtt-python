@@ -66,3 +66,4 @@ class Layout:
     right_overhang: float = 0.0
     identities: dict | None = None
     approach_box: tuple | None = None
+    pretransform: bool = False

@@ -49,7 +49,8 @@ class _GridBuilder(
         return Layout(self.total_w, self.total_h, tuple(self.lines), tuple(self.blocks), tuple(self.cells),
                       freeze_x=self.node_edge + GAP - PAD, freeze_y=self.branch_top_y + GAP + GRIP_BAND - PAD,
                       right_overhang=right_overhang, identities=self._col_ids,
-                      approach_box=self.approach_box)
+                      approach_box=self.approach_box,
+                      pretransform=bool(self.size_factor) or self.prescaler_is_matrix)
 
     def _emit_all(self) -> None:
         self._emit_headers()

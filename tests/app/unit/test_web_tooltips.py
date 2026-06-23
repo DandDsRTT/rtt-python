@@ -281,6 +281,36 @@ def test_every_rendered_caption_and_symbol_cell_id_parses_without_error():
             tooltips.tile_guide_help_for_cell(cb.id)  # must not raise
 
 
+def test_pretransform_relabels_the_prescaler_help_to_pretransformer():
+    # a size-sensitizing / matrix-prescaler scheme renames "prescaler" → "pretransformer" in the grid
+    # captions; the HELP wording must follow. control_help(pretransform=True) takes the pretransform
+    # stem for the prescaler preset, and the 𝑋 tile's guide card relabels in lockstep.
+    preset = tooltips.control_help("preset", "preset:prescaler")
+    assert "prescaler" in preset and "pretransformer" not in preset
+    preset_pt = tooltips.control_help("preset", "preset:prescaler", pretransform=True)
+    assert "pretransformer" in preset_pt and "prescaler" not in preset_pt
+    # the prescaler plain-text dual editor's hover relabels too (it also names the prescaler)
+    assert "prescaler" in tooltips.control_help("ptextedit", "ptext:prescaling:primes")
+    assert "pretransformer" in tooltips.control_help(
+        "ptextedit", "ptext:prescaling:primes", pretransform=True)
+    # the 𝑋 tile guide card
+    plain = tooltips.tile_guide_help_for_cell("caption:prescaling:primes")
+    pretransformed = tooltips.tile_guide_help_for_cell("caption:prescaling:primes", pretransform=True)
+    assert "prescaler" in plain.text and "pretransformer" not in plain.text
+    assert "pretransformer" in pretransformed.text and "prescaler" not in pretransformed.text
+    # only the text relabels; the link target is untouched
+    assert pretransformed.url == plain.url and pretransformed.location == plain.location
+
+
+def test_pretransform_leaves_help_without_the_prescaler_word_unchanged():
+    # the relabel only rewrites the "prescal…" stem; an unrelated tooltip is byte-identical whether or
+    # not pretransform is on, and a guide card with no prescaler word keeps its registry identity
+    for kind, cid in (("mapping", "cell:mapping:primes:0:0"), ("preset", "preset:tuning")):
+        assert tooltips.control_help(kind, cid) == tooltips.control_help(kind, cid, pretransform=True)
+    assert tooltips.tile_guide_help_for_cell("caption:mapping:primes", pretransform=True) is \
+        tooltips.GUIDE_HELP[("mapping", "primes")]
+
+
 def test_guide_help_covers_only_real_tiles_and_resolves_by_tile_key():
     # every registry key is a real (row, col) tile, and tile_guide_help round-trips it
     captioned = {(r, c) for r, c in grid_tables.CAPTIONS}

@@ -43,6 +43,7 @@ class _Reconciler:
         self._cb = None
         self._row_drag: int | None = None
         self._col_drag: tuple[str, int] | None = None
+        self.pretransform = False
         self._init_handles()
         self._init_render_caches()
         self.cell_kinds: dict[str, _KindHandlers] = {}
@@ -98,6 +99,10 @@ class _Reconciler:
         self.cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
         self.cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
         self.popup_state: dict = {}
+        # "prescaler" relabels to "pretransformer" in a size-sensitizing / matrix-prescaler scheme;
+        # these hold the (plain, relabeled) help wording so _sync_pretransform_help can swap it live
+        self.help_tips: dict = {}  # cell id -> (ui.tooltip, plain text, pretransform text)
+        self.guide_help_texts: dict = {}  # caption/symbol cell id -> (plain, pretransform) guide-card text
 
     def _init_render_caches(self) -> None:
         # Change-guard caches: the last applied (geometry string / content signature / ring state) per
@@ -142,6 +147,8 @@ class _Reconciler:
             self.fold_state,
             self.cell_units,
             self.cell_unit_text,
+            self.help_tips,
+            self.guide_help_texts,
             self.styled,
             self.content_sig,
             self.ring_sig,
@@ -278,14 +285,14 @@ class _Reconciler:
         for d in self._handle_dicts:
             d.pop(eid, None)
 
-    def _attach_guide_link(self, wrap, gh: tooltips.GuideHelp, tile: str) -> None:
+    def _attach_guide_link(self, wrap, gh: tooltips.GuideHelp, tile: str, text: str) -> None:
         # the hover-card (a body-level div built by _GUIDE_JS) reads these and renders a card that
         # stays open while hovered, so its "Read in the Guide" link is actually clickable — a Quasar
         # tooltip can't be (it hides the moment the cursor leaves the cell toward it). data-guide-tile
         # ties a tile's name + symbol cells into ONE hover zone so the card doesn't jump (the link
         # doesn't run away) when the cursor crosses from one to the other.
         wrap.classes("rtt-guide-link")
-        wrap._props["data-guide-text"] = gh.text
+        wrap._props["data-guide-text"] = text
         wrap._props["data-guide-tile"] = tile
         if gh.url:
             wrap._props["data-guide-loc"] = gh.location
@@ -315,7 +322,9 @@ class _Reconciler:
         self._wire_cell_input(wrap, cb)
 
     def _attach_hover_help(self, wrap, cb: spreadsheet.CellBox) -> None:
-        help_text = tooltips.control_help(cb.kind, cb.id)
+        plain = tooltips.control_help(cb.kind, cb.id)
+        relabeled = tooltips.control_help(cb.kind, cb.id, pretransform=True)
+        help_text = relabeled if self.pretransform else plain
         if cb.kind in VALUE_KINDS:
             wrap.classes("rtt-zoomable")
             if help_text:
@@ -327,12 +336,19 @@ class _Reconciler:
             elif cb.id == "preset:target":
                 with wrap:
                     self.target_limit_tip = ui.tooltip(help_text)
+            elif plain != relabeled:
+                with wrap:
+                    self.help_tips[cb.id] = (ui.tooltip(help_text), plain, relabeled)
             else:
                 wrap.tooltip(help_text)
         if cb.kind in ("symbol", "caption"):
             gh = tooltips.tile_guide_help_for_cell(cb.id)
             if gh is not None:
-                self._attach_guide_link(wrap, gh, cb.id.split(":", 1)[1])
+                gh_pt = tooltips.tile_guide_help_for_cell(cb.id, pretransform=True)
+                text = gh_pt.text if self.pretransform else gh.text
+                self._attach_guide_link(wrap, gh, cb.id.split(":", 1)[1], text)
+                if gh.text != gh_pt.text:
+                    self.guide_help_texts[cb.id] = (gh.text, gh_pt.text)
 
     def _wire_cell_input(self, wrap, cb: spreadsheet.CellBox) -> None:
         if cb.kind.endswith(("plus", "minus")):
