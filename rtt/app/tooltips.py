@@ -181,6 +181,13 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "The scaling factors for the unrotated intervals of the projection — one for an "
         "unchanged interval, and zero for a comma.",
         page="Projection", anchor="Unrotated vectors and scaling factors"),
+    ("ss_vectors", "primes"): GuideHelp(
+        "The basis change matrix — it expresses your domain basis in a prime-only superspace, "
+        "and thus can be used to map intervals from your domain to that superspace.",
+        page="Domain basis", anchor="Basis matrix conversion"),
+    ("ss_vectors", "ssprimes"): GuideHelp(
+        "The trivial JI mapping over the superspace's primes — the identity, since each "
+        "superspace prime maps to itself."),
 }
 
 
