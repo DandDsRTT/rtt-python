@@ -6,6 +6,7 @@ from nicegui import ui
 
 from rtt.app import (
     presets,
+    service,
     spreadsheet_text,
 )
 
@@ -414,11 +415,7 @@ class GestureController:
             if family not in presets.TARGET_SETS:
                 self.chooser_unhover()
                 return
-            text = (entry[0].value or "").strip()
-            try:
-                spec = f"{int(float(text))}-{family}" if text else family
-            except ValueError:
-                spec = family
+            spec = service.target_spec(family, entry[0].value)
             self.chooser_hover(cid, lambda: self.page.editor.set_target_spec(spec))
             return
         apply = self.page.edits._candidate_apply(cid, _option_key(sel, index))

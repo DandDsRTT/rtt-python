@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import math
 from typing import ClassVar
 
 from nicegui import background_tasks, ui
@@ -293,20 +292,19 @@ class EditController:
         if self.page.building or cid not in self.page.rec.inputs:
             return
         group, tok = cid.split(":")
-        raw = self.page.rec.cell_value(cid)
-        if raw in ("", "?/?"):
+        res = service.resolve_ratio_edit(
+            self.page.rec.cell_value(cid),
+            self.page.editor.state.d,
+            self.page.editor.state.domain_basis,
+        )
+        if res.problem == "blank":
             self.page.renderer.render()
             return
-        try:
-            vector = service.interval_vector(
-                raw, self.page.editor.state.d, self.page.editor.state.domain_basis
-            )
-        except ValueError as exc:
-            ui.notify(str(exc), type="negative", position="top")
+        if res.problem == "invalid":
+            ui.notify(res.message, type="negative", position="top")
             self.page.renderer.render()
             return
-
-        self._apply_ratio_edit(group, tok, vector)
+        self._apply_ratio_edit(group, tok, res.vector)
         # a quantities-row ratio edit routes into a retuning setter (comma/held/target/unchanged) —
         # render off the loop. (An interest edit doesn't retune, but the warm build is cheap.)
         self.page.renderer._request_render()
@@ -368,25 +366,24 @@ class EditController:
             )
 
     def _transform_domain_element(self, cid, op, index) -> None:
-        new_raw = service.transform_ratio(
-            self.page.rec.cell_value(cid), op, self.page.editor.state.domain_basis
+        res = service.resolve_domain_element_transform(
+            self.page.editor.state, index, self.page.rec.cell_value(cid), op
         )
-        if new_raw is None:
-            return  # no-op / unparseable
-        parsed = service.parse_domain_element(new_raw)
-        if parsed is None:
+        if res.problem == "noop":
+            return
+        if res.problem == "invalid":
             ui.notify(
-                f"“{new_raw}” is not a valid basis element (≠ 1)",
+                f"“{res.value}” is not a valid basis element (≠ 1)",
                 type="negative",
                 position="top",
             )
             self.page.renderer.render()
             return
-        if not service.can_set_domain_element(self.page.editor.state, index, parsed):
-            ui.notify(f"{new_raw} would make the basis dependent", type="negative", position="top")
+        if res.problem == "dependent":
+            ui.notify(f"{res.value} would make the basis dependent", type="negative", position="top")
             self.page.renderer.render()
             return
-        self.page.editor.set_domain_element(index, new_raw)
+        self.page.editor.set_domain_element(index, res.value)
         self.page.renderer._request_render()
 
     def _interval_group_state(self, group):
@@ -424,42 +421,33 @@ class EditController:
         pos = toks.index(int(tok)) if int(tok) in toks else int(tok)
         if not 0 <= pos < len(current):
             return
-        v = tuple(int(x) for x in current[pos])
-        if op == "reciprocate":
-            new_v = tuple(-x for x in v)
-        else:
-            new_v = tuple(
-                int(x) for x in service.equave_reduce_vector(v, self.page.editor.state.domain_basis)
-            )
-        if list(new_v) == list(v):
+        new_v = service.transformed_vector(current[pos], op, self.page.editor.state.domain_basis)
+        if new_v is None:
             return
         vectors = [list(x) for x in current]
         vectors[pos] = list(new_v)
         setter(vectors)
         self.page.renderer._request_render()
 
-    def _commit_pending_element(self, raw, parsed) -> None:
-        if not service.can_add_domain_element(self.page.editor.state, parsed):
-            ui.notify(
-                f"{raw} isn’t independent of the existing basis",
-                type="negative",
-                position="top",
-            )
-            self.page.renderer.render()
-            return
-        self.page.editor.set_pending_element(raw)
-        self.page.renderer._request_render()  # a new domain element retunes — render off the loop
+    def _apply_domain_element(self, tok: str, raw: str) -> None:
+        if tok == "pending":
+            self.page.editor.set_pending_element(raw)
+        else:
+            self.page.editor.set_domain_element(int(tok), raw)
+        self.page.renderer._request_render()  # a new / relabelled domain element retunes — off the loop
 
     def on_element_change(self, cid):
         if self.page.building or cid not in self.page.rec.inputs:
             return
         raw = self.page.rec.cell_value(cid)
         tok = cid.split(":")[1]
-        if raw in ("", "?/?"):
+        res = service.resolve_domain_element_edit(self.page.editor.state, tok, raw)
+        if res.problem == "noop":
+            return
+        if res.problem == "blank":
             self.page.renderer.render()
             return
-        parsed = service.parse_domain_element(raw)
-        if parsed is None:
+        if res.problem == "invalid":
             ui.notify(
                 f"“{raw}” is not a positive rational basis element (≠ 1)",
                 type="negative",
@@ -467,18 +455,16 @@ class EditController:
             )
             self.page.renderer.render()
             return
-        if tok == "pending":
-            self._commit_pending_element(raw, parsed)
-            return
-        index = int(tok)
-        if parsed == self.page.editor.state.domain_basis[index]:
-            return
-        if not service.can_set_domain_element(self.page.editor.state, index, parsed):
-            ui.notify(f"{raw} would make the basis dependent", type="negative", position="top")
+        if res.problem == "dependent":
+            msg = (
+                f"{raw} isn’t independent of the existing basis"
+                if tok == "pending"
+                else f"{raw} would make the basis dependent"
+            )
+            ui.notify(msg, type="negative", position="top")
             self.page.renderer.render()
             return
-        self.page.editor.set_domain_element(index, raw)
-        self.page.renderer._request_render()  # relabelling a domain element retunes — render off the loop
+        self._apply_domain_element(tok, raw)
 
     def on_element_preview(self, cid):
         g = self.page.rec.gesture
@@ -492,16 +478,8 @@ class EditController:
             return
         raw = self.page.rec.cell_value(cid)
         tok = cid.split(":")[1]
-        parsed = service.parse_domain_element(raw) if raw not in ("", "?/?") else None
-        if tok == "pending":
-            valid = parsed is not None and service.can_add_domain_element(self.page.editor.state, parsed)
-        else:
-            valid = (
-                parsed is not None
-                and parsed != self.page.editor.state.domain_basis[int(tok)]
-                and service.can_set_domain_element(self.page.editor.state, int(tok), parsed)
-            )
-        if not valid:
+        res = service.resolve_domain_element_edit(self.page.editor.state, tok, raw)
+        if res.problem is not None:
             self.page.gestures._edit_candidate(None)
         elif tok == "pending":
             self.page.gestures._edit_candidate(lambda: self.page.editor.set_pending_element(raw))
@@ -513,19 +491,11 @@ class EditController:
             return
         if cid not in ("optimization:power", "control:q"):
             return
-        raw = str(self.page.rec.inputs[cid].value).strip().lower()
-        if raw in ("∞", "inf", "max", "minimax"):
-            power = float("inf")
-        else:
-            try:
-                power = float(raw)
-            except ValueError:
-                return
-            if not math.isfinite(power) or power <= 0:
-                return
-        if cid == "control:q":
-            if power < 1:
-                return
+        is_q = cid == "control:q"
+        power = service.parse_power(self.page.rec.inputs[cid].value, minimum=1.0 if is_q else 0.0)
+        if power is None:
+            return
+        if is_q:
             self.page.editor.set_complexity_norm_power(power)
         else:
             self.page.editor.set_optimization_power(power)
@@ -642,62 +612,42 @@ class EditController:
         if self.page.building or g is None or g.kind != "edit" or g.source != "preset:target":
             return
         num, sel = self.page.rec.selects["preset:target"]
-        family = sel.value or "TILT"
         raw = num.value if typed is None else typed
-        if service.target_limit_problem(family, raw) == "whole":
+        res = service.resolve_target_limit(sel.value, raw, self.page.editor.state.domain_basis)
+        if res.problem == "whole" or not res.valid:
             self.page.gestures._edit_candidate(None)
             return
-        text = (str(raw) if raw is not None else "").strip()
-        spec = f"{int(float(text))}-{family}" if text else family
-        try:
-            valid = bool(service.target_interval_set(spec, self.page.editor.state.domain_basis))
-        except Exception as exc:
-            _log.debug("target spec %r rejected: %r", spec, exc)
-            valid = False
-        if not valid:
-            self.page.gestures._edit_candidate(None)
-            return
-        self.page.gestures._edit_candidate(lambda: self.page.editor.set_target_spec(spec))
+        self.page.gestures._edit_candidate(lambda: self.page.editor.set_target_spec(res.spec))
 
     def on_prescaler_change(self, cid):
         if self.page.building or cid not in self.page.rec.inputs:
             return
-        raw = self.page.rec.decimal_value(cid)
-        if not raw:
-            return
-        try:
-            value = float(raw)
-        except ValueError:
-            return
         parts = cid.split(":")
         i, j = int(parts[3]), int(parts[4])
-        if not math.isfinite(value) or (i == j and value <= 0):
+        res = service.custom_prescaler_entry(self.page.rec.decimal_value(cid), i == j)
+        if res.problem == "skip":
+            return
+        if res.problem == "invalid":
             ui.notify(_INVALID_PRESCALER, type="negative", position="top")
             self.page.renderer.render()
             return
-        self.page.editor.set_custom_prescaler_entry(i, j, value)
+        self.page.editor.set_custom_prescaler_entry(i, j, res.value)
         self.page.renderer._request_render()  # the prescaler drives the weighted tuning solve — render off the loop
 
     def on_weight_change(self, cid):
         if self.page.building or cid not in self.page.rec.inputs:
             return
-        weights = []
-        for other in self.page.rec.inputs:
-            if not other.startswith("weight:"):
-                continue
-            raw = self.page.rec.decimal_value(other)
-            if not raw:
-                return
-            try:
-                w = float(raw)
-            except ValueError:
-                return
-            if not math.isfinite(w) or w <= 0:
-                ui.notify(_INVALID_WEIGHT, type="negative", position="top")
-                self.page.renderer.render()
-                return
-            weights.append(w)
-        self.page.editor.set_custom_weights(weights)
+        raws = [
+            self.page.rec.decimal_value(o) for o in self.page.rec.inputs if o.startswith("weight:")
+        ]
+        res = service.custom_weights(raws)
+        if res.problem == "skip":
+            return
+        if res.problem == "invalid":
+            ui.notify(_INVALID_WEIGHT, type="negative", position="top")
+            self.page.renderer.render()
+            return
+        self.page.editor.set_custom_weights(list(res.value))
         self.page.renderer._request_render()  # the weights drive the tuning solve — render off the loop
 
     _PTEXT_EDITORS: ClassVar[dict[str, str]] = {
@@ -895,26 +845,18 @@ class EditController:
             return
         self.page.gestures.end_chooser_gesture()
         num, sel = self.page.rec.selects["preset:target"]
-        family = sel.value or "TILT"
-        problem = service.target_limit_problem(family, num.value)
-        if problem == "whole":
+        res = service.resolve_target_limit(sel.value, num.value, self.page.editor.state.domain_basis)
+        if res.problem == "whole":
             # a non-number is never accepted: toast and re-render, which restores the committed
             # value (the input is loopback-controlled, so the server's value overwrites the garbage)
             ui.notify(tooltips.target_limit_help("whole"), type="negative", position="top")
             self.page.renderer.render()
             return
-        text = (num.value or "").strip()
-        spec = f"{int(float(text))}-{family}" if text else family
-        try:
-            valid = bool(service.target_interval_set(spec, self.page.editor.state.domain_basis))
-        except Exception as exc:
-            _log.debug("target spec %r rejected: %r", spec, exc)
-            valid = False
-        if not valid:
+        if not res.valid:
             return
-        if problem == "odd":
+        if res.problem == "odd":
             ui.notify(tooltips.target_limit_help("odd"), type="negative", position="top")
-        self.page.editor.set_target_spec(spec)
+        self.page.editor.set_target_spec(res.spec)
         self.page.renderer._request_render()  # a new target set re-weights the optimization (retunes) — render off the loop
 
     def on_control_select(self, cid, value):
