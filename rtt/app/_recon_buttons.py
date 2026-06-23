@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from nicegui import ui
 
 from rtt.app import (
@@ -9,7 +8,6 @@ from rtt.app import (
 from rtt.app.render_html import (
     _control_svg,
 )
-
 
 
 class _ReconButtons:
@@ -21,13 +19,13 @@ class _ReconButtons:
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn").on(
             "click", lambda _=None: self.r._cb.act(self.r._editor.shrink)
         )
-        self.r._choose._preview_control(wrap, self.r._editor.shrink)
+        self._choose._preview_control(wrap, self.r._editor.shrink)
 
     def _build_plus(self, _cb: spreadsheet.CellBox, wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn").on(
             "click", lambda _=None: self.r._cb.act(self.r._editor.expand)
         )
-        self.r._choose._preview_control(wrap, self.r._editor.expand)
+        self._choose._preview_control(wrap, self.r._editor.expand)
 
     def _build_gen_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-minus-zone")
@@ -35,7 +33,7 @@ class _ReconButtons:
             "click",
             lambda _=None, idx=cb.gen: self.r._cb.act(lambda: self.r._editor.remove_mapping_row(idx)),
         )
-        self.r._choose._preview_rank_remove(wrap, "row", cb.gen)
+        self._choose._preview_rank_remove(wrap, "row", cb.gen)
 
     def _build_gen_plus(self, _cb: spreadsheet.CellBox, _wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-mapping").on(
@@ -53,7 +51,7 @@ class _ReconButtons:
             "click",
             lambda _=None, idx=cb.gen: self.r._cb.act(lambda: self.r._editor.remove_mapping_row(idx)),
         )
-        self.r._choose._preview_rank_remove(wrap, "row", cb.gen)
+        self._choose._preview_rank_remove(wrap, "row", cb.gen)
 
     def _build_map_plus(self, _cb: spreadsheet.CellBox, _wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-mapping").on(
@@ -65,7 +63,7 @@ class _ReconButtons:
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v").on(
             "click", lambda _=None: self.r._cb.act(self.r._editor.shrink)
         )
-        self.r._choose._preview_control(wrap, self.r._editor.shrink)
+        self._choose._preview_control(wrap, self.r._editor.shrink)
 
     def _build_comma_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
         self._build_list_minus(
@@ -97,7 +95,7 @@ class _ReconButtons:
         ui.html(_control_svg("minus")).classes(f"rtt-glyph {btn}").on(
             "click", lambda _=None: self.r._cb.act(action)
         )
-        self.r._choose._preview_control(wrap, action)
+        self._choose._preview_control(wrap, action)
 
     def _build_list_minus(
         self, cb: spreadsheet.CellBox, wrap, cancel, remove, rank_axis: str | None = None
@@ -109,9 +107,9 @@ class _ReconButtons:
             "click", lambda _=None: self.r._cb.act(action)
         )
         if rank_axis is not None and not pending:
-            self.r._choose._preview_rank_remove(wrap, rank_axis, cb.comma)
+            self._choose._preview_rank_remove(wrap, rank_axis, cb.comma)
         else:
-            self.r._choose._preview_control(wrap, action)
+            self._choose._preview_control(wrap, action)
 
     def _build_interest_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
         self._build_list_minus(

@@ -21,6 +21,7 @@ from rtt.app import (
     tooltips,
 )
 from rtt.app import settings as show_settings
+from rtt.app._recon_handles import CellHandles
 from rtt.app.editor import Editor
 from rtt.app.layout import Line
 
@@ -35,21 +36,24 @@ class _FakeElement:
         self.deleted = True
 
 
-def test_every_per_id_handle_dict_is_registered_for_drop():
-    # drop(eid) forgets an entity from every dict in _handle_dicts; a dict left out of that tuple
-    # leaks handles to a deleted element (the documented invariant in _Reconciler.__init__). The
-    # scheme_buttons dict (back-to-scheme buttons) was the one omitted — assert it (and the other
-    # per-id handle dicts) are all members, and that drop() actually purges scheme_buttons.
+def test_drop_purges_a_cell_from_every_handle_store():
+    # A cell's handles all ride ONE CellHandles record (rec.cells[id]); the only parallel per-id
+    # dicts left are the entity-keyed element + style/ring caches (rec._entity_dicts: els/styled/
+    # ring_sig, which also hold lines and washes). drop(eid) pops the record and sweeps those dicts,
+    # so no handle can leak to a deleted element — and a NEW handle field needs zero drop()
+    # bookkeeping, since it rides the record pop() already removes (the old _handle_dicts footgun,
+    # where scheme_buttons was once omitted and leaked, is gone by construction).
     rec = app._Reconciler(Editor())
-    for name in ("els", "inputs", "selects", "checks", "rangeopts", "scheme_buttons",
-                 "mean_damage_tips", "fold_state"):
-        d = getattr(rec, name)
-        assert any(existing is d for existing in rec._handle_dicts), f"{name} missing from _handle_dicts"
-    # behavioural: a registered-then-dropped scheme button leaves no stale handle behind
     rec.els["scheme:primes"] = _FakeElement()
-    rec.scheme_buttons["scheme:primes"] = "the-button"
+    rec.cells["scheme:primes"] = CellHandles()  # make_cell creates this per cell in production
+    rec.cells["scheme:primes"].scheme_button = "the-button"
+    rec.styled["scheme:primes"] = "left:0"
+    rec.ring_sig["scheme:primes"] = (False, False)
     rec.drop("scheme:primes")
-    assert "scheme:primes" not in rec.scheme_buttons  # purged by drop()'s sweep, not leaked
+    assert "scheme:primes" not in rec.cells
+    for d in rec._entity_dicts:
+        assert "scheme:primes" not in d
+    assert rec.handles("scheme:primes").scheme_button is None  # null-object, not a leaked handle
 
 
 def _bars(svg):

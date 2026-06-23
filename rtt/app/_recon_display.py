@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from nicegui import ui
 
 from rtt.app import (
@@ -30,42 +29,41 @@ from rtt.app.render_html import (
 )
 
 
-
 class _ReconDisplayCells:
     def __init__(self, r) -> None:
         self.r = r
 
     def _build_svgfill(self, cb: spreadsheet.CellBox, _wrap) -> None:
-        self.r.htmls[cb.id] = ui.html("").classes("rtt-svgfill")
+        self.r.cells[cb.id].html = ui.html("").classes("rtt-svgfill")
 
     def _update_ebk(self, cb: spreadsheet.CellBox) -> None:
-        if self.r.ebk_sizes.get(cb.id) != (cb.w, cb.h, cb.pending):
-            self.r.htmls[cb.id].set_content(ebk_svg(cb))
-            self.r.ebk_sizes[cb.id] = (cb.w, cb.h, cb.pending)
+        if self.r.handles(cb.id).ebk_size != (cb.w, cb.h, cb.pending):
+            self.r.cells[cb.id].html.set_content(ebk_svg(cb))
+            self.r.cells[cb.id].ebk_size = (cb.w, cb.h, cb.pending)
 
     def _update_chart(self, cb: spreadsheet.CellBox) -> None:
         key = (cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label)
-        if self.r.chart_keys.get(cb.id) != key:
-            self.r.htmls[cb.id].set_content(
+        if self.r.handles(cb.id).chart_key != key:
+            self.r.cells[cb.id].html.set_content(
                 _bar_chart(cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label)
             )
-            self.r.chart_keys[cb.id] = key
+            self.r.cells[cb.id].chart_key = key
 
     def _update_rangechart(self, cb: spreadsheet.CellBox) -> None:
         key = (cb.w, cb.h, cb.ranges, cb.values, cb.decimals)
-        if self.r.range_keys.get(cb.id) != key:
-            self.r.htmls[cb.id].set_content(
+        if self.r.handles(cb.id).range_key != key:
+            self.r.cells[cb.id].html.set_content(
                 _range_chart(cb.w, cb.h, cb.ranges, cb.values, cb.decimals)
             )
-            self.r.range_keys[cb.id] = key
+            self.r.cells[cb.id].range_key = key
 
     def _build_count(self, cb: spreadsheet.CellBox, _wrap) -> None:
-        self.r.math_cells[cb.id] = ui.html("").classes("rtt-count")
+        self.r.cells[cb.id].math_cell = ui.html("").classes("rtt-count")
 
     def _build_symbol(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-symbol-cell")
         cls = "rtt-symbol rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-symbol"
-        self.r.math_cells[cb.id] = ui.html("").classes(cls)
+        self.r.cells[cb.id].math_cell = ui.html("").classes(cls)
 
     @staticmethod
     def _matlabel_classes(text: str) -> str:
@@ -73,21 +71,21 @@ class _ReconDisplayCells:
 
     def _build_matlabel(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-matlabel-cell")
-        self.r.math_cells[cb.id] = ui.html("").classes(self._matlabel_classes(cb.text))
+        self.r.cells[cb.id].math_cell = ui.html("").classes(self._matlabel_classes(cb.text))
 
     def _build_units(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-units-cell")
-        self.r.math_cells[cb.id] = ui.html("").classes("rtt-units")
+        self.r.cells[cb.id].math_cell = ui.html("").classes("rtt-units")
 
     def _update_mathcell(self, cb: spreadsheet.CellBox) -> None:
         if cb.kind == "units":
             html = _units_html(cb.text)
-            if self.r.math_rendered.get(cb.id) != (html, cb.w):
-                self.r.math_cells[cb.id].set_content(html)
-                self.r.math_cells[cb.id].style(
+            if self.r.handles(cb.id).math_rendered != (html, cb.w):
+                self.r.cells[cb.id].math_cell.set_content(html)
+                self.r.cells[cb.id].math_cell.style(
                     f"font-size:{_units_font(cb.text, cb.w, _UNITS_MAX_FONT):.2f}px"
                 )
-                self.r.math_rendered[cb.id] = (html, cb.w)
+                self.r.cells[cb.id].math_rendered = (html, cb.w)
             return
         html = _math_html(cb.text)
         font = None
@@ -95,16 +93,16 @@ class _ReconDisplayCells:
             w = spreadsheet_text._min_width_for_lines(cb.text, 1, _MATLABEL_FONT)
             if w > cb.w - 2:
                 font = max(_MATLABEL_MIN_FONT, _MATLABEL_FONT * (cb.w - 2) / w)
-        if self.r.math_rendered.get(cb.id) != (html, font):
-            self.r.math_cells[cb.id].set_content(html)
+        if self.r.handles(cb.id).math_rendered != (html, font):
+            self.r.cells[cb.id].math_cell.set_content(html)
             if font is not None:
-                self.r.math_cells[cb.id].style(f"font-size:{font:.2f}px")
-            self.r.math_rendered[cb.id] = (html, font)
+                self.r.cells[cb.id].math_cell.style(f"font-size:{font:.2f}px")
+            self.r.cells[cb.id].math_rendered = (html, font)
             if cb.kind == "matlabel":
-                self.r.math_cells[cb.id].classes(replace=self._matlabel_classes(cb.text))
+                self.r.cells[cb.id].math_cell.classes(replace=self._matlabel_classes(cb.text))
             if cb.id == "optimization:mean_damage:symbol":
                 wide = "‖" in cb.text
-                self.r.math_cells[cb.id].classes(
+                self.r.cells[cb.id].math_cell.classes(
                     replace="rtt-symbol rtt-opt-1line rtt-opt-wide"
                     if wide
                     else "rtt-symbol rtt-opt-1line"
@@ -116,20 +114,20 @@ class _ReconDisplayCells:
         cls = "rtt-caption rtt-opt-1line" if one_line else "rtt-caption"
         if cb.align == "left":
             cls += " rtt-caption-left"
-        self.r.captions[cb.id] = ui.html("").classes(cls)
+        self.r.cells[cb.id].caption = ui.html("").classes(cls)
 
     def _update_caption(self, cb: spreadsheet.CellBox) -> None:
         html = _underline_html(cb.text, cb.underlines)
-        if self.r.caption_html.get(cb.id) != html:
-            self.r.captions[cb.id].set_content(html)
-            self.r.caption_html[cb.id] = html
-        self.r.captions[cb.id].classes(
+        if self.r.handles(cb.id).caption_html != html:
+            self.r.cells[cb.id].caption.set_content(html)
+            self.r.cells[cb.id].caption_html = html
+        self.r.cells[cb.id].caption.classes(
             add="rtt-caption-disabled" if cb.disabled else "",
             remove="" if cb.disabled else "rtt-caption-disabled",
         )
 
     def _build_ptextpending(self, cb: spreadsheet.CellBox, _wrap) -> None:
-        self.r.htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
+        self.r.cells[cb.id].html = ui.html("").classes("rtt-ptextpending")
 
     def _update_ptextpending(self, cb: spreadsheet.CellBox) -> None:
         ed = self.r._editor
@@ -149,10 +147,10 @@ class _ReconDisplayCells:
             prefix, draft, suffix = squared(
                 *service.mapping_pending_text(committed, ed.pending_mapping_row), False
             )
-            self.r.htmls[cb.id].set_content(
+            self.r.cells[cb.id].html.set_content(
                 f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}"
             )
-            self.r.htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
+            self.r.cells[cb.id].html.style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
             return
         if cb.id == "ptext:vectors:targets":
             targets = ed.target_override or service.target_interval_set(
@@ -163,13 +161,13 @@ class _ReconDisplayCells:
         else:
             committed, pending = ed.state.comma_basis, ed.pending_comma
         prefix, draft, suffix = squared(*service.vector_list_pending_text(committed, pending), True)
-        self.r.htmls[cb.id].set_content(f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
-        self.r.htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
+        self.r.cells[cb.id].html.set_content(f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
+        self.r.cells[cb.id].html.style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
 
     def _build_mathexpr(self, cb: spreadsheet.CellBox, _wrap) -> None:
-        self.r.exprs[cb.id] = ui.html("").classes("rtt-mathexpr")
+        self.r.cells[cb.id].expr = ui.html("").classes("rtt-mathexpr")
 
     def _update_mathexpr(self, cb: spreadsheet.CellBox) -> None:
-        if self.r.expr_state.get(cb.id) != (cb.text, cb.w):
-            self.r.exprs[cb.id].set_content(_mathexpr_html(cb.text, cb.w))
-            self.r.expr_state[cb.id] = (cb.text, cb.w)
+        if self.r.handles(cb.id).expr_state != (cb.text, cb.w):
+            self.r.cells[cb.id].expr.set_content(_mathexpr_html(cb.text, cb.w))
+            self.r.cells[cb.id].expr_state = (cb.text, cb.w)

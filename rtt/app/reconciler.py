@@ -13,6 +13,8 @@ from rtt.app._recon_buttons import _ReconButtons
 from rtt.app._recon_choosers import _ReconChoosers
 from rtt.app._recon_display import _ReconDisplayCells
 from rtt.app._recon_drag import _ReconDrag
+from rtt.app._recon_handles import EMPTY as _EMPTY_HANDLES
+from rtt.app._recon_handles import CellHandles
 from rtt.app._recon_value import _ReconValueCells
 from rtt.app.editor import Editor
 from rtt.app.page_assets import (
@@ -52,6 +54,12 @@ class _Reconciler:
         self._choose = _ReconChoosers(self)
         self._buttons = _ReconButtons(self)
         self._drag = _ReconDrag(self)
+        # Explicit sibling collaborators: the few cross-component calls (a button wiring a chooser's
+        # hover-preview, a value cell arming a drag) name their peer directly instead of reaching
+        # through self.r into a sibling — so each component declares whom it talks to.
+        self._buttons._choose = self._choose
+        self._value._choose = self._choose
+        self._value._drag = self._drag
         self._register_display_kinds()
         self._register_value_kinds()
         self._register_label_kinds()
@@ -63,96 +71,27 @@ class _Reconciler:
         return self._gestures.gesture if self._gestures is not None else None
 
     def _init_handles(self) -> None:
-        self.els: dict = {}
-        self.inputs: dict = {}
-        self.den_inputs: dict = {}
-        self.frac_edits: dict = {}
-        self.ratio_ops: dict = {}
-        self.labels: dict = {}
-        self.fracs: dict = {}
-        self.ratio_faces: dict = {}
-        self.stacked_faces: dict = {}
-        self.stacked_w: dict = {}
-        self.gensign_faces: dict = {}
-        self.htmls: dict = {}
-        self.ebk_sizes: dict = {}
-        self.chart_keys: dict = {}
-        self.range_keys: dict = {}
-        self.exprs: dict = {}
-        self.expr_state: dict = {}
-        self.kinds: dict = {}
-        self.selects: dict = {}  # preset cell id -> its q-select
-        self.checks: dict = {}  # control_check cell id -> its q-checkbox (the box-𝐋 "replace diminuator")
-        self.ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
-        self.rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
-        self.scheme_buttons: dict = {}  # back-to-scheme button cell id -> its ui.button (for the idle grey)
-        self.mean_damage_tips: dict = {}  # mean damage SYMBOL cell id -> its ui.tooltip (the value cell folds its
-        # help into the zoom magnifier as data-zoomhelp; the symbol — not a value cell — keeps a swappable tooltip)
+        # Every cell's element handles + per-cell last-rendered values travel together in one
+        # CellHandles record keyed by cell id (make_cell creates it, drop() removes it), so a new
+        # handle is just a new field on the record — not a 34th parallel dict you must remember to
+        # also sweep in drop(). The entity dicts below (els/styled/ring_sig) are keyed by ENTITY id,
+        # a superset of cell ids: lines and washes get an element + style/ring cache too, so they
+        # cannot live in a per-CELL record.
+        self.cells: dict[str, CellHandles] = {}
+        self.els: dict = {}  # entity id (cell OR line/wash) -> its wrapping ui.element
         self.target_limit_tip = (
             None  # the target chooser's ui.tooltip (text swaps to an invalid-limit message)
         )
-        self.captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
-        self.caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
-        self.math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
-        self.math_rendered: dict = {}  # ...and its last html, to rewrite on an equivalences toggle / value change
-        self.fold_state: dict = {}  # fold-toggle cell id -> last state token (unfold_more/less), to swap its SVG on change
-        self.cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
-        self.cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
-        self.popup_state: dict = {}
-        # "prescaler" relabels to "pretransformer" in a size-sensitizing / matrix-prescaler scheme;
-        # these hold the (plain, relabeled) help wording so _sync_pretransform_help can swap it live
-        self.help_tips: dict = {}  # cell id -> (ui.tooltip, plain text, pretransform text)
-        self.guide_help_texts: dict = {}  # caption/symbol cell id -> (plain, pretransform) guide-card text
 
     def _init_render_caches(self) -> None:
-        # Change-guard caches: the last applied (geometry string / content signature / ring state) per
-        # entity, so render() reapplies an element's style/content/rings ONLY when it actually changed
-        # — most cells are untouched between renders, so the reconcile skips them instead of re-running
-        # the per-cell work over the whole page on every interaction.
+        # Change-guard caches: the last applied (geometry string / ring state) per ENTITY, so render()
+        # reapplies an element's style/rings ONLY when it actually changed — most cells are untouched
+        # between renders, so the reconcile skips them instead of re-running the per-cell work over the
+        # whole page on every interaction. (The per-CELL content signature rides CellHandles.content_sig.)
         self.styled: dict = {}  # entity id -> last applied position/size style string
-        self.content_sig: dict = {}  # cell id -> last (content fields, w, h, audio) it was updated for
-        self.ring_sig: dict = {}  # cell id -> last (in-amber, in-red) ring state it was painted for
-        # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
-        # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
-        # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (
-            self.els,
-            self.inputs,
-            self.den_inputs,
-            self.frac_edits,
-            self.ratio_ops,
-            self.labels,
-            self.fracs,
-            self.ratio_faces,
-            self.stacked_faces,
-            self.stacked_w,
-            self.gensign_faces,
-            self.htmls,
-            self.ebk_sizes,
-            self.chart_keys,
-            self.range_keys,
-            self.exprs,
-            self.expr_state,
-            self.kinds,
-            self.selects,
-            self.checks,
-            self.ptext_inputs,
-            self.rangeopts,
-            self.scheme_buttons,
-            self.mean_damage_tips,
-            self.captions,
-            self.caption_html,
-            self.math_cells,
-            self.math_rendered,
-            self.fold_state,
-            self.cell_units,
-            self.cell_unit_text,
-            self.help_tips,
-            self.guide_help_texts,
-            self.styled,
-            self.content_sig,
-            self.ring_sig,
-        )
+        self.ring_sig: dict = {}  # entity id -> last (in-amber, in-red) ring state it was painted for
+        # drop() clears a departing entity from its record and from each entity-keyed dict.
+        self._entity_dicts = (self.els, self.styled, self.ring_sig)
 
     def _register_display_kinds(self) -> None:
         for _ebk_kind in _EBK_SVG_KINDS:
@@ -282,7 +221,8 @@ class _Reconciler:
 
     def drop(self, eid: str) -> None:
         self.els[eid].delete()
-        for d in self._handle_dicts:
+        self.cells.pop(eid, None)
+        for d in self._entity_dicts:
             d.pop(eid, None)
 
     def _attach_guide_link(self, wrap, gh: tooltips.GuideHelp, tile: str, text: str) -> None:
@@ -303,6 +243,7 @@ class _Reconciler:
         # register it + its kind (and audio key) so render() can place and reconcile it after.
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
+        self.cells[cb.id] = CellHandles()
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
         with wrap:
             self.cell_kinds[cb.kind].build(cb, wrap)
@@ -318,7 +259,7 @@ class _Reconciler:
         # (which clones the wrap) and any tooltip hang off it too.
         self._attach_hover_help(wrap, cb)
         self.els[cb.id] = wrap
-        self.kinds[cb.id] = cb.kind
+        self.cells[cb.id].kind = cb.kind
         self._wire_cell_input(wrap, cb)
 
     def _attach_hover_help(self, wrap, cb: spreadsheet.CellBox) -> None:
@@ -332,13 +273,13 @@ class _Reconciler:
         elif help_text:
             if cb.id in tooltips.MEAN_DAMAGE_IDS:
                 with wrap:
-                    self.mean_damage_tips[cb.id] = ui.tooltip(help_text)
+                    self.cells[cb.id].mean_damage_tip = ui.tooltip(help_text)
             elif cb.id == "preset:target":
                 with wrap:
                     self.target_limit_tip = ui.tooltip(help_text)
             elif plain != relabeled:
                 with wrap:
-                    self.help_tips[cb.id] = (ui.tooltip(help_text), plain, relabeled)
+                    self.cells[cb.id].help_tip = (ui.tooltip(help_text), plain, relabeled)
             else:
                 wrap.tooltip(help_text)
         if cb.kind in ("symbol", "caption"):
@@ -348,14 +289,14 @@ class _Reconciler:
                 text = gh_pt.text if self.pretransform else gh.text
                 self._attach_guide_link(wrap, gh, cb.id.split(":", 1)[1], text)
                 if gh.text != gh_pt.text:
-                    self.guide_help_texts[cb.id] = (gh.text, gh_pt.text)
+                    self.cells[cb.id].guide_help_text = (gh.text, gh_pt.text)
 
     def _wire_cell_input(self, wrap, cb: spreadsheet.CellBox) -> None:
         if cb.kind.endswith(("plus", "minus")):
             wrap.on("mousedown", js_handler="(e) => e.preventDefault()")
-        edit_input = self.inputs.get(cb.id) or self.ptext_inputs.get(cb.id)
+        edit_input = self.cells[cb.id].input or self.cells[cb.id].ptext_input
         if edit_input is not None:
-            den = self.den_inputs.get(cb.id)
+            den = self.cells[cb.id].den_input
             guard = _STACKED_EXIT_JS if den is not None else None
             for fld in (edit_input, den) if den is not None else (edit_input,):
                 fld.on(
@@ -378,20 +319,20 @@ class _Reconciler:
         if handlers.update is not None:
             handlers.update(cb)
         if cb.unit:
-            if cb.id not in self.cell_units:
+            if self.cells[cb.id].cell_unit is None:
                 with self.els[cb.id]:
-                    self.cell_units[cb.id] = ui.html("").classes("rtt-cellunit")
+                    self.cells[cb.id].cell_unit = ui.html("").classes("rtt-cellunit")
                 self.els[cb.id].classes(add="rtt-cell-united")
-            if self.cell_unit_text.get(cb.id) != (cb.unit, cb.w):
-                self.cell_units[cb.id].set_content(_bold_units(cb.unit))
-                self.cell_units[cb.id].style(
+            if self.cells[cb.id].cell_unit_text != (cb.unit, cb.w):
+                self.cells[cb.id].cell_unit.set_content(_bold_units(cb.unit))
+                self.cells[cb.id].cell_unit.style(
                     f"font-size:{_units_font(cb.unit, cb.w, _CELLUNIT_MAX_FONT):.2f}px"
                 )
-                self.cell_unit_text[cb.id] = (cb.unit, cb.w)
-        elif cb.id in self.cell_units:
-            self.cell_units[cb.id].delete()
-            self.cell_units.pop(cb.id, None)
-            self.cell_unit_text.pop(cb.id, None)
+                self.cells[cb.id].cell_unit_text = (cb.unit, cb.w)
+        elif self.cells[cb.id].cell_unit is not None:
+            self.cells[cb.id].cell_unit.delete()
+            self.cells[cb.id].cell_unit = None
+            self.cells[cb.id].cell_unit_text = None
             self.els[cb.id].classes(remove="rtt-cell-united")
         if cb.audio is not None:
             self._tag_audio(self.els[cb.id], cb)
@@ -402,31 +343,38 @@ class _Reconciler:
             f'data-audio="{tile}" data-idx="{idx}" data-cents="{cents:.6f}"'
         )
 
+    def handles(self, cid: str) -> CellHandles:
+        return self.cells.get(cid, _EMPTY_HANDLES)
+
     def cell_value(self, cid: str) -> str:
-        num = str(self.inputs[cid].value).strip()
+        num = str(self.cells[cid].input.value).strip()
         if not num:
             return ""
         if num == "?":
             return "?/?"
         if "/" in num:
             return num
-        den = str(self.den_inputs[cid].value).strip() if cid in self.den_inputs else ""
+        den = str(self.cells[cid].den_input.value).strip() if self.cells[cid].den_input else ""
         return num if den in ("", "1", "?") else f"{num}/{den}"
 
     def decimal_value(self, cid: str) -> str:
-        whole = str(self.inputs[cid].value).strip()
+        whole = str(self.cells[cid].input.value).strip()
         if not whole:
             return ""
         if "." in whole:
             return whole
-        frac = str(self.den_inputs[cid].value).strip().lstrip(".") if cid in self.den_inputs else ""
+        frac = (
+            str(self.cells[cid].den_input.value).strip().lstrip(".")
+            if self.cells[cid].den_input
+            else ""
+        )
         return whole if not frac else f"{whole}.{frac}"
 
     def set_decimal_value(self, cid: str, text: str) -> None:
         whole, frac = _cents_parts(text)
-        self.inputs[cid].value = whole
-        if cid in self.den_inputs:
-            self.den_inputs[cid].value = frac
+        self.cells[cid].input.value = whole
+        if self.cells[cid].den_input:
+            self.cells[cid].den_input.value = frac
 
     def _target_preset_values(self):
         if self._editor.target_override is not None or service.is_all_interval(

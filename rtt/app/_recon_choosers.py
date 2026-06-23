@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from nicegui import ui
 
 from rtt.app import (
@@ -25,7 +24,6 @@ from rtt.app.render_html import (
 )
 
 
-
 class _ReconChoosers:
     def __init__(self, r) -> None:
         self.r = r
@@ -40,10 +38,10 @@ class _ReconChoosers:
                 ui.label(mode).classes("rtt-rangelabel")
             opt.on("click", lambda _=None, m=mode: self.r._cb.on_range_mode(m))
             opts[mode] = opt
-        self.r.rangeopts[cb.id] = opts
+        self.r.cells[cb.id].rangeopts = opts
 
     def _update_rangemode(self, cb: spreadsheet.CellBox) -> None:
-        for mode, opt in self.r.rangeopts[cb.id].items():
+        for mode, opt in self.r.cells[cb.id].rangeopts.items():
             (
                 opt.classes(add="rtt-rangeopt-on")
                 if mode == cb.text
@@ -51,7 +49,7 @@ class _ReconChoosers:
             )
 
     def _build_scheme_button(self, cb: spreadsheet.CellBox, _wrap) -> None:
-        self.r.scheme_buttons[cb.id] = (
+        self.r.cells[cb.id].scheme_button = (
             ui.button(
                 cb.text, on_click=lambda: self.r._cb.act(self.r._editor.back_to_scheme), color=None
             )
@@ -60,7 +58,7 @@ class _ReconChoosers:
         )
 
     def _update_scheme_button(self, cb: spreadsheet.CellBox) -> None:
-        btn = self.r.scheme_buttons[cb.id]
+        btn = self.r.cells[cb.id].scheme_button
         (
             btn.classes(add="rtt-scheme-btn-idle")
             if not self.r._editor.manual_tuning
@@ -69,23 +67,23 @@ class _ReconChoosers:
 
     def _build_foldtoggle(self, cb: spreadsheet.CellBox, wrap) -> None:
         item = cb.id.split("toggle:", 1)[1]
-        self.r.htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes(
+        self.r.cells[cb.id].html = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes(
             "rtt-glyph rtt-toggle"
         )
-        self.r.fold_state[cb.id] = cb.text
+        self.r.cells[cb.id].fold_state = cb.text
         wrap.on("click", lambda _=None, it=item: self.r._cb.on_toggle(it))
 
     def _build_alltoggle(self, cb: spreadsheet.CellBox, wrap) -> None:
-        self.r.htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes(
+        self.r.cells[cb.id].html = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes(
             "rtt-glyph rtt-toggle"
         )
-        self.r.fold_state[cb.id] = cb.text
+        self.r.cells[cb.id].fold_state = cb.text
         wrap.on("click", lambda _=None: self.r._cb.on_toggle_all())
 
     def _update_foldtoggle(self, cb: spreadsheet.CellBox) -> None:
-        if self.r.fold_state.get(cb.id) != cb.text:
-            self.r.htmls[cb.id].set_content(_control_svg(_FOLD_GLYPH[cb.text]))
-            self.r.fold_state[cb.id] = cb.text
+        if self.r.handles(cb.id).fold_state != cb.text:
+            self.r.cells[cb.id].html.set_content(_control_svg(_FOLD_GLYPH[cb.text]))
+            self.r.cells[cb.id].fold_state = cb.text
 
     def _arm_option_hover(self, sel, wrap, cid: str) -> None:
         sel.add_slot(
@@ -136,7 +134,7 @@ class _ReconChoosers:
             )
         _set_offlist_prompt(sel, family)
         self._arm_option_hover(sel, wrap, cb.id)
-        self.r.selects[cb.id] = (num, sel)
+        self.r.cells[cb.id].select = (num, sel)
 
     def _wire_target_limit(self, num, cb: spreadsheet.CellBox) -> None:
         num.LOOPBACK = True
@@ -185,7 +183,7 @@ class _ReconChoosers:
         )
         _set_offlist_prompt(sel, value)
         self._arm_option_hover(sel, wrap, cb.id)
-        self.r.selects[cb.id] = sel
+        self.r.cells[cb.id].select = sel
 
     def _scheme_options(self, cb: spreadsheet.CellBox, name: str) -> tuple[list, object, str]:
         if name == "prescaler":
@@ -212,7 +210,7 @@ class _ReconChoosers:
         )
         _set_offlist_prompt(sel, value, prompt)
         self._arm_option_hover(sel, wrap, cb.id)
-        self.r.selects[cb.id] = sel
+        self.r.cells[cb.id].select = sel
 
     def _chooser_reflow_hold(self, cid: str) -> bool:
         # True while a generic chooser hover's REFLOW preview is re-rendering the grid for THIS
@@ -242,10 +240,10 @@ class _ReconChoosers:
             if g is not None and g.kind == "temp" and g.reflowed:
                 return
             value = presets.identify(self.r._editor.state)
-            self.r.selects[cb.id].value = value
-            _set_offlist_prompt(self.r.selects[cb.id], value)
+            self.r.cells[cb.id].select.value = value
+            _set_offlist_prompt(self.r.cells[cb.id].select, value)
         elif cb.id == "preset:target":
-            num, sel = self.r.selects[cb.id]
+            num, sel = self.r.cells[cb.id].select
             limit, family = self.r._target_preset_values()
             num.value = _limit_text(limit)
             sel.value = family
@@ -257,16 +255,16 @@ class _ReconChoosers:
             options = list(presets.prescaler_options(self.r._editor.settings["alt_complexity"]))
             value = self.r._editor.displayed_prescaler_name
             value = value if value in options else None
-            self.r.selects[cb.id].set_options(options, value=value)
-            _set_offlist_prompt(self.r.selects[cb.id], value)
-            self.r.selects[cb.id].set_enabled(not cb.disabled)
+            self.r.cells[cb.id].select.set_options(options, value=value)
+            _set_offlist_prompt(self.r.cells[cb.id].select, value)
+            self.r.cells[cb.id].select.set_enabled(not cb.disabled)
         elif cb.id.startswith("preset:projection"):
             options = presets.projection_options(self.r._editor.state)
             value = self.r._editor.displayed_projection_scheme_name
             value = value if value in options else None
-            self.r.selects[cb.id].set_options(options, value=value)
-            _set_offlist_prompt(self.r.selects[cb.id], value, prompt=_projection_prompt(cb.id))
-            self.r.selects[cb.id].set_enabled(not cb.disabled)
+            self.r.cells[cb.id].select.set_options(options, value=value)
+            _set_offlist_prompt(self.r.cells[cb.id].select, value, prompt=_projection_prompt(cb.id))
+            self.r.cells[cb.id].select.set_enabled(not cb.disabled)
         else:
             name = self.r._editor.displayed_tuning_scheme_name
             options = presets.tuning_scheme_options(
@@ -275,9 +273,9 @@ class _ReconChoosers:
                 self.r._editor.settings["weighting"],
             )
             scheme = name if name in options else None
-            self.r.selects[cb.id].set_options(options, value=scheme)
-            _set_offlist_prompt(self.r.selects[cb.id], scheme)
-            self.r.selects[cb.id].set_enabled(not cb.disabled)
+            self.r.cells[cb.id].select.set_options(options, value=scheme)
+            _set_offlist_prompt(self.r.cells[cb.id].select, scheme)
+            self.r.cells[cb.id].select.set_enabled(not cb.disabled)
 
     def _build_subpick(self, cb, wrap, options, value):
         sel = (
@@ -291,7 +289,7 @@ class _ReconChoosers:
         )
         _set_offlist_prompt(sel, value if value in options else None)
         self._arm_option_hover(sel, wrap, cb.id)
-        self.r.selects[cb.id] = sel
+        self.r.cells[cb.id].select = sel
 
     def _build_etpick(self, cb, wrap):
         db = self.r._editor.state.domain_basis
@@ -311,7 +309,7 @@ class _ReconChoosers:
         g = self.r._cur_gesture
         if g is not None and g.kind == "temp" and g.reflowed:
             return
-        sel = self.r.selects.get(cb.id)
+        sel = self.r.handles(cb.id).select
         if not isinstance(sel, ui.select):
             return
         db = self.r._editor.state.domain_basis
@@ -357,16 +355,16 @@ class _ReconChoosers:
             .classes("rtt-preset")
         )
         self._arm_option_hover(sel, wrap, cb.id)
-        self.r.selects[cb.id] = sel
+        self.r.cells[cb.id].select = sel
 
     def _update_control_select(self, cb: spreadsheet.CellBox) -> None:
         if self._chooser_reflow_hold(cb.id):
             return
-        self.r.selects[cb.id].set_options(list(cb.values), value=cb.text or None)
-        self.r.selects[cb.id].set_enabled(not cb.disabled)
+        self.r.cells[cb.id].select.set_options(list(cb.values), value=cb.text or None)
+        self.r.cells[cb.id].select.set_enabled(not cb.disabled)
 
     def _build_control_check(self, cb: spreadsheet.CellBox, wrap) -> None:
-        self.r.checks[cb.id] = (
+        self.r.cells[cb.id].check = (
             ui.checkbox(
                 cb.text,
                 value=cb.checked,
@@ -391,7 +389,7 @@ class _ReconChoosers:
         return None
 
     def _update_control_check(self, cb: spreadsheet.CellBox) -> None:
-        self.r.checks[cb.id].value = cb.checked
+        self.r.cells[cb.id].check.value = cb.checked
 
     def _build_formchooser(self, cb: spreadsheet.CellBox, wrap) -> None:
         sel = (
@@ -404,12 +402,12 @@ class _ReconChoosers:
             .classes("rtt-preset")
         )
         self._arm_option_hover(sel, wrap, cb.id)
-        self.r.selects[cb.id] = sel
+        self.r.cells[cb.id].select = sel
 
     def _update_formchooser(self, cb: spreadsheet.CellBox) -> None:
         if self._chooser_reflow_hold(cb.id):
             return
-        self.r.selects[cb.id].set_options(_formchooser_options(cb.id), value=cb.text or "")
+        self.r.cells[cb.id].select.set_options(_formchooser_options(cb.id), value=cb.text or "")
 
     def _preview_control(self, el, apply) -> None:
         el.on("mouseenter", lambda _=None: self.r._cb.control_hover(apply))

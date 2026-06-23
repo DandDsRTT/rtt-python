@@ -12,21 +12,19 @@ from rtt.app import (
     tooltips,
 )
 from rtt.app import settings as show_settings
+from rtt.app.page_assets import (
+    _CHROME_H,
+    _PAD,
+    _STORE_KEY,
+    _TILE_HOST,
+    _TINTS,
+    _doc_store,
+)
 from rtt.app.render_html import (
     _block_panes,
     _freeze_container,
     _line_style,
     _rect_in_view,
-)
-
-
-from rtt.app.page_assets import (
-    _PAD,
-    _CHROME_H,
-    _STORE_KEY,
-    _doc_store,
-    _TINTS,
-    _TILE_HOST,
 )
 
 _log = logging.getLogger(__name__)
@@ -233,8 +231,8 @@ class Renderer:
             service.is_all_interval(self.page.editor.tuning_scheme)
         )
         for cid in tooltips.MEAN_DAMAGE_IDS:
-            if cid in self.page.rec.mean_damage_tips:
-                self.page.rec.mean_damage_tips[cid].set_text(mean_damage_help_text)
+            if self.page.rec.handles(cid).mean_damage_tip is not None:
+                self.page.rec.cells[cid].mean_damage_tip.set_text(mean_damage_help_text)
                 continue
             wrap = self.page.rec.els.get(cid)
             if wrap is not None and wrap._props.get("data-zoomhelp") != mean_damage_help_text:
@@ -248,9 +246,14 @@ class Renderer:
         # update_cell, not make_cell), so the relabel is re-applied here every render, mirroring
         # _sync_mean_damage_tips' swap of the mean-damage wording.
         rec = self.page.rec
-        for tip, plain, relabeled in rec.help_tips.values():
-            tip.set_text(relabeled if pretransform else plain)
-        for cid, (plain, relabeled) in rec.guide_help_texts.items():
+        for h in rec.cells.values():
+            if h.help_tip is not None:
+                tip, plain, relabeled = h.help_tip
+                tip.set_text(relabeled if pretransform else plain)
+        for cid, h in rec.cells.items():
+            if h.guide_help_text is None:
+                continue
+            plain, relabeled = h.guide_help_text
             wrap = rec.els.get(cid)
             text = relabeled if pretransform else plain
             if wrap is not None and wrap._props.get("data-guide-text") != text:
@@ -309,7 +312,7 @@ class Renderer:
         return _rect_in_view(x, y, w, h, fy, self._viewport, _VIRT_OVERSCAN)
 
     def _make_cell_if_new(self, cb, container, cold, structural) -> None:
-        if cb.id in self.page.rec.els and self.page.rec.kinds[cb.id] != cb.kind:
+        if cb.id in self.page.rec.els and self.page.rec.cells[cb.id].kind != cb.kind:
             self.page.rec.drop(cb.id)
         if cb.id not in self.page.rec.els:
             with self.page.cell_parents[container]:
@@ -338,21 +341,13 @@ class Renderer:
         # render (the bug that surfaced here). Read-only display cells — the vast majority — are
         # only the server's to change, so the cache safely skips them.
         csig = (spreadsheet_text._cell_content(cb), cb.w, cb.h, cb.audio)
+        h = self.page.rec.handles(cb.id)
         volatile = any(
-            cb.id in d
-            for d in (
-                self.page.rec.inputs,
-                self.page.rec.den_inputs,
-                self.page.rec.ptext_inputs,
-                self.page.rec.selects,
-                self.page.rec.checks,
-                self.page.rec.frac_edits,
-                self.page.rec.ratio_ops,
-            )
+            (h.input, h.den_input, h.ptext_input, h.select, h.check, h.frac_edit, h.ratio_op)
         )
-        if volatile or self.page.rec.content_sig.get(cb.id) != csig:
+        if volatile or self.page.rec.handles(cb.id).content_sig != csig:
             self.page.rec.update_cell(cb)
-            self.page.rec.content_sig[cb.id] = csig
+            self.page.rec.cells[cb.id].content_sig = csig
 
     def _render_cells(self, lay, fx, fy, seen, amber, red, cold, structural) -> None:
         for cb in lay.cells:
@@ -417,7 +412,7 @@ class Renderer:
         if g is not None and g.source is not None:
             src_kind = next((cb.kind for cb in lay.cells if cb.id == g.source), None)
             if src_kind is None or (
-                g.source in self.page.rec.kinds and self.page.rec.kinds[g.source] != src_kind
+                g.source in self.page.rec.cells and self.page.rec.cells[g.source].kind != src_kind
             ):
                 self.page.gestures.end_gesture()
 

@@ -9,12 +9,10 @@ from rtt.app import (
     service,
     spreadsheet_text,
 )
-
-
 from rtt.app.page_assets import (
+    _Gesture,
     _hover_index,
     _option_key,
-    _Gesture,
 )
 
 _log = logging.getLogger(__name__)
@@ -395,12 +393,12 @@ class GestureController:
         # select, then preview applying it. Temperament + the sub-pickers route to their own sticky
         # reflow path; the rest (including the TILT/OLD family) go through chooser_hover below, which
         # reflows a value-only pick and reddens one that would remove cells.
-        entry = self.page.rec.selects.get(cid)
+        entry = self.page.rec.handles(cid).select
         sel = entry[1] if isinstance(entry, tuple) else entry
         if not isinstance(sel, ui.select):
             return
         index = _hover_index(detail)
-        if index is not None and self.page.rec.popup_state.get(cid) == "closed":
+        if index is not None and self.page.rec.handles(cid).popup_state == "closed":
             return
         if cid.startswith(("etpick:", "commapick:")):
             self._subpick_hover_preview(cid, _option_key(sel, index) if index is not None else None)
@@ -432,7 +430,7 @@ class GestureController:
         # a chooser's Quasar popup opened/closed: feed the server-side gate (see on_chooser_hover)
         # and treat the close as the gesture's leave — the option the pointer was on is gone, so a
         # live chooser/temperament preview ends (ungated; only positive arms are gated).
-        self.page.rec.popup_state[cid] = "open" if is_open else "closed"
+        self.page.rec.cells[cid].popup_state = "open" if is_open else "closed"
         if not is_open:
             self.on_chooser_hover(cid, None)
 
