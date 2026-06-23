@@ -153,6 +153,16 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "back leaves things unchanged."),
     ("tuning", "canongens"): GuideHelp(
         "The generator tuning map for the canonical form's generators."),
+    ("tuning", "held"): GuideHelp(
+        "Each held interval's tempered size — equal to its just size, since the tuning holds "
+        "it pure.",
+        "Tuning fundamentals", "Held-intervals"),
+    ("just", "held"): GuideHelp(
+        "Each held interval at its just size in cents.",
+        "Tuning fundamentals", "Held-intervals"),
+    ("retune", "held"): GuideHelp(
+        "Each held interval's retuning — zero, because the tuning holds these intervals pure.",
+        "Tuning fundamentals", "Held-intervals"),
 }
 
 
