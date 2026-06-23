@@ -80,8 +80,12 @@ from rtt.app.service.entry import (
     resolve_ratio_edit,
 )
 from rtt.app.service.outcome import (
+    IGNORE,
+    RERENDER,
     Effect,
     Outcome,
+    accept,
+    reject,
 )
 from rtt.app.service.parse import (
     _int_matrix_or_none,

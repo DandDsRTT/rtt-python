@@ -22,17 +22,18 @@ class _VectorEdits:
         self.e = e
         self.page = e.page
 
-    def _finish_edit(self, preview, outcome) -> None:
-        # outcome is ("incomplete",) | ("invalid", message) | ("ok", commit). A preview arms the
-        # candidate (the commit itself when ok, else nothing); a real edit commits / notifies / no-ops.
+    def _finish_edit(self, preview, out) -> None:
+        # out is a service.Outcome whose value (on ACCEPT) is the commit closure. A preview arms the
+        # candidate with that closure (else nothing); a real edit commits / notifies / no-ops.
         if preview:
-            self.page.gestures.edit_candidate(outcome[1] if outcome[0] == "ok" else None)
+            commit = out.value if out.effect is service.Effect.ACCEPT else None
+            self.page.gestures.edit_candidate(commit)
             return
-        if outcome[0] == "invalid":
-            ui.notify(outcome[1], type="negative", position="top")
+        if out.effect is service.Effect.REJECT:
+            ui.notify(out.message, type="negative", position="top")
             self.page.renderer.render()
-        elif outcome[0] == "ok":
-            outcome[1]()
+        elif out.effect is service.Effect.ACCEPT:
+            out.value()
             self.page.renderer.request_render()
 
     def _edit_pending_vector(self, spec, preview, toks, d) -> None:
@@ -67,19 +68,19 @@ class _VectorEdits:
         if len(toks) != count or any(
             self.page.rec.handles(cell_id(toks[i], p)).input is None for i in range(count) for p in range(d)
         ):
-            self._finish_edit(preview, ("incomplete",))
+            self._finish_edit(preview, service.IGNORE)
             return
         vectors = [
             [_parse_int(self.page.rec.cells[cell_id(toks[i], p)].input.value) for p in range(d)]
             for i in range(count)
         ]
         if any(v is None for vec in vectors for v in vec):
-            self._finish_edit(preview, ("incomplete",))
+            self._finish_edit(preview, service.IGNORE)
             return
         if spec.validate is not None and not spec.validate(vectors):
-            self._finish_edit(preview, ("invalid", _INVALID_TEMPERAMENT))
+            self._finish_edit(preview, service.reject(_INVALID_TEMPERAMENT))
             return
-        self._finish_edit(preview, ("ok", lambda: spec.commit(vectors)))
+        self._finish_edit(preview, service.accept(lambda: spec.commit(vectors)))
 
     def on_mapping_change(self, preview=False):
         self._edit_vector_grid(self.e._MAPPING_EDIT, preview)
@@ -122,23 +123,23 @@ class _VectorEdits:
             return
         d, r = self.page.editor.state.d, self.page.editor.state.r
         if any(self.page.rec.handles(ids.unchanged_cell(j, p)).input is None for j in range(r) for p in range(d)):
-            self._finish_edit(preview, ("incomplete",))
+            self._finish_edit(preview, service.IGNORE)
             return
         vectors = [
             [_parse_int(self.page.rec.cells[ids.unchanged_cell(j, p)].input.value) for p in range(d)]
             for j in range(r)
         ]
         if any(v is None for vec in vectors for v in vec):
-            self._finish_edit(preview, ("invalid", _INVALID_UNCHANGED))
+            self._finish_edit(preview, service.reject(_INVALID_UNCHANGED))
             return
         try:
             ratios = service.comma_ratios(
                 tuple(tuple(v) for v in vectors), self.page.editor.state.domain_basis
             )
         except (ValueError, ZeroDivisionError, ArithmeticError):
-            self._finish_edit(preview, ("invalid", _INVALID_UNCHANGED))
+            self._finish_edit(preview, service.reject(_INVALID_UNCHANGED))
             return
-        self._finish_edit(preview, ("ok", lambda: self.page.editor.set_unchanged_basis(ratios)))
+        self._finish_edit(preview, service.accept(lambda: self.page.editor.set_unchanged_basis(ratios)))
 
     def on_interest_change(self, preview=False):
         self._edit_vector_grid(self.e._INTEREST_EDIT, preview)
