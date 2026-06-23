@@ -26,6 +26,13 @@ def test_file_length_exempt_data_module_is_not_flagged():
     assert qc.file_length_violations("rtt/app/not_exempt.py", over) != []
 
 
+def test_file_length_exempt_matches_nested_and_absolute_paths():
+    exempt = next(iter(qc.FILE_LENGTH_EXEMPT))
+    assert qc.is_file_length_exempt(exempt)
+    assert qc.is_file_length_exempt("/abs/checkout/" + exempt)
+    assert not qc.is_file_length_exempt("other/" + exempt.replace("/", "_"))
+
+
 def test_function_length_violation_reports_name_and_span():
     body = "\n".join(f"    x{i} = {i}" for i in range(qc.MAX_FUNCTION_LINES + 5))
     source = f"def big():\n{body}\n"

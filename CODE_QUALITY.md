@@ -156,15 +156,23 @@ irreducible data modules, an explicit per-file exemption is acceptable, document
 
 `tools/quality_checks.py` carries a `FILE_LENGTH_EXEMPT` set of paths excused from the
 file-length cap, for modules that are **predominantly static data** (lookup dicts of
-strings) with only thin lookup logic — splitting them buys no readability, only an extra
-import hop, and the "cohesive logical module" rule has nothing to cut along. Each exemption
-is listed here with its justification:
+strings, CSS/JS/SVG asset blobs) with only thin lookup logic — splitting them buys no
+readability, only an extra import hop, and the "cohesive logical module" rule has nothing
+to cut along. Every other cap (function length, docstrings, coupling, cohesion) still
+applies. Each exemption is listed here with its justification:
 
 - **`rtt/app/tooltips.py`** — almost the whole file is help-text dictionaries
   (`GUIDE_HELP`, `SHOW_HELP`, `_KIND_HELP`, …) keyed by tile/control id; the handful of
   functions are one-line lookups over them. It is a data module by the same standard as
   `grid_tables.py`, and it is hot (the guide-tooltip work edits these dicts continually),
   so prying the data into a sibling file would only churn merge conflicts.
+- **`rtt/app/page_assets.py`** — the page's asset bank: ~77% string-literal lines (the
+  zoom/guide/busy/tour/tooltip JS, the CSS variable blocks and font face, the audio glyph
+  bank) plus small spec dataclasses and a handful of pure helpers. The blobs *are* the
+  module's purpose; the logic in it is minor and stays put.
+
+`rtt/app/grid_tables.py` (the EBK convention tables) is the other data-module candidate,
+handled by the 50/500 close-out chip.
 
 ### E501 (line length) is deferred *by design*, not skipped
 

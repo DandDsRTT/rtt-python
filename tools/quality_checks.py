@@ -12,7 +12,12 @@ MAX_LCOM4 = 10
 MAX_DIT = 2
 MAX_NOC = 3
 
-FILE_LENGTH_EXEMPT = frozenset({"rtt/app/tooltips.py"})
+FILE_LENGTH_EXEMPT = frozenset(
+    {
+        "rtt/app/tooltips.py",
+        "rtt/app/page_assets.py",
+    }
+)
 
 _DEFAULT_ROOTS = ("rtt", "tools")
 _DEFINITION = (ast.FunctionDef, ast.AsyncFunctionDef)
@@ -37,8 +42,13 @@ def span(node: ast.AST) -> int:
     return node.end_lineno - node.lineno + 1
 
 
+def is_file_length_exempt(path: str) -> bool:
+    posix = Path(path).as_posix()
+    return any(posix == name or posix.endswith("/" + name) for name in FILE_LENGTH_EXEMPT)
+
+
 def file_length_violations(path: str, text: str) -> list[Violation]:
-    if path in FILE_LENGTH_EXEMPT:
+    if is_file_length_exempt(path):
         return []
     lines = line_count(text)
     if lines <= MAX_FILE_LINES:
