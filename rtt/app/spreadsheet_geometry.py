@@ -61,33 +61,37 @@ from rtt.app.spreadsheet_text import (
 
 class _GeometryMixin:
     def superspace_tun(self):
+        _r = self.resolved
         if self._ss_tun is None:
-            ss_override = self.superspace_generator_tuning if self.show_superspace_generators else None
+            ss_override = self.superspace_generator_tuning if _r.flags.superspace_generators else None
             self._ss_tun = service.superspace_tuning(self.state, self.tuning_scheme, self.nonprime_approach,
                                                      generator_override=ss_override)
         return self._ss_tun
 
     def _caption_floor(self, key: str):
-        if not self.show_captions:
+        _r = self.resolved
+        if not _r.flags.captions:
             return 0
-        return max((_min_width_for_lines(self.effective_captions[(rk, key)], MAX_CAPTION_LINES)
+        return max((_min_width_for_lines(_r.labels.captions[(rk, key)], MAX_CAPTION_LINES)
                     for rk in self.present_caption_rows
-                    if (rk, key) in self.effective_captions and (rk, key) in self.declared_tiles), default=0)
+                    if (rk, key) in _r.labels.captions and (rk, key) in self.declared_tiles), default=0)
 
     def _projection_superspace_tail(self) -> str:
-        return f" = G{SUBSCRIPT_L}→ₛ𝑀ₛ→{SUBSCRIPT_L}" if self.show_superspace else ""
+        _r = self.resolved
+        return f" = G{SUBSCRIPT_L}→ₛ𝑀ₛ→{SUBSCRIPT_L}" if _r.flags.superspace else ""
 
     def _symbol_floor(self, key: str):
-        if not (self.show_symbols or self.show_equiv):
+        _r = self.resolved
+        if not (_r.flags.symbols or _r.flags.equiv):
             return 0
         floor = 0
         for (rkey, ckey), glyph in SYMBOLS.items():
             if ckey != key or (rkey, ckey) not in self.declared_tiles:
                 continue
             equiv = ""
-            if self.show_equiv:
+            if _r.flags.equiv:
                 equiv = EQUIVALENCES.get((rkey, ckey), "")
-                if self.show_form_subscript and (rkey, ckey) in FORM_EQUIVALENCES:
+                if _r.flags.form_subscript and (rkey, ckey) in FORM_EQUIVALENCES:
                     equiv = FORM_EQUIVALENCES[(rkey, ckey)]
                 if (rkey, ckey) == ("projection", "primes"):
                     equiv += self._projection_superspace_tail()
@@ -96,25 +100,27 @@ class _GeometryMixin:
         return floor
 
     def _form_subscripted(self, glyph: str, rkey: str, ckey: str) -> str:
-        if (glyph and self.show_form_subscript
+        _r = self.resolved
+        if (glyph and _r.flags.form_subscript
                 and (rkey in FORM_SUBSCRIPT_ROWS or (rkey, ckey) in FORM_SUBSCRIPT_GENS)):
             return glyph[:1] + SUBSCRIPT_C + glyph[1:]
         return glyph
 
     def _control_floor(self, key: str):
+        _r = self.resolved
         floor = 0
-        if key == ("ssprimes" if self.show_superspace else "primes") and self._lbox_show:
-            floor = PBOX_W if self.show_presets else LBOX_DIM_W + 2 * BOX_INNER
+        if key == ("ssprimes" if _r.flags.superspace else "primes") and self._lbox_show:
+            floor = PBOX_W if _r.flags.presets else LBOX_DIM_W + 2 * BOX_INNER
         if key == "targets" and self._cbox_show:
-            cbox_w = CBOX_W if self.show_presets else CBOX_NODROP_W
+            cbox_w = CBOX_W if _r.flags.presets else CBOX_NODROP_W
             floor = max(floor, cbox_w + 2 * BOX_INNER)
-        if key == "targets" and self.show_presets and self.settings["all_interval"]:
+        if key == "targets" and _r.flags.presets and self.settings["all_interval"]:
             floor = max(floor, TBOX_W)
-        if (key == "targets" and self.show_optimization and "row:damage" not in self.collapsed
+        if (key == "targets" and _r.flags.optimization and "row:damage" not in self.collapsed
                 and "tile:damage:targets" not in self.collapsed):
             floor = max(floor, OPT_BOX_MIN_W)
-        labels = ([lbl for _n, _r, c, lbl in PRESETS + PRESET_COPIES if c == key and lbl] if self.show_presets else [])
-        labels += [lbl for _n, _r, c, lbl in FORM_CHOOSERS if c == key and lbl] if self.show_form_controls else []
+        labels = ([lbl for _n, _r, c, lbl in PRESETS + PRESET_COPIES if c == key and lbl] if _r.flags.presets else [])
+        labels += [lbl for _n, _r, c, lbl in FORM_CHOOSERS if c == key and lbl] if _r.flags.form_controls else []
         if labels:
             floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(lbl, 1) for lbl in labels))
         if key in ("primes", "gens") and self.settings["projection"]:
@@ -147,33 +153,37 @@ class _GeometryMixin:
         return key in self.col_x and f"col:{key}" not in self.collapsed
 
     def _commas_band_w(self, nc_count: int):
-        nv = nc_count + self.nu
-        split = V_SPLIT_GAP if (self.show_unchanged and nc_count > 0) else 0
+        _r = self.resolved
+        nv = nc_count + _r.dims.nu
+        split = V_SPLIT_GAP if (_r.unchanged.shown and nc_count > 0) else 0
         empty = (_min_width_for_lines("nullity", 1)
-                 if (self.show_unchanged and nc_count == 0) else 0)
+                 if (_r.unchanged.shown and nc_count == 0) else 0)
         return 2 * BRACKET_W + nv * COL_W + split + empty
 
     def _caption_wrap_w(self, ckey: str):
-        if ckey == "commas" and self.ghost_comma:
-            resting = self._commas_band_w(self.nc + (1 if self.pending is not None else 0))
+        _r = self.resolved
+        if ckey == "commas" and _r.ghosts.comma:
+            resting = self._commas_band_w(_r.dims.nc + (1 if _r.commas.pending is not None else 0))
             return max(resting, self._caption_floor(ckey),
                        self._control_floor(ckey), self._symbol_floor(ckey))
         return self.open_col_w[ckey]
 
     def caption_band(self, key: str, folded: bool):
-        if not (self.show_captions and key in BANDS["caption"].rows and not folded):
+        _r = self.resolved
+        if not (_r.flags.captions and key in BANDS["caption"].rows and not folded):
             return 0
-        lines = [_wrap_lines(self.effective_captions[(key, c)], self._caption_wrap_w(c)) for c in self.col_x
-                 if (key, c) in self.effective_captions and (key, c) in self.declared_tiles]
-        if key == "counts" and self.show_unchanged and "commas" in self.col_x:
-            lines.append(_wrap_lines("unchanged interval count", self.nu * COL_W))
-            lines.append(_wrap_lines("nullity", self.nc * COL_W + self.empty_comma_w))
+        lines = [_wrap_lines(_r.labels.captions[(key, c)], self._caption_wrap_w(c)) for c in self.col_x
+                 if (key, c) in _r.labels.captions and (key, c) in self.declared_tiles]
+        if key == "counts" and _r.unchanged.shown and "commas" in self.col_x:
+            lines.append(_wrap_lines("unchanged interval count", _r.dims.nu * COL_W))
+            lines.append(_wrap_lines("nullity", _r.dims.nc * COL_W + _r.unchanged.empty_comma_w))
         return max(lines, default=1) * CAPTION_LINE
 
     def ptext_editable(self, rkey: str, ckey: str) -> bool:
+        _r = self.resolved
         if rkey == "prescaling":
-            return (rkey, ckey) == ("prescaling", "ssprimes" if self.show_superspace else "primes")
-        if rkey == "tuning" and self.show_superspace_generators:
+            return (rkey, ckey) == ("prescaling", "ssprimes" if _r.flags.superspace else "primes")
+        if rkey == "tuning" and _r.flags.superspace_generators:
             return ckey == "ssgens"
         return (rkey, ckey) in EDITABLE_PTEXT
 
@@ -218,18 +228,20 @@ class _GeometryMixin:
                 and f"tile:{rkey}:{ckey}" not in self.collapsed)
 
     def tile_unit(self, rkey: str, ckey: str):
+        _r = self.resolved
         base = UNITS.get((rkey, ckey))
         if base is None:
             return ""
         if rkey == "complexity":
-            return base.replace("(C)", self.complexity_unit)
+            return base.replace("(C)", _r.scalars.complexity_unit)
         if rkey == "weight":
-            return self.weight_unit
+            return _r.scalars.weight_unit
         if rkey == "damage":
-            return self.damage_unit
+            return _r.scalars.damage_unit
         return base
 
     def cell_unit(self, rkey: str, ckey: str, *, gen=None, prime=None, elem=None):
+        _r = self.resolved
         if not self.show_cell_units:
             return ""
         u = self.tile_unit(rkey, ckey)
@@ -243,10 +255,10 @@ class _GeometryMixin:
             else:
                 u = _subscript_coord(u, "g", f"g{_sub(gen + 1)}")
         if prime is not None:
-            coord = "p" if superspace else self.domain_label
+            coord = "p" if superspace else _r.labels.domain_label
             u = _subscript_coord(u, "p", f"{coord}{_sub(prime + 1)}")
         if elem is not None:
-            u = _subscript_coord(u, self.domain_label, f"{self.domain_label}{_sub(elem + 1)}")
+            u = _subscript_coord(u, _r.labels.domain_label, f"{_r.labels.domain_label}{_sub(elem + 1)}")
         return u
 
     def matlabel_gutter_w(self, group_key: str):
@@ -268,16 +280,18 @@ class _GeometryMixin:
         return self.etpick_left_pad(group_key) + self.handle_gutter_w(group_key) + self.matlabel_gutter_w(group_key)
 
     def matrix_span(self, group_key: str):
+        _r = self.resolved
         x, w = self.content_box(group_key)
         mx = self.outer_gutter_w(group_key)
         x, w = x + mx, w - 2 * mx
-        if group_key == "commas" and self.empty_comma_w:
-            x, w = x + self.empty_comma_w, w - self.empty_comma_w
+        if group_key == "commas" and _r.unchanged.empty_comma_w:
+            x, w = x + _r.unchanged.empty_comma_w, w - _r.unchanged.empty_comma_w
         return x, w
 
     def _weight_simplicity_header(self, i: int):
+        _r = self.resolved
         symbol = f"w{_sub(i + 1)}"
-        if not self.show_equiv:
+        if not _r.flags.equiv:
             return symbol
         return f"{symbol} = c{_sub(i + 1)}⁻¹"
 
@@ -289,11 +303,13 @@ class _GeometryMixin:
         return "elementratio" if "/" in text else "elementcell"
 
     def comma_left(self, c: int):
-        gap = V_SPLIT_GAP if (self.show_unchanged and 0 < self.nc_shown <= c) else 0
-        return self.commas_x + BRACKET_W + self.empty_comma_w + c * COL_W + gap
+        _r = self.resolved
+        gap = V_SPLIT_GAP if (_r.unchanged.shown and 0 < _r.dims.nc_shown <= c) else 0
+        return self.commas_x + BRACKET_W + _r.unchanged.empty_comma_w + c * COL_W + gap
 
     def comma_value_pos(self, i: int):
-        return i if i < self.nc else i + (self.nc_shown - self.nc)
+        _r = self.resolved
+        return i if i < _r.dims.nc else i + (_r.dims.nc_shown - _r.dims.nc)
 
     def target_left(self, j: int):
         return self.targets_x + BRACKET_W + j * COL_W
@@ -344,35 +360,38 @@ class _GeometryMixin:
         return self.group_left[ckey](i) + COL_W / 2
 
     def col_plus_x(self, ckey: str):
+        _r = self.resolved
         n = self.group_n[ckey]
         if n == 0:
             mx, mw = self.matrix_span(ckey)
             return mx + mw / 2
-        if ckey == "commas" and self.show_unchanged:
-            if self.nc_shown == 0:
-                return self.commas_x + BRACKET_W + self.empty_comma_w / 2
-            return self.comma_left(self.nc_shown - 1) + COL_W + V_SPLIT_GAP / 2
+        if ckey == "commas" and _r.unchanged.shown:
+            if _r.dims.nc_shown == 0:
+                return self.commas_x + BRACKET_W + _r.unchanged.empty_comma_w / 2
+            return self.comma_left(_r.dims.nc_shown - 1) + COL_W + V_SPLIT_GAP / 2
         return self.sub_axis_x(ckey, n - 1) + COL_W
 
     def _plus_shows(self, ckey: str) -> bool:
+        _r = self.resolved
         if ckey in ("interest", "held"):
             return self.col_open(ckey) and (self.row_open("quantities") or self.row_open("vectors"))
         if ckey == "targets":
-            return (self.tile_open("quantities", "targets") or self.tile_open("vectors", "targets")) and not self.all_interval
+            return (self.tile_open("quantities", "targets") or self.tile_open("vectors", "targets")) and not _r.scalars.all_interval
         if ckey == "gens":
             return self.tile_open("quantities", "gens") and self.state.n > 0
         if ckey == "primes":
-            return self.tile_open("quantities", "primes") and (self.show_nonstandard_domain or self.standard_domain)
+            return self.tile_open("quantities", "primes") and (_r.flags.nonstandard_domain or _r.scalars.standard_domain)
         if ckey == "commas":
             return self.tile_open("quantities", "commas") or self.tile_open("vectors", "commas")
         return self.tile_open("quantities", ckey) or self.tile_open("vectors", ckey)
 
     def closed_form_operand(self, key, group, i, value=None):
+        _r = self.resolved
         if key == "just":
             ratio = self.group_ratio[group](i)
             return _log_operand(ratio) if ratio is not None else None
-        if group == "commas" and key == "retune" and i < self.nc:
-            recip = 1 / Fraction(self.comma_ratios[i])
+        if group == "commas" and key == "retune" and i < _r.dims.nc:
+            recip = 1 / Fraction(_r.commas.ratios[i])
             return _log_operand(f"{recip.numerator}/{recip.denominator}")
         if key in ("tuning", "retune") and value is not None:
             if group in ("ssprimes", "ssgens"):
@@ -395,55 +414,62 @@ class _GeometryMixin:
                 else ss.retune_operand(vector, value))
 
     def _closed_form(self):
+        _r = self.resolved
         if not hasattr(self, "_closed_form_cache"):
             self._closed_form_cache = (
                 None
-                if not self.show_math or self._tun_from_generators
+                if not _r.flags.math or _r.tuning.from_generators
                 else service.closed_form_tuning(
-                    self.state.mapping, self.tuning_scheme, self.elements, self.nonprime_approach,
-                    held=self.held_ratios, prescaler_override=self.custom_prescaler,
-                    targets=self._optimum_target_override, weights_override=self.custom_weights)
+                    self.state.mapping, self.tuning_scheme, _r.dims.elements, self.nonprime_approach,
+                    held=_r.held.ratios, prescaler_override=self.custom_prescaler,
+                    targets=_r.tuning.optimum_target_override, weights_override=self.custom_weights)
             )
         return self._closed_form_cache
 
     def _ss_closed_form(self):
+        _r = self.resolved
         if not hasattr(self, "_ss_closed_form_cache"):
             self._ss_closed_form_cache = (
                 service.closed_form_superspace_tuning(self.state, self.tuning_scheme)
-                if self.show_math and self.show_superspace else None
+                if _r.flags.math and _r.flags.superspace else None
             )
         return self._ss_closed_form_cache
 
     def _tempered_vector(self, group, i):
+        _r = self.resolved
         if group == "primes":
-            return tuple(1 if k == i else 0 for k in range(self.d))
+            return tuple(1 if k == i else 0 for k in range(_r.dims.d))
         if group == "commas":
             return self._comma_tempered_vector(i)
-        seqs = {"targets": self.target_vectors, "interest": self.interest,
-                "held": self.held, "detempering": self.detempering_vectors}
+        seqs = {"targets": _r.targets.vectors, "interest": _r.interest.vectors,
+                "held": _r.held.vectors, "detempering": _r.detempering.vectors}
         seq = seqs.get(group)
         if seq is None:
             return None
         return seq[i] if i < len(seq) else None
 
     def _comma_tempered_vector(self, i):
-        if i < self.nc:
+        _r = self.resolved
+        if i < _r.dims.nc:
             return self.state.comma_basis[i]
-        j = i - self.nc
-        return self.unchanged_basis[j] if self.unchanged_basis and j < len(self.unchanged_basis) else None
+        j = i - _r.dims.nc
+        return _r.unchanged.basis[j] if _r.unchanged.basis and j < len(_r.unchanged.basis) else None
 
     def col_token(self, group: str, i: int):
-        if group == "commas" and i >= self.nc:
-            return f"u{i - self.nc}"
-        pairs = self._col_ids.get(group)
+        _r = self.resolved
+        if group == "commas" and i >= _r.dims.nc:
+            return f"u{i - _r.dims.nc}"
+        pairs = _r.col_ids.get(group)
         return i if pairs is None else pairs[i][0]
 
     def pending_col_token(self, group: str):
-        return pending_token([tok for tok, _ in self._col_ids[group]])
+        _r = self.resolved
+        return pending_token([tok for tok, _ in _r.col_ids[group]])
 
     def _pending_draft_idx(self, group: str):
-        return {"commas": (self.comma_draft or None, self.nc), "targets": (self.pending_target, self.k),
-                "held": (self.pending_held, self.nh), "interest": (self.pending_interest, self.mi)}.get(group)
+        _r = self.resolved
+        return {"commas": (_r.scalars.comma_draft or None, _r.dims.nc), "targets": (_r.targets.pending, _r.dims.k),
+                "held": (_r.held.pending, _r.dims.nh), "interest": (_r.interest.pending, _r.dims.mi)}.get(group)
 
     def _voice(self, tile, idx, cents) -> None:
         if cents is None:
