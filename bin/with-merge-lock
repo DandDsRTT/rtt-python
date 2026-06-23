@@ -76,7 +76,11 @@ the parent bash, and SIGHUP):
   * Backstops, three non-overlapping layers: PID-death (fast — daemon crashed) ·
     lease+grace (daemon hung but alive) · ``last_renew + HARD_GAP`` self-exit, hard-
     capped by an un-bumpable ``birth + ABS_MAX`` (agent abandoned the hold / forgot
-    ``release``; the cap prevents an immortal re-armed daemon).
+    ``release``; the cap prevents an immortal re-armed daemon). The PID-death layer is
+    enforced two ways: a front waiter takes over a stale marker, AND ``_scan`` /
+    ``_reap_dead_marker`` removes a dead-PID marker on *every* poll regardless of queue
+    position — so a leaked/PID-reused ticket stuck ahead in the FIFO can no longer pin a
+    crashed holder's marker in place until ``WAIT_MAX``.
   * Signal handlers ONLY set a flag / stamp a time / poke a self-pipe (to make the
     sleep interruptible) — never touch files — so a SIGTERM can't interrupt a marker
     rewrite mid-flight; all file mutation happens in the loop body.
@@ -229,7 +233,10 @@ def _state_path(token):
 # Fairness tickets (FIFO ordering only — NOT the mutex)
 # --------------------------------------------------------------------------- #
 def _scan():
-    """Live tickets as ``(ns, pid, name)`` sorted FIFO. Reclaims (removes) a ticket if:
+    """Live tickets as ``(ns, pid, name)`` sorted FIFO. Also frees a DEAD-PID holder
+    marker on the spot (``_reap_dead_marker``) so a crashed holder is reclaimed in
+    seconds by ANY poller — not only by a waiter that reaches the front of the queue.
+    Reclaims (removes) a ticket if:
       * its PID is dead (fast — the common crash case), OR
       * it belongs to the holder of a STALE marker (a hung-but-alive NEW holder: the
         marker lease, not the ticket, is the liveness signal, so clearing its ticket
@@ -249,6 +256,12 @@ def _scan():
             defunct_pid = int(m.get("daemon_pid", 0)) or None
         except (TypeError, ValueError):
             defunct_pid = None
+        # Free a DEAD-PID holder marker right now, regardless of where this caller sits
+        # in the FIFO. Marker takeover otherwise only runs for a waiter that reaches the
+        # front (idx == 0); a single leaked/PID-reused ticket ahead would then wedge the
+        # dead marker in place for the full WAIT_MAX. A PID-alive (hung/reused) holder is
+        # left untouched here, governed by the lease+grace path.
+        _reap_dead_marker(m)
     try:
         names = os.listdir(_DIR)
     except OSError:
@@ -343,6 +356,49 @@ def _claim_fresh(epoch, daemon_pid, token, lease_expiry):
     finally:
         os.close(fd)
     return True
+
+
+def _reap_dead_marker(m):
+    """Free the holder marker the instant its daemon PID is dead — seconds-level,
+    FIFO-independent reclaim (NOT gated on lease/TTL and NOT on a waiter reaching the
+    front of the queue). A marker whose daemon process no longer exists can never be
+    renewed or impersonated (PID reuse makes it ALIVE, not dead — see below), so it is
+    pure garbage and removing it is the documented "PID death → free in seconds" path.
+
+    Leaves a PID-*alive* holder alone: a healthy holder, a hung-but-alive daemon, and
+    a stale marker whose PID was *reused* by some live process all keep `_alive` True,
+    so they are governed by the lease+grace takeover path, never reaped here.
+
+    Race-safe against a concurrent takeover that may swap in a FRESH (alive) marker:
+    we rename the marker aside (atomic — exactly one reaper/takeover wins the rename),
+    then delete it only after re-confirming the renamed file STILL names a dead PID; if
+    we grabbed a freshly-installed live marker, we put it back untouched. Crashing
+    mid-reap orphans a harmless `.reap-*` dotfile and leaves the lock FREE — the safe
+    direction for a holder we already proved dead."""
+    if m is None:
+        return
+    pid = m.get("daemon_pid", 0)
+    if _alive(int(pid) if pid else 0):
+        return
+    aside = os.path.join(_DIR, ".reap-%d-%d" % (os.getpid(), time.time_ns()))
+    try:
+        os.rename(_MARKER, aside)
+    except OSError:
+        return  # already gone, or another reaper/takeover won the rename
+    cur = _read_json(aside)
+    if cur is not None and _alive(int(cur.get("daemon_pid", 0) or 0)):
+        try:
+            os.rename(aside, _MARKER)  # we grabbed a live marker — restore it untouched
+        except OSError:
+            try:
+                os.remove(aside)
+            except OSError:
+                pass
+    else:
+        try:
+            os.remove(aside)
+        except OSError:
+            pass
 
 
 def _claim_or_takeover(epoch, daemon_pid, token):

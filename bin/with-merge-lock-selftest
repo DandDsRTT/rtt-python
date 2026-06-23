@@ -20,7 +20,8 @@ Scenarios:
   5. stale-state recovery (daemon killed → re-acquire does NOT short-circuit to 'already held')
   6. back-compat: a live OLD-style ticket (lower ns) makes a new acquirer WAIT, then proceed
   7. mtime reclaim (a live-PID but ancient ticket is reclaimed — the PID-reuse wedge bound)
-  8. WAIT_MAX → FAIL, never proceed-unlocked
+  8. dead-PID marker reaped in seconds even when a leaked ticket wedges the FIFO front
+  9. hung-daemon lease takeover + no-re-stake; ABS_MAX cap; WAIT_MAX → FAIL, never proceed-unlocked
 """
 
 import json
@@ -285,6 +286,49 @@ def t_mtime_reclaim():
         kill_daemons(d)
 
 
+def t_dead_marker_reaped():
+    """A crashed holder's marker (daemon PID not alive) must be reclaimed in SECONDS by
+    any poll — even when a leaked/PID-reused ticket is wedged at the front of the FIFO
+    so no waiter can reach idx==0 to take it over. Regression for the dead-PID marker
+    that lingered the full WAIT_MAX while `status` plainly reported alive=False
+    stale=True (marker reclaim used to be coupled to the idx==0 takeover only)."""
+    d = tempfile.mkdtemp(prefix="rtt-mlock-11.")
+    blocker = subprocess.Popen(["sleep", "120"])  # a LIVE pid wedged at the FIFO front
+    try:
+        os.makedirs(d, exist_ok=True)
+        # A guaranteed-dead PID for the holder marker (spawn, kill, reap).
+        ghost = subprocess.Popen(["sleep", "60"])
+        dead_pid = ghost.pid
+        ghost.kill()
+        ghost.wait()
+        with open(os.path.join(d, ".holder"), "w") as f:
+            f.write(json.dumps({"kind": "merge-holder", "epoch": 1,
+                                "daemon_pid": dead_pid, "token": "ghost",
+                                "lease_expiry": 1.0}))
+        # A leaked live-PID ticket with a LOW ns sits ahead of any new waiter, so the
+        # idx==0 takeover can never run; only a direct PID-death reap frees the marker.
+        low_ns = time.time_ns() - 5_000_000_000
+        open(os.path.join(d, "%d-%d" % (low_ns, blocker.pid)), "x").close()
+        # One status poll (which runs _scan) must reap the dead marker within seconds.
+        run(d, "status")
+        reaped = marker(d) is None
+        # Once the blocker is gone, a waiter acquires promptly — no lingering wedge.
+        blocker.terminate()
+        blocker.wait(timeout=5)
+        t0 = time.time()
+        r = run(d, "acquire", env=_env(d, lock_id="W"), timeout=40)
+        dt = time.time() - t0
+        m2 = marker(d)
+        acquired = (r.returncode == 0 and m2 is not None
+                    and alive(m2.get("daemon_pid")) and dt < 15)
+        record("dead-PID marker reaped despite blocked FIFO", reaped and acquired,
+               "reaped=%s acquired=%s in %.1fs" % (reaped, acquired, dt))
+    finally:
+        if blocker.poll() is None:
+            blocker.kill()
+        kill_daemons(d)
+
+
 def t_hung_daemon():
     """A holder daemon that is alive but STUCK (SIGSTOP) stops renewing; its lease
     goes stale and another agent takes over via lease+grace (not PID death). When
@@ -361,8 +405,8 @@ def t_wait_max_fail():
 def main():
     print("== with-merge-lock self-test (interpreter: %s) ==" % PY)
     for fn in (t_happy, t_mutex, t_dead_daemon, t_abandon, t_stale_state,
-               t_backcompat_old_ticket, t_mtime_reclaim, t_hung_daemon, t_abs_cap,
-               t_wait_max_fail):
+               t_backcompat_old_ticket, t_mtime_reclaim, t_dead_marker_reaped,
+               t_hung_daemon, t_abs_cap, t_wait_max_fail):
         try:
             fn()
         except Exception as e:  # noqa: BLE001 — a crashed scenario is a failure
