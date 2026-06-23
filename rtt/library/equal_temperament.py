@@ -55,14 +55,16 @@ def _wart_string(n: int, val: tuple[int, ...], domain_basis: tuple) -> str:
 
 def uniform_maps(domain_basis: tuple, max_n: int) -> list[tuple[int, str, tuple[int, ...]]]:
     logs = [math.log2(float(Fraction(e))) for e in domain_basis]
-    val = [0] * len(domain_basis)
+    signs = [1 if log >= 0 else -1 for log in logs]
+    sizes = [abs(log) for log in logs]
+    counts = [0] * len(domain_basis)
     out: list[tuple[int, str, tuple[int, ...]]] = []
     while True:
-        i = min(range(len(val)), key=lambda j: (val[j] + 0.5) / logs[j])
-        val[i] += 1
-        n = val[0]
+        i = min(range(len(counts)), key=lambda j: (counts[j] + 0.5) / sizes[j])
+        counts[i] += 1
+        n = counts[0]
         if n > max_n:
             return out
         if n >= 1:
-            frozen = tuple(val)
-            out.append((n, _wart_string(n, frozen, domain_basis), frozen))
+            val = tuple(sign * count for sign, count in zip(signs, counts, strict=False))
+            out.append((n, _wart_string(n, val, domain_basis), val))
