@@ -28,6 +28,19 @@ def custom_prescaler_entry(raw, on_diagonal: bool) -> EntryResolution:
     return EntryResolution(value, None)
 
 
+def parse_power(raw, minimum: float = 0.0) -> float | None:
+    text = str(raw).strip().lower()
+    if text in ("∞", "inf", "max", "minimax"):
+        return float("inf")
+    try:
+        value = float(text)
+    except ValueError:
+        return None
+    if not math.isfinite(value) or value <= 0 or value < minimum:
+        return None
+    return value
+
+
 def custom_weights(raws) -> EntryResolution:
     weights = []
     for raw in raws:

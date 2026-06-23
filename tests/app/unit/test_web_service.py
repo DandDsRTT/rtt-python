@@ -685,6 +685,31 @@ def test_resolve_domain_element_edit_checks_a_pending_addition_for_independence(
     assert service.resolve_domain_element_edit(st, "pending", "9").problem == "dependent"
 
 
+def test_parse_power_reads_the_minimax_keywords_as_infinity():
+    for word in ("∞", "inf", "max", "minimax", "MiniMax", " INF "):
+        assert service.parse_power(word) == float("inf")
+
+
+def test_parse_power_accepts_a_positive_finite_number():
+    assert service.parse_power("2") == 2.0
+    assert service.parse_power("0.5") == 0.5
+
+
+def test_parse_power_rejects_nonpositive_nonfinite_or_unparseable():
+    assert service.parse_power("0") is None
+    assert service.parse_power("-1") is None
+    assert service.parse_power("nan") is None
+    assert service.parse_power("abc") is None
+    assert service.parse_power("") is None
+
+
+def test_parse_power_enforces_a_minimum_for_the_complexity_norm():
+    # the complexity norm power q must be >= 1; the minimax keyword still passes (infinity >= 1)
+    assert service.parse_power("0.5", minimum=1.0) is None
+    assert service.parse_power("1", minimum=1.0) == 1.0
+    assert service.parse_power("minimax", minimum=1.0) == float("inf")
+
+
 def test_tuning_maps_under_top():
     import pytest
 

@@ -68,6 +68,7 @@ from rtt.app.service.entry import (
     EntryResolution,
     custom_prescaler_entry,
     custom_weights,
+    parse_power,
 )
 from rtt.app.service.parse import (
     _int_matrix_or_none,
