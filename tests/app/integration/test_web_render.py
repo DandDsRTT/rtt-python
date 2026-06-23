@@ -1184,8 +1184,9 @@ async def test_scrolling_a_prescaler_weight_nudges_it_by_a_thousandth(user: User
     # stepped by the one shared mechanism rather than a snowflake handler.
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
-    user.find(kind=ui.checkbox, content="weighting").click()              # gates the prescaling row
-    _cell_child(user, "control:slope").set_value("simplicity-weight")     # a non-unity slope reveals it
+    user.find(kind=ui.checkbox, content="weighting").click()              # reveals the alt-complexity sub-toggle
+    _cell_child(user, "control:slope").set_value("simplicity-weight")     # a non-unity slope
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # reveals the prescaling row
     await user.should_see(marker="cell:prescaling:primes:1:1")
     assert _cell_child(user, "cell:prescaling:primes:1:1").value == "1.585"  # log₂3, shown to 3 dp
     user.find(marker="cell:prescaling:primes:1:1").trigger("wheel", {"deltaY": -100})  # up = +0.001
@@ -1494,8 +1495,9 @@ async def test_typing_the_prescaler_plain_text_overrides_the_scheme(user: User) 
     # on re-render — would otherwise be the scheme's log₂3 = 1.585 default.
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
-    user.find(kind=ui.checkbox, content="weighting").click()  # opens the prescaling row
-    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
+    user.find(kind=ui.checkbox, content="weighting").click()  # reveals the alt-complexity sub-toggle
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope (the complexity rows ride weighting)
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # reveals the prescaling row
     _toggle(user, "plain text values")  # the ptext band
     await user.should_see(marker="ptext:prescaling:primes")
     _cell_child(user, "ptext:prescaling:primes").set_value("[⟨1 0 0] ⟨0 4 0] ⟨0 0 2.322]⟩")
@@ -1512,7 +1514,8 @@ async def test_unparseable_prescaler_plain_text_reddens_the_box(user: User) -> N
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
-    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope (the complexity rows ride weighting)
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # reveals the prescaling row
     _toggle(user, "plain text values")
     await user.should_see(marker="ptext:prescaling:primes")
     _cell_child(user, "ptext:prescaling:primes").set_value("[⟨1 0.5 0] ⟨0 1 0] ⟨0 0 1]⟩")
@@ -1532,8 +1535,9 @@ async def test_editing_a_prescaler_diagonal_cell_overrides_the_scheme(user: User
     # (𝐿C reads the same diagonal, so its prime-3 row goes from -4·1.585 = -6.340 to -4·4 = -16).
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
-    user.find(kind=ui.checkbox, content="weighting").click()  # the prescaling row is gated on weighting
-    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
+    user.find(kind=ui.checkbox, content="weighting").click()  # reveals the alt-complexity sub-toggle
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope (the complexity rows ride weighting)
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # the prescaling row is gated on alt. complexity
     await user.should_see(marker="cell:prescaling:primes:1:1")
     _cell_child(user, "cell:prescaling:primes:1:1").set_value("4.0")
     await user.should_see(marker="cell:prescaling:primes:1:1")
@@ -1549,11 +1553,12 @@ async def test_editable_prescaler_cell_renders_a_stacked_cents_face(user: User) 
     # the bare prescaler 𝐋 diagonal cells are editable too; the 5-limit default seeds prime 3's
     # diagonal at log₂3 = 1.585, a 3-dp value that overflows the square as a single line. It splits
     # into a big whole-part field over a smaller fraction field (the in-place decimal editor). Enable
-    # weighting (gates the prescaling row).
+    # weighting + alternative complexity (gate the prescaling row).
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
-    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope (the complexity rows ride weighting)
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # reveals the prescaling row
     await user.should_see(marker="cell:prescaling:primes:1:1")
     value = _cell_child(user, "cell:prescaling:primes:1:1").value  # the rejoined value, e.g. "1.585"
     whole_in, frac_in = _dec_inputs(user, "cell:prescaling:primes:1:1")
@@ -1573,7 +1578,9 @@ async def test_a_bare_integer_value_fills_the_cell_not_the_reduced_whole_part_si
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
-    _cell_child(user, "control:slope").set_value("simplicity-weight")  # reveal the prescaling row
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope
+    user.find(kind=ui.checkbox, content="all-interval").click()  # reveal the in-grid all-interval checkbox
+    _cell_child(user, "control:all_interval").set_value(True)  # an all-interval scheme reveals the prescaling row (off-diagonal stays read-only)
     await user.should_see(marker="cell:prescaling:primes:0:1")
     zero_face = _cell_child(user, "cell:prescaling:primes:0:1")        # read-only tuning value: child[0] IS the face
     zero_main = zero_face.default_slot.children[0]
@@ -1726,8 +1733,9 @@ async def test_prescaler_chooser_shows_the_prompt_when_a_diagonal_is_overridden(
     # via Quasar's display-value — the same fallback the tuning chooser uses for a manual tuning.
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
-    user.find(kind=ui.checkbox, content="weighting").click()  # opens the prescaling row (box 𝐋)
-    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
+    user.find(kind=ui.checkbox, content="weighting").click()  # reveals the alt-complexity sub-toggle
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope (the complexity rows ride weighting)
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # reveals the prescaling row (box 𝐋)
     _toggle(user, "presets")  # the chooser dropdowns
     await user.should_see(marker="preset:prescaler")
     assert "display-value" not in _cell_child(user, "preset:prescaler")._props  # names log-prime
@@ -1775,7 +1783,8 @@ async def test_picking_a_prescaler_clears_a_manual_diagonal_override(user: User)
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
-    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals the prescaling/complexity rows
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope (the complexity rows ride weighting)
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # reveals the prescaling row
     _toggle(user, "presets")
     await user.should_see(marker="cell:prescaling:primes:1:1")
     seed = _cell_child(user, "cell:prescaling:primes:1:1").value  # the scheme's log₂3 = 1.585
@@ -1796,7 +1805,8 @@ async def test_editing_the_prescaler_wipes_then_restores_the_complexity_chooser(
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
     user.find(kind=ui.checkbox, content="weighting").click()
-    _cell_child(user, "control:slope").set_value("simplicity-weight")  # reveals box 𝒄 + the prescaling row
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals box 𝒄
+    user.find(kind=ui.checkbox, content="alternative complexity").click()  # reveals the prescaling row
     _toggle(user, "presets")  # the complexity + prescaler choosers are presets
     await user.should_see(marker="control:complexity")
     assert _cell_child(user, "control:complexity").value == "lp (log-product)"  # log-prime -> lp

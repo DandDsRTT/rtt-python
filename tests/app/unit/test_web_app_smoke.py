@@ -1166,9 +1166,9 @@ def test_dense_prescaling_plain_text_fits_its_cell():
     # cell width at the sizer's font — no spill off the tile's right edge. The estimated
     # width (glyph-aware, calibrated >= the real render) fitting guarantees the render fits.
     s = show_settings.defaults()
-    s.update(plain_text_values=True, weighting=True)
-    # the prescaling row is slope-gated (hidden under the unity default); a non-unity slope
-    # reveals it without changing the prescaler values (the prescaler is slope-independent)
+    s.update(plain_text_values=True, weighting=True, alt_complexity=True)
+    # the prescaling row is gated on alternative complexity (or an all-interval scheme); turning it
+    # on reveals the row without changing the prescaler values (the prescaler is slope-independent)
     cells = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                                 tuning_scheme="TILT minimax-S").cells}
     for cid in ("ptext:prescaling:primes", "ptext:prescaling:targets"):

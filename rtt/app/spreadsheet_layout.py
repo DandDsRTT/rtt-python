@@ -203,7 +203,7 @@ class _LayoutMixin:
         self.matlabel_ssprimes_w = MATLABEL_W_SSPRIMES if (self.show_header_symbols and self.show_superspace) else 0
         _label_row_present = {"mapping": show_temp, "vectors": self.show_interval_vectors,
                               "canon": self.show_canon, "projection": self.show_projection,
-                              "prescaling": self._complexity_shown, "ss_mapping": self.show_superspace,
+                              "prescaling": self._prescaling_shown, "ss_mapping": self.show_superspace,
                               "ss_vectors": self.show_superspace, "ss_projection": self.show_ss_projection}
         self.matlabel_other_w = {}
         if self.show_header_symbols:
@@ -254,7 +254,7 @@ class _LayoutMixin:
             ("tuning", ROW_H, show_tuning, True, "tuning"),
             ("just", ROW_H, show_tuning, True, "just tuning"),
             ("retune", ROW_H, show_tuning, True, "retuning"),
-            ("prescaling", (self.prescale_rows + self.size_rows) * ROW_H, self._complexity_shown, True, "complexity prescaling"),
+            ("prescaling", (self.prescale_rows + self.size_rows) * ROW_H, self._prescaling_shown, True, "complexity prescaling"),
             ("complexity", ROW_H, self._complexity_shown, True, "complexity"),
             ("weight", ROW_H, self.show_weighting, True, "weight"),
             ("damage", ROW_H, show_tuning, True, "damage"),

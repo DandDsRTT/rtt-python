@@ -185,11 +185,11 @@ def test_set_complexity_prescaler_swaps_the_weighting_prescaler_into_the_layout(
     assert service.prescaler_of(editor.tuning_scheme) == "log-prime"  # the default
     editor.set_complexity_prescaler("prime")  # the alt.-complexity control (box 𝐋)
     assert service.prescaler_of(editor.tuning_scheme) == "prime"
-    # the prescaling matrix is slope-gated (hidden under the unity default); a non-unity slope
-    # reveals it, and the prescaler swap is slope-independent so the diagonal still reads sopfr's primes
+    # the prescaling matrix is gated on alternative complexity (or an all-interval scheme); turning
+    # it on reveals it, and the prescaler swap is slope-independent so the diagonal still reads its primes
     editor.set_weight_slope("simplicity-weight")
     # and the swap flows into the prescaling matrix: sopfr's diagonal IS the primes
-    lay = spreadsheet.build(editor.state, {**settings.defaults(), "weighting": True},
+    lay = spreadsheet.build(editor.state, {**settings.defaults(), "weighting": True, "alt_complexity": True},
                             tuning_scheme=editor.tuning_scheme)
     on = {c.id: c.text for c in lay.cells}
     assert on["cell:prescaling:primes:0:0"] == "2"  # the diagonal (row i, prime column i)

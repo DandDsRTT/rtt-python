@@ -141,6 +141,8 @@ class _ResolveMixin:
         self.show_alt_complexity = _f.alt_complexity
         self._complexity_shown = (self.show_weighting
                                   and service.damage_weight_slope(self.tuning_scheme) != "unityWeight")
+        self._prescaling_shown = self._complexity_shown and (
+            service.is_all_interval(self.tuning_scheme) or self.show_alt_complexity)
         self.weight_unit = f"({service.weight_annotation(self.tuning_scheme)})"
         self.complexity_unit = f"({service.complexity_annotation(self.tuning_scheme)})"
         self.damage_unit = f"¢{self.weight_unit}"
