@@ -385,6 +385,50 @@ def t_abs_cap():
         kill_daemons(d)
 
 
+def t_abs_cap_waiter_reclaim():
+    """An ALIVE holder that keeps renewing its lease but whose OWN abs-cap never fires
+    (here: a large TTL in its env — the candidate-(c) override; in the wild also a
+    monotonic stall across a macOS system sleep) must STILL be reclaimed EXTERNALLY by
+    a waiter once the hold-age exceeds the waiter's ABS_MAX + GRACE. This proves the cap
+    no longer depends on the holder cooperating by self-exiting — the structural defect
+    that let a wedged-but-alive daemon pin the merge lock ~55 min in the wild.
+
+    Against the OLD code (abs-cap enforced only inside the holder's own loop) the waiter
+    can never reclaim a lease-fresh, PID-alive holder, so this scenario hangs until the
+    subprocess timeout and FAILS — i.e. it is also the regression repro."""
+    d = tempfile.mkdtemp(prefix="rtt-mlock-12.")
+    try:
+        # Holder A: huge TTL so it will NEVER self-exit on the cap during the test; it
+        # stays alive and renews its lease the whole time (the wedged-but-alive holder).
+        ea = _env(d, lock_id="A", TTL=9999, LEASE=4, GRACE=1, GAP=9999, RENEW=1)
+        ra = subprocess.run([PY, SCRIPT, "acquire"], env=ea, capture_output=True,
+                            text=True, timeout=30)
+        m1 = marker(d)
+        ok = ra.returncode == 0 and m1 is not None
+        dpid = int(m1["daemon_pid"]) if m1 else 0
+        # Waiter B: small TTL+GRACE, so once the hold-age passes TTL+GRACE it deems the
+        # marker over-cap and reclaims it — even though A is alive and lease-fresh.
+        t0 = time.time()
+        rb = subprocess.run(
+            [PY, SCRIPT, "acquire"],
+            env=_env(d, lock_id="B", TTL=3, GRACE=1, LEASE=4, GAP=9999, RENEW=1),
+            capture_output=True, text=True, timeout=40)
+        dt = time.time() - t0
+        m2 = marker(d)
+        reclaimed = (rb.returncode == 0 and m2 is not None
+                     and m2.get("epoch") != m1.get("epoch")
+                     and int(m2.get("daemon_pid")) != dpid
+                     and alive(m2.get("daemon_pid")))
+        # A must have been stood down during the takeover, not left orphaned alongside B.
+        time.sleep(2)
+        a_gone = not alive(dpid)
+        ok = ok and reclaimed and a_gone and dt < 30
+        record("abs-cap waiter reclaim (alive renewing holder)", ok,
+               "reclaimed=%s A_gone=%s in %.1fs" % (reclaimed, a_gone, dt))
+    finally:
+        kill_daemons(d)
+
+
 def t_wait_max_fail():
     d = tempfile.mkdtemp(prefix="rtt-mlock-8.")
     try:
@@ -406,7 +450,7 @@ def main():
     print("== with-merge-lock self-test (interpreter: %s) ==" % PY)
     for fn in (t_happy, t_mutex, t_dead_daemon, t_abandon, t_stale_state,
                t_backcompat_old_ticket, t_mtime_reclaim, t_dead_marker_reaped,
-               t_hung_daemon, t_abs_cap, t_wait_max_fail):
+               t_hung_daemon, t_abs_cap, t_abs_cap_waiter_reclaim, t_wait_max_fail):
         try:
             fn()
         except Exception as e:  # noqa: BLE001 — a crashed scenario is a failure
