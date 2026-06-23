@@ -4360,7 +4360,7 @@ async def test_virtualization_elides_offscreen_body_cells(user: User, monkeypatc
             assert c.id in page.rec.els
 
 
-async def test_scrolling_reveals_and_releases_body_cells(user: User, monkeypatch) -> None:
+async def test_scrolling_reveals_far_cells_and_retains_near_ones(user: User, monkeypatch) -> None:
     monkeypatch.setenv("RTT_VIRT_VIEWPORT", "320x320")
     await user.open("/")
     live, page = _live_page()
@@ -4371,12 +4371,29 @@ async def test_scrolling_reveals_and_releases_body_cells(user: User, monkeypatch
     assert far.id not in page.rec.els
     assert near.id in page.rec.els
 
-    # scroll so the far cell sits at the top-left of the viewport: it materializes...
+    # scroll so the far cell sits at the top-left of the viewport: it materializes on demand...
     page.renderer._on_viewport(SimpleNamespace(args={"l": far.x, "t": far.y - fy, "w": 320, "h": 320}))
     assert far.id in page.rec.els
-    # ...and the top-left cell, now far above the window, is released
-    if not page.renderer._body_visible(near.x, near.y, near.w, near.h, fy):
-        assert near.id not in page.rec.els
+    # ...and the now-far-above near cell is RETAINED, not evicted — a scroll only ever ADDS, so
+    # scrolling back to it never re-blanks (the regression this fixes).
+    assert not page.renderer._body_visible(near.x, near.y, near.w, near.h, fy)  # genuinely off-screen
+    assert near.id in page.rec.els
+
+
+async def test_background_fill_materializes_every_deferred_cell(user: User, monkeypatch) -> None:
+    # the cold paint defers off-screen cells; the fill (a background task, skipped under the sim, so
+    # driven directly here) builds them all so forward-scrolling has nothing left to materialize.
+    monkeypatch.setenv("RTT_VIRT_VIEWPORT", "320x320")
+    await user.open("/")
+    live, page = _live_page()
+    lay, fx, fy, body = _body_cells(live, page)
+    deferred = [c.id for c in body if c.id not in page.rec.els]
+    assert deferred, "a 320x320 viewport must defer some off-screen cells at cold paint"
+
+    await page.renderer._fill_offscreen(page.renderer._fill_gen)
+
+    for c in lay.cells:
+        assert c.id in page.rec.els, f"fill left {c.id} unmaterialized"
 
 
 async def test_revirtualize_keeps_offscreen_scroll_within_overscan_cheap(user: User, monkeypatch) -> None:

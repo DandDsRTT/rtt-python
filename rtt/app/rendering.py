@@ -41,6 +41,7 @@ _log = logging.getLogger(__name__)
 _VIRT_OVERSCAN = 600.0
 _VIRT_VIEWPORT0 = (1680.0, 1050.0)
 _VIRT_REVIRT_STEP = 200.0  # ignore scroll deltas smaller than this — the overscan already covers them
+_FILL_CHUNK = 80  # off-screen cells the background fill builds per event-loop yield (keeps it snappy)
 
 
 def _initial_viewport() -> tuple[float, float, float, float]:
@@ -75,6 +76,7 @@ class Renderer:
         self._newborn_ids: frozenset[str] = frozenset()
         self._prev_cell_ids: frozenset[str] = frozenset()
         self._last_rings: tuple = (frozenset(), frozenset())
+        self._fill_gen = 0  # bumped each render; a background fill bails once it no longer matches
 
     def request_render(self, after=None):
         # schedule an off-loop commit render; a request arriving while one is in flight collapses
@@ -177,7 +179,11 @@ class Renderer:
         for ln in lay.lines:
             x0, x1 = (ln.pos, ln.pos) if ln.orientation == "v" else (ln.start, ln.start + ln.length)
             y0, y1 = (ln.start, ln.start + ln.length) if ln.orientation == "v" else (ln.pos, ln.pos)
-            if x1 >= fx and y1 >= fy and self._body_visible(x0, y0, x1 - x0, y1 - y0, fy):
+            # Gridlines, washes and boxes are NOT virtualized — there are only ~O(rows+cols) of them
+            # (a few hundred), cheap to build once and keep. Virtualizing them was a mistake: their
+            # eviction left the grid's lines/colour-washes blanking on scroll (the body cells are the
+            # bulk and the only thing worth virtualizing). So a body line always builds.
+            if x1 >= fx and y1 >= fy:
                 place_line(ln, "", self.page.board, fy)
             if x1 >= fx and y0 < fy:
                 place_line(ln, "#col", self.page.colhead_inner, 0)
@@ -219,9 +225,7 @@ class Renderer:
                 self.page.rec.styled[eid] = style
 
         for bl in lay.blocks:
-            for pane in _block_panes(bl, fx, fy):
-                if pane == "body" and not self._body_visible(bl.x, bl.y, bl.w, bl.h, fy):
-                    continue
+            for pane in _block_panes(bl, fx, fy):  # washes/boxes aren't virtualized (see _render_lines)
                 place_block(bl, pane)
 
     def _sync_mean_damage_tips(self) -> None:
@@ -352,19 +356,23 @@ class Renderer:
 
     def _render_cells(self, lay, fx, fy, seen, amber, red, cold, structural) -> None:
         for cb in lay.cells:
+            seen.add(cb.id)  # a current-layout cell is VALID — never dropped; only stale cells go
             container = _freeze_container(cb, fx, fy)
-            # virtualize the body pane: skip a body cell whose geometry is outside the visible scroll
-            # rectangle (plus overscan). Left out of `seen`, it is released by the drop sweep below if it
-            # was materialized, and rebuilt when scrolled back. A PENDING draft is always materialized —
-            # it must be focusable/typeable even just off-screen (the add-then-scroll-into-view path).
-            # The frozen corner/col/row strips are small and stay fully built.
+            # Virtualize the body pane to keep the COLD paint cheap: BUILD a new body cell only when it
+            # is on screen (visible rect + overscan); a new off-screen one is deferred to the background
+            # fill (_fill_offscreen), which materializes the rest just after the first paint. An
+            # ALREADY-built cell, by contrast, is always repositioned + refreshed even off-screen, so a
+            # structural reflow can't strand a retained cell at a stale spot — and the change-guards make
+            # an unmoved cell a no-op. Off-screen cells are never EVICTED (that re-blank on scroll-back
+            # was the bug); the drop sweep below removes only cells gone from the layout. Frozen
+            # corner/col/row strips and pending drafts always build.
             if (
-                container == "body"
+                cb.id not in self.page.rec.els
+                and container == "body"
                 and not cb.pending
                 and not self._body_visible(cb.x, cb.y, cb.w, cb.h, fy)
             ):
                 continue
-            seen.add(cb.id)
             self._make_cell_if_new(cb, container, cold, structural)
             # body + row cells live in the scroll space (shifted up by fy); column + corner cells
             # keep native coords in their frozen strip / corner. Each reconcile step (reposition,
@@ -453,6 +461,54 @@ class Renderer:
                 "window.rttBusy && window.rttBusy.done();"
                 " window.rttScheduleReveal && window.rttScheduleReveal()"
             )
+        self._schedule_fill(lay)
+
+    def _schedule_fill(self, lay) -> None:
+        # After the cheap viewport-only paint, materialize the rest of the body OFF the critical path so
+        # forward-scrolling is never blank: a background task builds the deferred off-screen cells in
+        # chunks, yielding the loop between chunks. Bumping _fill_gen supersedes any fill still running
+        # for an older layout. Skipped under the test harness (synchronous, and its huge viewport has
+        # already built everything) and when nothing is deferred.
+        self._fill_gen += 1
+        if helpers.is_user_simulation():
+            return
+        if any(cb.id not in self.page.rec.els for cb in lay.cells):
+            background_tasks.create(self._fill_offscreen(self._fill_gen))
+
+    async def _fill_offscreen(self, gen) -> None:
+        # Build the not-yet-materialized cells a chunk at a time, yielding between chunks so scrolls,
+        # edits and the heartbeat keep flowing. Only ADDS cells (skips any already built by a scroll
+        # revirtualize), never drops, so it can't fight the live view; a structural render bumps
+        # _fill_gen and this loop exits, the new render scheduling a fresh fill for the new layout.
+        while self._fill_gen == gen:
+            lay = self.page.last_lay
+            if lay is None:
+                return
+            fx, fy = lay.freeze_x, lay.freeze_y
+            pending = [cb for cb in lay.cells if cb.id not in self.page.rec.els]
+            if not pending:
+                return
+            amber, red = self._last_rings
+            with self.page.page_client:
+                self.page.building = True
+                self._revirtualizing = True  # filled cells are existing content → appear at once
+                try:
+                    for cb in pending[:_FILL_CHUNK]:
+                        container = _freeze_container(cb, fx, fy)
+                        self._make_cell_if_new(cb, container, cold=False, structural=False)
+                        top = cb.y - (fy if container in ("body", "row") else 0)
+                        geo = (
+                            f"left:0; top:0; transform:translate({cb.x}px,{top}px); "
+                            f"width:{cb.w}px; height:{cb.h}px"
+                        )
+                        self.page.rec.els[cb.id].style(geo)
+                        self.page.rec.styled[cb.id] = geo
+                        self._update_cell_content(cb)
+                        self.page.gestures.paint_cell(cb.id, amber, red)
+                finally:
+                    self.page.building = False
+                    self._revirtualizing = False
+            await asyncio.sleep(0)
 
     def _scrolled_past_overscan(self, vp, ref) -> bool:
         # the viewport moved or resized enough that the materialized band may no longer cover it. A
@@ -477,12 +533,12 @@ class Renderer:
                 self._revirtualize()
 
     def _revirtualize(self) -> None:
-        # re-materialize the body pane for the current viewport against the CACHED layout — a scroll
-        # must never re-run the RTT solve (editor.layout). Reuses the cached rings, since recomputing
-        # them would re-run the gesture hypotheticals (which mutate and restore editor state). Newly
-        # visible cells appear at once (structural=False → never withheld); cells dragged past their
-        # overscan margin are released by _render_cells' drop sweep. The frozen strips are rebuilt into
-        # `seen` unconditionally (only the body pane is filtered), so the sweep never drops them.
+        # Give the just-scrolled-into-view region priority while the background fill is still running:
+        # materialize its body cells NOW, against the CACHED layout (a scroll must never re-run the RTT
+        # solve). Reuses the cached rings, since recomputing them would re-run the gesture hypotheticals
+        # (which mutate and restore editor state). Newly visible cells appear at once (structural=False →
+        # never withheld); nothing is evicted (re-blanking on scroll-back was the bug), so a scroll only
+        # ever ADDS — the drop sweep removes only cells gone from the layout, of which a scroll has none.
         lay = self.page.last_lay
         if lay is None:
             return
