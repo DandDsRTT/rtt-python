@@ -63,6 +63,11 @@ from rtt.app.service.core import (
     tuning,
     tuning_from_generators,
 )
+from rtt.app.service.entry import (
+    EntryResolution,
+    custom_prescaler_entry,
+    custom_weights,
+)
 from rtt.app.service.parse import (
     _int_matrix_or_none,
     _parse_float_list,

@@ -564,6 +564,47 @@ def test_resolve_target_limit_marks_an_unproducible_spec_invalid():
     assert res.valid is False
 
 
+def test_custom_prescaler_entry_accepts_a_finite_number():
+    res = service.custom_prescaler_entry("2.5", on_diagonal=True)
+    assert res.value == 2.5
+    assert res.problem is None
+
+
+def test_custom_prescaler_entry_skips_a_blank_or_partial_field():
+    # a blank or mid-edit (unparseable) field commits nothing and shows no toast — the user is typing
+    assert service.custom_prescaler_entry("", on_diagonal=True).problem == "skip"
+    assert service.custom_prescaler_entry(None, on_diagonal=False).problem == "skip"
+    assert service.custom_prescaler_entry("1.2.3", on_diagonal=True).problem == "skip"
+
+
+def test_custom_prescaler_entry_rejects_a_nonpositive_diagonal_but_allows_it_off_diagonal():
+    # the prescaler's diagonal scales a coordinate, so it must be positive; an off-diagonal shear
+    # entry may be zero or negative
+    assert service.custom_prescaler_entry("0", on_diagonal=True).problem == "invalid"
+    assert service.custom_prescaler_entry("-1", on_diagonal=True).problem == "invalid"
+    assert service.custom_prescaler_entry("-1", on_diagonal=False).value == -1.0
+    assert service.custom_prescaler_entry("inf", on_diagonal=False).problem == "invalid"
+
+
+def test_custom_weights_collects_a_full_row_of_positive_numbers():
+    res = service.custom_weights(["1", "2.5", "3"])
+    assert res.value == (1.0, 2.5, 3.0)
+    assert res.problem is None
+
+
+def test_custom_weights_skips_until_every_field_is_filled():
+    # any blank/partial field leaves the whole row uncommitted with no toast
+    assert service.custom_weights(["1", "", "3"]).problem == "skip"
+    assert service.custom_weights(["1", "2x", "3"]).problem == "skip"
+
+
+def test_custom_weights_rejects_a_nonpositive_or_nonfinite_weight():
+    # a damage weight must be a positive finite number
+    assert service.custom_weights(["1", "0", "3"]).problem == "invalid"
+    assert service.custom_weights(["1", "-2", "3"]).problem == "invalid"
+    assert service.custom_weights(["1", "nan", "3"]).problem == "invalid"
+
+
 def test_tuning_maps_under_top():
     import pytest
 
