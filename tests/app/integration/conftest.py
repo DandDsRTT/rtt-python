@@ -50,10 +50,25 @@ never kill another agent's process); if it later un-wedges we briefly overcommit
 by one run, then it finishes. With this, no agent ever needs manual ``NOLOCK`` to
 get past a stuck holder.
 
+LOAD-GATED BYPASS — don't let the bypass become a dogpile
+=========================================================
+The bypass above assumes a stale heartbeat means *hung*. Under sustained overload it
+usually means *starved*: a perfectly healthy suite the OS isn't scheduling. If we bypass
+a starved holder we start a SECOND CPU-bound suite, which starves both further, so both
+miss their heartbeats and get bypassed, so a THIRD starts… a self-feeding pile-up that
+defeats the 1-slot semaphore entirely (seen once pinning load at 33 with four concurrent
+multi-hour suites). So the bypass is **gated on spare capacity**: a stale holder is
+bypassed only while 1-minute load per core is below ``RTT_RENDER_GATE_BYPASS_MAXLOAD``;
+above it we WAIT for the holder instead of piling on. A genuinely hung holder is still
+bypassed once load drops (CPU is then free, so a flat heartbeat really is wedged), and a
+DEAD holder is reclaimed by ``_scan`` regardless of load — so crash recovery is unaffected.
+
 Env knobs:
   * ``RTT_RENDER_GATE_SLOTS``  how many run concurrently (default 1)
   * ``RTT_RENDER_GATE_WAIT``   max seconds to queue before proceeding anyway (default 3600)
   * ``RTT_RENDER_GATE_STUCK``  no-progress seconds after which a holder is bypassed (default 240)
+  * ``RTT_RENDER_GATE_BYPASS_MAXLOAD``  bypass a stuck holder only while loadavg/core is
+                              below this (default 1.0); above it, wait instead of piling on
   * ``RTT_RENDER_GATE_NOLOCK`` set to ``1`` to opt a run out entirely
 
 ``RTT_MERGE_PROGRESS_FILE`` (optional): when the land protocol exports it, this
@@ -73,6 +88,16 @@ _GATE_DIR = "/tmp/rtt-render-gate.d"
 _SLOTS = max(1, int(os.environ.get("RTT_RENDER_GATE_SLOTS", "1")))
 _WAIT_MAX = int(os.environ.get("RTT_RENDER_GATE_WAIT", "3600"))  # seconds willing to queue
 _STUCK = int(os.environ.get("RTT_RENDER_GATE_STUCK", "240"))  # no-progress → bypass holder
+# A stale-heartbeat holder is BYPASSED (its slot reused by the next waiter) only when the
+# machine has spare capacity to absorb another concurrent render suite. Under saturation a
+# stale heartbeat almost always means the holder is STARVED, not hung — so starting another
+# CPU-bound suite past it just deepens the thrash, and every running suite then misses its
+# heartbeat and gets bypassed too: a self-feeding pile-up that defeats the 1-slot semaphore
+# (observed pinning load at 33 with four concurrent multi-hour suites). So we bypass only
+# when 1-minute load per core is below this factor; above it we WAIT for the holder instead.
+# A genuinely hung holder is still bypassed once load falls (CPU is then free, so flatness
+# really is wedged), and a DEAD holder is reclaimed by _scan regardless of load.
+_BYPASS_MAXLOAD = float(os.environ.get("RTT_RENDER_GATE_BYPASS_MAXLOAD", "1.0"))
 _POLL = 3  # seconds between attempts
 _REPORT_EVERY = 15  # seconds between "still waiting" lines
 _DISABLED = os.environ.get("RTT_RENDER_GATE_NOLOCK") == "1"
@@ -143,13 +168,28 @@ def _scan():
     return live
 
 
-def _classify(live, my_name, now):
+def _bypass_allowed():
+    """True iff the machine has spare capacity to start another concurrent render suite,
+    so bypassing a stale-heartbeat holder is safe rather than thrash-inducing. Measured as
+    1-minute load average per core; fail-open (True) if load can't be read, preserving the
+    original always-bypass behavior. See `_BYPASS_MAXLOAD` for why this gate exists."""
+    try:
+        load1 = os.getloadavg()[0]
+        ncpu = os.cpu_count() or 1
+    except (OSError, ValueError):
+        return True
+    return load1 < ncpu * _BYPASS_MAXLOAD
+
+
+def _classify(live, my_name, now, bypass_ok):
     """Split the FIFO queue around me. Returns (running_fresh, waiters_ahead, wedged):
     a *running* ticket holds a slot (fresh heartbeat), a *wedged* one has a heartbeat
-    older than STUCK (a stuck holder we bypass — counted toward neither the slot budget
-    nor my position), and a ticket with no heartbeat yet is a true waiter. `wedged` is
-    counted directly (NOT derived by subtraction), so a later-arriving true waiter is
-    never miscounted as stuck."""
+    older than STUCK AND `bypass_ok` is set (a stuck holder we bypass — counted toward
+    neither the slot budget nor my position), and a ticket with no heartbeat yet is a true
+    waiter. `wedged` is counted directly (NOT derived by subtraction), so a later-arriving
+    true waiter is never miscounted as stuck. When `bypass_ok` is False (machine saturated),
+    a stale holder is NOT bypassed — it keeps counting as a running slot so we WAIT for it
+    instead of piling another suite onto an already-thrashing box."""
     my_key = next(((ns, pid) for ns, pid, name in live if name == my_name), None)
     running_fresh = 0
     waiters_ahead = 0
@@ -163,8 +203,10 @@ def _classify(live, my_name, now):
             age = 0
         if has_hb and age <= _STUCK:
             running_fresh += 1
+        elif has_hb and bypass_ok:
+            wedged += 1  # stale heartbeat + spare capacity → stuck holder, safe to bypass
         elif has_hb:
-            wedged += 1  # stale heartbeat → stuck holder, bypassed
+            running_fresh += 1  # stale but saturated → treat as a live slot; wait, don't pile on
         elif name != my_name and my_key is not None and (ns, pid) < my_key:
             waiters_ahead += 1
     return running_fresh, waiters_ahead, wedged
@@ -198,7 +240,8 @@ def _acquire():
             except OSError:
                 pass
             continue
-        running_fresh, waiters_ahead, wedged = _classify(live, _ticket_name, now)
+        bypass_ok = _bypass_allowed()
+        running_fresh, waiters_ahead, wedged = _classify(live, _ticket_name, now, bypass_ok)
         free = _SLOTS - running_fresh
         if free > 0 and waiters_ahead < free:
             _take_slot()
@@ -219,6 +262,8 @@ def _acquire():
             return
         if waited - last_report >= _REPORT_EVERY:
             note = f"; bypassing {wedged} stuck" if wedged else ""
+            if not bypass_ok:
+                note += "; holding off bypass (machine saturated)"
             print(
                 f"[render-gate] waiting our turn… position {waiters_ahead + 1} "
                 f"({running_fresh}/{_SLOTS} slots busy{note}; {waited}s elapsed)",

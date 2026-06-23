@@ -1,12 +1,15 @@
-"""The render-gate counting semaphore must bypass a STUCK slot holder.
+"""The render-gate counting semaphore must bypass a STUCK slot holder — but only when
+the machine has spare capacity, never under saturation.
 
 These pin the pure FIFO-classification rule in ``tests/app/integration/conftest.py``
 without spawning any process or sleeping: build synthetic ticket + heartbeat files,
 then assert how ``_classify`` divides the queue around a given waiter. A holder with
 a fresh heartbeat occupies a slot; one whose heartbeat is older than ``_STUCK`` is
-presumed wedged and bypassed; a ticket with no heartbeat is a true waiter and keeps
-its FIFO place. (The timing/process behavior of the live gate is exercised by running
-the real suite, like the merge lock's own standalone self-test.)
+presumed wedged and bypassed *when ``bypass_ok``*; a ticket with no heartbeat is a true
+waiter and keeps its FIFO place. The ``bypass_ok`` gate is what stops a starved holder
+from being mistaken for a hung one under load and spawning a second concurrent suite
+(the pile-up that defeats the 1-slot semaphore). (The timing/process behavior of the
+live gate is exercised by running the real suite, like the merge lock's self-test.)
 """
 
 import importlib.util
@@ -45,7 +48,7 @@ def _heartbeat(gate, name, age):
 def test_lone_waiter_takes_the_only_slot(gate):
     me = _ticket(gate, 100, 1)
     now = os.path.getmtime(os.path.join(gate._GATE_DIR, me[2]))
-    running, ahead, wedged = gate._classify([me], me[2], now)
+    running, ahead, wedged = gate._classify([me], me[2], now, bypass_ok=True)
     assert (running, ahead, wedged) == (0, 0, 0)  # no one running/ahead/stuck → I go
 
 
@@ -54,28 +57,41 @@ def test_fresh_holder_blocks_a_later_waiter(gate):
     _heartbeat(gate, holder[2], age=1)  # actively progressing
     me = _ticket(gate, 200, 2)
     now = os.path.getmtime(gate._hb_path(holder[2])) + 1
-    running, ahead, wedged = gate._classify([holder, me], me[2], now)
+    running, ahead, wedged = gate._classify([holder, me], me[2], now, bypass_ok=True)
     assert running == 1  # the slot is busy; with _SLOTS=1 I must wait
     assert ahead == 0    # the holder is running, not a waiter ahead of me
     assert wedged == 0   # a fresh holder is not stuck
 
 
-def test_stuck_holder_is_bypassed(gate):
+def test_stuck_holder_is_bypassed_when_capacity_is_spare(gate):
     holder = _ticket(gate, 100, 1)
     _heartbeat(gate, holder[2], age=gate._STUCK + 60)  # wedged: no progress
     me = _ticket(gate, 200, 2)
     now = os.path.getmtime(gate._hb_path(holder[2])) + gate._STUCK + 60
-    running, ahead, wedged = gate._classify([holder, me], me[2], now)
+    running, ahead, wedged = gate._classify([holder, me], me[2], now, bypass_ok=True)
     assert running == 0  # wedged holder no longer counts → a slot is free for me
     assert ahead == 0
     assert wedged == 1   # and it is reported as exactly one stuck holder
+
+
+def test_stuck_holder_is_NOT_bypassed_under_saturation(gate):
+    # The dogpile fix: under load a stale heartbeat means STARVED, not hung. The holder
+    # keeps its slot so we WAIT for it rather than starting a second CPU-bound suite.
+    holder = _ticket(gate, 100, 1)
+    _heartbeat(gate, holder[2], age=gate._STUCK + 60)
+    me = _ticket(gate, 200, 2)
+    now = os.path.getmtime(gate._hb_path(holder[2])) + gate._STUCK + 60
+    running, ahead, wedged = gate._classify([holder, me], me[2], now, bypass_ok=False)
+    assert running == 1  # stale-but-not-bypassed → still occupies the slot
+    assert ahead == 0
+    assert wedged == 0   # nothing is bypassed under saturation
 
 
 def test_earlier_true_waiter_keeps_its_place(gate):
     earlier = _ticket(gate, 100, 1)  # a waiter with no heartbeat, ahead of me
     me = _ticket(gate, 200, 2)
     now = os.path.getmtime(os.path.join(gate._GATE_DIR, me[2]))
-    running, ahead, wedged = gate._classify([earlier, me], me[2], now)
+    running, ahead, wedged = gate._classify([earlier, me], me[2], now, bypass_ok=True)
     assert running == 0
     assert ahead == 1   # FIFO preserved: I defer to the earlier waiter, not bypass it
     assert wedged == 0
@@ -88,7 +104,7 @@ def test_bypass_does_not_jump_an_earlier_waiter(gate):
     earlier = _ticket(gate, 150, 2)  # true waiter, earlier than me
     me = _ticket(gate, 200, 3)
     now = os.path.getmtime(gate._hb_path(holder[2])) + gate._STUCK + 60
-    running, ahead, wedged = gate._classify([holder, earlier, me], me[2], now)
+    running, ahead, wedged = gate._classify([holder, earlier, me], me[2], now, bypass_ok=True)
     assert running == 0  # holder bypassed
     assert ahead == 1    # but the earlier waiter is ahead of me → I still wait
     assert wedged == 1
@@ -100,5 +116,21 @@ def test_later_waiter_is_not_miscounted_as_stuck(gate):
     me = _ticket(gate, 100, 1)
     behind = _ticket(gate, 200, 2)  # arrived after me, still just waiting
     now = os.path.getmtime(os.path.join(gate._GATE_DIR, behind[2]))
-    running, ahead, wedged = gate._classify([me, behind], me[2], now)
+    running, ahead, wedged = gate._classify([me, behind], me[2], now, bypass_ok=True)
     assert (running, ahead, wedged) == (0, 0, 0)  # nobody running, ahead, or stuck
+
+
+def test_bypass_allowed_tracks_load_per_core(gate, monkeypatch):
+    gate._BYPASS_MAXLOAD = 1.0
+    monkeypatch.setattr(gate.os, "cpu_count", lambda: 10)
+    monkeypatch.setattr(gate.os, "getloadavg", lambda: (5.0, 5.0, 5.0))
+    assert gate._bypass_allowed() is True   # 5 < 10 cores → spare capacity, bypass OK
+    monkeypatch.setattr(gate.os, "getloadavg", lambda: (33.0, 30.0, 25.0))
+    assert gate._bypass_allowed() is False  # 33 > 10 cores → saturated, do not pile on
+
+
+def test_bypass_allowed_fails_open_without_loadavg(gate, monkeypatch):
+    def _boom():
+        raise OSError("no loadavg")
+    monkeypatch.setattr(gate.os, "getloadavg", _boom)
+    assert gate._bypass_allowed() is True   # can't measure → preserve original behavior
