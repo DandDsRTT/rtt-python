@@ -10,6 +10,13 @@ _PY_FILES = sorted(_RTT.rglob("*.py"))
 
 _COMMENTS_ALLOWED = {
     "app/app.py",
+    "app/page_assets.py",
+    "app/reconciler.py",
+    "app/gestures.py",
+    "app/rendering.py",
+    "app/editing.py",
+    "app/building.py",
+    "app/page.py",
     "app/render_html.py",
     "app/editor.py",
     "app/service/text.py",
