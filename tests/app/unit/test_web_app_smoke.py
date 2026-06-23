@@ -9,6 +9,8 @@ import re
 import sys
 from pathlib import Path
 
+import pytest
+
 import rtt.app.app as app
 from rtt.app import (
     grid_tables,
@@ -54,6 +56,19 @@ def test_drop_purges_a_cell_from_every_handle_store():
     for d in rec._entity_dicts:
         assert "scheme:primes" not in d
     assert rec.handles("scheme:primes").scheme_button is None  # null-object, not a leaked handle
+
+
+def test_handles_sentinel_reads_none_but_refuses_writes():
+    # rec.handles(id) returns a null-object for a non-live id so READS are safe (every field None).
+    # That sentinel is SHARED, so a WRITE through it would silently corrupt every future miss — make
+    # it raise instead, turning a latent bug into an immediate error. Real records stay writable.
+    rec = app._Reconciler(Editor())
+    assert rec.handles("ghost").input is None
+    with pytest.raises(AttributeError):
+        rec.handles("ghost").input = "leak"
+    rec.cells["live"] = CellHandles()
+    rec.cells["live"].input = "ok"
+    assert rec.handles("live").input == "ok"
 
 
 def _bars(svg):
