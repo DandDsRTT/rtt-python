@@ -5,6 +5,7 @@ from fractions import Fraction
 import sympy as sp
 
 from rtt.library.dimensions import get_d
+from rtt.library.list_utils import all_zeros_l
 from rtt.library.math_utils import (
     get_primes,
     pad_vectors_with_zeros_up_to_d,
@@ -92,12 +93,13 @@ def get_domain_basis_change_for_m(original_superspace: tuple, target_subspace: t
         remaining = list(target_entry)
         for superspace_entry in superspace_a:
             count = 0
-            while is_numerator_factor(remaining, superspace_entry):
-                count += 1
-                remaining = [r - s for r, s in zip(remaining, superspace_entry, strict=False)]
-            while is_denominator_factor(remaining, superspace_entry):
-                count -= 1
-                remaining = [r + s for r, s in zip(remaining, superspace_entry, strict=False)]
+            if not all_zeros_l(superspace_entry):
+                while is_numerator_factor(remaining, superspace_entry):
+                    count += 1
+                    remaining = [r - s for r, s in zip(remaining, superspace_entry, strict=False)]
+                while is_denominator_factor(remaining, superspace_entry):
+                    count -= 1
+                    remaining = [r + s for r, s in zip(remaining, superspace_entry, strict=False)]
             column.append(count)
         change.append(tuple(column))
     return tuple(change)

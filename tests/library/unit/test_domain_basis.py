@@ -248,6 +248,20 @@ def test_get_domain_basis_change_for_c(original, target, expected):
 
 
 @pytest.mark.parametrize(
+    "original, target, expected",
+    [
+        (("2", "1", "5"), ("2", "3", "5"), ((1, 0, 0), (0, 0, 0), (0, 0, 1))),
+        (("2", "3", "5"), ("2", "1", "5"), ((1, 0, 0), (0, 0, 0), (0, 0, 1))),
+    ],
+)
+def test_get_domain_basis_change_terminates_with_unison_basis_element(
+    original, target, expected
+):
+    assert get_domain_basis_change_for_m(original, target) == expected
+    assert get_domain_basis_change_for_c(original, target) == expected
+
+
+@pytest.mark.parametrize(
     "domain_basis, expected",
     [
         ((2, F(5, 3), F(9, 7)), (2, 3, 5, 7)),  # tests.m 4102
