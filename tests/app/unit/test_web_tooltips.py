@@ -223,11 +223,17 @@ def test_guide_url_builds_wiki_subpage_and_section_anchor():
         tooltips.GUIDE_BASE + "/Tuning_fundamentals#Damage,_error,_and_weight")
     assert tooltips.guide_url("Mappings", "") == tooltips.GUIDE_BASE + "/Mappings"
     for gh in tooltips.GUIDE_HELP.values():
-        if not gh.chapter:           # some tiles carry a blurb with no Guide section to link
-            assert gh.url == ""
-            continue
-        assert gh.url.startswith(tooltips.GUIDE_BASE + "/")
-        assert " " not in gh.url
+        if gh.page:                  # a standalone Xen Wiki page (not part of the guide)
+            assert gh.url.startswith("https://en.xen.wiki/w/")
+            assert not gh.url.startswith(tooltips.GUIDE_BASE)
+            assert " " not in gh.url
+            assert not gh.location.startswith("D&D's Guide")   # no guide prefix on a non-guide link
+        elif gh.chapter:
+            assert gh.url.startswith(tooltips.GUIDE_BASE + "/")
+            assert " " not in gh.url
+            assert gh.location.startswith("D&D's Guide > ")
+        else:                        # a blurb with no link at all
+            assert gh.url == "" and gh.location == ""
 
 
 @pytest.mark.parametrize("key,gh", sorted(tooltips.GUIDE_HELP.items()))
@@ -257,9 +263,13 @@ def test_tile_guide_help_for_cell_only_fires_on_three_part_tile_ids():
         tooltips.GUIDE_HELP[("mapping", "primes")]
     assert tooltips.tile_guide_help_for_cell("symbol:tuning:gens") is \
         tooltips.GUIDE_HELP[("tuning", "gens")]
+    # the counts captions ARE real tiles now (caption:counts:commas → nullity), but the nullity-of-
+    # unchanged split keeps a 4-part id that must not resolve
+    assert tooltips.tile_guide_help_for_cell("caption:counts:commas") is \
+        tooltips.GUIDE_HELP[("counts", "commas")]
     for non_tile in ("caption:q", "symbol:dual", "caption:slope", "caption:all_interval",
                      "caption:counts:commas:u", "optimization:power:symbol",
-                     "optimization:mean_damage:caption", "caption:counts:commas"):
+                     "optimization:mean_damage:caption"):
         assert tooltips.tile_guide_help_for_cell(non_tile) is None
 
 

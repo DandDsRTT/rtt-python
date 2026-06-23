@@ -15,14 +15,26 @@ class GuideHelp:
     text: str
     chapter: str = ""
     section: str = ""
+    page: str = ""
+    anchor: str = ""
 
     @property
     def location(self) -> str:
-        return f"{self.chapter} › {self.section}" if self.section else self.chapter
+        if self.page:
+            return self.anchor or self.page
+        if self.chapter:
+            tail = f"{self.chapter} › {self.section}" if self.section else self.chapter
+            return f"D&D's Guide > {tail}"
+        return ""
 
     @property
     def url(self) -> str:
-        return guide_url(self.chapter, self.section) if self.chapter else ""
+        if self.page:
+            anchor = "#" + self.anchor.replace(" ", "_") if self.anchor else ""
+            return f"https://en.xen.wiki/w/{self.page.replace(' ', '_')}{anchor}"
+        if self.chapter:
+            return guide_url(self.chapter, self.section)
+        return ""
 
 
 GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
@@ -97,6 +109,29 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "The comma basis sized under the tempered tuning — all zero cents, because the "
         "temperament makes all of these commas vanish.",
         "Mappings", "Making commas vanish"),
+    ("counts", "primes"): GuideHelp(
+        "The dimensionality is the count of primes.",
+        "Mappings", "Matrices"),
+    ("counts", "gens"): GuideHelp(
+        "The rank is how many generators the temperament has — equivalently, its number of "
+        "different step sizes.",
+        "Mappings", "Rank"),
+    ("counts", "commas"): GuideHelp(
+        "The nullity is how many commas it takes to describe all the intervals the "
+        "temperament tempers out — the count of commas in a comma basis.",
+        "Exploring temperaments", "Rank and nullity"),
+    ("counts", "targets"): GuideHelp(
+        "The number of target intervals the tuning is optimizing for."),
+    ("mapping", "canongens"): GuideHelp(
+        "The form matrix maps the canonical form of the mapping to the form you're using.",
+        page="Projection", anchor="Form matrix"),
+    ("vectors", "detempering"): GuideHelp(
+        "A list of simple JI intervals, each mapping to a different one of the generators "
+        "for this temperament.",
+        page="Generator preimage"),
+    ("vectors", "interest"): GuideHelp(
+        "Other intervals you'd like to keep an eye on — neither targeted nor held, just "
+        "tracked so you can watch how the temperament and tuning treat them."),
 }
 
 
