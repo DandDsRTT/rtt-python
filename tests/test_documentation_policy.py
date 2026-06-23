@@ -24,6 +24,8 @@ _COMMENTS_ALLOWED = {
     "app/building.py",
     "app/page.py",
     "app/render_html.py",
+    "app/render_html_layout.py",
+    "app/render_html_text.py",
     "app/editor.py",
     "app/service/text.py",
     "app/service/core.py",

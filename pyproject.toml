@@ -57,7 +57,7 @@ max-returns = 6
 "rtt/library/matrix_utils.py" = ["PLR0913"]
 "rtt/app/spreadsheet*.py" = ["PLR0913"]
 "rtt/app/app.py" = ["PLR0913"]
-"rtt/app/render_html.py" = ["PLR0913"]
+"rtt/app/render_html*.py" = ["PLR0913"]
 "rtt/app/marks.py" = ["PLR0913"]
 "rtt/app/service/*.py" = ["PLR0913"]
 
