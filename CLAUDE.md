@@ -177,10 +177,24 @@ single slot. So a running holder now stamps a **heartbeat** (`.hb-…`) on every
 whose heartbeat is older than `RTT_RENDER_GATE_STUCK` (default 240s) stops counting against the
 slot budget and the next waiter proceeds past it (FIFO among the remaining waiters is preserved;
 the wedged run is left alive, never killed). A healthy run stamps sub-second, so it is never
-falsely bypassed. **This is why you must NOT reach for `RTT_RENDER_GATE_NOLOCK=1`:** it skips the
-semaphore entirely, and several NOLOCK runs at once thrash every core and slow *everyone's* gate
-~10-20× — the exact dogpile the semaphore exists to prevent. NOLOCK still exists as a last-ditch
-opt-out, but the auto-bypass means a stuck holder no longer justifies it; just let the gate run.
+falsely bypassed. **The bypass is gated on spare CPU** (`RTT_RENDER_GATE_BYPASS_MAXLOAD`, default
+loadavg/core < 1.0): under saturation a stale heartbeat means *starved*, not hung, so bypassing it
+would just pile a second suite onto a thrashing box — a self-feeding dogpile (it once pinned load
+at 33 with four concurrent multi-hour suites). Above the threshold we **wait** for the holder
+instead. **This is also why you must NOT reach for `RTT_RENDER_GATE_NOLOCK=1`:** it skips the
+semaphore entirely, and several NOLOCK runs at once thrash every core — the exact dogpile the
+semaphore exists to prevent. NOLOCK still exists as a last-ditch opt-out, but the auto-bypass means
+a stuck holder no longer justifies it; just let the gate run.
+
+**The merge-lock holder's gate gets an automatic PRIORITY slot — so you never need `NOLOCK` even
+under the lock.** A held-lock land runs the render gate while holding the exclusive merge lock; if
+that gate queued behind speculative non-holder runs, the merge lock would sit **idle** for the whole
+wait, stalling everyone's merge (a real priority inversion — once pinned the lock ~19 min while its
+gate sat at 0% CPU behind a non-holder). So the gate now reads the merge-lock marker and, if **this
+worktree holds the lock**, takes a slot immediately (bounded to +1 over `SLOTS`, since the lock is
+exclusive) while still stamping a heartbeat so others don't pile on. This replaces the old manual
+`RTT_RENDER_GATE_NOLOCK=1`-on-the-under-lock-gate convention entirely: just run the gate normally
+under the lock — `bin/land` and the manual flow get the priority slot automatically.
 
 ## Take the merge lock to land — hold it across the WHOLE critical section
 

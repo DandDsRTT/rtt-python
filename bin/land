@@ -28,10 +28,10 @@ This script shrinks the lock-held section to the ff-merge alone:
   3. **Fallback for sustained collisions.** After ``--max-optimistic`` lockless rounds
      keep getting outrun by render-relevant lands, fall back to the proven legacy flow
      (``with-merge-lock bash -c 'rebase; gate; ff-merge'``) which HOLDS the lock across
-     one final gate — guaranteeing forward progress. That single under-lock gate sets
-     ``RTT_RENDER_GATE_NOLOCK=1`` (legitimate here: the exclusive merge lock already makes
-     us the sole gater, so bypassing the render semaphore can't oversubscribe — this is
-     the intended use of NOLOCK, NOT the footgun of skipping a busy queue unlocked).
+     one final gate — guaranteeing forward progress. That under-lock gate runs through the
+     render semaphore normally and is auto-granted a PRIORITY slot (the conftest detects
+     the held merge lock), so it never idles the lock behind speculative runs and never
+     needs the old manual ``RTT_RENDER_GATE_NOLOCK=1``.
 
 CORRECTNESS is preserved end to end: we only ever ``ff-merge`` a state whose rendered
 output we actually validated, because the under-lock ``merge-safe-check`` proves the
@@ -137,12 +137,16 @@ def _ff_merge(main_checkout, branch):
 
 def _legacy_fallback(main_checkout, branch, gate_cmd):
     """Proven path: hold the lock across one rebase+gate+ff-merge, guaranteeing progress
-    when optimistic rounds keep losing to render-relevant churn. NOLOCK on the render
-    semaphore is correct under the exclusive merge lock (sole gater, no oversubscription)."""
+    when optimistic rounds keep losing to render-relevant churn. The under-lock gate runs
+    through the render semaphore normally — it auto-detects that we hold the merge lock and
+    takes a PRIORITY slot (see tests/app/integration/conftest.py), so it never idles the
+    lock queued behind speculative runs AND stays visible so non-holders don't pile on. This
+    replaces the old blunt ``RTT_RENDER_GATE_NOLOCK=1`` (which hid the run from the semaphore
+    entirely, inviting oversubscription)."""
     _log("optimistic rounds exhausted; falling back to held-lock land (one final gate)")
     script = (
         "set -e; git rebase main; "
-        "RTT_RENDER_GATE_NOLOCK=1 %s; "
+        "%s; "
         "git -C %s merge --ff-only %s"
         % (" ".join(gate_cmd), _q(main_checkout), _q(branch))
     )
