@@ -26,14 +26,12 @@ from rtt.app.service.schemes import (
     displayed_targets,
 )
 from rtt.app.service.state import TemperamentState
-from rtt.app.service.text import (
-    _DASH,
+from rtt.app.service.text_conventions import _DASH, ebk_convention, render_ebk
+from rtt.app.service.text_format import (
     _cents_genmap,
     _cents_list,
     _cents_map,
     _prescale_vector_list,
-    ebk_convention,
-    render_ebk,
 )
 
 

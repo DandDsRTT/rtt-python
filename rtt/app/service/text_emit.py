@@ -29,8 +29,9 @@ from rtt.app.service.superspace import (
     superspace_tuning_embedding,
     superspace_tuning_projection,
 )
-from rtt.app.service.text import _DASH, _ket_list, embedding_ebk, projection_ebk
 from rtt.app.service.text_context import _Ctx, _identity
+from rtt.app.service.text_conventions import _DASH
+from rtt.app.service.text_format import _ket_list, embedding_ebk, projection_ebk
 
 
 def _base_structural(ctx: _Ctx) -> dict:
