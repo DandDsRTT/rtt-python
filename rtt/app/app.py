@@ -811,9 +811,10 @@ _BUSY_JS = f"""
 
   // Debounced reveal of withheld new content: every render calls this; the timer RESETS each time, so
   // it fires one beat after renders STOP (a retuning commit can render in stages). Reading the live --t
-  // makes it instant when animations are off. The 1.3x lets the last slide finish before the fade.
+  // off BODY (where the `animations`-off class overrides it to 0s — :root keeps the default) makes the
+  // reveal instant when animations are off. The 1.3x lets the last slide finish before the fade.
   window.rttScheduleReveal = () => {{
-    const t = getComputedStyle(document.documentElement).getPropertyValue('--t').trim();
+    const t = getComputedStyle(document.body).getPropertyValue('--t').trim();
     const ms = (t.endsWith('ms') ? parseFloat(t) : parseFloat(t) * 1000) * 1.3;
     clearTimeout(window.__rttReveal);
     window.__rttReveal = setTimeout(() => {{
