@@ -207,6 +207,10 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         page="Generator embedding matrix"),
     ("projection", "canongens"): GuideHelp(
         "The generator embedding for the canonical form's generators."),
+    ("counts", "ssprimes"): GuideHelp(
+        "The count of superspace primes."),
+    ("counts", "ssgens"): GuideHelp(
+        "The number of superspace generators."),
 }
 
 
