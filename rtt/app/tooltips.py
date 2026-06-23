@@ -44,9 +44,10 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "RTT.",
         "Mappings", "Mappings"),
     ("vectors", "commas"): GuideHelp(
-        "The comma basis is a basis for all the commas (small JI intervals) this temperament "
-        "tempers out — a minimal set from which every one of them can be built by combination. "
-        "Intervals differing by any such combination are thereby tempered together.",
+        "The commas this temperament tempers out — or in other words, (usually) small JI "
+        "intervals it makes vanish — form an endless set; the comma basis is a minimal "
+        "selection of them that generates all the rest by combination. Intervals differing "
+        "by any such combination are thereby tempered together.",
         "Exploring temperaments", "Mapping-row-bases and comma bases"),
     ("tuning", "gens"): GuideHelp(
         "The generator tuning map gives the size in cents of each generator. The mapping "
