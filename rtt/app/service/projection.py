@@ -15,9 +15,9 @@ from rtt.app.service.core import (
     interval_complexities,
     interval_sizes,
     interval_vector,
-    inverse_form_matrix,
     mapped_commas,
 )
+from rtt.app.service.core_forms import inverse_form_matrix
 from rtt.app.service.state import TemperamentState
 from rtt.library.generator_embedding import get_generator_embedding, get_tempering_projection
 from rtt.library.superspace import apply_matrix_to_vectors, greedy_independent_rows

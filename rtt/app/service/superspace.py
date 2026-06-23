@@ -7,12 +7,11 @@ from functools import lru_cache
 
 from rtt.app.service.core import (
     DEFAULT_TUNING_SCHEME,
-    ClosedFormTuning,
     Tuning,
     _to_matrix,
     _vectors_to_ratios,
-    closed_form_from_temperament,
 )
+from rtt.app.service.core_closed_form import ClosedFormTuning, closed_form_from_temperament
 from rtt.app.service.projection import (
     _held_for_projection,
     _matrix_strings,
