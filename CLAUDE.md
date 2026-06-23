@@ -338,6 +338,48 @@ render semaphore lets at most ~one land complete per gate) and removed entirely 
 moves by `merge-safe-check`. Reach for the manual held-lock sequence above only to hand-resolve a
 rebase conflict. Both keep the atomic `--ff-only` backstop, so neither can corrupt `main`.
 
+### A queue wait is NORMAL — don't catastrophize it, and never NOLOCK to skip it
+
+The merge lock and the render gate are **FIFO-fair**, and the queue normally **drains** — a queue
+several deep clears as teammates land, and `main` advancing while you wait is the system **working**,
+not failing. So a `[merge-gate] waiting our turn… position N of M` / `[render-gate] waiting our turn…`
+line that is **moving** is the normal, expected, correct state; **wait your turn** and don't reach for
+the panic words ("deadlocked", "gridlocked", "no one ever gets through") for an ordinary, draining
+queue. The lock is also always **safe**: it *fails closed* (refuses to merge without the lock; an
+hour-long wait FAILS the land rather than corrupting `main`), so you never have to fear a bad merge.
+
+But **be accurate, not naively reassuring — liveness is NOT guaranteed.** The self-heal is **not
+reliable**: the TTL hard-cap (`RTT_MERGE_GATE_TTL`, 40 min) is *supposed* to reclaim a wedged holder,
+but this has been **observed to fail** — a holder daemon that stays alive and keeps renewing its
+lease has held the lock **~55 min, past the TTL, without being reclaimed**, stalling every waiter
+until they hit the 1-hour wait cap and *fail*. So there is a real distinction:
+
+- **A deep but MOVING queue** → normal; wait it out; do not catastrophize.
+- **A SINGLE holder stuck past ~40 min** (position not advancing, holder daemon's hold age > TTL)
+  → this is a **genuine liveness bug**, not something that "clears on its own." Surface it to the
+  human **once, plainly** — name the wedged holder (PID + its worktree, from `bin/with-merge-lock
+  status`) so they can intervene — and don't pretend patience will fix it. Still do **not** `pkill`
+  another agent's process yourself, and do **not** NOLOCK around it (see below).
+
+Don't hold the merge lock yourself for long, either — validate in the shortest critical section you
+can; a land that holds the lock through a 9-min (or dogpiled, hours-long) gate is what *creates* these
+stalls for everyone behind you.
+- **NEVER set `RTT_RENDER_GATE_NOLOCK=1` to skip a busy queue.** The render-gate semaphore exists
+  to **serialize** render runs so they don't saturate the CPU. Bypassing it while several agents
+  are active creates a **dogpile**: every agent's gate run (including yours) slows 10–20× — the
+  exact slowdown you tried to escape, now inflicted on everyone, and your held merge lock blocks
+  the queue for *hours* instead of minutes. `NOLOCK` is **only** for a single, confirmed-stuck
+  render-gate holder *while you already hold the merge lock*. Under ordinary contention, take your
+  place in line — it is faster for everyone, including you.
+- **Let a slow but moving land ride; don't babysit or narrate it.** Run it in the background and
+  surface **only** the terminal result (merged / conflict / failure / wedged-holder). Don't
+  poll-and-report queue positions to the user for an advancing queue, and don't editorialize. The
+  accurate framing of a structural weakness is: the lock is **always safe** (fails closed) and a
+  healthy queue **drains**, but **liveness is not guaranteed** — under heavy concurrency it degrades,
+  and a wedged holder past the TTL can genuinely stall and fail lands until the self-heal is fixed.
+  Say that **once**, plainly, and spin a task chip to evolve it. Calm and accurate — neither panic
+  nor false reassurance.
+
 ## Git: you're on a fast-moving team — rebase onto main, then ff-merge
 
 You work in your own worktree on a `claude/<name>` branch. Several agents run in parallel and
