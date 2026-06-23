@@ -15,7 +15,9 @@ from rtt.app import (
 from rtt.app._editing_tuning import _TuningEdits
 from rtt.app._editing_vectors import _VectorEdits
 from rtt.app.page_assets import (
+    _INVALID_PRESCALER,
     _INVALID_TEMPERAMENT,
+    _INVALID_WEIGHT,
     _TILE_HOST,
     _VecGridEdit,
 )
@@ -146,18 +148,34 @@ class EditController:
         "on_toggle_all",
     )
 
-    def _commit_outcome(self, out, apply, reject_message=None) -> None:
+    def _reason_message(self, reason):
+        # the ONE place the view phrases a service Reason — fixed view copy (page_assets constants)
+        # or view-layer help text (tooltips) the service must not import. Decisions whose wording is
+        # derived from the input (parser errors, f-strings over the typed value) ride on
+        # Outcome.message instead and never pass through here.
+        if reason is service.Reason.INVALID_PRESCALER:
+            return _INVALID_PRESCALER
+        if reason is service.Reason.INVALID_WEIGHT:
+            return _INVALID_WEIGHT
+        if reason is service.Reason.TARGET_WHOLE:
+            return tooltips.target_limit_help("whole")
+        if reason is service.Reason.TARGET_ODD:
+            return tooltips.target_limit_help("odd")
+        return None
+
+    def _commit_outcome(self, out, apply) -> None:
         if out.effect is service.Effect.IGNORE:
             return
         if out.effect is service.Effect.RERENDER:
             self.page.renderer.render()
             return
+        msg = out.message or self._reason_message(out.reason)
         if out.effect is service.Effect.REJECT:
-            ui.notify(out.message or reject_message, type="negative", position="top")
+            ui.notify(msg, type="negative", position="top")
             self.page.renderer.render()
             return
-        if out.message:
-            ui.notify(out.message, type="negative", position="top")
+        if msg:  # ACCEPT carrying a non-blocking warning (e.g. an even OLD limit)
+            ui.notify(msg, type="negative", position="top")
         apply()
 
     def _preview_outcome(self, out, apply) -> None:
@@ -308,19 +326,15 @@ class EditController:
             return
         self.page.gestures.end_chooser_gesture()
         num, sel = self.page.rec.cells["preset:target"].select
-        res = service.resolve_target_limit(sel.value, num.value, self.page.editor.state.domain_basis)
-        if res.problem == "whole":
-            # a non-number is never accepted: toast and re-render, which restores the committed
-            # value (the input is loopback-controlled, so the server's value overwrites the garbage)
-            ui.notify(tooltips.target_limit_help("whole"), type="negative", position="top")
-            self.page.renderer.render()
-            return
-        if not res.valid:
-            return
-        if res.problem == "odd":
-            ui.notify(tooltips.target_limit_help("odd"), type="negative", position="top")
-        self.page.editor.set_target_spec(res.spec)
-        self.page.renderer.request_render()  # a new target set re-weights the optimization (retunes) — render off the loop
+        out = service.resolve_target_limit(sel.value, num.value, self.page.editor.state.domain_basis)
+        # a non-number rejects (toast + re-render restores the loopback-controlled field); an even OLD
+        # limit accepts but warns; a valid limit accepts; an unrealizable spec is silently ignored.
+
+        def apply():
+            self.page.editor.set_target_spec(out.value)
+            self.page.renderer.request_render()  # a new target set re-weights the optimization — off the loop
+
+        self._commit_outcome(out, apply)
 
     def on_control_select(self, cid, value):
         if self.page.building or value is None:

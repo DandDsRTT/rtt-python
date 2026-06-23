@@ -66,7 +66,6 @@ from rtt.app.service.core_intervals import (
     transformed_vector,
 )
 from rtt.app.service.core_targets import (
-    TargetLimitResolution,
     default_target_limit,
     resolve_target_limit,
     target_interval_set,
@@ -84,6 +83,7 @@ from rtt.app.service.outcome import (
     RERENDER,
     Effect,
     Outcome,
+    Reason,
     accept,
     reject,
 )

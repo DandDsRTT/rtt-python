@@ -10,10 +10,8 @@ from rtt.app import (
 )
 from rtt.app.page_assets import (
     _INVALID_EMBEDDING,
-    _INVALID_PRESCALER,
     _INVALID_PROJECTION,
     _INVALID_TEMPERAMENT,
-    _INVALID_WEIGHT,
     _PTEXT_DUAL_VECTOR_KIND,
     _TARGET_LIMIT_DEBOUNCE,
     _WHEEL_STEPS,
@@ -168,11 +166,8 @@ class _TuningEdits:
             return
         num, sel = self.page.rec.cells["preset:target"].select
         raw = num.value if typed is None else typed
-        res = service.resolve_target_limit(sel.value, raw, self.page.editor.state.domain_basis)
-        if res.problem == "whole" or not res.valid:
-            self.page.gestures.edit_candidate(None)
-            return
-        self.page.gestures.edit_candidate(lambda: self.page.editor.set_target_spec(res.spec))
+        out = service.resolve_target_limit(sel.value, raw, self.page.editor.state.domain_basis)
+        self.e._preview_outcome(out, lambda: self.page.editor.set_target_spec(out.value))
 
     def on_prescaler_change(self, cid):
         if self.page.building or self.page.rec.handles(cid).input is None:
@@ -185,7 +180,7 @@ class _TuningEdits:
             self.page.editor.set_custom_prescaler_entry(i, j, out.value)
             self.page.renderer.request_render()  # the prescaler drives the weighted solve — off the loop
 
-        self.e._commit_outcome(out, apply, _INVALID_PRESCALER)
+        self.e._commit_outcome(out, apply)
 
     def on_weight_change(self, cid):
         if self.page.building or self.page.rec.handles(cid).input is None:
@@ -199,7 +194,7 @@ class _TuningEdits:
             self.page.editor.set_custom_weights(list(out.value))
             self.page.renderer.request_render()  # the weights drive the tuning solve — off the loop
 
-        self.e._commit_outcome(out, apply, _INVALID_WEIGHT)
+        self.e._commit_outcome(out, apply)
 
     def on_ptext_edit(self, cid, value):
         if self.page.building:
