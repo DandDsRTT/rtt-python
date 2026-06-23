@@ -29,11 +29,7 @@ def test_lols_complexity_drops_the_prime_2_entry(ratio, expected):
     t = parse_temperament_data(MEANTONE)
     spec = resolve_tuning_scheme("minimax-lols-S")
     pcv = pad_vectors_with_zeros_up_to_d((quotient_to_pcv(Fraction(ratio)),), 3)[0]
-    complexity = get_complexity(
-        pcv, t, spec.complexity_norm_power, spec.complexity_log_prime_power,
-        spec.complexity_prime_power, spec.complexity_size_factor, spec.nonprime_basis_approach,
-        complexity_rough=spec.complexity_rough,
-    )
+    complexity = get_complexity(pcv, t, spec.complexity)
     assert complexity == pytest.approx(expected, abs=TOL)
 
 
@@ -113,7 +109,7 @@ def test_size_factor_complexity_names(name, expected):
     "name, expected",
     [
         ("held-octave TILT miniRMS-lils-C", (1200.000, 696.075)),  # un-roughed lils weights
-        ("TILT miniRMS-lols-C", (1200.000, 696.097)),              # roughed (2-less) lols weights
+        ("TILT miniRMS-lols-C", (1200.000, 696.097)),  # roughed (2-less) lols weights
     ],
 )
 def test_lols_target_mode_roughs_out_the_twos(name, expected):

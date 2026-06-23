@@ -12,6 +12,7 @@ from rtt.library.tuning import (
     optimize_tuning_map,
 )
 from rtt.library.tuning_scheme_names import (
+    ComplexitySpec,
     TuningSchemeSpec,
     complexity_name_traits,
     damage_name_traits,
@@ -28,8 +29,7 @@ SRUTAL = "[⟨2 0 11] ⟨0 1 -2]}"
 FIVE_OLD = "{2/1, 3/2, 4/3, 5/4, 8/5, 5/3, 6/5}"
 SIX_TILT = "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5}"
 TEN_TILT = (
-    "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5, 7/3, 7/4, "
-    "7/5, 7/6, 8/3, 8/5, 9/4, 9/5, 9/7, 10/7}"
+    "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5, 7/3, 7/4, 7/5, 7/6, 8/3, 8/5, 9/4, 9/5, 9/7, 10/7}"
 )
 
 # (optimization_power, damage_weight_slope, log_prime_power [5a], norm_power [4], expected)
@@ -92,9 +92,7 @@ NESTED_MINIMAX_CASES = [
 
 
 @pytest.mark.parametrize("slope, norm_power, log_prime_power, expected", NESTED_MINIMAX_CASES)
-def test_optimize_generator_tuning_map_nested_minimax(
-    slope, norm_power, log_prime_power, expected
-):
+def test_optimize_generator_tuning_map_nested_minimax(slope, norm_power, log_prime_power, expected):
     t = parse_temperament_data(PAJARA)
     spec = TuningSchemeSpec(
         optimization_power=inf,
@@ -202,9 +200,9 @@ PAJARA_SYSTEMATIC = [
 @pytest.mark.parametrize("scheme_name, expected", PAJARA_SYSTEMATIC)
 def test_optimize_generator_tuning_map_systematic_name(scheme_name, expected):
     t = parse_temperament_data(PAJARA)
-    assert optimize_generator_tuning_map(
-        t, f"{TEN_TILT} {scheme_name}"
-    ) == pytest.approx(expected, abs=TOL)
+    assert optimize_generator_tuning_map(t, f"{TEN_TILT} {scheme_name}") == pytest.approx(
+        expected, abs=TOL
+    )
 
 
 # Section "by damageSystematicName" (tests.m 2684-2720): srutal over sixTilt, damage
@@ -287,8 +285,11 @@ def test_optimize_generator_tuning_map_complexity_name(power, slope, complexity_
     t = parse_temperament_data(BLACKWOOD)
     traits, held = complexity_name_traits(complexity_name) if complexity_name else ({}, None)
     spec = TuningSchemeSpec(
-        optimization_power=power, target_intervals=SIX_TILT, damage_weight_slope=slope,
-        held_intervals=held, **traits,
+        optimization_power=power,
+        target_intervals=SIX_TILT,
+        damage_weight_slope=slope,
+        held_intervals=held,
+        **traits,
     )
     assert optimize_generator_tuning_map(t, spec) == pytest.approx(expected, abs=TOL)
 
@@ -342,9 +343,9 @@ def test_held_octave_with_target_single_free_generator():
     # tests.m 2872: the coinciding-damage edge where the held octave pins one generator,
     # leaving a single free one and a target (prime 5) whose damage is already locked.
     t = parse_temperament_data("[⟨3 0 7] ⟨0 1 0]}")
-    assert optimize_generator_tuning_map(
-        t, "held-octave {3/1, 5/1} minimax-U"
-    ) == pytest.approx((400.000, 1901.955), abs=TOL)
+    assert optimize_generator_tuning_map(t, "held-octave {3/1, 5/1} minimax-U") == pytest.approx(
+        (400.000, 1901.955), abs=TOL
+    )
 
 
 def test_held_interval_minimax():
@@ -464,13 +465,11 @@ def test_get_just_tuning_map_nonstandard_basis():
 )
 def test_get_complexity(norm_power, log_prime_power, expected):
     dummy = Temperament(((1, 2, 3), (0, 5, 6)), ROW)
-    result = get_complexity((1, 1, -1), dummy, norm_power, log_prime_power, 0, 0, "")
+    result = get_complexity((1, 1, -1), dummy, ComplexitySpec(norm_power, log_prime_power))
     assert result == pytest.approx(expected, abs=1e-9)
 
 
-@pytest.mark.parametrize(
-    "power, expected", [(1, float("inf")), (2, 2), (float("inf"), 1)]
-)
+@pytest.mark.parametrize("power, expected", [(1, float("inf")), (2, 2), (float("inf"), 1)])
 def test_get_dual_power(power, expected):
     assert get_dual_power(power) == expected
 
@@ -478,7 +477,5 @@ def test_get_dual_power(power, expected):
 def test_generator_tuning_map_from_t_and_tuning_map():
     meantone_m = parse_temperament_data("[⟨1 1 0] ⟨0 1 4]}")
     quarter_comma_tuning_map = (1200.000, 1896.578, 2786.314)
-    result = generator_tuning_map_from_t_and_tuning_map(
-        meantone_m, quarter_comma_tuning_map
-    )
+    result = generator_tuning_map_from_t_and_tuning_map(meantone_m, quarter_comma_tuning_map)
     assert result == pytest.approx((1200.000, 696.578), abs=TOL)

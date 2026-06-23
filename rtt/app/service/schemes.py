@@ -235,9 +235,10 @@ def complexity_prescaler(
     return tuple(
         get_complexity_prescaler(
             t,
-            spec.complexity_log_prime_power,
-            spec.complexity_prime_power,
-            nonprime_approach or spec.nonprime_basis_approach,
+            replace(
+                spec.complexity,
+                nonprime_basis_approach=nonprime_approach or spec.nonprime_basis_approach,
+            ),
         )
     )
 

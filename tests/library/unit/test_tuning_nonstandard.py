@@ -9,7 +9,7 @@ import pytest
 
 from rtt.library.parsing import parse_temperament_data
 from rtt.library.tuning import get_complexity, optimize_generator_tuning_map
-from rtt.library.tuning_scheme_names import TuningSchemeSpec
+from rtt.library.tuning_scheme_names import ComplexitySpec, TuningSchemeSpec
 
 TOL = 1e-2  # the library states these to 3-4 decimals; a couple of references are coarser
 
@@ -66,11 +66,12 @@ def test_neutral_complexity_is_prime_factored_across_shared_basis_elements():
     # factoring, so there the 3's do NOT cancel and the complexity IS log2(7/3)+log2(11/3).
     t = parse_temperament_data(ARTICLE_EXAMPLE)
     eleven_over_seven = (0, -1, 1)  # 11/7 as a vector over 2.7/3.11/3
-    # get_complexity(pcv, t, norm_power, log_prime_power, prime_power, size_factor, approach)
-    neutral = get_complexity(eleven_over_seven, t, 1, 1, 0, 0, "")
-    assert neutral == pytest.approx(log2(11 * 7), abs=1e-9)            # 6.267, the quotient form
+    neutral = get_complexity(eleven_over_seven, t, ComplexitySpec(1, 1))
+    assert neutral == pytest.approx(log2(11 * 7), abs=1e-9)  # 6.267, the quotient form
     assert neutral != pytest.approx(log2(7 * 3) + log2(11 * 3), abs=1e-2)  # NOT 9.437
-    nonprime = get_complexity(eleven_over_seven, t, 1, 1, 0, 0, "nonprime-based")
+    nonprime = get_complexity(
+        eleven_over_seven, t, ComplexitySpec(1, 1, nonprime_basis_approach="nonprime-based")
+    )
     assert nonprime == pytest.approx(log2(7 / 3) + log2(11 / 3), abs=1e-9)  # 3.097, atomic
 
 

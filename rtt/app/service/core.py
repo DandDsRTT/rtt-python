@@ -374,14 +374,7 @@ def interval_complexities(
     t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios, domain_basis)
     return tuple(
         get_complexity(
-            m,
-            t,
-            spec.complexity_norm_power,
-            spec.complexity_log_prime_power,
-            spec.complexity_prime_power,
-            spec.complexity_size_factor,
-            spec.nonprime_basis_approach,
-            prescaler_override=prescaler_override,
+            m, t, replace(spec.complexity, rough=0), prescaler_override=prescaler_override
         )
         for m in vectors
     )
