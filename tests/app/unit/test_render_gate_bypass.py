@@ -137,6 +137,80 @@ def test_bypass_allowed_fails_open_without_loadavg(gate, monkeypatch):
     assert gate._bypass_allowed() is True   # can't measure → preserve original behavior
 
 
+# --- the wait-cap proceed carries the SAME load gate as the bypass --------------------------
+# Closes the second dogpile door: a waiter that hits RTT_RENDER_GATE_WAIT used to "proceed
+# anyway" UNCONDITIONALLY, starting a second concurrent suite while the still-unfinished holder
+# (itself starved under load) crawled on — quietly rebuilding the concurrency the 1-slot
+# semaphore exists to prevent. Now it bursts past the cap only when the box is idle.
+
+def test_does_not_proceed_at_cap_under_saturation(gate):
+    gate._WAIT_MAX = 3600
+    # at the cap, but the machine is saturated → the holder is STARVED, not deadlocked; a second
+    # concurrent suite would only deepen the thrash, so we must NOT proceed.
+    assert gate._proceed_at_cap(gate._WAIT_MAX, bypass_ok=False) is False
+    assert gate._proceed_at_cap(gate._WAIT_MAX + 999, bypass_ok=False) is False
+
+
+def test_proceeds_at_cap_when_idle(gate):
+    gate._WAIT_MAX = 3600
+    # at the cap on an idle box → a holder that hasn't finished in an hour with CPU free really
+    # is wedged; bursting past is the right liveness valve.
+    assert gate._proceed_at_cap(gate._WAIT_MAX, bypass_ok=True) is True
+
+
+def test_does_not_proceed_before_the_cap_even_when_idle(gate):
+    gate._WAIT_MAX = 3600
+    # spare capacity is necessary but NOT sufficient — below the cap we keep our FIFO place.
+    assert gate._proceed_at_cap(gate._WAIT_MAX - 1, bypass_ok=True) is False
+    assert gate._proceed_at_cap(0, bypass_ok=True) is False
+
+
+def test_wait_cap_load_gate_mirrors_the_bypass_gate(gate, monkeypatch):
+    # Symmetry: the cap's proceed and the stuck-holder bypass read the SAME spare-capacity
+    # signal, so they open/close together. Idle → both fire; saturated → neither does.
+    gate._WAIT_MAX = 3600
+    gate._BYPASS_MAXLOAD = 1.0
+    monkeypatch.setattr(gate.os, "cpu_count", lambda: 10)
+    monkeypatch.setattr(gate.os, "getloadavg", lambda: (5.0, 5.0, 5.0))   # idle
+    assert gate._bypass_allowed() is True
+    assert gate._proceed_at_cap(gate._WAIT_MAX, gate._bypass_allowed()) is True
+    monkeypatch.setattr(gate.os, "getloadavg", lambda: (33.0, 30.0, 25.0))  # saturated
+    assert gate._bypass_allowed() is False
+    assert gate._proceed_at_cap(gate._WAIT_MAX, gate._bypass_allowed()) is False
+
+
+def test_acquire_loop_waits_at_cap_under_load_then_drains(gate, monkeypatch):
+    # End-to-end over the real _acquire loop (not just the helper): a fresh holder owns the only
+    # slot and we are already at the cap. While the box is saturated the loop must keep waiting —
+    # NOT start a second concurrent suite — and once load drops it bursts past. Proves the gate is
+    # wired into the loop and still DRAINS (no permanent deadlock).
+    holder = _ticket(gate, 100, 1)
+    _heartbeat(gate, holder[2], age=1)  # fresh: occupies the slot the whole time
+    gate._SLOTS = 1
+    gate._WAIT_MAX = 0   # already at the cap on the first iteration
+    gate._POLL = 0
+    monkeypatch.setattr(gate, "_holds_merge_lock", lambda: False)
+    monkeypatch.setattr(gate, "_admit", lambda: None)
+    monkeypatch.setattr(gate, "_reap_orphans", lambda: None)
+
+    state = {"loops": 0, "idle": False}
+
+    def fake_sleep(_):
+        state["loops"] += 1
+        if state["loops"] >= 3:
+            state["idle"] = True            # load drops after a few polls
+        if state["loops"] > 50:
+            raise AssertionError("loop never drained")
+
+    monkeypatch.setattr(gate.time, "sleep", fake_sleep)
+    monkeypatch.setattr(gate, "_bypass_allowed", lambda: state["idle"])
+
+    gate._acquire()                          # returns only after it proceeds past the cap
+    assert state["loops"] >= 3               # it DID wait while saturated, not burst immediately
+    assert gate._heartbeat is not None       # then took a slot once the box went idle
+    assert os.path.exists(gate._heartbeat)
+
+
 # --- merge-lock holder priority (fixes the priority inversion) ----------------------------
 
 def _write_marker(gate, tmp_path, token, daemon_pid):

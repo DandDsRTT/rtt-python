@@ -63,6 +63,12 @@ above it we WAIT for the holder instead of piling on. A genuinely hung holder is
 bypassed once load drops (CPU is then free, so a flat heartbeat really is wedged), and a
 DEAD holder is reclaimed by ``_scan`` regardless of load — so crash recovery is unaffected.
 
+The hard wait-cap (``RTT_RENDER_GATE_WAIT``) carries the SAME load gate (``_proceed_at_cap``):
+proceeding past the semaphore at the cap is just a slower second door to the same dogpile — under
+sustained load the slot-holder is itself starved and can't finish within the hour, so a waiter that
+"proceeds anyway" starts a concurrent second suite — so we only burst past the cap when the box is
+idle (a holder still unfinished then really is wedged), and otherwise keep waiting until load drops.
+
 MERGE-LOCK HOLDER PRIORITY — fixes the priority inversion
 =========================================================
 A held-lock land runs the render gate AS its validation *while holding the exclusive merge
@@ -79,7 +85,8 @@ replacement for the old manual ``RTT_RENDER_GATE_NOLOCK=1`` on the under-lock ga
 
 Env knobs:
   * ``RTT_RENDER_GATE_SLOTS``  how many run concurrently (default 1)
-  * ``RTT_RENDER_GATE_WAIT``   max seconds to queue before proceeding anyway (default 3600)
+  * ``RTT_RENDER_GATE_WAIT``   max seconds to queue before proceeding anyway (default 3600);
+                              the proceed-anyway burst is itself gated on spare load (see above)
   * ``RTT_RENDER_GATE_STUCK``  no-progress seconds after which a holder is bypassed (default 240)
   * ``RTT_RENDER_GATE_BYPASS_MAXLOAD``  bypass a stuck holder only while loadavg/core is
                               below this (default 1.0); above it, wait instead of piling on
@@ -263,6 +270,17 @@ def _bypass_allowed():
     return load1 < ncpu * _BYPASS_MAXLOAD
 
 
+def _proceed_at_cap(waited, bypass_ok):
+    """At the hard wait-cap, burst past the semaphore only when the machine is NOT saturated
+    (`bypass_ok`). A holder that hasn't finished within `_WAIT_MAX` under load is STARVED, not
+    deadlocked — proceeding starts a SECOND CPU-bound suite that starves both further, the exact
+    dogpile `_bypass_allowed` already prevents on the stuck-holder bypass path. So this is the
+    SAME load gate, on the wait-cap door: idle at the cap ⇒ a still-unfinished holder genuinely
+    is wedged and bursting past is the right deadlock-breaker; saturated at the cap ⇒ keep waiting
+    (the loop re-checks, and proceeds once load drops or the holder finishes — so it still drains)."""
+    return waited >= _WAIT_MAX and bypass_ok
+
+
 def _classify(live, my_name, now, bypass_ok):
     """Split the FIFO queue around me. Returns (running_fresh, waiters_ahead, wedged):
     a *running* ticket holds a slot (fresh heartbeat), a *wedged* one has a heartbeat
@@ -369,7 +387,7 @@ def _acquire():
                 file=sys.stderr,
             )
             return
-        if waited >= _WAIT_MAX:
+        if _proceed_at_cap(waited, bypass_ok):
             _take_slot()
             print(
                 f"[render-gate] waited {_WAIT_MAX}s (still position {waiters_ahead + 1} "
@@ -380,7 +398,8 @@ def _acquire():
         if waited - last_report >= _REPORT_EVERY:
             note = f"; bypassing {wedged} stuck" if wedged else ""
             if not bypass_ok:
-                note += "; holding off bypass (machine saturated)"
+                note += ("; past wait-cap but holding off (machine saturated)"
+                         if waited >= _WAIT_MAX else "; holding off bypass (machine saturated)")
             print(
                 f"[render-gate] waiting our turn… position {waiters_ahead + 1} "
                 f"({running_fresh}/{_SLOTS} slots busy{note}; {waited}s elapsed)",
