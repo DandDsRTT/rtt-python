@@ -2190,6 +2190,32 @@ def test_every_in_tile_band_reserves_for_what_it_emits():
     assert not spills, f"rows emit a band's content but reserve no height for it (it will spill): {spills}"
 
 
+def test_frame_and_chart_bands_reserve_height_for_what_they_emit():
+    # The same emit ⊆ reserve guard, extended to the two DISPLAY-choice bands the descriptor carries as
+    # explicit per-row flags rather than a content table: the EBK matrix frame (FRAMED_ROWS) and the bar
+    # chart (CHARTED_ROWS) — the last two hand-maintained reservation literals. A row that DRAWS a matrix
+    # frame (ebktop / ebkbrace / ebkangle around its cells) or a chart but does not RESERVE the frame /
+    # chart band spills past the bottom of the tile, exactly the canon-row class of bug. This reads the
+    # LIVE layout (the emitted cells), so a future framed/charted tile forgotten in the descriptor fails
+    # here, generically, before it reaches the user.
+    s = settings.defaults()
+    for k, v in list(s.items()):
+        if isinstance(v, bool):
+            s[k] = True
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
+                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    lay = b.layout()
+    frame_ys = {round(c.y, 3) for c in lay.cells if c.kind in {"ebktop", "ebkbrace", "ebkangle"}}
+    frame_emit = {r for r in b.rows if round(b.frame_top_y(r), 3) in frame_ys
+                  or round(b.frame_brace_y(r), 3) in frame_ys}
+    frame_spill = sorted(r for r in frame_emit if b.rows[r].frame <= 0)
+    assert not frame_spill, f"rows draw an EBK matrix frame but reserve no frame band (it will spill): {frame_spill}"
+    chart_emit = {c.id.split(":")[1] for c in lay.cells if c.id.startswith("chart:")}
+    chart_spill = sorted(r for r in chart_emit if b.rows[r].chart_top is None)
+    assert not chart_spill, f"rows draw a bar chart but reserve no chart band (it will spill): {chart_spill}"
+
+
 def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
     # The stronger half of the lockstep guard: a tile's plain-text band must show the SAME values as
     # its gridded cells — not merely exist (the test above). A band built from a different derivation
