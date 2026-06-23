@@ -968,6 +968,69 @@ def cmd_status(_args):
 
 
 # --------------------------------------------------------------------------- #
+# Wrapped-command process-group cleanup (legacy + NOLOCK paths)
+# --------------------------------------------------------------------------- #
+# The wrapped command is typically ``bash -c 'rebase; pytest; ff-merge'`` — a heavy render
+# suite. Run it in its OWN session/group and track the pgid, so a signal/exit to this wrapper
+# tears down the WHOLE child tree instead of orphaning the pytest to PID 1 (the leak diagnosed
+# in RESOURCE_GOVERNANCE_DIAGNOSIS.md). An un-trappable SIGKILL still orphans; bin/reap-orphan-
+# gates is the backstop. (The detached holder daemon is in its own session and never a member
+# of this group, so tearing the group down never disturbs the lock.)
+_child_pgid = None
+
+
+def _kill_child_group():
+    global _child_pgid
+    pgid = _child_pgid
+    if pgid is None:
+        return
+    _child_pgid = None
+    try:
+        os.killpg(pgid, 0)  # any survivors? (empty group after a clean wait → nothing to do)
+    except ProcessLookupError:
+        return
+    except OSError:
+        pass
+    try:
+        os.killpg(pgid, signal.SIGTERM)
+    except OSError:
+        return
+    time.sleep(0.2)
+    try:
+        os.killpg(pgid, signal.SIGKILL)
+    except OSError:
+        pass
+
+
+def _run_child_group(argv):
+    global _child_pgid
+    p = subprocess.Popen(argv, start_new_session=True)
+    try:
+        _child_pgid = os.getpgid(p.pid)
+    except OSError:
+        _child_pgid = p.pid
+    try:
+        return p.wait()
+    finally:
+        _kill_child_group()
+
+
+def _install_group_signals(extra=None):
+    def handler(signum, _frame):
+        _kill_child_group()
+        if extra is not None:
+            extra()
+        signal.signal(signum, signal.SIG_DFL)
+        os.kill(os.getpid(), signum)
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        try:
+            signal.signal(sig, handler)
+        except (ValueError, OSError):
+            pass
+    atexit.register(_kill_child_group)
+
+
+# --------------------------------------------------------------------------- #
 # Legacy single-command mode (back-compat): acquire → run → release in-process
 # --------------------------------------------------------------------------- #
 def _legacy(argv):
@@ -987,20 +1050,10 @@ def _legacy(argv):
             pass
 
     atexit.register(do_release)
-
-    def on_signal(signum, _frame):
-        do_release()
-        signal.signal(signum, signal.SIG_DFL)
-        os.kill(os.getpid(), signum)
-
-    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
-        try:
-            signal.signal(sig, on_signal)
-        except (ValueError, OSError):
-            pass
+    _install_group_signals(extra=do_release)
 
     try:
-        return subprocess.run(argv).returncode
+        return _run_child_group(argv)
     finally:
         do_release()
 
@@ -1052,7 +1105,8 @@ def main(argv):
     # Legacy: wrap a command.
     if _DISABLED:
         _log("disabled (RTT_MERGE_GATE_NOLOCK=1); running without the lock")
-        return subprocess.run(argv).returncode
+        _install_group_signals()
+        return _run_child_group(argv)
     return _legacy(argv)
 
 

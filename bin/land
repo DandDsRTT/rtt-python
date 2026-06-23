@@ -50,20 +50,91 @@ Exit status: 0 landed · 1 gate failed / gave up · 2 rebase conflict (resolve, 
 3 lock error · 4 usage / environment error.
 """
 
+import atexit
 import os
+import signal
 import subprocess
 import sys
+import time
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _WITH_LOCK = os.path.join(_HERE, "with-merge-lock")
 _SAFE_CHECK = os.path.join(_HERE, "merge-safe-check")
 _INSTALL_HOOK = os.path.join(_HERE, "install-merge-guard-hook")
+_REAPER = os.path.join(_HERE, "reap-orphan-gates")
 _PY = sys.executable
+
+# Process-group cleanup: the long-running gate child (a full render ``pytest``) is spawned in
+# its OWN session/group and tracked here, so a SIGTERM/INT/HUP to this land — or normal exit —
+# tears down the WHOLE child tree instead of orphaning it to PID 1 (the leak diagnosed in
+# RESOURCE_GOVERNANCE_DIAGNOSIS.md). An un-trappable SIGKILL still orphans; bin/reap-orphan-gates
+# is the backstop that sweeps those.
+_active_groups = set()
 
 
 def _log(msg):
     sys.stderr.write("[land] %s\n" % msg)
     sys.stderr.flush()
+
+
+def _killpg(pgid):
+    try:
+        os.killpg(pgid, 0)  # any survivors? (empty group after a clean wait → nothing to do)
+    except ProcessLookupError:
+        return
+    except OSError:
+        pass
+    try:
+        os.killpg(pgid, signal.SIGTERM)
+    except OSError:
+        return
+    time.sleep(0.2)
+    try:
+        os.killpg(pgid, signal.SIGKILL)
+    except OSError:
+        pass
+
+
+def _kill_active_groups():
+    for pgid in list(_active_groups):
+        _active_groups.discard(pgid)
+        _killpg(pgid)
+
+
+def _run_managed(cmd):
+    """Run `cmd` in its own process group, tracked so a signal/exit kills the whole tree.
+    Returns the child's exit code."""
+    p = subprocess.Popen(cmd, start_new_session=True)
+    try:
+        pgid = os.getpgid(p.pid)
+    except OSError:
+        pgid = p.pid
+    _active_groups.add(pgid)
+    try:
+        return p.wait()
+    finally:
+        _active_groups.discard(pgid)
+        _killpg(pgid)
+
+
+def _install_signal_cleanup():
+    def handler(signum, _frame):
+        _kill_active_groups()
+        signal.signal(signum, signal.SIG_DFL)
+        os.kill(os.getpid(), signum)
+    for s in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        try:
+            signal.signal(s, handler)
+        except (ValueError, OSError):
+            pass
+    atexit.register(_kill_active_groups)
+
+
+def _reap_orphans():
+    try:
+        subprocess.run([_PY, _REAPER, "--quiet"], timeout=60, stdout=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 
 def _git(*args, check=False, cwd=None):
@@ -121,7 +192,7 @@ def _rebase_onto_main():
 
 def _run_gate(gate_cmd):
     _log("validating (lockless): %s" % " ".join(gate_cmd))
-    return subprocess.run(gate_cmd).returncode == 0
+    return _run_managed(gate_cmd) == 0
 
 
 def _lock(*args):
@@ -150,7 +221,7 @@ def _legacy_fallback(main_checkout, branch, gate_cmd):
         "git -C %s merge --ff-only %s"
         % (" ".join(gate_cmd), _q(main_checkout), _q(branch))
     )
-    return subprocess.run([_PY, _WITH_LOCK, "bash", "-c", script]).returncode
+    return _run_managed([_PY, _WITH_LOCK, "bash", "-c", script])
 
 
 def _q(s):
@@ -216,6 +287,8 @@ def main(argv):
     if not gate_cmd:
         gate_cmd = [".venv/bin/python", "-m", "pytest", "-q"]
 
+    _install_signal_cleanup()
+    _reap_orphans()  # sweep abandoned gate trees before we add load of our own
     subprocess.run([_PY, _INSTALL_HOOK])
 
     main_checkout = _main_checkout()

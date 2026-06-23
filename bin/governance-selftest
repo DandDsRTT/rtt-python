@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""Isolated self-test for the resource-governance machinery (orphan reaping + process-group
+cleanup of the launchers). Like the other ``*-selftest`` scripts it spawns real processes in
+throwaway dirs, so it is NOT a pytest test — run it by hand or in CI::
+
+    /usr/bin/python3 bin/governance-selftest
+
+It proves:
+  1. ``bin/reap-orphan-gates`` kills an ORPHANED (PPID-1) gate-pattern process and SPARES an
+     identical one that still has a live parent (the PPID==1 gate is the load-bearing signal).
+  2. The reaper also clears the reaped PID's render-gate ticket + heartbeat.
+  3. ``bin/with-merge-lock`` (NOLOCK wrapped path) tears down its whole child process group on
+     SIGTERM instead of orphaning the wrapped suite.
+  4. ``bin/land`` tears down its gate child group on SIGTERM (no orphan left behind).
+
+Exits 0 iff every check passes.
+"""
+
+import os
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+PY = sys.executable
+REAPER = os.path.join(HERE, "reap-orphan-gates")
+WITH_LOCK = os.path.join(HERE, "with-merge-lock")
+LAND = os.path.join(HERE, "land")
+_results = []
+
+
+def record(name, ok, detail=""):
+    _results.append((name, ok))
+    print("%s  %s%s" % ("PASS" if ok else "FAIL", name, ("  — " + detail) if detail else ""))
+
+
+def alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def ppid_of(pid):
+    r = subprocess.run(["ps", "-o", "ppid=", "-p", str(pid)], capture_output=True, text=True)
+    try:
+        return int(r.stdout.strip())
+    except ValueError:
+        return None
+
+
+def wait_until(pred, timeout=5.0, step=0.1):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if pred():
+            return True
+        time.sleep(step)
+    return pred()
+
+
+def pids_matching(marker):
+    r = subprocess.run(["ps", "-axww", "-o", "pid=,command="], capture_output=True, text=True)
+    out = []
+    for line in r.stdout.splitlines():
+        line = line.strip()
+        if marker in line and "ps -axww" not in line:
+            try:
+                out.append(int(line.split(None, 1)[0]))
+            except ValueError:
+                pass
+    return out
+
+
+def spawn_orphan(marker):
+    """Spawn a sleeper whose parent immediately exits, so it reparents to PID 1. Returns its
+    PID once PPID==1 is observed (or None)."""
+    code = "import time; time.sleep(120)  # %s" % marker
+    # The sleeper's stdio MUST go to devnull, not inherit the launcher's captured pipe — else
+    # subprocess.run(capture_output) below never sees EOF (the grandchild keeps the fd open).
+    inner = ("import subprocess, sys, os;"
+             "dn = open(os.devnull, 'w');"
+             "p = subprocess.Popen([sys.executable, '-c', %r],"
+             " stdin=subprocess.DEVNULL, stdout=dn, stderr=dn);"
+             "print(p.pid)" % code)
+    r = subprocess.run([PY, "-c", inner], capture_output=True, text=True, timeout=10)
+    try:
+        pid = int(r.stdout.strip())
+    except ValueError:
+        return None
+    wait_until(lambda: ppid_of(pid) == 1, timeout=5.0)
+    return pid
+
+
+def spawn_live(marker):
+    """A sleeper that stays a child of THIS process (live parent, PPID != 1)."""
+    code = "import time; time.sleep(120)  # %s" % marker
+    return subprocess.Popen([PY, "-c", code])
+
+
+def kill_quiet(pid):
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except OSError:
+        pass
+
+
+# --------------------------------------------------------------------------- #
+def t_reaper_kills_orphan_spares_live():
+    marker = "GOVSELFTEST_%d_" % os.getpid()
+    orphan = spawn_orphan(marker + "ORPHAN")
+    live = spawn_live(marker + "LIVE")
+    try:
+        ok_setup = orphan is not None and ppid_of(orphan) == 1 and alive(live.pid)
+        subprocess.run([PY, REAPER, "--pattern", marker], timeout=30,
+                       capture_output=True, text=True)
+        orphan_dead = wait_until(lambda: not alive(orphan), timeout=5.0)
+        live_alive = alive(live.pid)
+        record("reaper kills PPID-1 orphan, spares live-parent twin",
+               ok_setup and orphan_dead and live_alive,
+               "setup=%s orphan_dead=%s live_alive=%s" % (ok_setup, orphan_dead, live_alive))
+    finally:
+        if orphan:
+            kill_quiet(orphan)
+        live.kill()
+        live.wait()
+
+
+def t_reaper_clears_render_ticket():
+    marker = "GOVSELFTEST_%d_TICKET" % os.getpid()
+    gate_dir = tempfile.mkdtemp(prefix="rtt-gov-gate.")
+    orphan = spawn_orphan(marker)
+    try:
+        ticket = os.path.join(gate_dir, "1-%d" % orphan)
+        hb = os.path.join(gate_dir, ".hb-1-%d" % orphan)
+        open(ticket, "w").close()
+        open(hb, "w").close()
+        env = dict(os.environ, RTT_RENDER_GATE_DIR=gate_dir)
+        subprocess.run([PY, REAPER, "--pattern", marker], env=env, timeout=30,
+                       capture_output=True, text=True)
+        dead = wait_until(lambda: not alive(orphan), timeout=5.0)
+        cleared = not os.path.exists(ticket) and not os.path.exists(hb)
+        record("reaper clears the reaped PID's render ticket + heartbeat",
+               dead and cleared, "dead=%s ticket_gone=%s" % (dead, not os.path.exists(ticket)))
+    finally:
+        if orphan:
+            kill_quiet(orphan)
+        subprocess.run(["rm", "-rf", gate_dir])
+
+
+def t_with_merge_lock_group_teardown():
+    marker = "GOVSELFTEST_%d_WML" % os.getpid()
+    gate_dir = tempfile.mkdtemp(prefix="rtt-gov-merge.")
+    env = dict(os.environ, RTT_MERGE_GATE_DIR=gate_dir, RTT_MERGE_GATE_NOLOCK="1")
+    body = ("%s -c 'import time; time.sleep(120)  # %s' & wait" % (PY, marker))
+    p = subprocess.Popen([PY, WITH_LOCK, "bash", "-c", body], env=env)
+    try:
+        appeared = wait_until(lambda: bool(pids_matching(marker)), timeout=10.0)
+        grand = pids_matching(marker)
+        p.send_signal(signal.SIGTERM)
+        gone = wait_until(lambda: not pids_matching(marker), timeout=8.0)
+        record("with-merge-lock tears down child group on SIGTERM",
+               appeared and gone, "grandchild_seen=%s gone_after_term=%s" % (bool(grand), gone))
+    finally:
+        for pid in pids_matching(marker):
+            kill_quiet(pid)
+        try:
+            p.kill()
+        except OSError:
+            pass
+        p.wait()
+        subprocess.run(["rm", "-rf", gate_dir])
+
+
+def _make_land_repo():
+    repo = tempfile.mkdtemp(prefix="rtt-gov-repo.")
+    subprocess.run(["git", "init", "-q", "-b", "main", repo], check=True)
+    subprocess.run(["git", "-C", repo, "config", "user.email", "t@t"], check=True)
+    subprocess.run(["git", "-C", repo, "config", "user.name", "t"], check=True)
+    os.makedirs(os.path.join(repo, "rtt"))
+    with open(os.path.join(repo, "rtt", "core.py"), "w") as f:
+        f.write("x = 1\n")
+    subprocess.run(["git", "-C", repo, "add", "-A"], check=True)
+    subprocess.run(["git", "-C", repo, "commit", "-q", "-m", "init"], check=True)
+    wt = tempfile.mkdtemp(prefix="rtt-gov-wt.")
+    os.rmdir(wt)
+    subprocess.run(["git", "-C", repo, "worktree", "add", "-q", "-b", "claude/gov", wt, "main"],
+                   check=True)
+    subprocess.run(["git", "-C", wt, "config", "user.email", "t@t"], check=True)
+    subprocess.run(["git", "-C", wt, "config", "user.name", "t"], check=True)
+    # A render-relevant change (under rtt/) so bin/land actually RUNS the gate.
+    with open(os.path.join(wt, "rtt", "feature.py"), "w") as f:
+        f.write("y = 2\n")
+    subprocess.run(["git", "-C", wt, "add", "-A"], check=True)
+    subprocess.run(["git", "-C", wt, "commit", "-q", "-m", "feat"], check=True)
+    return repo, wt
+
+
+def t_land_group_teardown():
+    marker = "GOVSELFTEST_%d_LAND" % os.getpid()
+    repo, wt = _make_land_repo()
+    gate_dir = tempfile.mkdtemp(prefix="rtt-gov-land-merge.")
+    # RTT_REAP_DISABLE so bin/land's startup sweep can't touch real machine orphans.
+    env = dict(os.environ, RTT_MERGE_GATE_DIR=gate_dir, RTT_REAP_DISABLE="1",
+               RTT_RENDER_GATE_NOADMIT="1")
+    gate = [PY, "-c", "import time; time.sleep(120)  # %s" % marker]
+    p = subprocess.Popen([PY, LAND, "--", *gate], cwd=wt, env=env)
+    try:
+        appeared = wait_until(lambda: bool(pids_matching(marker)), timeout=20.0)
+        p.send_signal(signal.SIGTERM)
+        gone = wait_until(lambda: not pids_matching(marker), timeout=10.0)
+        record("bin/land tears down gate child group on SIGTERM",
+               appeared and gone, "gate_seen=%s gone_after_term=%s" % (appeared, gone))
+    finally:
+        for pid in pids_matching(marker):
+            kill_quiet(pid)
+        try:
+            p.kill()
+        except OSError:
+            pass
+        p.wait()
+        subprocess.run(["git", "-C", repo, "worktree", "remove", "--force", wt],
+                       capture_output=True)
+        subprocess.run(["rm", "-rf", repo, wt, gate_dir])
+
+
+def main():
+    t_reaper_kills_orphan_spares_live()
+    t_reaper_clears_render_ticket()
+    t_with_merge_lock_group_teardown()
+    t_land_group_teardown()
+    passed = sum(1 for _, ok in _results if ok)
+    total = len(_results)
+    print("\n%d/%d checks passed" % (passed, total))
+    return 0 if passed == total else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

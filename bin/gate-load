@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""Machine-wide admission governor for heavy test suites.
+
+WHY THIS EXISTS
+===============
+The render-gate semaphore (``RTT_RENDER_GATE_SLOTS``) only serializes sessions that *collected*
+the render file. A plain ``pytest`` from a non-rebased agent, an orphaned suite, or any other
+heavy python work is uncounted — so the TOTAL concurrent CPU/memory load on the box is
+unbounded, which is how a 6-core machine reached loadavg 35 with ~17 python processes and
+started OOM-killing them (exit 137). See ``RESOURCE_GOVERNANCE_DIAGNOSIS.md``.
+
+This governor is keyed on REAL machine state — 1-minute loadavg per core, plus best-effort free
+memory — not on per-session bookkeeping, so it bounds load regardless of how a run was launched
+or which (possibly stale) conftest it carries. A *new* gate WAITS here until the box has capacity
+rather than piling on. It is the single shared source of the load policy: both
+``tests/app/integration/conftest.py`` (gate entry) and ``bin/land`` consult it, so the policy
+cannot drift between them or be lost on a stale base.
+
+It self-heals while waiting: each poll first sweeps orphaned gate trees
+(``bin/reap-orphan-gates``), because saturating load is usually dominated by abandoned suites —
+reaping them is the fastest way back to capacity.
+
+CRITICAL: the merge-lock holder must NEVER wait here. Its gate is the critical path that the
+exclusive merge lock is blocking everyone on; making it wait would reintroduce the priority
+inversion fixed in ``65cd4280``. So callers simply must not invoke ``wait`` when they hold the
+merge lock — the conftest checks ``_holds_merge_lock()`` and skips admission for the holder.
+
+Pure stdlib, runs under any Python (system 3.9 and the .venv).
+
+Usage::
+
+    bin/gate-load check     # exit 0 = capacity to start a suite; 1 = saturated
+    bin/gate-load wait      # block until capacity (reaping orphans each poll), bounded; exit 0
+    bin/gate-load status    # print the current readings
+
+Env knobs:
+  * ``RTT_GATE_ADMIT_MAXLOAD``  loadavg-per-core ceiling (default 2.0); at/above → saturated
+  * ``RTT_GATE_ADMIT_MINFREE``  minimum free-memory fraction (default 0.05); below → saturated
+                                (best-effort — ignored if memory can't be read)
+  * ``RTT_RENDER_GATE_WAIT``    max seconds to wait before proceeding anyway (default 3600)
+"""
+
+import os
+import subprocess
+import sys
+import time
+
+_MAXLOAD = float(os.environ.get("RTT_GATE_ADMIT_MAXLOAD", "2.0"))
+_MINFREE = float(os.environ.get("RTT_GATE_ADMIT_MINFREE", "0.05"))
+_WAIT_MAX = int(os.environ.get("RTT_RENDER_GATE_WAIT", "3600"))
+_POLL = 5
+_REPORT_EVERY = 30
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_REAPER = os.path.join(_HERE, "reap-orphan-gates")
+
+
+def _log(msg):
+    sys.stderr.write("[gate-load] %s\n" % msg)
+    sys.stderr.flush()
+
+
+def _load_per_core():
+    try:
+        return os.getloadavg()[0] / (os.cpu_count() or 1)
+    except (OSError, ValueError):
+        return None
+
+
+def _free_mem_fraction():
+    """Best-effort free-memory fraction via ``vm_stat`` (macOS). None if unreadable, so the
+    caller treats memory as a non-constraint rather than blocking on a bad read."""
+    try:
+        r = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode != 0:
+        return None
+    pages = {}
+    for line in r.stdout.splitlines():
+        if ":" not in line:
+            continue
+        key, _, val = line.partition(":")
+        val = val.strip().rstrip(".")
+        if val.isdigit():
+            pages[key.strip()] = int(val)
+    free = (pages.get("Pages free", 0) + pages.get("Pages inactive", 0)
+            + pages.get("Pages speculative", 0) + pages.get("Pages purgeable", 0))
+    total = free + pages.get("Pages active", 0) + pages.get("Pages wired down", 0) \
+        + pages.get("Pages occupied by compressor", 0)
+    if total <= 0:
+        return None
+    return free / total
+
+
+def _saturated():
+    """Return (saturated, reason). Saturated iff load/core >= MAXLOAD, or free memory is
+    readable and below MINFREE."""
+    load = _load_per_core()
+    if load is not None and load >= _MAXLOAD:
+        return True, "load/core %.2f >= %.2f" % (load, _MAXLOAD)
+    free = _free_mem_fraction()
+    if free is not None and free < _MINFREE:
+        return True, "free mem %.1f%% < %.1f%%" % (free * 100, _MINFREE * 100)
+    return False, "load/core %s free %s" % (
+        ("%.2f" % load) if load is not None else "?",
+        ("%.1f%%" % (free * 100)) if free is not None else "?",
+    )
+
+
+def _reap():
+    try:
+        subprocess.run([sys.executable, _REAPER, "--quiet"], timeout=30,
+                       stdout=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+def cmd_check(_args):
+    sat, reason = _saturated()
+    if sat:
+        _log("saturated (%s)" % reason)
+        return 1
+    return 0
+
+
+def cmd_wait(_args):
+    waited = 0
+    last_report = -_REPORT_EVERY
+    while True:
+        _reap()  # abandoned suites usually dominate the load — clear them first
+        sat, reason = _saturated()
+        if not sat:
+            if waited:
+                _log("capacity available after %ds (%s)" % (waited, reason))
+            return 0
+        if waited >= _WAIT_MAX:
+            _log("waited %ds for capacity (%s); proceeding anyway" % (_WAIT_MAX, reason))
+            return 0
+        if waited - last_report >= _REPORT_EVERY:
+            _log("holding off — machine saturated (%s); %ds elapsed" % (reason, waited))
+            last_report = waited
+        time.sleep(_POLL)
+        waited += _POLL
+
+
+def cmd_status(_args):
+    load = _load_per_core()
+    free = _free_mem_fraction()
+    sat, reason = _saturated()
+    print("load/core: %s (ceiling %.2f)" % (
+        ("%.2f" % load) if load is not None else "?", _MAXLOAD))
+    print("free mem:  %s (floor %.1f%%)" % (
+        ("%.1f%%" % (free * 100)) if free is not None else "?", _MINFREE * 100))
+    print("saturated: %s (%s)" % (sat, reason))
+    return 0
+
+
+def main(argv):
+    if not argv:
+        sys.stderr.write(__doc__.splitlines()[0] + "\n")
+        return 2
+    cmd = argv[0]
+    table = {"check": cmd_check, "wait": cmd_wait, "status": cmd_status}
+    if cmd not in table:
+        _log("unknown subcommand %r" % cmd)
+        return 2
+    return table[cmd](argv[1:])
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
