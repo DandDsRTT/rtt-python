@@ -149,7 +149,7 @@ class PageBuilder:
         )
 
     def _share_link(self) -> None:
-        self.page.gestures._end_commit_gestures()
+        self.page.gestures.end_commit_gestures()
         token = _encode_state(self.page.editor.serialize())
         ui.run_javascript(
             "(async function(){"
@@ -219,7 +219,7 @@ class PageBuilder:
             if self.page.building or value is None:
                 return
             self.page.editor.set_nonprime_basis_approach(value)
-            self.page.renderer._request_render()  # the nonprime approach changes how the tuning solves — off the loop
+            self.page.renderer.request_render()  # the nonprime approach changes how the tuning solves — off the loop
 
         def on_approach_hover(value):
             # preview the hovered approach option: ring the cells reading the temperament that

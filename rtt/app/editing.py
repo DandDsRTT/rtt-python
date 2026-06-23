@@ -165,25 +165,25 @@ class EditController:
         # outcome is ("incomplete",) | ("invalid", message) | ("ok", commit). A preview arms the
         # candidate (the commit itself when ok, else nothing); a real edit commits / notifies / no-ops.
         if preview:
-            self.page.gestures._edit_candidate(outcome[1] if outcome[0] == "ok" else None)
+            self.page.gestures.edit_candidate(outcome[1] if outcome[0] == "ok" else None)
             return
         if outcome[0] == "invalid":
             ui.notify(outcome[1], type="negative", position="top")
             self.page.renderer.render()
         elif outcome[0] == "ok":
             outcome[1]()
-            self.page.renderer._request_render()
+            self.page.renderer.request_render()
 
     def _edit_pending_vector(self, spec, preview, toks, d) -> None:
         cell_id = spec.cell_id
         pt = spreadsheet_text.pending_token(toks)
         if any(cell_id(pt, p) not in self.page.rec.inputs for p in range(d)):
             if preview:
-                self.page.gestures._edit_candidate(None)
+                self.page.gestures.edit_candidate(None)
             return
         values = [_parse_int(self.page.rec.inputs[cell_id(pt, p)].value) for p in range(d)]
         if preview:
-            self.page.gestures._edit_candidate(
+            self.page.gestures.edit_candidate(
                 (lambda v=values: spec.set_pending(v)) if spec.draft_arms else None
             )
             return
@@ -191,7 +191,7 @@ class EditController:
         if spec.pending() is None:
             # the change is applied (it retunes) — render OFF the loop, then rebase the gesture
             # on the fresh layout so its rings go away NOW (no blur fires)
-            self.page.renderer._request_render(after=self.page.gestures._rebase_edit_gesture)
+            self.page.renderer.request_render(after=self.page.gestures.rebase_edit_gesture)
 
     def _edit_vector_grid(self, spec, preview=False):
         if self.page.building or (spec.guard is not None and not spec.guard()):
@@ -230,7 +230,7 @@ class EditController:
         rc = len(service.canonical_mapping(self.page.editor.state.mapping))
         if any(ids.form_cell(i, j) not in self.page.rec.inputs for i in range(r) for j in range(rc)):
             if preview:
-                self.page.gestures._edit_candidate(None)
+                self.page.gestures.edit_candidate(None)
             return
         rows = [
             [_parse_int(self.page.rec.inputs[ids.form_cell(i, j)].value) for j in range(rc)]
@@ -238,20 +238,20 @@ class EditController:
         ]
         if any(v is None for row in rows for v in row):
             if preview:
-                self.page.gestures._edit_candidate(None)
+                self.page.gestures.edit_candidate(None)
             return
         if service.mapping_from_form_matrix(self.page.editor.state.mapping, rows) is None:
             if preview:
-                self.page.gestures._edit_candidate(None)
+                self.page.gestures.edit_candidate(None)
                 return
             ui.notify(_INVALID_FORM, type="negative", position="top")
             self.page.renderer.render()
             return
         if preview:
-            self.page.gestures._edit_candidate(lambda: self.page.editor.edit_form_matrix(rows))
+            self.page.gestures.edit_candidate(lambda: self.page.editor.edit_form_matrix(rows))
             return
         self.page.editor.edit_form_matrix(rows)
-        self.page.renderer._request_render()  # a form change re-stores the mapping (a new generating set) — render off the loop
+        self.page.renderer.request_render()  # a form change re-stores the mapping (a new generating set) — render off the loop
 
     def on_comma_change(self, preview=False):
         self._edit_vector_grid(self._COMMA_EDIT, preview)
@@ -307,7 +307,7 @@ class EditController:
         self._apply_ratio_edit(group, tok, res.vector)
         # a quantities-row ratio edit routes into a retuning setter (comma/held/target/unchanged) —
         # render off the loop. (An interest edit doesn't retune, but the warm build is cheap.)
-        self.page.renderer._request_render()
+        self.page.renderer.request_render()
 
     def _replace_interval_vector(self, group, tok, vector, current, setter) -> None:
         list_name = {
@@ -384,7 +384,7 @@ class EditController:
             self.page.renderer.render()
             return
         self.page.editor.set_domain_element(index, res.value)
-        self.page.renderer._request_render()
+        self.page.renderer.request_render()
 
     def _interval_group_state(self, group):
         if group == "comma":
@@ -412,7 +412,7 @@ class EditController:
         group, tok = cid.split(":")
         if group not in ("comma", "target", "held", "interest", "prime") or tok == "pending":
             return
-        self.page.gestures._end_commit_gestures()
+        self.page.gestures.end_commit_gestures()
         if group == "prime":  # relabel a domain basis element to its reduced / reciprocated ratio
             self._transform_domain_element(cid, op, int(tok))
             return
@@ -427,14 +427,14 @@ class EditController:
         vectors = [list(x) for x in current]
         vectors[pos] = list(new_v)
         setter(vectors)
-        self.page.renderer._request_render()
+        self.page.renderer.request_render()
 
     def _apply_domain_element(self, tok: str, raw: str) -> None:
         if tok == "pending":
             self.page.editor.set_pending_element(raw)
         else:
             self.page.editor.set_domain_element(int(tok), raw)
-        self.page.renderer._request_render()  # a new / relabelled domain element retunes — off the loop
+        self.page.renderer.request_render()  # a new / relabelled domain element retunes — off the loop
 
     def on_element_change(self, cid):
         if self.page.building or cid not in self.page.rec.inputs:
@@ -467,7 +467,7 @@ class EditController:
         self._apply_domain_element(tok, raw)
 
     def on_element_preview(self, cid):
-        g = self.page.rec.gesture
+        g = self.page.gestures.gesture
         if (
             self.page.building
             or g is None
@@ -480,11 +480,11 @@ class EditController:
         tok = cid.split(":")[1]
         res = service.resolve_domain_element_edit(self.page.editor.state, tok, raw)
         if res.problem is not None:
-            self.page.gestures._edit_candidate(None)
+            self.page.gestures.edit_candidate(None)
         elif tok == "pending":
-            self.page.gestures._edit_candidate(lambda: self.page.editor.set_pending_element(raw))
+            self.page.gestures.edit_candidate(lambda: self.page.editor.set_pending_element(raw))
         else:
-            self.page.gestures._edit_candidate(lambda: self.page.editor.set_domain_element(int(tok), raw))
+            self.page.gestures.edit_candidate(lambda: self.page.editor.set_domain_element(int(tok), raw))
 
     def on_power_change(self, cid):
         if self.page.building or cid not in self.page.rec.inputs:
@@ -499,7 +499,7 @@ class EditController:
             self.page.editor.set_complexity_norm_power(power)
         else:
             self.page.editor.set_optimization_power(power)
-        self.page.renderer._request_render()  # a new optimization / complexity power retunes — render off the loop
+        self.page.renderer.request_render()  # a new optimization / complexity power retunes — render off the loop
 
     def _gen_position(self, tok):
         toks = self.page.col_tokens("gens")
@@ -523,7 +523,7 @@ class EditController:
             self.page.editor.set_superspace_generator_tuning_component(i, cents)
         else:
             self.page.editor.set_generator_tuning_component(self._gen_position(i), cents)
-        self.page.renderer._request_render()  # a manual generator override re-derives the maps — render off the loop
+        self.page.renderer.request_render()  # a manual generator override re-derives the maps — render off the loop
 
     def on_gentuning_wheel(self, cid, delta_y):
         if self.page.building or not delta_y:
@@ -534,7 +534,7 @@ class EditController:
         else:
             self.page.editor.nudge_generator_tuning_component(self._gen_position(i), steps)
         # off the loop — rapid notches coalesce into one trailing rebuild at the value you land on
-        self.page.renderer._request_render()
+        self.page.renderer.request_render()
 
     def on_value_wheel(self, cid, delta_y):
         if self.page.building or not delta_y or cid not in self.page.rec.inputs:
@@ -608,16 +608,16 @@ class EditController:
         # rows are off-screen until committed, so they can't ring), like every other no-reflow add
         # preview. `typed` is the live field text for a keystroke (the loopback field's debounced
         # model value lags a keystroke behind); the wheel passes None and reads the stepped number.
-        g = self.page.rec.gesture
+        g = self.page.gestures.gesture
         if self.page.building or g is None or g.kind != "edit" or g.source != "preset:target":
             return
         num, sel = self.page.rec.selects["preset:target"]
         raw = num.value if typed is None else typed
         res = service.resolve_target_limit(sel.value, raw, self.page.editor.state.domain_basis)
         if res.problem == "whole" or not res.valid:
-            self.page.gestures._edit_candidate(None)
+            self.page.gestures.edit_candidate(None)
             return
-        self.page.gestures._edit_candidate(lambda: self.page.editor.set_target_spec(res.spec))
+        self.page.gestures.edit_candidate(lambda: self.page.editor.set_target_spec(res.spec))
 
     def on_prescaler_change(self, cid):
         if self.page.building or cid not in self.page.rec.inputs:
@@ -632,7 +632,7 @@ class EditController:
             self.page.renderer.render()
             return
         self.page.editor.set_custom_prescaler_entry(i, j, res.value)
-        self.page.renderer._request_render()  # the prescaler drives the weighted tuning solve — render off the loop
+        self.page.renderer.request_render()  # the prescaler drives the weighted tuning solve — render off the loop
 
     def on_weight_change(self, cid):
         if self.page.building or cid not in self.page.rec.inputs:
@@ -648,7 +648,7 @@ class EditController:
             self.page.renderer.render()
             return
         self.page.editor.set_custom_weights(list(res.value))
-        self.page.renderer._request_render()  # the weights drive the tuning solve — render off the loop
+        self.page.renderer.request_render()  # the weights drive the tuning solve — render off the loop
 
     _PTEXT_EDITORS: ClassVar[dict[str, str]] = {
         "ptext:mapping:primes": "try_edit_mapping_text",
@@ -672,7 +672,7 @@ class EditController:
             value = service.simple_matrix_to_ebk(value, _PTEXT_DUAL_VECTOR_KIND.get(cid, False))
         if getattr(self.page.editor, editor_method)(value):
             self.page.rec.ptext_inputs[cid].classes(remove="rtt-ptext-error")
-            self.page.renderer._request_render()  # a typed dual (mapping/commas/tuning/targets/P/G…) retunes — off the loop
+            self.page.renderer.request_render()  # a typed dual (mapping/commas/tuning/targets/P/G…) retunes — off the loop
             return
         self.page.rec.ptext_inputs[cid].classes(add="rtt-ptext-error")
         toast = self._ptext_error_toast(cid, value)
@@ -704,9 +704,9 @@ class EditController:
         # the universal click/keyboard commit: end gestures, mutate, then render OFF the loop
         # (_request_render) — most of these actions retune (expand/shrink, undo/redo across an
         # edit, a structural remove, back-to-scheme), so the heavy solve must not block the socket.
-        self.page.gestures._end_commit_gestures()
+        self.page.gestures.end_commit_gestures()
         action()
-        self.page.renderer._request_render()
+        self.page.renderer.request_render()
 
     def add_interval(self, action, group):
         # add the draft column, then focus into it: the quantities ratio cell if its row is shown
@@ -714,7 +714,7 @@ class EditController:
         # A draft add doesn't retune (the pending green vector isn't committed), so its build is
         # light — render SYNCHRONOUSLY (not the off-loop _request_render) so last_lay is current for
         # the focus hand-off below, which reads the just-built layout.
-        self.page.gestures._end_commit_gestures()
+        self.page.gestures.end_commit_gestures()
         action()
         self.page.renderer.render()
         quant_id, vec_kind = self.draft_focus[group]
@@ -796,15 +796,15 @@ class EditController:
             if value in presets.TEMPERAMENT_COMMAS:
                 self.page.gestures.end_gesture()
                 self.page.editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
-                self.page.renderer._request_render()  # a loaded temperament retunes — render off the loop
+                self.page.renderer.request_render()  # a loaded temperament retunes — render off the loop
             else:
                 self.page.renderer.render()
             return
-        apply = self._candidate_apply(cid, value)
+        apply = self.candidate_apply(cid, value)
         if apply is not None:
             self.page.gestures.end_chooser_gesture()
             apply()
-            self.page.renderer._request_render()  # a tuning / prescaler preset re-solves — render off the loop
+            self.page.renderer.request_render()  # a tuning / prescaler preset re-solves — render off the loop
 
     def on_subpick(self, cid, value):
         if self.page.building or value is None:
@@ -834,11 +834,11 @@ class EditController:
     def on_form_choose(self, cid, value):
         if self.page.building:
             return
-        apply = self._candidate_apply(cid, value)
+        apply = self.candidate_apply(cid, value)
         if apply is not None:
             self.page.gestures.end_chooser_gesture()
             apply()
-            self.page.renderer._request_render()  # canonicalizing re-keys the tuning solve — render off the loop
+            self.page.renderer.request_render()  # canonicalizing re-keys the tuning solve — render off the loop
 
     def on_target_change(self):
         if self.page.building:
@@ -857,12 +857,12 @@ class EditController:
         if res.problem == "odd":
             ui.notify(tooltips.target_limit_help("odd"), type="negative", position="top")
         self.page.editor.set_target_spec(res.spec)
-        self.page.renderer._request_render()  # a new target set re-weights the optimization (retunes) — render off the loop
+        self.page.renderer.request_render()  # a new target set re-weights the optimization (retunes) — render off the loop
 
     def on_control_select(self, cid, value):
         if self.page.building or value is None:
             return
-        apply = self._candidate_apply(cid, value)
+        apply = self.candidate_apply(cid, value)
         if apply is not None:
             self.page.gestures.end_chooser_gesture()
             apply()
@@ -872,7 +872,7 @@ class EditController:
             self.page.editor.set_all_interval(bool(value))
         else:
             return
-        self.page.renderer._request_render()  # a weighting / complexity / all-interval trait change retunes — off the loop
+        self.page.renderer.request_render()  # a weighting / complexity / all-interval trait change retunes — off the loop
 
     def on_range_mode(self, value):
         if self.page.building or value is None:
@@ -897,7 +897,7 @@ class EditController:
         ("control:slope", "set_weight_slope"),
     )
 
-    def _candidate_apply(self, cid, value):
+    def candidate_apply(self, cid, value):
         if value is None:
             return None
         for prefix, setter in self._APPLY_SETTERS:

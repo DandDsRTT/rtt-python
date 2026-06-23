@@ -76,7 +76,7 @@ class Renderer:
         self._prev_cell_ids: frozenset[str] = frozenset()
         self._last_rings: tuple = (frozenset(), frozenset())
 
-    def _request_render(self, after=None):
+    def request_render(self, after=None):
         # schedule an off-loop commit render; a request arriving while one is in flight collapses
         # into a single trailing rebuild (the state it lands on is the only one that matters).
         # ``after`` runs on the loop once render() has rebuilt — for the few commits with a
@@ -281,7 +281,7 @@ class Renderer:
                         "mnemonics"
                     ] else part.classes(remove="rtt-mnem-underline")
         self.page._sync_show_availability()
-        gesture_idle = self.page.rec.gesture is None or self.page.rec.gesture.token is None
+        gesture_idle = self.page.gestures.gesture is None or self.page.gestures.gesture.token is None
         if gesture_idle and not (self.page.load_failed and not self.page.editor.can_undo):
             _doc_store()[_STORE_KEY] = self.page.editor.serialize()
 
@@ -379,7 +379,7 @@ class Renderer:
         # legitimately render mid-gesture (their commits) and end on blur/mouseleave instead —
         # but any doc-moving render consumes a pending edit candidate (it is stale once the doc
         # moves; the baseline diff takes over, and no hypothetical solve runs inside a commit).
-        g = self.page.rec.gesture
+        g = self.page.gestures.gesture
         if g is not None and not self.page.gestures.gesture_rendering:
             if g.kind in ("hover", "chooser", "temp", "drag"):
                 self.page.gestures.end_gesture()
@@ -389,7 +389,7 @@ class Renderer:
             self.page.gestures.rank_remove = None
 
     def _validate_gesture_source(self, lay) -> None:
-        g = self.page.rec.gesture
+        g = self.page.gestures.gesture
         if g is not None and g.source is not None:
             src_kind = next((cb.kind for cb in lay.cells if cb.id == g.source), None)
             if src_kind is None or (

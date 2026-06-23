@@ -23,6 +23,10 @@ _log = logging.getLogger(__name__)
 class GestureController:
     def __init__(self, page) -> None:
         self.page = page
+        # the active preview gesture — the ONE record the ring highlights derive from (see _Gesture).
+        # None when no gesture is live; every paint recomputes the rings from it. The reconciler
+        # borrows this read-only via its narrow back-reference to honour preview holds while updating.
+        self.gesture = None
         self.gesture_rendering = False
         # a comma−/mapping− hover's transient rank-removal preview — None | ("comma", idx) | ("row", idx).
         # Pure view state (not a gesture, not document state): render() threads it into the build so the
@@ -41,13 +45,13 @@ class GestureController:
             self.gesture_rendering = False
 
     def end_gesture(self):
-        g, self.page.rec.gesture = self.page.rec.gesture, None
+        g, self.gesture = self.gesture, None
         if g is not None and g.token is not None:
             self.page.editor.restore_for_preview(g.token)
         return g
 
     def end_chooser_gesture(self):
-        if self.page.rec.gesture is not None and self.page.rec.gesture.kind == "chooser":
+        if self.gesture is not None and self.gesture.kind == "chooser":
             self.end_gesture()
 
     def compute_rings(self, lay):
@@ -60,7 +64,7 @@ class GestureController:
         return (amber | static_amber) - pending, (red | static_red) - pending
 
     def _gesture_rings(self, lay):
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is None:
             return frozenset(), frozenset()
         if g.apply is not None:
@@ -116,25 +120,25 @@ class GestureController:
         if was is not None and was.reflowed:
             self.gesture_render()
 
-    def _edit_candidate(self, apply):
-        g = self.page.rec.gesture
+    def edit_candidate(self, apply):
+        g = self.gesture
         if g is None or g.kind != "edit":
             return
         g.apply = apply
         self.paint_rings()
 
-    def _rebase_edit_gesture(self):
-        g = self.page.rec.gesture
+    def rebase_edit_gesture(self):
+        g = self.gesture
         if g is not None and g.kind == "edit":
             g.baseline = self.page.last_lay
             self.paint_rings()
 
-    def _end_commit_gestures(self):
+    def end_commit_gestures(self):
         # a commit ends any hover-family gesture FIRST — its rings are previews of a click that
         # has now landed (or been superseded), and a token gesture must restore the real document
         # before the action mutates it (e.g. Ctrl+Z while a temperament hover holds a hypothetical
         # doc). The edit/wheel gestures survive their own commits and end on blur/mouseleave.
-        if self.page.rec.gesture is not None and self.page.rec.gesture.kind in (
+        if self.gesture is not None and self.gesture.kind in (
             "hover",
             "chooser",
             "temp",
@@ -145,22 +149,22 @@ class GestureController:
 
     def on_cell_focus(self, cid):
         self.take_over_gesture()
-        self.page.rec.gesture = _Gesture(kind="edit", source=cid, baseline=self.page.last_lay)
+        self.gesture = _Gesture(kind="edit", source=cid, baseline=self.page.last_lay)
 
     def on_cell_blur(self, cid=None):
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is not None and g.kind in ("edit", "wheel") and (cid is None or g.source == cid):
             self.end_gesture()
             self.paint_rings()
 
     def combine_begin(self):
         self.end_gesture()
-        self.page.rec.gesture = _Gesture(
+        self.gesture = _Gesture(
             kind="drag", token=self.page.editor.capture_for_preview(), baseline=self.page.last_lay
         )
 
     def combine_preview(self, apply, target_pred=None):
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is None or g.kind != "drag":
             return
         self.page.editor.restore_for_preview(g.token)
@@ -170,14 +174,14 @@ class GestureController:
         self.gesture_render()
 
     def combine_commit(self, apply):
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is None or g.kind != "drag":
             return
         self.end_gesture()
         self.page.edits.act(apply)
 
     def combine_end(self):
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is None or g.kind != "drag":
             return
         self.end_gesture()
@@ -186,7 +190,7 @@ class GestureController:
     def control_hover(self, apply):
         if not self.page.editor.settings["preview_highlighting"]:
             return
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is not None and g.kind in ("edit", "drag"):
             return
         prev = None
@@ -194,20 +198,20 @@ class GestureController:
             prev = g
         elif g is not None:
             self.take_over_gesture()
-        self.page.rec.gesture = _Gesture(kind="hover", apply=apply, prev=prev)
+        self.gesture = _Gesture(kind="hover", apply=apply, prev=prev)
         self.paint_rings()
 
     def control_unhover(self):
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is None or g.kind != "hover":
             return
-        self.page.rec.gesture = g.prev
+        self.gesture = g.prev
         self.paint_rings()
 
     def rank_remove_hover(self, axis, idx):
         if not self.page.editor.settings["preview_highlighting"]:
             return
-        if self.page.rec.gesture is not None and self.page.rec.gesture.kind in ("edit", "drag"):
+        if self.gesture is not None and self.gesture.kind in ("edit", "drag"):
             return
         self.rank_remove = (axis, idx)
         self.rank_rendering = True
@@ -230,19 +234,19 @@ class GestureController:
     def chooser_hover(self, cid, apply):
         if not self.page.editor.settings["preview_highlighting"]:
             return
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is not None and g.kind in ("edit", "drag"):
             return
         if g is not None and (g.kind != "chooser" or g.source != cid):
             self.take_over_gesture()
-        if self.page.rec.gesture is None:
-            self.page.rec.gesture = _Gesture(
+        if self.gesture is None:
+            self.gesture = _Gesture(
                 kind="chooser",
                 source=cid,
                 token=self.page.editor.capture_for_preview(),
                 baseline=self.page.last_lay,
             )
-        g = self.page.rec.gesture
+        g = self.gesture
         self.page.editor.restore_for_preview(g.token)
         if g.reflowed:
             g.reflowed = False
@@ -269,7 +273,7 @@ class GestureController:
             self.gesture_render()
 
     def chooser_unhover(self):
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is None or g.kind != "chooser":
             return
         was = self.end_gesture()
@@ -279,7 +283,7 @@ class GestureController:
             self.paint_rings()
 
     def _end_temperament_preview(self):
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is None or g.kind != "temp":
             return
         was = self.end_gesture()
@@ -292,12 +296,12 @@ class GestureController:
         if key not in presets.TEMPERAMENT_COMMAS:
             self._end_temperament_preview()
             return
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is None or g.kind != "temp":
             if g is not None and g.kind in ("edit", "drag"):
                 return
             self.end_gesture()
-            g = self.page.rec.gesture = _Gesture(
+            g = self.gesture = _Gesture(
                 kind="temp", token=self.page.editor.capture_for_preview(), baseline=self.page.last_lay
             )
         self.page.editor.restore_for_preview(g.token)
@@ -318,12 +322,12 @@ class GestureController:
             self.gesture_render()
 
     def _ensure_temp_gesture(self):
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is None or g.kind != "temp":
             if g is not None and g.kind in ("edit", "drag"):
                 return None
             self.end_gesture()
-            g = self.page.rec.gesture = _Gesture(
+            g = self.gesture = _Gesture(
                 kind="temp", token=self.page.editor.capture_for_preview(), baseline=self.page.last_lay
             )
         self.page.editor.restore_for_preview(g.token)
@@ -418,7 +422,7 @@ class GestureController:
             spec = service.target_spec(family, entry[0].value)
             self.chooser_hover(cid, lambda: self.page.editor.set_target_spec(spec))
             return
-        apply = self.page.edits._candidate_apply(cid, _option_key(sel, index))
+        apply = self.page.edits.candidate_apply(cid, _option_key(sel, index))
         if apply is None:
             self.chooser_unhover()
             return
@@ -433,14 +437,14 @@ class GestureController:
             self.on_chooser_hover(cid, None)
 
     def gentuning_hover(self, cid):
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is not None and g.kind in ("edit", "drag", "hover"):
             return
         self.take_over_gesture()
-        self.page.rec.gesture = _Gesture(kind="wheel", source=cid, baseline=self.page.last_lay)
+        self.gesture = _Gesture(kind="wheel", source=cid, baseline=self.page.last_lay)
 
     def gentuning_unhover(self, cid):
-        g = self.page.rec.gesture
+        g = self.gesture
         if g is None or g.kind != "wheel" or g.source != cid:
             return
         self.end_gesture()
@@ -450,12 +454,12 @@ class GestureController:
         self.drag_src = (lst, idx)
         self.reorder_dst = (lst, idx)
         self.end_gesture()
-        self.page.rec.gesture = _Gesture(
+        self.gesture = _Gesture(
             kind="drag", token=self.page.editor.capture_for_preview(), baseline=self.page.last_lay
         )
 
     def on_drag_enter(self, dst_list, dst_idx):
-        g = self.page.rec.gesture
+        g = self.gesture
         if (
             g is None
             or g.kind != "drag"
@@ -470,7 +474,7 @@ class GestureController:
         self.gesture_render()
 
     def on_drag_end(self):
-        if self.page.rec.gesture is not None and self.page.rec.gesture.kind == "drag":
+        if self.gesture is not None and self.gesture.kind == "drag":
             self.end_gesture()
             self.page.renderer.render()
         self.drag_src = None
@@ -480,7 +484,7 @@ class GestureController:
         src = self.drag_src
         self.drag_src = None
         self.reorder_dst = None
-        had_preview = self.page.rec.gesture is not None and self.page.rec.gesture.kind == "drag"
+        had_preview = self.gesture is not None and self.gesture.kind == "drag"
         if had_preview:
             self.end_gesture()
         if not src:

@@ -64,15 +64,18 @@ from rtt.app.page_assets import (
     _set_offlist_prompt,
     _projection_prompt,
     _formchooser_options,
-    _Gesture,
 )
 
 _log = logging.getLogger(__name__)
 
 
 class _Reconciler:
-    def __init__(self, editor: Editor) -> None:
+    def __init__(self, editor: Editor, gestures=None) -> None:
         self._editor = editor
+        # the gesture state machine is OWNED by the GestureController; the reconciler only
+        # READS the live gesture (to honour a chooser/temperament preview hold while updating a
+        # cell). It borrows it through this narrow back-reference rather than owning the state.
+        self._gestures = gestures
         self._cb = None
         self._row_drag: int | None = None
         self._col_drag: tuple[str, int] | None = None
@@ -84,6 +87,10 @@ class _Reconciler:
         self._register_label_kinds()
         self._register_control_kinds()
         self._register_button_kinds()
+
+    @property
+    def _cur_gesture(self):
+        return self._gestures.gesture if self._gestures is not None else None
 
     def _init_handles(self) -> None:
         self.els: dict = {}
@@ -121,9 +128,6 @@ class _Reconciler:
         self.fold_state: dict = {}  # fold-toggle cell id -> last state token (unfold_more/less), to swap its SVG on change
         self.cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
         self.cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
-        # The active preview gesture — the ONE record the ring highlights derive from (see
-        # _Gesture). None when no gesture is live; every paint recomputes the rings from it.
-        self.gesture: _Gesture | None = None
         self.popup_state: dict = {}
 
     def _init_render_caches(self) -> None:
@@ -1175,7 +1179,7 @@ class _Reconciler:
         # the two faces would disagree mid-preview. The group is the cid's first two ":"-segments
         # (the copy adds a 3rd), so the base + every copy share it. The generic-chooser analogue of
         # the temperament guard below, which groups its own copies via the "preset:temperament" prefix.
-        g = self.gesture
+        g = self._cur_gesture
         if g is None or g.kind != "chooser" or not g.reflowed or g.source is None:
             return False
 
@@ -1188,7 +1192,8 @@ class _Reconciler:
         if self._chooser_reflow_hold(cb.id):
             return
         if cb.id.startswith("preset:temperament"):
-            if self.gesture is not None and self.gesture.kind == "temp" and self.gesture.reflowed:
+            g = self._cur_gesture
+            if g is not None and g.kind == "temp" and g.reflowed:
                 return
             value = presets.identify(self._editor.state)
             self.selects[cb.id].value = value
@@ -1257,7 +1262,8 @@ class _Reconciler:
         self._build_subpick(cb, wrap, presets.comma_options(db), value)
 
     def _update_subpick(self, cb):
-        if self.gesture is not None and self.gesture.kind == "temp" and self.gesture.reflowed:
+        g = self._cur_gesture
+        if g is not None and g.kind == "temp" and g.reflowed:
             return
         sel = self.selects.get(cb.id)
         if not isinstance(sel, ui.select):

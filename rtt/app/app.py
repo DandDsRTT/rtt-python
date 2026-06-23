@@ -242,7 +242,7 @@ class _Page:
                 except Exception:
                     _log.exception("stored document failed to load; using defaults: %.200r", stored)
                     self.load_failed = True
-        self.rec = _Reconciler(self.editor)
+        self.rec = _Reconciler(self.editor, self.gestures)
         self.building = False
         self.last_lay = None
         self.refs: dict = {}
