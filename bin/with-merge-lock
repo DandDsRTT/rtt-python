@@ -125,6 +125,10 @@ Env knobs:
                               the claim epoch; daemon self-exits at TTL, a waiter reclaims
                               at TTL+GRACE regardless of lease/liveness (default 2400)
   * ``RTT_MERGE_GATE_READY``  seconds ``acquire`` waits for its daemon to take the lock (default 30)
+  * ``RTT_MERGE_PROGRESS_FILE`` opt-in: path the held gate stamps as it advances; the
+                              holder daemon reclaims the lock if it goes stale (see below)
+  * ``RTT_MERGE_GATE_PROGRESS`` seconds of NO gate progress before work-progress reclaim
+                              fires (default 300; only active when PROGRESS_FILE is set)
   * ``RTT_MERGE_GATE_NOLOCK`` set to ``1`` to run the wrapped command without the lock
   * ``RTT_MERGE_GATE_DEBUG``  set to ``1`` to log daemon activity to ``$GATE_DIR/.daemon-<pid>.log``
 
@@ -156,6 +160,17 @@ _ABS_MAX = int(os.environ.get("RTT_MERGE_GATE_TTL", "2400"))
 _READY = int(os.environ.get("RTT_MERGE_GATE_READY", "30"))
 _DISABLED = os.environ.get("RTT_MERGE_GATE_NOLOCK") == "1"
 _DEBUG = os.environ.get("RTT_MERGE_GATE_DEBUG") == "1"
+
+# Work-progress reclaim (opt-in): when ``RTT_MERGE_PROGRESS_FILE`` names a file
+# that the held render gate stamps as it advances (the conftest does this when the
+# same env var is set), the holder daemon self-exits if that file goes stale for
+# ``RTT_MERGE_GATE_PROGRESS`` seconds — freeing a WEDGED gate in minutes instead of
+# waiting out ABS_MAX. Crucially this is keyed to REAL gate progress, NOT the agent's
+# ``renew``: a crawling-but-progressing gate keeps the file fresh and is never
+# reclaimed, while a timer-renewing agent can no longer keep a truly hung gate alive.
+# Unset → the daemon behaves exactly as before (lease + GAP + ABS_MAX backstops only).
+_PROGRESS_FILE = os.environ.get("RTT_MERGE_PROGRESS_FILE") or None
+_PROGRESS = int(os.environ.get("RTT_MERGE_GATE_PROGRESS", "300"))
 
 _POLL = 3            # seconds between FIFO-wait scans
 _REPORT_EVERY = 15   # seconds between "still waiting" lines
@@ -632,6 +647,21 @@ def _daemon(cfg):
             _d_log(logf, "%s deadline (hold_age=%.0fs); releasing" % (reason, hold_age))
             cleanup()
             return 0
+
+        # Work-progress reclaim: the held gate stamped a progress file and then
+        # stopped advancing (hung pytest). Free it well before ABS_MAX. Only once the
+        # file EXISTS (the gate has started) — so a long pre-gate rebase, which writes
+        # no progress, is governed by GAP, not this. Keyed to gate mtime alone, NOT the
+        # agent's renew, so a timer-renewing agent cannot keep a wedged gate alive.
+        if _PROGRESS_FILE is not None and _PROGRESS > 0:
+            try:
+                pmtime = os.path.getmtime(_PROGRESS_FILE)
+            except OSError:
+                pmtime = None
+            if pmtime is not None and (now_wall - pmtime) > _PROGRESS:
+                _d_log(logf, "gate made no progress for >%ds; releasing" % _PROGRESS)
+                cleanup()
+                return 0
 
         # Legacy fast recovery: wrapping process gone.
         if watch_parent and not _alive(watch_parent):

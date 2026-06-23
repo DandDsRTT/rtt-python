@@ -167,8 +167,20 @@ render runs to jump the queue** — ordering is FIFO/fair, so just wait your tur
 (`--ignore=…/test_web_render.py`) collects no render tests, so it never queues and stays fast.
 The gate self-heals (a killed holder's ticket is reclaimed on the next scan) and never blocks
 forever (`RTT_RENDER_GATE_WAIT`, default 3600s, then it proceeds anyway). Tune concurrency with
-`RTT_RENDER_GATE_SLOTS`; `RTT_RENDER_GATE_NOLOCK=1` opts a run out. Don't wrap the gate in `/tmp`
+`RTT_RENDER_GATE_SLOTS`. Don't wrap the gate in `/tmp`
 scripts to dodge it or sibling kills — that's the dogpile this prevents.
+
+**A STUCK holder is bypassed automatically — you should never need `NOLOCK`.** A *dead*
+holder (PID gone) frees its slot in seconds, but a holder that is alive yet **wedged** (hung
+pytest, or crawling so slowly under CPU thrash it makes no forward progress) used to pin the
+single slot. So a running holder now stamps a **heartbeat** (`.hb-…`) on every test; a holder
+whose heartbeat is older than `RTT_RENDER_GATE_STUCK` (default 240s) stops counting against the
+slot budget and the next waiter proceeds past it (FIFO among the remaining waiters is preserved;
+the wedged run is left alive, never killed). A healthy run stamps sub-second, so it is never
+falsely bypassed. **This is why you must NOT reach for `RTT_RENDER_GATE_NOLOCK=1`:** it skips the
+semaphore entirely, and several NOLOCK runs at once thrash every core and slow *everyone's* gate
+~10-20× — the exact dogpile the semaphore exists to prevent. NOLOCK still exists as a last-ditch
+opt-out, but the auto-bypass means a stuck holder no longer justifies it; just let the gate run.
 
 ## Take the merge lock to land — hold it across the WHOLE critical section
 
@@ -267,18 +279,37 @@ from other turns, don't narrate "still queued / still running".
 How it holds across tool calls: `acquire` spawns a detached, lease-renewing **holder daemon**; an
 atomic `.holder` marker (NOT ticket order — `time_ns` is only µs-granular here and collides) is the
 real mutex, with FIFO fairness tickets in `/tmp/rtt-merge-gate.d/` (the same boring no-`flock` `/tmp`
-mechanism as the render gate). Three self-heal backstops free a wedged lock automatically: a crashed
-daemon (PID death, seconds), a hung daemon (lease + grace, ~minutes), and an **abandoned** hold —
-agent/session gone without `release` — frees within `RTT_MERGE_GATE_GAP` (15 min) of the last
-`renew`, hard-capped at `RTT_MERGE_GATE_TTL` (40 min) from acquisition. `[merge-gate] waiting …` on
+mechanism as the render gate). Self-heal backstops free a wedged lock automatically: a crashed
+daemon (PID death, seconds), a hung daemon (lease + grace, ~minutes), an **abandoned** hold —
+agent/session gone without `release` — within `RTT_MERGE_GATE_GAP` (15 min) of the last `renew`,
+hard-capped at `RTT_MERGE_GATE_TTL` (40 min) from acquisition, and — when you export
+`RTT_MERGE_PROGRESS_FILE` (below) — a **wedged gate** whose progress stalls for
+`RTT_MERGE_GATE_PROGRESS` (5 min), keyed to real gate progress so a timer-`renew` can't keep a hung
+gate alive. `[merge-gate] waiting …` on
 stderr is your place in line — **that wait is correct, not a hang; don't `pkill` to jump it.**
 `bin/with-merge-lock status` shows the holder + queue. The lock is exclusive by design (no `SLOTS`
 knob — the merge must not race); even so, `git merge --ff-only` is the atomic ref-CAS backstop that
 keeps `main` safe if anything ever slips. Validate the lock itself in isolation with
 `bin/with-merge-lock-selftest` (spawns real daemons in throwaway dirs; not a pytest test). Knobs:
 `RTT_MERGE_GATE_WAIT` (3600s, then it FAILS — it never "proceeds unlocked"), `RTT_MERGE_GATE_LEASE`/
-`GRACE`/`RENEW`/`GAP`/`TTL`/`READY`, `RTT_MERGE_GATE_NOLOCK=1` to opt out, `RTT_MERGE_LOCK_ID` for an
-explicit lock identity.
+`GRACE`/`RENEW`/`GAP`/`TTL`/`READY`, `RTT_MERGE_GATE_PROGRESS` (work-progress reclaim threshold,
+default 300s; active only when `RTT_MERGE_PROGRESS_FILE` is set), `RTT_MERGE_GATE_NOLOCK=1` to opt
+out, `RTT_MERGE_LOCK_ID` for an explicit lock identity.
+
+**Optional — let a wedged gate self-reclaim faster than 40 min.** If you want the work-progress
+backstop (recommended when the machine is under heavy parallel load), export a per-agent progress
+path **before** `acquire` so both the daemon and the gate use it:
+
+```bash
+export RTT_MERGE_PROGRESS_FILE="/tmp/rtt-merge-gate.d/.progress-$$"
+bin/with-merge-lock acquire
+# … rebase …
+bin/with-merge-lock renew && .venv/bin/python -m pytest -q   # the gate stamps the file as it runs
+```
+
+The conftest stamps that file as it queues and on every test; if it stalls for
+`RTT_MERGE_GATE_PROGRESS` the holder daemon frees the lock — reclaiming a hung gate in ~5 min
+instead of ~40. Leave it unset to keep the old lease/GAP/ABS_MAX behavior exactly.
 
 **The orthogonal-files softener — skip a re-run when `main` moved harmlessly.** Even outside the
 lock, if your ff-merge is rejected because `main` moved, you do **not** always need to re-run the
@@ -297,6 +328,15 @@ precisely what landed under you. Render-**relevant** (forces a re-run) = the who
 anything else not on the irrelevant whitelist (`tests/**`, `guide/**`, `.claude/**`, `bin/**`,
 `*.md`, `*.png`/`*.csv`, a few top-level non-code files). The default is *relevant*: when unsure,
 re-run. (The lock makes this rare — it's the fallback for the occasional move that slips in.)
+
+**This optimistic short-lock is automated by `bin/land`** (see "Default: `bin/land`" above): it
+validates lock-free under the render semaphore, takes the merge lock only for the
+`merge-safe-check` + `--ff-only` (seconds, not the ~9-min gate), and falls back to the held-lock
+flow when repeatedly outrun. The cost it trades for is a possible re-gate ("chase") when `main`
+moves render-*relevantly* during your gate — bounded to ~one extra round per competing land (the
+render semaphore lets at most ~one land complete per gate) and removed entirely for orthogonal
+moves by `merge-safe-check`. Reach for the manual held-lock sequence above only to hand-resolve a
+rebase conflict. Both keep the atomic `--ff-only` backstop, so neither can corrupt `main`.
 
 ## Git: you're on a fast-moving team — rebase onto main, then ff-merge
 

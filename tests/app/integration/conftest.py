@@ -29,10 +29,37 @@ exactly how many are ahead of it. Tickets from dead PIDs are reclaimed on every
 scan, so a crashed/killed holder frees its slot automatically and the queue never
 wedges.
 
+PROGRESS HEARTBEAT — auto-bypass a STUCK holder (no manual ``NOLOCK`` needed)
+============================================================================
+A *dead* holder (PID gone) is reclaimed in seconds. But a holder that is ALIVE
+yet WEDGED — its pytest hung, or it is crawling so slowly under CPU thrash that
+it makes no forward progress — used to pin the single render slot until the whole
+queue gave up at ``RTT_RENDER_GATE_WAIT`` (3600s). Agents reached for
+``RTT_RENDER_GATE_NOLOCK=1`` to skip the gate and jump such a holder — which is
+the exact mechanism that serializes runs to avoid CPU saturation, so several
+NOLOCK runs at once thrash every core and slow *everyone's* gate ~10-20×.
+
+So a running holder now stamps a **heartbeat** (``.hb-<ns>-<pid>``, a dotfile so
+the ticket parser ignores it): created the instant it takes a slot, and re-touched
+at the start and end of every test. A healthy run touches it sub-second, so it is
+never falsely flagged. A run whose heartbeat is older than ``RTT_RENDER_GATE_STUCK``
+seconds (default 240) is presumed wedged and **stops counting against the slot
+budget** — the next waiter proceeds past it (FIFO among the remaining waiters is
+preserved; only the wedged *runner* is bypassed). The wedged run is left alone (we
+never kill another agent's process); if it later un-wedges we briefly overcommit
+by one run, then it finishes. With this, no agent ever needs manual ``NOLOCK`` to
+get past a stuck holder.
+
 Env knobs:
   * ``RTT_RENDER_GATE_SLOTS``  how many run concurrently (default 1)
   * ``RTT_RENDER_GATE_WAIT``   max seconds to queue before proceeding anyway (default 3600)
+  * ``RTT_RENDER_GATE_STUCK``  no-progress seconds after which a holder is bypassed (default 240)
   * ``RTT_RENDER_GATE_NOLOCK`` set to ``1`` to opt a run out entirely
+
+``RTT_MERGE_PROGRESS_FILE`` (optional): when the land protocol exports it, this
+gate also bumps that file as it queues and on every test, so the merge-lock holder
+daemon can tell a crawling-but-progressing gate from a wedged one and reclaim only
+the latter (see ``bin/with-merge-lock``). Unset → ignored; this gate is unaffected.
 """
 
 import os
@@ -43,11 +70,15 @@ _RENDER_FILE = "test_web_render.py"
 _GATE_DIR = "/tmp/rtt-render-gate.d"
 _SLOTS = max(1, int(os.environ.get("RTT_RENDER_GATE_SLOTS", "1")))
 _WAIT_MAX = int(os.environ.get("RTT_RENDER_GATE_WAIT", "3600"))  # seconds willing to queue
+_STUCK = int(os.environ.get("RTT_RENDER_GATE_STUCK", "240"))  # no-progress → bypass holder
 _POLL = 3  # seconds between attempts
 _REPORT_EVERY = 15  # seconds between "still waiting" lines
 _DISABLED = os.environ.get("RTT_RENDER_GATE_NOLOCK") == "1"
+_MERGE_PROGRESS_FILE = os.environ.get("RTT_MERGE_PROGRESS_FILE") or None
 
-_ticket = None  # path to this run's ticket file once created
+_ticket = None       # path to this run's ticket file once created
+_ticket_name = None  # its <ns>-<pid> basename
+_heartbeat = None    # path to this run's heartbeat file once it holds a slot
 
 
 def _alive(pid):
@@ -60,15 +91,31 @@ def _alive(pid):
     return True
 
 
+def _hb_path(name):
+    return os.path.join(_GATE_DIR, ".hb-" + name)
+
+
+def _bump(path):
+    """Create `path` if absent and refresh its mtime — the progress stamp."""
+    try:
+        with open(path, "a"):
+            pass
+        os.utime(path, None)
+    except OSError:
+        pass
+
+
 def _scan():
     """Return live tickets as a list of ``(ns, pid, filename)`` sorted FIFO,
-    removing any ticket whose PID is dead (reclaiming its slot)."""
+    removing any ticket whose PID is dead (and its heartbeat), reclaiming its slot."""
     live = []
     try:
         names = os.listdir(_GATE_DIR)
     except OSError:
         return live
     for name in names:
+        if name.startswith("."):
+            continue  # heartbeats / temp files — never tickets
         try:
             ns_s, pid_s = name.rsplit("-", 1)
             ns, pid = int(ns_s), int(pid_s)
@@ -77,19 +124,49 @@ def _scan():
         if _alive(pid):
             live.append((ns, pid, name))
         else:
-            try:
-                os.remove(os.path.join(_GATE_DIR, name))
-            except OSError:
-                pass
+            for p in (os.path.join(_GATE_DIR, name), _hb_path(name)):
+                try:
+                    os.remove(p)
+                except OSError:
+                    pass
     live.sort()
     return live
 
 
+def _classify(live, my_name, now):
+    """Split the FIFO queue around me. Returns (running_fresh, waiters_ahead),
+    where a *running* ticket holds a slot (has a fresh heartbeat), a heartbeat
+    older than STUCK is a wedged holder counted as neither (bypassed), and a
+    ticket with no heartbeat yet is a true waiter."""
+    my_key = next(((ns, pid) for ns, pid, name in live if name == my_name), None)
+    running_fresh = 0
+    waiters_ahead = 0
+    for ns, pid, name in live:
+        try:
+            age = now - os.path.getmtime(_hb_path(name))
+            has_hb = True
+        except OSError:
+            has_hb = False
+            age = 0
+        if has_hb and age <= _STUCK:
+            running_fresh += 1
+        elif not has_hb and name != my_name and my_key is not None and (ns, pid) < my_key:
+            waiters_ahead += 1
+        # else: wedged holder (stale heartbeat) — bypassed, counts toward nothing
+    return running_fresh, waiters_ahead
+
+
+def _take_slot():
+    global _heartbeat
+    _heartbeat = _hb_path(_ticket_name)
+    _bump(_heartbeat)
+
+
 def _acquire():
-    global _ticket
+    global _ticket, _ticket_name
     os.makedirs(_GATE_DIR, exist_ok=True)
-    my_name = f"{time.time_ns()}-{os.getpid()}"
-    _ticket = os.path.join(_GATE_DIR, my_name)
+    _ticket_name = f"{time.time_ns()}-{os.getpid()}"
+    _ticket = os.path.join(_GATE_DIR, _ticket_name)
     try:
         open(_ticket, "x").close()
     except OSError:
@@ -98,16 +175,19 @@ def _acquire():
     waited = 0
     last_report = -_REPORT_EVERY
     while True:
+        now = time.time()
         live = _scan()
         names = [n for _, _, n in live]
-        if my_name not in names:  # got reclaimed under us; re-stake our place
+        if _ticket_name not in names:  # got reclaimed under us; re-stake our place
             try:
                 open(_ticket, "x").close()
             except OSError:
                 pass
             continue
-        idx = names.index(my_name)
-        if idx < _SLOTS:
+        running_fresh, waiters_ahead = _classify(live, _ticket_name, now)
+        free = _SLOTS - running_fresh
+        if free > 0 and waiters_ahead < free:
+            _take_slot()
             extra = f" after waiting {waited}s" if waited else ""
             print(
                 f"[render-gate] slot acquired (PID {os.getpid()}){extra}; "
@@ -116,35 +196,48 @@ def _acquire():
             )
             return
         if waited >= _WAIT_MAX:
+            _take_slot()
             print(
-                f"[render-gate] waited {_WAIT_MAX}s (still position {idx - _SLOTS + 1} "
+                f"[render-gate] waited {_WAIT_MAX}s (still position {waiters_ahead + 1} "
                 f"in line); proceeding anyway",
                 file=sys.stderr,
             )
             return
         if waited - last_report >= _REPORT_EVERY:
-            position = idx - _SLOTS + 1
-            waiting = max(0, len(live) - _SLOTS)
-            ahead = [p for _, p, _ in live[:idx]]
+            bypassed = max(0, len(live) - running_fresh - waiters_ahead - 1)
+            note = f"; bypassing {bypassed} stuck" if bypassed else ""
             print(
-                f"[render-gate] waiting our turn… position {position} of {waiting} queued "
-                f"({_SLOTS} slots busy; {waited}s elapsed). PIDs ahead: {ahead}",
+                f"[render-gate] waiting our turn… position {waiters_ahead + 1} "
+                f"({running_fresh}/{_SLOTS} slots busy{note}; {waited}s elapsed)",
                 file=sys.stderr,
             )
             last_report = waited
+        if _MERGE_PROGRESS_FILE:
+            _bump(_MERGE_PROGRESS_FILE)  # queuing is forward progress for the merge daemon
         time.sleep(_POLL)
         waited += _POLL
 
 
-def _release():
-    global _ticket
-    if _ticket is None:
+def _progress():
+    """Stamp our heartbeat (and the optional merge-progress file) — called as
+    each test starts and finishes, so a healthy run never looks wedged."""
+    if _heartbeat is None:
         return
-    try:
-        os.remove(_ticket)
-    except OSError:
-        pass
+    _bump(_heartbeat)
+    if _MERGE_PROGRESS_FILE:
+        _bump(_MERGE_PROGRESS_FILE)
+
+
+def _release():
+    global _ticket, _heartbeat
+    for path in (_heartbeat, _ticket):
+        if path is not None:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
     _ticket = None
+    _heartbeat = None
 
 
 def pytest_collection_modifyitems(session, config, items):
@@ -152,6 +245,14 @@ def pytest_collection_modifyitems(session, config, items):
         return
     if any(_RENDER_FILE in str(getattr(item, "fspath", "")) for item in items):
         _acquire()
+
+
+def pytest_runtest_logstart(nodeid, location):
+    _progress()
+
+
+def pytest_runtest_logreport(report):
+    _progress()
 
 
 def pytest_sessionfinish(session, exitstatus):

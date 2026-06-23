@@ -53,6 +53,10 @@ def _env(d, lock_id=None, **over):
     e.setdefault("RTT_MERGE_GATE_TTL", "30")
     e.setdefault("RTT_MERGE_GATE_READY", "10")
     e.setdefault("RTT_MERGE_GATE_WAIT", "3600")
+    # Default OFF; scenarios that exercise work-progress reclaim set these explicitly
+    # (and we drop any inherited from the caller's shell so other scenarios are clean).
+    e.pop("RTT_MERGE_PROGRESS_FILE", None)
+    e.pop("RTT_MERGE_GATE_PROGRESS", None)
     for k, v in over.items():
         e["RTT_MERGE_GATE_" + k] = str(v)
     return e
@@ -429,6 +433,64 @@ def t_abs_cap_waiter_reclaim():
         kill_daemons(d)
 
 
+def t_progress_reclaim():
+    """Work-progress reclaim: with RTT_MERGE_PROGRESS_FILE set, a holder whose gate
+    keeps stamping the file is NOT reclaimed, but one whose gate goes stale is freed
+    within ~PROGRESS — even while a timer-renewing agent spams `renew` (which must NOT
+    save a wedged gate). GAP/TTL are large so ONLY the progress path can free it."""
+    d = tempfile.mkdtemp(prefix="rtt-mlock-14.")
+    pf = os.path.join(d, "gate-progress")
+    try:
+        e = _env(d, lock_id="A", GAP=120, TTL=120, LEASE=30, GRACE=5)
+        e["RTT_MERGE_PROGRESS_FILE"] = pf
+        e["RTT_MERGE_GATE_PROGRESS"] = "3"
+        r = subprocess.run([PY, SCRIPT, "acquire"], env=e, capture_output=True,
+                           text=True, timeout=30)
+        ok = r.returncode == 0 and marker(d) is not None
+        # Healthy gate: stamp the file for a few seconds → the lock is NOT reclaimed,
+        # even though we are NOT renewing (proves gate progress alone holds it).
+        held = True
+        for _ in range(5):
+            open(pf, "a").close()
+            os.utime(pf, None)
+            time.sleep(0.7)
+            if marker(d) is None:
+                held = False
+                break
+        ok = ok and held
+        # Now WEDGE: stop stamping, but keep timer-renewing. Must free within ~PROGRESS.
+        t0 = time.time()
+        freed = False
+        while time.time() - t0 < 12:
+            subprocess.run([PY, SCRIPT, "renew"], env=e, capture_output=True, timeout=10)
+            if marker(d) is None:
+                freed = True
+                break
+            time.sleep(0.4)
+        dt = time.time() - t0
+        ok = ok and freed and dt < 10
+        record("work-progress reclaim (timer-renew can't save a wedged gate)", ok,
+               "held_while_progressing=%s freed=%s after %.1fs" % (held, freed, dt))
+    finally:
+        kill_daemons(d)
+
+
+def t_progress_disabled_default():
+    """With no RTT_MERGE_PROGRESS_FILE, the progress path is inert: a holder that
+    never stamps anything is held purely by the existing lease/GAP backstops (here a
+    big GAP/TTL keep it alive for the whole window — proving the reclaim is opt-in)."""
+    d = tempfile.mkdtemp(prefix="rtt-mlock-15.")
+    try:
+        r = run(d, "acquire", env=_env(d, lock_id="A", GAP=120, TTL=120, LEASE=30, GRACE=5))
+        ok = r.returncode == 0 and marker(d) is not None
+        time.sleep(6)  # > default-test PROGRESS would be, but it's unset → still held
+        ok = ok and marker(d) is not None
+        record("progress reclaim is opt-in (off without PROGRESS_FILE)", ok,
+               "still_held=%s" % (marker(d) is not None))
+    finally:
+        kill_daemons(d)
+
+
 def t_wait_max_fail():
     d = tempfile.mkdtemp(prefix="rtt-mlock-8.")
     try:
@@ -450,7 +512,8 @@ def main():
     print("== with-merge-lock self-test (interpreter: %s) ==" % PY)
     for fn in (t_happy, t_mutex, t_dead_daemon, t_abandon, t_stale_state,
                t_backcompat_old_ticket, t_mtime_reclaim, t_dead_marker_reaped,
-               t_hung_daemon, t_abs_cap, t_abs_cap_waiter_reclaim, t_wait_max_fail):
+               t_hung_daemon, t_abs_cap, t_abs_cap_waiter_reclaim,
+               t_progress_reclaim, t_progress_disabled_default, t_wait_max_fail):
         try:
             fn()
         except Exception as e:  # noqa: BLE001 — a crashed scenario is a failure
