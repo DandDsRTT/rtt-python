@@ -80,9 +80,9 @@ class _DecorationsMixin:
         return self.rows["prescaling"].y + i * ROW_H
 
     def _matlabel_group_count(self):
-        return {"gens": self.r, "primes": self.d, "commas": self.nc + self.nu, "targets": self.k,
-                "held": self.nh, "detempering": self.r, "interest": self.mi,
-                "canongens": self.rc, "ssgens": self.rL, "ssprimes": self.dL}
+        return {"gens": self.resolved.dims.r, "primes": self.resolved.dims.d, "commas": self.resolved.dims.nc + self.resolved.dims.nu, "targets": self.resolved.dims.k,
+                "held": self.resolved.dims.nh, "detempering": self.resolved.dims.r, "interest": self.resolved.dims.mi,
+                "canongens": self.resolved.dims.rc, "ssgens": self.resolved.dims.rL, "ssprimes": self.resolved.dims.dL}
 
     def _emit_matrix_row_labels(self) -> None:
         row_top = {
@@ -100,19 +100,19 @@ class _DecorationsMixin:
             ("ss_vectors", "ssprimes"): self.ss_vec_top,
             ("ss_projection", "ssprimes"): self.ss_proj_top,
         }
-        row_count = {("mapping", "primes"): self.r,
-                     ("canon", "primes"): self.rc,
-                     ("mapping", "canongens"): self.r,
-                     ("vectors", "primes"): self.d,
-                     ("projection", "primes"): self.d,
-                     ("projection", "ssprimes"): self.d,
+        row_count = {("mapping", "primes"): self.resolved.dims.r,
+                     ("canon", "primes"): self.resolved.dims.rc,
+                     ("mapping", "canongens"): self.resolved.dims.r,
+                     ("vectors", "primes"): self.resolved.dims.d,
+                     ("projection", "primes"): self.resolved.dims.d,
+                     ("projection", "ssprimes"): self.resolved.dims.d,
 
                      ("prescaling", "primes"): self.prescale_rows + self.size_rows,
                      ("prescaling", "ssprimes"): self.prescale_rows + self.size_rows,
-                     ("ss_mapping", "ssprimes"): self.rL,
-                     ("ss_mapping", "primes"): self.rL,
-                     ("ss_vectors", "ssprimes"): self.dL,
-                     ("ss_projection", "ssprimes"): self.dL}
+                     ("ss_mapping", "ssprimes"): self.resolved.dims.rL,
+                     ("ss_mapping", "primes"): self.resolved.dims.rL,
+                     ("ss_vectors", "ssprimes"): self.resolved.dims.dL,
+                     ("ss_projection", "ssprimes"): self.resolved.dims.dL}
         for (rkey, ckey), glyph in self.row_labels.items():
             if not self.tile_open(rkey, ckey):
                 continue
@@ -143,7 +143,7 @@ class _DecorationsMixin:
             for i in range(group_count[ckey]):
                 glyph = col_label if callable(col_label) else self._form_subscripted(col_label, rkey, ckey)
                 text = glyph(i) if callable(glyph) else f"{glyph}{_sub(i + 1)}"
-                if self.show_unchanged and ckey == "commas":
+                if self.resolved.unchanged.shown and ckey == "commas":
                     text = text.replace("𝐜", "𝐯")
                 x = left(self.comma_value_pos(i)) if ckey == "commas" else left(i)
                 self.cells.append(CellBox(
@@ -237,7 +237,7 @@ class _DecorationsMixin:
                         **(FORM_EQUIVALENCES if self.show_form_subscript else {}),
                         **({("mapping", "primes"): f" = 𝐹𝑀{SUBSCRIPT_C}"} if self.show_canon else {}),
                         **({("vectors", "commas"): " = C|U", ("mapping", "commas"): ""}
-                           if self.show_unchanged else {})}
+                           if self.resolved.unchanged.shown else {})}
         if self.show_superspace:
             equivalences[("projection", "primes")] = (
                 equivalences[("projection", "primes")] + self._projection_superspace_tail())
@@ -256,7 +256,7 @@ class _DecorationsMixin:
         base_symbol = self.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
         if self._caption_ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:
             base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
-        if self.show_unchanged and ckey == "commas":
+        if self.resolved.unchanged.shown and ckey == "commas":
             base_symbol = base_symbol.replace(SUBSCRIPT_C, "\x00").replace("C", "V").replace("\x00", SUBSCRIPT_C)
         base_symbol = self._form_subscripted(base_symbol, rkey, ckey)
         glyph = base_symbol if (self.show_symbols or equiv) else ""
@@ -265,12 +265,12 @@ class _DecorationsMixin:
         return cy + SYMBOL_H
 
     def _emit_unchanged_counts_caption(self, rkey: str, cy: float) -> None:
-        comma_half_w = self.nc * COL_W + self.empty_comma_w
+        comma_half_w = self.resolved.dims.nc * COL_W + self.resolved.unchanged.empty_comma_w
         if comma_half_w:
-            comma_half_x = self.commas_x if self.empty_comma_w else self.comma_left(0)
+            comma_half_x = self.commas_x if self.resolved.unchanged.empty_comma_w else self.comma_left(0)
             self.cells.append(CellBox("caption:counts:commas", comma_half_x, cy, comma_half_w,
                                  self.rows[rkey].cap, "caption", text="nullity"))
-        self.cells.append(CellBox("caption:counts:commas:u", self.comma_left(self.nc_shown), cy, self.nu * COL_W,
+        self.cells.append(CellBox("caption:counts:commas:u", self.comma_left(self.resolved.dims.nc_shown), cy, self.resolved.dims.nu * COL_W,
                              self.rows[rkey].cap, "caption", text="unchanged interval count"))
 
     def _emit_tile_caption(self, rkey: str, ckey: str, name: str, cy: float) -> None:
@@ -298,7 +298,7 @@ class _DecorationsMixin:
         cy = self.rows[rkey].y + self.rows[rkey].h + self.rows[rkey].frame + self.row_cpick[rkey]
         if (self.show_symbols or self.show_equiv) and rkey in BANDS["symbol"].rows:
             cy = self._emit_tile_symbol(rkey, ckey, cy)
-        if self.show_captions and self.show_unchanged and (rkey, ckey) == ("counts", "commas"):
+        if self.show_captions and self.resolved.unchanged.shown and (rkey, ckey) == ("counts", "commas"):
             self._emit_unchanged_counts_caption(rkey, cy)
             return
         if self.show_captions:
@@ -310,7 +310,7 @@ class _DecorationsMixin:
         slope = service.damage_weight_slope(self.tuning_scheme)
         self._caption_equivs = self._caption_equivalences(self._caption_ai, slope)
         for (rkey, ckey), name in self.effective_captions.items():
-            if ckey == "interest" and not self.interest:
+            if ckey == "interest" and not self.resolved.interest.vectors:
                 continue
             if not self.tile_open(rkey, ckey):
                 continue

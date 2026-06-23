@@ -64,20 +64,20 @@ class _EmitMatrixMixin:
 
     def _emit_counts_row(self) -> None:
         if self.row_open("counts"):
-            cardinality = {"gens": self.r, "primes": self.d, "commas": self.state.n, "targets": self.k, "held": self.nh,
-                           "detempering": self.r,
-                           "ssgens": self.rL, "ssprimes": self.dL}
+            cardinality = {"gens": self.resolved.dims.r, "primes": self.resolved.dims.d, "commas": self.state.n, "targets": self.resolved.dims.k, "held": self.resolved.dims.nh,
+                           "detempering": self.resolved.dims.r,
+                           "ssgens": self.resolved.dims.rL, "ssprimes": self.resolved.dims.dL}
             for ckey, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
                 if not self.tile_open("counts", ckey):
                     continue
-                if ckey == "commas" and self.show_unchanged:
-                    comma_half_w = self.nc * COL_W + self.empty_comma_w
+                if ckey == "commas" and self.resolved.unchanged.shown:
+                    comma_half_w = self.resolved.dims.nc * COL_W + self.resolved.unchanged.empty_comma_w
                     if comma_half_w:
-                        comma_half_x = self.commas_x if self.empty_comma_w else self.comma_left(0)
+                        comma_half_x = self.commas_x if self.resolved.unchanged.empty_comma_w else self.comma_left(0)
                         self.cells.append(CellBox("count:commas", comma_half_x, self.rows["counts"].y, comma_half_w, ROW_H,
                                              "count", text=f"{_count_sym('n')} = {self.state.n}"))
-                    self.cells.append(CellBox("count:commas:u", self.comma_left(self.nc_shown), self.rows["counts"].y, self.nu * COL_W, ROW_H,
-                                         "count", text=f"{_count_sym('u')} = {self.nu}"))
+                    self.cells.append(CellBox("count:commas:u", self.comma_left(self.resolved.dims.nc_shown), self.rows["counts"].y, self.resolved.dims.nu * COL_W, ROW_H,
+                                         "count", text=f"{_count_sym('u')} = {self.resolved.dims.nu}"))
                     continue
                 cnt_x, cnt_w = self.tile_span_box("counts", ckey)
                 self.cells.append(CellBox(f"count:{ckey}", cnt_x, self.rows["counts"].y, cnt_w, ROW_H,
@@ -90,13 +90,13 @@ class _EmitMatrixMixin:
 
     def _emit_units_matrix(self) -> None:
         matrix_units = {
-            "vectors": (self.d, self.vec_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
-            "canon": (self.rc, self.canon_top, lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
-            "projection": (self.d, self.proj_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
-            "mapping": (self.r_shown, self.map_top, lambda i: f"g{_sub(i + 1)}/"),
-            "ss_vectors": (self.dL, self.ss_vec_top, lambda i: f"p{_sub(i + 1)}/"),
-            "ss_mapping": (self.rL, self.ss_map_top, lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
-            "ss_projection": (self.dL, self.ss_proj_top, lambda i: f"p{_sub(i + 1)}/"),
+            "vectors": (self.resolved.dims.d, self.vec_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
+            "canon": (self.resolved.dims.rc, self.canon_top, lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
+            "projection": (self.resolved.dims.d, self.proj_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
+            "mapping": (self.resolved.dims.r_shown, self.map_top, lambda i: f"g{_sub(i + 1)}/"),
+            "ss_vectors": (self.resolved.dims.dL, self.ss_vec_top, lambda i: f"p{_sub(i + 1)}/"),
+            "ss_mapping": (self.resolved.dims.rL, self.ss_map_top, lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
+            "ss_projection": (self.resolved.dims.dL, self.ss_proj_top, lambda i: f"p{_sub(i + 1)}/"),
         }
         for key, (n, top, label) in matrix_units.items():
             if not self.tile_open(key, "units"):
@@ -123,16 +123,16 @@ class _EmitMatrixMixin:
             return
         uy = self.rows["units"].y
         column_units = {
-            "canongens": (self.rc, self.canongen_left, lambda i: f"/g{SUBSCRIPT_C}{_sub(i + 1)}"),
-            "gens": (self.r, self.gen_left, lambda i: f"/g{_sub(i + 1)}"),
-            "primes": (self.d, self.prime_left, lambda i: f"/{self.domain_label}{_sub(i + 1)}"),
-            "ssgens": (self.rL, self.ss_gen_left, lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
-            "ssprimes": (self.dL, self.ss_prime_left, lambda i: f"/p{_sub(i + 1)}"),
-            "commas": (self.nv_shown, self.comma_left, lambda _i: "/1"),
-            "detempering": (self.r, self.detempering_left, lambda _i: "/1"),
-            "targets": (self.k_shown, self.target_left, lambda _i: "/1"),
-            "interest": (self.mi_shown, self.interest_left, lambda _i: "/1"),
-            "held": (self.nh_shown, self.held_left, lambda _i: "/1"),
+            "canongens": (self.resolved.dims.rc, self.canongen_left, lambda i: f"/g{SUBSCRIPT_C}{_sub(i + 1)}"),
+            "gens": (self.resolved.dims.r, self.gen_left, lambda i: f"/g{_sub(i + 1)}"),
+            "primes": (self.resolved.dims.d, self.prime_left, lambda i: f"/{self.domain_label}{_sub(i + 1)}"),
+            "ssgens": (self.resolved.dims.rL, self.ss_gen_left, lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
+            "ssprimes": (self.resolved.dims.dL, self.ss_prime_left, lambda i: f"/p{_sub(i + 1)}"),
+            "commas": (self.resolved.dims.nv_shown, self.comma_left, lambda _i: "/1"),
+            "detempering": (self.resolved.dims.r, self.detempering_left, lambda _i: "/1"),
+            "targets": (self.resolved.dims.k_shown, self.target_left, lambda _i: "/1"),
+            "interest": (self.resolved.dims.mi_shown, self.interest_left, lambda _i: "/1"),
+            "held": (self.resolved.dims.nh_shown, self.held_left, lambda _i: "/1"),
         }
         for key, (n, left, label) in column_units.items():
             if not self.tile_open("units", key):
@@ -162,110 +162,110 @@ class _EmitMatrixMixin:
 
     def _emit_qty_gens(self, qy, branch_minus) -> None:
         if self.tile_open("quantities", "gens"):
-            for g in range(self.r):
+            for g in range(self.resolved.dims.r):
                 self.cells.append(CellBox(f"qgen:{g}", self.gen_left(g), qy, COL_W, ROW_H, "genratio", text=self.gens[g], gen=g))
-            if self.r > 1:
-                branch_minus("gen_minus", "gens", self.r - 1, "gen_minus", gen=self.r - 1)
+            if self.resolved.dims.r > 1:
+                branch_minus("gen_minus", "gens", self.resolved.dims.r - 1, "gen_minus", gen=self.resolved.dims.r - 1)
 
     def _emit_qty_canongens(self, qy) -> None:
         if self.tile_open("quantities", "canongens"):
-            for g in range(self.rc):
-                self.cells.append(CellBox(f"cangen:{g}", self.canongen_left(g), qy, COL_W, ROW_H, "genratio", text=self.canon_gens[g]))
+            for g in range(self.resolved.dims.rc):
+                self.cells.append(CellBox(f"cangen:{g}", self.canongen_left(g), qy, COL_W, ROW_H, "genratio", text=self.resolved.canon.gens[g]))
 
     def _emit_qty_primes(self, qy, branch_minus) -> None:
         if not self.tile_open("quantities", "primes"):
             return
-        for p in range(self.d):
-            text = str(self.elements[p])
+        for p in range(self.resolved.dims.d):
+            text = str(self.resolved.dims.elements[p])
             kind = self._element_cell_kind(text) if self.show_nonstandard_domain else "prime"
             self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, kind, text=text, prime=p))
-            self._voice("quantities:primes", p, self.tun.just_map[p])
+            self._voice("quantities:primes", p, self.resolved.tuning.tun.just_map[p])
         if self.element_draft:
             draft_text = self.pending_element or "?/?"
-            self.cells.append(CellBox("prime:pending", self.prime_left(self.d), qy, COL_W, ROW_H,
-                                      self._element_cell_kind(draft_text), text=draft_text, prime=self.d, pending=True))
-            branch_minus("element_minus:pending", "primes", self.d, "element_minus")
+            self.cells.append(CellBox("prime:pending", self.prime_left(self.resolved.dims.d), qy, COL_W, ROW_H,
+                                      self._element_cell_kind(draft_text), text=draft_text, prime=self.resolved.dims.d, pending=True))
+            branch_minus("element_minus:pending", "primes", self.resolved.dims.d, "element_minus")
         if self.show_nonstandard_domain:
-            if self.d > 1:
-                for p in range(self.d):
+            if self.resolved.dims.d > 1:
+                for p in range(self.resolved.dims.d):
                     branch_minus(f"element_minus:{p}", "primes", p, "element_minus", prime=p)
         elif self.domain_can_shrink:
-            branch_minus("minus", "primes", self.d - 1, "minus")
+            branch_minus("minus", "primes", self.resolved.dims.d - 1, "minus")
 
     def _emit_qty_ssgens(self, qy) -> None:
         if self.tile_open("quantities", "ssgens"):
             ss_gens = service.superspace_generators(self.state)
-            for g in range(self.rL):
+            for g in range(self.resolved.dims.rL):
                 self.cells.append(CellBox(f"ssqgen:{g}", self.ss_gen_left(g), qy, COL_W, ROW_H, "genratio", text=ss_gens[g]))
 
     def _emit_qty_ssprimes(self, qy) -> None:
         if self.tile_open("quantities", "ssprimes"):
-            for p in range(self.dL):
-                self.cells.append(CellBox(f"ssqprime:{p}", self.ss_prime_left(p), qy, COL_W, ROW_H, "prime", text=str(self.superspace_primes[p]), prime=p))
+            for p in range(self.resolved.dims.dL):
+                self.cells.append(CellBox(f"ssqprime:{p}", self.ss_prime_left(p), qy, COL_W, ROW_H, "prime", text=str(self.resolved.dims.superspace_primes[p]), prime=p))
 
     def _emit_qty_commas(self, qy, branch_minus) -> None:
         if not self.tile_open("quantities", "commas"):
             return
-        for c in range(self.nc):
-            self.cells.append(CellBox(f"comma:{self.col_token('commas', c)}", self.comma_left(c), qy, COL_W, ROW_H, "ratiocell", text=self.comma_ratios[c], comma=c))
-            self._voice("quantities:commas", c, self.comma_sizes.just[c])
+        for c in range(self.resolved.dims.nc):
+            self.cells.append(CellBox(f"comma:{self.col_token('commas', c)}", self.comma_left(c), qy, COL_W, ROW_H, "ratiocell", text=self.resolved.commas.ratios[c], comma=c))
+            self._voice("quantities:commas", c, self.resolved.tuning.comma_sizes.just[c])
         if self.comma_draft:
-            self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H,
-                                 "commaratio" if self.ghost_comma else "ratiocell",
-                                 text=(self.ghost_comma_ratio or DASH) if self.ghost_comma else "?/?",
-                                 comma=self.nc, pending=True))
-        if self.show_unchanged:
-            full_u = self.unchanged_basis is not None and all(v is not None for v in self.unchanged_basis)
-            for j in range(self.nu):
-                doomed = self.pending is not None and j == self.nu - 1
-                self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.nc_shown + j), qy, COL_W, ROW_H,
+            self.cells.append(CellBox("comma:pending", self.comma_left(self.resolved.dims.nc), qy, COL_W, ROW_H,
+                                 "commaratio" if self.resolved.ghosts.comma else "ratiocell",
+                                 text=(self.resolved.ghosts.comma_ratio or DASH) if self.resolved.ghosts.comma else "?/?",
+                                 comma=self.resolved.dims.nc, pending=True))
+        if self.resolved.unchanged.shown:
+            full_u = self.resolved.unchanged.basis is not None and all(v is not None for v in self.resolved.unchanged.basis)
+            for j in range(self.resolved.dims.nu):
+                doomed = self.resolved.commas.pending is not None and j == self.resolved.dims.nu - 1
+                self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.resolved.dims.nc_shown + j), qy, COL_W, ROW_H,
                                      "ratiocell" if (full_u and not doomed) else "commaratio",
-                                     text=self.unchanged_ratios[j] or DASH, comma=self.nc + j))
-                self._voice("quantities:commas", self.nc + j, self.unchanged_sizes.just[j])
-        for c in range(self.nc):
+                                     text=self.resolved.unchanged.ratios[j] or DASH, comma=self.resolved.dims.nc + j))
+                self._voice("quantities:commas", self.resolved.dims.nc + j, self.resolved.unchanged.sizes.just[j])
+        for c in range(self.resolved.dims.nc):
             branch_minus(f"comma_minus:{self.col_token('commas', c)}", "commas", c, "comma_minus", comma=c)
-        if self.pending is not None:
-            branch_minus("comma_minus:pending", "commas", self.nc, "comma_minus")
+        if self.resolved.commas.pending is not None:
+            branch_minus("comma_minus:pending", "commas", self.resolved.dims.nc, "comma_minus")
 
     def _emit_qty_detempering(self, qy) -> None:
         if self.tile_open("quantities", "detempering"):
-            for i in range(self.r):
+            for i in range(self.resolved.dims.r):
                 self.cells.append(CellBox(f"detempering:{i}", self.detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=self.gens[i]))
-                self._voice("quantities:detempering", i, self.detempering_sizes.just[i])
+                self._voice("quantities:detempering", i, self.resolved.detempering.sizes.just[i])
 
     def _emit_qty_interests(self, qy, branch_minus) -> None:
         if self.tile_open("quantities", "targets"):
-            self._emit_qty_list(_QtyList("targets", "target", self.k, self.target_left, self.targets,
-                                         self.target_sizes, self.pending_target,
+            self._emit_qty_list(_QtyList("targets", "target", self.resolved.dims.k, self.target_left, self.resolved.targets.ratios,
+                                         self.resolved.tuning.target_sizes, self.resolved.targets.pending,
                                          "ratiocell" if self.targets_editable else "commaratio",
                                          self.targets_editable), qy, branch_minus)
         if self.tile_open("quantities", "held"):
-            self._emit_qty_list(_QtyList("held", "held", self.nh, self.held_left, self.held_ratios,
-                                         self.held_sizes, self.pending_held, "ratiocell", True), qy, branch_minus)
+            self._emit_qty_list(_QtyList("held", "held", self.resolved.dims.nh, self.held_left, self.resolved.held.ratios,
+                                         self.resolved.tuning.held_sizes, self.resolved.held.pending, "ratiocell", True), qy, branch_minus)
         if self.tile_open("quantities", "interest"):
-            self._emit_qty_list(_QtyList("interest", "interest", self.mi, self.interest_left, self.interest_ratios,
-                                         self.interest_sizes, self.pending_interest, "ratiocell", True), qy, branch_minus)
+            self._emit_qty_list(_QtyList("interest", "interest", self.resolved.dims.mi, self.interest_left, self.resolved.interest.ratios,
+                                         self.resolved.tuning.interest_sizes, self.resolved.interest.pending, "ratiocell", True), qy, branch_minus)
 
     def _qty_drag_controls(self, ckey, n, grip_top) -> None:
         for i in range(n):
             self.cells.append(CellBox(f"grip:{ckey}:{i}", self.sub_axis_x(ckey, i) - COL_W / 2,
                                  grip_top, COL_W, GRIP_BAND, "colgrip", comma=i))
         add_w = COL_W
-        if ckey == "commas" and self.show_unchanged:
-            add_w = self.empty_comma_w if self.nc_shown == 0 else V_SPLIT_GAP
+        if ckey == "commas" and self.resolved.unchanged.shown:
+            add_w = self.resolved.unchanged.empty_comma_w if self.resolved.dims.nc_shown == 0 else V_SPLIT_GAP
         self.cells.append(CellBox(f"grip:{ckey}:add", self.plus_stub_x[ckey] - add_w / 2,
                              grip_top, add_w, GRIP_BAND, "colgrip"))
 
     def _emit_qty_grips(self) -> None:
         grip_top = self.branch_top_y + GAP - PAD
-        counts = {"commas": self.nc, "targets": self.k, "held": self.nh, "interest": self.mi}
+        counts = {"commas": self.resolved.dims.nc, "targets": self.resolved.dims.k, "held": self.resolved.dims.nh, "interest": self.resolved.dims.mi}
         for ckey in ("commas", "targets", "held", "interest"):
             if self.row_open("quantities") and self._plus_shows(ckey):
                 self._qty_drag_controls(ckey, counts[ckey], grip_top)
-        if self.show_unchanged:
-            for j in range(self.nu):
-                if self.unchanged_basis[j] is not None:
-                    self.cells.append(CellBox(f"grip:unchanged:{j}", self.sub_axis_x("commas", self.nc_shown + j) - COL_W / 2,
+        if self.resolved.unchanged.shown:
+            for j in range(self.resolved.dims.nu):
+                if self.resolved.unchanged.basis[j] is not None:
+                    self.cells.append(CellBox(f"grip:unchanged:{j}", self.sub_axis_x("commas", self.resolved.dims.nc_shown + j) - COL_W / 2,
                                          grip_top, COL_W, GRIP_BAND, "colgrip", comma=j))
 
     def _emit_column_plus_controls(self) -> None:
@@ -290,30 +290,30 @@ class _EmitMatrixMixin:
 
     def _emit_rehomed_commas(self, vtop) -> None:
         if self.tile_open("vectors", "commas"):
-            for c in range(self.nc):
+            for c in range(self.resolved.dims.nc):
                 self._vec_minus(vtop, f"comma_minus:{self.col_token('commas', c)}", "commas", c, "comma_minus", comma=c)
-            if self.pending is not None:
-                self._vec_minus(vtop, "comma_minus:pending", "commas", self.nc, "comma_minus")
+            if self.resolved.commas.pending is not None:
+                self._vec_minus(vtop, "comma_minus:pending", "commas", self.resolved.dims.nc, "comma_minus")
 
     def _emit_rehomed_targets(self, vtop) -> None:
         if self.tile_open("vectors", "targets"):
             if self.targets_editable:
-                for j in range(self.k):
+                for j in range(self.resolved.dims.k):
                     self._vec_minus(vtop, f"target_minus:{j}", "targets", j, "target_minus", comma=j)
-            if self.pending_target is not None:
-                self._vec_minus(vtop, "target_minus:pending", "targets", self.k, "target_minus")
+            if self.resolved.targets.pending is not None:
+                self._vec_minus(vtop, "target_minus:pending", "targets", self.resolved.dims.k, "target_minus")
 
     def _emit_rehomed_held(self, vtop) -> None:
         if self.tile_open("vectors", "held"):
-            for i in range(self.nh):
+            for i in range(self.resolved.dims.nh):
                 self._vec_minus(vtop, f"held_minus:{i}", "held", i, "held_minus", comma=i)
-            if self.pending_held is not None:
-                self._vec_minus(vtop, "held_minus:pending", "held", self.nh, "held_minus")
+            if self.resolved.held.pending is not None:
+                self._vec_minus(vtop, "held_minus:pending", "held", self.resolved.dims.nh, "held_minus")
 
     def _emit_rehomed_interest(self, vtop) -> None:
         if self.tile_open("vectors", "interest"):
-            for i in range(self.mi):
+            for i in range(self.resolved.dims.mi):
                 self._vec_minus(vtop, f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
-            if self.pending_interest is not None:
-                self._vec_minus(vtop, "interest_minus:pending", "interest", self.mi, "interest_minus")
+            if self.resolved.interest.pending is not None:
+                self._vec_minus(vtop, "interest_minus:pending", "interest", self.resolved.dims.mi, "interest_minus")
 

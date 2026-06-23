@@ -28,94 +28,94 @@ class _EmitMappingMixin:
     def _emit_mapping_gens(self) -> None:
         if not self.tile_open("mapping", "quantities"):
             return
-        for i in range(self.r):
+        for i in range(self.resolved.dims.r):
             self.cells.append(CellBox(f"gen:{self.col_token('gens', i)}", self.col_x["quantities"], self.map_top(i), self.col_w["quantities"], ROW_H, "genratio", text=self.gens[i] if i < len(self.gens) else "", gen=i))
         map_bus_x = self.node_edge + self.FAN if self._row_fans("mapping") else self.node_edge
         gen_right = self.col_x["quantities"] + self.col_w["quantities"]
-        if self.r > 1:
-            for i in range(self.r):
+        if self.resolved.dims.r > 1:
+            for i in range(self.resolved.dims.r):
                 self.cells.append(CellBox(f"map_minus:{self.col_token('gens', i)}", map_bus_x, self.map_top(i), gen_right - map_bus_x, ROW_H, "map_minus", gen=i))
         if "mapping" in self.row_plus_y:
             self.cells.append(CellBox("map_plus", map_bus_x - BTN / 2, self.row_plus_y["mapping"] - BTN / 2, BTN, BTN, "map_plus"))
 
     def _emit_mapping_drag(self) -> None:
-        if self.settings.get("drag_to_combine") and self.r > 1 and self.tile_open("mapping", "primes"):
-            for i in range(self.r):
+        if self.settings.get("drag_to_combine") and self.resolved.dims.r > 1 and self.tile_open("mapping", "primes"):
+            for i in range(self.resolved.dims.r):
                 self.cells.append(CellBox(f"map_drag:{self.col_token('gens', i)}", self.primes_x + self.etpick_left_pad("primes"), self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
 
     def _emit_mapping_rows(self) -> None:
         mx, mw = self.matrix_span("primes")
         etpick_x = mx + mw + ETPICK_GAP
-        for i in range(self.r):
+        for i in range(self.resolved.dims.r):
             rt = self.col_token("gens", i)
             if self.tile_open("mapping", "primes"):
                 if self.show_presets:
                     self.cells.append(CellBox(f"etpick:{rt}", etpick_x, self.map_top(i), ETPICK_W, ROW_H, "etpick", gen=i))
-                for p in range(self.d):
+                for p in range(self.resolved.dims.d):
                     self.cells.append(CellBox(ids.mapping_cell(rt, p), self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", text=str(self.state.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
             if self.tile_open("mapping", "targets"):
-                self._emit_mapped_tile(_MappedTile("mapped", "targets", self.k, self.target_left, self.mapped, self.pending_target), i, rt)
+                self._emit_mapped_tile(_MappedTile("mapped", "targets", self.resolved.dims.k, self.target_left, self.resolved.targets.mapped, self.resolved.targets.pending), i, rt)
             if self.tile_open("mapping", "interest"):
-                self._emit_mapped_tile(_MappedTile("imapped", "interest", self.mi, self.interest_left, self.interest_mapped, self.pending_interest), i, rt)
+                self._emit_mapped_tile(_MappedTile("imapped", "interest", self.resolved.dims.mi, self.interest_left, self.resolved.interest.mapped, self.resolved.interest.pending), i, rt)
             if self.tile_open("mapping", "held"):
-                self._emit_mapped_tile(_MappedTile("hmapped", "held", self.nh, self.held_left, self.held_mapped, self.pending_held), i, rt)
+                self._emit_mapped_tile(_MappedTile("hmapped", "held", self.resolved.dims.nh, self.held_left, self.resolved.tuning.held_mapped, self.resolved.held.pending), i, rt)
             if self.tile_open("mapping", "commas"):
                 self._emit_mapping_comma_row(i, rt)
 
     def _emit_mapping_comma_row(self, i: int, rt: str) -> None:
-        for c in range(self.nc):
-            self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.col_token('commas', c)}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
+        for c in range(self.resolved.dims.nc):
+            self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.col_token('commas', c)}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.resolved.commas.mapped[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
         if self.comma_draft:
-            mc_text = str(self.ghost_comma_mapped[i]) if (self.ghost_comma and i < len(self.ghost_comma_mapped)) else ""
-            self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.pending_col_token('commas')}", self.comma_left(self.nc), self.map_top(i), COL_W, ROW_H, "mapped", text=mc_text, gen=i, pending=True))
-        for j in range(self.nu):
-            mapped_text = DASH if self.unchanged_mapped[i][j] is None else str(self.unchanged_mapped[i][j])
-            self.cells.append(CellBox(f"cell:mapped_unchanged:{rt}:{j}", self.comma_left(self.nc_shown + j), self.map_top(i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
+            mc_text = str(self.resolved.ghosts.comma_mapped[i]) if (self.resolved.ghosts.comma and i < len(self.resolved.ghosts.comma_mapped)) else ""
+            self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.pending_col_token('commas')}", self.comma_left(self.resolved.dims.nc), self.map_top(i), COL_W, ROW_H, "mapped", text=mc_text, gen=i, pending=True))
+        for j in range(self.resolved.dims.nu):
+            mapped_text = DASH if self.resolved.unchanged.mapped[i][j] is None else str(self.resolved.unchanged.mapped[i][j])
+            self.cells.append(CellBox(f"cell:mapped_unchanged:{rt}:{j}", self.comma_left(self.resolved.dims.nc_shown + j), self.map_top(i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
 
     def _emit_mapping_draft_row(self) -> None:
-        dr = self.r
+        dr = self.resolved.dims.r
         drt = self.pending_col_token("gens")
         if self.tile_open("mapping", "quantities"):
-            gen_text = self.ghost_row_ratio if self.ghost_row else "?"
+            gen_text = self.resolved.ghosts.row_ratio if self.resolved.ghosts.row else "?"
             self.cells.append(CellBox("gen:pending", self.col_x["quantities"], self.map_top(dr), self.col_w["quantities"], ROW_H, "genratio", text=gen_text, gen=dr, pending=True))
-            if not self.ghost_row:
+            if not self.resolved.ghosts.row:
                 map_bus_x = self.node_edge + self.FAN if self._row_fans("mapping") else self.node_edge
                 gen_right = self.col_x["quantities"] + self.col_w["quantities"]
                 self.cells.append(CellBox("map_minus:pending", map_bus_x, self.map_top(dr), gen_right - map_bus_x, ROW_H, "map_minus", gen=dr, pending=True))
         if self.tile_open("mapping", "primes"):
-            row_kind = "mapped" if self.ghost_row else "mapping"
-            for p in range(self.d):
-                v = self.ghost_row_map[p] if self.ghost_row else self.pending_mapping_row[p]
+            row_kind = "mapped" if self.resolved.ghosts.row else "mapping"
+            for p in range(self.resolved.dims.d):
+                v = self.resolved.ghosts.row_map[p] if self.resolved.ghosts.row else self.pending_mapping_row[p]
                 self.cells.append(CellBox(ids.mapping_cell(drt, p), self.prime_left(p), self.map_top(dr), COL_W, ROW_H, row_kind, text="" if v is None else str(v), gen=dr, prime=p, pending=True))
-            if not self.ghost_row and self.show_presets:
+            if not self.resolved.ghosts.row and self.show_presets:
                 mx, mw = self.matrix_span("primes")
                 self.cells.append(CellBox("etpick:draft", mx + mw + ETPICK_GAP, self.map_top(dr), ETPICK_W, ROW_H, "etpick", gen=dr, pending=True))
         self._emit_mapping_draft_mapped(dr, drt)
 
     def _draft_mapped_text(self, key, j) -> str:
-        vals = self.ghost_row_mapped.get(key, ()) if self.ghost_row else ()
+        vals = self.resolved.ghosts.row_mapped.get(key, ()) if self.resolved.ghosts.row else ()
         if j >= len(vals):
             return ""
         return DASH if vals[j] is None else str(vals[j])
 
     def _emit_mapping_draft_mapped(self, dr: int, drt: str) -> None:
         if self.tile_open("mapping", "targets"):
-            for j in range(self.k):
+            for j in range(self.resolved.dims.k):
                 self.cells.append(CellBox(f"cell:mapped:{drt}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(dr), COL_W, ROW_H, "mapped", text=self._draft_mapped_text("targets", j), gen=dr, pending=True))
         if self.tile_open("mapping", "interest"):
-            for ii in range(self.mi):
+            for ii in range(self.resolved.dims.mi):
                 self.cells.append(CellBox(f"cell:imapped:{drt}:{self.col_token('interest', ii)}", self.interest_left(ii), self.map_top(dr), COL_W, ROW_H, "mapped", text=self._draft_mapped_text("interest", ii), gen=dr, pending=True))
         if self.tile_open("mapping", "held"):
-            for hi in range(self.nh):
+            for hi in range(self.resolved.dims.nh):
                 self.cells.append(CellBox(f"cell:hmapped:{drt}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(dr), COL_W, ROW_H, "mapped", text=self._draft_mapped_text("held", hi), gen=dr, pending=True))
         if self.tile_open("mapping", "commas"):
             self._emit_mapping_draft_commas(dr, drt)
 
     def _emit_mapping_draft_commas(self, dr: int, drt: str) -> None:
-        for c in range(self.nc):
+        for c in range(self.resolved.dims.nc):
             self.cells.append(CellBox(f"cell:mapped_comma:{drt}:{self.col_token('commas', c)}", self.comma_left(c), self.map_top(dr), COL_W, ROW_H, "mapped", text=self._draft_mapped_text("commas", c), gen=dr, pending=True))
-        for j in range(self.nu):
-            self.cells.append(CellBox(f"cell:mapped_unchanged:{drt}:{j}", self.comma_left(self.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text=self._draft_mapped_text("unchanged", j), gen=dr, pending=True))
+        for j in range(self.resolved.dims.nu):
+            self.cells.append(CellBox(f"cell:mapped_unchanged:{drt}:{j}", self.comma_left(self.resolved.dims.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text=self._draft_mapped_text("unchanged", j), gen=dr, pending=True))
 
     def _emit_mapped_tile(self, m: _MappedTile, i: int, rt: str) -> None:
         for col in range(m.count):
@@ -131,7 +131,7 @@ class _EmitMappingMixin:
         if full is None:
             full = grid is not None
         top = top or self.proj_top
-        height = self.d if height is None else height
+        height = self.resolved.dims.d if height is None else height
         if colwise:
             self._emit_mapped_grid_colwise(prefix, grid, n_cols, left, col_kw,
                                            full, col_token_key, inset, top, height, pending)
@@ -161,113 +161,113 @@ class _EmitMappingMixin:
                                      COL_W - 2 * inset, ROW_H, "mapped", text=text, **{col_kw: j}))
 
     def _emit_projection_band(self) -> None:
-        self._emit_mapped_grid("primes", "proj", self.projection_matrix, self.d, self.prime_left, "prime")
-        self._emit_mapped_grid("gens", "embed", self.embedding_matrix, self.r, self.gen_left, "gen")
-        self._emit_mapped_grid("canongens", "embed_c", self.canon_embedding_matrix, self.rc, self.canongen_left, "gen")
-        self._emit_mapped_grid("ssgens", "embed_sl", self.embedding_superspace, self.rL, self.ss_gen_left, "gen")
-        self._emit_mapped_grid("ssprimes", "proj_sl", self.projection_superspace, self.dL, self.ss_prime_left, "prime")
+        self._emit_mapped_grid("primes", "proj", self.resolved.projection.matrix, self.resolved.dims.d, self.prime_left, "prime")
+        self._emit_mapped_grid("gens", "embed", self.resolved.projection.embedding_matrix, self.resolved.dims.r, self.gen_left, "gen")
+        self._emit_mapped_grid("canongens", "embed_c", self.resolved.canon.embedding_matrix, self.resolved.dims.rc, self.canongen_left, "gen")
+        self._emit_mapped_grid("ssgens", "embed_sl", self.resolved.projection.embedding_superspace, self.resolved.dims.rL, self.ss_gen_left, "gen")
+        self._emit_mapped_grid("ssprimes", "proj_sl", self.resolved.projection.superspace, self.resolved.dims.dL, self.ss_prime_left, "prime")
 
         self._emit_projection_unchanged()
         self._emit_projection_basis()
-        full_proj = self.projection_rationals is not None
-        self._emit_mapped_grid("detempering", "proj_pd", self.proj_detempering, self.r, self.detempering_left, "gen",
+        full_proj = self.resolved.projection.rationals is not None
+        self._emit_mapped_grid("detempering", "proj_pd", self.resolved.projection.detempering, self.resolved.dims.r, self.detempering_left, "gen",
                                full=full_proj, colwise=True, col_token_key="detempering")
-        self._emit_mapped_grid("targets", "proj_pt", self.proj_targets, self.k, self.target_left, "comma",
-                               full=full_proj, colwise=True, pending=self.pending_target)
-        self._emit_mapped_grid("held", "proj_ph", self.proj_held, self.nh, self.held_left, "comma",
-                               full=full_proj, colwise=True, pending=self.pending_held)
-        self._emit_mapped_grid("interest", "proj_pi", self.proj_interest, self.mi, self.interest_left, "comma",
-                               full=full_proj, colwise=True, inset=KET_INSET, pending=self.pending_interest)
+        self._emit_mapped_grid("targets", "proj_pt", self.resolved.projection.targets, self.resolved.dims.k, self.target_left, "comma",
+                               full=full_proj, colwise=True, pending=self.resolved.targets.pending)
+        self._emit_mapped_grid("held", "proj_ph", self.resolved.projection.held, self.resolved.dims.nh, self.held_left, "comma",
+                               full=full_proj, colwise=True, pending=self.resolved.held.pending)
+        self._emit_mapped_grid("interest", "proj_pi", self.resolved.projection.interest, self.resolved.dims.mi, self.interest_left, "comma",
+                               full=full_proj, colwise=True, inset=KET_INSET, pending=self.resolved.interest.pending)
         self._emit_scaling_factors()
 
     def _emit_projection_unchanged(self) -> None:
-        if not (self.show_unchanged and self.row_open("projection") and self.tile_open("projection", "commas")):
+        if not (self.resolved.unchanged.shown and self.row_open("projection") and self.tile_open("projection", "commas")):
             return
-        for c in range(self.nc):
-            for p in range(self.d):
+        for c in range(self.resolved.dims.nc):
+            for p in range(self.resolved.dims.d):
                 self.cells.append(CellBox(f"cell:proj_v:{p}:{self.col_token('commas', c)}", self.comma_left(c), self.proj_top(p),
                                      COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
         if self.comma_draft:
-            for p in range(self.d):
-                self.cells.append(CellBox(f"cell:proj_v:{p}:draft", self.comma_left(self.nc), self.proj_top(p),
-                                     COL_W, ROW_H, "mapped", text="0" if self.ghost_comma else "", prime=p, pending=True))
-        for j in range(self.nu):
-            dashed = self.unchanged_basis[j] is None
-            for p in range(self.d):
-                self.cells.append(CellBox(f"cell:proj_v:{p}:u{j}", self.comma_left(self.nc_shown + j), self.proj_top(p),
+            for p in range(self.resolved.dims.d):
+                self.cells.append(CellBox(f"cell:proj_v:{p}:draft", self.comma_left(self.resolved.dims.nc), self.proj_top(p),
+                                     COL_W, ROW_H, "mapped", text="0" if self.resolved.ghosts.comma else "", prime=p, pending=True))
+        for j in range(self.resolved.dims.nu):
+            dashed = self.resolved.unchanged.basis[j] is None
+            for p in range(self.resolved.dims.d):
+                self.cells.append(CellBox(f"cell:proj_v:{p}:u{j}", self.comma_left(self.resolved.dims.nc_shown + j), self.proj_top(p),
                                      COL_W, ROW_H, "mapped",
-                                     text=DASH if dashed else str(self.unchanged_basis[j][p]), prime=p, comma=self.nc + j))
+                                     text=DASH if dashed else str(self.resolved.unchanged.basis[j][p]), prime=p, comma=self.resolved.dims.nc + j))
 
     def _emit_projection_basis(self) -> None:
         if self.row_open("projection") and self.tile_open("projection", "quantities"):
             bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2
-            for p in range(self.d):
-                self.cells.append(CellBox(f"proj_basis:{p}", bx, self.proj_top(p), COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))
+            for p in range(self.resolved.dims.d):
+                self.cells.append(CellBox(f"proj_basis:{p}", bx, self.proj_top(p), COL_W, ROW_H, "prime", text=str(self.resolved.dims.elements[p]), prime=p))
 
     def _emit_scaling_factors(self) -> None:
         if self.row_open("scaling_factors") and self.tile_open("scaling_factors", "commas"):
-            scaling = ["0"] * self.nc + [(DASH if v is None else "1") for v in self.unchanged_basis]
+            scaling = ["0"] * self.resolved.dims.nc + [(DASH if v is None else "1") for v in self.resolved.unchanged.basis]
             for c, lam in enumerate(scaling):
                 self.cells.append(CellBox(f"cell:scaling:{self.col_token('commas', c)}", self.comma_left(self.comma_value_pos(c)), self.rows["scaling_factors"].y,
                                      COL_W, ROW_H, "mapped", text=lam, comma=c))
             if self.comma_draft:
-                self.cells.append(CellBox("cell:scaling:draft", self.comma_left(self.nc), self.rows["scaling_factors"].y,
-                                     COL_W, ROW_H, "mapped", text="0" if self.ghost_comma else "", pending=True))
+                self.cells.append(CellBox("cell:scaling:draft", self.comma_left(self.resolved.dims.nc), self.rows["scaling_factors"].y,
+                                     COL_W, ROW_H, "mapped", text="0" if self.resolved.ghosts.comma else "", pending=True))
 
     def _emit_canon_band(self) -> None:
         if self.row_open("canon"):
             self._emit_canon_gens()
             self._emit_canon_primes()
             self._emit_canon_form()
-            for i in range(self.rc):
+            for i in range(self.resolved.dims.rc):
                 self._emit_canon_row(i)
         self._emit_canon_finv()
 
     def _emit_canon_gens(self) -> None:
         if self.tile_open("canon", "quantities"):
-            for i in range(self.rc):
-                self.cells.append(CellBox(f"canon:gen:{i}", self.col_x["quantities"], self.canon_top(i), self.col_w["quantities"], ROW_H, "genratio", text=self.canon_gens[i] if i < len(self.canon_gens) else ""))
+            for i in range(self.resolved.dims.rc):
+                self.cells.append(CellBox(f"canon:gen:{i}", self.col_x["quantities"], self.canon_top(i), self.col_w["quantities"], ROW_H, "genratio", text=self.resolved.canon.gens[i] if i < len(self.resolved.canon.gens) else ""))
 
     def _emit_canon_primes(self) -> None:
         if self.tile_open("canon", "primes"):
-            for i in range(self.rc):
-                for p in range(self.d):
-                    self.cells.append(CellBox(f"cell:canon:{i}:{p}", self.prime_left(p), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.canon_mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("canon", "primes", gen=i, prime=p)))
+            for i in range(self.resolved.dims.rc):
+                for p in range(self.resolved.dims.d):
+                    self.cells.append(CellBox(f"cell:canon:{i}:{p}", self.prime_left(p), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.resolved.canon.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("canon", "primes", gen=i, prime=p)))
 
     def _emit_canon_form(self) -> None:
         if self.tile_open("canon", "gens"):
-            for i in range(len(self.form_M)):
-                for j in range(len(self.form_M)):
-                    self.cells.append(CellBox(f"cell:form:{i}:{j}", self.gen_left(j), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.form_M[i][j]), unit=self.cell_unit("canon", "gens", gen=i)))
+            for i in range(len(self.resolved.canon.form_M)):
+                for j in range(len(self.resolved.canon.form_M)):
+                    self.cells.append(CellBox(f"cell:form:{i}:{j}", self.gen_left(j), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.resolved.canon.form_M[i][j]), unit=self.cell_unit("canon", "gens", gen=i)))
 
     def _emit_canon_row(self, i: int) -> None:
         if self.tile_open("canon", "detempering"):
-            for c in range(self.r):
-                self.cells.append(CellBox(f"cell:canon_detempering:{i}:{self.col_token('detempering', c)}", self.detempering_left(c), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.canon_mapped_detempering[i][c]), gen=i, unit=self.cell_unit("canon", "detempering", gen=i)))
+            for c in range(self.resolved.dims.r):
+                self.cells.append(CellBox(f"cell:canon_detempering:{i}:{self.col_token('detempering', c)}", self.detempering_left(c), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.resolved.canon.mapped_detempering[i][c]), gen=i, unit=self.cell_unit("canon", "detempering", gen=i)))
         if self.tile_open("canon", "targets"):
-            self._emit_canon_mapped_tile("canon_mapped", "targets", self.k, self.target_left, self.canon_mapped, self.pending_target, i)
+            self._emit_canon_mapped_tile("canon_mapped", "targets", self.resolved.dims.k, self.target_left, self.resolved.canon.mapped, self.resolved.targets.pending, i)
         if self.tile_open("canon", "interest"):
-            self._emit_canon_mapped_tile("canon_imapped", "interest", self.mi, self.interest_left, self.canon_interest_mapped, self.pending_interest, i)
+            self._emit_canon_mapped_tile("canon_imapped", "interest", self.resolved.dims.mi, self.interest_left, self.resolved.canon.interest_mapped, self.resolved.interest.pending, i)
         if self.tile_open("canon", "held"):
-            self._emit_canon_mapped_tile("canon_hmapped", "held", self.nh, self.held_left, self.canon_held_mapped, self.pending_held, i)
+            self._emit_canon_mapped_tile("canon_hmapped", "held", self.resolved.dims.nh, self.held_left, self.resolved.canon.held_mapped, self.resolved.held.pending, i)
         if self.tile_open("canon", "commas"):
             self._emit_canon_comma_row(i)
 
     def _emit_canon_comma_row(self, i: int) -> None:
-        for c in range(self.nc):
-            self.cells.append(CellBox(f"cell:canon_mapped_comma:{i}:{self.col_token('commas', c)}", self.comma_left(c), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.canon_mapped_commas[i][c]), gen=i, unit=self.cell_unit("canon", "commas", gen=i)))
+        for c in range(self.resolved.dims.nc):
+            self.cells.append(CellBox(f"cell:canon_mapped_comma:{i}:{self.col_token('commas', c)}", self.comma_left(c), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(self.resolved.canon.mapped_commas[i][c]), gen=i, unit=self.cell_unit("canon", "commas", gen=i)))
         if self.comma_draft:
-            self.cells.append(CellBox(f"cell:canon_mapped_comma:{i}:{self.pending_col_token('commas')}", self.comma_left(self.nc), self.canon_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
-        for j in range(self.nu):
-            ut = DASH if self.canon_unchanged_mapped[i][j] is None else str(self.canon_unchanged_mapped[i][j])
-            self.cells.append(CellBox(f"cell:canon_mapped_unchanged:{i}:{j}", self.comma_left(self.nc_shown + j), self.canon_top(i), COL_W, ROW_H, "mapped", text=ut, gen=i, unit=self.cell_unit("canon", "commas", gen=i)))
+            self.cells.append(CellBox(f"cell:canon_mapped_comma:{i}:{self.pending_col_token('commas')}", self.comma_left(self.resolved.dims.nc), self.canon_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+        for j in range(self.resolved.dims.nu):
+            ut = DASH if self.resolved.canon.unchanged_mapped[i][j] is None else str(self.resolved.canon.unchanged_mapped[i][j])
+            self.cells.append(CellBox(f"cell:canon_mapped_unchanged:{i}:{j}", self.comma_left(self.resolved.dims.nc_shown + j), self.canon_top(i), COL_W, ROW_H, "mapped", text=ut, gen=i, unit=self.cell_unit("canon", "commas", gen=i)))
 
     def _emit_canon_finv(self) -> None:
         if self.tile_open("mapping", "canongens"):
-            for i in range(self.r):
-                for j in range(self.rc):
+            for i in range(self.resolved.dims.r):
+                for j in range(self.resolved.dims.rc):
                     self.cells.append(CellBox(f"cell:finv:{i}:{j}", self.canongen_left(j), self.map_top(i), COL_W, ROW_H,
-                                         "formcell", text=str(self.inverse_form_M[i][j]), unit=self.cell_unit("mapping", "canongens", gen=i)))
+                                         "formcell", text=str(self.resolved.canon.inverse_form_M[i][j]), unit=self.cell_unit("mapping", "canongens", gen=i)))
 
     def _emit_canon_mapped_tile(self, prefix, group, count, left_fn, data, pending, i) -> None:
         for col in range(count):

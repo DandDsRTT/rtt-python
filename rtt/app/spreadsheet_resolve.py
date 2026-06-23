@@ -24,6 +24,7 @@ from rtt.app.spreadsheet_constants import (
     SYMBOL_H,
 )
 from rtt.app.spreadsheet_models import _resolve_prescaler_labels, _resolve_show_flags
+from rtt.app.spreadsheet_resolved import from_builder
 from rtt.app.spreadsheet_text import _min_width_for_lines, _wrap_lines, assign_column_tokens
 
 
@@ -91,6 +92,7 @@ class _ResolveMixin:
         interest_tiles, held_tiles, detempering_tiles = self._declare_interval_column_tiles()
         self._resolve_projection_data(show_tuning)
         self._declare_tiles(interest_tiles, held_tiles, detempering_tiles)
+        self.resolved = from_builder(self)
 
         col_bands, content_x0 = self._define_col_bands(show_interval_ratios, show_domain_units,
                                                        show_temp, show_tuning, show_interest, label_w)

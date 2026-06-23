@@ -48,7 +48,7 @@ class _ControlsMixin:
             region |= {"temperament", "form"}
         if rkey in ("projection", "tuning"):
             region |= {"tuning"}
-        if self.show_unchanged and ckey == "commas":
+        if self.resolved.unchanged.shown and ckey == "commas":
             return {"temperament", "tuning"} | region
         if rkey in SPINE_ROWS and ckey in SPINE_COLUMN_GROUP:
             return self._as_groups(SPINE_COLUMN_GROUP[ckey]) | region
@@ -100,7 +100,7 @@ class _ControlsMixin:
             fid, fcap = form_chooser
             form_y = ctrl_y + PRESET_H + label_h + BAND_GAP
             self.cells.append(CellBox(fid, ctrl_x, form_y, dropdown_w, PRESET_H, "formchooser",
-                                 text=self.mapping_form_key if fid.endswith(":mapping") else self.comma_basis_form_key))
+                                 text=self.resolved.canon.mapping_form_key if fid.endswith(":mapping") else self.resolved.canon.comma_basis_form_key))
             self.cells.append(CellBox(f"{fid}:label", ctrl_x, form_y + PRESET_H, dropdown_w, CAPTION_LINE,
                                  "caption", text=fcap, align="left"))
         return ctrl_x, dropdown_w, ctrl_y
@@ -187,7 +187,7 @@ class _ControlsMixin:
                 top = self.ptext_band_y(rkey) + self.rows[rkey].ptext + self.rows[rkey].pre
                 cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESET_W, label)
                 self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser",
-                                     text=self.mapping_form_key if name == "mapping" else self.comma_basis_form_key))
+                                     text=self.resolved.canon.mapping_form_key if name == "mapping" else self.resolved.canon.comma_basis_form_key))
 
     def _emit_scheme_buttons(self) -> None:
         if self.settings["projection"] and not self.show_presets:
@@ -205,8 +205,8 @@ class _ControlsMixin:
             for (rkey, ckey), text in self.ptext_strings.items():
                 if not self.tile_open(rkey, ckey):
                     continue
-                if ((rkey, ckey) == ("vectors", "commas") and self.pending is not None) \
-                        or ((rkey, ckey) == ("vectors", "targets") and self.pending_target is not None) \
+                if ((rkey, ckey) == ("vectors", "commas") and self.resolved.commas.pending is not None) \
+                        or ((rkey, ckey) == ("vectors", "targets") and self.resolved.targets.pending is not None) \
                         or ((rkey, ckey) == ("mapping", "primes") and self.pending_mapping_row is not None):
                     kind = "ptextpending"
                 elif self.ptext_editable(rkey, ckey) and (ckey != "targets" or self.targets_editable):
@@ -234,8 +234,8 @@ class _ControlsMixin:
                      for cb in self.cells]
 
     def _mark_doomed_unchanged_column(self) -> None:
-        if (self.pending is not None or self.ghost_comma) and self.show_unchanged and self.nu:
-            doomed_x = self.comma_left(self.nc_shown + self.nu - 1)
+        if (self.resolved.commas.pending is not None or self.resolved.ghosts.comma) and self.resolved.unchanged.shown and self.resolved.dims.nu:
+            doomed_x = self.comma_left(self.resolved.dims.nc_shown + self.resolved.dims.nu - 1)
             self.cells = [replace(cb, preview_remove=True)
                           if (cb.w == COL_W and cb.x == doomed_x
                               and cb.kind not in ("count", "caption", "colgrip"))
@@ -243,8 +243,8 @@ class _ControlsMixin:
                           for cb in self.cells]
 
     def _mark_born_column(self) -> None:
-        if self.born_u:
-            born_x = self.comma_left(self.nc_shown + self.nu - 1)
+        if self.resolved.unchanged.born:
+            born_x = self.comma_left(self.resolved.dims.nc_shown + self.resolved.dims.nu - 1)
             self.cells = [replace(cb, pending=True)
                           if (cb.w == COL_W and cb.x == born_x
                               and cb.kind not in ("count", "caption", "colgrip"))
@@ -266,16 +266,16 @@ class _ControlsMixin:
 
     def _mark_dual_axis_previews(self) -> None:
         remove_rows = change_rows = remove_commas = change_commas = frozenset()
-        if self.pending is not None and self.r:
-            remove_rows, change_rows = frozenset({self.r - 1}), frozenset(range(self.r - 1))
-        if self.pending_mapping_row is not None and self.nc:
-            remove_commas, change_commas = frozenset({self.nc - 1}), frozenset(range(self.nc - 1))
+        if self.resolved.commas.pending is not None and self.resolved.dims.r:
+            remove_rows, change_rows = frozenset({self.resolved.dims.r - 1}), frozenset(range(self.resolved.dims.r - 1))
+        if self.pending_mapping_row is not None and self.resolved.dims.nc:
+            remove_commas, change_commas = frozenset({self.resolved.dims.nc - 1}), frozenset(range(self.resolved.dims.nc - 1))
         if self.preview_remove is not None:
             axis, idx = self.preview_remove
             if axis == "comma":
-                remove_commas, change_rows = frozenset({idx}), frozenset(range(self.r))
+                remove_commas, change_rows = frozenset({idx}), frozenset(range(self.resolved.dims.r))
             else:
-                remove_rows, change_commas = frozenset({idx}), frozenset(range(self.nc))
+                remove_rows, change_commas = frozenset({idx}), frozenset(range(self.resolved.dims.nc))
         if remove_rows or change_rows or remove_commas or change_commas:
             red_xs = frozenset(self.comma_left(c) for c in remove_commas)
             amber_xs = frozenset(self.comma_left(c) for c in change_commas)
