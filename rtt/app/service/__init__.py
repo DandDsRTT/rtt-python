@@ -138,6 +138,7 @@ from rtt.app.service.schemes import (
     weight_slope_variants,
 )
 from rtt.app.service.state import (
+    ElementEdit,
     ElementTransform,
     TemperamentState,
     _as_basis_element,
@@ -161,6 +162,7 @@ from rtt.app.service.state import (
     remove_comma,
     remove_domain_element,
     remove_mapping_row,
+    resolve_domain_element_edit,
     resolve_domain_element_transform,
     set_domain_element,
     shrink_domain,

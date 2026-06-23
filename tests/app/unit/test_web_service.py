@@ -647,6 +647,44 @@ def test_resolve_domain_element_transform_rejects_a_dependent_result():
     assert res.problem == "dependent"
 
 
+def test_resolve_domain_element_edit_classifies_a_blank_or_placeholder_field():
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    assert service.resolve_domain_element_edit(st, "1", "").problem == "blank"
+    assert service.resolve_domain_element_edit(st, "1", "?/?").problem == "blank"
+
+
+def test_resolve_domain_element_edit_rejects_an_unparseable_element():
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    assert service.resolve_domain_element_edit(st, "1", "1").problem == "invalid"  # the unison
+    assert service.resolve_domain_element_edit(st, "1", "x").problem == "invalid"
+
+
+def test_resolve_domain_element_edit_reports_an_unchanged_index_as_no_op():
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    # typing the value already in the slot commits nothing
+    assert service.resolve_domain_element_edit(st, "1", "3").problem == "noop"
+
+
+def test_resolve_domain_element_edit_accepts_a_fresh_relabel():
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    res = service.resolve_domain_element_edit(st, "1", "7")
+    assert res.value == "7"
+    assert res.problem is None
+
+
+def test_resolve_domain_element_edit_flags_a_dependent_relabel():
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    # relabeling the prime-3 slot to 4 (a power of the 2 already present) is dependent
+    assert service.resolve_domain_element_edit(st, "1", "4").problem == "dependent"
+
+
+def test_resolve_domain_element_edit_checks_a_pending_addition_for_independence():
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    # a pending element extends the basis, so it must be independent of all existing primes
+    assert service.resolve_domain_element_edit(st, "pending", "7").problem is None
+    assert service.resolve_domain_element_edit(st, "pending", "9").problem == "dependent"
+
+
 def test_tuning_maps_under_top():
     import pytest
 

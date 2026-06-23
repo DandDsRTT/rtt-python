@@ -188,6 +188,29 @@ def resolve_domain_element_transform(
     return ElementTransform(new_raw, None)
 
 
+@dataclass(frozen=True)
+class ElementEdit:
+    value: str | None
+    problem: str | None
+
+
+def resolve_domain_element_edit(state: TemperamentState, tok: str, raw: str) -> ElementEdit:
+    if raw in ("", "?/?"):
+        return ElementEdit(None, "blank")
+    parsed = parse_domain_element(raw)
+    if parsed is None:
+        return ElementEdit(raw, "invalid")
+    if tok == "pending":
+        ok = can_add_domain_element(state, parsed)
+        return ElementEdit(raw, None if ok else "dependent")
+    index = int(tok)
+    if parsed == state.domain_basis[index]:
+        return ElementEdit(raw, "noop")
+    if not can_set_domain_element(state, index, parsed):
+        return ElementEdit(raw, "dependent")
+    return ElementEdit(raw, None)
+
+
 def can_add_domain_element(state: TemperamentState, element) -> bool:
     parsed = parse_domain_element(element) if isinstance(element, str) else element
     if parsed is None:
