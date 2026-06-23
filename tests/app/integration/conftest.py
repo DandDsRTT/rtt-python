@@ -100,6 +100,7 @@ daemon can tell a crawling-but-progressing gate from a wedged one and reclaim on
 the latter (see ``bin/with-merge-lock``). Unset → ignored; this gate is unaffected.
 """
 
+import gc
 import hashlib
 import json
 import os
@@ -157,6 +158,17 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__f
 _REAPER = os.path.join(_REPO_ROOT, "bin", "reap-orphan-gates")
 _GATE_LOAD = os.path.join(_REPO_ROOT, "bin", "gate-load")
 _NOADMIT = os.environ.get("RTT_RENDER_GATE_NOADMIT") == "1"
+
+# Freeze the warm static heap before the render suite runs. Each ``user`` fixture wraps its
+# test in NiceGUI's ``nicegui_reset_globals``, which calls ``gc.collect()`` on entry AND exit
+# — 2 full collections per test, 342 across the 171-test suite. Each collection walks the whole
+# tracked heap, ~160k objects of which are the long-lived imports (numpy/scipy/sympy/nicegui/
+# fastapi/rtt and their module state) that live for the entire session and can never be collected
+# anyway. ``gc.freeze()`` moves those into a permanent generation gc never rescans, so each
+# per-test collection walks only the small per-test garbage instead of the whole static heap —
+# the dominant fixed per-test cost, removed without doing any less checking.
+_GCFREEZE = os.environ.get("RTT_RENDER_GATE_GCFREEZE") != "0"
+_frozen = False
 
 _ticket = None       # path to this run's ticket file once created
 _ticket_name = None  # its <ns>-<pid> basename
@@ -506,6 +518,23 @@ def _mint_green_token(config, exitstatus):
         pass
 
 
+def _freeze_static_heap():
+    """Move the warm static heap into gc's permanent generation so the per-test
+    ``gc.collect()`` in ``nicegui_reset_globals`` stops rescanning it. Idempotent and
+    opt-out via ``RTT_RENDER_GATE_GCFREEZE=0``. Called after collection (deps already
+    imported by collecting the render module) and before the first ``user`` fixture, so
+    everything heavy is warm and captured. The first re-imported ``rtt.*`` set is frozen
+    along with the deps; render_main re-imports a fresh set each test, which stays
+    collectable, so test-to-test object identity is unchanged."""
+    global _frozen
+    if _frozen or not _GCFREEZE:
+        return
+    import rtt.app.app  # noqa: F401 — ensure the heavy deps are warm before we freeze
+    gc.collect()
+    gc.freeze()
+    _frozen = True
+
+
 def pytest_collection_modifyitems(session, config, items):
     global _collected_render
     _collected_render = any(
@@ -514,6 +543,7 @@ def pytest_collection_modifyitems(session, config, items):
     if _DISABLED:
         return
     if _collected_render:
+        _freeze_static_heap()
         _acquire()
 
 

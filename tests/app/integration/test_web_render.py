@@ -46,6 +46,19 @@ def test_rowlabel_renders_a_hard_newline_as_a_line_break():
     assert "white-space:pre-line" in rule.replace(" ", "")
 
 
+def test_static_heap_is_frozen_so_per_test_gc_stays_cheap():
+    # the render suite's biggest fixed per-test cost was NiceGUI's reset_globals calling
+    # gc.collect() twice per test over the whole ~160k-object static heap; the integration
+    # conftest freezes that long-lived heap once (see conftest._freeze_static_heap) so each
+    # collect walks only the small per-test garbage. Pin that the freeze is active for this
+    # suite (the default; RTT_RENDER_GATE_GCFREEZE=0 opts out).
+    import gc
+    import os
+    if os.environ.get("RTT_RENDER_GATE_GCFREEZE") == "0":
+        pytest.skip("gc-freeze optimization explicitly disabled")
+    assert gc.get_freeze_count() > 50_000
+
+
 async def test_default_page_renders_without_error(user: User) -> None:
     await user.open("/")
     # the board built: a representative slice of the default grid's row/column titles
