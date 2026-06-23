@@ -520,6 +520,50 @@ def test_target_limit_problem_validates_the_chooser_entry():
     assert service.target_limit_problem("TILT", "8.5") == "whole"
 
 
+def test_resolve_target_limit_builds_the_spec_from_family_and_limit():
+    # a whole manual limit over a named family resolves to a "{n}-{family}" spec that produces a
+    # non-empty target set; the resolution carries no problem.
+    res = service.resolve_target_limit("OLD", "9", (2, 3, 5))
+    assert res.spec == "9-OLD"
+    assert res.problem is None
+    assert res.valid is True
+
+
+def test_resolve_target_limit_defaults_a_blank_family_to_tilt():
+    # the chooser passes the select's value, which is None/blank for the unnamed default
+    res = service.resolve_target_limit(None, None, (2, 3, 5))
+    assert res.spec == "TILT"
+    assert res.problem is None
+    assert res.valid is True
+    assert bool(service.target_interval_set(res.spec, (2, 3, 5)))
+
+
+def test_resolve_target_limit_flags_a_non_whole_limit_and_builds_no_spec():
+    # a decimal/unparseable limit is the "whole" problem: there is no spec to commit and it is invalid
+    res = service.resolve_target_limit("TILT", "8.5", (2, 3, 5))
+    assert res.problem == "whole"
+    assert res.spec is None
+    assert res.valid is False
+
+
+def test_resolve_target_limit_keeps_the_odd_problem_but_still_builds_a_valid_spec():
+    # an even OLD limit is the parity ("odd") problem — the caller warns but still commits, so the
+    # spec is built and valid, unlike the "whole" case which builds nothing
+    res = service.resolve_target_limit("OLD", "8", (2, 3, 5))
+    assert res.problem == "odd"
+    assert res.spec == "8-OLD"
+    assert res.valid is True
+
+
+def test_resolve_target_limit_marks_an_unproducible_spec_invalid():
+    # a spec the domain can't realize (a 1-limit triangle has no target intervals) is reported
+    # invalid rather than raising, so the caller can silently decline it
+    res = service.resolve_target_limit("TILT", "1", (2, 3, 5))
+    assert res.problem is None
+    assert res.spec == "1-TILT"
+    assert res.valid is False
+
+
 def test_tuning_maps_under_top():
     import pytest
 

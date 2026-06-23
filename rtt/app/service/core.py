@@ -165,6 +165,31 @@ def target_limit_problem(family: str | None, limit_value) -> str | None:
     return None
 
 
+@dataclass(frozen=True)
+class TargetLimitResolution:
+    problem: str | None
+    spec: str | None
+    valid: bool
+
+
+def _target_spec(family: str, limit_value) -> str:
+    text = (str(limit_value) if limit_value is not None else "").strip()
+    return f"{int(float(text))}-{family}" if text else family
+
+
+def resolve_target_limit(family: str | None, limit_value, domain_basis) -> TargetLimitResolution:
+    family = family or "TILT"
+    problem = target_limit_problem(family, limit_value)
+    if problem == "whole":
+        return TargetLimitResolution("whole", None, False)
+    spec = _target_spec(family, limit_value)
+    try:
+        valid = bool(target_interval_set(spec, domain_basis))
+    except Exception:
+        valid = False
+    return TargetLimitResolution(problem, spec, valid)
+
+
 # CPython raises when stringifying an int past ~4300 digits (its int->str DoS guard), so a ratio
 # component that large would crash the formatter; flag anything past this far-lower ceiling instead.
 _OVER_COMPLEX_RATIO = "⋯"
