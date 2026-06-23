@@ -90,9 +90,9 @@ class _EmitMatrixMixin:
 
     def _emit_units_matrix(self) -> None:
         matrix_units = {
-            "vectors": (self.resolved.dims.d, self.vec_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
+            "vectors": (self.resolved.dims.d, self.vec_top, lambda i: f"{self.resolved.labels.domain_label}{_sub(i + 1)}/"),
             "canon": (self.resolved.dims.rc, self.canon_top, lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
-            "projection": (self.resolved.dims.d, self.proj_top, lambda i: f"{self.domain_label}{_sub(i + 1)}/"),
+            "projection": (self.resolved.dims.d, self.proj_top, lambda i: f"{self.resolved.labels.domain_label}{_sub(i + 1)}/"),
             "mapping": (self.resolved.dims.r_shown, self.map_top, lambda i: f"g{_sub(i + 1)}/"),
             "ss_vectors": (self.resolved.dims.dL, self.ss_vec_top, lambda i: f"p{_sub(i + 1)}/"),
             "ss_mapping": (self.resolved.dims.rL, self.ss_map_top, lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
@@ -125,7 +125,7 @@ class _EmitMatrixMixin:
         column_units = {
             "canongens": (self.resolved.dims.rc, self.canongen_left, lambda i: f"/g{SUBSCRIPT_C}{_sub(i + 1)}"),
             "gens": (self.resolved.dims.r, self.gen_left, lambda i: f"/g{_sub(i + 1)}"),
-            "primes": (self.resolved.dims.d, self.prime_left, lambda i: f"/{self.domain_label}{_sub(i + 1)}"),
+            "primes": (self.resolved.dims.d, self.prime_left, lambda i: f"/{self.resolved.labels.domain_label}{_sub(i + 1)}"),
             "ssgens": (self.resolved.dims.rL, self.ss_gen_left, lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
             "ssprimes": (self.resolved.dims.dL, self.ss_prime_left, lambda i: f"/p{_sub(i + 1)}"),
             "commas": (self.resolved.dims.nv_shown, self.comma_left, lambda _i: "/1"),

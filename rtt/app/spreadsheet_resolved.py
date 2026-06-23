@@ -118,6 +118,19 @@ class Unchanged:
 
 
 @dataclass(frozen=True)
+class Labels:
+    col_labels: object
+    row_labels: object
+    captions: object
+    prescaling_symbols: object
+    prescaler_symbol: str
+    prescaler_equivalence: str
+    domain_label: str
+    realized_prescaler: object
+    scheme_prescaler: object
+
+
+@dataclass(frozen=True)
 class Resolved:
     dims: Dims
     targets: IntervalSet
@@ -130,6 +143,7 @@ class Resolved:
     projection: Projection
     ghosts: Ghosts
     unchanged: Unchanged
+    labels: Labels
     complexities: object
     col_ids: object
 
@@ -180,4 +194,8 @@ def from_builder(b) -> Resolved:
         unchanged=Unchanged(shown=b.show_unchanged, basis=b.unchanged_basis, ratios=b.unchanged_ratios,
                             mapped=b.unchanged_mapped, sizes=b.unchanged_sizes,
                             complexities=b.unchanged_complexities, born=b.born_u, empty_comma_w=b.empty_comma_w),
+        labels=Labels(col_labels=b.col_labels, row_labels=b.row_labels, captions=b.effective_captions,
+                      prescaling_symbols=b.prescaling_symbols, prescaler_symbol=b.prescaler_symbol,
+                      prescaler_equivalence=b.prescaler_equivalence, domain_label=b.domain_label,
+                      realized_prescaler=b._realized_prescaler, scheme_prescaler=b._scheme_prescaler),
         complexities=b.complexities, col_ids=b._col_ids)

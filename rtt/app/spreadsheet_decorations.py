@@ -113,7 +113,7 @@ class _DecorationsMixin:
                      ("ss_mapping", "primes"): self.resolved.dims.rL,
                      ("ss_vectors", "ssprimes"): self.resolved.dims.dL,
                      ("ss_projection", "ssprimes"): self.resolved.dims.dL}
-        for (rkey, ckey), glyph in self.row_labels.items():
+        for (rkey, ckey), glyph in self.resolved.labels.row_labels.items():
             if not self.tile_open(rkey, ckey):
                 continue
             top = row_top[(rkey, ckey)]
@@ -130,7 +130,7 @@ class _DecorationsMixin:
 
     def _emit_matrix_col_labels(self) -> None:
         group_count = self._matlabel_group_count()
-        for (rkey, ckey), label in self.col_labels.items():
+        for (rkey, ckey), label in self.resolved.labels.col_labels.items():
             if ckey not in group_count or rkey not in self.rows or self.rows[rkey].matlabel_top is None:
                 continue
             if not self.tile_open(rkey, ckey):
@@ -232,7 +232,7 @@ class _DecorationsMixin:
     def _caption_equivalences(self, ai: bool, slope) -> dict:
         equivalences = {**EQUIVALENCES,
                         ("weight", "targets"): "" if self.custom_weights_active else WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
-                        ("prescaling", "ssprimes" if self.show_superspace else "primes"): self.prescaler_equivalence,
+                        ("prescaling", "ssprimes" if self.show_superspace else "primes"): self.resolved.labels.prescaler_equivalence,
                         **(ALL_INTERVAL_EQUIVALENCES if ai else {}),
                         **(FORM_EQUIVALENCES if self.show_form_subscript else {}),
                         **({("mapping", "primes"): f" = 𝐹𝑀{SUBSCRIPT_C}"} if self.show_canon else {}),
@@ -243,9 +243,9 @@ class _DecorationsMixin:
                 equivalences[("projection", "primes")] + self._projection_superspace_tail())
         if ai:
             if not self.prescaler_is_matrix and not self.size_factor:
-                equivalences[("complexity", "targets")] = f" = diag({self.prescaler_symbol})"
-                equivalences[("weight", "targets")] = f" = diag({self.prescaler_symbol})⁻¹"
-            equivalences[("damage", "targets")] = f" = |𝒓|{self.prescaler_symbol}⁻¹"
+                equivalences[("complexity", "targets")] = f" = diag({self.resolved.labels.prescaler_symbol})"
+                equivalences[("weight", "targets")] = f" = diag({self.resolved.labels.prescaler_symbol})⁻¹"
+            equivalences[("damage", "targets")] = f" = |𝒓|{self.resolved.labels.prescaler_symbol}⁻¹"
         if not self.show_weighting:
             equivalences[("damage", "targets")] = " = |𝒓|" if ai else " = |𝐞|"
         return equivalences
@@ -253,7 +253,7 @@ class _DecorationsMixin:
     def _emit_tile_symbol(self, rkey: str, ckey: str, cy: float) -> float:
         cy += BAND_GAP
         equiv = self._caption_equivs.get((rkey, ckey), "") if self.show_equiv else ""
-        base_symbol = self.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
+        base_symbol = self.resolved.labels.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
         if self._caption_ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:
             base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
         if self.resolved.unchanged.shown and ckey == "commas":
@@ -286,7 +286,7 @@ class _DecorationsMixin:
     def _emit_tile_units(self, rkey: str, ckey: str) -> None:
         unit = self.tile_unit(rkey, ckey)
         if unit and not (rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")):
-            unit = _subscript_coord(unit, "p", self.domain_label)
+            unit = _subscript_coord(unit, "p", self.resolved.labels.domain_label)
         if self.show_units and unit:
             uy = self.rows[rkey].y + self.rows[rkey].h + self.rows[rkey].frame + self.row_cpick[rkey] + self.rows[rkey].sym + self.rows[rkey].cap
             self.cells.append(CellBox(f"units:{rkey}:{ckey}", self.col_x[ckey], uy, self.col_w[ckey], UNIT_H,
@@ -309,7 +309,7 @@ class _DecorationsMixin:
         self._caption_ai = service.is_all_interval(self.tuning_scheme)
         slope = service.damage_weight_slope(self.tuning_scheme)
         self._caption_equivs = self._caption_equivalences(self._caption_ai, slope)
-        for (rkey, ckey), name in self.effective_captions.items():
+        for (rkey, ckey), name in self.resolved.labels.captions.items():
             if ckey == "interest" and not self.resolved.interest.vectors:
                 continue
             if not self.tile_open(rkey, ckey):

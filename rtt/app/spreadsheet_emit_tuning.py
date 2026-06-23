@@ -219,9 +219,9 @@ class _EmitTuningMixin:
         return prescaler_diag, prescaler_is_matrix, ss_elements, prescale_vectors, groups, bare_group
 
     def _prescale_prime_terms(self, ss_elements):
-        if self._scheme_prescaler == "log-prime":
+        if self.resolved.labels.scheme_prescaler == "log-prime":
             return {i: f"log₂{p}" for i, p in enumerate(ss_elements)}
-        if self._scheme_prescaler == "prime":
+        if self.resolved.labels.scheme_prescaler == "prime":
             return {i: str(p) for i, p in enumerate(ss_elements)}
         return {}
 
@@ -310,7 +310,7 @@ class _EmitTuningMixin:
             if self.show_presets:
                 drop_w = CBOX_DROP_W
                 complexity_key = service.complexity_name_of(self.tuning_scheme)
-                if self._realized_prescaler is None:
+                if self.resolved.labels.realized_prescaler is None:
                     complexity_key = "custom"
                 complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
                 complexity_values = (((*tuple(service.COMPLEXITY_DISPLAYS.values()), "custom"))
@@ -420,7 +420,7 @@ class _EmitTuningMixin:
                                  text="optimization"))
             self.cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COL_W, ROW_H, "tuningvalue",
                                  text=service.cents(mean_damage, self._decimals)))
-            mean_damage_symbol = (f"⟪𝒓{self.prescaler_symbol}⁻¹⟫{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
+            mean_damage_symbol = (f"⟪𝒓{self.resolved.labels.prescaler_symbol}⁻¹⟫{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
                           if self.all_interval else "⟪𝐝⟫ₚ")
             if self.tuning_optimized:
                 mean_damage_symbol = f"min({mean_damage_symbol})"

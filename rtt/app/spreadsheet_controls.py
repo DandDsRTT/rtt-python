@@ -78,7 +78,7 @@ class _ControlsMixin:
             return self._is_sole_option(options, self.displayed_tuning_name)
         if name == "prescaler":
             return self._is_sole_option(presets.prescaler_options(self.settings["alt_complexity"]),
-                                        self._realized_prescaler)
+                                        self.resolved.labels.realized_prescaler)
         if name == "projection":
             return not presets.projection_options(self.state)
         return False
@@ -164,7 +164,7 @@ class _ControlsMixin:
             return
         preset_text = {"temperament": "", "target": self.target_spec,
                           "tuning": service.base_scheme_name(self.tuning_scheme) or "",
-                          "prescaler": self._realized_prescaler or "",
+                          "prescaler": self.resolved.labels.realized_prescaler or "",
                           "projection": self.displayed_projection_name or ""}
         for name, rkey, ckey, label in PRESETS:
             col = "ssprimes" if name == "prescaler" and self.show_superspace else ckey
