@@ -31,10 +31,11 @@ the whole ``rtt/`` tree, ``app.py``, the rootdir ``conftest.py`` (loads the User
 plugin), ``pytest.ini``, ``requirements.txt`` — and, conservatively, anything not
 on the irrelevant whitelist below. The default is *relevant*: when unsure, re-run.
 
-Render-IRRELEVANT (safe) whitelist:
+Render-IRRELEVANT (safe) whitelist (shared with ``bin/_render_relevance``):
   * ``tests/**``           — test-only; can't change shipped render output
   * ``guide/**``           — guide prose; not read by the app at render time
   * ``.claude/**``         — agent/harness config
+  * ``.github/**``         — CI config
   * ``bin/**``             — these helpers
   * ``*.md``               — docs (CLAUDE.md, README, audit notes, …)
   * ``*.png`` / ``*.csv``  — design mockups & their transcriptions
@@ -45,17 +46,13 @@ import os
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _render_relevance as _rr
+
 
 def _is_irrelevant(path):
     """True iff `path` cannot affect rendered output (safe to ignore)."""
-    prefixes = ("tests/", "guide/", ".claude/", "bin/")
-    if path.startswith(prefixes):
-        return True
-    if path.endswith((".md", ".png", ".csv")):
-        return True
-    if path in {"LICENSE", ".gitignore", ".python-version", "render.yaml"}:
-        return True
-    return False
+    return _rr.is_irrelevant(path)
 
 
 def _git(*args):

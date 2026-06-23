@@ -62,7 +62,9 @@ daemon can tell a crawling-but-progressing gate from a wedged one and reclaim on
 the latter (see ``bin/with-merge-lock``). Unset → ignored; this gate is unaffected.
 """
 
+import json
 import os
+import subprocess
 import sys
 import time
 
@@ -76,9 +78,17 @@ _REPORT_EVERY = 15  # seconds between "still waiting" lines
 _DISABLED = os.environ.get("RTT_RENDER_GATE_NOLOCK") == "1"
 _MERGE_PROGRESS_FILE = os.environ.get("RTT_MERGE_PROGRESS_FILE") or None
 
+# Green-token minting — the mechanical evidence that THIS exact tree passed the full
+# render gate. ``bin/merge-green-check`` / ``bin/merge-guard-hook`` consult it to refuse
+# an ungated render-relevant ff-merge of main (see those files). A token is an empty
+# file named by the git tree sha the session validated.
+_GREEN_DIR = os.environ.get("RTT_RENDER_GREEN_DIR", "/tmp/rtt-render-green.d")
+_GREEN_TTL = int(os.environ.get("RTT_RENDER_GREEN_TTL", str(7 * 24 * 3600)))
+
 _ticket = None       # path to this run's ticket file once created
 _ticket_name = None  # its <ns>-<pid> basename
 _heartbeat = None    # path to this run's heartbeat file once it holds a slot
+_collected_render = False  # did this session collect the render file at all?
 
 
 def _alive(pid):
@@ -243,10 +253,86 @@ def _release():
     _heartbeat = None
 
 
+def _git_out(*args):
+    try:
+        r = subprocess.run(["git", *args], capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def _clean_tree_sha():
+    """git tree sha of HEAD, but only if no TRACKED file is modified — so HEAD's tree
+    faithfully represents what the gate ran against and what an ff-merge would land.
+    Untracked files are ignored (they are in no commit, so they don't change the tree
+    nor what ``rtt`` imports). None if dirty or git unavailable."""
+    status = _git_out("status", "--porcelain", "--untracked-files=no")
+    if status is None or status != "":
+        return None
+    return _git_out("rev-parse", "HEAD^{tree}")
+
+
+def _prune_green(now):
+    try:
+        names = os.listdir(_GREEN_DIR)
+    except OSError:
+        return
+    for n in names:
+        p = os.path.join(_GREEN_DIR, n)
+        try:
+            if now - os.path.getmtime(p) > _GREEN_TTL:
+                os.remove(p)
+        except OSError:
+            pass
+
+
+def _mint_green_token(config, exitstatus):
+    """On a full, green render-gate session over a clean tree, record the validated
+    tree sha so the ff-merge guard can prove the gate ran on exactly this tree. A
+    partial run (``-k``/``-m``/``--lf``) must NOT mint — it didn't validate the whole
+    render suite — so we refuse those."""
+    if not _collected_render or int(exitstatus) != 0:
+        return
+    opt = config.option
+    if (getattr(opt, "keyword", "") or getattr(opt, "markexpr", "")
+            or getattr(opt, "lf", False) or getattr(opt, "failedfirst", False)
+            or getattr(opt, "last_failed", False)):
+        return
+    if any("::" in a for a in getattr(opt, "file_or_dir", []) or []):
+        return
+    tree = _clean_tree_sha()
+    if not tree:
+        return
+    now = time.time()
+    try:
+        os.makedirs(_GREEN_DIR, exist_ok=True)
+        _prune_green(now)
+        payload = json.dumps({
+            "kind": "render-green",
+            "tree": tree,
+            "head": _git_out("rev-parse", "HEAD"),
+            "pid": os.getpid(),
+            "time": now,
+        })
+        path = os.path.join(_GREEN_DIR, tree)
+        tmp = "%s.tmp-%d" % (path, os.getpid())
+        with open(tmp, "w") as f:
+            f.write(payload)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except OSError:
+        pass
+
+
 def pytest_collection_modifyitems(session, config, items):
+    global _collected_render
+    _collected_render = any(
+        _RENDER_FILE in str(getattr(item, "fspath", "")) for item in items
+    )
     if _DISABLED:
         return
-    if any(_RENDER_FILE in str(getattr(item, "fspath", "")) for item in items):
+    if _collected_render:
         _acquire()
 
 
@@ -260,3 +346,4 @@ def pytest_runtest_logreport(report):
 
 def pytest_sessionfinish(session, exitstatus):
     _release()
+    _mint_green_token(session.config, exitstatus)

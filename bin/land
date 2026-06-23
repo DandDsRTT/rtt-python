@@ -57,6 +57,7 @@ import sys
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _WITH_LOCK = os.path.join(_HERE, "with-merge-lock")
 _SAFE_CHECK = os.path.join(_HERE, "merge-safe-check")
+_INSTALL_HOOK = os.path.join(_HERE, "install-merge-guard-hook")
 _PY = sys.executable
 
 
@@ -210,6 +211,8 @@ def main(argv):
         i += 1
     if not gate_cmd:
         gate_cmd = [".venv/bin/python", "-m", "pytest", "-q"]
+
+    subprocess.run([_PY, _INSTALL_HOOK])
 
     main_checkout = _main_checkout()
     branch = _current_branch()

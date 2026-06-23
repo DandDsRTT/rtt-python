@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""``reference-transaction`` hook body — refuse an UNGATED render-relevant advance of main.
+
+Installed into the shared git hooks dir by ``bin/install-merge-guard-hook`` (as a tiny
+shim that execs this file). Git fires ``reference-transaction`` on EVERY ref update,
+passing the transaction phase as ``argv[1]`` and ``<old> <new> <ref>`` lines on stdin;
+exiting non-zero during the ``prepared`` phase ABORTS the whole transaction. So this is
+the one place a fast-forward of ``refs/heads/main`` can be vetoed mechanically — even a
+raw ``git merge --ff-only`` — closing the "trust the agent ran the gate" hole.
+
+It vetoes a ref update ONLY when ALL of these hold (otherwise it allows — fail-open, so
+it can never wedge the user's live main checkout on an unrelated op):
+
+  * phase == ``prepared``                         (the abortable phase)
+  * ref is ``refs/heads/main`` / ``master``       (not feature branches, tags, notes…)
+  * old and new are both real oids, old != new    (an update, not a create/delete)
+  * new is a DESCENDANT of old                    (a fast-forward ADVANCE — never a
+                                                   rewind/reset/recovery, which the human
+                                                   does deliberately)
+  * ``bin/merge-green-check old new`` returns 1    (render-relevant AND no green token)
+
+Any error locating the repo or running the check → ALLOW (with a stderr warning): the
+guard's job is to stop the *accidental* ungated land, not to risk breaking the live app
+on an edge case. ``RTT_FFMERGE_GUARD_OFF=1`` disables it entirely (human escape hatch).
+
+Pure stdlib; runs under whatever ``python3`` the shim's ``/usr/bin/env`` finds (system),
+so it must NOT depend on the repo ``.venv``.
+"""
+
+import os
+import subprocess
+import sys
+
+_ZERO = "0" * 40
+_MAIN_REFS = ("refs/heads/main", "refs/heads/master")
+
+
+def _warn(msg):
+    sys.stderr.write("[merge-guard] %s\n" % msg)
+
+
+def _is_zero(oid):
+    return oid == _ZERO or set(oid) == {"0"}
+
+
+def _is_fast_forward(old, new):
+    r = subprocess.run(["git", "merge-base", "--is-ancestor", old, new],
+                       capture_output=True, text=True)
+    return r.returncode == 0
+
+
+def _repo_top():
+    r = subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                       capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def main(argv):
+    phase = argv[0] if argv else ""
+    if phase != "prepared":
+        return 0
+    if os.environ.get("RTT_FFMERGE_GUARD_OFF") == "1":
+        return 0
+    if os.environ.get("RTT_GREEN_HOOK_ACTIVE") == "1":
+        return 0  # re-entrancy guard: never recurse into a nested transaction
+
+    lines = sys.stdin.read().splitlines()
+    main_moves = []
+    for line in lines:
+        parts = line.split()
+        if len(parts) != 3:
+            continue
+        old, new, ref = parts
+        if ref not in _MAIN_REFS:
+            continue
+        if _is_zero(old) or _is_zero(new) or old == new:
+            continue
+        if not _is_fast_forward(old, new):
+            continue  # rewind / divergent update — a deliberate human op; allow
+        main_moves.append((old, new, ref))
+
+    if not main_moves:
+        return 0
+
+    top = _repo_top()
+    check = os.path.join(top, "bin", "merge-green-check") if top else None
+    if not check or not os.path.exists(check):
+        _warn("merge-green-check not found — allowing main advance UNGUARDED")
+        return 0
+
+    env = dict(os.environ)
+    env["RTT_GREEN_HOOK_ACTIVE"] = "1"
+    for old, new, ref in main_moves:
+        try:
+            r = subprocess.run([sys.executable, check, old, new],
+                               env=env, capture_output=True, text=True, timeout=180)
+        except (OSError, subprocess.SubprocessError) as e:
+            _warn("guard check errored (%s) — allowing %s advance" % (e, ref))
+            continue
+        if r.returncode == 1:
+            sys.stderr.write(r.stderr)
+            _warn("REFUSING to advance %s to %s — no green full-render-gate token for "
+                  "its tree and the change is render-relevant." % (ref, new[:12]))
+            _warn("Run the full gate (.venv/bin/python -m pytest -q) on this exact tree, "
+                  "land via bin/land, or set RTT_FFMERGE_GUARD_OFF=1 to override.")
+            return 1
+        if r.returncode != 0:
+            _warn("guard check could not evaluate %s (exit %d) — allowing"
+                  % (ref, r.returncode))
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
