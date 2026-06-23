@@ -1,3 +1,7 @@
+from dataclasses import dataclass
+
+from rtt.app.spreadsheet_constants import SYMBOL_H, UNIT_H
+
 NORM_SUB_OPEN = chr(0xE001)
 NORM_SUB_CLOSE = chr(0xE002)
 SUB_OPEN = chr(0xE003)
@@ -136,7 +140,6 @@ CAPTIONS = {
     ("prescaling", "held"): "complexity prescaled held interval basis",
     ("complexity", "held"): "held interval basis interval complexity list",
 }
-CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 SYMBOLS = {
     ("ss_vectors", "primes"): "BL",
     ("ss_mapping", "ssprimes"): "𝑀L",
@@ -218,7 +221,6 @@ SYMBOLS = {
     ("weight", "targets"): "𝒘",
     ("damage", "targets"): "𝐝",
 }
-SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)
 ROW_LABEL_LETTERS = {
     ("mapping", "primes"): "𝒎",
     ("canon", "primes"): f"𝒎{SUBSCRIPT_C}",
@@ -296,21 +298,6 @@ COL_LABEL_LETTERS = {
     ("just", "ssprimes"): f"𝒋{SUBSCRIPT_L}",
     ("retune", "ssprimes"): f"𝒓{SUBSCRIPT_L}",
 }
-FRAMED_ROWS = frozenset(
-    {
-        "mapping",
-        "canon",
-        "vectors",
-        "prescaling",
-        "ss_vectors",
-        "ss_mapping",
-        "ss_projection",
-        "projection",
-    }
-)
-CHARTED_ROWS = frozenset({"retune", "weight", "damage"})
-COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS) | {"prescaling", "complexity"}
-
 _FACTOR_GROUP = {
     "G": "tuning",
     "J": "tuning",
@@ -416,13 +403,11 @@ PRESET_COPIES = (
     ("temperament", "vectors", "commas", "temperament"),
     ("projection", "projection", "gens", "established embedding"),
 )
-PRESET_ROWS = frozenset(row for _, row, _, _ in PRESETS + PRESET_COPIES)
 
 FORM_CHOOSERS = (
     ("mapping", "mapping", "primes", "form"),
     ("comma_basis", "vectors", "commas", "form"),
 )
-FORM_CHOOSER_ROWS = frozenset(row for _, row, _, _ in FORM_CHOOSERS)
 
 MNEMONICS = {
     ("ss_projection", "ssprimes"): "projection",
@@ -609,7 +594,42 @@ UNITS = {
     ("prescaling", "held"): "oct",
     ("complexity", "held"): "(C)",
 }
-UNITED_ROWS = frozenset(row for row, _ in UNITS)
+
+
+@dataclass(frozen=True)
+class Band:
+    name: str
+    rows: frozenset
+    height: float | None = None
+
+
+def _carrier_rows(table):
+    return frozenset(rkey for rkey, _ckey in table)
+
+
+BANDS = {
+    band.name: band
+    for band in (
+        Band("symbol", _carrier_rows(SYMBOLS), SYMBOL_H),
+        Band("caption", _carrier_rows(CAPTIONS)),
+        Band("units", _carrier_rows(UNITS), UNIT_H),
+        Band("col_label", _carrier_rows(COL_LABEL_LETTERS) | {"prescaling", "complexity"}),
+        Band("frame", frozenset({"mapping", "canon", "vectors", "prescaling",
+                                 "ss_vectors", "ss_mapping", "ss_projection", "projection"})),
+        Band("chart", frozenset({"retune", "weight", "damage"})),
+        Band("preset", frozenset(rkey for _name, rkey, _ckey, _label in PRESETS + PRESET_COPIES)),
+        Band("form_chooser", frozenset(rkey for _name, rkey, _ckey, _label in FORM_CHOOSERS)),
+    )
+}
+
+SYMBOLED_ROWS = BANDS["symbol"].rows
+CAPTIONED_ROWS = BANDS["caption"].rows
+UNITED_ROWS = BANDS["units"].rows
+COL_LABELED_ROWS = BANDS["col_label"].rows
+FRAMED_ROWS = BANDS["frame"].rows
+CHARTED_ROWS = BANDS["chart"].rows
+PRESET_ROWS = BANDS["preset"].rows
+FORM_CHOOSER_ROWS = BANDS["form_chooser"].rows
 
 WEIGHT_EQUIVALENCE_BY_SLOPE = {
     "complexityWeight": " = 𝒄",

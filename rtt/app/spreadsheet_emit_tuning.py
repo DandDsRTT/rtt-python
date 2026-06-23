@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from rtt.app import service
-from rtt.app.grid_tables import CHARTED_ROWS, SUB_CLOSE, SUB_OPEN
+from rtt.app.grid_tables import BANDS, SUB_CLOSE, SUB_OPEN
 from rtt.app.layout import CellBox
 from rtt.app.spreadsheet_constants import (
     APPROACH_RADIO_H,
@@ -46,7 +46,7 @@ class _EmitTuningMixin:
         if not self.tile_open(key, group):
             return
         values = tuple(values)
-        if key in CHARTED_ROWS:
+        if key in BANDS["chart"].rows:
             self.chart_tiles.append((key, group, values))
         y = self.rows[key].y
         is_gen_group = group in ("gens", "ssgens")

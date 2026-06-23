@@ -2,20 +2,13 @@ from __future__ import annotations
 
 from rtt.app import service
 from rtt.app.grid_tables import (
-    CAPTIONED_ROWS,
-    CHARTED_ROWS,
-    COL_LABELED_ROWS,
+    BANDS,
     COUNTS_TILES,
     DETEMPERING_COUNTS_TILES,
-    FORM_CHOOSER_ROWS,
-    FRAMED_ROWS,
     OPTIMIZATION_COUNTS_TILES,
-    PRESET_ROWS,
     SUPERSPACE_COUNTS_TILES,
     SUPERSPACE_TILES,
-    SYMBOLED_ROWS,
     TILES,
-    UNITED_ROWS,
     UNITS_TILES,
 )
 from rtt.app.spreadsheet_constants import (
@@ -44,11 +37,9 @@ from rtt.app.spreadsheet_constants import (
     ROW_HANDLE_W,
     SCHEME_BTN_SQ,
     STRIP,
-    SYMBOL_H,
     TITLE_MARGIN,
     TOGGLE,
     TOGGLE_INSET,
-    UNIT_H,
 )
 from rtt.app.spreadsheet_models import RowBand
 from rtt.app.spreadsheet_text import _title_w
@@ -269,7 +260,7 @@ class _LayoutMixin:
             ("damage", ROW_H, show_tuning, True, "damage"),
         )
         self.present_caption_rows = frozenset(
-            key for key, _h, present, _c, _l in row_bands if present and key in CAPTIONED_ROWS)
+            key for key, _h, present, _c, _l in row_bands if present and key in BANDS["caption"].rows)
         return row_bands
 
     def _layout_columns(self, col_bands, content_x0) -> None:
@@ -344,8 +335,8 @@ class _LayoutMixin:
 
     def _compute_row_band(self, key, natural, collapsible, label, tile_extra, show_charts, y) -> RowBand:
         folded = f"row:{key}" in self.collapsed
-        framed = key in FRAMED_ROWS and not folded
-        has_matlabel = (self.show_header_symbols and key in COL_LABELED_ROWS and not folded)
+        framed = key in BANDS["frame"].rows and not folded
+        has_matlabel = (self.show_header_symbols and key in BANDS["col_label"].rows and not folded)
         head_default = TOGGLE + 2 * TOGGLE_INSET - PAD
         int_handle = self._row_int_handle(key, folded)
         handle_band = (ROW_HANDLE_W + ROW_HANDLE_GAP) if int_handle else 0
@@ -353,19 +344,20 @@ class _LayoutMixin:
         head = base_head + handle_band
         top_frame = (FRAME_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
         bot_frame = (BRACE_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
-        charted = show_charts and key in CHARTED_ROWS and not folded and natural == ROW_H
+        charted = show_charts and key in BANDS["chart"].rows and not folded and natural == ROW_H
         chart_band = (CHART_H + CHART_GAP) if charted else 0
         cap = self.caption_band(key, folded)
-        sym = SYMBOL_H if ((self.show_symbols or self.show_equiv) and key in SYMBOLED_ROWS and not folded) else 0
-        uni = UNIT_H if (self.show_units and key in UNITED_ROWS and not folded) else 0
-        pre = self.preset_band_h(key) if (((self.show_presets and key in PRESET_ROWS)
+        sym = BANDS["symbol"].height if ((self.show_symbols or self.show_equiv)
+                                         and key in BANDS["symbol"].rows and not folded) else 0
+        uni = BANDS["units"].height if (self.show_units and key in BANDS["units"].rows and not folded) else 0
+        pre = self.preset_band_h(key) if (((self.show_presets and key in BANDS["preset"].rows)
                                          or (self.settings["all_interval"] and key == "vectors"))
                                         and not folded) else 0
         schemebtn = (self.control_region_band_h(SCHEME_BTN_SQ)
                      if (key == "projection" and self.settings["projection"] and not self.show_presets and not folded) else 0)
         formctrl = (self.formchooser_band_h(key)
                     if (self.show_form_controls and not self.show_presets
-                        and key in FORM_CHOOSER_ROWS and not folded) else 0)
+                        and key in BANDS["form_chooser"].rows and not folded) else 0)
         cpick = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and self.show_presets
                                            and self.col_open("commas")
                                            and (self.nc > 0 or self.pending is not None) and not folded) else 0

@@ -2160,14 +2160,7 @@ def test_every_in_tile_band_reserves_for_what_it_emits():
     # on over a rich nonstandard-domain temperament and asserts, for every band, that the set of rows
     # EMITTING content is contained in the set of rows RESERVING it — so a future row that emits into a
     # band but is forgotten in its reservation set fails here, for ANY band, not just plain text.
-    from rtt.app.grid_tables import (
-        CAPTIONED_ROWS,
-        COL_LABELED_ROWS,
-        SYMBOLED_ROWS,
-        SYMBOLS,
-        UNITED_ROWS,
-        UNITS,
-    )
+    from rtt.app.grid_tables import BANDS, SYMBOLS, UNITS
     s = settings.defaults()
     for k, v in list(s.items()):
         if isinstance(v, bool):
@@ -2175,16 +2168,17 @@ def test_every_in_tile_band_reserves_for_what_it_emits():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
                                  held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
-    # (band name, rows that EMIT its content, rows that RESERVE its height). The emit side reads the
-    # LIVE per-render content where one exists (col_labels/effective_captions/ptext_strings are rebuilt
-    # each render — exactly where drift hides), and the static content table otherwise.
+    # (band name, rows that EMIT its content, rows that RESERVE its height). The reserve side reads the
+    # ONE band descriptor (grid_tables.BANDS) the height pass also consults; the emit side reads the LIVE
+    # per-render content where one exists (col_labels/effective_captions/ptext_strings are rebuilt each
+    # render — exactly where drift hides), and the static content table otherwise.
     bands = {
         "plain text":   ({r for (r, _c) in b.ptext_strings},
                          {r for (r, _c) in b.ptext_strings if b.ptext_band(r, folded=False) > 0}),
-        "symbol":       ({r for (r, _c) in SYMBOLS}, set(SYMBOLED_ROWS)),
-        "units":        ({r for (r, _c) in UNITS}, set(UNITED_ROWS)),
-        "caption":      ({r for (r, _c) in b.effective_captions}, set(CAPTIONED_ROWS)),
-        "column label": ({r for (r, _c) in b.col_labels}, set(COL_LABELED_ROWS)),
+        "symbol":       ({r for (r, _c) in SYMBOLS}, set(BANDS["symbol"].rows)),
+        "units":        ({r for (r, _c) in UNITS}, set(BANDS["units"].rows)),
+        "caption":      ({r for (r, _c) in b.effective_captions}, set(BANDS["caption"].rows)),
+        "column label": ({r for (r, _c) in b.col_labels}, set(BANDS["col_label"].rows)),
     }
     spills = {name: sorted(emit - reserve) for name, (emit, reserve) in bands.items() if emit - reserve}
     assert not spills, f"rows emit a band's content but reserve no height for it (it will spill): {spills}"

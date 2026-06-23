@@ -6,11 +6,11 @@ from rtt.app.grid_tables import (
     ALL_INTERVAL_EQUIVALENCES,
     ALL_INTERVAL_MNEMONICS,
     ALL_INTERVAL_SYMBOLS,
+    BANDS,
     EQUIVALENCES,
     FORM_EQUIVALENCES,
     MNEMONICS,
     SUBSCRIPT_C,
-    SYMBOLED_ROWS,
     SYMBOLS,
     WEIGHT_EQUIVALENCE_BY_SLOPE,
 )
@@ -296,7 +296,7 @@ class _DecorationsMixin:
         if self._caption_ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:
             name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
         cy = self.rows[rkey].y + self.rows[rkey].h + self.rows[rkey].frame + self.row_cpick[rkey]
-        if (self.show_symbols or self.show_equiv) and rkey in SYMBOLED_ROWS:
+        if (self.show_symbols or self.show_equiv) and rkey in BANDS["symbol"].rows:
             cy = self._emit_tile_symbol(rkey, ckey, cy)
         if self.show_captions and self.show_unchanged and (rkey, ckey) == ("counts", "commas"):
             self._emit_unchanged_counts_caption(rkey, cy)

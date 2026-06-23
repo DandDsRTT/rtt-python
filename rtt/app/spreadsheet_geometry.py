@@ -5,7 +5,7 @@ from fractions import Fraction
 
 from rtt.app import service
 from rtt.app.grid_tables import (
-    CAPTIONED_ROWS,
+    BANDS,
     EDITABLE_PTEXT,
     EDITABLE_PTEXT_ROWS,
     EQUIVALENCES,
@@ -161,7 +161,7 @@ class _GeometryMixin:
         return self.open_col_w[ckey]
 
     def caption_band(self, key: str, folded: bool):
-        if not (self.show_captions and key in CAPTIONED_ROWS and not folded):
+        if not (self.show_captions and key in BANDS["caption"].rows and not folded):
             return 0
         lines = [_wrap_lines(self.effective_captions[(key, c)], self._caption_wrap_w(c)) for c in self.col_x
                  if (key, c) in self.effective_captions and (key, c) in self.declared_tiles]
