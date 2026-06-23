@@ -60,6 +60,7 @@ from rtt.app.service.core import (
     target_interval_vectors,
     target_limit_problem,
     transform_ratio,
+    transformed_vector,
     tuning,
     tuning_from_generators,
 )
@@ -137,6 +138,7 @@ from rtt.app.service.schemes import (
     weight_slope_variants,
 )
 from rtt.app.service.state import (
+    ElementTransform,
     TemperamentState,
     _as_basis_element,
     _state,
@@ -159,6 +161,7 @@ from rtt.app.service.state import (
     remove_comma,
     remove_domain_element,
     remove_mapping_row,
+    resolve_domain_element_transform,
     set_domain_element,
     shrink_domain,
     standardize_to_prime_limit,

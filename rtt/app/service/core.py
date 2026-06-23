@@ -449,6 +449,15 @@ def equave_reduce_vector(vector, domain_basis=None) -> tuple[int, ...]:
     return v if reduced == q else interval_vector(str(reduced), len(v), domain_basis)
 
 
+def transformed_vector(vector, op: str, domain_basis=None) -> tuple[int, ...] | None:
+    v = tuple(int(x) for x in vector)
+    if op == "reciprocate":
+        new_v = tuple(-x for x in v)
+    else:
+        new_v = tuple(int(x) for x in equave_reduce_vector(v, domain_basis))
+    return None if new_v == v else new_v
+
+
 def interval_op_availability(ratio: str, domain_basis=None) -> tuple[bool, bool]:
     try:
         q = Fraction(str(ratio))

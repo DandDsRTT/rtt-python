@@ -5,7 +5,12 @@ from fractions import Fraction
 
 import sympy as sp
 
-from rtt.app.service.core import _to_matrix, is_standard_domain, standard_primes
+from rtt.app.service.core import (
+    _to_matrix,
+    is_standard_domain,
+    standard_primes,
+    transform_ratio,
+)
 from rtt.library.dimensions import get_d, get_n, get_r
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
@@ -161,6 +166,26 @@ def set_domain_element(state: TemperamentState, index: int, element) -> Temperam
         *state.domain_basis[index + 1 :],
     )
     return from_mapping(state.mapping, new_basis)
+
+
+@dataclass(frozen=True)
+class ElementTransform:
+    value: str | None
+    problem: str | None
+
+
+def resolve_domain_element_transform(
+    state: TemperamentState, index: int, current_text: str, op: str
+) -> ElementTransform:
+    new_raw = transform_ratio(current_text, op, state.domain_basis)
+    if new_raw is None:
+        return ElementTransform(None, "noop")
+    parsed = parse_domain_element(new_raw)
+    if parsed is None:
+        return ElementTransform(new_raw, "invalid")
+    if not can_set_domain_element(state, index, parsed):
+        return ElementTransform(new_raw, "dependent")
+    return ElementTransform(new_raw, None)
 
 
 def can_add_domain_element(state: TemperamentState, element) -> bool:

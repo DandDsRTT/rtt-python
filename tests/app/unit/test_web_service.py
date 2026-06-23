@@ -605,6 +605,48 @@ def test_custom_weights_rejects_a_nonpositive_or_nonfinite_weight():
     assert service.custom_weights(["1", "nan", "3"]).problem == "invalid"
 
 
+def test_transformed_vector_reciprocates_and_reduces():
+    # 3/2 = (-1, 1, 0) over 2.3.5; reciprocation negates it, reduction is a no-op (already in [1, 2))
+    assert service.transformed_vector((-1, 1, 0), "reciprocate", (2, 3, 5)) == (1, -1, 0)
+    assert service.transformed_vector((-1, 1, 0), "reduce", (2, 3, 5)) is None
+    # 9/4 = (-2, 2, 0) reduces an octave down to 9/8 = (-3, 2, 0)
+    assert service.transformed_vector((-2, 2, 0), "reduce", (2, 3, 5)) == (-3, 2, 0)
+
+
+def test_transformed_vector_reports_a_unison_reciprocation_as_no_op():
+    assert service.transformed_vector((0, 0, 0), "reciprocate", (2, 3, 5)) is None
+
+
+def test_resolve_domain_element_transform_applies_a_valid_relabel():
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    # reducing the prime-3 basis element down an octave to 3/2 keeps the basis independent
+    res = service.resolve_domain_element_transform(st, 1, "3", "reduce")
+    assert res.value == "3/2"
+    assert res.problem is None
+
+
+def test_resolve_domain_element_transform_flags_a_no_op():
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    # 3/2 is already octave-reduced, so reducing it again changes nothing
+    assert service.resolve_domain_element_transform(st, 1, "3/2", "reduce").problem == "noop"
+
+
+def test_resolve_domain_element_transform_rejects_a_unison_result():
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    # reducing 2 by its own equave lands on 1, which is not a valid basis element
+    res = service.resolve_domain_element_transform(st, 0, "2", "reduce")
+    assert res.value == "1"
+    assert res.problem == "invalid"
+
+
+def test_resolve_domain_element_transform_rejects_a_dependent_result():
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    # relabeling the prime-3 slot to 1/4 (a power of 2) makes it dependent on the 2 already present
+    res = service.resolve_domain_element_transform(st, 1, "4", "reciprocate")
+    assert res.value == "1/4"
+    assert res.problem == "dependent"
+
+
 def test_tuning_maps_under_top():
     import pytest
 
