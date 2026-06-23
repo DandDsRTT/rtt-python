@@ -29,12 +29,12 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
     ("mapping", "primes"): GuideHelp(
         "A mapping represents a temperament: one map per generator, each counting how many "
         "of that generator are used to approximate each prime. It is the central object of "
-        "RTT — everything else follows from it.",
+        "RTT.",
         "Mappings", "Mappings"),
     ("vectors", "commas"): GuideHelp(
-        "The comma basis is a basis for all the commas this temperament tempers out — the "
-        "small JI intervals it makes vanish. Intervals differing by a tempered comma are "
-        "thereby tempered together.",
+        "The comma basis is a basis for all the commas (small JI intervals) this temperament "
+        "tempers out — a minimal set from which every one of them can be built by combination. "
+        "Intervals differing by any such combination are thereby tempered together.",
         "Exploring temperaments", "Mapping-row-bases and comma bases"),
     ("tuning", "gens"): GuideHelp(
         "The generator tuning map gives the size in cents of each generator. The mapping "
@@ -77,15 +77,15 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "out each of these commas.",
         "Mappings", "Making commas vanish"),
     ("vectors", "primes"): GuideHelp(
-        "The trivial JI mapping — each prime maps to itself, untempered. It is the identity "
-        "every temperament departs from.",
+        "The trivial JI mapping — each prime maps to itself. It is the identity every "
+        "temperament departs from.",
         "Exploring temperaments", "JI as a temperament"),
     ("mapping", "targets"): GuideHelp(
         "Each target interval mapped through the mapping — how many of each generator it "
         "takes to reach the temperament's version of that interval."),
     ("canon", "primes"): GuideHelp(
-        "The mapping rewritten into its canonical form, so the same temperament always "
-        "looks the same no matter how it was entered.",
+        "The mapping rewritten into its canonical form, serving as a standard identifier "
+        "for the temperament.",
         "Mappings", "Standard forms"),
     ("tuning", "targets"): GuideHelp(
         "Each target interval's size in cents under this tempered tuning.",

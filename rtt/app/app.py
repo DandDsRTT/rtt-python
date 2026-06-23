@@ -789,7 +789,7 @@ _GUIDE_JS = """
       const a = document.createElement('a');
       a.className = 'rtt-guide-card-link';
       a.href = url; a.target = '_blank'; a.rel = 'noopener';
-      a.textContent = 'Read in the Guide: ' + loc + ' →';
+      a.textContent = "D&D's Guide > " + loc + ' →';
       card.appendChild(a);
     }
     shownTile = cell.getAttribute('data-guide-tile');
