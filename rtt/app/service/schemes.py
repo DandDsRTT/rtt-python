@@ -10,8 +10,8 @@ from rtt.app.service.core import (
     _vectors_to_ratios,
     element_ratio,
     prescale_text,
-    target_interval_set,
 )
+from rtt.app.service.core_targets import target_interval_set
 from rtt.library.parsing import parse_quotient_list
 from rtt.library.temperament import Temperament, Variance
 from rtt.library.tuning import get_complexity_prescaler, get_dual_power

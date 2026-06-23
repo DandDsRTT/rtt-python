@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, replace
 from fractions import Fraction
 from functools import lru_cache
@@ -8,35 +7,16 @@ from functools import lru_cache
 import sympy as sp
 
 from rtt.library.addition import _get_greatest_factor
-from rtt.library.canonicalization import canonical_ca, canonical_ma
-from rtt.library.comma_forms import minimal_ca, positive_ratio_ca
 from rtt.library.dimensions import get_d, get_r
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
-    filter_target_intervals_for_nonstandard_domain_basis,
-    get_domain_basis,
     is_standard_prime_limit_domain_basis,
 )
-from rtt.library.dual import mapping_matrix
 from rtt.library.formatting import strip_negative_zero
 from rtt.library.generator_detempering import get_generator_detempering
-from rtt.library.generator_forms import (
-    equave_reduced_ma,
-    minimal_generator_ma,
-    positive_generator_ma,
-    positive_generator_shift_ma,
-    standard_jip_octaves,
-)
-from rtt.library.math_utils import equave_reduce, get_primes, pcv_to_quotient, quotient_to_pcv
+from rtt.library.math_utils import equave_reduce, get_primes, pcv_to_quotient
 from rtt.library.matrix_utils import Matrix
 from rtt.library.parsing import parse_quotient_list
-from rtt.library.symbolic_tuning import closed_form_generator_operator
-from rtt.library.target_intervals import (
-    default_old_limit,
-    default_tilt_limit,
-    process_old,
-    process_tilt,
-)
 from rtt.library.temperament import Temperament, Variance
 from rtt.library.tuning import (
     damage_weights,
@@ -130,69 +110,9 @@ def is_enfactored(mapping) -> bool:
     return greatest_factor(mapping) > 1
 
 
-def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
-    domain = tuple(domain_basis)
-    quotients = process_old(spec, domain) if "OLD" in spec else process_tilt(spec, domain)
-    if is_standard_prime_limit_domain_basis(domain):
-        quotients = tuple(q for q in quotients if len(quotient_to_pcv(q)) <= len(domain))
-    else:
-        quotients = filter_target_intervals_for_nonstandard_domain_basis(quotients, domain)
-    return tuple(f"{q.numerator}/{q.denominator}" for q in quotients)
-
-
 def element_ratio(element) -> str:
     fraction = Fraction(element)
     return f"{fraction.numerator}/{fraction.denominator}"
-
-
-def default_target_limit(family: str, domain_basis) -> int:
-    domain = tuple(domain_basis)
-    return default_old_limit(domain) if "OLD" in family else default_tilt_limit(domain)
-
-
-def target_limit_problem(family: str | None, limit_value) -> str | None:
-    no_manual_limit = not limit_value
-    if no_manual_limit:
-        return None
-    try:
-        number = float(limit_value)
-    except (TypeError, ValueError):
-        return "whole"
-    if number != int(number):
-        return "whole"
-    if "OLD" in (family or "") and int(number) % 2 == 0:
-        return "odd"
-    return None
-
-
-@dataclass(frozen=True)
-class TargetLimitResolution:
-    problem: str | None
-    spec: str | None
-    valid: bool
-
-
-def target_spec(family: str, limit_value) -> str:
-    text = (str(limit_value) if limit_value is not None else "").strip()
-    if not text:
-        return family
-    try:
-        return f"{int(float(text))}-{family}"
-    except ValueError:
-        return family
-
-
-def resolve_target_limit(family: str | None, limit_value, domain_basis) -> TargetLimitResolution:
-    family = family or "TILT"
-    problem = target_limit_problem(family, limit_value)
-    if problem == "whole":
-        return TargetLimitResolution("whole", None, False)
-    spec = target_spec(family, limit_value)
-    try:
-        valid = bool(target_interval_set(spec, domain_basis))
-    except Exception:
-        valid = False
-    return TargetLimitResolution(problem, spec, valid)
 
 
 # CPython raises when stringifying an int past ~4300 digits (its int->str DoS guard), so a ratio
@@ -271,150 +191,6 @@ def mapped_intervals(mapping, ratios, domain_basis=None) -> Matrix:
 def mapped_commas(mapping, comma_basis) -> Matrix:
     mapping = _to_matrix(mapping)
     return _map_through(mapping, _to_matrix(comma_basis))
-
-
-def canonical_mapping(mapping) -> Matrix:
-    return _to_matrix(canonical_ma(_to_matrix(mapping)))
-
-
-def canonical_comma_basis(comma_basis) -> Matrix:
-    return _to_matrix(canonical_ca(_to_matrix(comma_basis)))
-
-
-MAPPING_FORM_KEYS = (
-    "canonical",
-    "mingen",
-    "equave-reduced",
-    "positive-generator",
-    "positive-generator-shift",
-)
-MAPPING_FORM_LABELS = {
-    "canonical": "canonical",
-    "mingen": "minimal-generator",
-    "equave-reduced": "equave-reduced",
-    "positive-generator": "positive-generator (flip)",
-    "positive-generator-shift": "positive-generator (shift)",
-}
-_ALT_MAPPING_FORMS = {
-    "mingen": minimal_generator_ma,
-    "equave-reduced": equave_reduced_ma,
-    "positive-generator": positive_generator_ma,
-    "positive-generator-shift": positive_generator_shift_ma,
-}
-
-
-def _jip_octaves(mapping, domain_basis):
-    t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
-    return tuple(c / 1200.0 for c in get_just_tuning_map(t))
-
-
-def mapping_in_form(mapping, form: str, domain_basis=None) -> Matrix:
-    m = _to_matrix(mapping)
-    if form == "canonical":
-        return _to_matrix(canonical_ma(m))
-    return _to_matrix(_ALT_MAPPING_FORMS[form](m, _jip_octaves(m, domain_basis)))
-
-
-def identify_mapping_form(mapping, domain_basis=None) -> str | None:
-    m = _to_matrix(mapping)
-    for key in MAPPING_FORM_KEYS:
-        if mapping_in_form(m, key, domain_basis) == m:
-            return key
-    return None
-
-
-def resolve_mapping_form(mapping, preferred, domain_basis=None) -> str:
-    m = _to_matrix(mapping)
-    if preferred in MAPPING_FORM_KEYS and mapping_in_form(m, preferred, domain_basis) == m:
-        return preferred
-    return identify_mapping_form(m, domain_basis) or ""
-
-
-COMMA_BASIS_FORM_KEYS = ("canonical", "positive-ratio", "minimal")
-COMMA_BASIS_FORM_LABELS = {
-    "canonical": "canonical",
-    "positive-ratio": "positive-ratio",
-    "minimal": "minimal",
-}
-_ALT_COMMA_BASIS_FORMS = {
-    "positive-ratio": positive_ratio_ca,
-    "minimal": minimal_ca,
-}
-
-
-def _comma_octaves(d: int, domain_basis=None):
-    if domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis):
-        return standard_jip_octaves(d)
-    return tuple(math.log2(float(Fraction(e))) for e in domain_basis)
-
-
-def comma_basis_in_form(comma_basis, form: str, domain_basis=None) -> Matrix:
-    cb = _to_matrix(comma_basis)
-    if form == "canonical":
-        return _to_matrix(canonical_ca(cb))
-    d = len(cb[0]) if cb else (len(domain_basis) if domain_basis else 0)
-    return _to_matrix(_ALT_COMMA_BASIS_FORMS[form](cb, _comma_octaves(d, domain_basis)))
-
-
-def identify_comma_basis_form(comma_basis, domain_basis=None) -> str | None:
-    cb = _to_matrix(comma_basis)
-    for key in COMMA_BASIS_FORM_KEYS:
-        if comma_basis_in_form(cb, key, domain_basis) == cb:
-            return key
-    return None
-
-
-def resolve_comma_basis_form(comma_basis, preferred, domain_basis=None) -> str:
-    cb = _to_matrix(comma_basis)
-    if (
-        preferred in COMMA_BASIS_FORM_KEYS
-        and comma_basis_in_form(cb, preferred, domain_basis) == cb
-    ):
-        return preferred
-    return identify_comma_basis_form(cb, domain_basis) or ""
-
-
-def form_matrix(mapping) -> Matrix:
-    m = _to_matrix(mapping)
-    canon = canonical_ma(m)
-    detemper = get_generator_detempering(Temperament(m, Variance.ROW)).matrix
-    return tuple(
-        tuple(
-            sum(canon[i][p] * detemper[j][p] for p in range(len(m[0])))
-            for j in range(len(detemper))
-        )
-        for i in range(len(canon))
-    )
-
-
-def inverse_form_matrix(mapping) -> Matrix:
-    m = _to_matrix(mapping)
-    canon = canonical_ma(m)
-    canon_detemper = get_generator_detempering(Temperament(_to_matrix(canon), Variance.ROW)).matrix
-    return tuple(
-        tuple(
-            sum(m[i][p] * canon_detemper[j][p] for p in range(len(m[0])))
-            for j in range(len(canon_detemper))
-        )
-        for i in range(len(m))
-    )
-
-
-def mapping_from_form_matrix(mapping, form_rows) -> Matrix | None:
-    m = _to_matrix(mapping)
-    r = len(m)
-    f = _to_matrix(form_rows)
-    if len(f) != r or any(len(row) != r for row in f):
-        return None
-    try:
-        fm = sp.Matrix([[sp.Integer(int(x)) for x in row] for row in f])
-    except (TypeError, ValueError):
-        return None
-    if fm.det() not in (1, -1):
-        return None
-    canon = sp.Matrix([list(row) for row in canonical_ma(m)])
-    new = fm * canon
-    return tuple(tuple(int(new[i, j]) for j in range(new.cols)) for i in range(new.rows))
 
 
 def target_interval_vectors(ratios, d: int, domain_basis=None) -> Matrix:
@@ -630,140 +406,6 @@ def interval_weights(
             weights_override=weights_override,
         )
     )
-
-
-@dataclass(frozen=True)
-class ClosedFormTuning:
-    primes: tuple[int, ...]
-    generator_exponents: tuple[tuple[Fraction, ...], ...]
-    tempered_matrix: tuple[tuple[Fraction, ...], ...]
-
-    def generator_operand(self, generator: int, value: float) -> str | None:
-        if not 0 <= generator < len(self.generator_exponents):
-            return None
-        return self._operand(self.generator_exponents[generator], value)
-
-    def tempered_operand(self, vector, value: float) -> str | None:
-        return self._operand(self._tempered_exponents(vector), value)
-
-    def retune_operand(self, vector, value: float) -> str | None:
-        d = len(self.primes)
-        tempered = self._tempered_exponents(vector)
-        padded = tuple((vector[p] if p < len(vector) else 0) for p in range(d))
-        exponents = tuple(tempered[i] - padded[i] for i in range(d))
-        return self._operand(exponents, value)
-
-    def canonical_generator_operand(self, coefficients, value: float) -> str | None:
-        d = len(self.primes)
-        exponents = tuple(
-            sum(coefficients[k] * self.generator_exponents[k][i] for k in range(len(coefficients)))
-            for i in range(d)
-        )
-        return self._operand(exponents, value)
-
-    def _tempered_exponents(self, vector):
-        d = len(self.primes)
-        padded = tuple((vector[p] if p < len(vector) else 0) for p in range(d))
-        return tuple(
-            sum(self.tempered_matrix[i][p] * padded[p] for p in range(d)) for i in range(d)
-        )
-
-    def _operand(self, exponents, value: float) -> str | None:
-        if not _closed_form_matches(exponents, self.primes, value):
-            return None
-        return _power_product_operand(exponents, self.primes)
-
-
-def _closed_form_matches(exponents, primes, value: float, tolerance: float = 1e-6) -> bool:
-    closed = 1200 * sum(float(e) * math.log2(p) for e, p in zip(exponents, primes, strict=False))
-    return abs(closed - value) < tolerance
-
-
-def _power_product_operand(exponents, primes) -> str:
-    terms = []
-    for prime, exponent in zip(primes, exponents, strict=False):
-        if exponent == 0:
-            continue
-        if exponent == 1:
-            terms.append(str(prime))
-        elif exponent.denominator == 1:
-            terms.append(f"{prime}^{exponent.numerator}")
-        else:
-            terms.append(f"{prime}^({exponent.numerator}/{exponent.denominator})")
-    if not terms:
-        return "1"
-    if len(terms) == 1 and "^" not in terms[0]:
-        return terms[0]
-    return "(" + "·".join(terms) + ")"
-
-
-def closed_form_tuning(
-    mapping,
-    scheme: str = DEFAULT_TUNING_SCHEME,
-    domain_basis=None,
-    nonprime_approach: str = "",
-    held=(),
-    prescaler_override=None,
-    targets=None,
-    weights_override=None,
-) -> ClosedFormTuning | None:
-    if prescaler_override is not None or weights_override is not None:
-        return None
-    return _cached_closed_form(
-        _to_matrix(mapping),
-        scheme,
-        _hashable(domain_basis),
-        nonprime_approach,
-        tuple(held),
-        _hashable(targets),
-    )
-
-
-@lru_cache(maxsize=256)
-def _cached_closed_form(
-    mapping, scheme, domain_basis, nonprime_approach, held, targets
-) -> ClosedFormTuning | None:
-    t = Temperament(mapping, Variance.ROW, domain_basis)
-    spec = resolve_tuning_scheme(scheme)
-    if targets is not None and (spec.target_intervals or "").strip() not in ("{}", ""):
-        if targets:
-            spec = replace(spec, target_intervals="{" + ", ".join(targets) + "}")
-        else:
-            spec = replace(
-                spec,
-                target_intervals="1-OLD" if "OLD" in (spec.target_intervals or "") else "1-TILT",
-            )
-    if nonprime_approach:
-        spec = replace(spec, nonprime_basis_approach=nonprime_approach)
-    if held:
-        own = (spec.held_intervals or "").strip().strip("{}").strip()
-        parts = ([own] if own else []) + list(held)
-        spec = replace(spec, held_intervals="{" + ", ".join(parts) + "}")
-    return closed_form_from_temperament(t, spec)
-
-
-def closed_form_from_temperament(t, spec) -> ClosedFormTuning | None:
-    operator = closed_form_generator_operator(t, spec)
-    if operator is None:
-        return None
-    tempered = operator * sp.Matrix(mapping_matrix(t))
-    primes = tuple(int(p) for p in get_domain_basis(t))
-    return ClosedFormTuning(
-        primes=primes,
-        generator_exponents=tuple(
-            tuple(_to_fraction(operator[i, k]) for i in range(operator.rows))
-            for k in range(operator.cols)
-        ),
-        tempered_matrix=tuple(
-            tuple(_to_fraction(tempered[i, p]) for p in range(tempered.cols))
-            for i in range(tempered.rows)
-        ),
-    )
-
-
-def _to_fraction(value) -> Fraction:
-    rational = sp.Rational(value)
-    return Fraction(int(rational.p), int(rational.q))
 
 
 def cents(value, decimals: bool = True) -> str:
