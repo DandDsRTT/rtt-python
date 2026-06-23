@@ -5,7 +5,6 @@ from rtt.app.service.core import (
     DEFAULT_TUNING_SCHEME,
     IntervalSizes,
     Tuning,
-    _domain_label,
     _interval_vectors,
     _is_matrix,
     _map_through,
@@ -18,16 +17,12 @@ from rtt.app.service.core import (
     comma_ratios,
     domain_has_nonprimes,
     element_ratio,
-    equave_quotient,
-    equave_reduce_vector,
     generator_detempering,
     generators,
     get_generator_tuning_range,
     greatest_factor,
     interval_complexities,
-    interval_op_availability,
     interval_sizes,
-    interval_vector,
     interval_weights,
     is_enfactored,
     is_proper_temperament,
@@ -37,8 +32,6 @@ from rtt.app.service.core import (
     prescale_text,
     standard_primes,
     target_interval_vectors,
-    transform_ratio,
-    transformed_vector,
     tuning,
     tuning_from_generators,
 )
@@ -62,6 +55,15 @@ from rtt.app.service.core_forms import (
     mapping_in_form,
     resolve_comma_basis_form,
     resolve_mapping_form,
+)
+from rtt.app.service.core_intervals import (
+    _domain_label,
+    equave_quotient,
+    equave_reduce_vector,
+    interval_op_availability,
+    interval_vector,
+    transform_ratio,
+    transformed_vector,
 )
 from rtt.app.service.core_targets import (
     TargetLimitResolution,
@@ -204,21 +206,23 @@ from rtt.app.service.superspace import (
     superspace_tuning_embedding,
     superspace_tuning_projection,
 )
-from rtt.app.service.text import (
+from rtt.app.service.text_conventions import (
     _DASH,
     EBK_CONVENTIONS,
     EbkConvention,
+    ebk_convention,
+    render_ebk,
+)
+from rtt.app.service.text_format import (
     _cents_genmap,
     _cents_list,
     _cents_map,
     _ket_list,
     _prescale_vector_list,
-    ebk_convention,
     ebk_to_simple_matrix,
     embedding_ebk,
     mapping_pending_text,
     projection_ebk,
-    render_ebk,
     simple_matrix_to_ebk,
     vector_list_pending_text,
 )

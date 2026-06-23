@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 
 from rtt.app.service import outcome
-from rtt.app.service.core import interval_vector
+from rtt.app.service.core_intervals import interval_vector
 from rtt.app.service.outcome import Outcome
 
 
