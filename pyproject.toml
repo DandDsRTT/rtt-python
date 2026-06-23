@@ -60,9 +60,15 @@ max-returns = 6
 "rtt/app/marks.py" = ["PLR0913"]
 "rtt/app/service/*.py" = ["PLR0913"]
 
+# The branch-coverage gate is scoped to the LOGIC tiers only — the pure-math
+# library and the headless app-service layer — which fast, deterministic unit
+# tests exercise. The view layer (app.py, render_html.py, spreadsheet_*, marks,
+# tooltips) is guarded by the render integration tests as BEHAVIOUR tests, not by
+# a line percentage; measuring it here would force those slow, profiler-fragile
+# page-render tests to carry line coverage for SVG/DOM string assembly.
 [tool.coverage.run]
 branch = true
-source = ["rtt"]
+source = ["rtt/library", "rtt/app/service"]
 
 [tool.coverage.report]
 fail_under = 95

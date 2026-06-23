@@ -10,7 +10,7 @@ the same checks run on commit via **pre-commit**.
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/pre-commit install        # optional: run the fast subset on every commit
 bin/lint                            # lint + format + structural metrics + complexity
-bin/lint --cov                      # + 95% branch-coverage gate (runs the full suite)
+bin/lint --cov                      # + 95% branch-coverage gate (logic tiers only)
 ```
 
 In a worktree (no local `.venv`), point the runner at the main checkout's
@@ -35,7 +35,7 @@ in lockstep with the refactors so the gate stays green at every step.
 | Class cohesion (LCOM4) | ≤ 10 | ↓ | `tools/quality_checks.py` |
 | Depth of inheritance (DIT) | ≤ 2 | ≤ 2 | `tools/quality_checks.py` |
 | Number of children (NOC) | ≤ 3 | ≤ 3 | `tools/quality_checks.py` |
-| Branch coverage | ≥ 95% | ≥ 95% | `coverage` (`fail_under`) |
+| Branch coverage (logic tiers) | ≥ 95% | ≥ 95% | `coverage` (`fail_under`) |
 | Docstrings | banned | banned | `tools/quality_checks.py` |
 
 The architectural rails (coupling / LCOM4 / DIT / NOC) are calibrated to the
@@ -81,30 +81,32 @@ Status of every architectural metric requested:
   conventional names), which would fight the no-docstring rule and the math notation
   (`M_jL`, `B_L`, …).
 
-## Coverage gate scope — logic tiers only (PLANNED change)
+## Coverage gate scope — logic tiers only
 
-The 95% branch-coverage gate currently runs over the **whole** of `rtt/`. That is the wrong
-shape. It forces the slow NiceGUI page-render integration tests
-(`tests/app/integration/test_web_render.py`) to carry *line* coverage for the **view layer**
-(`app.py`, `render_html.py`, the `spreadsheet_*` modules, `marks.py`, `tooltips.py`) — which
-is exactly what makes a coverage run slow and profiler-fragile (see the
-`coverage-gate-local-blockers` memory: render-under-coverage is ~15 s/test on the local 3.14
-venv, deadlocks in NiceGUI's fixture teardown, and dogpiles across parallel agents).
+The 95% branch-coverage gate is scoped to the **logic tiers** — `rtt/library/**` and
+`rtt/app/service/**` — not the whole of `rtt/`. Line coverage is a meaningful signal for
+branchy **logic**; it is noise for the view layer's SVG/DOM string-assembly (`app.py`,
+`render_html.py`, the `spreadsheet_*` modules, `marks.py`, `tooltips.py`).
 
-Line coverage is a meaningful signal for branchy **logic**; it is noise for SVG/DOM
-string-assembly. So:
+Measuring the view layer here also forced the slow NiceGUI page-render integration tests
+(`tests/app/integration/test_web_render.py`) to carry its *line* coverage, which is exactly
+what made a coverage run slow and profiler-fragile (see the `coverage-gate-local-blockers`
+memory: render-under-coverage is ~15 s/test on the local 3.14 venv, deadlocks in NiceGUI's
+fixture teardown, and dogpiles across parallel agents). So:
 
-- **Scope the `fail_under = 95` gate to the logic tiers** — `rtt/library/**` and
-  `rtt/app/service/**` — which are exercised by fast, deterministic **unit** tests.
-- **Drop the line-coverage requirement on the view layer.** The view stays guarded by the
-  render integration tests as **behaviour** tests (build the page, assert it renders and
-  behaves), not by a line percentage.
+- **`fail_under = 95` is computed over the logic tiers only** — set via
+  `[tool.coverage.run] source = ["rtt/library", "rtt/app/service"]` in `pyproject.toml`,
+  which the logic tiers' fast, deterministic **unit** tests cover.
+- **The view layer carries no line-coverage requirement.** It stays guarded by the render
+  integration tests as **behaviour** tests (build the page, assert it renders and behaves),
+  not by a line percentage.
+- **`bin/lint --cov` runs coverage with the render tests excluded from the profiler**
+  (`--ignore=tests/app/integration/test_web_render.py`), so the coverage run is fast and
+  reliable. The render tests still run — unprofiled — in the full `pytest` suite that gates
+  a merge; coverage just no longer drives the profiler through them.
 
-Mechanically: narrow `[tool.coverage.run] source` (or `omit` the view files) so `fail_under`
-is computed over the logic tiers only; keep the render tests in the suite (they must stay
-green) but run them **without** the profiler. `bin/lint --cov` then becomes fast and
-reliable. This pairs with the `app.py` logic-extraction item below — together they move the
-view's *logic* into a place the scoped gate covers cheaply. PENDING — see the chip.
+This pairs with the `app.py` logic-extraction item below — together they move the view's
+*logic* into a place the scoped gate covers cheaply.
 
 ## Cleanup status
 

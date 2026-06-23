@@ -3,8 +3,10 @@
 # stop at the first failure), then exits non-zero if any check failed.
 #
 #   bin/lint          lint + format-check + structural metrics + complexity report
-#   bin/lint --cov    all of the above PLUS the 95% branch-coverage gate (slow:
-#                     it runs the full test suite, including the render gate)
+#   bin/lint --cov    all of the above PLUS the 95% branch-coverage gate, scoped to
+#                     the logic tiers (library + app/service). Skips the slow render
+#                     integration tests under the profiler — they guard the view layer
+#                     as behaviour tests in the full `pytest` suite, not by coverage.
 #
 # Interpreter: defaults to the persistent ./.venv; override with RTT_PY for a
 # worktree (which has no local .venv), e.g.
@@ -35,7 +37,7 @@ echo "== complexity (radon, report-only) =="
 
 if [[ "${1:-}" == "--cov" ]]; then
     step "coverage 95% branch gate" bash -c \
-        "'$PY' -m coverage run --branch --source=rtt -m pytest -q && '$PY' -m coverage report"
+        "'$PY' -m coverage run -m pytest -q --ignore=tests/app/integration/test_web_render.py && '$PY' -m coverage report"
 fi
 
 if [[ $rc -eq 0 ]]; then
