@@ -207,16 +207,6 @@ class Resolved:
     col_ids: object
 
 
-def _interval_set(b, ratios, sizes, mapped, vectors, pending) -> IntervalSet:
-    return IntervalSet(
-        ratios=getattr(b, ratios, None),
-        sizes=getattr(b, sizes, None),
-        mapped=getattr(b, mapped, None),
-        vectors=getattr(b, vectors, None),
-        pending=getattr(b, pending, None),
-    )
-
-
 def _dims(b) -> Dims:
     return Dims(
         d=b.d,
@@ -404,28 +394,40 @@ def _scalars(b) -> Scalars:
 def freeze(draft) -> Resolved:
     return Resolved(
         dims=_dims(draft),
-        targets=_interval_set(
-            draft, "targets", "target_sizes", "mapped", "target_vectors", "pending_target"
+        targets=IntervalSet(
+            ratios=draft.targets,
+            sizes=draft.target_sizes,
+            mapped=draft.mapped,
+            vectors=draft.target_vectors,
+            pending=draft.pending_target,
         ),
-        held=_interval_set(draft, "held_ratios", "held_sizes", "held_mapped", "held", "pending_held"),
-        commas=_interval_set(
-            draft, "comma_ratios", "comma_sizes", "mapped_commas", "comma_vectors", "pending"
+        held=IntervalSet(
+            ratios=draft.held_ratios,
+            sizes=draft.held_sizes,
+            mapped=draft.held_mapped,
+            vectors=draft.held,
+            pending=draft.pending_held,
         ),
-        interest=_interval_set(
-            draft,
-            "interest_ratios",
-            "interest_sizes",
-            "interest_mapped",
-            "interest",
-            "pending_interest",
+        commas=IntervalSet(
+            ratios=draft.comma_ratios,
+            sizes=draft.comma_sizes,
+            mapped=draft.mapped_commas,
+            vectors=None,
+            pending=draft.pending,
         ),
-        detempering=_interval_set(
-            draft,
-            "detempering_ratios",
-            "detempering_sizes",
-            "detempering_mapped",
-            "detempering_vectors",
-            "detempering_pending",
+        interest=IntervalSet(
+            ratios=draft.interest_ratios,
+            sizes=draft.interest_sizes,
+            mapped=draft.interest_mapped,
+            vectors=draft.interest,
+            pending=draft.pending_interest,
+        ),
+        detempering=IntervalSet(
+            ratios=None,
+            sizes=draft.detempering_sizes,
+            mapped=None,
+            vectors=draft.detempering_vectors,
+            pending=None,
         ),
         tuning=_tuning(draft),
         canon=_canon(draft),
