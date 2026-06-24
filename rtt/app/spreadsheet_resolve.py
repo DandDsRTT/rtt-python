@@ -70,18 +70,16 @@ class Resolver:
             self.preview_remove = None
         draft.displayed_tuning_name = self.displayed_tuning_name
         draft.displayed_projection_name = self.displayed_projection_name
-        (show_counts, show_charts, show_ranges, show_domain_units, show_temp,
-         show_tuning, show_interest, show_interval_ratios) = self._unpack_show_flags(draft)
+        self._unpack_show_flags(draft)
         label_w = LABEL_W
         header_h = HEADER_H
         self._resolve_superspace_dims(draft)
         self._resolve_prescaler_and_domain_labels(draft)
-        self._resolve_interval_sets(draft, generator_tuning, target_override, held_vectors, pending_comma,
-                                    show_temp, show_tuning)
+        self._resolve_interval_sets(draft, generator_tuning, target_override, held_vectors, pending_comma)
         self._resolve_complexities(draft)
         self._resolve_detempering(draft)
         self._resolve_canon_mapped(draft)
-        self._resolve_projection_data(draft, show_tuning)
+        self._resolve_projection_data(draft)
         self.resolved = freeze(draft)
         if self._resolve_only:
             return
@@ -89,21 +87,19 @@ class Resolver:
         interest_tiles, held_tiles, detempering_tiles = self._declare_interval_column_tiles()
         self._declare_tiles(interest_tiles, held_tiles, detempering_tiles)
 
-        col_bands, content_x0 = self._define_col_bands(show_interval_ratios, show_domain_units,
-                                                       show_temp, show_tuning, show_interest, label_w)
+        col_bands, content_x0 = self._define_col_bands(label_w)
 
-        row_bands = self._define_row_bands(show_counts, show_interval_ratios, show_domain_units,
-                                           show_temp, show_tuning)
+        row_bands = self._define_row_bands()
 
         self._layout_columns(col_bands, content_x0)
 
-        tile_extra = self._resolve_tile_extras(show_ranges, show_tuning)
+        tile_extra = self._resolve_tile_extras()
 
         rows_top_y = self._init_row_geometry(header_h)
 
         self._resolve_ptext_strings(generator_tuning, target_override)
 
-        self._layout_rows(row_bands, tile_extra, rows_top_y, show_charts)
+        self._layout_rows(row_bands, tile_extra, rows_top_y)
 
         self._init_group_geometry()
 
@@ -113,21 +109,21 @@ class Resolver:
         draft.show_mnemonics = _f.mnemonics
         draft.show_equiv = _f.equiv
         draft.show_presets = _f.presets
-        show_counts = _f.counts
+        draft.show_counts = _f.counts
         draft.show_ptext = _f.ptext
-        show_charts = _f.charts
-        show_ranges = _f.ranges
+        draft.show_charts = _f.charts
+        draft.show_ranges = _f.ranges
         draft.show_symbols = _f.symbols
         draft.ctrl_symbol_h = SYMBOL_H if draft.show_symbols else 0
         draft.show_header_symbols = _f.header_symbols
         draft.show_units = _f.units
         draft.show_cell_units = _f.cell_units
-        show_domain_units = _f.domain_units
-        show_temp = _f.temp
+        draft.show_domain_units = _f.domain_units
+        draft.show_temp = _f.temp
         self.show_form = _f.form
         draft.show_form_controls = _f.form_controls
         self.show_form_tiles = _f.form_tiles
-        show_tuning = _f.tuning
+        draft.show_tuning = _f.tuning
         draft.show_optimization = _f.optimization
         draft.show_weighting = _f.weighting
         draft.show_alt_complexity = _f.alt_complexity
@@ -141,19 +137,17 @@ class Resolver:
         draft._lbox_show = _f.lbox and draft._complexity_shown
         draft._cbox_show = _f.cbox and draft._complexity_shown
         draft.show_detempering = _f.detempering
-        show_interest = _f.interest
+        draft.show_interest = _f.interest
         draft.gridded = _f.gridded
         draft.show_quantities = _f.quantities
         draft._decimals = _f.decimals
         draft.show_ebk = _f.ebk
-        show_interval_ratios = _f.interval_ratios
+        draft.show_interval_ratios = _f.interval_ratios
         draft.show_interval_vectors = _f.interval_vectors
         draft.show_math = _f.math
         draft.custom_weights_active = (self.custom_weights is not None
                                       and not service.is_all_interval(self.tuning_scheme)
                                       and not draft.show_math)
-        return (show_counts, show_charts, show_ranges, show_domain_units, show_temp,
-                show_tuning, show_interest, show_interval_ratios)
 
     def _resolve_superspace_dims(self, draft) -> None:
         draft.d = self.state.d
@@ -189,15 +183,14 @@ class Resolver:
         draft.domain_label = "b" if service.domain_has_nonprimes(draft.elements) else "p"
         draft.domain_can_shrink = service.can_shrink_domain(self.state)
 
-    def _resolve_interval_sets(self, draft, generator_tuning, target_override, held_vectors, pending_comma,
-                               show_temp, show_tuning) -> None:
+    def _resolve_interval_sets(self, draft, generator_tuning, target_override, held_vectors, pending_comma) -> None:
         self._resolve_ghost_previews(draft)
         self._resolve_targets(draft, target_override)
         self._resolve_canon_form(draft)
         self._resolve_held(draft, held_vectors)
         self._resolve_tuning(draft, generator_tuning, target_override)
         self._resolve_commas(draft)
-        self._resolve_unchanged(draft, pending_comma, show_temp, show_tuning)
+        self._resolve_unchanged(draft, pending_comma)
         self._resolve_interest(draft)
         self._resolve_ghost_mapped(draft)
         self._resolve_col_ids(draft)
@@ -278,10 +271,10 @@ class Resolver:
         draft.mapped_commas = service.mapped_commas(self.state.mapping, self.state.comma_basis)
         draft.comma_sizes = service.interval_sizes(draft.tun, draft.comma_ratios, draft.elements)
 
-    def _resolve_unchanged(self, draft, pending_comma, show_temp, show_tuning) -> None:
+    def _resolve_unchanged(self, draft, pending_comma) -> None:
         _udata = (service.unchanged_interval_data(self.state, self.held_basis_ratios, draft.tun,
                                                   self.tuning_scheme, draft.elements, self.custom_prescaler)
-                  if (show_temp and show_tuning and self.settings["projection"]) else None)
+                  if (draft.show_temp and draft.show_tuning and self.settings["projection"]) else None)
         draft.show_unchanged = _udata is not None
         draft.nu = len(_udata.basis) if draft.show_unchanged else 0
         if _udata is not None:
@@ -407,8 +400,8 @@ class Resolver:
             tuple((None if _canon_u[j] is None else _canon_u[j][i]) for j in range(draft.nu))
             for i in range(draft.rc))
 
-    def _resolve_projection_data(self, draft, show_tuning) -> None:
-        draft.show_projection = show_tuning and self.settings["projection"]
+    def _resolve_projection_data(self, draft) -> None:
+        draft.show_projection = draft.show_tuning and self.settings["projection"]
         if draft.show_projection:
             for rc in (("mapping", "gens"), ("ss_mapping", "ssgens")):
                 cap = draft.effective_captions.get(rc)
