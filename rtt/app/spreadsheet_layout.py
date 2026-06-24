@@ -182,8 +182,9 @@ class _LayoutMixin:
             self.declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
 
     def _resolve_col_headers(self) -> None:
+        _r = self.resolved
         domain_title = ("domain basis\nelements"
-                        if service.domain_has_nonprimes(self.elements)
+                        if service.domain_has_nonprimes(_r.dims.elements)
                         else "domain\nprimes")
         self.col_header = {"quantities": "interval ratios", "units": "units",
                       "canongens": "canonical\ngenerators", "gens": "generators",
@@ -192,45 +193,46 @@ class _LayoutMixin:
                       "commas": "commas",
                       "held": "held\nintervals", "targets": "target\nintervals",
                       "interest": "other intervals\nof interest"}
-        if self.show_unchanged:
+        if _r.unchanged.shown:
             self.col_header["commas"] = "unrotated\nvector list"
 
     def _define_col_bands(self, show_interval_ratios, show_domain_units, show_temp,
                           show_tuning, show_interest, label_w):
+        _r = self.resolved
         self._resolve_col_headers()
-        self.matlabel_primes_w = ((MATLABEL_W_SS if self.show_superspace else MATLABEL_W)
-                                  if (self.show_header_symbols and show_temp) else 0)
-        self.matlabel_ssprimes_w = MATLABEL_W_SSPRIMES if (self.show_header_symbols and self.show_superspace) else 0
+        self.matlabel_primes_w = ((MATLABEL_W_SS if _r.flags.superspace else MATLABEL_W)
+                                  if (_r.flags.header_symbols and show_temp) else 0)
+        self.matlabel_ssprimes_w = MATLABEL_W_SSPRIMES if (_r.flags.header_symbols and _r.flags.superspace) else 0
         _label_row_present = {"mapping": show_temp, "vectors": self.show_interval_vectors,
-                              "canon": self.show_canon, "projection": self.show_projection,
-                              "prescaling": self._prescaling_shown, "ss_mapping": self.show_superspace,
-                              "ss_vectors": self.show_superspace, "ss_projection": self.show_ss_projection}
+                              "canon": _r.flags.canon, "projection": self.show_projection,
+                              "prescaling": self._prescaling_shown, "ss_mapping": _r.flags.superspace,
+                              "ss_vectors": _r.flags.superspace, "ss_projection": self.show_ss_projection}
         self.matlabel_other_w = {}
-        if self.show_header_symbols:
-            for (rk, ck) in self.row_labels:
+        if _r.flags.header_symbols:
+            for (rk, ck) in _r.labels.row_labels:
                 if ck not in ("primes", "ssprimes") and _label_row_present.get(rk) and (rk, ck) in self.declared_tiles:
                     self.matlabel_other_w[ck] = MATLABEL_W
         self.row_handle_w = (ROW_HANDLE_W + ROW_HANDLE_GAP) if (
-            self.settings.get("drag_to_combine") and show_temp and self.r > 1) else 0
-        self.etpick_w = (ETPICK_W + ETPICK_GAP) if (self.show_presets and show_temp) else 0
+            self.settings.get("drag_to_combine") and show_temp and _r.dims.r > 1) else 0
+        self.etpick_w = (ETPICK_W + ETPICK_GAP) if (_r.flags.presets and show_temp) else 0
         self.size_factor = service.complexity_size_factor(self.tuning_scheme)
         self.size_rows = 1 if self.size_factor else 0
-        self.prescale_rows = self.dL if self.show_superspace else self.d
-        self.all_interval_simplicity_weight = self.all_interval and (
-            bool(self.size_factor) or self.prescaler_is_matrix)
+        self.prescale_rows = _r.dims.dL if _r.flags.superspace else _r.dims.d
+        self.all_interval_simplicity_weight = _r.scalars.all_interval and (
+            bool(self.size_factor) or _r.scalars.prescaler_is_matrix)
         col_bands = (
             ("quantities", COL_W, show_interval_ratios, True),
             ("units", COL_W, show_domain_units, True),
-            ("canongens", 2 * BRACKET_W + self.rc * COL_W + 2 * self.matlabel_gutter_w("canongens"), self.show_canon, True),
-            ("gens", 2 * BRACKET_W + self.r * COL_W + 2 * self.matlabel_gutter_w("gens"), show_temp, True),
-            ("ssgens", 2 * BRACKET_W + self.rL * COL_W, self.show_superspace, True),
-            ("ssprimes", 2 * BRACKET_W + self.dL * COL_W + 2 * self.matlabel_ssprimes_w, self.show_superspace, True),
-            ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.outer_gutter_w("primes"), show_temp, True),
-            ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
-            ("commas", self._commas_band_w(self.nc_shown), show_temp, True),
-            ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
-            ("targets", 2 * BRACKET_W + self.k_shown * COL_W, show_tuning and self.targets_in_use, True),
-            ("interest", 2 * BRACKET_W + self.mi_shown * COL_W, show_interest, True),
+            ("canongens", 2 * BRACKET_W + _r.dims.rc * COL_W + 2 * self.matlabel_gutter_w("canongens"), _r.flags.canon, True),
+            ("gens", 2 * BRACKET_W + _r.dims.r * COL_W + 2 * self.matlabel_gutter_w("gens"), show_temp, True),
+            ("ssgens", 2 * BRACKET_W + _r.dims.rL * COL_W, _r.flags.superspace, True),
+            ("ssprimes", 2 * BRACKET_W + _r.dims.dL * COL_W + 2 * self.matlabel_ssprimes_w, _r.flags.superspace, True),
+            ("primes", 2 * BRACKET_W + _r.dims.d_shown * COL_W + 2 * self.outer_gutter_w("primes"), show_temp, True),
+            ("detempering", 2 * BRACKET_W + _r.dims.r * COL_W, _r.flags.detempering, True),
+            ("commas", self._commas_band_w(_r.dims.nc_shown), show_temp, True),
+            ("held", 2 * BRACKET_W + _r.dims.nh_shown * COL_W, _r.flags.optimization, True),
+            ("targets", 2 * BRACKET_W + _r.dims.k_shown * COL_W, show_tuning and self.targets_in_use, True),
+            ("interest", 2 * BRACKET_W + _r.dims.mi_shown * COL_W, show_interest, True),
         )
         self.node_x = label_w + GAP
         self.node_edge = self.node_x + TOGGLE
@@ -239,24 +241,25 @@ class _LayoutMixin:
 
     def _define_row_bands(self, show_counts, show_interval_ratios, show_domain_units,
                           show_temp, show_tuning):
+        _r = self.resolved
         row_bands = (
             ("counts", ROW_H, show_counts, True, "counts"),
             ("quantities", ROW_H, show_interval_ratios, True, "interval\nratios"),
             ("units", ROW_H, show_domain_units, True, "units"),
-            ("scaling_factors", ROW_H, self.show_unchanged, True, "scaling factors"),
-            ("vectors", self.d * ROW_H, self.show_interval_vectors, True, "interval vectors"),
-            ("canon", self.rc * ROW_H, self.show_canon, True, "canonical mapping"),
-            ("mapping", self.r_shown * ROW_H, show_temp, True, "mapping"),
-            ("ss_vectors", self.dL * ROW_H, self.show_superspace, True, "superspace\ninterval vectors"),
-            ("ss_mapping", self.rL * ROW_H, self.show_superspace, True, "superspace\nmapping"),
-            ("ss_projection", self.dL * ROW_H, self.show_ss_projection, True, "superspace\nprojection"),
-            ("projection", self.d * ROW_H, self.show_projection, True, "projection"),
+            ("scaling_factors", ROW_H, _r.unchanged.shown, True, "scaling factors"),
+            ("vectors", _r.dims.d * ROW_H, self.show_interval_vectors, True, "interval vectors"),
+            ("canon", _r.dims.rc * ROW_H, _r.flags.canon, True, "canonical mapping"),
+            ("mapping", _r.dims.r_shown * ROW_H, show_temp, True, "mapping"),
+            ("ss_vectors", _r.dims.dL * ROW_H, _r.flags.superspace, True, "superspace\ninterval vectors"),
+            ("ss_mapping", _r.dims.rL * ROW_H, _r.flags.superspace, True, "superspace\nmapping"),
+            ("ss_projection", _r.dims.dL * ROW_H, self.show_ss_projection, True, "superspace\nprojection"),
+            ("projection", _r.dims.d * ROW_H, self.show_projection, True, "projection"),
             ("tuning", ROW_H, show_tuning, True, "tuning"),
             ("just", ROW_H, show_tuning, True, "just tuning"),
             ("retune", ROW_H, show_tuning, True, "retuning"),
             ("prescaling", (self.prescale_rows + self.size_rows) * ROW_H, self._prescaling_shown, True, "complexity prescaling"),
             ("complexity", ROW_H, self._complexity_shown, True, "complexity"),
-            ("weight", ROW_H, self.show_weighting, True, "weight"),
+            ("weight", ROW_H, _r.flags.weighting, True, "weight"),
             ("damage", ROW_H, show_tuning, True, "damage"),
         )
         self.present_caption_rows = frozenset(
@@ -327,16 +330,18 @@ class _LayoutMixin:
         self.fanout_y = self.branch_top_y + self.FAN
 
     def _row_int_handle(self, key, folded):
+        _r = self.resolved
         return (key == "vectors" and not folded and self.settings.get("drag_to_combine")
-                and ((self.nc >= 2 and self.col_open("commas"))
-                     or (self.k >= 2 and not self.all_interval and self.col_open("targets"))
-                     or (self.nh >= 2 and self.col_open("held"))
-                     or (self.mi >= 2 and self.col_open("interest"))))
+                and ((_r.dims.nc >= 2 and self.col_open("commas"))
+                     or (_r.dims.k >= 2 and not _r.scalars.all_interval and self.col_open("targets"))
+                     or (_r.dims.nh >= 2 and self.col_open("held"))
+                     or (_r.dims.mi >= 2 and self.col_open("interest"))))
 
     def _compute_row_band(self, key, natural, collapsible, label, tile_extra, show_charts, y) -> RowBand:
+        _r = self.resolved
         folded = f"row:{key}" in self.collapsed
         framed = key in BANDS["frame"].rows and not folded
-        has_matlabel = (self.show_header_symbols and key in BANDS["col_label"].rows and not folded)
+        has_matlabel = (_r.flags.header_symbols and key in BANDS["col_label"].rows and not folded)
         head_default = TOGGLE + 2 * TOGGLE_INSET - PAD
         int_handle = self._row_int_handle(key, folded)
         handle_band = (ROW_HANDLE_W + ROW_HANDLE_GAP) if int_handle else 0
@@ -347,20 +352,20 @@ class _LayoutMixin:
         charted = show_charts and key in BANDS["chart"].rows and not folded and natural == ROW_H
         chart_band = (CHART_H + CHART_GAP) if charted else 0
         cap = self.caption_band(key, folded)
-        sym = BANDS["symbol"].height if ((self.show_symbols or self.show_equiv)
+        sym = BANDS["symbol"].height if ((_r.flags.symbols or _r.flags.equiv)
                                          and key in BANDS["symbol"].rows and not folded) else 0
-        uni = BANDS["units"].height if (self.show_units and key in BANDS["units"].rows and not folded) else 0
-        pre = self.preset_band_h(key) if (((self.show_presets and key in BANDS["preset"].rows)
+        uni = BANDS["units"].height if (_r.flags.units and key in BANDS["units"].rows and not folded) else 0
+        pre = self.preset_band_h(key) if (((_r.flags.presets and key in BANDS["preset"].rows)
                                          or (self.settings["all_interval"] and key == "vectors"))
                                         and not folded) else 0
         schemebtn = (self.control_region_band_h(SCHEME_BTN_SQ)
-                     if (key == "projection" and self.settings["projection"] and not self.show_presets and not folded) else 0)
+                     if (key == "projection" and self.settings["projection"] and not _r.flags.presets and not folded) else 0)
         formctrl = (self.formchooser_band_h(key)
-                    if (self.show_form_controls and not self.show_presets
+                    if (_r.flags.form_controls and not _r.flags.presets
                         and key in BANDS["form_chooser"].rows and not folded) else 0)
-        cpick = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and self.show_presets
+        cpick = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and _r.flags.presets
                                            and self.col_open("commas")
-                                           and (self.nc > 0 or self.pending is not None) and not folded) else 0
+                                           and (_r.dims.nc > 0 or _r.commas.pending is not None) and not folded) else 0
         ptext = self.ptext_band(key, folded)
         sym += BAND_GAP if sym else 0
         cap += BAND_GAP if cap else 0
@@ -380,31 +385,32 @@ class _LayoutMixin:
             chart_top=chart_top, int_handle_top=int_handle_top, matlabel_top=matlabel_top)
 
     def _init_group_geometry(self) -> None:
+        _r = self.resolved
         self.group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
                       "interest": "interest", "held": "held", "detempering": "detempering",
                       "canongens": "cangen", "ssgens": "ssgen", "ssprimes": "ssprime"}
         self.group_left = {"gens": self.gen_left, "primes": self.prime_left, "commas": self.comma_left, "targets": self.target_left,
                       "interest": self.interest_left, "held": self.held_left, "detempering": self.detempering_left,
                       "canongens": self.canongen_left, "ssgens": self.ss_gen_left, "ssprimes": self.ss_prime_left}
-        self.group_n = {"gens": self.r, "primes": self.d_shown, "commas": self.nv_shown,
-                   "targets": self.k_shown,
-                   "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r,
-                   "canongens": self.rc, "ssgens": self.rL, "ssprimes": self.dL}
+        self.group_n = {"gens": _r.dims.r, "primes": _r.dims.d_shown, "commas": _r.dims.nv_shown,
+                   "targets": _r.dims.k_shown,
+                   "interest": _r.dims.mi_shown, "held": _r.dims.nh_shown, "detempering": _r.dims.r,
+                   "canongens": _r.dims.rc, "ssgens": _r.dims.rL, "ssprimes": _r.dims.dL}
         self.group_ratio = {
-            "primes": lambda i: service.element_ratio(self.elements[i]),
-            "commas": lambda i: self.comma_ratios[i] if i < self.nc else self.unchanged_ratios[i - self.nc],
-            "targets": lambda i: self.targets[i],
-            "interest": lambda i: self.interest_ratios[i],
-            "held": lambda i: self.held_ratios[i],
-            "detempering": lambda i: self.gens[i],
-            "ssprimes": lambda i: service.element_ratio(self.superspace_primes[i]),
+            "primes": lambda i: service.element_ratio(_r.dims.elements[i]),
+            "commas": lambda i: _r.commas.ratios[i] if i < _r.dims.nc else _r.unchanged.ratios[i - _r.dims.nc],
+            "targets": lambda i: _r.targets.ratios[i],
+            "interest": lambda i: _r.interest.ratios[i],
+            "held": lambda i: _r.held.ratios[i],
+            "detempering": lambda i: _r.scalars.gens[i],
+            "ssprimes": lambda i: service.element_ratio(_r.dims.superspace_primes[i]),
         }
 
         self.plus_stub_x = {ckey: self.col_plus_x(ckey) for ckey in ("gens", "primes", "commas", "targets", "interest", "held")
                        if self._plus_shows(ckey)}
 
         self.row_plus_y = {}
-        if self.tile_open("vectors", "quantities") and (self.show_nonstandard_domain or self.standard_domain):
-            self.row_plus_y["vectors"] = self.vec_top(self.d_shown) + ROW_H / 2
+        if self.tile_open("vectors", "quantities") and (_r.flags.nonstandard_domain or _r.scalars.standard_domain):
+            self.row_plus_y["vectors"] = self.vec_top(_r.dims.d_shown) + ROW_H / 2
         if self.tile_open("mapping", "quantities") and self.state.n > 0:
-            self.row_plus_y["mapping"] = self.map_top(self.r_shown) + ROW_H / 2
+            self.row_plus_y["mapping"] = self.map_top(_r.dims.r_shown) + ROW_H / 2

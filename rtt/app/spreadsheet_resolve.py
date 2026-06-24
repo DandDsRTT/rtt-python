@@ -441,30 +441,31 @@ class _ResolveMixin:
             for ub in (self.unchanged_basis if self.show_unchanged else ()))
 
     def _resolve_tile_extras(self, show_ranges, show_tuning):
+        _r = self.resolved
         self.gtm_chart = (show_ranges and show_tuning and "row:tuning" not in self.collapsed
                      and self.col_open("gens") and "tile:tuning:gens" not in self.collapsed)
         self.gtm_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if self.gtm_chart else 0
-        self.lbox_ctrl = self._lbox_show and self.col_open("ssprimes" if self.show_superspace else "primes") and not self.show_presets
+        self.lbox_ctrl = self._lbox_show and self.col_open("ssprimes" if _r.flags.superspace else "primes") and not _r.flags.presets
         self.lbox_extra = (RANGE_GAP + self.control_region_band_h(OPTION_BOX_PX + CAPTION_LINE)) if self.lbox_ctrl else 0
         self.cbox_ctrl = self._cbox_show and self.col_open("targets")
-        self.cbox_extra = (RANGE_GAP + self.control_region_band_h(ROW_H + self.ctrl_symbol_h + 3 * CAPTION_LINE)) if self.cbox_ctrl else 0
-        self.opt_ctrl = (self.show_optimization and "row:damage" not in self.collapsed
+        self.cbox_extra = (RANGE_GAP + self.control_region_band_h(ROW_H + _r.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)) if self.cbox_ctrl else 0
+        self.opt_ctrl = (_r.flags.optimization and "row:damage" not in self.collapsed
                     and self.col_open("targets") and "tile:damage:targets" not in self.collapsed)
-        self.mean_damage_caption = "retuning magnitude" if self.all_interval else "power mean"
+        self.mean_damage_caption = "retuning magnitude" if _r.scalars.all_interval else "power mean"
         if self.tuning_optimized:
             self.mean_damage_caption = f"minimized {self.mean_damage_caption}"
         self.opt_cap_lines = _wrap_lines(self.mean_damage_caption, OPT_MEAN_DAMAGE_W) if self.opt_ctrl else 1
-        self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + self.ctrl_symbol_h
+        self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + _r.scalars.ctrl_symbol_h
                       + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
-        self.show_approach = (service.domain_has_nonprimes(self.elements)
+        self.show_approach = (service.domain_has_nonprimes(_r.dims.elements)
                           and "row:damage" not in self.collapsed and self.col_open("targets")
                           and "tile:damage:targets" not in self.collapsed)
         self.approach_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H) if self.show_approach else 0
-        self.slope_ctrl = (self.show_weighting
+        self.slope_ctrl = (_r.flags.weighting
                       and "row:weight" not in self.collapsed
                       and self.col_open("targets") and "tile:weight:targets" not in self.collapsed)
         self.slope_locked = self.slope_ctrl and (service.is_all_interval(self.tuning_scheme)
-                                                 or self.custom_weights_active)
+                                                 or _r.scalars.custom_weights_active)
         self.slope_extra = (RANGE_GAP + self.control_region_band_h(PRESET_H + CAPTION_LINE)) if self.slope_ctrl else 0
         return {
             "tuning": self.gtm_extra,
@@ -475,26 +476,27 @@ class _ResolveMixin:
         }
 
     def _resolve_ptext_strings(self, generator_tuning, target_override) -> None:
+        _r = self.resolved
         self.ptext_strings = (service.plain_text_values(self.state, self.tuning_scheme, self.target_spec,
-                                                   held=self.held, interest=self.interest,
+                                                   held=_r.held.vectors, interest=_r.interest.vectors,
                                                    generator_tuning=generator_tuning,
                                                    target_override=target_override,
                                                    nonprime_approach=self.nonprime_approach,
-                                                   superspace=self.show_superspace,
+                                                   superspace=_r.flags.superspace,
                                                    superspace_generator_override=(
                                                        self.superspace_generator_tuning
-                                                       if self.show_superspace_generators else None),
-                                                   consolidate_v=self.show_unchanged,
+                                                       if _r.flags.superspace_generators else None),
+                                                   consolidate_v=_r.unchanged.shown,
                                                    held_basis_ratios=self.held_basis_ratios,
-                                                   decimals=self._decimals,
+                                                   decimals=_r.flags.decimals,
                                                    custom_prescaler=self.custom_prescaler,
                                                    derived=service.DerivedQuantities(
-                                                       targets=self.targets, tun=self.tun,
-                                                       target_weights=self.target_weights,
-                                                       target_sizes=self.target_sizes,
-                                                       comma_sizes=self.comma_sizes,
+                                                       targets=_r.targets.ratios, tun=_r.tuning.tun,
+                                                       target_weights=_r.tuning.target_weights,
+                                                       target_sizes=_r.targets.sizes,
+                                                       comma_sizes=_r.commas.sizes,
                                                        superspace_tun=(self.superspace_tun()
-                                                                       if self.show_superspace else None)))
-                         if self.show_ptext else {})
-        if not self.show_ebk:
+                                                                       if _r.flags.superspace else None)))
+                         if _r.flags.ptext else {})
+        if not _r.flags.ebk:
             self.ptext_strings = {k: service.ebk_to_simple_matrix(v) for k, v in self.ptext_strings.items()}
