@@ -24,13 +24,13 @@ in lockstep with the refactors so the gate stays green at every step.
 
 | Metric | Now | Goal | Enforced by |
 |---|---|---|---|
-| Cyclomatic complexity | ≤ 10 | ≤ 5 | ruff `C901` |
+| Cyclomatic complexity | ≤ 10 | ≤ 5 | ruff |
 | Function length (lines) | ≤ 50 | ≤ 10 | `tools/quality_checks.py` |
 | File length (lines) | ≤ 500 | ≤ 100 | `tools/quality_checks.py` |
-| Arguments per function | ≤ 4 | ≤ 4 | ruff `PLR0913` |
-| Statements per function | ≤ 50 | ≤ 10 | ruff `PLR0915` |
-| Branches per function | ≤ 12 | ≤ 8 | ruff `PLR0912` |
-| Nesting depth | ≤ 4 | ≤ 3 | ruff `PLR1702` |
+| Arguments per function | ≤ 4 | ≤ 4 | ruff |
+| Statements per function | ≤ 50 | ≤ 10 | ruff |
+| Branches per function | ≤ 12 | ≤ 8 | ruff |
+| Nesting depth | ≤ 4 | ≤ 3 | ruff |
 | Efferent coupling (fan-out) | ≤ 18 | ↓ | `tools/quality_checks.py` |
 | Class cohesion (LCOM4) | ≤ 10 | ↓ | `tools/quality_checks.py` |
 | Depth of inheritance (DIT) | ≤ 2 | ≤ 2 | `tools/quality_checks.py` |
@@ -135,14 +135,14 @@ The gate is being driven to green in phases (tooling first):
    (relaxed per-file for the math/render-dense modules), CC ≤ 10, and the architectural
    metrics (efferent coupling, LCOM4, DIT, NOC). Every logic module is ≤ 500 lines; the
    only files over the cap are the three irreducible data modules listed above, exempt by
-   `FILE_LENGTH_EXEMPT`. `E501` and `ruff format` on the dense view modules are deferred
-   together (see the section above) — that is the only part of the ruff surface not yet
-   green, by design.
+   `FILE_LENGTH_EXEMPT`. The line-length limit and `ruff format` on the dense view modules
+   are deferred together (see the section above) — that is the only part of the ruff surface
+   not yet green, by design.
    - **The ratchet beyond 50/500 — files 500 → 250 → 100 and functions 50 → 25 → 10 — is
      the deliberately-deferred "later" campaign** ("50/500 now, 10/100 later"). Do NOT
      lower `MAX_FILE_LINES` / `MAX_FUNCTION_LINES` (or the ruff caps) without an explicit
      go-ahead: that campaign also decomposes the dense view modules enough to re-enable
-     `E501` + `ruff format` on them, so it is a coordinated effort, not a knob to nudge.
+     line-length and `ruff format` on them, so it is a coordinated effort, not a knob to nudge.
 
 ### Phase 3 file decomposition — architecture, not line-count chopping
 
@@ -181,7 +181,7 @@ applies. Each exemption is listed here with its justification:
   along, only an import hop. A test pins the exempt set to exactly these three data modules
   (`tests/tools/unit/test_quality_checks.py`), so a logic module can't be slipped in.
 
-### E501 (line length) + `ruff format` are deferred *together, by design*
+### The line-length limit + `ruff format` are deferred *together, by design*
 
 The long lines split into groups, none of which is a mechanical reflow:
 
@@ -190,19 +190,20 @@ The long lines split into groups, none of which is a mechanical reflow:
 - **Strings** — mostly the EBK/notation lines that must **never wrap** (CLAUDE.md) and
   tooltip help text. These resolve only by value-preserving implicit-string-concatenation
   splits, done with the notation in view.
-- **Code** in the dense view modules — the cell/SVG-assembly lines. Here E501 and the
+- **Code** in the dense view modules — the cell/SVG-assembly lines. Here line-length and the
   length caps **collide**: wrapping these lines to ≤100 chars (what `ruff format` does)
   pushes the module past the 500-line file cap (or a builder past the 50-line function
-  cap). You cannot satisfy line-length **and** length there until the code is decomposed
-  further — which is the parked 500→250→100 campaign, not this milestone.
+  cap). You cannot satisfy line-length **and** module/function length there until the code is
+  decomposed further — which is the parked 500→250→100 campaign, not this milestone.
 
-Because of that collision, **E501 and `ruff format` are deferred in lockstep**, so the gate
-goes green on everything that *is* in scope:
+Because of that collision, **line-length and `ruff format` are deferred in lockstep**, so the
+gate goes green on everything that *is* in scope:
 
-- **`E501` is in the ruff `ignore` list** (`pyproject.toml`) — line-length is not gated yet.
-- **`[tool.ruff.format].exclude`** lists the render/data-dense view modules whose canonical
-  format would wrap past a cap (`grid_tables`, `tooltips`, `page_assets`, `rendering`, the
-  `spreadsheet_*` emit/geometry/layout/resolve/brackets/controls/decorations/models family).
+- The **line-length limit is on ruff's ignore list** (`pyproject.toml`) — not gated yet.
+- The format step's **own exclude list** (`[tool.ruff.format]` in `pyproject.toml`) names the
+  render/data-dense view modules whose canonical format would wrap past a cap (`grid_tables`,
+  `tooltips`, `page_assets`, `rendering`, the `spreadsheet_*` emit/geometry/layout/resolve/
+  brackets/controls/decorations/models family).
   **Every other module IS `ruff format`-checked** — formatting is enforced on the library,
   service, and the non-dense app code; it is only deferred where it fights a length cap.
 
