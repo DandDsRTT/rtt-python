@@ -354,7 +354,11 @@ class _Reconciler:
             return "?/?"
         if "/" in num:
             return num
-        den = str(self.cells[cid].value.den_input.value).strip() if self.cells[cid].value.den_input else ""
+        den = (
+            str(self.cells[cid].value.den_input.value).strip()
+            if self.cells[cid].value.den_input
+            else ""
+        )
         return num if den in ("", "1", "?") else f"{num}/{den}"
 
     def decimal_value(self, cid: str) -> str:

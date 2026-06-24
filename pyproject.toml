@@ -53,6 +53,9 @@ max-returns = 6
 
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401", "F403", "F405"]
+# The read-only handle sentinel's __setattr__ override has a protocol-mandated (self, name, value)
+# signature but only uses `name` to build its rejection message — self/value are unused by design.
+"rtt/app/_recon_handles.py" = ["ARG001"]
 "tests/**/*.py" = ["ARG", "PLR0913", "PLR0915", "C901", "PLR0912", "E501", "SIM", "B011"]
 # args<=4 is the default, but the math/geometry/compute-dense modules legitimately take
 # several scalar/array/flag params; bundling them into objects obscures rather than clarifies

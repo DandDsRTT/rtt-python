@@ -209,7 +209,9 @@ class _ReconValueCells:
         else:
             self.r.cells[cb.id].value.input.value = text
         if spec.pending:
-            target = self.r.entities[cb.id].el if spec.ratio_allowed else self.r.cells[cb.id].value.input
+            target = (
+                self.r.entities[cb.id].el if spec.ratio_allowed else self.r.cells[cb.id].value.input
+            )
             target.classes(
                 add="rtt-pending" if cb.pending else "", remove="" if cb.pending else "rtt-pending"
             )
