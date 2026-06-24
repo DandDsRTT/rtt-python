@@ -151,6 +151,14 @@ class Flags:
     prescaling_shown: bool
     lbox_show: bool
     cbox_show: bool
+    counts: bool
+    charts: bool
+    ranges: bool
+    domain_units: bool
+    temp: bool
+    tuning: bool
+    interest: bool
+    interval_ratios: bool
 
 
 @dataclass(frozen=True)
@@ -366,6 +374,14 @@ def _flags(b) -> Flags:
         prescaling_shown=b._prescaling_shown,
         lbox_show=b._lbox_show,
         cbox_show=b._cbox_show,
+        counts=b.show_counts,
+        charts=b.show_charts,
+        ranges=b.show_ranges,
+        domain_units=b.show_domain_units,
+        temp=b.show_temp,
+        tuning=b.show_tuning,
+        interest=b.show_interest,
+        interval_ratios=b.show_interval_ratios,
     )
 
 
