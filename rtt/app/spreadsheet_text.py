@@ -33,13 +33,18 @@ def _count_sym(sym: str) -> str:
 
 
 def _pretransform_label(text: str) -> str:
-    for old, new in (("prescaled", "pretransformed"), ("prescaling", "pretransforming"),
-                     ("prescaler", "pretransformer")):
+    for old, new in (
+        ("prescaled", "pretransformed"),
+        ("prescaling", "pretransforming"),
+        ("prescaler", "pretransformer"),
+    ):
         text = text.replace(old, new)
     return text
 
 
-def _prescaler_col_labels(letter: str, show_equiv: bool, all_interval: bool, show_superspace: bool = False) -> dict:
+def _prescaler_col_labels(
+    letter: str, show_equiv: bool, all_interval: bool, show_superspace: bool = False
+) -> dict:
     def norm(inner):
         return lambda i: f"‖{inner(i)}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}"
 
@@ -80,7 +85,9 @@ def _math_expr(operand: str, value: float, show_value: bool, decimals: bool = Tr
     return f"{expr}\n= {service.cents(value, decimals)}" if show_value else expr
 
 
-def _prescale_math_expr(coeff, prime_term: str, value: float, show_value: bool, decimals: bool = True) -> str:
+def _prescale_math_expr(
+    coeff, prime_term: str, value: float, show_value: bool, decimals: bool = True
+) -> str:
     if coeff == 1:
         expr = prime_term
     elif coeff == -1:
@@ -102,7 +109,7 @@ def _power_mean(damages, power: float) -> float:
         return 0.0
     if power == float("inf"):
         return max(ds)
-    return (sum(d ** power for d in ds) / len(ds)) ** (1 / power)
+    return (sum(d**power for d in ds) / len(ds)) ** (1 / power)
 
 
 def _title_w(title: str) -> int:
@@ -115,8 +122,7 @@ def _fold_glyph(is_collapsed: bool) -> str:
 
 
 def _foldable_ids(cells) -> set:
-    return {c.id.split("toggle:", 1)[1] for c in cells
-            if c.kind in ("rowtoggle", "coltoggle")}
+    return {c.id.split("toggle:", 1)[1] for c in cells if c.kind in ("rowtoggle", "coltoggle")}
 
 
 def toggle_all_collapsed(layout, collapsed) -> set:
@@ -126,8 +132,19 @@ def toggle_all_collapsed(layout, collapsed) -> set:
     return set(collapsed) | foldable
 
 
-_CONTENT_FIELDS = ("kind", "text", "values", "ranges", "indicator", "indicator_label",
-                   "pending", "checked", "blank", "unit", "underlines")
+_CONTENT_FIELDS = (
+    "kind",
+    "text",
+    "values",
+    "ranges",
+    "indicator",
+    "indicator_label",
+    "pending",
+    "checked",
+    "blank",
+    "unit",
+    "underlines",
+)
 
 
 def _cell_content(cell: CellBox) -> tuple:
@@ -136,15 +153,18 @@ def _cell_content(cell: CellBox) -> tuple:
 
 def changed_cell_ids(old: Layout, new: Layout) -> frozenset:
     before = {c.id: _cell_content(c) for c in old.cells}
-    return frozenset(c.id for c in new.cells
-                     if c.kind in RINGABLE_KINDS
-                     and (c.id not in before or before[c.id] != _cell_content(c)))
+    return frozenset(
+        c.id
+        for c in new.cells
+        if c.kind in RINGABLE_KINDS and (c.id not in before or before[c.id] != _cell_content(c))
+    )
 
 
 def removed_cell_ids(old: Layout, new: Layout) -> frozenset:
     after = {c.id for c in new.cells}
-    return frozenset(c.id for c in old.cells
-                     if c.kind in RINGABLE_KINDS and not c.pending and c.id not in after)
+    return frozenset(
+        c.id for c in old.cells if c.kind in RINGABLE_KINDS and not c.pending and c.id not in after
+    )
 
 
 def _match_tokens_by_key(tokens, prev, keys) -> list[bool]:

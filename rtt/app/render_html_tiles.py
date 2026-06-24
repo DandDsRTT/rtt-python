@@ -156,7 +156,7 @@ def _tile_preset_html() -> str:
 
 
 _GENERAL_PART_BUILDERS = {
-    "gridded_values": lambda: _tile_grid_frame_html(),
+    "gridded_values": _tile_grid_frame_html,
     "math_expressions": lambda: _math_html(_TILE_MATH),
     "quantities": lambda: f'<span class="rtt-stacked-main">{_cents_parts(_TILE_VALUE)[0]}</span>',
     "decimals": lambda: f'<span class="rtt-stacked-sub">.{_cents_parts(_TILE_VALUE)[1]}</span>',
@@ -168,8 +168,8 @@ _GENERAL_PART_BUILDERS = {
     "units": lambda: f'<span class="rtt-units-pre">units: </span>{_units_html(_TILE_UNITS)}',
     "cell_units": lambda: _units_html(_TILE_UNITS),
     "plain_text_values": lambda: _math_html(_TILE_PTEXT),
-    "presets": lambda: _tile_preset_html(),
-    "charts": lambda: _example_chart(),
+    "presets": _tile_preset_html,
+    "charts": _example_chart,
     "drag_to_combine": lambda: (
         '<span class="material-icons" style="color:#444">drag_indicator</span>'
     ),

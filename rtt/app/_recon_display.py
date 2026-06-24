@@ -150,7 +150,9 @@ class _ReconDisplayCells:
             self.r.cells[cb.id].html.set_content(
                 f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}"
             )
-            self.r.cells[cb.id].html.style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
+            self.r.cells[cb.id].html.style(
+                f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px"
+            )
             return
         if cb.id == "ptext:vectors:targets":
             targets = ed.target_override or service.target_interval_set(
@@ -161,7 +163,9 @@ class _ReconDisplayCells:
         else:
             committed, pending = ed.state.comma_basis, ed.pending_comma
         prefix, draft, suffix = squared(*service.vector_list_pending_text(committed, pending), True)
-        self.r.cells[cb.id].html.set_content(f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
+        self.r.cells[cb.id].html.set_content(
+            f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}"
+        )
         self.r.cells[cb.id].html.style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
 
     def _build_mathexpr(self, cb: spreadsheet.CellBox, _wrap) -> None:

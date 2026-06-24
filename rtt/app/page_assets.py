@@ -1,77 +1,30 @@
 from __future__ import annotations
 
-import asyncio
 import base64
 import json
 import logging
-import math
-import os
-import sys
 import zlib
 from collections.abc import Callable
 from dataclasses import dataclass
-from html import escape as _escape
 from pathlib import Path
-from types import SimpleNamespace
-from typing import ClassVar, NamedTuple
+from typing import NamedTuple
 
-from nicegui import app, background_tasks, helpers, ui
+from nicegui import app, helpers, ui
 
 from rtt.app import (
-    ids,
-    presets,
     service,
     spreadsheet,
     spreadsheet_constants,
-    spreadsheet_text,
     tooltips,
 )
-from rtt.app import settings as show_settings
-from rtt.app.editor import Editor
 from rtt.app.marks import (
     BR_COLOR,
     PENDING_COLOR,
-    ebk_svg,
 )
 from rtt.app.render_html import (
-    _FOLD_GLYPH,
-    _TILE_CELL,
-    _TILE_CELL_X,
-    _TILE_CELL_Y,
-    _TILE_FRAME_H,
-    _TILE_FRAME_W,
-    _TILE_MATH,
-    _bar_chart,
-    _block_panes,
-    _bold_units,
-    _cents_parts,
-    _control_svg,
-    _digit_fit_font,
-    _example_html,
-    _fit_font,
-    _freeze_container,
-    _general_part_html,
-    _gentuning_parts,
-    _limit_text,
-    _line_style,
-    _math_html,
-    _mathexpr_html,
     _mode_svg,
     _option_box_svg,
-    _parse_int,
-    _power_parts,
-    _ptext_font,
-    _range_chart,
-    _ratio_font,
-    _ratio_parts,
-    _select_props,
-    _tile_fold_html,
-    _tile_name_pieces,
-    _underline_html,
-    _units_font,
-    _units_html,
     _wave_svg,
-    _wheel_step,
 )
 
 _log = logging.getLogger(__name__)

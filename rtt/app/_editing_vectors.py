@@ -67,7 +67,9 @@ class _VectorEdits:
         cell_id = spec.cell_id
         count = spec.count()
         if len(toks) != count or any(
-            self.page.rec.handles(cell_id(toks[i], p)).input is None for i in range(count) for p in range(d)
+            self.page.rec.handles(cell_id(toks[i], p)).input is None
+            for i in range(count)
+            for p in range(d)
         ):
             self._finish_edit(preview, service.IGNORE)
             return
@@ -93,7 +95,11 @@ class _VectorEdits:
             return
         r = len(self.page.editor.state.mapping)
         rc = len(service.canonical_mapping(self.page.editor.state.mapping))
-        if any(self.page.rec.handles(ids.form_cell(i, j)).input is None for i in range(r) for j in range(rc)):
+        if any(
+            self.page.rec.handles(ids.form_cell(i, j)).input is None
+            for i in range(r)
+            for j in range(rc)
+        ):
             if preview:
                 self.page.gestures.edit_candidate(None)
             return
@@ -127,11 +133,18 @@ class _VectorEdits:
         if self.page.building:
             return
         d, r = self.page.editor.state.d, self.page.editor.state.r
-        if any(self.page.rec.handles(ids.unchanged_cell(j, p)).input is None for j in range(r) for p in range(d)):
+        if any(
+            self.page.rec.handles(ids.unchanged_cell(j, p)).input is None
+            for j in range(r)
+            for p in range(d)
+        ):
             self._finish_edit(preview, service.IGNORE)
             return
         vectors = [
-            [_parse_int(self.page.rec.cells[ids.unchanged_cell(j, p)].input.value) for p in range(d)]
+            [
+                _parse_int(self.page.rec.cells[ids.unchanged_cell(j, p)].input.value)
+                for p in range(d)
+            ]
             for j in range(r)
         ]
         if any(v is None for vec in vectors for v in vec):
@@ -144,7 +157,9 @@ class _VectorEdits:
         except (ValueError, ZeroDivisionError, ArithmeticError):
             self._finish_edit(preview, service.reject(_INVALID_UNCHANGED))
             return
-        self._finish_edit(preview, service.accept(lambda: self.page.editor.set_unchanged_basis(ratios)))
+        self._finish_edit(
+            preview, service.accept(lambda: self.page.editor.set_unchanged_basis(ratios))
+        )
 
     @cb_method
     def on_interest_change(self, preview=False):
@@ -201,11 +216,19 @@ class _VectorEdits:
             }[group](vector)
         elif group == "comma":
             self._replace_interval_vector(
-                group, tok, vector, self.page.editor.state.comma_basis, self.page.editor.edit_comma_basis
+                group,
+                tok,
+                vector,
+                self.page.editor.state.comma_basis,
+                self.page.editor.edit_comma_basis,
             )
         elif group == "interest":
             self._replace_interval_vector(
-                group, tok, vector, self.page.editor.interest_vectors, self.page.editor.set_interest_vectors
+                group,
+                tok,
+                vector,
+                self.page.editor.interest_vectors,
+                self.page.editor.set_interest_vectors,
             )
         elif group == "held":
             self._replace_interval_vector(

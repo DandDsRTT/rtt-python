@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from rtt.app.layout import Block, CellBox, Layout, Line
 from rtt.app.spreadsheet_brackets import _BracketsMixin
+from rtt.app.spreadsheet_closed_form import _ClosedFormMixin
 from rtt.app.spreadsheet_constants import (
     GAP,
     GRIP_BAND,
@@ -26,6 +27,7 @@ class _GridBuilder(
     _ResolveMixin,
     _LayoutMixin,
     _GeometryMixin,
+    _ClosedFormMixin,
     _EmitMatrixMixin,
     _EmitMappingMixin,
     _EmitVectorsMixin,
@@ -42,15 +44,25 @@ class _GridBuilder(
 
         self._emit_all()
 
-        title_right = max((c.x + c.w / 2 + _title_w(c.text) / 2 for c in self.cells if c.kind == "colheader"),
-                          default=self.total_w)
+        title_right = max(
+            (c.x + c.w / 2 + _title_w(c.text) / 2 for c in self.cells if c.kind == "colheader"),
+            default=self.total_w,
+        )
         right_overhang = max(0.0, title_right - self.total_w)
 
-        return Layout(self.total_w, self.total_h, tuple(self.lines), tuple(self.blocks), tuple(self.cells),
-                      freeze_x=self.node_edge + GAP - PAD, freeze_y=self.branch_top_y + GAP + GRIP_BAND - PAD,
-                      right_overhang=right_overhang, identities=self._col_ids,
-                      approach_box=self.approach_box,
-                      pretransform=bool(self.size_factor) or self.prescaler_is_matrix)
+        return Layout(
+            self.total_w,
+            self.total_h,
+            tuple(self.lines),
+            tuple(self.blocks),
+            tuple(self.cells),
+            freeze_x=self.node_edge + GAP - PAD,
+            freeze_y=self.branch_top_y + GAP + GRIP_BAND - PAD,
+            right_overhang=right_overhang,
+            identities=self._col_ids,
+            approach_box=self.approach_box,
+            pretransform=bool(self.size_factor) or self.prescaler_is_matrix,
+        )
 
     def _emit_all(self) -> None:
         self._emit_headers()
@@ -97,4 +109,6 @@ def build(state, settings=None, collapsed=None, **inputs) -> Layout:
 
 
 def resolve(state, settings=None, collapsed=None, **inputs) -> Resolved:
-    return _GridBuilder(state, settings=settings, collapsed=collapsed, resolve_only=True, **inputs).resolved
+    return _GridBuilder(
+        state, settings=settings, collapsed=collapsed, resolve_only=True, **inputs
+    ).resolved

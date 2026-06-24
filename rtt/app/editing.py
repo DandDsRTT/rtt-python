@@ -282,7 +282,9 @@ class EditController:
             return
         self.page.gestures.end_chooser_gesture()
         num, sel = self.page.rec.cells["preset:target"].select
-        out = service.resolve_target_limit(sel.value, num.value, self.page.editor.state.domain_basis)
+        out = service.resolve_target_limit(
+            sel.value, num.value, self.page.editor.state.domain_basis
+        )
         # a non-number rejects (toast + re-render restores the loopback-controlled field); an even OLD
         # limit accepts but warns; a valid limit accepts; an unrealizable spec is silently ignored.
 

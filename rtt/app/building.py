@@ -6,10 +6,29 @@ from html import escape as _escape
 
 from nicegui import ui
 
+from rtt.app import settings as show_settings
 from rtt.app import (
     tooltips,
 )
-from rtt.app import settings as show_settings
+from rtt.app.page_assets import (
+    _AUDIO_GLYPHS,
+    _AUDIO_JS,
+    _CSS,
+    _DECIMAL_JS,
+    _FRACTION_JS,
+    _FREEZE_JS,
+    _GENERAL_TILE_LINES,
+    _GUIDE_JS,
+    _STATE_PARAM,
+    _TABNAV_JS,
+    _TILE_FONT,
+    _TOOLTIP_DELAY_MS,
+    _TOUR_JS,
+    _TOUR_STEPS,
+    _ZOOM_JS,
+    _audio_bank,
+    _encode_state,
+)
 from rtt.app.render_html import (
     _TILE_CELL,
     _TILE_CELL_X,
@@ -22,27 +41,6 @@ from rtt.app.render_html import (
     _general_part_html,
     _tile_fold_html,
     _tile_name_pieces,
-)
-
-
-from rtt.app.page_assets import (
-    _TOOLTIP_DELAY_MS,
-    _STATE_PARAM,
-    _encode_state,
-    _AUDIO_GLYPHS,
-    _AUDIO_JS,
-    _FREEZE_JS,
-    _FRACTION_JS,
-    _DECIMAL_JS,
-    _TABNAV_JS,
-    _TOUR_JS,
-    _TOUR_STEPS,
-    _CSS,
-    _GENERAL_TILE_LINES,
-    _TILE_FONT,
-    _audio_bank,
-    _ZOOM_JS,
-    _GUIDE_JS,
 )
 
 _log = logging.getLogger(__name__)
@@ -163,7 +161,9 @@ class PageBuilder:
 
     def _arm_history_previews(self) -> None:
         def arm(btn, can, op):
-            btn.on("mouseenter", lambda _=None: self.page.gestures.control_hover(op) if can() else None)
+            btn.on(
+                "mouseenter", lambda _=None: self.page.gestures.control_hover(op) if can() else None
+            )
             btn.on("mouseleave", lambda _=None: self.page.gestures.control_unhover())
 
         arm(self.page.refs["undo"], lambda: self.page.editor.can_undo, self.page.editor.undo)
@@ -228,7 +228,9 @@ class PageBuilder:
             if value is None:
                 self.page.gestures.control_unhover()
                 return
-            self.page.gestures.control_hover(lambda a=value: self.page.editor.set_nonprime_basis_approach(a))
+            self.page.gestures.control_hover(
+                lambda a=value: self.page.editor.set_nonprime_basis_approach(a)
+            )
 
         self.page.refs["approach"] = (
             ui.element("div").classes("rtt-approach rtt-rangemode").mark("approach")
@@ -425,9 +427,9 @@ class PageBuilder:
 
     def toggle_drawer(self):
         self.drawer_open = not self.drawer_open
-        self.page.panelgroup.classes(add="rtt-open") if self.drawer_open else self.page.panelgroup.classes(
-            remove="rtt-open"
-        )
+        self.page.panelgroup.classes(
+            add="rtt-open"
+        ) if self.drawer_open else self.page.panelgroup.classes(remove="rtt-open")
 
     def _pane_chrome(self):
         ui.button(icon="menu", on_click=self.toggle_drawer, color=None).props("flat dense").classes(
