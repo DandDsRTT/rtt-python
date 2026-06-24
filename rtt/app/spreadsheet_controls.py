@@ -238,7 +238,7 @@ class _ControlsMixin:
 
     def _filter_gridded_quantities(self) -> None:
         _r = self.resolved
-        if not self.gridded:
+        if not _r.flags.gridded:
             self.cells = [cb for cb in self.cells if cb.kind not in GRIDDED_KINDS]
         elif not _r.flags.quantities:
             self.cells = [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb

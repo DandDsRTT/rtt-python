@@ -107,9 +107,9 @@ class _GeometryMixin:
     def _control_floor(self, key: str):
         _r = self.resolved
         floor = 0
-        if key == ("ssprimes" if _r.flags.superspace else "primes") and self._lbox_show:
+        if key == ("ssprimes" if _r.flags.superspace else "primes") and _r.flags.lbox_show:
             floor = PBOX_W if _r.flags.presets else LBOX_DIM_W + 2 * BOX_INNER
-        if key == "targets" and self._cbox_show:
+        if key == "targets" and _r.flags.cbox_show:
             cbox_w = CBOX_W if _r.flags.presets else CBOX_NODROP_W
             floor = max(floor, cbox_w + 2 * BOX_INNER)
         if key == "targets" and _r.flags.presets and self.settings["all_interval"]:
@@ -240,7 +240,7 @@ class _GeometryMixin:
 
     def cell_unit(self, rkey: str, ckey: str, *, gen=None, prime=None, elem=None):
         _r = self.resolved
-        if not self.show_cell_units:
+        if not _r.flags.cell_units:
             return ""
         u = self.tile_unit(rkey, ckey)
         superspace = rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")
