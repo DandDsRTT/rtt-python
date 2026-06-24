@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from nicegui import ui
-
 from rtt.app import (
     ids,
     service,
@@ -86,29 +84,21 @@ class _VectorEdits:
             for i in range(r)
             for j in range(rc)
         ):
-            if preview:
-                self.page.gestures.edit_candidate(None)
+            self.e._apply_outcome(service.IGNORE, None, preview=preview)
             return
         rows = [
             [_parse_int(self.page.rec.cells[ids.form_cell(i, j)].value.input.value) for j in range(rc)]
             for i in range(r)
         ]
         if any(v is None for row in rows for v in row):
-            if preview:
-                self.page.gestures.edit_candidate(None)
+            self.e._apply_outcome(service.IGNORE, None, preview=preview)
             return
         if service.mapping_from_form_matrix(self.page.editor.state.mapping, rows) is None:
-            if preview:
-                self.page.gestures.edit_candidate(None)
-                return
-            ui.notify(_INVALID_FORM, type="negative", position="top")
-            self.page.renderer.render()
+            self.e._apply_outcome(service.reject(_INVALID_FORM), None, preview=preview)
             return
-        if preview:
-            self.page.gestures.edit_candidate(lambda: self.page.editor.edit_form_matrix(rows))
-            return
-        self.page.editor.edit_form_matrix(rows)
-        self.page.renderer.request_render()  # a form change re-stores the mapping (a new generating set) — render off the loop
+        self.e._apply_outcome(
+            service.accept(), lambda: self.page.editor.edit_form_matrix(rows), preview=preview
+        )
 
     @cb_method
     def on_comma_change(self, preview=False):
