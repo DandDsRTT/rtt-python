@@ -205,20 +205,20 @@ class Editor:
     def effective_generator_tuning(self) -> tuple[float, ...] | None:
         return self._view.effective_generator_tuning()
 
-    def _optimum_generator_tuning(self) -> tuple[float, ...]:
+    def optimum_generator_tuning(self) -> tuple[float, ...]:
         return self._view.optimum_generator_tuning()
 
-    def _optimum_superspace_generator_tuning(self) -> tuple[float, ...]:
+    def optimum_superspace_generator_tuning(self) -> tuple[float, ...]:
         return self._view.optimum_superspace_generator_tuning()
 
-    def _displayed_retuning_map(self) -> tuple[float, ...] | None:
-        return self._view._displayed_retuning_map()
+    def displayed_retuning_map(self) -> tuple[float, ...] | None:
+        return self._view.displayed_retuning_map()
 
-    def _current_targets(self) -> list[str]:
+    def current_targets(self) -> list[str]:
         return self._doc.current_targets()
 
-    def _list_vectors(self, name: str) -> list[tuple[int, ...]]:
-        return self._intervals._list_vectors(name)
+    def list_vectors(self, name: str) -> list[tuple[int, ...]]:
+        return self._intervals.list_vectors(name)
 
     def layout(self, prev_ids=None, preview_remove=None):
         return editor_layout.build(self._doc, self._view, prev_ids, preview_remove)
