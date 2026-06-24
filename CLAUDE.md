@@ -226,6 +226,21 @@ gh pr merge --auto                 # re-enqueue; the prior auto-merge was droppe
 Resolve conflicts inside the rebase exactly as before (see the git section below) — never reset to
 escape them — then re-arm the watcher above.
 
+**Clean up your branch once the PR is terminal.** A `claude/<name>` branch is throwaway — it exists
+only to carry one PR. So as the final step after the PR reaches a terminal state (**merged**, or you
+**closed** it), delete its **remote** branch so the remote doesn't fill up with dead `claude/*`
+heads. Do it idempotently — the merge queue may already have auto-deleted the head branch on merge:
+
+```bash
+git ls-remote --exit-code origin "$br" >/dev/null 2>&1 \
+  && git push origin --delete "$br"          # $br = your claude/<name>; skip if already gone
+```
+
+Don't try to delete the **local** branch or tear down the **worktree** you're running in — you're
+checked out on that branch, and the worktree is your live workspace; leaving those for the user /
+orchestrator to reap is correct. Cleanup is the remote branch only, and only after terminal — never
+delete a branch whose PR is still open or in the queue.
+
 **The user refreshes their own 8137 app.** Landing now happens on the remote `main`, not the local
 main checkout, so the user's `python app.py` on 8137 no longer auto-updates when you land — that is
 **by design**. The user pulls when they want to see new work (`git -C <main-checkout> pull`), or
