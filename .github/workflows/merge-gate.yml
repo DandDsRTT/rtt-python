@@ -1,15 +1,16 @@
-name: merge gate (full render suite)
+name: merge gate (full suite)
 
-# Visible, un-spoofable backstop to the local merge protocol: re-run the WHOLE suite
-# — including the 171 in-process page-render tests — on every push to main and on PRs
-# targeting it. The local green-gate guard (bin/merge-guard-hook) makes an ungated
-# red web change impossible to LAND; this makes it impossible to land UNNOTICED — if a
-# red tree ever reaches main, this job goes red where everyone can see it.
+# The merge queue's required check. The queue builds the candidate merge of a PR onto the
+# current main, runs the WHOLE suite — including the in-process page-render tests — on that
+# candidate, and fast-forwards main only when this is green. So a red tree can never land, and
+# what lands is exactly what was validated (branch + the main it merges onto). Also runs on PRs
+# for early feedback and on push to main as a visible post-merge backstop.
 
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [main]
+  merge_group:
+  push:
     branches: [main]
 
 concurrency:
@@ -29,6 +30,4 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Run the full suite (library + app + render)
-        env:
-          RTT_RENDER_GATE_NOLOCK: "1"   # CI is the sole gater — no cross-agent semaphore needed
         run: python -m pytest -q

@@ -124,7 +124,7 @@ If `.venv/` is ever missing, rebuild it once with a 3.10+ interpreter (this mach
 /opt/homebrew/bin/python3.14 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
-## Run the fast suite while iterating; the full suite is a merge gate
+## Run the fast suite while iterating; CI is the merge gate
 
 Tests live in three folders: **`tests/library/unit/`** (the pure math library — ~1,260 tests,
 ~10s), **`tests/app/unit/`** (web logic without a live page: Editor / layout / spreadsheet
@@ -134,360 +134,89 @@ whole scenario — currently just the two files in `tests/app/integration/`; eve
 library and app alike, is *unit*, and the library has no integration tests. Place new tests
 accordingly.
 
-The full suite is ~2,530 tests in **~3–5 min** (it drifts with parallel-agent CPU load), but
-**one file is ~67% of that wall-clock**: `tests/app/integration/test_web_render.py` — 171
-in-process page-render tests (NiceGUI's `User` plugin) that rebuild the whole spreadsheet page
-and re-run the RTT math on every `await user.open("/")` (~0.8s each). The other ~2,360 tests —
-all the library, service, editor and spreadsheet-layout checks — finish in ~75s. So split the loop:
+The full suite is ~2,530 tests, of which **one file is ~67% of the wall-clock**:
+`tests/app/integration/test_web_render.py` — in-process page-render tests (NiceGUI's `User`
+plugin) that rebuild the whole spreadsheet page and re-run the RTT math on every
+`await user.open("/")` (~0.8s each). The other ~2,360 tests — all the library, service, editor and
+spreadsheet-layout checks — finish in ~75s. **The merge queue runs the full suite in CI**
+(`.github/workflows/merge-gate.yml`); that CI run is *the* merge gate, so you do **not** need to
+run the slow render file locally to land. Split your *local* loop accordingly:
 
 - **While iterating, run the fast pass** — skip the one heavy file:
-  `.venv/bin/python -m pytest -q --ignore=tests/app/integration/test_web_render.py` (~75s). Use it for quick
-  inner-loop feedback on math/service/spreadsheet work.
-- **Run the render tests — i.e. the full `.venv/bin/python -m pytest -q` — before the ff-merge
-  to main, and whenever your change touches `rtt/app/`** (the renderer those tests cover). They
-  guard the exact UI the user validates on 8137 and that the mockup governs, so **a green full
-  run is the gate for the merge**: never land a web change on main on the strength of the fast
-  pass alone.
-- This only changes how *agents pace their own runs*. Do **not** add an `-m`/`addopts` default
-  that makes a bare `pytest` silently skip the render tests — the user's own runs and CI must
-  stay complete.
+  `.venv/bin/python -m pytest -q --ignore=tests/app/integration/test_web_render.py` (~75s). This is
+  your inner-loop feedback on math/service/spreadsheet work.
+- **Run the full `.venv/bin/python -m pytest -q` locally only when you want render feedback before
+  pushing** (e.g. your change touches `rtt/app/`). It is optional — CI runs it on every PR and
+  every queued merge regardless — but a quick local full run can save a round-trip through CI.
+- Do **not** add an `-m`/`addopts` default that makes a bare `pytest` silently skip the render
+  tests — the user's own runs and CI must stay complete.
 
-**Render runs take turns automatically — let them queue, don't kill them.** With many agents
-in parallel, all firing the render gate at once pins every core and nobody ever finishes. So
-`tests/app/integration/conftest.py` meters render runs through a **counting semaphore**: at most
-`RTT_RENDER_GATE_SLOTS` of them (default **1** — render tests are CPU-bound, so running several
-at once just multiplies everyone's wall-clock; one-at-a-time finishes each run fastest) run at
-once; the rest queue and take turns. Any pytest session that collected render tests drops a FIFO
-**ticket** (`/tmp/rtt-render-gate.d/`) and waits until it's among the N lowest live tickets, then
-runs and removes its ticket at the end. While queued you'll see `[render-gate] waiting our turn…
-position 2 of 5 queued (1 slot busy …)` on stderr — your **exact place in line** — then
-`[render-gate] slot acquired`. That
-wait is correct and expected; **do not treat it as a hang, and do not `pkill` other agents'
-render runs to jump the queue** — ordering is FIFO/fair, so just wait your turn. The fast pass
-(`--ignore=…/test_web_render.py`) collects no render tests, so it never queues and stays fast.
-The gate self-heals (a killed holder's ticket is reclaimed on the next scan) and never blocks
-forever (`RTT_RENDER_GATE_WAIT`, default 3600s, then it proceeds anyway). Tune concurrency with
-`RTT_RENDER_GATE_SLOTS`. Don't wrap the gate in `/tmp`
-scripts to dodge it or sibling kills — that's the dogpile this prevents.
+## Land by opening a PR — the merge queue gates and merges it
 
-**A STUCK holder is bypassed automatically — you should never need `NOLOCK`.** A *dead*
-holder (PID gone) frees its slot in seconds, but a holder that is alive yet **wedged** (hung
-pytest, or crawling so slowly under CPU thrash it makes no forward progress) used to pin the
-single slot. So a running holder now stamps a **heartbeat** (`.hb-…`) on every test; a holder
-whose heartbeat is older than `RTT_RENDER_GATE_STUCK` (default 240s) stops counting against the
-slot budget and the next waiter proceeds past it (FIFO among the remaining waiters is preserved;
-the wedged run is left alive, never killed). A healthy run stamps sub-second, so it is never
-falsely bypassed. **The bypass is gated on spare CPU** (`RTT_RENDER_GATE_BYPASS_MAXLOAD`, default
-loadavg/core < 1.0): under saturation a stale heartbeat means *starved*, not hung, so bypassing it
-would just pile a second suite onto a thrashing box — a self-feeding dogpile (it once pinned load
-at 33 with four concurrent multi-hour suites). Above the threshold we **wait** for the holder
-instead. **This is also why you must NOT reach for `RTT_RENDER_GATE_NOLOCK=1`:** it skips the
-semaphore entirely, and several NOLOCK runs at once thrash every core — the exact dogpile the
-semaphore exists to prevent. NOLOCK still exists as a last-ditch opt-out, but the auto-bypass means
-a stuck holder no longer justifies it; just let the gate run.
-
-**The merge-lock holder's gate gets an automatic PRIORITY slot — so you never need `NOLOCK` even
-under the lock.** A held-lock land runs the render gate while holding the exclusive merge lock; if
-that gate queued behind speculative non-holder runs, the merge lock would sit **idle** for the whole
-wait, stalling everyone's merge (a real priority inversion — once pinned the lock ~19 min while its
-gate sat at 0% CPU behind a non-holder). So the gate now reads the merge-lock marker and, if **this
-worktree holds the lock**, takes a slot immediately (bounded to +1 over `SLOTS`, since the lock is
-exclusive) while still stamping a heartbeat so others don't pile on. This replaces the old manual
-`RTT_RENDER_GATE_NOLOCK=1`-on-the-under-lock-gate convention entirely: just run the gate normally
-under the lock — `bin/land` and the manual flow get the priority slot automatically.
-
-## Take the merge lock to land — hold it across the WHOLE critical section
-
-The render gate above serializes the render *runs*, but **not the merges**. Without a merge lock,
-agents validate speculatively in parallel (the render-gate queue grows 10+ deep) and then race to
-`git merge --ff-only`. Whoever loses the race has `main` move under them with an `rtt/app/` change,
-so the green render run they just finished no longer validates the exact merged state. The fix is
-an **exclusive (single-holder) merge lock**, `bin/with-merge-lock`, covering the whole
-`rebase main → render gate → ff-merge → release` critical section: only the lock-holder
-validates-and-merges at a time, so the render-gate queue stays ~1 deep, **you validate the exact
-state you land** (no chase), and no speculative run is wasted.
-
-### Default: `bin/land` — validate lockless, hold the lock only for the ff-merge
-
-Holding the lock across the whole ~9-min render gate makes EVERY merge — even a docs- or
-`bin/`-only change that can't affect rendered output — queue behind the slowest render run. So
-the default landing tool is **`bin/land`**, which keeps the same correctness guarantee while
-holding the lock for *seconds*, not minutes:
+Landing is a **GitHub merge queue**, not a local merge. You never merge into the main checkout,
+never hold a lock, never run a render gate to land. You push your branch, open a PR, and enqueue
+it; the queue runs the full CI suite on the exact merged result and fast-forwards `main` only when
+green. The old bespoke local coordination layer (merge lock, render-gate semaphore, green-token
+guard, `bin/land`) has been **deleted** in favor of this — there is no `bin/land`, no
+`bin/with-merge-lock`, no `/tmp` ticket queue anymore.
 
 ```bash
-bin/land -- .venv/bin/python -m pytest -q     # from your worktree, on your claude/<name> branch
+# from your worktree, on your claude/<name> branch, with your work committed:
+git push -u origin HEAD                       # publish your branch
+gh pr create --fill --base main               # open the PR
+gh pr merge --auto --squash                   # enqueue; the queue lands it when CI is green
 ```
 
-It (1) rebases onto `main` and runs the gate **without** the lock (still serialized by the
-render-gate semaphore, so CPU is never oversubscribed) — and **skips the gate entirely** if your
-own diff is render-orthogonal (`bin/merge-safe-check` on your commits); then (2) takes the lock
-**only** for the ff-merge, using `merge-safe-check` to confirm `main` moved only in
-render-orthogonal files since the base you validated — if so it rebases (no re-gate) and
-`--ff-only`; if `main` moved render-relevant, it **releases and re-validates lockless**, never
-holding the lock across a gate. After `--max-optimistic` rounds of being outrun it falls back to
-the held-lock flow below for one final guaranteed land. You still **validate the exact state you
-land** (the under-lock `merge-safe-check` proves it), `--ff-only` is still the atomic backstop, and
-FIFO fairness is unchanged. Orthogonal changes stop waiting behind render-gate holders entirely.
+That's it — you're done. Do **not** wait on it, poll it, or narrate it. The queue:
 
-### Under sustained load: `bin/persistent-land` — relaunch `bin/land` until it lands
+- builds the candidate merge of your PR onto the current `main`,
+- runs `.github/workflows/merge-gate.yml` (the full suite, including the render file) on that
+  candidate,
+- fast-forwards `main` only if green; if red, it drops your PR from the queue and reports on the
+  PR — fix and re-enqueue.
 
-This machine runs **a dozen+ agents at all times**, so the box is frequently saturated (loadavg
-has hit 64 on 6 cores) and the OS **SIGKILLs heavy processes under memory pressure** (exit 137 —
-see `RESOURCE_GOVERNANCE_DIAGNOSIS.md`). `bin/land` is a *single* process: if it's killed mid-gate,
-nothing relaunches it. So the default landing tool under this steady-state contention is
-**`bin/persistent-land`**, which relaunches `bin/land` until the branch is on `main`, surviving
-kills:
+Because CI validates the *candidate merge* (your branch + the `main` it will land on), you always
+land the exact state that was validated — the property the old merge lock hand-built. Serialization
+and fairness are the queue's job now; there is no local lock to take and no queue position to watch.
+
+**Conflicts / `main` moved under you.** If your branch won't merge cleanly, rebase and repush — the
+queue re-validates:
 
 ```bash
-bin/persistent-land -- .venv/bin/python -m pytest -q     # from your worktree, on your branch
+git rebase main && git push --force-with-lease
 ```
 
-It adds **only** persistence — every attempt is a plain `bin/land`, so all load admission
-(`bin/gate-load`), orphan-reaping, locking, and the green-token guard are unchanged and there is no
-new load threshold to drift. It exits immediately if the branch is already landed, and it is itself
-light enough (a git check + a sleep) to survive the pressure that kills the gate it supervises; if
-`bin/persistent-land` is *itself* killed, just run it again — it's idempotent. Run it as ONE
-backgrounded job and surface only the terminal `PERSISTENT_LAND:` result; don't narrate the wait.
+Resolve conflicts inside the rebase exactly as before (see the git section below) — never reset to
+escape them.
 
-**NEVER hand-roll a land script that holds the merge lock across the render gate.** A
-`with-merge-lock acquire … pytest … ff-merge` shell loop that doesn't `renew` every few minutes
-gets its lock reclaimed by the 15-min self-heal mid-gate, and a `bash -c '… && release'` wrapper
-releases the lock on a rebase-conflict exit — both burn the entire queue wait. `bin/land` /
-`bin/persistent-land` already handle renewal, conflicts, and kills correctly; use them instead of
-reinventing the critical section.
+**The user refreshes their own 8137 app.** Landing now happens on the remote `main`, not the local
+main checkout, so the user's `python app.py` on 8137 no longer auto-updates when you land — that is
+**by design**. The user pulls when they want to see new work (`git -C <main-checkout> pull`), or
+uses the deployed `danddsrtt-app.onrender.com`. You never touch their checkout.
 
-### Fallback: hold the lock across the whole critical section (conflicts / manual)
+**One-time setup (already required for the flow above):** `gh` must be installed and authenticated
+on this machine (`brew install gh && gh auth login`), and the merge queue + branch protection must
+be enabled on `main` in GitHub. See `MERGE_QUEUE_MIGRATION.md`.
 
-Use the manual held-lock flow below when you must resolve a rebase conflict by hand, or when
-`bin/land` reports it gave up. **Hold the lock continuously across separate tool calls — do NOT
-wrap it around one `bash -c`.**
-The earlier one-command form had a hole: if the queued `git rebase main` hits a conflict (because
-`main` moved while you were queued — the wait can be 400s+), you can't resolve it inside the single
-wrapped command, so `set -e` exits, the lock releases, and **the entire long queue-wait is burned
-before reaching the gate**. Instead `acquire` once, then run each step as its own tool call while
-you keep holding:
-
-```bash
-# 1. CHEAP pre-checks FIRST, OUTSIDE the lock — don't burn a held slot on a run you could have
-#    known would fail. The fast pass (touches no render tests, so it never queues):
-.venv/bin/python -m pytest -q --ignore=tests/app/integration/test_web_render.py
-
-# 2. Take the lock. Blocks ONCE until held; main is now frozen for everyone else.
-bin/with-merge-lock acquire
-
-git rebase main          # resolve any conflict at leisure, across as many tool calls as you need —
-                         # nobody can move main while you hold the lock
-
-bin/with-merge-lock renew && .venv/bin/python -m pytest -q   # the render gate, on the EXACT state
-                         # you will land. Run the FULL gate ONLY here, under the lock.
-
-bin/with-merge-lock renew && \
-  git -C <main-checkout> merge --ff-only <your-branch>       # guaranteed: nothing moved
-
-bin/with-merge-lock release        # free it for the next agent
-```
-
-- **`renew` before the gate and before the ff-merge.** `renew` both extends your hold *and verifies
-  you still hold it* — it exits non-zero if you somehow lost the lock, so you re-`acquire` instead
-  of merging on a stale hold. Renew again during a long conflict resolution if it drags past ~10 min.
-- **Run the FULL render gate ONLY under the lock**, as your land-time validation; the fast pass is
-  the inner loop. Don't run the full gate speculatively outside the lock — it's redundant with the
-  guaranteed-exact under-lock run and just re-creates the contention the lock exists to kill.
-- **Always `release`** when you finish or abandon the attempt.
-- The legacy single-command form still works (and CI uses it): `bin/with-merge-lock bash -c '…'`
-  holds the lock for the wrapped command and releases on exit / failure / signal.
-
-**Don't surface the wait — collapse the no-conflict path into ONE silent background job.** Each
-time you end a turn to "check the queue" or report "still running", the user's Desktop sidebar
-dot flips yellow (= *I'm prompting him*) for a point where he can take no action — and the
-lock-wait + render gate is minutes long, so a step-per-tool-call landing pings him repeatedly
-over a pure wait. So after the cheap pre-checks and `acquire` (which spawns the **persistent**
-holder daemon — it keeps the lock independently of any job), run the rest —
-`rebase → renew+gate → renew+ff-merge → release` — as a **single plain `run_in_background`
-script** whose only completion notification is the land result. Report *that*; don't poll it
-from other turns, don't narrate "still queued / still running".
-  - This does **not** reintroduce the release-on-exit hole the bullet above guards against,
-    **as long as the job is a plain script, NOT `with-merge-lock bash -c '… && release'`.** A
-    plain script that aborts (e.g. on a rebase conflict) exits **without releasing** — the daemon
-    keeps the lock, the queue-wait is preserved — so on conflict the job exits with a marker and
-    you break OUT to the existing separate-tool-call path to resolve it interactively, still
-    holding. The single-job form is the **common no-conflict default**; the multi-call dance
-    above is the **conflict exception**, not the everyday shape.
-  - Wrapping it as `with-merge-lock bash -c '… && release'` WOULD re-break it (releases on the
-    conflict exit, burning the wait) — don't. Keep `acquire`/`release` as the plain script's first
-    and last steps, with `release` reached only on the success path.
-
-How it holds across tool calls: `acquire` spawns a detached, lease-renewing **holder daemon**; an
-atomic `.holder` marker (NOT ticket order — `time_ns` is only µs-granular here and collides) is the
-real mutex, with FIFO fairness tickets in `/tmp/rtt-merge-gate.d/` (the same boring no-`flock` `/tmp`
-mechanism as the render gate). Self-heal backstops free a wedged lock automatically: a crashed
-daemon (PID death, seconds), a hung daemon (lease + grace, ~minutes), an **abandoned** hold —
-agent/session gone without `release` — within `RTT_MERGE_GATE_GAP` (15 min) of the last `renew`,
-hard-capped at `RTT_MERGE_GATE_TTL` (40 min) from acquisition, and — when you export
-`RTT_MERGE_PROGRESS_FILE` (below) — a **wedged gate** whose progress stalls for
-`RTT_MERGE_GATE_PROGRESS` (5 min), keyed to real gate progress so a timer-`renew` can't keep a hung
-gate alive. `[merge-gate] waiting …` on
-stderr is your place in line — **that wait is correct, not a hang; don't `pkill` to jump it.**
-`bin/with-merge-lock status` shows the holder + queue. The lock is exclusive by design (no `SLOTS`
-knob — the merge must not race); even so, `git merge --ff-only` is the atomic ref-CAS backstop that
-keeps `main` safe if anything ever slips. Validate the lock itself in isolation with
-`bin/with-merge-lock-selftest` (spawns real daemons in throwaway dirs; not a pytest test). Knobs:
-`RTT_MERGE_GATE_WAIT` (3600s, then it FAILS — it never "proceeds unlocked"), `RTT_MERGE_GATE_LEASE`/
-`GRACE`/`RENEW`/`GAP`/`TTL`/`READY`, `RTT_MERGE_GATE_PROGRESS` (work-progress reclaim threshold,
-default 300s; active only when `RTT_MERGE_PROGRESS_FILE` is set), `RTT_MERGE_GATE_NOLOCK=1` to opt
-out, `RTT_MERGE_LOCK_ID` for an explicit lock identity.
-
-**Optional — let a wedged gate self-reclaim faster than 40 min.** If you want the work-progress
-backstop (recommended when the machine is under heavy parallel load), export a per-agent progress
-path **before** `acquire` so both the daemon and the gate use it:
-
-```bash
-export RTT_MERGE_PROGRESS_FILE="/tmp/rtt-merge-gate.d/.progress-$$"
-bin/with-merge-lock acquire
-# … rebase …
-bin/with-merge-lock renew && .venv/bin/python -m pytest -q   # the gate stamps the file as it runs
-```
-
-The conftest stamps that file as it queues and on every test; if it stalls for
-`RTT_MERGE_GATE_PROGRESS` the holder daemon frees the lock — reclaiming a hung gate in ~5 min
-instead of ~40. Leave it unset to keep the old lease/GAP/ABS_MAX behavior exactly.
-
-**The orthogonal-files softener — skip a re-run when `main` moved harmlessly.** Even outside the
-lock, if your ff-merge is rejected because `main` moved, you do **not** always need to re-run the
-gate. If `main` advanced *only* in files that can't affect your change's rendered output, your
-prior green render run still validates the merged state. This generalizes the long-standing
-"test-only move → prior green run still validates" judgment. Check it mechanically from your
-worktree:
-
-```bash
-bin/merge-safe-check        # diffs merge-base(main,HEAD)..main; exit 0 = SAFE to ff-merge, 1 = RE-RUN
-```
-
-`merge-base(main, HEAD)` is exactly the old main tip your green run was built on, so the diff is
-precisely what landed under you. Render-**relevant** (forces a re-run) = the whole `rtt/` tree,
-`app.py`, the rootdir `conftest.py`, `pytest.ini`, `requirements.txt`, and — conservatively —
-anything else not on the irrelevant whitelist (`tests/**`, `guide/**`, `.claude/**`, `bin/**`,
-`*.md`, `*.png`/`*.csv`, a few top-level non-code files). The default is *relevant*: when unsure,
-re-run. (The lock makes this rare — it's the fallback for the occasional move that slips in.)
-
-**This optimistic short-lock is automated by `bin/land`** (see "Default: `bin/land`" above): it
-validates lock-free under the render semaphore, takes the merge lock only for the
-`merge-safe-check` + `--ff-only` (seconds, not the ~9-min gate), and falls back to the held-lock
-flow when repeatedly outrun. The cost it trades for is a possible re-gate ("chase") when `main`
-moves render-*relevantly* during your gate — bounded to ~one extra round per competing land (the
-render semaphore lets at most ~one land complete per gate) and removed entirely for orthogonal
-moves by `merge-safe-check`. Reach for the manual held-lock sequence above only to hand-resolve a
-rebase conflict. Both keep the atomic `--ff-only` backstop, so neither can corrupt `main`.
-
-### A queue wait is NORMAL — don't catastrophize it, and never NOLOCK to skip it
-
-The merge lock and the render gate are **FIFO-fair**, and the queue normally **drains** — a queue
-several deep clears as teammates land, and `main` advancing while you wait is the system **working**,
-not failing. So a `[merge-gate] waiting our turn… position N of M` / `[render-gate] waiting our turn…`
-line that is **moving** is the normal, expected, correct state; **wait your turn** and don't reach for
-the panic words ("deadlocked", "gridlocked", "no one ever gets through") for an ordinary, draining
-queue. The lock is also always **safe**: it *fails closed* (refuses to merge without the lock; an
-hour-long wait FAILS the land rather than corrupting `main`), so you never have to fear a bad merge.
-
-But **be accurate, not naively reassuring — liveness is NOT guaranteed.** The self-heal is **not
-reliable**: the TTL hard-cap (`RTT_MERGE_GATE_TTL`, 40 min) is *supposed* to reclaim a wedged holder,
-but this has been **observed to fail** — a holder daemon that stays alive and keeps renewing its
-lease has held the lock **~55 min, past the TTL, without being reclaimed**, stalling every waiter
-until they hit the 1-hour wait cap and *fail*. So there is a real distinction:
-
-- **A deep but MOVING queue** → normal; wait it out; do not catastrophize.
-- **A CONFIRMED-WEDGED holder** (position not advancing for many minutes; `bin/with-merge-lock
-  status` shows a high `hold_age` and `over_cap`, or you can see the holder making no progress)
-  → this is a **genuine liveness bug**, not something that "clears on its own." Two backstops now
-  exist, so you do **not** have to wait it out or hand-`pkill` blindly:
-  - **Automatic:** a front waiter reclaims a holder once `hold_age ≥ TTL + GRACE` (~41 min),
-    regardless of lease freshness — so the worst case is bounded even if the holder never self-exits.
-  - **Manual, when you don't want to wait ~41 min:** run **`bin/with-merge-lock evict`**. It
-    force-reclaims the current holder (SIGKILLs its daemon, clears its marker + ticket, frees the
-    lock for the next FIFO waiter) **but is gated**: it REFUSES unless the holder's `hold_age`
-    exceeds `RTT_MERGE_GATE_EVICT` (default 1500s / 25 min), which is well above a healthy or even
-    dogpiled land cycle — so it can **never** be used to jump a moving queue or kill a live land.
-    Only run it on a holder you have CONFIRMED is wedged (queue not advancing). It is the sanctioned
-    replacement for hand-`pkill`-ing another agent's daemon; prefer it over a raw `kill`.
-  Still do **not** raw-`pkill` another agent's *land/gate* processes (only its lock daemon, via
-  `evict`), do **not** NOLOCK around a wedge (see below), and surface a persistent wedge to the
-  human once, plainly — name the holder (PID + worktree) — so they know the fleet hit one.
-
-Don't hold the merge lock yourself for long, either — validate in the shortest critical section you
-can; a land that holds the lock through a 9-min (or dogpiled, hours-long) gate is what *creates* these
-stalls for everyone behind you.
-- **NEVER set `RTT_RENDER_GATE_NOLOCK=1` to skip a busy queue.** The render-gate semaphore exists
-  to **serialize** render runs so they don't saturate the CPU. Bypassing it while several agents
-  are active creates a **dogpile**: every agent's gate run (including yours) slows 10–20× — the
-  exact slowdown you tried to escape, now inflicted on everyone, and your held merge lock blocks
-  the queue for *hours* instead of minutes. `NOLOCK` is **only** for a single, confirmed-stuck
-  render-gate holder *while you already hold the merge lock*. Under ordinary contention, take your
-  place in line — it is faster for everyone, including you.
-- **Let a slow but moving land ride; don't babysit or narrate it.** Run it in the background and
-  surface **only** the terminal result (merged / conflict / failure / wedged-holder). Don't
-  poll-and-report queue positions to the user for an advancing queue, and don't editorialize. The
-  accurate framing of a structural weakness is: the lock is **always safe** (fails closed) and a
-  healthy queue **drains**, but **liveness is not guaranteed** — under heavy concurrency it degrades,
-  and a wedged holder past the TTL can genuinely stall and fail lands until the self-heal is fixed.
-  Say that **once**, plainly, and spin a task chip to evolve it. Calm and accurate — neither panic
-  nor false reassurance.
-
-### The green-gate guard — the ff-merge is MECHANICALLY gated, not trusted
-
-Everything above serializes *who* validates and merges, but for a long time nothing actually
-**proved** a green full render gate had run on the EXACT tree being landed — the protocol
-*trusted* the landing agent to have run `.venv/bin/python -m pytest -q` green. That trust failed
-once: a tooltip reword in `rtt/app/tooltips.py` landed on the **fast pass**, with the two render
-tests that pinned the old wording still red on its own tree. A red web change reached `main`.
-
-So the green evidence is now mechanical:
-
-- **The render gate mints a green token.** When a full `pytest` session that *collected the render
-  file* finishes green over a clean tracked worktree, `tests/app/integration/conftest.py` writes an
-  empty file named by the exact **git tree sha** it validated into `$RTT_RENDER_GREEN_DIR` (default
-  `/tmp/rtt-render-green.d/`). A token means "the rendered output of this exact tree passed the full
-  gate." A partial run (`-k`/`-m`/`--lf`/a `::node-id`) or the fast pass mints **nothing** — so a
-  fast-pass land can never produce evidence.
-- **`bin/merge-green-check <old> <new>`** answers "may `main` advance old→new?": SAFE iff the move is
-  render-orthogonal (`bin/_render_relevance` whitelist, shared with `merge-safe-check`) **or** a green
-  token validated a render-equivalent tree; UNSAFE for a render-relevant tree with no token.
-- **A `reference-transaction` git hook enforces it at the ref update itself** (`bin/merge-guard-hook`,
-  installed into the shared hooks dir by `bin/install-merge-guard-hook`). A render-relevant
-  fast-forward of `refs/heads/main` with no matching green token is **rejected** — even a raw
-  `git -C <main> merge --ff-only`. It only ever blocks a confident render-relevant-without-token
-  fast-forward (rewinds/resets and orthogonal moves pass; any internal error fails OPEN), so it
-  cannot wedge the live checkout. `bin/land` installs/refreshes the hook on every run, so the normal
-  path self-deploys; install it by hand once with `bin/install-merge-guard-hook` for the manual flow.
-- **Human escape hatch:** `RTT_FFMERGE_GUARD_OFF=1` disables the guard for one command (for the
-  user's own out-of-band `main` operations). Agents should never need it — land via `bin/land`, or
-  run the full gate under the lock so the token is minted for the tree you land.
-- **CI is the visible backstop:** `.github/workflows/merge-gate.yml` re-runs the whole suite on every
-  push to `main`, so if a red tree ever does reach `main` it goes red where everyone can see it.
-- Validate the guard in isolation (throwaway repos, never the live lock/checkout) with
-  `bin/merge-guard-selftest` — it proves an ungated/stale-tree ff-merge is rejected and the
-  legitimate paths pass.
-
-## Git: you're on a fast-moving team — rebase onto main, then ff-merge
+## Git: you're on a fast-moving team — rebase onto main, land by PR
 
 You work in your own worktree on a `claude/<name>` branch. Several agents run in parallel and
 `main` moves every few minutes; the user is the **manager**, who deliberately assigns
-**separable** tasks — so when you sync with `main`, conflicts are rare and superficial. The
-user validates everything on **their own `python app.py` on 8137**, which serves the **main
-checkout** and hot-reloads, so work on your branch is invisible until it lands on `main`. Work
-like a normal engineer on that team — branch, rebase onto main, merge. No `reset` gymnastics,
+**separable** tasks — so when you sync with `main`, conflicts are rare and superficial. Work like a
+normal engineer on that team — branch, commit, rebase onto main, open a PR. No `reset` gymnastics,
 no fear:
 
-- **Commit as you go** (and `git add` new files) — always before you rebase or land. A commit
-  on your branch is the safe, recoverable home for work; only uncommitted / untracked files in
-  a worktree are fragile.
+- **Commit as you go** (and `git add` new files) — always before you rebase or push. A commit on
+  your branch is the safe, recoverable home for work; only uncommitted / untracked files in a
+  worktree are fragile.
 - **Stay on your `claude/<name>` branch.** Never `git checkout` / `switch` / `reset` / `rebase` in
   the **main checkout** (or any sibling worktree), and never hand-edit it — it's the live app the
   user is using. A `git checkout <commit>` there *detaches the running app's HEAD* and hides
-  everyone's landed work (this has bitten us). Two hooks now enforce it: one blocks edits into the
-  main checkout, one blocks state-changing git aimed at it from a worktree — the only allowed
-  main-checkout write is the landing `git -C <main> merge --ff-only <your-branch>`. Inspect another
-  branch read-only (`git -C <main> show/diff/log`) or just build in your own worktree (it already
-  has your commit).
+  everyone's landed work (this has bitten us). Two hooks enforce it: one blocks edits into the main
+  checkout, one blocks state-changing git aimed at it from a worktree. With landing now on the
+  remote queue, **nothing you do should ever write to the main checkout** — inspect another branch
+  read-only (`git -C <main> show/diff/log`) or just build in your own worktree (it already has your
+  commit).
 - **Never hand subagents / Workflow agents the main-checkout path.** Give them THIS worktree's path
   as cwd and tell them explicitly: read-only git, never `cd` into or `git checkout`/`reset` the main
   checkout, validate by in-process builds in the worktree. A review agent once `cd`'d into the main
@@ -497,7 +226,8 @@ no fear:
 - **Sync by rebasing onto main.** On a clean (committed) tree: `git rebase main`. It replays
   your commits on top of main's current tip and keeps you on your branch (it does NOT strand
   your worktree). Resolve the (superficial) conflicts and `git rebase --continue` — don't
-  `--abort` and start over, don't `reset --hard` to escape. Rebase again whenever `main` moves.
+  `--abort` and start over, don't `reset --hard` to escape. Rebase again whenever `main` moves,
+  and `git push --force-with-lease` to update your PR.
 - **If a teammate landed overlapping work, resolve it INSIDE the rebase — never reset-and-reapply.**
   When someone got there first, your `git rebase main` may conflict, or your version may now be
   redundant. The fix is *always* to resolve it within the rebase: keep what's still unique, take
@@ -510,14 +240,11 @@ no fear:
   looks, rebase and resolve — never merge to sync and never reset to escape.** An agent once hit a
   deep second collision, judged the merge "error-prone," and reset-to-main + cherry-picked its
   unique work; that detour is the bug this bullet exists to prevent.
-- **Land it when the task is done and tests pass**, holding the merge lock across the whole
-  `acquire → rebase → renew+gate → renew+ff-merge → release` sequence (see "Take the merge lock to
-  land" above). Because `main` is frozen while you hold the lock, the final
-  `git -C <main-checkout> merge --ff-only <your-branch>` is *guaranteed* to fast-forward — no chase.
-  The live app reloads and the user validates on 8137. (If you ever ff-merge *without* holding the
-  lock and it's rejected because `main` moved, `bin/merge-safe-check` is the fallback: if `main`
-  moved only in render-orthogonal files your green run still stands and you can ff-merge as-is;
-  otherwise `git rebase main`, re-run the gate, retry. A teammate landed first, nothing more.)
+- **Land it when the task is done and tests pass** by pushing your branch and enqueuing a PR (see
+  "Land by opening a PR" above). The merge queue runs the full CI suite on the candidate merge and
+  fast-forwards `main` only when green, so you always land exactly what was validated. If the queue
+  reports a conflict or a red run, rebase onto `main`, `push --force-with-lease`, and re-enqueue —
+  a teammate landed first, nothing more.
 - **Never `reset --soft`/`--hard main`, `clean -fd`, or `stash` to "tidy" or "fix."**
   `reset --soft main` only does what you want when your base already IS `main`; once `main` has
   moved past your base it silently **reverts every teammate's commit since that base** into your
@@ -525,10 +252,8 @@ no fear:
   once, when an agent committed on a stale base). Rebase is the clean tool. Want one commit
   instead of a `wip:` chain? Squash only your OWN commits:
   `git reset --soft $(git merge-base main HEAD) && git commit` — never plain `reset --soft main`.
-- **After any ff-merge, sanity-check** `git diff <prev-main> <new-main> --stat` shows only the
-  files you meant to change — a stale-base squash shows up here as a pile of unrelated reverts.
-- **Just report the merge** — not the 8200+ port you tested on, not branch/worktree mechanics,
-  and not `main`-vs-`origin` or push status (the user handles pushing).
+- **Just report the task + its PR** — not the 8200+ port you tested on, not branch/worktree
+  mechanics, and not `main`-vs-`origin` push status beyond whether the PR landed.
 
 ## Web app port: 8137 is the user's — agents launch on their own port
 

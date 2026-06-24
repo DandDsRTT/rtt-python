@@ -1,5 +1,10 @@
 # Graceful degradation of the merge lock + render gate under heavy contention
 
+> **SUPERSEDED (historical).** The merge lock and render gate analyzed here have been **removed**
+> in favor of a GitHub merge queue gated by CI. The contention failure modes below (wedged
+> holders, NOLOCK dogpiles, lock-across-the-gate serialization) are no longer reachable. Kept for
+> the design record only. See `MERGE_QUEUE_MIGRATION.md` and `WORKFLOW_CONSOLIDATION.md`.
+
 The lock + gate are *correct* (FIFO fairness, self-heal, atomic `git merge --ff-only`
 backstop). Under a 7-deep merge queue with `main` advancing every few minutes, three
 weaknesses collapsed throughput. None is a correctness bug; all three are
