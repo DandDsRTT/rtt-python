@@ -39,12 +39,14 @@ _SIMULATED_PAGES: list = []
 
 class _Page:
     def __init__(self, state: str | None = None) -> None:
-        self.gestures = GestureController(self)
+        loaded_from_url = self._load_document(state)
+        self.gestures = GestureController(self.editor, self)
         self.renderer = Renderer(self)
         self.edits = EditController(self)
         self.builder = PageBuilder(self)
         self.builder._setup_page_head()
-        self._init_page_client(self._load_document(state))
+        self.rec = _Reconciler(self.editor, self.gestures)
+        self._init_page_client(loaded_from_url)
         self.edits._build_edit_specs()
         self.edits._build_vector_list_specs()
         self._wire_reconciler()
@@ -82,7 +84,6 @@ class _Page:
                 except Exception:
                     _log.exception("stored document failed to load; using defaults: %.200r", stored)
                     self.load_failed = True
-        self.rec = _Reconciler(self.editor, self.gestures)
         self.building = False
         self.last_lay = None
         self.refs: dict = {}
@@ -208,7 +209,7 @@ class _Page:
         idents = self.last_lay.identities if self.last_lay is not None else None
         return [tok for tok, _ in (idents or {}).get(name, [])]
 
-    def _token_index(self, cid, name):
+    def token_index(self, cid, name):
         token = cid.split(":", 1)[1]
         for i, tok in enumerate(self.col_tokens(name)):
             if str(tok) == token:
