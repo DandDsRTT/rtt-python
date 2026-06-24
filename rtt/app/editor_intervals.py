@@ -112,7 +112,7 @@ class IntervalOps:
         self.doc.target_override = tuple(targets)
         self.doc.invalidate_custom_weights()
 
-    def _list_vectors(self, name: str) -> list[tuple[int, ...]]:
+    def list_vectors(self, name: str) -> list[tuple[int, ...]]:
         state = self.doc.state
         if name == "targets":
             return [
@@ -130,7 +130,7 @@ class IntervalOps:
         return [tuple(v) for v in state.comma_basis]
 
     def _peek_vector(self, name: str, i: int) -> tuple[int, ...] | None:
-        vectors = self._list_vectors(name)
+        vectors = self.list_vectors(name)
         return vectors[i] if 0 <= i < len(vectors) else None
 
     def _move_feasible(self, src: str, dst: str, vector: tuple[int, ...]) -> bool:

@@ -89,7 +89,7 @@ class TuningView:
             doc.state.mapping, doc.tuning_scheme, doc.custom_prescaler
         )
 
-    def _displayed_retuning_map(self) -> tuple[float, ...] | None:
+    def displayed_retuning_map(self) -> tuple[float, ...] | None:
         doc = self.doc
         try:
             generators = self.effective_generator_tuning()
@@ -102,13 +102,13 @@ class TuningView:
                 return optimum.retuning_map
             return self.optimum_tuning().retuning_map
         except (ValueError, ArithmeticError, IndexError, TypeError) as exc:
-            _log.debug("_displayed_retuning_map dashed: %r", exc)
+            _log.debug("displayed_retuning_map dashed: %r", exc)
             return None
 
     @property
     def unchanged_ratios(self) -> tuple[str, ...]:
         doc = self.doc
-        retuning = self._displayed_retuning_map()
+        retuning = self.displayed_retuning_map()
         if retuning is None:
             return ()
         held = (

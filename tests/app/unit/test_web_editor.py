@@ -455,7 +455,7 @@ def test_prime_based_superspace_generator_edit_drives_domain_and_resets():
     editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     editor.set_nonprime_basis_approach("prime-based")
     assert editor.effective_generator_tuning() is None or editor.superspace_generator_tuning is None
-    optimum_domain = editor._optimum_generator_tuning()
+    optimum_domain = editor.optimum_generator_tuning()
     editor.set_superspace_generator_tuning_component(2, 999.0)
     assert editor.superspace_generator_tuning is not None and editor.superspace_generator_tuning[2] == 999.0
     projected = editor.effective_generator_tuning()
@@ -566,7 +566,7 @@ def test_custom_weights_starts_off_and_the_toggle_drives_it():
     editor = Editor()
     assert editor.custom_weights is None
     assert editor.settings["custom_weights"] is False
-    n = len(editor._current_targets())
+    n = len(editor.current_targets())
     editor.set_show("custom_weights", True)
     assert editor.custom_weights is not None and len(editor.custom_weights) == n
     assert editor.settings["custom_weights"] is True
@@ -1350,12 +1350,12 @@ def test_unchanged_interval_drags_out_as_a_copy():
     # of its intervals to another list COPIES it there without removing it from U — and nothing can
     # be dropped INTO U. (The default tuning is quarter-comma meantone, which holds 2/1 and 5/4.)
     editor = Editor()
-    u_known = editor._list_vectors("unchanged")
+    u_known = editor.list_vectors("unchanged")
     assert u_known and u_known[0] is not None        # U is known (the tuning holds rationally)
     u0 = u_known[0]
     assert editor.move_interval("unchanged", 0, "interest", 0) is True
     assert tuple(editor.interest_vectors[0]) == u0   # copied into the interest list
-    assert editor._list_vectors("unchanged")[0] == u0  # …and U keeps it (derived — not removed)
+    assert editor.list_vectors("unchanged")[0] == u0  # …and U keeps it (derived — not removed)
     # nothing can be dropped INTO U (it isn't an editable list)
     assert editor.move_interval("interest", 0, "unchanged", 0) is False
 
@@ -1599,7 +1599,7 @@ def test_set_generator_tuning_text_freezes_a_typed_genmap():
 
 def test_set_generator_tuning_component_overrides_one_generator():
     editor = Editor()
-    optimum = editor._optimum_generator_tuning()
+    optimum = editor.optimum_generator_tuning()
     # with nothing overridden, editing one generator seeds the rest from the current optimum
     editor.set_generator_tuning_component(1, 700.0)
     eff = editor.effective_generator_tuning()
@@ -1705,11 +1705,11 @@ def test_flip_generator_reverses_the_mapping_row_and_keeps_the_tuning_map():
     # unchanged — the temperament sounds identical, the generator just points the other way.
     tuning_map_before = service.tuning(editor.state.mapping, editor.tuning_scheme).tuning_map
     row1_before, row0 = editor.state.mapping[1], editor.state.mapping[0]
-    gen1_before = editor._optimum_generator_tuning()[1]
+    gen1_before = editor.optimum_generator_tuning()[1]
     editor.flip_generator(1)
     assert editor.state.mapping[1] == tuple(-x for x in row1_before)  # row negated
     assert editor.state.mapping[0] == row0                            # the other row untouched
-    assert _cents_map([editor._optimum_generator_tuning()[1]]) == _cents_map([-gen1_before])
+    assert _cents_map([editor.optimum_generator_tuning()[1]]) == _cents_map([-gen1_before])
     tuning_map_after = service.tuning(editor.state.mapping, editor.tuning_scheme).tuning_map
     assert _cents_map(tuning_map_after) == _cents_map(tuning_map_before)  # 𝒕 unchanged
     assert editor.can_undo is True
@@ -1731,7 +1731,7 @@ def test_flip_generator_with_a_frozen_tuning_negates_its_size_and_holds_the_tuni
 
 def test_nudge_generator_tuning_component_steps_by_a_thousandth_of_a_cent():
     editor = Editor()
-    optimum = editor._optimum_generator_tuning()
+    optimum = editor.optimum_generator_tuning()
     shown = round(optimum[1], 3)  # the cell shows this generator's tuning at 3 dp
     # one scroll-up notch raises this generator by 1/1000 of a cent (and, like a typed edit,
     # freezes the tuning as a manual override with the rest seeded from the optimum)
@@ -1748,7 +1748,7 @@ def test_nudge_generator_tuning_component_steps_by_a_thousandth_of_a_cent():
 
 def test_consecutive_generator_nudges_coalesce_into_one_undo_step():
     editor = Editor()
-    shown = round(editor._optimum_generator_tuning()[1], 3)  # the cell shows the optimum at 3 dp
+    shown = round(editor.optimum_generator_tuning()[1], 3)  # the cell shows the optimum at 3 dp
     # three notches in one scroll gesture on the same generator is ONE undo step — so a single
     # undo reverts the whole fine-tune, not three undos for one continuous scroll
     editor.nudge_generator_tuning_component(1, 1)
@@ -1762,7 +1762,7 @@ def test_consecutive_generator_nudges_coalesce_into_one_undo_step():
 
 def test_nudging_a_different_generator_starts_a_new_undo_step():
     editor = Editor()
-    optimum = editor._optimum_generator_tuning()
+    optimum = editor.optimum_generator_tuning()
     editor.nudge_generator_tuning_component(0, 1)  # gesture A: generator 0
     editor.nudge_generator_tuning_component(1, 1)  # gesture B: a DIFFERENT generator -> its own step
     editor.undo()  # reverts only gesture B, leaving gesture A applied
@@ -1802,7 +1802,7 @@ def test_displayed_tuning_scheme_name_keeps_the_name_when_the_tuning_still_match
     # a manual tuning typed back AT the scheme's optimum (its displayed cents) is not a
     # deviation — the displayed tuning still realises the scheme — so the name stays.
     editor = Editor()
-    optimum = editor._optimum_generator_tuning()
+    optimum = editor.optimum_generator_tuning()
     editor.set_generator_tuning_component(1, round(optimum[1], 3))  # the cell's own shown value
     assert editor.effective_generator_tuning() is not None  # a manual tuning is set...
     assert editor.displayed_tuning_scheme_name == "minimax-U"  # ...but it matches at 3 dp
@@ -2058,9 +2058,9 @@ def test_the_tuning_follows_a_changed_target_interval_list():
     # override (it read the scheme's named TILT set), so editing the list left the tuning put —
     # the bug Douglas hit.
     editor = Editor()
-    tilt_optimum = editor._optimum_generator_tuning()  # over the default TILT family
+    tilt_optimum = editor.optimum_generator_tuning()  # over the default TILT family
     editor.set_target_override_text("[1 0 0⟩ [-1 1 0⟩")  # change the list to just 2/1 + 3/2
-    assert editor._optimum_generator_tuning() != tilt_optimum  # the tuning followed the new targets
+    assert editor.optimum_generator_tuning() != tilt_optimum  # the tuning followed the new targets
 
 
 def test_show_settings_start_at_defaults_and_changes_are_undoable():
@@ -2623,7 +2623,7 @@ def test_unchanged_basis_tuning_runs_over_the_domain_basis_not_the_standard_prim
     held = service.comma_ratios(ed.held_vectors, ed.state.domain_basis)
     grid = service.tuning(ed.state.mapping, ed.tuning_scheme, ed.state.domain_basis, held=held)
     over_primes = service.tuning(ed.state.mapping, ed.tuning_scheme, held=("3/1",))  # the old, wrong basis
-    editor = ed._displayed_retuning_map()
+    editor = ed.displayed_retuning_map()
     assert _cents_close(editor, grid.retuning_map)            # tracks the grid (domain basis)
     assert not _cents_close(editor, over_primes.retuning_map)  # NOT the standard-primes tuning
 
@@ -2641,7 +2641,7 @@ def test_unchanged_basis_threads_the_nonprime_approach():
     for approach in ("", "nonprime-based", "prime-based"):
         ed.nonprime_basis_approach = approach
         grid = service.tuning(ed.state.mapping, ed.tuning_scheme, ed.state.domain_basis, approach)
-        seen[approach] = ed._displayed_retuning_map()
+        seen[approach] = ed.displayed_retuning_map()
         assert _cents_close(seen[approach], grid.retuning_map)  # the editor tracks the grid for THIS approach
     assert not _cents_close(seen[""], seen["nonprime-based"])    # the approach is load-bearing, not ignored
 
@@ -2804,7 +2804,7 @@ def test_editor_optimum_uses_the_domain_basis_not_standard_primes():
     # standard prime limit, which froze an 822 ¢ "octave" on barbados.
     editor = Editor()
     assert editor.try_edit_mapping_text(BARBADOS)
-    gens = editor._optimum_generator_tuning()
+    gens = editor.optimum_generator_tuning()
     grid = service.tuning(editor.state.mapping, editor.tuning_scheme, editor.state.domain_basis).generator_map
     assert _cents_map(gens) == _cents_map(grid)  # editor seam agrees with the grid's reference solve
     assert round(gens[0], 3) == 1199.872 and round(gens[1], 3) == 248.766  # the real optimum, not 822 ¢
@@ -2818,7 +2818,7 @@ def test_editor_optimized_flag_and_scheme_name_are_honest_on_a_nonstandard_domai
     assert editor.try_edit_mapping_text(BARBADOS_ALT)
     assert editor.tuning_is_optimized is True
     assert editor.displayed_tuning_scheme_name == "minimax-U"
-    gens = editor._optimum_generator_tuning()
+    gens = editor.optimum_generator_tuning()
     assert round(gens[0], 3) == 1199.872 and round(gens[1], 3) == 951.106
 
 
@@ -2829,7 +2829,7 @@ def test_editor_optimum_honors_the_custom_prescaler():
     editor = Editor()
     editor.set_weight_slope("simplicity-weight")
     editor.set_custom_prescaler_entry(0, 0, 3.0)
-    gens = editor._optimum_generator_tuning()
+    gens = editor.optimum_generator_tuning()
     grid = service.tuning(editor.state.mapping, editor.tuning_scheme,
                           prescaler_override=editor.custom_prescaler).generator_map
     assert _cents_map(gens) == _cents_map(grid)
@@ -2877,7 +2877,7 @@ def test_comma_drag_drops_a_stale_manual_tuning_on_a_non_canonical_mapping():
     # generator-basis change), so a frozen manual tuning must drop rather than describe the old rows.
     editor = Editor()
     assert editor.try_edit_mapping_text("[⟨12 19 28 34] ⟨19 30 44 53]]")  # septimal meantone, 12&19 form
-    optimum = editor._optimum_generator_tuning()
+    optimum = editor.optimum_generator_tuning()
     editor.set_generator_tuning_text("{%f %f]" % optimum)  # a manual tuning of THESE generators
     editor.add_comma_to(0, 1)
     assert editor.state.mapping == ((1, 0, -4, -13), (0, 1, 4, 10))  # rewritten to canonical
@@ -3072,6 +3072,6 @@ def test_set_superspace_generator_tuning_text_holds_rl_cents_and_rejects_a_wrong
 def test_nudge_superspace_generator_tuning_component_steps_by_thousandths_of_a_cent():
     editor = Editor()
     editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    seed = editor._optimum_superspace_generator_tuning()[0]
+    seed = editor.optimum_superspace_generator_tuning()[0]
     editor.nudge_superspace_generator_tuning_component(0, 7)
     assert editor.superspace_generator_tuning[0] == round(round(seed, 3) + 7 * 0.001, 3)
