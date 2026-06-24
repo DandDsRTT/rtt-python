@@ -8,19 +8,19 @@ from rtt.app.page_assets import _STORE_KEY, _TILE_HOST, _doc_store
 class _ChromeSyncMixin:
     def _sync_mean_damage_tips(self) -> None:
         mean_damage_help_text = tooltips.mean_damage_help(
-            service.is_all_interval(self.page.editor.tuning_scheme)
+            service.is_all_interval(self._editor.tuning_scheme)
         )
         for cid in tooltips.MEAN_DAMAGE_IDS:
-            if self.page.rec.handles(cid).mean_damage_tip is not None:
-                self.page.rec.cells[cid].mean_damage_tip.set_text(mean_damage_help_text)
+            if self._rec.handles(cid).mean_damage_tip is not None:
+                self._rec.cells[cid].mean_damage_tip.set_text(mean_damage_help_text)
                 continue
-            wrap = self.page.rec.entity(cid).el
+            wrap = self._rec.entity(cid).el
             if wrap is not None and wrap._props.get("data-zoomhelp") != mean_damage_help_text:
                 wrap._props["data-zoomhelp"] = mean_damage_help_text
                 wrap.update()
 
     def _sync_pretransform_help(self, pretransform: bool) -> None:
-        rec = self.page.rec
+        rec = self._rec
         for h in rec.cells.values():
             if h.help_tip is not None:
                 tip, plain, relabeled = h.help_tip
@@ -36,47 +36,43 @@ class _ChromeSyncMixin:
                 wrap.update()
 
     def _sync_chrome(self, lay, fy) -> None:
-        self.page.refs["undo"].set_enabled(self.page.editor.can_undo)
-        self.page.refs["redo"].set_enabled(self.page.editor.can_redo)
-        self.page.refs["reset"].set_enabled(
-            self.page.editor.can_reset or self.page.chapter != show_settings.CHAPTER_DEFAULT
+        self._host.refs["undo"].set_enabled(self._editor.can_undo)
+        self._host.refs["redo"].set_enabled(self._editor.can_redo)
+        self._host.refs["reset"].set_enabled(
+            self._editor.can_reset or self._host.chapter != show_settings.CHAPTER_DEFAULT
         )
-        if self.page.chapter_slider.value != self.page.chapter:
-            self.page.chapter_slider.value = self.page.chapter
+        if self._host.chapter_slider.value != self._host.chapter:
+            self._host.chapter_slider.value = self._host.chapter
         if lay.approach_box is not None:
             ax, ay, aw, ah = lay.approach_box
-            self.page.refs["approach"].style(
+            self._host.refs["approach"].style(
                 f"position:absolute; left:{ax}px; top:{ay - fy}px; width:{aw}px; height:{ah}px"
             )
-            self.page.refs["approach"].set_visibility(True)
+            self._host.refs["approach"].set_visibility(True)
         else:
-            self.page.refs["approach"].set_visibility(False)
-        for key, opt in self.page.refs["approach_opts"].items():
+            self._host.refs["approach"].set_visibility(False)
+        for key, opt in self._host.refs["approach_opts"].items():
             (
                 opt.classes(add="rtt-rangeopt-on")
-                if key == self.page.editor.nonprime_basis_approach
+                if key == self._editor.nonprime_basis_approach
                 else opt.classes(remove="rtt-rangeopt-on")
             )
-        for key, box in self.page.boxes.items():
-            if box.value != self.page.editor.settings[key]:
-                box.value = self.page.editor.settings[key]
+        for key, box in self._host.boxes.items():
+            if box.value != self._editor.settings[key]:
+                box.value = self._editor.settings[key]
         self._sync_tile_parts()
-        self.page._sync_show_availability()
-        gesture_idle = (
-            self.page.gestures.gesture is None or self.page.gestures.gesture.token is None
-        )
-        if gesture_idle and not (self.page.load_failed and not self.page.editor.can_undo):
-            _doc_store()[_STORE_KEY] = self.page.editor.serialize()
+        self._host.sync_show_availability()
+        gesture_idle = self._gestures.gesture is None or self._gestures.gesture.token is None
+        if gesture_idle and not (self._host.load_failed and not self._editor.can_undo):
+            _doc_store()[_STORE_KEY] = self._editor.serialize()
 
     def _sync_tile_parts(self) -> None:
-        for key, parts in self.page.tile_parts.items():
+        for key, parts in self._host.tile_parts.items():
             shown = (
-                self.page.editor.settings["names"]
-                if key == "mnemonics"
-                else self.page.editor.settings[key]
+                self._editor.settings["names"] if key == "mnemonics" else self._editor.settings[key]
             )
             host = _TILE_HOST.get(key)
-            inert = host is not None and not self.page.editor.settings[host]
+            inert = host is not None and not self._editor.settings[host]
             for part in parts:
                 part.classes(
                     add="rtt-part-on" if shown else "rtt-part-off",
@@ -86,6 +82,6 @@ class _ChromeSyncMixin:
                     remove="rtt-part-inert"
                 )
                 if key == "mnemonics":
-                    part.classes(add="rtt-mnem-underline") if self.page.editor.settings[
+                    part.classes(add="rtt-mnem-underline") if self._editor.settings[
                         "mnemonics"
                     ] else part.classes(remove="rtt-mnem-underline")
