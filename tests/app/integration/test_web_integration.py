@@ -199,12 +199,12 @@ def test_disable_hidden_settings_turns_off_layers_past_the_chapter():
     editor.set_show("weighting", True)            # ch3
     editor.set_show("nonstandard_domain", True)   # ch9
     editor.set_show("counts", True)               # ch2
-    undo_depth = len(editor._undo_stack)
+    undo_depth = editor.undo_count
     editor.disable_hidden_settings(2)             # the slider lands on ch2
     assert editor.settings["weighting"] is False           # ch3 > 2 -> disabled
     assert editor.settings["nonstandard_domain"] is False  # ch9 > 2 -> disabled
     assert editor.settings["counts"] is True               # ch2 -> still revealed, left on
-    assert len(editor._undo_stack) == undo_depth           # a view prune, not an undoable edit
+    assert editor.undo_count == undo_depth           # a view prune, not an undoable edit
 
 
 def test_set_all_show_only_flips_the_keys_it_is_given():

@@ -139,8 +139,8 @@ class Editor:
         self._doc.pending.pending_mapping_row = value
 
     @property
-    def _undo_stack(self):
-        return self._doc.history.undo_stack
+    def undo_count(self) -> int:
+        return self._doc.history.undo_count
 
     @property
     def can_undo(self) -> bool:

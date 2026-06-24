@@ -1109,10 +1109,10 @@ def test_add_comma_to_ignores_a_comma_dropped_on_itself():
     editor = Editor()
     editor.edit_mapping(((12, 19, 28),))  # 12-ET 5-limit: two commas
     before = editor.state.comma_basis
-    steps = len(editor._undo_stack)
+    steps = editor.undo_count
     editor.add_comma_to(0, 0)  # a comma added to itself would double it — refused
     assert editor.state.comma_basis == before  # untouched
-    assert len(editor._undo_stack) == steps  # and no new undoable step
+    assert editor.undo_count == steps  # and no new undoable step
 
 
 def test_add_interest_to_combines_two_intervals_of_interest_undoably():
@@ -1145,10 +1145,10 @@ def test_add_target_to_multiplies_two_targets_materializing_the_override():
 def test_interval_drag_add_ignores_a_drop_on_itself():
     editor = Editor()
     editor.set_interest_vectors([(1, 0, 0), (0, 1, 0)])
-    steps = len(editor._undo_stack)  # the set was one undoable step
+    steps = editor.undo_count  # the set was one undoable step
     editor.add_interest_to(1, 1)  # dropping an interval on itself would double it — refused
     assert editor.interest_vectors == [(1, 0, 0), (0, 1, 0)]  # unchanged
-    assert len(editor._undo_stack) == steps  # ...and no new undoable step pushed
+    assert editor.undo_count == steps  # ...and no new undoable step pushed
 
 
 def test_add_and_remove_target_set_a_manual_override():
