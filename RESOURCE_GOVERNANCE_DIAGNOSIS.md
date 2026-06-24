@@ -1,5 +1,11 @@
 # Multi-agent test/land resource governance — diagnosis & fixes
 
+> **SUPERSEDED (historical).** The local coordination layer this document describes — the
+> render-gate semaphore, `bin/gate-load`, `bin/reap-orphan-gates`, `bin/land`,
+> `bin/with-merge-lock` — has been **removed**. Landing is now a GitHub merge queue gated by CI;
+> nothing CPU-heavy runs on the dev box, so the saturation problems below no longer apply. Kept
+> for the root-cause record only. See `MERGE_QUEUE_MIGRATION.md` and `WORKFLOW_CONSOLIDATION.md`.
+
 The land/render-gate machinery is *correct* (FIFO-fair merge lock, atomic `--ff-only`,
 tree-keyed green-token guard). What it lacked is **resource governance**: nothing cleaned up
 the heavy `pytest` process trees a killed/abandoned run leaves behind, and nothing kept the
