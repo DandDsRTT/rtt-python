@@ -113,7 +113,7 @@ class _LayoutMixin:
         self._prune_declared_tiles(draft)
 
     def _projection_col_tiles(self, draft):
-        if not self.show_projection:
+        if not draft.show_projection:
             return ()
         tiles = (
             ("block:proj:quantities", "projection", "quantities"),
@@ -135,7 +135,7 @@ class _LayoutMixin:
         return tiles
 
     def _ss_projection_col_tiles(self, draft):
-        if not self.show_ss_projection:
+        if not draft.show_ss_projection:
             return ()
         tiles = (
             ("block:ssproj:ssgens", "ss_projection", "ssgens"),
@@ -172,7 +172,7 @@ class _LayoutMixin:
             self.declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
                                ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
                                ("ss_vectors", "targets"), ("ss_mapping", "targets")}
-        if not self.show_identity_objects:
+        if not draft.show_identity_objects:
             self.declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
                                     ("mapping", "detempering"), ("canon", "canongens"),
                                     ("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
@@ -203,10 +203,10 @@ class _LayoutMixin:
         self.matlabel_primes_w = ((MATLABEL_W_SS if _r.flags.superspace else MATLABEL_W)
                                   if (_r.flags.header_symbols and show_temp) else 0)
         self.matlabel_ssprimes_w = MATLABEL_W_SSPRIMES if (_r.flags.header_symbols and _r.flags.superspace) else 0
-        _label_row_present = {"mapping": show_temp, "vectors": self.show_interval_vectors,
-                              "canon": _r.flags.canon, "projection": self.show_projection,
-                              "prescaling": self._prescaling_shown, "ss_mapping": _r.flags.superspace,
-                              "ss_vectors": _r.flags.superspace, "ss_projection": self.show_ss_projection}
+        _label_row_present = {"mapping": show_temp, "vectors": _r.flags.interval_vectors,
+                              "canon": _r.flags.canon, "projection": _r.flags.projection,
+                              "prescaling": _r.flags.prescaling_shown, "ss_mapping": _r.flags.superspace,
+                              "ss_vectors": _r.flags.superspace, "ss_projection": _r.flags.ss_projection}
         self.matlabel_other_w = {}
         if _r.flags.header_symbols:
             for (rk, ck) in _r.labels.row_labels:
@@ -247,18 +247,18 @@ class _LayoutMixin:
             ("quantities", ROW_H, show_interval_ratios, True, "interval\nratios"),
             ("units", ROW_H, show_domain_units, True, "units"),
             ("scaling_factors", ROW_H, _r.unchanged.shown, True, "scaling factors"),
-            ("vectors", _r.dims.d * ROW_H, self.show_interval_vectors, True, "interval vectors"),
+            ("vectors", _r.dims.d * ROW_H, _r.flags.interval_vectors, True, "interval vectors"),
             ("canon", _r.dims.rc * ROW_H, _r.flags.canon, True, "canonical mapping"),
             ("mapping", _r.dims.r_shown * ROW_H, show_temp, True, "mapping"),
             ("ss_vectors", _r.dims.dL * ROW_H, _r.flags.superspace, True, "superspace\ninterval vectors"),
             ("ss_mapping", _r.dims.rL * ROW_H, _r.flags.superspace, True, "superspace\nmapping"),
-            ("ss_projection", _r.dims.dL * ROW_H, self.show_ss_projection, True, "superspace\nprojection"),
-            ("projection", _r.dims.d * ROW_H, self.show_projection, True, "projection"),
+            ("ss_projection", _r.dims.dL * ROW_H, _r.flags.ss_projection, True, "superspace\nprojection"),
+            ("projection", _r.dims.d * ROW_H, _r.flags.projection, True, "projection"),
             ("tuning", ROW_H, show_tuning, True, "tuning"),
             ("just", ROW_H, show_tuning, True, "just tuning"),
             ("retune", ROW_H, show_tuning, True, "retuning"),
-            ("prescaling", (self.prescale_rows + self.size_rows) * ROW_H, self._prescaling_shown, True, "complexity prescaling"),
-            ("complexity", ROW_H, self._complexity_shown, True, "complexity"),
+            ("prescaling", (self.prescale_rows + self.size_rows) * ROW_H, _r.flags.prescaling_shown, True, "complexity prescaling"),
+            ("complexity", ROW_H, _r.flags.complexity_shown, True, "complexity"),
             ("weight", ROW_H, _r.flags.weighting, True, "weight"),
             ("damage", ROW_H, show_tuning, True, "damage"),
         )

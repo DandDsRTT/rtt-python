@@ -141,6 +141,16 @@ class Flags:
     units: bool
     weighting: bool
     decimals: bool
+    projection: bool
+    ss_projection: bool
+    identity_objects: bool
+    interval_vectors: bool
+    cell_units: bool
+    gridded: bool
+    complexity_shown: bool
+    prescaling_shown: bool
+    lbox_show: bool
+    cbox_show: bool
 
 
 @dataclass(frozen=True)
@@ -356,6 +366,16 @@ def _flags(b) -> Flags:
         units=b.show_units,
         weighting=b.show_weighting,
         decimals=b._decimals,
+        projection=b.show_projection,
+        ss_projection=b.show_ss_projection,
+        identity_objects=b.show_identity_objects,
+        interval_vectors=b.show_interval_vectors,
+        cell_units=b.show_cell_units,
+        gridded=b.gridded,
+        complexity_shown=b._complexity_shown,
+        prescaling_shown=b._prescaling_shown,
+        lbox_show=b._lbox_show,
+        cbox_show=b._cbox_show,
     )
 
 

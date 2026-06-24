@@ -134,7 +134,7 @@ class _ResolveMixin:
         draft.ctrl_symbol_h = SYMBOL_H if draft.show_symbols else 0
         draft.show_header_symbols = _f.header_symbols
         draft.show_units = _f.units
-        self.show_cell_units = _f.cell_units
+        draft.show_cell_units = _f.cell_units
         show_domain_units = _f.domain_units
         show_temp = _f.temp
         self.show_form = _f.form
@@ -144,23 +144,23 @@ class _ResolveMixin:
         draft.show_optimization = _f.optimization
         draft.show_weighting = _f.weighting
         draft.show_alt_complexity = _f.alt_complexity
-        self._complexity_shown = (draft.show_weighting
+        draft._complexity_shown = (draft.show_weighting
                                   and service.damage_weight_slope(self.tuning_scheme) != "unityWeight")
-        self._prescaling_shown = self._complexity_shown and (
+        draft._prescaling_shown = draft._complexity_shown and (
             service.is_all_interval(self.tuning_scheme) or draft.show_alt_complexity)
         draft.weight_unit = f"({service.weight_annotation(self.tuning_scheme)})"
         draft.complexity_unit = f"({service.complexity_annotation(self.tuning_scheme)})"
         draft.damage_unit = f"¢{draft.weight_unit}"
-        self._lbox_show = _f.lbox and self._complexity_shown
-        self._cbox_show = _f.cbox and self._complexity_shown
+        draft._lbox_show = _f.lbox and draft._complexity_shown
+        draft._cbox_show = _f.cbox and draft._complexity_shown
         draft.show_detempering = _f.detempering
         show_interest = _f.interest
-        self.gridded = _f.gridded
+        draft.gridded = _f.gridded
         draft.show_quantities = _f.quantities
         draft._decimals = _f.decimals
         draft.show_ebk = _f.ebk
         show_interval_ratios = _f.interval_ratios
-        self.show_interval_vectors = _f.interval_vectors
+        draft.show_interval_vectors = _f.interval_vectors
         draft.show_math = _f.math
         draft.custom_weights_active = (self.custom_weights is not None
                                       and not service.is_all_interval(self.tuning_scheme)
@@ -197,7 +197,7 @@ class _ResolveMixin:
         draft.col_labels = _p.col_labels
         draft.row_labels = _p.row_labels
         draft.effective_captions = _p.effective_captions
-        self.show_identity_objects = self.settings.get("identity_objects", False)
+        draft.show_identity_objects = self.settings.get("identity_objects", False)
         draft.standard_domain = service.is_standard_domain(draft.elements)
         draft.domain_label = "b" if service.domain_has_nonprimes(draft.elements) else "p"
         draft.domain_can_shrink = service.can_shrink_domain(self.state)
@@ -401,35 +401,35 @@ class _ResolveMixin:
         draft.prescaler_is_matrix = isinstance(draft.prescaler[0], (tuple, list))
 
     def _resolve_projection_data(self, draft, show_tuning) -> None:
-        self.show_projection = show_tuning and self.settings["projection"]
-        if self.show_projection:
+        draft.show_projection = show_tuning and self.settings["projection"]
+        if draft.show_projection:
             for rc in (("mapping", "gens"), ("ss_mapping", "ssgens")):
                 cap = draft.effective_captions.get(rc)
                 if cap and cap.endswith("generators"):
                     draft.effective_captions[rc] = cap[:-1] + "(s / embedding)"
         draft.projection_matrix = (service.tuning_projection(self.state, self.held_basis_ratios)
-                                  if self.show_projection else None)
+                                  if draft.show_projection else None)
         draft.embedding_matrix = (service.tuning_embedding(self.state, self.held_basis_ratios)
-                                 if self.show_projection else None)
+                                 if draft.show_projection else None)
         draft.canon_embedding_matrix = (service.canonical_generator_embedding(self.state, self.held_basis_ratios)
-                                       if self.show_projection else None)
+                                       if draft.show_projection else None)
         draft.projection_rationals = (service.projection_matrix_rationals(self.state, self.held_basis_ratios)
-                                     if self.show_projection else None)
+                                     if draft.show_projection else None)
         draft.proj_detempering = service.project_vectors(draft.projection_rationals, draft.detempering_vectors)
         draft.proj_held = service.project_vectors(draft.projection_rationals, draft.held)
         draft.proj_targets = service.project_vectors(draft.projection_rationals, draft.target_vectors)
         draft.proj_interest = service.project_vectors(draft.projection_rationals, draft.interest)
         draft.embedding_superspace = (service.superspace_generator_embedding_display(self.state, self.held_basis_ratios)
-                                     if (self.show_projection and draft.show_superspace) else None)
+                                     if (draft.show_projection and draft.show_superspace) else None)
         draft.projection_superspace = (service.superspace_prime_projection_display(self.state, self.held_basis_ratios)
-                                      if (self.show_projection and draft.show_superspace) else None)
-        self.show_ss_projection = self.show_projection and draft.show_superspace
+                                      if (draft.show_projection and draft.show_superspace) else None)
+        draft.show_ss_projection = draft.show_projection and draft.show_superspace
         draft.ss_projection_matrix = (service.superspace_tuning_projection(self.state, self.held_basis_ratios)
-                                     if self.show_ss_projection else None)
+                                     if draft.show_ss_projection else None)
         draft.ss_embedding_matrix = (service.superspace_tuning_embedding(self.state, self.held_basis_ratios)
-                                    if self.show_ss_projection else None)
+                                    if draft.show_ss_projection else None)
         draft.ss_projection_rationals = (service.superspace_projection_matrix_rationals(self.state, self.held_basis_ratios)
-                                        if self.show_ss_projection else None)
+                                        if draft.show_ss_projection else None)
         def _lift(vs):
             return service.lift_vectors_to_superspace(draft.elements, vs)
         _ssp = draft.ss_projection_rationals
@@ -450,9 +450,9 @@ class _ResolveMixin:
         self.gtm_chart = (show_ranges and show_tuning and "row:tuning" not in self.collapsed
                      and self.col_open("gens") and "tile:tuning:gens" not in self.collapsed)
         self.gtm_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if self.gtm_chart else 0
-        self.lbox_ctrl = self._lbox_show and self.col_open("ssprimes" if _r.flags.superspace else "primes") and not _r.flags.presets
+        self.lbox_ctrl = _r.flags.lbox_show and self.col_open("ssprimes" if _r.flags.superspace else "primes") and not _r.flags.presets
         self.lbox_extra = (RANGE_GAP + self.control_region_band_h(OPTION_BOX_PX + CAPTION_LINE)) if self.lbox_ctrl else 0
-        self.cbox_ctrl = self._cbox_show and self.col_open("targets")
+        self.cbox_ctrl = _r.flags.cbox_show and self.col_open("targets")
         self.cbox_extra = (RANGE_GAP + self.control_region_band_h(ROW_H + _r.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)) if self.cbox_ctrl else 0
         self.opt_ctrl = (_r.flags.optimization and "row:damage" not in self.collapsed
                     and self.col_open("targets") and "tile:damage:targets" not in self.collapsed)
