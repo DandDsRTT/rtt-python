@@ -164,7 +164,8 @@ guard, `bin/land`) has been **deleted** in favor of this — there is no `bin/la
 # from your worktree, on your claude/<name> branch, with your work committed:
 git push -u origin HEAD                       # publish your branch
 gh pr create --fill --base main               # open the PR
-gh pr merge --auto --squash                   # enqueue; the queue lands it when CI is green
+gh pr merge --auto                            # enqueue; the queue lands it when CI is green
+                                              # (no --squash: this repo's queue sets its own strategy)
 ```
 
 Enqueuing is **not** the finish line — **landing on `main` is.** The queue:
@@ -219,7 +220,7 @@ re-validates the new candidate:
 
 ```bash
 git rebase main && git push --force-with-lease
-gh pr merge --auto --squash        # re-enqueue; the prior auto-merge was dropped when it went DIRTY
+gh pr merge --auto                 # re-enqueue; the prior auto-merge was dropped when it went DIRTY
 ```
 
 Resolve conflicts inside the rebase exactly as before (see the git section below) — never reset to
@@ -229,6 +230,21 @@ escape them — then re-arm the watcher above.
 main checkout, so the user's `python app.py` on 8137 no longer auto-updates when you land — that is
 **by design**. The user pulls when they want to see new work (`git -C <main-checkout> pull`), or
 uses the deployed `danddsrtt-app.onrender.com`. You never touch their checkout.
+
+## Changed a workflow rule? Hand the user a broadcast for in-flight agents
+
+This file is loaded into an agent's context **at spawn**. So an edit here reaches every *newly*
+spawned agent automatically — but the agents **already running** still hold the old text and will not
+re-read this file on their own. A workflow change therefore silently misses exactly the mid-task
+agents who most need it (they'll keep landing the old way until their next spawn).
+
+So whenever you change a **workflow/process rule** other agents act on — how work lands, how to sync
+with `main`, which ports to use, the dev/test loop, anything procedural in this file — **also end
+your turn with a short, paste-ready broadcast the user can forward to currently-running agents.**
+Emit it as raw markdown inside a fenced ` ```markdown ` code block (so headers/lists survive the
+copy-paste), and make it state: what changed, what to do differently now, and which CLAUDE.md
+section to re-read. Keep it to the delta — not a re-explanation of the whole workflow. This applies
+to *process* changes only; a pure code/feature change needs no broadcast.
 
 **One-time setup (already required for the flow above):** `gh` must be installed and authenticated
 on this machine (`brew install gh && gh auth login`), and the merge queue + branch protection must
