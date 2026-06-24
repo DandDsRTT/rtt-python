@@ -22,6 +22,7 @@ from types import SimpleNamespace
 import nicegui.ui as ui
 import pytest
 from nicegui import core
+from nicegui.element_filter import ElementFilter
 from nicegui.elements.tooltip import Tooltip
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
@@ -832,6 +833,21 @@ async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cel
     await user.should_see(marker="prime:0")
 
 
+def _marked(user: User, marker: str, *, required: bool = True):
+    """The single live element carrying ``marker`` — the stable test handle the view stamps on a
+    cell's inner control via ``.mark()`` (see _recon_value: ``{cell_id}:num`` / ``:den`` / ``:whole``
+    / ``:frac`` / ``:sign`` / ``:main`` / ``:sub`` / ``:editbox``). The marker-keyed replacement for
+    walking ``default_slot.children`` by index, so an added wrapper or reordered child can't shift it.
+    Returns None (not raising) when ``required`` is False and no such element is rendered."""
+    with user._client:
+        els = list(ElementFilter(marker=marker, only_visible=True))
+    if els:
+        return els[0]
+    if required:
+        raise AssertionError(f"no rendered element carries marker {marker!r}")
+    return None
+
+
 def _approx_markers(user: User, cell_id: str) -> list:
     """The ``rtt-approx`` "~" labels rendered inside a cell (the approximate-ratio marker). Walks the
     cell wrap's descendants — the ~ rides the ``.rtt-ratio`` face, not the wrap itself."""
@@ -910,32 +926,29 @@ def _cell_child(user: User, cell_id: str):
     decimal (cents) cell wraps a whole-part + fraction input in a .rtt-dec-edit box; a sign-aware
     proxy makes it read/write like the old single input (see _DecCellProxy)."""
     wrap = next(iter(user.find(marker=cell_id).elements))
-    child = wrap.default_slot.children[0]
-    if "rtt-frac-edit" in getattr(child, "_classes", []):
-        return child.default_slot.children[0]  # the numerator input
-    if "rtt-dec-edit" in getattr(child, "_classes", []):
+    cls = getattr(wrap, "_classes", [])
+    if "rtt-fraccell" in cls:
+        return _marked(user, f"{cell_id}:num")  # the numerator input
+    if "rtt-deccell" in cls:
         whole, frac = _dec_inputs(user, cell_id)
-        main = child.default_slot.children[0]
-        sign = main.default_slot.children[0] if "rtt-gensign" in getattr(main.default_slot.children[0], "_classes", []) else None
+        sign = _marked(user, f"{cell_id}:sign", required=False)
         return _DecCellProxy(user, whole, frac, sign)
-    return child
+    return wrap.default_slot.children[0]
 
 
 def _dec_mode(user: User, cell_id: str) -> str:
     """An editable decimal cell's data-decmode ("int" — a bare whole, no fraction line — or "dec" —
     the whole over a small .fraction), read off its .rtt-dec-edit box. The decimal twin of the
     fraction cell's data-fracmode; the resting view the server sets from the committed value."""
-    box = next(iter(user.find(marker=cell_id).elements)).default_slot.children[0]
+    box = _marked(user, f"{cell_id}:editbox")
     return box._props.get("data-decmode", "")
 
 
 def _frac_inputs(user: User, cell_id: str):
     """The (numerator, denominator) input fields of an editable stacked-fraction cell — the two
-    separate fields that replaced the old overlaid num-over-den face. The .rtt-frac-edit box is the
-    wrap's first child; its children are num, the bar div, den."""
-    wrap = next(iter(user.find(marker=cell_id).elements))
-    box = wrap.default_slot.children[0]
-    return box.default_slot.children[0], box.default_slot.children[2]
+    separate fields that replaced the old overlaid num-over-den face, located by their stable
+    ``{cell_id}:num`` / ``:den`` markers (the bar div between them no longer matters)."""
+    return _marked(user, f"{cell_id}:num"), _marked(user, f"{cell_id}:den")
 
 
 def _ratio_value(user: User, cell_id: str) -> str:
@@ -961,7 +974,7 @@ def _ro_ratio_face(user: User, cell_id: str):
     face = _cell_child(user, cell_id)  # the .rtt-ratio div
     frac = next(c for c in face.default_slot.children if "rtt-frac" in getattr(c, "_classes", []))
     collapsed = "rtt-frac-whole" in getattr(frac, "_classes", [])
-    num, den = frac.default_slot.children[0], frac.default_slot.children[1]
+    num, den = _marked(user, f"{cell_id}:num"), _marked(user, f"{cell_id}:den")
     return num.text, den.text, collapsed
 
 
@@ -985,21 +998,17 @@ def _cell_text(user: User, cell_id: str) -> str:
 def _stacked_face(user: User, cell_id: str):
     """The (main label, sub label) of an editable cell's stacked OVERLAY face — the overlay that makes
     a value read like a read-only tuning value cell (the main glyph big, a small line below). Now used
-    only by the editable POWER cell (∞ over "(max)"): the input is child[0], the face child[1] (a
-    .rtt-tuning-value div holding the .rtt-stacked-main / .rtt-stacked-sub labels). The cents cells
-    (prescaler / weight / generator tuning) edit IN PLACE now — read them via _dec_inputs."""
-    wrap = next(iter(user.find(marker=cell_id).elements))
-    face = wrap.default_slot.children[1]
-    return face.default_slot.children[0], face.default_slot.children[1]
+    only by the editable POWER cell (∞ over "(max)"): the .rtt-stacked-main / .rtt-stacked-sub labels,
+    located by their stable ``{cell_id}:main`` / ``:sub`` markers. The cents cells (prescaler / weight /
+    generator tuning) edit IN PLACE now — read them via _dec_inputs."""
+    return _marked(user, f"{cell_id}:main"), _marked(user, f"{cell_id}:sub")
 
 
 def _ro_stacked_face(user: User, cell_id: str):
     """The (main, sub) labels of a READ-ONLY stacked value face (a tuning value cell): the
-    .rtt-tuning-value div sits directly in the wrap (no input to overlay), main over sub. Located
-    by class so a per-cell unit riding the wrap doesn't shift the index."""
-    wrap = next(iter(user.find(marker=cell_id).elements))
-    face = next(c for c in wrap.default_slot.children if "rtt-tuning-value" in getattr(c, "_classes", []))
-    return face.default_slot.children[0], face.default_slot.children[1]
+    .rtt-stacked-main / .rtt-stacked-sub labels, located by their stable ``{cell_id}:main`` / ``:sub``
+    markers so a per-cell unit riding the wrap can't shift the index."""
+    return _marked(user, f"{cell_id}:main"), _marked(user, f"{cell_id}:sub")
 
 
 def _ro_value(user: User, cell_id: str) -> str:
@@ -1015,14 +1024,9 @@ def _ro_value(user: User, cell_id: str) -> str:
 def _dec_inputs(user: User, cell_id: str):
     """The (whole, fraction) input fields of an editable stacked-DECIMAL (cents) cell — the two
     separate fields that replaced the old overlaid whole-over-.fraction face, the decimal twin of
-    _frac_inputs. The .rtt-dec-edit box is the wrap's first child; its children are the main row
-    ([sign?] + whole input) over the sub row (dot div + fraction input)."""
-    wrap = next(iter(user.find(marker=cell_id).elements))
-    box = wrap.default_slot.children[0]
-    main, sub = box.default_slot.children[0], box.default_slot.children[1]
-    whole = main.default_slot.children[-1]   # after the optional sign glyph
-    frac = sub.default_slot.children[1]       # after the dot div
-    return whole, frac
+    _frac_inputs, located by their stable ``{cell_id}:whole`` / ``:frac`` markers (no dependence on the
+    optional sign glyph or the dot div sitting beside them)."""
+    return _marked(user, f"{cell_id}:whole"), _marked(user, f"{cell_id}:frac")
 
 
 def _dec_value(user: User, cell_id: str) -> str:
@@ -1039,13 +1043,10 @@ def _gentuning_face(user: User, cell_id: str):
     genmap shows an explicit, clickable sign glyph (+ ordinarily assumed, − when negative) left of the
     big whole part, the small dot-led fraction stacked below. The sign is a label (its .text); the
     whole + fraction are the two real input fields (their .value), now edited in place. Returns
-    (sign_label, whole_input, fraction_input)."""
-    wrap = next(iter(user.find(marker=cell_id).elements))
-    box = wrap.default_slot.children[0]
-    main, sub = box.default_slot.children[0], box.default_slot.children[1]
-    sign = main.default_slot.children[0]   # the .rtt-gensign label
-    whole = main.default_slot.children[1]  # the whole-part input
-    frac = sub.default_slot.children[1]    # the fraction input (after the dot div)
+    (sign_label, whole_input, fraction_input), each located by its stable ``{cell_id}:sign`` /
+    ``:whole`` / ``:frac`` marker."""
+    sign = _marked(user, f"{cell_id}:sign")
+    whole, frac = _dec_inputs(user, cell_id)
     return sign, whole, frac
 
 
@@ -1482,7 +1483,7 @@ async def test_decimals_off_shrinks_a_long_integer_to_fit_its_cell(user: User) -
     # right edge (the reported "3-digit numbers butting the generator tuning map's right edge").
     gen_whole, _ = _dec_inputs(user, "tuning:gen:1")
     assert len(str(gen_whole.value)) == 3                         # a 3-digit generator (e.g. 697)
-    gen_box = next(iter(user.find(marker="tuning:gen:1").elements)).default_slot.children[0]
+    gen_box = _marked(user, "tuning:gen:1:editbox")
     assert float(gen_box._style["--dec-whole-font"].rstrip("px")) < cell_font, \
         "a signed 3-digit generator must shrink below the full cell font to clear its sign + box edge"
 
@@ -1582,8 +1583,7 @@ async def test_a_bare_integer_value_fills_the_cell_not_the_reduced_whole_part_si
     user.find(kind=ui.checkbox, content="all-interval").click()  # reveal the in-grid all-interval checkbox
     _cell_child(user, "control:all_interval").set_value(True)  # an all-interval scheme reveals the prescaling row (off-diagonal stays read-only)
     await user.should_see(marker="cell:prescaling:primes:0:1")
-    zero_face = _cell_child(user, "cell:prescaling:primes:0:1")        # read-only tuning value: child[0] IS the face
-    zero_main = zero_face.default_slot.children[0]
+    zero_main, _ = _ro_stacked_face(user, "cell:prescaling:primes:0:1")   # read-only tuning value face
     assert zero_main.text == "0"
     assert "rtt-stacked-solo" in zero_main._classes    # the bare integer takes the full-size (solo) face
     # the diagonal log₂3 = 1.585 keeps the stacked whole-over-.fraction view (dec mode, not solo)
@@ -1910,11 +1910,11 @@ async def test_typing_the_q_field_drives_the_complexity_norm(user: User) -> None
     user.find(kind=ui.checkbox, content="alternative complexity").click()  # make q an editable powerinput
     await user.should_see(marker="control:dual")
     assert _cell_child(user, "control:q").value == "1"              # taxicab default
-    assert _cell_child(user, "control:dual").default_slot.children[0].text == "∞"  # dual of taxicab (q=1), read-only face
+    assert _marked(user, "control:dual:main").text == "∞"          # dual of taxicab (q=1), read-only face
     _cell_child(user, "control:q").set_value("2")                  # taxicab (q=1) -> Euclidean (q=2)
     await user.should_see(marker="control:dual")
     assert _cell_child(user, "control:q").value == "2"             # the field reflects the new q
-    assert _cell_child(user, "control:dual").default_slot.children[0].text == "2"  # dual(2)=2 -> the typed q drove the norm
+    assert _marked(user, "control:dual:main").text == "2"          # dual(2)=2 -> the typed q drove the norm
 
 
 async def test_q_norm_power_is_read_only_until_alt_complexity(user: User) -> None:
@@ -1929,7 +1929,7 @@ async def test_q_norm_power_is_read_only_until_alt_complexity(user: User) -> Non
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals box 𝒄 + 𝑞
     await user.should_see(marker="control:q")
     assert "rtt-cell-input" not in _wrap_classes(user, "control:q")  # alt. complexity OFF -> read-only, no input
-    assert _cell_child(user, "control:q").default_slot.children[0].text == "1"  # the read-only face shows q=1
+    assert _marked(user, "control:q:main").text == "1"  # the read-only face shows q=1
     user.find(kind=ui.checkbox, content="alternative complexity").click()  # turn it on -> q becomes editable
     await user.should_see(marker="control:q")
     assert "rtt-cell-input" in _wrap_classes(user, "control:q")      # now an editable powerinput
@@ -2101,8 +2101,7 @@ async def test_all_interval_renders_the_locked_power_as_a_read_only_value(user: 
     _cell_child(user, "control:all_interval").set_value(True)       # check it -> all-interval locks the power
     await user.should_see(marker="optimization:power")
     assert "rtt-cell-input" not in _wrap_classes(user, "optimization:power")  # read-only value, no input
-    face = _cell_child(user, "optimization:power")                # the .rtt-tuning-value stacked face div
-    main, sub = face.default_slot.children[0], face.default_slot.children[1]
+    main, sub = _ro_stacked_face(user, "optimization:power")      # the .rtt-tuning-value stacked face
     assert (main.text, sub.text) == ("∞", "(max)")               # identical face: ∞ over (max), kept
     _cell_child(user, "control:all_interval").set_value(False)    # uncheck -> back to target-based
     await user.should_see(marker="optimization:power")
