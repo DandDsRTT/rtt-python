@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from rtt.app.service.core import cents, prescale_text
+from rtt.app.service.display import cents, prescale_text
 from rtt.app.service.text_conventions import (
     _DASH,
     _EMBED,

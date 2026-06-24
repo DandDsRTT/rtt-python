@@ -5,13 +5,9 @@ from dataclasses import replace
 from fractions import Fraction
 from functools import lru_cache
 
-from rtt.app.service.core import (
-    DEFAULT_TUNING_SCHEME,
-    Tuning,
-    _to_matrix,
-    _vectors_to_ratios,
-)
+from rtt.app.service.core import DEFAULT_TUNING_SCHEME, Tuning
 from rtt.app.service.core_closed_form import ClosedFormTuning, closed_form_from_temperament
+from rtt.app.service.core_vectors import _to_matrix, _vectors_to_ratios
 from rtt.app.service.projection import (
     _held_for_projection,
     _matrix_strings,

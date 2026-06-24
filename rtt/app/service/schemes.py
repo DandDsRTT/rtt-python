@@ -6,12 +6,10 @@ from rtt.app.service.core import (
     DEFAULT_TARGET_SPEC,
     DEFAULT_TUNING_SCHEME,
     _is_matrix,
-    _to_matrix,
-    _vectors_to_ratios,
-    element_ratio,
-    prescale_text,
 )
 from rtt.app.service.core_targets import target_interval_set
+from rtt.app.service.core_vectors import _to_matrix, _vectors_to_ratios, element_ratio
+from rtt.app.service.display import prescale_text
 from rtt.library.parsing import parse_quotient_list
 from rtt.library.temperament import Temperament, Variance
 from rtt.library.tuning import get_complexity_prescaler, get_dual_power
