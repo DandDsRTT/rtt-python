@@ -7,12 +7,15 @@ html, body { overscroll-behavior-x: none; }
    title moved to the settings sidebar). It fills the corner exactly — LABEL_W wide so its right
    edge meets the row-label column, HEADER_H tall so its bottom meets the column-header row
    — i.e. aligned with both the row titles and the column titles. Square (no radius), on the
-   same light grey as the sidebar and pane; the buttons centre within it. It sits in the fixed
-   .rtt-corner region (top-left of the frozen panes), positioned at the corner's origin. */
+   same light grey as the sidebar and pane. The button bank sits at the same top-left margin
+   (7px/6px) and the same height (28px) as the sidebar hamburger, so the two chrome-button
+   families read as one aligned row across the seam. It sits in the fixed .rtt-corner region
+   (top-left of the frozen panes), positioned at the corner's origin. */
 .rtt-titletile { position:absolute; top:0; left:0; box-sizing:border-box;
                  width:var(--label-w); height:var(--header-h); background:#e0e0e0;
-                 display:flex; align-items:center; justify-content:center; }
-.rtt-tile-btns { display:flex; gap:1.5px; }
+                 display:flex; align-items:flex-start; justify-content:flex-start; }
+.rtt-tile-btns { display:flex; gap:1.5px; align-items:center;
+                 height:28px; margin:-5px 0 0 6px; }
 /* square bordered icon buttons (undo/redo), matching the mockup's framed glyphs — sized to the
    same --option-box as every checkbox so the two button families never drift apart */
 .rtt-iconbtn { width:var(--option-box) !important; min-width:var(--option-box) !important;
