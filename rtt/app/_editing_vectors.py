@@ -23,20 +23,6 @@ class _VectorEdits:
         self.e = e
         self.page = e.page
 
-    def _finish_edit(self, preview, out) -> None:
-        # out is a service.Outcome whose value (on ACCEPT) is the commit closure. A preview arms the
-        # candidate with that closure (else nothing); a real edit commits / notifies / no-ops.
-        if preview:
-            commit = out.value if out.effect is service.Effect.ACCEPT else None
-            self.page.gestures.edit_candidate(commit)
-            return
-        if out.effect is service.Effect.REJECT:
-            ui.notify(out.message, type="negative", position="top")
-            self.page.renderer.render()
-        elif out.effect is service.Effect.ACCEPT:
-            out.value()
-            self.page.renderer.request_render()
-
     def _edit_pending_vector(self, spec, preview, toks, d) -> None:
         cell_id = spec.cell_id
         pt = spreadsheet_text.pending_token(toks)
@@ -71,19 +57,19 @@ class _VectorEdits:
             for i in range(count)
             for p in range(d)
         ):
-            self._finish_edit(preview, service.IGNORE)
+            self.e._apply_outcome(service.IGNORE, None, preview=preview)
             return
         vectors = [
             [_parse_int(self.page.rec.cells[cell_id(toks[i], p)].value.input.value) for p in range(d)]
             for i in range(count)
         ]
         if any(v is None for vec in vectors for v in vec):
-            self._finish_edit(preview, service.IGNORE)
+            self.e._apply_outcome(service.IGNORE, None, preview=preview)
             return
         if spec.validate is not None and not spec.validate(vectors):
-            self._finish_edit(preview, service.reject(_INVALID_TEMPERAMENT))
+            self.e._apply_outcome(service.reject(_INVALID_TEMPERAMENT), None, preview=preview)
             return
-        self._finish_edit(preview, service.accept(lambda: spec.commit(vectors)))
+        self.e._apply_outcome(service.accept(), lambda: spec.commit(vectors), preview=preview)
 
     @cb_method
     def on_mapping_change(self, preview=False):
@@ -138,7 +124,7 @@ class _VectorEdits:
             for j in range(r)
             for p in range(d)
         ):
-            self._finish_edit(preview, service.IGNORE)
+            self.e._apply_outcome(service.IGNORE, None, preview=preview)
             return
         vectors = [
             [
@@ -148,17 +134,17 @@ class _VectorEdits:
             for j in range(r)
         ]
         if any(v is None for vec in vectors for v in vec):
-            self._finish_edit(preview, service.reject(_INVALID_UNCHANGED))
+            self.e._apply_outcome(service.reject(_INVALID_UNCHANGED), None, preview=preview)
             return
         try:
             ratios = service.comma_ratios(
                 tuple(tuple(v) for v in vectors), self.page.editor.state.domain_basis
             )
         except (ValueError, ZeroDivisionError, ArithmeticError):
-            self._finish_edit(preview, service.reject(_INVALID_UNCHANGED))
+            self.e._apply_outcome(service.reject(_INVALID_UNCHANGED), None, preview=preview)
             return
-        self._finish_edit(
-            preview, service.accept(lambda: self.page.editor.set_unchanged_basis(ratios))
+        self.e._apply_outcome(
+            service.accept(), lambda: self.page.editor.set_unchanged_basis(ratios), preview=preview
         )
 
     @cb_method
@@ -184,13 +170,7 @@ class _VectorEdits:
             self.page.editor.state.domain_basis,
         )
 
-        def apply():
-            self._apply_ratio_edit(group, tok, out.value)
-            # a quantities-row ratio edit routes into a retuning setter (comma/held/target/unchanged)
-            # — render off the loop. (An interest edit doesn't retune, but the warm build is cheap.)
-            self.page.renderer.request_render()
-
-        self.e._commit_outcome(out, apply)
+        self.e._apply_outcome(out, lambda: self._apply_ratio_edit(group, tok, out.value))
 
     def _replace_interval_vector(self, group, tok, vector, current, setter) -> None:
         list_name = {
@@ -260,7 +240,7 @@ class _VectorEdits:
         out = service.resolve_domain_element_transform(
             self.page.editor.state, index, self.page.rec.cell_value(cid), op
         )
-        self.e._commit_outcome(out, lambda: self._apply_domain_element(str(index), out.value))
+        self.e._apply_outcome(out, lambda: self._apply_domain_element(str(index), out.value))
 
     def _interval_group_state(self, group):
         if group == "comma":
@@ -311,7 +291,6 @@ class _VectorEdits:
             self.page.editor.set_pending_element(raw)
         else:
             self.page.editor.set_domain_element(int(tok), raw)
-        self.page.renderer.request_render()  # a new / relabelled domain element retunes — off the loop
 
     @cb_method
     def on_element_change(self, cid):
@@ -320,7 +299,7 @@ class _VectorEdits:
         raw = self.page.rec.cell_value(cid)
         tok = cid.split(":")[1]
         out = service.resolve_domain_element_edit(self.page.editor.state, tok, raw)
-        self.e._commit_outcome(out, lambda: self._apply_domain_element(tok, raw))
+        self.e._apply_outcome(out, lambda: self._apply_domain_element(tok, raw))
 
     @cb_method
     def on_element_preview(self, cid):
@@ -336,11 +315,4 @@ class _VectorEdits:
         raw = self.page.rec.cell_value(cid)
         tok = cid.split(":")[1]
         out = service.resolve_domain_element_edit(self.page.editor.state, tok, raw)
-
-        def apply():
-            if tok == "pending":
-                self.page.editor.set_pending_element(raw)
-            else:
-                self.page.editor.set_domain_element(int(tok), raw)
-
-        self.e._preview_outcome(out, apply)
+        self.e._apply_outcome(out, lambda: self._apply_domain_element(tok, raw), preview=True)
