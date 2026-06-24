@@ -41,11 +41,11 @@ class _Page:
     def __init__(self, state: str | None = None) -> None:
         loaded_from_url = self._load_document(state)
         self.gestures = GestureController(self.editor, self)
-        self.renderer = Renderer(self)
+        self.rec = _Reconciler(self.editor, self.gestures)
+        self.renderer = Renderer(self.editor, self.rec, self.gestures, self)
         self.edits = EditController(self)
         self.builder = PageBuilder(self)
         self.builder._setup_page_head()
-        self.rec = _Reconciler(self.editor, self.gestures)
         self._init_page_client(loaded_from_url)
         self.edits._build_edit_specs()
         self.edits._build_vector_list_specs()
@@ -157,14 +157,14 @@ class _Page:
             _gate(row, "rtt-chap-hidden", show_settings.reveal_chapter(key) > ch)
         if "audio_bank" in self.refs:
             _gate(self.refs["audio_bank"], "rtt-chap-invisible", ch < show_settings.CHAPTER_MIN)
-        self._sync_show_availability()
+        self.sync_show_availability()
 
     def _available_keys(self):
         return [
             k for k in show_settings.IMPLEMENTED if show_settings.reveal_chapter(k) <= self.chapter
         ]
 
-    def _sync_show_availability(self):
+    def sync_show_availability(self):
         for key, box in self.boxes.items():
             disabled = (
                 key not in show_settings.IMPLEMENTED
