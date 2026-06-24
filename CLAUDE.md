@@ -167,7 +167,7 @@ gh pr create --fill --base main               # open the PR
 gh pr merge --auto --squash                   # enqueue; the queue lands it when CI is green
 ```
 
-That's it — you're done. Do **not** wait on it, poll it, or narrate it. The queue:
+Enqueuing is **not** the finish line — **landing on `main` is.** The queue:
 
 - builds the candidate merge of your PR onto the current `main`,
 - runs `.github/workflows/merge-gate.yml` (the full suite, including the render file) on that
@@ -179,15 +179,51 @@ Because CI validates the *candidate merge* (your branch + the `main` it will lan
 land the exact state that was validated — the property the old merge lock hand-built. Serialization
 and fairness are the queue's job now; there is no local lock to take and no queue position to watch.
 
-**Conflicts / `main` moved under you.** If your branch won't merge cleanly, rebase and repush — the
-queue re-validates:
+**See the PR through to merge — don't drop the task at `gh pr merge`.** The auto-merge you armed is
+not a guarantee: on a fast-moving `main`, your branch routinely goes **`DIRTY`** ("This branch has
+conflicts that must be resolved") or gets **dropped from the queue on a red candidate**, and then it
+just sits there unmerged forever unless you act. So your task is not finished until `main` actually
+contains your commit. **Watch the PR to a terminal state, then act on whatever it became.**
+
+This does **not** mean polling-with-narration or heartbeating the user — that would break the
+"never ping while waiting" rule (see the global guidance). It means arming **one silent background
+watcher** that emits nothing while the PR is healthy in the queue and **re-engages you only on a
+state you must act on.** Background a poll loop that exits only on a terminal/actionable state — its
+exit is what wakes you; while it loops it produces no user-facing text:
+
+```bash
+# Run in the background. Exits — and re-engages you — ONLY when there's something to do:
+#   0  merged        → report "PR #N merged" once, then stop
+#   10 conflicts     → rebase onto main, resolve, push --force-with-lease, re-enqueue, re-arm
+#   11 dropped/red   → read the failing check, fix, push, re-enqueue, re-arm
+#   12 closed        → unexpected; surface to the user
+pr=$(gh pr view --json number -q .number)
+while :; do
+  read -r state mss < <(gh pr view "$pr" --json state,mergeStateStatus -q '.state+" "+.mergeStateStatus')
+  [ "$state" = MERGED ] && exit 0
+  [ "$state" = CLOSED ] && exit 12
+  [ "$mss" = DIRTY ] && exit 10
+  if gh pr checks "$pr" 2>/dev/null | grep -qiE '\b(fail|failure)\b'; then exit 11; fi
+  sleep 45
+done
+```
+
+Until that watcher exits, stay silent — do not narrate "still queued" or "position 2 of 4"; those
+turn-ends are exactly the pings the global rule forbids. When it exits, do the matching action and,
+for the conflict/red cases, **re-arm the watcher** — you loop on `DIRTY → resolve → re-enqueue`
+until the PR is genuinely merged. Break silence only to report the merge, or to ask for a decision
+you genuinely can't make.
+
+**Resolving a `DIRTY` PR.** A conflict / `main` moved under you means rebase and repush — the queue
+re-validates the new candidate:
 
 ```bash
 git rebase main && git push --force-with-lease
+gh pr merge --auto --squash        # re-enqueue; the prior auto-merge was dropped when it went DIRTY
 ```
 
 Resolve conflicts inside the rebase exactly as before (see the git section below) — never reset to
-escape them.
+escape them — then re-arm the watcher above.
 
 **The user refreshes their own 8137 app.** Landing now happens on the remote `main`, not the local
 main checkout, so the user's `python app.py` on 8137 no longer auto-updates when you land — that is
