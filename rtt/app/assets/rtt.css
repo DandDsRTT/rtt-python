@@ -3,19 +3,16 @@
    navigate away. The board's own scroller adds overscroll-behavior-x:contain (see .rtt-gridbody). */
 html, body { overscroll-behavior-x: none; }
 
-/* the grid's empty top-left corner cell now holds only the undo/redo buttons (the app
-   title moved to the settings sidebar). It fills the corner exactly — LABEL_W wide so its right
-   edge meets the row-label column, HEADER_H tall so its bottom meets the column-header row
-   — i.e. aligned with both the row titles and the column titles. Square (no radius), on the
-   same light grey as the sidebar and pane. The button bank sits at the same top-left margin
-   (7px/6px) and the same height (28px) as the sidebar hamburger, so the two chrome-button
-   families read as one aligned row across the seam. It sits in the fixed .rtt-corner region
-   (top-left of the frozen panes), positioned at the corner's origin. */
-.rtt-titletile { position:absolute; top:0; left:0; box-sizing:border-box;
-                 width:var(--label-w); height:var(--header-h); background:#e0e0e0;
-                 display:flex; align-items:flex-start; justify-content:flex-start; }
-.rtt-tile-btns { display:flex; gap:1.5px; align-items:center;
-                 height:28px; margin:-5px 0 0 6px; }
+/* the grid's frozen top-left corner holds the undo/redo/reset/share/tour button bank (the app
+   title moved to the settings sidebar). The light-grey bank hugs its buttons with an equal 6px
+   margin on all four sides and stands 28px tall, the same as the sidebar hamburger — it does NOT
+   fill the corner. It is lifted by (hamburger top margin − grid pad) so its 28px band lines up
+   with the hamburger across the seam. It sits in the fixed .rtt-corner region, at the corner's
+   left origin. */
+.rtt-titletile { position:absolute; top:calc(7px - var(--pad)); left:0; box-sizing:border-box;
+                 width:fit-content; height:28px; background:#e0e0e0;
+                 display:flex; align-items:center; padding:6px; }
+.rtt-tile-btns { display:flex; gap:1.5px; }
 /* square bordered icon buttons (undo/redo), matching the mockup's framed glyphs — sized to the
    same --option-box as every checkbox so the two button families never drift apart */
 .rtt-iconbtn { width:var(--option-box) !important; min-width:var(--option-box) !important;
