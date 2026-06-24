@@ -37,80 +37,84 @@ class _TuningEdits:
 
     def __init__(self, e) -> None:
         self.e = e
-        self.page = e.page
+        self._editor = e._editor
+        self._rec = e._rec
+        self._renderer = e._renderer
+        self._gestures = e._gestures
+        self._host = e._host
         self.target_limit_commit = None
 
     @cb_method
     def on_power_change(self, cid):
-        if self.page.building or self.page.rec.handles(cid).value.input is None:
+        if self._host.building or self._rec.handles(cid).value.input is None:
             return
         if cid not in ("optimization:power", "control:q"):
             return
         is_q = cid == "control:q"
         power = service.parse_power(
-            self.page.rec.cells[cid].value.input.value, minimum=1.0 if is_q else 0.0
+            self._rec.cells[cid].value.input.value, minimum=1.0 if is_q else 0.0
         )
         if power is None:
             return
         if is_q:
-            self.page.editor.set_complexity_norm_power(power)
+            self._editor.set_complexity_norm_power(power)
         else:
-            self.page.editor.set_optimization_power(power)
-        self.page.renderer.request_render()
+            self._editor.set_optimization_power(power)
+        self._renderer.request_render()
 
     def _gen_position(self, tok):
-        toks = self.page.col_tokens("gens")
+        toks = self._host.col_tokens("gens")
         return toks.index(tok) if tok in toks else tok
 
     @cb_method
     def on_gentuning_change(self, cid):
-        if self.page.building or self.page.rec.handles(cid).value.input is None:
+        if self._host.building or self._rec.handles(cid).value.input is None:
             return
-        mag = self.page.rec.decimal_value(cid)
+        mag = self._rec.decimal_value(cid)
         if not mag:
             return
         try:
             cents = abs(float(mag))
         except ValueError:
             return
-        glyph = self.page.rec.handles(cid).value.gensign_face
+        glyph = self._rec.handles(cid).value.gensign_face
         if glyph is not None and glyph.text not in ("+", ""):
             cents = -cents
         i = int(cid.rsplit(":", 1)[1])
         if ":ssgen:" in cid:
-            self.page.editor.set_superspace_generator_tuning_component(i, cents)
+            self._editor.set_superspace_generator_tuning_component(i, cents)
         else:
-            self.page.editor.set_generator_tuning_component(self._gen_position(i), cents)
-        self.page.renderer.request_render()
+            self._editor.set_generator_tuning_component(self._gen_position(i), cents)
+        self._renderer.request_render()
 
     @cb_method
     def on_gentuning_wheel(self, cid, delta_y):
-        if self.page.building or not delta_y:
+        if self._host.building or not delta_y:
             return
         i, steps = int(cid.rsplit(":", 1)[1]), (1 if delta_y < 0 else -1)
         if ":ssgen:" in cid:
-            self.page.editor.nudge_superspace_generator_tuning_component(i, steps)
+            self._editor.nudge_superspace_generator_tuning_component(i, steps)
         else:
-            self.page.editor.nudge_generator_tuning_component(self._gen_position(i), steps)
-        self.page.renderer.request_render()
+            self._editor.nudge_generator_tuning_component(self._gen_position(i), steps)
+        self._renderer.request_render()
 
     @cb_method
     def on_value_wheel(self, cid, delta_y):
-        if self.page.building or not delta_y or self.page.rec.handles(cid).value.input is None:
+        if self._host.building or not delta_y or self._rec.handles(cid).value.input is None:
             return
-        step = _WHEEL_STEPS.get(self.page.rec.handles(cid).kind)
+        step = _WHEEL_STEPS.get(self._rec.handles(cid).kind)
         if step is None:
             return
-        if self.page.rec.handles(cid).value.den_input is not None:
-            self.page.building = True
-            self.page.rec.set_decimal_value(
-                cid, _wheel_step(self.page.rec.decimal_value(cid), delta_y, step)
+        if self._rec.handles(cid).value.den_input is not None:
+            self._host.building = True
+            self._rec.set_decimal_value(
+                cid, _wheel_step(self._rec.decimal_value(cid), delta_y, step)
             )
-            self.page.building = False
+            self._host.building = False
             self.on_prescaler_change(cid)
             return
-        self.page.rec.cells[cid].value.input.value = _wheel_step(
-            self.page.rec.cells[cid].value.input.value, delta_y, step
+        self._rec.cells[cid].value.input.value = _wheel_step(
+            self._rec.cells[cid].value.input.value, delta_y, step
         )
         commit = {
             "mapping": self.e.vectors.on_mapping_change,
@@ -119,18 +123,18 @@ class _TuningEdits:
             "heldcell": self.e.vectors.on_held_change,
             "targetcell": self.e.vectors.on_target_cells_change,
             "formcell": self.e.vectors.on_form_change,
-        }.get(self.page.rec.handles(cid).kind)
+        }.get(self._rec.handles(cid).kind)
         if commit is not None:
             commit()
 
     @cb_method
     def on_target_limit_wheel(self, delta_y):
-        if self.page.building or not delta_y:
+        if self._host.building or not delta_y:
             return
-        num = self.page.rec.cells["preset:target"].chooser.select[0]
-        self.page.building = True
+        num = self._rec.cells["preset:target"].chooser.select[0]
+        self._host.building = True
         num.value = _wheel_step(num.value, delta_y)
-        self.page.building = False
+        self._host.building = False
         self.on_target_limit_preview()
         if self.target_limit_commit is not None:
             self.target_limit_commit.cancel()
@@ -147,60 +151,56 @@ class _TuningEdits:
         except asyncio.CancelledError:
             return
         self.target_limit_commit = None
-        with self.page.page_client:
+        with self._host.page_client:
             self.e.on_target_change()
 
     @cb_method
     def on_target_limit_preview(self, typed=None):
-        g = self.page.gestures.gesture
-        if self.page.building or g is None or g.kind != "edit" or g.source != "preset:target":
+        g = self._gestures.gesture
+        if self._host.building or g is None or g.kind != "edit" or g.source != "preset:target":
             return
-        num, sel = self.page.rec.cells["preset:target"].chooser.select
+        num, sel = self._rec.cells["preset:target"].chooser.select
         raw = num.value if typed is None else typed
-        out = service.resolve_target_limit(sel.value, raw, self.page.editor.state.domain_basis)
-        self.e._apply_outcome(
-            out, lambda: self.page.editor.set_target_spec(out.value), preview=True
-        )
+        out = service.resolve_target_limit(sel.value, raw, self._editor.state.domain_basis)
+        self.e._apply_outcome(out, lambda: self._editor.set_target_spec(out.value), preview=True)
 
     @cb_method
     def on_prescaler_change(self, cid):
-        if self.page.building or self.page.rec.handles(cid).value.input is None:
+        if self._host.building or self._rec.handles(cid).value.input is None:
             return
         parts = cid.split(":")
         i, j = int(parts[3]), int(parts[4])
-        out = service.custom_prescaler_entry(self.page.rec.decimal_value(cid), i == j)
+        out = service.custom_prescaler_entry(self._rec.decimal_value(cid), i == j)
 
-        self.e._apply_outcome(
-            out, lambda: self.page.editor.set_custom_prescaler_entry(i, j, out.value)
-        )
+        self.e._apply_outcome(out, lambda: self._editor.set_custom_prescaler_entry(i, j, out.value))
 
     @cb_method
     def on_weight_change(self, cid):
-        if self.page.building or self.page.rec.handles(cid).value.input is None:
+        if self._host.building or self._rec.handles(cid).value.input is None:
             return
         raws = [
-            self.page.rec.decimal_value(o)
-            for o in self.page.rec.cells
-            if o.startswith("weight:") and self.page.rec.cells[o].value.input is not None
+            self._rec.decimal_value(o)
+            for o in self._rec.cells
+            if o.startswith("weight:") and self._rec.cells[o].value.input is not None
         ]
         out = service.custom_weights(raws)
 
-        self.e._apply_outcome(out, lambda: self.page.editor.set_custom_weights(list(out.value)))
+        self.e._apply_outcome(out, lambda: self._editor.set_custom_weights(list(out.value)))
 
     @cb_method
     def on_ptext_edit(self, cid, value):
-        if self.page.building:
+        if self._host.building:
             return
         editor_method = self._PTEXT_EDITORS.get(cid)
         if editor_method is None:
             return
-        if not self.page.editor.settings.get("ebk", True):
+        if not self._editor.settings.get("ebk", True):
             value = service.simple_matrix_to_ebk(value, _PTEXT_DUAL_VECTOR_KIND.get(cid, False))
-        if getattr(self.page.editor, editor_method)(value):
-            self.page.rec.cells[cid].value.ptext_input.classes(remove="rtt-ptext-error")
-            self.page.renderer.request_render()
+        if getattr(self._editor, editor_method)(value):
+            self._rec.cells[cid].value.ptext_input.classes(remove="rtt-ptext-error")
+            self._renderer.request_render()
             return
-        self.page.rec.cells[cid].value.ptext_input.classes(add="rtt-ptext-error")
+        self._rec.cells[cid].value.ptext_input.classes(add="rtt-ptext-error")
         toast = self._ptext_error_toast(cid, value)
         if toast:
             ui.notify(toast, type="negative", position="top")
@@ -221,7 +221,7 @@ class _TuningEdits:
         elif (
             cid == "ptext:projection:gens"
             and service.parse_embedding(
-                value, self.page.editor.state.d, len(self.page.editor.state.mapping)
+                value, self._editor.state.d, len(self._editor.state.mapping)
             )
             is not None
         ):
