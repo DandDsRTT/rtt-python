@@ -233,12 +233,12 @@ class EditController:
             self.page.editor.set_pending_comma(list(presets.comma_value_to_vector(value, db)))
             ok = self.page.editor.pending_comma is None
         elif cid.startswith("etpick:"):
-            i = self.page._token_index(cid, "gens")
+            i = self.page.token_index(cid, "gens")
             ok = i is not None and self.page.editor.set_mapping_row(
                 i, presets.et_value_to_val(value, db)
             )
         else:
-            c = self.page._token_index(cid, "commas")
+            c = self.page.token_index(cid, "commas")
             ok = c is not None and self.page.editor.set_comma(
                 c, presets.comma_value_to_vector(value, db)
             )
