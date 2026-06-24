@@ -120,10 +120,8 @@ class _ReconChoosers:
                 )
                 .classes("rtt-preset-num")
             )
-            # make the limit input CONTROLLED (ui.input defaults loopback off, leaving the box
-            # uncontrolled during typing). Off, the server can't overwrite what was typed, so a
-            # rejected non-number couldn't be reverted nor a value reddened-in-place. On, the
-            # server's value always wins — debounce keeps the echo to once-per-settled-entry.
+            # NiceGUI: ui.input defaults loopback off (uncontrolled during typing), so the server can't
+            # overwrite what was typed; _wire_target_limit turns loopback on so a rejected value reverts.
             self._wire_target_limit(num, cb)
             sel = (
                 ui.select(
@@ -149,22 +147,12 @@ class _ReconChoosers:
         )
         num.on("focus", lambda _=None: self.r._cb.on_cell_focus(cb.id))
         num.on("blur", lambda _=None, cid=cb.id: self.r._cb.on_cell_blur(cid))
-        # Enter commits the typed limit. The field is debounce=300 + loopback-controlled, so its
-        # value only settles to the server (firing the on_change commit) after a typing pause or
-        # on blur — pressing Enter alone did nothing (the reported "Enter doesn't submit the
-        # TILT/OLD number, only blur"). Blur the input on Enter: Quasar flushes the debounced
-        # value at once (committing via on_change) and the native blur runs on_cell_blur. Pure
-        # client-side, so it also works when the debounce hasn't yet elapsed.
+        # Quasar: a debounced field only commits its value on a typing pause or blur, so Enter alone
+        # never submits; blurring on Enter makes Quasar flush the debounced value (firing on_change).
         num.on("keydown.enter", js_handler="(e) => e.target.blur()")
-        # ...and previews each keystroke LIVE the way a wheel notch does, reddening the rows the
-        # typed limit would drop before the debounced commit reflows them away. on_change is the
-        # debounced model-value (the commit); this must fire at once on each keystroke instead.
-        # NOT the DOM `input` event: a Quasar QInput doesn't forward native `input` to a NiceGUI
-        # `.on()` listener (it never reaches the socket — verified), so an `.on("input")` preview
-        # silently never ran. `keyup` DOES fire on the QInput; and since NiceGUI's `args=` only
-        # filters TOP-LEVEL event keys (it can't pull the nested `target.value`), mirror the
-        # wheel's js_handler trick and emit the live DOM text ourselves — `e.args` is then the
-        # typed string (the loopback-debounced model value lags a keystroke, so read the event).
+        # NiceGUI/Quasar: a Quasar QInput doesn't forward native `input` to a NiceGUI `.on()` listener,
+        # and NiceGUI's `args=` filters only TOP-LEVEL event keys (it can't pull nested target.value),
+        # so listen on `keyup` and emit the live DOM text ourselves to preview each keystroke.
         num.on(
             "keyup",
             lambda e: self.r._cb.on_target_limit_preview(e.args),
@@ -217,16 +205,8 @@ class _ReconChoosers:
         self.r.cells[cb.id].chooser.select = sel
 
     def _chooser_reflow_hold(self, cid: str) -> bool:
-        # True while a generic chooser hover's REFLOW preview is re-rendering the grid for THIS
-        # chooser: the hovered chooser's q-select value + open popup must stay steady across that
-        # re-render (re-setting a q-select's value / options would disrupt or close its open popup),
-        # so the cell's update is skipped while it holds. Held by chooser GROUP, not exact id: a
-        # preset and its copy (preset:tuning ⟷ preset:tuning:gens, preset:projection ⟷
-        # preset:projection:gens — one selection shown in two tiles) must move together, else the
-        # non-hovered twin would flip to the hypothetical value while the hovered one stays put, so
-        # the two faces would disagree mid-preview. The group is the cid's first two ":"-segments
-        # (the copy adds a 3rd), so the base + every copy share it. The generic-chooser analogue of
-        # the temperament guard below, which groups its own copies via the "preset:temperament" prefix.
+        # Quasar: re-setting a q-select's value/options while its popup is open disrupts or closes the
+        # popup, so a hovered chooser's cell update is skipped across the reflow-preview re-render.
         g = self.r._cur_gesture
         if g is None or g.kind != "chooser" or not g.reflowed or g.source is None:
             return False

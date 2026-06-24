@@ -36,8 +36,6 @@ class _VectorEdits:
             return
         spec.set_pending(values)
         if spec.pending() is None:
-            # the change is applied (it retunes) — render OFF the loop, then rebase the gesture
-            # on the fresh layout so its rings go away NOW (no blur fires)
             self.page.renderer.request_render(after=self.page.gestures.rebase_edit_gesture)
 
     def _edit_vector_grid(self, spec, preview=False):
@@ -249,18 +247,13 @@ class _VectorEdits:
 
     @cb_method
     def transform_interval(self, cid, op):
-        # the equave-reduce / reciprocate buttons flanking an editable interval ratio (commas / targets
-        # / held / interest) or an editable domain basis element (prime). Resolve the cell's value,
-        # apply the op, and route it through the SAME setter a manual edit uses — one undo step, every
-        # dependent row recomputed. A no-op (already reduced, or a unison reciprocated) commits nothing,
-        # so a disabled button is safe.
         if self.page.building or self.page.rec.handles(cid).value.input is None:
             return
         group, tok = cid.split(":")
         if group not in ("comma", "target", "held", "interest", "prime") or tok == "pending":
             return
         self.page.gestures.end_commit_gestures()
-        if group == "prime":  # relabel a domain basis element to its reduced / reciprocated ratio
+        if group == "prime":
             self._transform_domain_element(cid, op, int(tok))
             return
         current, setter, list_name = self._interval_group_state(group)

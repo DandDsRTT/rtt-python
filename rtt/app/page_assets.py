@@ -31,10 +31,6 @@ _log = logging.getLogger(__name__)
 
 
 def cb_method(fn):
-    # Mark a method as a reconciler callback (a frontend event entry point). _wire_reconciler
-    # DERIVES the rec._cb namespace by scanning the edit/gesture controllers for methods carrying
-    # this mark, so the registry can never drift from the methods: rename one and it follows, add
-    # one by decorating it, and there is no parallel hand-maintained name list to forget.
     fn._rtt_cb = True
     return fn
 
@@ -46,14 +42,10 @@ class _KindHandlers(NamedTuple):
 
 _ASSETS = Path(__file__).parent / "assets"
 
-# Self-host the body font as WOFF2 (assets/fonts/) and serve it same-origin, so every machine
-# renders the SAME face. The app used to declare 'Cambria' with no webfont, so on any box without
-# MS Office (macOS, Render/Linux, mobile) it silently fell back to Georgia — whose old-style
-# proportional digits are why matrix columns looked uneven. STIX Two Text is the OFL scientific
-# serif we ship instead (Text faces carry both figure sets; the hard-subset STIX Two Math face
-# supplies only the ⟨ ⟩ ⟪ ⟫ EBK brackets the Text face omits). The @font-face block below points
-# at this route. Registering at import is idempotent across the reload worker and the test
-# re-imports (a duplicate FastAPI route is harmless — first match wins).
+# Self-host the body font same-origin so every machine renders the same face (a non-self-hosted face
+# falls back per-OS to differing proportional digits). The Math face supplies the ⟨⟩⟪⟫ EBK brackets
+# the Text face omits. Registering at import is idempotent across the reload worker and the test
+# re-imports (FastAPI's duplicate route is harmless — first match wins).
 app.add_static_files("/rtt-fonts", _ASSETS / "fonts")
 
 _PAD = 12
@@ -63,16 +55,15 @@ _TAB_W = 40
 _TAB_H = 218
 _CHROME_H = 40
 _TOOLTIP_DELAY_MS = 700
-# help waits for a deliberate rest instead of popping on every passing cursor (Quasar defaults to 0)
+# Quasar defaults the tooltip show-delay to 0; this waits for a deliberate cursor rest instead.
 _STORE_KEY = "rtt_doc"
 _STATE_PARAM = "state"
 _DARK_KEY = "rtt_dark"
 _CHAPTER_KEY = "rtt_chapter"
-_STORAGE_SECRET = "dnd-rtt-app"  # signs the per-browser session cookie that keys app.storage.user
-# Under NiceGUI's in-process User test simulation, app.storage.user is file-backed: writing
-# it on every render both litters the tree and races the harness's teardown file-cleanup on
-# Windows. The tests re-import this module per case, so a module-level dict gives the same
-# survives-a-refresh persistence, isolated per test, with no file I/O. Production is unaffected.
+_STORAGE_SECRET = "dnd-rtt-app"
+# NiceGUI: under the in-process User test simulation app.storage.user is file-backed, so writing it
+# per render litters the tree and races the harness teardown; a module-level dict gives the same
+# survives-a-refresh persistence per test with no file I/O (production uses app.storage.user).
 _MEMORY_STORE: dict = {}
 
 
@@ -148,12 +139,6 @@ _INT_WHEEL_JS = (
     "(e) => { if (e.currentTarget.contains(document.activeElement)) "
     "{ e.preventDefault(); emit(e); } }"
 )
-# How long after the last target-limit wheel notch to run the commit. Each notch cheaply steps the
-# shown number (server-side, so the loopback-controlled field actually updates), but COMMITTING a
-# new limit rebuilds the whole target set, re-solves the tuning and re-renders the grid — far too
-# heavy per notch (a fast scroll would queue one such solve per notch, each costlier as the set
-# grows, and grind the app). So the commit is debounced by this much, mirroring the limit input's
-# typing ``debounce=300``. See on_target_limit_wheel.
 _TARGET_LIMIT_DEBOUNCE = 0.3
 _BUSY_DELAY_MS = 180
 _BUSY_SAFETY_MS = 6000
@@ -237,12 +222,9 @@ _AUDIO_GLYPHS = {
 
 _AUDIO_JS = (_ASSETS / "audio.js").read_text(encoding="utf-8")
 
-# Frozen-pane support. The row band freezes by position:sticky (zero JS on its scroll path), but the
-# column-title strip sits OUTSIDE the body scroller (so the vertical scrollbar can stop below it), so
-# it can't ride the scroll via CSS — this listener translateX-syncs it to the body's horizontal
-# scroll. It also reveals the seams: a frozen region is "stuck" (body scrolled under it) exactly when
-# .rtt-gridbody has scrolled off zero on that axis, toggled as rtt-scrolled-x/y on .rtt-app. scroll
-# doesn't bubble → capture phase, so the body's scroll events are still caught here.
+# Browser: the column-title strip sits outside the body scroller (so the scrollbar can stop below it),
+# so CSS can't make it ride the scroll — this listener translateX-syncs it instead. scroll doesn't
+# bubble, so it's caught in the capture phase.
 _FREEZE_JS = (_ASSETS / "freeze.js").read_text(encoding="utf-8")
 
 _FRACTION_JS = (_ASSETS / "fraction.js").read_text(encoding="utf-8")
@@ -253,12 +235,8 @@ _TABNAV_JS = (_ASSETS / "tabnav.js").read_text(encoding="utf-8")
 
 _TOUR_JS = (_ASSETS / "tour.js").read_text(encoding="utf-8")
 
-# The tour steps, walking the app in its DEFAULT state (drawer closed, no extra Show layers on).
-# Each step spotlights the element its CSS selector matches (a region class that reaches the DOM —
-# NOT a NiceGUI .mark(), which is test-only) and floats the card on `place` side. `open` opens the
-# settings drawer first, so the steps that point inside it have their target on screen. An empty
-# `sel` is a centred slide. Keep these anchored to real, default-present regions — a missing target
-# degrades to a centred card (see tour.js), but the copy would then point at nothing.
+# NiceGUI: a tour step's `sel` must be a real DOM region class, NOT a .mark() (which exists only under
+# the test simulation), or the spotlight finds nothing in production.
 _TOUR_STEPS = [
     {
         "sel": "",
@@ -474,20 +452,11 @@ def _audio_bank() -> ui.element:
     return bank
 
 
-# The option-hover preview's client side, shared by every q-select armed via
-# _Reconciler._arm_option_hover (temperament / tuning / prescaler / complexity / weight-slope / form).
-# The dropdown popup is TELEPORTED to <body>, so the slot can reach the server neither via
-# `$parent.$emit` (its $parent is the menu, not the q-select that `.on()` listens on) nor via a
-# `document` call in the slot expression (Vue templates block non-whitelisted globals). So the option
-# slot only STAMPS each option's index (`:data-optidx`) AND its chooser's cell id (`data-optcid`) onto
-# its q-item, and this one-time, document-level delegation (real JS — globals available, and it
-# survives virtual scroll since it's not per-item) reads them off the hovered option and fires a native
-# `opthover` CustomEvent at THAT chooser's cell wrap, which listens for it. detail -1 clears.
-#
-# It DEBOUNCES + dedupes: each preview is a server-side re-solve, and `mouseover` bubbles many times per
-# second, so firing on every micro-move floods the socket and the client misses its heartbeat (->
-# "implicit handshake failed" -> reload, which also eats clicks). So a hover only fires after the
-# pointer SETTLES on an option (~90 ms), and never re-fires the same (chooser, option).
+# Quasar/Vue: the dropdown popup is teleported to <body>, so a per-option slot can't reach the server
+# (its $parent is the menu, and Vue templates block non-whitelisted globals like `document`). So each
+# option stamps data-optidx/data-optcid and this one document-level delegation reads them and fires an
+# `opthover` CustomEvent at the chooser's cell. It debounces (~90 ms settle) and dedupes because each
+# preview is a server re-solve and raw mouseover would flood the socket past its heartbeat (-> reload).
 _OPTION_HOVER_DELEGATION = """
 (() => {
   if (window.__rttOptHover) return;
@@ -527,22 +496,10 @@ _OPTION_HOVER_DELEGATION = """
 """
 
 
-# A Quasar tooltip (ui.tooltip / .tooltip()) shows on its anchor element's `mouseenter` and hides on
-# the matching `mouseleave` (QTooltip.configureAnchorEl binds exactly those two on desktop). That
-# leaves it stranded whenever the anchor is REMOVED or REFLOWED out from under a stationary cursor
-# before any `mouseleave` fires — the grid rebuilds and the hover help hangs on screen with nothing
-# to dismiss it. So anything that reflows the grid while a tooltip is up must drop it first: these
-# capture-phase listeners synthesize the `mouseleave` Quasar hides on, BEFORE the reflow round-trips.
-#
-#   - `pointerdown`: a click presses the anchor itself, so the pressed node sits UNDER the anchor —
-#     walk the `mouseleave` up the ancestor chain from the pressed node (covers every +/- button).
-#   - `keydown` / `wheel`: a keyboard commit (Enter/Tab re-solves the sheet) or a wheel-step reflows
-#     with NO pointerdown, so the pressed node isn't the anchor — the at-risk tooltip is on whatever
-#     the cursor RESTS on. Drop it from the deepest `:hover` element, and only when one is actually
-#     showing, so ordinary typing never perturbs the hover-preview rings (which share `mouseleave`).
-#
-# It fires `mouseleave` only (never `blur`): the editable cells' blur-commit handlers must stay
-# untouched, and QTooltip is hover-shown, so leave is enough.
+# Quasar: a tooltip hides only on its anchor's `mouseleave`, so it strands on screen when the anchor is
+# removed or reflowed out from under a stationary cursor before any leave fires. These capture-phase
+# listeners synthesize that `mouseleave` (only — never blur, so the cells' blur-commit handlers stay
+# untouched) before a reflow: from the pressed node on pointerdown, from the :hover node on keydown/wheel.
 _TOOLTIP_DISMISS_JS = """
 (() => {
   if (window.__rttTipDismiss) return;
@@ -698,13 +655,8 @@ _ZOOM_JS = """
 })()
 """
 
-# The Guide hover-card. A tile's name/symbol cell (.rtt-guide-link) carries a plain-language blurb
-# and a link to the matching section of D&D's guide, stashed in data-guide-* attributes by
-# _attach_guide_link. On hover this pops a small card with that blurb and an actual <a> link. Unlike
-# a Quasar tooltip (pointer-events:none, hides the instant the cursor leaves its anchor), this card
-# is a real, hoverable element: moving the cursor onto it keeps it open, so the link is clickable. It
-# closes on a short delay once the cursor has left BOTH the cell and the card. `tooltips` off
-# (body.rtt-no-tooltips) suppresses it, same as every other hover help.
+# Quasar: a tooltip is pointer-events:none and hides the instant the cursor leaves its anchor, so its
+# link can't be clicked; this builds a real hoverable card instead, kept open while the cursor is on it.
 _GUIDE_JS = """
 (() => {
   if (window.__rttGuide) return;
@@ -794,15 +746,9 @@ _GUIDE_JS = """
 })()
 """
 
-# The client-driven busy scrim. After a committing interaction the app has to think — an off-loop
-# re-solve and/or the browser patching a big grid — for anything from nothing to a few seconds. With
-# no feedback a slow beat reads as "I crashed it", so the user keeps clicking a frozen-looking page.
-# This arms the scrim (`.rtt-busy`, a dim veil + spinner + "Computing…" + wait cursor that also
-# swallows clicks) the instant a control is used and reveals it if the work outlasts a short delay.
-# It is driven ENTIRELY client-side, which is the whole point: a *synchronous* re-render (a Show
-# toggle, a fold) holds the event loop until it finishes, so the server cannot send a "show scrim"
-# message mid-work — only the browser can show it in that window. Every server render() ends by
-# calling rttBusy.done(), so the scrim lifts exactly when the awaited grid lands.
+# The busy scrim is armed client-side because a synchronous re-render holds the event loop until it
+# finishes, so the server can't send a "show scrim" message mid-work — only the browser can in that
+# window. Every server render() ends by calling rttBusy.done(), so the scrim lifts when the grid lands.
 _BUSY_JS = f"""
 (() => {{
   if (window.rttBusy) return;
@@ -911,9 +857,8 @@ class _GroupedSelect(ui.select):
         super().__init__(options, **kwargs)
 
     def _update_options(self) -> None:
-        # NiceGUI rebuilds the Quasar option dicts here (value/label); flag the divider
-        # rows so Quasar renders them disabled. Runs on every rebuild, so it survives a
-        # later set_options()/update() too.
+        # NiceGUI rebuilds the Quasar option dicts in super()._update_options(), so the divider rows
+        # must be re-flagged disabled here after it, or a later set_options()/update() drops the flag.
         super()._update_options()
         for option, value in zip(self._props["options"], self._values, strict=False):
             if self._is_divider(value):

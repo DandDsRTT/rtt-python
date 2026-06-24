@@ -112,13 +112,6 @@ class _ReconValueCells:
         self._arm_gridvalue(wrap, cb, spec)
 
     def _build_fraction(self, cb: spreadsheet.CellBox, wrap, commit, preview) -> None:
-        # the editable stacked fraction: a numerator input over a bar over a denominator input, edited
-        # IN PLACE (no overlay face, no diagonal slash). The two are SEPARATE fields — Tab moves
-        # num->den, the bar isn't selectable — and the cell collapses to the big-integer view when the
-        # denominator is blank/1 ("/" in integer view splits it open again). _FRACTION_JS drives the
-        # live int<->ratio switch client-side; make_cell gates focus/blur (it also wires the den) so
-        # the commit fires only when focus leaves the WHOLE cell. The white box + black outline rides
-        # the WRAP (one box around two inputs), not each input's own Quasar control.
         wrap.classes("rtt-cell-input rtt-fraccell")
         box = ui.element("div").classes("rtt-frac-edit")
         with box:
@@ -141,14 +134,6 @@ class _ReconValueCells:
         self._arm_ratio_ops(cb, wrap)
 
     def _arm_ratio_ops(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # the equave-reduce + reciprocate buttons flanking the bar of an editable interval ratio —
-        # any editable interval ratiocell (commas / targets / held / intervals of interest) AND the
-        # editable domain basis elements (nonstandard-domain box on: elementcell / elementratio). NOT
-        # the read-only derived faces (the ~generator ratios, a non-projection unchanged column, the
-        # standard read-only domain primes), which carry no value to edit in place. Each reveals on
-        # hover, hides while the cell is edited, and reads disabled when its op is a no-op: an interval
-        # already inside [1, equave) can't reduce, a unison can't reciprocate. They commit through
-        # transform_interval, one undo step.
         if (
             cb.kind not in ("ratiocell", "elementcell", "elementratio")
             or cb.pending

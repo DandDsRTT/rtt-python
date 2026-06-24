@@ -78,14 +78,9 @@ class GestureController:
         return frozenset(), frozenset()
 
     def paint_cell(self, eid, amber, red):
-        # idempotently set one cell's ring classes from the computed sets. Self-guarded on the cached
-        # ring state so an unchanged cell is skipped entirely (the common case — rings move only around
-        # the gesture); both render()'s sweep and paint_rings()'s hover sweep go through here, so the
-        # cache stays consistent whichever path painted last. (NiceGUI's classes() is itself change-
-        # detected, so even an un-guarded no-op sends nothing over the socket — this skips the Python.)
         el = self.page.rec.entity(eid).el
         if el is None:
-            return  # a ring id with no DOM element (nothing on screen to mark) — skip
+            return
         rsig = (eid in amber, eid in red)
         if self.page.rec.entity(eid).ring_sig == rsig:
             return
@@ -388,12 +383,6 @@ class GestureController:
 
     @cb_method
     def on_chooser_hover(self, cid, detail):
-        # the shared option-hover preview entry for every q-select armed via _arm_option_hover: the
-        # delegation fires `opthover` at the chooser's cell wrap carrying the hovered option's positional
-        # index in `detail` (-1 / None on leave). Map it back to the option's key through the live
-        # select, then preview applying it. Temperament + the sub-pickers route to their own sticky
-        # reflow path; the rest (including the TILT/OLD family) go through chooser_hover below, which
-        # reflows a value-only pick and reddens one that would remove cells.
         entry = self.page.rec.handles(cid).chooser.select
         sel = entry[1] if isinstance(entry, tuple) else entry
         if not isinstance(sel, ui.select):

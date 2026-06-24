@@ -101,15 +101,9 @@ def _power_parts(text) -> tuple[str, str]:
     return (text, "(max)") if text == "∞" else (text, "")
 
 
-# Per-glyph widths (in em — font-size multiples) for the .rtt-ptext face, used to estimate a
-# plain-text value's width without a browser. An EBK string mixes wide digits with narrow
-# punctuation and spaces, so a single average char width over-shrinks a punctuation-heavy
-# value (e.g. a prescaling ket-matrix, mostly 0s, dots and spaces); summing the real glyphs
-# lets each value fill its box. These are conservative upper-bound em-widths (originally Cambria,
-# rounded up with a ~5% margin) — the self-hosted STIX Two Text body face (see app.py) is narrower
-# still (its digit is ~0.50 em vs the 0.59 here), so the estimate stays safely above the real
-# render and a value never spills; it just sizes a touch conservatively. 0.59 (a digit, the widest
-# common EBK glyph) is the fallback for any character not listed.
+# There is no browser to measure text width in-process, so these per-glyph em-widths for the
+# .rtt-ptext face estimate it; they are conservative upper bounds over the (narrower) STIX Two Text
+# body face, so a value's estimate stays above its real render and never spills.
 _PTEXT_DEFAULT_EM = 0.59
 _PTEXT_GLYPH_EM = {
     **dict.fromkeys("0123456789", 0.59),

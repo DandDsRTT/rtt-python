@@ -99,10 +99,6 @@ class EditController:
         }
 
     def _reason_message(self, reason):
-        # the ONE place the view phrases a service Reason — fixed view copy (page_assets constants)
-        # or view-layer help text (tooltips) the service must not import. Decisions whose wording is
-        # derived from the input (parser errors, f-strings over the typed value) ride on
-        # Outcome.message instead and never pass through here.
         if reason is service.Reason.INVALID_PRESCALER:
             return _INVALID_PRESCALER
         if reason is service.Reason.INVALID_WEIGHT:
@@ -127,27 +123,19 @@ class EditController:
             ui.notify(msg, type="negative", position="top")
             self.page.renderer.render()
             return
-        if msg:  # ACCEPT carrying a non-blocking warning (e.g. an even OLD limit)
+        if msg:
             ui.notify(msg, type="negative", position="top")
         commit()
-        self.page.renderer.request_render()  # an accepted edit retunes — render off the loop
+        self.page.renderer.request_render()
 
     @cb_method
     def act(self, action):
-        # the universal click/keyboard commit: end gestures, mutate, then render OFF the loop
-        # (_request_render) — most of these actions retune (expand/shrink, undo/redo across an
-        # edit, a structural remove, back-to-scheme), so the heavy solve must not block the socket.
         self.page.gestures.end_commit_gestures()
         action()
         self.page.renderer.request_render()
 
     @cb_method
     def add_interval(self, action, group):
-        # add the draft column, then focus into it: the quantities ratio cell if its row is shown
-        # (the layout emitted it), else the first gridded vector cell (prime 0) of the draft column.
-        # A draft add doesn't retune (the pending green vector isn't committed), so its build is
-        # light — render SYNCHRONOUSLY (not the off-loop _request_render) so last_lay is current for
-        # the focus hand-off below, which reads the just-built layout.
         self.page.gestures.end_commit_gestures()
         action()
         self.page.renderer.render()
@@ -169,21 +157,10 @@ class EditController:
             self._focus_draft_cell(inp)
 
     def _focus_draft_cell(self, inp) -> None:
-        # Focus into the freshly-created draft cell AND select its contents, so the "?" placeholder
-        # the draft starts with is highlighted — the first keystroke replaces it instead of typing
-        # after it (no backspace needed). select() resolves through getElement().$refs.qRef to
-        # QInput.select() (a native input.select()); it is a harmless no-op on the empty
-        # integer-vector fallback cell. A direct runMethod can lose a race in a real (visible)
-        # browser: the cell-create 'update' and this focus message can be delivered in one frame,
-        # so the focus runs before Vue has mounted the new cell and populated its $ref — and
-        # silently no-ops. So defer to the next macrotask and poll briefly for the mount (getElement
-        # returns the ref once it exists). setTimeout works whether the page is visible or hidden —
-        # requestAnimationFrame would be paused while hidden (e.g. the render tests / a backgrounded
-        # tab), so it is the wrong tool here.
-        # The draft cell can be off-screen — a + at a far edge, or an add fired by keyboard while
-        # scrolled away. So after focusing, scroll the grid body the minimum that brings the cell
-        # fully into view (past the frozen left rowband, clear of the top edge). Setting scrollLeft/
-        # Top fires the body's own scroll listener, which re-pins the frozen header (see freeze.js).
+        # Browser: a direct runMethod can race Vue's mount in a real browser (the cell-create update
+        # and this focus can arrive in one frame, so focus runs before the $ref exists and no-ops), so
+        # defer to the next macrotask and poll for the mount. setTimeout (not requestAnimationFrame,
+        # which is paused while the tab is hidden, e.g. the render tests) drives both visible and hidden.
         ui.run_javascript(
             f"(function(){{var id={inp.id},n=0;function go(){{var c=getElement(id);"
             f"if(c){{runMethod(id,'focus',[]);runMethod(id,'select',[]);"
@@ -231,7 +208,7 @@ class EditController:
             if value in presets.TEMPERAMENT_COMMAS:
                 self.page.gestures.end_gesture()
                 self.page.editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
-                self.page.renderer.request_render()  # a loaded temperament retunes — render off the loop
+                self.page.renderer.request_render()
             else:
                 self.page.renderer.render()
             return
@@ -239,7 +216,7 @@ class EditController:
         if apply is not None:
             self.page.gestures.end_chooser_gesture()
             apply()
-            self.page.renderer.request_render()  # a tuning / prescaler preset re-solves — render off the loop
+            self.page.renderer.request_render()
 
     @cb_method
     def on_subpick(self, cid, value):
@@ -275,7 +252,7 @@ class EditController:
         if apply is not None:
             self.page.gestures.end_chooser_gesture()
             apply()
-            self.page.renderer.request_render()  # canonicalizing re-keys the tuning solve — render off the loop
+            self.page.renderer.request_render()
 
     @cb_method
     def on_target_change(self):
@@ -286,9 +263,6 @@ class EditController:
         out = service.resolve_target_limit(
             sel.value, num.value, self.page.editor.state.domain_basis
         )
-        # a non-number rejects (toast + re-render restores the loopback-controlled field); an even OLD
-        # limit accepts but warns; a valid limit accepts; an unrealizable spec is silently ignored.
-
         self._apply_outcome(out, lambda: self.page.editor.set_target_spec(out.value))
 
     @cb_method
@@ -305,7 +279,7 @@ class EditController:
             self.page.editor.set_all_interval(bool(value))
         else:
             return
-        self.page.renderer.request_render()  # a weighting / complexity / all-interval trait change retunes — off the loop
+        self.page.renderer.request_render()
 
     @cb_method
     def on_range_mode(self, value):
