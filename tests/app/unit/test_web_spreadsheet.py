@@ -6157,7 +6157,7 @@ def test_units_annotate_each_box_with_its_unit_string():
     off = {c.id: c for c in _with(units=False).cells}
     # the per-box units line, parallel to the symbol/caption, reads "units: <value>"
     # in plain ASCII (g/p/¢) — the view styles the value bold in a single-story-g
-    # sans face, keeping "units:" in the serif body face (see app._units_html)
+    # sans face, keeping "units:" in the serif body face (see render_html._units_html)
     assert on["units:tuning:gens"].text == "units: ¢/g"    # generator tuning map ¢/g
     assert on["units:tuning:primes"].text == "units: ¢/p"  # (prime) tuning map ¢/p
     assert on["units:mapping:primes"].text == "units: g/p"  # mapping matrix g/p

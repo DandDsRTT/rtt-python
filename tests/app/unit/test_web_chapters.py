@@ -5,6 +5,7 @@ The slider gates only the PANEL's controls; the grid (the toggle values) is unto
 import re
 
 import rtt.app.app as app
+from rtt.app import marks, page_assets
 from rtt.app import settings as show_settings
 from rtt.app import tooltips
 
@@ -81,8 +82,8 @@ def test_star_notch_title_is_short():
 def test_chapter_slider_is_a_standalone_preference_not_a_show_setting():
     # like dark mode: its own store key, separate from the serialized document, so "select all /
     # none" and Reset (which act only on editor.settings) never move it
-    assert isinstance(app._CHAPTER_KEY, str)
-    assert app._CHAPTER_KEY not in (app._STORE_KEY, app._DARK_KEY)
+    assert isinstance(page_assets._CHAPTER_KEY, str)
+    assert page_assets._CHAPTER_KEY not in (page_assets._STORE_KEY, page_assets._DARK_KEY)
     assert "chapter" not in show_settings.DEFAULTS
 
 
@@ -94,7 +95,7 @@ def test_chapter_slider_carries_chrome_hover_text():
 def test_unrevealed_controls_are_hidden_two_ways_by_dedicated_css_classes():
     # show/example rows COLLAPSE (display:none); dummy-tile parts stay in place but INVISIBLE
     # (visibility:hidden), so the tile keeps its shape as the slider moves
-    m = re.search(r"\.rtt-chap-hidden\s*\{([^}]*)\}", app._CSS)
+    m = re.search(r"\.rtt-chap-hidden\s*\{([^}]*)\}", page_assets._CSS)
     assert m and "display:none" in m.group(1).replace(" ", "")
-    m2 = re.search(r"\.rtt-chap-invisible\s*\{([^}]*)\}", app._CSS)
+    m2 = re.search(r"\.rtt-chap-invisible\s*\{([^}]*)\}", page_assets._CSS)
     assert m2 and "visibility:hidden" in m2.group(1).replace(" ", "")
