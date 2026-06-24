@@ -247,7 +247,9 @@ class _ReconChoosers:
             value = self.r._editor.displayed_projection_scheme_name
             value = value if value in options else None
             self.r.cells[cb.id].chooser.select.set_options(options, value=value)
-            _set_offlist_prompt(self.r.cells[cb.id].chooser.select, value, prompt=_projection_prompt(cb.id))
+            _set_offlist_prompt(
+                self.r.cells[cb.id].chooser.select, value, prompt=_projection_prompt(cb.id)
+            )
             self.r.cells[cb.id].chooser.select.set_enabled(not cb.disabled)
         else:
             name = self.r._editor.displayed_tuning_scheme_name
@@ -393,7 +395,9 @@ class _ReconChoosers:
     def _update_formchooser(self, cb: spreadsheet.CellBox) -> None:
         if self._chooser_reflow_hold(cb.id):
             return
-        self.r.cells[cb.id].chooser.select.set_options(_formchooser_options(cb.id), value=cb.text or "")
+        self.r.cells[cb.id].chooser.select.set_options(
+            _formchooser_options(cb.id), value=cb.text or ""
+        )
 
     def _preview_control(self, el, apply) -> None:
         el.on("mouseenter", lambda _=None: self.r._cb.control_hover(apply))

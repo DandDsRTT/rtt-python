@@ -28,7 +28,9 @@ class _VectorEdits:
             if preview:
                 self.page.gestures.edit_candidate(None)
             return
-        values = [_parse_int(self.page.rec.cells[cell_id(pt, p)].value.input.value) for p in range(d)]
+        values = [
+            _parse_int(self.page.rec.cells[cell_id(pt, p)].value.input.value) for p in range(d)
+        ]
         if preview:
             self.page.gestures.edit_candidate(
                 (lambda v=values: spec.set_pending(v)) if spec.draft_arms else None
@@ -56,7 +58,10 @@ class _VectorEdits:
             self.e._apply_outcome(service.IGNORE, None, preview=preview)
             return
         vectors = [
-            [_parse_int(self.page.rec.cells[cell_id(toks[i], p)].value.input.value) for p in range(d)]
+            [
+                _parse_int(self.page.rec.cells[cell_id(toks[i], p)].value.input.value)
+                for p in range(d)
+            ]
             for i in range(count)
         ]
         if any(v is None for vec in vectors for v in vec):
@@ -85,7 +90,10 @@ class _VectorEdits:
             self.e._apply_outcome(service.IGNORE, None, preview=preview)
             return
         rows = [
-            [_parse_int(self.page.rec.cells[ids.form_cell(i, j)].value.input.value) for j in range(rc)]
+            [
+                _parse_int(self.page.rec.cells[ids.form_cell(i, j)].value.input.value)
+                for j in range(rc)
+            ]
             for i in range(r)
         ]
         if any(v is None for row in rows for v in row):

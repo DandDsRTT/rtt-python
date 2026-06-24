@@ -74,7 +74,10 @@ def _read_only(cls):
     return type(f"_ReadOnly{cls.__name__}", (cls,), {"__setattr__": _reject_write})
 
 
-_RO = {c: _read_only(c) for c in (CellHandles, ValueHandles, DisplayHandles, ChooserHandles, EntityHandles)}
+_RO = {
+    c: _read_only(c)
+    for c in (CellHandles, ValueHandles, DisplayHandles, ChooserHandles, EntityHandles)
+}
 
 
 def _frozen_cell() -> CellHandles:

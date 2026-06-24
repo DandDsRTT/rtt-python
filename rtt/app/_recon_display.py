@@ -99,7 +99,9 @@ class _ReconDisplayCells:
                 self.r.cells[cb.id].display.math_cell.style(f"font-size:{font:.2f}px")
             self.r.cells[cb.id].display.math_rendered = (html, font)
             if cb.kind == "matlabel":
-                self.r.cells[cb.id].display.math_cell.classes(replace=self._matlabel_classes(cb.text))
+                self.r.cells[cb.id].display.math_cell.classes(
+                    replace=self._matlabel_classes(cb.text)
+                )
             if cb.id == "optimization:mean_damage:symbol":
                 wide = "‖" in cb.text
                 self.r.cells[cb.id].display.math_cell.classes(
@@ -166,7 +168,9 @@ class _ReconDisplayCells:
         self.r.cells[cb.id].display.html.set_content(
             f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}"
         )
-        self.r.cells[cb.id].display.html.style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
+        self.r.cells[cb.id].display.html.style(
+            f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px"
+        )
 
     def _build_mathexpr(self, cb: spreadsheet.CellBox, _wrap) -> None:
         self.r.cells[cb.id].display.expr = ui.html("").classes("rtt-mathexpr")

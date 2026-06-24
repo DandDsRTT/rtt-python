@@ -111,7 +111,9 @@ class EditController:
 
     def _apply_outcome(self, out, commit, preview=False) -> None:
         if preview:
-            self.page.gestures.edit_candidate(commit if out.effect is service.Effect.ACCEPT else None)
+            self.page.gestures.edit_candidate(
+                commit if out.effect is service.Effect.ACCEPT else None
+            )
             return
         if out.effect is service.Effect.IGNORE:
             return
