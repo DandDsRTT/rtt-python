@@ -177,11 +177,9 @@ from rtt.app.rendering import Renderer
 
 _log = logging.getLogger(__name__)
 
-# NiceGUI's User test simulation builds the real page but hands the test no reference to the _Page
-# object (only its ui elements), so the virtualization tests — which must call the renderer's
-# _on_viewport / inspect the materialized set on the live page — have no other way to reach it.
-# Recorded only under the simulation; production never appends here. Re-imported fresh per render
-# test, so it stays a singleton.
+# NiceGUI's User test simulation hands the test no reference to the _Page object (only its ui
+# elements), so tests that must reach the live page (e.g. the renderer's _on_viewport) have no other
+# way to it; appended only under the simulation.
 _SIMULATED_PAGES: list = []
 
 
@@ -205,11 +203,6 @@ class _Page:
             )
 
     def _load_document(self, state: str | None) -> bool:
-        # Dark mode is a global VIEWING preference, kept out of the document's Show settings: it
-        # persists under its own store key, so "select all / none" and Reset — which act only on
-        # editor.settings — never touch it. apply_theme drives the CSS overlay (assets/rtt-dark.css)
-        # by toggling the `rtt-dark` class on <body>, and paints the margin frame inline (its colour
-        # beats Quasar's body background the same way the static "#fff" did before).
         self.dark_mode = bool(_doc_store().get(_DARK_KEY, False))
 
         self.apply_theme()
@@ -218,11 +211,6 @@ class _Page:
             _doc_store().get(_CHAPTER_KEY, show_settings.CHAPTER_DEFAULT)
         )
 
-        # The Editor owns the whole document — temperament, view selections, the Show
-        # settings (editor.settings) and the folded rows/columns/tiles (editor.collapsed) —
-        # and the undo/redo history over all of it. We persist that document per browser
-        # (app.storage.user) so a refresh restores exactly where the user left off; a
-        # corrupt/old blob is ignored, falling back to the as-shipped defaults.
         self.editor = Editor()
         self.load_failed = False
         loaded_from_url = False
@@ -247,16 +235,13 @@ class _Page:
         return loaded_from_url
 
     def _init_page_client(self, loaded_from_url: bool) -> None:
-        # capture this page's Client now, while the slot context is valid. render() can run from an
-        # off-loop background task (_commit_render), where the slot stack is empty and ui.run_javascript
-        # — which finds its client via the current slot — would raise. Calling client.run_javascript on
-        # the captured client needs no slot, so the busy-scrim push works from the background task too.
+        # NiceGUI: capture this page's Client while the slot context is valid. render() can run from an
+        # off-loop background task (_commit_render) where ui.run_javascript — which finds its client via
+        # the current slot — would raise; client.run_javascript on the captured client needs no slot.
         self.page_client = ui.context.client
         self.page_client.on_disconnect(self._on_disconnect)
         if helpers.is_user_simulation():
             _SIMULATED_PAGES.append(self)
-        # the client reports its visible scroll rectangle here (freeze.js emits it on scroll/resize/
-        # boot); the renderer re-materializes the virtualized body pane against the cached layout.
         ui.on("rtt_viewport", self.renderer._on_viewport, throttle=0.05)
         ui.run_javascript(_OPTION_HOVER_DELEGATION)
         ui.run_javascript(_TOOLTIP_DISMISS_JS)
@@ -265,8 +250,6 @@ class _Page:
             ui.run_javascript("window.history.replaceState({}, '', window.location.pathname)")
 
     def _wire_reconciler(self) -> None:
-        # DERIVE the reconciler's callback namespace from the @cb_method marks on the edit/gesture
-        # controllers — there is no hand-maintained name list to drift from the actual methods.
         sources = (self.edits, self.edits.vectors, self.edits.tuning, self.gestures)
         self.rec._cb = SimpleNamespace(
             **{
@@ -333,8 +316,6 @@ class _Page:
                 or show_settings.reveal_chapter(key) > self.chapter
             )
             box.props("disable") if disabled else box.props(remove="disable")
-            # the example sample greys WITH the checkbox — the single disabled styling for every
-            # reason (the box's own label/glyph grey via Quasar's .disabled; this matches the sample)
             self.examples[key].classes(add="rtt-ex-disabled") if disabled else self.examples[
                 key
             ].classes(remove="rtt-ex-disabled")
@@ -401,12 +382,8 @@ def main() -> None:
         port = int(hosted_port)
     else:
         port = 8137
-    # Serve the DandDsRTT org icon as a LOCAL file (assets/favicon.png — the org's GitHub avatar,
-    # vendored). A remote URL would let NiceGUI emit it into the page <link rel=icon> (the tab still
-    # works) but registers /favicon.ico → get_favicon_response(), which raises ValueError on any
-    # remote URL — every browser/bot/health-check hit on /favicon.ico then 500s. A local file routes
-    # /favicon.ico to a working FileResponse (NiceGUI gates on helpers.is_file), so the icon serves
-    # and the route stops erroring.
+    # NiceGUI: a remote favicon URL makes /favicon.ico → get_favicon_response() raise ValueError, so
+    # every hit on /favicon.ico 500s; a LOCAL file routes it to a working FileResponse (is_file gate).
     favicon = str(Path(__file__).parent / "assets" / "favicon.png")
     run_kwargs = {
         "title": "D&D's RTT App",
@@ -414,22 +391,17 @@ def main() -> None:
         "show": False,
         "port": port,
         "storage_secret": os.environ.get("STORAGE_SECRET", _STORAGE_SECRET),
-        # The heavy retuning commits now render off the event loop (see _commit_render), so the
-        # websocket heartbeat keeps flowing through them. A few paths still build synchronously — the
-        # initial page (no socket yet), a structural hover PREVIEW the first time a high-limit state is
-        # seen (it warms the cache, so it's a one-off), a drag preview. Give the heartbeat generous
-        # headroom so one of those brief sync builds — slower still under parallel CPU load — can't trip
-        # the "lost connection" reload NiceGUI's default 3 s timeout caused. (Derived pings: interval
-        # max(0.8·t, 4) = 24 s, timeout max(0.4·t, 2) = 12 s.)
+        # NiceGUI: a few paths still build synchronously (the initial page, a one-off cache-warming
+        # hover preview, a drag preview); give the websocket heartbeat headroom so a brief sync build
+        # can't trip the "lost connection" reload that NiceGUI's default 3 s reconnect timeout caused.
         "reconnect_timeout": 30.0,
     }
     if hosted_port:
         run_kwargs.update(host="0.0.0.0", reload=False)
     else:
         worktrees = Path(__file__).resolve().parents[2] / ".claude" / "worktrees"
-        # watch the assets too, not just *.py (uvicorn's default), so an audio.js / rtt.css edit
-        # hot-reloads on its own — otherwise a JS/CSS-only change leaves the running instance stale
-        # until some unrelated .py file happens to change (a JS-only audio fix silently failed to land).
+        # uvicorn reload watches only *.py by default; include *.css / *.js so an assets-only edit
+        # hot-reloads on its own instead of waiting for some unrelated .py file to change.
         run_kwargs.update(
             reload=True,
             uvicorn_reload_includes="*.py,*.css,*.js",

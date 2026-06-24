@@ -25,12 +25,6 @@ def _block_panes(bl, fx: float, fy: float) -> tuple[str, ...]:
 
 
 def _rect_in_view(x, y, w, h, fy, view, overscan) -> bool:
-    # whether a grid rect's body-pane placement intersects the visible scroll rectangle (inflated by
-    # overscan). view is the gridbody's (scrollLeft, scrollTop, clientW, clientH) in its own scrolled
-    # coordinates; a body item sits at board-local (x, y - fy), the same frame the scroll metrics use.
-    # view is None before the client reports its viewport (and whenever virtualization is off), meaning
-    # "materialize everything". A zero-width/height edge (a gridline) still tests correctly: x..x and
-    # the overscan band give it a one-axis interval.
     if view is None:
         return True
     left, top, vw, vh = view
@@ -43,9 +37,8 @@ def _rect_in_view(x, y, w, h, fy, view, overscan) -> bool:
     )
 
 
-# spacing of the dots on a folded band's gridline: a LINE_W-long dot every _DOT_PITCH px.
-# CSS `border-style:dotted` packs dots ~one border-width apart (≈2*LINE_W period) and gives
-# no control; painting them ourselves lets us space them out — here ≈twice as sparse.
+# CSS `border-style:dotted` packs dots ~one border-width apart and gives no spacing control, so the
+# folded-band gridline dots are painted manually at this pitch instead.
 _DOT_PITCH = 8
 
 

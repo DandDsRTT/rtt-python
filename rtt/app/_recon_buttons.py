@@ -148,13 +148,8 @@ class _ReconButtons:
         )
 
     def _build_colgrip(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # drag one column's grip onto another to MOVE/reorder it; the per-list "grip:{list}:add" zone
-        # is drop-only — the append / into-empty-list target on the stub gridline, so dropping into a
-        # list is always "drop on the gridline" (no separate header/+ target). Mirrors the proven
-        # drag-to-combine handle EXACTLY (which the user confirmed works), so it relies on no global
-        # drag.js / dragging-class: a grip is BOTH source AND drop target, with a per-element dragover
-        # preventDefault (client-side, so it doesn't round-trip per move) marking it a valid target.
-        # The dragged column's (list, idx) is held server-side from dragstart through drop.
+        # HTML5 DnD: an element is only a valid drop target if it preventDefaults dragover, so each grip
+        # is both drag source and drop target with its own client-side dragover preventDefault.
         _, lst, tail = cb.id.split(":")
         wrap.on("dragover", js_handler="(e) => e.preventDefault()")
         if tail == "add":

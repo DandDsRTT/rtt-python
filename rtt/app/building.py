@@ -67,13 +67,9 @@ class PageBuilder:
             f"<script>window.rttTour={{steps:{json.dumps(_TOUR_STEPS)},autostart:true}};\n"
             f"{_TOUR_JS}</script>"
         )
-        # trim NiceGUI's default 16px content padding to a slim margin around the whole app
+        # NiceGUI: trim its default 16px .nicegui-content padding to a slim app margin.
         ui.query(".nicegui-content").style("padding:6px")
 
-        # the busy scrim (fixed, viewport-covering, hidden until revealed): shown while a heavy
-        # state change re-solves the tuning off the event loop, so the user sees "Computing…"
-        # rather than a frozen grid, and the clicks they'd otherwise pile up are swallowed. Built
-        # once, here, so it outlives every grid rebuild (see _request_render / _commit_render).
         with ui.element("div").classes("rtt-busy"):
             with ui.element("div").classes("rtt-busy-card"):
                 ui.element("div").classes("rtt-busy-spin")
@@ -203,12 +199,6 @@ class PageBuilder:
                 self._arm_history_previews()
 
     def _build_approach_radio(self) -> None:
-        # the chapter-9 nonstandard-domain-approach radio: prime-based, nonprime-based, or
-        # the library's neutral default (which reads a nonprime element as a formal prime).
-        # Built as the standard square radio (the tuning-ranges range-mode style — a vertical
-        # list of square options), NOT a Quasar inline radio. Hidden when the domain has no
-        # nonprime element — the trait is meaningless there — and revealed when a basis like
-        # 2.3.13/5 carries one. render() fills the live option and sets visibility each pass.
         approach_options = {
             "prime-based": "prime-based",
             "nonprime-based": "nonprime-based",
@@ -219,12 +209,9 @@ class PageBuilder:
             if self.page.building or value is None:
                 return
             self.page.editor.set_nonprime_basis_approach(value)
-            self.page.renderer.request_render()  # the nonprime approach changes how the tuning solves — off the loop
+            self.page.renderer.request_render()
 
         def on_approach_hover(value):
-            # preview the hovered approach option: ring the cells reading the temperament that
-            # way would move, without committing (control_hover reverts it). None = leaving the
-            # radio, so clear the preview. Each option is its own hover target (mouseenter).
             if value is None:
                 self.page.gestures.control_unhover()
                 return

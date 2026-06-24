@@ -20,11 +20,6 @@ class _ChromeSyncMixin:
                 wrap.update()
 
     def _sync_pretransform_help(self, pretransform: bool) -> None:
-        # a size-sensitizing / matrix-prescaler scheme relabels "prescaler" → "pretransformer" in the
-        # grid (effective_captions). The same relabel must reach the help wording: the prescaler-preset
-        # tooltip and the 𝑋 tile's guide card. These cells persist across a scheme switch (same id →
-        # update_cell, not make_cell), so the relabel is re-applied here every render, mirroring
-        # _sync_mean_damage_tips' swap of the mean-damage wording.
         rec = self.page.rec
         for h in rec.cells.values():
             if h.help_tip is not None:

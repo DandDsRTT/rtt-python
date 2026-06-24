@@ -39,9 +39,6 @@ _log = logging.getLogger(__name__)
 class _Reconciler:
     def __init__(self, editor: Editor, gestures=None) -> None:
         self._editor = editor
-        # the gesture state machine is OWNED by the GestureController; the reconciler only
-        # READS the live gesture (to honour a chooser/temperament preview hold while updating a
-        # cell). It borrows it through this narrow back-reference rather than owning the state.
         self._gestures = gestures
         self._cb = None
         self._row_drag: int | None = None
@@ -54,9 +51,6 @@ class _Reconciler:
         self._choose = _ReconChoosers(self)
         self._buttons = _ReconButtons(self)
         self._drag = _ReconDrag(self)
-        # Explicit sibling collaborators: the few cross-component calls (a button wiring a chooser's
-        # hover-preview, a value cell arming a drag) name their peer directly instead of reaching
-        # through self.r into a sibling — so each component declares whom it talks to.
         self._buttons._choose = self._choose
         self._value._choose = self._choose
         self._value._drag = self._drag
@@ -71,18 +65,9 @@ class _Reconciler:
         return self._gestures.gesture if self._gestures is not None else None
 
     def _init_handles(self) -> None:
-        # Two stores, both keyed by id. cells: a CellHandles record per CELL — every element handle +
-        # per-cell last-rendered value travels in one record, so a new handle is a new field, never a
-        # parallel dict you must remember to sweep. entities: an EntityHandles record per ENTITY (a
-        # superset of cells — lines and washes also get an element + the style/ring change-guard
-        # caches), grouping the el + styled + ring_sig that always co-vary for an entity. make_cell
-        # creates both for a cell; render() creates an entities record for each line/wash; drop()
-        # removes an id from both.
         self.cells: dict[str, CellHandles] = {}
         self.entities: dict[str, EntityHandles] = {}
-        self.target_limit_tip = (
-            None  # the target chooser's ui.tooltip (text swaps to an invalid-limit message)
-        )
+        self.target_limit_tip = None
 
     def _register_display_kinds(self) -> None:
         for _ebk_kind in _EBK_SVG_KINDS:
@@ -252,11 +237,8 @@ class _Reconciler:
         self.entities.pop(eid, None)
 
     def _attach_guide_link(self, wrap, gh: tooltips.GuideHelp, tile: str, text: str) -> None:
-        # the hover-card (a body-level div built by _GUIDE_JS) reads these and renders a card that
-        # stays open while hovered, so its "Read in the Guide" link is actually clickable — a Quasar
-        # tooltip can't be (it hides the moment the cursor leaves the cell toward it). data-guide-tile
-        # ties a tile's name + symbol cells into ONE hover zone so the card doesn't jump (the link
-        # doesn't run away) when the cursor crosses from one to the other.
+        # Quasar: a ui.tooltip hides the moment the cursor leaves the cell toward it, so its link can't
+        # be clicked; these data-attrs feed a custom body-level hover-card (_GUIDE_JS) that stays open.
         wrap.classes("rtt-guide-link")
         wrap._props["data-guide-text"] = text
         wrap._props["data-guide-tile"] = tile
@@ -265,10 +247,6 @@ class _Reconciler:
             wrap._props["data-guide-url"] = gh.url
 
     def make_cell(self, cb: spreadsheet.CellBox) -> None:
-        # build a cell's element in the active parent (the caller opens the freeze container),
-        # register it + its kind (and audio key) so render() can place and reconcile it after.
-        # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
-        # letting the User-fixture render tests locate a cell by its stable id
         self.cells[cb.id] = CellHandles()
         self.entities[cb.id] = EntityHandles()
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
@@ -276,14 +254,6 @@ class _Reconciler:
             self.cell_kinds[cb.kind].build(cb, wrap)
             if cb.audio is not None:
                 self._tag_audio(wrap, cb)
-        # Hover affordances. A gridded VALUE cell (VALUE_KINDS) becomes .rtt-zoomable — hovering it
-        # pops the zoom magnifier (a client-side clone, _ZOOM_JS), and its own hover help (if any —
-        # the editable cells' "type to edit…", the mean damage / dual(𝑞) explanations) folds INTO that
-        # magnifier as data-zoomhelp rather than a separate tooltip, so value cells carry exactly one
-        # hover popup. Every other control keeps its plain help tooltip. All wording still lives in
-        # rtt.app.tooltips; a NEW kind must be classified there (READONLY_KINDS or a help entry) or
-        # test_web_tooltips' completeness sweep fails. The mark/data-eid ride the wrap, so the magnifier
-        # (which clones the wrap) and any tooltip hang off it too.
         self._attach_hover_help(wrap, cb)
         self.entities[cb.id].el = wrap
         self.cells[cb.id].kind = cb.kind

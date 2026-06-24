@@ -28,18 +28,10 @@ class _ReconDrag:
         self.r = r
 
     def _build_map_drag(self, cb: spreadsheet.CellBox, wrap) -> None:
-        # HTML5 drag-to-combine, built EXACTLY like the working column-reorder grip (_build_colgrip):
-        # the grip is BOTH the drag SOURCE and a drop TARGET, with a per-element dragover preventDefault
-        # marking it a valid drop target. This is the proven path — drop one row's GRIP onto another's
-        # to add it in. (A Quasar INPUT cell is not a reliable native drop target; reorder hit the same
-        # wall and drops grip-to-grip too. The mapping cells are ALSO armed via _arm_row_target so
-        # hovering the row itself previews/accepts where the browser allows it, but the grip always
-        # works.) dragstart records the source row + effectAllowed='copy'/setData (copy cursor; Firefox
-        # drag-start); dragenter previews; drop commits; dragend clears. src==idx (own row) is a no-op.
-        # NOTE: no js dragstart — exactly like reorder. We do NOT set effectAllowed (leaving it the
-        # default 'uninitialized', which permits ALL drops incl. copy). Setting effectAllowed='copy'
-        # here previously LEFT IT 'none' and blocked every drop — the merge regression. dropEffect on
-        # dragover still requests the + (copy) cursor, allowed under 'uninitialized'.
+        # HTML5 DnD: a Quasar input cell is not a reliable native drop target, so the drag goes grip-to-
+        # grip (a grip is both source and target, each with its own dragover preventDefault). Do NOT set
+        # effectAllowed here — leaving it 'uninitialized' permits all drops; setting it 'copy' leaves it
+        # 'none' and blocks every drop. dropEffect='copy' on dragover gives the + cursor.
         wrap.classes("rtt-drag-handle rtt-row-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, idx=cb.gen: self._begin_row_drag(idx))
         wrap.on(
@@ -51,11 +43,8 @@ class _ReconDrag:
         ui.icon("drag_indicator").classes("rtt-grip")
 
     def _arm_row_target(self, wrap, gen: int) -> None:
-        # the mapping row is the drop target for a dragged generator row: dragover keeps every cell a
-        # droppable copy surface (preventDefault makes a drop land here; dropEffect='copy' gives the +
-        # cursor), dragenter previews dropping the dragged row INTO this row, drop commits it. The py
-        # preview/drop are no-ops unless a row drag is actually in flight (_row_drag set), so a
-        # non-combine drag — or a row over its own cells — passing over a cell changes nothing.
+        # HTML5 DnD: preventDefault on dragover makes a cell a droppable surface and dropEffect='copy'
+        # gives the + cursor, so every mapping cell can accept a dragged generator row.
         wrap.on(
             "dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}"
         )

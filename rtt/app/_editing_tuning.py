@@ -56,7 +56,7 @@ class _TuningEdits:
             self.page.editor.set_complexity_norm_power(power)
         else:
             self.page.editor.set_optimization_power(power)
-        self.page.renderer.request_render()  # a new optimization / complexity power retunes — render off the loop
+        self.page.renderer.request_render()
 
     def _gen_position(self, tok):
         toks = self.page.col_tokens("gens")
@@ -81,7 +81,7 @@ class _TuningEdits:
             self.page.editor.set_superspace_generator_tuning_component(i, cents)
         else:
             self.page.editor.set_generator_tuning_component(self._gen_position(i), cents)
-        self.page.renderer.request_render()  # a manual generator override re-derives the maps — render off the loop
+        self.page.renderer.request_render()
 
     @cb_method
     def on_gentuning_wheel(self, cid, delta_y):
@@ -92,7 +92,6 @@ class _TuningEdits:
             self.page.editor.nudge_superspace_generator_tuning_component(i, steps)
         else:
             self.page.editor.nudge_generator_tuning_component(self._gen_position(i), steps)
-        # off the loop — rapid notches coalesce into one trailing rebuild at the value you land on
         self.page.renderer.request_render()
 
     @cb_method
@@ -126,14 +125,6 @@ class _TuningEdits:
 
     @cb_method
     def on_target_limit_wheel(self, delta_y):
-        # step the TILT/OLD limit by ±1 per wheel notch. Unlike a matrix/vector cell, COMMITTING a
-        # new limit rebuilds the whole target interval set, re-solves the tuning and re-renders the
-        # grid — far too heavy to run on every notch. A fast scroll would queue one such solve per
-        # notch, each costlier than the last as the set grows, and grind the app to a halt. So step
-        # the shown number now (under the build guard, so the field's own on_target_change echo is a
-        # no-op — handle_event runs it inline) and DEBOUNCE the commit: the value is server-side, so
-        # the loopback-controlled field actually advances, while a re-armed task collapses the whole
-        # gesture into ONE solve at the limit you land on. Focus-gated client-side (see _INT_WHEEL_JS).
         if self.page.building or not delta_y:
             return
         num = self.page.rec.cells["preset:target"].chooser.select[0]
@@ -148,13 +139,9 @@ class _TuningEdits:
         )
 
     async def _debounced_target_commit(self):
-        # the tail of a target-limit wheel gesture: once the notches stop for _TARGET_LIMIT_DEBOUNCE,
-        # commit the number now in the field with the one real solve + render. A new notch cancels
-        # this and arms a fresh one. The debounce collapses the whole gesture into one commit, so an
-        # even odd-limit (OLD) you land on toasts once here (not once per notch) and the render reddens it.
-        # We run off the loop (a background task), where the slot stack is empty — so enter the captured
-        # page client's context, or on_target_change's ui.notify can't resolve the client and the toast
-        # silently vanishes (render reaches its client the same captured-client way, see page_client above).
+        # NiceGUI: this runs off the loop (a background task) where the slot stack is empty, so enter the
+        # captured page client or on_target_change's ui.notify can't resolve the client and the toast
+        # silently vanishes.
         try:
             await asyncio.sleep(_TARGET_LIMIT_DEBOUNCE)
         except asyncio.CancelledError:
@@ -165,15 +152,6 @@ class _TuningEdits:
 
     @cb_method
     def on_target_limit_preview(self, typed=None):
-        # live edit preview for the TILT/OLD limit field, mirroring on_element_preview: as the shown
-        # limit changes (a wheel notch steps it, a keystroke types it) but BEFORE the debounced commit
-        # reflows the grid, the candidate rings the target interval cells the new limit would MOVE
-        # (amber) / REMOVE (red) in place. LOWERING the limit drops intervals; reddening them while
-        # they're still on screen is what shows "what's going away" — a post-commit render can't, the
-        # reflow has already deleted them. RAISING it just rings the survivors that move (the added
-        # rows are off-screen until committed, so they can't ring), like every other no-reflow add
-        # preview. `typed` is the live field text for a keystroke (the loopback field's debounced
-        # model value lags a keystroke behind); the wheel passes None and reads the stepped number.
         g = self.page.gestures.gesture
         if self.page.building or g is None or g.kind != "edit" or g.source != "preset:target":
             return
@@ -216,7 +194,7 @@ class _TuningEdits:
             value = service.simple_matrix_to_ebk(value, _PTEXT_DUAL_VECTOR_KIND.get(cid, False))
         if getattr(self.page.editor, editor_method)(value):
             self.page.rec.cells[cid].value.ptext_input.classes(remove="rtt-ptext-error")
-            self.page.renderer.request_render()  # a typed dual (mapping/commas/tuning/targets/P/G…) retunes — off the loop
+            self.page.renderer.request_render()
             return
         self.page.rec.cells[cid].value.ptext_input.classes(add="rtt-ptext-error")
         toast = self._ptext_error_toast(cid, value)
