@@ -112,7 +112,9 @@ class _ReconChoosers:
         limit, family = self.r._target_preset_values()
         with ui.element("div").classes("rtt-preset-target"):
             num = (
-                ui.input(value=_limit_text(limit), on_change=lambda _e: self.r._cb.on_target_change())
+                ui.input(
+                    value=_limit_text(limit), on_change=lambda _e: self.r._cb.on_target_change()
+                )
                 .props(
                     'dense borderless hide-bottom-space placeholder="-" inputmode=numeric debounce=300'
                 )
@@ -204,7 +206,9 @@ class _ReconChoosers:
 
     def _build_scheme_select(self, cb, wrap, options, value, prompt) -> None:
         sel = (
-            ui.select(options, value=value, on_change=lambda e: self.r._cb.on_preset(cb.id, e.value))
+            ui.select(
+                options, value=value, on_change=lambda e: self.r._cb.on_preset(cb.id, e.value)
+            )
             .props(_select_props(cb.w))
             .classes("rtt-preset")
         )
@@ -293,7 +297,9 @@ class _ReconChoosers:
 
     def _build_etpick(self, cb, wrap):
         db = self.r._editor.state.domain_basis
-        value = None if cb.pending else presets.identify_et(self.r._editor.state.mapping[cb.gen], db)
+        value = (
+            None if cb.pending else presets.identify_et(self.r._editor.state.mapping[cb.gen], db)
+        )
         self._build_subpick(cb, wrap, presets.et_options(db), value)
 
     def _build_commapick(self, cb, wrap):

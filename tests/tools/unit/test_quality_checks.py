@@ -33,6 +33,29 @@ def test_file_length_exempt_matches_nested_and_absolute_paths():
     assert not qc.is_file_length_exempt("other/" + exempt.replace("/", "_"))
 
 
+def test_file_length_exempt_set_is_exactly_the_documented_data_modules():
+    assert qc.FILE_LENGTH_EXEMPT == frozenset(
+        {
+            "rtt/app/grid_tables.py",
+            "rtt/app/tooltips.py",
+            "rtt/app/page_assets.py",
+        }
+    )
+
+
+def test_each_exempt_module_is_a_real_over_cap_data_file():
+    root = Path(__file__).resolve().parents[3]
+    for rel in qc.FILE_LENGTH_EXEMPT:
+        path = root / rel
+        assert path.exists(), rel
+        assert qc.line_count(path.read_text()) > qc.MAX_FILE_LINES, rel
+
+
+def test_logic_modules_are_not_exempt():
+    for rel in ("rtt/app/rendering.py", "rtt/app/spreadsheet_geometry.py", "rtt/app/editor.py"):
+        assert not qc.is_file_length_exempt(rel)
+
+
 def test_function_length_violation_reports_name_and_span():
     body = "\n".join(f"    x{i} = {i}" for i in range(qc.MAX_FUNCTION_LINES + 5))
     source = f"def big():\n{body}\n"

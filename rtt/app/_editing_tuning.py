@@ -47,7 +47,9 @@ class _TuningEdits:
         if cid not in ("optimization:power", "control:q"):
             return
         is_q = cid == "control:q"
-        power = service.parse_power(self.page.rec.cells[cid].input.value, minimum=1.0 if is_q else 0.0)
+        power = service.parse_power(
+            self.page.rec.cells[cid].input.value, minimum=1.0 if is_q else 0.0
+        )
         if power is None:
             return
         if is_q:
@@ -102,11 +104,15 @@ class _TuningEdits:
             return
         if self.page.rec.handles(cid).den_input is not None:
             self.page.building = True
-            self.page.rec.set_decimal_value(cid, _wheel_step(self.page.rec.decimal_value(cid), delta_y, step))
+            self.page.rec.set_decimal_value(
+                cid, _wheel_step(self.page.rec.decimal_value(cid), delta_y, step)
+            )
             self.page.building = False
             self.on_prescaler_change(cid)
             return
-        self.page.rec.cells[cid].input.value = _wheel_step(self.page.rec.cells[cid].input.value, delta_y, step)
+        self.page.rec.cells[cid].input.value = _wheel_step(
+            self.page.rec.cells[cid].input.value, delta_y, step
+        )
         commit = {
             "mapping": self.e.vectors.on_mapping_change,
             "commacell": self.e.vectors.on_comma_change,
@@ -195,7 +201,9 @@ class _TuningEdits:
         if self.page.building or self.page.rec.handles(cid).input is None:
             return
         raws = [
-            self.page.rec.decimal_value(o) for o in self.page.rec.cells if o.startswith("weight:") and self.page.rec.cells[o].input is not None
+            self.page.rec.decimal_value(o)
+            for o in self.page.rec.cells
+            if o.startswith("weight:") and self.page.rec.cells[o].input is not None
         ]
         out = service.custom_weights(raws)
 
@@ -238,7 +246,9 @@ class _TuningEdits:
             return _INVALID_PROJECTION
         elif (
             cid == "ptext:projection:gens"
-            and service.parse_embedding(value, self.page.editor.state.d, len(self.page.editor.state.mapping))
+            and service.parse_embedding(
+                value, self.page.editor.state.d, len(self.page.editor.state.mapping)
+            )
             is not None
         ):
             return _INVALID_EMBEDDING

@@ -130,14 +130,19 @@ The gate is being driven to green in phases (tooling first):
      so the view files shrink to thin wiring AND the scoped coverage gate above covers the
      logic cheaply. This is the **testability** counterpart to the structural decomposition
      (which only moves view code between files); the two are orthogonal. NOT yet underway.
-3. **File decomposition + coupling/cohesion metrics**, then ratchet to 10 / 100.
-   - DONE: the architectural metrics (efferent coupling, LCOM4, DIT, NOC) are added,
-     calibrated to current worst-case, and gated via `tools/quality_checks.py`.
-   - PENDING: the file/function ratchet (50 → 25 → 10, 500 → 250 → 100). It can only
-     advance as the remaining oversized files split — `app.py`, `editor.py`,
-     `service/text.py`, `service/core.py`, `render_html.py`, `library/tuning.py`,
-     `grid_tables.py`, `tooltips.py` still exceed 500 — and the ~90 functions in the
-     26–50 range shrink. Lower the constants in lockstep, never ahead of the code.
+3. **File decomposition + coupling/cohesion metrics** — DONE. The **50/500 milestone is
+   reached**: `bin/lint` is fully GREEN at functions ≤ 50, files ≤ 500, args ≤ 4
+   (relaxed per-file for the math/render-dense modules), CC ≤ 10, and the architectural
+   metrics (efferent coupling, LCOM4, DIT, NOC). Every logic module is ≤ 500 lines; the
+   only files over the cap are the three irreducible data modules listed above, exempt by
+   `FILE_LENGTH_EXEMPT`. `E501` and `ruff format` on the dense view modules are deferred
+   together (see the section above) — that is the only part of the ruff surface not yet
+   green, by design.
+   - **The ratchet beyond 50/500 — files 500 → 250 → 100 and functions 50 → 25 → 10 — is
+     the deliberately-deferred "later" campaign** ("50/500 now, 10/100 later"). Do NOT
+     lower `MAX_FILE_LINES` / `MAX_FUNCTION_LINES` (or the ruff caps) without an explicit
+     go-ahead: that campaign also decomposes the dense view modules enough to re-enable
+     `E501` + `ruff format` on them, so it is a coordinated effort, not a knob to nudge.
 
 ### Phase 3 file decomposition — architecture, not line-count chopping
 
@@ -170,21 +175,36 @@ applies. Each exemption is listed here with its justification:
   zoom/guide/busy/tour/tooltip JS, the CSS variable blocks and font face, the audio glyph
   bank) plus small spec dataclasses and a handful of pure helpers. The blobs *are* the
   module's purpose; the logic in it is minor and stays put.
+- **`rtt/app/grid_tables.py`** — the per-(row, col) grid data tables (symbols, units,
+  equivalences, captions, presets, form choosers, EBK conventions): one keyed entry per
+  line, irreducible. It is the grid's data dictionary; there is no cohesive seam to split
+  along, only an import hop. A test pins the exempt set to exactly these three data modules
+  (`tests/tools/unit/test_quality_checks.py`), so a logic module can't be slipped in.
 
-`rtt/app/grid_tables.py` (the EBK convention tables) is the other data-module candidate,
-handled by the 50/500 close-out chip.
+### E501 (line length) + `ruff format` are deferred *together, by design*
 
-### E501 (line length) is deferred *by design*, not skipped
+The long lines split into groups, none of which is a mechanical reflow:
 
-The 255 long lines split into three groups, none of which is a mechanical reflow:
+- **Comments** belong to the separate comment scrub (this project treats a comment as a
+  smell; see CLAUDE.md). Reflowing lines slated for deletion is wasted work.
+- **Strings** — mostly the EBK/notation lines that must **never wrap** (CLAUDE.md) and
+  tooltip help text. These resolve only by value-preserving implicit-string-concatenation
+  splits, done with the notation in view.
+- **Code** in the dense view modules — the cell/SVG-assembly lines. Here E501 and the
+  length caps **collide**: wrapping these lines to ≤100 chars (what `ruff format` does)
+  pushes the module past the 500-line file cap (or a builder past the 50-line function
+  cap). You cannot satisfy line-length **and** length there until the code is decomposed
+  further — which is the parked 500→250→100 campaign, not this milestone.
 
-- **~113 are comments.** They belong to the separate comment scrub (this project
-  treats a comment as a smell; see CLAUDE.md). Reflowing lines that are slated for
-  deletion is wasted work, so E501-in-comments closes *with* that scrub.
-- **~108 are inside strings** — mostly the EBK/notation lines that must **never
-  wrap** (CLAUDE.md) and tooltip help text. These resolve by value-preserving
-  implicit-string-concatenation splits, handled with the notation in view.
-- **~34 are code** — these shorten naturally as the oversized functions in phase 2
-  are extracted, so they are folded into that refactor rather than touched twice.
+Because of that collision, **E501 and `ruff format` are deferred in lockstep**, so the gate
+goes green on everything that *is* in scope:
 
-So E501 reaches zero alongside phases 2–3 and the comment scrub, not before.
+- **`E501` is in the ruff `ignore` list** (`pyproject.toml`) — line-length is not gated yet.
+- **`[tool.ruff.format].exclude`** lists the render/data-dense view modules whose canonical
+  format would wrap past a cap (`grid_tables`, `tooltips`, `page_assets`, `rendering`, the
+  `spreadsheet_*` emit/geometry/layout/resolve/brackets/controls/decorations/models family).
+  **Every other module IS `ruff format`-checked** — formatting is enforced on the library,
+  service, and the non-dense app code; it is only deferred where it fights a length cap.
+
+Both re-enable together when the 500→250→100 decomposition splits the dense view modules so
+their wrapped lines fit under the caps. They are NOT closed at the 50/500 milestone.

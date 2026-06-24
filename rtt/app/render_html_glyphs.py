@@ -85,7 +85,7 @@ def _chart_ticks(lo: float, hi: float) -> list[float]:
     step = next(m * mag for m in (1, 2, 2.5, 5, 10) if raw <= m * mag)
     start = math.floor(lo / step) * step
     stop = (math.floor(hi / step) + 1) * step
-    count = int(round((stop - start) / step))
+    count = round((stop - start) / step)
     ticks = [round(start + i * step, 6) for i in range(count + 1)]
     if len(ticks) < 2 or ticks[-1] == ticks[0]:
         return [ticks[0], ticks[0] + 1.0]

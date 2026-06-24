@@ -169,7 +169,9 @@ class _ReconValueCells:
                 .mark(f"{cb.id}:reciprocate")
                 .tooltip(tooltips.RATIO_RECIPROCATE_HELP)
             )
-        reduce_btn.on("click", lambda _=None, cid=cb.id: self.r._cb.transform_interval(cid, "reduce"))
+        reduce_btn.on(
+            "click", lambda _=None, cid=cb.id: self.r._cb.transform_interval(cid, "reduce")
+        )
         recip_btn.on(
             "click", lambda _=None, cid=cb.id: self.r._cb.transform_interval(cid, "reciprocate")
         )
@@ -272,7 +274,9 @@ class _ReconValueCells:
                             ),
                         )
                     )
-                    self._choose._preview_control(s, lambda gi=gen_index: self.r._editor.flip_generator(gi))
+                    self._choose._preview_control(
+                        s, lambda gi=gen_index: self.r._editor.flip_generator(gi)
+                    )
                     self.r.cells[cb.id].gensign_face = s
                 whole = (
                     ui.input().props("dense borderless").classes("rtt-cellinput rtt-dec-whole-in")
@@ -302,7 +306,9 @@ class _ReconValueCells:
         )
 
     def _build_prescalercell(self, cb: spreadsheet.CellBox, wrap) -> None:
-        self._build_decimal(cb, wrap, lambda _e=None, cid=cb.id: self.r._cb.on_prescaler_change(cid))
+        self._build_decimal(
+            cb, wrap, lambda _e=None, cid=cb.id: self.r._cb.on_prescaler_change(cid)
+        )
 
     def _update_prescalercell(self, cb: spreadsheet.CellBox) -> None:
         self._update_decimal(cb, cb.text)

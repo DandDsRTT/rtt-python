@@ -16,6 +16,7 @@ FILE_LENGTH_EXEMPT = frozenset(
     {
         "rtt/app/tooltips.py",
         "rtt/app/page_assets.py",
+        "rtt/app/grid_tables.py",
     }
 )
 

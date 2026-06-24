@@ -18,6 +18,7 @@ _COMMENTS_ALLOWED = {
     "app/_recon_drag.py",
     "app/gestures.py",
     "app/rendering.py",
+    "app/rendering_chrome.py",
     "app/editing.py",
     "app/_editing_vectors.py",
     "app/_editing_tuning.py",

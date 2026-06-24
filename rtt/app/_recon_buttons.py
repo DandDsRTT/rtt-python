@@ -31,13 +31,16 @@ class _ReconButtons:
         wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn").on(
             "click",
-            lambda _=None, idx=cb.gen: self.r._cb.act(lambda: self.r._editor.remove_mapping_row(idx)),
+            lambda _=None, idx=cb.gen: self.r._cb.act(
+                lambda: self.r._editor.remove_mapping_row(idx)
+            ),
         )
         self._choose._preview_rank_remove(wrap, "row", cb.gen)
 
     def _build_gen_plus(self, _cb: spreadsheet.CellBox, _wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-mapping").on(
-            "click", lambda _=None: self.r._cb.add_interval(self.r._editor.add_mapping_row, "mapping")
+            "click",
+            lambda _=None: self.r._cb.add_interval(self.r._editor.add_mapping_row, "mapping"),
         )
 
     def _build_map_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
@@ -49,13 +52,16 @@ class _ReconButtons:
             return
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v").on(
             "click",
-            lambda _=None, idx=cb.gen: self.r._cb.act(lambda: self.r._editor.remove_mapping_row(idx)),
+            lambda _=None, idx=cb.gen: self.r._cb.act(
+                lambda: self.r._editor.remove_mapping_row(idx)
+            ),
         )
         self._choose._preview_rank_remove(wrap, "row", cb.gen)
 
     def _build_map_plus(self, _cb: spreadsheet.CellBox, _wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-mapping").on(
-            "click", lambda _=None: self.r._cb.add_interval(self.r._editor.add_mapping_row, "mapping")
+            "click",
+            lambda _=None: self.r._cb.add_interval(self.r._editor.add_mapping_row, "mapping"),
         )
 
     def _build_basis_minus(self, _cb: spreadsheet.CellBox, wrap) -> None:
@@ -122,7 +128,9 @@ class _ReconButtons:
         )
 
     def _build_held_minus(self, cb: spreadsheet.CellBox, wrap) -> None:
-        self._build_list_minus(cb, wrap, self.r._editor.cancel_pending_held, self.r._editor.remove_held)
+        self._build_list_minus(
+            cb, wrap, self.r._editor.cancel_pending_held, self.r._editor.remove_held
+        )
 
     def _build_held_plus(self, _cb: spreadsheet.CellBox, _wrap) -> None:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-held").on(

@@ -86,20 +86,38 @@ class _Reconciler:
 
     def _register_display_kinds(self) -> None:
         for _ebk_kind in _EBK_SVG_KINDS:
-            self.cell_kinds[_ebk_kind] = _KindHandlers(self._display._build_svgfill, self._display._update_ebk)
-        self.cell_kinds["chart"] = _KindHandlers(self._display._build_svgfill, self._display._update_chart)
-        self.cell_kinds["rangechart"] = _KindHandlers(self._display._build_svgfill, self._display._update_rangechart)
+            self.cell_kinds[_ebk_kind] = _KindHandlers(
+                self._display._build_svgfill, self._display._update_ebk
+            )
+        self.cell_kinds["chart"] = _KindHandlers(
+            self._display._build_svgfill, self._display._update_chart
+        )
+        self.cell_kinds["rangechart"] = _KindHandlers(
+            self._display._build_svgfill, self._display._update_rangechart
+        )
 
-        self.cell_kinds["count"] = _KindHandlers(self._display._build_count, self._display._update_mathcell)
-        self.cell_kinds["symbol"] = _KindHandlers(self._display._build_symbol, self._display._update_mathcell)
-        self.cell_kinds["matlabel"] = _KindHandlers(self._display._build_matlabel, self._display._update_mathcell)
-        self.cell_kinds["units"] = _KindHandlers(self._display._build_units, self._display._update_mathcell)
-        self.cell_kinds["caption"] = _KindHandlers(self._display._build_caption, self._display._update_caption)
+        self.cell_kinds["count"] = _KindHandlers(
+            self._display._build_count, self._display._update_mathcell
+        )
+        self.cell_kinds["symbol"] = _KindHandlers(
+            self._display._build_symbol, self._display._update_mathcell
+        )
+        self.cell_kinds["matlabel"] = _KindHandlers(
+            self._display._build_matlabel, self._display._update_mathcell
+        )
+        self.cell_kinds["units"] = _KindHandlers(
+            self._display._build_units, self._display._update_mathcell
+        )
+        self.cell_kinds["caption"] = _KindHandlers(
+            self._display._build_caption, self._display._update_caption
+        )
 
         self.cell_kinds["ptextpending"] = _KindHandlers(
             self._display._build_ptextpending, self._display._update_ptextpending
         )
-        self.cell_kinds["mathexpr"] = _KindHandlers(self._display._build_mathexpr, self._display._update_mathexpr)
+        self.cell_kinds["mathexpr"] = _KindHandlers(
+            self._display._build_mathexpr, self._display._update_mathexpr
+        )
 
     def _register_value_kinds(self) -> None:
         _gridvalue = _KindHandlers(self._value._build_gridvalue, self._value._update_gridvalue)
@@ -129,13 +147,19 @@ class _Reconciler:
             self._value._build_gentuningcell, self._value._update_gentuningcell
         )
 
-        self.cell_kinds["ptextedit"] = _KindHandlers(self._value._build_ptextedit, self._value._update_ptextedit)
+        self.cell_kinds["ptextedit"] = _KindHandlers(
+            self._value._build_ptextedit, self._value._update_ptextedit
+        )
 
-        self.cell_kinds["genratio"] = _KindHandlers(self._value._build_genratio, self._value._update_ratio)
+        self.cell_kinds["genratio"] = _KindHandlers(
+            self._value._build_genratio, self._value._update_ratio
+        )
         self.cell_kinds["ratiocell"] = _gridvalue
         self.cell_kinds["elementcell"] = _gridvalue
         self.cell_kinds["elementratio"] = _gridvalue
-        self.cell_kinds["commaratio"] = _KindHandlers(self._value._build_commaratio, self._value._update_ratio)
+        self.cell_kinds["commaratio"] = _KindHandlers(
+            self._value._build_commaratio, self._value._update_ratio
+        )
         self.cell_kinds["tuningvalue"] = _KindHandlers(
             self._value._build_tuning_value, self._value._update_tuning_value
         )
@@ -157,10 +181,14 @@ class _Reconciler:
         self.cell_kinds["transpose"] = _KindHandlers(
             self._value._label_builder("rtt-transpose"), self._value._update_label
         )
-        self.cell_kinds["boxtitle"] = _KindHandlers(self._value._label_builder("rtt-boxtitle"), None)
+        self.cell_kinds["boxtitle"] = _KindHandlers(
+            self._value._label_builder("rtt-boxtitle"), None
+        )
 
     def _register_control_kinds(self) -> None:
-        self.cell_kinds["rangemode"] = _KindHandlers(self._choose._build_rangemode, self._choose._update_rangemode)
+        self.cell_kinds["rangemode"] = _KindHandlers(
+            self._choose._build_rangemode, self._choose._update_rangemode
+        )
         self.cell_kinds["scheme_button"] = _KindHandlers(
             self._choose._build_scheme_button, self._choose._update_scheme_button
         )
@@ -173,11 +201,19 @@ class _Reconciler:
         self.cell_kinds["tiletoggle"] = _KindHandlers(
             self._choose._build_foldtoggle, self._choose._update_foldtoggle
         )
-        self.cell_kinds["alltoggle"] = _KindHandlers(self._choose._build_alltoggle, self._choose._update_foldtoggle)
+        self.cell_kinds["alltoggle"] = _KindHandlers(
+            self._choose._build_alltoggle, self._choose._update_foldtoggle
+        )
 
-        self.cell_kinds["preset"] = _KindHandlers(self._choose._build_preset, self._choose._update_preset)
-        self.cell_kinds["etpick"] = _KindHandlers(self._choose._build_etpick, self._choose._update_subpick)
-        self.cell_kinds["commapick"] = _KindHandlers(self._choose._build_commapick, self._choose._update_subpick)
+        self.cell_kinds["preset"] = _KindHandlers(
+            self._choose._build_preset, self._choose._update_preset
+        )
+        self.cell_kinds["etpick"] = _KindHandlers(
+            self._choose._build_etpick, self._choose._update_subpick
+        )
+        self.cell_kinds["commapick"] = _KindHandlers(
+            self._choose._build_commapick, self._choose._update_subpick
+        )
         self.cell_kinds["control_select"] = _KindHandlers(
             self._choose._build_control_select, self._choose._update_control_select
         )

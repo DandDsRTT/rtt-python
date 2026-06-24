@@ -195,10 +195,19 @@ def resolve_domain_element_edit(state: TemperamentState, tok: str, raw: str) -> 
     if parsed is None:
         return outcome.reject(f"“{raw}” is not a positive rational basis element (≠ 1)")
     if tok == "pending":
-        if not can_add_domain_element(state, parsed):
-            return outcome.reject(f"{raw} isn’t independent of the existing basis")
-        return outcome.accept(raw)
-    index = int(tok)
+        return _resolve_pending_domain_element(state, parsed, raw)
+    return _resolve_existing_domain_element(state, int(tok), parsed, raw)
+
+
+def _resolve_pending_domain_element(state: TemperamentState, parsed, raw: str) -> Outcome:
+    if not can_add_domain_element(state, parsed):
+        return outcome.reject(f"{raw} isn’t independent of the existing basis")
+    return outcome.accept(raw)
+
+
+def _resolve_existing_domain_element(
+    state: TemperamentState, index: int, parsed, raw: str
+) -> Outcome:
     if parsed == state.domain_basis[index]:
         return outcome.IGNORE
     if not can_set_domain_element(state, index, parsed):

@@ -26,12 +26,113 @@ from rtt.app import (
     tooltips,
 )
 from rtt.app import settings as show_settings
+from rtt.app.building import PageBuilder
+from rtt.app.editing import EditController
 from rtt.app.editor import Editor
+from rtt.app.gestures import GestureController
 from rtt.app.marks import (
     BR_COLOR,
     PENDING_COLOR,
     ebk_svg,
 )
+from rtt.app.page_assets import (
+    _ASSETS,
+    _AUDIO_BANK,
+    _AUDIO_GLYPHS,
+    _AUDIO_JS,
+    _BUSY_DELAY_MS,
+    _BUSY_JS,
+    _BUSY_SAFETY_MS,
+    _CELL_BORDER,
+    _CELL_BORDER_W,
+    _CELL_FONT,
+    _CELLUNIT_MAX_FONT,
+    _CHAPTER_KEY,
+    _CHROME_H,
+    _CSS,
+    _CSS_DARK_VARS,
+    _CSS_VARS,
+    _DARK_CELL,
+    _DARK_FRAME,
+    _DARK_KEY,
+    _DARK_MARK,
+    _DARK_MUTED,
+    _DARK_TEXT,
+    _DECIMAL_JS,
+    _EBK_SQUARE,
+    _EBK_SVG_KINDS,
+    _FONT_FACE,
+    _FRACTION_JS,
+    _FREEZE_JS,
+    _GENERAL_TILE_LINES,
+    _GENSIGN_W,
+    _GRIDVALUE_SPECS,
+    _GROUP_EXIT_JS,
+    _GUIDE_JS,
+    _INT_WHEEL_JS,
+    _INVALID_EMBEDDING,
+    _INVALID_FORM,
+    _INVALID_PRESCALER,
+    _INVALID_PROJECTION,
+    _INVALID_TEMPERAMENT,
+    _INVALID_UNCHANGED,
+    _INVALID_WEIGHT,
+    _LOAD_FAILED,
+    _MATLABEL_FONT,
+    _MATLABEL_MIN_FONT,
+    _MEMORY_STORE,
+    _MODE_FILLS,
+    _OPTION_HOVER_DELEGATION,
+    _PAD,
+    _PANEL_W,
+    _PENDING_TEXT_COLOR,
+    _PREVIEW_COLOR,
+    _PREVIEW_REMOVE_COLOR,
+    _PREVIEW_REMOVE_TEXT_COLOR,
+    _PREVIEW_TEXT_COLOR,
+    _PTEXT_DUAL_VECTOR_KIND,
+    _SEAM,
+    _STACKED_EXIT_JS,
+    _STACKED_MAIN_FONT,
+    _STATE_PARAM,
+    _STORAGE_SECRET,
+    _STORE_KEY,
+    _SUBPICK_POPUP_W,
+    _T,
+    _TAB_H,
+    _TAB_W,
+    _TABNAV_JS,
+    _TARGET_LIMIT_DEBOUNCE,
+    _TILE_FONT,
+    _TILE_HOST,
+    _TILE_IN_CELL_LAYERS,
+    _TINTS,
+    _TOOLTIP_DELAY_MS,
+    _TOOLTIP_DISMISS_JS,
+    _TOUR_JS,
+    _TOUR_STEPS,
+    _TRANSPOSE_MARK,
+    _UNITS_MAX_FONT,
+    _WHEEL_STEPS,
+    _ZOOM_JS,
+    VALUE_KINDS,
+    _audio_bank,
+    _decode_state,
+    _doc_store,
+    _encode_state,
+    _formchooser_options,
+    _Gesture,
+    _GridValueSpec,
+    _GroupedSelect,
+    _hover_index,
+    _KindHandlers,
+    _option_key,
+    _projection_prompt,
+    _set_offlist_prompt,
+    _VecGridEdit,
+    _vgroup_key,
+)
+from rtt.app.reconciler import _Reconciler
 from rtt.app.render_html import (
     _FOLD_GLYPH,
     _TILE_CELL,
@@ -72,112 +173,9 @@ from rtt.app.render_html import (
     _wave_svg,
     _wheel_step,
 )
+from rtt.app.rendering import Renderer
 
 _log = logging.getLogger(__name__)
-
-from rtt.app.page_assets import (
-    _KindHandlers,
-    _ASSETS,
-    _PAD,
-    _T,
-    _PANEL_W,
-    _TAB_W,
-    _TAB_H,
-    _CHROME_H,
-    _TOOLTIP_DELAY_MS,
-    _STORE_KEY,
-    _STATE_PARAM,
-    _DARK_KEY,
-    _CHAPTER_KEY,
-    _STORAGE_SECRET,
-    _MEMORY_STORE,
-    _doc_store,
-    _encode_state,
-    _decode_state,
-    _INVALID_TEMPERAMENT,
-    _INVALID_FORM,
-    _SUBPICK_POPUP_W,
-    _INVALID_PROJECTION,
-    _INVALID_EMBEDDING,
-    _INVALID_PRESCALER,
-    _INVALID_WEIGHT,
-    _INVALID_UNCHANGED,
-    _LOAD_FAILED,
-    _SEAM,
-    _PENDING_TEXT_COLOR,
-    _PREVIEW_COLOR,
-    _PREVIEW_TEXT_COLOR,
-    _PREVIEW_REMOVE_COLOR,
-    _PREVIEW_REMOVE_TEXT_COLOR,
-    _CELL_BORDER_W,
-    _CELL_BORDER,
-    _CELL_FONT,
-    _GENSIGN_W,
-    _STACKED_MAIN_FONT,
-    _TINTS,
-    _DARK_FRAME,
-    _DARK_CELL,
-    _DARK_MARK,
-    _DARK_TEXT,
-    _DARK_MUTED,
-    _WHEEL_STEPS,
-    _INT_WHEEL_JS,
-    _TARGET_LIMIT_DEBOUNCE,
-    _BUSY_DELAY_MS,
-    _BUSY_SAFETY_MS,
-    _GridValueSpec,
-    _VecGridEdit,
-    _GRIDVALUE_SPECS,
-    _vgroup_key,
-    _MODE_FILLS,
-    _AUDIO_GLYPHS,
-    _AUDIO_JS,
-    _FREEZE_JS,
-    _FRACTION_JS,
-    _DECIMAL_JS,
-    _TABNAV_JS,
-    _TOUR_JS,
-    _TOUR_STEPS,
-    _STACKED_EXIT_JS,
-    _GROUP_EXIT_JS,
-    _CSS_VARS,
-    _FONT_FACE,
-    _CSS_DARK_VARS,
-    _CSS,
-    _UNITS_MAX_FONT,
-    _CELLUNIT_MAX_FONT,
-    _MATLABEL_FONT,
-    _MATLABEL_MIN_FONT,
-    _EBK_SVG_KINDS,
-    _EBK_SQUARE,
-    _TRANSPOSE_MARK,
-    _PTEXT_DUAL_VECTOR_KIND,
-    _GENERAL_TILE_LINES,
-    _TILE_IN_CELL_LAYERS,
-    _TILE_HOST,
-    _TILE_FONT,
-    _AUDIO_BANK,
-    _audio_bank,
-    _OPTION_HOVER_DELEGATION,
-    _TOOLTIP_DISMISS_JS,
-    VALUE_KINDS,
-    _ZOOM_JS,
-    _GUIDE_JS,
-    _BUSY_JS,
-    _GroupedSelect,
-    _set_offlist_prompt,
-    _projection_prompt,
-    _formchooser_options,
-    _hover_index,
-    _option_key,
-    _Gesture,
-)
-
-from rtt.app.reconciler import _Reconciler
-from rtt.app.gestures import GestureController
-from rtt.app.rendering import Renderer
-from rtt.app.editing import EditController
-from rtt.app.building import PageBuilder
 
 # NiceGUI's User test simulation builds the real page but hands the test no reference to the _Page
 # object (only its ui elements), so the virtualization tests — which must call the renderer's
@@ -325,9 +323,7 @@ class _Page:
 
     def _available_keys(self):
         return [
-            k
-            for k in show_settings.IMPLEMENTED
-            if show_settings.reveal_chapter(k) <= self.chapter
+            k for k in show_settings.IMPLEMENTED if show_settings.reveal_chapter(k) <= self.chapter
         ]
 
     def _sync_show_availability(self):
@@ -374,8 +370,8 @@ class _Page:
         self.gestures.end_gesture()
 
     def col_tokens(self, name):
-        ids = self.last_lay.identities if self.last_lay is not None else None
-        return [tok for tok, _ in (ids or {}).get(name, [])]
+        idents = self.last_lay.identities if self.last_lay is not None else None
+        return [tok for tok, _ in (idents or {}).get(name, [])]
 
     def _token_index(self, cid, name):
         token = cid.split(":", 1)[1]
@@ -383,8 +379,6 @@ class _Page:
             if str(tok) == token:
                 return i
         return None
-
-
 
 
 @ui.page("/")
