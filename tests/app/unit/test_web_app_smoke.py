@@ -8,6 +8,7 @@ the original app's parseInt semantics. Rendering itself is verified in a browser
 import re
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -69,6 +70,29 @@ def test_handles_sentinel_reads_none_but_refuses_writes():
     rec.cells["live"] = CellHandles()
     rec.cells["live"].input = "ok"
     assert rec.handles("live").input == "ok"
+
+
+def test_on_disconnect_cancels_the_pending_target_limit_commit():
+    # _on_disconnect must reach the debounced target-limit commit at its REAL home and cancel it,
+    # then end gestures. The commit moved to the tuning sub-controller in the editing split, and a
+    # stale path (self.edits.target_limit_commit) was a crash on every disconnect — this pins it.
+    calls = []
+    page = app._Page.__new__(app._Page)
+    page.edits = SimpleNamespace(
+        tuning=SimpleNamespace(target_limit_commit=SimpleNamespace(cancel=lambda: calls.append("cancel")))
+    )
+    page.gestures = SimpleNamespace(end_gesture=lambda: calls.append("end"))
+    app._Page._on_disconnect(page)
+    assert calls == ["cancel", "end"]
+
+
+def test_on_disconnect_with_no_pending_commit_just_ends_gestures():
+    calls = []
+    page = app._Page.__new__(app._Page)
+    page.edits = SimpleNamespace(tuning=SimpleNamespace(target_limit_commit=None))
+    page.gestures = SimpleNamespace(end_gesture=lambda: calls.append("end"))
+    app._Page._on_disconnect(page)
+    assert calls == ["end"]
 
 
 def _bars(svg):
