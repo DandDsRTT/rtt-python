@@ -83,11 +83,11 @@ class GestureController:
         # the gesture); both render()'s sweep and paint_rings()'s hover sweep go through here, so the
         # cache stays consistent whichever path painted last. (NiceGUI's classes() is itself change-
         # detected, so even an un-guarded no-op sends nothing over the socket — this skips the Python.)
-        el = self.page.rec.els.get(eid)
+        el = self.page.rec.entity(eid).el
         if el is None:
             return  # a ring id with no DOM element (nothing on screen to mark) — skip
         rsig = (eid in amber, eid in red)
-        if self.page.rec.ring_sig.get(eid) == rsig:
+        if self.page.rec.entity(eid).ring_sig == rsig:
             return
         el.classes(
             add="rtt-preview-change" if eid in amber else "",
@@ -97,7 +97,7 @@ class GestureController:
             add="rtt-preview-remove" if eid in red else "",
             remove="" if eid in red else "rtt-preview-remove",
         )
-        self.page.rec.ring_sig[eid] = rsig
+        self.page.rec.entities[eid].ring_sig = rsig
 
     def paint_rings(self):
         lay = self.page.last_lay

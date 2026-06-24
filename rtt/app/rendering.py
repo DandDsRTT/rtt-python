@@ -12,6 +12,7 @@ from rtt.app import (
     tooltips,
 )
 from rtt.app import settings as show_settings
+from rtt.app._recon_handles import EntityHandles
 from rtt.app.page_assets import (
     _CHROME_H,
     _PAD,
@@ -163,16 +164,18 @@ class Renderer:
         def place_line(ln, suffix, parent, shift):
             eid = ln.id + suffix
             seen.add(eid)
-            if eid not in self.page.rec.els:
+            if eid not in self.page.rec.entities:
                 with parent:
                     cls = "rtt-line " + ("rtt-line-v" if ln.orientation == "v" else "rtt-line-h")
                     if self._revirtualizing:
                         cls += " rtt-noentry"
-                    self.page.rec.els[eid] = ui.element("div").classes(cls).props(f'data-eid="{eid}"')
+                    self.page.rec.entities[eid] = EntityHandles(
+                        el=ui.element("div").classes(cls).props(f'data-eid="{eid}"')
+                    )
             sty = _line_style(ln, shift)
-            if self.page.rec.styled.get(eid) != sty:  # only restyle a line that actually moved
-                self.page.rec.els[eid].style(sty)
-                self.page.rec.styled[eid] = sty
+            if self.page.rec.entity(eid).styled != sty:  # only restyle a line that actually moved
+                self.page.rec.entities[eid].el.style(sty)
+                self.page.rec.entities[eid].styled = sty
 
         for ln in lay.lines:
             x0, x1 = (ln.pos, ln.pos) if ln.orientation == "v" else (ln.start, ln.start + ln.length)
@@ -194,7 +197,7 @@ class Renderer:
             shift = 0 if pane in ("col", "corner") else fy
             eid = bl.id + suffix
             seen.add(eid)
-            if eid not in self.page.rec.els:
+            if eid not in self.page.rec.entities:
                 with self.page.cell_parents[pane]:
                     cls = (
                         "rtt-block-boxed"
@@ -207,8 +210,8 @@ class Renderer:
                     )
                     if self._revirtualizing:
                         cls += " rtt-noentry"
-                    self.page.rec.els[eid] = (
-                        ui.element("div").classes(cls).props(f'data-eid="{eid}"').mark(eid)
+                    self.page.rec.entities[eid] = EntityHandles(
+                        el=ui.element("div").classes(cls).props(f'data-eid="{eid}"').mark(eid)
                     )
             # position via transform:translate (anchored at left:0;top:0), so a wash/box that SHIFTS
             # on a reflow rides the compositor like the cells; its size (a wash growing to cover a new
@@ -217,10 +220,10 @@ class Renderer:
             if bl.tint in _TINTS:
                 style += f"; background:var(--wash-{bl.tint})"
             if (
-                self.page.rec.styled.get(eid) != style
+                self.page.rec.entity(eid).styled != style
             ):  # only restyle a block that actually moved/recoloured
-                self.page.rec.els[eid].style(style)
-                self.page.rec.styled[eid] = style
+                self.page.rec.entities[eid].el.style(style)
+                self.page.rec.entities[eid].styled = style
 
         for bl in lay.blocks:
             for pane in _block_panes(bl, fx, fy):  # washes/boxes aren't virtualized (see _render_lines)
@@ -234,7 +237,7 @@ class Renderer:
             if self.page.rec.handles(cid).mean_damage_tip is not None:
                 self.page.rec.cells[cid].mean_damage_tip.set_text(mean_damage_help_text)
                 continue
-            wrap = self.page.rec.els.get(cid)
+            wrap = self.page.rec.entity(cid).el
             if wrap is not None and wrap._props.get("data-zoomhelp") != mean_damage_help_text:
                 wrap._props["data-zoomhelp"] = mean_damage_help_text
                 wrap.update()
@@ -254,7 +257,7 @@ class Renderer:
             if h.guide_help_text is None:
                 continue
             plain, relabeled = h.guide_help_text
-            wrap = rec.els.get(cid)
+            wrap = rec.entity(cid).el
             text = relabeled if pretransform else plain
             if wrap is not None and wrap._props.get("data-guide-text") != text:
                 wrap._props["data-guide-text"] = text
@@ -312,13 +315,13 @@ class Renderer:
         return _rect_in_view(x, y, w, h, fy, self._viewport, _VIRT_OVERSCAN)
 
     def _make_cell_if_new(self, cb, container, cold, structural) -> None:
-        if cb.id in self.page.rec.els and self.page.rec.cells[cb.id].kind != cb.kind:
+        if cb.id in self.page.rec.entities and self.page.rec.cells[cb.id].kind != cb.kind:
             self.page.rec.drop(cb.id)
-        if cb.id not in self.page.rec.els:
+        if cb.id not in self.page.rec.entities:
             with self.page.cell_parents[container]:
                 self.page.rec.make_cell(cb)
             if self._revirtualizing:
-                self.page.rec.els[cb.id].classes(add="rtt-noentry")  # scrolled-in: appear at once
+                self.page.rec.entities[cb.id].el.classes(add="rtt-noentry")  # scrolled-in: appear at once
             # two-step entrance: a cell BORN by a STRUCTURAL render — present in the new layout, absent
             # from the previous one (_newborn_ids) — is WITHHELD (.rtt-withhold → opacity 0) while the
             # existing cells slide to open the room, and only fades in once the reflow has SETTLED. A
@@ -329,7 +332,7 @@ class Renderer:
             # under virtualization), so it appears at once; so do a PENDING draft (typeable immediately)
             # and the cold first paint (no room to make yet).
             if structural and not cold and not cb.pending and cb.id in self._newborn_ids:
-                self.page.rec.els[cb.id].classes(add="rtt-withhold")
+                self.page.rec.entities[cb.id].el.classes(add="rtt-withhold")
 
     def _update_cell_content(self, cb) -> None:
         # content depends on the cell's value fields AND its w/h (width-fitted faces re-fit on
@@ -362,7 +365,7 @@ class Renderer:
             # was the bug); the drop sweep below removes only cells gone from the layout. Frozen
             # corner/col/row strips and pending drafts always build.
             if (
-                cb.id not in self.page.rec.els
+                cb.id not in self.page.rec.entities
                 and container == "body"
                 and not cb.pending
                 and not self._body_visible(cb.x, cb.y, cb.w, cb.h, fy)
@@ -379,13 +382,13 @@ class Renderer:
             # of left/top — which would re-run layout every frame for every moving cell, the jank when a
             # basis/column change shifts most of the grid at once. Size still rides width/height.
             geo = f"left:0; top:0; transform:translate({cb.x}px,{top}px); width:{cb.w}px; height:{cb.h}px"
-            if self.page.rec.styled.get(cb.id) != geo:
-                self.page.rec.els[cb.id].style(geo)
-                self.page.rec.styled[cb.id] = geo
+            if self.page.rec.entity(cb.id).styled != geo:
+                self.page.rec.entities[cb.id].el.style(geo)
+                self.page.rec.entities[cb.id].styled = geo
             self._update_cell_content(cb)
             self.page.gestures.paint_cell(cb.id, amber, red)  # self-guards on ring_sig (no-op when unchanged)
 
-        for eid in [e for e in self.page.rec.els if e not in seen]:
+        for eid in [e for e in self.page.rec.entities if e not in seen]:
             self.page.rec.drop(eid)
 
     def _end_stale_gestures(self) -> None:
@@ -467,7 +470,7 @@ class Renderer:
         self._fill_gen += 1
         if helpers.is_user_simulation():
             return
-        if any(cb.id not in self.page.rec.els for cb in lay.cells):
+        if any(cb.id not in self.page.rec.entities for cb in lay.cells):
             background_tasks.create(self._fill_offscreen(self._fill_gen))
 
     async def _fill_offscreen(self, gen) -> None:
@@ -480,7 +483,7 @@ class Renderer:
             if lay is None:
                 return
             fx, fy = lay.freeze_x, lay.freeze_y
-            pending = [cb for cb in lay.cells if cb.id not in self.page.rec.els]
+            pending = [cb for cb in lay.cells if cb.id not in self.page.rec.entities]
             if not pending:
                 return
             amber, red = self._last_rings
@@ -496,8 +499,8 @@ class Renderer:
                             f"left:0; top:0; transform:translate({cb.x}px,{top}px); "
                             f"width:{cb.w}px; height:{cb.h}px"
                         )
-                        self.page.rec.els[cb.id].style(geo)
-                        self.page.rec.styled[cb.id] = geo
+                        self.page.rec.entities[cb.id].el.style(geo)
+                        self.page.rec.entities[cb.id].styled = geo
                         self._update_cell_content(cb)
                         self.page.gestures.paint_cell(cb.id, amber, red)
                 finally:

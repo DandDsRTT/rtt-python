@@ -24,7 +24,7 @@ from rtt.app import (
     tooltips,
 )
 from rtt.app import settings as show_settings
-from rtt.app._recon_handles import CellHandles
+from rtt.app._recon_handles import CellHandles, EntityHandles
 from rtt.app.editor import Editor
 from rtt.app.layout import Line
 
@@ -40,23 +40,22 @@ class _FakeElement:
 
 
 def test_drop_purges_a_cell_from_every_handle_store():
-    # A cell's handles all ride ONE CellHandles record (rec.cells[id]); the only parallel per-id
-    # dicts left are the entity-keyed element + style/ring caches (rec._entity_dicts: els/styled/
-    # ring_sig, which also hold lines and washes). drop(eid) pops the record and sweeps those dicts,
-    # so no handle can leak to a deleted element — and a NEW handle field needs zero drop()
-    # bookkeeping, since it rides the record pop() already removes (the old _handle_dicts footgun,
-    # where scheme_buttons was once omitted and leaked, is gone by construction).
+    # A cell's state lives in exactly two records, both keyed by id: cells[id] (a CellHandles of every
+    # cell-specific element handle + last-rendered value) and entities[id] (an EntityHandles of the
+    # el + style/ring change-guard caches, shared with lines/washes). drop(eid) pops BOTH, so no handle
+    # can leak to a deleted element, and a NEW handle is a new field on a record pop() already removes —
+    # no parallel-dict sweep-list to forget (the old _handle_dicts footgun is gone by construction).
     rec = app._Reconciler(Editor())
-    rec.els["scheme:primes"] = _FakeElement()
-    rec.cells["scheme:primes"] = CellHandles()  # make_cell creates this per cell in production
+    rec.cells["scheme:primes"] = CellHandles()  # make_cell creates both records per cell in production
     rec.cells["scheme:primes"].scheme_button = "the-button"
-    rec.styled["scheme:primes"] = "left:0"
-    rec.ring_sig["scheme:primes"] = (False, False)
+    rec.entities["scheme:primes"] = EntityHandles(el=_FakeElement())
+    rec.entities["scheme:primes"].styled = "left:0"
+    rec.entities["scheme:primes"].ring_sig = (False, False)
     rec.drop("scheme:primes")
     assert "scheme:primes" not in rec.cells
-    for d in rec._entity_dicts:
-        assert "scheme:primes" not in d
+    assert "scheme:primes" not in rec.entities
     assert rec.handles("scheme:primes").scheme_button is None  # null-object, not a leaked handle
+    assert rec.entity("scheme:primes").el is None
 
 
 def test_handles_sentinel_reads_none_but_refuses_writes():

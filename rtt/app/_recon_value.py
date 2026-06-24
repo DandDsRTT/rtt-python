@@ -220,7 +220,7 @@ class _ReconValueCells:
         else:
             self.r.cells[cb.id].input.value = text
         if spec.pending:
-            target = self.r.els[cb.id] if spec.ratio_allowed else self.r.cells[cb.id].input
+            target = self.r.entities[cb.id].el if spec.ratio_allowed else self.r.cells[cb.id].input
             target.classes(
                 add="rtt-pending" if cb.pending else "", remove="" if cb.pending else "rtt-pending"
             )
@@ -387,7 +387,7 @@ class _ReconValueCells:
             self._ratio(cb, approx=approx)
 
     def _update_ratio(self, cb: spreadsheet.CellBox) -> None:
-        self.r.els[cb.id].classes(
+        self.r.entities[cb.id].el.classes(
             add="rtt-pending" if cb.pending else "", remove="" if cb.pending else "rtt-pending"
         )
         face = self.r.handles(cb.id).ratio_face
@@ -404,7 +404,7 @@ class _ReconValueCells:
 
     def _update_tuning_value(self, cb: spreadsheet.CellBox) -> None:
         self.set_cents_face(cb.id, cb.text)
-        self.r.els[cb.id].classes(
+        self.r.entities[cb.id].el.classes(
             add="rtt-pending" if cb.pending else "", remove="" if cb.pending else "rtt-pending"
         )
 
@@ -416,7 +416,7 @@ class _ReconValueCells:
 
     def _update_label(self, cb: spreadsheet.CellBox) -> None:
         self.r.cells[cb.id].label.set_text(cb.text)
-        self.r.els[cb.id].classes(
+        self.r.entities[cb.id].el.classes(
             add="rtt-pending" if cb.pending else "", remove="" if cb.pending else "rtt-pending"
         )
 
