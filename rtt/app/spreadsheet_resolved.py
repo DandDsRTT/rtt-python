@@ -234,7 +234,7 @@ def _dims(b) -> Dims:
 def _tuning(b) -> Tuning:
     return Tuning(
         tun=b.tun,
-        ss_tun=b._ss_tun,
+        ss_tun=None,
         from_generators=b._tun_from_generators,
         target_weights=b.target_weights,
         target_sizes=b.target_sizes,
@@ -381,18 +381,18 @@ def _scalars(b) -> Scalars:
     )
 
 
-def from_builder(b) -> Resolved:
+def freeze(draft) -> Resolved:
     return Resolved(
-        dims=_dims(b),
+        dims=_dims(draft),
         targets=_interval_set(
-            b, "targets", "target_sizes", "mapped", "target_vectors", "pending_target"
+            draft, "targets", "target_sizes", "mapped", "target_vectors", "pending_target"
         ),
-        held=_interval_set(b, "held_ratios", "held_sizes", "held_mapped", "held", "pending_held"),
+        held=_interval_set(draft, "held_ratios", "held_sizes", "held_mapped", "held", "pending_held"),
         commas=_interval_set(
-            b, "comma_ratios", "comma_sizes", "mapped_commas", "comma_vectors", "pending"
+            draft, "comma_ratios", "comma_sizes", "mapped_commas", "comma_vectors", "pending"
         ),
         interest=_interval_set(
-            b,
+            draft,
             "interest_ratios",
             "interest_sizes",
             "interest_mapped",
@@ -400,21 +400,21 @@ def from_builder(b) -> Resolved:
             "pending_interest",
         ),
         detempering=_interval_set(
-            b,
+            draft,
             "detempering_ratios",
             "detempering_sizes",
             "detempering_mapped",
             "detempering_vectors",
             "detempering_pending",
         ),
-        tuning=_tuning(b),
-        canon=_canon(b),
-        projection=_projection(b),
-        ghosts=_ghosts(b),
-        unchanged=_unchanged(b),
-        labels=_labels(b),
-        flags=_flags(b),
-        scalars=_scalars(b),
-        complexities=b.complexities,
-        col_ids=b._col_ids,
+        tuning=_tuning(draft),
+        canon=_canon(draft),
+        projection=_projection(draft),
+        ghosts=_ghosts(draft),
+        unchanged=_unchanged(draft),
+        labels=_labels(draft),
+        flags=_flags(draft),
+        scalars=_scalars(draft),
+        complexities=draft.complexities,
+        col_ids=draft._col_ids,
     )

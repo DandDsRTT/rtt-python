@@ -34,20 +34,35 @@ def test_resolved_is_immutable():
         model.dims.d = 0
 
 
-def test_resolve_matches_the_builders_resolution():
-    # the headless model carries the same domain facts the renderer reads off self.
-    ed = Editor()
-    b = spreadsheet._GridBuilder(
+def _builder(ed: Editor) -> spreadsheet._GridBuilder:
+    return spreadsheet._GridBuilder(
         ed.state, ed.settings, ed.collapsed,
         tuning_scheme=ed.tuning_scheme, target_spec=ed.target_spec,
         interest=ed.interest_vectors, range_mode=ed.range_mode,
         pending_comma=ed.pending_comma, held_vectors=ed.held_vectors,
         generator_tuning=ed.effective_generator_tuning(),
     )
+
+
+def test_resolve_matches_the_builders_resolution():
+    # the headless model carries the same domain facts the full builder resolves into self.resolved.
+    ed = Editor()
+    b = _builder(ed)
     model = _resolve(ed)
-    assert model.dims.d == b.d
-    assert model.dims.k == b.k
-    assert model.targets.ratios == b.targets
-    assert model.commas.ratios == b.comma_ratios
-    assert model.tuning.tun is b.tun
-    assert model.projection.matrix == b.projection_matrix
+    assert model.dims.d == b.resolved.dims.d
+    assert model.dims.k == b.resolved.dims.k
+    assert model.targets.ratios == b.resolved.targets.ratios
+    assert model.commas.ratios == b.resolved.commas.ratios
+    assert model.tuning.tun is b.resolved.tuning.tun
+    assert model.projection.matrix == b.resolved.projection.matrix
+
+
+def test_the_resolved_model_is_the_only_copy_of_the_domain_facts():
+    # the mirror is gone: domain facts live ONLY on self.resolved, never as flat self.<attr>
+    # shadows. A future change that re-introduces the double storage fails here.
+    b = _builder(Editor())
+    for mirrored in ("comma_ratios", "tun", "gens", "show_superspace", "projection_matrix",
+                     "canon_mapping", "unchanged_ratios", "ghost_row", "all_interval"):
+        assert not hasattr(b, mirrored), f"{mirrored} still shadows the resolved model on self"
+    assert b.resolved.commas.ratios is not None
+    assert b.resolved.flags.superspace is False

@@ -1332,9 +1332,9 @@ def test_plain_text_custom_prescaler_matches_the_grid():
     gb = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=(1.0, 2.0, 3.0))
     pt = gb.ptext_strings
     # each retuned ptext tile equals the grid's own quantity (the same formatter the grid value uses)
-    assert pt[("tuning", "primes")] == service._cents_map(gb.tun.tuning_map)
-    assert pt[("complexity", "targets")] == service._cents_list(gb.complexities["targets"])
-    assert pt[("weight", "targets")] == service._cents_list(gb.target_weights)
+    assert pt[("tuning", "primes")] == service._cents_map(gb.resolved.tuning.tun.tuning_map)
+    assert pt[("complexity", "targets")] == service._cents_list(gb.resolved.complexities["targets"])
+    assert pt[("weight", "targets")] == service._cents_list(gb.resolved.tuning.target_weights)
     # the bare prescaler reads the typed diagonal (1, 2, 3), not the scheme's log-prime weights
     assert pt[("prescaling", "primes")] == "[⟨1 0 0] ⟨0 2 0] ⟨0 0 3]⟩"
     # and it genuinely deviates from the no-override views (the divergence is gone, not coincidental)
@@ -1353,8 +1353,8 @@ def test_plain_text_custom_prescaler_renders_an_off_diagonal_matrix_like_the_gri
     assert pt[("prescaling", "primes")] == "[⟨1 0.500 0] ⟨0 1.585 0] ⟨0 0 2.322]⟩"
     # the products and complexity still match the grid under the matrix override (no element-wise crash)
     gb = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=matrix)
-    assert gb.ptext_strings[("tuning", "primes")] == service._cents_map(gb.tun.tuning_map)
-    assert gb.ptext_strings[("complexity", "targets")] == service._cents_list(gb.complexities["targets"])
+    assert gb.ptext_strings[("tuning", "primes")] == service._cents_map(gb.resolved.tuning.tun.tuning_map)
+    assert gb.ptext_strings[("complexity", "targets")] == service._cents_list(gb.resolved.complexities["targets"])
 
 
 def test_plain_text_primes_complexity_runs_over_the_domain_basis_not_standard_primes():
@@ -2460,7 +2460,7 @@ def test_over_complex_generators_round_trip_back_to_a_finite_size():
     pt = service.plain_text_values(state, "TILT minimax-U", "TILT")  # the ptext detempering round-trip
     assert pt[("tuning", "detempering")]  # built without raising
     gb = _grid_with_ptext(state, "TILT minimax-U")  # the exact crash site: _resolve_interval_sets
-    assert service._OVER_COMPLEX_RATIO in gb.gens   # the genmap cell shows the sentinel, render survives
+    assert service._OVER_COMPLEX_RATIO in gb.resolved.scalars.gens   # the genmap cell shows the sentinel, render survives
 
 
 def test_remove_mapping_row_keeps_a_nonstandard_domain():
