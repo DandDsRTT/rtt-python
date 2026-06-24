@@ -4,6 +4,13 @@ from dataclasses import dataclass, field
 
 
 @dataclass
+class EntityHandles:
+    el: object = None
+    styled: object = None
+    ring_sig: object = None
+
+
+@dataclass
 class CellHandles:
     input: object = None
     den_input: object = None
@@ -49,10 +56,19 @@ class _ReadOnlyCellHandles(CellHandles):
         )
 
 
-def _empty_sentinel() -> CellHandles:
-    sentinel = CellHandles()
-    sentinel.__class__ = _ReadOnlyCellHandles
+class _ReadOnlyEntityHandles(EntityHandles):
+    def __setattr__(self, name, value):
+        raise AttributeError(
+            f"the missing-entity handle sentinel is read-only ({name!r} assignment): rec.entity(id) "
+            "returned it because the id is not live — route writes through rec.entities[id]"
+        )
+
+
+def _frozen(cls, base):
+    sentinel = base()
+    sentinel.__class__ = cls
     return sentinel
 
 
-EMPTY = _empty_sentinel()
+EMPTY = _frozen(_ReadOnlyCellHandles, CellHandles)
+EMPTY_ENTITY = _frozen(_ReadOnlyEntityHandles, EntityHandles)

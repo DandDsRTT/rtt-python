@@ -4361,13 +4361,13 @@ async def test_virtualization_elides_offscreen_body_cells(user: User, monkeypatc
     assert offscreen, "a 320x320 viewport must leave some body cells off-screen to elide"
 
     for cid in offscreen:
-        assert cid not in page.rec.els           # an off-screen body cell is never built
+        assert cid not in page.rec.entities           # an off-screen body cell is never built
     for cid in visible:
-        assert cid in page.rec.els               # a visible body cell is built
+        assert cid in page.rec.entities               # a visible body cell is built
     # the frozen corner/col/row strips stay fully materialized regardless of the viewport
     for c in lay.cells:
         if live._freeze_container(c, fx, fy) != "body":
-            assert c.id in page.rec.els
+            assert c.id in page.rec.entities
 
 
 async def test_scrolling_reveals_far_cells_and_retains_near_ones(user: User, monkeypatch) -> None:
@@ -4378,16 +4378,16 @@ async def test_scrolling_reveals_far_cells_and_retains_near_ones(user: User, mon
 
     far = max(body, key=lambda c: c.y)           # the bottom-most body cell — off-screen at cold paint
     near = min(body, key=lambda c: c.x + c.y)    # a top-left body cell — visible at cold paint
-    assert far.id not in page.rec.els
-    assert near.id in page.rec.els
+    assert far.id not in page.rec.entities
+    assert near.id in page.rec.entities
 
     # scroll so the far cell sits at the top-left of the viewport: it materializes on demand...
     page.renderer._on_viewport(SimpleNamespace(args={"l": far.x, "t": far.y - fy, "w": 320, "h": 320}))
-    assert far.id in page.rec.els
+    assert far.id in page.rec.entities
     # ...and the now-far-above near cell is RETAINED, not evicted — a scroll only ever ADDS, so
     # scrolling back to it never re-blanks (the regression this fixes).
     assert not page.renderer._body_visible(near.x, near.y, near.w, near.h, fy)  # genuinely off-screen
-    assert near.id in page.rec.els
+    assert near.id in page.rec.entities
 
 
 async def test_background_fill_materializes_every_deferred_cell(user: User, monkeypatch) -> None:
@@ -4397,13 +4397,13 @@ async def test_background_fill_materializes_every_deferred_cell(user: User, monk
     await user.open("/")
     live, page = _live_page()
     lay, fx, fy, body = _body_cells(live, page)
-    deferred = [c.id for c in body if c.id not in page.rec.els]
+    deferred = [c.id for c in body if c.id not in page.rec.entities]
     assert deferred, "a 320x320 viewport must defer some off-screen cells at cold paint"
 
     await page.renderer._fill_offscreen(page.renderer._fill_gen)
 
     for c in lay.cells:
-        assert c.id in page.rec.els, f"fill left {c.id} unmaterialized"
+        assert c.id in page.rec.entities, f"fill left {c.id} unmaterialized"
 
 
 async def test_revirtualize_keeps_offscreen_scroll_within_overscan_cheap(user: User, monkeypatch) -> None:
@@ -4412,9 +4412,9 @@ async def test_revirtualize_keeps_offscreen_scroll_within_overscan_cheap(user: U
     monkeypatch.setenv("RTT_VIRT_VIEWPORT", "320x320")
     await user.open("/")
     live, page = _live_page()
-    before = set(page.rec.els)
+    before = set(page.rec.entities)
     page.renderer._on_viewport(SimpleNamespace(args={"l": 4, "t": 4, "w": 320, "h": 320}))
-    assert set(page.rec.els) == before
+    assert set(page.rec.entities) == before
 
 
 def test_scrolled_past_overscan_only_fires_past_the_step_or_on_resize() -> None:
@@ -4445,12 +4445,12 @@ async def test_structural_newborns_are_withheld_scroll_materializations_are_not(
     # withhold class persists for inspection.
     await user.open("/")
     live, page = _live_page()
-    before = set(page.rec.els)
+    before = set(page.rec.entities)
     _toggle(user, "charts")                                   # a structural change that borns cells
     await user.should_see(marker="chart:retune:targets")
-    newborns = set(page.rec.els) - before
+    newborns = set(page.rec.entities) - before
     assert newborns, "enabling charts must add cells"
-    assert any("rtt-withhold" in page.rec.els[cid]._classes for cid in newborns), \
+    assert any("rtt-withhold" in page.rec.entities[cid].el._classes for cid in newborns), \
         "a structurally-born cell must be withheld for the two-step entrance"
-    assert all("rtt-noentry" not in page.rec.els[cid]._classes for cid in newborns), \
+    assert all("rtt-noentry" not in page.rec.entities[cid].el._classes for cid in newborns), \
         "rtt-noentry is only for scroll materialization, never a structural newborn"

@@ -14,7 +14,8 @@ from rtt.app._recon_choosers import _ReconChoosers
 from rtt.app._recon_display import _ReconDisplayCells
 from rtt.app._recon_drag import _ReconDrag
 from rtt.app._recon_handles import EMPTY as _EMPTY_HANDLES
-from rtt.app._recon_handles import CellHandles
+from rtt.app._recon_handles import EMPTY_ENTITY as _EMPTY_ENTITY
+from rtt.app._recon_handles import CellHandles, EntityHandles
 from rtt.app._recon_value import _ReconValueCells
 from rtt.app.editor import Editor
 from rtt.app.page_assets import (
@@ -47,7 +48,6 @@ class _Reconciler:
         self._col_drag: tuple[str, int] | None = None
         self.pretransform = False
         self._init_handles()
-        self._init_render_caches()
         self.cell_kinds: dict[str, _KindHandlers] = {}
         self._value = _ReconValueCells(self)
         self._display = _ReconDisplayCells(self)
@@ -71,27 +71,18 @@ class _Reconciler:
         return self._gestures.gesture if self._gestures is not None else None
 
     def _init_handles(self) -> None:
-        # Every cell's element handles + per-cell last-rendered values travel together in one
-        # CellHandles record keyed by cell id (make_cell creates it, drop() removes it), so a new
-        # handle is just a new field on the record — not a 34th parallel dict you must remember to
-        # also sweep in drop(). The entity dicts below (els/styled/ring_sig) are keyed by ENTITY id,
-        # a superset of cell ids: lines and washes get an element + style/ring cache too, so they
-        # cannot live in a per-CELL record.
+        # Two stores, both keyed by id. cells: a CellHandles record per CELL — every element handle +
+        # per-cell last-rendered value travels in one record, so a new handle is a new field, never a
+        # parallel dict you must remember to sweep. entities: an EntityHandles record per ENTITY (a
+        # superset of cells — lines and washes also get an element + the style/ring change-guard
+        # caches), grouping the el + styled + ring_sig that always co-vary for an entity. make_cell
+        # creates both for a cell; render() creates an entities record for each line/wash; drop()
+        # removes an id from both.
         self.cells: dict[str, CellHandles] = {}
-        self.els: dict = {}  # entity id (cell OR line/wash) -> its wrapping ui.element
+        self.entities: dict[str, EntityHandles] = {}
         self.target_limit_tip = (
             None  # the target chooser's ui.tooltip (text swaps to an invalid-limit message)
         )
-
-    def _init_render_caches(self) -> None:
-        # Change-guard caches: the last applied (geometry string / ring state) per ENTITY, so render()
-        # reapplies an element's style/rings ONLY when it actually changed — most cells are untouched
-        # between renders, so the reconcile skips them instead of re-running the per-cell work over the
-        # whole page on every interaction. (The per-CELL content signature rides CellHandles.content_sig.)
-        self.styled: dict = {}  # entity id -> last applied position/size style string
-        self.ring_sig: dict = {}  # entity id -> last (in-amber, in-red) ring state it was painted for
-        # drop() clears a departing entity from its record and from each entity-keyed dict.
-        self._entity_dicts = (self.els, self.styled, self.ring_sig)
 
     def _register_display_kinds(self) -> None:
         for _ebk_kind in _EBK_SVG_KINDS:
@@ -220,10 +211,9 @@ class _Reconciler:
         self.cell_kinds["colgrip"] = _KindHandlers(self._buttons._build_colgrip)
 
     def drop(self, eid: str) -> None:
-        self.els[eid].delete()
+        self.entities[eid].el.delete()
         self.cells.pop(eid, None)
-        for d in self._entity_dicts:
-            d.pop(eid, None)
+        self.entities.pop(eid, None)
 
     def _attach_guide_link(self, wrap, gh: tooltips.GuideHelp, tile: str, text: str) -> None:
         # the hover-card (a body-level div built by _GUIDE_JS) reads these and renders a card that
@@ -244,6 +234,7 @@ class _Reconciler:
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
         self.cells[cb.id] = CellHandles()
+        self.entities[cb.id] = EntityHandles()
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
         with wrap:
             self.cell_kinds[cb.kind].build(cb, wrap)
@@ -258,7 +249,7 @@ class _Reconciler:
         # test_web_tooltips' completeness sweep fails. The mark/data-eid ride the wrap, so the magnifier
         # (which clones the wrap) and any tooltip hang off it too.
         self._attach_hover_help(wrap, cb)
-        self.els[cb.id] = wrap
+        self.entities[cb.id].el = wrap
         self.cells[cb.id].kind = cb.kind
         self._wire_cell_input(wrap, cb)
 
@@ -320,9 +311,9 @@ class _Reconciler:
             handlers.update(cb)
         if cb.unit:
             if self.cells[cb.id].cell_unit is None:
-                with self.els[cb.id]:
+                with self.entities[cb.id].el:
                     self.cells[cb.id].cell_unit = ui.html("").classes("rtt-cellunit")
-                self.els[cb.id].classes(add="rtt-cell-united")
+                self.entities[cb.id].el.classes(add="rtt-cell-united")
             if self.cells[cb.id].cell_unit_text != (cb.unit, cb.w):
                 self.cells[cb.id].cell_unit.set_content(_bold_units(cb.unit))
                 self.cells[cb.id].cell_unit.style(
@@ -333,9 +324,9 @@ class _Reconciler:
             self.cells[cb.id].cell_unit.delete()
             self.cells[cb.id].cell_unit = None
             self.cells[cb.id].cell_unit_text = None
-            self.els[cb.id].classes(remove="rtt-cell-united")
+            self.entities[cb.id].el.classes(remove="rtt-cell-united")
         if cb.audio is not None:
-            self._tag_audio(self.els[cb.id], cb)
+            self._tag_audio(self.entities[cb.id].el, cb)
 
     def _tag_audio(self, el, cb: spreadsheet.CellBox) -> None:
         tile, idx, cents = cb.audio
@@ -345,6 +336,9 @@ class _Reconciler:
 
     def handles(self, cid: str) -> CellHandles:
         return self.cells.get(cid, _EMPTY_HANDLES)
+
+    def entity(self, eid: str) -> EntityHandles:
+        return self.entities.get(eid, _EMPTY_ENTITY)
 
     def cell_value(self, cid: str) -> str:
         num = str(self.cells[cid].input.value).strip()
