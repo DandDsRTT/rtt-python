@@ -28,7 +28,7 @@ from nicegui.testing.user_interaction import UserInteraction
 
 from rtt.app import app as web_app
 from rtt.app import rendering as web_rendering
-from rtt.app import service, spreadsheet, spreadsheet_constants
+from rtt.app import page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
 
@@ -72,9 +72,9 @@ async def test_state_query_param_loads_a_shared_document(user: User) -> None:
     live = _live()   # render_main re-imports rtt.app.app, so the store lives on this copy, not web_app
     doc = Editor().serialize()
     doc["settings"]["counts"] = not doc["settings"]["counts"]
-    token = live._encode_state(doc)
-    await user.open(f"/?{live._STATE_PARAM}={token}")
-    stored = live._doc_store()[live._STORE_KEY]
+    token = _live_assets()._encode_state(doc)
+    await user.open(f"/?{_live_assets()._STATE_PARAM}={token}")
+    stored = _live_assets()._doc_store()[_live_assets()._STORE_KEY]
     assert stored["settings"]["counts"] == doc["settings"]["counts"]
 
 
@@ -83,7 +83,7 @@ async def test_a_corrupt_state_query_param_falls_back_to_defaults(user: User, ca
     # index() deliberately ERROR-logs the decode failure (so a broken link is visible server-side);
     # that log is EXPECTED here, so suppress just that logger rather than failing the user fixture.
     with caplog.at_level(logging.CRITICAL, logger="rtt.app.app"):
-        await user.open(f"/?{web_app._STATE_PARAM}=not-a-real-token")
+        await user.open(f"/?{page_assets._STATE_PARAM}=not-a-real-token")
     await user.should_see("quantities")
 
 
@@ -1203,7 +1203,7 @@ async def test_scrolling_the_target_limit_steps_then_commits(user: User, monkeyp
     # the app. With the debounce zeroed the commit still lands and the stepped limit sticks — a
     # reverted/failed commit would snap it back, and the user fixture fails on any render error. The
     # chooser nests two controls, so the listener rides the limit input itself.
-    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 0)
+    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 0)
     await _enable(user, "presets")  # reveal the chooser dropdowns
     await user.should_see(marker="preset:target")
     num, _sel = _target_preset(user)
@@ -1420,7 +1420,7 @@ def test_ratio_font_shrinks_a_long_fraction_to_fit_its_square() -> None:
     # until its longer line plus the fraction-bar padding fits the cell — num and den scaled together.
     import math
 
-    from rtt.app.app import _ratio_font
+    from rtt.app.render_html import _ratio_font
     from rtt.app.render_html import _RATIO_DIGIT_EM, _RATIO_MAX_FONT, _RATIO_PAD
     cell = spreadsheet_constants.COL_W
     assert _ratio_font("2", "1", cell) == _RATIO_MAX_FONT          # 1-digit: sits at the cap
@@ -1464,7 +1464,7 @@ async def test_decimals_off_shrinks_a_long_integer_to_fit_its_cell(user: User) -
     # whole-ratio integers — and the fit is digit-aware, so a short value (a 1-digit retuning 0)
     # keeps the full cell font. Covers the read-only stacked face AND the editable generator-tuning
     # cell, whose +/- sign glyph eats box width so even a 3-digit value must shrink to clear it.
-    cell_font = float(web_app._CELL_FONT)
+    cell_font = float(page_assets._CELL_FONT)
     await user.open("/")
     main_on, sub_on = _ro_stacked_face(user, "tuning:prime:0")
     assert (main_on.text, sub_on.text) == ("1200", ".000")        # decimals on: whole over .fraction
@@ -2343,7 +2343,7 @@ async def test_settings_frozen_header_plus_chrome_bar_matches_the_grid_column_st
     frozen = next(iter(user.find(marker="showfrozen").elements))
     colhead = next(iter(user.find(marker="colhead").elements))
     assert frozen._style.get("height")  # the header is sized (not left to hug its content)...
-    assert _px(frozen, "height") == _px(colhead, "height") - web_app._CHROME_H  # ...to strip minus the bar
+    assert _px(frozen, "height") == _px(colhead, "height") - page_assets._CHROME_H  # ...to strip minus the bar
 
 
 def _px(el, prop: str) -> float:
@@ -2378,7 +2378,7 @@ async def test_settings_body_caps_below_the_window_so_it_doesnt_scroll_when_it_f
     scroll = next(iter(user.find(marker="showscroll").elements))
     colhead = next(iter(user.find(marker="colhead").elements))
     fy = _px(colhead, "height")  # the frozen header / column-strip height (freeze_y)
-    assert scroll._style.get("max-height") == f"calc(100vh - {web_app._PAD + fy}px)"
+    assert scroll._style.get("max-height") == f"calc(100vh - {page_assets._PAD + fy}px)"
 
 
 async def test_state_persists_across_a_refresh(user: User) -> None:
@@ -2831,7 +2831,7 @@ async def test_scrolling_the_target_limit_down_reddens_the_dropped_target_rows(
     # down to 5-TILT drops 6/5 (target index 7); its row must redden in place. The debounce is pinned
     # far out so the heavy commit can't reflow the row away mid-assertion — only the synchronous,
     # no-reflow remove-preview is under test (the commit itself is covered by the steps-then-commits test).
-    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 100)
+    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 100)
     await _enable(user, "presets")
     await user.should_see(marker="retune:target:7")           # the 6/5 row exists at the 6-TILT default
     num, _sel = _target_preset(user)
@@ -2858,7 +2858,7 @@ async def test_typing_the_target_limit_down_reddens_the_dropped_target_rows(
     # string), from the 6-TILT default down to 5, dropping 6/5 (target index 7). The structural wiring
     # itself is locked by test_the_typed_target_limit_preview_rides_keyup_not_input below — this test
     # only exercises the value path. Pin the debounce far out so no commit can reflow mid-assertion.
-    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 100)
+    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 100)
     await _enable(user, "presets")
     await user.should_see(marker="retune:target:7")            # the 6/5 row exists at the 6-TILT default
     num, _sel = _target_preset(user)
@@ -2895,7 +2895,7 @@ async def test_the_dropped_target_red_preview_clears_when_the_limit_field_is_lef
     # leaving the limit field ends the gesture: on_cell_blur clears the remove-preview, so the red a
     # scroll-down armed does not outlive the edit. (Were the debounce allowed to fire it would commit
     # the lower limit and delete the row outright; pin it out so the BLUR is what clears the red.)
-    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 100)
+    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 100)
     await _enable(user, "presets")
     await user.should_see(marker="retune:target:7")
     num, _sel = _target_preset(user)
@@ -2919,7 +2919,7 @@ async def test_the_target_remove_preview_diffs_the_on_screen_grid_not_the_focus_
     # so they MUST redden. Against the stale 6-TILT snapshot they're invisible (it never had rows 8/9),
     # so the red was silently missing — the bug. (_TARGET_LIMIT_DEBOUNCE is pinned small so the typed
     # commit lands, then pinned out so the follow-up preview stays a pure no-reflow preview.)
-    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 0.01)
+    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 0.01)
     await _enable(user, "presets")
     await user.should_see(marker="retune:target:7")           # the 6-TILT default is on screen
     num, _sel = _target_preset(user)
@@ -2928,7 +2928,7 @@ async def test_the_target_remove_preview_diffs_the_on_screen_grid_not_the_focus_
     await user.should_see(marker="retune:target:9")            # row 9 is one of the rows the grow added
     # now preview the limit back DOWN to 6 (without leaving the field): rows 8 and 9 are dropped, so
     # they must redden. Pin the debounce out so this stays a pure no-reflow preview, no commit.
-    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 100)
+    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 100)
     UserInteraction(user, {num}, None).trigger("keyup", "6")   # type the limit back down to 6
     assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:8"), \
         "a preview after a focused commit must diff the on-screen (8-TILT) grid, not the focus snapshot"
@@ -2940,7 +2940,7 @@ async def test_scrolling_the_target_limit_up_reddens_no_target_rows(user: User, 
     # the mirror guard: GROWING the limit removes nothing, so the remove-preview must stay empty — a
     # raised limit only adds rows (off-screen until committed) and re-solves the survivors. No red
     # anywhere, even though the re-solve does move survivors (those would ring amber, not red).
-    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 100)
+    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 100)
     await _enable(user, "presets")
     await user.should_see(marker="retune:target:7")
     num, _sel = _target_preset(user)
@@ -3022,7 +3022,7 @@ async def test_an_improper_mapping_commit_toasts_and_reverts_the_cells(user: Use
     for p, v in zip(range(3), ("1", "1", "0")):                # set row 1 == row 0 -> dependent, improper
         _cell_child(user, f"cell:mapping:1:{p}").set_value(v)
     _commit(user, "cell:mapping:1:2")
-    await user.should_see(web_app._INVALID_TEMPERAMENT)        # the negative toast names the failure
+    await user.should_see(page_assets._INVALID_TEMPERAMENT)        # the negative toast names the failure
     assert [_cell_child(user, f"cell:mapping:1:{p}").value for p in range(3)] == ["0", "1", "4"]  # reverted
     assert _cell_text(user, "cell:mapped:1:6") == "4"          # the document stayed meantone
 
@@ -3084,7 +3084,7 @@ async def test_an_improper_comma_commit_toasts_and_reverts_the_cells(user: User)
     for p, v in zip(range(3), ("0", "0", "1")):                # (0 0 1): from_comma_basis.mapping not proper
         _cell_child(user, f"cell:comma:{p}:0").set_value(v)
     _commit(user, "cell:comma:2:0")
-    await user.should_see(web_app._INVALID_TEMPERAMENT)        # the negative toast
+    await user.should_see(page_assets._INVALID_TEMPERAMENT)        # the negative toast
     assert [_cell_child(user, f"cell:comma:{p}:0").value for p in range(3)] == ["4", "-4", "1"]  # reverted to syntonic
 
 
@@ -4096,6 +4096,14 @@ def _live():
     return sys.modules["rtt.app.app"]
 
 
+def _live_assets():
+    return sys.modules["rtt.app.page_assets"]
+
+
+def _live_render():
+    return sys.modules["rtt.app.render_html"]
+
+
 async def test_a_mid_render_exception_restores_the_build_guard_so_handlers_stay_live(
         user: User, monkeypatch) -> None:
     # render() sets building[0]=True for its declarative pass, and EVERY commit/preview handler guards
@@ -4125,7 +4133,7 @@ async def test_a_mid_render_exception_restores_the_build_guard_so_handlers_stay_
     # the page must still be live: a guarded mapping commit reaches the document and persists
     _cell_child(user, "cell:mapping:1:2").set_value("7")   # the fifth's prime-5 entry: 4 -> 7
     _commit(user, "cell:mapping:1:2")
-    assert "7" in live._MEMORY_STORE[live._STORE_KEY]["mapping_ebk"]   # NOT swallowed by a stuck guard
+    assert "7" in _live_assets()._MEMORY_STORE[_live_assets()._STORE_KEY]["mapping_ebk"]   # NOT swallowed by a stuck guard
 
 
 async def test_the_reconcile_updates_only_changed_cells_not_the_whole_page(
@@ -4169,14 +4177,14 @@ async def test_a_corrupt_persisted_field_keeps_the_saved_document_and_warns(
     live = _live()
     _cell_child(user, "cell:mapping:1:2").set_value("5")   # the fifth's prime-5 entry: 4 -> 5
     _commit(user, "cell:mapping:1:2")
-    stored = live._MEMORY_STORE[live._STORE_KEY]
+    stored = _live_assets()._MEMORY_STORE[_live_assets()._STORE_KEY]
     assert "5" in stored["mapping_ebk"]   # the user's edit persisted
     corrupt = copy.deepcopy(stored)
     corrupt["held_vectors"] = [["x", 0, 0]]   # one malformed field -> load() raises on the int() parse
-    live._MEMORY_STORE[live._STORE_KEY] = corrupt
+    _live_assets()._MEMORY_STORE[_live_assets()._STORE_KEY] = corrupt
     with caplog.at_level(logging.CRITICAL, logger="rtt.app.app"):
         await user.open("/")   # refresh: load fails -> defaults shown, but the stored blob must be kept
-    after = live._MEMORY_STORE[live._STORE_KEY]
+    after = _live_assets()._MEMORY_STORE[_live_assets()._STORE_KEY]
     assert "5" in after["mapping_ebk"]   # the user's bytes are NOT wiped to defaults
     assert after["held_vectors"] == [["x", 0, 0]]   # the exact stored blob is preserved for recovery
     assert user.notify.contains("Your saved data is kept")   # ...and the silent reset is surfaced
@@ -4346,7 +4354,7 @@ def _live_page():
 def _body_cells(live, page):
     lay = page.last_lay
     fx, fy = lay.freeze_x, lay.freeze_y
-    body = [c for c in lay.cells if live._freeze_container(c, fx, fy) == "body" and not c.pending]
+    body = [c for c in lay.cells if _live_render()._freeze_container(c, fx, fy) == "body" and not c.pending]
     return lay, fx, fy, body
 
 
@@ -4366,7 +4374,7 @@ async def test_virtualization_elides_offscreen_body_cells(user: User, monkeypatc
         assert cid in page.rec.entities               # a visible body cell is built
     # the frozen corner/col/row strips stay fully materialized regardless of the viewport
     for c in lay.cells:
-        if live._freeze_container(c, fx, fy) != "body":
+        if _live_render()._freeze_container(c, fx, fy) != "body":
             assert c.id in page.rec.entities
 
 

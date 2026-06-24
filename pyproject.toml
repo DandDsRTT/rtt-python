@@ -53,11 +53,6 @@ max-returns = 6
 
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401", "F403", "F405"]
-# app.py is the page entrypoint AND a re-export facade: it re-imports the symbols the app.py
-# decomposition moved into sibling modules (render_html*, page_assets, marks, …) so the public
-# surface the smoke/render tests reach via `from rtt.app.app import X` stays intact. Those
-# re-imports read as unused-within-app.py, so F401 is ignored here as it is for __init__.py.
-"rtt/app/app.py" = ["F401", "PLR0913"]
 "tests/**/*.py" = ["ARG", "PLR0913", "PLR0915", "C901", "PLR0912", "E501", "SIM", "B011"]
 # args<=4 is the default, but the math/geometry/compute-dense modules legitimately take
 # several scalar/array/flag params; bundling them into objects obscures rather than clarifies

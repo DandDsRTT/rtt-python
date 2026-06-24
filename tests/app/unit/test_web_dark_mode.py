@@ -9,6 +9,7 @@ not its exact hue (the palette is tuned by eye, so pinning hexes would be brittl
 import re
 
 import rtt.app.app as app
+from rtt.app import marks, page_assets
 from rtt.app import settings as show_settings
 from rtt.app import tooltips
 
@@ -16,7 +17,7 @@ from rtt.app import tooltips
 def _dark_sets(selector, prop):
     """True if some ``body.rtt-dark … <selector> … { … <prop>: … }`` rule exists — i.e. the
     overlay themes ``prop`` on a rule whose (possibly grouped) selector mentions ``selector``."""
-    for m in re.finditer(r"(body\.rtt-dark[^{]*)\{([^}]*)\}", app._CSS):
+    for m in re.finditer(r"(body\.rtt-dark[^{]*)\{([^}]*)\}", page_assets._CSS):
         sels, body = m.group(1), m.group(2)
         if selector in sels and re.search(rf"(^|;|\s){re.escape(prop)}\s*:", body):
             return True
@@ -26,12 +27,12 @@ def _dark_sets(selector, prop):
 def _dark_var_blocks():
     """The declaration bodies of every bare ``body.rtt-dark { … }`` block (the themed
     custom-property overrides), concatenated."""
-    return " ".join(re.findall(r"body\.rtt-dark\s*\{([^}]*)\}", app._CSS))
+    return " ".join(re.findall(r"body\.rtt-dark\s*\{([^}]*)\}", page_assets._CSS))
 
 
 def test_dark_overlay_is_gated_on_the_body_class():
     # the whole theme lives behind body.rtt-dark, so the default (light) render is untouched
-    assert "body.rtt-dark" in app._CSS
+    assert "body.rtt-dark" in page_assets._CSS
 
 
 def test_dark_theme_darkens_every_core_surface():
@@ -60,15 +61,15 @@ def test_dark_theme_retints_the_baked_in_marks_without_disturbing_the_pending_gr
     # the EBK brackets bake BR_COLOR into their SVG fill; the overlay retints exactly that
     # value via an attribute rule (CSS beats the presentation attribute). A pending comma's
     # green marks (#2e9e3f) don't match it, so they stay green — assert nothing retints that fill.
-    assert f'body.rtt-dark [fill="{app.BR_COLOR}"]' in app._CSS
-    assert f'[fill="{app.PENDING_COLOR}"]' not in app._CSS
+    assert f'body.rtt-dark [fill="{marks.BR_COLOR}"]' in page_assets._CSS
+    assert f'[fill="{marks.PENDING_COLOR}"]' not in page_assets._CSS
 
 
 def test_dark_theme_retints_stroke_drawn_marks_too():
     # some BR_COLOR marks are STROKE-drawn, not filled: the chart axes / zero baseline (and the
     # dummy tile's sample-chart axes). The fill attribute rule can't reach a stroke, so a parallel
     # stroke rule retints exactly that value — else those lines stay near-black on the dark pane.
-    assert f'body.rtt-dark [stroke="{app.BR_COLOR}"]' in app._CSS
+    assert f'body.rtt-dark [stroke="{marks.BR_COLOR}"]' in page_assets._CSS
 
 
 def test_dark_theme_overrides_the_themed_variables():
@@ -85,7 +86,7 @@ def test_dark_stacked_cells_show_their_face_not_the_raw_input():
     # the unfocused input transparent (else the face doubles over the raw text) and re-light it to a
     # legible NON-black colour on focus. Regression: one blanket .q-field__native rule lit the raw
     # text always AND lost to the light focus rule's #000 (black, illegible on the dark cell).
-    css = app._CSS
+    css = page_assets._CSS
     unfocused = re.search(
         r"body\.rtt-dark \.rtt-cell-stacked \.rtt-cellinput \.q-field__native\s*\{([^}]*)\}", css)
     assert unfocused and "transparent" in unfocused.group(1)
@@ -98,7 +99,7 @@ def test_dark_mode_is_a_standalone_preference_not_a_show_setting():
     # dark mode is a global VIEWING preference, deliberately kept OUT of the Show settings: it
     # persists under its own store key (separate from the serialized document), so it is untouched
     # by "select all / none" and Reset — both of which act only on editor.settings.
-    assert isinstance(app._DARK_KEY, str) and app._DARK_KEY != app._STORE_KEY
+    assert isinstance(page_assets._DARK_KEY, str) and page_assets._DARK_KEY != page_assets._STORE_KEY
     assert "dark_mode" not in show_settings.DEFAULTS
 
 
@@ -111,8 +112,8 @@ def test_dark_mode_toggle_carries_hover_text():
 def test_light_wash_vars_keep_the_original_tints():
     # the renderer emits each wash colour as var(--wash-<group>); :root defines each to its _TINTS
     # value, so light mode renders byte-identically and the legend swatch matches the grid band
-    for group, tint in app._TINTS.items():
-        assert f"--wash-{group}:{tint}" in app._CSS
+    for group, tint in page_assets._TINTS.items():
+        assert f"--wash-{group}:{tint}" in page_assets._CSS
 
 
 def test_dark_theme_retints_the_colorization_washes():
@@ -127,7 +128,7 @@ def test_dark_theme_retints_the_colorization_washes():
 def test_dark_mode_has_its_own_option_box_svgs():
     # the checkbox / option-box art is a baked SVG data-URI, so dark mode needs its own dark-box
     # variants (set via the --option-box-* properties under body.rtt-dark) — three more URIs
-    assert app._CSS.count("data:image/svg") == 6  # 3 light + 3 dark, defined once each
+    assert page_assets._CSS.count("data:image/svg") == 6  # 3 light + 3 dark, defined once each
     allvars = _dark_var_blocks()
     for var in ("--option-box-unchecked", "--option-box-checked", "--option-box-disabled"):
         assert var + ":url(" in allvars, var

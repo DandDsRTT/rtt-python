@@ -16,6 +16,7 @@ import rtt.app.app as app
 from rtt.app import (
     grid_tables,
     marks,
+    page_assets,
     render_html,
     service,
     spreadsheet,
@@ -27,6 +28,7 @@ from rtt.app import settings as show_settings
 from rtt.app._recon_handles import CellHandles, EntityHandles
 from rtt.app.editor import Editor
 from rtt.app.layout import Line
+from rtt.app.reconciler import _Reconciler
 
 
 class _FakeElement:
@@ -45,7 +47,7 @@ def test_drop_purges_a_cell_from_every_handle_store():
     # el + style/ring change-guard caches, shared with lines/washes). drop(eid) pops BOTH, so no handle
     # can leak to a deleted element, and a NEW handle is a new field on a record pop() already removes —
     # no parallel-dict sweep-list to forget (the old _handle_dicts footgun is gone by construction).
-    rec = app._Reconciler(Editor())
+    rec = _Reconciler(Editor())
     rec.cells["scheme:primes"] = CellHandles()  # make_cell creates both records per cell in production
     rec.cells["scheme:primes"].chooser.scheme_button = "the-button"
     rec.entities["scheme:primes"] = EntityHandles(el=_FakeElement())
@@ -62,7 +64,7 @@ def test_handles_sentinel_reads_none_but_refuses_writes():
     # rec.handles(id) returns a null-object for a non-live id so READS are safe (every field None).
     # That sentinel is SHARED, so a WRITE through it would silently corrupt every future miss — make
     # it raise instead, turning a latent bug into an immediate error. Real records stay writable.
-    rec = app._Reconciler(Editor())
+    rec = _Reconciler(Editor())
     assert rec.handles("ghost").value.input is None
     with pytest.raises(AttributeError):
         rec.handles("ghost").value.input = "leak"
@@ -199,7 +201,7 @@ def test_main_takes_session_secret_from_env_with_a_local_fallback(monkeypatch):
     # into this public repo; unset (local dev), it falls back to the module default.
     assert _capture_main_run(monkeypatch, env={"STORAGE_SECRET": "from-the-platform"})[
         "storage_secret"] == "from-the-platform"
-    assert _capture_main_run(monkeypatch)["storage_secret"] == app._STORAGE_SECRET
+    assert _capture_main_run(monkeypatch)["storage_secret"] == page_assets._STORAGE_SECRET
 
 
 def test_main_passes_crash_safe_reload_excludes(monkeypatch):
@@ -278,47 +280,47 @@ def test_reload_excludes_filter_skips_worktrees_but_reloads_source(tmp_path):
 
 
 def test_parse_int_accepts_integers_and_rejects_partial_input():
-    assert app._parse_int("5") == 5
-    assert app._parse_int("-4") == -4
-    assert app._parse_int("  3 ") == 3
-    assert app._parse_int("") is None
-    assert app._parse_int("-") is None
-    assert app._parse_int("x") is None
-    assert app._parse_int(None) is None
+    assert render_html._parse_int("5") == 5
+    assert render_html._parse_int("-4") == -4
+    assert render_html._parse_int("  3 ") == 3
+    assert render_html._parse_int("") is None
+    assert render_html._parse_int("-") is None
+    assert render_html._parse_int("x") is None
+    assert render_html._parse_int(None) is None
 
 
 def test_ratio_parts_splits_fractions_and_passes_through_non_fractions():
-    assert app._ratio_parts("3/2") == ("3", "2")  # rendered as a stacked fraction
-    assert app._ratio_parts("2/1") == ("2", "1")
-    assert app._ratio_parts("5") is None  # a bare integer is not a fraction
-    assert app._ratio_parts("") is None
+    assert render_html._ratio_parts("3/2") == ("3", "2")  # rendered as a stacked fraction
+    assert render_html._ratio_parts("2/1") == ("2", "1")
+    assert render_html._ratio_parts("5") is None  # a bare integer is not a fraction
+    assert render_html._ratio_parts("") is None
 
 
 def test_cents_parts_splits_whole_and_fraction_for_decimal_alignment():
-    assert app._cents_parts("1899.26") == ("1899", "26")  # big whole, small fraction
-    assert app._cents_parts("-2.69") == ("-2", "69")
-    assert app._cents_parts("0.00") == ("0", "00")
-    assert app._cents_parts("5") == ("5", "")  # no fractional part
+    assert render_html._cents_parts("1899.26") == ("1899", "26")  # big whole, small fraction
+    assert render_html._cents_parts("-2.69") == ("-2", "69")
+    assert render_html._cents_parts("0.00") == ("0", "00")
+    assert render_html._cents_parts("5") == ("5", "")  # no fractional part
 
 
 def test_power_parts_annotates_infinity_as_max():
     # ∞ carries a small "(max)" below it (it IS the max-norm / minimax power), stacked like a
     # cents value's decimal; a numeric power (2, 1) shows bare, with no annotation
-    assert app._power_parts("∞") == ("∞", "(max)")
-    assert app._power_parts("2") == ("2", "")
-    assert app._power_parts("1") == ("1", "")
+    assert render_html._power_parts("∞") == ("∞", "(max)")
+    assert render_html._power_parts("2") == ("2", "")
+    assert render_html._power_parts("1") == ("1", "")
 
 
 def test_underline_html_wraps_only_the_marked_spans():
     # no spans -> plain text (the caption with mnemonics off)
-    assert app._underline_html("tuning map", ()) == "tuning map"
+    assert render_html._underline_html("tuning map", ()) == "tuning map"
     # a leading one-letter span -> just that letter underlined (the symbol mnemonic)
-    assert app._underline_html("tuning map", ((0, 1),)) == "<u>t</u>uning map"
+    assert render_html._underline_html("tuning map", ((0, 1),)) == "<u>t</u>uning map"
     # a span mid-string keeps the surrounding text intact
-    assert app._underline_html("(temperament) mapping", ((14, 1),)) == "(temperament) <u>m</u>apping"
+    assert render_html._underline_html("(temperament) mapping", ((14, 1),)) == "(temperament) <u>m</u>apping"
     # a descender letter (g/j/p/q/y) is tagged so only its underline drops below the
     # tail; non-descenders keep the normal snug underline
-    assert app._underline_html("just tuning map", ((0, 1),)) == '<u class="rtt-desc">j</u>ust tuning map'
+    assert render_html._underline_html("just tuning map", ((0, 1),)) == '<u class="rtt-desc">j</u>ust tuning map'
 
 
 def test_math_html_maps_each_block_to_its_weight_and_slant():
@@ -331,23 +333,23 @@ def test_math_html_maps_each_block_to_its_weight_and_slant():
         ("𝒕", "t", bold_italic), ("𝒈", "g", bold_italic),   # bold-italic map / generator
         ("𝑀", "M", italic),                                  # italic mapping
     ]:
-        html = app._math_html(glyph)
+        html = render_html._math_html(glyph)
         assert f">{base}</span>" in html, glyph
         assert ("font-weight:700" in html) is want_bold, glyph
         assert ("font-style:italic" in html) is want_italic, glyph
-    assert app._math_html("Y") == "Y"  # an upright list passes through, unstyled
+    assert render_html._math_html("Y") == "Y"  # an upright list passes through, unstyled
 
 
 def test_math_html_styles_products_per_letter_and_honours_the_subscript_sentinels():
     # a product styles each letter on its own (the comma column's 𝒕C: bold-italic map +
     # upright basis; an equivalence tail's 𝒈𝑀); ordinary characters pass through
-    assert app._math_html("𝒕C") == app._math_html("𝒕") + "C"
-    assert app._math_html(" = 𝒈𝑀") == " = " + app._math_html("𝒈") + app._math_html("𝑀")
+    assert render_html._math_html("𝒕C") == render_html._math_html("𝒕") + "C"
+    assert render_html._math_html(" = 𝒈𝑀") == " = " + render_html._math_html("𝒈") + render_html._math_html("𝑀")
     # NORM_SUB forces an italic subscript (the complexity row's trailing q); SUB is a PLAIN
     # subscript where only the math-italic 𝑞 slants (the dual(q) mean damage: "dual" upright)
-    assert app._math_html(grid_tables.NORM_SUB_OPEN + "q" + grid_tables.NORM_SUB_CLOSE) == \
+    assert render_html._math_html(grid_tables.NORM_SUB_OPEN + "q" + grid_tables.NORM_SUB_CLOSE) == \
         '<sub style="font-style:italic">q</sub>'
-    plain = app._math_html(grid_tables.SUB_OPEN + "dual(𝑞)" + grid_tables.SUB_CLOSE)
+    plain = render_html._math_html(grid_tables.SUB_OPEN + "dual(𝑞)" + grid_tables.SUB_CLOSE)
     assert plain.startswith("<sub>dual(") and plain.endswith(")</sub>") and "font-style:italic" in plain
 
 
@@ -364,7 +366,7 @@ def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
         "vbar": marks.vbar(2, 60),
     }
     for svg in mark_svgs.values():
-        assert svg.startswith("<svg") and f'fill="{app.BR_COLOR}"' in svg
+        assert svg.startswith("<svg") and f'fill="{marks.BR_COLOR}"' in svg
         assert "stroke-width" not in svg  # weight is the 1:1 viewBox, not a scaling stroke
     assert mark_svgs["angle"].count("<path") == 1 and "stroke" not in mark_svgs["angle"]  # one filled chevron
     # the down-chevron foot fits inside its oblong like every other mark — its whole
@@ -385,7 +387,7 @@ def test_units_html_bolds_variables_but_not_cents_oct_or_slash():
     # the "/" separator stay un-bold, consistently in the per-box line and the units
     # row/col. A per-box line also keeps "units:" in the serif label face.
     # a per-box line keeps "units:" in the serif label face and bolds its variables
-    assert app._units_html("units: g/p") == '<span class="rtt-units-pre">units: </span><b>g</b>/<b>p</b>'
+    assert render_html._units_html("units: g/p") == '<span class="rtt-units-pre">units: </span><b>g</b>/<b>p</b>'
     # the bolding rule token by token: each variable (with subscript) is wrapped in <b>; the
     # size units ¢ and "oct" and the "/" separator appear but never bold. Covers the per-box
     # "units: …" line and the bare domain-unit coordinate labels alike.
@@ -398,7 +400,7 @@ def test_units_html_bolds_variables_but_not_cents_oct_or_slash():
         ("/1", ["1"], ["/"]),     # the "1" placeholder is a variable, so bold
         ("oct/", [], ["oct", "/"]),
     ]:
-        html = app._units_html(text)
+        html = render_html._units_html(text)
         for v in bolded:
             assert f"<b>{v}</b>" in html, (text, v)
         for u in bare:
@@ -412,10 +414,10 @@ def test_line_style_centres_the_rule_on_its_coordinate():
     half = spreadsheet_constants.LINE_W / 2
     # the rule is positioned by transform:translate (so a reflow shift rides the compositor); the box is
     # anchored at left:0;top:0 and translated to (centred coordinate, start), its LENGTH on height/width
-    v = app._line_style(Line("trunk:x", "v", 100, 50, 200))
+    v = render_html._line_style(Line("trunk:x", "v", 100, 50, 200))
     assert f"transform:translate({100 - half}px,50px)" in v  # centred on x=100 (not flush), seated at y=50
     assert "height:200px" in v and "left:0; top:0" in v       # the length runs unchanged; box anchored at origin
-    h = app._line_style(Line("h:x", "h", 60, 10, 300))
+    h = render_html._line_style(Line("h:x", "h", 60, 10, 300))
     assert f"transform:translate(10px,{60 - half}px)" in h    # seated at x=10, centred on y=60
     assert "width:300px" in h and "left:0; top:0" in h
 
@@ -425,16 +427,16 @@ def test_line_style_dots_a_collapsed_bands_rule_and_restores_it_when_open():
     # are a repeating gradient painted through a transparent border (so the zero-size box
     # doesn't resize as a band folds), swept along the rule's length. The border colour and
     # background are emitted every update, so re-expanding restores the solid grey rule.
-    v_dotted = app._line_style(Line("trunk:x", "v", 100, 0, 50, dotted=True))
+    v_dotted = render_html._line_style(Line("trunk:x", "v", 100, 0, 50, dotted=True))
     assert "border-left-color:transparent" in v_dotted and "repeating-linear-gradient(to bottom," in v_dotted
     # painted over the border box -- the box has no width of its own, only the border, so
     # without this the gradient fills the zero-width content box and the dots never show
     assert "border-box" in v_dotted
-    v_solid = app._line_style(Line("trunk:x", "v", 100, 0, 50))
+    v_solid = render_html._line_style(Line("trunk:x", "v", 100, 0, 50))
     assert "border-left-color:var(--c-gridline)" in v_solid and "background:none" in v_solid
-    h_dotted = app._line_style(Line("h:x", "h", 60, 0, 50, dotted=True))
+    h_dotted = render_html._line_style(Line("h:x", "h", 60, 0, 50, dotted=True))
     assert "border-top-color:transparent" in h_dotted and "repeating-linear-gradient(to right," in h_dotted
-    h_solid = app._line_style(Line("h:x", "h", 60, 0, 50))
+    h_solid = render_html._line_style(Line("h:x", "h", 60, 0, 50))
     assert "border-top-color:var(--c-gridline)" in h_solid and "background:none" in h_solid
     # the dots are sparse: the transparent gap runs well past the dot's far edge (a LINE_W
     # dot then a gap several times wider), unlike CSS `dotted`'s ~one-width packing
@@ -447,15 +449,15 @@ def test_shared_axis_gridlines_render_two_pixels_thick():
     # gaps between tiles) are the board's gridlines; doubled from 1px to 2px so they read
     # clearly. Both orientations carry the same #e0e0e0 weight.
     assert spreadsheet_constants.LINE_W == 2
-    assert f"--line-w:{spreadsheet_constants.LINE_W}px" in app._CSS  # the gridline weight, set in :root
-    assert "--c-gridline:#e0e0e0" in app._CSS  # the gridline colour, set in :root so dark mode can retint it
-    assert "border-left:var(--line-w) solid var(--c-gridline)" in app._CSS  # the vertical gridlines
-    assert "border-top:var(--line-w) solid var(--c-gridline)" in app._CSS   # the horizontal gridlines
+    assert f"--line-w:{spreadsheet_constants.LINE_W}px" in page_assets._CSS  # the gridline weight, set in :root
+    assert "--c-gridline:#e0e0e0" in page_assets._CSS  # the gridline colour, set in :root so dark mode can retint it
+    assert "border-left:var(--line-w) solid var(--c-gridline)" in page_assets._CSS  # the vertical gridlines
+    assert "border-top:var(--line-w) solid var(--c-gridline)" in page_assets._CSS   # the horizontal gridlines
 
 
 def _css_rule(selector):
     """The declaration body of the first `selector { ... }` block in the page CSS."""
-    m = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", app._CSS)
+    m = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", page_assets._CSS)
     assert m, f"no CSS rule for {selector}"
     return m.group(1)
 
@@ -470,9 +472,9 @@ def test_temperament_divider_headers_read_as_centred_grey_rules_inset_like_the_i
     assert "justify-content:center" in label   # centred text
     assert "color:#777" in label                # grey, lighter than the items' black
     # the divider does NOT zero its padding -> its rules align with the item text, not the edges
-    assert "padding-left:0" not in app._CSS
-    assert ".q-item.disabled .q-item__label::before" in app._CSS  # the flanking rules...
-    assert "border-top:1px solid #777" in app._CSS                # ...are grey lines
+    assert "padding-left:0" not in page_assets._CSS
+    assert ".q-item.disabled .q-item__label::before" in page_assets._CSS  # the flanking rules...
+    assert "border-top:1px solid #777" in page_assets._CSS                # ...are grey lines
 
 
 def test_sidebar_hugs_its_content_as_a_fixed_left_column():
@@ -541,7 +543,7 @@ def test_grid_body_reserves_its_grey_margin_as_scroll_padding():
     # there, outside the scroller).
     rule = _css_rule(".rtt-gridbody")
     assert "padding:0 var(--pad) var(--pad) 0" in rule  # top:0 right:PAD bottom:PAD left:0
-    assert f"--pad:{app._PAD}px" in app._CSS  # the grey-margin width, set in :root
+    assert f"--pad:{page_assets._PAD}px" in page_assets._CSS  # the grey-margin width, set in :root
 
 
 def test_shell_fixes_the_app_to_the_window_framed_by_a_white_margin():
@@ -590,7 +592,7 @@ def test_row_band_wrapper_passes_clicks_through_and_the_strip_clips():
     # hidden behind the row titles as it scrolls under them. The column strip clips its translated
     # inner (overflow:hidden) so titles scrolled off the left don't spill over the corner / sidebar.
     assert "pointer-events:none" in _css_rule(".rtt-band")
-    assert "pointer-events:auto" in app._CSS  # the row band inner re-enables clicks
+    assert "pointer-events:auto" in page_assets._CSS  # the row band inner re-enables clicks
     assert "overflow:hidden" in _css_rule(".rtt-colhead")
 
 
@@ -624,7 +626,7 @@ def test_seam_appears_only_when_the_body_is_scrolled():
     # content box, inside the border). A shadow reserves no layout, so the frozen content + its wash
     # copies sit flush to the seam with no rest-state gap; a per-axis custom property carries the
     # colour, transparent until that axis scrolls (so revealing it still shifts nothing).
-    css = app._CSS
+    css = page_assets._CSS
     colhead, rowband = _css_rule(".rtt-colhead"), _css_rule(".rtt-rowband")
     assert "box-shadow:0 1px 0 var(--seam-y" in colhead  # column-strip seam (below the strip)
     assert "border-bottom" not in colhead                # NOT a layout-reserving border
@@ -632,7 +634,7 @@ def test_seam_appears_only_when_the_body_is_scrolled():
     assert "border-right" not in rowband
     assert ".rtt-app.rtt-scrolled-y .rtt-colhead" in css and "--seam-y:var(--seam)" in css
     assert ".rtt-app.rtt-scrolled-x .rtt-rowband" in css and "--seam-x:var(--seam)" in css
-    assert f"--seam:{app._SEAM}" in css  # the seam colour, set in :root
+    assert f"--seam:{page_assets._SEAM}" in css  # the seam colour, set in :root
 
 
 def test_block_panes_routes_a_wash_into_every_frozen_pane_its_rect_crosses():
@@ -647,10 +649,10 @@ def test_block_panes_routes_a_wash_into_every_frozen_pane_its_rect_crosses():
     over_top = Block("b", 200, 62, 50, 64)           # spills above freeze_y
     over_left = Block("b", 138, 200, 50, 50)         # spills left of freeze_x
     over_corner = Block("b", 138, 62, 50, 64)        # spills past both, into the corner
-    assert app._block_panes(inside, fx, fy) == ("body",)
-    assert app._block_panes(over_top, fx, fy) == ("body", "col")
-    assert app._block_panes(over_left, fx, fy) == ("body", "row")
-    assert app._block_panes(over_corner, fx, fy) == ("body", "col", "row", "corner")
+    assert render_html._block_panes(inside, fx, fy) == ("body",)
+    assert render_html._block_panes(over_top, fx, fy) == ("body", "col")
+    assert render_html._block_panes(over_left, fx, fy) == ("body", "row")
+    assert render_html._block_panes(over_corner, fx, fy) == ("body", "col", "row", "corner")
 
 
 def test_frozen_wash_copies_show_only_at_rest_dropping_once_the_body_scrolls():
@@ -659,7 +661,7 @@ def test_frozen_wash_copies_show_only_at_rest_dropping_once_the_body_scrolls():
     # an axis the first row/column has left the seam, so the strip would stain the gap with a stale
     # colour over the wrong tiles. So it drops when .rtt-app gains rtt-scrolled-x/y — paired with the
     # seam toggle on the same axis (column strip on y, row band on x; the base hides with its colour).
-    css = app._CSS
+    css = page_assets._CSS
     for sel in (".rtt-app.rtt-scrolled-y .rtt-colhead .rtt-wash",
                 ".rtt-app.rtt-scrolled-y .rtt-colhead .rtt-washbase",
                 ".rtt-app.rtt-scrolled-x .rtt-rowband .rtt-wash",
@@ -675,7 +677,7 @@ def test_freeze_script_syncs_the_column_strip_and_toggles_the_seam_on_body_scrol
     # can't do for a strip lifted out of the scroller) and toggles rtt-scrolled-x/y on .rtt-app from
     # the body's scroll offset to reveal the seams. It never moves the row titles — position:sticky
     # does that — so there is no bobble. (A second pass reserves scrollbar space; see the next test.)
-    js = app._FREEZE_JS
+    js = page_assets._FREEZE_JS
     assert ".rtt-gridbody" in js                                # listens to the body scroller
     assert "scrollTop" in js and "scrollLeft" in js             # reads its scroll offset
     assert ".rtt-colhead-inner" in js and "translateX" in js    # syncs the strip horizontally
@@ -695,7 +697,7 @@ def test_freeze_script_reserves_a_scrollbar_so_one_bar_never_forces_a_second():
     # padding, so even when the pane is already maxed (no room to grow) the gridlines themselves still
     # fit. It runs off resize/boot (and a render/sidebar nudge), never the scroll path — no scroll-time
     # work, no bobble — and uses no ResizeObserver / scroll-timeline.
-    js = app._FREEZE_JS
+    js = page_assets._FREEZE_JS
     assert "fit" in js                                          # the reservation pass
     assert "data-base" in js or "baseW" in js                  # reads the pane's published base size
     assert "paddingRight" in js and "paddingBottom" in js      # drops the cross-axis margin if maxed
@@ -710,7 +712,7 @@ def test_tooltip_dismiss_script_drops_hover_help_before_a_reflow():
     # before the reflow: from the pressed node on pointerdown (a click presses the anchor), and from the
     # hovered element on keydown / wheel (a keyboard commit or wheel-step reflows with no pointerdown,
     # so the at-risk tooltip is on whatever the cursor rests on — dropped only when one is showing).
-    js = app._TOOLTIP_DISMISS_JS
+    js = page_assets._TOOLTIP_DISMISS_JS
     assert "__rttTipDismiss" in js                                  # guarded so it installs only once
     assert "addEventListener('pointerdown'" in js and ", true)" in js  # capture phase, before the click
     assert "keydown" in js and "wheel" in js                        # the pointerdown-free reflow triggers too
@@ -729,11 +731,11 @@ def test_every_show_toggle_has_a_non_empty_example():
     for group_name, items in show_settings.SHOW_GROUPS:
         for key, _l, _d in items:
             if group_name == "general":
-                assert app._general_part_html(key).strip(), f"no tile sample for {key}"
+                assert render_html._general_part_html(key).strip(), f"no tile sample for {key}"
             elif key in show_settings.GROUPING_PARENTS:
-                assert app._example_html(key) == "", f"grouping parent {key} should have a blank example"
+                assert render_html._example_html(key) == "", f"grouping parent {key} should have a blank example"
             else:
-                assert app._example_html(key).strip(), f"no example for {key}"
+                assert render_html._example_html(key).strip(), f"no example for {key}"
 
 
 def test_interface_behaviours_lead_the_show_panel_as_live_default_on_ch2_toggles():
@@ -750,7 +752,7 @@ def test_interface_behaviours_lead_the_show_panel_as_live_default_on_ch2_toggles
         assert show_settings.CHAPTER[key] == 2              # present from the first notch
         assert show_settings.reveal_chapter(key) == 2       # no later ancestor gates it
         assert key not in show_settings.SUBCONTROLS         # a flat top-level toggle
-        assert app._example_html(key).strip()               # an example sample in the column
+        assert render_html._example_html(key).strip()               # an example sample in the column
 
 
 def test_example_html_renders_each_specific_groups_special_sample_kind():
@@ -760,21 +762,21 @@ def test_example_html_renders_each_specific_groups_special_sample_kind():
     for key, letter, group in (("temperament_colorization", "𝑀", "temperament"),
                                ("tuning_colorization", "𝐺", "tuning"),
                                ("form_colorization", "𝐹", "form")):
-        html = app._example_html(key)
+        html = render_html._example_html(key)
         assert f"--wash-{group}" in html         # the swatch rides the group's wash variable (so it
-        assert app._math_html(letter) in html    # retints with the grid in dark mode)...stamped with its matrix letter
-    assert "<svg" in app._example_html("tuning_ranges")  # the min/max I-beam
+        assert render_html._math_html(letter) in html    # retints with the grid in dark mode)...stamped with its matrix letter
+    assert "<svg" in render_html._example_html("tuning_ranges")  # the min/max I-beam
 
 
 def test_audio_bank_leads_with_a_mute_kill_switch_defaulting_to_muted():
     # the bank's first control is mute: it doubles as the kill switch (its engine fn stops all
     # audio) and the engage gate (unmuting is what lets a clicked cell sound). Audio starts MUTED,
     # so the bank shows the slashed (volume_off) glyph until the user unmutes; the other four follow.
-    assert [ctrl for ctrl, *_ in app._AUDIO_BANK] == ["mute", "wave", "mode", "hold", "root"]
-    assert app._AUDIO_BANK[0][2] == "toggleMute"               # wired to the engine's mute/kill
-    mute_up, mute_off = app._AUDIO_GLYPHS["mute"]
+    assert [ctrl for ctrl, *_ in page_assets._AUDIO_BANK] == ["mute", "wave", "mode", "hold", "root"]
+    assert page_assets._AUDIO_BANK[0][2] == "toggleMute"               # wired to the engine's mute/kill
+    mute_up, mute_off = page_assets._AUDIO_GLYPHS["mute"]
     assert "volume_up" in mute_up and "volume_off" in mute_off  # speaker / speaker-with-slash
-    assert app._AUDIO_BANK[0][1] == mute_off                   # default muted → the slashed glyph shows
+    assert page_assets._AUDIO_BANK[0][1] == mute_off                   # default muted → the slashed glyph shows
 
 
 def test_general_tile_renders_its_special_samples():
@@ -782,25 +784,25 @@ def test_general_tile_renders_its_special_samples():
     # SVG marks + a bordered cell) the closed form and value sit inside; the symbol is the styled
     # bold-italic n; the presets field looks like a real dropdown ("(presets)" + a caret); charts a
     # sparkline (the shared render).
-    assert "<svg" in app._general_part_html("gridded_values")   # the EBK frame marks...
-    assert "border" in app._general_part_html("gridded_values")  # ...around a bordered value box
-    assert "log" in app._general_part_html("math_expressions")  # 1200·log₂(3/2)
+    assert "<svg" in render_html._general_part_html("gridded_values")   # the EBK frame marks...
+    assert "border" in render_html._general_part_html("gridded_values")  # ...around a bordered value box
+    assert "log" in render_html._general_part_html("math_expressions")  # 1200·log₂(3/2)
     # the "=" belongs to the math EXPRESSION, not the numeric value (so it shows only with the form)
-    assert "=" in app._general_part_html("math_expressions")
+    assert "=" in render_html._general_part_html("math_expressions")
     # the value is the bare number — no "=" in its VISIBLE text (the stacked face carries "=" only
     # inside HTML attributes like class=, never as a displayed glyph)
-    assert "=" not in re.sub(r"<[^>]+>", "", app._general_part_html("quantities"))
-    assert 'font-style:italic">n</span>' in app._general_part_html("symbols")  # the styled 𝒏
+    assert "=" not in re.sub(r"<[^>]+>", "", render_html._general_part_html("quantities"))
+    assert 'font-style:italic">n</span>' in render_html._general_part_html("symbols")  # the styled 𝒏
     # the units sample reads "units: ¢/p" — the "units:" prefix (as on a real tile) and a unit
     # naming what it is (cents per prime), the variable p bold like real units
-    units = app._general_part_html("units")
+    units = render_html._general_part_html("units")
     assert "units: " in units and "¢" in units and "<b>p</b>" in units
-    assert "(presets)" in app._general_part_html("presets")       # the placeholder...
-    assert "arrow_drop_down" in app._general_part_html("presets")  # ...and the dropdown caret
-    chart = app._general_part_html("charts")
+    assert "(presets)" in render_html._general_part_html("presets")       # the placeholder...
+    assert "arrow_drop_down" in render_html._general_part_html("presets")  # ...and the dropdown caret
+    chart = render_html._general_part_html("charts")
     assert "<svg" in chart                  # the sparkline...
     assert render_html._CHART_GRID in chart         # ...with at least one grey horizontal tick line
-    assert "<svg" in app._tile_fold_html()  # the decorative top-left fold toggle (a boxed chevron)
+    assert "<svg" in render_html._tile_fold_html()  # the decorative top-left fold toggle (a boxed chevron)
 
 
 def test_general_tile_value_is_the_grids_stacked_three_decimal_face():
@@ -810,10 +812,10 @@ def test_general_tile_value_is_the_grids_stacked_three_decimal_face():
     # 3 dp). The whole part and its decimals are SEPARATE click targets (quantities / decimals), so
     # the .fraction can be toggled on its own.
     assert render_html._TILE_VALUE == "701.955"                           # 3 dp, the grid's cents precision
-    whole = app._general_part_html("quantities")
+    whole = render_html._general_part_html("quantities")
     assert 'class="rtt-stacked-main">701<' in whole              # the big whole part, its own target
     assert ".955" not in whole and "rtt-stacked-sub" not in whole  # the fraction is NOT here…
-    frac = app._general_part_html("decimals")
+    frac = render_html._general_part_html("decimals")
     assert 'class="rtt-stacked-sub">.955<' in frac               # …it is the decimals part below
 
 
@@ -823,14 +825,14 @@ def test_dummy_tile_chart_rides_the_themeable_mark_colors():
     # use — so the dark overlay's attribute rules retint them. A hardcoded pure black would be
     # invisible on the dark pane (the bug: bars/axes that stay black in dark mode).
     chart = render_html._example_chart()
-    assert app.BR_COLOR in chart and render_html._CHART_GRID in chart
+    assert marks.BR_COLOR in chart and render_html._CHART_GRID in chart
     assert "#000" not in chart
 
 
 def test_general_tile_equivalence_mixes_object_stylings():
     # the equivalence 𝒏 = 𝑒G shows styling variety: an italic scalar e and an upright (matrix) G,
     # distinct from the bold-italic map 𝒏 — so the equation reads as a mix of mathematical objects.
-    equiv = app._general_part_html("equivalences")
+    equiv = render_html._general_part_html("equivalences")
     assert 'font-style:italic">e</span>' in equiv  # the italic scalar e (not bold-italic)
     assert ">G<" in equiv or equiv.rstrip().endswith("G")  # the upright G, unstyled
 
@@ -838,7 +840,7 @@ def test_general_tile_equivalence_mixes_object_stylings():
 def test_interest_example_is_the_bold_interval_symbol():
     # the mockup labels each interval-of-interest 𝐢 (bold upright, like the vectors), so
     # the toggle's example shows that same glyph
-    assert app._math_html("𝐢") in app._example_html("interest")
+    assert render_html._math_html("𝐢") in render_html._example_html("interest")
 
 
 def test_general_tile_covers_every_general_layer_exactly_once():
@@ -848,18 +850,18 @@ def test_general_tile_covers_every_general_layer_exactly_once():
     # a line of their own. Together they must account for EVERY general toggle exactly once — a new
     # general layer can't slip in without earning a place (and a click target) in the tile.
     general = [key for key, _label, _default in dict(show_settings.SHOW_GROUPS)["general"]]
-    covered = [key for line in app._GENERAL_TILE_LINES for key in line] + list(app._TILE_IN_CELL_LAYERS)
+    covered = [key for line in page_assets._GENERAL_TILE_LINES for key in line] + list(page_assets._TILE_IN_CELL_LAYERS)
     assert sorted(covered) == sorted(general)
     assert len(covered) == len(set(covered))  # no layer placed twice
     for key in covered:  # every covered part renders a non-empty sample (the builder uses this)
-        assert app._general_part_html(key).strip(), f"empty tile part for {key}"
+        assert render_html._general_part_html(key).strip(), f"empty tile part for {key}"
 
 
 def test_general_tile_rides_each_subcontrol_on_its_parents_line():
     # a sub-control refines its parent layer, so in the tile it shares that layer's line rather
     # than getting a line of its own: equivalences extends the symbol (𝒏 = 𝑒G), mnemonics
     # underlines the name. Every general sub-control must sit on a line WITH its parent.
-    lines = app._GENERAL_TILE_LINES
+    lines = page_assets._GENERAL_TILE_LINES
     general_subs = {k: p for k, p in show_settings.SUBCONTROLS.items()
                     if k in [key for key, *_ in dict(show_settings.SHOW_GROUPS)["general"]]}
     assert general_subs  # guard the test itself: there are general sub-controls to check
@@ -871,7 +873,7 @@ def test_general_tile_seats_the_value_layers_inside_the_gridded_cell():
     # the value, its closed form and the gridded box are NOT separate tile rows: on a real tile
     # the value and math expression live inside the boxed cell, so the three ride one line. The
     # drag-to-combine grip also rides this line (in a slot left of the row label, like the grid).
-    value_line = next(line for line in app._GENERAL_TILE_LINES if "gridded_values" in line)
+    value_line = next(line for line in page_assets._GENERAL_TILE_LINES if "gridded_values" in line)
     assert set(value_line) == {"gridded_values", "math_expressions", "quantities", "decimals",
                                "drag_to_combine"}
 
@@ -879,15 +881,15 @@ def test_general_tile_seats_the_value_layers_inside_the_gridded_cell():
 def test_general_tile_symbol_and_equivalence_read_as_one_equation():
     # the symbol part is the bold-italic n; the equivalence part is its defining-equation tail,
     # so the two joined read 𝒏 = 𝑒G (the symbol's equation), one source of truth with _TILE_*.
-    assert app._general_part_html("symbols") == app._math_html(render_html._TILE_SYMBOL)
-    assert app._general_part_html("symbols") + app._general_part_html("equivalences") \
-        == app._math_html(render_html._TILE_SYMBOL + render_html._TILE_EQUIV)
+    assert render_html._general_part_html("symbols") == render_html._math_html(render_html._TILE_SYMBOL)
+    assert render_html._general_part_html("symbols") + render_html._general_part_html("equivalences") \
+        == render_html._math_html(render_html._TILE_SYMBOL + render_html._TILE_EQUIV)
 
 
 def test_general_tile_name_exposes_its_mnemonic_letter_as_a_separate_target():
     # the name word is split at its symbol-spelling letter so that letter (the mnemonics target)
     # is distinct from the rest of the word (names); the three pieces rejoin to exactly the name.
-    before, letter, after = app._tile_name_pieces()
+    before, letter, after = render_html._tile_name_pieces()
     assert before + letter + after == render_html._TILE_NAME
     assert letter == "n"  # the letter the symbol 𝒏 spells, underlined for mnemonics
 
@@ -927,7 +929,7 @@ def test_every_option_square_renders_at_one_uniform_size():
     # → an 18px box) than the settings (13.5px) and range (16px) boxes; now every q-checkbox box
     # and the range box are pinned to the one shared option-box size so they read identically.
     assert spreadsheet_constants.OPTION_BOX_PX == 16
-    assert f"--option-box:{spreadsheet_constants.OPTION_BOX_PX}px" in app._CSS  # the one shared size, set in :root
+    assert f"--option-box:{spreadsheet_constants.OPTION_BOX_PX}px" in page_assets._CSS  # the one shared size, set in :root
     box = "var(--option-box)"
     bg = _css_rule(".q-checkbox__bg")
     assert f"width:{box}" in bg and f"height:{box}" in bg  # the visible bordered square
@@ -937,8 +939,8 @@ def test_every_option_square_renders_at_one_uniform_size():
     assert f"width:{box}" in rangebox and f"height:{box}" in rangebox
     # the per-control overrides that made the in-grid control checkboxes oversized are gone —
     # the universal rules above now size every box, so nothing re-diverges
-    assert ".rtt-control-check .q-checkbox__inner" not in app._CSS
-    assert ".rtt-control-check .q-checkbox__label" not in app._CSS
+    assert ".rtt-control-check .q-checkbox__inner" not in page_assets._CSS
+    assert ".rtt-control-check .q-checkbox__label" not in page_assets._CSS
 
 
 def test_option_box_renders_as_one_svg_for_zoom_stable_appearance():
@@ -949,15 +951,15 @@ def test_option_box_renders_as_one_svg_for_zoom_stable_appearance():
     # unchecked box only the outline; the tuning-ranges radio box reuses the same art.
     # the box art is one SVG per state, defined once as a :root custom property and referenced
     # everywhere (so the same vector backs the checkbox, the mixed master, and the range box)
-    assert app._CSS.count("data:image/svg") == 6  # unchecked / checked / disabled, each a light + dark variant
+    assert page_assets._CSS.count("data:image/svg") == 6  # unchecked / checked / disabled, each a light + dark variant
     bg = _css_rule(".q-checkbox__bg")
     assert "var(--option-box-unchecked)" in bg and "border:none" in bg
     assert "var(--option-box-checked)" in _css_rule('.q-checkbox[aria-checked="true"] .q-checkbox__bg')
     assert "var(--option-box-disabled)" in _css_rule(".rtt-show-mixed .q-checkbox__bg")
     assert "var(--option-box-unchecked)" in _css_rule(".rtt-rangebox")
     # the per-edge CSS fill is gone for both the checkbox and the range box
-    assert ".q-checkbox__bg::after" not in app._CSS
-    assert ".rtt-rangebox::after" not in app._CSS
+    assert ".q-checkbox__bg::after" not in page_assets._CSS
+    assert ".rtt-rangebox::after" not in page_assets._CSS
 
 
 def test_brace_is_one_filled_path_with_width_independent_end_curls():
@@ -968,7 +970,7 @@ def test_brace_is_one_filled_path_with_width_independent_end_curls():
     for svg in (narrow, wide):
         assert svg.count("<path") == 1  # a single shape
         assert "stroke" not in svg  # filled, not stroked
-        assert f'fill="{app.BR_COLOR}"' in svg  # the one shared bracket colour
+        assert f'fill="{marks.BR_COLOR}"' in svg  # the one shared bracket colour
     assert 'viewBox="0 0 200.00 14.00"' in wide
     prefix = 0  # the left end-curl is laid down before any arm, so the two paths...
     while narrow[prefix] == wide[prefix]:
@@ -983,7 +985,7 @@ def test_curly_bracket_is_one_filled_ribbon_within_its_footprint():
     svg = marks.curly_bracket(16, 30)
     assert svg.startswith("<svg") and 'viewBox="0 0 16.00 30.00"' in svg
     assert svg.count("<path") == 1 and "stroke" not in svg
-    assert f'fill="{app.BR_COLOR}"' in svg
+    assert f'fill="{marks.BR_COLOR}"' in svg
     pts = re.findall(r"(-?\d+\.\d+),(-?\d+\.\d+)", svg)
     xs, ys = [float(x) for x, _y in pts], [float(y) for _x, y in pts]
     assert 0 <= min(xs) and max(xs) <= 16  # within the bracket-gutter width
@@ -993,11 +995,11 @@ def test_curly_bracket_is_one_filled_ribbon_within_its_footprint():
 def test_ebk_svg_routes_the_curly_open_brace_to_the_curly_bracket():
     from rtt.app.layout import CellBox
     cb = CellBox("bracket:tuning:genmap:l", 0, 0, 16, 30, "bracket", text="{")
-    assert app.ebk_svg(cb) == marks.curly_bracket(16, 30)  # not the square/angle renderer
+    assert marks.ebk_svg(cb) == marks.curly_bracket(16, 30)  # not the square/angle renderer
 
 
 def test_bar_chart_draws_one_scaled_bar_per_value_from_the_baseline():
-    svg = app._bar_chart(272, 64, (0.0, 5.0, 10.0))  # all positive (damage-like)
+    svg = render_html._bar_chart(272, 64, (0.0, 5.0, 10.0))  # all positive (damage-like)
     assert svg.startswith("<svg") and 'viewBox="0 0 272.00 64.00"' in svg
     bars = _bars(svg)
     assert len(bars) == 3  # one bar per value
@@ -1008,7 +1010,7 @@ def test_bar_chart_draws_one_scaled_bar_per_value_from_the_baseline():
 def test_bar_chart_extends_its_axis_past_the_tallest_bar_for_a_top_gridline():
     # standard chart practice: the value axis runs one nice step past the data so a
     # gridline always sits ABOVE the tallest bar (the bar must never reach the top edge)
-    svg = app._bar_chart(272, 64, (0.0, 5.0, 10.0))
+    svg = render_html._bar_chart(272, 64, (0.0, 5.0, 10.0))
     bar_tops = [y for y, ht in _bars(svg) if ht > 0]  # the drawn bars' top edges
     gridlines = [float(y) for y in re.findall(
         rf'<line x1="[\d.]+" y1="([\d.]+)"[^>]*stroke="{render_html._CHART_GRID}"', svg)]
@@ -1017,7 +1019,7 @@ def test_bar_chart_extends_its_axis_past_the_tallest_bar_for_a_top_gridline():
 
 
 def test_bar_chart_straddles_a_shared_zero_baseline_for_signed_values():
-    up, down = _bars(app._bar_chart(272, 64, (5.0, -5.0)))  # signed (retuning-like)
+    up, down = _bars(render_html._bar_chart(272, 64, (5.0, -5.0)))  # signed (retuning-like)
     # the positive bar's bottom meets the negative bar's top at the common zero line
     assert abs((up[0] + up[1]) - down[0]) < 0.01
     assert up[0] < down[0]  # positive rises above the baseline, negative drops below it
@@ -1026,7 +1028,7 @@ def test_bar_chart_straddles_a_shared_zero_baseline_for_signed_values():
 def test_bar_chart_indicator_line_is_broken_by_its_power_labelled_mean_damage():
     # the minimized-damage indicator: a solid grey line BROKEN by its ⟪𝐝⟫ label (the label
     # sits in a gap in the line), the scheme's Lp power as the subscript
-    svg = app._bar_chart(272, 64, (0.0, 10.0, 26.385), indicator=26.385, indicator_label="∞")
+    svg = render_html._bar_chart(272, 64, (0.0, 10.0, 26.385), indicator=26.385, indicator_label="∞")
     # the line is drawn in two segments (a stub left of the label, the rest to its right),
     # leaving the gap the label fills — not one unbroken rule
     assert svg.count(f'stroke="{render_html._CHART_INDICATOR}"') == 2
@@ -1034,7 +1036,7 @@ def test_bar_chart_indicator_line_is_broken_by_its_power_labelled_mean_damage():
     assert "⟪" in svg and "⟫" in svg and "∞" in svg
     assert 'font-weight="bold"' in svg
     # ...and a plain chart (no indicator) draws no such line or label
-    plain = app._bar_chart(272, 64, (0.0, 10.0, 26.385))
+    plain = render_html._bar_chart(272, 64, (0.0, 10.0, 26.385))
     assert f'stroke="{render_html._CHART_INDICATOR}"' not in plain
     assert "⟪" not in plain
 
@@ -1045,7 +1047,7 @@ def test_bar_chart_renders_numerically_flat_dust_without_dividing_by_zero():
     # guard yet collapses to a single value once the ticks are rounded — which zeroed the
     # axis span and crashed the chart's y-scaling with ZeroDivisionError (hit by clicking
     # optimize with charts on). Numerically-flat data must render flat, not raise.
-    svg = app._bar_chart(272, 64, (1e-13, -2e-14, 3e-14))  # must not raise
+    svg = render_html._bar_chart(272, 64, (1e-13, -2e-14, 3e-14))  # must not raise
     assert svg.startswith("<svg") and 'viewBox="0 0 272.00 64.00"' in svg
     bars = _bars(svg)
     assert len(bars) == 3  # one (flat) bar per value
@@ -1056,7 +1058,7 @@ def test_range_chart_draws_an_i_beam_with_min_max_labels_for_a_ranged_generator(
     # the generator tuning-ranges chart: a tall I-beam (stem + two caps) for a generator
     # with a range, the max/min cents labelled at its top/bottom caps. The "tuning ranges"
     # title is a boxtitle above the chart now, not drawn inside this SVG.
-    svg = app._range_chart(92, 96, ((1200.0, 1200.0), (685.714, 720.0)))
+    svg = render_html._range_chart(92, 96, ((1200.0, 1200.0), (685.714, 720.0)))
     assert svg.startswith("<svg") and 'viewBox="0 0 92.00 96.00"' in svg
     assert "tuning ranges" not in svg  # the title moved out to a boxtitle
     for label in ("720.000", "685.714"):  # the fifth's max (top cap) and min (bottom cap), 3dp like the grid
@@ -1068,18 +1070,18 @@ def test_range_chart_draws_an_i_beam_with_min_max_labels_for_a_ranged_generator(
 def test_range_chart_ticks_the_live_tuning_within_a_generators_range():
     # the live generator tuning is marked as a horizontal tick between the min/max caps,
     # at its proportional position within the range (here ~2/3 of the way down)
-    marks = sorted(y for y, h in _bars(app._range_chart(92, 96, ((685.714, 720.0),), (697.0,))) if h < 4)
+    marks = sorted(y for y, h in _bars(render_html._range_chart(92, 96, ((685.714, 720.0),), (697.0,))) if h < 4)
     assert len(marks) == 3  # max cap (top), live-tuning tick (interior), min cap (bottom)
     assert marks[0] < marks[1] < marks[2]  # the tick sits strictly between the two bounds
     # with no live tuning supplied (the bare helper), only the two range caps are drawn
-    plain = sorted(y for y, h in _bars(app._range_chart(92, 96, ((685.714, 720.0),))) if h < 4)
+    plain = sorted(y for y, h in _bars(render_html._range_chart(92, 96, ((685.714, 720.0),))) if h < 4)
     assert len(plain) == 2
 
 
 def test_range_chart_draws_only_a_flat_cap_for_a_pinned_generator():
     # the period is pinned (octave held pure), so its [min, max] is a point — drawn as a
     # single flat cap with one value label, not a misleading full-height range bar
-    svg = app._range_chart(92, 96, ((1200.0, 1200.0),))
+    svg = render_html._range_chart(92, 96, ((1200.0, 1200.0),))
     assert "1200.000" in svg
     heights = [h for _y, h in _bars(svg)]
     assert heights and max(heights) < 10  # only a flat cap, no tall range stem
@@ -1087,7 +1089,7 @@ def test_range_chart_draws_only_a_flat_cap_for_a_pinned_generator():
 
 def test_range_chart_shows_a_placeholder_and_no_i_beams_when_there_is_no_range():
     # the diamond-monotone range can be empty (no monotone tuning); show a placeholder
-    svg = app._range_chart(92, 96, ())
+    svg = render_html._range_chart(92, 96, ())
     assert "no range" in svg  # the placeholder text
     assert "<rect" not in svg  # no I-beams drawn
 
@@ -1097,7 +1099,7 @@ def _first_font(html):
 
 
 def test_mathexpr_html_stacks_two_lines_each_with_a_fitted_font():
-    html = app._mathexpr_html("1200 · log₂(3/2)\n= 701.96", 30)
+    html = render_html._mathexpr_html("1200 · log₂(3/2)\n= 701.96", 30)
     # a wrapper plus one div per line, each carrying its own inline font-size
     assert html.count("<div") == 3
     assert html.count("font-size:") == 2
@@ -1105,14 +1107,14 @@ def test_mathexpr_html_stacks_two_lines_each_with_a_fitted_font():
 
 
 def test_mathexpr_font_shrinks_for_longer_expressions():
-    short = app._mathexpr_html("1200 · log₂2\n= 1200.00", 30)  # short prime-map expression
-    long = app._mathexpr_html("1200 · log₂(6/5)\n= 315.64", 30)  # longer target-ratio one
+    short = render_html._mathexpr_html("1200 · log₂2\n= 1200.00", 30)  # short prime-map expression
+    long = render_html._mathexpr_html("1200 · log₂(6/5)\n= 315.64", 30)  # longer target-ratio one
     assert _first_font(long) < _first_font(short)  # the longer line is scaled down to fit
 
 
 def test_fit_font_is_clamped_between_the_min_and_max():
-    assert app._fit_font("x", 30) == render_html._EXPR_MAX_FONT  # a tiny line caps at the max
-    assert app._fit_font("x" * 100, 30) == render_html._EXPR_MIN_FONT  # a huge line floors at the min
+    assert render_html._fit_font("x", 30) == render_html._EXPR_MAX_FONT  # a tiny line caps at the max
+    assert render_html._fit_font("x" * 100, 30) == render_html._EXPR_MIN_FONT  # a huge line floors at the min
 
 
 def test_mathexpr_elides_a_giant_ratio_operand_instead_of_streaking():
@@ -1123,7 +1125,7 @@ def test_mathexpr_elides_a_giant_ratio_operand_instead_of_streaking():
     # the elision keys off the same "log₂" literal the renderer receives.
     giant = spreadsheet_text._math_expr(
         spreadsheet_text._log_operand("2" * 80 + "/" + "3" * 60), 240000.0, show_value=True)
-    html = app._mathexpr_html(giant, 37)
+    html = render_html._mathexpr_html(giant, 37)
     assert "1200 · log₂(…/…)" in html      # the giant ratio is elided, its ratio shape kept
     assert "2" * 80 not in html            # the huge numerator is gone
     assert "= " in html                    # the cents value line is untouched
@@ -1135,14 +1137,14 @@ def test_mathexpr_elides_a_giant_bare_integer_operand_to_an_ellipsis():
     # lone "…", matching the un-parenthesised form a small one (log₂65536) takes.
     giant = spreadsheet_text._math_expr(
         spreadsheet_text._log_operand("2" * 80 + "/1"), 96000.0, show_value=True)
-    html = app._mathexpr_html(giant, 37)
+    html = render_html._mathexpr_html(giant, 37)
     assert "1200 · log₂…" in html and "(…" not in html
     assert "2" * 80 not in html
 
 
 def test_mathexpr_leaves_a_small_operand_intact():
     # an operand that fits at the minimum font is never elided — no spurious "…"
-    html = app._mathexpr_html("1200 · log₂(3/2)\n= 701.96", 37)
+    html = render_html._mathexpr_html("1200 · log₂(3/2)\n= 701.96", 37)
     assert "1200 · log₂(3/2)" in html and "…" not in html
 
 
@@ -1153,18 +1155,18 @@ def test_elided_expr_line_fits_its_cell_at_the_fitted_font():
     raw = "1200 · log₂(" + "2" * 100 + "/" + "3" * 100 + ")"
     elided = render_html._elide_expr_line(raw, 37)
     assert elided == "1200 · log₂(…/…)"
-    assert len(elided) * render_html._EXPR_CHAR_W * app._fit_font(elided, 37) <= 37
+    assert len(elided) * render_html._EXPR_CHAR_W * render_html._fit_font(elided, 37) <= 37
 
 
 def test_plain_text_font_shrinks_to_fit_with_no_readability_floor():
     # the plain-text contract is fit-on-ONE-line, so the sizer has NO readability floor:
     # the denser the value the smaller the font (a prescaling ket-matrix at a high prime
     # limit shrinks well past any legible floor), while a short value grows to the cap.
-    dense = app._ptext_font("9.999 " * 40, 120)    # ~240 chars in a narrow box
-    denser = app._ptext_font("9.999 " * 80, 120)   # twice as long → smaller still
+    dense = render_html._ptext_font("9.999 " * 40, 120)    # ~240 chars in a narrow box
+    denser = render_html._ptext_font("9.999 " * 80, 120)   # twice as long → smaller still
     assert denser < dense < 5.0                     # keeps shrinking past the old 5px floor
-    assert app._ptext_font("1 0 0", 120) == spreadsheet_constants.PTEXT_MAX_FONT  # short value hits the cap
-    assert app._ptext_font("x" * 9, 30) <= spreadsheet_constants.PTEXT_MAX_FONT   # never exceeds the cap
+    assert render_html._ptext_font("1 0 0", 120) == spreadsheet_constants.PTEXT_MAX_FONT  # short value hits the cap
+    assert render_html._ptext_font("x" * 9, 30) <= spreadsheet_constants.PTEXT_MAX_FONT   # never exceeds the cap
 
 
 def test_plain_text_font_is_glyph_aware_not_uniform_width():
@@ -1174,7 +1176,7 @@ def test_plain_text_font_is_glyph_aware_not_uniform_width():
     sparse = "0 0 0 0 0 0 0 0 0 0"   # zeros split by (narrow) spaces
     dense = "0000000000000000000"    # all (wide) digits, identical length
     assert len(sparse) == len(dense)
-    assert app._ptext_font(sparse, 40) > app._ptext_font(dense, 40)
+    assert render_html._ptext_font(sparse, 40) > render_html._ptext_font(dense, 40)
 
 
 def test_approach_radio_is_visible_iff_the_domain_has_nonprime_elements():
@@ -1198,7 +1200,7 @@ def test_target_chooser_default_limit_uses_the_nonstandard_basis():
     from rtt.app.editor import Editor
     editor = Editor()
     assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
-    rec = app._Reconciler(editor)
+    rec = _Reconciler(editor)
     assert rec._target_preset_values() == (16, "TILT")
 
 
@@ -1215,7 +1217,7 @@ def test_dense_prescaling_plain_text_fits_its_cell():
                                                 tuning_scheme="TILT minimax-S").cells}
     for cid in ("ptext:prescaling:primes", "ptext:prescaling:targets"):
         c = cells[cid]
-        assert render_html._ptext_units(c.text) * app._ptext_font(c.text, c.w) <= c.w, cid
+        assert render_html._ptext_units(c.text) * render_html._ptext_font(c.text, c.w) <= c.w, cid
 
 
 def test_units_fit_their_cell_for_long_alternative_complexity_annotations():
@@ -1231,11 +1233,11 @@ def test_units_fit_their_cell_for_long_alternative_complexity_annotations():
     shrunk = False
     for c in cells:
         if c.kind == "units":
-            font = app._units_font(c.text, c.w, app._UNITS_MAX_FONT)
+            font = render_html._units_font(c.text, c.w, page_assets._UNITS_MAX_FONT)
             assert len(c.text) * render_html._EXPR_CHAR_W * font <= c.w, f"units {c.id}={c.text!r}"
-            shrunk = shrunk or font < app._UNITS_MAX_FONT
+            shrunk = shrunk or font < page_assets._UNITS_MAX_FONT
         if c.unit:
-            font = app._units_font(c.unit, c.w, app._CELLUNIT_MAX_FONT)
+            font = render_html._units_font(c.unit, c.w, page_assets._CELLUNIT_MAX_FONT)
             assert len(c.unit) * render_html._EXPR_CHAR_W * font <= c.w, f"cellunit {c.id}={c.unit!r}"
     # the long annotation actually triggered a shrink (the fit engaged — not a trivial pass)
     assert shrunk, "no units cell shrank — the long-annotation fit never engaged"
@@ -1245,15 +1247,15 @@ def test_tour_steps_are_well_formed_and_assets_wired():
     # the guided-tour steps drive the client engine (assets/tour.js); each must carry the copy the
     # card renders, and a non-empty selector must look like a CSS selector (a region class), never a
     # NiceGUI .mark() name (which is test-only and never reaches the DOM the tour queries).
-    assert app._TOUR_STEPS, "no tour steps defined"
-    for step in app._TOUR_STEPS:
+    assert page_assets._TOUR_STEPS, "no tour steps defined"
+    for step in page_assets._TOUR_STEPS:
         assert step["title"] and step["body"], f"empty copy: {step}"
         sel = step["sel"]
         assert isinstance(sel, str)
         assert sel == "" or sel.startswith("."), f"selector should be a class, got {sel!r}"
     # the engine + styles are bundled the same way the other assets are
-    assert app._TOUR_JS.strip(), "tour.js not loaded"
-    assert ".rtt-tour-card" in app._CSS, "tour.css not folded into the page stylesheet"
+    assert page_assets._TOUR_JS.strip(), "tour.js not loaded"
+    assert ".rtt-tour-card" in page_assets._CSS, "tour.css not folded into the page stylesheet"
     # the corner replay button has its hover help
     assert "tour" in tooltips.CHROME_HELP
 

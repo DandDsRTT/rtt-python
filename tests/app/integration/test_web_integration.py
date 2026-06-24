@@ -8,7 +8,7 @@ differ in sign from the original's hand-written mocks (e.g. the syntonic comma i
 """
 
 from rtt.app import service
-from rtt.app.app import _parse_int
+from rtt.app.render_html import _parse_int
 from rtt.app.editor import INITIAL_MAPPING, Editor
 
 
