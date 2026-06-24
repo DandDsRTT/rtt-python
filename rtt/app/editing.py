@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from nicegui import ui
 
@@ -23,33 +23,49 @@ from rtt.app.page_assets import (
     cb_method,
 )
 
+if TYPE_CHECKING:
+    from rtt.app._page_hosts import EditHost
+    from rtt.app.editor import Editor
+    from rtt.app.gestures import GestureController
+    from rtt.app.reconciler import _Reconciler
+
 _log = logging.getLogger(__name__)
 
 
 class EditController:
-    def __init__(self, page) -> None:
-        self.page = page
+    def __init__(
+        self,
+        editor: Editor,
+        rec: _Reconciler,
+        gestures: GestureController,
+        host: EditHost,
+    ) -> None:
+        self._editor = editor
+        self._rec = rec
+        self._gestures = gestures
+        self._host = host
+        self._renderer = host.renderer
         self.vectors = _VectorEdits(self)
         self.tuning = _TuningEdits(self)
 
     def _build_edit_specs(self) -> None:
         self._MAPPING_EDIT = _VecGridEdit(
             group="gens",
-            count=lambda: len(self.page.editor.state.mapping),
+            count=lambda: len(self._editor.state.mapping),
             cell_id=ids.mapping_cell,
-            pending=lambda: self.page.editor.pending_mapping_row,
-            set_pending=self.page.editor.set_pending_mapping_row,
-            commit=self.page.editor.edit_mapping,
+            pending=lambda: self._editor.pending_mapping_row,
+            set_pending=self._editor.set_pending_mapping_row,
+            commit=self._editor.edit_mapping,
             validate=service.is_proper_temperament,
-            guard=lambda: self.page.editor.settings["temperament_tiles"],
+            guard=lambda: self._editor.settings["temperament_tiles"],
         )
         self._COMMA_EDIT = _VecGridEdit(
             group="commas",
-            count=lambda: len(self.page.editor.state.comma_basis),
+            count=lambda: len(self._editor.state.comma_basis),
             cell_id=ids.comma_cell,
-            pending=lambda: self.page.editor.pending_comma,
-            set_pending=self.page.editor.set_pending_comma,
-            commit=self.page.editor.edit_comma_basis,
+            pending=lambda: self._editor.pending_comma,
+            set_pending=self._editor.set_pending_comma,
+            commit=self._editor.edit_comma_basis,
             validate=lambda basis: service.is_proper_temperament(
                 service.from_comma_basis(basis).mapping
             ),
@@ -58,34 +74,34 @@ class EditController:
     def _build_vector_list_specs(self) -> None:
         self._INTEREST_EDIT = _VecGridEdit(
             group="interest",
-            count=lambda: len(self.page.editor.interest_vectors),
+            count=lambda: len(self._editor.interest_vectors),
             cell_id=ids.interest_cell,
-            pending=lambda: self.page.editor.pending_interest,
-            set_pending=self.page.editor.set_pending_interest,
-            commit=self.page.editor.set_interest_vectors,
+            pending=lambda: self._editor.pending_interest,
+            set_pending=self._editor.set_pending_interest,
+            commit=self._editor.set_interest_vectors,
             draft_arms=True,
         )
         self._HELD_EDIT = _VecGridEdit(
             group="held",
-            count=lambda: len(self.page.editor.held_vectors),
+            count=lambda: len(self._editor.held_vectors),
             cell_id=ids.held_cell,
-            pending=lambda: self.page.editor.pending_held,
-            set_pending=self.page.editor.set_pending_held,
-            commit=self.page.editor.set_held_vectors,
+            pending=lambda: self._editor.pending_held,
+            set_pending=self._editor.set_pending_held,
+            commit=self._editor.set_held_vectors,
             draft_arms=True,
         )
         self._TARGET_EDIT = _VecGridEdit(
             group="targets",
             count=lambda: len(
-                self.page.editor.target_override
+                self._editor.target_override
                 or service.target_interval_set(
-                    self.page.editor.target_spec, self.page.editor.state.domain_basis
+                    self._editor.target_spec, self._editor.state.domain_basis
                 )
             ),
             cell_id=ids.target_cell,
-            pending=lambda: self.page.editor.pending_target,
-            set_pending=self.page.editor.set_pending_target,
-            commit=self.page.editor.set_target_override_vectors,
+            pending=lambda: self._editor.pending_target,
+            set_pending=self._editor.set_pending_target,
+            commit=self._editor.set_target_override_vectors,
             draft_arms=True,
         )
 
@@ -111,38 +127,36 @@ class EditController:
 
     def _apply_outcome(self, out, commit, preview=False) -> None:
         if preview:
-            self.page.gestures.edit_candidate(
-                commit if out.effect is service.Effect.ACCEPT else None
-            )
+            self._gestures.edit_candidate(commit if out.effect is service.Effect.ACCEPT else None)
             return
         if out.effect is service.Effect.IGNORE:
             return
         if out.effect is service.Effect.RERENDER:
-            self.page.renderer.render()
+            self._renderer.render()
             return
         msg = out.message or self._reason_message(out.reason)
         if out.effect is service.Effect.REJECT:
             ui.notify(msg, type="negative", position="top")
-            self.page.renderer.render()
+            self._renderer.render()
             return
         if msg:
             ui.notify(msg, type="negative", position="top")
         commit()
-        self.page.renderer.request_render()
+        self._renderer.request_render()
 
     @cb_method
     def act(self, action):
-        self.page.gestures.end_commit_gestures()
+        self._gestures.end_commit_gestures()
         action()
-        self.page.renderer.request_render()
+        self._renderer.request_render()
 
     @cb_method
     def add_interval(self, action, group):
-        self.page.gestures.end_commit_gestures()
+        self._gestures.end_commit_gestures()
         action()
-        self.page.renderer.render()
+        self._renderer.render()
         quant_id, vec_kind = self.draft_focus[group]
-        lay = self.page.last_lay
+        lay = self._host.last_lay
         if any(cb.id == quant_id for cb in lay.cells):
             target = quant_id
         elif vec_kind is not None:
@@ -154,7 +168,7 @@ class EditController:
             target = None
         if target is None and group == "element":
             target = next((cb.id for cb in lay.cells if cb.id == "basis:pending"), None)
-        inp = self.page.rec.handles(target).value.input if target is not None else None
+        inp = self._rec.handles(target).value.input if target is not None else None
         if inp is not None:
             self._focus_draft_cell(inp)
 
@@ -178,129 +192,127 @@ class EditController:
         )
 
     def on_show_toggle(self, key, value):
-        if self.page.building:
+        if self._host.building:
             return
-        if key == "nonstandard_domain" and not value and self.page.editor.basis_is_nonstandard:
-            self.page.editor.exit_nonstandard_domain()
-            self.page.renderer.render()
+        if key == "nonstandard_domain" and not value and self._editor.basis_is_nonstandard:
+            self._editor.exit_nonstandard_domain()
+            self._renderer.render()
             return
-        self.page.editor.set_show(key, value)
-        self.page.renderer.render()
+        self._editor.set_show(key, value)
+        self._renderer.render()
 
     def on_select_all(self, value):
-        if self.page.building:
+        if self._host.building:
             return
-        self.page.editor.set_all_show(value, self.page._available_keys())
-        self.page.renderer.render()
+        self._editor.set_all_show(value, self._host.available_keys())
+        self._renderer.render()
 
     def on_part_click(self, key):
-        if self.page.building:
+        if self._host.building:
             return
         host = _TILE_HOST.get(key)
-        if host is not None and not self.page.editor.settings[host]:
+        if host is not None and not self._editor.settings[host]:
             return
-        self.page.editor.set_show(key, not self.page.editor.settings[key])
-        self.page.renderer.render()
+        self._editor.set_show(key, not self._editor.settings[key])
+        self._renderer.render()
 
     @cb_method
     def on_preset(self, cid, value):
-        if self.page.building:
+        if self._host.building:
             return
         if cid.startswith("preset:temperament"):
             if value in presets.TEMPERAMENT_COMMAS:
-                self.page.gestures.end_gesture()
-                self.page.editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
-                self.page.renderer.request_render()
+                self._gestures.end_gesture()
+                self._editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
+                self._renderer.request_render()
             else:
-                self.page.renderer.render()
+                self._renderer.render()
             return
         apply = self.candidate_apply(cid, value)
         if apply is not None:
-            self.page.gestures.end_chooser_gesture()
+            self._gestures.end_chooser_gesture()
             apply()
-            self.page.renderer.request_render()
+            self._renderer.request_render()
 
     @cb_method
     def on_subpick(self, cid, value):
-        if self.page.building or value is None:
+        if self._host.building or value is None:
             return
-        self.page.gestures.end_gesture()
-        db = self.page.editor.state.domain_basis
+        self._gestures.end_gesture()
+        db = self._editor.state.domain_basis
         if cid == "etpick:draft":
-            self.page.editor.set_pending_mapping_row(list(presets.et_value_to_val(value, db)))
-            ok = self.page.editor.pending_mapping_row is None
+            self._editor.set_pending_mapping_row(list(presets.et_value_to_val(value, db)))
+            ok = self._editor.pending_mapping_row is None
         elif cid == "commapick:draft":
-            self.page.editor.set_pending_comma(list(presets.comma_value_to_vector(value, db)))
-            ok = self.page.editor.pending_comma is None
+            self._editor.set_pending_comma(list(presets.comma_value_to_vector(value, db)))
+            ok = self._editor.pending_comma is None
         elif cid.startswith("etpick:"):
-            i = self.page.token_index(cid, "gens")
-            ok = i is not None and self.page.editor.set_mapping_row(
+            i = self._host.token_index(cid, "gens")
+            ok = i is not None and self._editor.set_mapping_row(
                 i, presets.et_value_to_val(value, db)
             )
         else:
-            c = self.page.token_index(cid, "commas")
-            ok = c is not None and self.page.editor.set_comma(
+            c = self._host.token_index(cid, "commas")
+            ok = c is not None and self._editor.set_comma(
                 c, presets.comma_value_to_vector(value, db)
             )
         if not ok:
             ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
-        self.page.renderer.render()
+        self._renderer.render()
 
     @cb_method
     def on_form_choose(self, cid, value):
-        if self.page.building:
+        if self._host.building:
             return
         apply = self.candidate_apply(cid, value)
         if apply is not None:
-            self.page.gestures.end_chooser_gesture()
+            self._gestures.end_chooser_gesture()
             apply()
-            self.page.renderer.request_render()
+            self._renderer.request_render()
 
     @cb_method
     def on_target_change(self):
-        if self.page.building:
+        if self._host.building:
             return
-        self.page.gestures.end_chooser_gesture()
-        num, sel = self.page.rec.cells["preset:target"].chooser.select
-        out = service.resolve_target_limit(
-            sel.value, num.value, self.page.editor.state.domain_basis
-        )
-        self._apply_outcome(out, lambda: self.page.editor.set_target_spec(out.value))
+        self._gestures.end_chooser_gesture()
+        num, sel = self._rec.cells["preset:target"].chooser.select
+        out = service.resolve_target_limit(sel.value, num.value, self._editor.state.domain_basis)
+        self._apply_outcome(out, lambda: self._editor.set_target_spec(out.value))
 
     @cb_method
     def on_control_select(self, cid, value):
-        if self.page.building or value is None:
+        if self._host.building or value is None:
             return
         apply = self.candidate_apply(cid, value)
         if apply is not None:
-            self.page.gestures.end_chooser_gesture()
+            self._gestures.end_chooser_gesture()
             apply()
         elif cid == "control:diminuator":
-            self.page.editor.set_diminuator_replaced(bool(value))
+            self._editor.set_diminuator_replaced(bool(value))
         elif cid == "control:all_interval":
-            self.page.editor.set_all_interval(bool(value))
+            self._editor.set_all_interval(bool(value))
         else:
             return
-        self.page.renderer.request_render()
+        self._renderer.request_render()
 
     @cb_method
     def on_range_mode(self, value):
-        if self.page.building or value is None:
+        if self._host.building or value is None:
             return
-        self.page.editor.set_range_mode(value)
-        self.page.renderer.render()
+        self._editor.set_range_mode(value)
+        self._renderer.render()
 
     @cb_method
     def on_toggle(self, item):
-        self.page.editor.toggle_collapsed(item)
-        self.page.renderer.render()
+        self._editor.toggle_collapsed(item)
+        self._renderer.render()
 
     @cb_method
     def on_toggle_all(self):
-        self.page.editor.set_collapsed(
-            spreadsheet_text.toggle_all_collapsed(self.page.last_lay, self.page.editor.collapsed)
+        self._editor.set_collapsed(
+            spreadsheet_text.toggle_all_collapsed(self._host.last_lay, self._editor.collapsed)
         )
-        self.page.renderer.render()
+        self._renderer.render()
 
     _APPLY_SETTERS: ClassVar[tuple[tuple[str, str], ...]] = (
         ("preset:tuning", "set_tuning_scheme"),
@@ -314,7 +326,7 @@ class EditController:
             return None
         for prefix, setter in self._APPLY_SETTERS:
             if cid.startswith(prefix):
-                return lambda v=value, s=setter: getattr(self.page.editor, s)(v)
+                return lambda v=value, s=setter: getattr(self._editor, s)(v)
         if cid == "control:complexity":
             return self._complexity_apply(value)
         if cid.startswith("formchooser:"):
@@ -325,14 +337,14 @@ class EditController:
         if value == "custom":
             return None
         internal = next((k for k, v in service.COMPLEXITY_DISPLAYS.items() if v == value), value)
-        return lambda: self.page.editor.set_complexity_name(internal)
+        return lambda: self._editor.set_complexity_name(internal)
 
     def _formchooser_apply(self, cid, value):
         name = cid.split(":", 1)[1]
         if name == "mapping":
             if value not in service.MAPPING_FORM_KEYS:
                 return None
-            return lambda: self.page.editor.set_mapping_form(value)
+            return lambda: self._editor.set_mapping_form(value)
         if value not in service.COMMA_BASIS_FORM_KEYS:
             return None
-        return lambda: self.page.editor.set_comma_basis_form(value)
+        return lambda: self._editor.set_comma_basis_form(value)

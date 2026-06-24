@@ -43,3 +43,16 @@ class RenderHost(Protocol):
     load_failed: bool
 
     def sync_show_availability(self) -> None: ...
+
+
+class EditHost(Protocol):
+    renderer: Renderer
+    building: bool
+    last_lay: Layout | None
+    page_client: Client
+
+    def token_index(self, cid: str, name: str) -> int | None: ...
+
+    def col_tokens(self, name: str) -> list: ...
+
+    def available_keys(self) -> list[str]: ...

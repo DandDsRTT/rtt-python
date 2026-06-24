@@ -43,7 +43,7 @@ class _Page:
         self.gestures = GestureController(self.editor, self)
         self.rec = _Reconciler(self.editor, self.gestures)
         self.renderer = Renderer(self.editor, self.rec, self.gestures, self)
-        self.edits = EditController(self)
+        self.edits = EditController(self.editor, self.rec, self.gestures, self)
         self.builder = PageBuilder(self)
         self.builder._setup_page_head()
         self._init_page_client(loaded_from_url)
@@ -159,7 +159,7 @@ class _Page:
             _gate(self.refs["audio_bank"], "rtt-chap-invisible", ch < show_settings.CHAPTER_MIN)
         self.sync_show_availability()
 
-    def _available_keys(self):
+    def available_keys(self):
         return [
             k for k in show_settings.IMPLEMENTED if show_settings.reveal_chapter(k) <= self.chapter
         ]
@@ -174,7 +174,7 @@ class _Page:
             self.examples[key].classes(add="rtt-ex-disabled") if disabled else self.examples[
                 key
             ].classes(remove="rtt-ex-disabled")
-        states = [self.editor.settings[k] for k in self._available_keys()]
+        states = [self.editor.settings[k] for k in self.available_keys()]
         was_building = self.building
         self.building = True
         try:
