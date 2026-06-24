@@ -15,6 +15,10 @@ class History:
         return bool(self.undo_stack)
 
     @property
+    def undo_count(self) -> int:
+        return len(self.undo_stack)
+
+    @property
     def can_redo(self) -> bool:
         return bool(self.redo_stack)
 
