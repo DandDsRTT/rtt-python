@@ -66,3 +66,20 @@ def test_the_resolved_model_is_the_only_copy_of_the_domain_facts():
         assert not hasattr(b, mirrored), f"{mirrored} still shadows the resolved model on self"
     assert b.resolved.commas.ratios is not None
     assert b.resolved.flags.superspace is False
+
+
+def test_resolution_is_decoupled_from_layout():
+    # resolve() runs the standalone Resolver, not the full _GridBuilder: it produces the complete
+    # model (domain + tile-feeding flags) and stops before any tile/layout state is built.
+    ed = Editor()
+    r = spreadsheet.Resolver(
+        ed.state, ed.settings, ed.collapsed,
+        tuning_scheme=ed.tuning_scheme, target_spec=ed.target_spec,
+        interest=ed.interest_vectors, range_mode=ed.range_mode,
+        pending_comma=ed.pending_comma, held_vectors=ed.held_vectors,
+        generator_tuning=ed.effective_generator_tuning(), resolve_only=True,
+    )
+    assert isinstance(r.resolved, Resolved)
+    assert r.resolved.detempering.vectors is not None
+    assert not hasattr(r, "tiles")   # tile declaration belongs to layout, not resolution
+    assert not hasattr(r, "col_x")   # column geometry belongs to layout, not resolution

@@ -12,9 +12,14 @@ from rtt.app.grid_tables import (
     UNITS_TILES,
 )
 from rtt.app.spreadsheet_constants import (
+    APPROACH_RADIO_H,
     BAND_GAP,
+    BOX_INNER,
+    BOX_TITLE_GAP,
+    BOX_TITLE_H,
     BRACE_H,
     BRACKET_W,
+    CAPTION_LINE,
     CHART_GAP,
     CHART_H,
     COL_W,
@@ -31,7 +36,17 @@ from rtt.app.spreadsheet_constants import (
     MATLABEL_W,
     MATLABEL_W_SS,
     MATLABEL_W_SSPRIMES,
+    OPT_MEAN_DAMAGE_W,
+    OPT_PAD_B,
+    OPT_PAD_T,
+    OPT_TITLE_GAP,
+    OPT_TITLE_H,
+    OPTION_BOX_PX,
     PAD,
+    PRESET_H,
+    RANGE_CHART_H,
+    RANGE_GAP,
+    RANGE_MODE_H,
     ROW_H,
     ROW_HANDLE_GAP,
     ROW_HANDLE_W,
@@ -42,13 +57,14 @@ from rtt.app.spreadsheet_constants import (
     TOGGLE_INSET,
 )
 from rtt.app.spreadsheet_models import RowBand
-from rtt.app.spreadsheet_text import _title_w
+from rtt.app.spreadsheet_text import _title_w, _wrap_lines
 
 
 class _LayoutMixin:
-    def _declare_interval_column_tiles(self, draft):
+    def _declare_interval_column_tiles(self):
+        _r = self.resolved
         interest_tiles = ()
-        if draft.mi_shown:
+        if _r.dims.mi_shown:
             interest_tiles += (
                 ("block:vec:interest", "vectors", "interest"),
                 ("block:interest", "quantities", "interest"),
@@ -61,7 +77,7 @@ class _LayoutMixin:
                 ("block:complexity:interest", "complexity", "interest"),
             )
         held_tiles = ()
-        if draft.nh_shown:
+        if _r.dims.nh_shown:
             held_tiles += (
                 ("block:held", "quantities", "held"),
                 ("block:vec:held", "vectors", "held"),
@@ -73,8 +89,6 @@ class _LayoutMixin:
                 ("block:prescaling:held", "prescaling", "held"),
                 ("block:complexity:held", "complexity", "held"),
             )
-        draft.detempering_vectors = service.generator_detempering(self.state.mapping) if draft.show_detempering else ()
-        draft.detempering_sizes = service.interval_sizes(draft.tun, draft.gens, draft.elements) if draft.show_detempering else None
         detempering_tiles = (
             ("block:detempering", "quantities", "detempering"),
             ("block:vec:detempering", "vectors", "detempering"),
@@ -85,100 +99,89 @@ class _LayoutMixin:
             ("block:prescaling:detempering", "prescaling", "detempering"),
             ("block:complexity:detempering", "complexity", "detempering"),
             ("block:urow:detempering", "units", "detempering"),
-        ) if draft.show_detempering else ()
-        self._resolve_canon_mapped(draft)
+        ) if _r.flags.detempering else ()
         return interest_tiles, held_tiles, detempering_tiles
 
-    def _resolve_canon_mapped(self, draft) -> None:
-        draft.canon_mapped = service.mapped_intervals(draft.canon_mapping, draft.targets, draft.elements)
-        draft.canon_held_mapped = service.mapped_intervals(draft.canon_mapping, draft.held_ratios, draft.elements)
-        draft.canon_interest_mapped = service.mapped_intervals(draft.canon_mapping, draft.interest_ratios, draft.elements)
-        draft.canon_mapped_commas = service.mapped_commas(draft.canon_mapping, self.state.comma_basis)
-        draft.canon_mapped_detempering = (service.mapped_commas(draft.canon_mapping, draft.detempering_vectors)
-                                         if draft.show_detempering else ())
-        _canon_u = [None if (draft.unchanged_basis is None or draft.unchanged_basis[j] is None)
-                    else tuple(row[0] for row in service.mapped_commas(draft.canon_mapping, (draft.unchanged_basis[j],)))
-                    for j in range(draft.nu)]
-        draft.canon_unchanged_mapped = tuple(
-            tuple((None if _canon_u[j] is None else _canon_u[j][i]) for j in range(draft.nu))
-            for i in range(draft.rc))
-
-    def _declare_tiles(self, draft, interest_tiles, held_tiles, detempering_tiles) -> None:
+    def _declare_tiles(self, interest_tiles, held_tiles, detempering_tiles) -> None:
         self.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
                  + SUPERSPACE_COUNTS_TILES
                  + TILES + UNITS_TILES + SUPERSPACE_TILES
-                 + interest_tiles + held_tiles + detempering_tiles + self._projection_col_tiles(draft)
-                 + self._ss_projection_col_tiles(draft) + self._canon_col_tiles(draft))
+                 + interest_tiles + held_tiles + detempering_tiles + self._projection_col_tiles()
+                 + self._ss_projection_col_tiles() + self._canon_col_tiles())
         self.declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in self.tiles}
-        self._prune_declared_tiles(draft)
+        self._prune_declared_tiles()
 
-    def _projection_col_tiles(self, draft):
-        if not draft.show_projection:
+    def _projection_col_tiles(self):
+        _r = self.resolved
+        if not _r.flags.projection:
             return ()
         tiles = (
             ("block:proj:quantities", "projection", "quantities"),
             ("block:proj:units", "projection", "units"),
         )
-        if draft.show_detempering:
+        if _r.flags.detempering:
             tiles += (("block:proj:detempering", "projection", "detempering"),)
-        if draft.targets_editable:
+        if _r.scalars.targets_editable:
             tiles += (("block:proj:targets", "projection", "targets"),)
-        if draft.nh_shown:
+        if _r.dims.nh_shown:
             tiles += (("block:proj:held", "projection", "held"),)
-        if draft.mi_shown:
+        if _r.dims.mi_shown:
             tiles += (("block:proj:interest", "projection", "interest"),)
-        if draft.show_superspace:
+        if _r.flags.superspace:
             tiles += (
                 ("block:proj:ssgens", "projection", "ssgens"),
                 ("block:proj:ssprimes", "projection", "ssprimes"),
             )
         return tiles
 
-    def _ss_projection_col_tiles(self, draft):
-        if not draft.show_ss_projection:
+    def _ss_projection_col_tiles(self):
+        _r = self.resolved
+        if not _r.flags.ss_projection:
             return ()
         tiles = (
             ("block:ssproj:ssgens", "ss_projection", "ssgens"),
             ("block:ssproj:primes", "ss_projection", "primes"),
         )
-        if draft.show_unchanged:
+        if _r.unchanged.shown:
             tiles += (("block:ssproj:commas", "ss_projection", "commas"),)
-        if draft.show_detempering:
+        if _r.flags.detempering:
             tiles += (("block:ssproj:detempering", "ss_projection", "detempering"),)
-        if draft.targets_editable:
+        if _r.scalars.targets_editable:
             tiles += (("block:ssproj:targets", "ss_projection", "targets"),)
-        if draft.nh_shown:
+        if _r.dims.nh_shown:
             tiles += (("block:ssproj:held", "ss_projection", "held"),)
-        if draft.mi_shown:
+        if _r.dims.mi_shown:
             tiles += (("block:ssproj:interest", "ss_projection", "interest"),)
         return tiles
 
-    def _canon_col_tiles(self, draft):
-        if not draft.show_canon:
+    def _canon_col_tiles(self):
+        _r = self.resolved
+        if not _r.flags.canon:
             return ()
         tiles = (("block:canon_comma", "canon", "commas"),)
-        if draft.show_detempering:
+        if _r.flags.detempering:
             tiles += (("block:canon_detempering", "canon", "detempering"),)
-        if draft.targets_editable:
+        if _r.scalars.targets_editable:
             tiles += (("block:canon_mapped", "canon", "targets"),)
-        if draft.nh_shown:
+        if _r.dims.nh_shown:
             tiles += (("block:canon_held", "canon", "held"),)
-        if draft.mi_shown:
+        if _r.dims.mi_shown:
             tiles += (("block:canon_interest", "canon", "interest"),)
         return tiles
 
-    def _prune_declared_tiles(self, draft) -> None:
+    def _prune_declared_tiles(self) -> None:
+        _r = self.resolved
         if service.is_all_interval(self.tuning_scheme):
             self.declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
                                ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
                                ("ss_vectors", "targets"), ("ss_mapping", "targets")}
-        if not draft.show_identity_objects:
+        if not _r.flags.identity_objects:
             self.declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
                                     ("mapping", "detempering"), ("canon", "canongens"),
                                     ("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
-        if not draft.nh_shown:
+        if not _r.dims.nh_shown:
             self.declared_tiles -= {("ss_vectors", "held"), ("ss_mapping", "held")}
-        if not draft.mi_shown:
+        if not _r.dims.mi_shown:
             self.declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
 
     def _resolve_col_headers(self) -> None:
@@ -414,6 +417,41 @@ class _LayoutMixin:
             self.row_plus_y["vectors"] = self.vec_top(_r.dims.d_shown) + ROW_H / 2
         if self.tile_open("mapping", "quantities") and self.state.n > 0:
             self.row_plus_y["mapping"] = self.map_top(_r.dims.r_shown) + ROW_H / 2
+
+    def _resolve_tile_extras(self, show_ranges, show_tuning):
+        _r = self.resolved
+        self.gtm_chart = (show_ranges and show_tuning and "row:tuning" not in self.collapsed
+                     and self.col_open("gens") and "tile:tuning:gens" not in self.collapsed)
+        self.gtm_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if self.gtm_chart else 0
+        self.lbox_ctrl = _r.flags.lbox_show and self.col_open("ssprimes" if _r.flags.superspace else "primes") and not _r.flags.presets
+        self.lbox_extra = (RANGE_GAP + self.control_region_band_h(OPTION_BOX_PX + CAPTION_LINE)) if self.lbox_ctrl else 0
+        self.cbox_ctrl = _r.flags.cbox_show and self.col_open("targets")
+        self.cbox_extra = (RANGE_GAP + self.control_region_band_h(ROW_H + _r.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)) if self.cbox_ctrl else 0
+        self.opt_ctrl = (_r.flags.optimization and "row:damage" not in self.collapsed
+                    and self.col_open("targets") and "tile:damage:targets" not in self.collapsed)
+        self.mean_damage_caption = "retuning magnitude" if _r.scalars.all_interval else "power mean"
+        if self.tuning_optimized:
+            self.mean_damage_caption = f"minimized {self.mean_damage_caption}"
+        self.opt_cap_lines = _wrap_lines(self.mean_damage_caption, OPT_MEAN_DAMAGE_W) if self.opt_ctrl else 1
+        self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + _r.scalars.ctrl_symbol_h
+                      + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
+        self.show_approach = (service.domain_has_nonprimes(_r.dims.elements)
+                          and "row:damage" not in self.collapsed and self.col_open("targets")
+                          and "tile:damage:targets" not in self.collapsed)
+        self.approach_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H) if self.show_approach else 0
+        self.slope_ctrl = (_r.flags.weighting
+                      and "row:weight" not in self.collapsed
+                      and self.col_open("targets") and "tile:weight:targets" not in self.collapsed)
+        self.slope_locked = self.slope_ctrl and (service.is_all_interval(self.tuning_scheme)
+                                                 or _r.scalars.custom_weights_active)
+        self.slope_extra = (RANGE_GAP + self.control_region_band_h(PRESET_H + CAPTION_LINE)) if self.slope_ctrl else 0
+        return {
+            "tuning": self.gtm_extra,
+            "prescaling": self.lbox_extra,
+            "complexity": self.cbox_extra,
+            "weight": self.slope_extra,
+            "damage": self.opt_extra + self.approach_extra,
+        }
 
     def _resolve_ptext_strings(self, generator_tuning, target_override) -> None:
         _r = self.resolved

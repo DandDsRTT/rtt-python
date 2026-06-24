@@ -5,32 +5,16 @@ from types import SimpleNamespace
 from rtt.app import service
 from rtt.app.settings import defaults as _default_settings
 from rtt.app.spreadsheet_constants import (
-    APPROACH_RADIO_H,
-    BOX_INNER,
-    BOX_TITLE_GAP,
-    BOX_TITLE_H,
-    CAPTION_LINE,
     HEADER_H,
     LABEL_W,
-    OPT_MEAN_DAMAGE_W,
-    OPT_PAD_B,
-    OPT_PAD_T,
-    OPT_TITLE_GAP,
-    OPT_TITLE_H,
-    OPTION_BOX_PX,
-    PRESET_H,
-    RANGE_CHART_H,
-    RANGE_GAP,
-    RANGE_MODE_H,
-    ROW_H,
     SYMBOL_H,
 )
 from rtt.app.spreadsheet_models import _resolve_prescaler_labels, _resolve_show_flags
 from rtt.app.spreadsheet_resolved import freeze
-from rtt.app.spreadsheet_text import _min_width_for_lines, _wrap_lines, assign_column_tokens
+from rtt.app.spreadsheet_text import _min_width_for_lines, assign_column_tokens
 
 
-class _ResolveMixin:
+class Resolver:
     def __init__(self, state, settings=None, collapsed=None,
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
@@ -95,12 +79,15 @@ class _ResolveMixin:
         self._resolve_interval_sets(draft, generator_tuning, target_override, held_vectors, pending_comma,
                                     show_temp, show_tuning)
         self._resolve_complexities(draft)
-        interest_tiles, held_tiles, detempering_tiles = self._declare_interval_column_tiles(draft)
+        self._resolve_detempering(draft)
+        self._resolve_canon_mapped(draft)
         self._resolve_projection_data(draft, show_tuning)
-        self._declare_tiles(draft, interest_tiles, held_tiles, detempering_tiles)
         self.resolved = freeze(draft)
         if self._resolve_only:
             return
+
+        interest_tiles, held_tiles, detempering_tiles = self._declare_interval_column_tiles()
+        self._declare_tiles(interest_tiles, held_tiles, detempering_tiles)
 
         col_bands, content_x0 = self._define_col_bands(show_interval_ratios, show_domain_units,
                                                        show_temp, show_tuning, show_interest, label_w)
@@ -400,6 +387,26 @@ class _ResolveMixin:
         draft.prescaler = service.complexity_prescaler(self.state.mapping, self.tuning_scheme, override=self.custom_prescaler)
         draft.prescaler_is_matrix = isinstance(draft.prescaler[0], (tuple, list))
 
+    def _resolve_detempering(self, draft) -> None:
+        draft.detempering_vectors = (service.generator_detempering(self.state.mapping)
+                                     if draft.show_detempering else ())
+        draft.detempering_sizes = (service.interval_sizes(draft.tun, draft.gens, draft.elements)
+                                   if draft.show_detempering else None)
+
+    def _resolve_canon_mapped(self, draft) -> None:
+        draft.canon_mapped = service.mapped_intervals(draft.canon_mapping, draft.targets, draft.elements)
+        draft.canon_held_mapped = service.mapped_intervals(draft.canon_mapping, draft.held_ratios, draft.elements)
+        draft.canon_interest_mapped = service.mapped_intervals(draft.canon_mapping, draft.interest_ratios, draft.elements)
+        draft.canon_mapped_commas = service.mapped_commas(draft.canon_mapping, self.state.comma_basis)
+        draft.canon_mapped_detempering = (service.mapped_commas(draft.canon_mapping, draft.detempering_vectors)
+                                          if draft.show_detempering else ())
+        _canon_u = [None if (draft.unchanged_basis is None or draft.unchanged_basis[j] is None)
+                    else tuple(row[0] for row in service.mapped_commas(draft.canon_mapping, (draft.unchanged_basis[j],)))
+                    for j in range(draft.nu)]
+        draft.canon_unchanged_mapped = tuple(
+            tuple((None if _canon_u[j] is None else _canon_u[j][i]) for j in range(draft.nu))
+            for i in range(draft.rc))
+
     def _resolve_projection_data(self, draft, show_tuning) -> None:
         draft.show_projection = show_tuning and self.settings["projection"]
         if draft.show_projection:
@@ -444,38 +451,3 @@ class _ResolveMixin:
         draft.ss_unchanged_mapped = tuple(
             (service.map_vectors_into_superspace_generators(self.state, (ub,))[0] if ub is not None else None)
             for ub in (draft.unchanged_basis if draft.show_unchanged else ()))
-
-    def _resolve_tile_extras(self, show_ranges, show_tuning):
-        _r = self.resolved
-        self.gtm_chart = (show_ranges and show_tuning and "row:tuning" not in self.collapsed
-                     and self.col_open("gens") and "tile:tuning:gens" not in self.collapsed)
-        self.gtm_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if self.gtm_chart else 0
-        self.lbox_ctrl = _r.flags.lbox_show and self.col_open("ssprimes" if _r.flags.superspace else "primes") and not _r.flags.presets
-        self.lbox_extra = (RANGE_GAP + self.control_region_band_h(OPTION_BOX_PX + CAPTION_LINE)) if self.lbox_ctrl else 0
-        self.cbox_ctrl = _r.flags.cbox_show and self.col_open("targets")
-        self.cbox_extra = (RANGE_GAP + self.control_region_band_h(ROW_H + _r.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)) if self.cbox_ctrl else 0
-        self.opt_ctrl = (_r.flags.optimization and "row:damage" not in self.collapsed
-                    and self.col_open("targets") and "tile:damage:targets" not in self.collapsed)
-        self.mean_damage_caption = "retuning magnitude" if _r.scalars.all_interval else "power mean"
-        if self.tuning_optimized:
-            self.mean_damage_caption = f"minimized {self.mean_damage_caption}"
-        self.opt_cap_lines = _wrap_lines(self.mean_damage_caption, OPT_MEAN_DAMAGE_W) if self.opt_ctrl else 1
-        self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + _r.scalars.ctrl_symbol_h
-                      + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
-        self.show_approach = (service.domain_has_nonprimes(_r.dims.elements)
-                          and "row:damage" not in self.collapsed and self.col_open("targets")
-                          and "tile:damage:targets" not in self.collapsed)
-        self.approach_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H) if self.show_approach else 0
-        self.slope_ctrl = (_r.flags.weighting
-                      and "row:weight" not in self.collapsed
-                      and self.col_open("targets") and "tile:weight:targets" not in self.collapsed)
-        self.slope_locked = self.slope_ctrl and (service.is_all_interval(self.tuning_scheme)
-                                                 or _r.scalars.custom_weights_active)
-        self.slope_extra = (RANGE_GAP + self.control_region_band_h(PRESET_H + CAPTION_LINE)) if self.slope_ctrl else 0
-        return {
-            "tuning": self.gtm_extra,
-            "prescaling": self.lbox_extra,
-            "complexity": self.cbox_extra,
-            "weight": self.slope_extra,
-            "damage": self.opt_extra + self.approach_extra,
-        }
