@@ -2124,7 +2124,7 @@ def test_every_open_value_tile_has_a_plain_text_string():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
                                  held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
-    assert b.show_superspace and b.show_ptext  # the config really did light the superspace + plain text
+    assert b.resolved.flags.superspace and b.resolved.flags.ptext  # the config really did light the superspace + plain text
     value_rows = PTEXT_ROWS - {"quantities"}  # the quantities row's only band is the "2.3.5" primes string
     missing = [(r, c) for (r, c) in sorted(b.declared_tiles)
                if r in value_rows and c not in SPINE_COLUMNS and b.tile_open(r, c)
@@ -2146,7 +2146,7 @@ def test_every_row_that_produces_plain_text_reserves_its_band():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
                                  held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
-    assert b.show_ptext and b.show_canon  # the config really did light the plain text + the canon row
+    assert b.resolved.flags.ptext and b.resolved.flags.canon  # the config really did light the plain text + the canon row
     rows_with_text = {r for (r, _c) in b.ptext_strings}
     spill = sorted(r for r in rows_with_text if b.ptext_band(r, folded=False) <= 0)
     assert not spill, f"rows produce plain text but reserve no band (it will spill past the tile): {spill}"
@@ -2177,8 +2177,8 @@ def test_every_in_tile_band_reserves_for_what_it_emits():
                          {r for (r, _c) in b.ptext_strings if b.ptext_band(r, folded=False) > 0}),
         "symbol":       ({r for (r, _c) in SYMBOLS}, set(BANDS["symbol"].rows)),
         "units":        ({r for (r, _c) in UNITS}, set(BANDS["units"].rows)),
-        "caption":      ({r for (r, _c) in b.effective_captions}, set(BANDS["caption"].rows)),
-        "column label": ({r for (r, _c) in b.col_labels}, set(BANDS["col_label"].rows)),
+        "caption":      ({r for (r, _c) in b.resolved.labels.captions}, set(BANDS["caption"].rows)),
+        "column label": ({r for (r, _c) in b.resolved.labels.col_labels}, set(BANDS["col_label"].rows)),
     }
     spills = {name: sorted(emit - reserve) for name, (emit, reserve) in bands.items() if emit - reserve}
     assert not spills, f"rows emit a band's content but reserve no height for it (it will spill): {spills}"
@@ -2446,7 +2446,7 @@ def test_every_open_value_tile_declares_an_ebk_convention():
         if (rkey, ckey) not in EBK_CONVENTIONS and (rkey, ckey) != ("prescaling", "primes"):
             undeclared.append((rkey, ckey))
             continue
-        declared = _ebk_table_canonical(ebk_convention(rkey, ckey, superspace=b.show_superspace))
+        declared = _ebk_table_canonical(ebk_convention(rkey, ckey, superspace=b.resolved.flags.superspace))
         rendered = _ebk_canonical(_ebk_text_convention(b.ptext_strings[(rkey, ckey)]))
         if declared != rendered:
             mismatches.append((rkey, ckey, declared, rendered, b.ptext_strings[(rkey, ckey)]))
@@ -8039,7 +8039,7 @@ def test_every_derived_matrix_row_greens_its_draft_column():
     b = spreadsheet._GridBuilder(barb, s, tuning_scheme="minimax-ES",
                                  held_vectors=(), pending_held=[None, None, None],
                                  interest=(), pending_interest=[None, None, None])
-    assert b.show_superspace and "prescaling" in b.rows and "complexity" in b.rows
+    assert b.resolved.flags.superspace and "prescaling" in b.rows and "complexity" in b.rows
     assert_draft_greened(b, "held", 0, minimum=10)
     assert_draft_greened(b, "interest", 0, minimum=10)
 
@@ -8049,8 +8049,8 @@ def test_every_derived_matrix_row_greens_its_draft_column():
                                   target_override=["3/2", "5/4"], pending_target=[None, None, None],
                                   pending_comma=[None, None, None])
     assert ("units", "targets") in b2.declared_tiles  # the units tile the targets draft must fill
-    assert_draft_greened(b2, "targets", b2.k, minimum=6)
-    assert_draft_greened(b2, "commas", b2.nc, minimum=6)
+    assert_draft_greened(b2, "targets", b2.resolved.dims.k, minimum=6)
+    assert_draft_greened(b2, "commas", b2.resolved.dims.nc, minimum=6)
 
 
 def test_nonstandard_domain_adds_superspace_columns_between_gens_and_primes():

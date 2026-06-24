@@ -59,9 +59,9 @@ class _GridBuilder(
             freeze_x=self.node_edge + GAP - PAD,
             freeze_y=self.branch_top_y + GAP + GRIP_BAND - PAD,
             right_overhang=right_overhang,
-            identities=self._col_ids,
+            identities=self.resolved.col_ids,
             approach_box=self.approach_box,
-            pretransform=bool(self.size_factor) or self.prescaler_is_matrix,
+            pretransform=bool(self.size_factor) or self.resolved.scalars.prescaler_is_matrix,
         )
 
     def _emit_all(self) -> None:

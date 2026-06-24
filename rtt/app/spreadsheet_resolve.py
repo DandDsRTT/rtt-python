@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from rtt.app import service
 from rtt.app.settings import defaults as _default_settings
 from rtt.app.spreadsheet_constants import (
@@ -24,7 +26,7 @@ from rtt.app.spreadsheet_constants import (
     SYMBOL_H,
 )
 from rtt.app.spreadsheet_models import _resolve_prescaler_labels, _resolve_show_flags
-from rtt.app.spreadsheet_resolved import from_builder
+from rtt.app.spreadsheet_resolved import freeze
 from rtt.app.spreadsheet_text import _min_width_for_lines, _wrap_lines, assign_column_tokens
 
 
@@ -43,12 +45,6 @@ class _ResolveMixin:
         self.mapping_form = mapping_form
         self.comma_basis_form = comma_basis_form
         self.preview_remove = preview_remove
-        self.ghost_row = (preview_remove is not None and preview_remove[0] == "comma"
-                          and 0 <= preview_remove[1] < state.n)
-        self.ghost_comma = (preview_remove is not None and preview_remove[0] == "row"
-                            and len(state.mapping) > 1 and 0 <= preview_remove[1] < len(state.mapping))
-        if not (self.ghost_row or self.ghost_comma):
-            self.preview_remove = None
         self.targets_in_use = targets_in_use
         self.state = state
         self.settings = settings
@@ -81,19 +77,28 @@ class _ResolveMixin:
         self._build(generator_tuning, target_override, held_vectors, pending_comma)
 
     def _build(self, generator_tuning, target_override, held_vectors, pending_comma) -> None:
+        draft = SimpleNamespace()
+        draft.ghost_row = (self.preview_remove is not None and self.preview_remove[0] == "comma"
+                           and 0 <= self.preview_remove[1] < self.state.n)
+        draft.ghost_comma = (self.preview_remove is not None and self.preview_remove[0] == "row"
+                             and len(self.state.mapping) > 1 and 0 <= self.preview_remove[1] < len(self.state.mapping))
+        if not (draft.ghost_row or draft.ghost_comma):
+            self.preview_remove = None
+        draft.displayed_tuning_name = self.displayed_tuning_name
+        draft.displayed_projection_name = self.displayed_projection_name
         (show_counts, show_charts, show_ranges, show_domain_units, show_temp,
-         show_tuning, show_interest, show_interval_ratios) = self._unpack_show_flags()
+         show_tuning, show_interest, show_interval_ratios) = self._unpack_show_flags(draft)
         label_w = LABEL_W
         header_h = HEADER_H
-        self._resolve_superspace_dims()
-        self._resolve_prescaler_and_domain_labels()
-        self._resolve_interval_sets(generator_tuning, target_override, held_vectors, pending_comma,
+        self._resolve_superspace_dims(draft)
+        self._resolve_prescaler_and_domain_labels(draft)
+        self._resolve_interval_sets(draft, generator_tuning, target_override, held_vectors, pending_comma,
                                     show_temp, show_tuning)
-        self._resolve_complexities()
-        interest_tiles, held_tiles, detempering_tiles = self._declare_interval_column_tiles()
-        self._resolve_projection_data(show_tuning)
-        self._declare_tiles(interest_tiles, held_tiles, detempering_tiles)
-        self.resolved = from_builder(self)
+        self._resolve_complexities(draft)
+        interest_tiles, held_tiles, detempering_tiles = self._declare_interval_column_tiles(draft)
+        self._resolve_projection_data(draft, show_tuning)
+        self._declare_tiles(draft, interest_tiles, held_tiles, detempering_tiles)
+        self.resolved = freeze(draft)
         if self._resolve_only:
             return
 
@@ -115,330 +120,330 @@ class _ResolveMixin:
 
         self._init_group_geometry()
 
-    def _unpack_show_flags(self):
+    def _unpack_show_flags(self, draft):
         _f = _resolve_show_flags(self.settings, self.collapsed)
-        self.show_captions = _f.captions
-        self.show_mnemonics = _f.mnemonics
-        self.show_equiv = _f.equiv
-        self.show_presets = _f.presets
+        draft.show_captions = _f.captions
+        draft.show_mnemonics = _f.mnemonics
+        draft.show_equiv = _f.equiv
+        draft.show_presets = _f.presets
         show_counts = _f.counts
-        self.show_ptext = _f.ptext
+        draft.show_ptext = _f.ptext
         show_charts = _f.charts
         show_ranges = _f.ranges
-        self.show_symbols = _f.symbols
-        self.ctrl_symbol_h = SYMBOL_H if self.show_symbols else 0
-        self.show_header_symbols = _f.header_symbols
-        self.show_units = _f.units
+        draft.show_symbols = _f.symbols
+        draft.ctrl_symbol_h = SYMBOL_H if draft.show_symbols else 0
+        draft.show_header_symbols = _f.header_symbols
+        draft.show_units = _f.units
         self.show_cell_units = _f.cell_units
         show_domain_units = _f.domain_units
         show_temp = _f.temp
         self.show_form = _f.form
-        self.show_form_controls = _f.form_controls
+        draft.show_form_controls = _f.form_controls
         self.show_form_tiles = _f.form_tiles
         show_tuning = _f.tuning
-        self.show_optimization = _f.optimization
-        self.show_weighting = _f.weighting
-        self.show_alt_complexity = _f.alt_complexity
-        self._complexity_shown = (self.show_weighting
+        draft.show_optimization = _f.optimization
+        draft.show_weighting = _f.weighting
+        draft.show_alt_complexity = _f.alt_complexity
+        self._complexity_shown = (draft.show_weighting
                                   and service.damage_weight_slope(self.tuning_scheme) != "unityWeight")
         self._prescaling_shown = self._complexity_shown and (
-            service.is_all_interval(self.tuning_scheme) or self.show_alt_complexity)
-        self.weight_unit = f"({service.weight_annotation(self.tuning_scheme)})"
-        self.complexity_unit = f"({service.complexity_annotation(self.tuning_scheme)})"
-        self.damage_unit = f"¢{self.weight_unit}"
+            service.is_all_interval(self.tuning_scheme) or draft.show_alt_complexity)
+        draft.weight_unit = f"({service.weight_annotation(self.tuning_scheme)})"
+        draft.complexity_unit = f"({service.complexity_annotation(self.tuning_scheme)})"
+        draft.damage_unit = f"¢{draft.weight_unit}"
         self._lbox_show = _f.lbox and self._complexity_shown
         self._cbox_show = _f.cbox and self._complexity_shown
-        self.show_detempering = _f.detempering
+        draft.show_detempering = _f.detempering
         show_interest = _f.interest
         self.gridded = _f.gridded
-        self.show_quantities = _f.quantities
-        self._decimals = _f.decimals
-        self.show_ebk = _f.ebk
+        draft.show_quantities = _f.quantities
+        draft._decimals = _f.decimals
+        draft.show_ebk = _f.ebk
         show_interval_ratios = _f.interval_ratios
         self.show_interval_vectors = _f.interval_vectors
-        self.show_math = _f.math
-        self.custom_weights_active = (self.custom_weights is not None
+        draft.show_math = _f.math
+        draft.custom_weights_active = (self.custom_weights is not None
                                       and not service.is_all_interval(self.tuning_scheme)
-                                      and not self.show_math)
+                                      and not draft.show_math)
         return (show_counts, show_charts, show_ranges, show_domain_units, show_temp,
                 show_tuning, show_interest, show_interval_ratios)
 
-    def _resolve_superspace_dims(self) -> None:
-        self.d = self.state.d
-        self.r = len(self.state.mapping)
-        self.row_draft = self.pending_mapping_row is not None or self.ghost_row
-        self.r_shown = self.r + (1 if self.row_draft else 0)
-        self.elements = self.state.domain_basis
-        self.dL = service.superspace_dimension(self.elements)
-        self.rL = service.superspace_rank(self.state)
+    def _resolve_superspace_dims(self, draft) -> None:
+        draft.d = self.state.d
+        draft.r = len(self.state.mapping)
+        draft.row_draft = self.pending_mapping_row is not None or draft.ghost_row
+        draft.r_shown = draft.r + (1 if draft.row_draft else 0)
+        draft.elements = self.state.domain_basis
+        draft.dL = service.superspace_dimension(draft.elements)
+        draft.rL = service.superspace_rank(self.state)
         self._ss_tun = None
-        self.superspace_primes = service.superspace_primes(self.elements)
-        self.show_nonstandard_domain = self.settings.get("nonstandard_domain", False)
-        self.show_superspace = (
-            self.show_nonstandard_domain
-            and service.domain_has_nonprimes(self.elements)
+        draft.superspace_primes = service.superspace_primes(draft.elements)
+        draft.show_nonstandard_domain = self.settings.get("nonstandard_domain", False)
+        draft.show_superspace = (
+            draft.show_nonstandard_domain
+            and service.domain_has_nonprimes(draft.elements)
             and self.nonprime_approach != "nonprime-based"
         )
-        self.show_superspace_generators = self.show_superspace and self.nonprime_approach == "prime-based"
+        draft.show_superspace_generators = draft.show_superspace and self.nonprime_approach == "prime-based"
 
-    def _resolve_prescaler_and_domain_labels(self) -> None:
+    def _resolve_prescaler_and_domain_labels(self, draft) -> None:
         _p = _resolve_prescaler_labels(self.state, self.tuning_scheme, self.custom_prescaler,
-                                       self.show_equiv, self.show_superspace)
-        self._scheme_prescaler = _p.scheme_prescaler
-        self._realized_prescaler = _p.realized
-        self.prescaler_symbol = _p.symbol
-        self.prescaler_equivalence = _p.equivalence
-        self.prescaling_symbols = _p.prescaling_symbols
-        self.col_labels = _p.col_labels
-        self.row_labels = _p.row_labels
-        self.effective_captions = _p.effective_captions
+                                       draft.show_equiv, draft.show_superspace)
+        draft._scheme_prescaler = _p.scheme_prescaler
+        draft._realized_prescaler = _p.realized
+        draft.prescaler_symbol = _p.symbol
+        draft.prescaler_equivalence = _p.equivalence
+        draft.prescaling_symbols = _p.prescaling_symbols
+        draft.col_labels = _p.col_labels
+        draft.row_labels = _p.row_labels
+        draft.effective_captions = _p.effective_captions
         self.show_identity_objects = self.settings.get("identity_objects", False)
-        self.standard_domain = service.is_standard_domain(self.elements)
-        self.domain_label = "b" if service.domain_has_nonprimes(self.elements) else "p"
-        self.domain_can_shrink = service.can_shrink_domain(self.state)
+        draft.standard_domain = service.is_standard_domain(draft.elements)
+        draft.domain_label = "b" if service.domain_has_nonprimes(draft.elements) else "p"
+        draft.domain_can_shrink = service.can_shrink_domain(self.state)
 
-    def _resolve_interval_sets(self, generator_tuning, target_override, held_vectors, pending_comma,
+    def _resolve_interval_sets(self, draft, generator_tuning, target_override, held_vectors, pending_comma,
                                show_temp, show_tuning) -> None:
-        self._resolve_ghost_previews()
-        self._resolve_targets(target_override)
-        self._resolve_canon_form()
-        self._resolve_held(held_vectors)
-        self._resolve_tuning(generator_tuning, target_override)
-        self._resolve_commas()
-        self._resolve_unchanged(pending_comma, show_temp, show_tuning)
-        self._resolve_interest()
-        self._resolve_ghost_mapped()
-        self._resolve_col_ids()
+        self._resolve_ghost_previews(draft)
+        self._resolve_targets(draft, target_override)
+        self._resolve_canon_form(draft)
+        self._resolve_held(draft, held_vectors)
+        self._resolve_tuning(draft, generator_tuning, target_override)
+        self._resolve_commas(draft)
+        self._resolve_unchanged(draft, pending_comma, show_temp, show_tuning)
+        self._resolve_interest(draft)
+        self._resolve_ghost_mapped(draft)
+        self._resolve_col_ids(draft)
 
-    def _resolve_ghost_previews(self) -> None:
-        self.gens = service.generators(self.state.mapping, self.elements)
-        self.ghost_new = None
-        self.ghost_row_map = self.ghost_row_ratio = None
-        self.ghost_row_mapped = {}
-        self.ghost_comma_vec = self.ghost_comma_ratio = None
-        self.ghost_comma_mapped = ()
-        self.ghost_comma_just = 0.0
-        self.ghost_comma_complexity = 0.0
-        if self.ghost_row:
-            self.ghost_new = service.remove_comma(self.state, self.preview_remove[1])
-            self.ghost_row_map = self.ghost_new.mapping[-1]
-            born_gens = service.generators(self.ghost_new.mapping, self.elements)
-            self.ghost_row_ratio = born_gens[-1] if born_gens else ""
-        elif self.ghost_comma:
-            self.ghost_new = service.remove_mapping_row(self.state, self.preview_remove[1])
-            self.ghost_comma_vec = self.ghost_new.comma_basis[-1] if self.ghost_new.comma_basis else None
-            born_crs = service.comma_ratios(self.ghost_new.comma_basis, self.elements) if self.ghost_new.comma_basis else ()
-            self.ghost_comma_ratio = born_crs[-1] if born_crs else ""
+    def _resolve_ghost_previews(self, draft) -> None:
+        draft.gens = service.generators(self.state.mapping, draft.elements)
+        draft.ghost_new = None
+        draft.ghost_row_map = draft.ghost_row_ratio = None
+        draft.ghost_row_mapped = {}
+        draft.ghost_comma_vec = draft.ghost_comma_ratio = None
+        draft.ghost_comma_mapped = ()
+        draft.ghost_comma_just = 0.0
+        draft.ghost_comma_complexity = 0.0
+        if draft.ghost_row:
+            draft.ghost_new = service.remove_comma(self.state, self.preview_remove[1])
+            draft.ghost_row_map = draft.ghost_new.mapping[-1]
+            born_gens = service.generators(draft.ghost_new.mapping, draft.elements)
+            draft.ghost_row_ratio = born_gens[-1] if born_gens else ""
+        elif draft.ghost_comma:
+            draft.ghost_new = service.remove_mapping_row(self.state, self.preview_remove[1])
+            draft.ghost_comma_vec = draft.ghost_new.comma_basis[-1] if draft.ghost_new.comma_basis else None
+            born_crs = service.comma_ratios(draft.ghost_new.comma_basis, draft.elements) if draft.ghost_new.comma_basis else ()
+            draft.ghost_comma_ratio = born_crs[-1] if born_crs else ""
 
-    def _resolve_targets(self, target_override) -> None:
-        self.targets = service.displayed_targets(self.state, self.tuning_scheme, self.target_spec, target_override)
-        self.all_interval = service.is_all_interval(self.tuning_scheme)
-        self.targets_editable = not self.all_interval
-        self.k = len(self.targets)
-        self.pending_target = list(self.pending_target) if (self.pending_target is not None and self.targets_editable) else None
-        self.k_shown = self.k + (1 if self.pending_target is not None else 0)
-        self.mapped = service.mapped_intervals(self.state.mapping, self.targets, self.elements)
+    def _resolve_targets(self, draft, target_override) -> None:
+        draft.targets = service.displayed_targets(self.state, self.tuning_scheme, self.target_spec, target_override)
+        draft.all_interval = service.is_all_interval(self.tuning_scheme)
+        draft.targets_editable = not draft.all_interval
+        draft.k = len(draft.targets)
+        draft.pending_target = list(self.pending_target) if (self.pending_target is not None and draft.targets_editable) else None
+        draft.k_shown = draft.k + (1 if draft.pending_target is not None else 0)
+        draft.mapped = service.mapped_intervals(self.state.mapping, draft.targets, draft.elements)
 
-    def _resolve_canon_form(self) -> None:
-        self.canon_mapping = service.canonical_mapping(self.state.mapping)
-        self.rc = len(self.canon_mapping)
-        self.form_M = service.form_matrix(self.state.mapping)
-        self.canon_gens = service.generators(self.canon_mapping, self.elements)
-        self.inverse_form_M = service.inverse_form_matrix(self.state.mapping)
-        self.mapping_form_key = service.resolve_mapping_form(
+    def _resolve_canon_form(self, draft) -> None:
+        draft.canon_mapping = service.canonical_mapping(self.state.mapping)
+        draft.rc = len(draft.canon_mapping)
+        draft.form_M = service.form_matrix(self.state.mapping)
+        draft.canon_gens = service.generators(draft.canon_mapping, draft.elements)
+        draft.inverse_form_M = service.inverse_form_matrix(self.state.mapping)
+        draft.mapping_form_key = service.resolve_mapping_form(
             self.state.mapping, self.mapping_form, self.state.domain_basis)
-        self.comma_basis_form_key = (
+        draft.comma_basis_form_key = (
             service.resolve_comma_basis_form(self.state.comma_basis, self.comma_basis_form, self.state.domain_basis)
             if self.state.n else "")
-        self.form_is_canonical = self.mapping_form_key == "canonical"
-        self.show_form_subscript = self.show_form and self.form_is_canonical
-        self.show_canon = self.show_form_tiles and not self.form_is_canonical
+        draft.form_is_canonical = draft.mapping_form_key == "canonical"
+        draft.show_form_subscript = self.show_form and draft.form_is_canonical
+        draft.show_canon = self.show_form_tiles and not draft.form_is_canonical
 
-    def _resolve_held(self, held_vectors) -> None:
-        self.target_vectors = service.target_interval_vectors(self.targets, self.d, self.elements)
-        self.held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(self.d)) for m in held_vectors) if self.show_optimization else ()
-        self.nh = len(self.held)
-        self.pending_held = list(self.pending_held) if (self.pending_held is not None and self.show_optimization) else None
-        self.nh_shown = self.nh + (1 if self.pending_held is not None else 0)
-        self.held_ratios = service.comma_ratios(self.held, self.elements)
+    def _resolve_held(self, draft, held_vectors) -> None:
+        draft.target_vectors = service.target_interval_vectors(draft.targets, draft.d, draft.elements)
+        draft.held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(draft.d)) for m in held_vectors) if draft.show_optimization else ()
+        draft.nh = len(draft.held)
+        draft.pending_held = list(self.pending_held) if (self.pending_held is not None and draft.show_optimization) else None
+        draft.nh_shown = draft.nh + (1 if draft.pending_held is not None else 0)
+        draft.held_ratios = service.comma_ratios(draft.held, draft.elements)
 
-    def _resolve_tuning(self, generator_tuning, target_override) -> None:
+    def _resolve_tuning(self, draft, generator_tuning, target_override) -> None:
         if generator_tuning is not None and len(generator_tuning) == len(self.state.mapping):
-            self.tun = service.tuning_from_generators(self.state.mapping, generator_tuning, self.elements)
-            self._tun_from_generators = True
+            draft.tun = service.tuning_from_generators(self.state.mapping, generator_tuning, draft.elements)
+            draft._tun_from_generators = True
         else:
-            self.tun = service.tuning(self.state.mapping, self.tuning_scheme, self.elements, self.nonprime_approach, held=self.held_ratios,
+            draft.tun = service.tuning(self.state.mapping, self.tuning_scheme, draft.elements, self.nonprime_approach, held=draft.held_ratios,
                                  prescaler_override=self.custom_prescaler, targets=target_override,
                                  weights_override=self.custom_weights)
-            self._tun_from_generators = False
-        self._optimum_target_override = target_override
-        self.target_weights = service.interval_weights(self.state.mapping, self.tuning_scheme, self.targets,
+            draft._tun_from_generators = False
+        draft._optimum_target_override = target_override
+        draft.target_weights = service.interval_weights(self.state.mapping, self.tuning_scheme, draft.targets,
                                                   prescaler_override=self.custom_prescaler,
-                                                  domain_basis=self.elements,
+                                                  domain_basis=draft.elements,
                                                   weights_override=self.custom_weights)
-        self.target_sizes = service.interval_sizes(self.tun, self.targets, self.elements, weights=self.target_weights)
-        self.held_mapped = service.mapped_intervals(self.state.mapping, self.held_ratios, self.elements)
-        self.held_sizes = service.interval_sizes(self.tun, self.held_ratios, self.elements)
+        draft.target_sizes = service.interval_sizes(draft.tun, draft.targets, draft.elements, weights=draft.target_weights)
+        draft.held_mapped = service.mapped_intervals(self.state.mapping, draft.held_ratios, draft.elements)
+        draft.held_sizes = service.interval_sizes(draft.tun, draft.held_ratios, draft.elements)
 
-    def _resolve_commas(self) -> None:
-        self.comma_ratios = service.comma_ratios(self.state.comma_basis, self.elements) if self.state.n else ()
-        self.nc = len(self.comma_ratios)
-        self.mapped_commas = service.mapped_commas(self.state.mapping, self.state.comma_basis)
-        self.comma_sizes = service.interval_sizes(self.tun, self.comma_ratios, self.elements)
+    def _resolve_commas(self, draft) -> None:
+        draft.comma_ratios = service.comma_ratios(self.state.comma_basis, draft.elements) if self.state.n else ()
+        draft.nc = len(draft.comma_ratios)
+        draft.mapped_commas = service.mapped_commas(self.state.mapping, self.state.comma_basis)
+        draft.comma_sizes = service.interval_sizes(draft.tun, draft.comma_ratios, draft.elements)
 
-    def _resolve_unchanged(self, pending_comma, show_temp, show_tuning) -> None:
-        _udata = (service.unchanged_interval_data(self.state, self.held_basis_ratios, self.tun,
-                                                  self.tuning_scheme, self.elements, self.custom_prescaler)
+    def _resolve_unchanged(self, draft, pending_comma, show_temp, show_tuning) -> None:
+        _udata = (service.unchanged_interval_data(self.state, self.held_basis_ratios, draft.tun,
+                                                  self.tuning_scheme, draft.elements, self.custom_prescaler)
                   if (show_temp and show_tuning and self.settings["projection"]) else None)
-        self.show_unchanged = _udata is not None
-        self.nu = len(_udata.basis) if self.show_unchanged else 0
+        draft.show_unchanged = _udata is not None
+        draft.nu = len(_udata.basis) if draft.show_unchanged else 0
         if _udata is not None:
-            self.unchanged_basis, self.unchanged_ratios = _udata.basis, _udata.ratios
-            self.unchanged_mapped, self.unchanged_sizes = _udata.mapped, _udata.sizes
-            self.unchanged_complexities = _udata.complexities
+            draft.unchanged_basis, draft.unchanged_ratios = _udata.basis, _udata.ratios
+            draft.unchanged_mapped, draft.unchanged_sizes = _udata.mapped, _udata.sizes
+            draft.unchanged_complexities = _udata.complexities
         else:
-            self.unchanged_basis = None
-            self.unchanged_ratios = self.unchanged_mapped = self.unchanged_complexities = ()
-            self.unchanged_sizes = service.IntervalSizes((), (), (), ())
-        self.born_u = self.ghost_row and self.show_unchanged
-        if self.born_u:
-            tun_new = service.tuning(self.ghost_new.mapping, self.tuning_scheme, self.elements,
+            draft.unchanged_basis = None
+            draft.unchanged_ratios = draft.unchanged_mapped = draft.unchanged_complexities = ()
+            draft.unchanged_sizes = service.IntervalSizes((), (), (), ())
+        draft.born_u = draft.ghost_row and draft.show_unchanged
+        if draft.born_u:
+            tun_new = service.tuning(draft.ghost_new.mapping, self.tuning_scheme, draft.elements,
                                      self.nonprime_approach, held=self.held_basis_ratios,
                                      prescaler_override=self.custom_prescaler)
-            ud_new = service.unchanged_interval_data(self.ghost_new, self.held_basis_ratios, tun_new,
-                                                     self.tuning_scheme, self.elements, self.custom_prescaler)
-            if ud_new is not None and len(ud_new.basis) > self.nu:
+            ud_new = service.unchanged_interval_data(draft.ghost_new, self.held_basis_ratios, tun_new,
+                                                     self.tuning_scheme, draft.elements, self.custom_prescaler)
+            if ud_new is not None and len(ud_new.basis) > draft.nu:
                 bratio = ud_new.ratios[-1]
-                bm = service.mapped_intervals(self.state.mapping, (bratio,), self.elements) if bratio is not None else None
-                self.unchanged_basis = (*tuple(self.unchanged_basis), ud_new.basis[-1])
-                self.unchanged_ratios = (*tuple(self.unchanged_ratios), bratio)
-                self.unchanged_mapped = tuple((*tuple(row), bm[i][0] if bm is not None else None) for i, row in enumerate(self.unchanged_mapped))
-                self.unchanged_complexities = (*tuple(self.unchanged_complexities), ud_new.complexities[-1])
-                s, n = self.unchanged_sizes, ud_new.sizes
-                self.unchanged_sizes = service.IntervalSizes(
+                bm = service.mapped_intervals(self.state.mapping, (bratio,), draft.elements) if bratio is not None else None
+                draft.unchanged_basis = (*tuple(draft.unchanged_basis), ud_new.basis[-1])
+                draft.unchanged_ratios = (*tuple(draft.unchanged_ratios), bratio)
+                draft.unchanged_mapped = tuple((*tuple(row), bm[i][0] if bm is not None else None) for i, row in enumerate(draft.unchanged_mapped))
+                draft.unchanged_complexities = (*tuple(draft.unchanged_complexities), ud_new.complexities[-1])
+                s, n = draft.unchanged_sizes, ud_new.sizes
+                draft.unchanged_sizes = service.IntervalSizes(
                     (*tuple(s.tempered), n.tempered[-1]), (*tuple(s.just), n.just[-1]),
                     (*tuple(s.errors), n.errors[-1]), (*tuple(s.damage), n.damage[-1]))
-                self.nu += 1
+                draft.nu += 1
             else:
-                self.born_u = False
-        self.pending = (list(pending_comma)
+                draft.born_u = False
+        draft.pending = (list(pending_comma)
                         if pending_comma is not None else None)
-        self.comma_draft = self.pending is not None or self.ghost_comma
-        self.nc_shown = self.nc + (1 if self.comma_draft else 0)
-        self.nv_shown = self.nc_shown + self.nu
-        self.empty_comma_w = (_min_width_for_lines("nullity", 1)
-                              if (self.show_unchanged and self.nc_shown == 0) else 0)
-        if self.show_unchanged:
-            for (rk, ck), name in list(self.effective_captions.items()):
+        draft.comma_draft = draft.pending is not None or draft.ghost_comma
+        draft.nc_shown = draft.nc + (1 if draft.comma_draft else 0)
+        draft.nv_shown = draft.nc_shown + draft.nu
+        draft.empty_comma_w = (_min_width_for_lines("nullity", 1)
+                              if (draft.show_unchanged and draft.nc_shown == 0) else 0)
+        if draft.show_unchanged:
+            for (rk, ck), name in list(draft.effective_captions.items()):
                 if ck == "commas":
                     renamed = name.replace("comma basis", "unrotated vector list").replace(" (made to vanish!)", "")
                     if renamed.count("list") > 1:
                         renamed = renamed.replace("unrotated vector list", "unrotated vector", 1)
-                    self.effective_captions[(rk, ck)] = renamed
+                    draft.effective_captions[(rk, ck)] = renamed
 
-    def _resolve_interest(self) -> None:
-        self.interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(self.d)) for m in self.interest)
-        self.mi = len(self.interest)
-        self.pending_interest = list(self.pending_interest) if self.pending_interest is not None else None
-        self.mi_shown = self.mi + (1 if self.pending_interest is not None else 0)
-        self.element_draft = self.show_nonstandard_domain and self.pending_element is not None
-        self.d_shown = self.d + (1 if self.element_draft else 0)
-        self.interest_ratios = service.comma_ratios(self.interest, self.elements)
-        self.interest_mapped = service.mapped_intervals(self.state.mapping, self.interest_ratios, self.elements)
-        self.interest_sizes = service.interval_sizes(self.tun, self.interest_ratios, self.elements)
+    def _resolve_interest(self, draft) -> None:
+        draft.interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(draft.d)) for m in self.interest)
+        draft.mi = len(draft.interest)
+        draft.pending_interest = list(self.pending_interest) if self.pending_interest is not None else None
+        draft.mi_shown = draft.mi + (1 if draft.pending_interest is not None else 0)
+        draft.element_draft = draft.show_nonstandard_domain and self.pending_element is not None
+        draft.d_shown = draft.d + (1 if draft.element_draft else 0)
+        draft.interest_ratios = service.comma_ratios(draft.interest, draft.elements)
+        draft.interest_mapped = service.mapped_intervals(self.state.mapping, draft.interest_ratios, draft.elements)
+        draft.interest_sizes = service.interval_sizes(draft.tun, draft.interest_ratios, draft.elements)
 
-    def _resolve_ghost_mapped(self) -> None:
-        if self.ghost_row and self.ghost_new is not None:
-            nm = self.ghost_new.mapping
+    def _resolve_ghost_mapped(self, draft) -> None:
+        if draft.ghost_row and draft.ghost_new is not None:
+            nm = draft.ghost_new.mapping
             def _newborn_mapped(ratios):
-                return tuple(service.mapped_intervals(nm, (r,), self.elements)[-1][0] if r is not None else None
+                return tuple(service.mapped_intervals(nm, (r,), draft.elements)[-1][0] if r is not None else None
                              for r in ratios)
-            self.ghost_row_mapped = {
+            draft.ghost_row_mapped = {
                 key: _newborn_mapped(ratios)
-                for key, ratios in (("targets", self.targets), ("interest", self.interest_ratios),
-                                    ("held", self.held_ratios), ("commas", self.comma_ratios),
-                                    ("unchanged", self.unchanged_ratios))}
-        elif self.ghost_comma and self.ghost_comma_ratio:
-            col = service.mapped_intervals(self.state.mapping, (self.ghost_comma_ratio,), self.elements)
-            self.ghost_comma_mapped = tuple(row[0] for row in col)
-            self.ghost_comma_just = service.interval_sizes(self.tun, (self.ghost_comma_ratio,), self.elements).just[0]
-            self.ghost_comma_complexity = service.interval_complexities(
-                self.state.mapping, self.tuning_scheme, (self.ghost_comma_ratio,),
-                prescaler_override=self.custom_prescaler, domain_basis=self.elements)[0]
+                for key, ratios in (("targets", draft.targets), ("interest", draft.interest_ratios),
+                                    ("held", draft.held_ratios), ("commas", draft.comma_ratios),
+                                    ("unchanged", draft.unchanged_ratios))}
+        elif draft.ghost_comma and draft.ghost_comma_ratio:
+            col = service.mapped_intervals(self.state.mapping, (draft.ghost_comma_ratio,), draft.elements)
+            draft.ghost_comma_mapped = tuple(row[0] for row in col)
+            draft.ghost_comma_just = service.interval_sizes(draft.tun, (draft.ghost_comma_ratio,), draft.elements).just[0]
+            draft.ghost_comma_complexity = service.interval_complexities(
+                self.state.mapping, self.tuning_scheme, (draft.ghost_comma_ratio,),
+                prescaler_override=self.custom_prescaler, domain_basis=draft.elements)[0]
 
-    def _resolve_col_ids(self) -> None:
-        self._col_ids = {
+    def _resolve_col_ids(self, draft) -> None:
+        draft._col_ids = {
             name: assign_column_tokens(self.prev_ids.get(name), keys, claim_unmatched=claim)
-            for name, keys, claim in (("targets", self.targets, False),
-                                      ("held", self.held_ratios, False),
-                                      ("interest", self.interest_ratios, False),
-                                      ("commas", self.comma_ratios, True),
+            for name, keys, claim in (("targets", draft.targets, False),
+                                      ("held", draft.held_ratios, False),
+                                      ("interest", draft.interest_ratios, False),
+                                      ("commas", draft.comma_ratios, True),
                                       ("gens", tuple(tuple(row) for row in self.state.mapping), True))
         }
-        self._col_ids["detempering"] = self._col_ids["gens"]
+        draft._col_ids["detempering"] = draft._col_ids["gens"]
 
-    def _resolve_complexities(self) -> None:
-        self.complexities = {
-            "primes": service.interval_complexities(self.state.mapping, self.tuning_scheme, tuple(service.element_ratio(e) for e in self.elements),
-                                                    prescaler_override=self.custom_prescaler, domain_basis=self.elements),
-            "commas": service.interval_complexities(self.state.mapping, self.tuning_scheme, self.comma_ratios,
-                                                    prescaler_override=self.custom_prescaler, domain_basis=self.elements),
-            "targets": service.interval_complexities(self.state.mapping, self.tuning_scheme, self.targets,
-                                                     prescaler_override=self.custom_prescaler, domain_basis=self.elements),
-            "interest": service.interval_complexities(self.state.mapping, self.tuning_scheme, self.interest_ratios,
-                                                      prescaler_override=self.custom_prescaler, domain_basis=self.elements),
-            "held": service.interval_complexities(self.state.mapping, self.tuning_scheme, self.held_ratios,
-                                                  prescaler_override=self.custom_prescaler, domain_basis=self.elements),
-            "detempering": service.interval_complexities(self.state.mapping, self.tuning_scheme, self.gens,
-                                                         prescaler_override=self.custom_prescaler, domain_basis=self.elements),
+    def _resolve_complexities(self, draft) -> None:
+        draft.complexities = {
+            "primes": service.interval_complexities(self.state.mapping, self.tuning_scheme, tuple(service.element_ratio(e) for e in draft.elements),
+                                                    prescaler_override=self.custom_prescaler, domain_basis=draft.elements),
+            "commas": service.interval_complexities(self.state.mapping, self.tuning_scheme, draft.comma_ratios,
+                                                    prescaler_override=self.custom_prescaler, domain_basis=draft.elements),
+            "targets": service.interval_complexities(self.state.mapping, self.tuning_scheme, draft.targets,
+                                                     prescaler_override=self.custom_prescaler, domain_basis=draft.elements),
+            "interest": service.interval_complexities(self.state.mapping, self.tuning_scheme, draft.interest_ratios,
+                                                      prescaler_override=self.custom_prescaler, domain_basis=draft.elements),
+            "held": service.interval_complexities(self.state.mapping, self.tuning_scheme, draft.held_ratios,
+                                                  prescaler_override=self.custom_prescaler, domain_basis=draft.elements),
+            "detempering": service.interval_complexities(self.state.mapping, self.tuning_scheme, draft.gens,
+                                                         prescaler_override=self.custom_prescaler, domain_basis=draft.elements),
         }
-        self.prescaler = service.complexity_prescaler(self.state.mapping, self.tuning_scheme, override=self.custom_prescaler)
-        self.prescaler_is_matrix = isinstance(self.prescaler[0], (tuple, list))
+        draft.prescaler = service.complexity_prescaler(self.state.mapping, self.tuning_scheme, override=self.custom_prescaler)
+        draft.prescaler_is_matrix = isinstance(draft.prescaler[0], (tuple, list))
 
-    def _resolve_projection_data(self, show_tuning) -> None:
+    def _resolve_projection_data(self, draft, show_tuning) -> None:
         self.show_projection = show_tuning and self.settings["projection"]
         if self.show_projection:
             for rc in (("mapping", "gens"), ("ss_mapping", "ssgens")):
-                cap = self.effective_captions.get(rc)
+                cap = draft.effective_captions.get(rc)
                 if cap and cap.endswith("generators"):
-                    self.effective_captions[rc] = cap[:-1] + "(s / embedding)"
-        self.projection_matrix = (service.tuning_projection(self.state, self.held_basis_ratios)
+                    draft.effective_captions[rc] = cap[:-1] + "(s / embedding)"
+        draft.projection_matrix = (service.tuning_projection(self.state, self.held_basis_ratios)
                                   if self.show_projection else None)
-        self.embedding_matrix = (service.tuning_embedding(self.state, self.held_basis_ratios)
+        draft.embedding_matrix = (service.tuning_embedding(self.state, self.held_basis_ratios)
                                  if self.show_projection else None)
-        self.canon_embedding_matrix = (service.canonical_generator_embedding(self.state, self.held_basis_ratios)
+        draft.canon_embedding_matrix = (service.canonical_generator_embedding(self.state, self.held_basis_ratios)
                                        if self.show_projection else None)
-        self.projection_rationals = (service.projection_matrix_rationals(self.state, self.held_basis_ratios)
+        draft.projection_rationals = (service.projection_matrix_rationals(self.state, self.held_basis_ratios)
                                      if self.show_projection else None)
-        self.proj_detempering = service.project_vectors(self.projection_rationals, self.detempering_vectors)
-        self.proj_held = service.project_vectors(self.projection_rationals, self.held)
-        self.proj_targets = service.project_vectors(self.projection_rationals, self.target_vectors)
-        self.proj_interest = service.project_vectors(self.projection_rationals, self.interest)
-        self.embedding_superspace = (service.superspace_generator_embedding_display(self.state, self.held_basis_ratios)
-                                     if (self.show_projection and self.show_superspace) else None)
-        self.projection_superspace = (service.superspace_prime_projection_display(self.state, self.held_basis_ratios)
-                                      if (self.show_projection and self.show_superspace) else None)
-        self.show_ss_projection = self.show_projection and self.show_superspace
-        self.ss_projection_matrix = (service.superspace_tuning_projection(self.state, self.held_basis_ratios)
+        draft.proj_detempering = service.project_vectors(draft.projection_rationals, draft.detempering_vectors)
+        draft.proj_held = service.project_vectors(draft.projection_rationals, draft.held)
+        draft.proj_targets = service.project_vectors(draft.projection_rationals, draft.target_vectors)
+        draft.proj_interest = service.project_vectors(draft.projection_rationals, draft.interest)
+        draft.embedding_superspace = (service.superspace_generator_embedding_display(self.state, self.held_basis_ratios)
+                                     if (self.show_projection and draft.show_superspace) else None)
+        draft.projection_superspace = (service.superspace_prime_projection_display(self.state, self.held_basis_ratios)
+                                      if (self.show_projection and draft.show_superspace) else None)
+        self.show_ss_projection = self.show_projection and draft.show_superspace
+        draft.ss_projection_matrix = (service.superspace_tuning_projection(self.state, self.held_basis_ratios)
                                      if self.show_ss_projection else None)
-        self.ss_embedding_matrix = (service.superspace_tuning_embedding(self.state, self.held_basis_ratios)
+        draft.ss_embedding_matrix = (service.superspace_tuning_embedding(self.state, self.held_basis_ratios)
                                     if self.show_ss_projection else None)
-        self.ss_projection_rationals = (service.superspace_projection_matrix_rationals(self.state, self.held_basis_ratios)
+        draft.ss_projection_rationals = (service.superspace_projection_matrix_rationals(self.state, self.held_basis_ratios)
                                         if self.show_ss_projection else None)
         def _lift(vs):
-            return service.lift_vectors_to_superspace(self.elements, vs)
-        _ssp = self.ss_projection_rationals
-        self.ss_proj_basis = service.project_vectors(_ssp, service.basis_in_superspace(self.elements))
-        self.ss_proj_detempering = service.project_vectors(_ssp, _lift(self.detempering_vectors))
-        self.ss_proj_held = service.project_vectors(_ssp, _lift(self.held))
-        self.ss_proj_targets = service.project_vectors(_ssp, _lift(self.target_vectors))
-        self.ss_proj_interest = service.project_vectors(_ssp, _lift(self.interest))
-        self.ss_unchanged = tuple(
-            (service.lift_vectors_to_superspace(self.elements, (ub,))[0] if ub is not None else None)
-            for ub in (self.unchanged_basis if self.show_unchanged else ()))
-        self.ss_unchanged_mapped = tuple(
+            return service.lift_vectors_to_superspace(draft.elements, vs)
+        _ssp = draft.ss_projection_rationals
+        draft.ss_proj_basis = service.project_vectors(_ssp, service.basis_in_superspace(draft.elements))
+        draft.ss_proj_detempering = service.project_vectors(_ssp, _lift(draft.detempering_vectors))
+        draft.ss_proj_held = service.project_vectors(_ssp, _lift(draft.held))
+        draft.ss_proj_targets = service.project_vectors(_ssp, _lift(draft.target_vectors))
+        draft.ss_proj_interest = service.project_vectors(_ssp, _lift(draft.interest))
+        draft.ss_unchanged = tuple(
+            (service.lift_vectors_to_superspace(draft.elements, (ub,))[0] if ub is not None else None)
+            for ub in (draft.unchanged_basis if draft.show_unchanged else ()))
+        draft.ss_unchanged_mapped = tuple(
             (service.map_vectors_into_superspace_generators(self.state, (ub,))[0] if ub is not None else None)
-            for ub in (self.unchanged_basis if self.show_unchanged else ()))
+            for ub in (draft.unchanged_basis if draft.show_unchanged else ()))
 
     def _resolve_tile_extras(self, show_ranges, show_tuning):
         _r = self.resolved
@@ -474,29 +479,3 @@ class _ResolveMixin:
             "weight": self.slope_extra,
             "damage": self.opt_extra + self.approach_extra,
         }
-
-    def _resolve_ptext_strings(self, generator_tuning, target_override) -> None:
-        _r = self.resolved
-        self.ptext_strings = (service.plain_text_values(self.state, self.tuning_scheme, self.target_spec,
-                                                   held=_r.held.vectors, interest=_r.interest.vectors,
-                                                   generator_tuning=generator_tuning,
-                                                   target_override=target_override,
-                                                   nonprime_approach=self.nonprime_approach,
-                                                   superspace=_r.flags.superspace,
-                                                   superspace_generator_override=(
-                                                       self.superspace_generator_tuning
-                                                       if _r.flags.superspace_generators else None),
-                                                   consolidate_v=_r.unchanged.shown,
-                                                   held_basis_ratios=self.held_basis_ratios,
-                                                   decimals=_r.flags.decimals,
-                                                   custom_prescaler=self.custom_prescaler,
-                                                   derived=service.DerivedQuantities(
-                                                       targets=_r.targets.ratios, tun=_r.tuning.tun,
-                                                       target_weights=_r.tuning.target_weights,
-                                                       target_sizes=_r.targets.sizes,
-                                                       comma_sizes=_r.commas.sizes,
-                                                       superspace_tun=(self.superspace_tun()
-                                                                       if _r.flags.superspace else None)))
-                         if _r.flags.ptext else {})
-        if not _r.flags.ebk:
-            self.ptext_strings = {k: service.ebk_to_simple_matrix(v) for k, v in self.ptext_strings.items()}
