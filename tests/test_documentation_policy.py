@@ -28,7 +28,7 @@ _COMMENTS_ALLOWED = {
     "app/render_html_text.py",
     "app/editor.py",
     "app/service/text.py",
-    "app/service/core.py",
+    "app/service/core_vectors.py",
 }
 
 

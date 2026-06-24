@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from fractions import Fraction
 
-from rtt.app.service.core import (
+from rtt.app.service.core import standard_primes
+from rtt.app.service.core_vectors import (
     _interval_vectors,
     _vectors_to_ratios,
     comma_ratios,
-    standard_primes,
 )
 from rtt.library.domain_basis import is_standard_prime_limit_domain_basis
 from rtt.library.math_utils import equave_reduce

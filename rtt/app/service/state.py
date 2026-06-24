@@ -7,11 +7,11 @@ import sympy as sp
 
 from rtt.app.service import outcome
 from rtt.app.service.core import (
-    _to_matrix,
     is_standard_domain,
     standard_primes,
 )
 from rtt.app.service.core_intervals import transform_ratio
+from rtt.app.service.core_vectors import _to_matrix
 from rtt.app.service.outcome import Outcome
 from rtt.library.dimensions import get_d, get_n, get_r
 from rtt.library.domain_basis import (

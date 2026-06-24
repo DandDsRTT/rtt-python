@@ -5,20 +5,22 @@ from dataclasses import dataclass
 from rtt.app.service.core import (
     IntervalSizes,
     Tuning,
-    comma_ratios,
-    element_ratio,
-    generator_detempering,
-    generators,
     interval_complexities,
     interval_sizes,
     interval_weights,
-    mapped_commas,
-    mapped_intervals,
-    target_interval_vectors,
     tuning,
     tuning_from_generators,
 )
 from rtt.app.service.core_forms import canonical_mapping, form_matrix, inverse_form_matrix
+from rtt.app.service.core_vectors import (
+    comma_ratios,
+    element_ratio,
+    generator_detempering,
+    generators,
+    mapped_commas,
+    mapped_intervals,
+    target_interval_vectors,
+)
 from rtt.app.service.projection import unchanged_interval_data
 from rtt.app.service.schemes import (
     complexity_prescaler,

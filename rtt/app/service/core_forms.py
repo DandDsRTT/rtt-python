@@ -5,7 +5,7 @@ from fractions import Fraction
 
 import sympy as sp
 
-from rtt.app.service.core import _to_matrix
+from rtt.app.service.core_vectors import _to_matrix
 from rtt.library.canonicalization import canonical_ca, canonical_ma
 from rtt.library.comma_forms import minimal_ca, positive_ratio_ca
 from rtt.library.domain_basis import is_standard_prime_limit_domain_basis

@@ -7,7 +7,8 @@ from functools import lru_cache
 
 import sympy as sp
 
-from rtt.app.service.core import DEFAULT_TUNING_SCHEME, _hashable, _to_matrix
+from rtt.app.service.core import DEFAULT_TUNING_SCHEME, _hashable
+from rtt.app.service.core_vectors import _to_matrix
 from rtt.library.domain_basis import get_domain_basis
 from rtt.library.dual import mapping_matrix
 from rtt.library.symbolic_tuning import closed_form_generator_operator

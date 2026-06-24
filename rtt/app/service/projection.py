@@ -10,14 +10,16 @@ import sympy as sp
 from rtt.app.service.core import (
     IntervalSizes,
     Tuning,
-    _vectors_to_ratios,
-    comma_ratios,
     interval_complexities,
     interval_sizes,
-    mapped_commas,
 )
 from rtt.app.service.core_forms import inverse_form_matrix
 from rtt.app.service.core_intervals import interval_vector
+from rtt.app.service.core_vectors import (
+    _vectors_to_ratios,
+    comma_ratios,
+    mapped_commas,
+)
 from rtt.app.service.state import TemperamentState
 from rtt.library.generator_embedding import get_generator_embedding, get_tempering_projection
 from rtt.library.superspace import apply_matrix_to_vectors, greedy_independent_rows

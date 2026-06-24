@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from rtt.app.service.core import Tuning, comma_ratios, interval_sizes, mapped_intervals
+from rtt.app.service.core import Tuning, interval_sizes
+from rtt.app.service.core_vectors import comma_ratios, mapped_intervals
 from rtt.app.service.projection import (
     canonical_generator_embedding,
     project_vectors,
