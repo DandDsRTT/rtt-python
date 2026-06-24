@@ -163,7 +163,7 @@ class EditController:
             target = None
         if target is None and group == "element":
             target = next((cb.id for cb in lay.cells if cb.id == "basis:pending"), None)
-        inp = self.page.rec.handles(target).input if target is not None else None
+        inp = self.page.rec.handles(target).value.input if target is not None else None
         if inp is not None:
             self._focus_draft_cell(inp)
 
@@ -281,7 +281,7 @@ class EditController:
         if self.page.building:
             return
         self.page.gestures.end_chooser_gesture()
-        num, sel = self.page.rec.cells["preset:target"].select
+        num, sel = self.page.rec.cells["preset:target"].chooser.select
         out = service.resolve_target_limit(
             sel.value, num.value, self.page.editor.state.domain_basis
         )

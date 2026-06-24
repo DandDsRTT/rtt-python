@@ -321,9 +321,9 @@ class _Reconciler:
     def _wire_cell_input(self, wrap, cb: spreadsheet.CellBox) -> None:
         if cb.kind.endswith(("plus", "minus")):
             wrap.on("mousedown", js_handler="(e) => e.preventDefault()")
-        edit_input = self.cells[cb.id].input or self.cells[cb.id].ptext_input
+        edit_input = self.cells[cb.id].value.input or self.cells[cb.id].value.ptext_input
         if edit_input is not None:
-            den = self.cells[cb.id].den_input
+            den = self.cells[cb.id].value.den_input
             guard = _STACKED_EXIT_JS if den is not None else None
             for fld in (edit_input, den) if den is not None else (edit_input,):
                 fld.on(
@@ -377,34 +377,34 @@ class _Reconciler:
         return self.entities.get(eid, _EMPTY_ENTITY)
 
     def cell_value(self, cid: str) -> str:
-        num = str(self.cells[cid].input.value).strip()
+        num = str(self.cells[cid].value.input.value).strip()
         if not num:
             return ""
         if num == "?":
             return "?/?"
         if "/" in num:
             return num
-        den = str(self.cells[cid].den_input.value).strip() if self.cells[cid].den_input else ""
+        den = str(self.cells[cid].value.den_input.value).strip() if self.cells[cid].value.den_input else ""
         return num if den in ("", "1", "?") else f"{num}/{den}"
 
     def decimal_value(self, cid: str) -> str:
-        whole = str(self.cells[cid].input.value).strip()
+        whole = str(self.cells[cid].value.input.value).strip()
         if not whole:
             return ""
         if "." in whole:
             return whole
         frac = (
-            str(self.cells[cid].den_input.value).strip().lstrip(".")
-            if self.cells[cid].den_input
+            str(self.cells[cid].value.den_input.value).strip().lstrip(".")
+            if self.cells[cid].value.den_input
             else ""
         )
         return whole if not frac else f"{whole}.{frac}"
 
     def set_decimal_value(self, cid: str, text: str) -> None:
         whole, frac = _cents_parts(text)
-        self.cells[cid].input.value = whole
-        if self.cells[cid].den_input:
-            self.cells[cid].den_input.value = frac
+        self.cells[cid].value.input.value = whole
+        if self.cells[cid].value.den_input:
+            self.cells[cid].value.den_input.value = frac
 
     def _target_preset_values(self):
         if self._editor.target_override is not None or service.is_all_interval(

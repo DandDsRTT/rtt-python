@@ -47,14 +47,14 @@ def test_drop_purges_a_cell_from_every_handle_store():
     # no parallel-dict sweep-list to forget (the old _handle_dicts footgun is gone by construction).
     rec = app._Reconciler(Editor())
     rec.cells["scheme:primes"] = CellHandles()  # make_cell creates both records per cell in production
-    rec.cells["scheme:primes"].scheme_button = "the-button"
+    rec.cells["scheme:primes"].chooser.scheme_button = "the-button"
     rec.entities["scheme:primes"] = EntityHandles(el=_FakeElement())
     rec.entities["scheme:primes"].styled = "left:0"
     rec.entities["scheme:primes"].ring_sig = (False, False)
     rec.drop("scheme:primes")
     assert "scheme:primes" not in rec.cells
     assert "scheme:primes" not in rec.entities
-    assert rec.handles("scheme:primes").scheme_button is None  # null-object, not a leaked handle
+    assert rec.handles("scheme:primes").chooser.scheme_button is None  # null-object, not a leaked handle
     assert rec.entity("scheme:primes").el is None
 
 
@@ -63,12 +63,12 @@ def test_handles_sentinel_reads_none_but_refuses_writes():
     # That sentinel is SHARED, so a WRITE through it would silently corrupt every future miss — make
     # it raise instead, turning a latent bug into an immediate error. Real records stay writable.
     rec = app._Reconciler(Editor())
-    assert rec.handles("ghost").input is None
+    assert rec.handles("ghost").value.input is None
     with pytest.raises(AttributeError):
-        rec.handles("ghost").input = "leak"
+        rec.handles("ghost").value.input = "leak"
     rec.cells["live"] = CellHandles()
-    rec.cells["live"].input = "ok"
-    assert rec.handles("live").input == "ok"
+    rec.cells["live"].value.input = "ok"
+    assert rec.handles("live").value.input == "ok"
 
 
 def test_on_disconnect_cancels_the_pending_target_limit_commit():

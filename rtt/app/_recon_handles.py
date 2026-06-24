@@ -11,7 +11,7 @@ class EntityHandles:
 
 
 @dataclass
-class CellHandles:
+class ValueHandles:
     input: object = None
     den_input: object = None
     frac_edit: object = None
@@ -22,53 +22,75 @@ class CellHandles:
     stacked_face: object = None
     stacked_w: object = None
     gensign_face: object = None
+    ptext_input: object = None
+
+
+@dataclass
+class DisplayHandles:
     html: object = None
     ebk_size: object = None
     chart_key: object = None
     range_key: object = None
     expr: object = None
     expr_state: object = None
-    kind: object = None
-    select: object = None
-    check: object = None
-    ptext_input: object = None
-    rangeopts: dict = field(default_factory=dict)
-    scheme_button: object = None
-    mean_damage_tip: object = None
     caption: object = None
     caption_html: object = None
     math_cell: object = None
     math_rendered: object = None
+
+
+@dataclass
+class ChooserHandles:
+    select: object = None
+    check: object = None
+    rangeopts: dict = field(default_factory=dict)
+    scheme_button: object = None
     fold_state: object = None
+
+
+@dataclass
+class CellHandles:
+    value: ValueHandles = field(default_factory=ValueHandles)
+    display: DisplayHandles = field(default_factory=DisplayHandles)
+    chooser: ChooserHandles = field(default_factory=ChooserHandles)
+    kind: object = None
+    content_sig: object = None
     cell_unit: object = None
     cell_unit_text: object = None
     popup_state: object = None
-    content_sig: object = None
+    mean_damage_tip: object = None
     help_tip: object = None
     guide_help_text: object = None
 
 
-class _ReadOnlyCellHandles(CellHandles):
-    def __setattr__(self, name, value):
-        raise AttributeError(
-            f"the empty-cell handle sentinel is read-only ({name!r} assignment): rec.handles(id) "
-            "returned it because the cell id is not live — route writes through rec.cells[id]"
-        )
+def _reject_write(self, name, value):
+    raise AttributeError(
+        f"read-only handle sentinel ({name!r} assignment): rec.handles(id)/rec.entity(id) returned it "
+        "because the id is not live — route writes through rec.cells[id] / rec.entities[id]"
+    )
 
 
-class _ReadOnlyEntityHandles(EntityHandles):
-    def __setattr__(self, name, value):
-        raise AttributeError(
-            f"the missing-entity handle sentinel is read-only ({name!r} assignment): rec.entity(id) "
-            "returned it because the id is not live — route writes through rec.entities[id]"
-        )
+def _read_only(cls):
+    return type(f"_ReadOnly{cls.__name__}", (cls,), {"__setattr__": _reject_write})
 
 
-def _frozen(cls, base):
-    sentinel = base()
-    sentinel.__class__ = cls
+_RO = {c: _read_only(c) for c in (CellHandles, ValueHandles, DisplayHandles, ChooserHandles, EntityHandles)}
+
+
+def _frozen_cell() -> CellHandles:
+    sentinel = CellHandles()
+    sentinel.value.__class__ = _RO[ValueHandles]
+    sentinel.display.__class__ = _RO[DisplayHandles]
+    sentinel.chooser.__class__ = _RO[ChooserHandles]
+    sentinel.__class__ = _RO[CellHandles]
     return sentinel
 
 
-EMPTY = _frozen(_ReadOnlyCellHandles, CellHandles)
-EMPTY_ENTITY = _frozen(_ReadOnlyEntityHandles, EntityHandles)
+def _frozen_entity() -> EntityHandles:
+    sentinel = EntityHandles()
+    sentinel.__class__ = _RO[EntityHandles]
+    return sentinel
+
+
+EMPTY = _frozen_cell()
+EMPTY_ENTITY = _frozen_entity()
