@@ -16,7 +16,7 @@ from rtt.app.spreadsheet_emit_tuning import _EmitTuningMixin
 from rtt.app.spreadsheet_emit_vectors import _EmitVectorsMixin
 from rtt.app.spreadsheet_geometry import _GeometryMixin
 from rtt.app.spreadsheet_layout import _LayoutMixin
-from rtt.app.spreadsheet_resolve import _ResolveMixin
+from rtt.app.spreadsheet_resolve import Resolver
 from rtt.app.spreadsheet_resolved import Resolved
 from rtt.app.spreadsheet_text import (
     _title_w,
@@ -24,7 +24,7 @@ from rtt.app.spreadsheet_text import (
 
 
 class _GridBuilder(
-    _ResolveMixin,
+    Resolver,
     _LayoutMixin,
     _GeometryMixin,
     _ClosedFormMixin,
@@ -109,6 +109,6 @@ def build(state, settings=None, collapsed=None, **inputs) -> Layout:
 
 
 def resolve(state, settings=None, collapsed=None, **inputs) -> Resolved:
-    return _GridBuilder(
+    return Resolver(
         state, settings=settings, collapsed=collapsed, resolve_only=True, **inputs
     ).resolved
