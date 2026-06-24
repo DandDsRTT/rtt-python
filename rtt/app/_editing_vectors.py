@@ -40,11 +40,11 @@ class _VectorEdits:
     def _edit_pending_vector(self, spec, preview, toks, d) -> None:
         cell_id = spec.cell_id
         pt = spreadsheet_text.pending_token(toks)
-        if any(self.page.rec.handles(cell_id(pt, p)).input is None for p in range(d)):
+        if any(self.page.rec.handles(cell_id(pt, p)).value.input is None for p in range(d)):
             if preview:
                 self.page.gestures.edit_candidate(None)
             return
-        values = [_parse_int(self.page.rec.cells[cell_id(pt, p)].input.value) for p in range(d)]
+        values = [_parse_int(self.page.rec.cells[cell_id(pt, p)].value.input.value) for p in range(d)]
         if preview:
             self.page.gestures.edit_candidate(
                 (lambda v=values: spec.set_pending(v)) if spec.draft_arms else None
@@ -67,14 +67,14 @@ class _VectorEdits:
         cell_id = spec.cell_id
         count = spec.count()
         if len(toks) != count or any(
-            self.page.rec.handles(cell_id(toks[i], p)).input is None
+            self.page.rec.handles(cell_id(toks[i], p)).value.input is None
             for i in range(count)
             for p in range(d)
         ):
             self._finish_edit(preview, service.IGNORE)
             return
         vectors = [
-            [_parse_int(self.page.rec.cells[cell_id(toks[i], p)].input.value) for p in range(d)]
+            [_parse_int(self.page.rec.cells[cell_id(toks[i], p)].value.input.value) for p in range(d)]
             for i in range(count)
         ]
         if any(v is None for vec in vectors for v in vec):
@@ -96,7 +96,7 @@ class _VectorEdits:
         r = len(self.page.editor.state.mapping)
         rc = len(service.canonical_mapping(self.page.editor.state.mapping))
         if any(
-            self.page.rec.handles(ids.form_cell(i, j)).input is None
+            self.page.rec.handles(ids.form_cell(i, j)).value.input is None
             for i in range(r)
             for j in range(rc)
         ):
@@ -104,7 +104,7 @@ class _VectorEdits:
                 self.page.gestures.edit_candidate(None)
             return
         rows = [
-            [_parse_int(self.page.rec.cells[ids.form_cell(i, j)].input.value) for j in range(rc)]
+            [_parse_int(self.page.rec.cells[ids.form_cell(i, j)].value.input.value) for j in range(rc)]
             for i in range(r)
         ]
         if any(v is None for row in rows for v in row):
@@ -134,7 +134,7 @@ class _VectorEdits:
             return
         d, r = self.page.editor.state.d, self.page.editor.state.r
         if any(
-            self.page.rec.handles(ids.unchanged_cell(j, p)).input is None
+            self.page.rec.handles(ids.unchanged_cell(j, p)).value.input is None
             for j in range(r)
             for p in range(d)
         ):
@@ -142,7 +142,7 @@ class _VectorEdits:
             return
         vectors = [
             [
-                _parse_int(self.page.rec.cells[ids.unchanged_cell(j, p)].input.value)
+                _parse_int(self.page.rec.cells[ids.unchanged_cell(j, p)].value.input.value)
                 for p in range(d)
             ]
             for j in range(r)
@@ -175,7 +175,7 @@ class _VectorEdits:
 
     @cb_method
     def on_ratio_change(self, cid):
-        if self.page.building or self.page.rec.handles(cid).input is None:
+        if self.page.building or self.page.rec.handles(cid).value.input is None:
             return
         group, tok = cid.split(":")
         out = service.resolve_ratio_edit(
@@ -238,7 +238,7 @@ class _VectorEdits:
             ratios = [
                 self.page.rec.cell_value(f"unchanged:{j}")
                 for j in range(self.page.editor.state.r)
-                if self.page.rec.handles(f"unchanged:{j}").input is not None
+                if self.page.rec.handles(f"unchanged:{j}").value.input is not None
             ]
             if len(ratios) == self.page.editor.state.r and all(ratios):
                 self.page.editor.set_unchanged_basis(tuple(ratios))
@@ -284,7 +284,7 @@ class _VectorEdits:
         # apply the op, and route it through the SAME setter a manual edit uses — one undo step, every
         # dependent row recomputed. A no-op (already reduced, or a unison reciprocated) commits nothing,
         # so a disabled button is safe.
-        if self.page.building or self.page.rec.handles(cid).input is None:
+        if self.page.building or self.page.rec.handles(cid).value.input is None:
             return
         group, tok = cid.split(":")
         if group not in ("comma", "target", "held", "interest", "prime") or tok == "pending":
@@ -315,7 +315,7 @@ class _VectorEdits:
 
     @cb_method
     def on_element_change(self, cid):
-        if self.page.building or self.page.rec.handles(cid).input is None:
+        if self.page.building or self.page.rec.handles(cid).value.input is None:
             return
         raw = self.page.rec.cell_value(cid)
         tok = cid.split(":")[1]
@@ -330,7 +330,7 @@ class _VectorEdits:
             or g is None
             or g.kind != "edit"
             or g.source != cid
-            or self.page.rec.handles(cid).input is None
+            or self.page.rec.handles(cid).value.input is None
         ):
             return
         raw = self.page.rec.cell_value(cid)

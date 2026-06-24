@@ -394,7 +394,7 @@ class GestureController:
         # select, then preview applying it. Temperament + the sub-pickers route to their own sticky
         # reflow path; the rest (including the TILT/OLD family) go through chooser_hover below, which
         # reflows a value-only pick and reddens one that would remove cells.
-        entry = self.page.rec.handles(cid).select
+        entry = self.page.rec.handles(cid).chooser.select
         sel = entry[1] if isinstance(entry, tuple) else entry
         if not isinstance(sel, ui.select):
             return

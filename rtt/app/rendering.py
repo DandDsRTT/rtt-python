@@ -259,7 +259,15 @@ class Renderer(_ChromeSyncMixin):
         csig = (spreadsheet_text._cell_content(cb), cb.w, cb.h, cb.audio)
         h = self.page.rec.handles(cb.id)
         volatile = any(
-            (h.input, h.den_input, h.ptext_input, h.select, h.check, h.frac_edit, h.ratio_op)
+            (
+                h.value.input,
+                h.value.den_input,
+                h.value.ptext_input,
+                h.chooser.select,
+                h.chooser.check,
+                h.value.frac_edit,
+                h.value.ratio_op,
+            )
         )
         if volatile or self.page.rec.handles(cb.id).content_sig != csig:
             self.page.rec.update_cell(cb)

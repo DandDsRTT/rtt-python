@@ -37,8 +37,8 @@ class _ReconValueCells:
         with ui.element("div").classes(cls):
             m = ui.label(main).classes("rtt-stacked-main")
             s = ui.label(sub).classes("rtt-stacked-sub")
-        self.r.cells[cid].stacked_face = (m, s)
-        self.r.cells[cid].stacked_w = width
+        self.r.cells[cid].value.stacked_face = (m, s)
+        self.r.cells[cid].value.stacked_w = width
         self._size_stacked_main(m, main, sub, width)
 
     def _size_stacked_main(self, main_label, main: str, sub: str, width: float) -> None:
@@ -54,10 +54,10 @@ class _ReconValueCells:
         main_label.style(f"font-size:{size:.2f}px")
 
     def _sync_stacked_face(self, cid: str, main: str, sub: str) -> None:
-        m, s = self.r.cells[cid].stacked_face
+        m, s = self.r.cells[cid].value.stacked_face
         m.set_text(main)
         s.set_text(sub)
-        self._size_stacked_main(m, main, sub, self.r.cells[cid].stacked_w)
+        self._size_stacked_main(m, main, sub, self.r.cells[cid].value.stacked_w)
 
     def set_cents_face(self, cid: str, text: str) -> None:
         whole, frac = _cents_parts(text)
@@ -69,7 +69,7 @@ class _ReconValueCells:
 
     def _ratio(self, cb: spreadsheet.CellBox, approx: bool, overlay: bool = False) -> None:
         face = ui.element("div").classes("rtt-ratio rtt-cellface" if overlay else "rtt-ratio")
-        self.r.cells[cb.id].ratio_face = face
+        self.r.cells[cb.id].value.ratio_face = face
         with face:
             self._ratio_body(cb, approx)
 
@@ -84,10 +84,10 @@ class _ReconValueCells:
             with ui.element("div").classes("rtt-frac rtt-frac-whole" if whole else "rtt-frac"):
                 num = ui.label(parts[0]).classes("rtt-frac-num")
                 den = ui.label(parts[1]).classes("rtt-frac-den")
-            self.r.cells[cb.id].frac = (num, den)
+            self.r.cells[cb.id].value.frac = (num, den)
             self._fit_ratio(cb.id, parts[0], parts[1], cb.w, whole)
         else:
-            self.r.cells[cb.id].label = ui.label(cb.text).classes("rtt-value")
+            self.r.cells[cb.id].value.label = ui.label(cb.text).classes("rtt-value")
 
     def _fit_ratio(self, cid: str, num: str, den: str, width: float, whole: bool = False) -> None:
         size = (
@@ -96,8 +96,8 @@ class _ReconValueCells:
             else _ratio_font(num, den, width)
         )
         font = f"font-size:{size:.2f}px"
-        self.r.cells[cid].frac[0].style(font)
-        self.r.cells[cid].frac[1].style(font)
+        self.r.cells[cid].value.frac[0].style(font)
+        self.r.cells[cid].value.frac[1].style(font)
 
     def _build_gridvalue(self, cb: spreadsheet.CellBox, wrap) -> None:
         spec = _GRIDVALUE_SPECS[cb.kind]
@@ -108,7 +108,7 @@ class _ReconValueCells:
             wrap.classes("rtt-cell-input").props(f'data-vgroup="{_vgroup_key(cb)}"')
             inp = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput")
             inp.on("blur", commit, js_handler=_GROUP_EXIT_JS)
-            self.r.cells[cb.id].input = inp
+            self.r.cells[cb.id].value.input = inp
         self._arm_gridvalue(wrap, cb, spec)
 
     def _build_fraction(self, cb: spreadsheet.CellBox, wrap, commit, preview) -> None:
@@ -135,9 +135,9 @@ class _ReconValueCells:
             )
         num.on("blur", commit, js_handler=_STACKED_EXIT_JS)
         den.on("blur", commit, js_handler=_STACKED_EXIT_JS)
-        self.r.cells[cb.id].input = num
-        self.r.cells[cb.id].den_input = den
-        self.r.cells[cb.id].frac_edit = box
+        self.r.cells[cb.id].value.input = num
+        self.r.cells[cb.id].value.den_input = den
+        self.r.cells[cb.id].value.frac_edit = box
         self._arm_ratio_ops(cb, wrap)
 
     def _arm_ratio_ops(self, cb: spreadsheet.CellBox, wrap) -> None:
@@ -175,11 +175,11 @@ class _ReconValueCells:
         recip_btn.on(
             "click", lambda _=None, cid=cb.id: self.r._cb.transform_interval(cid, "reciprocate")
         )
-        self.r.cells[cb.id].ratio_op = (reduce_btn, recip_btn)
+        self.r.cells[cb.id].value.ratio_op = (reduce_btn, recip_btn)
         self._sync_ratio_ops(cb.id, cb.text)
 
     def _sync_ratio_ops(self, cid: str, text: str) -> None:
-        ops = self.r.handles(cid).ratio_op
+        ops = self.r.handles(cid).value.ratio_op
         if ops is None:
             return
         availability = service.interval_op_availability(text, self.r._editor.state.domain_basis)
@@ -220,9 +220,9 @@ class _ReconValueCells:
         if spec.ratio_allowed:
             self._update_fraction(cb, text)
         else:
-            self.r.cells[cb.id].input.value = text
+            self.r.cells[cb.id].value.input.value = text
         if spec.pending:
-            target = self.r.entities[cb.id].el if spec.ratio_allowed else self.r.cells[cb.id].input
+            target = self.r.entities[cb.id].el if spec.ratio_allowed else self.r.cells[cb.id].value.input
             target.classes(
                 add="rtt-pending" if cb.pending else "", remove="" if cb.pending else "rtt-pending"
             )
@@ -230,9 +230,9 @@ class _ReconValueCells:
     def _update_fraction(self, cb: spreadsheet.CellBox, text: str) -> None:
         num, den = _ratio_parts(text) or (text, "")
         ratio = den not in ("", "1")
-        self.r.cells[cb.id].input.value = num
-        self.r.cells[cb.id].den_input.value = den if ratio else ""
-        self.r.cells[cb.id].frac_edit.props(f"data-fracmode={'ratio' if ratio else 'int'}")
+        self.r.cells[cb.id].value.input.value = num
+        self.r.cells[cb.id].value.den_input.value = den if ratio else ""
+        self.r.cells[cb.id].value.frac_edit.props(f"data-fracmode={'ratio' if ratio else 'int'}")
         self._fit_fraction(cb.id, num, den, cb.w, ratio)
         self._sync_ratio_ops(cb.id, text)
 
@@ -243,8 +243,8 @@ class _ReconValueCells:
             else _digit_fit_font(len(num), width, float(_CELL_FONT))
         )
         style = f"font-size:{size:.2f}px"
-        self.r.cells[cid].input.style(style)
-        self.r.cells[cid].den_input.style(style)
+        self.r.cells[cid].value.input.style(style)
+        self.r.cells[cid].value.den_input.style(style)
 
     def _gridvalue_text(self, cb: spreadsheet.CellBox) -> str:
         if cb.pending and cb.kind in ("commacell", "mapping"):
@@ -277,7 +277,7 @@ class _ReconValueCells:
                     self._choose._preview_control(
                         s, lambda gi=gen_index: self.r._editor.flip_generator(gi)
                     )
-                    self.r.cells[cb.id].gensign_face = s
+                    self.r.cells[cb.id].value.gensign_face = s
                 whole = (
                     ui.input().props("dense borderless").classes("rtt-cellinput rtt-dec-whole-in")
                 )
@@ -286,22 +286,22 @@ class _ReconValueCells:
                 frac = ui.input().props("dense borderless").classes("rtt-cellinput rtt-dec-frac-in")
         whole.on("blur", commit, js_handler=_STACKED_EXIT_JS)
         frac.on("blur", commit, js_handler=_STACKED_EXIT_JS)
-        self.r.cells[cb.id].input = whole
-        self.r.cells[cb.id].den_input = frac
-        self.r.cells[cb.id].frac_edit = box
+        self.r.cells[cb.id].value.input = whole
+        self.r.cells[cb.id].value.den_input = frac
+        self.r.cells[cb.id].value.frac_edit = box
 
     def _update_decimal(self, cb: spreadsheet.CellBox, text: str, *, signed=False) -> None:
         if signed:
             sign, whole, frac = _gentuning_parts(text)
-            if self.r.handles(cb.id).gensign_face is not None:
-                self.r.cells[cb.id].gensign_face.set_text(sign)
+            if self.r.handles(cb.id).value.gensign_face is not None:
+                self.r.cells[cb.id].value.gensign_face.set_text(sign)
         else:
             whole, frac = _cents_parts(text)
-        self.r.cells[cb.id].input.value = whole
-        self.r.cells[cb.id].den_input.value = frac
-        self.r.cells[cb.id].frac_edit.props(f"data-decmode={'dec' if frac else 'int'}")
+        self.r.cells[cb.id].value.input.value = whole
+        self.r.cells[cb.id].value.den_input.value = frac
+        self.r.cells[cb.id].value.frac_edit.props(f"data-decmode={'dec' if frac else 'int'}")
         fit_w = cb.w - _GENSIGN_W if signed else cb.w
-        self.r.cells[cb.id].frac_edit.style(
+        self.r.cells[cb.id].value.frac_edit.style(
             f"--dec-whole-font:{_digit_fit_font(len(whole), fit_w, float(_CELL_FONT)):.2f}px"
         )
 
@@ -321,7 +321,7 @@ class _ReconValueCells:
 
     def _build_powerinput(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-cell-input rtt-cell-stacked")
-        self.r.cells[cb.id].input = (
+        self.r.cells[cb.id].value.input = (
             ui.input(on_change=lambda _e, cid=cb.id: self.r._cb.on_power_change(cid))
             .props("dense borderless")
             .classes("rtt-cellinput")
@@ -329,7 +329,7 @@ class _ReconValueCells:
         self._put_stacked_face(cb.id, "rtt-tuning-value rtt-cellface", *_power_parts(cb.text), cb.w)
 
     def _update_powerinput(self, cb: spreadsheet.CellBox) -> None:
-        self.r.cells[cb.id].input.value = cb.text
+        self.r.cells[cb.id].value.input.value = cb.text
         self._sync_stacked_face(cb.id, *_power_parts(cb.text))
 
     def _build_powerdisplay(self, cb: spreadsheet.CellBox, _wrap) -> None:
@@ -360,7 +360,7 @@ class _ReconValueCells:
             inp.on(
                 "blur",
                 lambda _e=None, cid=cb.id: self.r._cb.on_ptext_edit(
-                    cid, self.r.cells[cid].ptext_input.value
+                    cid, self.r.cells[cid].value.ptext_input.value
                 ),
             )
         else:
@@ -372,11 +372,11 @@ class _ReconValueCells:
                 .props("dense borderless")
                 .classes("rtt-ptextedit")
             )
-        self.r.cells[cb.id].ptext_input = inp
+        self.r.cells[cb.id].value.ptext_input = inp
 
     def _update_ptextedit(self, cb: spreadsheet.CellBox) -> None:
-        self.r.cells[cb.id].ptext_input.value = cb.text
-        self.r.cells[cb.id].ptext_input.style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
+        self.r.cells[cb.id].value.ptext_input.value = cb.text
+        self.r.cells[cb.id].value.ptext_input.style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
 
     def _build_genratio(self, cb: spreadsheet.CellBox, wrap) -> None:
         self._build_ratio_face(cb, wrap, approx=True)
@@ -388,7 +388,7 @@ class _ReconValueCells:
         if cb.pending:
             wrap.classes(add="rtt-pending")
         if cb.pending and cb.text in ("?", "?/?", ""):
-            self.r.cells[cb.id].label = ui.label(cb.text).classes("rtt-value rtt-pending-q")
+            self.r.cells[cb.id].value.label = ui.label(cb.text).classes("rtt-value rtt-pending-q")
         else:
             self._ratio(cb, approx=approx)
 
@@ -396,12 +396,12 @@ class _ReconValueCells:
         self.r.entities[cb.id].el.classes(
             add="rtt-pending" if cb.pending else "", remove="" if cb.pending else "rtt-pending"
         )
-        face = self.r.handles(cb.id).ratio_face
+        face = self.r.handles(cb.id).value.ratio_face
         if face is None:
             return
         face.clear()
-        self.r.cells[cb.id].frac = None
-        self.r.cells[cb.id].label = None
+        self.r.cells[cb.id].value.frac = None
+        self.r.cells[cb.id].value.label = None
         with face:
             self._ratio_body(cb, approx=(cb.kind == "genratio"))
 
@@ -416,16 +416,16 @@ class _ReconValueCells:
 
     def _label_builder(self, cls: str):
         def build(cb, _wrap):
-            self.r.cells[cb.id].label = ui.label(cb.text).classes(cls)
+            self.r.cells[cb.id].value.label = ui.label(cb.text).classes(cls)
 
         return build
 
     def _update_label(self, cb: spreadsheet.CellBox) -> None:
-        self.r.cells[cb.id].label.set_text(cb.text)
+        self.r.cells[cb.id].value.label.set_text(cb.text)
         self.r.entities[cb.id].el.classes(
             add="rtt-pending" if cb.pending else "", remove="" if cb.pending else "rtt-pending"
         )
 
     def _update_ptext(self, cb: spreadsheet.CellBox) -> None:
-        self.r.cells[cb.id].label.set_text(cb.text)
-        self.r.cells[cb.id].label.style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
+        self.r.cells[cb.id].value.label.set_text(cb.text)
+        self.r.cells[cb.id].value.label.style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
