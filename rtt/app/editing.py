@@ -113,7 +113,10 @@ class EditController:
             return tooltips.target_limit_help("odd")
         return None
 
-    def _commit_outcome(self, out, apply) -> None:
+    def _apply_outcome(self, out, commit, preview=False) -> None:
+        if preview:
+            self.page.gestures.edit_candidate(commit if out.effect is service.Effect.ACCEPT else None)
+            return
         if out.effect is service.Effect.IGNORE:
             return
         if out.effect is service.Effect.RERENDER:
@@ -126,10 +129,8 @@ class EditController:
             return
         if msg:  # ACCEPT carrying a non-blocking warning (e.g. an even OLD limit)
             ui.notify(msg, type="negative", position="top")
-        apply()
-
-    def _preview_outcome(self, out, apply) -> None:
-        self.page.gestures.edit_candidate(apply if out.effect is service.Effect.ACCEPT else None)
+        commit()
+        self.page.renderer.request_render()  # an accepted edit retunes — render off the loop
 
     @cb_method
     def act(self, action):
@@ -288,11 +289,7 @@ class EditController:
         # a non-number rejects (toast + re-render restores the loopback-controlled field); an even OLD
         # limit accepts but warns; a valid limit accepts; an unrealizable spec is silently ignored.
 
-        def apply():
-            self.page.editor.set_target_spec(out.value)
-            self.page.renderer.request_render()  # a new target set re-weights the optimization — off the loop
-
-        self._commit_outcome(out, apply)
+        self._apply_outcome(out, lambda: self.page.editor.set_target_spec(out.value))
 
     @cb_method
     def on_control_select(self, cid, value):

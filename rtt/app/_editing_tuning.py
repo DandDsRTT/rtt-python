@@ -180,7 +180,7 @@ class _TuningEdits:
         num, sel = self.page.rec.cells["preset:target"].chooser.select
         raw = num.value if typed is None else typed
         out = service.resolve_target_limit(sel.value, raw, self.page.editor.state.domain_basis)
-        self.e._preview_outcome(out, lambda: self.page.editor.set_target_spec(out.value))
+        self.e._apply_outcome(out, lambda: self.page.editor.set_target_spec(out.value), preview=True)
 
     @cb_method
     def on_prescaler_change(self, cid):
@@ -190,11 +190,7 @@ class _TuningEdits:
         i, j = int(parts[3]), int(parts[4])
         out = service.custom_prescaler_entry(self.page.rec.decimal_value(cid), i == j)
 
-        def apply():
-            self.page.editor.set_custom_prescaler_entry(i, j, out.value)
-            self.page.renderer.request_render()  # the prescaler drives the weighted solve — off the loop
-
-        self.e._commit_outcome(out, apply)
+        self.e._apply_outcome(out, lambda: self.page.editor.set_custom_prescaler_entry(i, j, out.value))
 
     @cb_method
     def on_weight_change(self, cid):
@@ -207,11 +203,7 @@ class _TuningEdits:
         ]
         out = service.custom_weights(raws)
 
-        def apply():
-            self.page.editor.set_custom_weights(list(out.value))
-            self.page.renderer.request_render()  # the weights drive the tuning solve — off the loop
-
-        self.e._commit_outcome(out, apply)
+        self.e._apply_outcome(out, lambda: self.page.editor.set_custom_weights(list(out.value)))
 
     @cb_method
     def on_ptext_edit(self, cid, value):
