@@ -28,6 +28,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Lint gate (same checks as bin/lint; pinned ruff so format-check matches local)
+        run: |
+          python -m ruff check rtt tools
+          python -m ruff format --check rtt tools
+          python -m tools.quality_checks rtt tools
       - name: Run the full suite (library + app + render)
         run: python -m pytest -q
