@@ -35,8 +35,8 @@ class _ReconValueCells:
 
     def _put_stacked_face(self, cid: str, cls: str, main: str, sub: str, width: float) -> None:
         with ui.element("div").classes(cls):
-            m = ui.label(main).classes("rtt-stacked-main")
-            s = ui.label(sub).classes("rtt-stacked-sub")
+            m = ui.label(main).classes("rtt-stacked-main").mark(f"{cid}:main")
+            s = ui.label(sub).classes("rtt-stacked-sub").mark(f"{cid}:sub")
         self.r.cells[cid].value.stacked_face = (m, s)
         self.r.cells[cid].value.stacked_w = width
         self._size_stacked_main(m, main, sub, width)
@@ -82,8 +82,8 @@ class _ReconValueCells:
             ui.label("~").classes("rtt-approx")
         if parts:
             with ui.element("div").classes("rtt-frac rtt-frac-whole" if whole else "rtt-frac"):
-                num = ui.label(parts[0]).classes("rtt-frac-num")
-                den = ui.label(parts[1]).classes("rtt-frac-den")
+                num = ui.label(parts[0]).classes("rtt-frac-num").mark(f"{cb.id}:num")
+                den = ui.label(parts[1]).classes("rtt-frac-den").mark(f"{cb.id}:den")
             self.r.cells[cb.id].value.frac = (num, den)
             self._fit_ratio(cb.id, parts[0], parts[1], cb.w, whole)
         else:
@@ -113,18 +113,20 @@ class _ReconValueCells:
 
     def _build_fraction(self, cb: spreadsheet.CellBox, wrap, commit, preview) -> None:
         wrap.classes("rtt-cell-input rtt-fraccell")
-        box = ui.element("div").classes("rtt-frac-edit")
+        box = ui.element("div").classes("rtt-frac-edit").mark(f"{cb.id}:editbox")
         with box:
             num = (
                 ui.input(on_change=preview)
                 .props("dense borderless")
                 .classes("rtt-cellinput rtt-frac-num-in")
+                .mark(f"{cb.id}:num")
             )
             ui.element("div").classes("rtt-frac-bar")
             den = (
                 ui.input(on_change=preview)
                 .props("dense borderless")
                 .classes("rtt-cellinput rtt-frac-den-in")
+                .mark(f"{cb.id}:den")
             )
         num.on("blur", commit, js_handler=_STACKED_EXIT_JS)
         den.on("blur", commit, js_handler=_STACKED_EXIT_JS)
@@ -244,14 +246,14 @@ class _ReconValueCells:
 
     def _build_decimal(self, cb: spreadsheet.CellBox, wrap, commit, *, gen_index=None) -> None:
         wrap.classes("rtt-cell-input rtt-deccell")
-        box = ui.element("div").classes("rtt-dec-edit")
+        box = ui.element("div").classes("rtt-dec-edit").mark(f"{cb.id}:editbox")
         with box:
             with ui.element("div").classes("rtt-dec-main"):
                 if gen_index is not None:
                     s = (
                         ui.label("")
                         .classes("rtt-gensign")
-                        .mark(f"gensign:{gen_index}")
+                        .mark(f"gensign:{gen_index} {cb.id}:sign")
                         .on(
                             "click",
                             lambda _=None, i=gen_index: self.r._cb.act(
@@ -264,11 +266,19 @@ class _ReconValueCells:
                     )
                     self.r.cells[cb.id].value.gensign_face = s
                 whole = (
-                    ui.input().props("dense borderless").classes("rtt-cellinput rtt-dec-whole-in")
+                    ui.input()
+                    .props("dense borderless")
+                    .classes("rtt-cellinput rtt-dec-whole-in")
+                    .mark(f"{cb.id}:whole")
                 )
             with ui.element("div").classes("rtt-dec-sub"):
                 ui.label(".").classes("rtt-dec-dot")
-                frac = ui.input().props("dense borderless").classes("rtt-cellinput rtt-dec-frac-in")
+                frac = (
+                    ui.input()
+                    .props("dense borderless")
+                    .classes("rtt-cellinput rtt-dec-frac-in")
+                    .mark(f"{cb.id}:frac")
+                )
         whole.on("blur", commit, js_handler=_STACKED_EXIT_JS)
         frac.on("blur", commit, js_handler=_STACKED_EXIT_JS)
         self.r.cells[cb.id].value.input = whole
