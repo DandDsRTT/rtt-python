@@ -9,6 +9,7 @@ from rtt.app.spreadsheet_constants import (
     LABEL_W,
     SYMBOL_H,
 )
+from rtt.app.spreadsheet_geometry_model import freeze_geometry
 from rtt.app.spreadsheet_models import _resolve_prescaler_labels, _resolve_show_flags
 from rtt.app.spreadsheet_resolved import freeze
 from rtt.app.spreadsheet_text import _min_width_for_lines, assign_column_tokens
@@ -102,6 +103,8 @@ class Resolver:
         self._layout_rows(row_bands, tile_extra, rows_top_y)
 
         self._init_group_geometry()
+
+        self.geometry = freeze_geometry(self)
 
     def _unpack_show_flags(self, draft):
         _f = _resolve_show_flags(self.settings, self.collapsed)
