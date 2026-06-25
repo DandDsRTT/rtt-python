@@ -51,9 +51,10 @@ After they were given injected deps (PRs #33/#34/#36/#38), that count is **0**, 
 exemption: `tooltips.py`'s `GuideHelp.page` is a wiki-page-name string, not the handle).
 This is the one rail set to *bite from zero* rather than calibrated to current-worst — it locks
 in the decoupling instead of trailing it. The companion measure for the spreadsheet builder
-(cross-file shared mutable `self` across its mixins, the ~141 census) is **not** gated yet: that
-god-object is mid-dismantle by the `_GridBuilder` pipeline campaign, so gating it now would block
-the in-flight migration — it lands with that campaign.
+(`spreadsheet_shared_state_violations`: cross-file shared mutable `self` across its files, the
+census that exposed that god-object) is **also gated now** — the pipeline campaign drove it from
+**141 → 13** (the remaining 13 are the frozen `resolved`/`geometry` value objects + raw build
+inputs, not god-state), and the gate is pinned at **13 so it can only ratchet down**, never regrow.
 
 To ratchet: lower the values in `pyproject.toml` (`[tool.ruff.lint.*]`) and the
 constants in `tools/quality_checks.py` (`MAX_FILE_LINES`, `MAX_FUNCTION_LINES`,

@@ -11,6 +11,12 @@ MAX_EFFERENT_COUPLING = 18
 MAX_LCOM4 = 10
 MAX_DIT = 2
 MAX_NOC = 3
+# Cross-file shared mutable `self` attributes across the spreadsheet builder cluster — the count
+# that exposed its god-object (was 141; the pipeline campaign drove it to 13: the frozen `resolved`
+# /`geometry` value objects + the raw build inputs consumed by the remaining construction mixins).
+# Set to bite from the current floor: it can only ratchet DOWN as the construction layer is further
+# decomposed, never grow.
+MAX_SPREADSHEET_SHARED_STATE = 13
 
 FILE_LENGTH_EXEMPT = frozenset(
     {
@@ -286,6 +292,40 @@ def page_reach_violations(files: list[Path]) -> list[Violation]:
     return found
 
 
+def _cross_file_shared_self(paths: list[Path]) -> set[str]:
+    writes: dict[str, set[str]] = {}
+    reads: dict[str, set[str]] = {}
+    for path in paths:
+        for node in ast.walk(ast.parse(path.read_text())):
+            if (
+                isinstance(node, ast.Attribute)
+                and isinstance(node.value, ast.Name)
+                and node.value.id == "self"
+            ):
+                bucket = writes if isinstance(node.ctx, ast.Store) else reads
+                bucket.setdefault(node.attr, set()).add(path.name)
+    return {
+        attr
+        for attr in set(writes) | set(reads)
+        if writes.get(attr) and (reads.get(attr, set()) - writes.get(attr, set()))
+    }
+
+
+def spreadsheet_shared_state_violations(files: list[Path]) -> list[Violation]:
+    cluster = [p for p in files if p.name.startswith("spreadsheet") and p.suffix == ".py"]
+    count = len(_cross_file_shared_self(cluster))
+    if count <= MAX_SPREADSHEET_SHARED_STATE:
+        return []
+    return [
+        Violation(
+            "rtt/app/spreadsheet*.py",
+            1,
+            f"cross-file shared mutable self {count} (max {MAX_SPREADSHEET_SHARED_STATE}) — "
+            "the builder god-object is regrowing; pass frozen value objects, don't share self",
+        )
+    ]
+
+
 def collect(roots: tuple[str, ...]) -> list[Violation]:
     files = python_files(roots)
     return [
@@ -294,6 +334,7 @@ def collect(roots: tuple[str, ...]) -> list[Violation]:
         *cohesion_violations(files),
         *inheritance_violations(files),
         *page_reach_violations(files),
+        *spreadsheet_shared_state_violations(files),
     ]
 
 

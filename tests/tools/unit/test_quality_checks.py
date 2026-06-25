@@ -183,6 +183,18 @@ def test_live_tree_passes_the_architectural_guard_rails():
     assert qc.page_reach_violations(files) == []
 
 
+def test_spreadsheet_shared_state_within_cap():
+    files = qc.python_files(qc._DEFAULT_ROOTS)
+    assert qc.spreadsheet_shared_state_violations(files) == []
+
+
+def test_spreadsheet_shared_state_fires_when_over_cap(monkeypatch):
+    monkeypatch.setattr(qc, "MAX_SPREADSHEET_SHARED_STATE", 0)
+    files = qc.python_files(qc._DEFAULT_ROOTS)
+    messages = [v.message for v in qc.spreadsheet_shared_state_violations(files)]
+    assert any("cross-file shared mutable self" in m for m in messages)
+
+
 def test_page_reach_flags_god_handle_but_not_injected_deps(tmp_path):
     (tmp_path / "m.py").write_text(
         "class C:\n"
