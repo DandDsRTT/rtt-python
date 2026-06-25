@@ -32,7 +32,6 @@ from rtt.app.spreadsheet_constants import (
     TBOX_W,
     V_SPLIT_GAP,
 )
-from rtt.app.spreadsheet_emit_model import element_cell_kind, voice
 from rtt.app.spreadsheet_text import (
     _min_width_for_lines,
     _wrap_lines,
@@ -106,14 +105,6 @@ class _GeometryMixin:
             floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_W)
         return floor
 
-    def content_box(self, key: str):
-        return query.content_box(self.geometry, key)
-
-    def tile_box(self, key: str):
-        return query.tile_box(self.geometry, key)
-
-    def tile_span_box(self, rkey: str, ckey: str):
-        return query.tile_span_box(self.geometry, rkey, ckey)
 
     def col_open(self, key: str) -> bool:
         return query.col_open(self.geometry, self.collapsed, key)
@@ -169,45 +160,26 @@ class _GeometryMixin:
         return max((self.control_band_h(ckey, PRESET_W, label)
                     for name, rk, ckey, label in FORM_CHOOSERS if rk == key and ckey in self.col_w), default=0)
 
-    def row_open(self, key: str) -> bool:
-        return query.row_open(self.geometry, self.collapsed, key)
 
     def tile_open(self, rkey: str, ckey: str) -> bool:
         return query.tile_open(self.geometry, self.collapsed, rkey, ckey)
 
-    def tile_unit(self, rkey: str, ckey: str):
-        return query.tile_unit(self.resolved, rkey, ckey)
-
-    def cell_unit(self, rkey: str, ckey: str, *, gen=None, prime=None, elem=None):
-        return query.cell_unit(self.resolved, rkey, ckey, gen=gen, prime=prime, elem=elem)
 
     def matlabel_gutter_w(self, group_key: str):
         return query.matlabel_gutter_w(self.geometry, group_key)
 
-    def handle_gutter_w(self, group_key: str):
-        return query.handle_gutter_w(self.geometry, group_key)
-
-    def etpick_left_pad(self, group_key: str):
-        return query.etpick_left_pad(self.geometry, group_key)
 
     def outer_gutter_w(self, group_key: str):
         return query.outer_gutter_w(self.geometry, group_key)
 
-    def matrix_span(self, group_key: str):
-        return query.matrix_span(self.geometry, self.resolved, group_key)
 
     def prime_left(self, p: int):
         return query.prime_left(self.geometry, p)
 
-    @staticmethod
-    def _element_cell_kind(text: str):
-        return element_cell_kind(text)
 
     def comma_left(self, c: int):
         return query.comma_left(self.geometry, self.resolved, c)
 
-    def comma_value_pos(self, i: int):
-        return query.comma_value_pos(self.resolved, i)
 
     def target_left(self, j: int):
         return query.target_left(self.geometry, j)
@@ -236,26 +208,10 @@ class _GeometryMixin:
     def map_top(self, i: int):
         return query.map_top(self.geometry, i)
 
-    def proj_top(self, i: int):
-        return query.proj_top(self.geometry, i)
-
-    def canon_top(self, i: int):
-        return query.canon_top(self.geometry, i)
 
     def vec_top(self, p: int):
         return query.vec_top(self.geometry, p)
 
-    def ss_vec_top(self, p: int):
-        return query.ss_vec_top(self.geometry, p)
-
-    def ss_map_top(self, i: int):
-        return query.ss_map_top(self.geometry, i)
-
-    def ss_proj_top(self, i: int):
-        return query.ss_proj_top(self.geometry, i)
-
-    def sub_axis_x(self, ckey: str, i: int):
-        return query.sub_axis_x(self.geometry, ckey, i)
 
     def col_plus_x(self, ckey: str):
         return query.col_plus_x(self.geometry, self.resolved, ckey)
@@ -264,26 +220,3 @@ class _GeometryMixin:
         return query.plus_shows(self.geometry, self.resolved, self.collapsed, self.state, ckey)
 
 
-    def col_token(self, group: str, i: int):
-        return query.col_token(self.resolved, group, i)
-
-    def pending_col_token(self, group: str):
-        return query.pending_col_token(self.resolved, group)
-
-    def _pending_draft_idx(self, group: str):
-        return query.pending_draft_idx(self.resolved, group)
-
-    def _voice(self, tile, idx, cents) -> None:
-        voice(self.cells, tile, idx, cents)
-
-    def cpick_band_y(self, rkey):
-        return query.cpick_band_y(self.geometry, rkey)
-
-    def ptext_band_y(self, rkey: str):
-        return query.ptext_band_y(self.geometry, rkey)
-
-    def frame_top_y(self, rkey: str):
-        return query.frame_top_y(self.geometry, rkey)
-
-    def frame_brace_y(self, rkey: str):
-        return query.frame_brace_y(self.geometry, rkey)
