@@ -35,11 +35,6 @@ from rtt.app.spreadsheet_emit_model import EmitResult
 from rtt.app.spreadsheet_text import _fold_glyph, _pretransform_label
 
 
-class _ControlsMixin:
-    def control_region_band_h(self, content_h):
-        return 2 * BOX_OUTER + 2 * BOX_INNER + content_h
-
-
 def transform_cells(cells, resolved, geometry, ctx) -> tuple:
     cells = _filter_gridded_quantities(cells, resolved)
     cells = _mark_doomed_unchanged_column(cells, resolved, geometry)

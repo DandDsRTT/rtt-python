@@ -150,6 +150,9 @@ class _GeometryMixin:
             return 0
         return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
 
+    def control_region_band_h(self, content_h):
+        return 2 * BOX_OUTER + 2 * BOX_INNER + content_h
+
     def control_band_h(self, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):
         return 2 * BOX_OUTER + query.control_dims(self.geometry, ckey, cap_w, label, scheme_btn, form_label)[2]
 

@@ -8,7 +8,6 @@ from rtt.app.spreadsheet_constants import (
     PAD,
 )
 from rtt.app.spreadsheet_controls import (
-    _ControlsMixin,
     emit_controls,
     emit_tile_toggles,
     transform_cells,
@@ -51,18 +50,13 @@ class _GridBuilder(
     _LayoutMixin,
     _GeometryMixin,
     _EmitMappingMixin,
-    _ControlsMixin,
 ):
     def layout(self) -> Layout:
-        self.cells: list[CellBox] = []
-        self.lines: list[Line] = []
-        self.blocks: list[Block] = []
-        self._control_region_boxes: list[Block] = []
-
-        self._emit_all()
-
+        cells, lines, blocks, approach_box = assemble(
+            self.resolved, self.geometry, build_context(self)
+        )
         title_right = max(
-            (c.x + c.w / 2 + _title_w(c.text) / 2 for c in self.cells if c.kind == "colheader"),
+            (c.x + c.w / 2 + _title_w(c.text) / 2 for c in cells if c.kind == "colheader"),
             default=self.total_w,
         )
         right_overhang = max(0.0, title_right - self.total_w)
@@ -70,59 +64,58 @@ class _GridBuilder(
         return Layout(
             self.total_w,
             self.total_h,
-            tuple(self.lines),
-            tuple(self.blocks),
-            tuple(self.cells),
+            lines,
+            blocks,
+            cells,
             freeze_x=self.node_edge + GAP - PAD,
             freeze_y=self.branch_top_y + GAP + GRIP_BAND - PAD,
             right_overhang=right_overhang,
             identities=self.resolved.col_ids,
-            approach_box=self.approach_box,
+            approach_box=approach_box,
             pretransform=bool(self.size_factor) or self.resolved.scalars.prescaler_is_matrix,
         )
 
-    def _emit_all(self) -> None:
-        ctx = build_context(self)
-        self.cells.extend(emit_headers(self.resolved, self.geometry, ctx).cells)
-        self.cells.extend(emit_counts_row(self.resolved, self.geometry, ctx).cells)
-        self.cells.extend(emit_units(self.resolved, self.geometry, ctx).cells)
-        self.cells.extend(emit_quantities_row(self.resolved, self.geometry, ctx).cells)
-        self.cells.extend(emit_column_plus_controls(self.resolved, self.geometry).cells)
-        self.cells.extend(emit_rehomed_minus_controls(self.resolved, self.geometry, ctx).cells)
-        self.cells.extend(emit_mapping(self.resolved, self.geometry, ctx).cells)
-        self.cells.extend(emit_projection_band(self.resolved, self.geometry, ctx).cells)
-        self.cells.extend(emit_canon_band(self.resolved, self.geometry, ctx).cells)
-        self.cells.extend(emit_vectors(self.resolved, self.geometry, ctx).cells)
-        self.cells.extend(emit_superspace_rows(self.resolved, self.geometry, ctx).cells)
-        self.cells.extend(emit_identity_objects(self.resolved, self.geometry, ctx).cells)
-        tuning = emit_tuning(self.resolved, self.geometry, ctx)
-        self.cells.extend(tuning.cells)
-        self._control_region_boxes.extend(tuning.region_boxes)
-        gtm_box = tuning.extra["gtm_box"]
-        opt_box = tuning.extra["opt_box"]
-        approach_frame = tuning.extra["approach_frame"]
-        self.approach_box = tuning.extra["approach_box"]
-        self.cells.extend(emit_brackets(self.resolved, self.geometry, ctx).cells)
-        decorations = emit_decorations(
-            self.resolved,
-            self.geometry,
-            ctx,
-            self._control_region_boxes,
-            gtm_box,
-            opt_box,
-            approach_frame,
-        )
-        self.cells.extend(decorations.cells)
-        self.lines.extend(decorations.lines)
-        self.blocks.extend(decorations.blocks)
-        controls = emit_controls(self.resolved, self.geometry, ctx)
-        self.cells.extend(controls.cells)
-        self.blocks.extend(controls.blocks)
-        self.cells.extend(
-            emit_ebk_frames_and_marks(self.resolved, self.geometry, ctx, self.cells).cells
-        )
-        self.cells.extend(emit_tile_toggles(self.geometry, ctx).cells)
-        self.cells = list(transform_cells(self.cells, self.resolved, self.geometry, ctx))
+
+def assemble(resolved, geometry, ctx):
+    cells: list[CellBox] = []
+    lines: list[Line] = []
+    blocks: list[Block] = []
+    region_boxes: list[Block] = []
+    cells.extend(emit_headers(resolved, geometry, ctx).cells)
+    cells.extend(emit_counts_row(resolved, geometry, ctx).cells)
+    cells.extend(emit_units(resolved, geometry, ctx).cells)
+    cells.extend(emit_quantities_row(resolved, geometry, ctx).cells)
+    cells.extend(emit_column_plus_controls(resolved, geometry).cells)
+    cells.extend(emit_rehomed_minus_controls(resolved, geometry, ctx).cells)
+    cells.extend(emit_mapping(resolved, geometry, ctx).cells)
+    cells.extend(emit_projection_band(resolved, geometry, ctx).cells)
+    cells.extend(emit_canon_band(resolved, geometry, ctx).cells)
+    cells.extend(emit_vectors(resolved, geometry, ctx).cells)
+    cells.extend(emit_superspace_rows(resolved, geometry, ctx).cells)
+    cells.extend(emit_identity_objects(resolved, geometry, ctx).cells)
+    tuning = emit_tuning(resolved, geometry, ctx)
+    cells.extend(tuning.cells)
+    region_boxes.extend(tuning.region_boxes)
+    cells.extend(emit_brackets(resolved, geometry, ctx).cells)
+    decorations = emit_decorations(
+        resolved,
+        geometry,
+        ctx,
+        region_boxes,
+        tuning.extra["gtm_box"],
+        tuning.extra["opt_box"],
+        tuning.extra["approach_frame"],
+    )
+    cells.extend(decorations.cells)
+    lines.extend(decorations.lines)
+    blocks.extend(decorations.blocks)
+    controls = emit_controls(resolved, geometry, ctx)
+    cells.extend(controls.cells)
+    blocks.extend(controls.blocks)
+    cells.extend(emit_ebk_frames_and_marks(resolved, geometry, ctx, cells).cells)
+    cells.extend(emit_tile_toggles(geometry, ctx).cells)
+    cells = list(transform_cells(cells, resolved, geometry, ctx))
+    return tuple(cells), tuple(lines), tuple(blocks), tuning.extra["approach_box"]
 
 
 def build(state, settings=None, collapsed=None, **inputs) -> Layout:
