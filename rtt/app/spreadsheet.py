@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from rtt.app.layout import Block, CellBox, Layout, Line
-from rtt.app.spreadsheet_brackets import _BracketsMixin
+from rtt.app.spreadsheet_brackets import emit_brackets, emit_ebk_frames_and_marks
 from rtt.app.spreadsheet_closed_form import _ClosedFormMixin
 from rtt.app.spreadsheet_constants import (
     GAP,
@@ -50,7 +50,6 @@ class _GridBuilder(
     _EmitMappingMixin,
     _EmitTuningMixin,
     _ControlsMixin,
-    _BracketsMixin,
     _DecorationsMixin,
 ):
     def layout(self) -> Layout:
@@ -106,7 +105,7 @@ class _GridBuilder(
         gtm_box = self._emit_tuning_ranges_box()
         opt_box = self._emit_optimization_box()
         approach_frame = self._emit_approach_box()
-        self._emit_brackets()
+        self.cells.extend(emit_brackets(self.resolved, self.geometry, ctx).cells)
         self._emit_matrix_labels()
         self._emit_axes()
         self._emit_panels(gtm_box, opt_box, approach_frame)
@@ -117,7 +116,9 @@ class _GridBuilder(
         self._emit_form_choosers()
         self._emit_scheme_buttons()
         self._emit_ptext_band()
-        self._emit_ebk_frames_and_marks()
+        self.cells.extend(
+            emit_ebk_frames_and_marks(self.resolved, self.geometry, ctx, self.cells).cells
+        )
         self._emit_tile_toggles()
         self._apply_value_display_filters()
 
