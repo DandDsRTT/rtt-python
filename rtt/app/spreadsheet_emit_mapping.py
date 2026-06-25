@@ -334,7 +334,3 @@ def _emit_canon_mapped_tile(cells, resolved, geometry, prefix, group, count, lef
         cells.append(CellBox(f"cell:{prefix}:{i}:draft", left_fn(count), query.canon_top(geometry, i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
 
 
-class _EmitMappingMixin:
-    def _emit_mapped_grid(self, tile, prefix, grid, n_cols, left, col_kw, **kw) -> None:
-        emit_mapped_grid(self.cells, self.resolved, self.geometry, self.collapsed,
-                         tile, prefix, grid, n_cols, left, col_kw, **kw)

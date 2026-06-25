@@ -14,7 +14,6 @@ from rtt.app.spreadsheet_controls import (
 )
 from rtt.app.spreadsheet_decorations import emit_decorations
 from rtt.app.spreadsheet_emit_mapping import (
-    _EmitMappingMixin,
     emit_canon_band,
     emit_mapping,
     emit_projection_band,
@@ -49,7 +48,6 @@ class _GridBuilder(
     _GeometryAccess,
     _LayoutMixin,
     _GeometryMixin,
-    _EmitMappingMixin,
 ):
     def layout(self) -> Layout:
         cells, lines, blocks, approach_box = assemble(
