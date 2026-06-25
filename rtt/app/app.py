@@ -4,7 +4,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 from nicegui import helpers, ui
 
@@ -26,7 +25,7 @@ from rtt.app.page_assets import (
     _decode_state,
     _doc_store,
 )
-from rtt.app.reconciler import _Reconciler
+from rtt.app.reconciler import _Reconciler, bind_callbacks
 from rtt.app.rendering import Renderer
 
 _log = logging.getLogger(__name__)
@@ -105,14 +104,8 @@ class _Page:
             ui.run_javascript("window.history.replaceState({}, '', window.location.pathname)")
 
     def _wire_reconciler(self) -> None:
-        sources = (self.edits, self.edits.vectors, self.edits.tuning, self.gestures)
-        self.rec._cb = SimpleNamespace(
-            **{
-                name: method
-                for s in sources
-                for name in dir(s)
-                if getattr((method := getattr(s, name)), "_rtt_cb", False)
-            }
+        self.rec._cb = bind_callbacks(
+            self.edits, self.edits.vectors, self.edits.tuning, self.gestures
         )
 
     def _dark_icon(self):

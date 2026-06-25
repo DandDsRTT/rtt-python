@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from types import SimpleNamespace
+from typing import Protocol, cast, runtime_checkable
 
 from nicegui import ui
 
@@ -35,12 +38,97 @@ from rtt.app.render_html import (
 
 _log = logging.getLogger(__name__)
 
+_Cb = Callable[..., object]
+
+
+@runtime_checkable
+class ReconcilerCallbacks(Protocol):
+    act: _Cb
+    add_interval: _Cb
+    on_preset: _Cb
+    on_subpick: _Cb
+    on_form_choose: _Cb
+    on_target_change: _Cb
+    on_control_select: _Cb
+    on_range_mode: _Cb
+    on_toggle: _Cb
+    on_toggle_all: _Cb
+
+    on_power_change: _Cb
+    on_gentuning_change: _Cb
+    on_gentuning_wheel: _Cb
+    on_value_wheel: _Cb
+    on_target_limit_wheel: _Cb
+    on_target_limit_preview: _Cb
+    on_prescaler_change: _Cb
+    on_weight_change: _Cb
+    on_ptext_edit: _Cb
+
+    on_mapping_change: _Cb
+    on_form_change: _Cb
+    on_comma_change: _Cb
+    on_unchanged_change: _Cb
+    on_interest_change: _Cb
+    on_held_change: _Cb
+    on_target_cells_change: _Cb
+    on_ratio_change: _Cb
+    on_element_change: _Cb
+    on_element_preview: _Cb
+    transform_interval: _Cb
+
+    on_cell_focus: _Cb
+    on_cell_blur: _Cb
+    combine_begin: _Cb
+    combine_preview: _Cb
+    combine_commit: _Cb
+    combine_end: _Cb
+    control_hover: _Cb
+    control_unhover: _Cb
+    rank_remove_hover: _Cb
+    rank_remove_unhover: _Cb
+    on_chooser_hover: _Cb
+    on_popup: _Cb
+    gentuning_hover: _Cb
+    gentuning_unhover: _Cb
+    on_drag_start: _Cb
+    on_drag_enter: _Cb
+    on_drag_end: _Cb
+    on_drop: _Cb
+
+
+def required_callback_names() -> frozenset[str]:
+    return frozenset(ReconcilerCallbacks.__annotations__)
+
+
+def _marked_callback(sources: tuple[object, ...], name: str) -> _Cb | None:
+    for source in sources:
+        method = getattr(source, name, None)
+        if getattr(method, "_rtt_cb", False):
+            return method
+    return None
+
+
+def bind_callbacks(*sources: object) -> ReconcilerCallbacks:
+    bound: dict[str, _Cb] = {}
+    unbound: list[str] = []
+    for name in required_callback_names():
+        method = _marked_callback(sources, name)
+        if method is None:
+            unbound.append(name)
+        else:
+            bound[name] = method
+    if unbound:
+        raise RuntimeError(
+            f"reconciler callbacks unbound (renamed or missing @cb_method): {sorted(unbound)}"
+        )
+    return cast("ReconcilerCallbacks", SimpleNamespace(**bound))
+
 
 class _Reconciler:
     def __init__(self, editor: Editor, gestures=None) -> None:
         self._editor = editor
         self._gestures = gestures
-        self._cb = None
+        self._cb: ReconcilerCallbacks | None = None
         self._row_drag: int | None = None
         self._col_drag: tuple[str, int] | None = None
         self.pretransform = False
