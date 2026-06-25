@@ -476,21 +476,8 @@ _OPTION_HOVER_DELEGATION = """
     const it = optOf(e.target);
     if (it && !optOf(e.relatedTarget)) { clearTimeout(timer); fire(it.getAttribute('data-optcid'), -1); }
   });
-  // A PRESS ends the hover-intent: the user is committing a pick (or dismissing the popup). Cancel any
-  // pending settle-timer right now, so it can't fire AFTER the select commits. A timer armed <90 ms
-  // before the click would otherwise fire once the popup has already closed, re-dispatching `opthover`
-  // at the chooser. (The SERVER also drops such stale arms — popup_state marks the popup 'closed'
-  // before they arrive, see _Reconciler.popup_state — so this cancel is a rate-limit nicety, not the
-  // correctness mechanism.) Capture-phase so it runs before the click commits, wherever the press
-  // lands. We do NOT lean on the popup-removal `mouseout` above to cancel it: a removed element under
-  // the cursor does not fire mouseout reliably across browsers.
-  //
-  // The press ALSO resets the dedupe. A popup that closes UNDER the pointer (a pick, Escape, an
-  // outside click) fires no `mouseout` for the hovered option, so lastCid/lastIdx would otherwise
-  // keep that option across popup sessions — and REOPENING the chooser and hovering the SAME option
-  // (the common case in a 2-4 option dropdown: you aim at the one you want) would be swallowed as a
-  // duplicate, reading as "this chooser's preview is dead". Every reopen starts with a press, so
-  // resetting here makes each popup session's first hover always fire.
+  // Browser: a removed element under the cursor does not fire mouseout reliably, so the pending
+  // settle-timer is cancelled here on pointerdown rather than relying on the popup-removal mouseout.
   document.addEventListener('pointerdown', () => { clearTimeout(timer); lastCid = null; lastIdx = null; }, true);
 })()
 """
@@ -509,10 +496,7 @@ _TOOLTIP_DISMISS_JS = """
       el.dispatchEvent(new MouseEvent('mouseleave', {bubbles: false}));
     }
   };
-  // a click presses the anchor: the pressed node is under it
   document.addEventListener('pointerdown', (e) => dropFrom(e.target), true);
-  // a keystroke / wheel-step reflows with no pointerdown: drop the tooltip on whatever the cursor
-  // rests on, and only when one is actually showing (so typing never disturbs the preview rings)
   const dropHovered = () => {
     if (document.querySelector('.q-tooltip') === null) return;
     const hov = document.querySelectorAll(':hover');
@@ -555,8 +539,8 @@ _ZOOM_JS = """
   if (window.__rttZoom) return;
   window.__rttZoom = true;
   const F = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom-factor')) || 1.7;
-  const DELAY = 130;   // ms before it appears — quick, but not on every cursor that crosses a cell
-  const GAP = 8;       // px between the cell and the magnifier
+  const DELAY = 130;
+  const GAP = 8;
   let timer = null, anchor = null;
 
   const overlay = document.createElement('div');
@@ -575,12 +559,10 @@ _ZOOM_JS = """
     const ow = overlay.offsetWidth, oh = overlay.offsetHeight;
     const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
     let left = Math.max(4, Math.min(r.left + r.width / 2 - ow / 2, vw - ow - 4));
-    let top = r.top - GAP - oh;                 // prefer above the cell
+    let top = r.top - GAP - oh;
     let above = true;
-    if (top < 4) { top = r.bottom + GAP; above = false; }   // not enough room: drop below
+    if (top < 4) { top = r.bottom + GAP; above = false; }
     top = Math.max(4, Math.min(top, vh - oh - 4));
-    // the loupe (the value) sits NEAREST the cell/cursor, the help tooltip on the far side: above the
-    // cell that means help-on-top / tile-on-bottom (column-reverse); below, tile-on-top (column)
     overlay.style.flexDirection = above ? 'column-reverse' : 'column';
     overlay.style.left = left + 'px';
     overlay.style.top = top + 'px';
@@ -589,14 +571,12 @@ _ZOOM_JS = """
   const build = (cell) => {
     const w = cell.offsetWidth, h = cell.offsetHeight;
     if (!w || !h) return;
-    // a blanked cell (quantities off) has nothing to magnify — bail before popping an empty card
     const srcInputs = cell.querySelectorAll('input');
     let hasContent = cell.textContent.trim();
     srcInputs.forEach(i => { if (i.value && i.value.trim()) hasContent = true; });
     if (!hasContent) return;
 
     overlay.innerHTML = '';
-    // the scale box carries the magnified layout size; the clone scales 1:1 from its top-left to fill it
     const scale = document.createElement('div');
     scale.className = 'rtt-zoom-scale';
     scale.style.width = (w * F) + 'px';
@@ -611,19 +591,16 @@ _ZOOM_JS = """
     clone.style.transform = 'scale(' + F + ')';
     clone.style.transformOrigin = 'top left';
     clone.style.transition = 'none';
-    clone.querySelectorAll('.q-tooltip').forEach(n => n.remove());  // don't drag a nested tooltip along
-    // cloneNode does NOT copy a live input's typed value (it's a property, not an attribute), so the
-    // editable integer cells (value lives only in their input) would clone empty — copy it across
+    clone.querySelectorAll('.q-tooltip').forEach(n => n.remove());
+    // Browser: cloneNode does NOT copy a live input's typed value (a property, not an attribute), so
+    // each editable cell's value is copied onto the clone by hand or it would clone empty.
     const cloneInputs = clone.querySelectorAll('input');
     srcInputs.forEach((s, i) => { if (cloneInputs[i]) cloneInputs[i].value = s.value; });
     scale.appendChild(clone);
-    // the loupe tile (the value on a grey grid-tile panel) — the magnified, non-interactive value
     const tile = document.createElement('div');
     tile.className = 'rtt-zoom-tile';
     tile.appendChild(scale);
     overlay.appendChild(tile);
-    // the cell's own hover help, below the loupe, styled like a normal tooltip (the editable cells'
-    // "type to edit…")
     const help = cell.getAttribute('data-zoomhelp');
     if (help) {
       const cap = document.createElement('div');
@@ -635,7 +612,6 @@ _ZOOM_JS = """
     place(cell);
   };
 
-  // hover in / out of a zoomable cell, delegated so it survives every grid rebuild
   document.addEventListener('mouseover', (e) => {
     const cell = e.target.closest && e.target.closest('.rtt-zoomable');
     if (!cell || cell === anchor) return;
@@ -647,7 +623,6 @@ _ZOOM_JS = """
     const cell = e.target.closest && e.target.closest('.rtt-zoomable');
     if (cell && cell === anchor && !cell.contains(e.relatedTarget)) hide();
   });
-  // a commit / reflow / scroll yanks the cell out from under the cursor — drop the magnifier
   document.addEventListener('pointerdown', hide, true);
   document.addEventListener('keydown', hide, true);
   document.addEventListener('wheel', hide, {capture: true, passive: true});
@@ -661,8 +636,8 @@ _GUIDE_JS = """
 (() => {
   if (window.__rttGuide) return;
   window.__rttGuide = true;
-  const DELAY = 200;   // ms before it appears
-  const HIDE = 160;    // ms grace to cross the gap from cell to card
+  const DELAY = 200;
+  const HIDE = 160;
   const GAP = 6;
   let showTimer = null, hideTimer = null, anchor = null, shownTile = null;
 
@@ -682,8 +657,8 @@ _GUIDE_JS = """
     const cw = card.offsetWidth, ch = card.offsetHeight;
     const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
     let left = Math.max(4, Math.min(r.left, vw - cw - 4));
-    let top = r.bottom + GAP;                       // prefer below the cell
-    if (top + ch > vh - 4) top = Math.max(4, r.top - GAP - ch);   // no room: flip above
+    let top = r.bottom + GAP;
+    if (top + ch > vh - 4) top = Math.max(4, r.top - GAP - ch);
     card.style.left = left + 'px';
     card.style.top = top + 'px';
   };
@@ -699,7 +674,7 @@ _GUIDE_JS = """
     body.className = 'rtt-guide-card-text';
     body.textContent = text;
     card.appendChild(body);
-    if (url) {                                       // some tiles have a blurb but no Guide section
+    if (url) {
       const a = document.createElement('a');
       a.className = 'rtt-guide-card-link';
       a.href = url; a.target = '_blank'; a.rel = 'noopener';
@@ -718,8 +693,6 @@ _GUIDE_JS = """
     const cell = e.target.closest && e.target.closest('.rtt-guide-link');
     if (!cell) return;
     cancelHide();
-    // a tile's name + symbol cells share one data-guide-tile: while the card is up for that tile,
-    // moving between them must NOT rebuild/reposition it (else the link runs away from the cursor)
     if (card.style.display === 'block' && cell.getAttribute('data-guide-tile') === shownTile) return;
     if (cell === anchor) return;
     if (showTimer) clearTimeout(showTimer);
@@ -731,14 +704,11 @@ _GUIDE_JS = """
     if (!cell) return;
     const to = e.relatedTarget;
     const toCell = to && to.closest && to.closest('.rtt-guide-link');
-    // staying within the same tile (name ↔ symbol) or moving onto the card: keep it open
     if (to && (card.contains(to) ||
                (toCell && toCell.getAttribute('data-guide-tile') === cell.getAttribute('data-guide-tile')))) return;
     if (showTimer) { clearTimeout(showTimer); showTimer = null; }
     scheduleHide();
   });
-  // a commit / reflow / scroll / keypress yanks the anchor out — drop the card, but never swallow a
-  // click that lands inside the card itself (that's the user reaching for the link)
   document.addEventListener('pointerdown', (e) => { if (!card.contains(e.target)) reallyHide(); }, true);
   document.addEventListener('keydown', reallyHide, true);
   document.addEventListener('wheel', reallyHide, {capture: true, passive: true});
@@ -763,15 +733,13 @@ _BUSY_JS = f"""
   const arm = () => {{
     if (armTimer) clearTimeout(armTimer);
     if (safety) clearTimeout(safety);
-    armTimer = setTimeout(reveal, {_BUSY_DELAY_MS});   // a fast edit lands first and never flashes it
-    safety = setTimeout(clear, {_BUSY_SAFETY_MS});      // never strand if this click never re-renders
+    armTimer = setTimeout(reveal, {_BUSY_DELAY_MS});
+    safety = setTimeout(clear, {_BUSY_SAFETY_MS});
   }};
   window.rttBusy = {{ arm, done: clear }};
 
-  // Debounced reveal of withheld new content: every render calls this; the timer RESETS each time, so
-  // it fires one beat after renders STOP (a retuning commit can render in stages). Reading the live --t
-  // off BODY (where the `animations`-off class overrides it to 0s — :root keeps the default) makes the
-  // reveal instant when animations are off. The 1.3x lets the last slide finish before the fade.
+  // reads --t off BODY, where the `animations`-off CSS class overrides it to 0s, so the reveal is
+  // instant when animations are off.
   window.rttScheduleReveal = () => {{
     const t = getComputedStyle(document.body).getPropertyValue('--t').trim();
     const ms = (t.endsWith('ms') ? parseFloat(t) : parseFloat(t) * 1000) * 1.3;
@@ -784,39 +752,19 @@ _BUSY_JS = f"""
     }}, ms);
   }};
 
-  // Arm ONLY on a real (e.isTrusted) user interaction that commits to the document and so triggers
-  // a server re-render: the +/-/fold controls and undo/redo/reset (.rtt-iconbtn), the Show
-  // checkboxes / grid control checkboxes (.q-checkbox), the range options (.rtt-rangeopt), the
-  // scheme/target dropdowns and their option picks ([role=option]/.q-item), Enter committing a cell
-  // edit, and Ctrl/Cmd+Z/Y. The isTrusted gate is essential: render() re-syncs control values
-  // programmatically (e.g. box.value = …), which can fire SYNTHETIC events — without the gate those
-  // would re-arm the scrim after the render, so it would flash "Computing…" for no reason and
-  // linger. We deliberately do NOT arm on wheel (it fires on every scroll over the grid, and the
-  // shown scrim would then eat the scroll) or on focus leaving a cell (fires on any focus change,
-  // mostly with no commit) — those were the spurious-trigger / stuck-spinner sources.
+  // Browser: render() re-syncs control values programmatically (box.value = …), which fires SYNTHETIC
+  // events; the e.isTrusted gate keeps those from re-arming the scrim after a render.
   const BTN = '.rtt-fanbtn,.rtt-minus-btn,.rtt-minus-btn-v,.rtt-toggle,.rtt-iconbtn';
   const at = (e, sel) => e.isTrusted && e.target && e.target.closest && e.target.closest(sel);
-  // .rtt-noarm opts a button out: share is an .rtt-iconbtn for styling but only copies a link — it
-  // never re-renders, so nothing would ever call rttBusy.done() and the scrim would linger the full
-  // safety timeout. Excluding it here keeps it from arming in the first place.
   document.addEventListener('pointerdown',
     (e) => {{ if (at(e, BTN) && !e.target.closest('.rtt-noarm')) window.rttBusy.arm(); }}, true);
   // Quasar's QCheckbox/QRadio commit on a CLICK of their role= div and never emit a DOM `change`,
-  // and the range options are our own .rtt-rangeopt divs — so every committing settings control is
-  // reached here, on click, not on a `change` event.
+  // so the committing settings controls are reached here on click, not on a `change` event.
   document.addEventListener('click', (e) => {{
     if (at(e, '[role=option],.q-item,.q-checkbox,.q-radio,.rtt-rangeopt')) window.rttBusy.arm();
   }}, true);
-  // Keyboard shortcuts. Each one resolves to an existing on-screen control and synthetically clicks
-  // it, so the action runs through the very same handler the mouse uses (act()/add_interval/
-  // toggle_drawer) — no parallel server path — and a shortcut is inert exactly when its button isn't
-  // on screen (e.g. Alt+C does nothing while the commas column is hidden, because no .rtt-hk-comma
-  // exists to click). Per-action modifier choices: Ctrl/Cmd for the edit-history pair (Z/Y) and the
-  // settings pane (Ctrl/Cmd+, — the standard Preferences shortcut), Alt for the "add a row" family.
-  // Every shortcut takes a modifier, so they all fire even while a cell is focused and bare typing is
-  // never intercepted. Keys match on e.code (the physical key) so a Mac's Option+letter dead-keys/
-  // special glyphs (and Cmd+, vs Cmd+;) still match. preventDefault stops the browser's own Ctrl+Z /
-  // Alt-mnemonic / Cmd+, from also firing.
+  // Browser: keys match on e.code (the physical key) so a Mac's Option+letter dead-keys and special
+  // glyphs still match; preventDefault stops the browser's own Ctrl+Z / Alt-mnemonic / Cmd+, firing.
   document.addEventListener('keydown', (e) => {{
     if (!e.isTrusted) return;
     const mod = e.ctrlKey || e.metaKey;
@@ -835,11 +783,8 @@ _BUSY_JS = f"""
     if (e.key === 'Enter' && e.target.closest && e.target.closest('.rtt-cell')) window.rttBusy.arm();
   }}, true);
 
-  // The shown scrim swallows pointer events so a pile of clicks can't land on the mid-recompute
-  // grid — but the user should still be able to SCROLL it to read while it computes. Its
-  // pointer-events:auto veil eats the wheel along with the clicks, so while it's up we forward
-  // wheel deltas to the grid's own scroller by hand (freeze.js's scroll listener then re-pins the
-  // frozen header/column bands). Gated on rtt-busy-on so normal-state scrolling stays native.
+  // Browser: the shown scrim's pointer-events:auto veil eats the wheel along with clicks, so while it
+  // is up the wheel deltas are forwarded to the grid's own scroller by hand.
   document.addEventListener('wheel', (e) => {{
     const o = scrim(); if (!o || !o.classList.contains('rtt-busy-on')) return;
     const body = document.querySelector('.rtt-gridbody'); if (!body) return;
