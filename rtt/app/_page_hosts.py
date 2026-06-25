@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from nicegui.element import Element
 
     from rtt.app.editing import EditController
+    from rtt.app.gestures import GestureController
     from rtt.app.layout import Layout
     from rtt.app.reconciler import _Reconciler
     from rtt.app.rendering import Renderer
@@ -56,3 +57,41 @@ class EditHost(Protocol):
     def col_tokens(self, name: str) -> list: ...
 
     def available_keys(self) -> list[str]: ...
+
+
+class BuildHost(Protocol):
+    gestures: GestureController
+    edits: EditController
+    renderer: Renderer
+    panelgroup: Element
+    grid_pane: Element
+    board: Element
+    corner: Element
+    colhead: Element
+    colhead_inner: Element
+    gridbody: Element
+    rowband: Element
+    show_scroll: Element
+    show_frozen: Element
+    cell_parents: dict[str, Element]
+    select_all_box: Element
+    dark_btn: Element
+    chapter_reading: Element
+    chapter_slider: Element
+    refs: dict[str, Element]
+    boxes: dict[str, Element]
+    examples: dict[str, Element]
+    tile_parts: dict[str, list[Element]]
+    show_rows: dict[str, Element]
+    chapter: int
+    building: bool
+
+    def reset_everything(self) -> None: ...
+
+    def on_dark_toggle(self) -> None: ...
+
+    def on_chapter_change(self, v) -> None: ...
+
+    def _dark_icon(self) -> str: ...
+
+    def _chapter_reading(self, ch: int) -> str: ...

@@ -44,7 +44,7 @@ class _Page:
         self.rec = _Reconciler(self.editor, self.gestures)
         self.renderer = Renderer(self.editor, self.rec, self.gestures, self)
         self.edits = EditController(self.editor, self.rec, self.gestures, self)
-        self.builder = PageBuilder(self)
+        self.builder = PageBuilder(self.editor, self)
         self.builder._setup_page_head()
         self._init_page_client(loaded_from_url)
         self.edits._build_edit_specs()
