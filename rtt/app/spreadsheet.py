@@ -7,7 +7,12 @@ from rtt.app.spreadsheet_constants import (
     GRIP_BAND,
     PAD,
 )
-from rtt.app.spreadsheet_controls import _ControlsMixin, emit_controls, emit_tile_toggles
+from rtt.app.spreadsheet_controls import (
+    _ControlsMixin,
+    emit_controls,
+    emit_tile_toggles,
+    transform_cells,
+)
 from rtt.app.spreadsheet_decorations import emit_decorations
 from rtt.app.spreadsheet_emit_mapping import (
     _EmitMappingMixin,
@@ -117,7 +122,7 @@ class _GridBuilder(
             emit_ebk_frames_and_marks(self.resolved, self.geometry, ctx, self.cells).cells
         )
         self.cells.extend(emit_tile_toggles(self.geometry, ctx).cells)
-        self._apply_value_display_filters()
+        self.cells = list(transform_cells(self.cells, self.resolved, self.geometry, ctx))
 
 
 def build(state, settings=None, collapsed=None, **inputs) -> Layout:
