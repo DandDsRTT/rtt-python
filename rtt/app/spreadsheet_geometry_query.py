@@ -1,7 +1,21 @@
 from __future__ import annotations
 
-from rtt.app.grid_tables import SUBSCRIPT_C, SUBSCRIPT_L, UNITS
-from rtt.app.spreadsheet_constants import BRACKET_W, COL_W, FRAME_GAP, FRAME_H, ROW_H, V_SPLIT_GAP
+from rtt.app.grid_tables import (
+    FORM_SUBSCRIPT_GENS,
+    FORM_SUBSCRIPT_ROWS,
+    SUBSCRIPT_C,
+    SUBSCRIPT_L,
+    UNITS,
+)
+from rtt.app.spreadsheet_constants import (
+    BRACKET_W,
+    COL_W,
+    FRAME_GAP,
+    FRAME_H,
+    PAD,
+    ROW_H,
+    V_SPLIT_GAP,
+)
 from rtt.app.spreadsheet_text import _sub, _subscript_coord, pending_token
 
 
@@ -270,3 +284,37 @@ def plus_shows(geometry, resolved, collapsed, state, ckey: str) -> bool:
     return tile_open(geometry, collapsed, "quantities", ckey) or tile_open(
         geometry, collapsed, "vectors", ckey
     )
+
+
+def form_subscripted(resolved, glyph: str, rkey: str, ckey: str) -> str:
+    if (
+        glyph
+        and resolved.flags.form_subscript
+        and (rkey in FORM_SUBSCRIPT_ROWS or (rkey, ckey) in FORM_SUBSCRIPT_GENS)
+    ):
+        return glyph[:1] + SUBSCRIPT_C + glyph[1:]
+    return glyph
+
+
+def projection_superspace_tail(resolved) -> str:
+    return f" = G{SUBSCRIPT_L}→ₛ𝑀ₛ→{SUBSCRIPT_L}" if resolved.flags.superspace else ""
+
+
+def weight_simplicity_header(resolved, i: int) -> str:
+    symbol = f"w{_sub(i + 1)}"
+    if not resolved.flags.equiv:
+        return symbol
+    return f"{symbol} = c{_sub(i + 1)}⁻¹"
+
+
+def panel_rect(geometry, collapsed, rkey: str, ckey: str):
+    tile_c = f"tile:{rkey}:{ckey}" in collapsed
+    col_c = f"col:{ckey}" in collapsed or tile_c
+    row_c = f"row:{rkey}" in collapsed or tile_c
+    cx, cw = tile_span_box(geometry, rkey, ckey)
+    ch, cy = geometry.rows[rkey].tile_h, geometry.rows[rkey].tile_top
+    w, px = (0, 0) if col_c else (cw, PAD)
+    h, py = (0, 0) if row_c else (ch, PAD)
+    bx = cx + cw / 2 if col_c else cx
+    by = cy + ch / 2 if row_c else cy
+    return bx - px, by - py, w + 2 * px, h + 2 * py

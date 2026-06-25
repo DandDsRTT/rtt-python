@@ -9,12 +9,8 @@ from rtt.app.grid_tables import (
     EQUIVALENCES,
     FORM_CHOOSERS,
     FORM_EQUIVALENCES,
-    FORM_SUBSCRIPT_GENS,
-    FORM_SUBSCRIPT_ROWS,
     PRESET_COPIES,
     PRESETS,
-    SUBSCRIPT_C,
-    SUBSCRIPT_L,
     SYMBOLS,
 )
 from rtt.app.spreadsheet_constants import (
@@ -30,7 +26,6 @@ from rtt.app.spreadsheet_constants import (
     LBOX_DIM_W,
     MAX_CAPTION_LINES,
     OPT_BOX_MIN_W,
-    PAD,
     PBOX_W,
     PRESET_H,
     PRESET_W,
@@ -46,7 +41,6 @@ from rtt.app.spreadsheet_constants import (
 from rtt.app.spreadsheet_emit_model import element_cell_kind, voice
 from rtt.app.spreadsheet_text import (
     _min_width_for_lines,
-    _sub,
     _wrap_lines,
 )
 
@@ -73,8 +67,7 @@ class _GeometryMixin:
                     if (rk, key) in _r.labels.captions and (rk, key) in self.declared_tiles), default=0)
 
     def _projection_superspace_tail(self) -> str:
-        _r = self.resolved
-        return f" = G{SUBSCRIPT_L}→ₛ𝑀ₛ→{SUBSCRIPT_L}" if _r.flags.superspace else ""
+        return query.projection_superspace_tail(self.resolved)
 
     def _symbol_floor(self, key: str):
         _r = self.resolved
@@ -96,11 +89,7 @@ class _GeometryMixin:
         return floor
 
     def _form_subscripted(self, glyph: str, rkey: str, ckey: str) -> str:
-        _r = self.resolved
-        if (glyph and _r.flags.form_subscript
-                and (rkey in FORM_SUBSCRIPT_ROWS or (rkey, ckey) in FORM_SUBSCRIPT_GENS)):
-            return glyph[:1] + SUBSCRIPT_C + glyph[1:]
-        return glyph
+        return query.form_subscripted(self.resolved, glyph, rkey, ckey)
 
     def _control_floor(self, key: str):
         _r = self.resolved
@@ -230,13 +219,6 @@ class _GeometryMixin:
     def matrix_span(self, group_key: str):
         return query.matrix_span(self.geometry, self.resolved, group_key)
 
-    def _weight_simplicity_header(self, i: int):
-        _r = self.resolved
-        symbol = f"w{_sub(i + 1)}"
-        if not _r.flags.equiv:
-            return symbol
-        return f"{symbol} = c{_sub(i + 1)}⁻¹"
-
     def prime_left(self, p: int):
         return query.prime_left(self.geometry, p)
 
@@ -316,18 +298,6 @@ class _GeometryMixin:
 
     def _voice(self, tile, idx, cents) -> None:
         voice(self.cells, tile, idx, cents)
-
-    def panel_rect(self, ckey: str, rkey: str):
-        tile_c = f"tile:{rkey}:{ckey}" in self.collapsed
-        col_c = f"col:{ckey}" in self.collapsed or tile_c
-        row_c = f"row:{rkey}" in self.collapsed or tile_c
-        cx, cw = self.tile_span_box(rkey, ckey)
-        ch, cy = self.rows[rkey].tile_h, self.rows[rkey].tile_top
-        w, px = (0, 0) if col_c else (cw, PAD)
-        h, py = (0, 0) if row_c else (ch, PAD)
-        bx = cx + cw / 2 if col_c else cx
-        by = cy + ch / 2 if row_c else cy
-        return bx - px, by - py, w + 2 * px, h + 2 * py
 
     def cpick_band_y(self, rkey):
         return query.cpick_band_y(self.geometry, rkey)

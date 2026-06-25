@@ -8,7 +8,7 @@ from rtt.app.spreadsheet_constants import (
     PAD,
 )
 from rtt.app.spreadsheet_controls import _ControlsMixin
-from rtt.app.spreadsheet_decorations import _DecorationsMixin
+from rtt.app.spreadsheet_decorations import emit_decorations
 from rtt.app.spreadsheet_emit_mapping import (
     _EmitMappingMixin,
     emit_canon_band,
@@ -47,7 +47,6 @@ class _GridBuilder(
     _GeometryMixin,
     _EmitMappingMixin,
     _ControlsMixin,
-    _DecorationsMixin,
 ):
     def layout(self) -> Layout:
         self.cells: list[CellBox] = []
@@ -99,11 +98,18 @@ class _GridBuilder(
         approach_frame = tuning.extra["approach_frame"]
         self.approach_box = tuning.extra["approach_box"]
         self.cells.extend(emit_brackets(self.resolved, self.geometry, ctx).cells)
-        self._emit_matrix_labels()
-        self._emit_axes()
-        self._emit_panels(gtm_box, opt_box, approach_frame)
-        self._emit_washes()
-        self._emit_symbols_captions()
+        decorations = emit_decorations(
+            self.resolved,
+            self.geometry,
+            ctx,
+            self._control_region_boxes,
+            gtm_box,
+            opt_box,
+            approach_frame,
+        )
+        self.cells.extend(decorations.cells)
+        self.lines.extend(decorations.lines)
+        self.blocks.extend(decorations.blocks)
         self._emit_presets()
         self._emit_all_interval_check_fallback()
         self._emit_form_choosers()

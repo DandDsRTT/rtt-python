@@ -4,20 +4,12 @@ from dataclasses import replace
 
 from rtt.app import presets, service
 from rtt.app.grid_tables import (
-    _FACTOR_GROUP,
     BLANKED_NUMBER_KINDS,
-    CELL_FACTORS,
     FORM_CHOOSERS,
     GRIDDED_KINDS,
     PRESET_COPIES,
     PRESETS,
     RINGABLE_KINDS,
-    SPINE_COLUMN_GROUP,
-    SPINE_COLUMNS,
-    SPINE_ROW_GROUP,
-    SPINE_ROWS,
-    SUPERSPACE_REGION_COLUMNS,
-    SUPERSPACE_REGION_ROWS,
 )
 from rtt.app.layout import Block, CellBox
 from rtt.app.spreadsheet_constants import (
@@ -42,30 +34,6 @@ from rtt.app.spreadsheet_text import _fold_glyph, _pretransform_label
 
 
 class _ControlsMixin:
-    def tile_groups(self, rkey: str, ckey: str):
-        _r = self.resolved
-        region = set()
-        if rkey == "canon" or ckey == "canongens":
-            region |= {"temperament", "form"}
-        if rkey in ("projection", "tuning"):
-            region |= {"tuning"}
-        if _r.unchanged.shown and ckey == "commas":
-            return {"temperament", "tuning"} | region
-        if rkey in SPINE_ROWS and ckey in SPINE_COLUMN_GROUP:
-            return self._as_groups(SPINE_COLUMN_GROUP[ckey]) | region
-        if ckey in SPINE_COLUMNS and rkey in SPINE_ROW_GROUP:
-            return self._as_groups(SPINE_ROW_GROUP[rkey]) | region
-        if ckey in SUPERSPACE_REGION_COLUMNS or rkey in SUPERSPACE_REGION_ROWS:
-            groups = {"tuning"}
-            if SPINE_COLUMN_GROUP.get(ckey) == "temperament":
-                groups.add("temperament")
-            return groups | region
-        return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((rkey, ckey), ())} | region
-
-    @staticmethod
-    def _as_groups(g):
-        return {g} if isinstance(g, str) else set(g)
-
     @staticmethod
     def _is_sole_option(options, value) -> bool:
         opts = options if isinstance(options, dict) else {o: o for o in options}
