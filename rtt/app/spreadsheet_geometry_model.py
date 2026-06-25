@@ -77,5 +77,16 @@ class Geometry:
 GEOMETRY_FIELDS = tuple(f.name for f in fields(Geometry))
 
 
-def freeze_geometry(builder) -> Geometry:
-    return Geometry(**{name: getattr(builder, name) for name in GEOMETRY_FIELDS})
+def freeze_geometry(draft) -> Geometry:
+    return Geometry(**{name: getattr(draft, name) for name in GEOMETRY_FIELDS})
+
+
+class _GeometryAccess:
+    pass
+
+
+for _field in GEOMETRY_FIELDS:
+    setattr(
+        _GeometryAccess, _field, property(lambda self, _name=_field: getattr(self.geometry, _name))
+    )
+del _field
