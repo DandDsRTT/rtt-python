@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from html import escape as _escape
+from typing import TYPE_CHECKING
 
 from nicegui import ui
 
@@ -43,12 +44,17 @@ from rtt.app.render_html import (
     _tile_name_pieces,
 )
 
+if TYPE_CHECKING:
+    from rtt.app._page_hosts import BuildHost
+    from rtt.app.editor import Editor
+
 _log = logging.getLogger(__name__)
 
 
 class PageBuilder:
-    def __init__(self, page) -> None:
-        self.page = page
+    def __init__(self, editor: Editor, host: BuildHost) -> None:
+        self._editor = editor
+        self._host = host
         self.drawer_open = False
 
     def _setup_page_head(self) -> None:
@@ -77,19 +83,19 @@ class PageBuilder:
 
     def _build_layout(self) -> None:
         with ui.element("div").classes("rtt-shell"):
-            self.page.panelgroup = ui.element("div").classes("rtt-panelgroup")
-            with self.page.panelgroup:
+            self._host.panelgroup = ui.element("div").classes("rtt-panelgroup")
+            with self._host.panelgroup:
                 with ui.element("div").classes("rtt-chrome"):
                     self._pane_chrome()
                 self._build_drawer()
             self._build_grid_pane()
 
     def _build_grid_pane(self) -> None:
-        self.page.grid_pane = ui.element("div").classes("rtt-app").mark("gridpane")
-        with self.page.grid_pane:
-            self.page.colhead = ui.element("div").classes("rtt-colhead").mark("colhead")
-            with self.page.colhead:
-                self.page.colhead_inner = (
+        self._host.grid_pane = ui.element("div").classes("rtt-app").mark("gridpane")
+        with self._host.grid_pane:
+            self._host.colhead = ui.element("div").classes("rtt-colhead").mark("colhead")
+            with self._host.colhead:
+                self._host.colhead_inner = (
                     ui.element("div").classes("rtt-colhead-inner").mark("colheadinner")
                 )
             self._build_corner()
@@ -99,12 +105,12 @@ class PageBuilder:
         drawer = ui.element("div").classes("rtt-drawer")
         with drawer, ui.element("div").classes("rtt-drawer-inner"):
             self._build_show_frozen()
-            self.page.boxes: dict = {}
-            self.page.examples: dict = {}
-            self.page.tile_parts: dict = {}
-            self.page.show_rows: dict = {}
-            self.page.show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
-            with self.page.show_scroll:
+            self._host.boxes: dict = {}
+            self._host.examples: dict = {}
+            self._host.tile_parts: dict = {}
+            self._host.show_rows: dict = {}
+            self._host.show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
+            with self._host.show_scroll:
                 self._build_chapter_group()
                 for group_name, items in show_settings.SHOW_GROUPS:
                     with ui.element("div").classes("rtt-show-group"):
@@ -114,27 +120,27 @@ class PageBuilder:
                             self._build_show_group(items)
 
     def _build_corner(self) -> None:
-        self.page.corner = ui.element("div").classes("rtt-corner").mark("corner")
-        with self.page.corner:
+        self._host.corner = ui.element("div").classes("rtt-corner").mark("corner")
+        with self._host.corner:
             self._build_title_buttons()
             self._build_approach_radio()
 
     def _build_gridbody(self) -> None:
-        self.page.gridbody = ui.element("div").classes("rtt-gridbody").mark("gridbody")
-        with self.page.gridbody:
-            self.page.board = ui.element("div").classes("rtt-gridcontent").mark("board")
-            with self.page.board, ui.element("div").classes("rtt-band"):
-                self.page.rowband = ui.element("div").classes("rtt-rowband").mark("rowband")
-        self.page.refs["approach"].move(self.page.board)
-        self.page.cell_parents = {
-            "corner": self.page.corner,
-            "col": self.page.colhead_inner,
-            "row": self.page.rowband,
-            "body": self.page.board,
+        self._host.gridbody = ui.element("div").classes("rtt-gridbody").mark("gridbody")
+        with self._host.gridbody:
+            self._host.board = ui.element("div").classes("rtt-gridcontent").mark("board")
+            with self._host.board, ui.element("div").classes("rtt-band"):
+                self._host.rowband = ui.element("div").classes("rtt-rowband").mark("rowband")
+        self._host.refs["approach"].move(self._host.board)
+        self._host.cell_parents = {
+            "corner": self._host.corner,
+            "col": self._host.colhead_inner,
+            "row": self._host.rowband,
+            "body": self._host.board,
         }
 
     def _icon_button(self, ref, icon, on_click, classes, help_key):
-        self.page.refs[ref] = (
+        self._host.refs[ref] = (
             ui.button(icon=icon, on_click=on_click, color=None)
             .props("flat dense")
             .classes(classes)
@@ -143,8 +149,8 @@ class PageBuilder:
         )
 
     def _share_link(self) -> None:
-        self.page.gestures.end_commit_gestures()
-        token = _encode_state(self.page.editor.serialize())
+        self._host.gestures.end_commit_gestures()
+        token = _encode_state(self._editor.serialize())
         ui.run_javascript(
             "(async function(){"
             f"var u=location.origin+location.pathname+'?{_STATE_PARAM}='+{json.dumps(token)};"
@@ -158,13 +164,14 @@ class PageBuilder:
     def _arm_history_previews(self) -> None:
         def arm(btn, can, op):
             btn.on(
-                "mouseenter", lambda _=None: self.page.gestures.control_hover(op) if can() else None
+                "mouseenter",
+                lambda _=None: self._host.gestures.control_hover(op) if can() else None,
             )
-            btn.on("mouseleave", lambda _=None: self.page.gestures.control_unhover())
+            btn.on("mouseleave", lambda _=None: self._host.gestures.control_unhover())
 
-        arm(self.page.refs["undo"], lambda: self.page.editor.can_undo, self.page.editor.undo)
-        arm(self.page.refs["redo"], lambda: self.page.editor.can_redo, self.page.editor.redo)
-        arm(self.page.refs["reset"], lambda: self.page.editor.can_reset, self.page.editor.reset)
+        arm(self._host.refs["undo"], lambda: self._editor.can_undo, self._editor.undo)
+        arm(self._host.refs["redo"], lambda: self._editor.can_redo, self._editor.redo)
+        arm(self._host.refs["reset"], lambda: self._editor.can_reset, self._editor.reset)
 
     def _build_title_buttons(self) -> None:
         with ui.element("div").classes("rtt-titletile").mark("titletile"):
@@ -172,19 +179,19 @@ class PageBuilder:
                 self._icon_button(
                     "undo",
                     "undo",
-                    lambda: self.page.edits.act(self.page.editor.undo),
+                    lambda: self._host.edits.act(self._editor.undo),
                     "rtt-iconbtn rtt-hk-undo",
                     "undo",
                 )
                 self._icon_button(
                     "redo",
                     "redo",
-                    lambda: self.page.edits.act(self.page.editor.redo),
+                    lambda: self._host.edits.act(self._editor.redo),
                     "rtt-iconbtn rtt-hk-redo",
                     "redo",
                 )
                 self._icon_button(
-                    "reset", "restart_alt", self.page.reset_everything, "rtt-iconbtn", "reset"
+                    "reset", "restart_alt", self._host.reset_everything, "rtt-iconbtn", "reset"
                 )
                 self._icon_button(
                     "share", "share", self._share_link, "rtt-iconbtn rtt-noarm", "share"
@@ -206,24 +213,24 @@ class PageBuilder:
         }
 
         def on_approach_change(value):
-            if self.page.building or value is None:
+            if self._host.building or value is None:
                 return
-            self.page.editor.set_nonprime_basis_approach(value)
-            self.page.renderer.request_render()
+            self._editor.set_nonprime_basis_approach(value)
+            self._host.renderer.request_render()
 
         def on_approach_hover(value):
             if value is None:
-                self.page.gestures.control_unhover()
+                self._host.gestures.control_unhover()
                 return
-            self.page.gestures.control_hover(
-                lambda a=value: self.page.editor.set_nonprime_basis_approach(a)
+            self._host.gestures.control_hover(
+                lambda a=value: self._editor.set_nonprime_basis_approach(a)
             )
 
-        self.page.refs["approach"] = (
+        self._host.refs["approach"] = (
             ui.element("div").classes("rtt-approach rtt-rangemode").mark("approach")
         )
-        self.page.refs["approach_opts"] = {}
-        with self.page.refs["approach"]:
+        self._host.refs["approach_opts"] = {}
+        with self._host.refs["approach"]:
             for key, label in approach_options.items():
                 opt = ui.element("div").classes("rtt-rangeopt")
                 with opt:
@@ -232,27 +239,27 @@ class PageBuilder:
                 opt.on("click", lambda _=None, k=key: on_approach_change(k))
                 opt.on("mouseenter", lambda _=None, k=key: on_approach_hover(k))
                 opt.mark(f"approach-{label}")
-                self.page.refs["approach_opts"][key] = opt
-        self.page.refs["approach"].on("mouseleave", lambda _=None: on_approach_hover(None))
+                self._host.refs["approach_opts"][key] = opt
+        self._host.refs["approach"].on("mouseleave", lambda _=None: on_approach_hover(None))
 
     def _build_show_frozen(self) -> None:
-        self.page.show_frozen = ui.element("div").classes("rtt-show-frozen").mark("showfrozen")
-        with self.page.show_frozen:
+        self._host.show_frozen = ui.element("div").classes("rtt-show-frozen").mark("showfrozen")
+        with self._host.show_frozen:
             with ui.element("div").classes("rtt-show-all"):
-                self.page.select_all_box = (
+                self._host.select_all_box = (
                     ui.checkbox(
                         "select all / none",
-                        value=all(self.page.editor.settings[k] for k in show_settings.IMPLEMENTED),
-                        on_change=lambda e: self.page.edits.on_select_all(e.value),
+                        value=all(self._editor.settings[k] for k in show_settings.IMPLEMENTED),
+                        on_change=lambda e: self._host.edits.on_select_all(e.value),
                     )
                     .props("dense size=xs color=grey-8")
                     .classes("rtt-show-item")
                     .mark("showall")
                     .tooltip(tooltips.CHROME_HELP["select_all"])
                 )
-                self.page.dark_btn = (
-                    ui.button(on_click=self.page.on_dark_toggle, color=None)
-                    .props(f"flat dense round icon={self.page._dark_icon()}")
+                self._host.dark_btn = (
+                    ui.button(on_click=self._host.on_dark_toggle, color=None)
+                    .props(f"flat dense round icon={self._host._dark_icon()}")
                     .classes("rtt-darktoggle")
                     .mark("darkmode")
                     .tooltip(tooltips.CHROME_HELP["dark_mode"])
@@ -262,18 +269,18 @@ class PageBuilder:
         with ui.element("div").classes("rtt-show-group rtt-chapter-group"):
             with ui.element("div").classes("rtt-chapter-head"):
                 ui.label("guide chapter").classes("rtt-chapter-title")
-                self.page.chapter_reading = (
-                    ui.label(self.page._chapter_reading(self.page.chapter))
+                self._host.chapter_reading = (
+                    ui.label(self._host._chapter_reading(self._host.chapter))
                     .classes("rtt-chapter-reading")
                     .mark("chapterreading")
                 )
-            self.page.chapter_slider = (
+            self._host.chapter_slider = (
                 ui.slider(
                     min=show_settings.CHAPTER_MIN,
                     max=show_settings.CHAPTER_STAR,
                     step=1,
-                    value=self.page.chapter,
-                    on_change=lambda e: self.page.on_chapter_change(e.value),
+                    value=self._host.chapter,
+                    on_change=lambda e: self._host.on_chapter_change(e.value),
                 )
                 .props("markers snap dense color=grey-8")
                 .classes("rtt-chapter-slider")
@@ -291,8 +298,8 @@ class PageBuilder:
             el.mark(f"showpart:{key}")
         if css:
             el.style(css)
-        el.on("click", lambda k=key: self.page.edits.on_part_click(k))
-        self.page.tile_parts.setdefault(key, []).append(el)
+        el.on("click", lambda k=key: self._host.edits.on_part_click(k))
+        self._host.tile_parts.setdefault(key, []).append(el)
         return el
 
     def _tile_named_part(self, key, *, size=None, style=""):
@@ -303,7 +310,7 @@ class PageBuilder:
         with ui.element("div").classes("rtt-show-tile"):
             with ui.element("div").classes("rtt-tile-head"):
                 ui.html(_tile_fold_html()).classes("rtt-tile-fold")
-                self.page.refs["audio_bank"] = _audio_bank()
+                self._host.refs["audio_bank"] = _audio_bank()
             for line in _GENERAL_TILE_LINES:
                 if "gridded_values" in line:
                     self._build_tile_grid_line()
@@ -393,8 +400,8 @@ class PageBuilder:
                 box = (
                     ui.checkbox(
                         label,
-                        value=self.page.editor.settings[key],
-                        on_change=lambda e, k=key: self.page.edits.on_show_toggle(k, e.value),
+                        value=self._editor.settings[key],
+                        on_change=lambda e, k=key: self._host.edits.on_show_toggle(k, e.value),
                     )
                     .props("dense size=xs color=grey-8")
                     .classes("rtt-show-item")
@@ -404,19 +411,19 @@ class PageBuilder:
                 example = (
                     ui.html(_example_html(key)).classes("rtt-ex-cell").mark(f"showexample:{key}")
                 )
-            self.page.boxes[key] = box
-            self.page.examples[key] = example
-            self.page.show_rows[key] = row
+            self._host.boxes[key] = box
+            self._host.examples[key] = example
+            self._host.show_rows[key] = row
             parent = show_settings.SUBCONTROLS.get(key)
             if parent:
                 box.style(f"margin-left:{show_settings.depth_of(key) * 18}px")
-                row.bind_visibility_from(self.page.boxes[parent], "value")
+                row.bind_visibility_from(self._host.boxes[parent], "value")
 
     def toggle_drawer(self):
         self.drawer_open = not self.drawer_open
-        self.page.panelgroup.classes(
+        self._host.panelgroup.classes(
             add="rtt-open"
-        ) if self.drawer_open else self.page.panelgroup.classes(remove="rtt-open")
+        ) if self.drawer_open else self._host.panelgroup.classes(remove="rtt-open")
 
     def _pane_chrome(self):
         ui.button(icon="menu", on_click=self.toggle_drawer, color=None).props("flat dense").classes(
