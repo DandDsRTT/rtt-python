@@ -189,68 +189,75 @@ def _emit_mapped_grid_rowwise(cells, prefix, grid, n_cols, left, col_kw,
                                  COL_W - 2 * inset, ROW_H, "mapped", text=text, **{col_kw: j}))
 
 
+def emit_projection_band(resolved, geometry, ctx) -> EmitResult:
+    _r = resolved
+    cells: list = []
+    cl = ctx.collapsed
+    emit_mapped_grid(cells, resolved, geometry, cl, "primes", "proj", _r.projection.matrix, _r.dims.d, lambda i: query.prime_left(geometry, i), "prime")
+    emit_mapped_grid(cells, resolved, geometry, cl, "gens", "embed", _r.projection.embedding_matrix, _r.dims.r, lambda i: query.gen_left(geometry, i), "gen")
+    emit_mapped_grid(cells, resolved, geometry, cl, "canongens", "embed_c", _r.canon.embedding_matrix, _r.dims.rc, lambda i: query.canongen_left(geometry, i), "gen")
+    emit_mapped_grid(cells, resolved, geometry, cl, "ssgens", "embed_sl", _r.projection.embedding_superspace, _r.dims.rL, lambda i: query.ss_gen_left(geometry, i), "gen")
+    emit_mapped_grid(cells, resolved, geometry, cl, "ssprimes", "proj_sl", _r.projection.superspace, _r.dims.dL, lambda i: query.ss_prime_left(geometry, i), "prime")
+    _emit_projection_unchanged(cells, resolved, geometry, ctx)
+    _emit_projection_basis(cells, resolved, geometry, ctx)
+    full_proj = _r.projection.rationals is not None
+    emit_mapped_grid(cells, resolved, geometry, cl, "detempering", "proj_pd", _r.projection.detempering, _r.dims.r, lambda i: query.detempering_left(geometry, i), "gen",
+                     full=full_proj, colwise=True, col_token_key="detempering")
+    emit_mapped_grid(cells, resolved, geometry, cl, "targets", "proj_pt", _r.projection.targets, _r.dims.k, lambda i: query.target_left(geometry, i), "comma",
+                     full=full_proj, colwise=True, pending=_r.targets.pending)
+    emit_mapped_grid(cells, resolved, geometry, cl, "held", "proj_ph", _r.projection.held, _r.dims.nh, lambda i: query.held_left(geometry, i), "comma",
+                     full=full_proj, colwise=True, pending=_r.held.pending)
+    emit_mapped_grid(cells, resolved, geometry, cl, "interest", "proj_pi", _r.projection.interest, _r.dims.mi, lambda i: query.interest_left(geometry, i), "comma",
+                     full=full_proj, colwise=True, inset=KET_INSET, pending=_r.interest.pending)
+    _emit_scaling_factors(cells, resolved, geometry, ctx)
+    return EmitResult(cells=tuple(cells))
+
+
+def _emit_projection_unchanged(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if not (_r.unchanged.shown and query.row_open(geometry, ctx.collapsed, "projection")
+            and query.tile_open(geometry, ctx.collapsed, "projection", "commas")):
+        return
+    for c in range(_r.dims.nc):
+        for p in range(_r.dims.d):
+            cells.append(CellBox(f"cell:proj_v:{p}:{query.col_token(_r, 'commas', c)}", query.comma_left(geometry, _r, c), query.proj_top(geometry, p),
+                                 COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
+    if _r.scalars.comma_draft:
+        for p in range(_r.dims.d):
+            cells.append(CellBox(f"cell:proj_v:{p}:draft", query.comma_left(geometry, _r, _r.dims.nc), query.proj_top(geometry, p),
+                                 COL_W, ROW_H, "mapped", text="0" if _r.ghosts.comma else "", prime=p, pending=True))
+    for j in range(_r.dims.nu):
+        dashed = _r.unchanged.basis[j] is None
+        for p in range(_r.dims.d):
+            cells.append(CellBox(f"cell:proj_v:{p}:u{j}", query.comma_left(geometry, _r, _r.dims.nc_shown + j), query.proj_top(geometry, p),
+                                 COL_W, ROW_H, "mapped",
+                                 text=DASH if dashed else str(_r.unchanged.basis[j][p]), prime=p, comma=_r.dims.nc + j))
+
+
+def _emit_projection_basis(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if query.row_open(geometry, ctx.collapsed, "projection") and query.tile_open(geometry, ctx.collapsed, "projection", "quantities"):
+        bx = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
+        for p in range(_r.dims.d):
+            cells.append(CellBox(f"proj_basis:{p}", bx, query.proj_top(geometry, p), COL_W, ROW_H, "prime", text=str(_r.dims.elements[p]), prime=p))
+
+
+def _emit_scaling_factors(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if query.row_open(geometry, ctx.collapsed, "scaling_factors") and query.tile_open(geometry, ctx.collapsed, "scaling_factors", "commas"):
+        scaling = ["0"] * _r.dims.nc + [(DASH if v is None else "1") for v in _r.unchanged.basis]
+        for c, lam in enumerate(scaling):
+            cells.append(CellBox(f"cell:scaling:{query.col_token(_r, 'commas', c)}", query.comma_left(geometry, _r, query.comma_value_pos(_r, c)), geometry.rows["scaling_factors"].y,
+                                 COL_W, ROW_H, "mapped", text=lam, comma=c))
+        if _r.scalars.comma_draft:
+            cells.append(CellBox("cell:scaling:draft", query.comma_left(geometry, _r, _r.dims.nc), geometry.rows["scaling_factors"].y,
+                                 COL_W, ROW_H, "mapped", text="0" if _r.ghosts.comma else "", pending=True))
+
+
 class _EmitMappingMixin:
     def _emit_mapped_grid(self, tile, prefix, grid, n_cols, left, col_kw, **kw) -> None:
         emit_mapped_grid(self.cells, self.resolved, self.geometry, self.collapsed,
                          tile, prefix, grid, n_cols, left, col_kw, **kw)
-
-    def _emit_projection_band(self) -> None:
-        _r = self.resolved
-        self._emit_mapped_grid("primes", "proj", _r.projection.matrix, _r.dims.d, self.prime_left, "prime")
-        self._emit_mapped_grid("gens", "embed", _r.projection.embedding_matrix, _r.dims.r, self.gen_left, "gen")
-        self._emit_mapped_grid("canongens", "embed_c", _r.canon.embedding_matrix, _r.dims.rc, self.canongen_left, "gen")
-        self._emit_mapped_grid("ssgens", "embed_sl", _r.projection.embedding_superspace, _r.dims.rL, self.ss_gen_left, "gen")
-        self._emit_mapped_grid("ssprimes", "proj_sl", _r.projection.superspace, _r.dims.dL, self.ss_prime_left, "prime")
-
-        self._emit_projection_unchanged()
-        self._emit_projection_basis()
-        full_proj = _r.projection.rationals is not None
-        self._emit_mapped_grid("detempering", "proj_pd", _r.projection.detempering, _r.dims.r, self.detempering_left, "gen",
-                               full=full_proj, colwise=True, col_token_key="detempering")
-        self._emit_mapped_grid("targets", "proj_pt", _r.projection.targets, _r.dims.k, self.target_left, "comma",
-                               full=full_proj, colwise=True, pending=_r.targets.pending)
-        self._emit_mapped_grid("held", "proj_ph", _r.projection.held, _r.dims.nh, self.held_left, "comma",
-                               full=full_proj, colwise=True, pending=_r.held.pending)
-        self._emit_mapped_grid("interest", "proj_pi", _r.projection.interest, _r.dims.mi, self.interest_left, "comma",
-                               full=full_proj, colwise=True, inset=KET_INSET, pending=_r.interest.pending)
-        self._emit_scaling_factors()
-
-    def _emit_projection_unchanged(self) -> None:
-        _r = self.resolved
-        if not (_r.unchanged.shown and self.row_open("projection") and self.tile_open("projection", "commas")):
-            return
-        for c in range(_r.dims.nc):
-            for p in range(_r.dims.d):
-                self.cells.append(CellBox(f"cell:proj_v:{p}:{self.col_token('commas', c)}", self.comma_left(c), self.proj_top(p),
-                                     COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
-        if _r.scalars.comma_draft:
-            for p in range(_r.dims.d):
-                self.cells.append(CellBox(f"cell:proj_v:{p}:draft", self.comma_left(_r.dims.nc), self.proj_top(p),
-                                     COL_W, ROW_H, "mapped", text="0" if _r.ghosts.comma else "", prime=p, pending=True))
-        for j in range(_r.dims.nu):
-            dashed = _r.unchanged.basis[j] is None
-            for p in range(_r.dims.d):
-                self.cells.append(CellBox(f"cell:proj_v:{p}:u{j}", self.comma_left(_r.dims.nc_shown + j), self.proj_top(p),
-                                     COL_W, ROW_H, "mapped",
-                                     text=DASH if dashed else str(_r.unchanged.basis[j][p]), prime=p, comma=_r.dims.nc + j))
-
-    def _emit_projection_basis(self) -> None:
-        _r = self.resolved
-        if self.row_open("projection") and self.tile_open("projection", "quantities"):
-            bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2
-            for p in range(_r.dims.d):
-                self.cells.append(CellBox(f"proj_basis:{p}", bx, self.proj_top(p), COL_W, ROW_H, "prime", text=str(_r.dims.elements[p]), prime=p))
-
-    def _emit_scaling_factors(self) -> None:
-        _r = self.resolved
-        if self.row_open("scaling_factors") and self.tile_open("scaling_factors", "commas"):
-            scaling = ["0"] * _r.dims.nc + [(DASH if v is None else "1") for v in _r.unchanged.basis]
-            for c, lam in enumerate(scaling):
-                self.cells.append(CellBox(f"cell:scaling:{self.col_token('commas', c)}", self.comma_left(self.comma_value_pos(c)), self.rows["scaling_factors"].y,
-                                     COL_W, ROW_H, "mapped", text=lam, comma=c))
-            if _r.scalars.comma_draft:
-                self.cells.append(CellBox("cell:scaling:draft", self.comma_left(_r.dims.nc), self.rows["scaling_factors"].y,
-                                     COL_W, ROW_H, "mapped", text="0" if _r.ghosts.comma else "", pending=True))
 
     def _emit_canon_band(self) -> None:
         _r = self.resolved
