@@ -1,7 +1,12 @@
 from rtt.app import service, settings, spreadsheet
 from rtt.app.spreadsheet_emit_mapping import emit_mapping
+from rtt.app.spreadsheet_emit_matrix import emit_counts_row, emit_headers, emit_units
 from rtt.app.spreadsheet_emit_model import EmitResult, build_context
 from rtt.app.spreadsheet_emit_vectors import emit_vectors
+
+
+def _maximized_builder():
+    return spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on())
 
 
 def _all_on():
@@ -39,3 +44,16 @@ def test_emit_mapping_is_a_pure_function_over_resolved_geometry_ctx():
     assert "gen:0" in ids
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
     assert ids <= full
+
+
+def test_emit_matrix_bands_are_pure_functions():
+    builder = _maximized_builder()
+    ctx = build_context(builder)
+    headers = {c.id for c in emit_headers(builder.resolved, builder.geometry, ctx).cells}
+    counts = {c.id for c in emit_counts_row(builder.resolved, builder.geometry, ctx).cells}
+    units = {c.id for c in emit_units(builder.resolved, builder.geometry, ctx).cells}
+    assert "header:primes" in headers and "toggle:all" in headers
+    assert "count:primes" in counts
+    assert any(i.startswith("urow:") or i.startswith("ucol:") for i in units)
+    full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
+    assert (headers | counts | units) <= full
