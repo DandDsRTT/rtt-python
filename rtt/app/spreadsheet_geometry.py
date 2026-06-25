@@ -4,7 +4,6 @@ from rtt.app import service
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     BANDS,
-    EDITABLE_PTEXT,
     EDITABLE_PTEXT_ROWS,
     EQUIVALENCES,
     FORM_CHOOSERS,
@@ -14,7 +13,6 @@ from rtt.app.grid_tables import (
     SYMBOLS,
 )
 from rtt.app.spreadsheet_constants import (
-    BAND_GAP,
     BOX_INNER,
     BOX_OUTER,
     BRACKET_W,
@@ -22,19 +20,15 @@ from rtt.app.spreadsheet_constants import (
     CBOX_NODROP_W,
     CBOX_W,
     COL_W,
-    CTRL_LABEL_GAP,
     LBOX_DIM_W,
     MAX_CAPTION_LINES,
     OPT_BOX_MIN_W,
     PBOX_W,
-    PRESET_H,
     PRESET_W,
     PTEXT_EDIT_H,
     PTEXT_H,
-    SCHEME_BTN_SQ,
     SCHEME_CTRL_W,
     SYMBOL_FONT,
-    TARGET_PRESET_W,
     TBOX_W,
     V_SPLIT_GAP,
 )
@@ -151,40 +145,20 @@ class _GeometryMixin:
             lines.append(_wrap_lines("nullity", _r.dims.nc * COL_W + _r.unchanged.empty_comma_w))
         return max(lines, default=1) * CAPTION_LINE
 
-    def ptext_editable(self, rkey: str, ckey: str) -> bool:
-        _r = self.resolved
-        if rkey == "prescaling":
-            return (rkey, ckey) == ("prescaling", "ssprimes" if _r.flags.superspace else "primes")
-        if rkey == "tuning" and _r.flags.superspace_generators:
-            return ckey == "ssgens"
-        return (rkey, ckey) in EDITABLE_PTEXT
-
-    def ptext_height(self, rkey: str, ckey: str):
-        return PTEXT_EDIT_H if self.ptext_editable(rkey, ckey) else PTEXT_H
-
     def ptext_band(self, key: str, folded: bool):
         if folded or not any(rk == key for rk, _ck in self.ptext_strings):
             return 0
         return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
 
-    def control_dims(self, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):
-        dropdown_w = max(40, min(self.col_w[ckey] - 2 * BOX_INNER, cap_w))
-        label_h = CAPTION_LINE if label else 0
-        box_h = 2 * BOX_INNER + PRESET_H + label_h
-        box_h += (SCHEME_BTN_SQ + CTRL_LABEL_GAP) if scheme_btn else 0
-        if form_label is not None:
-            box_h += BAND_GAP + PRESET_H + (CAPTION_LINE if form_label else 0)
-        return dropdown_w, label_h, box_h
-
     def control_band_h(self, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):
-        return 2 * BOX_OUTER + self.control_dims(ckey, cap_w, label, scheme_btn, form_label)[2]
+        return 2 * BOX_OUTER + query.control_dims(self.geometry, ckey, cap_w, label, scheme_btn, form_label)[2]
 
     def preset_cap(self, name: str):
-        return TARGET_PRESET_W if name == "target" else PRESET_W
+        return query.preset_cap(name)
 
     def preset_band_h(self, key: str):
         return max((self.control_band_h(ckey, self.preset_cap(name), label, scheme_btn=(name == "projection"),
-                                         form_label=self._preset_form_label(name, rk, ckey))
+                                         form_label=query.preset_form_label(self.resolved, name, rk, ckey))
                     for name, rk, ckey, label in PRESETS + PRESET_COPIES
                     if rk == key and ckey in self.col_w), default=0)
 

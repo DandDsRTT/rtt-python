@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from rtt.app.grid_tables import (
+    EDITABLE_PTEXT,
+    FORM_CHOOSERS,
     FORM_SUBSCRIPT_GENS,
     FORM_SUBSCRIPT_ROWS,
     SUBSCRIPT_C,
@@ -8,12 +10,22 @@ from rtt.app.grid_tables import (
     UNITS,
 )
 from rtt.app.spreadsheet_constants import (
+    BAND_GAP,
+    BOX_INNER,
     BRACKET_W,
+    CAPTION_LINE,
     COL_W,
+    CTRL_LABEL_GAP,
     FRAME_GAP,
     FRAME_H,
     PAD,
+    PRESET_H,
+    PRESET_W,
+    PTEXT_EDIT_H,
+    PTEXT_H,
     ROW_H,
+    SCHEME_BTN_SQ,
+    TARGET_PRESET_W,
     V_SPLIT_GAP,
 )
 from rtt.app.spreadsheet_text import _sub, _subscript_coord, pending_token
@@ -305,6 +317,42 @@ def weight_simplicity_header(resolved, i: int) -> str:
     if not resolved.flags.equiv:
         return symbol
     return f"{symbol} = c{_sub(i + 1)}⁻¹"
+
+
+def control_dims(geometry, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):
+    dropdown_w = max(40, min(geometry.col_w[ckey] - 2 * BOX_INNER, cap_w))
+    label_h = CAPTION_LINE if label else 0
+    box_h = 2 * BOX_INNER + PRESET_H + label_h
+    box_h += (SCHEME_BTN_SQ + CTRL_LABEL_GAP) if scheme_btn else 0
+    if form_label is not None:
+        box_h += BAND_GAP + PRESET_H + (CAPTION_LINE if form_label else 0)
+    return dropdown_w, label_h, box_h
+
+
+def preset_cap(name: str):
+    return TARGET_PRESET_W if name == "target" else PRESET_W
+
+
+def preset_form_label(resolved, name: str, rkey: str, ckey: str):
+    embeds = (
+        name == "temperament"
+        and resolved.flags.form_controls
+        and any(rk == rkey and ck == ckey for _n, rk, ck, _l in FORM_CHOOSERS)
+    )
+    return "form" if embeds else None
+
+
+def ptext_editable(resolved, rkey: str, ckey: str) -> bool:
+    _r = resolved
+    if rkey == "prescaling":
+        return (rkey, ckey) == ("prescaling", "ssprimes" if _r.flags.superspace else "primes")
+    if rkey == "tuning" and _r.flags.superspace_generators:
+        return ckey == "ssgens"
+    return (rkey, ckey) in EDITABLE_PTEXT
+
+
+def ptext_height(resolved, rkey: str, ckey: str):
+    return PTEXT_EDIT_H if ptext_editable(resolved, rkey, ckey) else PTEXT_H
 
 
 def panel_rect(geometry, collapsed, rkey: str, ckey: str):

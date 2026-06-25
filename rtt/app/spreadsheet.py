@@ -7,7 +7,7 @@ from rtt.app.spreadsheet_constants import (
     GRIP_BAND,
     PAD,
 )
-from rtt.app.spreadsheet_controls import _ControlsMixin
+from rtt.app.spreadsheet_controls import _ControlsMixin, emit_controls, emit_tile_toggles
 from rtt.app.spreadsheet_decorations import emit_decorations
 from rtt.app.spreadsheet_emit_mapping import (
     _EmitMappingMixin,
@@ -110,15 +110,13 @@ class _GridBuilder(
         self.cells.extend(decorations.cells)
         self.lines.extend(decorations.lines)
         self.blocks.extend(decorations.blocks)
-        self._emit_presets()
-        self._emit_all_interval_check_fallback()
-        self._emit_form_choosers()
-        self._emit_scheme_buttons()
-        self._emit_ptext_band()
+        controls = emit_controls(self.resolved, self.geometry, ctx)
+        self.cells.extend(controls.cells)
+        self.blocks.extend(controls.blocks)
         self.cells.extend(
             emit_ebk_frames_and_marks(self.resolved, self.geometry, ctx, self.cells).cells
         )
-        self._emit_tile_toggles()
+        self.cells.extend(emit_tile_toggles(self.geometry, ctx).cells)
         self._apply_value_display_filters()
 
 
