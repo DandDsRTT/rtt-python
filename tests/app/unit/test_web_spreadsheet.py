@@ -7224,7 +7224,7 @@ def test_form_colorization_washes_the_canon_row_and_column():
              generator_detempering=True, optimization=True, projection=True, identity_objects=True)
     b = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), settings=s,
                                  interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),), held_basis_ratios=("2/1", "5/4"))
-    b.layout()
+    lay = b.layout()
     tg = partial(_tile_groups, b.resolved)
     RED, WHITE, GREEN = {"form", "temperament"}, {"form", "temperament", "tuning"}, {"temperament", "tuning"}
     # the canon ROW + canon-gens COLUMN: red, going white where they cross a cyan column / row
@@ -7239,17 +7239,17 @@ def test_form_colorization_washes_the_canon_row_and_column():
     assert tg("mapping", "primes") == {"temperament"}
     # the THREE-way (white) intersection RENDERS as the bare white base — no colour band, so it reads
     # white (lighter than the board), not the muddy darken-grey three colour bands would give.
-    cells = {c.id: c for c in b.cells}
+    cells = {c.id: c for c in lay.cells}
     yc = cells["cell:canon_mapped:0:0"]   # Y_C, a white tile
     x, y = yc.x + yc.w / 2, yc.y + yc.h / 2
-    over = lambda pred: any(pred(bl) and bl.x <= x <= bl.x + bl.w and bl.y <= y <= bl.y + bl.h for bl in b.blocks)
+    over = lambda pred: any(pred(bl) and bl.x <= x <= bl.x + bl.w and bl.y <= y <= bl.y + bl.h for bl in lay.blocks)
     assert over(lambda bl: bl.id.startswith("washbase:"))                    # a white base IS laid
     assert not over(lambda bl: bl.tint in ("temperament", "tuning", "form"))  # but NO colour band → white
     # the counts "rank" tile spans both generator columns but splits: yellow generators | red canon-gens
     rank = cells["count:gens"]
     gx, cgx = cells["cell:form:0:0"].x + 5, cells["cell:fcancel:0:0"].x + 5
     in_band = lambda bx, tint: any(bl.tint == tint and bl.x <= bx <= bl.x + bl.w
-                                   and bl.y <= rank.y + rank.h / 2 <= bl.y + bl.h for bl in b.blocks)
+                                   and bl.y <= rank.y + rank.h / 2 <= bl.y + bl.h for bl in lay.blocks)
     assert in_band(gx, "temperament") and not in_band(gx, "form")   # generators half: yellow
     assert in_band(cgx, "temperament") and in_band(cgx, "form")     # canon-gens half: red
 
