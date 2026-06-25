@@ -1,5 +1,5 @@
 from rtt.app import service, settings, spreadsheet
-from rtt.app.spreadsheet_emit_mapping import emit_mapping
+from rtt.app.spreadsheet_emit_mapping import emit_mapping, emit_projection_band
 from rtt.app.spreadsheet_emit_matrix import (
     emit_column_plus_controls,
     emit_counts_row,
@@ -84,3 +84,15 @@ def test_emit_column_plus_and_rehomed_are_pure_functions():
     assert "gen_plus" in {c.id for c in plus.cells}
     # rehomed minus controls only emit when the quantities row is collapsed and vectors open
     assert rehomed.cells == ()
+
+
+def test_emit_projection_band_is_a_pure_function():
+    s = _all_on()
+    builder = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                                       held_basis_ratios=("2/1", "5/4"))
+    result = emit_projection_band(builder.resolved, builder.geometry, build_context(builder))
+    ids = {c.id for c in result.cells}
+    assert any(i.startswith("cell:proj:") for i in ids)
+    full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                                            held_basis_ratios=("2/1", "5/4")).cells}
+    assert ids <= full
