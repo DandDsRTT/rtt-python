@@ -12,6 +12,7 @@ from rtt.app.spreadsheet_controls import _ControlsMixin
 from rtt.app.spreadsheet_decorations import _DecorationsMixin
 from rtt.app.spreadsheet_emit_mapping import (
     _EmitMappingMixin,
+    emit_canon_band,
     emit_mapping,
     emit_projection_band,
 )
@@ -87,7 +88,7 @@ class _GridBuilder(
         self.cells.extend(emit_rehomed_minus_controls(self.resolved, self.geometry, ctx).cells)
         self.cells.extend(emit_mapping(self.resolved, self.geometry, ctx).cells)
         self.cells.extend(emit_projection_band(self.resolved, self.geometry, ctx).cells)
-        self._emit_canon_band()
+        self.cells.extend(emit_canon_band(self.resolved, self.geometry, ctx).cells)
         self.cells.extend(emit_vectors(self.resolved, self.geometry, ctx).cells)
         self._emit_superspace_rows()
         self._emit_identity_objects()

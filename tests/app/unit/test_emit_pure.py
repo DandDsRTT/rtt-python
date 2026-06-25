@@ -1,5 +1,5 @@
 from rtt.app import service, settings, spreadsheet
-from rtt.app.spreadsheet_emit_mapping import emit_mapping, emit_projection_band
+from rtt.app.spreadsheet_emit_mapping import emit_canon_band, emit_mapping, emit_projection_band
 from rtt.app.spreadsheet_emit_matrix import (
     emit_column_plus_controls,
     emit_counts_row,
@@ -95,4 +95,13 @@ def test_emit_projection_band_is_a_pure_function():
     assert any(i.startswith("cell:proj:") for i in ids)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                             held_basis_ratios=("2/1", "5/4")).cells}
+    assert ids <= full
+
+
+def test_emit_canon_band_is_a_pure_function():
+    # a non-canonical mapping form makes the canonical-mapping row render
+    builder = spreadsheet._GridBuilder(service.from_mapping(((1, 0, -4), (0, 1, 4))), _all_on())
+    result = emit_canon_band(builder.resolved, builder.geometry, build_context(builder))
+    ids = {c.id for c in result.cells}
+    full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, -4), (0, 1, 4))), _all_on()).cells}
     assert ids <= full
