@@ -86,6 +86,7 @@ class Resolver:
             return
 
         self.geometry = SimpleNamespace()
+        self._init_superspace_tuning()
         interest_tiles, held_tiles, detempering_tiles = self._declare_interval_column_tiles()
         self._declare_tiles(interest_tiles, held_tiles, detempering_tiles)
 
@@ -161,7 +162,6 @@ class Resolver:
         draft.elements = self.state.domain_basis
         draft.dL = service.superspace_dimension(draft.elements)
         draft.rL = service.superspace_rank(self.state)
-        self._ss_tun = None
         draft.superspace_primes = service.superspace_primes(draft.elements)
         draft.show_nonstandard_domain = self.settings.get("nonstandard_domain", False)
         draft.show_superspace = (
