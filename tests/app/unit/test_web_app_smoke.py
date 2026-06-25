@@ -1328,6 +1328,19 @@ def test_bind_callbacks_fails_loudly_on_a_missing_callback():
         bind_callbacks(source)
 
 
+def test_bind_callbacks_fails_loudly_on_a_duplicate_provider():
+    from types import SimpleNamespace
+
+    from rtt.app.reconciler import bind_callbacks, required_callback_names
+
+    full = SimpleNamespace(**{name: _cb_stub() for name in required_callback_names()})
+    clash = next(iter(required_callback_names()))
+    extra = SimpleNamespace(**{clash: _cb_stub()})
+
+    with pytest.raises(RuntimeError, match="multiple"):
+        bind_callbacks(full, extra)
+
+
 def _cb_stub():
     def stub(*_a, **_k):
         return None
