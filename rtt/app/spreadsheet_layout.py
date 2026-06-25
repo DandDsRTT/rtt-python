@@ -103,12 +103,12 @@ class _LayoutMixin:
         return interest_tiles, held_tiles, detempering_tiles
 
     def _declare_tiles(self, interest_tiles, held_tiles, detempering_tiles) -> None:
-        self.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
+        self.geometry.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
                  + SUPERSPACE_COUNTS_TILES
                  + TILES + UNITS_TILES + SUPERSPACE_TILES
                  + interest_tiles + held_tiles + detempering_tiles + self._projection_col_tiles()
                  + self._ss_projection_col_tiles() + self._canon_col_tiles())
-        self.declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in self.tiles}
+        self.geometry.declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in self.tiles}
         self._prune_declared_tiles()
 
     def _projection_col_tiles(self):
@@ -172,24 +172,24 @@ class _LayoutMixin:
     def _prune_declared_tiles(self) -> None:
         _r = self.resolved
         if service.is_all_interval(self.tuning_scheme):
-            self.declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
+            self.geometry.declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
                                ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
                                ("ss_vectors", "targets"), ("ss_mapping", "targets")}
         if not _r.flags.identity_objects:
-            self.declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
+            self.geometry.declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
                                     ("mapping", "detempering"), ("canon", "canongens"),
                                     ("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
         if not _r.dims.nh_shown:
-            self.declared_tiles -= {("ss_vectors", "held"), ("ss_mapping", "held")}
+            self.geometry.declared_tiles -= {("ss_vectors", "held"), ("ss_mapping", "held")}
         if not _r.dims.mi_shown:
-            self.declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
+            self.geometry.declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
 
     def _resolve_col_headers(self) -> None:
         _r = self.resolved
         domain_title = ("domain basis\nelements"
                         if service.domain_has_nonprimes(_r.dims.elements)
                         else "domain\nprimes")
-        self.col_header = {"quantities": "interval ratios", "units": "units",
+        self.geometry.col_header = {"quantities": "interval ratios", "units": "units",
                       "canongens": "canonical\ngenerators", "gens": "generators",
                       "ssgens": "superspace\ngenerators", "ssprimes": "superspace\nprimes",
                       "primes": domain_title, "detempering": "generator\ndetempering",
@@ -202,25 +202,25 @@ class _LayoutMixin:
     def _define_col_bands(self, label_w):
         _r = self.resolved
         self._resolve_col_headers()
-        self.matlabel_primes_w = ((MATLABEL_W_SS if _r.flags.superspace else MATLABEL_W)
+        self.geometry.matlabel_primes_w = ((MATLABEL_W_SS if _r.flags.superspace else MATLABEL_W)
                                   if (_r.flags.header_symbols and _r.flags.temp) else 0)
-        self.matlabel_ssprimes_w = MATLABEL_W_SSPRIMES if (_r.flags.header_symbols and _r.flags.superspace) else 0
+        self.geometry.matlabel_ssprimes_w = MATLABEL_W_SSPRIMES if (_r.flags.header_symbols and _r.flags.superspace) else 0
         _label_row_present = {"mapping": _r.flags.temp, "vectors": _r.flags.interval_vectors,
                               "canon": _r.flags.canon, "projection": _r.flags.projection,
                               "prescaling": _r.flags.prescaling_shown, "ss_mapping": _r.flags.superspace,
                               "ss_vectors": _r.flags.superspace, "ss_projection": _r.flags.ss_projection}
-        self.matlabel_other_w = {}
+        self.geometry.matlabel_other_w = {}
         if _r.flags.header_symbols:
             for (rk, ck) in _r.labels.row_labels:
                 if ck not in ("primes", "ssprimes") and _label_row_present.get(rk) and (rk, ck) in self.declared_tiles:
                     self.matlabel_other_w[ck] = MATLABEL_W
-        self.row_handle_w = (ROW_HANDLE_W + ROW_HANDLE_GAP) if (
+        self.geometry.row_handle_w = (ROW_HANDLE_W + ROW_HANDLE_GAP) if (
             self.settings.get("drag_to_combine") and _r.flags.temp and _r.dims.r > 1) else 0
-        self.etpick_w = (ETPICK_W + ETPICK_GAP) if (_r.flags.presets and _r.flags.temp) else 0
-        self.size_factor = service.complexity_size_factor(self.tuning_scheme)
-        self.size_rows = 1 if self.size_factor else 0
-        self.prescale_rows = _r.dims.dL if _r.flags.superspace else _r.dims.d
-        self.all_interval_simplicity_weight = _r.scalars.all_interval and (
+        self.geometry.etpick_w = (ETPICK_W + ETPICK_GAP) if (_r.flags.presets and _r.flags.temp) else 0
+        self.geometry.size_factor = service.complexity_size_factor(self.tuning_scheme)
+        self.geometry.size_rows = 1 if self.size_factor else 0
+        self.geometry.prescale_rows = _r.dims.dL if _r.flags.superspace else _r.dims.d
+        self.geometry.all_interval_simplicity_weight = _r.scalars.all_interval and (
             bool(self.size_factor) or _r.scalars.prescaler_is_matrix)
         col_bands = (
             ("quantities", COL_W, _r.flags.interval_ratios, True),
@@ -236,8 +236,8 @@ class _LayoutMixin:
             ("targets", 2 * BRACKET_W + _r.dims.k_shown * COL_W, _r.flags.tuning and self.targets_in_use, True),
             ("interest", 2 * BRACKET_W + _r.dims.mi_shown * COL_W, _r.flags.interest, True),
         )
-        self.node_x = label_w + GAP
-        self.node_edge = self.node_x + TOGGLE
+        self.geometry.node_x = label_w + GAP
+        self.geometry.node_edge = self.node_x + TOGGLE
         content_x0 = self.node_x + TOGGLE + GAP
         return col_bands, content_x0
 
@@ -263,12 +263,12 @@ class _LayoutMixin:
             ("weight", ROW_H, _r.flags.weighting, True, "weight"),
             ("damage", ROW_H, _r.flags.tuning, True, "damage"),
         )
-        self.present_caption_rows = frozenset(
+        self.geometry.present_caption_rows = frozenset(
             key for key, _h, present, _c, _l in row_bands if present and key in BANDS["caption"].rows)
         return row_bands
 
     def _layout_columns(self, col_bands, content_x0) -> None:
-        self.col_x, self.col_w, self.content_w, self.col_collapsible, self.open_col_w = {}, {}, {}, {}, {}
+        self.geometry.col_x, self.geometry.col_w, self.geometry.content_w, self.geometry.col_collapsible, self.geometry.open_col_w = {}, {}, {}, {}, {}
         x = content_x0
         first_present = True
         prev_title_oh = None
@@ -293,29 +293,29 @@ class _LayoutMixin:
             self.col_x[key] = x
             x += self.col_w[key]
             prev_title_oh = half_oh
-        self.total_w = x + GAP
+        self.geometry.total_w = x + GAP
 
-        self.content_x = {key: self.col_x[key] + (self.col_w[key] - self.content_w[key]) / 2 for key in self.col_x}
+        self.geometry.content_x = {key: self.col_x[key] + (self.col_w[key] - self.content_w[key]) / 2 for key in self.col_x}
 
-        self.primes_x = self.content_x.get("primes")
-        self.commas_x = self.content_x.get("commas")
-        self.targets_x = self.content_x.get("targets")
-        self.interest_x = self.content_x.get("interest")
-        self.held_x = self.content_x.get("held")
-        self.detempering_x = self.content_x.get("detempering")
-        self.canongens_x = self.content_x.get("canongens")
-        self.ssgens_x = self.content_x.get("ssgens")
-        self.ssprimes_x = self.content_x.get("ssprimes")
+        self.geometry.primes_x = self.content_x.get("primes")
+        self.geometry.commas_x = self.content_x.get("commas")
+        self.geometry.targets_x = self.content_x.get("targets")
+        self.geometry.interest_x = self.content_x.get("interest")
+        self.geometry.held_x = self.content_x.get("held")
+        self.geometry.detempering_x = self.content_x.get("detempering")
+        self.geometry.canongens_x = self.content_x.get("canongens")
+        self.geometry.ssgens_x = self.content_x.get("ssgens")
+        self.geometry.ssprimes_x = self.content_x.get("ssprimes")
 
     def _init_row_geometry(self, header_h):
-        self.header_y = 0
-        self.col_node_y = header_h + (GAP - TOGGLE) / 2
-        self.branch_top_y = self.col_node_y + TOGGLE
+        self.geometry.header_y = 0
+        self.geometry.col_node_y = header_h + (GAP - TOGGLE) / 2
+        self.geometry.branch_top_y = self.col_node_y + TOGGLE
         rows_top_y = self.branch_top_y + GAP + GRIP_BAND
-        self.FAN = (GAP - PAD) / 2
+        self.geometry.FAN = (GAP - PAD) / 2
 
-        self.rows: dict[str, RowBand] = {}
-        self.row_cpick = {}
+        self.geometry.rows: dict[str, RowBand] = {}
+        self.geometry.row_cpick = {}
         return rows_top_y
 
     def _layout_rows(self, row_bands, tile_extra, rows_top_y) -> None:
@@ -327,9 +327,9 @@ class _LayoutMixin:
             band = self._compute_row_band(key, natural, collapsible, label, tile_extra, show_charts, y)
             self.rows[key] = band
             y += band.tile_h + GAP
-        self.total_h = y
+        self.geometry.total_h = y
 
-        self.fanout_y = self.branch_top_y + self.FAN
+        self.geometry.fanout_y = self.branch_top_y + self.FAN
 
     def _row_int_handle(self, key, folded):
         _r = self.resolved
@@ -388,17 +388,17 @@ class _LayoutMixin:
 
     def _init_group_geometry(self) -> None:
         _r = self.resolved
-        self.group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
+        self.geometry.group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
                       "interest": "interest", "held": "held", "detempering": "detempering",
                       "canongens": "cangen", "ssgens": "ssgen", "ssprimes": "ssprime"}
-        self.group_left = {"gens": self.gen_left, "primes": self.prime_left, "commas": self.comma_left, "targets": self.target_left,
+        self.geometry.group_left = {"gens": self.gen_left, "primes": self.prime_left, "commas": self.comma_left, "targets": self.target_left,
                       "interest": self.interest_left, "held": self.held_left, "detempering": self.detempering_left,
                       "canongens": self.canongen_left, "ssgens": self.ss_gen_left, "ssprimes": self.ss_prime_left}
-        self.group_n = {"gens": _r.dims.r, "primes": _r.dims.d_shown, "commas": _r.dims.nv_shown,
+        self.geometry.group_n = {"gens": _r.dims.r, "primes": _r.dims.d_shown, "commas": _r.dims.nv_shown,
                    "targets": _r.dims.k_shown,
                    "interest": _r.dims.mi_shown, "held": _r.dims.nh_shown, "detempering": _r.dims.r,
                    "canongens": _r.dims.rc, "ssgens": _r.dims.rL, "ssprimes": _r.dims.dL}
-        self.group_ratio = {
+        self.geometry.group_ratio = {
             "primes": lambda i: service.element_ratio(_r.dims.elements[i]),
             "commas": lambda i: _r.commas.ratios[i] if i < _r.dims.nc else _r.unchanged.ratios[i - _r.dims.nc],
             "targets": lambda i: _r.targets.ratios[i],
@@ -408,10 +408,10 @@ class _LayoutMixin:
             "ssprimes": lambda i: service.element_ratio(_r.dims.superspace_primes[i]),
         }
 
-        self.plus_stub_x = {ckey: self.col_plus_x(ckey) for ckey in ("gens", "primes", "commas", "targets", "interest", "held")
+        self.geometry.plus_stub_x = {ckey: self.col_plus_x(ckey) for ckey in ("gens", "primes", "commas", "targets", "interest", "held")
                        if self._plus_shows(ckey)}
 
-        self.row_plus_y = {}
+        self.geometry.row_plus_y = {}
         if self.tile_open("vectors", "quantities") and (_r.flags.nonstandard_domain or _r.scalars.standard_domain):
             self.row_plus_y["vectors"] = self.vec_top(_r.dims.d_shown) + ROW_H / 2
         if self.tile_open("mapping", "quantities") and self.state.n > 0:
@@ -419,31 +419,31 @@ class _LayoutMixin:
 
     def _resolve_tile_extras(self):
         _r = self.resolved
-        self.gtm_chart = (_r.flags.ranges and _r.flags.tuning and "row:tuning" not in self.collapsed
+        self.geometry.gtm_chart = (_r.flags.ranges and _r.flags.tuning and "row:tuning" not in self.collapsed
                      and self.col_open("gens") and "tile:tuning:gens" not in self.collapsed)
-        self.gtm_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if self.gtm_chart else 0
-        self.lbox_ctrl = _r.flags.lbox_show and self.col_open("ssprimes" if _r.flags.superspace else "primes") and not _r.flags.presets
-        self.lbox_extra = (RANGE_GAP + self.control_region_band_h(OPTION_BOX_PX + CAPTION_LINE)) if self.lbox_ctrl else 0
-        self.cbox_ctrl = _r.flags.cbox_show and self.col_open("targets")
-        self.cbox_extra = (RANGE_GAP + self.control_region_band_h(ROW_H + _r.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)) if self.cbox_ctrl else 0
-        self.opt_ctrl = (_r.flags.optimization and "row:damage" not in self.collapsed
+        self.geometry.gtm_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if self.gtm_chart else 0
+        self.geometry.lbox_ctrl = _r.flags.lbox_show and self.col_open("ssprimes" if _r.flags.superspace else "primes") and not _r.flags.presets
+        self.geometry.lbox_extra = (RANGE_GAP + self.control_region_band_h(OPTION_BOX_PX + CAPTION_LINE)) if self.lbox_ctrl else 0
+        self.geometry.cbox_ctrl = _r.flags.cbox_show and self.col_open("targets")
+        self.geometry.cbox_extra = (RANGE_GAP + self.control_region_band_h(ROW_H + _r.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)) if self.cbox_ctrl else 0
+        self.geometry.opt_ctrl = (_r.flags.optimization and "row:damage" not in self.collapsed
                     and self.col_open("targets") and "tile:damage:targets" not in self.collapsed)
-        self.mean_damage_caption = "retuning magnitude" if _r.scalars.all_interval else "power mean"
+        self.geometry.mean_damage_caption = "retuning magnitude" if _r.scalars.all_interval else "power mean"
         if self.tuning_optimized:
-            self.mean_damage_caption = f"minimized {self.mean_damage_caption}"
-        self.opt_cap_lines = _wrap_lines(self.mean_damage_caption, OPT_MEAN_DAMAGE_W) if self.opt_ctrl else 1
-        self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + _r.scalars.ctrl_symbol_h
+            self.geometry.mean_damage_caption = f"minimized {self.mean_damage_caption}"
+        self.geometry.opt_cap_lines = _wrap_lines(self.mean_damage_caption, OPT_MEAN_DAMAGE_W) if self.opt_ctrl else 1
+        self.geometry.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + _r.scalars.ctrl_symbol_h
                       + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
-        self.show_approach = (service.domain_has_nonprimes(_r.dims.elements)
+        self.geometry.show_approach = (service.domain_has_nonprimes(_r.dims.elements)
                           and "row:damage" not in self.collapsed and self.col_open("targets")
                           and "tile:damage:targets" not in self.collapsed)
-        self.approach_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H) if self.show_approach else 0
-        self.slope_ctrl = (_r.flags.weighting
+        self.geometry.approach_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H) if self.show_approach else 0
+        self.geometry.slope_ctrl = (_r.flags.weighting
                       and "row:weight" not in self.collapsed
                       and self.col_open("targets") and "tile:weight:targets" not in self.collapsed)
-        self.slope_locked = self.slope_ctrl and (service.is_all_interval(self.tuning_scheme)
+        self.geometry.slope_locked = self.slope_ctrl and (service.is_all_interval(self.tuning_scheme)
                                                  or _r.scalars.custom_weights_active)
-        self.slope_extra = (RANGE_GAP + self.control_region_band_h(PRESET_H + CAPTION_LINE)) if self.slope_ctrl else 0
+        self.geometry.slope_extra = (RANGE_GAP + self.control_region_band_h(PRESET_H + CAPTION_LINE)) if self.slope_ctrl else 0
         return {
             "tuning": self.gtm_extra,
             "prescaling": self.lbox_extra,
@@ -454,7 +454,7 @@ class _LayoutMixin:
 
     def _resolve_ptext_strings(self, generator_tuning, target_override) -> None:
         _r = self.resolved
-        self.ptext_strings = (service.plain_text_values(self.state, self.tuning_scheme, self.target_spec,
+        self.geometry.ptext_strings = (service.plain_text_values(self.state, self.tuning_scheme, self.target_spec,
                                                    held=_r.held.vectors, interest=_r.interest.vectors,
                                                    generator_tuning=generator_tuning,
                                                    target_override=target_override,
@@ -476,4 +476,4 @@ class _LayoutMixin:
                                                                        if _r.flags.superspace else None)))
                          if _r.flags.ptext else {})
         if not _r.flags.ebk:
-            self.ptext_strings = {k: service.ebk_to_simple_matrix(v) for k, v in self.ptext_strings.items()}
+            self.geometry.ptext_strings = {k: service.ebk_to_simple_matrix(v) for k, v in self.ptext_strings.items()}

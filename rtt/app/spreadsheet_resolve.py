@@ -85,6 +85,7 @@ class Resolver:
         if self._resolve_only:
             return
 
+        self.geometry = SimpleNamespace()
         interest_tiles, held_tiles, detempering_tiles = self._declare_interval_column_tiles()
         self._declare_tiles(interest_tiles, held_tiles, detempering_tiles)
 
@@ -104,7 +105,7 @@ class Resolver:
 
         self._init_group_geometry()
 
-        self.geometry = freeze_geometry(self)
+        self.geometry = freeze_geometry(self.geometry)
 
     def _unpack_show_flags(self, draft):
         _f = _resolve_show_flags(self.settings, self.collapsed)
