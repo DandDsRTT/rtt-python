@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from rtt.app import service
+from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     ALL_INTERVAL_CAPTIONS,
     ALL_INTERVAL_EQUIVALENCES,
@@ -54,7 +55,7 @@ class _DecorationsMixin:
         self.gridline(f"foot:{key}", "v", cx, self.bot_bus_y, self.total_h - self.bot_bus_y, dotted=dotted)
 
     def _row_fans(self, key: str):
-        return self.rows[key].nsub > 1 or key in self.row_plus_y
+        return query.row_fans(self.geometry, key)
 
     def row_axis(self, key: str) -> None:
         n = self.rows[key].nsub

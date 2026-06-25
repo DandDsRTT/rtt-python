@@ -12,8 +12,9 @@ from rtt.app.spreadsheet_controls import _ControlsMixin
 from rtt.app.spreadsheet_decorations import _DecorationsMixin
 from rtt.app.spreadsheet_emit_mapping import _EmitMappingMixin
 from rtt.app.spreadsheet_emit_matrix import _EmitMatrixMixin
+from rtt.app.spreadsheet_emit_model import build_context
 from rtt.app.spreadsheet_emit_tuning import _EmitTuningMixin
-from rtt.app.spreadsheet_emit_vectors import _EmitVectorsMixin
+from rtt.app.spreadsheet_emit_vectors import _EmitVectorsMixin, emit_vectors
 from rtt.app.spreadsheet_geometry import _GeometryMixin
 from rtt.app.spreadsheet_geometry_model import _GeometryAccess
 from rtt.app.spreadsheet_layout import _LayoutMixin
@@ -67,6 +68,7 @@ class _GridBuilder(
         )
 
     def _emit_all(self) -> None:
+        ctx = build_context(self)
         self._emit_headers()
         self._emit_counts_row()
         self._emit_units()
@@ -76,7 +78,7 @@ class _GridBuilder(
         self._emit_mapping_band()
         self._emit_projection_band()
         self._emit_canon_band()
-        self._emit_vectors_band()
+        self.cells.extend(emit_vectors(self.resolved, self.geometry, ctx).cells)
         self._emit_superspace_rows()
         self._emit_identity_objects()
         chart_indicators = self._emit_tuning_rows()

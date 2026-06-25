@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import replace
-
 from rtt.app import service
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
@@ -45,6 +43,7 @@ from rtt.app.spreadsheet_constants import (
     TBOX_W,
     V_SPLIT_GAP,
 )
+from rtt.app.spreadsheet_emit_model import element_cell_kind, voice
 from rtt.app.spreadsheet_text import (
     _min_width_for_lines,
     _sub,
@@ -253,7 +252,7 @@ class _GeometryMixin:
 
     @staticmethod
     def _element_cell_kind(text: str):
-        return "elementratio" if "/" in text else "elementcell"
+        return element_cell_kind(text)
 
     def comma_left(self, c: int):
         return query.comma_left(self.geometry, self.resolved, c)
@@ -337,9 +336,7 @@ class _GeometryMixin:
         return query.pending_draft_idx(self.resolved, group)
 
     def _voice(self, tile, idx, cents) -> None:
-        if cents is None:
-            return
-        self.cells[-1] = replace(self.cells[-1], audio=(tile, int(idx), float(cents)))
+        voice(self.cells, tile, idx, cents)
 
     def panel_rect(self, ckey: str, rkey: str):
         tile_c = f"tile:{rkey}:{ckey}" in self.collapsed

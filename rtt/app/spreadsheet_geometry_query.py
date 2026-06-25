@@ -240,3 +240,7 @@ def cell_unit(resolved, rkey: str, ckey: str, *, gen=None, prime=None, elem=None
             u, resolved.labels.domain_label, f"{resolved.labels.domain_label}{_sub(elem + 1)}"
         )
     return u
+
+
+def row_fans(geometry, key: str) -> bool:
+    return geometry.rows[key].nsub > 1 or key in geometry.row_plus_y
