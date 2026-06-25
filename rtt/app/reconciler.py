@@ -100,27 +100,37 @@ def required_callback_names() -> frozenset[str]:
     return frozenset(ReconcilerCallbacks.__annotations__)
 
 
-def _marked_callback(sources: tuple[object, ...], name: str) -> _Cb | None:
-    for source in sources:
-        method = getattr(source, name, None)
-        if getattr(method, "_rtt_cb", False):
-            return method
-    return None
+def _marked_providers(sources: tuple[object, ...], name: str) -> list[_Cb]:
+    return [
+        method
+        for source in sources
+        if getattr((method := getattr(source, name, None)), "_rtt_cb", False)
+    ]
+
+
+def _raise_on_binding_problems(unbound: list[str], duplicated: list[str]) -> None:
+    problems = []
+    if unbound:
+        problems.append(f"unbound (renamed or missing @cb_method): {sorted(unbound)}")
+    if duplicated:
+        problems.append(f"bound on multiple sources: {sorted(duplicated)}")
+    if problems:
+        raise RuntimeError("reconciler callbacks " + "; ".join(problems))
 
 
 def bind_callbacks(*sources: object) -> ReconcilerCallbacks:
     bound: dict[str, _Cb] = {}
     unbound: list[str] = []
+    duplicated: list[str] = []
     for name in required_callback_names():
-        method = _marked_callback(sources, name)
-        if method is None:
+        providers = _marked_providers(sources, name)
+        if not providers:
             unbound.append(name)
+        elif len(providers) > 1:
+            duplicated.append(name)
         else:
-            bound[name] = method
-    if unbound:
-        raise RuntimeError(
-            f"reconciler callbacks unbound (renamed or missing @cb_method): {sorted(unbound)}"
-        )
+            bound[name] = providers[0]
+    _raise_on_binding_problems(unbound, duplicated)
     return cast("ReconcilerCallbacks", SimpleNamespace(**bound))
 
 
