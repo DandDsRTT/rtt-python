@@ -10,6 +10,7 @@ from rtt.app.spreadsheet_emit_matrix import (
     emit_rehomed_minus_controls,
     emit_units,
 )
+from rtt.app.spreadsheet_decorations import emit_decorations
 from rtt.app.spreadsheet_emit_model import EmitResult, build_context
 from rtt.app.spreadsheet_emit_prescaling import emit_prescaling_band
 from rtt.app.spreadsheet_emit_tuning import emit_tuning
@@ -179,6 +180,22 @@ def test_emit_tuning_is_a_pure_function_returning_cells_boxes_and_extra():
     assert set(result.extra) == {"gtm_box", "opt_box", "approach_frame", "approach_box"}
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
     assert ids <= full
+
+
+def test_emit_decorations_is_a_pure_function_returning_cells_lines_and_blocks():
+    builder = _maximized_builder()
+    ctx = build_context(builder)
+    tuning = emit_tuning(builder.resolved, builder.geometry, ctx)
+    result = emit_decorations(builder.resolved, builder.geometry, ctx, tuning.region_boxes,
+                              tuning.extra["gtm_box"], tuning.extra["opt_box"], tuning.extra["approach_frame"])
+    assert isinstance(result, EmitResult)
+    assert result.lines and result.blocks
+    cell_ids = {c.id for c in result.cells}
+    assert any(i.startswith("matlabel:") for i in cell_ids)
+    full = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on())
+    assert cell_ids <= {c.id for c in full.cells}
+    assert {b.id for b in result.blocks} <= {b.id for b in full.blocks}
+    assert {line.id for line in result.lines} <= {line.id for line in full.lines}
 
 
 def test_emit_prescaling_band_is_a_pure_function_over_resolved_geometry_ctx():

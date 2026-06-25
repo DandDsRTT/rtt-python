@@ -1,4 +1,5 @@
 import pickle
+from functools import partial
 
 import pytest
 
@@ -13,6 +14,7 @@ from rtt.app import (
 )
 from rtt.app.editor import Editor
 from rtt.app.layout import CellBox, Layout
+from rtt.app.spreadsheet_decorations import _tile_groups
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -7223,7 +7225,7 @@ def test_form_colorization_washes_the_canon_row_and_column():
     b = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), settings=s,
                                  interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),), held_basis_ratios=("2/1", "5/4"))
     b.layout()
-    tg = b.tile_groups
+    tg = partial(_tile_groups, b.resolved)
     RED, WHITE, GREEN = {"form", "temperament"}, {"form", "temperament", "tuning"}, {"temperament", "tuning"}
     # the canon ROW + canon-gens COLUMN: red, going white where they cross a cyan column / row
     assert tg("canon", "primes") == RED and tg("canon", "gens") == RED and tg("canon", "detempering") == RED
@@ -7264,7 +7266,7 @@ def test_form_colorization_is_a_layer_the_other_colorizations_compose_with():
         b = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), settings=s,
                                      held_basis_ratios=("2/1", "5/4"))
         b.layout()
-        return {g for g in b.tile_groups("tuning", "canongens") if s.get(f"{g}_colorization")}
+        return {g for g in _tile_groups(b.resolved, "tuning", "canongens") if s.get(f"{g}_colorization")}
     assert active(tuning_colorization=True) == {"tuning"}                                     # cyan
     assert active(tuning_colorization=True, temperament_colorization=True) == {"tuning", "temperament"}  # green
     assert active(tuning_colorization=True, temperament_colorization=True,
