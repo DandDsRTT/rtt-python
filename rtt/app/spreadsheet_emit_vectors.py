@@ -12,6 +12,7 @@ from rtt.app.spreadsheet_constants import (
     ROW_H,
     ROW_HANDLE_W,
 )
+from rtt.app.spreadsheet_emit_mapping import emit_mapped_grid
 from rtt.app.spreadsheet_emit_model import EmitResult, element_cell_kind, voice
 from rtt.app.spreadsheet_models import _VecGrid
 
@@ -143,251 +144,266 @@ def _emit_vectors_int_handles(cells, resolved, geometry, ctx) -> None:
                     cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), hy, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
 
 
-class _EmitVectorsMixin:
-    def _emit_superspace_rows(self) -> None:
-        self._emit_ss_quantity_rows()
-        self._emit_ss_matrix_rows()
-        self._emit_ss_vector_lists()
-        self._emit_ss_projection_rows()
+def emit_superspace_rows(resolved, geometry, ctx) -> EmitResult:
+    cells: list = []
+    _emit_ss_quantity_rows(cells, resolved, geometry, ctx)
+    _emit_ss_matrix_vectors(cells, resolved, geometry, ctx)
+    _emit_ss_matrix_mapping(cells, resolved, geometry, ctx)
+    _emit_ss_vector_lists(cells, resolved, geometry, ctx)
+    _emit_ss_projection_rows(cells, resolved, geometry, ctx)
+    return EmitResult(cells=tuple(cells))
 
-    def _emit_ss_quantity_rows(self) -> None:
-        _r = self.resolved
-        if self.row_open("ss_vectors") and self.tile_open("ss_vectors", "quantities"):
-            bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2
-            for p in range(_r.dims.dL):
-                self.cells.append(CellBox(f"ss_basis:{p}", bx, self.ss_vec_top(p), COL_W, ROW_H,
-                                          "prime", text=str(_r.dims.superspace_primes[p]), prime=p))
-        if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "quantities"):
-            ss_gens = service.superspace_generators(self.state)
-            for i in range(_r.dims.rL):
-                self.cells.append(CellBox(f"ss_gen:{i}", self.col_x["quantities"], self.ss_map_top(i),
-                                          self.col_w["quantities"], ROW_H, "genratio",
-                                          text=ss_gens[i] if i < len(ss_gens) else ""))
-        if self.row_open("ss_projection") and self.tile_open("ss_projection", "quantities"):
-            bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2
-            for p in range(_r.dims.dL):
-                self.cells.append(CellBox(f"ss_proj_basis:{p}", bx, self.ss_proj_top(p), COL_W, ROW_H, "prime",
-                                          text=str(_r.dims.superspace_primes[p]), prime=p))
 
-    def _emit_ss_matrix_rows(self) -> None:
-        self._emit_ss_matrix_vectors()
-        self._emit_ss_matrix_mapping()
+def _emit_ss_quantity_rows(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    cl = ctx.collapsed
+    if query.row_open(geometry, cl, "ss_vectors") and query.tile_open(geometry, cl, "ss_vectors", "quantities"):
+        bx = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
+        for p in range(_r.dims.dL):
+            cells.append(CellBox(f"ss_basis:{p}", bx, query.ss_vec_top(geometry, p), COL_W, ROW_H,
+                                 "prime", text=str(_r.dims.superspace_primes[p]), prime=p))
+    if query.row_open(geometry, cl, "ss_mapping") and query.tile_open(geometry, cl, "ss_mapping", "quantities"):
+        ss_gens = service.superspace_generators(ctx.state)
+        for i in range(_r.dims.rL):
+            cells.append(CellBox(f"ss_gen:{i}", geometry.col_x["quantities"], query.ss_map_top(geometry, i),
+                                 geometry.col_w["quantities"], ROW_H, "genratio",
+                                 text=ss_gens[i] if i < len(ss_gens) else ""))
+    if query.row_open(geometry, cl, "ss_projection") and query.tile_open(geometry, cl, "ss_projection", "quantities"):
+        bx = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
+        for p in range(_r.dims.dL):
+            cells.append(CellBox(f"ss_proj_basis:{p}", bx, query.ss_proj_top(geometry, p), COL_W, ROW_H, "prime",
+                                 text=str(_r.dims.superspace_primes[p]), prime=p))
 
-    def _emit_ss_matrix_vectors(self) -> None:
-        _r = self.resolved
-        if self.row_open("ss_vectors") and self.tile_open("ss_vectors", "primes"):
-            basis = service.basis_in_superspace(_r.dims.elements)
+
+def _emit_ss_matrix_vectors(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    cl = ctx.collapsed
+    if query.row_open(geometry, cl, "ss_vectors") and query.tile_open(geometry, cl, "ss_vectors", "primes"):
+        basis = service.basis_in_superspace(_r.dims.elements)
+        for ss_prime_idx in range(_r.dims.dL):
+            for elem_idx in range(_r.dims.d):
+                value = basis[elem_idx][ss_prime_idx]
+                cells.append(CellBox(
+                    f"cell:ss_vectors:primes:{ss_prime_idx}:{elem_idx}",
+                    query.prime_left(geometry, elem_idx), query.ss_vec_top(geometry, ss_prime_idx), COL_W, ROW_H,
+                    "vec", text=str(value), prime=ss_prime_idx, comma=elem_idx,
+                    unit=query.cell_unit(_r, "ss_vectors", "primes", prime=ss_prime_idx, elem=elem_idx)))
+    if query.row_open(geometry, cl, "ss_mapping") and query.tile_open(geometry, cl, "ss_mapping", "ssprimes"):
+        ml = service.superspace_mapping(ctx.state)
+        for gen_idx in range(_r.dims.rL):
             for ss_prime_idx in range(_r.dims.dL):
-                for elem_idx in range(_r.dims.d):
-                    value = basis[elem_idx][ss_prime_idx]
-                    self.cells.append(CellBox(
-                        f"cell:ss_vectors:primes:{ss_prime_idx}:{elem_idx}",
-                        self.prime_left(elem_idx), self.ss_vec_top(ss_prime_idx), COL_W, ROW_H,
-                        "vec", text=str(value), prime=ss_prime_idx, comma=elem_idx,
-                        unit=self.cell_unit("ss_vectors", "primes", prime=ss_prime_idx, elem=elem_idx),
-                    ))
-        if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):
-            ml = service.superspace_mapping(self.state)
-            for gen_idx in range(_r.dims.rL):
-                for ss_prime_idx in range(_r.dims.dL):
-                    self.cells.append(CellBox(
-                        f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}",
-                        self.ss_prime_left(ss_prime_idx), self.ss_map_top(gen_idx), COL_W, ROW_H,
-                        "mapped", text=str(ml[gen_idx][ss_prime_idx]),
-                        gen=gen_idx, prime=ss_prime_idx,
-                        unit=self.cell_unit("ss_mapping", "ssprimes", gen=gen_idx, prime=ss_prime_idx),
-                    ))
-        if self.row_open("ss_vectors") and self.tile_open("ss_vectors", "ssprimes"):
-            mjl = service.superspace_just_mapping(_r.dims.superspace_primes)
-            for i in range(_r.dims.dL):
-                for j in range(_r.dims.dL):
-                    self.cells.append(CellBox(
-                        f"cell:ss_vectors:ssprimes:{i}:{j}",
-                        self.ss_prime_left(j), self.ss_vec_top(i), COL_W, ROW_H,
-                        "mapped", text=str(mjl[i][j]), gen=i, prime=j,
-                        unit=self.cell_unit("ss_vectors", "ssprimes", prime=j)))
+                cells.append(CellBox(
+                    f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}",
+                    query.ss_prime_left(geometry, ss_prime_idx), query.ss_map_top(geometry, gen_idx), COL_W, ROW_H,
+                    "mapped", text=str(ml[gen_idx][ss_prime_idx]), gen=gen_idx, prime=ss_prime_idx,
+                    unit=query.cell_unit(_r, "ss_mapping", "ssprimes", gen=gen_idx, prime=ss_prime_idx)))
+    if query.row_open(geometry, cl, "ss_vectors") and query.tile_open(geometry, cl, "ss_vectors", "ssprimes"):
+        mjl = service.superspace_just_mapping(_r.dims.superspace_primes)
+        for i in range(_r.dims.dL):
+            for j in range(_r.dims.dL):
+                cells.append(CellBox(
+                    f"cell:ss_vectors:ssprimes:{i}:{j}",
+                    query.ss_prime_left(geometry, j), query.ss_vec_top(geometry, i), COL_W, ROW_H,
+                    "mapped", text=str(mjl[i][j]), gen=i, prime=j,
+                    unit=query.cell_unit(_r, "ss_vectors", "ssprimes", prime=j)))
 
-    def _emit_ss_matrix_mapping(self) -> None:
-        _r = self.resolved
-        if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssgens"):
-            mlgl = service.superspace_self_map(self.state)
-            for i in range(_r.dims.rL):
-                for j in range(_r.dims.rL):
-                    self.cells.append(CellBox(
-                        f"cell:ss_mapping:ssgens:{i}:{j}",
-                        self.ss_gen_left(j), self.ss_map_top(i), COL_W, ROW_H,
-                        "mapped", text=str(mlgl[i][j]), gen=i,
-                        unit=self.cell_unit("ss_mapping", "ssgens", gen=i)))
-        if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "primes"):
-            msl = service.mapping_to_superspace_generators(self.state)
-            for i in range(_r.dims.rL):
-                for e in range(_r.dims.d):
-                    self.cells.append(CellBox(
-                        f"cell:ss_mapping:primes:{i}:{e}",
-                        self.prime_left(e), self.ss_map_top(i), COL_W, ROW_H,
-                        "mapped", text=str(msl[i][e]), gen=i,
-                        unit=self.cell_unit("ss_mapping", "primes", gen=i, elem=e)))
 
-    def _emit_ss_vector_lists(self) -> None:
-        _r = self.resolved
-        ss_lists = (("commas", self.state.comma_basis, _r.dims.nc, self.comma_left, _r.scalars.comma_draft),
-                    ("targets", _r.targets.vectors, _r.dims.k, self.target_left, _r.targets.pending is not None),
-                    ("held", _r.held.vectors, _r.dims.nh, self.held_left, _r.held.pending is not None),
-                    ("interest", _r.interest.vectors, _r.dims.mi, self.interest_left, _r.interest.pending is not None),
-                    ("detempering", _r.detempering.vectors, _r.dims.r, self.detempering_left, False))
-        for row in ss_lists:
-            self._emit_ss_vector_list_lift(row)
-            self._emit_ss_vector_list_map(row)
-
-    def _emit_ss_vector_list_lift(self, row) -> None:
-        _r = self.resolved
-        ckey, vectors, n, left, draft = row
-        cols = tuple(vectors)[:n]
-        if not (self.row_open("ss_vectors") and self.tile_open("ss_vectors", ckey)):
-            return
-        lifted = service.lift_vectors_to_superspace(_r.dims.elements, cols)
-        for c in range(len(lifted)):
-            for p in range(_r.dims.dL):
-                self.cells.append(CellBox(
-                    f"cell:ss_vectors:{ckey}:{p}:{c}", left(c), self.ss_vec_top(p),
-                    COL_W, ROW_H, "vec", text=str(lifted[c][p]), prime=p, comma=c,
-                    unit=self.cell_unit("ss_vectors", ckey, prime=p)))
-        if draft:
-            for p in range(_r.dims.dL):
-                self.cells.append(CellBox(f"cell:ss_vectors:{ckey}:{p}:draft", left(n), self.ss_vec_top(p),
-                                     COL_W, ROW_H, "vec", text="", prime=p, pending=True))
-        if ckey == "commas":
-            for j in range(_r.dims.nu):
-                uj = _r.projection.ss_unchanged[j]
-                for p in range(_r.dims.dL):
-                    self.cells.append(CellBox(
-                        f"cell:ss_vectors:commas:{p}:u{j}", self.comma_left(_r.dims.nc_shown + j), self.ss_vec_top(p),
-                        COL_W, ROW_H, "vec", text=DASH if uj is None else str(uj[p]), prime=p, comma=_r.dims.nc + j,
-                        unit=self.cell_unit("ss_vectors", "commas", prime=p)))
-
-    def _emit_ss_vector_list_map(self, row) -> None:
-        _r = self.resolved
-        ckey, vectors, n, left, draft = row
-        cols = tuple(vectors)[:n]
-        if not (self.row_open("ss_mapping") and self.tile_open("ss_mapping", ckey)):
-            return
-        mapped = service.map_vectors_into_superspace_generators(self.state, cols)
-        for c in range(len(mapped)):
-            for g in range(_r.dims.rL):
-                self.cells.append(CellBox(
-                    f"cell:ss_mapping:{ckey}:{g}:{c}", left(c), self.ss_map_top(g),
-                    COL_W, ROW_H, "mapped", text=str(mapped[c][g]), gen=g, comma=c,
-                    unit=self.cell_unit("ss_mapping", ckey, gen=g)))
-        if draft:
-            for g in range(_r.dims.rL):
-                self.cells.append(CellBox(f"cell:ss_mapping:{ckey}:{g}:draft", left(n), self.ss_map_top(g),
-                                     COL_W, ROW_H, "mapped", text="", gen=g, pending=True))
-        if ckey == "commas":
-            for j in range(_r.dims.nu):
-                uj = _r.projection.ss_unchanged_mapped[j]
-                for g in range(_r.dims.rL):
-                    self.cells.append(CellBox(
-                        f"cell:ss_mapping:commas:{g}:u{j}", self.comma_left(_r.dims.nc_shown + j), self.ss_map_top(g),
-                        COL_W, ROW_H, "mapped", text=DASH if uj is None else str(uj[g]), gen=g, comma=_r.dims.nc + j,
-                        unit=self.cell_unit("ss_mapping", "commas", gen=g)))
-
-    def _emit_ss_projection_rows(self) -> None:
-        _r = self.resolved
-        self._emit_ss_proj_ssprimes()
-        ss_full = _r.projection.ss_rationals is not None
-        self._emit_ss_proj_ssgens(ss_full)
-        self._emit_ss_proj_primes(ss_full)
-        _ssp = {"full": ss_full, "colwise": True, "row": "ss_projection", "top": self.ss_proj_top, "height": _r.dims.dL}
-        self._emit_mapped_grid("detempering", "ss_proj_pd", _r.projection.ss_detempering, _r.dims.r, self.detempering_left, "gen", **_ssp)
-        self._emit_ss_proj_commas()
-        self._emit_mapped_grid("targets", "ss_proj_pt", _r.projection.ss_targets, _r.dims.k, self.target_left, "comma",
-                               pending=_r.targets.pending, **_ssp)
-        self._emit_mapped_grid("held", "ss_proj_ph", _r.projection.ss_held, _r.dims.nh, self.held_left, "comma",
-                               pending=_r.held.pending, **_ssp)
-        self._emit_mapped_grid("interest", "ss_proj_pi", _r.projection.ss_interest, _r.dims.mi, self.interest_left, "comma",
-                               inset=KET_INSET, pending=_r.interest.pending, **_ssp)
-
-    def _emit_ss_proj_ssprimes(self) -> None:
-        _r = self.resolved
-        if self.row_open("ss_projection") and self.tile_open("ss_projection", "ssprimes"):
-            full = _r.projection.ss_matrix is not None
-            for i in range(_r.dims.dL):
-                for j in range(_r.dims.dL):
-                    text = DASH if not full else _r.projection.ss_matrix[i][j]
-                    self.cells.append(CellBox(
-                        f"cell:ss_projection:ssprimes:{i}:{j}",
-                        self.ss_prime_left(j), self.ss_proj_top(i), COL_W, ROW_H,
-                        "mapped", text=text, gen=i, prime=j,
-                        unit=self.cell_unit("ss_projection", "ssprimes", gen=i, prime=j),
-                    ))
-
-    def _emit_ss_proj_ssgens(self, ss_full) -> None:
-        _r = self.resolved
-        if self.row_open("ss_projection") and self.tile_open("ss_projection", "ssgens"):
-            for i in range(_r.dims.dL):
-                for g in range(_r.dims.rL):
-                    text = DASH if not ss_full else _r.projection.ss_embedding_matrix[i][g]
-                    self.cells.append(CellBox(f"cell:ss_embed:{i}:{g}", self.ss_gen_left(g), self.ss_proj_top(i),
-                                         COL_W, ROW_H, "mapped", text=text, gen=g))
-
-    def _emit_ss_proj_primes(self, ss_full) -> None:
-        _r = self.resolved
-        if self.row_open("ss_projection") and self.tile_open("ss_projection", "primes"):
+def _emit_ss_matrix_mapping(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    cl = ctx.collapsed
+    if query.row_open(geometry, cl, "ss_mapping") and query.tile_open(geometry, cl, "ss_mapping", "ssgens"):
+        mlgl = service.superspace_self_map(ctx.state)
+        for i in range(_r.dims.rL):
+            for j in range(_r.dims.rL):
+                cells.append(CellBox(
+                    f"cell:ss_mapping:ssgens:{i}:{j}",
+                    query.ss_gen_left(geometry, j), query.ss_map_top(geometry, i), COL_W, ROW_H,
+                    "mapped", text=str(mlgl[i][j]), gen=i,
+                    unit=query.cell_unit(_r, "ss_mapping", "ssgens", gen=i)))
+    if query.row_open(geometry, cl, "ss_mapping") and query.tile_open(geometry, cl, "ss_mapping", "primes"):
+        msl = service.mapping_to_superspace_generators(ctx.state)
+        for i in range(_r.dims.rL):
             for e in range(_r.dims.d):
-                for p in range(_r.dims.dL):
-                    text = DASH if not ss_full else str(_r.projection.ss_basis[e][p])
-                    self.cells.append(CellBox(f"cell:ss_proj_bls:{e}:{p}", self.prime_left(e), self.ss_proj_top(p),
-                                         COL_W, ROW_H, "mapped", text=text, prime=p, comma=e))
+                cells.append(CellBox(
+                    f"cell:ss_mapping:primes:{i}:{e}",
+                    query.prime_left(geometry, e), query.ss_map_top(geometry, i), COL_W, ROW_H,
+                    "mapped", text=str(msl[i][e]), gen=i,
+                    unit=query.cell_unit(_r, "ss_mapping", "primes", gen=i, elem=e)))
 
-    def _emit_ss_proj_commas(self) -> None:
-        _r = self.resolved
-        if not (_r.unchanged.shown and self.row_open("ss_projection") and self.tile_open("ss_projection", "commas")):
-            return
-        for c in range(_r.dims.nc):
-            for p in range(_r.dims.dL):
-                self.cells.append(CellBox(f"cell:ss_proj_v:{p}:{c}", self.comma_left(c), self.ss_proj_top(p),
-                                     COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
-        if _r.commas.pending is not None:
-            for p in range(_r.dims.dL):
-                self.cells.append(CellBox(f"cell:ss_proj_v:{p}:draft", self.comma_left(_r.dims.nc), self.ss_proj_top(p),
-                                     COL_W, ROW_H, "mapped", text="", prime=p, pending=True))
+
+def _emit_ss_vector_lists(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    ss_lists = (("commas", ctx.state.comma_basis, _r.dims.nc, lambda c: query.comma_left(geometry, _r, c), _r.scalars.comma_draft),
+                ("targets", _r.targets.vectors, _r.dims.k, lambda c: query.target_left(geometry, c), _r.targets.pending is not None),
+                ("held", _r.held.vectors, _r.dims.nh, lambda c: query.held_left(geometry, c), _r.held.pending is not None),
+                ("interest", _r.interest.vectors, _r.dims.mi, lambda c: query.interest_left(geometry, c), _r.interest.pending is not None),
+                ("detempering", _r.detempering.vectors, _r.dims.r, lambda c: query.detempering_left(geometry, c), False))
+    for row in ss_lists:
+        _emit_ss_vector_list_lift(cells, resolved, geometry, ctx, row)
+        _emit_ss_vector_list_map(cells, resolved, geometry, ctx, row)
+
+
+def _emit_ss_vector_list_lift(cells, resolved, geometry, ctx, row) -> None:
+    _r = resolved
+    ckey, vectors, n, left, draft = row
+    cols = tuple(vectors)[:n]
+    if not (query.row_open(geometry, ctx.collapsed, "ss_vectors") and query.tile_open(geometry, ctx.collapsed, "ss_vectors", ckey)):
+        return
+    lifted = service.lift_vectors_to_superspace(_r.dims.elements, cols)
+    for c in range(len(lifted)):
+        for p in range(_r.dims.dL):
+            cells.append(CellBox(
+                f"cell:ss_vectors:{ckey}:{p}:{c}", left(c), query.ss_vec_top(geometry, p),
+                COL_W, ROW_H, "vec", text=str(lifted[c][p]), prime=p, comma=c,
+                unit=query.cell_unit(_r, "ss_vectors", ckey, prime=p)))
+    if draft:
+        for p in range(_r.dims.dL):
+            cells.append(CellBox(f"cell:ss_vectors:{ckey}:{p}:draft", left(n), query.ss_vec_top(geometry, p),
+                                 COL_W, ROW_H, "vec", text="", prime=p, pending=True))
+    if ckey == "commas":
         for j in range(_r.dims.nu):
-            dashed = _r.projection.ss_unchanged[j] is None
+            uj = _r.projection.ss_unchanged[j]
             for p in range(_r.dims.dL):
-                self.cells.append(CellBox(f"cell:ss_proj_v:{p}:{_r.dims.nc + j}", self.comma_left(_r.dims.nc_shown + j), self.ss_proj_top(p),
-                                     COL_W, ROW_H, "mapped",
-                                     text=DASH if dashed else str(_r.projection.ss_unchanged[j][p]), prime=p, comma=_r.dims.nc + j))
+                cells.append(CellBox(
+                    f"cell:ss_vectors:commas:{p}:u{j}", query.comma_left(geometry, _r, _r.dims.nc_shown + j), query.ss_vec_top(geometry, p),
+                    COL_W, ROW_H, "vec", text=DASH if uj is None else str(uj[p]), prime=p, comma=_r.dims.nc + j,
+                    unit=query.cell_unit(_r, "ss_vectors", "commas", prime=p)))
 
-    def _emit_identity_objects(self) -> None:
-        _r = self.resolved
-        self._emit_identity_vec_primes()
-        for ckey, prefix, left in (("gens", "selfmap", self.gen_left),
-                                   ("detempering", "mapped_detempering", self.detempering_left)):
-            if self.tile_open("mapping", ckey):
-                for i in range(_r.dims.r):
-                    for k in range(_r.dims.r):
-                        self.cells.append(CellBox(
-                            f"cell:{prefix}:{i}:{k}", left(k), self.map_top(i), COL_W, ROW_H,
-                            "mapped", text="1" if i == k else "0", gen=i,
-                            unit=self.cell_unit("mapping", ckey, gen=i)))
-        self._emit_identity_canongens()
 
-    def _emit_identity_vec_primes(self) -> None:
-        _r = self.resolved
-        if self.tile_open("vectors", "primes"):
-            for i in range(_r.dims.d):
-                for k in range(_r.dims.d):
-                    self.cells.append(CellBox(
-                        f"cell:vec:primes:{i}:{k}", self.prime_left(k), self.vec_top(i), COL_W, ROW_H,
-                        "mapped", text="1" if i == k else "0", gen=i, prime=k,
-                        unit=self.cell_unit("vectors", "primes", prime=k)))
+def _emit_ss_vector_list_map(cells, resolved, geometry, ctx, row) -> None:
+    _r = resolved
+    ckey, vectors, n, left, draft = row
+    cols = tuple(vectors)[:n]
+    if not (query.row_open(geometry, ctx.collapsed, "ss_mapping") and query.tile_open(geometry, ctx.collapsed, "ss_mapping", ckey)):
+        return
+    mapped = service.map_vectors_into_superspace_generators(ctx.state, cols)
+    for c in range(len(mapped)):
+        for g in range(_r.dims.rL):
+            cells.append(CellBox(
+                f"cell:ss_mapping:{ckey}:{g}:{c}", left(c), query.ss_map_top(geometry, g),
+                COL_W, ROW_H, "mapped", text=str(mapped[c][g]), gen=g, comma=c,
+                unit=query.cell_unit(_r, "ss_mapping", ckey, gen=g)))
+    if draft:
+        for g in range(_r.dims.rL):
+            cells.append(CellBox(f"cell:ss_mapping:{ckey}:{g}:draft", left(n), query.ss_map_top(geometry, g),
+                                 COL_W, ROW_H, "mapped", text="", gen=g, pending=True))
+    if ckey == "commas":
+        for j in range(_r.dims.nu):
+            uj = _r.projection.ss_unchanged_mapped[j]
+            for g in range(_r.dims.rL):
+                cells.append(CellBox(
+                    f"cell:ss_mapping:commas:{g}:u{j}", query.comma_left(geometry, _r, _r.dims.nc_shown + j), query.ss_map_top(geometry, g),
+                    COL_W, ROW_H, "mapped", text=DASH if uj is None else str(uj[g]), gen=g, comma=_r.dims.nc + j,
+                    unit=query.cell_unit(_r, "ss_mapping", "commas", gen=g)))
 
-    def _emit_identity_canongens(self) -> None:
-        _r = self.resolved
-        if self.tile_open("canon", "canongens"):
-            for i in range(_r.dims.rc):
-                for k in range(_r.dims.rc):
-                    self.cells.append(CellBox(
-                        f"cell:fcancel:{i}:{k}", self.canongen_left(k), self.canon_top(i), COL_W, ROW_H,
+
+def _emit_ss_projection_rows(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    cl = ctx.collapsed
+    _emit_ss_proj_ssprimes(cells, resolved, geometry, ctx)
+    ss_full = _r.projection.ss_rationals is not None
+    _emit_ss_proj_ssgens(cells, resolved, geometry, ctx, ss_full)
+    _emit_ss_proj_primes(cells, resolved, geometry, ctx, ss_full)
+    ssp = {"full": ss_full, "colwise": True, "row": "ss_projection",
+           "top": lambda i: query.ss_proj_top(geometry, i), "height": _r.dims.dL}
+    emit_mapped_grid(cells, resolved, geometry, cl, "detempering", "ss_proj_pd", _r.projection.ss_detempering, _r.dims.r, lambda i: query.detempering_left(geometry, i), "gen", **ssp)
+    _emit_ss_proj_commas(cells, resolved, geometry, ctx)
+    emit_mapped_grid(cells, resolved, geometry, cl, "targets", "ss_proj_pt", _r.projection.ss_targets, _r.dims.k, lambda i: query.target_left(geometry, i), "comma",
+                     pending=_r.targets.pending, **ssp)
+    emit_mapped_grid(cells, resolved, geometry, cl, "held", "ss_proj_ph", _r.projection.ss_held, _r.dims.nh, lambda i: query.held_left(geometry, i), "comma",
+                     pending=_r.held.pending, **ssp)
+    emit_mapped_grid(cells, resolved, geometry, cl, "interest", "ss_proj_pi", _r.projection.ss_interest, _r.dims.mi, lambda i: query.interest_left(geometry, i), "comma",
+                     inset=KET_INSET, pending=_r.interest.pending, **ssp)
+
+
+def _emit_ss_proj_ssprimes(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if query.row_open(geometry, ctx.collapsed, "ss_projection") and query.tile_open(geometry, ctx.collapsed, "ss_projection", "ssprimes"):
+        full = _r.projection.ss_matrix is not None
+        for i in range(_r.dims.dL):
+            for j in range(_r.dims.dL):
+                text = DASH if not full else _r.projection.ss_matrix[i][j]
+                cells.append(CellBox(
+                    f"cell:ss_projection:ssprimes:{i}:{j}",
+                    query.ss_prime_left(geometry, j), query.ss_proj_top(geometry, i), COL_W, ROW_H,
+                    "mapped", text=text, gen=i, prime=j,
+                    unit=query.cell_unit(_r, "ss_projection", "ssprimes", gen=i, prime=j)))
+
+
+def _emit_ss_proj_ssgens(cells, resolved, geometry, ctx, ss_full) -> None:
+    _r = resolved
+    if query.row_open(geometry, ctx.collapsed, "ss_projection") and query.tile_open(geometry, ctx.collapsed, "ss_projection", "ssgens"):
+        for i in range(_r.dims.dL):
+            for g in range(_r.dims.rL):
+                text = DASH if not ss_full else _r.projection.ss_embedding_matrix[i][g]
+                cells.append(CellBox(f"cell:ss_embed:{i}:{g}", query.ss_gen_left(geometry, g), query.ss_proj_top(geometry, i),
+                                     COL_W, ROW_H, "mapped", text=text, gen=g))
+
+
+def _emit_ss_proj_primes(cells, resolved, geometry, ctx, ss_full) -> None:
+    _r = resolved
+    if query.row_open(geometry, ctx.collapsed, "ss_projection") and query.tile_open(geometry, ctx.collapsed, "ss_projection", "primes"):
+        for e in range(_r.dims.d):
+            for p in range(_r.dims.dL):
+                text = DASH if not ss_full else str(_r.projection.ss_basis[e][p])
+                cells.append(CellBox(f"cell:ss_proj_bls:{e}:{p}", query.prime_left(geometry, e), query.ss_proj_top(geometry, p),
+                                     COL_W, ROW_H, "mapped", text=text, prime=p, comma=e))
+
+
+def _emit_ss_proj_commas(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if not (_r.unchanged.shown and query.row_open(geometry, ctx.collapsed, "ss_projection") and query.tile_open(geometry, ctx.collapsed, "ss_projection", "commas")):
+        return
+    for c in range(_r.dims.nc):
+        for p in range(_r.dims.dL):
+            cells.append(CellBox(f"cell:ss_proj_v:{p}:{c}", query.comma_left(geometry, _r, c), query.ss_proj_top(geometry, p),
+                                 COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
+    if _r.commas.pending is not None:
+        for p in range(_r.dims.dL):
+            cells.append(CellBox(f"cell:ss_proj_v:{p}:draft", query.comma_left(geometry, _r, _r.dims.nc), query.ss_proj_top(geometry, p),
+                                 COL_W, ROW_H, "mapped", text="", prime=p, pending=True))
+    for j in range(_r.dims.nu):
+        dashed = _r.projection.ss_unchanged[j] is None
+        for p in range(_r.dims.dL):
+            cells.append(CellBox(f"cell:ss_proj_v:{p}:{_r.dims.nc + j}", query.comma_left(geometry, _r, _r.dims.nc_shown + j), query.ss_proj_top(geometry, p),
+                                 COL_W, ROW_H, "mapped",
+                                 text=DASH if dashed else str(_r.projection.ss_unchanged[j][p]), prime=p, comma=_r.dims.nc + j))
+
+
+def emit_identity_objects(resolved, geometry, ctx) -> EmitResult:
+    _r = resolved
+    cells: list = []
+    _emit_identity_vec_primes(cells, resolved, geometry, ctx)
+    for ckey, prefix, left in (("gens", "selfmap", lambda k: query.gen_left(geometry, k)),
+                               ("detempering", "mapped_detempering", lambda k: query.detempering_left(geometry, k))):
+        if query.tile_open(geometry, ctx.collapsed, "mapping", ckey):
+            for i in range(_r.dims.r):
+                for k in range(_r.dims.r):
+                    cells.append(CellBox(
+                        f"cell:{prefix}:{i}:{k}", left(k), query.map_top(geometry, i), COL_W, ROW_H,
                         "mapped", text="1" if i == k else "0", gen=i,
-                        unit=self.cell_unit("canon", "canongens", gen=i)))
+                        unit=query.cell_unit(_r, "mapping", ckey, gen=i)))
+    _emit_identity_canongens(cells, resolved, geometry, ctx)
+    return EmitResult(cells=tuple(cells))
+
+
+def _emit_identity_vec_primes(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if query.tile_open(geometry, ctx.collapsed, "vectors", "primes"):
+        for i in range(_r.dims.d):
+            for k in range(_r.dims.d):
+                cells.append(CellBox(
+                    f"cell:vec:primes:{i}:{k}", query.prime_left(geometry, k), query.vec_top(geometry, i), COL_W, ROW_H,
+                    "mapped", text="1" if i == k else "0", gen=i, prime=k,
+                    unit=query.cell_unit(_r, "vectors", "primes", prime=k)))
+
+
+def _emit_identity_canongens(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if query.tile_open(geometry, ctx.collapsed, "canon", "canongens"):
+        for i in range(_r.dims.rc):
+            for k in range(_r.dims.rc):
+                cells.append(CellBox(
+                    f"cell:fcancel:{i}:{k}", query.canongen_left(geometry, k), query.canon_top(geometry, i), COL_W, ROW_H,
+                    "mapped", text="1" if i == k else "0", gen=i,
+                    unit=query.cell_unit(_r, "canon", "canongens", gen=i)))

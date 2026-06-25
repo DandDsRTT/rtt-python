@@ -26,7 +26,11 @@ from rtt.app.spreadsheet_emit_matrix import (
 )
 from rtt.app.spreadsheet_emit_model import build_context
 from rtt.app.spreadsheet_emit_tuning import _EmitTuningMixin
-from rtt.app.spreadsheet_emit_vectors import _EmitVectorsMixin, emit_vectors
+from rtt.app.spreadsheet_emit_vectors import (
+    emit_identity_objects,
+    emit_superspace_rows,
+    emit_vectors,
+)
 from rtt.app.spreadsheet_geometry import _GeometryMixin
 from rtt.app.spreadsheet_geometry_model import _GeometryAccess
 from rtt.app.spreadsheet_layout import _LayoutMixin
@@ -44,7 +48,6 @@ class _GridBuilder(
     _GeometryMixin,
     _ClosedFormMixin,
     _EmitMappingMixin,
-    _EmitVectorsMixin,
     _EmitTuningMixin,
     _ControlsMixin,
     _BracketsMixin,
@@ -90,8 +93,8 @@ class _GridBuilder(
         self.cells.extend(emit_projection_band(self.resolved, self.geometry, ctx).cells)
         self.cells.extend(emit_canon_band(self.resolved, self.geometry, ctx).cells)
         self.cells.extend(emit_vectors(self.resolved, self.geometry, ctx).cells)
-        self._emit_superspace_rows()
-        self._emit_identity_objects()
+        self.cells.extend(emit_superspace_rows(self.resolved, self.geometry, ctx).cells)
+        self.cells.extend(emit_identity_objects(self.resolved, self.geometry, ctx).cells)
         chart_indicators = self._emit_tuning_rows()
         self._emit_prescaling_band()
         self._emit_lbox_control()

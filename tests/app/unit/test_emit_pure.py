@@ -9,7 +9,11 @@ from rtt.app.spreadsheet_emit_matrix import (
     emit_units,
 )
 from rtt.app.spreadsheet_emit_model import EmitResult, build_context
-from rtt.app.spreadsheet_emit_vectors import emit_vectors
+from rtt.app.spreadsheet_emit_vectors import (
+    emit_identity_objects,
+    emit_superspace_rows,
+    emit_vectors,
+)
 
 
 def _maximized_builder():
@@ -95,6 +99,42 @@ def test_emit_projection_band_is_a_pure_function():
     assert any(i.startswith("cell:proj:") for i in ids)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                             held_basis_ratios=("2/1", "5/4")).cells}
+    assert ids <= full
+
+
+def _all_bool_on():
+    s = settings.defaults()
+    for key, value in list(s.items()):
+        if isinstance(value, bool):
+            s[key] = True
+    return s
+
+
+def _superspace_builder():
+    return spreadsheet._GridBuilder(
+        service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), _all_bool_on(),
+        tuning_scheme="minimax-ES", held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),),
+    )
+
+
+def test_emit_superspace_rows_is_a_pure_function_over_resolved_geometry_ctx():
+    builder = _superspace_builder()
+    result = emit_superspace_rows(builder.resolved, builder.geometry, build_context(builder))
+    ids = {c.id for c in result.cells}
+    assert "ss_basis:0" in ids
+    assert any(i.startswith("cell:ss_mapping:ssprimes:") for i in ids)
+    full = {c.id for c in spreadsheet.build(
+        service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), _all_bool_on(),
+        tuning_scheme="minimax-ES", held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),)).cells}
+    assert ids <= full
+
+
+def test_emit_identity_objects_is_a_pure_function_over_resolved_geometry_ctx():
+    builder = _maximized_builder()
+    result = emit_identity_objects(builder.resolved, builder.geometry, build_context(builder))
+    ids = {c.id for c in result.cells}
+    assert any(i.startswith("cell:vec:primes:") for i in ids)
+    full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
     assert ids <= full
 
 
