@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 
 from rtt.app import service
+from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     COUNTS,
     DETEMPERING_COUNTS,
@@ -25,6 +26,7 @@ from rtt.app.spreadsheet_constants import (
     TOGGLE,
     V_SPLIT_GAP,
 )
+from rtt.app.spreadsheet_emit_model import EmitResult
 from rtt.app.spreadsheet_models import _QtyList
 from rtt.app.spreadsheet_text import (
     _count_sym,
@@ -35,117 +37,128 @@ from rtt.app.spreadsheet_text import (
 )
 
 
+def emit_headers(resolved, geometry, ctx) -> EmitResult:
+    _r = resolved
+    cells: list = []
+    for key in geometry.col_x:
+        hx = geometry.col_x[key] + query.outer_gutter_w(geometry, key)
+        hw = geometry.col_w[key] - 2 * query.outer_gutter_w(geometry, key)
+        cells.append(CellBox(f"header:{key}", hx, geometry.header_y, hw, HEADER_H, "colheader", text=geometry.col_header[key]))
+        if geometry.col_collapsible[key]:
+            glyph = _fold_glyph(f"col:{key}" in ctx.collapsed)
+            tx = hx + (hw - TOGGLE) / 2
+            cells.append(CellBox(f"toggle:col:{key}", tx, geometry.col_node_y, TOGGLE, TOGGLE, "coltoggle", text=glyph))
+    for key in geometry.rows:
+        label = geometry.rows[key].label
+        if geometry.size_factor or _r.scalars.prescaler_is_matrix:
+            label = _pretransform_label(label)
+            label = label.replace(" pretransforming", chr(160) + "pre-" + chr(10) + "transforming")
+        cells.append(CellBox(f"label:{key}", 0, geometry.rows[key].y, LABEL_W, geometry.rows[key].h, "rowlabel", text=label))
+        if geometry.rows[key].collapsible:
+            glyph = _fold_glyph(f"row:{key}" in ctx.collapsed)
+            ty = geometry.rows[key].y + (geometry.rows[key].h - TOGGLE) / 2
+            cells.append(CellBox(f"toggle:row:{key}", geometry.node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
+    foldable = _foldable_ids(cells)
+    all_collapsed = bool(foldable) and foldable <= ctx.collapsed
+    cells.append(CellBox("toggle:all", geometry.node_x, geometry.col_node_y, TOGGLE, TOGGLE, "alltoggle",
+                         text=_fold_glyph(all_collapsed)))
+    return EmitResult(cells=tuple(cells))
+
+
+def emit_counts_row(resolved, geometry, ctx) -> EmitResult:
+    _r = resolved
+    cells: list = []
+    if not query.row_open(geometry, ctx.collapsed, "counts"):
+        return EmitResult()
+    cardinality = {"gens": _r.dims.r, "primes": _r.dims.d, "commas": ctx.state.n, "targets": _r.dims.k, "held": _r.dims.nh,
+                   "detempering": _r.dims.r,
+                   "ssgens": _r.dims.rL, "ssprimes": _r.dims.dL}
+    for ckey, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
+        if not query.tile_open(geometry, ctx.collapsed, "counts", ckey):
+            continue
+        if ckey == "commas" and _r.unchanged.shown:
+            comma_half_w = _r.dims.nc * COL_W + _r.unchanged.empty_comma_w
+            if comma_half_w:
+                comma_half_x = geometry.commas_x if _r.unchanged.empty_comma_w else query.comma_left(geometry, _r, 0)
+                cells.append(CellBox("count:commas", comma_half_x, geometry.rows["counts"].y, comma_half_w, ROW_H,
+                                     "count", text=f"{_count_sym('n')} = {ctx.state.n}"))
+            cells.append(CellBox("count:commas:u", query.comma_left(geometry, _r, _r.dims.nc_shown), geometry.rows["counts"].y, _r.dims.nu * COL_W, ROW_H,
+                                 "count", text=f"{_count_sym('u')} = {_r.dims.nu}"))
+            continue
+        cnt_x, cnt_w = query.tile_span_box(geometry, "counts", ckey)
+        cells.append(CellBox(f"count:{ckey}", cnt_x, geometry.rows["counts"].y, cnt_w, ROW_H,
+                             "count", text=f"{_count_sym(sym)} = {cardinality[ckey]}"))
+    return EmitResult(cells=tuple(cells))
+
+
+def emit_units(resolved, geometry, ctx) -> EmitResult:
+    cells: list = []
+    _emit_units_matrix(cells, resolved, geometry, ctx)
+    _emit_units_const(cells, resolved, geometry, ctx)
+    _emit_units_columns(cells, resolved, geometry, ctx)
+    return EmitResult(cells=tuple(cells))
+
+
+def _emit_units_matrix(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    matrix_units = {
+        "vectors": (_r.dims.d, lambda i: query.vec_top(geometry, i), lambda i: f"{_r.labels.domain_label}{_sub(i + 1)}/"),
+        "canon": (_r.dims.rc, lambda i: query.canon_top(geometry, i), lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
+        "projection": (_r.dims.d, lambda i: query.proj_top(geometry, i), lambda i: f"{_r.labels.domain_label}{_sub(i + 1)}/"),
+        "mapping": (_r.dims.r_shown, lambda i: query.map_top(geometry, i), lambda i: f"g{_sub(i + 1)}/"),
+        "ss_vectors": (_r.dims.dL, lambda i: query.ss_vec_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
+        "ss_mapping": (_r.dims.rL, lambda i: query.ss_map_top(geometry, i), lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
+        "ss_projection": (_r.dims.dL, lambda i: query.ss_proj_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
+    }
+    for key, (n, top, label) in matrix_units.items():
+        if not query.tile_open(geometry, ctx.collapsed, key, "units"):
+            continue
+        for i in range(n):
+            cells.append(CellBox(f"ucol:{key}:{i}", geometry.col_x["units"], top(i),
+                                 geometry.col_w["units"], ROW_H, "units", text=label(i)))
+
+
+def _emit_units_const(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    const_units = {"tuning": "¢/", "just": "¢/", "retune": "¢/", "prescaling": "oct/",
+                   "complexity": f"{_r.scalars.complexity_unit}/", "weight": f"{_r.scalars.weight_unit}/",
+                   "damage": f"{_r.scalars.damage_unit}/"}
+    for key, text in const_units.items():
+        if not query.tile_open(geometry, ctx.collapsed, key, "units"):
+            continue
+        n = geometry.rows[key].nsub
+        for i in range(n):
+            cid = f"ucol:{key}:{i}" if n > 1 else f"ucol:{key}"
+            cells.append(CellBox(cid, geometry.col_x["units"], geometry.rows[key].y + i * ROW_H,
+                                 geometry.col_w["units"], ROW_H, "units", text=text))
+
+
+def _emit_units_columns(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if "units" not in geometry.rows:
+        return
+    uy = geometry.rows["units"].y
+    column_units = {
+        "canongens": (_r.dims.rc, lambda i: query.canongen_left(geometry, i), lambda i: f"/g{SUBSCRIPT_C}{_sub(i + 1)}"),
+        "gens": (_r.dims.r, lambda i: query.gen_left(geometry, i), lambda i: f"/g{_sub(i + 1)}"),
+        "primes": (_r.dims.d, lambda i: query.prime_left(geometry, i), lambda i: f"/{_r.labels.domain_label}{_sub(i + 1)}"),
+        "ssgens": (_r.dims.rL, lambda i: query.ss_gen_left(geometry, i), lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
+        "ssprimes": (_r.dims.dL, lambda i: query.ss_prime_left(geometry, i), lambda i: f"/p{_sub(i + 1)}"),
+        "commas": (_r.dims.nv_shown, lambda i: query.comma_left(geometry, _r, i), lambda _i: "/1"),
+        "detempering": (_r.dims.r, lambda i: query.detempering_left(geometry, i), lambda _i: "/1"),
+        "targets": (_r.dims.k_shown, lambda i: query.target_left(geometry, i), lambda _i: "/1"),
+        "interest": (_r.dims.mi_shown, lambda i: query.interest_left(geometry, i), lambda _i: "/1"),
+        "held": (_r.dims.nh_shown, lambda i: query.held_left(geometry, i), lambda _i: "/1"),
+    }
+    for key, (n, left, label) in column_units.items():
+        if not query.tile_open(geometry, ctx.collapsed, "units", key):
+            continue
+        for i in range(n):
+            cells.append(CellBox(f"urow:{key}:{i}", left(i), uy, COL_W, ROW_H,
+                                 "units", text=label(i)))
+
+
 class _EmitMatrixMixin:
-    def _emit_headers(self) -> None:
-        _r = self.resolved
-        for key in self.col_x:
-            hx = self.col_x[key] + self.outer_gutter_w(key)
-            hw = self.col_w[key] - 2 * self.outer_gutter_w(key)
-            self.cells.append(CellBox(f"header:{key}", hx, self.header_y, hw, HEADER_H, "colheader", text=self.col_header[key]))
-            if self.col_collapsible[key]:
-                glyph = _fold_glyph(f"col:{key}" in self.collapsed)
-                tx = hx + (hw - TOGGLE) / 2
-                self.cells.append(CellBox(f"toggle:col:{key}", tx, self.col_node_y, TOGGLE, TOGGLE, "coltoggle", text=glyph))
-
-        for key in self.rows:
-            label = self.rows[key].label
-            if self.size_factor or _r.scalars.prescaler_is_matrix:
-                label = _pretransform_label(label)
-                label = label.replace(" pretransforming", chr(160) + "pre-" + chr(10) + "transforming")
-            self.cells.append(CellBox(f"label:{key}", 0, self.rows[key].y, LABEL_W, self.rows[key].h, "rowlabel", text=label))
-            if self.rows[key].collapsible:
-                glyph = _fold_glyph(f"row:{key}" in self.collapsed)
-                ty = self.rows[key].y + (self.rows[key].h - TOGGLE) / 2
-                self.cells.append(CellBox(f"toggle:row:{key}", self.node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
-
-        foldable = _foldable_ids(self.cells)
-        all_collapsed = bool(foldable) and foldable <= self.collapsed
-        self.cells.append(CellBox("toggle:all", self.node_x, self.col_node_y, TOGGLE, TOGGLE, "alltoggle",
-                             text=_fold_glyph(all_collapsed)))
-
-    def _emit_counts_row(self) -> None:
-        _r = self.resolved
-        if self.row_open("counts"):
-            cardinality = {"gens": _r.dims.r, "primes": _r.dims.d, "commas": self.state.n, "targets": _r.dims.k, "held": _r.dims.nh,
-                           "detempering": _r.dims.r,
-                           "ssgens": _r.dims.rL, "ssprimes": _r.dims.dL}
-            for ckey, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
-                if not self.tile_open("counts", ckey):
-                    continue
-                if ckey == "commas" and _r.unchanged.shown:
-                    comma_half_w = _r.dims.nc * COL_W + _r.unchanged.empty_comma_w
-                    if comma_half_w:
-                        comma_half_x = self.commas_x if _r.unchanged.empty_comma_w else self.comma_left(0)
-                        self.cells.append(CellBox("count:commas", comma_half_x, self.rows["counts"].y, comma_half_w, ROW_H,
-                                             "count", text=f"{_count_sym('n')} = {self.state.n}"))
-                    self.cells.append(CellBox("count:commas:u", self.comma_left(_r.dims.nc_shown), self.rows["counts"].y, _r.dims.nu * COL_W, ROW_H,
-                                         "count", text=f"{_count_sym('u')} = {_r.dims.nu}"))
-                    continue
-                cnt_x, cnt_w = self.tile_span_box("counts", ckey)
-                self.cells.append(CellBox(f"count:{ckey}", cnt_x, self.rows["counts"].y, cnt_w, ROW_H,
-                                     "count", text=f"{_count_sym(sym)} = {cardinality[ckey]}"))
-
-    def _emit_units(self) -> None:
-        self._emit_units_matrix()
-        self._emit_units_const()
-        self._emit_units_columns()
-
-    def _emit_units_matrix(self) -> None:
-        _r = self.resolved
-        matrix_units = {
-            "vectors": (_r.dims.d, self.vec_top, lambda i: f"{_r.labels.domain_label}{_sub(i + 1)}/"),
-            "canon": (_r.dims.rc, self.canon_top, lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
-            "projection": (_r.dims.d, self.proj_top, lambda i: f"{_r.labels.domain_label}{_sub(i + 1)}/"),
-            "mapping": (_r.dims.r_shown, self.map_top, lambda i: f"g{_sub(i + 1)}/"),
-            "ss_vectors": (_r.dims.dL, self.ss_vec_top, lambda i: f"p{_sub(i + 1)}/"),
-            "ss_mapping": (_r.dims.rL, self.ss_map_top, lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
-            "ss_projection": (_r.dims.dL, self.ss_proj_top, lambda i: f"p{_sub(i + 1)}/"),
-        }
-        for key, (n, top, label) in matrix_units.items():
-            if not self.tile_open(key, "units"):
-                continue
-            for i in range(n):
-                self.cells.append(CellBox(f"ucol:{key}:{i}", self.col_x["units"], top(i),
-                                     self.col_w["units"], ROW_H, "units", text=label(i)))
-
-    def _emit_units_const(self) -> None:
-        _r = self.resolved
-        const_units = {"tuning": "¢/", "just": "¢/", "retune": "¢/", "prescaling": "oct/",
-                       "complexity": f"{_r.scalars.complexity_unit}/", "weight": f"{_r.scalars.weight_unit}/",
-                       "damage": f"{_r.scalars.damage_unit}/"}
-        for key, text in const_units.items():
-            if not self.tile_open(key, "units"):
-                continue
-            n = self.rows[key].nsub
-            for i in range(n):
-                cid = f"ucol:{key}:{i}" if n > 1 else f"ucol:{key}"
-                self.cells.append(CellBox(cid, self.col_x["units"], self.rows[key].y + i * ROW_H,
-                                     self.col_w["units"], ROW_H, "units", text=text))
-
-    def _emit_units_columns(self) -> None:
-        _r = self.resolved
-        if "units" not in self.rows:
-            return
-        uy = self.rows["units"].y
-        column_units = {
-            "canongens": (_r.dims.rc, self.canongen_left, lambda i: f"/g{SUBSCRIPT_C}{_sub(i + 1)}"),
-            "gens": (_r.dims.r, self.gen_left, lambda i: f"/g{_sub(i + 1)}"),
-            "primes": (_r.dims.d, self.prime_left, lambda i: f"/{_r.labels.domain_label}{_sub(i + 1)}"),
-            "ssgens": (_r.dims.rL, self.ss_gen_left, lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
-            "ssprimes": (_r.dims.dL, self.ss_prime_left, lambda i: f"/p{_sub(i + 1)}"),
-            "commas": (_r.dims.nv_shown, self.comma_left, lambda _i: "/1"),
-            "detempering": (_r.dims.r, self.detempering_left, lambda _i: "/1"),
-            "targets": (_r.dims.k_shown, self.target_left, lambda _i: "/1"),
-            "interest": (_r.dims.mi_shown, self.interest_left, lambda _i: "/1"),
-            "held": (_r.dims.nh_shown, self.held_left, lambda _i: "/1"),
-        }
-        for key, (n, left, label) in column_units.items():
-            if not self.tile_open("units", key):
-                continue
-            for i in range(n):
-                self.cells.append(CellBox(f"urow:{key}:{i}", left(i), uy, COL_W, ROW_H,
-                                     "units", text=label(i)))
-
     def _qty_branch_minus(self, qy, cid, ckey, i, kind, **kw):
         self.cells.append(CellBox(cid, self.sub_axis_x(ckey, i) - COL_W / 2, self.fanout_y, COL_W,
                              qy - self.fanout_y, kind, **kw))
