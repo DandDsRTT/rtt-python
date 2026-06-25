@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from rtt.app import spreadsheet_geometry_query as query
-from rtt.app.spreadsheet_constants import FRAME_GAP, FRAME_H, ROW_H
+from rtt.app.spreadsheet_constants import BRACKET_W, COL_W, FRAME_GAP, FRAME_H, ROW_H, V_SPLIT_GAP
 from rtt.app.spreadsheet_models import RowBand
 
 
@@ -39,3 +39,29 @@ def test_frame_and_band_y_functions_are_pure_over_geometry():
         row.y + row.h + row.frame + g.row_cpick["mapping"] + row.sym + row.cap + row.units)
     assert query.frame_top_y(g, "mapping") == row.y - FRAME_H - FRAME_GAP
     assert query.frame_brace_y(g, "mapping") == row.y + row.h + FRAME_GAP
+
+
+def test_gutter_and_coordinate_functions_are_pure_over_geometry():
+    g = SimpleNamespace(
+        primes_x=10.0, targets_x=20.0, content_x={"gens": 5.0},
+        matlabel_primes_w=2.0, matlabel_ssprimes_w=3.0, matlabel_other_w={"gens": 1.0},
+        row_handle_w=4.0, etpick_w=0, group_left={"targets": (100.0, 200.0)})
+    assert query.matlabel_gutter_w(g, "primes") == 2.0
+    assert query.matlabel_gutter_w(g, "ssprimes") == 3.0
+    assert query.matlabel_gutter_w(g, "gens") == 1.0
+    assert query.handle_gutter_w(g, "primes") == 4.0
+    assert query.handle_gutter_w(g, "gens") == 0
+    assert query.etpick_left_pad(g, "primes") == 0
+    assert query.target_left(g, 1) == 20.0 + BRACKET_W + COL_W
+    assert query.prime_left(g, 0) == 10.0 + query.outer_gutter_w(g, "primes") + BRACKET_W
+    assert query.sub_axis_x(g, "targets", 1) == 200.0 + COL_W / 2
+
+
+def test_resolved_dependent_query_functions_are_pure():
+    g = SimpleNamespace(commas_x=90.0)
+    r = SimpleNamespace(unchanged=SimpleNamespace(shown=True, empty_comma_w=5.0),
+                        dims=SimpleNamespace(nc=2, nc_shown=3))
+    assert query.comma_value_pos(r, 1) == 1
+    assert query.comma_value_pos(r, 2) == 2 + (3 - 2)
+    assert query.comma_left(g, r, 0) == 90.0 + BRACKET_W + 5.0
+    assert query.comma_left(g, r, 3) == 90.0 + BRACKET_W + 5.0 + 3 * COL_W + V_SPLIT_GAP
