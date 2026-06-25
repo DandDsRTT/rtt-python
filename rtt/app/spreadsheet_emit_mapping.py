@@ -254,75 +254,87 @@ def _emit_scaling_factors(cells, resolved, geometry, ctx) -> None:
                                  COL_W, ROW_H, "mapped", text="0" if _r.ghosts.comma else "", pending=True))
 
 
+def emit_canon_band(resolved, geometry, ctx) -> EmitResult:
+    _r = resolved
+    cells: list = []
+    if query.row_open(geometry, ctx.collapsed, "canon"):
+        _emit_canon_gens(cells, resolved, geometry, ctx)
+        _emit_canon_primes(cells, resolved, geometry, ctx)
+        _emit_canon_form(cells, resolved, geometry, ctx)
+        for i in range(_r.dims.rc):
+            _emit_canon_row(cells, resolved, geometry, ctx, i)
+    _emit_canon_finv(cells, resolved, geometry, ctx)
+    return EmitResult(cells=tuple(cells))
+
+
+def _emit_canon_gens(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if query.tile_open(geometry, ctx.collapsed, "canon", "quantities"):
+        for i in range(_r.dims.rc):
+            cells.append(CellBox(f"canon:gen:{i}", geometry.col_x["quantities"], query.canon_top(geometry, i), geometry.col_w["quantities"], ROW_H, "genratio", text=_r.canon.gens[i] if i < len(_r.canon.gens) else ""))
+
+
+def _emit_canon_primes(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if query.tile_open(geometry, ctx.collapsed, "canon", "primes"):
+        for i in range(_r.dims.rc):
+            for p in range(_r.dims.d):
+                cells.append(CellBox(f"cell:canon:{i}:{p}", query.prime_left(geometry, p), query.canon_top(geometry, i), COL_W, ROW_H, "mapped", text=str(_r.canon.mapping[i][p]), gen=i, prime=p, unit=query.cell_unit(_r, "canon", "primes", gen=i, prime=p)))
+
+
+def _emit_canon_form(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if query.tile_open(geometry, ctx.collapsed, "canon", "gens"):
+        for i in range(len(_r.canon.form_M)):
+            for j in range(len(_r.canon.form_M)):
+                cells.append(CellBox(f"cell:form:{i}:{j}", query.gen_left(geometry, j), query.canon_top(geometry, i), COL_W, ROW_H, "mapped", text=str(_r.canon.form_M[i][j]), unit=query.cell_unit(_r, "canon", "gens", gen=i)))
+
+
+def _emit_canon_row(cells, resolved, geometry, ctx, i) -> None:
+    _r = resolved
+    cl = ctx.collapsed
+    if query.tile_open(geometry, cl, "canon", "detempering"):
+        for c in range(_r.dims.r):
+            cells.append(CellBox(f"cell:canon_detempering:{i}:{query.col_token(_r, 'detempering', c)}", query.detempering_left(geometry, c), query.canon_top(geometry, i), COL_W, ROW_H, "mapped", text=str(_r.canon.mapped_detempering[i][c]), gen=i, unit=query.cell_unit(_r, "canon", "detempering", gen=i)))
+    if query.tile_open(geometry, cl, "canon", "targets"):
+        _emit_canon_mapped_tile(cells, resolved, geometry, "canon_mapped", "targets", _r.dims.k, lambda c: query.target_left(geometry, c), _r.canon.mapped, _r.targets.pending, i)
+    if query.tile_open(geometry, cl, "canon", "interest"):
+        _emit_canon_mapped_tile(cells, resolved, geometry, "canon_imapped", "interest", _r.dims.mi, lambda c: query.interest_left(geometry, c), _r.canon.interest_mapped, _r.interest.pending, i)
+    if query.tile_open(geometry, cl, "canon", "held"):
+        _emit_canon_mapped_tile(cells, resolved, geometry, "canon_hmapped", "held", _r.dims.nh, lambda c: query.held_left(geometry, c), _r.canon.held_mapped, _r.held.pending, i)
+    if query.tile_open(geometry, cl, "canon", "commas"):
+        _emit_canon_comma_row(cells, resolved, geometry, i)
+
+
+def _emit_canon_comma_row(cells, resolved, geometry, i) -> None:
+    _r = resolved
+    for c in range(_r.dims.nc):
+        cells.append(CellBox(f"cell:canon_mapped_comma:{i}:{query.col_token(_r, 'commas', c)}", query.comma_left(geometry, _r, c), query.canon_top(geometry, i), COL_W, ROW_H, "mapped", text=str(_r.canon.mapped_commas[i][c]), gen=i, unit=query.cell_unit(_r, "canon", "commas", gen=i)))
+    if _r.scalars.comma_draft:
+        cells.append(CellBox(f"cell:canon_mapped_comma:{i}:{query.pending_col_token(_r, 'commas')}", query.comma_left(geometry, _r, _r.dims.nc), query.canon_top(geometry, i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+    for j in range(_r.dims.nu):
+        ut = DASH if _r.canon.unchanged_mapped[i][j] is None else str(_r.canon.unchanged_mapped[i][j])
+        cells.append(CellBox(f"cell:canon_mapped_unchanged:{i}:{j}", query.comma_left(geometry, _r, _r.dims.nc_shown + j), query.canon_top(geometry, i), COL_W, ROW_H, "mapped", text=ut, gen=i, unit=query.cell_unit(_r, "canon", "commas", gen=i)))
+
+
+def _emit_canon_finv(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if query.tile_open(geometry, ctx.collapsed, "mapping", "canongens"):
+        for i in range(_r.dims.r):
+            for j in range(_r.dims.rc):
+                cells.append(CellBox(f"cell:finv:{i}:{j}", query.canongen_left(geometry, j), query.map_top(geometry, i), COL_W, ROW_H,
+                                     "formcell", text=str(_r.canon.inverse_form_M[i][j]), unit=query.cell_unit(_r, "mapping", "canongens", gen=i)))
+
+
+def _emit_canon_mapped_tile(cells, resolved, geometry, prefix, group, count, left_fn, data, pending, i) -> None:
+    _r = resolved
+    for col in range(count):
+        cells.append(CellBox(f"cell:{prefix}:{i}:{query.col_token(_r, group, col)}", left_fn(col), query.canon_top(geometry, i), COL_W, ROW_H, "mapped", text=str(data[i][col]), gen=i, unit=query.cell_unit(_r, "canon", group, gen=i)))
+    if pending is not None:
+        cells.append(CellBox(f"cell:{prefix}:{i}:draft", left_fn(count), query.canon_top(geometry, i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+
+
 class _EmitMappingMixin:
     def _emit_mapped_grid(self, tile, prefix, grid, n_cols, left, col_kw, **kw) -> None:
         emit_mapped_grid(self.cells, self.resolved, self.geometry, self.collapsed,
                          tile, prefix, grid, n_cols, left, col_kw, **kw)
-
-    def _emit_canon_band(self) -> None:
-        _r = self.resolved
-        if self.row_open("canon"):
-            self._emit_canon_gens()
-            self._emit_canon_primes()
-            self._emit_canon_form()
-            for i in range(_r.dims.rc):
-                self._emit_canon_row(i)
-        self._emit_canon_finv()
-
-    def _emit_canon_gens(self) -> None:
-        _r = self.resolved
-        if self.tile_open("canon", "quantities"):
-            for i in range(_r.dims.rc):
-                self.cells.append(CellBox(f"canon:gen:{i}", self.col_x["quantities"], self.canon_top(i), self.col_w["quantities"], ROW_H, "genratio", text=_r.canon.gens[i] if i < len(_r.canon.gens) else ""))
-
-    def _emit_canon_primes(self) -> None:
-        _r = self.resolved
-        if self.tile_open("canon", "primes"):
-            for i in range(_r.dims.rc):
-                for p in range(_r.dims.d):
-                    self.cells.append(CellBox(f"cell:canon:{i}:{p}", self.prime_left(p), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(_r.canon.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("canon", "primes", gen=i, prime=p)))
-
-    def _emit_canon_form(self) -> None:
-        _r = self.resolved
-        if self.tile_open("canon", "gens"):
-            for i in range(len(_r.canon.form_M)):
-                for j in range(len(_r.canon.form_M)):
-                    self.cells.append(CellBox(f"cell:form:{i}:{j}", self.gen_left(j), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(_r.canon.form_M[i][j]), unit=self.cell_unit("canon", "gens", gen=i)))
-
-    def _emit_canon_row(self, i: int) -> None:
-        _r = self.resolved
-        if self.tile_open("canon", "detempering"):
-            for c in range(_r.dims.r):
-                self.cells.append(CellBox(f"cell:canon_detempering:{i}:{self.col_token('detempering', c)}", self.detempering_left(c), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(_r.canon.mapped_detempering[i][c]), gen=i, unit=self.cell_unit("canon", "detempering", gen=i)))
-        if self.tile_open("canon", "targets"):
-            self._emit_canon_mapped_tile("canon_mapped", "targets", _r.dims.k, self.target_left, _r.canon.mapped, _r.targets.pending, i)
-        if self.tile_open("canon", "interest"):
-            self._emit_canon_mapped_tile("canon_imapped", "interest", _r.dims.mi, self.interest_left, _r.canon.interest_mapped, _r.interest.pending, i)
-        if self.tile_open("canon", "held"):
-            self._emit_canon_mapped_tile("canon_hmapped", "held", _r.dims.nh, self.held_left, _r.canon.held_mapped, _r.held.pending, i)
-        if self.tile_open("canon", "commas"):
-            self._emit_canon_comma_row(i)
-
-    def _emit_canon_comma_row(self, i: int) -> None:
-        _r = self.resolved
-        for c in range(_r.dims.nc):
-            self.cells.append(CellBox(f"cell:canon_mapped_comma:{i}:{self.col_token('commas', c)}", self.comma_left(c), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(_r.canon.mapped_commas[i][c]), gen=i, unit=self.cell_unit("canon", "commas", gen=i)))
-        if _r.scalars.comma_draft:
-            self.cells.append(CellBox(f"cell:canon_mapped_comma:{i}:{self.pending_col_token('commas')}", self.comma_left(_r.dims.nc), self.canon_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
-        for j in range(_r.dims.nu):
-            ut = DASH if _r.canon.unchanged_mapped[i][j] is None else str(_r.canon.unchanged_mapped[i][j])
-            self.cells.append(CellBox(f"cell:canon_mapped_unchanged:{i}:{j}", self.comma_left(_r.dims.nc_shown + j), self.canon_top(i), COL_W, ROW_H, "mapped", text=ut, gen=i, unit=self.cell_unit("canon", "commas", gen=i)))
-
-    def _emit_canon_finv(self) -> None:
-        _r = self.resolved
-        if self.tile_open("mapping", "canongens"):
-            for i in range(_r.dims.r):
-                for j in range(_r.dims.rc):
-                    self.cells.append(CellBox(f"cell:finv:{i}:{j}", self.canongen_left(j), self.map_top(i), COL_W, ROW_H,
-                                         "formcell", text=str(_r.canon.inverse_form_M[i][j]), unit=self.cell_unit("mapping", "canongens", gen=i)))
-
-    def _emit_canon_mapped_tile(self, prefix, group, count, left_fn, data, pending, i) -> None:
-        for col in range(count):
-            self.cells.append(CellBox(f"cell:{prefix}:{i}:{self.col_token(group, col)}", left_fn(col), self.canon_top(i), COL_W, ROW_H, "mapped", text=str(data[i][col]), gen=i, unit=self.cell_unit("canon", group, gen=i)))
-        if pending is not None:
-            self.cells.append(CellBox(f"cell:{prefix}:{i}:draft", left_fn(count), self.canon_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
