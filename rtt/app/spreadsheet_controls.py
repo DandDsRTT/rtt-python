@@ -39,71 +39,81 @@ class _ControlsMixin:
     def control_region_band_h(self, content_h):
         return 2 * BOX_OUTER + 2 * BOX_INNER + content_h
 
-    def _filter_gridded_quantities(self) -> None:
-        _r = self.resolved
-        if not _r.flags.gridded:
-            self.cells = [cb for cb in self.cells if cb.kind not in GRIDDED_KINDS]
-        elif not _r.flags.quantities:
-            self.cells = [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
-                     for cb in self.cells]
 
-    def _mark_doomed_unchanged_column(self) -> None:
-        _r = self.resolved
-        if (_r.commas.pending is not None or _r.ghosts.comma) and _r.unchanged.shown and _r.dims.nu:
-            doomed_x = self.comma_left(_r.dims.nc_shown + _r.dims.nu - 1)
-            self.cells = [replace(cb, preview_remove=True)
-                          if (cb.w == COL_W and cb.x == doomed_x
-                              and cb.kind not in ("count", "caption", "colgrip"))
-                          else cb
-                          for cb in self.cells]
+def transform_cells(cells, resolved, geometry, ctx) -> tuple:
+    cells = _filter_gridded_quantities(cells, resolved)
+    cells = _mark_doomed_unchanged_column(cells, resolved, geometry)
+    cells = _mark_born_column(cells, resolved, geometry)
+    cells = _mark_dual_axis_previews(cells, resolved, geometry, ctx)
+    return tuple(cells)
 
-    def _mark_born_column(self) -> None:
-        _r = self.resolved
-        if _r.unchanged.born:
-            born_x = self.comma_left(_r.dims.nc_shown + _r.dims.nu - 1)
-            self.cells = [replace(cb, pending=True)
-                          if (cb.w == COL_W and cb.x == born_x
-                              and cb.kind not in ("count", "caption", "colgrip"))
-                          else cb
-                          for cb in self.cells]
 
-    @staticmethod
-    def _dual_preview(cb, axes):
-        remove_rows, red_xs, change_rows, amber_xs = axes
-        if cb.kind not in RINGABLE_KINDS or cb.preview_remove:
-            return cb
-        if cb.gen in remove_rows or cb.x in red_xs:
-            return replace(cb, preview_remove=True, pending=False)
-        if cb.pending:
-            return cb
-        if cb.gen in change_rows or cb.x in amber_xs:
-            return replace(cb, preview_change=True)
+def _filter_gridded_quantities(cells, resolved):
+    _r = resolved
+    if not _r.flags.gridded:
+        return [cb for cb in cells if cb.kind not in GRIDDED_KINDS]
+    if not _r.flags.quantities:
+        return [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
+                for cb in cells]
+    return cells
+
+
+def _mark_doomed_unchanged_column(cells, resolved, geometry):
+    _r = resolved
+    if not ((_r.commas.pending is not None or _r.ghosts.comma) and _r.unchanged.shown and _r.dims.nu):
+        return cells
+    doomed_x = query.comma_left(geometry, _r, _r.dims.nc_shown + _r.dims.nu - 1)
+    return [replace(cb, preview_remove=True)
+            if (cb.w == COL_W and cb.x == doomed_x
+                and cb.kind not in ("count", "caption", "colgrip"))
+            else cb
+            for cb in cells]
+
+
+def _mark_born_column(cells, resolved, geometry):
+    _r = resolved
+    if not _r.unchanged.born:
+        return cells
+    born_x = query.comma_left(geometry, _r, _r.dims.nc_shown + _r.dims.nu - 1)
+    return [replace(cb, pending=True)
+            if (cb.w == COL_W and cb.x == born_x
+                and cb.kind not in ("count", "caption", "colgrip"))
+            else cb
+            for cb in cells]
+
+
+def _dual_preview(cb, axes):
+    remove_rows, red_xs, change_rows, amber_xs = axes
+    if cb.kind not in RINGABLE_KINDS or cb.preview_remove:
         return cb
+    if cb.gen in remove_rows or cb.x in red_xs:
+        return replace(cb, preview_remove=True, pending=False)
+    if cb.pending:
+        return cb
+    if cb.gen in change_rows or cb.x in amber_xs:
+        return replace(cb, preview_change=True)
+    return cb
 
-    def _mark_dual_axis_previews(self) -> None:
-        _r = self.resolved
-        remove_rows = change_rows = remove_commas = change_commas = frozenset()
-        if _r.commas.pending is not None and _r.dims.r:
-            remove_rows, change_rows = frozenset({_r.dims.r - 1}), frozenset(range(_r.dims.r - 1))
-        if self.pending_mapping_row is not None and _r.dims.nc:
-            remove_commas, change_commas = frozenset({_r.dims.nc - 1}), frozenset(range(_r.dims.nc - 1))
-        if self.preview_remove is not None:
-            axis, idx = self.preview_remove
-            if axis == "comma":
-                remove_commas, change_rows = frozenset({idx}), frozenset(range(_r.dims.r))
-            else:
-                remove_rows, change_commas = frozenset({idx}), frozenset(range(_r.dims.nc))
-        if remove_rows or change_rows or remove_commas or change_commas:
-            red_xs = frozenset(self.comma_left(c) for c in remove_commas)
-            amber_xs = frozenset(self.comma_left(c) for c in change_commas)
-            axes = (remove_rows, red_xs, change_rows, amber_xs)
-            self.cells = [self._dual_preview(cb, axes) for cb in self.cells]
 
-    def _apply_value_display_filters(self) -> None:
-        self._filter_gridded_quantities()
-        self._mark_doomed_unchanged_column()
-        self._mark_born_column()
-        self._mark_dual_axis_previews()
+def _mark_dual_axis_previews(cells, resolved, geometry, ctx):
+    _r = resolved
+    remove_rows = change_rows = remove_commas = change_commas = frozenset()
+    if _r.commas.pending is not None and _r.dims.r:
+        remove_rows, change_rows = frozenset({_r.dims.r - 1}), frozenset(range(_r.dims.r - 1))
+    if ctx.pending_mapping_row is not None and _r.dims.nc:
+        remove_commas, change_commas = frozenset({_r.dims.nc - 1}), frozenset(range(_r.dims.nc - 1))
+    if ctx.preview_remove is not None:
+        axis, idx = ctx.preview_remove
+        if axis == "comma":
+            remove_commas, change_rows = frozenset({idx}), frozenset(range(_r.dims.r))
+        else:
+            remove_rows, change_commas = frozenset({idx}), frozenset(range(_r.dims.nc))
+    if not (remove_rows or change_rows or remove_commas or change_commas):
+        return cells
+    red_xs = frozenset(query.comma_left(geometry, _r, c) for c in remove_commas)
+    amber_xs = frozenset(query.comma_left(geometry, _r, c) for c in change_commas)
+    axes = (remove_rows, red_xs, change_rows, amber_xs)
+    return [_dual_preview(cb, axes) for cb in cells]
 
 
 def emit_controls(resolved, geometry, ctx) -> EmitResult:

@@ -1,6 +1,8 @@
 from rtt.app import service, settings, spreadsheet
 from rtt.app.spreadsheet_brackets import emit_brackets, emit_ebk_frames_and_marks
 from rtt.app.spreadsheet_closed_form import _closed_form, closed_form_operand
+from rtt.app.spreadsheet_controls import emit_controls, emit_tile_toggles, transform_cells
+from rtt.app.spreadsheet_decorations import emit_decorations
 from rtt.app.spreadsheet_emit_mapping import emit_canon_band, emit_mapping, emit_projection_band
 from rtt.app.spreadsheet_emit_matrix import (
     emit_column_plus_controls,
@@ -10,8 +12,6 @@ from rtt.app.spreadsheet_emit_matrix import (
     emit_rehomed_minus_controls,
     emit_units,
 )
-from rtt.app.spreadsheet_controls import emit_controls, emit_tile_toggles
-from rtt.app.spreadsheet_decorations import emit_decorations
 from rtt.app.spreadsheet_emit_model import EmitResult, build_context
 from rtt.app.spreadsheet_emit_prescaling import emit_prescaling_band
 from rtt.app.spreadsheet_emit_tuning import emit_tuning
@@ -181,6 +181,17 @@ def test_emit_tuning_is_a_pure_function_returning_cells_boxes_and_extra():
     assert set(result.extra) == {"gtm_box", "opt_box", "approach_frame", "approach_box"}
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
     assert ids <= full
+
+
+def test_transform_cells_marks_the_dual_axis_preview_on_a_row_removal():
+    # transform_cells is the post-emit rewrite pass the build applies last; removing mapping row 0
+    # reds over its mapped-comma cell. Drive the full build (which calls transform_cells) to confirm.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    cells = {c.id: c for c in spreadsheet.build(base, preview_remove=("row", 0)).cells}
+    assert cells["cell:mapped_comma:0:1"].preview_remove
+    # and it is a pure function over a cell tuple
+    builder = spreadsheet._GridBuilder(base)
+    assert transform_cells((), builder.resolved, builder.geometry, build_context(builder)) == ()
 
 
 def test_emit_controls_is_a_pure_function_returning_cells_and_blocks():
