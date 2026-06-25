@@ -317,58 +317,67 @@ def _qty_drag_controls(cells, resolved, geometry, ckey, n, grip_top) -> None:
                          grip_top, add_w, GRIP_BAND, "colgrip"))
 
 
-class _EmitMatrixMixin:
-    def _emit_column_plus_controls(self) -> None:
-        _r = self.resolved
-        primes_plus = "element_plus" if _r.flags.nonstandard_domain else "plus"
-        for ckey, cid in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
-                          ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
-            if ckey in self.plus_stub_x:
-                self.cells.append(CellBox(cid, self.plus_stub_x[ckey] - BTN / 2, self.fanout_y - BTN / 2, BTN, BTN, cid))
+def emit_column_plus_controls(resolved, geometry) -> EmitResult:
+    _r = resolved
+    cells: list = []
+    primes_plus = "element_plus" if _r.flags.nonstandard_domain else "plus"
+    for ckey, cid in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
+                      ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
+        if ckey in geometry.plus_stub_x:
+            cells.append(CellBox(cid, geometry.plus_stub_x[ckey] - BTN / 2, geometry.fanout_y - BTN / 2, BTN, BTN, cid))
+    return EmitResult(cells=tuple(cells))
 
-    def _vec_minus(self, vtop, cid, ckey, i, kind, **kw):
-        self.cells.append(CellBox(cid, self.sub_axis_x(ckey, i) - COL_W / 2, self.fanout_y,
-                             COL_W, vtop - self.fanout_y, kind, **kw))
 
-    def _emit_rehomed_minus_controls(self) -> None:
-        if self.row_open("quantities") or not self.row_open("vectors"):
-            return
-        vtop = self.rows["vectors"].y
-        self._emit_rehomed_commas(vtop)
-        self._emit_rehomed_targets(vtop)
-        self._emit_rehomed_held(vtop)
-        self._emit_rehomed_interest(vtop)
+def emit_rehomed_minus_controls(resolved, geometry, ctx) -> EmitResult:
+    cells: list = []
+    if query.row_open(geometry, ctx.collapsed, "quantities") or not query.row_open(geometry, ctx.collapsed, "vectors"):
+        return EmitResult()
+    vtop = geometry.rows["vectors"].y
 
-    def _emit_rehomed_commas(self, vtop) -> None:
-        _r = self.resolved
-        if self.tile_open("vectors", "commas"):
-            for c in range(_r.dims.nc):
-                self._vec_minus(vtop, f"comma_minus:{self.col_token('commas', c)}", "commas", c, "comma_minus", comma=c)
-            if _r.commas.pending is not None:
-                self._vec_minus(vtop, "comma_minus:pending", "commas", _r.dims.nc, "comma_minus")
+    def vec_minus(cid, ckey, i, kind, **kw):
+        cells.append(CellBox(cid, query.sub_axis_x(geometry, ckey, i) - COL_W / 2, geometry.fanout_y,
+                             COL_W, vtop - geometry.fanout_y, kind, **kw))
 
-    def _emit_rehomed_targets(self, vtop) -> None:
-        _r = self.resolved
-        if self.tile_open("vectors", "targets"):
-            if _r.scalars.targets_editable:
-                for j in range(_r.dims.k):
-                    self._vec_minus(vtop, f"target_minus:{j}", "targets", j, "target_minus", comma=j)
-            if _r.targets.pending is not None:
-                self._vec_minus(vtop, "target_minus:pending", "targets", _r.dims.k, "target_minus")
+    _emit_rehomed_commas(resolved, geometry, ctx, vec_minus)
+    _emit_rehomed_targets(resolved, geometry, ctx, vec_minus)
+    _emit_rehomed_held(resolved, geometry, ctx, vec_minus)
+    _emit_rehomed_interest(resolved, geometry, ctx, vec_minus)
+    return EmitResult(cells=tuple(cells))
 
-    def _emit_rehomed_held(self, vtop) -> None:
-        _r = self.resolved
-        if self.tile_open("vectors", "held"):
-            for i in range(_r.dims.nh):
-                self._vec_minus(vtop, f"held_minus:{i}", "held", i, "held_minus", comma=i)
-            if _r.held.pending is not None:
-                self._vec_minus(vtop, "held_minus:pending", "held", _r.dims.nh, "held_minus")
 
-    def _emit_rehomed_interest(self, vtop) -> None:
-        _r = self.resolved
-        if self.tile_open("vectors", "interest"):
-            for i in range(_r.dims.mi):
-                self._vec_minus(vtop, f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
-            if _r.interest.pending is not None:
-                self._vec_minus(vtop, "interest_minus:pending", "interest", _r.dims.mi, "interest_minus")
+def _emit_rehomed_commas(resolved, geometry, ctx, vec_minus) -> None:
+    _r = resolved
+    if query.tile_open(geometry, ctx.collapsed, "vectors", "commas"):
+        for c in range(_r.dims.nc):
+            vec_minus(f"comma_minus:{query.col_token(_r, 'commas', c)}", "commas", c, "comma_minus", comma=c)
+        if _r.commas.pending is not None:
+            vec_minus("comma_minus:pending", "commas", _r.dims.nc, "comma_minus")
+
+
+def _emit_rehomed_targets(resolved, geometry, ctx, vec_minus) -> None:
+    _r = resolved
+    if query.tile_open(geometry, ctx.collapsed, "vectors", "targets"):
+        if _r.scalars.targets_editable:
+            for j in range(_r.dims.k):
+                vec_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
+        if _r.targets.pending is not None:
+            vec_minus("target_minus:pending", "targets", _r.dims.k, "target_minus")
+
+
+def _emit_rehomed_held(resolved, geometry, ctx, vec_minus) -> None:
+    _r = resolved
+    if query.tile_open(geometry, ctx.collapsed, "vectors", "held"):
+        for i in range(_r.dims.nh):
+            vec_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
+        if _r.held.pending is not None:
+            vec_minus("held_minus:pending", "held", _r.dims.nh, "held_minus")
+
+
+def _emit_rehomed_interest(resolved, geometry, ctx, vec_minus) -> None:
+    _r = resolved
+    if query.tile_open(geometry, ctx.collapsed, "vectors", "interest"):
+        for i in range(_r.dims.mi):
+            vec_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
+        if _r.interest.pending is not None:
+            vec_minus("interest_minus:pending", "interest", _r.dims.mi, "interest_minus")
 

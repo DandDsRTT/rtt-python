@@ -1,9 +1,11 @@
 from rtt.app import service, settings, spreadsheet
 from rtt.app.spreadsheet_emit_mapping import emit_mapping
 from rtt.app.spreadsheet_emit_matrix import (
+    emit_column_plus_controls,
     emit_counts_row,
     emit_headers,
     emit_quantities_row,
+    emit_rehomed_minus_controls,
     emit_units,
 )
 from rtt.app.spreadsheet_emit_model import EmitResult, build_context
@@ -59,7 +61,7 @@ def test_emit_matrix_bands_are_pure_functions():
     units = {c.id for c in emit_units(builder.resolved, builder.geometry, ctx).cells}
     assert "header:primes" in headers and "toggle:all" in headers
     assert "count:primes" in counts
-    assert any(i.startswith("urow:") or i.startswith("ucol:") for i in units)
+    assert any(i.startswith(("urow:", "ucol:")) for i in units)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
     assert (headers | counts | units) <= full
 
@@ -71,3 +73,14 @@ def test_emit_quantities_row_is_a_pure_function():
     assert "qgen:0" in ids and "prime:0" in ids
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
     assert ids <= full
+
+
+def test_emit_column_plus_and_rehomed_are_pure_functions():
+    builder = _maximized_builder()
+    ctx = build_context(builder)
+    plus = emit_column_plus_controls(builder.resolved, builder.geometry)
+    rehomed = emit_rehomed_minus_controls(builder.resolved, builder.geometry, ctx)
+    assert isinstance(plus, EmitResult) and isinstance(rehomed, EmitResult)
+    assert "gen_plus" in {c.id for c in plus.cells}
+    # rehomed minus controls only emit when the quantities row is collapsed and vectors open
+    assert rehomed.cells == ()
