@@ -13,7 +13,7 @@ from rtt.app.spreadsheet_constants import (
     ROW_HANDLE_W,
 )
 from rtt.app.spreadsheet_emit_model import EmitResult, element_cell_kind, voice
-from rtt.app.spreadsheet_models import _QtyList, _VecGrid
+from rtt.app.spreadsheet_models import _VecGrid
 
 
 def emit_vectors(resolved, geometry, ctx) -> EmitResult:
@@ -144,16 +144,6 @@ def _emit_vectors_int_handles(cells, resolved, geometry, ctx) -> None:
 
 
 class _EmitVectorsMixin:
-    def _emit_qty_list(self, q: _QtyList, qy: float, branch_minus) -> None:
-        for j in range(q.count):
-            self.cells.append(CellBox(f"{q.singular}:{self.col_token(q.group, j)}", q.left_fn(j), qy, COL_W, ROW_H, q.kind, text=q.ratios[j], comma=j))
-            self._voice(f"quantities:{q.group}", j, q.sizes.just[j])
-            if q.minus_gate:
-                branch_minus(f"{q.singular}_minus:{j}", q.group, j, f"{q.singular}_minus", comma=j)
-        if q.pending is not None:
-            self.cells.append(CellBox(f"{q.singular}:pending", q.left_fn(q.count), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=q.count, pending=True))
-            branch_minus(f"{q.singular}_minus:pending", q.group, q.count, f"{q.singular}_minus")
-
     def _emit_superspace_rows(self) -> None:
         self._emit_ss_quantity_rows()
         self._emit_ss_matrix_rows()

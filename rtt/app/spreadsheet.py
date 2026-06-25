@@ -15,6 +15,7 @@ from rtt.app.spreadsheet_emit_matrix import (
     _EmitMatrixMixin,
     emit_counts_row,
     emit_headers,
+    emit_quantities_row,
     emit_units,
 )
 from rtt.app.spreadsheet_emit_model import build_context
@@ -77,7 +78,7 @@ class _GridBuilder(
         self.cells.extend(emit_headers(self.resolved, self.geometry, ctx).cells)
         self.cells.extend(emit_counts_row(self.resolved, self.geometry, ctx).cells)
         self.cells.extend(emit_units(self.resolved, self.geometry, ctx).cells)
-        self._emit_quantities_row()
+        self.cells.extend(emit_quantities_row(self.resolved, self.geometry, ctx).cells)
         self._emit_column_plus_controls()
         self._emit_rehomed_minus_controls()
         self.cells.extend(emit_mapping(self.resolved, self.geometry, ctx).cells)
