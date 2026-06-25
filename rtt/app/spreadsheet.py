@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from rtt.app.layout import Block, CellBox, Layout, Line
 from rtt.app.spreadsheet_brackets import emit_brackets, emit_ebk_frames_and_marks
-from rtt.app.spreadsheet_closed_form import _ClosedFormMixin
 from rtt.app.spreadsheet_constants import (
     GAP,
     GRIP_BAND,
@@ -46,7 +45,6 @@ class _GridBuilder(
     _GeometryAccess,
     _LayoutMixin,
     _GeometryMixin,
-    _ClosedFormMixin,
     _EmitMappingMixin,
     _EmitTuningMixin,
     _ControlsMixin,
