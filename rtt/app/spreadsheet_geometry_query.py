@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from rtt.app.grid_tables import SUBSCRIPT_C, SUBSCRIPT_L, UNITS
 from rtt.app.spreadsheet_constants import BRACKET_W, COL_W, FRAME_GAP, FRAME_H, ROW_H, V_SPLIT_GAP
-from rtt.app.spreadsheet_text import pending_token
+from rtt.app.spreadsheet_text import _sub, _subscript_coord, pending_token
 
 
 def map_top(geometry, i: int) -> float:
@@ -201,3 +202,41 @@ def pending_draft_idx(resolved, group: str):
         "held": (resolved.held.pending, resolved.dims.nh),
         "interest": (resolved.interest.pending, resolved.dims.mi),
     }.get(group)
+
+
+def tile_unit(resolved, rkey: str, ckey: str) -> str:
+    base = UNITS.get((rkey, ckey))
+    if base is None:
+        return ""
+    if rkey == "complexity":
+        return base.replace("(C)", resolved.scalars.complexity_unit)
+    if rkey == "weight":
+        return resolved.scalars.weight_unit
+    if rkey == "damage":
+        return resolved.scalars.damage_unit
+    return base
+
+
+def cell_unit(resolved, rkey: str, ckey: str, *, gen=None, prime=None, elem=None) -> str:
+    if not resolved.flags.cell_units:
+        return ""
+    u = tile_unit(resolved, rkey, ckey)
+    superspace = rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")
+    if gen is not None:
+        if superspace:
+            u = u.replace(f"g{SUBSCRIPT_L}", f"g{SUBSCRIPT_L}{_sub(gen + 1)}")
+        elif f"g{SUBSCRIPT_C}" in u:
+            gc = f"g{SUBSCRIPT_C}"
+            u = _subscript_coord(u.replace(gc, "\x00"), "g", f"g{_sub(gen + 1)}").replace(
+                "\x00", f"{gc}{_sub(gen + 1)}"
+            )
+        else:
+            u = _subscript_coord(u, "g", f"g{_sub(gen + 1)}")
+    if prime is not None:
+        coord = "p" if superspace else resolved.labels.domain_label
+        u = _subscript_coord(u, "p", f"{coord}{_sub(prime + 1)}")
+    if elem is not None:
+        u = _subscript_coord(
+            u, resolved.labels.domain_label, f"{resolved.labels.domain_label}{_sub(elem + 1)}"
+        )
+    return u

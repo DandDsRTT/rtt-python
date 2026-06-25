@@ -18,7 +18,6 @@ from rtt.app.grid_tables import (
     SUBSCRIPT_C,
     SUBSCRIPT_L,
     SYMBOLS,
-    UNITS,
 )
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
@@ -49,7 +48,6 @@ from rtt.app.spreadsheet_constants import (
 from rtt.app.spreadsheet_text import (
     _min_width_for_lines,
     _sub,
-    _subscript_coord,
     _wrap_lines,
 )
 
@@ -223,38 +221,10 @@ class _GeometryMixin:
         return query.tile_open(self.geometry, self.collapsed, rkey, ckey)
 
     def tile_unit(self, rkey: str, ckey: str):
-        _r = self.resolved
-        base = UNITS.get((rkey, ckey))
-        if base is None:
-            return ""
-        if rkey == "complexity":
-            return base.replace("(C)", _r.scalars.complexity_unit)
-        if rkey == "weight":
-            return _r.scalars.weight_unit
-        if rkey == "damage":
-            return _r.scalars.damage_unit
-        return base
+        return query.tile_unit(self.resolved, rkey, ckey)
 
     def cell_unit(self, rkey: str, ckey: str, *, gen=None, prime=None, elem=None):
-        _r = self.resolved
-        if not _r.flags.cell_units:
-            return ""
-        u = self.tile_unit(rkey, ckey)
-        superspace = rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")
-        if gen is not None:
-            if superspace:
-                u = u.replace(f"g{SUBSCRIPT_L}", f"g{SUBSCRIPT_L}{_sub(gen + 1)}")
-            elif f"g{SUBSCRIPT_C}" in u:
-                gc = f"g{SUBSCRIPT_C}"
-                u = _subscript_coord(u.replace(gc, "\x00"), "g", f"g{_sub(gen + 1)}").replace("\x00", f"{gc}{_sub(gen + 1)}")
-            else:
-                u = _subscript_coord(u, "g", f"g{_sub(gen + 1)}")
-        if prime is not None:
-            coord = "p" if superspace else _r.labels.domain_label
-            u = _subscript_coord(u, "p", f"{coord}{_sub(prime + 1)}")
-        if elem is not None:
-            u = _subscript_coord(u, _r.labels.domain_label, f"{_r.labels.domain_label}{_sub(elem + 1)}")
-        return u
+        return query.cell_unit(self.resolved, rkey, ckey, gen=gen, prime=prime, elem=elem)
 
     def matlabel_gutter_w(self, group_key: str):
         return query.matlabel_gutter_w(self.geometry, group_key)
