@@ -30,10 +30,10 @@ ET19D_C7 = dual(Temperament(((19, 30, 44, 54),), ROW))
 @pytest.mark.parametrize(
     "factors",
     [
-        (ET5_M, ET7_M),  # both mappings
-        (ET5_M, ET7_C),  # mixed
+        (ET5_M, ET7_M),
+        (ET5_M, ET7_C),
         (ET5_C, ET7_M),
-        (ET5_C, ET7_C),  # both comma bases
+        (ET5_C, ET7_C),
     ],
 )
 def test_map_merge_to_meantone(factors):
@@ -83,7 +83,6 @@ def test_merge_through_ebk(merge, inputs, expected):
     assert to_ebk(result) == expected
 
 
-# Merges across nonstandard domain bases (these exercise change_domain_basis).
 def test_map_merge_nonstandard_bases():
     t1 = Temperament(((22, 35, 51, 76),), ROW, (2, 3, 5, 11))
     t2 = Temperament(((17, 54, 48, 59),), ROW, (2, 9, 7, 11))

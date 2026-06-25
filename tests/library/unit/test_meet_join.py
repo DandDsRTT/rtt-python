@@ -17,7 +17,6 @@ def _identity(n):
     return tuple(tuple(int(i == j) for j in range(n)) for i in range(n))
 
 
-# 7-limit commas
 MEANTONE_C7 = (-4, 4, -1, 0)
 STARLING_C7 = (1, 2, -3, 1)
 SEPTIMAL_C7 = (6, -2, 0, -1)
@@ -25,7 +24,6 @@ PORCUPINE_C7 = (1, -5, 3, 0)
 MARVEL_C7 = (-5, 2, 2, -1)
 GAMELISMA7 = (-10, 1, 0, 3)
 SENSAMAGIC_C7 = (0, -5, 1, 2)
-# 11-limit commas
 MEANTONE_C11 = (-4, 4, -1, 0, 0)
 STARLING_C11 = (1, 2, -3, 1, 0)
 KEENANISMA11 = (-7, -1, 1, 1, 1)
