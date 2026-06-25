@@ -51,7 +51,6 @@ from rtt.app.spreadsheet_text import (
     _sub,
     _subscript_coord,
     _wrap_lines,
-    pending_token,
 )
 
 
@@ -147,7 +146,7 @@ class _GeometryMixin:
         return service.optimization_power(self.tuning_scheme)
 
     def col_open(self, key: str) -> bool:
-        return key in self.col_x and f"col:{key}" not in self.collapsed
+        return query.col_open(self.geometry, self.collapsed, key)
 
     def _commas_band_w(self, nc_count: int):
         _r = self.resolved
@@ -218,11 +217,10 @@ class _GeometryMixin:
                     for name, rk, ckey, label in FORM_CHOOSERS if rk == key and ckey in self.col_w), default=0)
 
     def row_open(self, key: str) -> bool:
-        return key in self.rows and f"row:{key}" not in self.collapsed
+        return query.row_open(self.geometry, self.collapsed, key)
 
     def tile_open(self, rkey: str, ckey: str) -> bool:
-        return ((rkey, ckey) in self.declared_tiles and self.row_open(rkey) and self.col_open(ckey)
-                and f"tile:{rkey}:{ckey}" not in self.collapsed)
+        return query.tile_open(self.geometry, self.collapsed, rkey, ckey)
 
     def tile_unit(self, rkey: str, ckey: str):
         _r = self.resolved
@@ -360,20 +358,13 @@ class _GeometryMixin:
 
 
     def col_token(self, group: str, i: int):
-        _r = self.resolved
-        if group == "commas" and i >= _r.dims.nc:
-            return f"u{i - _r.dims.nc}"
-        pairs = _r.col_ids.get(group)
-        return i if pairs is None else pairs[i][0]
+        return query.col_token(self.resolved, group, i)
 
     def pending_col_token(self, group: str):
-        _r = self.resolved
-        return pending_token([tok for tok, _ in _r.col_ids[group]])
+        return query.pending_col_token(self.resolved, group)
 
     def _pending_draft_idx(self, group: str):
-        _r = self.resolved
-        return {"commas": (_r.scalars.comma_draft or None, _r.dims.nc), "targets": (_r.targets.pending, _r.dims.k),
-                "held": (_r.held.pending, _r.dims.nh), "interest": (_r.interest.pending, _r.dims.mi)}.get(group)
+        return query.pending_draft_idx(self.resolved, group)
 
     def _voice(self, tile, idx, cents) -> None:
         if cents is None:

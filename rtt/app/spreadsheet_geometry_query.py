@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from rtt.app.spreadsheet_constants import BRACKET_W, COL_W, FRAME_GAP, FRAME_H, ROW_H, V_SPLIT_GAP
+from rtt.app.spreadsheet_text import pending_token
 
 
 def map_top(geometry, i: int) -> float:
@@ -163,3 +164,40 @@ def col_plus_x(geometry, resolved, ckey: str) -> float:
             return geometry.commas_x + BRACKET_W + resolved.unchanged.empty_comma_w / 2
         return comma_left(geometry, resolved, resolved.dims.nc_shown - 1) + COL_W + V_SPLIT_GAP / 2
     return sub_axis_x(geometry, ckey, n - 1) + COL_W
+
+
+def col_open(geometry, collapsed, key: str) -> bool:
+    return key in geometry.col_x and f"col:{key}" not in collapsed
+
+
+def row_open(geometry, collapsed, key: str) -> bool:
+    return key in geometry.rows and f"row:{key}" not in collapsed
+
+
+def tile_open(geometry, collapsed, rkey: str, ckey: str) -> bool:
+    return (
+        (rkey, ckey) in geometry.declared_tiles
+        and row_open(geometry, collapsed, rkey)
+        and col_open(geometry, collapsed, ckey)
+        and f"tile:{rkey}:{ckey}" not in collapsed
+    )
+
+
+def col_token(resolved, group: str, i: int):
+    if group == "commas" and i >= resolved.dims.nc:
+        return f"u{i - resolved.dims.nc}"
+    pairs = resolved.col_ids.get(group)
+    return i if pairs is None else pairs[i][0]
+
+
+def pending_col_token(resolved, group: str):
+    return pending_token([tok for tok, _ in resolved.col_ids[group]])
+
+
+def pending_draft_idx(resolved, group: str):
+    return {
+        "commas": (resolved.scalars.comma_draft or None, resolved.dims.nc),
+        "targets": (resolved.targets.pending, resolved.dims.k),
+        "held": (resolved.held.pending, resolved.dims.nh),
+        "interest": (resolved.interest.pending, resolved.dims.mi),
+    }.get(group)
