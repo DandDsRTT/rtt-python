@@ -114,12 +114,6 @@ class _ControlsMixin:
                   and any(rk == rkey and ck == ckey for _n, rk, ck, _l in FORM_CHOOSERS))
         return "form" if embeds else None
 
-    def control_region(self, box_id: str, ckey: str, top, content_h):
-        box_y = top + BOX_OUTER
-        self._control_region_boxes.append(Block(box_id, self.col_x[ckey], box_y, self.col_w[ckey],
-                                                 2 * BOX_INNER + content_h, boxed=True))
-        return self.col_x[ckey] + BOX_INNER, box_y + BOX_INNER
-
     def control_region_band_h(self, content_h):
         return 2 * BOX_OUTER + 2 * BOX_INNER + content_h
 

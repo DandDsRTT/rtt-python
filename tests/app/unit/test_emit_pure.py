@@ -11,6 +11,8 @@ from rtt.app.spreadsheet_emit_matrix import (
     emit_units,
 )
 from rtt.app.spreadsheet_emit_model import EmitResult, build_context
+from rtt.app.spreadsheet_emit_prescaling import emit_prescaling_band
+from rtt.app.spreadsheet_emit_tuning import emit_tuning
 from rtt.app.spreadsheet_emit_vectors import (
     emit_identity_objects,
     emit_superspace_rows,
@@ -165,6 +167,29 @@ def test_emit_ebk_frames_and_marks_reads_the_accumulator_for_v_split_bars():
 def _math_builder():
     s = {**settings.defaults(), "math_expressions": True}
     return spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
+
+
+def test_emit_tuning_is_a_pure_function_returning_cells_boxes_and_extra():
+    builder = _maximized_builder()
+    result = emit_tuning(builder.resolved, builder.geometry, build_context(builder))
+    assert isinstance(result, EmitResult)
+    ids = {c.id for c in result.cells}
+    assert any(i.startswith("tuning:") for i in ids)
+    # the box geometry rides on .extra; region boxes ride on .region_boxes
+    assert set(result.extra) == {"gtm_box", "opt_box", "approach_frame", "approach_box"}
+    full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
+    assert ids <= full
+
+
+def test_emit_prescaling_band_is_a_pure_function_over_resolved_geometry_ctx():
+    builder = _superspace_builder()
+    result = emit_prescaling_band(builder.resolved, builder.geometry, build_context(builder))
+    ids = {c.id for c in result.cells}
+    assert any(i.startswith("cell:prescaling:") for i in ids)
+    full = {c.id for c in spreadsheet.build(
+        service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), _all_bool_on(),
+        tuning_scheme="minimax-ES", held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),)).cells}
+    assert ids <= full
 
 
 def test_closed_form_operand_is_a_pure_function_over_resolved_geometry_ctx():

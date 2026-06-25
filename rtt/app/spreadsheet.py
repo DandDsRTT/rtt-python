@@ -24,7 +24,7 @@ from rtt.app.spreadsheet_emit_matrix import (
     emit_units,
 )
 from rtt.app.spreadsheet_emit_model import build_context
-from rtt.app.spreadsheet_emit_tuning import _EmitTuningMixin
+from rtt.app.spreadsheet_emit_tuning import emit_tuning
 from rtt.app.spreadsheet_emit_vectors import (
     emit_identity_objects,
     emit_superspace_rows,
@@ -46,7 +46,6 @@ class _GridBuilder(
     _LayoutMixin,
     _GeometryMixin,
     _EmitMappingMixin,
-    _EmitTuningMixin,
     _ControlsMixin,
     _DecorationsMixin,
 ):
@@ -92,17 +91,13 @@ class _GridBuilder(
         self.cells.extend(emit_vectors(self.resolved, self.geometry, ctx).cells)
         self.cells.extend(emit_superspace_rows(self.resolved, self.geometry, ctx).cells)
         self.cells.extend(emit_identity_objects(self.resolved, self.geometry, ctx).cells)
-        chart_indicators = self._emit_tuning_rows()
-        self._emit_prescaling_band()
-        self._emit_lbox_control()
-        self._emit_cbox_controls()
-        self._emit_complexity_row()
-        self._emit_weight_row()
-        self._emit_damage_row(chart_indicators)
-        self._emit_charts(chart_indicators)
-        gtm_box = self._emit_tuning_ranges_box()
-        opt_box = self._emit_optimization_box()
-        approach_frame = self._emit_approach_box()
+        tuning = emit_tuning(self.resolved, self.geometry, ctx)
+        self.cells.extend(tuning.cells)
+        self._control_region_boxes.extend(tuning.region_boxes)
+        gtm_box = tuning.extra["gtm_box"]
+        opt_box = tuning.extra["opt_box"]
+        approach_frame = tuning.extra["approach_frame"]
+        self.approach_box = tuning.extra["approach_box"]
         self.cells.extend(emit_brackets(self.resolved, self.geometry, ctx).cells)
         self._emit_matrix_labels()
         self._emit_axes()
