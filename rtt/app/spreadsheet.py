@@ -33,9 +33,7 @@ from rtt.app.spreadsheet_emit_vectors import (
     emit_superspace_rows,
     emit_vectors,
 )
-from rtt.app.spreadsheet_geometry import _GeometryMixin
 from rtt.app.spreadsheet_geometry_model import _GeometryAccess
-from rtt.app.spreadsheet_layout import _LayoutMixin
 from rtt.app.spreadsheet_resolve import Resolver
 from rtt.app.spreadsheet_resolved import Resolved
 from rtt.app.spreadsheet_text import (
@@ -46,8 +44,6 @@ from rtt.app.spreadsheet_text import (
 class _GridBuilder(
     Resolver,
     _GeometryAccess,
-    _LayoutMixin,
-    _GeometryMixin,
 ):
     def layout(self) -> Layout:
         cells, lines, blocks, approach_box = assemble(

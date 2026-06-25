@@ -16,6 +16,7 @@ from rtt.app import (
 from rtt.app.editor import Editor
 from rtt.app.layout import CellBox, Layout
 from rtt.app.spreadsheet_decorations import _tile_groups
+from rtt.app.spreadsheet_geometry import ptext_band
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -2130,7 +2131,7 @@ def test_every_open_value_tile_has_a_plain_text_string():
     assert b.resolved.flags.superspace and b.resolved.flags.ptext  # the config really did light the superspace + plain text
     value_rows = PTEXT_ROWS - {"quantities"}  # the quantities row's only band is the "2.3.5" primes string
     missing = [(r, c) for (r, c) in sorted(b.declared_tiles)
-               if r in value_rows and c not in SPINE_COLUMNS and b.tile_open(r, c)
+               if r in value_rows and c not in SPINE_COLUMNS and query.tile_open(b.geometry, b.collapsed, r, c)
                and (r, c) not in b.ptext_strings]
     assert not missing, f"open value tiles with no plain-text band: {missing}"
 
@@ -2151,7 +2152,7 @@ def test_every_row_that_produces_plain_text_reserves_its_band():
                                  held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
     assert b.resolved.flags.ptext and b.resolved.flags.canon  # the config really did light the plain text + the canon row
     rows_with_text = {r for (r, _c) in b.ptext_strings}
-    spill = sorted(r for r in rows_with_text if b.ptext_band(r, folded=False) <= 0)
+    spill = sorted(r for r in rows_with_text if ptext_band(b.geometry, r, folded=False) <= 0)
     assert not spill, f"rows produce plain text but reserve no band (it will spill past the tile): {spill}"
 
 
@@ -2177,7 +2178,7 @@ def test_every_in_tile_band_reserves_for_what_it_emits():
     # render — exactly where drift hides), and the static content table otherwise.
     bands = {
         "plain text":   ({r for (r, _c) in b.ptext_strings},
-                         {r for (r, _c) in b.ptext_strings if b.ptext_band(r, folded=False) > 0}),
+                         {r for (r, _c) in b.ptext_strings if ptext_band(b.geometry, r, folded=False) > 0}),
         "symbol":       ({r for (r, _c) in SYMBOLS}, set(BANDS["symbol"].rows)),
         "units":        ({r for (r, _c) in UNITS}, set(BANDS["units"].rows)),
         "caption":      ({r for (r, _c) in b.resolved.labels.captions}, set(BANDS["caption"].rows)),
@@ -2252,7 +2253,7 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
     mismatches = []
     checked = 0
     for (rkey, ckey) in sorted(b.declared_tiles):
-        if rkey not in value_rows or ckey in SPINE_COLUMNS or not b.tile_open(rkey, ckey):
+        if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.collapsed, rkey, ckey):
             continue
         if (rkey, ckey) not in b.ptext_strings:
             continue  # the presence test owns that failure
@@ -2401,7 +2402,7 @@ def test_every_plain_text_band_uses_the_same_brackets_as_its_grid_tile():
     value_rows = PTEXT_ROWS - {"quantities"}
     mismatches, checked = [], 0
     for (rkey, ckey) in sorted(b.declared_tiles):
-        if rkey not in value_rows or ckey in SPINE_COLUMNS or not b.tile_open(rkey, ckey):
+        if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.collapsed, rkey, ckey):
             continue
         if (rkey, ckey) not in b.ptext_strings:
             continue  # presence is the other guard's job
@@ -2442,7 +2443,7 @@ def test_every_open_value_tile_declares_an_ebk_convention():
     value_rows = PTEXT_ROWS - {"quantities"}
     undeclared, mismatches, checked = [], [], 0
     for (rkey, ckey) in sorted(b.declared_tiles):
-        if rkey not in value_rows or ckey in SPINE_COLUMNS or not b.tile_open(rkey, ckey):
+        if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.collapsed, rkey, ckey):
             continue
         if (rkey, ckey) not in b.ptext_strings:
             continue
@@ -8024,8 +8025,10 @@ def test_every_derived_matrix_row_greens_its_draft_column():
         # every DECLARED value-row tile of `lst`'s column must hold a cell (value OR unit) at the
         # draft column — one slot past the `committed` sub-columns. A blank there is exactly the bug.
         lay = b.layout()
-        left = {"held": b.held_left, "interest": b.interest_left,
-                "targets": b.target_left, "commas": b.comma_left}[lst]
+        left = {"held": lambda i: query.held_left(b.geometry, i),
+                "interest": lambda i: query.interest_left(b.geometry, i),
+                "targets": lambda i: query.target_left(b.geometry, i),
+                "commas": lambda i: query.comma_left(b.geometry, b.resolved, i)}[lst]
         dx = left(committed)
         checked = 0
         for rkey in VALUE_ROWS:

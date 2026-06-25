@@ -5,11 +5,10 @@ from types import SimpleNamespace
 from rtt.app import service
 from rtt.app.settings import defaults as _default_settings
 from rtt.app.spreadsheet_constants import (
-    HEADER_H,
-    LABEL_W,
     SYMBOL_H,
 )
-from rtt.app.spreadsheet_geometry_model import freeze_geometry
+from rtt.app.spreadsheet_emit_model import build_context
+from rtt.app.spreadsheet_layout import compute_geometry
 from rtt.app.spreadsheet_models import _resolve_prescaler_labels, _resolve_show_flags
 from rtt.app.spreadsheet_resolved import freeze
 from rtt.app.spreadsheet_text import _min_width_for_lines, assign_column_tokens
@@ -51,6 +50,8 @@ class Resolver:
         self.displayed_tuning_name = displayed_tuning_name
         self.held_basis_ratios = held_basis_ratios
         self.displayed_projection_name = displayed_projection_name
+        self.generator_tuning = generator_tuning
+        self.target_override = target_override
 
         if self.settings is None:
             self.settings = _default_settings()
@@ -72,8 +73,6 @@ class Resolver:
         draft.displayed_tuning_name = self.displayed_tuning_name
         draft.displayed_projection_name = self.displayed_projection_name
         self._unpack_show_flags(draft)
-        label_w = LABEL_W
-        header_h = HEADER_H
         self._resolve_superspace_dims(draft)
         self._resolve_prescaler_and_domain_labels(draft)
         self._resolve_interval_sets(draft, generator_tuning, target_override, held_vectors, pending_comma)
@@ -85,28 +84,7 @@ class Resolver:
         if self._resolve_only:
             return
 
-        self.geometry = SimpleNamespace()
-        self._init_superspace_tuning()
-        interest_tiles, held_tiles, detempering_tiles = self._declare_interval_column_tiles()
-        self._declare_tiles(interest_tiles, held_tiles, detempering_tiles)
-
-        col_bands, content_x0 = self._define_col_bands(label_w)
-
-        row_bands = self._define_row_bands()
-
-        self._layout_columns(col_bands, content_x0)
-
-        tile_extra = self._resolve_tile_extras()
-
-        rows_top_y = self._init_row_geometry(header_h)
-
-        self._resolve_ptext_strings(generator_tuning, target_override)
-
-        self._layout_rows(row_bands, tile_extra, rows_top_y)
-
-        self._init_group_geometry()
-
-        self.geometry = freeze_geometry(self.geometry)
+        self.geometry = compute_geometry(self.resolved, build_context(self))
 
     def _unpack_show_flags(self, draft):
         _f = _resolve_show_flags(self.settings, self.collapsed)

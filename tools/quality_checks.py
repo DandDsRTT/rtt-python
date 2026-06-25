@@ -12,11 +12,12 @@ MAX_LCOM4 = 10
 MAX_DIT = 2
 MAX_NOC = 3
 # Cross-file shared mutable `self` attributes across the spreadsheet builder cluster — the count
-# that exposed its god-object (was 141; the pipeline campaign drove it to 13: the frozen `resolved`
-# /`geometry` value objects + the raw build inputs consumed by the remaining construction mixins).
-# Set to bite from the current floor: it can only ratchet DOWN as the construction layer is further
-# decomposed, never grow.
-MAX_SPREADSHEET_SHARED_STATE = 13
+# that exposed its god-object (was 141; the pipeline campaign drove it to 13, then compute_geometry
+# became a free function over (resolved, ctx) and the construction mixins dissolved, leaving only
+# the two frozen value objects `resolved` and `geometry` that the builder writes once and reads back).
+# Set to bite from the current floor: it can only ratchet DOWN as the builder is further decomposed,
+# never grow.
+MAX_SPREADSHEET_SHARED_STATE = 2
 
 FILE_LENGTH_EXEMPT = frozenset(
     {
