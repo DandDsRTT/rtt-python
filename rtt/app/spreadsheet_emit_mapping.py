@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from rtt.app import ids
+from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.layout import CellBox
 from rtt.app.spreadsheet_constants import (
     BTN,
@@ -12,126 +13,140 @@ from rtt.app.spreadsheet_constants import (
     ROW_H,
     ROW_HANDLE_W,
 )
+from rtt.app.spreadsheet_emit_model import EmitResult
 from rtt.app.spreadsheet_models import _MappedTile
 
 
-class _EmitMappingMixin:
-    def _emit_mapping_band(self) -> None:
-        _r = self.resolved
-        if not self.row_open("mapping"):
-            return
-        self._emit_mapping_gens()
-        self._emit_mapping_drag()
-        self._emit_mapping_rows()
-        if _r.scalars.row_draft:
-            self._emit_mapping_draft_row()
+def emit_mapping(resolved, geometry, ctx) -> EmitResult:
+    _r = resolved
+    cells: list = []
+    if not query.row_open(geometry, ctx.collapsed, "mapping"):
+        return EmitResult()
+    _emit_mapping_gens(cells, resolved, geometry, ctx)
+    _emit_mapping_drag(cells, resolved, geometry, ctx)
+    _emit_mapping_rows(cells, resolved, geometry, ctx)
+    if _r.scalars.row_draft:
+        _emit_mapping_draft_row(cells, resolved, geometry, ctx)
+    return EmitResult(cells=tuple(cells))
 
-    def _emit_mapping_gens(self) -> None:
-        _r = self.resolved
-        if not self.tile_open("mapping", "quantities"):
-            return
+
+def _emit_mapping_gens(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if not query.tile_open(geometry, ctx.collapsed, "mapping", "quantities"):
+        return
+    for i in range(_r.dims.r):
+        cells.append(CellBox(f"gen:{query.col_token(_r, 'gens', i)}", geometry.col_x["quantities"], query.map_top(geometry, i), geometry.col_w["quantities"], ROW_H, "genratio", text=_r.scalars.gens[i] if i < len(_r.scalars.gens) else "", gen=i))
+    map_bus_x = geometry.node_edge + geometry.FAN if query.row_fans(geometry, "mapping") else geometry.node_edge
+    gen_right = geometry.col_x["quantities"] + geometry.col_w["quantities"]
+    if _r.dims.r > 1:
         for i in range(_r.dims.r):
-            self.cells.append(CellBox(f"gen:{self.col_token('gens', i)}", self.col_x["quantities"], self.map_top(i), self.col_w["quantities"], ROW_H, "genratio", text=_r.scalars.gens[i] if i < len(_r.scalars.gens) else "", gen=i))
-        map_bus_x = self.node_edge + self.FAN if self._row_fans("mapping") else self.node_edge
-        gen_right = self.col_x["quantities"] + self.col_w["quantities"]
-        if _r.dims.r > 1:
-            for i in range(_r.dims.r):
-                self.cells.append(CellBox(f"map_minus:{self.col_token('gens', i)}", map_bus_x, self.map_top(i), gen_right - map_bus_x, ROW_H, "map_minus", gen=i))
-        if "mapping" in self.row_plus_y:
-            self.cells.append(CellBox("map_plus", map_bus_x - BTN / 2, self.row_plus_y["mapping"] - BTN / 2, BTN, BTN, "map_plus"))
+            cells.append(CellBox(f"map_minus:{query.col_token(_r, 'gens', i)}", map_bus_x, query.map_top(geometry, i), gen_right - map_bus_x, ROW_H, "map_minus", gen=i))
+    if "mapping" in geometry.row_plus_y:
+        cells.append(CellBox("map_plus", map_bus_x - BTN / 2, geometry.row_plus_y["mapping"] - BTN / 2, BTN, BTN, "map_plus"))
 
-    def _emit_mapping_drag(self) -> None:
-        _r = self.resolved
-        if self.settings.get("drag_to_combine") and _r.dims.r > 1 and self.tile_open("mapping", "primes"):
-            for i in range(_r.dims.r):
-                self.cells.append(CellBox(f"map_drag:{self.col_token('gens', i)}", self.primes_x + self.etpick_left_pad("primes"), self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
 
-    def _emit_mapping_rows(self) -> None:
-        _r = self.resolved
-        mx, mw = self.matrix_span("primes")
-        etpick_x = mx + mw + ETPICK_GAP
+def _emit_mapping_drag(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    if ctx.settings.get("drag_to_combine") and _r.dims.r > 1 and query.tile_open(geometry, ctx.collapsed, "mapping", "primes"):
         for i in range(_r.dims.r):
-            rt = self.col_token("gens", i)
-            if self.tile_open("mapping", "primes"):
-                if _r.flags.presets:
-                    self.cells.append(CellBox(f"etpick:{rt}", etpick_x, self.map_top(i), ETPICK_W, ROW_H, "etpick", gen=i))
-                for p in range(_r.dims.d):
-                    self.cells.append(CellBox(ids.mapping_cell(rt, p), self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", text=str(self.state.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
-            if self.tile_open("mapping", "targets"):
-                self._emit_mapped_tile(_MappedTile("mapped", "targets", _r.dims.k, self.target_left, _r.targets.mapped, _r.targets.pending), i, rt)
-            if self.tile_open("mapping", "interest"):
-                self._emit_mapped_tile(_MappedTile("imapped", "interest", _r.dims.mi, self.interest_left, _r.interest.mapped, _r.interest.pending), i, rt)
-            if self.tile_open("mapping", "held"):
-                self._emit_mapped_tile(_MappedTile("hmapped", "held", _r.dims.nh, self.held_left, _r.tuning.held_mapped, _r.held.pending), i, rt)
-            if self.tile_open("mapping", "commas"):
-                self._emit_mapping_comma_row(i, rt)
+            cells.append(CellBox(f"map_drag:{query.col_token(_r, 'gens', i)}", geometry.primes_x + query.etpick_left_pad(geometry, "primes"), query.map_top(geometry, i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
 
-    def _emit_mapping_comma_row(self, i: int, rt: str) -> None:
-        _r = self.resolved
-        for c in range(_r.dims.nc):
-            self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.col_token('commas', c)}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(_r.commas.mapped[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
-        if _r.scalars.comma_draft:
-            mc_text = str(_r.ghosts.comma_mapped[i]) if (_r.ghosts.comma and i < len(_r.ghosts.comma_mapped)) else ""
-            self.cells.append(CellBox(f"cell:mapped_comma:{rt}:{self.pending_col_token('commas')}", self.comma_left(_r.dims.nc), self.map_top(i), COL_W, ROW_H, "mapped", text=mc_text, gen=i, pending=True))
-        for j in range(_r.dims.nu):
-            mapped_text = DASH if _r.unchanged.mapped[i][j] is None else str(_r.unchanged.mapped[i][j])
-            self.cells.append(CellBox(f"cell:mapped_unchanged:{rt}:{j}", self.comma_left(_r.dims.nc_shown + j), self.map_top(i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
 
-    def _emit_mapping_draft_row(self) -> None:
-        _r = self.resolved
-        dr = _r.dims.r
-        drt = self.pending_col_token("gens")
-        if self.tile_open("mapping", "quantities"):
-            gen_text = _r.ghosts.row_ratio if _r.ghosts.row else "?"
-            self.cells.append(CellBox("gen:pending", self.col_x["quantities"], self.map_top(dr), self.col_w["quantities"], ROW_H, "genratio", text=gen_text, gen=dr, pending=True))
-            if not _r.ghosts.row:
-                map_bus_x = self.node_edge + self.FAN if self._row_fans("mapping") else self.node_edge
-                gen_right = self.col_x["quantities"] + self.col_w["quantities"]
-                self.cells.append(CellBox("map_minus:pending", map_bus_x, self.map_top(dr), gen_right - map_bus_x, ROW_H, "map_minus", gen=dr, pending=True))
-        if self.tile_open("mapping", "primes"):
-            row_kind = "mapped" if _r.ghosts.row else "mapping"
+def _emit_mapping_rows(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    mx, mw = query.matrix_span(geometry, resolved, "primes")
+    etpick_x = mx + mw + ETPICK_GAP
+    for i in range(_r.dims.r):
+        rt = query.col_token(_r, "gens", i)
+        if query.tile_open(geometry, ctx.collapsed, "mapping", "primes"):
+            if _r.flags.presets:
+                cells.append(CellBox(f"etpick:{rt}", etpick_x, query.map_top(geometry, i), ETPICK_W, ROW_H, "etpick", gen=i))
             for p in range(_r.dims.d):
-                v = _r.ghosts.row_map[p] if _r.ghosts.row else self.pending_mapping_row[p]
-                self.cells.append(CellBox(ids.mapping_cell(drt, p), self.prime_left(p), self.map_top(dr), COL_W, ROW_H, row_kind, text="" if v is None else str(v), gen=dr, prime=p, pending=True))
-            if not _r.ghosts.row and _r.flags.presets:
-                mx, mw = self.matrix_span("primes")
-                self.cells.append(CellBox("etpick:draft", mx + mw + ETPICK_GAP, self.map_top(dr), ETPICK_W, ROW_H, "etpick", gen=dr, pending=True))
-        self._emit_mapping_draft_mapped(dr, drt)
+                cells.append(CellBox(ids.mapping_cell(rt, p), query.prime_left(geometry, p), query.map_top(geometry, i), COL_W, ROW_H, "mapping", text=str(ctx.state.mapping[i][p]), gen=i, prime=p, unit=query.cell_unit(_r, "mapping", "primes", gen=i, prime=p)))
+        if query.tile_open(geometry, ctx.collapsed, "mapping", "targets"):
+            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("mapped", "targets", _r.dims.k, lambda c: query.target_left(geometry, c), _r.targets.mapped, _r.targets.pending), i, rt)
+        if query.tile_open(geometry, ctx.collapsed, "mapping", "interest"):
+            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("imapped", "interest", _r.dims.mi, lambda c: query.interest_left(geometry, c), _r.interest.mapped, _r.interest.pending), i, rt)
+        if query.tile_open(geometry, ctx.collapsed, "mapping", "held"):
+            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("hmapped", "held", _r.dims.nh, lambda c: query.held_left(geometry, c), _r.tuning.held_mapped, _r.held.pending), i, rt)
+        if query.tile_open(geometry, ctx.collapsed, "mapping", "commas"):
+            _emit_mapping_comma_row(cells, resolved, geometry, i, rt)
 
-    def _draft_mapped_text(self, key, j) -> str:
-        _r = self.resolved
-        vals = _r.ghosts.row_mapped.get(key, ()) if _r.ghosts.row else ()
-        if j >= len(vals):
-            return ""
-        return DASH if vals[j] is None else str(vals[j])
 
-    def _emit_mapping_draft_mapped(self, dr: int, drt: str) -> None:
-        _r = self.resolved
-        if self.tile_open("mapping", "targets"):
-            for j in range(_r.dims.k):
-                self.cells.append(CellBox(f"cell:mapped:{drt}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(dr), COL_W, ROW_H, "mapped", text=self._draft_mapped_text("targets", j), gen=dr, pending=True))
-        if self.tile_open("mapping", "interest"):
-            for ii in range(_r.dims.mi):
-                self.cells.append(CellBox(f"cell:imapped:{drt}:{self.col_token('interest', ii)}", self.interest_left(ii), self.map_top(dr), COL_W, ROW_H, "mapped", text=self._draft_mapped_text("interest", ii), gen=dr, pending=True))
-        if self.tile_open("mapping", "held"):
-            for hi in range(_r.dims.nh):
-                self.cells.append(CellBox(f"cell:hmapped:{drt}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(dr), COL_W, ROW_H, "mapped", text=self._draft_mapped_text("held", hi), gen=dr, pending=True))
-        if self.tile_open("mapping", "commas"):
-            self._emit_mapping_draft_commas(dr, drt)
+def _emit_mapping_comma_row(cells, resolved, geometry, i, rt) -> None:
+    _r = resolved
+    for c in range(_r.dims.nc):
+        cells.append(CellBox(f"cell:mapped_comma:{rt}:{query.col_token(_r, 'commas', c)}", query.comma_left(geometry, _r, c), query.map_top(geometry, i), COL_W, ROW_H, "mapped", text=str(_r.commas.mapped[i][c]), gen=i, unit=query.cell_unit(_r, "mapping", "commas", gen=i)))
+    if _r.scalars.comma_draft:
+        mc_text = str(_r.ghosts.comma_mapped[i]) if (_r.ghosts.comma and i < len(_r.ghosts.comma_mapped)) else ""
+        cells.append(CellBox(f"cell:mapped_comma:{rt}:{query.pending_col_token(_r, 'commas')}", query.comma_left(geometry, _r, _r.dims.nc), query.map_top(geometry, i), COL_W, ROW_H, "mapped", text=mc_text, gen=i, pending=True))
+    for j in range(_r.dims.nu):
+        mapped_text = DASH if _r.unchanged.mapped[i][j] is None else str(_r.unchanged.mapped[i][j])
+        cells.append(CellBox(f"cell:mapped_unchanged:{rt}:{j}", query.comma_left(geometry, _r, _r.dims.nc_shown + j), query.map_top(geometry, i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=query.cell_unit(_r, "mapping", "commas", gen=i)))
 
-    def _emit_mapping_draft_commas(self, dr: int, drt: str) -> None:
-        _r = self.resolved
-        for c in range(_r.dims.nc):
-            self.cells.append(CellBox(f"cell:mapped_comma:{drt}:{self.col_token('commas', c)}", self.comma_left(c), self.map_top(dr), COL_W, ROW_H, "mapped", text=self._draft_mapped_text("commas", c), gen=dr, pending=True))
-        for j in range(_r.dims.nu):
-            self.cells.append(CellBox(f"cell:mapped_unchanged:{drt}:{j}", self.comma_left(_r.dims.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text=self._draft_mapped_text("unchanged", j), gen=dr, pending=True))
 
-    def _emit_mapped_tile(self, m: _MappedTile, i: int, rt: str) -> None:
-        for col in range(m.count):
-            self.cells.append(CellBox(f"cell:{m.prefix}:{rt}:{self.col_token(m.group, col)}", m.left_fn(col), self.map_top(i), COL_W, ROW_H, "mapped", text=str(m.data[i][col]), gen=i, unit=self.cell_unit("mapping", m.group, gen=i)))
-        if m.pending is not None:
-            self.cells.append(CellBox(f"cell:{m.prefix}:{rt}:draft", m.left_fn(m.count), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+def _emit_mapping_draft_row(cells, resolved, geometry, ctx) -> None:
+    _r = resolved
+    dr = _r.dims.r
+    drt = query.pending_col_token(_r, "gens")
+    if query.tile_open(geometry, ctx.collapsed, "mapping", "quantities"):
+        gen_text = _r.ghosts.row_ratio if _r.ghosts.row else "?"
+        cells.append(CellBox("gen:pending", geometry.col_x["quantities"], query.map_top(geometry, dr), geometry.col_w["quantities"], ROW_H, "genratio", text=gen_text, gen=dr, pending=True))
+        if not _r.ghosts.row:
+            map_bus_x = geometry.node_edge + geometry.FAN if query.row_fans(geometry, "mapping") else geometry.node_edge
+            gen_right = geometry.col_x["quantities"] + geometry.col_w["quantities"]
+            cells.append(CellBox("map_minus:pending", map_bus_x, query.map_top(geometry, dr), gen_right - map_bus_x, ROW_H, "map_minus", gen=dr, pending=True))
+    if query.tile_open(geometry, ctx.collapsed, "mapping", "primes"):
+        row_kind = "mapped" if _r.ghosts.row else "mapping"
+        for p in range(_r.dims.d):
+            v = _r.ghosts.row_map[p] if _r.ghosts.row else ctx.pending_mapping_row[p]
+            cells.append(CellBox(ids.mapping_cell(drt, p), query.prime_left(geometry, p), query.map_top(geometry, dr), COL_W, ROW_H, row_kind, text="" if v is None else str(v), gen=dr, prime=p, pending=True))
+        if not _r.ghosts.row and _r.flags.presets:
+            mx, mw = query.matrix_span(geometry, resolved, "primes")
+            cells.append(CellBox("etpick:draft", mx + mw + ETPICK_GAP, query.map_top(geometry, dr), ETPICK_W, ROW_H, "etpick", gen=dr, pending=True))
+    _emit_mapping_draft_mapped(cells, resolved, geometry, ctx, dr, drt)
 
+
+def _draft_mapped_text(resolved, key, j) -> str:
+    _r = resolved
+    vals = _r.ghosts.row_mapped.get(key, ()) if _r.ghosts.row else ()
+    if j >= len(vals):
+        return ""
+    return DASH if vals[j] is None else str(vals[j])
+
+
+def _emit_mapping_draft_mapped(cells, resolved, geometry, ctx, dr, drt) -> None:
+    _r = resolved
+    if query.tile_open(geometry, ctx.collapsed, "mapping", "targets"):
+        for j in range(_r.dims.k):
+            cells.append(CellBox(f"cell:mapped:{drt}:{query.col_token(_r, 'targets', j)}", query.target_left(geometry, j), query.map_top(geometry, dr), COL_W, ROW_H, "mapped", text=_draft_mapped_text(_r, "targets", j), gen=dr, pending=True))
+    if query.tile_open(geometry, ctx.collapsed, "mapping", "interest"):
+        for ii in range(_r.dims.mi):
+            cells.append(CellBox(f"cell:imapped:{drt}:{query.col_token(_r, 'interest', ii)}", query.interest_left(geometry, ii), query.map_top(geometry, dr), COL_W, ROW_H, "mapped", text=_draft_mapped_text(_r, "interest", ii), gen=dr, pending=True))
+    if query.tile_open(geometry, ctx.collapsed, "mapping", "held"):
+        for hi in range(_r.dims.nh):
+            cells.append(CellBox(f"cell:hmapped:{drt}:{query.col_token(_r, 'held', hi)}", query.held_left(geometry, hi), query.map_top(geometry, dr), COL_W, ROW_H, "mapped", text=_draft_mapped_text(_r, "held", hi), gen=dr, pending=True))
+    if query.tile_open(geometry, ctx.collapsed, "mapping", "commas"):
+        _emit_mapping_draft_commas(cells, resolved, geometry, dr, drt)
+
+
+def _emit_mapping_draft_commas(cells, resolved, geometry, dr, drt) -> None:
+    _r = resolved
+    for c in range(_r.dims.nc):
+        cells.append(CellBox(f"cell:mapped_comma:{drt}:{query.col_token(_r, 'commas', c)}", query.comma_left(geometry, _r, c), query.map_top(geometry, dr), COL_W, ROW_H, "mapped", text=_draft_mapped_text(_r, "commas", c), gen=dr, pending=True))
+    for j in range(_r.dims.nu):
+        cells.append(CellBox(f"cell:mapped_unchanged:{drt}:{j}", query.comma_left(geometry, _r, _r.dims.nc_shown + j), query.map_top(geometry, dr), COL_W, ROW_H, "mapped", text=_draft_mapped_text(_r, "unchanged", j), gen=dr, pending=True))
+
+
+def _emit_mapped_tile(cells, resolved, geometry, m: _MappedTile, i, rt) -> None:
+    _r = resolved
+    for col in range(m.count):
+        cells.append(CellBox(f"cell:{m.prefix}:{rt}:{query.col_token(_r, m.group, col)}", m.left_fn(col), query.map_top(geometry, i), COL_W, ROW_H, "mapped", text=str(m.data[i][col]), gen=i, unit=query.cell_unit(_r, "mapping", m.group, gen=i)))
+    if m.pending is not None:
+        cells.append(CellBox(f"cell:{m.prefix}:{rt}:draft", m.left_fn(m.count), query.map_top(geometry, i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
+
+
+class _EmitMappingMixin:
     def _emit_mapped_grid(self, tile, prefix, grid, n_cols, left, col_kw, *,
                           full=None, colwise=False, col_token_key=None, inset=0,
                           row="projection", top=None, height=None, pending=None) -> None:
