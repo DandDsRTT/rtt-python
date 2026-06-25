@@ -1,7 +1,9 @@
 # RTT — Project Instructions
 
 The RTT monolith is a microtonal/RTT engine with a NiceGUI web front end
-(`rtt/app/app.py`). Launch it with `python app.py` (optionally `python app.py <port>`).
+(`rtt/app/app.py`). Launch it with `python app.py` (optionally `python app.py <port>`) — but
+**agents must pass a port in the 8200+ range, never the bare default** (8137 is the user's; see the
+port rule below).
 
 ## The design mockup is the source of truth — never invent UI
 
@@ -113,7 +115,7 @@ until the urge is gone.
 
 The repo keeps a persistent virtualenv at `.venv/` (gitignored). All deps (runtime **and**
 test: `pytest`, `pytest-asyncio`, `nicegui` are pinned right in `requirements.txt`) are
-already installed there, so `.venv/bin/python -m pytest -q` "just works" (~2,400 tests).
+already installed there, so `.venv/bin/python -m pytest -q` "just works" (~2,530 tests).
 Always use `.venv/bin/python` — the bare `python`/`python3` on PATH is system 3.9, too old
 for the `numpy`/`scipy`/`sympy`/`nicegui` pins (which need Python ≥ 3.10).
 
@@ -186,11 +188,9 @@ conflicts that must be resolved") or gets **dropped from the queue on a red cand
 just sits there unmerged forever unless you act. So your task is not finished until `main` actually
 contains your commit. **Watch the PR to a terminal state, then act on whatever it became.**
 
-This does **not** mean polling-with-narration or heartbeating the user — that would break the
-"never ping while waiting" rule (see the global guidance). It means arming **one silent background
-watcher** that emits nothing while the PR is healthy in the queue and **re-engages you only on a
-state you must act on.** Background a poll loop that exits only on a terminal/actionable state — its
-exit is what wakes you; while it loops it produces no user-facing text:
+Per the global "never ping while waiting" rule, arm **one silent background watcher** that emits
+nothing while the PR is healthy and re-engages you only on an actionable state — its exit is what
+wakes you:
 
 ```bash
 # Run in the background. Exits — and re-engages you — ONLY when there's something to do:
@@ -209,11 +209,9 @@ while :; do
 done
 ```
 
-Until that watcher exits, stay silent — do not narrate "still queued" or "position 2 of 4"; those
-turn-ends are exactly the pings the global rule forbids. When it exits, do the matching action and,
-for the conflict/red cases, **re-arm the watcher** — you loop on `DIRTY → resolve → re-enqueue`
-until the PR is genuinely merged. Break silence only to report the merge, or to ask for a decision
-you genuinely can't make.
+When the watcher exits, do the matching action; for the conflict/red cases **re-arm it** — loop
+`DIRTY → resolve → re-enqueue` until the PR is genuinely merged. Break silence only to report the
+merge or ask a decision you genuinely can't make.
 
 **Resolving a `DIRTY` PR.** A conflict / `main` moved under you means rebase and repush — the queue
 re-validates the new candidate:
@@ -265,60 +263,24 @@ to *process* changes only; a pure code/feature change needs no broadcast.
 on this machine (`brew install gh && gh auth login`), and the merge queue + branch protection must
 be enabled on `main` in GitHub. See `MERGE_QUEUE_MIGRATION.md`.
 
-## Git: you're on a fast-moving team — rebase onto main, land by PR
+## Git: rebase onto main — the RTT specifics
 
-You work in your own worktree on a `claude/<name>` branch. Several agents run in parallel and
-`main` moves every few minutes; the user is the **manager**, who deliberately assigns
-**separable** tasks — so when you sync with `main`, conflicts are rare and superficial. Work like a
-normal engineer on that team — branch, commit, rebase onto main, open a PR. No `reset` gymnastics,
-no fear:
+The cross-project git flow — commit as you go, sync by **rebasing** onto `main` (never merge),
+resolve overlap *inside* the rebase (never reset-and-reapply), and never `reset --soft/--hard main`
+or `stash`/`clean -fd` to tidy or escape — lives in the global `CLAUDE.md`; follow it. What's
+specific to this repo:
 
-- **Commit as you go** (and `git add` new files) — always before you rebase or push. A commit on
-  your branch is the safe, recoverable home for work; only uncommitted / untracked files in a
-  worktree are fragile.
-- **Stay on your `claude/<name>` branch.** Never `git checkout` / `switch` / `reset` / `rebase` in
-  the **main checkout** (or any sibling worktree), and never hand-edit it — it's the live app the
-  user is using. A `git checkout <commit>` there *detaches the running app's HEAD* and hides
-  everyone's landed work (this has bitten us). Two hooks enforce it: one blocks edits into the main
-  checkout, one blocks state-changing git aimed at it from a worktree. With landing now on the
-  remote queue, **nothing you do should ever write to the main checkout** — inspect another branch
-  read-only (`git -C <main> show/diff/log`) or just build in your own worktree (it already has your
-  commit).
-- **Never hand subagents / Workflow agents the main-checkout path.** Give them THIS worktree's path
-  as cwd and tell them explicitly: read-only git, never `cd` into or `git checkout`/`reset` the main
-  checkout, validate by in-process builds in the worktree. A review agent once `cd`'d into the main
-  checkout to "validate" a branch and ran `git checkout`, detaching the live app. (Also: prefer
-  targeted `git add <paths>` over `git add -A` after running agents — they leave stray crop/temp
-  files in the worktree root that `-A` will sweep into your commit.)
-- **Sync by rebasing onto main.** On a clean (committed) tree: `git rebase main`. It replays
-  your commits on top of main's current tip and keeps you on your branch (it does NOT strand
-  your worktree). Resolve the (superficial) conflicts and `git rebase --continue` — don't
-  `--abort` and start over, don't `reset --hard` to escape. Rebase again whenever `main` moves,
-  and `git push --force-with-lease` to update your PR.
-- **If a teammate landed overlapping work, resolve it INSIDE the rebase — never reset-and-reapply.**
-  When someone got there first, your `git rebase main` may conflict, or your version may now be
-  redundant. The fix is *always* to resolve it within the rebase: keep what's still unique, take
-  theirs where they landed it first (`git checkout --theirs <file>` then `git add <file>`), or
-  `git rebase --continue` past a commit that rebase has made empty (it drops it for you; use
-  `git rebase --skip` if it doesn't). Do **NOT** "reset my branch to main and re-apply only my
-  unique contributions" — that is a manual, error-prone reinvention of what rebase already does
-  for you (replay *only* your changes on top of their work), it throws away your commits, and it
-  is exactly the `reset`-to-dig-out move this section forbids. **No matter how deep the collision
-  looks, rebase and resolve — never merge to sync and never reset to escape.** An agent once hit a
-  deep second collision, judged the merge "error-prone," and reset-to-main + cherry-picked its
-  unique work; that detour is the bug this bullet exists to prevent.
-- **Land it when the task is done and tests pass** by pushing your branch and enqueuing a PR (see
-  "Land by opening a PR" above). The merge queue runs the full CI suite on the candidate merge and
-  fast-forwards `main` only when green, so you always land exactly what was validated. If the queue
-  reports a conflict or a red run, rebase onto `main`, `push --force-with-lease`, and re-enqueue —
-  a teammate landed first, nothing more.
-- **Never `reset --soft`/`--hard main`, `clean -fd`, or `stash` to "tidy" or "fix."**
-  `reset --soft main` only does what you want when your base already IS `main`; once `main` has
-  moved past your base it silently **reverts every teammate's commit since that base** into your
-  squash (this has bitten us — it reverted a whole feature, and even reverted THIS very section
-  once, when an agent committed on a stale base). Rebase is the clean tool. Want one commit
-  instead of a `wip:` chain? Squash only your OWN commits:
-  `git reset --soft $(git merge-base main HEAD) && git commit` — never plain `reset --soft main`.
+- **Never write to the main checkout — ever.** Landing is on the remote queue, so nothing you do
+  should touch it. Don't `git checkout`/`switch`/`reset`/`rebase` there or hand-edit it — it's the
+  live app the user runs on 8137, and a stray `git checkout <commit>` *detaches the running app's
+  HEAD* and hides everyone's landed work (this has bitten us). Two hooks enforce it. Inspect other
+  branches read-only (`git -C <main> show/diff/log`); build in your own worktree (it already has
+  your commit).
+- **Never hand subagents / Workflow agents the main-checkout path.** Give them THIS worktree as
+  cwd and tell them explicitly: read-only git, never `cd` into or `checkout`/`reset` the main
+  checkout, validate by in-process builds here. (A review agent once `cd`'d in to "validate" a
+  branch, ran `git checkout`, and detached the live app.) Prefer targeted `git add <paths>` over
+  `git add -A` after running agents — they leave stray crop/temp files that `-A` would sweep in.
 - **Just report the task + its PR** — not the 8200+ port you tested on, not branch/worktree
   mechanics, and not `main`-vs-`origin` push status beyond whether the PR landed.
 
