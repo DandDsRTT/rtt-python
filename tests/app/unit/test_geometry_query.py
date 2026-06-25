@@ -90,3 +90,15 @@ def test_column_identity_queries_are_pure_over_resolved():
     assert query.col_token(r, "commas", 3) == "u1"  # i >= nc
     assert query.pending_draft_idx(r, "targets") == (None, 3)
     assert query.pending_draft_idx(r, "absent") is None
+
+
+def test_unit_queries_are_pure_over_resolved():
+    r = SimpleNamespace(
+        flags=SimpleNamespace(cell_units=True),
+        scalars=SimpleNamespace(weight_unit="(W)", damage_unit="¢(W)", complexity_unit="(X)"),
+        labels=SimpleNamespace(domain_label="p"))
+    assert query.tile_unit(r, "weight", "targets") == "(W)"
+    assert query.tile_unit(r, "damage", "targets") == "¢(W)"
+    assert query.tile_unit(r, "nope", "nope") == ""
+    off = SimpleNamespace(flags=SimpleNamespace(cell_units=False))
+    assert query.cell_unit(off, "weight", "targets") == ""
