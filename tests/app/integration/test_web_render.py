@@ -29,7 +29,7 @@ from nicegui.testing.user_interaction import UserInteraction
 
 from rtt.app import app as web_app
 from rtt.app import rendering as web_rendering
-from rtt.app import page_assets, service, spreadsheet, spreadsheet_constants
+from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
 
@@ -1204,7 +1204,7 @@ async def test_scrolling_the_target_limit_steps_then_commits(user: User, monkeyp
     # the app. With the debounce zeroed the commit still lands and the stepped limit sticks — a
     # reverted/failed commit would snap it back, and the user fixture fails on any render error. The
     # chooser nests two controls, so the listener rides the limit input itself.
-    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 0)
+    monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 0)
     await _enable(user, "presets")  # reveal the chooser dropdowns
     await user.should_see(marker="preset:target")
     num, _sel = _target_preset(user)
@@ -2830,7 +2830,7 @@ async def test_scrolling_the_target_limit_down_reddens_the_dropped_target_rows(
     # down to 5-TILT drops 6/5 (target index 7); its row must redden in place. The debounce is pinned
     # far out so the heavy commit can't reflow the row away mid-assertion — only the synchronous,
     # no-reflow remove-preview is under test (the commit itself is covered by the steps-then-commits test).
-    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 100)
+    monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 100)
     await _enable(user, "presets")
     await user.should_see(marker="retune:target:7")           # the 6/5 row exists at the 6-TILT default
     num, _sel = _target_preset(user)
@@ -2857,7 +2857,7 @@ async def test_typing_the_target_limit_down_reddens_the_dropped_target_rows(
     # string), from the 6-TILT default down to 5, dropping 6/5 (target index 7). The structural wiring
     # itself is locked by test_the_typed_target_limit_preview_rides_keyup_not_input below — this test
     # only exercises the value path. Pin the debounce far out so no commit can reflow mid-assertion.
-    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 100)
+    monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 100)
     await _enable(user, "presets")
     await user.should_see(marker="retune:target:7")            # the 6/5 row exists at the 6-TILT default
     num, _sel = _target_preset(user)
@@ -2894,7 +2894,7 @@ async def test_the_dropped_target_red_preview_clears_when_the_limit_field_is_lef
     # leaving the limit field ends the gesture: on_cell_blur clears the remove-preview, so the red a
     # scroll-down armed does not outlive the edit. (Were the debounce allowed to fire it would commit
     # the lower limit and delete the row outright; pin it out so the BLUR is what clears the red.)
-    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 100)
+    monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 100)
     await _enable(user, "presets")
     await user.should_see(marker="retune:target:7")
     num, _sel = _target_preset(user)
@@ -2918,7 +2918,7 @@ async def test_the_target_remove_preview_diffs_the_on_screen_grid_not_the_focus_
     # so they MUST redden. Against the stale 6-TILT snapshot they're invisible (it never had rows 8/9),
     # so the red was silently missing — the bug. (_TARGET_LIMIT_DEBOUNCE is pinned small so the typed
     # commit lands, then pinned out so the follow-up preview stays a pure no-reflow preview.)
-    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 0.01)
+    monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 0.01)
     await _enable(user, "presets")
     await user.should_see(marker="retune:target:7")           # the 6-TILT default is on screen
     num, _sel = _target_preset(user)
@@ -2927,7 +2927,7 @@ async def test_the_target_remove_preview_diffs_the_on_screen_grid_not_the_focus_
     await user.should_see(marker="retune:target:9")            # row 9 is one of the rows the grow added
     # now preview the limit back DOWN to 6 (without leaving the field): rows 8 and 9 are dropped, so
     # they must redden. Pin the debounce out so this stays a pure no-reflow preview, no commit.
-    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 100)
+    monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 100)
     UserInteraction(user, {num}, None).trigger("keyup", "6")   # type the limit back down to 6
     assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:8"), \
         "a preview after a focused commit must diff the on-screen (8-TILT) grid, not the focus snapshot"
@@ -2939,7 +2939,7 @@ async def test_scrolling_the_target_limit_up_reddens_no_target_rows(user: User, 
     # the mirror guard: GROWING the limit removes nothing, so the remove-preview must stay empty — a
     # raised limit only adds rows (off-screen until committed) and re-solves the survivors. No red
     # anywhere, even though the re-solve does move survivors (those would ring amber, not red).
-    monkeypatch.setattr(page_assets, "_TARGET_LIMIT_DEBOUNCE", 100)
+    monkeypatch.setattr(_editing_tuning, "_TARGET_LIMIT_DEBOUNCE", 100)
     await _enable(user, "presets")
     await user.should_see(marker="retune:target:7")
     num, _sel = _target_preset(user)
