@@ -391,21 +391,25 @@ class _LayoutMixin:
         self.geometry.group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
                       "interest": "interest", "held": "held", "detempering": "detempering",
                       "canongens": "cangen", "ssgens": "ssgen", "ssprimes": "ssprime"}
-        self.geometry.group_left = {"gens": self.gen_left, "primes": self.prime_left, "commas": self.comma_left, "targets": self.target_left,
-                      "interest": self.interest_left, "held": self.held_left, "detempering": self.detempering_left,
-                      "canongens": self.canongen_left, "ssgens": self.ss_gen_left, "ssprimes": self.ss_prime_left}
-        self.geometry.group_n = {"gens": _r.dims.r, "primes": _r.dims.d_shown, "commas": _r.dims.nv_shown,
+        group_n = {"gens": _r.dims.r, "primes": _r.dims.d_shown, "commas": _r.dims.nv_shown,
                    "targets": _r.dims.k_shown,
                    "interest": _r.dims.mi_shown, "held": _r.dims.nh_shown, "detempering": _r.dims.r,
                    "canongens": _r.dims.rc, "ssgens": _r.dims.rL, "ssprimes": _r.dims.dL}
+        self.geometry.group_n = group_n
+        content_x = self.geometry.content_x
+        left_fn = {"gens": self.gen_left, "primes": self.prime_left, "commas": self.comma_left, "targets": self.target_left,
+                   "interest": self.interest_left, "held": self.held_left, "detempering": self.detempering_left,
+                   "canongens": self.canongen_left, "ssgens": self.ss_gen_left, "ssprimes": self.ss_prime_left}
+        self.geometry.group_left = {g: tuple(fn(i) for i in range(group_n[g])) if g in content_x else ()
+                                    for g, fn in left_fn.items()}
         self.geometry.group_ratio = {
-            "primes": lambda i: service.element_ratio(_r.dims.elements[i]),
-            "commas": lambda i: _r.commas.ratios[i] if i < _r.dims.nc else _r.unchanged.ratios[i - _r.dims.nc],
-            "targets": lambda i: _r.targets.ratios[i],
-            "interest": lambda i: _r.interest.ratios[i],
-            "held": lambda i: _r.held.ratios[i],
-            "detempering": lambda i: _r.scalars.gens[i],
-            "ssprimes": lambda i: service.element_ratio(_r.dims.superspace_primes[i]),
+            "primes": tuple(service.element_ratio(e) for e in _r.dims.elements),
+            "commas": tuple(_r.commas.ratios[:_r.dims.nc]) + tuple(_r.unchanged.ratios),
+            "targets": tuple(_r.targets.ratios),
+            "interest": tuple(_r.interest.ratios),
+            "held": tuple(_r.held.ratios),
+            "detempering": tuple(_r.scalars.gens),
+            "ssprimes": tuple(service.element_ratio(e) for e in _r.dims.superspace_primes),
         }
 
         self.geometry.plus_stub_x = {ckey: self.col_plus_x(ckey) for ckey in ("gens", "primes", "commas", "targets", "interest", "held")

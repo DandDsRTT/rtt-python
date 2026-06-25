@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass, fields
 
 
@@ -48,9 +48,9 @@ class Geometry:
     row_plus_y: Mapping[str, float]
 
     group_elem: Mapping[str, str]
-    group_left: Mapping[str, Callable[[int], float]]
+    group_left: Mapping[str, tuple[float, ...]]
     group_n: Mapping[str, int]
-    group_ratio: Mapping[str, Callable[[int], object]]
+    group_ratio: Mapping[str, tuple]
     plus_stub_x: Mapping[str, float]
 
     tiles: tuple
