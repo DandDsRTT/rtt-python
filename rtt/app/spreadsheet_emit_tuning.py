@@ -3,6 +3,11 @@ from __future__ import annotations
 from rtt.app import service
 from rtt.app.grid_tables import BANDS, SUB_CLOSE, SUB_OPEN
 from rtt.app.layout import CellBox
+from rtt.app.spreadsheet_closed_form import (
+    _closed_form,
+    _ss_closed_form,
+    closed_form_operand,
+)
 from rtt.app.spreadsheet_constants import (
     APPROACH_RADIO_H,
     BOX_INNER,
@@ -56,7 +61,7 @@ class _EmitTuningMixin:
             cid = f"{key}:{self.group_elem[group]}:{self.col_token(group, i)}"
             x = self.group_left[group][self.comma_value_pos(i) if group == "commas" else i]
             u = self.cell_unit(key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
-            operand = self.closed_form_operand(key, group, i, v) if _r.flags.math else None
+            operand = closed_form_operand(self.resolved, self.geometry, self, key, group, i, v) if _r.flags.math else None
             if operand is not None:
                 self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, _r.flags.quantities, _r.flags.decimals), unit=u))
             else:
@@ -116,7 +121,7 @@ class _EmitTuningMixin:
         for i, v in enumerate(_r.tuning.tun.generator_map):
             operand = None
             if _r.flags.math and not _r.flags.superspace_generators:
-                closed_form = self._closed_form()
+                closed_form = _closed_form(self.resolved, self)
                 operand = closed_form.generator_operand(i, v) if closed_form is not None else None
             if operand is not None:
                 self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"][i], self.rows["tuning"].y, COL_W, ROW_H,
@@ -135,7 +140,7 @@ class _EmitTuningMixin:
             v = sum(gm[k] * _r.canon.inverse_form_M[k][j] for k in range(_r.dims.r))
             operand = None
             if _r.flags.math:
-                closed_form = self._closed_form()
+                closed_form = _closed_form(self.resolved, self)
                 if closed_form is not None:
                     coefficients = [_r.canon.inverse_form_M[k][j] for k in range(_r.dims.r)]
                     operand = closed_form.canonical_generator_operand(coefficients, v)
@@ -165,7 +170,7 @@ class _EmitTuningMixin:
         if not _r.flags.superspace_generators:
             self.tuning_value_row("tuning", "ssgens", ss_tun.generator_map)
             return
-        ss_cf = self._ss_closed_form() if _r.flags.math else None
+        ss_cf = _ss_closed_form(self.resolved, self) if _r.flags.math else None
         for i, v in enumerate(ss_tun.generator_map):
             operand = ss_cf.generator_operand(i, v) if ss_cf is not None else None
             if operand is not None:

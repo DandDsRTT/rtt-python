@@ -1,5 +1,6 @@
 from rtt.app import service, settings, spreadsheet
 from rtt.app.spreadsheet_brackets import emit_brackets, emit_ebk_frames_and_marks
+from rtt.app.spreadsheet_closed_form import _closed_form, closed_form_operand
 from rtt.app.spreadsheet_emit_mapping import emit_canon_band, emit_mapping, emit_projection_band
 from rtt.app.spreadsheet_emit_matrix import (
     emit_column_plus_controls,
@@ -159,6 +160,28 @@ def test_emit_ebk_frames_and_marks_reads_the_accumulator_for_v_split_bars():
     ids = {c.id for c in result.cells}
     full = {c.id for c in full_layout.cells}
     assert ids <= full
+
+
+def _math_builder():
+    s = {**settings.defaults(), "math_expressions": True}
+    return spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
+
+
+def test_closed_form_operand_is_a_pure_function_over_resolved_geometry_ctx():
+    builder = _math_builder()
+    ctx = build_context(builder)
+    # the just row's operand is the geometry-supplied ratio (1200·log₂ of that ratio)
+    operand = closed_form_operand(builder.resolved, builder.geometry, ctx, "just", "primes", 0)
+    assert operand is not None
+    # the builder is itself a duck-typed ctx (state/tuning_scheme/...), so it agrees with BuildContext
+    assert closed_form_operand(builder.resolved, builder.geometry, builder, "just", "primes", 0) == operand
+
+
+def test_closed_form_drops_the_redundant_self_cache():
+    builder = _math_builder()
+    # the service-level lru_cache makes repeated calls cheap and identical; no per-builder cache attr
+    assert not hasattr(builder, "_closed_form_cache")
+    assert _closed_form(builder.resolved, builder) is _closed_form(builder.resolved, builder)
 
 
 def test_emit_canon_band_is_a_pure_function():
