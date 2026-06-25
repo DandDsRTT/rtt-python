@@ -128,16 +128,13 @@ class _GeometryMixin:
         return floor
 
     def content_box(self, key: str):
-        return self.content_x[key], self.content_w[key]
+        return query.content_box(self.geometry, key)
 
     def tile_box(self, key: str):
-        return self.col_x[key], self.col_w[key]
+        return query.tile_box(self.geometry, key)
 
     def tile_span_box(self, rkey: str, ckey: str):
-        if (rkey, ckey) == ("counts", "gens") and "canongens" in self.col_x:
-            x = self.col_x["canongens"]
-            return x, self.col_x["gens"] + self.col_w["gens"] - x
-        return self.tile_box(ckey)
+        return query.tile_span_box(self.geometry, rkey, ckey)
 
     def displayed_optimization_power(self) -> float:
         if service.is_all_interval(self.tuning_scheme):
@@ -262,31 +259,19 @@ class _GeometryMixin:
         return u
 
     def matlabel_gutter_w(self, group_key: str):
-        if group_key == "primes":
-            return self.matlabel_primes_w
-        if group_key == "ssprimes":
-            return self.matlabel_ssprimes_w
-        return self.matlabel_other_w.get(group_key, 0)
+        return query.matlabel_gutter_w(self.geometry, group_key)
 
     def handle_gutter_w(self, group_key: str):
-        return self.row_handle_w if group_key == "primes" else 0
+        return query.handle_gutter_w(self.geometry, group_key)
 
     def etpick_left_pad(self, group_key: str):
-        if group_key != "primes" or not self.etpick_w:
-            return 0
-        return max(0, self.etpick_w - self.handle_gutter_w(group_key) - self.matlabel_gutter_w(group_key))
+        return query.etpick_left_pad(self.geometry, group_key)
 
     def outer_gutter_w(self, group_key: str):
-        return self.etpick_left_pad(group_key) + self.handle_gutter_w(group_key) + self.matlabel_gutter_w(group_key)
+        return query.outer_gutter_w(self.geometry, group_key)
 
     def matrix_span(self, group_key: str):
-        _r = self.resolved
-        x, w = self.content_box(group_key)
-        mx = self.outer_gutter_w(group_key)
-        x, w = x + mx, w - 2 * mx
-        if group_key == "commas" and _r.unchanged.empty_comma_w:
-            x, w = x + _r.unchanged.empty_comma_w, w - _r.unchanged.empty_comma_w
-        return x, w
+        return query.matrix_span(self.geometry, self.resolved, group_key)
 
     def _weight_simplicity_header(self, i: int):
         _r = self.resolved
@@ -296,44 +281,41 @@ class _GeometryMixin:
         return f"{symbol} = c{_sub(i + 1)}⁻¹"
 
     def prime_left(self, p: int):
-        return self.primes_x + self.outer_gutter_w("primes") + BRACKET_W + p * COL_W
+        return query.prime_left(self.geometry, p)
 
     @staticmethod
     def _element_cell_kind(text: str):
         return "elementratio" if "/" in text else "elementcell"
 
     def comma_left(self, c: int):
-        _r = self.resolved
-        gap = V_SPLIT_GAP if (_r.unchanged.shown and 0 < _r.dims.nc_shown <= c) else 0
-        return self.commas_x + BRACKET_W + _r.unchanged.empty_comma_w + c * COL_W + gap
+        return query.comma_left(self.geometry, self.resolved, c)
 
     def comma_value_pos(self, i: int):
-        _r = self.resolved
-        return i if i < _r.dims.nc else i + (_r.dims.nc_shown - _r.dims.nc)
+        return query.comma_value_pos(self.resolved, i)
 
     def target_left(self, j: int):
-        return self.targets_x + BRACKET_W + j * COL_W
+        return query.target_left(self.geometry, j)
 
     def interest_left(self, i: int):
-        return self.interest_x + BRACKET_W + i * COL_W
+        return query.interest_left(self.geometry, i)
 
     def held_left(self, i: int):
-        return self.held_x + BRACKET_W + i * COL_W
+        return query.held_left(self.geometry, i)
 
     def detempering_left(self, i: int):
-        return self.detempering_x + BRACKET_W + i * COL_W
+        return query.detempering_left(self.geometry, i)
 
     def gen_left(self, g: int):
-        return self.content_x["gens"] + self.outer_gutter_w("gens") + BRACKET_W + g * COL_W
+        return query.gen_left(self.geometry, g)
 
     def canongen_left(self, g: int):
-        return self.canongens_x + self.outer_gutter_w("canongens") + BRACKET_W + g * COL_W
+        return query.canongen_left(self.geometry, g)
 
     def ss_gen_left(self, g: int):
-        return self.ssgens_x + BRACKET_W + g * COL_W
+        return query.ss_gen_left(self.geometry, g)
 
     def ss_prime_left(self, p: int):
-        return self.ssprimes_x + self.outer_gutter_w("ssprimes") + BRACKET_W + p * COL_W
+        return query.ss_prime_left(self.geometry, p)
 
     def map_top(self, i: int):
         return query.map_top(self.geometry, i)
@@ -357,19 +339,10 @@ class _GeometryMixin:
         return query.ss_proj_top(self.geometry, i)
 
     def sub_axis_x(self, ckey: str, i: int):
-        return self.group_left[ckey][i] + COL_W / 2
+        return query.sub_axis_x(self.geometry, ckey, i)
 
     def col_plus_x(self, ckey: str):
-        _r = self.resolved
-        n = self.group_n[ckey]
-        if n == 0:
-            mx, mw = self.matrix_span(ckey)
-            return mx + mw / 2
-        if ckey == "commas" and _r.unchanged.shown:
-            if _r.dims.nc_shown == 0:
-                return self.commas_x + BRACKET_W + _r.unchanged.empty_comma_w / 2
-            return self.comma_left(_r.dims.nc_shown - 1) + COL_W + V_SPLIT_GAP / 2
-        return self.sub_axis_x(ckey, n - 1) + COL_W
+        return query.col_plus_x(self.geometry, self.resolved, ckey)
 
     def _plus_shows(self, ckey: str) -> bool:
         _r = self.resolved

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from rtt.app.spreadsheet_constants import FRAME_GAP, FRAME_H, ROW_H
+from rtt.app.spreadsheet_constants import BRACKET_W, COL_W, FRAME_GAP, FRAME_H, ROW_H, V_SPLIT_GAP
 
 
 def map_top(geometry, i: int) -> float:
@@ -47,3 +47,119 @@ def frame_top_y(geometry, rkey: str) -> float:
 
 def frame_brace_y(geometry, rkey: str) -> float:
     return geometry.rows[rkey].y + geometry.rows[rkey].h + FRAME_GAP
+
+
+def matlabel_gutter_w(geometry, group_key: str) -> float:
+    if group_key == "primes":
+        return geometry.matlabel_primes_w
+    if group_key == "ssprimes":
+        return geometry.matlabel_ssprimes_w
+    return geometry.matlabel_other_w.get(group_key, 0)
+
+
+def handle_gutter_w(geometry, group_key: str) -> float:
+    return geometry.row_handle_w if group_key == "primes" else 0
+
+
+def etpick_left_pad(geometry, group_key: str) -> float:
+    if group_key != "primes" or not geometry.etpick_w:
+        return 0
+    return max(
+        0,
+        geometry.etpick_w
+        - handle_gutter_w(geometry, group_key)
+        - matlabel_gutter_w(geometry, group_key),
+    )
+
+
+def outer_gutter_w(geometry, group_key: str) -> float:
+    return (
+        etpick_left_pad(geometry, group_key)
+        + handle_gutter_w(geometry, group_key)
+        + matlabel_gutter_w(geometry, group_key)
+    )
+
+
+def content_box(geometry, key: str):
+    return geometry.content_x[key], geometry.content_w[key]
+
+
+def tile_box(geometry, key: str):
+    return geometry.col_x[key], geometry.col_w[key]
+
+
+def tile_span_box(geometry, rkey: str, ckey: str):
+    if (rkey, ckey) == ("counts", "gens") and "canongens" in geometry.col_x:
+        x = geometry.col_x["canongens"]
+        return x, geometry.col_x["gens"] + geometry.col_w["gens"] - x
+    return tile_box(geometry, ckey)
+
+
+def matrix_span(geometry, resolved, group_key: str):
+    x, w = content_box(geometry, group_key)
+    mx = outer_gutter_w(geometry, group_key)
+    x, w = x + mx, w - 2 * mx
+    if group_key == "commas" and resolved.unchanged.empty_comma_w:
+        x, w = x + resolved.unchanged.empty_comma_w, w - resolved.unchanged.empty_comma_w
+    return x, w
+
+
+def prime_left(geometry, p: int) -> float:
+    return geometry.primes_x + outer_gutter_w(geometry, "primes") + BRACKET_W + p * COL_W
+
+
+def comma_left(geometry, resolved, c: int) -> float:
+    gap = V_SPLIT_GAP if (resolved.unchanged.shown and 0 < resolved.dims.nc_shown <= c) else 0
+    return geometry.commas_x + BRACKET_W + resolved.unchanged.empty_comma_w + c * COL_W + gap
+
+
+def comma_value_pos(resolved, i: int) -> int:
+    return i if i < resolved.dims.nc else i + (resolved.dims.nc_shown - resolved.dims.nc)
+
+
+def target_left(geometry, j: int) -> float:
+    return geometry.targets_x + BRACKET_W + j * COL_W
+
+
+def interest_left(geometry, i: int) -> float:
+    return geometry.interest_x + BRACKET_W + i * COL_W
+
+
+def held_left(geometry, i: int) -> float:
+    return geometry.held_x + BRACKET_W + i * COL_W
+
+
+def detempering_left(geometry, i: int) -> float:
+    return geometry.detempering_x + BRACKET_W + i * COL_W
+
+
+def gen_left(geometry, g: int) -> float:
+    return geometry.content_x["gens"] + outer_gutter_w(geometry, "gens") + BRACKET_W + g * COL_W
+
+
+def canongen_left(geometry, g: int) -> float:
+    return geometry.canongens_x + outer_gutter_w(geometry, "canongens") + BRACKET_W + g * COL_W
+
+
+def ss_gen_left(geometry, g: int) -> float:
+    return geometry.ssgens_x + BRACKET_W + g * COL_W
+
+
+def ss_prime_left(geometry, p: int) -> float:
+    return geometry.ssprimes_x + outer_gutter_w(geometry, "ssprimes") + BRACKET_W + p * COL_W
+
+
+def sub_axis_x(geometry, ckey: str, i: int) -> float:
+    return geometry.group_left[ckey][i] + COL_W / 2
+
+
+def col_plus_x(geometry, resolved, ckey: str) -> float:
+    n = geometry.group_n[ckey]
+    if n == 0:
+        mx, mw = matrix_span(geometry, resolved, ckey)
+        return mx + mw / 2
+    if ckey == "commas" and resolved.unchanged.shown:
+        if resolved.dims.nc_shown == 0:
+            return geometry.commas_x + BRACKET_W + resolved.unchanged.empty_comma_w / 2
+        return comma_left(geometry, resolved, resolved.dims.nc_shown - 1) + COL_W + V_SPLIT_GAP / 2
+    return sub_axis_x(geometry, ckey, n - 1) + COL_W
