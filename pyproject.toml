@@ -99,6 +99,7 @@ exclude = [
     "rtt/app/spreadsheet_emit_mapping.py",
     "rtt/app/spreadsheet_emit_vectors.py",
     "rtt/app/spreadsheet_emit_tuning.py",
+    "rtt/app/spreadsheet_emit_prescaling.py",
 ]
 
 # The branch-coverage gate is scoped to the LOGIC tiers only — the pure-math

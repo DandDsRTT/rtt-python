@@ -132,16 +132,6 @@ class _GeometryMixin:
     def tile_span_box(self, rkey: str, ckey: str):
         return query.tile_span_box(self.geometry, rkey, ckey)
 
-    def displayed_optimization_power(self) -> float:
-        if service.is_all_interval(self.tuning_scheme):
-            return float("inf")
-        return service.optimization_power(self.tuning_scheme)
-
-    def displayed_mean_damage_power(self) -> float:
-        if service.is_all_interval(self.tuning_scheme):
-            return service.dual_norm_power(self.tuning_scheme)
-        return service.optimization_power(self.tuning_scheme)
-
     def col_open(self, key: str) -> bool:
         return query.col_open(self.geometry, self.collapsed, key)
 
