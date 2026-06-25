@@ -73,6 +73,8 @@ class Geometry:
     slope_locked: bool
     mean_damage_caption: str
 
+    ss_tun: object
+
 
 GEOMETRY_FIELDS = tuple(f.name for f in fields(Geometry))
 

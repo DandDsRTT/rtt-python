@@ -58,13 +58,17 @@ from rtt.app.spreadsheet_text import (
 
 
 class _GeometryMixin:
-    def superspace_tun(self):
+    def _init_superspace_tuning(self):
         _r = self.resolved
-        if self._ss_tun is None:
-            ss_override = self.superspace_generator_tuning if _r.flags.superspace_generators else None
-            self._ss_tun = service.superspace_tuning(self.state, self.tuning_scheme, self.nonprime_approach,
-                                                     generator_override=ss_override)
-        return self._ss_tun
+        if not _r.flags.superspace:
+            self.geometry.ss_tun = None
+            return
+        ss_override = self.superspace_generator_tuning if _r.flags.superspace_generators else None
+        self.geometry.ss_tun = service.superspace_tuning(self.state, self.tuning_scheme, self.nonprime_approach,
+                                                         generator_override=ss_override)
+
+    def superspace_tun(self):
+        return self.geometry.ss_tun
 
     def _caption_floor(self, key: str):
         _r = self.resolved
