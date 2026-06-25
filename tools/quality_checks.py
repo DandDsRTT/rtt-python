@@ -251,6 +251,41 @@ def inheritance_violations(files: list[Path]) -> list[Violation]:
     return found
 
 
+def _reaches_page_god_handle(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Attribute)
+        and node.value.attr == "page"
+        and isinstance(node.value.value, ast.Name)
+        and node.value.value.id == "self"
+    )
+
+
+# GuideHelp.page (tooltips.py) is a wiki-page-NAME string field, not the _Page handle — its
+# `self.page.replace(...)` is a string op, so it is the one legitimate `self.page.` that is not
+# a god-handle reach.
+PAGE_REACH_EXEMPT = frozenset({"rtt/app/tooltips.py"})
+
+
+def page_reach_violations(files: list[Path]) -> list[Violation]:
+    found = []
+    for path in files:
+        posix = Path(path).as_posix()
+        if any(posix == name or posix.endswith("/" + name) for name in PAGE_REACH_EXEMPT):
+            continue
+        for node in ast.walk(ast.parse(path.read_text())):
+            if _reaches_page_god_handle(node):
+                found.append(
+                    Violation(
+                        str(path),
+                        node.lineno,
+                        f"reaches through the retired _Page god-handle (self.page.{node.attr}); "
+                        "inject the dep or use a narrow host instead",
+                    )
+                )
+    return found
+
+
 def collect(roots: tuple[str, ...]) -> list[Violation]:
     files = python_files(roots)
     return [
@@ -258,6 +293,7 @@ def collect(roots: tuple[str, ...]) -> list[Violation]:
         *coupling_violations(files),
         *cohesion_violations(files),
         *inheritance_violations(files),
+        *page_reach_violations(files),
     ]
 
 
