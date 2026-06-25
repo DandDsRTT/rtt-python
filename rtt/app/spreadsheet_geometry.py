@@ -312,18 +312,7 @@ class _GeometryMixin:
         return query.col_plus_x(self.geometry, self.resolved, ckey)
 
     def _plus_shows(self, ckey: str) -> bool:
-        _r = self.resolved
-        if ckey in ("interest", "held"):
-            return self.col_open(ckey) and (self.row_open("quantities") or self.row_open("vectors"))
-        if ckey == "targets":
-            return (self.tile_open("quantities", "targets") or self.tile_open("vectors", "targets")) and not _r.scalars.all_interval
-        if ckey == "gens":
-            return self.tile_open("quantities", "gens") and self.state.n > 0
-        if ckey == "primes":
-            return self.tile_open("quantities", "primes") and (_r.flags.nonstandard_domain or _r.scalars.standard_domain)
-        if ckey == "commas":
-            return self.tile_open("quantities", "commas") or self.tile_open("vectors", "commas")
-        return self.tile_open("quantities", ckey) or self.tile_open("vectors", ckey)
+        return query.plus_shows(self.geometry, self.resolved, self.collapsed, self.state, ckey)
 
 
     def col_token(self, group: str, i: int):

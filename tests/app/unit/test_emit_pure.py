@@ -1,6 +1,11 @@
 from rtt.app import service, settings, spreadsheet
 from rtt.app.spreadsheet_emit_mapping import emit_mapping
-from rtt.app.spreadsheet_emit_matrix import emit_counts_row, emit_headers, emit_units
+from rtt.app.spreadsheet_emit_matrix import (
+    emit_counts_row,
+    emit_headers,
+    emit_quantities_row,
+    emit_units,
+)
 from rtt.app.spreadsheet_emit_model import EmitResult, build_context
 from rtt.app.spreadsheet_emit_vectors import emit_vectors
 
@@ -57,3 +62,12 @@ def test_emit_matrix_bands_are_pure_functions():
     assert any(i.startswith("urow:") or i.startswith("ucol:") for i in units)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
     assert (headers | counts | units) <= full
+
+
+def test_emit_quantities_row_is_a_pure_function():
+    builder = _maximized_builder()
+    result = emit_quantities_row(builder.resolved, builder.geometry, build_context(builder))
+    ids = {c.id for c in result.cells}
+    assert "qgen:0" in ids and "prime:0" in ids
+    full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
+    assert ids <= full

@@ -244,3 +244,29 @@ def cell_unit(resolved, rkey: str, ckey: str, *, gen=None, prime=None, elem=None
 
 def row_fans(geometry, key: str) -> bool:
     return geometry.rows[key].nsub > 1 or key in geometry.row_plus_y
+
+
+def plus_shows(geometry, resolved, collapsed, state, ckey: str) -> bool:
+    _r = resolved
+    if ckey in ("interest", "held"):
+        return col_open(geometry, collapsed, ckey) and (
+            row_open(geometry, collapsed, "quantities") or row_open(geometry, collapsed, "vectors")
+        )
+    if ckey == "targets":
+        return (
+            tile_open(geometry, collapsed, "quantities", "targets")
+            or tile_open(geometry, collapsed, "vectors", "targets")
+        ) and not _r.scalars.all_interval
+    if ckey == "gens":
+        return tile_open(geometry, collapsed, "quantities", "gens") and state.n > 0
+    if ckey == "primes":
+        return tile_open(geometry, collapsed, "quantities", "primes") and (
+            _r.flags.nonstandard_domain or _r.scalars.standard_domain
+        )
+    if ckey == "commas":
+        return tile_open(geometry, collapsed, "quantities", "commas") or tile_open(
+            geometry, collapsed, "vectors", "commas"
+        )
+    return tile_open(geometry, collapsed, "quantities", ckey) or tile_open(
+        geometry, collapsed, "vectors", ckey
+    )
