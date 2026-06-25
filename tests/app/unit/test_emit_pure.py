@@ -10,6 +10,7 @@ from rtt.app.spreadsheet_emit_matrix import (
     emit_rehomed_minus_controls,
     emit_units,
 )
+from rtt.app.spreadsheet_controls import emit_controls, emit_tile_toggles
 from rtt.app.spreadsheet_decorations import emit_decorations
 from rtt.app.spreadsheet_emit_model import EmitResult, build_context
 from rtt.app.spreadsheet_emit_prescaling import emit_prescaling_band
@@ -178,6 +179,27 @@ def test_emit_tuning_is_a_pure_function_returning_cells_boxes_and_extra():
     assert any(i.startswith("tuning:") for i in ids)
     # the box geometry rides on .extra; region boxes ride on .region_boxes
     assert set(result.extra) == {"gtm_box", "opt_box", "approach_frame", "approach_box"}
+    full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
+    assert ids <= full
+
+
+def test_emit_controls_is_a_pure_function_returning_cells_and_blocks():
+    builder = _maximized_builder()
+    ctx = build_context(builder)
+    result = emit_controls(builder.resolved, builder.geometry, ctx)
+    assert isinstance(result, EmitResult)
+    cell_ids = {c.id for c in result.cells}
+    assert any(i.startswith("preset:") for i in cell_ids)
+    full = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on())
+    assert cell_ids <= {c.id for c in full.cells}
+    assert {b.id for b in result.blocks} <= {b.id for b in full.blocks}
+
+
+def test_emit_tile_toggles_is_a_pure_function_over_geometry_ctx():
+    builder = _maximized_builder()
+    result = emit_tile_toggles(builder.geometry, build_context(builder))
+    ids = {c.id for c in result.cells}
+    assert any(i.startswith("toggle:tile:") for i in ids)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
     assert ids <= full
 
