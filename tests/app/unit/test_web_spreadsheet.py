@@ -9,6 +9,7 @@ from rtt.app import (
     settings,
     spreadsheet,
     spreadsheet_constants,
+    spreadsheet_geometry_query as query,
     spreadsheet_models,
     spreadsheet_text,
 )
@@ -2203,8 +2204,8 @@ def test_frame_and_chart_bands_reserve_height_for_what_they_emit():
                                  held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
     lay = b.layout()
     frame_ys = {round(c.y, 3) for c in lay.cells if c.kind in {"ebktop", "ebkbrace", "ebkangle"}}
-    frame_emit = {r for r in b.rows if round(b.frame_top_y(r), 3) in frame_ys
-                  or round(b.frame_brace_y(r), 3) in frame_ys}
+    frame_emit = {r for r in b.rows if round(query.frame_top_y(b.geometry, r), 3) in frame_ys
+                  or round(query.frame_brace_y(b.geometry, r), 3) in frame_ys}
     frame_spill = sorted(r for r in frame_emit if b.rows[r].frame <= 0)
     assert not frame_spill, f"rows draw an EBK matrix frame but reserve no frame band (it will spill): {frame_spill}"
     chart_emit = {c.id.split(":")[1] for c in lay.cells if c.id.startswith("chart:")}
