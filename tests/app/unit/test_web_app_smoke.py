@@ -1260,32 +1260,77 @@ def test_tour_steps_are_well_formed_and_assets_wired():
     assert "tour" in tooltips.CHROME_HELP
 
 
-def test_reconciler_callbacks_are_derived_from_cb_method_marks():
-    # rec._cb is DERIVED from @cb_method marks (no hand-maintained name list), so a callback that
-    # lost its mark — a control that would silently do nothing in prod — is caught here instead.
+def _marked_callback_names():
     from rtt.app._editing_tuning import _TuningEdits
     from rtt.app._editing_vectors import _VectorEdits
     from rtt.app.editing import EditController
     from rtt.app.gestures import GestureController
 
-    marked = {
+    return {
         name
         for cls in (EditController, _VectorEdits, _TuningEdits, GestureController)
         for name in dir(cls)
         if getattr(getattr(cls, name, None), "_rtt_cb", False)
     }
-    # representative callbacks from each of the four controllers must keep their mark
-    for name in (
-        "act",
-        "transform_interval",
-        "on_ratio_change",
-        "on_mapping_change",
-        "on_power_change",
-        "on_target_change",
-        "combine_commit",
-        "control_hover",
-    ):
-        assert name in marked, f"{name} lost its @cb_method mark"
-    assert len(marked) >= 40
+
+
+def test_reconciler_callback_protocol_matches_marked_methods_exactly():
+    # The ReconcilerCallbacks Protocol is the single declared contract of what the reconciler may
+    # call. It must name EXACTLY the @cb_method-marked entry points across the four controllers:
+    # a rename or dropped mark leaves a declared callback unprovided; an unmapped marked method
+    # leaves a control wired to nothing. Either drift fails here loudly.
+    from rtt.app.reconciler import required_callback_names
+
+    declared = set(required_callback_names())
+    marked = _marked_callback_names()
+    assert declared == marked, {
+        "declared_only": sorted(declared - marked),
+        "marked_only": sorted(marked - declared),
+    }
     # a private helper must never be marked — only frontend entry points are callbacks
     assert not any(n.startswith("_") for n in marked)
+
+
+def test_bind_callbacks_binds_every_declared_callback():
+    from types import SimpleNamespace
+
+    from rtt.app.editing import EditController
+    from rtt.app.gestures import GestureController
+    from rtt.app.reconciler import (
+        ReconcilerCallbacks,
+        bind_callbacks,
+        required_callback_names,
+    )
+
+    gestures = GestureController(SimpleNamespace(), None)
+    host = SimpleNamespace(renderer=None, building=False)
+    edits = EditController(SimpleNamespace(), SimpleNamespace(), gestures, host)
+
+    cb = bind_callbacks(edits, edits.vectors, edits.tuning, gestures)
+    assert isinstance(cb, ReconcilerCallbacks)
+    for name in required_callback_names():
+        assert getattr(cb, name)._rtt_cb is True
+
+
+def test_bind_callbacks_fails_loudly_on_a_missing_callback():
+    from rtt.app.reconciler import bind_callbacks, required_callback_names
+
+    class _PartialSource:
+        pass
+
+    source = _PartialSource()
+    victim = next(iter(required_callback_names()))
+    for name in required_callback_names():
+        if name != victim:
+            setattr(source, name, _cb_stub())
+
+    with pytest.raises(RuntimeError, match=victim):
+        bind_callbacks(source)
+
+
+def _cb_stub():
+    def stub(*_a, **_k):
+        return None
+
+    stub._rtt_cb = True
+    return stub
