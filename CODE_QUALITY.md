@@ -44,6 +44,17 @@ split — exactly like file/function length. Afferent coupling (fan-in) is repor
 not gated: a high fan-in is the heavily-used shared core (e.g. `library.temperament`),
 which is healthy, not a smell.
 
+**The `self.page` god-handle gate (target 0, gated now).** The view controllers used to
+hold the whole `_Page` and reach through it — `self.page.editor.state…` — ~498 such reaches.
+After they were given injected deps (PRs #33/#34/#36/#38), that count is **0**, and
+`page_reach_violations` now **fails the build on any `self.page.<x>`** (one documented
+exemption: `tooltips.py`'s `GuideHelp.page` is a wiki-page-name string, not the handle).
+This is the one rail set to *bite from zero* rather than calibrated to current-worst — it locks
+in the decoupling instead of trailing it. The companion measure for the spreadsheet builder
+(cross-file shared mutable `self` across its mixins, the ~141 census) is **not** gated yet: that
+god-object is mid-dismantle by the `_GridBuilder` pipeline campaign, so gating it now would block
+the in-flight migration — it lands with that campaign.
+
 To ratchet: lower the values in `pyproject.toml` (`[tool.ruff.lint.*]`) and the
 constants in `tools/quality_checks.py` (`MAX_FILE_LINES`, `MAX_FUNCTION_LINES`,
 `MAX_EFFERENT_COUPLING`, `MAX_LCOM4`, `MAX_DIT`, `MAX_NOC`), after the corresponding
