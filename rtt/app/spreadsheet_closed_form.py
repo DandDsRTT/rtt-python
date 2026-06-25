@@ -10,7 +10,7 @@ class _ClosedFormMixin:
     def closed_form_operand(self, key, group, i, value=None):
         _r = self.resolved
         if key == "just":
-            ratio = self.group_ratio[group](i)
+            ratio = self.group_ratio[group][i]
             return _log_operand(ratio) if ratio is not None else None
         if group == "commas" and key == "retune" and i < _r.dims.nc:
             recip = 1 / Fraction(_r.commas.ratios[i])

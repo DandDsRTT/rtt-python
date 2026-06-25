@@ -54,7 +54,7 @@ class _EmitTuningMixin:
         is_prime_group = group in ("primes", "ssprimes")
         for i, v in enumerate(values):
             cid = f"{key}:{self.group_elem[group]}:{self.col_token(group, i)}"
-            x = self.group_left[group](self.comma_value_pos(i) if group == "commas" else i)
+            x = self.group_left[group][self.comma_value_pos(i) if group == "commas" else i]
             u = self.cell_unit(key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
             operand = self.closed_form_operand(key, group, i, v) if _r.flags.math else None
             if operand is not None:
@@ -72,13 +72,13 @@ class _EmitTuningMixin:
                          "complexity": _r.ghosts.comma_complexity}.get(key)
                 if gsize is not None:
                     text = service.cents(gsize, _r.flags.decimals)
-            self.cells.append(CellBox(f"{key}:{self.group_elem[group]}:draft", self.group_left[group](pending_idx[1]),
+            self.cells.append(CellBox(f"{key}:{self.group_elem[group]}:draft", self.group_left[group][pending_idx[1]],
                                       y, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
 
     def chart(self, rkey: str, ckey: str, values, indicator=None, indicator_label="") -> None:
         values = tuple(values)
         if values and rkey in self.rows and self.rows[rkey].chart_top is not None and self.tile_open(rkey, ckey):
-            x = self.group_left[ckey](0) - BRACKET_W
+            x = self.group_left[ckey][0] - BRACKET_W
             self.cells.append(CellBox(f"chart:{rkey}:{ckey}", x, self.rows[rkey].chart_top,
                                  2 * BRACKET_W + len(values) * COL_W, CHART_H, "chart", values=values,
                                  indicator=indicator, indicator_label=indicator_label))
@@ -119,10 +119,10 @@ class _EmitTuningMixin:
                 closed_form = self._closed_form()
                 operand = closed_form.generator_operand(i, v) if closed_form is not None else None
             if operand is not None:
-                self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
+                self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"][i], self.rows["tuning"].y, COL_W, ROW_H,
                                      "mathexpr", text=_math_expr(operand, v, _r.flags.quantities, _r.flags.decimals), unit=self.cell_unit("tuning", "gens", gen=i)))
             else:
-                self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"](i), self.rows["tuning"].y, COL_W, ROW_H,
+                self.cells.append(CellBox(f"tuning:gen:{self.col_token('gens', i)}", self.group_left["gens"][i], self.rows["tuning"].y, COL_W, ROW_H,
                                      gen_kind, text=service.cents(v, _r.flags.decimals), gen=i, unit=self.cell_unit("tuning", "gens", gen=i)))
             self._voice("tuning:gens", i, v)
 
@@ -169,11 +169,11 @@ class _EmitTuningMixin:
         for i, v in enumerate(ss_tun.generator_map):
             operand = ss_cf.generator_operand(i, v) if ss_cf is not None else None
             if operand is not None:
-                self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.rows["tuning"].y,
+                self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"][i], self.rows["tuning"].y,
                                      COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, _r.flags.quantities, _r.flags.decimals),
                                      unit=self.cell_unit("tuning", "ssgens", gen=i)))
             else:
-                self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.rows["tuning"].y,
+                self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"][i], self.rows["tuning"].y,
                                      COL_W, ROW_H, "gentuningcell", text=service.cents(v, _r.flags.decimals),
                                      unit=self.cell_unit("tuning", "ssgens", gen=i)))
             self._voice("tuning:ssgens", i, v)
@@ -253,7 +253,7 @@ class _EmitTuningMixin:
             if vec is None:
                 for i in range(nrows + self.size_rows):
                     cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
-                    cx, cy = left(self.comma_value_pos(c) if group == "commas" else c), self.rows["prescaling"].y + i * ROW_H
+                    cx, cy = left[self.comma_value_pos(c) if group == "commas" else c], self.rows["prescaling"].y + i * ROW_H
                     self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue", text=DASH, unit=u))
                 continue
             prescaled = self._prescale_vector(vec, prescaler_diag, prescaler_is_matrix, nrows)
@@ -269,7 +269,7 @@ class _EmitTuningMixin:
         for i in range(nrows + self.size_rows):
             value = prescaled[i] if i < nrows else self.size_factor * sum(prescaled)
             cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
-            cx, cy = left(self.comma_value_pos(c) if group == "commas" else c), self.rows["prescaling"].y + i * ROW_H
+            cx, cy = left[self.comma_value_pos(c) if group == "commas" else c], self.rows["prescaling"].y + i * ROW_H
             if i < nrows and not _r.flags.superspace and group == "primes" and (i == c or _r.flags.alt_complexity):
                 self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
                                      text=service.prescale_text(value, _r.flags.decimals), prime=i, unit=u))
@@ -296,7 +296,7 @@ class _EmitTuningMixin:
             if ghost_pre is not None:
                 value = ghost_pre[i] if i < nrows else self.size_factor * sum(ghost_pre)
                 text = service.prescale_text(value, _r.flags.decimals)
-            self.cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left(pending_idx[1]),
+            self.cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left[pending_idx[1]],
                                  cy, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
 
     def _emit_lbox_control(self) -> None:

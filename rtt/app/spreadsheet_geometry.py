@@ -359,7 +359,7 @@ class _GeometryMixin:
         return self.rows["ss_projection"].y + i * ROW_H
 
     def sub_axis_x(self, ckey: str, i: int):
-        return self.group_left[ckey](i) + COL_W / 2
+        return self.group_left[ckey][i] + COL_W / 2
 
     def col_plus_x(self, ckey: str):
         _r = self.resolved

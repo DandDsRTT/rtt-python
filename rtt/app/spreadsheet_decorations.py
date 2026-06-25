@@ -148,7 +148,7 @@ class _DecorationsMixin:
                 text = glyph(i) if callable(glyph) else f"{glyph}{_sub(i + 1)}"
                 if _r.unchanged.shown and ckey == "commas":
                     text = text.replace("𝐜", "𝐯")
-                x = left(self.comma_value_pos(i)) if ckey == "commas" else left(i)
+                x = left[self.comma_value_pos(i)] if ckey == "commas" else left[i]
                 self.cells.append(CellBox(
                     f"matlabel:col:{rkey}:{ckey}:{i}",
                     x, y, COL_W, MATLABEL_H,
@@ -169,7 +169,7 @@ class _DecorationsMixin:
 
         for key in self.group_left:
             self.column_axis(key, self.group_elem[key], self.group_n[key],
-                        lambda i, k=key: self.group_left[k](i) + COL_W / 2)
+                        lambda i, k=key: self.group_left[k][i] + COL_W / 2)
 
         for key in self.col_x:
             if key in self.fanned_columns:
