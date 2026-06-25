@@ -40,6 +40,8 @@ class BuildContext:
     custom_weights: object
     held_basis_ratios: object
     superspace_generator_tuning: object
+    generator_tuning: object
+    target_override: object
 
 
 def build_context(builder) -> BuildContext:
@@ -60,4 +62,6 @@ def build_context(builder) -> BuildContext:
         custom_weights=builder.custom_weights,
         held_basis_ratios=builder.held_basis_ratios,
         superspace_generator_tuning=builder.superspace_generator_tuning,
+        generator_tuning=builder.generator_tuning,
+        target_override=builder.target_override,
     )

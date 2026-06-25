@@ -4,13 +4,20 @@ from rtt.app import service
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     BANDS,
+    COUNTS_TILES,
+    DETEMPERING_COUNTS_TILES,
     EDITABLE_PTEXT_ROWS,
     EQUIVALENCES,
     FORM_CHOOSERS,
     FORM_EQUIVALENCES,
+    OPTIMIZATION_COUNTS_TILES,
     PRESET_COPIES,
     PRESETS,
+    SUPERSPACE_COUNTS_TILES,
+    SUPERSPACE_TILES,
     SYMBOLS,
+    TILES,
+    UNITS_TILES,
 )
 from rtt.app.spreadsheet_constants import (
     BOX_INNER,
@@ -38,185 +45,240 @@ from rtt.app.spreadsheet_text import (
 )
 
 
-class _GeometryMixin:
-    def _init_superspace_tuning(self):
-        _r = self.resolved
-        if not _r.flags.superspace:
-            self.geometry.ss_tun = None
-            return
-        ss_override = self.superspace_generator_tuning if _r.flags.superspace_generators else None
-        self.geometry.ss_tun = service.superspace_tuning(self.state, self.tuning_scheme, self.nonprime_approach,
-                                                         generator_override=ss_override)
-
-    def superspace_tun(self):
-        return self.geometry.ss_tun
-
-    def _caption_floor(self, key: str):
-        _r = self.resolved
-        if not _r.flags.captions:
-            return 0
-        return max((_min_width_for_lines(_r.labels.captions[(rk, key)], MAX_CAPTION_LINES)
-                    for rk in self.present_caption_rows
-                    if (rk, key) in _r.labels.captions and (rk, key) in self.declared_tiles), default=0)
-
-    def _projection_superspace_tail(self) -> str:
-        return query.projection_superspace_tail(self.resolved)
-
-    def _symbol_floor(self, key: str):
-        _r = self.resolved
-        if not (_r.flags.symbols or _r.flags.equiv):
-            return 0
-        floor = 0
-        for (rkey, ckey), glyph in SYMBOLS.items():
-            if ckey != key or (rkey, ckey) not in self.declared_tiles:
-                continue
-            equiv = ""
-            if _r.flags.equiv:
-                equiv = EQUIVALENCES.get((rkey, ckey), "")
-                if _r.flags.form_subscript and (rkey, ckey) in FORM_EQUIVALENCES:
-                    equiv = FORM_EQUIVALENCES[(rkey, ckey)]
-                if (rkey, ckey) == ("projection", "primes"):
-                    equiv += self._projection_superspace_tail()
-            sub_glyph = self._form_subscripted(glyph, rkey, ckey)
-            floor = max(floor, _min_width_for_lines(sub_glyph + equiv, 1, SYMBOL_FONT))
-        return floor
-
-    def _form_subscripted(self, glyph: str, rkey: str, ckey: str) -> str:
-        return query.form_subscripted(self.resolved, glyph, rkey, ckey)
-
-    def _control_floor(self, key: str):
-        _r = self.resolved
-        floor = 0
-        if key == ("ssprimes" if _r.flags.superspace else "primes") and _r.flags.lbox_show:
-            floor = PBOX_W if _r.flags.presets else LBOX_DIM_W + 2 * BOX_INNER
-        if key == "targets" and _r.flags.cbox_show:
-            cbox_w = CBOX_W if _r.flags.presets else CBOX_NODROP_W
-            floor = max(floor, cbox_w + 2 * BOX_INNER)
-        if key == "targets" and _r.flags.presets and self.settings["all_interval"]:
-            floor = max(floor, TBOX_W)
-        if (key == "targets" and _r.flags.optimization and "row:damage" not in self.collapsed
-                and "tile:damage:targets" not in self.collapsed):
-            floor = max(floor, OPT_BOX_MIN_W)
-        labels = ([lbl for _n, _r, c, lbl in PRESETS + PRESET_COPIES if c == key and lbl] if _r.flags.presets else [])
-        labels += [lbl for _n, _r, c, lbl in FORM_CHOOSERS if c == key and lbl] if _r.flags.form_controls else []
-        if labels:
-            floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(lbl, 1) for lbl in labels))
-        if key in ("primes", "gens") and self.settings["projection"]:
-            floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_W)
-        return floor
+def declare_interval_column_tiles(resolved):
+    _r = resolved
+    interest_tiles = ()
+    if _r.dims.mi_shown:
+        interest_tiles += (
+            ("block:vec:interest", "vectors", "interest"),
+            ("block:interest", "quantities", "interest"),
+            ("block:imapped", "mapping", "interest"),
+            ("block:tuning:interest", "tuning", "interest"),
+            ("block:just:interest", "just", "interest"),
+            ("block:retune:interest", "retune", "interest"),
+            ("block:urow:interest", "units", "interest"),
+            ("block:prescaling:interest", "prescaling", "interest"),
+            ("block:complexity:interest", "complexity", "interest"),
+        )
+    held_tiles = ()
+    if _r.dims.nh_shown:
+        held_tiles += (
+            ("block:held", "quantities", "held"),
+            ("block:vec:held", "vectors", "held"),
+            ("block:hmapped", "mapping", "held"),
+            ("block:tuning:held", "tuning", "held"),
+            ("block:just:held", "just", "held"),
+            ("block:retune:held", "retune", "held"),
+            ("block:urow:held", "units", "held"),
+            ("block:prescaling:held", "prescaling", "held"),
+            ("block:complexity:held", "complexity", "held"),
+        )
+    detempering_tiles = (
+        ("block:detempering", "quantities", "detempering"),
+        ("block:vec:detempering", "vectors", "detempering"),
+        ("block:mapped_detempering", "mapping", "detempering"),
+        ("block:tuning:detempering", "tuning", "detempering"),
+        ("block:just:detempering", "just", "detempering"),
+        ("block:retune:detempering", "retune", "detempering"),
+        ("block:prescaling:detempering", "prescaling", "detempering"),
+        ("block:complexity:detempering", "complexity", "detempering"),
+        ("block:urow:detempering", "units", "detempering"),
+    ) if _r.flags.detempering else ()
+    return interest_tiles, held_tiles, detempering_tiles
 
 
-    def col_open(self, key: str) -> bool:
-        return query.col_open(self.geometry, self.collapsed, key)
-
-    def _commas_band_w(self, nc_count: int):
-        _r = self.resolved
-        nv = nc_count + _r.dims.nu
-        split = V_SPLIT_GAP if (_r.unchanged.shown and nc_count > 0) else 0
-        empty = (_min_width_for_lines("nullity", 1)
-                 if (_r.unchanged.shown and nc_count == 0) else 0)
-        return 2 * BRACKET_W + nv * COL_W + split + empty
-
-    def _caption_wrap_w(self, ckey: str):
-        _r = self.resolved
-        if ckey == "commas" and _r.ghosts.comma:
-            resting = self._commas_band_w(_r.dims.nc + (1 if _r.commas.pending is not None else 0))
-            return max(resting, self._caption_floor(ckey),
-                       self._control_floor(ckey), self._symbol_floor(ckey))
-        return self.open_col_w[ckey]
-
-    def caption_band(self, key: str, folded: bool):
-        _r = self.resolved
-        if not (_r.flags.captions and key in BANDS["caption"].rows and not folded):
-            return 0
-        lines = [_wrap_lines(_r.labels.captions[(key, c)], self._caption_wrap_w(c)) for c in self.col_x
-                 if (key, c) in _r.labels.captions and (key, c) in self.declared_tiles]
-        if key == "counts" and _r.unchanged.shown and "commas" in self.col_x:
-            lines.append(_wrap_lines("unchanged interval count", _r.dims.nu * COL_W))
-            lines.append(_wrap_lines("nullity", _r.dims.nc * COL_W + _r.unchanged.empty_comma_w))
-        return max(lines, default=1) * CAPTION_LINE
-
-    def ptext_band(self, key: str, folded: bool):
-        if folded or not any(rk == key for rk, _ck in self.ptext_strings):
-            return 0
-        return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
-
-    def control_region_band_h(self, content_h):
-        return 2 * BOX_OUTER + 2 * BOX_INNER + content_h
-
-    def control_band_h(self, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):
-        return 2 * BOX_OUTER + query.control_dims(self.geometry, ckey, cap_w, label, scheme_btn, form_label)[2]
-
-    def preset_cap(self, name: str):
-        return query.preset_cap(name)
-
-    def preset_band_h(self, key: str):
-        return max((self.control_band_h(ckey, self.preset_cap(name), label, scheme_btn=(name == "projection"),
-                                         form_label=query.preset_form_label(self.resolved, name, rk, ckey))
-                    for name, rk, ckey, label in PRESETS + PRESET_COPIES
-                    if rk == key and ckey in self.col_w), default=0)
-
-    def formchooser_band_h(self, key: str):
-        return max((self.control_band_h(ckey, PRESET_W, label)
-                    for name, rk, ckey, label in FORM_CHOOSERS if rk == key and ckey in self.col_w), default=0)
+def declare_tiles(draft, resolved, ctx, interest_tiles, held_tiles, detempering_tiles) -> None:
+    draft.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
+             + SUPERSPACE_COUNTS_TILES
+             + TILES + UNITS_TILES + SUPERSPACE_TILES
+             + interest_tiles + held_tiles + detempering_tiles + _projection_col_tiles(resolved)
+             + _ss_projection_col_tiles(resolved) + _canon_col_tiles(resolved))
+    draft.declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in draft.tiles}
+    _prune_declared_tiles(draft, resolved, ctx)
 
 
-    def tile_open(self, rkey: str, ckey: str) -> bool:
-        return query.tile_open(self.geometry, self.collapsed, rkey, ckey)
+def _projection_col_tiles(resolved):
+    _r = resolved
+    if not _r.flags.projection:
+        return ()
+    tiles = (
+        ("block:proj:quantities", "projection", "quantities"),
+        ("block:proj:units", "projection", "units"),
+    )
+    if _r.flags.detempering:
+        tiles += (("block:proj:detempering", "projection", "detempering"),)
+    if _r.scalars.targets_editable:
+        tiles += (("block:proj:targets", "projection", "targets"),)
+    if _r.dims.nh_shown:
+        tiles += (("block:proj:held", "projection", "held"),)
+    if _r.dims.mi_shown:
+        tiles += (("block:proj:interest", "projection", "interest"),)
+    if _r.flags.superspace:
+        tiles += (
+            ("block:proj:ssgens", "projection", "ssgens"),
+            ("block:proj:ssprimes", "projection", "ssprimes"),
+        )
+    return tiles
 
 
-    def matlabel_gutter_w(self, group_key: str):
-        return query.matlabel_gutter_w(self.geometry, group_key)
+def _ss_projection_col_tiles(resolved):
+    _r = resolved
+    if not _r.flags.ss_projection:
+        return ()
+    tiles = (
+        ("block:ssproj:ssgens", "ss_projection", "ssgens"),
+        ("block:ssproj:primes", "ss_projection", "primes"),
+    )
+    if _r.unchanged.shown:
+        tiles += (("block:ssproj:commas", "ss_projection", "commas"),)
+    if _r.flags.detempering:
+        tiles += (("block:ssproj:detempering", "ss_projection", "detempering"),)
+    if _r.scalars.targets_editable:
+        tiles += (("block:ssproj:targets", "ss_projection", "targets"),)
+    if _r.dims.nh_shown:
+        tiles += (("block:ssproj:held", "ss_projection", "held"),)
+    if _r.dims.mi_shown:
+        tiles += (("block:ssproj:interest", "ss_projection", "interest"),)
+    return tiles
 
 
-    def outer_gutter_w(self, group_key: str):
-        return query.outer_gutter_w(self.geometry, group_key)
+def _canon_col_tiles(resolved):
+    _r = resolved
+    if not _r.flags.canon:
+        return ()
+    tiles = (("block:canon_comma", "canon", "commas"),)
+    if _r.flags.detempering:
+        tiles += (("block:canon_detempering", "canon", "detempering"),)
+    if _r.scalars.targets_editable:
+        tiles += (("block:canon_mapped", "canon", "targets"),)
+    if _r.dims.nh_shown:
+        tiles += (("block:canon_held", "canon", "held"),)
+    if _r.dims.mi_shown:
+        tiles += (("block:canon_interest", "canon", "interest"),)
+    return tiles
 
 
-    def prime_left(self, p: int):
-        return query.prime_left(self.geometry, p)
+def _prune_declared_tiles(draft, resolved, ctx) -> None:
+    _r = resolved
+    if service.is_all_interval(ctx.tuning_scheme):
+        draft.declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
+                           ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
+                           ("ss_vectors", "targets"), ("ss_mapping", "targets")}
+    if not _r.flags.identity_objects:
+        draft.declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
+                                ("mapping", "detempering"), ("canon", "canongens"),
+                                ("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
+    if not _r.dims.nh_shown:
+        draft.declared_tiles -= {("ss_vectors", "held"), ("ss_mapping", "held")}
+    if not _r.dims.mi_shown:
+        draft.declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
 
 
-    def comma_left(self, c: int):
-        return query.comma_left(self.geometry, self.resolved, c)
+def init_superspace_tuning(draft, resolved, ctx) -> None:
+    if not resolved.flags.superspace:
+        draft.ss_tun = None
+        return
+    ss_override = ctx.superspace_generator_tuning if resolved.flags.superspace_generators else None
+    draft.ss_tun = service.superspace_tuning(ctx.state, ctx.tuning_scheme, ctx.nonprime_approach,
+                                             generator_override=ss_override)
 
 
-    def target_left(self, j: int):
-        return query.target_left(self.geometry, j)
-
-    def interest_left(self, i: int):
-        return query.interest_left(self.geometry, i)
-
-    def held_left(self, i: int):
-        return query.held_left(self.geometry, i)
-
-    def detempering_left(self, i: int):
-        return query.detempering_left(self.geometry, i)
-
-    def gen_left(self, g: int):
-        return query.gen_left(self.geometry, g)
-
-    def canongen_left(self, g: int):
-        return query.canongen_left(self.geometry, g)
-
-    def ss_gen_left(self, g: int):
-        return query.ss_gen_left(self.geometry, g)
-
-    def ss_prime_left(self, p: int):
-        return query.ss_prime_left(self.geometry, p)
-
-    def map_top(self, i: int):
-        return query.map_top(self.geometry, i)
+def caption_floor(draft, resolved, key: str):
+    if not resolved.flags.captions:
+        return 0
+    return max((_min_width_for_lines(resolved.labels.captions[(rk, key)], MAX_CAPTION_LINES)
+                for rk in draft.present_caption_rows
+                if (rk, key) in resolved.labels.captions and (rk, key) in draft.declared_tiles), default=0)
 
 
-    def vec_top(self, p: int):
-        return query.vec_top(self.geometry, p)
+def symbol_floor(draft, resolved, key: str):
+    if not (resolved.flags.symbols or resolved.flags.equiv):
+        return 0
+    floor = 0
+    for (rkey, ckey), glyph in SYMBOLS.items():
+        if ckey != key or (rkey, ckey) not in draft.declared_tiles:
+            continue
+        equiv = ""
+        if resolved.flags.equiv:
+            equiv = EQUIVALENCES.get((rkey, ckey), "")
+            if resolved.flags.form_subscript and (rkey, ckey) in FORM_EQUIVALENCES:
+                equiv = FORM_EQUIVALENCES[(rkey, ckey)]
+            if (rkey, ckey) == ("projection", "primes"):
+                equiv += query.projection_superspace_tail(resolved)
+        sub_glyph = query.form_subscripted(resolved, glyph, rkey, ckey)
+        floor = max(floor, _min_width_for_lines(sub_glyph + equiv, 1, SYMBOL_FONT))
+    return floor
 
 
-    def col_plus_x(self, ckey: str):
-        return query.col_plus_x(self.geometry, self.resolved, ckey)
+def control_floor(resolved, ctx, key: str):
+    floor = 0
+    if key == ("ssprimes" if resolved.flags.superspace else "primes") and resolved.flags.lbox_show:
+        floor = PBOX_W if resolved.flags.presets else LBOX_DIM_W + 2 * BOX_INNER
+    if key == "targets" and resolved.flags.cbox_show:
+        cbox_w = CBOX_W if resolved.flags.presets else CBOX_NODROP_W
+        floor = max(floor, cbox_w + 2 * BOX_INNER)
+    if key == "targets" and resolved.flags.presets and ctx.settings["all_interval"]:
+        floor = max(floor, TBOX_W)
+    if (key == "targets" and resolved.flags.optimization and "row:damage" not in ctx.collapsed
+            and "tile:damage:targets" not in ctx.collapsed):
+        floor = max(floor, OPT_BOX_MIN_W)
+    labels = ([lbl for _n, _r, c, lbl in PRESETS + PRESET_COPIES if c == key and lbl] if resolved.flags.presets else [])
+    labels += [lbl for _n, _r, c, lbl in FORM_CHOOSERS if c == key and lbl] if resolved.flags.form_controls else []
+    if labels:
+        floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(lbl, 1) for lbl in labels))
+    if key in ("primes", "gens") and ctx.settings["projection"]:
+        floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_W)
+    return floor
 
-    def _plus_shows(self, ckey: str) -> bool:
-        return query.plus_shows(self.geometry, self.resolved, self.collapsed, self.state, ckey)
+
+def commas_band_w(resolved, nc_count: int):
+    nv = nc_count + resolved.dims.nu
+    split = V_SPLIT_GAP if (resolved.unchanged.shown and nc_count > 0) else 0
+    empty = (_min_width_for_lines("nullity", 1)
+             if (resolved.unchanged.shown and nc_count == 0) else 0)
+    return 2 * BRACKET_W + nv * COL_W + split + empty
 
 
+def _caption_wrap_w(draft, resolved, ctx, ckey: str):
+    if ckey == "commas" and resolved.ghosts.comma:
+        resting = commas_band_w(resolved, resolved.dims.nc + (1 if resolved.commas.pending is not None else 0))
+        return max(resting, caption_floor(draft, resolved, ckey),
+                   control_floor(resolved, ctx, ckey), symbol_floor(draft, resolved, ckey))
+    return draft.open_col_w[ckey]
+
+
+def caption_band(draft, resolved, ctx, key: str, folded: bool):
+    if not (resolved.flags.captions and key in BANDS["caption"].rows and not folded):
+        return 0
+    lines = [_wrap_lines(resolved.labels.captions[(key, c)], _caption_wrap_w(draft, resolved, ctx, c)) for c in draft.col_x
+             if (key, c) in resolved.labels.captions and (key, c) in draft.declared_tiles]
+    if key == "counts" and resolved.unchanged.shown and "commas" in draft.col_x:
+        lines.append(_wrap_lines("unchanged interval count", resolved.dims.nu * COL_W))
+        lines.append(_wrap_lines("nullity", resolved.dims.nc * COL_W + resolved.unchanged.empty_comma_w))
+    return max(lines, default=1) * CAPTION_LINE
+
+
+def ptext_band(draft, key: str, folded: bool):
+    if folded or not any(rk == key for rk, _ck in draft.ptext_strings):
+        return 0
+    return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
+
+
+def control_region_band_h(content_h):
+    return 2 * BOX_OUTER + 2 * BOX_INNER + content_h
+
+
+def _control_band_h(draft, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):
+    return 2 * BOX_OUTER + query.control_dims(draft, ckey, cap_w, label, scheme_btn, form_label)[2]
+
+
+def preset_band_h(draft, resolved, key: str):
+    return max((_control_band_h(draft, ckey, query.preset_cap(name), label, scheme_btn=(name == "projection"),
+                               form_label=query.preset_form_label(resolved, name, rk, ckey))
+                for name, rk, ckey, label in PRESETS + PRESET_COPIES
+                if rk == key and ckey in draft.col_w), default=0)
+
+
+def formchooser_band_h(draft, key: str):
+    return max((_control_band_h(draft, ckey, PRESET_W, label)
+                for name, rk, ckey, label in FORM_CHOOSERS if rk == key and ckey in draft.col_w), default=0)

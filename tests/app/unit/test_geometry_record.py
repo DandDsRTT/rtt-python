@@ -32,26 +32,28 @@ def test_geometry_record_faithfully_captures_every_builder_attr(builder):
 
 
 def _geometry_draft_write_targets():
-    source = open(os.path.join(os.path.dirname(spreadsheet.__file__), "spreadsheet_layout.py"),
-                  encoding="utf-8").read()
     targets = set()
 
     def is_geometry_attr(node):
-        return (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Attribute)
-                and isinstance(node.value.value, ast.Name) and node.value.value.id == "self"
-                and node.value.attr == "geometry")
+        return (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
+                and node.value.id == "draft")
 
-    for node in ast.walk(ast.parse(source)):
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                for element in (target.elts if isinstance(target, (ast.Tuple, ast.List)) else [target]):
-                    if is_geometry_attr(element):
-                        targets.add(element.attr)
-        elif isinstance(node, (ast.AugAssign, ast.AnnAssign)) and is_geometry_attr(node.target):
-            targets.add(node.target.attr)
+    for module in ("spreadsheet_layout.py", "spreadsheet_geometry.py"):
+        source = open(os.path.join(os.path.dirname(spreadsheet.__file__), module),
+                      encoding="utf-8").read()
+        for node in ast.walk(ast.parse(source)):
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    for element in (target.elts if isinstance(target, (ast.Tuple, ast.List)) else [target]):
+                        if is_geometry_attr(element):
+                            targets.add(element.attr)
+            elif isinstance(node, (ast.AugAssign, ast.AnnAssign)) and is_geometry_attr(node.target):
+                targets.add(node.target.attr)
     return targets
 
 
 def test_every_geometry_draft_write_is_a_declared_geometry_field():
-    undeclared = _geometry_draft_write_targets() - set(GEOMETRY_FIELDS)
-    assert not undeclared, f"self.geometry.X written but X not declared on Geometry: {sorted(undeclared)}"
+    written = _geometry_draft_write_targets()
+    assert written, "no draft.X writes found — the geometry-build scan is mis-targeted"
+    undeclared = written - set(GEOMETRY_FIELDS)
+    assert not undeclared, f"draft.X written but X not declared on Geometry: {sorted(undeclared)}"
