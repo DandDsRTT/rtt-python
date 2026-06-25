@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from rtt.app import service
+from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     BANDS,
     EDITABLE_PTEXT,
@@ -29,8 +30,6 @@ from rtt.app.spreadsheet_constants import (
     CBOX_W,
     COL_W,
     CTRL_LABEL_GAP,
-    FRAME_GAP,
-    FRAME_H,
     LBOX_DIM_W,
     MAX_CAPTION_LINES,
     OPT_BOX_MIN_W,
@@ -40,7 +39,6 @@ from rtt.app.spreadsheet_constants import (
     PRESET_W,
     PTEXT_EDIT_H,
     PTEXT_H,
-    ROW_H,
     SCHEME_BTN_SQ,
     SCHEME_CTRL_W,
     SYMBOL_FONT,
@@ -338,25 +336,25 @@ class _GeometryMixin:
         return self.ssprimes_x + self.outer_gutter_w("ssprimes") + BRACKET_W + p * COL_W
 
     def map_top(self, i: int):
-        return self.rows["mapping"].y + i * ROW_H
+        return query.map_top(self.geometry, i)
 
     def proj_top(self, i: int):
-        return self.rows["projection"].y + i * ROW_H
+        return query.proj_top(self.geometry, i)
 
     def canon_top(self, i: int):
-        return self.rows["canon"].y + i * ROW_H
+        return query.canon_top(self.geometry, i)
 
     def vec_top(self, p: int):
-        return self.rows["vectors"].y + p * ROW_H
+        return query.vec_top(self.geometry, p)
 
     def ss_vec_top(self, p: int):
-        return self.rows["ss_vectors"].y + p * ROW_H
+        return query.ss_vec_top(self.geometry, p)
 
     def ss_map_top(self, i: int):
-        return self.rows["ss_mapping"].y + i * ROW_H
+        return query.ss_map_top(self.geometry, i)
 
     def ss_proj_top(self, i: int):
-        return self.rows["ss_projection"].y + i * ROW_H
+        return query.ss_proj_top(self.geometry, i)
 
     def sub_axis_x(self, ckey: str, i: int):
         return self.group_left[ckey][i] + COL_W / 2
@@ -422,13 +420,13 @@ class _GeometryMixin:
         return bx - px, by - py, w + 2 * px, h + 2 * py
 
     def cpick_band_y(self, rkey):
-        return self.rows[rkey].y + self.rows[rkey].h + self.rows[rkey].frame
+        return query.cpick_band_y(self.geometry, rkey)
 
     def ptext_band_y(self, rkey: str):
-        return self.rows[rkey].y + self.rows[rkey].h + self.rows[rkey].frame + self.row_cpick[rkey] + self.rows[rkey].sym + self.rows[rkey].cap + self.rows[rkey].units
+        return query.ptext_band_y(self.geometry, rkey)
 
     def frame_top_y(self, rkey: str):
-        return self.rows[rkey].y - FRAME_H - FRAME_GAP
+        return query.frame_top_y(self.geometry, rkey)
 
     def frame_brace_y(self, rkey: str):
-        return self.rows[rkey].y + self.rows[rkey].h + FRAME_GAP
+        return query.frame_brace_y(self.geometry, rkey)
