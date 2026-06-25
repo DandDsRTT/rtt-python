@@ -1,4 +1,5 @@
 from rtt.app import service, settings, spreadsheet
+from rtt.app.spreadsheet_brackets import emit_brackets, emit_ebk_frames_and_marks
 from rtt.app.spreadsheet_emit_mapping import emit_canon_band, emit_mapping, emit_projection_band
 from rtt.app.spreadsheet_emit_matrix import (
     emit_column_plus_controls,
@@ -135,6 +136,28 @@ def test_emit_identity_objects_is_a_pure_function_over_resolved_geometry_ctx():
     ids = {c.id for c in result.cells}
     assert any(i.startswith("cell:vec:primes:") for i in ids)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
+    assert ids <= full
+
+
+def test_emit_brackets_is_a_pure_function_over_resolved_geometry_ctx():
+    builder = _maximized_builder()
+    result = emit_brackets(builder.resolved, builder.geometry, build_context(builder))
+    ids = {c.id for c in result.cells}
+    assert any(i.startswith("bracket:") for i in ids)
+    full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
+    assert ids <= full
+
+
+def test_emit_ebk_frames_and_marks_reads_the_accumulator_for_v_split_bars():
+    builder = _maximized_builder()
+    ctx = build_context(builder)
+    # the accumulator is the live cell list the orchestrator threads in
+    full_layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on())
+    accum = list(full_layout.cells)
+    result = emit_ebk_frames_and_marks(builder.resolved, builder.geometry, ctx, accum)
+    assert isinstance(result, EmitResult)
+    ids = {c.id for c in result.cells}
+    full = {c.id for c in full_layout.cells}
     assert ids <= full
 
 
