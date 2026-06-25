@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import functools
+
 from rtt.app import ids
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.layout import CellBox
@@ -146,44 +148,51 @@ def _emit_mapped_tile(cells, resolved, geometry, m: _MappedTile, i, rt) -> None:
         cells.append(CellBox(f"cell:{m.prefix}:{rt}:draft", m.left_fn(m.count), query.map_top(geometry, i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
 
 
-class _EmitMappingMixin:
-    def _emit_mapped_grid(self, tile, prefix, grid, n_cols, left, col_kw, *,
-                          full=None, colwise=False, col_token_key=None, inset=0,
-                          row="projection", top=None, height=None, pending=None) -> None:
-        _r = self.resolved
-        if not (self.row_open(row) and self.tile_open(row, tile)):
-            return
-        if full is None:
-            full = grid is not None
-        top = top or self.proj_top
-        height = _r.dims.d if height is None else height
-        if colwise:
-            self._emit_mapped_grid_colwise(prefix, grid, n_cols, left, col_kw,
-                                           full, col_token_key, inset, top, height, pending)
-        else:
-            self._emit_mapped_grid_rowwise(prefix, grid, n_cols, left, col_kw,
-                                           full, inset, top, height)
+def emit_mapped_grid(cells, resolved, geometry, collapsed, tile, prefix, grid, n_cols, left, col_kw, *,
+                     full=None, colwise=False, col_token_key=None, inset=0,
+                     row="projection", top=None, height=None, pending=None) -> None:
+    _r = resolved
+    if not (query.row_open(geometry, collapsed, row) and query.tile_open(geometry, collapsed, row, tile)):
+        return
+    if full is None:
+        full = grid is not None
+    if top is None:
+        top = functools.partial(query.proj_top, geometry)
+    height = _r.dims.d if height is None else height
+    if colwise:
+        _emit_mapped_grid_colwise(cells, resolved, prefix, grid, n_cols, left, col_kw,
+                                  full, col_token_key, inset, top, height, pending)
+    else:
+        _emit_mapped_grid_rowwise(cells, prefix, grid, n_cols, left, col_kw, full, inset, top, height)
 
-    def _emit_mapped_grid_colwise(self, prefix, grid, n_cols, left, col_kw,
-                                  full, col_token_key, inset, top, height, pending) -> None:
-        for j in range(n_cols):
-            for i in range(height):
-                text = str(grid[j][i]) if full else DASH
-                tok = j if col_token_key is None else self.col_token(col_token_key, j)
-                self.cells.append(CellBox(f"cell:{prefix}:{tok}:{i}", left(j) + inset, top(i),
-                                     COL_W - 2 * inset, ROW_H, "mapped", text=text, prime=i, **{col_kw: j}))
-        if pending is not None:
-            for i in range(height):
-                self.cells.append(CellBox(f"cell:{prefix}:draft:{i}", left(n_cols) + inset, top(i),
-                                     COL_W - 2 * inset, ROW_H, "mapped", text="", prime=i, pending=True))
 
-    def _emit_mapped_grid_rowwise(self, prefix, grid, n_cols, left, col_kw,
-                                  full, inset, top, height) -> None:
+def _emit_mapped_grid_colwise(cells, resolved, prefix, grid, n_cols, left, col_kw,
+                              full, col_token_key, inset, top, height, pending) -> None:
+    for j in range(n_cols):
         for i in range(height):
-            for j in range(n_cols):
-                text = grid[i][j] if full else DASH
-                self.cells.append(CellBox(f"cell:{prefix}:{i}:{j}", left(j) + inset, top(i),
-                                     COL_W - 2 * inset, ROW_H, "mapped", text=text, **{col_kw: j}))
+            text = str(grid[j][i]) if full else DASH
+            tok = j if col_token_key is None else query.col_token(resolved, col_token_key, j)
+            cells.append(CellBox(f"cell:{prefix}:{tok}:{i}", left(j) + inset, top(i),
+                                 COL_W - 2 * inset, ROW_H, "mapped", text=text, prime=i, **{col_kw: j}))
+    if pending is not None:
+        for i in range(height):
+            cells.append(CellBox(f"cell:{prefix}:draft:{i}", left(n_cols) + inset, top(i),
+                                 COL_W - 2 * inset, ROW_H, "mapped", text="", prime=i, pending=True))
+
+
+def _emit_mapped_grid_rowwise(cells, prefix, grid, n_cols, left, col_kw,
+                              full, inset, top, height) -> None:
+    for i in range(height):
+        for j in range(n_cols):
+            text = grid[i][j] if full else DASH
+            cells.append(CellBox(f"cell:{prefix}:{i}:{j}", left(j) + inset, top(i),
+                                 COL_W - 2 * inset, ROW_H, "mapped", text=text, **{col_kw: j}))
+
+
+class _EmitMappingMixin:
+    def _emit_mapped_grid(self, tile, prefix, grid, n_cols, left, col_kw, **kw) -> None:
+        emit_mapped_grid(self.cells, self.resolved, self.geometry, self.collapsed,
+                         tile, prefix, grid, n_cols, left, col_kw, **kw)
 
     def _emit_projection_band(self) -> None:
         _r = self.resolved
