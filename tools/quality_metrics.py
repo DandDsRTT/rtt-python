@@ -4,8 +4,9 @@ import ast
 import io
 import re
 import tokenize
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
+from typing import NamedTuple
 
 from tools._quality_common import (
     DEFINITION,
@@ -53,27 +54,116 @@ def _self_attr(value: ast.AST) -> str | None:
     return None
 
 
-def injected_handle_names(trees: list[tuple[Path, ast.Module]]) -> set[str]:
-    handles: set[str] = set()
-    aliases: list[tuple[str, str]] = []
-    for _path, tree in trees:
-        for node in ast.walk(tree):
-            if isinstance(node, DEFINITION) and node.name == "__init__":
-                _seed_param_handles(node, handles)
-            if isinstance(node, (ast.Assign, ast.AnnAssign)):
-                source = _self_attr(getattr(node, "value", None))
-                if source is not None:
-                    aliases += [(tgt.attr, source) for tgt in self_attr_targets(node)]
-    _grow_alias_handles(handles, aliases)
-    return handles
-
-
-def _seed_param_handles(init: ast.AST, handles: set[str]) -> None:
-    params = init_params(init)
-    for stmt in ast.walk(init):
+def _param_seeded_attrs(method: ast.AST) -> set[str]:
+    params = init_params(method)
+    seeded: set[str] = set()
+    for stmt in ast.walk(method):
         value = getattr(stmt, "value", None)
         if isinstance(value, ast.Name) and value.id in params:
-            handles |= {tgt.attr for tgt in self_attr_targets(stmt)}
+            seeded |= {tgt.attr for tgt in self_attr_targets(stmt)}
+    return seeded
+
+
+def constructor_injected_names(trees: list[tuple[Path, ast.Module]]) -> set[str]:
+    names: set[str] = set()
+    for _path, tree in trees:
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                for method in _enclosed_methods(node):
+                    if method.name == "__init__":
+                        names |= _param_seeded_attrs(method)
+    return names
+
+
+class _HandleParts(NamedTuple):
+    init_injected: set[str]
+    late_injected: set[str]
+    aliases: list[tuple[str, str]]
+    constructed: set[str]
+
+
+def _class_handle_parts(cls: ast.ClassDef, injectable: set[str]) -> _HandleParts:
+    init_injected: set[str] = set()
+    late_injected: set[str] = set()
+    constructed: set[str] = set()
+    aliases: list[tuple[str, str]] = []
+    for method in _enclosed_methods(cls):
+        seeded = _param_seeded_attrs(method)
+        if method.name == "__init__":
+            init_injected |= seeded
+        else:
+            late_injected |= seeded & injectable
+        for node in ast.walk(method):
+            if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+                continue
+            value = getattr(node, "value", None)
+            if isinstance(value, (ast.Name, ast.Constant)):
+                continue
+            source = _self_attr(value)
+            for tgt in self_attr_targets(node):
+                if source is not None:
+                    aliases.append((tgt.attr, source))
+                else:
+                    constructed.add(tgt.attr)
+    return _HandleParts(init_injected, late_injected, aliases, constructed)
+
+
+def _merge_handle_parts(left: _HandleParts | None, right: _HandleParts) -> _HandleParts:
+    if left is None:
+        return right
+    return _HandleParts(
+        left.init_injected | right.init_injected,
+        left.late_injected | right.late_injected,
+        left.aliases + right.aliases,
+        left.constructed | right.constructed,
+    )
+
+
+def _inheritance_components(bases: dict[str, set[str]]) -> dict[str, str]:
+    parent = {name: name for name in bases}
+
+    def root(name: str) -> str:
+        while parent[name] != name:
+            parent[name] = parent[parent[name]]
+            name = parent[name]
+        return name
+
+    for name in parent:
+        for base in bases[name]:
+            if base in parent:
+                parent[root(name)] = root(base)
+    return {name: root(name) for name in parent}
+
+
+def handles_by_class(trees: list[tuple[Path, ast.Module]]) -> dict[str, set[str]]:
+    injectable = constructor_injected_names(trees)
+    parts: dict[str, _HandleParts] = {}
+    bases: dict[str, set[str]] = defaultdict(set)
+    for _path, tree in trees:
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                parts[node.name] = _merge_handle_parts(
+                    parts.get(node.name), _class_handle_parts(node, injectable)
+                )
+                bases[node.name] |= {b.id for b in node.bases if isinstance(b, ast.Name)}
+    component = _inheritance_components(bases)
+    init: dict[str, set[str]] = defaultdict(set)
+    late: dict[str, set[str]] = defaultdict(set)
+    aliases: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    constructed: dict[str, set[str]] = defaultdict(set)
+    for name, part in parts.items():
+        root = component[name]
+        init[root] |= part.init_injected
+        late[root] |= part.late_injected
+        aliases[root] += part.aliases
+        constructed[root] |= part.constructed
+    resolved: dict[str, set[str]] = {}
+    for root in set(component.values()):
+        handles = init[root] | late[root]
+        _grow_alias_handles(handles, aliases[root])
+        handles -= constructed[root] - init[root]
+        resolved[root] = handles
+    return {name: resolved[component[name]] for name in parts}
 
 
 def _grow_alias_handles(handles: set[str], aliases: list[tuple[str, str]]) -> None:
@@ -87,11 +177,18 @@ def _grow_alias_handles(handles: set[str], aliases: list[tuple[str, str]]) -> No
 
 
 class _HandleVisitor(ast.NodeVisitor):
-    def __init__(self, handles: set[str]) -> None:
-        self.handles = handles
+    def __init__(self, class_handles: dict[str, set[str]]) -> None:
+        self.class_handles = class_handles
+        self.handles: set[str] = set()
         self.counts: Counter = Counter()
         self.chains: list[tuple[int, str]] = []
         self.scopes: list[dict[str, str]] = [{}]
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        enclosing = self.handles
+        self.handles = self.class_handles.get(node.name, set())
+        self.generic_visit(node)
+        self.handles = enclosing
 
     def visit_FunctionDef(self, node: ast.AST) -> None:
         self.scopes.append(dict(self.scopes[-1]))
@@ -157,7 +254,7 @@ class _HandleVisitor(ast.NodeVisitor):
 
 
 def _walk_handles(trees: list[tuple[Path, ast.Module]]) -> tuple[Counter, set[str]]:
-    visitor = _HandleVisitor(injected_handle_names(trees))
+    visitor = _HandleVisitor(handles_by_class(trees))
     rows: list[tuple[str, int, str]] = []
     for path, tree in trees:
         visitor.scopes = [{}]

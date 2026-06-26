@@ -1,18 +1,18 @@
 {
-  "reach_through_total": 456,
+  "reach_through_total": 402,
   "reach_through_by_handle": {
     "_editor": 120,
-    "state": 85,
     "_chrome": 78,
     "_rec": 49,
     "_runtime": 47,
+    "state": 34,
     "_gestures": 28,
     "_renderer": 28,
     "_edits": 7,
     "e": 5,
-    "settings": 4,
     "_handlers": 3,
-    "collapsed": 2
+    "settings": 2,
+    "class_handles": 1
   },
   "demeter_chains": [],
   "bag_cross_file_total": 0,

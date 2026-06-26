@@ -25,9 +25,162 @@ REACH_THROUGH = (
 )
 
 
-def test_injected_handle_names_detect_constructor_params(tmp_path):
+def test_handles_by_class_detect_constructor_params(tmp_path):
     write(tmp_path, "m.py", REACH_THROUGH)
-    assert qm.injected_handle_names(trees_under(tmp_path)) == {"_host", "_editor"}
+    assert qm.handles_by_class(trees_under(tmp_path))["Controller"] == {"_host", "_editor"}
+
+
+OWN_STATE = (
+    "class Document:\n"
+    "    def __init__(self):\n"
+    "        self.state = _build_state()\n"
+    "    def f(self):\n"
+    "        return self.state.mapping + self.state.n\n"
+)
+
+INJECTED_STATE = (
+    "class Resolver:\n"
+    "    def __init__(self, state):\n"
+    "        self.state = state\n"
+    "    def g(self):\n"
+    "        return self.state.mapping + self.state.n\n"
+)
+
+ALIASED_STATE = (
+    "class Resolver:\n"
+    "    def __init__(self, state):\n"
+    "        self.state = state\n"
+    "    def g(self):\n"
+    "        s = self.state\n"
+    "        return s.mapping + s.n\n"
+)
+
+
+def test_internally_assigned_state_is_not_an_injected_handle(tmp_path):
+    write(tmp_path, "document.py", OWN_STATE)
+    write(tmp_path, "resolver.py", INJECTED_STATE)
+    hbc = qm.handles_by_class(trees_under(tmp_path))
+    assert "state" not in hbc["Document"]
+    assert "state" in hbc["Resolver"]
+
+
+def test_a_class_reading_its_own_state_is_not_counted_as_reach_through(tmp_path):
+    write(tmp_path, "document.py", OWN_STATE)
+    assert qm.reach_through_by_handle(trees_under(tmp_path)).get("state", 0) == 0
+
+
+def test_an_injected_state_handle_is_counted(tmp_path):
+    write(tmp_path, "resolver.py", INJECTED_STATE)
+    assert qm.reach_through_by_handle(trees_under(tmp_path))["state"] == 2
+
+
+def test_aliased_injected_state_local_still_counts(tmp_path):
+    write(tmp_path, "resolver.py", ALIASED_STATE)
+    assert qm.reach_through_by_handle(trees_under(tmp_path))["state"] == 2
+
+
+def test_own_state_uncounted_even_when_a_peer_class_injects_that_name(tmp_path):
+    write(tmp_path, "document.py", OWN_STATE)
+    write(tmp_path, "resolver.py", INJECTED_STATE)
+    counts = qm.reach_through_by_handle(trees_under(tmp_path))
+    assert counts["state"] == 2
+
+
+INHERITED_HANDLE = (
+    "class _Mixin:\n"
+    "    def sync(self):\n"
+    "        return self._editor.tuning + self._editor.scheme\n"
+    "class View(_Mixin):\n"
+    "    def __init__(self, editor):\n"
+    "        self._editor = editor\n"
+)
+
+
+def test_base_class_counts_a_handle_injected_by_its_subclass(tmp_path):
+    write(tmp_path, "m.py", INHERITED_HANDLE)
+    trees = trees_under(tmp_path)
+    assert "_editor" in qm.handles_by_class(trees)["_Mixin"]
+    assert qm.reach_through_by_handle(trees)["_editor"] == 2
+
+
+SHARED_BASE_INJECTOR_AND_OWNER = (
+    "class Base:\n"
+    "    pass\n"
+    "class Injector(Base):\n"
+    "    def __init__(self, dep):\n"
+    "        self._dep = dep\n"
+    "    def use(self):\n"
+    "        return self._dep.a + self._dep.b\n"
+    "class Owner(Base):\n"
+    "    def __init__(self):\n"
+    "        self._dep = _build()\n"
+    "    def read(self):\n"
+    "        return self._dep.c\n"
+)
+
+
+def test_a_shared_base_never_drops_the_injectors_reach_throughs(tmp_path):
+    write(tmp_path, "m.py", SHARED_BASE_INJECTOR_AND_OWNER)
+    trees = trees_under(tmp_path)
+    assert "_dep" in qm.handles_by_class(trees)["Injector"]
+    assert qm.reach_through_by_handle(trees)["_dep"] >= 2
+
+
+TWO_PHASE_BIND = (
+    "class Owner:\n"
+    "    def __init__(self, rec):\n"
+    "        self._rec = rec\n"
+    "class Ctl:\n"
+    "    def __init__(self):\n"
+    "        self._rec = None\n"
+    "    def bind(self, rec):\n"
+    "        self._rec = rec\n"
+    "    def run(self):\n"
+    "        return self._rec.entity + self._rec.cells\n"
+)
+
+
+def test_two_phase_bind_injection_counts_when_the_name_is_a_known_handle(tmp_path):
+    write(tmp_path, "m.py", TWO_PHASE_BIND)
+    trees = trees_under(tmp_path)
+    assert "_rec" in qm.handles_by_class(trees)["Ctl"]
+    assert qm.reach_through_by_handle(trees)["_rec"] == 2
+
+
+SETTER_CACHE = (
+    "class Runtime:\n"
+    "    def __init__(self):\n"
+    "        self.last_lay = None\n"
+    "    def set_last(self, lay):\n"
+    "        self.last_lay = lay\n"
+    "    def read(self):\n"
+    "        return self.last_lay.identities\n"
+)
+
+
+def test_setter_cached_value_is_not_a_handle_when_never_constructor_injected(tmp_path):
+    write(tmp_path, "m.py", SETTER_CACHE)
+    trees = trees_under(tmp_path)
+    assert "last_lay" not in qm.handles_by_class(trees)["Runtime"]
+    assert qm.reach_through_by_handle(trees).get("last_lay", 0) == 0
+
+
+DEFAULT_FALLBACK = (
+    "class R:\n"
+    "    def __init__(self, settings=None):\n"
+    "        self.settings = settings\n"
+    "        if settings is None:\n"
+    "            self.settings = _defaults()\n"
+    "    def f(self):\n"
+    "        return self.settings.get('x')\n"
+)
+
+
+def test_constructor_injected_handle_survives_a_default_fallback_reassignment(tmp_path):
+    write(tmp_path, "m.py", DEFAULT_FALLBACK)
+    trees = trees_under(tmp_path)
+    assert "settings" in qm.handles_by_class(trees)["R"]
+    assert qm.reach_through_by_handle(trees)["settings"] == 1
 
 
 def test_reach_through_gate_is_a_ratchet_floor(tmp_path):
@@ -66,7 +219,7 @@ SELF_ATTR_ALIAS = (
 def test_self_attribute_alias_of_a_handle_is_itself_a_handle(tmp_path):
     write(tmp_path, "m.py", SELF_ATTR_ALIAS)
     trees = trees_under(tmp_path)
-    assert "_g" in qm.injected_handle_names(trees)
+    assert "_g" in qm.handles_by_class(trees)["C"]
     assert qm.reach_through_by_handle(trees)["_g"] == 3
 
 
