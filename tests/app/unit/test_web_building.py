@@ -17,8 +17,16 @@ class _FakePanel:
 
 
 def _builder(panel=None):
-    host = SimpleNamespace(panelgroup=panel or _FakePanel())
-    return PageBuilder(SimpleNamespace(), host)
+    chrome = SimpleNamespace(panelgroup=panel or _FakePanel())
+    return PageBuilder(
+        SimpleNamespace(),
+        chrome,
+        SimpleNamespace(),
+        SimpleNamespace(),
+        SimpleNamespace(),
+        SimpleNamespace(),
+        SimpleNamespace(),
+    )
 
 
 def test_page_builder_constructs_without_a_page():

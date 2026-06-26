@@ -58,6 +58,15 @@ def test_gesture_controller_constructs_without_a_page():
     assert g.drag_src is None
 
 
+def test_bind_wires_the_sibling_controllers_after_construction():
+    g = GestureController(_editor(), SimpleNamespace())
+    rec, renderer, edits = object(), object(), object()
+    g.bind(rec, renderer, edits)
+    assert g._rec is rec
+    assert g._renderer is renderer
+    assert g._edits is edits
+
+
 def test_compute_rings_static_only_when_no_gesture():
     g = GestureController(_editor(), SimpleNamespace())
     lay = SimpleNamespace(
@@ -82,7 +91,8 @@ def test_compute_rings_empty_when_preview_highlighting_off():
 def test_paint_cell_adds_amber_ring_and_records_signature():
     el = _FakeEl()
     rec = _FakeRec({"x": _FakeEntity(el)})
-    g = GestureController(_editor(), SimpleNamespace(rec=rec))
+    g = GestureController(_editor(), SimpleNamespace())
+    g.bind(rec, None, None)
     g.paint_cell("x", frozenset({"x"}), frozenset())
     assert "rtt-preview-change" in el.added
     assert rec.entities["x"].ring_sig == (True, False)
@@ -92,14 +102,16 @@ def test_paint_cell_is_a_noop_when_signature_unchanged():
     el = _FakeEl()
     ent = _FakeEntity(el)
     ent.ring_sig = (True, False)
-    g = GestureController(_editor(), SimpleNamespace(rec=_FakeRec({"x": ent})))
+    g = GestureController(_editor(), SimpleNamespace())
+    g.bind(_FakeRec({"x": ent}), None, None)
     g.paint_cell("x", frozenset({"x"}), frozenset())
     assert el.added == []
 
 
 def test_paint_cell_skips_missing_element():
     ent = _FakeEntity(None)
-    g = GestureController(_editor(), SimpleNamespace(rec=_FakeRec({"x": ent})))
+    g = GestureController(_editor(), SimpleNamespace())
+    g.bind(_FakeRec({"x": ent}), None, None)
     g.paint_cell("x", frozenset({"x"}), frozenset())
     assert ent.ring_sig is None
 
@@ -117,7 +129,8 @@ def test_end_gesture_restores_preview_token():
 def test_gesture_render_toggles_flag_and_calls_render():
     rendered = []
     renderer = SimpleNamespace(render=lambda: rendered.append(True))
-    g = GestureController(_editor(), SimpleNamespace(renderer=renderer))
+    g = GestureController(_editor(), SimpleNamespace())
+    g.bind(None, renderer, None)
     g.gesture_render()
     assert rendered == [True]
     assert g.gesture_rendering is False

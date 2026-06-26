@@ -25,9 +25,12 @@ from rtt.app.render_html import (
 from rtt.app.rendering_chrome import _ChromeSyncMixin
 
 if TYPE_CHECKING:
-    from rtt.app._page_hosts import RenderHost
+    from collections.abc import Callable
+
     from rtt.app.editor import Editor
     from rtt.app.gestures import GestureController
+    from rtt.app.page_chrome import PageChrome
+    from rtt.app.page_runtime import PageRuntime
     from rtt.app.reconciler import _Reconciler
 
 _log = logging.getLogger(__name__)
@@ -49,12 +52,20 @@ def _initial_viewport() -> tuple[float, float, float, float]:
 
 class Renderer(_ChromeSyncMixin):
     def __init__(
-        self, editor: Editor, rec: _Reconciler, gestures: GestureController, host: RenderHost
+        self,
+        editor: Editor,
+        rec: _Reconciler,
+        gestures: GestureController,
+        chrome: PageChrome,
+        runtime: PageRuntime,
+        sync_show_availability: Callable[[], None],
     ) -> None:
         self._editor = editor
         self._rec = rec
         self._gestures = gestures
-        self._host = host
+        self._chrome = chrome
+        self._runtime = runtime
+        self._sync_availability = sync_show_availability
         self.render_inflight = False
         self.render_again = False
         self.render_after = None
@@ -84,7 +95,7 @@ class Renderer(_ChromeSyncMixin):
             again = True
             cont = after
             while again:
-                prev = self._host.last_lay.identities if self._host.last_lay is not None else None
+                prev = self._runtime.last_lay.identities if self._runtime.last_lay is not None else None
                 try:
                     await asyncio.to_thread(self._editor.layout, prev_ids=prev)
                 except Exception:
@@ -103,7 +114,7 @@ class Renderer(_ChromeSyncMixin):
         # NiceGUI: render() can run off the event loop (_commit_render), where the slot stack is empty
         # and ui.query would raise "slot stack ... is empty"; entering the captured page client lets the
         # <body> query resolve there (and nests harmlessly inside the live slot on the synchronous path).
-        with self._host.page_client:
+        with self._runtime.page_client:
             body = ui.query("body")
             body.classes(add="rtt-no-anim") if not self._editor.settings[
                 "animations"
@@ -115,19 +126,19 @@ class Renderer(_ChromeSyncMixin):
     def _size_panes(self, lay, fx, fy) -> None:
         base_w = lay.width + lay.right_overhang + 2 * _PAD
         base_h = lay.height + 2 * _PAD
-        self._host.grid_pane.style(f"width:{base_w}px; height:{base_h}px")
+        self._chrome.grid_pane.style(f"width:{base_w}px; height:{base_h}px")
         fit_w = lay.width + 2 * _PAD
-        self._host.grid_pane.props(
+        self._chrome.grid_pane.props(
             f'data-base-w="{base_w}" data-base-h="{base_h}" data-fit-w="{fit_w}"'
         )
-        self._host.board.style(f"width:{lay.width}px; height:{lay.height - fy}px")
-        self._host.colhead.style(f"height:{fy}px")
-        self._host.colhead_inner.style(f"width:{lay.width}px; height:{fy}px")
-        self._host.corner.style(f"width:{fx}px; height:{fy}px")
-        self._host.gridbody.style(f"top:{_PAD + fy}px")
-        self._host.rowband.style(f"width:{fx}px; height:{lay.height - fy}px")
-        self._host.show_frozen.style(f"height:{max(0, fy - _CHROME_H)}px")
-        self._host.show_scroll.style(f"max-height:calc(100vh - {_PAD + fy}px)")
+        self._chrome.board.style(f"width:{lay.width}px; height:{lay.height - fy}px")
+        self._chrome.colhead.style(f"height:{fy}px")
+        self._chrome.colhead_inner.style(f"width:{lay.width}px; height:{fy}px")
+        self._chrome.corner.style(f"width:{fx}px; height:{fy}px")
+        self._chrome.gridbody.style(f"top:{_PAD + fy}px")
+        self._chrome.rowband.style(f"width:{fx}px; height:{lay.height - fy}px")
+        self._chrome.show_frozen.style(f"height:{max(0, fy - _CHROME_H)}px")
+        self._chrome.show_scroll.style(f"max-height:calc(100vh - {_PAD + fy}px)")
 
     def _render_lines(self, lay, fx, fy, seen) -> None:
         def place_line(ln, suffix, parent, shift):
@@ -150,11 +161,11 @@ class Renderer(_ChromeSyncMixin):
             x0, x1 = (ln.pos, ln.pos) if ln.orientation == "v" else (ln.start, ln.start + ln.length)
             y0, y1 = (ln.start, ln.start + ln.length) if ln.orientation == "v" else (ln.pos, ln.pos)
             if x1 >= fx and y1 >= fy:
-                place_line(ln, "", self._host.board, fy)
+                place_line(ln, "", self._chrome.board, fy)
             if x1 >= fx and y0 < fy:
-                place_line(ln, "#col", self._host.colhead_inner, 0)
+                place_line(ln, "#col", self._chrome.colhead_inner, 0)
             if x0 < fx and y1 >= fy:
-                place_line(ln, "#row", self._host.rowband, fy)
+                place_line(ln, "#row", self._chrome.rowband, fy)
 
     def _render_blocks(self, lay, fx, fy, seen) -> None:
         def place_block(bl, pane):
@@ -163,7 +174,7 @@ class Renderer(_ChromeSyncMixin):
             eid = bl.id + suffix
             seen.add(eid)
             if eid not in self._rec.entities:
-                with self._host.cell_parents[pane]:
+                with self._chrome.cell_parents[pane]:
                     cls = (
                         "rtt-block-boxed"
                         if bl.boxed
@@ -196,7 +207,7 @@ class Renderer(_ChromeSyncMixin):
         if cb.id in self._rec.entities and self._rec.cells[cb.id].kind != cb.kind:
             self._rec.drop(cb.id)
         if cb.id not in self._rec.entities:
-            with self._host.cell_parents[container]:
+            with self._chrome.cell_parents[container]:
                 self._rec.make_cell(cb)
             if self._revirtualizing:
                 self._rec.entities[cb.id].el.classes(add="rtt-noentry")
@@ -265,13 +276,12 @@ class Renderer(_ChromeSyncMixin):
 
     def render(self):
         self._end_stale_gestures()
-        self._host.building = True
-        try:
+        with self._runtime.building_guard():
             self.apply_view_classes()
-            prev = self._host.last_lay.identities if self._host.last_lay is not None else None
-            cold = self._host.last_lay is None
+            prev = self._runtime.last_lay.identities if self._runtime.last_lay is not None else None
+            cold = self._runtime.last_lay is None
             lay = self._editor.layout(prev_ids=prev, preview_remove=self._gestures.rank_remove)
-            self._host.last_lay = lay
+            self._runtime.set_last_lay(lay)
             self._rec.pretransform = lay.pretransform
             cur_ids = frozenset(cb.id for cb in lay.cells)
             self._newborn_ids = cur_ids - self._prev_cell_ids
@@ -290,12 +300,10 @@ class Renderer(_ChromeSyncMixin):
             self._sync_chrome(lay, fy)
             self._prev_cell_ids = cur_ids
             self._virt_for = self._viewport
-        finally:
-            self._host.building = False
         # NiceGUI: run_javascript from inside a handler-driven render hits a torn-down slot context
         # under the User test harness (no live client), so this browser-only scrim teardown is skipped.
         if not helpers.is_user_simulation():
-            self._host.page_client.run_javascript(
+            self._runtime.page_client.run_javascript(
                 "window.rttBusy && window.rttBusy.done();"
                 " window.rttScheduleReveal && window.rttScheduleReveal()"
             )
@@ -310,7 +318,7 @@ class Renderer(_ChromeSyncMixin):
 
     async def _fill_offscreen(self, gen) -> None:
         while self._fill_gen == gen:
-            lay = self._host.last_lay
+            lay = self._runtime.last_lay
             if lay is None:
                 return
             fx, fy = lay.freeze_x, lay.freeze_y
@@ -318,8 +326,7 @@ class Renderer(_ChromeSyncMixin):
             if not pending:
                 return
             amber, red = self._last_rings
-            with self._host.page_client:
-                self._host.building = True
+            with self._runtime.page_client, self._runtime.building_guard():
                 self._revirtualizing = True
                 try:
                     for cb in pending[:_FILL_CHUNK]:
@@ -335,7 +342,6 @@ class Renderer(_ChromeSyncMixin):
                         self._update_cell_content(cb)
                         self._gestures.paint_cell(cb.id, amber, red)
                 finally:
-                    self._host.building = False
                     self._revirtualizing = False
             await asyncio.sleep(0)
 
@@ -355,24 +361,23 @@ class Renderer(_ChromeSyncMixin):
             return
         self._viewport = vp
         if self._virt_for is None or self._scrolled_past_overscan(vp, self._virt_for):
-            with self._host.page_client:
+            with self._runtime.page_client:
                 self._revirtualize()
 
     def _revirtualize(self) -> None:
-        lay = self._host.last_lay
+        lay = self._runtime.last_lay
         if lay is None:
             return
         self._rec.pretransform = lay.pretransform
-        self._host.building = True
-        self._revirtualizing = True
-        try:
-            fx, fy = lay.freeze_x, lay.freeze_y
-            seen: set = set()
-            amber, red = self._last_rings
-            self._render_lines(lay, fx, fy, seen)
-            self._render_blocks(lay, fx, fy, seen)
-            self._render_cells(lay, fx, fy, seen, amber, red, cold=False, structural=False)
-        finally:
-            self._host.building = False
-            self._revirtualizing = False
+        with self._runtime.building_guard():
+            self._revirtualizing = True
+            try:
+                fx, fy = lay.freeze_x, lay.freeze_y
+                seen: set = set()
+                amber, red = self._last_rings
+                self._render_lines(lay, fx, fy, seen)
+                self._render_blocks(lay, fx, fy, seen)
+                self._render_cells(lay, fx, fy, seen, amber, red, cold=False, structural=False)
+            finally:
+                self._revirtualizing = False
         self._virt_for = self._viewport

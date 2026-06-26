@@ -8,7 +8,7 @@ from pathlib import Path
 from nicegui import helpers, ui
 
 from rtt.app import settings as show_settings
-from rtt.app.building import PageBuilder
+from rtt.app.building import ChromeHandlers, PageBuilder
 from rtt.app.editing import EditController
 from rtt.app.editor import Editor
 from rtt.app.gestures import GestureController
@@ -25,6 +25,8 @@ from rtt.app.page_assets import (
     _decode_state,
     _doc_store,
 )
+from rtt.app.page_chrome import PageChrome
+from rtt.app.page_runtime import PageRuntime
 from rtt.app.reconciler import _Reconciler, bind_callbacks
 from rtt.app.rendering import Renderer
 
@@ -38,12 +40,32 @@ _SIMULATED_PAGES: list = []
 
 class _Page:
     def __init__(self, state: str | None = None) -> None:
+        self.runtime = PageRuntime()
+        self.chrome = PageChrome()
         loaded_from_url = self._load_document(state)
-        self.gestures = GestureController(self.editor, self)
+        self.gestures = GestureController(self.editor, self.runtime)
         self.rec = _Reconciler(self.editor, self.gestures)
-        self.renderer = Renderer(self.editor, self.rec, self.gestures, self)
-        self.edits = EditController(self.editor, self.rec, self.gestures, self)
-        self.builder = PageBuilder(self.editor, self)
+        self.renderer = Renderer(
+            self.editor,
+            self.rec,
+            self.gestures,
+            self.chrome,
+            self.runtime,
+            self.sync_show_availability,
+        )
+        self.edits = EditController(
+            self.editor, self.rec, self.gestures, self.renderer, self.runtime
+        )
+        self.gestures.bind(self.rec, self.renderer, self.edits)
+        self.builder = PageBuilder(
+            self.editor,
+            self.chrome,
+            self.runtime,
+            self.gestures,
+            self.edits,
+            self.renderer,
+            ChromeHandlers(self.reset_everything, self.on_dark_toggle, self.on_chapter_change),
+        )
         self.builder._setup_page_head()
         self._init_page_client(loaded_from_url)
         self.edits._build_edit_specs()
@@ -52,22 +74,16 @@ class _Page:
         self.builder._build_layout()
         self.renderer.render()
         self.apply_chapter()
-        if self.load_failed:
+        if self.runtime.load_failed:
             ui.notify(
                 _LOAD_FAILED, type="warning", position="top", multi_line=True, close_button=True
             )
 
     def _load_document(self, state: str | None) -> bool:
-        self.dark_mode = bool(_doc_store().get(_DARK_KEY, False))
-
+        self.runtime.dark_mode = bool(_doc_store().get(_DARK_KEY, False))
         self.apply_theme()
-
-        self.chapter = self._clamp_chapter(
-            _doc_store().get(_CHAPTER_KEY, show_settings.CHAPTER_DEFAULT)
-        )
-
+        self.runtime.set_chapter(_doc_store().get(_CHAPTER_KEY, show_settings.CHAPTER_DEFAULT))
         self.editor = Editor()
-        self.load_failed = False
         loaded_from_url = False
         if state:
             try:
@@ -82,18 +98,15 @@ class _Page:
                     self.editor.load(stored)
                 except Exception:
                     _log.exception("stored document failed to load; using defaults: %.200r", stored)
-                    self.load_failed = True
-        self.building = False
-        self.last_lay = None
-        self.refs: dict = {}
+                    self.runtime.load_failed = True
         return loaded_from_url
 
     def _init_page_client(self, loaded_from_url: bool) -> None:
         # NiceGUI: capture this page's Client while the slot context is valid. render() can run from an
         # off-loop background task (_commit_render) where ui.run_javascript — which finds its client via
         # the current slot — would raise; client.run_javascript on the captured client needs no slot.
-        self.page_client = ui.context.client
-        self.page_client.on_disconnect(self._on_disconnect)
+        self.runtime.bind_client(ui.context.client)
+        self.runtime.page_client.on_disconnect(self._on_disconnect)
         if helpers.is_user_simulation():
             _SIMULATED_PAGES.append(self)
         ui.on("rtt_viewport", self.renderer._on_viewport, throttle=0.05)
@@ -108,88 +121,70 @@ class _Page:
             self.edits, self.edits.vectors, self.edits.tuning, self.gestures
         )
 
-    def _dark_icon(self):
-        return "light_mode" if self.dark_mode else "dark_mode"
-
     def apply_theme(self):
         body = ui.query("body")
-        body.classes(add="rtt-dark") if self.dark_mode else body.classes(remove="rtt-dark")
-        body.style(f"background:{_DARK_FRAME if self.dark_mode else '#fff'}")
+        dark = self.runtime.dark_mode
+        body.classes(add="rtt-dark") if dark else body.classes(remove="rtt-dark")
+        body.style(f"background:{_DARK_FRAME if dark else '#fff'}")
 
     def on_dark_toggle(self):
-        self.dark_mode = not self.dark_mode
-        _doc_store()[_DARK_KEY] = self.dark_mode
+        self.runtime.dark_mode = not self.runtime.dark_mode
+        _doc_store()[_DARK_KEY] = self.runtime.dark_mode
         self.apply_theme()
-        self.dark_btn.props(f"icon={self._dark_icon()}")
-
-    def _clamp_chapter(self, v) -> int:
-        try:
-            v = int(v)
-        except (TypeError, ValueError):
-            return show_settings.CHAPTER_DEFAULT
-        return min(show_settings.CHAPTER_STAR, max(show_settings.CHAPTER_MIN, v))
-
-    def _chapter_reading(self, ch: int) -> str:
-        label = "★" if ch >= show_settings.CHAPTER_STAR else str(ch)
-        return f"{label}: {show_settings.CHAPTER_TITLES[ch]}"
+        self.chrome.dark_btn.props(f"icon={self.runtime.dark_icon()}")
 
     def apply_chapter(self):
-        ch = self.chapter
-        self.chapter_reading.set_text(self._chapter_reading(ch))
-        self.chapter_reading.classes(add="rtt-chapter-reading-narrow") if len(
+        ch = self.runtime.chapter
+        self.chrome.chapter_reading.set_text(self.runtime.chapter_reading())
+        self.chrome.chapter_reading.classes(add="rtt-chapter-reading-narrow") if len(
             show_settings.CHAPTER_TITLES[ch]
-        ) >= 25 else self.chapter_reading.classes(remove="rtt-chapter-reading-narrow")
+        ) >= 25 else self.chrome.chapter_reading.classes(remove="rtt-chapter-reading-narrow")
 
         def _gate(el, cls, hidden):
             el.classes(add=cls) if hidden else el.classes(remove=cls)
 
-        for key, parts in self.tile_parts.items():
+        for key, parts in self.chrome.tile_parts.items():
             for part in parts:
                 _gate(part, "rtt-chap-invisible", show_settings.reveal_chapter(key) > ch)
-        for key, row in self.show_rows.items():
+        for key, row in self.chrome.show_rows.items():
             _gate(row, "rtt-chap-hidden", show_settings.reveal_chapter(key) > ch)
-        if "audio_bank" in self.refs:
-            _gate(self.refs["audio_bank"], "rtt-chap-invisible", ch < show_settings.CHAPTER_MIN)
+        if "audio_bank" in self.chrome.refs:
+            _gate(
+                self.chrome.refs["audio_bank"],
+                "rtt-chap-invisible",
+                ch < show_settings.CHAPTER_MIN,
+            )
         self.sync_show_availability()
 
-    def available_keys(self):
-        return [
-            k for k in show_settings.IMPLEMENTED if show_settings.reveal_chapter(k) <= self.chapter
-        ]
-
     def sync_show_availability(self):
-        for key, box in self.boxes.items():
+        for key, box in self.chrome.boxes.items():
             disabled = (
                 key not in show_settings.IMPLEMENTED
-                or show_settings.reveal_chapter(key) > self.chapter
+                or show_settings.reveal_chapter(key) > self.runtime.chapter
             )
             box.props("disable") if disabled else box.props(remove="disable")
-            self.examples[key].classes(add="rtt-ex-disabled") if disabled else self.examples[
-                key
-            ].classes(remove="rtt-ex-disabled")
-        states = [self.editor.settings[k] for k in self.available_keys()]
-        was_building = self.building
-        self.building = True
-        try:
-            self.select_all_box.value = bool(states) and all(states)
-        finally:
-            self.building = was_building
-        self.select_all_box.classes(add="rtt-show-mixed") if (
+            self.chrome.examples[key].classes(
+                add="rtt-ex-disabled"
+            ) if disabled else self.chrome.examples[key].classes(remove="rtt-ex-disabled")
+        states = [self.editor.settings[k] for k in self.runtime.available_keys()]
+        with self.runtime.building_guard():
+            self.chrome.select_all_box.value = bool(states) and all(states)
+        self.chrome.select_all_box.classes(add="rtt-show-mixed") if (
             any(states) and not all(states)
-        ) else self.select_all_box.classes(remove="rtt-show-mixed")
+        ) else self.chrome.select_all_box.classes(remove="rtt-show-mixed")
 
     def on_chapter_change(self, v):
-        if self.building:
+        if self.runtime.building:
             return
-        self.chapter = self._clamp_chapter(v)
-        _doc_store()[_CHAPTER_KEY] = self.chapter
-        self.editor.disable_hidden_settings(self.chapter)
+        self.runtime.set_chapter(v)
+        _doc_store()[_CHAPTER_KEY] = self.runtime.chapter
+        self.editor.disable_hidden_settings(self.runtime.chapter)
         self.apply_chapter()
         self.renderer.render()
 
     def reset_everything(self):
-        self.chapter = show_settings.CHAPTER_DEFAULT
-        _doc_store()[_CHAPTER_KEY] = self.chapter
+        self.runtime.set_chapter(show_settings.CHAPTER_DEFAULT)
+        _doc_store()[_CHAPTER_KEY] = self.runtime.chapter
         self.edits.act(self.editor.reset)
         self.apply_chapter()
 
@@ -197,17 +192,6 @@ class _Page:
         if self.edits.tuning.target_limit_commit is not None:
             self.edits.tuning.target_limit_commit.cancel()
         self.gestures.end_gesture()
-
-    def col_tokens(self, name):
-        idents = self.last_lay.identities if self.last_lay is not None else None
-        return [tok for tok, _ in (idents or {}).get(name, [])]
-
-    def token_index(self, cid, name):
-        token = cid.split(":", 1)[1]
-        for i, tok in enumerate(self.col_tokens(name)):
-            if str(tok) == token:
-                return i
-        return None
 
 
 @ui.page("/")

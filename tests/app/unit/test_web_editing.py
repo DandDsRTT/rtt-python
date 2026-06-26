@@ -15,8 +15,8 @@ def _controller():
         end_commit_gestures=lambda: calls.append("end_commit"),
         edit_candidate=lambda commit: calls.append(("edit_candidate", commit)),
     )
-    host = SimpleNamespace(renderer=renderer, building=False)
-    ec = EditController(SimpleNamespace(), SimpleNamespace(), gestures, host)
+    runtime = SimpleNamespace(building=False)
+    ec = EditController(SimpleNamespace(), SimpleNamespace(), gestures, renderer, runtime)
     return ec, calls
 
 

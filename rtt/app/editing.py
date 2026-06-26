@@ -24,10 +24,11 @@ from rtt.app.page_assets import (
 )
 
 if TYPE_CHECKING:
-    from rtt.app._page_hosts import EditHost
     from rtt.app.editor import Editor
     from rtt.app.gestures import GestureController
+    from rtt.app.page_runtime import PageRuntime
     from rtt.app.reconciler import _Reconciler
+    from rtt.app.rendering import Renderer
 
 _log = logging.getLogger(__name__)
 
@@ -38,13 +39,14 @@ class EditController:
         editor: Editor,
         rec: _Reconciler,
         gestures: GestureController,
-        host: EditHost,
+        renderer: Renderer,
+        runtime: PageRuntime,
     ) -> None:
         self._editor = editor
         self._rec = rec
         self._gestures = gestures
-        self._host = host
-        self._renderer = host.renderer
+        self._renderer = renderer
+        self._runtime = runtime
         self.vectors = _VectorEdits(self)
         self.tuning = _TuningEdits(self)
 
@@ -156,7 +158,7 @@ class EditController:
         action()
         self._renderer.render()
         quant_id, vec_kind = self.draft_focus[group]
-        lay = self._host.last_lay
+        lay = self._runtime.last_lay
         if any(cb.id == quant_id for cb in lay.cells):
             target = quant_id
         elif vec_kind is not None:
@@ -192,7 +194,7 @@ class EditController:
         )
 
     def on_show_toggle(self, key, value):
-        if self._host.building:
+        if self._runtime.building:
             return
         if key == "nonstandard_domain" and not value and self._editor.basis_is_nonstandard:
             self._editor.exit_nonstandard_domain()
@@ -202,13 +204,13 @@ class EditController:
         self._renderer.render()
 
     def on_select_all(self, value):
-        if self._host.building:
+        if self._runtime.building:
             return
-        self._editor.set_all_show(value, self._host.available_keys())
+        self._editor.set_all_show(value, self._runtime.available_keys())
         self._renderer.render()
 
     def on_part_click(self, key):
-        if self._host.building:
+        if self._runtime.building:
             return
         host = _TILE_HOST.get(key)
         if host is not None and not self._editor.settings[host]:
@@ -218,7 +220,7 @@ class EditController:
 
     @cb_method
     def on_preset(self, cid, value):
-        if self._host.building:
+        if self._runtime.building:
             return
         if cid.startswith("preset:temperament"):
             if value in presets.TEMPERAMENT_COMMAS:
@@ -236,7 +238,7 @@ class EditController:
 
     @cb_method
     def on_subpick(self, cid, value):
-        if self._host.building or value is None:
+        if self._runtime.building or value is None:
             return
         self._gestures.end_gesture()
         db = self._editor.state.domain_basis
@@ -247,12 +249,12 @@ class EditController:
             self._editor.set_pending_comma(list(presets.comma_value_to_vector(value, db)))
             ok = self._editor.pending_comma is None
         elif cid.startswith("etpick:"):
-            i = self._host.token_index(cid, "gens")
+            i = self._runtime.token_index(cid, "gens")
             ok = i is not None and self._editor.set_mapping_row(
                 i, presets.et_value_to_val(value, db)
             )
         else:
-            c = self._host.token_index(cid, "commas")
+            c = self._runtime.token_index(cid, "commas")
             ok = c is not None and self._editor.set_comma(
                 c, presets.comma_value_to_vector(value, db)
             )
@@ -262,7 +264,7 @@ class EditController:
 
     @cb_method
     def on_form_choose(self, cid, value):
-        if self._host.building:
+        if self._runtime.building:
             return
         apply = self.candidate_apply(cid, value)
         if apply is not None:
@@ -272,7 +274,7 @@ class EditController:
 
     @cb_method
     def on_target_change(self):
-        if self._host.building:
+        if self._runtime.building:
             return
         self._gestures.end_chooser_gesture()
         num, sel = self._rec.cells["preset:target"].chooser.select
@@ -281,7 +283,7 @@ class EditController:
 
     @cb_method
     def on_control_select(self, cid, value):
-        if self._host.building or value is None:
+        if self._runtime.building or value is None:
             return
         apply = self.candidate_apply(cid, value)
         if apply is not None:
@@ -297,7 +299,7 @@ class EditController:
 
     @cb_method
     def on_range_mode(self, value):
-        if self._host.building or value is None:
+        if self._runtime.building or value is None:
             return
         self._editor.set_range_mode(value)
         self._renderer.render()
@@ -310,7 +312,7 @@ class EditController:
     @cb_method
     def on_toggle_all(self):
         self._editor.set_collapsed(
-            spreadsheet_text.toggle_all_collapsed(self._host.last_lay, self._editor.collapsed)
+            spreadsheet_text.toggle_all_collapsed(self._runtime.last_lay, self._editor.collapsed)
         )
         self._renderer.render()
 

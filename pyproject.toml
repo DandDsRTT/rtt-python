@@ -68,10 +68,13 @@ max-returns = 6
 "rtt/app/marks.py" = ["PLR0913"]
 "rtt/app/service/*.py" = ["PLR0913"]
 # The view/reconciler layer carved out of app.py — same render-dense scalar/flag params
-# (cell id, css class, text parts, viewport coordinates x/y/w/h, draw-state flags).
+# (cell id, css class, text parts, viewport coordinates x/y/w/h, draw-state flags), plus the
+# view controllers that name their real collaborators (editor + reconciler + siblings + the
+# chrome/runtime holders) instead of reaching through one injected _Page god-handle.
 "rtt/app/_recon_*.py" = ["PLR0913"]
 "rtt/app/_editing_*.py" = ["PLR0913"]
 "rtt/app/building.py" = ["PLR0913"]
+"rtt/app/editing.py" = ["PLR0913"]
 "rtt/app/gestures.py" = ["PLR0913"]
 "rtt/app/rendering.py" = ["PLR0913"]
 
