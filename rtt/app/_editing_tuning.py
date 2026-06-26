@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import ClassVar
 
 from nicegui import background_tasks, ui
 
@@ -21,207 +20,233 @@ from rtt.app.render_html import (
     _wheel_step,
 )
 
+_PTEXT_EDITORS: dict[str, str] = {
+    "ptext:mapping:primes": "try_edit_mapping_text",
+    "ptext:mapping:canongens": "try_edit_form_matrix_text",
+    "ptext:vectors:commas": "try_edit_comma_basis_text",
+    "ptext:tuning:gens": "set_generator_tuning_text",
+    "ptext:tuning:ssgens": "set_superspace_generator_tuning_text",
+    "ptext:vectors:targets": "set_target_override_text",
+    "ptext:prescaling:primes": "set_custom_prescaler_text",
+    "ptext:projection:primes": "try_edit_projection_text",
+    "ptext:projection:gens": "try_edit_embedding_text",
+}
+
 
 class _TuningEdits:
-    _PTEXT_EDITORS: ClassVar[dict[str, str]] = {
-        "ptext:mapping:primes": "try_edit_mapping_text",
-        "ptext:mapping:canongens": "try_edit_form_matrix_text",
-        "ptext:vectors:commas": "try_edit_comma_basis_text",
-        "ptext:tuning:gens": "set_generator_tuning_text",
-        "ptext:tuning:ssgens": "set_superspace_generator_tuning_text",
-        "ptext:vectors:targets": "set_target_override_text",
-        "ptext:prescaling:primes": "set_custom_prescaler_text",
-        "ptext:projection:primes": "try_edit_projection_text",
-        "ptext:projection:gens": "try_edit_embedding_text",
-    }
-
     def __init__(self, e) -> None:
         self.e = e
-        self._editor = e._editor
-        self._rec = e._rec
-        self._renderer = e._renderer
-        self._gestures = e._gestures
-        self._runtime = e._runtime
         self.target_limit_commit = None
 
     @cb_method
     def on_power_change(self, cid):
-        if self._runtime.building or self._rec.handles(cid).value.input is None:
-            return
-        if cid not in ("optimization:power", "control:q"):
-            return
-        is_q = cid == "control:q"
-        power = service.parse_power(
-            self._rec.cells[cid].value.input.value, minimum=1.0 if is_q else 0.0
-        )
-        if power is None:
-            return
-        if is_q:
-            self._editor.set_complexity_norm_power(power)
-        else:
-            self._editor.set_optimization_power(power)
-        self._renderer.request_render()
-
-    def _gen_position(self, tok):
-        toks = self._runtime.col_tokens("gens")
-        return toks.index(tok) if tok in toks else tok
+        _power_change(self.e, cid)
 
     @cb_method
     def on_gentuning_change(self, cid):
-        if self._runtime.building or self._rec.handles(cid).value.input is None:
-            return
-        mag = self._rec.decimal_value(cid)
-        if not mag:
-            return
-        try:
-            cents = abs(float(mag))
-        except ValueError:
-            return
-        glyph = self._rec.handles(cid).value.gensign_face
-        if glyph is not None and glyph.text not in ("+", ""):
-            cents = -cents
-        i = int(cid.rsplit(":", 1)[1])
-        if ":ssgen:" in cid:
-            self._editor.set_superspace_generator_tuning_component(i, cents)
-        else:
-            self._editor.set_generator_tuning_component(self._gen_position(i), cents)
-        self._renderer.request_render()
+        _gentuning_change(self.e, cid)
 
     @cb_method
     def on_gentuning_wheel(self, cid, delta_y):
-        if self._runtime.building or not delta_y:
-            return
-        i, steps = int(cid.rsplit(":", 1)[1]), (1 if delta_y < 0 else -1)
-        if ":ssgen:" in cid:
-            self._editor.nudge_superspace_generator_tuning_component(i, steps)
-        else:
-            self._editor.nudge_generator_tuning_component(self._gen_position(i), steps)
-        self._renderer.request_render()
+        _gentuning_wheel(self.e, cid, delta_y)
 
     @cb_method
     def on_value_wheel(self, cid, delta_y):
-        if self._runtime.building or not delta_y or self._rec.handles(cid).value.input is None:
-            return
-        step = _WHEEL_STEPS.get(self._rec.handles(cid).kind)
-        if step is None:
-            return
-        if self._rec.handles(cid).value.den_input is not None:
-            with self._runtime.building_guard():
-                self._rec.set_decimal_value(
-                    cid, _wheel_step(self._rec.decimal_value(cid), delta_y, step)
-                )
-            self.on_prescaler_change(cid)
-            return
-        self._rec.cells[cid].value.input.value = _wheel_step(
-            self._rec.cells[cid].value.input.value, delta_y, step
-        )
-        commit = {
-            "mapping": self.e.vectors.on_mapping_change,
-            "commacell": self.e.vectors.on_comma_change,
-            "interestcell": self.e.vectors.on_interest_change,
-            "heldcell": self.e.vectors.on_held_change,
-            "targetcell": self.e.vectors.on_target_cells_change,
-            "formcell": self.e.vectors.on_form_change,
-        }.get(self._rec.handles(cid).kind)
-        if commit is not None:
-            commit()
+        _value_wheel(self.e, cid, delta_y)
 
     @cb_method
     def on_target_limit_wheel(self, delta_y):
-        if self._runtime.building or not delta_y:
-            return
-        num = self._rec.cells["preset:target"].chooser.select[0]
-        with self._runtime.building_guard():
-            num.value = _wheel_step(num.value, delta_y)
-        self.on_target_limit_preview()
-        if self.target_limit_commit is not None:
-            self.target_limit_commit.cancel()
-        self.target_limit_commit = background_tasks.create(
-            self._debounced_target_commit(), name="target-limit-commit"
-        )
-
-    async def _debounced_target_commit(self):
-        # NiceGUI: this runs off the loop (a background task) where the slot stack is empty, so enter the
-        # captured page client or on_target_change's ui.notify can't resolve the client and the toast
-        # silently vanishes.
-        try:
-            await asyncio.sleep(_TARGET_LIMIT_DEBOUNCE)
-        except asyncio.CancelledError:
-            return
-        self.target_limit_commit = None
-        with self._runtime.page_client:
-            self.e.on_target_change()
+        _target_limit_wheel(self, delta_y)
 
     @cb_method
     def on_target_limit_preview(self, typed=None):
-        g = self._gestures.gesture
-        if self._runtime.building or g is None or g.kind != "edit" or g.source != "preset:target":
-            return
-        num, sel = self._rec.cells["preset:target"].chooser.select
-        raw = num.value if typed is None else typed
-        out = service.resolve_target_limit(sel.value, raw, self._editor.state.domain_basis)
-        self.e._apply_outcome(out, lambda: self._editor.set_target_spec(out.value), preview=True)
+        _target_limit_preview(self.e, typed)
 
     @cb_method
     def on_prescaler_change(self, cid):
-        if self._runtime.building or self._rec.handles(cid).value.input is None:
-            return
-        parts = cid.split(":")
-        i, j = int(parts[3]), int(parts[4])
-        out = service.custom_prescaler_entry(self._rec.decimal_value(cid), i == j)
-
-        self.e._apply_outcome(out, lambda: self._editor.set_custom_prescaler_entry(i, j, out.value))
+        _prescaler_change(self.e, cid)
 
     @cb_method
     def on_weight_change(self, cid):
-        if self._runtime.building or self._rec.handles(cid).value.input is None:
-            return
-        raws = [
-            self._rec.decimal_value(o)
-            for o in self._rec.cells
-            if o.startswith("weight:") and self._rec.cells[o].value.input is not None
-        ]
-        out = service.custom_weights(raws)
-
-        self.e._apply_outcome(out, lambda: self._editor.set_custom_weights(list(out.value)))
+        _weight_change(self.e, cid)
 
     @cb_method
     def on_ptext_edit(self, cid, value):
-        if self._runtime.building:
-            return
-        editor_method = self._PTEXT_EDITORS.get(cid)
-        if editor_method is None:
-            return
-        if not self._editor.settings.get("ebk", True):
-            value = service.simple_matrix_to_ebk(value, _PTEXT_DUAL_VECTOR_KIND.get(cid, False))
-        if getattr(self._editor, editor_method)(value):
-            self._rec.cells[cid].value.ptext_input.classes(remove="rtt-ptext-error")
-            self._renderer.request_render()
-            return
-        self._rec.cells[cid].value.ptext_input.classes(add="rtt-ptext-error")
-        toast = self._ptext_error_toast(cid, value)
-        if toast:
-            ui.notify(toast, type="negative", position="top")
+        _ptext_edit(self.e, cid, value)
 
-    def _ptext_error_toast(self, cid, value):
-        if cid == "ptext:mapping:primes":
-            st = service.parse_mapping_state(value)
-            if st is not None and not service.is_proper_temperament(st.mapping):
-                return _INVALID_TEMPERAMENT
-        elif cid == "ptext:vectors:commas":
-            b = service.parse_comma_basis(value)
-            if b is not None and not service.is_proper_temperament(
-                service.from_comma_basis(b).mapping
-            ):
-                return _INVALID_TEMPERAMENT
-        elif cid == "ptext:projection:primes" and service.parse_projection(value) is not None:
-            return _INVALID_PROJECTION
-        elif (
-            cid == "ptext:projection:gens"
-            and service.parse_embedding(
-                value, self._editor.state.d, len(self._editor.state.mapping)
-            )
-            is not None
-        ):
-            return _INVALID_EMBEDDING
-        return None
+
+def _power_change(ec, cid):
+    if ec._runtime.building or ec._rec.handles(cid).value.input is None:
+        return
+    if cid not in ("optimization:power", "control:q"):
+        return
+    is_q = cid == "control:q"
+    power = service.parse_power(ec._rec.cells[cid].value.input.value, minimum=1.0 if is_q else 0.0)
+    if power is None:
+        return
+    if is_q:
+        ec._editor.set_complexity_norm_power(power)
+    else:
+        ec._editor.set_optimization_power(power)
+    ec._renderer.request_render()
+
+
+def _gen_position(ec, tok):
+    toks = ec._runtime.col_tokens("gens")
+    return toks.index(tok) if tok in toks else tok
+
+
+def _gentuning_change(ec, cid):
+    if ec._runtime.building or ec._rec.handles(cid).value.input is None:
+        return
+    mag = ec._rec.decimal_value(cid)
+    if not mag:
+        return
+    try:
+        cents = abs(float(mag))
+    except ValueError:
+        return
+    glyph = ec._rec.handles(cid).value.gensign_face
+    if glyph is not None and glyph.text not in ("+", ""):
+        cents = -cents
+    i = int(cid.rsplit(":", 1)[1])
+    if ":ssgen:" in cid:
+        ec._editor.set_superspace_generator_tuning_component(i, cents)
+    else:
+        ec._editor.set_generator_tuning_component(_gen_position(ec, i), cents)
+    ec._renderer.request_render()
+
+
+def _gentuning_wheel(ec, cid, delta_y):
+    if ec._runtime.building or not delta_y:
+        return
+    i, steps = int(cid.rsplit(":", 1)[1]), (1 if delta_y < 0 else -1)
+    if ":ssgen:" in cid:
+        ec._editor.nudge_superspace_generator_tuning_component(i, steps)
+    else:
+        ec._editor.nudge_generator_tuning_component(_gen_position(ec, i), steps)
+    ec._renderer.request_render()
+
+
+def _value_wheel(ec, cid, delta_y):
+    if ec._runtime.building or not delta_y or ec._rec.handles(cid).value.input is None:
+        return
+    step = _WHEEL_STEPS.get(ec._rec.handles(cid).kind)
+    if step is None:
+        return
+    if ec._rec.handles(cid).value.den_input is not None:
+        with ec._runtime.building_guard():
+            ec._rec.set_decimal_value(cid, _wheel_step(ec._rec.decimal_value(cid), delta_y, step))
+        _prescaler_change(ec, cid)
+        return
+    ec._rec.cells[cid].value.input.value = _wheel_step(
+        ec._rec.cells[cid].value.input.value, delta_y, step
+    )
+    commit = {
+        "mapping": ec.vectors.on_mapping_change,
+        "commacell": ec.vectors.on_comma_change,
+        "interestcell": ec.vectors.on_interest_change,
+        "heldcell": ec.vectors.on_held_change,
+        "targetcell": ec.vectors.on_target_cells_change,
+        "formcell": ec.vectors.on_form_change,
+    }.get(ec._rec.handles(cid).kind)
+    if commit is not None:
+        commit()
+
+
+def _target_limit_wheel(te, delta_y):
+    ec = te.e
+    if ec._runtime.building or not delta_y:
+        return
+    num = ec._rec.cells["preset:target"].chooser.select[0]
+    with ec._runtime.building_guard():
+        num.value = _wheel_step(num.value, delta_y)
+    _target_limit_preview(ec)
+    if te.target_limit_commit is not None:
+        te.target_limit_commit.cancel()
+    te.target_limit_commit = background_tasks.create(
+        _debounced_target_commit(te), name="target-limit-commit"
+    )
+
+
+async def _debounced_target_commit(te):
+    # NiceGUI: this runs off the loop (a background task) where the slot stack is empty, so enter the
+    # captured page client or on_target_change's ui.notify can't resolve the client and the toast
+    # silently vanishes.
+    try:
+        await asyncio.sleep(_TARGET_LIMIT_DEBOUNCE)
+    except asyncio.CancelledError:
+        return
+    te.target_limit_commit = None
+    ec = te.e
+    with ec._runtime.page_client:
+        ec.on_target_change()
+
+
+def _target_limit_preview(ec, typed=None):
+    g = ec._gestures.gesture
+    if ec._runtime.building or g is None or g.kind != "edit" or g.source != "preset:target":
+        return
+    num, sel = ec._rec.cells["preset:target"].chooser.select
+    raw = num.value if typed is None else typed
+    out = service.resolve_target_limit(sel.value, raw, ec._editor.state.domain_basis)
+    ec._apply_outcome(out, lambda: ec._editor.set_target_spec(out.value), preview=True)
+
+
+def _prescaler_change(ec, cid):
+    if ec._runtime.building or ec._rec.handles(cid).value.input is None:
+        return
+    parts = cid.split(":")
+    i, j = int(parts[3]), int(parts[4])
+    out = service.custom_prescaler_entry(ec._rec.decimal_value(cid), i == j)
+    ec._apply_outcome(out, lambda: ec._editor.set_custom_prescaler_entry(i, j, out.value))
+
+
+def _weight_change(ec, cid):
+    if ec._runtime.building or ec._rec.handles(cid).value.input is None:
+        return
+    raws = [
+        ec._rec.decimal_value(o)
+        for o in ec._rec.cells
+        if o.startswith("weight:") and ec._rec.cells[o].value.input is not None
+    ]
+    out = service.custom_weights(raws)
+    ec._apply_outcome(out, lambda: ec._editor.set_custom_weights(list(out.value)))
+
+
+def _ptext_edit(ec, cid, value):
+    if ec._runtime.building:
+        return
+    editor_method = _PTEXT_EDITORS.get(cid)
+    if editor_method is None:
+        return
+    if not ec._editor.settings.get("ebk", True):
+        value = service.simple_matrix_to_ebk(value, _PTEXT_DUAL_VECTOR_KIND.get(cid, False))
+    if getattr(ec._editor, editor_method)(value):
+        ec._rec.cells[cid].value.ptext_input.classes(remove="rtt-ptext-error")
+        ec._renderer.request_render()
+        return
+    ec._rec.cells[cid].value.ptext_input.classes(add="rtt-ptext-error")
+    toast = _ptext_error_toast(ec, cid, value)
+    if toast:
+        ui.notify(toast, type="negative", position="top")
+
+
+def _ptext_error_toast(ec, cid, value):
+    if cid == "ptext:mapping:primes":
+        st = service.parse_mapping_state(value)
+        if st is not None and not service.is_proper_temperament(st.mapping):
+            return _INVALID_TEMPERAMENT
+    elif cid == "ptext:vectors:commas":
+        b = service.parse_comma_basis(value)
+        if b is not None and not service.is_proper_temperament(service.from_comma_basis(b).mapping):
+            return _INVALID_TEMPERAMENT
+    elif cid == "ptext:projection:primes" and service.parse_projection(value) is not None:
+        return _INVALID_PROJECTION
+    elif (
+        cid == "ptext:projection:gens"
+        and service.parse_embedding(value, ec._editor.state.d, len(ec._editor.state.mapping))
+        is not None
+    ):
+        return _INVALID_EMBEDDING
+    return None

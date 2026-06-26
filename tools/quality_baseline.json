@@ -1,15 +1,15 @@
 {
-  "reach_through_total": 651,
+  "reach_through_total": 487,
   "reach_through_by_handle": {
-    "_editor": 182,
     "state": 122,
-    "_rec": 90,
+    "_editor": 120,
     "_chrome": 72,
-    "_runtime": 70,
-    "_renderer": 34,
-    "_gestures": 34,
-    "e": 31,
+    "_rec": 49,
+    "_runtime": 47,
+    "_gestures": 28,
+    "_renderer": 28,
     "_edits": 7,
+    "e": 5,
     "settings": 4,
     "_handlers": 3,
     "collapsed": 2
@@ -19,10 +19,6 @@
   "bag_cross_file_attrs": [],
   "bag_cross_file_accumulators": [],
   "class_surface": {
-    "rtt/app/_editing_vectors.py::_VectorEdits": {
-      "methods": 19,
-      "attrs": 6
-    },
     "rtt/app/building.py::PageBuilder": {
       "methods": 22,
       "attrs": 8
