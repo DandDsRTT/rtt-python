@@ -27,10 +27,6 @@
       "methods": 22,
       "attrs": 13
     },
-    "rtt/app/editor.py::Editor": {
-      "methods": 144,
-      "attrs": 1
-    },
     "rtt/app/editor_document.py::Document": {
       "methods": 21,
       "attrs": 20
