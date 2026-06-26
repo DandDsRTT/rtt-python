@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from functools import cached_property
 from typing import TYPE_CHECKING
 
@@ -13,8 +12,6 @@ if TYPE_CHECKING:
     from rtt.app.page_runtime import PageRuntime
     from rtt.app.reconciler import _Reconciler
     from rtt.app.rendering import Renderer
-
-_log = logging.getLogger(__name__)
 
 
 class GestureController:
@@ -123,74 +120,74 @@ class GestureController:
 
 
 class _GestureCombine:
-    def __init__(self, g) -> None:
-        self.g = g
+    def __init__(self, gc) -> None:
+        self.gc = gc
 
     @cb_method
     def on_cell_focus(self, cid):
-        _gesture_ops.on_cell_focus(self.g, cid)
+        _gesture_ops.on_cell_focus(self.gc, cid)
 
     @cb_method
     def on_cell_blur(self, cid=None):
-        _gesture_ops.on_cell_blur(self.g, cid)
+        _gesture_ops.on_cell_blur(self.gc, cid)
 
     @cb_method
     def combine_begin(self):
-        _gesture_ops.combine_begin(self.g)
+        _gesture_ops.combine_begin(self.gc)
 
     @cb_method
     def combine_preview(self, apply, target_pred=None):
-        _gesture_ops.combine_preview(self.g, apply, target_pred)
+        _gesture_ops.combine_preview(self.gc, apply, target_pred)
 
     @cb_method
     def combine_commit(self, apply):
-        _gesture_ops.combine_commit(self.g, apply)
+        _gesture_ops.combine_commit(self.gc, apply)
 
     @cb_method
     def combine_end(self):
-        _gesture_ops.combine_end(self.g)
+        _gesture_ops.combine_end(self.gc)
 
     @cb_method
     def rank_remove_hover(self, axis, idx):
-        _gesture_ops.rank_remove_hover(self.g, axis, idx)
+        _gesture_ops.rank_remove_hover(self.gc, axis, idx)
 
     @cb_method
     def rank_remove_unhover(self):
-        _gesture_ops.rank_remove_unhover(self.g)
+        _gesture_ops.rank_remove_unhover(self.gc)
 
 
 class _GestureHover:
-    def __init__(self, g) -> None:
-        self.g = g
+    def __init__(self, gc) -> None:
+        self.gc = gc
 
     @cb_method
     def on_chooser_hover(self, cid, detail):
-        _gesture_ops.on_chooser_hover(self.g, cid, detail)
+        _gesture_ops.on_chooser_hover(self.gc, cid, detail)
 
     @cb_method
     def on_popup(self, cid, is_open):
-        _gesture_ops.on_popup(self.g, cid, is_open)
+        _gesture_ops.on_popup(self.gc, cid, is_open)
 
     @cb_method
     def gentuning_hover(self, cid):
-        _gesture_ops.gentuning_hover(self.g, cid)
+        _gesture_ops.gentuning_hover(self.gc, cid)
 
     @cb_method
     def gentuning_unhover(self, cid):
-        _gesture_ops.gentuning_unhover(self.g, cid)
+        _gesture_ops.gentuning_unhover(self.gc, cid)
 
     @cb_method
     def on_drag_start(self, lst, idx):
-        _gesture_ops.on_drag_start(self.g, lst, idx)
+        _gesture_ops.on_drag_start(self.gc, lst, idx)
 
     @cb_method
     def on_drag_enter(self, dst_list, dst_idx):
-        _gesture_ops.on_drag_enter(self.g, dst_list, dst_idx)
+        _gesture_ops.on_drag_enter(self.gc, dst_list, dst_idx)
 
     @cb_method
     def on_drag_end(self):
-        _gesture_ops.on_drag_end(self.g)
+        _gesture_ops.on_drag_end(self.gc)
 
     @cb_method
     def on_drop(self, dst_list, dst_idx):
-        _gesture_ops.on_drop(self.g, dst_list, dst_idx)
+        _gesture_ops.on_drop(self.gc, dst_list, dst_idx)
