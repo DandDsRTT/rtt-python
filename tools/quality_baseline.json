@@ -1,9 +1,9 @@
 {
-  "reach_through_total": 487,
+  "reach_through_total": 493,
   "reach_through_by_handle": {
     "state": 122,
     "_editor": 120,
-    "_chrome": 72,
+    "_chrome": 78,
     "_rec": 49,
     "_runtime": 47,
     "_gestures": 28,
@@ -53,7 +53,7 @@
     },
     "rtt/app/page_chrome.py::PageChrome": {
       "methods": 1,
-      "attrs": 20
+      "attrs": 22
     },
     "rtt/app/reconciler.py::_Reconciler": {
       "methods": 21,

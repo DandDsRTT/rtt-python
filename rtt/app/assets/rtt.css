@@ -130,9 +130,17 @@ html, body { overscroll-behavior-x: none; }
    sizing the pane larger would only show it until the board overflows. The board (.rtt-gridcontent)
    holds the cells at native coords shifted up by freeze_y (the strip's height), so a body cell lands
    at the same pane position it always had. */
-.rtt-colhead { position:absolute; top:var(--pad); left:var(--pad); right:0; z-index:4; overflow:hidden;
+.rtt-colhead { position:absolute; top:var(--pad); left:var(--pad); right:var(--pad); z-index:4; overflow:hidden;
                background:#c0c0c0; box-sizing:border-box; box-shadow:0 1px 0 var(--seam-y,transparent); }
 .rtt-colhead-inner { position:absolute; top:0; left:0; will-change:transform; }
+/* A top overscroll slides the body scroller bodily DOWN, baring the pane behind it as an empty band
+   between the frozen column strip and the body. This layer sits BEHIND the scroller (first child of
+   the pane, no z-index) holding a fixed twin of every full-height column rule; the bared band reveals
+   those twins so the gridlines read unbroken through the bounce. It hugs the body's left inset and
+   rides the same horizontal scroll as the column strip, so each twin sits exactly under its live rule
+   at rest (hidden behind it) and only shows once the scroller pulls away. Pure backdrop — no input. */
+.rtt-colfill { position:absolute; left:var(--pad); right:0; bottom:0; overflow:hidden; pointer-events:none; }
+.rtt-colfill-inner { position:absolute; top:0; left:0; will-change:transform; }
 .rtt-corner { position:absolute; top:var(--pad); left:var(--pad); z-index:6; background:#c0c0c0;
               box-sizing:border-box; box-shadow:0 1px 0 var(--seam-y,transparent), 1px 0 0 var(--seam-x,transparent); }
 /* overscroll-behavior-x:contain keeps a leftward scroll/swipe inside the board from chaining out to

@@ -455,6 +455,21 @@ def test_shared_axis_gridlines_render_two_pixels_thick():
     assert "border-top:var(--line-w) solid var(--c-gridline)" in page_assets._CSS   # the horizontal gridlines
 
 
+def test_colfill_bounce_layer_sits_behind_the_scroller_carries_no_zindex_and_hugs_the_body_inset():
+    fill = _css_rule(".rtt-colfill")
+    assert "z-index" not in fill
+    assert "pointer-events:none" in fill
+    assert "left:var(--pad)" in fill and "bottom:0" in fill
+
+
+def test_only_full_height_seam_reaching_column_rules_are_twinned_in_the_colfill_not_centre_stubs():
+    lay = Editor().layout()
+    fy = lay.freeze_y
+    twinned = {ln.id for ln in lay.lines if ln.orientation == "v" and ln.start <= fy and ln.length > fy}
+    assert {"v:gen:0", "v:prime:0", "v:comma:0", "v:target:0"} <= twinned
+    assert "trunk:gens" not in twinned
+
+
 def _css_rule(selector):
     """The declaration body of the first `selector { ... }` block in the page CSS."""
     m = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", page_assets._CSS)
@@ -681,6 +696,7 @@ def test_freeze_script_syncs_the_column_strip_and_toggles_the_seam_on_body_scrol
     assert ".rtt-gridbody" in js                                # listens to the body scroller
     assert "scrollTop" in js and "scrollLeft" in js             # reads its scroll offset
     assert ".rtt-colhead-inner" in js and "translateX" in js    # syncs the strip horizontally
+    assert ".rtt-colfill-inner" in js
     assert "rtt-scrolled-x" in js and "rtt-scrolled-y" in js    # toggles the seams
     assert "addEventListener('scroll'" in js
     assert "ResizeObserver" not in js and "scroll-timeline" not in js  # no fixed-box machinery

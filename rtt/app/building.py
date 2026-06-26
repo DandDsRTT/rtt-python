@@ -121,6 +121,11 @@ class PageBuilder:
     def _build_grid_pane(self) -> None:
         self._chrome.grid_pane = ui.element("div").classes("rtt-app").mark("gridpane")
         with self._chrome.grid_pane:
+            self._chrome.colfill = ui.element("div").classes("rtt-colfill").mark("colfill")
+            with self._chrome.colfill:
+                self._chrome.colfill_inner = (
+                    ui.element("div").classes("rtt-colfill-inner").mark("colfillinner")
+                )
             self._chrome.colhead = ui.element("div").classes("rtt-colhead").mark("colhead")
             with self._chrome.colhead:
                 self._chrome.colhead_inner = (

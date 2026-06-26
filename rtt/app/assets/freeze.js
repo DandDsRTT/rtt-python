@@ -6,6 +6,10 @@ window.rttFreeze = (function () {
       if (!app) continue;
       var inner = app.querySelector('.rtt-colhead-inner');
       if (inner) inner.style.transform = 'translateX(' + (-b.scrollLeft) + 'px)';
+      // the colfill twins ride BOTH scroll axes so they rest exactly under the live rules; the bounce
+      // clamps scrollTop, so on a top overscroll they stay put and bridge the bared strip.
+      var fill = app.querySelector('.rtt-colfill-inner');
+      if (fill) fill.style.transform = 'translate(' + (-b.scrollLeft) + 'px,' + (-b.scrollTop) + 'px)';
       app.classList.toggle('rtt-scrolled-y', b.scrollTop > 0);
       app.classList.toggle('rtt-scrolled-x', b.scrollLeft > 0);
     }
