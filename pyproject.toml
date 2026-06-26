@@ -94,6 +94,7 @@ exclude = [
     "rtt/app/spreadsheet_geometry.py",
     "rtt/app/spreadsheet_layout.py",
     "rtt/app/spreadsheet_resolve.py",
+    "rtt/app/spreadsheet_resolve_intervals.py",
     "rtt/app/spreadsheet_resolve_steps.py",
     "rtt/app/spreadsheet_brackets.py",
     "rtt/app/spreadsheet_controls.py",
