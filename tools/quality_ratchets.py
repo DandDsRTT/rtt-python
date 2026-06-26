@@ -25,18 +25,35 @@ def load_baseline() -> dict:
 def reach_through_violations(
     trees: list[tuple[Path, ast.Module]], baseline: dict
 ) -> list[Violation]:
-    total = sum(reach_through_by_handle(trees).values())
-    floor = baseline["reach_through_total"]
-    if total <= floor:
-        return []
-    return [
-        Violation(
-            "rtt/app",
-            1,
-            f"injected-handle reach-throughs rose to {total} (ratchet floor {floor}); a class "
-            "reaches self.<injected_handle>.<member> — inject the member or narrow the handle",
-        )
-    ]
+    counts = reach_through_by_handle(trees)
+    found: list[Violation] = []
+    total = sum(counts.values())
+    total_floor = baseline["reach_through_total"]
+    if total > total_floor:
+        found.append(_reach_total_violation(total, total_floor))
+    for handle, floor in sorted(baseline.get("reach_through_by_handle", {}).items()):
+        live = counts.get(handle, 0)
+        if live > floor:
+            found.append(_reach_handle_violation(handle, live, floor))
+    return found
+
+
+def _reach_total_violation(total: int, floor: int) -> Violation:
+    return Violation(
+        "rtt/app",
+        1,
+        f"injected-handle reach-throughs rose to {total} (ratchet floor {floor}); a class "
+        "reaches self.<injected_handle>.<member> — inject the member or narrow the handle",
+    )
+
+
+def _reach_handle_violation(handle: str, live: int, floor: int) -> Violation:
+    return Violation(
+        "rtt/app",
+        1,
+        f"reach-throughs via self.{handle} rose to {live} (per-handle floor {floor}); a "
+        "per-handle floor only shrinks — inject the member or narrow the handle",
+    )
 
 
 def demeter_violations(trees: list[tuple[Path, ast.Module]], baseline: dict) -> list[Violation]:
@@ -84,15 +101,18 @@ def class_surface_violations(
     trees: list[tuple[Path, ast.Module]], baseline: dict
 ) -> list[Violation]:
     floors = baseline["class_surface"]
+    surface = class_surface(trees)
     found = []
-    for name, counts in sorted(oversized_classes(class_surface(trees)).items()):
-        floor = floors.get(name)
-        if floor is None:
-            found.append(_new_god_object(name, counts))
+    for name, floor in sorted(floors.items()):
+        counts = surface.get(name)
+        if counts is None:
             continue
         for kind in ("methods", "attrs"):
             if counts[kind] > floor[kind]:
                 found.append(_class_grew(name, kind, counts[kind], floor[kind]))
+    for name, counts in sorted(oversized_classes(surface).items()):
+        if name not in floors:
+            found.append(_new_god_object(name, counts))
     return found
 
 

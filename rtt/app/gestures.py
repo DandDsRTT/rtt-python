@@ -21,9 +21,9 @@ class GestureController:
     def __init__(self, editor: Editor, runtime: PageRuntime) -> None:
         self._editor = editor
         self._runtime = runtime
-        self._rec: _Reconciler = None
-        self._renderer: Renderer = None
-        self._edits: EditController = None
+        self._rec: _Reconciler | None = None
+        self._renderer: Renderer | None = None
+        self._edits: EditController | None = None
         self.gesture = None
         self.gesture_rendering = False
         self.rank_remove = None
