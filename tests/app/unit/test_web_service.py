@@ -1331,7 +1331,7 @@ def test_plain_text_custom_prescaler_matches_the_grid():
     # those grid tiles — the bug this guards.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone over 2.3.5
     gb = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=(1.0, 2.0, 3.0))
-    pt = gb.ptext_strings
+    pt = gb.geometry.ptext_strings
     # each retuned ptext tile equals the grid's own quantity (the same formatter the grid value uses)
     assert pt[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tun.tuning_map)
     assert pt[("complexity", "targets")] == text_format._cents_list(gb.resolved.complexities["targets"])
@@ -1339,7 +1339,7 @@ def test_plain_text_custom_prescaler_matches_the_grid():
     # the bare prescaler reads the typed diagonal (1, 2, 3), not the scheme's log-prime weights
     assert pt[("prescaling", "primes")] == "[⟨1 0 0] ⟨0 2 0] ⟨0 0 3]⟩"
     # and it genuinely deviates from the no-override views (the divergence is gone, not coincidental)
-    plain = _grid_with_ptext(state, "TILT minimax-S").ptext_strings
+    plain = _grid_with_ptext(state, "TILT minimax-S").geometry.ptext_strings
     assert pt[("tuning", "primes")] != plain[("tuning", "primes")]
     assert pt[("prescaling", "primes")] != plain[("prescaling", "primes")]
 
@@ -1350,12 +1350,12 @@ def test_plain_text_custom_prescaler_renders_an_off_diagonal_matrix_like_the_gri
     # 𝑋[i][c]: the 0.5 sits in row 0, col 1. A naïve 𝐿·eₚ reuse would have shown its transpose.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     matrix = ((1.0, 0.5, 0.0), (0.0, 1.585, 0.0), (0.0, 0.0, 2.322))
-    pt = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=matrix).ptext_strings
+    pt = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=matrix).geometry.ptext_strings
     assert pt[("prescaling", "primes")] == "[⟨1 0.500 0] ⟨0 1.585 0] ⟨0 0 2.322]⟩"
     # the products and complexity still match the grid under the matrix override (no element-wise crash)
     gb = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=matrix)
-    assert gb.ptext_strings[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tun.tuning_map)
-    assert gb.ptext_strings[("complexity", "targets")] == text_format._cents_list(gb.resolved.complexities["targets"])
+    assert gb.geometry.ptext_strings[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tun.tuning_map)
+    assert gb.geometry.ptext_strings[("complexity", "targets")] == text_format._cents_list(gb.resolved.complexities["targets"])
 
 
 def test_plain_text_primes_complexity_runs_over_the_domain_basis_not_standard_primes():

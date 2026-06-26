@@ -33,7 +33,6 @@ from rtt.app.spreadsheet_emit_vectors import (
     emit_superspace_rows,
     emit_vectors,
 )
-from rtt.app.spreadsheet_geometry_model import _GeometryAccess
 from rtt.app.spreadsheet_resolve import Resolver
 from rtt.app.spreadsheet_resolved import Resolved
 from rtt.app.spreadsheet_text import (
@@ -41,32 +40,30 @@ from rtt.app.spreadsheet_text import (
 )
 
 
-class _GridBuilder(
-    Resolver,
-    _GeometryAccess,
-):
+class _GridBuilder(Resolver):
     def layout(self) -> Layout:
+        geometry = self.geometry
         cells, lines, blocks, approach_box = assemble(
-            self.resolved, self.geometry, build_context(self)
+            self.resolved, geometry, build_context(self)
         )
         title_right = max(
             (c.x + c.w / 2 + _title_w(c.text) / 2 for c in cells if c.kind == "colheader"),
-            default=self.total_w,
+            default=geometry.total_w,
         )
-        right_overhang = max(0.0, title_right - self.total_w)
+        right_overhang = max(0.0, title_right - geometry.total_w)
 
         return Layout(
-            self.total_w,
-            self.total_h,
+            geometry.total_w,
+            geometry.total_h,
             lines,
             blocks,
             cells,
-            freeze_x=self.node_edge + GAP - PAD,
-            freeze_y=self.branch_top_y + GAP + GRIP_BAND - PAD,
+            freeze_x=geometry.node_edge + GAP - PAD,
+            freeze_y=geometry.branch_top_y + GAP + GRIP_BAND - PAD,
             right_overhang=right_overhang,
             identities=self.resolved.col_ids,
             approach_box=approach_box,
-            pretransform=bool(self.size_factor) or self.resolved.scalars.prescaler_is_matrix,
+            pretransform=bool(geometry.size_factor) or self.resolved.scalars.prescaler_is_matrix,
         )
 
 
