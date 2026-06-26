@@ -268,6 +268,18 @@ main checkout, so the user's `python app.py` on 8137 no longer auto-updates when
 **by design**. The user pulls when they want to see new work (`git -C <main-checkout> pull`), or
 uses the deployed `danddsrtt-app.onrender.com`. You never touch their checkout.
 
+**Previewing UNLANDED branch work for the user.** Under the old flow agents merged to the local main
+and the user saw the change on 8137 before it went remote; the merge queue removes that — your work
+sits on a `claude/<name>` branch in your worktree, which the user **cannot** `git checkout` (it is
+"already used by worktree …") and which their 8137 never shows. So when the user wants to *see* a
+change before it lands, **launch the app from your worktree on a 8200+ port and hand them the
+`http://localhost:<port>/` URL** — this is the sanctioned way for the user to view branch work, not
+just for your own verification. Launch it with `reload=False` (set `PORT=<port>` in the env, which
+takes the hosted-mode `ui.run` path — bare `app.py <port>` turns hot-reload ON, which the port rule
+below bans for agent launches). It is a long-lived server the user drives, so start it in the
+background and leave it up; never use 8137/8188/8189 (see the port section). This does **not** relax
+"never launch on 8137" — it is an explicit case of the existing 8200+ rule, now also serving the user.
+
 ## Changed a workflow rule? Hand the user a broadcast for in-flight agents
 
 This file is loaded into an agent's context **at spawn**. So an edit here reaches every *newly*
