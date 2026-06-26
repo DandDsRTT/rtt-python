@@ -1,13 +1,8 @@
 from __future__ import annotations
 
 from rtt.app import editor_layout
-from rtt.app.editor_document import INITIAL_MAPPING, Document
-from rtt.app.editor_intervals import IntervalOps
-from rtt.app.editor_session import SessionOps
-from rtt.app.editor_settings_ops import ShowSettingsOps
-from rtt.app.editor_structure import StructureOps
-from rtt.app.editor_tuning import TuningOps
-from rtt.app.editor_view import TuningView
+from rtt.app.editor_document import Document
+from rtt.app.editor_state import INITIAL_MAPPING
 
 __all__ = ["INITIAL_MAPPING", "Editor"]
 
@@ -15,12 +10,6 @@ __all__ = ["INITIAL_MAPPING", "Editor"]
 class Editor:
     def __init__(self) -> None:
         self._doc = Document()
-        self._view = TuningView(self._doc)
-        self._structure = StructureOps(self._doc)
-        self._tuning = TuningOps(self._doc, self._view, self._structure)
-        self._intervals = IntervalOps(self._doc, self._view)
-        self._show = ShowSettingsOps(self._doc, self._structure)
-        self._session = SessionOps(self._doc)
 
     @property
     def state(self):
@@ -156,342 +145,342 @@ class Editor:
 
     @property
     def can_expand(self) -> bool:
-        return self._structure.can_expand
+        return self._doc.can_expand
 
     @property
     def basis_is_nonstandard(self) -> bool:
-        return self._structure.basis_is_nonstandard
+        return self._doc.basis_is_nonstandard
 
     @property
     def can_shrink(self) -> bool:
-        return self._structure.can_shrink
+        return self._doc.can_shrink
 
     @property
     def can_remove_domain_element(self) -> bool:
-        return self._structure.can_remove_domain_element
+        return self._doc.can_remove_domain_element
 
     @property
     def can_add_mapping_row(self) -> bool:
-        return self._structure.can_add_mapping_row
+        return self._doc.can_add_mapping_row
 
     @property
     def can_remove_mapping_row(self) -> bool:
-        return self._structure.can_remove_mapping_row
+        return self._doc.can_remove_mapping_row
 
     @property
     def displayed_tuning_scheme_name(self) -> str | None:
-        return self._view.displayed_tuning_scheme_name
+        return self._doc.displayed_tuning_scheme_name
 
     @property
     def tuning_is_optimized(self) -> bool:
-        return self._view.tuning_is_optimized
+        return self._doc.tuning_is_optimized
 
     @property
     def displayed_prescaler_name(self) -> str | None:
-        return self._view.displayed_prescaler_name
+        return self._doc.displayed_prescaler_name
 
     @property
     def unchanged_ratios(self) -> tuple[str, ...]:
-        return self._view.unchanged_ratios
+        return self._doc.unchanged_ratios
 
     @property
     def targets_in_use(self) -> bool:
-        return self._view.targets_in_use
+        return self._doc.targets_in_use
 
     @property
     def displayed_projection_scheme_name(self) -> str | None:
-        return self._view.displayed_projection_scheme_name
+        return self._doc.displayed_projection_scheme_name
 
     def effective_generator_tuning(self) -> tuple[float, ...] | None:
-        return self._view.effective_generator_tuning()
+        return self._doc.effective_generator_tuning()
 
     def optimum_generator_tuning(self) -> tuple[float, ...]:
-        return self._view.optimum_generator_tuning()
+        return self._doc.optimum_generator_tuning()
 
     def optimum_superspace_generator_tuning(self) -> tuple[float, ...]:
-        return self._view.optimum_superspace_generator_tuning()
+        return self._doc.optimum_superspace_generator_tuning()
 
     def displayed_retuning_map(self) -> tuple[float, ...] | None:
-        return self._view.displayed_retuning_map()
+        return self._doc.displayed_retuning_map()
 
     def current_targets(self) -> list[str]:
         return self._doc.current_targets()
 
     def list_vectors(self, name: str) -> list[tuple[int, ...]]:
-        return self._intervals.list_vectors(name)
+        return self._doc.list_vectors(name)
 
     def layout(self, prev_ids=None, preview_remove=None):
-        return editor_layout.build(self._doc, self._view, prev_ids, preview_remove)
+        return editor_layout.build(self._doc, prev_ids, preview_remove)
 
     def capture_for_preview(self) -> tuple:
-        return self._session.capture_for_preview()
+        return self._doc.capture_for_preview()
 
     def restore_for_preview(self, token: tuple) -> None:
-        self._session.restore_for_preview(token)
+        self._doc.restore_for_preview(token)
 
     def undo(self) -> None:
-        self._session.undo()
+        self._doc.undo()
 
     def redo(self) -> None:
-        self._session.redo()
+        self._doc.redo()
 
     def reset(self) -> None:
-        self._session.reset()
+        self._doc.reset()
 
     def serialize(self) -> dict:
-        return self._session.serialize()
+        return self._doc.serialize()
 
     def load(self, data: dict) -> None:
-        self._session.load(data)
+        self._doc.load(data)
 
     def set_show(self, key: str, value: bool) -> None:
-        self._show.set_show(key, value)
+        self._doc.set_show(key, value)
 
     def set_all_show(self, value: bool, keys=None) -> None:
-        self._show.set_all_show(value, keys)
+        self._doc.set_all_show(value, keys)
 
     def disable_hidden_settings(self, chapter: int) -> None:
-        self._show.disable_hidden_settings(chapter)
+        self._doc.disable_hidden_settings(chapter)
 
     def toggle_collapsed(self, item: str) -> None:
-        self._show.toggle_collapsed(item)
+        self._doc.toggle_collapsed(item)
 
     def set_collapsed(self, items) -> None:
-        self._show.set_collapsed(items)
+        self._doc.set_collapsed(items)
 
     def edit_mapping(self, mapping) -> None:
-        self._structure.edit_mapping(mapping)
+        self._doc.edit_mapping(mapping)
 
     def edit_comma_basis(self, comma_basis, domain_basis=None) -> None:
-        self._structure.edit_comma_basis(comma_basis, domain_basis)
+        self._doc.edit_comma_basis(comma_basis, domain_basis)
 
     def exit_nonstandard_domain(self) -> None:
-        self._structure.exit_nonstandard_domain()
+        self._doc.exit_nonstandard_domain()
 
     def set_mapping_row(self, i: int, val) -> bool:
-        return self._structure.set_mapping_row(i, val)
+        return self._doc.set_mapping_row(i, val)
 
     def set_comma(self, c: int, vector) -> bool:
-        return self._structure.set_comma(c, vector)
+        return self._doc.set_comma(c, vector)
 
     def canonicalize_mapping(self) -> None:
-        self._structure.canonicalize_mapping()
+        self._doc.canonicalize_mapping()
 
     def set_mapping_form(self, form: str) -> None:
-        self._structure.set_mapping_form(form)
+        self._doc.set_mapping_form(form)
 
     def edit_form_matrix(self, form_rows) -> bool:
-        return self._structure.edit_form_matrix(form_rows)
+        return self._doc.edit_form_matrix(form_rows)
 
     def try_edit_form_matrix_text(self, text: str) -> bool:
-        return self._structure.try_edit_form_matrix_text(text)
+        return self._doc.try_edit_form_matrix_text(text)
 
     def canonicalize_comma_basis(self) -> None:
-        self._structure.canonicalize_comma_basis()
+        self._doc.canonicalize_comma_basis()
 
     def set_comma_basis_form(self, form: str) -> None:
-        self._structure.set_comma_basis_form(form)
+        self._doc.set_comma_basis_form(form)
 
     def try_edit_mapping_text(self, text: str) -> bool:
-        return self._structure.try_edit_mapping_text(text)
+        return self._doc.try_edit_mapping_text(text)
 
     def try_edit_comma_basis_text(self, text: str) -> bool:
-        return self._structure.try_edit_comma_basis_text(text)
+        return self._doc.try_edit_comma_basis_text(text)
 
     def expand(self) -> None:
-        self._structure.expand()
+        self._doc.expand()
 
     def shrink(self) -> None:
-        self._structure.shrink()
+        self._doc.shrink()
 
     def add_mapping_row(self) -> None:
-        self._structure.add_mapping_row()
+        self._doc.add_mapping_row()
 
     def set_pending_mapping_row(self, values) -> None:
-        self._structure.set_pending_mapping_row(values)
+        self._doc.set_pending_mapping_row(values)
 
     def cancel_pending_mapping_row(self) -> None:
-        self._structure.cancel_pending_mapping_row()
+        self._doc.cancel_pending_mapping_row()
 
     def remove_mapping_row(self, i: int) -> None:
-        self._structure.remove_mapping_row(i)
+        self._doc.remove_mapping_row(i)
 
     def add_mapping_row_to(self, source: int, target: int) -> None:
-        self._structure.add_mapping_row_to(source, target)
+        self._doc.add_mapping_row_to(source, target)
 
     def add_comma_to(self, source: int, target: int) -> None:
-        self._structure.add_comma_to(source, target)
+        self._doc.add_comma_to(source, target)
 
     def add_comma(self) -> None:
-        self._structure.add_comma()
+        self._doc.add_comma()
 
     def set_pending_comma(self, values) -> None:
-        self._structure.set_pending_comma(values)
+        self._doc.set_pending_comma(values)
 
     def cancel_pending_comma(self) -> None:
-        self._structure.cancel_pending_comma()
+        self._doc.cancel_pending_comma()
 
     def remove_comma(self, index: int = -1) -> None:
-        self._structure.remove_comma(index)
+        self._doc.remove_comma(index)
 
     def add_element(self) -> None:
-        self._structure.add_element()
+        self._doc.add_element()
 
     def set_pending_element(self, text) -> None:
-        self._structure.set_pending_element(text)
+        self._doc.set_pending_element(text)
 
     def remove_element(self) -> None:
-        self._structure.remove_element()
+        self._doc.remove_element()
 
     def remove_domain_element(self, index: int) -> None:
-        self._structure.remove_domain_element(index)
+        self._doc.remove_domain_element(index)
 
     def set_domain_element(self, index: int, text) -> None:
-        self._structure.set_domain_element(index, text)
+        self._doc.set_domain_element(index, text)
 
     def add_interest(self) -> None:
-        self._intervals.add_interest()
+        self._doc.add_interest()
 
     def set_pending_interest(self, values) -> None:
-        self._intervals.set_pending_interest(values)
+        self._doc.set_pending_interest(values)
 
     def cancel_pending_interest(self) -> None:
-        self._intervals.cancel_pending_interest()
+        self._doc.cancel_pending_interest()
 
     def remove_interest(self, i: int) -> None:
-        self._intervals.remove_interest(i)
+        self._doc.remove_interest(i)
 
     def set_interest_vectors(self, vectors) -> None:
-        self._intervals.set_interest_vectors(vectors)
+        self._doc.set_interest_vectors(vectors)
 
     def add_held(self) -> None:
-        self._intervals.add_held()
+        self._doc.add_held()
 
     def set_pending_held(self, values) -> None:
-        self._intervals.set_pending_held(values)
+        self._doc.set_pending_held(values)
 
     def cancel_pending_held(self) -> None:
-        self._intervals.cancel_pending_held()
+        self._doc.cancel_pending_held()
 
     def remove_held(self, i: int) -> None:
-        self._intervals.remove_held(i)
+        self._doc.remove_held(i)
 
     def set_held_vectors(self, vectors) -> None:
-        self._intervals.set_held_vectors(vectors)
+        self._doc.set_held_vectors(vectors)
 
     def set_target_spec(self, spec: str) -> None:
-        self._intervals.set_target_spec(spec)
+        self._doc.set_target_spec(spec)
 
     def set_target_override_text(self, text: str) -> bool:
-        return self._intervals.set_target_override_text(text)
+        return self._doc.set_target_override_text(text)
 
     def set_target_override_vectors(self, vectors) -> None:
-        self._intervals.set_target_override_vectors(vectors)
+        self._doc.set_target_override_vectors(vectors)
 
     def add_target(self) -> None:
-        self._intervals.add_target()
+        self._doc.add_target()
 
     def set_pending_target(self, values) -> None:
-        self._intervals.set_pending_target(values)
+        self._doc.set_pending_target(values)
 
     def cancel_pending_target(self) -> None:
-        self._intervals.cancel_pending_target()
+        self._doc.cancel_pending_target()
 
     def remove_target(self, i: int) -> None:
-        self._intervals.remove_target(i)
+        self._doc.remove_target(i)
 
     def move_interval(self, src_list: str, src_idx: int, dst_list: str, dst_idx: int) -> bool:
-        return self._intervals.move_interval(src_list, src_idx, dst_list, dst_idx)
+        return self._doc.move_interval(src_list, src_idx, dst_list, dst_idx)
 
     def add_interest_to(self, source: int, target: int) -> None:
-        self._intervals.add_interest_to(source, target)
+        self._doc.add_interest_to(source, target)
 
     def add_held_to(self, source: int, target: int) -> None:
-        self._intervals.add_held_to(source, target)
+        self._doc.add_held_to(source, target)
 
     def add_target_to(self, source: int, target: int) -> None:
-        self._intervals.add_target_to(source, target)
+        self._doc.add_target_to(source, target)
 
     def set_range_mode(self, mode: str) -> None:
-        self._intervals.set_range_mode(mode)
+        self._doc.set_range_mode(mode)
 
     def back_to_scheme(self) -> None:
-        self._tuning.back_to_scheme()
+        self._doc.back_to_scheme()
 
     def set_generator_tuning_text(self, text: str) -> bool:
-        return self._tuning.set_generator_tuning_text(text)
+        return self._doc.set_generator_tuning_text(text)
 
     def set_generator_tuning_component(self, i: int, cents: float) -> None:
-        self._tuning.set_generator_tuning_component(i, cents)
+        self._doc.set_generator_tuning_component(i, cents)
 
     def nudge_generator_tuning_component(self, i: int, steps: int) -> None:
-        self._tuning.nudge_generator_tuning_component(i, steps)
+        self._doc.nudge_generator_tuning_component(i, steps)
 
     def flip_generator(self, i: int) -> None:
-        self._tuning.flip_generator(i)
+        self._doc.flip_generator(i)
 
     def set_superspace_generator_tuning_text(self, text: str) -> bool:
-        return self._tuning.set_superspace_generator_tuning_text(text)
+        return self._doc.set_superspace_generator_tuning_text(text)
 
     def set_superspace_generator_tuning_component(self, i: int, cents: float) -> None:
-        self._tuning.set_superspace_generator_tuning_component(i, cents)
+        self._doc.set_superspace_generator_tuning_component(i, cents)
 
     def nudge_superspace_generator_tuning_component(self, i: int, steps: int) -> None:
-        self._tuning.nudge_superspace_generator_tuning_component(i, steps)
+        self._doc.nudge_superspace_generator_tuning_component(i, steps)
 
     def try_edit_projection_text(self, text: str) -> bool:
-        return self._tuning.try_edit_projection_text(text)
+        return self._doc.try_edit_projection_text(text)
 
     def try_edit_embedding_text(self, text: str) -> bool:
-        return self._tuning.try_edit_embedding_text(text)
+        return self._doc.try_edit_embedding_text(text)
 
     def set_tuning_scheme(self, name: str) -> None:
-        self._tuning.set_tuning_scheme(name)
+        self._doc.set_tuning_scheme(name)
 
     def set_established_projection(self, name: str | None) -> None:
-        self._tuning.set_established_projection(name)
+        self._doc.set_established_projection(name)
 
     def set_unchanged_basis(self, ratios) -> None:
-        self._tuning.set_unchanged_basis(ratios)
+        self._doc.set_unchanged_basis(ratios)
 
     def set_projection_matrix(self, projection) -> bool:
-        return self._tuning.set_projection_matrix(projection)
+        return self._doc.set_projection_matrix(projection)
 
     def set_embedding_matrix(self, embedding) -> bool:
-        return self._tuning.set_embedding_matrix(embedding)
+        return self._doc.set_embedding_matrix(embedding)
 
     def set_complexity_prescaler(self, prescaler: str) -> None:
-        self._tuning.set_complexity_prescaler(prescaler)
+        self._doc.set_complexity_prescaler(prescaler)
 
     def set_complexity_norm_power(self, power: float) -> None:
-        self._tuning.set_complexity_norm_power(power)
+        self._doc.set_complexity_norm_power(power)
 
     def set_optimization_power(self, power: float) -> None:
-        self._tuning.set_optimization_power(power)
+        self._doc.set_optimization_power(power)
 
     def set_weight_slope(self, slope: str) -> None:
-        self._tuning.set_weight_slope(slope)
+        self._doc.set_weight_slope(slope)
 
     def set_nonprime_basis_approach(self, approach: str) -> None:
-        self._tuning.set_nonprime_basis_approach(approach)
+        self._doc.set_nonprime_basis_approach(approach)
 
     def set_complexity_name(self, name: str) -> None:
-        self._tuning.set_complexity_name(name)
+        self._doc.set_complexity_name(name)
 
     def set_custom_prescaler_entry(self, i: int, j: int, value: float) -> None:
-        self._tuning.set_custom_prescaler_entry(i, j, value)
+        self._doc.set_custom_prescaler_entry(i, j, value)
 
     def set_custom_prescaler_text(self, text: str) -> bool:
-        return self._tuning.set_custom_prescaler_text(text)
+        return self._doc.set_custom_prescaler_text(text)
 
     def set_diminuator_replaced(self, replaced: bool) -> None:
-        self._tuning.set_diminuator_replaced(replaced)
+        self._doc.set_diminuator_replaced(replaced)
 
     def set_all_interval(self, all_interval: bool) -> None:
-        self._tuning.set_all_interval(all_interval)
+        self._doc.set_all_interval(all_interval)
 
     def set_custom_weight_entry(self, i: int, value: float) -> None:
-        self._tuning.set_custom_weight_entry(i, value)
+        self._doc.set_custom_weight_entry(i, value)
 
     def set_custom_weights(self, weights) -> None:
-        self._tuning.set_custom_weights(weights)
+        self._doc.set_custom_weights(weights)

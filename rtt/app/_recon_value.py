@@ -32,6 +32,7 @@ from rtt.app.render_html import (
 class _ReconValueCells:
     def __init__(self, r) -> None:
         self.r = r
+        self._editor = r._editor
 
     def _put_stacked_face(self, cid: str, cls: str, main: str, sub: str, width: float) -> None:
         with ui.element("div").classes(cls):
@@ -169,7 +170,8 @@ class _ReconValueCells:
         ops = self.r.handles(cid).value.ratio_op
         if ops is None:
             return
-        availability = service.interval_op_availability(text, self.r._editor.state.domain_basis)
+        state = self._editor.state
+        availability = service.interval_op_availability(text, state.domain_basis)
         for btn, enabled in zip(ops, availability, strict=False):
             btn.classes(
                 add="" if enabled else "rtt-op-disabled",

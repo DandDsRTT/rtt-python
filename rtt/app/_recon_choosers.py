@@ -27,6 +27,7 @@ from rtt.app.render_html import (
 class _ReconChoosers:
     def __init__(self, r) -> None:
         self.r = r
+        self._editor = r._editor
 
     def _build_rangemode(self, cb: spreadsheet.CellBox, wrap) -> None:
         wrap.classes("rtt-rangemode")
@@ -278,19 +279,15 @@ class _ReconChoosers:
         self.r.cells[cb.id].chooser.select = sel
 
     def _build_etpick(self, cb, wrap):
-        db = self.r._editor.state.domain_basis
-        value = (
-            None if cb.pending else presets.identify_et(self.r._editor.state.mapping[cb.gen], db)
-        )
+        state = self._editor.state
+        db = state.domain_basis
+        value = None if cb.pending else presets.identify_et(state.mapping[cb.gen], db)
         self._build_subpick(cb, wrap, presets.et_options(db), value)
 
     def _build_commapick(self, cb, wrap):
-        db = self.r._editor.state.domain_basis
-        value = (
-            None
-            if cb.pending
-            else presets.identify_comma(self.r._editor.state.comma_basis[cb.comma], db)
-        )
+        state = self._editor.state
+        db = state.domain_basis
+        value = None if cb.pending else presets.identify_comma(state.comma_basis[cb.comma], db)
         self._build_subpick(cb, wrap, presets.comma_options(db), value)
 
     def _update_subpick(self, cb):
@@ -300,19 +297,20 @@ class _ReconChoosers:
         sel = self.r.handles(cb.id).chooser.select
         if not isinstance(sel, ui.select):
             return
-        db = self.r._editor.state.domain_basis
+        state = self._editor.state
+        db = state.domain_basis
         if cb.id.startswith("etpick:"):
             options = presets.et_options(db)
-            if cb.pending or cb.gen >= len(self.r._editor.state.mapping):
+            if cb.pending or cb.gen >= len(state.mapping):
                 value = None
             else:
-                value = presets.identify_et(self.r._editor.state.mapping[cb.gen], db)
+                value = presets.identify_et(state.mapping[cb.gen], db)
         else:
             options = presets.comma_options(db)
-            if cb.pending or cb.comma >= len(self.r._editor.state.comma_basis):
+            if cb.pending or cb.comma >= len(state.comma_basis):
                 value = None
             else:
-                value = presets.identify_comma(self.r._editor.state.comma_basis[cb.comma], db)
+                value = presets.identify_comma(state.comma_basis[cb.comma], db)
         value = value if value in options else None
         sel.set_options(options, value=value)
         _set_offlist_prompt(sel, value)
