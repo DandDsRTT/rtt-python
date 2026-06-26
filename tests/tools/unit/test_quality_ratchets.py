@@ -191,6 +191,22 @@ def test_reach_through_gate_is_a_ratchet_floor(tmp_path):
     assert qr.reach_through_violations(trees, {"reach_through_total": 1}) != []
 
 
+def test_per_handle_floors_at_baseline_pass(tmp_path):
+    write(tmp_path, "m.py", REACH_THROUGH)
+    trees = trees_under(tmp_path)
+    at_floor = {"reach_through_total": 2, "reach_through_by_handle": {"_host": 1, "_editor": 1}}
+    assert qr.reach_through_violations(trees, at_floor) == []
+
+
+def test_a_handle_rising_above_its_floor_fails_even_when_total_stays_flat(tmp_path):
+    write(tmp_path, "m.py", REACH_THROUGH)
+    trees = trees_under(tmp_path)
+    floors = {"reach_through_total": 2, "reach_through_by_handle": {"_host": 0, "_editor": 2}}
+    violations = qr.reach_through_violations(trees, floors)
+    assert any("self._host rose to 1 (per-handle floor 0)" in v.message for v in violations)
+    assert not any("injected-handle reach-throughs rose" in v.message for v in violations)
+
+
 ALIASED_REACH = (
     "class C:\n"
     "    def __init__(self, host):\n"
@@ -400,6 +416,17 @@ def test_class_surface_gate_bans_growth_and_new_god_objects(tmp_path):
     assert any(
         "grew to" in v.message for v in qr.class_surface_violations(trees, {"class_surface": lower})
     )
+
+
+def test_class_surface_floor_is_checked_when_class_drops_below_oversized(tmp_path):
+    write(tmp_path, "g.py", klass("G", qm.CLASS_METHOD_FLOOR - 1, qm.CLASS_ATTR_FLOOR))
+    trees = trees_under(tmp_path)
+    surface = qm.class_surface(trees)
+    key = next(k for k in surface if k.endswith("::G"))
+    assert key not in qm.oversized_classes(surface)
+    floor = {key: {"methods": qm.CLASS_METHOD_FLOOR - 2, "attrs": qm.CLASS_ATTR_FLOOR + 1}}
+    violations = qr.class_surface_violations(trees, {"class_surface": floor})
+    assert any(f"grew to {qm.CLASS_METHOD_FLOOR} methods" in v.message for v in violations)
 
 
 def test_comment_gate_passes_platform_notes_but_bans_explanatory(tmp_path):

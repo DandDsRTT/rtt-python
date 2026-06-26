@@ -31,7 +31,7 @@ in lockstep with the refactors so the gate stays green at every step.
 | Statements per function | ≤ 50 | ≤ 10 | ruff |
 | Branches per function | ≤ 12 | ≤ 8 | ruff |
 | Nesting depth | ≤ 4 | ≤ 3 | ruff |
-| Efferent coupling (fan-out) | ≤ 18 | ↓ | `tools/quality_checks.py` |
+| Transitive efferent coupling | per-module ratchet (floor 8) | ↓ | `tools/quality_checks.py` |
 | Class cohesion (LCOM4) | ≤ 10 | ↓ | `tools/quality_checks.py` |
 | Depth of inheritance (DIT) | ≤ 2 | ≤ 2 | `tools/quality_checks.py` |
 | Number of children (NOC) | ≤ 3 | ≤ 3 | `tools/quality_checks.py` |
@@ -40,9 +40,11 @@ in lockstep with the refactors so the gate stays green at every step.
 
 The architectural rails (coupling / LCOM4 / DIT / NOC) are calibrated to the
 current worst value so they pass today and **ratchet down** as the oversized modules
-split — exactly like file/function length. Afferent coupling (fan-in) is reported,
-not gated: a high fan-in is the heavily-used shared core (e.g. `library.temperament`),
-which is healthy, not a smell.
+split — exactly like file/function length. Coupling is a **per-module transitive
+ratchet**, not a single threshold: every module at or above `COUPLING_FLOOR` (8) gets a
+floor in `tools/quality_baseline.json` (`coupling`) that can only shrink. Afferent
+coupling (fan-in) is reported, not gated: a high fan-in is the heavily-used shared core
+(e.g. `library.temperament`), which is healthy, not a smell.
 
 **The reach-through gate (a ratchet to an irreducible floor).** The view/editor controllers used
 to hold a whole god-object and reach through it — `self.page.editor.state…`, ~498 such reaches.
@@ -53,7 +55,9 @@ do). `tools/quality_ratchets.py` pins the results in `tools/quality_baseline.jso
 can only shrink, never grow**:
 
 - `reach_through_total` (the whole-tree count of injected-handle reaches),
-- a per-handle floor for each named handle,
+- a per-handle floor for each named handle, enforced independently of the total — a handle
+  whose live reach count exceeds its floor fails the gate even when another handle shrank to
+  keep the total flat,
 - a Demeter-depth ceiling (no `self.a.b.c.d` chains),
 - a `SimpleNamespace`-bag ban (no untyped mutable bag shared across files — the spreadsheet
   builder's old census, since replaced by frozen `resolved` / `geometry` records), and
@@ -67,8 +71,11 @@ to ratchet, reduce a real count, then lower its floor in the same PR (the gate c
 
 To ratchet: lower the values in `pyproject.toml` (`[tool.ruff.lint.*]`) and the
 constants in `tools/quality_checks.py` (`MAX_FILE_LINES`, `MAX_FUNCTION_LINES`,
-`MAX_EFFERENT_COUPLING`, `MAX_LCOM4`, `MAX_DIT`, `MAX_NOC`), after the corresponding
-refactor lands.
+`MAX_LCOM4`, `MAX_DIT`, `MAX_NOC`), after the corresponding refactor lands. Transitive
+coupling has no single `MAX` constant: cut a module's internal deps, then lower its
+floor in `tools/quality_baseline.json` (`coupling`) in the same PR — the same
+shrink-only ratchet as the reach-through floors (`COUPLING_FLOOR` is only the threshold
+at which a new module first gets a floor, not a global cap).
 
 ## The metric wishlist
 
