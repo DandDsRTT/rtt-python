@@ -1,17 +1,16 @@
 {
-  "reach_through_total": 310,
+  "reach_through_total": 305,
   "reach_through_by_handle": {
     "_chrome": 78,
     "_editor": 71,
     "_rec": 47,
-    "state": 34,
     "_runtime": 33,
+    "state": 31,
     "_gestures": 19,
     "_renderer": 10,
     "_edits": 7,
     "e": 5,
     "_handlers": 3,
-    "settings": 2,
     "class_handles": 1
   },
   "demeter_chains": [],
@@ -60,7 +59,7 @@
       "attrs": 0
     },
     "rtt/app/spreadsheet_resolve.py::Resolver": {
-      "methods": 21,
+      "methods": 18,
       "attrs": 30
     }
   },

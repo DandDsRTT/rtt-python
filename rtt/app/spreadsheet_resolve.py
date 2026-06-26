@@ -5,13 +5,15 @@ from typing import NamedTuple
 
 from rtt.app import service
 from rtt.app.settings import defaults as _default_settings
-from rtt.app.spreadsheet_constants import (
-    SYMBOL_H,
-)
 from rtt.app.spreadsheet_emit_model import build_context
 from rtt.app.spreadsheet_layout import compute_geometry
-from rtt.app.spreadsheet_models import _resolve_prescaler_labels, _resolve_show_flags
 from rtt.app.spreadsheet_resolve_draft import ResolveDraft
+from rtt.app.spreadsheet_resolve_inputs import make_inputs
+from rtt.app.spreadsheet_resolve_steps import (
+    resolve_prescaler_and_domain_labels,
+    resolve_superspace_dims,
+    unpack_show_flags,
+)
 from rtt.app.spreadsheet_resolved import freeze
 from rtt.app.spreadsheet_text import _min_width_for_lines, assign_column_tokens
 
@@ -71,12 +73,13 @@ class Resolver:
                        and len(self.state.mapping) > 1 and 0 <= self.preview_remove[1] < len(self.state.mapping))
         if not (ghost_row or ghost_comma):
             self.preview_remove = None
+        inputs = make_inputs(self, held_vectors, pending_comma)
         draft = ResolveDraft(ghost_row=ghost_row, ghost_comma=ghost_comma,
                              displayed_tuning_name=self.displayed_tuning_name,
                              displayed_projection_name=self.displayed_projection_name)
-        draft = self._unpack_show_flags(draft)
-        draft = self._resolve_superspace_dims(draft)
-        draft = self._resolve_prescaler_and_domain_labels(draft)
+        draft = unpack_show_flags(inputs, draft)
+        draft = resolve_superspace_dims(inputs, draft)
+        draft = resolve_prescaler_and_domain_labels(inputs, draft)
         draft = self._resolve_interval_sets(draft, generator_tuning, target_override, held_vectors, pending_comma)
         draft = self._resolve_complexities(draft)
         draft = self._resolve_detempering(draft)
@@ -87,62 +90,6 @@ class Resolver:
             return
 
         self.geometry = compute_geometry(self.resolved, build_context(self))
-
-    def _unpack_show_flags(self, draft):
-        _f = _resolve_show_flags(self.settings, self.collapsed)
-        show_symbols, show_weighting, show_math = _f.symbols, _f.weighting, _f.math
-        complexity_shown = (show_weighting
-                            and service.damage_weight_slope(self.tuning_scheme) != "unityWeight")
-        prescaling_shown = complexity_shown and (
-            service.is_all_interval(self.tuning_scheme) or _f.alt_complexity)
-        weight_unit = f"({service.weight_annotation(self.tuning_scheme)})"
-        return replace(
-            draft, show_captions=_f.captions, show_mnemonics=_f.mnemonics, show_equiv=_f.equiv,
-            show_presets=_f.presets, show_counts=_f.counts, show_ptext=_f.ptext, show_charts=_f.charts,
-            show_ranges=_f.ranges, show_symbols=show_symbols, ctrl_symbol_h=SYMBOL_H if show_symbols else 0,
-            show_header_symbols=_f.header_symbols, show_units=_f.units, show_cell_units=_f.cell_units,
-            show_domain_units=_f.domain_units, show_temp=_f.temp, show_form=_f.form,
-            show_form_controls=_f.form_controls, show_form_tiles=_f.form_tiles, show_tuning=_f.tuning,
-            show_optimization=_f.optimization, show_weighting=show_weighting,
-            show_alt_complexity=_f.alt_complexity, _complexity_shown=complexity_shown,
-            _prescaling_shown=prescaling_shown, weight_unit=weight_unit,
-            complexity_unit=f"({service.complexity_annotation(self.tuning_scheme)})",
-            damage_unit=f"¢{weight_unit}", _lbox_show=_f.lbox and complexity_shown,
-            _cbox_show=_f.cbox and complexity_shown, show_detempering=_f.detempering,
-            show_interest=_f.interest, gridded=_f.gridded, show_quantities=_f.quantities,
-            _decimals=_f.decimals, show_ebk=_f.ebk, show_interval_ratios=_f.interval_ratios,
-            show_interval_vectors=_f.interval_vectors, show_math=show_math,
-            custom_weights_active=(self.custom_weights is not None
-                                   and not service.is_all_interval(self.tuning_scheme)
-                                   and not show_math))
-
-    def _resolve_superspace_dims(self, draft):
-        elements = self.state.domain_basis
-        r = len(self.state.mapping)
-        row_draft = self.pending_mapping_row is not None or draft.ghost_row
-        show_nonstandard_domain = self.settings.get("nonstandard_domain", False)
-        show_superspace = (show_nonstandard_domain
-                           and service.domain_has_nonprimes(elements)
-                           and self.nonprime_approach != "nonprime-based")
-        return replace(
-            draft, d=self.state.d, r=r, row_draft=row_draft, r_shown=r + (1 if row_draft else 0),
-            elements=elements, dL=service.superspace_dimension(elements),
-            rL=service.superspace_rank(self.state), superspace_primes=service.superspace_primes(elements),
-            show_nonstandard_domain=show_nonstandard_domain, show_superspace=show_superspace,
-            show_superspace_generators=show_superspace and self.nonprime_approach == "prime-based")
-
-    def _resolve_prescaler_and_domain_labels(self, draft):
-        _p = _resolve_prescaler_labels(self.state, self.tuning_scheme, self.custom_prescaler,
-                                       draft.show_equiv, draft.show_superspace)
-        return replace(
-            draft, _scheme_prescaler=_p.scheme_prescaler, _realized_prescaler=_p.realized,
-            prescaler_symbol=_p.symbol, prescaler_equivalence=_p.equivalence,
-            prescaling_symbols=_p.prescaling_symbols, col_labels=_p.col_labels, row_labels=_p.row_labels,
-            effective_captions=_p.effective_captions,
-            show_identity_objects=self.settings.get("identity_objects", False),
-            standard_domain=service.is_standard_domain(draft.elements),
-            domain_label="b" if service.domain_has_nonprimes(draft.elements) else "p",
-            domain_can_shrink=service.can_shrink_domain(self.state))
 
     def _resolve_interval_sets(self, draft, generator_tuning, target_override, held_vectors, pending_comma):
         draft = self._resolve_ghost_previews(draft)
