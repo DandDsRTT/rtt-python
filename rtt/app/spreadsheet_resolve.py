@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import NamedTuple
 
 from rtt.app import service
 from rtt.app.settings import defaults as _default_settings
@@ -410,15 +411,12 @@ class Resolver:
             ss_unchanged_mapped=tuple(_ss_map(ub) for ub in unchanged_basis))
 
 
-class _Unchanged:
-    __slots__ = ("basis", "ratios", "mapped", "sizes", "complexities")
-
-    def __init__(self, basis, ratios, mapped, sizes, complexities):
-        self.basis = basis
-        self.ratios = ratios
-        self.mapped = mapped
-        self.sizes = sizes
-        self.complexities = complexities
+class _Unchanged(NamedTuple):
+    basis: object
+    ratios: object
+    mapped: object
+    sizes: object
+    complexities: object
 
 
 def _initial_unchanged(udata):
