@@ -44,17 +44,26 @@ split — exactly like file/function length. Afferent coupling (fan-in) is repor
 not gated: a high fan-in is the heavily-used shared core (e.g. `library.temperament`),
 which is healthy, not a smell.
 
-**The `self.page` god-handle gate (target 0, gated now).** The view controllers used to
-hold the whole `_Page` and reach through it — `self.page.editor.state…` — ~498 such reaches.
-After they were given injected deps (PRs #33/#34/#36/#38), that count is **0**, and
-`page_reach_violations` now **fails the build on any `self.page.<x>`** (one documented
-exemption: `tooltips.py`'s `GuideHelp.page` is a wiki-page-name string, not the handle).
-This is the one rail set to *bite from zero* rather than calibrated to current-worst — it locks
-in the decoupling instead of trailing it. The companion measure for the spreadsheet builder
-(`spreadsheet_shared_state_violations`: cross-file shared mutable `self` across its files, the
-census that exposed that god-object) is **also gated now** — the pipeline campaign drove it from
-**141 → 13** (the remaining 13 are the frozen `resolved`/`geometry` value objects + raw build
-inputs, not god-state), and the gate is pinned at **13 so it can only ratchet down**, never regrow.
+**The reach-through gate (a ratchet to an irreducible floor).** The view/editor controllers used
+to hold a whole god-object and reach through it — `self.page.editor.state…`, ~498 such reaches.
+The gate that catches this is `tools/quality_metrics.py`: it counts `self.<handle>.<member>` chains
+where `<handle>` is an *injected* collaborator, resolved **per inheritance component** so a class
+reading its OWN state does not count (constructor-, inheritance-, and `bind()`-injected handles all
+do). `tools/quality_ratchets.py` pins the results in `tools/quality_baseline.json` as **floors that
+can only shrink, never grow**:
+
+- `reach_through_total` (the whole-tree count of injected-handle reaches),
+- a per-handle floor for each named handle,
+- a Demeter-depth ceiling (no `self.a.b.c.d` chains),
+- a `SimpleNamespace`-bag ban (no untyped mutable bag shared across files — the spreadsheet
+  builder's old census, since replaced by frozen `resolved` / `geometry` records), and
+- a class-surface ceiling (per-class method and attribute counts).
+
+This replaced the original **name-matching** gates (a literal `self.page.<x>` check and a
+`spreadsheet_shared_state` census) once an audit showed a god-object could dodge them by simply
+renaming the handle. That finding *became* this metric — the canonical worked example of the audit
+loop documented at the end of this file. The live floors are whatever `quality_baseline.json` holds;
+to ratchet, reduce a real count, then lower its floor in the same PR (the gate confirms it shrank).
 
 To ratchet: lower the values in `pyproject.toml` (`[tool.ruff.lint.*]`) and the
 constants in `tools/quality_checks.py` (`MAX_FILE_LINES`, `MAX_FUNCTION_LINES`,
