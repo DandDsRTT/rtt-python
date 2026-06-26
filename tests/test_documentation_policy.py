@@ -24,7 +24,7 @@ _PLATFORM_LIMITATION = re.compile(
 _COMMENT_ALLOWANCE = {
     "app/app.py": 13,
     "app/page_assets.py": 29,
-    "app/reconciler.py": 2,
+    "app/_recon_cells.py": 2,
     "app/_recon_choosers.py": 9,
     "app/_recon_buttons.py": 2,
     "app/_recon_drag.py": 6,
