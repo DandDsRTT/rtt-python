@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from rtt.app import service
 from rtt.app.settings import defaults as _default_settings
 from rtt.app.spreadsheet_emit_model import build_context
 from rtt.app.spreadsheet_layout import compute_geometry
 from rtt.app.spreadsheet_resolve_draft import ResolveDraft
-from rtt.app.spreadsheet_resolve_inputs import make_inputs
+from rtt.app.spreadsheet_resolve_inputs import ResolveInputs
 from rtt.app.spreadsheet_resolve_intervals import resolve_interval_sets
 from rtt.app.spreadsheet_resolve_steps import (
     determine_ghosts,
@@ -31,50 +33,46 @@ class Resolver:
                  targets_in_use=True, pending_mapping_row=None, preview_remove=None,
                  mapping_form=None, comma_basis_form=None, resolve_only=False):
         self._resolve_only = resolve_only
-        self.prev_ids = prev_ids or {}
-        self.mapping_form = mapping_form
-        self.comma_basis_form = comma_basis_form
-        self.preview_remove = preview_remove
-        self.targets_in_use = targets_in_use
-        self.state = state
-        self.settings = settings
-        self.collapsed = collapsed
-        self.tuning_scheme = tuning_scheme
-        self.target_spec = target_spec
-        self.interest = interest
-        self.range_mode = range_mode
-        self.pending_interest = pending_interest
-        self.pending_held = pending_held
-        self.pending_target = pending_target
-        self.pending_element = pending_element
-        self.pending_mapping_row = pending_mapping_row
-        self.custom_prescaler = custom_prescaler
-        self.custom_weights = custom_weights
-        self.tuning_optimized = tuning_optimized
-        self.nonprime_approach = nonprime_approach
-        self.superspace_generator_tuning = superspace_generator_tuning
-        self.displayed_tuning_name = displayed_tuning_name
-        self.held_basis_ratios = held_basis_ratios
-        self.displayed_projection_name = displayed_projection_name
-        self.generator_tuning = generator_tuning
-        self.target_override = target_override
+        self.inputs = ResolveInputs(
+            state=state,
+            settings=settings if settings is not None else _default_settings(),
+            collapsed=collapsed or frozenset(),
+            tuning_scheme=tuning_scheme if tuning_scheme is not None else service.DEFAULT_DOCUMENT_SCHEME,
+            target_spec=target_spec if target_spec is not None else service.DEFAULT_TARGET_SPEC,
+            interest=interest,
+            range_mode=range_mode,
+            pending_interest=pending_interest,
+            pending_held=pending_held,
+            pending_target=pending_target,
+            pending_element=pending_element,
+            pending_mapping_row=pending_mapping_row,
+            pending_comma=pending_comma,
+            custom_prescaler=custom_prescaler,
+            custom_weights=custom_weights,
+            tuning_optimized=tuning_optimized,
+            nonprime_approach=nonprime_approach,
+            superspace_generator_tuning=superspace_generator_tuning,
+            displayed_tuning_name=displayed_tuning_name,
+            displayed_projection_name=displayed_projection_name,
+            held_basis_ratios=held_basis_ratios,
+            held_vectors=held_vectors,
+            generator_tuning=generator_tuning,
+            target_override=target_override,
+            targets_in_use=targets_in_use,
+            mapping_form=mapping_form,
+            comma_basis_form=comma_basis_form,
+            preview_remove=preview_remove,
+            prev_ids=prev_ids or {},
+        )
+        self._build()
 
-        if self.settings is None:
-            self.settings = _default_settings()
-        if self.tuning_scheme is None:
-            self.tuning_scheme = service.DEFAULT_DOCUMENT_SCHEME
-        if self.target_spec is None:
-            self.target_spec = service.DEFAULT_TARGET_SPEC
-        self.collapsed = self.collapsed or frozenset()
-        self._build(held_vectors, pending_comma)
-
-    def _build(self, held_vectors, pending_comma) -> None:
-        inputs = make_inputs(self, held_vectors, pending_comma)
-        ghosts = determine_ghosts(inputs)
-        self.preview_remove = ghosts.preview_remove
+    def _build(self) -> None:
+        ghosts = determine_ghosts(self.inputs)
+        self.inputs = replace(self.inputs, preview_remove=ghosts.preview_remove)
+        inputs = self.inputs
         draft = ResolveDraft(ghost_row=ghosts.ghost_row, ghost_comma=ghosts.ghost_comma,
-                             displayed_tuning_name=self.displayed_tuning_name,
-                             displayed_projection_name=self.displayed_projection_name)
+                             displayed_tuning_name=inputs.displayed_tuning_name,
+                             displayed_projection_name=inputs.displayed_projection_name)
         draft = unpack_show_flags(inputs, draft)
         draft = resolve_superspace_dims(inputs, draft)
         draft = resolve_prescaler_and_domain_labels(inputs, draft)

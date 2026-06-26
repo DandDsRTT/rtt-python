@@ -56,10 +56,6 @@
     "rtt/app/service/text_context.py::_Ctx": {
       "methods": 17,
       "attrs": 0
-    },
-    "rtt/app/spreadsheet_resolve.py::Resolver": {
-      "methods": 2,
-      "attrs": 30
     }
   },
   "coupling": {

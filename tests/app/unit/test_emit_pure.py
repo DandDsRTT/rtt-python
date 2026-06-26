@@ -238,15 +238,16 @@ def test_closed_form_operand_is_a_pure_function_over_resolved_geometry_ctx():
     # the just row's operand is the geometry-supplied ratio (1200·log₂ of that ratio)
     operand = closed_form_operand(resolved, geometry, ctx, "just", "primes", 0)
     assert operand is not None
-    # the builder is itself a duck-typed ctx (state/tuning_scheme/...), so it agrees with BuildContext
-    assert closed_form_operand(resolved, geometry, builder, "just", "primes", 0) == operand
+    # closed_form_operand is pure over (resolved, geometry, ctx): a fresh BuildContext agrees
+    assert closed_form_operand(resolved, geometry, build_context(builder), "just", "primes", 0) == operand
 
 
 def test_closed_form_drops_the_redundant_self_cache():
     builder = _math_builder()
     # the service-level lru_cache makes repeated calls cheap and identical; no per-builder cache attr
     assert not hasattr(builder, "_closed_form_cache")
-    assert _closed_form(builder.resolved, builder) is _closed_form(builder.resolved, builder)
+    ctx = build_context(builder)
+    assert _closed_form(builder.resolved, ctx) is _closed_form(builder.resolved, ctx)
 
 
 def test_emit_canon_band_is_a_pure_function():

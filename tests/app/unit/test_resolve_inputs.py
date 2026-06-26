@@ -4,7 +4,7 @@ import pytest
 
 from rtt.app import spreadsheet
 from rtt.app.editor import Editor
-from rtt.app.spreadsheet_resolve_inputs import ResolveInputs, make_inputs
+from rtt.app.spreadsheet_resolve_inputs import ResolveInputs
 
 
 def _builder(ed: Editor) -> spreadsheet._GridBuilder:
@@ -17,20 +17,23 @@ def _builder(ed: Editor) -> spreadsheet._GridBuilder:
     )
 
 
-def test_make_inputs_snapshots_the_resolve_inputs_off_the_builder():
+def test_the_builder_holds_its_raw_inputs_as_one_frozen_record():
     ed = Editor()
     b = _builder(ed)
-    inputs = make_inputs(b, ed.held_vectors, ed.pending_comma)
-    assert isinstance(inputs, ResolveInputs)
-    assert inputs.state is b.state
-    assert inputs.settings is b.settings
-    assert inputs.tuning_scheme is b.tuning_scheme
-    assert inputs.held_vectors == ed.held_vectors
-    assert inputs.pending_comma == ed.pending_comma
+    assert isinstance(b.inputs, ResolveInputs)
+    assert b.inputs.state is ed.state
+    assert b.inputs.range_mode == ed.range_mode
+    assert b.inputs.held_vectors == ed.held_vectors
+    assert b.inputs.pending_comma == ed.pending_comma
+
+
+def test_the_builder_does_not_shadow_the_inputs_as_flat_attributes():
+    b = _builder(Editor())
+    for field in ("state", "tuning_scheme", "settings", "held_basis_ratios", "custom_prescaler"):
+        assert not hasattr(b, field), f"{field} still shadows the inputs record on the builder"
 
 
 def test_resolve_inputs_is_a_frozen_value_object():
-    ed = Editor()
-    inputs = make_inputs(_builder(ed), ed.held_vectors, ed.pending_comma)
+    b = _builder(Editor())
     with pytest.raises(dataclasses.FrozenInstanceError):
-        inputs.state = None
+        b.inputs.state = None
