@@ -53,6 +53,90 @@ def test_reach_through_counts_handle_aliased_locals(tmp_path):
     assert qm.reach_through_by_handle(trees_under(tmp_path))["_host"] == 2
 
 
+SELF_ATTR_ALIAS = (
+    "class C:\n"
+    "    def __init__(self, host):\n"
+    "        self._host = host\n"
+    "        self._g = self._host\n"
+    "    def f(self):\n"
+    "        return self._g.a + self._g.b + self._g.c\n"
+)
+
+
+def test_self_attribute_alias_of_a_handle_is_itself_a_handle(tmp_path):
+    write(tmp_path, "m.py", SELF_ATTR_ALIAS)
+    trees = trees_under(tmp_path)
+    assert "_g" in qm.injected_handle_names(trees)
+    assert qm.reach_through_by_handle(trees)["_g"] == 3
+
+
+EXTENDED_ALIASES = (
+    "class C:\n"
+    "    def __init__(self, host):\n"
+    "        self._host = host\n"
+    "    def ann(self):\n"
+    "        h: object = self._host\n"
+    "        return h.a + h.b\n"
+    "    def walrus(self):\n"
+    "        return (w := self._host).a + w.b\n"
+    "    def chained(self):\n"
+    "        h = k = self._host\n"
+    "        return h.a + k.b\n"
+)
+
+
+def test_extended_local_alias_syntaxes_do_not_evade(tmp_path):
+    write(tmp_path, "m.py", EXTENDED_ALIASES)
+    assert qm.reach_through_by_handle(trees_under(tmp_path))["_host"] == 6
+
+
+def test_aliased_deep_chain_is_flagged_by_demeter(tmp_path):
+    write(
+        tmp_path,
+        "m.py",
+        "class C:\n"
+        "    def __init__(self, r):\n"
+        "        self.r = r\n"
+        "    def f(self):\n"
+        "        local = self.r\n"
+        "        return local._editor.state.domain_basis\n",
+    )
+    chains = qm.demeter_chains(trees_under(tmp_path))
+    assert [c.split("::", 1)[1] for c in chains] == ["self.r._editor.state.domain_basis"]
+
+
+ALIAS_IMPORT_BAG = (
+    "from types import SimpleNamespace as NS\n"
+    "def build():\n"
+    "    draft = NS()\n"
+    "    draft.shared = 1\n"
+    "    return draft\n"
+)
+
+
+def test_simplenamespace_import_alias_is_still_detected(tmp_path):
+    write(tmp_path, "build.py", ALIAS_IMPORT_BAG)
+    write(tmp_path, "read.py", "def use(draft):\n    return draft.shared\n")
+    crossing, accumulators = qm.bag_cross_file(trees_under(tmp_path))
+    assert crossing == {"draft.shared"}
+    assert accumulators == {"draft"}
+
+
+def test_cross_file_read_modify_write_bag_attr_counts(tmp_path):
+    write(
+        tmp_path,
+        "a.py",
+        "from types import SimpleNamespace\n"
+        "def build():\n"
+        "    draft = SimpleNamespace()\n"
+        "    draft.acc = []\n"
+        "    return draft\n",
+    )
+    write(tmp_path, "b.py", "def step(draft):\n    draft.acc = draft.acc + [1]\n")
+    crossing, _accumulators = qm.bag_cross_file(trees_under(tmp_path))
+    assert "draft.acc" in crossing
+
+
 DEMETER = (
     "class C:\n"
     "    def __init__(self, r):\n"
@@ -124,24 +208,41 @@ def klass(name, methods, attrs=0):
     return f"class {name}:\n{init}{body or '    pass\n'}"
 
 
-def test_class_surface_flags_methods_or_attrs_over_floor(tmp_path):
+WRAPPED_METHOD = (
+    "import typing\n"
+    "class Hidden:\n"
+    "    if typing.TYPE_CHECKING:\n"
+    "        def wrapped(self):\n"
+    "            return 1\n"
+)
+
+
+def test_class_surface_counts_block_wrapped_methods_and_keys_by_file(tmp_path):
     write(tmp_path, "wide.py", klass("Wide", qm.CLASS_METHOD_FLOOR + 1))
     write(tmp_path, "fat.py", klass("Fat", 1, qm.CLASS_ATTR_FLOOR + 1))
     write(tmp_path, "small.py", klass("Small", 3, 3))
     oversized = qm.oversized_classes(qm.class_surface(trees_under(tmp_path)))
-    assert set(oversized) == {"Wide", "Fat"}
+    assert {key.split("::")[-1] for key in oversized} == {"Wide", "Fat"}
+    assert all("::" in key for key in oversized)
+
+
+def test_class_surface_sees_methods_hidden_in_a_block(tmp_path):
+    write(tmp_path, "hidden.py", WRAPPED_METHOD)
+    surface = qm.class_surface(trees_under(tmp_path))
+    assert next(c for k, c in surface.items() if k.endswith("::Hidden"))["methods"] == 1
 
 
 def test_class_surface_gate_bans_growth_and_new_god_objects(tmp_path):
     write(tmp_path, "wide.py", klass("Wide", qm.CLASS_METHOD_FLOOR + 1))
     trees = trees_under(tmp_path)
-    floor = {"Wide": {"methods": qm.CLASS_METHOD_FLOOR + 1, "attrs": 0}}
+    key = next(k for k in qm.class_surface(trees) if k.endswith("::Wide"))
+    floor = {key: {"methods": qm.CLASS_METHOD_FLOOR + 1, "attrs": 0}}
     assert qr.class_surface_violations(trees, {"class_surface": floor}) == []
     assert any(
         "crosses the class-surface floor" in v.message
         for v in qr.class_surface_violations(trees, {"class_surface": {}})
     )
-    lower = {"Wide": {"methods": qm.CLASS_METHOD_FLOOR, "attrs": 0}}
+    lower = {key: {"methods": qm.CLASS_METHOD_FLOOR, "attrs": 0}}
     assert any(
         "grew to" in v.message for v in qr.class_surface_violations(trees, {"class_surface": lower})
     )
@@ -166,25 +267,33 @@ def test_reexport_facade_detection(tmp_path):
     assert qm.is_reexport_facade(ast.parse(LOGIC)) is False
 
 
-def _package(tmp_path, leaves):
-    pkg = tmp_path / "pkg"
-    pkg.mkdir()
-    (pkg / "__init__.py").write_text("".join(f"from pkg import s{i}\n" for i in range(leaves)))
-    (pkg / "big.py").write_text(
-        "".join(f"from pkg import s{i}\n" for i in range(leaves)) + "def run():\n    return 1\n"
-    )
+def _barrel_package(tmp_path, leaves):
+    svc = tmp_path / "svc"
+    svc.mkdir()
+    (svc / "__init__.py").write_text("".join(f"from svc.s{i} import f{i}\n" for i in range(leaves)))
     for i in range(leaves):
-        (pkg / f"s{i}.py").write_text("value = 1\n")
-    return python_files((str(tmp_path),))
+        (svc / f"s{i}.py").write_text(f"def f{i}():\n    return {i}\n")
+    uses = " + ".join(f"svc.f{i}()" for i in range(leaves))
+    (tmp_path / "consumer.py").write_text(f"import svc\ndef use():\n    return {uses}\n")
 
 
-def test_coupling_cap_bites_logic_modules_but_exempts_facades(tmp_path, monkeypatch):
-    monkeypatch.setattr(qc, "MAX_EFFERENT_COUPLING", 15)
+def test_transitive_coupling_resolves_barrel_names_to_submodules(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    _package(tmp_path, qc.MAX_EFFERENT_COUPLING + 1)
-    flagged = {v.path for v in qc.coupling_violations(python_files(("pkg",)))}
-    assert "pkg.big" in flagged
-    assert "pkg" not in flagged
+    _barrel_package(tmp_path, 3)
+    coupling = qc.transitive_coupling(python_files((".",)))
+    assert coupling["svc"] == 0
+    assert coupling["consumer"] == 3
+
+
+def test_coupling_gate_bites_a_new_over_floor_module_past_the_barrel(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(qc, "COUPLING_FLOOR", 3)
+    _barrel_package(tmp_path, 3)
+    files = python_files((".",))
+    assert qc.coupling_violations(files, {"coupling": {"consumer": 3}}) == []
+    flagged = {v.path for v in qc.coupling_violations(files, {"coupling": {}})}
+    assert "consumer" in flagged
+    assert "svc" not in flagged
 
 
 def test_write_baseline_round_trips_through_load(tmp_path, monkeypatch):

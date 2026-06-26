@@ -34,12 +34,11 @@ from tools.quality_ratchets import (
 
 MAX_FILE_LINES = 500
 MAX_FUNCTION_LINES = 50
-MAX_EFFERENT_COUPLING = 15
+COUPLING_FLOOR = 8
 MAX_LCOM4 = 10
 MAX_DIT = 2
 MAX_NOC = 3
 MAX_SPREADSHEET_SHARED_STATE = 2
-COUPLING_BASELINE_FLOOR = 10
 
 FILE_LENGTH_EXEMPT = frozenset(
     {
@@ -127,14 +126,6 @@ def _resolve_internal(target: str, internal: set[str]) -> str | None:
     return best
 
 
-def facade_modules(files: list[Path]) -> set[str]:
-    return {
-        module_name(path)
-        for path in files
-        if path.name == "__init__.py" and is_reexport_facade(ast.parse(path.read_text()))
-    }
-
-
 def efferent_coupling(files: list[Path]) -> dict[str, set[str]]:
     internal = {module_name(path) for path in files}
     fanout: dict[str, set[str]] = {}
@@ -149,37 +140,97 @@ def efferent_coupling(files: list[Path]) -> dict[str, set[str]]:
     return fanout
 
 
-def logic_coupling(files: list[Path]) -> dict[str, int]:
-    facades = facade_modules(files)
-    return {mod: len(deps) for mod, deps in efferent_coupling(files).items() if mod not in facades}
+def _reexport_sources(files: list[Path]) -> tuple[dict[str, str], set[str]]:
+    internal = {module_name(path) for path in files}
+    sources: dict[str, str] = {}
+    barrels: set[str] = set()
+    for path in files:
+        tree = ast.parse(path.read_text())
+        if path.name != "__init__.py" or not is_reexport_facade(tree):
+            continue
+        mod = module_name(path)
+        for node in tree.body:
+            source = _from_prefix(mod, node) if isinstance(node, ast.ImportFrom) else None
+            if source in internal:
+                barrels.add(mod)
+                sources.update({alias.asname or alias.name: source for alias in node.names})
+    return sources, barrels
 
 
-def coupling_violations(files: list[Path]) -> list[Violation]:
-    return [
-        Violation(mod, 1, f"efferent coupling {fanout} (max {MAX_EFFERENT_COUPLING})")
-        for mod, fanout in sorted(logic_coupling(files).items())
-        if fanout > MAX_EFFERENT_COUPLING
-    ]
+def _import_deps(mod: str, tree: ast.AST, resolution: tuple) -> tuple[set[str], dict]:
+    internal, barrels, sources = resolution
+    deps: set[str] = set()
+    barrel_locals: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            prefix = _from_prefix(mod, node)
+            for alias in node.names:
+                full = f"{prefix}.{alias.name}" if prefix else alias.name
+                if full in barrels:
+                    barrel_locals[alias.asname or alias.name] = full
+                elif prefix in barrels:
+                    deps.add(sources.get(alias.name))
+                else:
+                    deps.add(
+                        _resolve_internal(full, internal) or _resolve_internal(prefix, internal)
+                    )
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name in barrels:
+                    barrel_locals[alias.asname or alias.name] = alias.name
+                else:
+                    deps.add(_resolve_internal(alias.name, internal))
+    return {d for d in deps if d and d not in barrels and d != mod}, barrel_locals
+
+
+def transitive_coupling(files: list[Path]) -> dict[str, int]:
+    internal = {module_name(path) for path in files}
+    sources, barrels = _reexport_sources(files)
+    resolution = (internal, barrels, sources)
+    fanout: dict[str, int] = {}
+    for path in files:
+        mod = module_name(path)
+        tree = ast.parse(path.read_text())
+        if path.name == "__init__.py" and is_reexport_facade(tree):
+            fanout[mod] = 0
+            continue
+        deps, barrel_locals = _import_deps(mod, tree, resolution)
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Attribute)
+                and isinstance(node.value, ast.Name)
+                and node.value.id in barrel_locals
+                and sources.get(node.attr) not in (None, mod)
+            ):
+                deps.add(sources[node.attr])
+        fanout[mod] = len(deps)
+    return fanout
 
 
 def coupling_baseline(files: list[Path]) -> dict[str, int]:
     return {
         mod: fanout
-        for mod, fanout in logic_coupling(files).items()
-        if fanout >= COUPLING_BASELINE_FLOOR
+        for mod, fanout in transitive_coupling(files).items()
+        if fanout >= COUPLING_FLOOR
     }
 
 
-def coupling_ratchet_violations(files: list[Path], baseline: dict) -> list[Violation]:
+def coupling_violations(files: list[Path], baseline: dict) -> list[Violation]:
     floors = baseline["coupling"]
     found = []
-    for mod, fanout in sorted(logic_coupling(files).items()):
+    for mod, fanout in sorted(transitive_coupling(files).items()):
         floor = floors.get(mod)
         if floor is not None and fanout > floor:
-            found.append(Violation(mod, 1, f"efferent coupling rose to {fanout} (floor {floor})"))
-        elif floor is None and fanout >= COUPLING_BASELINE_FLOOR:
             found.append(
-                Violation(mod, 1, f"new module at coupling {fanout}; baseline it or cut deps")
+                Violation(mod, 1, f"transitive efferent coupling rose to {fanout} (floor {floor})")
+            )
+        elif floor is None and fanout >= COUPLING_FLOOR:
+            found.append(
+                Violation(
+                    mod,
+                    1,
+                    f"new module at transitive coupling {fanout} (>= {COUPLING_FLOOR}); cut deps or baseline it",
+                )
             )
     return found
 
@@ -300,7 +351,7 @@ def _cross_file_shared_self(paths: list[Path]) -> set[str]:
     return {
         attr
         for attr in set(writes) | set(reads)
-        if writes.get(attr) and (reads.get(attr, set()) - writes.get(attr, set()))
+        if writes.get(attr) and len(writes.get(attr, set()) | reads.get(attr, set())) > 1
     }
 
 
@@ -331,7 +382,7 @@ def ratchet_violations(
         *bag_violations(trees, baseline),
         *class_surface_violations(trees, baseline),
         *comment_violations(files, baseline),
-        *coupling_ratchet_violations(files, baseline),
+        *coupling_violations(files, baseline),
     ]
 
 
@@ -341,7 +392,6 @@ def collect(roots: tuple[str, ...]) -> list[Violation]:
     baseline = load_baseline()
     return [
         *(v for path in files for v in file_violations(path)),
-        *coupling_violations(files),
         *cohesion_violations(files),
         *inheritance_violations(files),
         *spreadsheet_shared_state_violations(files),
@@ -379,7 +429,7 @@ def worklist(roots: tuple[str, ...] = _DEFAULT_ROOTS) -> list[str]:
         lines.append(f"{key}: {live[key]} (floor {base[key]})")
     lines.append(f"demeter_4hop_chains: {len(live['demeter_chains'])}")
     lines.append(f"oversized_classes: {len(live['class_surface'])}")
-    lines.append(f"max_efferent_coupling: {max(live['coupling'].values(), default=0)}")
+    lines.append(f"max_transitive_coupling: {max(live['coupling'].values(), default=0)}")
     return lines
 
 

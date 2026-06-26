@@ -96,17 +96,19 @@ def test_efferent_coupling_counts_internal_package_imports(tmp_path, monkeypatch
     assert fanout["pkg.a"] == set()
 
 
-def test_coupling_violation_fires_above_threshold(tmp_path, monkeypatch):
+def test_coupling_violation_fires_when_a_module_rises_above_its_floor(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(qc, "MAX_EFFERENT_COUPLING", 1)
+    monkeypatch.setattr(qc, "COUPLING_FLOOR", 1)
     pkg = tmp_path / "pkg"
     pkg.mkdir()
     (pkg / "__init__.py").write_text("")
     (pkg / "hub.py").write_text("from pkg import a\nfrom pkg import b\n")
     (pkg / "a.py").write_text("x = 1\n")
     (pkg / "b.py").write_text("y = 1\n")
-    messages = [v.message for v in qc.coupling_violations(qc.python_files(("pkg",)))]
-    assert any("efferent coupling" in m for m in messages)
+    files = qc.python_files(("pkg",))
+    assert qc.coupling_violations(files, {"coupling": {"pkg.hub": 2}}) == []
+    messages = [v.message for v in qc.coupling_violations(files, {"coupling": {"pkg.hub": 1}})]
+    assert any("rose to 2" in m for m in messages)
 
 
 def test_lcom4_one_when_methods_share_an_attribute():
@@ -177,9 +179,14 @@ def test_inheritance_violation_flags_high_noc(tmp_path, monkeypatch):
 
 def test_live_tree_passes_the_architectural_guard_rails():
     files = qc.python_files(qc._DEFAULT_ROOTS)
-    assert qc.coupling_violations(files) == []
     assert qc.cohesion_violations(files) == []
     assert qc.inheritance_violations(files) == []
+
+
+def test_service_barrel_is_invisible_to_transitive_coupling():
+    coupling = qc.transitive_coupling(qc.python_files(qc._DEFAULT_ROOTS))
+    assert coupling["rtt.app.service"] == 0
+    assert max(coupling.values()) < 20
 
 
 def test_live_tree_sits_exactly_on_its_ratchet_floors():
