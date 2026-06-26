@@ -43,9 +43,7 @@ from rtt.app.spreadsheet_text import (
 class _GridBuilder(Resolver):
     def layout(self) -> Layout:
         geometry = self.geometry
-        cells, lines, blocks, approach_box = assemble(
-            self.resolved, geometry, build_context(self)
-        )
+        cells, lines, blocks, approach_box = assemble(self.resolved, geometry, build_context(self))
         title_right = max(
             (c.x + c.w / 2 + _title_w(c.text) / 2 for c in cells if c.kind == "colheader"),
             default=geometry.total_w,

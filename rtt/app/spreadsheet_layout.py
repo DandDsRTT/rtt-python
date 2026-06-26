@@ -304,7 +304,7 @@ def _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label,
         chart_top=chart_top, int_handle_top=int_handle_top, matlabel_top=matlabel_top), cpick
 
 
-def _group_geometry_fields(geometry, resolved, ctx):
+def _group_geometry_fields(geometry, resolved):
     _r = resolved
     group_n = {"gens": _r.dims.r, "primes": _r.dims.d_shown, "commas": _r.dims.nv_shown,
                "targets": _r.dims.k_shown,
@@ -321,14 +321,14 @@ def _group_geometry_fields(geometry, resolved, ctx):
                "canongens": lambda i: query.canongen_left(geometry, i),
                "ssgens": lambda i: query.ss_gen_left(geometry, i),
                "ssprimes": lambda i: query.ss_prime_left(geometry, i)}
-    return dict(
-        group_elem={"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
-                    "interest": "interest", "held": "held", "detempering": "detempering",
-                    "canongens": "cangen", "ssgens": "ssgen", "ssprimes": "ssprime"},
-        group_n=group_n,
-        group_left={g: tuple(fn(i) for i in range(group_n[g])) if g in content_x else ()
-                    for g, fn in left_fn.items()},
-        group_ratio={
+    return {
+        "group_elem": {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
+                       "interest": "interest", "held": "held", "detempering": "detempering",
+                       "canongens": "cangen", "ssgens": "ssgen", "ssprimes": "ssprime"},
+        "group_n": group_n,
+        "group_left": {g: tuple(fn(i) for i in range(group_n[g])) if g in content_x else ()
+                       for g, fn in left_fn.items()},
+        "group_ratio": {
             "primes": tuple(service.element_ratio(e) for e in _r.dims.elements),
             "commas": tuple(_r.commas.ratios[:_r.dims.nc]) + tuple(_r.unchanged.ratios),
             "targets": tuple(_r.targets.ratios),
@@ -336,12 +336,12 @@ def _group_geometry_fields(geometry, resolved, ctx):
             "held": tuple(_r.held.ratios),
             "detempering": tuple(_r.scalars.gens),
             "ssprimes": tuple(service.element_ratio(e) for e in _r.dims.superspace_primes),
-        })
+        }}
 
 
 def _init_group_geometry(geometry, resolved, ctx) -> Geometry:
     _r = resolved
-    geometry = replace(geometry, **_group_geometry_fields(geometry, resolved, ctx))
+    geometry = replace(geometry, **_group_geometry_fields(geometry, resolved))
     plus_stub_x = {ckey: query.col_plus_x(geometry, resolved, ckey)
                    for ckey in ("gens", "primes", "commas", "targets", "interest", "held")
                    if query.plus_shows(geometry, resolved, ctx.collapsed, ctx.state, ckey)}
