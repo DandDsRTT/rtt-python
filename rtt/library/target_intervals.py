@@ -46,12 +46,12 @@ def get_otonal_chord(harmonics: tuple[int, ...]) -> tuple[Fraction, ...]:
 
 
 def default_tilt_limit(domain_basis: tuple) -> int:
-    greatest = max(Fraction(q).numerator for q in domain_basis)
+    greatest = max(part for q in domain_basis for part in _parts(q))
     return int(sp.nextprime(greatest)) - 1
 
 
 def default_old_limit(domain_basis: tuple) -> int:
-    greatest = max(_odd_part(Fraction(q).numerator) for q in domain_basis)
+    greatest = max(_odd_part(part) for q in domain_basis for part in _parts(q))
     return int(sp.nextprime(greatest)) - 2
 
 
@@ -67,6 +67,11 @@ def process_old(target_spec: str, domain_basis: tuple) -> tuple[Fraction, ...]:
     match = re.search(r"(\d*)-?OLD", spec)
     given = match.group(1) if match else ""
     return get_old(int(given) if given else default_old_limit(domain_basis))
+
+
+def _parts(quotient) -> tuple[int, int]:
+    fraction = Fraction(quotient)
+    return (fraction.numerator, fraction.denominator)
 
 
 def _odd_part(n: int) -> int:
