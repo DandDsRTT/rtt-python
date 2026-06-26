@@ -107,7 +107,6 @@ _TEST_COMMENT_ALLOWANCE = {
     "library/unit/test_variance_utils.py": 1,
     "render_main.py": 2,
     "test_documentation_policy.py": 18,
-    "tools/unit/test_quality_checks.py": 2,
 }
 
 

@@ -1,0 +1,143 @@
+{
+  "reach_through_total": 1190,
+  "reach_through_by_handle": {
+    "doc": 343,
+    "r": 277,
+    "_host": 184,
+    "_editor": 182,
+    "_rec": 84,
+    "state": 48,
+    "e": 31,
+    "_gestures": 29,
+    "view": 6,
+    "settings": 3,
+    "structure": 3
+  },
+  "demeter_chains": [
+    "rtt/app/_recon_choosers.py::self.r._editor.state.comma_basis",
+    "rtt/app/_recon_choosers.py::self.r._editor.state.domain_basis",
+    "rtt/app/_recon_choosers.py::self.r._editor.state.mapping",
+    "rtt/app/_recon_value.py::self.r._editor.state.domain_basis"
+  ],
+  "bag_cross_file_total": 30,
+  "bag_cross_file_attrs": [
+    "draft._col_ids",
+    "draft.col_w",
+    "draft.col_x",
+    "draft.comma_ratios",
+    "draft.comma_sizes",
+    "draft.complexities",
+    "draft.declared_tiles",
+    "draft.detempering_sizes",
+    "draft.detempering_vectors",
+    "draft.held",
+    "draft.held_mapped",
+    "draft.held_ratios",
+    "draft.held_sizes",
+    "draft.interest",
+    "draft.interest_mapped",
+    "draft.interest_ratios",
+    "draft.interest_sizes",
+    "draft.mapped",
+    "draft.mapped_commas",
+    "draft.open_col_w",
+    "draft.pending",
+    "draft.pending_held",
+    "draft.pending_interest",
+    "draft.pending_target",
+    "draft.present_caption_rows",
+    "draft.ptext_strings",
+    "draft.ss_tun",
+    "draft.target_sizes",
+    "draft.target_vectors",
+    "draft.targets"
+  ],
+  "bag_cross_file_accumulators": [
+    "draft"
+  ],
+  "class_surface": {
+    "Document": {
+      "methods": 21,
+      "attrs": 20
+    },
+    "EditController": {
+      "methods": 22,
+      "attrs": 13
+    },
+    "Editor": {
+      "methods": 144,
+      "attrs": 7
+    },
+    "GestureController": {
+      "methods": 40,
+      "attrs": 8
+    },
+    "IntervalOps": {
+      "methods": 30,
+      "attrs": 3
+    },
+    "PageBuilder": {
+      "methods": 22,
+      "attrs": 3
+    },
+    "Renderer": {
+      "methods": 19,
+      "attrs": 14
+    },
+    "Resolver": {
+      "methods": 20,
+      "attrs": 32
+    },
+    "StructureOps": {
+      "methods": 39,
+      "attrs": 2
+    },
+    "TuningOps": {
+      "methods": 30,
+      "attrs": 4
+    },
+    "_Ctx": {
+      "methods": 17,
+      "attrs": 0
+    },
+    "_Page": {
+      "methods": 17,
+      "attrs": 13
+    },
+    "_ReconButtons": {
+      "methods": 20,
+      "attrs": 1
+    },
+    "_ReconChoosers": {
+      "methods": 31,
+      "attrs": 1
+    },
+    "_ReconDisplayCells": {
+      "methods": 17,
+      "attrs": 1
+    },
+    "_ReconValueCells": {
+      "methods": 42,
+      "attrs": 1
+    },
+    "_Reconciler": {
+      "methods": 21,
+      "attrs": 15
+    },
+    "_VectorEdits": {
+      "methods": 19,
+      "attrs": 6
+    }
+  },
+  "coupling": {
+    "rtt.app.editing": 13,
+    "rtt.app.reconciler": 13,
+    "rtt.app.rendering": 10,
+    "rtt.app.service.state": 12,
+    "rtt.app.service.superspace": 15,
+    "rtt.app.spreadsheet": 14,
+    "rtt.app.spreadsheet_emit_tuning": 10,
+    "rtt.library.tuning": 11
+  },
+  "explanatory_comment_blocks": 0
+}
