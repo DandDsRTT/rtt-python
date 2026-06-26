@@ -73,7 +73,7 @@
     "rtt.app.building": 10,
     "rtt.app.editing": 9,
     "rtt.app.editor_document": 13,
-    "rtt.app.editor_view": 8,
+    "rtt.app.editor_solve": 9,
     "rtt.app.gestures": 9,
     "rtt.app.reconciler": 13,
     "rtt.app.rendering": 10,
