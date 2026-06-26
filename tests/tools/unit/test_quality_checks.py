@@ -195,6 +195,23 @@ def test_live_tree_sits_exactly_on_its_ratchet_floors():
     assert qc.compute_baseline(files) == qc.load_baseline()
 
 
+def test_param_reach_live_total_is_pinned_to_the_baseline():
+    trees = qc.parse_files(qc.python_files(qc._DEFAULT_ROOTS))
+    counts = qc.param_reach_by_handle(trees)
+    base = qc.load_baseline()
+    assert sum(counts.values()) == base["param_reach_through_total"]
+    assert dict(counts.most_common()) == base["param_reach_through_by_handle"]
+
+
+def test_param_reach_store_dispatch_dominates_the_sibling_handles():
+    trees = qc.parse_files(qc.python_files(qc._DEFAULT_ROOTS))
+    counts = qc.param_reach_by_handle(trees)
+    siblings = {handle: count for handle, count in counts.items() if handle != "_editor"}
+    assert counts.most_common(1)[0][0] == "_editor"
+    assert counts["_editor"] > 0 and sum(siblings.values()) > 0
+    assert counts["_editor"] >= max(siblings.values())
+
+
 def test_spreadsheet_shared_state_within_cap():
     files = qc.python_files(qc._DEFAULT_ROOTS)
     assert qc.spreadsheet_shared_state_violations(files) == []

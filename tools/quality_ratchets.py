@@ -11,6 +11,7 @@ from tools.quality_metrics import (
     demeter_chains,
     explanatory_comment_blocks,
     oversized_classes,
+    param_reach_by_handle,
     reach_through_by_handle,
 )
 
@@ -53,6 +54,40 @@ def _reach_handle_violation(handle: str, live: int, floor: int) -> Violation:
         1,
         f"reach-throughs via self.{handle} rose to {live} (per-handle floor {floor}); a "
         "per-handle floor only shrinks — inject the member or narrow the handle",
+    )
+
+
+def param_reach_through_violations(
+    trees: list[tuple[Path, ast.Module]], baseline: dict
+) -> list[Violation]:
+    counts = param_reach_by_handle(trees)
+    found: list[Violation] = []
+    total = sum(counts.values())
+    total_floor = baseline["param_reach_through_total"]
+    if total > total_floor:
+        found.append(_param_total_violation(total, total_floor))
+    for handle, floor in sorted(baseline.get("param_reach_through_by_handle", {}).items()):
+        live = counts.get(handle, 0)
+        if live > floor:
+            found.append(_param_handle_violation(handle, live, floor))
+    return found
+
+
+def _param_total_violation(total: int, floor: int) -> Violation:
+    return Violation(
+        "rtt/app",
+        1,
+        f"param-form reach-throughs rose to {total} (ratchet floor {floor}); a shard free "
+        "function reaches controller.<injected_handle>.<member> — inject the member or narrow the param",
+    )
+
+
+def _param_handle_violation(handle: str, live: int, floor: int) -> Violation:
+    return Violation(
+        "rtt/app",
+        1,
+        f"param-form reach-throughs via .{handle} rose to {live} (per-handle floor {floor}); a "
+        "per-handle floor only shrinks — inject the member or narrow the param",
     )
 
 

@@ -77,6 +77,57 @@ floor in `tools/quality_baseline.json` (`coupling`) in the same PR — the same
 shrink-only ratchet as the reach-through floors (`COUPLING_FLOOR` is only the threshold
 at which a new module first gets a floor, not a global cap).
 
+**The param-form reach-through gate (the reach-through gate's companion).** Decomposing the
+view/editor controllers into free functions moved the very reaches the self-form gate counts out of
+its sight: `self._editor.state` inside a method became `ec._editor.state` inside a module-level shard
+free function (`_recon_*`, `_editing_*`, `_gesture_ops`, `_page_parts`, `_rendering_ops`). The
+self-form gate scores `param._editor.state` as zero, so the *same* coupling re-expressed through a
+parameter is invisible to it. `param_reach_by_handle` in `tools/quality_metrics.py` closes that blind
+spot. A module-level shard free function **binds** a controller iff its **first parameter name** is a
+known shard handle (`rec`→`_Reconciler`, `ec`→`EditController`, `te`→`_TuningEdits`,
+`gc`→`GestureController`, `pb`→`PageBuilder`, `r`→`Renderer`); it then counts every
+`param.<injected_handle>.<member>` reach (Load *and* Store, local aliases included) against the
+**same** `handles_by_class` set and through the **same** alias-tracking visitor (`_ReachVisitor`, now
+the shared base of both the self-form `_HandleVisitor` and the param-form `_ParamReachVisitor`). A
+function whose first parameter is not a handle (`def f(state, mapping): …`) binds nothing → 0; a bare
+`param.<own_member>` is the function reading its own argument, not a reach-through → 0. (`te` binds
+`_TuningEdits`, whose handle `e` *is* the EditController, so the `_editing_tuning` shards reach it as
+`ec = te.e; ec._runtime.…`, counted under handle `e`.) The result is pinned in `quality_baseline.json`
+as `param_reach_through_total` + `param_reach_through_by_handle`, **kept separate from** the self-form
+floors so a future self→param relocation cannot trade one gate's count for the other's; both ratchet
+down-only, total and per-handle, exactly like the self-form gate.
+
+**Known under-count path (a *known* gap, not a silent one).** Binding is checked only on module-level
+`tree.body` functions, so a shard helper *nested* inside a non-binding outer is never bound — e.g.
+`_recon_value.py`'s `label_builder(cls)` returns a nested `build(rec, …)`. Today this misses nothing
+(`build` only touches `rec.cells`, an own-member), and `tests/tools/unit/test_quality_ratchets.py`
+pins a `label_builder→build` fixture at 0 so the gap stays visible. The general fix (binding every
+nested `FunctionDef`) carries a double-count subtlety not worth its risk for a zero-impact gap, so the
+path is documented rather than hardened.
+
+**This floor is deep on purpose — it bottoms out near ~360, and that depth is correct, not debt.**
+The seeded total is 480, and most of it is irreducible:
+
+- **232 are `param._editor.<member>` — dispatches *into the store*** (the `Editor(Document)` facade).
+  A controller calling the store is the **north-star goal**, not coupling to cut. Replacing one store
+  handle with N store-method parameters would *raise* coupling by surface count. **Leave every
+  `_editor` reach untouched.**
+- **~136 are wide multi-handle orchestrators.** They genuinely touch many collaborators; the only ways
+  to lower their count are to explode the signature past four parameters (these shards are
+  PLR0913-exempt, so nothing forces it) or to re-bundle the handles into one record parameter — which
+  is the whole-controller-as-parameter dodge again, merely renamed. Both are worse than the reach.
+  **Irreducible.**
+- **~91 are genuinely removable** — single-sibling-handle reaches that can take a narrow dependency,
+  plus ~23 build-time `_chrome` slot writes and ~8 `_rec` cache writes that can route through a single
+  owner. Clearing these is the *only* sanctioned reduction; it lowers the floor toward ~384 → ~360.
+
+**Stop-condition — do not chase the store-dispatch or the wide set to zero.** Once the removable ~91
+are gone the gate is *done*: its job is to stop the count from silently **growing**, not to drive it
+to zero. Exploding a signature or bundling handles into a record to beat the number is exactly the
+theater this gate philosophy refuses — it swaps a legible reach for an illegible one while the
+coupling is unchanged. To ratchet, remove a *real* reach (narrow a dep or route a write through its
+owner), regenerate the baseline, and let the gate confirm the count shrank.
+
 ## The metric wishlist
 
 Status of every architectural metric requested:
