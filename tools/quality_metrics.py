@@ -43,45 +43,54 @@ def is_reexport_facade(tree: ast.Module) -> bool:
     )
 
 
-def injected_handle_names(trees: list[tuple[Path, ast.Module]]) -> set[str]:
-    names: set[str] = set()
-    for _path, tree in trees:
-        for node in ast.walk(tree):
-            if isinstance(node, DEFINITION) and node.name == "__init__":
-                params = init_params(node)
-                for stmt in ast.walk(node):
-                    value = getattr(stmt, "value", None)
-                    if isinstance(value, ast.Name) and value.id in params:
-                        names |= {tgt.attr for tgt in self_attr_targets(stmt)}
-    return names
-
-
-def _self_chain(node: ast.Attribute) -> list[str] | None:
-    hops: list[str] = []
-    cur: ast.AST = node
-    while isinstance(cur, ast.Attribute):
-        hops.append(cur.attr)
-        cur = cur.value
-    if isinstance(cur, ast.Name) and cur.id == "self":
-        return list(reversed(hops))
-    return None
-
-
-def _direct_handle(value: ast.AST, handles: set[str]) -> str | None:
+def _self_attr(value: ast.AST) -> str | None:
     if (
         isinstance(value, ast.Attribute)
         and isinstance(value.value, ast.Name)
         and value.value.id == "self"
-        and value.attr in handles
     ):
         return value.attr
     return None
 
 
-class _ReachCounter(ast.NodeVisitor):
+def injected_handle_names(trees: list[tuple[Path, ast.Module]]) -> set[str]:
+    handles: set[str] = set()
+    aliases: list[tuple[str, str]] = []
+    for _path, tree in trees:
+        for node in ast.walk(tree):
+            if isinstance(node, DEFINITION) and node.name == "__init__":
+                _seed_param_handles(node, handles)
+            if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                source = _self_attr(getattr(node, "value", None))
+                if source is not None:
+                    aliases += [(tgt.attr, source) for tgt in self_attr_targets(node)]
+    _grow_alias_handles(handles, aliases)
+    return handles
+
+
+def _seed_param_handles(init: ast.AST, handles: set[str]) -> None:
+    params = init_params(init)
+    for stmt in ast.walk(init):
+        value = getattr(stmt, "value", None)
+        if isinstance(value, ast.Name) and value.id in params:
+            handles |= {tgt.attr for tgt in self_attr_targets(stmt)}
+
+
+def _grow_alias_handles(handles: set[str], aliases: list[tuple[str, str]]) -> None:
+    changed = True
+    while changed:
+        changed = False
+        for target, source in aliases:
+            if source in handles and target not in handles:
+                handles.add(target)
+                changed = True
+
+
+class _HandleVisitor(ast.NodeVisitor):
     def __init__(self, handles: set[str]) -> None:
         self.handles = handles
         self.counts: Counter = Counter()
+        self.chains: list[tuple[int, str]] = []
         self.scopes: list[dict[str, str]] = [{}]
 
     def visit_FunctionDef(self, node: ast.AST) -> None:
@@ -91,26 +100,75 @@ class _ReachCounter(ast.NodeVisitor):
 
     visit_AsyncFunctionDef = visit_FunctionDef
 
+    def _register(self, target: ast.AST, value: ast.AST) -> None:
+        if isinstance(target, ast.Name):
+            handle = self._base_handle(value)
+            if handle:
+                self.scopes[-1][target.id] = handle
+
     def visit_Assign(self, node: ast.Assign) -> None:
-        handle = _direct_handle(node.value, self.handles)
-        if handle and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
-            self.scopes[-1][node.targets[0].id] = handle
+        for target in node.targets:
+            self._register(target, node.value)
         self.generic_visit(node)
 
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        if node.value is not None:
+            self._register(node.target, node.value)
+        self.generic_visit(node)
+
+    def visit_NamedExpr(self, node: ast.NamedExpr) -> None:
+        self._register(node.target, node.value)
+        self.generic_visit(node)
+
+    def _base_handle(self, value: ast.AST) -> str | None:
+        if isinstance(value, ast.NamedExpr):
+            value = value.value
+        attr = _self_attr(value)
+        if attr in self.handles:
+            return attr
+        if isinstance(value, ast.Name):
+            return self.scopes[-1].get(value.id)
+        return None
+
     def visit_Attribute(self, node: ast.Attribute) -> None:
-        handle = _direct_handle(node.value, self.handles)
-        if handle is None and isinstance(node.value, ast.Name):
-            handle = self.scopes[-1].get(node.value.id)
+        handle = self._base_handle(node.value)
         if handle:
             self.counts[handle] += 1
+        chain = self._chain(node)
+        if chain and chain[1] >= HANDLE_CHAIN_FLOOR:
+            self.chains.append((node.lineno, chain[0]))
         self.generic_visit(node)
+
+    def _chain(self, node: ast.Attribute) -> tuple[str, int] | None:
+        hops: list[str] = []
+        cur: ast.AST = node
+        while isinstance(cur, (ast.Attribute, ast.NamedExpr)):
+            if isinstance(cur, ast.NamedExpr):
+                cur = cur.value
+            else:
+                hops.append(cur.attr)
+                cur = cur.value
+        hops.reverse()
+        if isinstance(cur, ast.Name) and cur.id == "self" and hops and hops[0] in self.handles:
+            return "self." + ".".join(hops), len(hops)
+        if isinstance(cur, ast.Name) and (handle := self.scopes[-1].get(cur.id)):
+            return "self." + ".".join([handle, *hops]), len(hops) + 1
+        return None
+
+
+def _walk_handles(trees: list[tuple[Path, ast.Module]]) -> tuple[Counter, set[str]]:
+    visitor = _HandleVisitor(injected_handle_names(trees))
+    rows: list[tuple[str, int, str]] = []
+    for path, tree in trees:
+        visitor.scopes = [{}]
+        start = len(visitor.chains)
+        visitor.visit(tree)
+        rows += [(path.as_posix(), line, text) for line, text in visitor.chains[start:]]
+    return visitor.counts, _maximal_chains(rows)
 
 
 def reach_through_by_handle(trees: list[tuple[Path, ast.Module]]) -> Counter:
-    counter = _ReachCounter(injected_handle_names(trees))
-    for _path, tree in trees:
-        counter.visit(tree)
-    return counter.counts
+    return _walk_handles(trees)[0]
 
 
 def _maximal_chains(rows: list[tuple[str, int, str]]) -> set[str]:
@@ -126,32 +184,35 @@ def _maximal_chains(rows: list[tuple[str, int, str]]) -> set[str]:
 
 
 def demeter_chains(trees: list[tuple[Path, ast.Module]]) -> set[str]:
-    handles = injected_handle_names(trees)
-    rows: list[tuple[str, int, str]] = []
-    for path, tree in trees:
+    return _walk_handles(trees)[1]
+
+
+def namespace_ctor_names(trees: list[tuple[Path, ast.Module]]) -> set[str]:
+    names = {"SimpleNamespace"}
+    for _path, tree in trees:
         for node in ast.walk(tree):
-            if not isinstance(node, ast.Attribute):
-                continue
-            chain = _self_chain(node)
-            if chain and len(chain) >= HANDLE_CHAIN_FLOOR and chain[0] in handles:
-                rows.append((path.as_posix(), node.lineno, "self." + ".".join(chain)))
-    return _maximal_chains(rows)
+            if isinstance(node, ast.ImportFrom) and node.module == "types":
+                for alias in node.names:
+                    if alias.name == "SimpleNamespace":
+                        names.add(alias.asname or alias.name)
+    return names
 
 
-def _constructs_namespace(node: ast.AST) -> bool:
+def _constructs_namespace(node: ast.AST, ctor_names: set[str]) -> bool:
     if not (isinstance(node, ast.Assign) and isinstance(node.value, ast.Call)):
         return False
     func = node.value.func
-    return (isinstance(func, ast.Name) and func.id == "SimpleNamespace") or (
+    return (isinstance(func, ast.Name) and func.id in ctor_names) or (
         isinstance(func, ast.Attribute) and func.attr == "SimpleNamespace"
     )
 
 
 def bag_names(trees: list[tuple[Path, ast.Module]]) -> set[str]:
+    ctor_names = namespace_ctor_names(trees)
     names: set[str] = set()
     for _path, tree in trees:
         for node in ast.walk(tree):
-            if _constructs_namespace(node):
+            if _constructs_namespace(node, ctor_names):
                 names |= {tgt.id for tgt in node.targets if isinstance(tgt, ast.Name)}
     return names
 
@@ -178,29 +239,61 @@ def bag_cross_file(trees: list[tuple[Path, ast.Module]]) -> tuple[set[str], set[
     crossing = {
         key
         for key in set(writes) | set(reads)
-        if writes.get(key) and (reads.get(key, set()) - writes.get(key, set()))
+        if writes.get(key) and len(writes.get(key, set()) | reads.get(key, set())) > 1
     }
     return {f"{bag}.{attr}" for bag, attr in crossing}, {bag for bag, _attr in crossing}
 
 
+def _enclosed_methods(cls: ast.ClassDef) -> list[ast.AST]:
+    methods: list[ast.AST] = []
+    stack = list(cls.body)
+    while stack:
+        node = stack.pop()
+        if isinstance(node, DEFINITION):
+            methods.append(node)
+        elif isinstance(node, ast.ClassDef):
+            continue
+        else:
+            for field in ("body", "orelse", "finalbody"):
+                stack.extend(getattr(node, field, []))
+            for handler in getattr(node, "handlers", []):
+                stack.extend(handler.body)
+    return methods
+
+
 def _instance_attrs(cls: ast.ClassDef) -> set[str]:
-    return {
-        node.attr
-        for node in ast.walk(cls)
-        if isinstance(node, ast.Attribute)
-        and isinstance(node.value, ast.Name)
-        and node.value.id == "self"
-        and isinstance(node.ctx, ast.Store)
-    }
+    attrs: set[str] = set()
+    for method in _enclosed_methods(cls):
+        for node in ast.walk(method):
+            if (
+                isinstance(node, ast.Attribute)
+                and isinstance(node.value, ast.Name)
+                and node.value.id == "self"
+                and isinstance(node.ctx, ast.Store)
+            ):
+                attrs.add(node.attr)
+    return attrs
+
+
+def _collect_classes(
+    node: ast.AST, path: Path, prefix: list[str], surface: dict[str, dict[str, int]]
+) -> None:
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, ast.ClassDef):
+            qualified = ".".join([*prefix, child.name])
+            surface[f"{path.as_posix()}::{qualified}"] = {
+                "methods": len(_enclosed_methods(child)),
+                "attrs": len(_instance_attrs(child)),
+            }
+            _collect_classes(child, path, [*prefix, child.name], surface)
+        else:
+            _collect_classes(child, path, prefix, surface)
 
 
 def class_surface(trees: list[tuple[Path, ast.Module]]) -> dict[str, dict[str, int]]:
     surface: dict[str, dict[str, int]] = {}
-    for _path, tree in trees:
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef):
-                methods = sum(isinstance(m, DEFINITION) for m in node.body)
-                surface[node.name] = {"methods": methods, "attrs": len(_instance_attrs(node))}
+    for path, tree in trees:
+        _collect_classes(tree, path, [], surface)
     return surface
 
 
