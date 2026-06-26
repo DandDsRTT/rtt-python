@@ -118,7 +118,7 @@ branch = true
 source = ["rtt/library", "rtt/app/service"]
 
 [tool.coverage.report]
-fail_under = 95
+fail_under = 97
 show_missing = true
 exclude_also = [
     "if TYPE_CHECKING:",

@@ -10,7 +10,7 @@ the same checks run on commit via **pre-commit**.
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/pre-commit install        # optional: run the fast subset on every commit
 bin/lint                            # lint + format + structural metrics + complexity
-bin/lint --cov                      # + 95% branch-coverage gate (logic tiers only)
+bin/lint --cov                      # + 97% coverage gate + per-file floors (logic tiers)
 ```
 
 In a worktree (no local `.venv`), point the runner at the main checkout's
@@ -35,7 +35,7 @@ in lockstep with the refactors so the gate stays green at every step.
 | Class cohesion (LCOM4) | ≤ 10 | ↓ | `tools/quality_checks.py` |
 | Depth of inheritance (DIT) | ≤ 2 | ≤ 2 | `tools/quality_checks.py` |
 | Number of children (NOC) | ≤ 3 | ≤ 3 | `tools/quality_checks.py` |
-| Branch coverage (logic tiers) | ≥ 95% | ≥ 95% | `coverage` (`fail_under`) |
+| Branch coverage (logic tiers) | ≥ 97% aggregate + per-file floor | ↑ | `coverage` + `tools/coverage_floor.py` |
 | Docstrings | banned | banned | `tools/quality_checks.py` |
 
 The architectural rails (coupling / LCOM4 / DIT / NOC) are calibrated to the
@@ -111,7 +111,7 @@ Status of every architectural metric requested:
 
 ## Coverage gate scope — logic tiers only
 
-The 95% branch-coverage gate is scoped to the **logic tiers** — `rtt/library/**` and
+The 97% branch-coverage gate is scoped to the **logic tiers** — `rtt/library/**` and
 `rtt/app/service/**` — not the whole of `rtt/`. Line coverage is a meaningful signal for
 branchy **logic**; it is noise for the view layer's SVG/DOM string-assembly (`app.py`,
 `render_html.py`, the `spreadsheet_*` modules, `marks.py`, `tooltips.py`).
@@ -122,16 +122,25 @@ what made a coverage run slow and profiler-fragile (see the `coverage-gate-local
 memory: render-under-coverage is ~15 s/test on the local 3.14 venv, deadlocks in NiceGUI's
 fixture teardown, and dogpiles across parallel agents). So:
 
-- **`fail_under = 95` is computed over the logic tiers only** — set via
+- **`fail_under = 97` is computed over the logic tiers only** — set via
   `[tool.coverage.run] source = ["rtt/library", "rtt/app/service"]` in `pyproject.toml`,
   which the logic tiers' fast, deterministic **unit** tests cover.
+- **A per-file floor stops the aggregate from hiding a weak file.** The aggregate alone is
+  blind: a few logic-tier files sit well below it (e.g. `service/projection.py` ~89%,
+  `service/superspace.py` ~90%, `library/tuning_solvers.py` ~93%) while the whole tier
+  averages ~98%. `tools/coverage_floor.py` pins each logic-tier file's current branch
+  coverage (floored to 2 dp) in `tools/coverage_baseline.json` and fails the gate if any
+  file drops below its floor — a shrink-only ratchet, like the structural floors. To raise
+  a floor after adding tests, regenerate it: `python -m tools.coverage_floor coverage.json
+  --update-baseline`.
 - **The view layer carries no line-coverage requirement.** It stays guarded by the render
   integration tests as **behaviour** tests (build the page, assert it renders and behaves),
   not by a line percentage.
 - **`bin/lint --cov` runs coverage with the render tests excluded from the profiler**
-  (`--ignore=tests/app/integration/test_web_render.py`), so the coverage run is fast and
-  reliable. The render tests still run — unprofiled — in the full `pytest` suite that gates
-  a merge; coverage just no longer drives the profiler through them.
+  (`--ignore=tests/app/integration/test_web_render.py`), then `coverage report` (the 97%
+  aggregate gate) and `tools.coverage_floor` (the per-file floors). The render tests still
+  run — unprofiled — in the full `pytest` suite that gates a merge; coverage just no longer
+  drives the profiler through them.
 
 This pairs with the `app.py` logic-extraction item below — together they move the view's
 *logic* into a place the scoped gate covers cheaply.
