@@ -136,6 +136,8 @@ class Renderer(_ChromeSyncMixin):
         self._chrome.colhead_inner.style(f"width:{lay.width}px; height:{fy}px")
         self._chrome.corner.style(f"width:{fx}px; height:{fy}px")
         self._chrome.gridbody.style(f"top:{_PAD + fy}px")
+        self._chrome.colfill.style(f"top:{_PAD + fy}px")
+        self._chrome.colfill_inner.style(f"width:{lay.width}px; height:{lay.height}px")
         self._chrome.rowband.style(f"width:{fx}px; height:{lay.height - fy}px")
         self._chrome.show_frozen.style(f"height:{max(0, fy - _CHROME_H)}px")
         self._chrome.show_scroll.style(f"max-height:calc(100vh - {_PAD + fy}px)")
@@ -162,6 +164,8 @@ class Renderer(_ChromeSyncMixin):
             y0, y1 = (ln.start, ln.start + ln.length) if ln.orientation == "v" else (ln.pos, ln.pos)
             if x1 >= fx and y1 >= fy:
                 place_line(ln, "", self._chrome.board, fy)
+                if ln.orientation == "v" and y0 <= fy and ln.length > fy:
+                    place_line(ln, "#fill", self._chrome.colfill_inner, fy)
             if x1 >= fx and y0 < fy:
                 place_line(ln, "#col", self._chrome.colhead_inner, 0)
             if x0 < fx and y1 >= fy:

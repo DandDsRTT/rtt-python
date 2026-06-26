@@ -12,6 +12,8 @@ class PageChrome:
         self.grid_pane: Element | None = None
         self.colhead: Element | None = None
         self.colhead_inner: Element | None = None
+        self.colfill: Element | None = None
+        self.colfill_inner: Element | None = None
         self.corner: Element | None = None
         self.gridbody: Element | None = None
         self.board: Element | None = None
