@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from rtt.app import presets, service
-from rtt.app.editor_state import weights_are_solvable
+from rtt.app.editor_state import comma_ratios_in_domain, weights_are_solvable
 
 _GENERATOR_NUDGE_CENTS = 0.001
 
@@ -150,14 +150,14 @@ class _TuningCommands:
         U = service.unchanged_basis_from_projection(self.state, projection)
         if U is None:
             return False
-        self.set_unchanged_basis(service.comma_ratios(U, self.state.domain_basis))
+        self.set_unchanged_basis(comma_ratios_in_domain(self.state, U))
         return True
 
     def set_embedding_matrix(self, embedding) -> bool:
         U = service.unchanged_basis_from_embedding(self.state, embedding)
         if U is None:
             return False
-        self.set_unchanged_basis(service.comma_ratios(U, self.state.domain_basis))
+        self.set_unchanged_basis(comma_ratios_in_domain(self.state, U))
         return True
 
     def set_complexity_prescaler(self, prescaler: str) -> None:

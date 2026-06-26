@@ -1,8 +1,8 @@
 {
-  "reach_through_total": 465,
+  "reach_through_total": 456,
   "reach_through_by_handle": {
     "_editor": 120,
-    "state": 94,
+    "state": 85,
     "_chrome": 78,
     "_rec": 49,
     "_runtime": 47,
@@ -76,7 +76,6 @@
     "rtt.app.building": 10,
     "rtt.app.editing": 18,
     "rtt.app.editor_document": 13,
-    "rtt.app.editor_tuning": 8,
     "rtt.app.editor_view": 8,
     "rtt.app.gestures": 9,
     "rtt.app.reconciler": 13,

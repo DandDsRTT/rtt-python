@@ -18,6 +18,14 @@ def _same_cents_map(a, b) -> bool:
     )
 
 
+def blank_draft(state: TemperamentState) -> list[None]:
+    return [None] * state.d
+
+
+def comma_ratios_in_domain(state: TemperamentState, vectors):
+    return service.comma_ratios(vectors, state.domain_basis)
+
+
 @dataclass(frozen=True)
 class _Doc:
     state: TemperamentState
