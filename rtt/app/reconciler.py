@@ -486,5 +486,6 @@ class _Reconciler:
         family = self._editor.target_family
         limit = self._editor.target_limit
         if limit is None:
-            limit = service.default_target_limit(family, self._editor.state.domain_basis)
+            state = self._editor.state
+            limit = service.default_target_limit(family, state.domain_basis)
         return limit, family

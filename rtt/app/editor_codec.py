@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from rtt.app import service
 from rtt.app import settings as show_settings
-from rtt.app.editor_document import (
+from rtt.app.editor_state import (
     INITIAL_COLLAPSED,
-    Document,
     _Doc,
     prescaler_is_solvable,
     weights_are_solvable,
 )
+
+if TYPE_CHECKING:
+    from rtt.app.editor_document import Document
 
 
 def _prescaler_to_json(p):
