@@ -50,7 +50,7 @@ def _domain_basis_intersection_binary(basis1: tuple, basis2: tuple) -> tuple:
 
 
 def is_subspace_of(subspace: tuple, superspace: tuple) -> bool:
-    return domain_basis_merge(subspace, superspace) == tuple(superspace)
+    return domain_basis_merge(subspace, superspace) == canonical_domain_basis_private(superspace)
 
 
 def signs_match(a: int, b: int) -> bool:

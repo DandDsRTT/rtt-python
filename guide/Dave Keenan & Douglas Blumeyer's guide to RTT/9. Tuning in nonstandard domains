@@ -269,6 +269,38 @@ So, we suggest that the better generalization of the definition of the max integ
 
 Regarding our example, then, the integer limit of that basis is 21, the next prime is 23, and so the default TILT here is the 22-TILT (filtered, of course, of all intervals with 5's, 11's, 13's, 17's, and 19's in their factorizations, or odd counts of 3's).
 
+The same reasoning carries over to the [[OLD]], with one twist: an odd limit only ever climbs with ''odd'' content. So where the TILT's default reads off the greatest ''integer'' in the basis, the OLD's reads off the greatest ''odd part''&mdash;the largest odd number dividing any numerator or denominator of any basis element&mdash;and then, exactly as in the standard case, takes the odd just below the next prime above it:
+
+<math>
+\text{default_odd_limit} = \text{p}(\pi(g_\text{odd})+1)-2
+</math>
+
+where <math>g_\text{odd}</math> is that greatest odd part. For a prime-only basis this is just the greatest prime, so we recover the standard definition. The reason for keeping it odd-based rather than integer-based is easy to see: the basis 2.3.10 spans exactly the same lattice as plain 2.3.5 (its 10 contributes only a factor of 2, which the 2 already supplies), and so it ought to&mdash;and does&mdash;default to the 5-OLD, not some inflated odd limit read off the "10". For our 2.9.21 example, the greatest odd part is the 21 itself, so its default is the 21-OLD, alongside the 22-TILT we found above.
+
+=== How the approach determines the target-interval set ===
+Back in the [[#Note on coprime|note on coprime bases]] we flagged that when a tuning scheme's target-interval set is ''itself'' chosen by a scheme&mdash;a [[TILT]], an [[OLD]], and so on&mdash;the set you end up with depends on which of the three approaches you've taken. Having now worked through the approaches in full, we can be precise about how.
+
+Recall the two-step recipe for any such set scheme on a nonstandard domain: compute the set as if nothing were unusual, then filter out every interval the basis can't support. The first step doesn't care about the approach. It's the ''filter''&mdash;specifically, ''which subspace we filter to''&mdash;that the approach decides:
+
+* With the '''nonprime-based''' and '''neutral''' approaches we have not broken the basis down, so the only intervals we may target are the ones we can actually reach ''in that basis''. We filter to the lattice spanned by the domain basis itself. (These two approaches therefore agree on ''which'' intervals get targeted; they differ only in how each interval's complexity, and so its damage weight, is measured.)
+* With the '''prime-based''' approach we have embedded the temperament in its SPOB, and the whole point of doing so was to tune with respect to intervals we ''can't'' reach in the original basis. So here we filter to the SPOB&mdash;the prime superspace&mdash;which supports far more intervals, including the "lone" primes that the nonprime basis had locked together.
+
+The 2.{{sfrac|5|3}}.7 domain makes the difference vivid. Its default is the 10-TILT. Filtered to the basis itself, as the nonprime-based and neutral approaches do, only four intervals survive:
+
+<math>
+\left\{ \frac{2}{1}, \frac{5}{3}, \frac{6}{5}, \frac{7}{4} \right\}
+</math>
+
+and every one is reachable in 2.{{sfrac|5|3}}.7&mdash;the 5 and the 3 appear only ever locked together (as the {{sfrac|5|3}} itself, or as {{sfrac|6|5}} = 2·{{sfrac|3|5}}), while the 7 stands alone. But filtered to the SPOB 2.3.5.7, as the prime-based approach does, we recover the entire ordinary 10-TILT:
+
+<math>
+\left\{ \frac{2}{1}, \frac{3}{1}, \frac{3}{2}, \frac{4}{3}, \frac{5}{2}, \frac{5}{3}, \frac{5}{4}, \frac{6}{5}, \frac{7}{3}, \frac{7}{4}, \frac{7}{5}, \frac{7}{6}, \frac{8}{3}, \frac{8}{5}, \frac{9}{4}, \frac{9}{5}, \frac{9}{7}, \frac{10}{7} \right\}
+</math>
+
+now including the lone {{sfrac|5|4}}, {{sfrac|3|2}}, and the rest. This is exactly the sense in which we said you should only reach for the prime-based approach if you also intend to target intervals like {{sfrac|5|4}}, {{sfrac|6|5}}, and {{sfrac|7|4}} individually: those lone-prime intervals ''are'' the target-interval set's response to that choice.
+
+The default max follows the same logic, since each approach reads it from whichever basis it actually tunes in. The nonprime-based and neutral approaches read it from the original basis, so on 2.9.21&mdash;where 21 is a basis element they preserve&mdash;the default is the 22-TILT (filtered to the 2.9.21 lattice, which couples the count of 3's to the count of 7's, leaving just seven intervals). The prime-based approach reads it from the SPOB, and on 2.9.21 the SPOB is the ordinary 2.3.7, so the 21 has been dissolved into 3·7 for tuning purposes and the default is simply the 10-TILT.
+
 == Computation ==
 For this example, we'll tune a temperament of the 2.7/3.11/3 domain with the TILT minimax-C tuning scheme.
 

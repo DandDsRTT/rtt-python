@@ -67,18 +67,53 @@ def test_get_otonal_chord(harmonics, expected):
 # limit, TILT/OLD pick the integer/odd just below the next prime past the basis's greatest part.
 @pytest.mark.parametrize(
     "domain_basis, default_limit",
-    [((2, 3, 5), "6-TILT"), ((2, 3, 5, 7), "10-TILT"), ((2, 9, 21), "22-TILT")],
+    [
+        ((2, 3, 5), "6-TILT"),
+        ((2, 3, 5, 7), "10-TILT"),
+        ((2, 9, 21), "22-TILT"),
+        ((2, 3, Fraction(13, 5)), "16-TILT"),
+        ((2, 3, Fraction(5, 13)), "16-TILT"),
+        ((2, Fraction(5, 7)), "10-TILT"),
+    ],
 )
-def test_process_tilt_default_limit(domain_basis, default_limit):
+def test_process_tilt_default_limit_reads_the_greatest_part_numerator_or_denominator(
+    domain_basis, default_limit
+):
     assert process_tilt("TILT", domain_basis) == process_tilt(default_limit, domain_basis)
 
 
 @pytest.mark.parametrize(
     "domain_basis, default_limit",
-    [((2, 3, 5), "5-OLD"), ((2, 3, 5, 7), "9-OLD"), ((2, 9, 21), "21-OLD")],
+    [
+        ((2, 3, 5), "5-OLD"),
+        ((2, 3, 5, 7), "9-OLD"),
+        ((2, 9, 21), "21-OLD"),
+        ((2, 3, Fraction(13, 5)), "15-OLD"),
+        ((2, 3, Fraction(5, 13)), "15-OLD"),
+        ((2, Fraction(5, 7)), "9-OLD"),
+    ],
 )
-def test_process_old_default_limit(domain_basis, default_limit):
+def test_process_old_default_limit_reads_the_greatest_part_numerator_or_denominator(
+    domain_basis, default_limit
+):
     assert process_old("OLD", domain_basis) == process_old(default_limit, domain_basis)
+
+
+@pytest.mark.parametrize(
+    "process, family, domain_basis",
+    [
+        (process_tilt, "TILT", (2, 3, Fraction(5, 13))),
+        (process_old, "OLD", (2, 3, Fraction(5, 13))),
+        (process_tilt, "TILT", (2, Fraction(5, 7))),
+        (process_old, "OLD", (2, Fraction(5, 7))),
+    ],
+)
+def test_default_limit_keeps_a_nonempty_target_set_when_a_denominator_holds_the_greatest_part(
+    process, family, domain_basis
+):
+    quotients = process(family, domain_basis)
+    filtered = filter_target_intervals_for_nonstandard_domain_basis(quotients, domain_basis)
+    assert filtered, f"{family} default limit left no targets for {domain_basis}"
 
 
 # Filtering a target set to a nonstandard subgroup (tests.m 4109-4112): over the basis 4.3.5,

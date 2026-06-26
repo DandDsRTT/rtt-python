@@ -2144,14 +2144,15 @@ def test_can_remove_domain_element_keeps_at_least_one_element():
     assert not service.can_remove_domain_element(service.from_mapping(((1,),)))  # d = 1: nothing to remove
 
 
-def test_generator_tuning_range_is_none_for_an_unmeasurable_mixed_basis():
-    # 2.3.5.13/5 (5 and 13/5 share the prime 5): the odd-limit diamond the range solver works over
-    # isn't defined, so the range gracefully degrades to None rather than crashing the tuning build.
+def test_generator_tuning_range_is_well_defined_for_a_fractional_spelling_of_a_prime_subgroup():
+    # 2.3.5.13/5 canonicalizes to the prime-only subgroup 2.3.5.13, so its OLD target set is
+    # non-empty and the generator range solver is well-defined; the fractional spelling of the basis
+    # must not collapse the targets to empty (which would force a spurious None range).
     state = service.from_mapping(((1, 1, 0, 0), (0, 1, 4, 0), (0, 0, 0, 1)),
                                  domain_basis=(2, 3, 5, Fraction(13, 5)))
     t = service.tuning(state.mapping, service.DEFAULT_TUNING_SCHEME, state.domain_basis)
-    assert t.monotone_generator_range is None and t.tradeoff_generator_range is None
-    assert all(x == x for x in t.tuning_map)  # the tuning itself is finite and unaffected
+    assert t.monotone_generator_range is not None and t.tradeoff_generator_range is not None
+    assert all(x == x for x in t.tuning_map)
 
 
 def test_tuning_projection_is_dashed_for_an_under_held_tuning():
