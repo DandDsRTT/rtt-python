@@ -29,7 +29,7 @@ _COMMENT_ALLOWANCE = {
     "app/_recon_buttons.py": 2,
     "app/_recon_drag.py": 6,
     "app/rendering.py": 5,
-    "app/editing.py": 4,
+    "app/_editing_controls.py": 4,
     "app/_editing_tuning.py": 3,
     "app/building.py": 1,
     "app/render_html_layout.py": 2,

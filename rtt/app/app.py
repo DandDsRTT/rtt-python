@@ -118,7 +118,7 @@ class _Page:
 
     def _wire_reconciler(self) -> None:
         self.rec._cb = bind_callbacks(
-            self.edits, self.edits.vectors, self.edits.tuning, self.gestures
+            self.edits, self.edits.vectors, self.edits.tuning, self.edits.controls, self.gestures
         )
 
     def apply_theme(self):
