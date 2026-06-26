@@ -221,3 +221,72 @@ gate goes green on everything that *is* in scope:
 
 Both re-enable together when the 500→250→100 decomposition splits the dense view modules so
 their wrapped lines fit under the caps. They are NOT closed at the 50/500 milestone.
+
+## When is this "done"? — north-star, stop condition, and the audit loop
+
+A quality gate with no defined finish invites either endless polishing or quiet rot. Three
+things keep this gate convergent.
+
+### Architecture north-star
+
+The app is a **unidirectional data flow with an event shell**, not a two-way-bound framework.
+State lives in `Document` (the store: temperament/tuning state + undo/redo, alongside
+`pending` / `history` / view-settings); the render path is forward-only and pure —
+`state → resolve() → frozen Resolved → frozen Geometry → assemble()/emit → render` — with
+`_Reconciler` as the diff step. There is essentially no two-way binding (a handful of `.bind*`
+calls total). This is the React-Redux shape adapted to a **server-rendered** NiceGUI app: the
+"render loop" is the hand-built reconciler, not a virtual DOM. The data/render core is already
+where it should be. **The remaining coupling debt is entirely in the event/controller shell**
+(`GestureController`, `EditController`, `PageBuilder`, `Renderer`, `_Reconciler`) — controllers
+that reach *through* each other instead of dispatching into the store. The endgame is to
+converge that shell onto the store-and-pipeline core that already exists; do **not**
+re-architect the data flow toward something else.
+
+### The stop condition
+
+Stop auditing for structure when **(1)** every gate is green **at its floor**, and **(2)** each
+remaining floor is **demonstrably irreducible** — lowering it further would require breaking a
+unit that legitimately should exist. A proven-irreducible floor is a STOP signal, not a TODO.
+(Worked example: a design spike established that `Document`'s ~20-attr state core — undo/redo
+plus the state-transition invariants — cannot be safely split; that state *is* the document's
+identity.) At that point you switch from "auditing for improvements" to **the gate is the
+standing guard**: you touch coupling again only when a gate goes **red** (a regression) or a
+real feature forces it. Re-running an open-ended "what's wrong here?" audit on a codebase
+already at its floors **manufactures** findings — that is thrash, a property of the method, not
+the code.
+
+### The audit loop — gate the gap, don't polish the code
+
+A non-adversarial "does this look ok?" returns false comfort and misses real debt, so audits
+should stay adversarial. What keeps an adversarial audit from thrashing is **what its findings
+are allowed to become** — and "go fix it by hand" is not one of the options. Every finding
+routes to exactly one of:
+
+1. **Moves an existing gate** toward its floor → act; it is measured debt.
+2. **Becomes a new gate** → if it is a real, recurring, load-bearing invariant no current gate
+   catches, encode it as a metric + floor. (This is how the reach-through metric was born: an
+   audit found the god-object the size/coverage gates missed, and it became
+   `tools/quality_metrics.py`.)
+3. **Discarded** → if it cannot be stated as a measurable invariant with a target, it is taste,
+   not debt. Let it go.
+
+The materiality test is one question: **"Can I state this as a number with a target?"** If not,
+it is almost always subjective polish.
+
+The sharpest form is to point the adversary at the gate **coverage**, not the code: *"what real,
+measurable coupling or structural debt exists that no current gate would catch?"* Still
+adversarial — it forces finding blind spots, no false "looks fine" — but it **converges**,
+because the set of load-bearing measurable invariants is finite. When that prompt returns
+nothing you can trust the nothing: it is a checkable claim about the measurement system's
+coverage, unlike "is the code clean?", whose "nothing" is just the adversary giving up.
+
+Two riders:
+
+- **Trigger on events, not a calendar.** Run after a *large structural change* (to catch what
+  it just exposed — fixing one layer reveals the next; the layers are finite), or when a gate
+  keeps fighting you (a missing or miscalibrated invariant). A scheduled audit reintroduces
+  "it's audit time, find something."
+- **Taste is out of scope.** A misleading name or a conceptually leaky-but-uncoupled
+  abstraction is real but low-stakes and infinitely fundable. Handle it with a *time-boxed,
+  explicitly non-recurring* readability pass under a "diminishing returns → stop" rule. Never
+  put taste on repeat, and never let it pass as debt.
