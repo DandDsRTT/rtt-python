@@ -34,37 +34,3 @@ class ResolveInputs:
     comma_basis_form: object
     preview_remove: object
     prev_ids: object
-
-
-def make_inputs(builder, held_vectors, pending_comma) -> ResolveInputs:
-    return ResolveInputs(
-        state=builder.state,
-        settings=builder.settings,
-        collapsed=builder.collapsed,
-        tuning_scheme=builder.tuning_scheme,
-        target_spec=builder.target_spec,
-        interest=builder.interest,
-        range_mode=builder.range_mode,
-        pending_interest=builder.pending_interest,
-        pending_held=builder.pending_held,
-        pending_target=builder.pending_target,
-        pending_element=builder.pending_element,
-        pending_mapping_row=builder.pending_mapping_row,
-        pending_comma=pending_comma,
-        custom_prescaler=builder.custom_prescaler,
-        custom_weights=builder.custom_weights,
-        tuning_optimized=builder.tuning_optimized,
-        nonprime_approach=builder.nonprime_approach,
-        superspace_generator_tuning=builder.superspace_generator_tuning,
-        displayed_tuning_name=builder.displayed_tuning_name,
-        displayed_projection_name=builder.displayed_projection_name,
-        held_basis_ratios=builder.held_basis_ratios,
-        held_vectors=held_vectors,
-        generator_tuning=builder.generator_tuning,
-        target_override=builder.target_override,
-        targets_in_use=builder.targets_in_use,
-        mapping_form=builder.mapping_form,
-        comma_basis_form=builder.comma_basis_form,
-        preview_remove=builder.preview_remove,
-        prev_ids=builder.prev_ids,
-    )

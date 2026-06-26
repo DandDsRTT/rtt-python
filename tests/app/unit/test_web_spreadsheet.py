@@ -2133,7 +2133,7 @@ def test_every_open_value_tile_has_a_plain_text_string():
     assert b.resolved.flags.superspace and b.resolved.flags.ptext  # the config really did light the superspace + plain text
     value_rows = PTEXT_ROWS - {"quantities"}  # the quantities row's only band is the "2.3.5" primes string
     missing = [(r, c) for (r, c) in sorted(b.geometry.declared_tiles)
-               if r in value_rows and c not in SPINE_COLUMNS and query.tile_open(b.geometry, b.collapsed, r, c)
+               if r in value_rows and c not in SPINE_COLUMNS and query.tile_open(b.geometry, b.inputs.collapsed, r, c)
                and (r, c) not in b.geometry.ptext_strings]
     assert not missing, f"open value tiles with no plain-text band: {missing}"
 
@@ -2231,7 +2231,7 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
     mismatches = []
     checked = 0
     for (rkey, ckey) in sorted(b.geometry.declared_tiles):
-        if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.collapsed, rkey, ckey):
+        if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.inputs.collapsed, rkey, ckey):
             continue
         if (rkey, ckey) not in b.geometry.ptext_strings:
             continue  # the presence test owns that failure
@@ -2374,7 +2374,7 @@ def test_every_plain_text_band_uses_the_same_brackets_as_its_grid_tile():
     value_rows = PTEXT_ROWS - {"quantities"}
     mismatches, checked = [], 0
     for (rkey, ckey) in sorted(b.geometry.declared_tiles):
-        if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.collapsed, rkey, ckey):
+        if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.inputs.collapsed, rkey, ckey):
             continue
         if (rkey, ckey) not in b.geometry.ptext_strings:
             continue  # presence is the other guard's job
@@ -2409,7 +2409,7 @@ def test_every_open_value_tile_declares_an_ebk_convention():
     value_rows = PTEXT_ROWS - {"quantities"}
     undeclared, mismatches, checked = [], [], 0
     for (rkey, ckey) in sorted(b.geometry.declared_tiles):
-        if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.collapsed, rkey, ckey):
+        if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.inputs.collapsed, rkey, ckey):
             continue
         if (rkey, ckey) not in b.geometry.ptext_strings:
             continue
