@@ -13,7 +13,6 @@ from rtt.app.page_assets import (
     _SUBPICK_POPUP_W,
     _formchooser_options,
     _GroupedSelect,
-    _projection_prompt,
     _set_offlist_prompt,
 )
 from rtt.app.render_html import (
@@ -107,7 +106,7 @@ def build_preset(rec, cb: spreadsheet.CellBox, wrap) -> None:
     elif name == "temperament":
         _build_preset_temperament(rec, cb, wrap)
     else:
-        options, value, prompt = _scheme_options(rec, cb, name)
+        options, value, prompt = _scheme_options(rec, name)
         _build_scheme_select(rec, cb, wrap, options, value, prompt)
 
 
@@ -179,7 +178,7 @@ def _build_preset_temperament(rec, cb: spreadsheet.CellBox, wrap) -> None:
     rec.cells[cb.id].chooser.select = sel
 
 
-def _scheme_options(rec, cb: spreadsheet.CellBox, name: str) -> tuple[list, object, str]:
+def _scheme_options(rec, name: str) -> tuple[list, object, str]:
     if name == "prescaler":
         options = list(presets.prescaler_options(rec._editor.settings["alt_complexity"]))
         value = rec._editor.displayed_prescaler_name
@@ -187,7 +186,7 @@ def _scheme_options(rec, cb: spreadsheet.CellBox, name: str) -> tuple[list, obje
     if name == "projection":
         options = presets.projection_options(rec._editor.state)
         value = rec._editor.displayed_projection_scheme_name
-        return options, (value if value in options else None), _projection_prompt(cb.id)
+        return options, (value if value in options else None), "-"
     options = presets.tuning_scheme_options(
         service.is_all_interval(rec._editor.tuning_scheme),
         rec._editor.settings["alt_complexity"],
@@ -252,9 +251,7 @@ def update_preset(rec, cb: spreadsheet.CellBox) -> None:
         value = rec._editor.displayed_projection_scheme_name
         value = value if value in options else None
         rec.cells[cb.id].chooser.select.set_options(options, value=value)
-        _set_offlist_prompt(
-            rec.cells[cb.id].chooser.select, value, prompt=_projection_prompt(cb.id)
-        )
+        _set_offlist_prompt(rec.cells[cb.id].chooser.select, value)
         rec.cells[cb.id].chooser.select.set_enabled(not cb.disabled)
     else:
         name = rec._editor.displayed_tuning_scheme_name

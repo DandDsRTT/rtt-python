@@ -18,10 +18,12 @@ def cur_gesture(gestures):
 def target_preset_values(editor):
     if editor.target_override is not None or service.is_all_interval(editor.tuning_scheme):
         return None, None
+    state = editor.state
+    if not service.target_interval_set(editor.target_spec, state.domain_basis):
+        return None, None
     family = editor.target_family
     limit = editor.target_limit
     if limit is None:
-        state = editor.state
         limit = service.default_target_limit(family, state.domain_basis)
     return limit, family
 

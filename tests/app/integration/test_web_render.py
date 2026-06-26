@@ -258,6 +258,20 @@ async def test_projection_renders_the_embedding_and_its_choosers(user: User) -> 
     assert _cell_child(user, "tuning:gen:1").value == "694.786"  # the dropdown changed the tuning
 
 
+async def test_projection_choosers_show_a_dash_when_the_tuning_matches_no_named_projection(
+    user: User,
+) -> None:
+    await user.open("/")
+    _toggle(user, "presets")
+    user.find(kind=ui.checkbox, content="projection").click()
+    await user.should_see(marker="preset:projection")
+    assert "display-value" not in _cell_child(user, "preset:projection")._props
+    _cell_child(user, "tuning:gen:1").set_value("690")
+    await user.should_see(marker="preset:projection")
+    assert _cell_child(user, "preset:projection")._props.get("display-value") == "-"
+    assert _cell_child(user, "preset:projection:gens")._props.get("display-value") == "-"
+
+
 async def test_back_to_scheme_button_reverts_a_picked_projection(user: User) -> None:
     # the always-present "back to scheme" button on the projection tile hands a picked tuning back to
     # the scheme + target list: pick 1/3-comma (target list hidden), click it, and the target list
