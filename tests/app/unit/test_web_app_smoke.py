@@ -1280,11 +1280,19 @@ def _marked_callback_names():
     from rtt.app._editing_tuning import _TuningEdits
     from rtt.app._editing_vectors import _VectorEdits
     from rtt.app.editing import EditController, _ControlEdits
-    from rtt.app.gestures import GestureController
+    from rtt.app.gestures import GestureController, _GestureCombine, _GestureHover
 
     return {
         name
-        for cls in (EditController, _ControlEdits, _VectorEdits, _TuningEdits, GestureController)
+        for cls in (
+            EditController,
+            _ControlEdits,
+            _VectorEdits,
+            _TuningEdits,
+            GestureController,
+            _GestureCombine,
+            _GestureHover,
+        )
         for name in dir(cls)
         if getattr(getattr(cls, name, None), "_rtt_cb", False)
     }
@@ -1322,7 +1330,15 @@ def test_bind_callbacks_binds_every_declared_callback():
     runtime = SimpleNamespace(building=False)
     edits = EditController(SimpleNamespace(), SimpleNamespace(), gestures, None, runtime)
 
-    cb = bind_callbacks(edits, edits.vectors, edits.tuning, edits.controls, gestures)
+    cb = bind_callbacks(
+        edits,
+        edits.vectors,
+        edits.tuning,
+        edits.controls,
+        gestures,
+        gestures.combine,
+        gestures.hover,
+    )
     assert isinstance(cb, ReconcilerCallbacks)
     for name in required_callback_names():
         assert getattr(cb, name)._rtt_cb is True
