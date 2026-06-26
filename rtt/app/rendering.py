@@ -5,24 +5,13 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from nicegui import background_tasks, helpers, ui
+from nicegui import background_tasks, helpers
 
-from rtt.app import (
-    spreadsheet_text,
-)
-from rtt.app._recon_handles import EntityHandles
-from rtt.app.page_assets import (
-    _CHROME_H,
-    _PAD,
-    _TINTS,
-)
+from rtt.app import _rendering_ops, rendering_chrome
 from rtt.app.render_html import (
-    _block_panes,
     _freeze_container,
-    _line_style,
     _rect_in_view,
 )
-from rtt.app.rendering_chrome import _ChromeSyncMixin
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -50,7 +39,7 @@ def _initial_viewport() -> tuple[float, float, float, float]:
     return (0.0, 0.0, w, h)
 
 
-class Renderer(_ChromeSyncMixin):
+class Renderer:
     def __init__(
         self,
         editor: Editor,
@@ -95,7 +84,11 @@ class Renderer(_ChromeSyncMixin):
             again = True
             cont = after
             while again:
-                prev = self._runtime.last_lay.identities if self._runtime.last_lay is not None else None
+                prev = (
+                    self._runtime.last_lay.identities
+                    if self._runtime.last_lay is not None
+                    else None
+                )
                 try:
                     await asyncio.to_thread(self._editor.layout, prev_ids=prev)
                 except Exception:
@@ -111,175 +104,13 @@ class Renderer(_ChromeSyncMixin):
             self.render_inflight = False
 
     def apply_view_classes(self):
-        # NiceGUI: render() can run off the event loop (_commit_render), where the slot stack is empty
-        # and ui.query would raise "slot stack ... is empty"; entering the captured page client lets the
-        # <body> query resolve there (and nests harmlessly inside the live slot on the synchronous path).
-        with self._runtime.page_client:
-            body = ui.query("body")
-            body.classes(add="rtt-no-anim") if not self._editor.settings[
-                "animations"
-            ] else body.classes(remove="rtt-no-anim")
-            body.classes(add="rtt-no-tooltips") if not self._editor.settings[
-                "tooltips"
-            ] else body.classes(remove="rtt-no-tooltips")
-
-    def _size_panes(self, lay, fx, fy) -> None:
-        base_w = lay.width + lay.right_overhang + 2 * _PAD
-        base_h = lay.height + 2 * _PAD
-        self._chrome.grid_pane.style(f"width:{base_w}px; height:{base_h}px")
-        fit_w = lay.width + 2 * _PAD
-        self._chrome.grid_pane.props(
-            f'data-base-w="{base_w}" data-base-h="{base_h}" data-fit-w="{fit_w}"'
-        )
-        self._chrome.board.style(f"width:{lay.width}px; height:{lay.height - fy}px")
-        self._chrome.colhead.style(f"height:{fy}px")
-        self._chrome.colhead_inner.style(f"width:{lay.width}px; height:{fy}px")
-        self._chrome.corner.style(f"width:{fx}px; height:{fy}px")
-        self._chrome.gridbody.style(f"top:{_PAD + fy}px")
-        self._chrome.colfill.style(f"top:{_PAD + fy}px")
-        self._chrome.colfill_inner.style(f"width:{lay.width}px; height:{lay.height}px")
-        self._chrome.rowband.style(f"width:{fx}px; height:{lay.height - fy}px")
-        self._chrome.show_frozen.style(f"height:{max(0, fy - _CHROME_H)}px")
-        self._chrome.show_scroll.style(f"max-height:calc(100vh - {_PAD + fy}px)")
-
-    def _render_lines(self, lay, fx, fy, seen) -> None:
-        def place_line(ln, suffix, parent, shift):
-            eid = ln.id + suffix
-            seen.add(eid)
-            if eid not in self._rec.entities:
-                with parent:
-                    cls = "rtt-line " + ("rtt-line-v" if ln.orientation == "v" else "rtt-line-h")
-                    if self._revirtualizing:
-                        cls += " rtt-noentry"
-                    self._rec.entities[eid] = EntityHandles(
-                        el=ui.element("div").classes(cls).props(f'data-eid="{eid}"')
-                    )
-            sty = _line_style(ln, shift)
-            if self._rec.entity(eid).styled != sty:
-                self._rec.entities[eid].el.style(sty)
-                self._rec.entities[eid].styled = sty
-
-        for ln in lay.lines:
-            x0, x1 = (ln.pos, ln.pos) if ln.orientation == "v" else (ln.start, ln.start + ln.length)
-            y0, y1 = (ln.start, ln.start + ln.length) if ln.orientation == "v" else (ln.pos, ln.pos)
-            if x1 >= fx and y1 >= fy:
-                place_line(ln, "", self._chrome.board, fy)
-                if ln.orientation == "v" and y0 <= fy and ln.length > fy:
-                    place_line(ln, "#fill", self._chrome.colfill_inner, fy)
-            if x1 >= fx and y0 < fy:
-                place_line(ln, "#col", self._chrome.colhead_inner, 0)
-            if x0 < fx and y1 >= fy:
-                place_line(ln, "#row", self._chrome.rowband, fy)
-
-    def _render_blocks(self, lay, fx, fy, seen) -> None:
-        def place_block(bl, pane):
-            suffix = "" if pane == "body" else "#" + pane
-            shift = 0 if pane in ("col", "corner") else fy
-            eid = bl.id + suffix
-            seen.add(eid)
-            if eid not in self._rec.entities:
-                with self._chrome.cell_parents[pane]:
-                    cls = (
-                        "rtt-block-boxed"
-                        if bl.boxed
-                        else "rtt-washbase"
-                        if bl.tint == "base"
-                        else "rtt-wash"
-                        if bl.tint
-                        else "rtt-block"
-                    )
-                    if self._revirtualizing:
-                        cls += " rtt-noentry"
-                    self._rec.entities[eid] = EntityHandles(
-                        el=ui.element("div").classes(cls).props(f'data-eid="{eid}"').mark(eid)
-                    )
-            style = f"left:0; top:0; transform:translate({bl.x}px,{bl.y - shift}px); width:{bl.w}px; height:{bl.h}px"
-            if bl.tint in _TINTS:
-                style += f"; background:var(--wash-{bl.tint})"
-            if self._rec.entity(eid).styled != style:
-                self._rec.entities[eid].el.style(style)
-                self._rec.entities[eid].styled = style
-
-        for bl in lay.blocks:
-            for pane in _block_panes(bl, fx, fy):
-                place_block(bl, pane)
+        _rendering_ops.apply_view_classes(self._editor, self._runtime)
 
     def _body_visible(self, x, y, w, h, fy) -> bool:
         return _rect_in_view(x, y, w, h, fy, self._viewport, _VIRT_OVERSCAN)
 
-    def _make_cell_if_new(self, cb, container, cold, structural) -> None:
-        if cb.id in self._rec.entities and self._rec.cells[cb.id].kind != cb.kind:
-            self._rec.drop(cb.id)
-        if cb.id not in self._rec.entities:
-            with self._chrome.cell_parents[container]:
-                self._rec.make_cell(cb)
-            if self._revirtualizing:
-                self._rec.entities[cb.id].el.classes(add="rtt-noentry")
-            if structural and not cold and not cb.pending and cb.id in self._newborn_ids:
-                self._rec.entities[cb.id].el.classes(add="rtt-withhold")
-
-    def _update_cell_content(self, cb) -> None:
-        csig = (spreadsheet_text._cell_content(cb), cb.w, cb.h, cb.audio)
-        h = self._rec.handles(cb.id)
-        volatile = any(
-            (
-                h.value.input,
-                h.value.den_input,
-                h.value.ptext_input,
-                h.chooser.select,
-                h.chooser.check,
-                h.value.frac_edit,
-                h.value.ratio_op,
-            )
-        )
-        if volatile or self._rec.handles(cb.id).content_sig != csig:
-            self._rec.update_cell(cb)
-            self._rec.cells[cb.id].content_sig = csig
-
-    def _render_cells(self, lay, fx, fy, seen, amber, red, cold, structural) -> None:
-        for cb in lay.cells:
-            seen.add(cb.id)
-            container = _freeze_container(cb, fx, fy)
-            if (
-                cb.id not in self._rec.entities
-                and container == "body"
-                and not cb.pending
-                and not self._body_visible(cb.x, cb.y, cb.w, cb.h, fy)
-            ):
-                continue
-            self._make_cell_if_new(cb, container, cold, structural)
-            top = cb.y - (fy if container in ("body", "row") else 0)
-            geo = f"left:0; top:0; transform:translate({cb.x}px,{top}px); width:{cb.w}px; height:{cb.h}px"
-            if self._rec.entity(cb.id).styled != geo:
-                self._rec.entities[cb.id].el.style(geo)
-                self._rec.entities[cb.id].styled = geo
-            self._update_cell_content(cb)
-            self._gestures.paint_cell(cb.id, amber, red)
-
-        for eid in [e for e in self._rec.entities if e not in seen]:
-            self._rec.drop(eid)
-
-    def _end_stale_gestures(self) -> None:
-        g = self._gestures.gesture
-        if g is not None and not self._gestures.gesture_rendering:
-            if g.kind in ("hover", "chooser", "temp", "drag"):
-                self._gestures.end_gesture()
-            else:
-                g.apply = None
-        if not self._gestures.rank_rendering:
-            self._gestures.rank_remove = None
-
-    def _validate_gesture_source(self, lay) -> None:
-        g = self._gestures.gesture
-        if g is not None and g.source is not None:
-            src_kind = next((cb.kind for cb in lay.cells if cb.id == g.source), None)
-            if src_kind is None or (
-                g.source in self._rec.cells and self._rec.cells[g.source].kind != src_kind
-            ):
-                self._gestures.end_gesture()
-
     def render(self):
-        self._end_stale_gestures()
+        _rendering_ops.end_stale_gestures(self._gestures)
         with self._runtime.building_guard():
             self.apply_view_classes()
             prev = self._runtime.last_lay.identities if self._runtime.last_lay is not None else None
@@ -290,18 +121,18 @@ class Renderer(_ChromeSyncMixin):
             cur_ids = frozenset(cb.id for cb in lay.cells)
             self._newborn_ids = cur_ids - self._prev_cell_ids
             fx, fy = lay.freeze_x, lay.freeze_y
-            self._size_panes(lay, fx, fy)
-            seen = set()
+            _rendering_ops.size_panes(self._chrome, lay, fx, fy)
+            seen: set = set()
 
-            self._render_lines(lay, fx, fy, seen)
-            self._render_blocks(lay, fx, fy, seen)
-            self._validate_gesture_source(lay)
+            _rendering_ops.render_lines(self, lay, seen)
+            _rendering_ops.render_blocks(self, lay, seen)
+            _rendering_ops.validate_gesture_source(self._gestures, self._rec, lay)
             amber, red = self._gestures.compute_rings(lay)
             self._last_rings = (amber, red)
-            self._render_cells(lay, fx, fy, seen, amber, red, cold, structural=True)
-            self._sync_mean_damage_tips()
-            self._sync_pretransform_help(lay.pretransform)
-            self._sync_chrome(lay, fy)
+            _rendering_ops.render_cells(self, lay, seen, (amber, red, cold, True))
+            rendering_chrome.sync_mean_damage_tips(self._rec, self._editor)
+            rendering_chrome.sync_pretransform_help(self._rec, lay.pretransform)
+            rendering_chrome.sync_chrome(self, lay, fy)
             self._prev_cell_ids = cur_ids
             self._virt_for = self._viewport
         # NiceGUI: run_javascript from inside a handler-driven render hits a torn-down slot context
@@ -329,22 +160,13 @@ class Renderer(_ChromeSyncMixin):
             pending = [cb for cb in lay.cells if cb.id not in self._rec.entities]
             if not pending:
                 return
-            amber, red = self._last_rings
+            paint = (fy, False, self._last_rings)
             with self._runtime.page_client, self._runtime.building_guard():
                 self._revirtualizing = True
                 try:
                     for cb in pending[:_FILL_CHUNK]:
                         container = _freeze_container(cb, fx, fy)
-                        self._make_cell_if_new(cb, container, cold=False, structural=False)
-                        top = cb.y - (fy if container in ("body", "row") else 0)
-                        geo = (
-                            f"left:0; top:0; transform:translate({cb.x}px,{top}px); "
-                            f"width:{cb.w}px; height:{cb.h}px"
-                        )
-                        self._rec.entities[cb.id].el.style(geo)
-                        self._rec.entities[cb.id].styled = geo
-                        self._update_cell_content(cb)
-                        self._gestures.paint_cell(cb.id, amber, red)
+                        _rendering_ops.place_cell(self, cb, container, paint)
                 finally:
                     self._revirtualizing = False
             await asyncio.sleep(0)
@@ -376,12 +198,11 @@ class Renderer(_ChromeSyncMixin):
         with self._runtime.building_guard():
             self._revirtualizing = True
             try:
-                fx, fy = lay.freeze_x, lay.freeze_y
                 seen: set = set()
                 amber, red = self._last_rings
-                self._render_lines(lay, fx, fy, seen)
-                self._render_blocks(lay, fx, fy, seen)
-                self._render_cells(lay, fx, fy, seen, amber, red, cold=False, structural=False)
+                _rendering_ops.render_lines(self, lay, seen)
+                _rendering_ops.render_blocks(self, lay, seen)
+                _rendering_ops.render_cells(self, lay, seen, (amber, red, False, False))
             finally:
                 self._revirtualizing = False
         self._virt_for = self._viewport

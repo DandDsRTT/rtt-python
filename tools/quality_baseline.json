@@ -1,14 +1,14 @@
 {
-  "reach_through_total": 194,
+  "reach_through_total": 97,
   "reach_through_by_handle": {
-    "_editor": 53,
-    "_rec": 47,
-    "_chrome": 34,
-    "_runtime": 29,
-    "_gestures": 13,
+    "_editor": 38,
+    "_runtime": 24,
+    "_rec": 10,
     "_renderer": 9,
     "e": 5,
+    "_chrome": 5,
     "_edits": 3,
+    "_gestures": 2,
     "class_handles": 1
   },
   "demeter_chains": [],
@@ -41,7 +41,7 @@
       "attrs": 22
     },
     "rtt/app/rendering.py::Renderer": {
-      "methods": 19,
+      "methods": 11,
       "attrs": 16
     },
     "rtt/app/service/text_context.py::_Ctx": {
@@ -64,7 +64,7 @@
     "rtt.app.editor_document": 13,
     "rtt.app.editor_solve": 9,
     "rtt.app.gestures": 9,
-    "rtt.app.rendering": 10,
+    "rtt.app.rendering": 8,
     "rtt.app.service.core": 9,
     "rtt.app.service.core_forms": 9,
     "rtt.app.service.projection": 8,
