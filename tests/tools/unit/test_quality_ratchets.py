@@ -205,7 +205,8 @@ def klass(name, methods, attrs=0):
     body = "".join(f"    def m{i}(self):\n        return {i}\n" for i in range(methods))
     setters = "".join(f"        self.a{i} = {i}\n" for i in range(attrs))
     init = f"    def __init__(self):\n{setters}" if attrs else ""
-    return f"class {name}:\n{init}{body or '    pass\n'}"
+    members = body or "    pass\n"
+    return f"class {name}:\n{init}{members}"
 
 
 WRAPPED_METHOD = (
