@@ -1,0 +1,72 @@
+from __future__ import annotations
+
+from contextlib import contextmanager
+from typing import TYPE_CHECKING
+
+from rtt.app import settings as show_settings
+
+if TYPE_CHECKING:
+    from nicegui import Client
+
+    from rtt.app.layout import Layout
+
+
+def clamp_chapter(value) -> int:
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return show_settings.CHAPTER_DEFAULT
+    return min(show_settings.CHAPTER_STAR, max(show_settings.CHAPTER_MIN, value))
+
+
+class PageRuntime:
+    def __init__(self) -> None:
+        self.building = False
+        self.last_lay: Layout | None = None
+        self.page_client: Client | None = None
+        self.chapter = show_settings.CHAPTER_DEFAULT
+        self.dark_mode = False
+        self.load_failed = False
+
+    @contextmanager
+    def building_guard(self):
+        prev = self.building
+        self.building = True
+        try:
+            yield
+        finally:
+            self.building = prev
+
+    def set_last_lay(self, lay: Layout) -> None:
+        self.last_lay = lay
+
+    def bind_client(self, client: Client) -> None:
+        self.page_client = client
+
+    def set_chapter(self, value) -> int:
+        self.chapter = clamp_chapter(value)
+        return self.chapter
+
+    def col_tokens(self, name: str) -> list:
+        idents = self.last_lay.identities if self.last_lay is not None else None
+        return [tok for tok, _ in (idents or {}).get(name, [])]
+
+    def token_index(self, cid: str, name: str) -> int | None:
+        token = cid.split(":", 1)[1]
+        for i, tok in enumerate(self.col_tokens(name)):
+            if str(tok) == token:
+                return i
+        return None
+
+    def available_keys(self) -> list[str]:
+        return [
+            k for k in show_settings.IMPLEMENTED if show_settings.reveal_chapter(k) <= self.chapter
+        ]
+
+    def chapter_reading(self) -> str:
+        ch = self.chapter
+        label = "★" if ch >= show_settings.CHAPTER_STAR else str(ch)
+        return f"{label}: {show_settings.CHAPTER_TITLES[ch]}"
+
+    def dark_icon(self) -> str:
+        return "light_mode" if self.dark_mode else "dark_mode"

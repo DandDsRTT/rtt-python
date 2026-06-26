@@ -4351,7 +4351,7 @@ def _live_page():
 
 
 def _body_cells(live, page):
-    lay = page.last_lay
+    lay = page.runtime.last_lay
     fx, fy = lay.freeze_x, lay.freeze_y
     body = [c for c in lay.cells if _live_render()._freeze_container(c, fx, fy) == "body" and not c.pending]
     return lay, fx, fy, body

@@ -36,38 +36,38 @@ class _ChromeSyncMixin:
                 wrap.update()
 
     def _sync_chrome(self, lay, fy) -> None:
-        self._host.refs["undo"].set_enabled(self._editor.can_undo)
-        self._host.refs["redo"].set_enabled(self._editor.can_redo)
-        self._host.refs["reset"].set_enabled(
-            self._editor.can_reset or self._host.chapter != show_settings.CHAPTER_DEFAULT
+        self._chrome.refs["undo"].set_enabled(self._editor.can_undo)
+        self._chrome.refs["redo"].set_enabled(self._editor.can_redo)
+        self._chrome.refs["reset"].set_enabled(
+            self._editor.can_reset or self._runtime.chapter != show_settings.CHAPTER_DEFAULT
         )
-        if self._host.chapter_slider.value != self._host.chapter:
-            self._host.chapter_slider.value = self._host.chapter
+        if self._chrome.chapter_slider.value != self._runtime.chapter:
+            self._chrome.chapter_slider.value = self._runtime.chapter
         if lay.approach_box is not None:
             ax, ay, aw, ah = lay.approach_box
-            self._host.refs["approach"].style(
+            self._chrome.refs["approach"].style(
                 f"position:absolute; left:{ax}px; top:{ay - fy}px; width:{aw}px; height:{ah}px"
             )
-            self._host.refs["approach"].set_visibility(True)
+            self._chrome.refs["approach"].set_visibility(True)
         else:
-            self._host.refs["approach"].set_visibility(False)
-        for key, opt in self._host.refs["approach_opts"].items():
+            self._chrome.refs["approach"].set_visibility(False)
+        for key, opt in self._chrome.refs["approach_opts"].items():
             (
                 opt.classes(add="rtt-rangeopt-on")
                 if key == self._editor.nonprime_basis_approach
                 else opt.classes(remove="rtt-rangeopt-on")
             )
-        for key, box in self._host.boxes.items():
+        for key, box in self._chrome.boxes.items():
             if box.value != self._editor.settings[key]:
                 box.value = self._editor.settings[key]
         self._sync_tile_parts()
-        self._host.sync_show_availability()
+        self._sync_availability()
         gesture_idle = self._gestures.gesture is None or self._gestures.gesture.token is None
-        if gesture_idle and not (self._host.load_failed and not self._editor.can_undo):
+        if gesture_idle and not (self._runtime.load_failed and not self._editor.can_undo):
             _doc_store()[_STORE_KEY] = self._editor.serialize()
 
     def _sync_tile_parts(self) -> None:
-        for key, parts in self._host.tile_parts.items():
+        for key, parts in self._chrome.tile_parts.items():
             shown = (
                 self._editor.settings["names"] if key == "mnemonics" else self._editor.settings[key]
             )

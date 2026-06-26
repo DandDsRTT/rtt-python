@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import dataclass
 from html import escape as _escape
 from typing import TYPE_CHECKING
 
@@ -45,16 +46,43 @@ from rtt.app.render_html import (
 )
 
 if TYPE_CHECKING:
-    from rtt.app._page_hosts import BuildHost
+    from collections.abc import Callable
+
+    from rtt.app.editing import EditController
     from rtt.app.editor import Editor
+    from rtt.app.gestures import GestureController
+    from rtt.app.page_chrome import PageChrome
+    from rtt.app.page_runtime import PageRuntime
+    from rtt.app.rendering import Renderer
 
 _log = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class ChromeHandlers:
+    reset: Callable[[], None]
+    dark_toggle: Callable[[], None]
+    chapter_change: Callable[[object], None]
+
+
 class PageBuilder:
-    def __init__(self, editor: Editor, host: BuildHost) -> None:
+    def __init__(
+        self,
+        editor: Editor,
+        chrome: PageChrome,
+        runtime: PageRuntime,
+        gestures: GestureController,
+        edits: EditController,
+        renderer: Renderer,
+        handlers: ChromeHandlers,
+    ) -> None:
         self._editor = editor
-        self._host = host
+        self._chrome = chrome
+        self._runtime = runtime
+        self._gestures = gestures
+        self._edits = edits
+        self._renderer = renderer
+        self._handlers = handlers
         self.drawer_open = False
 
     def _setup_page_head(self) -> None:
@@ -83,19 +111,19 @@ class PageBuilder:
 
     def _build_layout(self) -> None:
         with ui.element("div").classes("rtt-shell"):
-            self._host.panelgroup = ui.element("div").classes("rtt-panelgroup")
-            with self._host.panelgroup:
+            self._chrome.panelgroup = ui.element("div").classes("rtt-panelgroup")
+            with self._chrome.panelgroup:
                 with ui.element("div").classes("rtt-chrome"):
                     self._pane_chrome()
                 self._build_drawer()
             self._build_grid_pane()
 
     def _build_grid_pane(self) -> None:
-        self._host.grid_pane = ui.element("div").classes("rtt-app").mark("gridpane")
-        with self._host.grid_pane:
-            self._host.colhead = ui.element("div").classes("rtt-colhead").mark("colhead")
-            with self._host.colhead:
-                self._host.colhead_inner = (
+        self._chrome.grid_pane = ui.element("div").classes("rtt-app").mark("gridpane")
+        with self._chrome.grid_pane:
+            self._chrome.colhead = ui.element("div").classes("rtt-colhead").mark("colhead")
+            with self._chrome.colhead:
+                self._chrome.colhead_inner = (
                     ui.element("div").classes("rtt-colhead-inner").mark("colheadinner")
                 )
             self._build_corner()
@@ -105,12 +133,10 @@ class PageBuilder:
         drawer = ui.element("div").classes("rtt-drawer")
         with drawer, ui.element("div").classes("rtt-drawer-inner"):
             self._build_show_frozen()
-            self._host.boxes: dict = {}
-            self._host.examples: dict = {}
-            self._host.tile_parts: dict = {}
-            self._host.show_rows: dict = {}
-            self._host.show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
-            with self._host.show_scroll:
+            self._chrome.show_scroll = (
+                ui.element("div").classes("rtt-show-scroll").mark("showscroll")
+            )
+            with self._chrome.show_scroll:
                 self._build_chapter_group()
                 for group_name, items in show_settings.SHOW_GROUPS:
                     with ui.element("div").classes("rtt-show-group"):
@@ -120,27 +146,27 @@ class PageBuilder:
                             self._build_show_group(items)
 
     def _build_corner(self) -> None:
-        self._host.corner = ui.element("div").classes("rtt-corner").mark("corner")
-        with self._host.corner:
+        self._chrome.corner = ui.element("div").classes("rtt-corner").mark("corner")
+        with self._chrome.corner:
             self._build_title_buttons()
             self._build_approach_radio()
 
     def _build_gridbody(self) -> None:
-        self._host.gridbody = ui.element("div").classes("rtt-gridbody").mark("gridbody")
-        with self._host.gridbody:
-            self._host.board = ui.element("div").classes("rtt-gridcontent").mark("board")
-            with self._host.board, ui.element("div").classes("rtt-band"):
-                self._host.rowband = ui.element("div").classes("rtt-rowband").mark("rowband")
-        self._host.refs["approach"].move(self._host.board)
-        self._host.cell_parents = {
-            "corner": self._host.corner,
-            "col": self._host.colhead_inner,
-            "row": self._host.rowband,
-            "body": self._host.board,
+        self._chrome.gridbody = ui.element("div").classes("rtt-gridbody").mark("gridbody")
+        with self._chrome.gridbody:
+            self._chrome.board = ui.element("div").classes("rtt-gridcontent").mark("board")
+            with self._chrome.board, ui.element("div").classes("rtt-band"):
+                self._chrome.rowband = ui.element("div").classes("rtt-rowband").mark("rowband")
+        self._chrome.refs["approach"].move(self._chrome.board)
+        self._chrome.cell_parents = {
+            "corner": self._chrome.corner,
+            "col": self._chrome.colhead_inner,
+            "row": self._chrome.rowband,
+            "body": self._chrome.board,
         }
 
     def _icon_button(self, ref, icon, on_click, classes, help_key):
-        self._host.refs[ref] = (
+        self._chrome.refs[ref] = (
             ui.button(icon=icon, on_click=on_click, color=None)
             .props("flat dense")
             .classes(classes)
@@ -149,7 +175,7 @@ class PageBuilder:
         )
 
     def _share_link(self) -> None:
-        self._host.gestures.end_commit_gestures()
+        self._gestures.end_commit_gestures()
         token = _encode_state(self._editor.serialize())
         ui.run_javascript(
             "(async function(){"
@@ -165,13 +191,13 @@ class PageBuilder:
         def arm(btn, can, op):
             btn.on(
                 "mouseenter",
-                lambda _=None: self._host.gestures.control_hover(op) if can() else None,
+                lambda _=None: self._gestures.control_hover(op) if can() else None,
             )
-            btn.on("mouseleave", lambda _=None: self._host.gestures.control_unhover())
+            btn.on("mouseleave", lambda _=None: self._gestures.control_unhover())
 
-        arm(self._host.refs["undo"], lambda: self._editor.can_undo, self._editor.undo)
-        arm(self._host.refs["redo"], lambda: self._editor.can_redo, self._editor.redo)
-        arm(self._host.refs["reset"], lambda: self._editor.can_reset, self._editor.reset)
+        arm(self._chrome.refs["undo"], lambda: self._editor.can_undo, self._editor.undo)
+        arm(self._chrome.refs["redo"], lambda: self._editor.can_redo, self._editor.redo)
+        arm(self._chrome.refs["reset"], lambda: self._editor.can_reset, self._editor.reset)
 
     def _build_title_buttons(self) -> None:
         with ui.element("div").classes("rtt-titletile").mark("titletile"):
@@ -179,19 +205,19 @@ class PageBuilder:
                 self._icon_button(
                     "undo",
                     "undo",
-                    lambda: self._host.edits.act(self._editor.undo),
+                    lambda: self._edits.act(self._editor.undo),
                     "rtt-iconbtn rtt-hk-undo",
                     "undo",
                 )
                 self._icon_button(
                     "redo",
                     "redo",
-                    lambda: self._host.edits.act(self._editor.redo),
+                    lambda: self._edits.act(self._editor.redo),
                     "rtt-iconbtn rtt-hk-redo",
                     "redo",
                 )
                 self._icon_button(
-                    "reset", "restart_alt", self._host.reset_everything, "rtt-iconbtn", "reset"
+                    "reset", "restart_alt", self._handlers.reset, "rtt-iconbtn", "reset"
                 )
                 self._icon_button(
                     "share", "share", self._share_link, "rtt-iconbtn rtt-noarm", "share"
@@ -213,24 +239,24 @@ class PageBuilder:
         }
 
         def on_approach_change(value):
-            if self._host.building or value is None:
+            if self._runtime.building or value is None:
                 return
             self._editor.set_nonprime_basis_approach(value)
-            self._host.renderer.request_render()
+            self._renderer.request_render()
 
         def on_approach_hover(value):
             if value is None:
-                self._host.gestures.control_unhover()
+                self._gestures.control_unhover()
                 return
-            self._host.gestures.control_hover(
+            self._gestures.control_hover(
                 lambda a=value: self._editor.set_nonprime_basis_approach(a)
             )
 
-        self._host.refs["approach"] = (
+        self._chrome.refs["approach"] = (
             ui.element("div").classes("rtt-approach rtt-rangemode").mark("approach")
         )
-        self._host.refs["approach_opts"] = {}
-        with self._host.refs["approach"]:
+        self._chrome.refs["approach_opts"] = {}
+        with self._chrome.refs["approach"]:
             for key, label in approach_options.items():
                 opt = ui.element("div").classes("rtt-rangeopt")
                 with opt:
@@ -239,27 +265,27 @@ class PageBuilder:
                 opt.on("click", lambda _=None, k=key: on_approach_change(k))
                 opt.on("mouseenter", lambda _=None, k=key: on_approach_hover(k))
                 opt.mark(f"approach-{label}")
-                self._host.refs["approach_opts"][key] = opt
-        self._host.refs["approach"].on("mouseleave", lambda _=None: on_approach_hover(None))
+                self._chrome.refs["approach_opts"][key] = opt
+        self._chrome.refs["approach"].on("mouseleave", lambda _=None: on_approach_hover(None))
 
     def _build_show_frozen(self) -> None:
-        self._host.show_frozen = ui.element("div").classes("rtt-show-frozen").mark("showfrozen")
-        with self._host.show_frozen:
+        self._chrome.show_frozen = ui.element("div").classes("rtt-show-frozen").mark("showfrozen")
+        with self._chrome.show_frozen:
             with ui.element("div").classes("rtt-show-all"):
-                self._host.select_all_box = (
+                self._chrome.select_all_box = (
                     ui.checkbox(
                         "select all / none",
                         value=all(self._editor.settings[k] for k in show_settings.IMPLEMENTED),
-                        on_change=lambda e: self._host.edits.on_select_all(e.value),
+                        on_change=lambda e: self._edits.on_select_all(e.value),
                     )
                     .props("dense size=xs color=grey-8")
                     .classes("rtt-show-item")
                     .mark("showall")
                     .tooltip(tooltips.CHROME_HELP["select_all"])
                 )
-                self._host.dark_btn = (
-                    ui.button(on_click=self._host.on_dark_toggle, color=None)
-                    .props(f"flat dense round icon={self._host._dark_icon()}")
+                self._chrome.dark_btn = (
+                    ui.button(on_click=self._handlers.dark_toggle, color=None)
+                    .props(f"flat dense round icon={self._runtime.dark_icon()}")
                     .classes("rtt-darktoggle")
                     .mark("darkmode")
                     .tooltip(tooltips.CHROME_HELP["dark_mode"])
@@ -269,18 +295,18 @@ class PageBuilder:
         with ui.element("div").classes("rtt-show-group rtt-chapter-group"):
             with ui.element("div").classes("rtt-chapter-head"):
                 ui.label("guide chapter").classes("rtt-chapter-title")
-                self._host.chapter_reading = (
-                    ui.label(self._host._chapter_reading(self._host.chapter))
+                self._chrome.chapter_reading = (
+                    ui.label(self._runtime.chapter_reading())
                     .classes("rtt-chapter-reading")
                     .mark("chapterreading")
                 )
-            self._host.chapter_slider = (
+            self._chrome.chapter_slider = (
                 ui.slider(
                     min=show_settings.CHAPTER_MIN,
                     max=show_settings.CHAPTER_STAR,
                     step=1,
-                    value=self._host.chapter,
-                    on_change=lambda e: self._host.on_chapter_change(e.value),
+                    value=self._runtime.chapter,
+                    on_change=lambda e: self._handlers.chapter_change(e.value),
                 )
                 .props("markers snap dense color=grey-8")
                 .classes("rtt-chapter-slider")
@@ -298,8 +324,8 @@ class PageBuilder:
             el.mark(f"showpart:{key}")
         if css:
             el.style(css)
-        el.on("click", lambda k=key: self._host.edits.on_part_click(k))
-        self._host.tile_parts.setdefault(key, []).append(el)
+        el.on("click", lambda k=key: self._edits.on_part_click(k))
+        self._chrome.tile_parts.setdefault(key, []).append(el)
         return el
 
     def _tile_named_part(self, key, *, size=None, style=""):
@@ -310,7 +336,7 @@ class PageBuilder:
         with ui.element("div").classes("rtt-show-tile"):
             with ui.element("div").classes("rtt-tile-head"):
                 ui.html(_tile_fold_html()).classes("rtt-tile-fold")
-                self._host.refs["audio_bank"] = _audio_bank()
+                self._chrome.refs["audio_bank"] = _audio_bank()
             for line in _GENERAL_TILE_LINES:
                 if "gridded_values" in line:
                     self._build_tile_grid_line()
@@ -401,7 +427,7 @@ class PageBuilder:
                     ui.checkbox(
                         label,
                         value=self._editor.settings[key],
-                        on_change=lambda e, k=key: self._host.edits.on_show_toggle(k, e.value),
+                        on_change=lambda e, k=key: self._edits.on_show_toggle(k, e.value),
                     )
                     .props("dense size=xs color=grey-8")
                     .classes("rtt-show-item")
@@ -411,19 +437,19 @@ class PageBuilder:
                 example = (
                     ui.html(_example_html(key)).classes("rtt-ex-cell").mark(f"showexample:{key}")
                 )
-            self._host.boxes[key] = box
-            self._host.examples[key] = example
-            self._host.show_rows[key] = row
+            self._chrome.boxes[key] = box
+            self._chrome.examples[key] = example
+            self._chrome.show_rows[key] = row
             parent = show_settings.SUBCONTROLS.get(key)
             if parent:
                 box.style(f"margin-left:{show_settings.depth_of(key) * 18}px")
-                row.bind_visibility_from(self._host.boxes[parent], "value")
+                row.bind_visibility_from(self._chrome.boxes[parent], "value")
 
     def toggle_drawer(self):
         self.drawer_open = not self.drawer_open
-        self._host.panelgroup.classes(
+        self._chrome.panelgroup.classes(
             add="rtt-open"
-        ) if self.drawer_open else self._host.panelgroup.classes(remove="rtt-open")
+        ) if self.drawer_open else self._chrome.panelgroup.classes(remove="rtt-open")
 
     def _pane_chrome(self):
         ui.button(icon="menu", on_click=self.toggle_drawer, color=None).props("flat dense").classes(

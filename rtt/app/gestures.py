@@ -5,29 +5,26 @@ from typing import TYPE_CHECKING
 
 from nicegui import ui
 
-from rtt.app import (
-    presets,
-    service,
-    spreadsheet_text,
-)
-from rtt.app.page_assets import (
-    _Gesture,
-    _hover_index,
-    _option_key,
-    cb_method,
-)
+from rtt.app import presets, service, spreadsheet_text
+from rtt.app.page_assets import _Gesture, _hover_index, _option_key, cb_method
 
 if TYPE_CHECKING:
-    from rtt.app._page_hosts import GestureHost
+    from rtt.app.editing import EditController
     from rtt.app.editor import Editor
+    from rtt.app.page_runtime import PageRuntime
+    from rtt.app.reconciler import _Reconciler
+    from rtt.app.rendering import Renderer
 
 _log = logging.getLogger(__name__)
 
 
 class GestureController:
-    def __init__(self, editor: Editor, host: GestureHost) -> None:
+    def __init__(self, editor: Editor, runtime: PageRuntime) -> None:
         self._editor = editor
-        self._host = host
+        self._runtime = runtime
+        self._rec: _Reconciler = None
+        self._renderer: Renderer = None
+        self._edits: EditController = None
         self.gesture = None
         self.gesture_rendering = False
         self.rank_remove = None
@@ -35,10 +32,15 @@ class GestureController:
         self.drag_src = None
         self.reorder_dst = None
 
+    def bind(self, rec: _Reconciler, renderer: Renderer, edits: EditController) -> None:
+        self._rec = rec
+        self._renderer = renderer
+        self._edits = edits
+
     def gesture_render(self):
         self.gesture_rendering = True
         try:
-            self._host.renderer.render()
+            self._renderer.render()
         finally:
             self.gesture_rendering = False
 
@@ -84,11 +86,11 @@ class GestureController:
         return frozenset(), frozenset()
 
     def paint_cell(self, eid, amber, red):
-        el = self._host.rec.entity(eid).el
+        el = self._rec.entity(eid).el
         if el is None:
             return
         rsig = (eid in amber, eid in red)
-        if self._host.rec.entity(eid).ring_sig == rsig:
+        if self._rec.entity(eid).ring_sig == rsig:
             return
         el.classes(
             add="rtt-preview-change" if eid in amber else "",
@@ -98,10 +100,10 @@ class GestureController:
             add="rtt-preview-remove" if eid in red else "",
             remove="" if eid in red else "rtt-preview-remove",
         )
-        self._host.rec.entities[eid].ring_sig = rsig
+        self._rec.entities[eid].ring_sig = rsig
 
     def paint_rings(self):
-        lay = self._host.last_lay
+        lay = self._runtime.last_lay
         if lay is None:
             return
         amber, red = self.compute_rings(lay)
@@ -123,7 +125,7 @@ class GestureController:
     def rebase_edit_gesture(self):
         g = self.gesture
         if g is not None and g.kind == "edit":
-            g.baseline = self._host.last_lay
+            g.baseline = self._runtime.last_lay
             self.paint_rings()
 
     def end_commit_gestures(self):
@@ -139,7 +141,7 @@ class GestureController:
     @cb_method
     def on_cell_focus(self, cid):
         self.take_over_gesture()
-        self.gesture = _Gesture(kind="edit", source=cid, baseline=self._host.last_lay)
+        self.gesture = _Gesture(kind="edit", source=cid, baseline=self._runtime.last_lay)
 
     @cb_method
     def on_cell_blur(self, cid=None):
@@ -152,7 +154,7 @@ class GestureController:
     def combine_begin(self):
         self.end_gesture()
         self.gesture = _Gesture(
-            kind="drag", token=self._editor.capture_for_preview(), baseline=self._host.last_lay
+            kind="drag", token=self._editor.capture_for_preview(), baseline=self._runtime.last_lay
         )
 
     @cb_method
@@ -172,7 +174,7 @@ class GestureController:
         if g is None or g.kind != "drag":
             return
         self.end_gesture()
-        self._host.edits.act(apply)
+        self._edits.act(apply)
 
     @cb_method
     def combine_end(self):
@@ -180,7 +182,7 @@ class GestureController:
         if g is None or g.kind != "drag":
             return
         self.end_gesture()
-        self._host.renderer.render()
+        self._renderer.render()
 
     @cb_method
     def control_hover(self, apply):
@@ -214,7 +216,7 @@ class GestureController:
         self.rank_remove = (axis, idx)
         self.rank_rendering = True
         try:
-            self._host.renderer.render()
+            self._renderer.render()
         finally:
             self.rank_rendering = False
 
@@ -222,7 +224,7 @@ class GestureController:
     def rank_remove_unhover(self):
         if self.rank_remove is not None:
             self.rank_remove = None
-            self._host.renderer.render()
+            self._renderer.render()
 
     def _cell_xy(self, lay, eid):
         for c in lay.cells:
@@ -243,7 +245,7 @@ class GestureController:
                 kind="chooser",
                 source=cid,
                 token=self._editor.capture_for_preview(),
-                baseline=self._host.last_lay,
+                baseline=self._runtime.last_lay,
             )
         g = self.gesture
         self._editor.restore_for_preview(g.token)
@@ -277,7 +279,7 @@ class GestureController:
             return
         was = self.end_gesture()
         if was is not None and was.reflowed:
-            self._host.renderer.render()
+            self._renderer.render()
         else:
             self.paint_rings()
 
@@ -287,7 +289,7 @@ class GestureController:
             return
         was = self.end_gesture()
         if was.reflowed:
-            self._host.renderer.render()
+            self._renderer.render()
         else:
             self.paint_rings()
 
@@ -301,7 +303,7 @@ class GestureController:
                 return
             self.end_gesture()
             g = self.gesture = _Gesture(
-                kind="temp", token=self._editor.capture_for_preview(), baseline=self._host.last_lay
+                kind="temp", token=self._editor.capture_for_preview(), baseline=self._runtime.last_lay
             )
         self._editor.restore_for_preview(g.token)
         if g.reflowed:
@@ -327,7 +329,7 @@ class GestureController:
                 return None
             self.end_gesture()
             g = self.gesture = _Gesture(
-                kind="temp", token=self._editor.capture_for_preview(), baseline=self._host.last_lay
+                kind="temp", token=self._editor.capture_for_preview(), baseline=self._runtime.last_lay
             )
         self._editor.restore_for_preview(g.token)
         if g.reflowed:
@@ -344,7 +346,7 @@ class GestureController:
         draft = cid in ("etpick:draft", "commapick:draft")
         idx = None
         if not draft:
-            idx = self._host.token_index(cid, "gens" if cid.startswith("etpick:") else "commas")
+            idx = self._runtime.token_index(cid, "gens" if cid.startswith("etpick:") else "commas")
             if idx is None:
                 self._end_temperament_preview()
                 return
@@ -389,12 +391,12 @@ class GestureController:
 
     @cb_method
     def on_chooser_hover(self, cid, detail):
-        entry = self._host.rec.handles(cid).chooser.select
+        entry = self._rec.handles(cid).chooser.select
         sel = entry[1] if isinstance(entry, tuple) else entry
         if not isinstance(sel, ui.select):
             return
         index = _hover_index(detail)
-        if index is not None and self._host.rec.handles(cid).popup_state == "closed":
+        if index is not None and self._rec.handles(cid).popup_state == "closed":
             return
         if cid.startswith(("etpick:", "commapick:")):
             self._subpick_hover_preview(cid, _option_key(sel, index) if index is not None else None)
@@ -416,7 +418,7 @@ class GestureController:
             spec = service.target_spec(family, entry[0].value)
             self.chooser_hover(cid, lambda: self._editor.set_target_spec(spec))
             return
-        apply = self._host.edits.candidate_apply(cid, _option_key(sel, index))
+        apply = self._edits.candidate_apply(cid, _option_key(sel, index))
         if apply is None:
             self.chooser_unhover()
             return
@@ -424,7 +426,7 @@ class GestureController:
 
     @cb_method
     def on_popup(self, cid, is_open):
-        self._host.rec.cells[cid].popup_state = "open" if is_open else "closed"
+        self._rec.cells[cid].popup_state = "open" if is_open else "closed"
         if not is_open:
             self.on_chooser_hover(cid, None)
 
@@ -434,7 +436,7 @@ class GestureController:
         if g is not None and g.kind in ("edit", "drag", "hover"):
             return
         self.take_over_gesture()
-        self.gesture = _Gesture(kind="wheel", source=cid, baseline=self._host.last_lay)
+        self.gesture = _Gesture(kind="wheel", source=cid, baseline=self._runtime.last_lay)
 
     @cb_method
     def gentuning_unhover(self, cid):
@@ -450,7 +452,7 @@ class GestureController:
         self.reorder_dst = (lst, idx)
         self.end_gesture()
         self.gesture = _Gesture(
-            kind="drag", token=self._editor.capture_for_preview(), baseline=self._host.last_lay
+            kind="drag", token=self._editor.capture_for_preview(), baseline=self._runtime.last_lay
         )
 
     @cb_method
@@ -473,7 +475,7 @@ class GestureController:
     def on_drag_end(self):
         if self.gesture is not None and self.gesture.kind == "drag":
             self.end_gesture()
-            self._host.renderer.render()
+            self._renderer.render()
         self.drag_src = None
         self.reorder_dst = None
 
@@ -487,8 +489,8 @@ class GestureController:
             self.end_gesture()
         if not src:
             if had_preview:
-                self._host.renderer.render()
+                self._renderer.render()
             return
         idx = dst_idx if dst_idx is not None else (1 << 30)
         if self._editor.move_interval(src[0], src[1], dst_list, idx) or had_preview:
-            self._host.renderer.render()
+            self._renderer.render()

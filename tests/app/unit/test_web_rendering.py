@@ -3,8 +3,10 @@ from types import SimpleNamespace
 from rtt.app.rendering import _VIRT_REVIRT_STEP, Renderer
 
 
-def _renderer(**host):
-    return Renderer(None, None, None, SimpleNamespace(**host))
+def _renderer(chrome=None, runtime=None):
+    return Renderer(
+        None, None, None, chrome or SimpleNamespace(), runtime or SimpleNamespace(), None
+    )
 
 
 def test_renderer_constructs_without_a_page():

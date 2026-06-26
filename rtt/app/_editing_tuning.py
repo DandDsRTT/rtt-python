@@ -41,12 +41,12 @@ class _TuningEdits:
         self._rec = e._rec
         self._renderer = e._renderer
         self._gestures = e._gestures
-        self._host = e._host
+        self._runtime = e._runtime
         self.target_limit_commit = None
 
     @cb_method
     def on_power_change(self, cid):
-        if self._host.building or self._rec.handles(cid).value.input is None:
+        if self._runtime.building or self._rec.handles(cid).value.input is None:
             return
         if cid not in ("optimization:power", "control:q"):
             return
@@ -63,12 +63,12 @@ class _TuningEdits:
         self._renderer.request_render()
 
     def _gen_position(self, tok):
-        toks = self._host.col_tokens("gens")
+        toks = self._runtime.col_tokens("gens")
         return toks.index(tok) if tok in toks else tok
 
     @cb_method
     def on_gentuning_change(self, cid):
-        if self._host.building or self._rec.handles(cid).value.input is None:
+        if self._runtime.building or self._rec.handles(cid).value.input is None:
             return
         mag = self._rec.decimal_value(cid)
         if not mag:
@@ -89,7 +89,7 @@ class _TuningEdits:
 
     @cb_method
     def on_gentuning_wheel(self, cid, delta_y):
-        if self._host.building or not delta_y:
+        if self._runtime.building or not delta_y:
             return
         i, steps = int(cid.rsplit(":", 1)[1]), (1 if delta_y < 0 else -1)
         if ":ssgen:" in cid:
@@ -100,17 +100,16 @@ class _TuningEdits:
 
     @cb_method
     def on_value_wheel(self, cid, delta_y):
-        if self._host.building or not delta_y or self._rec.handles(cid).value.input is None:
+        if self._runtime.building or not delta_y or self._rec.handles(cid).value.input is None:
             return
         step = _WHEEL_STEPS.get(self._rec.handles(cid).kind)
         if step is None:
             return
         if self._rec.handles(cid).value.den_input is not None:
-            self._host.building = True
-            self._rec.set_decimal_value(
-                cid, _wheel_step(self._rec.decimal_value(cid), delta_y, step)
-            )
-            self._host.building = False
+            with self._runtime.building_guard():
+                self._rec.set_decimal_value(
+                    cid, _wheel_step(self._rec.decimal_value(cid), delta_y, step)
+                )
             self.on_prescaler_change(cid)
             return
         self._rec.cells[cid].value.input.value = _wheel_step(
@@ -129,12 +128,11 @@ class _TuningEdits:
 
     @cb_method
     def on_target_limit_wheel(self, delta_y):
-        if self._host.building or not delta_y:
+        if self._runtime.building or not delta_y:
             return
         num = self._rec.cells["preset:target"].chooser.select[0]
-        self._host.building = True
-        num.value = _wheel_step(num.value, delta_y)
-        self._host.building = False
+        with self._runtime.building_guard():
+            num.value = _wheel_step(num.value, delta_y)
         self.on_target_limit_preview()
         if self.target_limit_commit is not None:
             self.target_limit_commit.cancel()
@@ -151,13 +149,13 @@ class _TuningEdits:
         except asyncio.CancelledError:
             return
         self.target_limit_commit = None
-        with self._host.page_client:
+        with self._runtime.page_client:
             self.e.on_target_change()
 
     @cb_method
     def on_target_limit_preview(self, typed=None):
         g = self._gestures.gesture
-        if self._host.building or g is None or g.kind != "edit" or g.source != "preset:target":
+        if self._runtime.building or g is None or g.kind != "edit" or g.source != "preset:target":
             return
         num, sel = self._rec.cells["preset:target"].chooser.select
         raw = num.value if typed is None else typed
@@ -166,7 +164,7 @@ class _TuningEdits:
 
     @cb_method
     def on_prescaler_change(self, cid):
-        if self._host.building or self._rec.handles(cid).value.input is None:
+        if self._runtime.building or self._rec.handles(cid).value.input is None:
             return
         parts = cid.split(":")
         i, j = int(parts[3]), int(parts[4])
@@ -176,7 +174,7 @@ class _TuningEdits:
 
     @cb_method
     def on_weight_change(self, cid):
-        if self._host.building or self._rec.handles(cid).value.input is None:
+        if self._runtime.building or self._rec.handles(cid).value.input is None:
             return
         raws = [
             self._rec.decimal_value(o)
@@ -189,7 +187,7 @@ class _TuningEdits:
 
     @cb_method
     def on_ptext_edit(self, cid, value):
-        if self._host.building:
+        if self._runtime.building:
             return
         editor_method = self._PTEXT_EDITORS.get(cid)
         if editor_method is None:

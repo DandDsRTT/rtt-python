@@ -1303,8 +1303,8 @@ def test_bind_callbacks_binds_every_declared_callback():
     )
 
     gestures = GestureController(SimpleNamespace(), None)
-    host = SimpleNamespace(renderer=None, building=False)
-    edits = EditController(SimpleNamespace(), SimpleNamespace(), gestures, host)
+    runtime = SimpleNamespace(building=False)
+    edits = EditController(SimpleNamespace(), SimpleNamespace(), gestures, None, runtime)
 
     cb = bind_callbacks(edits, edits.vectors, edits.tuning, gestures)
     assert isinstance(cb, ReconcilerCallbacks)

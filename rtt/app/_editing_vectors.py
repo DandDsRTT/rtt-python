@@ -23,7 +23,7 @@ class _VectorEdits:
         self._rec = e._rec
         self._renderer = e._renderer
         self._gestures = e._gestures
-        self._host = e._host
+        self._runtime = e._runtime
 
     def _edit_pending_vector(self, spec, preview, toks, d) -> None:
         cell_id = spec.cell_id
@@ -43,10 +43,10 @@ class _VectorEdits:
             self._renderer.request_render(after=self._gestures.rebase_edit_gesture)
 
     def _edit_vector_grid(self, spec, preview=False):
-        if self._host.building or (spec.guard is not None and not spec.guard()):
+        if self._runtime.building or (spec.guard is not None and not spec.guard()):
             return
         d = self._editor.state.d
-        toks = self._host.col_tokens(spec.group)
+        toks = self._runtime.col_tokens(spec.group)
         if spec.pending() is not None:
             self._edit_pending_vector(spec, preview, toks, d)
             return
@@ -77,7 +77,7 @@ class _VectorEdits:
 
     @cb_method
     def on_form_change(self, preview=False):
-        if self._host.building or not self._editor.settings.get("form_tiles"):
+        if self._runtime.building or not self._editor.settings.get("form_tiles"):
             return
         r = len(self._editor.state.mapping)
         rc = len(service.canonical_mapping(self._editor.state.mapping))
@@ -108,7 +108,7 @@ class _VectorEdits:
 
     @cb_method
     def on_unchanged_change(self, preview=False):
-        if self._host.building:
+        if self._runtime.building:
             return
         d, r = self._editor.state.d, self._editor.state.r
         if any(
@@ -153,7 +153,7 @@ class _VectorEdits:
 
     @cb_method
     def on_ratio_change(self, cid):
-        if self._host.building or self._rec.handles(cid).value.input is None:
+        if self._runtime.building or self._rec.handles(cid).value.input is None:
             return
         group, tok = cid.split(":")
         out = service.resolve_ratio_edit(
@@ -171,7 +171,7 @@ class _VectorEdits:
             "interest": "interest",
             "comma": "commas",
         }.get(group)
-        toks = self._host.col_tokens(list_name) if list_name else []
+        toks = self._runtime.col_tokens(list_name) if list_name else []
         pos = toks.index(int(tok)) if int(tok) in toks else int(tok)
         vectors = [list(v) for v in current]
         if vectors[pos] != list(vector):
@@ -251,7 +251,7 @@ class _VectorEdits:
 
     @cb_method
     def transform_interval(self, cid, op):
-        if self._host.building or self._rec.handles(cid).value.input is None:
+        if self._runtime.building or self._rec.handles(cid).value.input is None:
             return
         group, tok = cid.split(":")
         if group not in ("comma", "target", "held", "interest", "prime") or tok == "pending":
@@ -261,7 +261,7 @@ class _VectorEdits:
             self._transform_domain_element(cid, op, int(tok))
             return
         current, setter, list_name = self._interval_group_state(group)
-        toks = self._host.col_tokens(list_name)
+        toks = self._runtime.col_tokens(list_name)
         pos = toks.index(int(tok)) if int(tok) in toks else int(tok)
         if not 0 <= pos < len(current):
             return
@@ -281,7 +281,7 @@ class _VectorEdits:
 
     @cb_method
     def on_element_change(self, cid):
-        if self._host.building or self._rec.handles(cid).value.input is None:
+        if self._runtime.building or self._rec.handles(cid).value.input is None:
             return
         raw = self._rec.cell_value(cid)
         tok = cid.split(":")[1]
@@ -292,7 +292,7 @@ class _VectorEdits:
     def on_element_preview(self, cid):
         g = self._gestures.gesture
         if (
-            self._host.building
+            self._runtime.building
             or g is None
             or g.kind != "edit"
             or g.source != cid
