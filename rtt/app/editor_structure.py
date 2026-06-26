@@ -9,6 +9,98 @@ from rtt.app.service.state import TemperamentState
 _log = logging.getLogger(__name__)
 
 
+def _valid_domain_basis(state: TemperamentState) -> bool:
+    basis = state.domain_basis
+    if not state.mapping or len(basis) != len(state.mapping[0]):
+        return False
+    try:
+        elements = [Fraction(e) for e in basis]
+    except (TypeError, ValueError, ZeroDivisionError):
+        return False
+    if any(e <= 0 or e == 1 for e in elements):
+        return False
+    return service.is_independent_domain_basis(basis)
+
+
+def _blank_draft(state: TemperamentState) -> list[None]:
+    return [None] * state.d
+
+
+def _state_from_mapping(state: TemperamentState, mapping) -> TemperamentState:
+    domain_basis = state.domain_basis if mapping and len(mapping[0]) == state.d else None
+    return service.from_mapping(mapping, domain_basis)
+
+
+def _standardized_state(state: TemperamentState) -> TemperamentState:
+    ratios = service.comma_ratios(state.comma_basis, state.domain_basis)
+    return service.standardize_to_prime_limit(state.domain_basis, ratios)
+
+
+def _row_replaced(state: TemperamentState, i: int, val) -> TemperamentState | None:
+    rows = state.mapping
+    if not 0 <= i < len(rows):
+        return None
+    matrix = [list(row) for row in rows]
+    matrix[i] = [int(x) for x in val]
+    if not service.is_proper_temperament(matrix):
+        return None
+    return service.from_mapping(matrix, state.domain_basis)
+
+
+def _comma_replaced(state: TemperamentState, c: int, vector) -> TemperamentState | None:
+    cols = state.comma_basis
+    if not 0 <= c < len(cols):
+        return None
+    basis = [list(col) for col in cols]
+    basis[c] = [int(x) for x in vector]
+    domain_basis = state.domain_basis if len(basis[c]) == state.d else None
+    new_state = service.from_comma_basis(basis, domain_basis)
+    if new_state.n != len(basis) or not service.is_proper_temperament(new_state.mapping):
+        return None
+    return new_state
+
+
+def _canonical_mapping(state: TemperamentState):
+    return service.canonical_mapping(state.mapping)
+
+
+def _mapping_in_form(state: TemperamentState, form: str):
+    return service.mapping_in_form(state.mapping, form, state.domain_basis)
+
+
+def _mapping_from_form(state: TemperamentState, form_rows):
+    return service.mapping_from_form_matrix(state.mapping, form_rows)
+
+
+def _canonical_comma_basis(state: TemperamentState):
+    return service.canonical_comma_basis(state.comma_basis), state.domain_basis
+
+
+def _comma_basis_in_form(state: TemperamentState, form: str):
+    return service.comma_basis_in_form(
+        state.comma_basis, form, state.domain_basis
+    ), state.domain_basis
+
+
+def _comma_domain_basis(state: TemperamentState, basis):
+    return state.domain_basis if len(basis[0]) == state.d else None
+
+
+def _appended_row_state(state: TemperamentState, values) -> TemperamentState | None:
+    extended = [list(row) for row in state.mapping] + [[int(v) for v in values]]
+    if not service.is_proper_temperament(extended):
+        return None
+    return service.from_mapping(extended, state.domain_basis)
+
+
+def _extended_comma_state(
+    state: TemperamentState, new_comma, real_comma_basis
+) -> TemperamentState | None:
+    domain_basis = state.domain_basis if len(new_comma) == state.d else None
+    extended = service.from_comma_basis((*real_comma_basis, new_comma), domain_basis)
+    return extended if extended.n > state.n else None
+
+
 class _StructureCommands:
     @property
     def basis_is_nonstandard(self) -> bool:
@@ -35,18 +127,14 @@ class _StructureCommands:
         return self.state.r > 1
 
     def edit_mapping(self, mapping) -> None:
-        state = self.state
-        domain_basis = state.domain_basis if mapping and len(mapping[0]) == state.d else None
-        self.apply_state(service.from_mapping(mapping, domain_basis))
+        self.apply_state(_state_from_mapping(self.state, mapping))
 
     def edit_comma_basis(self, comma_basis, domain_basis=None) -> None:
         self.apply_state(service.from_comma_basis(comma_basis, domain_basis))
 
     def standardize_domain_in_place(self) -> None:
-        state = self.state
-        ratios = service.comma_ratios(state.comma_basis, state.domain_basis)
         self.pending.clear_drafts()
-        self.state = service.standardize_to_prime_limit(state.domain_basis, ratios)
+        self.state = _standardized_state(self.state)
         self.settings["nonstandard_domain"] = False
 
     def exit_nonstandard_domain(self) -> None:
@@ -56,40 +144,28 @@ class _StructureCommands:
         self.standardize_domain_in_place()
 
     def set_mapping_row(self, i: int, val) -> bool:
-        rows = self.state.mapping
-        if not 0 <= i < len(rows):
+        new_state = _row_replaced(self.state, i, val)
+        if new_state is None:
             return False
-        matrix = [list(row) for row in rows]
-        matrix[i] = [int(x) for x in val]
-        if not service.is_proper_temperament(matrix):
-            return False
-        self.apply_state(service.from_mapping(matrix, self.state.domain_basis))
+        self.apply_state(new_state)
         return True
 
     def set_comma(self, c: int, vector) -> bool:
-        state = self.state
-        cols = state.comma_basis
-        if not 0 <= c < len(cols):
-            return False
-        basis = [list(col) for col in cols]
-        basis[c] = [int(x) for x in vector]
-        domain_basis = state.domain_basis if len(basis[c]) == state.d else None
-        new_state = service.from_comma_basis(basis, domain_basis)
-        if new_state.n != len(basis) or not service.is_proper_temperament(new_state.mapping):
+        new_state = _comma_replaced(self.state, c, vector)
+        if new_state is None:
             return False
         self.apply_state(new_state)
         return True
 
     def canonicalize_mapping(self) -> None:
-        self.edit_mapping(service.canonical_mapping(self.state.mapping))
+        self.edit_mapping(_canonical_mapping(self.state))
 
     def set_mapping_form(self, form: str) -> None:
-        state = self.state
-        self.edit_mapping(service.mapping_in_form(state.mapping, form, state.domain_basis))
+        self.edit_mapping(_mapping_in_form(self.state, form))
         self.preferred_form["mapping"] = form
 
     def edit_form_matrix(self, form_rows) -> bool:
-        new = service.mapping_from_form_matrix(self.state.mapping, form_rows)
+        new = _mapping_from_form(self.state, form_rows)
         if new is None:
             return False
         self.edit_mapping(new)
@@ -103,35 +179,17 @@ class _StructureCommands:
         return self.edit_form_matrix(rows)
 
     def canonicalize_comma_basis(self) -> None:
-        state = self.state
-        self.edit_comma_basis(service.canonical_comma_basis(state.comma_basis), state.domain_basis)
+        self.edit_comma_basis(*_canonical_comma_basis(self.state))
 
     def set_comma_basis_form(self, form: str) -> None:
-        state = self.state
-        self.edit_comma_basis(
-            service.comma_basis_in_form(state.comma_basis, form, state.domain_basis),
-            state.domain_basis,
-        )
+        self.edit_comma_basis(*_comma_basis_in_form(self.state, form))
         self.preferred_form["comma_basis"] = form
-
-    @staticmethod
-    def _valid_domain_basis(state: TemperamentState) -> bool:
-        basis = state.domain_basis
-        if not state.mapping or len(basis) != len(state.mapping[0]):
-            return False
-        try:
-            elements = [Fraction(e) for e in basis]
-        except (TypeError, ValueError, ZeroDivisionError):
-            return False
-        if any(e <= 0 or e == 1 for e in elements):
-            return False
-        return service.is_independent_domain_basis(basis)
 
     def try_edit_mapping_text(self, text: str) -> bool:
         state = service.parse_mapping_state(text)
         if state is None or not service.is_proper_temperament(state.mapping):
             return False
-        if not self._valid_domain_basis(state):
+        if not _valid_domain_basis(state):
             return False
         self.apply_state(state)
         return True
@@ -140,7 +198,7 @@ class _StructureCommands:
         basis = service.parse_comma_basis(text)
         if basis is None:
             return False
-        domain_basis = self.state.domain_basis if len(basis[0]) == self.state.d else None
+        domain_basis = _comma_domain_basis(self.state, basis)
         try:
             if not service.is_proper_temperament(
                 service.from_comma_basis(basis, domain_basis).mapping
@@ -170,17 +228,16 @@ class _StructureCommands:
         if not self.can_add_mapping_row:
             return
         self.pending.clear_drafts()
-        self.pending.pending_mapping_row = [None] * self.state.d
+        self.pending.pending_mapping_row = _blank_draft(self.state)
 
     def set_pending_mapping_row(self, values) -> None:
         self.pending.pending_mapping_row = list(values)
         if any(v is None for v in values):
             return
-        state = self.state
-        extended = [list(row) for row in state.mapping] + [[int(v) for v in values]]
-        if service.is_proper_temperament(extended):
+        new_state = _appended_row_state(self.state, values)
+        if new_state is not None:
             self.snapshot()
-            self.state = service.from_mapping(extended, state.domain_basis)
+            self.state = new_state
             self.pending.pending_mapping_row = None
 
     def cancel_pending_mapping_row(self) -> None:
@@ -217,19 +274,17 @@ class _StructureCommands:
 
     def add_comma(self) -> None:
         self.pending.clear_drafts()
-        self.pending.pending_comma = [None] * self.state.d
+        self.pending.pending_comma = _blank_draft(self.state)
 
     def set_pending_comma(self, values) -> None:
         self.pending.pending_comma = list(values)
         if any(v is None for v in values):
             return
         new_comma = tuple(int(v) for v in values)
-        state = self.state
-        domain_basis = state.domain_basis if len(new_comma) == state.d else None
-        extended = service.from_comma_basis((*self.real_comma_basis, new_comma), domain_basis)
-        if extended.n > state.n:
+        new_state = _extended_comma_state(self.state, new_comma, self.real_comma_basis)
+        if new_state is not None:
             self.snapshot()
-            self.state = extended
+            self.state = new_state
             self.pending.pending_comma = None
 
     def cancel_pending_comma(self) -> None:
