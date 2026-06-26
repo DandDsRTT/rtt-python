@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from rtt.app import service
+from rtt.app import _editing_controls, service
 from rtt.app.editing import EditController
 from rtt.app.page_assets import _INVALID_PRESCALER
 
@@ -27,9 +27,8 @@ def test_edit_controller_constructs_without_a_page():
 
 
 def test_reason_message_maps_a_known_reason_and_ignores_unmapped():
-    ec, _ = _controller()
-    assert ec._reason_message(service.Reason.INVALID_PRESCALER) == _INVALID_PRESCALER
-    assert ec._reason_message(None) is None
+    assert _editing_controls.reason_message(service.Reason.INVALID_PRESCALER) == _INVALID_PRESCALER
+    assert _editing_controls.reason_message(None) is None
 
 
 def test_act_ends_gestures_runs_action_then_requests_render():

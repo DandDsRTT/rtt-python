@@ -132,11 +132,11 @@ class _Reconciler:
         self.entities: dict[str, EntityHandles] = {}
         self.target_limit_tip = None
         self.cell_kinds: dict[str, _KindHandlers] = {}
-        _recon_kinds.register_display_kinds(self)
-        _recon_kinds.register_value_kinds(self)
-        _recon_kinds.register_label_kinds(self)
-        _recon_kinds.register_control_kinds(self)
-        _recon_kinds.register_button_kinds(self)
+        _recon_kinds.register_display_kinds(self.cell_kinds)
+        _recon_kinds.register_value_kinds(self.cell_kinds)
+        _recon_kinds.register_label_kinds(self.cell_kinds)
+        _recon_kinds.register_control_kinds(self.cell_kinds)
+        _recon_kinds.register_button_kinds(self.cell_kinds)
 
     @property
     def _cur_gesture(self):

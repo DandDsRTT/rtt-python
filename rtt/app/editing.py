@@ -39,9 +39,6 @@ class EditController:
     def _build_vector_list_specs(self) -> None:
         _editing_controls.build_vector_list_specs(self)
 
-    def _reason_message(self, reason):
-        return _editing_controls.reason_message(reason)
-
     def _apply_outcome(self, out, commit, preview=False) -> None:
         _editing_controls.apply_outcome(self, out, commit, preview)
 
