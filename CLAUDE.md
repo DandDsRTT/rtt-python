@@ -188,41 +188,65 @@ conflicts that must be resolved") or gets **dropped from the queue on a red cand
 just sits there unmerged forever unless you act. So your task is not finished until `main` actually
 contains your commit. **Watch the PR to a terminal state, then act on whatever it became.**
 
-Per the global "never ping while waiting" rule, arm **one silent background watcher** that emits
-nothing while the PR is healthy and re-engages you only on an actionable state — its exit is what
-wakes you:
+**The watcher must judge the `merge_group` run, NOT `gh pr checks`.** The queue's required check
+runs on a **`merge_group`** event against a synthetic candidate branch (`gh-readonly-queue/main/
+pr-N-<sha>` = your PR merged onto current `main`). Its pass/fail **never appears in `gh pr checks`**,
+which lists only the PR-event checks. So a watcher that polls `gh pr checks` is **blind**: when a
+candidate fails, the queue drops the PR and silently un-arms auto-merge, leaving it OPEN + green-PR-
+checks, sitting as "merge when ready" forever — and the blind watcher loops without ever waking you
+(a real lapse this has caused). Key the watcher on the candidate run's conclusion instead:
 
 ```bash
 # Run in the background. Exits — and re-engages you — ONLY when there's something to do:
-#   0  merged        → report "PR #N merged" once, then stop
-#   10 conflicts     → rebase onto main, resolve, push --force-with-lease, re-enqueue, re-arm
-#   11 dropped/red   → read the failing check, fix, push, re-enqueue, re-arm
-#   12 closed        → unexpected; surface to the user
+#   0  merged           → report "PR #N merged" once, then stop
+#   10 conflicts(DIRTY) → rebase onto main, push --force-with-lease, re-enqueue, re-arm
+#   11 candidate failed → read the merge_group run log, fix, push, re-enqueue, re-arm
+#   12 closed           → unexpected; surface to the user
 pr=$(gh pr view --json number -q .number)
+mg() { gh run list --event merge_group --limit 20 --json databaseId,status,conclusion,headBranch \
+  -q "[.[]|select(.headBranch|contains(\"pr-$pr-\"))]|sort_by(.databaseId)|last|\"\(.databaseId) \(.conclusion//\"none\")\""; }
+base=$(mg); base=${base%% *}; base=${base:-0}   # ignore candidate runs from superseded fixes
 while :; do
-  read -r state mss < <(gh pr view "$pr" --json state,mergeStateStatus -q '.state+" "+.mergeStateStatus')
-  [ "$state" = MERGED ] && exit 0
-  [ "$state" = CLOSED ] && exit 12
-  [ "$mss" = DIRTY ] && exit 10
-  if gh pr checks "$pr" 2>/dev/null | grep -qiE '\b(fail|failure)\b'; then exit 11; fi
+  st=$(gh pr view "$pr" --json state -q .state)
+  [ "$st" = MERGED ] && exit 0
+  [ "$st" = CLOSED ] && exit 12
+  [ "$(gh pr view "$pr" --json mergeStateStatus -q .mergeStateStatus)" = DIRTY ] && exit 10
+  latest=$(mg); rid=${latest%% *}
+  if [ -n "$rid" ] && [ "${rid:-0}" -gt "$base" ] 2>/dev/null; then
+    case "$latest" in *failure) exit 11;; esac
+  fi
   sleep 45
 done
 ```
 
-When the watcher exits, do the matching action; for the conflict/red cases **re-arm it** — loop
-`DIRTY → resolve → re-enqueue` until the PR is genuinely merged. Break silence only to report the
+When the watcher exits, do the matching action; for the conflict/candidate-fail cases **re-arm it**
+(recompute `base` first) — loop until the PR is genuinely merged. Break silence only to report the
 merge or ask a decision you genuinely can't make.
 
-**Resolving a `DIRTY` PR.** A conflict / `main` moved under you means rebase and repush — the queue
-re-validates the new candidate:
+**Resolving a `DIRTY` or candidate-failed PR.** A candidate fails for one of two reasons, both fixed
+by rebase-and-repush so the queue re-validates a fresh candidate:
+- **A `git` conflict (`DIRTY`)** — `main` moved under you.
+- **Concurrent-`main` drift your branch never saw** — the candidate is `your branch + current main`,
+  so a teammate's just-landed change can break it even when your branch is green in isolation (e.g.
+  they added a file the doc-policy gate now flags, or changed a count an exact gate pins). Read the
+  failing `merge_group` run (`gh run view <id> --log-failed`) — the fix is usually one more line.
 
 ```bash
-git rebase main && git push --force-with-lease
-gh pr merge --auto                 # re-enqueue; the prior auto-merge was dropped when it went DIRTY
+git rebase main                    # resolve any conflicts INSIDE the rebase; never reset to escape
+# ...apply the one-line fix the candidate log demanded, if any...
+git push --force-with-lease        # REJECTED while the PR is still queued — dequeue first (below)
+gh pr merge --auto                 # re-enqueue. Use --auto ALONE: --merge/--squash trip
+                                   # "merge strategy is set by the merge queue" and may NOT enqueue.
 ```
 
-Resolve conflicts inside the rebase exactly as before (see the git section below) — never reset to
-escape them — then re-arm the watcher above.
+**To update a branch that is still in the queue you must dequeue it first** — a `push
+--force-with-lease` is rejected ("protected branch hook declined") while queued. Remove it, then
+push and re-enqueue:
+
+```bash
+gh api graphql -f query='mutation($id:ID!){dequeuePullRequest(input:{id:$id}){mergeQueueEntry{position}}}' \
+  -f id="$(gh pr view "$pr" --json id -q .id)"
+```
 
 **Clean up your branch once the PR is terminal.** A `claude/<name>` branch is throwaway — it exists
 only to carry one PR. So as the final step after the PR reaches a terminal state (**merged**, or you
