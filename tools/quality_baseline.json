@@ -1,8 +1,8 @@
 {
-  "reach_through_total": 493,
+  "reach_through_total": 465,
   "reach_through_by_handle": {
-    "state": 122,
     "_editor": 120,
+    "state": 94,
     "_chrome": 78,
     "_rec": 49,
     "_runtime": 47,
@@ -36,7 +36,7 @@
       "attrs": 8
     },
     "rtt/app/editor_structure.py::_StructureCommands": {
-      "methods": 38,
+      "methods": 37,
       "attrs": 2
     },
     "rtt/app/editor_tuning.py::_TuningCommands": {
