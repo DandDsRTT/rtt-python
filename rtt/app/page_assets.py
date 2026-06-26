@@ -817,10 +817,6 @@ def _set_offlist_prompt(select: ui.select, value, prompt: str = "-") -> None:
         select.props(remove="display-value")
 
 
-def _projection_prompt(cid: str) -> str:
-    return "<choose embedding>" if cid.endswith(":gens") else "<choose projection>"
-
-
 def _formchooser_options(cid: str) -> dict:
     if cid.endswith(":mapping"):
         return {

@@ -1220,6 +1220,15 @@ def test_target_chooser_default_limit_uses_the_nonstandard_basis():
     assert rec._target_preset_values() == (16, "TILT")
 
 
+def test_target_chooser_resets_to_dash_when_the_domain_empties_the_target_set():
+    from rtt.app.editor import Editor
+    editor = Editor()
+    editor.set_target_spec("5-TILT")
+    editor.set_domain_element(2, "21")
+    assert editor.current_targets() == []
+    assert _Reconciler(editor)._target_preset_values() == (None, None)
+
+
 def test_dense_prescaling_plain_text_fits_its_cell():
     # the reported overflow: the complexity-prescaler and prescaled-target-list tiles hold
     # the densest plain text (a d×k ket-matrix linearised onto one line). Each must fit its
