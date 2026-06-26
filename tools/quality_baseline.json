@@ -1,11 +1,11 @@
 {
-  "reach_through_total": 200,
+  "reach_through_total": 194,
   "reach_through_by_handle": {
-    "_editor": 58,
+    "_editor": 53,
     "_rec": 47,
     "_chrome": 34,
     "_runtime": 29,
-    "_gestures": 14,
+    "_gestures": 13,
     "_renderer": 9,
     "e": 5,
     "_edits": 3,
@@ -40,10 +40,6 @@
       "methods": 1,
       "attrs": 22
     },
-    "rtt/app/reconciler.py::_Reconciler": {
-      "methods": 21,
-      "attrs": 10
-    },
     "rtt/app/rendering.py::Renderer": {
       "methods": 19,
       "attrs": 16
@@ -68,7 +64,6 @@
     "rtt.app.editor_document": 13,
     "rtt.app.editor_solve": 9,
     "rtt.app.gestures": 9,
-    "rtt.app.reconciler": 13,
     "rtt.app.rendering": 10,
     "rtt.app.service.core": 9,
     "rtt.app.service.core_forms": 9,
