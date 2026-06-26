@@ -180,7 +180,12 @@ def test_live_tree_passes_the_architectural_guard_rails():
     assert qc.coupling_violations(files) == []
     assert qc.cohesion_violations(files) == []
     assert qc.inheritance_violations(files) == []
-    assert qc.page_reach_violations(files) == []
+
+
+def test_live_tree_sits_exactly_on_its_ratchet_floors():
+    files = qc.python_files(qc._DEFAULT_ROOTS)
+    assert qc.collect(qc._DEFAULT_ROOTS) == []
+    assert qc.compute_baseline(files) == qc.load_baseline()
 
 
 def test_spreadsheet_shared_state_within_cap():
@@ -195,17 +200,23 @@ def test_spreadsheet_shared_state_fires_when_over_cap(monkeypatch):
     assert any("cross-file shared mutable self" in m for m in messages)
 
 
-def test_page_reach_flags_god_handle_but_not_injected_deps(tmp_path):
-    (tmp_path / "m.py").write_text(
-        "class C:\n"
-        "    def f(self):\n"
-        "        return self.page.editor.state\n"  # the retired god-handle — flagged
-        "    def g(self):\n"
-        "        return self.editor.state\n"  # injected dep — fine
-    )
-    messages = [v.message for v in qc.page_reach_violations(qc.python_files((str(tmp_path),)))]
-    assert len(messages) == 1
-    assert "self.page.editor" in messages[0]
+_RENAMED_HANDLE = (
+    "class C:\n"
+    "    def __init__(self, host):\n"
+    "        self._host = host\n"
+    "    def f(self):\n"
+    "        return self._host.editor.state\n"
+    "    def g(self):\n"
+    "        return self._host.renderer.render()\n"
+)
+
+
+def test_reach_through_counts_every_injected_handle_not_just_page(tmp_path):
+    (tmp_path / "m.py").write_text(_RENAMED_HANDLE)
+    trees = qc.parse_files(qc.python_files((str(tmp_path),)))
+    assert sum(qc.reach_through_by_handle(trees).values()) == 2
+    assert qc.reach_through_violations(trees, {"reach_through_total": 1}) != []
+    assert qc.reach_through_violations(trees, {"reach_through_total": 2}) == []
 
 
 def test_collect_and_main_over_a_tree(tmp_path, capsys):
