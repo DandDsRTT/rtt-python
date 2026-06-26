@@ -47,24 +47,21 @@ def test_rowlabel_renders_a_hard_newline_as_a_line_break():
     assert "white-space:pre-line" in rule.replace(" ", "")
 
 
-async def test_default_page_renders_without_error(user: User) -> None:
-    await user.open("/")
+def test_default_page_renders_without_error(default_page: User) -> None:
     # the board built: a representative slice of the default grid's row/column titles
-    await user.should_see("quantities")
-    await user.should_see("tuning")
+    assert default_page.find(content="quantities").elements
+    assert default_page.find(content="tuning").elements
 
 
-async def test_share_button_renders_in_the_corner_bank(user: User) -> None:
+def test_share_button_renders_in_the_corner_bank(default_page: User) -> None:
     # the share button sits beside undo/redo/reset; it copies a ?state=… link to the live document
-    await user.open("/")
-    assert user.find(marker="share").elements
+    assert default_page.find(marker="share").elements
 
 
-async def test_tour_button_renders_in_the_corner_bank(user: User) -> None:
+def test_tour_button_renders_in_the_corner_bank(default_page: User) -> None:
     # the guided-tour replay button sits beside undo/redo/reset/share; clicking it starts the
     # client-side walkthrough (see assets/tour.js)
-    await user.open("/")
-    assert user.find(marker="tour").elements
+    assert default_page.find(marker="tour").elements
 
 
 async def test_state_query_param_loads_a_shared_document(user: User) -> None:
@@ -88,13 +85,12 @@ async def test_a_corrupt_state_query_param_falls_back_to_defaults(user: User, ca
     await user.should_see("quantities")
 
 
-async def test_grid_pane_publishes_its_base_size_for_the_scrollbar_fit(user: User) -> None:
+def test_grid_pane_publishes_its_base_size_for_the_scrollbar_fit(default_page: User) -> None:
     # the scrollbar-fit pass (rttFreeze.fit) reserves a scrollbar's width so one bar never forces a
     # second; to do that it must reset the pane to its UN-reserved size before measuring the window
     # caps. render publishes that base size as data-base-w/-h, which must equal the inline width/height
     # it sets — the value the JS resets to (see assets/freeze.js, tests in test_web_app_smoke).
-    await user.open("/")
-    pane = next(iter(user.find(marker="gridpane").elements))
+    pane = next(iter(default_page.find(marker="gridpane").elements))
     base_w, base_h = pane._props.get("data-base-w"), pane._props.get("data-base-h")
     fit_w = pane._props.get("data-fit-w")
     assert base_w is not None and base_h is not None and fit_w is not None
@@ -343,21 +339,20 @@ def _op_classes(user: User, marker: str) -> list[str]:
     return next(iter(user.find(marker=marker).elements))._classes
 
 
-async def test_interval_ratios_carry_reduce_and_reciprocate_buttons(user: User) -> None:
+def test_interval_ratios_carry_reduce_and_reciprocate_buttons(default_page: User) -> None:
     # every editable interval ratio (commas as well as targets/held/interest) gets the two hover
     # buttons flanking its bar, each greyed when its op is a no-op. The default TILT targets over
     # 2.3.5 are 2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5 (columns 0..7); the comma is 80/81.
-    await user.open("/")
-    await user.should_see(marker="target:0:reduce")
-    await user.should_see(marker="target:0:reciprocate")
-    await user.should_see(marker="comma:0:reduce")            # commas are in scope too
-    await user.should_see(marker="comma:0:reciprocate")
+    assert default_page.find(marker="target:0:reduce").elements
+    assert default_page.find(marker="target:0:reciprocate").elements
+    assert default_page.find(marker="comma:0:reduce").elements            # commas are in scope too
+    assert default_page.find(marker="comma:0:reciprocate").elements
     # 2/1 is outside [1, 2): reduce is live. 3/2 is already reduced: reduce is greyed.
-    assert "rtt-op-disabled" not in _op_classes(user, "target:0:reduce")
-    assert "rtt-op-disabled" in _op_classes(user, "target:2:reduce")
+    assert "rtt-op-disabled" not in _op_classes(default_page, "target:0:reduce")
+    assert "rtt-op-disabled" in _op_classes(default_page, "target:2:reduce")
     # reciprocate is live on any non-unison
-    assert "rtt-op-disabled" not in _op_classes(user, "target:0:reciprocate")
-    assert "rtt-op-disabled" not in _op_classes(user, "target:2:reciprocate")
+    assert "rtt-op-disabled" not in _op_classes(default_page, "target:0:reciprocate")
+    assert "rtt-op-disabled" not in _op_classes(default_page, "target:2:reciprocate")
 
 
 async def test_clicking_reduce_folds_the_interval_into_one_equave(user: User) -> None:
@@ -506,12 +501,11 @@ async def test_off_diagonal_pretransformer_edit_keeps_the_all_interval_weight_a_
     await user.should_not_see(marker="cell:weight:targets:0:0")    # ...never promoted to a matrix
 
 
-async def test_interval_columns_render_draggable_reorder_grips(user: User) -> None:
+def test_interval_columns_render_draggable_reorder_grips(default_page: User) -> None:
     # the target list shows by default, so its reorder grip renders with no setup: a draggable
     # ⠿ over each column (also the drop target). Drive the builder and confirm it's a drag source.
-    await user.open("/")
-    await user.should_see(marker="grip:targets:0")
-    grip = next(iter(user.find(marker="grip:targets:0").elements))
+    assert default_page.find(marker="grip:targets:0").elements
+    grip = next(iter(default_page.find(marker="grip:targets:0").elements))
     assert grip._props.get("draggable")  # the wrap is the HTML5 drag source
 
 
@@ -628,27 +622,25 @@ async def test_edge_washes_also_render_into_the_frozen_panes(user: User) -> None
     await user.should_see(marker="wash:temperament:mapping:quantities#row")  # the row-band copy (left spill)
 
 
-async def test_settings_and_controls_carry_hover_tooltips(user: User) -> None:
+def test_settings_and_controls_carry_hover_tooltips(default_page: User) -> None:
     # the Show toggles and the non-value controls get explanatory hover text (rtt.app.tooltips) as a
     # Tooltip; a value cell's help instead FOLDS into its zoom magnifier as data-zoomhelp (see
     # test_value_cell_help_folds_into_the_zoom_magnifier). A tooltip renders hidden until hover, so the
     # User sim's visible-only search can't see one — scan the client's element registry for the Tooltips.
-    await user.open("/")
-    tips = [el.text for el in user.client.elements.values() if isinstance(el, Tooltip)]
+    tips = [el.text for el in default_page.client.elements.values() if isinstance(el, Tooltip)]
     assert any("name caption" in t for t in tips)       # the "names" Show toggle's help (now a tile part)
     # the mapping cells' help ("approximate this prime") rides as data-zoomhelp, not a Tooltip
-    mapping = next(iter(user.find(marker="cell:mapping:0:0").elements))
+    mapping = next(iter(default_page.find(marker="cell:mapping:0:0").elements))
     assert "approximate this prime" in mapping._props.get("data-zoomhelp", "")
 
 
-async def test_hover_tooltips_wait_before_appearing(user: User) -> None:
+def test_hover_tooltips_wait_before_appearing(default_page: User) -> None:
     # the tooltips defaulted to Quasar's 0 ms show delay, popping the instant the cursor crossed
     # any control and burying the dense grid in hover help. Every tooltip now shares one show
     # delay (set on the Tooltip element's default props) so the help waits for a deliberate hover
     # rather than flashing on every passing cursor. The whole population carries it, chrome and
     # grid controls alike, so no path can slip back to instant.
-    await user.open("/")
-    tips = [el for el in user.client.elements.values() if isinstance(el, Tooltip)]
+    tips = [el for el in default_page.client.elements.values() if isinstance(el, Tooltip)]
     assert tips  # the page does build tooltips
     assert all(int(el._props.get("delay", 0)) >= 500 for el in tips)
 
@@ -657,24 +649,22 @@ def _wrap(user: User, cell_id: str):
     return next(iter(user.find(marker=cell_id).elements))
 
 
-async def test_every_gridded_value_cell_is_zoomable(user: User) -> None:
+def test_every_gridded_value_cell_is_zoomable(default_page: User) -> None:
     # hovering ANY gridded value pops the zoom magnifier (_ZOOM_JS clones the cell, scaled): the cell
     # wraps carry .rtt-zoomable for the engine to find them. Both a read-only value (the octave's
     # 1200.000 tuning) and an editable one (a mapping entry) get it — the magnifier is for every value,
     # not just the read-only ones. Structural cells (a row/column header) never become zoomable.
-    await user.open("/")
-    assert "rtt-zoomable" in _wrap(user, "tuning:prime:0")._classes     # read-only cents value
-    assert "rtt-zoomable" in _wrap(user, "cell:mapping:0:0")._classes   # editable mapping entry
-    assert "rtt-zoomable" in _wrap(user, "qgen:0")._classes             # read-only generator ratio
+    assert "rtt-zoomable" in _wrap(default_page, "tuning:prime:0")._classes     # read-only cents value
+    assert "rtt-zoomable" in _wrap(default_page, "cell:mapping:0:0")._classes   # editable mapping entry
+    assert "rtt-zoomable" in _wrap(default_page, "qgen:0")._classes             # read-only generator ratio
     # (the _ZOOM_JS engine that turns the class into a hover magnifier is a body <script>, verified
     # in a real browser; in-process the User plugin runs no client JS — see the project's render-test notes)
 
 
-async def test_structural_cells_are_not_zoomable(user: User) -> None:
+def test_structural_cells_are_not_zoomable(default_page: User) -> None:
     # only gridded VALUE cells zoom; a column header / row label / bracket is not a value, so it never
     # becomes .rtt-zoomable (and keeps no data-zoomhelp).
-    await user.open("/")
-    for el in user.client.elements.values():
+    for el in default_page.client.elements.values():
         classes = getattr(el, "_classes", [])
         if "rtt-zoomable" in classes:
             # a zoomable cell is a value cell — never a header/label/symbol/bracket
@@ -682,12 +672,11 @@ async def test_structural_cells_are_not_zoomable(user: User) -> None:
                            ("rtt-colheader", "rtt-rowlabel", "rtt-symbol", "rtt-boxtitle"))
 
 
-async def test_value_cell_help_folds_into_the_zoom_magnifier(user: User) -> None:
+def test_value_cell_help_folds_into_the_zoom_magnifier(default_page: User) -> None:
     # an editable value cell's how-to-edit help folds INTO its magnifier (data-zoomhelp) rather than a
     # separate tooltip, so a value cell carries exactly one hover popup. The text still comes from
     # tooltips.control_help, so the completeness sweep is unaffected; it just isn't a Tooltip element.
-    await user.open("/")
-    mapping = _wrap(user, "cell:mapping:0:0")
+    mapping = _wrap(default_page, "cell:mapping:0:0")
     assert mapping._props.get("data-zoomhelp", "").startswith("How many of this generator")
     # the value cell has no Tooltip of its own (its help folded in); only non-value controls do
     assert not any(isinstance(c, Tooltip) for c in mapping.default_slot.children)
@@ -749,14 +738,13 @@ def _row_classes(user: User, key: str) -> list[str]:
     return next(iter(user.find(marker=f"showrow:{key}").elements))._classes
 
 
-async def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_default(user: User) -> None:
+def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_default(default_page: User) -> None:
     # the chapter slider opens at the default position (ch4) and reveal-gates the panel's controls.
     # A show/example row past the slider COLLAPSES (rtt-chap-hidden / display:none); a dummy-tile
     # part past it stays in place but INVISIBLE (rtt-chap-invisible / visibility:hidden) so the tile
     # keeps its shape. The hiding is a CSS class (the in-process User plugin reads the Python tree,
     # not CSS), so this checks the class directly — what a real browser keys off.
-    await user.open("/")
-    slider = next(iter(user.find(marker="chapterslider").elements))
+    slider = next(iter(default_page.find(marker="chapterslider").elements))
     assert slider.value == show_settings.CHAPTER_DEFAULT  # the as-shipped slider position (ch4)
     # ch2/3/4 specific rows are revealed at the default (the ch3 tuning sub-controls included). Only
     # rows whose parent chain is on by default are findable here: optimization (under the on-by-
@@ -764,29 +752,29 @@ async def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_defaul
     # parent-hidden like all-interval and excluded (its chapter gating is unobservable until shown).
     for key in ("counts", "tuning_tiles", "optimization", "interest",
                 "interval_ratios"):
-        assert "rtt-chap-hidden" not in _row_classes(user, key), key
+        assert "rtt-chap-hidden" not in _row_classes(default_page, key), key
     # domain_units moved to ch5 (units analysis), so its row is collapsed at the default ch4
-    assert "rtt-chap-hidden" in _row_classes(user, "domain_units")
+    assert "rtt-chap-hidden" in _row_classes(default_page, "domain_units")
     # ...while the ch9 / outside-guide (★) rows are collapsed. (These are all top-level rows, or
     # — projection — a sub-control of the on-by-default tuning tiles, so they're present/findable;
     # a sub-control of an OFF parent, like all-interval under weighting, is hidden by its own
     # visibility binding and so isn't found regardless of chapter.)
     for key in ("nonstandard_domain", "projection", "generator_detempering", "identity_objects"):
-        assert "rtt-chap-hidden" in _row_classes(user, key), key
+        assert "rtt-chap-hidden" in _row_classes(default_page, key), key
     # the dummy tile's parts are gated the space-preserving way: an early layer shows, a ch5 one is
     # invisible-but-in-place (visibility:hidden, NOT display:none)
-    assert "rtt-chap-invisible" not in _part_classes(user, "gridded_values")  # ch2
-    assert "rtt-chap-invisible" in _part_classes(user, "units")               # ch5
+    assert "rtt-chap-invisible" not in _part_classes(default_page, "gridded_values")  # ch2
+    assert "rtt-chap-invisible" in _part_classes(default_page, "units")               # ch5
     # the audio bank rides the tile and is available from the first notch, so it shows at the default
-    assert "rtt-chap-invisible" not in next(iter(user.find(marker="audiobank").elements))._classes
+    assert "rtt-chap-invisible" not in next(iter(default_page.find(marker="audiobank").elements))._classes
     # a hidden (unrevealed) toggle is DISABLED too, not merely hidden — its checkbox carries the
     # `disable` prop; a revealed one does not.
     def _box(key):
-        return next(iter(user.find(marker=f"showbox:{key}").elements))
+        return next(iter(default_page.find(marker=f"showbox:{key}").elements))
     assert "disable" in _box("nonstandard_domain")._props  # ch9 — hidden + disabled at ch4
     assert "disable" not in _box("counts")._props          # ch2 — revealed + enabled
     # the live readout reads "<n>: <title>" (no "ch " prefix)
-    reading = next(iter(user.find(marker="chapterreading").elements))
+    reading = next(iter(default_page.find(marker="chapterreading").elements))
     assert reading.text == "4: Exploring temperaments"
 
 
@@ -1217,12 +1205,11 @@ async def test_scrolling_the_target_limit_steps_then_commits(user: User, monkeyp
     assert int(num.value) == before + 1            # committed, not reverted
 
 
-async def test_positive_gen_tuning_cell_shows_an_explicit_plus_sign(user: User) -> None:
+def test_positive_gen_tuning_cell_shows_an_explicit_plus_sign(default_page: User) -> None:
     # the generator tuning map shows each generator's sign as an explicit glyph — the "+" of a
     # positive generator (ordinarily assumed) made visible, so it can be clicked to flip. The
     # default scheme's period and fifth are both positive.
-    await user.open("/")
-    sign_lbl, _, _ = _gentuning_face(user, "tuning:gen:1")
+    sign_lbl, _, _ = _gentuning_face(default_page, "tuning:gen:1")
     assert sign_lbl.text == "+"
 
 
@@ -1243,14 +1230,13 @@ async def test_clicking_the_sign_flips_the_generator_and_its_mapping_row(user: U
     assert _cell_child(user, "cell:mapping:1:2").value == "-4"  # its mapping row flipped too
 
 
-async def test_editable_gen_tuning_cell_renders_a_stacked_cents_face(user: User) -> None:
+def test_editable_gen_tuning_cell_renders_a_stacked_cents_face(default_page: User) -> None:
     # the generator tuning map cells are editable IN PLACE, but a 3-dp cents value (e.g. 697.564)
     # overflows the 30px square as a single line. They split into a big whole-part field over a
     # smaller fraction field (the editable twin of the read-only stacked cents face), so the value
     # fits. Assert the live value splits across the two input fields.
-    await user.open("/")
-    value = _cell_child(user, "tuning:gen:1").value  # the signed cents value, e.g. "696.578" (default fifth +)
-    _sign, whole_in, frac_in = _gentuning_face(user, "tuning:gen:1")
+    value = _cell_child(default_page, "tuning:gen:1").value  # the signed cents value, e.g. "696.578" (default fifth +)
+    _sign, whole_in, frac_in = _gentuning_face(default_page, "tuning:gen:1")
     assert "." not in whole_in.value                # the whole part stands alone (no decimal)
     assert frac_in.value and "." not in frac_in.value  # the fraction is the bare digits (the dot is a sibling glyph)
     assert f"{whole_in.value}.{frac_in.value}" == value  # the two reconstruct the magnitude (the default fifth is +)
@@ -1379,12 +1365,11 @@ async def test_typing_a_bare_integer_into_a_pending_draft_fills_it(user: User) -
     assert [_cell_child(user, f"cell:held:{p}:0").value for p in range(3)] == ["1", "0", "0"]
 
 
-async def test_editable_ratio_cell_renders_a_stacked_fraction_face(user: User) -> None:
+def test_editable_ratio_cell_renders_a_stacked_fraction_face(default_page: User) -> None:
     # the editable comma ratio is an in-place stacked fraction: two separate inputs (numerator over a
     # bar over denominator), not an overlaid face on one input — the syntonic comma reads 80 over 81
-    await user.open("/")
-    assert isinstance(_cell_child(user, "comma:0"), ui.input)  # the editable numerator box, not a static label
-    num, den = _ratio_face(user, "comma:0")
+    assert isinstance(_cell_child(default_page, "comma:0"), ui.input)  # the editable numerator box, not a static label
+    num, den = _ratio_face(default_page, "comma:0")
     assert (num.value, den.value) == ("80", "81")              # the two fraction fields
 
 
@@ -2011,15 +1996,14 @@ async def test_custom_weights_stays_checkable_under_all_interval_so_select_all_w
     assert box("custom_weights").value is True                   # ...and it STICKS (doesn't snap back)
 
 
-async def test_a_disabled_toggle_greys_its_box_and_its_example_together(user: User) -> None:
+def test_a_disabled_toggle_greys_its_box_and_its_example_together(default_page: User) -> None:
     # the single disabled styling: an unavailable toggle greys BOTH its checkbox and its example
     # sample (rtt-ex-disabled), never out of step. At the default chapter, generator detempering (the
     # ★ notch) is chapter-disabled — so its box is disabled and its sample greys to match.
     def box(key):
-        return next(iter(user.find(marker=f"showbox:{key}").elements))
+        return next(iter(default_page.find(marker=f"showbox:{key}").elements))
     def example_greyed(key):
-        return "rtt-ex-disabled" in next(iter(user.find(marker=f"showexample:{key}").elements))._classes
-    await user.open("/")
+        return "rtt-ex-disabled" in next(iter(default_page.find(marker=f"showexample:{key}").elements))._classes
     assert "disable" in box("generator_detempering")._props and example_greyed("generator_detempering")
 
 
@@ -2232,14 +2216,13 @@ async def test_adding_a_target_commits_when_filled(user: User) -> None:
     assert _cell_child(user, f"cell:vec:targets:{k}:0").value == "-1"
 
 
-async def test_audio_bank_is_always_live_with_a_leading_mute(user: User) -> None:
+def test_audio_bank_is_always_live_with_a_leading_mute(default_page: User) -> None:
     # the waveform / play-mode / hold / 1-1 bank rides the settings panel's dummy tile and is now
     # ALWAYS live — mute (its leading control) is the on/off gate, so there is no audio Show toggle
     # and no greyed bank. All five controls render, mute first.
-    await user.open("/")
-    assert "rtt-bank-off" not in next(iter(user.find(marker="audiobank").elements))._classes
+    assert "rtt-bank-off" not in next(iter(default_page.find(marker="audiobank").elements))._classes
     for ctrl in ("mute", "wave", "mode", "hold", "root"):
-        assert user.find(marker=f"audioctrl:{ctrl}").elements  # the five controls sit on the dummy tile
+        assert default_page.find(marker=f"audioctrl:{ctrl}").elements  # the five controls sit on the dummy tile
 
 
 # --- tier 4: the settings select-all/none, the reset control, and refresh persistence ---
@@ -2298,9 +2281,8 @@ def _renders_inside(user: User, cell_marker: str, region_marker: str) -> bool:
     ("toggle:row:tuning", "rowband"),       # its fold toggle rides the same band
     ("toggle:all", "corner"),              # the master toggle -> the corner (frozen both)
 ])
-async def test_each_title_renders_into_its_frozen_region(user: User, cell: str, region: str) -> None:
-    await user.open("/")
-    assert _renders_inside(user, cell, region)
+def test_each_title_renders_into_its_frozen_region(default_page: User, cell: str, region: str) -> None:
+    assert _renders_inside(default_page, cell, region)
 
 
 @pytest.mark.parametrize("cell, region", [
@@ -2311,36 +2293,33 @@ async def test_each_title_renders_into_its_frozen_region(user: User, cell: str, 
     ("map_plus", "rowband"),          # a mapping-row + rides the sticky-left row band
     ("map_minus:0", "rowband"),       # ...and the per-row − reveal on that same band
 ])
-async def test_branch_controls_render_into_their_frozen_region(user: User, cell: str, region: str) -> None:
+def test_branch_controls_render_into_their_frozen_region(default_page: User, cell: str, region: str) -> None:
     # the always-shown + and the hover − now ride the frozen branch bands with their gridlines
     # (column controls in the column strip, mapping/basis controls in the row band), so they
     # stay put while the value tiles scroll under them. The renderer routes each cell to its
     # pane by its POSITION — which band its top-left falls in — not a hand-kept kind list (which
     # couldn't anyway: the column + and the basis + share the kind "plus" but freeze in different
     # bands).
-    await user.open("/")
-    assert _renders_inside(user, cell, region)
+    assert _renders_inside(default_page, cell, region)
 
 
-async def test_body_cells_render_on_the_board_under_no_frozen_region(user: User) -> None:
+def test_body_cells_render_on_the_board_under_no_frozen_region(default_page: User) -> None:
     # a value cell sits on the board (.rtt-gridcontent, the body scroll content), beneath none of
     # the frozen regions that sit outside / sticky-within the scroller
-    await user.open("/")
-    assert _renders_inside(user, "cell:mapping:0:0", "board")
+    assert _renders_inside(default_page, "cell:mapping:0:0", "board")
     for region in ("colheadinner", "rowband", "corner"):
-        assert not _renders_inside(user, "cell:mapping:0:0", region)
+        assert not _renders_inside(default_page, "cell:mapping:0:0", region)
 
 
-async def test_settings_frozen_header_plus_chrome_bar_matches_the_grid_column_strip_height(user: User) -> None:
+def test_settings_frozen_header_plus_chrome_bar_matches_the_grid_column_strip_height(default_page: User) -> None:
     # "exactly the same height as the frozen part of the main app pane": the settings frozen header now
     # sits BELOW the chrome title bar, so the two together must span the grid's frozen column strip
     # height (freeze_y) for the settings and grid frozen/scrolling seams to sit at the same height
     # across the app. render() therefore sizes the header to freeze_y MINUS the chrome bar. (The title-
     # bar rework regressed this by leaving the header at the full freeze_y, so its seam sat a chrome-
     # bar's height below the grid's — this guard now accounts for the bar above it.)
-    await user.open("/")
-    frozen = next(iter(user.find(marker="showfrozen").elements))
-    colhead = next(iter(user.find(marker="colhead").elements))
+    frozen = next(iter(default_page.find(marker="showfrozen").elements))
+    colhead = next(iter(default_page.find(marker="colhead").elements))
     assert frozen._style.get("height")  # the header is sized (not left to hug its content)...
     assert _px(frozen, "height") == _px(colhead, "height") - page_assets._CHROME_H  # ...to strip minus the bar
 
@@ -2349,7 +2328,7 @@ def _px(el, prop: str) -> float:
     return float(el._style.get(prop).rstrip("px"))
 
 
-async def test_grid_pane_hugs_the_grid_with_a_margin_all_round(user: User) -> None:
+def test_grid_pane_hugs_the_grid_with_a_margin_all_round(default_page: User) -> None:
     # the grey grid pane hugs the grid + a _PAD (12px) margin on EVERY side, so its grey shows past
     # the gridlines all round (white beyond). The body still fills to the pane's right/bottom edges
     # (so a scrolling grid's scrollbars sit flush there, no grey stranded outside them) — the margin
@@ -2357,25 +2336,23 @@ async def test_grid_pane_hugs_the_grid_with_a_margin_all_round(user: User) -> No
     # the right the pane also clears the last column's title overhang (it renders unwrapped past the
     # narrow interest column), so the long header shows instead of clipping. width = board width +
     # title overhang + 2·PAD; height = board + the column strip + 2·PAD.
-    await user.open("/")
     lay = Editor().layout()  # exactly the layout the fresh-page default render builds
-    pane = next(iter(user.find(marker="gridpane").elements))
-    board = next(iter(user.find(marker="board").elements))
-    colhead = next(iter(user.find(marker="colhead").elements))
+    pane = next(iter(default_page.find(marker="gridpane").elements))
+    board = next(iter(default_page.find(marker="board").elements))
+    colhead = next(iter(default_page.find(marker="colhead").elements))
     assert _px(board, "width") == lay.width                          # the rendered board IS the footprint
     assert lay.right_overhang > 0                                    # the interest title does overhang
     assert _px(pane, "width") == _px(board, "width") + lay.right_overhang + 24   # footprint + overhang + both margins
     assert _px(pane, "height") == _px(board, "height") + _px(colhead, "height") + 24  # body + strip + both margins
 
 
-async def test_settings_body_caps_below_the_window_so_it_doesnt_scroll_when_it_fits(user: User) -> None:
+def test_settings_body_caps_below_the_window_so_it_doesnt_scroll_when_it_fits(default_page: User) -> None:
     # the settings body sizes to its own content but render() caps it at the window less the inset and
     # the frozen band — the chrome title bar + frozen header together span the inset+freeze_y, same as
     # the grid — (calc(100vh - (pad + freeze_y)px)), so it scrolls only once its content genuinely
     # exceeds that — a self-contained cap that doesn't depend on the flex hug rounding out exactly.
-    await user.open("/")
-    scroll = next(iter(user.find(marker="showscroll").elements))
-    colhead = next(iter(user.find(marker="colhead").elements))
+    scroll = next(iter(default_page.find(marker="showscroll").elements))
+    colhead = next(iter(default_page.find(marker="colhead").elements))
     fy = _px(colhead, "height")  # the frozen header / column-strip height (freeze_y)
     assert scroll._style.get("max-height") == f"calc(100vh - {page_assets._PAD + fy}px)"
 
@@ -2533,10 +2510,9 @@ _DEFAULT_HTML_CELLS = ["caption:mapping:primes", "bracket:map:0:l", "symbol:mapp
 
 
 @pytest.mark.parametrize("cell_id", _DEFAULT_HTML_CELLS)
-async def test_default_view_html_cell_renders_non_blank_content(user: User, cell_id: str) -> None:
-    await user.open("/")
-    await user.should_see(marker=cell_id)
-    assert getattr(_cell_child(user, cell_id), "content", ""), \
+def test_default_view_html_cell_renders_non_blank_content(default_page: User, cell_id: str) -> None:
+    assert default_page.find(marker=cell_id).elements
+    assert getattr(_cell_child(default_page, cell_id), "content", ""), \
         f"{cell_id} rendered with empty html content — did render() drop its kind's branch?"
 
 
