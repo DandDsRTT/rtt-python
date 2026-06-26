@@ -18,6 +18,7 @@ class Solve:
     custom_prescaler: tuple | None
     custom_weights: tuple[float, ...] | None
     held_vectors: tuple[tuple[int, ...], ...]
+    interest_vectors: tuple[tuple[int, ...], ...]
     target_override: tuple[str, ...] | None
     generator_tuning: tuple[float, ...] | None
     manual_tuning: bool
@@ -35,6 +36,7 @@ def solve_model(doc) -> Solve:
         custom_prescaler=doc.custom_prescaler,
         custom_weights=doc.custom_weights,
         held_vectors=tuple(doc.held_vectors),
+        interest_vectors=tuple(doc.interest_vectors),
         target_override=doc.target_override,
         generator_tuning=doc.generator_tuning,
         manual_tuning=doc.manual_tuning,

@@ -3,13 +3,16 @@ from __future__ import annotations
 import re
 from fractions import Fraction
 
-from rtt.app import service
+from rtt.app import editor_predicates, service
 from rtt.app.editor_state import blank_draft, comma_ratios_in_domain
 
 
-class _IntervalCommands:
-    MOVE_LISTS = ("targets", "held", "interest", "commas", "unchanged")
+class _IntervalQueries:
+    def list_vectors(self, name: str) -> list[tuple[int, ...]]:
+        return editor_predicates.list_vectors(self._solve(), name)
 
+
+class _IntervalCommands:
     def _feed_draft(self, values, commit) -> list[int | None] | None:
         draft = list(values)
         if any(v is None for v in draft):
@@ -104,46 +107,6 @@ class _IntervalCommands:
         self.target_override = tuple(targets)
         self.invalidate_custom_weights()
 
-    def list_vectors(self, name: str) -> list[tuple[int, ...]]:
-        state = self.state
-        if name == "targets":
-            return [
-                tuple(v)
-                for v in service.target_interval_vectors(
-                    self.current_targets(), state.d, state.domain_basis
-                )
-            ]
-        if name == "held":
-            return [tuple(v) for v in self.held_vectors]
-        if name == "interest":
-            return [tuple(v) for v in self.interest_vectors]
-        if name == "unchanged":
-            return list(service.unchanged_interval_basis(state, self.unchanged_ratios) or ())
-        return [tuple(v) for v in state.comma_basis]
-
-    def _peek_vector(self, name: str, i: int) -> tuple[int, ...] | None:
-        vectors = self.list_vectors(name)
-        return vectors[i] if 0 <= i < len(vectors) else None
-
-    def _move_feasible(self, src: str, dst: str, vector: tuple[int, ...]) -> bool:
-        state = self.state
-        if src not in self.MOVE_LISTS or dst not in self.MOVE_LISTS:
-            return False
-        if dst == "unchanged":
-            return False
-        if "targets" in (src, dst) and service.is_all_interval(self.tuning_scheme):
-            return False
-        if src == "commas" and state.n == 0:
-            return False
-        if dst == "commas":
-            domain_basis = state.domain_basis if len(vector) == state.d else None
-            extended = service.from_comma_basis(
-                (*self.real_comma_basis, tuple(vector)), domain_basis
-            )
-            if extended.n <= state.n:
-                return False
-        return True
-
     def _take_from(self, name: str, i: int) -> None:
         if name == "targets":
             targets = self.current_targets()
@@ -175,8 +138,9 @@ class _IntervalCommands:
             )
 
     def move_interval(self, src_list: str, src_idx: int, dst_list: str, dst_idx: int) -> bool:
-        vector = self._peek_vector(src_list, src_idx)
-        if vector is None or not self._move_feasible(src_list, dst_list, vector):
+        s = self._solve()
+        vector = editor_predicates.peek_vector(editor_predicates.list_vectors(s, src_list), src_idx)
+        if vector is None or not editor_predicates.move_feasible(s, src_list, dst_list, vector):
             return False
         if src_list == dst_list and (src_list in ("commas", "unchanged") or src_idx == dst_idx):
             return False
