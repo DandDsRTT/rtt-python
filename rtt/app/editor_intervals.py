@@ -4,6 +4,7 @@ import re
 from fractions import Fraction
 
 from rtt.app import service
+from rtt.app.editor_state import blank_draft, comma_ratios_in_domain
 
 
 class _IntervalCommands:
@@ -19,7 +20,7 @@ class _IntervalCommands:
 
     def add_interest(self) -> None:
         self.pending.clear_drafts()
-        self.pending.pending_interest = [None] * self.state.d
+        self.pending.pending_interest = blank_draft(self.state)
 
     def set_pending_interest(self, values) -> None:
         self.pending.pending_interest = self._feed_draft(values, self.interest_vectors.append)
@@ -37,7 +38,7 @@ class _IntervalCommands:
 
     def add_held(self) -> None:
         self.pending.clear_drafts()
-        self.pending.pending_held = [None] * self.state.d
+        self.pending.pending_held = blank_draft(self.state)
 
     def set_pending_held(self, values) -> None:
         self.pending.pending_held = self._feed_draft(values, self.held_vectors.append)
@@ -69,25 +70,25 @@ class _IntervalCommands:
         if vectors is None:
             return False
         self.snapshot()
-        self.target_override = service.comma_ratios(vectors, self.state.domain_basis)
+        self.target_override = comma_ratios_in_domain(self.state, vectors)
         self.invalidate_custom_weights()
         return True
 
     def set_target_override_vectors(self, vectors) -> None:
         self.snapshot()
-        self.target_override = service.comma_ratios(
-            [tuple(int(x) for x in m) for m in vectors], self.state.domain_basis
+        self.target_override = comma_ratios_in_domain(
+            self.state, [tuple(int(x) for x in m) for m in vectors]
         )
         self.invalidate_custom_weights()
 
     def add_target(self) -> None:
         self.pending.clear_drafts()
-        self.pending.pending_target = [None] * self.state.d
+        self.pending.pending_target = blank_draft(self.state)
 
     def set_pending_target(self, values) -> None:
         def commit(vector):
             targets = self.current_targets()
-            targets.append(service.comma_ratios([vector], self.state.domain_basis)[0])
+            targets.append(comma_ratios_in_domain(self.state, [vector])[0])
             self.target_override = tuple(targets)
             self.invalidate_custom_weights()
 
@@ -160,7 +161,7 @@ class _IntervalCommands:
     def _put_into(self, name: str, i: int, vector: tuple[int, ...]) -> None:
         if name == "targets":
             targets = self.current_targets()
-            targets.insert(i, service.comma_ratios([vector], self.state.domain_basis)[0])
+            targets.insert(i, comma_ratios_in_domain(self.state, [vector])[0])
             self.target_override = tuple(targets)
         elif name == "held":
             self.held_vectors.insert(i, tuple(vector))

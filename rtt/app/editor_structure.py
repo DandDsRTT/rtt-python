@@ -4,6 +4,7 @@ import logging
 from fractions import Fraction
 
 from rtt.app import service
+from rtt.app.editor_state import blank_draft
 from rtt.app.service.state import TemperamentState
 
 _log = logging.getLogger(__name__)
@@ -20,10 +21,6 @@ def _valid_domain_basis(state: TemperamentState) -> bool:
     if any(e <= 0 or e == 1 for e in elements):
         return False
     return service.is_independent_domain_basis(basis)
-
-
-def _blank_draft(state: TemperamentState) -> list[None]:
-    return [None] * state.d
 
 
 def _state_from_mapping(state: TemperamentState, mapping) -> TemperamentState:
@@ -228,7 +225,7 @@ class _StructureCommands:
         if not self.can_add_mapping_row:
             return
         self.pending.clear_drafts()
-        self.pending.pending_mapping_row = _blank_draft(self.state)
+        self.pending.pending_mapping_row = blank_draft(self.state)
 
     def set_pending_mapping_row(self, values) -> None:
         self.pending.pending_mapping_row = list(values)
@@ -274,7 +271,7 @@ class _StructureCommands:
 
     def add_comma(self) -> None:
         self.pending.clear_drafts()
-        self.pending.pending_comma = _blank_draft(self.state)
+        self.pending.pending_comma = blank_draft(self.state)
 
     def set_pending_comma(self, values) -> None:
         self.pending.pending_comma = list(values)
