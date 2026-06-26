@@ -20,6 +20,7 @@ from tools.quality_metrics import (
     explanatory_comment_blocks,
     is_reexport_facade,
     oversized_classes,
+    param_reach_by_handle,
     reach_through_by_handle,
 )
 from tools.quality_ratchets import (
@@ -29,6 +30,7 @@ from tools.quality_ratchets import (
     comment_violations,
     demeter_violations,
     load_baseline,
+    param_reach_through_violations,
     reach_through_violations,
 )
 
@@ -378,6 +380,7 @@ def ratchet_violations(
 ) -> list[Violation]:
     return [
         *reach_through_violations(trees, baseline),
+        *param_reach_through_violations(trees, baseline),
         *demeter_violations(trees, baseline),
         *bag_violations(trees, baseline),
         *class_surface_violations(trees, baseline),
@@ -402,9 +405,12 @@ def collect(roots: tuple[str, ...]) -> list[Violation]:
 def compute_baseline(files: list[Path]) -> dict:
     trees = parse_files(files)
     crossing, accumulators = bag_cross_file(trees)
+    param_reach = param_reach_by_handle(trees)
     return {
         "reach_through_total": sum(reach_through_by_handle(trees).values()),
         "reach_through_by_handle": dict(reach_through_by_handle(trees).most_common()),
+        "param_reach_through_total": sum(param_reach.values()),
+        "param_reach_through_by_handle": dict(param_reach.most_common()),
         "demeter_chains": sorted(demeter_chains(trees)),
         "bag_cross_file_total": len(crossing),
         "bag_cross_file_attrs": sorted(crossing),
@@ -425,7 +431,12 @@ def worklist(roots: tuple[str, ...] = _DEFAULT_ROOTS) -> list[str]:
     live = compute_baseline(python_files(roots))
     base = load_baseline()
     lines = []
-    for key in ("reach_through_total", "bag_cross_file_total", "explanatory_comment_blocks"):
+    for key in (
+        "reach_through_total",
+        "param_reach_through_total",
+        "bag_cross_file_total",
+        "explanatory_comment_blocks",
+    ):
         lines.append(f"{key}: {live[key]} (floor {base[key]})")
     lines.append(f"demeter_4hop_chains: {len(live['demeter_chains'])}")
     lines.append(f"oversized_classes: {len(live['class_surface'])}")

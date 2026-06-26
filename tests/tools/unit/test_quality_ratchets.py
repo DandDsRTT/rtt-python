@@ -259,6 +259,146 @@ def test_extended_local_alias_syntaxes_do_not_evade(tmp_path):
     assert qm.reach_through_by_handle(trees_under(tmp_path))["_host"] == 6
 
 
+PARAM_REACH = (
+    "class _Reconciler:\n"
+    "    def __init__(self, editor):\n"
+    "        self._editor = editor\n"
+    "def make_cell(rec, cid):\n"
+    "    return rec._editor.state + rec._editor.scheme\n"
+)
+
+
+def test_param_form_reach_through_via_a_shard_param_is_counted(tmp_path):
+    write(tmp_path, "_recon.py", PARAM_REACH)
+    assert qm.param_reach_by_handle(trees_under(tmp_path))["_editor"] == 2
+
+
+PARAM_NARROW = "def f(state, mapping):\n    return mapping.foo + state.bar\n"
+
+
+def test_a_narrow_param_function_is_not_a_shard_binding(tmp_path):
+    write(tmp_path, "narrow.py", PARAM_NARROW)
+    assert qm.param_reach_by_handle(trees_under(tmp_path)) == {}
+
+
+PARAM_BARE_OWN = (
+    "class _Reconciler:\n"
+    "    def __init__(self, editor):\n"
+    "        self._editor = editor\n"
+    "def g(rec):\n"
+    "    return rec.gesture\n"
+)
+
+
+def test_bare_param_own_attribute_is_not_a_param_reach_through(tmp_path):
+    write(tmp_path, "_recon.py", PARAM_BARE_OWN)
+    assert sum(qm.param_reach_by_handle(trees_under(tmp_path)).values()) == 0
+
+
+PARAM_ALIAS = (
+    "class _Reconciler:\n"
+    "    def __init__(self, editor):\n"
+    "        self._editor = editor\n"
+    "def make_cell(rec, cid):\n"
+    "    ed = rec._editor\n"
+    "    return ed.state + ed.scheme\n"
+)
+
+
+def test_param_form_counts_handle_aliased_locals(tmp_path):
+    write(tmp_path, "_recon.py", PARAM_ALIAS)
+    assert qm.param_reach_by_handle(trees_under(tmp_path))["_editor"] == 2
+
+
+PARAM_EC = (
+    "class EditController:\n"
+    "    def __init__(self, editor):\n"
+    "        self._editor = editor\n"
+    "def _power_change(ec, cid):\n"
+    "    return ec._editor.scheme + ec._editor.state\n"
+)
+
+
+def test_ec_param_binds_to_editcontroller(tmp_path):
+    write(tmp_path, "_editing.py", PARAM_EC)
+    assert qm.param_reach_by_handle(trees_under(tmp_path))["_editor"] == 2
+
+
+PARAM_TE_INDIRECTION = (
+    "class _TuningEdits:\n"
+    "    def __init__(self, e):\n"
+    "        self.e = e\n"
+    "def _target_limit_wheel(te, delta_y):\n"
+    "    ec = te.e\n"
+    "    return ec._runtime.building + ec._rec.cells\n"
+)
+
+
+def test_param_reach_follows_te_dot_e_indirection_to_the_controller(tmp_path):
+    write(tmp_path, "_editing_tuning.py", PARAM_TE_INDIRECTION)
+    assert qm.param_reach_by_handle(trees_under(tmp_path))["e"] == 2
+
+
+PARAM_NESTED_ESCAPES = (
+    "class _Reconciler:\n"
+    "    def __init__(self, editor):\n"
+    "        self._editor = editor\n"
+    "def label_builder(cls):\n"
+    "    def build(rec, cb):\n"
+    "        return rec._editor.state\n"
+    "    return build\n"
+)
+
+
+def test_nested_shard_helper_in_a_nonbinding_outer_is_a_known_uncounted_path(tmp_path):
+    write(tmp_path, "_recon_value.py", PARAM_NESTED_ESCAPES)
+    assert qm.param_reach_by_handle(trees_under(tmp_path)).get("_editor", 0) == 0
+
+
+PARAM_NESTED_CLOSURE = (
+    "class GestureController:\n"
+    "    def __init__(self, renderer):\n"
+    "        self._renderer = renderer\n"
+    "def chooser_hover(gc, cid):\n"
+    "    def apply():\n"
+    "        return gc._renderer.render()\n"
+    "    return apply\n"
+)
+
+
+def test_param_reach_counts_closure_access_in_a_nested_shard_function(tmp_path):
+    write(tmp_path, "_gesture.py", PARAM_NESTED_CLOSURE)
+    assert qm.param_reach_by_handle(trees_under(tmp_path))["_renderer"] == 1
+
+
+def test_param_reach_gate_is_a_ratchet_floor(tmp_path):
+    write(tmp_path, "_recon.py", PARAM_REACH)
+    trees = trees_under(tmp_path)
+    assert sum(qm.param_reach_by_handle(trees).values()) == 2
+    at_floor = {"param_reach_through_total": 2, "param_reach_through_by_handle": {"_editor": 2}}
+    assert qr.param_reach_through_violations(trees, at_floor) == []
+    below = {"param_reach_through_total": 1, "param_reach_through_by_handle": {"_editor": 1}}
+    messages = [v.message for v in qr.param_reach_through_violations(trees, below)]
+    assert any("param-form reach-throughs rose to 2 (ratchet floor 1)" in m for m in messages)
+    assert any("via ._editor rose to 2 (per-handle floor 1)" in m for m in messages)
+
+
+def test_a_param_handle_rising_above_its_floor_fails_even_when_total_is_flat(tmp_path):
+    write(tmp_path, "_recon.py", PARAM_REACH)
+    trees = trees_under(tmp_path)
+    floors = {"param_reach_through_total": 2, "param_reach_through_by_handle": {"_editor": 1}}
+    messages = [v.message for v in qr.param_reach_through_violations(trees, floors)]
+    assert any("via ._editor rose to 2 (per-handle floor 1)" in m for m in messages)
+    assert not any("param-form reach-throughs rose" in m for m in messages)
+
+
+def test_every_shard_controller_class_still_exists_with_injected_handles():
+    trees = parse_files(python_files(qc._DEFAULT_ROOTS))
+    handles = qm.handles_by_class(trees)
+    for param, controller in qm.SHARD_PARAM_CONTROLLER.items():
+        assert handles.get(controller), f"{param} -> {controller} resolves to no injected handles"
+
+
 def test_aliased_deep_chain_is_flagged_by_demeter(tmp_path):
     write(
         tmp_path,

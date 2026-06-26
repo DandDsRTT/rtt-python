@@ -176,19 +176,11 @@ def _grow_alias_handles(handles: set[str], aliases: list[tuple[str, str]]) -> No
                 changed = True
 
 
-class _HandleVisitor(ast.NodeVisitor):
-    def __init__(self, class_handles: dict[str, set[str]]) -> None:
-        self.class_handles = class_handles
+class _ReachVisitor(ast.NodeVisitor):
+    def __init__(self) -> None:
         self.handles: set[str] = set()
         self.counts: Counter = Counter()
-        self.chains: list[tuple[int, str]] = []
         self.scopes: list[dict[str, str]] = [{}]
-
-    def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        enclosing = self.handles
-        self.handles = self.class_handles.get(node.name, set())
-        self.generic_visit(node)
-        self.handles = enclosing
 
     def visit_FunctionDef(self, node: ast.AST) -> None:
         self.scopes.append(dict(self.scopes[-1]))
@@ -196,6 +188,19 @@ class _HandleVisitor(ast.NodeVisitor):
         self.scopes.pop()
 
     visit_AsyncFunctionDef = visit_FunctionDef
+
+    def _direct_attr(self, value: ast.AST) -> str | None:
+        raise NotImplementedError
+
+    def _base_handle(self, value: ast.AST) -> str | None:
+        if isinstance(value, ast.NamedExpr):
+            value = value.value
+        attr = self._direct_attr(value)
+        if attr in self.handles:
+            return attr
+        if isinstance(value, ast.Name):
+            return self.scopes[-1].get(value.id)
+        return None
 
     def _register(self, target: ast.AST, value: ast.AST) -> None:
         if isinstance(target, ast.Name):
@@ -217,24 +222,36 @@ class _HandleVisitor(ast.NodeVisitor):
         self._register(node.target, node.value)
         self.generic_visit(node)
 
-    def _base_handle(self, value: ast.AST) -> str | None:
-        if isinstance(value, ast.NamedExpr):
-            value = value.value
-        attr = _self_attr(value)
-        if attr in self.handles:
-            return attr
-        if isinstance(value, ast.Name):
-            return self.scopes[-1].get(value.id)
-        return None
-
     def visit_Attribute(self, node: ast.Attribute) -> None:
         handle = self._base_handle(node.value)
         if handle:
             self.counts[handle] += 1
+        self._note_attribute(node)
+        self.generic_visit(node)
+
+    def _note_attribute(self, node: ast.Attribute) -> None:
+        pass
+
+
+class _HandleVisitor(_ReachVisitor):
+    def __init__(self, class_handles: dict[str, set[str]]) -> None:
+        super().__init__()
+        self.class_handles = class_handles
+        self.chains: list[tuple[int, str]] = []
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        enclosing = self.handles
+        self.handles = self.class_handles.get(node.name, set())
+        self.generic_visit(node)
+        self.handles = enclosing
+
+    def _direct_attr(self, value: ast.AST) -> str | None:
+        return _self_attr(value)
+
+    def _note_attribute(self, node: ast.Attribute) -> None:
         chain = self._chain(node)
         if chain and chain[1] >= HANDLE_CHAIN_FLOOR:
             self.chains.append((node.lineno, chain[0]))
-        self.generic_visit(node)
 
     def _chain(self, node: ast.Attribute) -> tuple[str, int] | None:
         hops: list[str] = []
@@ -282,6 +299,56 @@ def _maximal_chains(rows: list[tuple[str, int, str]]) -> set[str]:
 
 def demeter_chains(trees: list[tuple[Path, ast.Module]]) -> set[str]:
     return _walk_handles(trees)[1]
+
+
+SHARD_PARAM_CONTROLLER = {
+    "rec": "_Reconciler",
+    "ec": "EditController",
+    "te": "_TuningEdits",
+    "gc": "GestureController",
+    "pb": "PageBuilder",
+    "r": "Renderer",
+}
+
+
+class _ParamReachVisitor(_ReachVisitor):
+    def __init__(self, param: str, handles: set[str], counts: Counter) -> None:
+        super().__init__()
+        self.param = param
+        self.handles = handles
+        self.counts = counts
+
+    def _direct_attr(self, value: ast.AST) -> str | None:
+        if (
+            isinstance(value, ast.Attribute)
+            and isinstance(value.value, ast.Name)
+            and value.value.id == self.param
+        ):
+            return value.attr
+        return None
+
+
+def _shard_binding(
+    node: ast.AST, class_handles: dict[str, set[str]]
+) -> tuple[str, set[str]] | None:
+    if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or not node.args.args:
+        return None
+    param = node.args.args[0].arg
+    bound = SHARD_PARAM_CONTROLLER.get(param)
+    handles = class_handles.get(bound, set()) if bound else set()
+    return (param, handles) if handles else None
+
+
+def param_reach_by_handle(trees: list[tuple[Path, ast.Module]]) -> Counter:
+    class_handles = handles_by_class(trees)
+    counts: Counter = Counter()
+    for _path, tree in trees:
+        for node in tree.body:
+            binding = _shard_binding(node, class_handles)
+            if binding is not None:
+                param, handles = binding
+                _ParamReachVisitor(param, handles, counts).visit(node)
+    return counts
 
 
 def namespace_ctor_names(trees: list[tuple[Path, ast.Module]]) -> set[str]:
