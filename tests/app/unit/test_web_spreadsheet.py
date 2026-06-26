@@ -574,6 +574,16 @@ def _all_on():
     return s
 
 
+def _maximized_superspace_builder():
+    s = settings.defaults()
+    for k, v in list(s.items()):
+        if isinstance(v, bool):
+            s[k] = True
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    return spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
+                                    held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+
+
 def test_interval_columns_carry_a_drag_grip_per_column():
     # each existing interval column gets a drag grip (the drag-and-drop handle, also a drop target);
     # plus every list emits a drop-only "add" zone on its stub gridline (the append / into-empty
@@ -2119,15 +2129,7 @@ def test_every_open_value_tile_has_a_plain_text_string():
     # superspace-projection columns hit. This sweeps the WHOLE surface with every Show toggle on so a
     # newly-added tile that forgets its plain text fails here, rather than slipping through to the user.
     from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
-    s = settings.defaults()
-    for k, v in list(s.items()):
-        if isinstance(v, bool):
-            s[k] = True  # every Show toggle on, to open the maximum set of tiles
-    # a nonstandard-domain temperament (lights the chapter-9 superspace block) with held + interest +
-    # projection, so the detempering / held / superspace / projection columns are all in play at once
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
-                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    b = _maximized_superspace_builder()
     assert b.resolved.flags.superspace and b.resolved.flags.ptext  # the config really did light the superspace + plain text
     value_rows = PTEXT_ROWS - {"quantities"}  # the quantities row's only band is the "2.3.5" primes string
     missing = [(r, c) for (r, c) in sorted(b.declared_tiles)
@@ -2143,13 +2145,7 @@ def test_every_row_that_produces_plain_text_reserves_its_band():
     # appears in ptext_strings — so this asserts the real reservation (height > 0), not a proxy set
     # membership. Sweeping every Show toggle on (which surfaces the canon row via form_tiles) catches any
     # such row generically, before it reaches the user.
-    s = settings.defaults()
-    for k, v in list(s.items()):
-        if isinstance(v, bool):
-            s[k] = True
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
-                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    b = _maximized_superspace_builder()
     assert b.resolved.flags.ptext and b.resolved.flags.canon  # the config really did light the plain text + the canon row
     rows_with_text = {r for (r, _c) in b.ptext_strings}
     spill = sorted(r for r in rows_with_text if ptext_band(b.geometry, r, folded=False) <= 0)
@@ -2165,13 +2161,7 @@ def test_every_in_tile_band_reserves_for_what_it_emits():
     # EMITTING content is contained in the set of rows RESERVING it — so a future row that emits into a
     # band but is forgotten in its reservation set fails here, for ANY band, not just plain text.
     from rtt.app.grid_tables import BANDS, SYMBOLS, UNITS
-    s = settings.defaults()
-    for k, v in list(s.items()):
-        if isinstance(v, bool):
-            s[k] = True
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
-                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    b = _maximized_superspace_builder()
     # (band name, rows that EMIT its content, rows that RESERVE its height). The reserve side reads the
     # ONE band descriptor (grid_tables.BANDS) the height pass also consults; the emit side reads the LIVE
     # per-render content where one exists (col_labels/effective_captions/ptext_strings are rebuilt each
@@ -2196,13 +2186,7 @@ def test_frame_and_chart_bands_reserve_height_for_what_they_emit():
     # chart band spills past the bottom of the tile, exactly the canon-row class of bug. This reads the
     # LIVE layout (the emitted cells), so a future framed/charted tile forgotten in the descriptor fails
     # here, generically, before it reaches the user.
-    s = settings.defaults()
-    for k, v in list(s.items()):
-        if isinstance(v, bool):
-            s[k] = True
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
-                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    b = _maximized_superspace_builder()
     lay = b.layout()
     frame_ys = {round(c.y, 3) for c in lay.cells if c.kind in {"ebktop", "ebkbrace", "ebkangle"}}
     frame_emit = {r for r in b.rows if round(query.frame_top_y(b.geometry, r), 3) in frame_ys
@@ -2241,13 +2225,7 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
         i = min((text.find(ch) for ch in "[⟨{" if ch in text), default=0)
         return text[i:]
 
-    s = settings.defaults()
-    for k, v in list(s.items()):
-        if isinstance(v, bool):
-            s[k] = True
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
-                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    b = _maximized_superspace_builder()
     lay = b.layout()
     value_rows = PTEXT_ROWS - {"quantities"}
     mismatches = []
@@ -2391,13 +2369,7 @@ def test_every_plain_text_band_uses_the_same_brackets_as_its_grid_tile():
     # nonstandard-domain + held + interest + projection config the two guards above use, so the
     # whole surface (detempering / held / superspace / projection columns) is in play at once.
     from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
-    s = settings.defaults()
-    for k, v in list(s.items()):
-        if isinstance(v, bool):
-            s[k] = True
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
-                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    b = _maximized_superspace_builder()
     lay = b.layout()
     value_rows = PTEXT_ROWS - {"quantities"}
     mismatches, checked = [], 0
@@ -2433,13 +2405,7 @@ def test_every_open_value_tile_declares_an_ebk_convention():
     # tile can't ship without a convention, and can't drift from the one it names.
     from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
     from rtt.app.service.text_conventions import EBK_CONVENTIONS, ebk_convention
-    s = settings.defaults()
-    for k, v in list(s.items()):
-        if isinstance(v, bool):
-            s[k] = True
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    b = spreadsheet._GridBuilder(state, s, tuning_scheme="minimax-ES",
-                                 held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),))
+    b = _maximized_superspace_builder()
     value_rows = PTEXT_ROWS - {"quantities"}
     undeclared, mismatches, checked = [], [], 0
     for (rkey, ckey) in sorted(b.declared_tiles):

@@ -22,6 +22,10 @@ from rtt.app.spreadsheet_emit_vectors import (
 )
 
 
+def _inputs(builder):
+    return builder.resolved, builder.geometry, build_context(builder)
+
+
 def _maximized_builder():
     return spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on())
 
@@ -34,8 +38,7 @@ def _all_on():
 
 
 def test_emit_vectors_is_a_pure_function_over_resolved_geometry_ctx():
-    builder = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on())
-    result = emit_vectors(builder.resolved, builder.geometry, build_context(builder))
+    result = emit_vectors(*_inputs(_maximized_builder()))
     assert isinstance(result, EmitResult)
     ids = {c.id for c in result.cells}
     assert "basis:0" in ids
@@ -49,13 +52,12 @@ def test_emit_vectors_emits_nothing_when_the_vectors_row_is_hidden():
     s = settings.defaults()
     s["interval_vectors"] = False
     builder = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
-    result = emit_vectors(builder.resolved, builder.geometry, build_context(builder))
+    result = emit_vectors(*_inputs(builder))
     assert result.cells == ()
 
 
 def test_emit_mapping_is_a_pure_function_over_resolved_geometry_ctx():
-    builder = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on())
-    result = emit_mapping(builder.resolved, builder.geometry, build_context(builder))
+    result = emit_mapping(*_inputs(_maximized_builder()))
     assert isinstance(result, EmitResult)
     ids = {c.id for c in result.cells}
     assert "gen:0" in ids
@@ -64,11 +66,10 @@ def test_emit_mapping_is_a_pure_function_over_resolved_geometry_ctx():
 
 
 def test_emit_matrix_bands_are_pure_functions():
-    builder = _maximized_builder()
-    ctx = build_context(builder)
-    headers = {c.id for c in emit_headers(builder.resolved, builder.geometry, ctx).cells}
-    counts = {c.id for c in emit_counts_row(builder.resolved, builder.geometry, ctx).cells}
-    units = {c.id for c in emit_units(builder.resolved, builder.geometry, ctx).cells}
+    resolved, geometry, ctx = _inputs(_maximized_builder())
+    headers = {c.id for c in emit_headers(resolved, geometry, ctx).cells}
+    counts = {c.id for c in emit_counts_row(resolved, geometry, ctx).cells}
+    units = {c.id for c in emit_units(resolved, geometry, ctx).cells}
     assert "header:primes" in headers and "toggle:all" in headers
     assert "count:primes" in counts
     assert any(i.startswith(("urow:", "ucol:")) for i in units)
@@ -77,8 +78,7 @@ def test_emit_matrix_bands_are_pure_functions():
 
 
 def test_emit_quantities_row_is_a_pure_function():
-    builder = _maximized_builder()
-    result = emit_quantities_row(builder.resolved, builder.geometry, build_context(builder))
+    result = emit_quantities_row(*_inputs(_maximized_builder()))
     ids = {c.id for c in result.cells}
     assert "qgen:0" in ids and "prime:0" in ids
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
@@ -86,10 +86,9 @@ def test_emit_quantities_row_is_a_pure_function():
 
 
 def test_emit_column_plus_and_rehomed_are_pure_functions():
-    builder = _maximized_builder()
-    ctx = build_context(builder)
-    plus = emit_column_plus_controls(builder.resolved, builder.geometry)
-    rehomed = emit_rehomed_minus_controls(builder.resolved, builder.geometry, ctx)
+    resolved, geometry, ctx = _inputs(_maximized_builder())
+    plus = emit_column_plus_controls(resolved, geometry)
+    rehomed = emit_rehomed_minus_controls(resolved, geometry, ctx)
     assert isinstance(plus, EmitResult) and isinstance(rehomed, EmitResult)
     assert "gen_plus" in {c.id for c in plus.cells}
     # rehomed minus controls only emit when the quantities row is collapsed and vectors open
@@ -100,7 +99,7 @@ def test_emit_projection_band_is_a_pure_function():
     s = _all_on()
     builder = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                        held_basis_ratios=("2/1", "5/4"))
-    result = emit_projection_band(builder.resolved, builder.geometry, build_context(builder))
+    result = emit_projection_band(*_inputs(builder))
     ids = {c.id for c in result.cells}
     assert any(i.startswith("cell:proj:") for i in ids)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
@@ -124,8 +123,7 @@ def _superspace_builder():
 
 
 def test_emit_superspace_rows_is_a_pure_function_over_resolved_geometry_ctx():
-    builder = _superspace_builder()
-    result = emit_superspace_rows(builder.resolved, builder.geometry, build_context(builder))
+    result = emit_superspace_rows(*_inputs(_superspace_builder()))
     ids = {c.id for c in result.cells}
     assert "ss_basis:0" in ids
     assert any(i.startswith("cell:ss_mapping:ssprimes:") for i in ids)
@@ -136,8 +134,7 @@ def test_emit_superspace_rows_is_a_pure_function_over_resolved_geometry_ctx():
 
 
 def test_emit_identity_objects_is_a_pure_function_over_resolved_geometry_ctx():
-    builder = _maximized_builder()
-    result = emit_identity_objects(builder.resolved, builder.geometry, build_context(builder))
+    result = emit_identity_objects(*_inputs(_maximized_builder()))
     ids = {c.id for c in result.cells}
     assert any(i.startswith("cell:vec:primes:") for i in ids)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
@@ -145,8 +142,7 @@ def test_emit_identity_objects_is_a_pure_function_over_resolved_geometry_ctx():
 
 
 def test_emit_brackets_is_a_pure_function_over_resolved_geometry_ctx():
-    builder = _maximized_builder()
-    result = emit_brackets(builder.resolved, builder.geometry, build_context(builder))
+    result = emit_brackets(*_inputs(_maximized_builder()))
     ids = {c.id for c in result.cells}
     assert any(i.startswith("bracket:") for i in ids)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
@@ -154,12 +150,11 @@ def test_emit_brackets_is_a_pure_function_over_resolved_geometry_ctx():
 
 
 def test_emit_ebk_frames_and_marks_reads_the_accumulator_for_v_split_bars():
-    builder = _maximized_builder()
-    ctx = build_context(builder)
+    resolved, geometry, ctx = _inputs(_maximized_builder())
     # the accumulator is the live cell list the orchestrator threads in
     full_layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on())
     accum = list(full_layout.cells)
-    result = emit_ebk_frames_and_marks(builder.resolved, builder.geometry, ctx, accum)
+    result = emit_ebk_frames_and_marks(resolved, geometry, ctx, accum)
     assert isinstance(result, EmitResult)
     ids = {c.id for c in result.cells}
     full = {c.id for c in full_layout.cells}
@@ -172,8 +167,7 @@ def _math_builder():
 
 
 def test_emit_tuning_is_a_pure_function_returning_cells_boxes_and_extra():
-    builder = _maximized_builder()
-    result = emit_tuning(builder.resolved, builder.geometry, build_context(builder))
+    result = emit_tuning(*_inputs(_maximized_builder()))
     assert isinstance(result, EmitResult)
     ids = {c.id for c in result.cells}
     assert any(i.startswith("tuning:") for i in ids)
@@ -190,14 +184,12 @@ def test_transform_cells_marks_the_dual_axis_preview_on_a_row_removal():
     cells = {c.id: c for c in spreadsheet.build(base, preview_remove=("row", 0)).cells}
     assert cells["cell:mapped_comma:0:1"].preview_remove
     # and it is a pure function over a cell tuple
-    builder = spreadsheet._GridBuilder(base)
-    assert transform_cells((), builder.resolved, builder.geometry, build_context(builder)) == ()
+    assert transform_cells((), *_inputs(spreadsheet._GridBuilder(base))) == ()
 
 
 def test_emit_controls_is_a_pure_function_returning_cells_and_blocks():
-    builder = _maximized_builder()
-    ctx = build_context(builder)
-    result = emit_controls(builder.resolved, builder.geometry, ctx)
+    resolved, geometry, ctx = _inputs(_maximized_builder())
+    result = emit_controls(resolved, geometry, ctx)
     assert isinstance(result, EmitResult)
     cell_ids = {c.id for c in result.cells}
     assert any(i.startswith("preset:") for i in cell_ids)
@@ -207,8 +199,8 @@ def test_emit_controls_is_a_pure_function_returning_cells_and_blocks():
 
 
 def test_emit_tile_toggles_is_a_pure_function_over_geometry_ctx():
-    builder = _maximized_builder()
-    result = emit_tile_toggles(builder.geometry, build_context(builder))
+    _resolved, geometry, ctx = _inputs(_maximized_builder())
+    result = emit_tile_toggles(geometry, ctx)
     ids = {c.id for c in result.cells}
     assert any(i.startswith("toggle:tile:") for i in ids)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
@@ -216,10 +208,9 @@ def test_emit_tile_toggles_is_a_pure_function_over_geometry_ctx():
 
 
 def test_emit_decorations_is_a_pure_function_returning_cells_lines_and_blocks():
-    builder = _maximized_builder()
-    ctx = build_context(builder)
-    tuning = emit_tuning(builder.resolved, builder.geometry, ctx)
-    result = emit_decorations(builder.resolved, builder.geometry, ctx, tuning.region_boxes,
+    resolved, geometry, ctx = _inputs(_maximized_builder())
+    tuning = emit_tuning(resolved, geometry, ctx)
+    result = emit_decorations(resolved, geometry, ctx, tuning.region_boxes,
                               tuning.extra["gtm_box"], tuning.extra["opt_box"], tuning.extra["approach_frame"])
     assert isinstance(result, EmitResult)
     assert result.lines and result.blocks
@@ -232,8 +223,7 @@ def test_emit_decorations_is_a_pure_function_returning_cells_lines_and_blocks():
 
 
 def test_emit_prescaling_band_is_a_pure_function_over_resolved_geometry_ctx():
-    builder = _superspace_builder()
-    result = emit_prescaling_band(builder.resolved, builder.geometry, build_context(builder))
+    result = emit_prescaling_band(*_inputs(_superspace_builder()))
     ids = {c.id for c in result.cells}
     assert any(i.startswith("cell:prescaling:") for i in ids)
     full = {c.id for c in spreadsheet.build(
@@ -244,12 +234,12 @@ def test_emit_prescaling_band_is_a_pure_function_over_resolved_geometry_ctx():
 
 def test_closed_form_operand_is_a_pure_function_over_resolved_geometry_ctx():
     builder = _math_builder()
-    ctx = build_context(builder)
+    resolved, geometry, ctx = _inputs(builder)
     # the just row's operand is the geometry-supplied ratio (1200·log₂ of that ratio)
-    operand = closed_form_operand(builder.resolved, builder.geometry, ctx, "just", "primes", 0)
+    operand = closed_form_operand(resolved, geometry, ctx, "just", "primes", 0)
     assert operand is not None
     # the builder is itself a duck-typed ctx (state/tuning_scheme/...), so it agrees with BuildContext
-    assert closed_form_operand(builder.resolved, builder.geometry, builder, "just", "primes", 0) == operand
+    assert closed_form_operand(resolved, geometry, builder, "just", "primes", 0) == operand
 
 
 def test_closed_form_drops_the_redundant_self_cache():
@@ -262,7 +252,7 @@ def test_closed_form_drops_the_redundant_self_cache():
 def test_emit_canon_band_is_a_pure_function():
     # a non-canonical mapping form makes the canonical-mapping row render
     builder = spreadsheet._GridBuilder(service.from_mapping(((1, 0, -4), (0, 1, 4))), _all_on())
-    result = emit_canon_band(builder.resolved, builder.geometry, build_context(builder))
+    result = emit_canon_band(*_inputs(builder))
     ids = {c.id for c in result.cells}
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, -4), (0, 1, 4))), _all_on()).cells}
     assert ids <= full
