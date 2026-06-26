@@ -28,11 +28,11 @@
       "attrs": 20
     },
     "rtt/app/editor_intervals.py::_IntervalCommands": {
-      "methods": 29,
+      "methods": 26,
       "attrs": 8
     },
     "rtt/app/editor_structure.py::_StructureCommands": {
-      "methods": 37,
+      "methods": 31,
       "attrs": 2
     },
     "rtt/app/editor_tuning.py::_TuningCommands": {

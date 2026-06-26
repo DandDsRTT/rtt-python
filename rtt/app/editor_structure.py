@@ -1,26 +1,12 @@
 from __future__ import annotations
 
 import logging
-from fractions import Fraction
 
-from rtt.app import service
+from rtt.app import editor_predicates, service
 from rtt.app.editor_state import blank_draft
 from rtt.app.service.state import TemperamentState
 
 _log = logging.getLogger(__name__)
-
-
-def _valid_domain_basis(state: TemperamentState) -> bool:
-    basis = state.domain_basis
-    if not state.mapping or len(basis) != len(state.mapping[0]):
-        return False
-    try:
-        elements = [Fraction(e) for e in basis]
-    except (TypeError, ValueError, ZeroDivisionError):
-        return False
-    if any(e <= 0 or e == 1 for e in elements):
-        return False
-    return service.is_independent_domain_basis(basis)
 
 
 def _state_from_mapping(state: TemperamentState, mapping) -> TemperamentState:
@@ -98,31 +84,33 @@ def _extended_comma_state(
     return extended if extended.n > state.n else None
 
 
-class _StructureCommands:
+class _StructureQueries:
     @property
     def basis_is_nonstandard(self) -> bool:
-        return not service.is_standard_domain(self.state.domain_basis)
+        return editor_predicates.basis_is_nonstandard(self.state)
 
     @property
     def can_expand(self) -> bool:
-        return service.is_standard_domain(self.state.domain_basis)
+        return editor_predicates.can_expand(self.state)
 
     @property
     def can_shrink(self) -> bool:
-        return service.can_shrink_domain(self.state)
+        return editor_predicates.can_shrink(self.state)
 
     @property
     def can_remove_domain_element(self) -> bool:
-        return service.can_remove_domain_element(self.state)
+        return editor_predicates.can_remove_domain_element(self.state)
 
     @property
     def can_add_mapping_row(self) -> bool:
-        return self.state.n > 0
+        return editor_predicates.can_add_mapping_row(self.state)
 
     @property
     def can_remove_mapping_row(self) -> bool:
-        return self.state.r > 1
+        return editor_predicates.can_remove_mapping_row(self.state)
 
+
+class _StructureCommands:
     def edit_mapping(self, mapping) -> None:
         self.apply_state(_state_from_mapping(self.state, mapping))
 
@@ -135,7 +123,7 @@ class _StructureCommands:
         self.settings["nonstandard_domain"] = False
 
     def exit_nonstandard_domain(self) -> None:
-        if not self.basis_is_nonstandard:
+        if not editor_predicates.basis_is_nonstandard(self.state):
             return
         self.snapshot()
         self.standardize_domain_in_place()
@@ -186,7 +174,7 @@ class _StructureCommands:
         state = service.parse_mapping_state(text)
         if state is None or not service.is_proper_temperament(state.mapping):
             return False
-        if not _valid_domain_basis(state):
+        if not editor_predicates.valid_domain_basis(state):
             return False
         self.apply_state(state)
         return True
@@ -208,21 +196,21 @@ class _StructureCommands:
         return True
 
     def expand(self) -> None:
-        if not self.can_expand:
+        if not editor_predicates.can_expand(self.state):
             return
         self.snapshot()
         self.pending.clear_drafts()
         self.state = service.expand_domain(self.state)
 
     def shrink(self) -> None:
-        if not self.can_shrink:
+        if not editor_predicates.can_shrink(self.state):
             return
         self.snapshot()
         self.pending.clear_drafts()
         self.state = service.shrink_domain(self.state)
 
     def add_mapping_row(self) -> None:
-        if not self.can_add_mapping_row:
+        if not editor_predicates.can_add_mapping_row(self.state):
             return
         self.pending.clear_drafts()
         self.pending.pending_mapping_row = blank_draft(self.state)
@@ -241,7 +229,7 @@ class _StructureCommands:
         self.pending.pending_mapping_row = None
 
     def remove_mapping_row(self, i: int) -> None:
-        if not self.can_remove_mapping_row:
+        if not editor_predicates.can_remove_mapping_row(self.state):
             return
         self.snapshot()
         self.pending.clear_drafts()
@@ -310,7 +298,7 @@ class _StructureCommands:
         self.pending.pending_element = None
 
     def remove_domain_element(self, index: int) -> None:
-        if not self.can_remove_domain_element:
+        if not editor_predicates.can_remove_domain_element(self.state):
             return
         self.snapshot()
         self.pending.clear_drafts()

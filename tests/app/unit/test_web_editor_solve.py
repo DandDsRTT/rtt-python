@@ -14,6 +14,7 @@ def test_solve_model_round_trips_the_default_read_model():
     assert s.settings == editor.settings
     assert s.nonprime_basis_approach == editor.nonprime_basis_approach
     assert s.held_vectors == tuple(editor.held_vectors)
+    assert s.interest_vectors == tuple(editor.interest_vectors)
     assert s.target_override == editor.target_override
     assert s.generator_tuning == editor.generator_tuning
     assert s.manual_tuning == editor.manual_tuning

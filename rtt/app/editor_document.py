@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from rtt.app import service
 from rtt.app.editor_history import History
-from rtt.app.editor_intervals import _IntervalCommands
+from rtt.app.editor_intervals import _IntervalCommands, _IntervalQueries
 from rtt.app.editor_pending import PendingEdits
 from rtt.app.editor_session import _SessionCommands
 from rtt.app.editor_settings_ops import _ShowCommands
 from rtt.app.editor_state import _Doc, initial_doc
-from rtt.app.editor_structure import _StructureCommands
+from rtt.app.editor_structure import _StructureCommands, _StructureQueries
 from rtt.app.editor_tuning import _TuningCommands
 from rtt.app.editor_view import _TuningQueries
 from rtt.app.service.state import TemperamentState
@@ -15,7 +15,9 @@ from rtt.app.service.state import TemperamentState
 
 class Document(
     _StructureCommands,
+    _StructureQueries,
     _IntervalCommands,
+    _IntervalQueries,
     _TuningCommands,
     _ShowCommands,
     _SessionCommands,
