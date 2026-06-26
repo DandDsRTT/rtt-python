@@ -1,8 +1,7 @@
 {
-  "reach_through_total": 922,
+  "reach_through_total": 651,
   "reach_through_by_handle": {
-    "r": 267,
-    "_editor": 186,
+    "_editor": 182,
     "state": 122,
     "_rec": 90,
     "_chrome": 72,
@@ -23,22 +22,6 @@
     "rtt/app/_editing_vectors.py::_VectorEdits": {
       "methods": 19,
       "attrs": 6
-    },
-    "rtt/app/_recon_buttons.py::_ReconButtons": {
-      "methods": 20,
-      "attrs": 1
-    },
-    "rtt/app/_recon_choosers.py::_ReconChoosers": {
-      "methods": 31,
-      "attrs": 2
-    },
-    "rtt/app/_recon_display.py::_ReconDisplayCells": {
-      "methods": 17,
-      "attrs": 1
-    },
-    "rtt/app/_recon_value.py::_ReconValueCells": {
-      "methods": 42,
-      "attrs": 2
     },
     "rtt/app/building.py::PageBuilder": {
       "methods": 22,
@@ -78,7 +61,7 @@
     },
     "rtt/app/reconciler.py::_Reconciler": {
       "methods": 21,
-      "attrs": 15
+      "attrs": 10
     },
     "rtt/app/rendering.py::Renderer": {
       "methods": 19,
