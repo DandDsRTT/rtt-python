@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from rtt.app import _gesture_ops
 from rtt.app.gestures import GestureController
 from rtt.app.page_assets import _Gesture
 
@@ -131,7 +132,7 @@ def test_gesture_render_toggles_flag_and_calls_render():
     renderer = SimpleNamespace(render=lambda: rendered.append(True))
     g = GestureController(_editor(), SimpleNamespace())
     g.bind(None, renderer, None)
-    g.gesture_render()
+    _gesture_ops.gesture_render(g)
     assert rendered == [True]
     assert g.gesture_rendering is False
 

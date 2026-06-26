@@ -1,14 +1,13 @@
 {
-  "reach_through_total": 97,
+  "reach_through_total": 41,
   "reach_through_by_handle": {
-    "_editor": 38,
-    "_runtime": 24,
-    "_rec": 10,
-    "_renderer": 9,
+    "_runtime": 15,
+    "_rec": 7,
     "e": 5,
     "_chrome": 5,
-    "_edits": 3,
+    "_editor": 5,
     "_gestures": 2,
+    "_edits": 1,
     "class_handles": 1
   },
   "demeter_chains": [],
@@ -33,7 +32,7 @@
       "attrs": 7
     },
     "rtt/app/gestures.py::GestureController": {
-      "methods": 41,
+      "methods": 13,
       "attrs": 11
     },
     "rtt/app/page_chrome.py::PageChrome": {
@@ -59,7 +58,6 @@
     "rtt.app.editing": 9,
     "rtt.app.editor_document": 13,
     "rtt.app.editor_solve": 9,
-    "rtt.app.gestures": 9,
     "rtt.app.rendering": 8,
     "rtt.app.service.core": 9,
     "rtt.app.service.core_forms": 9,
