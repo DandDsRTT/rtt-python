@@ -34,10 +34,10 @@ def canonical_ca(matrix: Matrix) -> Matrix:
 
 def col_hermite_defactor(matrix: Matrix) -> Matrix:
     rank = sp.Matrix(matrix).rank()
-    inverse = sp.Matrix(hermite_right_unimodular(matrix)).inv().tolist()
+    inverse = sp.Matrix(_hermite_right_unimodular(matrix)).inv().tolist()
     return tuple(tuple(int(x) for x in inverse[i]) for i in range(rank))
 
 
-def hermite_right_unimodular(matrix: Matrix) -> Matrix:
+def _hermite_right_unimodular(matrix: Matrix) -> Matrix:
     transform, _ = hnf_with_transform(transpose(matrix))
     return transpose(transform)

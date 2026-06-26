@@ -4,8 +4,6 @@ from rtt.app.service.core import (
     DEFAULT_TUNING_SCHEME,
     IntervalSizes,
     Tuning,
-    _is_matrix,
-    _temperament_spec_vectors,
     domain_has_nonprimes,
     get_generator_tuning_range,
     greatest_factor,
@@ -41,7 +39,6 @@ from rtt.app.service.core_forms import (
     resolve_mapping_form,
 )
 from rtt.app.service.core_intervals import (
-    _domain_label,
     equave_quotient,
     equave_reduce_vector,
     interval_op_availability,
@@ -57,13 +54,6 @@ from rtt.app.service.core_targets import (
     target_spec,
 )
 from rtt.app.service.core_vectors import (
-    _OVER_COMPLEX_RATIO,
-    _interval_vectors,
-    _map_through,
-    _over,
-    _to_matrix,
-    _vectors,
-    _vectors_to_ratios,
     comma_ratios,
     element_ratio,
     generator_detempering,
@@ -92,9 +82,6 @@ from rtt.app.service.outcome import (
     reject,
 )
 from rtt.app.service.parse import (
-    _int_matrix_or_none,
-    _parse_float_list,
-    _rational_matrix_or_none,
     parse_cents_map,
     parse_comma_basis,
     parse_embedding,
@@ -105,11 +92,6 @@ from rtt.app.service.parse import (
 )
 from rtt.app.service.projection import (
     UnchangedData,
-    _all_primes_held,
-    _held_for_projection,
-    _integer_columns,
-    _matrix_strings,
-    _projection_temperaments,
     canonical_generator_embedding,
     held_basis_vectors,
     project_vectors,
@@ -124,12 +106,10 @@ from rtt.app.service.projection import (
     unchanged_ratios_of_tuning,
 )
 from rtt.app.service.schemes import (
-    _WEIGHT_VARIANT_ORDER,
     COMPLEXITY_DISPLAYS,
     COMPLEXITY_NAMES,
     PRESCALERS,
     WEIGHT_SLOPES,
-    _complexity_signature,
     base_scheme_name,
     complexity_annotation,
     complexity_name_of,
@@ -160,9 +140,6 @@ from rtt.app.service.schemes import (
     weight_slope_variants,
 )
 from rtt.app.service.state import (
-    TemperamentState,
-    _as_basis_element,
-    _state,
     add_comma_to,
     add_domain_element,
     add_mapping_row,
@@ -189,8 +166,6 @@ from rtt.app.service.state import (
     standardize_to_prime_limit,
 )
 from rtt.app.service.superspace import (
-    _superspace_held_basis,
-    _superspace_projection_temperaments,
     basis_in_superspace,
     closed_form_superspace_tuning,
     lift_vectors_to_superspace,
@@ -215,18 +190,12 @@ from rtt.app.service.superspace import (
     superspace_tuning_projection,
 )
 from rtt.app.service.text_conventions import (
-    _DASH,
     EBK_CONVENTIONS,
     EbkConvention,
     ebk_convention,
     render_ebk,
 )
 from rtt.app.service.text_format import (
-    _cents_genmap,
-    _cents_list,
-    _cents_map,
-    _ket_list,
-    _prescale_vector_list,
     ebk_to_simple_matrix,
     embedding_ebk,
     mapping_pending_text,

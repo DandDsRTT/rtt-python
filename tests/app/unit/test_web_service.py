@@ -5,6 +5,7 @@ import pytest
 
 from rtt.app import service, spreadsheet
 from rtt.app import settings as app_settings
+from rtt.app.service import core_vectors, parse, text_format
 
 
 def test_base_scheme_name_strips_the_target_prefix():
@@ -1332,9 +1333,9 @@ def test_plain_text_custom_prescaler_matches_the_grid():
     gb = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=(1.0, 2.0, 3.0))
     pt = gb.ptext_strings
     # each retuned ptext tile equals the grid's own quantity (the same formatter the grid value uses)
-    assert pt[("tuning", "primes")] == service._cents_map(gb.resolved.tuning.tun.tuning_map)
-    assert pt[("complexity", "targets")] == service._cents_list(gb.resolved.complexities["targets"])
-    assert pt[("weight", "targets")] == service._cents_list(gb.resolved.tuning.target_weights)
+    assert pt[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tun.tuning_map)
+    assert pt[("complexity", "targets")] == text_format._cents_list(gb.resolved.complexities["targets"])
+    assert pt[("weight", "targets")] == text_format._cents_list(gb.resolved.tuning.target_weights)
     # the bare prescaler reads the typed diagonal (1, 2, 3), not the scheme's log-prime weights
     assert pt[("prescaling", "primes")] == "[⟨1 0 0] ⟨0 2 0] ⟨0 0 3]⟩"
     # and it genuinely deviates from the no-override views (the divergence is gone, not coincidental)
@@ -1353,8 +1354,8 @@ def test_plain_text_custom_prescaler_renders_an_off_diagonal_matrix_like_the_gri
     assert pt[("prescaling", "primes")] == "[⟨1 0.500 0] ⟨0 1.585 0] ⟨0 0 2.322]⟩"
     # the products and complexity still match the grid under the matrix override (no element-wise crash)
     gb = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=matrix)
-    assert gb.ptext_strings[("tuning", "primes")] == service._cents_map(gb.resolved.tuning.tun.tuning_map)
-    assert gb.ptext_strings[("complexity", "targets")] == service._cents_list(gb.resolved.complexities["targets"])
+    assert gb.ptext_strings[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tun.tuning_map)
+    assert gb.ptext_strings[("complexity", "targets")] == text_format._cents_list(gb.resolved.complexities["targets"])
 
 
 def test_plain_text_primes_complexity_runs_over_the_domain_basis_not_standard_primes():
@@ -1366,7 +1367,7 @@ def test_plain_text_primes_complexity_runs_over_the_domain_basis_not_standard_pr
     elems = tuple(service.element_ratio(e) for e in state.domain_basis)
     over_basis = service.interval_complexities(state.mapping, "TILT minimax-S", elems,
                                                domain_basis=state.domain_basis)
-    assert band == service._cents_map(over_basis)        # exactly the grid's domain-basis map
+    assert band == text_format._cents_map(over_basis)        # exactly the grid's domain-basis map
     assert service.cents(over_basis[2]) in band          # log₂7 ≈ 2.807 shows
     truncated = service.interval_complexities(state.mapping, "TILT minimax-S",
                                               tuple(f"{p}/1" for p in service.standard_primes(state.d)))
@@ -1383,7 +1384,7 @@ def test_plain_text_threads_the_nonprime_approach_into_its_tuning():
     assert nonprime[("tuning", "primes")] != neutral[("tuning", "primes")]
     # and it matches service.tuning called with that same approach (the grid's own input)
     tun = service.tuning(state.mapping, "TILT minimax-S", state.domain_basis, "nonprime-based")
-    assert nonprime[("tuning", "primes")] == service._cents_map(tun.tuning_map)
+    assert nonprime[("tuning", "primes")] == text_format._cents_map(tun.tuning_map)
 
 
 def test_plain_text_mapping_is_the_ebk_string():
@@ -2355,11 +2356,11 @@ def test_projection_and_embedding_parsers_reject_bad_input():
 
 def test_rational_matrix_or_none_accepts_fractions_rejects_floats_and_ragged():
     from fractions import Fraction
-    assert service._rational_matrix_or_none(((1, Fraction(1, 4)), (0, -1))) == (("1", "1/4"), ("0", "-1"))
-    assert service._rational_matrix_or_none(((1.5, 0), (0, 1))) is None     # float
-    assert service._rational_matrix_or_none(((True, 0), (0, 1))) is None    # bool
-    assert service._rational_matrix_or_none(((1, 0), (0,))) is None         # ragged
-    assert service._rational_matrix_or_none(()) is None                     # empty
+    assert parse._rational_matrix_or_none(((1, Fraction(1, 4)), (0, -1))) == (("1", "1/4"), ("0", "-1"))
+    assert parse._rational_matrix_or_none(((1.5, 0), (0, 1))) is None     # float
+    assert parse._rational_matrix_or_none(((True, 0), (0, 1))) is None    # bool
+    assert parse._rational_matrix_or_none(((1, 0), (0,))) is None         # ragged
+    assert parse._rational_matrix_or_none(()) is None                     # empty
 
 
 def test_tuning_embedding_of_just_intonation_is_the_identity():
@@ -2444,7 +2445,7 @@ def test_vectors_to_ratios_flags_an_over_complex_ratio_instead_of_crashing():
     # sentinel rather than rendered. (editor-state-machine-1.)
     huge = service.from_mapping(((3, 4, -8), (-1, 7, 6), (3, 0, 6)))  # full-rank, accepted, vast generators
     gens = service.generators(huge.mapping)
-    assert gens == (service._OVER_COMPLEX_RATIO,) * 3  # flagged, not a 4300+-digit string (no crash)
+    assert gens == (core_vectors._OVER_COMPLEX_RATIO,) * 3  # flagged, not a 4300+-digit string (no crash)
     # a normal (small) generator still renders its ratio — the guard only intercepts the meaningless
     assert service.generators(((1, 1, 0), (0, 1, 4))) == ("2/1", "3/2")
 
@@ -2460,7 +2461,7 @@ def test_over_complex_generators_round_trip_back_to_a_finite_size():
     pt = service.plain_text_values(state, "TILT minimax-U", "TILT")  # the ptext detempering round-trip
     assert pt[("tuning", "detempering")]  # built without raising
     gb = _grid_with_ptext(state, "TILT minimax-U")  # the exact crash site: _resolve_interval_sets
-    assert service._OVER_COMPLEX_RATIO in gb.resolved.scalars.gens   # the genmap cell shows the sentinel, render survives
+    assert core_vectors._OVER_COMPLEX_RATIO in gb.resolved.scalars.gens   # the genmap cell shows the sentinel, render survives
 
 
 def test_remove_mapping_row_keeps_a_nonstandard_domain():
@@ -2551,7 +2552,7 @@ def test_plain_text_superspace_prescaling_lifts_like_the_grid():
     ss_pre = service.superspace_complexity_prescaler(state, "minimax-ES")   # the dL-tall diagonal
     lifted = service.lift_vectors_to_superspace(state.domain_basis, state.comma_basis)
     expected_cols = [tuple(ss_pre[i] * v[i] for i in range(len(ss_pre))) for v in lifted]
-    assert pt[("prescaling", "commas")] == service._prescale_vector_list(expected_cols)
+    assert pt[("prescaling", "commas")] == text_format._prescale_vector_list(expected_cols)
     # dL-tall (4 over the 2.3.5.13 superspace), not the unlifted d = 3 the bug showed
     assert len(expected_cols[0]) == len(ss_pre) == 4
     # the band agrees with the lifted-and-prescaled basis the grid renders for the same tile

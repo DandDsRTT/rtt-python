@@ -5,7 +5,7 @@ from fractions import Fraction
 
 from rtt.app import service
 from rtt.app.editor_document import Document
-from rtt.app.service import TemperamentState
+from rtt.app.service.state import TemperamentState
 
 _log = logging.getLogger(__name__)
 

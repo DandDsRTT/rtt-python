@@ -8,7 +8,7 @@ from rtt.app import service
 from rtt.app import settings as show_settings
 from rtt.app.editor_history import History
 from rtt.app.editor_pending import PendingEdits
-from rtt.app.service import TemperamentState
+from rtt.app.service.state import TemperamentState
 
 INITIAL_MAPPING = ((1, 1, 0), (0, 1, 4))
 INITIAL_COLLAPSED: frozenset[str] = frozenset()
