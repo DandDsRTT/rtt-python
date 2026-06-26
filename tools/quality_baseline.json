@@ -1,15 +1,14 @@
 {
-  "reach_through_total": 274,
+  "reach_through_total": 200,
   "reach_through_by_handle": {
-    "_chrome": 78,
-    "_editor": 71,
+    "_editor": 58,
     "_rec": 47,
-    "_runtime": 33,
-    "_gestures": 19,
-    "_renderer": 10,
-    "_edits": 7,
+    "_chrome": 34,
+    "_runtime": 29,
+    "_gestures": 14,
+    "_renderer": 9,
     "e": 5,
-    "_handlers": 3,
+    "_edits": 3,
     "class_handles": 1
   },
   "demeter_chains": [],
@@ -17,10 +16,6 @@
   "bag_cross_file_attrs": [],
   "bag_cross_file_accumulators": [],
   "class_surface": {
-    "rtt/app/building.py::PageBuilder": {
-      "methods": 22,
-      "attrs": 8
-    },
     "rtt/app/editor_document.py::Document": {
       "methods": 21,
       "attrs": 20
