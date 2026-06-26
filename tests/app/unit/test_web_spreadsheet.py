@@ -2132,9 +2132,9 @@ def test_every_open_value_tile_has_a_plain_text_string():
     b = _maximized_superspace_builder()
     assert b.resolved.flags.superspace and b.resolved.flags.ptext  # the config really did light the superspace + plain text
     value_rows = PTEXT_ROWS - {"quantities"}  # the quantities row's only band is the "2.3.5" primes string
-    missing = [(r, c) for (r, c) in sorted(b.declared_tiles)
+    missing = [(r, c) for (r, c) in sorted(b.geometry.declared_tiles)
                if r in value_rows and c not in SPINE_COLUMNS and query.tile_open(b.geometry, b.collapsed, r, c)
-               and (r, c) not in b.ptext_strings]
+               and (r, c) not in b.geometry.ptext_strings]
     assert not missing, f"open value tiles with no plain-text band: {missing}"
 
 
@@ -2147,7 +2147,7 @@ def test_every_row_that_produces_plain_text_reserves_its_band():
     # such row generically, before it reaches the user.
     b = _maximized_superspace_builder()
     assert b.resolved.flags.ptext and b.resolved.flags.canon  # the config really did light the plain text + the canon row
-    rows_with_text = {r for (r, _c) in b.ptext_strings}
+    rows_with_text = {r for (r, _c) in b.geometry.ptext_strings}
     spill = sorted(r for r in rows_with_text if ptext_band(b.geometry, r, folded=False) <= 0)
     assert not spill, f"rows produce plain text but reserve no band (it will spill past the tile): {spill}"
 
@@ -2167,8 +2167,8 @@ def test_every_in_tile_band_reserves_for_what_it_emits():
     # per-render content where one exists (col_labels/effective_captions/ptext_strings are rebuilt each
     # render — exactly where drift hides), and the static content table otherwise.
     bands = {
-        "plain text":   ({r for (r, _c) in b.ptext_strings},
-                         {r for (r, _c) in b.ptext_strings if ptext_band(b.geometry, r, folded=False) > 0}),
+        "plain text":   ({r for (r, _c) in b.geometry.ptext_strings},
+                         {r for (r, _c) in b.geometry.ptext_strings if ptext_band(b.geometry, r, folded=False) > 0}),
         "symbol":       ({r for (r, _c) in SYMBOLS}, set(BANDS["symbol"].rows)),
         "units":        ({r for (r, _c) in UNITS}, set(BANDS["units"].rows)),
         "caption":      ({r for (r, _c) in b.resolved.labels.captions}, set(BANDS["caption"].rows)),
@@ -2189,12 +2189,12 @@ def test_frame_and_chart_bands_reserve_height_for_what_they_emit():
     b = _maximized_superspace_builder()
     lay = b.layout()
     frame_ys = {round(c.y, 3) for c in lay.cells if c.kind in {"ebktop", "ebkbrace", "ebkangle"}}
-    frame_emit = {r for r in b.rows if round(query.frame_top_y(b.geometry, r), 3) in frame_ys
+    frame_emit = {r for r in b.geometry.rows if round(query.frame_top_y(b.geometry, r), 3) in frame_ys
                   or round(query.frame_brace_y(b.geometry, r), 3) in frame_ys}
-    frame_spill = sorted(r for r in frame_emit if b.rows[r].frame <= 0)
+    frame_spill = sorted(r for r in frame_emit if b.geometry.rows[r].frame <= 0)
     assert not frame_spill, f"rows draw an EBK matrix frame but reserve no frame band (it will spill): {frame_spill}"
     chart_emit = {c.id.split(":")[1] for c in lay.cells if c.id.startswith("chart:")}
-    chart_spill = sorted(r for r in chart_emit if b.rows[r].chart_top is None)
+    chart_spill = sorted(r for r in chart_emit if b.geometry.rows[r].chart_top is None)
     assert not chart_spill, f"rows draw a bar chart but reserve no chart band (it will spill): {chart_spill}"
 
 
@@ -2230,22 +2230,22 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
     value_rows = PTEXT_ROWS - {"quantities"}
     mismatches = []
     checked = 0
-    for (rkey, ckey) in sorted(b.declared_tiles):
+    for (rkey, ckey) in sorted(b.geometry.declared_tiles):
         if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.collapsed, rkey, ckey):
             continue
-        if (rkey, ckey) not in b.ptext_strings:
+        if (rkey, ckey) not in b.geometry.ptext_strings:
             continue  # the presence test owns that failure
         # the VALUE region of the tile only — the column's x-span × the row's value-area height
         # (rows[rkey].y .. +h). NOT panel_rect, which spans the whole tile stack (symbol / caption /
         # plain-text band / any overlapping control box) and would pull in the band itself and stray
         # box values. Brackets / matlabels inside the value band carry no ascii-digit tokens.
-        rb, cx, cw = b.rows[rkey], b.col_x[ckey], b.col_w[ckey]
+        rb, cx, cw = b.geometry.rows[rkey], b.geometry.col_x[ckey], b.geometry.col_w[ckey]
         grid_tokens = []
         for c in lay.cells:
             if (c.text and not c.id.startswith("ptext:")
                     and cx - 2 <= c.x <= cx + cw and rb.y - 2 <= c.y <= rb.y + rb.h + 2):
                 grid_tokens += TOKEN.findall(cell_value(c.text))
-        band_tokens = TOKEN.findall(band_body(b.ptext_strings[(rkey, ckey)]))
+        band_tokens = TOKEN.findall(band_body(b.geometry.ptext_strings[(rkey, ckey)]))
         if sorted(grid_tokens) != sorted(band_tokens):
             mismatches.append((rkey, ckey, sorted(band_tokens), sorted(grid_tokens)))
         checked += 1
@@ -2306,13 +2306,13 @@ def _ebk_grid_convention(b, lay, rkey, ckey):
     bands (matrix_frame's ebktop/ebkbrace/ebkangle), per-column ket marks and bracket glyphs.
     Cell-id shape disambiguates: a per-column mark / per-row stacked bracket ends in ``:<int>``,
     a spanning matrix_frame band or an outer list wrap does not."""
-    cx, cw = b.col_x[ckey], b.col_w[ckey]
+    cx, cw = b.geometry.col_x[ckey], b.geometry.col_w[ckey]
 
     def in_tile(c):  # x-centre inside the column, and this row is the nearest row band
         if not (cx - 2 <= c.x + c.w / 2 <= cx + cw + 2):
             return False
         ccy = c.y + c.h / 2
-        return min(b.rows, key=lambda k: abs(b.rows[k].y + b.rows[k].h / 2 - ccy)) == rkey
+        return min(b.geometry.rows, key=lambda k: abs(b.geometry.rows[k].y + b.geometry.rows[k].h / 2 - ccy)) == rkey
 
     frame_top = col_marks = False
     brace = angle = False
@@ -2373,15 +2373,15 @@ def test_every_plain_text_band_uses_the_same_brackets_as_its_grid_tile():
     lay = b.layout()
     value_rows = PTEXT_ROWS - {"quantities"}
     mismatches, checked = [], 0
-    for (rkey, ckey) in sorted(b.declared_tiles):
+    for (rkey, ckey) in sorted(b.geometry.declared_tiles):
         if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.collapsed, rkey, ckey):
             continue
-        if (rkey, ckey) not in b.ptext_strings:
+        if (rkey, ckey) not in b.geometry.ptext_strings:
             continue  # presence is the other guard's job
-        text_conv = _ebk_canonical(_ebk_text_convention(b.ptext_strings[(rkey, ckey)]))
+        text_conv = _ebk_canonical(_ebk_text_convention(b.geometry.ptext_strings[(rkey, ckey)]))
         grid_conv = _ebk_canonical(_ebk_grid_convention(b, lay, rkey, ckey))
         if text_conv != grid_conv:
-            mismatches.append((rkey, ckey, text_conv, grid_conv, b.ptext_strings[(rkey, ckey)]))
+            mismatches.append((rkey, ckey, text_conv, grid_conv, b.geometry.ptext_strings[(rkey, ckey)]))
         checked += 1
     assert checked >= 60, f"config did not light enough value tiles ({checked})"
     assert not mismatches, "grid and plain-text EBK brackets disagree:\n" + "\n".join(
@@ -2408,18 +2408,18 @@ def test_every_open_value_tile_declares_an_ebk_convention():
     b = _maximized_superspace_builder()
     value_rows = PTEXT_ROWS - {"quantities"}
     undeclared, mismatches, checked = [], [], 0
-    for (rkey, ckey) in sorted(b.declared_tiles):
+    for (rkey, ckey) in sorted(b.geometry.declared_tiles):
         if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.collapsed, rkey, ckey):
             continue
-        if (rkey, ckey) not in b.ptext_strings:
+        if (rkey, ckey) not in b.geometry.ptext_strings:
             continue
         if (rkey, ckey) not in EBK_CONVENTIONS and (rkey, ckey) != ("prescaling", "primes"):
             undeclared.append((rkey, ckey))
             continue
         declared = _ebk_table_canonical(ebk_convention(rkey, ckey, superspace=b.resolved.flags.superspace))
-        rendered = _ebk_canonical(_ebk_text_convention(b.ptext_strings[(rkey, ckey)]))
+        rendered = _ebk_canonical(_ebk_text_convention(b.geometry.ptext_strings[(rkey, ckey)]))
         if declared != rendered:
-            mismatches.append((rkey, ckey, declared, rendered, b.ptext_strings[(rkey, ckey)]))
+            mismatches.append((rkey, ckey, declared, rendered, b.geometry.ptext_strings[(rkey, ckey)]))
         checked += 1
     assert checked >= 60, f"config did not light enough value tiles ({checked})"
     assert not undeclared, f"open value tiles with no EBK_CONVENTIONS entry: {undeclared}"
@@ -7998,9 +7998,9 @@ def test_every_derived_matrix_row_greens_its_draft_column():
         dx = left(committed)
         checked = 0
         for rkey in VALUE_ROWS:
-            if rkey not in b.rows or (rkey, lst) not in b.declared_tiles:
+            if rkey not in b.geometry.rows or (rkey, lst) not in b.geometry.declared_tiles:
                 continue
-            top, h = b.rows[rkey].tile_top, b.rows[rkey].tile_h
+            top, h = b.geometry.rows[rkey].tile_top, b.geometry.rows[rkey].tile_h
             hit = any(abs(c.x - dx) < 7 and top - 1 <= c.y <= top + h + 1 and c.kind not in STRUCTURAL
                       for c in lay.cells)
             assert hit, f"first {lst} draft: row {rkey!r} is blank at the draft column (the bug)"
@@ -8011,7 +8011,7 @@ def test_every_derived_matrix_row_greens_its_draft_column():
     b = spreadsheet._GridBuilder(barb, s, tuning_scheme="minimax-ES",
                                  held_vectors=(), pending_held=[None, None, None],
                                  interest=(), pending_interest=[None, None, None])
-    assert b.resolved.flags.superspace and "prescaling" in b.rows and "complexity" in b.rows
+    assert b.resolved.flags.superspace and "prescaling" in b.geometry.rows and "complexity" in b.geometry.rows
     assert_draft_greened(b, "held", 0, minimum=10)
     assert_draft_greened(b, "interest", 0, minimum=10)
 
@@ -8020,7 +8020,7 @@ def test_every_derived_matrix_row_greens_its_draft_column():
     b2 = spreadsheet._GridBuilder(barb, s,
                                   target_override=["3/2", "5/4"], pending_target=[None, None, None],
                                   pending_comma=[None, None, None])
-    assert ("units", "targets") in b2.declared_tiles  # the units tile the targets draft must fill
+    assert ("units", "targets") in b2.geometry.declared_tiles  # the units tile the targets draft must fill
     assert_draft_greened(b2, "targets", b2.resolved.dims.k, minimum=6)
     assert_draft_greened(b2, "commas", b2.resolved.dims.nc, minimum=6)
 

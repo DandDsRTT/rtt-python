@@ -1,10 +1,9 @@
-import ast
-import os
+import dataclasses
 
 import pytest
 
 from rtt.app import service, settings, spreadsheet
-from rtt.app.spreadsheet_geometry_model import GEOMETRY_FIELDS, Geometry
+from rtt.app.spreadsheet_geometry_model import Geometry
 
 
 def _all_on():
@@ -25,35 +24,13 @@ def _builders():
 
 
 @pytest.mark.parametrize("builder", list(_builders()))
-def test_geometry_record_faithfully_captures_every_builder_attr(builder):
+def test_geometry_is_a_frozen_record(builder):
     assert isinstance(builder.geometry, Geometry)
-    for name in GEOMETRY_FIELDS:
-        assert getattr(builder.geometry, name) is getattr(builder, name)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        builder.geometry.total_w = 0.0
 
 
-def _geometry_draft_write_targets():
-    targets = set()
-
-    def is_geometry_attr(node):
-        return (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
-                and node.value.id == "draft")
-
-    for module in ("spreadsheet_layout.py", "spreadsheet_geometry.py"):
-        source = open(os.path.join(os.path.dirname(spreadsheet.__file__), module),
-                      encoding="utf-8").read()
-        for node in ast.walk(ast.parse(source)):
-            if isinstance(node, ast.Assign):
-                for target in node.targets:
-                    for element in (target.elts if isinstance(target, (ast.Tuple, ast.List)) else [target]):
-                        if is_geometry_attr(element):
-                            targets.add(element.attr)
-            elif isinstance(node, (ast.AugAssign, ast.AnnAssign)) and is_geometry_attr(node.target):
-                targets.add(node.target.attr)
-    return targets
-
-
-def test_every_geometry_draft_write_is_a_declared_geometry_field():
-    written = _geometry_draft_write_targets()
-    assert written, "no draft.X writes found — the geometry-build scan is mis-targeted"
-    undeclared = written - set(GEOMETRY_FIELDS)
-    assert not undeclared, f"draft.X written but X not declared on Geometry: {sorted(undeclared)}"
+@pytest.mark.parametrize("builder", list(_builders()))
+def test_builder_does_not_mirror_geometry_fields_as_flat_attrs(builder):
+    for field in ("total_w", "col_x", "rows", "declared_tiles", "ptext_strings", "size_factor"):
+        assert not hasattr(builder, field), f"{field} shadows geometry on the builder"

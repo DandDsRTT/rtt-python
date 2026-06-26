@@ -87,14 +87,14 @@ def declare_interval_column_tiles(resolved):
     return interest_tiles, held_tiles, detempering_tiles
 
 
-def declare_tiles(draft, resolved, ctx, interest_tiles, held_tiles, detempering_tiles) -> None:
-    draft.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
+def declare_tiles(resolved, ctx, interest_tiles, held_tiles, detempering_tiles):
+    tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
              + SUPERSPACE_COUNTS_TILES
              + TILES + UNITS_TILES + SUPERSPACE_TILES
              + interest_tiles + held_tiles + detempering_tiles + _projection_col_tiles(resolved)
              + _ss_projection_col_tiles(resolved) + _canon_col_tiles(resolved))
-    draft.declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in draft.tiles}
-    _prune_declared_tiles(draft, resolved, ctx)
+    declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in tiles}
+    return tiles, _prune_declared_tiles(declared_tiles, resolved, ctx)
 
 
 def _projection_col_tiles(resolved):
@@ -158,45 +158,45 @@ def _canon_col_tiles(resolved):
     return tiles
 
 
-def _prune_declared_tiles(draft, resolved, ctx) -> None:
+def _prune_declared_tiles(declared_tiles, resolved, ctx):
     _r = resolved
     if service.is_all_interval(ctx.tuning_scheme):
-        draft.declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
+        declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
                            ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
                            ("ss_vectors", "targets"), ("ss_mapping", "targets")}
     if not _r.flags.identity_objects:
-        draft.declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
+        declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
                                 ("mapping", "detempering"), ("canon", "canongens"),
                                 ("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
     if not _r.dims.nh_shown:
-        draft.declared_tiles -= {("ss_vectors", "held"), ("ss_mapping", "held")}
+        declared_tiles -= {("ss_vectors", "held"), ("ss_mapping", "held")}
     if not _r.dims.mi_shown:
-        draft.declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
+        declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
+    return declared_tiles
 
 
-def init_superspace_tuning(draft, resolved, ctx) -> None:
+def init_superspace_tuning(resolved, ctx):
     if not resolved.flags.superspace:
-        draft.ss_tun = None
-        return
+        return None
     ss_override = ctx.superspace_generator_tuning if resolved.flags.superspace_generators else None
-    draft.ss_tun = service.superspace_tuning(ctx.state, ctx.tuning_scheme, ctx.nonprime_approach,
-                                             generator_override=ss_override)
+    return service.superspace_tuning(ctx.state, ctx.tuning_scheme, ctx.nonprime_approach,
+                                     generator_override=ss_override)
 
 
-def caption_floor(draft, resolved, key: str):
+def caption_floor(geometry, resolved, key: str):
     if not resolved.flags.captions:
         return 0
     return max((_min_width_for_lines(resolved.labels.captions[(rk, key)], MAX_CAPTION_LINES)
-                for rk in draft.present_caption_rows
-                if (rk, key) in resolved.labels.captions and (rk, key) in draft.declared_tiles), default=0)
+                for rk in geometry.present_caption_rows
+                if (rk, key) in resolved.labels.captions and (rk, key) in geometry.declared_tiles), default=0)
 
 
-def symbol_floor(draft, resolved, key: str):
+def symbol_floor(geometry, resolved, key: str):
     if not (resolved.flags.symbols or resolved.flags.equiv):
         return 0
     floor = 0
     for (rkey, ckey), glyph in SYMBOLS.items():
-        if ckey != key or (rkey, ckey) not in draft.declared_tiles:
+        if ckey != key or (rkey, ckey) not in geometry.declared_tiles:
             continue
         equiv = ""
         if resolved.flags.equiv:
@@ -239,27 +239,27 @@ def commas_band_w(resolved, nc_count: int):
     return 2 * BRACKET_W + nv * COL_W + split + empty
 
 
-def _caption_wrap_w(draft, resolved, ctx, ckey: str):
+def _caption_wrap_w(geometry, resolved, ctx, ckey: str):
     if ckey == "commas" and resolved.ghosts.comma:
         resting = commas_band_w(resolved, resolved.dims.nc + (1 if resolved.commas.pending is not None else 0))
-        return max(resting, caption_floor(draft, resolved, ckey),
-                   control_floor(resolved, ctx, ckey), symbol_floor(draft, resolved, ckey))
-    return draft.open_col_w[ckey]
+        return max(resting, caption_floor(geometry, resolved, ckey),
+                   control_floor(resolved, ctx, ckey), symbol_floor(geometry, resolved, ckey))
+    return geometry.open_col_w[ckey]
 
 
-def caption_band(draft, resolved, ctx, key: str, folded: bool):
+def caption_band(geometry, resolved, ctx, key: str, folded: bool):
     if not (resolved.flags.captions and key in BANDS["caption"].rows and not folded):
         return 0
-    lines = [_wrap_lines(resolved.labels.captions[(key, c)], _caption_wrap_w(draft, resolved, ctx, c)) for c in draft.col_x
-             if (key, c) in resolved.labels.captions and (key, c) in draft.declared_tiles]
-    if key == "counts" and resolved.unchanged.shown and "commas" in draft.col_x:
+    lines = [_wrap_lines(resolved.labels.captions[(key, c)], _caption_wrap_w(geometry, resolved, ctx, c)) for c in geometry.col_x
+             if (key, c) in resolved.labels.captions and (key, c) in geometry.declared_tiles]
+    if key == "counts" and resolved.unchanged.shown and "commas" in geometry.col_x:
         lines.append(_wrap_lines("unchanged interval count", resolved.dims.nu * COL_W))
         lines.append(_wrap_lines("nullity", resolved.dims.nc * COL_W + resolved.unchanged.empty_comma_w))
     return max(lines, default=1) * CAPTION_LINE
 
 
-def ptext_band(draft, key: str, folded: bool):
-    if folded or not any(rk == key for rk, _ck in draft.ptext_strings):
+def ptext_band(geometry, key: str, folded: bool):
+    if folded or not any(rk == key for rk, _ck in geometry.ptext_strings):
         return 0
     return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
 
@@ -268,17 +268,17 @@ def control_region_band_h(content_h):
     return 2 * BOX_OUTER + 2 * BOX_INNER + content_h
 
 
-def _control_band_h(draft, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):
-    return 2 * BOX_OUTER + query.control_dims(draft, ckey, cap_w, label, scheme_btn, form_label)[2]
+def _control_band_h(geometry, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):
+    return 2 * BOX_OUTER + query.control_dims(geometry, ckey, cap_w, label, scheme_btn, form_label)[2]
 
 
-def preset_band_h(draft, resolved, key: str):
-    return max((_control_band_h(draft, ckey, query.preset_cap(name), label, scheme_btn=(name == "projection"),
+def preset_band_h(geometry, resolved, key: str):
+    return max((_control_band_h(geometry, ckey, query.preset_cap(name), label, scheme_btn=(name == "projection"),
                                form_label=query.preset_form_label(resolved, name, rk, ckey))
                 for name, rk, ckey, label in PRESETS + PRESET_COPIES
-                if rk == key and ckey in draft.col_w), default=0)
+                if rk == key and ckey in geometry.col_w), default=0)
 
 
-def formchooser_band_h(draft, key: str):
-    return max((_control_band_h(draft, ckey, PRESET_W, label)
-                for name, rk, ckey, label in FORM_CHOOSERS if rk == key and ckey in draft.col_w), default=0)
+def formchooser_band_h(geometry, key: str):
+    return max((_control_band_h(geometry, ckey, PRESET_W, label)
+                for name, rk, ckey, label in FORM_CHOOSERS if rk == key and ckey in geometry.col_w), default=0)
