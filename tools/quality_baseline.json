@@ -1,14 +1,14 @@
 {
-  "reach_through_total": 305,
+  "reach_through_total": 281,
   "reach_through_by_handle": {
     "_chrome": 78,
     "_editor": 71,
     "_rec": 47,
     "_runtime": 33,
-    "state": 31,
     "_gestures": 19,
     "_renderer": 10,
     "_edits": 7,
+    "state": 7,
     "e": 5,
     "_handlers": 3,
     "class_handles": 1
@@ -59,7 +59,7 @@
       "attrs": 0
     },
     "rtt/app/spreadsheet_resolve.py::Resolver": {
-      "methods": 18,
+      "methods": 6,
       "attrs": 30
     }
   },
@@ -90,7 +90,7 @@
     "rtt.app.spreadsheet_emit_tuning": 11,
     "rtt.app.spreadsheet_emit_vectors": 8,
     "rtt.app.spreadsheet_layout": 12,
-    "rtt.app.spreadsheet_resolve": 15,
+    "rtt.app.spreadsheet_resolve": 13,
     "rtt.library.addition": 8,
     "rtt.library.tuning": 11
   },
