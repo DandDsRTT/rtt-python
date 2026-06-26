@@ -7,19 +7,19 @@ from typing import Protocol, cast, runtime_checkable
 
 from nicegui import ui
 
+from rtt.app import _recon_buttons as buttons
+from rtt.app import _recon_choosers as choosers
+from rtt.app import _recon_display as display
+from rtt.app import _recon_drag as drag
+from rtt.app import _recon_value as value
 from rtt.app import (
     service,
     spreadsheet,
     tooltips,
 )
-from rtt.app._recon_buttons import _ReconButtons
-from rtt.app._recon_choosers import _ReconChoosers
-from rtt.app._recon_display import _ReconDisplayCells
-from rtt.app._recon_drag import _ReconDrag
 from rtt.app._recon_handles import EMPTY as _EMPTY_HANDLES
 from rtt.app._recon_handles import EMPTY_ENTITY as _EMPTY_ENTITY
 from rtt.app._recon_handles import CellHandles, EntityHandles
-from rtt.app._recon_value import _ReconValueCells
 from rtt.app.editor import Editor
 from rtt.app.page_assets import (
     _CELLUNIT_MAX_FONT,
@@ -144,14 +144,6 @@ class _Reconciler:
         self.pretransform = False
         self._init_handles()
         self.cell_kinds: dict[str, _KindHandlers] = {}
-        self._value = _ReconValueCells(self)
-        self._display = _ReconDisplayCells(self)
-        self._choose = _ReconChoosers(self)
-        self._buttons = _ReconButtons(self)
-        self._drag = _ReconDrag(self)
-        self._buttons._choose = self._choose
-        self._value._choose = self._choose
-        self._value._drag = self._drag
         self._register_display_kinds()
         self._register_value_kinds()
         self._register_label_kinds()
@@ -169,41 +161,25 @@ class _Reconciler:
 
     def _register_display_kinds(self) -> None:
         for _ebk_kind in _EBK_SVG_KINDS:
-            self.cell_kinds[_ebk_kind] = _KindHandlers(
-                self._display._build_svgfill, self._display._update_ebk
-            )
-        self.cell_kinds["chart"] = _KindHandlers(
-            self._display._build_svgfill, self._display._update_chart
-        )
+            self.cell_kinds[_ebk_kind] = _KindHandlers(display.build_svgfill, display.update_ebk)
+        self.cell_kinds["chart"] = _KindHandlers(display.build_svgfill, display.update_chart)
         self.cell_kinds["rangechart"] = _KindHandlers(
-            self._display._build_svgfill, self._display._update_rangechart
+            display.build_svgfill, display.update_rangechart
         )
 
-        self.cell_kinds["count"] = _KindHandlers(
-            self._display._build_count, self._display._update_mathcell
-        )
-        self.cell_kinds["symbol"] = _KindHandlers(
-            self._display._build_symbol, self._display._update_mathcell
-        )
-        self.cell_kinds["matlabel"] = _KindHandlers(
-            self._display._build_matlabel, self._display._update_mathcell
-        )
-        self.cell_kinds["units"] = _KindHandlers(
-            self._display._build_units, self._display._update_mathcell
-        )
-        self.cell_kinds["caption"] = _KindHandlers(
-            self._display._build_caption, self._display._update_caption
-        )
+        self.cell_kinds["count"] = _KindHandlers(display.build_count, display.update_mathcell)
+        self.cell_kinds["symbol"] = _KindHandlers(display.build_symbol, display.update_mathcell)
+        self.cell_kinds["matlabel"] = _KindHandlers(display.build_matlabel, display.update_mathcell)
+        self.cell_kinds["units"] = _KindHandlers(display.build_units, display.update_mathcell)
+        self.cell_kinds["caption"] = _KindHandlers(display.build_caption, display.update_caption)
 
         self.cell_kinds["ptextpending"] = _KindHandlers(
-            self._display._build_ptextpending, self._display._update_ptextpending
+            display.build_ptextpending, display.update_ptextpending
         )
-        self.cell_kinds["mathexpr"] = _KindHandlers(
-            self._display._build_mathexpr, self._display._update_mathexpr
-        )
+        self.cell_kinds["mathexpr"] = _KindHandlers(display.build_mathexpr, display.update_mathexpr)
 
     def _register_value_kinds(self) -> None:
-        _gridvalue = _KindHandlers(self._value._build_gridvalue, self._value._update_gridvalue)
+        _gridvalue = _KindHandlers(value.build_gridvalue, value.update_gridvalue)
         for _gv_kind in (
             "mapping",
             "commacell",
@@ -215,119 +191,107 @@ class _Reconciler:
         ):
             self.cell_kinds[_gv_kind] = _gridvalue
         self.cell_kinds["prescalercell"] = _KindHandlers(
-            self._value._build_prescalercell, self._value._update_prescalercell
+            value.build_prescalercell, value.update_prescalercell
         )
         self.cell_kinds["weightcell"] = _KindHandlers(
-            self._value._build_weightcell, self._value._update_weightcell
+            value.build_weightcell, value.update_weightcell
         )
         self.cell_kinds["powerinput"] = _KindHandlers(
-            self._value._build_powerinput, self._value._update_powerinput
+            value.build_powerinput, value.update_powerinput
         )
         self.cell_kinds["powerdisplay"] = _KindHandlers(
-            self._value._build_powerdisplay, self._value._update_powerdisplay
+            value.build_powerdisplay, value.update_powerdisplay
         )
         self.cell_kinds["gentuningcell"] = _KindHandlers(
-            self._value._build_gentuningcell, self._value._update_gentuningcell
+            value.build_gentuningcell, value.update_gentuningcell
         )
 
-        self.cell_kinds["ptextedit"] = _KindHandlers(
-            self._value._build_ptextedit, self._value._update_ptextedit
-        )
+        self.cell_kinds["ptextedit"] = _KindHandlers(value.build_ptextedit, value.update_ptextedit)
 
-        self.cell_kinds["genratio"] = _KindHandlers(
-            self._value._build_genratio, self._value._update_ratio
-        )
+        self.cell_kinds["genratio"] = _KindHandlers(value.build_genratio, value.update_ratio)
         self.cell_kinds["ratiocell"] = _gridvalue
         self.cell_kinds["elementcell"] = _gridvalue
         self.cell_kinds["elementratio"] = _gridvalue
-        self.cell_kinds["commaratio"] = _KindHandlers(
-            self._value._build_commaratio, self._value._update_ratio
-        )
+        self.cell_kinds["commaratio"] = _KindHandlers(value.build_commaratio, value.update_ratio)
         self.cell_kinds["tuningvalue"] = _KindHandlers(
-            self._value._build_tuning_value, self._value._update_tuning_value
+            value.build_tuning_value, value.update_tuning_value
         )
 
     def _register_label_kinds(self) -> None:
-        _value_builder = self._value._label_builder("rtt-value")
-        self.cell_kinds["prime"] = _KindHandlers(_value_builder, self._value._update_label)
-        self.cell_kinds["mapped"] = _KindHandlers(_value_builder, self._value._update_label)
-        self.cell_kinds["vec"] = _KindHandlers(_value_builder, self._value._update_label)
+        _value_builder = value.label_builder("rtt-value")
+        self.cell_kinds["prime"] = _KindHandlers(_value_builder, value.update_label)
+        self.cell_kinds["mapped"] = _KindHandlers(_value_builder, value.update_label)
+        self.cell_kinds["vec"] = _KindHandlers(_value_builder, value.update_label)
         self.cell_kinds["colheader"] = _KindHandlers(
-            self._value._label_builder("rtt-colheader"), self._value._update_label
+            value.label_builder("rtt-colheader"), value.update_label
         )
         self.cell_kinds["rowlabel"] = _KindHandlers(
-            self._value._label_builder("rtt-rowlabel"), self._value._update_label
+            value.label_builder("rtt-rowlabel"), value.update_label
         )
         self.cell_kinds["ptext"] = _KindHandlers(
-            self._value._label_builder("rtt-ptext"), self._value._update_ptext
+            value.label_builder("rtt-ptext"), value.update_ptext
         )
         self.cell_kinds["transpose"] = _KindHandlers(
-            self._value._label_builder("rtt-transpose"), self._value._update_label
+            value.label_builder("rtt-transpose"), value.update_label
         )
-        self.cell_kinds["boxtitle"] = _KindHandlers(
-            self._value._label_builder("rtt-boxtitle"), None
-        )
+        self.cell_kinds["boxtitle"] = _KindHandlers(value.label_builder("rtt-boxtitle"), None)
 
     def _register_control_kinds(self) -> None:
         self.cell_kinds["rangemode"] = _KindHandlers(
-            self._choose._build_rangemode, self._choose._update_rangemode
+            choosers.build_rangemode, choosers.update_rangemode
         )
         self.cell_kinds["scheme_button"] = _KindHandlers(
-            self._choose._build_scheme_button, self._choose._update_scheme_button
+            choosers.build_scheme_button, choosers.update_scheme_button
         )
         self.cell_kinds["rowtoggle"] = _KindHandlers(
-            self._choose._build_foldtoggle, self._choose._update_foldtoggle
+            choosers.build_foldtoggle, choosers.update_foldtoggle
         )
         self.cell_kinds["coltoggle"] = _KindHandlers(
-            self._choose._build_foldtoggle, self._choose._update_foldtoggle
+            choosers.build_foldtoggle, choosers.update_foldtoggle
         )
         self.cell_kinds["tiletoggle"] = _KindHandlers(
-            self._choose._build_foldtoggle, self._choose._update_foldtoggle
+            choosers.build_foldtoggle, choosers.update_foldtoggle
         )
         self.cell_kinds["alltoggle"] = _KindHandlers(
-            self._choose._build_alltoggle, self._choose._update_foldtoggle
+            choosers.build_alltoggle, choosers.update_foldtoggle
         )
 
-        self.cell_kinds["preset"] = _KindHandlers(
-            self._choose._build_preset, self._choose._update_preset
-        )
-        self.cell_kinds["etpick"] = _KindHandlers(
-            self._choose._build_etpick, self._choose._update_subpick
-        )
+        self.cell_kinds["preset"] = _KindHandlers(choosers.build_preset, choosers.update_preset)
+        self.cell_kinds["etpick"] = _KindHandlers(choosers.build_etpick, choosers.update_subpick)
         self.cell_kinds["commapick"] = _KindHandlers(
-            self._choose._build_commapick, self._choose._update_subpick
+            choosers.build_commapick, choosers.update_subpick
         )
         self.cell_kinds["control_select"] = _KindHandlers(
-            self._choose._build_control_select, self._choose._update_control_select
+            choosers.build_control_select, choosers.update_control_select
         )
         self.cell_kinds["control_check"] = _KindHandlers(
-            self._choose._build_control_check, self._choose._update_control_check
+            choosers.build_control_check, choosers.update_control_check
         )
         self.cell_kinds["formchooser"] = _KindHandlers(
-            self._choose._build_formchooser, self._choose._update_formchooser
+            choosers.build_formchooser, choosers.update_formchooser
         )
 
     def _register_button_kinds(self) -> None:
-        self.cell_kinds["minus"] = _KindHandlers(self._buttons._build_minus)
-        self.cell_kinds["plus"] = _KindHandlers(self._buttons._build_plus)
-        self.cell_kinds["gen_minus"] = _KindHandlers(self._buttons._build_gen_minus)
-        self.cell_kinds["gen_plus"] = _KindHandlers(self._buttons._build_gen_plus)
-        self.cell_kinds["map_minus"] = _KindHandlers(self._buttons._build_map_minus)
-        self.cell_kinds["map_plus"] = _KindHandlers(self._buttons._build_map_plus)
-        self.cell_kinds["map_drag"] = _KindHandlers(self._drag._build_map_drag)
-        self.cell_kinds["int_drag"] = _KindHandlers(self._drag._build_int_drag)
-        self.cell_kinds["basis_minus"] = _KindHandlers(self._buttons._build_basis_minus)
-        self.cell_kinds["comma_minus"] = _KindHandlers(self._buttons._build_comma_minus)
-        self.cell_kinds["comma_plus"] = _KindHandlers(self._buttons._build_comma_plus)
-        self.cell_kinds["element_plus"] = _KindHandlers(self._buttons._build_element_plus)
-        self.cell_kinds["element_minus"] = _KindHandlers(self._buttons._build_element_minus)
-        self.cell_kinds["interest_minus"] = _KindHandlers(self._buttons._build_interest_minus)
-        self.cell_kinds["interest_plus"] = _KindHandlers(self._buttons._build_interest_plus)
-        self.cell_kinds["held_minus"] = _KindHandlers(self._buttons._build_held_minus)
-        self.cell_kinds["held_plus"] = _KindHandlers(self._buttons._build_held_plus)
-        self.cell_kinds["target_minus"] = _KindHandlers(self._buttons._build_target_minus)
-        self.cell_kinds["target_plus"] = _KindHandlers(self._buttons._build_target_plus)
-        self.cell_kinds["colgrip"] = _KindHandlers(self._buttons._build_colgrip)
+        self.cell_kinds["minus"] = _KindHandlers(buttons.build_minus)
+        self.cell_kinds["plus"] = _KindHandlers(buttons.build_plus)
+        self.cell_kinds["gen_minus"] = _KindHandlers(buttons.build_gen_minus)
+        self.cell_kinds["gen_plus"] = _KindHandlers(buttons.build_gen_plus)
+        self.cell_kinds["map_minus"] = _KindHandlers(buttons.build_map_minus)
+        self.cell_kinds["map_plus"] = _KindHandlers(buttons.build_map_plus)
+        self.cell_kinds["map_drag"] = _KindHandlers(drag.build_map_drag)
+        self.cell_kinds["int_drag"] = _KindHandlers(drag.build_int_drag)
+        self.cell_kinds["basis_minus"] = _KindHandlers(buttons.build_basis_minus)
+        self.cell_kinds["comma_minus"] = _KindHandlers(buttons.build_comma_minus)
+        self.cell_kinds["comma_plus"] = _KindHandlers(buttons.build_comma_plus)
+        self.cell_kinds["element_plus"] = _KindHandlers(buttons.build_element_plus)
+        self.cell_kinds["element_minus"] = _KindHandlers(buttons.build_element_minus)
+        self.cell_kinds["interest_minus"] = _KindHandlers(buttons.build_interest_minus)
+        self.cell_kinds["interest_plus"] = _KindHandlers(buttons.build_interest_plus)
+        self.cell_kinds["held_minus"] = _KindHandlers(buttons.build_held_minus)
+        self.cell_kinds["held_plus"] = _KindHandlers(buttons.build_held_plus)
+        self.cell_kinds["target_minus"] = _KindHandlers(buttons.build_target_minus)
+        self.cell_kinds["target_plus"] = _KindHandlers(buttons.build_target_plus)
+        self.cell_kinds["colgrip"] = _KindHandlers(buttons.build_colgrip)
 
     def drop(self, eid: str) -> None:
         self.entities[eid].el.delete()
@@ -349,7 +313,7 @@ class _Reconciler:
         self.entities[cb.id] = EntityHandles()
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
         with wrap:
-            self.cell_kinds[cb.kind].build(cb, wrap)
+            self.cell_kinds[cb.kind].build(self, cb, wrap)
             if cb.audio is not None:
                 self._tag_audio(wrap, cb)
         self._attach_hover_help(wrap, cb)
@@ -412,7 +376,7 @@ class _Reconciler:
     def update_cell(self, cb: spreadsheet.CellBox) -> None:
         handlers = self.cell_kinds[cb.kind]
         if handlers.update is not None:
-            handlers.update(cb)
+            handlers.update(self, cb)
         if cb.unit:
             if self.cells[cb.id].cell_unit is None:
                 with self.entities[cb.id].el:
