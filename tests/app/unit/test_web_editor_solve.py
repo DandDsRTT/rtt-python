@@ -1,5 +1,6 @@
 from rtt.app import service
 from rtt.app.editor import Editor
+from rtt.app import editor_solve
 from rtt.app.editor_solve import Solve, solve_model
 
 
@@ -48,3 +49,33 @@ def test_solve_model_captures_the_live_superspace_override_that_capture_drops():
     snapshot = editor.capture()
     assert not hasattr(snapshot, "superspace_generator_tuning")
     assert not hasattr(snapshot, "nonprime_basis_approach")
+
+
+def test_displayed_scheme_name_bare_solve_omits_held_while_the_optimum_passes_it(monkeypatch):
+    editor = Editor()
+    editor.set_held_vectors([(-1, 1, 0)])
+    held_seen = []
+    real = editor_solve.service.tuning
+
+    def spy(*args, **kwargs):
+        held_seen.append(kwargs.get("held", "ABSENT"))
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(editor_solve.service, "tuning", spy)
+    _ = editor.displayed_tuning_scheme_name
+    assert "ABSENT" in held_seen
+    assert any(h not in ("ABSENT", ()) and h for h in held_seen)
+
+
+def test_tuning_queries_forward_through_the_solve_model_unchanged():
+    editor = Editor()
+    editor.set_tuning_scheme("minimax-C")
+    editor.set_held_vectors([(-1, 1, 0)])
+    s = solve_model(editor)
+    assert editor.optimum_generator_tuning() == editor_solve.optimum_generator_tuning(s)
+    assert editor.displayed_tuning_scheme_name == editor_solve.displayed_tuning_scheme_name(s)
+    assert editor.unchanged_ratios == editor_solve.unchanged_ratios(s)
+    assert editor.targets_in_use == editor_solve.targets_in_use(s)
+    assert editor.tuning_is_optimized == editor_solve.tuning_is_optimized(s)
+    assert editor.displayed_retuning_map() == editor_solve.displayed_retuning_map(s)
+    assert editor.displayed_projection_scheme_name == editor_solve.displayed_projection_scheme_name(s)
