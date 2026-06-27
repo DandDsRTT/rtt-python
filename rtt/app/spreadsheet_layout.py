@@ -266,11 +266,12 @@ def _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label,
     folded = f"row:{key}" in ctx.collapsed
     framed = key in BANDS["frame"].rows and not folded
     has_matlabel = (_r.flags.header_symbols and key in BANDS["col_label"].rows and not folded)
-    head_default = TOGGLE + 2 * TOGGLE_INSET - PAD
+    toggle_band = TOGGLE + 2 * TOGGLE_INSET - PAD
     int_handle = _row_int_handle(geometry, resolved, ctx, key, folded)
     handle_band = (ROW_HANDLE_W + ROW_HANDLE_GAP) if int_handle else 0
-    base_head = 0 if folded else max(head_default, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else head_default)
+    base_head = 0 if folded else max(toggle_band, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else toggle_band)
     head = base_head + handle_band
+    foot = 0 if folded else toggle_band
     top_frame = (FRAME_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
     bot_frame = (BRACE_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
     charted = show_charts and key in BANDS["chart"].rows and not folded and natural == ROW_H
@@ -300,7 +301,7 @@ def _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label,
     int_handle_top = (y + (handle_band - ROW_HANDLE_W) // 2) if int_handle else None
     matlabel_top = (y + handle_band + (base_head - MATLABEL_H) // 2) if has_matlabel else None
     tile_h = (head + top_frame + chart_band + row_h + bot_frame + cpick + sym + cap + uni
-              + pre + ptext + formctrl + schemebtn + tile_extra.get(key, 0))
+              + pre + ptext + formctrl + schemebtn + tile_extra.get(key, 0) + foot)
     return RowBand(
         y=y + head + top_frame + chart_band, h=row_h, label=label, collapsible=collapsible,
         tile_h=tile_h, tile_top=y, frame=bot_frame, sym=sym, cap=cap, units=uni, ptext=ptext,
