@@ -5,7 +5,7 @@ from rtt.app import _recon_choosers as choosers
 from rtt.app import _recon_display as display
 from rtt.app import _recon_drag as drag
 from rtt.app import _recon_value as value
-from rtt.app.page_assets import _EBK_SVG_KINDS, _KindHandlers
+from rtt.app.page_assets import _EBK_SVG_KINDS, GRIDVALUE_KINDS, _KindHandlers
 
 
 def register_display_kinds(cell_kinds) -> None:
@@ -28,15 +28,7 @@ def register_display_kinds(cell_kinds) -> None:
 
 def register_value_kinds(cell_kinds) -> None:
     _gridvalue = _KindHandlers(value.build_gridvalue, value.update_gridvalue)
-    for _gv_kind in (
-        "mapping",
-        "commacell",
-        "unchangedcell",
-        "interestcell",
-        "heldcell",
-        "targetcell",
-        "formcell",
-    ):
+    for _gv_kind in GRIDVALUE_KINDS:
         cell_kinds[_gv_kind] = _gridvalue
     cell_kinds["prescalercell"] = _KindHandlers(
         value.build_prescalercell, value.update_prescalercell
@@ -51,9 +43,6 @@ def register_value_kinds(cell_kinds) -> None:
     cell_kinds["ptextedit"] = _KindHandlers(value.build_ptextedit, value.update_ptextedit)
 
     cell_kinds["genratio"] = _KindHandlers(value.build_genratio, value.update_ratio)
-    cell_kinds["ratiocell"] = _gridvalue
-    cell_kinds["elementcell"] = _gridvalue
-    cell_kinds["elementratio"] = _gridvalue
     cell_kinds["commaratio"] = _KindHandlers(value.build_commaratio, value.update_ratio)
     cell_kinds["tuningvalue"] = _KindHandlers(value.build_tuning_value, value.update_tuning_value)
 
