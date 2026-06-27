@@ -784,15 +784,15 @@ def test_example_html_renders_each_specific_groups_special_sample_kind():
     assert "<svg" in render_html._example_html("tuning_ranges")  # the min/max I-beam
 
 
-def test_audio_bank_leads_with_a_mute_kill_switch_defaulting_to_muted():
+def test_audio_bank_leads_with_a_mute_kill_switch_defaulting_to_on():
     # the bank's first control is mute: it doubles as the kill switch (its engine fn stops all
-    # audio) and the engage gate (unmuting is what lets a clicked cell sound). Audio starts MUTED,
-    # so the bank shows the slashed (volume_off) glyph until the user unmutes; the other four follow.
+    # audio) and the engage gate (muting is what blocks a clicked cell from sounding). Audio now
+    # starts ON (unmuted), so the bank shows the plain (volume_up) glyph; muting shows the slash.
     assert [ctrl for ctrl, *_ in page_assets._AUDIO_BANK] == ["mute", "wave", "mode", "hold", "root"]
     assert page_assets._AUDIO_BANK[0][2] == "toggleMute"               # wired to the engine's mute/kill
     mute_up, mute_off = page_assets._AUDIO_GLYPHS["mute"]
     assert "volume_up" in mute_up and "volume_off" in mute_off  # speaker / speaker-with-slash
-    assert page_assets._AUDIO_BANK[0][1] == mute_off                   # default muted → the slashed glyph shows
+    assert page_assets._AUDIO_BANK[0][1] == mute_up                    # default unmuted → the plain glyph shows
 
 
 def test_general_tile_renders_its_special_samples():

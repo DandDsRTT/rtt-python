@@ -7,7 +7,7 @@ window.rttAudio = (function () {
   // even though the waveform / mode / hold / root config is shared.
   // `live` is EVERY currently-sounding voice's release fn — the kill switch (stopAll) clears it, so a
   // note/drone can always be silenced no matter how it was started (S.stop/S.held don't track them all).
-  const S = { wave: 0, mode: 0, hold: false, root: false, muted: true, stop: null, finish: null, held: {}, live: new Set() };
+  const S = { wave: 0, mode: 0, hold: false, root: false, muted: false, stop: null, finish: null, held: {}, live: new Set() };
   const api = { glyphs: null };
   function actx() {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -154,7 +154,7 @@ window.rttAudio = (function () {
   api.toggleMute = function () { S.muted = !S.muted; if (S.muted) { stopAll(); hideFloat(); }
     const e = ctrlEl('mute'); if (e) e.innerHTML = api.glyphs.mute[S.muted ? 1 : 0];
     document.body.classList.toggle('rtt-audio-muted', S.muted); };
-  if (document.body) document.body.classList.add('rtt-audio-muted');  // start muted (matches S.muted)
+  if (document.body && S.muted) document.body.classList.add('rtt-audio-muted');
   // Close the AudioContext when the page is hidden / reloaded. Without this, each reload leaks its
   // context; a browser caps how many a tab may hold, so after enough reloads (a hot-reload session
   // reloads on every save) new contexts fail to construct and ALL audio dies until the tab is closed.

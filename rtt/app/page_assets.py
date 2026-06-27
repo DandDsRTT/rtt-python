@@ -432,7 +432,7 @@ _TILE_FONT = {
 
 
 _AUDIO_BANK = (
-    ("mute", _AUDIO_GLYPHS["mute"][1], "toggleMute"),
+    ("mute", _AUDIO_GLYPHS["mute"][0], "toggleMute"),
     ("wave", _AUDIO_GLYPHS["wave"][0], "cycleWave"),
     ("mode", _AUDIO_GLYPHS["mode"][0], "cycleMode"),
     ("hold", _AUDIO_GLYPHS["lock"][0], "toggleHold"),

@@ -15,7 +15,7 @@ from rtt.app.spreadsheet_constants import (
     ROW_H,
     ROW_HANDLE_W,
 )
-from rtt.app.spreadsheet_emit_model import EmitResult
+from rtt.app.spreadsheet_emit_model import EmitResult, voice
 from rtt.app.spreadsheet_models import _MappedTile
 
 
@@ -66,11 +66,11 @@ def _emit_mapping_rows(cells, resolved, geometry, ctx) -> None:
             for p in range(_r.dims.d):
                 cells.append(CellBox(ids.mapping_cell(rt, p), query.prime_left(geometry, p), query.map_top(geometry, i), COL_W, ROW_H, "mapping", text=str(ctx.state.mapping[i][p]), gen=i, prime=p, unit=query.cell_unit(_r, "mapping", "primes", gen=i, prime=p)))
         if query.tile_open(geometry, ctx.collapsed, "mapping", "targets"):
-            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("mapped", "targets", _r.dims.k, lambda c: query.target_left(geometry, c), _r.targets.mapped, _r.targets.pending), i, rt)
+            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("mapped", "targets", _r.dims.k, lambda c: query.target_left(geometry, c), _r.targets.mapped, _r.targets.pending, _r.tuning.target_sizes.tempered), i, rt)
         if query.tile_open(geometry, ctx.collapsed, "mapping", "interest"):
-            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("imapped", "interest", _r.dims.mi, lambda c: query.interest_left(geometry, c), _r.interest.mapped, _r.interest.pending), i, rt)
+            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("imapped", "interest", _r.dims.mi, lambda c: query.interest_left(geometry, c), _r.interest.mapped, _r.interest.pending, _r.tuning.interest_sizes.tempered), i, rt)
         if query.tile_open(geometry, ctx.collapsed, "mapping", "held"):
-            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("hmapped", "held", _r.dims.nh, lambda c: query.held_left(geometry, c), _r.tuning.held_mapped, _r.held.pending), i, rt)
+            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("hmapped", "held", _r.dims.nh, lambda c: query.held_left(geometry, c), _r.tuning.held_mapped, _r.held.pending, _r.tuning.held_sizes.tempered), i, rt)
         if query.tile_open(geometry, ctx.collapsed, "mapping", "commas"):
             _emit_mapping_comma_row(cells, resolved, geometry, i, rt)
 
@@ -79,12 +79,14 @@ def _emit_mapping_comma_row(cells, resolved, geometry, i, rt) -> None:
     _r = resolved
     for c in range(_r.dims.nc):
         cells.append(CellBox(f"cell:mapped_comma:{rt}:{query.col_token(_r, 'commas', c)}", query.comma_left(geometry, _r, c), query.map_top(geometry, i), COL_W, ROW_H, "mapped", text=str(_r.commas.mapped[i][c]), gen=i, unit=query.cell_unit(_r, "mapping", "commas", gen=i)))
+        voice(cells, "mapped:commas", c, _r.tuning.comma_sizes.tempered[c])
     if _r.scalars.comma_draft:
         mc_text = str(_r.ghosts.comma_mapped[i]) if (_r.ghosts.comma and i < len(_r.ghosts.comma_mapped)) else ""
         cells.append(CellBox(f"cell:mapped_comma:{rt}:{query.pending_col_token(_r, 'commas')}", query.comma_left(geometry, _r, _r.dims.nc), query.map_top(geometry, i), COL_W, ROW_H, "mapped", text=mc_text, gen=i, pending=True))
     for j in range(_r.dims.nu):
         mapped_text = DASH if _r.unchanged.mapped[i][j] is None else str(_r.unchanged.mapped[i][j])
         cells.append(CellBox(f"cell:mapped_unchanged:{rt}:{j}", query.comma_left(geometry, _r, _r.dims.nc_shown + j), query.map_top(geometry, i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=query.cell_unit(_r, "mapping", "commas", gen=i)))
+        voice(cells, "mapped:commas", _r.dims.nc + j, _r.unchanged.sizes.tempered[j])
 
 
 def _emit_mapping_draft_row(cells, resolved, geometry, ctx) -> None:
@@ -144,13 +146,15 @@ def _emit_mapped_tile(cells, resolved, geometry, m: _MappedTile, i, rt) -> None:
     _r = resolved
     for col in range(m.count):
         cells.append(CellBox(f"cell:{m.prefix}:{rt}:{query.col_token(_r, m.group, col)}", m.left_fn(col), query.map_top(geometry, i), COL_W, ROW_H, "mapped", text=str(m.data[i][col]), gen=i, unit=query.cell_unit(_r, "mapping", m.group, gen=i)))
+        if m.sizes is not None:
+            voice(cells, f"mapped:{m.group}", col, m.sizes[col])
     if m.pending is not None:
         cells.append(CellBox(f"cell:{m.prefix}:{rt}:draft", m.left_fn(m.count), query.map_top(geometry, i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
 
 
 def emit_mapped_grid(cells, resolved, geometry, collapsed, tile, prefix, grid, n_cols, left, col_kw, *,
                      full=None, colwise=False, col_token_key=None, inset=0,
-                     row="projection", top=None, height=None, pending=None) -> None:
+                     row="projection", top=None, height=None, pending=None, audio=None) -> None:
     _r = resolved
     if not (query.row_open(geometry, collapsed, row) and query.tile_open(geometry, collapsed, row, tile)):
         return
@@ -161,19 +165,27 @@ def emit_mapped_grid(cells, resolved, geometry, collapsed, tile, prefix, grid, n
     height = _r.dims.d if height is None else height
     if colwise:
         _emit_mapped_grid_colwise(cells, resolved, prefix, grid, n_cols, left, col_kw,
-                                  full, col_token_key, inset, top, height, pending)
+                                  full, col_token_key, inset, top, height, pending, audio)
     else:
         _emit_mapped_grid_rowwise(cells, prefix, grid, n_cols, left, col_kw, full, inset, top, height)
 
 
+def _projected_sizes(resolved, grid, n_cols, height):
+    jm = resolved.tuning.tun.just_map
+    return [sum(jm[i] * grid[j][i] for i in range(height)) for j in range(n_cols)]
+
+
 def _emit_mapped_grid_colwise(cells, resolved, prefix, grid, n_cols, left, col_kw,
-                              full, col_token_key, inset, top, height, pending) -> None:
+                              full, col_token_key, inset, top, height, pending, audio=None) -> None:
+    sizes = _projected_sizes(resolved, grid, n_cols, height) if (audio is not None and full) else None
     for j in range(n_cols):
         for i in range(height):
             text = str(grid[j][i]) if full else DASH
             tok = j if col_token_key is None else query.col_token(resolved, col_token_key, j)
             cells.append(CellBox(f"cell:{prefix}:{tok}:{i}", left(j) + inset, top(i),
                                  COL_W - 2 * inset, ROW_H, "mapped", text=text, prime=i, **{col_kw: j}))
+            if sizes is not None:
+                voice(cells, audio, j, sizes[j])
     if pending is not None:
         for i in range(height):
             cells.append(CellBox(f"cell:{prefix}:draft:{i}", left(n_cols) + inset, top(i),
@@ -202,13 +214,13 @@ def emit_projection_band(resolved, geometry, ctx) -> EmitResult:
     _emit_projection_basis(cells, resolved, geometry, ctx)
     full_proj = _r.projection.rationals is not None
     emit_mapped_grid(cells, resolved, geometry, cl, "detempering", "proj_pd", _r.projection.detempering, _r.dims.r, lambda i: query.detempering_left(geometry, i), "gen",
-                     full=full_proj, colwise=True, col_token_key="detempering")
+                     full=full_proj, colwise=True, col_token_key="detempering", audio="proj:detempering")
     emit_mapped_grid(cells, resolved, geometry, cl, "targets", "proj_pt", _r.projection.targets, _r.dims.k, lambda i: query.target_left(geometry, i), "comma",
-                     full=full_proj, colwise=True, pending=_r.targets.pending)
+                     full=full_proj, colwise=True, pending=_r.targets.pending, audio="proj:targets")
     emit_mapped_grid(cells, resolved, geometry, cl, "held", "proj_ph", _r.projection.held, _r.dims.nh, lambda i: query.held_left(geometry, i), "comma",
-                     full=full_proj, colwise=True, pending=_r.held.pending)
+                     full=full_proj, colwise=True, pending=_r.held.pending, audio="proj:held")
     emit_mapped_grid(cells, resolved, geometry, cl, "interest", "proj_pi", _r.projection.interest, _r.dims.mi, lambda i: query.interest_left(geometry, i), "comma",
-                     full=full_proj, colwise=True, inset=KET_INSET, pending=_r.interest.pending)
+                     full=full_proj, colwise=True, inset=KET_INSET, pending=_r.interest.pending, audio="proj:interest")
     _emit_scaling_factors(cells, resolved, geometry, ctx)
     return EmitResult(cells=tuple(cells))
 
