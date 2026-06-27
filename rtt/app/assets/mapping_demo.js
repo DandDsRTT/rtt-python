@@ -60,7 +60,14 @@
   };
   const clear = () => { if (svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); svg.style.display = 'none'; } curKey = null; };
 
-  const text = (el) => { const i = el.querySelector('input'); return (i && i.value !== '') ? i.value : el.textContent; };
+  const text = (el) => {
+    const i = el.querySelector('input');
+    if (i && i.value !== '') return i.value;
+    // a rational renders as a stacked num-over-den pair, whose textContent would concatenate to "14"
+    const num = el.querySelector('.rtt-frac-num'), den = el.querySelector('.rtt-frac-den');
+    if (num && den && num.textContent && den.textContent) return num.textContent + '/' + den.textContent;
+    return el.textContent;
+  };
 
   // ---- svg primitives -------------------------------------------------------
   const line = (x1, y1, x2, y2, pal) => {
