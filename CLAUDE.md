@@ -360,6 +360,29 @@ biggest way agents disrupt the user. So, for **every** agent-initiated launch:
   a `reload=True` agent instance churns on every edit (yours and other agents') and orphans
   workers that keep the port bound. Agents relaunch deliberately; they don't need reload.
 
+**Never broad-kill app processes — only ever kill YOUR port's PID.** Several agents run preview
+servers in parallel (plus the user's 8137), so a broad match murders everyone else's app, not just
+yours. **Never** run `pkill -f app.py`, `pkill -f python`, `killall python`, `pkill -f rtt`, or any
+match that isn't pinned to one port — this has repeatedly taken down sibling agents' demos and the
+user's session. To free or restart your own port, target only the PID bound to it:
+
+```bash
+lsof -ti tcp:<port> | xargs kill        # frees ONLY <port>; touches no other server
+lsof -nP -iTCP:<port> -sTCP:LISTEN       # check who's on a port before launching
+```
+
+**Launch detached so it survives your turn ending.** A bare `python app.py &` is sent SIGHUP when
+your shell exits and dies between turns (so the user keeps finding it "down"). Start it so it
+outlives the shell, and never block the tool waiting on it:
+
+```bash
+nohup env PORT=<port> PYTHONPATH="$PWD" .venv/bin/python rtt/app/app.py > <log> 2>&1 < /dev/null & disown
+```
+
+(`setsid` is unavailable on macOS — use `nohup … & disown`.) Then check liveness in a *separate*
+command (`curl -s -o /dev/null -w '%{http_code}' http://localhost:<port>/`), not inline with the
+launch, or the launch command can hang to its timeout.
+
 ## The integration tests run in-process — run them, don't ask
 
 `tests/app/integration/` holds the project's integration tests — the ones that drive whole
