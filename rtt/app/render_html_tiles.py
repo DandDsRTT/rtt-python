@@ -62,6 +62,17 @@ _EXAMPLE_HTML = {
         '<rect x="2" y="2" width="10" height="2" fill="#000"/>'
         '<rect x="2" y="16" width="10" height="2" fill="#000"/></svg>'
     ),
+    "mapping_demos": (
+        '<svg width="30" height="20" viewBox="0 0 30 20" style="display:block">'
+        '<g fill="none" stroke="#ccc" stroke-width="1">'
+        '<rect x="2" y="2" width="8" height="7"/><rect x="10" y="2" width="8" height="7"/>'
+        '<rect x="2" y="9" width="8" height="7"/><rect x="10" y="9" width="8" height="7"/></g>'
+        '<path d="M6 2 L6 16 L26 16" fill="none" stroke="#ffce00" stroke-width="2.5"/>'
+        '<path d="M14 2 L14 16" fill="none" stroke="#ffce00" stroke-width="2.5"/>'
+        '<rect x="22" y="12.5" width="7" height="7" fill="#fff8d0" stroke="#ffce00" stroke-width="1.5"/>'
+        '<text x="5.4" y="13.5" font-size="7" fill="#5a4500">×</text>'
+        '<text x="19" y="18" font-size="7" fill="#5a4500">+</text></svg>'
+    ),
 }
 
 _COLORIZATION_LETTER = {"temperament": "𝑀", "tuning": "𝐺", "form": "𝐹"}

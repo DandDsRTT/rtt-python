@@ -20,6 +20,9 @@ def apply_view_classes(editor, runtime) -> None:
         body.classes(add="rtt-no-tooltips") if not editor.settings["tooltips"] else body.classes(
             remove="rtt-no-tooltips"
         )
+        body.classes(add="rtt-mapping-demos") if editor.settings["mapping_demos"] else body.classes(
+            remove="rtt-mapping-demos"
+        )
 
 
 def size_panes(chrome, lay, fx, fy) -> None:
