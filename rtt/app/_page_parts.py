@@ -31,7 +31,7 @@ from rtt.app.render_html import (
 
 def setup_page_head() -> None:
     ui.add_css(_CSS)
-    ui.tooltip.default_props(f"delay={_TOOLTIP_DELAY_MS}")
+    ui.tooltip.default_props(f"delay={_TOOLTIP_DELAY_MS} transition-duration=0")
     ui.add_body_html(
         f"<script>{_AUDIO_JS}\nwindow.rttAudio.glyphs = {json.dumps(_AUDIO_GLYPHS)};</script>"
     )

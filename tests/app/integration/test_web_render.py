@@ -681,6 +681,12 @@ def test_hover_tooltips_wait_before_appearing(default_page: User) -> None:
     assert all(int(el._props.get("delay", 0)) >= 500 for el in tips)
 
 
+def test_every_hover_tooltip_hides_instantly_so_a_reflow_cannot_strand_it(default_page: User) -> None:
+    tips = [el for el in default_page.client.elements.values() if isinstance(el, Tooltip)]
+    assert tips
+    assert all(int(el._props.get("transition-duration", 300)) == 0 for el in tips)
+
+
 def _wrap(user: User, cell_id: str):
     return next(iter(user.find(marker=cell_id).elements))
 
