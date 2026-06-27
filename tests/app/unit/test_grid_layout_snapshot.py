@@ -2,6 +2,7 @@ import dataclasses
 import json
 import math
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -155,6 +156,42 @@ def test_float_comparison_absorbs_cross_platform_noise_but_catches_real_drift():
     assert _first_divergence({"v": 216.5}, {"v": 216.501}) is not None
     assert _first_divergence({"v": 21.5}, {"v": 21.5 + 1e-7}) is not None
     assert _first_divergence({"text": "1"}, {"text": "2"}) is not None
+
+
+STACKED_RATIO_KINDS = frozenset(
+    {
+        "mapping",
+        "commacell",
+        "unchangedcell",
+        "interestcell",
+        "heldcell",
+        "targetcell",
+        "formcell",
+        "ratiocell",
+        "elementcell",
+        "elementratio",
+        "genratio",
+        "commaratio",
+        "mapped",
+    }
+)
+
+_BARE_RATIO = re.compile(r"^-?\d+/\d+$")
+
+
+@pytest.mark.parametrize("name", list(CONFIGS))
+def test_every_bare_ratio_cell_renders_stacked(name):
+    layout = CONFIGS[name]()
+    offenders = [
+        (cell.id, cell.kind, cell.text)
+        for cell in layout.cells
+        if isinstance(getattr(cell, "text", None), str)
+        and _BARE_RATIO.match(cell.text)
+        and cell.kind not in STACKED_RATIO_KINDS
+    ]
+    assert not offenders, (
+        f"{name}: cells holding a bare ratio but using a plain-text kind that renders it inline "
+        f"with a diagonal slash instead of as a stacked fraction: {offenders}")
 
 
 @pytest.mark.parametrize("name", list(CONFIGS))
