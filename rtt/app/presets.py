@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 
-from rtt.app import service
+from rtt.app import service, terminology
 from rtt.library import equal_temperament
 
 TUNING_SCHEMES: tuple[str, ...] = (
@@ -142,13 +142,13 @@ def temperament_options() -> dict[str, str]:
 
 
 def tuning_scheme_options(
-    all_interval: bool, include_alternatives: bool, weighting: bool
+    all_interval: bool, include_alternatives: bool, weighting: bool, dd_terminology: bool = True
 ) -> dict[str, str]:
     families = tuning_schemes(include_alternatives)
     if all_interval:
-        return {name: name for name in families}
+        return {name: terminology.scheme_name(name, dd_terminology) for name in families}
     return {
-        variant: f"T {variant}"
+        variant: f"T {terminology.scheme_name(variant, dd_terminology)}"
         for name in families
         for variant in service.weight_slope_variants(name, weighting)
     }

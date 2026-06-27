@@ -1,4 +1,4 @@
-from rtt.app import settings, spreadsheet, terminology
+from rtt.app import presets, settings, spreadsheet, terminology
 from rtt.app.editor import Editor
 
 
@@ -82,9 +82,19 @@ def test_grid_keeps_the_mapping_term_in_both_modes():
     assert "mapping" in _grid_texts(False)
 
 
-def test_displayed_scheme_name_substitutes_at_the_editor_chokepoint():
+def test_displayed_scheme_name_stays_the_systematic_option_key():
     editor = Editor()
     editor.set_tuning_scheme("minimax-S")
     assert editor.displayed_tuning_scheme_name == "minimax-S"
     editor.settings["dd_terminology"] = False
-    assert editor.displayed_tuning_scheme_name == "TOP"
+    assert editor.displayed_tuning_scheme_name == "minimax-S"
+
+
+def test_tuning_scheme_option_labels_substitute_wiki_names_keeping_systematic_keys():
+    target_based = presets.tuning_scheme_options(False, False, True, False)
+    assert target_based["minimax-S"] == "T TOP"
+    assert "minimax-S" in target_based
+    assert target_based["minimax-U"] == "T minimax-U"
+    all_interval = presets.tuning_scheme_options(True, False, False, False)
+    assert all_interval["minimax-S"] == "TOP"
+    assert presets.tuning_scheme_options(True, False, False, True)["minimax-S"] == "minimax-S"

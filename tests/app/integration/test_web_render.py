@@ -1128,6 +1128,22 @@ async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(
     assert _cell_child(user, "preset:tuning").options["minimax-S"] == "minimax-S"  # T prefix dropped
 
 
+async def test_picking_a_scheme_keeps_the_dropdown_on_that_scheme_with_wiki_terms(user: User) -> None:
+    # regression: with D&D terminology off the wiki name (TOP) must surface only in the option LABEL;
+    # the KEY and the chooser's selected value stay systematic (minimax-S) so the pick still matches.
+    await user.open("/")
+    _toggle(user, "presets")
+    user.find(kind=ui.checkbox, content="optimization").click()
+    user.find(kind=ui.checkbox, content="weighting").click()
+    user.find(kind=ui.checkbox, content="use D&D's terminology").click()
+    assert _cell_child(user, "preset:tuning").options["minimax-S"] == "T TOP"
+    _cell_child(user, "preset:tuning").set_value("minimax-S")
+    await user.should_see(marker="preset:tuning")
+    chooser = _cell_child(user, "preset:tuning")
+    assert chooser.value == "minimax-S", "dropdown blanked instead of holding the pick"
+    assert "display-value" not in chooser._props
+
+
 async def test_editing_a_mapping_cell_updates_the_mapped_list(user: User) -> None:
     await user.open("/")
     # meantone [[1,1,0],[0,1,4]]: 5/4 (target 6) maps to 4 fifths in the mapped list

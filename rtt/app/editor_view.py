@@ -1,11 +1,20 @@
 from __future__ import annotations
 
-from rtt.app import editor_solve, service
+from rtt.app import editor_solve, presets, service
 
 
 class _TuningQueries:
     def _solve(self) -> editor_solve.Solve:
         return editor_solve.solve_model(self)
+
+    @property
+    def tuning_scheme_options(self) -> dict[str, str]:
+        return presets.tuning_scheme_options(
+            service.is_all_interval(self.tuning_scheme),
+            self.settings["alt_complexity"],
+            self.settings["weighting"],
+            self.settings["dd_terminology"],
+        )
 
     def optimum_tuning(self) -> service.Tuning:
         return editor_solve.optimum_tuning(self._solve())

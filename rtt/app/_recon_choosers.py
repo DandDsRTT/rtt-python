@@ -190,11 +190,7 @@ def _scheme_options(rec, name: str) -> tuple[list, object, str]:
         options = presets.projection_options(rec._editor.state)
         value = rec._editor.displayed_projection_scheme_name
         return options, (value if value in options else None), "-"
-    options = presets.tuning_scheme_options(
-        service.is_all_interval(rec._editor.tuning_scheme),
-        rec._editor.settings["alt_complexity"],
-        rec._editor.settings["weighting"],
-    )
+    options = rec._editor.tuning_scheme_options
     scheme = rec._editor.displayed_tuning_scheme_name
     return options, (scheme if scheme in options else None), "-"
 
@@ -258,11 +254,7 @@ def update_preset(rec, cb: spreadsheet.CellBox) -> None:
         rec.cells[cb.id].chooser.select.set_enabled(not cb.disabled)
     else:
         name = rec._editor.displayed_tuning_scheme_name
-        options = presets.tuning_scheme_options(
-            service.is_all_interval(rec._editor.tuning_scheme),
-            rec._editor.settings["alt_complexity"],
-            rec._editor.settings["weighting"],
-        )
+        options = rec._editor.tuning_scheme_options
         scheme = name if name in options else None
         rec.cells[cb.id].chooser.select.set_options(options, value=scheme)
         _set_offlist_prompt(rec.cells[cb.id].chooser.select, scheme)
