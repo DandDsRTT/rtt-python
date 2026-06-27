@@ -4,7 +4,7 @@ from nicegui import ui
 
 from rtt.app import spreadsheet_text
 from rtt.app._recon_handles import EntityHandles
-from rtt.app.page_assets import _CHROME_H, _PAD, _TINTS
+from rtt.app.page_assets import _CELL_BORDER_W, _CHROME_H, _PAD, _TINTS, GRIDVALUE_KINDS
 from rtt.app.render_html import _block_panes, _freeze_container, _line_style
 
 
@@ -143,7 +143,8 @@ def place_cell(r, cb, container, paint) -> None:
     fy, structural, rings = paint
     make_cell_if_new(r, cb, container, structural)
     top = cb.y - (fy if container in ("body", "row") else 0)
-    geo = f"left:0; top:0; transform:translate({cb.x}px,{top}px); width:{cb.w}px; height:{cb.h}px"
+    grow = _CELL_BORDER_W if cb.kind in GRIDVALUE_KINDS else 0
+    geo = f"left:0; top:0; transform:translate({cb.x}px,{top}px); width:{cb.w + grow}px; height:{cb.h + grow}px"
     if r._rec.entity(cb.id).styled != geo:
         r._rec.entities[cb.id].el.style(geo)
         r._rec.entities[cb.id].styled = geo
