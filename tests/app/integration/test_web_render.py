@@ -819,6 +819,11 @@ async def test_reset_restores_the_guide_chapter_slider_to_the_default(user: User
     assert next(iter(user.find(marker="chapterreading").elements)).text == "4: Exploring temperaments"
 
 
+def test_guide_settings_box_holds_a_default_on_dd_terminology_toggle(default_page: User) -> None:
+    assert next(iter(default_page.find(marker="guidesettingstitle").elements)).text == "guide settings"
+    assert next(iter(default_page.find(marker="ddterminology").elements)).value is True
+
+
 async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cells(user: User) -> None:
     # the user's own action: open the live page, then click the gridded-values part to turn it OFF.
     # The dummy-tile test above only checks the PART's class flips; this drives the whole reconcile

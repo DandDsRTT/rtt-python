@@ -58,6 +58,7 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
 )
 
 DEFAULTS: dict[str, bool] = {key: default for _, items in SHOW_GROUPS for key, _, default in items}
+DEFAULTS["dd_terminology"] = True
 
 SUBCONTROLS: dict[str, str] = {
     "mnemonics": "names",
@@ -136,6 +137,7 @@ CHAPTER_STAR = 10
 CHAPTER_DEFAULT = 4
 
 CHAPTER: dict[str, int] = {
+    "dd_terminology": CHAPTER_MIN,
     "animations": 2,
     "preview_highlighting": 2,
     "tooltips": 2,

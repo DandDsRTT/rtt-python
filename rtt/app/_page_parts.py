@@ -272,7 +272,25 @@ def build_chapter_group(pb) -> dict:
             .mark("chapterslider")
             .tooltip(tooltips.CHROME_HELP["chapter"])
         )
-    return {"chapter_reading": chapter_reading, "chapter_slider": chapter_slider}
+        dd_terminology_box = (
+            _settings_checkbox(pb, "dd_terminology", "use D&D's terminology")
+            .classes("rtt-show-item rtt-chapter-dd")
+            .mark("ddterminology")
+            .tooltip(tooltips.CHROME_HELP["dd_terminology"])
+        )
+    return {
+        "chapter_reading": chapter_reading,
+        "chapter_slider": chapter_slider,
+        "dd_terminology_box": dd_terminology_box,
+    }
+
+
+def _settings_checkbox(pb, key, label):
+    return ui.checkbox(
+        label,
+        value=pb._editor.settings[key],
+        on_change=lambda e, k=key: pb._edits.on_show_toggle(k, e.value),
+    ).props("dense size=xs color=grey-8")
 
 
 def build_show_group(pb, items) -> None:
@@ -283,12 +301,7 @@ def build_show_group(pb, items) -> None:
         row = ui.element("div").classes("rtt-show-row").mark(f"showrow:{key}")
         with row:
             box = (
-                ui.checkbox(
-                    label,
-                    value=pb._editor.settings[key],
-                    on_change=lambda e, k=key: pb._edits.on_show_toggle(k, e.value),
-                )
-                .props("dense size=xs color=grey-8")
+                _settings_checkbox(pb, key, label)
                 .classes("rtt-show-item")
                 .mark(f"showbox:{key}")
                 .tooltip(tooltips.SHOW_HELP[key])
