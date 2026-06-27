@@ -159,7 +159,7 @@ def _emit_ss_quantity_rows(cells, resolved, geometry, ctx) -> None:
         bx = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
         for p in range(_r.dims.dL):
             cells.append(CellBox(f"ss_basis:{p}", bx, query.ss_vec_top(geometry, p), COL_W, ROW_H,
-                                 "prime", text=str(_r.dims.superspace_primes[p]), prime=p))
+                                 "commaratio", text=str(_r.dims.superspace_primes[p]), prime=p))
     if query.row_open(geometry, cl, "ss_mapping") and query.tile_open(geometry, cl, "ss_mapping", "quantities"):
         ss_gens = service.superspace_generators(ctx.state)
         for i in range(_r.dims.rL):
@@ -169,7 +169,7 @@ def _emit_ss_quantity_rows(cells, resolved, geometry, ctx) -> None:
     if query.row_open(geometry, cl, "ss_projection") and query.tile_open(geometry, cl, "ss_projection", "quantities"):
         bx = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
         for p in range(_r.dims.dL):
-            cells.append(CellBox(f"ss_proj_basis:{p}", bx, query.ss_proj_top(geometry, p), COL_W, ROW_H, "prime",
+            cells.append(CellBox(f"ss_proj_basis:{p}", bx, query.ss_proj_top(geometry, p), COL_W, ROW_H, "commaratio",
                                  text=str(_r.dims.superspace_primes[p]), prime=p))
 
 
