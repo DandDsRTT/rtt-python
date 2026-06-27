@@ -4,21 +4,19 @@ window.rttFreeze = (function () {
     for (var i = 0; i < bodies.length; i++) {
       var b = bodies[i], app = b.closest('.rtt-app');
       if (!app) continue;
-      // Clamp the offsets non-negative: desktop browsers hold scrollLeft/scrollTop at 0 through an
-      // elastic top/left overscroll, but iOS WebKit reports them NEGATIVE during the rubber-band. Left
-      // raw, that negative would shove the frozen titles and the gridline twins off their rules in the
-      // bounce zone (a stray rule over the column titles; full-height lines stopping short). Clamping
-      // makes both engines behave alike: through a top/left bounce the twins stay put and bridge the
-      // bared strip so every gridline reads unbroken.
-      var sx = Math.max(0, b.scrollLeft), sy = Math.max(0, b.scrollTop);
       var inner = app.querySelector('.rtt-colhead-inner');
-      if (inner) inner.style.transform = 'translateX(' + (-sx) + 'px)';
-      // the colfill twins ride BOTH scroll axes so they rest exactly under the live rules; on a top
-      // overscroll they stay put (sy clamped to 0) and bridge the bared strip.
+      if (inner) inner.style.transform = 'translateX(' + (-b.scrollLeft) + 'px)';
+      // The colfill twins ride the horizontal scroll EXACTLY (so each rests glued under its live column
+      // rule — clamping X would un-glue them in a left overscroll and ghost a second set of verticals).
+      // The vertical axis is clamped non-negative: iOS WebKit reports scrollTop negative through a top
+      // overscroll (desktop holds it at 0), and only the clamp keeps the twins PUT so they bridge the
+      // bared strip instead of riding the content down and baring an empty band (CSS extends them far
+      // upward — see .rtt-colfill-inner — so an arbitrarily long pull still reads unbroken).
+      var sy = Math.max(0, b.scrollTop);
       var fill = app.querySelector('.rtt-colfill-inner');
-      if (fill) fill.style.transform = 'translate(' + (-sx) + 'px,' + (-sy) + 'px)';
-      app.classList.toggle('rtt-scrolled-y', sy > 0);
-      app.classList.toggle('rtt-scrolled-x', sx > 0);
+      if (fill) fill.style.transform = 'translate(' + (-b.scrollLeft) + 'px,' + (-sy) + 'px)';
+      app.classList.toggle('rtt-scrolled-y', b.scrollTop > 0);
+      app.classList.toggle('rtt-scrolled-x', b.scrollLeft > 0);
     }
     reportViewport();
   }
