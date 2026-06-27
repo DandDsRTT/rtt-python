@@ -233,6 +233,8 @@ _DECIMAL_JS = (_ASSETS / "decimal.js").read_text(encoding="utf-8")
 
 _TABNAV_JS = (_ASSETS / "tabnav.js").read_text(encoding="utf-8")
 
+_MAPPING_DEMO_JS = (_ASSETS / "mapping_demo.js").read_text(encoding="utf-8")
+
 _TOUR_JS = (_ASSETS / "tour.js").read_text(encoding="utf-8")
 
 # NiceGUI: a tour step's `sel` must be a real DOM region class, NOT a .mark() (which exists only under

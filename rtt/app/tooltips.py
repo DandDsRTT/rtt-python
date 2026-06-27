@@ -297,6 +297,12 @@ SHOW_HELP: dict[str, str] = {
         "Tint each cell by what derives it — the mapping 𝑀 or the comma basis C. Refines "
         "“temperament tiles”."
     ),
+    "mapping_demos": (
+        "Hover an interval to overlay how the mapping 𝑀 sends it to its generator counts — yellow "
+        "lines trace each prime count down its mapping column, multiply it into each box, sum each "
+        "row, and carry the row’s total over to the mapped interval’s generator count. Refines "
+        "“temperament”."
+    ),
     "form": (
         "Show the form layer — mark the canonical (default) form with a subscript C on the mapping "
         "𝑀, generator tuning map 𝒈, and generator embedding G. Also expands the form sub-controls."

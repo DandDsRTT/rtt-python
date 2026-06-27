@@ -533,6 +533,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    NON-interactively: every editable-cell box is stripped, so an editable value reads like a read-only
    one. The cell's own hover help sits BELOW the loupe, styled like a normal Quasar tooltip. The clone
    carries its classes, so the value/dark cascades style it for free; the serif matches the grid. */
+/* the mapping-demo overlay: an SVG laid over the grid body in the board's own coordinate space, so it
+   scrolls with the cells. It traces an interval's prime counts through the mapping on hover. */
+.rtt-demo-overlay { position:absolute; left:0; top:0; pointer-events:none; z-index:50; overflow:visible; }
 .rtt-zoom-overlay { position:fixed; z-index:9000; pointer-events:none; display:flex;
             flex-direction:column; align-items:center; gap:7px; font-family:var(--rtt-serif); }
 /* the loupe tile: the value on a grid-tile-grey panel (the non-interactive look — a read-only value
