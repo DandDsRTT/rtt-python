@@ -7457,6 +7457,35 @@ def test_every_interval_ratio_and_vector_is_click_to_play():
     assert dv.audio and dv.audio[0] == "vectors:detempering"
 
 
+def test_mapped_interval_column_sounds_tempered_size_distinct_from_the_just_ratio():
+    cells = {c.id: c for c in _layout().cells}
+    mapped_target = cells["cell:mapped:0:1"]
+    assert mapped_target.audio is not None
+    assert mapped_target.audio[0] == "mapped:targets" and mapped_target.audio[1] == 1
+    just_ratio = cells["target:1"]
+    assert just_ratio.audio[0] == "quantities:targets"
+    assert abs(just_ratio.audio[2] - mapped_target.audio[2]) > 1.0
+
+
+def test_mapped_comma_column_sounds_its_tempered_out_unison():
+    cells = {c.id: c for c in _layout().cells}
+    mapped_comma = cells["cell:mapped_comma:0:0"]
+    assert mapped_comma.audio is not None and mapped_comma.audio[0] == "mapped:commas"
+    assert abs(mapped_comma.audio[2]) < 0.01
+
+
+def test_projected_interval_columns_are_click_to_play_when_the_projection_is_rational():
+    full = {c.id: c for c in _proj_build(held_basis_ratios=("2/1", "5/4")).cells}
+    projected_target = next(c for c in full.values() if c.id.startswith("cell:proj_pt:"))
+    assert projected_target.audio is not None and projected_target.audio[0] == "proj:targets"
+    assert abs(projected_target.audio[2]) > 1.0
+
+
+def test_projected_intervals_stay_silent_when_the_projection_is_dashed():
+    under_held = {c.id: c for c in _proj_build().cells}
+    assert all(c.audio is None for c in under_held.values() if c.id.startswith("cell:proj_pt:"))
+
+
 def test_form_layer_is_a_live_parent_with_three_live_subcontrols():
     # the form layer is a live top-level toggle (it adds the canonical-form subscript C — so unlike
     # the pure grouping parents temperament/tuning it is NOT in GROUPING_PARENTS). All THREE of its

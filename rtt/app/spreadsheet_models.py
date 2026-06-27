@@ -191,6 +191,7 @@ class _MappedTile(NamedTuple):
     left_fn: Callable[[int], float]
     data: object
     pending: object
+    sizes: object = None
 
 
 @dataclass
