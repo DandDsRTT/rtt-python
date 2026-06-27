@@ -137,18 +137,16 @@
     const gap = Math.min(7, (W * 0.45) / Math.max(1, R - 1));
 
     // (A) operand fan: each prime count splits into one line per mapping row. They share the leftward
-    // jaunt (a bus along the vector row), then split into parallel descents — row 0 into the box top
-    // (under the ×), each later row peeling left then entering its box from the left edge.
+    // jaunt (a bus along the vector row), then split into parallel descents on staggered tracks, each
+    // peeling right into its box's left edge (where the × sits).
     primes.forEach((p) => {
-      const cx = colX[p], vy = vp[p].c.y, busFrom = vp[p].c.l;
-      const tracks = rows.map((r, i) => (i === 0 ? cx : cx - W / 2 - i * gap));
-      const busTo = Math.min(...tracks);
-      line(busTo, vy, busFrom, vy);
+      const leftEdge = colX[p] - W / 2, vy = vp[p].c.y;
+      const tracks = rows.map((r, i) => leftEdge - i * gap);
+      line(Math.min(...tracks), vy, vp[p].c.l, vy);
       rows.forEach((r, i) => {
-        const tx = tracks[i], box = r.cells[p];
+        const box = r.cells[p];
         if (!box) return;
-        if (i === 0) { line(tx, vy, tx, box.c.t); }
-        else { path('M ' + tx + ' ' + vy + ' V ' + box.c.y + ' H ' + box.c.l); }
+        path('M ' + tracks[i] + ' ' + vy + ' V ' + box.c.y + ' H ' + leftEdge);
       });
     });
 
@@ -162,12 +160,12 @@
       glyph(r.rc.l - 8, r.rc.y, '=', 13);
     });
 
-    // (C) per-box marks: × on the top edge, the product on the bottom edge; + at each shared bottom
-    // corner between adjacent boxes.
+    // (C) per-box marks: × on the left edge (where the operand line lands), the product on the bottom
+    // edge; + at each shared bottom corner between adjacent boxes.
     rows.forEach((r) => {
       primes.forEach((p, kx) => {
         const box = r.cells[p]; if (!box) return;
-        chip(box.c.x, box.c.t, '×', true);
+        chip(box.c.l, box.c.y, '×', true);
         const prod = (box.m != null && vp[p].v != null) ? box.m * vp[p].v : null;
         if (prod != null) chip(box.c.x, box.c.btm, sgn(prod));
         if (kx < primes.length - 1) chip(box.c.rt, box.c.btm, '+', true);
