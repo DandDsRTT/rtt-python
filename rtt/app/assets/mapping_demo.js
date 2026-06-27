@@ -2,25 +2,49 @@
   if (window.__rttMapDemo) return;
   window.__rttMapDemo = true;
   const NS = 'http://www.w3.org/2000/svg';
-  const MAP_PREFIX = 'cell:mapping:';
-  const CH = 8; // half a chip — the × box's reach above/left of its anchor point
+  const CH = 8; // half a chip — the × box's reach above its anchor point
 
   // two palettes from the preview-highlighting set: amber (a "change") routes the operand in (left and
-  // down jaunts, × boxes); green (an "addition") accumulates the result (right jaunts, product/+/= boxes).
+  // down jaunts, × boxes); green (an "addition") accumulates the result (right jaunts, product/+ boxes).
   const AMBER = { stroke: 'var(--preview-color)', fill: 'color-mix(in srgb, var(--preview-color) 22%, #fff)', ink: 'var(--preview-text-color)' };
   const GREEN = { stroke: 'var(--pending-color)', fill: 'color-mix(in srgb, var(--pending-color) 22%, #fff)', ink: 'var(--pending-text-color)' };
 
-  // every interval kind that owns a prime-count vector and a mapped generator-count row. vec ids put
-  // the prime index either last (targets) or first (the rest); res is the mapped-row id prefix.
-  const KINDS = [
-    { key: 'targets', vp: 'cell:vec:targets:', primeLast: true, res: 'cell:mapped:' },
-    { key: 'held', vp: 'cell:held:', primeLast: false, res: 'cell:hmapped:' },
-    { key: 'interest', vp: 'cell:interest:', primeLast: false, res: 'cell:imapped:' },
-    { key: 'commas', vp: 'cell:comma:', primeLast: false, res: 'cell:mapped_comma:' },
+  // a tiny exact-rational type — the projection/superspace matrices carry fractions like 1/4, so the
+  // products and sums must stay exact rather than float.
+  const FR = (() => {
+    const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a || 1; };
+    const mk = (n, d) => { if (d < 0) { n = -n; d = -d; } const k = gcd(n, d); return { n: n / k, d: d / k }; };
+    const parse = (s) => {
+      s = (s || '').replace(/[−–—]/g, '-').replace(/⁄/g, '/').trim();
+      let m;
+      if ((m = s.match(/^(-?\d+)\/(-?\d+)$/))) return mk(+m[1], +m[2]);
+      if (/^-?\d+$/.test(s)) return mk(+s, 1);
+      return null;
+    };
+    const mul = (a, b) => mk(a.n * b.n, a.d * b.d);
+    const add = (a, b) => mk(a.n * b.d + b.n * a.d, a.d * b.d);
+    const str = (a) => { const sign = a.n < 0 ? '−' : ''; const n = Math.abs(a.n); return a.d === 1 ? sign + n : sign + n + '/' + a.d; };
+    return { parse, mul, add, str };
+  })();
+
+  // each flow is one "matrix × interval-vector" computation. Source/result cells are linked to the
+  // matrix purely by geometry (shared column x, top-to-bottom order), so the differing id grammars and
+  // raw-vs-token column keys across mapping/projection/superspace don't matter.
+  const VEC = '[data-eid^="cell:vec:targets:"],[data-eid^="cell:held:"],[data-eid^="cell:interest:"],[data-eid^="cell:comma:"]';
+  const MAPPED = '[data-eid^="cell:mapped:"],[data-eid^="cell:hmapped:"],[data-eid^="cell:imapped:"],[data-eid^="cell:mapped_comma:"]';
+  const PROJ = '[data-eid^="cell:proj_pt:"],[data-eid^="cell:proj_ph:"],[data-eid^="cell:proj_pi:"]';
+  const SSVEC = '[data-eid^="cell:ss_vectors:targets:"],[data-eid^="cell:ss_vectors:held:"],[data-eid^="cell:ss_vectors:interest:"],[data-eid^="cell:ss_vectors:commas:"]';
+  const SSMAP = '[data-eid^="cell:ss_mapping:targets:"],[data-eid^="cell:ss_mapping:held:"],[data-eid^="cell:ss_mapping:interest:"],[data-eid^="cell:ss_mapping:commas:"]';
+  const SSPROJ = '[data-eid^="cell:ss_proj_pt:"],[data-eid^="cell:ss_proj_ph:"],[data-eid^="cell:ss_proj_pi:"]';
+
+  const FLOWS = [
+    { name: 'mapping', trigger: VEC + ',' + MAPPED, source: VEC, matrix: '[data-eid^="cell:mapping:"]', result: MAPPED },
+    { name: 'projection', trigger: PROJ, source: VEC, matrix: '[data-eid^="cell:proj:"]', result: PROJ },
+    { name: 'ss_mapping', trigger: SSVEC + ',' + SSMAP, source: SSVEC, matrix: '[data-eid^="cell:ss_mapping:ssprimes:"]', result: SSMAP },
+    { name: 'ss_projection', trigger: SSPROJ, source: SSVEC, matrix: '[data-eid^="cell:ss_projection:ssprimes:"]', result: SSPROJ },
   ];
 
   let svg = null, curKey = null;
-
   const board = () => document.querySelector('.rtt-gridcontent');
   const active = () => document.body.classList.contains('rtt-mapping-demos');
 
@@ -33,24 +57,7 @@
   };
   const clear = () => { if (svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); svg.style.display = 'none'; } curKey = null; };
 
-  const num = (el) => {
-    if (!el) return null;
-    const inp = el.querySelector('input');
-    let t = inp && inp.value !== '' ? inp.value : el.textContent;
-    t = (t || '').replace(/[−–—]/g, '-');
-    const m = t.match(/-?\d+/);
-    return m ? parseInt(m[0], 10) : null;
-  };
-  const sgn = (n) => (n < 0 ? '−' + Math.abs(n) : String(n));
-  const byEid = (eid) => document.querySelector('[data-eid="' + eid + '"]');
-
-  const parseVec = (eid, k) => {
-    const rest = eid.slice(k.vp.length);
-    if (k.primeLast) { const i = rest.lastIndexOf(':'); return [rest.slice(0, i), parseInt(rest.slice(i + 1), 10)]; }
-    const i = rest.indexOf(':'); return [rest.slice(i + 1), parseInt(rest.slice(0, i), 10)];
-  };
-  const parseMap = (eid) => { const r = eid.slice(MAP_PREFIX.length); const i = r.lastIndexOf(':'); return [r.slice(0, i), parseInt(r.slice(i + 1), 10)]; };
-  const kindOf = (eid) => KINDS.find((k) => eid.startsWith(k.vp)) || null;
+  const text = (el) => { const i = el.querySelector('input'); return (i && i.value !== '') ? i.value : el.textContent; };
 
   // ---- svg primitives -------------------------------------------------------
   const line = (x1, y1, x2, y2, pal) => {
@@ -92,113 +99,103 @@
     svg.appendChild(r);
   };
 
+  const cluster = (vals) => {
+    const s = [...vals].sort((a, z) => a - z), out = [];
+    for (const v of s) if (!out.length || v - out[out.length - 1] > 6) out.push(v);
+    return out;
+  };
+
   // ---- draw -----------------------------------------------------------------
-  const draw = (k, tok) => {
+  const draw = (flow, hov) => {
     const b = board();
-    if (!b) return;
+    if (!b) return false;
     const bRect = b.getBoundingClientRect();
     const C = (el) => {
       const r = el.getBoundingClientRect();
       return { x: r.left - bRect.left + r.width / 2, y: r.top - bRect.top + r.height / 2,
-               t: r.top - bRect.top, btm: r.bottom - bRect.top, l: r.left - bRect.left, rt: r.right - bRect.left,
-               w: r.width, h: r.height };
+               t: r.top - bRect.top, btm: r.bottom - bRect.top, l: r.left - bRect.left, rt: r.right - bRect.left, w: r.width, h: r.height };
     };
+    const colX = C(hov).x;
+    const inCol = (o) => Math.abs(o.c.x - colX) < 8;
 
-    const vp = {};
-    document.querySelectorAll('[data-eid^="' + k.vp + '"]').forEach((el) => {
-      const [t, p] = parseVec(el.getAttribute('data-eid'), k);
-      if (t === tok) vp[p] = { el, c: C(el), v: num(el) };
-    });
-    if (!Object.keys(vp).length) return;
+    const src = [...document.querySelectorAll(flow.source)].map((el) => ({ c: C(el), v: FR.parse(text(el)) }))
+      .filter(inCol).sort((a, z) => a.c.y - z.c.y);
+    const mcells = [...document.querySelectorAll(flow.matrix)].map((el) => ({ c: C(el), m: FR.parse(text(el)) }));
+    const res = [...document.querySelectorAll(flow.result)].map((el) => ({ c: C(el) }))
+      .filter(inCol).sort((a, z) => a.c.y - z.c.y);
+    if (!src.length || !mcells.length || !res.length) return false;
 
-    const rmap = {};
-    document.querySelectorAll('[data-eid^="' + MAP_PREFIX + '"]').forEach((el) => {
-      const [rt, p] = parseMap(el.getAttribute('data-eid'));
-      (rmap[rt] = rmap[rt] || { rt, cells: {} }).cells[p] = { el, c: C(el), m: num(el) };
-    });
-    const rows = Object.values(rmap)
-      .map((r) => ({ ...r, result: byEid(k.res + r.rt + ':' + tok) }))
-      .filter((r) => r.result)
-      .map((r) => ({ ...r, rc: C(r.result) }))
-      .sort((a, z) => a.rc.y - z.rc.y);
-    if (!rows.length) return;
+    const ux = cluster(mcells.map((o) => o.c.x)), uy = cluster(mcells.map((o) => o.c.y));
+    const at = (i, p) => mcells.find((o) => Math.abs(o.c.y - uy[i]) < 6 && Math.abs(o.c.x - ux[p]) < 6);
+    const P = Math.min(src.length, ux.length), R = Math.min(res.length, uy.length);
+    if (!P || !R) return false;
+    const W = mcells[0].c.w;
 
-    const primes = Object.keys(vp).map(Number).filter((p) => rows.some((r) => r.cells[p])).sort((a, z) => a - z);
-    if (!primes.length) return;
-    const R = rows.length;
-    const W = rows[0].cells[primes[0]].c.w;
-    const colX = {}; primes.forEach((p) => { colX[p] = rows[0].cells[p] ? rows[0].cells[p].c.x : null; });
-
-    ensureSvg(b); clear(); svg.style.display = 'block'; curKey = k.key + ':' + tok;
+    ensureSvg(b);
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.style.display = 'block';
     const SW = Math.max(b.scrollWidth, b.offsetWidth), SH = Math.max(b.scrollHeight, b.offsetHeight);
     svg.setAttribute('width', SW); svg.setAttribute('height', SH); svg.setAttribute('viewBox', '0 0 ' + SW + ' ' + SH);
 
     const gap = Math.min(12, (W * 0.5) / Math.max(1, R - 1));
 
-    // (A) operand fan: each prime count splits into one line per mapping row. They share the leftward
-    // jaunt (a bus along the vector row), then split into parallel descents — row 0 straight into the
-    // top of its × box, each later row peeling left then entering its box from the left.
-    primes.forEach((p) => {
-      const leftEdge = colX[p] - W / 2, vy = vp[p].c.y;
-      const tracks = rows.map((r, i) => (i === 0 ? leftEdge : leftEdge - i * gap));
-      line(Math.min(...tracks), vy, vp[p].c.l, vy, AMBER);
-      rows.forEach((r, i) => {
-        const box = r.cells[p];
-        if (!box) return;
+    // (A) operand fan: each prime count splits into one line per matrix row — shared leftward bus, then
+    // split descents; row 0 into the top of its × box, later rows peeling left into the box's left edge.
+    for (let p = 0; p < P; p++) {
+      const box0 = at(0, p); if (!box0) continue;
+      const leftEdge = box0.c.l, vy = src[p].c.y;
+      const tracks = []; for (let i = 0; i < R; i++) tracks.push(i === 0 ? leftEdge : leftEdge - i * gap);
+      line(Math.min(...tracks), vy, src[p].c.l, vy, AMBER);
+      for (let i = 0; i < R; i++) {
+        const box = at(i, p); if (!box) continue;
         if (i === 0) line(leftEdge, vy, leftEdge, box.c.y - CH, AMBER);
         else path('M ' + tracks[i] + ' ' + vy + ' V ' + box.c.y + ' H ' + leftEdge, AMBER);
-      });
-    });
+      }
+    }
 
-    // (B) the running sum along each row: emerge from the first product and ride the boxes' bottom
-    // edge through the products and +s, then jerk up just past the last product and run at gridline
-    // level into the centre of the green outline.
-    rows.forEach((r) => {
-      const by = r.cells[primes[0]].c.btm;
-      const lastBox = r.cells[primes[primes.length - 1]];
-      path('M ' + r.cells[primes[0]].c.x + ' ' + by + ' H ' + lastBox.c.rt + ' V ' + r.rc.y + ' H ' + r.rc.l, GREEN);
-    });
+    // (B) running sum per row: emerge from the first product, ride the bottom edge through products/+s,
+    // jerk up past the last product, then run at gridline level into the centre of the result outline.
+    for (let i = 0; i < R; i++) {
+      const first = at(i, 0), last = at(i, P - 1); if (!first || !last) continue;
+      path('M ' + first.c.x + ' ' + first.c.btm + ' H ' + last.c.rt + ' V ' + res[i].c.y + ' H ' + res[i].c.l, GREEN);
+    }
 
-    // (C) per-box marks: × on the left edge (where the operand line lands), the product on the bottom
-    // edge; + at each shared bottom corner between adjacent boxes.
-    rows.forEach((r) => {
-      primes.forEach((p, kx) => {
-        const box = r.cells[p]; if (!box) return;
-        chip(box.c.l, box.c.y, '×', true, AMBER);
-        const prod = (box.m != null && vp[p].v != null) ? box.m * vp[p].v : null;
-        if (prod != null) chip(box.c.x, box.c.btm, sgn(prod), false, GREEN);
-        if (kx < primes.length - 1) chip(box.c.rt, box.c.btm, '+', true, GREEN);
-      });
-    });
+    // (C) per-box marks: × on the left edge, the product on the bottom edge, + at the shared corners.
+    for (let i = 0; i < R; i++) {
+      for (let p = 0; p < P; p++) {
+        const cell = at(i, p); if (!cell) continue;
+        chip(cell.c.l, cell.c.y, '×', true, AMBER);
+        const prod = (cell.m && src[p].v) ? FR.mul(cell.m, src[p].v) : null;
+        if (prod) chip(cell.c.x, cell.c.btm, FR.str(prod), false, GREEN);
+        if (p < P - 1) chip(cell.c.rt, cell.c.btm, '+', true, GREEN);
+      }
+    }
 
-    // (D) rings on both ends: the prime counts (operand, amber) and the generator counts (result, green).
-    primes.forEach((p) => ring(vp[p].c, AMBER));
-    rows.forEach((r) => ring(r.rc, GREEN));
+    // (D) rings on both ends: the operand vector (amber) and the result vector (green).
+    for (let p = 0; p < P; p++) ring(src[p].c, AMBER);
+    for (let i = 0; i < R; i++) ring(res[i].c, GREEN);
+    return true;
   };
 
-  const hoveredInterval = (node) => {
+  const hovered = (node) => {
     if (!node || !node.closest) return null;
-    for (const k of KINDS) {
-      const vcell = node.closest('[data-eid^="' + k.vp + '"]');
-      if (vcell) return { k, tok: parseVec(vcell.getAttribute('data-eid'), k)[0] };
-      // hovering the mapped (generator-count) cell drives the same flow as the interval itself
-      const rcell = node.closest('[data-eid^="' + k.res + '"]');
-      if (rcell) { const rest = rcell.getAttribute('data-eid').slice(k.res.length); return { k, tok: rest.slice(rest.lastIndexOf(':') + 1) }; }
-    }
+    for (const flow of FLOWS) { const cell = node.closest(flow.trigger); if (cell) return { flow, cell }; }
     return null;
   };
+  const keyOf = (h) => h.flow.name + ':' + Math.round(h.cell.getBoundingClientRect().left);
 
   document.addEventListener('mouseover', (e) => {
     if (!active()) { if (curKey) clear(); return; }
-    const hit = hoveredInterval(e.target);
-    if (!hit) return;
-    if (hit.k.key + ':' + hit.tok === curKey) return;
-    draw(hit.k, hit.tok);
+    const h = hovered(e.target);
+    if (!h) return;
+    const key = keyOf(h);
+    if (key === curKey) return;
+    if (draw(h.flow, h.cell)) curKey = key;
   });
   document.addEventListener('mouseout', (e) => {
     if (!curKey) return;
-    const hit = hoveredInterval(e.relatedTarget);
-    if (hit && hit.k.key + ':' + hit.tok === curKey) return;
+    const h = hovered(e.relatedTarget);
+    if (h && keyOf(h) === curKey) return;
     clear();
   });
   window.addEventListener('scroll', () => { if (curKey) clear(); }, { capture: true, passive: true });
