@@ -310,7 +310,6 @@ def row_fans(geometry, key: str) -> bool:
 
 
 def plus_shows(geometry, resolved, collapsed, state, ckey: str) -> bool:
-    _r = resolved
     if ckey in ("interest", "held"):
         return col_open(geometry, collapsed, ckey) and (
             row_open(geometry, collapsed, "quantities") or row_open(geometry, collapsed, "vectors")
@@ -319,12 +318,12 @@ def plus_shows(geometry, resolved, collapsed, state, ckey: str) -> bool:
         return (
             tile_open(geometry, collapsed, "quantities", "targets")
             or tile_open(geometry, collapsed, "vectors", "targets")
-        ) and not _r.scalars.all_interval
+        ) and not resolved.scalars.all_interval
     if ckey == "gens":
         return tile_open(geometry, collapsed, "quantities", "gens") and state.n > 0
     if ckey == "primes":
         return tile_open(geometry, collapsed, "quantities", "primes") and (
-            _r.flags.nonstandard_domain or _r.scalars.standard_domain
+            resolved.flags.nonstandard_domain or resolved.scalars.standard_domain
         )
     if ckey == "commas":
         return tile_open(geometry, collapsed, "quantities", "commas") or tile_open(
@@ -380,10 +379,9 @@ def preset_form_label(resolved, name: str, rkey: str, ckey: str):
 
 
 def ptext_editable(resolved, rkey: str, ckey: str) -> bool:
-    _r = resolved
     if rkey == "prescaling":
-        return (rkey, ckey) == ("prescaling", "ssprimes" if _r.flags.superspace else "primes")
-    if rkey == "tuning" and _r.flags.superspace_generators:
+        return (rkey, ckey) == ("prescaling", "ssprimes" if resolved.flags.superspace else "primes")
+    if rkey == "tuning" and resolved.flags.superspace_generators:
         return ckey == "ssgens"
     return (rkey, ckey) in EDITABLE_PTEXT
 

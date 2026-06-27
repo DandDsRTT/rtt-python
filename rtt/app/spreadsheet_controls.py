@@ -42,20 +42,18 @@ def transform_cells(cells, resolved, geometry, ctx) -> tuple:
 
 
 def _filter_gridded_quantities(cells, resolved):
-    _r = resolved
-    if not _r.flags.gridded_values:
+    if not resolved.flags.gridded_values:
         return [cb for cb in cells if cb.kind not in GRIDDED_KINDS]
-    if not _r.flags.quantities:
+    if not resolved.flags.quantities:
         return [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
                 for cb in cells]
     return cells
 
 
 def _mark_doomed_unchanged_column(cells, resolved, geometry):
-    _r = resolved
-    if not ((_r.commas.pending is not None or _r.ghosts.comma) and _r.unchanged.shown and _r.dims.nu):
+    if not ((resolved.commas.pending is not None or resolved.ghosts.comma) and resolved.unchanged.shown and resolved.dims.nu):
         return cells
-    doomed_x = query.comma_left(geometry, _r, _r.dims.nc_shown + _r.dims.nu - 1)
+    doomed_x = query.comma_left(geometry, resolved, resolved.dims.nc_shown + resolved.dims.nu - 1)
     return [replace(cb, preview_remove=True)
             if (cb.w == COL_W and cb.x == doomed_x
                 and cb.kind not in ("count", "caption", "colgrip"))
@@ -64,10 +62,9 @@ def _mark_doomed_unchanged_column(cells, resolved, geometry):
 
 
 def _mark_born_column(cells, resolved, geometry):
-    _r = resolved
-    if not _r.unchanged.born:
+    if not resolved.unchanged.born:
         return cells
-    born_x = query.comma_left(geometry, _r, _r.dims.nc_shown + _r.dims.nu - 1)
+    born_x = query.comma_left(geometry, resolved, resolved.dims.nc_shown + resolved.dims.nu - 1)
     return [replace(cb, pending=True)
             if (cb.w == COL_W and cb.x == born_x
                 and cb.kind not in ("count", "caption", "colgrip"))
@@ -89,22 +86,21 @@ def _dual_preview(cb, axes):
 
 
 def _mark_dual_axis_previews(cells, resolved, geometry, ctx):
-    _r = resolved
     remove_rows = change_rows = remove_commas = change_commas = frozenset()
-    if _r.commas.pending is not None and _r.dims.r:
-        remove_rows, change_rows = frozenset({_r.dims.r - 1}), frozenset(range(_r.dims.r - 1))
-    if ctx.pending_mapping_row is not None and _r.dims.nc:
-        remove_commas, change_commas = frozenset({_r.dims.nc - 1}), frozenset(range(_r.dims.nc - 1))
+    if resolved.commas.pending is not None and resolved.dims.r:
+        remove_rows, change_rows = frozenset({resolved.dims.r - 1}), frozenset(range(resolved.dims.r - 1))
+    if ctx.pending_mapping_row is not None and resolved.dims.nc:
+        remove_commas, change_commas = frozenset({resolved.dims.nc - 1}), frozenset(range(resolved.dims.nc - 1))
     if ctx.preview_remove is not None:
         axis, idx = ctx.preview_remove
         if axis == "comma":
-            remove_commas, change_rows = frozenset({idx}), frozenset(range(_r.dims.r))
+            remove_commas, change_rows = frozenset({idx}), frozenset(range(resolved.dims.r))
         else:
-            remove_rows, change_commas = frozenset({idx}), frozenset(range(_r.dims.nc))
+            remove_rows, change_commas = frozenset({idx}), frozenset(range(resolved.dims.nc))
     if not (remove_rows or change_rows or remove_commas or change_commas):
         return cells
-    red_xs = frozenset(query.comma_left(geometry, _r, c) for c in remove_commas)
-    amber_xs = frozenset(query.comma_left(geometry, _r, c) for c in change_commas)
+    red_xs = frozenset(query.comma_left(geometry, resolved, c) for c in remove_commas)
+    amber_xs = frozenset(query.comma_left(geometry, resolved, c) for c in change_commas)
     axes = (remove_rows, red_xs, change_rows, amber_xs)
     return [_dual_preview(cb, axes) for cb in cells]
 
@@ -140,16 +136,15 @@ def _is_sole_option(options, value) -> bool:
 
 
 def _preset_locked(resolved, ctx, name: str) -> bool:
-    _r = resolved
     if name == "tuning":
         options = presets.tuning_scheme_options(
             service.is_all_interval(ctx.tuning_scheme),
             ctx.settings["alt_complexity"], ctx.settings["weighting"],
             ctx.settings["terminology"])
-        return _is_sole_option(options, _r.scalars.displayed_tuning_name)
+        return _is_sole_option(options, resolved.scalars.displayed_tuning_name)
     if name == "prescaler":
         return _is_sole_option(presets.prescaler_options(ctx.settings["alt_complexity"]),
-                               _r.labels.realized_prescaler)
+                               resolved.labels.realized_prescaler)
     if name == "projection":
         return not presets.projection_options(ctx.state)
     return False
@@ -157,7 +152,6 @@ def _preset_locked(resolved, ctx, name: str) -> bool:
 
 def _control_box(cells, blocks, resolved, geometry, box_id: str, ckey: str, top, cap_w, label,
                  disabled: bool = False, scheme_btn: bool = False, form_chooser=None):
-    _r = resolved
     form_label = form_chooser[1] if form_chooser else None
     dropdown_w, label_h, box_h = query.control_dims(geometry, ckey, cap_w, label, scheme_btn, form_label)
     box_x, box_y = geometry.col_x[ckey], top + BOX_OUTER
@@ -173,7 +167,7 @@ def _control_box(cells, blocks, resolved, geometry, box_id: str, ckey: str, top,
         fid, fcap = form_chooser
         form_y = ctrl_y + PRESET_H + label_h + BAND_GAP
         cells.append(CellBox(fid, ctrl_x, form_y, dropdown_w, PRESET_H, "formchooser",
-                             text=_r.canon.mapping_form_key if fid.endswith(":mapping") else _r.canon.comma_basis_form_key))
+                             text=resolved.canon.mapping_form_key if fid.endswith(":mapping") else resolved.canon.comma_basis_form_key))
         cells.append(CellBox(f"{fid}:label", ctrl_x, form_y + PRESET_H, dropdown_w, CAPTION_LINE,
                              "caption", text=fcap, align="left"))
     return ctrl_x, dropdown_w, ctrl_y
@@ -187,10 +181,9 @@ def _emit_scheme_button(cells, x, y, ckey: str) -> None:
 
 
 def _emit_preset(cells, blocks, resolved, geometry, ctx, preset_text, cid, name, rkey, ckey, label):
-    _r = resolved
     if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
         return
-    if geometry.size_factor or _r.scalars.prescaler_is_matrix:
+    if geometry.size_factor or resolved.scalars.prescaler_is_matrix:
         label = _pretransform_label(label)
     top = query.ptext_band_y(geometry, rkey) + geometry.rows[rkey].ptext
     disabled = (name == "target" and service.is_all_interval(ctx.tuning_scheme)) \
@@ -211,27 +204,25 @@ def _emit_preset(cells, blocks, resolved, geometry, ctx, preset_text, cid, name,
 
 
 def _emit_presets(cells, blocks, resolved, geometry, ctx) -> None:
-    _r = resolved
-    if not _r.flags.presets:
+    if not resolved.flags.presets:
         return
     preset_text = {"temperament": "", "target": ctx.target_spec,
                       "tuning": terminology.scheme(
                           service.base_scheme_name(ctx.tuning_scheme),
                           ctx.settings["terminology"]) or "",
-                      "prescaler": _r.labels.realized_prescaler or "",
-                      "projection": _r.scalars.displayed_projection_name or ""}
+                      "prescaler": resolved.labels.realized_prescaler or "",
+                      "projection": resolved.scalars.displayed_projection_name or ""}
     for name, rkey, ckey, label in PRESETS:
-        col = "ssprimes" if name == "prescaler" and _r.flags.superspace else ckey
+        col = "ssprimes" if name == "prescaler" and resolved.flags.superspace else ckey
         _emit_preset(cells, blocks, resolved, geometry, ctx, preset_text, f"preset:{name}", name, rkey, col, label)
     for name, rkey, ckey, label in PRESET_COPIES:
         col = "ssgens" if (name == "tuning" and ckey == "gens"
-                           and _r.flags.superspace_generators) else ckey
+                           and resolved.flags.superspace_generators) else ckey
         _emit_preset(cells, blocks, resolved, geometry, ctx, preset_text, f"preset:{name}:{col}", name, rkey, col, label)
 
 
 def _emit_all_interval_check_fallback(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
-    if ctx.settings["all_interval"] and not _r.flags.presets and query.tile_open(geometry, ctx.collapsed, "vectors", "targets"):
+    if ctx.settings["all_interval"] and not resolved.flags.presets and query.tile_open(geometry, ctx.collapsed, "vectors", "targets"):
         top = query.ptext_band_y(geometry, "vectors") + geometry.rows["vectors"].ptext
         emit_option_check(cells, "all_interval", "all-interval",
                            service.is_all_interval(ctx.tuning_scheme),
@@ -239,20 +230,18 @@ def _emit_all_interval_check_fallback(cells, resolved, geometry, ctx) -> None:
 
 
 def _emit_form_choosers(cells, blocks, resolved, geometry, ctx) -> None:
-    _r = resolved
-    if _r.flags.form_controls and not _r.flags.presets:
+    if resolved.flags.form_controls and not resolved.flags.presets:
         for name, rkey, ckey, label in FORM_CHOOSERS:
             if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
                 continue
             top = query.ptext_band_y(geometry, rkey) + geometry.rows[rkey].ptext + geometry.rows[rkey].pre
             cx, cw, cy = _control_box(cells, blocks, resolved, geometry, f"block:formchooser:{name}", ckey, top, PRESET_W, label)
             cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser",
-                                 text=_r.canon.mapping_form_key if name == "mapping" else _r.canon.comma_basis_form_key))
+                                 text=resolved.canon.mapping_form_key if name == "mapping" else resolved.canon.comma_basis_form_key))
 
 
 def _emit_scheme_buttons(cells, blocks, resolved, geometry, ctx) -> None:
-    _r = resolved
-    if ctx.settings["projection"] and not _r.flags.presets:
+    if ctx.settings["projection"] and not resolved.flags.presets:
         for ckey in ("primes", "gens"):
             if not query.tile_open(geometry, ctx.collapsed, "projection", ckey):
                 continue
@@ -264,18 +253,17 @@ def _emit_scheme_buttons(cells, blocks, resolved, geometry, ctx) -> None:
 
 
 def _emit_ptext_band(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
-    if _r.flags.plain_text_values:
+    if resolved.flags.plain_text_values:
         for (rkey, ckey), text in geometry.ptext_strings.items():
             if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
                 continue
-            if ((rkey, ckey) == ("vectors", "commas") and _r.commas.pending is not None) \
-                    or ((rkey, ckey) == ("vectors", "targets") and _r.targets.pending is not None) \
+            if ((rkey, ckey) == ("vectors", "commas") and resolved.commas.pending is not None) \
+                    or ((rkey, ckey) == ("vectors", "targets") and resolved.targets.pending is not None) \
                     or ((rkey, ckey) == ("mapping", "primes") and ctx.pending_mapping_row is not None):
                 kind = "ptextpending"
-            elif query.ptext_editable(_r, rkey, ckey) and (ckey != "targets" or _r.scalars.targets_editable):
+            elif query.ptext_editable(resolved, rkey, ckey) and (ckey != "targets" or resolved.scalars.targets_editable):
                 kind = "ptextedit"
             else:
                 kind = "ptext"
             cells.append(CellBox(f"ptext:{rkey}:{ckey}", geometry.col_x[ckey], query.ptext_band_y(geometry, rkey),
-                                 geometry.col_w[ckey], query.ptext_height(_r, rkey, ckey), kind, text=text))
+                                 geometry.col_w[ckey], query.ptext_height(resolved, rkey, ckey), kind, text=text))

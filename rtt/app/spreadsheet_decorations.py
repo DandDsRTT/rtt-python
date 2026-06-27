@@ -116,14 +116,12 @@ def _emit_axes(lines, resolved, geometry, ctx) -> None:
 
 
 def _matlabel_group_count(resolved):
-    _r = resolved
-    return {"gens": _r.dims.r, "primes": _r.dims.d, "commas": _r.dims.nc + _r.dims.nu, "targets": _r.dims.k,
-            "held": _r.dims.nh, "detempering": _r.dims.r, "interest": _r.dims.mi,
-            "canongens": _r.dims.rc, "ssgens": _r.dims.rL, "ssprimes": _r.dims.dL}
+    return {"gens": resolved.dims.r, "primes": resolved.dims.d, "commas": resolved.dims.nc + resolved.dims.nu, "targets": resolved.dims.k,
+            "held": resolved.dims.nh, "detempering": resolved.dims.r, "interest": resolved.dims.mi,
+            "canongens": resolved.dims.rc, "ssgens": resolved.dims.rL, "ssprimes": resolved.dims.dL}
 
 
 def _emit_matrix_row_labels(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
 
     def prescale_top(i):
         return query.subrow_top(geometry, "prescaling", i)
@@ -141,25 +139,25 @@ def _emit_matrix_row_labels(cells, resolved, geometry, ctx) -> None:
         ("ss_vectors", "ssprimes"): lambda i: query.ss_vec_top(geometry, i),
         ("ss_projection", "ssprimes"): lambda i: query.ss_proj_top(geometry, i),
     }
-    row_count = {("mapping", "primes"): _r.dims.r,
-                 ("canon", "primes"): _r.dims.rc,
-                 ("mapping", "canongens"): _r.dims.r,
-                 ("vectors", "primes"): _r.dims.d,
-                 ("projection", "primes"): _r.dims.d,
-                 ("projection", "ssprimes"): _r.dims.d,
+    row_count = {("mapping", "primes"): resolved.dims.r,
+                 ("canon", "primes"): resolved.dims.rc,
+                 ("mapping", "canongens"): resolved.dims.r,
+                 ("vectors", "primes"): resolved.dims.d,
+                 ("projection", "primes"): resolved.dims.d,
+                 ("projection", "ssprimes"): resolved.dims.d,
                  ("prescaling", "primes"): geometry.prescale_rows + geometry.size_rows,
                  ("prescaling", "ssprimes"): geometry.prescale_rows + geometry.size_rows,
-                 ("ss_mapping", "ssprimes"): _r.dims.rL,
-                 ("ss_mapping", "primes"): _r.dims.rL,
-                 ("ss_vectors", "ssprimes"): _r.dims.dL,
-                 ("ss_projection", "ssprimes"): _r.dims.dL}
-    for (rkey, ckey), glyph in _r.labels.row_labels.items():
+                 ("ss_mapping", "ssprimes"): resolved.dims.rL,
+                 ("ss_mapping", "primes"): resolved.dims.rL,
+                 ("ss_vectors", "ssprimes"): resolved.dims.dL,
+                 ("ss_projection", "ssprimes"): resolved.dims.dL}
+    for (rkey, ckey), glyph in resolved.labels.row_labels.items():
         if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
             continue
         top = row_top[(rkey, ckey)]
         for i in range(row_count[(rkey, ckey)]):
             size_row = rkey == "prescaling" and i == geometry.prescale_rows and geometry.size_rows
-            g = query.form_subscripted(_r, glyph, rkey, ckey)
+            g = query.form_subscripted(resolved, glyph, rkey, ckey)
             text = "𝒛" if size_row else f"{g}{_sub(i + 1)}"
             cells.append(CellBox(
                 f"matlabel:row:{rkey}:{ckey}:{i}",
@@ -170,24 +168,23 @@ def _emit_matrix_row_labels(cells, resolved, geometry, ctx) -> None:
 
 
 def _emit_matrix_col_labels(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     group_count = _matlabel_group_count(resolved)
-    for (rkey, ckey), label in _r.labels.col_labels.items():
+    for (rkey, ckey), label in resolved.labels.col_labels.items():
         if ckey not in group_count or rkey not in geometry.rows or geometry.rows[rkey].matlabel_top is None:
             continue
         if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
             continue
         col_label = label
         if (rkey, ckey) == ("weight", "targets") and geometry.all_interval_simplicity_weight:
-            col_label = functools.partial(query.weight_simplicity_header, _r)
+            col_label = functools.partial(query.weight_simplicity_header, resolved)
         left = geometry.group_left[ckey]
         y = geometry.rows[rkey].matlabel_top
         for i in range(group_count[ckey]):
-            glyph = col_label if callable(col_label) else query.form_subscripted(_r, col_label, rkey, ckey)
+            glyph = col_label if callable(col_label) else query.form_subscripted(resolved, col_label, rkey, ckey)
             text = glyph(i) if callable(glyph) else f"{glyph}{_sub(i + 1)}"
-            if _r.unchanged.shown and ckey == "commas":
+            if resolved.unchanged.shown and ckey == "commas":
                 text = text.replace("𝐜", "𝐯")
-            x = left[query.comma_value_pos(_r, i)] if ckey == "commas" else left[i]
+            x = left[query.comma_value_pos(resolved, i)] if ckey == "commas" else left[i]
             cells.append(CellBox(
                 f"matlabel:col:{rkey}:{ckey}:{i}",
                 x, y, COL_W, MATLABEL_H,
@@ -226,13 +223,12 @@ def _as_groups(g):
 
 
 def _tile_groups(resolved, rkey, ckey):
-    _r = resolved
     region = set()
     if rkey == "canon" or ckey == "canongens":
         region |= {"temperament", "form"}
     if rkey in ("projection", "tuning"):
         region |= {"tuning"}
-    if _r.unchanged.shown and ckey == "commas":
+    if resolved.unchanged.shown and ckey == "commas":
         return {"temperament", "tuning"} | region
     if rkey in SPINE_ROWS and ckey in SPINE_COLUMN_GROUP:
         return _as_groups(SPINE_COLUMN_GROUP[ckey]) | region
@@ -284,60 +280,56 @@ def _emit_washes(blocks, resolved, geometry, ctx) -> None:
 
 
 def _caption_equivalences(resolved, geometry, ai, slope) -> dict:
-    _r = resolved
     equivalences = {**EQUIVALENCES,
-                    ("weight", "targets"): "" if _r.scalars.custom_weights_active else WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
-                    ("prescaling", "ssprimes" if _r.flags.superspace else "primes"): _r.labels.prescaler_equivalence,
+                    ("weight", "targets"): "" if resolved.scalars.custom_weights_active else WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
+                    ("prescaling", "ssprimes" if resolved.flags.superspace else "primes"): resolved.labels.prescaler_equivalence,
                     **(ALL_INTERVAL_EQUIVALENCES if ai else {}),
-                    **(FORM_EQUIVALENCES if _r.flags.form_subscript else {}),
-                    **({("mapping", "primes"): f" = 𝐹𝑀{SUBSCRIPT_C}"} if _r.flags.canon else {}),
+                    **(FORM_EQUIVALENCES if resolved.flags.form_subscript else {}),
+                    **({("mapping", "primes"): f" = 𝐹𝑀{SUBSCRIPT_C}"} if resolved.flags.canon else {}),
                     **({("vectors", "commas"): " = C|U", ("mapping", "commas"): ""}
-                       if _r.unchanged.shown else {})}
-    if _r.flags.superspace:
+                       if resolved.unchanged.shown else {})}
+    if resolved.flags.superspace:
         equivalences[("projection", "primes")] = (
-            equivalences[("projection", "primes")] + query.projection_superspace_tail(_r))
+            equivalences[("projection", "primes")] + query.projection_superspace_tail(resolved))
     if ai:
-        if not _r.scalars.prescaler_is_matrix and not geometry.size_factor:
-            equivalences[("complexity", "targets")] = f" = diag({_r.labels.prescaler_symbol})"
-            equivalences[("weight", "targets")] = f" = diag({_r.labels.prescaler_symbol})⁻¹"
-        equivalences[("damage", "targets")] = f" = |𝒓|{_r.labels.prescaler_symbol}⁻¹"
-    if not _r.flags.weighting:
+        if not resolved.scalars.prescaler_is_matrix and not geometry.size_factor:
+            equivalences[("complexity", "targets")] = f" = diag({resolved.labels.prescaler_symbol})"
+            equivalences[("weight", "targets")] = f" = diag({resolved.labels.prescaler_symbol})⁻¹"
+        equivalences[("damage", "targets")] = f" = |𝒓|{resolved.labels.prescaler_symbol}⁻¹"
+    if not resolved.flags.weighting:
         equivalences[("damage", "targets")] = " = |𝒓|" if ai else " = |𝐞|"
     return equivalences
 
 
 def _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, rkey, ckey, cy) -> float:
-    _r = resolved
     cy += BAND_GAP
-    equiv = caption_equivs.get((rkey, ckey), "") if _r.flags.equivalences else ""
-    base_symbol = _r.labels.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
+    equiv = caption_equivs.get((rkey, ckey), "") if resolved.flags.equivalences else ""
+    base_symbol = resolved.labels.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
     if caption_ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:
         base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
-    if _r.unchanged.shown and ckey == "commas":
+    if resolved.unchanged.shown and ckey == "commas":
         base_symbol = base_symbol.replace(SUBSCRIPT_C, "\x00").replace("C", "V").replace("\x00", SUBSCRIPT_C)
-    base_symbol = query.form_subscripted(_r, base_symbol, rkey, ckey)
-    glyph = base_symbol if (_r.flags.symbols or equiv) else ""
+    base_symbol = query.form_subscripted(resolved, base_symbol, rkey, ckey)
+    glyph = base_symbol if (resolved.flags.symbols or equiv) else ""
     if glyph or equiv:
         cells.append(CellBox(f"symbol:{rkey}:{ckey}", geometry.col_x[ckey], cy, geometry.col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
     return cy + SYMBOL_H
 
 
 def _emit_unchanged_counts_caption(cells, resolved, geometry, rkey, cy) -> None:
-    _r = resolved
-    comma_half_w = _r.dims.nc * COL_W + _r.unchanged.empty_comma_w
+    comma_half_w = resolved.dims.nc * COL_W + resolved.unchanged.empty_comma_w
     if comma_half_w:
-        comma_half_x = geometry.commas_x if _r.unchanged.empty_comma_w else query.comma_left(geometry, _r, 0)
+        comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_w else query.comma_left(geometry, resolved, 0)
         cells.append(CellBox("caption:counts:commas", comma_half_x, cy, comma_half_w,
                              geometry.rows[rkey].cap, "caption", text="nullity"))
-    cells.append(CellBox("caption:counts:commas:u", query.comma_left(geometry, _r, _r.dims.nc_shown), cy, _r.dims.nu * COL_W,
+    cells.append(CellBox("caption:counts:commas:u", query.comma_left(geometry, resolved, resolved.dims.nc_shown), cy, resolved.dims.nu * COL_W,
                          geometry.rows[rkey].cap, "caption", text="unchanged interval count"))
 
 
 def _emit_tile_caption(cells, resolved, geometry, caption_ai, rkey, ckey, name, cy) -> None:
-    _r = resolved
-    kw = MNEMONICS.get((rkey, ckey)) if _r.flags.mnemonics else None
+    kw = MNEMONICS.get((rkey, ckey)) if resolved.flags.mnemonics else None
     underlines = ((name.index(kw), 1),) if (kw and kw in name) else ()
-    if _r.flags.mnemonics and caption_ai:
+    if resolved.flags.mnemonics and caption_ai:
         underlines += tuple((name.index(w), 1)
                             for w in ALL_INTERVAL_MNEMONICS.get((rkey, ckey), ()) if w in name)
     cap_x, cap_w = query.tile_span_box(geometry, rkey, ckey)
@@ -346,38 +338,35 @@ def _emit_tile_caption(cells, resolved, geometry, caption_ai, rkey, ckey, name, 
 
 
 def _emit_tile_units(cells, resolved, geometry, rkey, ckey) -> None:
-    _r = resolved
-    unit = query.tile_unit(_r, rkey, ckey)
+    unit = query.tile_unit(resolved, rkey, ckey)
     if unit and not (rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")):
-        unit = _subscript_coord(unit, "p", _r.labels.domain_label)
-    if _r.flags.units and unit:
+        unit = _subscript_coord(unit, "p", resolved.labels.domain_label)
+    if resolved.flags.units and unit:
         uy = geometry.rows[rkey].y + geometry.rows[rkey].h + geometry.rows[rkey].frame + geometry.rows[rkey].cpick + geometry.rows[rkey].sym + geometry.rows[rkey].cap
         cells.append(CellBox(f"units:{rkey}:{ckey}", geometry.col_x[ckey], uy, geometry.col_w[ckey], UNIT_H,
                              "units", text=f"units: {unit}"))
 
 
 def _emit_tile_symbols_captions(cells, resolved, geometry, caption_equivs, caption_ai, rkey, ckey, name) -> None:
-    _r = resolved
     if caption_ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:
         name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
     cy = geometry.rows[rkey].y + geometry.rows[rkey].h + geometry.rows[rkey].frame + geometry.rows[rkey].cpick
-    if (_r.flags.symbols or _r.flags.equivalences) and rkey in BANDS["symbol"].rows:
+    if (resolved.flags.symbols or resolved.flags.equivalences) and rkey in BANDS["symbol"].rows:
         cy = _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, rkey, ckey, cy)
-    if _r.flags.names and _r.unchanged.shown and (rkey, ckey) == ("counts", "commas"):
+    if resolved.flags.names and resolved.unchanged.shown and (rkey, ckey) == ("counts", "commas"):
         _emit_unchanged_counts_caption(cells, resolved, geometry, rkey, cy)
         return
-    if _r.flags.names:
+    if resolved.flags.names:
         _emit_tile_caption(cells, resolved, geometry, caption_ai, rkey, ckey, name, cy)
     _emit_tile_units(cells, resolved, geometry, rkey, ckey)
 
 
 def _emit_symbols_captions(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     caption_ai = service.is_all_interval(ctx.tuning_scheme)
     slope = service.damage_weight_slope(ctx.tuning_scheme)
     caption_equivs = _caption_equivalences(resolved, geometry, caption_ai, slope)
-    for (rkey, ckey), name in _r.labels.captions.items():
-        if ckey == "interest" and not _r.interest.vectors:
+    for (rkey, ckey), name in resolved.labels.captions.items():
+        if ckey == "interest" and not resolved.interest.vectors:
             continue
         if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
             continue
