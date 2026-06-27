@@ -5793,10 +5793,9 @@ def test_every_implemented_toggle_actually_changes_the_layout():
     # NOT here: its Show toggle reveals the in-grid checkbox, which IS a settings-driven layout change.
     # Its mode effect — Tₚ=I etc. — is keyed off the scheme and covered by the all-interval tests.)
     MODE_TOGGLES = {"custom_weights"}
-    # the `interface` behaviours gate app-wide FEEL, not grid content: animations and tooltips ride a
-    # <body> class (CSS), preview highlighting is gated in the renderer's hover/ring path, and mapping
-    # demos rides a <body> class driving a client-side hover overlay — none is read by spreadsheet.build,
-    # so flipping one is a build no-op the same way a mode toggle is.
+    # the `interface` behaviours gate app-wide FEEL, not grid content: animations/tooltips/mapping_demos
+    # ride a <body> class and preview highlighting is gated in the renderer's hover path — none is
+    # read by spreadsheet.build, so flipping one is a build no-op the same way a mode toggle is.
     BEHAVIOUR_TOGGLES = {"animations", "preview_highlighting", "tooltips", "mapping_demos"}
     for key in settings.IMPLEMENTED:
         if key in settings.GROUPING_PARENTS or key in MODE_TOGGLES or key in BEHAVIOUR_TOGGLES:
