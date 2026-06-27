@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from rtt.app import presets, service, terminology
+from rtt.app import presets, service
 from rtt.app.editor_state import _same_cents_map
 from rtt.app.service.state import TemperamentState
 
@@ -100,9 +100,7 @@ def displayed_tuning_scheme_name(s: Solve) -> str | None:
             return None
     elif not _same_cents_map(held_optimum, bare):
         return None
-    return terminology.scheme_name(
-        service.base_scheme_name(s.tuning_scheme), s.settings.get("dd_terminology", True)
-    )
+    return service.base_scheme_name(s.tuning_scheme)
 
 
 def tuning_is_optimized(s: Solve) -> bool:

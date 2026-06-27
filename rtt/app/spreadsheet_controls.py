@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from rtt.app import presets, service
+from rtt.app import presets, service, terminology
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     BLANKED_NUMBER_KINDS,
@@ -144,7 +144,8 @@ def _preset_locked(resolved, ctx, name: str) -> bool:
     if name == "tuning":
         options = presets.tuning_scheme_options(
             service.is_all_interval(ctx.tuning_scheme),
-            ctx.settings["alt_complexity"], ctx.settings["weighting"])
+            ctx.settings["alt_complexity"], ctx.settings["weighting"],
+            ctx.settings["dd_terminology"])
         return _is_sole_option(options, _r.scalars.displayed_tuning_name)
     if name == "prescaler":
         return _is_sole_option(presets.prescaler_options(ctx.settings["alt_complexity"]),
@@ -214,7 +215,9 @@ def _emit_presets(cells, blocks, resolved, geometry, ctx) -> None:
     if not _r.flags.presets:
         return
     preset_text = {"temperament": "", "target": ctx.target_spec,
-                      "tuning": service.base_scheme_name(ctx.tuning_scheme) or "",
+                      "tuning": terminology.scheme_name(
+                          service.base_scheme_name(ctx.tuning_scheme),
+                          ctx.settings["dd_terminology"]) or "",
                       "prescaler": _r.labels.realized_prescaler or "",
                       "projection": _r.scalars.displayed_projection_name or ""}
     for name, rkey, ckey, label in PRESETS:
