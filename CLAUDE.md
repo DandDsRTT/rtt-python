@@ -300,6 +300,29 @@ below bans for agent launches). It is a long-lived server the user drives, so st
 background and leave it up; never use 8137/8188/8189 (see the port section). This does **not** relax
 "never launch on 8137" — it is an explicit case of the existing 8200+ rule, now also serving the user.
 
+## "Spawn an agent" / "break this out" means a TASK CHIP — never a hidden subagent
+
+When the user asks you to **spawn an agent**, **break out** unrelated work, or **hand something off
+to a separate agent** to be handled on its own, create a **task chip** with `spawn_task`
+(`mcp__ccd_session__spawn_task`). The chip is what the user expects: they click it to open an
+**independent, interactive session** (its own worktree) that they can read and steer themselves.
+Write the chip a full, self-contained brief — the spawned session has none of this conversation's
+context.
+
+Do **NOT** fulfill such a request with the **`Agent` tool**. That tool launches a *background
+subagent that runs inside your session, reports only to you, and is invisible and un-steerable to the
+user* — the opposite of what "spawn an agent" means here. Never silently use a background `Agent`
+subagent to carry out user-facing delegated work or to write/land code on the user's behalf. The
+`Agent` tool is only for **your own** internal sub-tasks whose result *you* consume (read-only
+exploration, a quick search) — not for breaking off a stream of work the user wants to own.
+
+Two more reasons the background-`Agent` path is actively wrong for code work here: (1) a subagent
+working in a worktree trips the **concurrent-worktree sync race** — its *uncommitted* edits bleed
+into your worktree and get committed under your branch, corrupting both (this has happened); (2) you
+cannot honestly report its status, because it lands PRs you can't see. If you ever believe a
+background `Agent` subagent is genuinely the right tool for something user-facing, **ask first** —
+never just do it.
+
 ## Changed a workflow rule? Hand the user a broadcast for in-flight agents
 
 This file is loaded into an agent's context **at spawn**. So an edit here reaches every *newly*
