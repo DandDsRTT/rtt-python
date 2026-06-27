@@ -188,20 +188,35 @@ conflicts that must be resolved") or gets **dropped from the queue on a red cand
 just sits there unmerged forever unless you act. So your task is not finished until `main` actually
 contains your commit. **Watch the PR to a terminal state, then act on whatever it became.**
 
-**The watcher must judge the `merge_group` run, NOT `gh pr checks`.** The queue's required check
-runs on a **`merge_group`** event against a synthetic candidate branch (`gh-readonly-queue/main/
-pr-N-<sha>` = your PR merged onto current `main`). Its pass/fail **never appears in `gh pr checks`**,
-which lists only the PR-event checks. So a watcher that polls `gh pr checks` is **blind**: when a
-candidate fails, the queue drops the PR and silently un-arms auto-merge, leaving it OPEN + green-PR-
-checks, sitting as "merge when ready" forever — and the blind watcher loops without ever waking you
-(a real lapse this has caused). Key the watcher on the candidate run's conclusion instead:
+**The watcher must judge BOTH the `merge_group` candidate run AND the PR's own checks — keying on
+either one alone is blind.** Two different failures each leave the PR sitting unmerged forever, and
+they surface in *different* places:
+
+- A **candidate (`merge_group`) failure.** The queue builds a synthetic candidate branch
+  (`gh-readonly-queue/main/pr-N-<sha>` = your PR merged onto current `main`) and runs the gate on it.
+  Its pass/fail **never appears in `gh pr checks`**. When it fails, the queue drops the PR and
+  un-arms auto-merge, leaving it OPEN with green PR-checks, "merge when ready" forever. A watcher
+  polling only `gh pr checks` is blind to this.
+- A **PR-event check failure.** This repo *also* runs the full suite as a `pull_request` check
+  (`full-suite`), which **does** appear in `gh pr checks`. When it fails (e.g. a teammate's just-
+  landed change added a test your branch now breaks — surfaced because the check tests your branch
+  *merged with main*), the PR goes **`BLOCKED`** (not `DIRTY`), never enters the queue, and
+  auto-merge stays armed but **never fires**. A watcher keyed only on the `merge_group` run is blind
+  to THIS: no candidate run is ever created, so it loops forever (a real lapse this has caused — an
+  agent waited on a merge that a failed `full-suite` had already doomed). `BLOCKED` is also the
+  normal state while a required check is still *pending*, so distinguish: exit only on a check whose
+  state is actually `fail`, not merely on `BLOCKED`.
+
+So watch both — exit on a failed PR-event check OR a failed candidate run OR `DIRTY` OR a terminal
+PR state:
 
 ```bash
 # Run in the background. Exits — and re-engages you — ONLY when there's something to do:
-#   0  merged           → report "PR #N merged" once, then stop
-#   10 conflicts(DIRTY) → rebase onto main, push --force-with-lease, re-enqueue, re-arm
-#   11 candidate failed → read the merge_group run log, fix, push, re-enqueue, re-arm
-#   12 closed           → unexpected; surface to the user
+#   0  merged             → report "PR #N merged" once, then stop
+#   10 conflicts(DIRTY)   → rebase onto main, push --force-with-lease, re-enqueue, re-arm
+#   11 candidate failed   → read the merge_group run log, fix, push, re-enqueue, re-arm
+#   12 closed             → unexpected; surface to the user
+#   13 PR check failed    → read the failing pull_request run log, fix, push (auto-merge stays armed)
 pr=$(gh pr view --json number -q .number)
 mg() { gh run list --event merge_group --limit 20 --json databaseId,status,conclusion,headBranch \
   -q "[.[]|select(.headBranch|contains(\"pr-$pr-\"))]|sort_by(.databaseId)|last|\"\(.databaseId) \(.conclusion//\"none\")\""; }
@@ -211,6 +226,8 @@ while :; do
   [ "$st" = MERGED ] && exit 0
   [ "$st" = CLOSED ] && exit 12
   [ "$(gh pr view "$pr" --json mergeStateStatus -q .mergeStateStatus)" = DIRTY ] && exit 10
+  # a PR-event required check that has actually concluded `fail` (NOT merely pending/BLOCKED):
+  if gh pr checks "$pr" 2>/dev/null | grep -qiw fail; then exit 13; fi
   latest=$(mg); rid=${latest%% *}
   if [ -n "$rid" ] && [ "${rid:-0}" -gt "$base" ] 2>/dev/null; then
     case "$latest" in *failure) exit 11;; esac
@@ -219,8 +236,11 @@ while :; do
 done
 ```
 
-When the watcher exits, do the matching action; for the conflict/candidate-fail cases **re-arm it**
-(recompute `base` first) — loop until the PR is genuinely merged. Break silence only to report the
+When the watcher exits, do the matching action; for the DIRTY / candidate-fail / PR-check-fail cases
+**fix and re-push, then re-arm it** (recompute `base` first) — loop until the PR is genuinely merged.
+For exit 13 the fix is the same shape as a candidate fail: read the failing run
+(`gh run view <id> --log-failed`), fix, push (`--force-with-lease` after a rebase); auto-merge is
+still armed, so no re-enqueue is needed unless it also got dequeued. Break silence only to report the
 merge or ask a decision you genuinely can't make.
 
 **Resolving a `DIRTY` or candidate-failed PR.** A candidate fails for one of two reasons, both fixed
