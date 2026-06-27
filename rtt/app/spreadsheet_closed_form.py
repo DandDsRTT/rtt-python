@@ -42,7 +42,7 @@ def _ss_closed_form_operand(resolved, ctx, key, group, i, value):
 
 def _closed_form(resolved, ctx):
     _r = resolved
-    if not _r.flags.math or _r.tuning.from_generators:
+    if not _r.flags.math_expressions or _r.tuning.from_generators:
         return None
     return service.closed_form_tuning(
         ctx.state.mapping,
@@ -58,7 +58,7 @@ def _closed_form(resolved, ctx):
 
 def _ss_closed_form(resolved, ctx):
     _r = resolved
-    if not (_r.flags.math and _r.flags.superspace):
+    if not (_r.flags.math_expressions and _r.flags.superspace):
         return None
     return service.closed_form_superspace_tuning(ctx.state, ctx.tuning_scheme)
 

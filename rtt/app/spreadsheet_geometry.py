@@ -83,7 +83,7 @@ def declare_interval_column_tiles(resolved):
         ("block:prescaling:detempering", "prescaling", "detempering"),
         ("block:complexity:detempering", "complexity", "detempering"),
         ("block:urow:detempering", "units", "detempering"),
-    ) if _r.flags.detempering else ()
+    ) if _r.flags.generator_detempering else ()
     return interest_tiles, held_tiles, detempering_tiles
 
 
@@ -105,7 +105,7 @@ def _projection_col_tiles(resolved):
         ("block:proj:quantities", "projection", "quantities"),
         ("block:proj:units", "projection", "units"),
     )
-    if _r.flags.detempering:
+    if _r.flags.generator_detempering:
         tiles += (("block:proj:detempering", "projection", "detempering"),)
     if _r.scalars.targets_editable:
         tiles += (("block:proj:targets", "projection", "targets"),)
@@ -131,7 +131,7 @@ def _ss_projection_col_tiles(resolved):
     )
     if _r.unchanged.shown:
         tiles += (("block:ssproj:commas", "ss_projection", "commas"),)
-    if _r.flags.detempering:
+    if _r.flags.generator_detempering:
         tiles += (("block:ssproj:detempering", "ss_projection", "detempering"),)
     if _r.scalars.targets_editable:
         tiles += (("block:ssproj:targets", "ss_projection", "targets"),)
@@ -147,7 +147,7 @@ def _canon_col_tiles(resolved):
     if not _r.flags.canon:
         return ()
     tiles = (("block:canon_comma", "canon", "commas"),)
-    if _r.flags.detempering:
+    if _r.flags.generator_detempering:
         tiles += (("block:canon_detempering", "canon", "detempering"),)
     if _r.scalars.targets_editable:
         tiles += (("block:canon_mapped", "canon", "targets"),)
@@ -192,14 +192,14 @@ def caption_floor(geometry, resolved, key: str):
 
 
 def symbol_floor(geometry, resolved, key: str):
-    if not (resolved.flags.symbols or resolved.flags.equiv):
+    if not (resolved.flags.symbols or resolved.flags.equivalences):
         return 0
     floor = 0
     for (rkey, ckey), glyph in SYMBOLS.items():
         if ckey != key or (rkey, ckey) not in geometry.declared_tiles:
             continue
         equiv = ""
-        if resolved.flags.equiv:
+        if resolved.flags.equivalences:
             equiv = EQUIVALENCES.get((rkey, ckey), "")
             if resolved.flags.form_subscript and (rkey, ckey) in FORM_EQUIVALENCES:
                 equiv = FORM_EQUIVALENCES[(rkey, ckey)]

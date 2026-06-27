@@ -82,7 +82,7 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, ctx, key, group, va
         cid = f"{key}:{geometry.group_elem[group]}:{query.col_token(_r, group, i)}"
         x = geometry.group_left[group][query.comma_value_pos(_r, i) if group == "commas" else i]
         u = query.cell_unit(_r, key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
-        operand = closed_form_operand(_r, geometry, ctx, key, group, i, v) if _r.flags.math else None
+        operand = closed_form_operand(_r, geometry, ctx, key, group, i, v) if _r.flags.math_expressions else None
         if operand is not None:
             cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, _r.flags.quantities, _r.flags.decimals), unit=u))
         else:
@@ -144,7 +144,7 @@ def _emit_tuning_gen_row(cells, resolved, geometry, ctx) -> None:
     gen_kind = "tuningvalue" if _r.flags.superspace_generators else "gentuningcell"
     for i, v in enumerate(_r.tuning.tun.generator_map):
         operand = None
-        if _r.flags.math and not _r.flags.superspace_generators:
+        if _r.flags.math_expressions and not _r.flags.superspace_generators:
             closed_form = _closed_form(resolved, ctx)
             operand = closed_form.generator_operand(i, v) if closed_form is not None else None
         if operand is not None:
@@ -164,7 +164,7 @@ def _emit_tuning_canongen_row(cells, resolved, geometry, ctx) -> None:
     for j in range(_r.dims.rc):
         v = sum(gm[k] * _r.canon.inverse_form_M[k][j] for k in range(_r.dims.r))
         operand = None
-        if _r.flags.math:
+        if _r.flags.math_expressions:
             closed_form = _closed_form(resolved, ctx)
             if closed_form is not None:
                 coefficients = [_r.canon.inverse_form_M[k][j] for k in range(_r.dims.r)]
@@ -197,7 +197,7 @@ def _emit_tuning_ssgen_row(cells, chart_tiles, resolved, geometry, ctx, ss_tun) 
     if not _r.flags.superspace_generators:
         tuning_value_row(cells, chart_tiles, resolved, geometry, ctx, "tuning", "ssgens", ss_tun.generator_map)
         return
-    ss_cf = _ss_closed_form(resolved, ctx) if _r.flags.math else None
+    ss_cf = _ss_closed_form(resolved, ctx) if _r.flags.math_expressions else None
     for i, v in enumerate(ss_tun.generator_map):
         operand = ss_cf.generator_operand(i, v) if ss_cf is not None else None
         if operand is not None:
@@ -213,7 +213,7 @@ def _emit_tuning_ssgen_row(cells, chart_tiles, resolved, geometry, ctx, ss_tun) 
 
 def _emit_tuning_detempering_rows(cells, chart_tiles, resolved, geometry, ctx) -> None:
     _r = resolved
-    if not _r.flags.detempering:
+    if not _r.flags.generator_detempering:
         return
     for key, values in (("tuning", _r.detempering.sizes.tempered),
                         ("just", _r.detempering.sizes.just),

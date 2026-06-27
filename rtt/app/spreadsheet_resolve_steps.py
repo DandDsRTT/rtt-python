@@ -25,32 +25,32 @@ def determine_ghosts(inputs) -> Ghosts:
 
 def unpack_show_flags(inputs, draft):
     _f = _resolve_show_flags(inputs.settings, inputs.collapsed)
-    show_symbols, show_weighting, show_math = _f.symbols, _f.weighting, _f.math
+    show_symbols, show_weighting, show_math_expressions = _f.symbols, _f.weighting, _f.math_expressions
     complexity_shown = (show_weighting
                         and service.damage_weight_slope(inputs.tuning_scheme) != "unityWeight")
     prescaling_shown = complexity_shown and (
         service.is_all_interval(inputs.tuning_scheme) or _f.alt_complexity)
     weight_unit = f"({service.weight_annotation(inputs.tuning_scheme)})"
     return replace(
-        draft, show_names=_f.names, show_mnemonics=_f.mnemonics, show_equiv=_f.equiv,
-        show_presets=_f.presets, show_counts=_f.counts, show_ptext=_f.ptext, show_charts=_f.charts,
-        show_ranges=_f.ranges, show_symbols=show_symbols, ctrl_symbol_h=SYMBOL_H if show_symbols else 0,
+        draft, show_names=_f.names, show_mnemonics=_f.mnemonics, show_equivalences=_f.equivalences,
+        show_presets=_f.presets, show_counts=_f.counts, show_plain_text_values=_f.plain_text_values, show_charts=_f.charts,
+        show_tuning_ranges=_f.tuning_ranges, show_symbols=show_symbols, ctrl_symbol_h=SYMBOL_H if show_symbols else 0,
         show_header_symbols=_f.header_symbols, show_units=_f.units, show_cell_units=_f.cell_units,
-        show_domain_units=_f.domain_units, show_temp=_f.temp, show_form=_f.form,
-        show_form_controls=_f.form_controls, show_form_tiles=_f.form_tiles, show_tuning=_f.tuning,
+        show_domain_units=_f.domain_units, show_temperament_tiles=_f.temperament_tiles, show_form=_f.form,
+        show_form_controls=_f.form_controls, show_form_tiles=_f.form_tiles, show_tuning_tiles=_f.tuning_tiles,
         show_optimization=_f.optimization, show_weighting=show_weighting,
         show_alt_complexity=_f.alt_complexity, _complexity_shown=complexity_shown,
         _prescaling_shown=prescaling_shown, weight_unit=weight_unit,
         complexity_unit=f"({service.complexity_annotation(inputs.tuning_scheme)})",
         damage_unit=f"¢{weight_unit}", _lbox_show=_f.lbox and complexity_shown,
-        _cbox_show=_f.cbox and complexity_shown, show_detempering=_f.detempering,
-        show_interest=_f.interest, gridded=_f.gridded, show_quantities=_f.quantities,
+        _cbox_show=_f.cbox and complexity_shown, show_generator_detempering=_f.generator_detempering,
+        show_interest=_f.interest, gridded_values=_f.gridded_values, show_quantities=_f.quantities,
         _decimals=_f.decimals, show_ebk=_f.ebk, show_interval_ratios=_f.interval_ratios,
-        show_interval_vectors=_f.interval_vectors, show_math=show_math,
+        show_interval_vectors=_f.interval_vectors, show_math_expressions=show_math_expressions,
         dd_terminology=inputs.settings.get("dd_terminology", True),
         custom_weights_active=(inputs.custom_weights is not None
                                and not service.is_all_interval(inputs.tuning_scheme)
-                               and not show_math))
+                               and not show_math_expressions))
 
 
 def resolve_superspace_dims(inputs, draft):
@@ -71,7 +71,7 @@ def resolve_superspace_dims(inputs, draft):
 
 def resolve_prescaler_and_domain_labels(inputs, draft):
     _p = _resolve_prescaler_labels(inputs.state, inputs.tuning_scheme, inputs.custom_prescaler,
-                                   draft.show_equiv, draft.show_superspace)
+                                   draft.show_equivalences, draft.show_superspace)
     return replace(
         draft, _scheme_prescaler=_p.scheme_prescaler, _realized_prescaler=_p.realized,
         prescaler_symbol=_p.symbol, prescaler_equivalence=_p.equivalence,
@@ -103,8 +103,8 @@ def resolve_complexities(inputs, draft):
 def resolve_detempering(inputs, draft):
     return replace(
         draft,
-        detempering_vectors=(service.generator_detempering(inputs.state.mapping) if draft.show_detempering else ()),
-        detempering_sizes=(service.interval_sizes(draft.tun, draft.gens, draft.elements) if draft.show_detempering else None))
+        detempering_vectors=(service.generator_detempering(inputs.state.mapping) if draft.show_generator_detempering else ()),
+        detempering_sizes=(service.interval_sizes(draft.tun, draft.gens, draft.elements) if draft.show_generator_detempering else None))
 
 
 def resolve_canon_mapped(inputs, draft):
@@ -120,12 +120,12 @@ def resolve_canon_mapped(inputs, draft):
         canon_held_mapped=service.mapped_intervals(canon_mapping, draft.held_ratios, draft.elements),
         canon_interest_mapped=service.mapped_intervals(canon_mapping, draft.interest_ratios, draft.elements),
         canon_mapped_commas=service.mapped_commas(canon_mapping, inputs.state.comma_basis),
-        canon_mapped_detempering=(service.mapped_commas(canon_mapping, draft.detempering_vectors) if draft.show_detempering else ()),
+        canon_mapped_detempering=(service.mapped_commas(canon_mapping, draft.detempering_vectors) if draft.show_generator_detempering else ()),
         canon_unchanged_mapped=canon_unchanged_mapped)
 
 
 def resolve_projection_data(inputs, draft):
-    show_projection = draft.show_tuning and inputs.settings["projection"]
+    show_projection = draft.show_tuning_tiles and inputs.settings["projection"]
     if show_projection:
         _embed_generators_caption(draft.effective_captions)
     rationals = (service.projection_matrix_rationals(inputs.state, inputs.held_basis_ratios)

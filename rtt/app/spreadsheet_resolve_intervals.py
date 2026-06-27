@@ -112,7 +112,7 @@ def resolve_commas(inputs, draft):
 def resolve_unchanged(inputs, draft):
     _udata = (service.unchanged_interval_data(inputs.state, inputs.held_basis_ratios, draft.tun,
                                               inputs.tuning_scheme, draft.elements, inputs.custom_prescaler)
-              if (draft.show_temp and draft.show_tuning and inputs.settings["projection"]) else None)
+              if (draft.show_temperament_tiles and draft.show_tuning_tiles and inputs.settings["projection"]) else None)
     unchanged = _initial_unchanged(_udata)
     nu = len(_udata.basis) if _udata is not None else 0
     born_u = draft.ghost_row and _udata is not None
@@ -123,7 +123,7 @@ def resolve_unchanged(inputs, draft):
     nc_shown = draft.nc + (1 if comma_draft else 0)
     if _udata is not None:
         _rename_commas_to_unrotated(draft.effective_captions)
-        if draft.show_equiv:
+        if draft.show_equivalences:
             _append_unchanged_caption_equivalence(draft.effective_captions)
     return replace(
         draft, show_unchanged=_udata is not None, nu=nu, born_u=born_u,
