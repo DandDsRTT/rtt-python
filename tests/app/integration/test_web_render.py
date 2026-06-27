@@ -1821,19 +1821,19 @@ async def test_editing_the_prescaler_wipes_then_restores_the_complexity_chooser(
 async def test_target_chooser_shows_the_prompt_when_an_interval_is_overridden(user: User) -> None:
     # the target chooser names the live TILT/OLD family + its limit; hand-editing a target
     # interval column freezes an explicit list no named family realises, so BOTH parts fall
-    # back to "-" — the family select via Quasar's display-value, the numeric limit blanked to
-    # its "-" placeholder — the same fallback the tuning and prescaler choosers use for an edit.
+    # back to "-" — the family select via Quasar's display-value, the numeric limit to a real
+    # selectable "-" value (not a placeholder) — the fallback the other choosers use for an edit.
     await _enable(user, "presets")
     await user.should_see(marker="cell:vec:targets:0:0")
     num, sel = _target_preset(user)
     assert "display-value" not in sel._props  # names the live family
-    assert num.value is not None              # shows the family's limit
+    assert num.value not in (None, "-")       # shows the family's limit
     _cell_child(user, "cell:vec:targets:0:0").set_value("3")  # deviate from the TILT list
     _commit(user, "cell:vec:targets:0:0")                     # commit on blur (typing only previews now)
     await user.should_see(marker="preset:target")
     num, sel = _target_preset(user)
     assert sel._props.get("display-value") == "-"
-    assert num.value is None  # the numeral blanks to its "-" placeholder
+    assert num.value == "-"  # the numeral is a real "-" value, selectable like any cell text
 
 
 async def test_selecting_a_target_family_clears_an_interval_override(user: User) -> None:
@@ -2130,7 +2130,7 @@ async def test_mean_damage_help_tracks_the_all_interval_mode(user: User) -> None
 
 async def test_all_interval_disables_the_target_chooser_and_falls_back_to_dash(user: User) -> None:
     # all-interval targets every interval, so the "target interval set scheme" chooser doesn't apply:
-    # both parts fall back to "-" (the family select's display-value, the limit's "-" placeholder) and
+    # both parts fall back to "-" (the family select's display-value, the limit's real "-" value) and
     # the whole control greys out non-interactive. Unchecking restores the live family and interactivity.
     await _enable(user, "presets")
     user.find(kind=ui.checkbox, content="optimization").click()  # reveal weighting (now nested under optimization)
@@ -2142,7 +2142,7 @@ async def test_all_interval_disables_the_target_chooser_and_falls_back_to_dash(u
     await user.should_see(marker="preset:target")
     num, sel = _target_preset(user)
     assert not sel.enabled and not num.enabled                    # greyed + locked
-    assert sel._props.get("display-value") == "-" and num.value is None  # both fall back to "-"
+    assert sel._props.get("display-value") == "-" and num.value == "-"  # both fall back to "-"
     _cell_child(user, "control:all_interval").set_value(False)   # uncheck -> back to target-based
     await user.should_see(marker="preset:target")
     num, sel = _target_preset(user)
