@@ -462,6 +462,28 @@ def test_colfill_bounce_layer_sits_behind_the_scroller_carries_no_zindex_and_hug
     assert "left:var(--pad)" in fill and "bottom:0" in fill
 
 
+def test_colfill_is_shown_only_through_a_top_overpull_so_it_never_ghost_echoes():
+    # the twins rest behind the live rules at every scroll position but a top overpull, and sync one
+    # frame late, so showing them always would ghost a second set of verticals on a fast horizontal
+    # scroll. They are hidden by default and revealed only under .rtt-overpull-y (set in the freeze JS).
+    assert "visibility:hidden" in _css_rule(".rtt-colfill")
+    assert "visibility:visible" in _css_rule(".rtt-app.rtt-overpull-y .rtt-colfill")
+    assert "rtt-overpull-y" in page_assets._FREEZE_JS and "b.scrollTop < 0" in page_assets._FREEZE_JS
+
+
+def test_rowfill_mirrors_colfill_for_the_sticky_row_bands_top_overpull_gap():
+    # the row band is position:sticky, so a top overpull slides it down and opens a gap below the fixed
+    # corner that bares the body's rules through the frozen-left edge. rowfill is the left twin of
+    # colfill: a fixed grey strip behind the body at the frozen-column inset, carrying the same seam.
+    fill = _css_rule(".rtt-rowfill")
+    assert "left:var(--pad)" in fill and "bottom:0" in fill
+    assert "background:#c0c0c0" in fill
+    assert "box-shadow:1px 0 0 var(--seam-x,transparent)" in fill
+    assert "z-index" not in fill  # behind the body, like colfill, so the row band covers it at rest
+    # the seam lights with the row band's, on a horizontal scroll
+    assert ".rtt-app.rtt-scrolled-x .rtt-rowfill" in page_assets._CSS
+
+
 def test_only_full_height_seam_reaching_column_rules_are_twinned_in_the_colfill_not_centre_stubs():
     lay = Editor().layout()
     fy = lay.freeze_y

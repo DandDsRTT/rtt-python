@@ -84,6 +84,7 @@ def build_grid_pane(pb) -> dict:
             slots["colfill_inner"] = (
                 ui.element("div").classes("rtt-colfill-inner").mark("colfillinner")
             )
+        slots["rowfill"] = ui.element("div").classes("rtt-rowfill").mark("rowfill")
         colhead = ui.element("div").classes("rtt-colhead").mark("colhead")
         slots["colhead"] = colhead
         with colhead:

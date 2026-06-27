@@ -139,8 +139,20 @@ html, body { overscroll-behavior-x: none; }
    those twins so the gridlines read unbroken through the bounce. It hugs the body's left inset and
    rides the same horizontal scroll as the column strip, so each twin sits exactly under its live rule
    at rest (hidden behind it) and only shows once the scroller pulls away. Pure backdrop — no input. */
-.rtt-colfill { position:absolute; left:var(--pad); right:0; bottom:0; overflow:hidden; pointer-events:none; }
+.rtt-colfill { position:absolute; left:var(--pad); right:0; bottom:0; overflow:hidden; pointer-events:none;
+               visibility:hidden; }
+/* The twins are needed ONLY while a top overscroll bares the band; at every other scroll position they
+   rest behind the live rules and, syncing one frame behind the native scroll, only peek out as ghost
+   echoes on a fast horizontal scroll. So show the layer solely during a top overpull (_FREEZE_JS sets
+   rtt-overpull-y when scrollTop < 0). */
+.rtt-app.rtt-overpull-y .rtt-colfill { visibility:visible; }
 .rtt-colfill-inner { position:absolute; top:0; left:0; will-change:transform; }
+/* The left mirror of .rtt-colfill: the row band is position:sticky, so a top overscroll slides it DOWN
+   with the content and opens a gap below the fixed corner — breaking the frozen-left edge and baring
+   the body's rules through it. This fixed grey strip sits behind the body at the frozen-column inset
+   and carries the same seam, so the bared gap reads as unbroken frozen background + edge. */
+.rtt-rowfill { position:absolute; left:var(--pad); bottom:0; overflow:hidden; pointer-events:none;
+               background:#c0c0c0; box-shadow:1px 0 0 var(--seam-x,transparent); }
 .rtt-corner { position:absolute; top:var(--pad); left:var(--pad); z-index:6; background:#c0c0c0;
               box-sizing:border-box; box-shadow:0 1px 0 var(--seam-y,transparent), 1px 0 0 var(--seam-x,transparent); }
 /* overscroll-behavior-x:contain keeps a leftward scroll/swipe inside the board from chaining out to
@@ -170,7 +182,8 @@ html, body { overscroll-behavior-x: none; }
    copies sit flush to the seam — no rest-state gap — and a per-axis custom property (--seam-y/--seam-x,
    unset = transparent) lights the shadow only when that axis scrolls, still shifting nothing. */
 .rtt-app.rtt-scrolled-y .rtt-colhead, .rtt-app.rtt-scrolled-y .rtt-corner { --seam-y:var(--seam); }
-.rtt-app.rtt-scrolled-x .rtt-rowband, .rtt-app.rtt-scrolled-x .rtt-corner { --seam-x:var(--seam); }
+.rtt-app.rtt-scrolled-x .rtt-rowband, .rtt-app.rtt-scrolled-x .rtt-corner,
+.rtt-app.rtt-scrolled-x .rtt-rowfill { --seam-x:var(--seam); }
 /* A top-row / left-column wash overhangs the seam, so besides the body copy it renders one into the
    frozen column strip / row band / corner (see _block_panes in app.py), filling the inter-title gap
    the body scroller would otherwise clip. That copy only completes the RESTING picture: once the body

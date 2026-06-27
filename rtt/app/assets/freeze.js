@@ -17,6 +17,9 @@ window.rttFreeze = (function () {
       if (fill) fill.style.transform = 'translate(' + (-b.scrollLeft) + 'px,' + (-sy) + 'px)';
       app.classList.toggle('rtt-scrolled-y', b.scrollTop > 0);
       app.classList.toggle('rtt-scrolled-x', b.scrollLeft > 0);
+      // The colfill twins are shown only here, through a top overpull, so they never ghost-echo behind
+      // the live rules on an ordinary scroll (see .rtt-colfill in the CSS).
+      app.classList.toggle('rtt-overpull-y', b.scrollTop < 0);
     }
     reportViewport();
   }
