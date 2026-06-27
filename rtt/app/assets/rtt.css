@@ -160,6 +160,15 @@ html, body { overscroll-behavior-x: none; }
    constantly in this grid. */
 .rtt-gridbody { position:absolute; left:var(--pad); right:0; bottom:0; overflow:auto;
                 overscroll-behavior-x:contain; padding:0 var(--pad) var(--pad) 0; }
+/* On touch devices, remove the elastic bounce entirely (overscroll-behavior:none, not contain —
+   contain only stops scroll-CHAINING and keeps the bounce). The bounce is where the two stubborn
+   mobile artifacts live: the bridge twins sync a frame late so a sustained pull shows a gridline
+   echo, and the row band (position:sticky) slides off the fixed corner so the collapse-all floats
+   away from the row toggles. No bounce removes both. Desktop keeps its bounce and its colfill/rowfill
+   bridges (a coarse pointer with no hover is a phone/tablet, not a trackpad). */
+@media (hover: none) and (pointer: coarse) {
+  .rtt-gridbody { overscroll-behavior:none; }
+}
 /* isolate the board so the washes' mix-blend-mode composes only with the board's own layers
    (the white wash bases), not the grey pane behind it */
 .rtt-gridcontent { position:relative; isolation:isolate; transition:width var(--t), height var(--t); }
