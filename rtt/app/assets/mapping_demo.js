@@ -28,23 +28,24 @@
     return { parse, mul, add, str };
   })();
 
-  // each flow is one "matrix × interval-vector" computation. Source/result cells are linked to the
-  // matrix purely by geometry (shared column x, top-to-bottom order), so the differing id grammars and
-  // raw-vs-token column keys across mapping/projection/superspace don't matter.
-  const sel = (...prefixes) => prefixes.map((p) => '[data-eid^="' + p + '"]').join(',');
-  const VEC = sel('cell:vec:targets:', 'cell:held:', 'cell:interest:', 'cell:comma:', 'cell:unchanged:', 'cell:vec:detempering:');
-  const MAPPED = sel('cell:mapped:', 'cell:hmapped:', 'cell:imapped:', 'cell:mapped_comma:', 'cell:mapped_unchanged:', 'cell:mapped_detempering:');
-  const PROJ = sel('cell:proj_pt:', 'cell:proj_ph:', 'cell:proj_pi:', 'cell:proj_pd:', 'cell:proj_v:');
-  const SSVEC = sel('cell:ss_vectors:targets:', 'cell:ss_vectors:held:', 'cell:ss_vectors:interest:', 'cell:ss_vectors:commas:', 'cell:ss_vectors:detempering:');
-  const SSMAP = sel('cell:ss_mapping:targets:', 'cell:ss_mapping:held:', 'cell:ss_mapping:interest:', 'cell:ss_mapping:commas:', 'cell:ss_mapping:detempering:');
-  const SSPROJ = sel('cell:ss_proj_pt:', 'cell:ss_proj_ph:', 'cell:ss_proj_pi:', 'cell:ss_proj_pd:', 'cell:ss_proj_v:');
+  // The grid holds two interval-vector spaces — prime-basis vectors and superspace-lifted vectors —
+  // each in one of every interval kind (targets / held / interest / commas / unchanged / detempering).
+  const STD_VEC = /^cell:(vec:targets|held|interest|comma|unchanged|vec:detempering):/;
+  const SS_VEC = /^cell:ss_vectors:(targets|held|interest|commas|detempering):/;
 
-  const FLOWS = [
-    { name: 'mapping', trigger: VEC + ',' + MAPPED, source: VEC, matrix: '[data-eid^="cell:mapping:"]', result: MAPPED },
-    { name: 'projection', trigger: PROJ, source: VEC, matrix: '[data-eid^="cell:proj:"]', result: PROJ },
-    { name: 'ss_mapping', trigger: SSVEC + ',' + SSMAP, source: SSVEC, matrix: '[data-eid^="cell:ss_mapping:ssprimes:"]', result: SSMAP },
-    { name: 'ss_projection', trigger: SSPROJ, source: SSVEC, matrix: '[data-eid^="cell:ss_projection:ssprimes:"]', result: SSPROJ },
+  // …and five transformation bands, each sending an interval vector through a matrix to a result
+  // vector of the same kind. A band is defined once by its matrix and a test for "a result cell of
+  // this band"; the geometry engine links source ↔ matrix ↔ result by column x and row order, so
+  // every interval tile in the band is covered without enumerating tiles.
+  const BANDS = [
+    { name: 'mapping', matrix: 'cell:mapping:', result: /^cell:(mapped|hmapped|imapped|mapped_comma|mapped_unchanged|mapped_detempering):/, vec: STD_VEC },
+    { name: 'canonical', matrix: 'cell:canon:', result: /^cell:canon_/, vec: STD_VEC },
+    { name: 'projection', matrix: 'cell:proj:', result: /^cell:proj_/, vec: STD_VEC },
+    { name: 'ss_mapping', matrix: 'cell:ss_mapping:ssprimes:', result: /^cell:ss_mapping:(targets|held|interest|commas|detempering):/, vec: SS_VEC },
+    { name: 'ss_projection', matrix: 'cell:ss_projection:ssprimes:', result: /^cell:ss_proj_(pt|ph|pi|pd|v):/, vec: SS_VEC },
   ];
+  // hovering a bare interval vector flows it through its space's mapping (the forward computation).
+  const forwardBand = (id) => (SS_VEC.test(id) ? BANDS[3] : BANDS[0]);
 
   let svg = null, curKey = null;
   const board = () => document.querySelector('.rtt-gridcontent');
@@ -108,7 +109,7 @@
   };
 
   // ---- draw -----------------------------------------------------------------
-  const draw = (flow, hov) => {
+  const draw = (band, hov) => {
     const b = board();
     if (!b) return false;
     const bRect = b.getBoundingClientRect();
@@ -119,11 +120,13 @@
     };
     const colX = C(hov).x;
     const inCol = (o) => Math.abs(o.c.x - colX) < 8;
+    const all = [...board().querySelectorAll('[data-eid]')];
+    const eid = (el) => el.getAttribute('data-eid');
 
-    const src = [...document.querySelectorAll(flow.source)].map((el) => ({ c: C(el), v: FR.parse(text(el)) }))
+    const src = all.filter((el) => band.vec.test(eid(el))).map((el) => ({ c: C(el), v: FR.parse(text(el)) }))
       .filter(inCol).sort((a, z) => a.c.y - z.c.y);
-    const mcells = [...document.querySelectorAll(flow.matrix)].map((el) => ({ c: C(el), m: FR.parse(text(el)) }));
-    const res = [...document.querySelectorAll(flow.result)].map((el) => ({ c: C(el) }))
+    const mcells = all.filter((el) => eid(el).startsWith(band.matrix)).map((el) => ({ c: C(el), m: FR.parse(text(el)) }));
+    const res = all.filter((el) => band.result.test(eid(el))).map((el) => ({ c: C(el) }))
       .filter(inCol).sort((a, z) => a.c.y - z.c.y);
     if (!src.length || !mcells.length || !res.length) return false;
 
@@ -182,11 +185,14 @@
   };
 
   const hovered = (node) => {
-    if (!node || !node.closest) return null;
-    for (const flow of FLOWS) { const cell = node.closest(flow.trigger); if (cell) return { flow, cell }; }
+    const cell = node && node.closest && node.closest('[data-eid]');
+    if (!cell) return null;
+    const id = cell.getAttribute('data-eid');
+    for (const band of BANDS) if (band.result.test(id)) return { band, cell };
+    if (STD_VEC.test(id) || SS_VEC.test(id)) return { band: forwardBand(id), cell };
     return null;
   };
-  const keyOf = (h) => h.flow.name + ':' + Math.round(h.cell.getBoundingClientRect().left);
+  const keyOf = (h) => h.band.name + ':' + Math.round(h.cell.getBoundingClientRect().left);
 
   document.addEventListener('mouseover', (e) => {
     if (!active()) { if (curKey) clear(); return; }
@@ -194,7 +200,7 @@
     if (!h) return;
     const key = keyOf(h);
     if (key === curKey) return;
-    if (draw(h.flow, h.cell)) curKey = key;
+    if (draw(h.band, h.cell)) curKey = key;
   });
   document.addEventListener('mouseout', (e) => {
     if (!curKey) return;
