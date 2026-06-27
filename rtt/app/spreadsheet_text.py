@@ -19,10 +19,29 @@ from rtt.app.spreadsheet_constants import (
 
 def emit_option_check(cells, name: str, label: str, checked: bool, check_x, ctrl_y) -> None:
     check_y = ctrl_y + (PRESET_H - OPTION_BOX_PX) / 2
-    cells.append(CellBox(f"control:{name}", check_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
-                         "control_check", text="", checked=checked))
-    cells.append(CellBox(f"caption:{name}", check_x, ctrl_y + PRESET_H, LBOX_DIM_W,
-                         CAPTION_LINE, "caption", text=label))
+    cells.append(
+        CellBox(
+            f"control:{name}",
+            check_x,
+            check_y,
+            LBOX_DIM_W,
+            OPTION_BOX_PX,
+            "control_check",
+            text="",
+            checked=checked,
+        )
+    )
+    cells.append(
+        CellBox(
+            f"caption:{name}",
+            check_x,
+            ctrl_y + PRESET_H,
+            LBOX_DIM_W,
+            CAPTION_LINE,
+            "caption",
+            text=label,
+        )
+    )
 
 
 def _mathit(letter: str) -> str:
