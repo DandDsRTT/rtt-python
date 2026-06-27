@@ -50,7 +50,7 @@ def register_value_kinds(cell_kinds) -> None:
 def register_label_kinds(cell_kinds) -> None:
     _value_builder = value.label_builder("rtt-value")
     cell_kinds["prime"] = _KindHandlers(_value_builder, value.update_label)
-    cell_kinds["mapped"] = _KindHandlers(_value_builder, value.update_label)
+    cell_kinds["mapped"] = _KindHandlers(value.build_mapped, value.update_ratio)
     cell_kinds["vec"] = _KindHandlers(_value_builder, value.update_label)
     cell_kinds["colheader"] = _KindHandlers(
         value.label_builder("rtt-colheader"), value.update_label

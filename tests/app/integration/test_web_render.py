@@ -251,6 +251,8 @@ async def test_projection_renders_the_projected_column_tiles(user: User) -> None
     _toggle(user, "generator detempering")
     await user.should_see(marker="cell:proj_pd:1:2")  # P·D's second column, bottom prime
     assert _cell_text(user, "cell:proj_pd:1:2") == "1/4"
+    assert _marked(user, "cell:proj_pd:1:2:num").text == "1"
+    assert _marked(user, "cell:proj_pd:1:2:den").text == "4"
     await user.should_see(marker="cell:proj_pt:0:0")  # P·T's first column (the octave)
 
 
@@ -1027,7 +1029,15 @@ def _commit(user: User, cell_id: str) -> None:
 
 
 def _cell_text(user: User, cell_id: str) -> str:
-    return getattr(_cell_child(user, cell_id), "text", "")
+    child = _cell_child(user, cell_id)
+    if "rtt-ratio" in getattr(child, "_classes", []):
+        num = _marked(user, f"{cell_id}:num", required=False)
+        if num is not None:
+            den = _marked(user, f"{cell_id}:den", required=False)
+            return f"{num.text}/{den.text}" if den is not None else num.text
+        inner = child.default_slot.children
+        return getattr(inner[0], "text", "") if inner else ""
+    return getattr(child, "text", "")
 
 
 def _stacked_face(user: User, cell_id: str):
