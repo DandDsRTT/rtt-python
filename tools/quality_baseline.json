@@ -10,13 +10,13 @@
     "_edits": 1,
     "class_handles": 1
   },
-  "param_reach_through_total": 480,
+  "param_reach_through_total": 450,
   "param_reach_through_by_handle": {
     "_editor": 232,
     "_rec": 73,
-    "_chrome": 60,
     "_runtime": 48,
     "_renderer": 31,
+    "_chrome": 30,
     "_gestures": 22,
     "_edits": 6,
     "e": 5,
@@ -48,7 +48,7 @@
       "attrs": 11
     },
     "rtt/app/page_chrome.py::PageChrome": {
-      "methods": 1,
+      "methods": 2,
       "attrs": 22
     },
     "rtt/app/rendering.py::Renderer": {

@@ -55,67 +55,79 @@ def setup_page_head() -> None:
 
 
 def build_layout(pb) -> None:
+    slots: dict = {}
     with ui.element("div").classes("rtt-shell"):
-        pb._chrome.panelgroup = ui.element("div").classes("rtt-panelgroup")
-        with pb._chrome.panelgroup:
+        panelgroup = ui.element("div").classes("rtt-panelgroup")
+        slots["panelgroup"] = panelgroup
+        with panelgroup:
             with ui.element("div").classes("rtt-chrome"):
                 pane_chrome(pb)
-            build_drawer(pb)
-        build_grid_pane(pb)
+            slots.update(build_drawer(pb))
+        slots.update(build_grid_pane(pb))
+    slots["cell_parents"] = {
+        "corner": slots["corner"],
+        "col": slots["colhead_inner"],
+        "row": slots["rowband"],
+        "body": slots["board"],
+    }
+    pb._chrome.populate(slots)
+    pb._chrome.refs["approach"].move(slots["board"])
 
 
-def build_grid_pane(pb) -> None:
-    pb._chrome.grid_pane = ui.element("div").classes("rtt-app").mark("gridpane")
-    with pb._chrome.grid_pane:
-        pb._chrome.colfill = ui.element("div").classes("rtt-colfill").mark("colfill")
-        with pb._chrome.colfill:
-            pb._chrome.colfill_inner = (
+def build_grid_pane(pb) -> dict:
+    grid_pane = ui.element("div").classes("rtt-app").mark("gridpane")
+    slots: dict = {"grid_pane": grid_pane}
+    with grid_pane:
+        colfill = ui.element("div").classes("rtt-colfill").mark("colfill")
+        slots["colfill"] = colfill
+        with colfill:
+            slots["colfill_inner"] = (
                 ui.element("div").classes("rtt-colfill-inner").mark("colfillinner")
             )
-        pb._chrome.colhead = ui.element("div").classes("rtt-colhead").mark("colhead")
-        with pb._chrome.colhead:
-            pb._chrome.colhead_inner = (
+        colhead = ui.element("div").classes("rtt-colhead").mark("colhead")
+        slots["colhead"] = colhead
+        with colhead:
+            slots["colhead_inner"] = (
                 ui.element("div").classes("rtt-colhead-inner").mark("colheadinner")
             )
-        build_corner(pb)
-        build_gridbody(pb)
+        slots.update(build_corner(pb))
+        slots.update(build_gridbody())
+    return slots
 
 
-def build_drawer(pb) -> None:
+def build_drawer(pb) -> dict:
+    slots: dict = {}
     drawer = ui.element("div").classes("rtt-drawer")
     with drawer, ui.element("div").classes("rtt-drawer-inner"):
-        build_show_frozen(pb)
-        pb._chrome.show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
-        with pb._chrome.show_scroll:
-            build_chapter_group(pb)
+        slots.update(build_show_frozen(pb))
+        show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
+        slots["show_scroll"] = show_scroll
+        with show_scroll:
+            slots.update(build_chapter_group(pb))
             for group_name, items in show_settings.SHOW_GROUPS:
                 with ui.element("div").classes("rtt-show-group"):
                     if group_name == "general":
                         pb._build_general_tile()
                     else:
                         build_show_group(pb, items)
+    return slots
 
 
-def build_corner(pb) -> None:
-    pb._chrome.corner = ui.element("div").classes("rtt-corner").mark("corner")
-    with pb._chrome.corner:
+def build_corner(pb) -> dict:
+    corner = ui.element("div").classes("rtt-corner").mark("corner")
+    with corner:
         build_title_buttons(pb)
         build_approach_radio(pb)
+    return {"corner": corner}
 
 
-def build_gridbody(pb) -> None:
-    pb._chrome.gridbody = ui.element("div").classes("rtt-gridbody").mark("gridbody")
-    with pb._chrome.gridbody:
-        pb._chrome.board = ui.element("div").classes("rtt-gridcontent").mark("board")
-        with pb._chrome.board, ui.element("div").classes("rtt-band"):
-            pb._chrome.rowband = ui.element("div").classes("rtt-rowband").mark("rowband")
-    pb._chrome.refs["approach"].move(pb._chrome.board)
-    pb._chrome.cell_parents = {
-        "corner": pb._chrome.corner,
-        "col": pb._chrome.colhead_inner,
-        "row": pb._chrome.rowband,
-        "body": pb._chrome.board,
-    }
+def build_gridbody() -> dict:
+    gridbody = ui.element("div").classes("rtt-gridbody").mark("gridbody")
+    with gridbody:
+        board = ui.element("div").classes("rtt-gridcontent").mark("board")
+        with board, ui.element("div").classes("rtt-band"):
+            rowband = ui.element("div").classes("rtt-rowband").mark("rowband")
+    return {"gridbody": gridbody, "board": board, "rowband": rowband}
 
 
 def share_link(pb) -> None:
@@ -212,11 +224,11 @@ def build_approach_radio(pb) -> None:
     pb._chrome.refs["approach"].on("mouseleave", lambda _=None: on_approach_hover(None))
 
 
-def build_show_frozen(pb) -> None:
-    pb._chrome.show_frozen = ui.element("div").classes("rtt-show-frozen").mark("showfrozen")
-    with pb._chrome.show_frozen:
+def build_show_frozen(pb) -> dict:
+    show_frozen = ui.element("div").classes("rtt-show-frozen").mark("showfrozen")
+    with show_frozen:
         with ui.element("div").classes("rtt-show-all"):
-            pb._chrome.select_all_box = (
+            select_all_box = (
                 ui.checkbox(
                     "select all / none",
                     value=all(pb._editor.settings[k] for k in show_settings.IMPLEMENTED),
@@ -227,25 +239,26 @@ def build_show_frozen(pb) -> None:
                 .mark("showall")
                 .tooltip(tooltips.CHROME_HELP["select_all"])
             )
-            pb._chrome.dark_btn = (
+            dark_btn = (
                 ui.button(on_click=pb._handlers.dark_toggle, color=None)
                 .props(f"flat dense round icon={pb._runtime.dark_icon()}")
                 .classes("rtt-darktoggle")
                 .mark("darkmode")
                 .tooltip(tooltips.CHROME_HELP["dark_mode"])
             )
+    return {"show_frozen": show_frozen, "select_all_box": select_all_box, "dark_btn": dark_btn}
 
 
-def build_chapter_group(pb) -> None:
+def build_chapter_group(pb) -> dict:
     with ui.element("div").classes("rtt-show-group rtt-chapter-group"):
         with ui.element("div").classes("rtt-chapter-head"):
             ui.label("guide chapter").classes("rtt-chapter-title")
-            pb._chrome.chapter_reading = (
+            chapter_reading = (
                 ui.label(pb._runtime.chapter_reading())
                 .classes("rtt-chapter-reading")
                 .mark("chapterreading")
             )
-        pb._chrome.chapter_slider = (
+        chapter_slider = (
             ui.slider(
                 min=show_settings.CHAPTER_MIN,
                 max=show_settings.CHAPTER_STAR,
@@ -258,6 +271,7 @@ def build_chapter_group(pb) -> None:
             .mark("chapterslider")
             .tooltip(tooltips.CHROME_HELP["chapter"])
         )
+    return {"chapter_reading": chapter_reading, "chapter_slider": chapter_slider}
 
 
 def build_show_group(pb, items) -> None:

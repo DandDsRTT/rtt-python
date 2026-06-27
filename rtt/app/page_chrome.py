@@ -30,3 +30,7 @@ class PageChrome:
         self.tile_parts: dict = {}
         self.show_rows: dict = {}
         self.cell_parents: dict = {}
+
+    def populate(self, slots: dict) -> None:
+        for name, element in slots.items():
+            setattr(self, name, element)

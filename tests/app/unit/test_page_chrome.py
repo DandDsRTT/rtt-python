@@ -20,3 +20,11 @@ def test_page_chrome_registries_are_independent_instances_per_page():
     a, b = PageChrome(), PageChrome()
     a.refs["x"] = 1
     assert b.refs == {}
+
+
+def test_populate_assigns_each_named_slot_onto_the_chrome():
+    chrome = PageChrome()
+    chrome.populate({"grid_pane": "G", "board": "B", "cell_parents": {"body": "B"}})
+    assert chrome.grid_pane == "G"
+    assert chrome.board == "B"
+    assert chrome.cell_parents == {"body": "B"}
