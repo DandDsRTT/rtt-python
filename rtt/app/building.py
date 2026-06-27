@@ -10,7 +10,6 @@ from rtt.app import _page_parts, tooltips
 from rtt.app.page_assets import (
     _GENERAL_TILE_LINES,
     _TILE_FONT,
-    _audio_bank,
 )
 from rtt.app.render_html import (
     _TILE_CELL,
@@ -97,10 +96,10 @@ class PageBuilder:
 
     def _build_general_tile(self) -> None:
         ui.label("tile features").classes("rtt-show-tiletitle").mark("tiletitle")
+        _page_parts._select_all_box(self, "general")
         with ui.element("div").classes("rtt-show-tile"):
             with ui.element("div").classes("rtt-tile-head"):
                 ui.html(_tile_fold_html()).classes("rtt-tile-fold")
-                self._chrome.refs["audio_bank"] = _audio_bank()
             for line in _GENERAL_TILE_LINES:
                 if "gridded_values" in line:
                     self._build_tile_grid_line()

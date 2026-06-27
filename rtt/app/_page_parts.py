@@ -23,6 +23,7 @@ from rtt.app.page_assets import (
     _TOUR_JS,
     _TOUR_STEPS,
     _ZOOM_JS,
+    _audio_bank,
     _encode_state,
 )
 from rtt.app.render_html import (
@@ -112,7 +113,7 @@ def build_drawer(pb) -> dict:
                     if group_name == "general":
                         pb._build_general_tile()
                     else:
-                        build_show_group(pb, items)
+                        build_show_group(pb, group_name, items)
     return slots
 
 
@@ -227,29 +228,68 @@ def build_approach_radio(pb) -> None:
     pb._chrome.refs["approach"].on("mouseleave", lambda _=None: on_approach_hover(None))
 
 
+_VIS_KIND = {"animations": "anim", "preview_highlighting": "prev", "tooltips": "tip"}
+_VISUAL_ICON = {
+    "animations": (
+        '<svg class="rtt-anim-icon" viewBox="0 0 14 14">'
+        '<rect x="1" y="1" width="3" height="3"/><rect x="5" y="1" width="3" height="3"/>'
+        '<rect x="1" y="5" width="3" height="3"/><rect x="5" y="5" width="3" height="3"/>'
+        '<rect class="g" x="9" y="1" width="3" height="3"/><rect class="g" x="9" y="5" width="3" height="3"/>'
+        '<rect class="g" x="1" y="9" width="3" height="3"/><rect class="g" x="5" y="9" width="3" height="3"/>'
+        '<rect class="g" x="9" y="9" width="3" height="3"/></svg>'
+    ),
+    "preview_highlighting": (
+        '<span class="rtt-prev-icon"><span class="rtt-prev-n n1">1</span>'
+        '<span class="rtt-prev-n n2">2</span><span class="rtt-prev-n n3">3</span></span>'
+    ),
+    "tooltips": '<span class="material-icons rtt-vis-mi">chat_bubble</span>',
+}
+
+
+def _setting(pb, key):
+    return pb._editor.settings[key]
+
+
+def _visual_toggle(pb, key):
+    on = _setting(pb, key)
+    cls = f"rtt-vis-ctrl rtt-vis-{_VIS_KIND[key]}" + ("" if on else " rtt-vis-off")
+    el = (
+        ui.html(_VISUAL_ICON[key])
+        .classes(cls)
+        .mark(f"visctrl:{key}")
+        .tooltip(tooltips.SHOW_HELP[key])
+    )
+    el.on("click", lambda _=None, k=key, v=not on: pb._edits.on_show_toggle(k, v))
+    return el
+
+
+def _box_label(*lines):
+    with ui.element("div").classes("rtt-box-label"):
+        for line in lines:
+            ui.label(line)
+
+
 def build_show_frozen(pb) -> dict:
     show_frozen = ui.element("div").classes("rtt-show-frozen").mark("showfrozen")
-    with show_frozen:
-        with ui.element("div").classes("rtt-show-all"):
-            select_all_box = (
-                ui.checkbox(
-                    "select all / none",
-                    value=all(pb._editor.settings[k] for k in show_settings.IMPLEMENTED),
-                    on_change=lambda e: pb._edits.on_select_all(e.value),
+    with show_frozen, ui.element("div").classes("rtt-frozen-banks"):
+        with ui.element("div").classes("rtt-settings-box rtt-visual-box").mark("visualbox"):
+            _box_label("visual", "settings")
+            with ui.element("div").classes("rtt-box-grid rtt-visual-grid"):
+                dark_btn = (
+                    ui.button(on_click=pb._handlers.dark_toggle, color=None)
+                    .props(f"flat dense round icon={pb._runtime.dark_icon()}")
+                    .classes("rtt-darktoggle")
+                    .mark("darkmode")
+                    .tooltip(tooltips.CHROME_HELP["dark_mode"])
                 )
-                .props("dense size=xs color=grey-8")
-                .classes("rtt-show-item")
-                .mark("showall")
-                .tooltip(tooltips.CHROME_HELP["select_all"])
-            )
-            dark_btn = (
-                ui.button(on_click=pb._handlers.dark_toggle, color=None)
-                .props(f"flat dense round icon={pb._runtime.dark_icon()}")
-                .classes("rtt-darktoggle")
-                .mark("darkmode")
-                .tooltip(tooltips.CHROME_HELP["dark_mode"])
-            )
-    return {"show_frozen": show_frozen, "select_all_box": select_all_box, "dark_btn": dark_btn}
+                _visual_toggle(pb, "animations")
+                _visual_toggle(pb, "preview_highlighting")
+                _visual_toggle(pb, "tooltips")
+        with ui.element("div").classes("rtt-settings-box rtt-audio-box").mark("audiobox"):
+            _box_label("audio", "settings")
+            with ui.element("div").classes("rtt-box-grid rtt-audio-grid"):
+                _audio_bank()
+    return {"show_frozen": show_frozen, "dark_btn": dark_btn}
 
 
 def build_chapter_group(pb) -> dict:
@@ -291,12 +331,31 @@ def build_chapter_group(pb) -> dict:
 def _settings_checkbox(pb, key, label):
     return ui.checkbox(
         label,
-        value=pb._editor.settings[key],
+        value=_setting(pb, key),
         on_change=lambda e, k=key: pb._edits.on_show_toggle(k, e.value),
     ).props("dense size=xs color=grey-8")
 
 
-def build_show_group(pb, items) -> None:
+def _select_all_box(pb, group_name):
+    keys = show_settings.group_keys(group_name)
+    box = (
+        ui.checkbox(
+            "select all / none",
+            value=all(_setting(pb, k) for k in keys if k in show_settings.IMPLEMENTED),
+            on_change=lambda e, ks=keys: pb._edits.on_select_all(e.value, ks),
+        )
+        .props("dense size=xs color=grey-8")
+        .classes("rtt-show-item rtt-section-all")
+        .mark(f"sectionall:{group_name}")
+        .tooltip(tooltips.CHROME_HELP["select_all"])
+    )
+    pb._chrome.section_all[group_name] = box
+    return box
+
+
+def build_show_group(pb, group_name, items) -> None:
+    ui.label(group_name).classes("rtt-app-features-title").mark("appfeaturestitle")
+    _select_all_box(pb, group_name)
     with ui.element("div").classes("rtt-show-head"):
         ui.label("show").classes("rtt-show-title")
         ui.label("example").classes("rtt-show-examplehdr")

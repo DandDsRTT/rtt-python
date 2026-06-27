@@ -49,8 +49,8 @@ class EditController:
     def on_show_toggle(self, key, value):
         _editing_controls.on_show_toggle(self, key, value)
 
-    def on_select_all(self, value):
-        _editing_controls.on_select_all(self._editor, self._renderer, self._runtime, value)
+    def on_select_all(self, value, keys):
+        _editing_controls.on_select_all(self._editor, self._renderer, self._runtime, value, keys)
 
     def on_part_click(self, key):
         _editing_controls.on_part_click(self._editor, self._renderer, self._runtime, key)

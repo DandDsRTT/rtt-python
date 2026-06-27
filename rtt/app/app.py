@@ -172,12 +172,14 @@ class _Page:
             self.chrome.examples[key].classes(
                 add="rtt-ex-disabled"
             ) if disabled else self.chrome.examples[key].classes(remove="rtt-ex-disabled")
-        states = [self.editor.settings[k] for k in self.runtime.available_keys()]
-        with self.runtime.building_guard():
-            self.chrome.select_all_box.value = bool(states) and all(states)
-        self.chrome.select_all_box.classes(add="rtt-show-mixed") if (
-            any(states) and not all(states)
-        ) else self.chrome.select_all_box.classes(remove="rtt-show-mixed")
+        for group_name, box in self.chrome.section_all.items():
+            keys = self.runtime.available_in(show_settings.group_keys(group_name))
+            states = [self.editor.settings[k] for k in keys]
+            with self.runtime.building_guard():
+                box.value = bool(states) and all(states)
+            box.classes(add="rtt-show-mixed") if (any(states) and not all(states)) else box.classes(
+                remove="rtt-show-mixed"
+            )
 
     def on_chapter_change(self, v):
         if self.runtime.building:

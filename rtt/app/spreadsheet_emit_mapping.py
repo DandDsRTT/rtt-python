@@ -233,6 +233,7 @@ def _emit_projection_unchanged(cells, resolved, geometry, ctx) -> None:
         for p in range(_r.dims.d):
             cells.append(CellBox(f"cell:proj_v:{p}:{query.col_token(_r, 'commas', c)}", query.comma_left(geometry, _r, c), query.proj_top(geometry, p),
                                  COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
+            voice(cells, "proj:commas", c, _r.tuning.comma_sizes.tempered[c])
     if _r.scalars.comma_draft:
         for p in range(_r.dims.d):
             cells.append(CellBox(f"cell:proj_v:{p}:draft", query.comma_left(geometry, _r, _r.dims.nc), query.proj_top(geometry, p),
@@ -243,6 +244,8 @@ def _emit_projection_unchanged(cells, resolved, geometry, ctx) -> None:
             cells.append(CellBox(f"cell:proj_v:{p}:u{j}", query.comma_left(geometry, _r, _r.dims.nc_shown + j), query.proj_top(geometry, p),
                                  COL_W, ROW_H, "mapped",
                                  text=DASH if dashed else str(_r.unchanged.basis[j][p]), prime=p, comma=_r.dims.nc + j))
+            if not dashed:
+                voice(cells, "proj:commas", _r.dims.nc + j, _r.unchanged.sizes.tempered[j])
 
 
 def _emit_projection_basis(cells, resolved, geometry, ctx) -> None:

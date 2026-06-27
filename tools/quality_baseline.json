@@ -1,24 +1,24 @@
 {
-  "reach_through_total": 41,
+  "reach_through_total": 40,
   "reach_through_by_handle": {
     "_runtime": 15,
     "_rec": 7,
     "e": 5,
-    "_chrome": 5,
     "_editor": 5,
+    "_chrome": 4,
     "_gestures": 2,
     "_edits": 1,
     "class_handles": 1
   },
-  "param_reach_through_total": 452,
+  "param_reach_through_total": 453,
   "param_reach_through_by_handle": {
-    "_editor": 234,
+    "_editor": 233,
     "_rec": 73,
     "_runtime": 48,
     "_renderer": 31,
-    "_chrome": 30,
+    "_chrome": 31,
     "_gestures": 22,
-    "_edits": 6,
+    "_edits": 7,
     "e": 5,
     "_handlers": 3
   },
@@ -49,7 +49,7 @@
     },
     "rtt/app/page_chrome.py::PageChrome": {
       "methods": 2,
-      "attrs": 23
+      "attrs": 24
     },
     "rtt/app/rendering.py::Renderer": {
       "methods": 11,

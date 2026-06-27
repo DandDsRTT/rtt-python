@@ -946,7 +946,63 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    330px-wide border (drawn on the border-box edge despite the 14px side padding) reads as one
    clean divider across the pane, like the column band's seam. */
 .rtt-show-frozen { flex:none; box-sizing:border-box; display:flex; flex-direction:column;
-                   justify-content:center; gap:3px; padding:0 14px; border-bottom:1px solid #c4c4c4; }
+                   justify-content:flex-start; gap:3px; padding:0 14px; border-bottom:1px solid #c4c4c4; }
+/* the frozen header's two settings banks — "visual settings" and "audio settings" — span the pane
+   side by side. Each box carries a two-line label on the left (vertically centred) and a small grid
+   of icon controls on the right. */
+.rtt-frozen-banks { display:flex; gap:10px; align-items:center; }
+.rtt-settings-box { flex:1 1 auto; display:flex; align-items:center; gap:8px; box-sizing:border-box;
+                    border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6; padding:3px 7px; }
+.rtt-box-label { font-size:11px; font-weight:bold; line-height:1.05; color:#444; white-space:nowrap; }
+.rtt-box-grid { display:grid; gap:4px; margin-left:auto; }
+.rtt-visual-grid { grid-template-columns:repeat(2, 16px); grid-auto-rows:16px; }
+.rtt-audio-box .rtt-tile-bank { display:grid; grid-template-columns:repeat(3, 16px);
+                                grid-auto-rows:16px; gap:4px; }
+.rtt-vis-ctrl { display:flex; align-items:center; justify-content:center; width:16px; height:16px;
+                cursor:pointer; }
+.rtt-visual-grid .rtt-darktoggle { width:16px !important; min-width:16px !important;
+                                   height:16px !important; min-height:16px !important; }
+.rtt-visual-grid .rtt-darktoggle .q-icon { font-size:14px; }
+.rtt-vis-mi { font-size:12px; color:#555; }
+/* tooltips toggle: a static bubble that greys out when off */
+.rtt-vis-tip.rtt-vis-off { opacity:0.4; filter:grayscale(1); }
+/* animations toggle: a 2x2 tile that grows a third row+column of squares and shrinks back, on a
+   loop. On = a smooth ease; off = the SAME two states but stepped (no smooth tween) — demonstrating
+   what the app's animations setting does. */
+.rtt-anim-icon { width:14px; height:14px; display:block; }
+.rtt-anim-icon rect { fill:#555; }
+.rtt-anim-icon .g { opacity:0; }
+.rtt-vis-anim .rtt-anim-icon .g { animation:rtt-anim-grow 1.8s ease-in-out infinite; }
+.rtt-vis-anim.rtt-vis-off .rtt-anim-icon .g { animation:rtt-anim-grow 1.8s steps(1, jump-none) infinite; }
+@keyframes rtt-anim-grow { 0%,14% { opacity:0; } 46%,72% { opacity:1; } 100% { opacity:0; } }
+/* preview-highlighting toggle: a value box that cycles the app's pending/change/remove states —
+   green "1", amber "2", red "3", then a blank beat — using the exact ring/wash/text the grid uses
+   (so it tracks dark mode via the same vars). Off = the same cycle with no colour. */
+.rtt-prev-icon { position:relative; width:12px; height:12px; display:block; }
+.rtt-prev-n { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+              font-size:8px; line-height:1; opacity:0; }
+.rtt-vis-prev .rtt-prev-icon { animation:rtt-prev-box 3s infinite; }
+.rtt-vis-prev .n1 { color:var(--pending-text-color); animation:rtt-prev-n1 3s infinite; }
+.rtt-vis-prev .n2 { color:var(--preview-text-color); animation:rtt-prev-n2 3s infinite; }
+.rtt-vis-prev .n3 { color:var(--preview-remove-text-color); animation:rtt-prev-n3 3s infinite; }
+@keyframes rtt-prev-box {
+  0%,28%   { box-shadow:inset 0 0 0 1.5px var(--pending-color);
+             background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
+  33%,61%  { box-shadow:inset 0 0 0 1.5px var(--preview-color);
+             background:color-mix(in srgb, var(--preview-color) 14%, transparent); }
+  66%,90%  { box-shadow:inset 0 0 0 1.5px var(--preview-remove-color);
+             background:color-mix(in srgb, var(--preview-remove-color) 14%, transparent); }
+  92%,100% { box-shadow:none; background:transparent; }
+}
+@keyframes rtt-prev-n1 { 0%,28% { opacity:1; } 30%,100% { opacity:0; } }
+@keyframes rtt-prev-n2 { 0%,30% { opacity:0; } 33%,61% { opacity:1; } 63%,100% { opacity:0; } }
+@keyframes rtt-prev-n3 { 0%,63% { opacity:0; } 66%,90% { opacity:1; } 92%,100% { opacity:0; } }
+.rtt-vis-prev.rtt-vis-off .rtt-prev-n { color:#777; }
+.rtt-vis-prev.rtt-vis-off .rtt-prev-icon { animation:rtt-prev-box-off 3s infinite; }
+@keyframes rtt-prev-box-off {
+  0%,90% { box-shadow:inset 0 0 0 1.5px #999; background:color-mix(in srgb, #999 14%, transparent); }
+  92%,100% { box-shadow:none; background:transparent; }
+}
 /* the scrolling body: the two toggle groups. It sizes to its OWN content (flex:none) capped by a
    max-height set in render() to the window less the inset and the frozen header — NOT by filling the
    flex column. That decoupling matters: when the panel fits, the body equals its content exactly, so
@@ -994,6 +1050,10 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    they render a notch smaller (apply_chapter adds this class for long titles) — staying one line. */
 .rtt-chapter-reading.rtt-chapter-reading-narrow { font-size:10px; }
 .rtt-chapter-slider { padding:0 6px; }
+/* the chapter notches default to a barely-visible 30%-black tick; darken + thicken them so the
+   reader can actually see the chapter stops, and flip to light ticks in dark mode. */
+.rtt-chapter-slider .q-slider__markers { color:rgba(0,0,0,0.8) !important; height:6px !important; }
+body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.85) !important; }
 /* the "use D&D's terminology" checkbox sits just under the slider inside the guide-settings box */
 .rtt-chapter-dd { margin-top:4px; }
 /* a control the chapter slider has not yet revealed (its chapter is past the slider) is made

@@ -27,6 +27,7 @@ class PageChrome:
         self.chapter_slider: Element | None = None
         self.refs: dict = {}
         self.boxes: dict = {}
+        self.section_all: dict = {}
         self.examples: dict = {}
         self.tile_parts: dict = {}
         self.show_rows: dict = {}

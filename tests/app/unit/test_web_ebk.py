@@ -76,8 +76,8 @@ def test_ebk_toggle_is_registered_on_by_default_from_chapter_two():
     assert app_settings.CHAPTER["ebk"] == 2                # revealed by the default slider (ch4 ≥ 2)
     assert app_settings.reveal_chapter("ebk") == 2
     # it's a show/example checkbox row (a notation MODE, not a per-tile dummy-tile layer), in the
-    # "specific tiles & controls" group just above its "units" (domain_units) row — the user's placement
-    specific = [k for k, *_ in dict(app_settings.SHOW_GROUPS)["specific tiles & controls"]]
+    # "app features" group just above its "units" (domain_units) row — the user's placement
+    specific = [k for k, *_ in dict(app_settings.SHOW_GROUPS)["app features"]]
     assert specific.index("ebk") == specific.index("domain_units") - 1
     general = [k for k, *_ in dict(app_settings.SHOW_GROUPS)["general"]]
     assert "ebk" not in general                            # NOT a dummy-tile part
