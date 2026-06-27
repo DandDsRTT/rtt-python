@@ -241,6 +241,8 @@ def ancestors_of(key: str) -> set[str]:
 
 def from_persisted(stored: dict) -> dict[str, bool]:
     return {
-        key: (stored.get(key, default) if key in IMPLEMENTED else default)
+        key: (
+            stored.get(key, default) if (key in IMPLEMENTED or key == "dd_terminology") else default
+        )
         for key, default in DEFAULTS.items()
     }

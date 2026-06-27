@@ -165,6 +165,28 @@ async def test_enabling_a_feature_renders_its_cell(user: User, label: str, cell_
     await user.should_see(marker=cell_id)
 
 
+async def test_guide_settings_box_carries_the_terminology_toggle(user: User) -> None:
+    await user.open("/")
+    await user.should_see(content="guide settings")
+    assert user.find(marker="ddterminology").elements
+
+
+async def test_dd_terminology_toggle_swaps_grid_terms_to_wiki_live(user: User) -> None:
+    await user.open("/")
+    assert user.find(content="interval vectors").elements
+    user.find(kind=ui.checkbox, content="use D&D's terminology").click()
+    await user.should_see(content="monzos")
+    assert user.find(content="comma list").elements
+
+
+async def test_undo_of_terminology_toggle_restores_dd_terms(user: User) -> None:
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="use D&D's terminology").click()
+    await user.should_see(content="monzos")
+    user.find(marker="undo").click()
+    await user.should_see(content="interval vectors")
+
+
 async def test_enabling_math_expressions_renders_the_closed_form(user: User) -> None:
     # the just row's cents cells become "1200 · log₂…" closed-form cells (kind mathexpr)
     await _enable(user, "math expressions")

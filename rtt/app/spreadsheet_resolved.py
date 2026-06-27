@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from rtt.app import terminology
+
 
 @dataclass(frozen=True)
 class Dims:
@@ -159,6 +161,7 @@ class Flags:
     tuning: bool
     interest: bool
     interval_ratios: bool
+    dd_terminology: bool
 
 
 @dataclass(frozen=True)
@@ -330,7 +333,7 @@ def _labels(b) -> Labels:
     return Labels(
         col_labels=b.col_labels,
         row_labels=b.row_labels,
-        captions=b.effective_captions,
+        captions=terminology.wiki_captions(b.effective_captions, b.dd_terminology),
         prescaling_symbols=b.prescaling_symbols,
         prescaler_symbol=b.prescaler_symbol,
         prescaler_equivalence=b.prescaler_equivalence,
@@ -382,6 +385,7 @@ def _flags(b) -> Flags:
         tuning=b.show_tuning,
         interest=b.show_interest,
         interval_ratios=b.show_interval_ratios,
+        dd_terminology=b.dd_terminology,
     )
 
 

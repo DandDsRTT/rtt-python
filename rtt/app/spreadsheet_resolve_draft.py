@@ -44,6 +44,7 @@ class ResolveDraft:
     show_ebk: object = None
     show_interval_ratios: object = None
     show_interval_vectors: object = None
+    dd_terminology: object = True
     show_math: object = None
     custom_weights_active: object = None
     d: object = None
