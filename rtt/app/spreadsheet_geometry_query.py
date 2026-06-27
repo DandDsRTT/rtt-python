@@ -351,7 +351,7 @@ def projection_superspace_tail(resolved) -> str:
 
 def weight_simplicity_header(resolved, i: int) -> str:
     symbol = f"w{_sub(i + 1)}"
-    if not resolved.flags.equiv:
+    if not resolved.flags.equivalences:
         return symbol
     return f"{symbol} = c{_sub(i + 1)}⁻¹"
 

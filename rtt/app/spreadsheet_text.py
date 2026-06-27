@@ -79,14 +79,14 @@ def _pretransform_label(text: str) -> str:
 
 
 def _prescaler_col_labels(
-    letter: str, show_equiv: bool, all_interval: bool, show_superspace: bool = False
+    letter: str, show_equivalences: bool, all_interval: bool, show_superspace: bool = False
 ) -> dict:
     def norm(inner):
         return lambda i: f"‖{inner(i)}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}"
 
     def complexity_target(i):
         symbol = f"c{_sub(i + 1)}"
-        if not show_equiv:
+        if not show_equivalences:
             return symbol
         inner = f"{letter}[{i + 1}]" if all_interval else f"{letter}𝐭{_sub(i + 1)}"
         return f"{symbol} = ‖{inner}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}"

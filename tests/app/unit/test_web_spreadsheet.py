@@ -2130,7 +2130,7 @@ def test_every_open_value_tile_has_a_plain_text_string():
     # newly-added tile that forgets its plain text fails here, rather than slipping through to the user.
     from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
     b = _maximized_superspace_builder()
-    assert b.resolved.flags.superspace and b.resolved.flags.ptext  # the config really did light the superspace + plain text
+    assert b.resolved.flags.superspace and b.resolved.flags.plain_text_values  # the config really did light the superspace + plain text
     value_rows = PTEXT_ROWS - {"quantities"}  # the quantities row's only band is the "2.3.5" primes string
     missing = [(r, c) for (r, c) in sorted(b.geometry.declared_tiles)
                if r in value_rows and c not in SPINE_COLUMNS and query.tile_open(b.geometry, b.inputs.collapsed, r, c)
@@ -2146,7 +2146,7 @@ def test_every_row_that_produces_plain_text_reserves_its_band():
     # membership. Sweeping every Show toggle on (which surfaces the canon row via form_tiles) catches any
     # such row generically, before it reaches the user.
     b = _maximized_superspace_builder()
-    assert b.resolved.flags.ptext and b.resolved.flags.canon  # the config really did light the plain text + the canon row
+    assert b.resolved.flags.plain_text_values and b.resolved.flags.canon  # the config really did light the plain text + the canon row
     rows_with_text = {r for (r, _c) in b.geometry.ptext_strings}
     spill = sorted(r for r in rows_with_text if ptext_band(b.geometry, r, folded=False) <= 0)
     assert not spill, f"rows produce plain text but reserve no band (it will spill past the tile): {spill}"
@@ -7816,10 +7816,10 @@ def test_prescaler_labels_resolve_the_log_prime_glyph_and_gated_name():
     # matrix, so products/headers carry the concrete 𝐿 (not the abstract 𝑋), and the bare tile's
     # NAME gains "= log-prime matrix" — but only with the equivalences layer on.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    p = spreadsheet_models._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equiv=True)
+    p = spreadsheet_models._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equivalences=True)
     assert p.symbol == "𝐿"  # the concrete log-prime glyph (not the abstract 𝑋)
     assert p.effective_captions[("prescaling", "primes")].endswith("= log-prime matrix")
-    bare = spreadsheet_models._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equiv=False)
+    bare = spreadsheet_models._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equivalences=False)
     assert "log-prime matrix" not in bare.effective_captions[("prescaling", "primes")]  # gated on equivalences
 
 

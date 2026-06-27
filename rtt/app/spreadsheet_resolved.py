@@ -124,18 +124,18 @@ class Flags:
     alt_complexity: bool
     canon: bool
     names: bool
-    detempering: bool
+    generator_detempering: bool
     ebk: bool
-    equiv: bool
+    equivalences: bool
     form_controls: bool
     form_subscript: bool
     header_symbols: bool
-    math: bool
+    math_expressions: bool
     mnemonics: bool
     nonstandard_domain: bool
     optimization: bool
     presets: bool
-    ptext: bool
+    plain_text_values: bool
     quantities: bool
     superspace: bool
     superspace_generators: bool
@@ -148,17 +148,17 @@ class Flags:
     identity_objects: bool
     interval_vectors: bool
     cell_units: bool
-    gridded: bool
+    gridded_values: bool
     complexity_shown: bool
     prescaling_shown: bool
     lbox_show: bool
     cbox_show: bool
     counts: bool
     charts: bool
-    ranges: bool
+    tuning_ranges: bool
     domain_units: bool
-    temp: bool
-    tuning: bool
+    temperament_tiles: bool
+    tuning_tiles: bool
     interest: bool
     interval_ratios: bool
     dd_terminology: bool
@@ -348,18 +348,18 @@ def _flags(b) -> Flags:
         alt_complexity=b.show_alt_complexity,
         canon=b.show_canon,
         names=b.show_names,
-        detempering=b.show_detempering,
+        generator_detempering=b.show_generator_detempering,
         ebk=b.show_ebk,
-        equiv=b.show_equiv,
+        equivalences=b.show_equivalences,
         form_controls=b.show_form_controls,
         form_subscript=b.show_form_subscript,
         header_symbols=b.show_header_symbols,
-        math=b.show_math,
+        math_expressions=b.show_math_expressions,
         mnemonics=b.show_mnemonics,
         nonstandard_domain=b.show_nonstandard_domain,
         optimization=b.show_optimization,
         presets=b.show_presets,
-        ptext=b.show_ptext,
+        plain_text_values=b.show_plain_text_values,
         quantities=b.show_quantities,
         superspace=b.show_superspace,
         superspace_generators=b.show_superspace_generators,
@@ -372,17 +372,17 @@ def _flags(b) -> Flags:
         identity_objects=b.show_identity_objects,
         interval_vectors=b.show_interval_vectors,
         cell_units=b.show_cell_units,
-        gridded=b.gridded,
+        gridded_values=b.gridded_values,
         complexity_shown=b._complexity_shown,
         prescaling_shown=b._prescaling_shown,
         lbox_show=b._lbox_show,
         cbox_show=b._cbox_show,
         counts=b.show_counts,
         charts=b.show_charts,
-        ranges=b.show_ranges,
+        tuning_ranges=b.show_tuning_ranges,
         domain_units=b.show_domain_units,
-        temp=b.show_temp,
-        tuning=b.show_tuning,
+        temperament_tiles=b.show_temperament_tiles,
+        tuning_tiles=b.show_tuning_tiles,
         interest=b.show_interest,
         interval_ratios=b.show_interval_ratios,
         dd_terminology=b.dd_terminology,

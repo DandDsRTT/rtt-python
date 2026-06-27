@@ -43,7 +43,7 @@ def transform_cells(cells, resolved, geometry, ctx) -> tuple:
 
 def _filter_gridded_quantities(cells, resolved):
     _r = resolved
-    if not _r.flags.gridded:
+    if not _r.flags.gridded_values:
         return [cb for cb in cells if cb.kind not in GRIDDED_KINDS]
     if not _r.flags.quantities:
         return [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
@@ -265,7 +265,7 @@ def _emit_scheme_buttons(cells, blocks, resolved, geometry, ctx) -> None:
 
 def _emit_ptext_band(cells, resolved, geometry, ctx) -> None:
     _r = resolved
-    if _r.flags.ptext:
+    if _r.flags.plain_text_values:
         for (rkey, ckey), text in geometry.ptext_strings.items():
             if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
                 continue

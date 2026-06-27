@@ -103,7 +103,7 @@ def _emit_prescale_cells(cells, resolved, geometry, group, c, vec, prescaled, pr
         if i < nrows and not _r.flags.superspace and group == "primes" and (i == c or _r.flags.alt_complexity):
             cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
                                  text=service.prescale_text(value, _r.flags.decimals), prime=i, unit=u))
-        elif i < nrows and _r.flags.math and vec[i] != 0 and i in prime_term:
+        elif i < nrows and _r.flags.math_expressions and vec[i] != 0 and i in prime_term:
             cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
                                  text=_prescale_math_expr(vec[i], prime_term[i], value, _r.flags.quantities, _r.flags.decimals), unit=u))
         else:

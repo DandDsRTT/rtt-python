@@ -309,7 +309,7 @@ def _caption_equivalences(resolved, geometry, ai, slope) -> dict:
 def _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, rkey, ckey, cy) -> float:
     _r = resolved
     cy += BAND_GAP
-    equiv = caption_equivs.get((rkey, ckey), "") if _r.flags.equiv else ""
+    equiv = caption_equivs.get((rkey, ckey), "") if _r.flags.equivalences else ""
     base_symbol = _r.labels.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
     if caption_ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:
         base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
@@ -361,7 +361,7 @@ def _emit_tile_symbols_captions(cells, resolved, geometry, caption_equivs, capti
     if caption_ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:
         name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
     cy = geometry.rows[rkey].y + geometry.rows[rkey].h + geometry.rows[rkey].frame + geometry.rows[rkey].cpick
-    if (_r.flags.symbols or _r.flags.equiv) and rkey in BANDS["symbol"].rows:
+    if (_r.flags.symbols or _r.flags.equivalences) and rkey in BANDS["symbol"].rows:
         cy = _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, rkey, ckey, cy)
     if _r.flags.names and _r.unchanged.shown and (rkey, ckey) == ("counts", "commas"):
         _emit_unchanged_counts_caption(cells, resolved, geometry, rkey, cy)

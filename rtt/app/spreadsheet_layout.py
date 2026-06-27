@@ -106,7 +106,7 @@ def _resolve_col_headers(resolved):
 
 def _matlabel_other_w(geometry, resolved):
     _r = resolved
-    _label_row_present = {"mapping": _r.flags.temp, "vectors": _r.flags.interval_vectors,
+    _label_row_present = {"mapping": _r.flags.temperament_tiles, "vectors": _r.flags.interval_vectors,
                           "canon": _r.flags.canon, "projection": _r.flags.projection,
                           "prescaling": _r.flags.prescaling_shown, "ss_mapping": _r.flags.superspace,
                           "ss_vectors": _r.flags.superspace, "ss_projection": _r.flags.ss_projection}
@@ -125,12 +125,12 @@ def _define_col_bands(geometry, resolved, ctx, label_w):
         geometry,
         col_header=_resolve_col_headers(resolved),
         matlabel_primes_w=((MATLABEL_W_SS if _r.flags.superspace else MATLABEL_W)
-                           if (_r.flags.header_symbols and _r.flags.temp) else 0),
+                           if (_r.flags.header_symbols and _r.flags.temperament_tiles) else 0),
         matlabel_ssprimes_w=MATLABEL_W_SSPRIMES if (_r.flags.header_symbols and _r.flags.superspace) else 0,
         matlabel_other_w=_matlabel_other_w(geometry, resolved),
         row_handle_w=(ROW_HANDLE_W + ROW_HANDLE_GAP) if (
-            ctx.settings.get("drag_to_combine") and _r.flags.temp and _r.dims.r > 1) else 0,
-        etpick_w=(ETPICK_W + ETPICK_GAP) if (_r.flags.presets and _r.flags.temp) else 0,
+            ctx.settings.get("drag_to_combine") and _r.flags.temperament_tiles and _r.dims.r > 1) else 0,
+        etpick_w=(ETPICK_W + ETPICK_GAP) if (_r.flags.presets and _r.flags.temperament_tiles) else 0,
         size_factor=size_factor,
         size_rows=1 if size_factor else 0,
         prescale_rows=_r.dims.dL if _r.flags.superspace else _r.dims.d,
@@ -148,14 +148,14 @@ def _col_bands(geometry, resolved, ctx):
         ("quantities", COL_W, _r.flags.interval_ratios, True),
         ("units", COL_W, _r.flags.domain_units, True),
         ("canongens", 2 * BRACKET_W + _r.dims.rc * COL_W + 2 * query.matlabel_gutter_w(geometry, "canongens"), _r.flags.canon, True),
-        ("gens", 2 * BRACKET_W + _r.dims.r * COL_W + 2 * query.matlabel_gutter_w(geometry, "gens"), _r.flags.temp, True),
+        ("gens", 2 * BRACKET_W + _r.dims.r * COL_W + 2 * query.matlabel_gutter_w(geometry, "gens"), _r.flags.temperament_tiles, True),
         ("ssgens", 2 * BRACKET_W + _r.dims.rL * COL_W, _r.flags.superspace, True),
         ("ssprimes", 2 * BRACKET_W + _r.dims.dL * COL_W + 2 * geometry.matlabel_ssprimes_w, _r.flags.superspace, True),
-        ("primes", 2 * BRACKET_W + _r.dims.d_shown * COL_W + 2 * query.outer_gutter_w(geometry, "primes"), _r.flags.temp, True),
-        ("detempering", 2 * BRACKET_W + _r.dims.r * COL_W, _r.flags.detempering, True),
-        ("commas", commas_band_w(resolved, _r.dims.nc_shown), _r.flags.temp, True),
+        ("primes", 2 * BRACKET_W + _r.dims.d_shown * COL_W + 2 * query.outer_gutter_w(geometry, "primes"), _r.flags.temperament_tiles, True),
+        ("detempering", 2 * BRACKET_W + _r.dims.r * COL_W, _r.flags.generator_detempering, True),
+        ("commas", commas_band_w(resolved, _r.dims.nc_shown), _r.flags.temperament_tiles, True),
         ("held", query.interval_list_w(_r.dims.nh_shown, "held"), _r.flags.optimization, True),
-        ("targets", query.interval_list_w(_r.dims.k_shown, "targets"), _r.flags.tuning and ctx.targets_in_use, True),
+        ("targets", query.interval_list_w(_r.dims.k_shown, "targets"), _r.flags.tuning_tiles and ctx.targets_in_use, True),
         ("interest", query.interval_list_w(_r.dims.mi_shown, "interest"), _r.flags.interest, True),
     )
 
@@ -169,18 +169,18 @@ def _define_row_bands(geometry, resolved):
         ("scaling_factors", ROW_H, _r.unchanged.shown, True, "scaling factors"),
         ("vectors", _r.dims.d * ROW_H, _r.flags.interval_vectors, True, "interval vectors"),
         ("canon", _r.dims.rc * ROW_H, _r.flags.canon, True, "canonical mapping"),
-        ("mapping", _r.dims.r_shown * ROW_H, _r.flags.temp, True, "mapping"),
+        ("mapping", _r.dims.r_shown * ROW_H, _r.flags.temperament_tiles, True, "mapping"),
         ("ss_vectors", _r.dims.dL * ROW_H, _r.flags.superspace, True, "superspace\ninterval vectors"),
         ("ss_mapping", _r.dims.rL * ROW_H, _r.flags.superspace, True, "superspace\nmapping"),
         ("ss_projection", _r.dims.dL * ROW_H, _r.flags.ss_projection, True, "superspace\nprojection"),
         ("projection", _r.dims.d * ROW_H, _r.flags.projection, True, "projection"),
-        ("tuning", ROW_H, _r.flags.tuning, True, "tuning"),
-        ("just", ROW_H, _r.flags.tuning, True, "just tuning"),
-        ("retune", ROW_H, _r.flags.tuning, True, "retuning"),
+        ("tuning", ROW_H, _r.flags.tuning_tiles, True, "tuning"),
+        ("just", ROW_H, _r.flags.tuning_tiles, True, "just tuning"),
+        ("retune", ROW_H, _r.flags.tuning_tiles, True, "retuning"),
         ("prescaling", (geometry.prescale_rows + geometry.size_rows) * ROW_H + query.prescale_size_gap(geometry), _r.flags.prescaling_shown, True, "complexity prescaling"),
         ("complexity", ROW_H, _r.flags.complexity_shown, True, "complexity"),
         ("weight", ROW_H, _r.flags.weighting, True, "weight"),
-        ("damage", ROW_H, _r.flags.tuning, True, "damage"),
+        ("damage", ROW_H, _r.flags.tuning_tiles, True, "damage"),
     )
     row_bands = tuple(
         (key, h, present, collapsible, terminology.wiki(label, _r.flags.dd_terminology))
@@ -273,7 +273,7 @@ def _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label,
     charted = show_charts and key in BANDS["chart"].rows and not folded and natural == ROW_H
     chart_band = (CHART_H + CHART_GAP) if charted else 0
     cap = caption_band(geometry, resolved, ctx, key, folded)
-    sym = BANDS["symbol"].height if ((_r.flags.symbols or _r.flags.equiv)
+    sym = BANDS["symbol"].height if ((_r.flags.symbols or _r.flags.equivalences)
                                      and key in BANDS["symbol"].rows and not folded) else 0
     uni = BANDS["units"].height if (_r.flags.units and key in BANDS["units"].rows and not folded) else 0
     pre = preset_band_h(geometry, resolved, key) if (((_r.flags.presets and key in BANDS["preset"].rows)
@@ -358,7 +358,7 @@ def _init_group_geometry(geometry, resolved, ctx) -> Geometry:
 
 def _resolve_tile_extras(geometry, resolved, ctx):
     _r = resolved
-    gtm_chart = (_r.flags.ranges and _r.flags.tuning and "row:tuning" not in ctx.collapsed
+    gtm_chart = (_r.flags.tuning_ranges and _r.flags.tuning_tiles and "row:tuning" not in ctx.collapsed
                  and query.col_open(geometry, ctx.collapsed, "gens") and "tile:tuning:gens" not in ctx.collapsed)
     gtm_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
     lbox_ctrl = _r.flags.lbox_show and query.col_open(geometry, ctx.collapsed, "ssprimes" if _r.flags.superspace else "primes") and not _r.flags.presets
@@ -420,7 +420,7 @@ def _resolve_ptext_strings(geometry, resolved, ctx) -> Geometry:
                                                    comma_sizes=_r.commas.sizes,
                                                    superspace_tun=(geometry.ss_tun
                                                                    if _r.flags.superspace else None)))
-                     if _r.flags.ptext else {})
+                     if _r.flags.plain_text_values else {})
     if not _r.flags.ebk:
         ptext_strings = {k: service.ebk_to_simple_matrix(v) for k, v in ptext_strings.items()}
     return replace(geometry, ptext_strings=ptext_strings)

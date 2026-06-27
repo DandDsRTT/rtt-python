@@ -20,64 +20,64 @@ from rtt.app.spreadsheet_text import _prescaler_col_labels, _pretransform_label
 class _ShowFlags:
     names: bool
     mnemonics: bool
-    equiv: bool
+    equivalences: bool
     presets: bool
     counts: bool
-    ptext: bool
+    plain_text_values: bool
     charts: bool
-    ranges: bool
+    tuning_ranges: bool
     symbols: bool
     header_symbols: bool
     units: bool
     cell_units: bool
     domain_units: bool
-    temp: bool
+    temperament_tiles: bool
     form: bool
     form_controls: bool
     form_tiles: bool
-    tuning: bool
+    tuning_tiles: bool
     optimization: bool
     weighting: bool
     alt_complexity: bool
     lbox: bool
     cbox: bool
-    detempering: bool
+    generator_detempering: bool
     interest: bool
-    gridded: bool
+    gridded_values: bool
     quantities: bool
     decimals: bool
     ebk: bool
     interval_ratios: bool
     interval_vectors: bool
-    math: bool
+    math_expressions: bool
 
 
 def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
     names = settings["names"]
-    temp = settings["temperament_tiles"]
-    tuning = settings["tuning_tiles"]
-    optimization = tuning and settings["optimization"]
-    weighting = tuning and settings["weighting"]
+    temperament_tiles = settings["temperament_tiles"]
+    tuning_tiles = settings["tuning_tiles"]
+    optimization = tuning_tiles and settings["optimization"]
+    weighting = tuning_tiles and settings["weighting"]
     alt_complexity = weighting and settings["alt_complexity"]
     return _ShowFlags(
         names=names,
         mnemonics=names and settings["mnemonics"],
-        equiv=settings["equivalences"],
+        equivalences=settings["equivalences"],
         presets=settings["presets"],
         counts=settings["counts"],
-        ptext=settings["plain_text_values"],
+        plain_text_values=settings["plain_text_values"],
         charts=settings["charts"],
-        ranges=settings["tuning_ranges"],
+        tuning_ranges=settings["tuning_ranges"],
         symbols=settings["symbols"],
         header_symbols=settings["header_symbols"],
         units=settings["units"],
         cell_units=settings["cell_units"],
         domain_units=settings["domain_units"],
-        temp=temp,
+        temperament_tiles=temperament_tiles,
         form=settings["form"],
         form_controls=settings["form_controls"],
         form_tiles=settings["form_tiles"],
-        tuning=tuning,
+        tuning_tiles=tuning_tiles,
         optimization=optimization,
         weighting=weighting,
         alt_complexity=alt_complexity,
@@ -87,15 +87,15 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         cbox=(weighting
               and "col:targets" not in collapsed and "row:complexity" not in collapsed
               and "tile:complexity:targets" not in collapsed),
-        detempering=settings["generator_detempering"],
+        generator_detempering=settings["generator_detempering"],
         interest=settings["interest"],
-        gridded=settings["gridded_values"],
+        gridded_values=settings["gridded_values"],
         quantities=settings["quantities"],
         decimals=settings.get("decimals", True),
         ebk=settings.get("ebk", True),
         interval_ratios=settings["interval_ratios"],
         interval_vectors=settings["interval_vectors"],
-        math=settings["math_expressions"],
+        math_expressions=settings["math_expressions"],
     )
 
 
@@ -111,7 +111,7 @@ class _PrescalerLabels:
     effective_captions: dict
 
 
-def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv, show_superspace=False) -> _PrescalerLabels:
+def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equivalences, show_superspace=False) -> _PrescalerLabels:
     all_interval = service.is_all_interval(tuning_scheme)
     scheme_prescaler = service.prescaler_of(tuning_scheme)
     realized = service.displayed_prescaler_name(state.mapping, tuning_scheme, custom_prescaler)
@@ -142,7 +142,7 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
         effective_captions[("prescaling", "primes")] = "complexity prescaled subspace basis elements"
         effective_captions[("complexity", "primes")] = "subspace basis element complexity map"
     _BASE_MATRIX_NAME = {"log-prime": "log-prime matrix", "prime": "diagonal matrix of primes", "identity": "identity matrix"}
-    if show_equiv and realized:
+    if show_equivalences and realized:
         if size_factor:
             base = _BASE_MATRIX_NAME[realized]
             effective_captions[("prescaling", bare_col)] += (
@@ -154,7 +154,7 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     return _PrescalerLabels(
         scheme_prescaler=scheme_prescaler, realized=realized, symbol=symbol, equivalence=equivalence,
         prescaling_symbols=prescaling_symbols,
-        col_labels={**COL_LABEL_LETTERS, **_prescaler_col_labels(symbol, show_equiv, all_interval, show_superspace)},
+        col_labels={**COL_LABEL_LETTERS, **_prescaler_col_labels(symbol, show_equivalences, all_interval, show_superspace)},
         row_labels=row_labels, effective_captions=effective_captions,
     )
 
