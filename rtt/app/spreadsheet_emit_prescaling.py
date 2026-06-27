@@ -81,7 +81,7 @@ def _emit_prescale_group(cells, resolved, geometry, group, vectors, prescaler_di
         if vec is None:
             for i in range(nrows + geometry.size_rows):
                 cid = f"cell:prescaling:{group}:{i}:{query.col_token(resolved, group, c)}"
-                cx, cy = left[query.comma_value_pos(resolved, c) if group == "commas" else c], query.prescale_row_y(geometry, i)
+                cx, cy = left[query.comma_value_pos(resolved, c) if group == "commas" else c], query.subrow_top(geometry, "prescaling", i)
                 cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue", text=DASH, unit=u))
             continue
         prescaled = _prescale_vector(vec, prescaler_diag, prescaler_is_matrix, nrows)
@@ -99,7 +99,7 @@ def _emit_prescale_cells(cells, resolved, geometry, group, c, vec, prescaled, pr
     for i in range(nrows + geometry.size_rows):
         value = prescaled[i] if i < nrows else geometry.size_factor * sum(prescaled)
         cid = f"cell:prescaling:{group}:{i}:{query.col_token(_r, group, c)}"
-        cx, cy = left[query.comma_value_pos(_r, c) if group == "commas" else c], query.prescale_row_y(geometry, i)
+        cx, cy = left[query.comma_value_pos(_r, c) if group == "commas" else c], query.subrow_top(geometry, "prescaling", i)
         if i < nrows and not _r.flags.superspace and group == "primes" and (i == c or _r.flags.alt_complexity):
             cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
                                  text=service.prescale_text(value, _r.flags.decimals), prime=i, unit=u))
@@ -122,7 +122,7 @@ def _emit_prescale_draft(cells, resolved, geometry, group, prescaler_diag, presc
         gvec = _lift_to_superspace(resolved, (_r.ghosts.comma_vec,))[0] if _r.flags.superspace else _r.ghosts.comma_vec
         ghost_pre = _prescale_vector(gvec, prescaler_diag, prescaler_is_matrix, nrows)
     for i in range(nrows + geometry.size_rows):
-        cy = query.prescale_row_y(geometry, i)
+        cy = query.subrow_top(geometry, "prescaling", i)
         text = ""
         if ghost_pre is not None:
             value = ghost_pre[i] if i < nrows else geometry.size_factor * sum(ghost_pre)

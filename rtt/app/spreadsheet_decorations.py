@@ -82,7 +82,7 @@ def _row_axis(lines, geometry, ctx, right_bus_x, key) -> None:
     n = geometry.rows[key].nsub
     folded = f"row:{key}" in ctx.collapsed
     cy = geometry.rows[key].y + geometry.rows[key].h / 2
-    ys = [cy] * n if folded else [geometry.rows[key].y + i * ROW_H + ROW_H / 2 for i in range(n)]
+    ys = [cy] * n if folded else [query.subrow_top(geometry, key, i) + ROW_H / 2 for i in range(n)]
     left_bus_x = geometry.node_edge + geometry.FAN if (query.row_fans(geometry, key) and not folded) else geometry.node_edge
     for i in range(n):
         _gridline(lines, f"h:{key}:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x, dotted=folded)
@@ -126,7 +126,7 @@ def _emit_matrix_row_labels(cells, resolved, geometry, ctx) -> None:
     _r = resolved
 
     def prescale_top(i):
-        return query.prescale_row_y(geometry, i)
+        return query.subrow_top(geometry, "prescaling", i)
     row_top = {
         ("mapping", "primes"): lambda i: query.map_top(geometry, i),
         ("canon", "primes"): lambda i: query.canon_top(geometry, i),
