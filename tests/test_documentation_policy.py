@@ -64,7 +64,7 @@ _TEST_COMMENT_ALLOWANCE = {
     "app/integration/test_web_render.py": 2010,
     "app/unit/test_emit_pure.py": 11,
     "app/unit/test_geometry_query.py": 2,
-    "app/unit/test_web_app_smoke.py": 524,
+    "app/unit/test_web_app_smoke.py": 532,
     "app/unit/test_web_chapters.py": 23,
     "app/unit/test_web_dark_mode.py": 30,
     "app/unit/test_web_ebk.py": 44,

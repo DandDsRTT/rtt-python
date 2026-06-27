@@ -35,6 +35,7 @@ def size_panes(chrome, lay, fx, fy) -> None:
     chrome.gridbody.style(f"top:{_PAD + fy}px")
     chrome.colfill.style(f"top:{_PAD + fy}px")
     chrome.colfill_inner.style(f"width:{lay.width}px; height:{lay.height}px")
+    chrome.rowfill.style(f"top:{_PAD + fy}px; width:{fx}px")
     chrome.rowband.style(f"width:{fx}px; height:{lay.height - fy}px")
     chrome.show_frozen.style(f"height:{max(0, fy - _CHROME_H)}px")
     chrome.show_scroll.style(f"max-height:calc(100dvh - {_PAD + fy}px)")

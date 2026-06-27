@@ -49,7 +49,7 @@
     },
     "rtt/app/page_chrome.py::PageChrome": {
       "methods": 2,
-      "attrs": 22
+      "attrs": 23
     },
     "rtt/app/rendering.py::Renderer": {
       "methods": 11,
