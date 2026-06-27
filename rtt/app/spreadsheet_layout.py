@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from rtt.app import service
+from rtt.app import service, terminology
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.grid_tables import (
     BANDS,
@@ -182,6 +182,10 @@ def _define_row_bands(geometry, resolved):
         ("complexity", ROW_H, _r.flags.complexity_shown, True, "complexity"),
         ("weight", ROW_H, _r.flags.weighting, True, "weight"),
         ("damage", ROW_H, _r.flags.tuning, True, "damage"),
+    )
+    row_bands = tuple(
+        (key, h, present, collapsible, terminology.wiki(label, _r.flags.dd_terminology))
+        for key, h, present, collapsible, label in row_bands
     )
     present_caption_rows = frozenset(
         key for key, _h, present, _c, _l in row_bands if present and key in BANDS["caption"].rows)

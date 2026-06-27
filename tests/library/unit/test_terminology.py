@@ -37,10 +37,12 @@ SCAN_DIRS = ("rtt", "tests")
 # their letters fall inside an ordinary word, so they also catch "monzos"/"wedgies".
 # "val"/"breed" carry \b word boundaries so they match only the standalone jargon, not
 # value/eval/interval/valid/Breed/etc. Add new unambiguous terms here.
+TERMINOLOGY_TOGGLE_SOURCE = "rtt/app/terminology.py"
+
 BANNED = {
-    "monzo": {"rtt/temperament.py"},
+    "monzo": {"rtt/temperament.py", TERMINOLOGY_TOGGLE_SOURCE},
     "wedgie": set(),
-    r"\bvals?\b": {"rtt/temperament.py"},
+    r"\bvals?\b": {"rtt/temperament.py", TERMINOLOGY_TOGGLE_SOURCE},
     r"\bbreeds?\b": set(),
 }
 
@@ -115,6 +117,8 @@ def test_no_non_systematic_scheme_names_in_rtt_sources():
     violations = []
     for path in (REPO_ROOT / "rtt").rglob("*.py"):
         rel = path.relative_to(REPO_ROOT).as_posix()
+        if rel == TERMINOLOGY_TOGGLE_SOURCE:
+            continue
         for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             for pattern in BANNED_SCHEME_NAME_PATTERNS:
                 if pattern.search(line):
