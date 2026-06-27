@@ -4072,7 +4072,9 @@ def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls():
     cap = on["caption:all_interval"]
     assert cap.kind == "caption" and cap.text == "all-interval"
     assert abs((chk.x + chk.w / 2) - (cap.x + cap.w / 2)) < 1  # square centred above its caption
-    assert cap.y == chk.y + chk.h  # the caption hugs the square's bottom
+    # the caption clears the square by the same gap that sits above it — not crammed against it
+    gap = (spreadsheet_constants.PRESET_H - spreadsheet_constants.OPTION_BOX_PX) / 2
+    assert cap.y == chk.y + chk.h + gap
     # an all-interval scheme reads the box checked
     on_ai = {c.id: c for c in _with(scheme="minimax-S", all_interval=True).cells}
     assert on_ai["control:all_interval"].checked is True
@@ -4127,11 +4129,11 @@ def test_alt_complexity_lays_box_l_out_with_just_the_diminuator_checkbox():
     assert cap_d.kind == "caption"
     assert cap_d.text == "replace diminuator"
     dim = on["control:diminuator"]
-    # the square sits inset within box 𝐋's border (BOX_INNER off the column's left), its caption
-    # hugging its bottom (the cell is sized to the rendered square, OPTION_BOX_PX, so its bottom IS
-    # the square's bottom)
+    # the square sits inset within box 𝐋's border (BOX_INNER off the column's left), centred in its
+    # control slot with the caption at the slot's bottom — clearing the square by the same gap above it
     assert dim.x == on["header:primes"].x + spreadsheet_constants.BOX_INNER
-    assert cap_d.y == dim.y + dim.h
+    gap = (spreadsheet_constants.PRESET_H - spreadsheet_constants.OPTION_BOX_PX) / 2
+    assert cap_d.y == dim.y + dim.h + gap
     # ...and is horizontally CENTRED above its caption slot (both at the column's left edge)
     assert abs((dim.x + dim.w / 2) - (cap_d.x + cap_d.w / 2)) < 1
 
@@ -9897,6 +9899,8 @@ def test_return_to_scheme_button_keeps_its_own_box_without_presets():
     box = next((b for b in lay.blocks if b.id == "block:scheme:primes"), None)
     assert box is not None and getattr(box, "boxed", False)
     assert box.x <= sq.x and box.y <= sq.y and sq.x + sq.w <= box.x + box.w and sq.y + sq.h <= box.y + box.h
+    # the ✕ square is centred in the box: equal margin above and below it
+    assert sq.y - box.y == (box.y + box.h) - (sq.y + sq.h)
 
 
 def test_generator_embedding_is_a_vector_list_of_generator_kets():
