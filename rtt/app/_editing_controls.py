@@ -181,10 +181,10 @@ def on_show_toggle(ec, key, value):
     ec._renderer.render()
 
 
-def on_select_all(editor, renderer, runtime, value):
+def on_select_all(editor, renderer, runtime, value, keys):
     if runtime.building:
         return
-    editor.set_all_show(value, runtime.available_keys())
+    editor.set_all_show(value, runtime.available_in(keys))
     renderer.render()
 
 

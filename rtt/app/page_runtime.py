@@ -59,8 +59,13 @@ class PageRuntime:
         return None
 
     def available_keys(self) -> list[str]:
+        return self.available_in(show_settings.IMPLEMENTED)
+
+    def available_in(self, keys) -> list[str]:
         return [
-            k for k in show_settings.IMPLEMENTED if show_settings.reveal_chapter(k) <= self.chapter
+            k
+            for k in keys
+            if k in show_settings.IMPLEMENTED and show_settings.reveal_chapter(k) <= self.chapter
         ]
 
     def chapter_reading(self) -> str:

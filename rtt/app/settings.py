@@ -22,11 +22,8 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
         ),
     ),
     (
-        "specific tiles & controls",
+        "app features",
         (
-            ("animations", "animations", True),
-            ("preview_highlighting", "preview highlighting", True),
-            ("tooltips", "tooltips", True),
             ("counts", "counts", True),
             ("interval_ratios", "interval ratios", True),
             ("interval_vectors", "interval vectors", True),
@@ -58,8 +55,24 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
     ),
 )
 
+VISUAL_TOGGLES: tuple[tuple[str, str, bool], ...] = (
+    ("animations", "animations", True),
+    ("preview_highlighting", "preview highlighting", True),
+    ("tooltips", "tooltips", True),
+)
+
 DEFAULTS: dict[str, bool] = {key: default for _, items in SHOW_GROUPS for key, _, default in items}
+for _vkey, _vlabel, _vdefault in VISUAL_TOGGLES:
+    DEFAULTS[_vkey] = _vdefault
 DEFAULTS["dd_terminology"] = True
+
+
+def group_keys(group_name: str) -> tuple[str, ...]:
+    for name, items in SHOW_GROUPS:
+        if name == group_name:
+            return tuple(key for key, _, _ in items)
+    return ()
+
 
 SUBCONTROLS: dict[str, str] = {
     "mnemonics": "names",

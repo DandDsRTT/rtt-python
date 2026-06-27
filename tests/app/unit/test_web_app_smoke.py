@@ -793,21 +793,21 @@ def test_every_show_toggle_has_a_non_empty_example():
                 assert render_html._example_html(key).strip(), f"no example for {key}"
 
 
-def test_interface_behaviours_lead_the_show_panel_as_live_default_on_ch2_toggles():
-    # the three app-wide interaction behaviours (animations / preview highlighting / tooltips) HEAD
-    # the "specific tiles & controls" group — the very top of the show/example checkbox column, above
-    # the grid-layer toggles — and each ships ON, is live (not greyed), reveals at chapter 2, and
-    # carries an example sample. They have no sub-controls (each is a flat top-level on/off).
+def test_interface_behaviours_are_the_visual_settings_box_toggles_default_on_ch2():
+    # the three app-wide interaction behaviours (animations / preview highlighting / tooltips) are
+    # the visual-settings box's icon toggles (alongside dark mode), pulled out of the show/example
+    # list since they are generic app settings, not RTT layers; each ships ON, is live (not greyed),
+    # reveals at chapter 2, and is a flat top-level on/off with no sub-controls.
     keys = ("animations", "preview_highlighting", "tooltips")
-    specific = [k for k, *_ in dict(show_settings.SHOW_GROUPS)["specific tiles & controls"]]
-    assert specific[:3] == list(keys)  # the first three rows of the group
+    assert [k for k, *_ in show_settings.VISUAL_TOGGLES] == list(keys)
+    grouped = {k for _, items in show_settings.SHOW_GROUPS for k, *_ in items}
     for key in keys:
-        assert show_settings.DEFAULTS[key] is True          # ships on (the app's default feel)
-        assert key in show_settings.IMPLEMENTED             # live, not greyed
-        assert show_settings.CHAPTER[key] == 2              # present from the first notch
-        assert show_settings.reveal_chapter(key) == 2       # no later ancestor gates it
-        assert key not in show_settings.SUBCONTROLS         # a flat top-level toggle
-        assert render_html._example_html(key).strip()               # an example sample in the column
+        assert key not in grouped  # no longer a show/example row
+        assert show_settings.DEFAULTS[key] is True
+        assert key in show_settings.IMPLEMENTED
+        assert show_settings.CHAPTER[key] == 2
+        assert show_settings.reveal_chapter(key) == 2
+        assert key not in show_settings.SUBCONTROLS
 
 
 def test_example_html_renders_each_specific_groups_special_sample_kind():

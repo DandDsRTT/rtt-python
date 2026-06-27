@@ -7487,6 +7487,15 @@ def test_projected_intervals_stay_silent_when_the_projection_is_dashed():
     assert all(c.audio is None for c in under_held.values() if c.id.startswith("cell:proj_pt:"))
 
 
+def test_projected_unrotated_vector_list_is_click_to_play():
+    cells = {c.id: c for c in _proj_build(held_basis_ratios=("2/1", "5/4")).cells}
+    held_proj = next(c for c in cells.values() if c.id.startswith("cell:proj_v:") and ":u" in c.id)
+    assert held_proj.audio is not None and held_proj.audio[0] == "proj:commas"
+    assert abs(held_proj.audio[2]) > 1.0
+    comma_proj = cells["cell:proj_v:0:0"]
+    assert comma_proj.audio is not None and abs(comma_proj.audio[2]) < 0.01
+
+
 def test_form_layer_is_a_live_parent_with_three_live_subcontrols():
     # the form layer is a live top-level toggle (it adds the canonical-form subscript C — so unlike
     # the pure grouping parents temperament/tuning it is NOT in GROUPING_PARENTS). All THREE of its
@@ -7501,7 +7510,7 @@ def test_form_layer_is_a_live_parent_with_three_live_subcontrols():
         assert settings.defaults()[child] is False              # default off
         assert child in settings.IMPLEMENTED                    # all three live now (steps 2, 4, 5)
     # the parent precedes its children in the group (the panel requires it for indentation)
-    specific = [k for k, *_ in dict(settings.SHOW_GROUPS)["specific tiles & controls"]]
+    specific = [k for k, *_ in dict(settings.SHOW_GROUPS)["app features"]]
     assert specific.index("form") < min(specific.index(c)
                                         for c in ("form_controls", "form_tiles", "form_colorization"))
 
@@ -7742,7 +7751,7 @@ def test_interest_is_a_top_level_toggle_after_the_tuning_tiles_group():
     # NOT a sub-control of the tuning group. It sits just after that group (whose last
     # member is colorization) and before generator detempering, mirroring the grid where
     # the interest column lands just right of the target intervals.
-    items = dict(settings.SHOW_GROUPS)["specific tiles & controls"]
+    items = dict(settings.SHOW_GROUPS)["app features"]
     keys = [k for k, *_ in items]
     assert keys[keys.index("tuning_colorization") + 1] == "interest"
     assert keys[keys.index("interest") + 1] == "generator_detempering"

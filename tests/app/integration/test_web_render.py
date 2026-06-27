@@ -120,7 +120,7 @@ def _toggle(user: User, label: str) -> None:
 
 
 _SPECIFIC_LABEL_BY_KEY = {key: label
-                          for key, label, _d in dict(show_settings.SHOW_GROUPS)["specific tiles & controls"]}
+                          for key, label, _d in dict(show_settings.SHOW_GROUPS)["app features"]}
 
 
 async def _enable(user: User, label: str) -> None:
@@ -129,7 +129,7 @@ async def _enable(user: User, label: str) -> None:
     and tuning ranges now nest under optimization)."""
     await user.open("/")
     if label not in _GENERAL_KEY_BY_LABEL:  # a specific-group control may be nested
-        spec_key = next((k for k, lbl, _ in dict(show_settings.SHOW_GROUPS)["specific tiles & controls"]
+        spec_key = next((k for k, lbl, _ in dict(show_settings.SHOW_GROUPS)["app features"]
                          if lbl == label), None)
         if spec_key is not None:
             defaults = show_settings.defaults()
@@ -825,7 +825,7 @@ def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_default(defa
     # invisible-but-in-place (visibility:hidden, NOT display:none)
     assert "rtt-chap-invisible" not in _part_classes(default_page, "gridded_values")  # ch2
     assert "rtt-chap-invisible" in _part_classes(default_page, "units")               # ch5
-    # the audio bank rides the tile and is available from the first notch, so it shows at the default
+    # the audio bank now lives in the frozen audio-settings box, so it is never chapter-gated invisible
     assert "rtt-chap-invisible" not in next(iter(default_page.find(marker="audiobank").elements))._classes
     # a hidden (unrevealed) toggle is DISABLED too, not merely hidden — its checkbox carries the
     # `disable` prop; a revealed one does not.
@@ -845,7 +845,8 @@ async def test_sliding_the_chapter_down_disables_the_advanced_layers_in_the_grid
     await user.open("/")
     slider = next(iter(user.find(marker="chapterslider").elements))
     slider.set_value(show_settings.CHAPTER_STAR)            # reveal everything (fires on_chapter_change)
-    next(iter(user.find(marker="showall").elements)).set_value(True)  # select-all over all revealed
+    next(iter(user.find(marker="sectionall:general").elements)).set_value(True)
+    next(iter(user.find(marker="sectionall:app features").elements)).set_value(True)  # select-all both sections
     await user.should_see(marker="units:mapping:primes")   # the per-box "units: …" line is now shown
     slider.set_value(2)                                    # slide down to ch2
     await user.should_not_see(marker="units:mapping:primes")  # units (ch5) is disabled -> content gone
@@ -2290,12 +2291,12 @@ async def test_adding_a_target_commits_when_filled(user: User) -> None:
 
 
 def test_audio_bank_is_always_live_with_a_leading_mute(default_page: User) -> None:
-    # the waveform / play-mode / hold / 1-1 bank rides the settings panel's dummy tile and is now
+    # the waveform / play-mode / hold / 1-1 bank lives in the frozen audio-settings box and is now
     # ALWAYS live — mute (its leading control) is the on/off gate, so there is no audio Show toggle
     # and no greyed bank. All five controls render, mute first.
     assert "rtt-bank-off" not in next(iter(default_page.find(marker="audiobank").elements))._classes
     for ctrl in ("mute", "wave", "mode", "hold", "root"):
-        assert default_page.find(marker=f"audioctrl:{ctrl}").elements  # the five controls sit on the dummy tile
+        assert default_page.find(marker=f"audioctrl:{ctrl}").elements  # the five controls in the audio box
 
 
 # --- tier 4: the settings select-all/none, the reset control, and refresh persistence ---
