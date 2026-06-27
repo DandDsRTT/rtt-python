@@ -133,7 +133,7 @@
     const SW = Math.max(b.scrollWidth, b.offsetWidth), SH = Math.max(b.scrollHeight, b.offsetHeight);
     svg.setAttribute('width', SW); svg.setAttribute('height', SH); svg.setAttribute('viewBox', '0 0 ' + SW + ' ' + SH);
 
-    const gap = Math.min(8, (W * 0.45) / Math.max(1, R - 1));
+    const gap = Math.min(10, (W * 0.45) / Math.max(1, R - 1));
 
     // (A) operand fan: each prime count splits into one line per mapping row. They share the leftward
     // jaunt (a bus along the vector row), then split into parallel descents — row 0 straight into the
@@ -151,10 +151,11 @@
     });
 
     // (B) the running sum along each row: emerge from the first product and ride the boxes' bottom
-    // edge through the products and +s, staying low all the way to the result cell's bottom-left corner.
+    // edge through the products and +s, staying low until the last moment, then jerk up the result
+    // cell's left edge into the centre of the green outline.
     rows.forEach((r) => {
       const by = r.cells[primes[0]].c.btm;
-      line(r.cells[primes[0]].c.x, by, r.rc.l, by, GREEN);
+      path('M ' + r.cells[primes[0]].c.x + ' ' + by + ' H ' + r.rc.l + ' V ' + r.rc.y, GREEN);
     });
 
     // (C) per-box marks: × on the left edge (where the operand line lands), the product on the bottom
@@ -172,9 +173,6 @@
     // (D) rings on both ends: the prime counts (operand, amber) and the generator counts (result, green).
     primes.forEach((p) => ring(vp[p].c, AMBER));
     rows.forEach((r) => ring(r.rc, GREEN));
-
-    // (E) the = box rides on top of the result ring, at its bottom-left corner.
-    rows.forEach((r) => chip(r.rc.l, r.rc.btm, '=', true, GREEN));
   };
 
   const hoveredInterval = (node) => {
