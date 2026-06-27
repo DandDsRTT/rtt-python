@@ -63,16 +63,19 @@
     svg.appendChild(t);
   };
 
-  const pill = (cx, cy, s) => {
-    const w = 9 + String(s).length * 7, h = 15;
+  const pill = (cx, cy, s, bg) => {
+    const txt = String(s);
+    const w = 9 + txt.length * 7, h = 15;
     const r = document.createElementNS(NS, 'rect');
     r.setAttribute('x', cx - w / 2); r.setAttribute('y', cy - h / 2);
     r.setAttribute('width', w); r.setAttribute('height', h);
-    r.setAttribute('rx', 4); r.setAttribute('fill', '#fff8d0');
+    r.setAttribute('rx', 4); r.setAttribute('fill', bg || '#fff8d0');
     r.setAttribute('stroke', LINE); r.setAttribute('stroke-width', '1.5');
     svg.appendChild(r);
-    glyph(cx, cy, s, 11, INK);
+    glyph(cx, cy, txt, 11, INK);
   };
+
+  const sgn = (n) => (n < 0 ? '−' + Math.abs(n) : String(n));
 
   const draw = (tok) => {
     const b = board();
@@ -127,26 +130,34 @@
     const colBtm = Math.max(...rowList.map((r) => r.rc.btm));
 
     // operand routing: feed each prime count from its vector cell across to its mapping column,
-    // then straight down through every box in that column.
+    // then straight down through every box in that column. The pill names the multiplier (×v[p])
+    // applied to every box of the column.
     drawn.forEach((p) => {
       const x = colX[p], vy = vp[p].c.y, vx = vp[p].c.x;
       const fromX = vx < x ? vp[p].c.rt : vp[p].c.l;
       line(fromX, vy, x, vy);
       line(x, Math.min(vy, colTop), x, colBtm);
-      pill(x, (vy + colTop) / 2, vp[p].v);
+      pill(x, (vy + colTop) / 2, '×' + sgn(vp[p].v), '#fff');
     });
 
-    // each mapping row: highlight the row, annotate the product in every box, sum across to result.
+    const matRight = Math.max(...drawn.map((p) => colX[p])) + (rowList[0].cells[drawn[0]] ?
+      rowList[0].cells[drawn[0]].c.w / 2 : 12);
+
+    // each mapping row: highlight the row, then read its products + sum out along the row line into
+    // the result cell — "M·v + M·v + … = g".
     rowList.forEach((r) => {
       const y = r.rc.y;
-      const xs = drawn.map((p) => colX[p]);
-      line(Math.min(...xs), y, r.rc.l, y);
-      drawn.forEach((p, k) => {
-        const cell = r.cells[p];
-        const prod = (cell && cell.m != null && vp[p].v != null) ? cell.m * vp[p].v : null;
-        if (cell) glyph(cell.c.x, cell.c.btm - 4, '×', 11, INK); // × in the box
-        if (prod != null) pill(colX[p], y - r.rc.h / 2 - 9, prod);     // product above the box-row
-        if (k < drawn.length - 1) glyph((colX[p] + colX[drawn[k + 1]]) / 2, y, '+', 13, INK);
+      line(Math.min(...drawn.map((p) => colX[p])), y, r.rc.l, y);
+      const prods = drawn.map((p) => (r.cells[p] && r.cells[p].m != null && vp[p].v != null)
+        ? r.cells[p].m * vp[p].v : null);
+      const toks = [];
+      prods.forEach((pr, k) => { toks.push(['p', pr]); if (k < prods.length - 1) toks.push(['+', '+']); });
+      const lane0 = matRight + 14, lane1 = r.rc.l - 16;
+      const step = toks.length > 1 ? (lane1 - lane0) / (toks.length - 1) : 0;
+      toks.forEach(([kind, val], k) => {
+        const x = toks.length > 1 ? lane0 + k * step : (lane0 + lane1) / 2;
+        if (kind === 'p') pill(x, y, sgn(val));
+        else glyph(x, y, '+', 13, INK);
       });
       glyph(r.rc.l - 7, y, '=', 13, INK);
       const rr = document.createElementNS(NS, 'rect');
