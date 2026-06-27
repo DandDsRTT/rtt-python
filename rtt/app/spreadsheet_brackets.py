@@ -50,8 +50,7 @@ def emit_ebk_frames_and_marks(resolved, geometry, ctx, accum) -> EmitResult:
 
 def bracket(cells, resolved, geometry, bid: str, rkey: str, ckey: str, y, h, *, fit=False, span=None,
             pending=False, stacked=False) -> None:
-    _r = resolved
-    if not _r.flags.ebk:
+    if not resolved.flags.ebk:
         if stacked:
             return
         glyphs = ("[", "]")
@@ -59,7 +58,7 @@ def bracket(cells, resolved, geometry, bid: str, rkey: str, ckey: str, y, h, *, 
         c = _ebk(resolved, rkey, ckey)
         glyphs = (c.inner_open, c.inner_close) if stacked else (c.outer_open, c.outer_close)
     gx, gw = span if span else query.matrix_span(geometry, resolved, ckey)
-    if fit and not _r.flags.ebk:
+    if fit and not resolved.flags.ebk:
         by, bh = y, h
     elif fit:
         by = y - (FRAME_H + FRAME_GAP) - FRAME_OVERHANG
@@ -80,12 +79,11 @@ def _ebk_foot(resolved, rkey, ckey, *, outer: bool) -> str:
 
 
 def matrix_frame(cells, resolved, geometry, ctx, rkey: str, ckey: str, bid: str, span=None) -> None:
-    _r = resolved
     if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
         return
     foot = _ebk_foot(resolved, rkey, ckey, outer=True)
     gx, gw = span if span else query.matrix_span(geometry, resolved, ckey)
-    if not _r.flags.ebk:
+    if not resolved.flags.ebk:
         y, h = geometry.rows[rkey].y, geometry.rows[rkey].h
         cells.append(CellBox(f"bracket:{bid}:l", gx, y, BRACKET_W, h, "bracket", text="["))
         cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, y, BRACKET_W, h, "bracket", text="]"))
@@ -96,11 +94,10 @@ def matrix_frame(cells, resolved, geometry, ctx, rkey: str, ckey: str, bid: str,
 
 def vector_list_marks(cells, resolved, geometry, ctx, rkey, name, ckey, left, n_cols, top="ebktop",
                       separators=True, pending_col=-1) -> None:
-    _r = resolved
     if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
         return
     foot = _ebk_foot(resolved, rkey, ckey, outer=False)
-    if _r.flags.ebk:
+    if resolved.flags.ebk:
         mark_w = COL_W - 2 * MARK_INSET
         for c in range(n_cols):
             mx = left(c) + MARK_INSET
@@ -127,12 +124,11 @@ def transpose_mark(cells, geometry, name, x, rkey, pending: bool = False) -> Non
 
 
 def v_split_bars(cells, resolved, geometry, ctx, accum) -> None:
-    _r = resolved
-    if not _r.unchanged.shown or geometry.commas_x is None or _r.dims.nc_shown == 0 or _r.dims.nu == 0:
+    if not resolved.unchanged.shown or geometry.commas_x is None or resolved.dims.nc_shown == 0 or resolved.dims.nu == 0:
         return
-    x = query.comma_left(geometry, _r, _r.dims.nc_shown) - V_SPLIT_GAP / 2 - SEP_W / 2
-    u_left = query.comma_left(geometry, _r, _r.dims.nc_shown)
-    u_right = u_left + _r.dims.nu * COL_W
+    x = query.comma_left(geometry, resolved, resolved.dims.nc_shown) - V_SPLIT_GAP / 2 - SEP_W / 2
+    u_left = query.comma_left(geometry, resolved, resolved.dims.nc_shown)
+    u_right = u_left + resolved.dims.nu * COL_W
     rows_with_u = set()
     for cell in accum:
         if u_left - 0.5 <= cell.x < u_right:
@@ -147,33 +143,31 @@ def v_split_bars(cells, resolved, geometry, ctx, accum) -> None:
 
 
 def _emit_canon_stacked_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
     if query.row_open(geometry, cl, "canon") and query.tile_open(geometry, cl, "canon", "primes"):
-        for i in range(_r.dims.rc):
+        for i in range(resolved.dims.rc):
             bracket(cells, resolved, geometry, f"canon:map:{i}", "canon", "primes", query.canon_top(geometry, i), ROW_H, stacked=True)
             bracket(cells, resolved, geometry, f"form:map:{i}", "canon", "gens", query.canon_top(geometry, i), ROW_H, stacked=True)
     if query.row_open(geometry, cl, "canon") and query.tile_open(geometry, cl, "canon", "canongens"):
-        for i in range(_r.dims.rc):
+        for i in range(resolved.dims.rc):
             bracket(cells, resolved, geometry, f"fcancel:map:{i}", "canon", "canongens", query.canon_top(geometry, i), ROW_H, stacked=True)
     if query.tile_open(geometry, cl, "mapping", "canongens"):
-        for i in range(_r.dims.r):
+        for i in range(resolved.dims.r):
             bracket(cells, resolved, geometry, f"finv:map:{i}", "mapping", "canongens", query.map_top(geometry, i), ROW_H, stacked=True)
 
 
 def _emit_canon_fit_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
     if not query.row_open(geometry, cl, "canon"):
         return
-    canon_y, canon_h = (geometry.rows["canon"].y if "canon" in geometry.rows else 0), _r.dims.rc * ROW_H
+    canon_y, canon_h = (geometry.rows["canon"].y if "canon" in geometry.rows else 0), resolved.dims.rc * ROW_H
     if query.tile_open(geometry, cl, "canon", "detempering"):
         bracket(cells, resolved, geometry, "canon_detempering", "canon", "detempering", canon_y, canon_h, fit=True)
     if query.tile_open(geometry, cl, "canon", "commas"):
         bracket(cells, resolved, geometry, "canon_comma", "canon", "commas", canon_y, canon_h, fit=True)
     if query.tile_open(geometry, cl, "canon", "targets"):
         bracket(cells, resolved, geometry, "canon_mapped", "canon", "targets", canon_y, canon_h, fit=True)
-    if _r.dims.nh and query.tile_open(geometry, cl, "canon", "held"):
+    if resolved.dims.nh and query.tile_open(geometry, cl, "canon", "held"):
         bracket(cells, resolved, geometry, "canon_hmapped", "canon", "held", canon_y, canon_h, fit=True)
 
 
@@ -185,11 +179,10 @@ def _emit_projection_brackets(cells, resolved, geometry, ctx) -> None:
 
 
 def _emit_projection_embed_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
-    py, ph = geometry.rows["projection"].y, _r.dims.d * ROW_H
+    py, ph = geometry.rows["projection"].y, resolved.dims.d * ROW_H
     if query.tile_open(geometry, cl, "projection", "primes"):
-        for i in range(_r.dims.d):
+        for i in range(resolved.dims.d):
             bracket(cells, resolved, geometry, f"proj:{i}", "projection", "primes", query.proj_top(geometry, i), ROW_H, stacked=True)
     if query.tile_open(geometry, cl, "projection", "gens"):
         bracket(cells, resolved, geometry, "embed", "projection", "gens", py, ph, fit=True)
@@ -200,13 +193,12 @@ def _emit_projection_embed_brackets(cells, resolved, geometry, ctx) -> None:
 
 
 def _emit_projection_list_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
-    py, ph = geometry.rows["projection"].y, _r.dims.d * ROW_H
+    py, ph = geometry.rows["projection"].y, resolved.dims.d * ROW_H
     if query.tile_open(geometry, cl, "projection", "ssprimes"):
-        for i in range(_r.dims.d):
+        for i in range(resolved.dims.d):
             bracket(cells, resolved, geometry, f"proj_sl:{i}", "projection", "ssprimes", query.proj_top(geometry, i), ROW_H, stacked=True)
-    if _r.unchanged.shown and query.tile_open(geometry, cl, "projection", "commas"):
+    if resolved.unchanged.shown and query.tile_open(geometry, cl, "projection", "commas"):
         bracket(cells, resolved, geometry, "proj_v", "projection", "commas", py, ph, fit=True)
     if query.tile_open(geometry, cl, "projection", "detempering"):
         bracket(cells, resolved, geometry, "proj_pd", "projection", "detempering", py, ph, fit=True)
@@ -217,39 +209,36 @@ def _emit_projection_list_brackets(cells, resolved, geometry, ctx) -> None:
 
 
 def _emit_mapping_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
     if query.row_open(geometry, cl, "scaling_factors") and query.tile_open(geometry, cl, "scaling_factors", "commas"):
         bracket(cells, resolved, geometry, "scaling", "scaling_factors", "commas", geometry.rows["scaling_factors"].y, ROW_H)
     if query.row_open(geometry, cl, "mapping"):
         if query.tile_open(geometry, cl, "mapping", "primes"):
-            for i in range(_r.dims.r):
+            for i in range(resolved.dims.r):
                 bracket(cells, resolved, geometry, f"map:{i}", "mapping", "primes", query.map_top(geometry, i), ROW_H, stacked=True)
             if ctx.pending_mapping_row is not None:
-                bracket(cells, resolved, geometry, "map:pending", "mapping", "primes", query.map_top(geometry, _r.dims.r), ROW_H, pending=True, stacked=True)
+                bracket(cells, resolved, geometry, "map:pending", "mapping", "primes", query.map_top(geometry, resolved.dims.r), ROW_H, pending=True, stacked=True)
         if query.tile_open(geometry, cl, "mapping", "commas"):
-            bracket(cells, resolved, geometry, "mapped_comma", "mapping", "commas", geometry.rows["mapping"].y, _r.dims.r_shown * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "mapped_comma", "mapping", "commas", geometry.rows["mapping"].y, resolved.dims.r_shown * ROW_H, fit=True)
         if query.tile_open(geometry, cl, "mapping", "targets"):
-            bracket(cells, resolved, geometry, "mapped", "mapping", "targets", geometry.rows["mapping"].y, _r.dims.r_shown * ROW_H, fit=True)
-        if _r.dims.nh and query.tile_open(geometry, cl, "mapping", "held"):
-            bracket(cells, resolved, geometry, "hmapped", "mapping", "held", geometry.rows["mapping"].y, _r.dims.r_shown * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "mapped", "mapping", "targets", geometry.rows["mapping"].y, resolved.dims.r_shown * ROW_H, fit=True)
+        if resolved.dims.nh and query.tile_open(geometry, cl, "mapping", "held"):
+            bracket(cells, resolved, geometry, "hmapped", "mapping", "held", geometry.rows["mapping"].y, resolved.dims.r_shown * ROW_H, fit=True)
 
 
 def _emit_ss_stacked_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
     if query.row_open(geometry, cl, "ss_mapping") and query.tile_open(geometry, cl, "ss_mapping", "ssprimes"):
-        for i in range(_r.dims.rL):
+        for i in range(resolved.dims.rL):
             bracket(cells, resolved, geometry, f"ss_map:{i}", "ss_mapping", "ssprimes", query.ss_map_top(geometry, i), ROW_H, stacked=True)
     if query.row_open(geometry, cl, "ss_projection") and query.tile_open(geometry, cl, "ss_projection", "ssprimes"):
-        for i in range(_r.dims.dL):
+        for i in range(resolved.dims.dL):
             bracket(cells, resolved, geometry, f"ss_proj:{i}", "ss_projection", "ssprimes", query.ss_proj_top(geometry, i), ROW_H, stacked=True)
 
 
 def _emit_ss_proj_fit_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
-    ssp_top, ssp_h = (geometry.rows["ss_projection"].y if "ss_projection" in geometry.rows else 0), _r.dims.dL * ROW_H
+    ssp_top, ssp_h = (geometry.rows["ss_projection"].y if "ss_projection" in geometry.rows else 0), resolved.dims.dL * ROW_H
     if query.row_open(geometry, cl, "ss_projection"):
         if query.tile_open(geometry, cl, "ss_projection", "ssgens"):
             bracket(cells, resolved, geometry, "ss_embed", "ss_projection", "ssgens", ssp_top, ssp_h, fit=True)
@@ -257,7 +246,7 @@ def _emit_ss_proj_fit_brackets(cells, resolved, geometry, ctx) -> None:
             bracket(cells, resolved, geometry, "ss_proj_bls", "ss_projection", "primes", ssp_top, ssp_h, fit=True)
         if query.tile_open(geometry, cl, "ss_projection", "detempering"):
             bracket(cells, resolved, geometry, "ss_proj_pd", "ss_projection", "detempering", ssp_top, ssp_h, fit=True)
-        if _r.unchanged.shown and query.tile_open(geometry, cl, "ss_projection", "commas"):
+        if resolved.unchanged.shown and query.tile_open(geometry, cl, "ss_projection", "commas"):
             bracket(cells, resolved, geometry, "ss_proj_v", "ss_projection", "commas", ssp_top, ssp_h, fit=True)
         if query.tile_open(geometry, cl, "ss_projection", "targets"):
             bracket(cells, resolved, geometry, "ss_proj_pt", "ss_projection", "targets", ssp_top, ssp_h, fit=True)
@@ -266,85 +255,79 @@ def _emit_ss_proj_fit_brackets(cells, resolved, geometry, ctx) -> None:
 
 
 def _emit_ss_rest_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
     if query.row_open(geometry, cl, "ss_vectors") and query.tile_open(geometry, cl, "ss_vectors", "ssprimes"):
-        for i in range(_r.dims.dL):
+        for i in range(resolved.dims.dL):
             bracket(cells, resolved, geometry, f"ss_vec_jmap:{i}", "ss_vectors", "ssprimes", query.ss_vec_top(geometry, i), ROW_H, stacked=True)
     if query.row_open(geometry, cl, "ss_mapping") and query.tile_open(geometry, cl, "ss_mapping", "primes"):
-        for i in range(_r.dims.rL):
+        for i in range(resolved.dims.rL):
             bracket(cells, resolved, geometry, f"ss_msl:{i}", "ss_mapping", "primes", query.ss_map_top(geometry, i), ROW_H, stacked=True)
     if query.row_open(geometry, cl, "ss_mapping") and query.tile_open(geometry, cl, "ss_mapping", "ssgens"):
         bracket(cells, resolved, geometry, "ss_selfmap", "ss_mapping", "ssgens",
-                geometry.rows["ss_mapping"].y, _r.dims.rL * ROW_H, fit=True)
+                geometry.rows["ss_mapping"].y, resolved.dims.rL * ROW_H, fit=True)
 
 
 def _emit_vector_stacked_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
     if query.tile_open(geometry, cl, "vectors", "primes"):
-        for i in range(_r.dims.d):
+        for i in range(resolved.dims.d):
             bracket(cells, resolved, geometry, f"vec:primes:{i}", "vectors", "primes", query.vec_top(geometry, i), ROW_H, stacked=True)
     if query.tile_open(geometry, cl, "mapping", "gens"):
         bracket(cells, resolved, geometry, "selfmap", "mapping", "gens",
-                geometry.rows["mapping"].y, _r.dims.r * ROW_H, fit=True)
+                geometry.rows["mapping"].y, resolved.dims.r * ROW_H, fit=True)
     if query.tile_open(geometry, cl, "mapping", "detempering"):
         bracket(cells, resolved, geometry, "mapped_detempering", "mapping", "detempering",
-                geometry.rows["mapping"].y, _r.dims.r * ROW_H, fit=True)
+                geometry.rows["mapping"].y, resolved.dims.r * ROW_H, fit=True)
 
 
 def _emit_ss_vectors_list_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
     if query.row_open(geometry, cl, "ss_vectors"):
         if query.tile_open(geometry, cl, "ss_vectors", "primes"):
-            bracket(cells, resolved, geometry, "ss_vec:primes", "ss_vectors", "primes", geometry.rows["ss_vectors"].y, _r.dims.dL * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "ss_vec:primes", "ss_vectors", "primes", geometry.rows["ss_vectors"].y, resolved.dims.dL * ROW_H, fit=True)
         for group in ("commas", "targets"):
             if query.tile_open(geometry, cl, "ss_vectors", group):
-                bracket(cells, resolved, geometry, f"ss_vec:{group}", "ss_vectors", group, geometry.rows["ss_vectors"].y, _r.dims.dL * ROW_H, fit=True)
-        if _r.dims.nh and query.tile_open(geometry, cl, "ss_vectors", "held"):
-            bracket(cells, resolved, geometry, "ss_vec:held", "ss_vectors", "held", geometry.rows["ss_vectors"].y, _r.dims.dL * ROW_H, fit=True)
+                bracket(cells, resolved, geometry, f"ss_vec:{group}", "ss_vectors", group, geometry.rows["ss_vectors"].y, resolved.dims.dL * ROW_H, fit=True)
+        if resolved.dims.nh and query.tile_open(geometry, cl, "ss_vectors", "held"):
+            bracket(cells, resolved, geometry, "ss_vec:held", "ss_vectors", "held", geometry.rows["ss_vectors"].y, resolved.dims.dL * ROW_H, fit=True)
         if query.tile_open(geometry, cl, "ss_vectors", "detempering"):
-            bracket(cells, resolved, geometry, "ss_vec:detempering", "ss_vectors", "detempering", geometry.rows["ss_vectors"].y, _r.dims.dL * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "ss_vec:detempering", "ss_vectors", "detempering", geometry.rows["ss_vectors"].y, resolved.dims.dL * ROW_H, fit=True)
 
 
 def _emit_ss_mapped_list_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
     if query.row_open(geometry, cl, "ss_mapping"):
         for group in ("commas", "targets"):
             if query.tile_open(geometry, cl, "ss_mapping", group):
-                bracket(cells, resolved, geometry, f"ss_mapped:{group}", "ss_mapping", group, geometry.rows["ss_mapping"].y, _r.dims.rL * ROW_H, fit=True)
-        if _r.dims.nh and query.tile_open(geometry, cl, "ss_mapping", "held"):
-            bracket(cells, resolved, geometry, "ss_mapped:held", "ss_mapping", "held", geometry.rows["ss_mapping"].y, _r.dims.rL * ROW_H, fit=True)
+                bracket(cells, resolved, geometry, f"ss_mapped:{group}", "ss_mapping", group, geometry.rows["ss_mapping"].y, resolved.dims.rL * ROW_H, fit=True)
+        if resolved.dims.nh and query.tile_open(geometry, cl, "ss_mapping", "held"):
+            bracket(cells, resolved, geometry, "ss_mapped:held", "ss_mapping", "held", geometry.rows["ss_mapping"].y, resolved.dims.rL * ROW_H, fit=True)
         if query.tile_open(geometry, cl, "ss_mapping", "detempering"):
-            bracket(cells, resolved, geometry, "ss_mapped:detempering", "ss_mapping", "detempering", geometry.rows["ss_mapping"].y, _r.dims.rL * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "ss_mapped:detempering", "ss_mapping", "detempering", geometry.rows["ss_mapping"].y, resolved.dims.rL * ROW_H, fit=True)
 
 
 def _emit_vec_list_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
     if query.row_open(geometry, cl, "vectors"):
         for group in ("commas", "targets"):
             if query.tile_open(geometry, cl, "vectors", group):
-                bracket(cells, resolved, geometry, f"vec:{group}", "vectors", group, geometry.rows["vectors"].y, _r.dims.d * ROW_H, fit=True)
-        if _r.dims.nh and query.tile_open(geometry, cl, "vectors", "held"):
-            bracket(cells, resolved, geometry, "vec:held", "vectors", "held", geometry.rows["vectors"].y, _r.dims.d * ROW_H, fit=True)
+                bracket(cells, resolved, geometry, f"vec:{group}", "vectors", group, geometry.rows["vectors"].y, resolved.dims.d * ROW_H, fit=True)
+        if resolved.dims.nh and query.tile_open(geometry, cl, "vectors", "held"):
+            bracket(cells, resolved, geometry, "vec:held", "vectors", "held", geometry.rows["vectors"].y, resolved.dims.d * ROW_H, fit=True)
         if query.tile_open(geometry, cl, "vectors", "detempering"):
-            bracket(cells, resolved, geometry, "vec:detempering", "vectors", "detempering", geometry.rows["vectors"].y, _r.dims.d * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "vec:detempering", "vectors", "detempering", geometry.rows["vectors"].y, resolved.dims.d * ROW_H, fit=True)
 
 
 def _emit_prescaling_brackets(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     cl = ctx.collapsed
     if query.row_open(geometry, cl, "prescaling"):
         ph = (geometry.prescale_rows + geometry.size_rows) * ROW_H + query.prescale_size_gap(geometry)
-        bare_col = "ssprimes" if _r.flags.superspace else "primes"
+        bare_col = "ssprimes" if resolved.flags.superspace else "primes"
         for group in ("commas", "detempering", "targets", "held"):
             if query.tile_open(geometry, cl, "prescaling", group):
                 bracket(cells, resolved, geometry, f"prescaling:{group}", "prescaling", group,
                         geometry.rows["prescaling"].y, ph, fit=True)
-        if _r.flags.superspace and query.tile_open(geometry, cl, "prescaling", "primes"):
+        if resolved.flags.superspace and query.tile_open(geometry, cl, "prescaling", "primes"):
             bracket(cells, resolved, geometry, "prescaling:primes", "prescaling", "primes",
                     geometry.rows["prescaling"].y, ph, fit=True)
         if query.tile_open(geometry, cl, "prescaling", bare_col):
@@ -383,7 +366,6 @@ def _emit_tuning_map_brackets(cells, resolved, geometry, ctx) -> None:
 
 
 def _emit_list_row_brackets(cells, resolved, geometry, ctx, key: str) -> None:
-    _r = resolved
     cl = ctx.collapsed
     if query.tile_open(geometry, cl, key, "primes"):
         bracket(cells, resolved, geometry, f"{key}:map", key, "primes", geometry.rows[key].y, ROW_H)
@@ -391,16 +373,15 @@ def _emit_list_row_brackets(cells, resolved, geometry, ctx, key: str) -> None:
         bracket(cells, resolved, geometry, f"{key}:commalist", key, "commas", geometry.rows[key].y, ROW_H)
     if query.tile_open(geometry, cl, key, "targets"):
         bracket(cells, resolved, geometry, f"{key}:list", key, "targets", geometry.rows[key].y, ROW_H)
-    if _r.dims.nh and query.tile_open(geometry, cl, key, "held"):
+    if resolved.dims.nh and query.tile_open(geometry, cl, key, "held"):
         bracket(cells, resolved, geometry, f"{key}:hlist", key, "held", geometry.rows[key].y, ROW_H)
     if key != "tuning" and query.tile_open(geometry, cl, key, "detempering"):
         bracket(cells, resolved, geometry, f"{key}:detemperinglist", key, "detempering", geometry.rows[key].y, ROW_H)
-    if (key != "complexity" or _r.flags.superspace) and query.tile_open(geometry, cl, key, "ssprimes"):
+    if (key != "complexity" or resolved.flags.superspace) and query.tile_open(geometry, cl, key, "ssprimes"):
         bracket(cells, resolved, geometry, f"{key}:ssprimes", key, "ssprimes", geometry.rows[key].y, ROW_H)
 
 
 def _emit_ebk_frames(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     matrix_frame(cells, resolved, geometry, ctx, "mapping", "primes", "primes")
     matrix_frame(cells, resolved, geometry, ctx, "projection", "primes", "proj")
     matrix_frame(cells, resolved, geometry, ctx, "projection", "ssprimes", "proj_sl")
@@ -408,7 +389,7 @@ def _emit_ebk_frames(cells, resolved, geometry, ctx) -> None:
     matrix_frame(cells, resolved, geometry, ctx, "canon", "gens", "form")
     matrix_frame(cells, resolved, geometry, ctx, "canon", "canongens", "fcancel")
     matrix_frame(cells, resolved, geometry, ctx, "mapping", "canongens", "finv")
-    matrix_frame(cells, resolved, geometry, ctx, "prescaling", "ssprimes" if _r.flags.superspace else "primes", "prescaling")
+    matrix_frame(cells, resolved, geometry, ctx, "prescaling", "ssprimes" if resolved.flags.superspace else "primes", "prescaling")
     matrix_frame(cells, resolved, geometry, ctx, "ss_mapping", "ssprimes", "ss_mapping")
     matrix_frame(cells, resolved, geometry, ctx, "ss_projection", "ssprimes", "ss_proj")
     matrix_frame(cells, resolved, geometry, ctx, "ss_vectors", "ssprimes", "ss_vec_jmap")
@@ -417,69 +398,67 @@ def _emit_ebk_frames(cells, resolved, geometry, ctx) -> None:
 
 
 def _emit_ebk_marks(cells, resolved, geometry, ctx) -> None:
-    _r = resolved
     gl = _left_fns(resolved, geometry)
     vlm = functools.partial(vector_list_marks, cells, resolved, geometry, ctx)
-    vlm("mapping", "mapped_comma", "commas", gl["comma"], _r.dims.nc + _r.dims.nu, separators=False)
-    vlm("projection", "proj_v", "commas", gl["comma"], _r.dims.nc + _r.dims.nu, separators=False)
-    vlm("projection", "embed", "gens", gl["gen"], _r.dims.r, separators=False)
-    vlm("projection", "embed_c", "canongens", gl["canongen"], _r.dims.rc, separators=False)
-    vlm("projection", "embed_sl", "ssgens", gl["ss_gen"], _r.dims.rL, separators=False)
-    vlm("projection", "proj_pd", "detempering", gl["detempering"], _r.dims.r, separators=False)
-    vlm("projection", "proj_pt", "targets", gl["target"], _r.dims.k)
-    vlm("projection", "proj_ph", "held", gl["held"], _r.dims.nh)
-    vlm("projection", "proj_pi", "interest", gl["interest"], _r.dims.mi, separators=False)
-    vlm("ss_projection", "ss_embed", "ssgens", gl["ss_gen"], _r.dims.rL, separators=False)
-    vlm("ss_projection", "ss_proj_bls", "primes", gl["prime"], _r.dims.d, separators=False)
-    vlm("ss_projection", "ss_proj_pd", "detempering", gl["detempering"], _r.dims.r, separators=False)
-    vlm("ss_projection", "ss_proj_v", "commas", gl["comma"], _r.dims.nc + _r.dims.nu, separators=False)
-    vlm("ss_projection", "ss_proj_pt", "targets", gl["target"], _r.dims.k)
-    vlm("ss_projection", "ss_proj_ph", "held", gl["held"], _r.dims.nh)
-    vlm("ss_projection", "ss_proj_pi", "interest", gl["interest"], _r.dims.mi, separators=False)
-    vlm("mapping", "mapped", "targets", gl["target"], _r.dims.k)
-    vlm("mapping", "imapped", "interest", gl["interest"], _r.dims.mi, separators=False)
-    vlm("mapping", "hmapped", "held", gl["held"], _r.dims.nh)
-    vlm("mapping", "selfmap", "gens", gl["gen"], _r.dims.r, separators=False)
-    vlm("mapping", "mapped_detempering", "detempering", gl["detempering"], _r.dims.r, separators=False)
-    vlm("canon", "canon_detempering", "detempering", gl["detempering"], _r.dims.r, separators=False)
-    vlm("canon", "canon_comma", "commas", gl["comma"], _r.dims.nc + _r.dims.nu, separators=False)
-    vlm("canon", "canon_mapped", "targets", gl["target"], _r.dims.k)
-    vlm("canon", "canon_imapped", "interest", gl["interest"], _r.dims.mi, separators=False)
-    vlm("canon", "canon_hmapped", "held", gl["held"], _r.dims.nh)
+    vlm("mapping", "mapped_comma", "commas", gl["comma"], resolved.dims.nc + resolved.dims.nu, separators=False)
+    vlm("projection", "proj_v", "commas", gl["comma"], resolved.dims.nc + resolved.dims.nu, separators=False)
+    vlm("projection", "embed", "gens", gl["gen"], resolved.dims.r, separators=False)
+    vlm("projection", "embed_c", "canongens", gl["canongen"], resolved.dims.rc, separators=False)
+    vlm("projection", "embed_sl", "ssgens", gl["ss_gen"], resolved.dims.rL, separators=False)
+    vlm("projection", "proj_pd", "detempering", gl["detempering"], resolved.dims.r, separators=False)
+    vlm("projection", "proj_pt", "targets", gl["target"], resolved.dims.k)
+    vlm("projection", "proj_ph", "held", gl["held"], resolved.dims.nh)
+    vlm("projection", "proj_pi", "interest", gl["interest"], resolved.dims.mi, separators=False)
+    vlm("ss_projection", "ss_embed", "ssgens", gl["ss_gen"], resolved.dims.rL, separators=False)
+    vlm("ss_projection", "ss_proj_bls", "primes", gl["prime"], resolved.dims.d, separators=False)
+    vlm("ss_projection", "ss_proj_pd", "detempering", gl["detempering"], resolved.dims.r, separators=False)
+    vlm("ss_projection", "ss_proj_v", "commas", gl["comma"], resolved.dims.nc + resolved.dims.nu, separators=False)
+    vlm("ss_projection", "ss_proj_pt", "targets", gl["target"], resolved.dims.k)
+    vlm("ss_projection", "ss_proj_ph", "held", gl["held"], resolved.dims.nh)
+    vlm("ss_projection", "ss_proj_pi", "interest", gl["interest"], resolved.dims.mi, separators=False)
+    vlm("mapping", "mapped", "targets", gl["target"], resolved.dims.k)
+    vlm("mapping", "imapped", "interest", gl["interest"], resolved.dims.mi, separators=False)
+    vlm("mapping", "hmapped", "held", gl["held"], resolved.dims.nh)
+    vlm("mapping", "selfmap", "gens", gl["gen"], resolved.dims.r, separators=False)
+    vlm("mapping", "mapped_detempering", "detempering", gl["detempering"], resolved.dims.r, separators=False)
+    vlm("canon", "canon_detempering", "detempering", gl["detempering"], resolved.dims.r, separators=False)
+    vlm("canon", "canon_comma", "commas", gl["comma"], resolved.dims.nc + resolved.dims.nu, separators=False)
+    vlm("canon", "canon_mapped", "targets", gl["target"], resolved.dims.k)
+    vlm("canon", "canon_imapped", "interest", gl["interest"], resolved.dims.mi, separators=False)
+    vlm("canon", "canon_hmapped", "held", gl["held"], resolved.dims.nh)
 
 
 def _emit_ebk_vector_marks(cells, resolved, geometry, ctx, accum) -> None:
-    _r = resolved
     gl = _left_fns(resolved, geometry)
     vlm = functools.partial(vector_list_marks, cells, resolved, geometry, ctx)
-    vlm("vectors", "vec:commas", "commas", gl["comma"], _r.dims.nv_shown, separators=False,
-        pending_col=(_r.dims.nc if _r.commas.pending is not None else -1))
-    vlm("vectors", "vec:targets", "targets", gl["target"], _r.dims.k_shown,
-        pending_col=(_r.dims.k if _r.targets.pending is not None else -1))
-    vlm("vectors", "vec:interest", "interest", gl["interest"], _r.dims.mi_shown, separators=False,
-        pending_col=(_r.dims.mi if _r.interest.pending is not None else -1))
-    vlm("vectors", "vec:held", "held", gl["held"], _r.dims.nh_shown,
-        pending_col=(_r.dims.nh if _r.held.pending is not None else -1))
-    vlm("vectors", "vec:detempering", "detempering", gl["detempering"], _r.dims.r)
-    vlm("ss_vectors", "ss_vec:primes", "primes", gl["prime"], _r.dims.d, separators=False)
-    vlm("ss_vectors", "ss_vec:commas", "commas", gl["comma"], _r.dims.nc + _r.dims.nu, separators=False)
-    vlm("ss_vectors", "ss_vec:targets", "targets", gl["target"], _r.dims.k)
-    vlm("ss_vectors", "ss_vec:held", "held", gl["held"], _r.dims.nh)
-    vlm("ss_vectors", "ss_vec:interest", "interest", gl["interest"], _r.dims.mi, separators=False)
-    vlm("ss_vectors", "ss_vec:detempering", "detempering", gl["detempering"], _r.dims.r)
-    vlm("ss_mapping", "ss_mapped:commas", "commas", gl["comma"], _r.dims.nc + _r.dims.nu, separators=False)
-    vlm("ss_mapping", "ss_mapped:targets", "targets", gl["target"], _r.dims.k)
-    vlm("ss_mapping", "ss_mapped:held", "held", gl["held"], _r.dims.nh)
-    if _r.flags.superspace:
-        vlm("prescaling", "prescaling:primes", "primes", gl["prime"], _r.dims.d, separators=False)
-    vlm("ss_mapping", "ss_mapped:interest", "interest", gl["interest"], _r.dims.mi, separators=False)
-    vlm("ss_mapping", "ss_mapped:detempering", "detempering", gl["detempering"], _r.dims.r)
-    vlm("ss_mapping", "ss_selfmap", "ssgens", gl["ss_gen"], _r.dims.rL, separators=False)
-    vlm("prescaling", "prescaling:commas", "commas", gl["comma"], _r.dims.nc + _r.dims.nu, separators=False)
-    vlm("prescaling", "prescaling:detempering", "detempering", gl["detempering"], _r.dims.r, separators=False)
-    vlm("prescaling", "prescaling:targets", "targets", gl["target"], _r.dims.k, separators=True)
-    vlm("prescaling", "prescaling:held", "held", gl["held"], _r.dims.nh, separators=True)
-    vlm("prescaling", "prescaling:interest", "interest", gl["interest"], _r.dims.mi, separators=False)
+    vlm("vectors", "vec:commas", "commas", gl["comma"], resolved.dims.nv_shown, separators=False,
+        pending_col=(resolved.dims.nc if resolved.commas.pending is not None else -1))
+    vlm("vectors", "vec:targets", "targets", gl["target"], resolved.dims.k_shown,
+        pending_col=(resolved.dims.k if resolved.targets.pending is not None else -1))
+    vlm("vectors", "vec:interest", "interest", gl["interest"], resolved.dims.mi_shown, separators=False,
+        pending_col=(resolved.dims.mi if resolved.interest.pending is not None else -1))
+    vlm("vectors", "vec:held", "held", gl["held"], resolved.dims.nh_shown,
+        pending_col=(resolved.dims.nh if resolved.held.pending is not None else -1))
+    vlm("vectors", "vec:detempering", "detempering", gl["detempering"], resolved.dims.r)
+    vlm("ss_vectors", "ss_vec:primes", "primes", gl["prime"], resolved.dims.d, separators=False)
+    vlm("ss_vectors", "ss_vec:commas", "commas", gl["comma"], resolved.dims.nc + resolved.dims.nu, separators=False)
+    vlm("ss_vectors", "ss_vec:targets", "targets", gl["target"], resolved.dims.k)
+    vlm("ss_vectors", "ss_vec:held", "held", gl["held"], resolved.dims.nh)
+    vlm("ss_vectors", "ss_vec:interest", "interest", gl["interest"], resolved.dims.mi, separators=False)
+    vlm("ss_vectors", "ss_vec:detempering", "detempering", gl["detempering"], resolved.dims.r)
+    vlm("ss_mapping", "ss_mapped:commas", "commas", gl["comma"], resolved.dims.nc + resolved.dims.nu, separators=False)
+    vlm("ss_mapping", "ss_mapped:targets", "targets", gl["target"], resolved.dims.k)
+    vlm("ss_mapping", "ss_mapped:held", "held", gl["held"], resolved.dims.nh)
+    if resolved.flags.superspace:
+        vlm("prescaling", "prescaling:primes", "primes", gl["prime"], resolved.dims.d, separators=False)
+    vlm("ss_mapping", "ss_mapped:interest", "interest", gl["interest"], resolved.dims.mi, separators=False)
+    vlm("ss_mapping", "ss_mapped:detempering", "detempering", gl["detempering"], resolved.dims.r)
+    vlm("ss_mapping", "ss_selfmap", "ssgens", gl["ss_gen"], resolved.dims.rL, separators=False)
+    vlm("prescaling", "prescaling:commas", "commas", gl["comma"], resolved.dims.nc + resolved.dims.nu, separators=False)
+    vlm("prescaling", "prescaling:detempering", "detempering", gl["detempering"], resolved.dims.r, separators=False)
+    vlm("prescaling", "prescaling:targets", "targets", gl["target"], resolved.dims.k, separators=True)
+    vlm("prescaling", "prescaling:held", "held", gl["held"], resolved.dims.nh, separators=True)
+    vlm("prescaling", "prescaling:interest", "interest", gl["interest"], resolved.dims.mi, separators=False)
     v_split_bars(cells, resolved, geometry, ctx, list(accum) + cells)
 
 

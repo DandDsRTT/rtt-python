@@ -46,9 +46,8 @@ from rtt.app.spreadsheet_text import (
 
 
 def declare_interval_column_tiles(resolved):
-    _r = resolved
     interest_tiles = ()
-    if _r.dims.mi_shown:
+    if resolved.dims.mi_shown:
         interest_tiles += (
             ("block:vec:interest", "vectors", "interest"),
             ("block:interest", "quantities", "interest"),
@@ -61,7 +60,7 @@ def declare_interval_column_tiles(resolved):
             ("block:complexity:interest", "complexity", "interest"),
         )
     held_tiles = ()
-    if _r.dims.nh_shown:
+    if resolved.dims.nh_shown:
         held_tiles += (
             ("block:held", "quantities", "held"),
             ("block:vec:held", "vectors", "held"),
@@ -83,7 +82,7 @@ def declare_interval_column_tiles(resolved):
         ("block:prescaling:detempering", "prescaling", "detempering"),
         ("block:complexity:detempering", "complexity", "detempering"),
         ("block:urow:detempering", "units", "detempering"),
-    ) if _r.flags.generator_detempering else ()
+    ) if resolved.flags.generator_detempering else ()
     return interest_tiles, held_tiles, detempering_tiles
 
 
@@ -98,22 +97,21 @@ def declare_tiles(resolved, ctx, interest_tiles, held_tiles, detempering_tiles):
 
 
 def _projection_col_tiles(resolved):
-    _r = resolved
-    if not _r.flags.projection:
+    if not resolved.flags.projection:
         return ()
     tiles = (
         ("block:proj:quantities", "projection", "quantities"),
         ("block:proj:units", "projection", "units"),
     )
-    if _r.flags.generator_detempering:
+    if resolved.flags.generator_detempering:
         tiles += (("block:proj:detempering", "projection", "detempering"),)
-    if _r.scalars.targets_editable:
+    if resolved.scalars.targets_editable:
         tiles += (("block:proj:targets", "projection", "targets"),)
-    if _r.dims.nh_shown:
+    if resolved.dims.nh_shown:
         tiles += (("block:proj:held", "projection", "held"),)
-    if _r.dims.mi_shown:
+    if resolved.dims.mi_shown:
         tiles += (("block:proj:interest", "projection", "interest"),)
-    if _r.flags.superspace:
+    if resolved.flags.superspace:
         tiles += (
             ("block:proj:ssgens", "projection", "ssgens"),
             ("block:proj:ssprimes", "projection", "ssprimes"),
@@ -122,55 +120,52 @@ def _projection_col_tiles(resolved):
 
 
 def _ss_projection_col_tiles(resolved):
-    _r = resolved
-    if not _r.flags.ss_projection:
+    if not resolved.flags.ss_projection:
         return ()
     tiles = (
         ("block:ssproj:ssgens", "ss_projection", "ssgens"),
         ("block:ssproj:primes", "ss_projection", "primes"),
     )
-    if _r.unchanged.shown:
+    if resolved.unchanged.shown:
         tiles += (("block:ssproj:commas", "ss_projection", "commas"),)
-    if _r.flags.generator_detempering:
+    if resolved.flags.generator_detempering:
         tiles += (("block:ssproj:detempering", "ss_projection", "detempering"),)
-    if _r.scalars.targets_editable:
+    if resolved.scalars.targets_editable:
         tiles += (("block:ssproj:targets", "ss_projection", "targets"),)
-    if _r.dims.nh_shown:
+    if resolved.dims.nh_shown:
         tiles += (("block:ssproj:held", "ss_projection", "held"),)
-    if _r.dims.mi_shown:
+    if resolved.dims.mi_shown:
         tiles += (("block:ssproj:interest", "ss_projection", "interest"),)
     return tiles
 
 
 def _canon_col_tiles(resolved):
-    _r = resolved
-    if not _r.flags.canon:
+    if not resolved.flags.canon:
         return ()
     tiles = (("block:canon_comma", "canon", "commas"),)
-    if _r.flags.generator_detempering:
+    if resolved.flags.generator_detempering:
         tiles += (("block:canon_detempering", "canon", "detempering"),)
-    if _r.scalars.targets_editable:
+    if resolved.scalars.targets_editable:
         tiles += (("block:canon_mapped", "canon", "targets"),)
-    if _r.dims.nh_shown:
+    if resolved.dims.nh_shown:
         tiles += (("block:canon_held", "canon", "held"),)
-    if _r.dims.mi_shown:
+    if resolved.dims.mi_shown:
         tiles += (("block:canon_interest", "canon", "interest"),)
     return tiles
 
 
 def _prune_declared_tiles(declared_tiles, resolved, ctx):
-    _r = resolved
     if service.is_all_interval(ctx.tuning_scheme):
         declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
                            ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
                            ("ss_vectors", "targets"), ("ss_mapping", "targets")}
-    if not _r.flags.identity_objects:
+    if not resolved.flags.identity_objects:
         declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
                                 ("mapping", "detempering"), ("canon", "canongens"),
                                 ("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
-    if not _r.dims.nh_shown:
+    if not resolved.dims.nh_shown:
         declared_tiles -= {("ss_vectors", "held"), ("ss_mapping", "held")}
-    if not _r.dims.mi_shown:
+    if not resolved.dims.mi_shown:
         declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
     return declared_tiles
 
@@ -222,8 +217,8 @@ def control_floor(resolved, ctx, key: str):
     if (key == "targets" and resolved.flags.optimization and "row:damage" not in ctx.collapsed
             and "tile:damage:targets" not in ctx.collapsed):
         floor = max(floor, OPT_BOX_MIN_W)
-    labels = ([lbl for _n, _r, c, lbl in PRESETS + PRESET_COPIES if c == key and lbl] if resolved.flags.presets else [])
-    labels += [lbl for _n, _r, c, lbl in FORM_CHOOSERS if c == key and lbl] if resolved.flags.form_controls else []
+    labels = ([lbl for _n, resolved, c, lbl in PRESETS + PRESET_COPIES if c == key and lbl] if resolved.flags.presets else [])
+    labels += [lbl for _n, resolved, c, lbl in FORM_CHOOSERS if c == key and lbl] if resolved.flags.form_controls else []
     if labels:
         floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(lbl, 1) for lbl in labels))
     if key in ("primes", "gens") and ctx.settings["projection"]:

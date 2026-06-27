@@ -88,9 +88,8 @@ def compute_geometry(resolved, ctx):
 
 
 def _resolve_col_headers(resolved):
-    _r = resolved
     domain_title = ("domain basis\nelements"
-                    if service.domain_has_nonprimes(_r.dims.elements)
+                    if service.domain_has_nonprimes(resolved.dims.elements)
                     else "domain\nprimes")
     col_header = {"quantities": "interval ratios", "units": "units",
                   "canongens": "canonical\ngenerators", "gens": "generators",
@@ -99,43 +98,41 @@ def _resolve_col_headers(resolved):
                   "commas": "commas",
                   "held": "held\nintervals", "targets": "target\nintervals",
                   "interest": "other intervals\nof interest"}
-    if _r.unchanged.shown:
+    if resolved.unchanged.shown:
         col_header["commas"] = "unrotated\nvector list"
     return col_header
 
 
 def _matlabel_other_w(geometry, resolved):
-    _r = resolved
-    _label_row_present = {"mapping": _r.flags.temperament_tiles, "vectors": _r.flags.interval_vectors,
-                          "canon": _r.flags.canon, "projection": _r.flags.projection,
-                          "prescaling": _r.flags.prescaling_shown, "ss_mapping": _r.flags.superspace,
-                          "ss_vectors": _r.flags.superspace, "ss_projection": _r.flags.ss_projection}
+    _label_row_present = {"mapping": resolved.flags.temperament_tiles, "vectors": resolved.flags.interval_vectors,
+                          "canon": resolved.flags.canon, "projection": resolved.flags.projection,
+                          "prescaling": resolved.flags.prescaling_shown, "ss_mapping": resolved.flags.superspace,
+                          "ss_vectors": resolved.flags.superspace, "ss_projection": resolved.flags.ss_projection}
     other = {}
-    if _r.flags.header_symbols:
-        for (rk, ck) in _r.labels.row_labels:
+    if resolved.flags.header_symbols:
+        for (rk, ck) in resolved.labels.row_labels:
             if ck not in ("primes", "ssprimes") and _label_row_present.get(rk) and (rk, ck) in geometry.declared_tiles:
                 other[ck] = MATLABEL_W
     return other
 
 
 def _define_col_bands(geometry, resolved, ctx, label_w):
-    _r = resolved
     size_factor = service.complexity_size_factor(ctx.tuning_scheme)
     geometry = replace(
         geometry,
         col_header=_resolve_col_headers(resolved),
-        matlabel_primes_w=((MATLABEL_W_SS if _r.flags.superspace else MATLABEL_W)
-                           if (_r.flags.header_symbols and _r.flags.temperament_tiles) else 0),
-        matlabel_ssprimes_w=MATLABEL_W_SSPRIMES if (_r.flags.header_symbols and _r.flags.superspace) else 0,
+        matlabel_primes_w=((MATLABEL_W_SS if resolved.flags.superspace else MATLABEL_W)
+                           if (resolved.flags.header_symbols and resolved.flags.temperament_tiles) else 0),
+        matlabel_ssprimes_w=MATLABEL_W_SSPRIMES if (resolved.flags.header_symbols and resolved.flags.superspace) else 0,
         matlabel_other_w=_matlabel_other_w(geometry, resolved),
         row_handle_w=(ROW_HANDLE_W + ROW_HANDLE_GAP) if (
-            ctx.settings.get("drag_to_combine") and _r.flags.temperament_tiles and _r.dims.r > 1) else 0,
-        etpick_w=(ETPICK_W + ETPICK_GAP) if (_r.flags.presets and _r.flags.temperament_tiles) else 0,
+            ctx.settings.get("drag_to_combine") and resolved.flags.temperament_tiles and resolved.dims.r > 1) else 0,
+        etpick_w=(ETPICK_W + ETPICK_GAP) if (resolved.flags.presets and resolved.flags.temperament_tiles) else 0,
         size_factor=size_factor,
         size_rows=1 if size_factor else 0,
-        prescale_rows=_r.dims.dL if _r.flags.superspace else _r.dims.d,
-        all_interval_simplicity_weight=_r.scalars.all_interval and (
-            bool(size_factor) or _r.scalars.prescaler_is_matrix),
+        prescale_rows=resolved.dims.dL if resolved.flags.superspace else resolved.dims.d,
+        all_interval_simplicity_weight=resolved.scalars.all_interval and (
+            bool(size_factor) or resolved.scalars.prescaler_is_matrix),
         node_x=label_w + GAP,
         node_edge=label_w + GAP + TOGGLE,
     )
@@ -143,47 +140,45 @@ def _define_col_bands(geometry, resolved, ctx, label_w):
 
 
 def _col_bands(geometry, resolved, ctx):
-    _r = resolved
     return (
-        ("quantities", COL_W, _r.flags.interval_ratios, True),
-        ("units", COL_W, _r.flags.domain_units, True),
-        ("canongens", 2 * BRACKET_W + _r.dims.rc * COL_W + 2 * query.matlabel_gutter_w(geometry, "canongens"), _r.flags.canon, True),
-        ("gens", 2 * BRACKET_W + _r.dims.r * COL_W + 2 * query.matlabel_gutter_w(geometry, "gens"), _r.flags.temperament_tiles, True),
-        ("ssgens", 2 * BRACKET_W + _r.dims.rL * COL_W, _r.flags.superspace, True),
-        ("ssprimes", 2 * BRACKET_W + _r.dims.dL * COL_W + 2 * geometry.matlabel_ssprimes_w, _r.flags.superspace, True),
-        ("primes", 2 * BRACKET_W + _r.dims.d_shown * COL_W + 2 * query.outer_gutter_w(geometry, "primes"), _r.flags.temperament_tiles, True),
-        ("detempering", 2 * BRACKET_W + _r.dims.r * COL_W, _r.flags.generator_detempering, True),
-        ("commas", commas_band_w(resolved, _r.dims.nc_shown), _r.flags.temperament_tiles, True),
-        ("held", query.interval_list_w(_r.dims.nh_shown, "held"), _r.flags.optimization, True),
-        ("targets", query.interval_list_w(_r.dims.k_shown, "targets"), _r.flags.tuning_tiles and ctx.targets_in_use, True),
-        ("interest", query.interval_list_w(_r.dims.mi_shown, "interest"), _r.flags.interest, True),
+        ("quantities", COL_W, resolved.flags.interval_ratios, True),
+        ("units", COL_W, resolved.flags.domain_units, True),
+        ("canongens", 2 * BRACKET_W + resolved.dims.rc * COL_W + 2 * query.matlabel_gutter_w(geometry, "canongens"), resolved.flags.canon, True),
+        ("gens", 2 * BRACKET_W + resolved.dims.r * COL_W + 2 * query.matlabel_gutter_w(geometry, "gens"), resolved.flags.temperament_tiles, True),
+        ("ssgens", 2 * BRACKET_W + resolved.dims.rL * COL_W, resolved.flags.superspace, True),
+        ("ssprimes", 2 * BRACKET_W + resolved.dims.dL * COL_W + 2 * geometry.matlabel_ssprimes_w, resolved.flags.superspace, True),
+        ("primes", 2 * BRACKET_W + resolved.dims.d_shown * COL_W + 2 * query.outer_gutter_w(geometry, "primes"), resolved.flags.temperament_tiles, True),
+        ("detempering", 2 * BRACKET_W + resolved.dims.r * COL_W, resolved.flags.generator_detempering, True),
+        ("commas", commas_band_w(resolved, resolved.dims.nc_shown), resolved.flags.temperament_tiles, True),
+        ("held", query.interval_list_w(resolved.dims.nh_shown, "held"), resolved.flags.optimization, True),
+        ("targets", query.interval_list_w(resolved.dims.k_shown, "targets"), resolved.flags.tuning_tiles and ctx.targets_in_use, True),
+        ("interest", query.interval_list_w(resolved.dims.mi_shown, "interest"), resolved.flags.interest, True),
     )
 
 
 def _define_row_bands(geometry, resolved):
-    _r = resolved
     row_bands = (
-        ("counts", ROW_H, _r.flags.counts, True, "counts"),
-        ("quantities", ROW_H, _r.flags.interval_ratios, True, "interval\nratios"),
-        ("units", ROW_H, _r.flags.domain_units, True, "units"),
-        ("scaling_factors", ROW_H, _r.unchanged.shown, True, "scaling factors"),
-        ("vectors", _r.dims.d * ROW_H, _r.flags.interval_vectors, True, "interval vectors"),
-        ("canon", _r.dims.rc * ROW_H, _r.flags.canon, True, "canonical mapping"),
-        ("mapping", _r.dims.r_shown * ROW_H, _r.flags.temperament_tiles, True, "mapping"),
-        ("ss_vectors", _r.dims.dL * ROW_H, _r.flags.superspace, True, "superspace\ninterval vectors"),
-        ("ss_mapping", _r.dims.rL * ROW_H, _r.flags.superspace, True, "superspace\nmapping"),
-        ("ss_projection", _r.dims.dL * ROW_H, _r.flags.ss_projection, True, "superspace\nprojection"),
-        ("projection", _r.dims.d * ROW_H, _r.flags.projection, True, "projection"),
-        ("tuning", ROW_H, _r.flags.tuning_tiles, True, "tuning"),
-        ("just", ROW_H, _r.flags.tuning_tiles, True, "just tuning"),
-        ("retune", ROW_H, _r.flags.tuning_tiles, True, "retuning"),
-        ("prescaling", (geometry.prescale_rows + geometry.size_rows) * ROW_H + query.prescale_size_gap(geometry), _r.flags.prescaling_shown, True, "complexity prescaling"),
-        ("complexity", ROW_H, _r.flags.complexity_shown, True, "complexity"),
-        ("weight", ROW_H, _r.flags.weighting, True, "weight"),
-        ("damage", ROW_H, _r.flags.tuning_tiles, True, "damage"),
+        ("counts", ROW_H, resolved.flags.counts, True, "counts"),
+        ("quantities", ROW_H, resolved.flags.interval_ratios, True, "interval\nratios"),
+        ("units", ROW_H, resolved.flags.domain_units, True, "units"),
+        ("scaling_factors", ROW_H, resolved.unchanged.shown, True, "scaling factors"),
+        ("vectors", resolved.dims.d * ROW_H, resolved.flags.interval_vectors, True, "interval vectors"),
+        ("canon", resolved.dims.rc * ROW_H, resolved.flags.canon, True, "canonical mapping"),
+        ("mapping", resolved.dims.r_shown * ROW_H, resolved.flags.temperament_tiles, True, "mapping"),
+        ("ss_vectors", resolved.dims.dL * ROW_H, resolved.flags.superspace, True, "superspace\ninterval vectors"),
+        ("ss_mapping", resolved.dims.rL * ROW_H, resolved.flags.superspace, True, "superspace\nmapping"),
+        ("ss_projection", resolved.dims.dL * ROW_H, resolved.flags.ss_projection, True, "superspace\nprojection"),
+        ("projection", resolved.dims.d * ROW_H, resolved.flags.projection, True, "projection"),
+        ("tuning", ROW_H, resolved.flags.tuning_tiles, True, "tuning"),
+        ("just", ROW_H, resolved.flags.tuning_tiles, True, "just tuning"),
+        ("retune", ROW_H, resolved.flags.tuning_tiles, True, "retuning"),
+        ("prescaling", (geometry.prescale_rows + geometry.size_rows) * ROW_H + query.prescale_size_gap(geometry), resolved.flags.prescaling_shown, True, "complexity prescaling"),
+        ("complexity", ROW_H, resolved.flags.complexity_shown, True, "complexity"),
+        ("weight", ROW_H, resolved.flags.weighting, True, "weight"),
+        ("damage", ROW_H, resolved.flags.tuning_tiles, True, "damage"),
     )
     row_bands = tuple(
-        (key, h, present, collapsible, terminology.substitute(label, _r.flags.terminology_mode))
+        (key, h, present, collapsible, terminology.substitute(label, resolved.flags.terminology_mode))
         for key, h, present, collapsible, label in row_bands
     )
     present_caption_rows = frozenset(
@@ -250,19 +245,17 @@ def _layout_rows(geometry, resolved, ctx, row_bands, tile_extra, rows_top_y) -> 
 
 
 def _row_int_handle(geometry, resolved, ctx, key, folded):
-    _r = resolved
     return (key == "vectors" and not folded and ctx.settings.get("drag_to_combine")
-            and ((_r.dims.nc >= 2 and query.col_open(geometry, ctx.collapsed, "commas"))
-                 or (_r.dims.k >= 2 and not _r.scalars.all_interval and query.col_open(geometry, ctx.collapsed, "targets"))
-                 or (_r.dims.nh >= 2 and query.col_open(geometry, ctx.collapsed, "held"))
-                 or (_r.dims.mi >= 2 and query.col_open(geometry, ctx.collapsed, "interest"))))
+            and ((resolved.dims.nc >= 2 and query.col_open(geometry, ctx.collapsed, "commas"))
+                 or (resolved.dims.k >= 2 and not resolved.scalars.all_interval and query.col_open(geometry, ctx.collapsed, "targets"))
+                 or (resolved.dims.nh >= 2 and query.col_open(geometry, ctx.collapsed, "held"))
+                 or (resolved.dims.mi >= 2 and query.col_open(geometry, ctx.collapsed, "interest"))))
 
 
 def _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label, tile_extra, show_charts, y):
-    _r = resolved
     folded = f"row:{key}" in ctx.collapsed
     framed = key in BANDS["frame"].rows and not folded
-    has_matlabel = (_r.flags.header_symbols and key in BANDS["col_label"].rows and not folded)
+    has_matlabel = (resolved.flags.header_symbols and key in BANDS["col_label"].rows and not folded)
     toggle_band = TOGGLE + 2 * TOGGLE_INSET - PAD
     int_handle = _row_int_handle(geometry, resolved, ctx, key, folded)
     handle_band = (ROW_HANDLE_W + ROW_HANDLE_GAP) if int_handle else 0
@@ -273,20 +266,20 @@ def _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label,
     charted = show_charts and key in BANDS["chart"].rows and not folded and natural == ROW_H
     chart_band = (CHART_H + CHART_GAP) if charted else 0
     cap = caption_band(geometry, resolved, ctx, key, folded)
-    sym = BANDS["symbol"].height if ((_r.flags.symbols or _r.flags.equivalences)
+    sym = BANDS["symbol"].height if ((resolved.flags.symbols or resolved.flags.equivalences)
                                      and key in BANDS["symbol"].rows and not folded) else 0
-    uni = BANDS["units"].height if (_r.flags.units and key in BANDS["units"].rows and not folded) else 0
-    pre = preset_band_h(geometry, resolved, key) if (((_r.flags.presets and key in BANDS["preset"].rows)
+    uni = BANDS["units"].height if (resolved.flags.units and key in BANDS["units"].rows and not folded) else 0
+    pre = preset_band_h(geometry, resolved, key) if (((resolved.flags.presets and key in BANDS["preset"].rows)
                                      or (ctx.settings["all_interval"] and key == "vectors"))
                                     and not folded) else 0
     schemebtn = (control_region_band_h(SCHEME_BTN_SQ)
-                 if (key == "projection" and ctx.settings["projection"] and not _r.flags.presets and not folded) else 0)
+                 if (key == "projection" and ctx.settings["projection"] and not resolved.flags.presets and not folded) else 0)
     formctrl = (formchooser_band_h(geometry, key)
-                if (_r.flags.form_controls and not _r.flags.presets
+                if (resolved.flags.form_controls and not resolved.flags.presets
                     and key in BANDS["form_chooser"].rows and not folded) else 0)
-    cpick = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and _r.flags.presets
+    cpick = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and resolved.flags.presets
                                        and query.col_open(geometry, ctx.collapsed, "commas")
-                                       and (_r.dims.nc > 0 or _r.commas.pending is not None) and not folded) else 0
+                                       and (resolved.dims.nc > 0 or resolved.commas.pending is not None) and not folded) else 0
     ptext = ptext_band(geometry, key, folded)
     sym += BAND_GAP if sym else 0
     cap += BAND_GAP if cap else 0
@@ -308,11 +301,10 @@ def _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label,
 
 
 def _group_geometry_fields(geometry, resolved):
-    _r = resolved
-    group_n = {"gens": _r.dims.r, "primes": _r.dims.d_shown, "commas": _r.dims.nv_shown,
-               "targets": _r.dims.k_shown,
-               "interest": _r.dims.mi_shown, "held": _r.dims.nh_shown, "detempering": _r.dims.r,
-               "canongens": _r.dims.rc, "ssgens": _r.dims.rL, "ssprimes": _r.dims.dL}
+    group_n = {"gens": resolved.dims.r, "primes": resolved.dims.d_shown, "commas": resolved.dims.nv_shown,
+               "targets": resolved.dims.k_shown,
+               "interest": resolved.dims.mi_shown, "held": resolved.dims.nh_shown, "detempering": resolved.dims.r,
+               "canongens": resolved.dims.rc, "ssgens": resolved.dims.rL, "ssprimes": resolved.dims.dL}
     content_x = geometry.content_x
     left_fn = {"gens": lambda i: query.gen_left(geometry, i),
                "primes": lambda i: query.prime_left(geometry, i),
@@ -332,56 +324,54 @@ def _group_geometry_fields(geometry, resolved):
         "group_left": {g: tuple(fn(i) for i in range(group_n[g])) if g in content_x else ()
                        for g, fn in left_fn.items()},
         "group_ratio": {
-            "primes": tuple(service.element_ratio(e) for e in _r.dims.elements),
-            "commas": tuple(_r.commas.ratios[:_r.dims.nc]) + tuple(_r.unchanged.ratios),
-            "targets": tuple(_r.targets.ratios),
-            "interest": tuple(_r.interest.ratios),
-            "held": tuple(_r.held.ratios),
-            "detempering": tuple(_r.scalars.gens),
-            "ssprimes": tuple(service.element_ratio(e) for e in _r.dims.superspace_primes),
+            "primes": tuple(service.element_ratio(e) for e in resolved.dims.elements),
+            "commas": tuple(resolved.commas.ratios[:resolved.dims.nc]) + tuple(resolved.unchanged.ratios),
+            "targets": tuple(resolved.targets.ratios),
+            "interest": tuple(resolved.interest.ratios),
+            "held": tuple(resolved.held.ratios),
+            "detempering": tuple(resolved.scalars.gens),
+            "ssprimes": tuple(service.element_ratio(e) for e in resolved.dims.superspace_primes),
         }}
 
 
 def _init_group_geometry(geometry, resolved, ctx) -> Geometry:
-    _r = resolved
     geometry = replace(geometry, **_group_geometry_fields(geometry, resolved))
     plus_stub_x = {ckey: query.col_plus_x(geometry, resolved, ckey)
                    for ckey in ("gens", "primes", "commas", "targets", "interest", "held")
                    if query.plus_shows(geometry, resolved, ctx.collapsed, ctx.state, ckey)}
     row_plus_y = {}
-    if query.tile_open(geometry, ctx.collapsed, "vectors", "quantities") and (_r.flags.nonstandard_domain or _r.scalars.standard_domain):
-        row_plus_y["vectors"] = query.vec_top(geometry, _r.dims.d_shown) + ROW_H / 2
+    if query.tile_open(geometry, ctx.collapsed, "vectors", "quantities") and (resolved.flags.nonstandard_domain or resolved.scalars.standard_domain):
+        row_plus_y["vectors"] = query.vec_top(geometry, resolved.dims.d_shown) + ROW_H / 2
     if query.tile_open(geometry, ctx.collapsed, "mapping", "quantities") and ctx.state.n > 0:
-        row_plus_y["mapping"] = query.map_top(geometry, _r.dims.r_shown) + ROW_H / 2
+        row_plus_y["mapping"] = query.map_top(geometry, resolved.dims.r_shown) + ROW_H / 2
     return replace(geometry, plus_stub_x=plus_stub_x, row_plus_y=row_plus_y)
 
 
 def _resolve_tile_extras(geometry, resolved, ctx):
-    _r = resolved
-    gtm_chart = (_r.flags.tuning_ranges and _r.flags.tuning_tiles and "row:tuning" not in ctx.collapsed
+    gtm_chart = (resolved.flags.tuning_ranges and resolved.flags.tuning_tiles and "row:tuning" not in ctx.collapsed
                  and query.col_open(geometry, ctx.collapsed, "gens") and "tile:tuning:gens" not in ctx.collapsed)
     gtm_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
-    lbox_ctrl = _r.flags.lbox_show and query.col_open(geometry, ctx.collapsed, "ssprimes" if _r.flags.superspace else "primes") and not _r.flags.presets
+    lbox_ctrl = resolved.flags.lbox_show and query.col_open(geometry, ctx.collapsed, "ssprimes" if resolved.flags.superspace else "primes") and not resolved.flags.presets
     lbox_extra = (RANGE_GAP + control_region_band_h(PRESET_H + CAPTION_LINE)) if lbox_ctrl else 0
-    cbox_ctrl = _r.flags.cbox_show and query.col_open(geometry, ctx.collapsed, "targets")
-    cbox_extra = (RANGE_GAP + control_region_band_h(ROW_H + _r.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)) if cbox_ctrl else 0
-    opt_ctrl = (_r.flags.optimization and "row:damage" not in ctx.collapsed
+    cbox_ctrl = resolved.flags.cbox_show and query.col_open(geometry, ctx.collapsed, "targets")
+    cbox_extra = (RANGE_GAP + control_region_band_h(ROW_H + resolved.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)) if cbox_ctrl else 0
+    opt_ctrl = (resolved.flags.optimization and "row:damage" not in ctx.collapsed
                 and query.col_open(geometry, ctx.collapsed, "targets") and "tile:damage:targets" not in ctx.collapsed)
-    mean_damage_caption = "retuning magnitude" if _r.scalars.all_interval else "power mean"
+    mean_damage_caption = "retuning magnitude" if resolved.scalars.all_interval else "power mean"
     if ctx.tuning_optimized:
         mean_damage_caption = f"minimized {mean_damage_caption}"
     opt_cap_lines = _wrap_lines(mean_damage_caption, OPT_MEAN_DAMAGE_W) if opt_ctrl else 1
-    opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + _r.scalars.ctrl_symbol_h
+    opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + resolved.scalars.ctrl_symbol_h
                   + opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if opt_ctrl else 0)
-    show_approach = (service.domain_has_nonprimes(_r.dims.elements)
+    show_approach = (service.domain_has_nonprimes(resolved.dims.elements)
                      and "row:damage" not in ctx.collapsed and query.col_open(geometry, ctx.collapsed, "targets")
                      and "tile:damage:targets" not in ctx.collapsed)
     approach_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H) if show_approach else 0
-    slope_ctrl = (_r.flags.weighting
+    slope_ctrl = (resolved.flags.weighting
                   and "row:weight" not in ctx.collapsed
                   and query.col_open(geometry, ctx.collapsed, "targets") and "tile:weight:targets" not in ctx.collapsed)
     slope_locked = slope_ctrl and (service.is_all_interval(ctx.tuning_scheme)
-                                   or _r.scalars.custom_weights_active)
+                                   or resolved.scalars.custom_weights_active)
     slope_extra = (RANGE_GAP + control_region_band_h(PRESET_H + CAPTION_LINE)) if slope_ctrl else 0
     geometry = replace(
         geometry, gtm_chart=gtm_chart, gtm_extra=gtm_extra, lbox_ctrl=lbox_ctrl, lbox_extra=lbox_extra,
@@ -399,28 +389,27 @@ def _resolve_tile_extras(geometry, resolved, ctx):
 
 
 def _resolve_ptext_strings(geometry, resolved, ctx) -> Geometry:
-    _r = resolved
     ptext_strings = (service.plain_text_values(ctx.state, ctx.tuning_scheme, ctx.target_spec,
-                                               held=_r.held.vectors, interest=_r.interest.vectors,
+                                               held=resolved.held.vectors, interest=resolved.interest.vectors,
                                                generator_tuning=ctx.generator_tuning,
                                                target_override=ctx.target_override,
                                                nonprime_approach=ctx.nonprime_approach,
-                                               superspace=_r.flags.superspace,
+                                               superspace=resolved.flags.superspace,
                                                superspace_generator_override=(
                                                    ctx.superspace_generator_tuning
-                                                   if _r.flags.superspace_generators else None),
-                                               consolidate_v=_r.unchanged.shown,
+                                                   if resolved.flags.superspace_generators else None),
+                                               consolidate_v=resolved.unchanged.shown,
                                                held_basis_ratios=ctx.held_basis_ratios,
-                                               decimals=_r.flags.decimals,
+                                               decimals=resolved.flags.decimals,
                                                custom_prescaler=ctx.custom_prescaler,
                                                derived=service.DerivedQuantities(
-                                                   targets=_r.targets.ratios, tun=_r.tuning.tun,
-                                                   target_weights=_r.tuning.target_weights,
-                                                   target_sizes=_r.targets.sizes,
-                                                   comma_sizes=_r.commas.sizes,
+                                                   targets=resolved.targets.ratios, tun=resolved.tuning.tun,
+                                                   target_weights=resolved.tuning.target_weights,
+                                                   target_sizes=resolved.targets.sizes,
+                                                   comma_sizes=resolved.commas.sizes,
                                                    superspace_tun=(geometry.ss_tun
-                                                                   if _r.flags.superspace else None)))
-                     if _r.flags.plain_text_values else {})
-    if not _r.flags.ebk:
+                                                                   if resolved.flags.superspace else None)))
+                     if resolved.flags.plain_text_values else {})
+    if not resolved.flags.ebk:
         ptext_strings = {k: service.ebk_to_simple_matrix(v) for k, v in ptext_strings.items()}
     return replace(geometry, ptext_strings=ptext_strings)
