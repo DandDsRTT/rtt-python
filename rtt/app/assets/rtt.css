@@ -941,10 +941,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-show-head { display:grid; grid-template-columns:160px 1fr; align-items:baseline;
                  padding:0; }
 .rtt-show-title { font-size:13px; font-weight:bold; }
-.rtt-show-examplehdr { font-size:13px; font-weight:bold; }
-/* the general group's section title ("tile features"), heading the dummy tile the way the
-   "show" title heads the specific column — same weight/size, with a little breathing room. */
-.rtt-show-tiletitle { font-size:13px; font-weight:bold; display:block; margin-bottom:2px; }
+/* the "example" column header right-justifies over its right-aligned sample cells */
+.rtt-show-examplehdr { font-size:13px; font-weight:bold; justify-self:end; }
+/* "tile features" / "app features" head their settings sections at the section-title size
+   (matching "guide settings"), a notch larger than the "show"/"example" column words. */
+.rtt-show-tiletitle, .rtt-app-features-title { font-size:14px; font-weight:bold; display:block; margin-bottom:2px; }
 /* general and specific each sit in their own rounded, lightly-bordered sub-card,
    stacked vertically (general above specific) */
 .rtt-show-group { border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6;
@@ -952,8 +953,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the guide-chapter reveal slider's section (a .rtt-show-group card above the two toggle groups):
    a short header — the "guide chapter" label and a live readout of the current chapter — over a
    marked slider whose notches are the guide's chapters plus a final ★. */
+/* "guide settings" box title — a section title (matches "tile features" / "app features"). */
+.rtt-chapter-boxtitle { font-size:14px; font-weight:bold; display:block; margin-bottom:3px; }
+/* the "max chapter" slider sub-label shares one baseline-aligned line with the live chapter name. */
 .rtt-chapter-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
-.rtt-chapter-title { font-size:14px; font-weight:bold; white-space:nowrap; }
+.rtt-chapter-title { font-size:12px; font-weight:bold; white-space:nowrap; }
 .rtt-chapter-reading { font-family:var(--rtt-serif); font-size:12px; opacity:0.7;
                        white-space:nowrap; }
 /* the longest chapter titles (ch7, ch9) would wrap to a second line beside "guide chapter", so
@@ -985,7 +989,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-show-item.disabled .q-checkbox__label { color:#999; }
 .rtt-show-item.disabled .q-checkbox__inner { color:#999 !important; }
 .rtt-ex-cell { font-family:var(--rtt-serif); font-size:13px; color:#000;
-               display:flex; align-items:center; min-height:26px; }
+               display:flex; align-items:center; justify-content:flex-end; min-height:26px; }
 /* a disabled toggle's sample greys to match its label — color for the glyph examples,
    plus the same 0.75 dim Quasar puts on the checkbox so the two read as one shade */
 .rtt-ex-cell.rtt-ex-disabled { color:#999; opacity:0.75; }

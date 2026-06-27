@@ -65,8 +65,8 @@ class PageRuntime:
 
     def chapter_reading(self) -> str:
         ch = self.chapter
-        label = "★" if ch >= show_settings.CHAPTER_STAR else str(ch)
-        return f"{label}: {show_settings.CHAPTER_TITLES[ch]}"
+        title = show_settings.CHAPTER_TITLES[ch]
+        return title if ch >= show_settings.CHAPTER_STAR else f"{ch}: {title}"
 
     def dark_icon(self) -> str:
         return "light_mode" if self.dark_mode else "dark_mode"

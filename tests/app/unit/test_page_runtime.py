@@ -68,10 +68,10 @@ def test_available_keys_filters_implemented_by_current_chapter():
     assert rt.available_keys() == expected
 
 
-def test_chapter_reading_stars_the_final_chapter_and_numbers_the_rest():
+def test_chapter_reading_drops_the_prefix_past_the_guide_and_numbers_the_rest():
     rt = PageRuntime()
     rt.set_chapter(show_settings.CHAPTER_STAR)
-    assert rt.chapter_reading().startswith("★: ")
+    assert rt.chapter_reading() == show_settings.CHAPTER_TITLES[show_settings.CHAPTER_STAR]
     rt.set_chapter(show_settings.CHAPTER_MIN)
     assert rt.chapter_reading().startswith(f"{show_settings.CHAPTER_MIN}: ")
 

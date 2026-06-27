@@ -251,8 +251,9 @@ def build_show_frozen(pb) -> dict:
 
 def build_chapter_group(pb) -> dict:
     with ui.element("div").classes("rtt-show-group rtt-chapter-group"):
+        ui.label("guide settings").classes("rtt-chapter-boxtitle").mark("guidesettingstitle")
         with ui.element("div").classes("rtt-chapter-head"):
-            ui.label("guide chapter").classes("rtt-chapter-title")
+            ui.label("max chapter").classes("rtt-chapter-title")
             chapter_reading = (
                 ui.label(pb._runtime.chapter_reading())
                 .classes("rtt-chapter-reading")
