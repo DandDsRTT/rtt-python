@@ -3,6 +3,7 @@
   window.__rttMapDemo = true;
   const NS = 'http://www.w3.org/2000/svg';
   const CH = 8; // half a chip — the × box's reach above its anchor point
+  const TAIL = 12; // the little horizontal run into the result box, after the sum line jerks up
 
   // two palettes from the preview-highlighting set: amber (a "change") routes the operand in (left and
   // down jaunts, × boxes); green (an "addition") accumulates the result (right jaunts, product/+ boxes).
@@ -154,10 +155,12 @@
     }
 
     // (B) running sum per row: emerge from the first product, ride the bottom edge through products/+s,
-    // jerk up past the last product, then run at gridline level into the centre of the result outline.
+    // stay low across the gap, then jerk up just left of the result box and run a tiny horizontal tail
+    // into the centre of its left edge (so the entry reads as distinct from the box's own outline).
     for (let i = 0; i < R; i++) {
       const first = at(i, 0), last = at(i, P - 1); if (!first || !last) continue;
-      path('M ' + first.c.x + ' ' + first.c.btm + ' H ' + last.c.rt + ' V ' + res[i].c.y + ' H ' + res[i].c.l, GREEN);
+      const riseX = Math.max(last.c.rt, res[i].c.l - TAIL);
+      path('M ' + first.c.x + ' ' + first.c.btm + ' H ' + riseX + ' V ' + res[i].c.y + ' H ' + res[i].c.l, GREEN);
     }
 
     // (C) per-box marks: × on the left edge, the product on the bottom edge, + at the shared corners.
