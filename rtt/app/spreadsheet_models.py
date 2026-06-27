@@ -18,7 +18,7 @@ from rtt.app.spreadsheet_text import _prescaler_col_labels, _pretransform_label
 
 @dataclass(frozen=True)
 class _ShowFlags:
-    captions: bool
+    names: bool
     mnemonics: bool
     equiv: bool
     presets: bool
@@ -53,15 +53,15 @@ class _ShowFlags:
 
 
 def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
-    captions = settings["names"]
+    names = settings["names"]
     temp = settings["temperament_tiles"]
     tuning = settings["tuning_tiles"]
     optimization = tuning and settings["optimization"]
     weighting = tuning and settings["weighting"]
     alt_complexity = weighting and settings["alt_complexity"]
     return _ShowFlags(
-        captions=captions,
-        mnemonics=captions and settings["mnemonics"],
+        names=names,
+        mnemonics=names and settings["mnemonics"],
         equiv=settings["equivalences"],
         presets=settings["presets"],
         counts=settings["counts"],
@@ -209,6 +209,7 @@ class RowBand:
     pre: float
     schemebtn: float
     nsub: int
+    cpick: float = 0.0
     chart_top: float | None = None
     int_handle_top: float | None = None
     matlabel_top: float | None = None

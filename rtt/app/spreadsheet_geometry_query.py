@@ -82,7 +82,7 @@ def cpick_band_y(geometry, rkey: str) -> float:
 
 def ptext_band_y(geometry, rkey: str) -> float:
     row = geometry.rows[rkey]
-    return row.y + row.h + row.frame + geometry.row_cpick[rkey] + row.sym + row.cap + row.units
+    return row.y + row.h + row.frame + row.cpick + row.sym + row.cap + row.units
 
 
 def frame_top_y(geometry, rkey: str) -> float:

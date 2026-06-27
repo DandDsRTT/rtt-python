@@ -44,7 +44,6 @@ class Geometry:
     ssprimes_x: float | None = None
 
     rows: Mapping = field(default_factory=dict)
-    row_cpick: Mapping[str, float] = field(default_factory=dict)
     row_plus_y: Mapping[str, float] = field(default_factory=dict)
 
     group_elem: Mapping[str, str] = field(default_factory=dict)

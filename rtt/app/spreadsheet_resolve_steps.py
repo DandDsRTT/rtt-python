@@ -32,7 +32,7 @@ def unpack_show_flags(inputs, draft):
         service.is_all_interval(inputs.tuning_scheme) or _f.alt_complexity)
     weight_unit = f"({service.weight_annotation(inputs.tuning_scheme)})"
     return replace(
-        draft, show_captions=_f.captions, show_mnemonics=_f.mnemonics, show_equiv=_f.equiv,
+        draft, show_names=_f.names, show_mnemonics=_f.mnemonics, show_equiv=_f.equiv,
         show_presets=_f.presets, show_counts=_f.counts, show_ptext=_f.ptext, show_charts=_f.charts,
         show_ranges=_f.ranges, show_symbols=show_symbols, ctrl_symbol_h=SYMBOL_H if show_symbols else 0,
         show_header_symbols=_f.header_symbols, show_units=_f.units, show_cell_units=_f.cell_units,

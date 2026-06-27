@@ -9,7 +9,7 @@ class ResolveDraft:
     ghost_comma: object = None
     displayed_tuning_name: object = None
     displayed_projection_name: object = None
-    show_captions: object = None
+    show_names: object = None
     show_mnemonics: object = None
     show_equiv: object = None
     show_presets: object = None
