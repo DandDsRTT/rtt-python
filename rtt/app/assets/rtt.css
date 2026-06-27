@@ -423,6 +423,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 }
 .rtt-control-check { width:100%; height:100%; display:flex; justify-content:center;
             align-items:center; }  /* visually centres the q-checkbox inside its cell wrap */
+/* a checkbox with no inline label (the in-grid control checks, whose caption is a separate cell
+   below them) must not reserve its empty label slot — otherwise centring the box+slot pair nudges
+   the box off-centre from the caption beneath it. Universal (every empty label collapses), so it
+   adds no per-control snowflake; labelled checkboxes (the settings panel) keep their slot. */
+.q-checkbox__label:empty { display:none; }
 /* Universal checkbox look AND size — every q-checkbox in the app (settings panel, the box-𝐋
    diminuator, the target-controls all-interval check, anywhere else) renders as ONE uniform
    square pinned to OPTION_BOX_PX: __inner sets the box model, __bg carries the mark. The mark —

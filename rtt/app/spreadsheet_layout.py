@@ -39,7 +39,6 @@ from rtt.app.spreadsheet_constants import (
     OPT_PAD_T,
     OPT_TITLE_GAP,
     OPT_TITLE_H,
-    OPTION_BOX_PX,
     PAD,
     PRESET_H,
     RANGE_CHART_H,
@@ -271,7 +270,6 @@ def _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label,
     handle_band = (ROW_HANDLE_W + ROW_HANDLE_GAP) if int_handle else 0
     base_head = 0 if folded else max(toggle_band, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else toggle_band)
     head = base_head + handle_band
-    foot = 0 if folded else toggle_band
     top_frame = (FRAME_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
     bot_frame = (BRACE_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
     charted = show_charts and key in BANDS["chart"].rows and not folded and natural == ROW_H
@@ -300,6 +298,8 @@ def _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label,
     chart_top = (y + head + top_frame) if charted else None
     int_handle_top = (y + (handle_band - ROW_HANDLE_W) // 2) if int_handle else None
     matlabel_top = (y + handle_band + (base_head - MATLABEL_H) // 2) if has_matlabel else None
+    trailing_band = sym + cap + uni + pre + ptext + formctrl + schemebtn + cpick + tile_extra.get(key, 0)
+    foot = 0 if (folded or trailing_band) else toggle_band
     tile_h = (head + top_frame + chart_band + row_h + bot_frame + cpick + sym + cap + uni
               + pre + ptext + formctrl + schemebtn + tile_extra.get(key, 0) + foot)
     return RowBand(
@@ -364,7 +364,7 @@ def _resolve_tile_extras(geometry, resolved, ctx):
                  and query.col_open(geometry, ctx.collapsed, "gens") and "tile:tuning:gens" not in ctx.collapsed)
     gtm_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
     lbox_ctrl = _r.flags.lbox_show and query.col_open(geometry, ctx.collapsed, "ssprimes" if _r.flags.superspace else "primes") and not _r.flags.presets
-    lbox_extra = (RANGE_GAP + control_region_band_h(OPTION_BOX_PX + CAPTION_LINE)) if lbox_ctrl else 0
+    lbox_extra = (RANGE_GAP + control_region_band_h(PRESET_H + CAPTION_LINE)) if lbox_ctrl else 0
     cbox_ctrl = _r.flags.cbox_show and query.col_open(geometry, ctx.collapsed, "targets")
     cbox_extra = (RANGE_GAP + control_region_band_h(ROW_H + _r.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)) if cbox_ctrl else 0
     opt_ctrl = (_r.flags.optimization and "row:damage" not in ctx.collapsed

@@ -20,9 +20,7 @@ from rtt.app.spreadsheet_constants import (
     CAPTION_LINE,
     COL_W,
     CTRL_LABEL_GAP,
-    LBOX_DIM_W,
     OPT_COL_GAP,
-    OPTION_BOX_PX,
     PAD,
     PRESET_H,
     PRESET_W,
@@ -32,7 +30,7 @@ from rtt.app.spreadsheet_constants import (
     TOGGLE_INSET,
 )
 from rtt.app.spreadsheet_emit_model import EmitResult
-from rtt.app.spreadsheet_text import _fold_glyph, _pretransform_label
+from rtt.app.spreadsheet_text import _fold_glyph, _pretransform_label, emit_option_check
 
 
 def transform_cells(cells, resolved, geometry, ctx) -> tuple:
@@ -180,27 +178,11 @@ def _control_box(cells, blocks, resolved, geometry, box_id: str, ckey: str, top,
     return ctrl_x, dropdown_w, ctrl_y
 
 
-def _emit_all_interval_check(cells, ctx, check_x, ctrl_y) -> None:
-    check_y = ctrl_y + (PRESET_H - OPTION_BOX_PX) / 2
-    cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
-                         "control_check", text="", checked=service.is_all_interval(ctx.tuning_scheme)))
-    cells.append(CellBox("caption:all_interval", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
-                         CAPTION_LINE, "caption", text="all-interval"))
-
-
 def _emit_scheme_button(cells, x, y, ckey: str) -> None:
     cells.append(CellBox(f"scheme:{ckey}", x, y, SCHEME_BTN_SQ, SCHEME_BTN_SQ, "scheme_button", text="✕"))
     label_y = y + (SCHEME_BTN_SQ - CAPTION_LINE) / 2
     cells.append(CellBox(f"scheme:{ckey}:label", x + SCHEME_BTN_SQ + 2, label_y, SCHEME_LABEL_W,
                          CAPTION_LINE, "caption", text="return to scheme", align="left"))
-
-
-def _emit_diminuator_check(cells, ctx, check_x, ctrl_y) -> None:
-    check_y = ctrl_y + (PRESET_H - OPTION_BOX_PX) / 2
-    cells.append(CellBox("control:diminuator", check_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
-                         "control_check", text="", checked=service.diminuator_replaced(ctx.tuning_scheme)))
-    cells.append(CellBox("caption:diminuator", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
-                         CAPTION_LINE, "caption", text="replace diminuator"))
 
 
 def _emit_preset(cells, blocks, resolved, geometry, ctx, preset_text, cid, name, rkey, ckey, label):
@@ -220,9 +202,11 @@ def _emit_preset(cells, blocks, resolved, geometry, ctx, preset_text, cid, name,
     cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
                          disabled=disabled))
     if name == "target" and ctx.settings["all_interval"]:
-        _emit_all_interval_check(cells, ctx, cx + cw + OPT_COL_GAP, cy)
+        emit_option_check(cells, "all_interval", "all-interval",
+                           service.is_all_interval(ctx.tuning_scheme), cx + cw + OPT_COL_GAP, cy)
     if name == "prescaler" and ctx.settings["alt_complexity"]:
-        _emit_diminuator_check(cells, ctx, cx + cw + OPT_COL_GAP, cy)
+        emit_option_check(cells, "diminuator", "replace diminuator",
+                           service.diminuator_replaced(ctx.tuning_scheme), cx + cw + OPT_COL_GAP, cy)
 
 
 def _emit_presets(cells, blocks, resolved, geometry, ctx) -> None:
@@ -246,7 +230,9 @@ def _emit_all_interval_check_fallback(cells, resolved, geometry, ctx) -> None:
     _r = resolved
     if ctx.settings["all_interval"] and not _r.flags.presets and query.tile_open(geometry, ctx.collapsed, "vectors", "targets"):
         top = query.ptext_band_y(geometry, "vectors") + geometry.rows["vectors"].ptext
-        _emit_all_interval_check(cells, ctx, geometry.col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
+        emit_option_check(cells, "all_interval", "all-interval",
+                           service.is_all_interval(ctx.tuning_scheme),
+                           geometry.col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
 
 
 def _emit_form_choosers(cells, blocks, resolved, geometry, ctx) -> None:
@@ -270,7 +256,7 @@ def _emit_scheme_buttons(cells, blocks, resolved, geometry, ctx) -> None:
             top = query.ptext_band_y(geometry, "projection") + geometry.rows["projection"].ptext
             box_y = top + BOX_OUTER
             blocks.append(Block(f"block:scheme:{ckey}", geometry.col_x[ckey], box_y, geometry.col_w[ckey],
-                                BOX_INNER + SCHEME_BTN_SQ + CTRL_LABEL_GAP, boxed=True))
+                                2 * BOX_INNER + SCHEME_BTN_SQ, boxed=True))
             _emit_scheme_button(cells, geometry.col_x[ckey] + BOX_INNER, box_y + BOX_INNER, ckey)
 
 

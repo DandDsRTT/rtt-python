@@ -5,7 +5,24 @@ import re
 from rtt.app import service
 from rtt.app.grid_tables import NORM_SUB_CLOSE, NORM_SUB_OPEN, RINGABLE_KINDS, SUBSCRIPT_L
 from rtt.app.layout import CellBox, Layout
-from rtt.app.spreadsheet_constants import CAPTION_CHAR_W, CAPTION_FONT, LINE_W, STRIP
+from rtt.app.spreadsheet_constants import (
+    CAPTION_CHAR_W,
+    CAPTION_FONT,
+    CAPTION_LINE,
+    LBOX_DIM_W,
+    LINE_W,
+    OPTION_BOX_PX,
+    PRESET_H,
+    STRIP,
+)
+
+
+def emit_option_check(cells, name: str, label: str, checked: bool, check_x, ctrl_y) -> None:
+    check_y = ctrl_y + (PRESET_H - OPTION_BOX_PX) / 2
+    cells.append(CellBox(f"control:{name}", check_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
+                         "control_check", text="", checked=checked))
+    cells.append(CellBox(f"caption:{name}", check_x, ctrl_y + PRESET_H, LBOX_DIM_W,
+                         CAPTION_LINE, "caption", text=label))
 
 
 def _mathit(letter: str) -> str:

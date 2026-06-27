@@ -21,7 +21,6 @@ from rtt.app.spreadsheet_constants import (
     CBOX_SLOT_W,
     CHART_H,
     COL_W,
-    LBOX_DIM_W,
     OPT_COL_GAP,
     OPT_MEAN_DAMAGE_W,
     OPT_PAD_B,
@@ -31,7 +30,6 @@ from rtt.app.spreadsheet_constants import (
     OPT_POW_CAP_W,
     OPT_TITLE_GAP,
     OPT_TITLE_H,
-    OPTION_BOX_PX,
     PRESET_H,
     RANGE_CHART_H,
     RANGE_GAP,
@@ -45,6 +43,7 @@ from rtt.app.spreadsheet_text import (
     _format_power,
     _math_expr,
     _power_mean,
+    emit_option_check,
 )
 
 
@@ -228,12 +227,9 @@ def _emit_lbox_control(cells, region_boxes, resolved, geometry, ctx) -> None:
     if geometry.lbox_ctrl:
         box_top = geometry.rows["prescaling"].tile_top + geometry.rows["prescaling"].tile_h - geometry.lbox_extra + RANGE_GAP
         bx, by = control_region(region_boxes, geometry, "block:diminuator", "ssprimes" if _r.flags.superspace else "primes",
-                                box_top, OPTION_BOX_PX + CAPTION_LINE)
-        cells.append(CellBox("control:diminuator", bx, by, LBOX_DIM_W, OPTION_BOX_PX,
-                             "control_check", text="",
-                             checked=service.diminuator_replaced(ctx.tuning_scheme)))
-        cells.append(CellBox("caption:diminuator", bx, by + OPTION_BOX_PX, LBOX_DIM_W,
-                             CAPTION_LINE, "caption", text="replace diminuator"))
+                                box_top, PRESET_H + CAPTION_LINE)
+        emit_option_check(cells, "diminuator", "replace diminuator",
+                          service.diminuator_replaced(ctx.tuning_scheme), bx, by)
 
 
 def _emit_cbox_controls(cells, region_boxes, resolved, geometry, ctx) -> None:
