@@ -9,3 +9,6 @@ __pycache__/
 .claude/launch.json
 .coverage
 coverage.json
+
+# cross-browser smoke screenshots (test_browser_matrix.py)
+.browser-matrix/
