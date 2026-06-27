@@ -155,9 +155,9 @@ def _col_bands(geometry, resolved, ctx):
         ("primes", 2 * BRACKET_W + _r.dims.d_shown * COL_W + 2 * query.outer_gutter_w(geometry, "primes"), _r.flags.temp, True),
         ("detempering", 2 * BRACKET_W + _r.dims.r * COL_W, _r.flags.detempering, True),
         ("commas", commas_band_w(resolved, _r.dims.nc_shown), _r.flags.temp, True),
-        ("held", query.interval_list_w(_r.dims.nh_shown), _r.flags.optimization, True),
-        ("targets", query.interval_list_w(_r.dims.k_shown), _r.flags.tuning and ctx.targets_in_use, True),
-        ("interest", query.interval_list_w(_r.dims.mi_shown), _r.flags.interest, True),
+        ("held", query.interval_list_w(_r.dims.nh_shown, "held"), _r.flags.optimization, True),
+        ("targets", query.interval_list_w(_r.dims.k_shown, "targets"), _r.flags.tuning and ctx.targets_in_use, True),
+        ("interest", query.interval_list_w(_r.dims.mi_shown, "interest"), _r.flags.interest, True),
     )
 
 
@@ -178,7 +178,7 @@ def _define_row_bands(geometry, resolved):
         ("tuning", ROW_H, _r.flags.tuning, True, "tuning"),
         ("just", ROW_H, _r.flags.tuning, True, "just tuning"),
         ("retune", ROW_H, _r.flags.tuning, True, "retuning"),
-        ("prescaling", (geometry.prescale_rows + geometry.size_rows) * ROW_H, _r.flags.prescaling_shown, True, "complexity prescaling"),
+        ("prescaling", (geometry.prescale_rows + geometry.size_rows) * ROW_H + query.prescale_size_gap(geometry), _r.flags.prescaling_shown, True, "complexity prescaling"),
         ("complexity", ROW_H, _r.flags.complexity_shown, True, "complexity"),
         ("weight", ROW_H, _r.flags.weighting, True, "weight"),
         ("damage", ROW_H, _r.flags.tuning, True, "damage"),

@@ -116,11 +116,7 @@ def vector_list_marks(cells, resolved, geometry, ctx, rkey, name, ckey, left, n_
             transpose_mark(cells, geometry, name, gx + gw, rkey)
     if not separators:
         return
-    if _r.flags.ebk:
-        sep_y = query.frame_top_y(geometry, rkey) - FRAME_OVERHANG
-        sep_h = query.frame_brace_y(geometry, rkey) + BRACE_H + FRAME_OVERHANG - sep_y
-    else:
-        sep_y, sep_h = geometry.rows[rkey].y, geometry.rows[rkey].h
+    sep_y, sep_h = query.separator_span(resolved, geometry, rkey)
     for c in range(1, n_cols):
         cells.append(CellBox(f"sep:{name}:{c}", (left(c - 1) + COL_W + left(c)) / 2 - SEP_W / 2, sep_y, SEP_W, sep_h, "vbar"))
 
@@ -146,7 +142,8 @@ def v_split_bars(cells, resolved, geometry, ctx, accum) -> None:
                     break
     for rkey in rows_with_u:
         if rkey != "counts" and query.tile_open(geometry, ctx.collapsed, rkey, "commas"):
-            cells.append(CellBox(f"vsplit:{rkey}", x, geometry.rows[rkey].y, SEP_W, geometry.rows[rkey].h, "vbar"))
+            sy, sh = query.separator_span(resolved, geometry, rkey)
+            cells.append(CellBox(f"vsplit:{rkey}", x, sy, SEP_W, sh, "vbar"))
 
 
 def _emit_canon_stacked_brackets(cells, resolved, geometry, ctx) -> None:
@@ -341,7 +338,7 @@ def _emit_prescaling_brackets(cells, resolved, geometry, ctx) -> None:
     _r = resolved
     cl = ctx.collapsed
     if query.row_open(geometry, cl, "prescaling"):
-        ph = (geometry.prescale_rows + geometry.size_rows) * ROW_H
+        ph = (geometry.prescale_rows + geometry.size_rows) * ROW_H + query.prescale_size_gap(geometry)
         bare_col = "ssprimes" if _r.flags.superspace else "primes"
         for group in ("commas", "detempering", "targets", "held"):
             if query.tile_open(geometry, cl, "prescaling", group):
@@ -354,11 +351,11 @@ def _emit_prescaling_brackets(cells, resolved, geometry, ctx) -> None:
             pspan = query.matrix_span(geometry, resolved, bare_col)
             for i in range(geometry.prescale_rows + geometry.size_rows):
                 bracket(cells, resolved, geometry, f"prescaling:row:{i}", "prescaling", bare_col,
-                        geometry.rows["prescaling"].y + i * ROW_H, ROW_H, span=pspan, stacked=True)
+                        query.prescale_row_y(geometry, i), ROW_H, span=pspan, stacked=True)
             if geometry.size_rows:
                 gx, gw = pspan
-                cells.append(CellBox("bar:prescaling", gx, geometry.rows["prescaling"].y + geometry.prescale_rows * ROW_H - SEP_W / 2,
-                                     gw, SEP_W, "hbar"))
+                bar_y = geometry.rows["prescaling"].y + geometry.prescale_rows * ROW_H + query.prescale_size_gap(geometry) / 2 - SEP_W / 2
+                cells.append(CellBox("bar:prescaling", gx, bar_y, gw, SEP_W, "hbar"))
 
 
 def _emit_scalar_row_brackets(cells, resolved, geometry, ctx) -> None:
