@@ -5,6 +5,7 @@ from rtt.app.grid_tables import (
     FORM_CHOOSERS,
     FORM_SUBSCRIPT_GENS,
     FORM_SUBSCRIPT_ROWS,
+    FRAMED_ROWS,
     SUBSCRIPT_C,
     SUBSCRIPT_L,
     UNITS,
@@ -66,9 +67,11 @@ def prescale_size_gap(geometry) -> float:
     return V_SPLIT_GAP if geometry.size_rows else 0
 
 
-def prescale_row_y(geometry, i: int) -> float:
-    gap = prescale_size_gap(geometry) if i >= geometry.prescale_rows else 0
-    return geometry.rows["prescaling"].y + i * ROW_H + gap
+def subrow_top(geometry, rkey: str, i: int) -> float:
+    gap = (
+        prescale_size_gap(geometry) if (rkey == "prescaling" and i >= geometry.prescale_rows) else 0
+    )
+    return geometry.rows[rkey].y + i * ROW_H + gap
 
 
 def cpick_band_y(geometry, rkey: str) -> float:
@@ -90,7 +93,7 @@ def frame_brace_y(geometry, rkey: str) -> float:
 
 
 def separator_span(resolved, geometry, rkey: str):
-    if resolved.flags.ebk:
+    if resolved.flags.ebk and rkey in FRAMED_ROWS:
         y = frame_top_y(geometry, rkey) - FRAME_OVERHANG
         return y, frame_brace_y(geometry, rkey) + BRACE_H + FRAME_OVERHANG - y
     return geometry.rows[rkey].y, geometry.rows[rkey].h
