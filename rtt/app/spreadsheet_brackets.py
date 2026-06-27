@@ -122,7 +122,7 @@ def vector_list_marks(cells, resolved, geometry, ctx, rkey, name, ckey, left, n_
     else:
         sep_y, sep_h = geometry.rows[rkey].y, geometry.rows[rkey].h
     for c in range(1, n_cols):
-        cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, sep_y, SEP_W, sep_h, "vbar"))
+        cells.append(CellBox(f"sep:{name}:{c}", (left(c - 1) + COL_W + left(c)) / 2 - SEP_W / 2, sep_y, SEP_W, sep_h, "vbar"))
 
 
 def transpose_mark(cells, geometry, name, x, rkey, pending: bool = False) -> None:

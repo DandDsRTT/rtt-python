@@ -8,7 +8,6 @@ from rtt.app.spreadsheet_constants import (
     COL_W,
     COMMAPICK_GAP,
     DASH,
-    KET_INSET,
     ROW_H,
     ROW_HANDLE_W,
 )
@@ -28,19 +27,18 @@ def emit_vectors(resolved, geometry, ctx) -> EmitResult:
         _emit_vectors_commas_col(cells, resolved, geometry, ctx)
     if query.tile_open(geometry, ctx.collapsed, "vectors", "targets"):
         target_kind = "targetcell" if _r.scalars.targets_editable else "vec"
-        cell_inset = KET_INSET if _r.scalars.targets_editable else 0
         _emit_vec_grid(cells, resolved, geometry, _VecGrid("targets", _r.dims.k, ids.target_cell,
-            lambda i: query.target_left(geometry, i), cell_inset, target_kind, "targetcell",
+            lambda i: query.target_left(geometry, i), target_kind, "targetcell",
             _r.targets.vectors, _r.targets.pending, _r.tuning.target_sizes))
     if query.tile_open(geometry, ctx.collapsed, "vectors", "held"):
         _emit_vec_grid(cells, resolved, geometry, _VecGrid("held", _r.dims.nh, ids.held_cell,
-            lambda i: query.held_left(geometry, i), 0, "heldcell", "heldcell",
+            lambda i: query.held_left(geometry, i), "heldcell", "heldcell",
             _r.held.vectors, _r.held.pending, _r.tuning.held_sizes))
     if query.tile_open(geometry, ctx.collapsed, "vectors", "detempering"):
         _emit_vectors_detempering_col(cells, resolved, geometry)
     if query.tile_open(geometry, ctx.collapsed, "vectors", "interest"):
         _emit_vec_grid(cells, resolved, geometry, _VecGrid("interest", _r.dims.mi, ids.interest_cell,
-            lambda i: query.interest_left(geometry, i), KET_INSET, "interestcell", "interestcell",
+            lambda i: query.interest_left(geometry, i), "interestcell", "interestcell",
             _r.interest.vectors, _r.interest.pending, _r.tuning.interest_sizes))
     _emit_vectors_int_handles(cells, resolved, geometry, ctx)
     return EmitResult(cells=tuple(cells))
@@ -50,12 +48,12 @@ def _emit_vec_grid(cells, resolved, geometry, g: _VecGrid) -> None:
     _r = resolved
     for col in range(g.count):
         for p in range(_r.dims.d):
-            cells.append(CellBox(g.id_fn(query.col_token(_r, g.group, col), p), g.left_fn(col) + g.inset, query.vec_top(geometry, p), COL_W - 2 * g.inset, ROW_H, g.committed_kind, text=str(g.data[col][p]), prime=p, comma=col, unit=query.cell_unit(_r, "vectors", g.group, prime=p)))
+            cells.append(CellBox(g.id_fn(query.col_token(_r, g.group, col), p), g.left_fn(col), query.vec_top(geometry, p), COL_W, ROW_H, g.committed_kind, text=str(g.data[col][p]), prime=p, comma=col, unit=query.cell_unit(_r, "vectors", g.group, prime=p)))
             voice(cells, f"vectors:{g.group}", col, g.sizes.just[col])
     if g.pending is not None:
         for p in range(_r.dims.d):
             v = g.pending[p]
-            cells.append(CellBox(g.id_fn(query.pending_col_token(_r, g.group), p), g.left_fn(g.count) + g.inset, query.vec_top(geometry, p), COL_W - 2 * g.inset, ROW_H, g.pending_kind,
+            cells.append(CellBox(g.id_fn(query.pending_col_token(_r, g.group), p), g.left_fn(g.count), query.vec_top(geometry, p), COL_W, ROW_H, g.pending_kind,
                                  text="" if v is None else str(v), prime=p, comma=g.count, pending=True, unit=query.cell_unit(_r, "vectors", g.group, prime=p)))
 
 
@@ -313,7 +311,7 @@ def _emit_ss_projection_rows(cells, resolved, geometry, ctx) -> None:
     emit_mapped_grid(cells, resolved, geometry, cl, "held", "ss_proj_ph", _r.projection.ss_held, _r.dims.nh, lambda i: query.held_left(geometry, i), "comma",
                      pending=_r.held.pending, **ssp)
     emit_mapped_grid(cells, resolved, geometry, cl, "interest", "ss_proj_pi", _r.projection.ss_interest, _r.dims.mi, lambda i: query.interest_left(geometry, i), "comma",
-                     inset=KET_INSET, pending=_r.interest.pending, **ssp)
+                     pending=_r.interest.pending, **ssp)
 
 
 def _emit_ss_proj_ssprimes(cells, resolved, geometry, ctx) -> None:

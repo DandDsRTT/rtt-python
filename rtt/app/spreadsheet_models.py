@@ -164,7 +164,6 @@ class _VecGrid(NamedTuple):
     count: int
     id_fn: Callable[[str, int], str]
     left_fn: Callable[[int], float]
-    inset: float
     committed_kind: str
     pending_kind: str
     data: object

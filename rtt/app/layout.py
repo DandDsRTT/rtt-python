@@ -42,6 +42,7 @@ class CellBox:
     ranges: tuple[tuple[float, float], ...] = ()
     indicator: float | None = None
     indicator_label: str = ""
+    col_gap: float = 0
     pending: bool = False
     preview_remove: bool = False
     preview_change: bool = False

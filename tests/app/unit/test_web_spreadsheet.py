@@ -431,11 +431,11 @@ def test_quantities_row_pluses_ride_the_bus_stub_past_the_last_branch_point():
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), opts, interest=((-1, 1, 0),))
     cells = {c.id: c for c in lay.cells}
     by_id = {ln.id: ln for ln in lay.lines}
-    for plus_id, col, last_sub in (("plus", "primes", "v:prime:2"),
-                                   ("comma_plus", "commas", "v:comma:0"),
-                                   ("interest_plus", "interest", "v:interest:0")):
+    for plus_id, col, last_sub, gap in (("plus", "primes", "v:prime:2", 0),
+                                        ("comma_plus", "commas", "v:comma:0", 0),
+                                        ("interest_plus", "interest", "v:interest:0", spreadsheet_constants.INTERVAL_COL_GAP)):
         plus, bus = cells[plus_id], by_id[f"bus:{col}:top"]
-        stub = by_id[last_sub].pos + spreadsheet_constants.COL_W  # one slot past the last sub-axis
+        stub = by_id[last_sub].pos + spreadsheet_constants.COL_W + gap  # one slot (incl. any inter-column gap) past the last sub-axis
         assert abs((plus.x + plus.w / 2) - stub) < 0.51     # the + centres on the stub
         assert abs((plus.y + plus.h / 2) - bus.pos) < 0.51  # ...up on the top bus
         assert abs((bus.start + bus.length) - stub) < 0.51  # and the bus reaches it
@@ -554,7 +554,7 @@ def test_target_list_carries_a_per_entry_minus_and_a_plus():
     assert all(f"target_minus:{j}" in cells for j in range(k))  # a − per target
     # the + rides the stub one COL_W past the last target's branch point, bus stretched to reach it
     plus, bus, last_sub = cells["target_plus"], by_id["bus:targets:top"], by_id[f"v:target:{k - 1}"]
-    stub = last_sub.pos + spreadsheet_constants.COL_W
+    stub = last_sub.pos + spreadsheet_constants.COL_W + spreadsheet_constants.INTERVAL_COL_GAP
     assert abs((plus.x + plus.w / 2) - stub) < 0.51
     assert abs((bus.start + bus.length) - stub) < 0.51
 
@@ -909,10 +909,10 @@ def test_mapping_cells_form_a_square_touching_grid():
     assert cells["cell:mapping:0:1"].x == c00.x + c00.w
     assert cells["cell:mapping:0:2"].x == c00.x + 2 * c00.w
     assert cells["cell:mapping:1:0"].y == c00.y + c00.h
-    # the mapped target interval list sits on the same square columns
+    # the mapped target interval list is square too, but spaced apart by the interval-column gap
     m00 = cells["cell:mapped:0:0"]
     assert m00.w == m00.h == spreadsheet_constants.ROW_H
-    assert cells["cell:mapped:0:1"].x == m00.x + m00.w
+    assert cells["cell:mapped:0:1"].x == m00.x + m00.w + spreadsheet_constants.INTERVAL_COL_GAP
 
 
 def test_tuning_rows_over_primes_and_targets():
@@ -5347,15 +5347,14 @@ def test_interest_intervals_are_editable_vectors_like_the_comma_basis():
 
 def test_interest_vector_cells_are_separated_boxes_not_a_contiguous_grid():
     # the mockup renders each interval's ket as its own bordered box with space around it,
-    # not a contiguous matrix grid. So the interest vector cells are inset within their
-    # COL_W column slot, leaving a horizontal gap between adjacent kets — while staying
-    # centred on the slot, so the per-column marks and the column axis still line up.
+    # not a contiguous matrix grid. So adjacent interest kets are full-width square boxes whose
+    # column slots are spaced apart by the interval-column gap.
     cells = {c.id: c for c in _with_interest(_INTEREST).cells}
     c0, c1 = cells["cell:interest:0:0"], cells["cell:interest:0:1"]
     m0 = cells["cell:imapped:0:0"]  # the mapped cell spans the full COL_W slot
-    assert c0.w < m0.w                              # the ket box is inset (narrower than the slot)
-    assert c0.x + c0.w < c1.x                       # a real gap between adjacent kets
-    assert c0.x + c0.w / 2 == m0.x + m0.w / 2       # ...but centred on the same slot
+    assert c0.w == m0.w == spreadsheet_constants.COL_W            # full-width square ket box
+    assert c1.x - (c0.x + c0.w) == spreadsheet_constants.INTERVAL_COL_GAP  # a real gap between adjacent kets
+    assert c0.x == m0.x                                           # ...sharing the slot with its mapped image
 
 
 def test_interest_has_add_and_per_interval_remove_controls():
@@ -6435,16 +6434,16 @@ def test_all_interval_target_list_is_read_only():
 
 def test_editable_target_vector_cells_clear_the_column_separator():
     # the target list is a matrix drawn WITH separator rules between its interval columns
-    # (unlike the loose interest collection). But its vector cells are editable inputs whose
-    # opaque box, sitting flush at the slot boundary, would paint over the thin rule. So the
-    # editable target cells are inset within their COL_W slot — like the interest kets — leaving
-    # a gap the separator shows through, while staying centred so the per-column marks/axis align.
+    # (unlike the loose interest collection). Its vector cells are full-width square editable
+    # inputs, and the interval-column gap between adjacent target slots leaves room for the thin
+    # rule, centred in the gap so neither opaque input box paints over it.
     cells = {c.id: c for c in _layout().cells}
     c0, c1 = cells["cell:vec:targets:0:0"], cells["cell:vec:targets:1:0"]
     sep = cells["sep:vec:targets:1"]            # the rule between target intervals 0 and 1
     full = cells["cell:mapped:0:0"]             # the mapped image spans the full COL_W slot
-    assert c0.w < full.w                        # the input box is inset (narrower than the slot)
-    assert c0.x + c0.w / 2 == full.x + full.w / 2   # ...but centred on the same slot
+    assert c0.w == full.w == spreadsheet_constants.COL_W   # full-width square input box
+    assert c0.x == full.x                                  # ...sharing the slot with its mapped image
+    assert c1.x - (c0.x + c0.w) == spreadsheet_constants.INTERVAL_COL_GAP  # a real gap between slots
     # the rule lies entirely in the gap between the two input boxes — neither covers it
     assert c0.x + c0.w <= sep.x                 # cell 0 ends at/before the rule's left edge
     assert sep.x + sep.w <= c1.x                # cell 1 starts at/after the rule's right edge
@@ -6873,9 +6872,9 @@ def test_chart_bars_centre_on_their_value_gridlines():
     # each black bar centres exactly on the thin grey vertical gridline under its value
     # cell — the chart's plot area overlays the value block, not the (possibly wider /
     # gutter-offset) column footprint. _bar_chart lays bar i at chart.x + BRACKET_W +
-    # i·COL_W + COL_W/2, so that must equal the per-element gridline. symbols adds the
-    # primes matlabel gutter and the interest column's long title widens its footprint,
-    # so both offsets are exercised.
+    # i·(COL_W + col_gap) + COL_W/2, so that must equal the per-element gridline. symbols adds
+    # the primes matlabel gutter and the interest column's long title widens its footprint, and
+    # the interval-list columns (targets/held/interest) carry an inter-column gap — all exercised.
     s = settings.defaults()
     s.update(charts=True, symbols=True, optimization=True, generator_detempering=True)
     lay = spreadsheet.build(
@@ -6889,7 +6888,7 @@ def test_chart_bars_centre_on_their_value_gridlines():
     for group, e in elem.items():
         ch = on[f"chart:retune:{group}"]
         for i in range(len(ch.values)):
-            bar_centre = ch.x + bw + i * cw + cw / 2
+            bar_centre = ch.x + bw + i * (cw + ch.col_gap) + cw / 2
             assert bar_centre == gridline[f"v:{e}:{i}"], f"{group} bar {i} is off its gridline"
 
 
@@ -9418,8 +9417,8 @@ def test_a_matrix_row_carries_a_unit_on_every_subrow_not_just_the_first():
 
 
 def test_read_only_target_vectors_stay_full_width():
-    # the all-interval Tₚ = 𝐈 list is read-only ("vec"), not editable: its cells stay full COL_W (the
-    # inset is an editable-input affordance only — see KET_INSET on the editable comma / interest kets).
+    # the all-interval Tₚ = 𝐈 list is read-only ("vec"), not editable; like every interval cell it is a
+    # full-width square box — separation between interval slots comes from the column gap, not a per-cell inset.
     cells = {c.id: c for c in _with(scheme="minimax-lils-S").cells}
     real = cells["cell:vec:targets:0:0"]
     assert real.kind == "vec"            # read-only (not the editable targetcell)
@@ -10259,7 +10258,8 @@ def test_projection_relabels_the_whole_column_as_the_unrotated_vector_list():
     # vanish!)" note drops too: only the comma half of V vanishes, which the λ = 0 row marks)
     named = {c.id: c for c in _with(projection=True).cells}
     assert named["header:commas"].text == "unrotated\nvector list"            # the column title
-    assert named["caption:vectors:commas"].text == "unrotated vector list"
+    # with equivalences on (default), the V = C|U tile name spells the equivalence out in words
+    assert named["caption:vectors:commas"].text == "unrotated vector list = comma basis | unchanged interval basis"
     assert named["caption:mapping:commas"].text == "mapped unrotated vector list"
     # where the rename would double "list" ("…vector list interval size list") the first is dropped
     assert named["caption:tuning:commas"].text == "tempered unrotated vector interval size list"
@@ -10361,7 +10361,7 @@ def test_projection_row_grows_a_draft_column_for_target_held_interest_drafts():
     k = _target_count()
     pt = {c.id: c for c in spreadsheet.build(base, s, pending_target=[None, None, None]).cells}
     assert all(pt[f"cell:proj_pt:draft:{p}"].pending and pt[f"cell:proj_pt:draft:{p}"].text == "" for p in range(3))
-    assert pt["cell:proj_pt:draft:0"].x == pt[f"cell:proj_pt:{k - 1}:0"].x + spreadsheet_constants.COL_W  # one slot past committed P·T
+    assert pt["cell:proj_pt:draft:0"].x == pt[f"cell:proj_pt:{k - 1}:0"].x + spreadsheet_constants.COL_W + spreadsheet_constants.INTERVAL_COL_GAP  # one slot past committed P·T
     ph = {c.id: c for c in spreadsheet.build(base, s, pending_held=[None, None, None]).cells}
     assert all(ph[f"cell:proj_ph:draft:{p}"].pending and ph[f"cell:proj_ph:draft:{p}"].text == "" for p in range(3))
     pi = {c.id: c for c in spreadsheet.build(base, s, interest=((1, 1, -1),), pending_interest=[None, None, None]).cells}

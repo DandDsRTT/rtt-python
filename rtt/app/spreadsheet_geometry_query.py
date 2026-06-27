@@ -18,6 +18,7 @@ from rtt.app.spreadsheet_constants import (
     CTRL_LABEL_GAP,
     FRAME_GAP,
     FRAME_H,
+    INTERVAL_COL_GAP,
     PAD,
     PRESET_H,
     PRESET_W,
@@ -145,16 +146,27 @@ def comma_value_pos(resolved, i: int) -> int:
     return i if i < resolved.dims.nc else i + (resolved.dims.nc_shown - resolved.dims.nc)
 
 
+_GAPPED_INTERVAL_COLS = ("targets", "held", "interest")
+
+
+def interval_col_gap(ckey: str) -> float:
+    return INTERVAL_COL_GAP if ckey in _GAPPED_INTERVAL_COLS else 0
+
+
+def interval_list_w(n: int) -> float:
+    return 2 * BRACKET_W + n * COL_W + max(n - 1, 0) * INTERVAL_COL_GAP
+
+
 def target_left(geometry, j: int) -> float:
-    return geometry.targets_x + BRACKET_W + j * COL_W
+    return geometry.targets_x + BRACKET_W + j * (COL_W + INTERVAL_COL_GAP)
 
 
 def interest_left(geometry, i: int) -> float:
-    return geometry.interest_x + BRACKET_W + i * COL_W
+    return geometry.interest_x + BRACKET_W + i * (COL_W + INTERVAL_COL_GAP)
 
 
 def held_left(geometry, i: int) -> float:
-    return geometry.held_x + BRACKET_W + i * COL_W
+    return geometry.held_x + BRACKET_W + i * (COL_W + INTERVAL_COL_GAP)
 
 
 def detempering_left(geometry, i: int) -> float:
@@ -190,7 +202,7 @@ def col_plus_x(geometry, resolved, ckey: str) -> float:
         if resolved.dims.nc_shown == 0:
             return geometry.commas_x + BRACKET_W + resolved.unchanged.empty_comma_w / 2
         return comma_left(geometry, resolved, resolved.dims.nc_shown - 1) + COL_W + V_SPLIT_GAP / 2
-    return sub_axis_x(geometry, ckey, n - 1) + COL_W
+    return sub_axis_x(geometry, ckey, n - 1) + COL_W + interval_col_gap(ckey)
 
 
 def col_open(geometry, collapsed, key: str) -> bool:

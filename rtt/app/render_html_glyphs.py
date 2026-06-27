@@ -92,8 +92,9 @@ def _chart_ticks(lo: float, hi: float) -> list[float]:
     return ticks
 
 
-def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="") -> str:
+def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="", col_gap=0) -> str:
     axis_x, col_w = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COL_W
+    pitch = col_w + col_gap
     values = tuple(values)
     present = tuple(v for v in values if v is not None)
     ticks = _chart_ticks(min((*present, 0.0)), max((*present, 0.0)))
@@ -125,7 +126,7 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="") -
     for i, v in enumerate(values):
         if v is None:
             continue
-        cx = axis_x + i * col_w + col_w / 2
+        cx = axis_x + i * pitch + col_w / 2
         yv = y_of(v)
         top, bot = min(zero_y, yv), max(zero_y, yv)
         body.append(rect(cx - bw / 2, top, bw, bot - top))
