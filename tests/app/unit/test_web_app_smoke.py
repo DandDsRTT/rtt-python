@@ -700,11 +700,13 @@ def test_freeze_script_syncs_the_column_strip_and_toggles_the_seam_on_body_scrol
     assert "rtt-scrolled-x" in js and "rtt-scrolled-y" in js    # toggles the seams
     assert "addEventListener('scroll'" in js
     assert "ResizeObserver" not in js and "scroll-timeline" not in js  # no fixed-box machinery
-    # The transforms read CLAMPED offsets, never raw scrollLeft/scrollTop: iOS WebKit reports those
-    # negative through an elastic top/left overscroll (desktop holds them at 0), which would shove the
-    # frozen titles and gridline twins off their rules in the bounce zone.
-    assert "Math.max(0, b.scrollLeft)" in js and "Math.max(0, b.scrollTop)" in js
-    assert "-b.scrollLeft" not in js and "-b.scrollTop" not in js
+    # Only the VERTICAL twin offset is clamped non-negative. iOS WebKit reports scrollTop negative
+    # through a top overscroll (desktop holds it at 0), so clamping keeps the colfill twins put to
+    # bridge the bared strip; the horizontal axis must track raw scroll so the twins stay glued under
+    # their columns — clamping X ghosts a second set of verticals on a left overscroll.
+    assert "Math.max(0, b.scrollTop)" in js
+    assert "-b.scrollLeft" in js
+    assert "Math.max(0, b.scrollLeft)" not in js
 
 
 def test_freeze_script_reserves_a_scrollbar_so_one_bar_never_forces_a_second():
