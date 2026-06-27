@@ -1223,8 +1223,8 @@ def test_target_chooser_default_limit_uses_the_nonstandard_basis():
 def test_target_chooser_resets_to_dash_when_the_domain_empties_the_target_set():
     from rtt.app.editor import Editor
     editor = Editor()
+    assert editor.try_edit_mapping_text("5.7 [⟨1 0] ⟨0 1]}") is True
     editor.set_target_spec("5-TILT")
-    editor.set_domain_element(2, "21")
     assert editor.current_targets() == []
     assert _Reconciler(editor)._target_preset_values() == (None, None)
 
