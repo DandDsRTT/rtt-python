@@ -19,7 +19,6 @@ from rtt.app.spreadsheet_constants import (
     BOX_OUTER,
     CAPTION_LINE,
     COL_W,
-    CTRL_LABEL_GAP,
     OPT_COL_GAP,
     PAD,
     PRESET_H,
@@ -159,7 +158,7 @@ def _control_box(cells, blocks, resolved, geometry, box_id: str, ckey: str, top,
     ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
     if scheme_btn:
         _emit_scheme_button(cells, ctrl_x, ctrl_y, ckey)
-        ctrl_y += SCHEME_BTN_SQ + CTRL_LABEL_GAP
+        ctrl_y += SCHEME_BTN_SQ + BAND_GAP
     if label:
         cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
                              "caption", text=label, align="left", disabled=disabled))
