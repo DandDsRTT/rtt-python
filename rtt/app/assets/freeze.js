@@ -4,14 +4,21 @@ window.rttFreeze = (function () {
     for (var i = 0; i < bodies.length; i++) {
       var b = bodies[i], app = b.closest('.rtt-app');
       if (!app) continue;
+      // Clamp the offsets non-negative: desktop browsers hold scrollLeft/scrollTop at 0 through an
+      // elastic top/left overscroll, but iOS WebKit reports them NEGATIVE during the rubber-band. Left
+      // raw, that negative would shove the frozen titles and the gridline twins off their rules in the
+      // bounce zone (a stray rule over the column titles; full-height lines stopping short). Clamping
+      // makes both engines behave alike: through a top/left bounce the twins stay put and bridge the
+      // bared strip so every gridline reads unbroken.
+      var sx = Math.max(0, b.scrollLeft), sy = Math.max(0, b.scrollTop);
       var inner = app.querySelector('.rtt-colhead-inner');
-      if (inner) inner.style.transform = 'translateX(' + (-b.scrollLeft) + 'px)';
-      // the colfill twins ride BOTH scroll axes so they rest exactly under the live rules; the bounce
-      // clamps scrollTop, so on a top overscroll they stay put and bridge the bared strip.
+      if (inner) inner.style.transform = 'translateX(' + (-sx) + 'px)';
+      // the colfill twins ride BOTH scroll axes so they rest exactly under the live rules; on a top
+      // overscroll they stay put (sy clamped to 0) and bridge the bared strip.
       var fill = app.querySelector('.rtt-colfill-inner');
-      if (fill) fill.style.transform = 'translate(' + (-b.scrollLeft) + 'px,' + (-b.scrollTop) + 'px)';
-      app.classList.toggle('rtt-scrolled-y', b.scrollTop > 0);
-      app.classList.toggle('rtt-scrolled-x', b.scrollLeft > 0);
+      if (fill) fill.style.transform = 'translate(' + (-sx) + 'px,' + (-sy) + 'px)';
+      app.classList.toggle('rtt-scrolled-y', sy > 0);
+      app.classList.toggle('rtt-scrolled-x', sx > 0);
     }
     reportViewport();
   }
