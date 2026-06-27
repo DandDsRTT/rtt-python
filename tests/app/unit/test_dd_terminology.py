@@ -1,4 +1,4 @@
-from rtt.app import settings, spreadsheet, terminology
+from rtt.app import presets, settings, spreadsheet, terminology
 from rtt.app.editor import Editor
 
 
@@ -9,20 +9,19 @@ def _grid_texts(dd_terminology):
 
 def test_phrase_substitution_is_identity_when_dd_terminology_on():
     assert terminology.wiki("interval vector", True) == "interval vector"
-    assert terminology.wiki("comma basis", True) == "comma basis"
+    assert terminology.wiki("interval vectors", True) == "interval vectors"
 
 
 def test_phrase_substitution_swaps_in_wiki_terms_when_dd_terminology_off():
     assert terminology.wiki("interval vector", False) == "monzo"
     assert terminology.wiki("interval vectors", False) == "monzos"
     assert terminology.wiki("interval-vectors", False) == "monzos"
-    assert terminology.wiki("comma basis", False) == "comma list"
-    assert terminology.wiki("projected unrotated vector list", False) == "projected eigenmonzo and comma list"
+    assert terminology.wiki("prime-count vector", False) == "monzo"
 
 
-def test_the_mapping_matrix_term_is_never_substituted():
-    assert terminology.wiki("(temperament) mapping", False) == "(temperament) mapping"
-    assert terminology.wiki("JI mapping", False) == "JI mapping"
+def test_terms_with_an_accepted_non_dd_form_are_left_alone():
+    for text in ("comma basis", "(temperament) mapping", "JI mapping", "projected unrotated vector list"):
+        assert terminology.wiki(text, False) == text
 
 
 def test_phrase_substitution_does_not_touch_unrelated_interval_phrases():
@@ -63,28 +62,52 @@ def test_dd_terminology_round_trips_through_persistence():
     assert settings.from_persisted({})["dd_terminology"] is True
 
 
-def test_grid_captions_keep_dd_terms_when_on():
+def test_interval_vector_row_label_becomes_monzos_off_only():
     on = _grid_texts(True)
-    assert "interval vectors" in on
-    assert "comma basis" in on
-
-
-def test_grid_captions_show_wiki_terms_when_off():
     off = _grid_texts(False)
-    assert "monzos" in off
-    assert "comma list" in off
+    assert "interval vectors" in on
     assert "interval vectors" not in off
-    assert "comma basis" not in off
+    assert "monzos" in off
 
 
-def test_grid_keeps_the_mapping_term_in_both_modes():
-    assert "mapping" in _grid_texts(True)
-    assert "mapping" in _grid_texts(False)
+def test_grid_keeps_accepted_terms_in_both_modes():
+    for text in ("mapping", "comma basis"):
+        assert text in _grid_texts(True)
+        assert text in _grid_texts(False)
 
 
-def test_displayed_scheme_name_substitutes_at_the_editor_chokepoint():
+def test_displayed_scheme_name_stays_systematic_so_it_matches_an_option_value():
     editor = Editor()
     editor.set_tuning_scheme("minimax-S")
     assert editor.displayed_tuning_scheme_name == "minimax-S"
     editor.settings["dd_terminology"] = False
-    assert editor.displayed_tuning_scheme_name == "TOP"
+    assert editor.displayed_tuning_scheme_name == "minimax-S"
+
+
+def _scheme_cell_text(dd_terminology):
+    editor = Editor()
+    editor.set_tuning_scheme("minimax-S")
+    layout = spreadsheet.build(
+        editor.state,
+        {**settings.defaults(), "presets": True, "dd_terminology": dd_terminology},
+        tuning_scheme=editor.tuning_scheme,
+    )
+    return next(cb.text for cb in layout.cells if cb.id == "preset:tuning")
+
+
+def test_scheme_name_cell_shows_the_systematic_name_when_on():
+    assert _scheme_cell_text(True) == "minimax-S"
+
+
+def test_scheme_name_cell_shows_the_wiki_name_when_off():
+    assert _scheme_cell_text(False) == "TOP"
+
+
+def test_tuning_scheme_dropdown_labels_use_wiki_names_when_off_keeping_systematic_values():
+    on = presets.tuning_scheme_options(True, True, False, True)
+    off = presets.tuning_scheme_options(True, True, False, False)
+    assert set(on) == set(off)
+    assert on["minimax-S"] == "minimax-S"
+    assert off["minimax-S"] == "TOP"
+    assert off["minimax-ES"] == "TE"
+    assert off["minimax-E-lils-S"] == "WE"

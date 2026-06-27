@@ -7,9 +7,7 @@ _PHRASE_WIKI_TERMS = (
     ("interval-vectors", "monzos"),
     ("interval vector", "monzo"),
     ("prime-count vector", "monzo"),
-    ("unrotated vector list", "eigenmonzo and comma list"),
     ("unchanged-interval basis", "eigenmonzo list"),
-    ("comma basis", "comma list"),
 )
 
 _SCHEME_WIKI_NAMES = {

@@ -176,7 +176,6 @@ async def test_dd_terminology_toggle_swaps_grid_terms_to_wiki_live(user: User) -
     assert user.find(content="interval vectors").elements
     user.find(kind=ui.checkbox, content="use D&D's terminology").click()
     await user.should_see(content="monzos")
-    assert user.find(content="comma list").elements
 
 
 async def test_undo_of_terminology_toggle_restores_dd_terms(user: User) -> None:
@@ -185,6 +184,23 @@ async def test_undo_of_terminology_toggle_restores_dd_terms(user: User) -> None:
     await user.should_see(content="monzos")
     user.find(marker="undo").click()
     await user.should_see(content="interval vectors")
+
+
+def _scheme_select(user: User):
+    return next(e for e in user.find(kind=ui.select).elements if "minimax-S" in (e.options or {}))
+
+
+async def test_all_interval_scheme_dropdown_relabels_to_wiki_names_when_off(user: User) -> None:
+    await user.open("/")
+    user.find(marker="showpart:presets").click()
+    user.find(kind=ui.checkbox, content="optimization").click()
+    user.find(kind=ui.checkbox, content="weighting").click()
+    user.find(kind=ui.checkbox, content="all-interval").click()
+    _cell_child(user, "control:all_interval").set_value(True)
+    user.find(kind=ui.checkbox, content="alternative complexity").click()
+    assert _scheme_select(user).options["minimax-S"] == "minimax-S"
+    user.find(kind=ui.checkbox, content="use D&D's terminology").click()
+    assert _scheme_select(user).options["minimax-S"] == "TOP"
 
 
 async def test_enabling_math_expressions_renders_the_closed_form(user: User) -> None:
