@@ -123,7 +123,7 @@ class Unchanged:
 class Flags:
     alt_complexity: bool
     canon: bool
-    captions: bool
+    names: bool
     detempering: bool
     ebk: bool
     equiv: bool
@@ -347,7 +347,7 @@ def _flags(b) -> Flags:
     return Flags(
         alt_complexity=b.show_alt_complexity,
         canon=b.show_canon,
-        captions=b.show_captions,
+        names=b.show_names,
         detempering=b.show_detempering,
         ebk=b.show_ebk,
         equiv=b.show_equiv,

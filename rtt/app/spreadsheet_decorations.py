@@ -351,7 +351,7 @@ def _emit_tile_units(cells, resolved, geometry, rkey, ckey) -> None:
     if unit and not (rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")):
         unit = _subscript_coord(unit, "p", _r.labels.domain_label)
     if _r.flags.units and unit:
-        uy = geometry.rows[rkey].y + geometry.rows[rkey].h + geometry.rows[rkey].frame + geometry.row_cpick[rkey] + geometry.rows[rkey].sym + geometry.rows[rkey].cap
+        uy = geometry.rows[rkey].y + geometry.rows[rkey].h + geometry.rows[rkey].frame + geometry.rows[rkey].cpick + geometry.rows[rkey].sym + geometry.rows[rkey].cap
         cells.append(CellBox(f"units:{rkey}:{ckey}", geometry.col_x[ckey], uy, geometry.col_w[ckey], UNIT_H,
                              "units", text=f"units: {unit}"))
 
@@ -360,13 +360,13 @@ def _emit_tile_symbols_captions(cells, resolved, geometry, caption_equivs, capti
     _r = resolved
     if caption_ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:
         name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
-    cy = geometry.rows[rkey].y + geometry.rows[rkey].h + geometry.rows[rkey].frame + geometry.row_cpick[rkey]
+    cy = geometry.rows[rkey].y + geometry.rows[rkey].h + geometry.rows[rkey].frame + geometry.rows[rkey].cpick
     if (_r.flags.symbols or _r.flags.equiv) and rkey in BANDS["symbol"].rows:
         cy = _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, rkey, ckey, cy)
-    if _r.flags.captions and _r.unchanged.shown and (rkey, ckey) == ("counts", "commas"):
+    if _r.flags.names and _r.unchanged.shown and (rkey, ckey) == ("counts", "commas"):
         _emit_unchanged_counts_caption(cells, resolved, geometry, rkey, cy)
         return
-    if _r.flags.captions:
+    if _r.flags.names:
         _emit_tile_caption(cells, resolved, geometry, caption_ai, rkey, ckey, name, cy)
     _emit_tile_units(cells, resolved, geometry, rkey, ckey)
 

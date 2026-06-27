@@ -184,7 +184,7 @@ def init_superspace_tuning(resolved, ctx):
 
 
 def caption_floor(geometry, resolved, key: str):
-    if not resolved.flags.captions:
+    if not resolved.flags.names:
         return 0
     return max((_min_width_for_lines(resolved.labels.captions[(rk, key)], MAX_CAPTION_LINES)
                 for rk in geometry.present_caption_rows
@@ -248,7 +248,7 @@ def _caption_wrap_w(geometry, resolved, ctx, ckey: str):
 
 
 def caption_band(geometry, resolved, ctx, key: str, folded: bool):
-    if not (resolved.flags.captions and key in BANDS["caption"].rows and not folded):
+    if not (resolved.flags.names and key in BANDS["caption"].rows and not folded):
         return 0
     lines = [_wrap_lines(resolved.labels.captions[(key, c)], _caption_wrap_w(geometry, resolved, ctx, c)) for c in geometry.col_x
              if (key, c) in resolved.labels.captions and (key, c) in geometry.declared_tiles]

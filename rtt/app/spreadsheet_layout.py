@@ -238,16 +238,14 @@ def _init_row_geometry(geometry, header_h):
 def _layout_rows(geometry, resolved, ctx, row_bands, tile_extra, rows_top_y) -> Geometry:
     show_charts = resolved.flags.charts
     rows: dict[str, RowBand] = {}
-    row_cpick = {}
     y = rows_top_y
     for key, natural, present, collapsible, label in row_bands:
         if not present:
             continue
-        band, cpick = _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label, tile_extra, show_charts, y)
+        band = _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label, tile_extra, show_charts, y)
         rows[key] = band
-        row_cpick[key] = cpick
         y += band.tile_h + GAP
-    return replace(geometry, rows=rows, row_cpick=row_cpick, total_h=y,
+    return replace(geometry, rows=rows, total_h=y,
                    fanout_y=geometry.branch_top_y + geometry.FAN)
 
 
@@ -305,8 +303,8 @@ def _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label,
     return RowBand(
         y=y + head + top_frame + chart_band, h=row_h, label=label, collapsible=collapsible,
         tile_h=tile_h, tile_top=y, frame=bot_frame, sym=sym, cap=cap, units=uni, ptext=ptext,
-        pre=pre, schemebtn=schemebtn, nsub=round(natural / ROW_H),
-        chart_top=chart_top, int_handle_top=int_handle_top, matlabel_top=matlabel_top), cpick
+        pre=pre, schemebtn=schemebtn, nsub=round(natural / ROW_H), cpick=cpick,
+        chart_top=chart_top, int_handle_top=int_handle_top, matlabel_top=matlabel_top)
 
 
 def _group_geometry_fields(geometry, resolved):
