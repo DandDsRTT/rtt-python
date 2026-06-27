@@ -134,14 +134,14 @@
     const SW = Math.max(b.scrollWidth, b.offsetWidth), SH = Math.max(b.scrollHeight, b.offsetHeight);
     svg.setAttribute('width', SW); svg.setAttribute('height', SH); svg.setAttribute('viewBox', '0 0 ' + SW + ' ' + SH);
 
-    const gap = Math.min(7, (W * 0.45) / Math.max(1, R - 1));
+    const gap = Math.min(10, (W * 0.45) / R);
 
     // (A) operand fan: each prime count splits into one line per mapping row. They share the leftward
     // jaunt (a bus along the vector row), then split into parallel descents on staggered tracks, each
-    // peeling right into its box's left edge (where the × sits).
+    // peeling right into its box's left edge (where the × sits) — every row keeps a visible entry.
     primes.forEach((p) => {
       const leftEdge = colX[p] - W / 2, vy = vp[p].c.y;
-      const tracks = rows.map((r, i) => leftEdge - i * gap);
+      const tracks = rows.map((r, i) => leftEdge - (i + 1) * gap);
       line(Math.min(...tracks), vy, vp[p].c.l, vy);
       rows.forEach((r, i) => {
         const box = r.cells[p];
@@ -150,14 +150,13 @@
       });
     });
 
-    // (B) the running sum along each row: ride the boxes' bottom edge through products and +s, then a
-    // short rise back to the gridline and into the generator-count cell.
+    // (B) the running sum along each row: emerge from the first product and ride the boxes' bottom
+    // edge through the products and +s, staying low all the way into a = box at the generator-count
+    // cell's bottom-left corner.
     rows.forEach((r) => {
-      const by = r.cells[primes[0]].c.btm, x0 = r.cells[primes[0]].c.l;
-      const lastBox = r.cells[primes[primes.length - 1]];
-      const xN = lastBox.c.rt;
-      path('M ' + x0 + ' ' + by + ' H ' + xN + ' V ' + r.rc.y + ' H ' + r.rc.l);
-      glyph(r.rc.l - 8, r.rc.y, '=', 13);
+      const by = r.cells[primes[0]].c.btm;
+      line(r.cells[primes[0]].c.x, by, r.rc.l, by);
+      chip(r.rc.l, by, '=', true);
     });
 
     // (C) per-box marks: × on the left edge (where the operand line lands), the product on the bottom
