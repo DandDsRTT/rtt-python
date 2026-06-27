@@ -12,12 +12,14 @@ from rtt.app.grid_tables import (
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
     BOX_INNER,
+    BRACE_H,
     BRACKET_W,
     CAPTION_LINE,
     COL_W,
     CTRL_LABEL_GAP,
     FRAME_GAP,
     FRAME_H,
+    FRAME_OVERHANG,
     INTERVAL_COL_GAP,
     PAD,
     PRESET_H,
@@ -60,6 +62,15 @@ def ss_proj_top(geometry, i: int) -> float:
     return geometry.rows["ss_projection"].y + i * ROW_H
 
 
+def prescale_size_gap(geometry) -> float:
+    return V_SPLIT_GAP if geometry.size_rows else 0
+
+
+def prescale_row_y(geometry, i: int) -> float:
+    gap = prescale_size_gap(geometry) if i >= geometry.prescale_rows else 0
+    return geometry.rows["prescaling"].y + i * ROW_H + gap
+
+
 def cpick_band_y(geometry, rkey: str) -> float:
     row = geometry.rows[rkey]
     return row.y + row.h + row.frame
@@ -76,6 +87,13 @@ def frame_top_y(geometry, rkey: str) -> float:
 
 def frame_brace_y(geometry, rkey: str) -> float:
     return geometry.rows[rkey].y + geometry.rows[rkey].h + FRAME_GAP
+
+
+def separator_span(resolved, geometry, rkey: str):
+    if resolved.flags.ebk:
+        y = frame_top_y(geometry, rkey) - FRAME_OVERHANG
+        return y, frame_brace_y(geometry, rkey) + BRACE_H + FRAME_OVERHANG - y
+    return geometry.rows[rkey].y, geometry.rows[rkey].h
 
 
 def matlabel_gutter_w(geometry, group_key: str) -> float:
@@ -146,27 +164,28 @@ def comma_value_pos(resolved, i: int) -> int:
     return i if i < resolved.dims.nc else i + (resolved.dims.nc_shown - resolved.dims.nc)
 
 
-_GAPPED_INTERVAL_COLS = ("targets", "held", "interest")
-
-
 def interval_col_gap(ckey: str) -> float:
-    return INTERVAL_COL_GAP if ckey in _GAPPED_INTERVAL_COLS else 0
+    if ckey in ("targets", "held"):
+        return INTERVAL_COL_GAP
+    if ckey == "interest":
+        return INTERVAL_COL_GAP / 2
+    return 0
 
 
-def interval_list_w(n: int) -> float:
-    return 2 * BRACKET_W + n * COL_W + max(n - 1, 0) * INTERVAL_COL_GAP
+def interval_list_w(n: int, ckey: str) -> float:
+    return 2 * BRACKET_W + n * COL_W + max(n - 1, 0) * interval_col_gap(ckey)
 
 
 def target_left(geometry, j: int) -> float:
-    return geometry.targets_x + BRACKET_W + j * (COL_W + INTERVAL_COL_GAP)
+    return geometry.targets_x + BRACKET_W + j * (COL_W + interval_col_gap("targets"))
 
 
 def interest_left(geometry, i: int) -> float:
-    return geometry.interest_x + BRACKET_W + i * (COL_W + INTERVAL_COL_GAP)
+    return geometry.interest_x + BRACKET_W + i * (COL_W + interval_col_gap("interest"))
 
 
 def held_left(geometry, i: int) -> float:
-    return geometry.held_x + BRACKET_W + i * (COL_W + INTERVAL_COL_GAP)
+    return geometry.held_x + BRACKET_W + i * (COL_W + interval_col_gap("held"))
 
 
 def detempering_left(geometry, i: int) -> float:

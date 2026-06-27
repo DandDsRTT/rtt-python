@@ -126,7 +126,7 @@ def _emit_matrix_row_labels(cells, resolved, geometry, ctx) -> None:
     _r = resolved
 
     def prescale_top(i):
-        return geometry.rows["prescaling"].y + i * ROW_H
+        return query.prescale_row_y(geometry, i)
     row_top = {
         ("mapping", "primes"): lambda i: query.map_top(geometry, i),
         ("canon", "primes"): lambda i: query.canon_top(geometry, i),

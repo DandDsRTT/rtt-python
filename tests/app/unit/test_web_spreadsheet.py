@@ -433,7 +433,7 @@ def test_quantities_row_pluses_ride_the_bus_stub_past_the_last_branch_point():
     by_id = {ln.id: ln for ln in lay.lines}
     for plus_id, col, last_sub, gap in (("plus", "primes", "v:prime:2", 0),
                                         ("comma_plus", "commas", "v:comma:0", 0),
-                                        ("interest_plus", "interest", "v:interest:0", spreadsheet_constants.INTERVAL_COL_GAP)):
+                                        ("interest_plus", "interest", "v:interest:0", spreadsheet_constants.INTERVAL_COL_GAP / 2)):
         plus, bus = cells[plus_id], by_id[f"bus:{col}:top"]
         stub = by_id[last_sub].pos + spreadsheet_constants.COL_W + gap  # one slot (incl. any inter-column gap) past the last sub-axis
         assert abs((plus.x + plus.w / 2) - stub) < 0.51     # the + centres on the stub
@@ -3029,8 +3029,8 @@ def test_size_factor_grows_the_prescaler_into_the_rectangular_ZL_matrix():
         assert lils[f"cell:prescaling:primes:3:{c}"].kind == "tuningvalue"
     # the diagonal rows are unchanged (still the editable prescalercell)
     assert lils["cell:prescaling:primes:0:0"].kind == "prescalercell"
-    # the size row sits one ROW_H below the last diagonal row, with its own per-row ⟨ … ] bracket
-    assert lils["cell:prescaling:primes:3:0"].y == lils["cell:prescaling:primes:2:0"].y + spreadsheet_constants.ROW_H
+    # the size row sits one ROW_H + the size-bar gap below the last diagonal row, with its own ⟨ … ] bracket
+    assert lils["cell:prescaling:primes:3:0"].y == lils["cell:prescaling:primes:2:0"].y + spreadsheet_constants.ROW_H + spreadsheet_constants.V_SPLIT_GAP
     assert lils["bracket:prescaling:row:3:l"].text == "⟨" and lils["bracket:prescaling:row:3:r"].text == "]"
 
 
@@ -5346,14 +5346,14 @@ def test_interest_intervals_are_editable_vectors_like_the_comma_basis():
 
 
 def test_interest_vector_cells_are_separated_boxes_not_a_contiguous_grid():
-    # the mockup renders each interval's ket as its own bordered box with space around it,
-    # not a contiguous matrix grid. So adjacent interest kets are full-width square boxes whose
-    # column slots are spaced apart by the interval-column gap.
+    # the mockup renders each interval's ket as its own bordered box with space around it, not a
+    # contiguous matrix grid. Adjacent interest kets are full-width square boxes spaced by HALF the
+    # interval-column gap — there's no separator rule between them, so only one copy of the space.
     cells = {c.id: c for c in _with_interest(_INTEREST).cells}
     c0, c1 = cells["cell:interest:0:0"], cells["cell:interest:0:1"]
     m0 = cells["cell:imapped:0:0"]  # the mapped cell spans the full COL_W slot
     assert c0.w == m0.w == spreadsheet_constants.COL_W            # full-width square ket box
-    assert c1.x - (c0.x + c0.w) == spreadsheet_constants.INTERVAL_COL_GAP  # a real gap between adjacent kets
+    assert c1.x - (c0.x + c0.w) == spreadsheet_constants.INTERVAL_COL_GAP / 2  # a real (half) gap between kets
     assert c0.x == m0.x                                           # ...sharing the slot with its mapped image
 
 
