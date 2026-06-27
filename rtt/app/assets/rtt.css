@@ -964,6 +964,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    they render a notch smaller (apply_chapter adds this class for long titles) — staying one line. */
 .rtt-chapter-reading.rtt-chapter-reading-narrow { font-size:10px; }
 .rtt-chapter-slider { padding:0 6px; }
+/* the "use D&D's terminology" checkbox sits just under the slider inside the guide-settings box */
+.rtt-chapter-dd { margin-top:4px; }
 /* a control the chapter slider has not yet revealed (its chapter is past the slider) is made
    INVISIBLE, two ways: a show/example row COLLAPSES (display:none — no leftover gap), while a
    dummy-tile part stays INVISIBLE BUT IN PLACE (visibility:hidden — the tile keeps its shape, and

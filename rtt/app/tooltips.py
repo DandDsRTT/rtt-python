@@ -359,6 +359,10 @@ CHROME_HELP: dict[str, str] = {
         "left for a simpler view, right to expose more. The ★ notch shows everything."
     ),
     "select_all": "Turn every available Show toggle on, or all off.",
+    "dd_terminology": (
+        "Use Dave & Douglas's systematic terminology. Turn off to show the more common wiki "
+        "terms (monzo, val, etc.) in their place."
+    ),
     "dark_mode": "Switch the whole app between the light and dark colour themes.",
     "undo": "Undo the last change. (⌘/Ctrl+Z)",
     "redo": "Redo the change you undid. (⌘/Ctrl+Y, or ⌘/Ctrl+Shift+Z)",
