@@ -31,6 +31,7 @@ from rtt.app.spreadsheet_constants import (
     SCHEME_BTN_SQ,
     TARGET_PRESET_W,
     V_SPLIT_GAP,
+    VAL_BRACKET_H,
 )
 from rtt.app.spreadsheet_text import _sub, _subscript_coord, pending_token
 
@@ -93,10 +94,12 @@ def frame_brace_y(geometry, rkey: str) -> float:
 
 
 def separator_span(resolved, geometry, rkey: str):
-    if resolved.flags.ebk and rkey in FRAMED_ROWS:
-        y = frame_top_y(geometry, rkey) - FRAME_OVERHANG
-        return y, frame_brace_y(geometry, rkey) + BRACE_H + FRAME_OVERHANG - y
-    return geometry.rows[rkey].y, geometry.rows[rkey].h
+    if rkey not in FRAMED_ROWS:
+        return geometry.rows[rkey].y + (ROW_H - VAL_BRACKET_H) / 2, VAL_BRACKET_H
+    if not resolved.flags.ebk:
+        return geometry.rows[rkey].y, geometry.rows[rkey].h
+    y = frame_top_y(geometry, rkey) - FRAME_OVERHANG
+    return y, frame_brace_y(geometry, rkey) + BRACE_H + FRAME_OVERHANG - y
 
 
 def matlabel_gutter_w(geometry, group_key: str) -> float:
