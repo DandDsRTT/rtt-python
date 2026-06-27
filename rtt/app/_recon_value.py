@@ -405,6 +405,10 @@ def build_commaratio(rec, cb: spreadsheet.CellBox, wrap) -> None:
     _build_ratio_face(rec, cb, wrap, approx=False)
 
 
+def build_mapped(rec, cb: spreadsheet.CellBox, _wrap) -> None:
+    _ratio(rec, cb, approx=False)
+
+
 def _build_ratio_face(rec, cb: spreadsheet.CellBox, wrap, approx: bool) -> None:
     if cb.pending:
         wrap.classes(add="rtt-pending")
