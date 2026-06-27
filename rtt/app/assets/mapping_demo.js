@@ -31,12 +31,13 @@
   // each flow is one "matrix × interval-vector" computation. Source/result cells are linked to the
   // matrix purely by geometry (shared column x, top-to-bottom order), so the differing id grammars and
   // raw-vs-token column keys across mapping/projection/superspace don't matter.
-  const VEC = '[data-eid^="cell:vec:targets:"],[data-eid^="cell:held:"],[data-eid^="cell:interest:"],[data-eid^="cell:comma:"]';
-  const MAPPED = '[data-eid^="cell:mapped:"],[data-eid^="cell:hmapped:"],[data-eid^="cell:imapped:"],[data-eid^="cell:mapped_comma:"]';
-  const PROJ = '[data-eid^="cell:proj_pt:"],[data-eid^="cell:proj_ph:"],[data-eid^="cell:proj_pi:"]';
-  const SSVEC = '[data-eid^="cell:ss_vectors:targets:"],[data-eid^="cell:ss_vectors:held:"],[data-eid^="cell:ss_vectors:interest:"],[data-eid^="cell:ss_vectors:commas:"]';
-  const SSMAP = '[data-eid^="cell:ss_mapping:targets:"],[data-eid^="cell:ss_mapping:held:"],[data-eid^="cell:ss_mapping:interest:"],[data-eid^="cell:ss_mapping:commas:"]';
-  const SSPROJ = '[data-eid^="cell:ss_proj_pt:"],[data-eid^="cell:ss_proj_ph:"],[data-eid^="cell:ss_proj_pi:"]';
+  const sel = (...prefixes) => prefixes.map((p) => '[data-eid^="' + p + '"]').join(',');
+  const VEC = sel('cell:vec:targets:', 'cell:held:', 'cell:interest:', 'cell:comma:', 'cell:unchanged:', 'cell:vec:detempering:');
+  const MAPPED = sel('cell:mapped:', 'cell:hmapped:', 'cell:imapped:', 'cell:mapped_comma:', 'cell:mapped_unchanged:', 'cell:mapped_detempering:');
+  const PROJ = sel('cell:proj_pt:', 'cell:proj_ph:', 'cell:proj_pi:', 'cell:proj_pd:', 'cell:proj_v:');
+  const SSVEC = sel('cell:ss_vectors:targets:', 'cell:ss_vectors:held:', 'cell:ss_vectors:interest:', 'cell:ss_vectors:commas:', 'cell:ss_vectors:detempering:');
+  const SSMAP = sel('cell:ss_mapping:targets:', 'cell:ss_mapping:held:', 'cell:ss_mapping:interest:', 'cell:ss_mapping:commas:', 'cell:ss_mapping:detempering:');
+  const SSPROJ = sel('cell:ss_proj_pt:', 'cell:ss_proj_ph:', 'cell:ss_proj_pi:', 'cell:ss_proj_pd:', 'cell:ss_proj_v:');
 
   const FLOWS = [
     { name: 'mapping', trigger: VEC + ',' + MAPPED, source: VEC, matrix: '[data-eid^="cell:mapping:"]', result: MAPPED },
