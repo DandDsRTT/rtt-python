@@ -4,13 +4,21 @@
   const NS = 'http://www.w3.org/2000/svg';
   const LINE = '#ffce00';
   const INK = '#5a4500';
-  const VEC_PREFIX = 'cell:vec:targets:';
+  const BG = '#fff8d0';
   const MAP_PREFIX = 'cell:mapping:';
 
-  let svg = null, curTok = null;
+  // every interval kind that owns a prime-count vector and a mapped generator-count row. vec ids put
+  // the prime index either last (targets) or first (the rest); res is the mapped-row id prefix.
+  const KINDS = [
+    { key: 'targets', vp: 'cell:vec:targets:', primeLast: true, res: 'cell:mapped:' },
+    { key: 'held', vp: 'cell:held:', primeLast: false, res: 'cell:hmapped:' },
+    { key: 'interest', vp: 'cell:interest:', primeLast: false, res: 'cell:imapped:' },
+    { key: 'commas', vp: 'cell:comma:', primeLast: false, res: 'cell:mapped_comma:' },
+  ];
+
+  let svg = null, curKey = null;
 
   const board = () => document.querySelector('.rtt-gridcontent');
-
   const active = () => document.body.classList.contains('rtt-mapping-demos');
 
   const ensureSvg = (b) => {
@@ -20,8 +28,7 @@
     b.appendChild(svg);
     return svg;
   };
-
-  const clear = () => { if (svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); svg.style.display = 'none'; } curTok = null; };
+  const clear = () => { if (svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); svg.style.display = 'none'; } curKey = null; };
 
   const num = (el) => {
     if (!el) return null;
@@ -31,162 +38,169 @@
     const m = t.match(/-?\d+/);
     return m ? parseInt(m[0], 10) : null;
   };
-
+  const sgn = (n) => (n < 0 ? '−' + Math.abs(n) : String(n));
   const byEid = (eid) => document.querySelector('[data-eid="' + eid + '"]');
 
-  // eids are "<fixed-prefix><token>:<int>"; the token itself may carry colons, so split off only
-  // the trailing integer and treat everything between prefix and it as the token.
-  const splitTail = (eid, prefix) => {
-    const rest = eid.slice(prefix.length);
-    const i = rest.lastIndexOf(':');
-    return [rest.slice(0, i), parseInt(rest.slice(i + 1), 10)];
+  // split "<prefix><a>:<b>" into [token, primeIndex] honouring which side the prime sits on.
+  const parseVec = (eid, k) => {
+    const rest = eid.slice(k.vp.length);
+    if (k.primeLast) { const i = rest.lastIndexOf(':'); return [rest.slice(0, i), parseInt(rest.slice(i + 1), 10)]; }
+    const i = rest.indexOf(':'); return [rest.slice(i + 1), parseInt(rest.slice(0, i), 10)];
   };
+  const parseMap = (eid) => { const r = eid.slice(MAP_PREFIX.length); const i = r.lastIndexOf(':'); return [r.slice(0, i), parseInt(r.slice(i + 1), 10)]; };
 
+  const kindOf = (eid) => KINDS.find((k) => eid.startsWith(k.vp)) || null;
+
+  // ---- svg primitives -------------------------------------------------------
   const line = (x1, y1, x2, y2) => {
     const l = document.createElementNS(NS, 'line');
-    l.setAttribute('x1', x1); l.setAttribute('y1', y1);
-    l.setAttribute('x2', x2); l.setAttribute('y2', y2);
-    l.setAttribute('stroke', LINE); l.setAttribute('stroke-width', '3');
-    l.setAttribute('stroke-linecap', 'round');
+    l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+    l.setAttribute('stroke', LINE); l.setAttribute('stroke-width', '3'); l.setAttribute('stroke-linecap', 'round');
     svg.appendChild(l);
   };
-
-  const glyph = (x, y, s, size, fill) => {
+  const path = (d) => {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d); p.setAttribute('fill', 'none');
+    p.setAttribute('stroke', LINE); p.setAttribute('stroke-width', '3');
+    p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(p);
+  };
+  const glyph = (x, y, s, size) => {
     const t = document.createElementNS(NS, 'text');
     t.setAttribute('x', x); t.setAttribute('y', y);
-    t.setAttribute('text-anchor', 'middle');
-    t.setAttribute('dominant-baseline', 'central');
-    t.setAttribute('font-size', size || 12);
-    t.setAttribute('fill', fill || INK);
+    t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'central');
+    t.setAttribute('font-size', size); t.setAttribute('fill', INK);
     t.setAttribute('font-family', "'STIX Two Text', Georgia, serif");
-    t.textContent = s;
-    svg.appendChild(t);
+    t.textContent = s; svg.appendChild(t);
   };
-
-  const pill = (cx, cy, s, bg) => {
+  const chip = (cx, cy, s, sq) => {
     const txt = String(s);
-    const w = 9 + txt.length * 7, h = 15;
+    const w = sq ? 16 : Math.max(16, 7 + txt.length * 7), h = 16;
     const r = document.createElementNS(NS, 'rect');
     r.setAttribute('x', cx - w / 2); r.setAttribute('y', cy - h / 2);
     r.setAttribute('width', w); r.setAttribute('height', h);
-    r.setAttribute('rx', 4); r.setAttribute('fill', bg || '#fff8d0');
-    r.setAttribute('stroke', LINE); r.setAttribute('stroke-width', '1.5');
+    r.setAttribute('rx', 4); r.setAttribute('fill', BG); r.setAttribute('stroke', LINE); r.setAttribute('stroke-width', '1.5');
     svg.appendChild(r);
-    glyph(cx, cy, txt, 11, INK);
+    glyph(cx, cy, txt, 11);
+  };
+  const ring = (c) => {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', c.l + 1); r.setAttribute('y', c.t + 1);
+    r.setAttribute('width', c.w - 2); r.setAttribute('height', c.h - 2);
+    r.setAttribute('fill', 'none'); r.setAttribute('stroke', LINE); r.setAttribute('stroke-width', '3');
+    svg.appendChild(r);
   };
 
-  const sgn = (n) => (n < 0 ? '−' + Math.abs(n) : String(n));
-
-  const draw = (tok) => {
+  // ---- draw -----------------------------------------------------------------
+  const draw = (k, tok) => {
     const b = board();
     if (!b) return;
     const bRect = b.getBoundingClientRect();
     const C = (el) => {
       const r = el.getBoundingClientRect();
       return { x: r.left - bRect.left + r.width / 2, y: r.top - bRect.top + r.height / 2,
-               t: r.top - bRect.top, btm: r.bottom - bRect.top,
-               l: r.left - bRect.left, rt: r.right - bRect.left, w: r.width, h: r.height };
+               t: r.top - bRect.top, btm: r.bottom - bRect.top, l: r.left - bRect.left, rt: r.right - bRect.left,
+               w: r.width, h: r.height };
     };
 
-    // operand vector v[p] of the hovered interval (a vertical stack in the interval column)
+    // operand vector v[p] of the hovered interval
     const vp = {};
-    document.querySelectorAll('[data-eid^="' + VEC_PREFIX + tok + ':"]').forEach((el) => {
-      const [t, p] = splitTail(el.getAttribute('data-eid'), VEC_PREFIX);
+    document.querySelectorAll('[data-eid^="' + k.vp + '"]').forEach((el) => {
+      const [t, p] = parseVec(el.getAttribute('data-eid'), k);
       if (t === tok) vp[p] = { el, c: C(el), v: num(el) };
     });
+    if (!Object.keys(vp).length) return;
 
     // mapping matrix M[row][p]
-    const rows = {};
+    const rmap = {};
     document.querySelectorAll('[data-eid^="' + MAP_PREFIX + '"]').forEach((el) => {
-      const [rt, p] = splitTail(el.getAttribute('data-eid'), MAP_PREFIX);
-      (rows[rt] = rows[rt] || { rt, cells: {} }).cells[p] = { el, c: C(el), m: num(el) };
+      const [rt, p] = parseMap(el.getAttribute('data-eid'));
+      (rmap[rt] = rmap[rt] || { rt, cells: {} }).cells[p] = { el, c: C(el), m: num(el) };
     });
-
-    const primes = Object.keys(vp).map(Number).sort((a, z) => a - z);
-    if (!primes.length) return;
-    const colX = {};
-    primes.forEach((p) => {
-      for (const rt in rows) if (rows[rt].cells[p]) { colX[p] = rows[rt].cells[p].c.x; break; }
-    });
-    const drawn = primes.filter((p) => p in colX);
-    if (!drawn.length) return;
-
-    ensureSvg(b);
-    clear();
-    svg.style.display = 'block';
-    curTok = tok;
-    const W = Math.max(b.scrollWidth, b.offsetWidth), H = Math.max(b.scrollHeight, b.offsetHeight);
-    svg.setAttribute('width', W); svg.setAttribute('height', H);
-    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-
-    const rowList = Object.values(rows)
-      .map((r) => ({ ...r, result: byEid('cell:mapped:' + r.rt + ':' + tok) }))
+    const rows = Object.values(rmap)
+      .map((r) => ({ ...r, result: byEid(k.res + r.rt + ':' + tok) }))
       .filter((r) => r.result)
       .map((r) => ({ ...r, rc: C(r.result) }))
       .sort((a, z) => a.rc.y - z.rc.y);
-    if (!rowList.length) return;
+    if (!rows.length) return;
 
-    const colTop = Math.min(...rowList.map((r) => r.rc.t));
-    const colBtm = Math.max(...rowList.map((r) => r.rc.btm));
+    const primes = Object.keys(vp).map(Number).filter((p) => rows.some((r) => r.cells[p])).sort((a, z) => a - z);
+    if (!primes.length) return;
+    const R = rows.length;
+    const W = rows[0].cells[primes[0]].c.w, H = rows[0].cells[primes[0]].c.h;
+    const colX = {}; primes.forEach((p) => { colX[p] = rows[0].cells[p] ? rows[0].cells[p].c.x : null; });
 
-    // operand routing: feed each prime count from its vector cell across to its mapping column,
-    // then straight down through every box in that column. The pill names the multiplier (×v[p])
-    // applied to every box of the column.
-    drawn.forEach((p) => {
-      const x = colX[p], vy = vp[p].c.y, vx = vp[p].c.x;
-      const fromX = vx < x ? vp[p].c.rt : vp[p].c.l;
-      line(fromX, vy, x, vy);
-      line(x, Math.min(vy, colTop), x, colBtm);
-      pill(x, (vy + colTop) / 2, '×' + sgn(vp[p].v), '#fff');
-    });
+    ensureSvg(b); clear(); svg.style.display = 'block'; curKey = k.key + ':' + tok;
+    const SW = Math.max(b.scrollWidth, b.offsetWidth), SH = Math.max(b.scrollHeight, b.offsetHeight);
+    svg.setAttribute('width', SW); svg.setAttribute('height', SH); svg.setAttribute('viewBox', '0 0 ' + SW + ' ' + SH);
 
-    const matRight = Math.max(...drawn.map((p) => colX[p])) + (rowList[0].cells[drawn[0]] ?
-      rowList[0].cells[drawn[0]].c.w / 2 : 12);
+    const gap = Math.min(7, (W * 0.45) / Math.max(1, R - 1));
 
-    // each mapping row: highlight the row, then read its products + sum out along the row line into
-    // the result cell — "M·v + M·v + … = g".
-    rowList.forEach((r) => {
-      const y = r.rc.y;
-      line(Math.min(...drawn.map((p) => colX[p])), y, r.rc.l, y);
-      const prods = drawn.map((p) => (r.cells[p] && r.cells[p].m != null && vp[p].v != null)
-        ? r.cells[p].m * vp[p].v : null);
-      const toks = [];
-      prods.forEach((pr, k) => { toks.push(['p', pr]); if (k < prods.length - 1) toks.push(['+', '+']); });
-      const lane0 = matRight + 14, lane1 = r.rc.l - 16;
-      const step = toks.length > 1 ? (lane1 - lane0) / (toks.length - 1) : 0;
-      toks.forEach(([kind, val], k) => {
-        const x = toks.length > 1 ? lane0 + k * step : (lane0 + lane1) / 2;
-        if (kind === 'p') pill(x, y, sgn(val));
-        else glyph(x, y, '+', 13, INK);
+    // (A) operand fan: each prime count splits into one line per mapping row. They share the leftward
+    // jaunt (a bus along the vector row), then split into parallel descents — row 0 into the box top
+    // (under the ×), each later row peeling left then entering its box from the left edge.
+    primes.forEach((p) => {
+      const cx = colX[p], vy = vp[p].c.y, busFrom = vp[p].c.l;
+      const tracks = rows.map((r, i) => (i === 0 ? cx : cx - W / 2 - i * gap));
+      const busTo = Math.min(...tracks);
+      line(busTo, vy, busFrom, vy);
+      rows.forEach((r, i) => {
+        const tx = tracks[i], box = r.cells[p];
+        if (!box) return;
+        if (i === 0) { line(tx, vy, tx, box.c.t); }
+        else { path('M ' + tx + ' ' + vy + ' V ' + box.c.y + ' H ' + box.c.l); }
       });
-      glyph(r.rc.l - 7, y, '=', 13, INK);
-      const rr = document.createElementNS(NS, 'rect');
-      rr.setAttribute('x', r.rc.l + 1); rr.setAttribute('y', r.rc.t + 1);
-      rr.setAttribute('width', r.rc.w - 2); rr.setAttribute('height', r.rc.h - 2);
-      rr.setAttribute('fill', 'none'); rr.setAttribute('stroke', LINE); rr.setAttribute('stroke-width', '3');
-      svg.appendChild(rr);
     });
+
+    // (B) the running sum along each row: ride the boxes' bottom edge through products and +s, then a
+    // short rise back to the gridline and into the generator-count cell.
+    rows.forEach((r) => {
+      const by = r.cells[primes[0]].c.btm, x0 = r.cells[primes[0]].c.l;
+      const lastBox = r.cells[primes[primes.length - 1]];
+      const xN = lastBox.c.rt;
+      path('M ' + x0 + ' ' + by + ' H ' + xN + ' V ' + r.rc.y + ' H ' + r.rc.l);
+      glyph(r.rc.l - 8, r.rc.y, '=', 13);
+    });
+
+    // (C) per-box marks: × on the top edge, the product on the bottom edge; + at each shared bottom
+    // corner between adjacent boxes.
+    rows.forEach((r) => {
+      primes.forEach((p, kx) => {
+        const box = r.cells[p]; if (!box) return;
+        chip(box.c.x, box.c.t, '×', true);
+        const prod = (box.m != null && vp[p].v != null) ? box.m * vp[p].v : null;
+        if (prod != null) chip(box.c.x, box.c.btm, sgn(prod));
+        if (kx < primes.length - 1) chip(box.c.rt, box.c.btm, '+', true);
+      });
+    });
+
+    // (D) rings on both ends of the computation: the prime counts and the generator counts.
+    primes.forEach((p) => ring(vp[p].c));
+    rows.forEach((r) => ring(r.rc));
   };
 
-  const intervalTokOf = (node) => {
-    const cell = node.closest && node.closest('[data-eid^="' + VEC_PREFIX + '"]');
-    if (!cell) return null;
-    return splitTail(cell.getAttribute('data-eid'), VEC_PREFIX)[0];
+  const hoveredInterval = (node) => {
+    if (!node || !node.closest) return null;
+    for (const k of KINDS) {
+      const cell = node.closest('[data-eid^="' + k.vp + '"]');
+      if (cell) return { k, tok: parseVec(cell.getAttribute('data-eid'), k)[0] };
+    }
+    return null;
   };
 
   document.addEventListener('mouseover', (e) => {
-    if (!active()) { if (curTok) clear(); return; }
-    const tok = intervalTokOf(e.target);
-    if (tok == null) return;
-    if (tok === curTok) return;
-    draw(tok);
+    if (!active()) { if (curKey) clear(); return; }
+    const hit = hoveredInterval(e.target);
+    if (!hit) return;
+    if (hit.k.key + ':' + hit.tok === curKey) return;
+    draw(hit.k, hit.tok);
   });
   document.addEventListener('mouseout', (e) => {
-    if (!curTok) return;
-    const to = e.relatedTarget;
-    if (to && intervalTokOf(to) === curTok) return;
+    if (!curKey) return;
+    const hit = hoveredInterval(e.relatedTarget);
+    if (hit && hit.k.key + ':' + hit.tok === curKey) return;
     clear();
   });
-  window.addEventListener('scroll', () => { if (curTok) clear(); }, { capture: true, passive: true });
-  document.addEventListener('pointerdown', () => { if (curTok) clear(); }, true);
+  window.addEventListener('scroll', () => { if (curKey) clear(); }, { capture: true, passive: true });
+  document.addEventListener('pointerdown', () => { if (curKey) clear(); }, true);
 })()
