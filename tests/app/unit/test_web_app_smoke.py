@@ -484,6 +484,16 @@ def test_rowfill_mirrors_colfill_for_the_sticky_row_bands_top_overpull_gap():
     assert ".rtt-app.rtt-scrolled-x .rtt-rowfill" in page_assets._CSS
 
 
+def test_touch_devices_damp_the_overscroll_bounce_so_the_grid_does_not_rubber_band():
+    # the bounce-zone gridline echo and the collapse-all/row-toggle float are both artifacts of the
+    # elastic overscroll; on touch devices we remove the bounce so neither can occur. It must be
+    # overscroll-behavior:none (contain only stops chaining, keeping the bounce), and scoped to a
+    # coarse-pointer/no-hover device so desktop keeps its bounce and the colfill/rowfill bridges.
+    assert "@media (hover: none) and (pointer: coarse)" in page_assets._CSS
+    touch = re.search(r"@media \(hover: none\) and \(pointer: coarse\) \{(.*?\})\s*\}", page_assets._CSS, re.S)
+    assert touch and ".rtt-gridbody" in touch.group(1) and "overscroll-behavior:none" in touch.group(1)
+
+
 def test_only_full_height_seam_reaching_column_rules_are_twinned_in_the_colfill_not_centre_stubs():
     lay = Editor().layout()
     fy = lay.freeze_y
