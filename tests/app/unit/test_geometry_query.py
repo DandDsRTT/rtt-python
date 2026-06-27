@@ -1,7 +1,15 @@
 from types import SimpleNamespace
 
 from rtt.app import spreadsheet_geometry_query as query
-from rtt.app.spreadsheet_constants import BRACKET_W, COL_W, FRAME_GAP, FRAME_H, ROW_H, V_SPLIT_GAP
+from rtt.app.spreadsheet_constants import (
+    BRACKET_W,
+    COL_W,
+    FRAME_GAP,
+    FRAME_H,
+    INTERVAL_COL_GAP,
+    ROW_H,
+    V_SPLIT_GAP,
+)
 from rtt.app.spreadsheet_models import RowBand
 
 
@@ -52,7 +60,7 @@ def test_gutter_and_coordinate_functions_are_pure_over_geometry():
     assert query.handle_gutter_w(g, "primes") == 4.0
     assert query.handle_gutter_w(g, "gens") == 0
     assert query.etpick_left_pad(g, "primes") == 0
-    assert query.target_left(g, 1) == 20.0 + BRACKET_W + COL_W
+    assert query.target_left(g, 1) == 20.0 + BRACKET_W + COL_W + INTERVAL_COL_GAP
     assert query.prime_left(g, 0) == 10.0 + query.outer_gutter_w(g, "primes") + BRACKET_W
     assert query.sub_axis_x(g, "targets", 1) == 200.0 + COL_W / 2
 

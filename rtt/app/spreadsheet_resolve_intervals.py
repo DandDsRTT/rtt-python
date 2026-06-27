@@ -123,6 +123,8 @@ def resolve_unchanged(inputs, draft):
     nc_shown = draft.nc + (1 if comma_draft else 0)
     if _udata is not None:
         _rename_commas_to_unrotated(draft.effective_captions)
+        if draft.show_equiv:
+            _append_unchanged_caption_equivalence(draft.effective_captions)
     return replace(
         draft, show_unchanged=_udata is not None, nu=nu, born_u=born_u,
         unchanged_basis=unchanged.basis, unchanged_ratios=unchanged.ratios,
@@ -226,3 +228,9 @@ def _rename_commas_to_unrotated(effective_captions):
         if renamed.count("list") > 1:
             renamed = renamed.replace("unrotated vector list", "unrotated vector", 1)
         effective_captions[(rk, ck)] = renamed
+
+
+def _append_unchanged_caption_equivalence(effective_captions):
+    key = ("vectors", "commas")
+    if key in effective_captions:
+        effective_captions[key] += " = comma basis | unchanged interval basis"

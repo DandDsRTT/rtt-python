@@ -155,9 +155,9 @@ def _col_bands(geometry, resolved, ctx):
         ("primes", 2 * BRACKET_W + _r.dims.d_shown * COL_W + 2 * query.outer_gutter_w(geometry, "primes"), _r.flags.temp, True),
         ("detempering", 2 * BRACKET_W + _r.dims.r * COL_W, _r.flags.detempering, True),
         ("commas", commas_band_w(resolved, _r.dims.nc_shown), _r.flags.temp, True),
-        ("held", 2 * BRACKET_W + _r.dims.nh_shown * COL_W, _r.flags.optimization, True),
-        ("targets", 2 * BRACKET_W + _r.dims.k_shown * COL_W, _r.flags.tuning and ctx.targets_in_use, True),
-        ("interest", 2 * BRACKET_W + _r.dims.mi_shown * COL_W, _r.flags.interest, True),
+        ("held", query.interval_list_w(_r.dims.nh_shown), _r.flags.optimization, True),
+        ("targets", query.interval_list_w(_r.dims.k_shown), _r.flags.tuning and ctx.targets_in_use, True),
+        ("interest", query.interval_list_w(_r.dims.mi_shown), _r.flags.interest, True),
     )
 
 

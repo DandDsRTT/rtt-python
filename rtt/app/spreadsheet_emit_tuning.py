@@ -107,8 +107,10 @@ def chart(cells, geometry, ctx, rkey, ckey, values, indicator=None, indicator_la
     values = tuple(values)
     if values and rkey in geometry.rows and geometry.rows[rkey].chart_top is not None and query.tile_open(geometry, ctx.collapsed, rkey, ckey):
         x = geometry.group_left[ckey][0] - BRACKET_W
+        gap = query.interval_col_gap(ckey)
+        width = 2 * BRACKET_W + len(values) * COL_W + max(len(values) - 1, 0) * gap
         cells.append(CellBox(f"chart:{rkey}:{ckey}", x, geometry.rows[rkey].chart_top,
-                             2 * BRACKET_W + len(values) * COL_W, CHART_H, "chart", values=values,
+                             width, CHART_H, "chart", values=values, col_gap=gap,
                              indicator=indicator, indicator_label=indicator_label))
 
 

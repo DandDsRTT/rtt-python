@@ -40,10 +40,10 @@ def update_ebk(rec, cb: spreadsheet.CellBox) -> None:
 
 
 def update_chart(rec, cb: spreadsheet.CellBox) -> None:
-    key = (cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label)
+    key = (cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label, cb.col_gap)
     if rec.handles(cb.id).display.chart_key != key:
         rec.cells[cb.id].display.html.set_content(
-            _bar_chart(cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label)
+            _bar_chart(cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label, cb.col_gap)
         )
         rec.cells[cb.id].display.chart_key = key
 
