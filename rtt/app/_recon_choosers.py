@@ -114,7 +114,10 @@ def _build_preset_target(rec, cb: spreadsheet.CellBox, wrap) -> None:
     limit, family = rec._target_preset_values()
     with ui.element("div").classes("rtt-preset-target"):
         num = (
-            ui.input(value=_limit_text(limit), on_change=lambda _e: rec._cb.on_target_change())
+            ui.input(
+                value=_limit_text(limit) or service.NO_LIMIT_TEXT,
+                on_change=lambda _e: rec._cb.on_target_change(),
+            )
             .props(
                 'dense borderless hide-bottom-space placeholder="-" inputmode=numeric debounce=300'
             )
@@ -233,7 +236,7 @@ def update_preset(rec, cb: spreadsheet.CellBox) -> None:
     elif cb.id == "preset:target":
         num, sel = rec.cells[cb.id].chooser.select
         limit, family = rec._target_preset_values()
-        num.value = _limit_text(limit)
+        num.value = _limit_text(limit) or service.NO_LIMIT_TEXT
         sel.value = family
         _set_offlist_prompt(sel, family)
         num.set_enabled(not cb.disabled)

@@ -519,6 +519,8 @@ def test_target_limit_problem_validates_the_chooser_entry():
     assert service.target_limit_problem("OLD", "8") == "odd"
     assert service.target_limit_problem("OLD", "9") is None
     assert service.target_limit_problem("TILT", "8.5") == "whole"
+    assert service.target_limit_problem("TILT", service.NO_LIMIT_TEXT) is None
+    assert service.target_limit_problem("OLD", service.NO_LIMIT_TEXT) is None
 
 
 def test_target_spec_builds_leniently_falling_back_to_the_bare_family():
@@ -529,6 +531,7 @@ def test_target_spec_builds_leniently_falling_back_to_the_bare_family():
     assert service.target_spec("OLD", None) == "OLD"
     assert service.target_spec("TILT", "abc") == "TILT"
     assert service.target_spec("TILT", "8.5") == "8-TILT"  # truncates like int(float(...))
+    assert service.target_spec("TILT", service.NO_LIMIT_TEXT) == "TILT"
 
 
 def test_resolve_target_limit_accepts_the_spec_from_family_and_limit():

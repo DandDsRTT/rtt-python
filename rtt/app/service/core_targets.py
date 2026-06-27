@@ -14,6 +14,8 @@ from rtt.library.target_intervals import (
     process_tilt,
 )
 
+NO_LIMIT_TEXT = "-"
+
 
 def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
     domain = tuple(domain_basis)
@@ -31,7 +33,7 @@ def default_target_limit(family: str, domain_basis) -> int:
 
 
 def target_limit_problem(family: str | None, limit_value) -> str | None:
-    no_manual_limit = not limit_value
+    no_manual_limit = not limit_value or str(limit_value).strip() == NO_LIMIT_TEXT
     if no_manual_limit:
         return None
     try:
@@ -47,7 +49,7 @@ def target_limit_problem(family: str | None, limit_value) -> str | None:
 
 def target_spec(family: str, limit_value) -> str:
     text = (str(limit_value) if limit_value is not None else "").strip()
-    if not text:
+    if not text or text == NO_LIMIT_TEXT:
         return family
     try:
         return f"{int(float(text))}-{family}"
