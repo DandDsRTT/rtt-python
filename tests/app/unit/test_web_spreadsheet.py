@@ -8100,9 +8100,9 @@ def test_nonstandard_domain_superspace_columns_head_their_quantities():
     cells = {c.id: c for c in _barbados_ss().cells}
     assert [cells[f"ssqprime:{p}"].text for p in range(4)] == ["2", "3", "5", "13"]
     assert [cells[f"ssqgen:{g}"].text for g in range(3)] == ["2/1", "26/3", "130/3"]
-    # the generators read ~approximate (genratio), the primes as white labels (prime)
+    # the generators read ~approximate (genratio), the primes as read-only stacked ratios (commaratio)
     assert cells["ssqgen:0"].kind == "genratio"
-    assert cells["ssqprime:0"].kind == "prime"
+    assert cells["ssqprime:0"].kind == "commaratio"
     # each header sits over its column's tuning cells (the 𝒈L / 𝒕L map below it), on the
     # quantities row (aligned with the gens/primes headers)
     assert cells["ssqgen:0"].x == cells["tuning:ssgen:0"].x
@@ -9670,7 +9670,7 @@ def test_projection_quantities_spine_lists_the_domain_primes():
     # (2, 3, 5), like the interval-vectors basis spine — read-only (the whole projection row is derived)
     cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}
     assert [cells[f"proj_basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
-    assert cells["proj_basis:0"].kind == "prime"                  # read-only
+    assert cells["proj_basis:0"].kind == "commaratio"            # read-only stacked ratio
     assert cells["proj_basis:0"].y == cells["cell:proj:0:0"].y    # aligned with P's top prime row
     assert cells["proj_basis:0"].x == cells["basis:0"].x          # same quantities spine as the vectors row
 

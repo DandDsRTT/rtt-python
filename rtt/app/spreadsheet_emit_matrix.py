@@ -228,7 +228,7 @@ def _emit_qty_ssprimes(cells, resolved, geometry, ctx, qy) -> None:
     _r = resolved
     if query.tile_open(geometry, ctx.collapsed, "quantities", "ssprimes"):
         for p in range(_r.dims.dL):
-            cells.append(CellBox(f"ssqprime:{p}", query.ss_prime_left(geometry, p), qy, COL_W, ROW_H, "prime", text=str(_r.dims.superspace_primes[p]), prime=p))
+            cells.append(CellBox(f"ssqprime:{p}", query.ss_prime_left(geometry, p), qy, COL_W, ROW_H, "commaratio", text=str(_r.dims.superspace_primes[p]), prime=p))
 
 
 def _emit_qty_commas(cells, resolved, geometry, ctx, qy, branch_minus) -> None:

@@ -133,6 +133,24 @@ def test_emit_superspace_rows_is_a_pure_function_over_resolved_geometry_ctx():
     assert ids <= full
 
 
+def test_projection_basis_uses_the_stacked_ratio_kind_for_a_nonstandard_element():
+    result = emit_projection_band(*_inputs(_superspace_builder()))
+    ratio = next(c for c in result.cells if c.id.startswith("proj_basis:") and "/" in c.text)
+    assert ratio.kind == "commaratio"
+
+
+def test_no_basis_cell_renders_a_ratio_as_inline_plain_text():
+    builds = [
+        spreadsheet.build(
+            service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), _all_bool_on(),
+            tuning_scheme="minimax-ES", held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),)),
+        spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on(),
+                          held_basis_ratios=("2/1", "5/4")),
+    ]
+    inline_ratios = [c for build in builds for c in build.cells if c.kind == "prime" and "/" in c.text]
+    assert inline_ratios == []
+
+
 def test_emit_identity_objects_is_a_pure_function_over_resolved_geometry_ctx():
     result = emit_identity_objects(*_inputs(_maximized_builder()))
     ids = {c.id for c in result.cells}

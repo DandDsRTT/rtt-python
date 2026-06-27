@@ -250,7 +250,7 @@ def _emit_projection_basis(cells, resolved, geometry, ctx) -> None:
     if query.row_open(geometry, ctx.collapsed, "projection") and query.tile_open(geometry, ctx.collapsed, "projection", "quantities"):
         bx = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
         for p in range(_r.dims.d):
-            cells.append(CellBox(f"proj_basis:{p}", bx, query.proj_top(geometry, p), COL_W, ROW_H, "prime", text=str(_r.dims.elements[p]), prime=p))
+            cells.append(CellBox(f"proj_basis:{p}", bx, query.proj_top(geometry, p), COL_W, ROW_H, "commaratio", text=str(_r.dims.elements[p]), prime=p))
 
 
 def _emit_scaling_factors(cells, resolved, geometry, ctx) -> None:
