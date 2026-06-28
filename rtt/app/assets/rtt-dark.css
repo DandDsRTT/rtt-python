@@ -225,8 +225,15 @@ body.rtt-dark .rtt-scheme-btn-idle .q-btn__content { color:#71777f !important; }
 body.rtt-dark svg rect[fill="#fff"][stroke="#bbb"] { fill:#1b1f24; stroke:#4e555d; }
 body.rtt-dark .rtt-glyph { color:#9aa1a9; }
 body.rtt-dark .rtt-glyph:hover { color:#cfd4da; }
+body.rtt-dark .rtt-fraccell:hover .rtt-ratio-op.rtt-op-disabled,
+body.rtt-dark .rtt-fraccell.rtt-spk-hover .rtt-ratio-op.rtt-op-disabled { color:#4e555d; }
 
 /* the busy scrim: a dark veil + dark card (see .rtt-busy in rtt.css) */
 body.rtt-dark .rtt-busy { background:rgba(0,0,0,0.45); }
 body.rtt-dark .rtt-busy-card { background:#23272d; color:#cfd4da; border-color:#4e555d; }
 body.rtt-dark .rtt-busy-spin { border-color:#4e555d; border-top-color:#cfd4da; }
+body.rtt-dark .rtt-settings-box { background:#2c323a; border-color:#3c424a; }
+body.rtt-dark .rtt-box-label { color:#aeb4bb; }
+body.rtt-dark .rtt-vis-mi { color:#9aa1a9; }
+body.rtt-dark .rtt-anim-icon rect { fill:#9aa1a9; }
+body.rtt-dark .rtt-vis-prev.rtt-vis-off .rtt-prev-n { color:#9aa1a9; }

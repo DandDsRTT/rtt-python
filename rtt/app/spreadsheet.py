@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from rtt.app.layout import Block, CellBox, Layout, Line
+from rtt.app.spreadsheet_audio import assign_audio
 from rtt.app.spreadsheet_brackets import emit_brackets, emit_ebk_frames_and_marks
 from rtt.app.spreadsheet_constants import (
     GAP,
@@ -85,6 +86,7 @@ def assemble(resolved, geometry, context):
     tuning = emit_tuning(resolved, geometry, context)
     cells.extend(tuning.cells)
     region_boxes.extend(tuning.region_boxes)
+    assign_audio(cells, resolved, geometry)
     cells.extend(emit_brackets(resolved, geometry, context).cells)
     decorations = emit_decorations(
         resolved,

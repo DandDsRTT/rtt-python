@@ -7397,15 +7397,16 @@ def test_comma_ratio_cell_is_click_to_play_with_its_just_size():
     assert abs(abs(cents) - 21.506) < 0.01
 
 
-def test_prime_cell_plays_its_size_but_a_generator_ratio_does_not():
+def test_prime_plays_its_just_size_and_a_generator_plays_its_tuned_size():
     cells = {c.id: c for c in _layout().cells}
     p = cells["prime:1"]  # the prime 3
     assert p.audio is not None
     tile, idx, cents = p.audio
     assert (tile, idx) == ("quantities:primes", 1)
     assert abs(cents - 1901.955) < 0.01  # 3/1 sounds 1901.955¢ (its JUST size)
-    # generators have no JUST size, so the generator-ratio cells stay silent (not click-to-play)
-    assert cells["qgen:0"].audio is None
+    # a generator IS an interval: it now sounds its tuned size, not silence
+    g = cells["qgen:0"]
+    assert g.audio is not None and g.audio[0] == "quantities:gens" and abs(g.audio[2]) > 100
 
 
 def test_tuning_sounds_tempered_just_sounds_just_and_retuning_errors_are_silent():
@@ -7430,6 +7431,78 @@ def test_genmap_cell_sounds_the_generators_tuned_size():
     assert (tile, idx) == ("tuning:gens", 0)
     assert abs(cents) > 100                                  # a real generator pitch, not silence
     assert abs(cents - float(cells["tuning:gen:0"].text)) < 0.6  # matches the displayed tuned size
+
+
+def test_one_pass_voices_every_interval_cell_so_none_are_silently_missed():
+    s = settings.defaults()
+    for key, val in list(s.items()):
+        if isinstance(val, bool):
+            s[key] = True
+    cells = spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        s,
+        held_basis_ratios=("2/1", "5/4"),
+        interest=((-2, 0, 1),),
+    ).cells
+    interval_kinds = {
+        "commacell", "commaratio", "ratiocell", "targetcell", "heldcell", "interestcell",
+        "vec", "unchangedcell", "elementcell", "elementratio", "genratio", "mapped",
+    }
+    not_a_pitch = (
+        "cell:mapping", "cell:canon:", "cell:form", "cell:finv", "cell:scaling",
+        "cell:vec:primes", "retune:", "damage:", "weight:", "optimization:",
+        "cell:proj:", "cell:embed_sl", "cell:proj_sl", "cell:ss",
+        "cell:selfmap", "cell:fcancel",
+    )
+    silent = [
+        c.id
+        for c in cells
+        if c.kind in interval_kinds and c.audio is None and not c.pending
+        and not c.id.startswith(not_a_pitch)
+    ]
+    assert silent == [], silent
+
+
+def test_a_rows_ratio_mirror_voices_each_entry_as_its_own_interval():
+    # A matrix row's leftmost ratio "mirror" (the prime ratios beside the vectors row, the generator
+    # ratios beside the mapping row) lists its intervals DOWN its single column, one per matrix row —
+    # so each entry is a DISTINCT interval and must get its own idx + pitch. The column-by-x grouping
+    # would collapse them to one idx (every entry the same pitch) and light the whole mirror as if it
+    # were one interval column — a col highlight over a row-based matrix. This pins the per-entry voice.
+    cells = {c.id: c for c in _layout().cells}
+    mirror = [cells[f"basis:{i}"] for i in range(3)]  # primes 2, 3, 5 beside the vectors row
+    assert [m.audio[1] for m in mirror] == [0, 1, 2]  # distinct idx, not all 0
+    assert abs(mirror[0].audio[2] - 1200) < 0.01 and abs(mirror[1].audio[2] - 1901.955) < 0.01
+
+
+def test_audio_voices_exactly_the_tiles_whose_ebk_inner_is_a_vector():
+    # The single-source guarantee: a value cell is click-to-play IFF its tile's EBK convention is a
+    # vector list (inner ket ⟩ or mapped-ket }) or a stacked vector (outer ⟩) — i.e. an interval —
+    # NOT a covector/map stack, a scalar row, or an identity round-trip (MG=I, FF⁻¹). assign_audio
+    # decides this in ONE place (spreadsheet_audio._is_interval_tile); this sweeps the whole maximized
+    # superspace surface and asserts the live audio matches that gate cell-for-cell, so a future tile
+    # that forgets to play (or a map tile that wrongly plays) fails here rather than reaching the user.
+    from rtt.app import spreadsheet_audio as audio
+    b = _maximized_superspace_builder()
+    g, lay, ss = b.geometry, b.layout(), b.resolved.flags.superspace
+    bands = sorted(g.rows.items(), key=lambda kv: kv[1].y)
+    spans = [(ck, g.content_x[ck], g.content_w[ck]) for ck in g.content_x]
+    missed, wrongly = [], []
+    for c in lay.cells:
+        if c.kind not in audio._INTERVAL_KINDS or c.pending:
+            continue
+        rkey = audio._band_of(bands, c.y + c.h / 2)
+        ckey = audio._col_of(spans, c.x + c.w / 2)
+        if rkey is None or ckey is None:
+            continue
+        plays = c.audio is not None and c.audio[0].startswith(tuple(audio._TILE_PREFIX.values()))
+        if audio._is_interval_tile(rkey, ckey, ss):
+            if not plays and c.text and c.text != "—":  # a dashed (irrational) cell has no pitch
+                missed.append((rkey, ckey, c.id))
+        elif plays:
+            wrongly.append((rkey, ckey, c.id))
+    assert not missed, f"interval tiles with a silent value cell: {missed[:12]}"
+    assert not wrongly, f"non-interval tiles that wrongly play: {wrongly[:12]}"
 
 
 def test_every_interval_ratio_and_vector_is_click_to_play():

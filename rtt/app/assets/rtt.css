@@ -862,23 +862,18 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-audio-ctrl:hover { color:#000; }
 .rtt-audio-ctrl.rtt-audio-on { background:#666; color:#fff; border-radius:2px; }
 .rtt-audio-glyph { width:12px; height:12px; display:block; }
-/* the per-interval audio affordance. Hovering any cell of an interval's COLUMN SEGMENT lights the
-   whole segment (.rtt-spk-hover, like the sounding flash) and floats ONE speaker above it —
-   tooltip-style, over the app — so the control reads as applying to the column, not a single vector
-   entry. audio.js positions + shows the float and manages the hover; clicking it sounds the interval.
-   Both only while unmuted (the engage gate). */
-/* the highlights are a subtle full-cell background tint, rendered via ::after so they show OVER the
-   opaque value face (a background on the wrap is hidden behind the white cell fill) and squared
-   to the cell (no radius). Sounding is most intense; a hovered column a touch less; and in chord / arp
-   modes the tile's OTHER pitches dimmer still, previewing that they too will play. */
-.rtt-spk-dim::after, .rtt-spk-hover::after, .rtt-spk-on::after { content:""; position:absolute;
-    inset:0; pointer-events:none; z-index:4; }
-.rtt-spk-dim::after { background:rgba(0,0,0,0.045); }
-.rtt-spk-hover::after { background:rgba(0,0,0,0.10); }
-.rtt-spk-on::after { background:rgba(0,0,0,0.20); }
+/* the per-interval audio affordance. Hovering any cell of an interval's column segment floats ONE
+   speaker above it — tooltip-style, over the app — and clicking it sounds the interval; both only
+   while unmuted (the engage gate). audio.js positions + shows the float and manages the hover. The
+   hover itself draws NO cell tint (a column wash reads as highlighting a column inside what is often
+   a row-based matrix); only the cells actually SOUNDING flash, via ::after so the tint shows OVER the
+   opaque value face (a background on the wrap is hidden behind the white cell fill) and squared to
+   the cell (no radius). */
+.rtt-spk-on::after { content:""; position:absolute; inset:0; pointer-events:none; z-index:4;
+    background:rgba(0,0,0,0.20); }
 /* the float sits flush ABOVE the column segment (its bottom on the segment's top edge) so moving the
    cursor up onto it never crosses dead space — the mouseout's relatedTarget is the float itself. */
-.rtt-spk-float { position:fixed; transform:translate(-50%, -100%); z-index:50; display:none;
+.rtt-spk-float { position:fixed; transform:translate(-50%, -100%); z-index:9600; display:none;
     align-items:center; justify-content:center; width:24px; height:24px; background:#fff;
     border:1px solid #8a8a8a; border-radius:2px; box-shadow:0 1px 4px rgba(0,0,0,0.3);
     color:#555; cursor:pointer; }
@@ -917,11 +912,16 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
            opacity:0; pointer-events:none; transition:opacity var(--t); }
 .rtt-ratio-op-reduce { left:0; transform:translate(-50%,-50%); }
 .rtt-ratio-op-recip { right:0; transform:translate(50%,-50%); }
-.rtt-fraccell:hover { z-index:10; }   /* lift the whole cell so its overhanging buttons sit ON TOP of the neighbouring value boxes (a later sibling would otherwise paint over the right-hand one) */
-.rtt-fraccell:hover .rtt-ratio-op { opacity:1; pointer-events:auto; }
+/* the audio float counts as part of the cell's hover zone: while a cell's speaker segment is lit
+   (cursor on the cell OR on its floated icon) keep the reduce/reciprocate buttons up too, so moving
+   onto the icon doesn't drop the cell's other hover affordances */
+.rtt-fraccell:hover, .rtt-fraccell.rtt-spk-hover { z-index:10; }   /* lift the whole cell so its overhanging buttons sit ON TOP of the neighbouring value boxes (a later sibling would otherwise paint over the right-hand one) */
+.rtt-fraccell:hover .rtt-ratio-op,
+.rtt-fraccell.rtt-spk-hover .rtt-ratio-op { opacity:1; pointer-events:auto; }
 .rtt-fraccell:focus-within .rtt-ratio-op { display:none; }
 /* a no-op button stays SOLID (the full white box) and greys only its glyph — never semi-transparent */
-.rtt-fraccell:hover .rtt-ratio-op.rtt-op-disabled { color:#bbb; pointer-events:none; cursor:default; }
+.rtt-fraccell:hover .rtt-ratio-op.rtt-op-disabled,
+.rtt-fraccell.rtt-spk-hover .rtt-ratio-op.rtt-op-disabled { color:#bbb; pointer-events:none; cursor:default; }
 
 /* drag-and-drop reorder grips. The GRIP (.rtt-colgrip) is the shared .rtt-drag-handle ⠿, riding the
    reserved GRIP_BAND room on the fan — along each column's sub-axis gridline, between the − above
@@ -971,8 +971,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-anim-icon rect { fill:#555; }
 .rtt-anim-icon .g { opacity:0; }
 .rtt-vis-anim .rtt-anim-icon .g { animation:rtt-anim-grow 1.8s ease-in-out infinite; }
-.rtt-vis-anim.rtt-vis-off .rtt-anim-icon .g { animation:rtt-anim-grow 1.8s steps(1, jump-none) infinite; }
+.rtt-vis-anim.rtt-vis-off .rtt-anim-icon .g { animation:rtt-anim-toggle 1.8s steps(2, jump-none) infinite; }
 @keyframes rtt-anim-grow { 0%,14% { opacity:0; } 46%,72% { opacity:1; } 100% { opacity:0; } }
+@keyframes rtt-anim-toggle { from { opacity:0; } to { opacity:1; } }
 /* preview-highlighting toggle: a value box that cycles the app's pending/change/remove states —
    green "1", amber "2", red "3", then a blank beat — using the exact ring/wash/text the grid uses
    (so it tracks dark mode via the same vars). Off = the same cycle with no colour. */
@@ -1024,6 +1025,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    sit on a common baseline so the two words line up. */
 .rtt-show-head { display:grid; grid-template-columns:160px 1fr; align-items:baseline;
                  padding:0; }
+/* breathe the app-features select-all off its show/example header, matching the gap the tile-features
+   select-all gets from the .rtt-show-tile (margin-top) that follows it */
+.rtt-section-all + .rtt-show-head { margin-top:8px; }
 .rtt-show-title { font-size:13px; font-weight:bold; }
 /* the "example" column header right-justifies over its right-aligned sample cells */
 .rtt-show-examplehdr { font-size:13px; font-weight:bold; justify-self:end; }

@@ -164,15 +164,27 @@ window.rttAudio = (function () {
   // segment (.rtt-spk-hover) and floats ONE speaker above it (tooltip-style, over the app); clicking
   // the float sounds the interval. Gated on unmuted; the chord is derived from the segment's sibling
   // cells live (reorder / retune safe). A grace timer lets the cursor cross the gap onto the button.
-  let floatEl = null, floatSeg = null, hideT = null;
+  let floatEl = null, floatSeg = null, floatCells = null, hideT = null;
   function segCells(tile, idx) {
     return document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"][data-idx="' + idx + '"]');
+  }
+  function placeFloat() {  // (re)anchor the float over its live cells — viewport coords, so it must
+    if (!floatEl || !floatCells || !floatCells.length) return;   // re-run on scroll or it slides away
+    let l = Infinity, t = Infinity, r = -Infinity, any = false;
+    for (let i = 0; i < floatCells.length; i++) {
+      if (!floatCells[i].isConnected) continue;
+      const k = floatCells[i].getBoundingClientRect();
+      l = Math.min(l, k.left); t = Math.min(t, k.top); r = Math.max(r, k.right); any = true;
+    }
+    if (!any) { hideFloat(); return; }
+    floatEl.style.left = ((l + r) / 2) + 'px';
+    floatEl.style.top = t + 'px';
   }
   function clearHover() {
     const es = document.querySelectorAll('.rtt-spk-hover, .rtt-spk-dim');
     for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-spk-hover', 'rtt-spk-dim');
   }
-  function hideFloat() { if (floatEl) floatEl.classList.remove('rtt-spk-float-on'); clearHover(); floatSeg = null; }
+  function hideFloat() { if (floatEl) floatEl.classList.remove('rtt-spk-float-on'); clearHover(); floatSeg = null; floatCells = null; }
   function keepFloat() { if (hideT) { clearTimeout(hideT); hideT = null; } }
   function planHide() { keepFloat(); hideT = setTimeout(hideFloat, 250); }
   function showFloat(tile, idx) {
@@ -189,8 +201,7 @@ window.rttAudio = (function () {
       cells = all; const key = String(idx);
       for (let i = 0; i < all.length; i++) all[i].classList.add(all[i].dataset.idx === key ? 'rtt-spk-hover' : 'rtt-spk-dim');
     }
-    let l = Infinity, t = Infinity, r = -Infinity;
-    for (let i = 0; i < cells.length; i++) { const k = cells[i].getBoundingClientRect(); l = Math.min(l, k.left); t = Math.min(t, k.top); r = Math.max(r, k.right); }
+    floatCells = Array.prototype.slice.call(cells);
     if (!floatEl) {
       floatEl = document.createElement('div');
       floatEl.className = 'rtt-spk-float';
@@ -206,15 +217,18 @@ window.rttAudio = (function () {
       });
       document.body.appendChild(floatEl);
     }
-    floatEl.style.left = ((l + r) / 2) + 'px';   // centred over the highlighted cells, floated above them
-    floatEl.style.top = t + 'px';
     floatEl.classList.add('rtt-spk-float-on');
     floatSeg = { tile: tile, idx: idx };
+    placeFloat();   // centred over the highlighted cells, floated above them
   }
+  function onFloat(t) { return t && t.closest && t.closest('.rtt-spk-float'); }
   document.addEventListener('mouseover', function (ev) {
     if (S.muted) return;                                   // muted = disengaged: no hover affordance
     const cell = ev.target.closest && ev.target.closest('.rtt-spk[data-audio]');
-    if (!cell) return;
+    if (!cell) {
+      if (floatSeg && !onFloat(ev.target)) planHide();     // moved onto something else: let it go
+      return;
+    }
     keepFloat();
     showFloat(cell.dataset.audio, +cell.dataset.idx);
   });
@@ -224,5 +238,14 @@ window.rttAudio = (function () {
     const to = ev.relatedTarget && ev.relatedTarget.closest && ev.relatedTarget.closest('.rtt-spk[data-audio],.rtt-spk-float');
     if (!to) planHide();                                   // left the column for something non-audio
   });
+  // a click or keypress anywhere but the float (e.g. a re-render the cursor never left) dismisses a
+  // stuck float, so it can't linger over the grid and block hovering the next cell.
+  document.addEventListener('pointerdown', function (ev) {
+    if (floatSeg && !onFloat(ev.target)) hideFloat();
+  }, true);
+  document.addEventListener('keydown', function () { if (floatSeg) hideFloat(); }, true);
+  // the grid body scrolls in its own scroller (scroll doesn't bubble) — re-anchor the float to its
+  // live cells so it rides the page instead of staying pinned to a viewport spot as the grid moves.
+  document.addEventListener('scroll', function () { if (floatSeg) placeFloat(); }, true);
   return api;
 })();

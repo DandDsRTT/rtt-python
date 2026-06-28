@@ -200,6 +200,8 @@ def _vgroup_key(cell_box: spreadsheet.CellBox) -> str:
     return ":".join(parts[:2] + parts[3:])
 
 
+
+
 _MODE_FILLS = (
     frozenset({(1, 1)}),
     frozenset({(2, 0), (1, 1), (0, 2)}),
@@ -566,9 +568,10 @@ _ZOOM_JS = """
     const ow = overlay.offsetWidth, oh = overlay.offsetHeight;
     const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
     let left = Math.max(4, Math.min(r.left + r.width / 2 - ow / 2, vw - ow - 4));
+    const audioFloat = cell.classList.contains('rtt-spk') && !document.body.classList.contains('rtt-audio-muted');
     let top = r.top - GAP - oh;
     let above = true;
-    if (top < 4) { top = r.bottom + GAP; above = false; }
+    if (audioFloat || top < 4) { top = r.bottom + GAP; above = false; }
     top = Math.max(4, Math.min(top, vh - oh - 4));
     overlay.style.flexDirection = above ? 'column-reverse' : 'column';
     overlay.style.left = left + 'px';
@@ -599,6 +602,7 @@ _ZOOM_JS = """
     clone.style.transformOrigin = 'top left';
     clone.style.transition = 'none';
     clone.querySelectorAll('.q-tooltip').forEach(n => n.remove());
+    clone.querySelectorAll('.rtt-ratio-op').forEach(n => n.remove());
     // Browser: cloneNode does NOT copy a live input's typed value (a property, not an attribute), so
     // each editable cell's value is copied onto the clone by hand or it would clone empty.
     const cloneInputs = clone.querySelectorAll('input');
@@ -627,10 +631,22 @@ _ZOOM_JS = """
     timer = setTimeout(() => { if (anchor === cell && cell.isConnected) build(cell); }, DELAY);
   });
   document.addEventListener('mouseout', (e) => {
+    const toFloat = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.rtt-spk-float');
     const cell = e.target.closest && e.target.closest('.rtt-zoomable');
-    if (cell && cell === anchor && !cell.contains(e.relatedTarget)) hide();
+    if (cell && cell === anchor) {
+      if (!toFloat && !cell.contains(e.relatedTarget)) hide();
+      return;
+    }
+    const fromFloat = e.target.closest && e.target.closest('.rtt-spk-float');
+    if (fromFloat && anchor && !toFloat) {
+      const toCell = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.rtt-zoomable');
+      if (toCell !== anchor) hide();
+    }
   });
-  document.addEventListener('pointerdown', hide, true);
+  document.addEventListener('pointerdown', (e) => {
+    if (e.target.closest && e.target.closest('.rtt-spk-float')) return;
+    hide();
+  }, true);
   document.addEventListener('keydown', hide, true);
   document.addEventListener('wheel', hide, {capture: true, passive: true});
   document.addEventListener('scroll', hide, {capture: true, passive: true});
