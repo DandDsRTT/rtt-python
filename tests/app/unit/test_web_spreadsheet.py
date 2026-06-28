@@ -16,7 +16,7 @@ from rtt.app import (
 from rtt.app.editor import Editor
 from rtt.app.layout import CellBox, Layout
 from rtt.app.spreadsheet_decorations import _tile_groups
-from rtt.app.spreadsheet_geometry import ptext_band
+from rtt.app.spreadsheet_geometry import plain_text_band
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -1620,8 +1620,8 @@ def test_generator_form_matrix_is_interactive():
     assert cells["ptext:mapping:canongens"].kind == "ptextedit"  # 𝐹's editable plain-text input
     assert cells["cell:form:0:0"].kind == "mapped"              # 𝐹⁻¹: read-only
     assert cells["ptext:canon:gens"].kind == "ptext"           # 𝐹⁻¹'s plain text is read-only
-    from rtt.app.grid_tables import EDITABLE_PTEXT
-    assert ("mapping", "canongens") in EDITABLE_PTEXT and ("canon", "gens") not in EDITABLE_PTEXT
+    from rtt.app.grid_tables import EDITABLE_PLAIN_TEXT
+    assert ("mapping", "canongens") in EDITABLE_PLAIN_TEXT and ("canon", "gens") not in EDITABLE_PLAIN_TEXT
 
 
 def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis_boxes():
@@ -2128,27 +2128,27 @@ def test_every_open_value_tile_has_a_plain_text_string():
     # entry shows numbers up top and a blank band below — the bug the generator-detempering and
     # superspace-projection columns hit. This sweeps the WHOLE surface with every Show toggle on so a
     # newly-added tile that forgets its plain text fails here, rather than slipping through to the user.
-    from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
+    from rtt.app.grid_tables import PLAIN_TEXT_ROWS, SPINE_COLUMNS
     b = _maximized_superspace_builder()
     assert b.resolved.flags.superspace and b.resolved.flags.plain_text_values  # the config really did light the superspace + plain text
-    value_rows = PTEXT_ROWS - {"quantities"}  # the quantities row's only band is the "2.3.5" primes string
+    value_rows = PLAIN_TEXT_ROWS - {"quantities"}  # the quantities row's only band is the "2.3.5" primes string
     missing = [(r, c) for (r, c) in sorted(b.geometry.declared_tiles)
                if r in value_rows and c not in SPINE_COLUMNS and query.tile_open(b.geometry, b.inputs.collapsed, r, c)
-               and (r, c) not in b.geometry.ptext_strings]
+               and (r, c) not in b.geometry.plain_text_strings]
     assert not missing, f"open value tiles with no plain-text band: {missing}"
 
 
 def test_every_row_that_produces_plain_text_reserves_its_band():
     # the CONVERSE of the lockstep guard above, and the invariant the canonical-mapping row broke: a row
     # that PRODUCES a plain-text EBK string must RESERVE band height for it, or the text spills past the
-    # bottom of the tile into the row below. ptext_band() is now CONTENT-FIRST — it reserves iff the row
-    # appears in ptext_strings — so this asserts the real reservation (height > 0), not a proxy set
+    # bottom of the tile into the row below. plain_text_band() is now CONTENT-FIRST — it reserves iff the row
+    # appears in plain_text_strings — so this asserts the real reservation (height > 0), not a proxy set
     # membership. Sweeping every Show toggle on (which surfaces the canon row via form_tiles) catches any
     # such row generically, before it reaches the user.
     b = _maximized_superspace_builder()
     assert b.resolved.flags.plain_text_values and b.resolved.flags.canon  # the config really did light the plain text + the canon row
-    rows_with_text = {r for (r, _c) in b.geometry.ptext_strings}
-    spill = sorted(r for r in rows_with_text if ptext_band(b.geometry, r, folded=False) <= 0)
+    rows_with_text = {r for (r, _c) in b.geometry.plain_text_strings}
+    spill = sorted(r for r in rows_with_text if plain_text_band(b.geometry, r, folded=False) <= 0)
     assert not spill, f"rows produce plain text but reserve no band (it will spill past the tile): {spill}"
 
 
@@ -2164,11 +2164,11 @@ def test_every_in_tile_band_reserves_for_what_it_emits():
     b = _maximized_superspace_builder()
     # (band name, rows that EMIT its content, rows that RESERVE its height). The reserve side reads the
     # ONE band descriptor (grid_tables.BANDS) the height pass also consults; the emit side reads the LIVE
-    # per-render content where one exists (col_labels/effective_captions/ptext_strings are rebuilt each
+    # per-render content where one exists (col_labels/effective_captions/plain_text_strings are rebuilt each
     # render — exactly where drift hides), and the static content table otherwise.
     bands = {
-        "plain text":   ({r for (r, _c) in b.geometry.ptext_strings},
-                         {r for (r, _c) in b.geometry.ptext_strings if ptext_band(b.geometry, r, folded=False) > 0}),
+        "plain text":   ({r for (r, _c) in b.geometry.plain_text_strings},
+                         {r for (r, _c) in b.geometry.plain_text_strings if plain_text_band(b.geometry, r, folded=False) > 0}),
         "symbol":       ({r for (r, _c) in SYMBOLS}, set(BANDS["symbol"].rows)),
         "units":        ({r for (r, _c) in UNITS}, set(BANDS["units"].rows)),
         "caption":      ({r for (r, _c) in b.resolved.labels.captions}, set(BANDS["caption"].rows)),
@@ -2215,7 +2215,7 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
     # so the band is tokenised from its first EBK bracket on.
     import re
 
-    from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
+    from rtt.app.grid_tables import PLAIN_TEXT_ROWS, SPINE_COLUMNS
     TOKEN = re.compile(r"—|-?\d+\.\d+|-?\d+/\d+|-?\d+")  # decimal before fraction before int
 
     def cell_value(text):  # a math-expression cell shows "<working>\n= <result>"; take the result
@@ -2227,13 +2227,13 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
 
     b = _maximized_superspace_builder()
     lay = b.layout()
-    value_rows = PTEXT_ROWS - {"quantities"}
+    value_rows = PLAIN_TEXT_ROWS - {"quantities"}
     mismatches = []
     checked = 0
     for (row_key, column_key) in sorted(b.geometry.declared_tiles):
         if row_key not in value_rows or column_key in SPINE_COLUMNS or not query.tile_open(b.geometry, b.inputs.collapsed, row_key, column_key):
             continue
-        if (row_key, column_key) not in b.geometry.ptext_strings:
+        if (row_key, column_key) not in b.geometry.plain_text_strings:
             continue  # the presence test owns that failure
         # the VALUE region of the tile only — the column's x-span × the row's value-area height
         # (rows[row_key].y .. +h). NOT panel_rect, which spans the whole tile stack (symbol / caption /
@@ -2245,7 +2245,7 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
             if (c.text and not c.id.startswith("ptext:")
                     and cx - 2 <= c.x <= cx + cw and rb.y - 2 <= c.y <= rb.y + rb.h + 2):
                 grid_tokens += TOKEN.findall(cell_value(c.text))
-        band_tokens = TOKEN.findall(band_body(b.geometry.ptext_strings[(row_key, column_key)]))
+        band_tokens = TOKEN.findall(band_body(b.geometry.plain_text_strings[(row_key, column_key)]))
         if sorted(grid_tokens) != sorted(band_tokens):
             mismatches.append((row_key, column_key, sorted(band_tokens), sorted(grid_tokens)))
         checked += 1
@@ -2368,20 +2368,20 @@ def test_every_plain_text_band_uses_the_same_brackets_as_its_grid_tile():
     # so the views can't read e.g. { … ] in the grid and [ … ⟩ in the band. Same all-on /
     # nonstandard-domain + held + interest + projection config the two guards above use, so the
     # whole surface (detempering / held / superspace / projection columns) is in play at once.
-    from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
+    from rtt.app.grid_tables import PLAIN_TEXT_ROWS, SPINE_COLUMNS
     b = _maximized_superspace_builder()
     lay = b.layout()
-    value_rows = PTEXT_ROWS - {"quantities"}
+    value_rows = PLAIN_TEXT_ROWS - {"quantities"}
     mismatches, checked = [], 0
     for (row_key, column_key) in sorted(b.geometry.declared_tiles):
         if row_key not in value_rows or column_key in SPINE_COLUMNS or not query.tile_open(b.geometry, b.inputs.collapsed, row_key, column_key):
             continue
-        if (row_key, column_key) not in b.geometry.ptext_strings:
+        if (row_key, column_key) not in b.geometry.plain_text_strings:
             continue  # presence is the other guard's job
-        text_conv = _ebk_canonical(_ebk_text_convention(b.geometry.ptext_strings[(row_key, column_key)]))
+        text_conv = _ebk_canonical(_ebk_text_convention(b.geometry.plain_text_strings[(row_key, column_key)]))
         grid_conv = _ebk_canonical(_ebk_grid_convention(b, lay, row_key, column_key))
         if text_conv != grid_conv:
-            mismatches.append((row_key, column_key, text_conv, grid_conv, b.geometry.ptext_strings[(row_key, column_key)]))
+            mismatches.append((row_key, column_key, text_conv, grid_conv, b.geometry.plain_text_strings[(row_key, column_key)]))
         checked += 1
     assert checked >= 60, f"config did not light enough value tiles ({checked})"
     assert not mismatches, "grid and plain-text EBK brackets disagree:\n" + "\n".join(
@@ -2403,23 +2403,23 @@ def test_every_open_value_tile_declares_an_ebk_convention():
     # to it by the grid↔band guard above. This pins both views to the table: every open value tile
     # must declare a convention there, and its rendered band must match what it declared — so a new
     # tile can't ship without a convention, and can't drift from the one it names.
-    from rtt.app.grid_tables import PTEXT_ROWS, SPINE_COLUMNS
+    from rtt.app.grid_tables import PLAIN_TEXT_ROWS, SPINE_COLUMNS
     from rtt.app.service.text_conventions import EBK_CONVENTIONS, ebk_convention
     b = _maximized_superspace_builder()
-    value_rows = PTEXT_ROWS - {"quantities"}
+    value_rows = PLAIN_TEXT_ROWS - {"quantities"}
     undeclared, mismatches, checked = [], [], 0
     for (row_key, column_key) in sorted(b.geometry.declared_tiles):
         if row_key not in value_rows or column_key in SPINE_COLUMNS or not query.tile_open(b.geometry, b.inputs.collapsed, row_key, column_key):
             continue
-        if (row_key, column_key) not in b.geometry.ptext_strings:
+        if (row_key, column_key) not in b.geometry.plain_text_strings:
             continue
         if (row_key, column_key) not in EBK_CONVENTIONS and (row_key, column_key) != ("prescaling", "primes"):
             undeclared.append((row_key, column_key))
             continue
         declared = _ebk_table_canonical(ebk_convention(row_key, column_key, superspace=b.resolved.flags.superspace))
-        rendered = _ebk_canonical(_ebk_text_convention(b.geometry.ptext_strings[(row_key, column_key)]))
+        rendered = _ebk_canonical(_ebk_text_convention(b.geometry.plain_text_strings[(row_key, column_key)]))
         if declared != rendered:
-            mismatches.append((row_key, column_key, declared, rendered, b.geometry.ptext_strings[(row_key, column_key)]))
+            mismatches.append((row_key, column_key, declared, rendered, b.geometry.plain_text_strings[(row_key, column_key)]))
         checked += 1
     assert checked >= 60, f"config did not light enough value tiles ({checked})"
     assert not undeclared, f"open value tiles with no EBK_CONVENTIONS entry: {undeclared}"
@@ -2484,11 +2484,11 @@ def test_plain_text_values_are_a_single_line_within_their_column():
     # every read-only value is one line tall and no wider than its column — the app
     # shrinks the font to fit, so a long tuning row never wraps or spills
     long, header = cells["ptext:tuning:targets"], cells["header:targets"]
-    assert long.h == spreadsheet_constants.PTEXT_H  # one line, even for the longest size list...
+    assert long.h == spreadsheet_constants.PLAIN_TEXT_H  # one line, even for the longest size list...
     assert long.w == header.w  # ...spanning exactly its column, never wider
-    assert cells["ptext:just:targets"].h == spreadsheet_constants.PTEXT_H
+    assert cells["ptext:just:targets"].h == spreadsheet_constants.PLAIN_TEXT_H
     # the editable duals are one (slightly taller) input line
-    assert cells["ptext:mapping:primes"].h == spreadsheet_constants.PTEXT_EDIT_H
+    assert cells["ptext:mapping:primes"].h == spreadsheet_constants.PLAIN_TEXT_EDIT_H
 
 
 def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
@@ -8457,7 +8457,7 @@ def test_superspace_projection_extra_tiles_absent_without_projection():
 
 def test_superspace_projection_emits_a_plain_text_band():
     # plain_text_values on: P_L gets its own EBK string band under the tile, like M_L / M_jL / B_L and
-    # the on-domain P — P_L was the sole matrix row missing one (PTEXT_ROWS + plain_text_values parity).
+    # the on-domain P — P_L was the sole matrix row missing one (PLAIN_TEXT_ROWS + plain_text_values parity).
     cells = {c.id for c in _barbados_proj(plain_text_values=True).cells}
     assert "ptext:ss_projection:ssprimes" in cells
     # absent without the projection toggle: the superspace mapping's band shows, P_L's does not
@@ -9315,7 +9315,7 @@ def test_superspace_mapping_row_labels_clear_the_bracket_and_cells():
 
 
 def test_superspace_matrix_plain_text_stays_within_its_tile():
-    # the M_L / M_jL / B_L plain-text EBK strings reserve band height (PTEXT_ROWS), so they sit
+    # the M_L / M_jL / B_L plain-text EBK strings reserve band height (PLAIN_TEXT_ROWS), so they sit
     # inside the tile instead of spilling into the row below (the issue-2 plain-text fix)
     cells = {c.id: c for c in _barbados_ss(symbols=True, plain_text_values=True, identity_objects=True).cells}
     ptext = cells["ptext:ss_mapping:ssprimes"]
@@ -10321,16 +10321,16 @@ def test_v_column_unchanged_basis_follows_the_held_basis():
     assert [third[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["1", "1", "-1"]     # 6/5
 
 
-def _assert_ptext_cells_match(lay, pt):
+def _assert_plain_text_cells_match(lay, pt):
     # every rendered ptext band cell carries exactly the string the direct derivation gives
-    ptext_cells = [c for c in lay.cells if c.id.startswith("ptext:")]
-    assert len(ptext_cells) >= 8  # the band is actually on, so the loop below isn't vacuous
-    for c in ptext_cells:
+    plain_text_cells = [c for c in lay.cells if c.id.startswith("ptext:")]
+    assert len(plain_text_cells) >= 8  # the band is actually on, so the loop below isn't vacuous
+    for c in plain_text_cells:
         _, row_key, column_key = c.id.split(":")
         assert c.text == pt[(row_key, column_key)], c.id
 
 
-def test_ptext_band_matches_a_direct_derivation_under_a_custom_prescaler():
+def test_plain_text_band_matches_a_direct_derivation_under_a_custom_prescaler():
     # the band is built FROM the grid's DerivedQuantities bundle; a direct (self-deriving)
     # plain_text_values call over the same document must produce identical strings. The
     # custom prescaler is one of the knobs that historically diverged the two views.
@@ -10339,10 +10339,10 @@ def test_ptext_band_matches_a_direct_derivation_under_a_custom_prescaler():
                             custom_prescaler=(1.0, 2.0, 3.0))
     pt = service.plain_text_values(state, service.DEFAULT_DOCUMENT_SCHEME,
                                    custom_prescaler=(1.0, 2.0, 3.0))
-    _assert_ptext_cells_match(lay, pt)
+    _assert_plain_text_cells_match(lay, pt)
 
 
-def test_ptext_band_matches_a_direct_derivation_under_a_manual_generator_tuning():
+def test_plain_text_band_matches_a_direct_derivation_under_a_manual_generator_tuning():
     # a frozen manual tuning takes the bundle's tun straight from the grid's
     # tuning_from_generators result — same strings as a direct self-deriving call
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -10350,16 +10350,16 @@ def test_ptext_band_matches_a_direct_derivation_under_a_manual_generator_tuning(
                             generator_tuning=(1201.7, 697.6))
     pt = service.plain_text_values(state, service.DEFAULT_DOCUMENT_SCHEME,
                                    generator_tuning=(1201.7, 697.6))
-    _assert_ptext_cells_match(lay, pt)
+    _assert_plain_text_cells_match(lay, pt)
 
 
-def test_ptext_band_matches_a_direct_derivation_over_the_superspace():
+def test_plain_text_band_matches_a_direct_derivation_over_the_superspace():
     # the chapter-9 block rides the bundle's memoized superspace_tun (the grid's one solve);
     # the direct call solves it itself — both must give the same ss tile strings
     lay = _barbados_ss(plain_text_values=True)
     pt = service.plain_text_values(_barbados_state(), service.DEFAULT_DOCUMENT_SCHEME,
                                    superspace=True)
-    _assert_ptext_cells_match(lay, pt)
+    _assert_plain_text_cells_match(lay, pt)
 
 
 # --- Audit fixes: draft-column holes, V-column label alignment, grip occlusion, mean-damage symbol ---

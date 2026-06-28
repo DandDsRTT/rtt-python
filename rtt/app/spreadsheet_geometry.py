@@ -6,7 +6,7 @@ from rtt.app.grid_tables import (
     BANDS,
     COUNTS_TILES,
     DETEMPERING_COUNTS_TILES,
-    EDITABLE_PTEXT_ROWS,
+    EDITABLE_PLAIN_TEXT_ROWS,
     EQUIVALENCES,
     FORM_CHOOSERS,
     FORM_EQUIVALENCES,
@@ -31,9 +31,9 @@ from rtt.app.spreadsheet_constants import (
     MAX_CAPTION_LINES,
     OPT_BOX_MIN_W,
     PBOX_W,
+    PLAIN_TEXT_EDIT_H,
+    PLAIN_TEXT_H,
     PRESET_W,
-    PTEXT_EDIT_H,
-    PTEXT_H,
     SCHEME_CTRL_W,
     SYMBOL_FONT,
     TBOX_W,
@@ -253,10 +253,10 @@ def caption_band(geometry, resolved, context, key: str, folded: bool):
     return max(lines, default=1) * CAPTION_LINE
 
 
-def ptext_band(geometry, key: str, folded: bool):
-    if folded or not any(rk == key for rk, _ck in geometry.ptext_strings):
+def plain_text_band(geometry, key: str, folded: bool):
+    if folded or not any(rk == key for rk, _ck in geometry.plain_text_strings):
         return 0
-    return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
+    return PLAIN_TEXT_EDIT_H if key in EDITABLE_PLAIN_TEXT_ROWS else PLAIN_TEXT_H
 
 
 def control_region_band_h(content_h):

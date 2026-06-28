@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from rtt.app.grid_tables import (
-    EDITABLE_PTEXT,
+    EDITABLE_PLAIN_TEXT,
     FORM_CHOOSERS,
     FORM_SUBSCRIPT_GENS,
     FORM_SUBSCRIPT_ROWS,
@@ -22,10 +22,10 @@ from rtt.app.spreadsheet_constants import (
     FRAME_OVERHANG,
     INTERVAL_COL_GAP,
     PAD,
+    PLAIN_TEXT_EDIT_H,
+    PLAIN_TEXT_H,
     PRESET_H,
     PRESET_W,
-    PTEXT_EDIT_H,
-    PTEXT_H,
     ROW_H,
     SCHEME_BTN_SQ,
     TARGET_PRESET_W,
@@ -81,7 +81,7 @@ def comma_picker_band_y(geometry, row_key: str) -> float:
     return row.y + row.h + row.frame
 
 
-def ptext_band_y(geometry, row_key: str) -> float:
+def plain_text_band_y(geometry, row_key: str) -> float:
     row = geometry.rows[row_key]
     return row.y + row.h + row.frame + row.comma_picker + row.symbol + row.caption + row.units
 
@@ -381,7 +381,7 @@ def preset_form_label(resolved, name: str, row_key: str, column_key: str):
     return "form" if embeds else None
 
 
-def ptext_editable(resolved, row_key: str, column_key: str) -> bool:
+def plain_text_editable(resolved, row_key: str, column_key: str) -> bool:
     if row_key == "prescaling":
         return (row_key, column_key) == (
             "prescaling",
@@ -389,11 +389,11 @@ def ptext_editable(resolved, row_key: str, column_key: str) -> bool:
         )
     if row_key == "tuning" and resolved.flags.superspace_generators:
         return column_key == "ssgens"
-    return (row_key, column_key) in EDITABLE_PTEXT
+    return (row_key, column_key) in EDITABLE_PLAIN_TEXT
 
 
-def ptext_height(resolved, row_key: str, column_key: str):
-    return PTEXT_EDIT_H if ptext_editable(resolved, row_key, column_key) else PTEXT_H
+def plain_text_height(resolved, row_key: str, column_key: str):
+    return PLAIN_TEXT_EDIT_H if plain_text_editable(resolved, row_key, column_key) else PLAIN_TEXT_H
 
 
 def panel_rect(geometry, collapsed, row_key: str, column_key: str):

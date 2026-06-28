@@ -32,5 +32,5 @@ def test_geometry_is_a_frozen_record(builder):
 
 @pytest.mark.parametrize("builder", list(_builders()))
 def test_builder_does_not_mirror_geometry_fields_as_flat_attrs(builder):
-    for field in ("total_w", "col_x", "rows", "declared_tiles", "ptext_strings", "size_factor"):
+    for field in ("total_w", "col_x", "rows", "declared_tiles", "plain_text_strings", "size_factor"):
         assert not hasattr(builder, field), f"{field} shadows geometry on the builder"

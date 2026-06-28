@@ -1587,7 +1587,7 @@ async def test_decimals_off_shrinks_a_long_integer_to_fit_its_cell(user: User) -
 async def test_typing_the_prescaler_plain_text_overrides_the_scheme(user: User) -> None:
     # the bare prescaler 𝐿 tile's plain-text box is the OTHER editable surface (alongside
     # the diagonal cells): typing a d×d matrix EBK with all off-diagonal entries zero parses
-    # to a d-tuple diagonal (on_ptext_edit -> editor.set_custom_prescaler_text), which then
+    # to a d-tuple diagonal (on_plain_text_edit -> editor.set_custom_prescaler_text), which then
     # drives every downstream consumer. The diagonal grid cell must reflect the typed value
     # on re-render — would otherwise be the scheme's log₂3 = 1.585 default.
     await user.open("/")

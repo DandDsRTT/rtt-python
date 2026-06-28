@@ -739,7 +739,7 @@ UNITS_TILES = (
     ("block:urow:ssprimes", "units", "ssprimes"),
 )
 
-EDITABLE_PTEXT = frozenset(
+EDITABLE_PLAIN_TEXT = frozenset(
     {
         ("mapping", "primes"),
         ("vectors", "commas"),
@@ -751,8 +751,8 @@ EDITABLE_PTEXT = frozenset(
         ("projection", "gens"),
     }
 )
-EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)
-PTEXT_ROWS = frozenset(
+EDITABLE_PLAIN_TEXT_ROWS = frozenset(r for r, _ in EDITABLE_PLAIN_TEXT)
+PLAIN_TEXT_ROWS = frozenset(
     {
         "quantities",
         "vectors",

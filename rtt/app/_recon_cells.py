@@ -108,7 +108,7 @@ def _draft_escape_js(cancel_eid):
 def wire_cell_input(rec, wrap, cell_box) -> None:
     if cell_box.kind.endswith(("plus", "minus")):
         wrap.on("mousedown", js_handler="(e) => e.preventDefault()")
-    edit_input = rec.cells[cell_box.id].value.input or rec.cells[cell_box.id].value.ptext_input
+    edit_input = rec.cells[cell_box.id].value.input or rec.cells[cell_box.id].value.plain_text_input
     if edit_input is not None:
         den = rec.cells[cell_box.id].value.den_input
         guard = _STACKED_EXIT_JS if den is not None else None

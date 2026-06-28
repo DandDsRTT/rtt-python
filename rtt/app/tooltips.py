@@ -595,7 +595,7 @@ _RATIO_HELP: dict[str, str] = {
     ),
 }
 
-_PTEXT_HELP: dict[str, str] = {
+_PLAIN_TEXT_HELP: dict[str, str] = {
     "ptext:mapping:primes": (
         "Type the mapping as a plain-text string (e.g. ⟨⟨1 0 -4]]) to drive the grid."
     ),
@@ -648,7 +648,7 @@ def _control_help(kind: str, cid: str) -> str | None:
     if kind == "preset":
         return _PRESET_HELP.get(cid.split(":")[1])
     if kind == "ptextedit":
-        return _PTEXT_HELP.get(cid)
+        return _PLAIN_TEXT_HELP.get(cid)
     if kind == "ratiocell":
         return _RATIO_HELP.get(cid.split(":", maxsplit=1)[0])
     return _ID_HELP.get(cid) or _KIND_HELP.get(kind)

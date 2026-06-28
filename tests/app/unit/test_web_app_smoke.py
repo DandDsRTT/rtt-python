@@ -1217,11 +1217,11 @@ def test_plain_text_font_shrinks_to_fit_with_no_readability_floor():
     # the plain-text contract is fit-on-ONE-line, so the sizer has NO readability floor:
     # the denser the value the smaller the font (a prescaling ket-matrix at a high prime
     # limit shrinks well past any legible floor), while a short value grows to the cap.
-    dense = render_html._ptext_font("9.999 " * 40, 120)    # ~240 chars in a narrow box
-    denser = render_html._ptext_font("9.999 " * 80, 120)   # twice as long → smaller still
+    dense = render_html._plain_text_font("9.999 " * 40, 120)    # ~240 chars in a narrow box
+    denser = render_html._plain_text_font("9.999 " * 80, 120)   # twice as long → smaller still
     assert denser < dense < 5.0                     # keeps shrinking past the old 5px floor
-    assert render_html._ptext_font("1 0 0", 120) == spreadsheet_constants.PTEXT_MAX_FONT  # short value hits the cap
-    assert render_html._ptext_font("x" * 9, 30) <= spreadsheet_constants.PTEXT_MAX_FONT   # never exceeds the cap
+    assert render_html._plain_text_font("1 0 0", 120) == spreadsheet_constants.PLAIN_TEXT_MAX_FONT  # short value hits the cap
+    assert render_html._plain_text_font("x" * 9, 30) <= spreadsheet_constants.PLAIN_TEXT_MAX_FONT   # never exceeds the cap
 
 
 def test_plain_text_font_is_glyph_aware_not_uniform_width():
@@ -1231,7 +1231,7 @@ def test_plain_text_font_is_glyph_aware_not_uniform_width():
     sparse = "0 0 0 0 0 0 0 0 0 0"   # zeros split by (narrow) spaces
     dense = "0000000000000000000"    # all (wide) digits, identical length
     assert len(sparse) == len(dense)
-    assert render_html._ptext_font(sparse, 40) > render_html._ptext_font(dense, 40)
+    assert render_html._plain_text_font(sparse, 40) > render_html._plain_text_font(dense, 40)
 
 
 def test_approach_radio_is_visible_iff_the_domain_has_nonprime_elements():
@@ -1281,7 +1281,7 @@ def test_dense_prescaling_plain_text_fits_its_cell():
                                                 tuning_scheme="TILT minimax-S").cells}
     for cid in ("ptext:prescaling:primes", "ptext:prescaling:targets"):
         c = cells[cid]
-        assert render_html._ptext_units(c.text) * render_html._ptext_font(c.text, c.w) <= c.w, cid
+        assert render_html._plain_text_units(c.text) * render_html._plain_text_font(c.text, c.w) <= c.w, cid
 
 
 def test_units_fit_their_cell_for_long_alternative_complexity_annotations():

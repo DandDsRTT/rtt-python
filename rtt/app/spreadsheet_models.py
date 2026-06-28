@@ -205,7 +205,7 @@ class RowBand:
     symbol: float
     caption: float
     units: float
-    ptext: float
+    plain_text: float
     preset: float
     scheme_button: float
     num_subrows: int
