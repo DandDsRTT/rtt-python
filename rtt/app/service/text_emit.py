@@ -75,11 +75,11 @@ def _base_structural(context: _Ctx) -> dict:
 
 
 def _canon_gen_sizes(context: _Ctx) -> list:
-    tun = context.core.tun
+    tuning_map = context.core.tuning_map
     inverse_form = context.canon.inverse_form
     nrow = len(context.state.mapping)
     return [
-        sum(tun.generator_map[k] * inverse_form[k][j] for k in range(nrow))
+        sum(tuning_map.generator_map[k] * inverse_form[k][j] for k in range(nrow))
         for j in range(context.canon.rc)
     ]
 
@@ -87,20 +87,20 @@ def _canon_gen_sizes(context: _Ctx) -> list:
 def _base_sizes(context: _Ctx) -> dict:
     core = context.core
     un = context.unchanged
-    tun = core.tun
+    tuning_map = core.tuning_map
     fmt = context.fmt
     return {
         ("tuning", "canongens"): fmt.cents_genmap(_canon_gen_sizes(context)),
-        ("tuning", "gens"): fmt.cents_genmap(tun.generator_map),
-        ("tuning", "primes"): fmt.cents_map(tun.tuning_map),
+        ("tuning", "gens"): fmt.cents_genmap(tuning_map.generator_map),
+        ("tuning", "primes"): fmt.cents_map(tuning_map.tuning_map),
         ("tuning", "commas"): fmt.cents_list(list(core.comma_sizes.tempered) + un.tempered),
         ("tuning", "detempering"): fmt.cents_genmap(core.detemper_sizes.tempered),
         ("tuning", "targets"): fmt.cents_list(core.target_sizes.tempered),
-        ("just", "primes"): fmt.cents_map(tun.just_map),
+        ("just", "primes"): fmt.cents_map(tuning_map.just_map),
         ("just", "commas"): fmt.cents_list(list(core.comma_sizes.just) + un.just),
         ("just", "detempering"): fmt.cents_list(core.detemper_sizes.just),
         ("just", "targets"): fmt.cents_list(core.target_sizes.just),
-        ("retune", "primes"): fmt.cents_map(tun.retuning_map),
+        ("retune", "primes"): fmt.cents_map(tuning_map.retuning_map),
         ("retune", "commas"): fmt.cents_list(list(core.comma_sizes.errors) + un.errors),
         ("retune", "detempering"): fmt.cents_list(core.detemper_sizes.errors),
         ("retune", "targets"): fmt.cents_list(core.target_sizes.errors),
@@ -142,7 +142,7 @@ def _held_values(context: _Ctx) -> dict:
     held = context.held
     held_ratios = context.core.held_ratios
     fmt = context.fmt
-    held_sizes = interval_sizes(context.core.tun, held_ratios, db)
+    held_sizes = interval_sizes(context.core.tuning_map, held_ratios, db)
     held_mapped = mapped_intervals(s.mapping, held_ratios, db)
     canon_held_mapped = mapped_intervals(context.canon.mapping, held_ratios, db)
     return {
@@ -165,7 +165,7 @@ def _interest_values(context: _Ctx) -> dict:
     interest_ratios = comma_ratios(interest, db)
     interest_mapped = mapped_intervals(s.mapping, interest_ratios, db)
     canon_interest_mapped = mapped_intervals(context.canon.mapping, interest_ratios, db)
-    interest_sizes = interval_sizes(context.core.tun, interest_ratios, db)
+    interest_sizes = interval_sizes(context.core.tuning_map, interest_ratios, db)
     return {
         ("vectors", "interest"): _ket_list(interest, "⟩", wrap=False),
         ("mapping", "interest"): _ket_list(zip(*interest_mapped, strict=False), "}", wrap=False),

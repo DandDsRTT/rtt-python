@@ -727,8 +727,8 @@ def test_a_held_octave_scheme_holds_the_octave_in_target_mode():
     spec = service.resolve_tuning_scheme(editor.tuning_scheme)
     assert spec.held_intervals == "octave"  # the hold survived the target-prefixing
     assert spec.target_intervals == editor.target_spec  # ...and it is target-based, not all-interval
-    tun = service.tuning(editor.state.mapping, editor.tuning_scheme, editor.state.domain_basis)
-    assert abs(tun.tuning_map[0] - 1200.0) < 1e-6  # prime 2 pinned exactly just
+    tuning_map = service.tuning(editor.state.mapping, editor.tuning_scheme, editor.state.domain_basis)
+    assert abs(tuning_map.tuning_map[0] - 1200.0) < 1e-6  # prime 2 pinned exactly just
 
 
 def test_all_interval_toggle_off_keeps_a_destretched_modifier():
@@ -1639,9 +1639,9 @@ def test_a_unison_target_does_not_break_simplicity_weighting():
     editor = Editor()
     editor.set_weight_slope("simplicity-weight")
     editor.set_target_override_vectors([[0, 0, 0], [-1, 1, 0]])  # 1/1 and 3/2
-    tun = service.tuning(editor.state.mapping, editor.tuning_scheme, editor.state.domain_basis,
+    tuning_map = service.tuning(editor.state.mapping, editor.tuning_scheme, editor.state.domain_basis,
                          targets=editor.target_override)
-    assert len(tun.tuning_map) == 3 and all(v == v and abs(v) < 1e6 for v in tun.tuning_map)
+    assert len(tuning_map.tuning_map) == 3 and all(v == v and abs(v) < 1e6 for v in tuning_map.tuning_map)
 
 
 def test_a_domain_change_forgets_stale_held_interest_and_prescaler():

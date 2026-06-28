@@ -39,7 +39,7 @@ class IntervalSet:
 
 @dataclass(frozen=True)
 class Tuning:
-    tun: object
+    tuning_map: object
     ss_tun: object
     from_generators: bool
     target_weights: object
@@ -244,9 +244,9 @@ def _dims(b) -> Dims:
 
 def _tuning(b) -> Tuning:
     return Tuning(
-        tun=b.tun,
+        tuning_map=b.tuning_map,
         ss_tun=None,
-        from_generators=b._tun_from_generators,
+        from_generators=b._tuning_map_from_generators,
         target_weights=b.target_weights,
         target_sizes=b.target_sizes,
         held_sizes=b.held_sizes,

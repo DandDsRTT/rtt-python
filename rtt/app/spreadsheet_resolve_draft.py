@@ -163,8 +163,8 @@ class ResolveDraft:
     ss_proj_interest: object = None
     ss_unchanged: object = None
     ss_unchanged_mapped: object = None
-    tun: object = None
-    _tun_from_generators: object = None
+    tuning_map: object = None
+    _tuning_map_from_generators: object = None
     unchanged_complexities: object = None
     unchanged_basis: object = None
     unchanged_ratios: object = None
