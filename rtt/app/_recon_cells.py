@@ -76,6 +76,35 @@ def attach_hover_help(rec, wrap, cell_box) -> None:
                 rec.cells[cell_box.id].guide_help_text = (gh.text, gh_pt.text)
 
 
+def draft_cancel_eid(cell_box):
+    by_kind = {
+        "mapping": "map_minus:pending",
+        "commacell": "comma_minus:pending",
+        "interestcell": "interest_minus:pending",
+        "heldcell": "held_minus:pending",
+        "targetcell": "target_minus:pending",
+    }
+    if cell_box.kind in by_kind:
+        return by_kind[cell_box.kind]
+    by_head = {
+        "comma": "comma_minus:pending",
+        "interest": "interest_minus:pending",
+        "held": "held_minus:pending",
+        "target": "target_minus:pending",
+        "gen": "map_minus:pending",
+        "prime": "element_minus:pending",
+        "basis": "element_minus:basis:pending",
+    }
+    return by_head.get(cell_box.id.split(":")[0])
+
+
+def _draft_escape_js(cancel_eid):
+    return (
+        f"(e) => {{const b=document.querySelector('[data-eid=\"{cancel_eid}\"] .rtt-glyph');"
+        "if(b){e.preventDefault();b.click();}}"
+    )
+
+
 def wire_cell_input(rec, wrap, cell_box) -> None:
     if cell_box.kind.endswith(("plus", "minus")):
         wrap.on("mousedown", js_handler="(e) => e.preventDefault()")
@@ -83,6 +112,7 @@ def wire_cell_input(rec, wrap, cell_box) -> None:
     if edit_input is not None:
         den = rec.cells[cell_box.id].value.den_input
         guard = _STACKED_EXIT_JS if den is not None else None
+        cancel_eid = draft_cancel_eid(cell_box) if cell_box.pending else None
         for fld in (edit_input, den) if den is not None else (edit_input,):
             fld.on(
                 "focus",
@@ -93,6 +123,8 @@ def wire_cell_input(rec, wrap, cell_box) -> None:
                 "blur", lambda _=None, cid=cell_box.id: rec._cb.on_cell_blur(cid), js_handler=guard
             )
             fld.on("keydown.enter", js_handler="(e) => e.target.blur()")
+            if cancel_eid is not None:
+                fld.on("keydown.escape", js_handler=_draft_escape_js(cancel_eid))
     if cell_box.kind in _WHEEL_STEPS:
         wrap.on(
             "wheel",

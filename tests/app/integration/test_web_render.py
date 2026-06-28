@@ -15,6 +15,7 @@ Python-side parallel of the data-eid the JS reconciler uses).
 import asyncio
 import copy
 import logging
+import re
 import sys
 from fractions import Fraction
 from types import SimpleNamespace
@@ -2698,6 +2699,34 @@ async def test_opening_a_mapping_row_draft_previews_the_dropped_comma(user: User
     _click_glyph(user, "map_minus:pending")                  # cancel the draft
     await user.should_see(marker="cell:comma:0:0")
     assert "rtt-preview-remove" not in _wrap_classes(user, "cell:comma:0:0")
+
+
+def _escape_target(user: User, cell_id: str) -> str:
+    """The data-eid the cell's keydown.escape js_handler clicks (the draft's − cancel button).
+    The handler is js-only — the in-process User plugin can't run it, so lock the wiring
+    structurally the way the typed-limit keyup guard does; clicking the − itself is covered
+    by the *_minus:pending cancel tests."""
+    listeners = list(_cell_child(user, cell_id)._event_listeners.values())
+    esc = next(listener for listener in listeners if listener.type == "keydown.escape")
+    m = re.search(r'data-eid="([^"]+)"', esc.js_handler)
+    return m.group(1)
+
+
+async def test_a_fresh_comma_draft_wires_escape_to_the_drafts_cancel_button(user: User) -> None:
+    await user.open("/")
+    _click_glyph(user, "comma_plus")
+    await user.should_see(marker="comma:pending")
+    assert _escape_target(user, "comma:pending") == "comma_minus:pending"
+    assert _escape_target(user, "cell:comma:0:1") == "comma_minus:pending"
+
+
+async def test_a_fresh_mapping_row_draft_wires_escape_to_the_drafts_cancel_button(
+    user: User,
+) -> None:
+    await user.open("/")
+    _click_glyph(user, "gen_plus")
+    await user.should_see(marker="cell:mapping:2:0")
+    assert _escape_target(user, "cell:mapping:2:0") == "map_minus:pending"
 
 
 async def test_hovering_a_comma_minus_previews_the_born_generator(user: User) -> None:
