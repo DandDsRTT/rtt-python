@@ -117,14 +117,14 @@ def emit_controls(resolved, geometry, ctx) -> EmitResult:
 
 def emit_tile_toggles(geometry, ctx) -> EmitResult:
     cells: list = []
-    for _bid, rkey, ckey in geometry.tiles:
-        if ((rkey, ckey) in geometry.declared_tiles
-                and rkey in geometry.rows and ckey in geometry.col_x
-                and query.row_open(geometry, ctx.collapsed, rkey) and query.col_open(geometry, ctx.collapsed, ckey)):
-            glyph = _fold_glyph(f"tile:{rkey}:{ckey}" in ctx.collapsed)
-            tog_x, _tw = query.tile_span_box(geometry, rkey, ckey)
-            cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}",
-                                 tog_x - PAD + TOGGLE_INSET, geometry.rows[rkey].tile_top - PAD + TOGGLE_INSET,
+    for _bid, row_key, column_key in geometry.tiles:
+        if ((row_key, column_key) in geometry.declared_tiles
+                and row_key in geometry.rows and column_key in geometry.col_x
+                and query.row_open(geometry, ctx.collapsed, row_key) and query.col_open(geometry, ctx.collapsed, column_key)):
+            glyph = _fold_glyph(f"tile:{row_key}:{column_key}" in ctx.collapsed)
+            tog_x, _tw = query.tile_span_box(geometry, row_key, column_key)
+            cells.append(CellBox(f"toggle:tile:{row_key}:{column_key}",
+                                 tog_x - PAD + TOGGLE_INSET, geometry.rows[row_key].tile_top - PAD + TOGGLE_INSET,
                                  TOGGLE, TOGGLE, "tiletoggle", text=glyph))
     return EmitResult(cells=tuple(cells))
 
@@ -149,15 +149,15 @@ def _preset_locked(resolved, ctx, name: str) -> bool:
     return False
 
 
-def _control_box(cells, blocks, resolved, geometry, box_id: str, ckey: str, top, cap_w, label,
+def _control_box(cells, blocks, resolved, geometry, box_id: str, column_key: str, top, cap_w, label,
                  disabled: bool = False, scheme_btn: bool = False, form_chooser=None):
     form_label = form_chooser[1] if form_chooser else None
-    dropdown_w, label_h, box_h = query.control_dims(geometry, ckey, cap_w, label, scheme_btn, form_label)
-    box_x, box_y = geometry.col_x[ckey], top + BOX_OUTER
-    blocks.append(Block(box_id, box_x, box_y, geometry.col_w[ckey], box_h, boxed=True))
+    dropdown_w, label_h, box_h = query.control_dims(geometry, column_key, cap_w, label, scheme_btn, form_label)
+    box_x, box_y = geometry.col_x[column_key], top + BOX_OUTER
+    blocks.append(Block(box_id, box_x, box_y, geometry.col_w[column_key], box_h, boxed=True))
     ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
     if scheme_btn:
-        _emit_scheme_button(cells, ctrl_x, ctrl_y, ckey)
+        _emit_scheme_button(cells, ctrl_x, ctrl_y, column_key)
         ctrl_y += SCHEME_BTN_SQ + BAND_GAP
     if label:
         cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
@@ -172,24 +172,24 @@ def _control_box(cells, blocks, resolved, geometry, box_id: str, ckey: str, top,
     return ctrl_x, dropdown_w, ctrl_y
 
 
-def _emit_scheme_button(cells, x, y, ckey: str) -> None:
-    cells.append(CellBox(f"scheme:{ckey}", x, y, SCHEME_BTN_SQ, SCHEME_BTN_SQ, "scheme_button", text="✕"))
+def _emit_scheme_button(cells, x, y, column_key: str) -> None:
+    cells.append(CellBox(f"scheme:{column_key}", x, y, SCHEME_BTN_SQ, SCHEME_BTN_SQ, "scheme_button", text="✕"))
     label_y = y + (SCHEME_BTN_SQ - CAPTION_LINE) / 2
-    cells.append(CellBox(f"scheme:{ckey}:label", x + SCHEME_BTN_SQ + 2, label_y, SCHEME_LABEL_W,
+    cells.append(CellBox(f"scheme:{column_key}:label", x + SCHEME_BTN_SQ + 2, label_y, SCHEME_LABEL_W,
                          CAPTION_LINE, "caption", text="return to scheme", align="left"))
 
 
-def _emit_preset(cells, blocks, resolved, geometry, ctx, preset_text, cid, name, rkey, ckey, label):
-    if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
+def _emit_preset(cells, blocks, resolved, geometry, ctx, preset_text, cid, name, row_key, column_key, label):
+    if not query.tile_open(geometry, ctx.collapsed, row_key, column_key):
         return
     if geometry.size_factor or resolved.scalars.prescaler_is_matrix:
         label = _pretransform_label(label)
-    top = query.ptext_band_y(geometry, rkey) + geometry.rows[rkey].ptext
+    top = query.ptext_band_y(geometry, row_key) + geometry.rows[row_key].ptext
     disabled = (name == "target" and service.is_all_interval(ctx.tuning_scheme)) \
         or _preset_locked(resolved, ctx, name)
-    fc = next((fn for fn, rk, ck, _l in FORM_CHOOSERS if rk == rkey and ck == ckey), None)
-    form_chooser = (f"formchooser:{fc}", "form") if (fc and query.preset_form_label(resolved, name, rkey, ckey)) else None
-    cx, cw, cy = _control_box(cells, blocks, resolved, geometry, f"block:{cid}", ckey, top, query.preset_cap(name), label,
+    fc = next((fn for fn, rk, ck, _l in FORM_CHOOSERS if rk == row_key and ck == column_key), None)
+    form_chooser = (f"formchooser:{fc}", "form") if (fc and query.preset_form_label(resolved, name, row_key, column_key)) else None
+    cx, cw, cy = _control_box(cells, blocks, resolved, geometry, f"block:{cid}", column_key, top, query.preset_cap(name), label,
                               disabled=disabled, scheme_btn=(name == "projection"),
                               form_chooser=form_chooser)
     cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
@@ -211,13 +211,13 @@ def _emit_presets(cells, blocks, resolved, geometry, ctx) -> None:
                           ctx.settings["terminology"]) or "",
                       "prescaler": resolved.labels.realized_prescaler or "",
                       "projection": resolved.scalars.displayed_projection_name or ""}
-    for name, rkey, ckey, label in PRESETS:
-        col = "ssprimes" if name == "prescaler" and resolved.flags.superspace else ckey
-        _emit_preset(cells, blocks, resolved, geometry, ctx, preset_text, f"preset:{name}", name, rkey, col, label)
-    for name, rkey, ckey, label in PRESET_COPIES:
-        col = "ssgens" if (name == "tuning" and ckey == "gens"
-                           and resolved.flags.superspace_generators) else ckey
-        _emit_preset(cells, blocks, resolved, geometry, ctx, preset_text, f"preset:{name}:{col}", name, rkey, col, label)
+    for name, row_key, column_key, label in PRESETS:
+        col = "ssprimes" if name == "prescaler" and resolved.flags.superspace else column_key
+        _emit_preset(cells, blocks, resolved, geometry, ctx, preset_text, f"preset:{name}", name, row_key, col, label)
+    for name, row_key, column_key, label in PRESET_COPIES:
+        col = "ssgens" if (name == "tuning" and column_key == "gens"
+                           and resolved.flags.superspace_generators) else column_key
+        _emit_preset(cells, blocks, resolved, geometry, ctx, preset_text, f"preset:{name}:{col}", name, row_key, col, label)
 
 
 def _emit_all_interval_check_fallback(cells, resolved, geometry, ctx) -> None:
@@ -230,39 +230,39 @@ def _emit_all_interval_check_fallback(cells, resolved, geometry, ctx) -> None:
 
 def _emit_form_choosers(cells, blocks, resolved, geometry, ctx) -> None:
     if resolved.flags.form_controls and not resolved.flags.presets:
-        for name, rkey, ckey, label in FORM_CHOOSERS:
-            if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
+        for name, row_key, column_key, label in FORM_CHOOSERS:
+            if not query.tile_open(geometry, ctx.collapsed, row_key, column_key):
                 continue
-            top = query.ptext_band_y(geometry, rkey) + geometry.rows[rkey].ptext + geometry.rows[rkey].pre
-            cx, cw, cy = _control_box(cells, blocks, resolved, geometry, f"block:formchooser:{name}", ckey, top, PRESET_W, label)
+            top = query.ptext_band_y(geometry, row_key) + geometry.rows[row_key].ptext + geometry.rows[row_key].pre
+            cx, cw, cy = _control_box(cells, blocks, resolved, geometry, f"block:formchooser:{name}", column_key, top, PRESET_W, label)
             cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser",
                                  text=resolved.canon.mapping_form_key if name == "mapping" else resolved.canon.comma_basis_form_key))
 
 
 def _emit_scheme_buttons(cells, blocks, resolved, geometry, ctx) -> None:
     if ctx.settings["projection"] and not resolved.flags.presets:
-        for ckey in ("primes", "gens"):
-            if not query.tile_open(geometry, ctx.collapsed, "projection", ckey):
+        for column_key in ("primes", "gens"):
+            if not query.tile_open(geometry, ctx.collapsed, "projection", column_key):
                 continue
             top = query.ptext_band_y(geometry, "projection") + geometry.rows["projection"].ptext
             box_y = top + BOX_OUTER
-            blocks.append(Block(f"block:scheme:{ckey}", geometry.col_x[ckey], box_y, geometry.col_w[ckey],
+            blocks.append(Block(f"block:scheme:{column_key}", geometry.col_x[column_key], box_y, geometry.col_w[column_key],
                                 2 * BOX_INNER + SCHEME_BTN_SQ, boxed=True))
-            _emit_scheme_button(cells, geometry.col_x[ckey] + BOX_INNER, box_y + BOX_INNER, ckey)
+            _emit_scheme_button(cells, geometry.col_x[column_key] + BOX_INNER, box_y + BOX_INNER, column_key)
 
 
 def _emit_ptext_band(cells, resolved, geometry, ctx) -> None:
     if resolved.flags.plain_text_values:
-        for (rkey, ckey), text in geometry.ptext_strings.items():
-            if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
+        for (row_key, column_key), text in geometry.ptext_strings.items():
+            if not query.tile_open(geometry, ctx.collapsed, row_key, column_key):
                 continue
-            if ((rkey, ckey) == ("vectors", "commas") and resolved.commas.pending is not None) \
-                    or ((rkey, ckey) == ("vectors", "targets") and resolved.targets.pending is not None) \
-                    or ((rkey, ckey) == ("mapping", "primes") and ctx.pending_mapping_row is not None):
+            if ((row_key, column_key) == ("vectors", "commas") and resolved.commas.pending is not None) \
+                    or ((row_key, column_key) == ("vectors", "targets") and resolved.targets.pending is not None) \
+                    or ((row_key, column_key) == ("mapping", "primes") and ctx.pending_mapping_row is not None):
                 kind = "ptextpending"
-            elif query.ptext_editable(resolved, rkey, ckey) and (ckey != "targets" or resolved.scalars.targets_editable):
+            elif query.ptext_editable(resolved, row_key, column_key) and (column_key != "targets" or resolved.scalars.targets_editable):
                 kind = "ptextedit"
             else:
                 kind = "ptext"
-            cells.append(CellBox(f"ptext:{rkey}:{ckey}", geometry.col_x[ckey], query.ptext_band_y(geometry, rkey),
-                                 geometry.col_w[ckey], query.ptext_height(resolved, rkey, ckey), kind, text=text))
+            cells.append(CellBox(f"ptext:{row_key}:{column_key}", geometry.col_x[column_key], query.ptext_band_y(geometry, row_key),
+                                 geometry.col_w[column_key], query.ptext_height(resolved, row_key, column_key), kind, text=text))

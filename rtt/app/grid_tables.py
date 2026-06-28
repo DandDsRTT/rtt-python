@@ -16,15 +16,15 @@ COUNTS = (
     ("commas", "n", "nullity"),
     ("targets", "k", "target interval count"),
 )
-COUNTS_TILES = tuple((f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in COUNTS)
+COUNTS_TILES = tuple((f"block:counts:{column_key}", "counts", column_key) for column_key, *_ in COUNTS)
 
 OPTIMIZATION_COUNTS = (("held", "h", "held interval count"),)
 OPTIMIZATION_COUNTS_TILES = tuple(
-    (f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in OPTIMIZATION_COUNTS
+    (f"block:counts:{column_key}", "counts", column_key) for column_key, *_ in OPTIMIZATION_COUNTS
 )
 DETEMPERING_COUNTS = (("detempering", "r", "rank"),)
 DETEMPERING_COUNTS_TILES = tuple(
-    (f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in DETEMPERING_COUNTS
+    (f"block:counts:{column_key}", "counts", column_key) for column_key, *_ in DETEMPERING_COUNTS
 )
 
 SUPERSPACE_COUNTS = (
@@ -32,7 +32,7 @@ SUPERSPACE_COUNTS = (
     ("ssprimes", "dL", "superspace dimensionality"),
 )
 SUPERSPACE_COUNTS_TILES = tuple(
-    (f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in SUPERSPACE_COUNTS
+    (f"block:counts:{column_key}", "counts", column_key) for column_key, *_ in SUPERSPACE_COUNTS
 )
 
 CAPTIONS = {
@@ -120,8 +120,8 @@ CAPTIONS = {
     ("weight", "targets"): "target interval weight list",
     ("damage", "targets"): "target interval damage list",
     **{
-        ("counts", ckey): name
-        for ckey, _sym, name in COUNTS
+        ("counts", column_key): name
+        for column_key, _sym, name in COUNTS
         + OPTIMIZATION_COUNTS
         + DETEMPERING_COUNTS
         + SUPERSPACE_COUNTS
@@ -604,7 +604,7 @@ class Band:
 
 
 def _carrier_rows(table):
-    return frozenset(rkey for rkey, _ckey in table)
+    return frozenset(row_key for row_key, _ckey in table)
 
 
 BANDS = {
@@ -617,8 +617,8 @@ BANDS = {
         Band("frame", frozenset({"mapping", "canon", "vectors", "prescaling",
                                  "ss_vectors", "ss_mapping", "ss_projection", "projection"})),
         Band("chart", frozenset({"retune", "weight", "damage"})),
-        Band("preset", frozenset(rkey for _name, rkey, _ckey, _label in PRESETS + PRESET_COPIES)),
-        Band("form_chooser", frozenset(rkey for _name, rkey, _ckey, _label in FORM_CHOOSERS)),
+        Band("preset", frozenset(row_key for _name, row_key, _ckey, _label in PRESETS + PRESET_COPIES)),
+        Band("form_chooser", frozenset(row_key for _name, row_key, _ckey, _label in FORM_CHOOSERS)),
     )
 }
 

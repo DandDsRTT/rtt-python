@@ -69,10 +69,10 @@ def emit_counts_row(resolved, geometry, ctx) -> EmitResult:
     cardinality = {"gens": resolved.dims.r, "primes": resolved.dims.d, "commas": ctx.state.n, "targets": resolved.dims.k, "held": resolved.dims.nh,
                    "detempering": resolved.dims.r,
                    "ssgens": resolved.dims.rL, "ssprimes": resolved.dims.dL}
-    for ckey, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
-        if not query.tile_open(geometry, ctx.collapsed, "counts", ckey):
+    for column_key, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
+        if not query.tile_open(geometry, ctx.collapsed, "counts", column_key):
             continue
-        if ckey == "commas" and resolved.unchanged.shown:
+        if column_key == "commas" and resolved.unchanged.shown:
             comma_half_w = resolved.dims.nc * COL_W + resolved.unchanged.empty_comma_w
             if comma_half_w:
                 comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_w else query.comma_left(geometry, resolved, 0)
@@ -81,9 +81,9 @@ def emit_counts_row(resolved, geometry, ctx) -> EmitResult:
             cells.append(CellBox("count:commas:u", query.comma_left(geometry, resolved, resolved.dims.nc_shown), geometry.rows["counts"].y, resolved.dims.nu * COL_W, ROW_H,
                                  "count", text=f"{_count_sym('u')} = {resolved.dims.nu}"))
             continue
-        cnt_x, cnt_w = query.tile_span_box(geometry, "counts", ckey)
-        cells.append(CellBox(f"count:{ckey}", cnt_x, geometry.rows["counts"].y, cnt_w, ROW_H,
-                             "count", text=f"{_count_sym(sym)} = {cardinality[ckey]}"))
+        cnt_x, cnt_w = query.tile_span_box(geometry, "counts", column_key)
+        cells.append(CellBox(f"count:{column_key}", cnt_x, geometry.rows["counts"].y, cnt_w, ROW_H,
+                             "count", text=f"{_count_sym(sym)} = {cardinality[column_key]}"))
     return EmitResult(cells=tuple(cells))
 
 
@@ -157,8 +157,8 @@ def emit_quantities_row(resolved, geometry, ctx) -> EmitResult:
         return EmitResult()
     qy = geometry.rows["quantities"].y
 
-    def branch_minus(cid, ckey, i, kind, **kw):
-        cells.append(CellBox(cid, query.sub_axis_x(geometry, ckey, i) - COL_W / 2, geometry.fanout_y, COL_W,
+    def branch_minus(cid, column_key, i, kind, **kw):
+        cells.append(CellBox(cid, query.sub_axis_x(geometry, column_key, i) - COL_W / 2, geometry.fanout_y, COL_W,
                              qy - geometry.fanout_y, kind, **kw))
 
     _emit_qty_gens(cells, resolved, geometry, ctx, qy, branch_minus)
@@ -281,9 +281,9 @@ def _emit_qty_list(cells, resolved, q: _QtyList, qy: float, branch_minus) -> Non
 def _emit_qty_grips(cells, resolved, geometry, ctx) -> None:
     grip_top = geometry.branch_top_y + GAP - PAD
     counts = {"commas": resolved.dims.nc, "targets": resolved.dims.k, "held": resolved.dims.nh, "interest": resolved.dims.mi}
-    for ckey in ("commas", "targets", "held", "interest"):
-        if query.row_open(geometry, ctx.collapsed, "quantities") and query.plus_shows(geometry, resolved, ctx.collapsed, ctx.state, ckey):
-            _qty_drag_controls(cells, resolved, geometry, ckey, counts[ckey], grip_top)
+    for column_key in ("commas", "targets", "held", "interest"):
+        if query.row_open(geometry, ctx.collapsed, "quantities") and query.plus_shows(geometry, resolved, ctx.collapsed, ctx.state, column_key):
+            _qty_drag_controls(cells, resolved, geometry, column_key, counts[column_key], grip_top)
     if resolved.unchanged.shown:
         for j in range(resolved.dims.nu):
             if resolved.unchanged.basis[j] is not None:
@@ -291,24 +291,24 @@ def _emit_qty_grips(cells, resolved, geometry, ctx) -> None:
                                      grip_top, COL_W, GRIP_BAND, "colgrip", comma=j))
 
 
-def _qty_drag_controls(cells, resolved, geometry, ckey, n, grip_top) -> None:
+def _qty_drag_controls(cells, resolved, geometry, column_key, n, grip_top) -> None:
     for i in range(n):
-        cells.append(CellBox(f"grip:{ckey}:{i}", query.sub_axis_x(geometry, ckey, i) - COL_W / 2,
+        cells.append(CellBox(f"grip:{column_key}:{i}", query.sub_axis_x(geometry, column_key, i) - COL_W / 2,
                              grip_top, COL_W, GRIP_BAND, "colgrip", comma=i))
     add_w = COL_W
-    if ckey == "commas" and resolved.unchanged.shown:
+    if column_key == "commas" and resolved.unchanged.shown:
         add_w = resolved.unchanged.empty_comma_w if resolved.dims.nc_shown == 0 else V_SPLIT_GAP
-    cells.append(CellBox(f"grip:{ckey}:add", geometry.plus_stub_x[ckey] - add_w / 2,
+    cells.append(CellBox(f"grip:{column_key}:add", geometry.plus_stub_x[column_key] - add_w / 2,
                          grip_top, add_w, GRIP_BAND, "colgrip"))
 
 
 def emit_column_plus_controls(resolved, geometry) -> EmitResult:
     cells: list = []
     primes_plus = "element_plus" if resolved.flags.nonstandard_domain else "plus"
-    for ckey, cid in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
+    for column_key, cid in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
                       ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
-        if ckey in geometry.plus_stub_x:
-            cells.append(CellBox(cid, geometry.plus_stub_x[ckey] - BTN / 2, geometry.fanout_y - BTN / 2, BTN, BTN, cid))
+        if column_key in geometry.plus_stub_x:
+            cells.append(CellBox(cid, geometry.plus_stub_x[column_key] - BTN / 2, geometry.fanout_y - BTN / 2, BTN, BTN, cid))
     return EmitResult(cells=tuple(cells))
 
 
@@ -318,8 +318,8 @@ def emit_rehomed_minus_controls(resolved, geometry, ctx) -> EmitResult:
         return EmitResult()
     vtop = geometry.rows["vectors"].y
 
-    def vec_minus(cid, ckey, i, kind, **kw):
-        cells.append(CellBox(cid, query.sub_axis_x(geometry, ckey, i) - COL_W / 2, geometry.fanout_y,
+    def vec_minus(cid, column_key, i, kind, **kw):
+        cells.append(CellBox(cid, query.sub_axis_x(geometry, column_key, i) - COL_W / 2, geometry.fanout_y,
                              COL_W, vtop - geometry.fanout_y, kind, **kw))
 
     _emit_rehomed_commas(resolved, geometry, ctx, vec_minus)

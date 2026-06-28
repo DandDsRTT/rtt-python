@@ -125,10 +125,10 @@ EBK_CONVENTIONS = {
 }
 
 
-def ebk_convention(rkey: str, ckey: str, *, superspace: bool = False) -> EbkConvention:
-    if (rkey, ckey) == ("prescaling", "primes"):
+def ebk_convention(row_key: str, column_key: str, *, superspace: bool = False) -> EbkConvention:
+    if (row_key, column_key) == ("prescaling", "primes"):
         return _BASIS if superspace else _BARE_PRESCALER
-    return EBK_CONVENTIONS[(rkey, ckey)]
+    return EBK_CONVENTIONS[(row_key, column_key)]
 
 
 def render_ebk(conv: EbkConvention, items, fmt=str) -> str:

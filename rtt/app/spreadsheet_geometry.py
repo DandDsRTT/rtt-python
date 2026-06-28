@@ -92,7 +92,7 @@ def declare_tiles(resolved, ctx, interest_tiles, held_tiles, detempering_tiles):
              + TILES + UNITS_TILES + SUPERSPACE_TILES
              + interest_tiles + held_tiles + detempering_tiles + _projection_col_tiles(resolved)
              + _ss_projection_col_tiles(resolved) + _canon_col_tiles(resolved))
-    declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in tiles}
+    declared_tiles = {(row_key, column_key) for _bid, row_key, column_key in tiles}
     return tiles, _prune_declared_tiles(declared_tiles, resolved, ctx)
 
 
@@ -190,17 +190,17 @@ def symbol_floor(geometry, resolved, key: str):
     if not (resolved.flags.symbols or resolved.flags.equivalences):
         return 0
     floor = 0
-    for (rkey, ckey), glyph in SYMBOLS.items():
-        if ckey != key or (rkey, ckey) not in geometry.declared_tiles:
+    for (row_key, column_key), glyph in SYMBOLS.items():
+        if column_key != key or (row_key, column_key) not in geometry.declared_tiles:
             continue
         equiv = ""
         if resolved.flags.equivalences:
-            equiv = EQUIVALENCES.get((rkey, ckey), "")
-            if resolved.flags.form_subscript and (rkey, ckey) in FORM_EQUIVALENCES:
-                equiv = FORM_EQUIVALENCES[(rkey, ckey)]
-            if (rkey, ckey) == ("projection", "primes"):
+            equiv = EQUIVALENCES.get((row_key, column_key), "")
+            if resolved.flags.form_subscript and (row_key, column_key) in FORM_EQUIVALENCES:
+                equiv = FORM_EQUIVALENCES[(row_key, column_key)]
+            if (row_key, column_key) == ("projection", "primes"):
                 equiv += query.projection_superspace_tail(resolved)
-        sub_glyph = query.form_subscripted(resolved, glyph, rkey, ckey)
+        sub_glyph = query.form_subscripted(resolved, glyph, row_key, column_key)
         floor = max(floor, _min_width_for_lines(sub_glyph + equiv, 1, SYMBOL_FONT))
     return floor
 
@@ -234,12 +234,12 @@ def commas_band_w(resolved, nc_count: int):
     return 2 * BRACKET_W + nv * COL_W + split + empty
 
 
-def _caption_wrap_w(geometry, resolved, ctx, ckey: str):
-    if ckey == "commas" and resolved.ghosts.comma:
+def _caption_wrap_w(geometry, resolved, ctx, column_key: str):
+    if column_key == "commas" and resolved.ghosts.comma:
         resting = commas_band_w(resolved, resolved.dims.nc + (1 if resolved.commas.pending is not None else 0))
-        return max(resting, caption_floor(geometry, resolved, ckey),
-                   control_floor(resolved, ctx, ckey), symbol_floor(geometry, resolved, ckey))
-    return geometry.open_col_w[ckey]
+        return max(resting, caption_floor(geometry, resolved, column_key),
+                   control_floor(resolved, ctx, column_key), symbol_floor(geometry, resolved, column_key))
+    return geometry.open_col_w[column_key]
 
 
 def caption_band(geometry, resolved, ctx, key: str, folded: bool):
@@ -263,17 +263,17 @@ def control_region_band_h(content_h):
     return 2 * BOX_OUTER + 2 * BOX_INNER + content_h
 
 
-def _control_band_h(geometry, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):
-    return 2 * BOX_OUTER + query.control_dims(geometry, ckey, cap_w, label, scheme_btn, form_label)[2]
+def _control_band_h(geometry, column_key: str, cap_w, label, scheme_btn: bool = False, form_label=None):
+    return 2 * BOX_OUTER + query.control_dims(geometry, column_key, cap_w, label, scheme_btn, form_label)[2]
 
 
 def preset_band_h(geometry, resolved, key: str):
-    return max((_control_band_h(geometry, ckey, query.preset_cap(name), label, scheme_btn=(name == "projection"),
-                               form_label=query.preset_form_label(resolved, name, rk, ckey))
-                for name, rk, ckey, label in PRESETS + PRESET_COPIES
-                if rk == key and ckey in geometry.col_w), default=0)
+    return max((_control_band_h(geometry, column_key, query.preset_cap(name), label, scheme_btn=(name == "projection"),
+                               form_label=query.preset_form_label(resolved, name, rk, column_key))
+                for name, rk, column_key, label in PRESETS + PRESET_COPIES
+                if rk == key and column_key in geometry.col_w), default=0)
 
 
 def formchooser_band_h(geometry, key: str):
-    return max((_control_band_h(geometry, ckey, PRESET_W, label)
-                for name, rk, ckey, label in FORM_CHOOSERS if rk == key and ckey in geometry.col_w), default=0)
+    return max((_control_band_h(geometry, column_key, PRESET_W, label)
+                for name, rk, column_key, label in FORM_CHOOSERS if rk == key and column_key in geometry.col_w), default=0)

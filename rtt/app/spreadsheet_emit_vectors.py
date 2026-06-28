@@ -127,11 +127,11 @@ def _emit_vectors_detempering_col(cells, resolved, geometry) -> None:
 def _emit_vectors_int_handles(cells, resolved, geometry, ctx) -> None:
     if "vectors" in geometry.rows and geometry.rows["vectors"].int_handle_top is not None:
         hy = geometry.rows["vectors"].int_handle_top
-        for group, count, col_left, ckey in (("comma", resolved.dims.nc, lambda i: query.comma_left(geometry, resolved, i), "commas"),
+        for group, count, col_left, column_key in (("comma", resolved.dims.nc, lambda i: query.comma_left(geometry, resolved, i), "commas"),
                                              ("target", resolved.dims.k, lambda i: query.target_left(geometry, i), "targets"),
                                              ("held", resolved.dims.nh, lambda i: query.held_left(geometry, i), "held"),
                                              ("interest", resolved.dims.mi, lambda i: query.interest_left(geometry, i), "interest")):
-            if count >= 2 and query.tile_open(geometry, ctx.collapsed, "vectors", ckey) and (ckey != "targets" or resolved.scalars.targets_editable):
+            if count >= 2 and query.tile_open(geometry, ctx.collapsed, "vectors", column_key) and (column_key != "targets" or resolved.scalars.targets_editable):
                 for i in range(count):
                     cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), hy, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
 
@@ -232,22 +232,22 @@ def _emit_ss_vector_lists(cells, resolved, geometry, ctx) -> None:
 
 
 def _emit_ss_vector_list_lift(cells, resolved, geometry, ctx, row) -> None:
-    ckey, vectors, n, left, draft = row
+    column_key, vectors, n, left, draft = row
     cols = tuple(vectors)[:n]
-    if not (query.row_open(geometry, ctx.collapsed, "ss_vectors") and query.tile_open(geometry, ctx.collapsed, "ss_vectors", ckey)):
+    if not (query.row_open(geometry, ctx.collapsed, "ss_vectors") and query.tile_open(geometry, ctx.collapsed, "ss_vectors", column_key)):
         return
     lifted = service.lift_vectors_to_superspace(resolved.dims.elements, cols)
     for c in range(len(lifted)):
         for p in range(resolved.dims.dL):
             cells.append(CellBox(
-                f"cell:ss_vectors:{ckey}:{p}:{c}", left(c), query.ss_vec_top(geometry, p),
+                f"cell:ss_vectors:{column_key}:{p}:{c}", left(c), query.ss_vec_top(geometry, p),
                 COL_W, ROW_H, "vec", text=str(lifted[c][p]), prime=p, comma=c,
-                unit=query.cell_unit(resolved, "ss_vectors", ckey, prime=p)))
+                unit=query.cell_unit(resolved, "ss_vectors", column_key, prime=p)))
     if draft:
         for p in range(resolved.dims.dL):
-            cells.append(CellBox(f"cell:ss_vectors:{ckey}:{p}:draft", left(n), query.ss_vec_top(geometry, p),
+            cells.append(CellBox(f"cell:ss_vectors:{column_key}:{p}:draft", left(n), query.ss_vec_top(geometry, p),
                                  COL_W, ROW_H, "vec", text="", prime=p, pending=True))
-    if ckey == "commas":
+    if column_key == "commas":
         for j in range(resolved.dims.nu):
             uj = resolved.projection.ss_unchanged[j]
             for p in range(resolved.dims.dL):
@@ -258,22 +258,22 @@ def _emit_ss_vector_list_lift(cells, resolved, geometry, ctx, row) -> None:
 
 
 def _emit_ss_vector_list_map(cells, resolved, geometry, ctx, row) -> None:
-    ckey, vectors, n, left, draft = row
+    column_key, vectors, n, left, draft = row
     cols = tuple(vectors)[:n]
-    if not (query.row_open(geometry, ctx.collapsed, "ss_mapping") and query.tile_open(geometry, ctx.collapsed, "ss_mapping", ckey)):
+    if not (query.row_open(geometry, ctx.collapsed, "ss_mapping") and query.tile_open(geometry, ctx.collapsed, "ss_mapping", column_key)):
         return
     mapped = service.map_vectors_into_superspace_generators(ctx.state, cols)
     for c in range(len(mapped)):
         for g in range(resolved.dims.rL):
             cells.append(CellBox(
-                f"cell:ss_mapping:{ckey}:{g}:{c}", left(c), query.ss_map_top(geometry, g),
+                f"cell:ss_mapping:{column_key}:{g}:{c}", left(c), query.ss_map_top(geometry, g),
                 COL_W, ROW_H, "mapped", text=str(mapped[c][g]), gen=g, comma=c,
-                unit=query.cell_unit(resolved, "ss_mapping", ckey, gen=g)))
+                unit=query.cell_unit(resolved, "ss_mapping", column_key, gen=g)))
     if draft:
         for g in range(resolved.dims.rL):
-            cells.append(CellBox(f"cell:ss_mapping:{ckey}:{g}:draft", left(n), query.ss_map_top(geometry, g),
+            cells.append(CellBox(f"cell:ss_mapping:{column_key}:{g}:draft", left(n), query.ss_map_top(geometry, g),
                                  COL_W, ROW_H, "mapped", text="", gen=g, pending=True))
-    if ckey == "commas":
+    if column_key == "commas":
         for j in range(resolved.dims.nu):
             uj = resolved.projection.ss_unchanged_mapped[j]
             for g in range(resolved.dims.rL):
@@ -354,15 +354,15 @@ def _emit_ss_proj_commas(cells, resolved, geometry, ctx) -> None:
 def emit_identity_objects(resolved, geometry, ctx) -> EmitResult:
     cells: list = []
     _emit_identity_vec_primes(cells, resolved, geometry, ctx)
-    for ckey, prefix, left in (("gens", "selfmap", lambda k: query.gen_left(geometry, k)),
+    for column_key, prefix, left in (("gens", "selfmap", lambda k: query.gen_left(geometry, k)),
                                ("detempering", "mapped_detempering", lambda k: query.detempering_left(geometry, k))):
-        if query.tile_open(geometry, ctx.collapsed, "mapping", ckey):
+        if query.tile_open(geometry, ctx.collapsed, "mapping", column_key):
             for i in range(resolved.dims.r):
                 for k in range(resolved.dims.r):
                     cells.append(CellBox(
                         f"cell:{prefix}:{i}:{k}", left(k), query.map_top(geometry, i), COL_W, ROW_H,
                         "mapped", text="1" if i == k else "0", gen=i,
-                        unit=query.cell_unit(resolved, "mapping", ckey, gen=i)))
+                        unit=query.cell_unit(resolved, "mapping", column_key, gen=i)))
     _emit_identity_canongens(cells, resolved, geometry, ctx)
     return EmitResult(cells=tuple(cells))
 

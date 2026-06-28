@@ -67,38 +67,40 @@ def prescale_size_gap(geometry) -> float:
     return V_SPLIT_GAP if geometry.size_rows else 0
 
 
-def subrow_top(geometry, rkey: str, i: int) -> float:
+def subrow_top(geometry, row_key: str, i: int) -> float:
     gap = (
-        prescale_size_gap(geometry) if (rkey == "prescaling" and i >= geometry.prescale_rows) else 0
+        prescale_size_gap(geometry)
+        if (row_key == "prescaling" and i >= geometry.prescale_rows)
+        else 0
     )
-    return geometry.rows[rkey].y + i * ROW_H + gap
+    return geometry.rows[row_key].y + i * ROW_H + gap
 
 
-def cpick_band_y(geometry, rkey: str) -> float:
-    row = geometry.rows[rkey]
+def cpick_band_y(geometry, row_key: str) -> float:
+    row = geometry.rows[row_key]
     return row.y + row.h + row.frame
 
 
-def ptext_band_y(geometry, rkey: str) -> float:
-    row = geometry.rows[rkey]
+def ptext_band_y(geometry, row_key: str) -> float:
+    row = geometry.rows[row_key]
     return row.y + row.h + row.frame + row.cpick + row.sym + row.cap + row.units
 
 
-def frame_top_y(geometry, rkey: str) -> float:
-    return geometry.rows[rkey].y - FRAME_H - FRAME_GAP
+def frame_top_y(geometry, row_key: str) -> float:
+    return geometry.rows[row_key].y - FRAME_H - FRAME_GAP
 
 
-def frame_brace_y(geometry, rkey: str) -> float:
-    return geometry.rows[rkey].y + geometry.rows[rkey].h + FRAME_GAP
+def frame_brace_y(geometry, row_key: str) -> float:
+    return geometry.rows[row_key].y + geometry.rows[row_key].h + FRAME_GAP
 
 
-def separator_span(resolved, geometry, rkey: str):
-    if rkey not in FRAMED_ROWS:
-        return geometry.rows[rkey].y + (ROW_H - VAL_BRACKET_H) / 2, VAL_BRACKET_H
+def separator_span(resolved, geometry, row_key: str):
+    if row_key not in FRAMED_ROWS:
+        return geometry.rows[row_key].y + (ROW_H - VAL_BRACKET_H) / 2, VAL_BRACKET_H
     if not resolved.flags.ebk:
-        return geometry.rows[rkey].y, geometry.rows[rkey].h
-    y = frame_top_y(geometry, rkey) - FRAME_OVERHANG
-    return y, frame_brace_y(geometry, rkey) + BRACE_H + FRAME_OVERHANG - y
+        return geometry.rows[row_key].y, geometry.rows[row_key].h
+    y = frame_top_y(geometry, row_key) - FRAME_OVERHANG
+    return y, frame_brace_y(geometry, row_key) + BRACE_H + FRAME_OVERHANG - y
 
 
 def matlabel_gutter_w(geometry, group_key: str) -> float:
@@ -140,11 +142,11 @@ def tile_box(geometry, key: str):
     return geometry.col_x[key], geometry.col_w[key]
 
 
-def tile_span_box(geometry, rkey: str, ckey: str):
-    if (rkey, ckey) == ("counts", "gens") and "canongens" in geometry.col_x:
+def tile_span_box(geometry, row_key: str, column_key: str):
+    if (row_key, column_key) == ("counts", "gens") and "canongens" in geometry.col_x:
         x = geometry.col_x["canongens"]
         return x, geometry.col_x["gens"] + geometry.col_w["gens"] - x
-    return tile_box(geometry, ckey)
+    return tile_box(geometry, column_key)
 
 
 def matrix_span(geometry, resolved, group_key: str):
@@ -169,16 +171,16 @@ def comma_value_pos(resolved, i: int) -> int:
     return i if i < resolved.dims.nc else i + (resolved.dims.nc_shown - resolved.dims.nc)
 
 
-def interval_col_gap(ckey: str) -> float:
-    if ckey in ("targets", "held"):
+def interval_col_gap(column_key: str) -> float:
+    if column_key in ("targets", "held"):
         return INTERVAL_COL_GAP
-    if ckey == "interest":
+    if column_key == "interest":
         return INTERVAL_COL_GAP / 2
     return 0
 
 
-def interval_list_w(n: int, ckey: str) -> float:
-    return 2 * BRACKET_W + n * COL_W + max(n - 1, 0) * interval_col_gap(ckey)
+def interval_list_w(n: int, column_key: str) -> float:
+    return 2 * BRACKET_W + n * COL_W + max(n - 1, 0) * interval_col_gap(column_key)
 
 
 def target_left(geometry, j: int) -> float:
@@ -213,20 +215,20 @@ def ss_prime_left(geometry, p: int) -> float:
     return geometry.ssprimes_x + outer_gutter_w(geometry, "ssprimes") + BRACKET_W + p * COL_W
 
 
-def sub_axis_x(geometry, ckey: str, i: int) -> float:
-    return geometry.group_left[ckey][i] + COL_W / 2
+def sub_axis_x(geometry, column_key: str, i: int) -> float:
+    return geometry.group_left[column_key][i] + COL_W / 2
 
 
-def col_plus_x(geometry, resolved, ckey: str) -> float:
-    n = geometry.group_n[ckey]
+def col_plus_x(geometry, resolved, column_key: str) -> float:
+    n = geometry.group_n[column_key]
     if n == 0:
-        mx, mw = matrix_span(geometry, resolved, ckey)
+        mx, mw = matrix_span(geometry, resolved, column_key)
         return mx + mw / 2
-    if ckey == "commas" and resolved.unchanged.shown:
+    if column_key == "commas" and resolved.unchanged.shown:
         if resolved.dims.nc_shown == 0:
             return geometry.commas_x + BRACKET_W + resolved.unchanged.empty_comma_w / 2
         return comma_left(geometry, resolved, resolved.dims.nc_shown - 1) + COL_W + V_SPLIT_GAP / 2
-    return sub_axis_x(geometry, ckey, n - 1) + COL_W + interval_col_gap(ckey)
+    return sub_axis_x(geometry, column_key, n - 1) + COL_W + interval_col_gap(column_key)
 
 
 def col_open(geometry, collapsed, key: str) -> bool:
@@ -237,12 +239,12 @@ def row_open(geometry, collapsed, key: str) -> bool:
     return key in geometry.rows and f"row:{key}" not in collapsed
 
 
-def tile_open(geometry, collapsed, rkey: str, ckey: str) -> bool:
+def tile_open(geometry, collapsed, row_key: str, column_key: str) -> bool:
     return (
-        (rkey, ckey) in geometry.declared_tiles
-        and row_open(geometry, collapsed, rkey)
-        and col_open(geometry, collapsed, ckey)
-        and f"tile:{rkey}:{ckey}" not in collapsed
+        (row_key, column_key) in geometry.declared_tiles
+        and row_open(geometry, collapsed, row_key)
+        and col_open(geometry, collapsed, column_key)
+        and f"tile:{row_key}:{column_key}" not in collapsed
     )
 
 
@@ -266,24 +268,24 @@ def pending_draft_idx(resolved, group: str):
     }.get(group)
 
 
-def tile_unit(resolved, rkey: str, ckey: str) -> str:
-    base = UNITS.get((rkey, ckey))
+def tile_unit(resolved, row_key: str, column_key: str) -> str:
+    base = UNITS.get((row_key, column_key))
     if base is None:
         return ""
-    if rkey == "complexity":
+    if row_key == "complexity":
         return base.replace("(C)", resolved.scalars.complexity_unit)
-    if rkey == "weight":
+    if row_key == "weight":
         return resolved.scalars.weight_unit
-    if rkey == "damage":
+    if row_key == "damage":
         return resolved.scalars.damage_unit
     return base
 
 
-def cell_unit(resolved, rkey: str, ckey: str, *, gen=None, prime=None, elem=None) -> str:
+def cell_unit(resolved, row_key: str, column_key: str, *, gen=None, prime=None, elem=None) -> str:
     if not resolved.flags.cell_units:
         return ""
-    u = tile_unit(resolved, rkey, ckey)
-    superspace = rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")
+    u = tile_unit(resolved, row_key, column_key)
+    superspace = row_key.startswith("ss_") or column_key in ("ssgens", "ssprimes")
     if gen is not None:
         if superspace:
             u = u.replace(f"g{SUBSCRIPT_L}", f"g{SUBSCRIPT_L}{_sub(gen + 1)}")
@@ -308,36 +310,36 @@ def row_fans(geometry, key: str) -> bool:
     return geometry.rows[key].nsub > 1 or key in geometry.row_plus_y
 
 
-def plus_shows(geometry, resolved, collapsed, state, ckey: str) -> bool:
-    if ckey in ("interest", "held"):
-        return col_open(geometry, collapsed, ckey) and (
+def plus_shows(geometry, resolved, collapsed, state, column_key: str) -> bool:
+    if column_key in ("interest", "held"):
+        return col_open(geometry, collapsed, column_key) and (
             row_open(geometry, collapsed, "quantities") or row_open(geometry, collapsed, "vectors")
         )
-    if ckey == "targets":
+    if column_key == "targets":
         return (
             tile_open(geometry, collapsed, "quantities", "targets")
             or tile_open(geometry, collapsed, "vectors", "targets")
         ) and not resolved.scalars.all_interval
-    if ckey == "gens":
+    if column_key == "gens":
         return tile_open(geometry, collapsed, "quantities", "gens") and state.n > 0
-    if ckey == "primes":
+    if column_key == "primes":
         return tile_open(geometry, collapsed, "quantities", "primes") and (
             resolved.flags.nonstandard_domain or resolved.scalars.standard_domain
         )
-    if ckey == "commas":
+    if column_key == "commas":
         return tile_open(geometry, collapsed, "quantities", "commas") or tile_open(
             geometry, collapsed, "vectors", "commas"
         )
-    return tile_open(geometry, collapsed, "quantities", ckey) or tile_open(
-        geometry, collapsed, "vectors", ckey
+    return tile_open(geometry, collapsed, "quantities", column_key) or tile_open(
+        geometry, collapsed, "vectors", column_key
     )
 
 
-def form_subscripted(resolved, glyph: str, rkey: str, ckey: str) -> str:
+def form_subscripted(resolved, glyph: str, row_key: str, column_key: str) -> str:
     if (
         glyph
         and resolved.flags.form_subscript
-        and (rkey in FORM_SUBSCRIPT_ROWS or (rkey, ckey) in FORM_SUBSCRIPT_GENS)
+        and (row_key in FORM_SUBSCRIPT_ROWS or (row_key, column_key) in FORM_SUBSCRIPT_GENS)
     ):
         return glyph[:1] + SUBSCRIPT_C + glyph[1:]
     return glyph
@@ -354,8 +356,10 @@ def weight_simplicity_header(resolved, i: int) -> str:
     return f"{symbol} = c{_sub(i + 1)}⁻¹"
 
 
-def control_dims(geometry, ckey: str, cap_w, label, scheme_btn: bool = False, form_label=None):
-    dropdown_w = max(40, min(geometry.col_w[ckey] - 2 * BOX_INNER, cap_w))
+def control_dims(
+    geometry, column_key: str, cap_w, label, scheme_btn: bool = False, form_label=None
+):
+    dropdown_w = max(40, min(geometry.col_w[column_key] - 2 * BOX_INNER, cap_w))
     label_h = CAPTION_LINE if label else 0
     box_h = 2 * BOX_INNER + PRESET_H + label_h
     box_h += (SCHEME_BTN_SQ + BAND_GAP) if scheme_btn else 0
@@ -368,33 +372,36 @@ def preset_cap(name: str):
     return TARGET_PRESET_W if name == "target" else PRESET_W
 
 
-def preset_form_label(resolved, name: str, rkey: str, ckey: str):
+def preset_form_label(resolved, name: str, row_key: str, column_key: str):
     embeds = (
         name == "temperament"
         and resolved.flags.form_controls
-        and any(rk == rkey and ck == ckey for _n, rk, ck, _l in FORM_CHOOSERS)
+        and any(rk == row_key and ck == column_key for _n, rk, ck, _l in FORM_CHOOSERS)
     )
     return "form" if embeds else None
 
 
-def ptext_editable(resolved, rkey: str, ckey: str) -> bool:
-    if rkey == "prescaling":
-        return (rkey, ckey) == ("prescaling", "ssprimes" if resolved.flags.superspace else "primes")
-    if rkey == "tuning" and resolved.flags.superspace_generators:
-        return ckey == "ssgens"
-    return (rkey, ckey) in EDITABLE_PTEXT
+def ptext_editable(resolved, row_key: str, column_key: str) -> bool:
+    if row_key == "prescaling":
+        return (row_key, column_key) == (
+            "prescaling",
+            "ssprimes" if resolved.flags.superspace else "primes",
+        )
+    if row_key == "tuning" and resolved.flags.superspace_generators:
+        return column_key == "ssgens"
+    return (row_key, column_key) in EDITABLE_PTEXT
 
 
-def ptext_height(resolved, rkey: str, ckey: str):
-    return PTEXT_EDIT_H if ptext_editable(resolved, rkey, ckey) else PTEXT_H
+def ptext_height(resolved, row_key: str, column_key: str):
+    return PTEXT_EDIT_H if ptext_editable(resolved, row_key, column_key) else PTEXT_H
 
 
-def panel_rect(geometry, collapsed, rkey: str, ckey: str):
-    tile_c = f"tile:{rkey}:{ckey}" in collapsed
-    col_c = f"col:{ckey}" in collapsed or tile_c
-    row_c = f"row:{rkey}" in collapsed or tile_c
-    cx, cw = tile_span_box(geometry, rkey, ckey)
-    ch, cy = geometry.rows[rkey].tile_h, geometry.rows[rkey].tile_top
+def panel_rect(geometry, collapsed, row_key: str, column_key: str):
+    tile_c = f"tile:{row_key}:{column_key}" in collapsed
+    col_c = f"col:{column_key}" in collapsed or tile_c
+    row_c = f"row:{row_key}" in collapsed or tile_c
+    cx, cw = tile_span_box(geometry, row_key, column_key)
+    ch, cy = geometry.rows[row_key].tile_h, geometry.rows[row_key].tile_top
     w, px = (0, 0) if col_c else (cw, PAD)
     h, py = (0, 0) if row_c else (ch, PAD)
     bx = cx + cw / 2 if col_c else cx

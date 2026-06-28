@@ -336,9 +336,9 @@ def _group_geometry_fields(geometry, resolved):
 
 def _init_group_geometry(geometry, resolved, ctx) -> Geometry:
     geometry = replace(geometry, **_group_geometry_fields(geometry, resolved))
-    plus_stub_x = {ckey: query.col_plus_x(geometry, resolved, ckey)
-                   for ckey in ("gens", "primes", "commas", "targets", "interest", "held")
-                   if query.plus_shows(geometry, resolved, ctx.collapsed, ctx.state, ckey)}
+    plus_stub_x = {column_key: query.col_plus_x(geometry, resolved, column_key)
+                   for column_key in ("gens", "primes", "commas", "targets", "interest", "held")
+                   if query.plus_shows(geometry, resolved, ctx.collapsed, ctx.state, column_key)}
     row_plus_y = {}
     if query.tile_open(geometry, ctx.collapsed, "vectors", "quantities") and (resolved.flags.nonstandard_domain or resolved.scalars.standard_domain):
         row_plus_y["vectors"] = query.vec_top(geometry, resolved.dims.d_shown) + ROW_H / 2

@@ -1725,10 +1725,10 @@ def test_each_content_tile_has_a_top_left_fold_toggle():
     cells = {c.id: c for c in _layout().cells}
     # every (row, column) content tile carries its own fold control, in addition
     # to the per-row and per-column ones
-    for rkey, ckey in (("quantities", "primes"), ("quantities", "targets"),
+    for row_key, column_key in (("quantities", "primes"), ("quantities", "targets"),
                        ("mapping", "primes"), ("mapping", "targets"),
                        ("tuning", "primes"), ("tuning", "targets"), ("damage", "targets")):
-        assert f"toggle:tile:{rkey}:{ckey}" in cells
+        assert f"toggle:tile:{row_key}:{column_key}" in cells
     # it sits in the tile's top-left corner: above and left of the tile's content
     node = cells["toggle:tile:mapping:primes"]
     first = cells["cell:mapping:0:0"]
@@ -2230,24 +2230,24 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
     value_rows = PTEXT_ROWS - {"quantities"}
     mismatches = []
     checked = 0
-    for (rkey, ckey) in sorted(b.geometry.declared_tiles):
-        if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.inputs.collapsed, rkey, ckey):
+    for (row_key, column_key) in sorted(b.geometry.declared_tiles):
+        if row_key not in value_rows or column_key in SPINE_COLUMNS or not query.tile_open(b.geometry, b.inputs.collapsed, row_key, column_key):
             continue
-        if (rkey, ckey) not in b.geometry.ptext_strings:
+        if (row_key, column_key) not in b.geometry.ptext_strings:
             continue  # the presence test owns that failure
         # the VALUE region of the tile only — the column's x-span × the row's value-area height
-        # (rows[rkey].y .. +h). NOT panel_rect, which spans the whole tile stack (symbol / caption /
+        # (rows[row_key].y .. +h). NOT panel_rect, which spans the whole tile stack (symbol / caption /
         # plain-text band / any overlapping control box) and would pull in the band itself and stray
         # box values. Brackets / matlabels inside the value band carry no ascii-digit tokens.
-        rb, cx, cw = b.geometry.rows[rkey], b.geometry.col_x[ckey], b.geometry.col_w[ckey]
+        rb, cx, cw = b.geometry.rows[row_key], b.geometry.col_x[column_key], b.geometry.col_w[column_key]
         grid_tokens = []
         for c in lay.cells:
             if (c.text and not c.id.startswith("ptext:")
                     and cx - 2 <= c.x <= cx + cw and rb.y - 2 <= c.y <= rb.y + rb.h + 2):
                 grid_tokens += TOKEN.findall(cell_value(c.text))
-        band_tokens = TOKEN.findall(band_body(b.geometry.ptext_strings[(rkey, ckey)]))
+        band_tokens = TOKEN.findall(band_body(b.geometry.ptext_strings[(row_key, column_key)]))
         if sorted(grid_tokens) != sorted(band_tokens):
-            mismatches.append((rkey, ckey, sorted(band_tokens), sorted(grid_tokens)))
+            mismatches.append((row_key, column_key, sorted(band_tokens), sorted(grid_tokens)))
         checked += 1
     assert checked >= 60, f"config did not light enough value tiles ({checked})"
     assert not mismatches, "plain text disagrees with the grid:\n" + "\n".join(
@@ -2301,18 +2301,18 @@ def _ebk_text_convention(text):
     return ("row", g[0], g[-1], "", "")  # one bare group: a scalar list / map / genmap / lone ket
 
 
-def _ebk_grid_convention(b, lay, rkey, ckey):
+def _ebk_grid_convention(b, lay, row_key, column_key):
     """The bracket convention the GRID draws around a tile's cells, reconstructed from its frame
     bands (matrix_frame's ebktop/ebkbrace/ebkangle), per-column ket marks and bracket glyphs.
     Cell-id shape disambiguates: a per-column mark / per-row stacked bracket ends in ``:<int>``,
     a spanning matrix_frame band or an outer list wrap does not."""
-    cx, cw = b.geometry.col_x[ckey], b.geometry.col_w[ckey]
+    cx, cw = b.geometry.col_x[column_key], b.geometry.col_w[column_key]
 
     def in_tile(c):  # x-centre inside the column, and this row is the nearest row band
         if not (cx - 2 <= c.x + c.w / 2 <= cx + cw + 2):
             return False
         ccy = c.y + c.h / 2
-        return min(b.geometry.rows, key=lambda k: abs(b.geometry.rows[k].y + b.geometry.rows[k].h / 2 - ccy)) == rkey
+        return min(b.geometry.rows, key=lambda k: abs(b.geometry.rows[k].y + b.geometry.rows[k].h / 2 - ccy)) == row_key
 
     frame_top = col_marks = False
     brace = angle = False
@@ -2373,15 +2373,15 @@ def test_every_plain_text_band_uses_the_same_brackets_as_its_grid_tile():
     lay = b.layout()
     value_rows = PTEXT_ROWS - {"quantities"}
     mismatches, checked = [], 0
-    for (rkey, ckey) in sorted(b.geometry.declared_tiles):
-        if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.inputs.collapsed, rkey, ckey):
+    for (row_key, column_key) in sorted(b.geometry.declared_tiles):
+        if row_key not in value_rows or column_key in SPINE_COLUMNS or not query.tile_open(b.geometry, b.inputs.collapsed, row_key, column_key):
             continue
-        if (rkey, ckey) not in b.geometry.ptext_strings:
+        if (row_key, column_key) not in b.geometry.ptext_strings:
             continue  # presence is the other guard's job
-        text_conv = _ebk_canonical(_ebk_text_convention(b.geometry.ptext_strings[(rkey, ckey)]))
-        grid_conv = _ebk_canonical(_ebk_grid_convention(b, lay, rkey, ckey))
+        text_conv = _ebk_canonical(_ebk_text_convention(b.geometry.ptext_strings[(row_key, column_key)]))
+        grid_conv = _ebk_canonical(_ebk_grid_convention(b, lay, row_key, column_key))
         if text_conv != grid_conv:
-            mismatches.append((rkey, ckey, text_conv, grid_conv, b.geometry.ptext_strings[(rkey, ckey)]))
+            mismatches.append((row_key, column_key, text_conv, grid_conv, b.geometry.ptext_strings[(row_key, column_key)]))
         checked += 1
     assert checked >= 60, f"config did not light enough value tiles ({checked})"
     assert not mismatches, "grid and plain-text EBK brackets disagree:\n" + "\n".join(
@@ -2408,18 +2408,18 @@ def test_every_open_value_tile_declares_an_ebk_convention():
     b = _maximized_superspace_builder()
     value_rows = PTEXT_ROWS - {"quantities"}
     undeclared, mismatches, checked = [], [], 0
-    for (rkey, ckey) in sorted(b.geometry.declared_tiles):
-        if rkey not in value_rows or ckey in SPINE_COLUMNS or not query.tile_open(b.geometry, b.inputs.collapsed, rkey, ckey):
+    for (row_key, column_key) in sorted(b.geometry.declared_tiles):
+        if row_key not in value_rows or column_key in SPINE_COLUMNS or not query.tile_open(b.geometry, b.inputs.collapsed, row_key, column_key):
             continue
-        if (rkey, ckey) not in b.geometry.ptext_strings:
+        if (row_key, column_key) not in b.geometry.ptext_strings:
             continue
-        if (rkey, ckey) not in EBK_CONVENTIONS and (rkey, ckey) != ("prescaling", "primes"):
-            undeclared.append((rkey, ckey))
+        if (row_key, column_key) not in EBK_CONVENTIONS and (row_key, column_key) != ("prescaling", "primes"):
+            undeclared.append((row_key, column_key))
             continue
-        declared = _ebk_table_canonical(ebk_convention(rkey, ckey, superspace=b.resolved.flags.superspace))
-        rendered = _ebk_canonical(_ebk_text_convention(b.geometry.ptext_strings[(rkey, ckey)]))
+        declared = _ebk_table_canonical(ebk_convention(row_key, column_key, superspace=b.resolved.flags.superspace))
+        rendered = _ebk_canonical(_ebk_text_convention(b.geometry.ptext_strings[(row_key, column_key)]))
         if declared != rendered:
-            mismatches.append((rkey, ckey, declared, rendered, b.geometry.ptext_strings[(rkey, ckey)]))
+            mismatches.append((row_key, column_key, declared, rendered, b.geometry.ptext_strings[(row_key, column_key)]))
         checked += 1
     assert checked >= 60, f"config did not light enough value tiles ({checked})"
     assert not undeclared, f"open value tiles with no EBK_CONVENTIONS entry: {undeclared}"
@@ -5160,9 +5160,9 @@ def test_counts_row_sits_at_the_top_aligned_over_its_columns():
     assert cells["count:primes"].y < cells["prime:0"].y
     assert cells["count:targets"].y < cells["target:0"].y
     # each count spans its column, centred over the values like the header
-    for ckey in ("gens", "primes", "targets"):
-        assert cells[f"count:{ckey}"].x == cells[f"header:{ckey}"].x
-        assert cells[f"count:{ckey}"].w == cells[f"header:{ckey}"].w
+    for column_key in ("gens", "primes", "targets"):
+        assert cells[f"count:{column_key}"].x == cells[f"header:{column_key}"].x
+        assert cells[f"count:{column_key}"].w == cells[f"header:{column_key}"].w
 
 
 def test_counts_present_keeps_the_column_fan_out_immediately_after_the_toggle():
@@ -5242,8 +5242,8 @@ def test_every_count_sits_on_its_own_grey_panel():
     counts = [c.id for c in lay.cells if c.id.startswith("count:")]
     assert counts  # the counts row is populated
     for cid in counts:
-        ckey = cid.split(":", 1)[1]
-        panel = blocks.get(f"block:counts:{ckey}")
+        column_key = cid.split(":", 1)[1]
+        panel = blocks.get(f"block:counts:{column_key}")
         assert panel is not None, f"{cid} has no backing panel"
         assert panel.w > 0 and panel.h > 0  # a visible grey background
 
@@ -8036,13 +8036,13 @@ def test_every_derived_matrix_row_greens_its_draft_column():
                 "commas": lambda i: query.comma_left(b.geometry, b.resolved, i)}[lst]
         dx = left(committed)
         checked = 0
-        for rkey in VALUE_ROWS:
-            if rkey not in b.geometry.rows or (rkey, lst) not in b.geometry.declared_tiles:
+        for row_key in VALUE_ROWS:
+            if row_key not in b.geometry.rows or (row_key, lst) not in b.geometry.declared_tiles:
                 continue
-            top, h = b.geometry.rows[rkey].tile_top, b.geometry.rows[rkey].tile_h
+            top, h = b.geometry.rows[row_key].tile_top, b.geometry.rows[row_key].tile_h
             hit = any(abs(c.x - dx) < 7 and top - 1 <= c.y <= top + h + 1 and c.kind not in STRUCTURAL
                       for c in lay.cells)
-            assert hit, f"first {lst} draft: row {rkey!r} is blank at the draft column (the bug)"
+            assert hit, f"first {lst} draft: row {row_key!r} is blank at the draft column (the bug)"
             checked += 1
         assert checked >= minimum, f"{lst}: only {checked} rows checked (config not fully lit?)"
 
@@ -10326,8 +10326,8 @@ def _assert_ptext_cells_match(lay, pt):
     ptext_cells = [c for c in lay.cells if c.id.startswith("ptext:")]
     assert len(ptext_cells) >= 8  # the band is actually on, so the loop below isn't vacuous
     for c in ptext_cells:
-        _, rkey, ckey = c.id.split(":")
-        assert c.text == pt[(rkey, ckey)], c.id
+        _, row_key, column_key = c.id.split(":")
+        assert c.text == pt[(row_key, column_key)], c.id
 
 
 def test_ptext_band_matches_a_direct_derivation_under_a_custom_prescaler():
