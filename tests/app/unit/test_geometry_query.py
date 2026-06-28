@@ -32,8 +32,8 @@ def test_row_top_functions_are_pure_over_geometry():
     assert query.map_top(g, 2) == 100.0 + 2 * ROW_H
     assert query.projection_top(g, 1) == 200.0 + ROW_H
     assert query.canon_top(g, 0) == 300.0
-    assert query.vec_top(g, 3) == 400.0 + 3 * ROW_H
-    assert query.superspace_vec_top(g, 1) == 500.0 + ROW_H
+    assert query.vector_top(g, 3) == 400.0 + 3 * ROW_H
+    assert query.superspace_vector_top(g, 1) == 500.0 + ROW_H
     assert query.superspace_map_top(g, 1) == 600.0 + ROW_H
     assert query.superspace_projection_top(g, 2) == 700.0 + 2 * ROW_H
 

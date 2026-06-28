@@ -519,7 +519,7 @@ VALUE_KINDS: frozenset[str] = frozenset(
         "prime",
         "formcell",
         "mapped",
-        "vec",
+        "vector",
         "tuningvalue",
         "genratio",
         "commaratio",

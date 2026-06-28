@@ -100,7 +100,7 @@ class Ghosts:
     row_map: object
     row_ratio: object
     row_mapped: object
-    comma_vec: object
+    comma_vector: object
     comma_ratio: object
     comma_mapped: object
     comma_just: float
@@ -308,7 +308,7 @@ def _ghosts(b) -> Ghosts:
         row_map=b.ghost_row_map,
         row_ratio=b.ghost_row_ratio,
         row_mapped=b.ghost_row_mapped,
-        comma_vec=b.ghost_comma_vec,
+        comma_vector=b.ghost_comma_vector,
         comma_ratio=b.ghost_comma_ratio,
         comma_mapped=b.ghost_comma_mapped,
         comma_just=b.ghost_comma_just,

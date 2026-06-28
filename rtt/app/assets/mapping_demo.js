@@ -30,7 +30,7 @@
 
   // The grid holds two interval-vector spaces — prime-basis vectors and superspace-lifted vectors —
   // each in one of every interval kind (targets / held / interest / commas / unchanged / detempering).
-  const STD_VEC = /^cell:(vec:targets|held|interest|comma|unchanged|vec:detempering):/;
+  const STD_VEC = /^cell:(vector:targets|held|interest|comma|unchanged|vector:detempering):/;
   const SS_VEC = /^cell:superspace_vectors:(targets|held|interest|commas|detempering):/;
 
   // …and five transformation bands, each sending an interval vector through a matrix to a result

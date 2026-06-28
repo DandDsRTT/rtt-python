@@ -162,6 +162,6 @@ def test_empty_open_list_tiles_keep_their_outer_ebk():
         ids = {c.id for c in layout.cells}
         # the empty target column is still open across the value rows, so every one of its list
         # tiles must show its outer [] — including the prescaling 𝐿T tile that regressed.
-        for stem in ("vec:targets", "mapped", "prescaling:targets"):
+        for stem in ("vector:targets", "mapped", "prescaling:targets"):
             assert f"bracket:{stem}:l" in ids and f"bracket:{stem}:r" in ids, \
                 f"ebk={ebk}: outer bracket missing for {stem} over an empty target list"

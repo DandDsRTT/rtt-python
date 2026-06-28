@@ -23,7 +23,7 @@ def resolve_interval_sets(inputs, draft):
 def resolve_ghost_previews(inputs, draft):
     elements = draft.elements
     ghost_new = ghost_row_map = ghost_row_ratio = None
-    ghost_comma_vec = ghost_comma_ratio = None
+    ghost_comma_vector = ghost_comma_ratio = None
     if draft.ghost_row:
         ghost_new = service.remove_comma(inputs.state, inputs.preview_remove[1])
         ghost_row_map = ghost_new.mapping[-1]
@@ -31,13 +31,13 @@ def resolve_ghost_previews(inputs, draft):
         ghost_row_ratio = born_gens[-1] if born_gens else ""
     elif draft.ghost_comma:
         ghost_new = service.remove_mapping_row(inputs.state, inputs.preview_remove[1])
-        ghost_comma_vec = ghost_new.comma_basis[-1] if ghost_new.comma_basis else None
+        ghost_comma_vector = ghost_new.comma_basis[-1] if ghost_new.comma_basis else None
         born_crs = service.comma_ratios(ghost_new.comma_basis, elements) if ghost_new.comma_basis else ()
         ghost_comma_ratio = born_crs[-1] if born_crs else ""
     return replace(
         draft, gens=service.generators(inputs.state.mapping, elements), ghost_new=ghost_new,
         ghost_row_map=ghost_row_map, ghost_row_ratio=ghost_row_ratio, ghost_row_mapped={},
-        ghost_comma_vec=ghost_comma_vec, ghost_comma_ratio=ghost_comma_ratio,
+        ghost_comma_vector=ghost_comma_vector, ghost_comma_ratio=ghost_comma_ratio,
         ghost_comma_mapped=(), ghost_comma_just=0.0, ghost_comma_complexity=0.0)
 
 

@@ -49,7 +49,7 @@ def declare_interval_column_tiles(resolved):
     interest_tiles = ()
     if resolved.dims.interest_count_shown:
         interest_tiles += (
-            ("block:vec:interest", "vectors", "interest"),
+            ("block:vector:interest", "vectors", "interest"),
             ("block:interest", "quantities", "interest"),
             ("block:imapped", "mapping", "interest"),
             ("block:tuning:interest", "tuning", "interest"),
@@ -63,7 +63,7 @@ def declare_interval_column_tiles(resolved):
     if resolved.dims.held_count_shown:
         held_tiles += (
             ("block:held", "quantities", "held"),
-            ("block:vec:held", "vectors", "held"),
+            ("block:vector:held", "vectors", "held"),
             ("block:hmapped", "mapping", "held"),
             ("block:tuning:held", "tuning", "held"),
             ("block:just:held", "just", "held"),
@@ -74,7 +74,7 @@ def declare_interval_column_tiles(resolved):
         )
     detempering_tiles = (
         ("block:detempering", "quantities", "detempering"),
-        ("block:vec:detempering", "vectors", "detempering"),
+        ("block:vector:detempering", "vectors", "detempering"),
         ("block:mapped_detempering", "mapping", "detempering"),
         ("block:tuning:detempering", "tuning", "detempering"),
         ("block:just:detempering", "just", "detempering"),

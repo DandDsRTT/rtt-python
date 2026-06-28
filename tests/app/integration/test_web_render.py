@@ -246,7 +246,7 @@ async def test_enabling_math_expressions_renders_the_closed_form(user: User) -> 
 
 
 async def test_enabling_generator_detempering_renders_the_column(user: User) -> None:
-    # the generator-detempering D column. Its value cells are interval vectors (kind "vec"),
+    # the generator-detempering D column. Its value cells are interval vectors (kind "vector"),
     # which — like every interval-vector cell — the user harness can't locate, so assert the
     # column header and lean on the fixture's ERROR-log guard to catch any fault rendering the
     # D matrix's cells, brackets or ket marks.
@@ -1358,10 +1358,10 @@ async def test_editing_a_target_cell_overrides_the_set(user: User) -> None:
     # the target interval list cells are editable: overriding a component freezes the set as an
     # explicit override. The default first target is 2/1 = (1 0 0); typing 2 there survives the
     # render only if the override applied (else the cell reverts to the default's component)
-    _cell_child(user, "cell:vec:targets:0:0").set_value("2")
-    _commit(user, "cell:vec:targets:0:0")              # commit on blur (typing only previews now)
-    await user.should_see(marker="cell:vec:targets:0:0")
-    assert _cell_child(user, "cell:vec:targets:0:0").value == "2"
+    _cell_child(user, "cell:vector:targets:0:0").set_value("2")
+    _commit(user, "cell:vector:targets:0:0")              # commit on blur (typing only previews now)
+    await user.should_see(marker="cell:vector:targets:0:0")
+    assert _cell_child(user, "cell:vector:targets:0:0").value == "2"
 
 
 async def test_editing_a_comma_ratio_updates_the_basis(user: User) -> None:
@@ -1921,12 +1921,12 @@ async def test_target_chooser_shows_the_prompt_when_an_interval_is_overridden(us
     # back to "-" — the family select via Quasar's display-value, the numeric limit to a real
     # selectable "-" value (not a placeholder) — the fallback the other choosers use for an edit.
     await _enable(user, "presets")
-    await user.should_see(marker="cell:vec:targets:0:0")
+    await user.should_see(marker="cell:vector:targets:0:0")
     num, sel = _target_preset(user)
     assert "display-value" not in sel._props  # names the live family
     assert num.value not in (None, "-")       # shows the family's limit
-    _cell_child(user, "cell:vec:targets:0:0").set_value("3")  # deviate from the TILT list
-    _commit(user, "cell:vec:targets:0:0")                     # commit on blur (typing only previews now)
+    _cell_child(user, "cell:vector:targets:0:0").set_value("3")  # deviate from the TILT list
+    _commit(user, "cell:vector:targets:0:0")                     # commit on blur (typing only previews now)
     await user.should_see(marker="preset:target")
     num, sel = _target_preset(user)
     assert sel._props.get("display-value") == "-"
@@ -1939,18 +1939,18 @@ async def test_selecting_a_target_family_clears_an_interval_override(user: User)
     # The override blanks the select to None, so re-picking "TILT" is a real change the handler
     # acts on — not the same-value no-op that made the pick look ignored.
     await _enable(user, "presets")
-    await user.should_see(marker="cell:vec:targets:0:0")
-    original = _cell_child(user, "cell:vec:targets:0:0").value  # the TILT list's first cell
-    _cell_child(user, "cell:vec:targets:0:0").set_value("3")  # deviate -> override
-    _commit(user, "cell:vec:targets:0:0")                     # commit on blur (typing only previews now)
+    await user.should_see(marker="cell:vector:targets:0:0")
+    original = _cell_child(user, "cell:vector:targets:0:0").value  # the TILT list's first cell
+    _cell_child(user, "cell:vector:targets:0:0").set_value("3")  # deviate -> override
+    _commit(user, "cell:vector:targets:0:0")                     # commit on blur (typing only previews now)
     await user.should_see(marker="preset:target")
     _, sel = _target_preset(user)
     assert sel._props.get("display-value") == "-"
     sel.set_value("TILT")  # re-pick the family
-    await user.should_see(marker="cell:vec:targets:0:0")
+    await user.should_see(marker="cell:vector:targets:0:0")
     _, sel = _target_preset(user)
     assert "display-value" not in sel._props  # family named again
-    assert _cell_child(user, "cell:vec:targets:0:0").value == original  # list restored to TILT
+    assert _cell_child(user, "cell:vector:targets:0:0").value == original  # list restored to TILT
 
 
 async def test_weighting_complexity_chooser_is_disabled_when_lp_only(user: User) -> None:
@@ -2317,14 +2317,14 @@ async def test_adding_a_target_commits_when_filled(user: User) -> None:
     k = len(service.target_interval_set(service.DEFAULT_TARGET_SPEC, Editor().state.domain_basis))
     await user.open("/")
     _click_glyph(user, "target_plus")               # start a blank green target draft
-    await user.should_see(marker=f"cell:vec:targets:{k}:0")
-    assert "rtt-pending" in _cell_child(user, f"cell:vec:targets:{k}:0")._classes
-    _cell_child(user, f"cell:vec:targets:{k}:0").set_value("-1")  # make it 3/2 = (-1 1 0)
-    _cell_child(user, f"cell:vec:targets:{k}:1").set_value("1")
-    _cell_child(user, f"cell:vec:targets:{k}:2").set_value("0")
-    _commit(user, f"cell:vec:targets:{k}:2")                      # commit the draft on blur (filling only previews)
+    await user.should_see(marker=f"cell:vector:targets:{k}:0")
+    assert "rtt-pending" in _cell_child(user, f"cell:vector:targets:{k}:0")._classes
+    _cell_child(user, f"cell:vector:targets:{k}:0").set_value("-1")  # make it 3/2 = (-1 1 0)
+    _cell_child(user, f"cell:vector:targets:{k}:1").set_value("1")
+    _cell_child(user, f"cell:vector:targets:{k}:2").set_value("0")
+    _commit(user, f"cell:vector:targets:{k}:2")                      # commit the draft on blur (filling only previews)
     await user.should_see(marker=f"target:{k}")  # the new target now heads its own column
-    assert _cell_child(user, f"cell:vec:targets:{k}:0").value == "-1"
+    assert _cell_child(user, f"cell:vector:targets:{k}:0").value == "-1"
 
 
 def test_audio_bank_is_always_live_with_a_leading_mute(default_page: User) -> None:
@@ -2532,7 +2532,7 @@ async def test_dragging_an_interval_onto_another_combines_them(user: User) -> No
     tuning_value = lambda i: _cell_child(user, f"target:{i}").value
     before0, before1 = tuning_value(0), tuning_value(1)
     grip = lambda i: set(user.find(marker=f"int_drag:target:{i}").elements)
-    cell = lambda i, p: set(user.find(marker=f"cell:vec:targets:{i}:{p}").elements)
+    cell = lambda i, p: set(user.find(marker=f"cell:vector:targets:{i}:{p}").elements)
     assert next(iter(grip(0)))._props.get("draggable")  # the browser starts a drag from the grip
     UserInteraction(user, grip(0), None).trigger("dragstart")        # grab target 0's grip
     UserInteraction(user, cell(1, 0), None).trigger("drop.prevent")  # drop onto target 1's column
@@ -2548,7 +2548,7 @@ async def test_dragging_over_an_interval_previews_the_product_then_reverts(user:
     tuning_value = lambda i: _cell_child(user, f"target:{i}").value
     before0, before1 = tuning_value(0), tuning_value(1)
     grip = lambda i: set(user.find(marker=f"int_drag:target:{i}").elements)
-    cell = lambda i, p: set(user.find(marker=f"cell:vec:targets:{i}:{p}").elements)
+    cell = lambda i, p: set(user.find(marker=f"cell:vector:targets:{i}:{p}").elements)
     UserInteraction(user, grip(0), None).trigger("dragstart")             # pick up target 0
     UserInteraction(user, cell(1, 0), None).trigger("dragenter.prevent")  # hover target 1's column → preview
     assert Fraction(tuning_value(1)) == Fraction(before0) * Fraction(before1)  # previews the product
@@ -3342,46 +3342,46 @@ async def test_a_held_draft_commit_materializes_a_new_held_column(user: User) ->
 
 async def test_a_target_keystroke_preview_does_not_commit_until_blur(user: User) -> None:
     # on_target_cells_change(preview=True): note its cell-id order is REVERSED vs the others —
-    # cell:vec:targets:{token}:{prime} (token then prime), not cell:{group}:{prime}:{token}. A focused
+    # cell:vector:targets:{token}:{prime} (token then prime), not cell:{group}:{prime}:{token}. A focused
     # keystroke through that id shape arms the candidate but does NOT commit the override.
     await user.open("/")
-    assert _cell_child(user, "cell:vec:targets:0:0").value == "1"  # the first target 2/1 = (1 0 0): prime-2 entry
-    cell = _cell_child(user, "cell:vec:targets:0:0")               # NB token (0) BEFORE prime (0)
+    assert _cell_child(user, "cell:vector:targets:0:0").value == "1"  # the first target 2/1 = (1 0 0): prime-2 entry
+    cell = _cell_child(user, "cell:vector:targets:0:0")               # NB token (0) BEFORE prime (0)
     UserInteraction(user, {cell}, None).trigger("focus")
     cell.set_value("2")                                           # a preview keystroke (would override to 4/1)
     # no commit on the keystroke: a sibling target cell still shows the un-overridden default set
-    assert _cell_child(user, "cell:vec:targets:1:1").value == "1"  # the second target 3/1's prime-3 entry, unmoved
+    assert _cell_child(user, "cell:vector:targets:1:1").value == "1"  # the second target 3/1's prime-3 entry, unmoved
     UserInteraction(user, {cell}, None).trigger("blur")           # blur is the commit: the override lands
-    await user.should_see(marker="cell:vec:targets:0:0")
-    assert _cell_child(user, "cell:vec:targets:0:0").value == "2"  # the typed override component committed on blur
+    await user.should_see(marker="cell:vector:targets:0:0")
+    assert _cell_child(user, "cell:vector:targets:0:0").value == "2"  # the typed override component committed on blur
 
 
 async def test_a_target_cell_edit_commits_through_the_reversed_id_shape(user: User) -> None:
-    # the commit arm through on_target_cells_change's REVERSED id (cell:vec:targets:{token}:{prime}):
+    # the commit arm through on_target_cells_change's REVERSED id (cell:vector:targets:{token}:{prime}):
     # overriding a component freezes the set as an explicit override that survives the render. Pin the
     # edit landing through that id order — the axis flip the consolidation must preserve.
     await user.open("/")
-    cell = _cell_child(user, "cell:vec:targets:0:1")              # token 0, PRIME 1 (the 2/1 target's prime-3 entry)
+    cell = _cell_child(user, "cell:vector:targets:0:1")              # token 0, PRIME 1 (the 2/1 target's prime-3 entry)
     cell.set_value("1")                                           # override the first target to (1 1 0) = 6/1
-    _commit(user, "cell:vec:targets:0:1")
-    await user.should_see(marker="cell:vec:targets:0:1")
-    assert _cell_child(user, "cell:vec:targets:0:1").value == "1"  # the override held through the reversed-id commit
+    _commit(user, "cell:vector:targets:0:1")
+    await user.should_see(marker="cell:vector:targets:0:1")
+    assert _cell_child(user, "cell:vector:targets:0:1").value == "1"  # the override held through the reversed-id commit
 
 
 async def test_a_target_draft_commit_materializes_a_new_target_column(user: User) -> None:
     # on_target_cells_change DRAFT branch: filling the green target draft (riding index k past the
     # defaults) commits it into a real target the moment the vector completes (set_pending_target), no
-    # blur. Pin the materialization through the reversed cell:vec:targets:{token}:{prime} id.
+    # blur. Pin the materialization through the reversed cell:vector:targets:{token}:{prime} id.
     k = len(service.target_interval_set(service.DEFAULT_TARGET_SPEC, Editor().state.domain_basis))
     await user.open("/")
     _click_glyph(user, "target_plus")
-    await user.should_see(marker=f"cell:vec:targets:{k}:0")
-    assert "rtt-pending" in _cell_child(user, f"cell:vec:targets:{k}:0")._classes
+    await user.should_see(marker=f"cell:vector:targets:{k}:0")
+    assert "rtt-pending" in _cell_child(user, f"cell:vector:targets:{k}:0")._classes
     for p, v in zip(range(3), ("-1", "1", "0")):                 # 3/2 = (-1 1 0)
-        _cell_child(user, f"cell:vec:targets:{k}:{p}").set_value(v)
-    _commit(user, f"cell:vec:targets:{k}:2")                   # blur -> on_target_cells_change(False) materializes the draft
+        _cell_child(user, f"cell:vector:targets:{k}:{p}").set_value(v)
+    _commit(user, f"cell:vector:targets:{k}:2")                   # blur -> on_target_cells_change(False) materializes the draft
     await user.should_see(marker=f"target:{k}")                  # the draft MATERIALIZED -> a real target column
-    assert "rtt-pending" not in _cell_child(user, f"cell:vec:targets:{k}:0")._classes
+    assert "rtt-pending" not in _cell_child(user, f"cell:vector:targets:{k}:0")._classes
 
 
 async def test_an_interest_draft_keystroke_preview_does_not_materialize_early(user: User) -> None:

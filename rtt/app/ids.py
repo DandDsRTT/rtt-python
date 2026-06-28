@@ -23,4 +23,4 @@ def unchanged_cell(column, prime):
 
 
 def target_cell(token, prime):
-    return f"cell:vec:targets:{token}:{prime}"
+    return f"cell:vector:targets:{token}:{prime}"

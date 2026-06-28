@@ -132,16 +132,16 @@ def add_interval(ec, action, group):
     ec._gestures.end_commit_gestures()
     action()
     ec._renderer.render()
-    quant_id, vec_kind = ec.draft_focus[group]
+    quant_id, vector_kind = ec.draft_focus[group]
     lay = ec._runtime.last_lay
     if any(cell_box.id == quant_id for cell_box in lay.cells):
         target = quant_id
-    elif vec_kind is not None:
+    elif vector_kind is not None:
         target = next(
             (
                 cell_box.id
                 for cell_box in lay.cells
-                if cell_box.pending and cell_box.prime == 0 and cell_box.kind == vec_kind
+                if cell_box.pending and cell_box.prime == 0 and cell_box.kind == vector_kind
             ),
             None,
         )

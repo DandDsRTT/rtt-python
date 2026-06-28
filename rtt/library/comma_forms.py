@@ -40,11 +40,11 @@ def _gram_schmidt(basis, w):
     bstar: list[list[float]] = []
     mu = [[0.0] * len(basis) for _ in basis]
     for i, b in enumerate(basis):
-        vec = [float(x) for x in b]
+        vector = [float(x) for x in b]
         for j in range(i):
             mu[i][j] = _weighted_dot(b, bstar[j], w) / _weighted_dot(bstar[j], bstar[j], w)
-            vec = [v - mu[i][j] * s for v, s in zip(vec, bstar[j], strict=False)]
-        bstar.append(vec)
+            vector = [v - mu[i][j] * s for v, s in zip(vector, bstar[j], strict=False)]
+        bstar.append(vector)
     return bstar, mu
 
 
@@ -91,16 +91,16 @@ def minimal_ca(matrix: Matrix, jip_octaves) -> Matrix:
     candidates = []
     for coeffs in itertools.product(range(-k, k + 1), repeat=rank):
         if any(coeffs):
-            vec = [sum(c * seed[r][d] for r, c in enumerate(coeffs)) for d in range(dim)]
-            candidates.append(vec)
+            vector = [sum(c * seed[r][d] for r, c in enumerate(coeffs)) for d in range(dim)]
+            candidates.append(vector)
     candidates.sort(key=lambda c: _complexity(c, jip_octaves))
 
     picked: list[list[int]] = []
-    for vec in candidates:
+    for vector in candidates:
         if len(picked) == rank:
             break
-        if np.linalg.matrix_rank(np.array([*picked, vec])) > len(picked):
-            picked.append(vec)
+        if np.linalg.matrix_rank(np.array([*picked, vector])) > len(picked):
+            picked.append(vector)
 
     chosen = (
         picked
