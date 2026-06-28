@@ -101,6 +101,26 @@ def test_grid_pane_publishes_its_base_size_for_the_scrollbar_fit(default_page: U
     assert 0 < float(fit_w) <= float(base_w)
 
 
+def test_value_cells_carry_data_value_for_the_mapping_demo_overlay(default_page: User) -> None:
+    cell = next(iter(default_page.find(marker="cell:mapping:1:2").elements))
+    assert cell._props.get("data-value") == "4", (
+        "mapping_demo.js reads each value cell's number from data-value (not the rendered face); the "
+        "mapping matrix's prime-5 fifth entry is 4, so its wrap must publish it"
+    )
+
+
+async def test_a_stacked_fraction_cell_publishes_its_value_uncorrupted(user: User) -> None:
+    doc = Editor().serialize()
+    doc["settings"]["projection"] = True
+    token = _live_assets()._encode_state(doc)
+    await user.open(f"/?{_live_assets()._STATE_PARAM}={token}")
+    cell = next(iter(user.find(marker="cell:proj:2:1").elements))
+    assert cell._props.get("data-value") == "1/4", (
+        "the projection matrix's 1/4 entry renders as a stacked num-over-den pair whose textContent "
+        "concatenates to '14'; data-value must carry the model value verbatim so the overlay reads 1/4"
+    )
+
+
 # --- tier 2: each Show feature's render branch (paths the default render never reaches) ---
 
 # The "general" Show layers are toggled by clicking their part of the dummy tile (located by

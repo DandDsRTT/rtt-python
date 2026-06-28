@@ -36,3 +36,29 @@ jobs:
           python -m tools.quality_checks rtt tools
       - name: Run the full suite (library + app + render)
         run: python -m pytest -q
+
+  # The client-JS gate. The full suite above runs in-process and executes ZERO browser JavaScript, so
+  # a regression in assets/*.js (or the inline scripts in page_assets.py) sails through it. This job
+  # drives real Chrome via Playwright with RTT_BROWSER_SMOKE=1, so the scripts' behavior is gated on
+  # every merge. Kept a SEPARATE job so its Chrome install + flakiness never slow or destabilize the
+  # main suite. Mark it a required check in branch protection for it to actually block the queue.
+  browser-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Install Chrome for Playwright
+        run: python -m playwright install --with-deps chrome
+      - name: Run the real-browser suite (client JS)
+        env:
+          RTT_BROWSER_SMOKE: "1"
+        run: |
+          python -m pytest -q \
+            tests/app/integration/test_browser_smoke.py \
+            tests/app/integration/test_browser_behavior.py

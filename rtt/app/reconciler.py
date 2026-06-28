@@ -27,6 +27,25 @@ _log = logging.getLogger(__name__)
 _Cb = Callable[..., object]
 
 
+_DEMO_VALUE_KINDS = frozenset(
+    {
+        "mapping",
+        "mapped",
+        "vec",
+        "targetcell",
+        "heldcell",
+        "commacell",
+        "interestcell",
+        "unchangedcell",
+    }
+)
+
+
+def _stamp_value(wrap, cell_box: spreadsheet.CellBox) -> None:
+    if cell_box.kind in _DEMO_VALUE_KINDS:
+        wrap.props(f'data-value="{cell_box.text}"')
+
+
 @runtime_checkable
 class ReconcilerCallbacks(Protocol):
     act: _Cb
@@ -163,6 +182,7 @@ class _Reconciler:
         _recon_cells.attach_hover_help(self, wrap, cell_box)
         self.entities[cell_box.id].el = wrap
         self.cells[cell_box.id].kind = cell_box.kind
+        _stamp_value(wrap, cell_box)
         _recon_cells.wire_cell_input(self, wrap, cell_box)
 
     def update_cell(self, cell_box: spreadsheet.CellBox) -> None:
@@ -187,6 +207,7 @@ class _Reconciler:
             self.entities[cell_box.id].el.classes(remove="rtt-cell-united")
         if cell_box.audio is not None:
             _recon_cells.tag_audio(self.entities[cell_box.id].el, cell_box)
+        _stamp_value(self.entities[cell_box.id].el, cell_box)
 
     def handles(self, cid: str) -> CellHandles:
         return self.cells.get(cid, _EMPTY_HANDLES)
