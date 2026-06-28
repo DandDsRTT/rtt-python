@@ -79,7 +79,7 @@ def _column_axis(lines, resolved, geometry, ctx, fanned_columns, bot_bus_y, key,
 
 
 def _row_axis(lines, geometry, ctx, right_bus_x, key) -> None:
-    n = geometry.rows[key].nsub
+    n = geometry.rows[key].num_subrows
     folded = f"row:{key}" in ctx.collapsed
     cy = geometry.rows[key].y + geometry.rows[key].h / 2
     ys = [cy] * n if folded else [query.subrow_top(geometry, key, i) + ROW_H / 2 for i in range(n)]
@@ -170,7 +170,7 @@ def _emit_matrix_row_labels(cells, resolved, geometry, ctx) -> None:
 def _emit_matrix_col_labels(cells, resolved, geometry, ctx) -> None:
     group_count = _matlabel_group_count(resolved)
     for (row_key, column_key), label in resolved.labels.col_labels.items():
-        if column_key not in group_count or row_key not in geometry.rows or geometry.rows[row_key].matlabel_top is None:
+        if column_key not in group_count or row_key not in geometry.rows or geometry.rows[row_key].matrix_label_top is None:
             continue
         if not query.tile_open(geometry, ctx.collapsed, row_key, column_key):
             continue
@@ -178,7 +178,7 @@ def _emit_matrix_col_labels(cells, resolved, geometry, ctx) -> None:
         if (row_key, column_key) == ("weight", "targets") and geometry.all_interval_simplicity_weight:
             col_label = functools.partial(query.weight_simplicity_header, resolved)
         left = geometry.group_left[column_key]
-        y = geometry.rows[row_key].matlabel_top
+        y = geometry.rows[row_key].matrix_label_top
         for i in range(group_count[column_key]):
             glyph = col_label if callable(col_label) else query.form_subscripted(resolved, col_label, row_key, column_key)
             text = glyph(i) if callable(glyph) else f"{glyph}{_sub(i + 1)}"
@@ -321,9 +321,9 @@ def _emit_unchanged_counts_caption(cells, resolved, geometry, row_key, cy) -> No
     if comma_half_w:
         comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_w else query.comma_left(geometry, resolved, 0)
         cells.append(CellBox("caption:counts:commas", comma_half_x, cy, comma_half_w,
-                             geometry.rows[row_key].cap, "caption", text="nullity"))
+                             geometry.rows[row_key].caption, "caption", text="nullity"))
     cells.append(CellBox("caption:counts:commas:u", query.comma_left(geometry, resolved, resolved.dims.nc_shown), cy, resolved.dims.nu * COL_W,
-                         geometry.rows[row_key].cap, "caption", text="unchanged interval count"))
+                         geometry.rows[row_key].caption, "caption", text="unchanged interval count"))
 
 
 def _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_key, name, cy) -> None:
@@ -333,7 +333,7 @@ def _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_ke
         underlines += tuple((name.index(w), 1)
                             for w in ALL_INTERVAL_MNEMONICS.get((row_key, column_key), ()) if w in name)
     cap_x, cap_w = query.tile_span_box(geometry, row_key, column_key)
-    cells.append(CellBox(f"caption:{row_key}:{column_key}", cap_x, cy, cap_w, geometry.rows[row_key].cap,
+    cells.append(CellBox(f"caption:{row_key}:{column_key}", cap_x, cy, cap_w, geometry.rows[row_key].caption,
                          "caption", text=name, underlines=underlines))
 
 
@@ -342,7 +342,7 @@ def _emit_tile_units(cells, resolved, geometry, row_key, column_key) -> None:
     if unit and not (row_key.startswith("ss_") or column_key in ("ssgens", "ssprimes")):
         unit = _subscript_coord(unit, "p", resolved.labels.domain_label)
     if resolved.flags.units and unit:
-        uy = geometry.rows[row_key].y + geometry.rows[row_key].h + geometry.rows[row_key].frame + geometry.rows[row_key].cpick + geometry.rows[row_key].sym + geometry.rows[row_key].cap
+        uy = geometry.rows[row_key].y + geometry.rows[row_key].h + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker + geometry.rows[row_key].symbol + geometry.rows[row_key].caption
         cells.append(CellBox(f"units:{row_key}:{column_key}", geometry.col_x[column_key], uy, geometry.col_w[column_key], UNIT_H,
                              "units", text=f"units: {unit}"))
 
@@ -350,7 +350,7 @@ def _emit_tile_units(cells, resolved, geometry, row_key, column_key) -> None:
 def _emit_tile_symbols_captions(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, name) -> None:
     if caption_ai and (row_key, column_key) in ALL_INTERVAL_CAPTIONS:
         name = ALL_INTERVAL_CAPTIONS[(row_key, column_key)]
-    cy = geometry.rows[row_key].y + geometry.rows[row_key].h + geometry.rows[row_key].frame + geometry.rows[row_key].cpick
+    cy = geometry.rows[row_key].y + geometry.rows[row_key].h + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker
     if (resolved.flags.symbols or resolved.flags.equivalences) and row_key in BANDS["symbol"].rows:
         cy = _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, cy)
     if resolved.flags.names and resolved.unchanged.shown and (row_key, column_key) == ("counts", "commas"):

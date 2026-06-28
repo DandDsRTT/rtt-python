@@ -76,14 +76,14 @@ def subrow_top(geometry, row_key: str, i: int) -> float:
     return geometry.rows[row_key].y + i * ROW_H + gap
 
 
-def cpick_band_y(geometry, row_key: str) -> float:
+def comma_picker_band_y(geometry, row_key: str) -> float:
     row = geometry.rows[row_key]
     return row.y + row.h + row.frame
 
 
 def ptext_band_y(geometry, row_key: str) -> float:
     row = geometry.rows[row_key]
-    return row.y + row.h + row.frame + row.cpick + row.sym + row.cap + row.units
+    return row.y + row.h + row.frame + row.comma_picker + row.symbol + row.caption + row.units
 
 
 def frame_top_y(geometry, row_key: str) -> float:
@@ -307,7 +307,7 @@ def cell_unit(resolved, row_key: str, column_key: str, *, gen=None, prime=None, 
 
 
 def row_fans(geometry, key: str) -> bool:
-    return geometry.rows[key].nsub > 1 or key in geometry.row_plus_y
+    return geometry.rows[key].num_subrows > 1 or key in geometry.row_plus_y
 
 
 def plus_shows(geometry, resolved, collapsed, state, column_key: str) -> bool:

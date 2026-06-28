@@ -244,7 +244,7 @@ def _layout_rows(geometry, resolved, ctx, row_bands, tile_extra, rows_top_y) -> 
                    fanout_y=geometry.branch_top_y + geometry.FAN)
 
 
-def _row_int_handle(geometry, resolved, ctx, key, folded):
+def _row_interval_handle(geometry, resolved, ctx, key, folded):
     return (key == "vectors" and not folded and ctx.settings.get("drag_to_combine")
             and ((resolved.dims.nc >= 2 and query.col_open(geometry, ctx.collapsed, "commas"))
                  or (resolved.dims.k >= 2 and not resolved.scalars.all_interval and query.col_open(geometry, ctx.collapsed, "targets"))
@@ -257,47 +257,47 @@ def _compute_row_band(geometry, resolved, ctx, key, natural, collapsible, label,
     framed = key in BANDS["frame"].rows and not folded
     has_matlabel = (resolved.flags.header_symbols and key in BANDS["col_label"].rows and not folded)
     toggle_band = TOGGLE + 2 * TOGGLE_INSET - PAD
-    int_handle = _row_int_handle(geometry, resolved, ctx, key, folded)
-    handle_band = (ROW_HANDLE_W + ROW_HANDLE_GAP) if int_handle else 0
+    interval_handle = _row_interval_handle(geometry, resolved, ctx, key, folded)
+    handle_band = (ROW_HANDLE_W + ROW_HANDLE_GAP) if interval_handle else 0
     base_head = 0 if folded else max(toggle_band, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else toggle_band)
     head = base_head + handle_band
     top_frame = (FRAME_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
     bot_frame = (BRACE_H + FRAME_GAP + FRAME_OVERHANG) if framed else 0
     charted = show_charts and key in BANDS["chart"].rows and not folded and natural == ROW_H
     chart_band = (CHART_H + CHART_GAP) if charted else 0
-    cap = caption_band(geometry, resolved, ctx, key, folded)
-    sym = BANDS["symbol"].height if ((resolved.flags.symbols or resolved.flags.equivalences)
+    caption = caption_band(geometry, resolved, ctx, key, folded)
+    symbol = BANDS["symbol"].height if ((resolved.flags.symbols or resolved.flags.equivalences)
                                      and key in BANDS["symbol"].rows and not folded) else 0
-    uni = BANDS["units"].height if (resolved.flags.units and key in BANDS["units"].rows and not folded) else 0
-    pre = preset_band_h(geometry, resolved, key) if (((resolved.flags.presets and key in BANDS["preset"].rows)
+    units = BANDS["units"].height if (resolved.flags.units and key in BANDS["units"].rows and not folded) else 0
+    preset = preset_band_h(geometry, resolved, key) if (((resolved.flags.presets and key in BANDS["preset"].rows)
                                      or (ctx.settings["all_interval"] and key == "vectors"))
                                     and not folded) else 0
-    schemebtn = (control_region_band_h(SCHEME_BTN_SQ)
+    scheme_button = (control_region_band_h(SCHEME_BTN_SQ)
                  if (key == "projection" and ctx.settings["projection"] and not resolved.flags.presets and not folded) else 0)
-    formctrl = (formchooser_band_h(geometry, key)
+    form_controls = (formchooser_band_h(geometry, key)
                 if (resolved.flags.form_controls and not resolved.flags.presets
                     and key in BANDS["form_chooser"].rows and not folded) else 0)
-    cpick = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and resolved.flags.presets
+    comma_picker = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and resolved.flags.presets
                                        and query.col_open(geometry, ctx.collapsed, "commas")
                                        and (resolved.dims.nc > 0 or resolved.commas.pending is not None) and not folded) else 0
     ptext = ptext_band(geometry, key, folded)
-    sym += BAND_GAP if sym else 0
-    cap += BAND_GAP if cap else 0
-    uni += BAND_GAP if uni else 0
+    symbol += BAND_GAP if symbol else 0
+    caption += BAND_GAP if caption else 0
+    units += BAND_GAP if units else 0
     ptext += BAND_GAP if ptext else 0
     row_h = STRIP if folded else natural
     chart_top = (y + head + top_frame) if charted else None
-    int_handle_top = (y + (handle_band - ROW_HANDLE_W) // 2) if int_handle else None
-    matlabel_top = (y + handle_band + (base_head - MATLABEL_H) // 2) if has_matlabel else None
-    trailing_band = sym + cap + uni + pre + ptext + formctrl + schemebtn + cpick + tile_extra.get(key, 0)
+    interval_handle_top = (y + (handle_band - ROW_HANDLE_W) // 2) if interval_handle else None
+    matrix_label_top = (y + handle_band + (base_head - MATLABEL_H) // 2) if has_matlabel else None
+    trailing_band = symbol + caption + units + preset + ptext + form_controls + scheme_button + comma_picker + tile_extra.get(key, 0)
     foot = 0 if (folded or trailing_band) else toggle_band
-    tile_h = (head + top_frame + chart_band + row_h + bot_frame + cpick + sym + cap + uni
-              + pre + ptext + formctrl + schemebtn + tile_extra.get(key, 0) + foot)
+    tile_h = (head + top_frame + chart_band + row_h + bot_frame + comma_picker + symbol + caption + units
+              + preset + ptext + form_controls + scheme_button + tile_extra.get(key, 0) + foot)
     return RowBand(
         y=y + head + top_frame + chart_band, h=row_h, label=label, collapsible=collapsible,
-        tile_h=tile_h, tile_top=y, frame=bot_frame, sym=sym, cap=cap, units=uni, ptext=ptext,
-        pre=pre, schemebtn=schemebtn, nsub=round(natural / ROW_H), cpick=cpick,
-        chart_top=chart_top, int_handle_top=int_handle_top, matlabel_top=matlabel_top)
+        tile_h=tile_h, tile_top=y, frame=bot_frame, symbol=symbol, caption=caption, units=units, ptext=ptext,
+        preset=preset, scheme_button=scheme_button, num_subrows=round(natural / ROW_H), comma_picker=comma_picker,
+        chart_top=chart_top, interval_handle_top=interval_handle_top, matrix_label_top=matrix_label_top)
 
 
 def _group_geometry_fields(geometry, resolved):

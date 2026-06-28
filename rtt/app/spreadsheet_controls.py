@@ -233,7 +233,7 @@ def _emit_form_choosers(cells, blocks, resolved, geometry, ctx) -> None:
         for name, row_key, column_key, label in FORM_CHOOSERS:
             if not query.tile_open(geometry, ctx.collapsed, row_key, column_key):
                 continue
-            top = query.ptext_band_y(geometry, row_key) + geometry.rows[row_key].ptext + geometry.rows[row_key].pre
+            top = query.ptext_band_y(geometry, row_key) + geometry.rows[row_key].ptext + geometry.rows[row_key].preset
             cx, cw, cy = _control_box(cells, blocks, resolved, geometry, f"block:formchooser:{name}", column_key, top, PRESET_W, label)
             cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser",
                                  text=resolved.canon.mapping_form_key if name == "mapping" else resolved.canon.comma_basis_form_key))

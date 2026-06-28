@@ -120,7 +120,7 @@ def _emit_units_const(cells, resolved, geometry, ctx) -> None:
     for key, text in const_units.items():
         if not query.tile_open(geometry, ctx.collapsed, key, "units"):
             continue
-        n = geometry.rows[key].nsub
+        n = geometry.rows[key].num_subrows
         for i in range(n):
             cid = f"ucol:{key}:{i}" if n > 1 else f"ucol:{key}"
             cells.append(CellBox(cid, geometry.col_x["units"], geometry.rows[key].y + i * ROW_H,
