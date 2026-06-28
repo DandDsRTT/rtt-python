@@ -28,7 +28,7 @@ def test_tuning_scheme_options_prefix_T_when_not_all_interval():
     assert targeted["minimax-U"] == "T minimax-U"
     assert targeted["minimax-C"] == "T minimax-C"
     assert all(label.startswith("T ") for label in targeted.values())
-    # composes with the alternative-complexity gate: without alternatives, only the lp family —
+    # composes with the alternative-complexity gate: without alternatives, only the plain lp family —
     # its single bare simplicity name (all-interval) or its three weight variants (target-based)
     assert set(presets.tuning_scheme_options(True, include_alternatives=False, weighting=True)) == {"minimax-S"}
     assert set(presets.tuning_scheme_options(False, include_alternatives=False, weighting=True)) == {
@@ -149,14 +149,17 @@ def test_every_target_set_preset_resolves_to_intervals_for_the_domain():
 
 
 def test_tuning_schemes_gate_alternative_complexities_behind_the_setting():
-    # every scheme whose interval complexity isn't the plain log-product (lp) is an
-    # alternative-complexity scheme, gated behind the alternative-complexity feature: with it
-    # off the preset offers only the strictly-lp scheme; with it on, the whole family.
+    # the default view offers only the plain log-product scheme; everything else — the alternative
+    # complexities AND the octave-treatment (held/destretched) variants — is gated behind the
+    # alternative-complexity feature, which with it on offers the whole family.
     assert presets.tuning_schemes(include_alternatives=False) == ("minimax-S",)
     assert presets.tuning_schemes(include_alternatives=True) == presets.TUNING_SCHEMES
-    # the gated list is a strict subset, and everything withheld is genuinely non-lp
+    # the gated list is a strict subset; everything withheld is non-lp or an octave-treatment variant
     withheld = set(presets.TUNING_SCHEMES) - set(presets.tuning_schemes(include_alternatives=False))
-    assert withheld and all(service.complexity_name_of(s) != "lp" for s in withheld)
+    assert withheld and all(
+        service.complexity_name_of(s) != "lp" or s.startswith(("held-octave", "destretched-octave"))
+        for s in withheld
+    )
 
 
 def test_prescaler_options_gate_the_alternatives_behind_the_setting():

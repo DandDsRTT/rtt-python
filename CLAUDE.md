@@ -66,6 +66,31 @@ the mockup:
   chokepoint (grid cells, plain-text EBK strings, range-chart labels); the underlying floats keep
   full precision, so turning it back on restores 3-dp. Not in the mockup — user-requested.
 
+## Reuse the app's existing UI assets — search before you hand-roll a control
+
+Before building **any** UI control — a radio, a chooser, a checkbox, a tile, a button, a hover
+card, a colored region — **search the codebase for an existing implementation and reuse it.** This
+app has a deliberately small, shared vocabulary of widgets (the `rtt-rangemode`/`rtt-rangeopt`
+radio used by the chapter-9 nonstandard-domain **approach** control, the shared `gridvalue` editable
+cell, the preset `ui.select` choosers, the `rtt-show-item` checkboxes, the tile-feature parts, the
+zoom-hover/guide-hover cards, …). A second, hand-rolled version of something we already have is a
+**snowflake**: it diverges in styling and behavior, doubles the maintenance, and is exactly the kind
+of thing the user has to notice and send back. Hand-rolling a fresh `ui.radio` when
+`build_rangemode_radio` already exists is a real example of this failure.
+
+So, as a hard step before writing a new widget:
+
+- **Grep first.** Look for the CSS class, the builder function, the `mark()` name, or a visually
+  similar control already in `rtt/app/_page_parts.py`, `rtt/app/building.py`, the `_recon_*` /
+  `render_html_*` files, and `rtt/app/assets/rtt.css`. If something close exists, **reuse or extend
+  it** (factor a shared helper if two callers now need it) rather than starting fresh.
+- Only build a genuinely new widget when nothing reusable exists — and if you must, build it so the
+  *next* agent can reuse it (a named helper + a CSS class), not as a one-off.
+- If you're unsure whether an existing asset fits, **ask** rather than hand-rolling on a guess.
+
+This complements the mockup rule above: the mockup governs *what* UI exists; this governs *how* you
+build it — out of the parts we already have.
+
 ## Only tests and names document — no comments, no docstrings
 
 **Tests and object names are the only documentation allowed in this project.** Comments and

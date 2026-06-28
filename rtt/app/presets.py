@@ -7,20 +7,35 @@ from rtt.library import equal_temperament
 
 TUNING_SCHEMES: tuple[str, ...] = (
     "minimax-S",
+    "held-octave minimax-S",
+    "destretched-octave minimax-S",
     "minimax-ES",
     "held-octave minimax-ES",
     "destretched-octave minimax-ES",
+    "minimax-copfr-S",
     "minimax-E-copfr-S",
     "minimax-sopfr-S",
+    "minimax-E-sopfr-S",
     "minimax-lils-S",
+    "held-octave minimax-lils-S",
+    "destretched-octave minimax-lils-S",
     "minimax-E-lils-S",
+    "held-octave minimax-E-lils-S",
+    "destretched-octave minimax-E-lils-S",
 )
+
+
+_OCTAVE_TREATMENTS = ("held-octave", "destretched-octave")
 
 
 def tuning_schemes(include_alternatives: bool) -> tuple[str, ...]:
     if include_alternatives:
         return TUNING_SCHEMES
-    return tuple(s for s in TUNING_SCHEMES if service.complexity_name_of(s) == "lp")
+    return tuple(
+        s
+        for s in TUNING_SCHEMES
+        if service.complexity_name_of(s) == "lp" and not s.startswith(_OCTAVE_TREATMENTS)
+    )
 
 
 def prescaler_options(include_alternatives: bool) -> tuple[str, ...]:
