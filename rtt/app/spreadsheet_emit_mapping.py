@@ -149,7 +149,7 @@ def emit_mapped_grid(cells, resolved, geometry, collapsed, tile, prefix, grid, n
     if full is None:
         full = grid is not None
     if top is None:
-        top = functools.partial(query.proj_top, geometry)
+        top = functools.partial(query.projection_top, geometry)
     height = resolved.dims.dimensionality if height is None else height
     if colwise:
         _emit_mapped_grid_colwise(cells, resolved, prefix, grid, n_cols, left, col_kw,
@@ -192,22 +192,22 @@ def _emit_mapped_grid_rowwise(cells, prefix, grid, n_cols, left, col_kw,
 def emit_projection_band(resolved, geometry, context) -> EmitResult:
     cells: list = []
     cl = context.collapsed
-    emit_mapped_grid(cells, resolved, geometry, cl, "primes", "proj", resolved.projection.matrix, resolved.dims.dimensionality, lambda i: query.prime_left(geometry, i), "prime")
+    emit_mapped_grid(cells, resolved, geometry, cl, "primes", "projection", resolved.projection.matrix, resolved.dims.dimensionality, lambda i: query.prime_left(geometry, i), "prime")
     emit_mapped_grid(cells, resolved, geometry, cl, "gens", "embed", resolved.projection.embedding_matrix, resolved.dims.rank, lambda i: query.gen_left(geometry, i), "gen")
     emit_mapped_grid(cells, resolved, geometry, cl, "canongens", "embed_c", resolved.canon.embedding_matrix, resolved.dims.canonical_rank, lambda i: query.canongen_left(geometry, i), "gen")
     emit_mapped_grid(cells, resolved, geometry, cl, "ssgens", "embed_sl", resolved.projection.embedding_superspace, resolved.dims.superspace_rank, lambda i: query.ss_gen_left(geometry, i), "gen")
-    emit_mapped_grid(cells, resolved, geometry, cl, "ssprimes", "proj_sl", resolved.projection.superspace, resolved.dims.superspace_dimensionality, lambda i: query.ss_prime_left(geometry, i), "prime")
+    emit_mapped_grid(cells, resolved, geometry, cl, "ssprimes", "projection_superspace", resolved.projection.superspace, resolved.dims.superspace_dimensionality, lambda i: query.ss_prime_left(geometry, i), "prime")
     _emit_projection_unchanged(cells, resolved, geometry, context)
     _emit_projection_basis(cells, resolved, geometry, context)
-    full_proj = resolved.projection.rationals is not None
-    emit_mapped_grid(cells, resolved, geometry, cl, "detempering", "proj_pd", resolved.projection.detempering, resolved.dims.rank, lambda i: query.detempering_left(geometry, i), "gen",
-                     full=full_proj, colwise=True, col_token_key="detempering", audio="proj:detempering")
-    emit_mapped_grid(cells, resolved, geometry, cl, "targets", "proj_pt", resolved.projection.targets, resolved.dims.target_count, lambda i: query.target_left(geometry, i), "comma",
-                     full=full_proj, colwise=True, pending=resolved.targets.pending, audio="proj:targets")
-    emit_mapped_grid(cells, resolved, geometry, cl, "held", "proj_ph", resolved.projection.held, resolved.dims.held_count, lambda i: query.held_left(geometry, i), "comma",
-                     full=full_proj, colwise=True, pending=resolved.held.pending, audio="proj:held")
-    emit_mapped_grid(cells, resolved, geometry, cl, "interest", "proj_pi", resolved.projection.interest, resolved.dims.interest_count, lambda i: query.interest_left(geometry, i), "comma",
-                     full=full_proj, colwise=True, pending=resolved.interest.pending, audio="proj:interest")
+    full_projection = resolved.projection.rationals is not None
+    emit_mapped_grid(cells, resolved, geometry, cl, "detempering", "projection_detempering", resolved.projection.detempering, resolved.dims.rank, lambda i: query.detempering_left(geometry, i), "gen",
+                     full=full_projection, colwise=True, col_token_key="detempering", audio="projection:detempering")
+    emit_mapped_grid(cells, resolved, geometry, cl, "targets", "projection_targets", resolved.projection.targets, resolved.dims.target_count, lambda i: query.target_left(geometry, i), "comma",
+                     full=full_projection, colwise=True, pending=resolved.targets.pending, audio="projection:targets")
+    emit_mapped_grid(cells, resolved, geometry, cl, "held", "projection_held", resolved.projection.held, resolved.dims.held_count, lambda i: query.held_left(geometry, i), "comma",
+                     full=full_projection, colwise=True, pending=resolved.held.pending, audio="projection:held")
+    emit_mapped_grid(cells, resolved, geometry, cl, "interest", "projection_interest", resolved.projection.interest, resolved.dims.interest_count, lambda i: query.interest_left(geometry, i), "comma",
+                     full=full_projection, colwise=True, pending=resolved.interest.pending, audio="projection:interest")
     _emit_scaling_factors(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
 
@@ -218,28 +218,28 @@ def _emit_projection_unchanged(cells, resolved, geometry, context) -> None:
         return
     for c in range(resolved.dims.comma_count):
         for p in range(resolved.dims.dimensionality):
-            cells.append(CellBox(f"cell:proj_v:{p}:{query.col_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.proj_top(geometry, p),
+            cells.append(CellBox(f"cell:projection_vectors:{p}:{query.col_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.projection_top(geometry, p),
                                  COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
-            voice(cells, "proj:commas", c, resolved.tuning.comma_sizes.tempered[c])
+            voice(cells, "projection:commas", c, resolved.tuning.comma_sizes.tempered[c])
     if resolved.scalars.comma_draft:
         for p in range(resolved.dims.dimensionality):
-            cells.append(CellBox(f"cell:proj_v:{p}:draft", query.comma_left(geometry, resolved, resolved.dims.comma_count), query.proj_top(geometry, p),
+            cells.append(CellBox(f"cell:projection_vectors:{p}:draft", query.comma_left(geometry, resolved, resolved.dims.comma_count), query.projection_top(geometry, p),
                                  COL_W, ROW_H, "mapped", text="0" if resolved.ghosts.comma else "", prime=p, pending=True))
     for j in range(resolved.dims.unchanged_count):
         dashed = resolved.unchanged.basis[j] is None
         for p in range(resolved.dims.dimensionality):
-            cells.append(CellBox(f"cell:proj_v:{p}:u{j}", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + j), query.proj_top(geometry, p),
+            cells.append(CellBox(f"cell:projection_vectors:{p}:u{j}", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + j), query.projection_top(geometry, p),
                                  COL_W, ROW_H, "mapped",
                                  text=DASH if dashed else str(resolved.unchanged.basis[j][p]), prime=p, comma=resolved.dims.comma_count + j))
             if not dashed:
-                voice(cells, "proj:commas", resolved.dims.comma_count + j, resolved.unchanged.sizes.tempered[j])
+                voice(cells, "projection:commas", resolved.dims.comma_count + j, resolved.unchanged.sizes.tempered[j])
 
 
 def _emit_projection_basis(cells, resolved, geometry, context) -> None:
     if query.row_open(geometry, context.collapsed, "projection") and query.tile_open(geometry, context.collapsed, "projection", "quantities"):
         bx = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
         for p in range(resolved.dims.dimensionality):
-            cells.append(CellBox(f"proj_basis:{p}", bx, query.proj_top(geometry, p), COL_W, ROW_H, "commaratio", text=str(resolved.dims.elements[p]), prime=p))
+            cells.append(CellBox(f"projection_basis:{p}", bx, query.projection_top(geometry, p), COL_W, ROW_H, "commaratio", text=str(resolved.dims.elements[p]), prime=p))
 
 
 def _emit_scaling_factors(cells, resolved, geometry, context) -> None:

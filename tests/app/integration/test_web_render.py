@@ -115,7 +115,7 @@ async def test_a_stacked_fraction_cell_publishes_its_value_uncorrupted(user: Use
     doc["settings"]["projection"] = True
     token = _live_assets()._encode_state(doc)
     await user.open(f"/?{_live_assets()._STATE_PARAM}={token}")
-    cell = next(iter(user.find(marker="cell:proj:2:1").elements))
+    cell = next(iter(user.find(marker="cell:projection:2:1").elements))
     assert cell._props.get("data-value") == "1/4", (
         "the projection matrix's 1/4 entry renders as a stacked num-over-den pair whose textContent "
         "concatenates to '14'; data-value must carry the model value verbatim so the overlay reads 1/4"
@@ -291,7 +291,7 @@ async def test_enabling_projection_renders_the_box(user: User) -> None:
     # ⟨ … ] map brackets or spanning frame — the page must not 500 with projection on.
     await _enable(user, "projection")
     await user.should_see(marker="label:projection")
-    await user.should_see(marker="cell:proj:2:1")  # the 1/4 entry (mapped kind, locatable like the mapping)
+    await user.should_see(marker="cell:projection:2:1")  # the 1/4 entry (mapped kind, locatable like the mapping)
 
 
 async def test_projection_renders_the_projected_column_tiles(user: User) -> None:
@@ -301,11 +301,11 @@ async def test_projection_renders_the_projected_column_tiles(user: User) -> None
     # ERROR-log guard to catch any fault building the projected cells, { … ]/[ … ] brackets or ket marks.
     await _enable(user, "projection")
     _toggle(user, "generator detempering")
-    await user.should_see(marker="cell:proj_pd:1:2")  # P·D's second column, bottom prime
-    assert _cell_text(user, "cell:proj_pd:1:2") == "1/4"
-    assert _marked(user, "cell:proj_pd:1:2:num").text == "1"
-    assert _marked(user, "cell:proj_pd:1:2:den").text == "4"
-    await user.should_see(marker="cell:proj_pt:0:0")  # P·T's first column (the octave)
+    await user.should_see(marker="cell:projection_detempering:1:2")  # P·D's second column, bottom prime
+    assert _cell_text(user, "cell:projection_detempering:1:2") == "1/4"
+    assert _marked(user, "cell:projection_detempering:1:2:num").text == "1"
+    assert _marked(user, "cell:projection_detempering:1:2:den").text == "4"
+    await user.should_see(marker="cell:projection_targets:0:0")  # P·T's first column (the octave)
 
 
 async def test_projection_renders_the_embedding_and_its_choosers(user: User) -> None:
@@ -322,13 +322,13 @@ async def test_projection_renders_the_embedding_and_its_choosers(user: User) -> 
     # read 1/4-comma and P/G fill in (the 5^(1/4) entries), NOT dashes
     assert _cell_child(user, "preset:projection").value == "1/4-comma"
     # P and G are read-only "mapped" cells now (edited via their plain-text bands) — read the cell text
-    assert _cell_text(user, "cell:proj:2:1") == "1/4"
+    assert _cell_text(user, "cell:projection:2:1") == "1/4"
     assert _cell_text(user, "cell:embed:2:1") == "1/4"
     # pick 1/3-comma -> P and G re-form (it holds 6/5), both choosers track it, and the genmap
     # actually re-solves to third-comma (1200, 694.786)
     _cell_child(user, "preset:projection").set_value("1/3-comma")
     await user.should_see(marker="cell:embed:2:1")
-    assert _cell_text(user, "cell:proj:2:1") == "1/3"
+    assert _cell_text(user, "cell:projection:2:1") == "1/3"
     assert _cell_text(user, "cell:embed:2:1") == "1/3"
     assert _cell_child(user, "preset:projection:gens").value == "1/3-comma"
     assert _cell_child(user, "tuning:gen:1").value == "694.786"  # the dropdown changed the tuning

@@ -39,7 +39,7 @@ def map_top(geometry, i: int) -> float:
     return geometry.rows["mapping"].y + i * ROW_H
 
 
-def proj_top(geometry, i: int) -> float:
+def projection_top(geometry, i: int) -> float:
     return geometry.rows["projection"].y + i * ROW_H
 
 
@@ -59,7 +59,7 @@ def ss_map_top(geometry, i: int) -> float:
     return geometry.rows["ss_mapping"].y + i * ROW_H
 
 
-def ss_proj_top(geometry, i: int) -> float:
+def ss_projection_top(geometry, i: int) -> float:
     return geometry.rows["ss_projection"].y + i * ROW_H
 
 

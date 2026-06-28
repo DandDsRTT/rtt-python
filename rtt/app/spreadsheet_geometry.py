@@ -100,21 +100,21 @@ def _projection_col_tiles(resolved):
     if not resolved.flags.projection:
         return ()
     tiles = (
-        ("block:proj:quantities", "projection", "quantities"),
-        ("block:proj:units", "projection", "units"),
+        ("block:projection:quantities", "projection", "quantities"),
+        ("block:projection:units", "projection", "units"),
     )
     if resolved.flags.generator_detempering:
-        tiles += (("block:proj:detempering", "projection", "detempering"),)
+        tiles += (("block:projection:detempering", "projection", "detempering"),)
     if resolved.scalars.targets_editable:
-        tiles += (("block:proj:targets", "projection", "targets"),)
+        tiles += (("block:projection:targets", "projection", "targets"),)
     if resolved.dims.held_count_shown:
-        tiles += (("block:proj:held", "projection", "held"),)
+        tiles += (("block:projection:held", "projection", "held"),)
     if resolved.dims.interest_count_shown:
-        tiles += (("block:proj:interest", "projection", "interest"),)
+        tiles += (("block:projection:interest", "projection", "interest"),)
     if resolved.flags.superspace:
         tiles += (
-            ("block:proj:ssgens", "projection", "ssgens"),
-            ("block:proj:ssprimes", "projection", "ssprimes"),
+            ("block:projection:ssgens", "projection", "ssgens"),
+            ("block:projection:ssprimes", "projection", "ssprimes"),
         )
     return tiles
 
@@ -123,19 +123,19 @@ def _ss_projection_col_tiles(resolved):
     if not resolved.flags.ss_projection:
         return ()
     tiles = (
-        ("block:ssproj:ssgens", "ss_projection", "ssgens"),
-        ("block:ssproj:primes", "ss_projection", "primes"),
+        ("block:ss_projection:ssgens", "ss_projection", "ssgens"),
+        ("block:ss_projection:primes", "ss_projection", "primes"),
     )
     if resolved.unchanged.shown:
-        tiles += (("block:ssproj:commas", "ss_projection", "commas"),)
+        tiles += (("block:ss_projection:commas", "ss_projection", "commas"),)
     if resolved.flags.generator_detempering:
-        tiles += (("block:ssproj:detempering", "ss_projection", "detempering"),)
+        tiles += (("block:ss_projection:detempering", "ss_projection", "detempering"),)
     if resolved.scalars.targets_editable:
-        tiles += (("block:ssproj:targets", "ss_projection", "targets"),)
+        tiles += (("block:ss_projection:targets", "ss_projection", "targets"),)
     if resolved.dims.held_count_shown:
-        tiles += (("block:ssproj:held", "ss_projection", "held"),)
+        tiles += (("block:ss_projection:held", "ss_projection", "held"),)
     if resolved.dims.interest_count_shown:
-        tiles += (("block:ssproj:interest", "ss_projection", "interest"),)
+        tiles += (("block:ss_projection:interest", "ss_projection", "interest"),)
     return tiles
 
 

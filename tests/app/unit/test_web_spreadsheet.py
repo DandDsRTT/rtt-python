@@ -63,7 +63,7 @@ def _with(scheme=None, **overrides):
     return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, tuning_scheme=scheme)
 
 
-def _proj_build(held_basis_ratios=(), **overrides):
+def _projection_build(held_basis_ratios=(), **overrides):
     # a meantone build with the projection box on and a given held interval basis — () leaves the
     # tuning under-held (P/G/U dashed), a full rational basis like ("2/1", "5/4") completes it.
     s = settings.defaults()
@@ -1570,7 +1570,7 @@ def test_form_matrix_row_labels_get_a_balanced_matlabel_gutter():
 
 def test_canonical_generators_column_builds_finv_embedding_and_tuning_tiles():
     from rtt.app.grid_tables import SUBSCRIPT_C
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"),
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"),
                                           form_tiles=True, symbols=True, header_symbols=True).cells}
     # 𝐹 (generator form matrix) over the mapping row: M = F·M_C, so F = ((1,1),(0,1)) (cell id is the
     # historical "cell:finv" from before the 𝐹/𝐹⁻¹ swap)
@@ -1592,7 +1592,7 @@ def test_canonical_generators_column_builds_finv_embedding_and_tuning_tiles():
 
 
 def test_canonical_generators_column_tiles_carry_plain_text_matching_their_grids():
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), form_tiles=True, plain_text_values=True).cells}
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"), form_tiles=True, plain_text_values=True).cells}
     # the three new tiles' EBK strings read in the same brackets as their grids (the lockstep guard
     # enforces this globally; here we pin the exact strings): 𝐹 a covector stack, G_C a vector list,
     # 𝒈_C a cents genmap
@@ -1603,7 +1603,7 @@ def test_canonical_generators_column_tiles_carry_plain_text_matching_their_grids
 
 def test_canonical_embedding_and_tuning_tiles_carry_their_column_index_headers():
     from rtt.app.grid_tables import SUBSCRIPT_C
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), form_tiles=True, header_symbols=True).cells}
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"), form_tiles=True, header_symbols=True).cells}
     # G_C / 𝒈_C head each canonical-generator column with its index (𝐠_Cᵢ / 𝒈_Cᵢ), like G / 𝒈 do
     assert cells["matlabel:col:projection:canongens:0"].text == f"𝐠{SUBSCRIPT_C}₁"
     assert cells["matlabel:col:projection:canongens:1"].text == f"𝐠{SUBSCRIPT_C}₂"
@@ -3699,7 +3699,7 @@ def test_gridded_values_off_hides_the_nonstandard_domain_element_cells_and_contr
     # element ± controls (element_minus/element_plus, not the plain minus/plus walk). Those kinds
     # were overlooked in GRIDDED_KINDS, so gridded-off used to leave them floating while the rest
     # of the row/column collapsed. They must now collapse with everything else. The projection P/G
-    # grids (read-only "mapped" cells, cell:proj:*/cell:embed:*) ride along to confirm gridded-off
+    # grids (read-only "mapped" cells, cell:projection:*/cell:embed:*) ride along to confirm gridded-off
     # still hides them too — they were already gridded, this guards against regressing that.
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")  # genuinely nonstandard (13/5)
     s = {**settings.defaults(), "nonstandard_domain": True, "projection": True}
@@ -3713,13 +3713,13 @@ def test_gridded_values_off_hides_the_nonstandard_domain_element_cells_and_contr
     domain_control_ids = {"element_minus:0", "element_minus:1", "element_minus:2",
                           "element_minus:basis:0", "element_minus:basis:1", "element_minus:basis:2",
                           "element_plus", "basis_plus"}
-    proj_grid_ids = {c for c in on if c.startswith(("cell:proj:", "cell:embed:"))}
-    assert proj_grid_ids and all(on[c].kind == "mapped" for c in proj_grid_ids)
+    projection_grid_ids = {c for c in on if c.startswith(("cell:projection:", "cell:embed:"))}
+    assert projection_grid_ids and all(on[c].kind == "mapped" for c in projection_grid_ids)
     assert domain_value_ids <= on.keys() and domain_control_ids <= on.keys()
     # gridded off: every one of those is gone (only captions/tile boxes/plain-text survive)
     assert not (domain_value_ids & off)
     assert not (domain_control_ids & off)
-    assert not (proj_grid_ids & off)
+    assert not (projection_grid_ids & off)
 
 
 def test_gridded_values_off_hides_the_editable_unchanged_basis_cells():
@@ -4762,7 +4762,7 @@ def test_a_mapping_minus_hover_fills_the_born_commas_projection_and_complexity_r
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone; minimax-S → the complexity rows show
     cells = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S", preview_remove=("row", 0)).cells}
     assert cells["cell:scaling:draft"].text == "0"                           # λ = 0 (a vanished comma)
-    assert [cells[f"cell:proj_v:{p}:draft"].text for p in range(3)] == ["0", "0", "0"]  # P·comma = 0
+    assert [cells[f"cell:projection_vectors:{p}:draft"].text for p in range(3)] == ["0", "0", "0"]  # P·comma = 0
     # the prescaled born-comma vector 𝐿·comma matches what the committed comma columns compute
     pre = [cells[f"cell:prescaling:commas:{i}:draft"].text for i in range(3)]
     assert pre[0] == "0" and pre != ["", "", ""]                             # filled, not blank
@@ -7476,24 +7476,24 @@ def test_mapped_comma_column_sounds_its_tempered_out_unison():
 
 
 def test_projected_interval_columns_are_click_to_play_when_the_projection_is_rational():
-    full = {c.id: c for c in _proj_build(held_basis_ratios=("2/1", "5/4")).cells}
-    projected_target = next(c for c in full.values() if c.id.startswith("cell:proj_pt:"))
-    assert projected_target.audio is not None and projected_target.audio[0] == "proj:targets"
+    full = {c.id: c for c in _projection_build(held_basis_ratios=("2/1", "5/4")).cells}
+    projected_target = next(c for c in full.values() if c.id.startswith("cell:projection_targets:"))
+    assert projected_target.audio is not None and projected_target.audio[0] == "projection:targets"
     assert abs(projected_target.audio[2]) > 1.0
 
 
 def test_projected_intervals_stay_silent_when_the_projection_is_dashed():
-    under_held = {c.id: c for c in _proj_build().cells}
-    assert all(c.audio is None for c in under_held.values() if c.id.startswith("cell:proj_pt:"))
+    under_held = {c.id: c for c in _projection_build().cells}
+    assert all(c.audio is None for c in under_held.values() if c.id.startswith("cell:projection_targets:"))
 
 
 def test_projected_unrotated_vector_list_is_click_to_play():
-    cells = {c.id: c for c in _proj_build(held_basis_ratios=("2/1", "5/4")).cells}
-    held_proj = next(c for c in cells.values() if c.id.startswith("cell:proj_v:") and ":u" in c.id)
-    assert held_proj.audio is not None and held_proj.audio[0] == "proj:commas"
-    assert abs(held_proj.audio[2]) > 1.0
-    comma_proj = cells["cell:proj_v:0:0"]
-    assert comma_proj.audio is not None and abs(comma_proj.audio[2]) < 0.01
+    cells = {c.id: c for c in _projection_build(held_basis_ratios=("2/1", "5/4")).cells}
+    held_projection = next(c for c in cells.values() if c.id.startswith("cell:projection_vectors:") and ":u" in c.id)
+    assert held_projection.audio is not None and held_projection.audio[0] == "projection:commas"
+    assert abs(held_projection.audio[2]) > 1.0
+    comma_projection = cells["cell:projection_vectors:0:0"]
+    assert comma_projection.audio is not None and abs(comma_projection.audio[2]) < 0.01
 
 
 def test_form_layer_is_a_live_parent_with_three_live_subcontrols():
@@ -7547,8 +7547,8 @@ def test_form_layer_subscripts_the_canonical_form_objects_in_symbols():
     assert on["symbol:mapping:targets"].text == f"Y{C}"
     assert on["symbol:tuning:gens"].text == f"𝒈{C}"
     # the projection's generator embedding G (only present when projection is on)
-    proj = _canon_cells(symbols=True, projection=True, form=True, equivalences=False)
-    assert proj["symbol:projection:gens"].text == f"G{C}"
+    projection = _canon_cells(symbols=True, projection=True, form=True, equivalences=False)
+    assert projection["symbol:projection:gens"].text == f"G{C}"
     # form-invariant objects stay bare, and nothing is subscripted without the layer
     assert on["symbol:tuning:primes"].text == "𝒕"          # the prime tuning map is form-invariant
     assert on["symbol:vectors:commas"].text == "C"         # the comma basis itself
@@ -7586,10 +7586,10 @@ def test_form_layer_subscripts_the_matrix_header_labels():
     assert held["matlabel:col:mapping:held:0"].text == f"𝑀{C}𝐡{s1}"
     # under unchanged the mapped comma column reads the mapped unrotated vector list 𝑀𝐯, and the
     # projection embedding's generator columns are 𝐠 — both subscripted, over a projection build
-    proj = _canon_cells(symbols=True, header_symbols=True, form=True, projection=True,
+    projection = _canon_cells(symbols=True, header_symbols=True, form=True, projection=True,
                         _held_basis_ratios=("2/1", "5/4"))
-    assert proj["matlabel:col:mapping:commas:0"].text.startswith(f"𝑀{C}𝐯")  # unrotated vector list 𝑀𝐯
-    assert proj["matlabel:col:projection:gens:0"].text == f"𝐠{C}{s1}"
+    assert projection["matlabel:col:mapping:commas:0"].text.startswith(f"𝑀{C}𝐯")  # unrotated vector list 𝑀𝐯
+    assert projection["matlabel:col:projection:gens:0"].text == f"𝐠{C}{s1}"
 
 
 def test_form_subscript_is_two_faced_and_the_canon_row_needs_a_noncanonical_form():
@@ -8262,9 +8262,9 @@ def test_superspace_columns_get_their_fold_toggles_in_the_header_band():
     assert {"toggle:col:ssgens", "toggle:col:ssprimes"} <= cells
 
 
-def _barbados_proj(held_basis_ratios=("2", "13/5"), **overrides):
+def _barbados_projection(held_basis_ratios=("2", "13/5"), **overrides):
     # BARBADOS superspace with the projection box on and a full held basis ({2/1, 13/5} pins P_L);
-    # held_basis_ratios=() leaves it under-held (P_L dashed), like _proj_build for the on-domain row.
+    # held_basis_ratios=() leaves it under-held (P_L dashed), like _projection_build for the on-domain row.
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     s = settings.defaults()
     s["nonstandard_domain"] = True
@@ -8277,7 +8277,7 @@ def test_superspace_projection_row_renders_PL_over_the_superspace_primes():
     # the projection toggle adds a third superspace row band — the superspace projection P_L = G_L·M_L,
     # a dL × dL covector stack over the superspace primes (the chapter-9 analogue of the on-domain P).
     # It seats just below the superspace mapping and above the on-domain projection row.
-    cells = {c.id: c for c in _barbados_proj().cells}
+    cells = {c.id: c for c in _barbados_projection().cells}
     assert cells["label:ss_projection"].text == "superspace\nprojection"
     # dL = 4 rows tall (one covector per superspace prime)
     assert cells["label:ss_projection"].h == 4 * spreadsheet_constants.ROW_H
@@ -8298,20 +8298,20 @@ def test_superspace_projection_row_renders_the_embedding_and_projected_lists():
     # the superspace projection row carries the full tile set, paralleling the on-domain projection row:
     # the embedding G_L (ssgens), P_L·B_Ls (primes), P_L·V (commas/V), P_L·T_L (targets) — each P_L applied
     # to that column's lifted vectors. BARBADOS over 2.3.13/5 (dL=4, rL=3, d=3) held by {2/1, 13/5}.
-    cells = {c.id: c for c in _barbados_proj().cells}
+    cells = {c.id: c for c in _barbados_projection().cells}
     # G_L the embedding, dL × rL = 4 × 3 (a vector list over the superspace generators)
     assert {f"cell:ss_embed:{i}:{g}" for i in range(4) for g in range(3)} <= set(cells)
     assert cells["cell:ss_embed:0:0"].text == "1" and cells["cell:ss_embed:0:1"].text == "1/3"
     # P_L·B_Ls the projected subspace basis, dL-tall over the d = 3 domain-element columns
-    assert {f"cell:ss_proj_bls:{e}:{p}" for e in range(3) for p in range(4)} <= set(cells)
-    assert cells["cell:ss_proj_bls:0:0"].text == "1"     # P_L·2/1 = 2/1 (held)
-    assert cells["cell:ss_proj_bls:1:0"].text == "2/3"   # P_L·3 is tempered
+    assert {f"cell:ss_projection_basis_lift:{e}:{p}" for e in range(3) for p in range(4)} <= set(cells)
+    assert cells["cell:ss_projection_basis_lift:0:0"].text == "1"     # P_L·2/1 = 2/1 (held)
+    assert cells["cell:ss_projection_basis_lift:1:0"].text == "2/3"   # P_L·3 is tempered
     # P_L·V over the consolidated V = C|U column: the comma half vanishes (0), the unchanged half is held
-    assert {f"cell:ss_proj_v:{p}:0" for p in range(4)} <= set(cells)
-    assert [cells[f"cell:ss_proj_v:{p}:0"].text for p in range(4)] == ["0", "0", "0", "0"]  # P_L·comma = 0
+    assert {f"cell:ss_projection_vectors:{p}:0" for p in range(4)} <= set(cells)
+    assert [cells[f"cell:ss_projection_vectors:{p}:0"].text for p in range(4)] == ["0", "0", "0", "0"]  # P_L·comma = 0
     # P_L·T_L the projected target list, dL-tall over the targets, not dashed (a full rational projection)
-    assert any(c.startswith("cell:ss_proj_pt:") for c in cells)
-    assert cells["cell:ss_proj_pt:0:0"].text != spreadsheet_constants.DASH
+    assert any(c.startswith("cell:ss_projection_targets:") for c in cells)
+    assert cells["cell:ss_projection_targets:0:0"].text != spreadsheet_constants.DASH
     # the tiles carry their mockup captions
     assert cells["caption:ss_projection:ssgens"].text == "superspace generator embedding"
     assert cells["caption:ss_projection:primes"].text == "superspace projected subspace basis elements"
@@ -8320,33 +8320,33 @@ def test_superspace_projection_row_renders_the_embedding_and_projected_lists():
 def test_superspace_projection_detempering_tile_renders_when_shown():
     # P_L·D_L (the projected lifted domain detempering, dL × r) rides the generator-detempering column,
     # the chapter-9 analogue of the on-domain P·D — shown only when that column is on, dashed-aware.
-    cells = {c.id: c for c in _barbados_proj(generator_detempering=True).cells}
-    assert {f"cell:ss_proj_pd:{i}:{p}" for i in range(2) for p in range(4)} <= set(cells)  # dL × r = 4 × 2
-    assert cells["cell:ss_proj_pd:0:0"].text != spreadsheet_constants.DASH  # a full rational projection, not dashed
+    cells = {c.id: c for c in _barbados_projection(generator_detempering=True).cells}
+    assert {f"cell:ss_projection_detempering:{i}:{p}" for i in range(2) for p in range(4)} <= set(cells)  # dL × r = 4 × 2
+    assert cells["cell:ss_projection_detempering:0:0"].text != spreadsheet_constants.DASH  # a full rational projection, not dashed
     assert cells["caption:ss_projection:detempering"].text == "projected generator detempering in superspace"
     # absent when the generator-detempering column is off (parity with the on-domain P·D)
-    off = {c.id for c in _barbados_proj().cells}
-    assert not any(c.startswith("cell:ss_proj_pd:") for c in off)
+    off = {c.id for c in _barbados_projection().cells}
+    assert not any(c.startswith("cell:ss_projection_detempering:") for c in off)
 
 
 def test_superspace_projection_extra_tiles_dash_when_under_held():
     # every projected tile dashes in lockstep with P_L when the tuning isn't a full rational projection
-    cells = {c.id: c for c in _barbados_proj(held_basis_ratios=()).cells}
+    cells = {c.id: c for c in _barbados_projection(held_basis_ratios=()).cells}
     assert cells["cell:ss_embed:0:0"].text == spreadsheet_constants.DASH       # G_L dashed
-    assert cells["cell:ss_proj_bls:0:0"].text == spreadsheet_constants.DASH    # P_L·B_Ls dashed
+    assert cells["cell:ss_projection_basis_lift:0:0"].text == spreadsheet_constants.DASH    # P_L·B_Ls dashed
 
 
 def test_superspace_projection_extra_tiles_absent_without_projection():
     # additive-only: the embedding / projected-list tiles need the projection toggle, like P_L itself
     cells = {c.id for c in _barbados_ss().cells}  # projection off
-    assert not any(c.startswith(("cell:ss_embed:", "cell:ss_proj_bls:", "cell:ss_proj_v:",
-                                 "cell:ss_proj_pt:", "cell:ss_proj_pd:")) for c in cells)
+    assert not any(c.startswith(("cell:ss_embed:", "cell:ss_projection_basis_lift:", "cell:ss_projection_vectors:",
+                                 "cell:ss_projection_targets:", "cell:ss_projection_detempering:")) for c in cells)
 
 
 def test_superspace_projection_row_dashes_when_under_held():
     # under-held (P_L undetermined, service returns None): every cell an em-dash — in lockstep with
     # the on-domain projection P, never asserting a projection the optimum doesn't have.
-    cells = {c.id: c for c in _barbados_proj(held_basis_ratios=()).cells}
+    cells = {c.id: c for c in _barbados_projection(held_basis_ratios=()).cells}
     assert cells["cell:ss_projection:ssprimes:0:0"].text == spreadsheet_constants.DASH
     assert cells["cell:ss_projection:ssprimes:3:3"].text == spreadsheet_constants.DASH
 
@@ -8363,8 +8363,8 @@ def test_superspace_projection_row_absent_without_the_projection_toggle():
 def test_superspace_projection_row_absent_on_a_standard_domain():
     # a standard prime domain has no superspace, so no P_L even with the projection box on — only
     # the on-domain P renders
-    cells = {c.id for c in _proj_build(("2", "5/4")).cells}  # meantone, projection on, standard domain
-    assert "cell:proj:0:0" in cells  # the on-domain projection P is there
+    cells = {c.id for c in _projection_build(("2", "5/4")).cells}  # meantone, projection on, standard domain
+    assert "cell:projection:0:0" in cells  # the on-domain projection P is there
     assert "label:ss_projection" not in cells
     assert not any(c.startswith("cell:ss_projection:") for c in cells)
 
@@ -8373,20 +8373,20 @@ def test_superspace_projection_quantities_spine_lists_the_superspace_primes():
     # the superspace projection's quantities spine lists the dL superspace primes (the mockup's
     # α, β, γ … are placeholders for them), one per row — exactly like the superspace interval-
     # vectors spine above it. For BARBADOS over 2.3.13/5 the superspace is 2.3.5.13.
-    cells = {c.id: c for c in _barbados_proj().cells}
-    assert [cells[f"ss_proj_basis:{p}"].text for p in range(4)] == ["2", "3", "5", "13"]
+    cells = {c.id: c for c in _barbados_projection().cells}
+    assert [cells[f"ss_projection_basis:{p}"].text for p in range(4)] == ["2", "3", "5", "13"]
     # the same superspace primes the ss_vectors spine shows (both rows are indexed by them)
-    assert [cells[f"ss_proj_basis:{p}"].text for p in range(4)] == [cells[f"ss_basis:{p}"].text for p in range(4)]
+    assert [cells[f"ss_projection_basis:{p}"].text for p in range(4)] == [cells[f"ss_basis:{p}"].text for p in range(4)]
     # spine-centred in the quantities column, sharing its x with the superspace mapping spine above
-    assert cells["ss_proj_basis:0"].x == cells["ss_basis:0"].x
-    assert cells["ss_proj_basis:0"].w == spreadsheet_constants.COL_W
+    assert cells["ss_projection_basis:0"].x == cells["ss_basis:0"].x
+    assert cells["ss_projection_basis:0"].w == spreadsheet_constants.COL_W
 
 
 def test_superspace_projection_units_column_reads_superspace_prime():
     # P_L = G_L·M_L is a superspace-prime → superspace-prime operator (dL × dL), so its units column
     # reads pᵢ/ down the dL rows — true primes, exactly like the M_jL / B_L rows above it, NEVER the
     # on-domain basis element b. The units COLUMN rides the domain_units toggle.
-    cells = {c.id: c for c in _barbados_proj(domain_units=True).cells}
+    cells = {c.id: c for c in _barbados_projection(domain_units=True).cells}
     assert cells["ucol:ss_projection:0"].text == "p₁/"
     assert cells["ucol:ss_projection:3"].text == "p₄/"
 
@@ -8395,13 +8395,13 @@ def test_superspace_projection_row_carries_the_full_projected_tile_set():
     # the row is the chapter-9 analogue of the WHOLE on-domain projection row: not just the P_L matrix
     # but the embedding G_L and P_L applied to every column's lifted vectors — P_L·B_Ls / P_L·D_L /
     # P_L·V / P_L·T_L (the superspace twins of G / P·D / P·V / P·T).
-    cells = {c.id: c for c in _barbados_proj(generator_detempering=True).cells}
+    cells = {c.id: c for c in _barbados_projection(generator_detempering=True).cells}
     assert {f"cell:ss_embed:{i}:{g}" for i in range(4) for g in range(3)} <= set(cells)        # G_L (dL × rL)
-    assert {f"cell:ss_proj_bls:{e}:{p}" for e in range(3) for p in range(4)} <= set(cells)      # P_L·B_Ls (d × dL)
-    assert {f"cell:ss_proj_pd:{i}:{p}" for i in range(2) for p in range(4)} <= set(cells)        # P_L·D_L (r × dL)
-    assert "cell:ss_proj_pt:0:0" in cells                                                         # P_L·T_L
+    assert {f"cell:ss_projection_basis_lift:{e}:{p}" for e in range(3) for p in range(4)} <= set(cells)      # P_L·B_Ls (d × dL)
+    assert {f"cell:ss_projection_detempering:{i}:{p}" for i in range(2) for p in range(4)} <= set(cells)        # P_L·D_L (r × dL)
+    assert "cell:ss_projection_targets:0:0" in cells                                                         # P_L·T_L
     # P_L·V over the consolidated V = C|U column: the comma half vanishes (every entry zero)
-    assert all(cells[f"cell:ss_proj_v:{p}:0"].text == "0" for p in range(4))
+    assert all(cells[f"cell:ss_projection_vectors:{p}:0"].text == "0" for p in range(4))
 
 
 def test_superspace_projection_embedding_G_L_matches_the_service():
@@ -8409,7 +8409,7 @@ def test_superspace_projection_embedding_G_L_matches_the_service():
     # grid cells read it cell-for-cell, over the superspace-generators column
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     gl = service.superspace_tuning_embedding(state, ("2", "13/5"))
-    cells = {c.id: c for c in _barbados_proj().cells}
+    cells = {c.id: c for c in _barbados_projection().cells}
     assert [[cells[f"cell:ss_embed:{i}:{g}"].text for g in range(3)] for i in range(4)] == [list(r) for r in gl]
 
 
@@ -8418,13 +8418,13 @@ def test_superspace_projection_projected_basis_matches_P_L_times_B_L():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     pl = service.superspace_projection_matrix_rationals(state, ("2", "13/5"))
     expected = service.project_vectors(pl, service.basis_in_superspace(state.domain_basis))
-    cells = {c.id: c for c in _barbados_proj().cells}
-    assert [[cells[f"cell:ss_proj_bls:{e}:{p}"].text for p in range(4)] for e in range(3)] \
+    cells = {c.id: c for c in _barbados_projection().cells}
+    assert [[cells[f"cell:ss_projection_basis_lift:{e}:{p}"].text for p in range(4)] for e in range(3)] \
         == [[str(x) for x in v] for v in expected]
 
 
 def test_superspace_projection_extra_tiles_carry_captions_symbols_and_units():
-    cells = {c.id: c for c in _barbados_proj(generator_detempering=True, names=True, symbols=True, units=True).cells}
+    cells = {c.id: c for c in _barbados_projection(generator_detempering=True, names=True, symbols=True, units=True).cells}
     assert cells["caption:ss_projection:ssgens"].text == "superspace generator embedding"
     assert cells["caption:ss_projection:primes"].text == "superspace projected subspace basis elements"
     assert cells["caption:ss_projection:detempering"].text == "projected generator detempering in superspace"
@@ -8440,25 +8440,25 @@ def test_superspace_projection_extra_tiles_carry_captions_symbols_and_units():
 
 def test_superspace_projection_extra_tiles_dash_when_under_held():
     # the whole row dashes in lockstep with P_L when the tuning isn't a full rational projection
-    cells = {c.id: c for c in _barbados_proj(held_basis_ratios=(), generator_detempering=True).cells}
+    cells = {c.id: c for c in _barbados_projection(held_basis_ratios=(), generator_detempering=True).cells}
     assert cells["cell:ss_embed:0:0"].text == spreadsheet_constants.DASH        # G_L
-    assert cells["cell:ss_proj_bls:0:0"].text == spreadsheet_constants.DASH     # P_L·B_Ls
-    assert cells["cell:ss_proj_pd:0:0"].text == spreadsheet_constants.DASH      # P_L·D_L
-    assert cells["cell:ss_proj_pt:0:0"].text == spreadsheet_constants.DASH      # P_L·T_L
+    assert cells["cell:ss_projection_basis_lift:0:0"].text == spreadsheet_constants.DASH     # P_L·B_Ls
+    assert cells["cell:ss_projection_detempering:0:0"].text == spreadsheet_constants.DASH      # P_L·D_L
+    assert cells["cell:ss_projection_targets:0:0"].text == spreadsheet_constants.DASH      # P_L·T_L
 
 
 def test_superspace_projection_extra_tiles_absent_without_projection():
     # additive-only: with the projection toggle off, none of the projected tiles leave a trace
     cells = {c.id for c in _barbados_ss(generator_detempering=True).cells}  # projection off
-    assert not any(c.startswith(("cell:ss_embed:", "cell:ss_proj_bls:", "cell:ss_proj_pd:",
-                                 "cell:ss_proj_v:", "cell:ss_proj_pt:", "cell:ss_proj_ph:",
-                                 "cell:ss_proj_pi:")) for c in cells)
+    assert not any(c.startswith(("cell:ss_embed:", "cell:ss_projection_basis_lift:", "cell:ss_projection_detempering:",
+                                 "cell:ss_projection_vectors:", "cell:ss_projection_targets:", "cell:ss_projection_held:",
+                                 "cell:ss_projection_interest:")) for c in cells)
 
 
 def test_superspace_projection_emits_a_plain_text_band():
     # plain_text_values on: P_L gets its own EBK string band under the tile, like M_L / M_jL / B_L and
     # the on-domain P — P_L was the sole matrix row missing one (PLAIN_TEXT_ROWS + plain_text_values parity).
-    cells = {c.id for c in _barbados_proj(plain_text_values=True).cells}
+    cells = {c.id for c in _barbados_projection(plain_text_values=True).cells}
     assert "ptext:ss_projection:ssprimes" in cells
     # absent without the projection toggle: the superspace mapping's band shows, P_L's does not
     off = {c.id for c in _barbados_ss(plain_text_values=True).cells}  # projection off
@@ -8469,7 +8469,7 @@ def test_superspace_projection_emits_a_plain_text_band():
 def test_superspace_projection_every_tile_emits_a_plain_text_band():
     # parity with the on-domain projection row: EVERY tile carries a plain-text EBK band when
     # plain_text_values is on — not just P_L, but the embedding G_L and each projected list.
-    cells = {c.id for c in _barbados_proj(plain_text_values=True, generator_detempering=True).cells}
+    cells = {c.id for c in _barbados_projection(plain_text_values=True, generator_detempering=True).cells}
     for col in ["ssgens", "ssprimes", "primes", "detempering", "commas", "targets"]:
         assert f"ptext:ss_projection:{col}" in cells, col
 
@@ -8477,7 +8477,7 @@ def test_superspace_projection_every_tile_emits_a_plain_text_band():
 def test_superspace_projection_caption_symbol_and_units_when_named():
     # names + symbols + units on: the tile carries the "superspace projection" caption, the in-tile
     # 𝒑Lᵢ covector row labels, the p/p units line, and the P_L = G_L M_L symbol/equivalence
-    cells = {c.id: c for c in _barbados_proj(names=True, symbols=True, header_symbols=True, units=True).cells}
+    cells = {c.id: c for c in _barbados_projection(names=True, symbols=True, header_symbols=True, units=True).cells}
     assert cells["caption:ss_projection:ssprimes"].text == "superspace projection"
     assert "matlabel:row:ss_projection:ssprimes:0" in cells  # 𝒑L₁ row label
     # the units line under the tile reads p/p (a superspace-prime operator, like M_jL above it)
@@ -9544,7 +9544,7 @@ def test_pending_element_renders_drafts_on_both_axes():
 def test_projection_off_by_default_shows_no_projection_box():
     cells = {c.id for c in _layout().cells}  # default build: projection off
     assert "label:projection" not in cells
-    assert not any(c.startswith("cell:proj:") for c in cells)
+    assert not any(c.startswith("cell:projection:") for c in cells)
 
 
 def test_projection_is_an_interactive_toggle():
@@ -9558,45 +9558,45 @@ def test_projection_on_adds_a_dxd_matrix_between_mapping_and_tuning():
     # a d×d matrix of read-only cells (d=3 here), on the shared domain-prime axes
     for i in range(3):
         for p in range(3):
-            cell = cells[f"cell:proj:{i}:{p}"]
+            cell = cells[f"cell:projection:{i}:{p}"]
             assert cell.kind == "mapped"  # read-only computed value, like the mapped lists
             assert cell.x == cells[f"cell:mapping:0:{p}"].x  # the same prime columns
     # its own band, between the mapping and the tuning rows (per the mockup)
     assert cells["label:mapping"].y < cells["label:projection"].y < cells["label:tuning"].y
     # square grid cells stacked one ROW_H apart, like the other matrices
-    c00 = cells["cell:proj:0:0"]
+    c00 = cells["cell:projection:0:0"]
     assert c00.w == c00.h == spreadsheet_constants.ROW_H
-    assert cells["cell:proj:1:0"].y == c00.y + spreadsheet_constants.ROW_H
+    assert cells["cell:projection:1:0"].y == c00.y + spreadsheet_constants.ROW_H
 
 
 def test_projection_box_is_dashed_until_the_tuning_is_a_rational_projection():
     # the corrected model: the default tuning holds nothing rational, so P is TOTALLY DASHED
     # (every cell an em-dash) — NOT a fabricated quarter-comma it doesn't actually realise.
-    dashed = {c.id: c for c in _proj_build().cells}
-    assert all(dashed[f"cell:proj:{i}:{p}"].text == "—" for i in range(3) for p in range(3))
+    dashed = {c.id: c for c in _projection_build().cells}
+    assert all(dashed[f"cell:projection:{i}:{p}"].text == "—" for i in range(3) for p in range(3))
 
 
 def test_projection_box_shows_the_real_quarter_comma_when_fully_held():
     # holding a full rational basis {2/1, 5/4} pins quarter-comma meantone: the fifth flat by 1/4
     # comma (the 1/4 on prime 3's image). Reproduces the mockup exactly.
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}
     expected = (("1", "1", "0"), ("0", "0", "0"), ("0", "1/4", "1"))
     for i in range(3):
         for p in range(3):
-            assert cells[f"cell:proj:{i}:{p}"].text == expected[i][p]
+            assert cells[f"cell:projection:{i}:{p}"].text == expected[i][p]
 
 
 def test_projection_box_is_framed_like_a_matrix_of_maps():
     cells = {c.id: c for c in _with(projection=True).cells}
     # each of the d rows is a map: ⟨ … ] brackets, like the mapping rows
-    assert cells["bracket:proj:0:l"].text == "⟨" and cells["bracket:proj:0:r"].text == "]"
-    assert {"bracket:proj:1:l", "bracket:proj:2:l"} <= set(cells)  # d=3 rows
+    assert cells["bracket:projection:0:l"].text == "⟨" and cells["bracket:projection:0:r"].text == "]"
+    assert {"bracket:projection:1:l", "bracket:projection:2:l"} <= set(cells)  # d=3 rows
     # and the whole matrix is enclosed by a spanning top bracket + bottom ANGLE close ⟩ (P is p/p, so
     # its outer closes with the prime-coordinate ket ⟩, matching its plain text [⟨…]…⟩ — not the
     # mapping's generator-coordinate })
-    assert "ebktop:proj" in cells and "ebkangle:proj" in cells and "ebkbrace:proj" not in cells
-    top, brace = cells["ebktop:proj"], cells["ebkangle:proj"]
-    first, last = cells["cell:proj:0:0"], cells["cell:proj:2:0"]
+    assert "ebktop:projection" in cells and "ebkangle:projection" in cells and "ebkbrace:projection" not in cells
+    top, brace = cells["ebktop:projection"], cells["ebkangle:projection"]
+    first, last = cells["cell:projection:0:0"], cells["cell:projection:2:0"]
     assert top.y + top.h <= first.y       # the top bracket sits above the matrix
     assert brace.y >= last.y + last.h     # the angle close sits below it
 
@@ -9612,11 +9612,11 @@ def test_projection_hides_with_its_parent_tuning_tiles():
     # projection box with it (even when projection itself is on)
     cells = {c.id for c in _with(projection=True, tuning_tiles=False).cells}
     assert "label:projection" not in cells
-    assert not any(c.startswith("cell:proj:") for c in cells)
+    assert not any(c.startswith("cell:projection:") for c in cells)
 
 
 def test_projection_on_adds_the_generator_embedding_G_beside_P():
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # quarter-comma: a full rational hold
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}  # quarter-comma: a full rational hold
     # G shares the projection band (the d prime rows) but lives in the r generator columns:
     # a d×r matrix of read-only "mapped" cells (d=3, r=2 here) — edited only via the plain-text band,
     # since 𝑀𝐺 = 𝐼 couples every entry
@@ -9625,14 +9625,14 @@ def test_projection_on_adds_the_generator_embedding_G_beside_P():
             cell = cells[f"cell:embed:{i}:{g}"]
             assert cell.kind == "mapped"                  # read-only (a single entry can't be a valid edit)
             assert cell.x == cells[f"tuning:gen:{g}"].x   # the same generator columns as 𝒈
-            assert cell.y == cells[f"cell:proj:{i}:0"].y  # the same prime rows as P
+            assert cell.y == cells[f"cell:projection:{i}:0"].y  # the same prime rows as P
     # quarter-comma's embedding G: the octave and 5^(1/4)
     expected = (("1", "0"), ("0", "0"), ("0", "1/4"))
     for i in range(3):
         for g in range(2):
             assert cells[f"cell:embed:{i}:{g}"].text == expected[i][g]
     # under-held (the default), G dashes out in lockstep with P
-    dashed = {c.id: c for c in _proj_build().cells}
+    dashed = {c.id: c for c in _projection_build().cells}
     assert all(dashed[f"cell:embed:{i}:{g}"].text == "—" for i in range(3) for g in range(2))
 
 
@@ -9640,7 +9640,7 @@ def test_projection_p_and_g_carry_full_chrome_and_editable_plain_text():
     # P and G are at chrome parity with the mapping: symbols 𝑃/𝐺 (+ equivalence), the p/p and p/g
     # units, P's covector rows labelled 𝒑ᵢ and G's columns 𝐠ᵢ, and an EDITABLE plain-text band each —
     # the only edit path now the gridded cells are read-only "mapped".
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, header_symbols=True, units=True,
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"), symbols=True, header_symbols=True, units=True,
                                           equivalences=True, plain_text_values=True).cells}
     assert cells["symbol:projection:primes"].text.startswith("𝑃") and "= G𝑀" in cells["symbol:projection:primes"].text
     assert cells["symbol:projection:gens"].text.startswith("G")   # upright G (a basis), not italic 𝐺
@@ -9649,7 +9649,7 @@ def test_projection_p_and_g_carry_full_chrome_and_editable_plain_text():
     assert cells["matlabel:row:projection:primes:0"].text == "𝒑₁"   # P's covector rows
     assert cells["matlabel:col:projection:gens:0"].text == "𝐠₁"     # G's vector columns
     # the gridded cells are read-only; editing is via the plain-text bands (kind "ptextedit")
-    assert cells["cell:proj:0:0"].kind == "mapped" and cells["cell:embed:0:0"].kind == "mapped"
+    assert cells["cell:projection:0:0"].kind == "mapped" and cells["cell:embed:0:0"].kind == "mapped"
     assert cells["ptext:projection:primes"].kind == "ptextedit"
     assert cells["ptext:projection:gens"].kind == "ptextedit"
     assert cells["ptext:projection:primes"].text == "[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩"
@@ -9659,12 +9659,12 @@ def test_projection_p_and_g_carry_full_chrome_and_editable_plain_text():
 def test_projection_plain_text_bands_dash_when_under_held():
     # under-held (the default), P/G aren't a full rational projection, so the bands dash in lockstep
     # with the grid cells
-    cells = {c.id: c for c in _proj_build(plain_text_values=True).cells}
+    cells = {c.id: c for c in _projection_build(plain_text_values=True).cells}
     assert cells["ptext:projection:primes"].text == "[⟨— — —]⟨— — —]⟨— — —]⟩"
     assert cells["ptext:projection:gens"].text == "{[— — —⟩ [— — —⟩]"
 
 
-def _proj_full(**overrides):
+def _projection_full(**overrides):
     # a quarter-comma (fully held) projection build with extra build kwargs (held_vectors, interest)
     s = settings.defaults()
     s["projection"] = True
@@ -9677,82 +9677,82 @@ def _proj_full(**overrides):
 def test_projection_quantities_spine_lists_the_domain_primes():
     # the projection row's quantities column labels its prime-indexed rows with the domain basis
     # (2, 3, 5), like the interval-vectors basis spine — read-only (the whole projection row is derived)
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}
-    assert [cells[f"proj_basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
-    assert cells["proj_basis:0"].kind == "commaratio"            # read-only stacked ratio
-    assert cells["proj_basis:0"].y == cells["cell:proj:0:0"].y    # aligned with P's top prime row
-    assert cells["proj_basis:0"].x == cells["basis:0"].x          # same quantities spine as the vectors row
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}
+    assert [cells[f"projection_basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
+    assert cells["projection_basis:0"].kind == "commaratio"            # read-only stacked ratio
+    assert cells["projection_basis:0"].y == cells["cell:projection:0:0"].y    # aligned with P's top prime row
+    assert cells["projection_basis:0"].x == cells["basis:0"].x          # same quantities spine as the vectors row
 
 
 def test_projection_units_spine_labels_each_row_as_a_prime_coordinate():
     # P is a p/p operator, so the units column reads pᵢ/ down the projection row, like the vectors row
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), domain_units=True).cells}
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"), domain_units=True).cells}
     assert [cells[f"ucol:projection:{p}"].text for p in range(3)] == ["p₁/", "p₂/", "p₃/"]
-    assert cells["ucol:projection:0"].y == cells["cell:proj:0:0"].y
+    assert cells["ucol:projection:0"].y == cells["cell:projection:0:0"].y
 
 
 def test_projection_detempering_tile_shows_P_times_D():
     # the projected generator detempering P·D over the detempering column: d-tall ket columns, one per
     # generator. P·D = the embedding G (P·D = GMD = G, since M·D = I): quarter-comma's columns are the
     # octave [1 0 0] and 5^(1/4) = [0 0 1/4]. Read-only "mapped" cells, like P/G.
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), generator_detempering=True).cells}
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"), generator_detempering=True).cells}
     expected = (("1", "0", "0"), ("0", "0", "1/4"))
     for i in range(2):  # r = 2 generators
         for p in range(3):
-            cell = cells[f"cell:proj_pd:{i}:{p}"]
+            cell = cells[f"cell:projection_detempering:{i}:{p}"]
             assert cell.text == expected[i][p]
             assert cell.kind == "mapped"
             assert cell.x == cells[f"cell:vec:detempering:{i}:{p}"].x  # the detempering column
-            assert cell.y == cells[f"cell:proj:{p}:0"].y               # the projection row's prime rows
+            assert cell.y == cells[f"cell:projection:{p}:0"].y               # the projection row's prime rows
 
 
 def test_projection_targets_tile_shows_P_times_T():
     # P·T over the targets column: each default target (the 5-limit diamond) projected to its tempered
     # vector — the 8 columns of the mockup's PT tile (e.g. 3/2 → 5^(1/4) = [0 0 1/4], 6/5 → [2 0 -3/4])
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}
     expected = (("1", "0", "0"), ("1", "0", "1/4"), ("0", "0", "1/4"), ("1", "0", "-1/4"),
                 ("-1", "0", "1"), ("-1", "0", "3/4"), ("-2", "0", "1"), ("2", "0", "-3/4"))
     for j, col in enumerate(expected):
         for p in range(3):
-            cell = cells[f"cell:proj_pt:{j}:{p}"]
+            cell = cells[f"cell:projection_targets:{j}:{p}"]
             vec = cells[f"cell:vec:targets:{j}:{p}"]
             assert cell.text == col[p]
             assert cell.kind == "mapped"
             assert cell.x + cell.w / 2 == vec.x + vec.w / 2  # column-centred on the targets column
-            assert cell.y == cells[f"cell:proj:{p}:0"].y     # the projection row's prime rows
+            assert cell.y == cells[f"cell:projection:{p}:0"].y     # the projection row's prime rows
 
 
 def test_projection_held_tile_shows_P_times_H_equals_H():
     # P·H = H: the held intervals are P's eigenvalue-1 directions, unchanged by the projection
-    cells = {c.id: c for c in _proj_full(optimization=True,
+    cells = {c.id: c for c in _projection_full(optimization=True,
                                          held_vectors=[(1, 0, 0), (-2, 0, 1)]).cells}
     expected = (("1", "0", "0"), ("-2", "0", "1"))
     for i in range(2):
         for p in range(3):
-            assert cells[f"cell:proj_ph:{i}:{p}"].text == expected[i][p]
-            assert cells[f"cell:proj_ph:{i}:{p}"].kind == "mapped"
+            assert cells[f"cell:projection_held:{i}:{p}"].text == expected[i][p]
+            assert cells[f"cell:projection_held:{i}:{p}"].kind == "mapped"
 
 
 def test_projection_interest_tile_shows_P_times_interest():
     # P·interest over the loose interest kets: 3/2 → [0 0 1/4], 6/5 → [2 0 -3/4]
-    cells = {c.id: c for c in _proj_full(interest=[(-1, 1, 0), (1, 1, -1)]).cells}
+    cells = {c.id: c for c in _projection_full(interest=[(-1, 1, 0), (1, 1, -1)]).cells}
     expected = (("0", "0", "1/4"), ("2", "0", "-3/4"))
     for i in range(2):
         for p in range(3):
-            assert cells[f"cell:proj_pi:{i}:{p}"].text == expected[i][p]
-            assert cells[f"cell:proj_pi:{i}:{p}"].kind == "mapped"
+            assert cells[f"cell:projection_interest:{i}:{p}"].text == expected[i][p]
+            assert cells[f"cell:projection_interest:{i}:{p}"].kind == "mapped"
 
 
 def test_projection_column_tiles_dash_when_under_held():
     # under-held (no rational projection), every projected tile dashes in lockstep with P
-    cells = {c.id: c for c in _proj_build(generator_detempering=True).cells}
-    assert all(cells[f"cell:proj_pd:{i}:{p}"].text == "—" for i in range(2) for p in range(3))
-    assert all(cells[f"cell:proj_pt:{j}:{p}"].text == "—" for j in range(3) for p in range(3))
+    cells = {c.id: c for c in _projection_build(generator_detempering=True).cells}
+    assert all(cells[f"cell:projection_detempering:{i}:{p}"].text == "—" for i in range(2) for p in range(3))
+    assert all(cells[f"cell:projection_targets:{j}:{p}"].text == "—" for j in range(3) for p in range(3))
 
 
 def test_projection_column_tiles_carry_full_chrome():
     # captions, symbols, units and per-column labels at parity with the vectors-row tiles they project
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), generator_detempering=True,
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"), generator_detempering=True,
                                           symbols=True, header_symbols=True, units=True, equivalences=True).cells}
     assert cells["caption:projection:detempering"].text == "projected generator detempering"
     assert cells["caption:projection:targets"].text == "projected target interval list"
@@ -9766,7 +9766,7 @@ def test_projection_column_tiles_carry_full_chrome():
 
 def test_projection_held_tile_carries_the_equals_H_equivalence():
     # PH = H: the held tile's symbol gains the "= H" equivalence (the held intervals are unchanged)
-    cells = {c.id: c for c in _proj_full(optimization=True, held_vectors=[(1, 0, 0), (-2, 0, 1)],
+    cells = {c.id: c for c in _projection_full(optimization=True, held_vectors=[(1, 0, 0), (-2, 0, 1)],
                                          symbols=True, header_symbols=True, equivalences=True).cells}
     assert cells["caption:projection:held"].text == "projected held interval basis"
     assert cells["symbol:projection:held"].text == "𝑃H = H"
@@ -9775,7 +9775,7 @@ def test_projection_held_tile_carries_the_equals_H_equivalence():
 
 def test_projection_interest_tile_caption_and_label():
     # interest carries a caption + per-column label but NO big symbol (a loose collection, like the vectors row)
-    cells = {c.id: c for c in _proj_full(interest=[(-1, 1, 0), (1, 1, -1)], symbols=True, header_symbols=True).cells}
+    cells = {c.id: c for c in _projection_full(interest=[(-1, 1, 0), (1, 1, -1)], symbols=True, header_symbols=True).cells}
     assert cells["caption:projection:interest"].text == "projected intervals"
     assert cells["matlabel:col:projection:interest:0"].text == "𝑃𝐢₁"
     assert "symbol:projection:interest" not in cells
@@ -9783,7 +9783,7 @@ def test_projection_interest_tile_caption_and_label():
 
 def test_projection_column_tiles_carry_plain_text_bands():
     # the EBK strings under each projected tile: P·D the embedding form { … ], P·T a ket list [ … ]
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), generator_detempering=True,
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"), generator_detempering=True,
                                           plain_text_values=True).cells}
     assert cells["ptext:projection:detempering"].text == "{[1 0 0⟩ [0 0 1/4⟩]"
     assert cells["ptext:projection:targets"].text == (
@@ -9793,13 +9793,13 @@ def test_projection_column_tiles_carry_plain_text_bands():
 def test_projection_column_tiles_use_their_vectors_row_brackets():
     # P·D takes the embedding's { … ] (genmap), P·T a list [ … ]; their per-column ket marks ride the
     # projection row's frame band, like the matrix tiles' marks
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), generator_detempering=True).cells}
-    assert cells["bracket:proj_pd:l"].text == "{" and cells["bracket:proj_pd:r"].text == "]"
-    assert cells["bracket:proj_pt:l"].text == "[" and cells["bracket:proj_pt:r"].text == "]"
-    assert "ebkangle:proj_pd:0" in cells and "ebkangle:proj_pt:0" in cells  # per-column ket feet
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"), generator_detempering=True).cells}
+    assert cells["bracket:projection_detempering:l"].text == "{" and cells["bracket:projection_detempering:r"].text == "]"
+    assert cells["bracket:projection_targets:l"].text == "[" and cells["bracket:projection_targets:r"].text == "]"
+    assert "ebkangle:projection_detempering:0" in cells and "ebkangle:projection_targets:0" in cells  # per-column ket feet
 
 
-def _proj_superspace(**overrides):
+def _projection_superspace(**overrides):
     # BARBADOS over the nonstandard domain 2.3.13/5 with projection + the superspace columns on,
     # holding {2/1, 3/1} (a full rational projection)
     st = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
@@ -9812,21 +9812,21 @@ def _proj_superspace(**overrides):
 def test_projection_superspace_tiles_fill_the_gap_between_G_and_P():
     # the missing tiles: G_L→s (d×rL vector list, ssgens) and P_L→s (d×dL covector stack, ssprimes),
     # between G (gens) and P (primes) in the projection row — so the row reads G, G_L→s, P_L→s, P
-    cells = {c.id: c for c in _proj_superspace().cells}
+    cells = {c.id: c for c in _projection_superspace().cells}
     assert [cells[f"cell:embed_sl:0:{g}"].text for g in range(3)] == ["1", "0", "0"]      # G_L→s row 0
     assert [cells[f"cell:embed_sl:1:{g}"].text for g in range(3)] == ["0", "1/2", "0"]    # G_L→s row 1
-    assert [cells[f"cell:proj_sl:0:{p}"].text for p in range(4)] == ["1", "0", "0", "-1"]  # P_L→s row 0
-    assert [cells[f"cell:proj_sl:1:{p}"].text for p in range(4)] == ["0", "1", "0", "3/2"]  # P_L→s row 1
-    assert cells["cell:embed_sl:0:0"].kind == "mapped" and cells["cell:proj_sl:0:0"].kind == "mapped"
-    assert cells["cell:embed_sl:0:0"].y == cells["cell:proj:0:0"].y  # the projection row's prime rows
+    assert [cells[f"cell:projection_superspace:0:{p}"].text for p in range(4)] == ["1", "0", "0", "-1"]  # P_L→s row 0
+    assert [cells[f"cell:projection_superspace:1:{p}"].text for p in range(4)] == ["0", "1", "0", "3/2"]  # P_L→s row 1
+    assert cells["cell:embed_sl:0:0"].kind == "mapped" and cells["cell:projection_superspace:0:0"].kind == "mapped"
+    assert cells["cell:embed_sl:0:0"].y == cells["cell:projection:0:0"].y  # the projection row's prime rows
     # left→right order: G < G_L→s < P_L→s < P
     assert (cells["cell:embed:0:0"].x < cells["cell:embed_sl:0:0"].x
-            < cells["cell:proj_sl:0:0"].x < cells["cell:proj:0:0"].x)
+            < cells["cell:projection_superspace:0:0"].x < cells["cell:projection:0:0"].x)
 
 
 def test_projection_superspace_tiles_carry_chrome():
     from rtt.app.grid_tables import SUBSCRIPT_L
-    cells = {c.id: c for c in _proj_superspace(symbols=True, header_symbols=True, equivalences=True, units=True).cells}
+    cells = {c.id: c for c in _projection_superspace(symbols=True, header_symbols=True, equivalences=True, units=True).cells}
     assert cells["caption:projection:ssgens"].text == "embedding from superspace generators to subspace elements"
     assert cells["caption:projection:ssprimes"].text == "projection from superspace to subspace"
     assert cells["symbol:projection:ssgens"].text == f"G{SUBSCRIPT_L}→ₛ"
@@ -9837,7 +9837,7 @@ def test_projection_superspace_tiles_carry_chrome():
     assert cells["matlabel:row:projection:ssprimes:0"].text == f"𝒑{SUBSCRIPT_L}→ₛ₁"   # P_L→s covector rows
     # G_L→s the genmap { … ] (a vector list, like G); P_L→s a covector stack ⟨ … ] per row (like P)
     assert cells["bracket:embed_sl:l"].text == "{" and cells["bracket:embed_sl:r"].text == "]"
-    assert cells["bracket:proj_sl:0:l"].text == "⟨" and cells["bracket:proj_sl:0:r"].text == "]"
+    assert cells["bracket:projection_superspace:0:l"].text == "⟨" and cells["bracket:projection_superspace:0:r"].text == "]"
 
 
 def test_projection_superspace_tiles_dash_when_under_held():
@@ -9847,16 +9847,16 @@ def test_projection_superspace_tiles_dash_when_under_held():
     s.update(projection=True, nonstandard_domain=True)
     cells = {c.id: c for c in spreadsheet.build(st, s).cells}  # no held_basis_ratios → under-held
     assert all(cells[f"cell:embed_sl:{i}:{g}"].text == "—" for i in range(3) for g in range(3))
-    assert all(cells[f"cell:proj_sl:{i}:{p}"].text == "—" for i in range(3) for p in range(4))
+    assert all(cells[f"cell:projection_superspace:{i}:{p}"].text == "—" for i in range(3) for p in range(4))
 
 
 def test_projection_row_comes_after_the_superspace_rows():
     # per the mockup the projection row (P, G_L→s, P_L→s) sits BELOW the superspace interval-vectors
     # (B_L) and superspace mapping (M_L) rows, not above them
-    cells = {c.id: c for c in _proj_superspace().cells}
-    proj_y = cells["cell:proj:0:0"].y
-    assert proj_y > cells["cell:ss_vectors:primes:0:0"].y    # below B_L
-    assert proj_y > cells["cell:ss_mapping:ssprimes:0:0"].y  # below M_L
+    cells = {c.id: c for c in _projection_superspace().cells}
+    projection_y = cells["cell:projection:0:0"].y
+    assert projection_y > cells["cell:ss_vectors:primes:0:0"].y    # below B_L
+    assert projection_y > cells["cell:ss_mapping:ssprimes:0:0"].y  # below M_L
 
 
 def test_projection_targets_tile_tracks_the_targets_column():
@@ -9868,7 +9868,7 @@ def test_projection_targets_tile_tracks_the_targets_column():
     s.update(projection=True)
     for kw in ({}, {"target_override": ()}):  # a populated target list, then an empty-but-open one
         ids = {c.id for c in spreadsheet.build(st, s, held_basis_ratios=("2/1", "5/4"), **kw).cells}
-        assert ("bracket:vec:targets:l" in ids) == ("bracket:proj_pt:l" in ids)
+        assert ("bracket:vec:targets:l" in ids) == ("bracket:projection_targets:l" in ids)
 
 
 def test_projection_symbol_floor_widens_the_tile_so_the_equivalence_never_wraps():
@@ -9877,11 +9877,11 @@ def test_projection_symbol_floor_widens_the_tile_so_the_equivalence_never_wraps(
     # matrix then centres in the widened column.
     from rtt.app.spreadsheet_constants import SYMBOL_FONT
     from rtt.app.spreadsheet_text import _min_width_for_lines
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, equivalences=True, names=True).cells}
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"), symbols=True, equivalences=True, names=True).cells}
     sym = cells["symbol:projection:primes"]
     assert sym.w >= _min_width_for_lines(sym.text, 1, SYMBOL_FONT)   # the cell is wide enough — no wrap
-    left = cells["cell:proj:0:0"].x - sym.x                          # margin from the column edge to the matrix
-    right = (sym.x + sym.w) - (cells["cell:proj:0:2"].x + cells["cell:proj:0:2"].w)
+    left = cells["cell:projection:0:0"].x - sym.x                          # margin from the column edge to the matrix
+    right = (sym.x + sym.w) - (cells["cell:projection:0:2"].x + cells["cell:projection:0:2"].w)
     assert abs(left - right) <= 1                                    # the matrix is centred in the widened column
 
 
@@ -9949,7 +9949,7 @@ def test_established_projection_choosers_need_both_presets_and_the_projection_bo
 
 
 def test_projection_adds_a_scaling_factors_row_over_v():
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # a full rational hold completes U
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}  # a full rational hold completes U
     assert cells["label:scaling_factors"].text == "scaling factors"
     # λ = diag(λ): 0 per comma (vanished), 1 per unchanged interval (held). Meantone fully held
     # has n=1 comma + u=2 unchanged → [0, 1, 1] over the three V sub-columns. The comma half is
@@ -9964,7 +9964,7 @@ def test_projection_adds_a_scaling_factors_row_over_v():
 
 
 def test_projection_consolidates_commas_and_unchanged_into_v():
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # a full rational hold completes U
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}  # a full rational hold completes U
     # V = C|U: the editable comma vectors C stay, the unchanged basis U appends — also editable now
     # (a full rational projection), retyping it retunes
     assert cells["cell:comma:0:0"].kind == "commacell"   # C stays editable
@@ -9981,7 +9981,7 @@ def test_projection_consolidates_commas_and_unchanged_into_v():
 
 def test_projection_dashes_the_unchanged_columns_when_under_held():
     # default (under-held): both unchanged columns are dashed — every U cell an em-dash
-    cells = {c.id: c for c in _proj_build().cells}
+    cells = {c.id: c for c in _projection_build().cells}
     assert all(cells[f"cell:unchanged:{p}:{j}"].text == "—" for p in range(3) for j in range(2))
 
 
@@ -9999,7 +9999,7 @@ def test_projection_on_a_nonstandard_domain_lifts_dashes_cleanly():
 
 
 def test_projection_mapping_row_spans_v_mapping_the_unchanged_intervals():
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # quarter-comma: full hold
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}  # quarter-comma: full hold
     # M·C = 0 (the comma vanishes) stays; M·U appends — the unchanged intervals' generator coords.
     assert cells["cell:mapped_comma:0:0"].text == "0"
     assert cells["cell:mapped_unchanged:0:0"].text == "1"   # M·(2/1) = ⟨1 0] (the period)
@@ -10008,16 +10008,16 @@ def test_projection_mapping_row_spans_v_mapping_the_unchanged_intervals():
 
 
 def test_projection_row_spans_v_with_the_projected_unrotated_vector_list():
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # quarter-comma: a full rational hold
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}  # quarter-comma: a full rational hold
     # P·V over the V column: P·comma = 0 (the eigenvalue-0 direction vanishes), P·unchanged = the
     # unchanged interval itself (eigenvalue 1). V col 0 = comma (identity-keyed), the unchanged
     # u₁=2/1, u₂=5/4 ride their own u{j} namespace.
-    assert [cells[f"cell:proj_v:{p}:0"].text for p in range(3)] == ["0", "0", "0"]    # P·c₁ = 𝟎
-    assert [cells[f"cell:proj_v:{p}:u0"].text for p in range(3)] == ["1", "0", "0"]   # P·u₁ = 2/1
-    assert [cells[f"cell:proj_v:{p}:u1"].text for p in range(3)] == ["-2", "0", "1"]  # P·u₂ = 5/4
+    assert [cells[f"cell:projection_vectors:{p}:0"].text for p in range(3)] == ["0", "0", "0"]    # P·c₁ = 𝟎
+    assert [cells[f"cell:projection_vectors:{p}:u0"].text for p in range(3)] == ["1", "0", "0"]   # P·u₁ = 2/1
+    assert [cells[f"cell:projection_vectors:{p}:u1"].text for p in range(3)] == ["-2", "0", "1"]  # P·u₂ = 5/4
     # it rides the projection row band (same y as P over the primes) on the V sub-axes
-    assert cells["cell:proj_v:0:0"].y == cells["cell:proj:0:0"].y
-    assert cells["cell:proj_v:0:u0"].x == cells["cell:unchanged:0:0"].x  # V col 1 = first unchanged col
+    assert cells["cell:projection_vectors:0:0"].y == cells["cell:projection:0:0"].y
+    assert cells["cell:projection_vectors:0:u0"].x == cells["cell:unchanged:0:0"].x  # V col 1 = first unchanged col
     assert cells["caption:projection:commas"].text == "projected unrotated vector list"
 
 
@@ -10156,7 +10156,7 @@ def test_projection_pending_comma_reddens_the_unchanged_interval_it_will_delete(
     doomed_ids = ([f"cell:unchanged:{p}:{last}" for p in range(3)] + [f"unchanged:{last}"]
                   + [f"cell:mapped_unchanged:{i}:{last}" for i in range(2)]
                   + [f"tuning:comma:u{last}", f"just:comma:u{last}", f"retune:comma:u{last}"]
-                  + [f"cell:proj_v:{p}:u{last}" for p in range(3)] + [f"cell:scaling:u{last}"])
+                  + [f"cell:projection_vectors:{p}:u{last}" for p in range(3)] + [f"cell:scaling:u{last}"])
     assert all(cells[cid].preview_remove for cid in doomed_ids), \
         [cid for cid in doomed_ids if not cells[cid].preview_remove]
     # the earlier U column, the unchanged count/caption, and the drag grip are NOT reddened
@@ -10170,7 +10170,7 @@ def test_projection_pending_comma_reddens_the_unchanged_interval_it_will_delete(
 
 
 def test_unchanged_columns_have_cross_list_drag_grips():
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), drag_to_combine=True).cells}
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"), drag_to_combine=True).cells}
     # each KNOWN unchanged interval gets a drag grip — a cross-list drag SOURCE (drop it on another
     # list to copy it there), on its own U sub-axis, like the comma/target/held/interest columns
     assert cells["grip:unchanged:0"].kind == "colgrip"
@@ -10213,7 +10213,7 @@ def test_projection_v_column_counts_both_nullity_and_unchanged():
 def test_projected_unrotated_vector_list_tile_is_complete():
     # the P·V tile carries the full complement like every other V-column tile: a symbol, a units
     # line, and a plain-text EBK string (not just the gridded cells)
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, units=True, plain_text_values=True).cells}
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"), symbols=True, units=True, plain_text_values=True).cells}
     assert cells["symbol:projection:commas"].text == "𝑃V"      # P·V (= V·diag(λ)); italic 𝑃 operator
     assert cells["units:projection:commas"].text == "units: p"  # prime-count vectors, like V
     # the plain text shows the WHOLE column V = C|U: P·𝐜 = 𝟎 (commas vanish) then P·𝐮 = 𝐮 (held)
@@ -10223,7 +10223,7 @@ def test_projected_unrotated_vector_list_tile_is_complete():
 def test_consolidated_v_column_reads_green():
     # V = C|U mixes the comma half (temperament/yellow) with the unchanged/held half (tuning/cyan),
     # so the whole column reads GREEN — every tile carries BOTH washes when both colorizations are on
-    blocks = {b.id for b in _proj_build(("2/1", "5/4"),
+    blocks = {b.id for b in _projection_build(("2/1", "5/4"),
                                         temperament_colorization=True, tuning_colorization=True).blocks}
     for r in ("vectors", "mapping", "scaling_factors", "projection", "tuning", "just", "retune"):
         assert f"wash:temperament:{r}:commas" in blocks, r   # yellow (the comma half C)
@@ -10236,13 +10236,13 @@ def test_consolidated_v_column_reads_green():
 def test_v_column_plain_text_shows_both_the_comma_and_unchanged_halves():
     # the inline plain text matches the grid for the WHOLE consolidated V = C|U — not just C. Every
     # value tile appends the unchanged half U (here 2/1, 5/4 under a full rational hold).
-    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), plain_text_values=True, weighting=True).cells}
+    cells = {c.id: c for c in _projection_build(("2/1", "5/4"), plain_text_values=True, weighting=True).cells}
     assert cells["ptext:vectors:commas"].text == "[[4 -4 1⟩ [1 0 0⟩ [-2 0 1⟩]"   # C | U vectors
     assert cells["ptext:mapping:commas"].text == "[[0 0} [1 0} [-2 4}]"           # M·C=0 | M·U
     assert cells["ptext:tuning:commas"].text == "[0.000 1200.000 386.314]"        # comma | unchanged sizes
     assert cells["ptext:scaling_factors:commas"].text == "[0 1 1]"                # λ over C|U
     # under-held, the unchanged half dashes out in the plain text exactly as in the grid
-    dashed = {c.id: c for c in _proj_build(plain_text_values=True).cells}
+    dashed = {c.id: c for c in _projection_build(plain_text_values=True).cells}
     assert dashed["ptext:vectors:commas"].text == "[[4 -4 1⟩ [— — —⟩ [— — —⟩]"
     assert dashed["ptext:tuning:commas"].text == "[0.000 — —]"
     # OFF projection the column is just C again (no consolidation, no U) — regression guard
@@ -10315,8 +10315,8 @@ def test_v_column_unchanged_basis_follows_the_held_basis():
     # U is the held basis, so the held intervals / established-projection chooser drive the V = C|U
     # column: holding {2/1, 5/4} (quarter-comma) vs {2/1, 6/5} (third-comma) changes the second
     # unchanged column from 5/4 to 6/5.
-    quarter = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}
-    third = {c.id: c for c in _proj_build(("2/1", "6/5")).cells}
+    quarter = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}
+    third = {c.id: c for c in _projection_build(("2/1", "6/5")).cells}
     assert [quarter[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["-2", "0", "1"]  # 5/4
     assert [third[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["1", "1", "-1"]     # 6/5
 
@@ -10373,15 +10373,15 @@ def test_projection_row_grows_a_draft_column_for_target_held_interest_drafts():
     s = {**settings.defaults(), "projection": True, "optimization": True}
     k = _target_count()
     pt = {c.id: c for c in spreadsheet.build(base, s, pending_target=[None, None, None]).cells}
-    assert all(pt[f"cell:proj_pt:draft:{p}"].pending and pt[f"cell:proj_pt:draft:{p}"].text == "" for p in range(3))
-    assert pt["cell:proj_pt:draft:0"].x == pt[f"cell:proj_pt:{k - 1}:0"].x + spreadsheet_constants.COL_W + spreadsheet_constants.INTERVAL_COL_GAP  # one slot past committed P·T
+    assert all(pt[f"cell:projection_targets:draft:{p}"].pending and pt[f"cell:projection_targets:draft:{p}"].text == "" for p in range(3))
+    assert pt["cell:projection_targets:draft:0"].x == pt[f"cell:projection_targets:{k - 1}:0"].x + spreadsheet_constants.COL_W + spreadsheet_constants.INTERVAL_COL_GAP  # one slot past committed P·T
     ph = {c.id: c for c in spreadsheet.build(base, s, pending_held=[None, None, None]).cells}
-    assert all(ph[f"cell:proj_ph:draft:{p}"].pending and ph[f"cell:proj_ph:draft:{p}"].text == "" for p in range(3))
+    assert all(ph[f"cell:projection_held:draft:{p}"].pending and ph[f"cell:projection_held:draft:{p}"].text == "" for p in range(3))
     pi = {c.id: c for c in spreadsheet.build(base, s, interest=((1, 1, -1),), pending_interest=[None, None, None]).cells}
-    assert all(pi[f"cell:proj_pi:draft:{p}"].pending and pi[f"cell:proj_pi:draft:{p}"].text == "" for p in range(3))
+    assert all(pi[f"cell:projection_interest:draft:{p}"].pending and pi[f"cell:projection_interest:draft:{p}"].text == "" for p in range(3))
     # no draft → no draft column in the projection row (regression guard)
     none = {c.id for c in spreadsheet.build(base, s, interest=((1, 1, -1),)).cells}
-    assert not any(i.startswith(("cell:proj_pt:draft", "cell:proj_ph:draft", "cell:proj_pi:draft")) for i in none)
+    assert not any(i.startswith(("cell:projection_targets:draft", "cell:projection_held:draft", "cell:projection_interest:draft")) for i in none)
 
 
 def test_scaling_factors_grows_a_green_draft_column_for_a_pending_comma():
@@ -10391,7 +10391,7 @@ def test_scaling_factors_grows_a_green_draft_column_for_a_pending_comma():
     s = {**settings.defaults(), "projection": True}
     c = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None]).cells}
     assert c["cell:scaling:draft"].pending and c["cell:scaling:draft"].text == ""
-    assert c["cell:scaling:draft"].x == c["cell:proj_v:0:draft"].x   # aligned with the projection row's comma draft
+    assert c["cell:scaling:draft"].x == c["cell:projection_vectors:0:draft"].x   # aligned with the projection row's comma draft
     assert "cell:scaling:draft" not in {cb.id for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
 
 
@@ -10428,7 +10428,7 @@ def test_v_column_labels_track_their_cells_during_a_pending_comma():
     assert c["matlabel:col:vectors:commas:2"].x == c["cell:unchanged:0:1"].x    # 𝐯₃ over the LAST U col (now labelled)
     assert "matlabel:col:vectors:commas:3" not in c                            # exactly nc + nu labels
     assert c["matlabel:col:vectors:commas:1"].x != c["cell:comma:0:1"].x        # no label over the draft column
-    assert c["matlabel:col:projection:commas:1"].x == c["cell:proj_v:0:u0"].x  # the whole V band tracks together
+    assert c["matlabel:col:projection:commas:1"].x == c["cell:projection_vectors:0:u0"].x  # the whole V band tracks together
     # off-draft this is a no-op: labels sit on their plain columns (regression guard)
     rest = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
     assert rest["matlabel:col:vectors:commas:1"].x == rest["cell:unchanged:0:0"].x

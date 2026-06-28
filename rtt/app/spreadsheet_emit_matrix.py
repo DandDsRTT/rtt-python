@@ -99,11 +99,11 @@ def _emit_units_matrix(cells, resolved, geometry, context) -> None:
     matrix_units = {
         "vectors": (resolved.dims.dimensionality, lambda i: query.vec_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
         "canon": (resolved.dims.canonical_rank, lambda i: query.canon_top(geometry, i), lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
-        "projection": (resolved.dims.dimensionality, lambda i: query.proj_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
+        "projection": (resolved.dims.dimensionality, lambda i: query.projection_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
         "mapping": (resolved.dims.rank_shown, lambda i: query.map_top(geometry, i), lambda i: f"g{_sub(i + 1)}/"),
         "ss_vectors": (resolved.dims.superspace_dimensionality, lambda i: query.ss_vec_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
         "ss_mapping": (resolved.dims.superspace_rank, lambda i: query.ss_map_top(geometry, i), lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
-        "ss_projection": (resolved.dims.superspace_dimensionality, lambda i: query.ss_proj_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
+        "ss_projection": (resolved.dims.superspace_dimensionality, lambda i: query.ss_projection_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
     }
     for key, (n, top, label) in matrix_units.items():
         if not query.tile_open(geometry, context.collapsed, key, "units"):
