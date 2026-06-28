@@ -315,17 +315,30 @@ def build_chapter_group(pb) -> dict:
             .mark("chapterslider")
             .tooltip(tooltips.CHROME_HELP["chapter"])
         )
-        dd_terminology_box = (
-            _settings_checkbox(pb, "dd_terminology", "use D&D's terminology")
-            .classes("rtt-show-item rtt-chapter-dd")
-            .mark("ddterminology")
-            .tooltip(tooltips.CHROME_HELP["dd_terminology"])
-        )
+        terminology_radio = build_terminology_radio(pb)
     return {
         "chapter_reading": chapter_reading,
         "chapter_slider": chapter_slider,
-        "dd_terminology_box": dd_terminology_box,
+        "terminology_radio": terminology_radio,
     }
+
+
+def build_terminology_radio(pb):
+    with ui.element("div").classes("rtt-terminology-box").mark("terminologybox"):
+        ui.label("terminology").classes("rtt-terminology-title")
+        radio = (
+            ui.radio(
+                {"dd": "D&D", "wiki": "wiki", "both": "both"},
+                value=pb._editor.settings["terminology"],
+                on_change=lambda e: pb._edits.on_show_toggle("terminology", e.value),
+            )
+            .props("inline dense size=xs color=grey-8")
+            .classes("rtt-terminology-radio")
+            .mark("terminologyradio")
+            .tooltip(tooltips.CHROME_HELP["terminology"])
+        )
+    pb._chrome.refs["terminology"] = radio
+    return radio
 
 
 def _settings_checkbox(pb, key, label):

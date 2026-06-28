@@ -165,22 +165,33 @@ async def test_enabling_a_feature_renders_its_cell(user: User, label: str, cell_
     await user.should_see(marker=cell_id)
 
 
-async def test_guide_settings_box_carries_the_terminology_toggle(user: User) -> None:
+def _terminology_radio(user: User):
+    return next(iter(user.find(marker="terminologyradio").elements))
+
+
+async def test_guide_settings_box_carries_the_terminology_radio(user: User) -> None:
     await user.open("/")
     await user.should_see(content="guide settings")
-    assert user.find(marker="ddterminology").elements
+    await user.should_see(content="terminology")
+    assert _terminology_radio(user).value == "dd"
 
 
-async def test_dd_terminology_toggle_swaps_grid_terms_to_wiki_live(user: User) -> None:
+async def test_wiki_mode_swaps_grid_terms_to_wiki_live(user: User) -> None:
     await user.open("/")
     assert user.find(content="interval vectors").elements
-    user.find(kind=ui.checkbox, content="use D&D's terminology").click()
+    _terminology_radio(user).set_value("wiki")
     await user.should_see(content="monzos")
 
 
-async def test_undo_of_terminology_toggle_restores_dd_terms(user: User) -> None:
+async def test_both_mode_shows_dd_terms_with_the_wiki_name_in_parentheses(user: User) -> None:
     await user.open("/")
-    user.find(kind=ui.checkbox, content="use D&D's terminology").click()
+    _terminology_radio(user).set_value("both")
+    await user.should_see(content="interval vectors (monzos)")
+
+
+async def test_undo_of_a_terminology_change_restores_dd_terms(user: User) -> None:
+    await user.open("/")
+    _terminology_radio(user).set_value("wiki")
     await user.should_see(content="monzos")
     user.find(marker="undo").click()
     await user.should_see(content="interval vectors")
@@ -190,7 +201,7 @@ def _scheme_select(user: User):
     return next(e for e in user.find(kind=ui.select).elements if "minimax-S" in (e.options or {}))
 
 
-async def test_all_interval_scheme_dropdown_relabels_to_wiki_names_when_off(user: User) -> None:
+async def test_all_interval_scheme_dropdown_relabels_to_wiki_names_in_wiki_mode(user: User) -> None:
     await user.open("/")
     user.find(marker="showpart:presets").click()
     user.find(kind=ui.checkbox, content="optimization").click()
@@ -199,7 +210,7 @@ async def test_all_interval_scheme_dropdown_relabels_to_wiki_names_when_off(user
     _cell_child(user, "control:all_interval").set_value(True)
     user.find(kind=ui.checkbox, content="alternative complexity").click()
     assert _scheme_select(user).options["minimax-S"] == "minimax-S"
-    user.find(kind=ui.checkbox, content="use D&D's terminology").click()
+    _terminology_radio(user).set_value("wiki")
     assert _scheme_select(user).options["minimax-S"] == "TOP"
 
 
@@ -866,9 +877,9 @@ async def test_reset_restores_the_guide_chapter_slider_to_the_default(user: User
     assert next(iter(user.find(marker="chapterreading").elements)).text == "4: Exploring temperaments"
 
 
-def test_guide_settings_box_holds_a_default_on_dd_terminology_toggle(default_page: User) -> None:
+def test_guide_settings_box_holds_a_dd_default_terminology_radio(default_page: User) -> None:
     assert next(iter(default_page.find(marker="guidesettingstitle").elements)).text == "guide settings"
-    assert next(iter(default_page.find(marker="ddterminology").elements)).value is True
+    assert next(iter(default_page.find(marker="terminologyradio").elements)).value == "dd"
 
 
 async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cells(user: User) -> None:

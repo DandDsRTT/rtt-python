@@ -142,11 +142,14 @@ def temperament_options() -> dict[str, str]:
 
 
 def tuning_scheme_options(
-    all_interval: bool, include_alternatives: bool, weighting: bool, dd_terminology: bool = True
+    all_interval: bool,
+    include_alternatives: bool,
+    weighting: bool,
+    terminology_mode: str = terminology.DD,
 ) -> dict[str, str]:
     families = tuning_schemes(include_alternatives)
     if all_interval:
-        return {name: terminology.scheme_name(name, dd_terminology) for name in families}
+        return {name: terminology.scheme(name, terminology_mode) for name in families}
     return {
         variant: f"T {variant}"
         for name in families

@@ -16,9 +16,9 @@ def test_every_show_toggle_has_a_chapter():
     assert set(show_settings.CHAPTER) == set(show_settings.DEFAULTS)
 
 
-def test_dd_terminology_defaults_on_and_is_always_available():
-    assert show_settings.defaults()["dd_terminology"] is True
-    assert show_settings.reveal_chapter("dd_terminology") == show_settings.CHAPTER_MIN
+def test_terminology_defaults_to_dd_and_is_always_available():
+    assert show_settings.defaults()["terminology"] == "dd"
+    assert show_settings.reveal_chapter("terminology") == show_settings.CHAPTER_MIN
 
 
 def test_chapter_values_sit_within_the_slider_range():

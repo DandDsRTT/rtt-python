@@ -194,7 +194,7 @@ def _scheme_options(rec, name: str) -> tuple[list, object, str]:
         service.is_all_interval(rec._editor.tuning_scheme),
         rec._editor.settings["alt_complexity"],
         rec._editor.settings["weighting"],
-        rec._editor.settings["dd_terminology"],
+        rec._editor.settings["terminology"],
     )
     scheme = rec._editor.displayed_tuning_scheme_name
     return options, (scheme if scheme in options else None), "-"
@@ -263,7 +263,7 @@ def update_preset(rec, cb: spreadsheet.CellBox) -> None:
             service.is_all_interval(rec._editor.tuning_scheme),
             rec._editor.settings["alt_complexity"],
             rec._editor.settings["weighting"],
-            rec._editor.settings["dd_terminology"],
+            rec._editor.settings["terminology"],
         )
         scheme = name if name in options else None
         rec.cells[cb.id].chooser.select.set_options(options, value=scheme)
