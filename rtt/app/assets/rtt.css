@@ -139,13 +139,7 @@ html, body { overscroll-behavior-x: none; }
    those twins so the gridlines read unbroken through the bounce. It hugs the body's left inset and
    rides the same horizontal scroll as the column strip, so each twin sits exactly under its live rule
    at rest (hidden behind it) and only shows once the scroller pulls away. Pure backdrop — no input. */
-.rtt-colfill { position:absolute; left:var(--pad); right:0; bottom:0; overflow:hidden; pointer-events:none;
-               visibility:hidden; }
-/* The twins are needed ONLY while a top overscroll bares the band; at every other scroll position they
-   rest behind the live rules and, syncing one frame behind the native scroll, only peek out as ghost
-   echoes on a fast horizontal scroll. So show the layer solely during a top overpull (_FREEZE_JS sets
-   rtt-overpull-y when scrollTop < 0). */
-.rtt-app.rtt-overpull-y .rtt-colfill { visibility:visible; }
+.rtt-colfill { position:absolute; left:var(--pad); right:0; bottom:0; overflow:hidden; pointer-events:none; }
 .rtt-colfill-inner { position:absolute; top:0; left:0; will-change:transform; }
 /* The left mirror of .rtt-colfill: the row band is position:sticky, so a top overscroll slides it DOWN
    with the content and opens a gap below the fixed corner — breaking the frozen-left edge and baring
@@ -168,6 +162,10 @@ html, body { overscroll-behavior-x: none; }
    bridges (a coarse pointer with no hover is a phone/tablet, not a trackpad). */
 @media (hover: none) and (pointer: coarse) {
   .rtt-gridbody { overscroll-behavior:none; }
+  /* No bounce on touch means the colfill bridge is never bared — and the twins sync one frame late, so
+     on iOS they peek out as a ghost-echo on a fast horizontal scroll. Hide the layer here; desktop, which
+     keeps its bounce and needs the bridge, keeps it visible. */
+  .rtt-colfill { visibility:hidden; }
 }
 /* isolate the board so the washes' mix-blend-mode composes only with the board's own layers
    (the white wash bases), not the grey pane behind it */
