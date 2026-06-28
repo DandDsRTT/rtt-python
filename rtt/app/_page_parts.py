@@ -249,7 +249,8 @@ def _visual_toggle(pb, key):
         .mark(f"visctrl:{key}")
         .tooltip(tooltips.SHOW_HELP[key])
     )
-    el.on("click", lambda _=None, k=key, v=not on: pb._edits.on_show_toggle(k, v))
+    el.on("click", lambda _=None, k=key: pb._edits.on_show_toggle(k, not _setting(pb, k)))
+    pb._chrome.vis_toggles[key] = el
     return el
 
 

@@ -28,6 +28,7 @@ class PageChrome:
         self.refs: dict = {}
         self.boxes: dict = {}
         self.section_all: dict = {}
+        self.vis_toggles: dict = {}
         self.examples: dict = {}
         self.tile_parts: dict = {}
         self.show_rows: dict = {}

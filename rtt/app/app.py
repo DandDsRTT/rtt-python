@@ -163,6 +163,10 @@ class _Page:
         self.sync_show_availability()
 
     def sync_show_availability(self):
+        for key, toggle in self.chrome.vis_toggles.items():
+            toggle.classes(remove="rtt-vis-off") if self.editor.settings[key] else toggle.classes(
+                add="rtt-vis-off"
+            )
         for key, box in self.chrome.boxes.items():
             disabled = (
                 key not in show_settings.IMPLEMENTED

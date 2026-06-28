@@ -10,13 +10,13 @@
     "_edits": 1,
     "class_handles": 1
   },
-  "param_reach_through_total": 453,
+  "param_reach_through_total": 454,
   "param_reach_through_by_handle": {
     "_editor": 234,
     "_rec": 73,
     "_runtime": 48,
     "_renderer": 31,
-    "_chrome": 29,
+    "_chrome": 30,
     "_gestures": 22,
     "_edits": 8,
     "e": 5,
@@ -49,7 +49,7 @@
     },
     "rtt/app/page_chrome.py::PageChrome": {
       "methods": 2,
-      "attrs": 24
+      "attrs": 25
     },
     "rtt/app/rendering.py::Renderer": {
       "methods": 11,
@@ -78,7 +78,7 @@
     "rtt.app.service.state": 11,
     "rtt.app.service.superspace": 15,
     "rtt.app.service.text_context": 8,
-    "rtt.app.spreadsheet": 13,
+    "rtt.app.spreadsheet": 14,
     "rtt.app.spreadsheet_controls": 9,
     "rtt.app.spreadsheet_emit_matrix": 8,
     "rtt.app.spreadsheet_emit_tuning": 11,
