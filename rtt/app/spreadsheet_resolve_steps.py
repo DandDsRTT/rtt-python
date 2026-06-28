@@ -24,29 +24,29 @@ def determine_ghosts(inputs) -> Ghosts:
 
 
 def unpack_show_flags(inputs, draft):
-    _f = _resolve_show_flags(inputs.settings, inputs.collapsed)
-    show_symbols, show_weighting, show_math_expressions = _f.symbols, _f.weighting, _f.math_expressions
+    show_flags = _resolve_show_flags(inputs.settings, inputs.collapsed)
+    show_symbols, show_weighting, show_math_expressions = show_flags.symbols, show_flags.weighting, show_flags.math_expressions
     complexity_shown = (show_weighting
                         and service.damage_weight_slope(inputs.tuning_scheme) != "unityWeight")
     prescaling_shown = complexity_shown and (
-        service.is_all_interval(inputs.tuning_scheme) or _f.alt_complexity)
+        service.is_all_interval(inputs.tuning_scheme) or show_flags.alt_complexity)
     weight_unit = f"({service.weight_annotation(inputs.tuning_scheme)})"
     return replace(
-        draft, show_names=_f.names, show_mnemonics=_f.mnemonics, show_equivalences=_f.equivalences,
-        show_presets=_f.presets, show_counts=_f.counts, show_plain_text_values=_f.plain_text_values, show_charts=_f.charts,
-        show_tuning_ranges=_f.tuning_ranges, show_symbols=show_symbols, ctrl_symbol_h=SYMBOL_H if show_symbols else 0,
-        show_header_symbols=_f.header_symbols, show_units=_f.units, show_cell_units=_f.cell_units,
-        show_domain_units=_f.domain_units, show_temperament_tiles=_f.temperament_tiles, show_form=_f.form,
-        show_form_controls=_f.form_controls, show_form_tiles=_f.form_tiles, show_tuning_tiles=_f.tuning_tiles,
-        show_optimization=_f.optimization, show_weighting=show_weighting,
-        show_alt_complexity=_f.alt_complexity, _complexity_shown=complexity_shown,
+        draft, show_names=show_flags.names, show_mnemonics=show_flags.mnemonics, show_equivalences=show_flags.equivalences,
+        show_presets=show_flags.presets, show_counts=show_flags.counts, show_plain_text_values=show_flags.plain_text_values, show_charts=show_flags.charts,
+        show_tuning_ranges=show_flags.tuning_ranges, show_symbols=show_symbols, ctrl_symbol_h=SYMBOL_H if show_symbols else 0,
+        show_header_symbols=show_flags.header_symbols, show_units=show_flags.units, show_cell_units=show_flags.cell_units,
+        show_domain_units=show_flags.domain_units, show_temperament_tiles=show_flags.temperament_tiles, show_form=show_flags.form,
+        show_form_controls=show_flags.form_controls, show_form_tiles=show_flags.form_tiles, show_tuning_tiles=show_flags.tuning_tiles,
+        show_optimization=show_flags.optimization, show_weighting=show_weighting,
+        show_alt_complexity=show_flags.alt_complexity, _complexity_shown=complexity_shown,
         _prescaling_shown=prescaling_shown, weight_unit=weight_unit,
         complexity_unit=f"({service.complexity_annotation(inputs.tuning_scheme)})",
-        damage_unit=f"¢{weight_unit}", _lbox_show=_f.lbox and complexity_shown,
-        _cbox_show=_f.cbox and complexity_shown, show_generator_detempering=_f.generator_detempering,
-        show_interest=_f.interest, gridded_values=_f.gridded_values, show_quantities=_f.quantities,
-        _decimals=_f.decimals, show_ebk=_f.ebk, show_interval_ratios=_f.interval_ratios,
-        show_interval_vectors=_f.interval_vectors, show_math_expressions=show_math_expressions,
+        damage_unit=f"¢{weight_unit}", _lbox_show=show_flags.lbox and complexity_shown,
+        _cbox_show=show_flags.cbox and complexity_shown, show_generator_detempering=show_flags.generator_detempering,
+        show_interest=show_flags.interest, gridded_values=show_flags.gridded_values, show_quantities=show_flags.quantities,
+        _decimals=show_flags.decimals, show_ebk=show_flags.ebk, show_interval_ratios=show_flags.interval_ratios,
+        show_interval_vectors=show_flags.interval_vectors, show_math_expressions=show_math_expressions,
         terminology_mode=inputs.settings.get("terminology", "dd"),
         custom_weights_active=(inputs.custom_weights is not None
                                and not service.is_all_interval(inputs.tuning_scheme)
