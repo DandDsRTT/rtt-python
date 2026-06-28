@@ -67,7 +67,7 @@ def test_gutter_and_coordinate_functions_are_pure_over_geometry():
 def test_resolved_dependent_query_functions_are_pure():
     g = SimpleNamespace(commas_x=90.0)
     r = SimpleNamespace(unchanged=SimpleNamespace(shown=True, empty_comma_w=5.0),
-                        dims=SimpleNamespace(nc=2, nc_shown=3))
+                        dims=SimpleNamespace(comma_count=2, comma_count_shown=3))
     assert query.comma_value_pos(r, 1) == 1
     assert query.comma_value_pos(r, 2) == 2 + (3 - 2)
     assert query.comma_left(g, r, 0) == 90.0 + BRACKET_W + 5.0
@@ -88,7 +88,7 @@ def test_openness_predicates_are_pure_over_geometry_and_collapsed():
 
 def test_column_identity_queries_are_pure_over_resolved():
     r = SimpleNamespace(
-        dims=SimpleNamespace(nc=2, k=3, nh=0, mi=0),
+        dims=SimpleNamespace(comma_count=2, target_count=3, held_count=0, interest_count=0),
         col_ids={"targets": [(7, "a"), (8, "b"), (9, "c")], "commas": [(0, "x"), (1, "y")]},
         scalars=SimpleNamespace(comma_draft=False),
         targets=SimpleNamespace(pending=None), held=SimpleNamespace(pending=None),

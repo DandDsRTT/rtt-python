@@ -21,8 +21,8 @@ def test_resolve_produces_the_domain_model_without_rendering():
     # the RTT model is obtainable with zero rendering: no Layout, no cells.
     model = _resolve(Editor())
     assert isinstance(model, Resolved)
-    assert model.dims.d == 3
-    assert model.dims.r == 2
+    assert model.dims.dimensionality == 3
+    assert model.dims.rank == 2
     assert model.targets.ratios[:3] == ("2/1", "3/1", "3/2")
 
 
@@ -31,7 +31,7 @@ def test_resolved_is_immutable():
     with pytest.raises(dataclasses.FrozenInstanceError):
         model.dims = None
     with pytest.raises(dataclasses.FrozenInstanceError):
-        model.dims.d = 0
+        model.dims.dimensionality = 0
 
 
 def _builder(ed: Editor) -> spreadsheet._GridBuilder:
@@ -49,8 +49,8 @@ def test_resolve_matches_the_builders_resolution():
     ed = Editor()
     b = _builder(ed)
     model = _resolve(ed)
-    assert model.dims.d == b.resolved.dims.d
-    assert model.dims.k == b.resolved.dims.k
+    assert model.dims.dimensionality == b.resolved.dims.dimensionality
+    assert model.dims.target_count == b.resolved.dims.target_count
     assert model.targets.ratios == b.resolved.targets.ratios
     assert model.commas.ratios == b.resolved.commas.ratios
     assert model.tuning.tuning_map is b.resolved.tuning.tuning_map

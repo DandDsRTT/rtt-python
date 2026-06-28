@@ -7,23 +7,23 @@ from rtt.app import terminology
 
 @dataclass(frozen=True)
 class Dims:
-    d: int
-    dL: int
-    r: int
-    rL: int
-    rc: int
-    k: int
-    nc: int
-    nh: int
-    mi: int
-    nu: int
-    k_shown: int
-    nh_shown: int
-    mi_shown: int
-    nc_shown: int
-    nv_shown: int
-    d_shown: int
-    r_shown: int
+    dimensionality: int
+    superspace_dimensionality: int
+    rank: int
+    superspace_rank: int
+    canonical_rank: int
+    target_count: int
+    comma_count: int
+    held_count: int
+    interest_count: int
+    unchanged_count: int
+    target_count_shown: int
+    held_count_shown: int
+    interest_count_shown: int
+    comma_count_shown: int
+    vector_count_shown: int
+    dimensionality_shown: int
+    rank_shown: int
     elements: tuple
     superspace_primes: tuple
 
@@ -220,23 +220,23 @@ class Resolved:
 
 def _dims(b) -> Dims:
     return Dims(
-        d=b.d,
-        dL=b.dL,
-        r=b.r,
-        rL=b.rL,
-        rc=b.rc,
-        k=b.k,
-        nc=b.nc,
-        nh=b.nh,
-        mi=b.mi,
-        nu=b.nu,
-        k_shown=b.k_shown,
-        nh_shown=b.nh_shown,
-        mi_shown=b.mi_shown,
-        nc_shown=b.nc_shown,
-        nv_shown=b.nv_shown,
-        d_shown=b.d_shown,
-        r_shown=b.r_shown,
+        dimensionality=b.dimensionality,
+        superspace_dimensionality=b.superspace_dimensionality,
+        rank=b.rank,
+        superspace_rank=b.superspace_rank,
+        canonical_rank=b.canonical_rank,
+        target_count=b.target_count,
+        comma_count=b.comma_count,
+        held_count=b.held_count,
+        interest_count=b.interest_count,
+        unchanged_count=b.unchanged_count,
+        target_count_shown=b.target_count_shown,
+        held_count_shown=b.held_count_shown,
+        interest_count_shown=b.interest_count_shown,
+        comma_count_shown=b.comma_count_shown,
+        vector_count_shown=b.vector_count_shown,
+        dimensionality_shown=b.dimensionality_shown,
+        rank_shown=b.rank_shown,
         elements=b.elements,
         superspace_primes=b.superspace_primes,
     )

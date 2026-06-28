@@ -10,7 +10,7 @@ def closed_form_operand(resolved, geometry, context, key, group, i, value=None):
     if key == "just":
         ratio = geometry.group_ratio[group][i]
         return _log_operand(ratio) if ratio is not None else None
-    if group == "commas" and key == "retune" and i < resolved.dims.nc:
+    if group == "commas" and key == "retune" and i < resolved.dims.comma_count:
         reciprocal = 1 / Fraction(resolved.commas.ratios[i])
         return _log_operand(f"{reciprocal.numerator}/{reciprocal.denominator}")
     if key in ("tuning", "retune") and value is not None:
@@ -62,7 +62,7 @@ def _ss_closed_form(resolved, context):
 
 def _tempered_vector(resolved, context, group, i):
     if group == "primes":
-        return tuple(1 if k == i else 0 for k in range(resolved.dims.d))
+        return tuple(1 if k == i else 0 for k in range(resolved.dims.dimensionality))
     if group == "commas":
         return _comma_tempered_vector(resolved, context, i)
     seqs = {
@@ -78,9 +78,9 @@ def _tempered_vector(resolved, context, group, i):
 
 
 def _comma_tempered_vector(resolved, context, i):
-    if i < resolved.dims.nc:
+    if i < resolved.dims.comma_count:
         return context.state.comma_basis[i]
-    j = i - resolved.dims.nc
+    j = i - resolved.dims.comma_count
     return (
         resolved.unchanged.basis[j]
         if resolved.unchanged.basis and j < len(resolved.unchanged.basis)
