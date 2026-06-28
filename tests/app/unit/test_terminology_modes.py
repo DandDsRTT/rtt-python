@@ -60,6 +60,14 @@ def test_every_systematic_all_interval_scheme_has_its_wiki_name():
         assert terminology.scheme(systematic, "both") == f"{systematic} ({wiki})"
 
 
+def test_every_offered_all_interval_scheme_has_a_wiki_name_except_copfr():
+    for name in presets.TUNING_SCHEMES:
+        if name == "minimax-copfr-S":
+            assert terminology.scheme(name, "wiki") == name
+        else:
+            assert terminology.scheme(name, "wiki") != name
+
+
 def test_scheme_passes_through_unnamed_schemes_and_none():
     assert terminology.scheme("minimax-U", "wiki") == "minimax-U"
     assert terminology.scheme("minimax-copfr-S", "wiki") == "minimax-copfr-S"

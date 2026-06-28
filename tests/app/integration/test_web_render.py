@@ -165,33 +165,37 @@ async def test_enabling_a_feature_renders_its_cell(user: User, label: str, cell_
     await user.should_see(marker=cell_id)
 
 
-def _terminology_radio(user: User):
-    return next(iter(user.find(marker="terminologyradio").elements))
+def _pick_terminology(user: User, mode: str) -> None:
+    user.find(marker=f"terminologyradio-{mode}").click()
+
+
+def _terminology_opt_selected(user: User, mode: str) -> bool:
+    return "rtt-rangeopt-on" in next(iter(user.find(marker=f"terminologyradio-{mode}").elements))._classes
 
 
 async def test_guide_settings_box_carries_the_terminology_radio(user: User) -> None:
     await user.open("/")
     await user.should_see(content="guide settings")
     await user.should_see(content="terminology")
-    assert _terminology_radio(user).value == "dd"
+    assert _terminology_opt_selected(user, "dd")
 
 
 async def test_wiki_mode_swaps_grid_terms_to_wiki_live(user: User) -> None:
     await user.open("/")
     assert user.find(content="interval vectors").elements
-    _terminology_radio(user).set_value("wiki")
+    _pick_terminology(user, "wiki")
     await user.should_see(content="monzos")
 
 
 async def test_both_mode_shows_dd_terms_with_the_wiki_name_in_parentheses(user: User) -> None:
     await user.open("/")
-    _terminology_radio(user).set_value("both")
+    _pick_terminology(user, "both")
     await user.should_see(content="interval vectors (monzos)")
 
 
 async def test_undo_of_a_terminology_change_restores_dd_terms(user: User) -> None:
     await user.open("/")
-    _terminology_radio(user).set_value("wiki")
+    _pick_terminology(user, "wiki")
     await user.should_see(content="monzos")
     user.find(marker="undo").click()
     await user.should_see(content="interval vectors")
@@ -210,7 +214,7 @@ async def test_all_interval_scheme_dropdown_relabels_to_wiki_names_in_wiki_mode(
     _cell_child(user, "control:all_interval").set_value(True)
     user.find(kind=ui.checkbox, content="alternative complexity").click()
     assert _scheme_select(user).options["minimax-S"] == "minimax-S"
-    _terminology_radio(user).set_value("wiki")
+    _pick_terminology(user, "wiki")
     assert _scheme_select(user).options["minimax-S"] == "TOP"
 
 
@@ -879,7 +883,8 @@ async def test_reset_restores_the_guide_chapter_slider_to_the_default(user: User
 
 def test_guide_settings_box_holds_a_dd_default_terminology_radio(default_page: User) -> None:
     assert next(iter(default_page.find(marker="guidesettingstitle").elements)).text == "guide settings"
-    assert next(iter(default_page.find(marker="terminologyradio").elements)).value == "dd"
+    dd_opt = next(iter(default_page.find(marker="terminologyradio-dd").elements))
+    assert "rtt-rangeopt-on" in dd_opt._classes
 
 
 async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cells(user: User) -> None:

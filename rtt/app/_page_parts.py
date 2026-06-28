@@ -211,21 +211,11 @@ def build_approach_radio(pb) -> None:
             return
         pb._gestures.control_hover(lambda a=value: pb._editor.set_nonprime_basis_approach(a))
 
-    pb._chrome.refs["approach"] = (
-        ui.element("div").classes("rtt-approach rtt-rangemode").mark("approach")
-    )
-    pb._chrome.refs["approach_opts"] = {}
-    with pb._chrome.refs["approach"]:
-        for key, label in approach_options.items():
-            opt = ui.element("div").classes("rtt-rangeopt")
-            with opt:
-                ui.element("span").classes("rtt-rangebox")
-                ui.label(label).classes("rtt-rangelabel")
-            opt.on("click", lambda _=None, k=key: on_approach_change(k))
-            opt.on("mouseenter", lambda _=None, k=key: on_approach_hover(k))
-            opt.mark(f"approach-{label}")
-            pb._chrome.refs["approach_opts"][key] = opt
-    pb._chrome.refs["approach"].on("mouseleave", lambda _=None: on_approach_hover(None))
+    radio, opts = build_rangemode_radio(pb, "approach", approach_options, on_approach_change)
+    radio.classes(add="rtt-approach")
+    for key, opt in opts.items():
+        opt.on("mouseenter", lambda _=None, k=key: on_approach_hover(k))
+    radio.on("mouseleave", lambda _=None: on_approach_hover(None))
 
 
 _VIS_KIND = {"animations": "anim", "preview_highlighting": "prev", "tooltips": "tip"}
@@ -323,21 +313,33 @@ def build_chapter_group(pb) -> dict:
     }
 
 
+def build_rangemode_radio(pb, ref, options, on_select):
+    radio = ui.element("div").classes("rtt-rangemode").mark(ref)
+    opts = {}
+    with radio:
+        for key, label in options.items():
+            opt = ui.element("div").classes("rtt-rangeopt")
+            with opt:
+                ui.element("span").classes("rtt-rangebox")
+                ui.label(label).classes("rtt-rangelabel")
+            opt.on("click", lambda _=None, k=key: on_select(k))
+            opt.mark(f"{ref}-{key or label}")
+            opts[key] = opt
+    pb._chrome.refs[ref] = radio
+    pb._chrome.refs[f"{ref}_opts"] = opts
+    return radio, opts
+
+
 def build_terminology_radio(pb):
     with ui.element("div").classes("rtt-terminology-box").mark("terminologybox"):
         ui.label("terminology").classes("rtt-terminology-title")
-        radio = (
-            ui.radio(
-                {"dd": "D&D", "wiki": "wiki", "both": "both"},
-                value=pb._editor.settings["terminology"],
-                on_change=lambda e: pb._edits.on_show_toggle("terminology", e.value),
-            )
-            .props("inline dense size=xs color=grey-8")
-            .classes("rtt-terminology-radio")
-            .mark("terminologyradio")
-            .tooltip(tooltips.CHROME_HELP["terminology"])
+        radio, _opts = build_rangemode_radio(
+            pb,
+            "terminologyradio",
+            {"dd": "D&D", "wiki": "wiki", "both": "both"},
+            lambda value: pb._edits.on_show_toggle("terminology", value),
         )
-    pb._chrome.refs["terminology"] = radio
+        radio.tooltip(tooltips.CHROME_HELP["terminology"])
     return radio
 
 
