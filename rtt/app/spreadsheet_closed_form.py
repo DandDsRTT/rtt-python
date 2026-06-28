@@ -14,8 +14,8 @@ def closed_form_operand(resolved, geometry, context, key, group, i, value=None):
         reciprocal = 1 / Fraction(resolved.commas.ratios[i])
         return _log_operand(f"{reciprocal.numerator}/{reciprocal.denominator}")
     if key in ("tuning", "retune") and value is not None:
-        if group in ("ssprimes", "ssgens"):
-            return _ss_closed_form_operand(resolved, context, key, group, i, value)
+        if group in ("superspace_primes", "superspace_generators"):
+            return _superspace_closed_form_operand(resolved, context, key, group, i, value)
         closed_form = _closed_form(resolved, context)
         vector = _tempered_vector(resolved, context, group, i) if closed_form is not None else None
         if vector is not None:
@@ -27,15 +27,17 @@ def closed_form_operand(resolved, geometry, context, key, group, i, value=None):
     return None
 
 
-def _ss_closed_form_operand(resolved, context, key, group, i, value):
-    ss = _ss_closed_form(resolved, context)
-    if ss is None:
+def _superspace_closed_form_operand(resolved, context, key, group, i, value):
+    superspace = _superspace_closed_form(resolved, context)
+    if superspace is None:
         return None
-    if group == "ssgens":
-        return ss.generator_operand(i, value) if key == "tuning" else None
-    vector = tuple(1 if k == i else 0 for k in range(len(ss.primes)))
+    if group == "superspace_generators":
+        return superspace.generator_operand(i, value) if key == "tuning" else None
+    vector = tuple(1 if k == i else 0 for k in range(len(superspace.primes)))
     return (
-        ss.tempered_operand(vector, value) if key == "tuning" else ss.retune_operand(vector, value)
+        superspace.tempered_operand(vector, value)
+        if key == "tuning"
+        else superspace.retune_operand(vector, value)
     )
 
 
@@ -54,7 +56,7 @@ def _closed_form(resolved, context):
     )
 
 
-def _ss_closed_form(resolved, context):
+def _superspace_closed_form(resolved, context):
     if not (resolved.flags.math_expressions and resolved.flags.superspace):
         return None
     return service.closed_form_superspace_tuning(context.state, context.tuning_scheme)

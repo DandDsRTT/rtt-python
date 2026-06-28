@@ -104,7 +104,7 @@ def _prescaler_col_labels(
     }
     if show_superspace:
         labels[("prescaling", "primes")] = letter + "𝐛" + SUBSCRIPT_L + "ₛ"
-        labels[("complexity", "ssprimes")] = norm(lambda i: f"{letter}[{i + 1}]")
+        labels[("complexity", "superspace_primes")] = norm(lambda i: f"{letter}[{i + 1}]")
         labels[("complexity", "primes")] = norm(lambda i: f"{letter}𝐛{SUBSCRIPT_L}ₛ{_sub(i + 1)}")
     return labels
 

@@ -217,16 +217,16 @@ def _projection_values(context: _Ctx) -> dict:
 
 
 @dataclass(frozen=True)
-class _SsCtx:
+class _SuperspaceContext:
     ml: tuple
-    ss_primes: tuple
+    superspace_primes: tuple
     mjl: tuple
     mlgl: tuple
     msl: tuple
     bl: tuple
-    ss_tun: Tuning
+    superspace_tuning_map: Tuning
     dL: int
-    ss_prescaler: object
+    superspace_prescaler: object
 
 
 def _superspace_tuning(context: _Ctx) -> Tuning:
@@ -241,23 +241,23 @@ def _superspace_tuning(context: _Ctx) -> Tuning:
     )
 
 
-def _derive_superspace(context: _Ctx) -> _SsCtx:
+def _derive_superspace(context: _Ctx) -> _SuperspaceContext:
     s = context.state
-    ss_primes = superspace_primes(context.db)
-    return _SsCtx(
+    superspace_prime_basis = superspace_primes(context.db)
+    return _SuperspaceContext(
         superspace_mapping(s),
-        ss_primes,
-        superspace_just_mapping(ss_primes),
+        superspace_prime_basis,
+        superspace_just_mapping(superspace_prime_basis),
         superspace_self_map(s),
         mapping_to_superspace_generators(s),
         basis_in_superspace(context.db),
         _superspace_tuning(context),
-        len(ss_primes),
+        len(superspace_prime_basis),
         superspace_complexity_prescaler(s, context.scheme),
     )
 
 
-def _ss_u(context: _Ctx) -> list:
+def _superspace_u(context: _Ctx) -> list:
     db = context.db
     return [
         None if u is None else lift_vectors_to_superspace(db, (u,))[0]
@@ -265,167 +265,226 @@ def _ss_u(context: _Ctx) -> list:
     ]
 
 
-def _prescaled_ss(ssc: _SsCtx, vectors):
-    return tuple(tuple(ssc.ss_prescaler[i] * v[i] for i in range(ssc.dL)) for v in vectors)
+def _prescaled_superspace(superspace_context: _SuperspaceContext, vectors):
+    return tuple(
+        tuple(
+            superspace_context.superspace_prescaler[i] * v[i] for i in range(superspace_context.dL)
+        )
+        for v in vectors
+    )
 
 
-def _ss_prod(context: _Ctx, ssc: _SsCtx, vs):
-    return context.sized(_prescaled_ss(ssc, lift_vectors_to_superspace(context.db, vs)))
+def _superspace_prod(context: _Ctx, superspace_context: _SuperspaceContext, vs):
+    return context.sized(
+        _prescaled_superspace(superspace_context, lift_vectors_to_superspace(context.db, vs))
+    )
 
 
-def _ssp_cols(context: _Ctx, p_L, dL: int, vectors):
+def _superspace_prime_cols(context: _Ctx, p_L, dL: int, vectors):
     cols = project_vectors(p_L, lift_vectors_to_superspace(context.db, vectors))
     return list(cols) if cols else [tuple(_DASH for _ in range(dL)) for _ in vectors]
 
 
-def _ss_base(context: _Ctx, ssc: _SsCtx) -> dict:
+def _superspace_vector_rows(
+    context: _Ctx, superspace_context: _SuperspaceContext, superspace_unchanged: list
+) -> dict:
     s = context.state
     db = context.db
     core = context.core
-    ss_u = _ss_u(context)
-    ss_u_mapped = [
+    return {
+        ("superspace_vectors", "primes"): context.r(
+            ("superspace_vectors", "primes"), superspace_context.bl
+        ),
+        ("superspace_vectors", "superspace_primes"): context.r(
+            ("superspace_vectors", "superspace_primes"), superspace_context.mjl
+        ),
+        ("superspace_vectors", "commas"): _ket_list(
+            list(lift_vectors_to_superspace(db, s.comma_basis)) + superspace_unchanged, "⟩"
+        ),
+        ("superspace_vectors", "targets"): _ket_list(
+            lift_vectors_to_superspace(db, core.target_vectors), "⟩"
+        ),
+        ("superspace_vectors", "detempering"): _ket_list(
+            lift_vectors_to_superspace(db, core.detemper_vectors), "⟩"
+        ),
+        ("superspace_vectors", "interest"): _ket_list(
+            lift_vectors_to_superspace(db, context.interest), "⟩", wrap=False
+        ),
+    }
+
+
+def _superspace_base(context: _Ctx, superspace_context: _SuperspaceContext) -> dict:
+    s = context.state
+    core = context.core
+    superspace_unchanged = _superspace_u(context)
+    superspace_unchanged_mapped = [
         None if u is None else map_vectors_into_superspace_generators(s, (u,))[0]
         for u in context.unchanged.basis
     ]
     return {
-        ("ss_vectors", "primes"): context.r(("ss_vectors", "primes"), ssc.bl),
-        ("ss_vectors", "ssprimes"): context.r(("ss_vectors", "ssprimes"), ssc.mjl),
-        ("ss_vectors", "commas"): _ket_list(
-            list(lift_vectors_to_superspace(db, s.comma_basis)) + ss_u, "⟩"
+        **_superspace_vector_rows(context, superspace_context, superspace_unchanged),
+        ("superspace_mapping", "superspace_primes"): context.r(
+            ("superspace_mapping", "superspace_primes"), superspace_context.ml
         ),
-        ("ss_vectors", "targets"): _ket_list(
-            lift_vectors_to_superspace(db, core.target_vectors), "⟩"
+        ("superspace_mapping", "primes"): context.r(
+            ("superspace_mapping", "primes"), superspace_context.msl
         ),
-        ("ss_vectors", "detempering"): _ket_list(
-            lift_vectors_to_superspace(db, core.detemper_vectors), "⟩"
+        ("superspace_mapping", "superspace_generators"): context.r(
+            ("superspace_mapping", "superspace_generators"), superspace_context.mlgl
         ),
-        ("ss_vectors", "interest"): _ket_list(
-            lift_vectors_to_superspace(db, context.interest), "⟩", wrap=False
+        ("superspace_mapping", "commas"): _ket_list(
+            list(map_vectors_into_superspace_generators(s, s.comma_basis))
+            + superspace_unchanged_mapped,
+            "}",
         ),
-        ("ss_mapping", "ssprimes"): context.r(("ss_mapping", "ssprimes"), ssc.ml),
-        ("ss_mapping", "primes"): context.r(("ss_mapping", "primes"), ssc.msl),
-        ("ss_mapping", "ssgens"): context.r(("ss_mapping", "ssgens"), ssc.mlgl),
-        ("ss_mapping", "commas"): _ket_list(
-            list(map_vectors_into_superspace_generators(s, s.comma_basis)) + ss_u_mapped, "}"
-        ),
-        ("ss_mapping", "targets"): _ket_list(
+        ("superspace_mapping", "targets"): _ket_list(
             map_vectors_into_superspace_generators(s, core.target_vectors), "}"
         ),
-        ("ss_mapping", "detempering"): context.r(
-            ("ss_mapping", "detempering"),
+        ("superspace_mapping", "detempering"): context.r(
+            ("superspace_mapping", "detempering"),
             map_vectors_into_superspace_generators(s, core.detemper_vectors),
         ),
-        ("ss_mapping", "interest"): _ket_list(
+        ("superspace_mapping", "interest"): _ket_list(
             map_vectors_into_superspace_generators(s, context.interest), "}", wrap=False
         ),
-        ("tuning", "ssgens"): context.fmt.cents_genmap(ssc.ss_tun.generator_map),
-        ("tuning", "ssprimes"): context.fmt.cents_map(ssc.ss_tun.tuning_map),
-        ("just", "ssprimes"): context.fmt.cents_map(ssc.ss_tun.just_map),
-        ("retune", "ssprimes"): context.fmt.cents_map(ssc.ss_tun.retuning_map),
+        ("tuning", "superspace_generators"): context.fmt.cents_genmap(
+            superspace_context.superspace_tuning_map.generator_map
+        ),
+        ("tuning", "superspace_primes"): context.fmt.cents_map(
+            superspace_context.superspace_tuning_map.tuning_map
+        ),
+        ("just", "superspace_primes"): context.fmt.cents_map(
+            superspace_context.superspace_tuning_map.just_map
+        ),
+        ("retune", "superspace_primes"): context.fmt.cents_map(
+            superspace_context.superspace_tuning_map.retuning_map
+        ),
     }
 
 
-def _ss_held(context: _Ctx) -> dict:
+def _superspace_held(context: _Ctx) -> dict:
     db = context.db
     held = context.held
     return {
-        ("ss_vectors", "held"): _ket_list(lift_vectors_to_superspace(db, held), "⟩"),
-        ("ss_mapping", "held"): _ket_list(
+        ("superspace_vectors", "held"): _ket_list(lift_vectors_to_superspace(db, held), "⟩"),
+        ("superspace_mapping", "held"): _ket_list(
             map_vectors_into_superspace_generators(context.state, held), "}"
         ),
     }
 
 
-def _ss_projection(context: _Ctx, ssc: _SsCtx) -> dict:
+def _superspace_projection(context: _Ctx, superspace_context: _SuperspaceContext) -> dict:
     s = context.state
     hbr = context.held_basis_ratios
-    dL = ssc.dL
+    dL = superspace_context.dL
     core = context.core
     p_L = superspace_projection_matrix_rationals(s, hbr)
-    projected_basis_lift = project_vectors(p_L, ssc.bl) or [
-        tuple(_DASH for _ in range(dL)) for _ in ssc.bl
+    projected_basis_lift = project_vectors(p_L, superspace_context.bl) or [
+        tuple(_DASH for _ in range(dL)) for _ in superspace_context.bl
     ]
     out = {
-        ("ss_projection", "ssprimes"): projection_ebk(superspace_tuning_projection(s, hbr), dL),
-        ("ss_projection", "ssgens"): embedding_ebk(
+        ("superspace_projection", "superspace_primes"): projection_ebk(
+            superspace_tuning_projection(s, hbr), dL
+        ),
+        ("superspace_projection", "superspace_generators"): embedding_ebk(
             superspace_tuning_embedding(s, hbr), dL, superspace_rank(s)
         ),
-        ("ss_projection", "primes"): context.r(("ss_projection", "primes"), projected_basis_lift),
-        ("ss_projection", "detempering"): context.r(
-            ("ss_projection", "detempering"), _ssp_cols(context, p_L, dL, core.detemper_vectors)
+        ("superspace_projection", "primes"): context.r(
+            ("superspace_projection", "primes"), projected_basis_lift
         ),
-        ("ss_projection", "commas"): _ket_list(
-            [(0,) * dL for _ in core.commas] + _ss_u(context), "⟩"
+        ("superspace_projection", "detempering"): context.r(
+            ("superspace_projection", "detempering"),
+            _superspace_prime_cols(context, p_L, dL, core.detemper_vectors),
         ),
-        ("ss_projection", "targets"): _ket_list(
-            _ssp_cols(context, p_L, dL, core.target_vectors), "⟩"
+        ("superspace_projection", "commas"): _ket_list(
+            [(0,) * dL for _ in core.commas] + _superspace_u(context), "⟩"
+        ),
+        ("superspace_projection", "targets"): _ket_list(
+            _superspace_prime_cols(context, p_L, dL, core.target_vectors), "⟩"
         ),
     }
     if context.held:
-        out[("ss_projection", "held")] = _ket_list(_ssp_cols(context, p_L, dL, context.held), "⟩")
-    if context.interest:
-        out[("ss_projection", "interest")] = _ket_list(
-            _ssp_cols(context, p_L, dL, context.interest), "⟩", wrap=False
+        out[("superspace_projection", "held")] = _ket_list(
+            _superspace_prime_cols(context, p_L, dL, context.held), "⟩"
         )
-    out[("projection", "ssgens")] = embedding_ebk(
+    if context.interest:
+        out[("superspace_projection", "interest")] = _ket_list(
+            _superspace_prime_cols(context, p_L, dL, context.interest), "⟩", wrap=False
+        )
+    out[("projection", "superspace_generators")] = embedding_ebk(
         superspace_generator_embedding_display(s, hbr), s.d, superspace_rank(s)
     )
-    out[("projection", "ssprimes")] = projection_ebk(
+    out[("projection", "superspace_primes")] = projection_ebk(
         superspace_prime_projection_display(s, hbr), s.d, cols=dL
     )
     return out
 
 
-def _ss_units(dL: int) -> tuple:
+def _superspace_units(dL: int) -> tuple:
     return tuple(tuple(1 if i == p else 0 for i in range(dL)) for p in range(dL))
 
 
-def _ss_u_prescaled(context: _Ctx, ssc: _SsCtx) -> list:
+def _superspace_u_prescaled(context: _Ctx, superspace_context: _SuperspaceContext) -> list:
     db = context.db
     return [
         None
         if u is None
-        else context.sized(_prescaled_ss(ssc, lift_vectors_to_superspace(db, (u,))))[0]
+        else context.sized(
+            _prescaled_superspace(superspace_context, lift_vectors_to_superspace(db, (u,)))
+        )[0]
         for u in context.unchanged.basis
     ]
 
 
-def _ss_prescaling(context: _Ctx, ssc: _SsCtx) -> dict:
+def _superspace_prescaling(context: _Ctx, superspace_context: _SuperspaceContext) -> dict:
     fmt = context.fmt
     core = context.core
-    dL = ssc.dL
+    dL = superspace_context.dL
     sf = context.prescale.size_factor
-    ss_bare_size = (tuple(sf * w for w in ssc.ss_prescaler),) if sf else ()
+    superspace_bare_size = (
+        (tuple(sf * w for w in superspace_context.superspace_prescaler),) if sf else ()
+    )
     out = {
-        ("prescaling", "ssprimes"): fmt.prescale(
-            _prescaled_ss(ssc, _ss_units(dL)) + ss_bare_size, col="⟨]", outer="[⟩"
+        ("prescaling", "superspace_primes"): fmt.prescale(
+            _prescaled_superspace(superspace_context, _superspace_units(dL)) + superspace_bare_size,
+            col="⟨]",
+            outer="[⟩",
         ),
         ("prescaling", "primes"): fmt.prescale(
-            context.sized(_prescaled_ss(ssc, ssc.bl)), col="[⟩", outer="⟨]"
+            context.sized(_prescaled_superspace(superspace_context, superspace_context.bl)),
+            col="[⟩",
+            outer="⟨]",
         ),
-        ("complexity", "ssprimes"): fmt.cents_map(ssc.ss_prescaler),
+        ("complexity", "superspace_primes"): fmt.cents_map(superspace_context.superspace_prescaler),
         ("complexity", "primes"): fmt.cents_map(context.complexities(core.prime_ratios)),
         ("prescaling", "commas"): fmt.prescale(
-            list(_ss_prod(context, ssc, core.comma_basis)) + _ss_u_prescaled(context, ssc)
+            list(_superspace_prod(context, superspace_context, core.comma_basis))
+            + _superspace_u_prescaled(context, superspace_context)
         ),
-        ("prescaling", "detempering"): fmt.prescale(_ss_prod(context, ssc, core.detemper_vectors)),
-        ("prescaling", "targets"): fmt.prescale(_ss_prod(context, ssc, core.target_vectors)),
+        ("prescaling", "detempering"): fmt.prescale(
+            _superspace_prod(context, superspace_context, core.detemper_vectors)
+        ),
+        ("prescaling", "targets"): fmt.prescale(
+            _superspace_prod(context, superspace_context, core.target_vectors)
+        ),
     }
     if context.held:
-        out[("prescaling", "held")] = fmt.prescale(_ss_prod(context, ssc, context.held))
+        out[("prescaling", "held")] = fmt.prescale(
+            _superspace_prod(context, superspace_context, context.held)
+        )
     if context.interest:
         out[("prescaling", "interest")] = fmt.prescale(
-            _ss_prod(context, ssc, context.interest), outer=""
+            _superspace_prod(context, superspace_context, context.interest), outer=""
         )
     return out
 
 
 def _superspace_values(context: _Ctx) -> dict:
-    ssc = _derive_superspace(context)
-    out = _ss_base(context, ssc)
+    superspace_context = _derive_superspace(context)
+    out = _superspace_base(context, superspace_context)
     if context.held:
-        out.update(_ss_held(context))
+        out.update(_superspace_held(context))
     if context.consolidate_v:
-        out.update(_ss_projection(context, ssc))
-    out.update(_ss_prescaling(context, ssc))
+        out.update(_superspace_projection(context, superspace_context))
+    out.update(_superspace_prescaling(context, superspace_context))
     return out

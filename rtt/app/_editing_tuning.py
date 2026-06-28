@@ -25,7 +25,7 @@ _PLAIN_TEXT_EDITORS: dict[str, str] = {
     "ptext:mapping:canongens": "try_edit_form_matrix_text",
     "ptext:vectors:commas": "try_edit_comma_basis_text",
     "ptext:tuning:gens": "set_generator_tuning_text",
-    "ptext:tuning:ssgens": "set_superspace_generator_tuning_text",
+    "ptext:tuning:superspace_generators": "set_superspace_generator_tuning_text",
     "ptext:vectors:targets": "set_target_override_text",
     "ptext:prescaling:primes": "set_custom_prescaler_text",
     "ptext:projection:primes": "try_edit_projection_text",
@@ -110,7 +110,7 @@ def _gentuning_change(ec, cid):
     if glyph is not None and glyph.text not in ("+", ""):
         cents = -cents
     i = int(cid.rsplit(":", 1)[1])
-    if ":ssgen:" in cid:
+    if ":superspace_generator:" in cid:
         ec._editor.set_superspace_generator_tuning_component(i, cents)
     else:
         ec._editor.set_generator_tuning_component(_gen_position(ec, i), cents)
@@ -121,7 +121,7 @@ def _gentuning_wheel(ec, cid, delta_y):
     if ec._runtime.building or not delta_y:
         return
     i, steps = int(cid.rsplit(":", 1)[1]), (1 if delta_y < 0 else -1)
-    if ":ssgen:" in cid:
+    if ":superspace_generator:" in cid:
         ec._editor.nudge_superspace_generator_tuning_component(i, steps)
     else:
         ec._editor.nudge_generator_tuning_component(_gen_position(ec, i), steps)

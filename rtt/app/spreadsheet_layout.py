@@ -75,7 +75,7 @@ from rtt.app.spreadsheet_text import _title_w, _wrap_lines
 def compute_geometry(resolved, context):
     interest_tiles, held_tiles, detempering_tiles = declare_interval_column_tiles(resolved)
     tiles, declared_tiles = declare_tiles(resolved, context, interest_tiles, held_tiles, detempering_tiles)
-    geometry = Geometry(ss_tun=init_superspace_tuning(resolved, context),
+    geometry = Geometry(superspace_tuning_map=init_superspace_tuning(resolved, context),
                         tiles=tiles, declared_tiles=declared_tiles)
     geometry, col_bands, content_x0 = _define_col_bands(geometry, resolved, context, LABEL_W)
     geometry, row_bands = _define_row_bands(geometry, resolved)
@@ -93,7 +93,7 @@ def _resolve_col_headers(resolved):
                     else "domain\nprimes")
     col_header = {"quantities": "interval ratios", "units": "units",
                   "canongens": "canonical\ngenerators", "gens": "generators",
-                  "ssgens": "superspace\ngenerators", "ssprimes": "superspace\nprimes",
+                  "superspace_generators": "superspace\ngenerators", "superspace_primes": "superspace\nprimes",
                   "primes": domain_title, "detempering": "generator\ndetempering",
                   "commas": "commas",
                   "held": "held\nintervals", "targets": "target\nintervals",
@@ -106,12 +106,12 @@ def _resolve_col_headers(resolved):
 def _matlabel_other_w(geometry, resolved):
     _label_row_present = {"mapping": resolved.flags.temperament_tiles, "vectors": resolved.flags.interval_vectors,
                           "canon": resolved.flags.canon, "projection": resolved.flags.projection,
-                          "prescaling": resolved.flags.prescaling_shown, "ss_mapping": resolved.flags.superspace,
-                          "ss_vectors": resolved.flags.superspace, "ss_projection": resolved.flags.ss_projection}
+                          "prescaling": resolved.flags.prescaling_shown, "superspace_mapping": resolved.flags.superspace,
+                          "superspace_vectors": resolved.flags.superspace, "superspace_projection": resolved.flags.superspace_projection}
     other = {}
     if resolved.flags.header_symbols:
         for (rk, ck) in resolved.labels.row_labels:
-            if ck not in ("primes", "ssprimes") and _label_row_present.get(rk) and (rk, ck) in geometry.declared_tiles:
+            if ck not in ("primes", "superspace_primes") and _label_row_present.get(rk) and (rk, ck) in geometry.declared_tiles:
                 other[ck] = MATLABEL_W
     return other
 
@@ -123,7 +123,7 @@ def _define_col_bands(geometry, resolved, context, label_w):
         col_header=_resolve_col_headers(resolved),
         matlabel_primes_w=((MATLABEL_W_SS if resolved.flags.superspace else MATLABEL_W)
                            if (resolved.flags.header_symbols and resolved.flags.temperament_tiles) else 0),
-        matlabel_ssprimes_w=MATLABEL_W_SSPRIMES if (resolved.flags.header_symbols and resolved.flags.superspace) else 0,
+        matlabel_superspace_primes_w=MATLABEL_W_SSPRIMES if (resolved.flags.header_symbols and resolved.flags.superspace) else 0,
         matlabel_other_w=_matlabel_other_w(geometry, resolved),
         row_handle_w=(ROW_HANDLE_W + ROW_HANDLE_GAP) if (
             context.settings.get("drag_to_combine") and resolved.flags.temperament_tiles and resolved.dims.rank > 1) else 0,
@@ -145,8 +145,8 @@ def _col_bands(geometry, resolved, context):
         ("units", COL_W, resolved.flags.domain_units, True),
         ("canongens", 2 * BRACKET_W + resolved.dims.canonical_rank * COL_W + 2 * query.matlabel_gutter_w(geometry, "canongens"), resolved.flags.canon, True),
         ("gens", 2 * BRACKET_W + resolved.dims.rank * COL_W + 2 * query.matlabel_gutter_w(geometry, "gens"), resolved.flags.temperament_tiles, True),
-        ("ssgens", 2 * BRACKET_W + resolved.dims.superspace_rank * COL_W, resolved.flags.superspace, True),
-        ("ssprimes", 2 * BRACKET_W + resolved.dims.superspace_dimensionality * COL_W + 2 * geometry.matlabel_ssprimes_w, resolved.flags.superspace, True),
+        ("superspace_generators", 2 * BRACKET_W + resolved.dims.superspace_rank * COL_W, resolved.flags.superspace, True),
+        ("superspace_primes", 2 * BRACKET_W + resolved.dims.superspace_dimensionality * COL_W + 2 * geometry.matlabel_superspace_primes_w, resolved.flags.superspace, True),
         ("primes", 2 * BRACKET_W + resolved.dims.dimensionality_shown * COL_W + 2 * query.outer_gutter_w(geometry, "primes"), resolved.flags.temperament_tiles, True),
         ("detempering", 2 * BRACKET_W + resolved.dims.rank * COL_W, resolved.flags.generator_detempering, True),
         ("commas", commas_band_w(resolved, resolved.dims.comma_count_shown), resolved.flags.temperament_tiles, True),
@@ -165,9 +165,9 @@ def _define_row_bands(geometry, resolved):
         ("vectors", resolved.dims.dimensionality * ROW_H, resolved.flags.interval_vectors, True, "interval vectors"),
         ("canon", resolved.dims.canonical_rank * ROW_H, resolved.flags.canon, True, "canonical mapping"),
         ("mapping", resolved.dims.rank_shown * ROW_H, resolved.flags.temperament_tiles, True, "mapping"),
-        ("ss_vectors", resolved.dims.superspace_dimensionality * ROW_H, resolved.flags.superspace, True, "superspace\ninterval vectors"),
-        ("ss_mapping", resolved.dims.superspace_rank * ROW_H, resolved.flags.superspace, True, "superspace\nmapping"),
-        ("ss_projection", resolved.dims.superspace_dimensionality * ROW_H, resolved.flags.ss_projection, True, "superspace\nprojection"),
+        ("superspace_vectors", resolved.dims.superspace_dimensionality * ROW_H, resolved.flags.superspace, True, "superspace\ninterval vectors"),
+        ("superspace_mapping", resolved.dims.superspace_rank * ROW_H, resolved.flags.superspace, True, "superspace\nmapping"),
+        ("superspace_projection", resolved.dims.superspace_dimensionality * ROW_H, resolved.flags.superspace_projection, True, "superspace\nprojection"),
         ("projection", resolved.dims.dimensionality * ROW_H, resolved.flags.projection, True, "projection"),
         ("tuning", ROW_H, resolved.flags.tuning_tiles, True, "tuning"),
         ("just", ROW_H, resolved.flags.tuning_tiles, True, "just tuning"),
@@ -219,8 +219,8 @@ def _layout_columns(geometry, resolved, context, col_bands, content_x0) -> Geome
         primes_x=content_x.get("primes"), commas_x=content_x.get("commas"),
         targets_x=content_x.get("targets"), interest_x=content_x.get("interest"),
         held_x=content_x.get("held"), detempering_x=content_x.get("detempering"),
-        canongens_x=content_x.get("canongens"), ssgens_x=content_x.get("ssgens"),
-        ssprimes_x=content_x.get("ssprimes"))
+        canongens_x=content_x.get("canongens"), superspace_generators_x=content_x.get("superspace_generators"),
+        superspace_primes_x=content_x.get("superspace_primes"))
 
 
 def _init_row_geometry(geometry, header_h):
@@ -304,7 +304,7 @@ def _group_geometry_fields(geometry, resolved):
     group_n = {"gens": resolved.dims.rank, "primes": resolved.dims.dimensionality_shown, "commas": resolved.dims.vector_count_shown,
                "targets": resolved.dims.target_count_shown,
                "interest": resolved.dims.interest_count_shown, "held": resolved.dims.held_count_shown, "detempering": resolved.dims.rank,
-               "canongens": resolved.dims.canonical_rank, "ssgens": resolved.dims.superspace_rank, "ssprimes": resolved.dims.superspace_dimensionality}
+               "canongens": resolved.dims.canonical_rank, "superspace_generators": resolved.dims.superspace_rank, "superspace_primes": resolved.dims.superspace_dimensionality}
     content_x = geometry.content_x
     left_fn = {"gens": lambda i: query.gen_left(geometry, i),
                "primes": lambda i: query.prime_left(geometry, i),
@@ -314,12 +314,12 @@ def _group_geometry_fields(geometry, resolved):
                "held": lambda i: query.held_left(geometry, i),
                "detempering": lambda i: query.detempering_left(geometry, i),
                "canongens": lambda i: query.canongen_left(geometry, i),
-               "ssgens": lambda i: query.ss_gen_left(geometry, i),
-               "ssprimes": lambda i: query.ss_prime_left(geometry, i)}
+               "superspace_generators": lambda i: query.superspace_gen_left(geometry, i),
+               "superspace_primes": lambda i: query.superspace_prime_left(geometry, i)}
     return {
         "group_elem": {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
                        "interest": "interest", "held": "held", "detempering": "detempering",
-                       "canongens": "cangen", "ssgens": "ssgen", "ssprimes": "ssprime"},
+                       "canongens": "cangen", "superspace_generators": "superspace_generator", "superspace_primes": "superspace_prime"},
         "group_n": group_n,
         "group_left": {g: tuple(fn(i) for i in range(group_n[g])) if g in content_x else ()
                        for g, fn in left_fn.items()},
@@ -330,7 +330,7 @@ def _group_geometry_fields(geometry, resolved):
             "interest": tuple(resolved.interest.ratios),
             "held": tuple(resolved.held.ratios),
             "detempering": tuple(resolved.scalars.gens),
-            "ssprimes": tuple(service.element_ratio(e) for e in resolved.dims.superspace_primes),
+            "superspace_primes": tuple(service.element_ratio(e) for e in resolved.dims.superspace_primes),
         }}
 
 
@@ -351,7 +351,7 @@ def _resolve_tile_extras(geometry, resolved, context):
     gtm_chart = (resolved.flags.tuning_ranges and resolved.flags.tuning_tiles and "row:tuning" not in context.collapsed
                  and query.col_open(geometry, context.collapsed, "gens") and "tile:tuning:gens" not in context.collapsed)
     gtm_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
-    lbox_ctrl = resolved.flags.lbox_show and query.col_open(geometry, context.collapsed, "ssprimes" if resolved.flags.superspace else "primes") and not resolved.flags.presets
+    lbox_ctrl = resolved.flags.lbox_show and query.col_open(geometry, context.collapsed, "superspace_primes" if resolved.flags.superspace else "primes") and not resolved.flags.presets
     lbox_extra = (RANGE_GAP + control_region_band_h(PRESET_H + CAPTION_LINE)) if lbox_ctrl else 0
     cbox_ctrl = resolved.flags.cbox_show and query.col_open(geometry, context.collapsed, "targets")
     cbox_extra = (RANGE_GAP + control_region_band_h(ROW_H + resolved.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)) if cbox_ctrl else 0
@@ -407,7 +407,7 @@ def _resolve_plain_text_strings(geometry, resolved, context) -> Geometry:
                                                    target_weights=resolved.tuning.target_weights,
                                                    target_sizes=resolved.targets.sizes,
                                                    comma_sizes=resolved.commas.sizes,
-                                                   superspace_tun=(geometry.ss_tun
+                                                   superspace_tun=(geometry.superspace_tuning_map
                                                                    if resolved.flags.superspace else None)))
                      if resolved.flags.plain_text_values else {})
     if not resolved.flags.ebk:

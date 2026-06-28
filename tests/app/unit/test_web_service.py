@@ -1910,7 +1910,7 @@ def test_superspace_tuning_projection_is_a_dL_idempotent_holding_the_lifted_held
 
 
 def test_superspace_tuning_embedding_is_the_dL_by_rL_factor_of_P_L():
-    # G_L = H_L·(M_L·H_L)⁻¹, the embedding factor of P_L = G_L·M_L (the ssgens-column tile): dL × rL,
+    # G_L = H_L·(M_L·H_L)⁻¹, the embedding factor of P_L = G_L·M_L (the superspace_generators-column tile): dL × rL,
     # its columns the held tuning's superspace generators as fractional superspace-prime vectors.
     # BARBADOS over 2.3.13/5 (dL=4, rL=3) held by {2/1, 13/5}. None (dashed) in lockstep with P_L.
     import sympy as sp
@@ -1951,13 +1951,13 @@ def test_plain_text_values_includes_the_superspace_projection_when_projection_on
     # in lockstep when the tuning isn't a full rational projection.
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     pt = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=("2", "13/5"))
-    assert pt[("ss_projection", "ssprimes")] == "[⟨1 2/3 0 0]⟨0 0 0 0]⟨0 -2/3 1 0]⟨0 2/3 0 1]⟩"
+    assert pt[("superspace_projection", "superspace_primes")] == "[⟨1 2/3 0 0]⟨0 0 0 0]⟨0 -2/3 1 0]⟨0 2/3 0 1]⟩"
     # projection off (no V consolidation): no P_L band, exactly like the on-domain P plain text
     off = service.plain_text_values(state, superspace=True, consolidate_v=False, held_basis_ratios=("2", "13/5"))
-    assert ("ss_projection", "ssprimes") not in off
+    assert ("superspace_projection", "superspace_primes") not in off
     # under-held: the band is present but fully dashed (lockstep with the dashed grid)
     dashed = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=())
-    assert dashed[("ss_projection", "ssprimes")] == service.projection_ebk(None, 4)
+    assert dashed[("superspace_projection", "superspace_primes")] == service.projection_ebk(None, 4)
 
 
 def test_plain_text_values_includes_every_superspace_projection_tile():
@@ -1966,17 +1966,17 @@ def test_plain_text_values_includes_every_superspace_projection_tile():
     # P_L·V / P_L·T_L), each built from the same P_L the grid uses.
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     pt = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=("2", "13/5"))
-    for col in ("ssgens", "ssprimes", "primes", "detempering", "commas", "targets"):
-        assert ("ss_projection", col) in pt, col
+    for col in ("superspace_generators", "superspace_primes", "primes", "detempering", "commas", "targets"):
+        assert ("superspace_projection", col) in pt, col
     # the bracket shapes mirror the on-domain twins: G_L a vector list ({…]), P_L·B_Ls the covector-style
     # ⟨…] of B_L, P_L·D_L the generator-coordinate {…], P_L·V / P_L·T_L the plain […]
-    assert pt[("ss_projection", "ssgens")].startswith("{") and pt[("ss_projection", "ssgens")].endswith("]")
-    assert pt[("ss_projection", "primes")].startswith("⟨")
-    assert pt[("ss_projection", "detempering")].startswith("{")
-    assert pt[("ss_projection", "targets")].startswith("[")
+    assert pt[("superspace_projection", "superspace_generators")].startswith("{") and pt[("superspace_projection", "superspace_generators")].endswith("]")
+    assert pt[("superspace_projection", "primes")].startswith("⟨")
+    assert pt[("superspace_projection", "detempering")].startswith("{")
+    assert pt[("superspace_projection", "targets")].startswith("[")
     # dashed in lockstep with P_L when under-held
     dashed = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=())
-    assert "—" in dashed[("ss_projection", "primes")]
+    assert "—" in dashed[("superspace_projection", "primes")]
 
 
 def test_plain_text_values_includes_superspace_entries_when_superspace_on():
@@ -1987,32 +1987,32 @@ def test_plain_text_values_includes_superspace_entries_when_superspace_on():
     pt = service.plain_text_values(state, superspace=True)
     # B_L (basis change matrix): each domain element as a ket over the superspace primes,
     # wrapped in the distinct OUTER ⟨ … ] the mockup draws for it
-    assert pt[("ss_vectors", "primes")] == "⟨[1 0 0 0⟩ [0 1 0 0⟩ [0 0 -1 1⟩]"
+    assert pt[("superspace_vectors", "primes")] == "⟨[1 0 0 0⟩ [0 1 0 0⟩ [0 0 -1 1⟩]"
     # M_L: the temperament's mapping over the superspace primes (covector stack — same
     # mapping-style ⟨ … ] inside [ … } shape the existing M uses)
     ml = service.superspace_mapping(state)
     expected_ml = "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "}"
-    assert pt[("ss_mapping", "ssprimes")] == expected_ml
-    # M_jL = I (dL × dL identity) — the p/p JI mapping over the superspace primes, a tile in the ss_vectors row. A covector
+    assert pt[("superspace_mapping", "superspace_primes")] == expected_ml
+    # M_jL = I (dL × dL identity) — the p/p JI mapping over the superspace primes, a tile in the superspace_vectors row. A covector
     # stack closing with the angle ⟩ (an operator, like P_L), NOT the mapping's }.
-    assert pt[("ss_vectors", "ssprimes")] == (
+    assert pt[("superspace_vectors", "superspace_primes")] == (
         "[⟨1 0 0 0]⟨0 1 0 0]⟨0 0 1 0]⟨0 0 0 1]⟩"
     )
     # M_LGL = I (rL × rL identity) — a COLUMN-first vector list { … ] (kets [ … } in gen coords)
-    assert pt[("ss_mapping", "ssgens")] == "{[1 0 0} [0 1 0} [0 0 1}]"
+    assert pt[("superspace_mapping", "superspace_generators")] == "{[1 0 0} [0 1 0} [0 0 1}]"
     # the cyan tuning rows have entries
-    assert ("tuning", "ssgens") in pt
-    assert ("tuning", "ssprimes") in pt
-    assert ("just", "ssprimes") in pt
-    assert ("retune", "ssprimes") in pt
+    assert ("tuning", "superspace_generators") in pt
+    assert ("tuning", "superspace_primes") in pt
+    assert ("just", "superspace_primes") in pt
+    assert ("retune", "superspace_primes") in pt
 
 
 def test_plain_text_values_omits_superspace_entries_when_superspace_off():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     pt = service.plain_text_values(state)  # superspace=False (default)
-    for key in (("ss_vectors", "primes"), ("ss_mapping", "ssprimes"),
-                ("ss_vectors", "ssprimes"), ("tuning", "ssgens"),
-                ("tuning", "ssprimes"), ("just", "ssprimes"), ("retune", "ssprimes")):
+    for key in (("superspace_vectors", "primes"), ("superspace_mapping", "superspace_primes"),
+                ("superspace_vectors", "superspace_primes"), ("tuning", "superspace_generators"),
+                ("tuning", "superspace_primes"), ("just", "superspace_primes"), ("retune", "superspace_primes")):
         assert key not in pt
 
 
@@ -2553,12 +2553,12 @@ def test_plain_text_superspace_prescaling_lifts_like_the_grid():
     # cells above it. (ebk-notation-4.)
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     pt = service.plain_text_values(state, "minimax-ES", superspace=True)
-    ss_pre = service.superspace_complexity_prescaler(state, "minimax-ES")   # the dL-tall diagonal
+    superspace_pre = service.superspace_complexity_prescaler(state, "minimax-ES")   # the dL-tall diagonal
     lifted = service.lift_vectors_to_superspace(state.domain_basis, state.comma_basis)
-    expected_cols = [tuple(ss_pre[i] * v[i] for i in range(len(ss_pre))) for v in lifted]
+    expected_cols = [tuple(superspace_pre[i] * v[i] for i in range(len(superspace_pre))) for v in lifted]
     assert pt[("prescaling", "commas")] == text_format._prescale_vector_list(expected_cols)
     # dL-tall (4 over the 2.3.5.13 superspace), not the unlifted d = 3 the bug showed
-    assert len(expected_cols[0]) == len(ss_pre) == 4
+    assert len(expected_cols[0]) == len(superspace_pre) == 4
     # the band agrees with the lifted-and-prescaled basis the grid renders for the same tile
     assert " 7.401" in pt[("prescaling", "commas")]   # 2·log₂13 — the lifted 13-coordinate, never log₂5
 
@@ -2600,30 +2600,30 @@ def _barbados_state():
 
 
 def test_superspace_generators_are_the_lifted_mappings_detempering():
-    from rtt.app.service import superspace as ss
-    assert ss.superspace_generators(_barbados_state()) == ("2/1", "26/3", "130/3")
+    from rtt.app.service import superspace as superspace
+    assert superspace.superspace_generators(_barbados_state()) == ("2/1", "26/3", "130/3")
 
 
 def test_superspace_self_map_is_the_rank_L_identity():
-    from rtt.app.service import superspace as ss
+    from rtt.app.service import superspace as superspace
     state = _barbados_state()
-    rl = ss.superspace_rank(state)
-    assert ss.superspace_self_map(state) == tuple(
+    rl = superspace.superspace_rank(state)
+    assert superspace.superspace_self_map(state) == tuple(
         tuple(1 if i == j else 0 for j in range(rl)) for i in range(rl))
 
 
 def test_mapping_into_superspace_generators_sends_the_commas_to_zero():
-    from rtt.app.service import superspace as ss
+    from rtt.app.service import superspace as superspace
     state = _barbados_state()
-    mapped = ss.map_vectors_into_superspace_generators(state, state.comma_basis)
+    mapped = superspace.map_vectors_into_superspace_generators(state, state.comma_basis)
     assert all(all(x == 0 for x in row) for row in mapped)
 
 
 def test_projecting_superspace_generators_to_domain_recovers_the_on_domain_tuning():
-    from rtt.app.service import superspace as ss
+    from rtt.app.service import superspace as superspace
     state = _barbados_state()
-    ss_optimum = ss.superspace_tuning(state, "minimax-S").generator_map
-    projected = ss.project_superspace_generators_to_domain(state, ss_optimum)
+    superspace_optimum = superspace.superspace_tuning(state, "minimax-S").generator_map
+    projected = superspace.project_superspace_generators_to_domain(state, superspace_optimum)
     on_domain = service.tuning(state.mapping, "minimax-S", state.domain_basis).generator_map
     assert projected == pytest.approx(tuple(on_domain))
 

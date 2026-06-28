@@ -68,7 +68,7 @@ def emit_counts_row(resolved, geometry, context) -> EmitResult:
         return EmitResult()
     cardinality = {"gens": resolved.dims.rank, "primes": resolved.dims.dimensionality, "commas": context.state.n, "targets": resolved.dims.target_count, "held": resolved.dims.held_count,
                    "detempering": resolved.dims.rank,
-                   "ssgens": resolved.dims.superspace_rank, "ssprimes": resolved.dims.superspace_dimensionality}
+                   "superspace_generators": resolved.dims.superspace_rank, "superspace_primes": resolved.dims.superspace_dimensionality}
     for column_key, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
         if not query.tile_open(geometry, context.collapsed, "counts", column_key):
             continue
@@ -101,9 +101,9 @@ def _emit_units_matrix(cells, resolved, geometry, context) -> None:
         "canon": (resolved.dims.canonical_rank, lambda i: query.canon_top(geometry, i), lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
         "projection": (resolved.dims.dimensionality, lambda i: query.projection_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
         "mapping": (resolved.dims.rank_shown, lambda i: query.map_top(geometry, i), lambda i: f"g{_sub(i + 1)}/"),
-        "ss_vectors": (resolved.dims.superspace_dimensionality, lambda i: query.ss_vec_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
-        "ss_mapping": (resolved.dims.superspace_rank, lambda i: query.ss_map_top(geometry, i), lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
-        "ss_projection": (resolved.dims.superspace_dimensionality, lambda i: query.ss_projection_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
+        "superspace_vectors": (resolved.dims.superspace_dimensionality, lambda i: query.superspace_vec_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
+        "superspace_mapping": (resolved.dims.superspace_rank, lambda i: query.superspace_map_top(geometry, i), lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
+        "superspace_projection": (resolved.dims.superspace_dimensionality, lambda i: query.superspace_projection_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
     }
     for key, (n, top, label) in matrix_units.items():
         if not query.tile_open(geometry, context.collapsed, key, "units"):
@@ -135,8 +135,8 @@ def _emit_units_columns(cells, resolved, geometry, context) -> None:
         "canongens": (resolved.dims.canonical_rank, lambda i: query.canongen_left(geometry, i), lambda i: f"/g{SUBSCRIPT_C}{_sub(i + 1)}"),
         "gens": (resolved.dims.rank, lambda i: query.gen_left(geometry, i), lambda i: f"/g{_sub(i + 1)}"),
         "primes": (resolved.dims.dimensionality, lambda i: query.prime_left(geometry, i), lambda i: f"/{resolved.labels.domain_label}{_sub(i + 1)}"),
-        "ssgens": (resolved.dims.superspace_rank, lambda i: query.ss_gen_left(geometry, i), lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
-        "ssprimes": (resolved.dims.superspace_dimensionality, lambda i: query.ss_prime_left(geometry, i), lambda i: f"/p{_sub(i + 1)}"),
+        "superspace_generators": (resolved.dims.superspace_rank, lambda i: query.superspace_gen_left(geometry, i), lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
+        "superspace_primes": (resolved.dims.superspace_dimensionality, lambda i: query.superspace_prime_left(geometry, i), lambda i: f"/p{_sub(i + 1)}"),
         "commas": (resolved.dims.vector_count_shown, lambda i: query.comma_left(geometry, resolved, i), lambda _i: "/1"),
         "detempering": (resolved.dims.rank, lambda i: query.detempering_left(geometry, i), lambda _i: "/1"),
         "targets": (resolved.dims.target_count_shown, lambda i: query.target_left(geometry, i), lambda _i: "/1"),
@@ -164,8 +164,8 @@ def emit_quantities_row(resolved, geometry, context) -> EmitResult:
     _emit_qty_gens(cells, resolved, geometry, context, qy, branch_minus)
     _emit_qty_canongens(cells, resolved, geometry, context, qy)
     _emit_qty_primes(cells, resolved, geometry, context, qy, branch_minus)
-    _emit_qty_ssgens(cells, resolved, geometry, context, qy)
-    _emit_qty_ssprimes(cells, resolved, geometry, context, qy)
+    _emit_qty_superspace_generators(cells, resolved, geometry, context, qy)
+    _emit_qty_superspace_primes(cells, resolved, geometry, context, qy)
     _emit_qty_commas(cells, resolved, geometry, context, qy, branch_minus)
     _emit_qty_detempering(cells, resolved, geometry, context, qy)
     _emit_qty_interests(cells, resolved, geometry, context, qy, branch_minus)
@@ -208,17 +208,17 @@ def _emit_qty_primes(cells, resolved, geometry, context, qy, branch_minus) -> No
         branch_minus("minus", "primes", resolved.dims.dimensionality - 1, "minus")
 
 
-def _emit_qty_ssgens(cells, resolved, geometry, context, qy) -> None:
-    if query.tile_open(geometry, context.collapsed, "quantities", "ssgens"):
-        ss_gens = service.superspace_generators(context.state)
+def _emit_qty_superspace_generators(cells, resolved, geometry, context, qy) -> None:
+    if query.tile_open(geometry, context.collapsed, "quantities", "superspace_generators"):
+        superspace_gens = service.superspace_generators(context.state)
         for g in range(resolved.dims.superspace_rank):
-            cells.append(CellBox(f"ssqgen:{g}", query.ss_gen_left(geometry, g), qy, COL_W, ROW_H, "genratio", text=ss_gens[g]))
+            cells.append(CellBox(f"superspace_quantity_generator:{g}", query.superspace_gen_left(geometry, g), qy, COL_W, ROW_H, "genratio", text=superspace_gens[g]))
 
 
-def _emit_qty_ssprimes(cells, resolved, geometry, context, qy) -> None:
-    if query.tile_open(geometry, context.collapsed, "quantities", "ssprimes"):
+def _emit_qty_superspace_primes(cells, resolved, geometry, context, qy) -> None:
+    if query.tile_open(geometry, context.collapsed, "quantities", "superspace_primes"):
         for p in range(resolved.dims.superspace_dimensionality):
-            cells.append(CellBox(f"ssqprime:{p}", query.ss_prime_left(geometry, p), qy, COL_W, ROW_H, "commaratio", text=str(resolved.dims.superspace_primes[p]), prime=p))
+            cells.append(CellBox(f"superspace_quantity_prime:{p}", query.superspace_prime_left(geometry, p), qy, COL_W, ROW_H, "commaratio", text=str(resolved.dims.superspace_primes[p]), prime=p))
 
 
 def _emit_qty_commas(cells, resolved, geometry, context, qy, branch_minus) -> None:

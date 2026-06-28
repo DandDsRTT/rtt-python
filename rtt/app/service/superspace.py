@@ -156,13 +156,15 @@ def _cached_closed_form_superspace_tuning(ml, superspace, scheme) -> ClosedFormT
 
 
 def project_superspace_generators_to_domain(
-    state: TemperamentState, ss_generators
+    state: TemperamentState, superspace_generators
 ) -> tuple[float, ...]:
     superspace = superspace_primes(state.domain_basis)
     ml_t = Temperament(_to_matrix(superspace_mapping(state)), Variance.ROW, superspace)
-    ss_tuning_map = tuning_map_from_generators(ml_t, tuple(float(g) for g in ss_generators))
+    superspace_tuning_map = tuning_map_from_generators(
+        ml_t, tuple(float(g) for g in superspace_generators)
+    )
     bl = basis_in_superspace(state.domain_basis)
-    domain_tuning_map = apply_matrix_to_vectors(bl, (ss_tuning_map,))[0]
+    domain_tuning_map = apply_matrix_to_vectors(bl, (superspace_tuning_map,))[0]
     domain_t = Temperament(_to_matrix(state.mapping), Variance.ROW, state.domain_basis)
     return tuple(
         float(g) for g in generator_tuning_map_from_t_and_tuning_map(domain_t, domain_tuning_map)

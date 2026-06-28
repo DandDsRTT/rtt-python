@@ -212,10 +212,10 @@ def _emit_presets(cells, blocks, resolved, geometry, context) -> None:
                       "prescaler": resolved.labels.realized_prescaler or "",
                       "projection": resolved.scalars.displayed_projection_name or ""}
     for name, row_key, column_key, label in PRESETS:
-        col = "ssprimes" if name == "prescaler" and resolved.flags.superspace else column_key
+        col = "superspace_primes" if name == "prescaler" and resolved.flags.superspace else column_key
         _emit_preset(cells, blocks, resolved, geometry, context, preset_text, f"preset:{name}", name, row_key, col, label)
     for name, row_key, column_key, label in PRESET_COPIES:
-        col = "ssgens" if (name == "tuning" and column_key == "gens"
+        col = "superspace_generators" if (name == "tuning" and column_key == "gens"
                            and resolved.flags.superspace_generators) else column_key
         _emit_preset(cells, blocks, resolved, geometry, context, preset_text, f"preset:{name}:{col}", name, row_key, col, label)
 

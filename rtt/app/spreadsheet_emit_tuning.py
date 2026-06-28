@@ -6,7 +6,7 @@ from rtt.app.grid_tables import BANDS, SUB_CLOSE, SUB_OPEN
 from rtt.app.layout import Block, CellBox
 from rtt.app.spreadsheet_closed_form import (
     _closed_form,
-    _ss_closed_form,
+    _superspace_closed_form,
     closed_form_operand,
 )
 from rtt.app.spreadsheet_constants import (
@@ -75,8 +75,8 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group
     if key in BANDS["chart"].rows:
         chart_tiles.append((key, group, values))
     y = geometry.rows[key].y
-    is_gen_group = group in ("gens", "ssgens")
-    is_prime_group = group in ("primes", "ssprimes")
+    is_gen_group = group in ("gens", "superspace_generators")
+    is_prime_group = group in ("primes", "superspace_primes")
     for i, v in enumerate(values):
         cid = f"{key}:{geometry.group_elem[group]}:{query.col_token(resolved, group, i)}"
         x = geometry.group_left[group][query.comma_value_pos(resolved, i) if group == "commas" else i]
@@ -177,32 +177,32 @@ def _emit_tuning_canongen_row(cells, resolved, geometry, context) -> None:
 def _emit_tuning_superspace_rows(cells, chart_tiles, resolved, geometry, context) -> None:
     if not (resolved.flags.superspace and query.row_open(geometry, context.collapsed, "tuning")):
         return
-    ss_tun = geometry.ss_tun
-    if query.tile_open(geometry, context.collapsed, "tuning", "ssgens"):
-        _emit_tuning_ssgen_row(cells, chart_tiles, resolved, geometry, context, ss_tun)
-    tuning_value_row(cells, chart_tiles, resolved, geometry, context, "tuning", "ssprimes", ss_tun.tuning_map)
+    superspace_tuning_map = geometry.superspace_tuning_map
+    if query.tile_open(geometry, context.collapsed, "tuning", "superspace_generators"):
+        _emit_tuning_superspace_generator_row(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map)
+    tuning_value_row(cells, chart_tiles, resolved, geometry, context, "tuning", "superspace_primes", superspace_tuning_map.tuning_map)
     if query.row_open(geometry, context.collapsed, "just"):
-        tuning_value_row(cells, chart_tiles, resolved, geometry, context, "just", "ssprimes", ss_tun.just_map)
+        tuning_value_row(cells, chart_tiles, resolved, geometry, context, "just", "superspace_primes", superspace_tuning_map.just_map)
     if query.row_open(geometry, context.collapsed, "retune"):
-        tuning_value_row(cells, chart_tiles, resolved, geometry, context, "retune", "ssprimes", ss_tun.retuning_map)
+        tuning_value_row(cells, chart_tiles, resolved, geometry, context, "retune", "superspace_primes", superspace_tuning_map.retuning_map)
 
 
-def _emit_tuning_ssgen_row(cells, chart_tiles, resolved, geometry, context, ss_tun) -> None:
+def _emit_tuning_superspace_generator_row(cells, chart_tiles, resolved, geometry, context, superspace_tuning_map) -> None:
     if not resolved.flags.superspace_generators:
-        tuning_value_row(cells, chart_tiles, resolved, geometry, context, "tuning", "ssgens", ss_tun.generator_map)
+        tuning_value_row(cells, chart_tiles, resolved, geometry, context, "tuning", "superspace_generators", superspace_tuning_map.generator_map)
         return
-    ss_cf = _ss_closed_form(resolved, context) if resolved.flags.math_expressions else None
-    for i, v in enumerate(ss_tun.generator_map):
-        operand = ss_cf.generator_operand(i, v) if ss_cf is not None else None
+    superspace_closed_form = _superspace_closed_form(resolved, context) if resolved.flags.math_expressions else None
+    for i, v in enumerate(superspace_tuning_map.generator_map):
+        operand = superspace_closed_form.generator_operand(i, v) if superspace_closed_form is not None else None
         if operand is not None:
-            cells.append(CellBox(f"tuning:ssgen:{i}", geometry.group_left["ssgens"][i], geometry.rows["tuning"].y,
+            cells.append(CellBox(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
                                  COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals),
-                                 unit=query.cell_unit(resolved, "tuning", "ssgens", gen=i)))
+                                 unit=query.cell_unit(resolved, "tuning", "superspace_generators", gen=i)))
         else:
-            cells.append(CellBox(f"tuning:ssgen:{i}", geometry.group_left["ssgens"][i], geometry.rows["tuning"].y,
+            cells.append(CellBox(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
                                  COL_W, ROW_H, "gentuningcell", text=service.cents(v, resolved.flags.decimals),
-                                 unit=query.cell_unit(resolved, "tuning", "ssgens", gen=i)))
-        voice(cells, "tuning:ssgens", i, v)
+                                 unit=query.cell_unit(resolved, "tuning", "superspace_generators", gen=i)))
+        voice(cells, "tuning:superspace_generators", i, v)
 
 
 def _emit_tuning_detempering_rows(cells, chart_tiles, resolved, geometry, context) -> None:
@@ -218,7 +218,7 @@ def _emit_tuning_detempering_rows(cells, chart_tiles, resolved, geometry, contex
 def _emit_lbox_control(cells, region_boxes, resolved, geometry, context) -> None:
     if geometry.lbox_ctrl:
         box_top = geometry.rows["prescaling"].tile_top + geometry.rows["prescaling"].tile_h - geometry.lbox_extra + RANGE_GAP
-        bx, by = control_region(region_boxes, geometry, "block:diminuator", "ssprimes" if resolved.flags.superspace else "primes",
+        bx, by = control_region(region_boxes, geometry, "block:diminuator", "superspace_primes" if resolved.flags.superspace else "primes",
                                 box_top, PRESET_H + CAPTION_LINE)
         emit_option_check(cells, "diminuator", "replace diminuator",
                           service.diminuator_replaced(context.tuning_scheme), bx, by)
@@ -275,8 +275,8 @@ def _emit_complexity_row(cells, chart_tiles, resolved, geometry, context) -> Non
         for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
             values = resolved.complexities[group] + (resolved.unchanged.complexities if group == "commas" else ())
             tuning_value_row(cells, chart_tiles, resolved, geometry, context, "complexity", group, values)
-        if resolved.flags.superspace and query.tile_open(geometry, context.collapsed, "complexity", "ssprimes"):
-            tuning_value_row(cells, chart_tiles, resolved, geometry, context, "complexity", "ssprimes",
+        if resolved.flags.superspace and query.tile_open(geometry, context.collapsed, "complexity", "superspace_primes"):
+            tuning_value_row(cells, chart_tiles, resolved, geometry, context, "complexity", "superspace_primes",
                              service.superspace_complexity_prescaler(context.state, context.tuning_scheme))
 
 

@@ -40,7 +40,7 @@ class IntervalSet:
 @dataclass(frozen=True)
 class Tuning:
     tuning_map: object
-    ss_tun: object
+    superspace_tuning_map: object
     from_generators: bool
     target_weights: object
     target_sizes: object
@@ -80,16 +80,16 @@ class Projection:
     targets: object
     held: object
     interest: object
-    ss_matrix: object
-    ss_rationals: object
-    ss_embedding_matrix: object
-    ss_basis: object
-    ss_detempering: object
-    ss_targets: object
-    ss_held: object
-    ss_interest: object
-    ss_unchanged: object
-    ss_unchanged_mapped: object
+    superspace_matrix: object
+    superspace_rationals: object
+    superspace_embedding_matrix: object
+    superspace_basis: object
+    superspace_detempering: object
+    superspace_targets: object
+    superspace_held: object
+    superspace_interest: object
+    superspace_unchanged: object
+    superspace_unchanged_mapped: object
 
 
 @dataclass(frozen=True)
@@ -144,7 +144,7 @@ class Flags:
     weighting: bool
     decimals: bool
     projection: bool
-    ss_projection: bool
+    superspace_projection: bool
     identity_objects: bool
     interval_vectors: bool
     cell_units: bool
@@ -245,7 +245,7 @@ def _dims(b) -> Dims:
 def _tuning(b) -> Tuning:
     return Tuning(
         tuning_map=b.tuning_map,
-        ss_tun=None,
+        superspace_tuning_map=None,
         from_generators=b._tuning_map_from_generators,
         target_weights=b.target_weights,
         target_sizes=b.target_sizes,
@@ -287,16 +287,16 @@ def _projection(b) -> Projection:
         targets=b.projection_targets,
         held=b.projection_held,
         interest=b.projection_interest,
-        ss_matrix=b.ss_projection_matrix,
-        ss_rationals=b.ss_projection_rationals,
-        ss_embedding_matrix=b.ss_embedding_matrix,
-        ss_basis=b.ss_projection_basis,
-        ss_detempering=b.ss_projection_detempering,
-        ss_targets=b.ss_projection_targets,
-        ss_held=b.ss_projection_held,
-        ss_interest=b.ss_projection_interest,
-        ss_unchanged=b.ss_unchanged,
-        ss_unchanged_mapped=b.ss_unchanged_mapped,
+        superspace_matrix=b.superspace_projection_matrix,
+        superspace_rationals=b.superspace_projection_rationals,
+        superspace_embedding_matrix=b.superspace_embedding_matrix,
+        superspace_basis=b.superspace_projection_basis,
+        superspace_detempering=b.superspace_projection_detempering,
+        superspace_targets=b.superspace_projection_targets,
+        superspace_held=b.superspace_projection_held,
+        superspace_interest=b.superspace_projection_interest,
+        superspace_unchanged=b.superspace_unchanged,
+        superspace_unchanged_mapped=b.superspace_unchanged_mapped,
     )
 
 
@@ -368,7 +368,7 @@ def _flags(b) -> Flags:
         weighting=b.show_weighting,
         decimals=b._decimals,
         projection=b.show_projection,
-        ss_projection=b.show_ss_projection,
+        superspace_projection=b.show_superspace_projection,
         identity_objects=b.show_identity_objects,
         interval_vectors=b.show_interval_vectors,
         cell_units=b.show_cell_units,
