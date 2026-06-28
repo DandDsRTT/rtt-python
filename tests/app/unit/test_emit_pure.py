@@ -66,10 +66,10 @@ def test_emit_mapping_is_a_pure_function_over_resolved_geometry_ctx():
 
 
 def test_emit_matrix_bands_are_pure_functions():
-    resolved, geometry, ctx = _inputs(_maximized_builder())
-    headers = {c.id for c in emit_headers(resolved, geometry, ctx).cells}
-    counts = {c.id for c in emit_counts_row(resolved, geometry, ctx).cells}
-    units = {c.id for c in emit_units(resolved, geometry, ctx).cells}
+    resolved, geometry, context = _inputs(_maximized_builder())
+    headers = {c.id for c in emit_headers(resolved, geometry, context).cells}
+    counts = {c.id for c in emit_counts_row(resolved, geometry, context).cells}
+    units = {c.id for c in emit_units(resolved, geometry, context).cells}
     assert "header:primes" in headers and "toggle:all" in headers
     assert "count:primes" in counts
     assert any(i.startswith(("urow:", "ucol:")) for i in units)
@@ -86,9 +86,9 @@ def test_emit_quantities_row_is_a_pure_function():
 
 
 def test_emit_column_plus_and_rehomed_are_pure_functions():
-    resolved, geometry, ctx = _inputs(_maximized_builder())
+    resolved, geometry, context = _inputs(_maximized_builder())
     plus = emit_column_plus_controls(resolved, geometry)
-    rehomed = emit_rehomed_minus_controls(resolved, geometry, ctx)
+    rehomed = emit_rehomed_minus_controls(resolved, geometry, context)
     assert isinstance(plus, EmitResult) and isinstance(rehomed, EmitResult)
     assert "gen_plus" in {c.id for c in plus.cells}
     # rehomed minus controls only emit when the quantities row is collapsed and vectors open
@@ -168,11 +168,11 @@ def test_emit_brackets_is_a_pure_function_over_resolved_geometry_ctx():
 
 
 def test_emit_ebk_frames_and_marks_reads_the_accumulator_for_v_split_bars():
-    resolved, geometry, ctx = _inputs(_maximized_builder())
+    resolved, geometry, context = _inputs(_maximized_builder())
     # the accumulator is the live cell list the orchestrator threads in
     full_layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on())
     accum = list(full_layout.cells)
-    result = emit_ebk_frames_and_marks(resolved, geometry, ctx, accum)
+    result = emit_ebk_frames_and_marks(resolved, geometry, context, accum)
     assert isinstance(result, EmitResult)
     ids = {c.id for c in result.cells}
     full = {c.id for c in full_layout.cells}
@@ -206,8 +206,8 @@ def test_transform_cells_marks_the_dual_axis_preview_on_a_row_removal():
 
 
 def test_emit_controls_is_a_pure_function_returning_cells_and_blocks():
-    resolved, geometry, ctx = _inputs(_maximized_builder())
-    result = emit_controls(resolved, geometry, ctx)
+    resolved, geometry, context = _inputs(_maximized_builder())
+    result = emit_controls(resolved, geometry, context)
     assert isinstance(result, EmitResult)
     cell_ids = {c.id for c in result.cells}
     assert any(i.startswith("preset:") for i in cell_ids)
@@ -217,8 +217,8 @@ def test_emit_controls_is_a_pure_function_returning_cells_and_blocks():
 
 
 def test_emit_tile_toggles_is_a_pure_function_over_geometry_ctx():
-    _resolved, geometry, ctx = _inputs(_maximized_builder())
-    result = emit_tile_toggles(geometry, ctx)
+    _resolved, geometry, context = _inputs(_maximized_builder())
+    result = emit_tile_toggles(geometry, context)
     ids = {c.id for c in result.cells}
     assert any(i.startswith("toggle:tile:") for i in ids)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
@@ -226,9 +226,9 @@ def test_emit_tile_toggles_is_a_pure_function_over_geometry_ctx():
 
 
 def test_emit_decorations_is_a_pure_function_returning_cells_lines_and_blocks():
-    resolved, geometry, ctx = _inputs(_maximized_builder())
-    tuning = emit_tuning(resolved, geometry, ctx)
-    result = emit_decorations(resolved, geometry, ctx, tuning.region_boxes,
+    resolved, geometry, context = _inputs(_maximized_builder())
+    tuning = emit_tuning(resolved, geometry, context)
+    result = emit_decorations(resolved, geometry, context, tuning.region_boxes,
                               tuning.extra["gtm_box"], tuning.extra["opt_box"], tuning.extra["approach_frame"])
     assert isinstance(result, EmitResult)
     assert result.lines and result.blocks
@@ -252,11 +252,11 @@ def test_emit_prescaling_band_is_a_pure_function_over_resolved_geometry_ctx():
 
 def test_closed_form_operand_is_a_pure_function_over_resolved_geometry_ctx():
     builder = _math_builder()
-    resolved, geometry, ctx = _inputs(builder)
+    resolved, geometry, context = _inputs(builder)
     # the just row's operand is the geometry-supplied ratio (1200·log₂ of that ratio)
-    operand = closed_form_operand(resolved, geometry, ctx, "just", "primes", 0)
+    operand = closed_form_operand(resolved, geometry, context, "just", "primes", 0)
     assert operand is not None
-    # closed_form_operand is pure over (resolved, geometry, ctx): a fresh BuildContext agrees
+    # closed_form_operand is pure over (resolved, geometry, context): a fresh BuildContext agrees
     assert closed_form_operand(resolved, geometry, build_context(builder), "just", "primes", 0) == operand
 
 
@@ -264,8 +264,8 @@ def test_closed_form_drops_the_redundant_self_cache():
     builder = _math_builder()
     # the service-level lru_cache makes repeated calls cheap and identical; no per-builder cache attr
     assert not hasattr(builder, "_closed_form_cache")
-    ctx = build_context(builder)
-    assert _closed_form(builder.resolved, ctx) is _closed_form(builder.resolved, ctx)
+    context = build_context(builder)
+    assert _closed_form(builder.resolved, context) is _closed_form(builder.resolved, context)
 
 
 def test_emit_canon_band_is_a_pure_function():

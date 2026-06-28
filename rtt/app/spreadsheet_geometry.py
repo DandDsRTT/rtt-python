@@ -86,14 +86,14 @@ def declare_interval_column_tiles(resolved):
     return interest_tiles, held_tiles, detempering_tiles
 
 
-def declare_tiles(resolved, ctx, interest_tiles, held_tiles, detempering_tiles):
+def declare_tiles(resolved, context, interest_tiles, held_tiles, detempering_tiles):
     tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
              + SUPERSPACE_COUNTS_TILES
              + TILES + UNITS_TILES + SUPERSPACE_TILES
              + interest_tiles + held_tiles + detempering_tiles + _projection_col_tiles(resolved)
              + _ss_projection_col_tiles(resolved) + _canon_col_tiles(resolved))
     declared_tiles = {(row_key, column_key) for _bid, row_key, column_key in tiles}
-    return tiles, _prune_declared_tiles(declared_tiles, resolved, ctx)
+    return tiles, _prune_declared_tiles(declared_tiles, resolved, context)
 
 
 def _projection_col_tiles(resolved):
@@ -154,8 +154,8 @@ def _canon_col_tiles(resolved):
     return tiles
 
 
-def _prune_declared_tiles(declared_tiles, resolved, ctx):
-    if service.is_all_interval(ctx.tuning_scheme):
+def _prune_declared_tiles(declared_tiles, resolved, context):
+    if service.is_all_interval(context.tuning_scheme):
         declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
                            ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
                            ("ss_vectors", "targets"), ("ss_mapping", "targets")}
@@ -170,11 +170,11 @@ def _prune_declared_tiles(declared_tiles, resolved, ctx):
     return declared_tiles
 
 
-def init_superspace_tuning(resolved, ctx):
+def init_superspace_tuning(resolved, context):
     if not resolved.flags.superspace:
         return None
-    ss_override = ctx.superspace_generator_tuning if resolved.flags.superspace_generators else None
-    return service.superspace_tuning(ctx.state, ctx.tuning_scheme, ctx.nonprime_approach,
+    ss_override = context.superspace_generator_tuning if resolved.flags.superspace_generators else None
+    return service.superspace_tuning(context.state, context.tuning_scheme, context.nonprime_approach,
                                      generator_override=ss_override)
 
 
@@ -205,23 +205,23 @@ def symbol_floor(geometry, resolved, key: str):
     return floor
 
 
-def control_floor(resolved, ctx, key: str):
+def control_floor(resolved, context, key: str):
     floor = 0
     if key == ("ssprimes" if resolved.flags.superspace else "primes") and resolved.flags.lbox_show:
         floor = PBOX_W if resolved.flags.presets else LBOX_DIM_W + 2 * BOX_INNER
     if key == "targets" and resolved.flags.cbox_show:
         cbox_w = CBOX_W if resolved.flags.presets else CBOX_NODROP_W
         floor = max(floor, cbox_w + 2 * BOX_INNER)
-    if key == "targets" and resolved.flags.presets and ctx.settings["all_interval"]:
+    if key == "targets" and resolved.flags.presets and context.settings["all_interval"]:
         floor = max(floor, TBOX_W)
-    if (key == "targets" and resolved.flags.optimization and "row:damage" not in ctx.collapsed
-            and "tile:damage:targets" not in ctx.collapsed):
+    if (key == "targets" and resolved.flags.optimization and "row:damage" not in context.collapsed
+            and "tile:damage:targets" not in context.collapsed):
         floor = max(floor, OPT_BOX_MIN_W)
     labels = ([lbl for _n, resolved, c, lbl in PRESETS + PRESET_COPIES if c == key and lbl] if resolved.flags.presets else [])
     labels += [lbl for _n, resolved, c, lbl in FORM_CHOOSERS if c == key and lbl] if resolved.flags.form_controls else []
     if labels:
         floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(lbl, 1) for lbl in labels))
-    if key in ("primes", "gens") and ctx.settings["projection"]:
+    if key in ("primes", "gens") and context.settings["projection"]:
         floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_W)
     return floor
 
@@ -234,18 +234,18 @@ def commas_band_w(resolved, nc_count: int):
     return 2 * BRACKET_W + nv * COL_W + split + empty
 
 
-def _caption_wrap_w(geometry, resolved, ctx, column_key: str):
+def _caption_wrap_w(geometry, resolved, context, column_key: str):
     if column_key == "commas" and resolved.ghosts.comma:
         resting = commas_band_w(resolved, resolved.dims.nc + (1 if resolved.commas.pending is not None else 0))
         return max(resting, caption_floor(geometry, resolved, column_key),
-                   control_floor(resolved, ctx, column_key), symbol_floor(geometry, resolved, column_key))
+                   control_floor(resolved, context, column_key), symbol_floor(geometry, resolved, column_key))
     return geometry.open_col_w[column_key]
 
 
-def caption_band(geometry, resolved, ctx, key: str, folded: bool):
+def caption_band(geometry, resolved, context, key: str, folded: bool):
     if not (resolved.flags.names and key in BANDS["caption"].rows and not folded):
         return 0
-    lines = [_wrap_lines(resolved.labels.captions[(key, c)], _caption_wrap_w(geometry, resolved, ctx, c)) for c in geometry.col_x
+    lines = [_wrap_lines(resolved.labels.captions[(key, c)], _caption_wrap_w(geometry, resolved, context, c)) for c in geometry.col_x
              if (key, c) in resolved.labels.captions and (key, c) in geometry.declared_tiles]
     if key == "counts" and resolved.unchanged.shown and "commas" in geometry.col_x:
         lines.append(_wrap_lines("unchanged interval count", resolved.dims.nu * COL_W))

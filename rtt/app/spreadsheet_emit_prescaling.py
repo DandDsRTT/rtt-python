@@ -8,13 +8,13 @@ from rtt.app.spreadsheet_emit_model import EmitResult
 from rtt.app.spreadsheet_text import _prescale_math_expr
 
 
-def emit_prescaling_band(resolved, geometry, ctx) -> EmitResult:
+def emit_prescaling_band(resolved, geometry, context) -> EmitResult:
     cells: list = []
     nrows = geometry.prescale_rows
-    prescaler_diag, prescaler_is_matrix, ss_elements, prescale_vectors, groups, bare_group = _prescale_setup(resolved, ctx, nrows)
+    prescaler_diag, prescaler_is_matrix, ss_elements, prescale_vectors, groups, bare_group = _prescale_setup(resolved, context, nrows)
     prime_term = _prescale_prime_terms(resolved, ss_elements)
     for group in groups:
-        if not query.tile_open(geometry, ctx.collapsed, "prescaling", group):
+        if not query.tile_open(geometry, context.collapsed, "prescaling", group):
             continue
         _emit_prescale_group(cells, resolved, geometry, group, prescale_vectors[group], prescaler_diag,
                              prescaler_is_matrix, prime_term, bare_group, nrows)
@@ -27,9 +27,9 @@ def _lift_to_superspace(resolved, vs):
                  for v in vs)
 
 
-def _prescale_setup(resolved, ctx, nrows):
+def _prescale_setup(resolved, context, nrows):
     if resolved.flags.superspace:
-        prescaler_diag = service.superspace_complexity_prescaler(ctx.state, ctx.tuning_scheme)
+        prescaler_diag = service.superspace_complexity_prescaler(context.state, context.tuning_scheme)
         prescaler_is_matrix = False
         ss_elements = service.superspace_primes(resolved.dims.elements)
 
@@ -38,7 +38,7 @@ def _prescale_setup(resolved, ctx, nrows):
         prescale_vectors = {
             "ssprimes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
             "primes": service.basis_in_superspace(resolved.dims.elements),
-            "commas": lift(ctx.state.comma_basis) + (lift(resolved.unchanged.basis) if resolved.unchanged.shown else ()),
+            "commas": lift(context.state.comma_basis) + (lift(resolved.unchanged.basis) if resolved.unchanged.shown else ()),
             "targets": lift(resolved.targets.vectors),
             "interest": lift(resolved.interest.vectors),
             "held": lift(resolved.held.vectors),
@@ -52,7 +52,7 @@ def _prescale_setup(resolved, ctx, nrows):
         ss_elements = resolved.dims.elements
         prescale_vectors = {
             "primes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
-            "commas": ctx.state.comma_basis + (resolved.unchanged.basis if resolved.unchanged.shown else ()),
+            "commas": context.state.comma_basis + (resolved.unchanged.basis if resolved.unchanged.shown else ()),
             "targets": resolved.targets.vectors,
             "interest": resolved.interest.vectors,
             "held": resolved.held.vectors,

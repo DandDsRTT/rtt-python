@@ -6,7 +6,7 @@ from rtt.app import service
 from rtt.app.spreadsheet_text import _log_operand
 
 
-def closed_form_operand(resolved, geometry, ctx, key, group, i, value=None):
+def closed_form_operand(resolved, geometry, context, key, group, i, value=None):
     if key == "just":
         ratio = geometry.group_ratio[group][i]
         return _log_operand(ratio) if ratio is not None else None
@@ -15,9 +15,9 @@ def closed_form_operand(resolved, geometry, ctx, key, group, i, value=None):
         return _log_operand(f"{recip.numerator}/{recip.denominator}")
     if key in ("tuning", "retune") and value is not None:
         if group in ("ssprimes", "ssgens"):
-            return _ss_closed_form_operand(resolved, ctx, key, group, i, value)
-        closed_form = _closed_form(resolved, ctx)
-        vector = _tempered_vector(resolved, ctx, group, i) if closed_form is not None else None
+            return _ss_closed_form_operand(resolved, context, key, group, i, value)
+        closed_form = _closed_form(resolved, context)
+        vector = _tempered_vector(resolved, context, group, i) if closed_form is not None else None
         if vector is not None:
             return (
                 closed_form.tempered_operand(vector, value)
@@ -27,8 +27,8 @@ def closed_form_operand(resolved, geometry, ctx, key, group, i, value=None):
     return None
 
 
-def _ss_closed_form_operand(resolved, ctx, key, group, i, value):
-    ss = _ss_closed_form(resolved, ctx)
+def _ss_closed_form_operand(resolved, context, key, group, i, value):
+    ss = _ss_closed_form(resolved, context)
     if ss is None:
         return None
     if group == "ssgens":
@@ -39,32 +39,32 @@ def _ss_closed_form_operand(resolved, ctx, key, group, i, value):
     )
 
 
-def _closed_form(resolved, ctx):
+def _closed_form(resolved, context):
     if not resolved.flags.math_expressions or resolved.tuning.from_generators:
         return None
     return service.closed_form_tuning(
-        ctx.state.mapping,
-        ctx.tuning_scheme,
+        context.state.mapping,
+        context.tuning_scheme,
         resolved.dims.elements,
-        ctx.nonprime_approach,
+        context.nonprime_approach,
         held=resolved.held.ratios,
-        prescaler_override=ctx.custom_prescaler,
+        prescaler_override=context.custom_prescaler,
         targets=resolved.tuning.optimum_target_override,
-        weights_override=ctx.custom_weights,
+        weights_override=context.custom_weights,
     )
 
 
-def _ss_closed_form(resolved, ctx):
+def _ss_closed_form(resolved, context):
     if not (resolved.flags.math_expressions and resolved.flags.superspace):
         return None
-    return service.closed_form_superspace_tuning(ctx.state, ctx.tuning_scheme)
+    return service.closed_form_superspace_tuning(context.state, context.tuning_scheme)
 
 
-def _tempered_vector(resolved, ctx, group, i):
+def _tempered_vector(resolved, context, group, i):
     if group == "primes":
         return tuple(1 if k == i else 0 for k in range(resolved.dims.d))
     if group == "commas":
-        return _comma_tempered_vector(resolved, ctx, i)
+        return _comma_tempered_vector(resolved, context, i)
     seqs = {
         "targets": resolved.targets.vectors,
         "interest": resolved.interest.vectors,
@@ -77,9 +77,9 @@ def _tempered_vector(resolved, ctx, group, i):
     return seq[i] if i < len(seq) else None
 
 
-def _comma_tempered_vector(resolved, ctx, i):
+def _comma_tempered_vector(resolved, context, i):
     if i < resolved.dims.nc:
-        return ctx.state.comma_basis[i]
+        return context.state.comma_basis[i]
     j = i - resolved.dims.nc
     return (
         resolved.unchanged.basis[j]

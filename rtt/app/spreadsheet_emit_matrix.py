@@ -35,14 +35,14 @@ from rtt.app.spreadsheet_text import (
 )
 
 
-def emit_headers(resolved, geometry, ctx) -> EmitResult:
+def emit_headers(resolved, geometry, context) -> EmitResult:
     cells: list = []
     for key in geometry.col_x:
         hx = geometry.col_x[key] + query.outer_gutter_w(geometry, key)
         hw = geometry.col_w[key] - 2 * query.outer_gutter_w(geometry, key)
         cells.append(CellBox(f"header:{key}", hx, geometry.header_y, hw, HEADER_H, "colheader", text=geometry.col_header[key]))
         if geometry.col_collapsible[key]:
-            glyph = _fold_glyph(f"col:{key}" in ctx.collapsed)
+            glyph = _fold_glyph(f"col:{key}" in context.collapsed)
             tx = hx + (hw - TOGGLE) / 2
             cells.append(CellBox(f"toggle:col:{key}", tx, geometry.col_node_y, TOGGLE, TOGGLE, "coltoggle", text=glyph))
     for key in geometry.rows:
@@ -52,32 +52,32 @@ def emit_headers(resolved, geometry, ctx) -> EmitResult:
             label = label.replace(" pretransforming", chr(160) + "pre-" + chr(10) + "transforming")
         cells.append(CellBox(f"label:{key}", 0, geometry.rows[key].y, LABEL_W, geometry.rows[key].h, "rowlabel", text=label))
         if geometry.rows[key].collapsible:
-            glyph = _fold_glyph(f"row:{key}" in ctx.collapsed)
+            glyph = _fold_glyph(f"row:{key}" in context.collapsed)
             ty = geometry.rows[key].y + (geometry.rows[key].h - TOGGLE) / 2
             cells.append(CellBox(f"toggle:row:{key}", geometry.node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
     foldable = _foldable_ids(cells)
-    all_collapsed = bool(foldable) and foldable <= ctx.collapsed
+    all_collapsed = bool(foldable) and foldable <= context.collapsed
     cells.append(CellBox("toggle:all", geometry.node_x, geometry.col_node_y, TOGGLE, TOGGLE, "alltoggle",
                          text=_fold_glyph(all_collapsed)))
     return EmitResult(cells=tuple(cells))
 
 
-def emit_counts_row(resolved, geometry, ctx) -> EmitResult:
+def emit_counts_row(resolved, geometry, context) -> EmitResult:
     cells: list = []
-    if not query.row_open(geometry, ctx.collapsed, "counts"):
+    if not query.row_open(geometry, context.collapsed, "counts"):
         return EmitResult()
-    cardinality = {"gens": resolved.dims.r, "primes": resolved.dims.d, "commas": ctx.state.n, "targets": resolved.dims.k, "held": resolved.dims.nh,
+    cardinality = {"gens": resolved.dims.r, "primes": resolved.dims.d, "commas": context.state.n, "targets": resolved.dims.k, "held": resolved.dims.nh,
                    "detempering": resolved.dims.r,
                    "ssgens": resolved.dims.rL, "ssprimes": resolved.dims.dL}
     for column_key, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
-        if not query.tile_open(geometry, ctx.collapsed, "counts", column_key):
+        if not query.tile_open(geometry, context.collapsed, "counts", column_key):
             continue
         if column_key == "commas" and resolved.unchanged.shown:
             comma_half_w = resolved.dims.nc * COL_W + resolved.unchanged.empty_comma_w
             if comma_half_w:
                 comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_w else query.comma_left(geometry, resolved, 0)
                 cells.append(CellBox("count:commas", comma_half_x, geometry.rows["counts"].y, comma_half_w, ROW_H,
-                                     "count", text=f"{_count_sym('n')} = {ctx.state.n}"))
+                                     "count", text=f"{_count_sym('n')} = {context.state.n}"))
             cells.append(CellBox("count:commas:u", query.comma_left(geometry, resolved, resolved.dims.nc_shown), geometry.rows["counts"].y, resolved.dims.nu * COL_W, ROW_H,
                                  "count", text=f"{_count_sym('u')} = {resolved.dims.nu}"))
             continue
@@ -87,15 +87,15 @@ def emit_counts_row(resolved, geometry, ctx) -> EmitResult:
     return EmitResult(cells=tuple(cells))
 
 
-def emit_units(resolved, geometry, ctx) -> EmitResult:
+def emit_units(resolved, geometry, context) -> EmitResult:
     cells: list = []
-    _emit_units_matrix(cells, resolved, geometry, ctx)
-    _emit_units_const(cells, resolved, geometry, ctx)
-    _emit_units_columns(cells, resolved, geometry, ctx)
+    _emit_units_matrix(cells, resolved, geometry, context)
+    _emit_units_const(cells, resolved, geometry, context)
+    _emit_units_columns(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
 
 
-def _emit_units_matrix(cells, resolved, geometry, ctx) -> None:
+def _emit_units_matrix(cells, resolved, geometry, context) -> None:
     matrix_units = {
         "vectors": (resolved.dims.d, lambda i: query.vec_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
         "canon": (resolved.dims.rc, lambda i: query.canon_top(geometry, i), lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
@@ -106,19 +106,19 @@ def _emit_units_matrix(cells, resolved, geometry, ctx) -> None:
         "ss_projection": (resolved.dims.dL, lambda i: query.ss_proj_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
     }
     for key, (n, top, label) in matrix_units.items():
-        if not query.tile_open(geometry, ctx.collapsed, key, "units"):
+        if not query.tile_open(geometry, context.collapsed, key, "units"):
             continue
         for i in range(n):
             cells.append(CellBox(f"ucol:{key}:{i}", geometry.col_x["units"], top(i),
                                  geometry.col_w["units"], ROW_H, "units", text=label(i)))
 
 
-def _emit_units_const(cells, resolved, geometry, ctx) -> None:
+def _emit_units_const(cells, resolved, geometry, context) -> None:
     const_units = {"tuning": "¢/", "just": "¢/", "retune": "¢/", "prescaling": "oct/",
                    "complexity": f"{resolved.scalars.complexity_unit}/", "weight": f"{resolved.scalars.weight_unit}/",
                    "damage": f"{resolved.scalars.damage_unit}/"}
     for key, text in const_units.items():
-        if not query.tile_open(geometry, ctx.collapsed, key, "units"):
+        if not query.tile_open(geometry, context.collapsed, key, "units"):
             continue
         n = geometry.rows[key].num_subrows
         for i in range(n):
@@ -127,7 +127,7 @@ def _emit_units_const(cells, resolved, geometry, ctx) -> None:
                                  geometry.col_w["units"], ROW_H, "units", text=text))
 
 
-def _emit_units_columns(cells, resolved, geometry, ctx) -> None:
+def _emit_units_columns(cells, resolved, geometry, context) -> None:
     if "units" not in geometry.rows:
         return
     uy = geometry.rows["units"].y
@@ -144,14 +144,14 @@ def _emit_units_columns(cells, resolved, geometry, ctx) -> None:
         "held": (resolved.dims.nh_shown, lambda i: query.held_left(geometry, i), lambda _i: "/1"),
     }
     for key, (n, left, label) in column_units.items():
-        if not query.tile_open(geometry, ctx.collapsed, "units", key):
+        if not query.tile_open(geometry, context.collapsed, "units", key):
             continue
         for i in range(n):
             cells.append(CellBox(f"urow:{key}:{i}", left(i), uy, COL_W, ROW_H,
                                  "units", text=label(i)))
 
 
-def emit_quantities_row(resolved, geometry, ctx) -> EmitResult:
+def emit_quantities_row(resolved, geometry, context) -> EmitResult:
     cells: list = []
     if "quantities" not in geometry.rows:
         return EmitResult()
@@ -161,34 +161,34 @@ def emit_quantities_row(resolved, geometry, ctx) -> EmitResult:
         cells.append(CellBox(cid, query.sub_axis_x(geometry, column_key, i) - COL_W / 2, geometry.fanout_y, COL_W,
                              qy - geometry.fanout_y, kind, **kw))
 
-    _emit_qty_gens(cells, resolved, geometry, ctx, qy, branch_minus)
-    _emit_qty_canongens(cells, resolved, geometry, ctx, qy)
-    _emit_qty_primes(cells, resolved, geometry, ctx, qy, branch_minus)
-    _emit_qty_ssgens(cells, resolved, geometry, ctx, qy)
-    _emit_qty_ssprimes(cells, resolved, geometry, ctx, qy)
-    _emit_qty_commas(cells, resolved, geometry, ctx, qy, branch_minus)
-    _emit_qty_detempering(cells, resolved, geometry, ctx, qy)
-    _emit_qty_interests(cells, resolved, geometry, ctx, qy, branch_minus)
-    _emit_qty_grips(cells, resolved, geometry, ctx)
+    _emit_qty_gens(cells, resolved, geometry, context, qy, branch_minus)
+    _emit_qty_canongens(cells, resolved, geometry, context, qy)
+    _emit_qty_primes(cells, resolved, geometry, context, qy, branch_minus)
+    _emit_qty_ssgens(cells, resolved, geometry, context, qy)
+    _emit_qty_ssprimes(cells, resolved, geometry, context, qy)
+    _emit_qty_commas(cells, resolved, geometry, context, qy, branch_minus)
+    _emit_qty_detempering(cells, resolved, geometry, context, qy)
+    _emit_qty_interests(cells, resolved, geometry, context, qy, branch_minus)
+    _emit_qty_grips(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
 
 
-def _emit_qty_gens(cells, resolved, geometry, ctx, qy, branch_minus) -> None:
-    if query.tile_open(geometry, ctx.collapsed, "quantities", "gens"):
+def _emit_qty_gens(cells, resolved, geometry, context, qy, branch_minus) -> None:
+    if query.tile_open(geometry, context.collapsed, "quantities", "gens"):
         for g in range(resolved.dims.r):
             cells.append(CellBox(f"qgen:{g}", query.gen_left(geometry, g), qy, COL_W, ROW_H, "genratio", text=resolved.scalars.gens[g], gen=g))
         if resolved.dims.r > 1:
             branch_minus("gen_minus", "gens", resolved.dims.r - 1, "gen_minus", gen=resolved.dims.r - 1)
 
 
-def _emit_qty_canongens(cells, resolved, geometry, ctx, qy) -> None:
-    if query.tile_open(geometry, ctx.collapsed, "quantities", "canongens"):
+def _emit_qty_canongens(cells, resolved, geometry, context, qy) -> None:
+    if query.tile_open(geometry, context.collapsed, "quantities", "canongens"):
         for g in range(resolved.dims.rc):
             cells.append(CellBox(f"cangen:{g}", query.canongen_left(geometry, g), qy, COL_W, ROW_H, "genratio", text=resolved.canon.gens[g]))
 
 
-def _emit_qty_primes(cells, resolved, geometry, ctx, qy, branch_minus) -> None:
-    if not query.tile_open(geometry, ctx.collapsed, "quantities", "primes"):
+def _emit_qty_primes(cells, resolved, geometry, context, qy, branch_minus) -> None:
+    if not query.tile_open(geometry, context.collapsed, "quantities", "primes"):
         return
     for p in range(resolved.dims.d):
         text = str(resolved.dims.elements[p])
@@ -196,7 +196,7 @@ def _emit_qty_primes(cells, resolved, geometry, ctx, qy, branch_minus) -> None:
         cells.append(CellBox(f"prime:{p}", query.prime_left(geometry, p), qy, COL_W, ROW_H, kind, text=text, prime=p))
         voice(cells, "quantities:primes", p, resolved.tuning.tun.just_map[p])
     if resolved.scalars.element_draft:
-        draft_text = ctx.pending_element or "?/?"
+        draft_text = context.pending_element or "?/?"
         cells.append(CellBox("prime:pending", query.prime_left(geometry, resolved.dims.d), qy, COL_W, ROW_H,
                              element_cell_kind(draft_text), text=draft_text, prime=resolved.dims.d, pending=True))
         branch_minus("element_minus:pending", "primes", resolved.dims.d, "element_minus")
@@ -208,21 +208,21 @@ def _emit_qty_primes(cells, resolved, geometry, ctx, qy, branch_minus) -> None:
         branch_minus("minus", "primes", resolved.dims.d - 1, "minus")
 
 
-def _emit_qty_ssgens(cells, resolved, geometry, ctx, qy) -> None:
-    if query.tile_open(geometry, ctx.collapsed, "quantities", "ssgens"):
-        ss_gens = service.superspace_generators(ctx.state)
+def _emit_qty_ssgens(cells, resolved, geometry, context, qy) -> None:
+    if query.tile_open(geometry, context.collapsed, "quantities", "ssgens"):
+        ss_gens = service.superspace_generators(context.state)
         for g in range(resolved.dims.rL):
             cells.append(CellBox(f"ssqgen:{g}", query.ss_gen_left(geometry, g), qy, COL_W, ROW_H, "genratio", text=ss_gens[g]))
 
 
-def _emit_qty_ssprimes(cells, resolved, geometry, ctx, qy) -> None:
-    if query.tile_open(geometry, ctx.collapsed, "quantities", "ssprimes"):
+def _emit_qty_ssprimes(cells, resolved, geometry, context, qy) -> None:
+    if query.tile_open(geometry, context.collapsed, "quantities", "ssprimes"):
         for p in range(resolved.dims.dL):
             cells.append(CellBox(f"ssqprime:{p}", query.ss_prime_left(geometry, p), qy, COL_W, ROW_H, "commaratio", text=str(resolved.dims.superspace_primes[p]), prime=p))
 
 
-def _emit_qty_commas(cells, resolved, geometry, ctx, qy, branch_minus) -> None:
-    if not query.tile_open(geometry, ctx.collapsed, "quantities", "commas"):
+def _emit_qty_commas(cells, resolved, geometry, context, qy, branch_minus) -> None:
+    if not query.tile_open(geometry, context.collapsed, "quantities", "commas"):
         return
     for c in range(resolved.dims.nc):
         cells.append(CellBox(f"comma:{query.col_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), qy, COL_W, ROW_H, "ratiocell", text=resolved.commas.ratios[c], comma=c))
@@ -246,23 +246,23 @@ def _emit_qty_commas(cells, resolved, geometry, ctx, qy, branch_minus) -> None:
         branch_minus("comma_minus:pending", "commas", resolved.dims.nc, "comma_minus")
 
 
-def _emit_qty_detempering(cells, resolved, geometry, ctx, qy) -> None:
-    if query.tile_open(geometry, ctx.collapsed, "quantities", "detempering"):
+def _emit_qty_detempering(cells, resolved, geometry, context, qy) -> None:
+    if query.tile_open(geometry, context.collapsed, "quantities", "detempering"):
         for i in range(resolved.dims.r):
             cells.append(CellBox(f"detempering:{i}", query.detempering_left(geometry, i), qy, COL_W, ROW_H, "commaratio", text=resolved.scalars.gens[i]))
             voice(cells, "quantities:detempering", i, resolved.detempering.sizes.just[i])
 
 
-def _emit_qty_interests(cells, resolved, geometry, ctx, qy, branch_minus) -> None:
-    if query.tile_open(geometry, ctx.collapsed, "quantities", "targets"):
+def _emit_qty_interests(cells, resolved, geometry, context, qy, branch_minus) -> None:
+    if query.tile_open(geometry, context.collapsed, "quantities", "targets"):
         _emit_qty_list(cells, resolved, _QtyList("targets", "target", resolved.dims.k, lambda i: query.target_left(geometry, i), resolved.targets.ratios,
                                      resolved.tuning.target_sizes, resolved.targets.pending,
                                      "ratiocell" if resolved.scalars.targets_editable else "commaratio",
                                      resolved.scalars.targets_editable), qy, branch_minus)
-    if query.tile_open(geometry, ctx.collapsed, "quantities", "held"):
+    if query.tile_open(geometry, context.collapsed, "quantities", "held"):
         _emit_qty_list(cells, resolved, _QtyList("held", "held", resolved.dims.nh, lambda i: query.held_left(geometry, i), resolved.held.ratios,
                                      resolved.tuning.held_sizes, resolved.held.pending, "ratiocell", True), qy, branch_minus)
-    if query.tile_open(geometry, ctx.collapsed, "quantities", "interest"):
+    if query.tile_open(geometry, context.collapsed, "quantities", "interest"):
         _emit_qty_list(cells, resolved, _QtyList("interest", "interest", resolved.dims.mi, lambda i: query.interest_left(geometry, i), resolved.interest.ratios,
                                      resolved.tuning.interest_sizes, resolved.interest.pending, "ratiocell", True), qy, branch_minus)
 
@@ -278,11 +278,11 @@ def _emit_qty_list(cells, resolved, q: _QtyList, qy: float, branch_minus) -> Non
         branch_minus(f"{q.singular}_minus:pending", q.group, q.count, f"{q.singular}_minus")
 
 
-def _emit_qty_grips(cells, resolved, geometry, ctx) -> None:
+def _emit_qty_grips(cells, resolved, geometry, context) -> None:
     grip_top = geometry.branch_top_y + GAP - PAD
     counts = {"commas": resolved.dims.nc, "targets": resolved.dims.k, "held": resolved.dims.nh, "interest": resolved.dims.mi}
     for column_key in ("commas", "targets", "held", "interest"):
-        if query.row_open(geometry, ctx.collapsed, "quantities") and query.plus_shows(geometry, resolved, ctx.collapsed, ctx.state, column_key):
+        if query.row_open(geometry, context.collapsed, "quantities") and query.plus_shows(geometry, resolved, context.collapsed, context.state, column_key):
             _qty_drag_controls(cells, resolved, geometry, column_key, counts[column_key], grip_top)
     if resolved.unchanged.shown:
         for j in range(resolved.dims.nu):
@@ -312,9 +312,9 @@ def emit_column_plus_controls(resolved, geometry) -> EmitResult:
     return EmitResult(cells=tuple(cells))
 
 
-def emit_rehomed_minus_controls(resolved, geometry, ctx) -> EmitResult:
+def emit_rehomed_minus_controls(resolved, geometry, context) -> EmitResult:
     cells: list = []
-    if query.row_open(geometry, ctx.collapsed, "quantities") or not query.row_open(geometry, ctx.collapsed, "vectors"):
+    if query.row_open(geometry, context.collapsed, "quantities") or not query.row_open(geometry, context.collapsed, "vectors"):
         return EmitResult()
     vtop = geometry.rows["vectors"].y
 
@@ -322,23 +322,23 @@ def emit_rehomed_minus_controls(resolved, geometry, ctx) -> EmitResult:
         cells.append(CellBox(cid, query.sub_axis_x(geometry, column_key, i) - COL_W / 2, geometry.fanout_y,
                              COL_W, vtop - geometry.fanout_y, kind, **kw))
 
-    _emit_rehomed_commas(resolved, geometry, ctx, vec_minus)
-    _emit_rehomed_targets(resolved, geometry, ctx, vec_minus)
-    _emit_rehomed_held(resolved, geometry, ctx, vec_minus)
-    _emit_rehomed_interest(resolved, geometry, ctx, vec_minus)
+    _emit_rehomed_commas(resolved, geometry, context, vec_minus)
+    _emit_rehomed_targets(resolved, geometry, context, vec_minus)
+    _emit_rehomed_held(resolved, geometry, context, vec_minus)
+    _emit_rehomed_interest(resolved, geometry, context, vec_minus)
     return EmitResult(cells=tuple(cells))
 
 
-def _emit_rehomed_commas(resolved, geometry, ctx, vec_minus) -> None:
-    if query.tile_open(geometry, ctx.collapsed, "vectors", "commas"):
+def _emit_rehomed_commas(resolved, geometry, context, vec_minus) -> None:
+    if query.tile_open(geometry, context.collapsed, "vectors", "commas"):
         for c in range(resolved.dims.nc):
             vec_minus(f"comma_minus:{query.col_token(resolved, 'commas', c)}", "commas", c, "comma_minus", comma=c)
         if resolved.commas.pending is not None:
             vec_minus("comma_minus:pending", "commas", resolved.dims.nc, "comma_minus")
 
 
-def _emit_rehomed_targets(resolved, geometry, ctx, vec_minus) -> None:
-    if query.tile_open(geometry, ctx.collapsed, "vectors", "targets"):
+def _emit_rehomed_targets(resolved, geometry, context, vec_minus) -> None:
+    if query.tile_open(geometry, context.collapsed, "vectors", "targets"):
         if resolved.scalars.targets_editable:
             for j in range(resolved.dims.k):
                 vec_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
@@ -346,16 +346,16 @@ def _emit_rehomed_targets(resolved, geometry, ctx, vec_minus) -> None:
             vec_minus("target_minus:pending", "targets", resolved.dims.k, "target_minus")
 
 
-def _emit_rehomed_held(resolved, geometry, ctx, vec_minus) -> None:
-    if query.tile_open(geometry, ctx.collapsed, "vectors", "held"):
+def _emit_rehomed_held(resolved, geometry, context, vec_minus) -> None:
+    if query.tile_open(geometry, context.collapsed, "vectors", "held"):
         for i in range(resolved.dims.nh):
             vec_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
         if resolved.held.pending is not None:
             vec_minus("held_minus:pending", "held", resolved.dims.nh, "held_minus")
 
 
-def _emit_rehomed_interest(resolved, geometry, ctx, vec_minus) -> None:
-    if query.tile_open(geometry, ctx.collapsed, "vectors", "interest"):
+def _emit_rehomed_interest(resolved, geometry, context, vec_minus) -> None:
+    if query.tile_open(geometry, context.collapsed, "vectors", "interest"):
         for i in range(resolved.dims.mi):
             vec_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
         if resolved.interest.pending is not None:
