@@ -5,3 +5,5 @@ ruff==0.15.18
 coverage==7.14.2
 radon==6.0.1
 pre-commit==4.6.0
+# Real-browser test suite (tests/app/integration/test_browser_*.py); opt-in via RTT_BROWSER_SMOKE=1.
+playwright==1.60.0

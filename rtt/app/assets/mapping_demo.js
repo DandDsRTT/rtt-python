@@ -60,12 +60,15 @@
   };
   const clear = () => { if (svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); svg.style.display = 'none'; } curKey = null; };
 
+  // the cell carries its model value in data-value (stamped server-side), so the overlay never has to
+  // reconstruct it from the rendered face — a stacked num-over-den fraction's textContent would
+  // concatenate ("1/4" -> "14"). The input/textContent reads are fallbacks for any value cell that
+  // somehow lacks the attribute.
   const text = (el) => {
+    const dv = el.getAttribute && el.getAttribute('data-value');
+    if (dv) return dv;
     const i = el.querySelector('input');
     if (i && i.value !== '') return i.value;
-    // a rational renders as a stacked num-over-den pair, whose textContent would concatenate to "14"
-    const num = el.querySelector('.rtt-frac-num'), den = el.querySelector('.rtt-frac-den');
-    if (num && den && num.textContent && den.textContent) return num.textContent + '/' + den.textContent;
     return el.textContent;
   };
 
