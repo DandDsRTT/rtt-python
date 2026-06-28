@@ -85,16 +85,16 @@ def resolve_prescaler_and_domain_labels(inputs, draft):
 
 
 def resolve_complexities(inputs, draft):
-    def _cx(intervals):
+    def _complexity(intervals):
         return service.interval_complexities(inputs.state.mapping, inputs.tuning_scheme, intervals,
                                              prescaler_override=inputs.custom_prescaler, domain_basis=draft.elements)
     complexities = {
-        "primes": _cx(tuple(service.element_ratio(e) for e in draft.elements)),
-        "commas": _cx(draft.comma_ratios),
-        "targets": _cx(draft.targets),
-        "interest": _cx(draft.interest_ratios),
-        "held": _cx(draft.held_ratios),
-        "detempering": _cx(draft.gens),
+        "primes": _complexity(tuple(service.element_ratio(e) for e in draft.elements)),
+        "commas": _complexity(draft.comma_ratios),
+        "targets": _complexity(draft.targets),
+        "interest": _complexity(draft.interest_ratios),
+        "held": _complexity(draft.held_ratios),
+        "detempering": _complexity(draft.gens),
     }
     prescaler = service.complexity_prescaler(inputs.state.mapping, inputs.tuning_scheme, override=inputs.custom_prescaler)
     return replace(draft, complexities=complexities, prescaler=prescaler,
