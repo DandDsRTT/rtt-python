@@ -202,14 +202,14 @@ class RowBand:
     tile_h: float
     tile_top: float
     frame: float
-    sym: float
-    cap: float
+    symbol: float
+    caption: float
     units: float
     ptext: float
-    pre: float
-    schemebtn: float
-    nsub: int
-    cpick: float = 0.0
+    preset: float
+    scheme_button: float
+    num_subrows: int
+    comma_picker: float = 0.0
     chart_top: float | None = None
-    int_handle_top: float | None = None
-    matlabel_top: float | None = None
+    interval_handle_top: float | None = None
+    matrix_label_top: float | None = None

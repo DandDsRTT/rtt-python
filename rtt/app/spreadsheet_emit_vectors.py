@@ -96,7 +96,7 @@ def _emit_vectors_commas_col(cells, resolved, geometry, ctx) -> None:
             cells.append(CellBox(ids.comma_cell(query.col_token(resolved, 'commas', c), p), query.comma_left(geometry, resolved, c), query.vec_top(geometry, p), COL_W, ROW_H, "commacell", text=str(ctx.state.comma_basis[c][p]), prime=p, comma=c, unit=query.cell_unit(resolved, "vectors", "commas", prime=p)))
             voice(cells, "vectors:commas", c, resolved.tuning.comma_sizes.just[c])
         if resolved.flags.presets:
-            cells.append(CellBox(f"commapick:{query.col_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.cpick_band_y(geometry, "vectors") + COMMAPICK_GAP, COL_W, ROW_H, "commapick", comma=c))
+            cells.append(CellBox(f"commapick:{query.col_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP, COL_W, ROW_H, "commapick", comma=c))
     full_u = resolved.unchanged.basis is not None and all(v is not None for v in resolved.unchanged.basis)
     for j in range(resolved.dims.nu):
         doomed = resolved.commas.pending is not None and j == resolved.dims.nu - 1
@@ -114,7 +114,7 @@ def _emit_vectors_commas_col(cells, resolved, geometry, ctx) -> None:
             cells.append(CellBox(ids.comma_cell(query.pending_col_token(resolved, 'commas'), p), query.comma_left(geometry, resolved, resolved.dims.nc), query.vec_top(geometry, p), COL_W, ROW_H, col_kind,
                                  text="" if v is None else str(v), prime=p, comma=resolved.dims.nc, pending=True, unit=query.cell_unit(resolved, "vectors", "commas", prime=p)))
         if resolved.commas.pending is not None and resolved.flags.presets:
-            cells.append(CellBox("commapick:draft", query.comma_left(geometry, resolved, resolved.dims.nc), query.cpick_band_y(geometry, "vectors") + COMMAPICK_GAP, COL_W, ROW_H, "commapick", comma=resolved.dims.nc, pending=True))
+            cells.append(CellBox("commapick:draft", query.comma_left(geometry, resolved, resolved.dims.nc), query.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP, COL_W, ROW_H, "commapick", comma=resolved.dims.nc, pending=True))
 
 
 def _emit_vectors_detempering_col(cells, resolved, geometry) -> None:
@@ -125,8 +125,8 @@ def _emit_vectors_detempering_col(cells, resolved, geometry) -> None:
 
 
 def _emit_vectors_int_handles(cells, resolved, geometry, ctx) -> None:
-    if "vectors" in geometry.rows and geometry.rows["vectors"].int_handle_top is not None:
-        hy = geometry.rows["vectors"].int_handle_top
+    if "vectors" in geometry.rows and geometry.rows["vectors"].interval_handle_top is not None:
+        hy = geometry.rows["vectors"].interval_handle_top
         for group, count, col_left, column_key in (("comma", resolved.dims.nc, lambda i: query.comma_left(geometry, resolved, i), "commas"),
                                              ("target", resolved.dims.k, lambda i: query.target_left(geometry, i), "targets"),
                                              ("held", resolved.dims.nh, lambda i: query.held_left(geometry, i), "held"),
