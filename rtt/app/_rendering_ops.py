@@ -148,10 +148,10 @@ def place_cell(r, cell_box, container, paint) -> None:
     make_cell_if_new(r, cell_box, container, structural)
     top = cell_box.y - (fy if container in ("body", "row") else 0)
     grow = _CELL_BORDER_W if cell_box.kind in GRIDVALUE_KINDS else 0
-    geo = f"left:0; top:0; transform:translate({cell_box.x}px,{top}px); width:{cell_box.w + grow}px; height:{cell_box.h + grow}px"
-    if r._rec.entity(cell_box.id).styled != geo:
-        r._rec.entities[cell_box.id].el.style(geo)
-        r._rec.entities[cell_box.id].styled = geo
+    placement = f"left:0; top:0; transform:translate({cell_box.x}px,{top}px); width:{cell_box.w + grow}px; height:{cell_box.h + grow}px"
+    if r._rec.entity(cell_box.id).styled != placement:
+        r._rec.entities[cell_box.id].el.style(placement)
+        r._rec.entities[cell_box.id].styled = placement
     update_cell_content(r, cell_box)
     amber, red = rings
     r._gestures.paint_cell(cell_box.id, amber, red)
