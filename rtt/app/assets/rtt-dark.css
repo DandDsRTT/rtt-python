@@ -9,9 +9,10 @@
    --option-box-* SVGs) are retinted once — here, or in app._CSS_DARK_VARS for the baked SVGs —
    and their rules follow for free; the rest are re-targeted by selector below.
 
-   The colorization washes and the back-to-scheme button's 3-D face are OFF in the default document,
-   so they are left un-themed for now (their light colours only surface once those Show layers are
-   turned on). What IS always present — and so themed below — is the audio bank, the per-column hover
+   The colorization washes are OFF in the default document, so they are left un-themed for now (their
+   light colours only surface once that Show layer is turned on). The back-to-scheme button's 3-D face
+   IS themed below (it surfaces with the projection layer). What IS always present — and so themed
+   below — is the audio bank, the per-column hover
    speaker, and the dummy tile's sample chart (its bars and axes ride _BR_COLOR, retinted by the
    marks rule below; the real per-tile charts share that token, so they follow for free once the
    charts layer is on). The preview-highlight accent RINGS and washes (the pending green, the edit-
@@ -202,6 +203,21 @@ body.rtt-dark .rtt-select-popup .q-focus-helper { background:#fff !important; } 
 body.rtt-dark .rtt-select-popup .q-item.disabled .q-item__label { color:#888f97; }
 body.rtt-dark .rtt-select-popup .q-item.disabled .q-item__label::before,
 body.rtt-dark .rtt-select-popup .q-item.disabled .q-item__label::after { border-top-color:#888f97; }
+
+/* ── the back-to-scheme button (projection / generator-embedding tiles) ──────────────────────
+   the light rules (rtt.css .rtt-scheme-btn) bake a light-grey 3-D face; restate it in dark tones so
+   the button reads as raised off the #31373f control box. Its border rides --cell-border (already
+   retinted) so only the face, bevel and ✕ glyph need overriding. !important to beat the light
+   !important rules. */
+body.rtt-dark .rtt-scheme-btn { background:linear-gradient(#474e57,#343a42) !important;
+            box-shadow:inset 1px 1px 0 rgba(255,255,255,0.12), inset -1px -1px 1px rgba(0,0,0,0.45) !important; }
+body.rtt-dark .rtt-scheme-btn .q-btn__content { color:#e3e6ea !important; }
+body.rtt-dark .rtt-scheme-btn:hover:not(.rtt-scheme-btn-idle) { background:linear-gradient(#515862,#3a414a) !important; }
+body.rtt-dark .rtt-scheme-btn:active:not(.rtt-scheme-btn-idle) { background:linear-gradient(#2c323a,#3e454e) !important;
+            box-shadow:inset 1px 1px 2px rgba(0,0,0,0.55), inset -1px -1px 0 rgba(255,255,255,0.10) !important; }
+body.rtt-dark .rtt-scheme-btn-idle { background:linear-gradient(#3a414a,#31373f) !important;
+            box-shadow:inset 1px 1px 0 rgba(255,255,255,0.08), inset -1px -1px 1px rgba(0,0,0,0.20) !important; }
+body.rtt-dark .rtt-scheme-btn-idle .q-btn__content { color:#71777f !important; }
 
 /* ── fan controls (the +/− add-remove buttons and the fold chevrons) ─────────────────────────
    each is an inline SVG: a white #bbb-bordered box with a currentColor glyph. The box's exact
