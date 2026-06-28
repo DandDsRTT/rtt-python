@@ -104,7 +104,7 @@ def _edit_vector_grid(ec, spec, preview=False):
         [_parse_int(ec._rec.cells[cell_id(toks[i], p)].value.input.value) for p in range(d)]
         for i in range(count)
     ]
-    if any(v is None for vec in vectors for v in vec):
+    if any(v is None for vector in vectors for v in vector):
         ec._apply_outcome(service.IGNORE, None, preview=preview)
         return
     if spec.validate is not None and not spec.validate(vectors):
@@ -153,7 +153,7 @@ def _unchanged_change(ec, preview=False):
         [_parse_int(ec._rec.cells[ids.unchanged_cell(j, p)].value.input.value) for p in range(d)]
         for j in range(r)
     ]
-    if any(v is None for vec in vectors for v in vec):
+    if any(v is None for vector in vectors for v in vector):
         ec._apply_outcome(service.reject(_INVALID_UNCHANGED), None, preview=preview)
         return
     try:

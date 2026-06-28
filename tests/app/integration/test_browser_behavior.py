@@ -135,7 +135,7 @@ def _overlay_texts(page):
 def test_mapping_demos_toggle_gates_the_overlay(browser):
     with _page(browser) as (page, errors):
         assert not page.evaluate("() => document.body.classList.contains('rtt-mapping-demos')")
-        page.hover('[data-eid="cell:vec:targets:3:0"]')
+        page.hover('[data-eid="cell:vector:targets:3:0"]')
         page.wait_for_timeout(150)
         assert _overlay_texts(page) is None, "overlay drew while mapping demos was off"
         assert not errors
@@ -146,7 +146,7 @@ def test_mapping_demos_toggle_gates_the_overlay(browser):
 
 def test_mapping_band_overlay_computes_the_row_products(browser):
     with _page(browser, f"?state={_token(mapping_demos=True)}") as (page, errors):
-        page.hover('[data-eid="cell:vec:targets:3:0"]')
+        page.hover('[data-eid="cell:vector:targets:3:0"]')
         page.wait_for_timeout(150)
         chips = _overlay_texts(page)
         assert chips, "the overlay did not draw on hovering the 4/3 interval vector"

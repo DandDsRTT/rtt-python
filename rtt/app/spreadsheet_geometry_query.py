@@ -47,11 +47,11 @@ def canon_top(geometry, i: int) -> float:
     return geometry.rows["canon"].y + i * ROW_H
 
 
-def vec_top(geometry, p: int) -> float:
+def vector_top(geometry, p: int) -> float:
     return geometry.rows["vectors"].y + p * ROW_H
 
 
-def superspace_vec_top(geometry, p: int) -> float:
+def superspace_vector_top(geometry, p: int) -> float:
     return geometry.rows["superspace_vectors"].y + p * ROW_H
 
 

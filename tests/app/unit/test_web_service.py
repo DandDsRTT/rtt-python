@@ -1201,8 +1201,8 @@ def test_interval_complexities_accept_a_full_matrix_pretransformer():
     X = ((1.0, 0.5, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
     comps = service.interval_complexities(mapping, "minimax-S", ("3/2", "5/4"), prescaler_override=X)
     # minimax-S is taxicab (q=1), no size factor: complexity = ‖𝑋·v‖₁
-    for got, vec in zip(comps, ([-1, 1, 0], [-2, 0, 1])):
-        assert got == pytest.approx(float(np.linalg.norm(np.array(X) @ np.array(vec), 1)))
+    for got, vector in zip(comps, ([-1, 1, 0], [-2, 0, 1])):
+        assert got == pytest.approx(float(np.linalg.norm(np.array(X) @ np.array(vector), 1)))
 
 
 def test_interval_weights_use_the_prescaler_override():

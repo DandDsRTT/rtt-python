@@ -42,7 +42,7 @@ def test_emit_vectors_is_a_pure_function_over_resolved_geometry_ctx():
     assert isinstance(result, EmitResult)
     ids = {c.id for c in result.cells}
     assert "basis:0" in ids
-    assert any(c.id.startswith("cell:vec:detempering") for c in result.cells)
+    assert any(c.id.startswith("cell:vector:detempering") for c in result.cells)
     # every cell it emits also appears in the full build (it owns the vectors band)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
     assert ids <= full
@@ -154,7 +154,7 @@ def test_no_basis_cell_renders_a_ratio_as_inline_plain_text():
 def test_emit_identity_objects_is_a_pure_function_over_resolved_geometry_ctx():
     result = emit_identity_objects(*_inputs(_maximized_builder()))
     ids = {c.id for c in result.cells}
-    assert any(i.startswith("cell:vec:primes:") for i in ids)
+    assert any(i.startswith("cell:vector:primes:") for i in ids)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
     assert ids <= full
 

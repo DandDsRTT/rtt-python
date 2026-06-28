@@ -1092,7 +1092,7 @@ def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure():
     # no value numbers anywhere: header primes/ratios, matrix, mapped list, cents,
     # interval-vector cells
     assert not any(c.startswith(("prime:", "target:", "gen:", "cell:mapping:",
-                                 "cell:mapped:", "cell:vec:", "comma:", "cell:comma:",
+                                 "cell:mapped:", "cell:vector:", "comma:", "cell:comma:",
                                  "tuning:", "just:", "retune:", "damage:"))
                    for c in ids)
     # no EBK marks (brackets, top brackets, braces, vector rules) and no domain/comma controls
@@ -1191,7 +1191,7 @@ def test_temperament_tiles_off_removes_the_mapping_row_and_domain_columns():
     # the temperament tiles: it stays, still showing the target vectors over the surviving targets
     # column. Only the cells in the now-gone temperament columns (the comma vectors) vanish.
     assert "label:vectors" in off
-    assert "cell:vec:targets:0:0" in off
+    assert "cell:vector:targets:0:0" in off
     # the whole domain-primes column goes with it: its header, the prime headers,
     # and every row's prime-side cells -- including the tuning maps over primes
     assert "header:primes" not in off
@@ -1213,7 +1213,7 @@ def test_interval_vectors_off_removes_the_interval_vectors_row_only():
     # the interval-vectors row -- its label and every interval-as-vector cell (targets, commas,
     # intervals of interest) -- is gone, since the row now answers to its own toggle
     assert "label:vectors" not in off
-    assert not any(c.startswith(("cell:vec:", "cell:comma:", "cell:interest:", "cell:held:"))
+    assert not any(c.startswith(("cell:vector:", "cell:comma:", "cell:interest:", "cell:held:"))
                    for c in off)
     # ...but the temperament tiles are untouched: the mapping row, the domain columns, and the
     # interval-ratios row (comma ratios / prime ratios) all stay
@@ -1236,7 +1236,7 @@ def test_interval_vectors_row_reserves_no_phantom_picker_band_when_commas_column
     no_comma = {b.id: b for b in spreadsheet.build(full, s).blocks}
     # with the commas column hidden, the comma in state must not grow the vectors row: its spine
     # tile is the same height as the no-comma build (which reserves no band either way)
-    assert with_comma["block:vec:quantities"].h == no_comma["block:vec:quantities"].h
+    assert with_comma["block:vector:quantities"].h == no_comma["block:vector:quantities"].h
     # and there are genuinely no picker cells to back a band (the commas column is gone)
     assert not any(c.id.startswith("commapick") for c in spreadsheet.build(meantone, s).cells)
 
@@ -2006,7 +2006,7 @@ def test_target_preset_now_lives_in_the_target_interval_list_tile():
     # still under the targets column, seated one BOX_INNER inside its tile-spanning box
     assert target.x == cells["header:targets"].x + spreadsheet_constants.BOX_INNER
     # it now sits in the interval-vectors row (the target interval list), below those cells
-    assert target.y > cells["cell:vec:targets:0:0"].y
+    assert target.y > cells["cell:vector:targets:0:0"].y
     # and below the quantities-row target ratios it used to sit under
     assert target.y > cells["target:0"].y
 
@@ -2023,7 +2023,7 @@ def test_control_dropdowns_are_boxed_within_their_tiles():
     for cid, label, tile in (("preset:tuning", "established tuning scheme", "block:tuning:primes"),
                              ("preset:tuning:gens", "established tuning scheme", "block:tuning:gens"),
                              ("preset:temperament", "temperament", "block:mapping"),
-                             ("preset:target", "target interval set scheme", "block:vec:targets")):
+                             ("preset:target", "target interval set scheme", "block:vector:targets")):
         ctrl, box, panel = cells[cid], boxes[f"block:{cid}"], boxes[tile]
         assert box.boxed is True  # a bordered box, not a plain tile
         assert box.x <= ctrl.x and box.x + box.w >= ctrl.x + ctrl.w  # encloses the control
@@ -2073,7 +2073,7 @@ def test_chooser_boxes_span_the_full_width_of_their_tiles():
     for cid, tile in (("block:preset:temperament", "block:mapping"),
                       ("block:preset:tuning", "block:tuning:primes"),
                       ("block:preset:tuning:gens", "block:tuning:gens"),
-                      ("block:preset:target", "block:vec:targets")):
+                      ("block:preset:target", "block:vector:targets")):
         box, panel = boxes[cid], boxes[tile]
         left, right = box.x - panel.x, (panel.x + panel.w) - (box.x + box.w)
         assert abs(left - right) < 1  # equal insets == the box spans its tile's footprint
@@ -2517,15 +2517,15 @@ def test_interval_vectors_row_sits_between_quantities_and_mapping():
 def test_interval_vectors_show_targets_as_vectors():
     cells = {c.id: c for c in _layout().cells}
     # each target interval as a d-tall vector column: 2/1->[1,0,0], 3/2->[-1,1,0], 5/4->[-2,0,1]
-    assert [cells[f"cell:vec:targets:0:{p}"].text for p in range(3)] == ["1", "0", "0"]
-    assert [cells[f"cell:vec:targets:2:{p}"].text for p in range(3)] == ["-1", "1", "0"]
-    assert [cells[f"cell:vec:targets:6:{p}"].text for p in range(3)] == ["-2", "0", "1"]
+    assert [cells[f"cell:vector:targets:0:{p}"].text for p in range(3)] == ["1", "0", "0"]
+    assert [cells[f"cell:vector:targets:2:{p}"].text for p in range(3)] == ["-1", "1", "0"]
+    assert [cells[f"cell:vector:targets:6:{p}"].text for p in range(3)] == ["-2", "0", "1"]
     # the editable vector cell is inset within its COL_W slot (leaving the separator rule a gap),
     # so it shares the ratio header's column AXIS by centre, not by left edge
-    v, hdr = cells["cell:vec:targets:2:0"], cells["target:2"]
+    v, hdr = cells["cell:vector:targets:2:0"], cells["target:2"]
     assert v.x + v.w / 2 == hdr.x + hdr.w / 2  # column centred on its target axis
     # the d components stack downward, one ROW_H apart
-    assert cells["cell:vec:targets:0:1"].y - cells["cell:vec:targets:0:0"].y == spreadsheet_constants.ROW_H
+    assert cells["cell:vector:targets:0:1"].y - cells["cell:vector:targets:0:0"].y == spreadsheet_constants.ROW_H
 
 
 def test_interval_vectors_domain_primes_identity_renders_with_identity_objects():
@@ -2539,14 +2539,14 @@ def test_interval_vectors_domain_primes_identity_renders_with_identity_objects()
                                     plain_text_values=True).cells}
     for i in range(3):  # d = 3
         for k in range(3):
-            assert cells[f"cell:vec:primes:{i}:{k}"].text == ("1" if i == k else "0")
-            assert cells[f"cell:vec:primes:{i}:{k}"].kind == "mapped"
+            assert cells[f"cell:vector:primes:{i}:{k}"].text == ("1" if i == k else "0")
+            assert cells[f"cell:vector:primes:{i}:{k}"].kind == "mapped"
     assert cells["symbol:vectors:primes"].text == f"\U0001D440{J} = \U0001D43C"  # 𝑀ⱼ = 𝐼
     assert cells["caption:vectors:primes"].text == "JI mapping"
     assert cells["matlabel:row:vectors:primes:0"].text == f"\U0001D48E{J}₁"  # 𝒎ⱼ₁
-    assert cells["ebktop:vec:primes"].kind == "ebktop"
-    assert cells["ebkangle:vec:primes"].kind == "ebkangle"  # the outer ⟩ foot (operator, not the } of M)
-    assert cells["bracket:vec:primes:0:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
+    assert cells["ebktop:vector:primes"].kind == "ebktop"
+    assert cells["ebkangle:vector:primes"].kind == "ebkangle"  # the outer ⟩ foot (operator, not the } of M)
+    assert cells["bracket:vector:primes:0:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
     assert cells["ptext:vectors:primes"].text == "[⟨1 0 0]⟨0 1 0]⟨0 0 1]⟩"
 
 
@@ -2554,8 +2554,8 @@ def test_interval_vectors_domain_primes_identity_gated_off_by_default():
     # off by default: the primes column carries NOTHING at the interval-vectors row — no cells,
     # ket marks, the enclosing bracket, fold toggle or caption.
     cells = {c.id for c in _with(names=True).cells}
-    assert not any(c.startswith(("cell:vec:primes", "ebktop:vec:primes",
-                                 "bracket:vec:primes")) for c in cells)
+    assert not any(c.startswith(("cell:vector:primes", "ebktop:vector:primes",
+                                 "bracket:vector:primes")) for c in cells)
     assert {"toggle:tile:vectors:primes", "caption:vectors:primes"}.isdisjoint(cells)
 
 
@@ -2680,10 +2680,10 @@ def test_interval_drag_handles_sit_above_the_column_labels_in_the_vectors_row():
     for i in range(2):
         handle = cells[f"int_drag:comma:{i}"]
         label = cells[f"matlabel:col:vectors:commas:{i}"]
-        vec0 = cells[f"cell:comma:0:{i}"]  # the column's first vector component
+        vector0 = cells[f"cell:comma:0:{i}"]  # the column's first vector component
         assert handle.comma == i and handle.x == label.x  # aligned over its own column
         assert handle.y + handle.h <= label.y  # ABOVE the column label...
-        assert label.y < vec0.y  # ...which is above the vector cells (handle / label / vector)
+        assert label.y < vector0.y  # ...which is above the vector cells (handle / label / vector)
     # the interest column carries no column label, but still gets handles above its vectors
     assert cells["int_drag:interest:0"].y + spreadsheet_constants.ROW_HANDLE_W <= cells["cell:interest:0:0"].y
     assert "int_drag:target:0" in cells  # the default target list (many) gets them too
@@ -2749,7 +2749,7 @@ def test_comma_basis_renders_as_raw_vectors_in_the_interval_vectors_row():
     assert c00.w == c00.h == spreadsheet_constants.ROW_H  # square grid cells
     assert cells["cell:comma:1:0"].y == c00.y + c00.h  # stacked down its column
     assert c00.x == cells["comma:0"].x  # on the commas axis
-    assert c00.y == cells["cell:vec:targets:0:0"].y  # top-aligned across the vectors row
+    assert c00.y == cells["cell:vector:targets:0:0"].y  # top-aligned across the vectors row
 
 
 def test_mapping_row_commas_show_the_mapped_comma_basis_vanishing():
@@ -3726,7 +3726,7 @@ def test_gridded_values_off_hides_the_editable_unchanged_basis_cells():
     # The editable unchanged basis U (the U half of the consolidated V = C|U view, rendered as
     # "unchangedcell" when the tuning is a full rational projection — meantone fully held by 2/1
     # and 5/4) was also missing from GRIDDED_KINDS, so it leaked when gridded-off. (The read-only
-    # dashed form "vec" was already filtered; only the editable kind was overlooked.) It must hide.
+    # dashed form "vector" was already filtered; only the editable kind was overlooked.) It must hide.
     mt = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = {**settings.defaults(), "projection": True}
     on = {c.id: c for c in spreadsheet.build(mt, {**s, "gridded_values": True}, held_basis_ratios=("2/1", "5/4")).cells}
@@ -3760,7 +3760,7 @@ def test_all_interval_removes_all_redundant_target_tiles():
     for bid in removed:
         assert bid in based, bid       # present when target-based
         assert bid not in allint, bid  # fully removed (panel and all) when all-interval
-    assert {"block:vec:targets", "block:complexity:targets", "block:weight:targets",
+    assert {"block:vector:targets", "block:complexity:targets", "block:weight:targets",
             "block:damage:targets"} <= allint  # the kept target tiles remain
 
 
@@ -4102,7 +4102,7 @@ def test_all_interval_checkbox_sits_inside_the_target_chooser_box():
     lay = _with(all_interval=True, presets=True)
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
-    box, tile = blocks["block:preset:target"], blocks["block:vec:targets"]
+    box, tile = blocks["block:preset:target"], blocks["block:vector:targets"]
     for cid in ("control:all_interval", "caption:all_interval"):
         c = cells[cid]
         assert box.x <= c.x and c.x + c.w <= box.x + box.w  # enclosed horizontally
@@ -4412,9 +4412,9 @@ def test_comma_basis_is_framed_as_a_vector_list_spanning_its_d_tall_height():
     cells = {c.id: c for c in _layout().cells}
     # the comma basis (in the interval-vectors row) is a list of vectors: an enclosing
     # [ ] plus per-column ket marks
-    assert cells["bracket:vec:commas:l"].text == "[" and cells["bracket:vec:commas:r"].text == "]"
-    assert "ebktop:vec:commas:0" in cells and "ebkangle:vec:commas:0" in cells
-    cb = cells["bracket:vec:commas:l"]
+    assert cells["bracket:vector:commas:l"].text == "[" and cells["bracket:vector:commas:r"].text == "]"
+    assert "ebktop:vector:commas:0" in cells and "ebkangle:vector:commas:0" in cells
+    cb = cells["bracket:vector:commas:l"]
     # the enclosing bracket spans the full d=3 tall basis
     assert cb.y <= cells["cell:comma:0:0"].y
     assert cb.y + cb.h >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].h
@@ -4425,9 +4425,9 @@ def test_untempered_vector_columns_get_angle_feet_while_mapped_lists_keep_braces
     # the interval-vectors row holds RAW (untempered) vectors — each column is a ket,
     # so its foot is the angle ⟩ (drawn as a down-chevron), not the curly brace
     for group in ("commas", "targets"):
-        assert f"ebkangle:vec:{group}:0" in cells       # the ket's angle foot
-        assert f"ebkbrace:vec:{group}:0" not in cells   # never the curly brace
-        assert f"ebktop:vec:{group}:0" in cells         # the square top ([) is unchanged
+        assert f"ebkangle:vector:{group}:0" in cells       # the ket's angle foot
+        assert f"ebkbrace:vector:{group}:0" not in cells   # never the curly brace
+        assert f"ebktop:vector:{group}:0" in cells         # the square top ([) is unchanged
     # the mapped (tempered) lists in the mapping row keep the curly-brace foot
     assert "ebkbrace:mapped:0" in cells and "ebkangle:mapped:0" not in cells
     assert "ebkbrace:mapped_comma:0" in cells and "ebkangle:mapped_comma:0" not in cells
@@ -4450,8 +4450,8 @@ def test_comma_basis_grid_has_no_separator_rules_that_double_its_cell_borders():
     two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])  # two real comma columns
     cells = {c.id for c in spreadsheet.build(two).cells}
     assert "cell:comma:0:1" in cells  # the second comma column is present...
-    assert not any(c.startswith("sep:vec:commas") for c in cells)  # ...with no separator rule
-    assert "sep:vec:targets:1" in cells  # the bare target-list vecs still need their separators
+    assert not any(c.startswith("sep:vector:commas") for c in cells)  # ...with no separator rule
+    assert "sep:vector:targets:1" in cells  # the bare target-list vecs still need their separators
 
 
 def test_caption_line_estimate_wraps_a_long_name_in_a_narrow_column():
@@ -4606,8 +4606,8 @@ def test_the_pending_comma_columns_ket_marks_are_flagged_for_green():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 1 real comma + a pending draft (col 1)
     cells = {c.id: c for c in spreadsheet.build(base, pending_comma=[None, None, None]).cells}
     # the draft column's EBK ket marks render green (like its cells); the real comma's don't
-    assert cells["ebktop:vec:commas:1"].pending and cells["ebkangle:vec:commas:1"].pending
-    assert not cells["ebktop:vec:commas:0"].pending
+    assert cells["ebktop:vector:commas:1"].pending and cells["ebkangle:vector:commas:1"].pending
+    assert not cells["ebktop:vector:commas:0"].pending
 
 
 def test_the_pending_comma_greens_the_advanced_prescaling_matrix_draft_column():
@@ -5337,14 +5337,14 @@ def test_interest_intervals_are_editable_vectors_like_the_comma_basis():
     assert cells["cell:interest:0:0"].text == "-1"  # 3/2 = [-1 1 0>: prime-2 exponent
     assert cells["cell:interest:1:0"].text == "1" and cells["cell:interest:2:0"].text == "0"
     assert cells["cell:interest:2:2"].text == "1"  # 10/9 = [1 -2 1>: prime-5 exponent
-    assert cells["cell:interest:0:0"].kind == "interestcell"  # editable, not a static "vec"
+    assert cells["cell:interest:0:0"].kind == "interestcell"  # editable, not a static "vector"
     # each interval stands alone as its own ket (per-column ⟨ top + ⟩ angle foot), UNLIKE
     # the comma basis / target list: no outer [ … ] wrapping it into a matrix, and no
     # separator rules between the columns — just space (per the mockup)
-    assert {"ebktop:vec:interest:0", "ebkangle:vec:interest:0",
-            "ebktop:vec:interest:1", "ebkangle:vec:interest:1"} <= set(cells)
-    assert "bracket:vec:interest:l" not in cells and "bracket:vec:interest:r" not in cells
-    assert not any(c.startswith("sep:vec:interest:") for c in cells)
+    assert {"ebktop:vector:interest:0", "ebkangle:vector:interest:0",
+            "ebktop:vector:interest:1", "ebkangle:vector:interest:1"} <= set(cells)
+    assert "bracket:vector:interest:l" not in cells and "bracket:vector:interest:r" not in cells
+    assert not any(c.startswith("sep:vector:interest:") for c in cells)
 
 
 def test_interest_vector_cells_are_separated_boxes_not_a_contiguous_grid():
@@ -5408,8 +5408,8 @@ def test_a_pending_interest_draft_rides_right_of_the_committed_intervals():
     assert cells["cell:interest:0:1"].pending and cells["cell:interest:0:1"].text == ""
     assert cells["interest:pending"].x > cells["interest:0"].x
     # the draft column's ket marks render green (like its cells); the real interval's don't
-    assert cells["ebkangle:vec:interest:1"].pending
-    assert not cells["ebkangle:vec:interest:0"].pending
+    assert cells["ebkangle:vector:interest:1"].pending
+    assert not cells["ebkangle:vector:interest:0"].pending
 
 
 def _with_held(held_vectors, pending_held=None):
@@ -5446,8 +5446,8 @@ def test_a_pending_held_draft_rides_right_of_the_committed_held_intervals():
     assert not cells["cell:held:0:0"].pending  # the committed held interval stays black
     assert cells["cell:held:0:1"].pending and cells["cell:held:0:1"].text == ""
     assert cells["held:pending"].x > cells["held:0"].x
-    assert cells["ebkangle:vec:held:1"].pending
-    assert not cells["ebkangle:vec:held:0"].pending
+    assert cells["ebkangle:vector:held:1"].pending
+    assert not cells["ebkangle:vector:held:0"].pending
 
 
 def _target_count():
@@ -5462,7 +5462,7 @@ def test_adding_a_target_opens_a_blank_green_draft_column():
     cells = {c.id: c for c in spreadsheet.build(base, pending_target=[None, None, None]).cells}
     assert cells["target:pending"].text == "?/?" and cells["target:pending"].pending
     # the draft rides at index k (right of the committed targets), blank and green
-    assert all(cells[f"cell:vec:targets:{k}:{p}"].text == "" and cells[f"cell:vec:targets:{k}:{p}"].pending
+    assert all(cells[f"cell:vector:targets:{k}:{p}"].text == "" and cells[f"cell:vector:targets:{k}:{p}"].pending
                for p in range(3))
     assert cells["target:pending"].x > cells[f"target:{k - 1}"].x
     assert cells["target_plus"].x > cells["target:pending"].x
@@ -5473,10 +5473,10 @@ def test_a_partly_typed_target_draft_shows_its_entered_components():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     k = _target_count()
     cells = {c.id: c for c in spreadsheet.build(base, pending_target=[-1, 1, None]).cells}
-    assert cells[f"cell:vec:targets:{k}:0"].text == "-1"
-    assert cells[f"cell:vec:targets:{k}:1"].text == "1"
-    assert cells[f"cell:vec:targets:{k}:2"].text == ""
-    assert all(cells[f"cell:vec:targets:{k}:{p}"].pending for p in range(3))
+    assert cells[f"cell:vector:targets:{k}:0"].text == "-1"
+    assert cells[f"cell:vector:targets:{k}:1"].text == "1"
+    assert cells[f"cell:vector:targets:{k}:2"].text == ""
+    assert all(cells[f"cell:vector:targets:{k}:{p}"].pending for p in range(3))
 
 
 def test_a_pending_target_draft_is_suppressed_in_all_interval_mode():
@@ -5565,7 +5565,7 @@ def test_per_tile_fold_toggle_hugs_its_tile_corner():
     lay = _with_interest(_INTEREST[:1])
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
-    for toggle_id, block_id in (("toggle:tile:vectors:interest", "block:vec:interest"),
+    for toggle_id, block_id in (("toggle:tile:vectors:interest", "block:vector:interest"),
                                 ("toggle:tile:mapping:primes", "block:mapping")):
         toggle, tile = cells[toggle_id], blocks[block_id]
         assert toggle.x == tile.x + spreadsheet_constants.TOGGLE_INSET  # hugs the tile's corner
@@ -5592,7 +5592,7 @@ def test_populated_interest_has_per_interval_axes_and_panels():
     assert {"v:interest:0", "v:interest:1", "v:interest:2"} <= ids
     assert {"trunk:interest", "bus:interest:top", "bus:interest:bot", "foot:interest"} <= ids
     blocks = {b.id for b in lay.blocks}
-    assert {"block:interest", "block:imapped", "block:tuning:interest", "block:vec:interest"} <= blocks
+    assert {"block:interest", "block:imapped", "block:tuning:interest", "block:vector:interest"} <= blocks
     assert "block:damage:interest" not in blocks  # no damage tile
 
 
@@ -5956,8 +5956,8 @@ def test_col_labels_sit_inside_the_tile_centred_above_the_bracket():
     on = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
     for tile_block_id, frame_id, label_id in [
-        ("block:vec:commas", "vec:commas", "matlabel:col:vectors:commas:0"),
-        ("block:vec:targets", "vec:targets", "matlabel:col:vectors:targets:0"),
+        ("block:vector:commas", "vector:commas", "matlabel:col:vectors:commas:0"),
+        ("block:vector:targets", "vector:targets", "matlabel:col:vectors:targets:0"),
         ("block:mapped", "mapped", "matlabel:col:mapping:targets:0"),
         ("block:mapped_comma", "mapped_comma", "matlabel:col:mapping:commas:0"),
     ]:
@@ -5994,11 +5994,11 @@ def test_col_labels_sit_above_the_top_frame_in_framed_rows():
     assert on["matlabel:col:mapping:commas:0"].y + on["matlabel:col:mapping:commas:0"].h \
         <= on["ebktop:mapped_comma:0"].y
     # interval vectors row: same rule — the comma basis 𝐜ᵢ labels sit above the basis's
-    # per-column ket marks (ebktop:vec:commas:*)
+    # per-column ket marks (ebktop:vector:commas:*)
     assert on["matlabel:col:vectors:commas:0"].y + on["matlabel:col:vectors:commas:0"].h \
-        <= on["ebktop:vec:commas:0"].y
+        <= on["ebktop:vector:commas:0"].y
     assert on["matlabel:col:vectors:targets:0"].y + on["matlabel:col:vectors:targets:0"].h \
-        <= on["ebktop:vec:targets:0"].y
+        <= on["ebktop:vector:targets:0"].y
 
 
 def test_mapping_top_frame_hugs_the_cells_not_the_row_label_gutter():
@@ -6153,7 +6153,7 @@ def test_units_carry_a_per_value_unit_on_each_gridded_cell():
     assert on["tuning:gen:0"].unit == "¢/g₁"         # generator tuning map: cents per generator
     assert on["tuning:target:0"].unit == "¢"         # a size list: plain cents, no index
     assert on["cell:mapped:0:0"].unit == "g₁"        # mapped target list: generators (gen index)
-    assert on["cell:vec:targets:0:0"].unit == "p₁"   # interval vector: prime component
+    assert on["cell:vector:targets:0:0"].unit == "p₁"   # interval vector: prime component
     # the prescaler matrix's per-cell unit is octaves per its COLUMN's prime (oct/p), so the
     # p subscripts by the column — its diagonal reads oct/pᵢ, and an off-diagonal zero tracks
     # its column's prime, not its row (the matrix's d columns are the d domain primes)
@@ -6235,7 +6235,7 @@ def test_nonstandard_domain_units_use_basis_element_label_b():
     # per-gridded-cell units: the prime denominator becomes a basis-element denominator
     assert on["cell:mapping:0:0"].unit == "g₁/b₁"        # 𝑔/𝑝 → 𝑔/𝒃
     assert on["tuning:prime:0"].unit == "¢/b₁"            # ¢/𝑝 → ¢/𝒃
-    assert on["cell:vec:targets:0:0"].unit == "b₁"        # the vector coordinate itself
+    assert on["cell:vector:targets:0:0"].unit == "b₁"        # the vector coordinate itself
     assert on["cell:prescaling:primes:0:1"].unit == "oct/b₂"  # column-tracked denominator
 
 
@@ -6395,7 +6395,7 @@ def test_a_target_override_drives_the_target_columns():
     cells = {c.id: c for c in spreadsheet.build(base, s, target_override=("2/1", "3/2")).cells}
     assert cells["target:0"].text == "2/1" and cells["target:1"].text == "3/2"
     assert "target:2" not in cells  # exactly two columns
-    assert cells["cell:vec:targets:0:0"].kind == "targetcell"  # the editable vector cells
+    assert cells["cell:vector:targets:0:0"].kind == "targetcell"  # the editable vector cells
     for row in ("tuning", "just", "damage"):  # the size lists follow the override (two columns)
         assert f"{row}:target:1" in cells and f"{row}:target:2" not in cells
 
@@ -6415,7 +6415,7 @@ def test_a_target_override_retunes_the_generator_map():
 def test_target_interval_list_cells_and_plain_text_are_editable():
     cells = {c.id: c for c in _with(plain_text_values=True).cells}
     assert cells["ptext:vectors:targets"].kind == "ptextedit"
-    assert cells["cell:vec:targets:0:0"].kind == "targetcell"
+    assert cells["cell:vector:targets:0:0"].kind == "targetcell"
 
 
 def test_all_interval_target_list_is_read_only():
@@ -6426,10 +6426,10 @@ def test_all_interval_target_list_is_read_only():
     # scheme keeps every one of them editable.
     allint = {c.id: c for c in _with(scheme="minimax-S", plain_text_values=True).cells}
     based = {c.id: c for c in _with(scheme="TILT minimax-S", plain_text_values=True).cells}
-    assert allint["cell:vec:targets:0:0"].kind == "vec"
+    assert allint["cell:vector:targets:0:0"].kind == "vector"
     assert allint["target:0"].kind == "commaratio"
     assert allint["ptext:vectors:targets"].kind == "ptext"
-    assert based["cell:vec:targets:0:0"].kind == "targetcell"
+    assert based["cell:vector:targets:0:0"].kind == "targetcell"
     assert based["target:0"].kind == "ratiocell"
     assert based["ptext:vectors:targets"].kind == "ptextedit"
 
@@ -6440,8 +6440,8 @@ def test_editable_target_vector_cells_clear_the_column_separator():
     # inputs, and the interval-column gap between adjacent target slots leaves room for the thin
     # rule, centred in the gap so neither opaque input box paints over it.
     cells = {c.id: c for c in _layout().cells}
-    c0, c1 = cells["cell:vec:targets:0:0"], cells["cell:vec:targets:1:0"]
-    sep = cells["sep:vec:targets:1"]            # the rule between target intervals 0 and 1
+    c0, c1 = cells["cell:vector:targets:0:0"], cells["cell:vector:targets:1:0"]
+    sep = cells["sep:vector:targets:1"]            # the rule between target intervals 0 and 1
     full = cells["cell:mapped:0:0"]             # the mapped image spans the full COL_W slot
     assert c0.w == full.w == spreadsheet_constants.COL_W   # full-width square input box
     assert c0.x == full.x                                  # ...sharing the slot with its mapped image
@@ -6636,10 +6636,10 @@ def test_generator_detempering_column_holds_the_d_matrix():
     assert "header:detempering" not in off
     assert cells["header:primes"].x < cells["header:detempering"].x < cells["header:commas"].x
     # D for 5-limit meantone: the octave [1 0 0⟩ and the fifth [-1 1 0⟩, as vector columns
-    assert [cells[f"cell:vec:detempering:0:{p}"].text for p in range(3)] == ["1", "0", "0"]
-    assert [cells[f"cell:vec:detempering:1:{p}"].text for p in range(3)] == ["-1", "1", "0"]
+    assert [cells[f"cell:vector:detempering:0:{p}"].text for p in range(3)] == ["1", "0", "0"]
+    assert [cells[f"cell:vector:detempering:1:{p}"].text for p in range(3)] == ["-1", "1", "0"]
     # framed as a vector list (an enclosing bracket), riding its own gridline axis
-    assert "bracket:vec:detempering:l" in cells
+    assert "bracket:vector:detempering:l" in cells
     assert "trunk:detempering" in {ln.id for ln in lay.lines}
 
 
@@ -6686,7 +6686,7 @@ def test_mapped_generator_detempering_gated_off_by_default():
             "symbol:mapping:detempering", "ptext:mapping:detempering"}.isdisjoint(cells)
     # only the identity tile is deferred — the detempering column itself stays (its header, the
     # D matrix in the interval-vectors row, and the tuning/just/… rows below it)
-    assert {"header:detempering", "cell:vec:detempering:0:0"} <= cells
+    assert {"header:detempering", "cell:vector:detempering:0:0"} <= cells
 
 
 def test_generator_detempering_tuning_row_equals_the_genmap():
@@ -7112,7 +7112,7 @@ def test_colorization_follows_the_content_map():
     assert at("interest:0") == N               # quantities × other-intervals
     assert at("held:0") == C                   # quantities × held intervals (H, now cyan)
     assert at("basis:0") == N                  # interval-vectors × spine (the domain basis, quantities col)
-    assert at("cell:vec:targets:0:0") == C     # interval-vectors × targets (the target vectors, T)
+    assert at("cell:vector:targets:0:0") == C     # interval-vectors × targets (the target vectors, T)
     assert at("cell:interest:0:0") == N        # interval-vectors × other-intervals
     assert at("cell:held:0:0") == C            # interval-vectors × held intervals (the H basis)
     # the generators in the spine are the generator basis — an input, carrying neither the
@@ -7264,7 +7264,7 @@ def test_generator_detempering_column_colorizes_by_content():
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
     # the detempering basis carries no colour (like the interest list); only its products colour
     assert at("detempering:0") == N                    # quantities × detempering (the detempering list, neutral)
-    assert at("cell:vec:detempering:0:0") == N         # interval-vectors × detempering (the basis, neutral)
+    assert at("cell:vector:detempering:0:0") == N         # interval-vectors × detempering (the basis, neutral)
     # the tuning/retune family keeps its 𝒈𝑀 green; the bare 𝒋 / 𝑋 products are cyan-only now
     assert at("tuning:detempering:0") == G             # tuning × detempering (𝒕·D, the 𝒈𝑀 greens)
     assert at("just:detempering:0") == C               # just × detempering (𝒋·D, bare cyan 𝒋)
@@ -7439,7 +7439,7 @@ def test_every_interval_ratio_and_vector_is_click_to_play():
     base = {c.id: c for c in _layout().cells}
     tr = next(c for c in base.values() if c.id.startswith("target:") and c.id != "target:pending")
     assert tr.audio and tr.audio[0] == "quantities:targets"
-    tv = next(c for c in base.values() if c.id.startswith("cell:vec:targets:"))
+    tv = next(c for c in base.values() if c.id.startswith("cell:vector:targets:"))
     assert tv.audio and tv.audio[0] == "vectors:targets"
     assert base["cell:comma:0:0"].audio and base["cell:comma:0:0"].audio[0] == "vectors:commas"
     interest = {c.id: c for c in _with_interest([(-2, 0, 1)]).cells}  # 5/4 = 2⁻²·5
@@ -7454,7 +7454,7 @@ def test_every_interval_ratio_and_vector_is_click_to_play():
     assert hv.audio and hv.audio[0] == "vectors:held"
     det = {c.id: c for c in _with(generator_detempering=True).cells}
     assert det["detempering:0"].audio and det["detempering:0"].audio[0] == "quantities:detempering"
-    dv = next(c for c in det.values() if c.id.startswith("cell:vec:detempering:"))
+    dv = next(c for c in det.values() if c.id.startswith("cell:vector:detempering:"))
     assert dv.audio and dv.audio[0] == "vectors:detempering"
 
 
@@ -7788,8 +7788,8 @@ def test_caption_widened_commas_tile_keeps_its_fold_toggle_on_the_panel_edge():
     blocks = {b.id: b for b in _with(names=True).blocks}
     narrow = {b.id: b for b in _with(names=False).blocks}
     cells = {c.id: c for c in _with(names=True).cells}
-    panel = blocks["block:vec:commas"]
-    assert panel.w > narrow["block:vec:commas"].w           # the caption really did widen it
+    panel = blocks["block:vector:commas"]
+    assert panel.w > narrow["block:vector:commas"].w           # the caption really did widen it
     fold = cells["toggle:tile:vectors:commas"]
     assert fold.x == panel.x + spreadsheet_constants.TOGGLE_INSET     # the fold hugs the panel's left edge
 
@@ -7909,7 +7909,7 @@ def test_changed_cell_ids_rings_only_value_cells_not_marks_or_controls():
         _diff_cell("v", "2"),                                    # a real value change -> rings
         CellBox("ebktop:targets:0", 0, 0, 10, 10, "ebktop"),    # new EBK marks -> must NOT ring
         CellBox("ebkbrace:targets:0", 0, 0, 10, 10, "ebkbrace"),
-        CellBox("ebkangle:vec:commas:1", 0, 0, 10, 10, "ebkangle"),
+        CellBox("ebkangle:vector:commas:1", 0, 0, 10, 10, "ebkangle"),
         CellBox("sep:targets:1", 0, 0, 10, 10, "vbar"),         # a column separator ("subgridline")
         CellBox("grip:targets:0", 0, 0, 10, 10, "colgrip"),     # a drag grip
         CellBox("comma_minus:0", 0, 0, 10, 10, "comma_minus"),  # a - control
@@ -7936,7 +7936,7 @@ def test_removed_cell_ids_ignores_survivors_added_cells_and_removed_scaffolding(
     old = _diff_layout(
         _diff_cell("survivor", "1"),
         _diff_cell("value", "2"),                                 # a value cell -> rings red when gone
-        CellBox("ebkangle:vec:commas:1", 0, 0, 10, 10, "ebkangle"),  # marks / controls deleted with it
+        CellBox("ebkangle:vector:commas:1", 0, 0, 10, 10, "ebkangle"),  # marks / controls deleted with it
         CellBox("sep:targets:1", 0, 0, 10, 10, "vbar"),
         CellBox("grip:commas:1", 0, 0, 10, 10, "colgrip"),
         CellBox("comma_minus:1", 0, 0, 10, 10, "comma_minus"),
@@ -8890,10 +8890,10 @@ def test_M_L_and_M_jL_cells_are_read_only_mapped_kind():
 def test_M_jL_tile_has_brackets_and_matrix_frame():
     cells = {c.id: c for c in _barbados_superspace_identity().cells}
     for i in range(4):  # dL=4 covector rows
-        assert cells[f"bracket:superspace_vec_jmap:{i}:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
-        assert cells[f"bracket:superspace_vec_jmap:{i}:r"].text == spreadsheet_constants.MAP_BRACKETS[1]
-    assert "ebktop:superspace_vec_jmap" in cells
-    assert "ebkangle:superspace_vec_jmap" in cells
+        assert cells[f"bracket:superspace_vector_ji_map:{i}:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
+        assert cells[f"bracket:superspace_vector_ji_map:{i}:r"].text == spreadsheet_constants.MAP_BRACKETS[1]
+    assert "ebktop:superspace_vector_ji_map" in cells
+    assert "ebkangle:superspace_vector_ji_map" in cells
 
 
 def test_M_jL_tile_carries_caption_and_symbol():
@@ -9143,8 +9143,8 @@ def test_superspace_M_L_per_row_brackets_reuse_MAP_BRACKETS():
 def test_superspace_M_jL_per_row_brackets_reuse_MAP_BRACKETS():
     cells = {c.id: c for c in _barbados_superspace_identity().cells}
     for i in range(4):  # dL=4 rows
-        assert cells[f"bracket:superspace_vec_jmap:{i}:l"].text == "⟨"
-        assert cells[f"bracket:superspace_vec_jmap:{i}:r"].text == "]"
+        assert cells[f"bracket:superspace_vector_ji_map:{i}:l"].text == "⟨"
+        assert cells[f"bracket:superspace_vector_ji_map:{i}:r"].text == "]"
 
 
 def test_superspace_t_L_j_L_r_L_brackets_reuse_MAP_BRACKETS():
@@ -9167,8 +9167,8 @@ def test_superspace_M_L_and_M_jL_outer_frame_uses_ebktop_with_brace_or_angle():
     cells = {c.id: c for c in _barbados_superspace_identity().cells}
     assert cells["ebktop:superspace_mapping"].kind == "ebktop"
     assert cells["ebkbrace:superspace_mapping"].kind == "ebkbrace"   # M_L: mapping → curly }
-    assert cells["ebktop:superspace_vec_jmap"].kind == "ebktop"
-    assert cells["ebkangle:superspace_vec_jmap"].kind == "ebkangle"  # M_jL: operator → angle ⟩
+    assert cells["ebktop:superspace_vector_ji_map"].kind == "ebktop"
+    assert cells["ebkangle:superspace_vector_ji_map"].kind == "ebkangle"  # M_jL: operator → angle ⟩
 
 
 def test_existing_bracket_constants_are_unchanged_by_superspace():
@@ -9428,11 +9428,11 @@ def test_a_matrix_row_carries_a_unit_on_every_subrow_not_just_the_first():
 
 
 def test_read_only_target_vectors_stay_full_width():
-    # the all-interval Tₚ = 𝐈 list is read-only ("vec"), not editable; like every interval cell it is a
+    # the all-interval Tₚ = 𝐈 list is read-only ("vector"), not editable; like every interval cell it is a
     # full-width square box — separation between interval slots comes from the column gap, not a per-cell inset.
     cells = {c.id: c for c in _with(scheme="minimax-lils-S").cells}
-    real = cells["cell:vec:targets:0:0"]
-    assert real.kind == "vec"            # read-only (not the editable targetcell)
+    real = cells["cell:vector:targets:0:0"]
+    assert real.kind == "vector"            # read-only (not the editable targetcell)
     assert real.w == spreadsheet_constants.COL_W   # full width, no inset
 # ── chapter-9 domain basis elements become editable with the nonstandard-domain box ──────────
 
@@ -9702,7 +9702,7 @@ def test_projection_detempering_tile_shows_P_times_D():
             cell = cells[f"cell:projection_detempering:{i}:{p}"]
             assert cell.text == expected[i][p]
             assert cell.kind == "mapped"
-            assert cell.x == cells[f"cell:vec:detempering:{i}:{p}"].x  # the detempering column
+            assert cell.x == cells[f"cell:vector:detempering:{i}:{p}"].x  # the detempering column
             assert cell.y == cells[f"cell:projection:{p}:0"].y               # the projection row's prime rows
 
 
@@ -9715,10 +9715,10 @@ def test_projection_targets_tile_shows_P_times_T():
     for j, col in enumerate(expected):
         for p in range(3):
             cell = cells[f"cell:projection_targets:{j}:{p}"]
-            vec = cells[f"cell:vec:targets:{j}:{p}"]
+            vector = cells[f"cell:vector:targets:{j}:{p}"]
             assert cell.text == col[p]
             assert cell.kind == "mapped"
-            assert cell.x + cell.w / 2 == vec.x + vec.w / 2  # column-centred on the targets column
+            assert cell.x + cell.w / 2 == vector.x + vector.w / 2  # column-centred on the targets column
             assert cell.y == cells[f"cell:projection:{p}:0"].y     # the projection row's prime rows
 
 
@@ -9868,7 +9868,7 @@ def test_projection_targets_tile_tracks_the_targets_column():
     s.update(projection=True)
     for kw in ({}, {"target_override": ()}):  # a populated target list, then an empty-but-open one
         ids = {c.id for c in spreadsheet.build(st, s, held_basis_ratios=("2/1", "5/4"), **kw).cells}
-        assert ("bracket:vec:targets:l" in ids) == ("bracket:projection_targets:l" in ids)
+        assert ("bracket:vector:targets:l" in ids) == ("bracket:projection_targets:l" in ids)
 
 
 def test_projection_symbol_floor_widens_the_tile_so_the_equivalence_never_wraps():
@@ -10131,10 +10131,10 @@ def test_projection_at_full_rank_keeps_the_nullity_count_in_a_readable_stub():
     assert cap.text == "nullity"
     assert spreadsheet_text._wrap_lines("nullity", cap.w) == 1
     # the stub sits LEFT of the bracket; the unchanged count + first U cell sit to its right
-    assert n_count.x == cap.x < cells["bracket:vec:commas:l"].x <= cells["cell:unchanged:0:0"].x
+    assert n_count.x == cap.x < cells["bracket:vector:commas:l"].x <= cells["cell:unchanged:0:0"].x
     assert cells["count:commas:u"].x == cells["cell:unchanged:0:0"].x   # u tally over U
     # the bracket still hugs U on both sides — the stub is OUTSIDE the matrix (no gap inside the EBK)
-    assert cells["bracket:vec:commas:l"].x + spreadsheet_constants.BRACKET_W == cells["cell:unchanged:0:0"].x
+    assert cells["bracket:vector:commas:l"].x + spreadsheet_constants.BRACKET_W == cells["cell:unchanged:0:0"].x
 
 
 def test_projection_pending_comma_reddens_the_unchanged_interval_it_will_delete():

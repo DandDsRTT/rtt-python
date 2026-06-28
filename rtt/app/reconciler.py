@@ -31,7 +31,7 @@ _DEMO_VALUE_KINDS = frozenset(
     {
         "mapping",
         "mapped",
-        "vec",
+        "vector",
         "targetcell",
         "heldcell",
         "commacell",

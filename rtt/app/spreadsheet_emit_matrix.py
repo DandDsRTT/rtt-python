@@ -97,11 +97,11 @@ def emit_units(resolved, geometry, context) -> EmitResult:
 
 def _emit_units_matrix(cells, resolved, geometry, context) -> None:
     matrix_units = {
-        "vectors": (resolved.dims.dimensionality, lambda i: query.vec_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
+        "vectors": (resolved.dims.dimensionality, lambda i: query.vector_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
         "canon": (resolved.dims.canonical_rank, lambda i: query.canon_top(geometry, i), lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
         "projection": (resolved.dims.dimensionality, lambda i: query.projection_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
         "mapping": (resolved.dims.rank_shown, lambda i: query.map_top(geometry, i), lambda i: f"g{_sub(i + 1)}/"),
-        "superspace_vectors": (resolved.dims.superspace_dimensionality, lambda i: query.superspace_vec_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
+        "superspace_vectors": (resolved.dims.superspace_dimensionality, lambda i: query.superspace_vector_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
         "superspace_mapping": (resolved.dims.superspace_rank, lambda i: query.superspace_map_top(geometry, i), lambda i: f"g{SUBSCRIPT_L}{_sub(i + 1)}/"),
         "superspace_projection": (resolved.dims.superspace_dimensionality, lambda i: query.superspace_projection_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
     }
@@ -318,46 +318,46 @@ def emit_rehomed_minus_controls(resolved, geometry, context) -> EmitResult:
         return EmitResult()
     vtop = geometry.rows["vectors"].y
 
-    def vec_minus(cid, column_key, i, kind, **kw):
+    def vector_minus(cid, column_key, i, kind, **kw):
         cells.append(CellBox(cid, query.sub_axis_x(geometry, column_key, i) - COL_W / 2, geometry.fanout_y,
                              COL_W, vtop - geometry.fanout_y, kind, **kw))
 
-    _emit_rehomed_commas(resolved, geometry, context, vec_minus)
-    _emit_rehomed_targets(resolved, geometry, context, vec_minus)
-    _emit_rehomed_held(resolved, geometry, context, vec_minus)
-    _emit_rehomed_interest(resolved, geometry, context, vec_minus)
+    _emit_rehomed_commas(resolved, geometry, context, vector_minus)
+    _emit_rehomed_targets(resolved, geometry, context, vector_minus)
+    _emit_rehomed_held(resolved, geometry, context, vector_minus)
+    _emit_rehomed_interest(resolved, geometry, context, vector_minus)
     return EmitResult(cells=tuple(cells))
 
 
-def _emit_rehomed_commas(resolved, geometry, context, vec_minus) -> None:
+def _emit_rehomed_commas(resolved, geometry, context, vector_minus) -> None:
     if query.tile_open(geometry, context.collapsed, "vectors", "commas"):
         for c in range(resolved.dims.comma_count):
-            vec_minus(f"comma_minus:{query.col_token(resolved, 'commas', c)}", "commas", c, "comma_minus", comma=c)
+            vector_minus(f"comma_minus:{query.col_token(resolved, 'commas', c)}", "commas", c, "comma_minus", comma=c)
         if resolved.commas.pending is not None:
-            vec_minus("comma_minus:pending", "commas", resolved.dims.comma_count, "comma_minus")
+            vector_minus("comma_minus:pending", "commas", resolved.dims.comma_count, "comma_minus")
 
 
-def _emit_rehomed_targets(resolved, geometry, context, vec_minus) -> None:
+def _emit_rehomed_targets(resolved, geometry, context, vector_minus) -> None:
     if query.tile_open(geometry, context.collapsed, "vectors", "targets"):
         if resolved.scalars.targets_editable:
             for j in range(resolved.dims.target_count):
-                vec_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
+                vector_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
         if resolved.targets.pending is not None:
-            vec_minus("target_minus:pending", "targets", resolved.dims.target_count, "target_minus")
+            vector_minus("target_minus:pending", "targets", resolved.dims.target_count, "target_minus")
 
 
-def _emit_rehomed_held(resolved, geometry, context, vec_minus) -> None:
+def _emit_rehomed_held(resolved, geometry, context, vector_minus) -> None:
     if query.tile_open(geometry, context.collapsed, "vectors", "held"):
         for i in range(resolved.dims.held_count):
-            vec_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
+            vector_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
         if resolved.held.pending is not None:
-            vec_minus("held_minus:pending", "held", resolved.dims.held_count, "held_minus")
+            vector_minus("held_minus:pending", "held", resolved.dims.held_count, "held_minus")
 
 
-def _emit_rehomed_interest(resolved, geometry, context, vec_minus) -> None:
+def _emit_rehomed_interest(resolved, geometry, context, vector_minus) -> None:
     if query.tile_open(geometry, context.collapsed, "vectors", "interest"):
         for i in range(resolved.dims.interest_count):
-            vec_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
+            vector_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
         if resolved.interest.pending is not None:
-            vec_minus("interest_minus:pending", "interest", resolved.dims.interest_count, "interest_minus")
+            vector_minus("interest_minus:pending", "interest", resolved.dims.interest_count, "interest_minus")
 

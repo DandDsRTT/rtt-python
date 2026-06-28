@@ -75,7 +75,7 @@ class ResolveDraft:
     ghost_row_map: object = None
     ghost_row_ratio: object = None
     ghost_row_mapped: object = None
-    ghost_comma_vec: object = None
+    ghost_comma_vector: object = None
     ghost_comma_ratio: object = None
     ghost_comma_mapped: object = None
     ghost_comma_just: object = None
