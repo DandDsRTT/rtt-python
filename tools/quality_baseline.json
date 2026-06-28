@@ -10,15 +10,15 @@
     "_edits": 1,
     "class_handles": 1
   },
-  "param_reach_through_total": 453,
+  "param_reach_through_total": 459,
   "param_reach_through_by_handle": {
-    "_editor": 233,
+    "_editor": 236,
     "_rec": 73,
     "_runtime": 48,
+    "_chrome": 33,
     "_renderer": 31,
-    "_chrome": 31,
     "_gestures": 22,
-    "_edits": 7,
+    "_edits": 8,
     "e": 5,
     "_handlers": 3
   },

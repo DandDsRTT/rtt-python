@@ -183,7 +183,7 @@ def _define_row_bands(geometry, resolved):
         ("damage", ROW_H, _r.flags.tuning_tiles, True, "damage"),
     )
     row_bands = tuple(
-        (key, h, present, collapsible, terminology.wiki(label, _r.flags.dd_terminology))
+        (key, h, present, collapsible, terminology.substitute(label, _r.flags.terminology_mode))
         for key, h, present, collapsible, label in row_bands
     )
     present_caption_rows = frozenset(

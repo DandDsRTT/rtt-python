@@ -41,6 +41,12 @@ def sync_chrome(r, lay, fy) -> None:
     )
     if r._chrome.chapter_slider.value != r._runtime.chapter:
         r._chrome.chapter_slider.value = r._runtime.chapter
+    terminology_radio = r._chrome.refs.get("terminology")
+    if (
+        terminology_radio is not None
+        and terminology_radio.value != r._editor.settings["terminology"]
+    ):
+        terminology_radio.value = r._editor.settings["terminology"]
     if lay.approach_box is not None:
         ax, ay, aw, ah = lay.approach_box
         r._chrome.refs["approach"].style(

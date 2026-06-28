@@ -161,7 +161,7 @@ class Flags:
     tuning_tiles: bool
     interest: bool
     interval_ratios: bool
-    dd_terminology: bool
+    terminology_mode: str
 
 
 @dataclass(frozen=True)
@@ -333,7 +333,7 @@ def _labels(b) -> Labels:
     return Labels(
         col_labels=b.col_labels,
         row_labels=b.row_labels,
-        captions=terminology.wiki_captions(b.effective_captions, b.dd_terminology),
+        captions=terminology.substitute_captions(b.effective_captions, b.terminology_mode),
         prescaling_symbols=b.prescaling_symbols,
         prescaler_symbol=b.prescaler_symbol,
         prescaler_equivalence=b.prescaler_equivalence,
@@ -385,7 +385,7 @@ def _flags(b) -> Flags:
         tuning_tiles=b.show_tuning_tiles,
         interest=b.show_interest,
         interval_ratios=b.show_interval_ratios,
-        dd_terminology=b.dd_terminology,
+        terminology_mode=b.terminology_mode,
     )
 
 

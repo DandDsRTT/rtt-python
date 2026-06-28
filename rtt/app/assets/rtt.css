@@ -1054,8 +1054,10 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    reader can actually see the chapter stops, and flip to light ticks in dark mode. */
 .rtt-chapter-slider .q-slider__markers { color:rgba(0,0,0,0.8) !important; height:6px !important; }
 body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.85) !important; }
-/* the "use D&D's terminology" checkbox sits just under the slider inside the guide-settings box */
-.rtt-chapter-dd { margin-top:4px; }
+/* the "terminology" radio sits in its own bordered sub-box under the slider, inside the
+   guide-settings box; its title matches the slider's "max chapter" sub-label weight. */
+.rtt-terminology-box { margin-top:6px; padding:4px 6px; border:1px solid #c4c4c4; border-radius:4px; }
+.rtt-terminology-title { font-size:12px; font-weight:bold; display:block; margin-bottom:2px; }
 /* a control the chapter slider has not yet revealed (its chapter is past the slider) is made
    INVISIBLE, two ways: a show/example row COLLAPSES (display:none — no leftover gap), while a
    dummy-tile part stays INVISIBLE BUT IN PLACE (visibility:hidden — the tile keeps its shape, and

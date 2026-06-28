@@ -61,10 +61,12 @@ VISUAL_TOGGLES: tuple[tuple[str, str, bool], ...] = (
     ("tooltips", "tooltips", True),
 )
 
-DEFAULTS: dict[str, bool] = {key: default for _, items in SHOW_GROUPS for key, _, default in items}
+DEFAULTS: dict[str, object] = {
+    key: default for _, items in SHOW_GROUPS for key, _, default in items
+}
 for _vkey, _vlabel, _vdefault in VISUAL_TOGGLES:
     DEFAULTS[_vkey] = _vdefault
-DEFAULTS["dd_terminology"] = True
+DEFAULTS["terminology"] = "dd"
 
 
 def group_keys(group_name: str) -> tuple[str, ...]:
@@ -153,7 +155,7 @@ CHAPTER_STAR = 10
 CHAPTER_DEFAULT = 4
 
 CHAPTER: dict[str, int] = {
-    "dd_terminology": CHAPTER_MIN,
+    "terminology": CHAPTER_MIN,
     "animations": 2,
     "preview_highlighting": 2,
     "tooltips": 2,
@@ -222,7 +224,7 @@ def revealed(chapter: int) -> set[str]:
     return {key for key in DEFAULTS if reveal_chapter(key) <= chapter}
 
 
-def defaults() -> dict[str, bool]:
+def defaults() -> dict[str, object]:
     return dict(DEFAULTS)
 
 
@@ -256,10 +258,8 @@ def ancestors_of(key: str) -> set[str]:
     return chain
 
 
-def from_persisted(stored: dict) -> dict[str, bool]:
+def from_persisted(stored: dict) -> dict[str, object]:
     return {
-        key: (
-            stored.get(key, default) if (key in IMPLEMENTED or key == "dd_terminology") else default
-        )
+        key: (stored.get(key, default) if (key in IMPLEMENTED or key == "terminology") else default)
         for key, default in DEFAULTS.items()
     }

@@ -20,8 +20,8 @@ def _chapter_text(chapter: str) -> str:
 
 
 def test_show_help_covers_every_toggle_with_nonempty_text():
-    # every Show toggle carries hover text (chrome-backed dd_terminology is helped via CHROME_HELP)
-    assert set(tooltips.SHOW_HELP) == set(show_settings.DEFAULTS) - {"dd_terminology"}
+    # every Show toggle carries hover text (chrome-backed terminology is helped via CHROME_HELP)
+    assert set(tooltips.SHOW_HELP) == set(show_settings.DEFAULTS) - {"terminology"}
     assert all(text.strip() for text in tooltips.SHOW_HELP.values())
 
 
@@ -201,8 +201,8 @@ def test_every_rendered_cell_is_classified_for_tooltips():
 
 def test_chrome_help_covers_the_app_chrome_buttons():
     # the always-present chrome: settings drawer, the max-chapter slider, select-all, the
-    # use-D&D's-terminology toggle, dark-mode, undo, redo, reset, share, and the tour replay button
-    assert set(tooltips.CHROME_HELP) == {"settings", "chapter", "select_all", "dd_terminology",
+    # terminology radio, dark-mode, undo, redo, reset, share, and the tour replay button
+    assert set(tooltips.CHROME_HELP) == {"settings", "chapter", "select_all", "terminology",
                                          "dark_mode", "undo", "redo", "reset", "share", "tour"}
     assert all(text.strip() for text in tooltips.CHROME_HELP.values())
 

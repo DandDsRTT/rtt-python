@@ -47,7 +47,7 @@ def unpack_show_flags(inputs, draft):
         show_interest=_f.interest, gridded_values=_f.gridded_values, show_quantities=_f.quantities,
         _decimals=_f.decimals, show_ebk=_f.ebk, show_interval_ratios=_f.interval_ratios,
         show_interval_vectors=_f.interval_vectors, show_math_expressions=show_math_expressions,
-        dd_terminology=inputs.settings.get("dd_terminology", True),
+        terminology_mode=inputs.settings.get("terminology", "dd"),
         custom_weights_active=(inputs.custom_weights is not None
                                and not service.is_all_interval(inputs.tuning_scheme)
                                and not show_math_expressions))
