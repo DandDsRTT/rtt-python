@@ -48,16 +48,16 @@ def emit_ebk_frames_and_marks(resolved, geometry, ctx, accum) -> EmitResult:
     return EmitResult(cells=tuple(cells))
 
 
-def bracket(cells, resolved, geometry, bid: str, rkey: str, ckey: str, y, h, *, fit=False, span=None,
+def bracket(cells, resolved, geometry, bid: str, row_key: str, column_key: str, y, h, *, fit=False, span=None,
             pending=False, stacked=False) -> None:
     if not resolved.flags.ebk:
         if stacked:
             return
         glyphs = ("[", "]")
     else:
-        c = _ebk(resolved, rkey, ckey)
+        c = _ebk(resolved, row_key, column_key)
         glyphs = (c.inner_open, c.inner_close) if stacked else (c.outer_open, c.outer_close)
-    gx, gw = span if span else query.matrix_span(geometry, resolved, ckey)
+    gx, gw = span if span else query.matrix_span(geometry, resolved, column_key)
     if fit and not resolved.flags.ebk:
         by, bh = y, h
     elif fit:
@@ -69,57 +69,57 @@ def bracket(cells, resolved, geometry, bid: str, rkey: str, ckey: str, y, h, *, 
     cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1], pending=pending))
 
 
-def _ebk(resolved, rkey, ckey):
-    return service.ebk_convention(rkey, ckey, superspace=resolved.flags.superspace)
+def _ebk(resolved, row_key, column_key):
+    return service.ebk_convention(row_key, column_key, superspace=resolved.flags.superspace)
 
 
-def _ebk_foot(resolved, rkey, ckey, *, outer: bool) -> str:
-    c = _ebk(resolved, rkey, ckey)
+def _ebk_foot(resolved, row_key, column_key, *, outer: bool) -> str:
+    c = _ebk(resolved, row_key, column_key)
     return "ebkbrace" if (c.outer_close if outer else c.inner_close) == "}" else "ebkangle"
 
 
-def matrix_frame(cells, resolved, geometry, ctx, rkey: str, ckey: str, bid: str, span=None) -> None:
-    if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
+def matrix_frame(cells, resolved, geometry, ctx, row_key: str, column_key: str, bid: str, span=None) -> None:
+    if not query.tile_open(geometry, ctx.collapsed, row_key, column_key):
         return
-    foot = _ebk_foot(resolved, rkey, ckey, outer=True)
-    gx, gw = span if span else query.matrix_span(geometry, resolved, ckey)
+    foot = _ebk_foot(resolved, row_key, column_key, outer=True)
+    gx, gw = span if span else query.matrix_span(geometry, resolved, column_key)
     if not resolved.flags.ebk:
-        y, h = geometry.rows[rkey].y, geometry.rows[rkey].h
+        y, h = geometry.rows[row_key].y, geometry.rows[row_key].h
         cells.append(CellBox(f"bracket:{bid}:l", gx, y, BRACKET_W, h, "bracket", text="["))
         cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, y, BRACKET_W, h, "bracket", text="]"))
         return
-    cells.append(CellBox(f"ebktop:{bid}", gx, query.frame_top_y(geometry, rkey), gw, FRAME_H, "ebktop"))
-    cells.append(CellBox(f"{foot}:{bid}", gx, query.frame_brace_y(geometry, rkey), gw, BRACE_H, foot))
+    cells.append(CellBox(f"ebktop:{bid}", gx, query.frame_top_y(geometry, row_key), gw, FRAME_H, "ebktop"))
+    cells.append(CellBox(f"{foot}:{bid}", gx, query.frame_brace_y(geometry, row_key), gw, BRACE_H, foot))
 
 
-def vector_list_marks(cells, resolved, geometry, ctx, rkey, name, ckey, left, n_cols, top="ebktop",
+def vector_list_marks(cells, resolved, geometry, ctx, row_key, name, column_key, left, n_cols, top="ebktop",
                       separators=True, pending_col=-1) -> None:
-    if not query.tile_open(geometry, ctx.collapsed, rkey, ckey):
+    if not query.tile_open(geometry, ctx.collapsed, row_key, column_key):
         return
-    foot = _ebk_foot(resolved, rkey, ckey, outer=False)
+    foot = _ebk_foot(resolved, row_key, column_key, outer=False)
     if resolved.flags.ebk:
         mark_w = COL_W - 2 * MARK_INSET
         for c in range(n_cols):
             mx = left(c) + MARK_INSET
             pend = (c == pending_col)
-            cells.append(CellBox(f"{top}:{name}:{c}", mx, query.frame_top_y(geometry, rkey), mark_w, FRAME_H, top, pending=pend))
-            cells.append(CellBox(f"{foot}:{name}:{c}", mx, query.frame_brace_y(geometry, rkey), mark_w, BRACE_H, foot, pending=pend))
+            cells.append(CellBox(f"{top}:{name}:{c}", mx, query.frame_top_y(geometry, row_key), mark_w, FRAME_H, top, pending=pend))
+            cells.append(CellBox(f"{foot}:{name}:{c}", mx, query.frame_brace_y(geometry, row_key), mark_w, BRACE_H, foot, pending=pend))
     elif n_cols:
-        if ckey == "interest":
+        if column_key == "interest":
             for c in range(n_cols):
-                transpose_mark(cells, geometry, f"{name}:{c}", left(c) + COL_W - MARK_INSET, rkey, pending=(c == pending_col))
+                transpose_mark(cells, geometry, f"{name}:{c}", left(c) + COL_W - MARK_INSET, row_key, pending=(c == pending_col))
         else:
-            gx, gw = query.matrix_span(geometry, resolved, ckey)
-            transpose_mark(cells, geometry, name, gx + gw, rkey)
+            gx, gw = query.matrix_span(geometry, resolved, column_key)
+            transpose_mark(cells, geometry, name, gx + gw, row_key)
     if not separators:
         return
-    sep_y, sep_h = query.separator_span(resolved, geometry, rkey)
+    sep_y, sep_h = query.separator_span(resolved, geometry, row_key)
     for c in range(1, n_cols):
         cells.append(CellBox(f"sep:{name}:{c}", (left(c - 1) + COL_W + left(c)) / 2 - SEP_W / 2, sep_y, SEP_W, sep_h, "vbar"))
 
 
-def transpose_mark(cells, geometry, name, x, rkey, pending: bool = False) -> None:
-    cells.append(CellBox(f"transpose:{name}", x, geometry.rows[rkey].y - FRAME_GAP, TRANSPOSE_W, ROW_H,
+def transpose_mark(cells, geometry, name, x, row_key, pending: bool = False) -> None:
+    cells.append(CellBox(f"transpose:{name}", x, geometry.rows[row_key].y - FRAME_GAP, TRANSPOSE_W, ROW_H,
                          "transpose", text="ᵀ", pending=pending))
 
 
@@ -132,14 +132,14 @@ def v_split_bars(cells, resolved, geometry, ctx, accum) -> None:
     rows_with_u = set()
     for cell in accum:
         if u_left - 0.5 <= cell.x < u_right:
-            for rkey, band in geometry.rows.items():
+            for row_key, band in geometry.rows.items():
                 if band.y <= cell.y < band.y + band.h:
-                    rows_with_u.add(rkey)
+                    rows_with_u.add(row_key)
                     break
-    for rkey in rows_with_u:
-        if rkey != "counts" and query.tile_open(geometry, ctx.collapsed, rkey, "commas"):
-            sy, sh = query.separator_span(resolved, geometry, rkey)
-            cells.append(CellBox(f"vsplit:{rkey}", x, sy, SEP_W, sh, "vbar"))
+    for row_key in rows_with_u:
+        if row_key != "counts" and query.tile_open(geometry, ctx.collapsed, row_key, "commas"):
+            sy, sh = query.separator_span(resolved, geometry, row_key)
+            cells.append(CellBox(f"vsplit:{row_key}", x, sy, SEP_W, sh, "vbar"))
 
 
 def _emit_canon_stacked_brackets(cells, resolved, geometry, ctx) -> None:

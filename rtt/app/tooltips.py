@@ -216,8 +216,8 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
 }
 
 
-def tile_guide_help(rkey: str, ckey: str) -> GuideHelp | None:
-    return GUIDE_HELP.get((rkey, ckey))
+def tile_guide_help(row_key: str, column_key: str) -> GuideHelp | None:
+    return GUIDE_HELP.get((row_key, column_key))
 
 
 def tile_guide_help_for_cell(cell_id: str, *, pretransform: bool = False) -> GuideHelp | None:

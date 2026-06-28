@@ -164,7 +164,7 @@ def test_target_limit_help_distinguishes_the_two_errors():
 def test_every_editable_dual_has_a_distinct_tooltip():
     # the editable plain-text duals are exactly EDITABLE_PTEXT (the layout's source of truth);
     # each must carry its own hover text so no editable value is left unexplained
-    ids = [f"ptext:{rkey}:{ckey}" for rkey, ckey in grid_tables.EDITABLE_PTEXT]
+    ids = [f"ptext:{row_key}:{column_key}" for row_key, column_key in grid_tables.EDITABLE_PTEXT]
     texts = [tooltips.control_help("ptextedit", cid) for cid in ids]
     assert all((t or "").strip() for t in texts)
     assert len(set(texts)) == len(ids)
@@ -314,7 +314,7 @@ def test_pretransform_leaves_help_without_the_prescaler_word_unchanged():
 def test_guide_help_covers_only_real_tiles_and_resolves_by_tile_key():
     # every registry key is a real (row, col) tile, and tile_guide_help round-trips it
     captioned = {(r, c) for r, c in grid_tables.CAPTIONS}
-    for (rkey, ckey), gh in tooltips.GUIDE_HELP.items():
-        assert (rkey, ckey) in captioned, f"{(rkey, ckey)} is not a captioned tile"
-        assert tooltips.tile_guide_help(rkey, ckey) is gh
+    for (row_key, column_key), gh in tooltips.GUIDE_HELP.items():
+        assert (row_key, column_key) in captioned, f"{(row_key, column_key)} is not a captioned tile"
+        assert tooltips.tile_guide_help(row_key, column_key) is gh
     assert tooltips.tile_guide_help("mapping", "nonsense") is None

@@ -101,13 +101,13 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, ctx, key, group, va
                              y, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
 
 
-def chart(cells, geometry, ctx, rkey, ckey, values, indicator=None, indicator_label="") -> None:
+def chart(cells, geometry, ctx, row_key, column_key, values, indicator=None, indicator_label="") -> None:
     values = tuple(values)
-    if values and rkey in geometry.rows and geometry.rows[rkey].chart_top is not None and query.tile_open(geometry, ctx.collapsed, rkey, ckey):
-        x = geometry.group_left[ckey][0] - BRACKET_W
-        gap = query.interval_col_gap(ckey)
+    if values and row_key in geometry.rows and geometry.rows[row_key].chart_top is not None and query.tile_open(geometry, ctx.collapsed, row_key, column_key):
+        x = geometry.group_left[column_key][0] - BRACKET_W
+        gap = query.interval_col_gap(column_key)
         width = 2 * BRACKET_W + len(values) * COL_W + max(len(values) - 1, 0) * gap
-        cells.append(CellBox(f"chart:{rkey}:{ckey}", x, geometry.rows[rkey].chart_top,
+        cells.append(CellBox(f"chart:{row_key}:{column_key}", x, geometry.rows[row_key].chart_top,
                              width, CHART_H, "chart", values=values, col_gap=gap,
                              indicator=indicator, indicator_label=indicator_label))
 
@@ -306,9 +306,9 @@ def _emit_damage_row(cells, chart_tiles, chart_indicators, resolved, geometry, c
 
 
 def _emit_charts(cells, chart_tiles, chart_indicators, geometry, ctx) -> None:
-    for rkey, ckey, values in chart_tiles:
-        indicator, label = chart_indicators.get((rkey, ckey), (None, ""))
-        chart(cells, geometry, ctx, rkey, ckey, values, indicator=indicator, indicator_label=label)
+    for row_key, column_key, values in chart_tiles:
+        indicator, label = chart_indicators.get((row_key, column_key), (None, ""))
+        chart(cells, geometry, ctx, row_key, column_key, values, indicator=indicator, indicator_label=label)
 
 
 def _emit_tuning_ranges_box(cells, resolved, geometry, ctx):
@@ -391,11 +391,11 @@ def _emit_approach_box(cells, geometry):
     return approach_frame, approach_box
 
 
-def control_region(region_boxes, geometry, box_id, ckey, top, content_h):
+def control_region(region_boxes, geometry, box_id, column_key, top, content_h):
     box_y = top + BOX_OUTER
-    region_boxes.append(Block(box_id, geometry.col_x[ckey], box_y, geometry.col_w[ckey],
+    region_boxes.append(Block(box_id, geometry.col_x[column_key], box_y, geometry.col_w[column_key],
                               2 * BOX_INNER + content_h, boxed=True))
-    return geometry.col_x[ckey] + BOX_INNER, box_y + BOX_INNER
+    return geometry.col_x[column_key] + BOX_INNER, box_y + BOX_INNER
 
 
 def _is_sole_option(options, value) -> bool:
