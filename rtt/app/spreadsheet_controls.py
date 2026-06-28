@@ -50,9 +50,9 @@ def _filter_gridded_quantities(cells, resolved):
 
 
 def _mark_doomed_unchanged_column(cells, resolved, geometry):
-    if not ((resolved.commas.pending is not None or resolved.ghosts.comma) and resolved.unchanged.shown and resolved.dims.nu):
+    if not ((resolved.commas.pending is not None or resolved.ghosts.comma) and resolved.unchanged.shown and resolved.dims.unchanged_count):
         return cells
-    doomed_x = query.comma_left(geometry, resolved, resolved.dims.nc_shown + resolved.dims.nu - 1)
+    doomed_x = query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + resolved.dims.unchanged_count - 1)
     return [replace(cell_box, preview_remove=True)
             if (cell_box.w == COL_W and cell_box.x == doomed_x
                 and cell_box.kind not in ("count", "caption", "colgrip"))
@@ -63,7 +63,7 @@ def _mark_doomed_unchanged_column(cells, resolved, geometry):
 def _mark_born_column(cells, resolved, geometry):
     if not resolved.unchanged.born:
         return cells
-    born_x = query.comma_left(geometry, resolved, resolved.dims.nc_shown + resolved.dims.nu - 1)
+    born_x = query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + resolved.dims.unchanged_count - 1)
     return [replace(cell_box, pending=True)
             if (cell_box.w == COL_W and cell_box.x == born_x
                 and cell_box.kind not in ("count", "caption", "colgrip"))
@@ -86,16 +86,16 @@ def _dual_preview(cell_box, axes):
 
 def _mark_dual_axis_previews(cells, resolved, geometry, context):
     remove_rows = change_rows = remove_commas = change_commas = frozenset()
-    if resolved.commas.pending is not None and resolved.dims.r:
-        remove_rows, change_rows = frozenset({resolved.dims.r - 1}), frozenset(range(resolved.dims.r - 1))
-    if context.pending_mapping_row is not None and resolved.dims.nc:
-        remove_commas, change_commas = frozenset({resolved.dims.nc - 1}), frozenset(range(resolved.dims.nc - 1))
+    if resolved.commas.pending is not None and resolved.dims.rank:
+        remove_rows, change_rows = frozenset({resolved.dims.rank - 1}), frozenset(range(resolved.dims.rank - 1))
+    if context.pending_mapping_row is not None and resolved.dims.comma_count:
+        remove_commas, change_commas = frozenset({resolved.dims.comma_count - 1}), frozenset(range(resolved.dims.comma_count - 1))
     if context.preview_remove is not None:
         axis, idx = context.preview_remove
         if axis == "comma":
-            remove_commas, change_rows = frozenset({idx}), frozenset(range(resolved.dims.r))
+            remove_commas, change_rows = frozenset({idx}), frozenset(range(resolved.dims.rank))
         else:
-            remove_rows, change_commas = frozenset({idx}), frozenset(range(resolved.dims.nc))
+            remove_rows, change_commas = frozenset({idx}), frozenset(range(resolved.dims.comma_count))
     if not (remove_rows or change_rows or remove_commas or change_commas):
         return cells
     red_xs = frozenset(query.comma_left(geometry, resolved, c) for c in remove_commas)

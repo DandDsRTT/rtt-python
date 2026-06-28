@@ -55,16 +55,17 @@ def unpack_show_flags(inputs, draft):
 
 def resolve_superspace_dims(inputs, draft):
     elements = inputs.state.domain_basis
-    r = len(inputs.state.mapping)
+    rank = len(inputs.state.mapping)
     row_draft = inputs.pending_mapping_row is not None or draft.ghost_row
     show_nonstandard_domain = inputs.settings.get("nonstandard_domain", False)
     show_superspace = (show_nonstandard_domain
                        and service.domain_has_nonprimes(elements)
                        and inputs.nonprime_approach != "nonprime-based")
     return replace(
-        draft, d=inputs.state.d, r=r, row_draft=row_draft, r_shown=r + (1 if row_draft else 0),
-        elements=elements, dL=service.superspace_dimension(elements),
-        rL=service.superspace_rank(inputs.state), superspace_primes=service.superspace_primes(elements),
+        draft, dimensionality=inputs.state.d, rank=rank, row_draft=row_draft,
+        rank_shown=rank + (1 if row_draft else 0),
+        elements=elements, superspace_dimensionality=service.superspace_dimension(elements),
+        superspace_rank=service.superspace_rank(inputs.state), superspace_primes=service.superspace_primes(elements),
         show_nonstandard_domain=show_nonstandard_domain, show_superspace=show_superspace,
         show_superspace_generators=show_superspace and inputs.nonprime_approach == "prime-based")
 
@@ -111,10 +112,10 @@ def resolve_canon_mapped(inputs, draft):
     canon_mapping = draft.canon_mapping
     _canon_u = [None if (draft.unchanged_basis is None or draft.unchanged_basis[j] is None)
                 else tuple(row[0] for row in service.mapped_commas(canon_mapping, (draft.unchanged_basis[j],)))
-                for j in range(draft.nu)]
+                for j in range(draft.unchanged_count)]
     canon_unchanged_mapped = tuple(
-        tuple((None if _canon_u[j] is None else _canon_u[j][i]) for j in range(draft.nu))
-        for i in range(draft.rc))
+        tuple((None if _canon_u[j] is None else _canon_u[j][i]) for j in range(draft.unchanged_count))
+        for i in range(draft.canonical_rank))
     return replace(
         draft, canon_mapped=service.mapped_intervals(canon_mapping, draft.targets, draft.elements),
         canon_held_mapped=service.mapped_intervals(canon_mapping, draft.held_ratios, draft.elements),

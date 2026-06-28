@@ -45,11 +45,11 @@ def resolve_targets(inputs, draft):
     targets = service.displayed_targets(inputs.state, inputs.tuning_scheme, inputs.target_spec, inputs.target_override)
     all_interval = service.is_all_interval(inputs.tuning_scheme)
     targets_editable = not all_interval
-    k = len(targets)
+    target_count = len(targets)
     pending_target = list(inputs.pending_target) if (inputs.pending_target is not None and targets_editable) else None
     return replace(
-        draft, targets=targets, all_interval=all_interval, targets_editable=targets_editable, k=k,
-        pending_target=pending_target, k_shown=k + (1 if pending_target is not None else 0),
+        draft, targets=targets, all_interval=all_interval, targets_editable=targets_editable, target_count=target_count,
+        pending_target=pending_target, target_count_shown=target_count + (1 if pending_target is not None else 0),
         mapped=service.mapped_intervals(inputs.state.mapping, targets, draft.elements))
 
 
@@ -59,7 +59,7 @@ def resolve_canon_form(inputs, draft):
         inputs.state.mapping, inputs.mapping_form, inputs.state.domain_basis)
     form_is_canonical = mapping_form_key == "canonical"
     return replace(
-        draft, canon_mapping=canon_mapping, rc=len(canon_mapping),
+        draft, canon_mapping=canon_mapping, canonical_rank=len(canon_mapping),
         form_M=service.form_matrix(inputs.state.mapping),
         canon_gens=service.generators(canon_mapping, draft.elements),
         inverse_form_M=service.inverse_form_matrix(inputs.state.mapping),
@@ -72,12 +72,12 @@ def resolve_canon_form(inputs, draft):
 
 
 def resolve_held(inputs, draft):
-    held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(draft.d)) for m in inputs.held_vectors) if draft.show_optimization else ()
-    nh = len(held)
+    held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(draft.dimensionality)) for m in inputs.held_vectors) if draft.show_optimization else ()
+    held_count = len(held)
     pending_held = list(inputs.pending_held) if (inputs.pending_held is not None and draft.show_optimization) else None
     return replace(
-        draft, target_vectors=service.target_interval_vectors(draft.targets, draft.d, draft.elements),
-        held=held, nh=nh, pending_held=pending_held, nh_shown=nh + (1 if pending_held is not None else 0),
+        draft, target_vectors=service.target_interval_vectors(draft.targets, draft.dimensionality, draft.elements),
+        held=held, held_count=held_count, pending_held=pending_held, held_count_shown=held_count + (1 if pending_held is not None else 0),
         held_ratios=service.comma_ratios(held, draft.elements))
 
 
@@ -104,7 +104,7 @@ def resolve_tuning(inputs, draft):
 def resolve_commas(inputs, draft):
     comma_ratios = service.comma_ratios(inputs.state.comma_basis, draft.elements) if inputs.state.n else ()
     return replace(
-        draft, comma_ratios=comma_ratios, nc=len(comma_ratios),
+        draft, comma_ratios=comma_ratios, comma_count=len(comma_ratios),
         mapped_commas=service.mapped_commas(inputs.state.mapping, inputs.state.comma_basis),
         comma_sizes=service.interval_sizes(draft.tuning_map, comma_ratios, draft.elements))
 
@@ -114,34 +114,34 @@ def resolve_unchanged(inputs, draft):
                                               inputs.tuning_scheme, draft.elements, inputs.custom_prescaler)
               if (draft.show_temperament_tiles and draft.show_tuning_tiles and inputs.settings["projection"]) else None)
     unchanged = _initial_unchanged(_udata)
-    nu = len(_udata.basis) if _udata is not None else 0
+    unchanged_count = len(_udata.basis) if _udata is not None else 0
     born_u = draft.ghost_row and _udata is not None
     if born_u:
-        unchanged, nu, born_u = augment_born_unchanged(inputs, draft, unchanged, nu)
+        unchanged, unchanged_count, born_u = augment_born_unchanged(inputs, draft, unchanged, unchanged_count)
     pending = list(inputs.pending_comma) if inputs.pending_comma is not None else None
     comma_draft = pending is not None or draft.ghost_comma
-    nc_shown = draft.nc + (1 if comma_draft else 0)
+    comma_count_shown = draft.comma_count + (1 if comma_draft else 0)
     if _udata is not None:
         _rename_commas_to_unrotated(draft.effective_captions)
         if draft.show_equivalences:
             _append_unchanged_caption_equivalence(draft.effective_captions)
     return replace(
-        draft, show_unchanged=_udata is not None, nu=nu, born_u=born_u,
+        draft, show_unchanged=_udata is not None, unchanged_count=unchanged_count, born_u=born_u,
         unchanged_basis=unchanged.basis, unchanged_ratios=unchanged.ratios,
         unchanged_mapped=unchanged.mapped, unchanged_sizes=unchanged.sizes,
         unchanged_complexities=unchanged.complexities, pending=pending, comma_draft=comma_draft,
-        nc_shown=nc_shown, nv_shown=nc_shown + nu,
-        empty_comma_w=(_min_width_for_lines("nullity", 1) if (_udata is not None and nc_shown == 0) else 0))
+        comma_count_shown=comma_count_shown, vector_count_shown=comma_count_shown + unchanged_count,
+        empty_comma_w=(_min_width_for_lines("nullity", 1) if (_udata is not None and comma_count_shown == 0) else 0))
 
 
-def augment_born_unchanged(inputs, draft, unchanged, nu):
+def augment_born_unchanged(inputs, draft, unchanged, unchanged_count):
     new_tuning_map = service.tuning(draft.ghost_new.mapping, inputs.tuning_scheme, draft.elements,
                              inputs.nonprime_approach, held=inputs.held_basis_ratios,
                              prescaler_override=inputs.custom_prescaler)
     ud_new = service.unchanged_interval_data(draft.ghost_new, inputs.held_basis_ratios, new_tuning_map,
                                              inputs.tuning_scheme, draft.elements, inputs.custom_prescaler)
-    if ud_new is None or len(ud_new.basis) <= nu:
-        return unchanged, nu, False
+    if ud_new is None or len(ud_new.basis) <= unchanged_count:
+        return unchanged, unchanged_count, False
     bratio = ud_new.ratios[-1]
     bm = service.mapped_intervals(inputs.state.mapping, (bratio,), draft.elements) if bratio is not None else None
     s, n = unchanged.sizes, ud_new.sizes
@@ -153,19 +153,19 @@ def augment_born_unchanged(inputs, draft, unchanged, nu):
             (*tuple(s.tempered), n.tempered[-1]), (*tuple(s.just), n.just[-1]),
             (*tuple(s.errors), n.errors[-1]), (*tuple(s.damage), n.damage[-1])),
         complexities=(*tuple(unchanged.complexities), ud_new.complexities[-1]))
-    return grown, nu + 1, True
+    return grown, unchanged_count + 1, True
 
 
 def resolve_interest(inputs, draft):
-    interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(draft.d)) for m in inputs.interest)
-    mi = len(interest)
+    interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(draft.dimensionality)) for m in inputs.interest)
+    interest_count = len(interest)
     pending_interest = list(inputs.pending_interest) if inputs.pending_interest is not None else None
     element_draft = draft.show_nonstandard_domain and inputs.pending_element is not None
     interest_ratios = service.comma_ratios(interest, draft.elements)
     return replace(
-        draft, interest=interest, mi=mi, pending_interest=pending_interest,
-        mi_shown=mi + (1 if pending_interest is not None else 0), element_draft=element_draft,
-        d_shown=draft.d + (1 if element_draft else 0), interest_ratios=interest_ratios,
+        draft, interest=interest, interest_count=interest_count, pending_interest=pending_interest,
+        interest_count_shown=interest_count + (1 if pending_interest is not None else 0), element_draft=element_draft,
+        dimensionality_shown=draft.dimensionality + (1 if element_draft else 0), interest_ratios=interest_ratios,
         interest_mapped=service.mapped_intervals(inputs.state.mapping, interest_ratios, draft.elements),
         interest_sizes=service.interval_sizes(draft.tuning_map, interest_ratios, draft.elements))
 
