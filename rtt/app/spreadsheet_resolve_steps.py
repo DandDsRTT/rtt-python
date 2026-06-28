@@ -131,22 +131,22 @@ def resolve_projection_data(inputs, draft):
         _embed_generators_caption(draft.effective_captions)
     rationals = (service.projection_matrix_rationals(inputs.state, inputs.held_basis_ratios)
                  if show_projection else None)
-    show_ss = show_projection and draft.show_superspace
-    ss_rationals = (service.superspace_projection_matrix_rationals(inputs.state, inputs.held_basis_ratios)
-                    if show_ss else None)
+    show_superspace = show_projection and draft.show_superspace
+    superspace_rationals = (service.superspace_projection_matrix_rationals(inputs.state, inputs.held_basis_ratios)
+                    if show_superspace else None)
 
     def _lift(vs):
         return service.lift_vectors_to_superspace(draft.elements, vs)
 
-    def _ss_lift(ub):
+    def _superspace_lift(ub):
         return service.lift_vectors_to_superspace(draft.elements, (ub,))[0] if ub is not None else None
 
-    def _ss_map(ub):
+    def _superspace_map(ub):
         return service.map_vectors_into_superspace_generators(inputs.state, (ub,))[0] if ub is not None else None
 
     unchanged_basis = draft.unchanged_basis if draft.show_unchanged else ()
     return replace(
-        draft, show_projection=show_projection, show_ss_projection=show_ss,
+        draft, show_projection=show_projection, show_superspace_projection=show_superspace,
         projection_matrix=(service.tuning_projection(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         embedding_matrix=(service.tuning_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         canon_embedding_matrix=(service.canonical_generator_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None),
@@ -155,22 +155,22 @@ def resolve_projection_data(inputs, draft):
         projection_held=service.project_vectors(rationals, draft.held),
         projection_targets=service.project_vectors(rationals, draft.target_vectors),
         projection_interest=service.project_vectors(rationals, draft.interest),
-        embedding_superspace=(service.superspace_generator_embedding_display(inputs.state, inputs.held_basis_ratios) if show_ss else None),
-        projection_superspace=(service.superspace_prime_projection_display(inputs.state, inputs.held_basis_ratios) if show_ss else None),
-        ss_projection_matrix=(service.superspace_tuning_projection(inputs.state, inputs.held_basis_ratios) if show_ss else None),
-        ss_embedding_matrix=(service.superspace_tuning_embedding(inputs.state, inputs.held_basis_ratios) if show_ss else None),
-        ss_projection_rationals=ss_rationals,
-        ss_projection_basis=service.project_vectors(ss_rationals, service.basis_in_superspace(draft.elements)),
-        ss_projection_detempering=service.project_vectors(ss_rationals, _lift(draft.detempering_vectors)),
-        ss_projection_held=service.project_vectors(ss_rationals, _lift(draft.held)),
-        ss_projection_targets=service.project_vectors(ss_rationals, _lift(draft.target_vectors)),
-        ss_projection_interest=service.project_vectors(ss_rationals, _lift(draft.interest)),
-        ss_unchanged=tuple(_ss_lift(ub) for ub in unchanged_basis),
-        ss_unchanged_mapped=tuple(_ss_map(ub) for ub in unchanged_basis))
+        embedding_superspace=(service.superspace_generator_embedding_display(inputs.state, inputs.held_basis_ratios) if show_superspace else None),
+        projection_superspace=(service.superspace_prime_projection_display(inputs.state, inputs.held_basis_ratios) if show_superspace else None),
+        superspace_projection_matrix=(service.superspace_tuning_projection(inputs.state, inputs.held_basis_ratios) if show_superspace else None),
+        superspace_embedding_matrix=(service.superspace_tuning_embedding(inputs.state, inputs.held_basis_ratios) if show_superspace else None),
+        superspace_projection_rationals=superspace_rationals,
+        superspace_projection_basis=service.project_vectors(superspace_rationals, service.basis_in_superspace(draft.elements)),
+        superspace_projection_detempering=service.project_vectors(superspace_rationals, _lift(draft.detempering_vectors)),
+        superspace_projection_held=service.project_vectors(superspace_rationals, _lift(draft.held)),
+        superspace_projection_targets=service.project_vectors(superspace_rationals, _lift(draft.target_vectors)),
+        superspace_projection_interest=service.project_vectors(superspace_rationals, _lift(draft.interest)),
+        superspace_unchanged=tuple(_superspace_lift(ub) for ub in unchanged_basis),
+        superspace_unchanged_mapped=tuple(_superspace_map(ub) for ub in unchanged_basis))
 
 
 def _embed_generators_caption(effective_captions):
-    for rc in (("mapping", "gens"), ("ss_mapping", "ssgens")):
+    for rc in (("mapping", "gens"), ("superspace_mapping", "superspace_generators")):
         cap = effective_captions.get(rc)
         if cap and cap.endswith("generators"):
             effective_captions[rc] = cap[:-1] + "(s / embedding)"

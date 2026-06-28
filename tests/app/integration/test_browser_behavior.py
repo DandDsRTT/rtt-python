@@ -172,7 +172,7 @@ def test_superspace_mapping_band_triggers_on_a_nonstandard_domain(browser):
     with _page(browser, f"?state={token}", width=1800, height=1150) as (page, errors):
         result = page.evaluate(
             "() => { const e = [...document.querySelectorAll('[data-eid]')]"
-            ".find(x => /^cell:ss_mapping:(targets|held|interest|commas|detempering):/"
+            ".find(x => /^cell:superspace_mapping:(targets|held|interest|commas|detempering):/"
             ".test(x.getAttribute('data-eid'))); return e && e.getAttribute('data-eid'); }"
         )
         assert result, "no superspace-mapping result cell rendered for the nonstandard domain"

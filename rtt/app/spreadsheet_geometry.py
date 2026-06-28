@@ -91,7 +91,7 @@ def declare_tiles(resolved, context, interest_tiles, held_tiles, detempering_til
              + SUPERSPACE_COUNTS_TILES
              + TILES + UNITS_TILES + SUPERSPACE_TILES
              + interest_tiles + held_tiles + detempering_tiles + _projection_col_tiles(resolved)
-             + _ss_projection_col_tiles(resolved) + _canon_col_tiles(resolved))
+             + _superspace_projection_col_tiles(resolved) + _canon_col_tiles(resolved))
     declared_tiles = {(row_key, column_key) for _bid, row_key, column_key in tiles}
     return tiles, _prune_declared_tiles(declared_tiles, resolved, context)
 
@@ -113,29 +113,29 @@ def _projection_col_tiles(resolved):
         tiles += (("block:projection:interest", "projection", "interest"),)
     if resolved.flags.superspace:
         tiles += (
-            ("block:projection:ssgens", "projection", "ssgens"),
-            ("block:projection:ssprimes", "projection", "ssprimes"),
+            ("block:projection:superspace_generators", "projection", "superspace_generators"),
+            ("block:projection:superspace_primes", "projection", "superspace_primes"),
         )
     return tiles
 
 
-def _ss_projection_col_tiles(resolved):
-    if not resolved.flags.ss_projection:
+def _superspace_projection_col_tiles(resolved):
+    if not resolved.flags.superspace_projection:
         return ()
     tiles = (
-        ("block:ss_projection:ssgens", "ss_projection", "ssgens"),
-        ("block:ss_projection:primes", "ss_projection", "primes"),
+        ("block:superspace_projection:superspace_generators", "superspace_projection", "superspace_generators"),
+        ("block:superspace_projection:primes", "superspace_projection", "primes"),
     )
     if resolved.unchanged.shown:
-        tiles += (("block:ss_projection:commas", "ss_projection", "commas"),)
+        tiles += (("block:superspace_projection:commas", "superspace_projection", "commas"),)
     if resolved.flags.generator_detempering:
-        tiles += (("block:ss_projection:detempering", "ss_projection", "detempering"),)
+        tiles += (("block:superspace_projection:detempering", "superspace_projection", "detempering"),)
     if resolved.scalars.targets_editable:
-        tiles += (("block:ss_projection:targets", "ss_projection", "targets"),)
+        tiles += (("block:superspace_projection:targets", "superspace_projection", "targets"),)
     if resolved.dims.held_count_shown:
-        tiles += (("block:ss_projection:held", "ss_projection", "held"),)
+        tiles += (("block:superspace_projection:held", "superspace_projection", "held"),)
     if resolved.dims.interest_count_shown:
-        tiles += (("block:ss_projection:interest", "ss_projection", "interest"),)
+        tiles += (("block:superspace_projection:interest", "superspace_projection", "interest"),)
     return tiles
 
 
@@ -158,24 +158,24 @@ def _prune_declared_tiles(declared_tiles, resolved, context):
     if service.is_all_interval(context.tuning_scheme):
         declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
                            ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
-                           ("ss_vectors", "targets"), ("ss_mapping", "targets")}
+                           ("superspace_vectors", "targets"), ("superspace_mapping", "targets")}
     if not resolved.flags.identity_objects:
         declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
                                 ("mapping", "detempering"), ("canon", "canongens"),
-                                ("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
+                                ("superspace_vectors", "superspace_primes"), ("superspace_mapping", "superspace_generators")}
     if not resolved.dims.held_count_shown:
-        declared_tiles -= {("ss_vectors", "held"), ("ss_mapping", "held")}
+        declared_tiles -= {("superspace_vectors", "held"), ("superspace_mapping", "held")}
     if not resolved.dims.interest_count_shown:
-        declared_tiles -= {("ss_vectors", "interest"), ("ss_mapping", "interest")}
+        declared_tiles -= {("superspace_vectors", "interest"), ("superspace_mapping", "interest")}
     return declared_tiles
 
 
 def init_superspace_tuning(resolved, context):
     if not resolved.flags.superspace:
         return None
-    ss_override = context.superspace_generator_tuning if resolved.flags.superspace_generators else None
+    superspace_override = context.superspace_generator_tuning if resolved.flags.superspace_generators else None
     return service.superspace_tuning(context.state, context.tuning_scheme, context.nonprime_approach,
-                                     generator_override=ss_override)
+                                     generator_override=superspace_override)
 
 
 def caption_floor(geometry, resolved, key: str):
@@ -207,7 +207,7 @@ def symbol_floor(geometry, resolved, key: str):
 
 def control_floor(resolved, context, key: str):
     floor = 0
-    if key == ("ssprimes" if resolved.flags.superspace else "primes") and resolved.flags.lbox_show:
+    if key == ("superspace_primes" if resolved.flags.superspace else "primes") and resolved.flags.lbox_show:
         floor = PBOX_W if resolved.flags.presets else LBOX_DIM_W + 2 * BOX_INNER
     if key == "targets" and resolved.flags.cbox_show:
         cbox_w = CBOX_W if resolved.flags.presets else CBOX_NODROP_W

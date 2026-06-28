@@ -11,8 +11,8 @@ from rtt.app.spreadsheet_text import _prescale_math_expr
 def emit_prescaling_band(resolved, geometry, context) -> EmitResult:
     cells: list = []
     nrows = geometry.prescale_rows
-    prescaler_diag, prescaler_is_matrix, ss_elements, prescale_vectors, groups, bare_group = _prescale_setup(resolved, context, nrows)
-    prime_term = _prescale_prime_terms(resolved, ss_elements)
+    prescaler_diag, prescaler_is_matrix, superspace_elements, prescale_vectors, groups, bare_group = _prescale_setup(resolved, context, nrows)
+    prime_term = _prescale_prime_terms(resolved, superspace_elements)
     for group in groups:
         if not query.tile_open(geometry, context.collapsed, "prescaling", group):
             continue
@@ -31,12 +31,12 @@ def _prescale_setup(resolved, context, nrows):
     if resolved.flags.superspace:
         prescaler_diag = service.superspace_complexity_prescaler(context.state, context.tuning_scheme)
         prescaler_is_matrix = False
-        ss_elements = service.superspace_primes(resolved.dims.elements)
+        superspace_elements = service.superspace_primes(resolved.dims.elements)
 
         def lift(vs):
             return _lift_to_superspace(resolved, vs)
         prescale_vectors = {
-            "ssprimes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
+            "superspace_primes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
             "primes": service.basis_in_superspace(resolved.dims.elements),
             "commas": lift(context.state.comma_basis) + (lift(resolved.unchanged.basis) if resolved.unchanged.shown else ()),
             "targets": lift(resolved.targets.vectors),
@@ -44,12 +44,12 @@ def _prescale_setup(resolved, context, nrows):
             "held": lift(resolved.held.vectors),
             "detempering": lift(resolved.detempering.vectors),
         }
-        groups = ("ssprimes", "primes", "commas", "targets", "interest", "held", "detempering")
-        bare_group = "ssprimes"
+        groups = ("superspace_primes", "primes", "commas", "targets", "interest", "held", "detempering")
+        bare_group = "superspace_primes"
     else:
         prescaler_diag = resolved.scalars.prescaler
         prescaler_is_matrix = resolved.scalars.prescaler_is_matrix
-        ss_elements = resolved.dims.elements
+        superspace_elements = resolved.dims.elements
         prescale_vectors = {
             "primes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
             "commas": context.state.comma_basis + (resolved.unchanged.basis if resolved.unchanged.shown else ()),
@@ -60,14 +60,14 @@ def _prescale_setup(resolved, context, nrows):
         }
         groups = ("primes", "commas", "targets", "interest", "held", "detempering")
         bare_group = "primes"
-    return prescaler_diag, prescaler_is_matrix, ss_elements, prescale_vectors, groups, bare_group
+    return prescaler_diag, prescaler_is_matrix, superspace_elements, prescale_vectors, groups, bare_group
 
 
-def _prescale_prime_terms(resolved, ss_elements):
+def _prescale_prime_terms(resolved, superspace_elements):
     if resolved.labels.scheme_prescaler == "log-prime":
-        return {i: f"log₂{p}" for i, p in enumerate(ss_elements)}
+        return {i: f"log₂{p}" for i, p in enumerate(superspace_elements)}
     if resolved.labels.scheme_prescaler == "prime":
-        return {i: str(p) for i, p in enumerate(ss_elements)}
+        return {i: str(p) for i, p in enumerate(superspace_elements)}
     return {}
 
 

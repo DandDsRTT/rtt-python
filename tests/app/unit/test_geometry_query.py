@@ -22,8 +22,8 @@ def _row(y, h=10.0, frame=2.0, symbol=3.0, caption=4.0, units=5.0, comma_picker=
 def _geometry():
     return SimpleNamespace(
         rows={"mapping": _row(100.0, comma_picker=7.0), "projection": _row(200.0), "canon": _row(300.0),
-              "vectors": _row(400.0), "ss_vectors": _row(500.0), "ss_mapping": _row(600.0),
-              "ss_projection": _row(700.0)})
+              "vectors": _row(400.0), "superspace_vectors": _row(500.0), "superspace_mapping": _row(600.0),
+              "superspace_projection": _row(700.0)})
 
 
 def test_row_top_functions_are_pure_over_geometry():
@@ -33,9 +33,9 @@ def test_row_top_functions_are_pure_over_geometry():
     assert query.projection_top(g, 1) == 200.0 + ROW_H
     assert query.canon_top(g, 0) == 300.0
     assert query.vec_top(g, 3) == 400.0 + 3 * ROW_H
-    assert query.ss_vec_top(g, 1) == 500.0 + ROW_H
-    assert query.ss_map_top(g, 1) == 600.0 + ROW_H
-    assert query.ss_projection_top(g, 2) == 700.0 + 2 * ROW_H
+    assert query.superspace_vec_top(g, 1) == 500.0 + ROW_H
+    assert query.superspace_map_top(g, 1) == 600.0 + ROW_H
+    assert query.superspace_projection_top(g, 2) == 700.0 + 2 * ROW_H
 
 
 def test_frame_and_band_y_functions_are_pure_over_geometry():
@@ -51,10 +51,10 @@ def test_frame_and_band_y_functions_are_pure_over_geometry():
 def test_gutter_and_coordinate_functions_are_pure_over_geometry():
     g = SimpleNamespace(
         primes_x=10.0, targets_x=20.0, content_x={"gens": 5.0},
-        matlabel_primes_w=2.0, matlabel_ssprimes_w=3.0, matlabel_other_w={"gens": 1.0},
+        matlabel_primes_w=2.0, matlabel_superspace_primes_w=3.0, matlabel_other_w={"gens": 1.0},
         row_handle_w=4.0, etpick_w=0, group_left={"targets": (100.0, 200.0)})
     assert query.matlabel_gutter_w(g, "primes") == 2.0
-    assert query.matlabel_gutter_w(g, "ssprimes") == 3.0
+    assert query.matlabel_gutter_w(g, "superspace_primes") == 3.0
     assert query.matlabel_gutter_w(g, "gens") == 1.0
     assert query.handle_gutter_w(g, "primes") == 4.0
     assert query.handle_gutter_w(g, "gens") == 0

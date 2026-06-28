@@ -31,7 +31,7 @@
   // The grid holds two interval-vector spaces — prime-basis vectors and superspace-lifted vectors —
   // each in one of every interval kind (targets / held / interest / commas / unchanged / detempering).
   const STD_VEC = /^cell:(vec:targets|held|interest|comma|unchanged|vec:detempering):/;
-  const SS_VEC = /^cell:ss_vectors:(targets|held|interest|commas|detempering):/;
+  const SS_VEC = /^cell:superspace_vectors:(targets|held|interest|commas|detempering):/;
 
   // …and five transformation bands, each sending an interval vector through a matrix to a result
   // vector of the same kind. A band is defined once by its matrix and a test for "a result cell of
@@ -41,8 +41,8 @@
     { name: 'mapping', matrix: 'cell:mapping:', result: /^cell:(mapped|hmapped|imapped|mapped_comma|mapped_unchanged|mapped_detempering):/, vec: STD_VEC },
     { name: 'canonical', matrix: 'cell:canon:', result: /^cell:canon_/, vec: STD_VEC },
     { name: 'projection', matrix: 'cell:projection:', result: /^cell:projection_/, vec: STD_VEC },
-    { name: 'ss_mapping', matrix: 'cell:ss_mapping:ssprimes:', result: /^cell:ss_mapping:(targets|held|interest|commas|detempering):/, vec: SS_VEC },
-    { name: 'ss_projection', matrix: 'cell:ss_projection:ssprimes:', result: /^cell:ss_projection_(targets|held|interest|detempering|vectors):/, vec: SS_VEC },
+    { name: 'superspace_mapping', matrix: 'cell:superspace_mapping:superspace_primes:', result: /^cell:superspace_mapping:(targets|held|interest|commas|detempering):/, vec: SS_VEC },
+    { name: 'superspace_projection', matrix: 'cell:superspace_projection:superspace_primes:', result: /^cell:superspace_projection_(targets|held|interest|detempering|vectors):/, vec: SS_VEC },
   ];
   // hovering a bare interval vector flows it through its space's mapping (the forward computation).
   const forwardBand = (id) => (SS_VEC.test(id) ? BANDS[3] : BANDS[0]);

@@ -51,16 +51,16 @@ def vec_top(geometry, p: int) -> float:
     return geometry.rows["vectors"].y + p * ROW_H
 
 
-def ss_vec_top(geometry, p: int) -> float:
-    return geometry.rows["ss_vectors"].y + p * ROW_H
+def superspace_vec_top(geometry, p: int) -> float:
+    return geometry.rows["superspace_vectors"].y + p * ROW_H
 
 
-def ss_map_top(geometry, i: int) -> float:
-    return geometry.rows["ss_mapping"].y + i * ROW_H
+def superspace_map_top(geometry, i: int) -> float:
+    return geometry.rows["superspace_mapping"].y + i * ROW_H
 
 
-def ss_projection_top(geometry, i: int) -> float:
-    return geometry.rows["ss_projection"].y + i * ROW_H
+def superspace_projection_top(geometry, i: int) -> float:
+    return geometry.rows["superspace_projection"].y + i * ROW_H
 
 
 def prescale_size_gap(geometry) -> float:
@@ -106,8 +106,8 @@ def separator_span(resolved, geometry, row_key: str):
 def matlabel_gutter_w(geometry, group_key: str) -> float:
     if group_key == "primes":
         return geometry.matlabel_primes_w
-    if group_key == "ssprimes":
-        return geometry.matlabel_ssprimes_w
+    if group_key == "superspace_primes":
+        return geometry.matlabel_superspace_primes_w
     return geometry.matlabel_other_w.get(group_key, 0)
 
 
@@ -215,12 +215,17 @@ def canongen_left(geometry, g: int) -> float:
     return geometry.canongens_x + outer_gutter_w(geometry, "canongens") + BRACKET_W + g * COL_W
 
 
-def ss_gen_left(geometry, g: int) -> float:
-    return geometry.ssgens_x + BRACKET_W + g * COL_W
+def superspace_gen_left(geometry, g: int) -> float:
+    return geometry.superspace_generators_x + BRACKET_W + g * COL_W
 
 
-def ss_prime_left(geometry, p: int) -> float:
-    return geometry.ssprimes_x + outer_gutter_w(geometry, "ssprimes") + BRACKET_W + p * COL_W
+def superspace_prime_left(geometry, p: int) -> float:
+    return (
+        geometry.superspace_primes_x
+        + outer_gutter_w(geometry, "superspace_primes")
+        + BRACKET_W
+        + p * COL_W
+    )
 
 
 def sub_axis_x(geometry, column_key: str, i: int) -> float:
@@ -297,7 +302,10 @@ def cell_unit(resolved, row_key: str, column_key: str, *, gen=None, prime=None, 
     if not resolved.flags.cell_units:
         return ""
     u = tile_unit(resolved, row_key, column_key)
-    superspace = row_key.startswith("ss_") or column_key in ("ssgens", "ssprimes")
+    superspace = row_key.startswith("superspace_") or column_key in (
+        "superspace_generators",
+        "superspace_primes",
+    )
     if gen is not None:
         if superspace:
             u = u.replace(f"g{SUBSCRIPT_L}", f"g{SUBSCRIPT_L}{_sub(gen + 1)}")
@@ -397,10 +405,10 @@ def plain_text_editable(resolved, row_key: str, column_key: str) -> bool:
     if row_key == "prescaling":
         return (row_key, column_key) == (
             "prescaling",
-            "ssprimes" if resolved.flags.superspace else "primes",
+            "superspace_primes" if resolved.flags.superspace else "primes",
         )
     if row_key == "tuning" and resolved.flags.superspace_generators:
-        return column_key == "ssgens"
+        return column_key == "superspace_generators"
     return (row_key, column_key) in EDITABLE_PLAIN_TEXT
 
 

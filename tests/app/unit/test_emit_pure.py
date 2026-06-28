@@ -125,8 +125,8 @@ def _superspace_builder():
 def test_emit_superspace_rows_is_a_pure_function_over_resolved_geometry_ctx():
     result = emit_superspace_rows(*_inputs(_superspace_builder()))
     ids = {c.id for c in result.cells}
-    assert "ss_basis:0" in ids
-    assert any(i.startswith("cell:ss_mapping:ssprimes:") for i in ids)
+    assert "superspace_basis:0" in ids
+    assert any(i.startswith("cell:superspace_mapping:superspace_primes:") for i in ids)
     full = {c.id for c in spreadsheet.build(
         service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), _all_bool_on(),
         tuning_scheme="minimax-ES", held_vectors=((1, 0, 0), (0, 0, 1)), interest=((-1, 1, 0),)).cells}

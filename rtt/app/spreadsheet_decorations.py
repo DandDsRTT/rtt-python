@@ -118,7 +118,7 @@ def _emit_axes(lines, resolved, geometry, context) -> None:
 def _matlabel_group_count(resolved):
     return {"gens": resolved.dims.rank, "primes": resolved.dims.dimensionality, "commas": resolved.dims.comma_count + resolved.dims.unchanged_count, "targets": resolved.dims.target_count,
             "held": resolved.dims.held_count, "detempering": resolved.dims.rank, "interest": resolved.dims.interest_count,
-            "canongens": resolved.dims.canonical_rank, "ssgens": resolved.dims.superspace_rank, "ssprimes": resolved.dims.superspace_dimensionality}
+            "canongens": resolved.dims.canonical_rank, "superspace_generators": resolved.dims.superspace_rank, "superspace_primes": resolved.dims.superspace_dimensionality}
 
 
 def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
@@ -131,26 +131,26 @@ def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
         ("mapping", "canongens"): lambda i: query.map_top(geometry, i),
         ("vectors", "primes"): lambda i: query.vec_top(geometry, i),
         ("projection", "primes"): lambda i: query.projection_top(geometry, i),
-        ("projection", "ssprimes"): lambda i: query.projection_top(geometry, i),
+        ("projection", "superspace_primes"): lambda i: query.projection_top(geometry, i),
         ("prescaling", "primes"): prescale_top,
-        ("prescaling", "ssprimes"): prescale_top,
-        ("ss_mapping", "ssprimes"): lambda i: query.ss_map_top(geometry, i),
-        ("ss_mapping", "primes"): lambda i: query.ss_map_top(geometry, i),
-        ("ss_vectors", "ssprimes"): lambda i: query.ss_vec_top(geometry, i),
-        ("ss_projection", "ssprimes"): lambda i: query.ss_projection_top(geometry, i),
+        ("prescaling", "superspace_primes"): prescale_top,
+        ("superspace_mapping", "superspace_primes"): lambda i: query.superspace_map_top(geometry, i),
+        ("superspace_mapping", "primes"): lambda i: query.superspace_map_top(geometry, i),
+        ("superspace_vectors", "superspace_primes"): lambda i: query.superspace_vec_top(geometry, i),
+        ("superspace_projection", "superspace_primes"): lambda i: query.superspace_projection_top(geometry, i),
     }
     row_count = {("mapping", "primes"): resolved.dims.rank,
                  ("canon", "primes"): resolved.dims.canonical_rank,
                  ("mapping", "canongens"): resolved.dims.rank,
                  ("vectors", "primes"): resolved.dims.dimensionality,
                  ("projection", "primes"): resolved.dims.dimensionality,
-                 ("projection", "ssprimes"): resolved.dims.dimensionality,
+                 ("projection", "superspace_primes"): resolved.dims.dimensionality,
                  ("prescaling", "primes"): geometry.prescale_rows + geometry.size_rows,
-                 ("prescaling", "ssprimes"): geometry.prescale_rows + geometry.size_rows,
-                 ("ss_mapping", "ssprimes"): resolved.dims.superspace_rank,
-                 ("ss_mapping", "primes"): resolved.dims.superspace_rank,
-                 ("ss_vectors", "ssprimes"): resolved.dims.superspace_dimensionality,
-                 ("ss_projection", "ssprimes"): resolved.dims.superspace_dimensionality}
+                 ("prescaling", "superspace_primes"): geometry.prescale_rows + geometry.size_rows,
+                 ("superspace_mapping", "superspace_primes"): resolved.dims.superspace_rank,
+                 ("superspace_mapping", "primes"): resolved.dims.superspace_rank,
+                 ("superspace_vectors", "superspace_primes"): resolved.dims.superspace_dimensionality,
+                 ("superspace_projection", "superspace_primes"): resolved.dims.superspace_dimensionality}
     for (row_key, column_key), glyph in resolved.labels.row_labels.items():
         if not query.tile_open(geometry, context.collapsed, row_key, column_key):
             continue
@@ -282,7 +282,7 @@ def _emit_washes(blocks, resolved, geometry, context) -> None:
 def _caption_equivalences(resolved, geometry, ai, slope) -> dict:
     equivalences = {**EQUIVALENCES,
                     ("weight", "targets"): "" if resolved.scalars.custom_weights_active else WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
-                    ("prescaling", "ssprimes" if resolved.flags.superspace else "primes"): resolved.labels.prescaler_equivalence,
+                    ("prescaling", "superspace_primes" if resolved.flags.superspace else "primes"): resolved.labels.prescaler_equivalence,
                     **(ALL_INTERVAL_EQUIVALENCES if ai else {}),
                     **(FORM_EQUIVALENCES if resolved.flags.form_subscript else {}),
                     **({("mapping", "primes"): f" = 𝐹𝑀{SUBSCRIPT_C}"} if resolved.flags.canon else {}),
@@ -339,7 +339,7 @@ def _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_ke
 
 def _emit_tile_units(cells, resolved, geometry, row_key, column_key) -> None:
     unit = query.tile_unit(resolved, row_key, column_key)
-    if unit and not (row_key.startswith("ss_") or column_key in ("ssgens", "ssprimes")):
+    if unit and not (row_key.startswith("superspace_") or column_key in ("superspace_generators", "superspace_primes")):
         unit = _subscript_coord(unit, "p", resolved.labels.domain_label)
     if resolved.flags.units and unit:
         uy = geometry.rows[row_key].y + geometry.rows[row_key].h + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker + geometry.rows[row_key].symbol + geometry.rows[row_key].caption

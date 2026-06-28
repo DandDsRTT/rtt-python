@@ -132,10 +132,10 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     prescaling_symbols = {(r, c): symbol + s[1:] for (r, c), s in SYMBOLS.items()
                           if r == "prescaling" and s.startswith("L")}
     effective_captions = dict(CAPTIONS)
-    bare_col = "ssprimes" if show_superspace else "primes"
+    bare_col = "superspace_primes" if show_superspace else "primes"
     row_labels = dict(ROW_LABEL_LETTERS)
     row_labels.pop(("prescaling", "primes"), None)
-    row_labels.pop(("prescaling", "ssprimes"), None)
+    row_labels.pop(("prescaling", "superspace_primes"), None)
     row_labels[("prescaling", bare_col)] = "𝒍" if is_log_prime else "𝒙"
     if show_superspace:
         prescaling_symbols[("prescaling", "primes")] = f"{symbol}B{SUBSCRIPT_L}ₛ"

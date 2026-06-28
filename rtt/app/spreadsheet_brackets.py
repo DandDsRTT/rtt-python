@@ -28,12 +28,12 @@ def emit_brackets(resolved, geometry, context) -> EmitResult:
     _emit_canon_fit_brackets(cells, resolved, geometry, context)
     _emit_projection_brackets(cells, resolved, geometry, context)
     _emit_mapping_brackets(cells, resolved, geometry, context)
-    _emit_ss_stacked_brackets(cells, resolved, geometry, context)
-    _emit_ss_projection_fit_brackets(cells, resolved, geometry, context)
-    _emit_ss_rest_brackets(cells, resolved, geometry, context)
+    _emit_superspace_stacked_brackets(cells, resolved, geometry, context)
+    _emit_superspace_projection_fit_brackets(cells, resolved, geometry, context)
+    _emit_superspace_rest_brackets(cells, resolved, geometry, context)
     _emit_vector_stacked_brackets(cells, resolved, geometry, context)
-    _emit_ss_vectors_list_brackets(cells, resolved, geometry, context)
-    _emit_ss_mapped_list_brackets(cells, resolved, geometry, context)
+    _emit_superspace_vectors_list_brackets(cells, resolved, geometry, context)
+    _emit_superspace_mapped_list_brackets(cells, resolved, geometry, context)
     _emit_vec_list_brackets(cells, resolved, geometry, context)
     _emit_prescaling_brackets(cells, resolved, geometry, context)
     _emit_scalar_row_brackets(cells, resolved, geometry, context)
@@ -188,16 +188,16 @@ def _emit_projection_embed_brackets(cells, resolved, geometry, context) -> None:
         bracket(cells, resolved, geometry, "embed", "projection", "gens", py, ph, fit=True)
     if query.tile_open(geometry, cl, "projection", "canongens"):
         bracket(cells, resolved, geometry, "embed_c", "projection", "canongens", py, ph, fit=True)
-    if query.tile_open(geometry, cl, "projection", "ssgens"):
-        bracket(cells, resolved, geometry, "embed_sl", "projection", "ssgens", py, ph, fit=True)
+    if query.tile_open(geometry, cl, "projection", "superspace_generators"):
+        bracket(cells, resolved, geometry, "embed_sl", "projection", "superspace_generators", py, ph, fit=True)
 
 
 def _emit_projection_list_brackets(cells, resolved, geometry, context) -> None:
     cl = context.collapsed
     py, ph = geometry.rows["projection"].y, resolved.dims.dimensionality * ROW_H
-    if query.tile_open(geometry, cl, "projection", "ssprimes"):
+    if query.tile_open(geometry, cl, "projection", "superspace_primes"):
         for i in range(resolved.dims.dimensionality):
-            bracket(cells, resolved, geometry, f"projection_superspace:{i}", "projection", "ssprimes", query.projection_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"projection_superspace:{i}", "projection", "superspace_primes", query.projection_top(geometry, i), ROW_H, stacked=True)
     if resolved.unchanged.shown and query.tile_open(geometry, cl, "projection", "commas"):
         bracket(cells, resolved, geometry, "projection_vectors", "projection", "commas", py, ph, fit=True)
     if query.tile_open(geometry, cl, "projection", "detempering"):
@@ -226,45 +226,45 @@ def _emit_mapping_brackets(cells, resolved, geometry, context) -> None:
             bracket(cells, resolved, geometry, "hmapped", "mapping", "held", geometry.rows["mapping"].y, resolved.dims.rank_shown * ROW_H, fit=True)
 
 
-def _emit_ss_stacked_brackets(cells, resolved, geometry, context) -> None:
+def _emit_superspace_stacked_brackets(cells, resolved, geometry, context) -> None:
     cl = context.collapsed
-    if query.row_open(geometry, cl, "ss_mapping") and query.tile_open(geometry, cl, "ss_mapping", "ssprimes"):
+    if query.row_open(geometry, cl, "superspace_mapping") and query.tile_open(geometry, cl, "superspace_mapping", "superspace_primes"):
         for i in range(resolved.dims.superspace_rank):
-            bracket(cells, resolved, geometry, f"ss_map:{i}", "ss_mapping", "ssprimes", query.ss_map_top(geometry, i), ROW_H, stacked=True)
-    if query.row_open(geometry, cl, "ss_projection") and query.tile_open(geometry, cl, "ss_projection", "ssprimes"):
+            bracket(cells, resolved, geometry, f"superspace_map:{i}", "superspace_mapping", "superspace_primes", query.superspace_map_top(geometry, i), ROW_H, stacked=True)
+    if query.row_open(geometry, cl, "superspace_projection") and query.tile_open(geometry, cl, "superspace_projection", "superspace_primes"):
         for i in range(resolved.dims.superspace_dimensionality):
-            bracket(cells, resolved, geometry, f"ss_projection:{i}", "ss_projection", "ssprimes", query.ss_projection_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"superspace_projection:{i}", "superspace_projection", "superspace_primes", query.superspace_projection_top(geometry, i), ROW_H, stacked=True)
 
 
-def _emit_ss_projection_fit_brackets(cells, resolved, geometry, context) -> None:
+def _emit_superspace_projection_fit_brackets(cells, resolved, geometry, context) -> None:
     cl = context.collapsed
-    ssp_top, ssp_h = (geometry.rows["ss_projection"].y if "ss_projection" in geometry.rows else 0), resolved.dims.superspace_dimensionality * ROW_H
-    if query.row_open(geometry, cl, "ss_projection"):
-        if query.tile_open(geometry, cl, "ss_projection", "ssgens"):
-            bracket(cells, resolved, geometry, "ss_embed", "ss_projection", "ssgens", ssp_top, ssp_h, fit=True)
-        if query.tile_open(geometry, cl, "ss_projection", "primes"):
-            bracket(cells, resolved, geometry, "ss_projection_basis_lift", "ss_projection", "primes", ssp_top, ssp_h, fit=True)
-        if query.tile_open(geometry, cl, "ss_projection", "detempering"):
-            bracket(cells, resolved, geometry, "ss_projection_detempering", "ss_projection", "detempering", ssp_top, ssp_h, fit=True)
-        if resolved.unchanged.shown and query.tile_open(geometry, cl, "ss_projection", "commas"):
-            bracket(cells, resolved, geometry, "ss_projection_vectors", "ss_projection", "commas", ssp_top, ssp_h, fit=True)
-        if query.tile_open(geometry, cl, "ss_projection", "targets"):
-            bracket(cells, resolved, geometry, "ss_projection_targets", "ss_projection", "targets", ssp_top, ssp_h, fit=True)
-        if query.tile_open(geometry, cl, "ss_projection", "held"):
-            bracket(cells, resolved, geometry, "ss_projection_held", "ss_projection", "held", ssp_top, ssp_h, fit=True)
+    superspace_projection_top, superspace_projection_height = (geometry.rows["superspace_projection"].y if "superspace_projection" in geometry.rows else 0), resolved.dims.superspace_dimensionality * ROW_H
+    if query.row_open(geometry, cl, "superspace_projection"):
+        if query.tile_open(geometry, cl, "superspace_projection", "superspace_generators"):
+            bracket(cells, resolved, geometry, "superspace_embed", "superspace_projection", "superspace_generators", superspace_projection_top, superspace_projection_height, fit=True)
+        if query.tile_open(geometry, cl, "superspace_projection", "primes"):
+            bracket(cells, resolved, geometry, "superspace_projection_basis_lift", "superspace_projection", "primes", superspace_projection_top, superspace_projection_height, fit=True)
+        if query.tile_open(geometry, cl, "superspace_projection", "detempering"):
+            bracket(cells, resolved, geometry, "superspace_projection_detempering", "superspace_projection", "detempering", superspace_projection_top, superspace_projection_height, fit=True)
+        if resolved.unchanged.shown and query.tile_open(geometry, cl, "superspace_projection", "commas"):
+            bracket(cells, resolved, geometry, "superspace_projection_vectors", "superspace_projection", "commas", superspace_projection_top, superspace_projection_height, fit=True)
+        if query.tile_open(geometry, cl, "superspace_projection", "targets"):
+            bracket(cells, resolved, geometry, "superspace_projection_targets", "superspace_projection", "targets", superspace_projection_top, superspace_projection_height, fit=True)
+        if query.tile_open(geometry, cl, "superspace_projection", "held"):
+            bracket(cells, resolved, geometry, "superspace_projection_held", "superspace_projection", "held", superspace_projection_top, superspace_projection_height, fit=True)
 
 
-def _emit_ss_rest_brackets(cells, resolved, geometry, context) -> None:
+def _emit_superspace_rest_brackets(cells, resolved, geometry, context) -> None:
     cl = context.collapsed
-    if query.row_open(geometry, cl, "ss_vectors") and query.tile_open(geometry, cl, "ss_vectors", "ssprimes"):
+    if query.row_open(geometry, cl, "superspace_vectors") and query.tile_open(geometry, cl, "superspace_vectors", "superspace_primes"):
         for i in range(resolved.dims.superspace_dimensionality):
-            bracket(cells, resolved, geometry, f"ss_vec_jmap:{i}", "ss_vectors", "ssprimes", query.ss_vec_top(geometry, i), ROW_H, stacked=True)
-    if query.row_open(geometry, cl, "ss_mapping") and query.tile_open(geometry, cl, "ss_mapping", "primes"):
+            bracket(cells, resolved, geometry, f"superspace_vec_jmap:{i}", "superspace_vectors", "superspace_primes", query.superspace_vec_top(geometry, i), ROW_H, stacked=True)
+    if query.row_open(geometry, cl, "superspace_mapping") and query.tile_open(geometry, cl, "superspace_mapping", "primes"):
         for i in range(resolved.dims.superspace_rank):
-            bracket(cells, resolved, geometry, f"ss_msl:{i}", "ss_mapping", "primes", query.ss_map_top(geometry, i), ROW_H, stacked=True)
-    if query.row_open(geometry, cl, "ss_mapping") and query.tile_open(geometry, cl, "ss_mapping", "ssgens"):
-        bracket(cells, resolved, geometry, "ss_selfmap", "ss_mapping", "ssgens",
-                geometry.rows["ss_mapping"].y, resolved.dims.superspace_rank * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, f"superspace_mapping_lift:{i}", "superspace_mapping", "primes", query.superspace_map_top(geometry, i), ROW_H, stacked=True)
+    if query.row_open(geometry, cl, "superspace_mapping") and query.tile_open(geometry, cl, "superspace_mapping", "superspace_generators"):
+        bracket(cells, resolved, geometry, "superspace_self_map", "superspace_mapping", "superspace_generators",
+                geometry.rows["superspace_mapping"].y, resolved.dims.superspace_rank * ROW_H, fit=True)
 
 
 def _emit_vector_stacked_brackets(cells, resolved, geometry, context) -> None:
@@ -280,30 +280,30 @@ def _emit_vector_stacked_brackets(cells, resolved, geometry, context) -> None:
                 geometry.rows["mapping"].y, resolved.dims.rank * ROW_H, fit=True)
 
 
-def _emit_ss_vectors_list_brackets(cells, resolved, geometry, context) -> None:
+def _emit_superspace_vectors_list_brackets(cells, resolved, geometry, context) -> None:
     cl = context.collapsed
-    if query.row_open(geometry, cl, "ss_vectors"):
-        if query.tile_open(geometry, cl, "ss_vectors", "primes"):
-            bracket(cells, resolved, geometry, "ss_vec:primes", "ss_vectors", "primes", geometry.rows["ss_vectors"].y, resolved.dims.superspace_dimensionality * ROW_H, fit=True)
+    if query.row_open(geometry, cl, "superspace_vectors"):
+        if query.tile_open(geometry, cl, "superspace_vectors", "primes"):
+            bracket(cells, resolved, geometry, "superspace_vec:primes", "superspace_vectors", "primes", geometry.rows["superspace_vectors"].y, resolved.dims.superspace_dimensionality * ROW_H, fit=True)
         for group in ("commas", "targets"):
-            if query.tile_open(geometry, cl, "ss_vectors", group):
-                bracket(cells, resolved, geometry, f"ss_vec:{group}", "ss_vectors", group, geometry.rows["ss_vectors"].y, resolved.dims.superspace_dimensionality * ROW_H, fit=True)
-        if resolved.dims.held_count and query.tile_open(geometry, cl, "ss_vectors", "held"):
-            bracket(cells, resolved, geometry, "ss_vec:held", "ss_vectors", "held", geometry.rows["ss_vectors"].y, resolved.dims.superspace_dimensionality * ROW_H, fit=True)
-        if query.tile_open(geometry, cl, "ss_vectors", "detempering"):
-            bracket(cells, resolved, geometry, "ss_vec:detempering", "ss_vectors", "detempering", geometry.rows["ss_vectors"].y, resolved.dims.superspace_dimensionality * ROW_H, fit=True)
+            if query.tile_open(geometry, cl, "superspace_vectors", group):
+                bracket(cells, resolved, geometry, f"superspace_vec:{group}", "superspace_vectors", group, geometry.rows["superspace_vectors"].y, resolved.dims.superspace_dimensionality * ROW_H, fit=True)
+        if resolved.dims.held_count and query.tile_open(geometry, cl, "superspace_vectors", "held"):
+            bracket(cells, resolved, geometry, "superspace_vec:held", "superspace_vectors", "held", geometry.rows["superspace_vectors"].y, resolved.dims.superspace_dimensionality * ROW_H, fit=True)
+        if query.tile_open(geometry, cl, "superspace_vectors", "detempering"):
+            bracket(cells, resolved, geometry, "superspace_vec:detempering", "superspace_vectors", "detempering", geometry.rows["superspace_vectors"].y, resolved.dims.superspace_dimensionality * ROW_H, fit=True)
 
 
-def _emit_ss_mapped_list_brackets(cells, resolved, geometry, context) -> None:
+def _emit_superspace_mapped_list_brackets(cells, resolved, geometry, context) -> None:
     cl = context.collapsed
-    if query.row_open(geometry, cl, "ss_mapping"):
+    if query.row_open(geometry, cl, "superspace_mapping"):
         for group in ("commas", "targets"):
-            if query.tile_open(geometry, cl, "ss_mapping", group):
-                bracket(cells, resolved, geometry, f"ss_mapped:{group}", "ss_mapping", group, geometry.rows["ss_mapping"].y, resolved.dims.superspace_rank * ROW_H, fit=True)
-        if resolved.dims.held_count and query.tile_open(geometry, cl, "ss_mapping", "held"):
-            bracket(cells, resolved, geometry, "ss_mapped:held", "ss_mapping", "held", geometry.rows["ss_mapping"].y, resolved.dims.superspace_rank * ROW_H, fit=True)
-        if query.tile_open(geometry, cl, "ss_mapping", "detempering"):
-            bracket(cells, resolved, geometry, "ss_mapped:detempering", "ss_mapping", "detempering", geometry.rows["ss_mapping"].y, resolved.dims.superspace_rank * ROW_H, fit=True)
+            if query.tile_open(geometry, cl, "superspace_mapping", group):
+                bracket(cells, resolved, geometry, f"superspace_mapped:{group}", "superspace_mapping", group, geometry.rows["superspace_mapping"].y, resolved.dims.superspace_rank * ROW_H, fit=True)
+        if resolved.dims.held_count and query.tile_open(geometry, cl, "superspace_mapping", "held"):
+            bracket(cells, resolved, geometry, "superspace_mapped:held", "superspace_mapping", "held", geometry.rows["superspace_mapping"].y, resolved.dims.superspace_rank * ROW_H, fit=True)
+        if query.tile_open(geometry, cl, "superspace_mapping", "detempering"):
+            bracket(cells, resolved, geometry, "superspace_mapped:detempering", "superspace_mapping", "detempering", geometry.rows["superspace_mapping"].y, resolved.dims.superspace_rank * ROW_H, fit=True)
 
 
 def _emit_vec_list_brackets(cells, resolved, geometry, context) -> None:
@@ -322,7 +322,7 @@ def _emit_prescaling_brackets(cells, resolved, geometry, context) -> None:
     cl = context.collapsed
     if query.row_open(geometry, cl, "prescaling"):
         ph = (geometry.prescale_rows + geometry.size_rows) * ROW_H + query.prescale_size_gap(geometry)
-        bare_col = "ssprimes" if resolved.flags.superspace else "primes"
+        bare_col = "superspace_primes" if resolved.flags.superspace else "primes"
         for group in ("commas", "detempering", "targets", "held"):
             if query.tile_open(geometry, cl, "prescaling", group):
                 bracket(cells, resolved, geometry, f"prescaling:{group}", "prescaling", group,
@@ -361,8 +361,8 @@ def _emit_tuning_map_brackets(cells, resolved, geometry, context) -> None:
         bracket(cells, resolved, geometry, "tuning:cangenmap", "tuning", "canongens", geometry.rows["tuning"].y, ROW_H)
     if query.tile_open(geometry, cl, "tuning", "detempering"):
         bracket(cells, resolved, geometry, "tuning:detempering", "tuning", "detempering", geometry.rows["tuning"].y, ROW_H)
-    if query.tile_open(geometry, cl, "tuning", "ssgens"):
-        bracket(cells, resolved, geometry, "tuning:ssgenmap", "tuning", "ssgens", geometry.rows["tuning"].y, ROW_H)
+    if query.tile_open(geometry, cl, "tuning", "superspace_generators"):
+        bracket(cells, resolved, geometry, "tuning:superspace_generator_map", "tuning", "superspace_generators", geometry.rows["tuning"].y, ROW_H)
 
 
 def _emit_list_row_brackets(cells, resolved, geometry, context, key: str) -> None:
@@ -377,23 +377,23 @@ def _emit_list_row_brackets(cells, resolved, geometry, context, key: str) -> Non
         bracket(cells, resolved, geometry, f"{key}:hlist", key, "held", geometry.rows[key].y, ROW_H)
     if key != "tuning" and query.tile_open(geometry, cl, key, "detempering"):
         bracket(cells, resolved, geometry, f"{key}:detemperinglist", key, "detempering", geometry.rows[key].y, ROW_H)
-    if (key != "complexity" or resolved.flags.superspace) and query.tile_open(geometry, cl, key, "ssprimes"):
-        bracket(cells, resolved, geometry, f"{key}:ssprimes", key, "ssprimes", geometry.rows[key].y, ROW_H)
+    if (key != "complexity" or resolved.flags.superspace) and query.tile_open(geometry, cl, key, "superspace_primes"):
+        bracket(cells, resolved, geometry, f"{key}:superspace_primes", key, "superspace_primes", geometry.rows[key].y, ROW_H)
 
 
 def _emit_ebk_frames(cells, resolved, geometry, context) -> None:
     matrix_frame(cells, resolved, geometry, context, "mapping", "primes", "primes")
     matrix_frame(cells, resolved, geometry, context, "projection", "primes", "projection")
-    matrix_frame(cells, resolved, geometry, context, "projection", "ssprimes", "projection_superspace")
+    matrix_frame(cells, resolved, geometry, context, "projection", "superspace_primes", "projection_superspace")
     matrix_frame(cells, resolved, geometry, context, "canon", "primes", "canon")
     matrix_frame(cells, resolved, geometry, context, "canon", "gens", "form")
     matrix_frame(cells, resolved, geometry, context, "canon", "canongens", "fcancel")
     matrix_frame(cells, resolved, geometry, context, "mapping", "canongens", "finv")
-    matrix_frame(cells, resolved, geometry, context, "prescaling", "ssprimes" if resolved.flags.superspace else "primes", "prescaling")
-    matrix_frame(cells, resolved, geometry, context, "ss_mapping", "ssprimes", "ss_mapping")
-    matrix_frame(cells, resolved, geometry, context, "ss_projection", "ssprimes", "ss_projection")
-    matrix_frame(cells, resolved, geometry, context, "ss_vectors", "ssprimes", "ss_vec_jmap")
-    matrix_frame(cells, resolved, geometry, context, "ss_mapping", "primes", "ss_msl")
+    matrix_frame(cells, resolved, geometry, context, "prescaling", "superspace_primes" if resolved.flags.superspace else "primes", "prescaling")
+    matrix_frame(cells, resolved, geometry, context, "superspace_mapping", "superspace_primes", "superspace_mapping")
+    matrix_frame(cells, resolved, geometry, context, "superspace_projection", "superspace_primes", "superspace_projection")
+    matrix_frame(cells, resolved, geometry, context, "superspace_vectors", "superspace_primes", "superspace_vec_jmap")
+    matrix_frame(cells, resolved, geometry, context, "superspace_mapping", "primes", "superspace_mapping_lift")
     matrix_frame(cells, resolved, geometry, context, "vectors", "primes", "vec:primes")
 
 
@@ -404,18 +404,18 @@ def _emit_ebk_marks(cells, resolved, geometry, context) -> None:
     vlm("projection", "projection_vectors", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
     vlm("projection", "embed", "gens", gl["gen"], resolved.dims.rank, separators=False)
     vlm("projection", "embed_c", "canongens", gl["canongen"], resolved.dims.canonical_rank, separators=False)
-    vlm("projection", "embed_sl", "ssgens", gl["ss_gen"], resolved.dims.superspace_rank, separators=False)
+    vlm("projection", "embed_sl", "superspace_generators", gl["superspace_gen"], resolved.dims.superspace_rank, separators=False)
     vlm("projection", "projection_detempering", "detempering", gl["detempering"], resolved.dims.rank, separators=False)
     vlm("projection", "projection_targets", "targets", gl["target"], resolved.dims.target_count)
     vlm("projection", "projection_held", "held", gl["held"], resolved.dims.held_count)
     vlm("projection", "projection_interest", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
-    vlm("ss_projection", "ss_embed", "ssgens", gl["ss_gen"], resolved.dims.superspace_rank, separators=False)
-    vlm("ss_projection", "ss_projection_basis_lift", "primes", gl["prime"], resolved.dims.dimensionality, separators=False)
-    vlm("ss_projection", "ss_projection_detempering", "detempering", gl["detempering"], resolved.dims.rank, separators=False)
-    vlm("ss_projection", "ss_projection_vectors", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
-    vlm("ss_projection", "ss_projection_targets", "targets", gl["target"], resolved.dims.target_count)
-    vlm("ss_projection", "ss_projection_held", "held", gl["held"], resolved.dims.held_count)
-    vlm("ss_projection", "ss_projection_interest", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
+    vlm("superspace_projection", "superspace_embed", "superspace_generators", gl["superspace_gen"], resolved.dims.superspace_rank, separators=False)
+    vlm("superspace_projection", "superspace_projection_basis_lift", "primes", gl["prime"], resolved.dims.dimensionality, separators=False)
+    vlm("superspace_projection", "superspace_projection_detempering", "detempering", gl["detempering"], resolved.dims.rank, separators=False)
+    vlm("superspace_projection", "superspace_projection_vectors", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
+    vlm("superspace_projection", "superspace_projection_targets", "targets", gl["target"], resolved.dims.target_count)
+    vlm("superspace_projection", "superspace_projection_held", "held", gl["held"], resolved.dims.held_count)
+    vlm("superspace_projection", "superspace_projection_interest", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
     vlm("mapping", "mapped", "targets", gl["target"], resolved.dims.target_count)
     vlm("mapping", "imapped", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
     vlm("mapping", "hmapped", "held", gl["held"], resolved.dims.held_count)
@@ -440,20 +440,20 @@ def _emit_ebk_vector_marks(cells, resolved, geometry, context, accum) -> None:
     vlm("vectors", "vec:held", "held", gl["held"], resolved.dims.held_count_shown,
         pending_col=(resolved.dims.held_count if resolved.held.pending is not None else -1))
     vlm("vectors", "vec:detempering", "detempering", gl["detempering"], resolved.dims.rank)
-    vlm("ss_vectors", "ss_vec:primes", "primes", gl["prime"], resolved.dims.dimensionality, separators=False)
-    vlm("ss_vectors", "ss_vec:commas", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
-    vlm("ss_vectors", "ss_vec:targets", "targets", gl["target"], resolved.dims.target_count)
-    vlm("ss_vectors", "ss_vec:held", "held", gl["held"], resolved.dims.held_count)
-    vlm("ss_vectors", "ss_vec:interest", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
-    vlm("ss_vectors", "ss_vec:detempering", "detempering", gl["detempering"], resolved.dims.rank)
-    vlm("ss_mapping", "ss_mapped:commas", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
-    vlm("ss_mapping", "ss_mapped:targets", "targets", gl["target"], resolved.dims.target_count)
-    vlm("ss_mapping", "ss_mapped:held", "held", gl["held"], resolved.dims.held_count)
+    vlm("superspace_vectors", "superspace_vec:primes", "primes", gl["prime"], resolved.dims.dimensionality, separators=False)
+    vlm("superspace_vectors", "superspace_vec:commas", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
+    vlm("superspace_vectors", "superspace_vec:targets", "targets", gl["target"], resolved.dims.target_count)
+    vlm("superspace_vectors", "superspace_vec:held", "held", gl["held"], resolved.dims.held_count)
+    vlm("superspace_vectors", "superspace_vec:interest", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
+    vlm("superspace_vectors", "superspace_vec:detempering", "detempering", gl["detempering"], resolved.dims.rank)
+    vlm("superspace_mapping", "superspace_mapped:commas", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
+    vlm("superspace_mapping", "superspace_mapped:targets", "targets", gl["target"], resolved.dims.target_count)
+    vlm("superspace_mapping", "superspace_mapped:held", "held", gl["held"], resolved.dims.held_count)
     if resolved.flags.superspace:
         vlm("prescaling", "prescaling:primes", "primes", gl["prime"], resolved.dims.dimensionality, separators=False)
-    vlm("ss_mapping", "ss_mapped:interest", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
-    vlm("ss_mapping", "ss_mapped:detempering", "detempering", gl["detempering"], resolved.dims.rank)
-    vlm("ss_mapping", "ss_selfmap", "ssgens", gl["ss_gen"], resolved.dims.superspace_rank, separators=False)
+    vlm("superspace_mapping", "superspace_mapped:interest", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
+    vlm("superspace_mapping", "superspace_mapped:detempering", "detempering", gl["detempering"], resolved.dims.rank)
+    vlm("superspace_mapping", "superspace_self_map", "superspace_generators", gl["superspace_gen"], resolved.dims.superspace_rank, separators=False)
     vlm("prescaling", "prescaling:commas", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
     vlm("prescaling", "prescaling:detempering", "detempering", gl["detempering"], resolved.dims.rank, separators=False)
     vlm("prescaling", "prescaling:targets", "targets", gl["target"], resolved.dims.target_count, separators=True)
@@ -472,5 +472,5 @@ def _left_fns(resolved, geometry):
         "detempering": lambda i: query.detempering_left(geometry, i),
         "gen": lambda g: query.gen_left(geometry, g),
         "canongen": lambda g: query.canongen_left(geometry, g),
-        "ss_gen": lambda g: query.ss_gen_left(geometry, g),
+        "superspace_gen": lambda g: query.superspace_gen_left(geometry, g),
     }

@@ -183,21 +183,21 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "The scaling factors for the unrotated intervals of the projection — one for an "
         "unchanged interval, and zero for a comma.",
         page="Projection", anchor="Unrotated vectors and scaling factors"),
-    ("ss_vectors", "primes"): GuideHelp(
+    ("superspace_vectors", "primes"): GuideHelp(
         "The basis change matrix — it expresses your domain basis in a prime-only superspace, "
         "and thus can be used to map intervals from your domain to that superspace.",
         page="Domain basis", anchor="Basis matrix conversion"),
-    ("ss_vectors", "ssprimes"): GuideHelp(
+    ("superspace_vectors", "superspace_primes"): GuideHelp(
         "The trivial JI mapping over the superspace's primes — the identity, since each "
         "superspace prime maps to itself."),
-    ("tuning", "ssprimes"): GuideHelp(
+    ("tuning", "superspace_primes"): GuideHelp(
         "The superspace tuning map gives the tempered size in cents of each superspace prime."),
-    ("tuning", "ssgens"): GuideHelp(
+    ("tuning", "superspace_generators"): GuideHelp(
         "The size in cents of each superspace generator."),
-    ("just", "ssprimes"): GuideHelp(
+    ("just", "superspace_primes"): GuideHelp(
         "The superspace just tuning map gives each superspace prime's justly-intoned size "
         "in cents."),
-    ("retune", "ssprimes"): GuideHelp(
+    ("retune", "superspace_primes"): GuideHelp(
         "Each superspace prime's retuning — the change the temperament makes to its tuning, "
         "from just to tempered."),
     ("projection", "primes"): GuideHelp(
@@ -209,9 +209,9 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         page="Generator embedding matrix"),
     ("projection", "canongens"): GuideHelp(
         "The generator embedding for the canonical form's generators."),
-    ("counts", "ssprimes"): GuideHelp(
+    ("counts", "superspace_primes"): GuideHelp(
         "The count of superspace primes."),
-    ("counts", "ssgens"): GuideHelp(
+    ("counts", "superspace_generators"): GuideHelp(
         "The number of superspace generators."),
 }
 

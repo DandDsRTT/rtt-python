@@ -29,7 +29,7 @@ class Geometry:
     col_header: Mapping[str, str] = field(default_factory=dict)
     present_caption_rows: frozenset = frozenset()
     matlabel_primes_w: float = 0.0
-    matlabel_ssprimes_w: float = 0.0
+    matlabel_superspace_primes_w: float = 0.0
     matlabel_other_w: Mapping[str, float] = field(default_factory=dict)
     row_handle_w: float = 0.0
     etpick_w: float = 0.0
@@ -40,8 +40,8 @@ class Geometry:
     held_x: float | None = None
     detempering_x: float | None = None
     canongens_x: float | None = None
-    ssgens_x: float | None = None
-    ssprimes_x: float | None = None
+    superspace_generators_x: float | None = None
+    superspace_primes_x: float | None = None
 
     rows: Mapping = field(default_factory=dict)
     row_plus_y: Mapping[str, float] = field(default_factory=dict)
@@ -72,4 +72,4 @@ class Geometry:
     slope_locked: bool = False
     mean_damage_caption: str = ""
 
-    ss_tun: object = None
+    superspace_tuning_map: object = None

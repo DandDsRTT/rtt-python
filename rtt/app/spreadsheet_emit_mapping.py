@@ -195,8 +195,8 @@ def emit_projection_band(resolved, geometry, context) -> EmitResult:
     emit_mapped_grid(cells, resolved, geometry, cl, "primes", "projection", resolved.projection.matrix, resolved.dims.dimensionality, lambda i: query.prime_left(geometry, i), "prime")
     emit_mapped_grid(cells, resolved, geometry, cl, "gens", "embed", resolved.projection.embedding_matrix, resolved.dims.rank, lambda i: query.gen_left(geometry, i), "gen")
     emit_mapped_grid(cells, resolved, geometry, cl, "canongens", "embed_c", resolved.canon.embedding_matrix, resolved.dims.canonical_rank, lambda i: query.canongen_left(geometry, i), "gen")
-    emit_mapped_grid(cells, resolved, geometry, cl, "ssgens", "embed_sl", resolved.projection.embedding_superspace, resolved.dims.superspace_rank, lambda i: query.ss_gen_left(geometry, i), "gen")
-    emit_mapped_grid(cells, resolved, geometry, cl, "ssprimes", "projection_superspace", resolved.projection.superspace, resolved.dims.superspace_dimensionality, lambda i: query.ss_prime_left(geometry, i), "prime")
+    emit_mapped_grid(cells, resolved, geometry, cl, "superspace_generators", "embed_sl", resolved.projection.embedding_superspace, resolved.dims.superspace_rank, lambda i: query.superspace_gen_left(geometry, i), "gen")
+    emit_mapped_grid(cells, resolved, geometry, cl, "superspace_primes", "projection_superspace", resolved.projection.superspace, resolved.dims.superspace_dimensionality, lambda i: query.superspace_prime_left(geometry, i), "prime")
     _emit_projection_unchanged(cells, resolved, geometry, context)
     _emit_projection_basis(cells, resolved, geometry, context)
     full_projection = resolved.projection.rationals is not None
