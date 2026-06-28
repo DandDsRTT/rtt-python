@@ -194,7 +194,7 @@ def _emit_qty_primes(cells, resolved, geometry, context, qy, branch_minus) -> No
         text = str(resolved.dims.elements[p])
         kind = element_cell_kind(text) if resolved.flags.nonstandard_domain else "prime"
         cells.append(CellBox(f"prime:{p}", query.prime_left(geometry, p), qy, COL_W, ROW_H, kind, text=text, prime=p))
-        voice(cells, "quantities:primes", p, resolved.tuning.tun.just_map[p])
+        voice(cells, "quantities:primes", p, resolved.tuning.tuning_map.just_map[p])
     if resolved.scalars.element_draft:
         draft_text = context.pending_element or "?/?"
         cells.append(CellBox("prime:pending", query.prime_left(geometry, resolved.dims.d), qy, COL_W, ROW_H,

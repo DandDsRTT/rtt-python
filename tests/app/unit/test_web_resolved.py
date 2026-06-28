@@ -53,7 +53,7 @@ def test_resolve_matches_the_builders_resolution():
     assert model.dims.k == b.resolved.dims.k
     assert model.targets.ratios == b.resolved.targets.ratios
     assert model.commas.ratios == b.resolved.commas.ratios
-    assert model.tuning.tun is b.resolved.tuning.tun
+    assert model.tuning.tuning_map is b.resolved.tuning.tuning_map
     assert model.projection.matrix == b.resolved.projection.matrix
 
 
@@ -61,7 +61,7 @@ def test_the_resolved_model_is_the_only_copy_of_the_domain_facts():
     # the mirror is gone: domain facts live ONLY on self.resolved, never as flat self.<attr>
     # shadows. A future change that re-introduces the double storage fails here.
     b = _builder(Editor())
-    for mirrored in ("comma_ratios", "tun", "gens", "show_superspace", "projection_matrix",
+    for mirrored in ("comma_ratios", "tuning_map", "gens", "show_superspace", "projection_matrix",
                      "canon_mapping", "unchanged_ratios", "ghost_row", "all_interval"):
         assert not hasattr(b, mirrored), f"{mirrored} still shadows the resolved model on self"
     assert b.resolved.commas.ratios is not None

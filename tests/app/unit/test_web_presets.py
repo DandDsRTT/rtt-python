@@ -138,8 +138,8 @@ def test_temperament_options_show_names_lowercased_but_keep_canonical_value_keys
 def test_every_tuning_scheme_preset_optimizes_to_a_finite_tuning():
     mapping = ((1, 1, 0), (0, 1, 4))  # the initial meantone
     for scheme in presets.TUNING_SCHEMES:
-        tun = service.tuning(mapping, scheme)
-        assert all(math.isfinite(v) for v in tun.tuning_map), scheme
+        tuning_map = service.tuning(mapping, scheme)
+        assert all(math.isfinite(v) for v in tuning_map.tuning_map), scheme
 
 
 def test_every_target_set_preset_resolves_to_intervals_for_the_domain():

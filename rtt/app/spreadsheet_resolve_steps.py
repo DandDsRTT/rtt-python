@@ -104,7 +104,7 @@ def resolve_detempering(inputs, draft):
     return replace(
         draft,
         detempering_vectors=(service.generator_detempering(inputs.state.mapping) if draft.show_generator_detempering else ()),
-        detempering_sizes=(service.interval_sizes(draft.tun, draft.gens, draft.elements) if draft.show_generator_detempering else None))
+        detempering_sizes=(service.interval_sizes(draft.tuning_map, draft.gens, draft.elements) if draft.show_generator_detempering else None))
 
 
 def resolve_canon_mapped(inputs, draft):

@@ -256,20 +256,20 @@ def test_tuning_from_generators_applies_a_manual_generator_tuning():
     # a manually-set generator tuning gives tuning_map = generators · mapping (not the
     # scheme optimum) — what a manual generator-tuning override produces. For
     # 5-limit meantone with a pure octave + pure fifth (1200, 701.955):
-    tun = service.tuning_from_generators([[1, 1, 0], [0, 1, 4]], (1200.0, 701.955))
-    assert tun.generator_map == (1200.0, 701.955)
-    assert abs(tun.tuning_map[0] - 1200.0) < 1e-6        # prime 2 = the octave generator
-    assert abs(tun.tuning_map[1] - 1901.955) < 1e-6      # prime 3 = octave + fifth
-    assert abs(tun.tuning_map[2] - 4 * 701.955) < 1e-6   # prime 5 = 4 fifths
+    tuning_map = service.tuning_from_generators([[1, 1, 0], [0, 1, 4]], (1200.0, 701.955))
+    assert tuning_map.generator_map == (1200.0, 701.955)
+    assert abs(tuning_map.tuning_map[0] - 1200.0) < 1e-6        # prime 2 = the octave generator
+    assert abs(tuning_map.tuning_map[1] - 1901.955) < 1e-6      # prime 3 = octave + fifth
+    assert abs(tuning_map.tuning_map[2] - 4 * 701.955) < 1e-6   # prime 5 = 4 fifths
 
 
 def test_tuning_holds_user_specified_intervals_just():
     # the held intervals column feeds service.tuning: an interval passed as held comes out
     # tuned exactly justly (zero error), the whole tuning reoptimized around the constraint
-    tun = service.tuning([[1, 1, 0], [0, 1, 4]], held=("3/2",))
+    tuning_map = service.tuning([[1, 1, 0], [0, 1, 4]], held=("3/2",))
     fifth = (-1, 1, 0)  # 3/2
-    tempered = sum(tun.tuning_map[p] * fifth[p] for p in range(3))
-    just = sum(tun.just_map[p] * fifth[p] for p in range(3))
+    tempered = sum(tuning_map.tuning_map[p] * fifth[p] for p in range(3))
+    just = sum(tuning_map.just_map[p] * fifth[p] for p in range(3))
     assert abs(tempered - just) < 1e-6
     # without the constraint the default minimax tuning does NOT hold the fifth pure
     free = service.tuning([[1, 1, 0], [0, 1, 4]])
@@ -821,16 +821,16 @@ def test_interval_sizes_weights_scale_damage_into_the_scheme_weighted_form():
     import pytest
 
     state = service.from_mapping([[1, 0, -4], [0, 1, 4]])
-    tun = service.tuning(state.mapping, "TILT minimax-U")  # quarter-comma meantone, pure octave
+    tuning_map = service.tuning(state.mapping, "TILT minimax-U")  # quarter-comma meantone, pure octave
     targets = service.displayed_targets(state, "TILT minimax-C")
     weights = service.interval_weights(state.mapping, "TILT minimax-C", targets)
-    s = service.interval_sizes(tun, targets, weights=weights)
+    s = service.interval_sizes(tuning_map, targets, weights=weights)
     by_ratio = dict(zip(targets, s.damage))
     assert by_ratio["3/2"] == pytest.approx(13.898, abs=1e-2)
     assert by_ratio["4/3"] == pytest.approx(19.275, abs=1e-2)
     assert by_ratio["6/5"] == pytest.approx(26.382, abs=1e-2)
     # unity weight leaves the damage as plain |error| (the default, weights=None)
-    unweighted = service.interval_sizes(tun, targets)
+    unweighted = service.interval_sizes(tuning_map, targets)
     assert unweighted.damage == pytest.approx(tuple(abs(e) for e in s.errors), abs=1e-9)
 
 
@@ -841,10 +841,10 @@ def test_interval_sizes_over_a_nonstandard_domain_express_intervals_in_the_basis
     # the corresponding map entry — only true if the ratio is expressed in the (nonprime)
     # basis, not parsed over standard primes (where 13/5 would lose its 13)
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    tun = service.tuning(state.mapping, domain_basis=state.domain_basis)
-    s = service.interval_sizes(tun, ("2/1", "3/1", "13/5"), domain_basis=state.domain_basis)
-    assert s.tempered == pytest.approx(tun.tuning_map, abs=1e-6)
-    assert s.just == pytest.approx(tun.just_map, abs=1e-6)
+    tuning_map = service.tuning(state.mapping, domain_basis=state.domain_basis)
+    s = service.interval_sizes(tuning_map, ("2/1", "3/1", "13/5"), domain_basis=state.domain_basis)
+    assert s.tempered == pytest.approx(tuning_map.tuning_map, abs=1e-6)
+    assert s.just == pytest.approx(tuning_map.just_map, abs=1e-6)
 
 
 def test_interval_sizes_of_the_empty_set_are_empty():
@@ -1336,7 +1336,7 @@ def test_plain_text_custom_prescaler_matches_the_grid():
     gb = _grid_with_plain_text(state, "TILT minimax-S", custom_prescaler=(1.0, 2.0, 3.0))
     pt = gb.geometry.plain_text_strings
     # each retuned ptext tile equals the grid's own quantity (the same formatter the grid value uses)
-    assert pt[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tun.tuning_map)
+    assert pt[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tuning_map.tuning_map)
     assert pt[("complexity", "targets")] == text_format._cents_list(gb.resolved.complexities["targets"])
     assert pt[("weight", "targets")] == text_format._cents_list(gb.resolved.tuning.target_weights)
     # the bare prescaler reads the typed diagonal (1, 2, 3), not the scheme's log-prime weights
@@ -1357,7 +1357,7 @@ def test_plain_text_custom_prescaler_renders_an_off_diagonal_matrix_like_the_gri
     assert pt[("prescaling", "primes")] == "[⟨1 0.500 0] ⟨0 1.585 0] ⟨0 0 2.322]⟩"
     # the products and complexity still match the grid under the matrix override (no element-wise crash)
     gb = _grid_with_plain_text(state, "TILT minimax-S", custom_prescaler=matrix)
-    assert gb.geometry.plain_text_strings[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tun.tuning_map)
+    assert gb.geometry.plain_text_strings[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tuning_map.tuning_map)
     assert gb.geometry.plain_text_strings[("complexity", "targets")] == text_format._cents_list(gb.resolved.complexities["targets"])
 
 
@@ -1386,8 +1386,8 @@ def test_plain_text_threads_the_nonprime_approach_into_its_tuning():
     nonprime = service.plain_text_values(state, "TILT minimax-S", "TILT", nonprime_approach="nonprime-based")
     assert nonprime[("tuning", "primes")] != neutral[("tuning", "primes")]
     # and it matches service.tuning called with that same approach (the grid's own input)
-    tun = service.tuning(state.mapping, "TILT minimax-S", state.domain_basis, "nonprime-based")
-    assert nonprime[("tuning", "primes")] == text_format._cents_map(tun.tuning_map)
+    tuning_map = service.tuning(state.mapping, "TILT minimax-S", state.domain_basis, "nonprime-based")
+    assert nonprime[("tuning", "primes")] == text_format._cents_map(tuning_map.tuning_map)
 
 
 def test_plain_text_mapping_is_the_ebk_string():
@@ -1436,19 +1436,19 @@ def test_plain_text_tuning_rows_use_map_and_list_brackets_at_grid_precision():
     state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     pt = service.plain_text_values(state, "TILT minimax-S")
     targets = service.target_interval_set("TILT", service.standard_primes(state.d))
-    tun = service.tuning(state.mapping, "TILT minimax-S")
+    tuning_map = service.tuning(state.mapping, "TILT minimax-S")
     # minimax-S is simplicity-weighted, so the damage row is 𝐝 = |𝐞|·W, not plain |error| —
     # the comparison sizes must carry the same weights or the two views diverge
     weights = service.interval_weights(state.mapping, "TILT minimax-S", targets)
-    sizes = service.interval_sizes(tun, targets, weights=weights)
+    sizes = service.interval_sizes(tuning_map, targets, weights=weights)
 
     def cents(values):  # the same 3-dp the grid shows, so the two views agree
         return " ".join(f"{v:.3f}" for v in values)
 
     # tuning / just / retuning maps over the primes are covectors: ⟨ … ]
-    assert pt[("tuning", "primes")] == f"⟨{cents(tun.tuning_map)}]"
-    assert pt[("just", "primes")] == f"⟨{cents(tun.just_map)}]"
-    assert pt[("retune", "primes")] == f"⟨{cents(tun.retuning_map)}]"
+    assert pt[("tuning", "primes")] == f"⟨{cents(tuning_map.tuning_map)}]"
+    assert pt[("just", "primes")] == f"⟨{cents(tuning_map.just_map)}]"
+    assert pt[("retune", "primes")] == f"⟨{cents(tuning_map.retuning_map)}]"
     # the size / error / damage lists over the targets are plain lists: [ … ]
     assert pt[("tuning", "targets")] == f"[{cents(sizes.tempered)}]"
     assert pt[("just", "targets")] == f"[{cents(sizes.just)}]"
@@ -1462,8 +1462,8 @@ def test_plain_text_generator_tuning_map_uses_curly_open_square_close():
     # distinct from the prime maps' ⟨ … ] — at the same 3-dp the grid shows
     state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     pt = service.plain_text_values(state)
-    tun = service.tuning(state.mapping)
-    cents = " ".join(f"{v:.3f}" for v in tun.generator_map)
+    tuning_map = service.tuning(state.mapping)
+    cents = " ".join(f"{v:.3f}" for v in tuning_map.generator_map)
     assert pt[("tuning", "gens")] == "{" + cents + "]"
 
 
@@ -1494,8 +1494,8 @@ def test_plain_text_held_column_mirrors_the_grid():
     held = [(-1, 1, 0)]  # the fifth 3/2, held exactly just
     pt = service.plain_text_values(state, held=held)
     held_ratios = service.comma_ratios(held)
-    tun = service.tuning(state.mapping, held=held_ratios)
-    sizes = service.interval_sizes(tun, held_ratios)
+    tuning_map = service.tuning(state.mapping, held=held_ratios)
+    sizes = service.interval_sizes(tuning_map, held_ratios)
 
     def cents(values):
         return " ".join(f"{v:.3f}" for v in values)
@@ -1528,8 +1528,8 @@ def test_plain_text_interest_column_is_standalone_kets_not_a_matrix():
     interest = [(-1, 1, 0), (-3, 2, 0), (1, -2, 1), (3, 0, -1)]  # 3/2, 9/8, 10/9, 8/5
     pt = service.plain_text_values(state, interest=interest)
     interest_ratios = service.comma_ratios(interest)
-    tun = service.tuning(state.mapping)
-    sizes = service.interval_sizes(tun, interest_ratios)
+    tuning_map = service.tuning(state.mapping)
+    sizes = service.interval_sizes(tuning_map, interest_ratios)
 
     def cents(values):
         return " ".join(f"{v:.3f}" for v in values)
@@ -1598,8 +1598,8 @@ def test_plain_text_over_a_nonstandard_domain_uses_the_basis():
     pt = service.plain_text_values(state)
     assert pt[("quantities", "primes")] == "2.3.13/5"
     assert pt[("vectors", "commas")] == "[[2 -3 2⟩]"  # the comma vector, basis-relative
-    tun = service.tuning(state.mapping, domain_basis=state.domain_basis)
-    cents = " ".join(f"{v:.3f}" for v in tun.tuning_map)
+    tuning_map = service.tuning(state.mapping, domain_basis=state.domain_basis)
+    cents = " ".join(f"{v:.3f}" for v in tuning_map.tuning_map)
     assert pt[("tuning", "primes")] == f"⟨{cents}]"
 
 
@@ -1862,14 +1862,14 @@ def test_superspace_tuning_runs_over_the_superspace_primes():
     # the superspace is the size of each prime; the tuning has rL=3 generators and dL=4
     # prime sizes. retuning_map = tempered - just (component-wise).
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    tun = service.superspace_tuning(state, "minimax-S")
-    assert len(tun.generator_map) == 3  # rL
-    assert len(tun.tuning_map) == 4 and len(tun.just_map) == 4  # dL
-    assert tun.just_map == pytest.approx(
+    tuning_map = service.superspace_tuning(state, "minimax-S")
+    assert len(tuning_map.generator_map) == 3  # rL
+    assert len(tuning_map.tuning_map) == 4 and len(tuning_map.just_map) == 4  # dL
+    assert tuning_map.just_map == pytest.approx(
         (1200.0, 1200.0 * math.log2(3), 1200.0 * math.log2(5), 1200.0 * math.log2(13)), abs=1e-6
     )
-    assert tun.retuning_map == pytest.approx(
-        tuple(t - j for t, j in zip(tun.tuning_map, tun.just_map)), abs=1e-9
+    assert tuning_map.retuning_map == pytest.approx(
+        tuple(t - j for t, j in zip(tuning_map.tuning_map, tuning_map.just_map)), abs=1e-9
     )
 
 
@@ -2063,8 +2063,8 @@ def test_add_domain_element_holds_the_new_element_just():
     assert added.d == state.d + 1 and added.r == state.r + 1 and added.n == state.n  # +d, +r, n held
     assert added.mapping == ((1, 1, 0, 0), (0, 1, 4, 0), (0, 0, 0, 1))  # existing cols intact, unit row
     # the new element's own generator tunes it pure (zero error on 7)
-    tun = service.tuning(added.mapping, service.DEFAULT_TUNING_SCHEME, added.domain_basis)
-    assert tun.tuning_map[3] == pytest.approx(1200 * math.log2(7), abs=1e-6)
+    tuning_map = service.tuning(added.mapping, service.DEFAULT_TUNING_SCHEME, added.domain_basis)
+    assert tuning_map.tuning_map[3] == pytest.approx(1200 * math.log2(7), abs=1e-6)
 
 
 def test_add_domain_element_accepts_a_nonprime():
@@ -2459,8 +2459,8 @@ def test_over_complex_generators_round_trip_back_to_a_finite_size():
     # round-trip these ratio strings stay finite instead of crashing the same way. The whole grid
     # build (the original crash site, service.generators inside spreadsheet.build) succeeds.
     state = service.from_mapping(((3, 4, -8), (-1, 7, 6), (3, 0, 6)))
-    tun = service.tuning(state.mapping, "TILT minimax-U")
-    sizes = service.interval_sizes(tun, service.generators(state.mapping))  # would have raised at parse
+    tuning_map = service.tuning(state.mapping, "TILT minimax-U")
+    sizes = service.interval_sizes(tuning_map, service.generators(state.mapping))  # would have raised at parse
     assert all(math.isfinite(s) for s in sizes.tempered)
     pt = service.plain_text_values(state, "TILT minimax-U", "TILT")  # the ptext detempering round-trip
     assert pt[("tuning", "detempering")]  # built without raising
@@ -2587,8 +2587,8 @@ def test_scheme_json_round_trips_through_the_inf_optimization_power_sentinel():
 def test_unchanged_interval_data_dashes_the_directions_an_under_held_tuning_leaves_free():
     from rtt.app.service.projection import unchanged_interval_data
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone, r = 2
-    tun = service.tuning(state.mapping, "minimax-S", state.domain_basis)
-    data = unchanged_interval_data(state, ("2/1",), tun, "minimax-S", state.domain_basis)
+    tuning_map = service.tuning(state.mapping, "minimax-S", state.domain_basis)
+    data = unchanged_interval_data(state, ("2/1",), tuning_map, "minimax-S", state.domain_basis)
     assert data.basis == ((1, 0, 0), None)            # one held direction known, one left dashed
     assert data.ratios == ("2/1", None)
     assert data.mapped == ((1, None), (0, None))       # M·U scattered back, dashed column None

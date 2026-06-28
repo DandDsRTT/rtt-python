@@ -190,7 +190,7 @@ class UnchangedData:
 def unchanged_interval_data(
     state: TemperamentState,
     held_ratios,
-    tun: Tuning,
+    tuning_map: Tuning,
     scheme,
     domain_basis=None,
     prescaler_override=None,
@@ -211,7 +211,7 @@ def unchanged_interval_data(
     ratios = comma_ratios(known, domain_basis) if known else ()
     mapped = mapped_commas(state.mapping, known) if known else ()
     mapped_rows = tuple(scatter(mapped[i] if known else ()) for i in range(len(state.mapping)))
-    sizes = interval_sizes(tun, ratios, domain_basis)
+    sizes = interval_sizes(tuning_map, ratios, domain_basis)
     sized = IntervalSizes(
         scatter(sizes.tempered), scatter(sizes.just), scatter(sizes.errors), scatter(sizes.damage)
     )

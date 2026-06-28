@@ -6898,10 +6898,10 @@ def test_generator_tuning_map_tile_shows_the_generator_map_cents_in_the_default_
     # the generator tuning map (the tuning row over the generators) is a default-view
     # tile, like the tuning map over the primes — present without any toggle
     st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    tun = service.tuning(st.mapping, service.DEFAULT_DOCUMENT_SCHEME)  # the default view's scheme
+    tuning_map = service.tuning(st.mapping, service.DEFAULT_DOCUMENT_SCHEME)  # the default view's scheme
     cells = {c.id: c for c in _layout().cells}  # default settings (charts off)
-    assert cells["tuning:gen:0"].text == service.cents(tun.generator_map[0])
-    assert cells["tuning:gen:1"].text == service.cents(tun.generator_map[1])
+    assert cells["tuning:gen:0"].text == service.cents(tuning_map.generator_map[0])
+    assert cells["tuning:gen:1"].text == service.cents(tuning_map.generator_map[1])
     # one cents cell per generator, in the generators column, one COL_W apart
     assert cells["header:gens"].x <= cells["tuning:gen:0"].x < cells["header:primes"].x
     assert cells["tuning:gen:1"].x == cells["tuning:gen:0"].x + spreadsheet_constants.COL_W
@@ -6957,10 +6957,10 @@ def test_the_ranges_chart_answers_to_tuning_ranges_not_charts():
 
 def test_generator_tuning_range_chart_carries_the_monotone_ranges_by_default():
     st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    tun = service.tuning(st.mapping)  # ranges are interval-set-independent (the OLD diamond)
+    tuning_map = service.tuning(st.mapping)  # ranges are interval-set-independent (the OLD diamond)
     ch = {c.id: c for c in _with(tuning_ranges=True).cells}["rangechart:tuning:gens"]
     # default mode is monotone: one (low, high) cents pair per generator
-    assert ch.ranges == tun.monotone_generator_range
+    assert ch.ranges == tuning_map.monotone_generator_range
     assert len(ch.ranges) == 2  # rank 2: period + one free generator
     assert ch.ranges[0][0] == ch.ranges[0][1]  # the period pins to a point (octave held pure)
     assert ch.ranges[1][0] < ch.ranges[1][1]  # the fifth has a genuine [min, max] range
@@ -6968,12 +6968,12 @@ def test_generator_tuning_range_chart_carries_the_monotone_ranges_by_default():
 
 def test_range_mode_tradeoff_switches_the_chart_to_the_tradeoff_range():
     st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    tun = service.tuning(st.mapping)  # ranges are interval-set-independent (the OLD diamond)
+    tuning_map = service.tuning(st.mapping)  # ranges are interval-set-independent (the OLD diamond)
     s = settings.defaults()
     s["tuning_ranges"] = True
     ch = {c.id: c for c in spreadsheet.build(st, s, range_mode="tradeoff").cells}["rangechart:tuning:gens"]
-    assert ch.ranges == tun.tradeoff_generator_range
-    assert ch.ranges != tun.monotone_generator_range  # the two modes give different ranges
+    assert ch.ranges == tuning_map.tradeoff_generator_range
+    assert ch.ranges != tuning_map.monotone_generator_range  # the two modes give different ranges
 
 
 def test_range_chart_draws_a_placeholder_when_no_monotone_range_exists():
@@ -9078,13 +9078,13 @@ def test_M_jL_tile_has_a_plain_text_string():
 
 def test_cyan_superspace_tuning_tiles_have_plain_text_strings():
     cells = {c.id: c for c in _barbados_ss(plain_text_values=True).cells}
-    tun = _barbados_superspace_tuning()
+    tuning_map = _barbados_superspace_tuning()
     # 𝒈ₗ — genmap shape "{ … ]"
-    expected_g = "{" + " ".join(service.cents(v) for v in tun.generator_map) + "]"
+    expected_g = "{" + " ".join(service.cents(v) for v in tuning_map.generator_map) + "]"
     assert cells["ptext:tuning:ssgens"].text == expected_g
     # 𝒕ₗ / 𝒋ₗ / 𝒓ₗ — map shape "⟨ … ]"
-    for row_key, values in (("tuning", tun.tuning_map), ("just", tun.just_map),
-                            ("retune", tun.retuning_map)):
+    for row_key, values in (("tuning", tuning_map.tuning_map), ("just", tuning_map.just_map),
+                            ("retune", tuning_map.retuning_map)):
         expected = "⟨" + " ".join(service.cents(v) for v in values) + "]"
         assert cells[f"ptext:{row_key}:ssprimes"].text == expected
 
@@ -10343,7 +10343,7 @@ def test_plain_text_band_matches_a_direct_derivation_under_a_custom_prescaler():
 
 
 def test_plain_text_band_matches_a_direct_derivation_under_a_manual_generator_tuning():
-    # a frozen manual tuning takes the bundle's tun straight from the grid's
+    # a frozen manual tuning takes the bundle's tuning_map straight from the grid's
     # tuning_from_generators result — same strings as a direct self-deriving call
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     lay = spreadsheet.build(state, {**settings.defaults(), "plain_text_values": True},

@@ -403,7 +403,7 @@ def _resolve_plain_text_strings(geometry, resolved, context) -> Geometry:
                                                decimals=resolved.flags.decimals,
                                                custom_prescaler=context.custom_prescaler,
                                                derived=service.DerivedQuantities(
-                                                   targets=resolved.targets.ratios, tun=resolved.tuning.tun,
+                                                   targets=resolved.targets.ratios, tuning_map=resolved.tuning.tuning_map,
                                                    target_weights=resolved.tuning.target_weights,
                                                    target_sizes=resolved.targets.sizes,
                                                    comma_sizes=resolved.commas.sizes,

@@ -122,9 +122,9 @@ def _emit_tuning_rows(cells, chart_tiles, resolved, geometry, context) -> None:
 
 def _emit_tuning_prime_rows(cells, chart_tiles, resolved, geometry, context) -> None:
     tuning_data = {
-        "tuning": (resolved.tuning.tun.tuning_map, resolved.tuning.comma_sizes.tempered + resolved.unchanged.sizes.tempered, resolved.tuning.target_sizes.tempered, resolved.tuning.interest_sizes.tempered, resolved.tuning.held_sizes.tempered),
-        "just": (resolved.tuning.tun.just_map, resolved.tuning.comma_sizes.just + resolved.unchanged.sizes.just, resolved.tuning.target_sizes.just, resolved.tuning.interest_sizes.just, resolved.tuning.held_sizes.just),
-        "retune": (resolved.tuning.tun.retuning_map, resolved.tuning.comma_sizes.errors + resolved.unchanged.sizes.errors, resolved.tuning.target_sizes.errors, resolved.tuning.interest_sizes.errors, resolved.tuning.held_sizes.errors),
+        "tuning": (resolved.tuning.tuning_map.tuning_map, resolved.tuning.comma_sizes.tempered + resolved.unchanged.sizes.tempered, resolved.tuning.target_sizes.tempered, resolved.tuning.interest_sizes.tempered, resolved.tuning.held_sizes.tempered),
+        "just": (resolved.tuning.tuning_map.just_map, resolved.tuning.comma_sizes.just + resolved.unchanged.sizes.just, resolved.tuning.target_sizes.just, resolved.tuning.interest_sizes.just, resolved.tuning.held_sizes.just),
+        "retune": (resolved.tuning.tuning_map.retuning_map, resolved.tuning.comma_sizes.errors + resolved.unchanged.sizes.errors, resolved.tuning.target_sizes.errors, resolved.tuning.interest_sizes.errors, resolved.tuning.held_sizes.errors),
     }
     for key, (prime_vals, comma_vals, target_vals, interest_vals, held_vals) in tuning_data.items():
         if query.row_open(geometry, context.collapsed, key):
@@ -139,7 +139,7 @@ def _emit_tuning_gen_row(cells, resolved, geometry, context) -> None:
     if not (query.row_open(geometry, context.collapsed, "tuning") and query.tile_open(geometry, context.collapsed, "tuning", "gens")):
         return
     gen_kind = "tuningvalue" if resolved.flags.superspace_generators else "gentuningcell"
-    for i, v in enumerate(resolved.tuning.tun.generator_map):
+    for i, v in enumerate(resolved.tuning.tuning_map.generator_map):
         operand = None
         if resolved.flags.math_expressions and not resolved.flags.superspace_generators:
             closed_form = _closed_form(resolved, context)
@@ -156,7 +156,7 @@ def _emit_tuning_gen_row(cells, resolved, geometry, context) -> None:
 def _emit_tuning_canongen_row(cells, resolved, geometry, context) -> None:
     if not (query.row_open(geometry, context.collapsed, "tuning") and query.tile_open(geometry, context.collapsed, "tuning", "canongens")):
         return
-    gm = resolved.tuning.tun.generator_map
+    gm = resolved.tuning.tuning_map.generator_map
     for j in range(resolved.dims.rc):
         v = sum(gm[k] * resolved.canon.inverse_form_M[k][j] for k in range(resolved.dims.r))
         operand = None
@@ -314,7 +314,7 @@ def _emit_charts(cells, chart_tiles, chart_indicators, geometry, context) -> Non
 def _emit_tuning_ranges_box(cells, resolved, geometry, context):
     gtm_box = None
     if geometry.gtm_chart:
-        chosen = resolved.tuning.tun.monotone_generator_range if context.range_mode == "monotone" else resolved.tuning.tun.tradeoff_generator_range
+        chosen = resolved.tuning.tuning_map.monotone_generator_range if context.range_mode == "monotone" else resolved.tuning.tuning_map.tradeoff_generator_range
         gx, gw = geometry.col_x["gens"], geometry.col_w["gens"]
         cy = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_h - geometry.gtm_extra + RANGE_GAP
         cells.append(CellBox("rangetitle:tuning:gens", gx, cy + BOX_INNER, gw, BOX_TITLE_H, "boxtitle",
@@ -322,7 +322,7 @@ def _emit_tuning_ranges_box(cells, resolved, geometry, context):
         chart_y = cy + BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP
         cells.append(CellBox("rangechart:tuning:gens", gx, chart_y, gw, RANGE_CHART_H, "rangechart",
                              ranges=tuple(chosen) if chosen is not None else (),
-                             values=tuple(resolved.tuning.tun.generator_map),
+                             values=tuple(resolved.tuning.tuning_map.generator_map),
                              decimals=resolved.flags.decimals))
         cells.append(CellBox("rangemode:tuning:gens", gx, chart_y + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
                              "rangemode", text=context.range_mode))

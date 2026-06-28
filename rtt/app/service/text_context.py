@@ -40,7 +40,7 @@ from rtt.app.service.text_format import (
 @dataclass(frozen=True)
 class DerivedQuantities:
     targets: tuple
-    tun: Tuning
+    tuning_map: Tuning
     target_weights: tuple
     target_sizes: IntervalSizes
     comma_sizes: IntervalSizes
@@ -77,7 +77,7 @@ class _Core:
     mapped_comma: tuple
     target_vectors: tuple
     held_ratios: tuple
-    tun: Tuning
+    tuning_map: Tuning
     target_weights: tuple
     target_sizes: IntervalSizes
     comma_sizes: IntervalSizes
@@ -244,7 +244,7 @@ def _apply_size(prescale: _Prescale, cols):
 
 def _derive_tuning(inp: _Inputs, held_ratios):
     if inp.derived is not None:
-        return inp.derived.tun
+        return inp.derived.tuning_map
     state = inp.state
     if inp.generator_tuning is not None and len(inp.generator_tuning) == len(state.mapping):
         return tuning_from_generators(state.mapping, inp.generator_tuning, inp.db)
@@ -263,7 +263,7 @@ def _derive_core(inp: _Inputs, targets, held_ratios) -> _Core:
     state, db = inp.state, inp.db
     comma_basis = state.comma_basis if state.n else ()
     commas = comma_ratios(comma_basis, db)
-    tun = _derive_tuning(inp, held_ratios)
+    tuning_map = _derive_tuning(inp, held_ratios)
     weights = (
         inp.derived.target_weights
         if inp.derived
@@ -278,9 +278,9 @@ def _derive_core(inp: _Inputs, targets, held_ratios) -> _Core:
     target_sizes = (
         inp.derived.target_sizes
         if inp.derived
-        else interval_sizes(tun, targets, db, weights=weights)
+        else interval_sizes(tuning_map, targets, db, weights=weights)
     )
-    comma_sizes = inp.derived.comma_sizes if inp.derived else interval_sizes(tun, commas, db)
+    comma_sizes = inp.derived.comma_sizes if inp.derived else interval_sizes(tuning_map, commas, db)
     detemper_ratios = generators(state.mapping, db)
     return _Core(
         targets,
@@ -290,12 +290,12 @@ def _derive_core(inp: _Inputs, targets, held_ratios) -> _Core:
         mapped_commas(state.mapping, comma_basis),
         target_interval_vectors(targets, state.d, db),
         held_ratios,
-        tun,
+        tuning_map,
         weights,
         target_sizes,
         comma_sizes,
         detemper_ratios,
-        interval_sizes(tun, detemper_ratios, db),
+        interval_sizes(tuning_map, detemper_ratios, db),
         generator_detempering(state.mapping),
         tuple(element_ratio(e) for e in db),
     )
@@ -330,7 +330,7 @@ def _derive_unchanged(inp: _Inputs, core: _Core, prescale: _Prescale) -> _Unchan
     state, db = inp.state, inp.db
     udata = (
         unchanged_interval_data(
-            state, inp.held_basis_ratios, core.tun, inp.scheme, db, inp.custom_prescaler
+            state, inp.held_basis_ratios, core.tuning_map, inp.scheme, db, inp.custom_prescaler
         )
         if inp.consolidate_v
         else None

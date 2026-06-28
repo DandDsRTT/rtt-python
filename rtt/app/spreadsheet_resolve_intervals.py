@@ -83,10 +83,10 @@ def resolve_held(inputs, draft):
 
 def resolve_tuning(inputs, draft):
     if inputs.generator_tuning is not None and len(inputs.generator_tuning) == len(inputs.state.mapping):
-        tun = service.tuning_from_generators(inputs.state.mapping, inputs.generator_tuning, draft.elements)
+        tuning_map = service.tuning_from_generators(inputs.state.mapping, inputs.generator_tuning, draft.elements)
         from_generators = True
     else:
-        tun = service.tuning(inputs.state.mapping, inputs.tuning_scheme, draft.elements, inputs.nonprime_approach, held=draft.held_ratios,
+        tuning_map = service.tuning(inputs.state.mapping, inputs.tuning_scheme, draft.elements, inputs.nonprime_approach, held=draft.held_ratios,
                              prescaler_override=inputs.custom_prescaler, targets=inputs.target_override,
                              weights_override=inputs.custom_weights)
         from_generators = False
@@ -94,11 +94,11 @@ def resolve_tuning(inputs, draft):
                                               prescaler_override=inputs.custom_prescaler,
                                               domain_basis=draft.elements, weights_override=inputs.custom_weights)
     return replace(
-        draft, tun=tun, _tun_from_generators=from_generators, _optimum_target_override=inputs.target_override,
+        draft, tuning_map=tuning_map, _tuning_map_from_generators=from_generators, _optimum_target_override=inputs.target_override,
         target_weights=target_weights,
-        target_sizes=service.interval_sizes(tun, draft.targets, draft.elements, weights=target_weights),
+        target_sizes=service.interval_sizes(tuning_map, draft.targets, draft.elements, weights=target_weights),
         held_mapped=service.mapped_intervals(inputs.state.mapping, draft.held_ratios, draft.elements),
-        held_sizes=service.interval_sizes(tun, draft.held_ratios, draft.elements))
+        held_sizes=service.interval_sizes(tuning_map, draft.held_ratios, draft.elements))
 
 
 def resolve_commas(inputs, draft):
@@ -106,11 +106,11 @@ def resolve_commas(inputs, draft):
     return replace(
         draft, comma_ratios=comma_ratios, nc=len(comma_ratios),
         mapped_commas=service.mapped_commas(inputs.state.mapping, inputs.state.comma_basis),
-        comma_sizes=service.interval_sizes(draft.tun, comma_ratios, draft.elements))
+        comma_sizes=service.interval_sizes(draft.tuning_map, comma_ratios, draft.elements))
 
 
 def resolve_unchanged(inputs, draft):
-    _udata = (service.unchanged_interval_data(inputs.state, inputs.held_basis_ratios, draft.tun,
+    _udata = (service.unchanged_interval_data(inputs.state, inputs.held_basis_ratios, draft.tuning_map,
                                               inputs.tuning_scheme, draft.elements, inputs.custom_prescaler)
               if (draft.show_temperament_tiles and draft.show_tuning_tiles and inputs.settings["projection"]) else None)
     unchanged = _initial_unchanged(_udata)
@@ -135,10 +135,10 @@ def resolve_unchanged(inputs, draft):
 
 
 def augment_born_unchanged(inputs, draft, unchanged, nu):
-    tun_new = service.tuning(draft.ghost_new.mapping, inputs.tuning_scheme, draft.elements,
+    new_tuning_map = service.tuning(draft.ghost_new.mapping, inputs.tuning_scheme, draft.elements,
                              inputs.nonprime_approach, held=inputs.held_basis_ratios,
                              prescaler_override=inputs.custom_prescaler)
-    ud_new = service.unchanged_interval_data(draft.ghost_new, inputs.held_basis_ratios, tun_new,
+    ud_new = service.unchanged_interval_data(draft.ghost_new, inputs.held_basis_ratios, new_tuning_map,
                                              inputs.tuning_scheme, draft.elements, inputs.custom_prescaler)
     if ud_new is None or len(ud_new.basis) <= nu:
         return unchanged, nu, False
@@ -167,7 +167,7 @@ def resolve_interest(inputs, draft):
         mi_shown=mi + (1 if pending_interest is not None else 0), element_draft=element_draft,
         d_shown=draft.d + (1 if element_draft else 0), interest_ratios=interest_ratios,
         interest_mapped=service.mapped_intervals(inputs.state.mapping, interest_ratios, draft.elements),
-        interest_sizes=service.interval_sizes(draft.tun, interest_ratios, draft.elements))
+        interest_sizes=service.interval_sizes(draft.tuning_map, interest_ratios, draft.elements))
 
 
 def resolve_ghost_mapped(inputs, draft):
@@ -186,7 +186,7 @@ def resolve_ghost_mapped(inputs, draft):
         col = service.mapped_intervals(inputs.state.mapping, (draft.ghost_comma_ratio,), draft.elements)
         return replace(
             draft, ghost_comma_mapped=tuple(row[0] for row in col),
-            ghost_comma_just=service.interval_sizes(draft.tun, (draft.ghost_comma_ratio,), draft.elements).just[0],
+            ghost_comma_just=service.interval_sizes(draft.tuning_map, (draft.ghost_comma_ratio,), draft.elements).just[0],
             ghost_comma_complexity=service.interval_complexities(
                 inputs.state.mapping, inputs.tuning_scheme, (draft.ghost_comma_ratio,),
                 prescaler_override=inputs.custom_prescaler, domain_basis=draft.elements)[0])
