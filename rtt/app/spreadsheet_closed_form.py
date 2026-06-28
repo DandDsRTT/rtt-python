@@ -11,8 +11,8 @@ def closed_form_operand(resolved, geometry, context, key, group, i, value=None):
         ratio = geometry.group_ratio[group][i]
         return _log_operand(ratio) if ratio is not None else None
     if group == "commas" and key == "retune" and i < resolved.dims.nc:
-        recip = 1 / Fraction(resolved.commas.ratios[i])
-        return _log_operand(f"{recip.numerator}/{recip.denominator}")
+        reciprocal = 1 / Fraction(resolved.commas.ratios[i])
+        return _log_operand(f"{reciprocal.numerator}/{reciprocal.denominator}")
     if key in ("tuning", "retune") and value is not None:
         if group in ("ssprimes", "ssgens"):
             return _ss_closed_form_operand(resolved, context, key, group, i, value)
