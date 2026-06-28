@@ -157,7 +157,7 @@ def test_mapping_band_overlay_computes_the_row_products(browser):
 
 def test_projection_band_reads_a_stacked_fraction_uncorrupted(browser):
     with _page(browser, f"?state={_token(mapping_demos=True, projection=True)}") as (page, errors):
-        page.hover('[data-eid="cell:proj_pt:3:0"]')
+        page.hover('[data-eid="cell:projection_targets:3:0"]')
         page.wait_for_timeout(150)
         chips = _overlay_texts(page)
         assert chips, "the overlay did not draw on hovering the projected 4/3"

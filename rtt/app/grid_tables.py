@@ -661,7 +661,7 @@ TILES = (
     ("block:selfmap", "mapping", "gens"),
     ("block:projection", "projection", "primes"),
     ("block:projection_embedding", "projection", "gens"),
-    ("block:proj_v", "projection", "commas"),
+    ("block:projection_vectors", "projection", "commas"),
     ("block:scaling_factors", "scaling_factors", "commas"),
     ("block:mapped_comma", "mapping", "commas"),
     ("block:mapped", "mapping", "targets"),

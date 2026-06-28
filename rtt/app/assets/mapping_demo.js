@@ -40,9 +40,9 @@
   const BANDS = [
     { name: 'mapping', matrix: 'cell:mapping:', result: /^cell:(mapped|hmapped|imapped|mapped_comma|mapped_unchanged|mapped_detempering):/, vec: STD_VEC },
     { name: 'canonical', matrix: 'cell:canon:', result: /^cell:canon_/, vec: STD_VEC },
-    { name: 'projection', matrix: 'cell:proj:', result: /^cell:proj_/, vec: STD_VEC },
+    { name: 'projection', matrix: 'cell:projection:', result: /^cell:projection_/, vec: STD_VEC },
     { name: 'ss_mapping', matrix: 'cell:ss_mapping:ssprimes:', result: /^cell:ss_mapping:(targets|held|interest|commas|detempering):/, vec: SS_VEC },
-    { name: 'ss_projection', matrix: 'cell:ss_projection:ssprimes:', result: /^cell:ss_proj_(pt|ph|pi|pd|v):/, vec: SS_VEC },
+    { name: 'ss_projection', matrix: 'cell:ss_projection:ssprimes:', result: /^cell:ss_projection_(targets|held|interest|detempering|vectors):/, vec: SS_VEC },
   ];
   // hovering a bare interval vector flows it through its space's mapping (the forward computation).
   const forwardBand = (id) => (SS_VEC.test(id) ? BANDS[3] : BANDS[0]);

@@ -29,7 +29,7 @@ def emit_brackets(resolved, geometry, context) -> EmitResult:
     _emit_projection_brackets(cells, resolved, geometry, context)
     _emit_mapping_brackets(cells, resolved, geometry, context)
     _emit_ss_stacked_brackets(cells, resolved, geometry, context)
-    _emit_ss_proj_fit_brackets(cells, resolved, geometry, context)
+    _emit_ss_projection_fit_brackets(cells, resolved, geometry, context)
     _emit_ss_rest_brackets(cells, resolved, geometry, context)
     _emit_vector_stacked_brackets(cells, resolved, geometry, context)
     _emit_ss_vectors_list_brackets(cells, resolved, geometry, context)
@@ -183,7 +183,7 @@ def _emit_projection_embed_brackets(cells, resolved, geometry, context) -> None:
     py, ph = geometry.rows["projection"].y, resolved.dims.dimensionality * ROW_H
     if query.tile_open(geometry, cl, "projection", "primes"):
         for i in range(resolved.dims.dimensionality):
-            bracket(cells, resolved, geometry, f"proj:{i}", "projection", "primes", query.proj_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"projection:{i}", "projection", "primes", query.projection_top(geometry, i), ROW_H, stacked=True)
     if query.tile_open(geometry, cl, "projection", "gens"):
         bracket(cells, resolved, geometry, "embed", "projection", "gens", py, ph, fit=True)
     if query.tile_open(geometry, cl, "projection", "canongens"):
@@ -197,15 +197,15 @@ def _emit_projection_list_brackets(cells, resolved, geometry, context) -> None:
     py, ph = geometry.rows["projection"].y, resolved.dims.dimensionality * ROW_H
     if query.tile_open(geometry, cl, "projection", "ssprimes"):
         for i in range(resolved.dims.dimensionality):
-            bracket(cells, resolved, geometry, f"proj_sl:{i}", "projection", "ssprimes", query.proj_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"projection_superspace:{i}", "projection", "ssprimes", query.projection_top(geometry, i), ROW_H, stacked=True)
     if resolved.unchanged.shown and query.tile_open(geometry, cl, "projection", "commas"):
-        bracket(cells, resolved, geometry, "proj_v", "projection", "commas", py, ph, fit=True)
+        bracket(cells, resolved, geometry, "projection_vectors", "projection", "commas", py, ph, fit=True)
     if query.tile_open(geometry, cl, "projection", "detempering"):
-        bracket(cells, resolved, geometry, "proj_pd", "projection", "detempering", py, ph, fit=True)
+        bracket(cells, resolved, geometry, "projection_detempering", "projection", "detempering", py, ph, fit=True)
     if query.tile_open(geometry, cl, "projection", "targets"):
-        bracket(cells, resolved, geometry, "proj_pt", "projection", "targets", py, ph, fit=True)
+        bracket(cells, resolved, geometry, "projection_targets", "projection", "targets", py, ph, fit=True)
     if query.tile_open(geometry, cl, "projection", "held"):
-        bracket(cells, resolved, geometry, "proj_ph", "projection", "held", py, ph, fit=True)
+        bracket(cells, resolved, geometry, "projection_held", "projection", "held", py, ph, fit=True)
 
 
 def _emit_mapping_brackets(cells, resolved, geometry, context) -> None:
@@ -233,25 +233,25 @@ def _emit_ss_stacked_brackets(cells, resolved, geometry, context) -> None:
             bracket(cells, resolved, geometry, f"ss_map:{i}", "ss_mapping", "ssprimes", query.ss_map_top(geometry, i), ROW_H, stacked=True)
     if query.row_open(geometry, cl, "ss_projection") and query.tile_open(geometry, cl, "ss_projection", "ssprimes"):
         for i in range(resolved.dims.superspace_dimensionality):
-            bracket(cells, resolved, geometry, f"ss_proj:{i}", "ss_projection", "ssprimes", query.ss_proj_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"ss_projection:{i}", "ss_projection", "ssprimes", query.ss_projection_top(geometry, i), ROW_H, stacked=True)
 
 
-def _emit_ss_proj_fit_brackets(cells, resolved, geometry, context) -> None:
+def _emit_ss_projection_fit_brackets(cells, resolved, geometry, context) -> None:
     cl = context.collapsed
     ssp_top, ssp_h = (geometry.rows["ss_projection"].y if "ss_projection" in geometry.rows else 0), resolved.dims.superspace_dimensionality * ROW_H
     if query.row_open(geometry, cl, "ss_projection"):
         if query.tile_open(geometry, cl, "ss_projection", "ssgens"):
             bracket(cells, resolved, geometry, "ss_embed", "ss_projection", "ssgens", ssp_top, ssp_h, fit=True)
         if query.tile_open(geometry, cl, "ss_projection", "primes"):
-            bracket(cells, resolved, geometry, "ss_proj_bls", "ss_projection", "primes", ssp_top, ssp_h, fit=True)
+            bracket(cells, resolved, geometry, "ss_projection_basis_lift", "ss_projection", "primes", ssp_top, ssp_h, fit=True)
         if query.tile_open(geometry, cl, "ss_projection", "detempering"):
-            bracket(cells, resolved, geometry, "ss_proj_pd", "ss_projection", "detempering", ssp_top, ssp_h, fit=True)
+            bracket(cells, resolved, geometry, "ss_projection_detempering", "ss_projection", "detempering", ssp_top, ssp_h, fit=True)
         if resolved.unchanged.shown and query.tile_open(geometry, cl, "ss_projection", "commas"):
-            bracket(cells, resolved, geometry, "ss_proj_v", "ss_projection", "commas", ssp_top, ssp_h, fit=True)
+            bracket(cells, resolved, geometry, "ss_projection_vectors", "ss_projection", "commas", ssp_top, ssp_h, fit=True)
         if query.tile_open(geometry, cl, "ss_projection", "targets"):
-            bracket(cells, resolved, geometry, "ss_proj_pt", "ss_projection", "targets", ssp_top, ssp_h, fit=True)
+            bracket(cells, resolved, geometry, "ss_projection_targets", "ss_projection", "targets", ssp_top, ssp_h, fit=True)
         if query.tile_open(geometry, cl, "ss_projection", "held"):
-            bracket(cells, resolved, geometry, "ss_proj_ph", "ss_projection", "held", ssp_top, ssp_h, fit=True)
+            bracket(cells, resolved, geometry, "ss_projection_held", "ss_projection", "held", ssp_top, ssp_h, fit=True)
 
 
 def _emit_ss_rest_brackets(cells, resolved, geometry, context) -> None:
@@ -383,15 +383,15 @@ def _emit_list_row_brackets(cells, resolved, geometry, context, key: str) -> Non
 
 def _emit_ebk_frames(cells, resolved, geometry, context) -> None:
     matrix_frame(cells, resolved, geometry, context, "mapping", "primes", "primes")
-    matrix_frame(cells, resolved, geometry, context, "projection", "primes", "proj")
-    matrix_frame(cells, resolved, geometry, context, "projection", "ssprimes", "proj_sl")
+    matrix_frame(cells, resolved, geometry, context, "projection", "primes", "projection")
+    matrix_frame(cells, resolved, geometry, context, "projection", "ssprimes", "projection_superspace")
     matrix_frame(cells, resolved, geometry, context, "canon", "primes", "canon")
     matrix_frame(cells, resolved, geometry, context, "canon", "gens", "form")
     matrix_frame(cells, resolved, geometry, context, "canon", "canongens", "fcancel")
     matrix_frame(cells, resolved, geometry, context, "mapping", "canongens", "finv")
     matrix_frame(cells, resolved, geometry, context, "prescaling", "ssprimes" if resolved.flags.superspace else "primes", "prescaling")
     matrix_frame(cells, resolved, geometry, context, "ss_mapping", "ssprimes", "ss_mapping")
-    matrix_frame(cells, resolved, geometry, context, "ss_projection", "ssprimes", "ss_proj")
+    matrix_frame(cells, resolved, geometry, context, "ss_projection", "ssprimes", "ss_projection")
     matrix_frame(cells, resolved, geometry, context, "ss_vectors", "ssprimes", "ss_vec_jmap")
     matrix_frame(cells, resolved, geometry, context, "ss_mapping", "primes", "ss_msl")
     matrix_frame(cells, resolved, geometry, context, "vectors", "primes", "vec:primes")
@@ -401,21 +401,21 @@ def _emit_ebk_marks(cells, resolved, geometry, context) -> None:
     gl = _left_fns(resolved, geometry)
     vlm = functools.partial(vector_list_marks, cells, resolved, geometry, context)
     vlm("mapping", "mapped_comma", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
-    vlm("projection", "proj_v", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
+    vlm("projection", "projection_vectors", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
     vlm("projection", "embed", "gens", gl["gen"], resolved.dims.rank, separators=False)
     vlm("projection", "embed_c", "canongens", gl["canongen"], resolved.dims.canonical_rank, separators=False)
     vlm("projection", "embed_sl", "ssgens", gl["ss_gen"], resolved.dims.superspace_rank, separators=False)
-    vlm("projection", "proj_pd", "detempering", gl["detempering"], resolved.dims.rank, separators=False)
-    vlm("projection", "proj_pt", "targets", gl["target"], resolved.dims.target_count)
-    vlm("projection", "proj_ph", "held", gl["held"], resolved.dims.held_count)
-    vlm("projection", "proj_pi", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
+    vlm("projection", "projection_detempering", "detempering", gl["detempering"], resolved.dims.rank, separators=False)
+    vlm("projection", "projection_targets", "targets", gl["target"], resolved.dims.target_count)
+    vlm("projection", "projection_held", "held", gl["held"], resolved.dims.held_count)
+    vlm("projection", "projection_interest", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
     vlm("ss_projection", "ss_embed", "ssgens", gl["ss_gen"], resolved.dims.superspace_rank, separators=False)
-    vlm("ss_projection", "ss_proj_bls", "primes", gl["prime"], resolved.dims.dimensionality, separators=False)
-    vlm("ss_projection", "ss_proj_pd", "detempering", gl["detempering"], resolved.dims.rank, separators=False)
-    vlm("ss_projection", "ss_proj_v", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
-    vlm("ss_projection", "ss_proj_pt", "targets", gl["target"], resolved.dims.target_count)
-    vlm("ss_projection", "ss_proj_ph", "held", gl["held"], resolved.dims.held_count)
-    vlm("ss_projection", "ss_proj_pi", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
+    vlm("ss_projection", "ss_projection_basis_lift", "primes", gl["prime"], resolved.dims.dimensionality, separators=False)
+    vlm("ss_projection", "ss_projection_detempering", "detempering", gl["detempering"], resolved.dims.rank, separators=False)
+    vlm("ss_projection", "ss_projection_vectors", "commas", gl["comma"], resolved.dims.comma_count + resolved.dims.unchanged_count, separators=False)
+    vlm("ss_projection", "ss_projection_targets", "targets", gl["target"], resolved.dims.target_count)
+    vlm("ss_projection", "ss_projection_held", "held", gl["held"], resolved.dims.held_count)
+    vlm("ss_projection", "ss_projection_interest", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
     vlm("mapping", "mapped", "targets", gl["target"], resolved.dims.target_count)
     vlm("mapping", "imapped", "interest", gl["interest"], resolved.dims.interest_count, separators=False)
     vlm("mapping", "hmapped", "held", gl["held"], resolved.dims.held_count)

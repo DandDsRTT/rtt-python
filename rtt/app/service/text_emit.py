@@ -184,7 +184,7 @@ def _interest_values(context: _Ctx) -> dict:
     }
 
 
-def _proj_cols(context: _Ctx, p_rat, vectors):
+def _projection_cols(context: _Ctx, p_rat, vectors):
     cols = project_vectors(p_rat, vectors)
     return list(cols) if cols else [tuple(_DASH for _ in range(context.d)) for _ in vectors]
 
@@ -200,17 +200,18 @@ def _projection_values(context: _Ctx) -> dict:
             canonical_generator_embedding(s, hbr), s.d, context.canon.rc
         ),
         ("projection", "detempering"): context.r(
-            ("projection", "detempering"), _proj_cols(context, p_rat, context.core.detemper_vectors)
+            ("projection", "detempering"),
+            _projection_cols(context, p_rat, context.core.detemper_vectors),
         ),
         ("projection", "targets"): _ket_list(
-            _proj_cols(context, p_rat, context.core.target_vectors), "⟩"
+            _projection_cols(context, p_rat, context.core.target_vectors), "⟩"
         ),
     }
     if context.held:
-        out[("projection", "held")] = _ket_list(_proj_cols(context, p_rat, context.held), "⟩")
+        out[("projection", "held")] = _ket_list(_projection_cols(context, p_rat, context.held), "⟩")
     if context.interest:
         out[("projection", "interest")] = _ket_list(
-            _proj_cols(context, p_rat, context.interest), "⟩", wrap=False
+            _projection_cols(context, p_rat, context.interest), "⟩", wrap=False
         )
     return out
 
@@ -341,13 +342,15 @@ def _ss_projection(context: _Ctx, ssc: _SsCtx) -> dict:
     dL = ssc.dL
     core = context.core
     p_L = superspace_projection_matrix_rationals(s, hbr)
-    proj_bl = project_vectors(p_L, ssc.bl) or [tuple(_DASH for _ in range(dL)) for _ in ssc.bl]
+    projected_basis_lift = project_vectors(p_L, ssc.bl) or [
+        tuple(_DASH for _ in range(dL)) for _ in ssc.bl
+    ]
     out = {
         ("ss_projection", "ssprimes"): projection_ebk(superspace_tuning_projection(s, hbr), dL),
         ("ss_projection", "ssgens"): embedding_ebk(
             superspace_tuning_embedding(s, hbr), dL, superspace_rank(s)
         ),
-        ("ss_projection", "primes"): context.r(("ss_projection", "primes"), proj_bl),
+        ("ss_projection", "primes"): context.r(("ss_projection", "primes"), projected_basis_lift),
         ("ss_projection", "detempering"): context.r(
             ("ss_projection", "detempering"), _ssp_cols(context, p_L, dL, core.detemper_vectors)
         ),

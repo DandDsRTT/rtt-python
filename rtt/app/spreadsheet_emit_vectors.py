@@ -162,7 +162,7 @@ def _emit_ss_quantity_rows(cells, resolved, geometry, context) -> None:
     if query.row_open(geometry, cl, "ss_projection") and query.tile_open(geometry, cl, "ss_projection", "quantities"):
         bx = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
         for p in range(resolved.dims.superspace_dimensionality):
-            cells.append(CellBox(f"ss_proj_basis:{p}", bx, query.ss_proj_top(geometry, p), COL_W, ROW_H, "commaratio",
+            cells.append(CellBox(f"ss_projection_basis:{p}", bx, query.ss_projection_top(geometry, p), COL_W, ROW_H, "commaratio",
                                  text=str(resolved.dims.superspace_primes[p]), prime=p))
 
 
@@ -285,23 +285,23 @@ def _emit_ss_vector_list_map(cells, resolved, geometry, context, row) -> None:
 
 def _emit_ss_projection_rows(cells, resolved, geometry, context) -> None:
     cl = context.collapsed
-    _emit_ss_proj_ssprimes(cells, resolved, geometry, context)
+    _emit_ss_projection_ssprimes(cells, resolved, geometry, context)
     ss_full = resolved.projection.ss_rationals is not None
-    _emit_ss_proj_ssgens(cells, resolved, geometry, context, ss_full)
-    _emit_ss_proj_primes(cells, resolved, geometry, context, ss_full)
+    _emit_ss_projection_ssgens(cells, resolved, geometry, context, ss_full)
+    _emit_ss_projection_primes(cells, resolved, geometry, context, ss_full)
     ssp = {"full": ss_full, "colwise": True, "row": "ss_projection",
-           "top": lambda i: query.ss_proj_top(geometry, i), "height": resolved.dims.superspace_dimensionality}
-    emit_mapped_grid(cells, resolved, geometry, cl, "detempering", "ss_proj_pd", resolved.projection.ss_detempering, resolved.dims.rank, lambda i: query.detempering_left(geometry, i), "gen", **ssp)
-    _emit_ss_proj_commas(cells, resolved, geometry, context)
-    emit_mapped_grid(cells, resolved, geometry, cl, "targets", "ss_proj_pt", resolved.projection.ss_targets, resolved.dims.target_count, lambda i: query.target_left(geometry, i), "comma",
+           "top": lambda i: query.ss_projection_top(geometry, i), "height": resolved.dims.superspace_dimensionality}
+    emit_mapped_grid(cells, resolved, geometry, cl, "detempering", "ss_projection_detempering", resolved.projection.ss_detempering, resolved.dims.rank, lambda i: query.detempering_left(geometry, i), "gen", **ssp)
+    _emit_ss_projection_commas(cells, resolved, geometry, context)
+    emit_mapped_grid(cells, resolved, geometry, cl, "targets", "ss_projection_targets", resolved.projection.ss_targets, resolved.dims.target_count, lambda i: query.target_left(geometry, i), "comma",
                      pending=resolved.targets.pending, **ssp)
-    emit_mapped_grid(cells, resolved, geometry, cl, "held", "ss_proj_ph", resolved.projection.ss_held, resolved.dims.held_count, lambda i: query.held_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, cl, "held", "ss_projection_held", resolved.projection.ss_held, resolved.dims.held_count, lambda i: query.held_left(geometry, i), "comma",
                      pending=resolved.held.pending, **ssp)
-    emit_mapped_grid(cells, resolved, geometry, cl, "interest", "ss_proj_pi", resolved.projection.ss_interest, resolved.dims.interest_count, lambda i: query.interest_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, cl, "interest", "ss_projection_interest", resolved.projection.ss_interest, resolved.dims.interest_count, lambda i: query.interest_left(geometry, i), "comma",
                      pending=resolved.interest.pending, **ssp)
 
 
-def _emit_ss_proj_ssprimes(cells, resolved, geometry, context) -> None:
+def _emit_ss_projection_ssprimes(cells, resolved, geometry, context) -> None:
     if query.row_open(geometry, context.collapsed, "ss_projection") and query.tile_open(geometry, context.collapsed, "ss_projection", "ssprimes"):
         full = resolved.projection.ss_matrix is not None
         for i in range(resolved.dims.superspace_dimensionality):
@@ -309,44 +309,44 @@ def _emit_ss_proj_ssprimes(cells, resolved, geometry, context) -> None:
                 text = DASH if not full else resolved.projection.ss_matrix[i][j]
                 cells.append(CellBox(
                     f"cell:ss_projection:ssprimes:{i}:{j}",
-                    query.ss_prime_left(geometry, j), query.ss_proj_top(geometry, i), COL_W, ROW_H,
+                    query.ss_prime_left(geometry, j), query.ss_projection_top(geometry, i), COL_W, ROW_H,
                     "mapped", text=text, gen=i, prime=j,
                     unit=query.cell_unit(resolved, "ss_projection", "ssprimes", gen=i, prime=j)))
 
 
-def _emit_ss_proj_ssgens(cells, resolved, geometry, context, ss_full) -> None:
+def _emit_ss_projection_ssgens(cells, resolved, geometry, context, ss_full) -> None:
     if query.row_open(geometry, context.collapsed, "ss_projection") and query.tile_open(geometry, context.collapsed, "ss_projection", "ssgens"):
         for i in range(resolved.dims.superspace_dimensionality):
             for g in range(resolved.dims.superspace_rank):
                 text = DASH if not ss_full else resolved.projection.ss_embedding_matrix[i][g]
-                cells.append(CellBox(f"cell:ss_embed:{i}:{g}", query.ss_gen_left(geometry, g), query.ss_proj_top(geometry, i),
+                cells.append(CellBox(f"cell:ss_embed:{i}:{g}", query.ss_gen_left(geometry, g), query.ss_projection_top(geometry, i),
                                      COL_W, ROW_H, "mapped", text=text, gen=g))
 
 
-def _emit_ss_proj_primes(cells, resolved, geometry, context, ss_full) -> None:
+def _emit_ss_projection_primes(cells, resolved, geometry, context, ss_full) -> None:
     if query.row_open(geometry, context.collapsed, "ss_projection") and query.tile_open(geometry, context.collapsed, "ss_projection", "primes"):
         for e in range(resolved.dims.dimensionality):
             for p in range(resolved.dims.superspace_dimensionality):
                 text = DASH if not ss_full else str(resolved.projection.ss_basis[e][p])
-                cells.append(CellBox(f"cell:ss_proj_bls:{e}:{p}", query.prime_left(geometry, e), query.ss_proj_top(geometry, p),
+                cells.append(CellBox(f"cell:ss_projection_basis_lift:{e}:{p}", query.prime_left(geometry, e), query.ss_projection_top(geometry, p),
                                      COL_W, ROW_H, "mapped", text=text, prime=p, comma=e))
 
 
-def _emit_ss_proj_commas(cells, resolved, geometry, context) -> None:
+def _emit_ss_projection_commas(cells, resolved, geometry, context) -> None:
     if not (resolved.unchanged.shown and query.row_open(geometry, context.collapsed, "ss_projection") and query.tile_open(geometry, context.collapsed, "ss_projection", "commas")):
         return
     for c in range(resolved.dims.comma_count):
         for p in range(resolved.dims.superspace_dimensionality):
-            cells.append(CellBox(f"cell:ss_proj_v:{p}:{c}", query.comma_left(geometry, resolved, c), query.ss_proj_top(geometry, p),
+            cells.append(CellBox(f"cell:ss_projection_vectors:{p}:{c}", query.comma_left(geometry, resolved, c), query.ss_projection_top(geometry, p),
                                  COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
     if resolved.commas.pending is not None:
         for p in range(resolved.dims.superspace_dimensionality):
-            cells.append(CellBox(f"cell:ss_proj_v:{p}:draft", query.comma_left(geometry, resolved, resolved.dims.comma_count), query.ss_proj_top(geometry, p),
+            cells.append(CellBox(f"cell:ss_projection_vectors:{p}:draft", query.comma_left(geometry, resolved, resolved.dims.comma_count), query.ss_projection_top(geometry, p),
                                  COL_W, ROW_H, "mapped", text="", prime=p, pending=True))
     for j in range(resolved.dims.unchanged_count):
         dashed = resolved.projection.ss_unchanged[j] is None
         for p in range(resolved.dims.superspace_dimensionality):
-            cells.append(CellBox(f"cell:ss_proj_v:{p}:{resolved.dims.comma_count + j}", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + j), query.ss_proj_top(geometry, p),
+            cells.append(CellBox(f"cell:ss_projection_vectors:{p}:{resolved.dims.comma_count + j}", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + j), query.ss_projection_top(geometry, p),
                                  COL_W, ROW_H, "mapped",
                                  text=DASH if dashed else str(resolved.projection.ss_unchanged[j][p]), prime=p, comma=resolved.dims.comma_count + j))
 

@@ -101,7 +101,7 @@ def test_emit_projection_band_is_a_pure_function():
                                        held_basis_ratios=("2/1", "5/4"))
     result = emit_projection_band(*_inputs(builder))
     ids = {c.id for c in result.cells}
-    assert any(i.startswith("cell:proj:") for i in ids)
+    assert any(i.startswith("cell:projection:") for i in ids)
     full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                             held_basis_ratios=("2/1", "5/4")).cells}
     assert ids <= full
@@ -135,7 +135,7 @@ def test_emit_superspace_rows_is_a_pure_function_over_resolved_geometry_ctx():
 
 def test_projection_basis_uses_the_stacked_ratio_kind_for_a_nonstandard_element():
     result = emit_projection_band(*_inputs(_superspace_builder()))
-    ratio = next(c for c in result.cells if c.id.startswith("proj_basis:") and "/" in c.text)
+    ratio = next(c for c in result.cells if c.id.startswith("projection_basis:") and "/" in c.text)
     assert ratio.kind == "commaratio"
 
 
