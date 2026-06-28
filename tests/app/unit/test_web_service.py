@@ -1315,9 +1315,9 @@ def test_plain_text_tuning_follows_a_target_override():
     assert overridden[("tuning", "gens")] != base[("tuning", "gens")]
 
 
-def _grid_with_ptext(state, scheme, custom_prescaler=None, **extra):
+def _grid_with_plain_text(state, scheme, custom_prescaler=None, **extra):
     """A _GridBuilder with the plain-text band + weighting + alt-complexity on (the layers the
-    prescaler/complexity divergences live under), so ptext_strings and the grid's own quantities
+    prescaler/complexity divergences live under), so plain_text_strings and the grid's own quantities
     can be compared directly inside one builder — the strongest 'the two views agree' check."""
     se = app_settings.defaults()
     se.update({"plain_text_values": True, "weighting": True, "alt_complexity": True})
@@ -1333,8 +1333,8 @@ def test_plain_text_custom_prescaler_matches_the_grid():
     # thread the ptext re-derived from the scheme's log-prime diagonal and diverged from every one of
     # those grid tiles — the bug this guards.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone over 2.3.5
-    gb = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=(1.0, 2.0, 3.0))
-    pt = gb.geometry.ptext_strings
+    gb = _grid_with_plain_text(state, "TILT minimax-S", custom_prescaler=(1.0, 2.0, 3.0))
+    pt = gb.geometry.plain_text_strings
     # each retuned ptext tile equals the grid's own quantity (the same formatter the grid value uses)
     assert pt[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tun.tuning_map)
     assert pt[("complexity", "targets")] == text_format._cents_list(gb.resolved.complexities["targets"])
@@ -1342,7 +1342,7 @@ def test_plain_text_custom_prescaler_matches_the_grid():
     # the bare prescaler reads the typed diagonal (1, 2, 3), not the scheme's log-prime weights
     assert pt[("prescaling", "primes")] == "[⟨1 0 0] ⟨0 2 0] ⟨0 0 3]⟩"
     # and it genuinely deviates from the no-override views (the divergence is gone, not coincidental)
-    plain = _grid_with_ptext(state, "TILT minimax-S").geometry.ptext_strings
+    plain = _grid_with_plain_text(state, "TILT minimax-S").geometry.plain_text_strings
     assert pt[("tuning", "primes")] != plain[("tuning", "primes")]
     assert pt[("prescaling", "primes")] != plain[("prescaling", "primes")]
 
@@ -1353,12 +1353,12 @@ def test_plain_text_custom_prescaler_renders_an_off_diagonal_matrix_like_the_gri
     # 𝑋[i][c]: the 0.5 sits in row 0, col 1. A naïve 𝐿·eₚ reuse would have shown its transpose.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     matrix = ((1.0, 0.5, 0.0), (0.0, 1.585, 0.0), (0.0, 0.0, 2.322))
-    pt = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=matrix).geometry.ptext_strings
+    pt = _grid_with_plain_text(state, "TILT minimax-S", custom_prescaler=matrix).geometry.plain_text_strings
     assert pt[("prescaling", "primes")] == "[⟨1 0.500 0] ⟨0 1.585 0] ⟨0 0 2.322]⟩"
     # the products and complexity still match the grid under the matrix override (no element-wise crash)
-    gb = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=matrix)
-    assert gb.geometry.ptext_strings[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tun.tuning_map)
-    assert gb.geometry.ptext_strings[("complexity", "targets")] == text_format._cents_list(gb.resolved.complexities["targets"])
+    gb = _grid_with_plain_text(state, "TILT minimax-S", custom_prescaler=matrix)
+    assert gb.geometry.plain_text_strings[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tun.tuning_map)
+    assert gb.geometry.plain_text_strings[("complexity", "targets")] == text_format._cents_list(gb.resolved.complexities["targets"])
 
 
 def test_plain_text_primes_complexity_runs_over_the_domain_basis_not_standard_primes():
@@ -2464,7 +2464,7 @@ def test_over_complex_generators_round_trip_back_to_a_finite_size():
     assert all(math.isfinite(s) for s in sizes.tempered)
     pt = service.plain_text_values(state, "TILT minimax-U", "TILT")  # the ptext detempering round-trip
     assert pt[("tuning", "detempering")]  # built without raising
-    gb = _grid_with_ptext(state, "TILT minimax-U")  # the exact crash site: _resolve_interval_sets
+    gb = _grid_with_plain_text(state, "TILT minimax-U")  # the exact crash site: _resolve_interval_sets
     assert core_vectors._OVER_COMPLEX_RATIO in gb.resolved.scalars.gens   # the genmap cell shows the sentinel, render survives
 
 

@@ -11,7 +11,7 @@ from rtt.app.page_assets import (
     _INVALID_EMBEDDING,
     _INVALID_PROJECTION,
     _INVALID_TEMPERAMENT,
-    _PTEXT_DUAL_VECTOR_KIND,
+    _PLAIN_TEXT_DUAL_VECTOR_KIND,
     _TARGET_LIMIT_DEBOUNCE,
     _WHEEL_STEPS,
     cb_method,
@@ -20,7 +20,7 @@ from rtt.app.render_html import (
     _wheel_step,
 )
 
-_PTEXT_EDITORS: dict[str, str] = {
+_PLAIN_TEXT_EDITORS: dict[str, str] = {
     "ptext:mapping:primes": "try_edit_mapping_text",
     "ptext:mapping:canongens": "try_edit_form_matrix_text",
     "ptext:vectors:commas": "try_edit_comma_basis_text",
@@ -71,8 +71,8 @@ class _TuningEdits:
         _weight_change(self.e, cid)
 
     @cb_method
-    def on_ptext_edit(self, cid, value):
-        _ptext_edit(self.e, cid, value)
+    def on_plain_text_edit(self, cid, value):
+        _plain_text_edit(self.e, cid, value)
 
 
 def _power_change(ec, cid):
@@ -214,25 +214,25 @@ def _weight_change(ec, cid):
     ec._apply_outcome(out, lambda: ec._editor.set_custom_weights(list(out.value)))
 
 
-def _ptext_edit(ec, cid, value):
+def _plain_text_edit(ec, cid, value):
     if ec._runtime.building:
         return
-    editor_method = _PTEXT_EDITORS.get(cid)
+    editor_method = _PLAIN_TEXT_EDITORS.get(cid)
     if editor_method is None:
         return
     if not ec._editor.settings.get("ebk", True):
-        value = service.simple_matrix_to_ebk(value, _PTEXT_DUAL_VECTOR_KIND.get(cid, False))
+        value = service.simple_matrix_to_ebk(value, _PLAIN_TEXT_DUAL_VECTOR_KIND.get(cid, False))
     if getattr(ec._editor, editor_method)(value):
-        ec._rec.cells[cid].value.ptext_input.classes(remove="rtt-ptext-error")
+        ec._rec.cells[cid].value.plain_text_input.classes(remove="rtt-ptext-error")
         ec._renderer.request_render()
         return
-    ec._rec.cells[cid].value.ptext_input.classes(add="rtt-ptext-error")
-    toast = _ptext_error_toast(ec, cid, value)
+    ec._rec.cells[cid].value.plain_text_input.classes(add="rtt-ptext-error")
+    toast = _plain_text_error_toast(ec, cid, value)
     if toast:
         ui.notify(toast, type="negative", position="top")
 
 
-def _ptext_error_toast(ec, cid, value):
+def _plain_text_error_toast(ec, cid, value):
     if cid == "ptext:mapping:primes":
         st = service.parse_mapping_state(value)
         if st is not None and not service.is_proper_temperament(st.mapping):

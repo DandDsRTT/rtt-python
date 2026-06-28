@@ -162,9 +162,9 @@ def test_target_limit_help_distinguishes_the_two_errors():
 
 
 def test_every_editable_dual_has_a_distinct_tooltip():
-    # the editable plain-text duals are exactly EDITABLE_PTEXT (the layout's source of truth);
+    # the editable plain-text duals are exactly EDITABLE_PLAIN_TEXT (the layout's source of truth);
     # each must carry its own hover text so no editable value is left unexplained
-    ids = [f"ptext:{row_key}:{column_key}" for row_key, column_key in grid_tables.EDITABLE_PTEXT]
+    ids = [f"ptext:{row_key}:{column_key}" for row_key, column_key in grid_tables.EDITABLE_PLAIN_TEXT]
     texts = [tooltips.control_help("ptextedit", cid) for cid in ids]
     assert all((t or "").strip() for t in texts)
     assert len(set(texts)) == len(ids)

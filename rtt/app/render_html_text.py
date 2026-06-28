@@ -104,8 +104,8 @@ def _power_parts(text) -> tuple[str, str]:
 # There is no browser to measure text width in-process, so these per-glyph em-widths for the
 # .rtt-ptext face estimate it; they are conservative upper bounds over the (narrower) STIX Two Text
 # body face, so a value's estimate stays above its real render and never spills.
-_PTEXT_DEFAULT_EM = 0.59
-_PTEXT_GLYPH_EM = {
+_PLAIN_TEXT_DEFAULT_EM = 0.59
+_PLAIN_TEXT_GLYPH_EM = {
     **dict.fromkeys("0123456789", 0.59),
     ".": 0.25,
     "-": 0.35,
@@ -123,18 +123,18 @@ _PTEXT_GLYPH_EM = {
 }
 
 
-def _ptext_units(text: str) -> float:
-    return sum(_PTEXT_GLYPH_EM.get(c, _PTEXT_DEFAULT_EM) for c in text)
+def _plain_text_units(text: str) -> float:
+    return sum(_PLAIN_TEXT_GLYPH_EM.get(c, _PLAIN_TEXT_DEFAULT_EM) for c in text)
 
 
-def _ptext_font(text: str, width: float) -> float:
-    units = _ptext_units(text)
-    fit = (width - 2) / units if units else spreadsheet_constants.PTEXT_MAX_FONT
-    return int(min(spreadsheet_constants.PTEXT_MAX_FONT, fit) * 10) / 10
+def _plain_text_font(text: str, width: float) -> float:
+    units = _plain_text_units(text)
+    fit = (width - 2) / units if units else spreadsheet_constants.PLAIN_TEXT_MAX_FONT
+    return int(min(spreadsheet_constants.PLAIN_TEXT_MAX_FONT, fit) * 10) / 10
 
 
 _RATIO_MAX_FONT = 13.0
-_RATIO_DIGIT_EM = _PTEXT_GLYPH_EM["0"]
+_RATIO_DIGIT_EM = _PLAIN_TEXT_GLYPH_EM["0"]
 _RATIO_PAD = 6.0
 
 

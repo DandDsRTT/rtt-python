@@ -22,7 +22,7 @@ class ValueHandles:
     stacked_face: object = None
     stacked_w: object = None
     gensign_face: object = None
-    ptext_input: object = None
+    plain_text_input: object = None
 
 
 @dataclass

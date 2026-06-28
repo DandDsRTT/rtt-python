@@ -29,8 +29,8 @@ from rtt.app.render_html import (
     _control_svg,
     _digit_fit_font,
     _gentuning_parts,
+    _plain_text_font,
     _power_parts,
-    _ptext_font,
     _ratio_font,
     _ratio_parts,
 )
@@ -394,31 +394,31 @@ def update_gentuningcell(rec, cell_box: spreadsheet.CellBox) -> None:
     _update_decimal(rec, cell_box, "" if cell_box.blank else cell_box.text, signed=True)
 
 
-def build_ptextedit(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
+def build_plain_text_edit(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
     if cell_box.id.startswith("ptext:projection:"):
         inp = ui.input(value=cell_box.text).props("dense borderless").classes("rtt-ptextedit")
         inp.on(
             "blur",
-            lambda _e=None, cid=cell_box.id: rec._cb.on_ptext_edit(
-                cid, rec.cells[cid].value.ptext_input.value
+            lambda _e=None, cid=cell_box.id: rec._cb.on_plain_text_edit(
+                cid, rec.cells[cid].value.plain_text_input.value
             ),
         )
     else:
         inp = (
             ui.input(
                 value=cell_box.text,
-                on_change=lambda e, cid=cell_box.id: rec._cb.on_ptext_edit(cid, e.value),
+                on_change=lambda e, cid=cell_box.id: rec._cb.on_plain_text_edit(cid, e.value),
             )
             .props("dense borderless")
             .classes("rtt-ptextedit")
         )
-    rec.cells[cell_box.id].value.ptext_input = inp
+    rec.cells[cell_box.id].value.plain_text_input = inp
 
 
-def update_ptextedit(rec, cell_box: spreadsheet.CellBox) -> None:
-    rec.cells[cell_box.id].value.ptext_input.value = cell_box.text
-    rec.cells[cell_box.id].value.ptext_input.style(
-        f"font-size:{_ptext_font(cell_box.text, cell_box.w)}px"
+def update_plain_text_edit(rec, cell_box: spreadsheet.CellBox) -> None:
+    rec.cells[cell_box.id].value.plain_text_input.value = cell_box.text
+    rec.cells[cell_box.id].value.plain_text_input.style(
+        f"font-size:{_plain_text_font(cell_box.text, cell_box.w)}px"
     )
 
 
@@ -487,8 +487,8 @@ def update_label(rec, cell_box: spreadsheet.CellBox) -> None:
     )
 
 
-def update_ptext(rec, cell_box: spreadsheet.CellBox) -> None:
+def update_plain_text(rec, cell_box: spreadsheet.CellBox) -> None:
     rec.cells[cell_box.id].value.label.set_text(cell_box.text)
     rec.cells[cell_box.id].value.label.style(
-        f"font-size:{_ptext_font(cell_box.text, cell_box.w)}px"
+        f"font-size:{_plain_text_font(cell_box.text, cell_box.w)}px"
     )

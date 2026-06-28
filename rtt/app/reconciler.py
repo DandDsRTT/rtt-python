@@ -67,7 +67,7 @@ class ReconcilerCallbacks(Protocol):
     on_target_limit_preview: _Cb
     on_prescaler_change: _Cb
     on_weight_change: _Cb
-    on_ptext_edit: _Cb
+    on_plain_text_edit: _Cb
 
     on_mapping_change: _Cb
     on_form_change: _Cb

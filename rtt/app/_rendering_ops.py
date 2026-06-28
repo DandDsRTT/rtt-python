@@ -131,7 +131,7 @@ def update_cell_content(r, cell_box) -> None:
         (
             h.value.input,
             h.value.den_input,
-            h.value.ptext_input,
+            h.value.plain_text_input,
             h.chooser.select,
             h.chooser.check,
             h.value.frac_edit,

@@ -63,8 +63,8 @@ from rtt.app.spreadsheet_geometry import (
     declare_tiles,
     formchooser_band_h,
     init_superspace_tuning,
+    plain_text_band,
     preset_band_h,
-    ptext_band,
     symbol_floor,
 )
 from rtt.app.spreadsheet_geometry_model import Geometry
@@ -82,7 +82,7 @@ def compute_geometry(resolved, context):
     geometry = _layout_columns(geometry, resolved, context, col_bands, content_x0)
     geometry, tile_extra = _resolve_tile_extras(geometry, resolved, context)
     geometry, rows_top_y = _init_row_geometry(geometry, HEADER_H)
-    geometry = _resolve_ptext_strings(geometry, resolved, context)
+    geometry = _resolve_plain_text_strings(geometry, resolved, context)
     geometry = _layout_rows(geometry, resolved, context, row_bands, tile_extra, rows_top_y)
     return _init_group_geometry(geometry, resolved, context)
 
@@ -280,22 +280,22 @@ def _compute_row_band(geometry, resolved, context, key, natural, collapsible, la
     comma_picker = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and resolved.flags.presets
                                        and query.col_open(geometry, context.collapsed, "commas")
                                        and (resolved.dims.nc > 0 or resolved.commas.pending is not None) and not folded) else 0
-    ptext = ptext_band(geometry, key, folded)
+    plain_text = plain_text_band(geometry, key, folded)
     symbol += BAND_GAP if symbol else 0
     caption += BAND_GAP if caption else 0
     units += BAND_GAP if units else 0
-    ptext += BAND_GAP if ptext else 0
+    plain_text += BAND_GAP if plain_text else 0
     row_h = STRIP if folded else natural
     chart_top = (y + head + top_frame) if charted else None
     interval_handle_top = (y + (handle_band - ROW_HANDLE_W) // 2) if interval_handle else None
     matrix_label_top = (y + handle_band + (base_head - MATLABEL_H) // 2) if has_matlabel else None
-    trailing_band = symbol + caption + units + preset + ptext + form_controls + scheme_button + comma_picker + tile_extra.get(key, 0)
+    trailing_band = symbol + caption + units + preset + plain_text + form_controls + scheme_button + comma_picker + tile_extra.get(key, 0)
     foot = 0 if (folded or trailing_band) else toggle_band
     tile_h = (head + top_frame + chart_band + row_h + bot_frame + comma_picker + symbol + caption + units
-              + preset + ptext + form_controls + scheme_button + tile_extra.get(key, 0) + foot)
+              + preset + plain_text + form_controls + scheme_button + tile_extra.get(key, 0) + foot)
     return RowBand(
         y=y + head + top_frame + chart_band, h=row_h, label=label, collapsible=collapsible,
-        tile_h=tile_h, tile_top=y, frame=bot_frame, symbol=symbol, caption=caption, units=units, ptext=ptext,
+        tile_h=tile_h, tile_top=y, frame=bot_frame, symbol=symbol, caption=caption, units=units, plain_text=plain_text,
         preset=preset, scheme_button=scheme_button, num_subrows=round(natural / ROW_H), comma_picker=comma_picker,
         chart_top=chart_top, interval_handle_top=interval_handle_top, matrix_label_top=matrix_label_top)
 
@@ -388,8 +388,8 @@ def _resolve_tile_extras(geometry, resolved, context):
     }
 
 
-def _resolve_ptext_strings(geometry, resolved, context) -> Geometry:
-    ptext_strings = (service.plain_text_values(context.state, context.tuning_scheme, context.target_spec,
+def _resolve_plain_text_strings(geometry, resolved, context) -> Geometry:
+    plain_text_strings = (service.plain_text_values(context.state, context.tuning_scheme, context.target_spec,
                                                held=resolved.held.vectors, interest=resolved.interest.vectors,
                                                generator_tuning=context.generator_tuning,
                                                target_override=context.target_override,
@@ -411,5 +411,5 @@ def _resolve_ptext_strings(geometry, resolved, context) -> Geometry:
                                                                    if resolved.flags.superspace else None)))
                      if resolved.flags.plain_text_values else {})
     if not resolved.flags.ebk:
-        ptext_strings = {k: service.ebk_to_simple_matrix(v) for k, v in ptext_strings.items()}
-    return replace(geometry, ptext_strings=ptext_strings)
+        plain_text_strings = {k: service.ebk_to_simple_matrix(v) for k, v in plain_text_strings.items()}
+    return replace(geometry, plain_text_strings=plain_text_strings)

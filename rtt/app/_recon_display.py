@@ -21,7 +21,7 @@ from rtt.app.render_html import (
     _bar_chart,
     _math_html,
     _mathexpr_html,
-    _ptext_font,
+    _plain_text_font,
     _range_chart,
     _underline_html,
     _units_font,
@@ -159,7 +159,7 @@ def update_caption(rec, cell_box: spreadsheet.CellBox) -> None:
     )
 
 
-def build_ptextpending(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
+def build_plain_text_pending(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
     rec.cells[cell_box.id].display.html = ui.html("").classes("rtt-ptextpending")
 
 
@@ -173,7 +173,7 @@ def _squared(off, prefix, draft, suffix, vector_based):
     )
 
 
-def update_ptextpending(rec, cell_box: spreadsheet.CellBox) -> None:
+def update_plain_text_pending(rec, cell_box: spreadsheet.CellBox) -> None:
     ed = rec._editor
     off = not ed.settings.get("ebk", True)
     if cell_box.id == "ptext:mapping:primes":
@@ -185,7 +185,7 @@ def update_ptextpending(rec, cell_box: spreadsheet.CellBox) -> None:
             f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}"
         )
         rec.cells[cell_box.id].display.html.style(
-            f"font-size:{_ptext_font(prefix + draft + suffix, cell_box.w)}px"
+            f"font-size:{_plain_text_font(prefix + draft + suffix, cell_box.w)}px"
         )
         return
     if cell_box.id == "ptext:vectors:targets":
@@ -203,7 +203,7 @@ def update_ptextpending(rec, cell_box: spreadsheet.CellBox) -> None:
         f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}"
     )
     rec.cells[cell_box.id].display.html.style(
-        f"font-size:{_ptext_font(prefix + draft + suffix, cell_box.w)}px"
+        f"font-size:{_plain_text_font(prefix + draft + suffix, cell_box.w)}px"
     )
 
 

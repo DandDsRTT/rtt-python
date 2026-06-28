@@ -111,7 +111,7 @@ def emit_controls(resolved, geometry, context) -> EmitResult:
     _emit_all_interval_check_fallback(cells, resolved, geometry, context)
     _emit_form_choosers(cells, blocks, resolved, geometry, context)
     _emit_scheme_buttons(cells, blocks, resolved, geometry, context)
-    _emit_ptext_band(cells, resolved, geometry, context)
+    _emit_plain_text_band(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells), blocks=tuple(blocks))
 
 
@@ -184,7 +184,7 @@ def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cid, n
         return
     if geometry.size_factor or resolved.scalars.prescaler_is_matrix:
         label = _pretransform_label(label)
-    top = query.ptext_band_y(geometry, row_key) + geometry.rows[row_key].ptext
+    top = query.plain_text_band_y(geometry, row_key) + geometry.rows[row_key].plain_text
     disabled = (name == "target" and service.is_all_interval(context.tuning_scheme)) \
         or _preset_locked(resolved, context, name)
     fc = next((fn for fn, rk, ck, _l in FORM_CHOOSERS if rk == row_key and ck == column_key), None)
@@ -222,7 +222,7 @@ def _emit_presets(cells, blocks, resolved, geometry, context) -> None:
 
 def _emit_all_interval_check_fallback(cells, resolved, geometry, context) -> None:
     if context.settings["all_interval"] and not resolved.flags.presets and query.tile_open(geometry, context.collapsed, "vectors", "targets"):
-        top = query.ptext_band_y(geometry, "vectors") + geometry.rows["vectors"].ptext
+        top = query.plain_text_band_y(geometry, "vectors") + geometry.rows["vectors"].plain_text
         emit_option_check(cells, "all_interval", "all-interval",
                            service.is_all_interval(context.tuning_scheme),
                            geometry.col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
@@ -233,7 +233,7 @@ def _emit_form_choosers(cells, blocks, resolved, geometry, context) -> None:
         for name, row_key, column_key, label in FORM_CHOOSERS:
             if not query.tile_open(geometry, context.collapsed, row_key, column_key):
                 continue
-            top = query.ptext_band_y(geometry, row_key) + geometry.rows[row_key].ptext + geometry.rows[row_key].preset
+            top = query.plain_text_band_y(geometry, row_key) + geometry.rows[row_key].plain_text + geometry.rows[row_key].preset
             cx, cw, cy = _control_box(cells, blocks, resolved, geometry, f"block:formchooser:{name}", column_key, top, PRESET_W, label)
             cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser",
                                  text=resolved.canon.mapping_form_key if name == "mapping" else resolved.canon.comma_basis_form_key))
@@ -244,25 +244,25 @@ def _emit_scheme_buttons(cells, blocks, resolved, geometry, context) -> None:
         for column_key in ("primes", "gens"):
             if not query.tile_open(geometry, context.collapsed, "projection", column_key):
                 continue
-            top = query.ptext_band_y(geometry, "projection") + geometry.rows["projection"].ptext
+            top = query.plain_text_band_y(geometry, "projection") + geometry.rows["projection"].plain_text
             box_y = top + BOX_OUTER
             blocks.append(Block(f"block:scheme:{column_key}", geometry.col_x[column_key], box_y, geometry.col_w[column_key],
                                 2 * BOX_INNER + SCHEME_BTN_SQ, boxed=True))
             _emit_scheme_button(cells, geometry.col_x[column_key] + BOX_INNER, box_y + BOX_INNER, column_key)
 
 
-def _emit_ptext_band(cells, resolved, geometry, context) -> None:
+def _emit_plain_text_band(cells, resolved, geometry, context) -> None:
     if resolved.flags.plain_text_values:
-        for (row_key, column_key), text in geometry.ptext_strings.items():
+        for (row_key, column_key), text in geometry.plain_text_strings.items():
             if not query.tile_open(geometry, context.collapsed, row_key, column_key):
                 continue
             if ((row_key, column_key) == ("vectors", "commas") and resolved.commas.pending is not None) \
                     or ((row_key, column_key) == ("vectors", "targets") and resolved.targets.pending is not None) \
                     or ((row_key, column_key) == ("mapping", "primes") and context.pending_mapping_row is not None):
                 kind = "ptextpending"
-            elif query.ptext_editable(resolved, row_key, column_key) and (column_key != "targets" or resolved.scalars.targets_editable):
+            elif query.plain_text_editable(resolved, row_key, column_key) and (column_key != "targets" or resolved.scalars.targets_editable):
                 kind = "ptextedit"
             else:
                 kind = "ptext"
-            cells.append(CellBox(f"ptext:{row_key}:{column_key}", geometry.col_x[column_key], query.ptext_band_y(geometry, row_key),
-                                 geometry.col_w[column_key], query.ptext_height(resolved, row_key, column_key), kind, text=text))
+            cells.append(CellBox(f"ptext:{row_key}:{column_key}", geometry.col_x[column_key], query.plain_text_band_y(geometry, row_key),
+                                 geometry.col_w[column_key], query.plain_text_height(resolved, row_key, column_key), kind, text=text))

@@ -54,7 +54,7 @@ class Geometry:
 
     tiles: tuple = ()
     declared_tiles: frozenset = frozenset()
-    ptext_strings: Mapping = field(default_factory=dict)
+    plain_text_strings: Mapping = field(default_factory=dict)
 
     gtm_chart: bool = False
     gtm_extra: float = 0.0

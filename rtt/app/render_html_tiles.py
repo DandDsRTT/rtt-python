@@ -104,7 +104,7 @@ _TILE_EQUIV = " = 𝑒G"
 _TILE_MATH = "1200·log₂(3/2) ="
 _TILE_VALUE = "701.955"
 _TILE_UNITS = "¢/p"
-_TILE_PTEXT = "⟨1200 1902 2786]"
+_TILE_PLAIN_TEXT = "⟨1200 1902 2786]"
 
 _TILE_MNEMONIC_AT = _TILE_NAME.index("n")
 
@@ -178,7 +178,7 @@ _GENERAL_PART_BUILDERS = {
     "mnemonics": lambda: _escape(_tile_name_pieces()[1]),
     "units": lambda: f'<span class="rtt-units-pre">units: </span>{_units_html(_TILE_UNITS)}',
     "cell_units": lambda: _units_html(_TILE_UNITS),
-    "plain_text_values": lambda: _math_html(_TILE_PTEXT),
+    "plain_text_values": lambda: _math_html(_TILE_PLAIN_TEXT),
     "presets": _tile_preset_html,
     "charts": _example_chart,
     "drag_to_combine": lambda: (
