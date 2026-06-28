@@ -134,17 +134,23 @@ def add_interval(ec, action, group):
     ec._renderer.render()
     quant_id, vec_kind = ec.draft_focus[group]
     lay = ec._runtime.last_lay
-    if any(cb.id == quant_id for cb in lay.cells):
+    if any(cell_box.id == quant_id for cell_box in lay.cells):
         target = quant_id
     elif vec_kind is not None:
         target = next(
-            (cb.id for cb in lay.cells if cb.pending and cb.prime == 0 and cb.kind == vec_kind),
+            (
+                cell_box.id
+                for cell_box in lay.cells
+                if cell_box.pending and cell_box.prime == 0 and cell_box.kind == vec_kind
+            ),
             None,
         )
     else:
         target = None
     if target is None and group == "element":
-        target = next((cb.id for cb in lay.cells if cb.id == "basis:pending"), None)
+        target = next(
+            (cell_box.id for cell_box in lay.cells if cell_box.id == "basis:pending"), None
+        )
     inp = ec._rec.handles(target).value.input if target is not None else None
     if inp is not None:
         focus_draft_cell(inp)

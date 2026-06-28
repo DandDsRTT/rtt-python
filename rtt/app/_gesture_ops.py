@@ -25,8 +25,8 @@ def paint_rings(gc):
     if lay is None:
         return
     amber, red = gc.compute_rings(lay)
-    for cb in lay.cells:
-        gc.paint_cell(cb.id, amber, red)
+    for cell_box in lay.cells:
+        gc.paint_cell(cell_box.id, amber, red)
 
 
 def gesture_rings(gc, lay):
@@ -47,7 +47,7 @@ def gesture_rings(gc, lay):
     if g.baseline is not None:
         amber = spreadsheet_text.changed_cell_ids(g.baseline, lay) - {g.source}
         if g.target_pred is not None:
-            amber |= frozenset(cb.id for cb in lay.cells if g.target_pred(cb))
+            amber |= frozenset(cell_box.id for cell_box in lay.cells if g.target_pred(cell_box))
         return amber, frozenset()
     return frozenset(), frozenset()
 

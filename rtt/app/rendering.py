@@ -118,7 +118,7 @@ class Renderer:
             lay = self._editor.layout(prev_ids=prev, preview_remove=self._gestures.rank_remove)
             self._runtime.set_last_lay(lay)
             self._rec.pretransform = lay.pretransform
-            cur_ids = frozenset(cb.id for cb in lay.cells)
+            cur_ids = frozenset(cell_box.id for cell_box in lay.cells)
             self._newborn_ids = cur_ids - self._prev_cell_ids
             fx, fy = lay.freeze_x, lay.freeze_y
             _rendering_ops.size_panes(self._chrome, lay, fx, fy)
@@ -148,7 +148,7 @@ class Renderer:
         self._fill_gen += 1
         if helpers.is_user_simulation():
             return
-        if any(cb.id not in self._rec.entities for cb in lay.cells):
+        if any(cell_box.id not in self._rec.entities for cell_box in lay.cells):
             background_tasks.create(self._fill_offscreen(self._fill_gen))
 
     async def _fill_offscreen(self, gen) -> None:
@@ -157,16 +157,16 @@ class Renderer:
             if lay is None:
                 return
             fx, fy = lay.freeze_x, lay.freeze_y
-            pending = [cb for cb in lay.cells if cb.id not in self._rec.entities]
+            pending = [cell_box for cell_box in lay.cells if cell_box.id not in self._rec.entities]
             if not pending:
                 return
             paint = (fy, False, self._last_rings)
             with self._runtime.page_client, self._runtime.building_guard():
                 self._revirtualizing = True
                 try:
-                    for cb in pending[:_FILL_CHUNK]:
-                        container = _freeze_container(cb, fx, fy)
-                        _rendering_ops.place_cell(self, cb, container, paint)
+                    for cell_box in pending[:_FILL_CHUNK]:
+                        container = _freeze_container(cell_box, fx, fy)
+                        _rendering_ops.place_cell(self, cell_box, container, paint)
                 finally:
                     self._revirtualizing = False
             await asyncio.sleep(0)
