@@ -43,10 +43,10 @@ def transform_cells(cells, resolved, geometry, ctx) -> tuple:
 
 def _filter_gridded_quantities(cells, resolved):
     if not resolved.flags.gridded_values:
-        return [cb for cb in cells if cb.kind not in GRIDDED_KINDS]
+        return [cell_box for cell_box in cells if cell_box.kind not in GRIDDED_KINDS]
     if not resolved.flags.quantities:
-        return [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
-                for cb in cells]
+        return [replace(cell_box, blank=True, text="") if cell_box.kind in BLANKED_NUMBER_KINDS else cell_box
+                for cell_box in cells]
     return cells
 
 
@@ -54,35 +54,35 @@ def _mark_doomed_unchanged_column(cells, resolved, geometry):
     if not ((resolved.commas.pending is not None or resolved.ghosts.comma) and resolved.unchanged.shown and resolved.dims.nu):
         return cells
     doomed_x = query.comma_left(geometry, resolved, resolved.dims.nc_shown + resolved.dims.nu - 1)
-    return [replace(cb, preview_remove=True)
-            if (cb.w == COL_W and cb.x == doomed_x
-                and cb.kind not in ("count", "caption", "colgrip"))
-            else cb
-            for cb in cells]
+    return [replace(cell_box, preview_remove=True)
+            if (cell_box.w == COL_W and cell_box.x == doomed_x
+                and cell_box.kind not in ("count", "caption", "colgrip"))
+            else cell_box
+            for cell_box in cells]
 
 
 def _mark_born_column(cells, resolved, geometry):
     if not resolved.unchanged.born:
         return cells
     born_x = query.comma_left(geometry, resolved, resolved.dims.nc_shown + resolved.dims.nu - 1)
-    return [replace(cb, pending=True)
-            if (cb.w == COL_W and cb.x == born_x
-                and cb.kind not in ("count", "caption", "colgrip"))
-            else cb
-            for cb in cells]
+    return [replace(cell_box, pending=True)
+            if (cell_box.w == COL_W and cell_box.x == born_x
+                and cell_box.kind not in ("count", "caption", "colgrip"))
+            else cell_box
+            for cell_box in cells]
 
 
-def _dual_preview(cb, axes):
+def _dual_preview(cell_box, axes):
     remove_rows, red_xs, change_rows, amber_xs = axes
-    if cb.kind not in RINGABLE_KINDS or cb.preview_remove:
-        return cb
-    if cb.gen in remove_rows or cb.x in red_xs:
-        return replace(cb, preview_remove=True, pending=False)
-    if cb.pending:
-        return cb
-    if cb.gen in change_rows or cb.x in amber_xs:
-        return replace(cb, preview_change=True)
-    return cb
+    if cell_box.kind not in RINGABLE_KINDS or cell_box.preview_remove:
+        return cell_box
+    if cell_box.gen in remove_rows or cell_box.x in red_xs:
+        return replace(cell_box, preview_remove=True, pending=False)
+    if cell_box.pending:
+        return cell_box
+    if cell_box.gen in change_rows or cell_box.x in amber_xs:
+        return replace(cell_box, preview_change=True)
+    return cell_box
 
 
 def _mark_dual_axis_previews(cells, resolved, geometry, ctx):
@@ -102,7 +102,7 @@ def _mark_dual_axis_previews(cells, resolved, geometry, ctx):
     red_xs = frozenset(query.comma_left(geometry, resolved, c) for c in remove_commas)
     amber_xs = frozenset(query.comma_left(geometry, resolved, c) for c in change_commas)
     axes = (remove_rows, red_xs, change_rows, amber_xs)
-    return [_dual_preview(cb, axes) for cb in cells]
+    return [_dual_preview(cell_box, axes) for cell_box in cells]
 
 
 def emit_controls(resolved, geometry, ctx) -> EmitResult:

@@ -23,7 +23,7 @@ from rtt.app.render_html import (
 )
 
 
-def build_rangemode(rec, cb: spreadsheet.CellBox, wrap) -> None:
+def build_rangemode(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-rangemode")
     opts = {}
     for mode in ("monotone", "tradeoff"):
@@ -33,28 +33,30 @@ def build_rangemode(rec, cb: spreadsheet.CellBox, wrap) -> None:
             ui.label(mode).classes("rtt-rangelabel")
         opt.on("click", lambda _=None, m=mode: rec._cb.on_range_mode(m))
         opts[mode] = opt
-    rec.cells[cb.id].chooser.rangeopts = opts
+    rec.cells[cell_box.id].chooser.rangeopts = opts
 
 
-def update_rangemode(rec, cb: spreadsheet.CellBox) -> None:
-    for mode, opt in rec.cells[cb.id].chooser.rangeopts.items():
+def update_rangemode(rec, cell_box: spreadsheet.CellBox) -> None:
+    for mode, opt in rec.cells[cell_box.id].chooser.rangeopts.items():
         (
             opt.classes(add="rtt-rangeopt-on")
-            if mode == cb.text
+            if mode == cell_box.text
             else opt.classes(remove="rtt-rangeopt-on")
         )
 
 
-def build_scheme_button(rec, cb: spreadsheet.CellBox, _wrap) -> None:
-    rec.cells[cb.id].chooser.scheme_button = (
-        ui.button(cb.text, on_click=lambda: rec._cb.act(rec._editor.back_to_scheme), color=None)
+def build_scheme_button(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
+    rec.cells[cell_box.id].chooser.scheme_button = (
+        ui.button(
+            cell_box.text, on_click=lambda: rec._cb.act(rec._editor.back_to_scheme), color=None
+        )
         .props("unelevated dense no-caps")
         .classes("rtt-scheme-btn")
     )
 
 
-def update_scheme_button(rec, cb: spreadsheet.CellBox) -> None:
-    btn = rec.cells[cb.id].chooser.scheme_button
+def update_scheme_button(rec, cell_box: spreadsheet.CellBox) -> None:
+    btn = rec.cells[cell_box.id].chooser.scheme_button
     (
         btn.classes(add="rtt-scheme-btn-idle")
         if not rec._editor.manual_tuning
@@ -62,27 +64,27 @@ def update_scheme_button(rec, cb: spreadsheet.CellBox) -> None:
     )
 
 
-def build_foldtoggle(rec, cb: spreadsheet.CellBox, wrap) -> None:
-    item = cb.id.split("toggle:", 1)[1]
-    rec.cells[cb.id].display.html = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes(
+def build_foldtoggle(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
+    item = cell_box.id.split("toggle:", 1)[1]
+    rec.cells[cell_box.id].display.html = ui.html(_control_svg(_FOLD_GLYPH[cell_box.text])).classes(
         "rtt-glyph rtt-toggle"
     )
-    rec.cells[cb.id].chooser.fold_state = cb.text
+    rec.cells[cell_box.id].chooser.fold_state = cell_box.text
     wrap.on("click", lambda _=None, it=item: rec._cb.on_toggle(it))
 
 
-def build_alltoggle(rec, cb: spreadsheet.CellBox, wrap) -> None:
-    rec.cells[cb.id].display.html = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes(
+def build_alltoggle(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
+    rec.cells[cell_box.id].display.html = ui.html(_control_svg(_FOLD_GLYPH[cell_box.text])).classes(
         "rtt-glyph rtt-toggle"
     )
-    rec.cells[cb.id].chooser.fold_state = cb.text
+    rec.cells[cell_box.id].chooser.fold_state = cell_box.text
     wrap.on("click", lambda _=None: rec._cb.on_toggle_all())
 
 
-def update_foldtoggle(rec, cb: spreadsheet.CellBox) -> None:
-    if rec.handles(cb.id).chooser.fold_state != cb.text:
-        rec.cells[cb.id].display.html.set_content(_control_svg(_FOLD_GLYPH[cb.text]))
-        rec.cells[cb.id].chooser.fold_state = cb.text
+def update_foldtoggle(rec, cell_box: spreadsheet.CellBox) -> None:
+    if rec.handles(cell_box.id).chooser.fold_state != cell_box.text:
+        rec.cells[cell_box.id].display.html.set_content(_control_svg(_FOLD_GLYPH[cell_box.text]))
+        rec.cells[cell_box.id].chooser.fold_state = cell_box.text
 
 
 def _arm_option_hover(rec, sel, wrap, cid: str) -> None:
@@ -99,18 +101,18 @@ def _arm_option_hover(rec, sel, wrap, cid: str) -> None:
     sel.on("popup-hide", lambda _=None: rec._cb.on_popup(cid, False))
 
 
-def build_preset(rec, cb: spreadsheet.CellBox, wrap) -> None:
-    name = cb.id.split(":")[1]
+def build_preset(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
+    name = cell_box.id.split(":")[1]
     if name == "target":
-        _build_preset_target(rec, cb, wrap)
+        _build_preset_target(rec, cell_box, wrap)
     elif name == "temperament":
-        _build_preset_temperament(rec, cb, wrap)
+        _build_preset_temperament(rec, cell_box, wrap)
     else:
         options, value, prompt = _scheme_options(rec, name)
-        _build_scheme_select(rec, cb, wrap, options, value, prompt)
+        _build_scheme_select(rec, cell_box, wrap, options, value, prompt)
 
 
-def _build_preset_target(rec, cb: spreadsheet.CellBox, wrap) -> None:
+def _build_preset_target(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     limit, family = rec._target_preset_values()
     with ui.element("div").classes("rtt-preset-target"):
         num = (
@@ -125,22 +127,22 @@ def _build_preset_target(rec, cb: spreadsheet.CellBox, wrap) -> None:
         )
         # NiceGUI: ui.input defaults loopback off (uncontrolled during typing), so the server can't
         # overwrite what was typed; _wire_target_limit turns loopback on so a rejected value reverts.
-        _wire_target_limit(rec, num, cb)
+        _wire_target_limit(rec, num, cell_box)
         sel = (
             ui.select(
                 list(presets.TARGET_SETS),
                 value=family,
                 on_change=lambda _e: rec._cb.on_target_change(),
             )
-            .props(_select_props(cb.w - 30))
+            .props(_select_props(cell_box.w - 30))
             .classes("rtt-preset")
         )
     _set_offlist_prompt(sel, family)
-    _arm_option_hover(rec, sel, wrap, cb.id)
-    rec.cells[cb.id].chooser.select = (num, sel)
+    _arm_option_hover(rec, sel, wrap, cell_box.id)
+    rec.cells[cell_box.id].chooser.select = (num, sel)
 
 
-def _wire_target_limit(rec, num, cb: spreadsheet.CellBox) -> None:
+def _wire_target_limit(rec, num, cell_box: spreadsheet.CellBox) -> None:
     num.LOOPBACK = True
     num._props["loopback"] = True
     num.on(
@@ -149,8 +151,8 @@ def _wire_target_limit(rec, num, cb: spreadsheet.CellBox) -> None:
         args=["deltaY"],
         js_handler=_INT_WHEEL_JS,
     )
-    num.on("focus", lambda _=None: rec._cb.on_cell_focus(cb.id))
-    num.on("blur", lambda _=None, cid=cb.id: rec._cb.on_cell_blur(cid))
+    num.on("focus", lambda _=None: rec._cb.on_cell_focus(cell_box.id))
+    num.on("blur", lambda _=None, cid=cell_box.id: rec._cb.on_cell_blur(cid))
     # Quasar: a debounced field only commits its value on a typing pause or blur, so Enter alone
     # never submits; blurring on Enter makes Quasar flush the debounced value (firing on_change).
     num.on("keydown.enter", js_handler="(e) => e.target.blur()")
@@ -164,21 +166,21 @@ def _wire_target_limit(rec, num, cb: spreadsheet.CellBox) -> None:
     )
 
 
-def _build_preset_temperament(rec, cb: spreadsheet.CellBox, wrap) -> None:
+def _build_preset_temperament(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     value = presets.identify(rec._editor.state)
     sel = (
         _GroupedSelect(
             presets.temperament_options(),
             value=value,
             is_divider=presets.is_divider,
-            on_change=lambda e: rec._cb.on_preset(cb.id, e.value),
+            on_change=lambda e: rec._cb.on_preset(cell_box.id, e.value),
         )
-        .props(_select_props(cb.w))
+        .props(_select_props(cell_box.w))
         .classes("rtt-preset")
     )
     _set_offlist_prompt(sel, value)
-    _arm_option_hover(rec, sel, wrap, cb.id)
-    rec.cells[cb.id].chooser.select = sel
+    _arm_option_hover(rec, sel, wrap, cell_box.id)
+    rec.cells[cell_box.id].chooser.select = sel
 
 
 def _scheme_options(rec, name: str) -> tuple[list, object, str]:
@@ -200,15 +202,15 @@ def _scheme_options(rec, name: str) -> tuple[list, object, str]:
     return options, (scheme if scheme in options else None), "-"
 
 
-def _build_scheme_select(rec, cb, wrap, options, value, prompt) -> None:
+def _build_scheme_select(rec, cell_box, wrap, options, value, prompt) -> None:
     sel = (
-        ui.select(options, value=value, on_change=lambda e: rec._cb.on_preset(cb.id, e.value))
-        .props(_select_props(cb.w))
+        ui.select(options, value=value, on_change=lambda e: rec._cb.on_preset(cell_box.id, e.value))
+        .props(_select_props(cell_box.w))
         .classes("rtt-preset")
     )
     _set_offlist_prompt(sel, value, prompt)
-    _arm_option_hover(rec, sel, wrap, cb.id)
-    rec.cells[cb.id].chooser.select = sel
+    _arm_option_hover(rec, sel, wrap, cell_box.id)
+    rec.cells[cell_box.id].chooser.select = sel
 
 
 def _chooser_reflow_hold(rec, cid: str) -> bool:
@@ -224,39 +226,39 @@ def _chooser_reflow_hold(rec, cid: str) -> bool:
     return group(cid) == group(g.source)
 
 
-def update_preset(rec, cb: spreadsheet.CellBox) -> None:
-    if _chooser_reflow_hold(rec, cb.id):
+def update_preset(rec, cell_box: spreadsheet.CellBox) -> None:
+    if _chooser_reflow_hold(rec, cell_box.id):
         return
-    if cb.id.startswith("preset:temperament"):
+    if cell_box.id.startswith("preset:temperament"):
         g = rec._cur_gesture
         if g is not None and g.kind == "temp" and g.reflowed:
             return
         value = presets.identify(rec._editor.state)
-        rec.cells[cb.id].chooser.select.value = value
-        _set_offlist_prompt(rec.cells[cb.id].chooser.select, value)
-    elif cb.id == "preset:target":
-        num, sel = rec.cells[cb.id].chooser.select
+        rec.cells[cell_box.id].chooser.select.value = value
+        _set_offlist_prompt(rec.cells[cell_box.id].chooser.select, value)
+    elif cell_box.id == "preset:target":
+        num, sel = rec.cells[cell_box.id].chooser.select
         limit, family = rec._target_preset_values()
         num.value = _limit_text(limit) or service.NO_LIMIT_TEXT
         sel.value = family
         _set_offlist_prompt(sel, family)
-        num.set_enabled(not cb.disabled)
-        sel.set_enabled(not cb.disabled)
+        num.set_enabled(not cell_box.disabled)
+        sel.set_enabled(not cell_box.disabled)
         _sync_target_limit_error(rec, num, family, limit)
-    elif cb.id == "preset:prescaler":
+    elif cell_box.id == "preset:prescaler":
         options = list(presets.prescaler_options(rec._editor.settings["alt_complexity"]))
         value = rec._editor.displayed_prescaler_name
         value = value if value in options else None
-        rec.cells[cb.id].chooser.select.set_options(options, value=value)
-        _set_offlist_prompt(rec.cells[cb.id].chooser.select, value)
-        rec.cells[cb.id].chooser.select.set_enabled(not cb.disabled)
-    elif cb.id.startswith("preset:projection"):
+        rec.cells[cell_box.id].chooser.select.set_options(options, value=value)
+        _set_offlist_prompt(rec.cells[cell_box.id].chooser.select, value)
+        rec.cells[cell_box.id].chooser.select.set_enabled(not cell_box.disabled)
+    elif cell_box.id.startswith("preset:projection"):
         options = presets.projection_options(rec._editor.state)
         value = rec._editor.displayed_projection_scheme_name
         value = value if value in options else None
-        rec.cells[cb.id].chooser.select.set_options(options, value=value)
-        _set_offlist_prompt(rec.cells[cb.id].chooser.select, value)
-        rec.cells[cb.id].chooser.select.set_enabled(not cb.disabled)
+        rec.cells[cell_box.id].chooser.select.set_options(options, value=value)
+        _set_offlist_prompt(rec.cells[cell_box.id].chooser.select, value)
+        rec.cells[cell_box.id].chooser.select.set_enabled(not cell_box.disabled)
     else:
         name = rec._editor.displayed_tuning_scheme_name
         options = presets.tuning_scheme_options(
@@ -266,61 +268,63 @@ def update_preset(rec, cb: spreadsheet.CellBox) -> None:
             rec._editor.settings["terminology"],
         )
         scheme = name if name in options else None
-        rec.cells[cb.id].chooser.select.set_options(options, value=scheme)
-        _set_offlist_prompt(rec.cells[cb.id].chooser.select, scheme)
-        rec.cells[cb.id].chooser.select.set_enabled(not cb.disabled)
+        rec.cells[cell_box.id].chooser.select.set_options(options, value=scheme)
+        _set_offlist_prompt(rec.cells[cell_box.id].chooser.select, scheme)
+        rec.cells[cell_box.id].chooser.select.set_enabled(not cell_box.disabled)
 
 
-def _build_subpick(rec, cb, wrap, options, value):
+def _build_subpick(rec, cell_box, wrap, options, value):
     sel = (
         ui.select(
             options,
             value=value if value in options else None,
-            on_change=lambda e, cid=cb.id: rec._cb.on_subpick(cid, e.value),
+            on_change=lambda e, cid=cell_box.id: rec._cb.on_subpick(cid, e.value),
         )
         .props(_select_props(_SUBPICK_POPUP_W))
         .classes("rtt-preset rtt-subpick")
     )
     _set_offlist_prompt(sel, value if value in options else None)
-    _arm_option_hover(rec, sel, wrap, cb.id)
-    rec.cells[cb.id].chooser.select = sel
+    _arm_option_hover(rec, sel, wrap, cell_box.id)
+    rec.cells[cell_box.id].chooser.select = sel
 
 
-def build_etpick(rec, cb, wrap):
+def build_etpick(rec, cell_box, wrap):
     state = rec._editor.state
     db = state.domain_basis
-    value = None if cb.pending else presets.identify_et(state.mapping[cb.gen], db)
-    _build_subpick(rec, cb, wrap, presets.et_options(db), value)
+    value = None if cell_box.pending else presets.identify_et(state.mapping[cell_box.gen], db)
+    _build_subpick(rec, cell_box, wrap, presets.et_options(db), value)
 
 
-def build_commapick(rec, cb, wrap):
+def build_commapick(rec, cell_box, wrap):
     state = rec._editor.state
     db = state.domain_basis
-    value = None if cb.pending else presets.identify_comma(state.comma_basis[cb.comma], db)
-    _build_subpick(rec, cb, wrap, presets.comma_options(db), value)
+    value = (
+        None if cell_box.pending else presets.identify_comma(state.comma_basis[cell_box.comma], db)
+    )
+    _build_subpick(rec, cell_box, wrap, presets.comma_options(db), value)
 
 
-def update_subpick(rec, cb):
+def update_subpick(rec, cell_box):
     g = rec._cur_gesture
     if g is not None and g.kind == "temp" and g.reflowed:
         return
-    sel = rec.handles(cb.id).chooser.select
+    sel = rec.handles(cell_box.id).chooser.select
     if not isinstance(sel, ui.select):
         return
     state = rec._editor.state
     db = state.domain_basis
-    if cb.id.startswith("etpick:"):
+    if cell_box.id.startswith("etpick:"):
         options = presets.et_options(db)
-        if cb.pending or cb.gen >= len(state.mapping):
+        if cell_box.pending or cell_box.gen >= len(state.mapping):
             value = None
         else:
-            value = presets.identify_et(state.mapping[cb.gen], db)
+            value = presets.identify_et(state.mapping[cell_box.gen], db)
     else:
         options = presets.comma_options(db)
-        if cb.pending or cb.comma >= len(state.comma_basis):
+        if cell_box.pending or cell_box.comma >= len(state.comma_basis):
             value = None
         else:
-            value = presets.identify_comma(state.comma_basis[cb.comma], db)
+            value = presets.identify_comma(state.comma_basis[cell_box.comma], db)
     value = value if value in options else None
     sel.set_options(options, value=value)
     _set_offlist_prompt(sel, value)
@@ -342,76 +346,80 @@ def _sync_target_limit_error(rec, num, family, limit) -> None:
         )
 
 
-def build_control_select(rec, cb: spreadsheet.CellBox, wrap) -> None:
+def build_control_select(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     sel = (
         ui.select(
-            list(cb.values),
-            value=cb.text or None,
-            on_change=lambda e, cid=cb.id: rec._cb.on_control_select(cid, e.value),
+            list(cell_box.values),
+            value=cell_box.text or None,
+            on_change=lambda e, cid=cell_box.id: rec._cb.on_control_select(cid, e.value),
         )
-        .props(_select_props(cb.w))
+        .props(_select_props(cell_box.w))
         .classes("rtt-preset")
     )
-    _arm_option_hover(rec, sel, wrap, cb.id)
-    rec.cells[cb.id].chooser.select = sel
+    _arm_option_hover(rec, sel, wrap, cell_box.id)
+    rec.cells[cell_box.id].chooser.select = sel
 
 
-def update_control_select(rec, cb: spreadsheet.CellBox) -> None:
-    if _chooser_reflow_hold(rec, cb.id):
+def update_control_select(rec, cell_box: spreadsheet.CellBox) -> None:
+    if _chooser_reflow_hold(rec, cell_box.id):
         return
-    rec.cells[cb.id].chooser.select.set_options(list(cb.values), value=cb.text or None)
-    rec.cells[cb.id].chooser.select.set_enabled(not cb.disabled)
+    rec.cells[cell_box.id].chooser.select.set_options(
+        list(cell_box.values), value=cell_box.text or None
+    )
+    rec.cells[cell_box.id].chooser.select.set_enabled(not cell_box.disabled)
 
 
-def build_control_check(rec, cb: spreadsheet.CellBox, wrap) -> None:
-    rec.cells[cb.id].chooser.check = (
+def build_control_check(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
+    rec.cells[cell_box.id].chooser.check = (
         ui.checkbox(
-            cb.text,
-            value=cb.checked,
-            on_change=lambda e, cid=cb.id: rec._cb.on_control_select(cid, e.value),
+            cell_box.text,
+            value=cell_box.checked,
+            on_change=lambda e, cid=cell_box.id: rec._cb.on_control_select(cid, e.value),
         )
         .props("dense")
         .classes("rtt-control-check")
     )
-    apply = _control_check_preview(rec, cb)
+    apply = _control_check_preview(rec, cell_box)
     if apply is not None:
         preview_control(rec, wrap, apply)
 
 
-def _control_check_preview(rec, cb: spreadsheet.CellBox):
-    if cb.id == "control:diminuator":
+def _control_check_preview(rec, cell_box: spreadsheet.CellBox):
+    if cell_box.id == "control:diminuator":
         return lambda: rec._editor.set_diminuator_replaced(
             not service.diminuator_replaced(rec._editor.tuning_scheme)
         )
-    if cb.id == "control:all_interval":
+    if cell_box.id == "control:all_interval":
         return lambda: rec._editor.set_all_interval(
             not service.is_all_interval(rec._editor.tuning_scheme)
         )
     return None
 
 
-def update_control_check(rec, cb: spreadsheet.CellBox) -> None:
-    rec.cells[cb.id].chooser.check.value = cb.checked
+def update_control_check(rec, cell_box: spreadsheet.CellBox) -> None:
+    rec.cells[cell_box.id].chooser.check.value = cell_box.checked
 
 
-def build_formchooser(rec, cb: spreadsheet.CellBox, wrap) -> None:
+def build_formchooser(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     sel = (
         ui.select(
-            _formchooser_options(cb.id),
-            value=cb.text or "",
-            on_change=lambda e, c=cb.id: rec._cb.on_form_choose(c, e.value),
+            _formchooser_options(cell_box.id),
+            value=cell_box.text or "",
+            on_change=lambda e, c=cell_box.id: rec._cb.on_form_choose(c, e.value),
         )
-        .props(_select_props(cb.w))
+        .props(_select_props(cell_box.w))
         .classes("rtt-preset")
     )
-    _arm_option_hover(rec, sel, wrap, cb.id)
-    rec.cells[cb.id].chooser.select = sel
+    _arm_option_hover(rec, sel, wrap, cell_box.id)
+    rec.cells[cell_box.id].chooser.select = sel
 
 
-def update_formchooser(rec, cb: spreadsheet.CellBox) -> None:
-    if _chooser_reflow_hold(rec, cb.id):
+def update_formchooser(rec, cell_box: spreadsheet.CellBox) -> None:
+    if _chooser_reflow_hold(rec, cell_box.id):
         return
-    rec.cells[cb.id].chooser.select.set_options(_formchooser_options(cb.id), value=cb.text or "")
+    rec.cells[cell_box.id].chooser.select.set_options(
+        _formchooser_options(cell_box.id), value=cell_box.text or ""
+    )
 
 
 def preview_control(rec, el, apply) -> None:

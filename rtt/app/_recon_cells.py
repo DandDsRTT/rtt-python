@@ -28,8 +28,8 @@ def target_preset_values(editor):
     return limit, family
 
 
-def tag_audio(el, cb) -> None:
-    tile, idx, cents = cb.audio
+def tag_audio(el, cell_box) -> None:
+    tile, idx, cents = cell_box.audio
     el.classes(add="rtt-spk").props(
         f'data-audio="{tile}" data-idx="{idx}" data-cents="{cents:.6f}"'
     )
@@ -46,51 +46,57 @@ def attach_guide_link(wrap, gh, tile, text) -> None:
         wrap._props["data-guide-url"] = gh.url
 
 
-def attach_hover_help(rec, wrap, cb) -> None:
-    plain = tooltips.control_help(cb.kind, cb.id)
-    relabeled = tooltips.control_help(cb.kind, cb.id, pretransform=True)
+def attach_hover_help(rec, wrap, cell_box) -> None:
+    plain = tooltips.control_help(cell_box.kind, cell_box.id)
+    relabeled = tooltips.control_help(cell_box.kind, cell_box.id, pretransform=True)
     help_text = relabeled if rec.pretransform else plain
-    if cb.kind in VALUE_KINDS:
+    if cell_box.kind in VALUE_KINDS:
         wrap.classes("rtt-zoomable")
         if help_text:
             wrap._props["data-zoomhelp"] = help_text
     elif help_text:
-        if cb.id in tooltips.MEAN_DAMAGE_IDS:
+        if cell_box.id in tooltips.MEAN_DAMAGE_IDS:
             with wrap:
-                rec.cells[cb.id].mean_damage_tip = ui.tooltip(help_text)
-        elif cb.id == "preset:target":
+                rec.cells[cell_box.id].mean_damage_tip = ui.tooltip(help_text)
+        elif cell_box.id == "preset:target":
             with wrap:
                 rec.target_limit_tip = ui.tooltip(help_text)
         elif plain != relabeled:
             with wrap:
-                rec.cells[cb.id].help_tip = (ui.tooltip(help_text), plain, relabeled)
+                rec.cells[cell_box.id].help_tip = (ui.tooltip(help_text), plain, relabeled)
         else:
             wrap.tooltip(help_text)
-    if cb.kind in ("symbol", "caption"):
-        gh = tooltips.tile_guide_help_for_cell(cb.id)
+    if cell_box.kind in ("symbol", "caption"):
+        gh = tooltips.tile_guide_help_for_cell(cell_box.id)
         if gh is not None:
-            gh_pt = tooltips.tile_guide_help_for_cell(cb.id, pretransform=True)
+            gh_pt = tooltips.tile_guide_help_for_cell(cell_box.id, pretransform=True)
             text = gh_pt.text if rec.pretransform else gh.text
-            attach_guide_link(wrap, gh, cb.id.split(":", 1)[1], text)
+            attach_guide_link(wrap, gh, cell_box.id.split(":", 1)[1], text)
             if gh.text != gh_pt.text:
-                rec.cells[cb.id].guide_help_text = (gh.text, gh_pt.text)
+                rec.cells[cell_box.id].guide_help_text = (gh.text, gh_pt.text)
 
 
-def wire_cell_input(rec, wrap, cb) -> None:
-    if cb.kind.endswith(("plus", "minus")):
+def wire_cell_input(rec, wrap, cell_box) -> None:
+    if cell_box.kind.endswith(("plus", "minus")):
         wrap.on("mousedown", js_handler="(e) => e.preventDefault()")
-    edit_input = rec.cells[cb.id].value.input or rec.cells[cb.id].value.ptext_input
+    edit_input = rec.cells[cell_box.id].value.input or rec.cells[cell_box.id].value.ptext_input
     if edit_input is not None:
-        den = rec.cells[cb.id].value.den_input
+        den = rec.cells[cell_box.id].value.den_input
         guard = _STACKED_EXIT_JS if den is not None else None
         for fld in (edit_input, den) if den is not None else (edit_input,):
-            fld.on("focus", lambda _=None, cid=cb.id: rec._cb.on_cell_focus(cid), js_handler=guard)
-            fld.on("blur", lambda _=None, cid=cb.id: rec._cb.on_cell_blur(cid), js_handler=guard)
+            fld.on(
+                "focus",
+                lambda _=None, cid=cell_box.id: rec._cb.on_cell_focus(cid),
+                js_handler=guard,
+            )
+            fld.on(
+                "blur", lambda _=None, cid=cell_box.id: rec._cb.on_cell_blur(cid), js_handler=guard
+            )
             fld.on("keydown.enter", js_handler="(e) => e.target.blur()")
-    if cb.kind in _WHEEL_STEPS:
+    if cell_box.kind in _WHEEL_STEPS:
         wrap.on(
             "wheel",
-            lambda e, cid=cb.id: rec._cb.on_value_wheel(cid, e.args.get("deltaY")),
+            lambda e, cid=cell_box.id: rec._cb.on_value_wheel(cid, e.args.get("deltaY")),
             args=["deltaY"],
             js_handler=_INT_WHEEL_JS,
         )

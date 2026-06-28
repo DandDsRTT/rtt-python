@@ -29,13 +29,13 @@ def build_plus(rec, _cb: spreadsheet.CellBox, wrap) -> None:
     preview_control(rec, wrap, rec._editor.expand)
 
 
-def build_gen_minus(rec, cb: spreadsheet.CellBox, wrap) -> None:
+def build_gen_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-minus-zone")
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn").on(
         "click",
-        lambda _=None, idx=cb.gen: rec._cb.act(lambda: rec._editor.remove_mapping_row(idx)),
+        lambda _=None, idx=cell_box.gen: rec._cb.act(lambda: rec._editor.remove_mapping_row(idx)),
     )
-    preview_rank_remove(rec, wrap, "row", cb.gen)
+    preview_rank_remove(rec, wrap, "row", cell_box.gen)
 
 
 def build_gen_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
@@ -44,18 +44,18 @@ def build_gen_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
     )
 
 
-def build_map_minus(rec, cb: spreadsheet.CellBox, wrap) -> None:
+def build_map_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-minus-zone")
-    if cb.pending:
+    if cell_box.pending:
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v").on(
             "click", lambda _=None: rec._cb.act(rec._editor.cancel_pending_mapping_row)
         )
         return
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v").on(
         "click",
-        lambda _=None, idx=cb.gen: rec._cb.act(lambda: rec._editor.remove_mapping_row(idx)),
+        lambda _=None, idx=cell_box.gen: rec._cb.act(lambda: rec._editor.remove_mapping_row(idx)),
     )
-    preview_rank_remove(rec, wrap, "row", cb.gen)
+    preview_rank_remove(rec, wrap, "row", cell_box.gen)
 
 
 def build_map_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
@@ -72,9 +72,14 @@ def build_basis_minus(rec, _cb: spreadsheet.CellBox, wrap) -> None:
     preview_control(rec, wrap, rec._editor.shrink)
 
 
-def build_comma_minus(rec, cb: spreadsheet.CellBox, wrap) -> None:
+def build_comma_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     _build_list_minus(
-        rec, cb, wrap, rec._editor.cancel_pending_comma, rec._editor.remove_comma, rank_axis="comma"
+        rec,
+        cell_box,
+        wrap,
+        rec._editor.cancel_pending_comma,
+        rec._editor.remove_comma,
+        rank_axis="comma",
     )
 
 
@@ -90,13 +95,13 @@ def build_element_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
     )
 
 
-def build_element_minus(rec, cb: spreadsheet.CellBox, wrap) -> None:
+def build_element_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     action = (
         rec._editor.remove_element
-        if cb.id.endswith(":pending")
-        else (lambda idx=cb.prime: rec._editor.remove_domain_element(idx))
+        if cell_box.id.endswith(":pending")
+        else (lambda idx=cell_box.prime: rec._editor.remove_domain_element(idx))
     )
-    btn = "rtt-minus-btn-v" if ":basis" in cb.id else "rtt-minus-btn"
+    btn = "rtt-minus-btn-v" if ":basis" in cell_box.id else "rtt-minus-btn"
     wrap.classes("rtt-minus-zone")
     ui.html(_control_svg("minus")).classes(f"rtt-glyph {btn}").on(
         "click", lambda _=None: rec._cb.act(action)
@@ -104,22 +109,24 @@ def build_element_minus(rec, cb: spreadsheet.CellBox, wrap) -> None:
     preview_control(rec, wrap, action)
 
 
-def _build_list_minus(rec, cb: spreadsheet.CellBox, wrap, cancel, remove, rank_axis=None) -> None:
-    pending = cb.id.endswith(":pending")
-    action = cancel if pending else (lambda idx=cb.comma: remove(idx))
+def _build_list_minus(
+    rec, cell_box: spreadsheet.CellBox, wrap, cancel, remove, rank_axis=None
+) -> None:
+    pending = cell_box.id.endswith(":pending")
+    action = cancel if pending else (lambda idx=cell_box.comma: remove(idx))
     wrap.classes("rtt-minus-zone")
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn").on(
         "click", lambda _=None: rec._cb.act(action)
     )
     if rank_axis is not None and not pending:
-        preview_rank_remove(rec, wrap, rank_axis, cb.comma)
+        preview_rank_remove(rec, wrap, rank_axis, cell_box.comma)
     else:
         preview_control(rec, wrap, action)
 
 
-def build_interest_minus(rec, cb: spreadsheet.CellBox, wrap) -> None:
+def build_interest_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     _build_list_minus(
-        rec, cb, wrap, rec._editor.cancel_pending_interest, rec._editor.remove_interest
+        rec, cell_box, wrap, rec._editor.cancel_pending_interest, rec._editor.remove_interest
     )
 
 
@@ -129,8 +136,8 @@ def build_interest_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
     )
 
 
-def build_held_minus(rec, cb: spreadsheet.CellBox, wrap) -> None:
-    _build_list_minus(rec, cb, wrap, rec._editor.cancel_pending_held, rec._editor.remove_held)
+def build_held_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
+    _build_list_minus(rec, cell_box, wrap, rec._editor.cancel_pending_held, rec._editor.remove_held)
 
 
 def build_held_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
@@ -139,8 +146,10 @@ def build_held_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
     )
 
 
-def build_target_minus(rec, cb: spreadsheet.CellBox, wrap) -> None:
-    _build_list_minus(rec, cb, wrap, rec._editor.cancel_pending_target, rec._editor.remove_target)
+def build_target_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
+    _build_list_minus(
+        rec, cell_box, wrap, rec._editor.cancel_pending_target, rec._editor.remove_target
+    )
 
 
 def build_target_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
@@ -149,17 +158,17 @@ def build_target_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
     )
 
 
-def build_colgrip(rec, cb: spreadsheet.CellBox, wrap) -> None:
+def build_colgrip(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     # HTML5 DnD: an element is only a valid drop target if it preventDefaults dragover, so each grip
     # is both drag source and drop target with its own client-side dragover preventDefault.
-    _, lst, tail = cb.id.split(":")
+    _, lst, tail = cell_box.id.split(":")
     wrap.on("dragover", js_handler="(e) => e.preventDefault()")
     if tail == "add":
         wrap.classes("rtt-colgrip rtt-coldrop")
         wrap.on("dragenter.prevent", lambda _=None, which=lst: rec._cb.on_drag_enter(which, None))
         wrap.on("drop.prevent", lambda _=None, which=lst: rec._cb.on_drop(which, None))
         return
-    idx = cb.comma
+    idx = cell_box.comma
     wrap.classes("rtt-drag-handle rtt-colgrip").props("draggable=true")
     wrap.on("dragstart", lambda _=None, which=lst, i=idx: rec._cb.on_drag_start(which, i))
     wrap.on("dragenter.prevent", lambda _=None, which=lst, i=idx: rec._cb.on_drag_enter(which, i))

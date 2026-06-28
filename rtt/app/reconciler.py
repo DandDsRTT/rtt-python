@@ -147,41 +147,46 @@ class _Reconciler:
         self.cells.pop(eid, None)
         self.entities.pop(eid, None)
 
-    def make_cell(self, cb: spreadsheet.CellBox) -> None:
-        self.cells[cb.id] = CellHandles()
-        self.entities[cb.id] = EntityHandles()
-        wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
+    def make_cell(self, cell_box: spreadsheet.CellBox) -> None:
+        self.cells[cell_box.id] = CellHandles()
+        self.entities[cell_box.id] = EntityHandles()
+        wrap = (
+            ui.element("div")
+            .classes("rtt-cell")
+            .props(f'data-eid="{cell_box.id}"')
+            .mark(cell_box.id)
+        )
         with wrap:
-            self.cell_kinds[cb.kind].build(self, cb, wrap)
-            if cb.audio is not None:
-                _recon_cells.tag_audio(wrap, cb)
-        _recon_cells.attach_hover_help(self, wrap, cb)
-        self.entities[cb.id].el = wrap
-        self.cells[cb.id].kind = cb.kind
-        _recon_cells.wire_cell_input(self, wrap, cb)
+            self.cell_kinds[cell_box.kind].build(self, cell_box, wrap)
+            if cell_box.audio is not None:
+                _recon_cells.tag_audio(wrap, cell_box)
+        _recon_cells.attach_hover_help(self, wrap, cell_box)
+        self.entities[cell_box.id].el = wrap
+        self.cells[cell_box.id].kind = cell_box.kind
+        _recon_cells.wire_cell_input(self, wrap, cell_box)
 
-    def update_cell(self, cb: spreadsheet.CellBox) -> None:
-        handlers = self.cell_kinds[cb.kind]
+    def update_cell(self, cell_box: spreadsheet.CellBox) -> None:
+        handlers = self.cell_kinds[cell_box.kind]
         if handlers.update is not None:
-            handlers.update(self, cb)
-        if cb.unit:
-            if self.cells[cb.id].cell_unit is None:
-                with self.entities[cb.id].el:
-                    self.cells[cb.id].cell_unit = ui.html("").classes("rtt-cellunit")
-                self.entities[cb.id].el.classes(add="rtt-cell-united")
-            if self.cells[cb.id].cell_unit_text != (cb.unit, cb.w):
-                self.cells[cb.id].cell_unit.set_content(_bold_units(cb.unit))
-                self.cells[cb.id].cell_unit.style(
-                    f"font-size:{_units_font(cb.unit, cb.w, _CELLUNIT_MAX_FONT):.2f}px"
+            handlers.update(self, cell_box)
+        if cell_box.unit:
+            if self.cells[cell_box.id].cell_unit is None:
+                with self.entities[cell_box.id].el:
+                    self.cells[cell_box.id].cell_unit = ui.html("").classes("rtt-cellunit")
+                self.entities[cell_box.id].el.classes(add="rtt-cell-united")
+            if self.cells[cell_box.id].cell_unit_text != (cell_box.unit, cell_box.w):
+                self.cells[cell_box.id].cell_unit.set_content(_bold_units(cell_box.unit))
+                self.cells[cell_box.id].cell_unit.style(
+                    f"font-size:{_units_font(cell_box.unit, cell_box.w, _CELLUNIT_MAX_FONT):.2f}px"
                 )
-                self.cells[cb.id].cell_unit_text = (cb.unit, cb.w)
-        elif self.cells[cb.id].cell_unit is not None:
-            self.cells[cb.id].cell_unit.delete()
-            self.cells[cb.id].cell_unit = None
-            self.cells[cb.id].cell_unit_text = None
-            self.entities[cb.id].el.classes(remove="rtt-cell-united")
-        if cb.audio is not None:
-            _recon_cells.tag_audio(self.entities[cb.id].el, cb)
+                self.cells[cell_box.id].cell_unit_text = (cell_box.unit, cell_box.w)
+        elif self.cells[cell_box.id].cell_unit is not None:
+            self.cells[cell_box.id].cell_unit.delete()
+            self.cells[cell_box.id].cell_unit = None
+            self.cells[cell_box.id].cell_unit_text = None
+            self.entities[cell_box.id].el.classes(remove="rtt-cell-united")
+        if cell_box.audio is not None:
+            _recon_cells.tag_audio(self.entities[cell_box.id].el, cell_box)
 
     def handles(self, cid: str) -> CellHandles:
         return self.cells.get(cid, _EMPTY_HANDLES)

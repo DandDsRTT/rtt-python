@@ -191,12 +191,12 @@ _GRIDVALUE_SPECS = {
 }
 
 
-def _vgroup_key(cb: spreadsheet.CellBox) -> str:
-    if cb.kind in ("mapping", "targetcell"):
-        return cb.id.rsplit(":", 1)[0]
-    if cb.kind == "formcell":
+def _vgroup_key(cell_box: spreadsheet.CellBox) -> str:
+    if cell_box.kind in ("mapping", "targetcell"):
+        return cell_box.id.rsplit(":", 1)[0]
+    if cell_box.kind == "formcell":
         return "cell:finv"
-    parts = cb.id.split(":")
+    parts = cell_box.id.split(":")
     return ":".join(parts[:2] + parts[3:])
 
 

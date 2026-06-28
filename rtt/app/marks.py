@@ -202,22 +202,24 @@ def _hbar(w, h):
     return svg(w, h, rect(0, (h - _BR_BAR) / 2, w, _BR_BAR))
 
 
-def ebk_svg(cb):
-    if cb.kind == "bracket":
-        if cb.text == "⟨":
-            svg = angle_bracket(cb.w, cb.h)
-        elif cb.text == "{":
-            svg = curly_bracket(cb.w, cb.h)
+def ebk_svg(cell_box):
+    if cell_box.kind == "bracket":
+        if cell_box.text == "⟨":
+            svg = angle_bracket(cell_box.w, cell_box.h)
+        elif cell_box.text == "{":
+            svg = curly_bracket(cell_box.w, cell_box.h)
         else:
-            svg = square_bracket(cb.w, cb.h, "left" if cb.text == "[" else "right")
-    elif cb.kind == "ebktop":
-        svg = top_bracket(cb.w, cb.h)
-    elif cb.kind == "ebkbrace":
-        svg = brace(cb.w, cb.h)
-    elif cb.kind == "ebkangle":
-        svg = angle_foot(cb.w, cb.h)
-    elif cb.kind == "hbar":
-        svg = _hbar(cb.w, cb.h)
+            svg = square_bracket(
+                cell_box.w, cell_box.h, "left" if cell_box.text == "[" else "right"
+            )
+    elif cell_box.kind == "ebktop":
+        svg = top_bracket(cell_box.w, cell_box.h)
+    elif cell_box.kind == "ebkbrace":
+        svg = brace(cell_box.w, cell_box.h)
+    elif cell_box.kind == "ebkangle":
+        svg = angle_foot(cell_box.w, cell_box.h)
+    elif cell_box.kind == "hbar":
+        svg = _hbar(cell_box.w, cell_box.h)
     else:
-        svg = vbar(cb.w, cb.h)
-    return svg.replace(BR_COLOR, PENDING_COLOR) if cb.pending else svg
+        svg = vbar(cell_box.w, cell_box.h)
+    return svg.replace(BR_COLOR, PENDING_COLOR) if cell_box.pending else svg
