@@ -10,8 +10,8 @@ from rtt.app.service.text_emit import (
     _held_values,
     _interest_values,
     _projection_values,
-    _superspace_values,
 )
+from rtt.app.service.text_emit_superspace import _superspace_values
 
 
 def plain_text_values(

@@ -10354,7 +10354,7 @@ def test_plain_text_band_matches_a_direct_derivation_under_a_manual_generator_tu
 
 
 def test_plain_text_band_matches_a_direct_derivation_over_the_superspace():
-    # the chapter-9 block rides the bundle's memoized superspace_tun (the grid's one solve);
+    # the chapter-9 block rides the bundle's memoized superspace_tuning_map (the grid's one solve);
     # the direct call solves it itself — both must give the same superspace tile strings
     lay = _barbados_superspace(plain_text_values=True)
     pt = service.plain_text_values(_barbados_state(), service.DEFAULT_DOCUMENT_SCHEME,

@@ -44,7 +44,7 @@ class DerivedQuantities:
     target_weights: tuple
     target_sizes: IntervalSizes
     comma_sizes: IntervalSizes
-    superspace_tun: Tuning | None = None
+    superspace_tuning_map: Tuning | None = None
 
 
 @dataclass(frozen=True)

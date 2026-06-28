@@ -407,7 +407,7 @@ def _resolve_plain_text_strings(geometry, resolved, context) -> Geometry:
                                                    target_weights=resolved.tuning.target_weights,
                                                    target_sizes=resolved.targets.sizes,
                                                    comma_sizes=resolved.commas.sizes,
-                                                   superspace_tun=(geometry.superspace_tuning_map
+                                                   superspace_tuning_map=(geometry.superspace_tuning_map
                                                                    if resolved.flags.superspace else None)))
                      if resolved.flags.plain_text_values else {})
     if not resolved.flags.ebk:
