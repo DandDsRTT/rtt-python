@@ -362,7 +362,7 @@ def control_dims(
     dropdown_w = max(40, min(geometry.col_w[column_key] - 2 * BOX_INNER, cap_w))
     label_h = CAPTION_LINE if label else 0
     box_h = 2 * BOX_INNER + PRESET_H + label_h
-    box_h += (SCHEME_BTN_SQ + BAND_GAP) if scheme_btn else 0
+    box_h += (SCHEME_BTN_SQ + BOX_INNER) if scheme_btn else 0
     if form_label is not None:
         box_h += BAND_GAP + PRESET_H + (CAPTION_LINE if form_label else 0)
     return dropdown_w, label_h, box_h
