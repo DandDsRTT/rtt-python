@@ -39,15 +39,15 @@ from rtt.app.spreadsheet_emit_model import EmitResult
 from rtt.app.spreadsheet_text import _bus_span, _sub, _subscript_coord
 
 
-def emit_decorations(resolved, geometry, ctx, region_boxes, gtm_box, opt_box, approach_frame) -> EmitResult:
+def emit_decorations(resolved, geometry, context, region_boxes, gtm_box, opt_box, approach_frame) -> EmitResult:
     cells: list = []
     lines: list = []
     blocks: list = []
-    _emit_matrix_labels(cells, resolved, geometry, ctx)
-    _emit_axes(lines, resolved, geometry, ctx)
-    _emit_panels(blocks, geometry, ctx, region_boxes, gtm_box, opt_box, approach_frame)
-    _emit_washes(blocks, resolved, geometry, ctx)
-    _emit_symbols_captions(cells, resolved, geometry, ctx)
+    _emit_matrix_labels(cells, resolved, geometry, context)
+    _emit_axes(lines, resolved, geometry, context)
+    _emit_panels(blocks, geometry, context, region_boxes, gtm_box, opt_box, approach_frame)
+    _emit_washes(blocks, resolved, geometry, context)
+    _emit_symbols_captions(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells), lines=tuple(lines), blocks=tuple(blocks))
 
 
@@ -55,11 +55,11 @@ def _gridline(lines, lid, orientation, pos, start, length, *, dotted) -> None:
     lines.append(Line(lid, orientation, pos, start, length, dotted=dotted))
 
 
-def _column_axis(lines, resolved, geometry, ctx, fanned_columns, bot_bus_y, key, prefix, n, center_open) -> None:
+def _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, key, prefix, n, center_open) -> None:
     if key not in geometry.col_x:
         return
     fanned_columns.add(key)
-    dotted = f"col:{key}" in ctx.collapsed
+    dotted = f"col:{key}" in context.collapsed
     mx, mw = query.matrix_span(geometry, resolved, key)
     cx = mx + mw / 2
     if n == 0:
@@ -78,9 +78,9 @@ def _column_axis(lines, resolved, geometry, ctx, fanned_columns, bot_bus_y, key,
     _gridline(lines, f"foot:{key}", "v", cx, bot_bus_y, geometry.total_h - bot_bus_y, dotted=dotted)
 
 
-def _row_axis(lines, geometry, ctx, right_bus_x, key) -> None:
+def _row_axis(lines, geometry, context, right_bus_x, key) -> None:
     n = geometry.rows[key].num_subrows
-    folded = f"row:{key}" in ctx.collapsed
+    folded = f"row:{key}" in context.collapsed
     cy = geometry.rows[key].y + geometry.rows[key].h / 2
     ys = [cy] * n if folded else [query.subrow_top(geometry, key, i) + ROW_H / 2 for i in range(n)]
     left_bus_x = geometry.node_edge + geometry.FAN if (query.row_fans(geometry, key) and not folded) else geometry.node_edge
@@ -94,25 +94,25 @@ def _row_axis(lines, geometry, ctx, right_bus_x, key) -> None:
     _gridline(lines, f"foot:{key}", "h", cy, right_bus_x, geometry.total_w - right_bus_x, dotted=folded)
 
 
-def _emit_axes(lines, resolved, geometry, ctx) -> None:
+def _emit_axes(lines, resolved, geometry, context) -> None:
     bot_bus_y = geometry.total_h - geometry.FAN
     fanned_columns: set = set()
     for key in geometry.group_left:
-        _column_axis(lines, resolved, geometry, ctx, fanned_columns, bot_bus_y, key, geometry.group_elem[key], geometry.group_n[key],
+        _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, key, geometry.group_elem[key], geometry.group_n[key],
                      lambda i, k=key: geometry.group_left[k][i] + COL_W / 2)
     for key in geometry.col_x:
         if key in fanned_columns:
             continue
         cx = geometry.col_x[key] + geometry.col_w[key] / 2
         _gridline(lines, f"trunk:{key}", "v", cx, geometry.branch_top_y, geometry.total_h - geometry.branch_top_y,
-                  dotted=f"col:{key}" in ctx.collapsed)
+                  dotted=f"col:{key}" in context.collapsed)
     right_bus_x = geometry.total_w - geometry.FAN
     for key in geometry.rows:
         if query.row_fans(geometry, key):
-            _row_axis(lines, geometry, ctx, right_bus_x, key)
+            _row_axis(lines, geometry, context, right_bus_x, key)
         else:
             _gridline(lines, f"h:{key}", "h", geometry.rows[key].y + geometry.rows[key].h / 2, geometry.node_edge, geometry.total_w - geometry.node_edge,
-                      dotted=f"row:{key}" in ctx.collapsed)
+                      dotted=f"row:{key}" in context.collapsed)
 
 
 def _matlabel_group_count(resolved):
@@ -121,7 +121,7 @@ def _matlabel_group_count(resolved):
             "canongens": resolved.dims.rc, "ssgens": resolved.dims.rL, "ssprimes": resolved.dims.dL}
 
 
-def _emit_matrix_row_labels(cells, resolved, geometry, ctx) -> None:
+def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
 
     def prescale_top(i):
         return query.subrow_top(geometry, "prescaling", i)
@@ -152,7 +152,7 @@ def _emit_matrix_row_labels(cells, resolved, geometry, ctx) -> None:
                  ("ss_vectors", "ssprimes"): resolved.dims.dL,
                  ("ss_projection", "ssprimes"): resolved.dims.dL}
     for (row_key, column_key), glyph in resolved.labels.row_labels.items():
-        if not query.tile_open(geometry, ctx.collapsed, row_key, column_key):
+        if not query.tile_open(geometry, context.collapsed, row_key, column_key):
             continue
         top = row_top[(row_key, column_key)]
         for i in range(row_count[(row_key, column_key)]):
@@ -167,12 +167,12 @@ def _emit_matrix_row_labels(cells, resolved, geometry, ctx) -> None:
             ))
 
 
-def _emit_matrix_col_labels(cells, resolved, geometry, ctx) -> None:
+def _emit_matrix_col_labels(cells, resolved, geometry, context) -> None:
     group_count = _matlabel_group_count(resolved)
     for (row_key, column_key), label in resolved.labels.col_labels.items():
         if column_key not in group_count or row_key not in geometry.rows or geometry.rows[row_key].matrix_label_top is None:
             continue
-        if not query.tile_open(geometry, ctx.collapsed, row_key, column_key):
+        if not query.tile_open(geometry, context.collapsed, row_key, column_key):
             continue
         col_label = label
         if (row_key, column_key) == ("weight", "targets") and geometry.all_interval_simplicity_weight:
@@ -192,23 +192,23 @@ def _emit_matrix_col_labels(cells, resolved, geometry, ctx) -> None:
             ))
 
 
-def _emit_matrix_labels(cells, resolved, geometry, ctx) -> None:
+def _emit_matrix_labels(cells, resolved, geometry, context) -> None:
     if not resolved.flags.header_symbols:
         return
-    _emit_matrix_row_labels(cells, resolved, geometry, ctx)
-    _emit_matrix_col_labels(cells, resolved, geometry, ctx)
+    _emit_matrix_row_labels(cells, resolved, geometry, context)
+    _emit_matrix_col_labels(cells, resolved, geometry, context)
 
 
-def _panel(blocks, geometry, ctx, bid, column_key, row_key) -> None:
+def _panel(blocks, geometry, context, bid, column_key, row_key) -> None:
     if column_key not in geometry.col_x or row_key not in geometry.rows:
         return
-    blocks.append(Block(bid, *query.panel_rect(geometry, ctx.collapsed, row_key, column_key)))
+    blocks.append(Block(bid, *query.panel_rect(geometry, context.collapsed, row_key, column_key)))
 
 
-def _emit_panels(blocks, geometry, ctx, region_boxes, gtm_box, opt_box, approach_frame) -> None:
+def _emit_panels(blocks, geometry, context, region_boxes, gtm_box, opt_box, approach_frame) -> None:
     for bid, row_key, column_key in geometry.tiles:
         if (row_key, column_key) in geometry.declared_tiles:
-            _panel(blocks, geometry, ctx, bid, column_key, row_key)
+            _panel(blocks, geometry, context, bid, column_key, row_key)
     blocks.extend(region_boxes)
     if gtm_box is not None:
         blocks.append(Block("block:tuning:rangesbox", *gtm_box, boxed=True))
@@ -249,14 +249,14 @@ def _wash_segments(resolved, geometry, row_key, column_key):
     return [(column_key, query.tile_span_box(geometry, row_key, column_key), _tile_groups(resolved, row_key, column_key))]
 
 
-def _wash_bands(resolved, geometry, ctx):
+def _wash_bands(resolved, geometry, context):
     bands = []
     for _bid, row_key, column_key in geometry.tiles:
-        if (row_key, column_key) not in geometry.declared_tiles or not query.tile_open(geometry, ctx.collapsed, row_key, column_key):
+        if (row_key, column_key) not in geometry.declared_tiles or not query.tile_open(geometry, context.collapsed, row_key, column_key):
             continue
         y, h = geometry.rows[row_key].tile_top - WASH_PAD, geometry.rows[row_key].tile_h + 2 * WASH_PAD
         for seg_key, (tile_x, tile_w), seg_groups in _wash_segments(resolved, geometry, row_key, column_key):
-            groups = sorted(g for g in seg_groups if ctx.settings.get(f"{g}_colorization"))
+            groups = sorted(g for g in seg_groups if context.settings.get(f"{g}_colorization"))
             if not groups:
                 continue
             x, w = tile_x - WASH_PAD, tile_w + 2 * WASH_PAD
@@ -268,10 +268,10 @@ def _wash_bands(resolved, geometry, ctx):
     return bands
 
 
-def _emit_washes(blocks, resolved, geometry, ctx) -> None:
+def _emit_washes(blocks, resolved, geometry, context) -> None:
     if not (geometry.col_x and geometry.rows):
         return
-    bands = _wash_bands(resolved, geometry, ctx)
+    bands = _wash_bands(resolved, geometry, context)
     for bid, x, y, w, h, _ in bands:
         blocks.append(Block(f"washbase:{bid}", x, y, w, h, tint="base"))
     for bid, x, y, w, h, group in bands:
@@ -361,13 +361,13 @@ def _emit_tile_symbols_captions(cells, resolved, geometry, caption_equivs, capti
     _emit_tile_units(cells, resolved, geometry, row_key, column_key)
 
 
-def _emit_symbols_captions(cells, resolved, geometry, ctx) -> None:
-    caption_ai = service.is_all_interval(ctx.tuning_scheme)
-    slope = service.damage_weight_slope(ctx.tuning_scheme)
+def _emit_symbols_captions(cells, resolved, geometry, context) -> None:
+    caption_ai = service.is_all_interval(context.tuning_scheme)
+    slope = service.damage_weight_slope(context.tuning_scheme)
     caption_equivs = _caption_equivalences(resolved, geometry, caption_ai, slope)
     for (row_key, column_key), name in resolved.labels.captions.items():
         if column_key == "interest" and not resolved.interest.vectors:
             continue
-        if not query.tile_open(geometry, ctx.collapsed, row_key, column_key):
+        if not query.tile_open(geometry, context.collapsed, row_key, column_key):
             continue
         _emit_tile_symbols_captions(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, name)

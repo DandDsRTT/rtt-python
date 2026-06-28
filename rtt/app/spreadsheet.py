@@ -65,31 +65,31 @@ class _GridBuilder(Resolver):
         )
 
 
-def assemble(resolved, geometry, ctx):
+def assemble(resolved, geometry, context):
     cells: list[CellBox] = []
     lines: list[Line] = []
     blocks: list[Block] = []
     region_boxes: list[Block] = []
-    cells.extend(emit_headers(resolved, geometry, ctx).cells)
-    cells.extend(emit_counts_row(resolved, geometry, ctx).cells)
-    cells.extend(emit_units(resolved, geometry, ctx).cells)
-    cells.extend(emit_quantities_row(resolved, geometry, ctx).cells)
+    cells.extend(emit_headers(resolved, geometry, context).cells)
+    cells.extend(emit_counts_row(resolved, geometry, context).cells)
+    cells.extend(emit_units(resolved, geometry, context).cells)
+    cells.extend(emit_quantities_row(resolved, geometry, context).cells)
     cells.extend(emit_column_plus_controls(resolved, geometry).cells)
-    cells.extend(emit_rehomed_minus_controls(resolved, geometry, ctx).cells)
-    cells.extend(emit_mapping(resolved, geometry, ctx).cells)
-    cells.extend(emit_projection_band(resolved, geometry, ctx).cells)
-    cells.extend(emit_canon_band(resolved, geometry, ctx).cells)
-    cells.extend(emit_vectors(resolved, geometry, ctx).cells)
-    cells.extend(emit_superspace_rows(resolved, geometry, ctx).cells)
-    cells.extend(emit_identity_objects(resolved, geometry, ctx).cells)
-    tuning = emit_tuning(resolved, geometry, ctx)
+    cells.extend(emit_rehomed_minus_controls(resolved, geometry, context).cells)
+    cells.extend(emit_mapping(resolved, geometry, context).cells)
+    cells.extend(emit_projection_band(resolved, geometry, context).cells)
+    cells.extend(emit_canon_band(resolved, geometry, context).cells)
+    cells.extend(emit_vectors(resolved, geometry, context).cells)
+    cells.extend(emit_superspace_rows(resolved, geometry, context).cells)
+    cells.extend(emit_identity_objects(resolved, geometry, context).cells)
+    tuning = emit_tuning(resolved, geometry, context)
     cells.extend(tuning.cells)
     region_boxes.extend(tuning.region_boxes)
-    cells.extend(emit_brackets(resolved, geometry, ctx).cells)
+    cells.extend(emit_brackets(resolved, geometry, context).cells)
     decorations = emit_decorations(
         resolved,
         geometry,
-        ctx,
+        context,
         region_boxes,
         tuning.extra["gtm_box"],
         tuning.extra["opt_box"],
@@ -98,12 +98,12 @@ def assemble(resolved, geometry, ctx):
     cells.extend(decorations.cells)
     lines.extend(decorations.lines)
     blocks.extend(decorations.blocks)
-    controls = emit_controls(resolved, geometry, ctx)
+    controls = emit_controls(resolved, geometry, context)
     cells.extend(controls.cells)
     blocks.extend(controls.blocks)
-    cells.extend(emit_ebk_frames_and_marks(resolved, geometry, ctx, cells).cells)
-    cells.extend(emit_tile_toggles(geometry, ctx).cells)
-    cells = list(transform_cells(cells, resolved, geometry, ctx))
+    cells.extend(emit_ebk_frames_and_marks(resolved, geometry, context, cells).cells)
+    cells.extend(emit_tile_toggles(geometry, context).cells)
+    cells = list(transform_cells(cells, resolved, geometry, context))
     return tuple(cells), tuple(lines), tuple(blocks), tuning.extra["approach_box"]
 
 

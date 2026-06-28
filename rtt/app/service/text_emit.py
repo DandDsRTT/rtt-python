@@ -35,17 +35,17 @@ from rtt.app.service.text_conventions import _DASH
 from rtt.app.service.text_format import _ket_list, embedding_ebk, projection_ebk
 
 
-def _base_structural(ctx: _Ctx) -> dict:
-    s = ctx.state
-    db = ctx.db
-    core = ctx.core
-    canon = ctx.canon
-    un = ctx.unchanged
+def _base_structural(context: _Ctx) -> dict:
+    s = context.state
+    db = context.db
+    core = context.core
+    canon = context.canon
+    un = context.unchanged
     return {
         ("quantities", "primes"): ".".join(str(e) for e in db),
         ("vectors", "commas"): _ket_list(list(core.comma_basis) + un.basis, "⟩"),
         ("projection", "commas"): _ket_list([(0,) * s.d for _ in core.commas] + un.basis, "⟩"),
-        ("scaling_factors", "commas"): ctx.r(
+        ("scaling_factors", "commas"): context.r(
             ("scaling_factors", "commas"), ["0"] * len(core.commas) + un.scaling
         ),
         ("vectors", "targets"): _ket_list(core.target_vectors, "⟩"),
@@ -55,40 +55,42 @@ def _base_structural(ctx: _Ctx) -> dict:
             list(zip(*core.mapped_comma, strict=False)) + un.mapped_cols, "}"
         ),
         ("mapping", "targets"): _ket_list(zip(*core.mapped, strict=False), "}"),
-        ("vectors", "primes"): ctx.r(("vectors", "primes"), _identity(s.d)),
-        ("mapping", "gens"): ctx.r(("mapping", "gens"), _identity(len(s.mapping))),
-        ("mapping", "detempering"): ctx.r(("mapping", "detempering"), _identity(len(s.mapping))),
-        ("canon", "primes"): ctx.r(("canon", "primes"), canon.mapping),
-        ("canon", "gens"): ctx.r(("canon", "gens"), canon.form),
-        ("canon", "canongens"): ctx.r(("canon", "canongens"), _identity(canon.rc)),
-        ("canon", "detempering"): ctx.r(
+        ("vectors", "primes"): context.r(("vectors", "primes"), _identity(s.d)),
+        ("mapping", "gens"): context.r(("mapping", "gens"), _identity(len(s.mapping))),
+        ("mapping", "detempering"): context.r(
+            ("mapping", "detempering"), _identity(len(s.mapping))
+        ),
+        ("canon", "primes"): context.r(("canon", "primes"), canon.mapping),
+        ("canon", "gens"): context.r(("canon", "gens"), canon.form),
+        ("canon", "canongens"): context.r(("canon", "canongens"), _identity(canon.rc)),
+        ("canon", "detempering"): context.r(
             ("canon", "detempering"), list(zip(*canon.mapped_detempering, strict=False))
         ),
         ("canon", "commas"): _ket_list(
             list(zip(*canon.mapped_comma, strict=False)) + canon.u_mapped_cols, "}"
         ),
         ("canon", "targets"): _ket_list(zip(*canon.mapped, strict=False), "}"),
-        ("mapping", "canongens"): ctx.r(("mapping", "canongens"), canon.inverse_form),
+        ("mapping", "canongens"): context.r(("mapping", "canongens"), canon.inverse_form),
     }
 
 
-def _canon_gen_sizes(ctx: _Ctx) -> list:
-    tun = ctx.core.tun
-    inverse_form = ctx.canon.inverse_form
-    nrow = len(ctx.state.mapping)
+def _canon_gen_sizes(context: _Ctx) -> list:
+    tun = context.core.tun
+    inverse_form = context.canon.inverse_form
+    nrow = len(context.state.mapping)
     return [
         sum(tun.generator_map[k] * inverse_form[k][j] for k in range(nrow))
-        for j in range(ctx.canon.rc)
+        for j in range(context.canon.rc)
     ]
 
 
-def _base_sizes(ctx: _Ctx) -> dict:
-    core = ctx.core
-    un = ctx.unchanged
+def _base_sizes(context: _Ctx) -> dict:
+    core = context.core
+    un = context.unchanged
     tun = core.tun
-    fmt = ctx.fmt
+    fmt = context.fmt
     return {
-        ("tuning", "canongens"): fmt.cents_genmap(_canon_gen_sizes(ctx)),
+        ("tuning", "canongens"): fmt.cents_genmap(_canon_gen_sizes(context)),
         ("tuning", "gens"): fmt.cents_genmap(tun.generator_map),
         ("tuning", "primes"): fmt.cents_map(tun.tuning_map),
         ("tuning", "commas"): fmt.cents_list(list(core.comma_sizes.tempered) + un.tempered),
@@ -106,39 +108,43 @@ def _base_sizes(ctx: _Ctx) -> dict:
     }
 
 
-def _base_prescale_complexity(ctx: _Ctx) -> dict:
-    core = ctx.core
-    un = ctx.unchanged
-    pre = ctx.prescale
-    fmt = ctx.fmt
+def _base_prescale_complexity(context: _Ctx) -> dict:
+    core = context.core
+    un = context.unchanged
+    pre = context.prescale
+    fmt = context.fmt
     return {
         ("prescaling", "primes"): fmt.prescale(
             pre.bare_rows + list(pre.bare_size_row), col="⟨]", outer="[⟩"
         ),
         ("prescaling", "commas"): fmt.prescale(
-            list(ctx.sized(ctx.prescaled(core.comma_basis))) + un.prescaled
+            list(context.sized(context.prescaled(core.comma_basis))) + un.prescaled
         ),
         ("prescaling", "detempering"): fmt.prescale(
-            ctx.sized(ctx.prescaled(core.detemper_vectors))
+            context.sized(context.prescaled(core.detemper_vectors))
         ),
-        ("prescaling", "targets"): fmt.prescale(ctx.sized(ctx.prescaled(core.target_vectors))),
-        ("complexity", "primes"): fmt.cents_map(ctx.complexities(core.prime_ratios)),
-        ("complexity", "commas"): fmt.cents_list(list(ctx.complexities(core.commas)) + un.comps),
-        ("complexity", "detempering"): fmt.cents_list(ctx.complexities(core.detemper_ratios)),
-        ("complexity", "targets"): fmt.cents_list(ctx.complexities(core.targets)),
+        ("prescaling", "targets"): fmt.prescale(
+            context.sized(context.prescaled(core.target_vectors))
+        ),
+        ("complexity", "primes"): fmt.cents_map(context.complexities(core.prime_ratios)),
+        ("complexity", "commas"): fmt.cents_list(
+            list(context.complexities(core.commas)) + un.comps
+        ),
+        ("complexity", "detempering"): fmt.cents_list(context.complexities(core.detemper_ratios)),
+        ("complexity", "targets"): fmt.cents_list(context.complexities(core.targets)),
         ("weight", "targets"): fmt.cents_list(core.target_weights),
     }
 
 
-def _held_values(ctx: _Ctx) -> dict:
-    s = ctx.state
-    db = ctx.db
-    held = ctx.held
-    held_ratios = ctx.core.held_ratios
-    fmt = ctx.fmt
-    held_sizes = interval_sizes(ctx.core.tun, held_ratios, db)
+def _held_values(context: _Ctx) -> dict:
+    s = context.state
+    db = context.db
+    held = context.held
+    held_ratios = context.core.held_ratios
+    fmt = context.fmt
+    held_sizes = interval_sizes(context.core.tun, held_ratios, db)
     held_mapped = mapped_intervals(s.mapping, held_ratios, db)
-    canon_held_mapped = mapped_intervals(ctx.canon.mapping, held_ratios, db)
+    canon_held_mapped = mapped_intervals(context.canon.mapping, held_ratios, db)
     return {
         ("vectors", "held"): _ket_list(held, "⟩"),
         ("mapping", "held"): _ket_list(zip(*held_mapped, strict=False), "}"),
@@ -146,20 +152,20 @@ def _held_values(ctx: _Ctx) -> dict:
         ("tuning", "held"): fmt.cents_list(held_sizes.tempered),
         ("just", "held"): fmt.cents_list(held_sizes.just),
         ("retune", "held"): fmt.cents_list(held_sizes.errors),
-        ("prescaling", "held"): fmt.prescale(ctx.sized(ctx.prescaled(held))),
-        ("complexity", "held"): fmt.cents_list(ctx.complexities(held_ratios)),
+        ("prescaling", "held"): fmt.prescale(context.sized(context.prescaled(held))),
+        ("complexity", "held"): fmt.cents_list(context.complexities(held_ratios)),
     }
 
 
-def _interest_values(ctx: _Ctx) -> dict:
-    s = ctx.state
-    db = ctx.db
-    interest = ctx.interest
-    fmt = ctx.fmt
+def _interest_values(context: _Ctx) -> dict:
+    s = context.state
+    db = context.db
+    interest = context.interest
+    fmt = context.fmt
     interest_ratios = comma_ratios(interest, db)
     interest_mapped = mapped_intervals(s.mapping, interest_ratios, db)
-    canon_interest_mapped = mapped_intervals(ctx.canon.mapping, interest_ratios, db)
-    interest_sizes = interval_sizes(ctx.core.tun, interest_ratios, db)
+    canon_interest_mapped = mapped_intervals(context.canon.mapping, interest_ratios, db)
+    interest_sizes = interval_sizes(context.core.tun, interest_ratios, db)
     return {
         ("vectors", "interest"): _ket_list(interest, "⟩", wrap=False),
         ("mapping", "interest"): _ket_list(zip(*interest_mapped, strict=False), "}", wrap=False),
@@ -169,36 +175,42 @@ def _interest_values(ctx: _Ctx) -> dict:
         ("tuning", "interest"): fmt.cents_list(interest_sizes.tempered, wrap=False),
         ("just", "interest"): fmt.cents_list(interest_sizes.just, wrap=False),
         ("retune", "interest"): fmt.cents_list(interest_sizes.errors, wrap=False),
-        ("prescaling", "interest"): fmt.prescale(ctx.sized(ctx.prescaled(interest)), outer=""),
-        ("complexity", "interest"): fmt.cents_list(ctx.complexities(interest_ratios), wrap=False),
+        ("prescaling", "interest"): fmt.prescale(
+            context.sized(context.prescaled(interest)), outer=""
+        ),
+        ("complexity", "interest"): fmt.cents_list(
+            context.complexities(interest_ratios), wrap=False
+        ),
     }
 
 
-def _proj_cols(ctx: _Ctx, p_rat, vectors):
+def _proj_cols(context: _Ctx, p_rat, vectors):
     cols = project_vectors(p_rat, vectors)
-    return list(cols) if cols else [tuple(_DASH for _ in range(ctx.d)) for _ in vectors]
+    return list(cols) if cols else [tuple(_DASH for _ in range(context.d)) for _ in vectors]
 
 
-def _projection_values(ctx: _Ctx) -> dict:
-    s = ctx.state
-    hbr = ctx.held_basis_ratios
+def _projection_values(context: _Ctx) -> dict:
+    s = context.state
+    hbr = context.held_basis_ratios
     p_rat = projection_matrix_rationals(s, hbr)
     out = {
         ("projection", "primes"): projection_ebk(tuning_projection(s, hbr), s.d),
         ("projection", "gens"): embedding_ebk(tuning_embedding(s, hbr), s.d, len(s.mapping)),
         ("projection", "canongens"): embedding_ebk(
-            canonical_generator_embedding(s, hbr), s.d, ctx.canon.rc
+            canonical_generator_embedding(s, hbr), s.d, context.canon.rc
         ),
-        ("projection", "detempering"): ctx.r(
-            ("projection", "detempering"), _proj_cols(ctx, p_rat, ctx.core.detemper_vectors)
+        ("projection", "detempering"): context.r(
+            ("projection", "detempering"), _proj_cols(context, p_rat, context.core.detemper_vectors)
         ),
-        ("projection", "targets"): _ket_list(_proj_cols(ctx, p_rat, ctx.core.target_vectors), "⟩"),
+        ("projection", "targets"): _ket_list(
+            _proj_cols(context, p_rat, context.core.target_vectors), "⟩"
+        ),
     }
-    if ctx.held:
-        out[("projection", "held")] = _ket_list(_proj_cols(ctx, p_rat, ctx.held), "⟩")
-    if ctx.interest:
+    if context.held:
+        out[("projection", "held")] = _ket_list(_proj_cols(context, p_rat, context.held), "⟩")
+    if context.interest:
         out[("projection", "interest")] = _ket_list(
-            _proj_cols(ctx, p_rat, ctx.interest), "⟩", wrap=False
+            _proj_cols(context, p_rat, context.interest), "⟩", wrap=False
         )
     return out
 
@@ -216,38 +228,39 @@ class _SsCtx:
     ss_prescaler: object
 
 
-def _superspace_tuning(ctx: _Ctx) -> Tuning:
-    derived = ctx.derived
+def _superspace_tuning(context: _Ctx) -> Tuning:
+    derived = context.derived
     if derived is not None and derived.superspace_tun is not None:
         return derived.superspace_tun
     return superspace_tuning(
-        ctx.state,
-        ctx.scheme,
-        ctx.nonprime_approach,
-        generator_override=ctx.superspace_generator_override,
+        context.state,
+        context.scheme,
+        context.nonprime_approach,
+        generator_override=context.superspace_generator_override,
     )
 
 
-def _derive_superspace(ctx: _Ctx) -> _SsCtx:
-    s = ctx.state
-    ss_primes = superspace_primes(ctx.db)
+def _derive_superspace(context: _Ctx) -> _SsCtx:
+    s = context.state
+    ss_primes = superspace_primes(context.db)
     return _SsCtx(
         superspace_mapping(s),
         ss_primes,
         superspace_just_mapping(ss_primes),
         superspace_self_map(s),
         mapping_to_superspace_generators(s),
-        basis_in_superspace(ctx.db),
-        _superspace_tuning(ctx),
+        basis_in_superspace(context.db),
+        _superspace_tuning(context),
         len(ss_primes),
-        superspace_complexity_prescaler(s, ctx.scheme),
+        superspace_complexity_prescaler(s, context.scheme),
     )
 
 
-def _ss_u(ctx: _Ctx) -> list:
-    db = ctx.db
+def _ss_u(context: _Ctx) -> list:
+    db = context.db
     return [
-        None if u is None else lift_vectors_to_superspace(db, (u,))[0] for u in ctx.unchanged.basis
+        None if u is None else lift_vectors_to_superspace(db, (u,))[0]
+        for u in context.unchanged.basis
     ]
 
 
@@ -255,27 +268,27 @@ def _prescaled_ss(ssc: _SsCtx, vectors):
     return tuple(tuple(ssc.ss_prescaler[i] * v[i] for i in range(ssc.dL)) for v in vectors)
 
 
-def _ss_prod(ctx: _Ctx, ssc: _SsCtx, vs):
-    return ctx.sized(_prescaled_ss(ssc, lift_vectors_to_superspace(ctx.db, vs)))
+def _ss_prod(context: _Ctx, ssc: _SsCtx, vs):
+    return context.sized(_prescaled_ss(ssc, lift_vectors_to_superspace(context.db, vs)))
 
 
-def _ssp_cols(ctx: _Ctx, p_L, dL: int, vectors):
-    cols = project_vectors(p_L, lift_vectors_to_superspace(ctx.db, vectors))
+def _ssp_cols(context: _Ctx, p_L, dL: int, vectors):
+    cols = project_vectors(p_L, lift_vectors_to_superspace(context.db, vectors))
     return list(cols) if cols else [tuple(_DASH for _ in range(dL)) for _ in vectors]
 
 
-def _ss_base(ctx: _Ctx, ssc: _SsCtx) -> dict:
-    s = ctx.state
-    db = ctx.db
-    core = ctx.core
-    ss_u = _ss_u(ctx)
+def _ss_base(context: _Ctx, ssc: _SsCtx) -> dict:
+    s = context.state
+    db = context.db
+    core = context.core
+    ss_u = _ss_u(context)
     ss_u_mapped = [
         None if u is None else map_vectors_into_superspace_generators(s, (u,))[0]
-        for u in ctx.unchanged.basis
+        for u in context.unchanged.basis
     ]
     return {
-        ("ss_vectors", "primes"): ctx.r(("ss_vectors", "primes"), ssc.bl),
-        ("ss_vectors", "ssprimes"): ctx.r(("ss_vectors", "ssprimes"), ssc.mjl),
+        ("ss_vectors", "primes"): context.r(("ss_vectors", "primes"), ssc.bl),
+        ("ss_vectors", "ssprimes"): context.r(("ss_vectors", "ssprimes"), ssc.mjl),
         ("ss_vectors", "commas"): _ket_list(
             list(lift_vectors_to_superspace(db, s.comma_basis)) + ss_u, "⟩"
         ),
@@ -286,47 +299,47 @@ def _ss_base(ctx: _Ctx, ssc: _SsCtx) -> dict:
             lift_vectors_to_superspace(db, core.detemper_vectors), "⟩"
         ),
         ("ss_vectors", "interest"): _ket_list(
-            lift_vectors_to_superspace(db, ctx.interest), "⟩", wrap=False
+            lift_vectors_to_superspace(db, context.interest), "⟩", wrap=False
         ),
-        ("ss_mapping", "ssprimes"): ctx.r(("ss_mapping", "ssprimes"), ssc.ml),
-        ("ss_mapping", "primes"): ctx.r(("ss_mapping", "primes"), ssc.msl),
-        ("ss_mapping", "ssgens"): ctx.r(("ss_mapping", "ssgens"), ssc.mlgl),
+        ("ss_mapping", "ssprimes"): context.r(("ss_mapping", "ssprimes"), ssc.ml),
+        ("ss_mapping", "primes"): context.r(("ss_mapping", "primes"), ssc.msl),
+        ("ss_mapping", "ssgens"): context.r(("ss_mapping", "ssgens"), ssc.mlgl),
         ("ss_mapping", "commas"): _ket_list(
             list(map_vectors_into_superspace_generators(s, s.comma_basis)) + ss_u_mapped, "}"
         ),
         ("ss_mapping", "targets"): _ket_list(
             map_vectors_into_superspace_generators(s, core.target_vectors), "}"
         ),
-        ("ss_mapping", "detempering"): ctx.r(
+        ("ss_mapping", "detempering"): context.r(
             ("ss_mapping", "detempering"),
             map_vectors_into_superspace_generators(s, core.detemper_vectors),
         ),
         ("ss_mapping", "interest"): _ket_list(
-            map_vectors_into_superspace_generators(s, ctx.interest), "}", wrap=False
+            map_vectors_into_superspace_generators(s, context.interest), "}", wrap=False
         ),
-        ("tuning", "ssgens"): ctx.fmt.cents_genmap(ssc.ss_tun.generator_map),
-        ("tuning", "ssprimes"): ctx.fmt.cents_map(ssc.ss_tun.tuning_map),
-        ("just", "ssprimes"): ctx.fmt.cents_map(ssc.ss_tun.just_map),
-        ("retune", "ssprimes"): ctx.fmt.cents_map(ssc.ss_tun.retuning_map),
+        ("tuning", "ssgens"): context.fmt.cents_genmap(ssc.ss_tun.generator_map),
+        ("tuning", "ssprimes"): context.fmt.cents_map(ssc.ss_tun.tuning_map),
+        ("just", "ssprimes"): context.fmt.cents_map(ssc.ss_tun.just_map),
+        ("retune", "ssprimes"): context.fmt.cents_map(ssc.ss_tun.retuning_map),
     }
 
 
-def _ss_held(ctx: _Ctx) -> dict:
-    db = ctx.db
-    held = ctx.held
+def _ss_held(context: _Ctx) -> dict:
+    db = context.db
+    held = context.held
     return {
         ("ss_vectors", "held"): _ket_list(lift_vectors_to_superspace(db, held), "⟩"),
         ("ss_mapping", "held"): _ket_list(
-            map_vectors_into_superspace_generators(ctx.state, held), "}"
+            map_vectors_into_superspace_generators(context.state, held), "}"
         ),
     }
 
 
-def _ss_projection(ctx: _Ctx, ssc: _SsCtx) -> dict:
-    s = ctx.state
-    hbr = ctx.held_basis_ratios
+def _ss_projection(context: _Ctx, ssc: _SsCtx) -> dict:
+    s = context.state
+    hbr = context.held_basis_ratios
     dL = ssc.dL
-    core = ctx.core
+    core = context.core
     p_L = superspace_projection_matrix_rationals(s, hbr)
     proj_bl = project_vectors(p_L, ssc.bl) or [tuple(_DASH for _ in range(dL)) for _ in ssc.bl]
     out = {
@@ -334,18 +347,22 @@ def _ss_projection(ctx: _Ctx, ssc: _SsCtx) -> dict:
         ("ss_projection", "ssgens"): embedding_ebk(
             superspace_tuning_embedding(s, hbr), dL, superspace_rank(s)
         ),
-        ("ss_projection", "primes"): ctx.r(("ss_projection", "primes"), proj_bl),
-        ("ss_projection", "detempering"): ctx.r(
-            ("ss_projection", "detempering"), _ssp_cols(ctx, p_L, dL, core.detemper_vectors)
+        ("ss_projection", "primes"): context.r(("ss_projection", "primes"), proj_bl),
+        ("ss_projection", "detempering"): context.r(
+            ("ss_projection", "detempering"), _ssp_cols(context, p_L, dL, core.detemper_vectors)
         ),
-        ("ss_projection", "commas"): _ket_list([(0,) * dL for _ in core.commas] + _ss_u(ctx), "⟩"),
-        ("ss_projection", "targets"): _ket_list(_ssp_cols(ctx, p_L, dL, core.target_vectors), "⟩"),
+        ("ss_projection", "commas"): _ket_list(
+            [(0,) * dL for _ in core.commas] + _ss_u(context), "⟩"
+        ),
+        ("ss_projection", "targets"): _ket_list(
+            _ssp_cols(context, p_L, dL, core.target_vectors), "⟩"
+        ),
     }
-    if ctx.held:
-        out[("ss_projection", "held")] = _ket_list(_ssp_cols(ctx, p_L, dL, ctx.held), "⟩")
-    if ctx.interest:
+    if context.held:
+        out[("ss_projection", "held")] = _ket_list(_ssp_cols(context, p_L, dL, context.held), "⟩")
+    if context.interest:
         out[("ss_projection", "interest")] = _ket_list(
-            _ssp_cols(ctx, p_L, dL, ctx.interest), "⟩", wrap=False
+            _ssp_cols(context, p_L, dL, context.interest), "⟩", wrap=False
         )
     out[("projection", "ssgens")] = embedding_ebk(
         superspace_generator_embedding_display(s, hbr), s.d, superspace_rank(s)
@@ -360,50 +377,52 @@ def _ss_units(dL: int) -> tuple:
     return tuple(tuple(1 if i == p else 0 for i in range(dL)) for p in range(dL))
 
 
-def _ss_u_prescaled(ctx: _Ctx, ssc: _SsCtx) -> list:
-    db = ctx.db
+def _ss_u_prescaled(context: _Ctx, ssc: _SsCtx) -> list:
+    db = context.db
     return [
         None
         if u is None
-        else ctx.sized(_prescaled_ss(ssc, lift_vectors_to_superspace(db, (u,))))[0]
-        for u in ctx.unchanged.basis
+        else context.sized(_prescaled_ss(ssc, lift_vectors_to_superspace(db, (u,))))[0]
+        for u in context.unchanged.basis
     ]
 
 
-def _ss_prescaling(ctx: _Ctx, ssc: _SsCtx) -> dict:
-    fmt = ctx.fmt
-    core = ctx.core
+def _ss_prescaling(context: _Ctx, ssc: _SsCtx) -> dict:
+    fmt = context.fmt
+    core = context.core
     dL = ssc.dL
-    sf = ctx.prescale.size_factor
+    sf = context.prescale.size_factor
     ss_bare_size = (tuple(sf * w for w in ssc.ss_prescaler),) if sf else ()
     out = {
         ("prescaling", "ssprimes"): fmt.prescale(
             _prescaled_ss(ssc, _ss_units(dL)) + ss_bare_size, col="⟨]", outer="[⟩"
         ),
         ("prescaling", "primes"): fmt.prescale(
-            ctx.sized(_prescaled_ss(ssc, ssc.bl)), col="[⟩", outer="⟨]"
+            context.sized(_prescaled_ss(ssc, ssc.bl)), col="[⟩", outer="⟨]"
         ),
         ("complexity", "ssprimes"): fmt.cents_map(ssc.ss_prescaler),
-        ("complexity", "primes"): fmt.cents_map(ctx.complexities(core.prime_ratios)),
+        ("complexity", "primes"): fmt.cents_map(context.complexities(core.prime_ratios)),
         ("prescaling", "commas"): fmt.prescale(
-            list(_ss_prod(ctx, ssc, core.comma_basis)) + _ss_u_prescaled(ctx, ssc)
+            list(_ss_prod(context, ssc, core.comma_basis)) + _ss_u_prescaled(context, ssc)
         ),
-        ("prescaling", "detempering"): fmt.prescale(_ss_prod(ctx, ssc, core.detemper_vectors)),
-        ("prescaling", "targets"): fmt.prescale(_ss_prod(ctx, ssc, core.target_vectors)),
+        ("prescaling", "detempering"): fmt.prescale(_ss_prod(context, ssc, core.detemper_vectors)),
+        ("prescaling", "targets"): fmt.prescale(_ss_prod(context, ssc, core.target_vectors)),
     }
-    if ctx.held:
-        out[("prescaling", "held")] = fmt.prescale(_ss_prod(ctx, ssc, ctx.held))
-    if ctx.interest:
-        out[("prescaling", "interest")] = fmt.prescale(_ss_prod(ctx, ssc, ctx.interest), outer="")
+    if context.held:
+        out[("prescaling", "held")] = fmt.prescale(_ss_prod(context, ssc, context.held))
+    if context.interest:
+        out[("prescaling", "interest")] = fmt.prescale(
+            _ss_prod(context, ssc, context.interest), outer=""
+        )
     return out
 
 
-def _superspace_values(ctx: _Ctx) -> dict:
-    ssc = _derive_superspace(ctx)
-    out = _ss_base(ctx, ssc)
-    if ctx.held:
-        out.update(_ss_held(ctx))
-    if ctx.consolidate_v:
-        out.update(_ss_projection(ctx, ssc))
-    out.update(_ss_prescaling(ctx, ssc))
+def _superspace_values(context: _Ctx) -> dict:
+    ssc = _derive_superspace(context)
+    out = _ss_base(context, ssc)
+    if context.held:
+        out.update(_ss_held(context))
+    if context.consolidate_v:
+        out.update(_ss_projection(context, ssc))
+    out.update(_ss_prescaling(context, ssc))
     return out

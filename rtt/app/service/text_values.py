@@ -48,16 +48,16 @@ def plain_text_values(
         derived,
         decimals,
     )
-    ctx = _build_context(inp)
-    values = _base_structural(ctx)
-    values.update(_base_sizes(ctx))
-    values.update(_base_prescale_complexity(ctx))
-    if ctx.held:
-        values.update(_held_values(ctx))
-    if ctx.interest:
-        values.update(_interest_values(ctx))
-    if ctx.consolidate_v:
-        values.update(_projection_values(ctx))
-    if ctx.superspace:
-        values.update(_superspace_values(ctx))
+    context = _build_context(inp)
+    values = _base_structural(context)
+    values.update(_base_sizes(context))
+    values.update(_base_prescale_complexity(context))
+    if context.held:
+        values.update(_held_values(context))
+    if context.interest:
+        values.update(_interest_values(context))
+    if context.consolidate_v:
+        values.update(_projection_values(context))
+    if context.superspace:
+        values.update(_superspace_values(context))
     return values
