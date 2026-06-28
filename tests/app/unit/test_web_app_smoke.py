@@ -462,13 +462,16 @@ def test_colfill_bounce_layer_sits_behind_the_scroller_carries_no_zindex_and_hug
     assert "left:var(--pad)" in fill and "bottom:0" in fill
 
 
-def test_colfill_is_shown_only_through_a_top_overpull_so_it_never_ghost_echoes():
-    # the twins rest behind the live rules at every scroll position but a top overpull, and sync one
-    # frame late, so showing them always would ghost a second set of verticals on a fast horizontal
-    # scroll. They are hidden by default and revealed only under .rtt-overpull-y (set in the freeze JS).
-    assert "visibility:hidden" in _css_rule(".rtt-colfill")
-    assert "visibility:visible" in _css_rule(".rtt-app.rtt-overpull-y .rtt-colfill")
-    assert "rtt-overpull-y" in page_assets._FREEZE_JS and "b.scrollTop < 0" in page_assets._FREEZE_JS
+def test_colfill_is_visible_on_desktop_so_the_top_bounce_bridge_shows_and_hidden_only_on_touch():
+    # desktop keeps its bounce and pins scrollTop at 0 through it, so the bridge shows only by being
+    # visible at rest (no scroll signal marks the bounce, hence no scrollTop<0 overpull gate); touch
+    # removes the bounce, so the bridge never bares and is hidden there to kill the iOS late-sync echo.
+    assert "visibility:hidden" not in _css_rule(".rtt-colfill")
+    assert ".rtt-app.rtt-overpull-y" not in page_assets._CSS
+    assert "rtt-overpull-y" not in page_assets._FREEZE_JS
+    touch = re.search(r"@media \(hover: none\) and \(pointer: coarse\) \{(.*?\.rtt-colfill[^}]*\})\s*\}",
+                      page_assets._CSS, re.S)
+    assert touch and re.search(r"\.rtt-colfill\s*\{[^}]*visibility:hidden", touch.group(1))
 
 
 def test_rowfill_mirrors_colfill_for_the_sticky_row_bands_top_overpull_gap():
