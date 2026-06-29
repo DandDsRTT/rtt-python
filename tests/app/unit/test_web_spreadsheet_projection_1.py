@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _with, _projection_build, _projection_full, _projection_superspace
 
 
-class TestProjectionColumn:
+class TestProjectionBox:
     def test_projection_off_by_default_shows_no_projection_box(self):
         cells = {c.id for c in _layout().cells}
         assert "label:projection" not in cells
@@ -250,7 +250,7 @@ class TestProjectionColumn:
             assert ("bracket:vector:targets:l" in ids) == ("bracket:projection_targets:l" in ids)
 
 
-class TestReturnScheme:
+class TestProjectionChrome:
     def test_projection_symbol_floor_widens_the_tile_so_the_equivalence_never_wraps(self):
         from rtt.app.spreadsheet_constants import SYMBOL_FONT
         from rtt.app.spreadsheet_text import _min_width_for_lines

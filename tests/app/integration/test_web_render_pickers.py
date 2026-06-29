@@ -20,7 +20,7 @@ from rtt.app.editor import Editor
 from _render_support import _enable, _cell_child, _wrap_classes, _click_glyph
 
 
-class TestSubpickersBuild:
+class TestSubPickers:
     async def test_subpickers_build_and_derive_their_value_from_state(self, user: User) -> None:
         await _enable(user, "presets")
         et0 = _cell_child(user, "etpick:0")

@@ -279,7 +279,7 @@ class TestCanonicalGenerators:
         assert not any(c.startswith("preset:") for c in cells)
 
 
-class TestPlainText:
+class TestPresetChoosers:
     def test_presets_on_adds_the_three_chooser_dropdowns_under_their_tiles(self):
         lay = _with(presets=True)
         cells = {c.id: c for c in lay.cells}
@@ -612,7 +612,7 @@ class TestPlainText:
         assert pt.x == header.x and pt.width == header.width
 
 
-class TestPlainText2:
+class TestPlainTextBand:
     def test_plain_text_band_grows_tiles_and_pushes_lower_rows_down(self):
         on = {c.id: c for c in _with(plain_text_values=True).cells}
         off = {c.id: c for c in _with(plain_text_values=False).cells}

@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _with, _with_interest, _INTEREST
 
 
-class TestMatrixLabels:
+class TestInterestTilesAndFolds:
     def test_the_target_list_plain_text_becomes_a_two_tone_draft_box_while_pending(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
@@ -346,7 +346,7 @@ class TestMatrixLabels:
                 f"{label_id}: dist_above={dist_above}, dist_below={dist_below} should be ~equal"
 
 
-class TestOptimizationBox:
+class TestRowAndColumnLabels:
     def test_col_labels_sit_above_the_top_frame_in_framed_rows(self):
         on = {c.id: c for c in _with(header_symbols=True).cells}
         assert on["matlabel:col:mapping:targets:0"].y + on["matlabel:col:mapping:targets:0"].height \
@@ -680,7 +680,7 @@ class TestOptimizationBox:
         assert off["chart:damage:targets"].indicator_label == ""
 
 
-class TestOptimizationBox2:
+class TestOptimizationBoxFrame:
     def test_optimization_box_is_a_bordered_frame_nested_in_the_damage_tile(self):
         lay = _with(optimization=True)
         blocks = {b.id: b for b in lay.blocks}

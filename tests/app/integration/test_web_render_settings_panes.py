@@ -20,7 +20,7 @@ from rtt.app.editor import Editor
 from _render_support import _toggle, _enable, _cell_child, _wrap_classes, _commit, _cell_text, _live, _live_assets, _ENABLE_HTML_CELLS, _DEFAULT_HTML_CELLS
 
 
-class TestDroppingRow:
+class TestSettingsAndPanes:
     async def test_select_all_turns_on_every_implemented_feature(self, user: User) -> None:
         await user.open("/")
         user.find(kind=ui.checkbox, content="select all / none").click()

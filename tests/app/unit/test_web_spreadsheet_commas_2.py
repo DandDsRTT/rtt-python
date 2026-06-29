@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _with, _in_commas
 
 
-class TestIntervalGreys:
+class TestOptimizationControls:
     def test_optimization_power_is_editable_only_with_alt_complexity(self):
         off = {c.id: c for c in _with("TILT minimax-S", optimization=True).cells}
         assert off["optimization:power"].kind == "powerdisplay"
@@ -315,7 +315,7 @@ class TestIntervalGreys:
         assert settings.SUBCONTROLS["custom_weights"] == "weighting"
 
 
-class TestCustomWeights:
+class TestCustomWeightRow:
     def test_subcontrol_nesting_depth_drives_panel_indentation(self):
         assert settings.depth_of("tuning") == 0, "the panel indents each row by its nesting depth, so a child sits further right than its # parent. The 'tuning' grouping parent (depth 0) holds the two modes' shared base (tuning # boxes) plus the two modes — 'optimization' (Mode A) and 'projection' (Mode B) — at depth 1. # 'optimization' parents the optimize sub-axes (weighting, tuning ranges) at depth 2, and # weighting's three refinements (all-interval, alt. complexity, custom weights) at depth 3"
         assert settings.depth_of("tuning_tiles") == 1
@@ -589,7 +589,7 @@ class TestCustomWeights:
         assert cells["cell:mapped:2:0"].pending and cells["cell:mapped:2:0"].text == ""
 
 
-class TestCommaMinus:
+class TestPendingMappingRow:
     def test_a_partly_typed_pending_mapping_row_shows_its_entered_components(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         cells = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[0, None, 1]).cells}

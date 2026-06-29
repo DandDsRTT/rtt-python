@@ -20,7 +20,7 @@ from rtt.app.editor import Editor
 from _render_support import _toggle, _enable, _cell_child, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _target_preset, _escape_target
 
 
-class TestHoveringComma:
+class TestEditPreviewRipple:
     async def test_editing_a_cell_previews_the_ripple_then_commits_on_blur(self, user: User) -> None:
         await user.open("/")
         assert _cell_text(user, "cell:mapped:1:6") == "4"
@@ -390,7 +390,7 @@ class TestHoveringComma:
         assert "rtt-preview-remove" not in _wrap_classes(user, "prime:3")
 
 
-class TestCompletingHeld:
+class TestPreviewClearing:
     async def test_completing_a_held_interval_draft_clears_the_rings_without_blur(self, user: User) -> None:
         await user.open("/")
         _toggle(user, "optimization")

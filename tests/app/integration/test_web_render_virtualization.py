@@ -20,7 +20,7 @@ from rtt.app.editor import Editor
 from _render_support import _toggle, _live_render, _live_page, _body_cells
 
 
-class TestVirtualizationElides:
+class TestViewportVirtualization:
     async def test_virtualization_elides_offscreen_body_cells(self, user: User, monkeypatch) -> None:
         monkeypatch.setenv("RTT_VIRT_VIEWPORT", "320x320")
         await user.open("/")

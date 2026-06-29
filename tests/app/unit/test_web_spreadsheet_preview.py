@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _diff_layout, _diff_cell
 
 
-class TestChangedCell:
+class TestPreviewCellIds:
     def test_changed_cell_ids_is_empty_for_an_unchanged_layout(self):
         lay = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
         assert spreadsheet_text.changed_cell_ids(lay, lay) == frozenset()

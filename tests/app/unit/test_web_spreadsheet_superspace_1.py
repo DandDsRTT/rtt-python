@@ -480,7 +480,7 @@ class TestSuperspaceProjection:
     _SUBSCRIPT_DIGITS = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
 
-class TestML:
+class TestMLTile:
     def test_M_L_emits_one_cell_per_superspace_generator_row_and_superspace_prime_col(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
         ml = service.superspace_mapping(

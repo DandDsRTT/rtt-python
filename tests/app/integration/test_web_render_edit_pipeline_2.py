@@ -20,7 +20,7 @@ from rtt.app.editor import Editor
 from _render_support import _toggle, _enable, _wrap, _marked, _cell_child, _wrap_classes, _click_glyph, _commit, _stacked_face, _ro_stacked_face, _target_preset, _preset_tooltip_text
 
 
-class TestTemperamentChooser:
+class TestChoosers:
     async def test_temperament_divider_rows_render_as_disabled_options(self, user: User) -> None:
         await _enable(user, "presets")
         select = _cell_child(user, "preset:temperament")
@@ -388,7 +388,7 @@ class TestTemperamentChooser:
         assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
 
 
-class TestOptimizationHeld:
+class TestHeldAndInterestCommit:
     async def test_optimization_renders_the_held_column_and_its_add_control(self, user: User) -> None:
         await _enable(user, "optimization")
         await user.should_see(marker="header:held")

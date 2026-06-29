@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _drag_layout, _with
 
 
-class TestIntervalVectors2:
+class TestIntervalVectorsRow:
     def test_interval_vectors_row_sits_between_quantities_and_mapping(self):
         cells = {c.id: c for c in _layout().cells}
         assert cells["label:vectors"].text == "interval vectors"
