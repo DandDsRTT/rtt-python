@@ -117,7 +117,7 @@ def displayed_prescaler_name(s: Solve) -> str | None:
 def displayed_retuning_map(s: Solve) -> tuple[float, ...] | None:
     try:
         generators = effective_generator_tuning(s)
-        if generators is not None and len(generators) == s.state.r:
+        if generators is not None and len(generators) == s.state.rank:
             optimum = optimum_tuning(s)
             if not _same_cents_map(generators, optimum.generator_map):
                 return service.tuning_from_generators(
@@ -151,7 +151,7 @@ def targets_in_use(s: Solve) -> bool:
         return True
     if not s.manual_tuning:
         return True
-    if len(unchanged_ratios(s)) < s.state.r:
+    if len(unchanged_ratios(s)) < s.state.rank:
         return True
     displayed = effective_generator_tuning(s)
     if displayed is None:

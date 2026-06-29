@@ -105,7 +105,7 @@ class _TuningCommands:
         return self.set_projection_matrix(matrix)
 
     def try_edit_embedding_text(self, text: str) -> bool:
-        matrix = service.parse_embedding(text, self.state.d, len(self.state.mapping))
+        matrix = service.parse_embedding(text, self.state.dimensionality, len(self.state.mapping))
         if matrix is None:
             return False
         return self.set_embedding_matrix(matrix)
@@ -205,7 +205,7 @@ class _TuningCommands:
             diag[i] = float(value)
             self.custom_prescaler = tuple(diag)
         else:
-            d = self.state.d
+            d = self.state.dimensionality
             rows = (
                 [list(r) for r in self.custom_prescaler]
                 if is_matrix
@@ -218,7 +218,7 @@ class _TuningCommands:
             self.custom_prescaler = tuple(tuple(r) for r in rows)
 
     def set_custom_prescaler_text(self, text: str) -> bool:
-        diag = service.parse_prescaler_diagonal(text, self.state.d)
+        diag = service.parse_prescaler_diagonal(text, self.state.dimensionality)
         if diag is None:
             return False
         self.snapshot()

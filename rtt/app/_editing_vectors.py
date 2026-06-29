@@ -86,7 +86,7 @@ def _edit_pending_vector(ec, spec, preview, toks, d) -> None:
 def _edit_vector_grid(ec, spec, preview=False):
     if ec._runtime.building or (spec.guard is not None and not spec.guard()):
         return
-    d = ec._editor.state.d
+    d = ec._editor.state.dimensionality
     toks = ec._runtime.col_tokens(spec.group)
     if spec.pending() is not None:
         _edit_pending_vector(ec, spec, preview, toks, d)
@@ -141,7 +141,7 @@ def _form_change(ec, preview=False):
 def _unchanged_change(ec, preview=False):
     if ec._runtime.building:
         return
-    d, r = ec._editor.state.d, ec._editor.state.r
+    d, r = ec._editor.state.dimensionality, ec._editor.state.rank
     if any(
         ec._rec.handles(ids.unchanged_cell(j, p)).value.input is None
         for j in range(r)
@@ -174,7 +174,7 @@ def _ratio_change(ec, cid):
     group, tok = cid.split(":")
     out = service.resolve_ratio_edit(
         ec._rec.cell_value(cid),
-        ec._editor.state.d,
+        ec._editor.state.dimensionality,
         ec._editor.state.domain_basis,
     )
     ec._apply_outcome(out, lambda: _apply_ratio_edit(ec, group, tok, out.value))
@@ -218,10 +218,10 @@ def _apply_ratio_edit(ec, group, tok, vector) -> None:
     elif group == "unchanged":
         ratios = [
             ec._rec.cell_value(f"unchanged:{j}")
-            for j in range(ec._editor.state.r)
+            for j in range(ec._editor.state.rank)
             if ec._rec.handles(f"unchanged:{j}").value.input is not None
         ]
-        if len(ratios) == ec._editor.state.r and all(ratios):
+        if len(ratios) == ec._editor.state.rank and all(ratios):
             ec._editor.set_unchanged_basis(tuple(ratios))
     else:
         targets = ec._editor.target_override or service.target_interval_set(
@@ -233,7 +233,7 @@ def _apply_ratio_edit(ec, group, tok, vector) -> None:
             tok,
             vector,
             service.target_interval_vectors(
-                targets, ec._editor.state.d, ec._editor.state.domain_basis
+                targets, ec._editor.state.dimensionality, ec._editor.state.domain_basis
             ),
             ec._editor.set_target_override_vectors,
         )
@@ -254,7 +254,7 @@ def _interval_group_state(ec, group):
             ec._editor.target_spec, ec._editor.state.domain_basis
         )
         current = service.target_interval_vectors(
-            targets, ec._editor.state.d, ec._editor.state.domain_basis
+            targets, ec._editor.state.dimensionality, ec._editor.state.domain_basis
         )
         return current, ec._editor.set_target_override_vectors, "targets"
     if group == "held":

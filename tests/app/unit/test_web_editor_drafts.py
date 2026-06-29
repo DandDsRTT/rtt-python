@@ -11,7 +11,7 @@ class TestCommaDrafts:
         editor.add_comma()
         assert editor.pending_comma == [None, None, None]
         assert editor.state.comma_basis == ((4, -4, 1),)
-        assert editor.state.r == 2
+        assert editor.state.rank == 2
         assert editor.can_undo is False, "...and starting a draft is not an undoable edit"
 
     def test_add_comma_to_recombines_the_comma_basis_undoably(self):
@@ -39,16 +39,16 @@ class TestCommaDrafts:
         editor.set_pending_comma([4, -5, 1])
         assert editor.pending_comma is None
         assert editor.state.comma_basis == ((4, -4, 1), (4, -5, 1))
-        assert (editor.state.r, editor.state.n) == (1, 2)
+        assert (editor.state.rank, editor.state.nullity) == (1, 2)
         assert editor.can_undo is True
 
     def test_incomplete_or_dependent_pending_comma_is_held_not_committed(self):
         editor = Editor()
         editor.add_comma()
         editor.set_pending_comma([4, None, 1])
-        assert editor.pending_comma == [4, None, 1] and editor.state.r == 2
+        assert editor.pending_comma == [4, None, 1] and editor.state.rank == 2
         editor.set_pending_comma([8, -8, 2])
-        assert editor.pending_comma == [8, -8, 2] and editor.state.r == 2, "not a new comma -> held"
+        assert editor.pending_comma == [8, -8, 2] and editor.state.rank == 2, "not a new comma -> held"
 
     def test_cancelling_a_pending_comma_discards_the_draft(self):
         editor = Editor()
@@ -66,16 +66,16 @@ class TestCommaDrafts:
         assert editor.pending_comma is None and len(editor.state.comma_basis) == 2
         editor.remove_comma()
         assert editor.state.comma_basis == ((4, -4, 1),)
-        assert editor.state.r == 2
+        assert editor.state.rank == 2
 
     def test_removing_a_comma_can_target_any_index_not_only_the_last(self):
         editor = Editor()
         editor.add_comma()
         editor.set_pending_comma([4, -5, 1])
         two = editor.state
-        assert len(two.comma_basis) == 2 and two.r == 1
+        assert len(two.comma_basis) == 2 and two.rank == 1
         editor.remove_comma(0)
-        assert editor.state.n == 1 and editor.state.r == 2, "one comma un-tempered"
+        assert editor.state.nullity == 1 and editor.state.rank == 2, "one comma un-tempered"
         assert editor.state == service.remove_comma(two, 0)
         assert editor.state != service.remove_comma(two, -1)
         editor.undo()
@@ -84,7 +84,7 @@ class TestCommaDrafts:
     def test_remove_comma_un_tempers_the_last_comma_to_just_intonation(self):
         editor = Editor()
         editor.remove_comma()
-        assert (editor.state.d, editor.state.r, editor.state.n) == (3, 3, 0)
+        assert (editor.state.dimensionality, editor.state.rank, editor.state.nullity) == (3, 3, 0)
         assert editor.state.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
         editor.undo()
         assert editor.state.comma_basis == ((4, -4, 1),)
@@ -92,20 +92,20 @@ class TestCommaDrafts:
     def test_remove_comma_is_a_noop_with_nothing_tempered(self):
         editor = Editor()
         editor.remove_comma()
-        assert editor.state.n == 0
+        assert editor.state.nullity == 0
         editor.remove_comma()
-        assert editor.state.n == 0 and editor.can_undo is True
+        assert editor.state.nullity == 0 and editor.can_undo is True
 
     def test_first_comma_from_just_intonation_commits_no_phantom_unison(self):
         editor = Editor()
         editor.remove_comma()
         editor.add_comma()
         editor.set_pending_comma([4, -4, 1])
-        assert editor.state.comma_basis == ((4, -4, 1),) and editor.state.n == 1
+        assert editor.state.comma_basis == ((4, -4, 1),) and editor.state.nullity == 1
         editor2 = Editor()
         editor2.remove_comma()
         editor2.move_interval("targets", 0, "commas", 0)
-        assert (0, 0, 0) not in editor2.state.comma_basis and editor2.state.n == 1
+        assert (0, 0, 0) not in editor2.state.comma_basis and editor2.state.nullity == 1
 
 
 class TestMappingRowDrafts:
@@ -124,7 +124,7 @@ class TestMappingRowDrafts:
         editor.add_mapping_row()
         assert editor.pending_mapping_row == [None, None, None]
         assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))
-        assert (editor.state.r, editor.state.n) == (2, 1)
+        assert (editor.state.rank, editor.state.nullity) == (2, 1)
         assert editor.can_undo is False, "...and starting a draft is not undoable"
 
     def test_add_mapping_row_opens_no_draft_at_full_rank(self):
@@ -155,7 +155,7 @@ class TestMappingRowDrafts:
         editor.set_pending_mapping_row([0, 0, 1])
         assert editor.pending_mapping_row is None
         assert editor.state.mapping == ((1, 1, 0), (0, 1, 4), (0, 0, 1))
-        assert (editor.state.r, editor.state.n) == (3, 0)
+        assert (editor.state.rank, editor.state.nullity) == (3, 0)
         assert editor.can_undo is True
         editor.undo()
         assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))
@@ -164,9 +164,9 @@ class TestMappingRowDrafts:
         editor = Editor()
         editor.add_mapping_row()
         editor.set_pending_mapping_row([0, 0, None])
-        assert editor.pending_mapping_row == [0, 0, None] and editor.state.r == 2
+        assert editor.pending_mapping_row == [0, 0, None] and editor.state.rank == 2
         editor.set_pending_mapping_row([2, 2, 0])
-        assert editor.pending_mapping_row == [2, 2, 0] and editor.state.r == 2, "held, not committed"
+        assert editor.pending_mapping_row == [2, 2, 0] and editor.state.rank == 2, "held, not committed"
 
     def test_cancel_pending_mapping_row_discards_the_draft(self):
         editor = Editor()
@@ -186,15 +186,15 @@ class TestMappingRowDrafts:
     def test_add_remove_mapping_row_change_rank_holding_dimensionality(self):
         editor = Editor()
         editor.remove_mapping_row(0)
-        assert (editor.state.r, editor.state.d, editor.state.n) == (1, 3, 2)
+        assert (editor.state.rank, editor.state.dimensionality, editor.state.nullity) == (1, 3, 2)
         editor.add_mapping_row()
         assert editor.pending_mapping_row == [None, None, None], "a draft, not yet committed"
-        assert (editor.state.r, editor.state.d, editor.state.n) == (1, 3, 2)
+        assert (editor.state.rank, editor.state.dimensionality, editor.state.nullity) == (1, 3, 2)
         editor.set_pending_mapping_row([1, 1, 0])
         assert editor.pending_mapping_row is None
-        assert (editor.state.r, editor.state.d, editor.state.n) == (2, 3, 1)
+        assert (editor.state.rank, editor.state.dimensionality, editor.state.nullity) == (2, 3, 1)
         editor.undo()
-        assert editor.state.r == 1
+        assert editor.state.rank == 1
 
 
 class TestDraftExclusivity:
@@ -234,7 +234,7 @@ class TestDraftExclusivity:
         editor.add_element()
         assert editor.pending_comma is None
         editor.set_pending_element("7")
-        assert editor.state.d == 4
+        assert editor.state.dimensionality == 4
 
     def test_set_pending_comma_preserves_a_nonstandard_domain(self):
         editor = Editor()
@@ -242,7 +242,7 @@ class TestDraftExclusivity:
         editor.add_comma()
         editor.set_pending_comma([0, 0, 1])
         assert editor.pending_comma is None
-        assert editor.state.n == 2
+        assert editor.state.nullity == 2
         assert editor.state.domain_basis == (2, 3, Fraction(13, 5))
 
 

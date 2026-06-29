@@ -1,6 +1,6 @@
 import pytest
 
-from rtt.library.dimensions import get_d, get_n, get_r
+from rtt.library.dimensions import get_dimensionality, get_nullity, get_rank
 from rtt.library.parsing import parse_temperament_data
 from rtt.library.temperament import Temperament, Variance
 
@@ -29,15 +29,15 @@ DIMENSIONS = [
 class TestDimensions:
     @pytest.mark.parametrize("t, d, r, n", DIMENSIONS)
     def test_get_d(self, t, d, r, n):
-        assert get_d(t) == d
+        assert get_dimensionality(t) == d
 
     @pytest.mark.parametrize("t, d, r, n", DIMENSIONS)
     def test_get_r(self, t, d, r, n):
-        assert get_r(t) == r
+        assert get_rank(t) == r
 
     @pytest.mark.parametrize("t, d, r, n", DIMENSIONS)
     def test_get_n(self, t, d, r, n):
-        assert get_n(t) == n
+        assert get_nullity(t) == n
 
     @pytest.mark.parametrize(
         "ebk, d, r, n",
@@ -45,4 +45,4 @@ class TestDimensions:
     )
     def test_dimensions_through_parser(self, ebk, d, r, n):
         t = parse_temperament_data(ebk)
-        assert (get_d(t), get_r(t), get_n(t)) == (d, r, n)
+        assert (get_dimensionality(t), get_rank(t), get_nullity(t)) == (d, r, n)

@@ -59,7 +59,7 @@ class TestTargetIntervalVectors:
     def test_target_interval_vectors_over_a_nonstandard_domain(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         vectors = service.target_interval_vectors(
-            ("2/1", "3/1", "13/5"), state.d, domain_basis=state.domain_basis
+            ("2/1", "3/1", "13/5"), state.dimensionality, domain_basis=state.domain_basis
         )
         assert vectors == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
 
@@ -79,7 +79,7 @@ class TestEquave:
 
     def test_equave_reduce_vector_over_a_nonstandard_domain(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-        octave = service.interval_vector("2/1", state.d, state.domain_basis)
+        octave = service.interval_vector("2/1", state.dimensionality, state.domain_basis)
         assert service.equave_reduce_vector(octave, state.domain_basis) == (0, 0, 0)
 
 
@@ -132,12 +132,12 @@ class TestIntervalVector:
     def test_interval_vector_names_a_nonstandard_domain_in_its_out_of_limit_error(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         with pytest.raises(ValueError, match=r"outside the 2.3.13/5 domain"):
-            service.interval_vector("5/4", state.d, domain_basis=state.domain_basis)
+            service.interval_vector("5/4", state.dimensionality, domain_basis=state.domain_basis)
 
     def test_interval_vector_over_a_nonstandard_domain_expresses_in_the_basis(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-        assert service.interval_vector("13/5", state.d, domain_basis=state.domain_basis) == (0, 0, 1)
-        assert service.interval_vector("676/675", state.d, domain_basis=state.domain_basis) == (2, -3, 2)
+        assert service.interval_vector("13/5", state.dimensionality, domain_basis=state.domain_basis) == (0, 0, 1)
+        assert service.interval_vector("676/675", state.dimensionality, domain_basis=state.domain_basis) == (2, -3, 2)
 
 
 class TestTargetSets:
@@ -157,7 +157,7 @@ class TestTargetSets:
         targets = service.target_interval_set("TILT", state.domain_basis)
         assert "5/4" not in targets and "7/3" not in targets
         assert "3/2" in targets and "13/5" in targets
-        vectors = service.target_interval_vectors(targets, state.d, domain_basis=state.domain_basis)
+        vectors = service.target_interval_vectors(targets, state.dimensionality, domain_basis=state.domain_basis)
         assert len(vectors) == len(targets)
 
     def test_old_target_interval_set_is_the_odd_limit_diamond(self):

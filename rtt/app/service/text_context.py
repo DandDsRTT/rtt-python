@@ -166,7 +166,7 @@ class _TextContext:
 
     @property
     def dimensionality(self) -> int:
-        return self.inputs.state.d
+        return self.inputs.state.dimensionality
 
     @property
     def held(self) -> tuple:
@@ -208,7 +208,7 @@ class _TextContext:
         return self.formatter.render(key, data, formatter)
 
     def prescaled(self, vectors):
-        return _apply_prescaler(self.prescale, self.state.d, vectors)
+        return _apply_prescaler(self.prescale, self.state.dimensionality, vectors)
 
     def sized(self, cols):
         return _apply_size(self.prescale, cols)
@@ -261,7 +261,7 @@ def _derive_tuning(inputs: _Inputs, held_ratios):
 
 def _derive_core(inputs: _Inputs, targets, held_ratios) -> _Core:
     state, domain_basis = inputs.state, inputs.domain_basis
-    comma_basis = state.comma_basis if state.n else ()
+    comma_basis = state.comma_basis if state.nullity else ()
     commas = comma_ratios(comma_basis, domain_basis)
     tuning_map = _derive_tuning(inputs, held_ratios)
     weights = (
@@ -292,7 +292,7 @@ def _derive_core(inputs: _Inputs, targets, held_ratios) -> _Core:
         commas,
         mapped_intervals(state.mapping, targets, domain_basis),
         mapped_commas(state.mapping, comma_basis),
-        target_interval_vectors(targets, state.d, domain_basis),
+        target_interval_vectors(targets, state.dimensionality, domain_basis),
         held_ratios,
         tuning_map,
         weights,
@@ -317,10 +317,11 @@ def _derive_prescale(inputs: _Inputs) -> _Prescale:
     is_matrix = bool(prescaler) and isinstance(prescaler[0], (tuple, list))
     size_factor = complexity_size_factor(inputs.scheme)
     if is_matrix:
-        bare_rows = [tuple(prescaler[i]) for i in range(state.d)]
+        bare_rows = [tuple(prescaler[i]) for i in range(state.dimensionality)]
     else:
         bare_rows = [
-            tuple(prescaler[i] if k == i else 0 for k in range(state.d)) for i in range(state.d)
+            tuple(prescaler[i] if k == i else 0 for k in range(state.dimensionality))
+            for i in range(state.dimensionality)
         ]
     bare_size_row = (
         (tuple(size_factor * sum(col) for col in zip(*bare_rows, strict=False)),)
@@ -352,7 +353,9 @@ def _derive_unchanged(inputs: _Inputs, core: _Core, prescale: _Prescale) -> _Unc
         for j in range(len(udata.basis))
     ]
     prescaled = [
-        None if u is None else _apply_size(prescale, _apply_prescaler(prescale, state.d, (u,)))[0]
+        None
+        if u is None
+        else _apply_size(prescale, _apply_prescaler(prescale, state.dimensionality, (u,)))[0]
         for u in udata.basis
     ]
     return _Unchanged(
@@ -374,7 +377,9 @@ def _derive_canon(inputs: _Inputs, targets, core: _Core, unchanged: _Unchanged) 
     u_mapped_cols = [
         None
         if u is None
-        else tuple(sum(mapping[i][p] * u[p] for p in range(state.d)) for i in range(rc))
+        else tuple(
+            sum(mapping[i][p] * u[p] for p in range(state.dimensionality)) for i in range(rc)
+        )
         for u in unchanged.basis
     ]
     return _Canonical(

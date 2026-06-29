@@ -22,11 +22,11 @@ def can_remove_domain_element(state: TemperamentState) -> bool:
 
 
 def can_add_mapping_row(state: TemperamentState) -> bool:
-    return state.n > 0
+    return state.nullity > 0
 
 
 def can_remove_mapping_row(state: TemperamentState) -> bool:
-    return state.r > 1
+    return state.rank > 1
 
 
 def basis_is_nonstandard(state: TemperamentState) -> bool:
@@ -58,7 +58,7 @@ def list_vectors(s: Solve, name: str) -> list[tuple[int, ...]]:
         return [
             tuple(v)
             for v in service.target_interval_vectors(
-                current_targets(s), state.d, state.domain_basis
+                current_targets(s), state.dimensionality, state.domain_basis
             )
         ]
     if name == "held":
@@ -82,12 +82,12 @@ def move_feasible(s: Solve, src: str, dst: str, vector: tuple[int, ...]) -> bool
         return False
     if "targets" in (src, dst) and service.is_all_interval(s.tuning_scheme):
         return False
-    if src == "commas" and state.n == 0:
+    if src == "commas" and state.nullity == 0:
         return False
     if dst == "commas":
-        real_comma_basis = state.comma_basis if state.n else ()
-        domain_basis = state.domain_basis if len(vector) == state.d else None
+        real_comma_basis = state.comma_basis if state.nullity else ()
+        domain_basis = state.domain_basis if len(vector) == state.dimensionality else None
         extended = service.from_comma_basis((*real_comma_basis, tuple(vector)), domain_basis)
-        if extended.n <= state.n:
+        if extended.nullity <= state.nullity:
             return False
     return True

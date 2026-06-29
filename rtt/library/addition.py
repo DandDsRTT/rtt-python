@@ -4,7 +4,7 @@ import sympy as sp
 from sympy.matrices.normalforms import smith_normal_decomp
 
 from rtt.library.canonicalization import canonical_form
-from rtt.library.dimensions import get_d, get_n, get_r
+from rtt.library.dimensions import get_dimensionality, get_nullity, get_rank
 from rtt.library.domain_basis import get_domain_basis
 from rtt.library.dual import dual
 from rtt.library.list_utils import divide_out_gcd, leading_entry, trailing_entry
@@ -49,15 +49,15 @@ def _addition(t1: Temperament, t2: Temperament, is_sum: bool) -> Temperament:
 
 
 def _canonical_addition_variance(t: Temperament) -> Variance:
-    return Variance.ROW if get_r(t) < get_n(t) else Variance.COL
+    return Variance.ROW if get_rank(t) < get_nullity(t) else Variance.COL
 
 
 def _dimensions_mismatch(t1: Temperament, t2: Temperament) -> bool:
-    return get_r(t1) != get_r(t2) or get_d(t1) != get_d(t2)
+    return get_rank(t1) != get_rank(t2) or get_dimensionality(t1) != get_dimensionality(t2)
 
 
 def _get_grade(t: Temperament) -> int:
-    return get_n(t) if t.variance is Variance.COL else get_r(t)
+    return get_nullity(t) if t.variance is Variance.COL else get_rank(t)
 
 
 def _get_linear_dependence_basis(t1: Temperament, t2: Temperament) -> tuple:

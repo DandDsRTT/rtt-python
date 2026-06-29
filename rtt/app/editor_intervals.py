@@ -132,7 +132,7 @@ class _IntervalCommands:
             self.interest_vectors.insert(i, tuple(vector))
         else:
             state = self.state
-            domain_basis = state.domain_basis if len(vector) == state.d else None
+            domain_basis = state.domain_basis if len(vector) == state.dimensionality else None
             self.state = service.from_comma_basis(
                 (*self.real_comma_basis, tuple(vector)), domain_basis
             )

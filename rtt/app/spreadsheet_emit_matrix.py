@@ -66,7 +66,7 @@ def emit_counts_row(resolved, geometry, context) -> EmitResult:
     cells: list = []
     if not query.row_open(geometry, context.collapsed, "counts"):
         return EmitResult()
-    cardinality = {"gens": resolved.dims.rank, "primes": resolved.dims.dimensionality, "commas": context.state.n, "targets": resolved.dims.target_count, "held": resolved.dims.held_count,
+    cardinality = {"gens": resolved.dims.rank, "primes": resolved.dims.dimensionality, "commas": context.state.nullity, "targets": resolved.dims.target_count, "held": resolved.dims.held_count,
                    "detempering": resolved.dims.rank,
                    "superspace_generators": resolved.dims.superspace_rank, "superspace_primes": resolved.dims.superspace_dimensionality}
     for column_key, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
@@ -77,7 +77,7 @@ def emit_counts_row(resolved, geometry, context) -> EmitResult:
             if comma_half_w:
                 comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_w else query.comma_left(geometry, resolved, 0)
                 cells.append(CellBox("count:commas", comma_half_x, geometry.rows["counts"].y, comma_half_w, ROW_H,
-                                     "count", text=f"{_count_sym('n')} = {context.state.n}"))
+                                     "count", text=f"{_count_sym('n')} = {context.state.nullity}"))
             cells.append(CellBox("count:commas:u", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown), geometry.rows["counts"].y, resolved.dims.unchanged_count * COL_W, ROW_H,
                                  "count", text=f"{_count_sym('u')} = {resolved.dims.unchanged_count}"))
             continue

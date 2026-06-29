@@ -10,7 +10,9 @@ _log = logging.getLogger(__name__)
 
 
 def _state_from_mapping(state: TemperamentState, mapping) -> TemperamentState:
-    domain_basis = state.domain_basis if mapping and len(mapping[0]) == state.d else None
+    domain_basis = (
+        state.domain_basis if mapping and len(mapping[0]) == state.dimensionality else None
+    )
     return service.from_mapping(mapping, domain_basis)
 
 
@@ -36,9 +38,9 @@ def _comma_replaced(state: TemperamentState, c: int, vector) -> TemperamentState
         return None
     basis = [list(col) for col in cols]
     basis[c] = [int(x) for x in vector]
-    domain_basis = state.domain_basis if len(basis[c]) == state.d else None
+    domain_basis = state.domain_basis if len(basis[c]) == state.dimensionality else None
     new_state = service.from_comma_basis(basis, domain_basis)
-    if new_state.n != len(basis) or not service.is_proper_temperament(new_state.mapping):
+    if new_state.nullity != len(basis) or not service.is_proper_temperament(new_state.mapping):
         return None
     return new_state
 
@@ -66,7 +68,7 @@ def _comma_basis_in_form(state: TemperamentState, form: str):
 
 
 def _comma_domain_basis(state: TemperamentState, basis):
-    return state.domain_basis if len(basis[0]) == state.d else None
+    return state.domain_basis if len(basis[0]) == state.dimensionality else None
 
 
 def _appended_row_state(state: TemperamentState, values) -> TemperamentState | None:
@@ -79,9 +81,9 @@ def _appended_row_state(state: TemperamentState, values) -> TemperamentState | N
 def _extended_comma_state(
     state: TemperamentState, new_comma, real_comma_basis
 ) -> TemperamentState | None:
-    domain_basis = state.domain_basis if len(new_comma) == state.d else None
+    domain_basis = state.domain_basis if len(new_comma) == state.dimensionality else None
     extended = service.from_comma_basis((*real_comma_basis, new_comma), domain_basis)
-    return extended if extended.n > state.n else None
+    return extended if extended.nullity > state.nullity else None
 
 
 class _StructureQueries:
@@ -276,7 +278,7 @@ class _StructureCommands:
         self.pending.pending_comma = None
 
     def remove_comma(self, index: int = -1) -> None:
-        if self.state.n == 0:
+        if self.state.nullity == 0:
             return
         self.snapshot()
         self.state = service.remove_comma(self.state, index)

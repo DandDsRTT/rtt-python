@@ -4,7 +4,7 @@ from fractions import Fraction
 
 import sympy as sp
 
-from rtt.library.dimensions import get_d
+from rtt.library.dimensions import get_dimensionality
 from rtt.library.list_utils import all_zeros_l
 from rtt.library.math_utils import (
     get_primes,
@@ -166,7 +166,7 @@ def _supered_quotient(quotient: Fraction):
 
 
 def get_standard_prime_limit_domain_basis(t: Temperament) -> tuple[int, ...]:
-    return get_primes(get_d(t))
+    return get_primes(get_dimensionality(t))
 
 
 def get_domain_basis(t: Temperament) -> tuple:

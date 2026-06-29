@@ -28,7 +28,7 @@ class TestGeneratorTuning:
         editor = Editor()
         editor.set_generator_tuning_component(1, 700.0)
         editor.expand()
-        assert editor.state.r == 3 and len(editor.generator_tuning) == 2
+        assert editor.state.rank == 3 and len(editor.generator_tuning) == 2
         editor.set_generator_tuning_component(2, 700.0)
         assert len(editor.generator_tuning) == 3 and editor.generator_tuning[2] == 700.0
         editor.nudge_generator_tuning_component(2, 5)
@@ -174,7 +174,7 @@ class TestSchemeNameTracking:
         assert editor.effective_generator_tuning() is not None
         assert editor.displayed_tuning_scheme_name == "minimax-U"
         editor.expand()
-        assert len(editor.effective_generator_tuning()) != editor.state.r
+        assert len(editor.effective_generator_tuning()) != editor.state.rank
         assert editor.displayed_tuning_scheme_name == "minimax-U"
 
     def test_displayed_tuning_scheme_name_drops_to_none_when_a_held_interval_deviates_the_tuning(self):

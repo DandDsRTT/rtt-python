@@ -4,7 +4,7 @@ from fractions import Fraction
 
 import sympy as sp
 
-from rtt.library.dimensions import get_d
+from rtt.library.dimensions import get_dimensionality
 from rtt.library.domain_basis import get_domain_basis
 from rtt.library.dual import mapping_matrix
 from rtt.library.temperament import Temperament
@@ -75,7 +75,7 @@ def _column_space_projector(determining, _rank):
 
 
 def _build_generator_operator(t: Temperament, spec: TuningSchemeSpec) -> sp.Matrix:
-    d = get_d(t)
+    d = get_dimensionality(t)
     mapping = sp.Matrix(mapping_matrix(t))
     rank = mapping.rows
     targets = (

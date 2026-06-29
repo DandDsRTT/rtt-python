@@ -6,7 +6,7 @@ from typing import Literal
 import numpy as np
 from scipy.optimize import linprog
 
-from rtt.library.dimensions import get_d
+from rtt.library.dimensions import get_dimensionality
 from rtt.library.dual import mapping_matrix
 from rtt.library.temperament import Temperament
 from rtt.library.tuning import get_just_tuning_map, resolve_target_intervals
@@ -17,7 +17,7 @@ Mode = Literal["monotone", "tradeoff"]
 def get_generator_tuning_range(
     t: Temperament, mode: Mode, target_spec: str = "OLD"
 ) -> tuple[tuple[float, float], ...] | None:
-    d = get_d(t)
+    d = get_dimensionality(t)
     mapping = np.array(mapping_matrix(t), dtype=float)
     r = mapping.shape[0]
     just = np.array(get_just_tuning_map(t), dtype=float)

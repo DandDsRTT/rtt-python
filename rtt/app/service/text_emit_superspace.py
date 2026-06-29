@@ -240,13 +240,21 @@ def _superspace_projection(context: _TextContext, superspace_context: _Superspac
             "⟩",
             wrap=False,
         )
-    out[("projection", "superspace_generators")] = embedding_ebk(
-        superspace_generator_embedding_display(s, hbr), s.d, superspace_rank(s)
-    )
-    out[("projection", "superspace_primes")] = projection_ebk(
-        superspace_prime_projection_display(s, hbr), s.d, cols=superspace_dimensionality
-    )
+    out.update(_domain_projection_into_superspace(s, hbr, superspace_dimensionality))
     return out
+
+
+def _domain_projection_into_superspace(s, hbr, superspace_dimensionality) -> dict:
+    return {
+        ("projection", "superspace_generators"): embedding_ebk(
+            superspace_generator_embedding_display(s, hbr), s.dimensionality, superspace_rank(s)
+        ),
+        ("projection", "superspace_primes"): projection_ebk(
+            superspace_prime_projection_display(s, hbr),
+            s.dimensionality,
+            cols=superspace_dimensionality,
+        ),
+    }
 
 
 def _superspace_units(superspace_dimensionality: int) -> tuple:

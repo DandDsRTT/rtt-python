@@ -200,7 +200,9 @@ def update_plain_text_pending(rec, cell_box: spreadsheet.CellBox) -> None:
         targets = ed.target_override or service.target_interval_set(
             ed.target_spec, ed.state.domain_basis
         )
-        committed = service.target_interval_vectors(targets, ed.state.d, ed.state.domain_basis)
+        committed = service.target_interval_vectors(
+            targets, ed.state.dimensionality, ed.state.domain_basis
+        )
         pending = ed.pending_target
     else:
         committed, pending = ed.state.comma_basis, ed.pending_comma

@@ -35,7 +35,7 @@ class TestPlainTextRows:
     def test_plain_text_tuning_rows_use_map_and_list_brackets_at_grid_precision(self):
         state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
         pt = service.plain_text_values(state, "TILT minimax-S")
-        targets = service.target_interval_set("TILT", service.standard_primes(state.d))
+        targets = service.target_interval_set("TILT", service.standard_primes(state.dimensionality))
         tuning_map = service.tuning(state.mapping, "TILT minimax-S")
         weights = service.interval_weights(state.mapping, "TILT minimax-S", targets)
         sizes = service.interval_sizes(tuning_map, targets, weights=weights)
@@ -202,7 +202,7 @@ class TestPlainTextNonstandard:
         assert band == text_format._cents_map(over_basis)
         assert service.cents(over_basis[2]) in band
         truncated = service.interval_complexities(state.mapping, "TILT minimax-S",
-                                                  tuple(f"{p}/1" for p in service.standard_primes(state.d)))
+                                                  tuple(f"{p}/1" for p in service.standard_primes(state.dimensionality)))
         assert service.cents(truncated[2]) not in band, "not the prime-truncated log₂5 ≈ 2.322"
 
     def test_plain_text_threads_the_nonprime_approach_into_its_tuning(self):

@@ -14,7 +14,7 @@ class TestEstablishedProjection:
 
     def test_established_projection_reflects_a_hand_typed_held_basis(self):
         ed = Editor()
-        v = lambda r: tuple(service.interval_vector(r, ed.state.d, ed.state.domain_basis))
+        v = lambda r: tuple(service.interval_vector(r, ed.state.dimensionality, ed.state.domain_basis))
         ed.set_held_vectors([v("2/1"), v("5/4")])
         assert ed.unchanged_ratios == ("2/1", "5/4")
         assert ed.displayed_projection_scheme_name == "1/4-comma"
@@ -83,11 +83,11 @@ class TestEstablishedProjection:
 class TestUnchangedBasis:
     def test_a_held_interval_always_appears_in_the_unchanged_basis(self):
         ed = Editor()
-        v = lambda r: tuple(service.interval_vector(r, ed.state.d, ed.state.domain_basis))
+        v = lambda r: tuple(service.interval_vector(r, ed.state.dimensionality, ed.state.domain_basis))
         ed.set_held_vectors([v("9/8")])
         assert "9/8" in ed.unchanged_ratios, "the held interval itself, not a stand-in"
         assert ed.unchanged_ratios[0] == "9/8"
-        assert service.interval_vector("9/8", ed.state.d, ed.state.domain_basis) in (
+        assert service.interval_vector("9/8", ed.state.dimensionality, ed.state.domain_basis) in (
             service.unchanged_interval_basis(ed.state, ed.unchanged_ratios) or ())
 
     def test_held_interval_is_expressed_in_the_domain_basis(self):
@@ -99,7 +99,7 @@ class TestUnchangedBasis:
 
     def test_an_unheld_interval_is_never_faked_into_the_unchanged_basis(self):
         ed = Editor()
-        v = lambda r: tuple(service.interval_vector(r, ed.state.d, ed.state.domain_basis))
+        v = lambda r: tuple(service.interval_vector(r, ed.state.dimensionality, ed.state.domain_basis))
         ed.set_held_vectors([v("9/8")])
         ed.set_generator_tuning_component(0, 1200.0)
         ed.set_generator_tuning_component(1, 700.0)

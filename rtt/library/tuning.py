@@ -8,7 +8,7 @@ from scipy.linalg import null_space
 
 from rtt.library.change_basis import change_domain_basis_for_c
 from rtt.library.complexity import get_complexity, get_complexity_prescaler
-from rtt.library.dimensions import get_d
+from rtt.library.dimensions import get_dimensionality
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
     filter_target_intervals_for_nonstandard_domain_basis,
@@ -81,13 +81,18 @@ def optimize_generator_tuning_map(
     )
     if prime_based:
         generators = _retrieve_prime_domain_basis_generators(generators, t, solve_t)
-    generators = _default_free_generators_to_just(generators, t, spec, get_d(t))
+    generators = _default_free_generators_to_just(generators, t, spec, get_dimensionality(t))
 
     if spec.destretched_interval:
         mapping = np.array(mapping_matrix(t), dtype=float)
         just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)
         generators = _destretch(
-            generators, spec.destretched_interval, t, mapping, just_tuning_map, get_d(t)
+            generators,
+            spec.destretched_interval,
+            t,
+            mapping,
+            just_tuning_map,
+            get_dimensionality(t),
         )
     return tuple(float(g) for g in generators)
 
@@ -98,7 +103,7 @@ def _solve_generators(
     prescaler_override=None,
     weights_override=None,
 ) -> np.ndarray:
-    d = get_d(t)
+    d = get_dimensionality(t)
     mapping = np.array(mapping_matrix(t), dtype=float)
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)
     if _is_all_interval(spec) and spec.complexity_size_factor != 0:
@@ -347,7 +352,7 @@ def _evaluate_damages(
     t: Temperament, tuning_map: tuple, spec: TuningSchemeSpec | str
 ) -> tuple[tuple[tuple[int, ...], ...], np.ndarray, float]:
     spec = resolve_tuning_scheme(spec)
-    d = get_d(t)
+    d = get_dimensionality(t)
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)
     vectors, weights, power = _optimization_setup(t, spec, d)
     targets = np.array(vectors, dtype=float).reshape(-1, d)

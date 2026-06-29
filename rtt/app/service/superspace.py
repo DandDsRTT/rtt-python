@@ -204,7 +204,7 @@ def superspace_prime_projection_display(state: TemperamentState, held_ratios=())
 
 def _superspace_held_basis(state: TemperamentState, held_ratios, ml):
     domain_held = _held_for_projection(state, held_ratios)
-    if len(domain_held) != state.r:
+    if len(domain_held) != state.rank:
         return None
     lifted = lift_vectors_to_superspace(state.domain_basis, domain_held)
     return extend_to_full_image_rank(ml, lifted)

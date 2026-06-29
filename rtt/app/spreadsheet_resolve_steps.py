@@ -17,7 +17,7 @@ class Ghosts(NamedTuple):
 def determine_ghosts(inputs) -> Ghosts:
     pr = inputs.preview_remove
     ghost_row = (pr is not None and pr[0] == "comma"
-                 and 0 <= pr[1] < inputs.state.n)
+                 and 0 <= pr[1] < inputs.state.nullity)
     ghost_comma = (pr is not None and pr[0] == "row"
                    and len(inputs.state.mapping) > 1 and 0 <= pr[1] < len(inputs.state.mapping))
     return Ghosts(ghost_row, ghost_comma, pr if (ghost_row or ghost_comma) else None)
@@ -62,7 +62,7 @@ def resolve_superspace_dims(inputs, draft):
                        and service.domain_has_nonprimes(elements)
                        and inputs.nonprime_approach != "nonprime-based")
     return replace(
-        draft, dimensionality=inputs.state.d, rank=rank, row_draft=row_draft,
+        draft, dimensionality=inputs.state.dimensionality, rank=rank, row_draft=row_draft,
         rank_shown=rank + (1 if row_draft else 0),
         elements=elements, superspace_dimensionality=service.superspace_dimension(elements),
         superspace_rank=service.superspace_rank(inputs.state), superspace_primes=service.superspace_primes(elements),

@@ -439,10 +439,10 @@ class TestPerElementDomainControls:
         assert not any(i.startswith("element_minus") for i in off)
         on = {c.id: c for c in spreadsheet.build(augmented, _nonstd_on(augmented)).cells}
         assert "basis_minus" not in on and "minus" not in on
-        qty = {f"element_minus:{p}" for p in range(augmented.d)}
-        spine = {f"element_minus:basis:{p}" for p in range(augmented.d)}
+        qty = {f"element_minus:{p}" for p in range(augmented.dimensionality)}
+        spine = {f"element_minus:basis:{p}" for p in range(augmented.dimensionality)}
         assert qty <= set(on) and spine <= set(on)
-        assert all(on[f"element_minus:{p}"].prime == p for p in range(augmented.d))
+        assert all(on[f"element_minus:{p}"].prime == p for p in range(augmented.dimensionality))
 
     def test_per_element_domain_minus_is_withheld_at_the_last_element(self):
         sole = service.from_mapping(((1,),))

@@ -52,7 +52,7 @@ class TestTuning:
 
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         t = service.tuning(state.mapping, domain_basis=state.domain_basis)
-        assert len(t.generator_map) == state.r and len(t.tuning_map) == state.d
+        assert len(t.generator_map) == state.rank and len(t.tuning_map) == state.dimensionality
         assert t.just_map == pytest.approx(
             (1200.0, 1901.955, 1200.0 * math.log2(13 / 5)), abs=1e-2
         )
@@ -425,7 +425,7 @@ class TestUnchangedInterval:
     def test_unchanged_interval_basis_always_has_r_columns(self):
         state = service.from_mapping(((2, 3, 5, 6), (0, 1, -2, -2)))
         assert service.unchanged_interval_basis(state) == (None, None)
-        assert len(service.unchanged_interval_basis(state)) == state.r == state.d - state.n
+        assert len(service.unchanged_interval_basis(state)) == state.rank == state.dimensionality - state.nullity
         assert service.unchanged_interval_basis(state, ("2/1", "7/1")) == ((1, 0, 0, 0), (0, 0, 0, 1))
 
     def test_held_basis_vectors_keeps_only_independent_in_domain_intervals(self):
