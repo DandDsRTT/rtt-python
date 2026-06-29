@@ -47,7 +47,7 @@ from rtt.app.spreadsheet_constants import (
     ROW_H,
     ROW_HANDLE_GAP,
     ROW_HANDLE_W,
-    SCHEME_BTN_SQ,
+    SCHEME_BUTTON_SQ,
     STRIP,
     TITLE_MARGIN,
     TOGGLE,
@@ -272,7 +272,7 @@ def _compute_row_band(geometry, resolved, context, key, natural, collapsible, la
     preset = preset_band_h(geometry, resolved, key) if (((resolved.flags.presets and key in BANDS["preset"].rows)
                                      or (context.settings["all_interval"] and key == "vectors"))
                                     and not folded) else 0
-    scheme_button = (control_region_band_h(SCHEME_BTN_SQ)
+    scheme_button = (control_region_band_h(SCHEME_BUTTON_SQ)
                  if (key == "projection" and context.settings["projection"] and not resolved.flags.presets and not folded) else 0)
     form_controls = (formchooser_band_h(geometry, key)
                 if (resolved.flags.form_controls and not resolved.flags.presets

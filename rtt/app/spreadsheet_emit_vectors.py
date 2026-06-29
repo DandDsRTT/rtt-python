@@ -4,7 +4,7 @@ from rtt.app import ids, service
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.layout import CellBox
 from rtt.app.spreadsheet_constants import (
-    BTN,
+    BUTTON,
     COL_W,
     COMMAPICK_GAP,
     DASH,
@@ -86,8 +86,8 @@ def _emit_vectors_basis_col(cells, resolved, geometry, context) -> None:
         _emit_basis_minus(cells, geometry, "basis_minus", resolved.dims.dimensionality - 1, "basis_minus")
     if "vectors" in geometry.row_plus_y:
         plus_kind = "element_plus" if resolved.flags.nonstandard_domain else "plus"
-        cells.append(CellBox("basis_plus", basis_bus_x - BTN / 2, geometry.row_plus_y["vectors"] - BTN / 2,
-                             BTN, BTN, plus_kind))
+        cells.append(CellBox("basis_plus", basis_bus_x - BUTTON / 2, geometry.row_plus_y["vectors"] - BUTTON / 2,
+                             BUTTON, BUTTON, plus_kind))
 
 
 def _emit_vectors_commas_col(cells, resolved, geometry, context) -> None:

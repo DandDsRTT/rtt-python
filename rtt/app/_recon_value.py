@@ -155,25 +155,25 @@ def _arm_ratio_ops(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
         return
     wrap.classes("rtt-ratioed")
     with wrap:
-        reduce_btn = (
+        reduce_button = (
             ui.html(_control_svg("reduce"))
             .classes("rtt-glyph rtt-ratio-op rtt-ratio-op-reduce")
             .mark(f"{cell_box.id}:reduce")
             .tooltip(tooltips.RATIO_REDUCE_HELP)
         )
-        recip_btn = (
+        reciprocate_button = (
             ui.html(_control_svg("reciprocate"))
             .classes("rtt-glyph rtt-ratio-op rtt-ratio-op-recip")
             .mark(f"{cell_box.id}:reciprocate")
             .tooltip(tooltips.RATIO_RECIPROCATE_HELP)
         )
-    reduce_btn.on(
+    reduce_button.on(
         "click", lambda _=None, cid=cell_box.id: rec._cb.transform_interval(cid, "reduce")
     )
-    recip_btn.on(
+    reciprocate_button.on(
         "click", lambda _=None, cid=cell_box.id: rec._cb.transform_interval(cid, "reciprocate")
     )
-    rec.cells[cell_box.id].value.ratio_op = (reduce_btn, recip_btn)
+    rec.cells[cell_box.id].value.ratio_op = (reduce_button, reciprocate_button)
     _sync_ratio_ops(rec, cell_box.id, cell_box.text)
 
 
@@ -183,8 +183,8 @@ def _sync_ratio_ops(rec, cid: str, text: str) -> None:
         return
     state = rec._editor.state
     availability = service.interval_op_availability(text, state.domain_basis)
-    for btn, enabled in zip(ops, availability, strict=False):
-        btn.classes(
+    for button, enabled in zip(ops, availability, strict=False):
+        button.classes(
             add="" if enabled else "rtt-op-disabled",
             remove="rtt-op-disabled" if enabled else "",
         )

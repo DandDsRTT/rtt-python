@@ -12,7 +12,7 @@ from rtt.app.grid_tables import (
 )
 from rtt.app.layout import CellBox
 from rtt.app.spreadsheet_constants import (
-    BTN,
+    BUTTON,
     COL_W,
     DASH,
     GAP,
@@ -308,7 +308,7 @@ def emit_column_plus_controls(resolved, geometry) -> EmitResult:
     for column_key, cid in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
                       ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
         if column_key in geometry.plus_stub_x:
-            cells.append(CellBox(cid, geometry.plus_stub_x[column_key] - BTN / 2, geometry.fanout_y - BTN / 2, BTN, BTN, cid))
+            cells.append(CellBox(cid, geometry.plus_stub_x[column_key] - BUTTON / 2, geometry.fanout_y - BUTTON / 2, BUTTON, BUTTON, cid))
     return EmitResult(cells=tuple(cells))
 
 

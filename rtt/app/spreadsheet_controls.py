@@ -23,7 +23,7 @@ from rtt.app.spreadsheet_constants import (
     PAD,
     PRESET_H,
     PRESET_W,
-    SCHEME_BTN_SQ,
+    SCHEME_BUTTON_SQ,
     SCHEME_LABEL_W,
     TOGGLE,
     TOGGLE_INSET,
@@ -150,15 +150,15 @@ def _preset_locked(resolved, context, name: str) -> bool:
 
 
 def _control_box(cells, blocks, resolved, geometry, box_id: str, column_key: str, top, cap_w, label,
-                 disabled: bool = False, scheme_btn: bool = False, form_chooser=None):
+                 disabled: bool = False, scheme_button: bool = False, form_chooser=None):
     form_label = form_chooser[1] if form_chooser else None
-    dropdown_w, label_h, box_h = query.control_dims(geometry, column_key, cap_w, label, scheme_btn, form_label)
+    dropdown_w, label_h, box_h = query.control_dims(geometry, column_key, cap_w, label, scheme_button, form_label)
     box_x, box_y = geometry.col_x[column_key], top + BOX_OUTER
     blocks.append(Block(box_id, box_x, box_y, geometry.col_w[column_key], box_h, boxed=True))
     ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
-    if scheme_btn:
+    if scheme_button:
         _emit_scheme_button(cells, ctrl_x, ctrl_y, column_key)
-        ctrl_y += SCHEME_BTN_SQ + BOX_INNER
+        ctrl_y += SCHEME_BUTTON_SQ + BOX_INNER
     if label:
         cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
                              "caption", text=label, align="left", disabled=disabled))
@@ -173,9 +173,9 @@ def _control_box(cells, blocks, resolved, geometry, box_id: str, column_key: str
 
 
 def _emit_scheme_button(cells, x, y, column_key: str) -> None:
-    cells.append(CellBox(f"scheme:{column_key}", x, y, SCHEME_BTN_SQ, SCHEME_BTN_SQ, "scheme_button", text="✕"))
-    label_y = y + (SCHEME_BTN_SQ - CAPTION_LINE) / 2
-    cells.append(CellBox(f"scheme:{column_key}:label", x + SCHEME_BTN_SQ + 2, label_y, SCHEME_LABEL_W,
+    cells.append(CellBox(f"scheme:{column_key}", x, y, SCHEME_BUTTON_SQ, SCHEME_BUTTON_SQ, "scheme_button", text="✕"))
+    label_y = y + (SCHEME_BUTTON_SQ - CAPTION_LINE) / 2
+    cells.append(CellBox(f"scheme:{column_key}:label", x + SCHEME_BUTTON_SQ + 2, label_y, SCHEME_LABEL_W,
                          CAPTION_LINE, "caption", text="return to scheme", align="left"))
 
 
@@ -190,7 +190,7 @@ def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cid, n
     fc = next((fn for fn, rk, ck, _l in FORM_CHOOSERS if rk == row_key and ck == column_key), None)
     form_chooser = (f"formchooser:{fc}", "form") if (fc and query.preset_form_label(resolved, name, row_key, column_key)) else None
     cx, cw, cy = _control_box(cells, blocks, resolved, geometry, f"block:{cid}", column_key, top, query.preset_cap(name), label,
-                              disabled=disabled, scheme_btn=(name == "projection"),
+                              disabled=disabled, scheme_button=(name == "projection"),
                               form_chooser=form_chooser)
     cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
                          disabled=disabled))
@@ -247,7 +247,7 @@ def _emit_scheme_buttons(cells, blocks, resolved, geometry, context) -> None:
             top = query.plain_text_band_y(geometry, "projection") + geometry.rows["projection"].plain_text
             box_y = top + BOX_OUTER
             blocks.append(Block(f"block:scheme:{column_key}", geometry.col_x[column_key], box_y, geometry.col_w[column_key],
-                                2 * BOX_INNER + SCHEME_BTN_SQ, boxed=True))
+                                2 * BOX_INNER + SCHEME_BUTTON_SQ, boxed=True))
             _emit_scheme_button(cells, geometry.col_x[column_key] + BOX_INNER, box_y + BOX_INNER, column_key)
 
 

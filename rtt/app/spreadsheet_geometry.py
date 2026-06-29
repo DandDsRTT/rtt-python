@@ -263,12 +263,12 @@ def control_region_band_h(content_h):
     return 2 * BOX_OUTER + 2 * BOX_INNER + content_h
 
 
-def _control_band_h(geometry, column_key: str, cap_w, label, scheme_btn: bool = False, form_label=None):
-    return 2 * BOX_OUTER + query.control_dims(geometry, column_key, cap_w, label, scheme_btn, form_label)[2]
+def _control_band_h(geometry, column_key: str, cap_w, label, scheme_button: bool = False, form_label=None):
+    return 2 * BOX_OUTER + query.control_dims(geometry, column_key, cap_w, label, scheme_button, form_label)[2]
 
 
 def preset_band_h(geometry, resolved, key: str):
-    return max((_control_band_h(geometry, column_key, query.preset_cap(name), label, scheme_btn=(name == "projection"),
+    return max((_control_band_h(geometry, column_key, query.preset_cap(name), label, scheme_button=(name == "projection"),
                                form_label=query.preset_form_label(resolved, name, rk, column_key))
                 for name, rk, column_key, label in PRESETS + PRESET_COPIES
                 if rk == key and column_key in geometry.col_w), default=0)

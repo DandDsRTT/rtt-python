@@ -54,7 +54,7 @@
       '<div class="rtt-tour-body"></div>' +
       '<div class="rtt-tour-foot">' +
       '<span class="rtt-tour-count"></span>' +
-      '<span class="rtt-tour-btns">' +
+      '<span class="rtt-tour-buttons">' +
       '<button type="button" class="rtt-tour-skip">Skip</button>' +
       '<button type="button" class="rtt-tour-back">Back</button>' +
       '<button type="button" class="rtt-tour-next">Next</button>' +

@@ -82,12 +82,12 @@
   letter-spacing: 0.02em;
 }
 
-.rtt-tour-btns {
+.rtt-tour-buttons {
   display: flex;
   gap: 6px;
 }
 
-.rtt-tour-btns button {
+.rtt-tour-buttons button {
   font-family: inherit;
   font-size: 12px;
   padding: 4px 12px;
@@ -98,22 +98,22 @@
   cursor: pointer;
 }
 
-.rtt-tour-btns button:hover {
+.rtt-tour-buttons button:hover {
   background: #e9ebee;
 }
 
-.rtt-tour-btns button.rtt-tour-next {
+.rtt-tour-buttons button.rtt-tour-next {
   border-color: #3a3f46;
   background: #3a3f46;          /* a dark-grey "primary" — emphasis without any colour */
   color: #fff;
 }
 
-.rtt-tour-btns button.rtt-tour-next:hover {
+.rtt-tour-buttons button.rtt-tour-next:hover {
   background: #2b2f35;
   border-color: #2b2f35;
 }
 
-.rtt-tour-btns button.rtt-tour-skip {
+.rtt-tour-buttons button.rtt-tour-skip {
   border-color: transparent;
   background: transparent;
   color: #8a9099;
@@ -121,7 +121,7 @@
   padding-right: 4px;
 }
 
-.rtt-tour-btns button.rtt-tour-skip:hover {
+.rtt-tour-buttons button.rtt-tour-skip:hover {
   background: transparent;
   color: #3a3f46;
   text-decoration: underline;
@@ -139,34 +139,34 @@ body.rtt-dark .rtt-tour-body {
   color: #aeb4bc;
 }
 
-body.rtt-dark .rtt-tour-btns button {
+body.rtt-dark .rtt-tour-buttons button {
   background: #31373f;
   border-color: #4e555d;
   color: #e3e6ea;
 }
 
-body.rtt-dark .rtt-tour-btns button:hover {
+body.rtt-dark .rtt-tour-buttons button:hover {
   background: #3a414a;
 }
 
-body.rtt-dark .rtt-tour-btns button.rtt-tour-skip {
+body.rtt-dark .rtt-tour-buttons button.rtt-tour-skip {
   background: transparent;
   border-color: transparent;
   color: #71777f;
 }
 
-body.rtt-dark .rtt-tour-btns button.rtt-tour-skip:hover {
+body.rtt-dark .rtt-tour-buttons button.rtt-tour-skip:hover {
   color: #e3e6ea;
 }
 
 /* on the dark card a dark "primary" would vanish — flip it to a light grey with dark text */
-body.rtt-dark .rtt-tour-btns button.rtt-tour-next {
+body.rtt-dark .rtt-tour-buttons button.rtt-tour-next {
   background: #aeb4bc;
   border-color: #aeb4bc;
   color: #1b1f24;
 }
 
-body.rtt-dark .rtt-tour-btns button.rtt-tour-next:hover {
+body.rtt-dark .rtt-tour-buttons button.rtt-tour-next:hover {
   background: #c4cad1;
   border-color: #c4cad1;
 }

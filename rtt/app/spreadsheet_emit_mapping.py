@@ -6,7 +6,7 @@ from rtt.app import ids
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.layout import CellBox
 from rtt.app.spreadsheet_constants import (
-    BTN,
+    BUTTON,
     COL_W,
     DASH,
     ETPICK_GAP,
@@ -41,7 +41,7 @@ def _emit_mapping_gens(cells, resolved, geometry, context) -> None:
         for i in range(resolved.dims.rank):
             cells.append(CellBox(f"map_minus:{query.col_token(resolved, 'gens', i)}", map_bus_x, query.map_top(geometry, i), gen_right - map_bus_x, ROW_H, "map_minus", gen=i))
     if "mapping" in geometry.row_plus_y:
-        cells.append(CellBox("map_plus", map_bus_x - BTN / 2, geometry.row_plus_y["mapping"] - BTN / 2, BTN, BTN, "map_plus"))
+        cells.append(CellBox("map_plus", map_bus_x - BUTTON / 2, geometry.row_plus_y["mapping"] - BUTTON / 2, BUTTON, BUTTON, "map_plus"))
 
 
 def _emit_mapping_drag(cells, resolved, geometry, context) -> None:

@@ -144,10 +144,10 @@ body.rtt-dark .rtt-gensign:hover { background:#31373f; }   /* the generator sign
 /* ── app chrome: the sidebar title and the undo/redo/hamburger buttons ──────────────────────────
    these light rules use !important (to beat Quasar), so the dark overrides must too. */
 body.rtt-dark .rtt-sidetitle { color:#e3e6ea; }
-body.rtt-dark .rtt-iconbtn { background:#1b1f24 !important; border-color:#8d949d; }
-body.rtt-dark .rtt-iconbtn .q-icon { color:#e3e6ea !important; }
-body.rtt-dark .rtt-iconbtn.disabled { border-color:#454c54 !important; }
-body.rtt-dark .rtt-iconbtn.disabled .q-icon { color:#71777f !important; }
+body.rtt-dark .rtt-icon-button { background:#1b1f24 !important; border-color:#8d949d; }
+body.rtt-dark .rtt-icon-button .q-icon { color:#e3e6ea !important; }
+body.rtt-dark .rtt-icon-button.disabled { border-color:#454c54 !important; }
+body.rtt-dark .rtt-icon-button.disabled .q-icon { color:#71777f !important; }
 body.rtt-dark .rtt-hamburger { background:#1b1f24 !important; border-color:#4e555d; }
 body.rtt-dark .rtt-hamburger .q-icon { color:#cfd4da !important; }
 
@@ -205,19 +205,19 @@ body.rtt-dark .rtt-select-popup .q-item.disabled .q-item__label::before,
 body.rtt-dark .rtt-select-popup .q-item.disabled .q-item__label::after { border-top-color:#888f97; }
 
 /* ── the back-to-scheme button (projection / generator-embedding tiles) ──────────────────────
-   the light rules (rtt.css .rtt-scheme-btn) bake a light-grey 3-D face; restate it in dark tones so
+   the light rules (rtt.css .rtt-scheme-button) bake a light-grey 3-D face; restate it in dark tones so
    the button reads as raised off the #31373f control box. Its border rides --cell-border (already
    retinted) so only the face, bevel and ✕ glyph need overriding. !important to beat the light
    !important rules. */
-body.rtt-dark .rtt-scheme-btn { background:linear-gradient(#474e57,#343a42) !important;
+body.rtt-dark .rtt-scheme-button { background:linear-gradient(#474e57,#343a42) !important;
             box-shadow:inset 1px 1px 0 rgba(255,255,255,0.12), inset -1px -1px 1px rgba(0,0,0,0.45) !important; }
-body.rtt-dark .rtt-scheme-btn .q-btn__content { color:#e3e6ea !important; }
-body.rtt-dark .rtt-scheme-btn:hover:not(.rtt-scheme-btn-idle) { background:linear-gradient(#515862,#3a414a) !important; }
-body.rtt-dark .rtt-scheme-btn:active:not(.rtt-scheme-btn-idle) { background:linear-gradient(#2c323a,#3e454e) !important;
+body.rtt-dark .rtt-scheme-button .q-btn__content { color:#e3e6ea !important; }
+body.rtt-dark .rtt-scheme-button:hover:not(.rtt-scheme-button-idle) { background:linear-gradient(#515862,#3a414a) !important; }
+body.rtt-dark .rtt-scheme-button:active:not(.rtt-scheme-button-idle) { background:linear-gradient(#2c323a,#3e454e) !important;
             box-shadow:inset 1px 1px 2px rgba(0,0,0,0.55), inset -1px -1px 0 rgba(255,255,255,0.10) !important; }
-body.rtt-dark .rtt-scheme-btn-idle { background:linear-gradient(#3a414a,#31373f) !important;
+body.rtt-dark .rtt-scheme-button-idle { background:linear-gradient(#3a414a,#31373f) !important;
             box-shadow:inset 1px 1px 0 rgba(255,255,255,0.08), inset -1px -1px 1px rgba(0,0,0,0.20) !important; }
-body.rtt-dark .rtt-scheme-btn-idle .q-btn__content { color:#71777f !important; }
+body.rtt-dark .rtt-scheme-button-idle .q-btn__content { color:#71777f !important; }
 
 /* ── fan controls (the +/− add-remove buttons and the fold chevrons) ─────────────────────────
    each is an inline SVG: a white #bbb-bordered box with a currentColor glyph. The box's exact
