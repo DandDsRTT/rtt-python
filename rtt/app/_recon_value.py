@@ -68,9 +68,16 @@ def set_cents_face(rec, cid: str, text: str) -> None:
     _sync_stacked_face(rec, cid, whole, f".{frac}" if frac else "")
 
 
+def _set_pending_class(element, pending: bool) -> None:
+    element.classes(
+        add="rtt-pending" if pending else "",
+        remove="" if pending else "rtt-pending",
+    )
+
+
 def cents_face(rec, cell_box: spreadsheet.CellBox, cls: str) -> None:
     whole, frac = _cents_parts(cell_box.text)
-    _put_stacked_face(rec, cell_box.id, cls, whole, f".{frac}" if frac else "", cell_box.w)
+    _put_stacked_face(rec, cell_box.id, cls, whole, f".{frac}" if frac else "", cell_box.width)
 
 
 def _ratio(rec, cell_box: spreadsheet.CellBox, approx: bool, overlay: bool = False) -> None:
@@ -92,7 +99,7 @@ def _ratio_body(rec, cell_box: spreadsheet.CellBox, approx: bool) -> None:
             num = ui.label(parts[0]).classes("rtt-frac-num").mark(f"{cell_box.id}:num")
             den = ui.label(parts[1]).classes("rtt-frac-den").mark(f"{cell_box.id}:den")
         rec.cells[cell_box.id].value.frac = (num, den)
-        _fit_ratio(rec, cell_box.id, parts[0], parts[1], cell_box.w, whole)
+        _fit_ratio(rec, cell_box.id, parts[0], parts[1], cell_box.width, whole)
     else:
         rec.cells[cell_box.id].value.label = ui.label(cell_box.text).classes("rtt-value")
 
@@ -230,10 +237,7 @@ def update_gridvalue(rec, cell_box: spreadsheet.CellBox) -> None:
             if spec.ratio_allowed
             else rec.cells[cell_box.id].value.input
         )
-        target.classes(
-            add="rtt-pending" if cell_box.pending else "",
-            remove="" if cell_box.pending else "rtt-pending",
-        )
+        _set_pending_class(target, cell_box.pending)
 
 
 def _update_fraction(rec, cell_box: spreadsheet.CellBox, text: str) -> None:
@@ -242,7 +246,7 @@ def _update_fraction(rec, cell_box: spreadsheet.CellBox, text: str) -> None:
     rec.cells[cell_box.id].value.input.value = num
     rec.cells[cell_box.id].value.den_input.value = den if ratio else ""
     rec.cells[cell_box.id].value.frac_edit.props(f"data-fracmode={'ratio' if ratio else 'int'}")
-    _fit_fraction(rec, cell_box.id, num, den, cell_box.w, ratio)
+    _fit_fraction(rec, cell_box.id, num, den, cell_box.width, ratio)
     _sync_ratio_ops(rec, cell_box.id, text)
 
 
@@ -319,7 +323,7 @@ def _update_decimal(rec, cell_box: spreadsheet.CellBox, text: str, *, signed=Fal
     rec.cells[cell_box.id].value.input.value = whole
     rec.cells[cell_box.id].value.den_input.value = frac
     rec.cells[cell_box.id].value.frac_edit.props(f"data-decmode={'dec' if frac else 'int'}")
-    fit_w = cell_box.w - _GENSIGN_W if signed else cell_box.w
+    fit_w = cell_box.width - _GENSIGN_W if signed else cell_box.width
     rec.cells[cell_box.id].value.frac_edit.style(
         f"--dec-whole-font:{_digit_fit_font(len(whole), fit_w, float(_CELL_FONT)):.2f}px"
     )
@@ -353,7 +357,11 @@ def build_powerinput(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
         .classes("rtt-cellinput")
     )
     _put_stacked_face(
-        rec, cell_box.id, "rtt-tuning-value rtt-cellface", *_power_parts(cell_box.text), cell_box.w
+        rec,
+        cell_box.id,
+        "rtt-tuning-value rtt-cellface",
+        *_power_parts(cell_box.text),
+        cell_box.width,
     )
 
 
@@ -364,7 +372,11 @@ def update_powerinput(rec, cell_box: spreadsheet.CellBox) -> None:
 
 def build_powerdisplay(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
     _put_stacked_face(
-        rec, cell_box.id, "rtt-tuning-value rtt-cellface", *_power_parts(cell_box.text), cell_box.w
+        rec,
+        cell_box.id,
+        "rtt-tuning-value rtt-cellface",
+        *_power_parts(cell_box.text),
+        cell_box.width,
     )
 
 
@@ -418,7 +430,7 @@ def build_plain_text_edit(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
 def update_plain_text_edit(rec, cell_box: spreadsheet.CellBox) -> None:
     rec.cells[cell_box.id].value.plain_text_input.value = cell_box.text
     rec.cells[cell_box.id].value.plain_text_input.style(
-        f"font-size:{_plain_text_font(cell_box.text, cell_box.w)}px"
+        f"font-size:{_plain_text_font(cell_box.text, cell_box.width)}px"
     )
 
 
@@ -446,10 +458,7 @@ def _build_ratio_face(rec, cell_box: spreadsheet.CellBox, wrap, approx: bool) ->
 
 
 def update_ratio(rec, cell_box: spreadsheet.CellBox) -> None:
-    rec.entities[cell_box.id].el.classes(
-        add="rtt-pending" if cell_box.pending else "",
-        remove="" if cell_box.pending else "rtt-pending",
-    )
+    _set_pending_class(rec.entities[cell_box.id].el, cell_box.pending)
     face = rec.handles(cell_box.id).value.ratio_face
     if face is None:
         return
@@ -466,10 +475,7 @@ def build_tuning_value(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
 
 def update_tuning_value(rec, cell_box: spreadsheet.CellBox) -> None:
     set_cents_face(rec, cell_box.id, cell_box.text)
-    rec.entities[cell_box.id].el.classes(
-        add="rtt-pending" if cell_box.pending else "",
-        remove="" if cell_box.pending else "rtt-pending",
-    )
+    _set_pending_class(rec.entities[cell_box.id].el, cell_box.pending)
 
 
 def label_builder(cls: str):
@@ -481,14 +487,11 @@ def label_builder(cls: str):
 
 def update_label(rec, cell_box: spreadsheet.CellBox) -> None:
     rec.cells[cell_box.id].value.label.set_text(cell_box.text)
-    rec.entities[cell_box.id].el.classes(
-        add="rtt-pending" if cell_box.pending else "",
-        remove="" if cell_box.pending else "rtt-pending",
-    )
+    _set_pending_class(rec.entities[cell_box.id].el, cell_box.pending)
 
 
 def update_plain_text(rec, cell_box: spreadsheet.CellBox) -> None:
     rec.cells[cell_box.id].value.label.set_text(cell_box.text)
     rec.cells[cell_box.id].value.label.style(
-        f"font-size:{_plain_text_font(cell_box.text, cell_box.w)}px"
+        f"font-size:{_plain_text_font(cell_box.text, cell_box.width)}px"
     )

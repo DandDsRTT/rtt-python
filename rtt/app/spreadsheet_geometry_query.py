@@ -78,12 +78,12 @@ def subrow_top(geometry, row_key: str, i: int) -> float:
 
 def comma_picker_band_y(geometry, row_key: str) -> float:
     row = geometry.rows[row_key]
-    return row.y + row.h + row.frame
+    return row.y + row.height + row.frame
 
 
 def plain_text_band_y(geometry, row_key: str) -> float:
     row = geometry.rows[row_key]
-    return row.y + row.h + row.frame + row.comma_picker + row.symbol + row.caption + row.units
+    return row.y + row.height + row.frame + row.comma_picker + row.symbol + row.caption + row.units
 
 
 def frame_top_y(geometry, row_key: str) -> float:
@@ -91,14 +91,14 @@ def frame_top_y(geometry, row_key: str) -> float:
 
 
 def frame_brace_y(geometry, row_key: str) -> float:
-    return geometry.rows[row_key].y + geometry.rows[row_key].h + FRAME_GAP
+    return geometry.rows[row_key].y + geometry.rows[row_key].height + FRAME_GAP
 
 
 def separator_span(resolved, geometry, row_key: str):
     if row_key not in FRAMED_ROWS:
         return geometry.rows[row_key].y + (ROW_H - VAL_BRACKET_H) / 2, VAL_BRACKET_H
     if not resolved.flags.ebk:
-        return geometry.rows[row_key].y, geometry.rows[row_key].h
+        return geometry.rows[row_key].y, geometry.rows[row_key].height
     y = frame_top_y(geometry, row_key) - FRAME_OVERHANG
     return y, frame_brace_y(geometry, row_key) + BRACE_H + FRAME_OVERHANG - y
 
@@ -150,12 +150,12 @@ def tile_span_box(geometry, row_key: str, column_key: str):
 
 
 def matrix_span(geometry, resolved, group_key: str):
-    x, w = content_box(geometry, group_key)
+    x, width = content_box(geometry, group_key)
     matrix_x = outer_gutter_w(geometry, group_key)
-    x, w = x + matrix_x, w - 2 * matrix_x
+    x, width = x + matrix_x, width - 2 * matrix_x
     if group_key == "commas" and resolved.unchanged.empty_comma_w:
-        x, w = x + resolved.unchanged.empty_comma_w, w - resolved.unchanged.empty_comma_w
-    return x, w
+        x, width = x + resolved.unchanged.empty_comma_w, width - resolved.unchanged.empty_comma_w
+    return x, width
 
 
 def prime_left(geometry, p: int) -> float:
@@ -422,8 +422,8 @@ def panel_rect(geometry, collapsed, row_key: str, column_key: str):
     row_c = f"row:{row_key}" in collapsed or tile_c
     tile_x, tile_width = tile_span_box(geometry, row_key, column_key)
     tile_height, tile_y = geometry.rows[row_key].tile_h, geometry.rows[row_key].tile_top
-    w, padding_x = (0, 0) if col_c else (tile_width, PAD)
-    h, padding_y = (0, 0) if row_c else (tile_height, PAD)
+    width, padding_x = (0, 0) if col_c else (tile_width, PAD)
+    height, padding_y = (0, 0) if row_c else (tile_height, PAD)
     box_x = tile_x + tile_width / 2 if col_c else tile_x
     box_y = tile_y + tile_height / 2 if row_c else tile_y
-    return box_x - padding_x, box_y - padding_y, w + 2 * padding_x, h + 2 * padding_y
+    return box_x - padding_x, box_y - padding_y, width + 2 * padding_x, height + 2 * padding_y

@@ -13,15 +13,15 @@ _BR_BRACE_THIN = 0.4
 _BR_BRACE_CUSP = 0.2
 
 
-def svg(w, h, body):
+def svg(width, height, body):
     return (
-        f'<svg width="100%" height="100%" viewBox="0 0 {w:.2f} {h:.2f}" '
+        f'<svg width="100%" height="100%" viewBox="0 0 {width:.2f} {height:.2f}" '
         f'preserveAspectRatio="none" style="display:block;overflow:visible">{body}</svg>'
     )
 
 
-def rect(x, y, w, h):
-    return f'<rect x="{x:.2f}" y="{y:.2f}" width="{w:.2f}" height="{h:.2f}" fill="{BR_COLOR}"/>'
+def rect(x, y, width, height):
+    return f'<rect x="{x:.2f}" y="{y:.2f}" width="{width:.2f}" height="{height:.2f}" fill="{BR_COLOR}"/>'
 
 
 def ribbon(pts):
@@ -59,39 +59,39 @@ def _qbez(p0, ctrl, p1, w0, w1, n, *, skip_first=False):
     return out
 
 
-def square_bracket(w, h, side):
+def square_bracket(width, height, side):
     if side == "left":
-        x_in = w - BR_INSET
+        x_in = width - BR_INSET
         x_out = x_in - BR_SERIF_L
         bar_x = x_out
     else:
         x_out = BR_INSET
         bar_x = x_out + BR_SERIF_L - _BR_BAR
     return svg(
-        w,
-        h,
-        rect(bar_x, 0, _BR_BAR, h)
+        width,
+        height,
+        rect(bar_x, 0, _BR_BAR, height)
         + rect(x_out, 0, BR_SERIF_L, _BR_SERIF_T)
-        + rect(x_out, h - _BR_SERIF_T, BR_SERIF_L, _BR_SERIF_T),
+        + rect(x_out, height - _BR_SERIF_T, BR_SERIF_L, _BR_SERIF_T),
     )
 
 
-def top_bracket(w, h):
+def top_bracket(width, height):
     return svg(
-        w,
-        h,
-        rect(0, 0, w, _BR_BAR)
+        width,
+        height,
+        rect(0, 0, width, _BR_BAR)
         + rect(0, 0, _BR_SERIF_T, BR_SERIF_L)
-        + rect(w - _BR_SERIF_T, 0, _BR_SERIF_T, BR_SERIF_L),
+        + rect(width - _BR_SERIF_T, 0, _BR_SERIF_T, BR_SERIF_L),
     )
 
 
-def angle_bracket(w, h):
-    bx1 = w - BR_INSET
+def angle_bracket(width, height):
+    bx1 = width - BR_INSET
     bx0 = bx1 - BR_SERIF_L
-    center_y = h / 2
+    center_y = height / 2
     vx, tx = bx0 + _BR_ANGLE_THICK, bx1 - 0.4
-    top, vertex, bot = (tx, 0.2), (vx, center_y), (tx, h - 0.2)
+    top, vertex, bot = (tx, 0.2), (vx, center_y), (tx, height - 0.2)
     n = 10
     pts = [
         (
@@ -109,18 +109,18 @@ def angle_bracket(w, h):
         )
         for i in range(1, n + 1)
     ]
-    return svg(w, h, ribbon(pts))
+    return svg(width, height, ribbon(pts))
 
 
-def brace(w, h):
-    center_x = w / 2
+def brace(width, height):
+    center_x = width / 2
     end_x, serif_dx, cusp_dx = 2.0, 3.2, 5.5
     span = end_x + serif_dx + cusp_dx + 1.0
     if span > center_x:
         s = center_x / span
         end_x, serif_dx, cusp_dx = end_x * s, serif_dx * s, cusp_dx * s
-    arm_y = h / 2
-    reach = h / 2 - 0.5
+    arm_y = height / 2
+    reach = height / 2 - 0.5
     tip_y, cusp_y = arm_y - reach, arm_y + reach - 0.3
     thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
     n = 10
@@ -144,27 +144,27 @@ def brace(w, h):
         n,
         skip_first=True,
     )
-    pts.append((w - end_x - serif_dx, arm_y, thick))
+    pts.append((width - end_x - serif_dx, arm_y, thick))
     pts += _qbez(
-        (w - end_x - serif_dx, arm_y),
-        (w - end_x, arm_y),
-        (w - end_x, tip_y),
+        (width - end_x - serif_dx, arm_y),
+        (width - end_x, arm_y),
+        (width - end_x, tip_y),
         thick,
         thin,
         n,
         skip_first=True,
     )
-    return svg(w, h, ribbon(pts))
+    return svg(width, height, ribbon(pts))
 
 
-def curly_bracket(w, h):
-    center_y = h / 2
+def curly_bracket(width, height):
+    center_y = height / 2
     end_y, serif_dy, cusp_dy = 2.0, 3.2, 5.5
     span = end_y + serif_dy + cusp_dy + 1.0
     if span > center_y:
         s = center_y / span
         end_y, serif_dy, cusp_dy = end_y * s, serif_dy * s, cusp_dy * s
-    tip_x = w - BR_INSET
+    tip_x = width - BR_INSET
     cusp_x = tip_x - BR_SERIF_L
     arm_x = (tip_x + cusp_x) / 2
     thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
@@ -189,23 +189,23 @@ def curly_bracket(w, h):
         n,
         skip_first=True,
     )
-    pts.append((arm_x, h - end_y - serif_dy, thick))
+    pts.append((arm_x, height - end_y - serif_dy, thick))
     pts += _qbez(
-        (arm_x, h - end_y - serif_dy),
-        (arm_x, h - end_y),
-        (tip_x, h - end_y),
+        (arm_x, height - end_y - serif_dy),
+        (arm_x, height - end_y),
+        (tip_x, height - end_y),
         thick,
         thin,
         n,
         skip_first=True,
     )
-    return svg(w, h, ribbon(pts))
+    return svg(width, height, ribbon(pts))
 
 
-def angle_foot(w, h):
-    center_x = w / 2
-    ty, vy = 0.85, h - 0.5 - _BR_ANGLE_THICK
-    left, vertex, right = (0.8, ty), (center_x, vy), (w - 0.8, ty)
+def angle_foot(width, height):
+    center_x = width / 2
+    ty, vy = 0.85, height - 0.5 - _BR_ANGLE_THICK
+    left, vertex, right = (0.8, ty), (center_x, vy), (width - 0.8, ty)
     n = 8
     pts = [
         (
@@ -223,35 +223,35 @@ def angle_foot(w, h):
         )
         for i in range(1, n + 1)
     ]
-    return svg(w, h, ribbon(pts))
+    return svg(width, height, ribbon(pts))
 
 
-def vbar(w, h):
-    return svg(w, h, rect((w - _BR_BAR) / 2, 0, _BR_BAR, h))
+def vbar(width, height):
+    return svg(width, height, rect((width - _BR_BAR) / 2, 0, _BR_BAR, height))
 
 
-def _hbar(w, h):
-    return svg(w, h, rect(0, (h - _BR_BAR) / 2, w, _BR_BAR))
+def _hbar(width, height):
+    return svg(width, height, rect(0, (height - _BR_BAR) / 2, width, _BR_BAR))
 
 
 def ebk_svg(cell_box):
     if cell_box.kind == "bracket":
         if cell_box.text == "⟨":
-            svg = angle_bracket(cell_box.w, cell_box.h)
+            svg = angle_bracket(cell_box.width, cell_box.height)
         elif cell_box.text == "{":
-            svg = curly_bracket(cell_box.w, cell_box.h)
+            svg = curly_bracket(cell_box.width, cell_box.height)
         else:
             svg = square_bracket(
-                cell_box.w, cell_box.h, "left" if cell_box.text == "[" else "right"
+                cell_box.width, cell_box.height, "left" if cell_box.text == "[" else "right"
             )
     elif cell_box.kind == "ebktop":
-        svg = top_bracket(cell_box.w, cell_box.h)
+        svg = top_bracket(cell_box.width, cell_box.height)
     elif cell_box.kind == "ebkbrace":
-        svg = brace(cell_box.w, cell_box.h)
+        svg = brace(cell_box.width, cell_box.height)
     elif cell_box.kind == "ebkangle":
-        svg = angle_foot(cell_box.w, cell_box.h)
+        svg = angle_foot(cell_box.width, cell_box.height)
     elif cell_box.kind == "hbar":
-        svg = _hbar(cell_box.w, cell_box.h)
+        svg = _hbar(cell_box.width, cell_box.height)
     else:
-        svg = vbar(cell_box.w, cell_box.h)
+        svg = vbar(cell_box.width, cell_box.height)
     return svg.replace(BR_COLOR, PENDING_COLOR) if cell_box.pending else svg

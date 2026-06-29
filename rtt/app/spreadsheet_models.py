@@ -196,7 +196,7 @@ class _MappedTile(NamedTuple):
 @dataclass
 class RowBand:
     y: float
-    h: float
+    height: float
     label: str
     collapsible: bool
     tile_h: float

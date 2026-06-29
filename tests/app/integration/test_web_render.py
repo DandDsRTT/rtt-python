@@ -4480,7 +4480,7 @@ async def test_virtualization_elides_offscreen_body_cells(user: User, monkeypatc
     live, page = _live_page()
     lay, fx, fy, body = _body_cells(live, page)
 
-    visible = {c.id for c in body if page.renderer._body_visible(c.x, c.y, c.w, c.h, fy)}
+    visible = {c.id for c in body if page.renderer._body_visible(c.x, c.y, c.width, c.height, fy)}
     offscreen = {c.id for c in body} - visible
     assert offscreen, "a 320x320 viewport must leave some body cells off-screen to elide"
 
@@ -4510,7 +4510,7 @@ async def test_scrolling_reveals_far_cells_and_retains_near_ones(user: User, mon
     assert far.id in page.rec.entities
     # ...and the now-far-above near cell is RETAINED, not evicted — a scroll only ever ADDS, so
     # scrolling back to it never re-blanks (the regression this fixes).
-    assert not page.renderer._body_visible(near.x, near.y, near.w, near.h, fy)  # genuinely off-screen
+    assert not page.renderer._body_visible(near.x, near.y, near.width, near.height, fy)  # genuinely off-screen
     assert near.id in page.rec.entities
 
 

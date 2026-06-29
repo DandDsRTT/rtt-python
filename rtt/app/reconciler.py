@@ -194,12 +194,12 @@ class _Reconciler:
                 with self.entities[cell_box.id].el:
                     self.cells[cell_box.id].cell_unit = ui.html("").classes("rtt-cellunit")
                 self.entities[cell_box.id].el.classes(add="rtt-cell-united")
-            if self.cells[cell_box.id].cell_unit_text != (cell_box.unit, cell_box.w):
+            if self.cells[cell_box.id].cell_unit_text != (cell_box.unit, cell_box.width):
                 self.cells[cell_box.id].cell_unit.set_content(_bold_units(cell_box.unit))
                 self.cells[cell_box.id].cell_unit.style(
-                    f"font-size:{_units_font(cell_box.unit, cell_box.w, _CELLUNIT_MAX_FONT):.2f}px"
+                    f"font-size:{_units_font(cell_box.unit, cell_box.width, _CELLUNIT_MAX_FONT):.2f}px"
                 )
-                self.cells[cell_box.id].cell_unit_text = (cell_box.unit, cell_box.w)
+                self.cells[cell_box.id].cell_unit_text = (cell_box.unit, cell_box.width)
         elif self.cells[cell_box.id].cell_unit is not None:
             self.cells[cell_box.id].cell_unit.delete()
             self.cells[cell_box.id].cell_unit = None

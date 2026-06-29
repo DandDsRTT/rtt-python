@@ -55,7 +55,7 @@ _VIEW = (100.0, 200.0, 400.0, 300.0)  # visible x:[100,500] board-y:[200,500]
 
 
 @pytest.mark.parametrize(
-    "x, y, w, h, overscan, expected",
+    "x, y, width, height, overscan, expected",
     [
         # squarely inside the visible window (grid-y 260 → board-y 210, within [200,500])
         (200.0, 260.0, 30.0, 20.0, 0.0, True),
@@ -75,8 +75,8 @@ _VIEW = (100.0, 200.0, 400.0, 300.0)  # visible x:[100,500] board-y:[200,500]
         (60.0, 260.0, 40.0, 20.0, 0.0, False),
     ],
 )
-def test_rect_in_view_intersects_the_visible_window(x, y, w, h, overscan, expected):
-    assert _rect_in_view(x, y, w, h, 50.0, _VIEW, overscan) is expected
+def test_rect_in_view_intersects_the_visible_window(x, y, width, height, overscan, expected):
+    assert _rect_in_view(x, y, width, height, 50.0, _VIEW, overscan) is expected
 
 
 def test_rect_in_view_with_no_viewport_admits_everything():

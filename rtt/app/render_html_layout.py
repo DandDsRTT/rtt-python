@@ -24,16 +24,16 @@ def _block_panes(bl, freeze_x: float, freeze_y: float) -> tuple[str, ...]:
     return tuple(panes)
 
 
-def _rect_in_view(x, y, w, h, freeze_y, view, overscan) -> bool:
+def _rect_in_view(x, y, width, height, freeze_y, view, overscan) -> bool:
     if view is None:
         return True
     left, top, vw, vh = view
     by = y - freeze_y
     return (
         x < left + vw + overscan
-        and x + w > left - overscan
+        and x + width > left - overscan
         and by < top + vh + overscan
-        and by + h > top - overscan
+        and by + height > top - overscan
     )
 
 

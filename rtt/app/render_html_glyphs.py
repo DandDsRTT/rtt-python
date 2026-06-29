@@ -92,14 +92,16 @@ def _chart_ticks(lo: float, hi: float) -> list[float]:
     return ticks
 
 
-def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="", col_gap=0) -> str:
+def _bar_chart(
+    width: float, height: float, values, indicator=None, indicator_label="", col_gap=0
+) -> str:
     axis_x, col_w = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COL_W
     pitch = col_w + col_gap
     values = tuple(values)
     present = tuple(v for v in values if v is not None)
     ticks = _chart_ticks(min((*present, 0.0)), max((*present, 0.0)))
     axis_lo, axis_hi = ticks[0], ticks[-1]
-    plot_top, plot_bot = _CHART_PAD_T, h - _CHART_PAD_B
+    plot_top, plot_bot = _CHART_PAD_T, height - _CHART_PAD_B
     span = axis_hi - axis_lo
 
     def y_of(v):
@@ -109,7 +111,7 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="", c
     for tv in ticks:
         ty = y_of(tv)
         body.append(
-            f'<line x1="{axis_x:.2f}" y1="{ty:.2f}" x2="{w:.2f}" y2="{ty:.2f}" '
+            f'<line x1="{axis_x:.2f}" y1="{ty:.2f}" x2="{width:.2f}" y2="{ty:.2f}" '
             f'stroke="{_CHART_GRID}" stroke-width="0.5"/>'
         )
         body.append(
@@ -118,7 +120,7 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="", c
         )
     zero_y = y_of(0)
     body.append(
-        f'<line x1="{axis_x:.2f}" y1="{zero_y:.2f}" x2="{w:.2f}" y2="{zero_y:.2f}" '
+        f'<line x1="{axis_x:.2f}" y1="{zero_y:.2f}" x2="{width:.2f}" y2="{zero_y:.2f}" '
         f'stroke="{BR_COLOR}" stroke-width="1"/>'
     )
     body.append(rect(axis_x, plot_top, 0.8, plot_bot - plot_top))
@@ -130,11 +132,11 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="", c
         yv = y_of(v)
         top, bot = min(zero_y, yv), max(zero_y, yv)
         body.append(rect(center_x - bar_width / 2, top, bar_width, bot - top))
-    body.extend(_bar_chart_indicator(w, axis_x, y_of, indicator, indicator_label))
-    return svg(w, h, "".join(body))
+    body.extend(_bar_chart_indicator(width, axis_x, y_of, indicator, indicator_label))
+    return svg(width, height, "".join(body))
 
 
-def _bar_chart_indicator(w, axis_x, y_of, indicator, indicator_label) -> list[str]:
+def _bar_chart_indicator(width, axis_x, y_of, indicator, indicator_label) -> list[str]:
     if indicator is None:
         return []
     iy = y_of(indicator)
@@ -149,7 +151,7 @@ def _bar_chart_indicator(w, axis_x, y_of, indicator, indicator_label) -> list[st
     return [
         f'<line x1="{axis_x:.2f}" y1="{iy:.2f}" x2="{lx - 2:.2f}" y2="{iy:.2f}" '
         f'stroke="{_CHART_INDICATOR}" stroke-width="1.5"/>',
-        f'<line x1="{lx + lbl_w + 2:.2f}" y1="{iy:.2f}" x2="{w:.2f}" y2="{iy:.2f}" '
+        f'<line x1="{lx + lbl_w + 2:.2f}" y1="{iy:.2f}" x2="{width:.2f}" y2="{iy:.2f}" '
         f'stroke="{_CHART_INDICATOR}" stroke-width="1.5"/>',
         f'<text x="{lx:.2f}" y="{iy + lbl_font * 0.34:.2f}" font-size="{lbl_font}" '
         f'fill="{_CHART_INDICATOR}"><tspan>⟪</tspan>'
@@ -157,16 +159,16 @@ def _bar_chart_indicator(w, axis_x, y_of, indicator, indicator_label) -> list[st
     ]
 
 
-def _range_chart(w: float, h: float, ranges, tunings=(), decimals: bool = True) -> str:
+def _range_chart(width: float, height: float, ranges, tunings=(), decimals: bool = True) -> str:
     cx0, col_w = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COL_W
     if not ranges:
         return svg(
-            w,
-            h,
-            f'<text x="{w / 2:.2f}" y="{h / 2 + 2:.2f}" text-anchor="middle" '
+            width,
+            height,
+            f'<text x="{width / 2:.2f}" y="{height / 2 + 2:.2f}" text-anchor="middle" '
             f'font-size="{_RANGE_FONT}" fill="{BR_COLOR}">no range</text>',
         )
-    plot_top, plot_bot = _RANGE_PLOT_T, h - _RANGE_PLOT_B
+    plot_top, plot_bot = _RANGE_PLOT_T, height - _RANGE_PLOT_B
     mid, hw = (plot_top + plot_bot) / 2, _RANGE_MARK_W / 2
     cap_half, tick_half = _RANGE_CAP_W / 2, _RANGE_CAP_W / 2 - 3
 
@@ -192,7 +194,7 @@ def _range_chart(w: float, h: float, ranges, tunings=(), decimals: bool = True) 
         if i < len(tunings):
             frac = min(1.0, max(0.0, (hi - tunings[i]) / (hi - lo)))
             body.append(bar(center_x, plot_top + frac * (plot_bot - plot_top), tick_half))
-    return svg(w, h, "".join(body))
+    return svg(width, height, "".join(body))
 
 
 def _example_chart() -> str:

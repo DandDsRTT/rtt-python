@@ -19,8 +19,8 @@ class Block:
     id: str
     x: float
     y: float
-    w: float
-    h: float
+    width: float
+    height: float
     tint: str = ""
     boxed: bool = False
 
@@ -30,8 +30,8 @@ class CellBox:
     id: str
     x: float
     y: float
-    w: float
-    h: float
+    width: float
+    height: float
     kind: str
     text: str = ""
     gen: int = -1

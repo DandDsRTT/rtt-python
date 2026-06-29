@@ -100,7 +100,7 @@ def render_blocks(r, lay, seen) -> None:
                 r._rec.entities[eid] = EntityHandles(
                     el=ui.element("div").classes(cls).props(f'data-eid="{eid}"').mark(eid)
                 )
-        style = f"left:0; top:0; transform:translate({bl.x}px,{bl.y - shift}px); width:{bl.w}px; height:{bl.h}px"
+        style = f"left:0; top:0; transform:translate({bl.x}px,{bl.y - shift}px); width:{bl.width}px; height:{bl.height}px"
         if bl.tint in _TINTS:
             style += f"; background:var(--wash-{bl.tint})"
         if r._rec.entity(eid).styled != style:
@@ -125,17 +125,22 @@ def make_cell_if_new(r, cell_box, container, structural) -> None:
 
 
 def update_cell_content(r, cell_box) -> None:
-    csig = (spreadsheet_text._cell_content(cell_box), cell_box.w, cell_box.h, cell_box.audio)
-    h = r._rec.handles(cell_box.id)
+    csig = (
+        spreadsheet_text._cell_content(cell_box),
+        cell_box.width,
+        cell_box.height,
+        cell_box.audio,
+    )
+    height = r._rec.handles(cell_box.id)
     volatile = any(
         (
-            h.value.input,
-            h.value.den_input,
-            h.value.plain_text_input,
-            h.chooser.select,
-            h.chooser.check,
-            h.value.frac_edit,
-            h.value.ratio_op,
+            height.value.input,
+            height.value.den_input,
+            height.value.plain_text_input,
+            height.chooser.select,
+            height.chooser.check,
+            height.value.frac_edit,
+            height.value.ratio_op,
         )
     )
     if volatile or r._rec.handles(cell_box.id).content_sig != csig:
@@ -148,7 +153,7 @@ def place_cell(r, cell_box, container, paint) -> None:
     make_cell_if_new(r, cell_box, container, structural)
     top = cell_box.y - (freeze_y if container in ("body", "row") else 0)
     grow = _CELL_BORDER_W if cell_box.kind in GRIDVALUE_KINDS else 0
-    placement = f"left:0; top:0; transform:translate({cell_box.x}px,{top}px); width:{cell_box.w + grow}px; height:{cell_box.h + grow}px"
+    placement = f"left:0; top:0; transform:translate({cell_box.x}px,{top}px); width:{cell_box.width + grow}px; height:{cell_box.height + grow}px"
     if r._rec.entity(cell_box.id).styled != placement:
         r._rec.entities[cell_box.id].el.style(placement)
         r._rec.entities[cell_box.id].styled = placement
@@ -168,7 +173,9 @@ def render_cells(r, lay, seen, flags) -> None:
             cell_box.id not in r._rec.entities
             and container == "body"
             and not cell_box.pending
-            and not r._body_visible(cell_box.x, cell_box.y, cell_box.w, cell_box.h, freeze_y)
+            and not r._body_visible(
+                cell_box.x, cell_box.y, cell_box.width, cell_box.height, freeze_y
+            )
         ):
             continue
         place_cell(r, cell_box, container, paint)

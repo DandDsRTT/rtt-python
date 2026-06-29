@@ -99,7 +99,7 @@ def test_on_disconnect_with_no_pending_commit_just_ends_gestures():
 def _bars(svg):
     """(y, height) of each chart bar in an SVG; the thin y-axis rect is excluded by width."""
     rects = re.findall(r'<rect x="[-\d.]+" y="([-\d.]+)" width="([\d.]+)" height="([-\d.]+)"', svg)
-    return [(float(y), float(h)) for y, wdt, h in rects if float(wdt) > 1]
+    return [(float(y), float(height)) for y, wdt, height in rects if float(wdt) > 1]
 
 
 def test_app_module_exposes_entry_points():
@@ -417,9 +417,9 @@ def test_line_style_centres_the_rule_on_its_coordinate():
     v = render_html._line_style(Line("trunk:x", "v", 100, 50, 200))
     assert f"transform:translate({100 - half}px,50px)" in v  # centred on x=100 (not flush), seated at y=50
     assert "height:200px" in v and "left:0; top:0" in v       # the length runs unchanged; box anchored at origin
-    h = render_html._line_style(Line("h:x", "h", 60, 10, 300))
-    assert f"transform:translate(10px,{60 - half}px)" in h    # seated at x=10, centred on y=60
-    assert "width:300px" in h and "left:0; top:0" in h
+    height = render_html._line_style(Line("h:x", "h", 60, 10, 300))
+    assert f"transform:translate(10px,{60 - half}px)" in height    # seated at x=10, centred on y=60
+    assert "width:300px" in height and "left:0; top:0" in height
 
 
 def test_line_style_dots_a_collapsed_bands_rule_and_restores_it_when_open():
@@ -1109,7 +1109,7 @@ def test_bar_chart_renders_numerically_flat_dust_without_dividing_by_zero():
     assert svg.startswith("<svg") and 'viewBox="0 0 272.00 64.00"' in svg
     bars = _bars(svg)
     assert len(bars) == 3  # one (flat) bar per value
-    assert all(abs(h) < 0.01 for _y, h in bars)  # dust rests on the baseline, not blown up
+    assert all(abs(height) < 0.01 for _y, height in bars)  # dust rests on the baseline, not blown up
 
 
 def test_range_chart_draws_an_i_beam_with_min_max_labels_for_a_ranged_generator():
@@ -1121,18 +1121,18 @@ def test_range_chart_draws_an_i_beam_with_min_max_labels_for_a_ranged_generator(
     assert "tuning ranges" not in svg  # the title moved out to a boxtitle
     for label in ("720.000", "685.714"):  # the fifth's max (top cap) and min (bottom cap), 3dp like the grid
         assert label in svg
-    heights = [h for _y, h in _bars(svg)]
+    heights = [height for _y, height in _bars(svg)]
     assert max(heights) > 30  # the ranged generator's I-beam stem spans the plot area
 
 
 def test_range_chart_ticks_the_live_tuning_within_a_generators_range():
     # the live generator tuning is marked as a horizontal tick between the min/max caps,
     # at its proportional position within the range (here ~2/3 of the way down)
-    marks = sorted(y for y, h in _bars(render_html._range_chart(92, 96, ((685.714, 720.0),), (697.0,))) if h < 4)
+    marks = sorted(y for y, height in _bars(render_html._range_chart(92, 96, ((685.714, 720.0),), (697.0,))) if height < 4)
     assert len(marks) == 3  # max cap (top), live-tuning tick (interior), min cap (bottom)
     assert marks[0] < marks[1] < marks[2]  # the tick sits strictly between the two bounds
     # with no live tuning supplied (the bare helper), only the two range caps are drawn
-    plain = sorted(y for y, h in _bars(render_html._range_chart(92, 96, ((685.714, 720.0),))) if h < 4)
+    plain = sorted(y for y, height in _bars(render_html._range_chart(92, 96, ((685.714, 720.0),))) if height < 4)
     assert len(plain) == 2
 
 
@@ -1141,7 +1141,7 @@ def test_range_chart_draws_only_a_flat_cap_for_a_pinned_generator():
     # single flat cap with one value label, not a misleading full-height range bar
     svg = render_html._range_chart(92, 96, ((1200.0, 1200.0),))
     assert "1200.000" in svg
-    heights = [h for _y, h in _bars(svg)]
+    heights = [height for _y, height in _bars(svg)]
     assert heights and max(heights) < 10  # only a flat cap, no tall range stem
 
 
@@ -1284,7 +1284,7 @@ def test_dense_prescaling_plain_text_fits_its_cell():
                                                 tuning_scheme="TILT minimax-S").cells}
     for cid in ("plain_text:prescaling:primes", "plain_text:prescaling:targets"):
         c = cells[cid]
-        assert render_html._plain_text_units(c.text) * render_html._plain_text_font(c.text, c.w) <= c.w, cid
+        assert render_html._plain_text_units(c.text) * render_html._plain_text_font(c.text, c.width) <= c.width, cid
 
 
 def test_units_fit_their_cell_for_long_alternative_complexity_annotations():
@@ -1300,12 +1300,12 @@ def test_units_fit_their_cell_for_long_alternative_complexity_annotations():
     shrunk = False
     for c in cells:
         if c.kind == "units":
-            font = render_html._units_font(c.text, c.w, page_assets._UNITS_MAX_FONT)
-            assert len(c.text) * render_html._EXPR_CHAR_W * font <= c.w, f"units {c.id}={c.text!r}"
+            font = render_html._units_font(c.text, c.width, page_assets._UNITS_MAX_FONT)
+            assert len(c.text) * render_html._EXPR_CHAR_W * font <= c.width, f"units {c.id}={c.text!r}"
             shrunk = shrunk or font < page_assets._UNITS_MAX_FONT
         if c.unit:
-            font = render_html._units_font(c.unit, c.w, page_assets._CELLUNIT_MAX_FONT)
-            assert len(c.unit) * render_html._EXPR_CHAR_W * font <= c.w, f"cellunit {c.id}={c.unit!r}"
+            font = render_html._units_font(c.unit, c.width, page_assets._CELLUNIT_MAX_FONT)
+            assert len(c.unit) * render_html._EXPR_CHAR_W * font <= c.width, f"cellunit {c.id}={c.unit!r}"
     # the long annotation actually triggered a shrink (the fit engaged — not a trivial pass)
     assert shrunk, "no units cell shrank — the long-annotation fit never engaged"
 

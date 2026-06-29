@@ -109,8 +109,8 @@ def assign_audio(cells, r, geometry):
     for i, cb in enumerate(cells):
         if cb.kind not in _INTERVAL_KINDS or cb.pending:
             continue
-        rkey = _band_of(bands, cb.y + cb.h / 2)
-        ckey = _col_of(spans, cb.x + cb.w / 2)
+        rkey = _band_of(bands, cb.y + cb.height / 2)
+        ckey = _col_of(spans, cb.x + cb.width / 2)
         if rkey is None or ckey is None or not _is_interval_tile(rkey, ckey, p.ss):
             continue
         groups.setdefault((rkey, ckey), []).append((cb.x, cb.y, i))
@@ -129,7 +129,7 @@ def assign_audio(cells, r, geometry):
 
 def _band_of(bands, y):
     for rkey, band in bands:
-        if band.y - 0.5 <= y < band.y + band.h + 0.5:
+        if band.y - 0.5 <= y < band.y + band.height + 0.5:
             return rkey
     return None
 

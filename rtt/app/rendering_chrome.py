@@ -18,14 +18,14 @@ def sync_mean_damage_tips(rec, editor) -> None:
 
 
 def sync_pretransform_help(rec, pretransform: bool) -> None:
-    for h in rec.cells.values():
-        if h.help_tip is not None:
-            tip, plain, relabeled = h.help_tip
+    for height in rec.cells.values():
+        if height.help_tip is not None:
+            tip, plain, relabeled = height.help_tip
             tip.set_text(relabeled if pretransform else plain)
-    for cid, h in rec.cells.items():
-        if h.guide_help_text is None:
+    for cid, height in rec.cells.items():
+        if height.guide_help_text is None:
             continue
-        plain, relabeled = h.guide_help_text
+        plain, relabeled = height.guide_help_text
         wrap = rec.entity(cid).el
         text = relabeled if pretransform else plain
         if wrap is not None and wrap._props.get("data-guide-text") != text:

@@ -129,10 +129,10 @@ _TILE_CELL_Y = _TILE_CAP + _TILE_ENCLOSE
 
 
 def _tile_grid_frame_html() -> str:
-    def mark(x, y, w, h, inner):
+    def mark(x, y, width, height, inner):
         return (
             f'<div style="position:absolute;left:{x}px;top:{y}px;'
-            f'width:{w}px;height:{h}px">{inner}</div>'
+            f'width:{width}px;height:{height}px">{inner}</div>'
         )
 
     cell, cap, bracket_width, cell_x, cell_y = (
