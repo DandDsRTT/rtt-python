@@ -13,8 +13,8 @@ from rtt.app.spreadsheet_constants import (
 from rtt.app.spreadsheet_models import RowBand
 
 
-def _row(y, h=10.0, frame=2.0, symbol=3.0, caption=4.0, units=5.0, comma_picker=0.0):
-    return RowBand(y=y, h=h, label="", collapsible=True, tile_h=0.0, tile_top=0.0,
+def _row(y, height=10.0, frame=2.0, symbol=3.0, caption=4.0, units=5.0, comma_picker=0.0):
+    return RowBand(y=y, height=height, label="", collapsible=True, tile_h=0.0, tile_top=0.0,
                    frame=frame, symbol=symbol, caption=caption, units=units, plain_text=0.0, preset=0.0,
                    scheme_button=0.0, num_subrows=1, comma_picker=comma_picker)
 
@@ -41,11 +41,11 @@ def test_row_top_functions_are_pure_over_geometry():
 def test_frame_and_band_y_functions_are_pure_over_geometry():
     g = _geometry()
     row = g.rows["mapping"]
-    assert query.comma_picker_band_y(g, "mapping") == row.y + row.h + row.frame
+    assert query.comma_picker_band_y(g, "mapping") == row.y + row.height + row.frame
     assert query.plain_text_band_y(g, "mapping") == (
-        row.y + row.h + row.frame + row.comma_picker + row.symbol + row.caption + row.units)
+        row.y + row.height + row.frame + row.comma_picker + row.symbol + row.caption + row.units)
     assert query.frame_top_y(g, "mapping") == row.y - FRAME_H - FRAME_GAP
-    assert query.frame_brace_y(g, "mapping") == row.y + row.h + FRAME_GAP
+    assert query.frame_brace_y(g, "mapping") == row.y + row.height + FRAME_GAP
 
 
 def test_gutter_and_coordinate_functions_are_pure_over_geometry():

@@ -81,7 +81,7 @@ def _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, 
 def _row_axis(lines, geometry, context, right_bus_x, key) -> None:
     n = geometry.rows[key].num_subrows
     folded = f"row:{key}" in context.collapsed
-    center_y = geometry.rows[key].y + geometry.rows[key].h / 2
+    center_y = geometry.rows[key].y + geometry.rows[key].height / 2
     ys = [center_y] * n if folded else [query.subrow_top(geometry, key, i) + ROW_H / 2 for i in range(n)]
     left_bus_x = geometry.node_edge + geometry.FAN if (query.row_fans(geometry, key) and not folded) else geometry.node_edge
     for i in range(n):
@@ -111,7 +111,7 @@ def _emit_axes(lines, resolved, geometry, context) -> None:
         if query.row_fans(geometry, key):
             _row_axis(lines, geometry, context, right_bus_x, key)
         else:
-            _gridline(lines, f"h:{key}", "h", geometry.rows[key].y + geometry.rows[key].h / 2, geometry.node_edge, geometry.total_w - geometry.node_edge,
+            _gridline(lines, f"h:{key}", "h", geometry.rows[key].y + geometry.rows[key].height / 2, geometry.node_edge, geometry.total_w - geometry.node_edge,
                       dotted=f"row:{key}" in context.collapsed)
 
 
@@ -254,17 +254,17 @@ def _wash_bands(resolved, geometry, context):
     for _bid, row_key, column_key in geometry.tiles:
         if (row_key, column_key) not in geometry.declared_tiles or not query.tile_open(geometry, context.collapsed, row_key, column_key):
             continue
-        y, h = geometry.rows[row_key].tile_top - WASH_PAD, geometry.rows[row_key].tile_h + 2 * WASH_PAD
+        y, height = geometry.rows[row_key].tile_top - WASH_PAD, geometry.rows[row_key].tile_h + 2 * WASH_PAD
         for seg_key, (tile_x, tile_w), seg_groups in _wash_segments(resolved, geometry, row_key, column_key):
             groups = sorted(g for g in seg_groups if context.settings.get(f"{g}_colorization"))
             if not groups:
                 continue
-            x, w = tile_x - WASH_PAD, tile_w + 2 * WASH_PAD
+            x, width = tile_x - WASH_PAD, tile_w + 2 * WASH_PAD
             if len(groups) == 3:
-                bands.append((f"white:{row_key}:{seg_key}", x, y, w, h, None))
+                bands.append((f"white:{row_key}:{seg_key}", x, y, width, height, None))
             else:
                 for group in groups:
-                    bands.append((f"{group}:{row_key}:{seg_key}", x, y, w, h, group))
+                    bands.append((f"{group}:{row_key}:{seg_key}", x, y, width, height, group))
     return bands
 
 
@@ -272,11 +272,11 @@ def _emit_washes(blocks, resolved, geometry, context) -> None:
     if not (geometry.col_x and geometry.rows):
         return
     bands = _wash_bands(resolved, geometry, context)
-    for bid, x, y, w, h, _ in bands:
-        blocks.append(Block(f"washbase:{bid}", x, y, w, h, tint="base"))
-    for bid, x, y, w, h, group in bands:
+    for bid, x, y, width, height, _ in bands:
+        blocks.append(Block(f"washbase:{bid}", x, y, width, height, tint="base"))
+    for bid, x, y, width, height, group in bands:
         if group is not None:
-            blocks.append(Block(f"wash:{bid}", x, y, w, h, tint=group))
+            blocks.append(Block(f"wash:{bid}", x, y, width, height, tint=group))
 
 
 def _caption_equivalences(resolved, geometry, ai, slope) -> dict:
@@ -330,8 +330,8 @@ def _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_ke
     kw = MNEMONICS.get((row_key, column_key)) if resolved.flags.mnemonics else None
     underlines = ((name.index(kw), 1),) if (kw and kw in name) else ()
     if resolved.flags.mnemonics and caption_ai:
-        underlines += tuple((name.index(w), 1)
-                            for w in ALL_INTERVAL_MNEMONICS.get((row_key, column_key), ()) if w in name)
+        underlines += tuple((name.index(width), 1)
+                            for width in ALL_INTERVAL_MNEMONICS.get((row_key, column_key), ()) if width in name)
     cap_x, cap_w = query.tile_span_box(geometry, row_key, column_key)
     cells.append(CellBox(f"caption:{row_key}:{column_key}", cap_x, center_y, cap_w, geometry.rows[row_key].caption,
                          "caption", text=name, underlines=underlines))
@@ -342,7 +342,7 @@ def _emit_tile_units(cells, resolved, geometry, row_key, column_key) -> None:
     if unit and not (row_key.startswith("superspace_") or column_key in ("superspace_generators", "superspace_primes")):
         unit = _subscript_coord(unit, "p", resolved.labels.domain_label)
     if resolved.flags.units and unit:
-        uy = geometry.rows[row_key].y + geometry.rows[row_key].h + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker + geometry.rows[row_key].symbol + geometry.rows[row_key].caption
+        uy = geometry.rows[row_key].y + geometry.rows[row_key].height + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker + geometry.rows[row_key].symbol + geometry.rows[row_key].caption
         cells.append(CellBox(f"units:{row_key}:{column_key}", geometry.col_x[column_key], uy, geometry.col_w[column_key], UNIT_H,
                              "units", text=f"units: {unit}"))
 
@@ -350,7 +350,7 @@ def _emit_tile_units(cells, resolved, geometry, row_key, column_key) -> None:
 def _emit_tile_symbols_captions(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, name) -> None:
     if caption_ai and (row_key, column_key) in ALL_INTERVAL_CAPTIONS:
         name = ALL_INTERVAL_CAPTIONS[(row_key, column_key)]
-    center_y = geometry.rows[row_key].y + geometry.rows[row_key].h + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker
+    center_y = geometry.rows[row_key].y + geometry.rows[row_key].height + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker
     if (resolved.flags.symbols or resolved.flags.equivalences) and row_key in BANDS["symbol"].rows:
         center_y = _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, center_y)
     if resolved.flags.names and resolved.unchanged.shown and (row_key, column_key) == ("counts", "commas"):

@@ -65,7 +65,7 @@ def test_displayed_scheme_name_bare_solve_omits_held_while_the_optimum_passes_it
     monkeypatch.setattr(editor_solve.service, "tuning", spy)
     _ = editor.displayed_tuning_scheme_name
     assert "ABSENT" in held_seen
-    assert any(h not in ("ABSENT", ()) and h for h in held_seen)
+    assert any(height not in ("ABSENT", ()) and height for height in held_seen)
 
 
 def test_tuning_queries_forward_through_the_solve_model_unchanged():

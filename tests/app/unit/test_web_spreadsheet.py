@@ -115,8 +115,8 @@ def test_the_first_columns_title_clears_the_frozen_corner():
     # its centred title clear of the corner (left edge at/right of the seam); the other columns'
     # titles still overhang freely into the inter-column gaps (no corner there to clip them).
     lay = _layout()
-    h = {c.id: c for c in lay.cells}["header:quantities"]
-    title_left = (h.x + h.w / 2) - spreadsheet_text._title_w(h.text) / 2  # the centred, unwrapped title
+    height = {c.id: c for c in lay.cells}["header:quantities"]
+    title_left = (height.x + height.width / 2) - spreadsheet_text._title_w(height.text) / 2  # the centred, unwrapped title
     assert title_left >= lay.freeze_x - 0.51  # not tucked under the frozen corner
 
 
@@ -128,9 +128,9 @@ def test_branch_controls_ride_the_frozen_bands():
     # controls ride the row band (left of freeze_x).
     lay = _layout()
     cells = {c.id: c for c in lay.cells}
-    assert cells["plus"].y + cells["plus"].h <= lay.freeze_y           # column + wholly in the strip
+    assert cells["plus"].y + cells["plus"].height <= lay.freeze_y           # column + wholly in the strip
     assert cells["minus"].y < lay.freeze_y                             # column − reveal anchors there
-    assert cells["basis_plus"].x + cells["basis_plus"].w <= lay.freeze_x  # row + wholly in the band
+    assert cells["basis_plus"].x + cells["basis_plus"].width <= lay.freeze_x  # row + wholly in the band
     assert cells["basis_minus"].x < lay.freeze_x                       # row − reveal anchors there
 
 
@@ -143,7 +143,7 @@ def test_layout_reports_the_rightmost_title_overhang():
     # hug-to-content panes introduced). Titles never overhang the bottom, so only the right is
     # reported.
     lay = _layout()
-    rightmost = max(c.x + c.w / 2 + spreadsheet_text._title_w(c.text) / 2
+    rightmost = max(c.x + c.width / 2 + spreadsheet_text._title_w(c.text) / 2
                     for c in lay.cells if c.kind == "colheader")
     assert lay.right_overhang == rightmost - lay.width  # the interest title's reach past total_w
     assert lay.right_overhang > 0  # it really does overhang (else there'd be nothing to fix)
@@ -156,7 +156,7 @@ def test_no_title_overhang_reports_zero():
     # below the grid. Hiding the long-titled interest column leaves "target intervals" last,
     # whose title sits well within total_w.
     lay = _with(interest=False)
-    rightmost = max(c.x + c.w / 2 + spreadsheet_text._title_w(c.text) / 2
+    rightmost = max(c.x + c.width / 2 + spreadsheet_text._title_w(c.text) / 2
                     for c in lay.cells if c.kind == "colheader")
     assert rightmost < lay.width  # no title reaches past the grid's right edge
     assert lay.right_overhang == 0
@@ -166,8 +166,8 @@ def _title_edges(lay):
     # each column header's (key, title-left, title-right) for its unwrapped title centred on its
     # gridline, left to right
     return [(c.id.split("header:", 1)[1],
-             c.x + c.w / 2 - spreadsheet_text._title_w(c.text) / 2,
-             c.x + c.w / 2 + spreadsheet_text._title_w(c.text) / 2)
+             c.x + c.width / 2 - spreadsheet_text._title_w(c.text) / 2,
+             c.x + c.width / 2 + spreadsheet_text._title_w(c.text) / 2)
             for c in sorted((c for c in lay.cells if c.kind == "colheader"), key=lambda c: c.x)]
 
 
@@ -197,7 +197,7 @@ def test_title_clearance_leaves_shielded_columns_untouched():
     lay = _layout()
     interest = {c.id: c for c in lay.cells}["header:interest"]
     targets = {c.id: c for c in lay.cells}["header:targets"]
-    assert interest.x == targets.x + targets.w + spreadsheet_constants.GAP  # plain GAP, not widened
+    assert interest.x == targets.x + targets.width + spreadsheet_constants.GAP  # plain GAP, not widened
     assert lay.right_overhang > 0  # interest's title still overhangs the right edge (pane widens to show it)
 
 
@@ -211,11 +211,11 @@ def _assert_freeze_partition(lay):
     fx, fy = lay.freeze_x, lay.freeze_y
     for cb in lay.cells:
         if cb.kind in {"colheader", "coltoggle"}:
-            assert cb.y + cb.h <= fy                          # column titles + toggles: above the seam
+            assert cb.y + cb.height <= fy                          # column titles + toggles: above the seam
         elif cb.kind in {"rowlabel", "rowtoggle"}:
-            assert cb.x + cb.w <= fx                          # row titles + toggles: left of the seam
+            assert cb.x + cb.width <= fx                          # row titles + toggles: left of the seam
         elif cb.kind == "alltoggle":
-            assert cb.y + cb.h <= fy and cb.x + cb.w <= fx    # the master toggle: the corner of both
+            assert cb.y + cb.height <= fy and cb.x + cb.width <= fx    # the master toggle: the corner of both
         elif cb.kind.endswith(("plus", "minus")) or cb.kind == "colgrip":
             assert cb.x < fx or cb.y < fy                     # a fan control rides a frozen band, not the body
         else:
@@ -367,9 +367,9 @@ def test_minus_is_revealed_at_the_last_primes_branch_point_clear_of_its_input():
     cells = {c.id: c for c in lay.cells}
     by_id = {ln.id: ln for ln in lay.lines}
     minus = cells["minus"]
-    assert abs((minus.x + minus.w / 2) - by_id["v:prime:2"].pos) < 0.51  # centred on the last sub-axis
+    assert abs((minus.x + minus.width / 2) - by_id["v:prime:2"].pos) < 0.51  # centred on the last sub-axis
     assert minus.y == by_id["bus:primes:top"].pos  # the zone drops from the top bus (branch point)
-    assert minus.y + minus.h <= cells["cell:mapping:0:2"].y  # ...and clear of the editable input below
+    assert minus.y + minus.height <= cells["cell:mapping:0:2"].y  # ...and clear of the editable input below
 
 
 def test_minus_tracks_the_new_last_prime_after_a_shrink():
@@ -379,11 +379,11 @@ def test_minus_tracks_the_new_last_prime_after_a_shrink():
     wide = service.expand_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # 2.3.5.7 meantone, d=4
     wlay = spreadsheet.build(wide)
     wcells, wlines = {c.id: c for c in wlay.cells}, {ln.id: ln for ln in wlay.lines}
-    assert abs((wcells["minus"].x + wcells["minus"].w / 2) - wlines["v:prime:3"].pos) < 0.51  # on prime 3
+    assert abs((wcells["minus"].x + wcells["minus"].width / 2) - wlines["v:prime:3"].pos) < 0.51  # on prime 3
     slay = spreadsheet.build(service.shrink_domain(wide))  # back to 2.3.5, d=3
     scells, slines = {c.id: c for c in slay.cells}, {ln.id: ln for ln in slay.lines}
     assert "prime:3" not in scells  # the 7 is gone again
-    assert abs((scells["minus"].x + scells["minus"].w / 2) - slines["v:prime:2"].pos) < 0.51  # moved to prime 2
+    assert abs((scells["minus"].x + scells["minus"].width / 2) - slines["v:prime:2"].pos) < 0.51  # moved to prime 2
 
 
 def test_a_single_prime_domain_has_no_minus_but_keeps_plus():
@@ -436,8 +436,8 @@ def test_quantities_row_pluses_ride_the_bus_stub_past_the_last_branch_point():
                                         ("interest_plus", "interest", "v:interest:0", spreadsheet_constants.INTERVAL_COL_GAP / 2)):
         plus, bus = cells[plus_id], by_id[f"bus:{col}:top"]
         stub = by_id[last_sub].pos + spreadsheet_constants.COL_W + gap  # one slot (incl. any inter-column gap) past the last sub-axis
-        assert abs((plus.x + plus.w / 2) - stub) < 0.51     # the + centres on the stub
-        assert abs((plus.y + plus.h / 2) - bus.pos) < 0.51  # ...up on the top bus
+        assert abs((plus.x + plus.width / 2) - stub) < 0.51     # the + centres on the stub
+        assert abs((plus.y + plus.height / 2) - bus.pos) < 0.51  # ...up on the top bus
         assert abs((bus.start + bus.length) - stub) < 0.51  # and the bus reaches it
 
 
@@ -508,13 +508,13 @@ def test_generators_plus_and_minus_ride_the_generators_fan():
     by_id = {ln.id: ln for ln in lay.lines}
     plus, bus, last_sub = cells["gen_plus"], by_id["bus:gens:top"], by_id["v:gen:1"]
     stub = last_sub.pos + spreadsheet_constants.COL_W
-    assert abs((plus.x + plus.w / 2) - stub) < 0.51      # the + centres on the stub
-    assert abs((plus.y + plus.h / 2) - bus.pos) < 0.51   # ...up on the top bus
+    assert abs((plus.x + plus.width / 2) - stub) < 0.51      # the + centres on the stub
+    assert abs((plus.y + plus.height / 2) - bus.pos) < 0.51   # ...up on the top bus
     assert abs((bus.start + bus.length) - stub) < 0.51   # and the bus reaches it
     minus = cells["gen_minus"]
-    assert abs((minus.x + minus.w / 2) - last_sub.pos) < 0.51  # − on the last generator's branch point
+    assert abs((minus.x + minus.width / 2) - last_sub.pos) < 0.51  # − on the last generator's branch point
     assert minus.y == bus.pos                                  # the zone drops from the top bus
-    assert minus.y + minus.h <= cells["tuning:gen:0"].y        # ...clear of the genmap cell below
+    assert minus.y + minus.height <= cells["tuning:gen:0"].y        # ...clear of the genmap cell below
 
 
 def test_a_single_generator_temperament_has_no_gen_minus_but_keeps_gen_plus():
@@ -540,7 +540,7 @@ def test_minus_hover_zone_clears_the_editable_quantities_cell():
     assert k >= 2
     for j in range(k):
         zone, cell = cells[f"target_minus:{j}"], cells[f"target:{j}"]
-        assert zone.y + zone.h <= cell.y + 0.51  # the zone ends at (not past) the cell's top edge
+        assert zone.y + zone.height <= cell.y + 0.51  # the zone ends at (not past) the cell's top edge
 
 
 def test_target_list_carries_a_per_entry_minus_and_a_plus():
@@ -555,7 +555,7 @@ def test_target_list_carries_a_per_entry_minus_and_a_plus():
     # the + rides the stub one COL_W past the last target's branch point, bus stretched to reach it
     plus, bus, last_sub = cells["target_plus"], by_id["bus:targets:top"], by_id[f"v:target:{k - 1}"]
     stub = last_sub.pos + spreadsheet_constants.COL_W + spreadsheet_constants.INTERVAL_COL_GAP
-    assert abs((plus.x + plus.w / 2) - stub) < 0.51
+    assert abs((plus.x + plus.width / 2) - stub) < 0.51
     assert abs((bus.start + bus.length) - stub) < 0.51
 
 
@@ -609,9 +609,9 @@ def test_a_drag_grip_rides_the_fan_band_below_the_minus():
     cells = {c.id: c for c in lay.cells}
     sub = {ln.id: ln for ln in lay.lines}["v:held:1"].pos  # column 1's gridline
     grip, minus = cells["grip:held:1"], cells["held_minus:1"]
-    assert abs((grip.x + grip.w / 2) - sub) < 0.51   # centred on the column's gridline
+    assert abs((grip.x + grip.width / 2) - sub) < 0.51   # centred on the column's gridline
     assert grip.y > minus.y + 0.5                     # sits BELOW the − (which rides the branch point above)
-    assert grip.y + grip.h <= lay.freeze_y + 0.51     # ...and above the seam (in the frozen fan, not clipped)
+    assert grip.y + grip.height <= lay.freeze_y + 0.51     # ...and above the seam (in the frozen fan, not clipped)
 
 
 def test_an_empty_interval_list_still_offers_a_gridline_drop_zone():
@@ -904,15 +904,15 @@ def test_mapping_cells_form_a_square_touching_grid():
     cells = {c.id: c for c in _layout().cells}
     c00 = cells["cell:mapping:0:0"]
     # each cell is square, so the matrix reads as a grid of squares (mockup z_map2)
-    assert c00.w == c00.h == spreadsheet_constants.ROW_H
+    assert c00.width == c00.height == spreadsheet_constants.ROW_H
     # consecutive cells in a row/column abut exactly — shared borders, no gaps
-    assert cells["cell:mapping:0:1"].x == c00.x + c00.w
-    assert cells["cell:mapping:0:2"].x == c00.x + 2 * c00.w
-    assert cells["cell:mapping:1:0"].y == c00.y + c00.h
+    assert cells["cell:mapping:0:1"].x == c00.x + c00.width
+    assert cells["cell:mapping:0:2"].x == c00.x + 2 * c00.width
+    assert cells["cell:mapping:1:0"].y == c00.y + c00.height
     # the mapped target interval list is square too, but spaced apart by the interval-column gap
     m00 = cells["cell:mapped:0:0"]
-    assert m00.w == m00.h == spreadsheet_constants.ROW_H
-    assert cells["cell:mapped:0:1"].x == m00.x + m00.w + spreadsheet_constants.INTERVAL_COL_GAP
+    assert m00.width == m00.height == spreadsheet_constants.ROW_H
+    assert cells["cell:mapped:0:1"].x == m00.x + m00.width + spreadsheet_constants.INTERVAL_COL_GAP
 
 
 def test_tuning_rows_over_primes_and_targets():
@@ -959,7 +959,7 @@ def test_convergence_buses_keep_solid_corners_and_the_top_bus_reaches_the_plus()
     assert by["bus:primes:bot"].start == v0.pos - half
     assert by["bus:primes:bot"].start + by["bus:primes:bot"].length == vlast.pos + half  # bot rejoins half past
     top, plus = by["bus:primes:top"], cells["plus"]
-    assert top.start + top.length == plus.x + plus.w / 2  # the top bus reaches the + stub
+    assert top.start + top.length == plus.x + plus.width / 2  # the top bus reaches the + stub
     assert top.start + top.length > vlast.pos + half      # ...extending past the last sub-line
 
 
@@ -983,8 +983,8 @@ def test_adjacent_tiles_keep_a_roomy_minimum_gap():
     # 2px-thick gridlines threading the gap keep their room
     blocks = {b.id: b for b in _layout().blocks}
     top, bot = blocks["block:tuning:targets"], blocks["block:just:targets"]
-    assert (top.x, top.w) == (bot.x, bot.w)  # the same column, stacked vertically
-    assert bot.y - (top.y + top.h) == spreadsheet_constants.GAP - 2 * spreadsheet_constants.PAD  # the visible gap between the two tiles
+    assert (top.x, top.width) == (bot.x, bot.width)  # the same column, stacked vertically
+    assert bot.y - (top.y + top.height) == spreadsheet_constants.GAP - 2 * spreadsheet_constants.PAD  # the visible gap between the two tiles
 
 
 def test_quantities_spine_row_has_a_horizontal_gridline():
@@ -993,7 +993,7 @@ def test_quantities_spine_row_has_a_horizontal_gridline():
     cells = {c.id: c for c in lay.cells}
     assert "h:quantities" in by_id  # the spine row gets a gridline like the tuning rows
     line, prime = by_id["h:quantities"], cells["prime:0"]
-    assert abs(line.pos - (prime.y + prime.h / 2)) < 0.51  # centred on the quantities row
+    assert abs(line.pos - (prime.y + prime.height / 2)) < 0.51  # centred on the quantities row
     assert line.start < prime.x  # runs in from the left, across the data columns
     assert line.start + line.length >= cells["target:3"].x
 
@@ -1016,7 +1016,7 @@ def test_quantities_spine_column_is_present_with_a_vertical_gridline():
     # ...carrying a single vertical gridline down the grid (the column spine)
     assert "trunk:quantities" in by_id
     spine, header = by_id["trunk:quantities"], cells["header:quantities"]
-    assert abs(spine.pos - (header.x + header.w / 2)) < 0.51  # centred on the column
+    assert abs(spine.pos - (header.x + header.width / 2)) < 0.51  # centred on the column
     assert spine.start < cells["prime:0"].y  # starts above the quantities row
     assert spine.start + spine.length >= cells["label:damage"].y  # runs past the last row
     # ...and a fold toggle, like every other column
@@ -1030,9 +1030,9 @@ def test_a_spine_hugs_col_w_and_overhangs_its_title_unless_it_is_leftmost():
     # its left overhang would vanish under the frozen corner, so it's floored wider to hold its title
     # (see test_the_first_columns_title_clears_the_frozen_corner).
     cells = {c.id: c for c in _with(domain_units=True).cells}
-    assert cells["header:units"].w == spreadsheet_constants.COL_W             # hugs the COL_W content...
-    assert cells["header:units"].w < spreadsheet_text._title_w("units")  # ...the title overhanging it
-    assert cells["header:quantities"].w > cells["header:units"].w   # but the leftmost is floored wider
+    assert cells["header:units"].width == spreadsheet_constants.COL_W             # hugs the COL_W content...
+    assert cells["header:units"].width < spreadsheet_text._title_w("units")  # ...the title overhanging it
+    assert cells["header:quantities"].width > cells["header:units"].width   # but the leftmost is floored wider
 
 
 def test_generators_column_fans_into_per_generator_axes():
@@ -1049,7 +1049,7 @@ def test_generators_column_fans_into_per_generator_axes():
     # each per-generator axis runs through the centre of its generator-tuning-map cell
     for i in (0, 1):
         cell = cells[f"tuning:gen:{i}"]
-        assert abs(by_id[f"v:gen:{i}"].pos - (cell.x + cell.w / 2)) < 0.51
+        assert abs(by_id[f"v:gen:{i}"].pos - (cell.x + cell.width / 2)) < 0.51
     # the trunk is now just the short fan stem above the data, not a full-height spine
     assert by_id["trunk:gens"].length < by_id["trunk:quantities"].length
 
@@ -1069,7 +1069,7 @@ def test_interval_vectors_row_fans_into_per_component_axes():
     rules = [by_id[f"h:vectors:{i}"].pos for i in range(3)]
     assert rules == sorted(rules)  # top-to-bottom in component order
     for pos in rules:
-        assert vrow.y <= pos <= vrow.y + vrow.h  # each within the vectors row band
+        assert vrow.y <= pos <= vrow.y + vrow.height  # each within the vectors row band
     assert by_id["h:vectors:0"].start + by_id["h:vectors:0"].length >= cells["header:targets"].x
 
 
@@ -1236,7 +1236,7 @@ def test_interval_vectors_row_reserves_no_phantom_picker_band_when_commas_column
     no_comma = {b.id: b for b in spreadsheet.build(full, s).blocks}
     # with the commas column hidden, the comma in state must not grow the vectors row: its spine
     # tile is the same height as the no-comma build (which reserves no band either way)
-    assert with_comma["block:vector:quantities"].h == no_comma["block:vector:quantities"].h
+    assert with_comma["block:vector:quantities"].height == no_comma["block:vector:quantities"].height
     # and there are genuinely no picker cells to back a band (the commas column is gone)
     assert not any(c.id.startswith("commapick") for c in spreadsheet.build(meantone, s).cells)
 
@@ -1260,7 +1260,7 @@ def test_collapsing_a_row_hides_its_content_but_keeps_the_label():
     coll = {c.id: c for c in spreadsheet.build(base, collapsed={"row:tuning"}).cells}
     assert not any(c.startswith("tuning:") for c in coll)  # the tuning content is gone
     assert "label:tuning" in coll  # ...but its label remains as a re-expandable strip
-    assert coll["label:tuning"].h < full["label:tuning"].h  # shrunk to a thin strip
+    assert coll["label:tuning"].height < full["label:tuning"].height  # shrunk to a thin strip
     assert coll["label:just"].y < full["label:just"].y  # rows below lift into the freed space
 
 
@@ -1294,7 +1294,7 @@ def test_collapsed_column_keeps_its_title_at_a_width_that_fits_it():
     coll = {c.id: c for c in spreadsheet.build(base, collapsed={"col:targets"}).cells}["header:targets"]
     full = {c.id: c for c in spreadsheet.build(base).cells}["header:targets"]
     assert coll.text == "target\nintervals"  # the title stays put (not blanked, not rotated)
-    assert spreadsheet_constants.STRIP < coll.w < full.w  # folded narrower, but wide enough to read the title
+    assert spreadsheet_constants.STRIP < coll.width < full.width  # folded narrower, but wide enough to read the title
 
 
 def test_collapsed_column_gridline_stays_centred_in_its_fold_node():
@@ -1308,8 +1308,8 @@ def test_collapsed_column_gridline_stays_centred_in_its_fold_node():
         trunk = {ln.id: ln for ln in lay.lines}[f"trunk:{key}"]
         cells = {c.id: c for c in lay.cells}
         toggle, header = cells[f"toggle:col:{key}"], cells[f"header:{key}"]
-        assert abs(trunk.pos - (toggle.x + toggle.w / 2)) < 0.51, key  # centred in the node
-        assert abs(trunk.pos - (header.x + header.w / 2)) < 0.51, key  # and under the title
+        assert abs(trunk.pos - (toggle.x + toggle.width / 2)) < 0.51, key  # centred in the node
+        assert abs(trunk.pos - (header.x + header.width / 2)) < 0.51, key  # and under the title
 
 
 def test_a_collapsed_multiline_title_strip_fits_its_widest_line():
@@ -1319,8 +1319,8 @@ def test_a_collapsed_multiline_title_strip_fits_its_widest_line():
     interest = {c.id: c for c in spreadsheet.build(
         base, collapsed={"col:interest"}, interest=[(0, 0, 0)] * 5).cells}["header:interest"]
     assert interest.text == "other intervals\nof interest"
-    assert interest.w == len("other intervals") * 8 + 10  # the widest line, not all 27 chars
-    assert interest.w < len("other intervals of interest") * 8 + 10  # far narrower than one line
+    assert interest.width == len("other intervals") * 8 + 10  # the widest line, not all 27 chars
+    assert interest.width < len("other intervals of interest") * 8 + 10  # far narrower than one line
 
 
 def test_collapsing_a_spine_column_never_widens_it():
@@ -1333,8 +1333,8 @@ def test_collapsing_a_spine_column_never_widens_it():
     opened = {c.id: c for c in spreadsheet.build(base, s).cells}
     collapsed = {c.id: c for c in spreadsheet.build(base, s, collapsed={"col:quantities", "col:units"}).cells}
     for key in ("quantities", "units"):
-        assert collapsed[f"header:{key}"].w <= opened[f"header:{key}"].w  # collapse never widens
-    assert collapsed["header:units"].w == spreadsheet_constants.COL_W  # the overhanging spine stays one COL_W
+        assert collapsed[f"header:{key}"].width <= opened[f"header:{key}"].width  # collapse never widens
+    assert collapsed["header:units"].width == spreadsheet_constants.COL_W  # the overhanging spine stays one COL_W
 
 
 def test_a_rows_nested_control_grows_every_tile_in_that_row_uniformly():
@@ -1345,21 +1345,21 @@ def test_a_rows_nested_control_grows_every_tile_in_that_row_uniformly():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     ranges = settings.defaults(); ranges["tuning_ranges"] = True
     on = {b.id: b for b in spreadsheet.build(base, ranges).blocks}
-    gens = on["block:tuning:gens"].h  # the tile carrying the ranges chart
+    gens = on["block:tuning:gens"].height  # the tile carrying the ranges chart
     for sib in ("block:tuning:primes", "block:tuning:commas", "block:tuning:targets"):
-        assert on[sib].h == gens, sib  # chart-less siblings match the charted tile
+        assert on[sib].height == gens, sib  # chart-less siblings match the charted tile
     off = {b.id: b for b in spreadsheet.build(base).blocks}
-    assert gens > off["block:tuning:primes"].h  # the chart reserves real height (not zeroed away)
+    assert gens > off["block:tuning:primes"].height  # the chart reserves real height (not zeroed away)
 
     alt = settings.defaults(); alt["weighting"] = True; alt["alt_complexity"] = True
     # weighting reveals the complexity rows; alt. complexity reveals the prescaling rows (and box 𝐋/𝒄)
     aon = {b.id: b for b in spreadsheet.build(base, alt, tuning_scheme="TILT minimax-S").blocks}
-    presc = aon["block:prescaling:primes"].h  # box 𝐋 extends the prescaling row's primes tile
+    presc = aon["block:prescaling:primes"].height  # box 𝐋 extends the prescaling row's primes tile
     for sib in ("block:prescaling:commas", "block:prescaling:targets"):
-        assert aon[sib].h == presc, sib
-    comp = aon["block:complexity:targets"].h  # box 𝒄 extends the complexity row's targets tile
+        assert aon[sib].height == presc, sib
+    comp = aon["block:complexity:targets"].height  # box 𝒄 extends the complexity row's targets tile
     for sib in ("block:complexity:primes", "block:complexity:commas"):
-        assert aon[sib].h == comp, sib
+        assert aon[sib].height == comp, sib
 
 
 def test_collapsing_a_column_does_not_shrink_its_rows_caption_band():
@@ -1374,7 +1374,7 @@ def test_collapsing_a_column_does_not_shrink_its_rows_caption_band():
     without_gens = {b.id: b for b in spreadsheet.build(base, s, collapsed={"col:commas"}).blocks}
     with_gens = {b.id: b for b in spreadsheet.build(base, s, collapsed={"col:commas", "col:gens"}).blocks}
     for sib in ("block:tuning:primes", "block:tuning:targets"):
-        assert with_gens[sib].h == without_gens[sib].h, f"{sib} shrank when the gens column collapsed"
+        assert with_gens[sib].height == without_gens[sib].height, f"{sib} shrank when the gens column collapsed"
 
 
 def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline():
@@ -1383,7 +1383,7 @@ def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline():
     blocks = {b.id: b for b in lay.blocks}
     lines = {ln.id for ln in lay.lines}
     assert "block:tuning:primes" in blocks  # the panel persists so the renderer can animate it...
-    assert blocks["block:tuning:primes"].h == 0  # ...folding to nothing (no leftover grey tile)
+    assert blocks["block:tuning:primes"].height == 0  # ...folding to nothing (no leftover grey tile)
     assert "h:tuning" in lines  # leaving a single gridline through the folded row
 
 
@@ -1392,7 +1392,7 @@ def test_collapsing_a_column_folds_its_panels_away_and_converges_the_lines():
     lay = spreadsheet.build(base, collapsed={"col:primes"})
     blocks = {b.id: b for b in lay.blocks}
     by_id = {ln.id: ln for ln in lay.lines}
-    assert blocks["block:mapping"].w == 0  # the primes-column panels fold to nothing
+    assert blocks["block:mapping"].width == 0  # the primes-column panels fold to nothing
     # the per-prime verticals converge onto one x (so they read as a single line)
     assert by_id["v:prime:0"].pos == by_id["v:prime:1"].pos == by_id["v:prime:2"].pos
     assert by_id["bus:primes:top"].length == 0  # ...and the buses shrink to nothing
@@ -1427,8 +1427,8 @@ def test_the_mapping_matrix_is_framed_top_and_bottom():
     # the framing bands stand off the matrix by a gap, so the top bracket and
     # bottom brace never butt up against the per-row ⟨ … ] brackets (which would
     # read as one tall curly shape on the left edge)
-    assert top.y + top.h < first.y  # top bracket sits fully above row 0, clear of it
-    assert brace.y > last.y + last.h  # brace sits fully below the last row, clear of it
+    assert top.y + top.height < first.y  # top bracket sits fully above row 0, clear of it
+    assert brace.y > last.y + last.height  # brace sits fully below the last row, clear of it
     # the mapped list is marked per target column
     assert {"ebktop:mapped:0", "ebkbrace:mapped:0"} <= set(cells)
 
@@ -1550,7 +1550,7 @@ def test_rank_count_merges_across_the_canonical_generators_and_generators_column
     cells = {c.id: c for c in _with(form_tiles=True).cells}
     rank, hcan, hgen = cells["count:gens"], cells["header:canongens"], cells["header:gens"]
     assert rank.text.endswith(" = 2")  # the rank r = 2 (math-italic r glyph + " = 2")
-    assert rank.x <= hcan.x and rank.x + rank.w >= hgen.x  # the cell spans both column headers
+    assert rank.x <= hcan.x and rank.x + rank.width >= hgen.x  # the cell spans both column headers
     assert cells["caption:counts:gens"].text == "rank"
     assert "count:canongens" not in cells  # no separate canonical-generators count — it's merged
     plain = {c.id: c for c in _layout().cells}  # hugs the generators column alone without the form layer
@@ -1564,8 +1564,8 @@ def test_form_matrix_row_labels_get_a_balanced_matlabel_gutter():
     cells = {c.id: c for c in _with(form_tiles=True, header_symbols=True).cells}
     flabel, fbracket = cells["matlabel:row:mapping:canongens:0"], cells["bracket:finv:map:0:l"]
     assert flabel.text == "𝒇₁"
-    assert flabel.x + flabel.w <= fbracket.x  # the label sits left of (or up to) the { bracket, not over it
-    assert flabel.w > 0 and fbracket.x - flabel.x >= flabel.w  # a real gutter, ≥ the label's own width
+    assert flabel.x + flabel.width <= fbracket.x  # the label sits left of (or up to) the { bracket, not over it
+    assert flabel.width > 0 and fbracket.x - flabel.x >= flabel.width  # a real gutter, ≥ the label's own width
 
 
 def test_canonical_generators_column_builds_finv_embedding_and_tuning_tiles():
@@ -1665,8 +1665,8 @@ def test_mapped_list_rules_its_vector_columns_apart_clear_of_the_marks():
     assert "sep:mapped:1" in cells  # a bar between columns 0 and 1
     sep = cells["sep:mapped:1"]
     top0, brace0 = cells["ebktop:mapped:0"], cells["ebkbrace:mapped:0"]
-    assert top0.w < spreadsheet_constants.COL_W and brace0.w < spreadsheet_constants.COL_W  # inset, not full column
-    assert top0.x + top0.w < sep.x  # the mark stops short of the bar to its right
+    assert top0.width < spreadsheet_constants.COL_W and brace0.width < spreadsheet_constants.COL_W  # inset, not full column
+    assert top0.x + top0.width < sep.x  # the mark stops short of the bar to its right
     # the rules span the matrix's full framed height and OVERHANG the per-column top/bottom
     # marks by FRAME_OVERHANG at each end — exactly like the outer [ ] wrap (and mirroring how
     # the mapping's spanning bracket overhangs its per-row ⟨ ] in x) — so every vertical rule
@@ -1674,7 +1674,7 @@ def test_mapped_list_rules_its_vector_columns_apart_clear_of_the_marks():
     outer = cells["bracket:mapped:l"]
     over = spreadsheet_constants.FRAME_OVERHANG
     assert sep.y == outer.y == top0.y - over            # top: overhang above the top marks
-    assert sep.y + sep.h == outer.y + outer.h == brace0.y + brace0.h + over  # below the bottom marks
+    assert sep.y + sep.height == outer.y + outer.height == brace0.y + brace0.height + over  # below the bottom marks
 
 
 def test_maps_get_angle_brackets_and_lists_get_square_brackets():
@@ -1696,13 +1696,13 @@ def test_per_row_brackets_are_short_and_centred_leaving_a_gap_between_rows():
     l0, l1 = cells["bracket:map:0:l"], cells["bracket:map:1:l"]
     row0 = cells["cell:mapping:0:0"]
     # each per-row bracket is much shorter than the ROW_H row it sits in...
-    assert l0.h < spreadsheet_constants.ROW_H
-    assert l0.h == l1.h
+    assert l0.height < spreadsheet_constants.ROW_H
+    assert l0.height == l1.height
     # ...and centred within its row
-    assert abs((l0.y + l0.h / 2) - (row0.y + row0.h / 2)) < 0.51
+    assert abs((l0.y + l0.height / 2) - (row0.y + row0.height / 2)) < 0.51
     # so neighbouring rows' brackets keep a clear gap >= 75% of a bracket's height
-    gap = l1.y - (l0.y + l0.h)
-    assert gap >= 0.75 * l0.h
+    gap = l1.y - (l0.y + l0.height)
+    assert gap >= 0.75 * l0.height
 
 
 def test_mapped_list_outer_bracket_still_spans_the_whole_matrix():
@@ -1710,15 +1710,15 @@ def test_mapped_list_outer_bracket_still_spans_the_whole_matrix():
     b = cells["bracket:mapped:l"]
     first, last = cells["cell:mapped:0:0"], cells["cell:mapped:1:0"]
     # the enclosing [ ] is the tall exception: it spans both mapping rows
-    assert b.h > spreadsheet_constants.ROW_H
-    assert b.y <= first.y and b.y + b.h >= last.y + last.h
+    assert b.height > spreadsheet_constants.ROW_H
+    assert b.y <= first.y and b.y + b.height >= last.y + last.height
 
 
 def test_the_row_fold_node_clears_the_first_content_tile():
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))))
     node = {c.id: c for c in lay.cells}["toggle:row:mapping"]
     gens_block = {b.id: b for b in lay.blocks}["block:gens"]
-    assert node.x + node.w <= gens_block.x  # the node does not collide with the tile
+    assert node.x + node.width <= gens_block.x  # the node does not collide with the tile
 
 
 def test_each_content_tile_has_a_top_left_fold_toggle():
@@ -1742,14 +1742,14 @@ def test_tile_toggle_sits_clear_of_the_tile_content_and_panel_edges():
     # framed tile: the toggle is fully above the matrix's top framing band, so it
     # never overlaps the bracket or the cells
     tog, top = cells["toggle:tile:mapping:primes"], cells["ebktop:primes"]
-    assert tog.y + tog.h <= top.y
+    assert tog.y + tog.height <= top.y
     # single-row tile: it clears the value row too
     tt, v = cells["toggle:tile:tuning:primes"], cells["tuning:prime:0"]
-    assert tt.y + tt.h <= v.y
+    assert tt.y + tt.height <= v.y
     # and it floats inset inside its grey panel, never flush against an edge
     panel = blocks["block:mapping"]
     assert panel.x < tog.x and panel.y < tog.y
-    assert tog.x + tog.w < panel.x + panel.w
+    assert tog.x + tog.width < panel.x + panel.width
 
 
 def test_collapsing_a_tile_hides_its_content_keeps_its_toggle_and_folds_its_panel():
@@ -1762,7 +1762,7 @@ def test_collapsing_a_tile_hides_its_content_keeps_its_toggle_and_folds_its_pane
     assert not any(c.startswith("bracket:map:") for c in cells)
     assert "ebktop:primes" not in cells and "ebkbrace:primes" not in cells
     # ...the panel folds to a zero-size point so the renderer animates it away...
-    assert blocks["block:mapping"].w == 0 and blocks["block:mapping"].h == 0
+    assert blocks["block:mapping"].width == 0 and blocks["block:mapping"].height == 0
     # ...but the toggle stays so the tile can be re-expanded
     assert "toggle:tile:mapping:primes" in cells
 
@@ -1870,7 +1870,7 @@ def test_presets_on_adds_the_three_chooser_dropdowns_under_their_tiles():
     temp, matrix = cells["preset:temperament"], cells["cell:mapping:0:0"]
     box = blocks["block:preset:temperament"]
     assert temp.y > matrix.y and temp.x == box.x + inset
-    assert box.x <= matrix.x and matrix.x + matrix.w <= box.x + box.w  # the box spans the matrix's column
+    assert box.x <= matrix.x and matrix.x + matrix.width <= box.x + box.width  # the box spans the matrix's column
     # the target chooser sits under the target interval list, in its column
     assert cells["preset:target"].x == cells["header:targets"].x + inset
 
@@ -1956,7 +1956,7 @@ def test_target_preset_chooser_follows_the_interval_vectors_row():
 def test_preset_dropdown_clears_the_row_below_it():
     cells = {c.id: c for c in _with(presets=True).cells}
     drop, next_row = cells["preset:tuning"], cells["label:just"]
-    assert drop.y + drop.h <= next_row.y  # the reserved band keeps it off the next row
+    assert drop.y + drop.height <= next_row.y  # the reserved band keeps it off the next row
 
 
 def test_preset_chooser_sits_below_the_plain_text_band():
@@ -1965,14 +1965,14 @@ def test_preset_chooser_sits_below_the_plain_text_band():
     s["presets"], s["plain_text_values"] = True, True
     cells = {c.id: c for c in spreadsheet.build(base, s).cells}
     chooser, plain_text = cells["preset:tuning"], cells["plain_text:tuning:primes"]
-    assert chooser.y >= plain_text.y + plain_text.h  # the chooser rides beneath the plain-text box
+    assert chooser.y >= plain_text.y + plain_text.height  # the chooser rides beneath the plain-text box
 
 
 def test_target_chooser_is_wider_to_seat_its_numeric_override():
     # the target chooser carries a numeric limit field beside the TILT/OLD select,
     # so it reserves more width than the single-control tuning chooser
     cells = {c.id: c for c in _with(presets=True).cells}
-    assert cells["preset:target"].w > cells["preset:tuning"].w
+    assert cells["preset:target"].width > cells["preset:tuning"].width
 
 
 def test_tuning_and_temperament_dropdowns_are_copied_into_more_tiles():
@@ -2026,10 +2026,10 @@ def test_control_dropdowns_are_boxed_within_their_tiles():
                              ("preset:target", "target interval set scheme", "block:vector:targets")):
         ctrl, box, panel = cells[cid], boxes[f"block:{cid}"], boxes[tile]
         assert box.boxed is True  # a bordered box, not a plain tile
-        assert box.x <= ctrl.x and box.x + box.w >= ctrl.x + ctrl.w  # encloses the control
-        assert box.y <= ctrl.y and box.y + box.h >= ctrl.y + ctrl.h
+        assert box.x <= ctrl.x and box.x + box.width >= ctrl.x + ctrl.width  # encloses the control
+        assert box.y <= ctrl.y and box.y + box.height >= ctrl.y + ctrl.height
         # the box stays WITHIN its tile -- never spilling out (the reported bug)
-        assert box.x >= panel.x - 0.5 and box.x + box.w <= panel.x + panel.w + 0.5
+        assert box.x >= panel.x - 0.5 and box.x + box.width <= panel.x + panel.width + 0.5
         # the standard dropdown label (a left-justified caption, the .rtt-caption-left asset)
         # hugs the dropdown's bottom edge, like the box-𝐋/𝒄/𝒘 controls -- not a box title above
         lbl = cells[f"block:{cid}:label"]
@@ -2040,7 +2040,7 @@ def test_control_dropdowns_are_boxed_within_their_tiles():
                        ("formchooser:comma_basis", "block:preset:temperament:commas")):
         assert f"block:{fcid}" not in boxes              # no separate box for the form chooser
         ctrl, box = cells[fcid], boxes[tbox]
-        assert box.y <= ctrl.y and box.y + box.h >= ctrl.y + ctrl.h  # enclosed by the temperament box
+        assert box.y <= ctrl.y and box.y + box.height >= ctrl.y + ctrl.height  # enclosed by the temperament box
         tdrop = cells[tbox.removeprefix("block:")]       # the temperament dropdown it sits under
         assert ctrl.y > tdrop.y                          # below the main chooser
         flbl = cells[f"{fcid}:label"]
@@ -2056,9 +2056,9 @@ def test_a_long_control_label_widens_its_narrow_tile():
     lay = spreadsheet.build(base, {**settings.defaults(), "presets": True})
     gens_on = {b.id: b for b in lay.blocks}["block:tuning:gens"]
     box = {b.id: b for b in lay.blocks}["block:preset:tuning:gens"]
-    assert gens_on.w > gens_off.w  # the tile widened for the label
-    assert gens_on.w >= spreadsheet_text._min_width_for_lines("established tuning scheme", 1)  # fits it on one line
-    assert box.x >= gens_on.x and box.x + box.w <= gens_on.x + gens_on.w  # the box stays inside the widened tile
+    assert gens_on.width > gens_off.width  # the tile widened for the label
+    assert gens_on.width >= spreadsheet_text._min_width_for_lines("established tuning scheme", 1)  # fits it on one line
+    assert box.x >= gens_on.x and box.x + box.width <= gens_on.x + gens_on.width  # the box stays inside the widened tile
 
 
 def test_chooser_boxes_span_the_full_width_of_their_tiles():
@@ -2075,7 +2075,7 @@ def test_chooser_boxes_span_the_full_width_of_their_tiles():
                       ("block:preset:tuning:gens", "block:tuning:gens"),
                       ("block:preset:target", "block:vector:targets")):
         box, panel = boxes[cid], boxes[tile]
-        left, right = box.x - panel.x, (panel.x + panel.w) - (box.x + box.w)
+        left, right = box.x - panel.x, (panel.x + panel.width) - (box.x + box.width)
         assert abs(left - right) < 1  # equal insets == the box spans its tile's footprint
 
 
@@ -2090,7 +2090,7 @@ def test_target_chooser_box_spans_its_tile_with_a_capped_dropdown_inside():
     lay = spreadsheet.build(base, s)
     box = {b.id: b for b in lay.blocks}["block:preset:target"]
     dropdown = {c.id: c for c in lay.cells}["preset:target"]
-    assert dropdown.w < box.w - 30  # the dropdown stays narrow inside the wide, tile-spanning box
+    assert dropdown.width < box.width - 30  # the dropdown stays narrow inside the wide, tile-spanning box
 
 
 def test_build_honors_the_target_interval_spec():
@@ -2243,7 +2243,7 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
         grid_tokens = []
         for c in lay.cells:
             if (c.text and not c.id.startswith("plain_text:")
-                    and cx - 2 <= c.x <= cx + cw and rb.y - 2 <= c.y <= rb.y + rb.h + 2):
+                    and cx - 2 <= c.x <= cx + cw and rb.y - 2 <= c.y <= rb.y + rb.height + 2):
                 grid_tokens += TOKEN.findall(cell_value(c.text))
         band_tokens = TOKEN.findall(band_body(b.geometry.plain_text_strings[(row_key, column_key)]))
         if sorted(grid_tokens) != sorted(band_tokens):
@@ -2309,10 +2309,10 @@ def _ebk_grid_convention(b, lay, row_key, column_key):
     cx, cw = b.geometry.col_x[column_key], b.geometry.col_w[column_key]
 
     def in_tile(c):  # x-centre inside the column, and this row is the nearest row band
-        if not (cx - 2 <= c.x + c.w / 2 <= cx + cw + 2):
+        if not (cx - 2 <= c.x + c.width / 2 <= cx + cw + 2):
             return False
-        ccy = c.y + c.h / 2
-        return min(b.geometry.rows, key=lambda k: abs(b.geometry.rows[k].y + b.geometry.rows[k].h / 2 - ccy)) == row_key
+        ccy = c.y + c.height / 2
+        return min(b.geometry.rows, key=lambda k: abs(b.geometry.rows[k].y + b.geometry.rows[k].height / 2 - ccy)) == row_key
 
     frame_top = col_marks = False
     brace = angle = False
@@ -2441,8 +2441,8 @@ def test_quantities_interval_ratios_emit_no_redundant_plain_text():
 def test_plain_text_band_sits_below_the_caption_spanning_its_column():
     cells = {c.id: c for c in _with(plain_text_values=True, names=True).cells}
     pt, cap, header = cells["plain_text:mapping:primes"], cells["caption:mapping:primes"], cells["header:primes"]
-    assert pt.y >= cap.y + cap.h  # the string sits below the name caption
-    assert pt.x == header.x and pt.w == header.w  # and spans the column
+    assert pt.y >= cap.y + cap.height  # the string sits below the name caption
+    assert pt.x == header.x and pt.width == header.width  # and spans the column
 
 
 def test_plain_text_band_grows_tiles_and_pushes_lower_rows_down():
@@ -2484,11 +2484,11 @@ def test_plain_text_values_are_a_single_line_within_their_column():
     # every read-only value is one line tall and no wider than its column — the app
     # shrinks the font to fit, so a long tuning row never wraps or spills
     long, header = cells["plain_text:tuning:targets"], cells["header:targets"]
-    assert long.h == spreadsheet_constants.PLAIN_TEXT_H  # one line, even for the longest size list...
-    assert long.w == header.w  # ...spanning exactly its column, never wider
-    assert cells["plain_text:just:targets"].h == spreadsheet_constants.PLAIN_TEXT_H
+    assert long.height == spreadsheet_constants.PLAIN_TEXT_H  # one line, even for the longest size list...
+    assert long.width == header.width  # ...spanning exactly its column, never wider
+    assert cells["plain_text:just:targets"].height == spreadsheet_constants.PLAIN_TEXT_H
     # the editable duals are one (slightly taller) input line
-    assert cells["plain_text:mapping:primes"].h == spreadsheet_constants.PLAIN_TEXT_EDIT_H
+    assert cells["plain_text:mapping:primes"].height == spreadsheet_constants.PLAIN_TEXT_EDIT_H
 
 
 def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
@@ -2523,7 +2523,7 @@ def test_interval_vectors_show_targets_as_vectors():
     # the editable vector cell is inset within its COL_W slot (leaving the separator rule a gap),
     # so it shares the ratio header's column AXIS by centre, not by left edge
     v, hdr = cells["cell:vector:targets:2:0"], cells["target:2"]
-    assert v.x + v.w / 2 == hdr.x + hdr.w / 2  # column centred on its target axis
+    assert v.x + v.width / 2 == hdr.x + hdr.width / 2  # column centred on its target axis
     # the d components stack downward, one ROW_H apart
     assert cells["cell:vector:targets:0:1"].y - cells["cell:vector:targets:0:0"].y == spreadsheet_constants.ROW_H
 
@@ -2565,9 +2565,9 @@ def test_interval_vectors_quantities_tile_shows_the_domain_basis_as_row_index():
     # row-index, stacked vertically — dual to the generators indexing the mapping rows
     assert [cells[f"basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
     # boxed COL_W squares like the domain primes, centred in the wider spine column
-    assert cells["basis:0"].w == spreadsheet_constants.COL_W == cells["prime:0"].w
+    assert cells["basis:0"].width == spreadsheet_constants.COL_W == cells["prime:0"].width
     gen0 = cells["gen:0"]  # the generators span the full spine; the basis is centred in it
-    assert cells["basis:0"].x + cells["basis:0"].w / 2 == gen0.x + gen0.w / 2
+    assert cells["basis:0"].x + cells["basis:0"].width / 2 == gen0.x + gen0.width / 2
     assert cells["basis:0"].y == cells["cell:comma:0:0"].y  # aligned with the top component
     assert cells["basis:1"].y - cells["basis:0"].y == spreadsheet_constants.ROW_H  # stacked down its column
 
@@ -2583,11 +2583,11 @@ def test_interval_vectors_basis_controls_ride_the_rows_left_bus():
     plus, minus, bot = cells["basis_plus"], cells["basis_minus"], cells["basis:2"]
     left_bus = by_id["vbar:vectors:left"]
     assert minus.x == left_bus.pos  # − zone drops from the left-bus branch point (button at its edge)
-    assert abs((minus.y + minus.h / 2) - by_id["h:vectors:2"].pos) < 0.51  # ...on the bottom prime's sub-row
+    assert abs((minus.y + minus.height / 2) - by_id["h:vectors:2"].pos) < 0.51  # ...on the bottom prime's sub-row
     assert minus.x < cells["basis:2"].x  # ...out to the LEFT of the primes
-    assert abs((plus.x + plus.w / 2) - left_bus.pos) < 0.51  # + centred on the left bus
-    assert plus.y >= bot.y + bot.h  # ...below the whole stack (clear of the last box)
-    assert abs((left_bus.start + left_bus.length) - (plus.y + plus.h / 2)) < 0.51  # bar reaches the +
+    assert abs((plus.x + plus.width / 2) - left_bus.pos) < 0.51  # + centred on the left bus
+    assert plus.y >= bot.y + bot.height  # ...below the whole stack (clear of the last box)
+    assert abs((left_bus.start + left_bus.length) - (plus.y + plus.height / 2)) < 0.51  # bar reaches the +
 
 
 def test_mapping_row_controls_ride_the_rows_left_bus():
@@ -2602,12 +2602,12 @@ def test_mapping_row_controls_ride_the_rows_left_bus():
     for i in range(2):  # a − per generator (unlike the domain −, which is last-only)
         minus = cells[f"map_minus:{i}"]
         assert minus.x == left_bus.pos  # − drops from the left-bus branch point
-        assert abs((minus.y + minus.h / 2) - by_id[f"h:mapping:{i}"].pos) < 0.51  # on generator i's sub-row
+        assert abs((minus.y + minus.height / 2) - by_id[f"h:mapping:{i}"].pos) < 0.51  # on generator i's sub-row
         assert minus.x < cells["gen:0"].x  # ...out to the LEFT of the generator-ratio spine
     plus = cells["map_plus"]
-    assert abs((plus.x + plus.w / 2) - left_bus.pos) < 0.51  # + centred on the left bus
-    assert plus.y >= cells["gen:1"].y + cells["gen:1"].h  # ...below the last generator row
-    assert abs((left_bus.start + left_bus.length) - (plus.y + plus.h / 2)) < 0.51  # bar reaches the +
+    assert abs((plus.x + plus.width / 2) - left_bus.pos) < 0.51  # + centred on the left bus
+    assert plus.y >= cells["gen:1"].y + cells["gen:1"].height  # ...below the last generator row
+    assert abs((left_bus.start + left_bus.length) - (plus.y + plus.height / 2)) < 0.51  # bar reaches the +
 
 
 def test_mapping_row_minus_gated_on_rank_and_plus_on_nullity():
@@ -2629,10 +2629,10 @@ def test_a_rank_one_mapping_still_fans_to_connect_its_plus():
     by_id = {ln.id: ln for ln in lay.lines}
     assert "h:mapping:0" in by_id and "h:mapping" not in by_id  # the fanned sub-rule, not the flat spine
     left_bus, plus = by_id["vbar:mapping:left"], cells["map_plus"]
-    assert abs((plus.x + plus.w / 2) - left_bus.pos) < 0.51  # + centred on the left bus
-    assert abs((left_bus.start + left_bus.length) - (plus.y + plus.h / 2)) < 0.51  # the bar reaches the +
+    assert abs((plus.x + plus.width / 2) - left_bus.pos) < 0.51  # + centred on the left bus
+    assert abs((left_bus.start + left_bus.length) - (plus.y + plus.height / 2)) < 0.51  # the bar reaches the +
     # ...and the + sits as close to the spine as the always-fanned basis +, not a FAN further out
-    assert abs((plus.x + plus.w / 2) - (cells["basis_plus"].x + cells["basis_plus"].w / 2)) < 0.51
+    assert abs((plus.x + plus.width / 2) - (cells["basis_plus"].x + cells["basis_plus"].width / 2)) < 0.51
 
 
 def test_drag_handles_are_gated_on_the_drag_to_combine_toggle():
@@ -2657,8 +2657,8 @@ def test_mapping_row_drag_handles_sit_left_of_the_row_labels():
         label = cells[f"matlabel:row:mapping:primes:{i}"]
         assert handle.gen == i
         assert handle.y == cells[f"cell:mapping:{i}:0"].y  # aligned with row i
-        assert handle.x + handle.w <= label.x  # LEFT of the row label (no overlap)
-        assert label.x + label.w <= cells[f"cell:mapping:{i}:0"].x  # label still sits between handle and matrix
+        assert handle.x + handle.width <= label.x  # LEFT of the row label (no overlap)
+        assert label.x + label.width <= cells[f"cell:mapping:{i}:0"].x  # label still sits between handle and matrix
         assert handle.x > cells[f"map_minus:{i}"].x  # ...and right of the left-bus − control (separate)
 
 
@@ -2682,7 +2682,7 @@ def test_interval_drag_handles_sit_above_the_column_labels_in_the_vectors_row():
         label = cells[f"matlabel:col:vectors:commas:{i}"]
         vector0 = cells[f"cell:comma:0:{i}"]  # the column's first vector component
         assert handle.comma == i and handle.x == label.x  # aligned over its own column
-        assert handle.y + handle.h <= label.y  # ABOVE the column label...
+        assert handle.y + handle.height <= label.y  # ABOVE the column label...
         assert label.y < vector0.y  # ...which is above the vector cells (handle / label / vector)
     # the interest column carries no column label, but still gets handles above its vectors
     assert cells["int_drag:interest:0"].y + spreadsheet_constants.ROW_HANDLE_W <= cells["cell:interest:0:0"].y
@@ -2746,8 +2746,8 @@ def test_comma_basis_renders_as_raw_vectors_in_the_interval_vectors_row():
     assert cells["cell:comma:1:0"].text == "-4"
     assert cells["cell:comma:2:0"].text == "1"
     c00 = cells["cell:comma:0:0"]
-    assert c00.w == c00.h == spreadsheet_constants.ROW_H  # square grid cells
-    assert cells["cell:comma:1:0"].y == c00.y + c00.h  # stacked down its column
+    assert c00.width == c00.height == spreadsheet_constants.ROW_H  # square grid cells
+    assert cells["cell:comma:1:0"].y == c00.y + c00.height  # stacked down its column
     assert c00.x == cells["comma:0"].x  # on the commas axis
     assert c00.y == cells["cell:vector:targets:0:0"].y  # top-aligned across the vectors row
 
@@ -2836,7 +2836,7 @@ def test_charts_on_adds_a_weight_bar_chart_over_the_targets():
     assert ch.kind == "chart"
     assert len(ch.values) == 8  # one bar per target interval (the weight list)
     assert all(v >= 0 for v in ch.values)  # weights are non-negative
-    assert ch.y + ch.h <= on["weight:target:0"].y  # the chart sits above its values
+    assert ch.y + ch.height <= on["weight:target:0"].y  # the chart sits above its values
 
 
 def test_the_size_factor_prescaler_carries_a_horizontal_size_bar():
@@ -3439,11 +3439,11 @@ def test_outer_matrix_frame_hugs_the_cells_leaving_subrow_labels_outside():
         top, foot = cells[top_id], cells[foot_id]
         label, left, right = cells[label_id], cells[left_id], cells[right_id]
         # the subrow label sits fully to the LEFT of the outer frame (outside it)
-        assert label.x + label.w <= top.x
+        assert label.x + label.width <= top.x
         # the frame's left and right edges align with the per-row brackets — it hugs the
         # cell matrix, not the wider grey footprint (top and bottom spans stay in lockstep)
         assert top.x == left.x == foot.x
-        assert top.x + top.w == right.x + right.w == foot.x + foot.w
+        assert top.x + top.width == right.x + right.width == foot.x + foot.width
 
 
 def test_prescaling_matrix_carries_its_symbol_and_caption():
@@ -3492,7 +3492,7 @@ def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile():
     box = blocks["block:preset:prescaler"]
     assert sel.y > pre.y
     assert sel.x == box.x + spreadsheet_constants.BOX_INNER  # one inner pad into the box
-    assert box.x <= pre.x and pre.x + pre.w <= box.x + box.w  # the box spans the prescaler's column
+    assert box.x <= pre.x and pre.x + pre.width <= box.x + box.width  # the box spans the prescaler's column
     # gone without the prescaling tile (weighting off) or its column (temperament tiles off)
     assert "preset:prescaler" not in {c.id for c in _with("minimax-S", weighting=False, presets=True).cells}
     assert "preset:prescaler" not in {
@@ -3625,7 +3625,7 @@ def test_predefined_complexities_dropdown_is_gated_on_presets():
     # width is column-floored — the released dropdown reservation shows in 𝑞's leftward shift above.
     off_box = {b.id: b for b in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
     on_box = {b.id: b for b in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
-    assert off_box.w <= on_box.w
+    assert off_box.width <= on_box.width
 
 
 def test_box_c_lays_out_with_q_and_dual_q_norm_power_fields():
@@ -3641,7 +3641,7 @@ def test_box_c_lays_out_with_q_and_dual_q_norm_power_fields():
     # bottom-aligned with the q/dual captions further down the row)
     assert on["caption:complexity"].kind == "caption"
     assert on["caption:complexity"].text == "predefined complexities"
-    assert on["caption:complexity"].y == on["control:complexity"].y + on["control:complexity"].h
+    assert on["caption:complexity"].y == on["control:complexity"].y + on["control:complexity"].height
     # the q norm-power field: with alt. complexity on it is an editable powerinput (white box) styled
     # like the optimization power 𝑝; typing a new q drives the norm. Default taxicab => 1.
     assert on["control:q"].kind == "powerinput"
@@ -3817,14 +3817,14 @@ def test_optimization_mean_damage_carries_a_label_caption():
     mean_damage = on_based["optimization:mean_damage"]
     sym = on_based["optimization:mean_damage:symbol"]
     assert cap.y > sym.y
-    assert abs((cap.x + cap.w / 2) - (mean_damage.x + mean_damage.w / 2)) < 0.5
+    assert abs((cap.x + cap.width / 2) - (mean_damage.x + mean_damage.width / 2)) < 0.5
     # target-based the short label is one line; all-interval the wide label reserves two, so the
     # box (and thus the damage tile) grows by exactly that extra line
-    assert on_based["optimization:mean_damage:caption"].h == spreadsheet_constants.CAPTION_LINE
-    assert on_allint["optimization:mean_damage:caption"].h == 2 * spreadsheet_constants.CAPTION_LINE
+    assert on_based["optimization:mean_damage:caption"].height == spreadsheet_constants.CAPTION_LINE
+    assert on_allint["optimization:mean_damage:caption"].height == 2 * spreadsheet_constants.CAPTION_LINE
     box_based = {b.id: b for b in based.blocks}["block:optimization:box"]
     box_allint = {b.id: b for b in allint.blocks}["block:optimization:box"]
-    assert box_allint.h == box_based.h + spreadsheet_constants.CAPTION_LINE
+    assert box_allint.height == box_based.height + spreadsheet_constants.CAPTION_LINE
 
 
 def test_all_interval_locks_the_optimization_power_to_infinity():
@@ -3908,10 +3908,10 @@ def test_minimized_mean_damage_prefixes_its_label_with_minimized():
     assert cap("minimax-S", True).text == "minimized retuning magnitude"
     assert cap("minimax-S", False).text == "retuning magnitude"
     # the reserved caption band grows by the wrapped "minimized" line
-    assert cap("TILT minimax-S", True).h == 2 * spreadsheet_constants.CAPTION_LINE   # "minimized" / "power mean"
-    assert cap("TILT minimax-S", False).h == spreadsheet_constants.CAPTION_LINE      # "power mean"
-    assert cap("minimax-S", True).h == 3 * spreadsheet_constants.CAPTION_LINE         # + "retuning" / "magnitude"
-    assert cap("minimax-S", False).h == 2 * spreadsheet_constants.CAPTION_LINE
+    assert cap("TILT minimax-S", True).height == 2 * spreadsheet_constants.CAPTION_LINE   # "minimized" / "power mean"
+    assert cap("TILT minimax-S", False).height == spreadsheet_constants.CAPTION_LINE      # "power mean"
+    assert cap("minimax-S", True).height == 3 * spreadsheet_constants.CAPTION_LINE         # + "retuning" / "magnitude"
+    assert cap("minimax-S", False).height == 2 * spreadsheet_constants.CAPTION_LINE
 
 
 def test_all_interval_mean_damage_aggregates_at_the_dual_norm_power_not_infinity():
@@ -4071,10 +4071,10 @@ def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls():
     assert chk.checked is False  # all-interval OFF by default (the default scheme is target-based)
     cap = on["caption:all_interval"]
     assert cap.kind == "caption" and cap.text == "all-interval"
-    assert abs((chk.x + chk.w / 2) - (cap.x + cap.w / 2)) < 1  # square centred above its caption
+    assert abs((chk.x + chk.width / 2) - (cap.x + cap.width / 2)) < 1  # square centred above its caption
     # the caption clears the square by the same gap that sits above it — not crammed against it
     gap = (spreadsheet_constants.PRESET_H - spreadsheet_constants.OPTION_BOX_PX) / 2
-    assert cap.y == chk.y + chk.h + gap
+    assert cap.y == chk.y + chk.height + gap
     # an all-interval scheme reads the box checked
     on_ai = {c.id: c for c in _with(scheme="minimax-S", all_interval=True).cells}
     assert on_ai["control:all_interval"].checked is True
@@ -4085,7 +4085,7 @@ def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
     # caption hugs it; that square is the SINGLE shared option-box size (OPTION_BOX_PX = 16),
     # identical to the settings-panel checkboxes and the tuning-ranges monotone/tradeoff boxes.
     chk = {c.id: c for c in _with(all_interval=True).cells}["control:all_interval"]
-    assert chk.h == spreadsheet_constants.OPTION_BOX_PX  # tracks the one shared option-box constant
+    assert chk.height == spreadsheet_constants.OPTION_BOX_PX  # tracks the one shared option-box constant
 
 
 def test_all_interval_checkbox_rides_right_of_the_target_chooser_when_shown():
@@ -4105,9 +4105,9 @@ def test_all_interval_checkbox_sits_inside_the_target_chooser_box():
     box, tile = blocks["block:preset:target"], blocks["block:vector:targets"]
     for cid in ("control:all_interval", "caption:all_interval"):
         c = cells[cid]
-        assert box.x <= c.x and c.x + c.w <= box.x + box.w  # enclosed horizontally
-        assert box.y <= c.y and c.y + c.h <= box.y + box.h  # enclosed vertically
-    assert tile.x <= box.x and box.x + box.w <= tile.x + tile.w  # box stays within the tile
+        assert box.x <= c.x and c.x + c.width <= box.x + box.width  # enclosed horizontally
+        assert box.y <= c.y and c.y + c.height <= box.y + box.height  # enclosed vertically
+    assert tile.x <= box.x and box.x + box.width <= tile.x + tile.width  # box stays within the tile
 
 
 def test_all_interval_show_entry_is_live_not_a_greyed_stub():
@@ -4133,9 +4133,9 @@ def test_alt_complexity_lays_box_l_out_with_just_the_diminuator_checkbox():
     # control slot with the caption at the slot's bottom — clearing the square by the same gap above it
     assert dim.x == on["header:primes"].x + spreadsheet_constants.BOX_INNER
     gap = (spreadsheet_constants.PRESET_H - spreadsheet_constants.OPTION_BOX_PX) / 2
-    assert cap_d.y == dim.y + dim.h + gap
+    assert cap_d.y == dim.y + dim.height + gap
     # ...and is horizontally CENTRED above its caption slot (both at the column's left edge)
-    assert abs((dim.x + dim.w / 2) - (cap_d.x + cap_d.w / 2)) < 1
+    assert abs((dim.x + dim.width / 2) - (cap_d.x + cap_d.width / 2)) < 1
 
 
 def test_weighting_controls_each_sit_in_a_bordered_box():
@@ -4154,8 +4154,8 @@ def test_weighting_controls_each_sit_in_a_bordered_box():
         assert box.boxed, box_id
         ctrl = cells[ctrl_id]
         # the control sits fully inside its box, inset off the left/top border
-        assert box.x < ctrl.x and ctrl.x + ctrl.w <= box.x + box.w + 0.01, box_id
-        assert box.y < ctrl.y and ctrl.y + ctrl.h <= box.y + box.h + 0.01, box_id
+        assert box.x < ctrl.x and ctrl.x + ctrl.width <= box.x + box.width + 0.01, box_id
+        assert box.y < ctrl.y and ctrl.y + ctrl.height <= box.y + box.height + 0.01, box_id
 
 
 def test_diminuator_rides_the_pretransformer_chooser_box_when_presets_on():
@@ -4205,7 +4205,7 @@ def test_weighting_captions_the_weight_slope_chooser():
     cap = on["caption:slope"]
     assert cap.kind == "caption"
     assert cap.text == "damage weight slope"
-    assert cap.h == spreadsheet_constants.CAPTION_LINE
+    assert cap.height == spreadsheet_constants.CAPTION_LINE
     assert cap.y > on["control:slope"].y  # sits below the chooser
 
 
@@ -4223,7 +4223,7 @@ def test_weighting_adds_a_weight_slope_chooser_to_the_weight_box():
     # it rides below the weight list, filling box 𝒘's interior (the targets column inset by its border)
     assert ctrl.y > on["weight:target:0"].y
     assert ctrl.x == on["header:targets"].x + spreadsheet_constants.BOX_INNER
-    assert ctrl.w == on["header:targets"].w - 2 * spreadsheet_constants.BOX_INNER
+    assert ctrl.width == on["header:targets"].width - 2 * spreadsheet_constants.BOX_INNER
 
 
 def test_all_interval_greys_and_locks_the_weight_slope_chooser():
@@ -4377,7 +4377,7 @@ def test_custom_weights_show_the_overridden_values_in_the_weight_row():
     override = tuple(1.0 + 0.5 * i for i in range(n))
     lay = spreadsheet.build(base, s, custom_weights=override)
     texts = [c.text for c in lay.cells if c.id.startswith("weight:target:")]
-    assert texts == [service.cents(w) for w in override]
+    assert texts == [service.cents(width) for width in override]
 
 
 def test_commas_have_a_shared_vertical_axis_per_comma():
@@ -4403,8 +4403,8 @@ def test_commas_column_has_panels_that_fold_away_and_converge_when_collapsed():
     lay = spreadsheet.build(base, collapsed={"col:commas"})
     blocks = {b.id: b for b in lay.blocks}
     by_id = {ln.id: ln for ln in lay.lines}
-    assert blocks["block:commas"].w == 0  # the quantities-row comma panel folds away
-    assert blocks["block:tuning:commas"].w == 0  # ...and each tuning row's
+    assert blocks["block:commas"].width == 0  # the quantities-row comma panel folds away
+    assert blocks["block:tuning:commas"].width == 0  # ...and each tuning row's
     assert by_id["bus:commas:top"].length == 0  # the comma axis converges to one line
 
 
@@ -4417,7 +4417,7 @@ def test_comma_basis_is_framed_as_a_vector_list_spanning_its_d_tall_height():
     cb = cells["bracket:vector:commas:l"]
     # the enclosing bracket spans the full d=3 tall basis
     assert cb.y <= cells["cell:comma:0:0"].y
-    assert cb.y + cb.h >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].h
+    assert cb.y + cb.height >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].height
 
 
 def test_untempered_vector_columns_get_angle_feet_while_mapped_lists_keep_braces():
@@ -4469,19 +4469,19 @@ def test_a_long_caption_widens_its_tile_to_stay_within_two_lines():
     cap = cells["caption:tuning:commas"]
     # the name never wraps past two lines: the column is floored wide enough to hold it,
     # rather than the font shrinking or the name spilling tall down a narrow column
-    assert spreadsheet_text._wrap_lines(name, cap.w) <= spreadsheet_constants.MAX_CAPTION_LINES
+    assert spreadsheet_text._wrap_lines(name, cap.width) <= spreadsheet_constants.MAX_CAPTION_LINES
     # the caption band is its wrapped lines plus BAND_GAP (the in-tile breathing room)
-    assert cap.h == spreadsheet_text._wrap_lines(name, cap.w) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
-    assert cap.h <= spreadsheet_constants.MAX_CAPTION_LINES * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
+    assert cap.height == spreadsheet_text._wrap_lines(name, cap.width) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
+    assert cap.height <= spreadsheet_constants.MAX_CAPTION_LINES * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
     # the tile widened to make that fit: the commas column is wider than its lone value
     # cell + brackets alone would make it (a narrow one-comma content width)
     content_w = 2 * spreadsheet_constants.BRACKET_W + spreadsheet_constants.COL_W
-    assert cells["header:commas"].w > content_w
-    assert cap.w == cells["header:commas"].w  # the caption spans the (widened) column
+    assert cells["header:commas"].width > content_w
+    assert cap.width == cells["header:commas"].width  # the caption spans the (widened) column
     assert cap.y >= cells["tuning:comma:0"].y + spreadsheet_constants.ROW_H  # below the value cell
     # the grey tile widened with it, so the caption sits within the tile, never beyond it
     panel = blocks["block:tuning:commas"]
-    assert panel.x <= cap.x and cap.x + cap.w <= panel.x + panel.w
+    assert panel.x <= cap.x and cap.x + cap.width <= panel.x + panel.width
 
 
 def test_a_widened_caption_tile_keeps_the_add_control_on_its_fan_stub():
@@ -4494,10 +4494,10 @@ def test_a_widened_caption_tile_keeps_the_add_control_on_its_fan_stub():
     blocks = {b.id: b for b in lay.blocks}
     narrow = {b.id: b for b in _with(names=False).blocks}
     by_id = {ln.id: ln for ln in lay.lines}
-    assert blocks["block:commas"].w > narrow["block:commas"].w  # commas tile widened by its caption
+    assert blocks["block:commas"].width > narrow["block:commas"].width  # commas tile widened by its caption
     plus, bus = cells["comma_plus"], by_id["bus:commas:top"]
     stub = by_id["v:comma:0"].pos + spreadsheet_constants.COL_W  # one slot past the (re-centred) comma
-    assert abs((plus.x + plus.w / 2) - stub) < 0.51     # the + tracks the fan, not the tile edge
+    assert abs((plus.x + plus.width / 2) - stub) < 0.51     # the + tracks the fan, not the tile edge
     assert abs((bus.start + bus.length) - stub) < 0.51  # and the bus reaches it
 
 
@@ -4507,8 +4507,8 @@ def test_min_width_for_lines_floors_a_column_to_keep_a_name_within_two_lines():
     for name in ("tempered comma basis interval size list (made to vanish!)",
                  "comma basis interval retuning list (made to vanish!)",
                  "(just) comma basis interval size list"):
-        w = spreadsheet_text._min_width_for_lines(name, 2)
-        assert spreadsheet_text._wrap_lines(name, w) <= 2
+        width = spreadsheet_text._min_width_for_lines(name, 2)
+        assert spreadsheet_text._wrap_lines(name, width) <= 2
         assert spreadsheet_text._wrap_lines(name, 2 * spreadsheet_constants.BRACKET_W + spreadsheet_constants.COL_W) > 2
 
 
@@ -4520,9 +4520,9 @@ def test_short_captions_span_the_full_band_so_css_can_centre_them():
     cells = {c.id: c for c in _with(names=True).cells}
     short = cells["caption:tuning:primes"]  # "tuning map" — one line in its column
     tall = cells["caption:tuning:commas"]   # "tempered ... (made to vanish!)" — two lines
-    assert spreadsheet_text._wrap_lines(short.text, short.w) == 1
-    assert spreadsheet_text._wrap_lines(tall.text, tall.w) == 2
-    assert short.h == tall.h == spreadsheet_text._wrap_lines(tall.text, tall.w) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
+    assert spreadsheet_text._wrap_lines(short.text, short.width) == 1
+    assert spreadsheet_text._wrap_lines(tall.text, tall.width) == 2
+    assert short.height == tall.height == spreadsheet_text._wrap_lines(tall.text, tall.width) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
     assert short.y == tall.y  # both start at the band top; the CSS centres within the band
 
 
@@ -4563,14 +4563,14 @@ def test_each_comma_carries_its_own_minus_on_its_branch_point():
     one, by1 = {c.id: c for c in lay.cells}, {ln.id: ln for ln in lay.lines}
     assert "comma_minus:0" in one  # the SOLE comma is removable now (un-tempers to just intonation)
     cm = one["comma_minus:0"]  # centred on the lone comma's branch point, dropping from the top bus
-    assert abs((cm.x + cm.w / 2) - by1["v:comma:0"].pos) < 0.51
+    assert abs((cm.x + cm.width / 2) - by1["v:comma:0"].pos) < 0.51
     assert cm.y == by1["bus:commas:top"].pos
     two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])  # two real commas: EACH carries its own −
     tlay = spreadsheet.build(two)
     cells, by2 = {c.id: c for c in tlay.cells}, {ln.id: ln for ln in tlay.lines}
     assert {"comma_minus:0", "comma_minus:1"} <= set(cells)  # any comma removable, not just the last
-    assert abs((cells["comma_minus:0"].x + cells["comma_minus:0"].w / 2) - by2["v:comma:0"].pos) < 0.51
-    assert abs((cells["comma_minus:1"].x + cells["comma_minus:1"].w / 2) - by2["v:comma:1"].pos) < 0.51
+    assert abs((cells["comma_minus:0"].x + cells["comma_minus:0"].width / 2) - by2["v:comma:0"].pos) < 0.51
+    assert abs((cells["comma_minus:1"].x + cells["comma_minus:1"].width / 2) - by2["v:comma:1"].pos) < 0.51
     ji = service.add_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # full rank, n=0
     assert not any(c.startswith("comma_minus") for c in {c.id for c in spreadsheet.build(ji).cells})  # nothing to remove
 
@@ -4590,7 +4590,7 @@ def test_adding_a_comma_starts_a_pending_draft_column_that_does_not_re_rank():
     # the draft column carries its own − on its branch point (to cancel it); the real comma keeps its
     by_id = {ln.id: ln for ln in spreadsheet.build(base, pending_comma=[None, None, None]).lines}
     assert "comma_minus:0" in cells  # the real comma stays independently removable
-    assert abs((cells["comma_minus:pending"].x + cells["comma_minus:pending"].w / 2) - by_id["v:comma:1"].pos) < 0.51
+    assert abs((cells["comma_minus:pending"].x + cells["comma_minus:pending"].width / 2) - by_id["v:comma:1"].pos) < 0.51
 
 
 def test_a_partly_typed_pending_comma_shows_its_entered_components():
@@ -4708,9 +4708,9 @@ def test_the_mapped_list_brackets_grow_to_enclose_the_draft_rows_placeholders():
     frame = ((spreadsheet_constants.FRAME_H + spreadsheet_constants.FRAME_GAP) + (spreadsheet_constants.FRAME_GAP + spreadsheet_constants.BRACE_H)
              + 2 * spreadsheet_constants.FRAME_OVERHANG)
     for bid in ("bracket:mapped:l", "bracket:mapped_comma:l"):
-        assert plain[bid].h == 2 * spreadsheet_constants.ROW_H + frame        # committed: r rows
+        assert plain[bid].height == 2 * spreadsheet_constants.ROW_H + frame        # committed: r rows
         # ...and grows by exactly one ROW_H when the draft row joins, enclosing its placeholder
-        assert drafting[bid].h == plain[bid].h + spreadsheet_constants.ROW_H  # draft: r_shown rows
+        assert drafting[bid].height == plain[bid].height + spreadsheet_constants.ROW_H  # draft: r_shown rows
     # the draft row's mapped-target cell is a blank green placeholder the grown bracket now encloses
     assert drafting["cell:mapped:2:0"].pending and drafting["cell:mapped:2:0"].text == ""
     # ...but its cell over the doomed comma is red (the draft generator un-tempers it away), enclosed all the same
@@ -5162,7 +5162,7 @@ def test_counts_row_sits_at_the_top_aligned_over_its_columns():
     # each count spans its column, centred over the values like the header
     for column_key in ("gens", "primes", "targets"):
         assert cells[f"count:{column_key}"].x == cells[f"header:{column_key}"].x
-        assert cells[f"count:{column_key}"].w == cells[f"header:{column_key}"].w
+        assert cells[f"count:{column_key}"].width == cells[f"header:{column_key}"].width
 
 
 def test_counts_present_keeps_the_column_fan_out_immediately_after_the_toggle():
@@ -5178,7 +5178,7 @@ def test_counts_present_keeps_the_column_fan_out_immediately_after_the_toggle():
     # ...and the per-prime sub-lines thread straight through the counts band
     v0 = by_id["v:prime:0"]
     assert v0.start == fan
-    assert v0.start < count.y and v0.start + v0.length > count.y + count.h
+    assert v0.start < count.y and v0.start + v0.length > count.y + count.height
     # the trunk is just the short stem from the branch top down to the fan-out
     trunk = by_id["trunk:primes"]
     assert trunk.start + trunk.length == fan
@@ -5245,7 +5245,7 @@ def test_every_count_sits_on_its_own_grey_panel():
         column_key = cid.split(":", 1)[1]
         panel = blocks.get(f"block:counts:{column_key}")
         assert panel is not None, f"{cid} has no backing panel"
-        assert panel.w > 0 and panel.h > 0  # a visible grey background
+        assert panel.width > 0 and panel.height > 0  # a visible grey background
 
 
 def test_other_intervals_of_interest_column_is_present_right_of_targets():
@@ -5261,8 +5261,8 @@ def test_empty_interest_columns_footprint_hugs_its_content_the_title_overhangs()
     # that and overhangs the column (rendered without wrapping), rather than forcing the
     # footprint out to the title's strip width and leaving the narrow content adrift in it.
     cells = {c.id: c for c in _layout().cells}  # default build => interest empty
-    assert cells["header:interest"].w == 2 * spreadsheet_constants.BRACKET_W
-    assert cells["header:interest"].w < spreadsheet_text._title_w("other intervals\nof interest")
+    assert cells["header:interest"].width == 2 * spreadsheet_constants.BRACKET_W
+    assert cells["header:interest"].width < spreadsheet_text._title_w("other intervals\nof interest")
 
 
 def test_empty_interest_column_is_just_a_header_and_axis():
@@ -5354,8 +5354,8 @@ def test_interest_vector_cells_are_separated_boxes_not_a_contiguous_grid():
     cells = {c.id: c for c in _with_interest(_INTEREST).cells}
     c0, c1 = cells["cell:interest:0:0"], cells["cell:interest:0:1"]
     m0 = cells["cell:imapped:0:0"]  # the mapped cell spans the full COL_W slot
-    assert c0.w == m0.w == spreadsheet_constants.COL_W            # full-width square ket box
-    assert c1.x - (c0.x + c0.w) == spreadsheet_constants.INTERVAL_COL_GAP / 2  # a real (half) gap between kets
+    assert c0.width == m0.width == spreadsheet_constants.COL_W            # full-width square ket box
+    assert c1.x - (c0.x + c0.width) == spreadsheet_constants.INTERVAL_COL_GAP / 2  # a real (half) gap between kets
     assert c0.x == m0.x                                           # ...sharing the slot with its mapped image
 
 
@@ -5508,7 +5508,7 @@ def test_adding_intervals_of_interest_never_shrinks_the_header():
     # floor), so it only ever grows as intervals are added — like every other column.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     builds = [spreadsheet.build(base, collapsed=frozenset(), interest=[(0, 0, 0)] * n) for n in range(5)]
-    widths = [{c.id: c for c in lay.cells}["header:interest"].w for lay in builds]
+    widths = [{c.id: c for c in lay.cells}["header:interest"].width for lay in builds]
     assert widths == sorted(widths)  # monotonic: adding an interval never narrows the header
     assert min(widths) == widths[0]  # ...and never dips below the empty (title-strip) width
 
@@ -5527,10 +5527,10 @@ def test_interest_tiles_and_footprint_hug_their_content_the_title_overhangs():
                 for rk in ("vectors", "mapping", "tuning", "just", "retune"))
     hug_w = max(content_w, floor)
     # the tile hugs that width — just its PAD overhang each side (the + rides the fan, not the tile)
-    assert blocks["block:interest"].w == hug_w + 2 * spreadsheet_constants.PAD
+    assert blocks["block:interest"].width == hug_w + 2 * spreadsheet_constants.PAD
     # the footprint hugs content/captions (no title reservation); the wider title overhangs it
-    assert cells["header:interest"].w == hug_w
-    assert cells["header:interest"].w < spreadsheet_text._title_w("other intervals\nof interest")
+    assert cells["header:interest"].width == hug_w
+    assert cells["header:interest"].width < spreadsheet_text._title_w("other intervals\nof interest")
 
 
 def test_interest_title_overhangs_symmetrically_centred_on_the_gridline():
@@ -5545,8 +5545,8 @@ def test_interest_title_overhangs_symmetrically_centred_on_the_gridline():
         cells = {c.id: c for c in lay.cells}
         lines = {ln.id: ln for ln in lay.lines}
         header, trunk = cells["header:interest"], lines["trunk:interest"]
-        assert header.w < title_w  # footprint hugs content, narrower than the title
-        assert header.x + header.w / 2 == trunk.pos  # header centred on the gridline => title overhangs evenly
+        assert header.width < title_w  # footprint hugs content, narrower than the title
+        assert header.x + header.width / 2 == trunk.pos  # header centred on the gridline => title overhangs evenly
     # a single interval: the tile is narrower than the title yet centred on the gridline,
     # and the lone interval's own axis coincides with the trunk
     one = _with_interest(_INTEREST[:1])
@@ -5554,8 +5554,8 @@ def test_interest_title_overhangs_symmetrically_centred_on_the_gridline():
     lines = {ln.id: ln for ln in one.lines}
     block = {b.id: b for b in one.blocks}["block:interest"]
     trunk = lines["trunk:interest"]
-    assert block.w < title_w  # the tile is allowed to be smaller than the title
-    assert block.x + block.w / 2 == trunk.pos  # ...and is centred on the same gridline
+    assert block.width < title_w  # the tile is allowed to be smaller than the title
+    assert block.x + block.width / 2 == trunk.pos  # ...and is centred on the same gridline
     assert lines["v:interest:0"].pos == trunk.pos  # the single interval's axis is the trunk
 
 
@@ -5569,7 +5569,7 @@ def test_per_tile_fold_toggle_hugs_its_tile_corner():
                                 ("toggle:tile:mapping:primes", "block:mapping")):
         toggle, tile = cells[toggle_id], blocks[block_id]
         assert toggle.x == tile.x + spreadsheet_constants.TOGGLE_INSET  # hugs the tile's corner
-        assert tile.x <= toggle.x <= tile.x + tile.w          # ...so it sits within the tile
+        assert tile.x <= toggle.x <= tile.x + tile.width          # ...so it sits within the tile
 
 
 def test_populated_interest_mapped_list_is_standalone_columns_not_a_matrix():
@@ -5766,8 +5766,8 @@ def test_every_implemented_toggle_actually_changes_the_layout():
         return (
             # c.unit is in the tuple so cell_units (which adds/removes the per-value unit beneath a
             # cell without changing the cell's id/geometry/text) registers as a real layout change
-            frozenset((c.id, c.x, c.y, c.w, c.h, c.kind, c.text, c.unit, c.underlines) for c in lay.cells),
-            frozenset((b.id, b.x, b.y, b.w, b.h, b.tint) for b in lay.blocks),
+            frozenset((c.id, c.x, c.y, c.width, c.height, c.kind, c.text, c.unit, c.underlines) for c in lay.cells),
+            frozenset((b.id, b.x, b.y, b.width, b.height, b.tint) for b in lay.blocks),
         )
 
     # a few toggles only refine a layer that isn't their hierarchy parent, so their effect is
@@ -5941,7 +5941,7 @@ def test_matrix_labels_sit_above_or_left_of_the_cells_they_label():
     assert on["matlabel:row:mapping:primes:0"].x < on["bracket:map:0:l"].x
     # the row label vertically aligns with the row's value cells
     assert (on["matlabel:row:mapping:primes:0"].y <= on["cell:mapping:0:0"].y
-            <= on["matlabel:row:mapping:primes:0"].y + on["matlabel:row:mapping:primes:0"].h)
+            <= on["matlabel:row:mapping:primes:0"].y + on["matlabel:row:mapping:primes:0"].height)
 
 
 def test_col_labels_sit_inside_the_tile_centred_above_the_bracket():
@@ -5971,12 +5971,12 @@ def test_col_labels_sit_inside_the_tile_centred_above_the_bracket():
         assert label.y >= tile_top - 1, \
             f"{label_id} (y={label.y}) must sit inside tile (top={tile_top}), not in the gap"
         # the label sits ABOVE the bracket (with the bracket clear below it)
-        assert label.y + label.h <= bracket_top, \
-            f"{label_id} bottom y={label.y + label.h} must be at/above bracket y={bracket_top}"
+        assert label.y + label.height <= bracket_top, \
+            f"{label_id} bottom y={label.y + label.height} must be at/above bracket y={bracket_top}"
         # equidistance: distance from tile_top to label-top ≈ distance from label-bottom
         # to bracket-top (within 1px tolerance for int rounding)
         dist_above = label.y - tile_top
-        dist_below = bracket_top - (label.y + label.h)
+        dist_below = bracket_top - (label.y + label.height)
         assert abs(dist_above - dist_below) <= 1, \
             f"{label_id}: dist_above={dist_above}, dist_below={dist_below} should be ~equal"
 
@@ -5989,15 +5989,15 @@ def test_col_labels_sit_above_the_top_frame_in_framed_rows():
     on = {c.id: c for c in _with(header_symbols=True).cells}
     # mapping matrix: top bracket (ebktop:primes) sits BELOW the row labels' band, and
     # the col labels for the mapping's mapped lists sit above their own ebktop marks
-    assert on["matlabel:col:mapping:targets:0"].y + on["matlabel:col:mapping:targets:0"].h \
+    assert on["matlabel:col:mapping:targets:0"].y + on["matlabel:col:mapping:targets:0"].height \
         <= on["ebktop:mapped:0"].y
-    assert on["matlabel:col:mapping:commas:0"].y + on["matlabel:col:mapping:commas:0"].h \
+    assert on["matlabel:col:mapping:commas:0"].y + on["matlabel:col:mapping:commas:0"].height \
         <= on["ebktop:mapped_comma:0"].y
     # interval vectors row: same rule — the comma basis 𝐜ᵢ labels sit above the basis's
     # per-column ket marks (ebktop:vector:commas:*)
-    assert on["matlabel:col:vectors:commas:0"].y + on["matlabel:col:vectors:commas:0"].h \
+    assert on["matlabel:col:vectors:commas:0"].y + on["matlabel:col:vectors:commas:0"].height \
         <= on["ebktop:vector:commas:0"].y
-    assert on["matlabel:col:vectors:targets:0"].y + on["matlabel:col:vectors:targets:0"].h \
+    assert on["matlabel:col:vectors:targets:0"].y + on["matlabel:col:vectors:targets:0"].height \
         <= on["ebktop:vector:targets:0"].y
 
 
@@ -6016,8 +6016,8 @@ def test_mapping_top_frame_hugs_the_cells_not_the_row_label_gutter():
     assert ebktop.x == left_bracket.x
     assert ebkbrace.x == left_bracket.x
     # the top/brace's RIGHT edge ends at the per-row ]'s right edge
-    assert ebktop.x + ebktop.w == right_bracket.x + right_bracket.w
-    assert ebkbrace.x + ebkbrace.w == right_bracket.x + right_bracket.w
+    assert ebktop.x + ebktop.width == right_bracket.x + right_bracket.width
+    assert ebkbrace.x + ebkbrace.width == right_bracket.x + right_bracket.width
 
 
 def test_row_labels_balance_the_primes_tile_with_an_equal_right_gutter():
@@ -6029,7 +6029,7 @@ def test_row_labels_balance_the_primes_tile_with_an_equal_right_gutter():
     on = {c.id: c for c in lay.cells}
     panel = {b.id: b for b in lay.blocks}["block:mapping"]
     left = on["bracket:map:0:l"].x - panel.x
-    right = (panel.x + panel.w) - (on["bracket:map:0:r"].x + on["bracket:map:0:r"].w)
+    right = (panel.x + panel.width) - (on["bracket:map:0:r"].x + on["bracket:map:0:r"].width)
     assert abs(left - right) < 0.01, f"primes matrix off-centre in its tile: left={left}, right={right}"
     assert left >= spreadsheet_constants.MATLABEL_W  # the label gutter (and its mirror) reserve real room
 
@@ -6294,8 +6294,8 @@ def test_optimization_box_lays_out_mean_damage_and_power():
             < on["optimization:power:caption"].y)
     # the min-damage and the power are ordinary gridded cells (COL_W wide); their contents are
     # centred like any other value cell (not stretched/left-justified within the control)
-    assert on["optimization:mean_damage"].w == spreadsheet_constants.COL_W
-    assert on["optimization:power"].w == spreadsheet_constants.COL_W
+    assert on["optimization:mean_damage"].width == spreadsheet_constants.COL_W
+    assert on["optimization:power"].width == spreadsheet_constants.COL_W
     # the controls are PACKED LEFT, not distributed across the wide box: the mean damage is a COLUMN
     # hugging the left inner edge (its symbol and caption span the column width and its COL_W value
     # cell is centred within it), and the power column sits immediately to its right, one OPT_COL_GAP
@@ -6303,7 +6303,7 @@ def test_optimization_box_lays_out_mean_damage_and_power():
     # apart. (Same packing as the complexity/slope control regions in this column.)
     mean_damage_col_x = box.x + spreadsheet_constants.OPT_PAD_L
     assert on["optimization:mean_damage:symbol"].x == mean_damage_col_x
-    assert on["optimization:mean_damage:symbol"].w == spreadsheet_constants.OPT_MEAN_DAMAGE_W
+    assert on["optimization:mean_damage:symbol"].width == spreadsheet_constants.OPT_MEAN_DAMAGE_W
     assert on["optimization:mean_damage:caption"].x == mean_damage_col_x
     assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet_constants.OPT_MEAN_DAMAGE_W - spreadsheet_constants.COL_W) / 2
     mean_damage_r = mean_damage_col_x + spreadsheet_constants.OPT_MEAN_DAMAGE_W  # the mean damage column's right edge
@@ -6313,15 +6313,15 @@ def test_optimization_box_lays_out_mean_damage_and_power():
     assert on["optimization:power:caption"].x == pow_col_x
     assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPT_POW_CAP_W - spreadsheet_constants.COL_W) / 2
     cap = on["optimization:power:caption"]
-    assert cap.x > mean_damage_r and cap.x + cap.w < box.x + box.w  # ...and its caption clears both sides
+    assert cap.x > mean_damage_r and cap.x + cap.width < box.x + box.width  # ...and its caption clears both sides
     # the box is still floored wide enough to seat the controls and their captions
-    assert box.w >= spreadsheet_constants.OPT_BOX_MIN_W
+    assert box.width >= spreadsheet_constants.OPT_BOX_MIN_W
     # the caption occupies a single line (so "optimization power" sits right under 𝑝, not a
     # two-line band that floats it lower)
-    assert on["optimization:power:caption"].h == spreadsheet_constants.CAPTION_LINE
+    assert on["optimization:power:caption"].height == spreadsheet_constants.CAPTION_LINE
     # the title sits inside the box (below its top border) with a gap before the controls
     assert on["optimization:title"].y > box.y
-    assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].h
+    assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].height
     # optimization is always on — no optimize button, and no lock hint beneath it
     ids = {c.id for c in lay.cells}
     assert "optimization:button" not in ids
@@ -6338,7 +6338,7 @@ def test_optimization_box_fills_the_full_width_of_the_damage_tile():
     box = blk["block:optimization:box"]
     panel = blk["block:damage:targets"]  # the damage tile's grey panel
     assert box.x == panel.x + spreadsheet_constants.PAD  # the box starts at the tile's content left edge
-    assert box.w == panel.w - 2 * spreadsheet_constants.PAD  # ...and fills the tile's content width
+    assert box.width == panel.width - 2 * spreadsheet_constants.PAD  # ...and fills the tile's content width
 
 
 def test_a_narrow_damage_tile_widens_to_seat_the_optimization_box():
@@ -6350,8 +6350,8 @@ def test_a_narrow_damage_tile_widens_to_seat_the_optimization_box():
     s["optimization"] = True
     blk = {b.id: b for b in spreadsheet.build(base, s).blocks}
     box = blk["block:optimization:box"]
-    assert box.w >= spreadsheet_constants.OPT_BOX_MIN_W  # wide enough to seat mean damage | power
-    assert box.w == blk["block:damage:targets"].w - 2 * spreadsheet_constants.PAD  # still fills its tile
+    assert box.width >= spreadsheet_constants.OPT_BOX_MIN_W  # wide enough to seat mean damage | power
+    assert box.width == blk["block:damage:targets"].width - 2 * spreadsheet_constants.PAD  # still fills its tile
 
 
 def test_a_manual_generator_tuning_drives_the_displayed_maps():
@@ -6443,12 +6443,12 @@ def test_editable_target_vector_cells_clear_the_column_separator():
     c0, c1 = cells["cell:vector:targets:0:0"], cells["cell:vector:targets:1:0"]
     sep = cells["sep:vector:targets:1"]            # the rule between target intervals 0 and 1
     full = cells["cell:mapped:0:0"]             # the mapped image spans the full COL_W slot
-    assert c0.w == full.w == spreadsheet_constants.COL_W   # full-width square input box
+    assert c0.width == full.width == spreadsheet_constants.COL_W   # full-width square input box
     assert c0.x == full.x                                  # ...sharing the slot with its mapped image
-    assert c1.x - (c0.x + c0.w) == spreadsheet_constants.INTERVAL_COL_GAP  # a real gap between slots
+    assert c1.x - (c0.x + c0.width) == spreadsheet_constants.INTERVAL_COL_GAP  # a real gap between slots
     # the rule lies entirely in the gap between the two input boxes — neither covers it
-    assert c0.x + c0.w <= sep.x                 # cell 0 ends at/before the rule's left edge
-    assert sep.x + sep.w <= c1.x                # cell 1 starts at/after the rule's right edge
+    assert c0.x + c0.width <= sep.x                 # cell 0 ends at/before the rule's left edge
+    assert sep.x + sep.width <= c1.x                # cell 1 starts at/after the rule's right edge
 
 
 def test_typing_the_target_interval_list_drives_the_grid_through_the_editor():
@@ -6500,7 +6500,7 @@ def test_optimization_box_is_a_bordered_frame_nested_in_the_damage_tile():
     box = blocks["block:optimization:box"]
     assert box.boxed
     panel = blocks["block:damage:targets"]
-    assert panel.y <= box.y and box.y + box.h <= panel.y + panel.h  # nested within the panel
+    assert panel.y <= box.y and box.y + box.height <= panel.y + panel.height  # nested within the panel
 
 
 def test_optimization_on_adds_an_addable_held_intervals_column():
@@ -6834,10 +6834,10 @@ def test_the_damage_chart_sits_above_its_values_and_reserves_row_space():
     off = {c.id: c for c in _with(charts=False).cells}
     on = {c.id: c for c in _with(charts=True).cells}
     ch, v0 = on["chart:damage:targets"], on["damage:target:0"]
-    assert ch.y + ch.h <= v0.y  # the chart sits fully above the value cells, clear of them
+    assert ch.y + ch.height <= v0.y  # the chart sits fully above the value cells, clear of them
     assert on["damage:target:0"].y > off["damage:target:0"].y  # values pushed down to make room
     # the chart spans the target columns (so its bars can align with them)
-    assert ch.x <= on["target:0"].x and ch.x + ch.w >= on["target:7"].x + spreadsheet_constants.COL_W
+    assert ch.x <= on["target:0"].x and ch.x + ch.width >= on["target:7"].x + spreadsheet_constants.COL_W
 
 
 def test_charts_on_adds_signed_retuning_charts_over_primes_and_targets():
@@ -6848,8 +6848,8 @@ def test_charts_on_adds_signed_retuning_charts_over_primes_and_targets():
     assert len(ct.values) == 8  # one bar per target interval (the error list)
     assert any(v < 0 for v in ct.values)  # errors are signed, so the chart straddles zero
     # each chart sits above its own value row, clear of it
-    assert cp.y + cp.h <= on["retune:prime:0"].y
-    assert ct.y + ct.h <= on["retune:target:0"].y
+    assert cp.y + cp.height <= on["retune:prime:0"].y
+    assert ct.y + ct.height <= on["retune:target:0"].y
 
 
 def test_every_open_tile_in_the_retuning_row_is_charted():
@@ -6933,7 +6933,7 @@ def test_tuning_ranges_on_adds_a_generator_tuning_range_chart_in_the_generators_
     ch = on["rangechart:tuning:gens"]
     assert ch.kind == "rangechart"
     # it spans the generators column (so its per-generator I-beams align with the cells)
-    assert ch.x == on["header:gens"].x and ch.w == on["header:gens"].w
+    assert ch.x == on["header:gens"].x and ch.width == on["header:gens"].width
 
 
 def test_generator_range_chart_carries_the_decimals_toggle():
@@ -7006,7 +7006,7 @@ def test_range_mode_selector_sits_below_the_chart_and_carries_the_current_mode()
     assert sel.kind == "rangemode"
     assert sel.text == "monotone"  # the live mode (default), so the renderer can preset it
     assert sel.x == ch.x  # in the generators column, under the chart
-    assert sel.y >= ch.y + ch.h  # below the chart, clear of it
+    assert sel.y >= ch.y + ch.height  # below the chart, clear of it
 
 
 def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector():
@@ -7014,9 +7014,9 @@ def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector():
     cells = {c.id: c for c in lay.cells}
     pan = {b.id: b for b in lay.blocks}["block:tuning:gens"]  # the tile's OWN panel, extended
     v, ch, sel = cells["tuning:gen:0"], cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
-    assert pan.x <= ch.x and pan.x + pan.w >= ch.x + ch.w  # encloses the chart horizontally
+    assert pan.x <= ch.x and pan.x + pan.width >= ch.x + ch.width  # encloses the chart horizontally
     assert pan.y <= v.y  # starts at/above the generator-map values...
-    assert pan.y + pan.h >= sel.y + sel.h  # ...and extends down past the nested chart + selector
+    assert pan.y + pan.height >= sel.y + sel.height  # ...and extends down past the nested chart + selector
     # the panel is a normal default-view tile too (present without the chart), just shorter,
     # and there is no separate floating panel
     assert "block:tuning:gens" in {b.id for b in _with(tuning_ranges=False).blocks}
@@ -7035,7 +7035,7 @@ def test_tuning_ranges_box_has_a_left_aligned_boxtitle():
     assert title.y < chart.y  # the title sits above the chart
     assert title.x == cells["header:gens"].x
     box = boxes["block:tuning:rangesbox"]  # the box still frames the whole thing
-    assert box.y <= title.y and box.y + box.h >= sel.y + sel.h
+    assert box.y <= title.y and box.y + box.height >= sel.y + sel.height
 
 
 def test_tuning_ranges_draws_a_bordered_box_around_the_chart_and_selector():
@@ -7049,8 +7049,8 @@ def test_tuning_ranges_draws_a_bordered_box_around_the_chart_and_selector():
     box = boxes["block:tuning:rangesbox"]
     assert box.boxed is True  # a bordered box, not a plain grey tile
     ch, sel = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
-    assert box.x <= ch.x and box.x + box.w >= ch.x + ch.w  # encloses them horizontally
-    assert box.y <= ch.y and box.y + box.h >= sel.y + sel.h  # and the chart + selector vertically
+    assert box.x <= ch.x and box.x + box.width >= ch.x + ch.width  # encloses them horizontally
+    assert box.y <= ch.y and box.y + box.height >= sel.y + sel.height  # and the chart + selector vertically
     # gone when the ranges box is off
     assert "block:tuning:rangesbox" not in {b.id for b in _with(tuning_ranges=False).blocks}
 
@@ -7062,7 +7062,7 @@ def test_tuning_ranges_box_reserves_row_height_so_following_rows_clear_it():
     lay = _with(tuning_ranges=True)
     cells = {c.id: c for c in lay.cells}
     panel = {b.id: b for b in lay.blocks}["block:tuning:gens"]  # the extended generator-tuning-map tile
-    box_bottom = panel.y + panel.h
+    box_bottom = panel.y + panel.height
     for nxt in ("just:prime:0", "retune:prime:0", "damage:target:0"):
         assert cells[nxt].y >= box_bottom, f"{nxt} overlaps the ranges box"
     # and turning the box on must push those rows DOWN versus off (space is reserved, not stolen)
@@ -7074,12 +7074,12 @@ def _color_at(lay, x, y):
     # which colorization groups' colour bands cover the point: {temperament}=yellow,
     # {tuning}=cyan, both=green (the darken blend), empty=uncoloured
     return {b.tint for b in lay.blocks if b.tint in ("temperament", "tuning")
-            and b.x <= x <= b.x + b.w and b.y <= y <= b.y + b.h}
+            and b.x <= x <= b.x + b.width and b.y <= y <= b.y + b.height}
 
 
 def _mid(cells, cid):
     c = cells[cid]
-    return c.x + c.w / 2, c.y + c.h / 2
+    return c.x + c.width / 2, c.y + c.height / 2
 
 
 def _colormap_layout():
@@ -7210,15 +7210,15 @@ def test_form_colorization_washes_the_canon_row_and_column():
     # white (lighter than the board), not the muddy darken-grey three colour bands would give.
     cells = {c.id: c for c in lay.cells}
     yc = cells["cell:canon_mapped:0:0"]   # Y_C, a white tile
-    x, y = yc.x + yc.w / 2, yc.y + yc.h / 2
-    over = lambda pred: any(pred(bl) and bl.x <= x <= bl.x + bl.w and bl.y <= y <= bl.y + bl.h for bl in lay.blocks)
+    x, y = yc.x + yc.width / 2, yc.y + yc.height / 2
+    over = lambda pred: any(pred(bl) and bl.x <= x <= bl.x + bl.width and bl.y <= y <= bl.y + bl.height for bl in lay.blocks)
     assert over(lambda bl: bl.id.startswith("washbase:"))                    # a white base IS laid
     assert not over(lambda bl: bl.tint in ("temperament", "tuning", "form"))  # but NO colour band → white
     # the counts "rank" tile spans both generator columns but splits: yellow generators | red canon-gens
     rank = cells["count:gens"]
     gx, cgx = cells["cell:form:0:0"].x + 5, cells["cell:fcancel:0:0"].x + 5
-    in_band = lambda bx, tint: any(bl.tint == tint and bl.x <= bx <= bl.x + bl.w
-                                   and bl.y <= rank.y + rank.h / 2 <= bl.y + bl.h for bl in lay.blocks)
+    in_band = lambda bx, tint: any(bl.tint == tint and bl.x <= bx <= bl.x + bl.width
+                                   and bl.y <= rank.y + rank.height / 2 <= bl.y + bl.height for bl in lay.blocks)
     assert in_band(gx, "temperament") and not in_band(gx, "form")   # generators half: yellow
     assert in_band(cgx, "temperament") and in_band(cgx, "form")     # canon-gens half: red
 
@@ -7328,9 +7328,9 @@ def test_washes_bridge_the_plus_column_gutters():
     # sizes 𝒕C and target sizes 𝐚 are both green. Probe each gutter's midpoint.
     lay = _colormap_layout()
     cells = {c.id: c for c in lay.cells}
-    h = lambda k: cells[f"header:{k}"]
-    primes_commas = (h("primes").x + h("primes").w + h("commas").x) / 2    # 𝑀 | 𝑀C
-    commas_targets = (h("commas").x + h("commas").w + h("targets").x) / 2  # 𝑀C | 𝑀T  /  𝒕C | 𝐚
+    height = lambda k: cells[f"header:{k}"]
+    primes_commas = (height("primes").x + height("primes").width + height("commas").x) / 2    # 𝑀 | 𝑀C
+    commas_targets = (height("commas").x + height("commas").width + height("targets").x) / 2  # 𝑀C | 𝑀T  /  𝒕C | 𝐚
     map_y = _mid(cells, "cell:mapping:0:0")[1]
     tun_y = _mid(cells, "tuning:prime:0")[1]
     assert "temperament" in _color_at(lay, primes_commas, map_y)               # 𝑀 meets 𝑀C
@@ -7344,9 +7344,9 @@ def test_colorization_off_by_default_and_renders_as_base_plus_darken_bands():
     washes = {b.id.split(":", 1)[1]: b for b in blocks if b.tint == "tuning"}
     bases = {b.id.split(":", 1)[1]: b for b in blocks if b.tint == "base"}
     assert washes and set(washes) == set(bases)  # one white base per colour band
-    for k, w in washes.items():
+    for k, width in washes.items():
         b = bases[k]
-        assert (b.x, b.y, b.w, b.h) == (w.x, w.y, w.w, w.h)  # base coincident with its colour band
+        assert (b.x, b.y, b.width, b.height) == (width.x, width.y, width.width, width.height)  # base coincident with its colour band
     assert all(b.tint == "" for b in blocks if b.id.startswith("block:"))  # grey tiles untinted
 
 
@@ -7491,8 +7491,8 @@ def test_audio_voices_exactly_the_tiles_whose_ebk_inner_is_a_vector():
     for c in lay.cells:
         if c.kind not in audio._INTERVAL_KINDS or c.pending:
             continue
-        rkey = audio._band_of(bands, c.y + c.h / 2)
-        ckey = audio._col_of(spans, c.x + c.w / 2)
+        rkey = audio._band_of(bands, c.y + c.height / 2)
+        ckey = audio._col_of(spans, c.x + c.width / 2)
         if rkey is None or ckey is None:
             continue
         plays = c.audio is not None and c.audio[0].startswith(tuple(audio._TILE_PREFIX.values()))
@@ -7862,7 +7862,7 @@ def test_caption_widened_commas_tile_keeps_its_fold_toggle_on_the_panel_edge():
     narrow = {b.id: b for b in _with(names=False).blocks}
     cells = {c.id: c for c in _with(names=True).cells}
     panel = blocks["block:vector:commas"]
-    assert panel.w > narrow["block:vector:commas"].w           # the caption really did widen it
+    assert panel.width > narrow["block:vector:commas"].width           # the caption really did widen it
     fold = cells["toggle:tile:vectors:commas"]
     assert fold.x == panel.x + spreadsheet_constants.TOGGLE_INSET     # the fold hugs the panel's left edge
 
@@ -7916,7 +7916,7 @@ def _diff_layout(*cells):
 
 
 def _diff_cell(cid, text, **kw):
-    return CellBox(id=cid, x=0, y=0, w=10, h=10, kind="tuningvalue", text=text, **kw)
+    return CellBox(id=cid, x=0, y=0, width=10, height=10, kind="tuningvalue", text=text, **kw)
 
 
 def test_changed_cell_ids_is_empty_for_an_unchanged_layout():
@@ -8112,8 +8112,8 @@ def test_every_derived_matrix_row_greens_its_draft_column():
         for row_key in VALUE_ROWS:
             if row_key not in b.geometry.rows or (row_key, lst) not in b.geometry.declared_tiles:
                 continue
-            top, h = b.geometry.rows[row_key].tile_top, b.geometry.rows[row_key].tile_h
-            hit = any(abs(c.x - dx) < 7 and top - 1 <= c.y <= top + h + 1 and c.kind not in STRUCTURAL
+            top, height = b.geometry.rows[row_key].tile_top, b.geometry.rows[row_key].tile_h
+            hit = any(abs(c.x - dx) < 7 and top - 1 <= c.y <= top + height + 1 and c.kind not in STRUCTURAL
                       for c in lay.cells)
             assert hit, f"first {lst} draft: row {row_key!r} is blank at the draft column (the bug)"
             checked += 1
@@ -8161,8 +8161,8 @@ def test_nonstandard_domain_superspace_columns_size_to_rL_dL():
     # the header spans the column; the column's content footprint matches
     # (no caption widening here — Phase 3 declares no captioned tiles in the new columns
     # so the natural width drives the footprint)
-    assert cells["header:superspace_generators"].w == expected_superspace_generators_w
-    assert cells["header:superspace_primes"].w == expected_superspace_primes_w
+    assert cells["header:superspace_generators"].width == expected_superspace_generators_w
+    assert cells["header:superspace_primes"].width == expected_superspace_primes_w
 
 
 def test_nonstandard_domain_off_omits_the_superspace_columns():
@@ -8228,8 +8228,8 @@ def test_nonstandard_domain_superspace_rows_size_to_dL_rL():
     cells = {c.id: c for c in _barbados_superspace().cells}
     # BARBADOS: dL = 4, rL = 3
     dL, rL = 4, 3
-    assert cells["label:superspace_vectors"].h == dL * spreadsheet_constants.ROW_H
-    assert cells["label:superspace_mapping"].h == rL * spreadsheet_constants.ROW_H
+    assert cells["label:superspace_vectors"].height == dL * spreadsheet_constants.ROW_H
+    assert cells["label:superspace_mapping"].height == rL * spreadsheet_constants.ROW_H
 
 
 def test_nonstandard_domain_off_omits_the_superspace_rows():
@@ -8285,7 +8285,7 @@ def test_superspace_vectors_spine_is_centred_in_the_quantities_column():
     # the domain basis directly above
     cells = {c.id: c for c in _barbados_superspace().cells}
     assert cells["superspace_basis:0"].x == cells["basis:0"].x      # both spine-centred
-    assert cells["superspace_basis:0"].w == cells["basis:0"].w == spreadsheet_constants.COL_W
+    assert cells["superspace_basis:0"].width == cells["basis:0"].width == spreadsheet_constants.COL_W
 
 
 def test_nonstandard_domain_off_omits_the_spine_basis_index():
@@ -8353,7 +8353,7 @@ def test_superspace_projection_row_renders_PL_over_the_superspace_primes():
     cells = {c.id: c for c in _barbados_projection().cells}
     assert cells["label:superspace_projection"].text == "superspace\nprojection"
     # dL = 4 rows tall (one covector per superspace prime)
-    assert cells["label:superspace_projection"].h == 4 * spreadsheet_constants.ROW_H
+    assert cells["label:superspace_projection"].height == 4 * spreadsheet_constants.ROW_H
     # ordered: superspace_mapping < superspace_projection < projection
     assert cells["label:superspace_mapping"].y < cells["label:superspace_projection"].y < cells["label:projection"].y
     # the full 4 × 4 P_L grid renders over the superspace_primes column
@@ -8452,7 +8452,7 @@ def test_superspace_projection_quantities_spine_lists_the_superspace_primes():
     assert [cells[f"superspace_projection_basis:{p}"].text for p in range(4)] == [cells[f"superspace_basis:{p}"].text for p in range(4)]
     # spine-centred in the quantities column, sharing its x with the superspace mapping spine above
     assert cells["superspace_projection_basis:0"].x == cells["superspace_basis:0"].x
-    assert cells["superspace_projection_basis:0"].w == spreadsheet_constants.COL_W
+    assert cells["superspace_projection_basis:0"].width == spreadsheet_constants.COL_W
 
 
 def test_superspace_projection_units_column_reads_superspace_prime():
@@ -9383,8 +9383,8 @@ def test_superspace_mapping_row_labels_clear_the_bracket_and_cells():
     label = cells["matlabel:row:superspace_mapping:superspace_primes:0"]
     bracket = cells["bracket:superspace_map:0:l"]
     cell0 = cells["cell:superspace_mapping:superspace_primes:0:0"]
-    assert label.x + label.w <= bracket.x        # label ends at/before the ⟨ starts
-    assert bracket.x + bracket.w <= cell0.x      # ⟨ ends at/before the first cell
+    assert label.x + label.width <= bracket.x        # label ends at/before the ⟨ starts
+    assert bracket.x + bracket.width <= cell0.x      # ⟨ ends at/before the first cell
 
 
 def test_superspace_matrix_plain_text_stays_within_its_tile():
@@ -9393,7 +9393,7 @@ def test_superspace_matrix_plain_text_stays_within_its_tile():
     cells = {c.id: c for c in _barbados_superspace(symbols=True, plain_text_values=True, identity_objects=True).cells}
     plain_text = cells["plain_text:superspace_mapping:superspace_primes"]
     next_label = cells["label:tuning"]
-    assert plain_text.y + plain_text.h <= next_label.y     # the plain text clears the next row's band
+    assert plain_text.y + plain_text.height <= next_label.y     # the plain text clears the next row's band
 
 
 def test_nonstandard_domain_uses_b_throughout_the_basis_column_not_just_units():
@@ -9506,7 +9506,7 @@ def test_read_only_target_vectors_stay_full_width():
     cells = {c.id: c for c in _with(scheme="minimax-lils-S").cells}
     real = cells["cell:vector:targets:0:0"]
     assert real.kind == "vector"            # read-only (not the editable targetcell)
-    assert real.w == spreadsheet_constants.COL_W   # full width, no inset
+    assert real.width == spreadsheet_constants.COL_W   # full width, no inset
 # ── chapter-9 domain basis elements become editable with the nonstandard-domain box ──────────
 
 def _nonstd_on(state):
@@ -9638,7 +9638,7 @@ def test_projection_on_adds_a_dxd_matrix_between_mapping_and_tuning():
     assert cells["label:mapping"].y < cells["label:projection"].y < cells["label:tuning"].y
     # square grid cells stacked one ROW_H apart, like the other matrices
     c00 = cells["cell:projection:0:0"]
-    assert c00.w == c00.h == spreadsheet_constants.ROW_H
+    assert c00.width == c00.height == spreadsheet_constants.ROW_H
     assert cells["cell:projection:1:0"].y == c00.y + spreadsheet_constants.ROW_H
 
 
@@ -9670,8 +9670,8 @@ def test_projection_box_is_framed_like_a_matrix_of_maps():
     assert "ebktop:projection" in cells and "ebkangle:projection" in cells and "ebkbrace:projection" not in cells
     top, brace = cells["ebktop:projection"], cells["ebkangle:projection"]
     first, last = cells["cell:projection:0:0"], cells["cell:projection:2:0"]
-    assert top.y + top.h <= first.y       # the top bracket sits above the matrix
-    assert brace.y >= last.y + last.h     # the angle close sits below it
+    assert top.y + top.height <= first.y       # the top bracket sits above the matrix
+    assert brace.y >= last.y + last.height     # the angle close sits below it
 
 
 def test_projection_row_fans_a_gridline_per_subrow():
@@ -9791,7 +9791,7 @@ def test_projection_targets_tile_shows_P_times_T():
             vector = cells[f"cell:vector:targets:{j}:{p}"]
             assert cell.text == col[p]
             assert cell.kind == "mapped"
-            assert cell.x + cell.w / 2 == vector.x + vector.w / 2  # column-centred on the targets column
+            assert cell.x + cell.width / 2 == vector.x + vector.width / 2  # column-centred on the targets column
             assert cell.y == cells[f"cell:projection:{p}:0"].y     # the projection row's prime rows
 
 
@@ -9952,9 +9952,9 @@ def test_projection_symbol_floor_widens_the_tile_so_the_equivalence_never_wraps(
     from rtt.app.spreadsheet_text import _min_width_for_lines
     cells = {c.id: c for c in _projection_build(("2/1", "5/4"), symbols=True, equivalences=True, names=True).cells}
     sym = cells["symbol:projection:primes"]
-    assert sym.w >= _min_width_for_lines(sym.text, 1, SYMBOL_FONT)   # the cell is wide enough — no wrap
+    assert sym.width >= _min_width_for_lines(sym.text, 1, SYMBOL_FONT)   # the cell is wide enough — no wrap
     left = cells["cell:projection:0:0"].x - sym.x                          # margin from the column edge to the matrix
-    right = (sym.x + sym.w) - (cells["cell:projection:0:2"].x + cells["cell:projection:0:2"].w)
+    right = (sym.x + sym.width) - (cells["cell:projection:0:2"].x + cells["cell:projection:0:2"].width)
     assert abs(left - right) <= 1                                    # the matrix is centred in the widened column
 
 
@@ -9968,7 +9968,7 @@ def test_return_to_scheme_button_is_boxed_above_the_dropdown_with_presets():
     assert sq.y < dropdown.y  # ✕ row above the dropdown
     box = next(b for b in lay.blocks if b.id == "block:preset:projection")
     for cell in (sq, dropdown):
-        assert box.x <= cell.x and cell.y >= box.y and cell.y < box.y + box.h  # both inside the box
+        assert box.x <= cell.x and cell.y >= box.y and cell.y < box.y + box.height  # both inside the box
 
 
 def test_return_to_scheme_button_keeps_its_own_box_without_presets():
@@ -9980,9 +9980,9 @@ def test_return_to_scheme_button_keeps_its_own_box_without_presets():
     sq = cells["scheme:primes"]
     box = next((b for b in lay.blocks if b.id == "block:scheme:primes"), None)
     assert box is not None and getattr(box, "boxed", False)
-    assert box.x <= sq.x and box.y <= sq.y and sq.x + sq.w <= box.x + box.w and sq.y + sq.h <= box.y + box.h
+    assert box.x <= sq.x and box.y <= sq.y and sq.x + sq.width <= box.x + box.width and sq.y + sq.height <= box.y + box.height
     # the ✕ square is centred in the box: equal margin above and below it
-    assert sq.y - box.y == (box.y + box.h) - (sq.y + sq.h)
+    assert sq.y - box.y == (box.y + box.height) - (sq.y + sq.height)
 
 
 def test_generator_embedding_is_a_vector_list_of_generator_kets():
@@ -10032,7 +10032,7 @@ def test_projection_adds_a_scaling_factors_row_over_v():
     assert cells["label:scaling_factors"].y < cells["label:vectors"].y
     # a one-ROW_H scalar list, on the same V sub-axes as the vectors below it
     s0 = cells["cell:scaling:0"]
-    assert s0.h == spreadsheet_constants.ROW_H
+    assert s0.height == spreadsheet_constants.ROW_H
     assert s0.x == cells["cell:comma:0:0"].x
 
 
@@ -10202,7 +10202,7 @@ def test_projection_at_full_rank_keeps_the_nullity_count_in_a_readable_stub():
     assert n_count.text.endswith("= 0")
     cap = cells["caption:counts:commas"]         # …and "nullity" fits on a single line in the stub
     assert cap.text == "nullity"
-    assert spreadsheet_text._wrap_lines("nullity", cap.w) == 1
+    assert spreadsheet_text._wrap_lines("nullity", cap.width) == 1
     # the stub sits LEFT of the bracket; the unchanged count + first U cell sit to its right
     assert n_count.x == cap.x < cells["bracket:vector:commas:l"].x <= cells["cell:unchanged:0:0"].x
     assert cells["count:commas:u"].x == cells["cell:unchanged:0:0"].x   # u tally over U
@@ -10279,8 +10279,8 @@ def test_projection_v_column_counts_both_nullity_and_unchanged():
     # each half is NAMED too, the name centred over the same area as its tally
     assert cells["caption:counts:commas"].text == "nullity"
     assert cells["caption:counts:commas:u"].text == "unchanged interval count"
-    assert (cells["caption:counts:commas"].x, cells["caption:counts:commas"].w) == (cells["count:commas"].x, cells["count:commas"].w)
-    assert (cells["caption:counts:commas:u"].x, cells["caption:counts:commas:u"].w) == (cells["count:commas:u"].x, cells["count:commas:u"].w)
+    assert (cells["caption:counts:commas"].x, cells["caption:counts:commas"].width) == (cells["count:commas"].x, cells["count:commas"].width)
+    assert (cells["caption:counts:commas:u"].x, cells["caption:counts:commas:u"].width) == (cells["count:commas:u"].x, cells["count:commas:u"].width)
 
 
 def test_projected_unrotated_vector_list_tile_is_complete():
@@ -10513,18 +10513,18 @@ def test_comma_add_drop_zone_does_not_occlude_the_unchanged_grips():
     # dead). It now rides the C|U gap (or the nullity stub at full rank), narrowed to that stub, clear of
     # U's grips on their own sub-axes. (End-to-end drag behaviour should be re-checked in a real browser.)
     def overlap(a, b):
-        return max(a.x, b.x) < min(a.x + a.w, b.x + b.w) - 0.01
+        return max(a.x, b.x) < min(a.x + a.width, b.x + b.width) - 0.01
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = {**settings.defaults(), "projection": True, "drag_to_combine": True}
     # n ≥ 1 (meantone, projection on, U held rational): add zone in the gap, left of U's first grip
     on = {c.id: c for c in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
     assert not overlap(on["grip:commas:add"], on["grip:unchanged:0"])
-    assert on["grip:commas:add"].x + on["grip:commas:add"].w <= on["grip:unchanged:0"].x + 0.51
+    assert on["grip:commas:add"].x + on["grip:commas:add"].width <= on["grip:unchanged:0"].x + 0.51
     # full rank (n = 0): the add zone rides the reserved nullity stub, NOT U's first sub-axis where it
     # used to coincide EXACTLY with grip:unchanged:0
     full = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1))), s).cells}
     assert not overlap(full["grip:commas:add"], full["grip:unchanged:0"])
-    assert full["grip:commas:add"].x + full["grip:commas:add"].w <= full["grip:unchanged:0"].x + 0.51
+    assert full["grip:commas:add"].x + full["grip:commas:add"].width <= full["grip:unchanged:0"].x + 0.51
     assert full["comma_plus"].x < full["cell:unchanged:0:0"].x  # the + sits in the stub, left of U
 
 
@@ -10578,12 +10578,12 @@ def test_etpick_rides_the_right_gutter_of_each_mapping_row():
     for i in range(2):  # meantone, rank 2
         ep = cells[f"etpick:{i}"]
         assert ep.kind == "etpick" and ep.gen == i
-        assert ep.w == spreadsheet_constants.COL_W and ep.h == spreadsheet_constants.ROW_H
+        assert ep.width == spreadsheet_constants.COL_W and ep.height == spreadsheet_constants.ROW_H
         assert ep.y == cells[f"cell:mapping:{i}:0"].y   # the picker shares the row
         # it sits to the RIGHT of the row, clearing the closing ] bracket (the analogue of the
         # comma picker below each column; the crowded left — handles, 𝒎ᵢ labels — stays clear)
         close_bracket = cells[f"bracket:map:{i}:r"]
-        assert ep.x >= close_bracket.x + close_bracket.w
+        assert ep.x >= close_bracket.x + close_bracket.width
     # gone without presets
     off = {c.id: c for c in _with(presets=False).cells}
     assert not any(k.startswith("etpick:") for k in off)
@@ -10599,24 +10599,24 @@ def test_et_picker_keeps_the_mapping_matrix_centred_in_its_tile():
     cells = {c.id: c for c in lay.cells}
     tile = {b.id: b for b in lay.blocks}["block:primes"]  # the mapping·primes grey panel (spans the column)
     lb, rb = cells["bracket:map:0:l"], cells["bracket:map:0:r"]
-    m_left, m_right = lb.x, rb.x + rb.w                   # the EBK matrix span (⟨ … ])
-    assert abs((m_left - tile.x) - ((tile.x + tile.w) - m_right)) < 0.51  # equal gutters → centred
+    m_left, m_right = lb.x, rb.x + rb.width                   # the EBK matrix span (⟨ … ])
+    assert abs((m_left - tile.x) - ((tile.x + tile.width) - m_right)) < 0.51  # equal gutters → centred
     # the picker fills that right gutter, past the ], reaching the tile edge — no dead band beyond it
     ep = cells["etpick:0"]
     assert ep.x >= m_right
-    assert abs((ep.x + ep.w) - (tile.x + tile.w - spreadsheet_constants.PAD)) < 0.51
+    assert abs((ep.x + ep.width) - (tile.x + tile.width - spreadsheet_constants.PAD)) < 0.51
     # the left furniture sits in the matching left gutter: the handle outside the row label, the
     # label butting up against the matrix's opening ⟨
     handle, label = cells["map_drag:0"], cells["matlabel:row:mapping:primes:0"]
-    assert tile.x <= handle.x and handle.x + handle.w <= label.x
-    assert abs((label.x + label.w) - m_left) < 0.51
+    assert tile.x <= handle.x and handle.x + handle.width <= label.x
+    assert abs((label.x + label.width) - m_left) < 0.51
 
 
 def test_commapick_rides_below_each_real_comma_column():
     cells = {c.id: c for c in _with(presets=True).cells}
     cp = cells["commapick:0"]  # meantone has one comma
     assert cp.kind == "commapick" and cp.comma == 0
-    assert cp.w == spreadsheet_constants.COL_W and cp.h == spreadsheet_constants.ROW_H
+    assert cp.width == spreadsheet_constants.COL_W and cp.height == spreadsheet_constants.ROW_H
     column_cell = next(c for cid, c in cells.items()
                        if cid.startswith("cell:comma:0:") and c.comma == 0)
     assert cp.x == column_cell.x   # aligned under its column

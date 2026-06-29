@@ -33,10 +33,10 @@ _FILL_CHUNK = 80
 def _initial_viewport() -> tuple[float, float, float, float]:
     spec = os.environ.get("RTT_VIRT_VIEWPORT", "")
     if spec:
-        w, h = (float(n) for n in spec.lower().split("x"))
+        width, height = (float(n) for n in spec.lower().split("x"))
     else:
-        w, h = _VIRT_VIEWPORT0
-    return (0.0, 0.0, w, h)
+        width, height = _VIRT_VIEWPORT0
+    return (0.0, 0.0, width, height)
 
 
 class Renderer:
@@ -106,8 +106,8 @@ class Renderer:
     def apply_view_classes(self):
         _rendering_ops.apply_view_classes(self._editor, self._runtime)
 
-    def _body_visible(self, x, y, w, h, freeze_y) -> bool:
-        return _rect_in_view(x, y, w, h, freeze_y, self._viewport, _VIRT_OVERSCAN)
+    def _body_visible(self, x, y, width, height, freeze_y) -> bool:
+        return _rect_in_view(x, y, width, height, freeze_y, self._viewport, _VIRT_OVERSCAN)
 
     def render(self):
         _rendering_ops.end_stale_gestures(self._gestures)

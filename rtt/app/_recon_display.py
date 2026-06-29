@@ -34,15 +34,23 @@ def build_svgfill(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
 
 
 def update_ebk(rec, cell_box: spreadsheet.CellBox) -> None:
-    if rec.handles(cell_box.id).display.ebk_size != (cell_box.w, cell_box.h, cell_box.pending):
+    if rec.handles(cell_box.id).display.ebk_size != (
+        cell_box.width,
+        cell_box.height,
+        cell_box.pending,
+    ):
         rec.cells[cell_box.id].display.html.set_content(ebk_svg(cell_box))
-        rec.cells[cell_box.id].display.ebk_size = (cell_box.w, cell_box.h, cell_box.pending)
+        rec.cells[cell_box.id].display.ebk_size = (
+            cell_box.width,
+            cell_box.height,
+            cell_box.pending,
+        )
 
 
 def update_chart(rec, cell_box: spreadsheet.CellBox) -> None:
     key = (
-        cell_box.w,
-        cell_box.h,
+        cell_box.width,
+        cell_box.height,
         cell_box.values,
         cell_box.indicator,
         cell_box.indicator_label,
@@ -51,8 +59,8 @@ def update_chart(rec, cell_box: spreadsheet.CellBox) -> None:
     if rec.handles(cell_box.id).display.chart_key != key:
         rec.cells[cell_box.id].display.html.set_content(
             _bar_chart(
-                cell_box.w,
-                cell_box.h,
+                cell_box.width,
+                cell_box.height,
                 cell_box.values,
                 cell_box.indicator,
                 cell_box.indicator_label,
@@ -63,11 +71,11 @@ def update_chart(rec, cell_box: spreadsheet.CellBox) -> None:
 
 
 def update_rangechart(rec, cell_box: spreadsheet.CellBox) -> None:
-    key = (cell_box.w, cell_box.h, cell_box.ranges, cell_box.values, cell_box.decimals)
+    key = (cell_box.width, cell_box.height, cell_box.ranges, cell_box.values, cell_box.decimals)
     if rec.handles(cell_box.id).display.range_key != key:
         rec.cells[cell_box.id].display.html.set_content(
             _range_chart(
-                cell_box.w, cell_box.h, cell_box.ranges, cell_box.values, cell_box.decimals
+                cell_box.width, cell_box.height, cell_box.ranges, cell_box.values, cell_box.decimals
             )
         )
         rec.cells[cell_box.id].display.range_key = key
@@ -100,12 +108,12 @@ def build_units(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
 def update_mathcell(rec, cell_box: spreadsheet.CellBox) -> None:
     if cell_box.kind == "units":
         html = _units_html(cell_box.text)
-        if rec.handles(cell_box.id).display.math_rendered != (html, cell_box.w):
+        if rec.handles(cell_box.id).display.math_rendered != (html, cell_box.width):
             rec.cells[cell_box.id].display.math_cell.set_content(html)
             rec.cells[cell_box.id].display.math_cell.style(
-                f"font-size:{_units_font(cell_box.text, cell_box.w, _UNITS_MAX_FONT):.2f}px"
+                f"font-size:{_units_font(cell_box.text, cell_box.width, _UNITS_MAX_FONT):.2f}px"
             )
-            rec.cells[cell_box.id].display.math_rendered = (html, cell_box.w)
+            rec.cells[cell_box.id].display.math_rendered = (html, cell_box.width)
         return
     html = _math_html(cell_box.text)
     font = None
@@ -115,9 +123,9 @@ def update_mathcell(rec, cell_box: spreadsheet.CellBox) -> None:
         and "‖" not in cell_box.text
         and " " not in cell_box.text
     ):
-        w = spreadsheet_text._min_width_for_lines(cell_box.text, 1, _MATLABEL_FONT)
-        if w > cell_box.w - 2:
-            font = max(_MATLABEL_MIN_FONT, _MATLABEL_FONT * (cell_box.w - 2) / w)
+        width = spreadsheet_text._min_width_for_lines(cell_box.text, 1, _MATLABEL_FONT)
+        if width > cell_box.width - 2:
+            font = max(_MATLABEL_MIN_FONT, _MATLABEL_FONT * (cell_box.width - 2) / width)
     if rec.handles(cell_box.id).display.math_rendered != (html, font):
         rec.cells[cell_box.id].display.math_cell.set_content(html)
         if font is not None:
@@ -185,7 +193,7 @@ def update_plain_text_pending(rec, cell_box: spreadsheet.CellBox) -> None:
             f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}"
         )
         rec.cells[cell_box.id].display.html.style(
-            f"font-size:{_plain_text_font(prefix + draft + suffix, cell_box.w)}px"
+            f"font-size:{_plain_text_font(prefix + draft + suffix, cell_box.width)}px"
         )
         return
     if cell_box.id == "plain_text:vectors:targets":
@@ -203,7 +211,7 @@ def update_plain_text_pending(rec, cell_box: spreadsheet.CellBox) -> None:
         f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}"
     )
     rec.cells[cell_box.id].display.html.style(
-        f"font-size:{_plain_text_font(prefix + draft + suffix, cell_box.w)}px"
+        f"font-size:{_plain_text_font(prefix + draft + suffix, cell_box.width)}px"
     )
 
 
@@ -212,6 +220,8 @@ def build_mathexpr(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
 
 
 def update_mathexpr(rec, cell_box: spreadsheet.CellBox) -> None:
-    if rec.handles(cell_box.id).display.expr_state != (cell_box.text, cell_box.w):
-        rec.cells[cell_box.id].display.expr.set_content(_mathexpr_html(cell_box.text, cell_box.w))
-        rec.cells[cell_box.id].display.expr_state = (cell_box.text, cell_box.w)
+    if rec.handles(cell_box.id).display.expr_state != (cell_box.text, cell_box.width):
+        rec.cells[cell_box.id].display.expr.set_content(
+            _mathexpr_html(cell_box.text, cell_box.width)
+        )
+        rec.cells[cell_box.id].display.expr_state = (cell_box.text, cell_box.width)

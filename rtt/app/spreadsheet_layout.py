@@ -178,8 +178,8 @@ def _define_row_bands(geometry, resolved):
         ("damage", ROW_H, resolved.flags.tuning_tiles, True, "damage"),
     )
     row_bands = tuple(
-        (key, h, present, collapsible, terminology.substitute(label, resolved.flags.terminology_mode))
-        for key, h, present, collapsible, label in row_bands
+        (key, height, present, collapsible, terminology.substitute(label, resolved.flags.terminology_mode))
+        for key, height, present, collapsible, label in row_bands
     )
     present_caption_rows = frozenset(
         key for key, _h, present, _c, _l in row_bands if present and key in BANDS["caption"].rows)
@@ -294,7 +294,7 @@ def _compute_row_band(geometry, resolved, context, key, natural, collapsible, la
     tile_h = (head + top_frame + chart_band + row_h + bot_frame + comma_picker + symbol + caption + units
               + preset + plain_text + form_controls + scheme_button + tile_extra.get(key, 0) + foot)
     return RowBand(
-        y=y + head + top_frame + chart_band, h=row_h, label=label, collapsible=collapsible,
+        y=y + head + top_frame + chart_band, height=row_h, label=label, collapsible=collapsible,
         tile_h=tile_h, tile_top=y, frame=bot_frame, symbol=symbol, caption=caption, units=units, plain_text=plain_text,
         preset=preset, scheme_button=scheme_button, num_subrows=round(natural / ROW_H), comma_picker=comma_picker,
         chart_top=chart_top, interval_handle_top=interval_handle_top, matrix_label_top=matrix_label_top)

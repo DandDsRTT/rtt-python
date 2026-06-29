@@ -134,7 +134,7 @@ def _build_preset_target(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
                 value=family,
                 on_change=lambda _e: rec._cb.on_target_change(),
             )
-            .props(_select_props(cell_box.w - 30))
+            .props(_select_props(cell_box.width - 30))
             .classes("rtt-preset")
         )
     _set_offlist_prompt(sel, family)
@@ -175,7 +175,7 @@ def _build_preset_temperament(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
             is_divider=presets.is_divider,
             on_change=lambda e: rec._cb.on_preset(cell_box.id, e.value),
         )
-        .props(_select_props(cell_box.w))
+        .props(_select_props(cell_box.width))
         .classes("rtt-preset")
     )
     _set_offlist_prompt(sel, value)
@@ -205,7 +205,7 @@ def _scheme_options(rec, name: str) -> tuple[list, object, str]:
 def _build_scheme_select(rec, cell_box, wrap, options, value, prompt) -> None:
     sel = (
         ui.select(options, value=value, on_change=lambda e: rec._cb.on_preset(cell_box.id, e.value))
-        .props(_select_props(cell_box.w))
+        .props(_select_props(cell_box.width))
         .classes("rtt-preset")
     )
     _set_offlist_prompt(sel, value, prompt)
@@ -353,7 +353,7 @@ def build_control_select(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
             value=cell_box.text or None,
             on_change=lambda e, cid=cell_box.id: rec._cb.on_control_select(cid, e.value),
         )
-        .props(_select_props(cell_box.w))
+        .props(_select_props(cell_box.width))
         .classes("rtt-preset")
     )
     _arm_option_hover(rec, sel, wrap, cell_box.id)
@@ -407,7 +407,7 @@ def build_formchooser(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
             value=cell_box.text or "",
             on_change=lambda e, c=cell_box.id: rec._cb.on_form_choose(c, e.value),
         )
-        .props(_select_props(cell_box.w))
+        .props(_select_props(cell_box.width))
         .classes("rtt-preset")
     )
     _arm_option_hover(rec, sel, wrap, cell_box.id)

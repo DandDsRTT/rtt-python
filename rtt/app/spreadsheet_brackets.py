@@ -48,7 +48,7 @@ def emit_ebk_frames_and_marks(resolved, geometry, context, accum) -> EmitResult:
     return EmitResult(cells=tuple(cells))
 
 
-def bracket(cells, resolved, geometry, bid: str, row_key: str, column_key: str, y, h, *, fit=False, span=None,
+def bracket(cells, resolved, geometry, bid: str, row_key: str, column_key: str, y, height, *, fit=False, span=None,
             pending=False, stacked=False) -> None:
     if not resolved.flags.ebk:
         if stacked:
@@ -59,12 +59,12 @@ def bracket(cells, resolved, geometry, bid: str, row_key: str, column_key: str, 
         glyphs = (c.inner_open, c.inner_close) if stacked else (c.outer_open, c.outer_close)
     matrix_x, matrix_width = span if span else query.matrix_span(geometry, resolved, column_key)
     if fit and not resolved.flags.ebk:
-        bracket_y, bracket_height = y, h
+        bracket_y, bracket_height = y, height
     elif fit:
         bracket_y = y - (FRAME_H + FRAME_GAP) - FRAME_OVERHANG
-        bracket_height = h + (FRAME_H + FRAME_GAP) + (FRAME_GAP + BRACE_H) + 2 * FRAME_OVERHANG
+        bracket_height = height + (FRAME_H + FRAME_GAP) + (FRAME_GAP + BRACE_H) + 2 * FRAME_OVERHANG
     else:
-        bracket_y, bracket_height = y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H
+        bracket_y, bracket_height = y + (height - VAL_BRACKET_H) / 2, VAL_BRACKET_H
     cells.append(CellBox(f"bracket:{bid}:l", matrix_x, bracket_y, BRACKET_W, bracket_height, "bracket", text=glyphs[0], pending=pending))
     cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_W, bracket_y, BRACKET_W, bracket_height, "bracket", text=glyphs[1], pending=pending))
 
@@ -84,9 +84,9 @@ def matrix_frame(cells, resolved, geometry, context, row_key: str, column_key: s
     foot = _ebk_foot(resolved, row_key, column_key, outer=True)
     matrix_x, matrix_width = span if span else query.matrix_span(geometry, resolved, column_key)
     if not resolved.flags.ebk:
-        y, h = geometry.rows[row_key].y, geometry.rows[row_key].h
-        cells.append(CellBox(f"bracket:{bid}:l", matrix_x, y, BRACKET_W, h, "bracket", text="["))
-        cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_W, y, BRACKET_W, h, "bracket", text="]"))
+        y, height = geometry.rows[row_key].y, geometry.rows[row_key].height
+        cells.append(CellBox(f"bracket:{bid}:l", matrix_x, y, BRACKET_W, height, "bracket", text="["))
+        cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_W, y, BRACKET_W, height, "bracket", text="]"))
         return
     cells.append(CellBox(f"ebktop:{bid}", matrix_x, query.frame_top_y(geometry, row_key), matrix_width, FRAME_H, "ebktop"))
     cells.append(CellBox(f"{foot}:{bid}", matrix_x, query.frame_brace_y(geometry, row_key), matrix_width, BRACE_H, foot))
@@ -133,7 +133,7 @@ def v_split_bars(cells, resolved, geometry, context, accum) -> None:
     for cell in accum:
         if u_left - 0.5 <= cell.x < u_right:
             for row_key, band in geometry.rows.items():
-                if band.y <= cell.y < band.y + band.h:
+                if band.y <= cell.y < band.y + band.height:
                     rows_with_u.add(row_key)
                     break
     for row_key in rows_with_u:

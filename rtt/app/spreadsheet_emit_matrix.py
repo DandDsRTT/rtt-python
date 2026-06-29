@@ -50,10 +50,10 @@ def emit_headers(resolved, geometry, context) -> EmitResult:
         if geometry.size_factor or resolved.scalars.prescaler_is_matrix:
             label = _pretransform_label(label)
             label = label.replace(" pretransforming", chr(160) + "pre-" + chr(10) + "transforming")
-        cells.append(CellBox(f"label:{key}", 0, geometry.rows[key].y, LABEL_W, geometry.rows[key].h, "rowlabel", text=label))
+        cells.append(CellBox(f"label:{key}", 0, geometry.rows[key].y, LABEL_W, geometry.rows[key].height, "rowlabel", text=label))
         if geometry.rows[key].collapsible:
             glyph = _fold_glyph(f"row:{key}" in context.collapsed)
-            ty = geometry.rows[key].y + (geometry.rows[key].h - TOGGLE) / 2
+            ty = geometry.rows[key].y + (geometry.rows[key].height - TOGGLE) / 2
             cells.append(CellBox(f"toggle:row:{key}", geometry.node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
     foldable = _foldable_ids(cells)
     all_collapsed = bool(foldable) and foldable <= context.collapsed
