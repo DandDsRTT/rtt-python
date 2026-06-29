@@ -48,8 +48,6 @@ CLOSED_FORM_CASES = [
     (MEANTONE_5, BASIS_5, "held-octave miniRMS-U"),
     (MEANTONE_5, BASIS_5, "{2, 3/2} miniRMS-U"),
     (MEANTONE_5, BASIS_5, "{2, 3/2, 5/4} miniRMS-U"),
-    # held AND targeted at once: the octave is pinned pure while a finite target set is
-    # least-squares-fit in the held interval's null space (the mixed closed-form branch)
     (MEANTONE_5, BASIS_5, "held-octave {5/4, 3/2} miniRMS-U"),
     (MEANTONE_7, BASIS_7, "miniRMS-U"),
     (MEANTONE_7, BASIS_7, "held-octave miniRMS-U"),
@@ -58,33 +56,6 @@ CLOSED_FORM_CASES = [
     (ET12_5, BASIS_5, "miniRMS-U"),
     (ET12_5, BASIS_5, "held-octave miniRMS-U"),
 ]
-
-
-def test_closed_form_generators_equal_numeric_optimizer():
-    for mapping, basis, name in CLOSED_FORM_CASES:
-        t = Temperament(mapping, Variance.ROW, basis)
-        numeric = optimize_generator_tuning_map(t, resolve_tuning_scheme(name))
-        symbolic = _symbolic_generators(t, name)
-        assert len(symbolic) == len(numeric)
-        for s, n in zip(symbolic, numeric):
-            assert abs(s - n) < 1e-9, (name, s, n)
-
-
-def test_closed_form_tuning_map_equals_numeric_optimizer():
-    for mapping, basis, name in CLOSED_FORM_CASES:
-        t = Temperament(mapping, Variance.ROW, basis)
-        numeric = optimize_tuning_map(t, resolve_tuning_scheme(name))
-        symbolic = _symbolic_tuning(t, name)
-        for s, n in zip(symbolic, numeric):
-            assert abs(s - n) < 1e-9, (name, s, n)
-
-
-def test_closed_form_operator_is_exactly_rational():
-    for mapping, basis, name in CLOSED_FORM_CASES:
-        t = Temperament(mapping, Variance.ROW, basis)
-        operator = closed_form_generator_operator(t, name)
-        assert operator is not None
-        assert _is_rational_operator(operator)
 
 
 NO_CLOSED_FORM_CASES = [
@@ -97,35 +68,53 @@ NO_CLOSED_FORM_CASES = [
 ]
 
 
-def test_no_closed_form_for_minimax_weighted_and_destretched():
-    t = Temperament(MEANTONE_5, Variance.ROW, BASIS_5)
-    for name in NO_CLOSED_FORM_CASES:
-        assert closed_form_generator_operator(t, name) is None, name
+class TestSymbolicTuning:
+    def test_closed_form_generators_equal_numeric_optimizer(self):
+        for mapping, basis, name in CLOSED_FORM_CASES:
+            t = Temperament(mapping, Variance.ROW, basis)
+            numeric = optimize_generator_tuning_map(t, resolve_tuning_scheme(name))
+            symbolic = _symbolic_generators(t, name)
+            assert len(symbolic) == len(numeric)
+            for s, n in zip(symbolic, numeric):
+                assert abs(s - n) < 1e-9, (name, s, n)
 
+    def test_closed_form_tuning_map_equals_numeric_optimizer(self):
+        for mapping, basis, name in CLOSED_FORM_CASES:
+            t = Temperament(mapping, Variance.ROW, basis)
+            numeric = optimize_tuning_map(t, resolve_tuning_scheme(name))
+            symbolic = _symbolic_tuning(t, name)
+            for s, n in zip(symbolic, numeric):
+                assert abs(s - n) < 1e-9, (name, s, n)
 
-def test_no_closed_form_for_nonprime_domain():
-    # a non-prime domain element (here 9 = 3²) breaks the prime-power-product form, so no
-    # tidy closed form — even though the optimum is still an exact rational solution
-    t = Temperament(MEANTONE_5, Variance.ROW, ("2", "9", "5"))
-    assert closed_form_generator_operator(t, "miniRMS-U") is None
-    assert not has_rational_closed_form(resolve_tuning_scheme("miniRMS-U"), t)
+    def test_closed_form_operator_is_exactly_rational(self):
+        for mapping, basis, name in CLOSED_FORM_CASES:
+            t = Temperament(mapping, Variance.ROW, basis)
+            operator = closed_form_generator_operator(t, name)
+            assert operator is not None
+            assert _is_rational_operator(operator)
 
+    def test_no_closed_form_for_minimax_weighted_and_destretched(self):
+        t = Temperament(MEANTONE_5, Variance.ROW, BASIS_5)
+        for name in NO_CLOSED_FORM_CASES:
+            assert closed_form_generator_operator(t, name) is None, name
 
-def test_closed_form_for_non_consecutive_prime_domain():
-    # a prime-only basis that skips a prime (2.3.7, no 5) still yields an exact prime-power
-    # closed form — this is what the superspace tuning rows rely on (their primes can skip)
-    t = Temperament(((1, 1, 0), (0, 1, 4)), Variance.ROW, ("2", "3", "7"))
-    operator = closed_form_generator_operator(t, "miniRMS-U")
-    assert operator is not None and _is_rational_operator(operator)
-    primes = [int(p) for p in get_domain_basis(t)]
-    just = sp.Matrix([[1200 * sp.log(p, 2) for p in primes]])
-    symbolic = [float(sp.N((just * operator)[0, k])) for k in range(operator.cols)]
-    numeric = optimize_generator_tuning_map(t, resolve_tuning_scheme("miniRMS-U"))
-    for s, n in zip(symbolic, numeric):
-        assert abs(s - n) < 1e-9
+    def test_no_closed_form_for_nonprime_domain(self):
+        t = Temperament(MEANTONE_5, Variance.ROW, ("2", "9", "5"))
+        assert closed_form_generator_operator(t, "miniRMS-U") is None
+        assert not has_rational_closed_form(resolve_tuning_scheme("miniRMS-U"), t)
 
+    def test_closed_form_for_non_consecutive_prime_domain(self):
+        t = Temperament(((1, 1, 0), (0, 1, 4)), Variance.ROW, ("2", "3", "7"))
+        operator = closed_form_generator_operator(t, "miniRMS-U")
+        assert operator is not None and _is_rational_operator(operator)
+        primes = [int(p) for p in get_domain_basis(t)]
+        just = sp.Matrix([[1200 * sp.log(p, 2) for p in primes]])
+        symbolic = [float(sp.N((just * operator)[0, k])) for k in range(operator.cols)]
+        numeric = optimize_generator_tuning_map(t, resolve_tuning_scheme("miniRMS-U"))
+        for s, n in zip(symbolic, numeric):
+            assert abs(s - n) < 1e-9
 
-def test_held_octave_makes_octave_pure():
-    t = Temperament(MEANTONE_5, Variance.ROW, BASIS_5)
-    tuning = _symbolic_tuning(t, "held-octave miniRMS-U")
-    assert abs(tuning[0] - 1200.0) < 1e-9
+    def test_held_octave_makes_octave_pure(self):
+        t = Temperament(MEANTONE_5, Variance.ROW, BASIS_5)
+        tuning = _symbolic_tuning(t, "held-octave miniRMS-U")
+        assert abs(tuning[0] - 1200.0) < 1e-9

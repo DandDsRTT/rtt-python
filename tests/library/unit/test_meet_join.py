@@ -37,7 +37,6 @@ SENSAMAGIC_C11 = (0, -5, 1, 2, 0)
 WERCKISMA11 = (-3, 2, -1, 2, -1)
 VALINORSMA11 = (4, 0, -2, -1, 1)
 
-# (comma basis, canonical mapping) dual pairs
 meantone_m11 = Temperament(((1, 0, -4, -13, -25), (0, 1, 4, 10, 18)), ROW)
 meantone_c11 = Temperament((MEANTONE_C11, STARLING_C11, MOTHWELLSMA11), COL)
 meanpop_m11 = Temperament(((1, 0, -4, -13, 24), (0, 1, 4, 10, -13)), ROW)
@@ -101,11 +100,6 @@ DUAL_PAIRS = [
 ]
 
 
-@pytest.mark.parametrize("comma_basis, mapping", DUAL_PAIRS)
-def test_dual_of_meet_join_temperaments(comma_basis, mapping):
-    assert dual(comma_basis) == mapping
-
-
 MERGE_CASES = [
     (comma_merge, (meantone_c11, meanpop_c11), et31_c11),
     (
@@ -131,12 +125,6 @@ MERGE_CASES = [
 ]
 
 
-@pytest.mark.parametrize("merge, factors, expected", MERGE_CASES)
-def test_meet_join_merges(merge, factors, expected):
-    assert merge(*factors) == expected
-
-
-# The same examples as multivectors (the EA progressive product = join/meet via duals).
 _mm = matrix_to_multivector
 EA_PRODUCT_CASES = [
     (_mm(meantone_m11), _mm(meanpop_m11), Multivector((0, 0, 0, 0, 0), 4, ROW)),
@@ -158,11 +146,6 @@ EA_PRODUCT_CASES = [
 ]
 
 
-@pytest.mark.parametrize("u1, u2, expected", EA_PRODUCT_CASES)
-def test_ea_meet_join_products(u1, u2, expected):
-    assert progressive_product(u1, u2) == expected
-
-
 EA_PRODUCT_ERRORS = [
     (_mm(meantone_c11), _mm(meanpop_c11)),
     (_mm(meantone_c11), _mm(porcupine_c11)),
@@ -172,14 +155,26 @@ EA_PRODUCT_ERRORS = [
 ]
 
 
-@pytest.mark.parametrize("u1, u2", EA_PRODUCT_ERRORS)
-def test_ea_meet_join_product_errors(u1, u2):
-    with pytest.raises(ValueError):
-        progressive_product(u1, u2)
+class TestMeetJoin:
+    @pytest.mark.parametrize("comma_basis, mapping", DUAL_PAIRS)
+    def test_dual_of_meet_join_temperaments(self, comma_basis, mapping):
+        assert dual(comma_basis) == mapping
 
+    @pytest.mark.parametrize("merge, factors, expected", MERGE_CASES)
+    def test_meet_join_merges(self, merge, factors, expected):
+        assert merge(*factors) == expected
 
-def test_dual_with_nonstandard_basis():
-    m = Temperament(((1, 1, 3), (0, 3, -1)), ROW, (2, 3, 7))
-    c = Temperament(((-10, 1, 3),), COL, (2, 3, 7))
-    assert dual(m) == canonical_form(c)
-    assert dual(c) == canonical_form(m)
+    @pytest.mark.parametrize("u1, u2, expected", EA_PRODUCT_CASES)
+    def test_ea_meet_join_products(self, u1, u2, expected):
+        assert progressive_product(u1, u2) == expected
+
+    @pytest.mark.parametrize("u1, u2", EA_PRODUCT_ERRORS)
+    def test_ea_meet_join_product_errors(self, u1, u2):
+        with pytest.raises(ValueError):
+            progressive_product(u1, u2)
+
+    def test_dual_with_nonstandard_basis(self):
+        m = Temperament(((1, 1, 3), (0, 3, -1)), ROW, (2, 3, 7))
+        c = Temperament(((-10, 1, 3),), COL, (2, 3, 7))
+        assert dual(m) == canonical_form(c)
+        assert dual(c) == canonical_form(m)

@@ -19,7 +19,7 @@ from rtt.library.tuning_scheme_names import (
 )
 
 TOL = 1e-3
-TOL_MINIMAX_S = 1e-2  # the library uses accuracy=2 for the minimax-S generator forms
+TOL_MINIMAX_S = 1e-2
 
 TEMPERAMENTS = {
     "meantone": "[⟨1 1 0] ⟨0 1 4]}",
@@ -42,7 +42,6 @@ TEMPERAMENTS = {
 }
 
 
-# minimax-S generator tuning maps (the second generator written as in the source).
 MINIMAX_S_GENERATORS = {
     "meantone": (1201.70, 1201.70 - 504.13),
     "blackwood": (238.87, 238.86 * 11.0003 + 158.78),
@@ -63,13 +62,6 @@ MINIMAX_S_GENERATORS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", MINIMAX_S_GENERATORS.items())
-def test_minimax_s(name, expected):
-    t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_generator_tuning_map(t, "minimax-S") == pytest.approx(expected, abs=TOL_MINIMAX_S)
-
-
-# minimax-ES tuning maps.
 MINIMAX_ES_TUNING_MAPS = {
     "meantone": (1201.397, 1898.446, 2788.196),
     "blackwood": (1194.308, 1910.892, 2786.314),
@@ -91,13 +83,6 @@ MINIMAX_ES_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", MINIMAX_ES_TUNING_MAPS.items())
-def test_minimax_es(name, expected):
-    t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_tuning_map(t, "minimax-ES") == pytest.approx(expected, abs=TOL)
-
-
-# held-octave minimax-ES generator tuning maps.
 HELD_OCTAVE_MINIMAX_ES_GENERATORS = {
     "meantone": (1200.000, 697.214),
     "blackwood": (240.000, 1200.000 * 2 + 386.314),
@@ -119,15 +104,6 @@ HELD_OCTAVE_MINIMAX_ES_GENERATORS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", HELD_OCTAVE_MINIMAX_ES_GENERATORS.items())
-def test_held_octave_minimax_es(name, expected):
-    t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_generator_tuning_map(t, "held-octave minimax-ES") == pytest.approx(
-        expected, abs=TOL
-    )
-
-
-# destretched-octave minimax-ES tuning maps (tests.m 2998-3014).
 DESTRETCHED_OCTAVE_MINIMAX_ES_TUNING_MAPS = {
     "meantone": (1200.000, 1896.239, 2784.955),
     "blackwood": (1200.000, 1920.000, 2799.594),
@@ -149,13 +125,6 @@ DESTRETCHED_OCTAVE_MINIMAX_ES_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", DESTRETCHED_OCTAVE_MINIMAX_ES_TUNING_MAPS.items())
-def test_destretched_octave_minimax_es(name, expected):
-    t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_tuning_map(t, "destretched-octave minimax-ES") == pytest.approx(expected, abs=TOL)
-
-
-# destretched-octave minimax-S (tests.m 3024-3035); some use looser accuracy.
 DESTRETCHED_OCTAVE_MINIMAX_S_CASES = [
     ("[⟨1 -1 0 1] ⟨0 10 9 7]}", (1200.000, 310.196), TOL),
     ("[⟨1 2 6 2 10] ⟨0 -1 -9 2 -16]}", (1200.0, 490.4), 0.1),
@@ -164,61 +133,12 @@ DESTRETCHED_OCTAVE_MINIMAX_S_CASES = [
     ("[⟨1 1 2 1] ⟨0 1 0 2] ⟨0 0 1 2]}", (1200.0, 700.391, 384.022), TOL),
     ("[⟨1 1 0] ⟨0 1 4]}", (1200.0, 696.58), 0.01),
     ("[⟨1 1 0 -3] ⟨0 1 4 10]}", (1200.0, 696.58), 0.01),
-    # [7j]: the library's value is corrected (its 706.843 has more damage than this 709.184).
     ("[⟨2 2 7 8 14 5] ⟨0 1 -2 -2 -6 2]}", (600.000, 709.184), TOL),
 ]
 
 
-@pytest.mark.parametrize("ebk, expected, tol", DESTRETCHED_OCTAVE_MINIMAX_S_CASES)
-def test_destretched_octave_minimax_s(ebk, expected, tol):
-    t = parse_temperament_data(ebk)
-    assert optimize_generator_tuning_map(t, "destretched-octave minimax-S") == pytest.approx(expected, abs=tol)
-
-
-def test_destretched_octave_minimax_s_locked_primes_tuning_map():
-    # tests.m 3027 (accuracy 1): an 11-limit destretched-octave minimax-S whose minimax-S has a
-    # pair of locked primes.
-    t = parse_temperament_data("[⟨1 3 0 0 3] ⟨0 -3 5 6 1]}")
-    assert optimize_tuning_map(t, "destretched-octave minimax-S") == pytest.approx(
-        (1200.00, 1915.81, 2806.98, 3368.38, 4161.40), abs=0.1
-    )
-
-
-def test_all_interval_explicit_specs():
-    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
-    assert optimize_generator_tuning_map(
-        meantone,
-        TuningSchemeSpec(optimization_power=inf, target_intervals="{}", damage_weight_slope="simplicityWeight"),
-    ) == pytest.approx((1201.699, 697.564), abs=TOL)
-    assert optimize_generator_tuning_map(
-        meantone,
-        TuningSchemeSpec(
-            optimization_power=inf,
-            target_intervals="{}",
-            damage_weight_slope="simplicityWeight",
-            complexity_norm_power=2,
-        ),
-    ) == pytest.approx((1201.397, 697.049), abs=TOL)
-    pajara = parse_temperament_data(TEMPERAMENTS["pajara"])
-    assert optimize_generator_tuning_map(pajara, "minimax-S") == pytest.approx(
-        (598.447, 106.567), abs=TOL
-    )
-    assert optimize_generator_tuning_map(pajara, "minimax-ES") == pytest.approx(
-        (598.859, 106.844), abs=TOL
-    )
-
-
-# Non-systematic / historical / community scheme names are banned in this codebase and no longer
-# resolve — `resolve_tuning_scheme` raises on them. That rejection is covered by
-# test_tuning_scheme_names.py; this file exercises only the systematic names.
-
-
-# Alternative-complexity all-interval families (tests.m 3470-3540), size factor 0 so they
-# go through the ordinary (un-augmented) all-interval path. Each maps a (temperament -> tuning
-# map) over the standard temperament set. A few use looser accuracy in the library (TOL_2).
 TOL_2 = 1e-2
 
-# minimax-E-copfr-S (tests.m 3472-3490).
 MINIMAX_E_COPFR_S_TUNING_MAPS = {
     "meantone": (1202.6068, 1899.3482, 2786.9654),
     "blackwood": (1191.8899, 1907.0238, 2786.3137),
@@ -240,13 +160,6 @@ MINIMAX_E_COPFR_S_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", MINIMAX_E_COPFR_S_TUNING_MAPS.items())
-def test_minimax_e_copfr_s(name, expected):
-    t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_tuning_map(t, "minimax-E-copfr-S") == pytest.approx(expected, abs=TOL)
-
-
-# minimax-sopfr-S (tests.m 3494-3517). tetracot and magic7 use accuracy 2.
 MINIMAX_SOPFR_S_TUNING_MAPS = {
     "meantone": ((1201.7205, 1899.3742, 2790.6150), TOL),
     "blackwood": ((1194.179, 1910.686, 2786.314), TOL),
@@ -268,14 +181,6 @@ MINIMAX_SOPFR_S_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected_tol", MINIMAX_SOPFR_S_TUNING_MAPS.items())
-def test_minimax_sopfr_s(name, expected_tol):
-    expected, tol = expected_tol
-    t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_tuning_map(t, "minimax-sopfr-S") == pytest.approx(expected, abs=tol)
-
-
-# minimax-E-sopfr-S (tests.m 3521-3540).
 MINIMAX_E_SOPFR_S_TUNING_MAPS = {
     "meantone": (1201.4768, 1898.6321, 2788.6213),
     "blackwood": (1193.9975, 1910.3960, 2786.3137),
@@ -297,16 +202,6 @@ MINIMAX_E_SOPFR_S_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", MINIMAX_E_SOPFR_S_TUNING_MAPS.items())
-def test_minimax_e_sopfr_s(name, expected):
-    t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_tuning_map(t, "minimax-E-sopfr-S") == pytest.approx(expected, abs=TOL)
-
-
-# Size-factor (augmented) all-interval families. The phantom-prime augmentation handles the
-# lils norm; values match the library to <0.001 across the temperament set.
-
-# minimax-lils-S (tests.m 3546-3561; no sensamagic example).
 MINIMAX_LILS_S_TUNING_MAPS = {
     "meantone": (1200.000, 1896.578, 2786.314),
     "blackwood": (1188.722, 1901.955, 2773.22),
@@ -327,13 +222,6 @@ MINIMAX_LILS_S_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", MINIMAX_LILS_S_TUNING_MAPS.items())
-def test_minimax_lils_s(name, expected):
-    t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_tuning_map(t, "minimax-lils-S") == pytest.approx(expected, abs=TOL)
-
-
-# minimax-E-lils-S (tests.m 3571-3587).
 MINIMAX_E_LILS_S_TUNING_MAPS = {
     "meantone": (1201.3906, 1898.4361, 2788.1819),
     "blackwood": (1194.2544, 1910.8071, 2786.1895),
@@ -355,13 +243,6 @@ MINIMAX_E_LILS_S_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", MINIMAX_E_LILS_S_TUNING_MAPS.items())
-def test_minimax_e_lils_s(name, expected):
-    t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_tuning_map(t, "minimax-E-lils-S") == pytest.approx(expected, abs=TOL)
-
-
-# held-octave minimax-E-lils-S = minimax-E-lols-S (tests.m 3607-3623).
 HELD_OCTAVE_MINIMAX_E_LILS_S_TUNING_MAPS = {
     "meantone": (1200.0000, 1896.6512, 2786.605),
     "blackwood": (1200.0000, 1920.0000, 2795.1253),
@@ -383,22 +264,8 @@ HELD_OCTAVE_MINIMAX_E_LILS_S_TUNING_MAPS = {
 }
 
 
-@pytest.mark.parametrize("name, expected", HELD_OCTAVE_MINIMAX_E_LILS_S_TUNING_MAPS.items())
-def test_held_octave_minimax_e_lils_s(name, expected):
-    t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_tuning_map(t, "held-octave minimax-E-lils-S") == pytest.approx(
-        expected, abs=TOL
-    )
-
-
-# A held interval must come out exactly just (trait 0's defining contract) even in a size-factor
-# (lils) all-interval scheme. The phantom-prime augmentation has to carry each held vector's own
-# size component into the phantom column; the octave's component happens to be log2(2) = 1, so a
-# hard-coded 1 held only the octave and silently mistuned every other held interval. tests.m never
-# paired a non-octave held interval with the size-factor (lils) family (its held + size-factor
-# cases all hold the octave), so the suite never caught it.
 HELD_NON_OCTAVE_SIZE_FACTOR = [
-    ("minimax-lils-S", "2/1", (1, 0, 0)),  # the octave: already correct, a control
+    ("minimax-lils-S", "2/1", (1, 0, 0)),
     ("minimax-lils-S", "3/2", (-1, 1, 0)),
     ("minimax-lils-S", "5/4", (-2, 0, 1)),
     ("minimax-E-lils-S", "3/2", (-1, 1, 0)),
@@ -406,39 +273,6 @@ HELD_NON_OCTAVE_SIZE_FACTOR = [
 ]
 
 
-@pytest.mark.parametrize("scheme, ratio, vector", HELD_NON_OCTAVE_SIZE_FACTOR)
-def test_held_interval_is_just_in_size_factor_all_interval(scheme, ratio, vector):
-    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
-    tuning_map = optimize_tuning_map(meantone, f"held-{ratio} {scheme}")
-    tempered = sum(t * v for t, v in zip(tuning_map, vector))
-    assert tempered == pytest.approx(1200.0 * log2(float(Fraction(ratio))), abs=TOL)
-
-
-def test_held_non_octave_minimax_e_lils_s_tuning_map():
-    # The full tuning map for meantone holding 3/2 just under minimax-E-lils-S.
-    # No published reference exists — tests.m never held a non-octave interval under a size-factor
-    # scheme — so this locks the corrected phantom-prime augmentation exactly. The Euclidean (E)
-    # variant is chosen deliberately: it is strictly convex, so its optimum is unique. The taxicab
-    # minimax-lils-S held here has a flat optimal face (many tuning maps share the minimum damage),
-    # which would make an exact full-map assertion solver-dependent; that case is pinned by the
-    # held-just contract above instead. 3/2 = (-1,1,0) lands exactly just: 1907.1065 - 1205.1515.
-    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
-    assert optimize_tuning_map(meantone, "held-3/2 minimax-E-lils-S") == pytest.approx(
-        (1205.1515, 1907.1065, 2807.820), abs=TOL
-    )
-
-
-def test_destretched_octave_minimax_lils_s():
-    # The only published human reference for this scheme (tests.m 3596-3597), an 11-limit
-    # temperament the library checks at accuracy 0 (integer rounding); our values round to the same.
-    t = parse_temperament_data("[⟨1 3 0 0 3] ⟨0 -3 5 6 1]}")
-    assert optimize_tuning_map(t, "destretched-octave minimax-lils-S") == pytest.approx(
-        (1200.000, 1915.929, 2806.785, 3368.142, 4161.357), abs=0.5
-    )
-
-
-# Continuum between minimax-S (k=0) and minimax-lils-S (k=1), and beyond
-# (tests.m 3651-3655): the size factor sweeps the interval-complexity norm pre-transformer.
 CONTINUUM = [
     (0.00, (1201.699, 1899.263, 2790.258)),
     (0.25, (1201.273, 1898.591, 2789.271)),
@@ -448,20 +282,6 @@ CONTINUUM = [
 ]
 
 
-@pytest.mark.parametrize("size_factor, expected", CONTINUUM)
-def test_size_factor_continuum(size_factor, expected):
-    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
-    spec = TuningSchemeSpec(
-        optimization_power=inf,
-        target_intervals="{}",
-        damage_weight_slope="simplicityWeight",
-        complexity_size_factor=size_factor,
-    )
-    assert optimize_tuning_map(meantone, spec) == pytest.approx(expected, abs=TOL)
-
-
-# All-interval lils vs non-lils across norm powers, via name + an explicit norm-power
-# override (tests.m 3636-3647). The dual of the complexity norm power sets the optimization.
 NORM_POWER_OVERRIDES = [
     ("minimax-lils-S", None, (1200.000, 696.578)),
     ("minimax-lils-S", inf, (1200.000, 696.578)),
@@ -473,73 +293,181 @@ NORM_POWER_OVERRIDES = [
 ]
 
 
-@pytest.mark.parametrize("name, norm_power, expected", NORM_POWER_OVERRIDES)
-def test_all_interval_norm_power_overrides(name, norm_power, expected):
-    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
-    spec = tuning_scheme_from_systematic_name(name)
-    if norm_power is not None:
-        spec = replace(spec, complexity_norm_power=norm_power)
-    assert optimize_generator_tuning_map(meantone, spec) == pytest.approx(expected, abs=TOL)
+class TestTuningAllInterval:
+    @pytest.mark.parametrize("name, expected", MINIMAX_S_GENERATORS.items())
+    def test_minimax_s(self, name, expected):
+        t = parse_temperament_data(TEMPERAMENTS[name])
+        assert optimize_generator_tuning_map(t, "minimax-S") == pytest.approx(expected, abs=TOL_MINIMAX_S)
 
+    @pytest.mark.parametrize("name, expected", MINIMAX_ES_TUNING_MAPS.items())
+    def test_minimax_es(self, name, expected):
+        t = parse_temperament_data(TEMPERAMENTS[name])
+        assert optimize_tuning_map(t, "minimax-ES") == pytest.approx(expected, abs=TOL)
 
-def test_all_interval_copfr_explicit_specs():
-    # tests.m 3464-3467: all-interval copfr / E-copfr via explicit spec and systematic name.
-    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
-    base = TuningSchemeSpec(
-        optimization_power=inf,
-        target_intervals="{}",
-        damage_weight_slope="simplicityWeight",
-        complexity_log_prime_power=0,
+    @pytest.mark.parametrize("name, expected", HELD_OCTAVE_MINIMAX_ES_GENERATORS.items())
+    def test_held_octave_minimax_es(self, name, expected):
+        t = parse_temperament_data(TEMPERAMENTS[name])
+        assert optimize_generator_tuning_map(t, "held-octave minimax-ES") == pytest.approx(
+            expected, abs=TOL
+        )
+
+    @pytest.mark.parametrize("name, expected", DESTRETCHED_OCTAVE_MINIMAX_ES_TUNING_MAPS.items())
+    def test_destretched_octave_minimax_es(self, name, expected):
+        t = parse_temperament_data(TEMPERAMENTS[name])
+        assert optimize_tuning_map(t, "destretched-octave minimax-ES") == pytest.approx(expected, abs=TOL)
+
+    @pytest.mark.parametrize("ebk, expected, tol", DESTRETCHED_OCTAVE_MINIMAX_S_CASES)
+    def test_destretched_octave_minimax_s(self, ebk, expected, tol):
+        t = parse_temperament_data(ebk)
+        assert optimize_generator_tuning_map(t, "destretched-octave minimax-S") == pytest.approx(expected, abs=tol)
+
+    def test_destretched_octave_minimax_s_locked_primes_tuning_map(self):
+        t = parse_temperament_data("[⟨1 3 0 0 3] ⟨0 -3 5 6 1]}")
+        assert optimize_tuning_map(t, "destretched-octave minimax-S") == pytest.approx(
+            (1200.00, 1915.81, 2806.98, 3368.38, 4161.40), abs=0.1
+        )
+
+    def test_all_interval_explicit_specs(self):
+        meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
+        assert optimize_generator_tuning_map(
+            meantone,
+            TuningSchemeSpec(optimization_power=inf, target_intervals="{}", damage_weight_slope="simplicityWeight"),
+        ) == pytest.approx((1201.699, 697.564), abs=TOL)
+        assert optimize_generator_tuning_map(
+            meantone,
+            TuningSchemeSpec(
+                optimization_power=inf,
+                target_intervals="{}",
+                damage_weight_slope="simplicityWeight",
+                complexity_norm_power=2,
+            ),
+        ) == pytest.approx((1201.397, 697.049), abs=TOL)
+        pajara = parse_temperament_data(TEMPERAMENTS["pajara"])
+        assert optimize_generator_tuning_map(pajara, "minimax-S") == pytest.approx(
+            (598.447, 106.567), abs=TOL
+        )
+        assert optimize_generator_tuning_map(pajara, "minimax-ES") == pytest.approx(
+            (598.859, 106.844), abs=TOL
+        )
+
+    @pytest.mark.parametrize("name, expected", MINIMAX_E_COPFR_S_TUNING_MAPS.items())
+    def test_minimax_e_copfr_s(self, name, expected):
+        t = parse_temperament_data(TEMPERAMENTS[name])
+        assert optimize_tuning_map(t, "minimax-E-copfr-S") == pytest.approx(expected, abs=TOL)
+
+    @pytest.mark.parametrize("name, expected_tol", MINIMAX_SOPFR_S_TUNING_MAPS.items())
+    def test_minimax_sopfr_s(self, name, expected_tol):
+        expected, tol = expected_tol
+        t = parse_temperament_data(TEMPERAMENTS[name])
+        assert optimize_tuning_map(t, "minimax-sopfr-S") == pytest.approx(expected, abs=tol)
+
+    @pytest.mark.parametrize("name, expected", MINIMAX_E_SOPFR_S_TUNING_MAPS.items())
+    def test_minimax_e_sopfr_s(self, name, expected):
+        t = parse_temperament_data(TEMPERAMENTS[name])
+        assert optimize_tuning_map(t, "minimax-E-sopfr-S") == pytest.approx(expected, abs=TOL)
+
+    @pytest.mark.parametrize("name, expected", MINIMAX_LILS_S_TUNING_MAPS.items())
+    def test_minimax_lils_s(self, name, expected):
+        t = parse_temperament_data(TEMPERAMENTS[name])
+        assert optimize_tuning_map(t, "minimax-lils-S") == pytest.approx(expected, abs=TOL)
+
+    @pytest.mark.parametrize("name, expected", MINIMAX_E_LILS_S_TUNING_MAPS.items())
+    def test_minimax_e_lils_s(self, name, expected):
+        t = parse_temperament_data(TEMPERAMENTS[name])
+        assert optimize_tuning_map(t, "minimax-E-lils-S") == pytest.approx(expected, abs=TOL)
+
+    @pytest.mark.parametrize("name, expected", HELD_OCTAVE_MINIMAX_E_LILS_S_TUNING_MAPS.items())
+    def test_held_octave_minimax_e_lils_s(self, name, expected):
+        t = parse_temperament_data(TEMPERAMENTS[name])
+        assert optimize_tuning_map(t, "held-octave minimax-E-lils-S") == pytest.approx(
+            expected, abs=TOL
+        )
+
+    @pytest.mark.parametrize("scheme, ratio, vector", HELD_NON_OCTAVE_SIZE_FACTOR)
+    def test_held_interval_is_just_in_size_factor_all_interval(self, scheme, ratio, vector):
+        meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
+        tuning_map = optimize_tuning_map(meantone, f"held-{ratio} {scheme}")
+        tempered = sum(t * v for t, v in zip(tuning_map, vector))
+        assert tempered == pytest.approx(1200.0 * log2(float(Fraction(ratio))), abs=TOL)
+
+    def test_held_non_octave_minimax_e_lils_s_tuning_map(self):
+        meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
+        assert optimize_tuning_map(meantone, "held-3/2 minimax-E-lils-S") == pytest.approx(
+            (1205.1515, 1907.1065, 2807.820), abs=TOL
+        )
+
+    def test_destretched_octave_minimax_lils_s(self):
+        t = parse_temperament_data("[⟨1 3 0 0 3] ⟨0 -3 5 6 1]}")
+        assert optimize_tuning_map(t, "destretched-octave minimax-lils-S") == pytest.approx(
+            (1200.000, 1915.929, 2806.785, 3368.142, 4161.357), abs=0.5
+        )
+
+    @pytest.mark.parametrize("size_factor, expected", CONTINUUM)
+    def test_size_factor_continuum(self, size_factor, expected):
+        meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
+        spec = TuningSchemeSpec(
+            optimization_power=inf,
+            target_intervals="{}",
+            damage_weight_slope="simplicityWeight",
+            complexity_size_factor=size_factor,
+        )
+        assert optimize_tuning_map(meantone, spec) == pytest.approx(expected, abs=TOL)
+
+    @pytest.mark.parametrize("name, norm_power, expected", NORM_POWER_OVERRIDES)
+    def test_all_interval_norm_power_overrides(self, name, norm_power, expected):
+        meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
+        spec = tuning_scheme_from_systematic_name(name)
+        if norm_power is not None:
+            spec = replace(spec, complexity_norm_power=norm_power)
+        assert optimize_generator_tuning_map(meantone, spec) == pytest.approx(expected, abs=TOL)
+
+    def test_all_interval_copfr_explicit_specs(self):
+        meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
+        base = TuningSchemeSpec(
+            optimization_power=inf,
+            target_intervals="{}",
+            damage_weight_slope="simplicityWeight",
+            complexity_log_prime_power=0,
+        )
+        assert optimize_generator_tuning_map(meantone, base) == pytest.approx(
+            (1202.390, 697.176), abs=TOL
+        )
+        assert optimize_generator_tuning_map(
+            meantone, replace(base, complexity_norm_power=2)
+        ) == pytest.approx((1202.607, 696.741), abs=TOL)
+        pajara = parse_temperament_data(TEMPERAMENTS["pajara"])
+        assert optimize_generator_tuning_map(pajara, "minimax-copfr-S") == pytest.approx(
+            (597.119, 103.293), abs=TOL
+        )
+        assert optimize_generator_tuning_map(pajara, "minimax-E-copfr-S") == pytest.approx(
+            (598.345, 106.693), abs=TOL
+        )
+
+    @pytest.mark.parametrize("name", list(TEMPERAMENTS))
+    @pytest.mark.parametrize(
+        "all_interval, over_primes",
+        [
+            ("minimax-E-copfr-S", "primes miniRMS-U"),
+            ("minimax-copfr-S", "primes minimax-U"),
+        ],
     )
-    assert optimize_generator_tuning_map(meantone, base) == pytest.approx(
-        (1202.390, 697.176), abs=TOL
-    )
-    assert optimize_generator_tuning_map(
-        meantone, replace(base, complexity_norm_power=2)
-    ) == pytest.approx((1202.607, 696.741), abs=TOL)
-    pajara = parse_temperament_data(TEMPERAMENTS["pajara"])
-    assert optimize_generator_tuning_map(pajara, "minimax-copfr-S") == pytest.approx(
-        (597.119, 103.293), abs=TOL
-    )
-    assert optimize_generator_tuning_map(pajara, "minimax-E-copfr-S") == pytest.approx(
-        (598.345, 106.693), abs=TOL
-    )
+    def test_copfr_all_interval_equals_primes_optimization(self, name, all_interval, over_primes):
+        t = parse_temperament_data(TEMPERAMENTS[name])
+        assert optimize_generator_tuning_map(t, all_interval) == pytest.approx(
+            optimize_generator_tuning_map(t, over_primes), abs=TOL
+        )
 
-
-# copfr all-interval schemes equal the corresponding unweighted optimization over the primes
-# (tests.m 3658-3695): minimax-E-copfr-S = primes miniRMS-U, minimax-copfr-S = primes minimax-U.
-@pytest.mark.parametrize("name", list(TEMPERAMENTS))
-@pytest.mark.parametrize(
-    "all_interval, over_primes",
-    [
-        ("minimax-E-copfr-S", "primes miniRMS-U"),
-        ("minimax-copfr-S", "primes minimax-U"),
-    ],
-)
-def test_copfr_all_interval_equals_primes_optimization(name, all_interval, over_primes):
-    t = parse_temperament_data(TEMPERAMENTS[name])
-    assert optimize_generator_tuning_map(t, all_interval) == pytest.approx(
-        optimize_generator_tuning_map(t, over_primes), abs=TOL
+    @pytest.mark.parametrize(
+        "bare, twin",
+        [
+            ("miniRMS-S", "minimax-S"),
+            ("miniRMS-ES", "minimax-ES"),
+            ("miniaverage-S", "minimax-S"),
+        ],
     )
-
-
-# Regression: a BARE simplicity-weighted name (no target-set prefix) is an all-interval scheme,
-# whatever its mini… power word. The name resolver once special-cased only "minimax…S", so
-# miniRMS-S / miniRMS-ES / miniaverage-S resolved to a target-less spec the solver couldn't pin —
-# an all-zero tuning map whose mean damage was nan. They must instead resolve to the all-interval
-# ({}) form and (since an all-interval optimum minimaxes over every interval by duality, ignoring
-# the stored power) tune identically to their minimax-prefixed twin.
-@pytest.mark.parametrize(
-    "bare, twin",
-    [
-        ("miniRMS-S", "minimax-S"),
-        ("miniRMS-ES", "minimax-ES"),
-        ("miniaverage-S", "minimax-S"),
-    ],
-)
-def test_bare_simplicity_names_are_all_interval_not_a_nan_tuning(bare, twin):
-    t = parse_temperament_data(TEMPERAMENTS["meantone"])
-    assert tuning_scheme_from_systematic_name(bare).target_intervals == "{}"  # resolves all-interval
-    tm = optimize_tuning_map(t, bare)
-    assert all(x == x for x in tm)  # finite (x != x is True only for nan) — not the degenerate solve
-    assert tm == pytest.approx(optimize_tuning_map(t, twin), abs=TOL)  # equals the minimax twin
+    def test_bare_simplicity_names_are_all_interval_not_a_nan_tuning(self, bare, twin):
+        t = parse_temperament_data(TEMPERAMENTS["meantone"])
+        assert tuning_scheme_from_systematic_name(bare).target_intervals == "{}"
+        tm = optimize_tuning_map(t, bare)
+        assert all(x == x for x in tm), "finite (x != x is True only for nan) — not the degenerate solve"
+        assert tm == pytest.approx(optimize_tuning_map(t, twin), abs=TOL)

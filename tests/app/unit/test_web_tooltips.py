@@ -19,19 +19,6 @@ def _chapter_text(chapter: str) -> str:
     return matches[0].read_text(encoding="utf-8")
 
 
-def test_show_help_covers_every_toggle_with_nonempty_text():
-    # every Show toggle carries hover text (chrome-backed terminology is helped via CHROME_HELP)
-    assert set(tooltips.SHOW_HELP) == set(show_settings.DEFAULTS) - {"terminology"}
-    assert all(text.strip() for text in tooltips.SHOW_HELP.values())
-
-
-@pytest.mark.parametrize("kind", sorted(tooltips.READONLY_KINDS))
-def test_control_help_is_none_for_readonly_kinds(kind):
-    # the read-only output kinds are declared once, in tooltips.READONLY_KINDS
-    assert tooltips.control_help(kind, f"{kind}:mapping:primes") is None
-
-
-# interactive kinds whose meaning is fixed by the kind alone (a representative id each)
 _INTERACTIVE_KINDS = [
     ("mapping", "cell:mapping:primes:0:0"),
     ("commacell", "cell:comma:commas:0:0"),
@@ -64,16 +51,10 @@ _INTERACTIVE_KINDS = [
 ]
 
 
-@pytest.mark.parametrize("kind, cid", _INTERACTIVE_KINDS)
-def test_control_help_is_present_for_interactive_kinds(kind, cid):
-    assert (tooltips.control_help(kind, cid) or "").strip()
-
-
-# kinds that back several controls, told apart by id (the id carries the role)
 _DISAMBIGUATED = [
     ("powerinput", "optimization:power"),
     ("powerinput", "control:q"),
-    ("powerdisplay", "control:dual"),  # dual(q) is derived → a read-only powerdisplay that still carries help
+    ("powerdisplay", "control:dual"),
     ("control_select", "control:complexity"),
     ("control_select", "control:slope"),
     ("control_check", "control:diminuator"),
@@ -84,90 +65,22 @@ _DISAMBIGUATED = [
     ("preset", "preset:tuning"),
     ("preset", "preset:target"),
     ("preset", "preset:prescaler"),
-    ("preset", "preset:tuning:gens"),         # a copied chooser in a second tile
+    ("preset", "preset:tuning:gens"),
     ("preset", "preset:temperament:commas"),
     ("plain_text_edit", "plain_text:mapping:primes"),
     ("plain_text_edit", "plain_text:vectors:commas"),
     ("plain_text_edit", "plain_text:tuning:gens"),
     ("plain_text_edit", "plain_text:vectors:targets"),
     ("plain_text_edit", "plain_text:prescaling:primes"),
-    ("element_minus", "element_minus:1"),             # the per-element domain remove (quantities axis)
-    ("element_minus", "element_minus:basis:2"),       # ...and its interval-vectors spine twin
-    ("element_minus", "element_minus:pending"),       # the ?/? draft's cancel (quantities axis)
-    ("element_minus", "element_minus:basis:pending"),  # ...and its spine twin
+    ("element_minus", "element_minus:1"),
+    ("element_minus", "element_minus:basis:2"),
+    ("element_minus", "element_minus:pending"),
+    ("element_minus", "element_minus:basis:pending"),
 ]
 
 
 def _help(kind, cid):
     return tooltips.control_help(kind, cid)
-
-
-@pytest.mark.parametrize("kind, cid", _DISAMBIGUATED)
-def test_disambiguated_controls_each_have_text(kind, cid):
-    assert (_help(kind, cid) or "").strip()
-
-
-def test_overloaded_kinds_resolve_to_distinct_text_per_role():
-    # one powerinput is the optimization power 𝑝, another the complexity norm power 𝑞
-    assert _help("powerinput", "optimization:power") != _help("powerinput", "control:q")
-    # the two alt.-complexity choosers each describe their own dimension
-    assert len({_help("control_select", "control:complexity"),
-                _help("control_select", "control:slope")}) == 2
-    # the two control_check boxes (diminuator, all-interval) describe different things
-    assert _help("control_check", "control:diminuator") != _help("control_check", "control:all_interval")
-    assert _help("formchooser", "formchooser:mapping") != _help("formchooser", "formchooser:comma_basis")
-    # the four preset choosers differ; a copied chooser reads like its base
-    assert len({_help("preset", "preset:temperament"),
-                _help("preset", "preset:tuning"),
-                _help("preset", "preset:target"),
-                _help("preset", "preset:prescaler")}) == 4
-    assert _help("preset", "preset:tuning:gens") == _help("preset", "preset:tuning")
-    # the domain − reads "remove this element" per-element, "cancel the draft" for the ?/? draft —
-    # on both axes, told apart by the ":pending" suffix in the id
-    assert _help("element_minus", "element_minus:1") == _help("element_minus", "element_minus:basis:2")
-    assert _help("element_minus", "element_minus:pending") == _help("element_minus", "element_minus:basis:pending")
-    assert _help("element_minus", "element_minus:1") != _help("element_minus", "element_minus:pending")
-
-
-def test_target_preset_help_describes_an_integer_or_odd_limit_not_a_prime_limit():
-    # the target chooser's limit is an integer limit (the TILT triangle) or an odd limit (the OLD
-    # diamond), never a prime limit — an earlier wording wrongly called it a prime limit.
-    help_text = tooltips.control_help("preset", "preset:target")
-    assert "prime limit" not in help_text
-    assert "integer limit" in help_text and "odd limit" in help_text
-
-
-def test_mean_damage_help_names_a_different_quantity_per_mode():
-    # the optimization mean damage is a read-only value but still carries help, and that help must
-    # track the scheme: target-based it is the minimized damage ⟪𝐝⟫ₚ over the target list;
-    # all-interval it is the retuning magnitude minimized over every interval. Two distinct,
-    # non-empty wordings, each naming the quantity the live symbol shows.
-    target = tooltips.mean_damage_help(all_interval=False)
-    allint = tooltips.mean_damage_help(all_interval=True)
-    assert target.strip() and allint.strip()
-    assert target != allint
-    assert "⟪𝐝⟫ₚ" in target and "target" in target
-    assert "retuning" in allint and "every interval" in allint
-
-
-def test_target_limit_help_distinguishes_the_two_errors():
-    # the two target-limit problems service.target_limit_problem reports each get their own
-    # wording (the hover tip AND the toast read the same string): an even odd-limit-diamond limit
-    # must be odd; any limit must be a whole number. Distinct, non-empty, and naming the fix.
-    odd = tooltips.target_limit_help("odd")
-    whole = tooltips.target_limit_help("whole")
-    assert odd.strip() and whole.strip() and odd != whole
-    assert "odd" in odd  # tells the user the OLD limit must be odd
-    assert "whole number" in whole
-
-
-def test_every_editable_dual_has_a_distinct_tooltip():
-    # the editable plain-text duals are exactly EDITABLE_PLAIN_TEXT (the layout's source of truth);
-    # each must carry its own hover text so no editable value is left unexplained
-    ids = [f"plain_text:{row_key}:{column_key}" for row_key, column_key in grid_tables.EDITABLE_PLAIN_TEXT]
-    texts = [tooltips.control_help("plain_text_edit", cid) for cid in ids]
-    assert all((t or "").strip() for t in texts)
-    assert len(set(texts)) == len(ids)
 
 
 def _rendered_cells():
@@ -178,143 +91,158 @@ def _rendered_cells():
     full = Editor()
     for key in full.settings:
         full.settings[key] = key in show_settings.IMPLEMENTED
-    full.set_collapsed(set())  # expand every row / column / tile so all their cells render
+    full.set_collapsed(set())
     cells += full.layout().cells
     return cells
 
 
-def test_every_rendered_cell_is_classified_for_tooltips():
-    # the safety net behind control_help: sweep a full build and require each rendered cell to
-    # be either a declared read-only output (no tooltip) or an interactive control with hover
-    # text. A brand-new control kind with no tooltips.py entry trips this — closing the gap a
-    # hardcoded test list would leave open. The optimization mean damage is the lone read-only
-    # exception (MEAN_DAMAGE_IDS): it carries help despite being a value, so it must read like a
-    # control here, not like a bare output.
-    for cb in _rendered_cells():
-        text = tooltips.control_help(cb.kind, cb.id)
-        if cb.kind in tooltips.READONLY_KINDS and cb.id not in tooltips.HELPED_READONLY_IDS:
-            assert text is None, f"read-only {cb.kind!r} ({cb.id}) should carry no tooltip"
-        else:
-            assert (text or "").strip(), (
-                f"control {cb.kind!r} ({cb.id}) has no hover text — add it in rtt/app/tooltips.py")
+class TestWebTooltips:
+    def test_show_help_covers_every_toggle_with_nonempty_text(self):
+        assert set(tooltips.SHOW_HELP) == set(show_settings.DEFAULTS) - {"terminology"}
+        assert all(text.strip() for text in tooltips.SHOW_HELP.values())
 
+    @pytest.mark.parametrize("kind", sorted(tooltips.READONLY_KINDS))
+    def test_control_help_is_none_for_readonly_kinds(self, kind):
+        assert tooltips.control_help(kind, f"{kind}:mapping:primes") is None
 
-def test_chrome_help_covers_the_app_chrome_buttons():
-    # the always-present chrome: settings drawer, the max-chapter slider, select-all, the
-    # terminology radio, dark-mode, undo, redo, reset, share, and the tour replay button
-    assert set(tooltips.CHROME_HELP) == {"settings", "chapter", "select_all", "terminology",
-                                         "dark_mode", "undo", "redo", "reset", "share", "tour"}
-    assert all(text.strip() for text in tooltips.CHROME_HELP.values())
+    @pytest.mark.parametrize("kind, cid", _INTERACTIVE_KINDS)
+    def test_control_help_is_present_for_interactive_kinds(self, kind, cid):
+        assert (tooltips.control_help(kind, cid) or "").strip()
 
+    @pytest.mark.parametrize("kind, cid", _DISAMBIGUATED)
+    def test_disambiguated_controls_each_have_text(self, kind, cid):
+        assert (_help(kind, cid) or "").strip()
 
-def test_audio_help_covers_the_five_bank_controls_with_global_wording():
-    # the single dummy-tile audio bank's five controls each carry distinct, non-empty help; the
-    # wording is global ("every pitch", never "this tile") now that one bank drives every speaker.
-    # mute leads the bank and doubles as the kill switch (muting silences all sounding audio).
-    assert set(tooltips.AUDIO_HELP) == {"mute", "wave", "mode", "hold", "root"}
-    assert len(set(tooltips.AUDIO_HELP.values())) == 5
-    for text in tooltips.AUDIO_HELP.values():
-        assert text.strip() and "this tile" not in text
+    def test_overloaded_kinds_resolve_to_distinct_text_per_role(self):
+        assert _help("powerinput", "optimization:power") != _help("powerinput", "control:q")
+        assert len({_help("control_select", "control:complexity"),
+                    _help("control_select", "control:slope")}) == 2
+        assert _help("control_check", "control:diminuator") != _help("control_check", "control:all_interval")
+        assert _help("formchooser", "formchooser:mapping") != _help("formchooser", "formchooser:comma_basis")
+        assert len({_help("preset", "preset:temperament"),
+                    _help("preset", "preset:tuning"),
+                    _help("preset", "preset:target"),
+                    _help("preset", "preset:prescaler")}) == 4
+        assert _help("preset", "preset:tuning:gens") == _help("preset", "preset:tuning")
+        assert _help("element_minus", "element_minus:1") == _help("element_minus", "element_minus:basis:2")
+        assert _help("element_minus", "element_minus:pending") == _help("element_minus", "element_minus:basis:pending")
+        assert _help("element_minus", "element_minus:1") != _help("element_minus", "element_minus:pending")
 
+    def test_target_preset_help_describes_an_integer_or_odd_limit_not_a_prime_limit(self):
+        help_text = tooltips.control_help("preset", "preset:target")
+        assert "prime limit" not in help_text
+        assert "integer limit" in help_text and "odd limit" in help_text
 
-def test_guide_url_builds_wiki_subpage_and_section_anchor():
-    # chapter → subpage (spaces → underscores); section → MediaWiki #anchor (spaces → underscores)
-    assert tooltips.guide_url("Tuning fundamentals", "Damage, error, and weight") == (
-        tooltips.GUIDE_BASE + "/Tuning_fundamentals#Damage,_error,_and_weight")
-    assert tooltips.guide_url("Mappings", "") == tooltips.GUIDE_BASE + "/Mappings"
-    for gh in tooltips.GUIDE_HELP.values():
-        if gh.page:                  # a standalone Xen Wiki page (not part of the guide)
-            assert gh.url.startswith("https://en.xen.wiki/w/")
-            assert not gh.url.startswith(tooltips.GUIDE_BASE)
-            assert " " not in gh.url
-            assert not gh.location.startswith("D&D's Guide")   # no guide prefix on a non-guide link
-        elif gh.chapter:
-            assert gh.url.startswith(tooltips.GUIDE_BASE + "/")
-            assert " " not in gh.url
-            assert gh.location.startswith("D&D's Guide > ")
-        else:                        # a blurb with no link at all
-            assert gh.url == "" and gh.location == ""
+    def test_mean_damage_help_names_a_different_quantity_per_mode(self):
+        target = tooltips.mean_damage_help(all_interval=False)
+        allint = tooltips.mean_damage_help(all_interval=True)
+        assert target.strip() and allint.strip()
+        assert target != allint
+        assert "⟪𝐝⟫ₚ" in target and "target" in target
+        assert "retuning" in allint and "every interval" in allint
 
+    def test_target_limit_help_distinguishes_the_two_errors(self):
+        odd = tooltips.target_limit_help("odd")
+        whole = tooltips.target_limit_help("whole")
+        assert odd.strip() and whole.strip() and odd != whole
+        assert "odd" in odd, "tells the user the OLD limit must be odd"
+        assert "whole number" in whole
 
-@pytest.mark.parametrize("key,gh", sorted(tooltips.GUIDE_HELP.items()))
-def test_guide_help_text_is_a_clean_general_blurb(key, gh):
-    # the blurb is Guide-voiced prose describing the object in general — NOT a verbatim quote and
-    # NOT tied to whatever temperament happens to be loaded (the comma basis once read "the meantone
-    # comma", which only held for the default)
-    assert gh.text.strip() == gh.text and gh.text.endswith(".")
-    assert "meantone" not in gh.text.lower(), f"{key} blurb names a specific temperament"
+    def test_every_editable_dual_has_a_distinct_tooltip(self):
+        ids = [f"plain_text:{row_key}:{column_key}" for row_key, column_key in grid_tables.EDITABLE_PLAIN_TEXT]
+        texts = [tooltips.control_help("plain_text_edit", cid) for cid in ids]
+        assert all((t or "").strip() for t in texts)
+        assert len(set(texts)) == len(ids)
 
+    def test_every_rendered_cell_is_classified_for_tooltips(self):
+        for cb in _rendered_cells():
+            text = tooltips.control_help(cb.kind, cb.id)
+            if cb.kind in tooltips.READONLY_KINDS and cb.id not in tooltips.HELPED_READONLY_IDS:
+                assert text is None, f"read-only {cb.kind!r} ({cb.id}) should carry no tooltip"
+            else:
+                assert (text or "").strip(), (
+                    f"control {cb.kind!r} ({cb.id}) has no hover text — add it in rtt/app/tooltips.py")
 
-@pytest.mark.parametrize("key,gh", sorted(tooltips.GUIDE_HELP.items()))
-def test_guide_help_section_is_a_real_heading_in_its_chapter(key, gh):
-    # the linked section anchor resolves: a == heading == with that exact text exists in the chapter
-    if not gh.chapter:               # link-less tile: nothing to resolve
-        return
-    heading = re.compile(rf"^=+\s*{re.escape(gh.section)}\s*=+\s*$", re.MULTILINE)
-    assert heading.search(_chapter_text(gh.chapter)), f"no heading {gh.section!r} in {gh.chapter!r}"
+    def test_chrome_help_covers_the_app_chrome_buttons(self):
+        assert set(tooltips.CHROME_HELP) == {"settings", "chapter", "select_all", "terminology",
+                                             "dark_mode", "undo", "redo", "reset", "share", "tour"}
+        assert all(text.strip() for text in tooltips.CHROME_HELP.values())
 
+    def test_audio_help_covers_the_five_bank_controls_with_global_wording(self):
+        assert set(tooltips.AUDIO_HELP) == {"mute", "wave", "mode", "hold", "root"}
+        assert len(set(tooltips.AUDIO_HELP.values())) == 5
+        for text in tooltips.AUDIO_HELP.values():
+            assert text.strip() and "this tile" not in text
 
-def test_tile_guide_help_for_cell_only_fires_on_three_part_tile_ids():
-    # the make_cell hook keys off a cell id; control cells share the "caption"/"symbol" kinds but
-    # carry non-tile ids of 2 parts (caption:q, symbol:dual) or 4 (caption:counts:commas:u), and the
-    # optimization tiles put the kind LAST (optimization:power:symbol). None of these may be parsed
-    # as a (row, col) tile — only a real symbol:row:col / caption:row:col resolves.
-    assert tooltips.tile_guide_help_for_cell("caption:mapping:primes") is \
-        tooltips.GUIDE_HELP[("mapping", "primes")]
-    assert tooltips.tile_guide_help_for_cell("symbol:tuning:gens") is \
-        tooltips.GUIDE_HELP[("tuning", "gens")]
-    # the counts captions ARE real tiles now (caption:counts:commas → nullity), but the nullity-of-
-    # unchanged split keeps a 4-part id that must not resolve
-    assert tooltips.tile_guide_help_for_cell("caption:counts:commas") is \
-        tooltips.GUIDE_HELP[("counts", "commas")]
-    for non_tile in ("caption:q", "symbol:dual", "caption:slope", "caption:all_interval",
-                     "caption:counts:commas:u", "optimization:power:symbol",
-                     "optimization:mean_damage:caption"):
-        assert tooltips.tile_guide_help_for_cell(non_tile) is None
+    def test_guide_url_builds_wiki_subpage_and_section_anchor(self):
+        assert tooltips.guide_url("Tuning fundamentals", "Damage, error, and weight") == (
+            tooltips.GUIDE_BASE + "/Tuning_fundamentals#Damage,_error,_and_weight")
+        assert tooltips.guide_url("Mappings", "") == tooltips.GUIDE_BASE + "/Mappings"
+        for gh in tooltips.GUIDE_HELP.values():
+            if gh.page:
+                assert gh.url.startswith("https://en.xen.wiki/w/")
+                assert not gh.url.startswith(tooltips.GUIDE_BASE)
+                assert " " not in gh.url
+                assert not gh.location.startswith("D&D's Guide")
+            elif gh.chapter:
+                assert gh.url.startswith(tooltips.GUIDE_BASE + "/")
+                assert " " not in gh.url
+                assert gh.location.startswith("D&D's Guide > ")
+            else:
+                assert gh.url == "" and gh.location == ""
 
+    @pytest.mark.parametrize("key,gh", sorted(tooltips.GUIDE_HELP.items()))
+    def test_guide_help_text_is_a_clean_general_blurb(self, key, gh):
+        assert gh.text.strip() == gh.text and gh.text.endswith("."), "the blurb is Guide-voiced prose describing the object in general — NOT a verbatim quote and # NOT tied to whatever temperament happens to be loaded (the comma basis once read 'the meantone # comma', which only held for the default)"
+        assert "meantone" not in gh.text.lower(), f"{key} blurb names a specific temperament"
 
-def test_every_rendered_caption_and_symbol_cell_id_parses_without_error():
-    # a full build's caption/symbol cells all flow through tile_guide_help_for_cell in make_cell;
-    # every one must parse safely (a 2-part control id once unpacked into 3 and crashed render)
-    for cb in _rendered_cells():
-        if cb.kind in ("symbol", "caption"):
-            tooltips.tile_guide_help_for_cell(cb.id)  # must not raise
+    @pytest.mark.parametrize("key,gh", sorted(tooltips.GUIDE_HELP.items()))
+    def test_guide_help_section_is_a_real_heading_in_its_chapter(self, key, gh):
+        if not gh.chapter:
+            return
+        heading = re.compile(rf"^=+\s*{re.escape(gh.section)}\s*=+\s*$", re.MULTILINE)
+        assert heading.search(_chapter_text(gh.chapter)), f"no heading {gh.section!r} in {gh.chapter!r}"
 
+    def test_tile_guide_help_for_cell_only_fires_on_three_part_tile_ids(self):
+        assert tooltips.tile_guide_help_for_cell("caption:mapping:primes") is \
+            tooltips.GUIDE_HELP[("mapping", "primes")]
+        assert tooltips.tile_guide_help_for_cell("symbol:tuning:gens") is \
+            tooltips.GUIDE_HELP[("tuning", "gens")]
+        assert tooltips.tile_guide_help_for_cell("caption:counts:commas") is \
+            tooltips.GUIDE_HELP[("counts", "commas")]
+        for non_tile in ("caption:q", "symbol:dual", "caption:slope", "caption:all_interval",
+                         "caption:counts:commas:u", "optimization:power:symbol",
+                         "optimization:mean_damage:caption"):
+            assert tooltips.tile_guide_help_for_cell(non_tile) is None
 
-def test_pretransform_relabels_the_prescaler_help_to_pretransformer():
-    # a size-sensitizing / matrix-prescaler scheme renames "prescaler" → "pretransformer" in the grid
-    # captions; the HELP wording must follow. control_help(pretransform=True) takes the pretransform
-    # stem for the prescaler preset, and the 𝑋 tile's guide card relabels in lockstep.
-    preset = tooltips.control_help("preset", "preset:prescaler")
-    assert "prescaler" in preset and "pretransformer" not in preset
-    preset_pt = tooltips.control_help("preset", "preset:prescaler", pretransform=True)
-    assert "pretransformer" in preset_pt and "prescaler" not in preset_pt
-    # the prescaler plain-text dual editor's hover relabels too (it also names the prescaler)
-    assert "prescaler" in tooltips.control_help("plain_text_edit", "plain_text:prescaling:primes")
-    assert "pretransformer" in tooltips.control_help(
-        "plain_text_edit", "plain_text:prescaling:primes", pretransform=True)
-    # the 𝑋 tile guide card
-    plain = tooltips.tile_guide_help_for_cell("caption:prescaling:primes")
-    pretransformed = tooltips.tile_guide_help_for_cell("caption:prescaling:primes", pretransform=True)
-    assert "prescaler" in plain.text and "pretransformer" not in plain.text
-    assert "pretransformer" in pretransformed.text and "prescaler" not in pretransformed.text
-    # only the text relabels; the link target is untouched
-    assert pretransformed.url == plain.url and pretransformed.location == plain.location
+    def test_every_rendered_caption_and_symbol_cell_id_parses_without_error(self):
+        for cb in _rendered_cells():
+            if cb.kind in ("symbol", "caption"):
+                tooltips.tile_guide_help_for_cell(cb.id)
 
+    def test_pretransform_relabels_the_prescaler_help_to_pretransformer(self):
+        preset = tooltips.control_help("preset", "preset:prescaler")
+        assert "prescaler" in preset and "pretransformer" not in preset
+        preset_pt = tooltips.control_help("preset", "preset:prescaler", pretransform=True)
+        assert "pretransformer" in preset_pt and "prescaler" not in preset_pt
+        assert "prescaler" in tooltips.control_help("plain_text_edit", "plain_text:prescaling:primes"), "the prescaler plain-text dual editor's hover relabels too (it also names the prescaler)"
+        assert "pretransformer" in tooltips.control_help(
+            "plain_text_edit", "plain_text:prescaling:primes", pretransform=True)
+        plain = tooltips.tile_guide_help_for_cell("caption:prescaling:primes")
+        pretransformed = tooltips.tile_guide_help_for_cell("caption:prescaling:primes", pretransform=True)
+        assert "prescaler" in plain.text and "pretransformer" not in plain.text
+        assert "pretransformer" in pretransformed.text and "prescaler" not in pretransformed.text
+        assert pretransformed.url == plain.url and pretransformed.location == plain.location
 
-def test_pretransform_leaves_help_without_the_prescaler_word_unchanged():
-    # the relabel only rewrites the "prescal…" stem; an unrelated tooltip is byte-identical whether or
-    # not pretransform is on, and a guide card with no prescaler word keeps its registry identity
-    for kind, cid in (("mapping", "cell:mapping:primes:0:0"), ("preset", "preset:tuning")):
-        assert tooltips.control_help(kind, cid) == tooltips.control_help(kind, cid, pretransform=True)
-    assert tooltips.tile_guide_help_for_cell("caption:mapping:primes", pretransform=True) is \
-        tooltips.GUIDE_HELP[("mapping", "primes")]
+    def test_pretransform_leaves_help_without_the_prescaler_word_unchanged(self):
+        for kind, cid in (("mapping", "cell:mapping:primes:0:0"), ("preset", "preset:tuning")):
+            assert tooltips.control_help(kind, cid) == tooltips.control_help(kind, cid, pretransform=True)
+        assert tooltips.tile_guide_help_for_cell("caption:mapping:primes", pretransform=True) is \
+            tooltips.GUIDE_HELP[("mapping", "primes")]
 
-
-def test_guide_help_covers_only_real_tiles_and_resolves_by_tile_key():
-    # every registry key is a real (row, col) tile, and tile_guide_help round-trips it
-    captioned = {(r, c) for r, c in grid_tables.CAPTIONS}
-    for (row_key, column_key), gh in tooltips.GUIDE_HELP.items():
-        assert (row_key, column_key) in captioned, f"{(row_key, column_key)} is not a captioned tile"
-        assert tooltips.tile_guide_help(row_key, column_key) is gh
-    assert tooltips.tile_guide_help("mapping", "nonsense") is None
+    def test_guide_help_covers_only_real_tiles_and_resolves_by_tile_key(self):
+        captioned = {(r, c) for r, c in grid_tables.CAPTIONS}
+        for (row_key, column_key), gh in tooltips.GUIDE_HELP.items():
+            assert (row_key, column_key) in captioned, f"{(row_key, column_key)} is not a captioned tile"
+            assert tooltips.tile_guide_help(row_key, column_key) is gh
+        assert tooltips.tile_guide_help("mapping", "nonsense") is None

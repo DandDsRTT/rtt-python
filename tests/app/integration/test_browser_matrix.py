@@ -15,8 +15,6 @@ _SHOTS_DIR = Path(
     os.environ.get("RTT_BROWSER_MATRIX_DIR", str(_REPO_ROOT / ".browser-matrix"))
 )
 
-# iOS Chrome/Firefox/Edge are all WebKit (Apple mandates it), so webkit-on-iPhone is the closest free
-# iOS proxy; firefox + chromium widen the desktop-engine coverage Chrome-on-macOS alone misses.
 _ENGINES = ["chromium", "firefox", "webkit"]
 _DESKTOP = {"label": "desktop", "viewport": {"width": 1440, "height": 900}, "mobile": False}
 _MOBILE = {"label": "mobile", "device": "iPhone 13", "mobile": True}
@@ -73,50 +71,50 @@ def _context_kwargs(driver, engine: str, viewport: dict) -> dict:
     descriptor = dict(driver.devices[viewport["device"]])
     descriptor.pop("default_browser_type", None)
     if engine == "firefox":
-        # Firefox can't emulate is_mobile/has_touch; keep the viewport + UA only (phone-width layout).
         descriptor.pop("is_mobile", None)
         descriptor.pop("has_touch", None)
     return descriptor
 
 
-@pytest.mark.parametrize("viewport", _VIEWPORTS, ids=lambda v: v["label"])
-@pytest.mark.parametrize("engine", _ENGINES)
-def test_renders_clean_across_engines_and_viewports(served_app, engine, viewport):
-    from playwright.sync_api import sync_playwright
+class TestBrowserMatrix:
+    @pytest.mark.parametrize("viewport", _VIEWPORTS, ids=lambda v: v["label"])
+    @pytest.mark.parametrize("engine", _ENGINES)
+    def test_renders_clean_across_engines_and_viewports(self, served_app, engine, viewport):
+        from playwright.sync_api import sync_playwright
 
-    label = f"{engine}-{viewport['label']}"
-    client_errors: list[str] = []
-    with sync_playwright() as driver:
-        launcher = getattr(driver, engine)
-        try:
-            browser = launcher.launch()
-        except Exception as launch_failure:
-            pytest.skip(f"{engine} engine unavailable (run `playwright install {engine}`): {launch_failure}")
-        context = browser.new_context(**_context_kwargs(driver, engine, viewport))
-        page = context.new_page()
-        page.on("console", lambda m: client_errors.append(m.text) if m.type == "error" else None)
-        page.on("pageerror", lambda e: client_errors.append(str(e)))
-        page.goto(served_app, wait_until="networkidle")
-        page.wait_for_selector(".rtt-gridcontent", timeout=20000)
-        installed = page.evaluate(
-            "() => ({"
-            "  freeze: typeof window.rttFreeze,"
-            "  audio:  typeof window.rttAudio,"
-            "  tour:   typeof window.rttTour"
-            "})"
+        label = f"{engine}-{viewport['label']}"
+        client_errors: list[str] = []
+        with sync_playwright() as driver:
+            launcher = getattr(driver, engine)
+            try:
+                browser = launcher.launch()
+            except Exception as launch_failure:
+                pytest.skip(f"{engine} engine unavailable (run `playwright install {engine}`): {launch_failure}")
+            context = browser.new_context(**_context_kwargs(driver, engine, viewport))
+            page = context.new_page()
+            page.on("console", lambda m: client_errors.append(m.text) if m.type == "error" else None)
+            page.on("pageerror", lambda e: client_errors.append(str(e)))
+            page.goto(served_app, wait_until="networkidle")
+            page.wait_for_selector(".rtt-gridcontent", timeout=20000)
+            installed = page.evaluate(
+                "() => ({"
+                "  freeze: typeof window.rttFreeze,"
+                "  audio:  typeof window.rttAudio,"
+                "  tour:   typeof window.rttTour"
+                "})"
+            )
+            _SHOTS_DIR.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(_SHOTS_DIR / f"{label}.png"))
+            browser.close()
+
+        assert not client_errors, (
+            f"[{label}] the page logged client-JS errors this engine surfaces but Chrome-on-macOS "
+            f"and the in-process suite never run: {client_errors}"
         )
-        _SHOTS_DIR.mkdir(parents=True, exist_ok=True)
-        page.screenshot(path=str(_SHOTS_DIR / f"{label}.png"))
-        browser.close()
-
-    assert not client_errors, (
-        f"[{label}] the page logged client-JS errors this engine surfaces but Chrome-on-macOS "
-        f"and the in-process suite never run: {client_errors}"
-    )
-    assert installed["freeze"] != "undefined", (
-        f"[{label}] freeze.js did not install window.rttFreeze — the JS bundle failed to load or "
-        f"threw on this engine. Got: {installed}"
-    )
-    assert installed["audio"] != "undefined" and installed["tour"] != "undefined", (
-        f"[{label}] a client-JS module did not install its global on this engine: {installed}"
-    )
+        assert installed["freeze"] != "undefined", (
+            f"[{label}] freeze.js did not install window.rttFreeze — the JS bundle failed to load or "
+            f"threw on this engine. Got: {installed}"
+        )
+        assert installed["audio"] != "undefined" and installed["tour"] != "undefined", (
+            f"[{label}] a client-JS module did not install its global on this engine: {installed}"
+        )

@@ -57,37 +57,38 @@ def served_app():
             server.kill()
 
 
-def test_real_browser_loads_the_page_and_runs_its_client_js(served_app):
-    from playwright.sync_api import sync_playwright
+class TestBrowserSmoke:
+    def test_real_browser_loads_the_page_and_runs_its_client_js(self, served_app):
+        from playwright.sync_api import sync_playwright
 
-    client_errors: list[str] = []
-    with sync_playwright() as driver:
-        try:
-            browser = driver.chromium.launch(channel="chrome")
-        except Exception as launch_failure:
-            pytest.skip(f"no Chrome available for the browser smoke: {launch_failure}")
-        page = browser.new_page()
-        page.on("console", lambda m: client_errors.append(m.text) if m.type == "error" else None)
-        page.on("pageerror", lambda e: client_errors.append(str(e)))
-        page.goto(served_app, wait_until="networkidle")
-        page.wait_for_selector(".rtt-gridcontent", timeout=15000)
-        installed = page.evaluate(
-            "() => ({"
-            "  freeze: typeof window.rttFreeze,"
-            "  audio:  typeof window.rttAudio,"
-            "  tour:   typeof window.rttTour"
-            "})"
+        client_errors: list[str] = []
+        with sync_playwright() as driver:
+            try:
+                browser = driver.chromium.launch(channel="chrome")
+            except Exception as launch_failure:
+                pytest.skip(f"no Chrome available for the browser smoke: {launch_failure}")
+            page = browser.new_page()
+            page.on("console", lambda m: client_errors.append(m.text) if m.type == "error" else None)
+            page.on("pageerror", lambda e: client_errors.append(str(e)))
+            page.goto(served_app, wait_until="networkidle")
+            page.wait_for_selector(".rtt-gridcontent", timeout=15000)
+            installed = page.evaluate(
+                "() => ({"
+                "  freeze: typeof window.rttFreeze,"
+                "  audio:  typeof window.rttAudio,"
+                "  tour:   typeof window.rttTour"
+                "})"
+            )
+            browser.close()
+
+        assert not client_errors, (
+            "the page logged client-JS errors that the in-process User suite never executes: "
+            f"{client_errors}"
         )
-        browser.close()
-
-    assert not client_errors, (
-        "the page logged client-JS errors that the in-process User suite never executes: "
-        f"{client_errors}"
-    )
-    assert installed["freeze"] != "undefined", (
-        "freeze.js did not install window.rttFreeze in a real browser — the JS bundle failed to "
-        f"load or threw on execution (in-process renders can't catch this). Got: {installed}"
-    )
-    assert installed["audio"] != "undefined" and installed["tour"] != "undefined", (
-        f"a client-JS module did not install its global (bundle partially failed): {installed}"
-    )
+        assert installed["freeze"] != "undefined", (
+            "freeze.js did not install window.rttFreeze in a real browser — the JS bundle failed to "
+            f"load or threw on execution (in-process renders can't catch this). Got: {installed}"
+        )
+        assert installed["audio"] != "undefined" and installed["tour"] != "undefined", (
+            f"a client-JS module did not install its global (bundle partially failed): {installed}"
+        )

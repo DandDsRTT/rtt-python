@@ -15,7 +15,7 @@ import sys
 for _name in [m for m in list(sys.modules) if m == "rtt" or m.startswith("rtt.")]:
     del sys.modules[_name]
 
-import rtt.app.app  # noqa: E402, F401  — the import registers @ui.page("/")
-from nicegui import ui  # noqa: E402
+import rtt.app.app
+from nicegui import ui
 
 ui.run(storage_secret="render-test")

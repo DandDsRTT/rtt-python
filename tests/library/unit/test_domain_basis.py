@@ -85,15 +85,15 @@ IS_SUBSPACE_OF = [
 ]
 
 CANONICAL_DOMAIN_BASIS = [
-    ((2, 7, 9), (2, 9, 7)),  # order by prime limit
+    ((2, 7, 9), (2, 9, 7)),
     ((2, F(9, 7), 5), (2, 5, F(9, 7))),
     ((2, F(9, 7), F(5, 3)), (2, F(5, 3), F(9, 7))),
-    ((2, 3, 9), (2, 3)),  # consolidate redundancies
+    ((2, 3, 9), (2, 3)),
     ((2, 3, 15), (2, 3, 5)),
     ((2, 3, F(5, 3)), (2, 3, 5)),
-    ((2, F(5, 3), F(7, 5)), (2, F(5, 3), F(7, 3))),  # tricky
+    ((2, F(5, 3), F(7, 5)), (2, F(5, 3), F(7, 3))),
     ((1, 1), (1,)),
-    ((2, 3, 7), (2, 3, 7)),  # already-canonical subgroups
+    ((2, 3, 7), (2, 3, 7)),
     ((2, 5, 7), (2, 5, 7)),
     ((2, 3, F(7, 5)), (2, 3, F(7, 5))),
     ((2, F(5, 3), 7), (2, F(5, 3), 7)),
@@ -122,156 +122,140 @@ CANONICAL_DOMAIN_BASIS = [
 ]
 
 
-def test_get_standard_prime_limit_domain_basis():
-    t = Temperament(((1, 0, -4), (0, 1, 4)), ROW)
-    assert get_standard_prime_limit_domain_basis(t) == (2, 3, 5)
+class TestDomainBasis:
+    def test_get_standard_prime_limit_domain_basis(self):
+        t = Temperament(((1, 0, -4), (0, 1, 4)), ROW)
+        assert get_standard_prime_limit_domain_basis(t) == (2, 3, 5)
 
+    def test_get_domain_basis_standard(self):
+        t = Temperament(((1, 0, -4), (0, 1, 4)), ROW)
+        assert get_domain_basis(t) == (2, 3, 5)
 
-def test_get_domain_basis_standard():
-    t = Temperament(((1, 0, -4), (0, 1, 4)), ROW)
-    assert get_domain_basis(t) == (2, 3, 5)
+    def test_get_domain_basis_custom(self):
+        t = Temperament(((11, 35, 31),), ROW, (2, 9, 7))
+        assert get_domain_basis(t) == (2, 9, 7)
 
+    @pytest.mark.parametrize("domain_basis, expected", [((2, 9, 7), 4), ((1,), 1)])
+    def test_get_domain_basis_dimension(self, domain_basis, expected):
+        assert get_domain_basis_dimension(domain_basis) == expected
 
-def test_get_domain_basis_custom():
-    t = Temperament(((11, 35, 31),), ROW, (2, 9, 7))
-    assert get_domain_basis(t) == (2, 9, 7)
+    @pytest.mark.parametrize("domain_basis, expected", CANONICAL_DOMAIN_BASIS)
+    def test_canonical_domain_basis_private(self, domain_basis, expected):
+        assert canonical_domain_basis_private(domain_basis) == expected
 
+    def test_canonical_domain_basis(self):
+        assert canonical_domain_basis("2.7.9") == (2, 9, 7)
 
-@pytest.mark.parametrize("domain_basis, expected", [((2, 9, 7), 4), ((1,), 1)])
-def test_get_domain_basis_dimension(domain_basis, expected):
-    assert get_domain_basis_dimension(domain_basis) == expected
-
-
-@pytest.mark.parametrize("domain_basis, expected", CANONICAL_DOMAIN_BASIS)
-def test_canonical_domain_basis_private(domain_basis, expected):
-    assert canonical_domain_basis_private(domain_basis) == expected
-
-
-def test_canonical_domain_basis():
-    assert canonical_domain_basis("2.7.9") == (2, 9, 7)
-
-
-@pytest.mark.parametrize(
-    "domain_basis, expected",
-    [((2, 3, 5, 7, 11), True), ((2, 3, 7, 5, 11), True), ((2, 3, 5, 9, 11), False)],
-)
-def test_is_standard_prime_limit_domain_basis(domain_basis, expected):
-    assert is_standard_prime_limit_domain_basis(domain_basis) is expected
-
-
-@pytest.mark.parametrize("bases, expected", DOMAIN_BASIS_MERGE)
-def test_domain_basis_merge(bases, expected):
-    assert domain_basis_merge(*bases) == expected
-
-
-@pytest.mark.parametrize("bases, expected", DOMAIN_BASIS_INTERSECTION)
-def test_domain_basis_intersection(bases, expected):
-    assert domain_basis_intersection(*bases) == expected
-
-
-@pytest.mark.parametrize("subspace, superspace, expected", IS_SUBSPACE_OF)
-def test_is_subspace_of(subspace, superspace, expected):
-    assert is_subspace_of(subspace, superspace) is expected
-
-
-def test_get_basis_a():
-    t = Temperament(((11, 35, 31),), ROW, (2, 9, 7))
-    assert get_basis_a(t) == Temperament(
-        ((1, 0, 0, 0), (0, 2, 0, 0), (0, 0, 0, 1)), COL
+    @pytest.mark.parametrize(
+        "domain_basis, expected",
+        [((2, 3, 5, 7, 11), True), ((2, 3, 7, 5, 11), True), ((2, 3, 5, 9, 11), False)],
     )
+    def test_is_standard_prime_limit_domain_basis(self, domain_basis, expected):
+        assert is_standard_prime_limit_domain_basis(domain_basis) is expected
 
+    @pytest.mark.parametrize("bases, expected", DOMAIN_BASIS_MERGE)
+    def test_domain_basis_merge(self, bases, expected):
+        assert domain_basis_merge(*bases) == expected
 
-@pytest.mark.parametrize(
-    "a, b, expected",
-    [
-        (3, 5, True),
-        (-3, -5, True),
-        (-3, 5, False),
-        (3, -5, False),
-        (3, 0, True),
-        (0, 5, True),
-        (-3, 0, True),
-        (0, -5, True),
-    ],
-)
-def test_signs_match(a, b, expected):
-    assert signs_match(a, b) is expected
+    @pytest.mark.parametrize("bases, expected", DOMAIN_BASIS_INTERSECTION)
+    def test_domain_basis_intersection(self, bases, expected):
+        assert domain_basis_intersection(*bases) == expected
 
+    @pytest.mark.parametrize("subspace, superspace, expected", IS_SUBSPACE_OF)
+    def test_is_subspace_of(self, subspace, superspace, expected):
+        assert is_subspace_of(subspace, superspace) is expected
 
-@pytest.mark.parametrize(
-    "subspace, superspace, expected",
-    [
-        ((1, 0, 0), (1, 0, 0), True),
-        ((2, 0, 0), (1, 0, 0), True),
-        ((1, 1, 0), (1, 0, 0), True),
-        ((1, 1, 0), (1, 1, 0), True),
-        ((2, 1, 0), (1, 1, 0), True),
-        ((1, 1, 0), (1, 2, 0), False),
-        ((1, 0, 0), (0, 0, 1), False),
-    ],
-)
-def test_is_numerator_factor(subspace, superspace, expected):
-    assert is_numerator_factor(subspace, superspace) is expected
+    def test_get_basis_a(self):
+        t = Temperament(((11, 35, 31),), ROW, (2, 9, 7))
+        assert get_basis_a(t) == Temperament(
+            ((1, 0, 0, 0), (0, 2, 0, 0), (0, 0, 0, 1)), COL
+        )
 
+    @pytest.mark.parametrize(
+        "a, b, expected",
+        [
+            (3, 5, True),
+            (-3, -5, True),
+            (-3, 5, False),
+            (3, -5, False),
+            (3, 0, True),
+            (0, 5, True),
+            (-3, 0, True),
+            (0, -5, True),
+        ],
+    )
+    def test_signs_match(self, a, b, expected):
+        assert signs_match(a, b) is expected
 
-@pytest.mark.parametrize(
-    "subspace, superspace, expected",
-    [
-        ((1, 0, 0), (1, 0, 0), False),
-        ((1, -1, 0), (1, 0, 0), False),
-        ((1, -1, 0), (0, 1, 0), True),
-    ],
-)
-def test_is_denominator_factor(subspace, superspace, expected):
-    assert is_denominator_factor(subspace, superspace) is expected
+    @pytest.mark.parametrize(
+        "subspace, superspace, expected",
+        [
+            ((1, 0, 0), (1, 0, 0), True),
+            ((2, 0, 0), (1, 0, 0), True),
+            ((1, 1, 0), (1, 0, 0), True),
+            ((1, 1, 0), (1, 1, 0), True),
+            ((2, 1, 0), (1, 1, 0), True),
+            ((1, 1, 0), (1, 2, 0), False),
+            ((1, 0, 0), (0, 0, 1), False),
+        ],
+    )
+    def test_is_numerator_factor(self, subspace, superspace, expected):
+        assert is_numerator_factor(subspace, superspace) is expected
 
+    @pytest.mark.parametrize(
+        "subspace, superspace, expected",
+        [
+            ((1, 0, 0), (1, 0, 0), False),
+            ((1, -1, 0), (1, 0, 0), False),
+            ((1, -1, 0), (0, 1, 0), True),
+        ],
+    )
+    def test_is_denominator_factor(self, subspace, superspace, expected):
+        assert is_denominator_factor(subspace, superspace) is expected
 
-@pytest.mark.parametrize(
-    "original, target, expected",
-    [
-        ((2, 3, 5, 7), (2, 3, 5), ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0))),
-        ((2, 3, 7), (2, 9, 7), ((1, 0, 0), (0, 2, 0), (0, 0, 1))),
-        ((2, 3, 5, 7), (2, F(9, 7), F(5, 3)), ((1, 0, 0, 0), (0, 2, 0, -1), (0, -1, 1, 0))),
-    ],
-)
-def test_get_domain_basis_change_for_m(original, target, expected):
-    assert get_domain_basis_change_for_m(original, target) == expected
+    @pytest.mark.parametrize(
+        "original, target, expected",
+        [
+            ((2, 3, 5, 7), (2, 3, 5), ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0))),
+            ((2, 3, 7), (2, 9, 7), ((1, 0, 0), (0, 2, 0), (0, 0, 1))),
+            ((2, 3, 5, 7), (2, F(9, 7), F(5, 3)), ((1, 0, 0, 0), (0, 2, 0, -1), (0, -1, 1, 0))),
+        ],
+    )
+    def test_get_domain_basis_change_for_m(self, original, target, expected):
+        assert get_domain_basis_change_for_m(original, target) == expected
 
+    @pytest.mark.parametrize(
+        "original, target, expected",
+        [
+            ((2, 3, 5), (2, 3, 5, 7), ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0))),
+            ((2, 9, 7), (2, 3, 7), ((1, 0, 0), (0, 2, 0), (0, 0, 1))),
+            ((2, F(9, 7), F(5, 3)), (2, 3, 5, 7), ((1, 0, 0, 0), (0, 2, 0, -1), (0, -1, 1, 0))),
+        ],
+    )
+    def test_get_domain_basis_change_for_c(self, original, target, expected):
+        assert get_domain_basis_change_for_c(original, target) == expected
 
-@pytest.mark.parametrize(
-    "original, target, expected",
-    [
-        ((2, 3, 5), (2, 3, 5, 7), ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0))),
-        ((2, 9, 7), (2, 3, 7), ((1, 0, 0), (0, 2, 0), (0, 0, 1))),
-        ((2, F(9, 7), F(5, 3)), (2, 3, 5, 7), ((1, 0, 0, 0), (0, 2, 0, -1), (0, -1, 1, 0))),
-    ],
-)
-def test_get_domain_basis_change_for_c(original, target, expected):
-    assert get_domain_basis_change_for_c(original, target) == expected
+    @pytest.mark.parametrize(
+        "original, target, expected",
+        [
+            (("2", "1", "5"), ("2", "3", "5"), ((1, 0, 0), (0, 0, 0), (0, 0, 1))),
+            (("2", "3", "5"), ("2", "1", "5"), ((1, 0, 0), (0, 0, 0), (0, 0, 1))),
+        ],
+    )
+    def test_get_domain_basis_change_terminates_with_unison_basis_element(self, 
+        original, target, expected
+    ):
+        assert get_domain_basis_change_for_m(original, target) == expected
+        assert get_domain_basis_change_for_c(original, target) == expected
 
-
-@pytest.mark.parametrize(
-    "original, target, expected",
-    [
-        (("2", "1", "5"), ("2", "3", "5"), ((1, 0, 0), (0, 0, 0), (0, 0, 1))),
-        (("2", "3", "5"), ("2", "1", "5"), ((1, 0, 0), (0, 0, 0), (0, 0, 1))),
-    ],
-)
-def test_get_domain_basis_change_terminates_with_unison_basis_element(
-    original, target, expected
-):
-    assert get_domain_basis_change_for_m(original, target) == expected
-    assert get_domain_basis_change_for_c(original, target) == expected
-
-
-@pytest.mark.parametrize(
-    "domain_basis, expected",
-    [
-        ((2, F(5, 3), F(9, 7)), (2, 3, 5, 7)),  # tests.m 4102
-        ((2, 3, 5), (2, 3, 5)),
-        ((4, 3, 5), (2, 3, 5)),
-        ((2, F(13, 5)), (2, 5, 13)),
-    ],
-)
-def test_get_simplest_prime_only_basis(domain_basis, expected):
-    assert get_simplest_prime_only_basis(domain_basis) == expected
+    @pytest.mark.parametrize(
+        "domain_basis, expected",
+        [
+            ((2, F(5, 3), F(9, 7)), (2, 3, 5, 7)),
+            ((2, 3, 5), (2, 3, 5)),
+            ((4, 3, 5), (2, 3, 5)),
+            ((2, F(13, 5)), (2, 5, 13)),
+        ],
+    )
+    def test_get_simplest_prime_only_basis(self, domain_basis, expected):
+        assert get_simplest_prime_only_basis(domain_basis) == expected

@@ -13,9 +13,8 @@ from rtt.library.generator_forms import standard_jip_octaves
 JIP3 = standard_jip_octaves(3)
 JIP4 = standard_jip_octaves(4)
 
-# commas stored as rows (each tuple element is one comma's prime-count vector)
-MEANTONE = ((4, -4, 1),)                          # canonical [⟨4 -4 1⟩] = 80/81 (downward)
-SEPTIMAL_MEANTONE = ((4, -4, 1, 0), (13, -10, 0, 1))   # canonical [80/81, 57344/59049]
+MEANTONE = ((4, -4, 1),)
+SEPTIMAL_MEANTONE = ((4, -4, 1, 0), (13, -10, 0, 1))
 PRIMES = (2, 3, 5, 7, 11, 13)
 
 
@@ -34,53 +33,37 @@ def _ratios(matrix):
     return [_ratio(v) for v in matrix]
 
 
-def test_positive_ratio_matches_the_guide():
-    # the guide's worked example: meantone's canonical comma 80/81 (downward) flips to 81/80
-    assert cf.positive_ratio_ca(MEANTONE, JIP3) == ((-4, 4, -1),)
-    assert _ratios(cf.positive_ratio_ca(MEANTONE, JIP3)) == [Fraction(81, 80)]
-    # "The positive ratio form of septimal meantone is [81/80, 59049/57344]."
-    assert _ratios(cf.positive_ratio_ca(SEPTIMAL_MEANTONE, JIP4)) == [
-        Fraction(81, 80), Fraction(59049, 57344)]
+class TestCommaForms:
+    def test_positive_ratio_matches_the_guide(self):
+        assert cf.positive_ratio_ca(MEANTONE, JIP3) == ((-4, 4, -1),)
+        assert _ratios(cf.positive_ratio_ca(MEANTONE, JIP3)) == [Fraction(81, 80)]
+        assert _ratios(cf.positive_ratio_ca(SEPTIMAL_MEANTONE, JIP4)) == [
+            Fraction(81, 80), Fraction(59049, 57344)]
 
+    def test_minimal_matches_the_wiki_comma_lists(self):
+        assert _ratios(cf.minimal_ca(MEANTONE, JIP3)) == [Fraction(81, 80)]
+        assert _ratios(cf.minimal_ca(SEPTIMAL_MEANTONE, JIP4)) == [Fraction(81, 80), Fraction(126, 125)]
 
-def test_minimal_matches_the_wiki_comma_lists():
-    # a single comma is already minimal — just made positive in pitch
-    assert _ratios(cf.minimal_ca(MEANTONE, JIP3)) == [Fraction(81, 80)]
-    # septimal meantone's wiki comma list is [81/80, 126/125], simpler than the canonical
-    # [81/80, 57344/59049] — LLL alone would pick the L2-shorter 225/224, but the log-product
-    # (L1) minimum is 126/125
-    assert _ratios(cf.minimal_ca(SEPTIMAL_MEANTONE, JIP4)) == [Fraction(81, 80), Fraction(126, 125)]
+    def test_minimal_ca_of_a_commaless_basis_short_circuits(self):
+        assert cf.minimal_ca((), JIP3) == ()
+        assert cf.minimal_ca(((0, 0, 0),), JIP3) == ((0, 0, 0),)
 
+    def test_minimal_is_simpler_than_canonical(self):
+        minimal = cf.minimal_ca(SEPTIMAL_MEANTONE, JIP4)
+        worst_minimal = max(cf._complexity(c, JIP4) for c in minimal)
+        worst_canonical = max(cf._complexity(c, JIP4) for c in SEPTIMAL_MEANTONE)
+        assert worst_minimal < worst_canonical
 
-def test_minimal_ca_of_a_commaless_basis_short_circuits():
-    # a JI / contorted basis with no real commas has nothing to LLL-reduce: an empty basis
-    # stays empty, and an all-zero comma row passes straight through (no enumeration).
-    assert cf.minimal_ca((), JIP3) == ()
-    assert cf.minimal_ca(((0, 0, 0),), JIP3) == ((0, 0, 0),)
+    def test_every_form_preserves_the_temperament(self):
+        for matrix, jip in [(MEANTONE, JIP3), (SEPTIMAL_MEANTONE, JIP4),
+                            (((1, -5, 3),), JIP3),
+                            (((-11, 7, 0, 0), (4, -4, 1, 0)), JIP4)]:
+            canon = canonical_ca(matrix)
+            for form in (cf.positive_ratio_ca, cf.minimal_ca):
+                assert canonical_ca(form(matrix, jip)) == canon, (form.__name__, matrix)
 
-
-def test_minimal_is_simpler_than_canonical():
-    # the whole point of the minimal form: no comma is more complex than the canonical's
-    minimal = cf.minimal_ca(SEPTIMAL_MEANTONE, JIP4)
-    worst_minimal = max(cf._complexity(c, JIP4) for c in minimal)
-    worst_canonical = max(cf._complexity(c, JIP4) for c in SEPTIMAL_MEANTONE)
-    assert worst_minimal < worst_canonical
-
-
-def test_every_form_preserves_the_temperament():
-    # a form is only a re-expression: it must canonicalize back to the same comma basis
-    for matrix, jip in [(MEANTONE, JIP3), (SEPTIMAL_MEANTONE, JIP4),
-                        (((1, -5, 3),), JIP3),                       # porcupine 250/243
-                        (((-11, 7, 0, 0), (4, -4, 1, 0)), JIP4)]:    # 2-comma, 7-limit
-        canon = canonical_ca(matrix)
+    def test_forms_are_idempotent_and_input_independent(self):
         for form in (cf.positive_ratio_ca, cf.minimal_ca):
-            assert canonical_ca(form(matrix, jip)) == canon, (form.__name__, matrix)
-
-
-def test_forms_are_idempotent_and_input_independent():
-    # a form of a form is itself; and equivalent inputs (same canonical) give the same form
-    for form in (cf.positive_ratio_ca, cf.minimal_ca):
-        once = form(SEPTIMAL_MEANTONE, JIP4)
-        assert form(once, JIP4) == once                                  # idempotent
-        # a non-canonical but equivalent basis (second comma replaced by a combination) → same form
-        assert form(((4, -4, 1, 0), (17, -14, 1, 1)), JIP4) == once
+            once = form(SEPTIMAL_MEANTONE, JIP4)
+            assert form(once, JIP4) == once
+            assert form(((4, -4, 1, 0), (17, -14, 1, 1)), JIP4) == once
