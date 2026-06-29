@@ -1,0 +1,366 @@
+from functools import partial
+
+import pytest
+
+from rtt.app import (
+    grid_tables,
+    service,
+    settings,
+    spreadsheet,
+    spreadsheet_constants,
+    spreadsheet_geometry_query as query,
+    spreadsheet_models,
+    spreadsheet_text,
+)
+from rtt.app.editor import Editor
+from rtt.app.layout import CellBox, Layout
+from rtt.app.spreadsheet_decorations import _tile_groups
+from rtt.app.spreadsheet_geometry import plain_text_band
+from _spreadsheet_support import _memoized_build, _layout, _with, _title_edges, _assert_freeze_partition, _all_on
+
+
+class TestFreezeBands:
+    def test_rows_columns_and_cells_are_present(self):
+        ids = {c.id for c in _layout().cells}
+        assert {"header:gens", "header:primes"} <= ids
+        assert {"label:quantities", "label:mapping"} <= ids
+        assert {"prime:0", "prime:1", "prime:2"} <= ids
+        assert {"gen:0", "gen:1"} <= ids
+        assert {"cell:mapping:0:0", "cell:mapping:1:2"} <= ids
+        assert {"minus", "plus"} <= ids
+
+    def test_freeze_seam_sits_at_the_first_value_tile(self):
+        lay = _layout()
+        tiles = [bl for bl in lay.blocks if bl.tint == "" and not bl.boxed]
+        assert lay.freeze_y == min(bl.y for bl in tiles)
+        assert lay.freeze_x == min(bl.x for bl in tiles)
+        by_id = {ln.id: ln for ln in lay.lines}
+        assert by_id["trunk:primes"].start < lay.freeze_y
+        assert by_id["trunk:mapping"].start < lay.freeze_x
+
+    def test_the_first_columns_title_clears_the_frozen_corner(self):
+        lay = _layout()
+        h = {c.id: c for c in lay.cells}["header:quantities"]
+        title_left = (h.x + h.w / 2) - spreadsheet_text._title_w(h.text) / 2
+        assert title_left >= lay.freeze_x - 0.51, "not tucked under the frozen corner"
+
+    def test_branch_controls_ride_the_frozen_bands(self):
+        lay = _layout()
+        cells = {c.id: c for c in lay.cells}
+        assert cells["plus"].y + cells["plus"].h <= lay.freeze_y
+        assert cells["minus"].y < lay.freeze_y
+        assert cells["basis_plus"].x + cells["basis_plus"].w <= lay.freeze_x
+        assert cells["basis_minus"].x < lay.freeze_x
+
+    def test_layout_reports_the_rightmost_title_overhang(self):
+        lay = _layout()
+        rightmost = max(c.x + c.w / 2 + spreadsheet_text._title_w(c.text) / 2
+                        for c in lay.cells if c.kind == "colheader")
+        assert lay.right_overhang == rightmost - lay.width
+        assert lay.right_overhang > 0
+
+    def test_no_title_overhang_reports_zero(self):
+        lay = _with(interest=False)
+        rightmost = max(c.x + c.w / 2 + spreadsheet_text._title_w(c.text) / 2
+                        for c in lay.cells if c.kind == "colheader")
+        assert rightmost < lay.width
+        assert lay.right_overhang == 0
+
+    def test_adjacent_column_titles_keep_a_margin(self):
+        s = settings.defaults()
+        s["optimization"] = True
+        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, targets_in_use=False)
+        edges = _title_edges(lay)
+        assert [k for k, _l, _r in edges][-2:] == ["held", "interest"]
+        for (lk, _ll, lr), (rk, rl, _rr) in zip(edges, edges[1:]):
+            assert rl - lr >= spreadsheet_constants.TITLE_MARGIN - 0.5, f"{lk}->{rk} titles only {rl - lr:.1f}px apart"
+
+    def test_title_clearance_leaves_shielded_columns_untouched(self):
+        lay = _layout()
+        interest = {c.id: c for c in lay.cells}["header:interest"]
+        targets = {c.id: c for c in lay.cells}["header:targets"]
+        assert interest.x == targets.x + targets.w + spreadsheet_constants.GAP, "plain GAP, not widened"
+        assert lay.right_overhang > 0
+
+    def test_freeze_bands_hold_exactly_the_titles_and_toggles(self):
+        _assert_freeze_partition(_layout())
+
+    def test_freeze_bands_survive_collapsing_rows_and_columns(self):
+        collapsed = {"row:tuning", "row:mapping", "col:targets", "col:primes"}
+        _assert_freeze_partition(spreadsheet.build(
+            service.from_mapping(((1, 1, 0), (0, 1, 4))), collapsed=collapsed))
+
+    def test_build_renders_a_nonstandard_domain_in_its_elements(self):
+        state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+        cells = {c.id: c for c in spreadsheet.build(state).cells}
+        assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "13/5"]
+        assert cells["header:primes"].text == "domain basis\nelements"
+        assert cells["gen:1"].text == "15/13"
+
+    def test_build_threads_nonprime_approach_through_to_the_tuning(self):
+        state = service.from_temperament_data("2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]]")
+        neutral = spreadsheet.build(state, tuning_scheme="TILT minimax-C")
+        nonprime = spreadsheet.build(state, tuning_scheme="TILT minimax-C", nonprime_approach="nonprime-based")
+        n = {c.id: c.text for c in neutral.cells}
+        np_ = {c.id: c.text for c in nonprime.cells}
+        assert n["tuning:gen:0"] != np_["tuning:gen:0"]
+        assert n["tuning:gen:1"] != np_["tuning:gen:1"]
+
+    def test_generator_ratios_also_head_the_generators_column_in_the_quantities_row(self):
+        cells = {c.id: c for c in _layout().cells}
+        assert cells["qgen:0"].text == "2/1"
+        assert cells["qgen:1"].text == "3/2"
+        assert cells["qgen:0"].x == cells["tuning:gen:0"].x
+        assert cells["qgen:1"].x == cells["tuning:gen:1"].x
+        assert cells["qgen:0"].y == cells["prime:0"].y
+
+    def test_standard_domain_header_still_reads_domain_primes(self):
+        cells = {c.id: c for c in _layout().cells}
+        assert cells["header:primes"].text == "domain\nprimes"
+        assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "5"]
+
+    def test_nonstandard_but_all_prime_domain_still_reads_domain_primes(self):
+        arch = service.from_comma_basis(((6, -2, -1),), domain_basis=(2, 3, 7))
+        s = settings.defaults()
+        s["domain_units"] = True
+        cells = {c.id: c for c in spreadsheet.build(arch, s).cells}
+        assert cells["header:primes"].text == "domain\nprimes"
+        assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "7"]
+        assert cells["urow:primes:0"].text == "/p₁", "its coordinate label is p (true primes) too, not the basis-element b"
+
+    def test_generator_ratios_are_listed_in_the_quantities_column(self):
+        cells = {c.id: c for c in _layout().cells}
+        assert cells["gen:0"].text == "2/1"
+        assert cells["gen:1"].text == "3/2"
+        assert cells["gen:0"].x == cells["header:quantities"].x
+        assert cells["gen:0"].x < cells["header:gens"].x
+        assert cells["gen:0"].y == cells["cell:mapping:0:0"].y
+        assert cells["gen:1"].y == cells["cell:mapping:1:0"].y
+
+    def test_mapping_over_generators_identity_renders_with_identity_objects(self):
+        cells = {c.id: c for c in _with(identity_objects=True, names=True, symbols=True,
+                                        equivalences=True, plain_text_values=True).cells}
+        for i in range(2):
+            for k in range(2):
+                assert cells[f"cell:selfmap:{i}:{k}"].text == ("1" if i == k else "0")
+                assert cells[f"cell:selfmap:{i}:{k}"].kind == "mapped"
+        assert cells["symbol:mapping:gens"].text == "\U0001D440G = \U0001D43C"
+        assert cells["caption:mapping:gens"].text == "mapped generators"
+        assert cells["bracket:selfmap:l"].text == spreadsheet_constants.GENMAP_BRACKETS[0]
+        assert cells["bracket:selfmap:r"].text == spreadsheet_constants.GENMAP_BRACKETS[1]
+        assert cells["ebktop:selfmap:0"].kind == "ebktop"
+        assert cells["ebkbrace:selfmap:0"].kind == "ebkbrace"
+        assert cells["plain_text:mapping:gens"].text == "{[1 0} [0 1}]"
+        assert not any(c.startswith(("matlabel:row:mapping:gens", "matlabel:col:mapping:gens")) for c in cells)
+
+    def test_mapping_over_generators_identity_gated_off_by_default(self):
+        cells = {c.id for c in _layout().cells}
+        assert not any(c.startswith(("cell:selfmap", "bracket:selfmap", "ebktop:selfmap",
+                                     "ebkbrace:selfmap")) for c in cells)
+        assert "toggle:tile:mapping:gens" not in cells
+
+    def test_standard_identity_objects_wash_temperament_yellow(self):
+        washes = {b.id for b in _with(identity_objects=True, generator_detempering=True,
+                                      temperament_colorization=True).blocks}
+        for key in ("vectors:primes", "mapping:gens", "mapping:detempering"):
+            assert f"wash:temperament:{key}" in washes
+            assert f"wash:tuning:{key}" not in washes, "not cyan"
+
+    def test_primes_sit_above_the_mapping_columns(self):
+        cells = {c.id: c for c in _layout().cells}
+        for p in range(3):
+            assert cells[f"prime:{p}"].x == cells[f"cell:mapping:0:{p}"].x
+        assert cells["prime:0"].y < cells["cell:mapping:0:0"].y
+
+    def test_minus_is_revealed_at_the_last_primes_branch_point_clear_of_its_input(self):
+        lay = _layout()
+        cells = {c.id: c for c in lay.cells}
+        by_id = {ln.id: ln for ln in lay.lines}
+        minus = cells["minus"]
+        assert abs((minus.x + minus.w / 2) - by_id["v:prime:2"].pos) < 0.51
+        assert minus.y == by_id["bus:primes:top"].pos, "the zone drops from the top bus (branch point)"
+        assert minus.y + minus.h <= cells["cell:mapping:0:2"].y
+
+    def test_minus_tracks_the_new_last_prime_after_a_shrink(self):
+        wide = service.expand_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))
+        wlay = spreadsheet.build(wide)
+        wcells, wlines = {c.id: c for c in wlay.cells}, {ln.id: ln for ln in wlay.lines}
+        assert abs((wcells["minus"].x + wcells["minus"].w / 2) - wlines["v:prime:3"].pos) < 0.51
+        slay = spreadsheet.build(service.shrink_domain(wide))
+        scells, slines = {c.id: c for c in slay.cells}, {ln.id: ln for ln in slay.lines}
+        assert "prime:3" not in scells
+        assert abs((scells["minus"].x + scells["minus"].w / 2) - slines["v:prime:2"].pos) < 0.51
+
+    def test_a_single_prime_domain_has_no_minus_but_keeps_plus(self):
+        cells = {c.id for c in spreadsheet.build(service.from_mapping(((1,),))).cells}
+        assert "minus" not in cells
+        assert {"plus", "prime:0"} <= cells
+
+    def test_domain_minus_is_absent_on_a_nonstandard_subgroup(self):
+        arch = service.from_comma_basis(((6, -2, -1),), domain_basis=(2, 3, 7))
+        cells = {c.id for c in spreadsheet.build(arch).cells}
+        assert {"prime:0", "prime:2"} <= cells
+        assert "minus" not in cells and "basis_minus" not in cells
+
+    def test_domain_minus_shows_even_when_the_shrink_would_degenerate(self):
+        augmented = service.from_comma_basis(((7, 0, -3),))
+        cells = {c.id for c in spreadsheet.build(augmented).cells}
+        assert {"prime:0", "prime:2"} <= cells
+        assert "minus" in cells and "basis_minus" in cells
+
+    def test_domain_plus_is_absent_on_a_nonstandard_subgroup(self):
+        arch = service.from_comma_basis(((6, -2, -1),), domain_basis=(2, 3, 7))
+        cells = {c.id for c in spreadsheet.build(arch).cells}
+        assert {"prime:0", "prime:2"} <= cells
+        assert "plus" not in cells and "basis_plus" not in cells
+
+    def test_quantities_row_pluses_ride_the_bus_stub_past_the_last_branch_point(self):
+        opts = settings.defaults()
+        opts["names"] = False
+        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), opts, interest=((-1, 1, 0),))
+        cells = {c.id: c for c in lay.cells}
+        by_id = {ln.id: ln for ln in lay.lines}
+        for plus_id, col, last_sub, gap in (("plus", "primes", "v:prime:2", 0),
+                                            ("comma_plus", "commas", "v:comma:0", 0),
+                                            ("interest_plus", "interest", "v:interest:0", spreadsheet_constants.INTERVAL_COL_GAP / 2)):
+            plus, bus = cells[plus_id], by_id[f"bus:{col}:top"]
+            stub = by_id[last_sub].pos + spreadsheet_constants.COL_W + gap
+            assert abs((plus.x + plus.w / 2) - stub) < 0.51
+            assert abs((plus.y + plus.h / 2) - bus.pos) < 0.51
+            assert abs((bus.start + bus.length) - stub) < 0.51
+
+    def test_interval_pluses_survive_hiding_the_quantities_row(self):
+        state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+        interval_pluses = {"comma_plus", "target_plus", "interest_plus"}
+        quantities_only = {"plus", "gen_plus"}
+
+        shown = {c.id for c in spreadsheet.build(state).cells}
+        assert (interval_pluses | quantities_only) <= shown
+
+        folded = {c.id for c in spreadsheet.build(state, collapsed={"row:quantities"}).cells}
+        assert interval_pluses <= folded
+        assert quantities_only.isdisjoint(folded)
+
+        off = settings.defaults()
+        off["interval_ratios"] = False
+        dropped = {c.id for c in spreadsheet.build(state, off).cells}
+        assert interval_pluses <= dropped
+        assert quantities_only.isdisjoint(dropped)
+
+        both_hidden = {c.id for c in spreadsheet.build(state, off, collapsed={"row:vectors"}).cells}
+        assert (interval_pluses | quantities_only).isdisjoint(both_hidden)
+
+
+class TestGeneratorsPlus:
+    def test_interval_minuses_rehome_to_the_vectors_row_when_quantities_hidden(self):
+        state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+
+        shown = {c.id for c in spreadsheet.build(state).cells}
+        assert {"comma_minus:0", "target_minus:0", "minus", "gen_minus"} <= shown
+
+        folded = {c.id for c in spreadsheet.build(state, collapsed={"row:quantities"}).cells}
+        assert {"comma_minus:0", "target_minus:0"} <= folded
+        assert {"minus", "gen_minus"}.isdisjoint(folded)
+        assert "basis_minus" in folded, "(the domain − twin already lives on the vectors row)"
+
+        drafts = (("pending_comma", "comma_minus:pending"), ("pending_interest", "interest_minus:pending"))
+        for arg, minus_id in drafts:
+            cells = {c.id for c in spreadsheet.build(state, collapsed={"row:quantities"},
+                                                     **{arg: [None, None, None]}).cells}
+            assert minus_id in cells
+
+        off = settings.defaults(); off["interval_ratios"] = False
+        both_hidden = {c.id for c in spreadsheet.build(state, off, collapsed={"row:vectors"}).cells}
+        assert {"comma_minus:0", "target_minus:0"}.isdisjoint(both_hidden)
+
+    def test_generators_plus_and_minus_ride_the_generators_fan(self):
+        lay = _layout()
+        cells = {c.id: c for c in lay.cells}
+        by_id = {ln.id: ln for ln in lay.lines}
+        plus, bus, last_sub = cells["gen_plus"], by_id["bus:gens:top"], by_id["v:gen:1"]
+        stub = last_sub.pos + spreadsheet_constants.COL_W
+        assert abs((plus.x + plus.w / 2) - stub) < 0.51
+        assert abs((plus.y + plus.h / 2) - bus.pos) < 0.51
+        assert abs((bus.start + bus.length) - stub) < 0.51
+        minus = cells["gen_minus"]
+        assert abs((minus.x + minus.w / 2) - last_sub.pos) < 0.51
+        assert minus.y == bus.pos, "the zone drops from the top bus"
+        assert minus.y + minus.h <= cells["tuning:gen:0"].y
+
+    def test_a_single_generator_temperament_has_no_gen_minus_but_keeps_gen_plus(self):
+        cells = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),))).cells}
+        assert "gen_minus" not in cells
+        assert {"gen_plus", "qgen:0"} <= cells, "...but n>0, so a generator can still be added (un-tempering a comma)"
+
+    def test_generators_plus_is_gated_on_a_comma_to_un_temper(self):
+        assert "gen_plus" in {c.id for c in _layout().cells}, "the generators + un-tempers a comma (−n, +r, hold d), like the mapping +, so it needs a comma: # present at n>0, gone at full rank where there is nothing left to un-temper"
+        ji = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
+        assert "gen_plus" not in {c.id for c in spreadsheet.build(ji).cells}
+
+    def test_minus_hover_zone_clears_the_editable_quantities_cell(self):
+        cells = {c.id: c for c in _layout().cells}
+        k = len([c for c in cells if c.startswith("target:") and c.split(":")[1].isdigit()])
+        assert k >= 2
+        for j in range(k):
+            zone, cell = cells[f"target_minus:{j}"], cells[f"target:{j}"]
+            assert zone.y + zone.h <= cell.y + 0.51
+
+    def test_target_list_carries_a_per_entry_minus_and_a_plus(self):
+        lay = _layout()
+        cells = {c.id: c for c in lay.cells}
+        by_id = {ln.id: ln for ln in lay.lines}
+        k = len([c for c in cells if c.startswith("target:") and c.split(":")[1].isdigit()])
+        assert k >= 2
+        assert all(f"target_minus:{j}" in cells for j in range(k))
+        plus, bus, last_sub = cells["target_plus"], by_id["bus:targets:top"], by_id[f"v:target:{k - 1}"]
+        stub = last_sub.pos + spreadsheet_constants.COL_W + spreadsheet_constants.INTERVAL_COL_GAP
+        assert abs((plus.x + plus.w / 2) - stub) < 0.51
+        assert abs((bus.start + bus.length) - stub) < 0.51
+
+    def test_target_list_has_no_controls_in_all_interval(self):
+        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), tuning_scheme="minimax-S")
+        cells = {c.id for c in lay.cells}
+        assert "target_plus" not in cells
+        assert not any(c.startswith("target_minus:") for c in cells)
+
+    def test_interval_columns_carry_a_drag_grip_per_column(self):
+        ed = Editor()
+        ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])
+        ed.set_interest_vectors([(1, 1, -1)])
+        cells = {c.id: c for c in spreadsheet.build(
+            ed.state, _all_on(), interest=ed.interest_vectors, held_vectors=ed.held_vectors).cells}
+        assert cells["grip:held:0"].kind == "colgrip" and cells["grip:held:1"].kind == "colgrip"
+        assert "grip:held:2" not in cells
+        assert cells["grip:held:add"].kind == "colgrip"
+        assert cells["grip:interest:0"].kind == "colgrip"
+
+    def test_a_drag_grip_rides_the_fan_band_below_the_minus(self):
+        ed = Editor()
+        ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])
+        lay = spreadsheet.build(ed.state, _all_on(), held_vectors=ed.held_vectors)
+        cells = {c.id: c for c in lay.cells}
+        sub = {ln.id: ln for ln in lay.lines}["v:held:1"].pos
+        grip, minus = cells["grip:held:1"], cells["held_minus:1"]
+        assert abs((grip.x + grip.w / 2) - sub) < 0.51
+        assert grip.y > minus.y + 0.5
+        assert grip.y + grip.h <= lay.freeze_y + 0.51, "...and above the seam (in the frozen fan, not clipped)"
+
+    def test_an_empty_interval_list_still_offers_a_gridline_drop_zone(self):
+        cells = {c.id for c in spreadsheet.build(
+            service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
+        assert "grip:interest:0" not in cells
+        assert "grip:interest:add" in cells
+
+    def test_comma_grips_let_even_the_sole_comma_be_dragged_out(self):
+        on = {**_all_on(), "projection": False}
+        one = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), on).cells}
+        assert "grip:commas:0" in one and "grip:commas:add" in one
+        two = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),)), on).cells}
+        assert "grip:commas:0" in two and "grip:commas:1" in two
+        ji = {c.id for c in spreadsheet.build(service.add_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4)))), on).cells}
+        assert "grip:commas:0" not in ji
+
+    def test_targets_have_no_drag_grips_in_all_interval(self):
+        cells = {c.id for c in spreadsheet.build(
+            service.from_mapping(((1, 1, 0), (0, 1, 4))), tuning_scheme="minimax-S").cells}
+        assert not any(c.startswith("grip:targets") for c in cells)
