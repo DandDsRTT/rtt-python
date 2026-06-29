@@ -126,10 +126,10 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="", c
     for i, v in enumerate(values):
         if v is None:
             continue
-        cx = axis_x + i * pitch + col_w / 2
+        center_x = axis_x + i * pitch + col_w / 2
         yv = y_of(v)
         top, bot = min(zero_y, yv), max(zero_y, yv)
-        body.append(rect(cx - bw / 2, top, bw, bot - top))
+        body.append(rect(center_x - bw / 2, top, bw, bot - top))
     body.extend(_bar_chart_indicator(w, axis_x, y_of, indicator, indicator_label))
     return svg(w, h, "".join(body))
 
@@ -170,28 +170,28 @@ def _range_chart(w: float, h: float, ranges, tunings=(), decimals: bool = True) 
     mid, hw = (plot_top + plot_bot) / 2, _RANGE_MARK_W / 2
     cap_half, tick_half = _RANGE_CAP_W / 2, _RANGE_CAP_W / 2 - 3
 
-    def bar(cx, y, half):
-        return rect(cx - half, y - hw, 2 * half, _RANGE_MARK_W)
+    def bar(center_x, y, half):
+        return rect(center_x - half, y - hw, 2 * half, _RANGE_MARK_W)
 
-    def label(cx, y, v):
+    def label(center_x, y, v):
         shown = strip_negative_zero(f"{v:.{3 if decimals else 0}f}")
         return (
-            f'<text x="{cx:.2f}" y="{y:.2f}" text-anchor="middle" '
+            f'<text x="{center_x:.2f}" y="{y:.2f}" text-anchor="middle" '
             f'font-size="{_RANGE_FONT}" fill="{BR_COLOR}">{shown}</text>'
         )
 
     body = []
     for i, (lo, hi) in enumerate(ranges):
-        cx = cx0 + i * col_w + col_w / 2
+        center_x = cx0 + i * col_w + col_w / 2
         if hi - lo < 1e-6:
-            body.append(bar(cx, mid, cap_half) + label(cx, mid - 4, lo))
+            body.append(bar(center_x, mid, cap_half) + label(center_x, mid - 4, lo))
             continue
-        body.append(rect(cx - hw, plot_top, _RANGE_MARK_W, plot_bot - plot_top))
-        body.append(bar(cx, plot_top, cap_half) + bar(cx, plot_bot, cap_half))
-        body.append(label(cx, plot_top - 4, hi) + label(cx, plot_bot + 9, lo))
+        body.append(rect(center_x - hw, plot_top, _RANGE_MARK_W, plot_bot - plot_top))
+        body.append(bar(center_x, plot_top, cap_half) + bar(center_x, plot_bot, cap_half))
+        body.append(label(center_x, plot_top - 4, hi) + label(center_x, plot_bot + 9, lo))
         if i < len(tunings):
             frac = min(1.0, max(0.0, (hi - tunings[i]) / (hi - lo)))
-            body.append(bar(cx, plot_top + frac * (plot_bot - plot_top), tick_half))
+            body.append(bar(center_x, plot_top + frac * (plot_bot - plot_top), tick_half))
     return svg(w, h, "".join(body))
 
 

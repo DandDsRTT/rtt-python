@@ -61,12 +61,12 @@ def _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, 
     fanned_columns.add(key)
     dotted = f"col:{key}" in context.collapsed
     mx, mw = query.matrix_span(geometry, resolved, key)
-    cx = mx + mw / 2
+    center_x = mx + mw / 2
     if n == 0:
-        _gridline(lines, f"trunk:{key}", "v", cx, geometry.branch_top_y, geometry.fanout_y - geometry.branch_top_y, dotted=dotted)
-        _gridline(lines, f"foot:{key}", "v", cx, geometry.fanout_y, geometry.total_h - geometry.fanout_y, dotted=dotted)
+        _gridline(lines, f"trunk:{key}", "v", center_x, geometry.branch_top_y, geometry.fanout_y - geometry.branch_top_y, dotted=dotted)
+        _gridline(lines, f"foot:{key}", "v", center_x, geometry.fanout_y, geometry.total_h - geometry.fanout_y, dotted=dotted)
         return
-    xs = [cx] * n if dotted else [center_open(i) for i in range(n)]
+    xs = [center_x] * n if dotted else [center_open(i) for i in range(n)]
     for i in range(n):
         _gridline(lines, f"v:{prefix}:{i}", "v", xs[i], geometry.fanout_y, bot_bus_y - geometry.fanout_y, dotted=dotted)
     bx, bw = _bus_span(xs)
@@ -74,15 +74,15 @@ def _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, 
     bus_left = min(geometry.plus_stub_x[key], bx) if key in geometry.plus_stub_x else bx
     _gridline(lines, f"bus:{key}:top", "h", geometry.fanout_y, bus_left, top_end - bus_left, dotted=dotted)
     _gridline(lines, f"bus:{key}:bot", "h", bot_bus_y, bx, bw, dotted=dotted)
-    _gridline(lines, f"trunk:{key}", "v", cx, geometry.branch_top_y, geometry.fanout_y - geometry.branch_top_y, dotted=dotted)
-    _gridline(lines, f"foot:{key}", "v", cx, bot_bus_y, geometry.total_h - bot_bus_y, dotted=dotted)
+    _gridline(lines, f"trunk:{key}", "v", center_x, geometry.branch_top_y, geometry.fanout_y - geometry.branch_top_y, dotted=dotted)
+    _gridline(lines, f"foot:{key}", "v", center_x, bot_bus_y, geometry.total_h - bot_bus_y, dotted=dotted)
 
 
 def _row_axis(lines, geometry, context, right_bus_x, key) -> None:
     n = geometry.rows[key].num_subrows
     folded = f"row:{key}" in context.collapsed
-    cy = geometry.rows[key].y + geometry.rows[key].h / 2
-    ys = [cy] * n if folded else [query.subrow_top(geometry, key, i) + ROW_H / 2 for i in range(n)]
+    center_y = geometry.rows[key].y + geometry.rows[key].h / 2
+    ys = [center_y] * n if folded else [query.subrow_top(geometry, key, i) + ROW_H / 2 for i in range(n)]
     left_bus_x = geometry.node_edge + geometry.FAN if (query.row_fans(geometry, key) and not folded) else geometry.node_edge
     for i in range(n):
         _gridline(lines, f"h:{key}:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x, dotted=folded)
@@ -90,8 +90,8 @@ def _row_axis(lines, geometry, context, right_bus_x, key) -> None:
     left_bottom = geometry.row_plus_y[key] if key in geometry.row_plus_y else bus_y + bus_h
     _gridline(lines, f"vbar:{key}:left", "v", left_bus_x, bus_y, left_bottom - bus_y, dotted=folded)
     _gridline(lines, f"vbar:{key}:right", "v", right_bus_x, bus_y, bus_h, dotted=folded)
-    _gridline(lines, f"trunk:{key}", "h", cy, geometry.node_edge, left_bus_x - geometry.node_edge, dotted=folded)
-    _gridline(lines, f"foot:{key}", "h", cy, right_bus_x, geometry.total_w - right_bus_x, dotted=folded)
+    _gridline(lines, f"trunk:{key}", "h", center_y, geometry.node_edge, left_bus_x - geometry.node_edge, dotted=folded)
+    _gridline(lines, f"foot:{key}", "h", center_y, right_bus_x, geometry.total_w - right_bus_x, dotted=folded)
 
 
 def _emit_axes(lines, resolved, geometry, context) -> None:
@@ -103,8 +103,8 @@ def _emit_axes(lines, resolved, geometry, context) -> None:
     for key in geometry.col_x:
         if key in fanned_columns:
             continue
-        cx = geometry.col_x[key] + geometry.col_w[key] / 2
-        _gridline(lines, f"trunk:{key}", "v", cx, geometry.branch_top_y, geometry.total_h - geometry.branch_top_y,
+        center_x = geometry.col_x[key] + geometry.col_w[key] / 2
+        _gridline(lines, f"trunk:{key}", "v", center_x, geometry.branch_top_y, geometry.total_h - geometry.branch_top_y,
                   dotted=f"col:{key}" in context.collapsed)
     right_bus_x = geometry.total_w - geometry.FAN
     for key in geometry.rows:
@@ -301,8 +301,8 @@ def _caption_equivalences(resolved, geometry, ai, slope) -> dict:
     return equivalences
 
 
-def _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, cy) -> float:
-    cy += BAND_GAP
+def _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, center_y) -> float:
+    center_y += BAND_GAP
     equiv = caption_equivs.get((row_key, column_key), "") if resolved.flags.equivalences else ""
     base_symbol = resolved.labels.prescaling_symbols.get((row_key, column_key), SYMBOLS.get((row_key, column_key), ""))
     if caption_ai and (row_key, column_key) in ALL_INTERVAL_SYMBOLS:
@@ -312,28 +312,28 @@ def _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row
     base_symbol = query.form_subscripted(resolved, base_symbol, row_key, column_key)
     glyph = base_symbol if (resolved.flags.symbols or equiv) else ""
     if glyph or equiv:
-        cells.append(CellBox(f"symbol:{row_key}:{column_key}", geometry.col_x[column_key], cy, geometry.col_w[column_key], SYMBOL_H, "symbol", text=glyph + equiv))
-    return cy + SYMBOL_H
+        cells.append(CellBox(f"symbol:{row_key}:{column_key}", geometry.col_x[column_key], center_y, geometry.col_w[column_key], SYMBOL_H, "symbol", text=glyph + equiv))
+    return center_y + SYMBOL_H
 
 
-def _emit_unchanged_counts_caption(cells, resolved, geometry, row_key, cy) -> None:
+def _emit_unchanged_counts_caption(cells, resolved, geometry, row_key, center_y) -> None:
     comma_half_w = resolved.dims.comma_count * COL_W + resolved.unchanged.empty_comma_w
     if comma_half_w:
         comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_w else query.comma_left(geometry, resolved, 0)
-        cells.append(CellBox("caption:counts:commas", comma_half_x, cy, comma_half_w,
+        cells.append(CellBox("caption:counts:commas", comma_half_x, center_y, comma_half_w,
                              geometry.rows[row_key].caption, "caption", text="nullity"))
-    cells.append(CellBox("caption:counts:commas:u", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown), cy, resolved.dims.unchanged_count * COL_W,
+    cells.append(CellBox("caption:counts:commas:u", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown), center_y, resolved.dims.unchanged_count * COL_W,
                          geometry.rows[row_key].caption, "caption", text="unchanged interval count"))
 
 
-def _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_key, name, cy) -> None:
+def _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_key, name, center_y) -> None:
     kw = MNEMONICS.get((row_key, column_key)) if resolved.flags.mnemonics else None
     underlines = ((name.index(kw), 1),) if (kw and kw in name) else ()
     if resolved.flags.mnemonics and caption_ai:
         underlines += tuple((name.index(w), 1)
                             for w in ALL_INTERVAL_MNEMONICS.get((row_key, column_key), ()) if w in name)
     cap_x, cap_w = query.tile_span_box(geometry, row_key, column_key)
-    cells.append(CellBox(f"caption:{row_key}:{column_key}", cap_x, cy, cap_w, geometry.rows[row_key].caption,
+    cells.append(CellBox(f"caption:{row_key}:{column_key}", cap_x, center_y, cap_w, geometry.rows[row_key].caption,
                          "caption", text=name, underlines=underlines))
 
 
@@ -350,14 +350,14 @@ def _emit_tile_units(cells, resolved, geometry, row_key, column_key) -> None:
 def _emit_tile_symbols_captions(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, name) -> None:
     if caption_ai and (row_key, column_key) in ALL_INTERVAL_CAPTIONS:
         name = ALL_INTERVAL_CAPTIONS[(row_key, column_key)]
-    cy = geometry.rows[row_key].y + geometry.rows[row_key].h + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker
+    center_y = geometry.rows[row_key].y + geometry.rows[row_key].h + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker
     if (resolved.flags.symbols or resolved.flags.equivalences) and row_key in BANDS["symbol"].rows:
-        cy = _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, cy)
+        center_y = _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row_key, column_key, center_y)
     if resolved.flags.names and resolved.unchanged.shown and (row_key, column_key) == ("counts", "commas"):
-        _emit_unchanged_counts_caption(cells, resolved, geometry, row_key, cy)
+        _emit_unchanged_counts_caption(cells, resolved, geometry, row_key, center_y)
         return
     if resolved.flags.names:
-        _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_key, name, cy)
+        _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_key, name, center_y)
     _emit_tile_units(cells, resolved, geometry, row_key, column_key)
 
 

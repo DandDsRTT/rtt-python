@@ -136,8 +136,8 @@ def _band_of(bands, y):
 
 def _col_of(spans, x):
     found = None
-    for ckey, cx, cw in spans:
-        if cx - 0.5 <= x < cx + cw + 0.5:
+    for ckey, column_x, cw in spans:
+        if column_x - 0.5 <= x < column_x + cw + 0.5:
             found = ckey
     return found
 

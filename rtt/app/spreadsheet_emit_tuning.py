@@ -228,8 +228,8 @@ def _emit_cbox_controls(cells, region_boxes, resolved, geometry, context) -> Non
     if not geometry.cbox_ctrl:
         return
     box_top = geometry.rows["complexity"].tile_top + geometry.rows["complexity"].tile_h - geometry.cbox_extra + RANGE_GAP
-    tx, cy = control_region(region_boxes, geometry, "block:complexity", "targets", box_top, ROW_H + resolved.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)
-    sym_y = cy + ROW_H
+    tx, control_y = control_region(region_boxes, geometry, "block:complexity", "targets", box_top, ROW_H + resolved.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)
+    sym_y = control_y + ROW_H
     cap_y = sym_y + resolved.scalars.ctrl_symbol_h
     cap_h = 3 * CAPTION_LINE
     slot_w = CBOX_SLOT_W
@@ -243,17 +243,17 @@ def _emit_cbox_controls(cells, region_boxes, resolved, geometry, context) -> Non
         complexity_values = (((*tuple(service.COMPLEXITY_DISPLAYS.values()), "custom"))
                              if resolved.flags.alt_complexity else (complexity_text,))
         complexity_locked = _is_sole_option(complexity_values, complexity_text)
-        cells.append(CellBox("control:complexity", tx, cy, drop_w, PRESET_H,
+        cells.append(CellBox("control:complexity", tx, control_y, drop_w, PRESET_H,
                              "control_select", text=complexity_text, values=complexity_values,
                              disabled=complexity_locked))
-        cells.append(CellBox("caption:complexity", tx, cy + PRESET_H, drop_w,
+        cells.append(CellBox("caption:complexity", tx, control_y + PRESET_H, drop_w,
                              CAPTION_LINE, "caption", text="predefined complexities",
                              align="left", disabled=complexity_locked))
         q_slot_x = tx + drop_w + OPT_COL_GAP
     q_x = q_slot_x + (slot_w - COL_W) / 2
     q_text = _format_power(service.complexity_norm_power(context.tuning_scheme))
     q_kind = "powerinput" if resolved.flags.alt_complexity else "powerdisplay"
-    cells.append(CellBox("control:q", q_x, cy, COL_W, ROW_H, q_kind, text=q_text))
+    cells.append(CellBox("control:q", q_x, control_y, COL_W, ROW_H, q_kind, text=q_text))
     if resolved.flags.symbols:
         cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
     cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
@@ -262,7 +262,7 @@ def _emit_cbox_controls(cells, region_boxes, resolved, geometry, context) -> Non
         dual_slot_x = q_slot_x + slot_w + OPT_COL_GAP
         dual_x = dual_slot_x + (slot_w - COL_W) / 2
         dual_text = _format_power(service.dual_norm_power(context.tuning_scheme))
-        cells.append(CellBox("control:dual", dual_x, cy, COL_W, ROW_H, "powerdisplay", text=dual_text))
+        cells.append(CellBox("control:dual", dual_x, control_y, COL_W, ROW_H, "powerdisplay", text=dual_text))
         if resolved.flags.symbols:
             cells.append(CellBox("symbol:dual", dual_slot_x, sym_y, slot_w, SYMBOL_H,
                                  "symbol", text="dual(𝑞)"))
@@ -316,17 +316,17 @@ def _emit_tuning_ranges_box(cells, resolved, geometry, context):
     if geometry.gtm_chart:
         chosen = resolved.tuning.tuning_map.monotone_generator_range if context.range_mode == "monotone" else resolved.tuning.tuning_map.tradeoff_generator_range
         gx, gw = geometry.col_x["gens"], geometry.col_w["gens"]
-        cy = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_h - geometry.gtm_extra + RANGE_GAP
-        cells.append(CellBox("rangetitle:tuning:gens", gx, cy + BOX_INNER, gw, BOX_TITLE_H, "boxtitle",
+        control_y = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_h - geometry.gtm_extra + RANGE_GAP
+        cells.append(CellBox("rangetitle:tuning:gens", gx, control_y + BOX_INNER, gw, BOX_TITLE_H, "boxtitle",
                              text="tuning ranges", align="left"))
-        chart_y = cy + BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP
+        chart_y = control_y + BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP
         cells.append(CellBox("rangechart:tuning:gens", gx, chart_y, gw, RANGE_CHART_H, "rangechart",
                              ranges=tuple(chosen) if chosen is not None else (),
                              values=tuple(resolved.tuning.tuning_map.generator_map),
                              decimals=resolved.flags.decimals))
         cells.append(CellBox("rangemode:tuning:gens", gx, chart_y + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
                              "rangemode", text=context.range_mode))
-        gtm_box = (gx, cy, gw, 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
+        gtm_box = (gx, control_y, gw, 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
     return gtm_box
 
 
