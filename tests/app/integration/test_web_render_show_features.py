@@ -20,7 +20,7 @@ from rtt.app.editor import Editor
 from _render_support import _toggle, _enable, _pick_terminology, _terminology_opt_selected, _scheme_select, _op_classes, _cell_left, _part_classes, _marked, _approx_markers, _cell_child, _ratio_value, _wrap_classes, _ro_ratio_face, _click_glyph, _commit, _cell_text, _live, _live_assets, _GENERAL_KEY_BY_LABEL, _FEATURE_CELLS
 
 
-class TestBackScheme:
+class TestFeatureRenderBranches:
     def test_rowlabel_renders_a_hard_newline_as_a_line_break(self):
         import os
         import re
@@ -254,7 +254,7 @@ class TestBackScheme:
         assert "rtt-op-disabled" in _op_classes(user, "prime:1:reduce")
 
 
-class TestProjectionPlain:
+class TestProjectionPlainText:
     async def test_a_projection_plain_text_edit_is_unmolested_until_submit(self, user: User) -> None:
         await _enable(user, "projection")
         _toggle(user, "plain text values")

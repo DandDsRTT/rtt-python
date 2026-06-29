@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _with
 
 
-class TestSizeFactor:
+class TestCommasColumn:
     def test_commas_column_sits_between_primes_and_targets_with_its_comma_ratios(self):
         cells = {c.id: c for c in _layout().cells}
         assert cells["header:commas"].text == "commas"
@@ -305,7 +305,7 @@ class TestSizeFactor:
         assert on["symbol:prescaling:targets"].text == "𝑋T"
 
 
-class TestWeightingRows:
+class TestWeightingLabels:
     def test_log_prime_prescaler_name_gains_the_equivalence(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = {**settings.defaults(), "weighting": True, "alt_complexity": True, "symbols": True, "names": True,
@@ -660,7 +660,7 @@ class TestWeightingRows:
         assert "control:norm" not in on
 
 
-class TestGriddedValues:
+class TestGriddedValuesToggle:
     def test_q_norm_power_is_editable_only_with_alt_complexity(self):
         off = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}
         assert off["control:q"].kind == "powerdisplay"

@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _with, _color_at, _mid, _barbados_superspace, _barbados_superspace_identity, _SUBSCRIPT_DIGITS, _barbados_state, _barbados_superspace_tuning, _nonstd_on
 
 
-class TestSuperspaceTuning:
+class TestSuperspaceMatrixTiles:
     def test_M_L_absent_over_a_standard_prime_domain(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults() | {"nonstandard_domain": True}
@@ -217,7 +217,7 @@ class TestSuperspaceTuning:
             assert cells[f"bracket:{key}:superspace_primes:r"].text == "]"
 
 
-class TestPerCell:
+class TestSuperspaceBracketsAndMath:
     def test_superspace_g_L_brackets_reuse_GENMAP_BRACKETS(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
         assert cells["bracket:tuning:superspace_generator_map:l"].text == "{"
@@ -431,7 +431,7 @@ class TestPerCell:
         assert off["basis_plus"].kind == "plus", "...and so does the spine +"
 
 
-class TestBoxOff:
+class TestPerElementDomainControls:
     def test_box_off_walk_minus_gives_way_to_a_per_element_minus_with_the_box_on(self):
         augmented = service.from_comma_basis(((7, 0, -3),))
         off = {c.id for c in spreadsheet.build(augmented).cells}

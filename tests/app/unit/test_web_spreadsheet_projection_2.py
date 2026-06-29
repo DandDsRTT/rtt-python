@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _with, _projection_build, _target_count, _barbados_superspace, _barbados_state, _assert_plain_text_cells_match
 
 
-class TestProjectionV:
+class TestProjectionVColumn:
     def test_projection_dashes_the_unchanged_columns_when_under_held(self):
         cells = {c.id: c for c in _projection_build().cells}
         assert all(cells[f"cell:unchanged:{p}:{j}"].text == "—" for p in range(3) for j in range(2))
@@ -267,7 +267,7 @@ class TestProjectionV:
         _assert_plain_text_cells_match(lay, pt)
 
 
-class TestPlainText3:
+class TestProjectionDrafts:
     def test_plain_text_band_matches_a_direct_derivation_over_the_superspace(self):
         lay = _barbados_superspace(plain_text_values=True)
         pt = service.plain_text_values(_barbados_state(), service.DEFAULT_DOCUMENT_SCHEME,

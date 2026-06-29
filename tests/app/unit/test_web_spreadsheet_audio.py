@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _with, _projection_build, _with_interest, _maximized_superspace_builder, _INTEREST, _held, _CANON_MEANTONE, _canon_cells
 
 
-class TestCanonicalMapping:
+class TestPerCellAudio:
     def test_comma_ratio_cell_is_click_to_play_with_its_just_size(self):
         cells = {c.id: c for c in _layout().cells}
         cb = cells["comma:0"]
@@ -362,7 +362,7 @@ class TestCanonicalMapping:
         assert fold.x == panel.x + spreadsheet_constants.TOGGLE_INSET
 
 
-class TestShowFlags:
+class TestShowFlagGating:
     def test_show_flags_gate_sub_controls_under_their_parent(self):
         s = settings.defaults()
         s.update(tuning_tiles=False, optimization=True, weighting=True, alt_complexity=True,

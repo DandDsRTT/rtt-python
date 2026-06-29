@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _with, _all_on, _tokens, _held_state, _reorder_volatile, _in_targets
 
 
-class TestFreshColumn:
+class TestColumnTokens:
     def test_fresh_column_tokens_number_the_columns_by_index(self):
         pairs = spreadsheet_text.assign_column_tokens(None, [(-1, 1, 0), (2, 0, -1), (1, 1, -1)])
         assert _tokens(pairs) == [0, 1, 2]
@@ -258,7 +258,7 @@ class TestFreshColumn:
         assert "v:prime:3" in after and "v:prime:3" not in before
 
 
-class TestIntervalVectors:
+class TestSpineAndAxes:
     def test_quantities_spine_column_is_present_with_a_vertical_gridline(self):
         lay = _layout()
         cells = {c.id: c for c in lay.cells}

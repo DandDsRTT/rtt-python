@@ -20,7 +20,7 @@ from rtt.app.editor import Editor
 from _render_support import _toggle, _enable, _marked, _cell_child, _dec_mode, _frac_inputs, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _stacked_face, _ro_stacked_face, _dec_inputs, _gentuning_face, _ratio_face, _target_preset
 
 
-class TestEditingTarget:
+class TestCellEditPipeline:
     async def test_single_option_tuning_chooser_is_a_disabled_dropdown(self, user: User) -> None:
         await user.open("/")
         _toggle(user, "presets")
@@ -351,7 +351,7 @@ class TestEditingTarget:
         assert _dec_mode(user, "cell:prescaling:primes:1:1") == "dec"
 
 
-class TestBareInteger:
+class TestValueDisplayAndUndo:
     async def test_a_bare_integer_value_fills_the_cell_not_the_reduced_whole_part_size(self, user: User) -> None:
         await user.open("/")
         user.find(kind=ui.checkbox, content="optimization").click()

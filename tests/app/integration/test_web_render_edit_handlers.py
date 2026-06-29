@@ -20,7 +20,7 @@ from rtt.app.editor import Editor
 from _render_support import _toggle, _enable, _cell_child, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _ro_value, _target_preset
 
 
-class TestImproperMapping:
+class TestEditCommitHandlers:
     async def test_mapping_keystroke_preview_does_not_commit_until_blur(self, user: User) -> None:
         await user.open("/")
         assert _cell_text(user, "cell:mapped:1:6") == "4"
@@ -341,7 +341,7 @@ class TestImproperMapping:
         assert _ro_value(user, "weight:target:1") == before
 
 
-class TestHoveringForm:
+class TestChooserHoverPreviews:
     async def test_hovering_a_weight_slope_option_previews_reselecting(self, user: User) -> None:
         await user.open("/")
         _toggle(user, "optimization")

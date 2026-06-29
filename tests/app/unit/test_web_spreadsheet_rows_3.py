@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _with, _held, _color_at, _mid, _colormap_layout, _spine_colormap
 
 
-class TestGeneratorDetempering:
+class TestHeldColumn:
     def test_optimization_on_adds_an_addable_held_intervals_column(self):
         on = {c.id: c for c in _with(optimization=True).cells}
         off = {c.id for c in _with(optimization=False).cells}
@@ -242,7 +242,7 @@ class TestGeneratorDetempering:
         assert ch.x <= on["target:0"].x and ch.x + ch.width >= on["target:7"].x + spreadsheet_constants.COL_W, "the chart spans the target columns (so its bars can align with them)"
 
 
-class TestGeneratorTuning:
+class TestRetuningChartsAndGenMap:
     def test_charts_on_adds_signed_retuning_charts_over_primes_and_targets(self):
         on = {c.id: c for c in _with(charts=True).cells}
         cp, ct = on["chart:retune:primes"], on["chart:retune:targets"]

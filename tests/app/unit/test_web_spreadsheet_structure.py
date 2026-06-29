@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _layout, _with, _title_edges, _assert_freeze_partition, _all_on
 
 
-class TestFreezeBands:
+class TestFreezeAndStructure:
     def test_rows_columns_and_cells_are_present(self):
         ids = {c.id for c in _layout().cells}
         assert {"header:gens", "header:primes"} <= ids
@@ -251,7 +251,7 @@ class TestFreezeBands:
         assert (interval_pluses | quantities_only).isdisjoint(both_hidden)
 
 
-class TestGeneratorsPlus:
+class TestAddRemoveControls:
     def test_interval_minuses_rehome_to_the_vectors_row_when_quantities_hidden(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
 

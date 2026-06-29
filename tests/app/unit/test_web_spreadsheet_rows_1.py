@@ -493,7 +493,7 @@ class TestCountsRow:
         assert all(cells[f"cell:vector:targets:{k}:{p}"].pending for p in range(3))
 
 
-class TestPendingTarget:
+class TestPendingTargetDraft:
     def test_a_pending_target_draft_is_suppressed_in_all_interval_mode(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         cells = {c.id for c in spreadsheet.build(base, tuning_scheme="minimax-S", pending_target=[None, None, None]).cells}

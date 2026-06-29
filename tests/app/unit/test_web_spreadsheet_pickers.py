@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_geometry import plain_text_band
 from _spreadsheet_support import _memoized_build, _with
 
 
-class TestEtpickRides:
+class TestSubPickerPlacement:
     def test_etpick_rides_the_right_gutter_of_each_mapping_row(self):
         cells = {c.id: c for c in _with(presets=True).cells}
         for i in range(2):
