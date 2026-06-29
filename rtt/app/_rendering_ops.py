@@ -25,27 +25,27 @@ def apply_view_classes(editor, runtime) -> None:
         )
 
 
-def size_panes(chrome, lay, fx, fy) -> None:
+def size_panes(chrome, lay, freeze_x, freeze_y) -> None:
     base_w = lay.width + lay.right_overhang + 2 * _PAD
     base_h = lay.height + 2 * _PAD
     chrome.grid_pane.style(f"width:{base_w}px; height:{base_h}px")
     fit_w = lay.width + 2 * _PAD
     chrome.grid_pane.props(f'data-base-w="{base_w}" data-base-h="{base_h}" data-fit-w="{fit_w}"')
-    chrome.board.style(f"width:{lay.width}px; height:{lay.height - fy}px")
-    chrome.colhead.style(f"height:{fy}px")
-    chrome.colhead_inner.style(f"width:{lay.width}px; height:{fy}px")
-    chrome.corner.style(f"width:{fx}px; height:{fy}px")
-    chrome.gridbody.style(f"top:{_PAD + fy}px")
-    chrome.colfill.style(f"top:{_PAD + fy}px")
+    chrome.board.style(f"width:{lay.width}px; height:{lay.height - freeze_y}px")
+    chrome.colhead.style(f"height:{freeze_y}px")
+    chrome.colhead_inner.style(f"width:{lay.width}px; height:{freeze_y}px")
+    chrome.corner.style(f"width:{freeze_x}px; height:{freeze_y}px")
+    chrome.gridbody.style(f"top:{_PAD + freeze_y}px")
+    chrome.colfill.style(f"top:{_PAD + freeze_y}px")
     chrome.colfill_inner.style(f"width:{lay.width}px; height:{lay.height}px")
-    chrome.rowfill.style(f"top:{_PAD + fy}px; width:{fx}px")
-    chrome.rowband.style(f"width:{fx}px; height:{lay.height - fy}px")
-    chrome.show_frozen.style(f"height:{max(0, fy - _CHROME_H)}px")
-    chrome.show_scroll.style(f"max-height:calc(100dvh - {_PAD + fy}px)")
+    chrome.rowfill.style(f"top:{_PAD + freeze_y}px; width:{freeze_x}px")
+    chrome.rowband.style(f"width:{freeze_x}px; height:{lay.height - freeze_y}px")
+    chrome.show_frozen.style(f"height:{max(0, freeze_y - _CHROME_H)}px")
+    chrome.show_scroll.style(f"max-height:calc(100dvh - {_PAD + freeze_y}px)")
 
 
 def render_lines(r, lay, seen) -> None:
-    fx, fy = lay.freeze_x, lay.freeze_y
+    freeze_x, freeze_y = lay.freeze_x, lay.freeze_y
 
     def place_line(ln, suffix, parent, shift):
         eid = ln.id + suffix
@@ -66,22 +66,22 @@ def render_lines(r, lay, seen) -> None:
     for ln in lay.lines:
         x0, x1 = (ln.pos, ln.pos) if ln.orientation == "v" else (ln.start, ln.start + ln.length)
         y0, y1 = (ln.start, ln.start + ln.length) if ln.orientation == "v" else (ln.pos, ln.pos)
-        if x1 >= fx and y1 >= fy:
-            place_line(ln, "", r._chrome.board, fy)
-            if ln.orientation == "v" and y0 <= fy and ln.length > fy:
-                place_line(ln, "#fill", r._chrome.colfill_inner, fy)
-        if x1 >= fx and y0 < fy:
+        if x1 >= freeze_x and y1 >= freeze_y:
+            place_line(ln, "", r._chrome.board, freeze_y)
+            if ln.orientation == "v" and y0 <= freeze_y and ln.length > freeze_y:
+                place_line(ln, "#fill", r._chrome.colfill_inner, freeze_y)
+        if x1 >= freeze_x and y0 < freeze_y:
             place_line(ln, "#col", r._chrome.colhead_inner, 0)
-        if x0 < fx and y1 >= fy:
-            place_line(ln, "#row", r._chrome.rowband, fy)
+        if x0 < freeze_x and y1 >= freeze_y:
+            place_line(ln, "#row", r._chrome.rowband, freeze_y)
 
 
 def render_blocks(r, lay, seen) -> None:
-    fx, fy = lay.freeze_x, lay.freeze_y
+    freeze_x, freeze_y = lay.freeze_x, lay.freeze_y
 
     def place_block(bl, pane):
         suffix = "" if pane == "body" else "#" + pane
-        shift = 0 if pane in ("col", "corner") else fy
+        shift = 0 if pane in ("col", "corner") else freeze_y
         eid = bl.id + suffix
         seen.add(eid)
         if eid not in r._rec.entities:
@@ -108,7 +108,7 @@ def render_blocks(r, lay, seen) -> None:
             r._rec.entities[eid].styled = style
 
     for bl in lay.blocks:
-        for pane in _block_panes(bl, fx, fy):
+        for pane in _block_panes(bl, freeze_x, freeze_y):
             place_block(bl, pane)
 
 
@@ -144,9 +144,9 @@ def update_cell_content(r, cell_box) -> None:
 
 
 def place_cell(r, cell_box, container, paint) -> None:
-    fy, structural, rings = paint
+    freeze_y, structural, rings = paint
     make_cell_if_new(r, cell_box, container, structural)
-    top = cell_box.y - (fy if container in ("body", "row") else 0)
+    top = cell_box.y - (freeze_y if container in ("body", "row") else 0)
     grow = _CELL_BORDER_W if cell_box.kind in GRIDVALUE_KINDS else 0
     placement = f"left:0; top:0; transform:translate({cell_box.x}px,{top}px); width:{cell_box.w + grow}px; height:{cell_box.h + grow}px"
     if r._rec.entity(cell_box.id).styled != placement:
@@ -159,16 +159,16 @@ def place_cell(r, cell_box, container, paint) -> None:
 
 def render_cells(r, lay, seen, flags) -> None:
     amber, red, cold, structural = flags
-    fx, fy = lay.freeze_x, lay.freeze_y
-    paint = (fy, structural and not cold, (amber, red))
+    freeze_x, freeze_y = lay.freeze_x, lay.freeze_y
+    paint = (freeze_y, structural and not cold, (amber, red))
     for cell_box in lay.cells:
         seen.add(cell_box.id)
-        container = _freeze_container(cell_box, fx, fy)
+        container = _freeze_container(cell_box, freeze_x, freeze_y)
         if (
             cell_box.id not in r._rec.entities
             and container == "body"
             and not cell_box.pending
-            and not r._body_visible(cell_box.x, cell_box.y, cell_box.w, cell_box.h, fy)
+            and not r._body_visible(cell_box.x, cell_box.y, cell_box.w, cell_box.h, freeze_y)
         ):
             continue
         place_cell(r, cell_box, container, paint)

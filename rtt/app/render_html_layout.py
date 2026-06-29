@@ -3,32 +3,32 @@ from __future__ import annotations
 from rtt.app import spreadsheet_constants
 
 
-def _freeze_container(cell_box, fx: float, fy: float) -> str:
-    if cell_box.x < fx and cell_box.y < fy:
+def _freeze_container(cell_box, freeze_x: float, freeze_y: float) -> str:
+    if cell_box.x < freeze_x and cell_box.y < freeze_y:
         return "corner"
-    if cell_box.y < fy:
+    if cell_box.y < freeze_y:
         return "col"
-    if cell_box.x < fx:
+    if cell_box.x < freeze_x:
         return "row"
     return "body"
 
 
-def _block_panes(bl, fx: float, fy: float) -> tuple[str, ...]:
+def _block_panes(bl, freeze_x: float, freeze_y: float) -> tuple[str, ...]:
     panes = ["body"]
-    if bl.y < fy:
+    if bl.y < freeze_y:
         panes.append("col")
-    if bl.x < fx:
+    if bl.x < freeze_x:
         panes.append("row")
-    if bl.x < fx and bl.y < fy:
+    if bl.x < freeze_x and bl.y < freeze_y:
         panes.append("corner")
     return tuple(panes)
 
 
-def _rect_in_view(x, y, w, h, fy, view, overscan) -> bool:
+def _rect_in_view(x, y, w, h, freeze_y, view, overscan) -> bool:
     if view is None:
         return True
     left, top, vw, vh = view
-    by = y - fy
+    by = y - freeze_y
     return (
         x < left + vw + overscan
         and x + w > left - overscan

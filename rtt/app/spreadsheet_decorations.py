@@ -60,8 +60,8 @@ def _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, 
         return
     fanned_columns.add(key)
     dotted = f"col:{key}" in context.collapsed
-    mx, mw = query.matrix_span(geometry, resolved, key)
-    center_x = mx + mw / 2
+    matrix_x, matrix_width = query.matrix_span(geometry, resolved, key)
+    center_x = matrix_x + matrix_width / 2
     if n == 0:
         _gridline(lines, f"trunk:{key}", "v", center_x, geometry.branch_top_y, geometry.fanout_y - geometry.branch_top_y, dotted=dotted)
         _gridline(lines, f"foot:{key}", "v", center_x, geometry.fanout_y, geometry.total_h - geometry.fanout_y, dotted=dotted)

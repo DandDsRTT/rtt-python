@@ -57,7 +57,7 @@ def bracket(cells, resolved, geometry, bid: str, row_key: str, column_key: str, 
     else:
         c = _ebk(resolved, row_key, column_key)
         glyphs = (c.inner_open, c.inner_close) if stacked else (c.outer_open, c.outer_close)
-    gx, gw = span if span else query.matrix_span(geometry, resolved, column_key)
+    matrix_x, matrix_width = span if span else query.matrix_span(geometry, resolved, column_key)
     if fit and not resolved.flags.ebk:
         by, bh = y, h
     elif fit:
@@ -65,8 +65,8 @@ def bracket(cells, resolved, geometry, bid: str, row_key: str, column_key: str, 
         bh = h + (FRAME_H + FRAME_GAP) + (FRAME_GAP + BRACE_H) + 2 * FRAME_OVERHANG
     else:
         by, bh = y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H
-    cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0], pending=pending))
-    cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1], pending=pending))
+    cells.append(CellBox(f"bracket:{bid}:l", matrix_x, by, BRACKET_W, bh, "bracket", text=glyphs[0], pending=pending))
+    cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1], pending=pending))
 
 
 def _ebk(resolved, row_key, column_key):
@@ -82,14 +82,14 @@ def matrix_frame(cells, resolved, geometry, context, row_key: str, column_key: s
     if not query.tile_open(geometry, context.collapsed, row_key, column_key):
         return
     foot = _ebk_foot(resolved, row_key, column_key, outer=True)
-    gx, gw = span if span else query.matrix_span(geometry, resolved, column_key)
+    matrix_x, matrix_width = span if span else query.matrix_span(geometry, resolved, column_key)
     if not resolved.flags.ebk:
         y, h = geometry.rows[row_key].y, geometry.rows[row_key].h
-        cells.append(CellBox(f"bracket:{bid}:l", gx, y, BRACKET_W, h, "bracket", text="["))
-        cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, y, BRACKET_W, h, "bracket", text="]"))
+        cells.append(CellBox(f"bracket:{bid}:l", matrix_x, y, BRACKET_W, h, "bracket", text="["))
+        cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_W, y, BRACKET_W, h, "bracket", text="]"))
         return
-    cells.append(CellBox(f"ebktop:{bid}", gx, query.frame_top_y(geometry, row_key), gw, FRAME_H, "ebktop"))
-    cells.append(CellBox(f"{foot}:{bid}", gx, query.frame_brace_y(geometry, row_key), gw, BRACE_H, foot))
+    cells.append(CellBox(f"ebktop:{bid}", matrix_x, query.frame_top_y(geometry, row_key), matrix_width, FRAME_H, "ebktop"))
+    cells.append(CellBox(f"{foot}:{bid}", matrix_x, query.frame_brace_y(geometry, row_key), matrix_width, BRACE_H, foot))
 
 
 def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_key, left, n_cols, top="ebktop",
@@ -100,17 +100,17 @@ def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_
     if resolved.flags.ebk:
         mark_w = COL_W - 2 * MARK_INSET
         for c in range(n_cols):
-            mx = left(c) + MARK_INSET
+            mark_x = left(c) + MARK_INSET
             pend = (c == pending_col)
-            cells.append(CellBox(f"{top}:{name}:{c}", mx, query.frame_top_y(geometry, row_key), mark_w, FRAME_H, top, pending=pend))
-            cells.append(CellBox(f"{foot}:{name}:{c}", mx, query.frame_brace_y(geometry, row_key), mark_w, BRACE_H, foot, pending=pend))
+            cells.append(CellBox(f"{top}:{name}:{c}", mark_x, query.frame_top_y(geometry, row_key), mark_w, FRAME_H, top, pending=pend))
+            cells.append(CellBox(f"{foot}:{name}:{c}", mark_x, query.frame_brace_y(geometry, row_key), mark_w, BRACE_H, foot, pending=pend))
     elif n_cols:
         if column_key == "interest":
             for c in range(n_cols):
                 transpose_mark(cells, geometry, f"{name}:{c}", left(c) + COL_W - MARK_INSET, row_key, pending=(c == pending_col))
         else:
-            gx, gw = query.matrix_span(geometry, resolved, column_key)
-            transpose_mark(cells, geometry, name, gx + gw, row_key)
+            matrix_x, matrix_width = query.matrix_span(geometry, resolved, column_key)
+            transpose_mark(cells, geometry, name, matrix_x + matrix_width, row_key)
     if not separators:
         return
     sep_y, sep_h = query.separator_span(resolved, geometry, row_key)
@@ -336,9 +336,9 @@ def _emit_prescaling_brackets(cells, resolved, geometry, context) -> None:
                 bracket(cells, resolved, geometry, f"prescaling:row:{i}", "prescaling", bare_col,
                         query.subrow_top(geometry, "prescaling", i), ROW_H, span=pspan, stacked=True)
             if geometry.size_rows:
-                gx, gw = pspan
+                matrix_x, matrix_width = pspan
                 bar_y = geometry.rows["prescaling"].y + geometry.prescale_rows * ROW_H + query.prescale_size_gap(geometry) / 2 - SEP_W / 2
-                cells.append(CellBox("bar:prescaling", gx, bar_y, gw, SEP_W, "hbar"))
+                cells.append(CellBox("bar:prescaling", matrix_x, bar_y, matrix_width, SEP_W, "hbar"))
 
 
 def _emit_scalar_row_brackets(cells, resolved, geometry, context) -> None:

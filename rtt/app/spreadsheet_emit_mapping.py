@@ -51,8 +51,8 @@ def _emit_mapping_drag(cells, resolved, geometry, context) -> None:
 
 
 def _emit_mapping_rows(cells, resolved, geometry, context) -> None:
-    mx, mw = query.matrix_span(geometry, resolved, "primes")
-    etpick_x = mx + mw + ETPICK_GAP
+    matrix_x, matrix_width = query.matrix_span(geometry, resolved, "primes")
+    etpick_x = matrix_x + matrix_width + ETPICK_GAP
     for i in range(resolved.dims.rank):
         rt = query.col_token(resolved, "gens", i)
         if query.tile_open(geometry, context.collapsed, "mapping", "primes"):
@@ -99,8 +99,8 @@ def _emit_mapping_draft_row(cells, resolved, geometry, context) -> None:
             v = resolved.ghosts.row_map[p] if resolved.ghosts.row else context.pending_mapping_row[p]
             cells.append(CellBox(ids.mapping_cell(drt, p), query.prime_left(geometry, p), query.map_top(geometry, dr), COL_W, ROW_H, row_kind, text="" if v is None else str(v), gen=dr, prime=p, pending=True))
         if not resolved.ghosts.row and resolved.flags.presets:
-            mx, mw = query.matrix_span(geometry, resolved, "primes")
-            cells.append(CellBox("etpick:draft", mx + mw + ETPICK_GAP, query.map_top(geometry, dr), ETPICK_W, ROW_H, "etpick", gen=dr, pending=True))
+            matrix_x, matrix_width = query.matrix_span(geometry, resolved, "primes")
+            cells.append(CellBox("etpick:draft", matrix_x + matrix_width + ETPICK_GAP, query.map_top(geometry, dr), ETPICK_W, ROW_H, "etpick", gen=dr, pending=True))
     _emit_mapping_draft_mapped(cells, resolved, geometry, context, dr, drt)
 
 

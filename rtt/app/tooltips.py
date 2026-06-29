@@ -223,12 +223,12 @@ def tile_guide_help(row_key: str, column_key: str) -> GuideHelp | None:
 def tile_guide_help_for_cell(cell_id: str, *, pretransform: bool = False) -> GuideHelp | None:
     parts = cell_id.split(":")
     if len(parts) == 3 and parts[0] in ("symbol", "caption"):
-        gh = tile_guide_help(parts[1], parts[2])
-        if gh is not None and pretransform:
-            relabeled = _pretransform_label(gh.text)
-            if relabeled != gh.text:
-                return replace(gh, text=relabeled)
-        return gh
+        guide_help = tile_guide_help(parts[1], parts[2])
+        if guide_help is not None and pretransform:
+            relabeled = _pretransform_label(guide_help.text)
+            if relabeled != guide_help.text:
+                return replace(guide_help, text=relabeled)
+        return guide_help
     return None
 
 

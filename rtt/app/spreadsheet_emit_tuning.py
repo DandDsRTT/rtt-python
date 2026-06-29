@@ -315,18 +315,18 @@ def _emit_tuning_ranges_box(cells, resolved, geometry, context):
     gtm_box = None
     if geometry.gtm_chart:
         chosen = resolved.tuning.tuning_map.monotone_generator_range if context.range_mode == "monotone" else resolved.tuning.tuning_map.tradeoff_generator_range
-        gx, gw = geometry.col_x["gens"], geometry.col_w["gens"]
+        gens_x, gens_width = geometry.col_x["gens"], geometry.col_w["gens"]
         control_y = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_h - geometry.gtm_extra + RANGE_GAP
-        cells.append(CellBox("rangetitle:tuning:gens", gx, control_y + BOX_INNER, gw, BOX_TITLE_H, "boxtitle",
+        cells.append(CellBox("rangetitle:tuning:gens", gens_x, control_y + BOX_INNER, gens_width, BOX_TITLE_H, "boxtitle",
                              text="tuning ranges", align="left"))
         chart_y = control_y + BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP
-        cells.append(CellBox("rangechart:tuning:gens", gx, chart_y, gw, RANGE_CHART_H, "rangechart",
+        cells.append(CellBox("rangechart:tuning:gens", gens_x, chart_y, gens_width, RANGE_CHART_H, "rangechart",
                              ranges=tuple(chosen) if chosen is not None else (),
                              values=tuple(resolved.tuning.tuning_map.generator_map),
                              decimals=resolved.flags.decimals))
-        cells.append(CellBox("rangemode:tuning:gens", gx, chart_y + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
+        cells.append(CellBox("rangemode:tuning:gens", gens_x, chart_y + RANGE_CHART_H + RANGE_GAP, gens_width, RANGE_MODE_H,
                              "rangemode", text=context.range_mode))
-        gtm_box = (gx, control_y, gw, 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
+        gtm_box = (gens_x, control_y, gens_width, 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
     return gtm_box
 
 
