@@ -183,8 +183,8 @@ PARAM_EC = (
     "class EditController:\n"
     "    def __init__(self, editor):\n"
     "        self._editor = editor\n"
-    "def _power_change(ec, cid):\n"
-    "    return ec._editor.scheme + ec._editor.state\n"
+    "def _power_change(edit_controller, cid):\n"
+    "    return edit_controller._editor.scheme + edit_controller._editor.state\n"
 )
 
 
@@ -193,8 +193,8 @@ PARAM_TE_INDIRECTION = (
     "    def __init__(self, e):\n"
     "        self.e = e\n"
     "def _target_limit_wheel(te, delta_y):\n"
-    "    ec = te.e\n"
-    "    return ec._runtime.building + ec._rec.cells\n"
+    "    edit_controller = te.e\n"
+    "    return edit_controller._runtime.building + edit_controller._rec.cells\n"
 )
 
 
@@ -400,7 +400,7 @@ class TestQualityRatchets1:
         write(tmp_path, "_recon.py", PARAM_ALIAS)
         assert qm.param_reach_by_handle(trees_under(tmp_path))["_editor"] == 2
 
-    def test_ec_param_binds_to_editcontroller(self, tmp_path):
+    def test_edit_controller_param_binds_to_editcontroller(self, tmp_path):
         write(tmp_path, "_editing.py", PARAM_EC)
         assert qm.param_reach_by_handle(trees_under(tmp_path))["_editor"] == 2
 

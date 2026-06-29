@@ -309,9 +309,9 @@ class TestParsing:
         assert service.parse_cents_map("{1201.699 697.564]") == (1201.699, 697.564)
         assert service.parse_cents_map("⟨1200.000 1901.955 2786.314]") == (1200.0, 1901.955, 2786.314)
         st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
-        gm = service.tuning(st.mapping).generator_map
+        generator_map = service.tuning(st.mapping).generator_map
         parsed = service.parse_cents_map(service.plain_text_values(st)[("tuning", "gens")])
-        assert parsed == tuple(round(g, 3) for g in gm)
+        assert parsed == tuple(round(g, 3) for g in generator_map)
         assert service.parse_cents_map("{1200 700]", 2) == (1200.0, 700.0), "an optional length check, so a caller can demand exactly r generators"
         assert service.parse_cents_map("{1200 700]", 3) is None
         assert service.parse_cents_map("garbage") is None

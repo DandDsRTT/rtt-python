@@ -170,13 +170,13 @@ def _is_interval_tile(row_key, column_key, superspace):
     if row_key == "quantities" or column_key == "quantities":
         return True
     try:
-        conv = ebk_convention(row_key, column_key, superspace=superspace)
+        convention = ebk_convention(row_key, column_key, superspace=superspace)
     except KeyError:
         return False
-    if conv.structure == "list":
-        return conv.inner_close in ("⟩", "}")
-    if conv.structure == "stack":
-        return conv.outer_close == "⟩"
+    if convention.structure == "list":
+        return convention.inner_close in ("⟩", "}")
+    if convention.structure == "stack":
+        return convention.outer_close == "⟩"
     return False
 
 

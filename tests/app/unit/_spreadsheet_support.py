@@ -228,19 +228,19 @@ def _ebk_grid_convention(b, lay, row_key, column_key):
     return ("none", "", "", "", "")
 
 
-def _ebk_canonical(conv):
+def _ebk_canonical(convention):
     """Fold the one harmless ambiguity away before comparing: a single ket (a no-wrap list of one
     interval, ``[…⟩`` / ``[…}``) reads as a bare ``row`` by the close char but IS a 1-item list."""
-    structure, oo, oc, io, ic = conv
+    structure, oo, oc, io, ic = convention
     if structure == "row" and oo == "[" and oc in "⟩}":
         return ("list", "", "", "[", oc)
-    return conv
+    return convention
 
 
-def _ebk_table_canonical(conv):
+def _ebk_table_canonical(convention):
     """Reduce an EBK_CONVENTIONS row to the 5-tuple the band parser yields: drop the (text-only)
     separator, and fold a bracket-less ``row`` to ``none`` (a bare scalar list reads as ``none``)."""
-    structure, oo, oc, io, ic, _sep = conv
+    structure, oo, oc, io, ic, _sep = convention
     if structure == "row" and not oo and not oc:
         return ("none", "", "", "", "")
     return (structure, oo, oc, io, ic)

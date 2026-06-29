@@ -131,15 +131,15 @@ def ebk_convention(row_key: str, column_key: str, *, superspace: bool = False) -
     return EBK_CONVENTIONS[(row_key, column_key)]
 
 
-def render_ebk(conv: EbkConvention, items, formatter=str) -> str:
+def render_ebk(convention: EbkConvention, items, formatter=str) -> str:
     oo, oc, io, ic, sep = (
-        conv.outer_open,
-        conv.outer_close,
-        conv.inner_open,
-        conv.inner_close,
-        conv.sep,
+        convention.outer_open,
+        convention.outer_close,
+        convention.inner_open,
+        convention.inner_close,
+        convention.sep,
     )
-    if conv.structure == "row":
+    if convention.structure == "row":
         return oo + sep.join(_DASH if v is None else formatter(v) for v in items) + oc
     vectors = list(items)
     dim = next((len(v) for v in vectors if v is not None), 0)
