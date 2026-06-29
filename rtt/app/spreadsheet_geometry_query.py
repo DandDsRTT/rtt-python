@@ -420,10 +420,10 @@ def panel_rect(geometry, collapsed, row_key: str, column_key: str):
     tile_c = f"tile:{row_key}:{column_key}" in collapsed
     col_c = f"col:{column_key}" in collapsed or tile_c
     row_c = f"row:{row_key}" in collapsed or tile_c
-    tile_x, cw = tile_span_box(geometry, row_key, column_key)
-    ch, tile_y = geometry.rows[row_key].tile_h, geometry.rows[row_key].tile_top
-    w, px = (0, 0) if col_c else (cw, PAD)
-    h, py = (0, 0) if row_c else (ch, PAD)
-    bx = tile_x + cw / 2 if col_c else tile_x
-    by = tile_y + ch / 2 if row_c else tile_y
-    return bx - px, by - py, w + 2 * px, h + 2 * py
+    tile_x, tile_width = tile_span_box(geometry, row_key, column_key)
+    tile_height, tile_y = geometry.rows[row_key].tile_h, geometry.rows[row_key].tile_top
+    w, padding_x = (0, 0) if col_c else (tile_width, PAD)
+    h, padding_y = (0, 0) if row_c else (tile_height, PAD)
+    box_x = tile_x + tile_width / 2 if col_c else tile_x
+    box_y = tile_y + tile_height / 2 if row_c else tile_y
+    return box_x - padding_x, box_y - padding_y, w + 2 * padding_x, h + 2 * padding_y

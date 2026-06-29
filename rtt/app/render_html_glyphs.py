@@ -122,14 +122,14 @@ def _bar_chart(w: float, h: float, values, indicator=None, indicator_label="", c
         f'stroke="{BR_COLOR}" stroke-width="1"/>'
     )
     body.append(rect(axis_x, plot_top, 0.8, plot_bot - plot_top))
-    bw = col_w * _CHART_BAR_FRAC
+    bar_width = col_w * _CHART_BAR_FRAC
     for i, v in enumerate(values):
         if v is None:
             continue
         center_x = axis_x + i * pitch + col_w / 2
         yv = y_of(v)
         top, bot = min(zero_y, yv), max(zero_y, yv)
-        body.append(rect(center_x - bw / 2, top, bw, bot - top))
+        body.append(rect(center_x - bar_width / 2, top, bar_width, bot - top))
     body.extend(_bar_chart_indicator(w, axis_x, y_of, indicator, indicator_label))
     return svg(w, h, "".join(body))
 

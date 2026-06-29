@@ -59,14 +59,14 @@ def bracket(cells, resolved, geometry, bid: str, row_key: str, column_key: str, 
         glyphs = (c.inner_open, c.inner_close) if stacked else (c.outer_open, c.outer_close)
     matrix_x, matrix_width = span if span else query.matrix_span(geometry, resolved, column_key)
     if fit and not resolved.flags.ebk:
-        by, bh = y, h
+        bracket_y, bracket_height = y, h
     elif fit:
-        by = y - (FRAME_H + FRAME_GAP) - FRAME_OVERHANG
-        bh = h + (FRAME_H + FRAME_GAP) + (FRAME_GAP + BRACE_H) + 2 * FRAME_OVERHANG
+        bracket_y = y - (FRAME_H + FRAME_GAP) - FRAME_OVERHANG
+        bracket_height = h + (FRAME_H + FRAME_GAP) + (FRAME_GAP + BRACE_H) + 2 * FRAME_OVERHANG
     else:
-        by, bh = y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H
-    cells.append(CellBox(f"bracket:{bid}:l", matrix_x, by, BRACKET_W, bh, "bracket", text=glyphs[0], pending=pending))
-    cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1], pending=pending))
+        bracket_y, bracket_height = y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H
+    cells.append(CellBox(f"bracket:{bid}:l", matrix_x, bracket_y, BRACKET_W, bracket_height, "bracket", text=glyphs[0], pending=pending))
+    cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_W, bracket_y, BRACKET_W, bracket_height, "bracket", text=glyphs[1], pending=pending))
 
 
 def _ebk(resolved, row_key, column_key):

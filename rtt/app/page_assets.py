@@ -677,11 +677,11 @@ _GUIDE_JS = """
 
   const place = (cell) => {
     const r = cell.getBoundingClientRect();
-    const cw = card.offsetWidth, ch = card.offsetHeight;
+    const card_width = card.offsetWidth, card_height = card.offsetHeight;
     const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
-    let left = Math.max(4, Math.min(r.left, vw - cw - 4));
+    let left = Math.max(4, Math.min(r.left, vw - card_width - 4));
     let top = r.bottom + GAP;
-    if (top + ch > vh - 4) top = Math.max(4, r.top - GAP - ch);
+    if (top + card_height > vh - 4) top = Math.max(4, r.top - GAP - card_height);
     card.style.left = left + 'px';
     card.style.top = top + 'px';
   };

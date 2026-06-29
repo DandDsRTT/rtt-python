@@ -69,11 +69,11 @@ def _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, 
     xs = [center_x] * n if dotted else [center_open(i) for i in range(n)]
     for i in range(n):
         _gridline(lines, f"v:{prefix}:{i}", "v", xs[i], geometry.fanout_y, bot_bus_y - geometry.fanout_y, dotted=dotted)
-    bx, bw = _bus_span(xs)
-    top_end = max(geometry.plus_stub_x[key], bx + bw) if key in geometry.plus_stub_x else bx + bw
-    bus_left = min(geometry.plus_stub_x[key], bx) if key in geometry.plus_stub_x else bx
+    bus_x, bus_width = _bus_span(xs)
+    top_end = max(geometry.plus_stub_x[key], bus_x + bus_width) if key in geometry.plus_stub_x else bus_x + bus_width
+    bus_left = min(geometry.plus_stub_x[key], bus_x) if key in geometry.plus_stub_x else bus_x
     _gridline(lines, f"bus:{key}:top", "h", geometry.fanout_y, bus_left, top_end - bus_left, dotted=dotted)
-    _gridline(lines, f"bus:{key}:bot", "h", bot_bus_y, bx, bw, dotted=dotted)
+    _gridline(lines, f"bus:{key}:bot", "h", bot_bus_y, bus_x, bus_width, dotted=dotted)
     _gridline(lines, f"trunk:{key}", "v", center_x, geometry.branch_top_y, geometry.fanout_y - geometry.branch_top_y, dotted=dotted)
     _gridline(lines, f"foot:{key}", "v", center_x, bot_bus_y, geometry.total_h - bot_bus_y, dotted=dotted)
 
