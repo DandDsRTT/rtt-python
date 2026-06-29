@@ -24,11 +24,11 @@ class TestDomainElements:
         ed = Editor()
         ed.add_element()
         assert ed.pending_element == "", "a blank green ?/? draft, not yet part of the domain"
-        assert ed.state.d == 3
+        assert ed.state.dimensionality == 3
         ed.set_pending_element("7")
         assert ed.pending_element is None
         assert ed.state.domain_basis == (2, 3, 5, 7)
-        assert ed.state.d == 4 and ed.state.r == 3
+        assert ed.state.dimensionality == 4 and ed.state.rank == 3
         ed.undo()
         assert ed.state.domain_basis == (2, 3, 5)
 
@@ -67,7 +67,7 @@ class TestDomainElements:
         ed.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         before = ed.state
         ed.remove_domain_element(0)
-        assert ed.state.domain_basis == (3, Fraction(13, 5)) and ed.state.d == 2
+        assert ed.state.domain_basis == (3, Fraction(13, 5)) and ed.state.dimensionality == 2
         assert ed.can_undo is True
         ed.undo()
         assert ed.state.domain_basis == before.domain_basis and ed.state.comma_basis == before.comma_basis
@@ -86,7 +86,7 @@ class TestDomainElements:
         ed.settings["nonstandard_domain"] = True
         ed.state = service.from_mapping(((1,),))
         ed.remove_domain_element(0)
-        assert ed.state.d == 1 and ed.can_undo is False
+        assert ed.state.dimensionality == 1 and ed.can_undo is False
 
     def test_domain_expand_shrink_are_inert_on_a_nonstandard_domain(self):
         editor = Editor()
@@ -101,18 +101,18 @@ class TestDomainElements:
         editor = Editor()
         assert editor.can_expand is True
         editor.expand()
-        assert editor.state.d == 4 and editor.state.domain_basis == (2, 3, 5, 7)
+        assert editor.state.dimensionality == 4 and editor.state.domain_basis == (2, 3, 5, 7)
 
     def test_shrinking_runs_down_to_one_prime_through_degenerate_states(self):
         editor = Editor()
         assert editor.can_shrink is True
         editor.shrink()
-        assert editor.state.d == 2 and editor.can_shrink is True
+        assert editor.state.dimensionality == 2 and editor.can_shrink is True
         editor.shrink()
-        assert editor.state.d == 1
+        assert editor.state.dimensionality == 1
         assert editor.can_shrink is False, "zero primes is not a domain — the floor"
         editor.shrink()
-        assert editor.state.d == 1
+        assert editor.state.dimensionality == 1
 
     def test_structural_edits_preserve_a_nonstandard_domain(self):
         barbados_domain = (2, 3, Fraction(13, 5))
@@ -196,8 +196,8 @@ class TestNonprimeApproach:
             editor = Editor()
             if walk == "shrink":
                 editor.try_edit_mapping_text("[⟨1 0 -4 -13] ⟨0 1 4 10]}")
-            editor.set_held_vectors([tuple([-1, 1, 0] + [0] * (editor.state.d - 3))])
-            editor.set_interest_vectors([tuple([-2, 0, 1] + [0] * (editor.state.d - 3))])
+            editor.set_held_vectors([tuple([-1, 1, 0] + [0] * (editor.state.dimensionality - 3))])
+            editor.set_interest_vectors([tuple([-2, 0, 1] + [0] * (editor.state.dimensionality - 3))])
             editor.set_custom_prescaler_entry(0, 0, 2.0)
             getattr(editor, walk)()
             assert editor.held_vectors == [] and editor.interest_vectors == []

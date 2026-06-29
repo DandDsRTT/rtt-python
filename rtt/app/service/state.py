@@ -13,7 +13,7 @@ from rtt.app.service.core import (
 from rtt.app.service.core_intervals import transform_ratio
 from rtt.app.service.core_vectors import _to_matrix
 from rtt.app.service.outcome import Outcome
-from rtt.library.dimensions import get_d, get_n, get_r
+from rtt.library.dimensions import get_dimensionality, get_nullity, get_rank
 from rtt.library.domain_basis import (
     express_quotients_in_domain_basis,
     get_domain_basis,
@@ -31,16 +31,21 @@ from rtt.library.temperament import Temperament, Variance
 class TemperamentState:
     mapping: Matrix
     comma_basis: Matrix
-    d: int
-    r: int
-    n: int
+    dimensionality: int
+    rank: int
+    nullity: int
     domain_basis: tuple
 
 
 def _state(mapping: Matrix, comma_basis: Matrix, domain_basis=None) -> TemperamentState:
     m = Temperament(mapping, Variance.ROW, domain_basis)
     return TemperamentState(
-        mapping, comma_basis, get_d(m), get_r(m), get_n(m), tuple(get_domain_basis(m))
+        mapping,
+        comma_basis,
+        get_dimensionality(m),
+        get_rank(m),
+        get_nullity(m),
+        tuple(get_domain_basis(m)),
     )
 
 
@@ -87,16 +92,16 @@ def shrink_domain(state: TemperamentState) -> TemperamentState:
     independent: list[tuple[int, ...]] = []
     for comma in (c[:-1] for c in state.comma_basis):
         trial = [*independent, comma]
-        raises_the_nullity = from_comma_basis(tuple(trial)).n == len(trial)
+        raises_the_nullity = from_comma_basis(tuple(trial)).nullity == len(trial)
         if raises_the_nullity:
             independent.append(comma)
     if not independent:
-        return just_intonation(standard_primes(state.d - 1))
+        return just_intonation(standard_primes(state.dimensionality - 1))
     return from_comma_basis(tuple(independent))
 
 
 def can_shrink_domain(state: TemperamentState) -> bool:
-    return is_standard_domain(state.domain_basis) and state.d > 1
+    return is_standard_domain(state.domain_basis) and state.dimensionality > 1
 
 
 def just_intonation(domain_basis) -> TemperamentState:
@@ -225,21 +230,21 @@ def can_add_domain_element(state: TemperamentState, element) -> bool:
 def add_domain_element(state: TemperamentState, element) -> TemperamentState:
     new_basis = (*tuple(state.domain_basis), _as_basis_element(element))
     extended = tuple((*tuple(row), 0) for row in state.mapping)
-    new_generator = (*tuple(0 for _ in range(state.d)), 1)
+    new_generator = (*tuple(0 for _ in range(state.dimensionality)), 1)
     return from_mapping((*extended, new_generator), new_basis)
 
 
 def can_remove_domain_element(state: TemperamentState) -> bool:
-    return state.d > 1
+    return state.dimensionality > 1
 
 
 def remove_domain_element(state: TemperamentState, index: int) -> TemperamentState:
-    i = index % state.d
+    i = index % state.dimensionality
     new_basis = state.domain_basis[:i] + state.domain_basis[i + 1 :]
     independent: list[tuple[int, ...]] = []
     for comma in (c[:i] + c[i + 1 :] for c in state.comma_basis):
         trial = [*independent, comma]
-        raises_the_nullity = from_comma_basis(tuple(trial), new_basis).n == len(trial)
+        raises_the_nullity = from_comma_basis(tuple(trial), new_basis).nullity == len(trial)
         if raises_the_nullity:
             independent.append(comma)
     if not independent:

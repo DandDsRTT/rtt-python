@@ -65,7 +65,7 @@ def resolve_canon_form(inputs, draft):
         inverse_form_M=service.inverse_form_matrix(inputs.state.mapping),
         mapping_form_key=mapping_form_key,
         comma_basis_form_key=(service.resolve_comma_basis_form(
-            inputs.state.comma_basis, inputs.comma_basis_form, inputs.state.domain_basis) if inputs.state.n else ""),
+            inputs.state.comma_basis, inputs.comma_basis_form, inputs.state.domain_basis) if inputs.state.nullity else ""),
         form_is_canonical=form_is_canonical,
         show_form_subscript=draft.show_form and form_is_canonical,
         show_canon=draft.show_form_tiles and not form_is_canonical)
@@ -102,7 +102,7 @@ def resolve_tuning(inputs, draft):
 
 
 def resolve_commas(inputs, draft):
-    comma_ratios = service.comma_ratios(inputs.state.comma_basis, draft.elements) if inputs.state.n else ()
+    comma_ratios = service.comma_ratios(inputs.state.comma_basis, draft.elements) if inputs.state.nullity else ()
     return replace(
         draft, comma_ratios=comma_ratios, comma_count=len(comma_ratios),
         mapped_commas=service.mapped_commas(inputs.state.mapping, inputs.state.comma_basis),

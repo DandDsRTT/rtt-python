@@ -112,10 +112,12 @@ def hnf_with_transform(matrix: Matrix) -> tuple[Matrix, Matrix]:
 class _SmithReduction:
     def __init__(self, matrix: Matrix):
         self.rows = [list(row) for row in matrix]
-        self.m = len(self.rows)
-        self.n = len(self.rows[0]) if self.rows else 0
-        self.left = [[int(i == j) for j in range(self.m)] for i in range(self.m)]
-        self.right = [[int(i == j) for j in range(self.n)] for i in range(self.n)]
+        self.row_count = len(self.rows)
+        self.column_count = len(self.rows[0]) if self.rows else 0
+        self.left = [[int(i == j) for j in range(self.row_count)] for i in range(self.row_count)]
+        self.right = [
+            [int(i == j) for j in range(self.column_count)] for i in range(self.column_count)
+        ]
 
     def _add_row(self, target, source, q):
         r, ll = self.rows, self.left
@@ -141,36 +143,45 @@ class _SmithReduction:
     def _bring_nonzero_to_corner(self, t):
         if self.rows[t][t] != 0:
             return
-        spot = next((i, j) for i in range(t, self.m) for j in range(t, self.n) if self.rows[i][j])
+        spot = next(
+            (i, j)
+            for i in range(t, self.row_count)
+            for j in range(t, self.column_count)
+            if self.rows[i][j]
+        )
         self._swap_rows(t, spot[0])
         self._swap_cols(t, spot[1])
 
     def _clear_below_pivot(self, t):
         pivot = min(
-            (i for i in range(t, self.m) if self.rows[i][t]), key=lambda i: abs(self.rows[i][t])
+            (i for i in range(t, self.row_count) if self.rows[i][t]),
+            key=lambda i: abs(self.rows[i][t]),
         )
         self._swap_rows(t, pivot)
-        for i in range(t + 1, self.m):
+        for i in range(t + 1, self.row_count):
             if self.rows[i][t]:
                 self._add_row(i, t, -(self.rows[i][t] // self.rows[t][t]))
-        return any(self.rows[i][t] for i in range(t + 1, self.m))
+        return any(self.rows[i][t] for i in range(t + 1, self.row_count))
 
     def _clear_right_of_pivot(self, t):
         pivot = min(
-            (j for j in range(t, self.n) if self.rows[t][j]), key=lambda j: abs(self.rows[t][j])
+            (j for j in range(t, self.column_count) if self.rows[t][j]),
+            key=lambda j: abs(self.rows[t][j]),
         )
         self._swap_cols(t, pivot)
-        for j in range(t + 1, self.n):
+        for j in range(t + 1, self.column_count):
             if self.rows[t][j]:
                 self._add_col(j, t, -(self.rows[t][j] // self.rows[t][t]))
-        return any(self.rows[t][j] for j in range(t + 1, self.n))
+        return any(self.rows[t][j] for j in range(t + 1, self.column_count))
 
     def _reduce_pivot_cross(self, t):
         while self._clear_below_pivot(t) or self._clear_right_of_pivot(t):
             pass
 
     def _offending_row(self, t):
-        cross = ((i, j) for i in range(t + 1, self.m) for j in range(t + 1, self.n))
+        cross = (
+            (i, j) for i in range(t + 1, self.row_count) for j in range(t + 1, self.column_count)
+        )
         return next((i for i, j in cross if self.rows[i][j] % self.rows[t][t]), None)
 
     def _normalize_pivot_sign(self, t):
@@ -179,11 +190,15 @@ class _SmithReduction:
             self.left[t] = [-x for x in self.left[t]]
 
     def _all_zero_from(self, t):
-        return all(self.rows[i][j] == 0 for i in range(t, self.m) for j in range(t, self.n))
+        return all(
+            self.rows[i][j] == 0
+            for i in range(t, self.row_count)
+            for j in range(t, self.column_count)
+        )
 
     def reduce(self):
         t = 0
-        while t < min(self.m, self.n):
+        while t < min(self.row_count, self.column_count):
             if self._all_zero_from(t):
                 break
             self._bring_nonzero_to_corner(t)

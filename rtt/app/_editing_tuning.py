@@ -245,7 +245,9 @@ def _plain_text_error_toast(ec, cid, value):
         return _INVALID_PROJECTION
     elif (
         cid == "plain_text:projection:gens"
-        and service.parse_embedding(value, ec._editor.state.d, len(ec._editor.state.mapping))
+        and service.parse_embedding(
+            value, ec._editor.state.dimensionality, len(ec._editor.state.mapping)
+        )
         is not None
     ):
         return _INVALID_EMBEDDING

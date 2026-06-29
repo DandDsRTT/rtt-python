@@ -25,7 +25,7 @@ def _base_structural(context: _TextContext) -> dict:
         ("quantities", "primes"): ".".join(str(e) for e in domain_basis),
         ("vectors", "commas"): _ket_list(list(core.comma_basis) + unchanged.basis, "⟩"),
         ("projection", "commas"): _ket_list(
-            [(0,) * s.d for _ in core.commas] + unchanged.basis, "⟩"
+            [(0,) * s.dimensionality for _ in core.commas] + unchanged.basis, "⟩"
         ),
         ("scaling_factors", "commas"): context.render(
             ("scaling_factors", "commas"), ["0"] * len(core.commas) + unchanged.scaling
@@ -37,7 +37,7 @@ def _base_structural(context: _TextContext) -> dict:
             list(zip(*core.mapped_comma, strict=False)) + unchanged.mapped_cols, "}"
         ),
         ("mapping", "targets"): _ket_list(zip(*core.mapped, strict=False), "}"),
-        ("vectors", "primes"): context.render(("vectors", "primes"), _identity(s.d)),
+        ("vectors", "primes"): context.render(("vectors", "primes"), _identity(s.dimensionality)),
         ("mapping", "gens"): context.render(("mapping", "gens"), _identity(len(s.mapping))),
         ("mapping", "detempering"): context.render(
             ("mapping", "detempering"), _identity(len(s.mapping))
@@ -186,10 +186,12 @@ def _projection_values(context: _TextContext) -> dict:
     hbr = context.held_basis_ratios
     p_rat = projection_matrix_rationals(s, hbr)
     out = {
-        ("projection", "primes"): projection_ebk(tuning_projection(s, hbr), s.d),
-        ("projection", "gens"): embedding_ebk(tuning_embedding(s, hbr), s.d, len(s.mapping)),
+        ("projection", "primes"): projection_ebk(tuning_projection(s, hbr), s.dimensionality),
+        ("projection", "gens"): embedding_ebk(
+            tuning_embedding(s, hbr), s.dimensionality, len(s.mapping)
+        ),
         ("projection", "canongens"): embedding_ebk(
-            canonical_generator_embedding(s, hbr), s.d, context.canon.rank
+            canonical_generator_embedding(s, hbr), s.dimensionality, context.canon.rank
         ),
         ("projection", "detempering"): context.render(
             ("projection", "detempering"),

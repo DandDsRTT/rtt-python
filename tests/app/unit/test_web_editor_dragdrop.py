@@ -29,7 +29,7 @@ class TestMoveInterval:
         editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         editor.interest_vectors = [(0, 0, 1)]
         assert editor.move_interval("interest", 0, "commas", 1) is True
-        assert editor.state.n == 2
+        assert editor.state.nullity == 2
         assert editor.state.domain_basis == (2, 3, Fraction(13, 5))
 
     def test_within_list_reorder_keeps_the_moved_columns_cell_id_for_the_glide(self):
@@ -72,7 +72,7 @@ class TestMoveInterval:
     def test_move_a_target_into_held_converts_the_ratio_and_materializes_the_override(self):
         editor = Editor()
         targets = service.target_interval_set(editor.target_spec, editor.state.domain_basis)
-        first = service.interval_vector(targets[0], editor.state.d, editor.state.domain_basis)
+        first = service.interval_vector(targets[0], editor.state.dimensionality, editor.state.domain_basis)
         assert editor.move_interval("targets", 0, "held", 0) is True
         assert editor.held_vectors == [first]
         assert editor.target_override is not None and len(editor.target_override) == len(targets) - 1
@@ -84,11 +84,11 @@ class TestMoveInterval:
         editor.add_interest()
         assert editor.pending_interest is not None
         assert editor.move_interval("held", 0, "commas", 0) is True
-        assert (editor.state.r, editor.state.n) == (1, 2)
+        assert (editor.state.rank, editor.state.nullity) == (1, 2)
         assert len(editor.state.comma_basis) == 2 and editor.held_vectors == []
         assert editor.pending_interest is None
         editor.undo()
-        assert (editor.state.r, editor.state.n) == (2, 1) and editor.held_vectors == [(4, -5, 1)]
+        assert (editor.state.rank, editor.state.nullity) == (2, 1) and editor.held_vectors == [(4, -5, 1)]
 
     def test_moving_a_dependent_interval_into_commas_is_rejected(self):
         editor = Editor()
@@ -104,13 +104,13 @@ class TestMoveInterval:
         editor.edit_comma_basis([[4, -4, 1], [4, -5, 1]])
         vector = editor.state.comma_basis[-1]
         assert editor.move_interval("commas", len(editor.state.comma_basis) - 1, "interest", 0) is True
-        assert (editor.state.r, editor.state.n) == (2, 1), "un-tempering it dropped the nullity"
+        assert (editor.state.rank, editor.state.nullity) == (2, 1), "un-tempering it dropped the nullity"
         assert editor.interest_vectors == [vector]
 
     def test_dragging_out_the_sole_comma_un_tempers_it_to_just_intonation(self):
         editor = Editor()
         assert editor.move_interval("commas", 0, "held", 0) is True
-        assert editor.state.n == 0
+        assert editor.state.nullity == 0
         assert editor.held_vectors == [(4, -4, 1)]
 
     def test_dragging_a_comma_out_is_blocked_with_nothing_tempered(self):

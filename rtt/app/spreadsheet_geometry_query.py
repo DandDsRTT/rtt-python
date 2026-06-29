@@ -341,7 +341,7 @@ def plus_shows(geometry, resolved, collapsed, state, column_key: str) -> bool:
             or tile_open(geometry, collapsed, "vectors", "targets")
         ) and not resolved.scalars.all_interval
     if column_key == "gens":
-        return tile_open(geometry, collapsed, "quantities", "gens") and state.n > 0
+        return tile_open(geometry, collapsed, "quantities", "gens") and state.nullity > 0
     if column_key == "primes":
         return tile_open(geometry, collapsed, "quantities", "primes") and (
             resolved.flags.nonstandard_domain or resolved.scalars.standard_domain

@@ -91,7 +91,7 @@ class TestMatrixEdits:
         assert editor.set_mapping_row(0, (12, 19, 28)) is True
         assert editor.state.mapping[0] == (12, 19, 28), "stored verbatim, not canonicalized"
         assert editor.state.mapping[1] == (0, 1, 4)
-        assert (editor.state.r, editor.state.n) == (2, 1)
+        assert (editor.state.rank, editor.state.nullity) == (2, 1)
         assert editor.can_undo is True
         editor.undo()
         assert editor.state.mapping == INITIAL_MAPPING
@@ -114,7 +114,7 @@ class TestMatrixEdits:
         vector = presets.comma_value_to_vector("128/125", (2, 3, 5))
         assert editor.set_comma(0, vector) is True
         assert editor.state.comma_basis[0] == tuple(vector)
-        assert editor.state.n == 1
+        assert editor.state.nullity == 1
         assert editor.can_undo is True
         editor.undo()
         assert editor.state.comma_basis == ((4, -4, 1),)
@@ -122,10 +122,10 @@ class TestMatrixEdits:
     def test_set_comma_rejects_a_dependent_comma(self):
         editor = Editor()
         editor.edit_comma_basis([[-4, 4, -1, 0], [1, 2, -3, 1]])
-        assert editor.state.n == 2
+        assert editor.state.nullity == 2
         assert editor.set_comma(1, (-8, 8, -2, 0)) is False
         assert editor.state.comma_basis == ((-4, 4, -1, 0), (1, 2, -3, 1))
-        assert editor.state.n == 2
+        assert editor.state.nullity == 2
 
     def test_set_comma_preserves_a_nonstandard_domain(self):
         editor = Editor()
@@ -147,7 +147,7 @@ class TestMatrixEdits:
         editor = Editor()
         editor.edit_mapping(((1, 0, 0),))
         assert editor.can_remove_mapping_row is False
-        assert editor.can_add_mapping_row is True, "...n>0, a comma to un-temper"
+        assert editor.can_add_mapping_row is True, "...nullity>0, a comma to un-temper"
         editor.edit_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
         assert editor.can_add_mapping_row is False, "nothing tempered to un-temper"
 

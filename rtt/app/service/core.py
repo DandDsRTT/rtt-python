@@ -8,7 +8,7 @@ import sympy as sp
 
 from rtt.app.service.core_vectors import _interval_vectors, _over, _to_matrix
 from rtt.library.addition import _get_greatest_factor
-from rtt.library.dimensions import get_d, get_r
+from rtt.library.dimensions import get_dimensionality, get_rank
 from rtt.library.domain_basis import is_standard_prime_limit_domain_basis
 from rtt.library.math_utils import get_primes
 from rtt.library.temperament import Temperament, Variance
@@ -83,7 +83,7 @@ def is_proper_temperament(mapping) -> bool:
     rows = _to_matrix(mapping)
     if not rows or not rows[0]:
         return False
-    rank = get_r(Temperament(rows, Variance.ROW))
+    rank = get_rank(Temperament(rows, Variance.ROW))
     if rank < len(rows):
         return False
     return all(any(row[p] for row in rows) for p in range(len(rows[0])))
@@ -91,7 +91,7 @@ def is_proper_temperament(mapping) -> bool:
 
 def greatest_factor(mapping) -> int:
     rows = _to_matrix(mapping)
-    if not rows or not rows[0] or get_r(Temperament(rows, Variance.ROW)) < len(rows):
+    if not rows or not rows[0] or get_rank(Temperament(rows, Variance.ROW)) < len(rows):
         return 1
     return abs(_get_greatest_factor(rows))
 
@@ -199,7 +199,11 @@ def interval_sizes(tuning_map: Tuning, ratios, domain_basis=None, weights=None) 
 
 def _temperament_spec_vectors(mapping, scheme, ratios, domain_basis=None):
     t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
-    return t, resolve_tuning_scheme(scheme), _interval_vectors(ratios, domain_basis, get_d(t))
+    return (
+        t,
+        resolve_tuning_scheme(scheme),
+        _interval_vectors(ratios, domain_basis, get_dimensionality(t)),
+    )
 
 
 def interval_complexities(

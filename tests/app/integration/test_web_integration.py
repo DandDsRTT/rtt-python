@@ -13,7 +13,7 @@ from rtt.app.editor import INITIAL_MAPPING, Editor
 
 
 def _domain(editor):
-    return list(service.standard_primes(editor.state.d))
+    return list(service.standard_primes(editor.state.dimensionality))
 
 
 def _mapping(editor):
@@ -64,10 +64,10 @@ class TestWebIntegration:
         editor.edit_mapping(((12, 19, 28),))
         editor.shrink()
         editor.shrink()
-        assert editor.state.d == editor.state.r + editor.state.n
+        assert editor.state.dimensionality == editor.state.rank + editor.state.nullity
         cols = [c.id for c in editor.layout().cells
                 if c.id.startswith("comma:") and not c.id.endswith(":pending")]
-        assert len(cols) == editor.state.n == 1
+        assert len(cols) == editor.state.nullity == 1
 
     def test_changing_the_mapping_updates_the_comma_basis(self):
         editor = Editor()
@@ -101,7 +101,7 @@ class TestWebIntegration:
         editor = Editor()
         editor.remove_comma()
         assert _mapping(editor) == [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-        assert editor.state.n == 0
+        assert editor.state.nullity == 0
         ids = {c.id for c in editor.layout().cells}
         assert "comma_plus" in ids and not any(c.startswith("comma_minus") for c in ids)
         assert "comma:0" not in ids and "cell:comma:0:0" not in ids

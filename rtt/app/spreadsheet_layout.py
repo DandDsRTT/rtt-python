@@ -342,7 +342,7 @@ def _init_group_geometry(geometry, resolved, context) -> Geometry:
     row_plus_y = {}
     if query.tile_open(geometry, context.collapsed, "vectors", "quantities") and (resolved.flags.nonstandard_domain or resolved.scalars.standard_domain):
         row_plus_y["vectors"] = query.vector_top(geometry, resolved.dims.dimensionality_shown) + ROW_H / 2
-    if query.tile_open(geometry, context.collapsed, "mapping", "quantities") and context.state.n > 0:
+    if query.tile_open(geometry, context.collapsed, "mapping", "quantities") and context.state.nullity > 0:
         row_plus_y["mapping"] = query.map_top(geometry, resolved.dims.rank_shown) + ROW_H / 2
     return replace(geometry, plus_stub_x=plus_stub_x, row_plus_y=row_plus_y)
 

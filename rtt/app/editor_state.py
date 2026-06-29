@@ -19,7 +19,7 @@ def _same_cents_map(a, b) -> bool:
 
 
 def blank_draft(state: TemperamentState) -> list[None]:
-    return [None] * state.d
+    return [None] * state.dimensionality
 
 
 def comma_ratios_in_domain(state: TemperamentState, vectors):

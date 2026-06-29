@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 
-from rtt.library.dimensions import get_d, get_r
+from rtt.library.dimensions import get_dimensionality, get_rank
 from rtt.library.temperament import Temperament, Variance
 
 _OUTPUT_ACCURACY = 3
@@ -30,9 +30,9 @@ def to_ebk(t: Temperament) -> str:
 def _outer_brackets(
     count: int, t: Temperament, when_d: tuple[str, str], when_r: tuple[str, str]
 ) -> tuple[str, str]:
-    if count == get_d(t):
+    if count == get_dimensionality(t):
         return when_d
-    if count == get_r(t):
+    if count == get_rank(t):
         return when_r
     return ("[", "]")
 
@@ -40,9 +40,9 @@ def _outer_brackets(
 def vector_to_ebk(vector: tuple, t: Temperament) -> str:
     body = " ".join(_format_number(x) for x in vector)
     n = len(vector)
-    if n == get_d(t):
+    if n == get_dimensionality(t):
         return f"[{body}⟩"
-    if n == get_r(t):
+    if n == get_rank(t):
         return "[" + body + "}"
     return f"[{body}]"
 
@@ -50,9 +50,9 @@ def vector_to_ebk(vector: tuple, t: Temperament) -> str:
 def covector_to_ebk(covector: tuple, t: Temperament) -> str:
     body = " ".join(_format_number(x) for x in covector)
     n = len(covector)
-    if n == get_d(t):
+    if n == get_dimensionality(t):
         return f"⟨{body}]"
-    if n == get_r(t):
+    if n == get_rank(t):
         return "{" + body + "]"
     return f"[{body}]"
 

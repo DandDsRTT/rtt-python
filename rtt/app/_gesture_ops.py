@@ -142,7 +142,11 @@ def temperament_hover_preview(gc, key):
     base = gc._editor.state
     gc._editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[key])
     hyp = gc._editor.state
-    if hyp.d < base.d or hyp.r < base.r or hyp.n < base.n:
+    if (
+        hyp.dimensionality < base.dimensionality
+        or hyp.rank < base.rank
+        or hyp.nullity < base.nullity
+    ):
         gc._editor.restore_for_preview(g.token)
         g.apply = lambda: gc._editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[key])
         paint_rings(gc)
@@ -216,7 +220,11 @@ def preview_subpick_pick(gc, cid, value, idx) -> None:
     base = gc._editor.state
     apply()
     hyp = gc._editor.state
-    if hyp.d < base.d or hyp.r < base.r or hyp.n < base.n:
+    if (
+        hyp.dimensionality < base.dimensionality
+        or hyp.rank < base.rank
+        or hyp.nullity < base.nullity
+    ):
         gc._editor.restore_for_preview(g.token)
         g.apply = apply
         paint_rings(gc)

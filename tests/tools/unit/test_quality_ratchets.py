@@ -30,7 +30,7 @@ OWN_STATE = (
     "    def __init__(self):\n"
     "        self.state = _build_state()\n"
     "    def f(self):\n"
-    "        return self.state.mapping + self.state.n\n"
+    "        return self.state.mapping + self.state.nullity\n"
 )
 
 INJECTED_STATE = (
@@ -38,7 +38,7 @@ INJECTED_STATE = (
     "    def __init__(self, state):\n"
     "        self.state = state\n"
     "    def g(self):\n"
-    "        return self.state.mapping + self.state.n\n"
+    "        return self.state.mapping + self.state.nullity\n"
 )
 
 ALIASED_STATE = (

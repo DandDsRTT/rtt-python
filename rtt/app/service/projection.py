@@ -32,18 +32,21 @@ def held_basis_vectors(state: TemperamentState, held_ratios) -> tuple:
     vectors: list = []
     for ratio in held_ratios:
         try:
-            vectors.append(interval_vector(ratio, state.d, state.domain_basis))
+            vectors.append(interval_vector(ratio, state.dimensionality, state.domain_basis))
         except ValueError:
             continue
-    return greedy_independent_rows(vectors, state.r)
+    return greedy_independent_rows(vectors, state.rank)
 
 
 def _all_primes_held(state: TemperamentState) -> tuple:
-    return tuple(tuple(1 if k == j else 0 for k in range(state.d)) for j in range(state.d))
+    return tuple(
+        tuple(1 if k == j else 0 for k in range(state.dimensionality))
+        for j in range(state.dimensionality)
+    )
 
 
 def _projection_temperaments(state: TemperamentState, held_vectors):
-    d, r = state.d, state.r
+    d, r = state.dimensionality, state.rank
     if d <= 0 or not 0 < r <= d or len(held_vectors) != r:
         return None
     mapping_t = Temperament(state.mapping, Variance.ROW, state.domain_basis)
@@ -52,7 +55,7 @@ def _projection_temperaments(state: TemperamentState, held_vectors):
 
 
 def _held_for_projection(state: TemperamentState, held_ratios):
-    return _all_primes_held(state) if state.n == 0 else held_basis_vectors(state, held_ratios)
+    return _all_primes_held(state) if state.nullity == 0 else held_basis_vectors(state, held_ratios)
 
 
 def _matrix_strings(matrix):
@@ -132,7 +135,7 @@ def _integer_columns(vectors):
 
 def unchanged_basis_from_projection(state: TemperamentState, projection):
     try:
-        d, r = state.d, state.r
+        d, r = state.dimensionality, state.rank
         P = sp.Matrix([[sp.Rational(x) for x in row] for row in projection])
         if P.shape != (d, d) or P * P != P:
             return None
@@ -148,7 +151,7 @@ def unchanged_basis_from_projection(state: TemperamentState, projection):
 
 def unchanged_basis_from_embedding(state: TemperamentState, embedding):
     try:
-        d, r = state.d, state.r
+        d, r = state.dimensionality, state.rank
         G = sp.Matrix([[sp.Rational(x) for x in row] for row in embedding])
         M = sp.Matrix([list(row) for row in state.mapping])
         if G.shape != (d, r) or sp.eye(r) != M * G:
@@ -161,10 +164,10 @@ def unchanged_basis_from_embedding(state: TemperamentState, embedding):
 
 
 def unchanged_interval_basis(state: TemperamentState, held_ratios=()):
-    d, r = state.d, state.r
+    d, r = state.dimensionality, state.rank
     if d <= 0 or not 0 < r <= d:
         return None
-    if state.n == 0:
+    if state.nullity == 0:
         return _all_primes_held(state)
     held = held_basis_vectors(state, held_ratios)
     return held + (None,) * (r - len(held))
@@ -230,10 +233,10 @@ def unchanged_interval_data(
 
 
 def unchanged_ratios_of_tuning(state: TemperamentState, retuning_map, candidate_ratios, tol=1e-6):
-    d, r = state.d, state.r
+    d, r = state.dimensionality, state.rank
     if d <= 0 or not 0 < r <= d:
         return ()
-    if state.n == 0:
+    if state.nullity == 0:
         return _vectors_to_ratios(_all_primes_held(state), state.domain_basis)
     rows, ratios = [], []
     for ratio in candidate_ratios:

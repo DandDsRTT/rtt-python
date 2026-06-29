@@ -75,7 +75,7 @@ class Document(
 
     @state.setter
     def state(self, new_state: TemperamentState) -> None:
-        if new_state.d != self._state.d:
+        if new_state.dimensionality != self._state.dimensionality:
             self.target_limit = None
             self.target_override = None
             self.held_vectors = []
@@ -94,7 +94,7 @@ class Document(
 
     @property
     def real_comma_basis(self) -> tuple[tuple[int, ...], ...]:
-        return self.state.comma_basis if self.state.n else ()
+        return self.state.comma_basis if self.state.nullity else ()
 
     @property
     def target_spec(self) -> str:

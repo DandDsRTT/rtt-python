@@ -13,7 +13,7 @@ class TestFromMapping:
         state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
         assert state.mapping == ((1, 1, 0), (0, 1, 4))
         assert state.comma_basis == ((4, -4, 1),)
-        assert (state.d, state.r, state.n) == (3, 2, 1)
+        assert (state.dimensionality, state.rank, state.nullity) == (3, 2, 1)
 
     def test_from_mapping_records_standard_prime_domain_basis(self):
         state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
@@ -28,12 +28,12 @@ class TestFromMapping:
         state = service.from_comma_basis([[-4, 4, -1]])
         assert state.comma_basis == ((-4, 4, -1),)
         assert state.mapping == ((1, 0, -4), (0, 1, 4))
-        assert (state.d, state.r, state.n) == (3, 2, 1)
+        assert (state.dimensionality, state.rank, state.nullity) == (3, 2, 1)
 
     def test_full_rank_mapping_has_zero_comma_and_zero_nullity(self):
         state = service.from_mapping([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         assert state.comma_basis == ((0, 0, 0),)
-        assert (state.d, state.r, state.n) == (3, 3, 0)
+        assert (state.dimensionality, state.rank, state.nullity) == (3, 3, 0)
 
 
 class TestFromTemperamentData:
@@ -41,7 +41,7 @@ class TestFromTemperamentData:
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         assert state.domain_basis == (2, 3, Fraction(13, 5))
         assert state.mapping == ((1, 2, 2), (0, -2, -3))
-        assert (state.d, state.r, state.n) == (3, 2, 1)
+        assert (state.dimensionality, state.rank, state.nullity) == (3, 2, 1)
 
     def test_from_temperament_data_reads_a_standard_temperament_too(self):
         state = service.from_temperament_data("[⟨1 1 0] ⟨0 1 4]}")
@@ -50,7 +50,7 @@ class TestFromTemperamentData:
 
     def test_from_temperament_data_reads_a_comma_basis_too(self):
         state = service.from_temperament_data("[-4 4 -1⟩")
-        assert (state.d, state.r, state.n) == (3, 2, 1)
+        assert (state.dimensionality, state.rank, state.nullity) == (3, 2, 1)
         assert state.comma_basis == ((-4, 4, -1),)
 
 
@@ -76,12 +76,12 @@ class TestDomainExpandShrink:
         from rtt.app.service.state import from_comma_basis, shrink_domain
 
         shrunk = shrink_domain(from_comma_basis(((0, 0, 1),)))
-        assert (shrunk.d, shrunk.n) == (2, 0)
+        assert (shrunk.dimensionality, shrunk.nullity) == (2, 0)
 
     def test_expand_domain_appends_prime_and_redualizes(self):
         state = service.expand_domain(service.from_comma_basis([[-4, 4, -1]]))
         assert state.comma_basis == ((-4, 4, -1, 0),)
-        assert (state.d, state.r, state.n) == (4, 3, 1)
+        assert (state.dimensionality, state.rank, state.nullity) == (4, 3, 1)
         assert all(
             sum(m * c for m, c in zip(row, (-4, 4, -1, 0))) == 0 for row in state.mapping
         )
@@ -91,13 +91,13 @@ class TestDomainExpandShrink:
         state = service.shrink_domain(service.expand_domain(meantone))
         assert state.comma_basis == ((-4, 4, -1),)
         assert state.mapping == ((1, 0, -4), (0, 1, 4))
-        assert (state.d, state.r, state.n) == (3, 2, 1)
+        assert (state.dimensionality, state.rank, state.nullity) == (3, 2, 1)
 
     def test_shrinking_keeps_the_comma_count_equal_to_the_nullity(self):
         twelve = service.from_mapping(((12, 19, 28),))
         one = service.shrink_domain(service.shrink_domain(twelve))
-        assert (one.d, one.r, one.n) == (1, 0, 1) and one.d == one.r + one.n
-        assert len(one.comma_basis) == one.n == 1, "one comma, not the two it would naively keep"
+        assert (one.dimensionality, one.rank, one.nullity) == (1, 0, 1) and one.dimensionality == one.rank + one.nullity
+        assert len(one.comma_basis) == one.nullity == 1, "one comma, not the two it would naively keep"
 
     def test_standard_primes_gives_the_domain_basis_header(self):
         assert service.standard_primes(3) == (2, 3, 5)
@@ -107,22 +107,22 @@ class TestDomainExpandShrink:
 class TestCommaEdits:
     def test_remove_comma_drops_the_last_comma_and_reranks(self):
         st = service.from_comma_basis(((4, -4, 1), (1, 0, 0)))
-        assert (st.d, st.r, st.n) == (3, 1, 2)
+        assert (st.dimensionality, st.rank, st.nullity) == (3, 1, 2)
         removed = service.remove_comma(st)
         assert removed.comma_basis == ((4, -4, 1),)
-        assert (removed.d, removed.r, removed.n) == (3, 2, 1)
+        assert (removed.dimensionality, removed.rank, removed.nullity) == (3, 2, 1)
 
     def test_remove_comma_can_drop_an_arbitrary_index(self):
         st = service.from_comma_basis(((4, -4, 1), (1, 0, 0)))
         dropped_first = service.remove_comma(st, 0)
         assert dropped_first.comma_basis == service.from_comma_basis(((1, 0, 0),)).comma_basis
-        assert (dropped_first.d, dropped_first.r, dropped_first.n) == (3, 2, 1)
+        assert (dropped_first.dimensionality, dropped_first.rank, dropped_first.nullity) == (3, 2, 1)
         assert service.remove_comma(st).comma_basis == ((4, -4, 1),), "default still drops the last"
 
     def test_remove_comma_un_tempers_the_sole_comma_to_just_intonation(self):
         meantone = service.from_comma_basis(((4, -4, 1),))
         ji = service.remove_comma(meantone)
-        assert (ji.d, ji.r, ji.n) == (3, 3, 0)
+        assert (ji.dimensionality, ji.rank, ji.nullity) == (3, 3, 0)
         assert ji.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
         assert ji.comma_basis == ((0, 0, 0),)
 
@@ -130,7 +130,7 @@ class TestCommaEdits:
         archytas = service.from_comma_basis(((6, -2, -1),), domain_basis=(2, 3, 7))
         ji = service.remove_comma(archytas)
         assert ji.domain_basis == (2, 3, 7)
-        assert (ji.d, ji.r, ji.n) == (3, 3, 0) and ji.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+        assert (ji.dimensionality, ji.rank, ji.nullity) == (3, 3, 0) and ji.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
         assert service.add_mapping_row(archytas) == ji
 
     def test_add_comma_to_recombines_the_basis_holding_the_temperament(self):
@@ -139,11 +139,11 @@ class TestCommaEdits:
         assert combined.comma_basis[1] == tuple(a + b for a, b in zip(twelve.comma_basis[1], twelve.comma_basis[0]))
         assert combined.comma_basis[0] == twelve.comma_basis[0]
         assert combined.mapping == twelve.mapping
-        assert (combined.d, combined.r, combined.n) == (twelve.d, twelve.r, twelve.n)
+        assert (combined.dimensionality, combined.rank, combined.nullity) == (twelve.dimensionality, twelve.rank, twelve.nullity)
 
     def test_remove_comma_keeps_a_nonstandard_domain_at_higher_nullity(self):
         n2 = service.from_temperament_data("2.3.13/5 [⟨1 1 1]}")
-        assert n2.n == 2
+        assert n2.nullity == 2
         assert service.remove_comma(n2, 0).domain_basis == (2, 3, Fraction(13, 5))
         n1 = service.from_temperament_data("2.3.13/5 [⟨1 0 -1] ⟨0 2 3]}")
         assert service.remove_comma(n1, 0).domain_basis == (2, 3, Fraction(13, 5))
@@ -153,12 +153,12 @@ class TestMappingRowEdits:
     def test_remove_mapping_row_drops_a_generator_holding_dimensionality(self):
         st = service.remove_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4))), 0)
         assert st.mapping == ((0, 1, 4),)
-        assert (st.d, st.r, st.n) == (3, 1, 2)
+        assert (st.dimensionality, st.rank, st.nullity) == (3, 1, 2)
 
     def test_add_mapping_row_un_tempers_a_comma_raising_rank(self):
         st = service.add_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4))))
         assert st.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1)), "canonical full rank (JI), not a raw comma row"
-        assert (st.d, st.r, st.n) == (3, 3, 0)
+        assert (st.dimensionality, st.rank, st.nullity) == (3, 3, 0)
         assert service.generators(st.mapping) == ("2/1", "3/1", "5/1"), "simple generators, not vast ratios"
 
     def test_add_mapping_row_to_combines_generators_holding_the_temperament(self):
@@ -166,7 +166,7 @@ class TestMappingRowEdits:
         combined = service.add_mapping_row_to(meantone, 0, 1)
         assert combined.mapping == ((1, 1, 0), (1, 2, 4))
         assert combined.comma_basis == meantone.comma_basis
-        assert (combined.d, combined.r, combined.n) == (meantone.d, meantone.r, meantone.n)
+        assert (combined.dimensionality, combined.rank, combined.nullity) == (meantone.dimensionality, meantone.rank, meantone.nullity)
         assert service.generators(combined.mapping) == ("4/3", "3/2")
 
     def test_remove_mapping_row_keeps_a_nonstandard_domain(self):
@@ -195,7 +195,7 @@ class TestDomainElementEdits:
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         added = service.add_domain_element(state, service.parse_domain_element("7"))
         assert added.domain_basis == (2, 3, 5, 7)
-        assert added.d == state.d + 1 and added.r == state.r + 1 and added.n == state.n
+        assert added.dimensionality == state.dimensionality + 1 and added.rank == state.rank + 1 and added.nullity == state.nullity
         assert added.mapping == ((1, 1, 0, 0), (0, 1, 4, 0), (0, 0, 0, 1))
         tuning_map = service.tuning(added.mapping, service.DEFAULT_TUNING_SCHEME, added.domain_basis)
         assert tuning_map.tuning_map[3] == pytest.approx(1200 * math.log2(7), abs=1e-6)
@@ -204,7 +204,7 @@ class TestDomainElementEdits:
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         added = service.add_domain_element(state, service.parse_domain_element("13/5"))
         assert added.domain_basis == (2, 3, 5, Fraction(13, 5))
-        assert added.d == 4 and added.r == 3 and added.n == state.n
+        assert added.dimensionality == 4 and added.rank == 3 and added.nullity == state.nullity
 
     def test_can_add_domain_element_guards_validity_and_independence(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -232,19 +232,19 @@ class TestDomainElementEdits:
         assert service.remove_domain_element(state, 0).domain_basis == (3, Fraction(13, 5))
         assert service.remove_domain_element(state, 1).domain_basis == (2, Fraction(13, 5))
         assert service.remove_domain_element(state, 2).domain_basis == (2, 3)
-        for k in range(state.d):
-            assert service.remove_domain_element(state, k).d == state.d - 1
+        for k in range(state.dimensionality):
+            assert service.remove_domain_element(state, k).dimensionality == state.dimensionality - 1
 
     def test_remove_domain_element_inverts_add_domain_element(self):
         state = service.from_comma_basis(((4, -4, 1),))
         added = service.add_domain_element(state, service.parse_domain_element("13/5"))
-        back = service.remove_domain_element(added, added.d - 1)
+        back = service.remove_domain_element(added, added.dimensionality - 1)
         assert back.domain_basis == state.domain_basis and back.comma_basis == state.comma_basis
-        assert (back.d, back.r, back.n) == (state.d, state.r, state.n)
+        assert (back.dimensionality, back.rank, back.nullity) == (state.dimensionality, state.rank, state.nullity)
 
     def test_remove_domain_element_matches_shrink_for_the_last_standard_element(self):
         state = service.from_comma_basis(((4, -4, 1),))
-        removed = service.remove_domain_element(state, state.d - 1)
+        removed = service.remove_domain_element(state, state.dimensionality - 1)
         shrunk = service.shrink_domain(state)
         assert removed.domain_basis == shrunk.domain_basis == (2, 3)
         assert removed.mapping == shrunk.mapping and removed.comma_basis == shrunk.comma_basis
@@ -252,7 +252,7 @@ class TestDomainElementEdits:
     def test_remove_domain_element_collapsing_every_comma_leaves_just_intonation(self):
         state = service.from_comma_basis(((0, 0, 1),))
         ji = service.remove_domain_element(state, 2)
-        assert ji.domain_basis == (2, 3) and ji.n == 0 and ji.r == ji.d == 2
+        assert ji.domain_basis == (2, 3) and ji.nullity == 0 and ji.rank == ji.dimensionality == 2
 
     def test_can_remove_domain_element_keeps_at_least_one_element(self):
         assert service.can_remove_domain_element(service.from_comma_basis(((4, -4, 1),)))

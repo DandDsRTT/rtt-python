@@ -7,7 +7,7 @@ from math import comb
 import sympy as sp
 
 from rtt.library.canonicalization import canonical_form
-from rtt.library.dimensions import get_d, get_n, get_r
+from rtt.library.dimensions import get_dimensionality, get_nullity, get_rank
 from rtt.library.list_utils import all_zeros_l, divide_out_gcd, leading_entry, trailing_entry
 from rtt.library.matrix_utils import get_largest_minors_l, hnf, reverse_inner_l, rotate_180
 from rtt.library.temperament import Temperament, Variance
@@ -18,7 +18,7 @@ class Multivector:
     coords: tuple
     grade: int
     variance: Variance
-    d: int | None = None
+    dimensionality: int | None = None
 
 
 def ea_get_largest_minors_l(u: Multivector) -> tuple:
@@ -56,8 +56,8 @@ def ea_get_n(u: Multivector) -> int:
 
 
 def _ea_get_decomposable_d(u: Multivector) -> int:
-    if u.d is not None:
-        return u.d
+    if u.dimensionality is not None:
+        return u.dimensionality
     target = len(u.coords)
     d = u.grade
     while comb(d, u.grade) != target:
@@ -234,10 +234,12 @@ def _ea_addition(u1: Multivector, u2: Multivector, is_sum: bool) -> Multivector:
 
 
 def matrix_to_multivector(t: Temperament) -> Multivector:
-    grade = get_n(t) if t.variance is Variance.COL else get_r(t)
+    grade = get_nullity(t) if t.variance is Variance.COL else get_rank(t)
     independent_rows = hnf(t.matrix)[:grade]
     return ea_canonical_form(
-        Multivector(get_largest_minors_l(independent_rows), grade, t.variance, get_d(t))
+        Multivector(
+            get_largest_minors_l(independent_rows), grade, t.variance, get_dimensionality(t)
+        )
     )
 
 
