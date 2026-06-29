@@ -179,13 +179,13 @@ class TestFreshColumn:
     def test_mapping_cells_form_a_square_touching_grid(self):
         cells = {c.id: c for c in _layout().cells}
         c00 = cells["cell:mapping:0:0"]
-        assert c00.w == c00.h == spreadsheet_constants.ROW_H, "each cell is square, so the matrix reads as a grid of squares (mockup z_map2)"
-        assert cells["cell:mapping:0:1"].x == c00.x + c00.w
-        assert cells["cell:mapping:0:2"].x == c00.x + 2 * c00.w
-        assert cells["cell:mapping:1:0"].y == c00.y + c00.h
+        assert c00.width == c00.height == spreadsheet_constants.ROW_H, "each cell is square, so the matrix reads as a grid of squares (mockup z_map2)"
+        assert cells["cell:mapping:0:1"].x == c00.x + c00.width
+        assert cells["cell:mapping:0:2"].x == c00.x + 2 * c00.width
+        assert cells["cell:mapping:1:0"].y == c00.y + c00.height
         m00 = cells["cell:mapped:0:0"]
-        assert m00.w == m00.h == spreadsheet_constants.ROW_H
-        assert cells["cell:mapped:0:1"].x == m00.x + m00.w + spreadsheet_constants.INTERVAL_COL_GAP
+        assert m00.width == m00.height == spreadsheet_constants.ROW_H
+        assert cells["cell:mapped:0:1"].x == m00.x + m00.width + spreadsheet_constants.INTERVAL_COL_GAP
 
     def test_tuning_rows_over_primes_and_targets(self):
         cells = {c.id: c for c in _layout().cells}
@@ -221,7 +221,7 @@ class TestFreshColumn:
         assert by["bus:primes:bot"].start == v0.pos - half
         assert by["bus:primes:bot"].start + by["bus:primes:bot"].length == vlast.pos + half
         top, plus = by["bus:primes:top"], cells["plus"]
-        assert top.start + top.length == plus.x + plus.w / 2
+        assert top.start + top.length == plus.x + plus.width / 2
         assert top.start + top.length > vlast.pos + half
 
     def test_mapping_rejoin_bars_span_the_full_generator_fan(self):
@@ -237,8 +237,8 @@ class TestFreshColumn:
     def test_adjacent_tiles_keep_a_roomy_minimum_gap(self):
         blocks = {b.id: b for b in _layout().blocks}
         top, bot = blocks["block:tuning:targets"], blocks["block:just:targets"]
-        assert (top.x, top.w) == (bot.x, bot.w)
-        assert bot.y - (top.y + top.h) == spreadsheet_constants.GAP - 2 * spreadsheet_constants.PAD
+        assert (top.x, top.width) == (bot.x, bot.width)
+        assert bot.y - (top.y + top.height) == spreadsheet_constants.GAP - 2 * spreadsheet_constants.PAD
 
     def test_quantities_spine_row_has_a_horizontal_gridline(self):
         lay = _layout()
@@ -246,7 +246,7 @@ class TestFreshColumn:
         cells = {c.id: c for c in lay.cells}
         assert "h:quantities" in by_id
         line, prime = by_id["h:quantities"], cells["prime:0"]
-        assert abs(line.pos - (prime.y + prime.h / 2)) < 0.51
+        assert abs(line.pos - (prime.y + prime.height / 2)) < 0.51
         assert line.start < prime.x
         assert line.start + line.length >= cells["target:3"].x
 
@@ -267,16 +267,16 @@ class TestIntervalVectors:
         assert cells["header:quantities"].x < cells["header:gens"].x
         assert "trunk:quantities" in by_id
         spine, header = by_id["trunk:quantities"], cells["header:quantities"]
-        assert abs(spine.pos - (header.x + header.w / 2)) < 0.51
+        assert abs(spine.pos - (header.x + header.width / 2)) < 0.51
         assert spine.start < cells["prime:0"].y
         assert spine.start + spine.length >= cells["label:damage"].y
         assert "toggle:col:quantities" in cells
 
     def test_a_spine_hugs_col_w_and_overhangs_its_title_unless_it_is_leftmost(self):
         cells = {c.id: c for c in _with(domain_units=True).cells}
-        assert cells["header:units"].w == spreadsheet_constants.COL_W
-        assert cells["header:units"].w < spreadsheet_text._title_w("units")
-        assert cells["header:quantities"].w > cells["header:units"].w
+        assert cells["header:units"].width == spreadsheet_constants.COL_W
+        assert cells["header:units"].width < spreadsheet_text._title_w("units")
+        assert cells["header:quantities"].width > cells["header:units"].width
 
     def test_generators_column_fans_into_per_generator_axes(self):
         lay = _layout()
@@ -287,7 +287,7 @@ class TestIntervalVectors:
         assert {"trunk:gens", "bus:gens:top", "bus:gens:bot", "foot:gens"} <= ids
         for i in (0, 1):
             cell = cells[f"tuning:gen:{i}"]
-            assert abs(by_id[f"v:gen:{i}"].pos - (cell.x + cell.w / 2)) < 0.51
+            assert abs(by_id[f"v:gen:{i}"].pos - (cell.x + cell.width / 2)) < 0.51
         assert by_id["trunk:gens"].length < by_id["trunk:quantities"].length, "the trunk is now just the short fan stem above the data, not a full-height spine"
 
     def test_interval_vectors_row_fans_into_per_component_axes(self):
@@ -302,7 +302,7 @@ class TestIntervalVectors:
         rules = [by_id[f"h:vectors:{i}"].pos for i in range(3)]
         assert rules == sorted(rules)
         for pos in rules:
-            assert vrow.y <= pos <= vrow.y + vrow.h
+            assert vrow.y <= pos <= vrow.y + vrow.height
         assert by_id["h:vectors:0"].start + by_id["h:vectors:0"].length >= cells["header:targets"].x
 
     def test_tuning_tiles_off_removes_the_tuning_rows_and_the_target_intervals_column(self):
@@ -410,7 +410,7 @@ class TestIntervalVectors:
         full = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
         with_comma = {b.id: b for b in spreadsheet.build(meantone, s).blocks}
         no_comma = {b.id: b for b in spreadsheet.build(full, s).blocks}
-        assert with_comma["block:vector:quantities"].h == no_comma["block:vector:quantities"].h, "with the commas column hidden, the comma in state must not grow the vectors row: its spine # tile is the same height as the no-comma build (which reserves no band either way)"
+        assert with_comma["block:vector:quantities"].height == no_comma["block:vector:quantities"].height, "with the commas column hidden, the comma in state must not grow the vectors row: its spine # tile is the same height as the no-comma build (which reserves no band either way)"
         assert not any(c.id.startswith("commapick") for c in spreadsheet.build(meantone, s).cells)
 
     def test_every_row_including_quantities_has_a_fold_toggle(self):
@@ -430,7 +430,7 @@ class TestIntervalVectors:
         coll = {c.id: c for c in spreadsheet.build(base, collapsed={"row:tuning"}).cells}
         assert not any(c.startswith("tuning:") for c in coll)
         assert "label:tuning" in coll
-        assert coll["label:tuning"].h < full["label:tuning"].h
+        assert coll["label:tuning"].height < full["label:tuning"].height
         assert coll["label:just"].y < full["label:just"].y
 
     def test_collapsing_the_targets_column_hides_its_cells_across_every_row(self):
@@ -456,7 +456,7 @@ class TestIntervalVectors:
         coll = {c.id: c for c in spreadsheet.build(base, collapsed={"col:targets"}).cells}["header:targets"]
         full = {c.id: c for c in spreadsheet.build(base).cells}["header:targets"]
         assert coll.text == "target\nintervals", "the title stays put (not blanked, not rotated)"
-        assert spreadsheet_constants.STRIP < coll.w < full.w
+        assert spreadsheet_constants.STRIP < coll.width < full.width
 
     def test_collapsed_column_gridline_stays_centred_in_its_fold_node(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -465,16 +465,16 @@ class TestIntervalVectors:
             trunk = {ln.id: ln for ln in lay.lines}[f"trunk:{key}"]
             cells = {c.id: c for c in lay.cells}
             toggle, header = cells[f"toggle:col:{key}"], cells[f"header:{key}"]
-            assert abs(trunk.pos - (toggle.x + toggle.w / 2)) < 0.51, key
-            assert abs(trunk.pos - (header.x + header.w / 2)) < 0.51, key
+            assert abs(trunk.pos - (toggle.x + toggle.width / 2)) < 0.51, key
+            assert abs(trunk.pos - (header.x + header.width / 2)) < 0.51, key
 
     def test_a_collapsed_multiline_title_strip_fits_its_widest_line(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         interest = {c.id: c for c in spreadsheet.build(
             base, collapsed={"col:interest"}, interest=[(0, 0, 0)] * 5).cells}["header:interest"]
         assert interest.text == "other intervals\nof interest"
-        assert interest.w == len("other intervals") * 8 + 10, "the widest line, not all 27 chars"
-        assert interest.w < len("other intervals of interest") * 8 + 10
+        assert interest.width == len("other intervals") * 8 + 10, "the widest line, not all 27 chars"
+        assert interest.width < len("other intervals of interest") * 8 + 10
 
     def test_collapsing_a_spine_column_never_widens_it(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -482,27 +482,27 @@ class TestIntervalVectors:
         opened = {c.id: c for c in spreadsheet.build(base, s).cells}
         collapsed = {c.id: c for c in spreadsheet.build(base, s, collapsed={"col:quantities", "col:units"}).cells}
         for key in ("quantities", "units"):
-            assert collapsed[f"header:{key}"].w <= opened[f"header:{key}"].w
-        assert collapsed["header:units"].w == spreadsheet_constants.COL_W
+            assert collapsed[f"header:{key}"].width <= opened[f"header:{key}"].width
+        assert collapsed["header:units"].width == spreadsheet_constants.COL_W
 
     def test_a_rows_nested_control_grows_every_tile_in_that_row_uniformly(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         ranges = settings.defaults(); ranges["tuning_ranges"] = True
         on = {b.id: b for b in spreadsheet.build(base, ranges).blocks}
-        gens = on["block:tuning:gens"].h
+        gens = on["block:tuning:gens"].height
         for sib in ("block:tuning:primes", "block:tuning:commas", "block:tuning:targets"):
-            assert on[sib].h == gens, sib
+            assert on[sib].height == gens, sib
         off = {b.id: b for b in spreadsheet.build(base).blocks}
-        assert gens > off["block:tuning:primes"].h
+        assert gens > off["block:tuning:primes"].height
 
         alt = settings.defaults(); alt["weighting"] = True; alt["alt_complexity"] = True
         aon = {b.id: b for b in spreadsheet.build(base, alt, tuning_scheme="TILT minimax-S").blocks}
-        presc = aon["block:prescaling:primes"].h
+        presc = aon["block:prescaling:primes"].height
         for sib in ("block:prescaling:commas", "block:prescaling:targets"):
-            assert aon[sib].h == presc, sib
-        comp = aon["block:complexity:targets"].h
+            assert aon[sib].height == presc, sib
+        comp = aon["block:complexity:targets"].height
         for sib in ("block:complexity:primes", "block:complexity:commas"):
-            assert aon[sib].h == comp, sib
+            assert aon[sib].height == comp, sib
 
     def test_collapsing_a_column_does_not_shrink_its_rows_caption_band(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -510,7 +510,7 @@ class TestIntervalVectors:
         without_gens = {b.id: b for b in spreadsheet.build(base, s, collapsed={"col:commas"}).blocks}
         with_gens = {b.id: b for b in spreadsheet.build(base, s, collapsed={"col:commas", "col:gens"}).blocks}
         for sib in ("block:tuning:primes", "block:tuning:targets"):
-            assert with_gens[sib].h == without_gens[sib].h, f"{sib} shrank when the gens column collapsed"
+            assert with_gens[sib].height == without_gens[sib].height, f"{sib} shrank when the gens column collapsed"
 
     def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -518,7 +518,7 @@ class TestIntervalVectors:
         blocks = {b.id: b for b in lay.blocks}
         lines = {ln.id for ln in lay.lines}
         assert "block:tuning:primes" in blocks, "the panel persists so the renderer can animate it"
-        assert blocks["block:tuning:primes"].h == 0
+        assert blocks["block:tuning:primes"].height == 0
         assert "h:tuning" in lines
 
     def test_collapsing_a_column_folds_its_panels_away_and_converges_the_lines(self):
@@ -526,7 +526,7 @@ class TestIntervalVectors:
         lay = spreadsheet.build(base, collapsed={"col:primes"})
         blocks = {b.id: b for b in lay.blocks}
         by_id = {ln.id: ln for ln in lay.lines}
-        assert blocks["block:mapping"].w == 0
+        assert blocks["block:mapping"].width == 0
         assert by_id["v:prime:0"].pos == by_id["v:prime:1"].pos == by_id["v:prime:2"].pos, "the per-prime verticals converge onto one x (so they read as a single line)"
         assert by_id["bus:primes:top"].length == 0
 
@@ -552,8 +552,8 @@ class TestFormBox:
         assert "ebktop:primes" in cells and "ebkbrace:primes" in cells
         top, brace = cells["ebktop:primes"], cells["ebkbrace:primes"]
         first, last = cells["cell:mapping:0:0"], cells["cell:mapping:1:0"]
-        assert top.y + top.h < first.y, "the framing bands stand off the matrix by a gap, so the top bracket and # bottom brace never butt up against the per-row ⟨ … ] brackets (which would # read as one tall curly shape on the left edge)"
-        assert brace.y > last.y + last.h
+        assert top.y + top.height < first.y, "the framing bands stand off the matrix by a gap, so the top bracket and # bottom brace never butt up against the per-row ⟨ … ] brackets (which would # read as one tall curly shape on the left edge)"
+        assert brace.y > last.y + last.height
         assert {"ebktop:mapped:0", "ebkbrace:mapped:0"} <= set(cells)
 
     def test_form_box_shows_the_canonical_mapping_over_the_primes(self):

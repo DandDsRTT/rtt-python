@@ -33,8 +33,8 @@ class TestSizeFactor:
         assert cells["cell:comma:1:0"].text == "-4"
         assert cells["cell:comma:2:0"].text == "1"
         c00 = cells["cell:comma:0:0"]
-        assert c00.w == c00.h == spreadsheet_constants.ROW_H
-        assert cells["cell:comma:1:0"].y == c00.y + c00.h
+        assert c00.width == c00.height == spreadsheet_constants.ROW_H
+        assert cells["cell:comma:1:0"].y == c00.y + c00.height
         assert c00.x == cells["comma:0"].x
         assert c00.y == cells["cell:vector:targets:0:0"].y
 
@@ -99,7 +99,7 @@ class TestSizeFactor:
         assert ch.kind == "chart"
         assert len(ch.values) == 8
         assert all(v >= 0 for v in ch.values)
-        assert ch.y + ch.h <= on["weight:target:0"].y
+        assert ch.y + ch.height <= on["weight:target:0"].y
 
     def test_the_size_factor_prescaler_carries_a_horizontal_size_bar(self):
         on = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
@@ -520,9 +520,9 @@ class TestWeightingRows:
         ):
             top, foot = cells[top_id], cells[foot_id]
             label, left, right = cells[label_id], cells[left_id], cells[right_id]
-            assert label.x + label.w <= top.x
+            assert label.x + label.width <= top.x
             assert top.x == left.x == foot.x, "the frame's left and right edges align with the per-row brackets — it hugs the # cell matrix, not the wider grey footprint (top and bottom spans stay in lockstep)"
-            assert top.x + top.w == right.x + right.w == foot.x + foot.w
+            assert top.x + top.width == right.x + right.width == foot.x + foot.width
 
     def test_prescaling_matrix_carries_its_symbol_and_caption(self):
         cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, symbols=True, names=True, equivalences=False).cells}
@@ -552,7 +552,7 @@ class TestWeightingRows:
         box = blocks["block:preset:prescaler"]
         assert sel.y > pre.y
         assert sel.x == box.x + spreadsheet_constants.BOX_INNER
-        assert box.x <= pre.x and pre.x + pre.w <= box.x + box.w
+        assert box.x <= pre.x and pre.x + pre.width <= box.x + box.width
         assert "preset:prescaler" not in {c.id for c in _with("minimax-S", weighting=False, presets=True).cells}
         assert "preset:prescaler" not in {
             c.id for c in _with("minimax-S", weighting=True, presets=True, temperament_tiles=False).cells}
@@ -634,14 +634,14 @@ class TestWeightingRows:
         assert off["control:q"].x < on["control:q"].x
         off_box = {b.id: b for b in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
         on_box = {b.id: b for b in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
-        assert off_box.w <= on_box.w
+        assert off_box.width <= on_box.width
 
     def test_box_c_lays_out_with_q_and_dual_q_norm_power_fields(self):
         on = {c.id: c for c in _with(scheme="minimax-S", weighting=True, presets=True,
                                      all_interval=True, alt_complexity=True).cells}
         assert on["caption:complexity"].kind == "caption"
         assert on["caption:complexity"].text == "predefined complexities"
-        assert on["caption:complexity"].y == on["control:complexity"].y + on["control:complexity"].h
+        assert on["caption:complexity"].y == on["control:complexity"].y + on["control:complexity"].height
         assert on["control:q"].kind == "powerinput"
         assert on["control:q"].text == "1"
         assert on["control:q"].x > on["control:complexity"].x
@@ -752,12 +752,12 @@ class TestGriddedValues:
         mean_damage = on_based["optimization:mean_damage"]
         sym = on_based["optimization:mean_damage:symbol"]
         assert cap.y > sym.y
-        assert abs((cap.x + cap.w / 2) - (mean_damage.x + mean_damage.w / 2)) < 0.5
-        assert on_based["optimization:mean_damage:caption"].h == spreadsheet_constants.CAPTION_LINE, "target-based the short label is one line; all-interval the wide label reserves two, so the # box (and thus the damage tile) grows by exactly that extra line"
-        assert on_allint["optimization:mean_damage:caption"].h == 2 * spreadsheet_constants.CAPTION_LINE
+        assert abs((cap.x + cap.width / 2) - (mean_damage.x + mean_damage.width / 2)) < 0.5
+        assert on_based["optimization:mean_damage:caption"].height == spreadsheet_constants.CAPTION_LINE, "target-based the short label is one line; all-interval the wide label reserves two, so the # box (and thus the damage tile) grows by exactly that extra line"
+        assert on_allint["optimization:mean_damage:caption"].height == 2 * spreadsheet_constants.CAPTION_LINE
         box_based = {b.id: b for b in based.blocks}["block:optimization:box"]
         box_allint = {b.id: b for b in allint.blocks}["block:optimization:box"]
-        assert box_allint.h == box_based.h + spreadsheet_constants.CAPTION_LINE
+        assert box_allint.height == box_based.height + spreadsheet_constants.CAPTION_LINE
 
     def test_all_interval_locks_the_optimization_power_to_infinity(self):
         finite_ai = service.scheme_with_power("minimax-S", 2.0)

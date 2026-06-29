@@ -63,10 +63,10 @@ class TestIntervalGreys:
         assert cap("TILT minimax-S", False).text == "power mean"
         assert cap("minimax-S", True).text == "minimized retuning magnitude"
         assert cap("minimax-S", False).text == "retuning magnitude"
-        assert cap("TILT minimax-S", True).h == 2 * spreadsheet_constants.CAPTION_LINE
-        assert cap("TILT minimax-S", False).h == spreadsheet_constants.CAPTION_LINE
-        assert cap("minimax-S", True).h == 3 * spreadsheet_constants.CAPTION_LINE
-        assert cap("minimax-S", False).h == 2 * spreadsheet_constants.CAPTION_LINE
+        assert cap("TILT minimax-S", True).height == 2 * spreadsheet_constants.CAPTION_LINE
+        assert cap("TILT minimax-S", False).height == spreadsheet_constants.CAPTION_LINE
+        assert cap("minimax-S", True).height == 3 * spreadsheet_constants.CAPTION_LINE
+        assert cap("minimax-S", False).height == 2 * spreadsheet_constants.CAPTION_LINE
 
     def test_all_interval_mean_damage_aggregates_at_the_dual_norm_power_not_infinity(self):
         import pytest
@@ -177,15 +177,15 @@ class TestIntervalGreys:
         assert chk.checked is False
         cap = on["caption:all_interval"]
         assert cap.kind == "caption" and cap.text == "all-interval"
-        assert abs((chk.x + chk.w / 2) - (cap.x + cap.w / 2)) < 1
+        assert abs((chk.x + chk.width / 2) - (cap.x + cap.width / 2)) < 1
         gap = (spreadsheet_constants.PRESET_H - spreadsheet_constants.OPTION_BOX_PX) / 2
-        assert cap.y == chk.y + chk.h + gap
+        assert cap.y == chk.y + chk.height + gap
         on_ai = {c.id: c for c in _with(scheme="minimax-S", all_interval=True).cells}
         assert on_ai["control:all_interval"].checked is True
 
     def test_control_checkbox_cell_matches_the_one_shared_option_box_size(self):
         chk = {c.id: c for c in _with(all_interval=True).cells}["control:all_interval"]
-        assert chk.h == spreadsheet_constants.OPTION_BOX_PX
+        assert chk.height == spreadsheet_constants.OPTION_BOX_PX
 
     def test_all_interval_checkbox_rides_right_of_the_target_chooser_when_shown(self):
         on = {c.id: c for c in _with(all_interval=True, presets=True).cells}
@@ -198,9 +198,9 @@ class TestIntervalGreys:
         box, tile = blocks["block:preset:target"], blocks["block:vector:targets"]
         for cid in ("control:all_interval", "caption:all_interval"):
             c = cells[cid]
-            assert box.x <= c.x and c.x + c.w <= box.x + box.w
-            assert box.y <= c.y and c.y + c.h <= box.y + box.h
-        assert tile.x <= box.x and box.x + box.w <= tile.x + tile.w
+            assert box.x <= c.x and c.x + c.width <= box.x + box.width
+            assert box.y <= c.y and c.y + c.height <= box.y + box.height
+        assert tile.x <= box.x and box.x + box.width <= tile.x + tile.width
 
     def test_all_interval_show_entry_is_live_not_a_greyed_stub(self):
         assert "all_interval" in settings.IMPLEMENTED, "the all-interval Show toggle reveals the in-grid box-𝐓 checkbox (a two-step process); its # content is built, so the Show panel offers it live (interactive), not greyed out as a stub"
@@ -217,8 +217,8 @@ class TestIntervalGreys:
         dim = on["control:diminuator"]
         assert dim.x == on["header:primes"].x + spreadsheet_constants.BOX_INNER
         gap = (spreadsheet_constants.PRESET_H - spreadsheet_constants.OPTION_BOX_PX) / 2
-        assert cap_d.y == dim.y + dim.h + gap
-        assert abs((dim.x + dim.w / 2) - (cap_d.x + cap_d.w / 2)) < 1
+        assert cap_d.y == dim.y + dim.height + gap
+        assert abs((dim.x + dim.width / 2) - (cap_d.x + cap_d.width / 2)) < 1
 
     def test_weighting_controls_each_sit_in_a_bordered_box(self):
         lay = _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True)
@@ -230,8 +230,8 @@ class TestIntervalGreys:
             box = blocks[box_id]
             assert box.boxed, box_id
             ctrl = cells[ctrl_id]
-            assert box.x < ctrl.x and ctrl.x + ctrl.w <= box.x + box.w + 0.01, box_id
-            assert box.y < ctrl.y and ctrl.y + ctrl.h <= box.y + box.h + 0.01, box_id
+            assert box.x < ctrl.x and ctrl.x + ctrl.width <= box.x + box.width + 0.01, box_id
+            assert box.y < ctrl.y and ctrl.y + ctrl.height <= box.y + box.height + 0.01, box_id
 
     def test_diminuator_rides_the_pretransformer_chooser_box_when_presets_on(self):
         on = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
@@ -267,7 +267,7 @@ class TestIntervalGreys:
         cap = on["caption:slope"]
         assert cap.kind == "caption"
         assert cap.text == "damage weight slope"
-        assert cap.h == spreadsheet_constants.CAPTION_LINE
+        assert cap.height == spreadsheet_constants.CAPTION_LINE
         assert cap.y > on["control:slope"].y
 
     def test_weighting_adds_a_weight_slope_chooser_to_the_weight_box(self):
@@ -281,7 +281,7 @@ class TestIntervalGreys:
         assert ctrl.values == ("complexity-weight", "unity-weight", "simplicity-weight")
         assert ctrl.y > on["weight:target:0"].y
         assert ctrl.x == on["header:targets"].x + spreadsheet_constants.BOX_INNER
-        assert ctrl.w == on["header:targets"].w - 2 * spreadsheet_constants.BOX_INNER
+        assert ctrl.width == on["header:targets"].width - 2 * spreadsheet_constants.BOX_INNER
 
     def test_all_interval_greys_and_locks_the_weight_slope_chooser(self):
         on = {c.id: c for c in _with(scheme="minimax-S", weighting=True).cells}
@@ -383,7 +383,7 @@ class TestCustomWeights:
         override = tuple(1.0 + 0.5 * i for i in range(n))
         lay = spreadsheet.build(base, s, custom_weights=override)
         texts = [c.text for c in lay.cells if c.id.startswith("weight:target:")]
-        assert texts == [service.cents(w) for w in override]
+        assert texts == [service.cents(width) for width in override]
 
     def test_commas_have_a_shared_vertical_axis_per_comma(self):
         ids = {ln.id for ln in _layout().lines}
@@ -406,8 +406,8 @@ class TestCustomWeights:
         lay = spreadsheet.build(base, collapsed={"col:commas"})
         blocks = {b.id: b for b in lay.blocks}
         by_id = {ln.id: ln for ln in lay.lines}
-        assert blocks["block:commas"].w == 0
-        assert blocks["block:tuning:commas"].w == 0
+        assert blocks["block:commas"].width == 0
+        assert blocks["block:tuning:commas"].width == 0
         assert by_id["bus:commas:top"].length == 0
 
     def test_comma_basis_is_framed_as_a_vector_list_spanning_its_d_tall_height(self):
@@ -416,7 +416,7 @@ class TestCustomWeights:
         assert "ebktop:vector:commas:0" in cells and "ebkangle:vector:commas:0" in cells
         cb = cells["bracket:vector:commas:l"]
         assert cb.y <= cells["cell:comma:0:0"].y
-        assert cb.y + cb.h >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].h
+        assert cb.y + cb.height >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].height
 
     def test_untempered_vector_columns_get_angle_feet_while_mapped_lists_keep_braces(self):
         cells = {c.id: c for c in _layout().cells}
@@ -450,15 +450,15 @@ class TestCustomWeights:
         blocks = {b.id: b for b in lay.blocks}
         name = "tempered comma basis interval size list (made to vanish!)"
         cap = cells["caption:tuning:commas"]
-        assert spreadsheet_text._wrap_lines(name, cap.w) <= spreadsheet_constants.MAX_CAPTION_LINES
-        assert cap.h == spreadsheet_text._wrap_lines(name, cap.w) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
-        assert cap.h <= spreadsheet_constants.MAX_CAPTION_LINES * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
+        assert spreadsheet_text._wrap_lines(name, cap.width) <= spreadsheet_constants.MAX_CAPTION_LINES
+        assert cap.height == spreadsheet_text._wrap_lines(name, cap.width) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
+        assert cap.height <= spreadsheet_constants.MAX_CAPTION_LINES * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
         content_w = 2 * spreadsheet_constants.BRACKET_W + spreadsheet_constants.COL_W
-        assert cells["header:commas"].w > content_w
-        assert cap.w == cells["header:commas"].w
+        assert cells["header:commas"].width > content_w
+        assert cap.width == cells["header:commas"].width
         assert cap.y >= cells["tuning:comma:0"].y + spreadsheet_constants.ROW_H
         panel = blocks["block:tuning:commas"]
-        assert panel.x <= cap.x and cap.x + cap.w <= panel.x + panel.w
+        assert panel.x <= cap.x and cap.x + cap.width <= panel.x + panel.width
 
     def test_a_widened_caption_tile_keeps_the_add_control_on_its_fan_stub(self):
         lay = _with(names=True)
@@ -466,27 +466,27 @@ class TestCustomWeights:
         blocks = {b.id: b for b in lay.blocks}
         narrow = {b.id: b for b in _with(names=False).blocks}
         by_id = {ln.id: ln for ln in lay.lines}
-        assert blocks["block:commas"].w > narrow["block:commas"].w
+        assert blocks["block:commas"].width > narrow["block:commas"].width
         plus, bus = cells["comma_plus"], by_id["bus:commas:top"]
         stub = by_id["v:comma:0"].pos + spreadsheet_constants.COL_W
-        assert abs((plus.x + plus.w / 2) - stub) < 0.51, "the + tracks the fan, not the tile edge"
+        assert abs((plus.x + plus.width / 2) - stub) < 0.51, "the + tracks the fan, not the tile edge"
         assert abs((bus.start + bus.length) - stub) < 0.51
 
     def test_min_width_for_lines_floors_a_column_to_keep_a_name_within_two_lines(self):
         for name in ("tempered comma basis interval size list (made to vanish!)",
                      "comma basis interval retuning list (made to vanish!)",
                      "(just) comma basis interval size list"):
-            w = spreadsheet_text._min_width_for_lines(name, 2)
-            assert spreadsheet_text._wrap_lines(name, w) <= 2
+            width = spreadsheet_text._min_width_for_lines(name, 2)
+            assert spreadsheet_text._wrap_lines(name, width) <= 2
             assert spreadsheet_text._wrap_lines(name, 2 * spreadsheet_constants.BRACKET_W + spreadsheet_constants.COL_W) > 2
 
     def test_short_captions_span_the_full_band_so_css_can_centre_them(self):
         cells = {c.id: c for c in _with(names=True).cells}
         short = cells["caption:tuning:primes"]
         tall = cells["caption:tuning:commas"]
-        assert spreadsheet_text._wrap_lines(short.text, short.w) == 1
-        assert spreadsheet_text._wrap_lines(tall.text, tall.w) == 2
-        assert short.h == tall.h == spreadsheet_text._wrap_lines(tall.text, tall.w) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
+        assert spreadsheet_text._wrap_lines(short.text, short.width) == 1
+        assert spreadsheet_text._wrap_lines(tall.text, tall.width) == 2
+        assert short.height == tall.height == spreadsheet_text._wrap_lines(tall.text, tall.width) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
         assert short.y == tall.y
 
     def test_comma_columns_get_in_tile_captions_consistent_with_the_targets(self):
@@ -515,14 +515,14 @@ class TestCustomWeights:
         one, by1 = {c.id: c for c in lay.cells}, {ln.id: ln for ln in lay.lines}
         assert "comma_minus:0" in one, "the SOLE comma is removable now (un-tempers to just intonation)"
         cm = one["comma_minus:0"]
-        assert abs((cm.x + cm.w / 2) - by1["v:comma:0"].pos) < 0.51
+        assert abs((cm.x + cm.width / 2) - by1["v:comma:0"].pos) < 0.51
         assert cm.y == by1["bus:commas:top"].pos
         two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])
         tlay = spreadsheet.build(two)
         cells, by2 = {c.id: c for c in tlay.cells}, {ln.id: ln for ln in tlay.lines}
         assert {"comma_minus:0", "comma_minus:1"} <= set(cells), "any comma removable, not just the last"
-        assert abs((cells["comma_minus:0"].x + cells["comma_minus:0"].w / 2) - by2["v:comma:0"].pos) < 0.51
-        assert abs((cells["comma_minus:1"].x + cells["comma_minus:1"].w / 2) - by2["v:comma:1"].pos) < 0.51
+        assert abs((cells["comma_minus:0"].x + cells["comma_minus:0"].width / 2) - by2["v:comma:0"].pos) < 0.51
+        assert abs((cells["comma_minus:1"].x + cells["comma_minus:1"].width / 2) - by2["v:comma:1"].pos) < 0.51
         ji = service.add_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4))))
         assert not any(c.startswith("comma_minus") for c in {c.id for c in spreadsheet.build(ji).cells})
 
@@ -537,7 +537,7 @@ class TestCustomWeights:
         assert "tuning:comma:1" not in cells
         by_id = {ln.id: ln for ln in spreadsheet.build(base, pending_comma=[None, None, None]).lines}
         assert "comma_minus:0" in cells
-        assert abs((cells["comma_minus:pending"].x + cells["comma_minus:pending"].w / 2) - by_id["v:comma:1"].pos) < 0.51
+        assert abs((cells["comma_minus:pending"].x + cells["comma_minus:pending"].width / 2) - by_id["v:comma:1"].pos) < 0.51
 
     def test_a_partly_typed_pending_comma_shows_its_entered_components(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -621,8 +621,8 @@ class TestCommaMinus:
         frame = ((spreadsheet_constants.FRAME_H + spreadsheet_constants.FRAME_GAP) + (spreadsheet_constants.FRAME_GAP + spreadsheet_constants.BRACE_H)
                  + 2 * spreadsheet_constants.FRAME_OVERHANG)
         for bid in ("bracket:mapped:l", "bracket:mapped_comma:l"):
-            assert plain[bid].h == 2 * spreadsheet_constants.ROW_H + frame
-            assert drafting[bid].h == plain[bid].h + spreadsheet_constants.ROW_H
+            assert plain[bid].height == 2 * spreadsheet_constants.ROW_H + frame
+            assert drafting[bid].height == plain[bid].height + spreadsheet_constants.ROW_H
         assert drafting["cell:mapped:2:0"].pending and drafting["cell:mapped:2:0"].text == ""
         assert drafting["cell:mapped_comma:2:0"].preview_remove and not drafting["cell:mapped_comma:2:0"].pending, "...but its cell over the doomed comma is red (the draft generator un-tempers it away), enclosed all the same"
 

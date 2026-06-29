@@ -312,14 +312,14 @@ class TestPerCell:
         label = cells["matlabel:row:superspace_mapping:superspace_primes:0"]
         bracket = cells["bracket:superspace_map:0:l"]
         cell0 = cells["cell:superspace_mapping:superspace_primes:0:0"]
-        assert label.x + label.w <= bracket.x
-        assert bracket.x + bracket.w <= cell0.x
+        assert label.x + label.width <= bracket.x
+        assert bracket.x + bracket.width <= cell0.x
 
     def test_superspace_matrix_plain_text_stays_within_its_tile(self):
         cells = {c.id: c for c in _barbados_superspace(symbols=True, plain_text_values=True, identity_objects=True).cells}
         plain_text = cells["plain_text:superspace_mapping:superspace_primes"]
         next_label = cells["label:tuning"]
-        assert plain_text.y + plain_text.h <= next_label.y
+        assert plain_text.y + plain_text.height <= next_label.y
 
     def test_nonstandard_domain_uses_b_throughout_the_basis_column_not_just_units(self):
         cells = {c.id: c for c in _barbados_superspace(names=True, units=True).cells}
@@ -392,7 +392,7 @@ class TestPerCell:
         cells = {c.id: c for c in _with(scheme="minimax-lils-S").cells}
         real = cells["cell:vector:targets:0:0"]
         assert real.kind == "vector"
-        assert real.w == spreadsheet_constants.COL_W
+        assert real.width == spreadsheet_constants.COL_W
 
     def test_domain_elements_are_editable_elementcells_with_the_box_on(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")

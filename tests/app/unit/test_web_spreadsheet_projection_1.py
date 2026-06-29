@@ -38,7 +38,7 @@ class TestProjectionColumn:
                 assert cell.x == cells[f"cell:mapping:0:{p}"].x
         assert cells["label:mapping"].y < cells["label:projection"].y < cells["label:tuning"].y
         c00 = cells["cell:projection:0:0"]
-        assert c00.w == c00.h == spreadsheet_constants.ROW_H
+        assert c00.width == c00.height == spreadsheet_constants.ROW_H
         assert cells["cell:projection:1:0"].y == c00.y + spreadsheet_constants.ROW_H
 
     def test_projection_box_is_dashed_until_the_tuning_is_a_rational_projection(self):
@@ -59,8 +59,8 @@ class TestProjectionColumn:
         assert "ebktop:projection" in cells and "ebkangle:projection" in cells and "ebkbrace:projection" not in cells, "and the whole matrix is enclosed by a spanning top bracket + bottom ANGLE close ⟩ (P is p/p, so # its outer closes with the prime-coordinate ket ⟩, matching its plain text [⟨…]…⟩ — not the # mapping's generator-coordinate })"
         top, brace = cells["ebktop:projection"], cells["ebkangle:projection"]
         first, last = cells["cell:projection:0:0"], cells["cell:projection:2:0"]
-        assert top.y + top.h <= first.y
-        assert brace.y >= last.y + last.h
+        assert top.y + top.height <= first.y
+        assert brace.y >= last.y + last.height
 
     def test_projection_row_fans_a_gridline_per_subrow(self):
         lines = {ln.id for ln in _with(projection=True).lines}
@@ -139,7 +139,7 @@ class TestProjectionColumn:
                 vector = cells[f"cell:vector:targets:{j}:{p}"]
                 assert cell.text == col[p]
                 assert cell.kind == "mapped"
-                assert cell.x + cell.w / 2 == vector.x + vector.w / 2
+                assert cell.x + cell.width / 2 == vector.x + vector.width / 2
                 assert cell.y == cells[f"cell:projection:{p}:0"].y
 
     def test_projection_held_tile_shows_P_times_H_equals_H(self):
@@ -256,9 +256,9 @@ class TestReturnScheme:
         from rtt.app.spreadsheet_text import _min_width_for_lines
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), symbols=True, equivalences=True, names=True).cells}
         sym = cells["symbol:projection:primes"]
-        assert sym.w >= _min_width_for_lines(sym.text, 1, SYMBOL_FONT)
+        assert sym.width >= _min_width_for_lines(sym.text, 1, SYMBOL_FONT)
         left = cells["cell:projection:0:0"].x - sym.x
-        right = (sym.x + sym.w) - (cells["cell:projection:0:2"].x + cells["cell:projection:0:2"].w)
+        right = (sym.x + sym.width) - (cells["cell:projection:0:2"].x + cells["cell:projection:0:2"].width)
         assert abs(left - right) <= 1
 
     def test_return_to_scheme_button_is_boxed_above_the_dropdown_with_presets(self):
@@ -268,7 +268,7 @@ class TestReturnScheme:
         assert sq.y < dropdown.y
         box = next(b for b in lay.blocks if b.id == "block:preset:projection")
         for cell in (sq, dropdown):
-            assert box.x <= cell.x and cell.y >= box.y and cell.y < box.y + box.h
+            assert box.x <= cell.x and cell.y >= box.y and cell.y < box.y + box.height
 
     def test_return_to_scheme_button_keeps_its_own_box_without_presets(self):
         lay = _with(projection=True, presets=False)
@@ -276,8 +276,8 @@ class TestReturnScheme:
         sq = cells["scheme:primes"]
         box = next((b for b in lay.blocks if b.id == "block:scheme:primes"), None)
         assert box is not None and getattr(box, "boxed", False)
-        assert box.x <= sq.x and box.y <= sq.y and sq.x + sq.w <= box.x + box.w and sq.y + sq.h <= box.y + box.h
-        assert sq.y - box.y == (box.y + box.h) - (sq.y + sq.h)
+        assert box.x <= sq.x and box.y <= sq.y and sq.x + sq.width <= box.x + box.width and sq.y + sq.height <= box.y + box.height
+        assert sq.y - box.y == (box.y + box.height) - (sq.y + sq.height)
 
     def test_generator_embedding_is_a_vector_list_of_generator_kets(self):
         cells = {c.id: c for c in _with(projection=True).cells}
@@ -306,7 +306,7 @@ class TestReturnScheme:
         assert [cells[i].text for i in ("cell:scaling:0", "cell:scaling:u0", "cell:scaling:u1")] == ["0", "1", "1"]
         assert cells["label:scaling_factors"].y < cells["label:vectors"].y
         s0 = cells["cell:scaling:0"]
-        assert s0.h == spreadsheet_constants.ROW_H
+        assert s0.height == spreadsheet_constants.ROW_H
         assert s0.x == cells["cell:comma:0:0"].x
 
     def test_projection_consolidates_commas_and_unchanged_into_v(self):

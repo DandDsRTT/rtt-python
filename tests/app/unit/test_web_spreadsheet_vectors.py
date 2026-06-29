@@ -33,7 +33,7 @@ class TestIntervalVectors2:
         assert [cells[f"cell:vector:targets:2:{p}"].text for p in range(3)] == ["-1", "1", "0"]
         assert [cells[f"cell:vector:targets:6:{p}"].text for p in range(3)] == ["-2", "0", "1"]
         v, hdr = cells["cell:vector:targets:2:0"], cells["target:2"]
-        assert v.x + v.w / 2 == hdr.x + hdr.w / 2
+        assert v.x + v.width / 2 == hdr.x + hdr.width / 2
         assert cells["cell:vector:targets:0:1"].y - cells["cell:vector:targets:0:0"].y == spreadsheet_constants.ROW_H
 
     def test_interval_vectors_domain_primes_identity_renders_with_identity_objects(self):
@@ -62,9 +62,9 @@ class TestIntervalVectors2:
     def test_interval_vectors_quantities_tile_shows_the_domain_basis_as_row_index(self):
         cells = {c.id: c for c in _layout().cells}
         assert [cells[f"basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
-        assert cells["basis:0"].w == spreadsheet_constants.COL_W == cells["prime:0"].w
+        assert cells["basis:0"].width == spreadsheet_constants.COL_W == cells["prime:0"].width
         gen0 = cells["gen:0"]
-        assert cells["basis:0"].x + cells["basis:0"].w / 2 == gen0.x + gen0.w / 2
+        assert cells["basis:0"].x + cells["basis:0"].width / 2 == gen0.x + gen0.width / 2
         assert cells["basis:0"].y == cells["cell:comma:0:0"].y
         assert cells["basis:1"].y - cells["basis:0"].y == spreadsheet_constants.ROW_H
 
@@ -75,11 +75,11 @@ class TestIntervalVectors2:
         plus, minus, bot = cells["basis_plus"], cells["basis_minus"], cells["basis:2"]
         left_bus = by_id["vbar:vectors:left"]
         assert minus.x == left_bus.pos, "− zone drops from the left-bus branch point (button at its edge)"
-        assert abs((minus.y + minus.h / 2) - by_id["h:vectors:2"].pos) < 0.51
+        assert abs((minus.y + minus.height / 2) - by_id["h:vectors:2"].pos) < 0.51
         assert minus.x < cells["basis:2"].x
-        assert abs((plus.x + plus.w / 2) - left_bus.pos) < 0.51
-        assert plus.y >= bot.y + bot.h
-        assert abs((left_bus.start + left_bus.length) - (plus.y + plus.h / 2)) < 0.51
+        assert abs((plus.x + plus.width / 2) - left_bus.pos) < 0.51
+        assert plus.y >= bot.y + bot.height
+        assert abs((left_bus.start + left_bus.length) - (plus.y + plus.height / 2)) < 0.51
 
     def test_mapping_row_controls_ride_the_rows_left_bus(self):
         lay = _layout()
@@ -89,12 +89,12 @@ class TestIntervalVectors2:
         for i in range(2):
             minus = cells[f"map_minus:{i}"]
             assert minus.x == left_bus.pos, "− drops from the left-bus branch point"
-            assert abs((minus.y + minus.h / 2) - by_id[f"h:mapping:{i}"].pos) < 0.51
+            assert abs((minus.y + minus.height / 2) - by_id[f"h:mapping:{i}"].pos) < 0.51
             assert minus.x < cells["gen:0"].x
         plus = cells["map_plus"]
-        assert abs((plus.x + plus.w / 2) - left_bus.pos) < 0.51
-        assert plus.y >= cells["gen:1"].y + cells["gen:1"].h
-        assert abs((left_bus.start + left_bus.length) - (plus.y + plus.h / 2)) < 0.51
+        assert abs((plus.x + plus.width / 2) - left_bus.pos) < 0.51
+        assert plus.y >= cells["gen:1"].y + cells["gen:1"].height
+        assert abs((left_bus.start + left_bus.length) - (plus.y + plus.height / 2)) < 0.51
 
     def test_mapping_row_minus_gated_on_rank_and_plus_on_nullity(self):
         rank1 = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),))).cells}
@@ -109,9 +109,9 @@ class TestIntervalVectors2:
         by_id = {ln.id: ln for ln in lay.lines}
         assert "h:mapping:0" in by_id and "h:mapping" not in by_id, "the fanned sub-rule, not the flat spine"
         left_bus, plus = by_id["vbar:mapping:left"], cells["map_plus"]
-        assert abs((plus.x + plus.w / 2) - left_bus.pos) < 0.51
-        assert abs((left_bus.start + left_bus.length) - (plus.y + plus.h / 2)) < 0.51
-        assert abs((plus.x + plus.w / 2) - (cells["basis_plus"].x + cells["basis_plus"].w / 2)) < 0.51, "...and the + sits as close to the spine as the always-fanned basis +, not a FAN further out"
+        assert abs((plus.x + plus.width / 2) - left_bus.pos) < 0.51
+        assert abs((left_bus.start + left_bus.length) - (plus.y + plus.height / 2)) < 0.51
+        assert abs((plus.x + plus.width / 2) - (cells["basis_plus"].x + cells["basis_plus"].width / 2)) < 0.51, "...and the + sits as close to the spine as the always-fanned basis +, not a FAN further out"
 
     def test_drag_handles_are_gated_on_the_drag_to_combine_toggle(self):
         off = {c.id for c in _layout().cells}
@@ -129,8 +129,8 @@ class TestIntervalVectors2:
             label = cells[f"matlabel:row:mapping:primes:{i}"]
             assert handle.gen == i
             assert handle.y == cells[f"cell:mapping:{i}:0"].y
-            assert handle.x + handle.w <= label.x
-            assert label.x + label.w <= cells[f"cell:mapping:{i}:0"].x
+            assert handle.x + handle.width <= label.x
+            assert label.x + label.width <= cells[f"cell:mapping:{i}:0"].x
             assert handle.x > cells[f"map_minus:{i}"].x
 
     def test_mapping_row_drag_handles_need_two_rows(self):
@@ -148,7 +148,7 @@ class TestIntervalVectors2:
             label = cells[f"matlabel:col:vectors:commas:{i}"]
             vector0 = cells[f"cell:comma:0:{i}"]
             assert handle.comma == i and handle.x == label.x
-            assert handle.y + handle.h <= label.y
+            assert handle.y + handle.height <= label.y
             assert label.y < vector0.y
         assert cells["int_drag:interest:0"].y + spreadsheet_constants.ROW_HANDLE_W <= cells["cell:interest:0:0"].y
         assert "int_drag:target:0" in cells

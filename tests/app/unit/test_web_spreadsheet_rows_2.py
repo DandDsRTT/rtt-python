@@ -32,7 +32,7 @@ class TestMatrixLabels:
     def test_adding_intervals_of_interest_never_shrinks_the_header(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         builds = [spreadsheet.build(base, collapsed=frozenset(), interest=[(0, 0, 0)] * n) for n in range(5)]
-        widths = [{c.id: c for c in lay.cells}["header:interest"].w for lay in builds]
+        widths = [{c.id: c for c in lay.cells}["header:interest"].width for lay in builds]
         assert widths == sorted(widths)
         assert min(widths) == widths[0]
 
@@ -44,9 +44,9 @@ class TestMatrixLabels:
         floor = max(spreadsheet_text._min_width_for_lines(grid_tables.CAPTIONS[(rk, "interest")], spreadsheet_constants.MAX_CAPTION_LINES)
                     for rk in ("vectors", "mapping", "tuning", "just", "retune"))
         hug_w = max(content_w, floor)
-        assert blocks["block:interest"].w == hug_w + 2 * spreadsheet_constants.PAD, "the tile hugs that width — just its PAD overhang each side (the + rides the fan, not the tile)"
-        assert cells["header:interest"].w == hug_w
-        assert cells["header:interest"].w < spreadsheet_text._title_w("other intervals\nof interest")
+        assert blocks["block:interest"].width == hug_w + 2 * spreadsheet_constants.PAD, "the tile hugs that width — just its PAD overhang each side (the + rides the fan, not the tile)"
+        assert cells["header:interest"].width == hug_w
+        assert cells["header:interest"].width < spreadsheet_text._title_w("other intervals\nof interest")
 
     def test_interest_title_overhangs_symmetrically_centred_on_the_gridline(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -56,15 +56,15 @@ class TestMatrixLabels:
             cells = {c.id: c for c in lay.cells}
             lines = {ln.id: ln for ln in lay.lines}
             header, trunk = cells["header:interest"], lines["trunk:interest"]
-            assert header.w < title_w
-            assert header.x + header.w / 2 == trunk.pos
+            assert header.width < title_w
+            assert header.x + header.width / 2 == trunk.pos
         one = _with_interest(_INTEREST[:1])
         cells = {c.id: c for c in one.cells}
         lines = {ln.id: ln for ln in one.lines}
         block = {b.id: b for b in one.blocks}["block:interest"]
         trunk = lines["trunk:interest"]
-        assert block.w < title_w
-        assert block.x + block.w / 2 == trunk.pos
+        assert block.width < title_w
+        assert block.x + block.width / 2 == trunk.pos
         assert lines["v:interest:0"].pos == trunk.pos
 
     def test_per_tile_fold_toggle_hugs_its_tile_corner(self):
@@ -75,7 +75,7 @@ class TestMatrixLabels:
                                     ("toggle:tile:mapping:primes", "block:mapping")):
             toggle, tile = cells[toggle_id], blocks[block_id]
             assert toggle.x == tile.x + spreadsheet_constants.TOGGLE_INSET
-            assert tile.x <= toggle.x <= tile.x + tile.w, "...so it sits within the tile"
+            assert tile.x <= toggle.x <= tile.x + tile.width, "...so it sits within the tile"
 
     def test_populated_interest_mapped_list_is_standalone_columns_not_a_matrix(self):
         cells = {c.id: c for c in _with_interest(_INTEREST[:2]).cells}
@@ -209,8 +209,8 @@ class TestMatrixLabels:
         def snapshot(s, key_base=base):
             lay = spreadsheet.build(key_base, s, tuning_scheme="TILT minimax-S")
             return (
-                frozenset((c.id, c.x, c.y, c.w, c.h, c.kind, c.text, c.unit, c.underlines) for c in lay.cells),
-                frozenset((b.id, b.x, b.y, b.w, b.h, b.tint) for b in lay.blocks),
+                frozenset((c.id, c.x, c.y, c.width, c.height, c.kind, c.text, c.unit, c.underlines) for c in lay.cells),
+                frozenset((b.id, b.x, b.y, b.width, b.height, b.tint) for b in lay.blocks),
             )
 
         rides_on = {"form": "symbols", "form_colorization": "form_tiles"}
@@ -318,7 +318,7 @@ class TestMatrixLabels:
         assert on["matlabel:col:tuning:primes:0"].y < on["tuning:prime:0"].y
         assert on["matlabel:row:mapping:primes:0"].x < on["bracket:map:0:l"].x
         assert (on["matlabel:row:mapping:primes:0"].y <= on["cell:mapping:0:0"].y
-                <= on["matlabel:row:mapping:primes:0"].y + on["matlabel:row:mapping:primes:0"].h)
+                <= on["matlabel:row:mapping:primes:0"].y + on["matlabel:row:mapping:primes:0"].height)
 
     def test_col_labels_sit_inside_the_tile_centred_above_the_bracket(self):
         lay = spreadsheet.build(
@@ -338,10 +338,10 @@ class TestMatrixLabels:
             tile_top = blocks[tile_block_id].y + spreadsheet_constants.PAD
             assert label.y >= tile_top - 1, \
                 f"{label_id} (y={label.y}) must sit inside tile (top={tile_top}), not in the gap"
-            assert label.y + label.h <= bracket_top, \
-                f"{label_id} bottom y={label.y + label.h} must be at/above bracket y={bracket_top}"
+            assert label.y + label.height <= bracket_top, \
+                f"{label_id} bottom y={label.y + label.height} must be at/above bracket y={bracket_top}"
             dist_above = label.y - tile_top
-            dist_below = bracket_top - (label.y + label.h)
+            dist_below = bracket_top - (label.y + label.height)
             assert abs(dist_above - dist_below) <= 1, \
                 f"{label_id}: dist_above={dist_above}, dist_below={dist_below} should be ~equal"
 
@@ -349,13 +349,13 @@ class TestMatrixLabels:
 class TestOptimizationBox:
     def test_col_labels_sit_above_the_top_frame_in_framed_rows(self):
         on = {c.id: c for c in _with(header_symbols=True).cells}
-        assert on["matlabel:col:mapping:targets:0"].y + on["matlabel:col:mapping:targets:0"].h \
+        assert on["matlabel:col:mapping:targets:0"].y + on["matlabel:col:mapping:targets:0"].height \
             <= on["ebktop:mapped:0"].y
-        assert on["matlabel:col:mapping:commas:0"].y + on["matlabel:col:mapping:commas:0"].h \
+        assert on["matlabel:col:mapping:commas:0"].y + on["matlabel:col:mapping:commas:0"].height \
             <= on["ebktop:mapped_comma:0"].y
-        assert on["matlabel:col:vectors:commas:0"].y + on["matlabel:col:vectors:commas:0"].h \
+        assert on["matlabel:col:vectors:commas:0"].y + on["matlabel:col:vectors:commas:0"].height \
             <= on["ebktop:vector:commas:0"].y
-        assert on["matlabel:col:vectors:targets:0"].y + on["matlabel:col:vectors:targets:0"].h \
+        assert on["matlabel:col:vectors:targets:0"].y + on["matlabel:col:vectors:targets:0"].height \
             <= on["ebktop:vector:targets:0"].y
 
     def test_mapping_top_frame_hugs_the_cells_not_the_row_label_gutter(self):
@@ -366,15 +366,15 @@ class TestOptimizationBox:
         right_bracket = on["bracket:map:0:r"]
         assert ebktop.x == left_bracket.x
         assert ebkbrace.x == left_bracket.x
-        assert ebktop.x + ebktop.w == right_bracket.x + right_bracket.w
-        assert ebkbrace.x + ebkbrace.w == right_bracket.x + right_bracket.w
+        assert ebktop.x + ebktop.width == right_bracket.x + right_bracket.width
+        assert ebkbrace.x + ebkbrace.width == right_bracket.x + right_bracket.width
 
     def test_row_labels_balance_the_primes_tile_with_an_equal_right_gutter(self):
         lay = _with(header_symbols=True)
         on = {c.id: c for c in lay.cells}
         panel = {b.id: b for b in lay.blocks}["block:mapping"]
         left = on["bracket:map:0:l"].x - panel.x
-        right = (panel.x + panel.w) - (on["bracket:map:0:r"].x + on["bracket:map:0:r"].w)
+        right = (panel.x + panel.width) - (on["bracket:map:0:r"].x + on["bracket:map:0:r"].width)
         assert abs(left - right) < 0.01, f"primes matrix off-centre in its tile: left={left}, right={right}"
         assert left >= spreadsheet_constants.MATLABEL_W
 
@@ -545,11 +545,11 @@ class TestOptimizationBox:
         assert on["optimization:mean_damage"].y < on["optimization:mean_damage:symbol"].y
         assert (on["optimization:power"].y < on["optimization:power:symbol"].y
                 < on["optimization:power:caption"].y)
-        assert on["optimization:mean_damage"].w == spreadsheet_constants.COL_W
-        assert on["optimization:power"].w == spreadsheet_constants.COL_W
+        assert on["optimization:mean_damage"].width == spreadsheet_constants.COL_W
+        assert on["optimization:power"].width == spreadsheet_constants.COL_W
         mean_damage_col_x = box.x + spreadsheet_constants.OPT_PAD_L
         assert on["optimization:mean_damage:symbol"].x == mean_damage_col_x
-        assert on["optimization:mean_damage:symbol"].w == spreadsheet_constants.OPT_MEAN_DAMAGE_W
+        assert on["optimization:mean_damage:symbol"].width == spreadsheet_constants.OPT_MEAN_DAMAGE_W
         assert on["optimization:mean_damage:caption"].x == mean_damage_col_x
         assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet_constants.OPT_MEAN_DAMAGE_W - spreadsheet_constants.COL_W) / 2
         mean_damage_r = mean_damage_col_x + spreadsheet_constants.OPT_MEAN_DAMAGE_W
@@ -557,11 +557,11 @@ class TestOptimizationBox:
         assert on["optimization:power:caption"].x == pow_col_x
         assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPT_POW_CAP_W - spreadsheet_constants.COL_W) / 2
         cap = on["optimization:power:caption"]
-        assert cap.x > mean_damage_r and cap.x + cap.w < box.x + box.w
-        assert box.w >= spreadsheet_constants.OPT_BOX_MIN_W
-        assert on["optimization:power:caption"].h == spreadsheet_constants.CAPTION_LINE, "the caption occupies a single line (so 'optimization power' sits right under 𝑝, not a # two-line band that floats it lower)"
+        assert cap.x > mean_damage_r and cap.x + cap.width < box.x + box.width
+        assert box.width >= spreadsheet_constants.OPT_BOX_MIN_W
+        assert on["optimization:power:caption"].height == spreadsheet_constants.CAPTION_LINE, "the caption occupies a single line (so 'optimization power' sits right under 𝑝, not a # two-line band that floats it lower)"
         assert on["optimization:title"].y > box.y
-        assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].h
+        assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].height
         ids = {c.id for c in lay.cells}
         assert "optimization:button" not in ids
         assert "optimization:button:hint" not in ids
@@ -573,7 +573,7 @@ class TestOptimizationBox:
         box = blk["block:optimization:box"]
         panel = blk["block:damage:targets"]
         assert box.x == panel.x + spreadsheet_constants.PAD
-        assert box.w == panel.w - 2 * spreadsheet_constants.PAD
+        assert box.width == panel.width - 2 * spreadsheet_constants.PAD
 
     def test_a_narrow_damage_tile_widens_to_seat_the_optimization_box(self):
         base = service.from_mapping(((1, 1), (0, 1)))
@@ -581,8 +581,8 @@ class TestOptimizationBox:
         s["optimization"] = True
         blk = {b.id: b for b in spreadsheet.build(base, s).blocks}
         box = blk["block:optimization:box"]
-        assert box.w >= spreadsheet_constants.OPT_BOX_MIN_W
-        assert box.w == blk["block:damage:targets"].w - 2 * spreadsheet_constants.PAD
+        assert box.width >= spreadsheet_constants.OPT_BOX_MIN_W
+        assert box.width == blk["block:damage:targets"].width - 2 * spreadsheet_constants.PAD
 
     def test_a_manual_generator_tuning_drives_the_displayed_maps(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -645,11 +645,11 @@ class TestOptimizationBox:
         c0, c1 = cells["cell:vector:targets:0:0"], cells["cell:vector:targets:1:0"]
         sep = cells["sep:vector:targets:1"]
         full = cells["cell:mapped:0:0"]
-        assert c0.w == full.w == spreadsheet_constants.COL_W
+        assert c0.width == full.width == spreadsheet_constants.COL_W
         assert c0.x == full.x
-        assert c1.x - (c0.x + c0.w) == spreadsheet_constants.INTERVAL_COL_GAP
-        assert c0.x + c0.w <= sep.x
-        assert sep.x + sep.w <= c1.x
+        assert c1.x - (c0.x + c0.width) == spreadsheet_constants.INTERVAL_COL_GAP
+        assert c0.x + c0.width <= sep.x
+        assert sep.x + sep.width <= c1.x
 
     def test_typing_the_target_interval_list_drives_the_grid_through_the_editor(self):
         editor = Editor()
@@ -687,4 +687,4 @@ class TestOptimizationBox2:
         box = blocks["block:optimization:box"]
         assert box.boxed
         panel = blocks["block:damage:targets"]
-        assert panel.y <= box.y and box.y + box.h <= panel.y + panel.h
+        assert panel.y <= box.y and box.y + box.height <= panel.y + panel.height

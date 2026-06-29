@@ -76,8 +76,8 @@ def _with_interest(interest, collapsed=None):
 
 def _title_edges(lay):
     return [(c.id.split("header:", 1)[1],
-             c.x + c.w / 2 - spreadsheet_text._title_w(c.text) / 2,
-             c.x + c.w / 2 + spreadsheet_text._title_w(c.text) / 2)
+             c.x + c.width / 2 - spreadsheet_text._title_w(c.text) / 2,
+             c.x + c.width / 2 + spreadsheet_text._title_w(c.text) / 2)
             for c in sorted((c for c in lay.cells if c.kind == "colheader"), key=lambda c: c.x)]
 
 
@@ -85,11 +85,11 @@ def _assert_freeze_partition(lay):
     fx, fy = lay.freeze_x, lay.freeze_y
     for cb in lay.cells:
         if cb.kind in {"colheader", "coltoggle"}:
-            assert cb.y + cb.h <= fy
+            assert cb.y + cb.height <= fy
         elif cb.kind in {"rowlabel", "rowtoggle"}:
-            assert cb.x + cb.w <= fx
+            assert cb.x + cb.width <= fx
         elif cb.kind == "alltoggle":
-            assert cb.y + cb.h <= fy and cb.x + cb.w <= fx
+            assert cb.y + cb.height <= fy and cb.x + cb.width <= fx
         elif cb.kind.endswith(("plus", "minus")) or cb.kind == "colgrip":
             assert cb.x < fx or cb.y < fy
         else:
@@ -185,10 +185,10 @@ def _ebk_grid_convention(b, lay, row_key, column_key):
     cx, cw = b.geometry.col_x[column_key], b.geometry.col_w[column_key]
 
     def in_tile(c):
-        if not (cx - 2 <= c.x + c.w / 2 <= cx + cw + 2):
+        if not (cx - 2 <= c.x + c.width / 2 <= cx + cw + 2):
             return False
-        ccy = c.y + c.h / 2
-        return min(b.geometry.rows, key=lambda k: abs(b.geometry.rows[k].y + b.geometry.rows[k].h / 2 - ccy)) == row_key
+        ccy = c.y + c.height / 2
+        return min(b.geometry.rows, key=lambda k: abs(b.geometry.rows[k].y + b.geometry.rows[k].height / 2 - ccy)) == row_key
 
     frame_top = col_marks = False
     brace = angle = False
@@ -277,12 +277,12 @@ def _held(scheme=None, **overrides):
 
 def _color_at(lay, x, y):
     return {b.tint for b in lay.blocks if b.tint in ("temperament", "tuning")
-            and b.x <= x <= b.x + b.w and b.y <= y <= b.y + b.h}
+            and b.x <= x <= b.x + b.width and b.y <= y <= b.y + b.height}
 
 
 def _mid(cells, cid):
     c = cells[cid]
-    return c.x + c.w / 2, c.y + c.h / 2
+    return c.x + c.width / 2, c.y + c.height / 2
 
 
 def _colormap_layout():
@@ -325,7 +325,7 @@ def _diff_layout(*cells):
 
 
 def _diff_cell(cid, text, **kw):
-    return CellBox(id=cid, x=0, y=0, w=10, h=10, kind="tuningvalue", text=text, **kw)
+    return CellBox(id=cid, x=0, y=0, width=10, height=10, kind="tuningvalue", text=text, **kw)
 
 
 def _barbados_superspace(**overrides):
