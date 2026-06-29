@@ -56,26 +56,26 @@ def _emit_vector_grid(cells, resolved, geometry, g: _VecGrid) -> None:
 
 
 def _basis_col_x(geometry):
-    bx = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
+    basis_x = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
     basis_bus_x = geometry.node_edge + geometry.FAN if query.row_fans(geometry, "vectors") else geometry.node_edge
-    return bx, basis_bus_x
+    return basis_x, basis_bus_x
 
 
 def _emit_basis_minus(cells, geometry, cid, p, kind, **kw):
-    bx, basis_bus_x = _basis_col_x(geometry)
+    basis_x, basis_bus_x = _basis_col_x(geometry)
     cells.append(CellBox(cid, basis_bus_x, query.vector_top(geometry, p),
-                         (bx + COL_W) - basis_bus_x, ROW_H, kind, **kw))
+                         (basis_x + COL_W) - basis_bus_x, ROW_H, kind, **kw))
 
 
 def _emit_vectors_basis_col(cells, resolved, geometry, context) -> None:
-    bx, basis_bus_x = _basis_col_x(geometry)
+    basis_x, basis_bus_x = _basis_col_x(geometry)
     for p in range(resolved.dims.dimensionality):
         text = str(resolved.dims.elements[p])
         kind = element_cell_kind(text) if resolved.flags.nonstandard_domain else "prime"
-        cells.append(CellBox(f"basis:{p}", bx, query.vector_top(geometry, p), COL_W, ROW_H, kind, text=text, prime=p))
+        cells.append(CellBox(f"basis:{p}", basis_x, query.vector_top(geometry, p), COL_W, ROW_H, kind, text=text, prime=p))
     if resolved.scalars.element_draft:
         draft_text = context.pending_element or "?/?"
-        cells.append(CellBox("basis:pending", bx, query.vector_top(geometry, resolved.dims.dimensionality), COL_W, ROW_H,
+        cells.append(CellBox("basis:pending", basis_x, query.vector_top(geometry, resolved.dims.dimensionality), COL_W, ROW_H,
                                   element_cell_kind(draft_text), text=draft_text, prime=resolved.dims.dimensionality, pending=True))
         _emit_basis_minus(cells, geometry, "element_minus:basis:pending", resolved.dims.dimensionality, "element_minus")
     if resolved.flags.nonstandard_domain:
@@ -149,9 +149,9 @@ def emit_superspace_rows(resolved, geometry, context) -> EmitResult:
 def _emit_superspace_quantity_rows(cells, resolved, geometry, context) -> None:
     cl = context.collapsed
     if query.row_open(geometry, cl, "superspace_vectors") and query.tile_open(geometry, cl, "superspace_vectors", "quantities"):
-        bx = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
+        basis_x = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
         for p in range(resolved.dims.superspace_dimensionality):
-            cells.append(CellBox(f"superspace_basis:{p}", bx, query.superspace_vector_top(geometry, p), COL_W, ROW_H,
+            cells.append(CellBox(f"superspace_basis:{p}", basis_x, query.superspace_vector_top(geometry, p), COL_W, ROW_H,
                                  "commaratio", text=str(resolved.dims.superspace_primes[p]), prime=p))
     if query.row_open(geometry, cl, "superspace_mapping") and query.tile_open(geometry, cl, "superspace_mapping", "quantities"):
         superspace_gens = service.superspace_generators(context.state)
@@ -160,9 +160,9 @@ def _emit_superspace_quantity_rows(cells, resolved, geometry, context) -> None:
                                  geometry.col_w["quantities"], ROW_H, "genratio",
                                  text=superspace_gens[i] if i < len(superspace_gens) else ""))
     if query.row_open(geometry, cl, "superspace_projection") and query.tile_open(geometry, cl, "superspace_projection", "quantities"):
-        bx = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
+        basis_x = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
         for p in range(resolved.dims.superspace_dimensionality):
-            cells.append(CellBox(f"superspace_projection_basis:{p}", bx, query.superspace_projection_top(geometry, p), COL_W, ROW_H, "commaratio",
+            cells.append(CellBox(f"superspace_projection_basis:{p}", basis_x, query.superspace_projection_top(geometry, p), COL_W, ROW_H, "commaratio",
                                  text=str(resolved.dims.superspace_primes[p]), prime=p))
 
 

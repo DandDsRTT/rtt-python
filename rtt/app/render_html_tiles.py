@@ -135,13 +135,19 @@ def _tile_grid_frame_html() -> str:
             f'width:{w}px;height:{h}px">{inner}</div>'
         )
 
-    cell, cap, bw, cell_x, cell_y = _TILE_CELL, _TILE_CAP, _TILE_BR_W, _TILE_CELL_X, _TILE_CELL_Y
+    cell, cap, bracket_width, cell_x, cell_y = (
+        _TILE_CELL,
+        _TILE_CAP,
+        _TILE_BR_W,
+        _TILE_CELL_X,
+        _TILE_CELL_Y,
+    )
     span = _TILE_FRAME_W
     return (
         f'<div style="position:relative;width:{_TILE_FRAME_W}px;height:{_TILE_FRAME_H}px">'
         + mark(0, 0, span, cap, top_bracket(span, cap))
         + mark(0, _TILE_FRAME_H - cap, span, cap, brace(span, cap))
-        + mark(0, cell_y, bw, cell, angle_bracket(bw, cell))
+        + mark(0, cell_y, bracket_width, cell, angle_bracket(bracket_width, cell))
         + mark(
             cell_x,
             cell_y,
@@ -150,7 +156,9 @@ def _tile_grid_frame_html() -> str:
             '<div style="width:100%;height:100%;box-sizing:border-box;'
             'border:1px solid #555;background:#fff"></div>',
         )
-        + mark(cell_x + cell, cell_y, bw, cell, square_bracket(bw, cell, "right"))
+        + mark(
+            cell_x + cell, cell_y, bracket_width, cell, square_bracket(bracket_width, cell, "right")
+        )
         + "</div>"
     )
 
