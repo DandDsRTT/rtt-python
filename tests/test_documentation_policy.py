@@ -71,7 +71,6 @@ _TEST_COMMENT_ALLOWANCE = {
     "app/unit/test_web_presets.py": 82,
     "app/unit/test_web_render_html.py": 22,
     "app/unit/test_web_resolved.py": 8,
-    "app/unit/test_web_spreadsheet.py": 3931,
     "app/unit/test_web_tooltips.py": 67,
     "library/unit/test_addition.py": 39,
     "library/unit/test_canonicalization.py": 5,
