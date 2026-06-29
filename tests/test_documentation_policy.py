@@ -239,3 +239,10 @@ class TestDocumentationPolicy:
                 "(CLAUDE.md). Remove it, or replace it with a clearer name."
             )
         )
+
+    def test_no_test_file_carries_a_comment_allowance(self):
+        assert _TEST_COMMENT_ALLOWANCE == {}, (
+            f"_TEST_COMMENT_ALLOWANCE must stay empty — every test file is zero-comment now. "
+            f"It still lists {sorted(_TEST_COMMENT_ALLOWANCE)}; drive those to zero and remove the "
+            "entries rather than grandfathering comments back in (CLAUDE.md)."
+        )
