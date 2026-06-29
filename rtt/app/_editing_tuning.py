@@ -21,15 +21,15 @@ from rtt.app.render_html import (
 )
 
 _PLAIN_TEXT_EDITORS: dict[str, str] = {
-    "ptext:mapping:primes": "try_edit_mapping_text",
-    "ptext:mapping:canongens": "try_edit_form_matrix_text",
-    "ptext:vectors:commas": "try_edit_comma_basis_text",
-    "ptext:tuning:gens": "set_generator_tuning_text",
-    "ptext:tuning:superspace_generators": "set_superspace_generator_tuning_text",
-    "ptext:vectors:targets": "set_target_override_text",
-    "ptext:prescaling:primes": "set_custom_prescaler_text",
-    "ptext:projection:primes": "try_edit_projection_text",
-    "ptext:projection:gens": "try_edit_embedding_text",
+    "plain_text:mapping:primes": "try_edit_mapping_text",
+    "plain_text:mapping:canongens": "try_edit_form_matrix_text",
+    "plain_text:vectors:commas": "try_edit_comma_basis_text",
+    "plain_text:tuning:gens": "set_generator_tuning_text",
+    "plain_text:tuning:superspace_generators": "set_superspace_generator_tuning_text",
+    "plain_text:vectors:targets": "set_target_override_text",
+    "plain_text:prescaling:primes": "set_custom_prescaler_text",
+    "plain_text:projection:primes": "try_edit_projection_text",
+    "plain_text:projection:gens": "try_edit_embedding_text",
 }
 
 
@@ -223,28 +223,28 @@ def _plain_text_edit(ec, cid, value):
     if not ec._editor.settings.get("ebk", True):
         value = service.simple_matrix_to_ebk(value, _PLAIN_TEXT_DUAL_VECTOR_KIND.get(cid, False))
     if getattr(ec._editor, editor_method)(value):
-        ec._rec.cells[cid].value.plain_text_input.classes(remove="rtt-ptext-error")
+        ec._rec.cells[cid].value.plain_text_input.classes(remove="rtt-plain-text-error")
         ec._renderer.request_render()
         return
-    ec._rec.cells[cid].value.plain_text_input.classes(add="rtt-ptext-error")
+    ec._rec.cells[cid].value.plain_text_input.classes(add="rtt-plain-text-error")
     toast = _plain_text_error_toast(ec, cid, value)
     if toast:
         ui.notify(toast, type="negative", position="top")
 
 
 def _plain_text_error_toast(ec, cid, value):
-    if cid == "ptext:mapping:primes":
+    if cid == "plain_text:mapping:primes":
         st = service.parse_mapping_state(value)
         if st is not None and not service.is_proper_temperament(st.mapping):
             return _INVALID_TEMPERAMENT
-    elif cid == "ptext:vectors:commas":
+    elif cid == "plain_text:vectors:commas":
         b = service.parse_comma_basis(value)
         if b is not None and not service.is_proper_temperament(service.from_comma_basis(b).mapping):
             return _INVALID_TEMPERAMENT
-    elif cid == "ptext:projection:primes" and service.parse_projection(value) is not None:
+    elif cid == "plain_text:projection:primes" and service.parse_projection(value) is not None:
         return _INVALID_PROJECTION
     elif (
-        cid == "ptext:projection:gens"
+        cid == "plain_text:projection:gens"
         and service.parse_embedding(value, ec._editor.state.d, len(ec._editor.state.mapping))
         is not None
     ):

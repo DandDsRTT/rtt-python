@@ -259,10 +259,10 @@ def _emit_plain_text_band(cells, resolved, geometry, context) -> None:
             if ((row_key, column_key) == ("vectors", "commas") and resolved.commas.pending is not None) \
                     or ((row_key, column_key) == ("vectors", "targets") and resolved.targets.pending is not None) \
                     or ((row_key, column_key) == ("mapping", "primes") and context.pending_mapping_row is not None):
-                kind = "ptextpending"
+                kind = "plain_text_pending"
             elif query.plain_text_editable(resolved, row_key, column_key) and (column_key != "targets" or resolved.scalars.targets_editable):
-                kind = "ptextedit"
+                kind = "plain_text_edit"
             else:
-                kind = "ptext"
-            cells.append(CellBox(f"ptext:{row_key}:{column_key}", geometry.col_x[column_key], query.plain_text_band_y(geometry, row_key),
+                kind = "plain_text"
+            cells.append(CellBox(f"plain_text:{row_key}:{column_key}", geometry.col_x[column_key], query.plain_text_band_y(geometry, row_key),
                                  geometry.col_w[column_key], query.plain_text_height(resolved, row_key, column_key), kind, text=text))

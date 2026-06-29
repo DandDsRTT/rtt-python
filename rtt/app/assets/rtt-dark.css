@@ -98,14 +98,14 @@ body.rtt-dark .rtt-cellinput .q-field__control { background:#1b1f24; }
 body.rtt-dark .rtt-cellinput .q-field__native { color:#e3e6ea; }
 body.rtt-dark .rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent; }
 body.rtt-dark .rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:#e3e6ea; }
-body.rtt-dark .rtt-ptextedit .q-field__control,
-body.rtt-dark .rtt-ptextpending { background:#1b1f24; border-color:#4e555d; }
-body.rtt-dark .rtt-ptextedit .q-field__native,
-body.rtt-dark .rtt-ptextpending { color:#e3e6ea; }
+body.rtt-dark .rtt-plain-text-edit .q-field__control,
+body.rtt-dark .rtt-plain-text-pending { background:#1b1f24; border-color:#4e555d; }
+body.rtt-dark .rtt-plain-text-edit .q-field__native,
+body.rtt-dark .rtt-plain-text-pending { color:#e3e6ea; }
 /* every gridded value / scalar / plain-text / ratio face */
 body.rtt-dark .rtt-value,
 body.rtt-dark .rtt-count,
-body.rtt-dark .rtt-ptext,
+body.rtt-dark .rtt-plain-text,
 body.rtt-dark .rtt-ratio,
 body.rtt-dark .rtt-tuning-value,
 body.rtt-dark .rtt-stacked-sub,

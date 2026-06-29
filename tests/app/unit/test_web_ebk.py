@@ -127,17 +127,17 @@ def test_ebk_off_is_a_single_square_bracket_per_matrix_no_nesting():
 
 
 def test_ebk_off_transforms_the_plain_text_strings():
-    def ptext(layout, rk, ck):
-        return next((c.text for c in layout.cells if c.id == f"ptext:{rk}:{ck}"), None)
+    def plain_text(layout, rk, ck):
+        return next((c.text for c in layout.cells if c.id == f"plain_text:{rk}:{ck}"), None)
     on = _build(True, plain_text_values=True)
     off = _build(False, plain_text_values=True)
     # the mapping reads its EBK string on, the plain matrix off (map kind — no ᵀ)
-    assert ptext(on, "mapping", "primes") == "[⟨1 0 -4] ⟨0 1 4]}"
-    assert ptext(off, "mapping", "primes") == "[[1 0 -4] [0 1 4]]"
+    assert plain_text(on, "mapping", "primes") == "[⟨1 0 -4] ⟨0 1 4]}"
+    assert plain_text(off, "mapping", "primes") == "[[1 0 -4] [0 1 4]]"
     # the target interval vectors are the vector kind — a ᵀ off
-    assert ptext(on, "vectors", "targets").startswith("[[")
-    assert ptext(off, "vectors", "targets").endswith("]ᵀ")
-    assert "⟨" not in ptext(off, "vectors", "targets") and "⟩" not in ptext(off, "vectors", "targets")
+    assert plain_text(on, "vectors", "targets").startswith("[[")
+    assert plain_text(off, "vectors", "targets").endswith("]ᵀ")
+    assert "⟨" not in plain_text(off, "vectors", "targets") and "⟩" not in plain_text(off, "vectors", "targets")
 
 
 # ── an OPEN list tile keeps its outer EBK even when empty ──────────────────────────────────────

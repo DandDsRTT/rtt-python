@@ -102,7 +102,7 @@ def _power_parts(text) -> tuple[str, str]:
 
 
 # There is no browser to measure text width in-process, so these per-glyph em-widths for the
-# .rtt-ptext face estimate it; they are conservative upper bounds over the (narrower) STIX Two Text
+# .rtt-plain-text face estimate it; they are conservative upper bounds over the (narrower) STIX Two Text
 # body face, so a value's estimate stays above its real render and never spills.
 _PLAIN_TEXT_DEFAULT_EM = 0.59
 _PLAIN_TEXT_GLYPH_EM = {

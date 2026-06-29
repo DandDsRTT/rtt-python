@@ -54,7 +54,7 @@ def test_dark_theme_relights_the_editable_cell_inputs():
     # its fill and re-light its typed text, or edited cells stay blinding white
     assert _dark_sets(".rtt-cellinput", "background")
     assert _dark_sets(".rtt-cellinput", "color")
-    assert _dark_sets(".rtt-ptextedit", "background")
+    assert _dark_sets(".rtt-plain-text-edit", "background")
 
 
 def test_dark_theme_retints_the_baked_in_marks_without_disturbing_the_pending_green():

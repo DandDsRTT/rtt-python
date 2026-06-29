@@ -160,7 +160,7 @@ def update_caption(rec, cell_box: spreadsheet.CellBox) -> None:
 
 
 def build_plain_text_pending(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
-    rec.cells[cell_box.id].display.html = ui.html("").classes("rtt-ptextpending")
+    rec.cells[cell_box.id].display.html = ui.html("").classes("rtt-plain-text-pending")
 
 
 def _squared(off, prefix, draft, suffix, vector_based):
@@ -176,7 +176,7 @@ def _squared(off, prefix, draft, suffix, vector_based):
 def update_plain_text_pending(rec, cell_box: spreadsheet.CellBox) -> None:
     ed = rec._editor
     off = not ed.settings.get("ebk", True)
-    if cell_box.id == "ptext:mapping:primes":
+    if cell_box.id == "plain_text:mapping:primes":
         committed = service.simple_matrix_to_ebk(cell_box.text, False) if off else cell_box.text
         prefix, draft, suffix = _squared(
             off, *service.mapping_pending_text(committed, ed.pending_mapping_row), False
@@ -188,7 +188,7 @@ def update_plain_text_pending(rec, cell_box: spreadsheet.CellBox) -> None:
             f"font-size:{_plain_text_font(prefix + draft + suffix, cell_box.w)}px"
         )
         return
-    if cell_box.id == "ptext:vectors:targets":
+    if cell_box.id == "plain_text:vectors:targets":
         targets = ed.target_override or service.target_interval_set(
             ed.target_spec, ed.state.domain_basis
         )

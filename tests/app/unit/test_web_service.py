@@ -1330,12 +1330,12 @@ def test_plain_text_custom_prescaler_matches_the_grid():
     # the bare prescaler tile's hand-edited diagonal threads into plain_text_values exactly as it
     # does into the grid: the SAME retuned tuning map, target complexity and weight (the grid passes
     # custom_prescaler into service.tuning / interval_weights / interval_complexities). Without the
-    # thread the ptext re-derived from the scheme's log-prime diagonal and diverged from every one of
+    # thread the plain_text re-derived from the scheme's log-prime diagonal and diverged from every one of
     # those grid tiles — the bug this guards.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone over 2.3.5
     gb = _grid_with_plain_text(state, "TILT minimax-S", custom_prescaler=(1.0, 2.0, 3.0))
     pt = gb.geometry.plain_text_strings
-    # each retuned ptext tile equals the grid's own quantity (the same formatter the grid value uses)
+    # each retuned plain_text tile equals the grid's own quantity (the same formatter the grid value uses)
     assert pt[("tuning", "primes")] == text_format._cents_map(gb.resolved.tuning.tuning_map.tuning_map)
     assert pt[("complexity", "targets")] == text_format._cents_list(gb.resolved.complexities["targets"])
     assert pt[("weight", "targets")] == text_format._cents_list(gb.resolved.tuning.target_weights)
@@ -1380,7 +1380,7 @@ def test_plain_text_primes_complexity_runs_over_the_domain_basis_not_standard_pr
 def test_plain_text_threads_the_nonprime_approach_into_its_tuning():
     # the grid passes nonprime_approach into service.tuning; plain_text_values must too, or its tuning
     # rows diverge from the grid over a nonprime domain. A nonprime-based approach retunes differently
-    # from the neutral default here, so the ptext tuning map moves when the approach is threaded.
+    # from the neutral default here, so the plain_text tuning map moves when the approach is threaded.
     state = service.from_temperament_data("2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]]")
     neutral = service.plain_text_values(state, "TILT minimax-S", "TILT")
     nonprime = service.plain_text_values(state, "TILT minimax-S", "TILT", nonprime_approach="nonprime-based")
@@ -2462,7 +2462,7 @@ def test_over_complex_generators_round_trip_back_to_a_finite_size():
     tuning_map = service.tuning(state.mapping, "TILT minimax-U")
     sizes = service.interval_sizes(tuning_map, service.generators(state.mapping))  # would have raised at parse
     assert all(math.isfinite(s) for s in sizes.tempered)
-    pt = service.plain_text_values(state, "TILT minimax-U", "TILT")  # the ptext detempering round-trip
+    pt = service.plain_text_values(state, "TILT minimax-U", "TILT")  # the plain_text detempering round-trip
     assert pt[("tuning", "detempering")]  # built without raising
     gb = _grid_with_plain_text(state, "TILT minimax-U")  # the exact crash site: _resolve_interval_sets
     assert core_vectors._OVER_COMPLEX_RATIO in gb.resolved.scalars.gens   # the genmap cell shows the sentinel, render survives
