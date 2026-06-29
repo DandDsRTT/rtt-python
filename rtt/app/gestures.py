@@ -36,8 +36,8 @@ class GestureController:
     def hover(self):
         return _GestureHover(self)
 
-    def bind(self, rec: _Reconciler, renderer: Renderer, edits: EditController) -> None:
-        self._rec = rec
+    def bind(self, reconciler: _Reconciler, renderer: Renderer, edits: EditController) -> None:
+        self._rec = reconciler
         self._renderer = renderer
         self._edits = edits
 

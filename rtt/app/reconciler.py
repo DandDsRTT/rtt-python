@@ -143,7 +143,7 @@ class _Reconciler:
     def __init__(self, editor: Editor, gestures=None) -> None:
         self._editor = editor
         self._gestures = gestures
-        self._cb: ReconcilerCallbacks | None = None
+        self._cell_box: ReconcilerCallbacks | None = None
         self._row_drag: int | None = None
         self._col_drag: tuple[str, int] | None = None
         self.pretransform = False

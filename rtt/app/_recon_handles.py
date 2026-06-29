@@ -65,8 +65,8 @@ class CellHandles:
 
 def _reject_write(self, name, value):
     raise AttributeError(
-        f"read-only handle sentinel ({name!r} assignment): rec.handles(id)/rec.entity(id) returned it "
-        "because the id is not live — route writes through rec.cells[id] / rec.entities[id]"
+        f"read-only handle sentinel ({name!r} assignment): reconciler.handles(id)/reconciler.entity(id) returned it "
+        "because the id is not live — route writes through reconciler.cells[id] / reconciler.entities[id]"
     )
 
 

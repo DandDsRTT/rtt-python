@@ -29,19 +29,17 @@ from rtt.app.render_html import (
     _control_svg,
     _digit_fit_font,
     _gentuning_parts,
-    _plain_text_font,
-    _power_parts,
     _ratio_font,
     _ratio_parts,
 )
 
 
-def _put_stacked_face(rec, cid: str, cls: str, main: str, sub: str, width: float) -> None:
+def _put_stacked_face(reconciler, cid: str, cls: str, main: str, sub: str, width: float) -> None:
     with ui.element("div").classes(cls):
         m = ui.label(main).classes("rtt-stacked-main").mark(f"{cid}:main")
         s = ui.label(sub).classes("rtt-stacked-sub").mark(f"{cid}:sub")
-    rec.cells[cid].value.stacked_face = (m, s)
-    rec.cells[cid].value.stacked_w = width
+    reconciler.cells[cid].value.stacked_face = (m, s)
+    reconciler.cells[cid].value.stacked_w = width
     _size_stacked_main(m, main, sub, width)
 
 
@@ -56,16 +54,16 @@ def _size_stacked_main(main_label, main: str, sub: str, width: float) -> None:
     main_label.style(f"font-size:{size:.2f}px")
 
 
-def _sync_stacked_face(rec, cid: str, main: str, sub: str) -> None:
-    m, s = rec.cells[cid].value.stacked_face
+def _sync_stacked_face(reconciler, cid: str, main: str, sub: str) -> None:
+    m, s = reconciler.cells[cid].value.stacked_face
     m.set_text(main)
     s.set_text(sub)
-    _size_stacked_main(m, main, sub, rec.cells[cid].value.stacked_w)
+    _size_stacked_main(m, main, sub, reconciler.cells[cid].value.stacked_w)
 
 
-def set_cents_face(rec, cid: str, text: str) -> None:
+def set_cents_face(reconciler, cid: str, text: str) -> None:
     whole, frac = _cents_parts(text)
-    _sync_stacked_face(rec, cid, whole, f".{frac}" if frac else "")
+    _sync_stacked_face(reconciler, cid, whole, f".{frac}" if frac else "")
 
 
 def _set_pending_class(element, pending: bool) -> None:
@@ -75,19 +73,21 @@ def _set_pending_class(element, pending: bool) -> None:
     )
 
 
-def cents_face(rec, cell_box: spreadsheet.CellBox, cls: str) -> None:
+def cents_face(reconciler, cell_box: spreadsheet.CellBox, cls: str) -> None:
     whole, frac = _cents_parts(cell_box.text)
-    _put_stacked_face(rec, cell_box.id, cls, whole, f".{frac}" if frac else "", cell_box.width)
+    _put_stacked_face(
+        reconciler, cell_box.id, cls, whole, f".{frac}" if frac else "", cell_box.width
+    )
 
 
-def _ratio(rec, cell_box: spreadsheet.CellBox, approx: bool, overlay: bool = False) -> None:
+def _ratio(reconciler, cell_box: spreadsheet.CellBox, approx: bool, overlay: bool = False) -> None:
     face = ui.element("div").classes("rtt-ratio rtt-cellface" if overlay else "rtt-ratio")
-    rec.cells[cell_box.id].value.ratio_face = face
+    reconciler.cells[cell_box.id].value.ratio_face = face
     with face:
-        _ratio_body(rec, cell_box, approx)
+        _ratio_body(reconciler, cell_box, approx)
 
 
-def _ratio_body(rec, cell_box: spreadsheet.CellBox, approx: bool) -> None:
+def _ratio_body(reconciler, cell_box: spreadsheet.CellBox, approx: bool) -> None:
     parts = _ratio_parts(cell_box.text)
     if parts and not all(p.lstrip("-").isdigit() for p in parts):
         parts = None
@@ -98,37 +98,37 @@ def _ratio_body(rec, cell_box: spreadsheet.CellBox, approx: bool) -> None:
         with ui.element("div").classes("rtt-frac rtt-frac-whole" if whole else "rtt-frac"):
             num = ui.label(parts[0]).classes("rtt-frac-num").mark(f"{cell_box.id}:num")
             den = ui.label(parts[1]).classes("rtt-frac-den").mark(f"{cell_box.id}:den")
-        rec.cells[cell_box.id].value.frac = (num, den)
-        _fit_ratio(rec, cell_box.id, parts[0], parts[1], cell_box.width, whole)
+        reconciler.cells[cell_box.id].value.frac = (num, den)
+        _fit_ratio(reconciler, cell_box.id, parts[0], parts[1], cell_box.width, whole)
     else:
-        rec.cells[cell_box.id].value.label = ui.label(cell_box.text).classes("rtt-value")
+        reconciler.cells[cell_box.id].value.label = ui.label(cell_box.text).classes("rtt-value")
 
 
-def _fit_ratio(rec, cid: str, num: str, den: str, width: float, whole: bool = False) -> None:
+def _fit_ratio(reconciler, cid: str, num: str, den: str, width: float, whole: bool = False) -> None:
     size = (
         _digit_fit_font(len(num), width, float(_CELL_FONT))
         if whole
         else _ratio_font(num, den, width)
     )
     font = f"font-size:{size:.2f}px"
-    rec.cells[cid].value.frac[0].style(font)
-    rec.cells[cid].value.frac[1].style(font)
+    reconciler.cells[cid].value.frac[0].style(font)
+    reconciler.cells[cid].value.frac[1].style(font)
 
 
-def build_gridvalue(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_gridvalue(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     spec = _GRIDVALUE_SPECS[cell_box.kind]
-    commit, preview = _gridvalue_handlers(rec, cell_box, spec)
+    commit, preview = _gridvalue_handlers(reconciler, cell_box, spec)
     if spec.ratio_allowed:
-        _build_fraction(rec, cell_box, wrap, commit, preview)
+        _build_fraction(reconciler, cell_box, wrap, commit, preview)
     else:
         wrap.classes("rtt-cell-input").props(f'data-vgroup="{_vgroup_key(cell_box)}"')
         inp = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput")
         inp.on("blur", commit, js_handler=_GROUP_EXIT_JS)
-        rec.cells[cell_box.id].value.input = inp
-    _arm_gridvalue(rec, wrap, cell_box, spec)
+        reconciler.cells[cell_box.id].value.input = inp
+    _arm_gridvalue(reconciler, wrap, cell_box, spec)
 
 
-def _build_fraction(rec, cell_box: spreadsheet.CellBox, wrap, commit, preview) -> None:
+def _build_fraction(reconciler, cell_box: spreadsheet.CellBox, wrap, commit, preview) -> None:
     wrap.classes("rtt-cell-input rtt-fraccell")
     box = ui.element("div").classes("rtt-frac-edit").mark(f"{cell_box.id}:editbox")
     with box:
@@ -147,13 +147,13 @@ def _build_fraction(rec, cell_box: spreadsheet.CellBox, wrap, commit, preview) -
         )
     num.on("blur", commit, js_handler=_STACKED_EXIT_JS)
     den.on("blur", commit, js_handler=_STACKED_EXIT_JS)
-    rec.cells[cell_box.id].value.input = num
-    rec.cells[cell_box.id].value.den_input = den
-    rec.cells[cell_box.id].value.frac_edit = box
-    _arm_ratio_ops(rec, cell_box, wrap)
+    reconciler.cells[cell_box.id].value.input = num
+    reconciler.cells[cell_box.id].value.den_input = den
+    reconciler.cells[cell_box.id].value.frac_edit = box
+    _arm_ratio_ops(reconciler, cell_box, wrap)
 
 
-def _arm_ratio_ops(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
+def _arm_ratio_ops(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     if (
         cell_box.kind not in ("ratiocell", "elementcell", "elementratio")
         or cell_box.pending
@@ -175,20 +175,22 @@ def _arm_ratio_ops(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
             .tooltip(tooltips.RATIO_RECIPROCATE_HELP)
         )
     reduce_button.on(
-        "click", lambda _=None, cid=cell_box.id: rec._cb.transform_interval(cid, "reduce")
+        "click",
+        lambda _=None, cid=cell_box.id: reconciler._cell_box.transform_interval(cid, "reduce"),
     )
     reciprocate_button.on(
-        "click", lambda _=None, cid=cell_box.id: rec._cb.transform_interval(cid, "reciprocate")
+        "click",
+        lambda _=None, cid=cell_box.id: reconciler._cell_box.transform_interval(cid, "reciprocate"),
     )
-    rec.cells[cell_box.id].value.ratio_op = (reduce_button, reciprocate_button)
-    _sync_ratio_ops(rec, cell_box.id, cell_box.text)
+    reconciler.cells[cell_box.id].value.ratio_op = (reduce_button, reciprocate_button)
+    _sync_ratio_ops(reconciler, cell_box.id, cell_box.text)
 
 
-def _sync_ratio_ops(rec, cid: str, text: str) -> None:
-    ops = rec.handles(cid).value.ratio_op
+def _sync_ratio_ops(reconciler, cid: str, text: str) -> None:
+    ops = reconciler.handles(cid).value.ratio_op
     if ops is None:
         return
-    state = rec._editor.state
+    state = reconciler._editor.state
     availability = service.interval_op_availability(text, state.domain_basis)
     for button, enabled in zip(ops, availability, strict=False):
         button.classes(
@@ -197,14 +199,14 @@ def _sync_ratio_ops(rec, cid: str, text: str) -> None:
         )
 
 
-def _gridvalue_handlers(rec, cell_box: spreadsheet.CellBox, spec: _GridValueSpec):
-    fn = getattr(rec._cb, spec.commit)
+def _gridvalue_handlers(reconciler, cell_box: spreadsheet.CellBox, spec: _GridValueSpec):
+    fn = getattr(reconciler._cell_box, spec.commit)
     if spec.cid_arg:
 
         def commit(_=None, cid=cell_box.id):
             return fn(cid)
 
-        pv = getattr(rec._cb, spec.preview) if spec.preview else None
+        pv = getattr(reconciler._cell_box, spec.preview) if spec.preview else None
         preview = (lambda _e=None, cid=cell_box.id: pv(cid)) if pv else None
     else:
 
@@ -215,65 +217,69 @@ def _gridvalue_handlers(rec, cell_box: spreadsheet.CellBox, spec: _GridValueSpec
     return commit, preview
 
 
-def _arm_gridvalue(rec, wrap, cell_box: spreadsheet.CellBox, spec: _GridValueSpec) -> None:
+def _arm_gridvalue(reconciler, wrap, cell_box: spreadsheet.CellBox, spec: _GridValueSpec) -> None:
     if spec.arm is None:
         return
     if spec.arm[0] == "row":
-        arm_row_target(rec, wrap, cell_box.gen)
+        arm_row_target(reconciler, wrap, cell_box.gen)
     else:
-        arm_col_target(rec, wrap, spec.arm[1], cell_box.comma)
+        arm_col_target(reconciler, wrap, spec.arm[1], cell_box.comma)
 
 
-def update_gridvalue(rec, cell_box: spreadsheet.CellBox) -> None:
+def update_gridvalue(reconciler, cell_box: spreadsheet.CellBox) -> None:
     spec = _GRIDVALUE_SPECS[cell_box.kind]
-    text = _gridvalue_text(rec, cell_box)
+    text = _gridvalue_text(reconciler, cell_box)
     if spec.ratio_allowed:
-        _update_fraction(rec, cell_box, text)
+        _update_fraction(reconciler, cell_box, text)
     else:
-        rec.cells[cell_box.id].value.input.value = text
+        reconciler.cells[cell_box.id].value.input.value = text
     if spec.pending:
         target = (
-            rec.entities[cell_box.id].el
+            reconciler.entities[cell_box.id].el
             if spec.ratio_allowed
-            else rec.cells[cell_box.id].value.input
+            else reconciler.cells[cell_box.id].value.input
         )
         _set_pending_class(target, cell_box.pending)
 
 
-def _update_fraction(rec, cell_box: spreadsheet.CellBox, text: str) -> None:
+def _update_fraction(reconciler, cell_box: spreadsheet.CellBox, text: str) -> None:
     num, den = _ratio_parts(text) or (text, "")
     ratio = den not in ("", "1")
-    rec.cells[cell_box.id].value.input.value = num
-    rec.cells[cell_box.id].value.den_input.value = den if ratio else ""
-    rec.cells[cell_box.id].value.frac_edit.props(f"data-fracmode={'ratio' if ratio else 'int'}")
-    _fit_fraction(rec, cell_box.id, num, den, cell_box.width, ratio)
-    _sync_ratio_ops(rec, cell_box.id, text)
+    reconciler.cells[cell_box.id].value.input.value = num
+    reconciler.cells[cell_box.id].value.den_input.value = den if ratio else ""
+    reconciler.cells[cell_box.id].value.frac_edit.props(
+        f"data-fracmode={'ratio' if ratio else 'int'}"
+    )
+    _fit_fraction(reconciler, cell_box.id, num, den, cell_box.width, ratio)
+    _sync_ratio_ops(reconciler, cell_box.id, text)
 
 
-def _fit_fraction(rec, cid: str, num: str, den: str, width: float, ratio: bool) -> None:
+def _fit_fraction(reconciler, cid: str, num: str, den: str, width: float, ratio: bool) -> None:
     size = (
         _ratio_font(num, den, width)
         if ratio
         else _digit_fit_font(len(num), width, float(_CELL_FONT))
     )
     style = f"font-size:{size:.2f}px"
-    rec.cells[cid].value.input.style(style)
-    rec.cells[cid].value.den_input.style(style)
+    reconciler.cells[cid].value.input.style(style)
+    reconciler.cells[cid].value.den_input.style(style)
 
 
-def _gridvalue_text(rec, cell_box: spreadsheet.CellBox) -> str:
+def _gridvalue_text(reconciler, cell_box: spreadsheet.CellBox) -> str:
     if cell_box.pending and cell_box.kind in ("commacell", "mapping"):
         draft = (
-            rec._editor.pending_comma
+            reconciler._editor.pending_comma
             if cell_box.kind == "commacell"
-            else rec._editor.pending_mapping_row
+            else reconciler._editor.pending_mapping_row
         )
         v = draft[cell_box.prime] if draft is not None else None
         return "" if v is None else str(v)
     return "" if cell_box.blank else cell_box.text
 
 
-def _build_decimal(rec, cell_box: spreadsheet.CellBox, wrap, commit, *, gen_index=None) -> None:
+def _build_decimal(
+    reconciler, cell_box: spreadsheet.CellBox, wrap, commit, *, gen_index=None
+) -> None:
     wrap.classes("rtt-cell-input rtt-deccell")
     box = ui.element("div").classes("rtt-dec-edit").mark(f"{cell_box.id}:editbox")
     with box:
@@ -285,13 +291,15 @@ def _build_decimal(rec, cell_box: spreadsheet.CellBox, wrap, commit, *, gen_inde
                     .mark(f"gensign:{gen_index} {cell_box.id}:sign")
                     .on(
                         "click",
-                        lambda _=None, i=gen_index: rec._cb.act(
-                            lambda: rec._editor.flip_generator(i)
+                        lambda _=None, i=gen_index: reconciler._cell_box.act(
+                            lambda: reconciler._editor.flip_generator(i)
                         ),
                     )
                 )
-                preview_control(rec, s, lambda gi=gen_index: rec._editor.flip_generator(gi))
-                rec.cells[cell_box.id].value.gensign_face = s
+                preview_control(
+                    reconciler, s, lambda gi=gen_index: reconciler._editor.flip_generator(gi)
+                )
+                reconciler.cells[cell_box.id].value.gensign_face = s
             whole = (
                 ui.input()
                 .props("dense borderless")
@@ -308,190 +316,22 @@ def _build_decimal(rec, cell_box: spreadsheet.CellBox, wrap, commit, *, gen_inde
             )
     whole.on("blur", commit, js_handler=_STACKED_EXIT_JS)
     frac.on("blur", commit, js_handler=_STACKED_EXIT_JS)
-    rec.cells[cell_box.id].value.input = whole
-    rec.cells[cell_box.id].value.den_input = frac
-    rec.cells[cell_box.id].value.frac_edit = box
+    reconciler.cells[cell_box.id].value.input = whole
+    reconciler.cells[cell_box.id].value.den_input = frac
+    reconciler.cells[cell_box.id].value.frac_edit = box
 
 
-def _update_decimal(rec, cell_box: spreadsheet.CellBox, text: str, *, signed=False) -> None:
+def _update_decimal(reconciler, cell_box: spreadsheet.CellBox, text: str, *, signed=False) -> None:
     if signed:
         sign, whole, frac = _gentuning_parts(text)
-        if rec.handles(cell_box.id).value.gensign_face is not None:
-            rec.cells[cell_box.id].value.gensign_face.set_text(sign)
+        if reconciler.handles(cell_box.id).value.gensign_face is not None:
+            reconciler.cells[cell_box.id].value.gensign_face.set_text(sign)
     else:
         whole, frac = _cents_parts(text)
-    rec.cells[cell_box.id].value.input.value = whole
-    rec.cells[cell_box.id].value.den_input.value = frac
-    rec.cells[cell_box.id].value.frac_edit.props(f"data-decmode={'dec' if frac else 'int'}")
+    reconciler.cells[cell_box.id].value.input.value = whole
+    reconciler.cells[cell_box.id].value.den_input.value = frac
+    reconciler.cells[cell_box.id].value.frac_edit.props(f"data-decmode={'dec' if frac else 'int'}")
     fit_w = cell_box.width - _GENSIGN_W if signed else cell_box.width
-    rec.cells[cell_box.id].value.frac_edit.style(
+    reconciler.cells[cell_box.id].value.frac_edit.style(
         f"--dec-whole-font:{_digit_fit_font(len(whole), fit_w, float(_CELL_FONT)):.2f}px"
-    )
-
-
-def build_prescalercell(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
-    _build_decimal(
-        rec, cell_box, wrap, lambda _e=None, cid=cell_box.id: rec._cb.on_prescaler_change(cid)
-    )
-
-
-def update_prescalercell(rec, cell_box: spreadsheet.CellBox) -> None:
-    _update_decimal(rec, cell_box, cell_box.text)
-
-
-def build_weightcell(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
-    _build_decimal(
-        rec, cell_box, wrap, lambda _e=None, cid=cell_box.id: rec._cb.on_weight_change(cid)
-    )
-
-
-def update_weightcell(rec, cell_box: spreadsheet.CellBox) -> None:
-    _update_decimal(rec, cell_box, cell_box.text)
-
-
-def build_powerinput(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
-    wrap.classes("rtt-cell-input rtt-cell-stacked")
-    rec.cells[cell_box.id].value.input = (
-        ui.input(on_change=lambda _e, cid=cell_box.id: rec._cb.on_power_change(cid))
-        .props("dense borderless")
-        .classes("rtt-cellinput")
-    )
-    _put_stacked_face(
-        rec,
-        cell_box.id,
-        "rtt-tuning-value rtt-cellface",
-        *_power_parts(cell_box.text),
-        cell_box.width,
-    )
-
-
-def update_powerinput(rec, cell_box: spreadsheet.CellBox) -> None:
-    rec.cells[cell_box.id].value.input.value = cell_box.text
-    _sync_stacked_face(rec, cell_box.id, *_power_parts(cell_box.text))
-
-
-def build_powerdisplay(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
-    _put_stacked_face(
-        rec,
-        cell_box.id,
-        "rtt-tuning-value rtt-cellface",
-        *_power_parts(cell_box.text),
-        cell_box.width,
-    )
-
-
-def update_powerdisplay(rec, cell_box: spreadsheet.CellBox) -> None:
-    _sync_stacked_face(rec, cell_box.id, *_power_parts(cell_box.text))
-
-
-def build_gentuningcell(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
-    i = int(cell_box.id.rsplit(":", 1)[1])
-    _build_decimal(
-        rec,
-        cell_box,
-        wrap,
-        lambda _e=None, cid=cell_box.id: rec._cb.on_gentuning_change(cid),
-        gen_index=i,
-    )
-    wrap.on(
-        "wheel.prevent",
-        lambda e, cid=cell_box.id: rec._cb.on_gentuning_wheel(cid, e.args.get("deltaY")),
-        args=["deltaY"],
-    )
-    wrap.on("mouseenter", lambda _=None, cid=cell_box.id: rec._cb.gentuning_hover(cid))
-    wrap.on("mouseleave", lambda _=None, cid=cell_box.id: rec._cb.gentuning_unhover(cid))
-
-
-def update_gentuningcell(rec, cell_box: spreadsheet.CellBox) -> None:
-    _update_decimal(rec, cell_box, "" if cell_box.blank else cell_box.text, signed=True)
-
-
-def build_plain_text_edit(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
-    if cell_box.id.startswith("plain_text:projection:"):
-        inp = ui.input(value=cell_box.text).props("dense borderless").classes("rtt-plain-text-edit")
-        inp.on(
-            "blur",
-            lambda _e=None, cid=cell_box.id: rec._cb.on_plain_text_edit(
-                cid, rec.cells[cid].value.plain_text_input.value
-            ),
-        )
-    else:
-        inp = (
-            ui.input(
-                value=cell_box.text,
-                on_change=lambda e, cid=cell_box.id: rec._cb.on_plain_text_edit(cid, e.value),
-            )
-            .props("dense borderless")
-            .classes("rtt-plain-text-edit")
-        )
-    rec.cells[cell_box.id].value.plain_text_input = inp
-
-
-def update_plain_text_edit(rec, cell_box: spreadsheet.CellBox) -> None:
-    rec.cells[cell_box.id].value.plain_text_input.value = cell_box.text
-    rec.cells[cell_box.id].value.plain_text_input.style(
-        f"font-size:{_plain_text_font(cell_box.text, cell_box.width)}px"
-    )
-
-
-def build_genratio(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
-    _build_ratio_face(rec, cell_box, wrap, approx=True)
-
-
-def build_commaratio(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
-    _build_ratio_face(rec, cell_box, wrap, approx=False)
-
-
-def build_mapped(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
-    _ratio(rec, cell_box, approx=False)
-
-
-def _build_ratio_face(rec, cell_box: spreadsheet.CellBox, wrap, approx: bool) -> None:
-    if cell_box.pending:
-        wrap.classes(add="rtt-pending")
-    if cell_box.pending and cell_box.text in ("?", "?/?", ""):
-        rec.cells[cell_box.id].value.label = ui.label(cell_box.text).classes(
-            "rtt-value rtt-pending-q"
-        )
-    else:
-        _ratio(rec, cell_box, approx=approx)
-
-
-def update_ratio(rec, cell_box: spreadsheet.CellBox) -> None:
-    _set_pending_class(rec.entities[cell_box.id].el, cell_box.pending)
-    face = rec.handles(cell_box.id).value.ratio_face
-    if face is None:
-        return
-    face.clear()
-    rec.cells[cell_box.id].value.frac = None
-    rec.cells[cell_box.id].value.label = None
-    with face:
-        _ratio_body(rec, cell_box, approx=(cell_box.kind == "genratio"))
-
-
-def build_tuning_value(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
-    cents_face(rec, cell_box, "rtt-tuning-value")
-
-
-def update_tuning_value(rec, cell_box: spreadsheet.CellBox) -> None:
-    set_cents_face(rec, cell_box.id, cell_box.text)
-    _set_pending_class(rec.entities[cell_box.id].el, cell_box.pending)
-
-
-def label_builder(cls: str):
-    def build(rec, cell_box, _wrap):
-        rec.cells[cell_box.id].value.label = ui.label(cell_box.text).classes(cls)
-
-    return build
-
-
-def update_label(rec, cell_box: spreadsheet.CellBox) -> None:
-    rec.cells[cell_box.id].value.label.set_text(cell_box.text)
-    _set_pending_class(rec.entities[cell_box.id].el, cell_box.pending)
-
-
-def update_plain_text(rec, cell_box: spreadsheet.CellBox) -> None:
-    rec.cells[cell_box.id].value.label.set_text(cell_box.text)
-    rec.cells[cell_box.id].value.label.style(
-        f"font-size:{_plain_text_font(cell_box.text, cell_box.width)}px"
     )
