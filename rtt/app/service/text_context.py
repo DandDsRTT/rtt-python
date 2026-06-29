@@ -48,12 +48,12 @@ class DerivedQuantities:
 
 
 @dataclass(frozen=True)
-class _Fmt:
+class _Formatter:
     decimals: bool
     superspace: bool
 
-    def r(self, key, data, fmt=str) -> str:
-        return render_ebk(ebk_convention(*key, superspace=self.superspace), data, fmt)
+    def render(self, key, data, formatter=str) -> str:
+        return render_ebk(ebk_convention(*key, superspace=self.superspace), data, formatter)
 
     def cents_map(self, values) -> str:
         return _cents_map(values, self.decimals)
@@ -104,14 +104,14 @@ class _Unchanged:
     tempered: list
     just: list
     errors: list
-    comps: list
+    complexities: list
     scaling: list
 
 
 @dataclass(frozen=True)
-class _Canon:
+class _Canonical:
     mapping: tuple
-    rc: int
+    rank: int
     form: tuple
     inverse_form: tuple
     mapped: tuple
@@ -139,73 +139,73 @@ class _Inputs:
     decimals: bool
 
     @property
-    def db(self) -> tuple:
+    def domain_basis(self) -> tuple:
         return self.state.domain_basis
 
 
 @dataclass(frozen=True)
-class _Ctx:
-    inp: _Inputs
-    fmt: _Fmt
+class _TextContext:
+    inputs: _Inputs
+    formatter: _Formatter
     core: _Core
     prescale: _Prescale
     unchanged: _Unchanged
-    canon: _Canon
+    canon: _Canonical
 
     @property
     def state(self) -> TemperamentState:
-        return self.inp.state
+        return self.inputs.state
 
     @property
     def scheme(self) -> str:
-        return self.inp.scheme
+        return self.inputs.scheme
 
     @property
-    def db(self) -> tuple:
-        return self.inp.state.domain_basis
+    def domain_basis(self) -> tuple:
+        return self.inputs.state.domain_basis
 
     @property
-    def d(self) -> int:
-        return self.inp.state.d
+    def dimensionality(self) -> int:
+        return self.inputs.state.d
 
     @property
     def held(self) -> tuple:
-        return self.inp.held
+        return self.inputs.held
 
     @property
     def interest(self) -> tuple:
-        return self.inp.interest
+        return self.inputs.interest
 
     @property
     def consolidate_v(self) -> bool:
-        return self.inp.consolidate_v
+        return self.inputs.consolidate_v
 
     @property
     def superspace(self) -> bool:
-        return self.inp.superspace
+        return self.inputs.superspace
 
     @property
     def held_basis_ratios(self) -> tuple:
-        return self.inp.held_basis_ratios
+        return self.inputs.held_basis_ratios
 
     @property
     def custom_prescaler(self) -> object:
-        return self.inp.custom_prescaler
+        return self.inputs.custom_prescaler
 
     @property
     def nonprime_approach(self) -> str:
-        return self.inp.nonprime_approach
+        return self.inputs.nonprime_approach
 
     @property
     def superspace_generator_override(self) -> object:
-        return self.inp.superspace_generator_override
+        return self.inputs.superspace_generator_override
 
     @property
     def derived(self) -> DerivedQuantities | None:
-        return self.inp.derived
+        return self.inputs.derived
 
-    def r(self, key, data, fmt=str) -> str:
-        return self.fmt.r(key, data, fmt)
+    def render(self, key, data, formatter=str) -> str:
+        return self.formatter.render(key, data, formatter)
 
     def prescaled(self, vectors):
         return _apply_prescaler(self.prescale, self.state.d, vectors)
@@ -218,7 +218,7 @@ class _Ctx:
             self.state.mapping,
             self.scheme,
             ratios,
-            domain_basis=self.db,
+            domain_basis=self.domain_basis,
             prescaler_override=self.custom_prescaler,
         )
 
@@ -242,76 +242,80 @@ def _apply_size(prescale: _Prescale, cols):
     return tuple((*col, prescale.size_factor * sum(col)) for col in cols)
 
 
-def _derive_tuning(inp: _Inputs, held_ratios):
-    if inp.derived is not None:
-        return inp.derived.tuning_map
-    state = inp.state
-    if inp.generator_tuning is not None and len(inp.generator_tuning) == len(state.mapping):
-        return tuning_from_generators(state.mapping, inp.generator_tuning, inp.db)
+def _derive_tuning(inputs: _Inputs, held_ratios):
+    if inputs.derived is not None:
+        return inputs.derived.tuning_map
+    state = inputs.state
+    if inputs.generator_tuning is not None and len(inputs.generator_tuning) == len(state.mapping):
+        return tuning_from_generators(state.mapping, inputs.generator_tuning, inputs.domain_basis)
     return tuning(
         state.mapping,
-        inp.scheme,
-        inp.db,
-        inp.nonprime_approach,
+        inputs.scheme,
+        inputs.domain_basis,
+        inputs.nonprime_approach,
         held=held_ratios,
-        prescaler_override=inp.custom_prescaler,
-        targets=inp.target_override,
+        prescaler_override=inputs.custom_prescaler,
+        targets=inputs.target_override,
     )
 
 
-def _derive_core(inp: _Inputs, targets, held_ratios) -> _Core:
-    state, db = inp.state, inp.db
+def _derive_core(inputs: _Inputs, targets, held_ratios) -> _Core:
+    state, domain_basis = inputs.state, inputs.domain_basis
     comma_basis = state.comma_basis if state.n else ()
-    commas = comma_ratios(comma_basis, db)
-    tuning_map = _derive_tuning(inp, held_ratios)
+    commas = comma_ratios(comma_basis, domain_basis)
+    tuning_map = _derive_tuning(inputs, held_ratios)
     weights = (
-        inp.derived.target_weights
-        if inp.derived
+        inputs.derived.target_weights
+        if inputs.derived
         else interval_weights(
             state.mapping,
-            inp.scheme,
+            inputs.scheme,
             targets,
-            domain_basis=db,
-            prescaler_override=inp.custom_prescaler,
+            domain_basis=domain_basis,
+            prescaler_override=inputs.custom_prescaler,
         )
     )
     target_sizes = (
-        inp.derived.target_sizes
-        if inp.derived
-        else interval_sizes(tuning_map, targets, db, weights=weights)
+        inputs.derived.target_sizes
+        if inputs.derived
+        else interval_sizes(tuning_map, targets, domain_basis, weights=weights)
     )
-    comma_sizes = inp.derived.comma_sizes if inp.derived else interval_sizes(tuning_map, commas, db)
-    detemper_ratios = generators(state.mapping, db)
+    comma_sizes = (
+        inputs.derived.comma_sizes
+        if inputs.derived
+        else interval_sizes(tuning_map, commas, domain_basis)
+    )
+    detemper_ratios = generators(state.mapping, domain_basis)
     return _Core(
         targets,
         comma_basis,
         commas,
-        mapped_intervals(state.mapping, targets, db),
+        mapped_intervals(state.mapping, targets, domain_basis),
         mapped_commas(state.mapping, comma_basis),
-        target_interval_vectors(targets, state.d, db),
+        target_interval_vectors(targets, state.d, domain_basis),
         held_ratios,
         tuning_map,
         weights,
         target_sizes,
         comma_sizes,
         detemper_ratios,
-        interval_sizes(tuning_map, detemper_ratios, db),
+        interval_sizes(tuning_map, detemper_ratios, domain_basis),
         generator_detempering(state.mapping),
-        tuple(element_ratio(e) for e in db),
+        tuple(element_ratio(e) for e in domain_basis),
     )
 
 
-def _derive_prescale(inp: _Inputs) -> _Prescale:
-    state, db = inp.state, inp.db
+def _derive_prescale(inputs: _Inputs) -> _Prescale:
+    state, domain_basis = inputs.state, inputs.domain_basis
     prescaler = complexity_prescaler(
         state.mapping,
-        inp.scheme,
-        override=inp.custom_prescaler,
-        domain_basis=db,
-        nonprime_approach=inp.nonprime_approach,
+        inputs.scheme,
+        override=inputs.custom_prescaler,
+        domain_basis=domain_basis,
+        nonprime_approach=inputs.nonprime_approach,
     )
     is_matrix = bool(prescaler) and isinstance(prescaler[0], (tuple, list))
-    size_factor = complexity_size_factor(inp.scheme)
+    size_factor = complexity_size_factor(inputs.scheme)
     if is_matrix:
         bare_rows = [tuple(prescaler[i]) for i in range(state.d)]
     else:
@@ -326,20 +330,25 @@ def _derive_prescale(inp: _Inputs) -> _Prescale:
     return _Prescale(prescaler, is_matrix, size_factor, bare_rows, bare_size_row)
 
 
-def _derive_unchanged(inp: _Inputs, core: _Core, prescale: _Prescale) -> _Unchanged:
-    state, db = inp.state, inp.db
+def _derive_unchanged(inputs: _Inputs, core: _Core, prescale: _Prescale) -> _Unchanged:
+    state, domain_basis = inputs.state, inputs.domain_basis
     udata = (
         unchanged_interval_data(
-            state, inp.held_basis_ratios, core.tuning_map, inp.scheme, db, inp.custom_prescaler
+            state,
+            inputs.held_basis_ratios,
+            core.tuning_map,
+            inputs.scheme,
+            domain_basis,
+            inputs.custom_prescaler,
         )
-        if inp.consolidate_v
+        if inputs.consolidate_v
         else None
     )
     if udata is None:
         return _Unchanged([], [], [], [], [], [], [], [])
-    nrow = len(state.mapping)
+    row_count = len(state.mapping)
     mapped_cols = [
-        None if udata.basis[j] is None else tuple(udata.mapped[i][j] for i in range(nrow))
+        None if udata.basis[j] is None else tuple(udata.mapped[i][j] for i in range(row_count))
         for j in range(len(udata.basis))
     ]
     prescaled = [
@@ -358,8 +367,8 @@ def _derive_unchanged(inp: _Inputs, core: _Core, prescale: _Prescale) -> _Unchan
     )
 
 
-def _derive_canon(inp: _Inputs, targets, core: _Core, unchanged: _Unchanged) -> _Canon:
-    state, db = inp.state, inp.db
+def _derive_canon(inputs: _Inputs, targets, core: _Core, unchanged: _Unchanged) -> _Canonical:
+    state, domain_basis = inputs.state, inputs.domain_basis
     mapping = canonical_mapping(state.mapping)
     rc = len(mapping)
     u_mapped_cols = [
@@ -368,30 +377,32 @@ def _derive_canon(inp: _Inputs, targets, core: _Core, unchanged: _Unchanged) -> 
         else tuple(sum(mapping[i][p] * u[p] for p in range(state.d)) for i in range(rc))
         for u in unchanged.basis
     ]
-    return _Canon(
+    return _Canonical(
         mapping,
         rc,
         form_matrix(state.mapping),
         inverse_form_matrix(state.mapping),
-        mapped_intervals(mapping, targets, db),
+        mapped_intervals(mapping, targets, domain_basis),
         mapped_commas(mapping, core.comma_basis),
         mapped_commas(mapping, core.detemper_vectors),
         u_mapped_cols,
     )
 
 
-def _resolve_targets(inp: _Inputs):
-    if inp.derived:
-        return inp.derived.targets
-    return displayed_targets(inp.state, inp.scheme, inp.target_spec, inp.target_override)
+def _resolve_targets(inputs: _Inputs):
+    if inputs.derived:
+        return inputs.derived.targets
+    return displayed_targets(
+        inputs.state, inputs.scheme, inputs.target_spec, inputs.target_override
+    )
 
 
-def _build_context(inp: _Inputs) -> _Ctx:
-    targets = _resolve_targets(inp)
-    held_ratios = comma_ratios(inp.held, inp.db) if inp.held else ()
-    core = _derive_core(inp, targets, held_ratios)
-    prescale = _derive_prescale(inp)
-    unchanged = _derive_unchanged(inp, core, prescale)
-    canon = _derive_canon(inp, targets, core, unchanged)
-    fmt = _Fmt(inp.decimals, inp.superspace)
-    return _Ctx(inp, fmt, core, prescale, unchanged, canon)
+def _build_context(inputs: _Inputs) -> _TextContext:
+    targets = _resolve_targets(inputs)
+    held_ratios = comma_ratios(inputs.held, inputs.domain_basis) if inputs.held else ()
+    core = _derive_core(inputs, targets, held_ratios)
+    prescale = _derive_prescale(inputs)
+    unchanged = _derive_unchanged(inputs, core, prescale)
+    canon = _derive_canon(inputs, targets, core, unchanged)
+    formatter = _Formatter(inputs.decimals, inputs.superspace)
+    return _TextContext(inputs, formatter, core, prescale, unchanged, canon)
