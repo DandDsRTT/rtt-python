@@ -33,7 +33,7 @@ def sync_pretransform_help(rec, pretransform: bool) -> None:
             wrap.update()
 
 
-def sync_chrome(r, lay, fy) -> None:
+def sync_chrome(r, lay, freeze_y) -> None:
     r._chrome.refs["undo"].set_enabled(r._editor.can_undo)
     r._chrome.refs["redo"].set_enabled(r._editor.can_redo)
     r._chrome.refs["reset"].set_enabled(
@@ -50,7 +50,7 @@ def sync_chrome(r, lay, fy) -> None:
     if lay.approach_box is not None:
         ax, ay, aw, ah = lay.approach_box
         r._chrome.refs["approach"].style(
-            f"position:absolute; left:{ax}px; top:{ay - fy}px; width:{aw}px; height:{ah}px"
+            f"position:absolute; left:{ax}px; top:{ay - freeze_y}px; width:{aw}px; height:{ah}px"
         )
         r._chrome.refs["approach"].set_visibility(True)
     else:

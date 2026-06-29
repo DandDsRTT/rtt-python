@@ -155,49 +155,49 @@ def emit_quantities_row(resolved, geometry, context) -> EmitResult:
     cells: list = []
     if "quantities" not in geometry.rows:
         return EmitResult()
-    qy = geometry.rows["quantities"].y
+    quantity_y = geometry.rows["quantities"].y
 
     def branch_minus(cid, column_key, i, kind, **kw):
         cells.append(CellBox(cid, query.sub_axis_x(geometry, column_key, i) - COL_W / 2, geometry.fanout_y, COL_W,
-                             qy - geometry.fanout_y, kind, **kw))
+                             quantity_y - geometry.fanout_y, kind, **kw))
 
-    _emit_qty_gens(cells, resolved, geometry, context, qy, branch_minus)
-    _emit_qty_canongens(cells, resolved, geometry, context, qy)
-    _emit_qty_primes(cells, resolved, geometry, context, qy, branch_minus)
-    _emit_qty_superspace_generators(cells, resolved, geometry, context, qy)
-    _emit_qty_superspace_primes(cells, resolved, geometry, context, qy)
-    _emit_qty_commas(cells, resolved, geometry, context, qy, branch_minus)
-    _emit_qty_detempering(cells, resolved, geometry, context, qy)
-    _emit_qty_interests(cells, resolved, geometry, context, qy, branch_minus)
+    _emit_qty_gens(cells, resolved, geometry, context, quantity_y, branch_minus)
+    _emit_qty_canongens(cells, resolved, geometry, context, quantity_y)
+    _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minus)
+    _emit_qty_superspace_generators(cells, resolved, geometry, context, quantity_y)
+    _emit_qty_superspace_primes(cells, resolved, geometry, context, quantity_y)
+    _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minus)
+    _emit_qty_detempering(cells, resolved, geometry, context, quantity_y)
+    _emit_qty_interests(cells, resolved, geometry, context, quantity_y, branch_minus)
     _emit_qty_grips(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
 
 
-def _emit_qty_gens(cells, resolved, geometry, context, qy, branch_minus) -> None:
+def _emit_qty_gens(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "gens"):
         for g in range(resolved.dims.rank):
-            cells.append(CellBox(f"qgen:{g}", query.gen_left(geometry, g), qy, COL_W, ROW_H, "genratio", text=resolved.scalars.gens[g], gen=g))
+            cells.append(CellBox(f"qgen:{g}", query.gen_left(geometry, g), quantity_y, COL_W, ROW_H, "genratio", text=resolved.scalars.gens[g], gen=g))
         if resolved.dims.rank > 1:
             branch_minus("gen_minus", "gens", resolved.dims.rank - 1, "gen_minus", gen=resolved.dims.rank - 1)
 
 
-def _emit_qty_canongens(cells, resolved, geometry, context, qy) -> None:
+def _emit_qty_canongens(cells, resolved, geometry, context, quantity_y) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "canongens"):
         for g in range(resolved.dims.canonical_rank):
-            cells.append(CellBox(f"cangen:{g}", query.canongen_left(geometry, g), qy, COL_W, ROW_H, "genratio", text=resolved.canon.gens[g]))
+            cells.append(CellBox(f"cangen:{g}", query.canongen_left(geometry, g), quantity_y, COL_W, ROW_H, "genratio", text=resolved.canon.gens[g]))
 
 
-def _emit_qty_primes(cells, resolved, geometry, context, qy, branch_minus) -> None:
+def _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
     if not query.tile_open(geometry, context.collapsed, "quantities", "primes"):
         return
     for p in range(resolved.dims.dimensionality):
         text = str(resolved.dims.elements[p])
         kind = element_cell_kind(text) if resolved.flags.nonstandard_domain else "prime"
-        cells.append(CellBox(f"prime:{p}", query.prime_left(geometry, p), qy, COL_W, ROW_H, kind, text=text, prime=p))
+        cells.append(CellBox(f"prime:{p}", query.prime_left(geometry, p), quantity_y, COL_W, ROW_H, kind, text=text, prime=p))
         voice(cells, "quantities:primes", p, resolved.tuning.tuning_map.just_map[p])
     if resolved.scalars.element_draft:
         draft_text = context.pending_element or "?/?"
-        cells.append(CellBox("prime:pending", query.prime_left(geometry, resolved.dims.dimensionality), qy, COL_W, ROW_H,
+        cells.append(CellBox("prime:pending", query.prime_left(geometry, resolved.dims.dimensionality), quantity_y, COL_W, ROW_H,
                              element_cell_kind(draft_text), text=draft_text, prime=resolved.dims.dimensionality, pending=True))
         branch_minus("element_minus:pending", "primes", resolved.dims.dimensionality, "element_minus")
     if resolved.flags.nonstandard_domain:
@@ -208,27 +208,27 @@ def _emit_qty_primes(cells, resolved, geometry, context, qy, branch_minus) -> No
         branch_minus("minus", "primes", resolved.dims.dimensionality - 1, "minus")
 
 
-def _emit_qty_superspace_generators(cells, resolved, geometry, context, qy) -> None:
+def _emit_qty_superspace_generators(cells, resolved, geometry, context, quantity_y) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "superspace_generators"):
         superspace_gens = service.superspace_generators(context.state)
         for g in range(resolved.dims.superspace_rank):
-            cells.append(CellBox(f"superspace_quantity_generator:{g}", query.superspace_gen_left(geometry, g), qy, COL_W, ROW_H, "genratio", text=superspace_gens[g]))
+            cells.append(CellBox(f"superspace_quantity_generator:{g}", query.superspace_gen_left(geometry, g), quantity_y, COL_W, ROW_H, "genratio", text=superspace_gens[g]))
 
 
-def _emit_qty_superspace_primes(cells, resolved, geometry, context, qy) -> None:
+def _emit_qty_superspace_primes(cells, resolved, geometry, context, quantity_y) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "superspace_primes"):
         for p in range(resolved.dims.superspace_dimensionality):
-            cells.append(CellBox(f"superspace_quantity_prime:{p}", query.superspace_prime_left(geometry, p), qy, COL_W, ROW_H, "commaratio", text=str(resolved.dims.superspace_primes[p]), prime=p))
+            cells.append(CellBox(f"superspace_quantity_prime:{p}", query.superspace_prime_left(geometry, p), quantity_y, COL_W, ROW_H, "commaratio", text=str(resolved.dims.superspace_primes[p]), prime=p))
 
 
-def _emit_qty_commas(cells, resolved, geometry, context, qy, branch_minus) -> None:
+def _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
     if not query.tile_open(geometry, context.collapsed, "quantities", "commas"):
         return
     for c in range(resolved.dims.comma_count):
-        cells.append(CellBox(f"comma:{query.col_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), qy, COL_W, ROW_H, "ratiocell", text=resolved.commas.ratios[c], comma=c))
+        cells.append(CellBox(f"comma:{query.col_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), quantity_y, COL_W, ROW_H, "ratiocell", text=resolved.commas.ratios[c], comma=c))
         voice(cells, "quantities:commas", c, resolved.tuning.comma_sizes.just[c])
     if resolved.scalars.comma_draft:
-        cells.append(CellBox("comma:pending", query.comma_left(geometry, resolved, resolved.dims.comma_count), qy, COL_W, ROW_H,
+        cells.append(CellBox("comma:pending", query.comma_left(geometry, resolved, resolved.dims.comma_count), quantity_y, COL_W, ROW_H,
                              "commaratio" if resolved.ghosts.comma else "ratiocell",
                              text=(resolved.ghosts.comma_ratio or DASH) if resolved.ghosts.comma else "?/?",
                              comma=resolved.dims.comma_count, pending=True))
@@ -236,7 +236,7 @@ def _emit_qty_commas(cells, resolved, geometry, context, qy, branch_minus) -> No
         full_u = resolved.unchanged.basis is not None and all(v is not None for v in resolved.unchanged.basis)
         for j in range(resolved.dims.unchanged_count):
             doomed = resolved.commas.pending is not None and j == resolved.dims.unchanged_count - 1
-            cells.append(CellBox(f"unchanged:{j}", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + j), qy, COL_W, ROW_H,
+            cells.append(CellBox(f"unchanged:{j}", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + j), quantity_y, COL_W, ROW_H,
                                  "ratiocell" if (full_u and not doomed) else "commaratio",
                                  text=resolved.unchanged.ratios[j] or DASH, comma=resolved.dims.comma_count + j))
             voice(cells, "quantities:commas", resolved.dims.comma_count + j, resolved.unchanged.sizes.just[j])
@@ -246,35 +246,35 @@ def _emit_qty_commas(cells, resolved, geometry, context, qy, branch_minus) -> No
         branch_minus("comma_minus:pending", "commas", resolved.dims.comma_count, "comma_minus")
 
 
-def _emit_qty_detempering(cells, resolved, geometry, context, qy) -> None:
+def _emit_qty_detempering(cells, resolved, geometry, context, quantity_y) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "detempering"):
         for i in range(resolved.dims.rank):
-            cells.append(CellBox(f"detempering:{i}", query.detempering_left(geometry, i), qy, COL_W, ROW_H, "commaratio", text=resolved.scalars.gens[i]))
+            cells.append(CellBox(f"detempering:{i}", query.detempering_left(geometry, i), quantity_y, COL_W, ROW_H, "commaratio", text=resolved.scalars.gens[i]))
             voice(cells, "quantities:detempering", i, resolved.detempering.sizes.just[i])
 
 
-def _emit_qty_interests(cells, resolved, geometry, context, qy, branch_minus) -> None:
+def _emit_qty_interests(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "targets"):
         _emit_qty_list(cells, resolved, _QtyList("targets", "target", resolved.dims.target_count, lambda i: query.target_left(geometry, i), resolved.targets.ratios,
                                      resolved.tuning.target_sizes, resolved.targets.pending,
                                      "ratiocell" if resolved.scalars.targets_editable else "commaratio",
-                                     resolved.scalars.targets_editable), qy, branch_minus)
+                                     resolved.scalars.targets_editable), quantity_y, branch_minus)
     if query.tile_open(geometry, context.collapsed, "quantities", "held"):
         _emit_qty_list(cells, resolved, _QtyList("held", "held", resolved.dims.held_count, lambda i: query.held_left(geometry, i), resolved.held.ratios,
-                                     resolved.tuning.held_sizes, resolved.held.pending, "ratiocell", True), qy, branch_minus)
+                                     resolved.tuning.held_sizes, resolved.held.pending, "ratiocell", True), quantity_y, branch_minus)
     if query.tile_open(geometry, context.collapsed, "quantities", "interest"):
         _emit_qty_list(cells, resolved, _QtyList("interest", "interest", resolved.dims.interest_count, lambda i: query.interest_left(geometry, i), resolved.interest.ratios,
-                                     resolved.tuning.interest_sizes, resolved.interest.pending, "ratiocell", True), qy, branch_minus)
+                                     resolved.tuning.interest_sizes, resolved.interest.pending, "ratiocell", True), quantity_y, branch_minus)
 
 
-def _emit_qty_list(cells, resolved, q: _QtyList, qy: float, branch_minus) -> None:
+def _emit_qty_list(cells, resolved, q: _QtyList, quantity_y: float, branch_minus) -> None:
     for j in range(q.count):
-        cells.append(CellBox(f"{q.singular}:{query.col_token(resolved, q.group, j)}", q.left_fn(j), qy, COL_W, ROW_H, q.kind, text=q.ratios[j], comma=j))
+        cells.append(CellBox(f"{q.singular}:{query.col_token(resolved, q.group, j)}", q.left_fn(j), quantity_y, COL_W, ROW_H, q.kind, text=q.ratios[j], comma=j))
         voice(cells, f"quantities:{q.group}", j, q.sizes.just[j])
         if q.minus_gate:
             branch_minus(f"{q.singular}_minus:{j}", q.group, j, f"{q.singular}_minus", comma=j)
     if q.pending is not None:
-        cells.append(CellBox(f"{q.singular}:pending", q.left_fn(q.count), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=q.count, pending=True))
+        cells.append(CellBox(f"{q.singular}:pending", q.left_fn(q.count), quantity_y, COL_W, ROW_H, "ratiocell", text="?/?", comma=q.count, pending=True))
         branch_minus(f"{q.singular}_minus:pending", q.group, q.count, f"{q.singular}_minus")
 
 

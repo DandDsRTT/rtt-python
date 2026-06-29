@@ -151,8 +151,8 @@ def tile_span_box(geometry, row_key: str, column_key: str):
 
 def matrix_span(geometry, resolved, group_key: str):
     x, w = content_box(geometry, group_key)
-    mx = outer_gutter_w(geometry, group_key)
-    x, w = x + mx, w - 2 * mx
+    matrix_x = outer_gutter_w(geometry, group_key)
+    x, w = x + matrix_x, w - 2 * matrix_x
     if group_key == "commas" and resolved.unchanged.empty_comma_w:
         x, w = x + resolved.unchanged.empty_comma_w, w - resolved.unchanged.empty_comma_w
     return x, w
@@ -235,8 +235,8 @@ def sub_axis_x(geometry, column_key: str, i: int) -> float:
 def col_plus_x(geometry, resolved, column_key: str) -> float:
     n = geometry.group_n[column_key]
     if n == 0:
-        mx, mw = matrix_span(geometry, resolved, column_key)
-        return mx + mw / 2
+        matrix_x, matrix_width = matrix_span(geometry, resolved, column_key)
+        return matrix_x + matrix_width / 2
     if column_key == "commas" and resolved.unchanged.shown:
         if resolved.dims.comma_count_shown == 0:
             return geometry.commas_x + BRACKET_W + resolved.unchanged.empty_comma_w / 2

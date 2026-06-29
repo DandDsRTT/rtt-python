@@ -140,10 +140,10 @@ class _Page:
         self.chrome.dark_button.props(f"icon={self.runtime.dark_icon()}")
 
     def apply_chapter(self):
-        ch = self.runtime.chapter
+        chapter = self.runtime.chapter
         self.chrome.chapter_reading.set_text(self.runtime.chapter_reading())
         self.chrome.chapter_reading.classes(add="rtt-chapter-reading-narrow") if len(
-            show_settings.CHAPTER_TITLES[ch]
+            show_settings.CHAPTER_TITLES[chapter]
         ) >= 25 else self.chrome.chapter_reading.classes(remove="rtt-chapter-reading-narrow")
 
         def _gate(el, cls, hidden):
@@ -151,14 +151,14 @@ class _Page:
 
         for key, parts in self.chrome.tile_parts.items():
             for part in parts:
-                _gate(part, "rtt-chap-invisible", show_settings.reveal_chapter(key) > ch)
+                _gate(part, "rtt-chap-invisible", show_settings.reveal_chapter(key) > chapter)
         for key, row in self.chrome.show_rows.items():
-            _gate(row, "rtt-chap-hidden", show_settings.reveal_chapter(key) > ch)
+            _gate(row, "rtt-chap-hidden", show_settings.reveal_chapter(key) > chapter)
         if "audio_bank" in self.chrome.refs:
             _gate(
                 self.chrome.refs["audio_bank"],
                 "rtt-chap-invisible",
-                ch < show_settings.CHAPTER_MIN,
+                chapter < show_settings.CHAPTER_MIN,
             )
         self.sync_show_availability()
 

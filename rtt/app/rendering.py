@@ -106,8 +106,8 @@ class Renderer:
     def apply_view_classes(self):
         _rendering_ops.apply_view_classes(self._editor, self._runtime)
 
-    def _body_visible(self, x, y, w, h, fy) -> bool:
-        return _rect_in_view(x, y, w, h, fy, self._viewport, _VIRT_OVERSCAN)
+    def _body_visible(self, x, y, w, h, freeze_y) -> bool:
+        return _rect_in_view(x, y, w, h, freeze_y, self._viewport, _VIRT_OVERSCAN)
 
     def render(self):
         _rendering_ops.end_stale_gestures(self._gestures)
@@ -120,8 +120,8 @@ class Renderer:
             self._rec.pretransform = lay.pretransform
             cur_ids = frozenset(cell_box.id for cell_box in lay.cells)
             self._newborn_ids = cur_ids - self._prev_cell_ids
-            fx, fy = lay.freeze_x, lay.freeze_y
-            _rendering_ops.size_panes(self._chrome, lay, fx, fy)
+            freeze_x, freeze_y = lay.freeze_x, lay.freeze_y
+            _rendering_ops.size_panes(self._chrome, lay, freeze_x, freeze_y)
             seen: set = set()
 
             _rendering_ops.render_lines(self, lay, seen)
@@ -132,7 +132,7 @@ class Renderer:
             _rendering_ops.render_cells(self, lay, seen, (amber, red, cold, True))
             rendering_chrome.sync_mean_damage_tips(self._rec, self._editor)
             rendering_chrome.sync_pretransform_help(self._rec, lay.pretransform)
-            rendering_chrome.sync_chrome(self, lay, fy)
+            rendering_chrome.sync_chrome(self, lay, freeze_y)
             self._prev_cell_ids = cur_ids
             self._virt_for = self._viewport
         # NiceGUI: run_javascript from inside a handler-driven render hits a torn-down slot context
@@ -156,16 +156,16 @@ class Renderer:
             lay = self._runtime.last_lay
             if lay is None:
                 return
-            fx, fy = lay.freeze_x, lay.freeze_y
+            freeze_x, freeze_y = lay.freeze_x, lay.freeze_y
             pending = [cell_box for cell_box in lay.cells if cell_box.id not in self._rec.entities]
             if not pending:
                 return
-            paint = (fy, False, self._last_rings)
+            paint = (freeze_y, False, self._last_rings)
             with self._runtime.page_client, self._runtime.building_guard():
                 self._revirtualizing = True
                 try:
                     for cell_box in pending[:_FILL_CHUNK]:
-                        container = _freeze_container(cell_box, fx, fy)
+                        container = _freeze_container(cell_box, freeze_x, freeze_y)
                         _rendering_ops.place_cell(self, cell_box, container, paint)
                 finally:
                     self._revirtualizing = False

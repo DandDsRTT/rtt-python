@@ -35,15 +35,15 @@ def tag_audio(el, cell_box) -> None:
     )
 
 
-def attach_guide_link(wrap, gh, tile, text) -> None:
+def attach_guide_link(wrap, guide_help, tile, text) -> None:
     # Quasar: a ui.tooltip hides the moment the cursor leaves the cell toward it, so its link can't
     # be clicked; these data-attrs feed a custom body-level hover-card (_GUIDE_JS) that stays open.
     wrap.classes("rtt-guide-link")
     wrap._props["data-guide-text"] = text
     wrap._props["data-guide-tile"] = tile
-    if gh.url:
-        wrap._props["data-guide-loc"] = gh.location
-        wrap._props["data-guide-url"] = gh.url
+    if guide_help.url:
+        wrap._props["data-guide-loc"] = guide_help.location
+        wrap._props["data-guide-url"] = guide_help.url
 
 
 def attach_hover_help(rec, wrap, cell_box) -> None:
@@ -67,13 +67,18 @@ def attach_hover_help(rec, wrap, cell_box) -> None:
         else:
             wrap.tooltip(help_text)
     if cell_box.kind in ("symbol", "caption"):
-        gh = tooltips.tile_guide_help_for_cell(cell_box.id)
-        if gh is not None:
-            gh_pt = tooltips.tile_guide_help_for_cell(cell_box.id, pretransform=True)
-            text = gh_pt.text if rec.pretransform else gh.text
-            attach_guide_link(wrap, gh, cell_box.id.split(":", 1)[1], text)
-            if gh.text != gh_pt.text:
-                rec.cells[cell_box.id].guide_help_text = (gh.text, gh_pt.text)
+        guide_help = tooltips.tile_guide_help_for_cell(cell_box.id)
+        if guide_help is not None:
+            guide_help_pretransform = tooltips.tile_guide_help_for_cell(
+                cell_box.id, pretransform=True
+            )
+            text = guide_help_pretransform.text if rec.pretransform else guide_help.text
+            attach_guide_link(wrap, guide_help, cell_box.id.split(":", 1)[1], text)
+            if guide_help.text != guide_help_pretransform.text:
+                rec.cells[cell_box.id].guide_help_text = (
+                    guide_help.text,
+                    guide_help_pretransform.text,
+                )
 
 
 def draft_cancel_eid(cell_box):

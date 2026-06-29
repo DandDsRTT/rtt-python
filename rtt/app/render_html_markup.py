@@ -29,8 +29,8 @@ _MATH_ALPHABET_RANGES = (
 )
 
 
-def _demath(ch: str) -> tuple[str, bool, bool] | None:
-    cp = ord(ch)
+def _demath(character: str) -> tuple[str, bool, bool] | None:
+    cp = ord(character)
     for lo, hi, base, bold, italic in _MATH_ALPHABET_RANGES:
         if lo <= cp <= hi:
             return chr(ord(base) + cp - lo), bold, italic
@@ -39,22 +39,22 @@ def _demath(ch: str) -> tuple[str, bool, bool] | None:
 
 def _math_html(text: str) -> str:
     out = []
-    for ch in text:
-        if ch == grid_tables.NORM_SUB_OPEN:
+    for character in text:
+        if character == grid_tables.NORM_SUB_OPEN:
             out.append('<sub style="font-style:italic">')
             continue
-        if ch == grid_tables.NORM_SUB_CLOSE:
+        if character == grid_tables.NORM_SUB_CLOSE:
             out.append("</sub>")
             continue
-        if ch == grid_tables.SUB_OPEN:
+        if character == grid_tables.SUB_OPEN:
             out.append("<sub>")
             continue
-        if ch == grid_tables.SUB_CLOSE:
+        if character == grid_tables.SUB_CLOSE:
             out.append("</sub>")
             continue
-        styled = _demath(ch)
+        styled = _demath(character)
         if styled is None:
-            out.append(_escape(ch))
+            out.append(_escape(character))
             continue
         base, bold, italic = styled
         css = (["font-weight:700"] if bold else []) + (["font-style:italic"] if italic else [])
@@ -74,7 +74,7 @@ _SUB_TAGS = {
 
 
 def _run_html(s: str) -> str:
-    return "".join(_SUB_TAGS.get(ch) or _escape(ch) for ch in s)
+    return "".join(_SUB_TAGS.get(character) or _escape(character) for character in s)
 
 
 def _bold_units(value) -> str:
