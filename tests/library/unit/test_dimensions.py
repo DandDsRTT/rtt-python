@@ -6,7 +6,6 @@ from rtt.library.temperament import Temperament, Variance
 
 ROW, COL = Variance.ROW, Variance.COL
 
-# (temperament, d, r, n) — every dimensions case from rtt-library/tests.m.
 DIMENSIONS = [
     (Temperament(((0,),), ROW), 1, 0, 1),
     (Temperament(((0,),), COL), 1, 1, 0),
@@ -27,25 +26,23 @@ DIMENSIONS = [
 ]
 
 
-@pytest.mark.parametrize("t, d, r, n", DIMENSIONS)
-def test_get_d(t, d, r, n):
-    assert get_d(t) == d
+class TestDimensions:
+    @pytest.mark.parametrize("t, d, r, n", DIMENSIONS)
+    def test_get_d(self, t, d, r, n):
+        assert get_d(t) == d
 
+    @pytest.mark.parametrize("t, d, r, n", DIMENSIONS)
+    def test_get_r(self, t, d, r, n):
+        assert get_r(t) == r
 
-@pytest.mark.parametrize("t, d, r, n", DIMENSIONS)
-def test_get_r(t, d, r, n):
-    assert get_r(t) == r
+    @pytest.mark.parametrize("t, d, r, n", DIMENSIONS)
+    def test_get_n(self, t, d, r, n):
+        assert get_n(t) == n
 
-
-@pytest.mark.parametrize("t, d, r, n", DIMENSIONS)
-def test_get_n(t, d, r, n):
-    assert get_n(t) == n
-
-
-@pytest.mark.parametrize(
-    "ebk, d, r, n",
-    [("[⟨1 0 -4] ⟨0 1 4]}", 3, 2, 1), ("[4 -4 1⟩", 3, 2, 1)],
-)
-def test_dimensions_through_parser(ebk, d, r, n):
-    t = parse_temperament_data(ebk)
-    assert (get_d(t), get_r(t), get_n(t)) == (d, r, n)
+    @pytest.mark.parametrize(
+        "ebk, d, r, n",
+        [("[⟨1 0 -4] ⟨0 1 4]}", 3, 2, 1), ("[4 -4 1⟩", 3, 2, 1)],
+    )
+    def test_dimensions_through_parser(self, ebk, d, r, n):
+        t = parse_temperament_data(ebk)
+        assert (get_d(t), get_r(t), get_n(t)) == (d, r, n)

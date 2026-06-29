@@ -11,7 +11,6 @@ I1 = ((1,),)
 I2 = ((1, 0), (0, 1))
 I3 = ((1, 0, 0), (0, 1, 0), (0, 0, 1))
 
-# Every dualPrivate case from rtt-library/tests.m.
 DUAL_CASES = [
     (Temperament(((1, 0, -4), (0, 1, 4)), ROW), Temperament(((4, -4, 1),), COL)),
     (Temperament(((0, 9, 4),), ROW), Temperament(((1, 0, 0), (0, -4, 9)), COL)),
@@ -33,7 +32,6 @@ DUAL_CASES = [
     (Temperament(((-19, 12),), COL), Temperament(((12, 19),), ROW)),
 ]
 
-# (mapping, comma-basis) pairs that are duals of each other (verifyDuals).
 DUAL_PAIRS = [
     (Temperament(((1, 0, -4), (0, 1, 4)), ROW), Temperament(((4, -4, 1),), COL)),
     (Temperament(((1, 0, 0), (0, -4, 9)), ROW), Temperament(((0, 9, 4),), COL)),
@@ -47,16 +45,15 @@ DUAL_PAIRS = [
 ]
 
 
-@pytest.mark.parametrize("temperament, expected", DUAL_CASES)
-def test_dual(temperament, expected):
-    assert dual(temperament) == expected
+class TestDual:
+    @pytest.mark.parametrize("temperament, expected", DUAL_CASES)
+    def test_dual(self, temperament, expected):
+        assert dual(temperament) == expected
 
+    @pytest.mark.parametrize("mapping, comma_basis", DUAL_PAIRS)
+    def test_dual_agrees_with_canonical_form(self, mapping, comma_basis):
+        assert dual(mapping) == canonical_form(comma_basis)
+        assert dual(comma_basis) == canonical_form(mapping)
 
-@pytest.mark.parametrize("mapping, comma_basis", DUAL_PAIRS)
-def test_dual_agrees_with_canonical_form(mapping, comma_basis):
-    assert dual(mapping) == canonical_form(comma_basis)
-    assert dual(comma_basis) == canonical_form(mapping)
-
-
-def test_dual_through_parser():
-    assert to_ebk(dual(parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}"))) == "[4 -4 1⟩"
+    def test_dual_through_parser(self):
+        assert to_ebk(dual(parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}"))) == "[4 -4 1⟩"

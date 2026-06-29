@@ -17,23 +17,22 @@ def _builder(ed: Editor) -> spreadsheet._GridBuilder:
     )
 
 
-def test_the_builder_holds_its_raw_inputs_as_one_frozen_record():
-    ed = Editor()
-    b = _builder(ed)
-    assert isinstance(b.inputs, ResolveInputs)
-    assert b.inputs.state is ed.state
-    assert b.inputs.range_mode == ed.range_mode
-    assert b.inputs.held_vectors == ed.held_vectors
-    assert b.inputs.pending_comma == ed.pending_comma
+class TestResolveInputs:
+    def test_the_builder_holds_its_raw_inputs_as_one_frozen_record(self):
+        ed = Editor()
+        b = _builder(ed)
+        assert isinstance(b.inputs, ResolveInputs)
+        assert b.inputs.state is ed.state
+        assert b.inputs.range_mode == ed.range_mode
+        assert b.inputs.held_vectors == ed.held_vectors
+        assert b.inputs.pending_comma == ed.pending_comma
 
+    def test_the_builder_does_not_shadow_the_inputs_as_flat_attributes(self):
+        b = _builder(Editor())
+        for field in ("state", "tuning_scheme", "settings", "held_basis_ratios", "custom_prescaler"):
+            assert not hasattr(b, field), f"{field} still shadows the inputs record on the builder"
 
-def test_the_builder_does_not_shadow_the_inputs_as_flat_attributes():
-    b = _builder(Editor())
-    for field in ("state", "tuning_scheme", "settings", "held_basis_ratios", "custom_prescaler"):
-        assert not hasattr(b, field), f"{field} still shadows the inputs record on the builder"
-
-
-def test_resolve_inputs_is_a_frozen_value_object():
-    b = _builder(Editor())
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        b.inputs.state = None
+    def test_resolve_inputs_is_a_frozen_value_object(self):
+        b = _builder(Editor())
+        with pytest.raises(dataclasses.FrozenInstanceError):
+            b.inputs.state = None

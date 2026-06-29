@@ -132,114 +132,107 @@ def _overlay_texts(page):
     )
 
 
-def test_mapping_demos_toggle_gates_the_overlay(browser):
-    with _page(browser) as (page, errors):
-        assert not page.evaluate("() => document.body.classList.contains('rtt-mapping-demos')")
-        page.hover('[data-eid="cell:vector:targets:3:0"]')
-        page.wait_for_timeout(150)
-        assert _overlay_texts(page) is None, "overlay drew while mapping demos was off"
-        assert not errors
-    with _page(browser, f"?state={_token(mapping_demos=True)}") as (page, errors):
-        assert page.evaluate("() => document.body.classList.contains('rtt-mapping-demos')")
-        assert not errors
+class TestBrowserBehavior:
+    def test_mapping_demos_toggle_gates_the_overlay(self, browser):
+        with _page(browser) as (page, errors):
+            assert not page.evaluate("() => document.body.classList.contains('rtt-mapping-demos')")
+            page.hover('[data-eid="cell:vector:targets:3:0"]')
+            page.wait_for_timeout(150)
+            assert _overlay_texts(page) is None, "overlay drew while mapping demos was off"
+            assert not errors
+        with _page(browser, f"?state={_token(mapping_demos=True)}") as (page, errors):
+            assert page.evaluate("() => document.body.classList.contains('rtt-mapping-demos')")
+            assert not errors
 
+    def test_mapping_band_overlay_computes_the_row_products(self, browser):
+        with _page(browser, f"?state={_token(mapping_demos=True)}") as (page, errors):
+            page.hover('[data-eid="cell:vector:targets:3:0"]')
+            page.wait_for_timeout(150)
+            chips = _overlay_texts(page)
+            assert chips, "the overlay did not draw on hovering the 4/3 interval vector"
+            assert "2" in chips and f"{_MINUS}1" in chips, f"missing the mapping row products: {chips}"
+            assert "14" not in chips and f"{_MINUS}14" not in chips, f"stacked-read corruption: {chips}"
+            assert not errors
 
-def test_mapping_band_overlay_computes_the_row_products(browser):
-    with _page(browser, f"?state={_token(mapping_demos=True)}") as (page, errors):
-        page.hover('[data-eid="cell:vector:targets:3:0"]')
-        page.wait_for_timeout(150)
-        chips = _overlay_texts(page)
-        assert chips, "the overlay did not draw on hovering the 4/3 interval vector"
-        assert "2" in chips and f"{_MINUS}1" in chips, f"missing the mapping row products: {chips}"
-        assert "14" not in chips and f"{_MINUS}14" not in chips, f"stacked-read corruption: {chips}"
-        assert not errors
+    def test_projection_band_reads_a_stacked_fraction_uncorrupted(self, browser):
+        with _page(browser, f"?state={_token(mapping_demos=True, projection=True)}") as (page, errors):
+            page.hover('[data-eid="cell:projection_targets:3:0"]')
+            page.wait_for_timeout(150)
+            chips = _overlay_texts(page)
+            assert chips, "the overlay did not draw on hovering the projected 4/3"
+            assert f"{_MINUS}1/4" in chips, f"expected the (1/4)*(-1) = -1/4 product chip; got {chips}"
+            assert "14" not in chips and f"{_MINUS}14" not in chips, f"stacked-fraction read corrupted: {chips}"
+            assert not errors
 
+    def test_superspace_mapping_band_triggers_on_a_nonstandard_domain(self, browser):
+        token = _token(mapping_text="2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}", mapping_demos=True,
+                       nonstandard_domain=True)
+        with _page(browser, f"?state={token}", width=1800, height=1150) as (page, errors):
+            result = page.evaluate(
+                "() => { const e = [...document.querySelectorAll('[data-eid]')]"
+                ".find(x => /^cell:superspace_mapping:(targets|held|interest|commas|detempering):/"
+                ".test(x.getAttribute('data-eid'))); return e && e.getAttribute('data-eid'); }"
+            )
+            assert result, "no superspace-mapping result cell rendered for the nonstandard domain"
+            page.hover(f'[data-eid="{result}"]')
+            page.wait_for_timeout(200)
+            chips = _overlay_texts(page)
+            assert chips and "×" in chips, "the superspace-mapping band drew no overlay chips"
+            assert not errors
 
-def test_projection_band_reads_a_stacked_fraction_uncorrupted(browser):
-    with _page(browser, f"?state={_token(mapping_demos=True, projection=True)}") as (page, errors):
-        page.hover('[data-eid="cell:projection_targets:3:0"]')
-        page.wait_for_timeout(150)
-        chips = _overlay_texts(page)
-        assert chips, "the overlay did not draw on hovering the projected 4/3"
-        assert f"{_MINUS}1/4" in chips, f"expected the (1/4)*(-1) = -1/4 product chip; got {chips}"
-        assert "14" not in chips and f"{_MINUS}14" not in chips, f"stacked-fraction read corrupted: {chips}"
-        assert not errors
+    def test_audio_mute_toggles_the_body_class(self, browser):
+        with _page(browser) as (page, errors):
+            page.evaluate("() => window.rttAudio.toggleMute()")
+            assert page.evaluate("() => document.body.classList.contains('rtt-audio-muted')")
+            page.evaluate("() => window.rttAudio.toggleMute()")
+            assert not page.evaluate("() => document.body.classList.contains('rtt-audio-muted')")
+            assert not errors
 
+    def test_fraction_slash_opens_the_denominator(self, browser):
+        with _page(browser, f"?state={_token(interval_ratios=True)}") as (page, errors):
+            opened = page.evaluate(
+                "() => { const num = document.querySelector('.rtt-frac-num-in input');"
+                " if (!num) return null; const box = num.closest('.rtt-frac-edit'); num.focus();"
+                " num.dispatchEvent(new KeyboardEvent('keydown', {key: '/', bubbles: true, cancelable: true}));"
+                " const den = box.querySelector('.rtt-frac-den-in input');"
+                " return {mode: box.dataset.fracmode, denFocused: document.activeElement === den}; }"
+            )
+            assert opened == {"mode": "ratio", "denFocused": True}
+            assert not errors
 
-def test_superspace_mapping_band_triggers_on_a_nonstandard_domain(browser):
-    token = _token(mapping_text="2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}", mapping_demos=True,
-                   nonstandard_domain=True)
-    with _page(browser, f"?state={token}", width=1800, height=1150) as (page, errors):
-        result = page.evaluate(
-            "() => { const e = [...document.querySelectorAll('[data-eid]')]"
-            ".find(x => /^cell:superspace_mapping:(targets|held|interest|commas|detempering):/"
-            ".test(x.getAttribute('data-eid'))); return e && e.getAttribute('data-eid'); }"
-        )
-        assert result, "no superspace-mapping result cell rendered for the nonstandard domain"
-        page.hover(f'[data-eid="{result}"]')
-        page.wait_for_timeout(200)
-        chips = _overlay_texts(page)
-        assert chips and "×" in chips, "the superspace-mapping band drew no overlay chips"
-        assert not errors
+    def test_tabnav_moves_focus_to_another_grid_cell(self, browser):
+        with _page(browser) as (page, errors):
+            moved = page.evaluate(
+                "() => { const SEL = '.rtt-cell .rtt-cellinput input';"
+                " const ins = [...document.querySelectorAll(SEL)].filter(i => !i.disabled && i.offsetParent);"
+                " if (ins.length < 2) return null; ins[0].focus(); const before = document.activeElement;"
+                " before.dispatchEvent(new KeyboardEvent('keydown', {key: 'Tab', bubbles: true, cancelable: true}));"
+                " return document.activeElement !== before && document.activeElement.matches(SEL); }"
+            )
+            assert moved is True
+            assert not errors
 
+    def test_tour_start_builds_the_overlay_and_escape_dismisses_it(self, browser):
+        with _page(browser) as (page, errors):
+            started = page.evaluate(
+                "() => { window.rttTour.stop(); window.rttTour.start();"
+                " return {built: !!document.querySelector('.rtt-tour-root'),"
+                "         title: (document.querySelector('.rtt-tour-title') || {}).textContent}; }"
+            )
+            assert started["built"] and started["title"]
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(50)
+            assert not page.evaluate("() => !!document.querySelector('.rtt-tour-root')")
+            assert page.evaluate("() => localStorage.getItem('rttTourSeen')") == "1"
+            assert not errors
 
-def test_audio_mute_toggles_the_body_class(browser):
-    with _page(browser) as (page, errors):
-        page.evaluate("() => window.rttAudio.toggleMute()")
-        assert page.evaluate("() => document.body.classList.contains('rtt-audio-muted')")
-        page.evaluate("() => window.rttAudio.toggleMute()")
-        assert not page.evaluate("() => document.body.classList.contains('rtt-audio-muted')")
-        assert not errors
-
-
-def test_fraction_slash_opens_the_denominator(browser):
-    with _page(browser, f"?state={_token(interval_ratios=True)}") as (page, errors):
-        opened = page.evaluate(
-            "() => { const num = document.querySelector('.rtt-frac-num-in input');"
-            " if (!num) return null; const box = num.closest('.rtt-frac-edit'); num.focus();"
-            " num.dispatchEvent(new KeyboardEvent('keydown', {key: '/', bubbles: true, cancelable: true}));"
-            " const den = box.querySelector('.rtt-frac-den-in input');"
-            " return {mode: box.dataset.fracmode, denFocused: document.activeElement === den}; }"
-        )
-        assert opened == {"mode": "ratio", "denFocused": True}
-        assert not errors
-
-
-def test_tabnav_moves_focus_to_another_grid_cell(browser):
-    with _page(browser) as (page, errors):
-        moved = page.evaluate(
-            "() => { const SEL = '.rtt-cell .rtt-cellinput input';"
-            " const ins = [...document.querySelectorAll(SEL)].filter(i => !i.disabled && i.offsetParent);"
-            " if (ins.length < 2) return null; ins[0].focus(); const before = document.activeElement;"
-            " before.dispatchEvent(new KeyboardEvent('keydown', {key: 'Tab', bubbles: true, cancelable: true}));"
-            " return document.activeElement !== before && document.activeElement.matches(SEL); }"
-        )
-        assert moved is True
-        assert not errors
-
-
-def test_tour_start_builds_the_overlay_and_escape_dismisses_it(browser):
-    with _page(browser) as (page, errors):
-        started = page.evaluate(
-            "() => { window.rttTour.stop(); window.rttTour.start();"
-            " return {built: !!document.querySelector('.rtt-tour-root'),"
-            "         title: (document.querySelector('.rtt-tour-title') || {}).textContent}; }"
-        )
-        assert started["built"] and started["title"]
-        page.keyboard.press("Escape")
-        page.wait_for_timeout(50)
-        assert not page.evaluate("() => !!document.querySelector('.rtt-tour-root')")
-        assert page.evaluate("() => localStorage.getItem('rttTourSeen')") == "1"
-        assert not errors
-
-
-def test_freeze_syncs_the_frozen_header_to_horizontal_scroll(browser):
-    with _page(browser, width=760, height=820) as (page, errors):
-        synced = page.evaluate(
-            "() => { const body = document.querySelector('.rtt-gridbody');"
-            " if (body.scrollWidth <= body.clientWidth) return 'no-overflow';"
-            " body.scrollLeft = 40; window.rttFreeze.update();"
-            " return (document.querySelector('.rtt-colhead-inner') || {}).style.transform; }"
-        )
-        assert synced == "translateX(-40px)", f"frozen header did not track the scroll: {synced!r}"
-        assert not errors
+    def test_freeze_syncs_the_frozen_header_to_horizontal_scroll(self, browser):
+        with _page(browser, width=760, height=820) as (page, errors):
+            synced = page.evaluate(
+                "() => { const body = document.querySelector('.rtt-gridbody');"
+                " if (body.scrollWidth <= body.clientWidth) return 'no-overflow';"
+                " body.scrollLeft = 40; window.rttFreeze.update();"
+                " return (document.querySelector('.rtt-colhead-inner') || {}).style.transform; }"
+            )
+            assert synced == "translateX(-40px)", f"frozen header did not track the scroll: {synced!r}"
+            assert not errors

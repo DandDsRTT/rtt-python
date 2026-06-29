@@ -29,17 +29,17 @@ def _builder(panel=None):
     )
 
 
-def test_page_builder_constructs_without_a_page():
-    b = _builder()
-    assert b.drawer_open is False
+class TestWebBuilding:
+    def test_page_builder_constructs_without_a_page(self):
+        b = _builder()
+        assert b.drawer_open is False
 
-
-def test_toggle_drawer_opens_then_closes_toggling_the_panel_class():
-    panel = _FakePanel()
-    b = _builder(panel)
-    b.toggle_drawer()
-    assert b.drawer_open is True
-    assert panel.added == ["rtt-open"]
-    b.toggle_drawer()
-    assert b.drawer_open is False
-    assert panel.removed == ["rtt-open"]
+    def test_toggle_drawer_opens_then_closes_toggling_the_panel_class(self):
+        panel = _FakePanel()
+        b = _builder(panel)
+        b.toggle_drawer()
+        assert b.drawer_open is True
+        assert panel.added == ["rtt-open"]
+        b.toggle_drawer()
+        assert b.drawer_open is False
+        assert panel.removed == ["rtt-open"]

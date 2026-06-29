@@ -9,8 +9,6 @@ from rtt.library.canonicalization import (
 from rtt.library.parsing import parse_temperament_data
 from rtt.library.temperament import Temperament, Variance
 
-# Every canonicalFormPrivate / canonicalMa mapping case from rtt-library/tests.m
-# (the domain-basis-dependent cases live with canonical_form below).
 CANONICAL_MA = [
     (((12, 0, 0), (19, 0, 0)), ((1, 0, 0),)),
     (((1, 1, 0), (0, 1, 4)), ((1, 0, -4), (0, 1, 4))),
@@ -51,43 +49,34 @@ CANONICAL_CA = [
 ]
 
 
-@pytest.mark.parametrize("matrix, expected", CANONICAL_MA)
-def test_canonical_ma(matrix, expected):
-    assert canonical_ma(matrix) == expected
+class TestCanonicalization:
+    @pytest.mark.parametrize("matrix, expected", CANONICAL_MA)
+    def test_canonical_ma(self, matrix, expected):
+        assert canonical_ma(matrix) == expected
 
+    @pytest.mark.parametrize("matrix, expected", CANONICAL_CA)
+    def test_canonical_ca(self, matrix, expected):
+        assert canonical_ca(matrix) == expected
 
-@pytest.mark.parametrize("matrix, expected", CANONICAL_CA)
-def test_canonical_ca(matrix, expected):
-    assert canonical_ca(matrix) == expected
+    def test_col_hermite_defactor(self):
+        assert col_hermite_defactor(((6, 5, -4), (4, -4, 1))) == ((6, 5, -4), (-4, -4, 3)), "Matches Wolfram exactly. (hermiteRightUnimodular's exact output is omitted: # the unimodular transform isn't unique, and mine differs only by the sign of # one column — which cancels out, so col_hermite_defactor still matches.)"
 
+    def test_canonical_form_mapping(self):
+        t = Temperament(((5, 8, 12), (7, 11, 16)), Variance.ROW)
+        assert canonical_form(t) == Temperament(((1, 0, -4), (0, 1, 4)), Variance.ROW)
 
-def test_col_hermite_defactor():
-    # Matches Wolfram exactly. (hermiteRightUnimodular's exact output is omitted:
-    # the unimodular transform isn't unique, and mine differs only by the sign of
-    # one column — which cancels out, so col_hermite_defactor still matches.)
-    assert col_hermite_defactor(((6, 5, -4), (4, -4, 1))) == ((6, 5, -4), (-4, -4, 3))
+    def test_canonical_form_comma_basis(self):
+        t = Temperament(((-8, 8, -2),), Variance.COL)
+        assert canonical_form(t) == Temperament(((4, -4, 1),), Variance.COL)
 
+    def test_canonical_form_keeps_nonstandard_domain_basis(self):
+        t = Temperament(((22, 70, 62),), Variance.ROW, (2, 9, 7))
+        assert canonical_form(t) == Temperament(((11, 35, 31),), Variance.ROW, (2, 9, 7))
 
-def test_canonical_form_mapping():
-    t = Temperament(((5, 8, 12), (7, 11, 16)), Variance.ROW)
-    assert canonical_form(t) == Temperament(((1, 0, -4), (0, 1, 4)), Variance.ROW)
+    def test_canonical_form_drops_standard_domain_basis(self):
+        t = Temperament(((24, 38, 56),), Variance.ROW, (2, 3, 5))
+        assert canonical_form(t) == Temperament(((12, 19, 28),), Variance.ROW)
 
-
-def test_canonical_form_comma_basis():
-    t = Temperament(((-8, 8, -2),), Variance.COL)
-    assert canonical_form(t) == Temperament(((4, -4, 1),), Variance.COL)
-
-
-def test_canonical_form_keeps_nonstandard_domain_basis():
-    t = Temperament(((22, 70, 62),), Variance.ROW, (2, 9, 7))
-    assert canonical_form(t) == Temperament(((11, 35, 31),), Variance.ROW, (2, 9, 7))
-
-
-def test_canonical_form_drops_standard_domain_basis():
-    t = Temperament(((24, 38, 56),), Variance.ROW, (2, 3, 5))
-    assert canonical_form(t) == Temperament(((12, 19, 28),), Variance.ROW)
-
-
-def test_canonical_form_matches_parsed_ebk():
-    some = parse_temperament_data("[⟨5 8 12] ⟨7 11 16]}")
-    assert canonical_form(some) == parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}")
+    def test_canonical_form_matches_parsed_ebk(self):
+        some = parse_temperament_data("[⟨5 8 12] ⟨7 11 16]}")
+        assert canonical_form(some) == parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}")
