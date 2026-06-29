@@ -402,7 +402,7 @@ RATIO_RECIPROCATE_HELP = (
 
 READONLY_KINDS: frozenset[str] = frozenset({
     "prime", "colheader", "rowlabel", "mapped", "vector", "tuningvalue", "powerdisplay",
-    "genratio", "commaratio", "mathexpr", "ptext", "ptextpending",
+    "genratio", "commaratio", "mathexpr", "plain_text", "plain_text_pending",
     "symbol", "matlabel", "units", "caption", "count", "boxtitle",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "transpose", "vbar", "chart", "rangechart",
 })
@@ -596,24 +596,24 @@ _RATIO_HELP: dict[str, str] = {
 }
 
 _PLAIN_TEXT_HELP: dict[str, str] = {
-    "ptext:mapping:primes": (
+    "plain_text:mapping:primes": (
         "Type the mapping as a plain-text string (e.g. ⟨⟨1 0 -4]]) to drive the grid."
     ),
-    "ptext:vectors:commas": "Type the comma basis as a plain-text string to drive the grid.",
-    "ptext:tuning:gens": "Type the generator tuning map as a plain-text string to drive the grid.",
-    "ptext:mapping:canongens": (
+    "plain_text:vectors:commas": "Type the comma basis as a plain-text string to drive the grid.",
+    "plain_text:tuning:gens": "Type the generator tuning map as a plain-text string to drive the grid.",
+    "plain_text:mapping:canongens": (
         "Type the generator form matrix 𝐹 as a plain-text string to re-store the mapping in that "
         "generating set (same temperament); rejected unless 𝐹 is square and unimodular."
     ),
-    "ptext:vectors:targets": (
+    "plain_text:vectors:targets": (
         "Type the target interval list as a plain-text string to drive the grid."
     ),
-    "ptext:prescaling:primes": "Type the prescaler as a plain-text string to drive the grid.",
-    "ptext:projection:primes": (
+    "plain_text:prescaling:primes": "Type the prescaler as a plain-text string to drive the grid.",
+    "plain_text:projection:primes": (
         "Type the projection 𝑃 as a plain-text string to retune to it; rejected unless it's a "
         "valid projection (idempotent, commas in its kernel)."
     ),
-    "ptext:projection:gens": (
+    "plain_text:projection:gens": (
         "Type the generator embedding 𝐺 as a plain-text string to retune to it; rejected unless 𝑀𝐺 "
         "= 𝐼."
     ),
@@ -647,7 +647,7 @@ def _control_help(kind: str, cid: str) -> str | None:
         return _ID_HELP.get(cid) if cid in HELPED_READONLY_IDS else None
     if kind == "preset":
         return _PRESET_HELP.get(cid.split(":")[1])
-    if kind == "ptextedit":
+    if kind == "plain_text_edit":
         return _PLAIN_TEXT_HELP.get(cid)
     if kind == "ratiocell":
         return _RATIO_HELP.get(cid.split(":", maxsplit=1)[0])

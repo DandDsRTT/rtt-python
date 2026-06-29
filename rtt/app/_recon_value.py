@@ -395,8 +395,8 @@ def update_gentuningcell(rec, cell_box: spreadsheet.CellBox) -> None:
 
 
 def build_plain_text_edit(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
-    if cell_box.id.startswith("ptext:projection:"):
-        inp = ui.input(value=cell_box.text).props("dense borderless").classes("rtt-ptextedit")
+    if cell_box.id.startswith("plain_text:projection:"):
+        inp = ui.input(value=cell_box.text).props("dense borderless").classes("rtt-plain-text-edit")
         inp.on(
             "blur",
             lambda _e=None, cid=cell_box.id: rec._cb.on_plain_text_edit(
@@ -410,7 +410,7 @@ def build_plain_text_edit(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
                 on_change=lambda e, cid=cell_box.id: rec._cb.on_plain_text_edit(cid, e.value),
             )
             .props("dense borderless")
-            .classes("rtt-ptextedit")
+            .classes("rtt-plain-text-edit")
         )
     rec.cells[cell_box.id].value.plain_text_input = inp
 

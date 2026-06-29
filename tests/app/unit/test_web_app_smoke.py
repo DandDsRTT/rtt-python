@@ -1282,7 +1282,7 @@ def test_dense_prescaling_plain_text_fits_its_cell():
     # on reveals the row without changing the prescaler values (the prescaler is slope-independent)
     cells = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                                 tuning_scheme="TILT minimax-S").cells}
-    for cid in ("ptext:prescaling:primes", "ptext:prescaling:targets"):
+    for cid in ("plain_text:prescaling:primes", "plain_text:prescaling:targets"):
         c = cells[cid]
         assert render_html._plain_text_units(c.text) * render_html._plain_text_font(c.text, c.w) <= c.w, cid
 

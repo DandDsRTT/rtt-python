@@ -167,7 +167,7 @@ _FEATURE_CELLS = [
     # enable-an-off-feature cases — their render is covered by the default page + the spreadsheet
     # tests.
     ("row/col header symbols", "matlabel:row:mapping:primes:0"),  # the matrix row header label (header_symbols)
-    ("plain text values", "ptext:mapping:primes"),   # the editable EBK dual input
+    ("plain text values", "plain_text:mapping:primes"),   # the editable EBK dual input
     ("presets", "preset:temperament"),         # the chooser dropdowns (q-select)
     ("presets", "preset:tuning:gens"),         # a copied dropdown (its own :col-suffixed id)
     ("charts", "chart:retune:targets"),              # a per-tile bar-chart SVG
@@ -405,10 +405,10 @@ async def test_editing_the_generator_embedding_retunes(user: User) -> None:
     # and the tuning re-solves to third-comma (1200, 694.786).
     await _enable(user, "projection")
     _toggle(user, "plain text values")
-    await user.should_see(marker="ptext:projection:gens")
+    await user.should_see(marker="plain_text:projection:gens")
     assert _cell_child(user, "tuning:gen:1").value == "696.578"
-    _cell_child(user, "ptext:projection:gens").set_value("{[1 0 0⟩[1/3 -1/3 1/3⟩]")  # 1/3-comma G
-    _commit(user, "ptext:projection:gens")
+    _cell_child(user, "plain_text:projection:gens").set_value("{[1 0 0⟩[1/3 -1/3 1/3⟩]")  # 1/3-comma G
+    _commit(user, "plain_text:projection:gens")
     assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
 
 
@@ -417,10 +417,10 @@ async def test_editing_the_projection_matrix_retunes(user: User) -> None:
     # plain-text band. Type 1/3-comma's P as a map-list EBK string and the tuning re-solves to third-comma.
     await _enable(user, "projection")
     _toggle(user, "plain text values")
-    await user.should_see(marker="ptext:projection:primes")
+    await user.should_see(marker="plain_text:projection:primes")
     assert _cell_child(user, "tuning:gen:1").value == "696.578"
-    _cell_child(user, "ptext:projection:primes").set_value("[⟨1 4/3 4/3]⟨0 -1/3 -4/3]⟨0 1/3 4/3]⟩")  # 1/3-comma P
-    _commit(user, "ptext:projection:primes")
+    _cell_child(user, "plain_text:projection:primes").set_value("[⟨1 4/3 4/3]⟨0 -1/3 -4/3]⟨0 1/3 4/3]⟩")  # 1/3-comma P
+    _commit(user, "plain_text:projection:primes")
     assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
 
 
@@ -492,13 +492,13 @@ async def test_a_projection_plain_text_edit_is_unmolested_until_submit(user: Use
     # uncommitted does nothing; committing it THEN reddens and toasts.
     await _enable(user, "projection")
     _toggle(user, "plain text values")
-    await user.should_see(marker="ptext:projection:primes")
-    _cell_child(user, "ptext:projection:primes").set_value("[⟨2 0 0]⟨0 1 0]⟨0 0 1]⟩")  # invalid, but not submitted
-    assert "rtt-ptext-error" not in _cell_child(user, "ptext:projection:primes").classes  # unmolested
+    await user.should_see(marker="plain_text:projection:primes")
+    _cell_child(user, "plain_text:projection:primes").set_value("[⟨2 0 0]⟨0 1 0]⟨0 0 1]⟩")  # invalid, but not submitted
+    assert "rtt-plain-text-error" not in _cell_child(user, "plain_text:projection:primes").classes  # unmolested
     assert _cell_child(user, "tuning:gen:1").value == "696.578"                            # not retuned
-    _commit(user, "ptext:projection:primes")                                              # NOW submit
+    _commit(user, "plain_text:projection:primes")                                              # NOW submit
     await user.should_see("isn't a valid projection")
-    assert "rtt-ptext-error" in _cell_child(user, "ptext:projection:primes").classes
+    assert "rtt-plain-text-error" in _cell_child(user, "plain_text:projection:primes").classes
 
 
 async def test_an_invalid_projection_plain_text_toasts_and_reddens(user: User) -> None:
@@ -506,12 +506,12 @@ async def test_an_invalid_projection_plain_text_toasts_and_reddens(user: User) -
     # idempotency P² = P) toasts the reason at top and reddens the band — the tuning stays put.
     await _enable(user, "projection")
     _toggle(user, "plain text values")
-    await user.should_see(marker="ptext:projection:primes")
+    await user.should_see(marker="plain_text:projection:primes")
     assert _cell_child(user, "tuning:gen:1").value == "696.578"   # 1/4-comma
-    _cell_child(user, "ptext:projection:primes").set_value("[⟨2 0 0]⟨0 1 0]⟨0 0 1]⟩")  # P[0][0]=2 → P²≠P
-    _commit(user, "ptext:projection:primes")
+    _cell_child(user, "plain_text:projection:primes").set_value("[⟨2 0 0]⟨0 1 0]⟨0 0 1]⟩")  # P[0][0]=2 → P²≠P
+    _commit(user, "plain_text:projection:primes")
     await user.should_see("isn't a valid projection")           # the red toast names the reason
-    assert "rtt-ptext-error" in _cell_child(user, "ptext:projection:primes").classes
+    assert "rtt-plain-text-error" in _cell_child(user, "plain_text:projection:primes").classes
     assert _cell_child(user, "tuning:gen:1").value == "696.578"  # tuning unchanged
 
 
@@ -520,12 +520,12 @@ async def test_an_invalid_embedding_plain_text_toasts_and_reddens(user: User) ->
     # the reason and reddens — the embedding counterpart of the invalid-projection case.
     await _enable(user, "projection")
     _toggle(user, "plain text values")
-    await user.should_see(marker="ptext:projection:gens")
+    await user.should_see(marker="plain_text:projection:gens")
     assert _cell_child(user, "tuning:gen:1").value == "696.578"
-    _cell_child(user, "ptext:projection:gens").set_value("{[0 0 0⟩[0 0 1/4⟩]")  # zeroed column → 𝑀𝐺 ≠ 𝐼
-    _commit(user, "ptext:projection:gens")
+    _cell_child(user, "plain_text:projection:gens").set_value("{[0 0 0⟩[0 0 1/4⟩]")  # zeroed column → 𝑀𝐺 ≠ 𝐼
+    _commit(user, "plain_text:projection:gens")
     await user.should_see("isn't a valid embedding")
-    assert "rtt-ptext-error" in _cell_child(user, "ptext:projection:gens").classes
+    assert "rtt-plain-text-error" in _cell_child(user, "plain_text:projection:gens").classes
     assert _cell_child(user, "tuning:gen:1").value == "696.578"  # tuning unchanged
 
 
@@ -534,10 +534,10 @@ async def test_an_unparseable_projection_plain_text_reddens_without_a_toast(user
     # feedback) — no toast, like the mapping / comma-basis / prescaler duals. The tuning stays put.
     await _enable(user, "projection")
     _toggle(user, "plain text values")
-    await user.should_see(marker="ptext:projection:primes")
-    _cell_child(user, "ptext:projection:primes").set_value("not a matrix")
-    _commit(user, "ptext:projection:primes")
-    assert "rtt-ptext-error" in _cell_child(user, "ptext:projection:primes").classes
+    await user.should_see(marker="plain_text:projection:primes")
+    _cell_child(user, "plain_text:projection:primes").set_value("not a matrix")
+    _commit(user, "plain_text:projection:primes")
+    assert "rtt-plain-text-error" in _cell_child(user, "plain_text:projection:primes").classes
     assert _cell_child(user, "tuning:gen:1").value == "696.578"  # tuning unchanged
 
 
@@ -1595,9 +1595,9 @@ async def test_typing_the_prescaler_plain_text_overrides_the_scheme(user: User) 
     user.find(kind=ui.checkbox, content="weighting").click()  # reveals the alt-complexity sub-toggle
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope (the complexity rows ride weighting)
     user.find(kind=ui.checkbox, content="alternative complexity").click()  # reveals the prescaling row
-    _toggle(user, "plain text values")  # the ptext band
-    await user.should_see(marker="ptext:prescaling:primes")
-    _cell_child(user, "ptext:prescaling:primes").set_value("[⟨1 0 0] ⟨0 4 0] ⟨0 0 2.322]⟩")
+    _toggle(user, "plain text values")  # the plain_text band
+    await user.should_see(marker="plain_text:prescaling:primes")
+    _cell_child(user, "plain_text:prescaling:primes").set_value("[⟨1 0 0] ⟨0 4 0] ⟨0 0 2.322]⟩")
     await user.should_see(marker="cell:prescaling:primes:1:1")
     # the diagonal cell now reads the typed value (rather than reverting to the scheme's 1.585)
     assert _cell_child(user, "cell:prescaling:primes:1:1").value == "4"
@@ -1605,7 +1605,7 @@ async def test_typing_the_prescaler_plain_text_overrides_the_scheme(user: User) 
 
 async def test_unparseable_prescaler_plain_text_reddens_the_box(user: User) -> None:
     # an off-diagonal nonzero is invalid (𝐿 is diagonal), so the input box flags the typed
-    # text via the rtt-ptext-error class instead of mangling the override — mirroring the
+    # text via the rtt-plain-text-error class instead of mangling the override — mirroring the
     # mapping / comma-basis duals' validation path. The override stays untouched (the editor
     # would otherwise have written a non-diagonal 𝐿, which the math layer can't honour).
     await user.open("/")
@@ -1614,11 +1614,11 @@ async def test_unparseable_prescaler_plain_text_reddens_the_box(user: User) -> N
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope (the complexity rows ride weighting)
     user.find(kind=ui.checkbox, content="alternative complexity").click()  # reveals the prescaling row
     _toggle(user, "plain text values")
-    await user.should_see(marker="ptext:prescaling:primes")
-    _cell_child(user, "ptext:prescaling:primes").set_value("[⟨1 0.5 0] ⟨0 1 0] ⟨0 0 1]⟩")
+    await user.should_see(marker="plain_text:prescaling:primes")
+    _cell_child(user, "plain_text:prescaling:primes").set_value("[⟨1 0.5 0] ⟨0 1 0] ⟨0 0 1]⟩")
     # the input box surfaces the rejection via the same red-outline class the other duals use
-    classes = _cell_child(user, "ptext:prescaling:primes").classes
-    assert "rtt-ptext-error" in classes
+    classes = _cell_child(user, "plain_text:prescaling:primes").classes
+    assert "rtt-plain-text-error" in classes
     # the diagonal grid cell stays at its scheme-derived 1.585 (no override applied)
     assert _cell_child(user, "cell:prescaling:primes:1:1").value == "1.585"
 
@@ -4190,7 +4190,7 @@ async def test_hovering_a_nonstandard_approach_option_previews_setting_it(user: 
     # (optimization always invisibly on), so the displayed tuning re-solves under the hovered approach.
     await user.open("/")
     _toggle(user, "plain text values")                            # reveal the editable mapping EBK dual
-    _cell_child(user, "ptext:mapping:primes").set_value("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")  # a nonprime domain
+    _cell_child(user, "plain_text:mapping:primes").set_value("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")  # a nonprime domain
     await user.should_see(marker="approach")                      # ...so the approach radio shows
     prime_opt = set(user.find(marker="approach-prime-based").elements)
     UserInteraction(user, prime_opt, None).trigger("mouseenter")                  # hover "prime-based"

@@ -327,7 +327,7 @@ def test_mapping_over_generators_identity_renders_with_identity_objects():
     assert cells["bracket:selfmap:r"].text == spreadsheet_constants.GENMAP_BRACKETS[1]  # ]
     assert cells["ebktop:selfmap:0"].kind == "ebktop"
     assert cells["ebkbrace:selfmap:0"].kind == "ebkbrace"  # the ket's } foot
-    assert cells["ptext:mapping:gens"].text == "{[1 0} [0 1}]"
+    assert cells["plain_text:mapping:gens"].text == "{[1 0} [0 1}]"
     assert not any(c.startswith(("matlabel:row:mapping:gens", "matlabel:col:mapping:gens")) for c in cells)
 
 
@@ -779,7 +779,7 @@ def test_reordered_held_column_keeps_its_vector_cell_id_and_glides():
 def _reorder_volatile(cid):
     # tuning-derived cells (tempered sizes, errors, charts, plain-text re-lists) shift by sub-cent
     # solver noise / re-list on reorder, so they're expected to "change" — filter them out
-    return cid.startswith(("chart:", "ptext:", "tuning:", "retune:", "rangechart:"))
+    return cid.startswith(("chart:", "plain_text:", "tuning:", "retune:", "rangechart:"))
 
 
 def test_reordering_held_rekeys_every_column_cell_not_just_the_vectors():
@@ -1596,9 +1596,9 @@ def test_canonical_generators_column_tiles_carry_plain_text_matching_their_grids
     # the three new tiles' EBK strings read in the same brackets as their grids (the lockstep guard
     # enforces this globally; here we pin the exact strings): 𝐹 a covector stack, G_C a vector list,
     # 𝒈_C a cents genmap
-    assert cells["ptext:mapping:canongens"].text == "[{1 1] {0 1]}"          # 𝐹 (𝑀 = 𝐹𝑀_C)
-    assert cells["ptext:projection:canongens"].text == "{[1 0 0⟩ [1 0 1/4⟩]"  # G_C
-    assert cells["ptext:tuning:canongens"].text.startswith("{1200")          # 𝒈_C
+    assert cells["plain_text:mapping:canongens"].text == "[{1 1] {0 1]}"          # 𝐹 (𝑀 = 𝐹𝑀_C)
+    assert cells["plain_text:projection:canongens"].text == "{[1 0 0⟩ [1 0 1/4⟩]"  # G_C
+    assert cells["plain_text:tuning:canongens"].text.startswith("{1200")          # 𝒈_C
 
 
 def test_canonical_embedding_and_tuning_tiles_carry_their_column_index_headers():
@@ -1617,9 +1617,9 @@ def test_generator_form_matrix_is_interactive():
     # <choose form>. Its read-only inverse 𝐹⁻¹ (canon row × gens) is NOT editable.
     cells = {c.id: c for c in _with(form_tiles=True, plain_text_values=True).cells}
     assert cells["cell:finv:0:0"].kind == "formcell"            # 𝐹: routed to the editable gridvalue component
-    assert cells["ptext:mapping:canongens"].kind == "ptextedit"  # 𝐹's editable plain-text input
+    assert cells["plain_text:mapping:canongens"].kind == "plain_text_edit"  # 𝐹's editable plain-text input
     assert cells["cell:form:0:0"].kind == "mapped"              # 𝐹⁻¹: read-only
-    assert cells["ptext:canon:gens"].kind == "ptext"           # 𝐹⁻¹'s plain text is read-only
+    assert cells["plain_text:canon:gens"].kind == "plain_text"           # 𝐹⁻¹'s plain text is read-only
     from rtt.app.grid_tables import EDITABLE_PLAIN_TEXT
     assert ("mapping", "canongens") in EDITABLE_PLAIN_TEXT and ("canon", "gens") not in EDITABLE_PLAIN_TEXT
 
@@ -1964,8 +1964,8 @@ def test_preset_chooser_sits_below_the_plain_text_band():
     s = settings.defaults()
     s["presets"], s["plain_text_values"] = True, True
     cells = {c.id: c for c in spreadsheet.build(base, s).cells}
-    chooser, ptext = cells["preset:tuning"], cells["ptext:tuning:primes"]
-    assert chooser.y >= ptext.y + ptext.h  # the chooser rides beneath the plain-text box
+    chooser, plain_text = cells["preset:tuning"], cells["plain_text:tuning:primes"]
+    assert chooser.y >= plain_text.y + plain_text.h  # the chooser rides beneath the plain-text box
 
 
 def test_target_chooser_is_wider_to_seat_its_numeric_override():
@@ -2113,13 +2113,13 @@ def test_build_honors_the_tuning_scheme():
 def test_plain_text_values_adds_a_string_band_under_each_tile():
     on = {c.id: c for c in _with(plain_text_values=True).cells}
     off = {c.id for c in _with(plain_text_values=False).cells}
-    assert not any(c.startswith("ptext:") for c in off)  # off by default
+    assert not any(c.startswith("plain_text:") for c in off)  # off by default
     # each value group gets its natural plain-text form (from the service seam)
-    assert on["ptext:mapping:primes"].text == "[⟨1 1 0] ⟨0 1 4]}"
-    assert on["ptext:mapping:targets"].text.startswith("[[1 0}")  # generator-coord vectors (close })
-    assert on["ptext:vectors:commas"].text == "[[4 -4 1⟩]"  # comma basis: vector list, outer [ ]
-    assert on["ptext:quantities:primes"].text == "2.3.5"
-    assert on["ptext:tuning:primes"].text.startswith("⟨")  # a tuning map
+    assert on["plain_text:mapping:primes"].text == "[⟨1 1 0] ⟨0 1 4]}"
+    assert on["plain_text:mapping:targets"].text.startswith("[[1 0}")  # generator-coord vectors (close })
+    assert on["plain_text:vectors:commas"].text == "[[4 -4 1⟩]"  # comma basis: vector list, outer [ ]
+    assert on["plain_text:quantities:primes"].text == "2.3.5"
+    assert on["plain_text:tuning:primes"].text.startswith("⟨")  # a tuning map
 
 
 def test_every_open_value_tile_has_a_plain_text_string():
@@ -2242,7 +2242,7 @@ def test_every_plain_text_band_shows_the_same_numbers_as_its_grid_tile():
         rb, cx, cw = b.geometry.rows[row_key], b.geometry.col_x[column_key], b.geometry.col_w[column_key]
         grid_tokens = []
         for c in lay.cells:
-            if (c.text and not c.id.startswith("ptext:")
+            if (c.text and not c.id.startswith("plain_text:")
                     and cx - 2 <= c.x <= cx + cw and rb.y - 2 <= c.y <= rb.y + rb.h + 2):
                 grid_tokens += TOKEN.findall(cell_value(c.text))
         band_tokens = TOKEN.findall(band_body(b.geometry.plain_text_strings[(row_key, column_key)]))
@@ -2431,16 +2431,16 @@ def test_quantities_interval_ratios_emit_no_redundant_plain_text():
     ids = {c.id for c in _with(plain_text_values=True).cells}
     # the quantities row's interval-ratio columns (commas, targets, held, …) already show the
     # formatted "n/d" in the gridded cell, so they emit NO duplicate plain-text line below it.
-    assert not any(i.startswith("ptext:quantities:commas") for i in ids)
-    assert not any(i.startswith("ptext:quantities:targets") for i in ids)
+    assert not any(i.startswith("plain_text:quantities:commas") for i in ids)
+    assert not any(i.startswith("plain_text:quantities:targets") for i in ids)
     # the domain-primes column keeps its plain text — "2.3.5" is the compact prime-limit
     # notation, not a copy of the gridded "2 3 5" cells.
-    assert "ptext:quantities:primes" in ids
+    assert "plain_text:quantities:primes" in ids
 
 
 def test_plain_text_band_sits_below_the_caption_spanning_its_column():
     cells = {c.id: c for c in _with(plain_text_values=True, names=True).cells}
-    pt, cap, header = cells["ptext:mapping:primes"], cells["caption:mapping:primes"], cells["header:primes"]
+    pt, cap, header = cells["plain_text:mapping:primes"], cells["caption:mapping:primes"], cells["header:primes"]
     assert pt.y >= cap.y + cap.h  # the string sits below the name caption
     assert pt.x == header.x and pt.w == header.w  # and spans the column
 
@@ -2456,39 +2456,39 @@ def test_collapsing_hides_the_plain_text_band_with_the_tile():
     s = settings.defaults()
     s["plain_text_values"] = True
     row_off = {c.id for c in spreadsheet.build(base, s, collapsed={"row:mapping"}).cells}
-    assert not any(c.startswith("ptext:mapping:") for c in row_off)  # a folded row keeps no band
+    assert not any(c.startswith("plain_text:mapping:") for c in row_off)  # a folded row keeps no band
     tile_off = {c.id for c in spreadsheet.build(base, s, collapsed={"tile:mapping:primes"}).cells}
-    assert "ptext:mapping:primes" not in tile_off  # a collapsed tile drops its band...
-    assert "ptext:mapping:targets" in tile_off  # ...but its open sibling keeps one
+    assert "plain_text:mapping:primes" not in tile_off  # a collapsed tile drops its band...
+    assert "plain_text:mapping:targets" in tile_off  # ...but its open sibling keeps one
 
 
 def test_editable_plain_text_tiles_render_as_inputs():
-    # weighting + alternative complexity opens the prescaling row so the bare prescaler 𝐿 tile's ptext is present too
+    # weighting + alternative complexity opens the prescaling row so the bare prescaler 𝐿 tile's plain_text is present too
     cells = {c.id: c for c in _with("TILT minimax-S", plain_text_values=True, weighting=True, alt_complexity=True).cells}
     # the editable tiles render as inputs: the mapping + comma-basis duals, the generator
     # tuning map (typing a cents tuning freezes it), the target interval list (typing a
     # vector list overrides the target set), and the bare prescaler 𝐿 (typing a d×d
     # diagonal matrix overrides the complexity-prescaler diagonal)
-    for cid in ("ptext:mapping:primes", "ptext:vectors:commas", "ptext:tuning:gens",
-                "ptext:vectors:targets", "ptext:prescaling:primes"):
-        assert cells[cid].kind == "ptextedit"
+    for cid in ("plain_text:mapping:primes", "plain_text:vectors:commas", "plain_text:tuning:gens",
+                "plain_text:vectors:targets", "plain_text:prescaling:primes"):
+        assert cells[cid].kind == "plain_text_edit"
     # every computed value stays read-only display text, not an editable box
-    for cid in ("ptext:mapping:targets", "ptext:mapping:commas", "ptext:tuning:primes",
-                "ptext:quantities:primes", "ptext:damage:targets",
-                "ptext:prescaling:commas"):  # 𝐿C is a computed product, not editable
-        assert cells[cid].kind == "ptext"
+    for cid in ("plain_text:mapping:targets", "plain_text:mapping:commas", "plain_text:tuning:primes",
+                "plain_text:quantities:primes", "plain_text:damage:targets",
+                "plain_text:prescaling:commas"):  # 𝐿C is a computed product, not editable
+        assert cells[cid].kind == "plain_text"
 
 
 def test_plain_text_values_are_a_single_line_within_their_column():
     cells = {c.id: c for c in _with(plain_text_values=True).cells}
     # every read-only value is one line tall and no wider than its column — the app
     # shrinks the font to fit, so a long tuning row never wraps or spills
-    long, header = cells["ptext:tuning:targets"], cells["header:targets"]
+    long, header = cells["plain_text:tuning:targets"], cells["header:targets"]
     assert long.h == spreadsheet_constants.PLAIN_TEXT_H  # one line, even for the longest size list...
     assert long.w == header.w  # ...spanning exactly its column, never wider
-    assert cells["ptext:just:targets"].h == spreadsheet_constants.PLAIN_TEXT_H
+    assert cells["plain_text:just:targets"].h == spreadsheet_constants.PLAIN_TEXT_H
     # the editable duals are one (slightly taller) input line
-    assert cells["ptext:mapping:primes"].h == spreadsheet_constants.PLAIN_TEXT_EDIT_H
+    assert cells["plain_text:mapping:primes"].h == spreadsheet_constants.PLAIN_TEXT_EDIT_H
 
 
 def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
@@ -2547,7 +2547,7 @@ def test_interval_vectors_domain_primes_identity_renders_with_identity_objects()
     assert cells["ebktop:vector:primes"].kind == "ebktop"
     assert cells["ebkangle:vector:primes"].kind == "ebkangle"  # the outer ⟩ foot (operator, not the } of M)
     assert cells["bracket:vector:primes:0:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
-    assert cells["ptext:vectors:primes"].text == "[⟨1 0 0]⟨0 1 0]⟨0 0 1]⟩"
+    assert cells["plain_text:vectors:primes"].text == "[⟨1 0 0]⟨0 1 0]⟨0 0 1]⟩"
 
 
 def test_interval_vectors_domain_primes_identity_gated_off_by_default():
@@ -2792,7 +2792,7 @@ def test_damage_row_has_no_commas_tile():
     assert "symbol:damage:commas" not in cells                   # no symbol slot
     assert {"bracket:damage:commalist:l", "bracket:damage:commalist:r"}.isdisjoint(cells)
     assert "toggle:tile:damage:commas" not in cells              # no fold toggle
-    assert "ptext:damage:commas" not in cells                    # no plain-text box
+    assert "plain_text:damage:commas" not in cells                    # no plain-text box
     assert "block:damage:commas" not in blocks                   # no grey panel
 
 
@@ -3300,7 +3300,7 @@ def test_prescaling_plain_text_shows_the_same_numbers_as_the_grid():
                               for i in range(d)) + vc
                 for c in range(ncols)]
         op, cl = outer[group]
-        assert cells[f"ptext:prescaling:{group}"].text == f"{op}{' '.join(vecs)}{cl}", group
+        assert cells[f"plain_text:prescaling:{group}"].text == f"{op}{' '.join(vecs)}{cl}", group
 
 
 def test_weighting_rows_show_their_units_line_when_units_on():
@@ -3361,8 +3361,8 @@ def test_damage_weight_and_complexity_units_track_the_tuning_scheme():
 
 def test_weighting_rows_render_a_plain_text_box_when_plain_text_on():
     cells = {c.id for c in _with("TILT minimax-S", weighting=True, plain_text_values=True, alt_complexity=True).cells}  # weighting reveals the complexity rows; alt. complexity reveals the prescaling rows
-    assert {"ptext:weight:targets", "ptext:complexity:primes", "ptext:complexity:targets",
-            "ptext:prescaling:primes"} <= cells
+    assert {"plain_text:weight:targets", "plain_text:complexity:primes", "plain_text:complexity:targets",
+            "plain_text:prescaling:primes"} <= cells
 
 
 def test_prescaling_row_sits_between_retuning_and_complexity():
@@ -4014,11 +4014,11 @@ def test_all_interval_target_list_plain_text_tracks_the_grid_identity():
     # REGRESSION: all-interval replaces the target list with Tₚ = 𝐈, and the grid shows the
     # identity — but the plain text re-resolved the named target set on its own and stayed stale
     # (byte-identical to the target-based list). Both views resolve the displayed targets through
-    # one seam now, so the ptext is the identity ket-list: one unit vector per domain prime.
+    # one seam now, so the plain_text is the identity ket-list: one unit vector per domain prime.
     allint = {c.id: c for c in _with(scheme="minimax-S", plain_text_values=True).cells}
     based = {c.id: c for c in _with(scheme="TILT minimax-S", plain_text_values=True).cells}
-    assert allint["ptext:vectors:targets"].text == "[[1 0 0⟩ [0 1 0⟩ [0 0 1⟩]"
-    assert allint["ptext:vectors:targets"].text != based["ptext:vectors:targets"].text
+    assert allint["plain_text:vectors:targets"].text == "[[1 0 0⟩ [0 1 0⟩ [0 0 1⟩]"
+    assert allint["plain_text:vectors:targets"].text != based["plain_text:vectors:targets"].text
 
 
 def test_all_interval_relabels_the_complexity_weight_and_damage_equivalences():
@@ -4629,16 +4629,16 @@ def test_the_pending_comma_greens_the_advanced_prescaling_matrix_draft_column():
 def test_the_comma_basis_plain_text_becomes_a_two_tone_draft_box_while_pending():
     # while a comma is pending the comma-basis plain text can't be a single-colour input
     # (it must show the committed commas black and the draft vector green), so it flips to a
-    # static two-tone "ptextpending" box; the mapping keeps its editable text box, and once
+    # static two-tone "plain_text_pending" box; the mapping keeps its editable text box, and once
     # there's no draft the comma basis returns to an editable box too.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["plain_text_values"] = True
     drafting = {c.id: c for c in spreadsheet.build(base, s, pending_comma=[None, None, None]).cells}
-    assert drafting["ptext:vectors:commas"].kind == "ptextpending"
-    assert drafting["ptext:mapping:primes"].kind == "ptextedit"  # the mapping is untouched
+    assert drafting["plain_text:vectors:commas"].kind == "plain_text_pending"
+    assert drafting["plain_text:mapping:primes"].kind == "plain_text_edit"  # the mapping is untouched
     resting = {c.id: c for c in spreadsheet.build(base, s).cells}
-    assert resting["ptext:vectors:commas"].kind == "ptextedit"  # no draft -> editable again
+    assert resting["plain_text:vectors:commas"].kind == "plain_text_edit"  # no draft -> editable again
 
 
 def test_adding_a_mapping_row_starts_a_pending_draft_row_that_does_not_re_rank():
@@ -4679,17 +4679,17 @@ def test_a_pending_mapping_row_grows_only_the_mapping_band_by_one_row():
 
 def test_the_mapping_plain_text_becomes_a_two_tone_draft_box_while_a_row_is_pending():
     # the ROW mirror of test_the_comma_basis_plain_text_...: while a generator row is pending, the
-    # mapping's editable plain-text box flips to a static two-tone "ptextpending" box (committed maps
+    # mapping's editable plain-text box flips to a static two-tone "plain_text_pending" box (committed maps
     # black, draft map green — a single-colour input can't do that); the comma basis keeps its
     # editable box, and once there's no draft the mapping returns to an editable box.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["plain_text_values"] = True
     drafting = {c.id: c for c in spreadsheet.build(base, s, pending_mapping_row=[None, None, None]).cells}
-    assert drafting["ptext:mapping:primes"].kind == "ptextpending"
-    assert drafting["ptext:vectors:commas"].kind == "ptextedit"  # the comma basis is untouched
+    assert drafting["plain_text:mapping:primes"].kind == "plain_text_pending"
+    assert drafting["plain_text:vectors:commas"].kind == "plain_text_edit"  # the comma basis is untouched
     resting = {c.id: c for c in spreadsheet.build(base, s).cells}
-    assert resting["ptext:mapping:primes"].kind == "ptextedit"  # no draft -> editable again
+    assert resting["plain_text:mapping:primes"].kind == "plain_text_edit"  # no draft -> editable again
 
 
 def test_the_mapped_list_brackets_grow_to_enclose_the_draft_rows_placeholders():
@@ -5306,11 +5306,11 @@ def test_populated_interest_renders_plain_text_for_all_its_value_tiles():
     s["plain_text_values"] = True
     cells = {c.id: c for c in spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), s, interest=_INTEREST).cells}
-    assert cells["ptext:vectors:interest"].text == "[-1 1 0⟩ [-3 2 0⟩ [1 -2 1⟩ [3 0 -1⟩"
-    assert cells["ptext:mapping:interest"].text == "[0 1} [-1 2} [-1 2} [3 -4}"
-    assert {"ptext:tuning:interest", "ptext:just:interest", "ptext:retune:interest"} <= set(cells)
+    assert cells["plain_text:vectors:interest"].text == "[-1 1 0⟩ [-3 2 0⟩ [1 -2 1⟩ [3 0 -1⟩"
+    assert cells["plain_text:mapping:interest"].text == "[0 1} [-1 2} [-1 2} [3 -4}"
+    assert {"plain_text:tuning:interest", "plain_text:just:interest", "plain_text:retune:interest"} <= set(cells)
     # the size rows' plain text is bare numbers too — no enclosing [ … ] (the whole column)
-    assert cells["ptext:just:interest"].text == "701.955 203.910 182.404 813.686"
+    assert cells["plain_text:just:interest"].text == "701.955 203.910 182.404 813.686"
 
 
 def test_decimals_off_rounds_every_value_to_the_nearest_integer():
@@ -5327,7 +5327,7 @@ def test_decimals_off_rounds_every_value_to_the_nearest_integer():
     assert off["just:interest:0"].text == "702"     # 701.955 → 702, rounded, no decimal point
     assert "." not in off["just:interest:0"].text
     # the plain-text EBK string rounds in lockstep, so the grid and the inline notation still match
-    assert off["ptext:just:interest"].text == "702 204 182 814"
+    assert off["plain_text:just:interest"].text == "702 204 182 814"
 
 
 def test_interest_intervals_are_editable_vectors_like_the_comma_basis():
@@ -5496,9 +5496,9 @@ def test_the_target_list_plain_text_becomes_a_two_tone_draft_box_while_pending()
     s = settings.defaults()
     s["plain_text_values"] = True
     drafting = {c.id: c for c in spreadsheet.build(base, s, pending_target=[None, None, None]).cells}
-    assert drafting["ptext:vectors:targets"].kind == "ptextpending"
+    assert drafting["plain_text:vectors:targets"].kind == "plain_text_pending"
     resting = {c.id: c for c in spreadsheet.build(base, s).cells}
-    assert resting["ptext:vectors:targets"].kind == "ptextedit"  # no draft -> editable again
+    assert resting["plain_text:vectors:targets"].kind == "plain_text_edit"  # no draft -> editable again
 
 
 def test_adding_intervals_of_interest_never_shrinks_the_header():
@@ -6414,7 +6414,7 @@ def test_a_target_override_retunes_the_generator_map():
 
 def test_target_interval_list_cells_and_plain_text_are_editable():
     cells = {c.id: c for c in _with(plain_text_values=True).cells}
-    assert cells["ptext:vectors:targets"].kind == "ptextedit"
+    assert cells["plain_text:vectors:targets"].kind == "plain_text_edit"
     assert cells["cell:vector:targets:0:0"].kind == "targetcell"
 
 
@@ -6422,16 +6422,16 @@ def test_all_interval_target_list_is_read_only():
     # in all-interval the target list is the auto Tₚ = 𝐈 identity (not user-curated), so it
     # carries NO editing affordance: the vector cells, the quantities-row ratio twin, and the
     # plain-text band all render as the read-only computed kinds the sibling detempering
-    # vectors/ratios use — never the editable targetcell / ratiocell / ptextedit. A target-based
+    # vectors/ratios use — never the editable targetcell / ratiocell / plain_text_edit. A target-based
     # scheme keeps every one of them editable.
     allint = {c.id: c for c in _with(scheme="minimax-S", plain_text_values=True).cells}
     based = {c.id: c for c in _with(scheme="TILT minimax-S", plain_text_values=True).cells}
     assert allint["cell:vector:targets:0:0"].kind == "vector"
     assert allint["target:0"].kind == "commaratio"
-    assert allint["ptext:vectors:targets"].kind == "ptext"
+    assert allint["plain_text:vectors:targets"].kind == "plain_text"
     assert based["cell:vector:targets:0:0"].kind == "targetcell"
     assert based["target:0"].kind == "ratiocell"
-    assert based["ptext:vectors:targets"].kind == "ptextedit"
+    assert based["plain_text:vectors:targets"].kind == "plain_text_edit"
 
 
 def test_editable_target_vector_cells_clear_the_column_separator():
@@ -6605,14 +6605,14 @@ def test_held_column_equivalences_show_the_held_just_identities():
 def test_held_column_shows_plain_text_values():
     on = _held(plain_text_values=True)
     # the held column's tiles get plain-text EBK boxes like every other value tile
-    assert on["ptext:vectors:held"].text == "[[-1 1 0⟩]"   # the held basis (vector list)
-    assert on["ptext:mapping:held"].text == "[[0 1}]"      # mapped into generator coords
-    assert "ptext:tuning:held" in on and "ptext:just:held" in on
+    assert on["plain_text:vectors:held"].text == "[[-1 1 0⟩]"   # the held basis (vector list)
+    assert on["plain_text:mapping:held"].text == "[[0 1}]"      # mapped into generator coords
+    assert "plain_text:tuning:held" in on and "plain_text:just:held" in on
     # held just ⇒ the retuning error vanishes
-    assert abs(float(on["ptext:retune:held"].text.strip("[]"))) < 1e-3
+    assert abs(float(on["plain_text:retune:held"].text.strip("[]"))) < 1e-3
     # the quantities tile (the ratio heading the column) emits NO plain text — the gridded
     # ratio already is the formatted value, so a duplicate line would be redundant
-    assert "ptext:quantities:held:0" not in on
+    assert "plain_text:quantities:held:0" not in on
 
 
 def test_held_column_has_the_full_interval_column_tile_set():
@@ -6672,7 +6672,7 @@ def test_mapped_generator_detempering_renders_with_identity_objects():
     assert cells["bracket:mapped_detempering:l"].text == spreadsheet_constants.GENMAP_BRACKETS[0]  # {
     assert cells["ebktop:mapped_detempering:0"].kind == "ebktop"
     assert cells["ebkbrace:mapped_detempering:0"].kind == "ebkbrace"  # the ket's } foot
-    assert cells["ptext:mapping:detempering"].text == "{[1 0} [0 1}]"
+    assert cells["plain_text:mapping:detempering"].text == "{[1 0} [0 1}]"
 
 
 def test_mapped_generator_detempering_gated_off_by_default():
@@ -6683,7 +6683,7 @@ def test_mapped_generator_detempering_gated_off_by_default():
                                  equivalences=True, plain_text_values=True).cells}
     assert not any("mapped_detempering" in c for c in cells)
     assert {"toggle:tile:mapping:detempering", "caption:mapping:detempering",
-            "symbol:mapping:detempering", "ptext:mapping:detempering"}.isdisjoint(cells)
+            "symbol:mapping:detempering", "plain_text:mapping:detempering"}.isdisjoint(cells)
     # only the identity tile is deferred — the detempering column itself stays (its header, the
     # D matrix in the interval-vectors row, and the tuning/just/… rows below it)
     assert {"header:detempering", "cell:vector:detempering:0:0"} <= cells
@@ -6726,10 +6726,10 @@ def test_generator_detempering_size_row_symbols():
 def test_generator_detempering_size_rows_plain_text():
     cells = {c.id: c for c in _with(generator_detempering=True, plain_text_values=True).cells}
     # the tuning row is the generator tuning map, so its plain text matches the genmap's ({ ])
-    assert cells["ptext:tuning:detempering"].text == cells["ptext:tuning:gens"].text
+    assert cells["plain_text:tuning:detempering"].text == cells["plain_text:tuning:gens"].text
     # just/retune are ordinary cents lists ([ ]); just sizes are the octave + fifth
-    assert cells["ptext:just:detempering"].text == "[1200.000 701.955]"
-    assert cells["ptext:retune:detempering"].text.startswith("[")
+    assert cells["plain_text:just:detempering"].text == "[1200.000 701.955]"
+    assert cells["plain_text:retune:detempering"].text.startswith("[")
 
 
 def test_generator_detempering_quantities_row_shows_the_generator_ratios():
@@ -6745,7 +6745,7 @@ def test_generator_detempering_quantities_emits_no_redundant_plain_text():
     # the detempering ratio heads the column in the gridded quantities row; a plain-text line
     # below it would just duplicate it, so none is emitted (like commas / targets / held)
     ids = {c.id for c in _with(generator_detempering=True, plain_text_values=True).cells}
-    assert not any(i.startswith("ptext:quantities:detempering") for i in ids)
+    assert not any(i.startswith("plain_text:quantities:detempering") for i in ids)
 
 
 def test_generator_detempering_prescaling_row_scales_each_vector():
@@ -6917,10 +6917,10 @@ def test_generator_tuning_map_gets_a_plain_text_value_band():
     # plain text values is on — the { … ] curly map string from the service
     st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     on = {c.id: c for c in _with(plain_text_values=True).cells}
-    assert "ptext:tuning:gens" in on
-    assert on["ptext:tuning:gens"].text == service.plain_text_values(
+    assert "plain_text:tuning:gens" in on
+    assert on["plain_text:tuning:gens"].text == service.plain_text_values(
         st, service.DEFAULT_DOCUMENT_SCHEME)[("tuning", "gens")]
-    assert on["ptext:tuning:gens"].text.startswith("{") and on["ptext:tuning:gens"].text.endswith("]")
+    assert on["plain_text:tuning:gens"].text.startswith("{") and on["plain_text:tuning:gens"].text.endswith("]")
 
 
 def test_tuning_ranges_on_adds_a_generator_tuning_range_chart_in_the_generators_column():
@@ -7809,13 +7809,13 @@ def test_canonical_mapping_row_carries_plain_text():
     cells = {c.id: c for c in spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
         held_vectors=[(-1, 1, 0)], interest=((1, -2, 1),)).cells}
-    assert cells["ptext:canon:primes"].text == "[⟨1 0 -4] ⟨0 1 4]}"   # 𝑀_C
-    assert cells["ptext:canon:gens"].text == "[{1 -1] {0 1]}"          # 𝐹
-    assert cells["ptext:canon:canongens"].text == "[{1 0] {0 1]}"      # 𝐹⁻¹𝐹 = 𝐼
-    assert cells["ptext:canon:detempering"].text == "{[1 0} [-1 1}]"   # 𝑀_C·D = 𝐹 (a vector list)
-    assert cells["ptext:canon:commas"].text == "[[0 0}]"               # 𝑀_C·C vanishes to O
-    assert cells["ptext:canon:held"].text == "[[-1 1}]"                # 𝑀_C·H
-    assert cells["ptext:canon:interest"].text == "[-3 2}"              # 𝑀_C·interest (stands alone)
+    assert cells["plain_text:canon:primes"].text == "[⟨1 0 -4] ⟨0 1 4]}"   # 𝑀_C
+    assert cells["plain_text:canon:gens"].text == "[{1 -1] {0 1]}"          # 𝐹
+    assert cells["plain_text:canon:canongens"].text == "[{1 0] {0 1]}"      # 𝐹⁻¹𝐹 = 𝐼
+    assert cells["plain_text:canon:detempering"].text == "{[1 0} [-1 1}]"   # 𝑀_C·D = 𝐹 (a vector list)
+    assert cells["plain_text:canon:commas"].text == "[[0 0}]"               # 𝑀_C·C vanishes to O
+    assert cells["plain_text:canon:held"].text == "[[-1 1}]"                # 𝑀_C·H
+    assert cells["plain_text:canon:interest"].text == "[-3 2}"              # 𝑀_C·interest (stands alone)
 
 
 def test_interest_is_a_top_level_toggle_after_the_tuning_tiles_group():
@@ -8532,11 +8532,11 @@ def test_superspace_projection_emits_a_plain_text_band():
     # plain_text_values on: P_L gets its own EBK string band under the tile, like M_L / M_jL / B_L and
     # the on-domain P — P_L was the sole matrix row missing one (PLAIN_TEXT_ROWS + plain_text_values parity).
     cells = {c.id for c in _barbados_projection(plain_text_values=True).cells}
-    assert "ptext:superspace_projection:superspace_primes" in cells
+    assert "plain_text:superspace_projection:superspace_primes" in cells
     # absent without the projection toggle: the superspace mapping's band shows, P_L's does not
     off = {c.id for c in _barbados_superspace(plain_text_values=True).cells}  # projection off
-    assert "ptext:superspace_mapping:superspace_primes" in off
-    assert "ptext:superspace_projection:superspace_primes" not in off
+    assert "plain_text:superspace_mapping:superspace_primes" in off
+    assert "plain_text:superspace_projection:superspace_primes" not in off
 
 
 def test_superspace_projection_every_tile_emits_a_plain_text_band():
@@ -8544,7 +8544,7 @@ def test_superspace_projection_every_tile_emits_a_plain_text_band():
     # plain_text_values is on — not just P_L, but the embedding G_L and each projected list.
     cells = {c.id for c in _barbados_projection(plain_text_values=True, generator_detempering=True).cells}
     for col in ["superspace_generators", "superspace_primes", "primes", "detempering", "commas", "targets"]:
-        assert f"ptext:superspace_projection:{col}" in cells, col
+        assert f"plain_text:superspace_projection:{col}" in cells, col
 
 
 def test_superspace_projection_caption_symbol_and_units_when_named():
@@ -8702,9 +8702,9 @@ def test_superspace_prescaler_interactivity_and_controls_shift_to_superspace_pri
     cells = {c.id: c for c in _barbados_prescaling().cells}
     # the bare prescaler's plain text stays editable — now in superspace-primes; the 𝐿·B_Ls plain text is
     # read-only, and reads ⟨[…⟩ …] (a matrix of kets like B_L), NOT the backwards bare-prescaler stack
-    assert cells["ptext:prescaling:superspace_primes"].kind == "ptextedit"
-    assert cells["ptext:prescaling:primes"].kind == "ptext"
-    assert cells["ptext:prescaling:primes"].text.startswith("⟨[") and cells["ptext:prescaling:primes"].text.endswith("]")
+    assert cells["plain_text:prescaling:superspace_primes"].kind == "plain_text_edit"
+    assert cells["plain_text:prescaling:primes"].kind == "plain_text"
+    assert cells["plain_text:prescaling:primes"].text.startswith("⟨[") and cells["plain_text:prescaling:primes"].text.endswith("]")
     # 𝐿·B_Ls is a matrix of kets, so it takes COLUMN headers (one per domain element, like B_L),
     # NOT the bare prescaler's row headers; the bare prescaler (superspace-primes) keeps its dL row headers
     assert sum(1 for i in cells if i.startswith("matlabel:row:prescaling:primes:")) == 0
@@ -8770,8 +8770,8 @@ def test_prime_based_shifts_generator_editing_to_superspace():
     prime = {c.id: c for c in spreadsheet.build(state, s, nonprime_approach="prime-based").cells}
     assert {prime[i].kind for i in prime if i.startswith("tuning:gen:")} == {"tuningvalue"}      # 𝒈 read-only
     assert {prime[i].kind for i in prime if i.startswith("tuning:superspace_generator:")} == {"gentuningcell"}  # 𝒈L editable
-    assert prime["ptext:tuning:gens"].kind == "ptext"
-    assert prime["ptext:tuning:superspace_generators"].kind == "ptextedit"
+    assert prime["plain_text:tuning:gens"].kind == "plain_text"
+    assert prime["plain_text:tuning:superspace_generators"].kind == "plain_text_edit"
     assert "preset:tuning:superspace_generators" in prime  # the tuning-scheme chooser copy follows to 𝒈L
     # neutral: no generator shift — 𝒈 stays editable, 𝒈L read-only
     neutral = {c.id: c for c in spreadsheet.build(state, s, nonprime_approach="").cells}
@@ -9130,7 +9130,7 @@ def test_B_L_tile_has_a_plain_text_string():
     # B_L for BARBADOS over 2.3.13/5 → ((1,0,0,0), (0,1,0,0), (0,0,-1,1)). The basis change
     # matrix wraps its domain-element kets in an OUTER ⟨ … ] (the mockup's distinct bracket,
     # setting it apart from the plain [ … ] lifted lists C_L / T_L)
-    assert cells["ptext:superspace_vectors:primes"].text == "⟨[1 0 0 0⟩ [0 1 0 0⟩ [0 0 -1 1⟩]"
+    assert cells["plain_text:superspace_vectors:primes"].text == "⟨[1 0 0 0⟩ [0 1 0 0⟩ [0 0 -1 1⟩]"
 
 
 def test_M_L_tile_has_a_plain_text_string():
@@ -9138,14 +9138,14 @@ def test_M_L_tile_has_a_plain_text_string():
     # the mapping-style stack "[⟨…]⟨…]⟨…]}" — same shape the existing M's plain-text uses
     ml = service.superspace_mapping(_barbados_state())
     expected = "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "}"
-    assert cells["ptext:superspace_mapping:superspace_primes"].text == expected
+    assert cells["plain_text:superspace_mapping:superspace_primes"].text == expected
 
 
 def test_M_jL_tile_has_a_plain_text_string():
     cells = {c.id: c for c in _barbados_superspace_identity(plain_text_values=True).cells}
     # the dL × dL identity — a covector stack closing with the angle ⟩ (the b/b JI mapping is an
     # operator, like P_L), NOT the mapping's }
-    assert cells["ptext:superspace_vectors:superspace_primes"].text == (
+    assert cells["plain_text:superspace_vectors:superspace_primes"].text == (
         "[⟨1 0 0 0]⟨0 1 0 0]⟨0 0 1 0]⟨0 0 0 1]⟩")
 
 
@@ -9154,21 +9154,21 @@ def test_cyan_superspace_tuning_tiles_have_plain_text_strings():
     tuning_map = _barbados_superspace_tuning()
     # 𝒈ₗ — genmap shape "{ … ]"
     expected_g = "{" + " ".join(service.cents(v) for v in tuning_map.generator_map) + "]"
-    assert cells["ptext:tuning:superspace_generators"].text == expected_g
+    assert cells["plain_text:tuning:superspace_generators"].text == expected_g
     # 𝒕ₗ / 𝒋ₗ / 𝒓ₗ — map shape "⟨ … ]"
     for row_key, values in (("tuning", tuning_map.tuning_map), ("just", tuning_map.just_map),
                             ("retune", tuning_map.retuning_map)):
         expected = "⟨" + " ".join(service.cents(v) for v in values) + "]"
-        assert cells[f"ptext:{row_key}:superspace_primes"].text == expected
+        assert cells[f"plain_text:{row_key}:superspace_primes"].text == expected
 
 
 def test_superspace_plain_text_off_when_nonstandard_domain_off():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     s = settings.defaults() | {"plain_text_values": True}  # nonstandard_domain off
     cids = {c.id for c in spreadsheet.build(state, s).cells}
-    for new in ("ptext:superspace_vectors:primes", "ptext:superspace_mapping:superspace_primes",
-                "ptext:superspace_vectors:superspace_primes", "ptext:tuning:superspace_generators",
-                "ptext:tuning:superspace_primes", "ptext:just:superspace_primes", "ptext:retune:superspace_primes"):
+    for new in ("plain_text:superspace_vectors:primes", "plain_text:superspace_mapping:superspace_primes",
+                "plain_text:superspace_vectors:superspace_primes", "plain_text:tuning:superspace_generators",
+                "plain_text:tuning:superspace_primes", "plain_text:just:superspace_primes", "plain_text:retune:superspace_primes"):
         assert new not in cids
 
 
@@ -9391,9 +9391,9 @@ def test_superspace_matrix_plain_text_stays_within_its_tile():
     # the M_L / M_jL / B_L plain-text EBK strings reserve band height (PLAIN_TEXT_ROWS), so they sit
     # inside the tile instead of spilling into the row below (the issue-2 plain-text fix)
     cells = {c.id: c for c in _barbados_superspace(symbols=True, plain_text_values=True, identity_objects=True).cells}
-    ptext = cells["ptext:superspace_mapping:superspace_primes"]
+    plain_text = cells["plain_text:superspace_mapping:superspace_primes"]
     next_label = cells["label:tuning"]
-    assert ptext.y + ptext.h <= next_label.y     # the plain text clears the next row's band
+    assert plain_text.y + plain_text.h <= next_label.y     # the plain text clears the next row's band
 
 
 def test_nonstandard_domain_uses_b_throughout_the_basis_column_not_just_units():
@@ -9721,20 +9721,20 @@ def test_projection_p_and_g_carry_full_chrome_and_editable_plain_text():
     assert cells["units:projection:gens"].text == "units: p/g"
     assert cells["matlabel:row:projection:primes:0"].text == "𝒑₁"   # P's covector rows
     assert cells["matlabel:col:projection:gens:0"].text == "𝐠₁"     # G's vector columns
-    # the gridded cells are read-only; editing is via the plain-text bands (kind "ptextedit")
+    # the gridded cells are read-only; editing is via the plain-text bands (kind "plain_text_edit")
     assert cells["cell:projection:0:0"].kind == "mapped" and cells["cell:embed:0:0"].kind == "mapped"
-    assert cells["ptext:projection:primes"].kind == "ptextedit"
-    assert cells["ptext:projection:gens"].kind == "ptextedit"
-    assert cells["ptext:projection:primes"].text == "[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩"
-    assert cells["ptext:projection:gens"].text == "{[1 0 0⟩ [0 0 1/4⟩]"
+    assert cells["plain_text:projection:primes"].kind == "plain_text_edit"
+    assert cells["plain_text:projection:gens"].kind == "plain_text_edit"
+    assert cells["plain_text:projection:primes"].text == "[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩"
+    assert cells["plain_text:projection:gens"].text == "{[1 0 0⟩ [0 0 1/4⟩]"
 
 
 def test_projection_plain_text_bands_dash_when_under_held():
     # under-held (the default), P/G aren't a full rational projection, so the bands dash in lockstep
     # with the grid cells
     cells = {c.id: c for c in _projection_build(plain_text_values=True).cells}
-    assert cells["ptext:projection:primes"].text == "[⟨— — —]⟨— — —]⟨— — —]⟩"
-    assert cells["ptext:projection:gens"].text == "{[— — —⟩ [— — —⟩]"
+    assert cells["plain_text:projection:primes"].text == "[⟨— — —]⟨— — —]⟨— — —]⟩"
+    assert cells["plain_text:projection:gens"].text == "{[— — —⟩ [— — —⟩]"
 
 
 def _projection_full(**overrides):
@@ -9858,8 +9858,8 @@ def test_projection_column_tiles_carry_plain_text_bands():
     # the EBK strings under each projected tile: P·D the embedding form { … ], P·T a ket list [ … ]
     cells = {c.id: c for c in _projection_build(("2/1", "5/4"), generator_detempering=True,
                                           plain_text_values=True).cells}
-    assert cells["ptext:projection:detempering"].text == "{[1 0 0⟩ [0 0 1/4⟩]"
-    assert cells["ptext:projection:targets"].text == (
+    assert cells["plain_text:projection:detempering"].text == "{[1 0 0⟩ [0 0 1/4⟩]"
+    assert cells["plain_text:projection:targets"].text == (
         "[[1 0 0⟩ [1 0 1/4⟩ [0 0 1/4⟩ [1 0 -1/4⟩ [-1 0 1⟩ [-1 0 3/4⟩ [-2 0 1⟩ [2 0 -3/4⟩]")
 
 
@@ -10290,7 +10290,7 @@ def test_projected_unrotated_vector_list_tile_is_complete():
     assert cells["symbol:projection:commas"].text == "𝑃V"      # P·V (= V·diag(λ)); italic 𝑃 operator
     assert cells["units:projection:commas"].text == "units: p"  # prime-count vectors, like V
     # the plain text shows the WHOLE column V = C|U: P·𝐜 = 𝟎 (commas vanish) then P·𝐮 = 𝐮 (held)
-    assert cells["ptext:projection:commas"].text == "[[0 0 0⟩ [1 0 0⟩ [-2 0 1⟩]"
+    assert cells["plain_text:projection:commas"].text == "[[0 0 0⟩ [1 0 0⟩ [-2 0 1⟩]"
 
 
 def test_consolidated_v_column_reads_green():
@@ -10310,17 +10310,17 @@ def test_v_column_plain_text_shows_both_the_comma_and_unchanged_halves():
     # the inline plain text matches the grid for the WHOLE consolidated V = C|U — not just C. Every
     # value tile appends the unchanged half U (here 2/1, 5/4 under a full rational hold).
     cells = {c.id: c for c in _projection_build(("2/1", "5/4"), plain_text_values=True, weighting=True).cells}
-    assert cells["ptext:vectors:commas"].text == "[[4 -4 1⟩ [1 0 0⟩ [-2 0 1⟩]"   # C | U vectors
-    assert cells["ptext:mapping:commas"].text == "[[0 0} [1 0} [-2 4}]"           # M·C=0 | M·U
-    assert cells["ptext:tuning:commas"].text == "[0.000 1200.000 386.314]"        # comma | unchanged sizes
-    assert cells["ptext:scaling_factors:commas"].text == "[0 1 1]"                # λ over C|U
+    assert cells["plain_text:vectors:commas"].text == "[[4 -4 1⟩ [1 0 0⟩ [-2 0 1⟩]"   # C | U vectors
+    assert cells["plain_text:mapping:commas"].text == "[[0 0} [1 0} [-2 4}]"           # M·C=0 | M·U
+    assert cells["plain_text:tuning:commas"].text == "[0.000 1200.000 386.314]"        # comma | unchanged sizes
+    assert cells["plain_text:scaling_factors:commas"].text == "[0 1 1]"                # λ over C|U
     # under-held, the unchanged half dashes out in the plain text exactly as in the grid
     dashed = {c.id: c for c in _projection_build(plain_text_values=True).cells}
-    assert dashed["ptext:vectors:commas"].text == "[[4 -4 1⟩ [— — —⟩ [— — —⟩]"
-    assert dashed["ptext:tuning:commas"].text == "[0.000 — —]"
+    assert dashed["plain_text:vectors:commas"].text == "[[4 -4 1⟩ [— — —⟩ [— — —⟩]"
+    assert dashed["plain_text:tuning:commas"].text == "[0.000 — —]"
     # OFF projection the column is just C again (no consolidation, no U) — regression guard
     off = {c.id: c for c in _with(plain_text_values=True).cells}
-    assert off["ptext:vectors:commas"].text == "[[4 -4 1⟩]"
+    assert off["plain_text:vectors:commas"].text == "[[4 -4 1⟩]"
 
 
 def test_no_scaling_factors_or_unchanged_columns_without_projection():
@@ -10395,8 +10395,8 @@ def test_v_column_unchanged_basis_follows_the_held_basis():
 
 
 def _assert_plain_text_cells_match(lay, pt):
-    # every rendered ptext band cell carries exactly the string the direct derivation gives
-    plain_text_cells = [c for c in lay.cells if c.id.startswith("ptext:")]
+    # every rendered plain_text band cell carries exactly the string the direct derivation gives
+    plain_text_cells = [c for c in lay.cells if c.id.startswith("plain_text:")]
     assert len(plain_text_cells) >= 8  # the band is actually on, so the loop below isn't vacuous
     for c in plain_text_cells:
         _, row_key, column_key = c.id.split(":")

@@ -20,7 +20,7 @@ def register_display_kinds(cell_kinds) -> None:
     cell_kinds["units"] = _KindHandlers(display.build_units, display.update_mathcell)
     cell_kinds["caption"] = _KindHandlers(display.build_caption, display.update_caption)
 
-    cell_kinds["ptextpending"] = _KindHandlers(
+    cell_kinds["plain_text_pending"] = _KindHandlers(
         display.build_plain_text_pending, display.update_plain_text_pending
     )
     cell_kinds["mathexpr"] = _KindHandlers(display.build_mathexpr, display.update_mathexpr)
@@ -40,7 +40,7 @@ def register_value_kinds(cell_kinds) -> None:
         value.build_gentuningcell, value.update_gentuningcell
     )
 
-    cell_kinds["ptextedit"] = _KindHandlers(
+    cell_kinds["plain_text_edit"] = _KindHandlers(
         value.build_plain_text_edit, value.update_plain_text_edit
     )
 
@@ -58,7 +58,9 @@ def register_label_kinds(cell_kinds) -> None:
         value.label_builder("rtt-colheader"), value.update_label
     )
     cell_kinds["rowlabel"] = _KindHandlers(value.label_builder("rtt-rowlabel"), value.update_label)
-    cell_kinds["ptext"] = _KindHandlers(value.label_builder("rtt-ptext"), value.update_plain_text)
+    cell_kinds["plain_text"] = _KindHandlers(
+        value.label_builder("rtt-plain-text"), value.update_plain_text
+    )
     cell_kinds["transpose"] = _KindHandlers(
         value.label_builder("rtt-transpose"), value.update_label
     )

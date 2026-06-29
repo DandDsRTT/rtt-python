@@ -284,7 +284,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    numeric inherits, so naming the value containers covers their nested faces (the stacked/frac/dec
    parts, the per-value unit, the zoom clone — itself a .rtt-cell). The few SVG range labels carry
    .rtt-rangelabel directly. */
-.rtt-cell, .rtt-value, .rtt-count, .rtt-matlabel, .rtt-symbol, .rtt-ptext, .rtt-ptextedit,
+.rtt-cell, .rtt-value, .rtt-count, .rtt-matlabel, .rtt-symbol, .rtt-plain-text, .rtt-plain-text-edit,
 .rtt-ratio, .rtt-frac, .rtt-stacked-main, .rtt-stacked-sub, .rtt-rangelabel, .rtt-preset-num,
 .rtt-caption, .rtt-ex-cell {
   font-variant-numeric: tabular-nums lining-nums;
@@ -328,20 +328,20 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-count { font-size:15px; color:#000; white-space:nowrap; }
 /* a read-only plain-text value: serif text on ONE line, no box. Its font-size is set
    inline per box (shrunk to fit its column), so a long value never wraps or spills. */
-.rtt-ptext { width:100%; text-align:center; color:#000; white-space:nowrap; line-height:1;
+.rtt-plain-text { width:100%; text-align:center; color:#000; white-space:nowrap; line-height:1;
              font-family:var(--rtt-serif); }
 /* the two editable duals (mapping, comma basis): a white bordered input filling its
-   cell; an unparseable entry turns the border red (rtt-ptext-error) and is not applied.
+   cell; an unparseable entry turns the border red (rtt-plain-text-error) and is not applied.
    Its font-size is set inline per box too, so the value stays on one line. */
-.rtt-ptextedit { width:100%; height:100%; }
-.rtt-ptextedit .q-field__control { min-height:0 !important; height:100%;
+.rtt-plain-text-edit { width:100%; height:100%; }
+.rtt-plain-text-edit .q-field__control { min-height:0 !important; height:100%;
             background:#fff; border:1px solid #8a8a8a; border-radius:2px; padding:0 3px; }
-.rtt-ptextedit .q-field__control::before, .rtt-ptextedit .q-field__control::after { display:none !important; }
-.rtt-ptextedit .q-field__native { color:#000; min-height:0 !important; padding:0; text-align:center;
-            line-height:var(--ptext-edit-h); white-space:nowrap; font-size:inherit !important;
+.rtt-plain-text-edit .q-field__control::before, .rtt-plain-text-edit .q-field__control::after { display:none !important; }
+.rtt-plain-text-edit .q-field__native { color:#000; min-height:0 !important; padding:0; text-align:center;
+            line-height:var(--plain-text-edit-h); white-space:nowrap; font-size:inherit !important;
             font-family:var(--rtt-serif); }
-.rtt-ptextedit .q-field__marginal, .rtt-ptextedit .q-field__bottom { display:none !important; }
-.rtt-ptextedit.rtt-ptext-error .q-field__control { border-color:#d33; }
+.rtt-plain-text-edit .q-field__marginal, .rtt-plain-text-edit .q-field__bottom { display:none !important; }
+.rtt-plain-text-edit.rtt-plain-text-error .q-field__control { border-color:#d33; }
 /* the quantity symbol above the caption: _math_html renders the base letter in the
    UI serif with explicit weight/slant (bold-italic for maps, bold-upright for
    vectors/matrices) — not a maths-font glyph, whose styling font fallback dropped */
@@ -805,7 +805,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the comma basis plain text while a comma is pending: not an editable input (which is
    one colour) but a static box matching the input's frame, holding the committed commas
    in black and the red draft vector — you edit the draft in the red grid cells */
-.rtt-ptextpending { width:100%; height:100%; box-sizing:border-box; display:flex;
+.rtt-plain-text-pending { width:100%; height:100%; box-sizing:border-box; display:flex;
             align-items:center; justify-content:center; background:#fff; border:1px solid #8a8a8a;
             border-radius:2px; padding:0 3px; color:#000; white-space:nowrap; overflow:hidden;
             font-family:var(--rtt-serif); }

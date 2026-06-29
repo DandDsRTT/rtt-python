@@ -40,7 +40,7 @@ _INTERACTIVE_KINDS = [
     ("targetcell", "cell:target:0:0"),
     ("prescalercell", "cell:prescaling:primes:0:0"),
     ("gentuningcell", "cell:tuning:gens:0"),
-    ("ptextedit", "ptext:mapping:primes"),
+    ("plain_text_edit", "plain_text:mapping:primes"),
     ("rangemode", "rangemode:tuning:gens"),
     ("minus", "minus:2"),
     ("plus", "plus"),
@@ -86,11 +86,11 @@ _DISAMBIGUATED = [
     ("preset", "preset:prescaler"),
     ("preset", "preset:tuning:gens"),         # a copied chooser in a second tile
     ("preset", "preset:temperament:commas"),
-    ("ptextedit", "ptext:mapping:primes"),
-    ("ptextedit", "ptext:vectors:commas"),
-    ("ptextedit", "ptext:tuning:gens"),
-    ("ptextedit", "ptext:vectors:targets"),
-    ("ptextedit", "ptext:prescaling:primes"),
+    ("plain_text_edit", "plain_text:mapping:primes"),
+    ("plain_text_edit", "plain_text:vectors:commas"),
+    ("plain_text_edit", "plain_text:tuning:gens"),
+    ("plain_text_edit", "plain_text:vectors:targets"),
+    ("plain_text_edit", "plain_text:prescaling:primes"),
     ("element_minus", "element_minus:1"),             # the per-element domain remove (quantities axis)
     ("element_minus", "element_minus:basis:2"),       # ...and its interval-vectors spine twin
     ("element_minus", "element_minus:pending"),       # the ?/? draft's cancel (quantities axis)
@@ -164,8 +164,8 @@ def test_target_limit_help_distinguishes_the_two_errors():
 def test_every_editable_dual_has_a_distinct_tooltip():
     # the editable plain-text duals are exactly EDITABLE_PLAIN_TEXT (the layout's source of truth);
     # each must carry its own hover text so no editable value is left unexplained
-    ids = [f"ptext:{row_key}:{column_key}" for row_key, column_key in grid_tables.EDITABLE_PLAIN_TEXT]
-    texts = [tooltips.control_help("ptextedit", cid) for cid in ids]
+    ids = [f"plain_text:{row_key}:{column_key}" for row_key, column_key in grid_tables.EDITABLE_PLAIN_TEXT]
+    texts = [tooltips.control_help("plain_text_edit", cid) for cid in ids]
     assert all((t or "").strip() for t in texts)
     assert len(set(texts)) == len(ids)
 
@@ -290,9 +290,9 @@ def test_pretransform_relabels_the_prescaler_help_to_pretransformer():
     preset_pt = tooltips.control_help("preset", "preset:prescaler", pretransform=True)
     assert "pretransformer" in preset_pt and "prescaler" not in preset_pt
     # the prescaler plain-text dual editor's hover relabels too (it also names the prescaler)
-    assert "prescaler" in tooltips.control_help("ptextedit", "ptext:prescaling:primes")
+    assert "prescaler" in tooltips.control_help("plain_text_edit", "plain_text:prescaling:primes")
     assert "pretransformer" in tooltips.control_help(
-        "ptextedit", "ptext:prescaling:primes", pretransform=True)
+        "plain_text_edit", "plain_text:prescaling:primes", pretransform=True)
     # the 𝑋 tile guide card
     plain = tooltips.tile_guide_help_for_cell("caption:prescaling:primes")
     pretransformed = tooltips.tile_guide_help_for_cell("caption:prescaling:primes", pretransform=True)

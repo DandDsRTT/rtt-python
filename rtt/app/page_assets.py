@@ -344,7 +344,7 @@ _CSS_VARS = f""":root {{
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
   --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT};
   --label-w:{spreadsheet_constants.LABEL_W}px; --header-h:{spreadsheet_constants.HEADER_H}px; --line-w:{spreadsheet_constants.LINE_W}px;
-  --ptext-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_H}px; --option-box:{spreadsheet_constants.OPTION_BOX_PX}px; --button:{spreadsheet_constants.BUTTON}px;
+  --plain-text-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_H}px; --option-box:{spreadsheet_constants.OPTION_BOX_PX}px; --button:{spreadsheet_constants.BUTTON}px;
   --option-box-unchecked:url("{_option_box_svg(None)}");
   --option-box-checked:url("{_option_box_svg("#000")}");
   --option-box-disabled:url("{_option_box_svg("#888")}");
@@ -400,12 +400,12 @@ _EBK_SQUARE = str.maketrans("⟨{⟩}", "[[]]")
 _TRANSPOSE_MARK = "ᵀ"
 
 _PLAIN_TEXT_DUAL_VECTOR_KIND = {
-    "ptext:vectors:commas": True,
-    "ptext:vectors:targets": True,
-    "ptext:projection:gens": True,
-    "ptext:mapping:primes": False,
-    "ptext:projection:primes": False,
-    "ptext:prescaling:primes": False,
+    "plain_text:vectors:commas": True,
+    "plain_text:vectors:targets": True,
+    "plain_text:projection:gens": True,
+    "plain_text:mapping:primes": False,
+    "plain_text:projection:primes": False,
+    "plain_text:prescaling:primes": False,
 }
 
 
