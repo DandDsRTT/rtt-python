@@ -152,8 +152,8 @@ PARAM_REACH = (
     "class _Reconciler:\n"
     "    def __init__(self, editor):\n"
     "        self._editor = editor\n"
-    "def make_cell(rec, cid):\n"
-    "    return rec._editor.state + rec._editor.scheme\n"
+    "def make_cell(reconciler, cid):\n"
+    "    return reconciler._editor.state + reconciler._editor.scheme\n"
 )
 
 
@@ -164,8 +164,8 @@ PARAM_BARE_OWN = (
     "class _Reconciler:\n"
     "    def __init__(self, editor):\n"
     "        self._editor = editor\n"
-    "def g(rec):\n"
-    "    return rec.gesture\n"
+    "def g(reconciler):\n"
+    "    return reconciler.gesture\n"
 )
 
 
@@ -173,8 +173,8 @@ PARAM_ALIAS = (
     "class _Reconciler:\n"
     "    def __init__(self, editor):\n"
     "        self._editor = editor\n"
-    "def make_cell(rec, cid):\n"
-    "    ed = rec._editor\n"
+    "def make_cell(reconciler, cid):\n"
+    "    ed = reconciler._editor\n"
     "    return ed.state + ed.scheme\n"
 )
 

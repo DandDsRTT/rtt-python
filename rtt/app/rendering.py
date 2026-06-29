@@ -43,14 +43,14 @@ class Renderer:
     def __init__(
         self,
         editor: Editor,
-        rec: _Reconciler,
+        reconciler: _Reconciler,
         gestures: GestureController,
         chrome: PageChrome,
         runtime: PageRuntime,
         sync_show_availability: Callable[[], None],
     ) -> None:
         self._editor = editor
-        self._rec = rec
+        self._rec = reconciler
         self._gestures = gestures
         self._chrome = chrome
         self._runtime = runtime

@@ -61,9 +61,9 @@ class TestWebGestures:
 
     def test_bind_wires_the_sibling_controllers_after_construction(self):
         g = GestureController(_editor(), SimpleNamespace())
-        rec, renderer, edits = object(), object(), object()
-        g.bind(rec, renderer, edits)
-        assert g._rec is rec
+        reconciler, renderer, edits = object(), object(), object()
+        g.bind(reconciler, renderer, edits)
+        assert g._rec is reconciler
         assert g._renderer is renderer
         assert g._edits is edits
 
@@ -88,12 +88,12 @@ class TestWebGestures:
 
     def test_paint_cell_adds_amber_ring_and_records_signature(self):
         el = _FakeEl()
-        rec = _FakeRec({"x": _FakeEntity(el)})
+        reconciler = _FakeRec({"x": _FakeEntity(el)})
         g = GestureController(_editor(), SimpleNamespace())
-        g.bind(rec, None, None)
+        g.bind(reconciler, None, None)
         g.paint_cell("x", frozenset({"x"}), frozenset())
         assert "rtt-preview-change" in el.added
-        assert rec.entities["x"].ring_sig == (True, False)
+        assert reconciler.entities["x"].ring_sig == (True, False)
 
     def test_paint_cell_is_a_noop_when_signature_unchanged(self):
         el = _FakeEl()

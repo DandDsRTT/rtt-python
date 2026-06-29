@@ -5,28 +5,28 @@ from rtt.app import settings as show_settings
 from rtt.app.page_assets import _STORE_KEY, _TILE_HOST, _doc_store
 
 
-def sync_mean_damage_tips(rec, editor) -> None:
+def sync_mean_damage_tips(reconciler, editor) -> None:
     mean_damage_help_text = tooltips.mean_damage_help(service.is_all_interval(editor.tuning_scheme))
     for cid in tooltips.MEAN_DAMAGE_IDS:
-        if rec.handles(cid).mean_damage_tip is not None:
-            rec.cells[cid].mean_damage_tip.set_text(mean_damage_help_text)
+        if reconciler.handles(cid).mean_damage_tip is not None:
+            reconciler.cells[cid].mean_damage_tip.set_text(mean_damage_help_text)
             continue
-        wrap = rec.entity(cid).el
+        wrap = reconciler.entity(cid).el
         if wrap is not None and wrap._props.get("data-zoomhelp") != mean_damage_help_text:
             wrap._props["data-zoomhelp"] = mean_damage_help_text
             wrap.update()
 
 
-def sync_pretransform_help(rec, pretransform: bool) -> None:
-    for height in rec.cells.values():
+def sync_pretransform_help(reconciler, pretransform: bool) -> None:
+    for height in reconciler.cells.values():
         if height.help_tip is not None:
             tip, plain, relabeled = height.help_tip
             tip.set_text(relabeled if pretransform else plain)
-    for cid, height in rec.cells.items():
+    for cid, height in reconciler.cells.items():
         if height.guide_help_text is None:
             continue
         plain, relabeled = height.guide_help_text
-        wrap = rec.entity(cid).el
+        wrap = reconciler.entity(cid).el
         text = relabeled if pretransform else plain
         if wrap is not None and wrap._props.get("data-guide-text") != text:
             wrap._props["data-guide-text"] = text

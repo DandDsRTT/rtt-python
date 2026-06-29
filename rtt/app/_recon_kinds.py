@@ -5,6 +5,7 @@ from rtt.app import _recon_choosers as choosers
 from rtt.app import _recon_display as display
 from rtt.app import _recon_drag as drag
 from rtt.app import _recon_value as value
+from rtt.app import _recon_value_kinds as value_kinds
 from rtt.app.page_assets import _EBK_SVG_KINDS, GRIDVALUE_KINDS, _KindHandlers
 
 
@@ -31,40 +32,50 @@ def register_value_kinds(cell_kinds) -> None:
     for _gv_kind in GRIDVALUE_KINDS:
         cell_kinds[_gv_kind] = _gridvalue
     cell_kinds["prescalercell"] = _KindHandlers(
-        value.build_prescalercell, value.update_prescalercell
+        value_kinds.build_prescalercell, value_kinds.update_prescalercell
     )
-    cell_kinds["weightcell"] = _KindHandlers(value.build_weightcell, value.update_weightcell)
-    cell_kinds["powerinput"] = _KindHandlers(value.build_powerinput, value.update_powerinput)
-    cell_kinds["powerdisplay"] = _KindHandlers(value.build_powerdisplay, value.update_powerdisplay)
+    cell_kinds["weightcell"] = _KindHandlers(
+        value_kinds.build_weightcell, value_kinds.update_weightcell
+    )
+    cell_kinds["powerinput"] = _KindHandlers(
+        value_kinds.build_powerinput, value_kinds.update_powerinput
+    )
+    cell_kinds["powerdisplay"] = _KindHandlers(
+        value_kinds.build_powerdisplay, value_kinds.update_powerdisplay
+    )
     cell_kinds["gentuningcell"] = _KindHandlers(
-        value.build_gentuningcell, value.update_gentuningcell
+        value_kinds.build_gentuningcell, value_kinds.update_gentuningcell
     )
 
     cell_kinds["plain_text_edit"] = _KindHandlers(
-        value.build_plain_text_edit, value.update_plain_text_edit
+        value_kinds.build_plain_text_edit, value_kinds.update_plain_text_edit
     )
 
-    cell_kinds["genratio"] = _KindHandlers(value.build_genratio, value.update_ratio)
-    cell_kinds["commaratio"] = _KindHandlers(value.build_commaratio, value.update_ratio)
-    cell_kinds["tuningvalue"] = _KindHandlers(value.build_tuning_value, value.update_tuning_value)
+    cell_kinds["genratio"] = _KindHandlers(value_kinds.build_genratio, value_kinds.update_ratio)
+    cell_kinds["commaratio"] = _KindHandlers(value_kinds.build_commaratio, value_kinds.update_ratio)
+    cell_kinds["tuningvalue"] = _KindHandlers(
+        value_kinds.build_tuning_value, value_kinds.update_tuning_value
+    )
 
 
 def register_label_kinds(cell_kinds) -> None:
-    _value_builder = value.label_builder("rtt-value")
-    cell_kinds["prime"] = _KindHandlers(_value_builder, value.update_label)
-    cell_kinds["mapped"] = _KindHandlers(value.build_mapped, value.update_ratio)
-    cell_kinds["vector"] = _KindHandlers(_value_builder, value.update_label)
+    _value_builder = value_kinds.label_builder("rtt-value")
+    cell_kinds["prime"] = _KindHandlers(_value_builder, value_kinds.update_label)
+    cell_kinds["mapped"] = _KindHandlers(value_kinds.build_mapped, value_kinds.update_ratio)
+    cell_kinds["vector"] = _KindHandlers(_value_builder, value_kinds.update_label)
     cell_kinds["colheader"] = _KindHandlers(
-        value.label_builder("rtt-colheader"), value.update_label
+        value_kinds.label_builder("rtt-colheader"), value_kinds.update_label
     )
-    cell_kinds["rowlabel"] = _KindHandlers(value.label_builder("rtt-rowlabel"), value.update_label)
+    cell_kinds["rowlabel"] = _KindHandlers(
+        value_kinds.label_builder("rtt-rowlabel"), value_kinds.update_label
+    )
     cell_kinds["plain_text"] = _KindHandlers(
-        value.label_builder("rtt-plain-text"), value.update_plain_text
+        value_kinds.label_builder("rtt-plain-text"), value_kinds.update_plain_text
     )
     cell_kinds["transpose"] = _KindHandlers(
-        value.label_builder("rtt-transpose"), value.update_label
+        value_kinds.label_builder("rtt-transpose"), value_kinds.update_label
     )
-    cell_kinds["boxtitle"] = _KindHandlers(value.label_builder("rtt-boxtitle"), None)
+    cell_kinds["boxtitle"] = _KindHandlers(value_kinds.label_builder("rtt-boxtitle"), None)
 
 
 def register_control_kinds(cell_kinds) -> None:

@@ -19,13 +19,13 @@ class EditController:
     def __init__(
         self,
         editor: Editor,
-        rec: _Reconciler,
+        reconciler: _Reconciler,
         gestures: GestureController,
         renderer: Renderer,
         runtime: PageRuntime,
     ) -> None:
         self._editor = editor
-        self._rec = rec
+        self._rec = reconciler
         self._gestures = gestures
         self._renderer = renderer
         self._runtime = runtime
