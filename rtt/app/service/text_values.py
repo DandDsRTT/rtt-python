@@ -31,7 +31,7 @@ def plain_text_values(
     derived: DerivedQuantities | None = None,
     decimals: bool = True,
 ) -> dict[tuple[str, str], str]:
-    inp = _Inputs(
+    inputs = _Inputs(
         state,
         scheme,
         target_spec,
@@ -48,7 +48,7 @@ def plain_text_values(
         derived,
         decimals,
     )
-    context = _build_context(inp)
+    context = _build_context(inputs)
     values = _base_structural(context)
     values.update(_base_sizes(context))
     values.update(_base_prescale_complexity(context))

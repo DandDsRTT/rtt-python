@@ -102,7 +102,7 @@ def _prescale_vector_list(
     oo, oc = (outer[0], outer[1]) if outer else ("", "")
     structure = "stack" if col[0] == "⟨" else "list"
     conv = EbkConvention(structure, oo, oc, col[0], col[1], " ")
-    return render_ebk(conv, vectors, fmt=lambda x: prescale_text(x, decimals))
+    return render_ebk(conv, vectors, formatter=lambda x: prescale_text(x, decimals))
 
 
 def vector_list_pending_text(committed_vectors, pending) -> tuple[str, str, str]:
@@ -117,12 +117,14 @@ def mapping_pending_text(committed_ebk, pending) -> tuple[str, str, str]:
 
 
 def _cents_map(values, decimals: bool = True) -> str:
-    return render_ebk(_MAP, values, fmt=lambda v: cents(v, decimals))
+    return render_ebk(_MAP, values, formatter=lambda v: cents(v, decimals))
 
 
 def _cents_list(values, wrap: bool = True, decimals: bool = True) -> str:
-    return render_ebk(_SCALARS if wrap else _SCALARS_BARE, values, fmt=lambda v: cents(v, decimals))
+    return render_ebk(
+        _SCALARS if wrap else _SCALARS_BARE, values, formatter=lambda v: cents(v, decimals)
+    )
 
 
 def _cents_genmap(values, decimals: bool = True) -> str:
-    return render_ebk(_GENMAP, values, fmt=lambda v: cents(v, decimals))
+    return render_ebk(_GENMAP, values, formatter=lambda v: cents(v, decimals))

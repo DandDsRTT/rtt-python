@@ -55,7 +55,7 @@
       "methods": 11,
       "attrs": 16
     },
-    "rtt/app/service/text_context.py::_Ctx": {
+    "rtt/app/service/text_context.py::_TextContext": {
       "methods": 17,
       "attrs": 0
     }
