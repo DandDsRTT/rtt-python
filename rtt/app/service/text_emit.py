@@ -183,15 +183,19 @@ def _projection_cols(context: _TextContext, p_rat, vectors):
 
 def _projection_values(context: _TextContext) -> dict:
     s = context.state
-    hbr = context.held_basis_ratios
-    p_rat = projection_matrix_rationals(s, hbr)
+    held_basis_ratios = context.held_basis_ratios
+    p_rat = projection_matrix_rationals(s, held_basis_ratios)
     out = {
-        ("projection", "primes"): projection_ebk(tuning_projection(s, hbr), s.dimensionality),
+        ("projection", "primes"): projection_ebk(
+            tuning_projection(s, held_basis_ratios), s.dimensionality
+        ),
         ("projection", "gens"): embedding_ebk(
-            tuning_embedding(s, hbr), s.dimensionality, len(s.mapping)
+            tuning_embedding(s, held_basis_ratios), s.dimensionality, len(s.mapping)
         ),
         ("projection", "canongens"): embedding_ebk(
-            canonical_generator_embedding(s, hbr), s.dimensionality, context.canon.rank
+            canonical_generator_embedding(s, held_basis_ratios),
+            s.dimensionality,
+            context.canon.rank,
         ),
         ("projection", "detempering"): context.render(
             ("projection", "detempering"),

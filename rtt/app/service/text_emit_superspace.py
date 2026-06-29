@@ -200,20 +200,22 @@ def _superspace_held(context: _TextContext) -> dict:
 
 def _superspace_projection(context: _TextContext, superspace_context: _SuperspaceContext) -> dict:
     s = context.state
-    hbr = context.held_basis_ratios
+    held_basis_ratios = context.held_basis_ratios
     superspace_dimensionality = superspace_context.superspace_dimensionality
     core = context.core
-    p_L = superspace_projection_matrix_rationals(s, hbr)
+    p_L = superspace_projection_matrix_rationals(s, held_basis_ratios)
     projected_basis_lift = project_vectors(p_L, superspace_context.basis_change_matrix) or [
         tuple(_DASH for _ in range(superspace_dimensionality))
         for _ in superspace_context.basis_change_matrix
     ]
     out = {
         ("superspace_projection", "superspace_primes"): projection_ebk(
-            superspace_tuning_projection(s, hbr), superspace_dimensionality
+            superspace_tuning_projection(s, held_basis_ratios), superspace_dimensionality
         ),
         ("superspace_projection", "superspace_generators"): embedding_ebk(
-            superspace_tuning_embedding(s, hbr), superspace_dimensionality, superspace_rank(s)
+            superspace_tuning_embedding(s, held_basis_ratios),
+            superspace_dimensionality,
+            superspace_rank(s),
         ),
         ("superspace_projection", "primes"): context.render(
             ("superspace_projection", "primes"), projected_basis_lift
@@ -240,17 +242,19 @@ def _superspace_projection(context: _TextContext, superspace_context: _Superspac
             "⟩",
             wrap=False,
         )
-    out.update(_domain_projection_into_superspace(s, hbr, superspace_dimensionality))
+    out.update(_domain_projection_into_superspace(s, held_basis_ratios, superspace_dimensionality))
     return out
 
 
-def _domain_projection_into_superspace(s, hbr, superspace_dimensionality) -> dict:
+def _domain_projection_into_superspace(s, held_basis_ratios, superspace_dimensionality) -> dict:
     return {
         ("projection", "superspace_generators"): embedding_ebk(
-            superspace_generator_embedding_display(s, hbr), s.dimensionality, superspace_rank(s)
+            superspace_generator_embedding_display(s, held_basis_ratios),
+            s.dimensionality,
+            superspace_rank(s),
         ),
         ("projection", "superspace_primes"): projection_ebk(
-            superspace_prime_projection_display(s, hbr),
+            superspace_prime_projection_display(s, held_basis_ratios),
             s.dimensionality,
             cols=superspace_dimensionality,
         ),

@@ -156,9 +156,9 @@ def _emit_tuning_gen_row(cells, resolved, geometry, context) -> None:
 def _emit_tuning_canongen_row(cells, resolved, geometry, context) -> None:
     if not (query.row_open(geometry, context.collapsed, "tuning") and query.tile_open(geometry, context.collapsed, "tuning", "canongens")):
         return
-    gm = resolved.tuning.tuning_map.generator_map
+    generator_map = resolved.tuning.tuning_map.generator_map
     for j in range(resolved.dims.canonical_rank):
-        v = sum(gm[k] * resolved.canon.inverse_form_M[k][j] for k in range(resolved.dims.rank))
+        v = sum(generator_map[k] * resolved.canon.inverse_form_M[k][j] for k in range(resolved.dims.rank))
         operand = None
         if resolved.flags.math_expressions:
             closed_form = _closed_form(resolved, context)

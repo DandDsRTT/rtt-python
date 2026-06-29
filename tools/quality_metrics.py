@@ -303,7 +303,7 @@ def demeter_chains(trees: list[tuple[Path, ast.Module]]) -> set[str]:
 
 SHARD_PARAM_CONTROLLER = {
     "rec": "_Reconciler",
-    "ec": "EditController",
+    "edit_controller": "EditController",
     "te": "_TuningEdits",
     "gc": "GestureController",
     "pb": "PageBuilder",

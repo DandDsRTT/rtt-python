@@ -159,8 +159,8 @@ def emit_mapped_grid(cells, resolved, geometry, collapsed, tile, prefix, grid, n
 
 
 def _projected_sizes(resolved, grid, n_cols, height):
-    jm = resolved.tuning.tuning_map.just_map
-    return [sum(jm[i] * grid[j][i] for i in range(height)) for j in range(n_cols)]
+    just_map = resolved.tuning.tuning_map.just_map
+    return [sum(just_map[i] * grid[j][i] for i in range(height)) for j in range(n_cols)]
 
 
 def _emit_mapped_grid_colwise(cells, resolved, prefix, grid, n_cols, left, col_kw,

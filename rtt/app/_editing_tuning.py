@@ -75,93 +75,105 @@ class _TuningEdits:
         _plain_text_edit(self.e, cid, value)
 
 
-def _power_change(ec, cid):
-    if ec._runtime.building or ec._rec.handles(cid).value.input is None:
+def _power_change(edit_controller, cid):
+    if edit_controller._runtime.building or edit_controller._rec.handles(cid).value.input is None:
         return
     if cid not in ("optimization:power", "control:q"):
         return
     is_q = cid == "control:q"
-    power = service.parse_power(ec._rec.cells[cid].value.input.value, minimum=1.0 if is_q else 0.0)
+    power = service.parse_power(
+        edit_controller._rec.cells[cid].value.input.value, minimum=1.0 if is_q else 0.0
+    )
     if power is None:
         return
     if is_q:
-        ec._editor.set_complexity_norm_power(power)
+        edit_controller._editor.set_complexity_norm_power(power)
     else:
-        ec._editor.set_optimization_power(power)
-    ec._renderer.request_render()
+        edit_controller._editor.set_optimization_power(power)
+    edit_controller._renderer.request_render()
 
 
-def _gen_position(ec, tok):
-    toks = ec._runtime.col_tokens("gens")
+def _gen_position(edit_controller, tok):
+    toks = edit_controller._runtime.col_tokens("gens")
     return toks.index(tok) if tok in toks else tok
 
 
-def _gentuning_change(ec, cid):
-    if ec._runtime.building or ec._rec.handles(cid).value.input is None:
+def _gentuning_change(edit_controller, cid):
+    if edit_controller._runtime.building or edit_controller._rec.handles(cid).value.input is None:
         return
-    mag = ec._rec.decimal_value(cid)
+    mag = edit_controller._rec.decimal_value(cid)
     if not mag:
         return
     try:
         cents = abs(float(mag))
     except ValueError:
         return
-    glyph = ec._rec.handles(cid).value.gensign_face
+    glyph = edit_controller._rec.handles(cid).value.gensign_face
     if glyph is not None and glyph.text not in ("+", ""):
         cents = -cents
     i = int(cid.rsplit(":", 1)[1])
     if ":superspace_generator:" in cid:
-        ec._editor.set_superspace_generator_tuning_component(i, cents)
+        edit_controller._editor.set_superspace_generator_tuning_component(i, cents)
     else:
-        ec._editor.set_generator_tuning_component(_gen_position(ec, i), cents)
-    ec._renderer.request_render()
+        edit_controller._editor.set_generator_tuning_component(
+            _gen_position(edit_controller, i), cents
+        )
+    edit_controller._renderer.request_render()
 
 
-def _gentuning_wheel(ec, cid, delta_y):
-    if ec._runtime.building or not delta_y:
+def _gentuning_wheel(edit_controller, cid, delta_y):
+    if edit_controller._runtime.building or not delta_y:
         return
     i, steps = int(cid.rsplit(":", 1)[1]), (1 if delta_y < 0 else -1)
     if ":superspace_generator:" in cid:
-        ec._editor.nudge_superspace_generator_tuning_component(i, steps)
+        edit_controller._editor.nudge_superspace_generator_tuning_component(i, steps)
     else:
-        ec._editor.nudge_generator_tuning_component(_gen_position(ec, i), steps)
-    ec._renderer.request_render()
+        edit_controller._editor.nudge_generator_tuning_component(
+            _gen_position(edit_controller, i), steps
+        )
+    edit_controller._renderer.request_render()
 
 
-def _value_wheel(ec, cid, delta_y):
-    if ec._runtime.building or not delta_y or ec._rec.handles(cid).value.input is None:
+def _value_wheel(edit_controller, cid, delta_y):
+    if (
+        edit_controller._runtime.building
+        or not delta_y
+        or edit_controller._rec.handles(cid).value.input is None
+    ):
         return
-    step = _WHEEL_STEPS.get(ec._rec.handles(cid).kind)
+    step = _WHEEL_STEPS.get(edit_controller._rec.handles(cid).kind)
     if step is None:
         return
-    if ec._rec.handles(cid).value.den_input is not None:
-        with ec._runtime.building_guard():
-            ec._rec.set_decimal_value(cid, _wheel_step(ec._rec.decimal_value(cid), delta_y, step))
-        _prescaler_change(ec, cid)
+    if edit_controller._rec.handles(cid).value.den_input is not None:
+        with edit_controller._runtime.building_guard():
+            edit_controller._rec.set_decimal_value(
+                cid, _wheel_step(edit_controller._rec.decimal_value(cid), delta_y, step)
+            )
+        _prescaler_change(edit_controller, cid)
         return
-    ec._rec.cells[cid].value.input.value = _wheel_step(
-        ec._rec.cells[cid].value.input.value, delta_y, step
+    edit_controller._rec.cells[cid].value.input.value = _wheel_step(
+        edit_controller._rec.cells[cid].value.input.value, delta_y, step
     )
     commit = {
-        "mapping": ec.vectors.on_mapping_change,
-        "commacell": ec.vectors.on_comma_change,
-        "interestcell": ec.vectors.on_interest_change,
-        "heldcell": ec.vectors.on_held_change,
-        "targetcell": ec.vectors.on_target_cells_change,
-        "formcell": ec.vectors.on_form_change,
-    }.get(ec._rec.handles(cid).kind)
+        "mapping": edit_controller.vectors.on_mapping_change,
+        "commacell": edit_controller.vectors.on_comma_change,
+        "interestcell": edit_controller.vectors.on_interest_change,
+        "heldcell": edit_controller.vectors.on_held_change,
+        "targetcell": edit_controller.vectors.on_target_cells_change,
+        "formcell": edit_controller.vectors.on_form_change,
+    }.get(edit_controller._rec.handles(cid).kind)
     if commit is not None:
         commit()
 
 
 def _target_limit_wheel(te, delta_y):
-    ec = te.e
-    if ec._runtime.building or not delta_y:
+    edit_controller = te.e
+    if edit_controller._runtime.building or not delta_y:
         return
-    num = ec._rec.cells["preset:target"].chooser.select[0]
-    with ec._runtime.building_guard():
+    num = edit_controller._rec.cells["preset:target"].chooser.select[0]
+    with edit_controller._runtime.building_guard():
         num.value = _wheel_step(num.value, delta_y)
-    _target_limit_preview(ec)
+    _target_limit_preview(edit_controller)
     if te.target_limit_commit is not None:
         te.target_limit_commit.cancel()
     te.target_limit_commit = background_tasks.create(
@@ -178,61 +190,74 @@ async def _debounced_target_commit(te):
     except asyncio.CancelledError:
         return
     te.target_limit_commit = None
-    ec = te.e
-    with ec._runtime.page_client:
-        ec.on_target_change()
+    edit_controller = te.e
+    with edit_controller._runtime.page_client:
+        edit_controller.on_target_change()
 
 
-def _target_limit_preview(ec, typed=None):
-    g = ec._gestures.gesture
-    if ec._runtime.building or g is None or g.kind != "edit" or g.source != "preset:target":
+def _target_limit_preview(edit_controller, typed=None):
+    g = edit_controller._gestures.gesture
+    if (
+        edit_controller._runtime.building
+        or g is None
+        or g.kind != "edit"
+        or g.source != "preset:target"
+    ):
         return
-    num, sel = ec._rec.cells["preset:target"].chooser.select
+    num, sel = edit_controller._rec.cells["preset:target"].chooser.select
     raw = num.value if typed is None else typed
-    out = service.resolve_target_limit(sel.value, raw, ec._editor.state.domain_basis)
-    ec._apply_outcome(out, lambda: ec._editor.set_target_spec(out.value), preview=True)
+    out = service.resolve_target_limit(sel.value, raw, edit_controller._editor.state.domain_basis)
+    edit_controller._apply_outcome(
+        out, lambda: edit_controller._editor.set_target_spec(out.value), preview=True
+    )
 
 
-def _prescaler_change(ec, cid):
-    if ec._runtime.building or ec._rec.handles(cid).value.input is None:
+def _prescaler_change(edit_controller, cid):
+    if edit_controller._runtime.building or edit_controller._rec.handles(cid).value.input is None:
         return
     parts = cid.split(":")
     i, j = int(parts[3]), int(parts[4])
-    out = service.custom_prescaler_entry(ec._rec.decimal_value(cid), i == j)
-    ec._apply_outcome(out, lambda: ec._editor.set_custom_prescaler_entry(i, j, out.value))
+    out = service.custom_prescaler_entry(edit_controller._rec.decimal_value(cid), i == j)
+    edit_controller._apply_outcome(
+        out, lambda: edit_controller._editor.set_custom_prescaler_entry(i, j, out.value)
+    )
 
 
-def _weight_change(ec, cid):
-    if ec._runtime.building or ec._rec.handles(cid).value.input is None:
+def _weight_change(edit_controller, cid):
+    if edit_controller._runtime.building or edit_controller._rec.handles(cid).value.input is None:
         return
     raws = [
-        ec._rec.decimal_value(o)
-        for o in ec._rec.cells
-        if o.startswith("weight:") and ec._rec.cells[o].value.input is not None
+        edit_controller._rec.decimal_value(o)
+        for o in edit_controller._rec.cells
+        if o.startswith("weight:") and edit_controller._rec.cells[o].value.input is not None
     ]
     out = service.custom_weights(raws)
-    ec._apply_outcome(out, lambda: ec._editor.set_custom_weights(list(out.value)))
+    edit_controller._apply_outcome(
+        out, lambda: edit_controller._editor.set_custom_weights(list(out.value))
+    )
 
 
-def _plain_text_edit(ec, cid, value):
-    if ec._runtime.building:
+def _plain_text_edit(edit_controller, cid, value):
+    if edit_controller._runtime.building:
         return
     editor_method = _PLAIN_TEXT_EDITORS.get(cid)
     if editor_method is None:
         return
-    if not ec._editor.settings.get("ebk", True):
+    if not edit_controller._editor.settings.get("ebk", True):
         value = service.simple_matrix_to_ebk(value, _PLAIN_TEXT_DUAL_VECTOR_KIND.get(cid, False))
-    if getattr(ec._editor, editor_method)(value):
-        ec._rec.cells[cid].value.plain_text_input.classes(remove="rtt-plain-text-error")
-        ec._renderer.request_render()
+    if getattr(edit_controller._editor, editor_method)(value):
+        edit_controller._rec.cells[cid].value.plain_text_input.classes(
+            remove="rtt-plain-text-error"
+        )
+        edit_controller._renderer.request_render()
         return
-    ec._rec.cells[cid].value.plain_text_input.classes(add="rtt-plain-text-error")
-    toast = _plain_text_error_toast(ec, cid, value)
+    edit_controller._rec.cells[cid].value.plain_text_input.classes(add="rtt-plain-text-error")
+    toast = _plain_text_error_toast(edit_controller, cid, value)
     if toast:
         ui.notify(toast, type="negative", position="top")
 
 
-def _plain_text_error_toast(ec, cid, value):
+def _plain_text_error_toast(edit_controller, cid, value):
     if cid == "plain_text:mapping:primes":
         st = service.parse_mapping_state(value)
         if st is not None and not service.is_proper_temperament(st.mapping):
@@ -246,7 +271,9 @@ def _plain_text_error_toast(ec, cid, value):
     elif (
         cid == "plain_text:projection:gens"
         and service.parse_embedding(
-            value, ec._editor.state.dimensionality, len(ec._editor.state.mapping)
+            value,
+            edit_controller._editor.state.dimensionality,
+            len(edit_controller._editor.state.mapping),
         )
         is not None
     ):

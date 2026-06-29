@@ -25,62 +25,64 @@ _APPLY_SETTERS = (
 )
 
 
-def build_edit_specs(ec) -> None:
-    ec._MAPPING_EDIT = _VecGridEdit(
+def build_edit_specs(edit_controller) -> None:
+    edit_controller._MAPPING_EDIT = _VecGridEdit(
         group="gens",
-        count=lambda: len(ec._editor.state.mapping),
+        count=lambda: len(edit_controller._editor.state.mapping),
         cell_id=ids.mapping_cell,
-        pending=lambda: ec._editor.pending_mapping_row,
-        set_pending=ec._editor.set_pending_mapping_row,
-        commit=ec._editor.edit_mapping,
+        pending=lambda: edit_controller._editor.pending_mapping_row,
+        set_pending=edit_controller._editor.set_pending_mapping_row,
+        commit=edit_controller._editor.edit_mapping,
         validate=service.is_proper_temperament,
-        guard=lambda: ec._editor.settings["temperament_tiles"],
+        guard=lambda: edit_controller._editor.settings["temperament_tiles"],
     )
-    ec._COMMA_EDIT = _VecGridEdit(
+    edit_controller._COMMA_EDIT = _VecGridEdit(
         group="commas",
-        count=lambda: len(ec._editor.state.comma_basis),
+        count=lambda: len(edit_controller._editor.state.comma_basis),
         cell_id=ids.comma_cell,
-        pending=lambda: ec._editor.pending_comma,
-        set_pending=ec._editor.set_pending_comma,
-        commit=ec._editor.edit_comma_basis,
+        pending=lambda: edit_controller._editor.pending_comma,
+        set_pending=edit_controller._editor.set_pending_comma,
+        commit=edit_controller._editor.edit_comma_basis,
         validate=lambda basis: service.is_proper_temperament(
             service.from_comma_basis(basis).mapping
         ),
     )
 
 
-def build_vector_list_specs(ec) -> None:
-    ec._INTEREST_EDIT = _VecGridEdit(
+def build_vector_list_specs(edit_controller) -> None:
+    edit_controller._INTEREST_EDIT = _VecGridEdit(
         group="interest",
-        count=lambda: len(ec._editor.interest_vectors),
+        count=lambda: len(edit_controller._editor.interest_vectors),
         cell_id=ids.interest_cell,
-        pending=lambda: ec._editor.pending_interest,
-        set_pending=ec._editor.set_pending_interest,
-        commit=ec._editor.set_interest_vectors,
+        pending=lambda: edit_controller._editor.pending_interest,
+        set_pending=edit_controller._editor.set_pending_interest,
+        commit=edit_controller._editor.set_interest_vectors,
         draft_arms=True,
     )
-    ec._HELD_EDIT = _VecGridEdit(
+    edit_controller._HELD_EDIT = _VecGridEdit(
         group="held",
-        count=lambda: len(ec._editor.held_vectors),
+        count=lambda: len(edit_controller._editor.held_vectors),
         cell_id=ids.held_cell,
-        pending=lambda: ec._editor.pending_held,
-        set_pending=ec._editor.set_pending_held,
-        commit=ec._editor.set_held_vectors,
+        pending=lambda: edit_controller._editor.pending_held,
+        set_pending=edit_controller._editor.set_pending_held,
+        commit=edit_controller._editor.set_held_vectors,
         draft_arms=True,
     )
-    ec._TARGET_EDIT = _VecGridEdit(
+    edit_controller._TARGET_EDIT = _VecGridEdit(
         group="targets",
         count=lambda: len(
-            ec._editor.target_override
-            or service.target_interval_set(ec._editor.target_spec, ec._editor.state.domain_basis)
+            edit_controller._editor.target_override
+            or service.target_interval_set(
+                edit_controller._editor.target_spec, edit_controller._editor.state.domain_basis
+            )
         ),
         cell_id=ids.target_cell,
-        pending=lambda: ec._editor.pending_target,
-        set_pending=ec._editor.set_pending_target,
-        commit=ec._editor.set_target_override_vectors,
+        pending=lambda: edit_controller._editor.pending_target,
+        set_pending=edit_controller._editor.set_pending_target,
+        commit=edit_controller._editor.set_target_override_vectors,
         draft_arms=True,
     )
-    ec.draft_focus = {
+    edit_controller.draft_focus = {
         "comma": ("comma:pending", "commacell"),
         "target": ("target:pending", "targetcell"),
         "held": ("held:pending", "heldcell"),
@@ -102,24 +104,26 @@ def reason_message(reason):
     return None
 
 
-def apply_outcome(ec, out, commit, preview=False) -> None:
+def apply_outcome(edit_controller, out, commit, preview=False) -> None:
     if preview:
-        ec._gestures.edit_candidate(commit if out.effect is service.Effect.ACCEPT else None)
+        edit_controller._gestures.edit_candidate(
+            commit if out.effect is service.Effect.ACCEPT else None
+        )
         return
     if out.effect is service.Effect.IGNORE:
         return
     if out.effect is service.Effect.RERENDER:
-        ec._renderer.render()
+        edit_controller._renderer.render()
         return
     msg = out.message or reason_message(out.reason)
     if out.effect is service.Effect.REJECT:
         ui.notify(msg, type="negative", position="top")
-        ec._renderer.render()
+        edit_controller._renderer.render()
         return
     if msg:
         ui.notify(msg, type="negative", position="top")
     commit()
-    ec._renderer.request_render()
+    edit_controller._renderer.request_render()
 
 
 def act(gestures, renderer, action):
@@ -128,12 +132,12 @@ def act(gestures, renderer, action):
     renderer.request_render()
 
 
-def add_interval(ec, action, group):
-    ec._gestures.end_commit_gestures()
+def add_interval(edit_controller, action, group):
+    edit_controller._gestures.end_commit_gestures()
     action()
-    ec._renderer.render()
-    quant_id, vector_kind = ec.draft_focus[group]
-    lay = ec._runtime.last_lay
+    edit_controller._renderer.render()
+    quant_id, vector_kind = edit_controller.draft_focus[group]
+    lay = edit_controller._runtime.last_lay
     if any(cell_box.id == quant_id for cell_box in lay.cells):
         target = quant_id
     elif vector_kind is not None:
@@ -151,7 +155,7 @@ def add_interval(ec, action, group):
         target = next(
             (cell_box.id for cell_box in lay.cells if cell_box.id == "basis:pending"), None
         )
-    inp = ec._rec.handles(target).value.input if target is not None else None
+    inp = edit_controller._rec.handles(target).value.input if target is not None else None
     if inp is not None:
         focus_draft_cell(inp)
 
@@ -176,15 +180,15 @@ def focus_draft_cell(inp) -> None:
     )
 
 
-def on_show_toggle(ec, key, value):
-    if ec._runtime.building:
+def on_show_toggle(edit_controller, key, value):
+    if edit_controller._runtime.building:
         return
-    if key == "nonstandard_domain" and not value and ec._editor.basis_is_nonstandard:
-        ec._editor.exit_nonstandard_domain()
-        ec._renderer.render()
+    if key == "nonstandard_domain" and not value and edit_controller._editor.basis_is_nonstandard:
+        edit_controller._editor.exit_nonstandard_domain()
+        edit_controller._renderer.render()
         return
-    ec._editor.set_show(key, value)
-    ec._renderer.render()
+    edit_controller._editor.set_show(key, value)
+    edit_controller._renderer.render()
 
 
 def on_select_all(editor, renderer, runtime, value, keys):
@@ -204,126 +208,134 @@ def on_part_click(editor, renderer, runtime, key):
     renderer.render()
 
 
-def on_preset(ec, cid, value):
-    if ec._runtime.building:
+def on_preset(edit_controller, cid, value):
+    if edit_controller._runtime.building:
         return
     if cid.startswith("preset:temperament"):
         if value in presets.TEMPERAMENT_COMMAS:
-            ec._gestures.end_gesture()
-            ec._editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
-            ec._renderer.request_render()
+            edit_controller._gestures.end_gesture()
+            edit_controller._editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
+            edit_controller._renderer.request_render()
         else:
-            ec._renderer.render()
+            edit_controller._renderer.render()
         return
-    apply = candidate_apply(ec, cid, value)
+    apply = candidate_apply(edit_controller, cid, value)
     if apply is not None:
-        ec._gestures.end_chooser_gesture()
+        edit_controller._gestures.end_chooser_gesture()
         apply()
-        ec._renderer.request_render()
+        edit_controller._renderer.request_render()
 
 
-def on_subpick(ec, cid, value):
-    if ec._runtime.building or value is None:
+def on_subpick(edit_controller, cid, value):
+    if edit_controller._runtime.building or value is None:
         return
-    ec._gestures.end_gesture()
-    db = ec._editor.state.domain_basis
+    edit_controller._gestures.end_gesture()
+    db = edit_controller._editor.state.domain_basis
     if cid == "etpick:draft":
-        ec._editor.set_pending_mapping_row(list(presets.et_value_to_val(value, db)))
-        ok = ec._editor.pending_mapping_row is None
+        edit_controller._editor.set_pending_mapping_row(list(presets.et_value_to_val(value, db)))
+        ok = edit_controller._editor.pending_mapping_row is None
     elif cid == "commapick:draft":
-        ec._editor.set_pending_comma(list(presets.comma_value_to_vector(value, db)))
-        ok = ec._editor.pending_comma is None
+        edit_controller._editor.set_pending_comma(list(presets.comma_value_to_vector(value, db)))
+        ok = edit_controller._editor.pending_comma is None
     elif cid.startswith("etpick:"):
-        i = ec._runtime.token_index(cid, "gens")
-        ok = i is not None and ec._editor.set_mapping_row(i, presets.et_value_to_val(value, db))
+        i = edit_controller._runtime.token_index(cid, "gens")
+        ok = i is not None and edit_controller._editor.set_mapping_row(
+            i, presets.et_value_to_val(value, db)
+        )
     else:
-        c = ec._runtime.token_index(cid, "commas")
-        ok = c is not None and ec._editor.set_comma(c, presets.comma_value_to_vector(value, db))
+        c = edit_controller._runtime.token_index(cid, "commas")
+        ok = c is not None and edit_controller._editor.set_comma(
+            c, presets.comma_value_to_vector(value, db)
+        )
     if not ok:
         ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
-    ec._renderer.render()
+    edit_controller._renderer.render()
 
 
-def on_form_choose(ec, cid, value):
-    if ec._runtime.building:
+def on_form_choose(edit_controller, cid, value):
+    if edit_controller._runtime.building:
         return
-    apply = candidate_apply(ec, cid, value)
+    apply = candidate_apply(edit_controller, cid, value)
     if apply is not None:
-        ec._gestures.end_chooser_gesture()
+        edit_controller._gestures.end_chooser_gesture()
         apply()
-        ec._renderer.request_render()
+        edit_controller._renderer.request_render()
 
 
-def on_target_change(ec):
-    if ec._runtime.building:
+def on_target_change(edit_controller):
+    if edit_controller._runtime.building:
         return
-    ec._gestures.end_chooser_gesture()
-    num, sel = ec._rec.cells["preset:target"].chooser.select
-    out = service.resolve_target_limit(sel.value, num.value, ec._editor.state.domain_basis)
-    apply_outcome(ec, out, lambda: ec._editor.set_target_spec(out.value))
+    edit_controller._gestures.end_chooser_gesture()
+    num, sel = edit_controller._rec.cells["preset:target"].chooser.select
+    out = service.resolve_target_limit(
+        sel.value, num.value, edit_controller._editor.state.domain_basis
+    )
+    apply_outcome(edit_controller, out, lambda: edit_controller._editor.set_target_spec(out.value))
 
 
-def on_control_select(ec, cid, value):
-    if ec._runtime.building or value is None:
+def on_control_select(edit_controller, cid, value):
+    if edit_controller._runtime.building or value is None:
         return
-    apply = candidate_apply(ec, cid, value)
+    apply = candidate_apply(edit_controller, cid, value)
     if apply is not None:
-        ec._gestures.end_chooser_gesture()
+        edit_controller._gestures.end_chooser_gesture()
         apply()
     elif cid == "control:diminuator":
-        ec._editor.set_diminuator_replaced(bool(value))
+        edit_controller._editor.set_diminuator_replaced(bool(value))
     elif cid == "control:all_interval":
-        ec._editor.set_all_interval(bool(value))
+        edit_controller._editor.set_all_interval(bool(value))
     else:
         return
-    ec._renderer.request_render()
+    edit_controller._renderer.request_render()
 
 
-def on_range_mode(ec, value):
-    if ec._runtime.building or value is None:
+def on_range_mode(edit_controller, value):
+    if edit_controller._runtime.building or value is None:
         return
-    ec._editor.set_range_mode(value)
-    ec._renderer.render()
+    edit_controller._editor.set_range_mode(value)
+    edit_controller._renderer.render()
 
 
-def on_toggle(ec, item):
-    ec._editor.toggle_collapsed(item)
-    ec._renderer.render()
+def on_toggle(edit_controller, item):
+    edit_controller._editor.toggle_collapsed(item)
+    edit_controller._renderer.render()
 
 
-def on_toggle_all(ec):
-    ec._editor.set_collapsed(
-        spreadsheet_text.toggle_all_collapsed(ec._runtime.last_lay, ec._editor.collapsed)
+def on_toggle_all(edit_controller):
+    edit_controller._editor.set_collapsed(
+        spreadsheet_text.toggle_all_collapsed(
+            edit_controller._runtime.last_lay, edit_controller._editor.collapsed
+        )
     )
-    ec._renderer.render()
+    edit_controller._renderer.render()
 
 
-def candidate_apply(ec, cid, value):
+def candidate_apply(edit_controller, cid, value):
     if value is None:
         return None
     for prefix, setter in _APPLY_SETTERS:
         if cid.startswith(prefix):
-            return lambda v=value, s=setter: getattr(ec._editor, s)(v)
+            return lambda v=value, s=setter: getattr(edit_controller._editor, s)(v)
     if cid == "control:complexity":
-        return complexity_apply(ec, value)
+        return complexity_apply(edit_controller, value)
     if cid.startswith("formchooser:"):
-        return formchooser_apply(ec, cid, value)
+        return formchooser_apply(edit_controller, cid, value)
     return None
 
 
-def complexity_apply(ec, value):
+def complexity_apply(edit_controller, value):
     if value == "custom":
         return None
     internal = next((k for k, v in service.COMPLEXITY_DISPLAYS.items() if v == value), value)
-    return lambda: ec._editor.set_complexity_name(internal)
+    return lambda: edit_controller._editor.set_complexity_name(internal)
 
 
-def formchooser_apply(ec, cid, value):
+def formchooser_apply(edit_controller, cid, value):
     name = cid.split(":", 1)[1]
     if name == "mapping":
         if value not in service.MAPPING_FORM_KEYS:
             return None
-        return lambda: ec._editor.set_mapping_form(value)
+        return lambda: edit_controller._editor.set_mapping_form(value)
     if value not in service.COMMA_BASIS_FORM_KEYS:
         return None
-    return lambda: ec._editor.set_comma_basis_form(value)
+    return lambda: edit_controller._editor.set_comma_basis_form(value)

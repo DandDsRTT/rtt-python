@@ -101,8 +101,8 @@ def _prescale_vector_list(
 ) -> str:
     oo, oc = (outer[0], outer[1]) if outer else ("", "")
     structure = "stack" if col[0] == "⟨" else "list"
-    conv = EbkConvention(structure, oo, oc, col[0], col[1], " ")
-    return render_ebk(conv, vectors, formatter=lambda x: prescale_text(x, decimals))
+    convention = EbkConvention(structure, oo, oc, col[0], col[1], " ")
+    return render_ebk(convention, vectors, formatter=lambda x: prescale_text(x, decimals))
 
 
 def vector_list_pending_text(committed_vectors, pending) -> tuple[str, str, str]:
