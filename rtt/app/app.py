@@ -137,7 +137,7 @@ class _Page:
         self.runtime.dark_mode = not self.runtime.dark_mode
         _doc_store()[_DARK_KEY] = self.runtime.dark_mode
         self.apply_theme()
-        self.chrome.dark_btn.props(f"icon={self.runtime.dark_icon()}")
+        self.chrome.dark_button.props(f"icon={self.runtime.dark_icon()}")
 
     def apply_chapter(self):
         ch = self.runtime.chapter

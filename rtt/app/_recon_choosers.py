@@ -51,16 +51,16 @@ def build_scheme_button(rec, cell_box: spreadsheet.CellBox, _wrap) -> None:
             cell_box.text, on_click=lambda: rec._cb.act(rec._editor.back_to_scheme), color=None
         )
         .props("unelevated dense no-caps")
-        .classes("rtt-scheme-btn")
+        .classes("rtt-scheme-button")
     )
 
 
 def update_scheme_button(rec, cell_box: spreadsheet.CellBox) -> None:
-    btn = rec.cells[cell_box.id].chooser.scheme_button
+    button = rec.cells[cell_box.id].chooser.scheme_button
     (
-        btn.classes(add="rtt-scheme-btn-idle")
+        button.classes(add="rtt-scheme-button-idle")
         if not rec._editor.manual_tuning
-        else btn.classes(remove="rtt-scheme-btn-idle")
+        else button.classes(remove="rtt-scheme-button-idle")
     )
 
 

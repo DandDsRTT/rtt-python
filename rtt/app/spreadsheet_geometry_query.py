@@ -27,7 +27,7 @@ from rtt.app.spreadsheet_constants import (
     PRESET_H,
     PRESET_W,
     ROW_H,
-    SCHEME_BTN_SQ,
+    SCHEME_BUTTON_SQ,
     TARGET_PRESET_W,
     V_SPLIT_GAP,
     VAL_BRACKET_H,
@@ -377,12 +377,12 @@ def weight_simplicity_header(resolved, i: int) -> str:
 
 
 def control_dims(
-    geometry, column_key: str, cap_w, label, scheme_btn: bool = False, form_label=None
+    geometry, column_key: str, cap_w, label, scheme_button: bool = False, form_label=None
 ):
     dropdown_w = max(40, min(geometry.col_w[column_key] - 2 * BOX_INNER, cap_w))
     label_h = CAPTION_LINE if label else 0
     box_h = 2 * BOX_INNER + PRESET_H + label_h
-    box_h += (SCHEME_BTN_SQ + BOX_INNER) if scheme_btn else 0
+    box_h += (SCHEME_BUTTON_SQ + BOX_INNER) if scheme_button else 0
     if form_label is not None:
         box_h += BAND_GAP + PRESET_H + (CAPTION_LINE if form_label else 0)
     return dropdown_w, label_h, box_h

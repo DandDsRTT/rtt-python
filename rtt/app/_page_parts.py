@@ -149,12 +149,12 @@ def share_link(pb) -> None:
 
 
 def arm_history_previews(pb) -> None:
-    def arm(btn, can, op):
-        btn.on(
+    def arm(button, can, op):
+        button.on(
             "mouseenter",
             lambda _=None: pb._gestures.control_hover(op) if can() else None,
         )
-        btn.on("mouseleave", lambda _=None: pb._gestures.control_unhover())
+        button.on("mouseleave", lambda _=None: pb._gestures.control_unhover())
 
     arm(pb._chrome.refs["undo"], lambda: pb._editor.can_undo, pb._editor.undo)
     arm(pb._chrome.refs["redo"], lambda: pb._editor.can_redo, pb._editor.redo)
@@ -163,30 +163,30 @@ def arm_history_previews(pb) -> None:
 
 def build_title_buttons(pb) -> None:
     with ui.element("div").classes("rtt-titletile").mark("titletile"):
-        with ui.element("div").classes("rtt-tile-btns"):
+        with ui.element("div").classes("rtt-tile-buttons"):
             pb._icon_button(
                 "undo",
                 "undo",
                 lambda: pb._edits.act(pb._editor.undo),
-                "rtt-iconbtn rtt-hk-undo",
+                "rtt-icon-button rtt-hk-undo",
                 "undo",
             )
             pb._icon_button(
                 "redo",
                 "redo",
                 lambda: pb._edits.act(pb._editor.redo),
-                "rtt-iconbtn rtt-hk-redo",
+                "rtt-icon-button rtt-hk-redo",
                 "redo",
             )
-            pb._icon_button("reset", "restart_alt", pb._handlers.reset, "rtt-iconbtn", "reset")
+            pb._icon_button("reset", "restart_alt", pb._handlers.reset, "rtt-icon-button", "reset")
             pb._icon_button(
-                "share", "share", lambda: share_link(pb), "rtt-iconbtn rtt-noarm", "share"
+                "share", "share", lambda: share_link(pb), "rtt-icon-button rtt-noarm", "share"
             )
             pb._icon_button(
                 "tour",
                 "help_outline",
                 lambda: ui.run_javascript("window.rttTour && window.rttTour.start()"),
-                "rtt-iconbtn rtt-noarm",
+                "rtt-icon-button rtt-noarm",
                 "tour",
             )
             arm_history_previews(pb)
@@ -265,7 +265,7 @@ def build_show_frozen(pb) -> dict:
         with ui.element("div").classes("rtt-settings-box rtt-visual-box").mark("visualbox"):
             _box_label("visual", "settings")
             with ui.element("div").classes("rtt-box-grid rtt-visual-grid"):
-                dark_btn = (
+                dark_button = (
                     ui.button(on_click=pb._handlers.dark_toggle, color=None)
                     .props(f"flat dense round icon={pb._runtime.dark_icon()}")
                     .classes("rtt-darktoggle")
@@ -279,7 +279,7 @@ def build_show_frozen(pb) -> dict:
             _box_label("audio", "settings")
             with ui.element("div").classes("rtt-box-grid rtt-audio-grid"):
                 _audio_bank()
-    return {"show_frozen": show_frozen, "dark_btn": dark_btn}
+    return {"show_frozen": show_frozen, "dark_button": dark_button}
 
 
 def build_chapter_group(pb) -> dict:

@@ -22,7 +22,7 @@ class PageChrome:
         self.show_scroll: Element | None = None
         self.show_frozen: Element | None = None
         self.select_all_box: Element | None = None
-        self.dark_btn: Element | None = None
+        self.dark_button: Element | None = None
         self.chapter_reading: Element | None = None
         self.chapter_slider: Element | None = None
         self.refs: dict = {}

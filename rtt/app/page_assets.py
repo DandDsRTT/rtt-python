@@ -264,7 +264,7 @@ _TOUR_STEPS = [
         "new value and the whole grid recomputes.",
     },
     {
-        "sel": ".rtt-fanbtn",
+        "sel": ".rtt-fan-button",
         "place": "bottom",
         "title": "Reshaping the grid",
         "body": "The grid grows and shrinks with you. A <b>+</b> button adds a column or row — a new "
@@ -342,7 +342,7 @@ _CSS_VARS = f""":root {{
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
   --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT};
   --label-w:{spreadsheet_constants.LABEL_W}px; --header-h:{spreadsheet_constants.HEADER_H}px; --line-w:{spreadsheet_constants.LINE_W}px;
-  --ptext-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_H}px; --option-box:{spreadsheet_constants.OPTION_BOX_PX}px; --btn:{spreadsheet_constants.BTN}px;
+  --ptext-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_H}px; --option-box:{spreadsheet_constants.OPTION_BOX_PX}px; --button:{spreadsheet_constants.BUTTON}px;
   --option-box-unchecked:url("{_option_box_svg(None)}");
   --option-box-checked:url("{_option_box_svg("#000")}");
   --option-box-disabled:url("{_option_box_svg("#888")}");
@@ -761,10 +761,10 @@ _BUSY_JS = f"""
 
   // Browser: render() re-syncs control values programmatically (box.value = …), which fires SYNTHETIC
   // events; the e.isTrusted gate keeps those from re-arming the scrim after a render.
-  const BTN = '.rtt-fanbtn,.rtt-minus-btn,.rtt-minus-btn-v,.rtt-toggle,.rtt-iconbtn';
+  const BUTTON = '.rtt-fan-button,.rtt-minus-button,.rtt-minus-button-v,.rtt-toggle,.rtt-icon-button';
   const at = (e, sel) => e.isTrusted && e.target && e.target.closest && e.target.closest(sel);
   document.addEventListener('pointerdown',
-    (e) => {{ if (at(e, BTN) && !e.target.closest('.rtt-noarm')) window.rttBusy.arm(); }}, true);
+    (e) => {{ if (at(e, BUTTON) && !e.target.closest('.rtt-noarm')) window.rttBusy.arm(); }}, true);
   // Quasar's QCheckbox/QRadio commit on a CLICK of their role= div and never emit a DOM `change`,
   // so the committing settings controls are reached here on click, not on a `change` event.
   document.addEventListener('click', (e) => {{

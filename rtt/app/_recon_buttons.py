@@ -16,14 +16,14 @@ from rtt.app.render_html import (
 
 def build_minus(rec, _cb: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-minus-zone")
-    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn").on(
+    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
         "click", lambda _=None: rec._cb.act(rec._editor.shrink)
     )
     preview_control(rec, wrap, rec._editor.shrink)
 
 
 def build_plus(rec, _cb: spreadsheet.CellBox, wrap) -> None:
-    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn").on(
+    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button").on(
         "click", lambda _=None: rec._cb.act(rec._editor.expand)
     )
     preview_control(rec, wrap, rec._editor.expand)
@@ -31,7 +31,7 @@ def build_plus(rec, _cb: spreadsheet.CellBox, wrap) -> None:
 
 def build_gen_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-minus-zone")
-    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn").on(
+    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
         "click",
         lambda _=None, idx=cell_box.gen: rec._cb.act(lambda: rec._editor.remove_mapping_row(idx)),
     )
@@ -39,7 +39,7 @@ def build_gen_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
 
 
 def build_gen_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
-    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-mapping").on(
+    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-mapping").on(
         "click", lambda _=None: rec._cb.add_interval(rec._editor.add_mapping_row, "mapping")
     )
 
@@ -47,11 +47,11 @@ def build_gen_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
 def build_map_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-minus-zone")
     if cell_box.pending:
-        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v").on(
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v").on(
             "click", lambda _=None: rec._cb.act(rec._editor.cancel_pending_mapping_row)
         )
         return
-    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v").on(
+    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v").on(
         "click",
         lambda _=None, idx=cell_box.gen: rec._cb.act(lambda: rec._editor.remove_mapping_row(idx)),
     )
@@ -59,14 +59,14 @@ def build_map_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
 
 
 def build_map_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
-    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-mapping").on(
+    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-mapping").on(
         "click", lambda _=None: rec._cb.add_interval(rec._editor.add_mapping_row, "mapping")
     )
 
 
 def build_basis_minus(rec, _cb: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-minus-zone")
-    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v").on(
+    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v").on(
         "click", lambda _=None: rec._cb.act(rec._editor.shrink)
     )
     preview_control(rec, wrap, rec._editor.shrink)
@@ -84,13 +84,13 @@ def build_comma_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
 
 
 def build_comma_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
-    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-comma").on(
+    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-comma").on(
         "click", lambda _=None: rec._cb.add_interval(rec._editor.add_comma, "comma")
     )
 
 
 def build_element_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
-    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-element").on(
+    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-element").on(
         "click", lambda _=None: rec._cb.add_interval(rec._editor.add_element, "element")
     )
 
@@ -101,9 +101,9 @@ def build_element_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
         if cell_box.id.endswith(":pending")
         else (lambda idx=cell_box.prime: rec._editor.remove_domain_element(idx))
     )
-    btn = "rtt-minus-btn-v" if ":basis" in cell_box.id else "rtt-minus-btn"
+    button = "rtt-minus-button-v" if ":basis" in cell_box.id else "rtt-minus-button"
     wrap.classes("rtt-minus-zone")
-    ui.html(_control_svg("minus")).classes(f"rtt-glyph {btn}").on(
+    ui.html(_control_svg("minus")).classes(f"rtt-glyph {button}").on(
         "click", lambda _=None: rec._cb.act(action)
     )
     preview_control(rec, wrap, action)
@@ -115,7 +115,7 @@ def _build_list_minus(
     pending = cell_box.id.endswith(":pending")
     action = cancel if pending else (lambda idx=cell_box.comma: remove(idx))
     wrap.classes("rtt-minus-zone")
-    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn").on(
+    ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
         "click", lambda _=None: rec._cb.act(action)
     )
     if rank_axis is not None and not pending:
@@ -131,7 +131,7 @@ def build_interest_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
 
 
 def build_interest_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
-    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-interest").on(
+    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-interest").on(
         "click", lambda _=None: rec._cb.add_interval(rec._editor.add_interest, "interest")
     )
 
@@ -141,7 +141,7 @@ def build_held_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
 
 
 def build_held_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
-    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-held").on(
+    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-held").on(
         "click", lambda _=None: rec._cb.add_interval(rec._editor.add_held, "held")
     )
 
@@ -153,7 +153,7 @@ def build_target_minus(rec, cell_box: spreadsheet.CellBox, wrap) -> None:
 
 
 def build_target_plus(rec, _cb: spreadsheet.CellBox, _wrap) -> None:
-    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn rtt-hk-target").on(
+    ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-target").on(
         "click", lambda _=None: rec._cb.add_interval(rec._editor.add_target, "target")
     )
 

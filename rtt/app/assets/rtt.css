@@ -12,21 +12,21 @@ html, body { overscroll-behavior-x: none; }
 .rtt-titletile { position:absolute; top:calc(7px - var(--pad)); left:0; box-sizing:border-box;
                  width:fit-content; height:28px; background:#e0e0e0;
                  display:flex; align-items:center; padding:6px; }
-.rtt-tile-btns { display:flex; gap:1.5px; }
+.rtt-tile-buttons { display:flex; gap:1.5px; }
 /* square bordered icon buttons (undo/redo), matching the mockup's framed glyphs — sized to the
    same --option-box as every checkbox so the two button families never drift apart */
-.rtt-iconbtn { width:var(--option-box) !important; min-width:var(--option-box) !important;
+.rtt-icon-button { width:var(--option-box) !important; min-width:var(--option-box) !important;
             height:var(--option-box) !important;
             min-height:var(--option-box) !important; padding:0 !important; background:#fff !important;
             border:1px solid #000; border-radius:2px !important; box-shadow:none !important; }
-.rtt-iconbtn .q-icon { color:#000 !important; font-size:13px; }
+.rtt-icon-button .q-icon { color:#000 !important; font-size:13px; }
 /* a disabled undo/redo button greys out like the disabled Show toggles. NiceGUI marks a
    set_enabled(False) button with the generic `.disabled` class (NOT Quasar's
    q-btn--disable), so target that: grey the icon AND border to #999/#bbb, well off the
    crisp black of an active button — so against Quasar's own disabled fade the button
    reads unmistakably inactive, matching the #999 of a disabled toggle. */
-.rtt-iconbtn.disabled { border-color:#bbb !important; }
-.rtt-iconbtn.disabled .q-icon { color:#999 !important; }
+.rtt-icon-button.disabled { border-color:#bbb !important; }
+.rtt-icon-button.disabled .q-icon { color:#999 !important; }
 /* Quasar gives EVERY disabled control a `not-allowed` cursor (the slashed "no-entry" circle on
    hover). This app NEVER wants it anywhere: a greyed control already reads as inactive from its
    dim, so the slashed circle is just noise. Ban it app-wide (the dim STAYS -- that's the real
@@ -817,7 +817,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-glyph { color:#666; cursor:pointer; line-height:0; }
 .rtt-glyph:hover { color:#333; }
 .rtt-glyph > svg { display:block; width:100%; height:100%; }
-.rtt-fanbtn { width:100%; height:100%; }   /* the always-shown + fills its BTN-sized cell wrap */
+.rtt-fan-button { width:100%; height:100%; }   /* the always-shown + fills its button-sized cell wrap */
 /* drag-to-add handles: a greyscale grip dragged onto a sibling to add this element into it — a
    mapping-row handle just LEFT of each row (generators), an interval-column handle just BELOW each
    ratio (commas / targets / held / interest). Subtle by default, darkening on hover (like the fan
@@ -830,23 +830,23 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the "back to scheme" button on the projection / generator-embedding tiles — a 3D button: a
    light-top/dark-bottom face with a crisp inset bevel (white highlight top-left, soft shadow
    bottom-right) just inside the black cell border, so it reads as raised off the row; greyed
-   (.rtt-scheme-btn-idle) when the tuning is already scheme-driven (nothing to
+   (.rtt-scheme-button-idle) when the tuning is already scheme-driven (nothing to
    hand back). It stays clickable when idle; only the look changes. */
-.rtt-scheme-btn { width:100% !important; min-width:0 !important; height:100% !important; min-height:0 !important;
+.rtt-scheme-button { width:100% !important; min-width:0 !important; height:100% !important; min-height:0 !important;
             border:var(--cell-border) !important; border-radius:0 !important; padding:0 !important;
             background:linear-gradient(#fafafa,#cfcfcf) !important;
             box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 1px rgba(0,0,0,0.30) !important;
             transition:background .06s linear, box-shadow .06s linear !important; }
-.rtt-scheme-btn .q-btn__content { font-size:var(--cell-font); transition:transform .06s linear; }
-.rtt-scheme-btn:hover:not(.rtt-scheme-btn-idle) { background:linear-gradient(#fff,#dadada) !important; }
-.rtt-scheme-btn:active:not(.rtt-scheme-btn-idle) { background:linear-gradient(#c2c2c2,#e6e6e6) !important;
+.rtt-scheme-button .q-btn__content { font-size:var(--cell-font); transition:transform .06s linear; }
+.rtt-scheme-button:hover:not(.rtt-scheme-button-idle) { background:linear-gradient(#fff,#dadada) !important; }
+.rtt-scheme-button:active:not(.rtt-scheme-button-idle) { background:linear-gradient(#c2c2c2,#e6e6e6) !important;
             box-shadow:inset 1px 1px 2px rgba(0,0,0,0.38), inset -1px -1px 0 rgba(255,255,255,0.65) !important; }
-.rtt-scheme-btn:active:not(.rtt-scheme-btn-idle) .q-btn__content { transform:translate(1px,1px); }
-.rtt-scheme-btn-idle { cursor:default !important;
+.rtt-scheme-button:active:not(.rtt-scheme-button-idle) .q-btn__content { transform:translate(1px,1px); }
+.rtt-scheme-button-idle { cursor:default !important;
             background:linear-gradient(#e6e6e6,#d6d6d6) !important;
             box-shadow:inset 1px 1px 0 rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.08) !important; }
-.rtt-scheme-btn-idle .q-btn__content { color:#999 !important; }
-.rtt-scheme-btn-idle:hover, .rtt-scheme-btn-idle:active { background:linear-gradient(#e6e6e6,#d6d6d6) !important;
+.rtt-scheme-button-idle .q-btn__content { color:#999 !important; }
+.rtt-scheme-button-idle:hover, .rtt-scheme-button-idle:active { background:linear-gradient(#e6e6e6,#d6d6d6) !important;
             box-shadow:inset 1px 1px 0 rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.08) !important; }
 /* an in-tile box title (the optimization box's "optimization" header, and every titled
    control box): left-aligned at the top-left of the box (its cell otherwise centres it),
@@ -893,27 +893,27 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    The zone sits above the cells (z-index) so a column added via + can't paint over it and
    shrink the hover target down to just the button itself. */
 .rtt-minus-zone { background:transparent; z-index:4; }
-.rtt-minus-btn { position:absolute !important; top:0; left:50%; transform:translate(-50%,-50%);
-           width:var(--btn); height:var(--btn);
+.rtt-minus-button { position:absolute !important; top:0; left:50%; transform:translate(-50%,-50%);
+           width:var(--button); height:var(--button);
            opacity:0; pointer-events:none; transition:opacity var(--t); }
-.rtt-minus-zone:hover .rtt-minus-btn { opacity:1; pointer-events:auto; }
+.rtt-minus-zone:hover .rtt-minus-button { opacity:1; pointer-events:auto; }
 /* the horizontal basis's domain −: its zone spans the bottom prime's sub-row from the
    row's left bus; the button reveals centred ON that left-bus branch point (out to the
    left of the primes), the row mirror of a column −'s top-bus reveal */
-.rtt-minus-btn-v { position:absolute !important; left:0; top:50%; transform:translate(-50%,-50%);
-           width:var(--btn); height:var(--btn);
+.rtt-minus-button-v { position:absolute !important; left:0; top:50%; transform:translate(-50%,-50%);
+           width:var(--button); height:var(--button);
            opacity:0; pointer-events:none; transition:opacity var(--t); }
-.rtt-minus-zone:hover .rtt-minus-btn-v { opacity:1; pointer-events:auto; }
+.rtt-minus-zone:hover .rtt-minus-button-v { opacity:1; pointer-events:auto; }
 
 /* the equave-reduce (↓) and reciprocate (↕) buttons flanking an editable interval ratio's bar
    (commas / targets / held / interest). They reveal on hover of the cell, hide while it's being
    edited, and grey out (solid box, greyed glyph) when their op is a no-op (already reduced / a
-   unison). Same size as the +/− (var(--btn)), centred ON the cell's left/right edges at the bar's
+   unison). Same size as the +/− (var(--button)), centred ON the cell's left/right edges at the bar's
    mid-line so they overhang into the neighbouring cells (the cell turns overflow:visible via
    .rtt-ratioed so they aren't clipped, and lifts its z-index on hover so they sit on top). A
    bare-integer "n" (no visible bar) is flanked as if the vinculum were there. */
 .rtt-fraccell.rtt-ratioed { overflow:visible; }
-.rtt-ratio-op { position:absolute !important; top:50%; width:var(--btn); height:var(--btn); z-index:6;
+.rtt-ratio-op { position:absolute !important; top:50%; width:var(--button); height:var(--button); z-index:6;
            opacity:0; pointer-events:none; transition:opacity var(--t); }
 .rtt-ratio-op-reduce { left:0; transform:translate(-50%,-50%); }
 .rtt-ratio-op-recip { right:0; transform:translate(50%,-50%); }

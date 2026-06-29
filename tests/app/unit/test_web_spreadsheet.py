@@ -10094,9 +10094,9 @@ def test_projection_keeps_the_comma_add_remove_controls():
     # the + rides the C|U gap — the visual "next comma" slot between the comma half and U — kept clear
     # of BOTH the − (on the lone comma's branch point) and U's first reorder grip, so it doesn't sit on
     # U's gridline and occlude grip:unchanged:0 (layout-invariants-2)
-    assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet_constants.COL_W + spreadsheet_constants.V_SPLIT_GAP / 2 - spreadsheet_constants.BTN / 2)) < 0.51
+    assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet_constants.COL_W + spreadsheet_constants.V_SPLIT_GAP / 2 - spreadsheet_constants.BUTTON / 2)) < 0.51
     # and a COL_W clear of the − hover zone on the lone comma (so the + is actually clickable)
-    assert cells["comma_plus"].x - cells["comma_minus:0"].x >= spreadsheet_constants.COL_W - spreadsheet_constants.BTN
+    assert cells["comma_plus"].x - cells["comma_minus:0"].x >= spreadsheet_constants.COL_W - spreadsheet_constants.BUTTON
 
 
 def test_projection_at_full_rank_shows_the_complete_unchanged_basis():
