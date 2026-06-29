@@ -46,10 +46,10 @@ def attach_guide_link(wrap, guide_help, tile, text) -> None:
         wrap._props["data-guide-url"] = guide_help.url
 
 
-def attach_hover_help(rec, wrap, cell_box) -> None:
+def attach_hover_help(reconciler, wrap, cell_box) -> None:
     plain = tooltips.control_help(cell_box.kind, cell_box.id)
     relabeled = tooltips.control_help(cell_box.kind, cell_box.id, pretransform=True)
-    help_text = relabeled if rec.pretransform else plain
+    help_text = relabeled if reconciler.pretransform else plain
     if cell_box.kind in VALUE_KINDS:
         wrap.classes("rtt-zoomable")
         if help_text:
@@ -57,13 +57,13 @@ def attach_hover_help(rec, wrap, cell_box) -> None:
     elif help_text:
         if cell_box.id in tooltips.MEAN_DAMAGE_IDS:
             with wrap:
-                rec.cells[cell_box.id].mean_damage_tip = ui.tooltip(help_text)
+                reconciler.cells[cell_box.id].mean_damage_tip = ui.tooltip(help_text)
         elif cell_box.id == "preset:target":
             with wrap:
-                rec.target_limit_tip = ui.tooltip(help_text)
+                reconciler.target_limit_tip = ui.tooltip(help_text)
         elif plain != relabeled:
             with wrap:
-                rec.cells[cell_box.id].help_tip = (ui.tooltip(help_text), plain, relabeled)
+                reconciler.cells[cell_box.id].help_tip = (ui.tooltip(help_text), plain, relabeled)
         else:
             wrap.tooltip(help_text)
     if cell_box.kind in ("symbol", "caption"):
@@ -72,10 +72,10 @@ def attach_hover_help(rec, wrap, cell_box) -> None:
             guide_help_pretransform = tooltips.tile_guide_help_for_cell(
                 cell_box.id, pretransform=True
             )
-            text = guide_help_pretransform.text if rec.pretransform else guide_help.text
+            text = guide_help_pretransform.text if reconciler.pretransform else guide_help.text
             attach_guide_link(wrap, guide_help, cell_box.id.split(":", 1)[1], text)
             if guide_help.text != guide_help_pretransform.text:
-                rec.cells[cell_box.id].guide_help_text = (
+                reconciler.cells[cell_box.id].guide_help_text = (
                     guide_help.text,
                     guide_help_pretransform.text,
                 )
@@ -110,22 +110,27 @@ def _draft_escape_js(cancel_eid):
     )
 
 
-def wire_cell_input(rec, wrap, cell_box) -> None:
+def wire_cell_input(reconciler, wrap, cell_box) -> None:
     if cell_box.kind.endswith(("plus", "minus")):
         wrap.on("mousedown", js_handler="(e) => e.preventDefault()")
-    edit_input = rec.cells[cell_box.id].value.input or rec.cells[cell_box.id].value.plain_text_input
+    edit_input = (
+        reconciler.cells[cell_box.id].value.input
+        or reconciler.cells[cell_box.id].value.plain_text_input
+    )
     if edit_input is not None:
-        den = rec.cells[cell_box.id].value.den_input
+        den = reconciler.cells[cell_box.id].value.den_input
         guard = _STACKED_EXIT_JS if den is not None else None
         cancel_eid = draft_cancel_eid(cell_box) if cell_box.pending else None
         for fld in (edit_input, den) if den is not None else (edit_input,):
             fld.on(
                 "focus",
-                lambda _=None, cid=cell_box.id: rec._cb.on_cell_focus(cid),
+                lambda _=None, cid=cell_box.id: reconciler._cell_box.on_cell_focus(cid),
                 js_handler=guard,
             )
             fld.on(
-                "blur", lambda _=None, cid=cell_box.id: rec._cb.on_cell_blur(cid), js_handler=guard
+                "blur",
+                lambda _=None, cid=cell_box.id: reconciler._cell_box.on_cell_blur(cid),
+                js_handler=guard,
             )
             fld.on("keydown.enter", js_handler="(e) => e.target.blur()")
             if cancel_eid is not None:
@@ -133,7 +138,9 @@ def wire_cell_input(rec, wrap, cell_box) -> None:
     if cell_box.kind in _WHEEL_STEPS:
         wrap.on(
             "wheel",
-            lambda e, cid=cell_box.id: rec._cb.on_value_wheel(cid, e.args.get("deltaY")),
+            lambda e, cid=cell_box.id: reconciler._cell_box.on_value_wheel(
+                cid, e.args.get("deltaY")
+            ),
             args=["deltaY"],
             js_handler=_INT_WHEEL_JS,
         )

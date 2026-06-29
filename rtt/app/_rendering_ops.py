@@ -195,9 +195,11 @@ def end_stale_gestures(gestures) -> None:
         gestures.rank_remove = None
 
 
-def validate_gesture_source(gestures, rec, lay) -> None:
+def validate_gesture_source(gestures, reconciler, lay) -> None:
     g = gestures.gesture
     if g is not None and g.source is not None:
         src_kind = next((cell_box.kind for cell_box in lay.cells if cell_box.id == g.source), None)
-        if src_kind is None or (g.source in rec.cells and rec.cells[g.source].kind != src_kind):
+        if src_kind is None or (
+            g.source in reconciler.cells and reconciler.cells[g.source].kind != src_kind
+        ):
             gestures.end_gesture()

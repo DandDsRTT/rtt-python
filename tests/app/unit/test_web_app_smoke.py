@@ -114,26 +114,26 @@ def _cb_stub():
 
 class TestWebAppSmoke1:
     def test_drop_purges_a_cell_from_every_handle_store(self):
-        rec = _Reconciler(Editor())
-        rec.cells["scheme:primes"] = CellHandles()
-        rec.cells["scheme:primes"].chooser.scheme_button = "the-button"
-        rec.entities["scheme:primes"] = EntityHandles(el=_FakeElement())
-        rec.entities["scheme:primes"].styled = "left:0"
-        rec.entities["scheme:primes"].ring_sig = (False, False)
-        rec.drop("scheme:primes")
-        assert "scheme:primes" not in rec.cells
-        assert "scheme:primes" not in rec.entities
-        assert rec.handles("scheme:primes").chooser.scheme_button is None, "null-object, not a leaked handle"
-        assert rec.entity("scheme:primes").el is None
+        reconciler = _Reconciler(Editor())
+        reconciler.cells["scheme:primes"] = CellHandles()
+        reconciler.cells["scheme:primes"].chooser.scheme_button = "the-button"
+        reconciler.entities["scheme:primes"] = EntityHandles(el=_FakeElement())
+        reconciler.entities["scheme:primes"].styled = "left:0"
+        reconciler.entities["scheme:primes"].ring_sig = (False, False)
+        reconciler.drop("scheme:primes")
+        assert "scheme:primes" not in reconciler.cells
+        assert "scheme:primes" not in reconciler.entities
+        assert reconciler.handles("scheme:primes").chooser.scheme_button is None, "null-object, not a leaked handle"
+        assert reconciler.entity("scheme:primes").el is None
 
     def test_handles_sentinel_reads_none_but_refuses_writes(self):
-        rec = _Reconciler(Editor())
-        assert rec.handles("ghost").value.input is None
+        reconciler = _Reconciler(Editor())
+        assert reconciler.handles("ghost").value.input is None
         with pytest.raises(AttributeError):
-            rec.handles("ghost").value.input = "leak"
-        rec.cells["live"] = CellHandles()
-        rec.cells["live"].value.input = "ok"
-        assert rec.handles("live").value.input == "ok"
+            reconciler.handles("ghost").value.input = "leak"
+        reconciler.cells["live"] = CellHandles()
+        reconciler.cells["live"].value.input = "ok"
+        assert reconciler.handles("live").value.input == "ok"
 
     def test_on_disconnect_cancels_the_pending_target_limit_commit(self):
         calls = []

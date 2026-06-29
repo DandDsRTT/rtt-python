@@ -351,8 +351,8 @@ class TestWebAppSmoke4:
         from rtt.app.editor import Editor
         editor = Editor()
         assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
-        rec = _Reconciler(editor)
-        assert rec._target_preset_values() == (16, "TILT")
+        reconciler = _Reconciler(editor)
+        assert reconciler._target_preset_values() == (16, "TILT")
 
     def test_target_chooser_resets_to_dash_when_the_domain_empties_the_target_set(self):
         from rtt.app.editor import Editor

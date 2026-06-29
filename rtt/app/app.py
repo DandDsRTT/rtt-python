@@ -44,19 +44,19 @@ class _Page:
         self.chrome = PageChrome()
         loaded_from_url = self._load_document(state)
         self.gestures = GestureController(self.editor, self.runtime)
-        self.rec = _Reconciler(self.editor, self.gestures)
+        self.reconciler = _Reconciler(self.editor, self.gestures)
         self.renderer = Renderer(
             self.editor,
-            self.rec,
+            self.reconciler,
             self.gestures,
             self.chrome,
             self.runtime,
             self.sync_show_availability,
         )
         self.edits = EditController(
-            self.editor, self.rec, self.gestures, self.renderer, self.runtime
+            self.editor, self.reconciler, self.gestures, self.renderer, self.runtime
         )
-        self.gestures.bind(self.rec, self.renderer, self.edits)
+        self.gestures.bind(self.reconciler, self.renderer, self.edits)
         self.builder = PageBuilder(
             self.editor,
             self.chrome,
@@ -117,7 +117,7 @@ class _Page:
             ui.run_javascript("window.history.replaceState({}, '', window.location.pathname)")
 
     def _wire_reconciler(self) -> None:
-        self.rec._cb = bind_callbacks(
+        self.reconciler._cell_box = bind_callbacks(
             self.edits,
             self.edits.vectors,
             self.edits.tuning,
