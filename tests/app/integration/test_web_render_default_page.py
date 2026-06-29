@@ -1,0 +1,202 @@
+import asyncio
+import copy
+import logging
+import re
+import sys
+from fractions import Fraction
+from types import SimpleNamespace
+import nicegui.ui as ui
+import pytest
+from nicegui import core
+from nicegui.element_filter import ElementFilter
+from nicegui.elements.tooltip import Tooltip
+from nicegui.testing import User
+from nicegui.testing.user_interaction import UserInteraction
+from rtt.app import app as web_app
+from rtt.app import rendering as web_rendering
+from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
+from rtt.app import settings as show_settings
+from rtt.app.editor import Editor
+from _render_support import _op_classes, _wrap, _part_classes, _row_classes, _cell_child, _gentuning_face, _ratio_face, _renders_inside, _px, _DEFAULT_HTML_CELLS
+
+
+class TestDefaultPage:
+    def test_default_page_renders_without_error(self, default_page: User) -> None:
+        assert default_page.find(content="quantities").elements
+        assert default_page.find(content="tuning").elements
+
+    def test_share_button_renders_in_the_corner_bank(self, default_page: User) -> None:
+        assert default_page.find(marker="share").elements
+
+    def test_tour_button_renders_in_the_corner_bank(self, default_page: User) -> None:
+        assert default_page.find(marker="tour").elements
+
+    def test_grid_pane_publishes_its_base_size_for_the_scrollbar_fit(self, default_page: User) -> None:
+        pane = next(iter(default_page.find(marker="gridpane").elements))
+        base_w, base_h = pane._props.get("data-base-w"), pane._props.get("data-base-h")
+        fit_w = pane._props.get("data-fit-w")
+        assert base_w is not None and base_h is not None and fit_w is not None
+        assert float(base_w) == float(pane._style["width"].rstrip("px"))
+        assert float(base_h) == float(pane._style["height"].rstrip("px"))
+        assert 0 < float(fit_w) <= float(base_w), "fit-w is the gridlines' own width — base-w minus the last column title's right overhang — so it # never exceeds base-w; a horizontal scrollbar is owed only when the pane is capped below it"
+
+    def test_value_cells_carry_data_value_for_the_mapping_demo_overlay(self, default_page: User) -> None:
+        cell = next(iter(default_page.find(marker="cell:mapping:1:2").elements))
+        assert cell._props.get("data-value") == "4", (
+            "mapping_demo.js reads each value cell's number from data-value (not the rendered face); the "
+            "mapping matrix's prime-5 fifth entry is 4, so its wrap must publish it"
+        )
+
+    def test_interval_ratios_carry_reduce_and_reciprocate_buttons(self, default_page: User) -> None:
+        assert default_page.find(marker="target:0:reduce").elements
+        assert default_page.find(marker="target:0:reciprocate").elements
+        assert default_page.find(marker="comma:0:reduce").elements
+        assert default_page.find(marker="comma:0:reciprocate").elements
+        assert "rtt-op-disabled" not in _op_classes(default_page, "target:0:reduce")
+        assert "rtt-op-disabled" in _op_classes(default_page, "target:2:reduce")
+        assert "rtt-op-disabled" not in _op_classes(default_page, "target:0:reciprocate")
+        assert "rtt-op-disabled" not in _op_classes(default_page, "target:2:reciprocate")
+
+    def test_interval_columns_render_draggable_reorder_grips(self, default_page: User) -> None:
+        assert default_page.find(marker="grip:targets:0").elements, "the target list shows by default, so its reorder grip renders with no setup: a draggable # ⠿ over each column (also the drop target). Drive the builder and confirm it's a drag source"
+        grip = next(iter(default_page.find(marker="grip:targets:0").elements))
+        assert grip._props.get("draggable")
+
+    def test_settings_and_controls_carry_hover_tooltips(self, default_page: User) -> None:
+        tips = [el.text for el in default_page.client.elements.values() if isinstance(el, Tooltip)]
+        assert any("name caption" in t for t in tips)
+        mapping = next(iter(default_page.find(marker="cell:mapping:0:0").elements))
+        assert "approximate this prime" in mapping._props.get("data-zoomhelp", "")
+
+    def test_hover_tooltips_wait_before_appearing(self, default_page: User) -> None:
+        tips = [el for el in default_page.client.elements.values() if isinstance(el, Tooltip)]
+        assert tips
+        assert all(int(el._props.get("delay", 0)) >= 500 for el in tips)
+
+    def test_every_hover_tooltip_hides_instantly_so_a_reflow_cannot_strand_it(self, default_page: User) -> None:
+        tips = [el for el in default_page.client.elements.values() if isinstance(el, Tooltip)]
+        assert tips
+        assert all(int(el._props.get("transition-duration", 300)) == 0 for el in tips)
+
+    def test_every_gridded_value_cell_is_zoomable(self, default_page: User) -> None:
+        assert "rtt-zoomable" in _wrap(default_page, "tuning:prime:0")._classes, "hovering ANY gridded value pops the zoom magnifier (_ZOOM_JS clones the cell, scaled): the cell # wraps carry .rtt-zoomable for the engine to find them. Both a read-only value (the octave's # 1200.000 tuning) and an editable one (a mapping entry) get it — the magnifier is for every value, # not just the read-only ones. Structural cells (a row/column header) never become zoomable"
+        assert "rtt-zoomable" in _wrap(default_page, "cell:mapping:0:0")._classes
+        assert "rtt-zoomable" in _wrap(default_page, "qgen:0")._classes
+
+    def test_structural_cells_are_not_zoomable(self, default_page: User) -> None:
+        for el in default_page.client.elements.values():
+            classes = getattr(el, "_classes", [])
+            if "rtt-zoomable" in classes:
+                assert not any(c in classes for c in
+                               ("rtt-colheader", "rtt-rowlabel", "rtt-symbol", "rtt-boxtitle"))
+
+    def test_value_cell_help_folds_into_the_zoom_magnifier(self, default_page: User) -> None:
+        mapping = _wrap(default_page, "cell:mapping:0:0")
+        assert mapping._props.get("data-zoomhelp", "").startswith("How many of this generator")
+        assert not any(isinstance(c, Tooltip) for c in mapping.default_slot.children)
+
+    def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_default(self, default_page: User) -> None:
+        slider = next(iter(default_page.find(marker="chapterslider").elements))
+        assert slider.value == show_settings.CHAPTER_DEFAULT
+        for key in ("counts", "tuning_tiles", "optimization", "interest",
+                    "interval_ratios"):
+            assert "rtt-chap-hidden" not in _row_classes(default_page, key), key
+        assert "rtt-chap-hidden" in _row_classes(default_page, "domain_units"), "domain_units moved to ch5 (units analysis), so its row is collapsed at the default ch4"
+        for key in ("nonstandard_domain", "projection", "generator_detempering", "identity_objects"):
+            assert "rtt-chap-hidden" in _row_classes(default_page, key), key
+        assert "rtt-chap-invisible" not in _part_classes(default_page, "gridded_values"), "the dummy tile's parts are gated the space-preserving way: an early layer shows, a ch5 one is # invisible-but-in-place (visibility:hidden, NOT display:none)"
+        assert "rtt-chap-invisible" in _part_classes(default_page, "units")
+        assert "rtt-chap-invisible" not in next(iter(default_page.find(marker="audiobank").elements))._classes, "the audio bank now lives in the frozen audio-settings box, so it is never chapter-gated invisible"
+        def _box(key):
+            return next(iter(default_page.find(marker=f"showbox:{key}").elements))
+        assert "disable" in _box("nonstandard_domain")._props
+        assert "disable" not in _box("counts")._props
+        reading = next(iter(default_page.find(marker="chapterreading").elements))
+        assert reading.text == "4: Exploring temperaments"
+
+    def test_guide_settings_box_holds_a_dd_default_terminology_radio(self, default_page: User) -> None:
+        assert next(iter(default_page.find(marker="guidesettingstitle").elements)).text == "guide settings"
+        dd_opt = next(iter(default_page.find(marker="terminologyradio-dd").elements))
+        assert "rtt-rangeopt-on" in dd_opt._classes
+
+    def test_positive_gen_tuning_cell_shows_an_explicit_plus_sign(self, default_page: User) -> None:
+        sign_lbl, _, _ = _gentuning_face(default_page, "tuning:gen:1")
+        assert sign_lbl.text == "+"
+
+    def test_editable_gen_tuning_cell_renders_a_stacked_cents_face(self, default_page: User) -> None:
+        value = _cell_child(default_page, "tuning:gen:1").value
+        _sign, whole_in, frac_in = _gentuning_face(default_page, "tuning:gen:1")
+        assert "." not in whole_in.value
+        assert frac_in.value and "." not in frac_in.value
+        assert f"{whole_in.value}.{frac_in.value}" == value
+
+    def test_editable_ratio_cell_renders_a_stacked_fraction_face(self, default_page: User) -> None:
+        assert isinstance(_cell_child(default_page, "comma:0"), ui.input), "the editable numerator box, not a static label"
+        num, den = _ratio_face(default_page, "comma:0")
+        assert (num.value, den.value) == ("80", "81")
+
+    def test_a_disabled_toggle_greys_its_box_and_its_example_together(self, default_page: User) -> None:
+        def box(key):
+            return next(iter(default_page.find(marker=f"showbox:{key}").elements))
+        def example_greyed(key):
+            return "rtt-ex-disabled" in next(iter(default_page.find(marker=f"showexample:{key}").elements))._classes
+        assert "disable" in box("generator_detempering")._props and example_greyed("generator_detempering")
+
+    def test_audio_bank_is_always_live_with_a_leading_mute(self, default_page: User) -> None:
+        assert "rtt-bank-off" not in next(iter(default_page.find(marker="audiobank").elements))._classes, "the waveform / play-mode / hold / 1-1 bank lives in the frozen audio-settings box and is now # ALWAYS live — mute (its leading control) is the on/off gate, so there is no audio Show toggle # and no greyed bank. All five controls render, mute first"
+        for ctrl in ("mute", "wave", "mode", "hold", "root"):
+            assert default_page.find(marker=f"audioctrl:{ctrl}").elements
+
+    @pytest.mark.parametrize("cell, region", [
+        ("header:gens", "colheadinner"),
+        ("toggle:col:targets", "colheadinner"),
+        ("label:tuning", "rowband"),
+        ("toggle:row:tuning", "rowband"),
+        ("toggle:all", "corner"),
+    ])
+    def test_each_title_renders_into_its_frozen_region(self, default_page: User, cell: str, region: str) -> None:
+        assert _renders_inside(default_page, cell, region)
+
+    @pytest.mark.parametrize("cell, region", [
+        ("plus", "colheadinner"),
+        ("minus", "colheadinner"),
+        ("gen_plus", "colheadinner"),
+        ("target_plus", "colheadinner"),
+        ("map_plus", "rowband"),
+        ("map_minus:0", "rowband"),
+    ])
+    def test_branch_controls_render_into_their_frozen_region(self, default_page: User, cell: str, region: str) -> None:
+        assert _renders_inside(default_page, cell, region), "the always-shown + and the hover − now ride the frozen branch bands with their gridlines # (column controls in the column strip, mapping/basis controls in the row band), so they # stay put while the value tiles scroll under them. The renderer routes each cell to its # pane by its POSITION — which band its top-left falls in — not a hand-kept kind list (which # couldn't anyway: the column + and the basis + share the kind 'plus' but freeze in different # bands)"
+
+    def test_body_cells_render_on_the_board_under_no_frozen_region(self, default_page: User) -> None:
+        assert _renders_inside(default_page, "cell:mapping:0:0", "board")
+        for region in ("colheadinner", "rowband", "corner"):
+            assert not _renders_inside(default_page, "cell:mapping:0:0", region)
+
+    def test_settings_frozen_header_plus_chrome_bar_matches_the_grid_column_strip_height(self, default_page: User) -> None:
+        frozen = next(iter(default_page.find(marker="showfrozen").elements))
+        colhead = next(iter(default_page.find(marker="colhead").elements))
+        assert frozen._style.get("height")
+        assert _px(frozen, "height") == _px(colhead, "height") - page_assets._CHROME_H
+
+    def test_grid_pane_hugs_the_grid_with_a_margin_all_round(self, default_page: User) -> None:
+        lay = Editor().layout()
+        pane = next(iter(default_page.find(marker="gridpane").elements))
+        board = next(iter(default_page.find(marker="board").elements))
+        colhead = next(iter(default_page.find(marker="colhead").elements))
+        assert _px(board, "width") == lay.width
+        assert lay.right_overhang > 0
+        assert _px(pane, "width") == _px(board, "width") + lay.right_overhang + 24
+        assert _px(pane, "height") == _px(board, "height") + _px(colhead, "height") + 24
+
+    def test_settings_body_caps_below_the_window_so_it_doesnt_scroll_when_it_fits(self, default_page: User) -> None:
+        scroll = next(iter(default_page.find(marker="showscroll").elements))
+        colhead = next(iter(default_page.find(marker="colhead").elements))
+        fy = _px(colhead, "height")
+        assert scroll._style.get("max-height") == f"calc(100dvh - {page_assets._PAD + fy}px)"
+
+    @pytest.mark.parametrize("cell_id", _DEFAULT_HTML_CELLS)
+    def test_default_view_html_cell_renders_non_blank_content(self, default_page: User, cell_id: str) -> None:
+        assert default_page.find(marker=cell_id).elements
+        assert getattr(_cell_child(default_page, cell_id), "content", ""), \
+            f"{cell_id} rendered with empty html content — did render() drop its kind's branch?"
