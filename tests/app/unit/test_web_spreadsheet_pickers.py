@@ -25,10 +25,10 @@ class TestEtpickRides:
         for i in range(2):
             ep = cells[f"etpick:{i}"]
             assert ep.kind == "etpick" and ep.gen == i
-            assert ep.w == spreadsheet_constants.COL_W and ep.h == spreadsheet_constants.ROW_H
+            assert ep.width == spreadsheet_constants.COL_W and ep.height == spreadsheet_constants.ROW_H
             assert ep.y == cells[f"cell:mapping:{i}:0"].y
             close_bracket = cells[f"bracket:map:{i}:r"]
-            assert ep.x >= close_bracket.x + close_bracket.w
+            assert ep.x >= close_bracket.x + close_bracket.width
         off = {c.id: c for c in _with(presets=False).cells}
         assert not any(k.startswith("etpick:") for k in off)
 
@@ -37,20 +37,20 @@ class TestEtpickRides:
         cells = {c.id: c for c in lay.cells}
         tile = {b.id: b for b in lay.blocks}["block:primes"]
         lb, rb = cells["bracket:map:0:l"], cells["bracket:map:0:r"]
-        m_left, m_right = lb.x, rb.x + rb.w
-        assert abs((m_left - tile.x) - ((tile.x + tile.w) - m_right)) < 0.51
+        m_left, m_right = lb.x, rb.x + rb.width
+        assert abs((m_left - tile.x) - ((tile.x + tile.width) - m_right)) < 0.51
         ep = cells["etpick:0"]
         assert ep.x >= m_right
-        assert abs((ep.x + ep.w) - (tile.x + tile.w - spreadsheet_constants.PAD)) < 0.51
+        assert abs((ep.x + ep.width) - (tile.x + tile.width - spreadsheet_constants.PAD)) < 0.51
         handle, label = cells["map_drag:0"], cells["matlabel:row:mapping:primes:0"]
-        assert tile.x <= handle.x and handle.x + handle.w <= label.x
-        assert abs((label.x + label.w) - m_left) < 0.51
+        assert tile.x <= handle.x and handle.x + handle.width <= label.x
+        assert abs((label.x + label.width) - m_left) < 0.51
 
     def test_commapick_rides_below_each_real_comma_column(self):
         cells = {c.id: c for c in _with(presets=True).cells}
         cp = cells["commapick:0"]
         assert cp.kind == "commapick" and cp.comma == 0
-        assert cp.w == spreadsheet_constants.COL_W and cp.h == spreadsheet_constants.ROW_H
+        assert cp.width == spreadsheet_constants.COL_W and cp.height == spreadsheet_constants.ROW_H
         column_cell = next(c for cid, c in cells.items()
                            if cid.startswith("cell:comma:0:") and c.comma == 0)
         assert cp.x == column_cell.x

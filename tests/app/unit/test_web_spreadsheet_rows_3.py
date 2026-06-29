@@ -237,9 +237,9 @@ class TestGeneratorDetempering:
         off = {c.id: c for c in _with(charts=False).cells}
         on = {c.id: c for c in _with(charts=True).cells}
         ch, v0 = on["chart:damage:targets"], on["damage:target:0"]
-        assert ch.y + ch.h <= v0.y
+        assert ch.y + ch.height <= v0.y
         assert on["damage:target:0"].y > off["damage:target:0"].y
-        assert ch.x <= on["target:0"].x and ch.x + ch.w >= on["target:7"].x + spreadsheet_constants.COL_W, "the chart spans the target columns (so its bars can align with them)"
+        assert ch.x <= on["target:0"].x and ch.x + ch.width >= on["target:7"].x + spreadsheet_constants.COL_W, "the chart spans the target columns (so its bars can align with them)"
 
 
 class TestGeneratorTuning:
@@ -250,8 +250,8 @@ class TestGeneratorTuning:
         assert len(cp.values) == 3
         assert len(ct.values) == 8
         assert any(v < 0 for v in ct.values), "errors are signed, so the chart straddles zero"
-        assert cp.y + cp.h <= on["retune:prime:0"].y
-        assert ct.y + ct.h <= on["retune:target:0"].y
+        assert cp.y + cp.height <= on["retune:prime:0"].y
+        assert ct.y + ct.height <= on["retune:target:0"].y
 
     def test_every_open_tile_in_the_retuning_row_is_charted(self):
         s = settings.defaults()
@@ -310,7 +310,7 @@ class TestGeneratorTuning:
         assert "rangechart:tuning:gens" not in off
         ch = on["rangechart:tuning:gens"]
         assert ch.kind == "rangechart"
-        assert ch.x == on["header:gens"].x and ch.w == on["header:gens"].w, "it spans the generators column (so its per-generator I-beams align with the cells)"
+        assert ch.x == on["header:gens"].x and ch.width == on["header:gens"].width, "it spans the generators column (so its per-generator I-beams align with the cells)"
 
     def test_generator_range_chart_carries_the_decimals_toggle(self):
         on = {c.id: c for c in _with(tuning_ranges=True).cells}["rangechart:tuning:gens"]
@@ -365,16 +365,16 @@ class TestGeneratorTuning:
         assert sel.kind == "rangemode"
         assert sel.text == "monotone", "the live mode (default), so the renderer can preset it"
         assert sel.x == ch.x
-        assert sel.y >= ch.y + ch.h
+        assert sel.y >= ch.y + ch.height
 
     def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector(self):
         lay = _with(tuning_ranges=True)
         cells = {c.id: c for c in lay.cells}
         pan = {b.id: b for b in lay.blocks}["block:tuning:gens"]
         v, ch, sel = cells["tuning:gen:0"], cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
-        assert pan.x <= ch.x and pan.x + pan.w >= ch.x + ch.w
+        assert pan.x <= ch.x and pan.x + pan.width >= ch.x + ch.width
         assert pan.y <= v.y
-        assert pan.y + pan.h >= sel.y + sel.h
+        assert pan.y + pan.height >= sel.y + sel.height
         assert "block:tuning:gens" in {b.id for b in _with(tuning_ranges=False).blocks}
         assert "block:gentuning" not in {b.id for b in lay.blocks}
 
@@ -388,7 +388,7 @@ class TestGeneratorTuning:
         assert title.y < chart.y
         assert title.x == cells["header:gens"].x
         box = boxes["block:tuning:rangesbox"]
-        assert box.y <= title.y and box.y + box.h >= sel.y + sel.h
+        assert box.y <= title.y and box.y + box.height >= sel.y + sel.height
 
     def test_tuning_ranges_draws_a_bordered_box_around_the_chart_and_selector(self):
         lay = _with(tuning_ranges=True)
@@ -398,15 +398,15 @@ class TestGeneratorTuning:
         box = boxes["block:tuning:rangesbox"]
         assert box.boxed is True, "a bordered box, not a plain grey tile"
         ch, sel = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
-        assert box.x <= ch.x and box.x + box.w >= ch.x + ch.w
-        assert box.y <= ch.y and box.y + box.h >= sel.y + sel.h
+        assert box.x <= ch.x and box.x + box.width >= ch.x + ch.width
+        assert box.y <= ch.y and box.y + box.height >= sel.y + sel.height
         assert "block:tuning:rangesbox" not in {b.id for b in _with(tuning_ranges=False).blocks}
 
     def test_tuning_ranges_box_reserves_row_height_so_following_rows_clear_it(self):
         lay = _with(tuning_ranges=True)
         cells = {c.id: c for c in lay.cells}
         panel = {b.id: b for b in lay.blocks}["block:tuning:gens"]
-        box_bottom = panel.y + panel.h
+        box_bottom = panel.y + panel.height
         for nxt in ("just:prime:0", "retune:prime:0", "damage:target:0"):
             assert cells[nxt].y >= box_bottom, f"{nxt} overlaps the ranges box"
         off = {c.id: c for c in _with(tuning_ranges=False).cells}
@@ -490,14 +490,14 @@ class TestGeneratorTuning:
         assert tg("mapping", "primes") == {"temperament"}
         cells = {c.id: c for c in lay.cells}
         yc = cells["cell:canon_mapped:0:0"]
-        x, y = yc.x + yc.w / 2, yc.y + yc.h / 2
-        over = lambda pred: any(pred(bl) and bl.x <= x <= bl.x + bl.w and bl.y <= y <= bl.y + bl.h for bl in lay.blocks)
+        x, y = yc.x + yc.width / 2, yc.y + yc.height / 2
+        over = lambda pred: any(pred(bl) and bl.x <= x <= bl.x + bl.width and bl.y <= y <= bl.y + bl.height for bl in lay.blocks)
         assert over(lambda bl: bl.id.startswith("washbase:"))
         assert not over(lambda bl: bl.tint in ("temperament", "tuning", "form"))
         rank = cells["count:gens"]
         gx, cgx = cells["cell:form:0:0"].x + 5, cells["cell:fcancel:0:0"].x + 5
-        in_band = lambda bx, tint: any(bl.tint == tint and bl.x <= bx <= bl.x + bl.w
-                                       and bl.y <= rank.y + rank.h / 2 <= bl.y + bl.h for bl in lay.blocks)
+        in_band = lambda bx, tint: any(bl.tint == tint and bl.x <= bx <= bl.x + bl.width
+                                       and bl.y <= rank.y + rank.height / 2 <= bl.y + bl.height for bl in lay.blocks)
         assert in_band(gx, "temperament") and not in_band(gx, "form")
         assert in_band(cgx, "temperament") and in_band(cgx, "form")
 
@@ -559,9 +559,9 @@ class TestGeneratorTuning:
     def test_washes_bridge_the_plus_column_gutters(self):
         lay = _colormap_layout()
         cells = {c.id: c for c in lay.cells}
-        h = lambda k: cells[f"header:{k}"]
-        primes_commas = (h("primes").x + h("primes").w + h("commas").x) / 2
-        commas_targets = (h("commas").x + h("commas").w + h("targets").x) / 2
+        height = lambda k: cells[f"header:{k}"]
+        primes_commas = (height("primes").x + height("primes").width + height("commas").x) / 2
+        commas_targets = (height("commas").x + height("commas").width + height("targets").x) / 2
         map_y = _mid(cells, "cell:mapping:0:0")[1]
         tun_y = _mid(cells, "tuning:prime:0")[1]
         assert "temperament" in _color_at(lay, primes_commas, map_y)
@@ -574,9 +574,9 @@ class TestGeneratorTuning:
         washes = {b.id.split(":", 1)[1]: b for b in blocks if b.tint == "tuning"}
         bases = {b.id.split(":", 1)[1]: b for b in blocks if b.tint == "base"}
         assert washes and set(washes) == set(bases)
-        for k, w in washes.items():
+        for k, width in washes.items():
             b = bases[k]
-            assert (b.x, b.y, b.w, b.h) == (w.x, w.y, w.w, w.h)
+            assert (b.x, b.y, b.width, b.height) == (width.x, width.y, width.width, width.height)
         assert all(b.tint == "" for b in blocks if b.id.startswith("block:"))
 
     def test_collapsing_a_tile_removes_its_colorization(self):

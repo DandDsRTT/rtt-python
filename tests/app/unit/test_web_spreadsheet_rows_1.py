@@ -263,7 +263,7 @@ class TestCountsRow:
         assert cells["count:targets"].y < cells["target:0"].y
         for column_key in ("gens", "primes", "targets"):
             assert cells[f"count:{column_key}"].x == cells[f"header:{column_key}"].x
-            assert cells[f"count:{column_key}"].w == cells[f"header:{column_key}"].w
+            assert cells[f"count:{column_key}"].width == cells[f"header:{column_key}"].width
 
     def test_counts_present_keeps_the_column_fan_out_immediately_after_the_toggle(self):
         lay = _with(counts=True)
@@ -274,7 +274,7 @@ class TestCountsRow:
         assert fan < count.y
         v0 = by_id["v:prime:0"]
         assert v0.start == fan
-        assert v0.start < count.y and v0.start + v0.length > count.y + count.h
+        assert v0.start < count.y and v0.start + v0.length > count.y + count.height
         trunk = by_id["trunk:primes"]
         assert trunk.start + trunk.length == fan
         assert fan == {ln.id: ln for ln in _with(counts=False).lines}["bus:primes:top"].pos
@@ -331,7 +331,7 @@ class TestCountsRow:
             column_key = cid.split(":", 1)[1]
             panel = blocks.get(f"block:counts:{column_key}")
             assert panel is not None, f"{cid} has no backing panel"
-            assert panel.w > 0 and panel.h > 0
+            assert panel.width > 0 and panel.height > 0
 
     def test_other_intervals_of_interest_column_is_present_right_of_targets(self):
         cells = {c.id: c for c in _layout().cells}
@@ -341,8 +341,8 @@ class TestCountsRow:
 
     def test_empty_interest_columns_footprint_hugs_its_content_the_title_overhangs(self):
         cells = {c.id: c for c in _layout().cells}
-        assert cells["header:interest"].w == 2 * spreadsheet_constants.BRACKET_W
-        assert cells["header:interest"].w < spreadsheet_text._title_w("other intervals\nof interest")
+        assert cells["header:interest"].width == 2 * spreadsheet_constants.BRACKET_W
+        assert cells["header:interest"].width < spreadsheet_text._title_w("other intervals\nof interest")
 
     def test_empty_interest_column_is_just_a_header_and_axis(self):
         lay = _layout()
@@ -403,8 +403,8 @@ class TestCountsRow:
         cells = {c.id: c for c in _with_interest(_INTEREST).cells}
         c0, c1 = cells["cell:interest:0:0"], cells["cell:interest:0:1"]
         m0 = cells["cell:imapped:0:0"]
-        assert c0.w == m0.w == spreadsheet_constants.COL_W
-        assert c1.x - (c0.x + c0.w) == spreadsheet_constants.INTERVAL_COL_GAP / 2
+        assert c0.width == m0.width == spreadsheet_constants.COL_W
+        assert c1.x - (c0.x + c0.width) == spreadsheet_constants.INTERVAL_COL_GAP / 2
         assert c0.x == m0.x
 
     def test_interest_has_add_and_per_interval_remove_controls(self):

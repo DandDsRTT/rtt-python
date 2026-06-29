@@ -62,7 +62,7 @@ class TestCanonicalGenerators:
         cells = {c.id: c for c in _with(form_tiles=True).cells}
         rank, hcan, hgen = cells["count:gens"], cells["header:canongens"], cells["header:gens"]
         assert rank.text.endswith(" = 2")
-        assert rank.x <= hcan.x and rank.x + rank.w >= hgen.x
+        assert rank.x <= hcan.x and rank.x + rank.width >= hgen.x
         assert cells["caption:counts:gens"].text == "rank"
         assert "count:canongens" not in cells
         plain = {c.id: c for c in _layout().cells}
@@ -72,8 +72,8 @@ class TestCanonicalGenerators:
         cells = {c.id: c for c in _with(form_tiles=True, header_symbols=True).cells}
         flabel, fbracket = cells["matlabel:row:mapping:canongens:0"], cells["bracket:finv:map:0:l"]
         assert flabel.text == "𝒇₁"
-        assert flabel.x + flabel.w <= fbracket.x, "the label sits left of (or up to) the { bracket, not over it"
-        assert flabel.w > 0 and fbracket.x - flabel.x >= flabel.w
+        assert flabel.x + flabel.width <= fbracket.x, "the label sits left of (or up to) the { bracket, not over it"
+        assert flabel.width > 0 and fbracket.x - flabel.x >= flabel.width
 
     def test_canonical_generators_column_builds_finv_embedding_and_tuning_tiles(self):
         from rtt.app.grid_tables import SUBSCRIPT_C
@@ -139,12 +139,12 @@ class TestCanonicalGenerators:
         assert "sep:mapped:1" in cells, "the mapped target interval list separates its vector columns with vertical # bars, and the per-column top/bottom marks are inset so they never touch one"
         sep = cells["sep:mapped:1"]
         top0, brace0 = cells["ebktop:mapped:0"], cells["ebkbrace:mapped:0"]
-        assert top0.w < spreadsheet_constants.COL_W and brace0.w < spreadsheet_constants.COL_W, "inset, not full column"
-        assert top0.x + top0.w < sep.x
+        assert top0.width < spreadsheet_constants.COL_W and brace0.width < spreadsheet_constants.COL_W, "inset, not full column"
+        assert top0.x + top0.width < sep.x
         outer = cells["bracket:mapped:l"]
         over = spreadsheet_constants.FRAME_OVERHANG
         assert sep.y == outer.y == top0.y - over
-        assert sep.y + sep.h == outer.y + outer.h == brace0.y + brace0.h + over
+        assert sep.y + sep.height == outer.y + outer.height == brace0.y + brace0.height + over
 
     def test_maps_get_angle_brackets_and_lists_get_square_brackets(self):
         cells = {c.id: c for c in _layout().cells}
@@ -159,24 +159,24 @@ class TestCanonicalGenerators:
         cells = {c.id: c for c in _layout().cells}
         l0, l1 = cells["bracket:map:0:l"], cells["bracket:map:1:l"]
         row0 = cells["cell:mapping:0:0"]
-        assert l0.h < spreadsheet_constants.ROW_H
-        assert l0.h == l1.h
-        assert abs((l0.y + l0.h / 2) - (row0.y + row0.h / 2)) < 0.51
-        gap = l1.y - (l0.y + l0.h)
-        assert gap >= 0.75 * l0.h
+        assert l0.height < spreadsheet_constants.ROW_H
+        assert l0.height == l1.height
+        assert abs((l0.y + l0.height / 2) - (row0.y + row0.height / 2)) < 0.51
+        gap = l1.y - (l0.y + l0.height)
+        assert gap >= 0.75 * l0.height
 
     def test_mapped_list_outer_bracket_still_spans_the_whole_matrix(self):
         cells = {c.id: c for c in _layout().cells}
         b = cells["bracket:mapped:l"]
         first, last = cells["cell:mapped:0:0"], cells["cell:mapped:1:0"]
-        assert b.h > spreadsheet_constants.ROW_H
-        assert b.y <= first.y and b.y + b.h >= last.y + last.h
+        assert b.height > spreadsheet_constants.ROW_H
+        assert b.y <= first.y and b.y + b.height >= last.y + last.height
 
     def test_the_row_fold_node_clears_the_first_content_tile(self):
         lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))))
         node = {c.id: c for c in lay.cells}["toggle:row:mapping"]
         gens_block = {b.id: b for b in lay.blocks}["block:gens"]
-        assert node.x + node.w <= gens_block.x, "the node does not collide with the tile"
+        assert node.x + node.width <= gens_block.x, "the node does not collide with the tile"
 
     def test_each_content_tile_has_a_top_left_fold_toggle(self):
         cells = {c.id: c for c in _layout().cells}
@@ -193,12 +193,12 @@ class TestCanonicalGenerators:
         cells = {c.id: c for c in lay.cells}
         blocks = {b.id: b for b in lay.blocks}
         tog, top = cells["toggle:tile:mapping:primes"], cells["ebktop:primes"]
-        assert tog.y + tog.h <= top.y
+        assert tog.y + tog.height <= top.y
         tt, v = cells["toggle:tile:tuning:primes"], cells["tuning:prime:0"]
-        assert tt.y + tt.h <= v.y
+        assert tt.y + tt.height <= v.y
         panel = blocks["block:mapping"]
         assert panel.x < tog.x and panel.y < tog.y
-        assert tog.x + tog.w < panel.x + panel.w
+        assert tog.x + tog.width < panel.x + panel.width
 
     def test_collapsing_a_tile_hides_its_content_keeps_its_toggle_and_folds_its_panel(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -208,7 +208,7 @@ class TestCanonicalGenerators:
         assert not any(c.startswith("cell:mapping:") for c in cells)
         assert not any(c.startswith("bracket:map:") for c in cells)
         assert "ebktop:primes" not in cells and "ebkbrace:primes" not in cells
-        assert blocks["block:mapping"].w == 0 and blocks["block:mapping"].h == 0, "...the panel folds to a zero-size point so the renderer animates it away"
+        assert blocks["block:mapping"].width == 0 and blocks["block:mapping"].height == 0, "...the panel folds to a zero-size point so the renderer animates it away"
         assert "toggle:tile:mapping:primes" in cells, "...but the toggle stays so the tile can be re-expanded"
 
     def test_collapsing_a_tile_leaves_its_siblings_and_the_grid_geometry_intact(self):
@@ -289,7 +289,7 @@ class TestPlainText:
         temp, matrix = cells["preset:temperament"], cells["cell:mapping:0:0"]
         box = blocks["block:preset:temperament"]
         assert temp.y > matrix.y and temp.x == box.x + inset
-        assert box.x <= matrix.x and matrix.x + matrix.w <= box.x + box.w
+        assert box.x <= matrix.x and matrix.x + matrix.width <= box.x + box.width
         assert cells["preset:target"].x == cells["header:targets"].x + inset
 
     def test_single_option_tuning_chooser_is_a_disabled_dropdown(self):
@@ -350,7 +350,7 @@ class TestPlainText:
     def test_preset_dropdown_clears_the_row_below_it(self):
         cells = {c.id: c for c in _with(presets=True).cells}
         drop, next_row = cells["preset:tuning"], cells["label:just"]
-        assert drop.y + drop.h <= next_row.y
+        assert drop.y + drop.height <= next_row.y
 
     def test_preset_chooser_sits_below_the_plain_text_band(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -358,11 +358,11 @@ class TestPlainText:
         s["presets"], s["plain_text_values"] = True, True
         cells = {c.id: c for c in spreadsheet.build(base, s).cells}
         chooser, plain_text = cells["preset:tuning"], cells["plain_text:tuning:primes"]
-        assert chooser.y >= plain_text.y + plain_text.h
+        assert chooser.y >= plain_text.y + plain_text.height
 
     def test_target_chooser_is_wider_to_seat_its_numeric_override(self):
         cells = {c.id: c for c in _with(presets=True).cells}
-        assert cells["preset:target"].w > cells["preset:tuning"].w
+        assert cells["preset:target"].width > cells["preset:tuning"].width
 
     def test_tuning_and_temperament_dropdowns_are_copied_into_more_tiles(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -401,16 +401,16 @@ class TestPlainText:
                                  ("preset:target", "target interval set scheme", "block:vector:targets")):
             ctrl, box, panel = cells[cid], boxes[f"block:{cid}"], boxes[tile]
             assert box.boxed is True, "a bordered box, not a plain tile"
-            assert box.x <= ctrl.x and box.x + box.w >= ctrl.x + ctrl.w
-            assert box.y <= ctrl.y and box.y + box.h >= ctrl.y + ctrl.h
-            assert box.x >= panel.x - 0.5 and box.x + box.w <= panel.x + panel.w + 0.5, "the box stays WITHIN its tile -- never spilling out (the reported bug)"
+            assert box.x <= ctrl.x and box.x + box.width >= ctrl.x + ctrl.width
+            assert box.y <= ctrl.y and box.y + box.height >= ctrl.y + ctrl.height
+            assert box.x >= panel.x - 0.5 and box.x + box.width <= panel.x + panel.width + 0.5, "the box stays WITHIN its tile -- never spilling out (the reported bug)"
             lbl = cells[f"block:{cid}:label"]
             assert lbl.kind == "caption" and lbl.text == label and lbl.align == "left" and lbl.y > ctrl.y
         for fcid, tbox in (("formchooser:mapping", "block:preset:temperament"),
                            ("formchooser:comma_basis", "block:preset:temperament:commas")):
             assert f"block:{fcid}" not in boxes
             ctrl, box = cells[fcid], boxes[tbox]
-            assert box.y <= ctrl.y and box.y + box.h >= ctrl.y + ctrl.h
+            assert box.y <= ctrl.y and box.y + box.height >= ctrl.y + ctrl.height
             tdrop = cells[tbox.removeprefix("block:")]
             assert ctrl.y > tdrop.y
             flbl = cells[f"{fcid}:label"]
@@ -422,9 +422,9 @@ class TestPlainText:
         lay = spreadsheet.build(base, {**settings.defaults(), "presets": True})
         gens_on = {b.id: b for b in lay.blocks}["block:tuning:gens"]
         box = {b.id: b for b in lay.blocks}["block:preset:tuning:gens"]
-        assert gens_on.w > gens_off.w
-        assert gens_on.w >= spreadsheet_text._min_width_for_lines("established tuning scheme", 1)
-        assert box.x >= gens_on.x and box.x + box.w <= gens_on.x + gens_on.w
+        assert gens_on.width > gens_off.width
+        assert gens_on.width >= spreadsheet_text._min_width_for_lines("established tuning scheme", 1)
+        assert box.x >= gens_on.x and box.x + box.width <= gens_on.x + gens_on.width
 
     def test_chooser_boxes_span_the_full_width_of_their_tiles(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -436,7 +436,7 @@ class TestPlainText:
                           ("block:preset:tuning:gens", "block:tuning:gens"),
                           ("block:preset:target", "block:vector:targets")):
             box, panel = boxes[cid], boxes[tile]
-            left, right = box.x - panel.x, (panel.x + panel.w) - (box.x + box.w)
+            left, right = box.x - panel.x, (panel.x + panel.width) - (box.x + box.width)
             assert abs(left - right) < 1
 
     def test_target_chooser_box_spans_its_tile_with_a_capped_dropdown_inside(self):
@@ -446,7 +446,7 @@ class TestPlainText:
         lay = spreadsheet.build(base, s)
         box = {b.id: b for b in lay.blocks}["block:preset:target"]
         dropdown = {c.id: c for c in lay.cells}["preset:target"]
-        assert dropdown.w < box.w - 30
+        assert dropdown.width < box.width - 30
 
     def test_build_honors_the_target_interval_spec(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -542,7 +542,7 @@ class TestPlainText:
             grid_tokens = []
             for c in lay.cells:
                 if (c.text and not c.id.startswith("plain_text:")
-                        and cx - 2 <= c.x <= cx + cw and rb.y - 2 <= c.y <= rb.y + rb.h + 2):
+                        and cx - 2 <= c.x <= cx + cw and rb.y - 2 <= c.y <= rb.y + rb.height + 2):
                     grid_tokens += TOKEN.findall(cell_value(c.text))
             band_tokens = TOKEN.findall(band_body(b.geometry.plain_text_strings[(row_key, column_key)]))
             if sorted(grid_tokens) != sorted(band_tokens):
@@ -608,8 +608,8 @@ class TestPlainText:
     def test_plain_text_band_sits_below_the_caption_spanning_its_column(self):
         cells = {c.id: c for c in _with(plain_text_values=True, names=True).cells}
         pt, cap, header = cells["plain_text:mapping:primes"], cells["caption:mapping:primes"], cells["header:primes"]
-        assert pt.y >= cap.y + cap.h
-        assert pt.x == header.x and pt.w == header.w
+        assert pt.y >= cap.y + cap.height
+        assert pt.x == header.x and pt.width == header.width
 
 
 class TestPlainText2:
@@ -641,10 +641,10 @@ class TestPlainText2:
     def test_plain_text_values_are_a_single_line_within_their_column(self):
         cells = {c.id: c for c in _with(plain_text_values=True).cells}
         long, header = cells["plain_text:tuning:targets"], cells["header:targets"]
-        assert long.h == spreadsheet_constants.PLAIN_TEXT_H
-        assert long.w == header.w
-        assert cells["plain_text:just:targets"].h == spreadsheet_constants.PLAIN_TEXT_H
-        assert cells["plain_text:mapping:primes"].h == spreadsheet_constants.PLAIN_TEXT_EDIT_H
+        assert long.height == spreadsheet_constants.PLAIN_TEXT_H
+        assert long.width == header.width
+        assert cells["plain_text:just:targets"].height == spreadsheet_constants.PLAIN_TEXT_H
+        assert cells["plain_text:mapping:primes"].height == spreadsheet_constants.PLAIN_TEXT_EDIT_H
 
     def test_names_toggles_in_tile_captions_but_never_the_row_col_titles(self):
         on = {c.id: c for c in _with(names=True).cells}

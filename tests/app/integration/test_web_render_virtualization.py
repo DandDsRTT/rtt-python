@@ -27,7 +27,7 @@ class TestVirtualizationElides:
         live, page = _live_page()
         lay, fx, fy, body = _body_cells(live, page)
 
-        visible = {c.id for c in body if page.renderer._body_visible(c.x, c.y, c.w, c.h, fy)}
+        visible = {c.id for c in body if page.renderer._body_visible(c.x, c.y, c.width, c.height, fy)}
         offscreen = {c.id for c in body} - visible
         assert offscreen, "a 320x320 viewport must leave some body cells off-screen to elide"
 
@@ -52,7 +52,7 @@ class TestVirtualizationElides:
 
         page.renderer._on_viewport(SimpleNamespace(args={"l": far.x, "t": far.y - fy, "w": 320, "h": 320}))
         assert far.id in page.rec.entities
-        assert not page.renderer._body_visible(near.x, near.y, near.w, near.h, fy), "...and the now-far-above near cell is RETAINED, not evicted — a scroll only ever ADDS, so # scrolling back to it never re-blanks (the regression this fixes)"
+        assert not page.renderer._body_visible(near.x, near.y, near.width, near.height, fy), "...and the now-far-above near cell is RETAINED, not evicted — a scroll only ever ADDS, so # scrolling back to it never re-blanks (the regression this fixes)"
         assert near.id in page.rec.entities
 
     async def test_background_fill_materializes_every_deferred_cell(self, user: User, monkeypatch) -> None:

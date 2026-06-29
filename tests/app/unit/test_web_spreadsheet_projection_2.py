@@ -120,7 +120,7 @@ class TestProjectionV:
         assert n_count.text.endswith("= 0")
         cap = cells["caption:counts:commas"]
         assert cap.text == "nullity"
-        assert spreadsheet_text._wrap_lines("nullity", cap.w) == 1
+        assert spreadsheet_text._wrap_lines("nullity", cap.width) == 1
         assert n_count.x == cap.x < cells["bracket:vector:commas:l"].x <= cells["cell:unchanged:0:0"].x
         assert cells["count:commas:u"].x == cells["cell:unchanged:0:0"].x
         assert cells["bracket:vector:commas:l"].x + spreadsheet_constants.BRACKET_W == cells["cell:unchanged:0:0"].x
@@ -174,8 +174,8 @@ class TestProjectionV:
         assert cells["count:commas"].x < cells["count:commas:u"].x
         assert cells["caption:counts:commas"].text == "nullity"
         assert cells["caption:counts:commas:u"].text == "unchanged interval count"
-        assert (cells["caption:counts:commas"].x, cells["caption:counts:commas"].w) == (cells["count:commas"].x, cells["count:commas"].w)
-        assert (cells["caption:counts:commas:u"].x, cells["caption:counts:commas:u"].w) == (cells["count:commas:u"].x, cells["count:commas:u"].w)
+        assert (cells["caption:counts:commas"].x, cells["caption:counts:commas"].width) == (cells["count:commas"].x, cells["count:commas"].width)
+        assert (cells["caption:counts:commas:u"].x, cells["caption:counts:commas:u"].width) == (cells["count:commas:u"].x, cells["count:commas:u"].width)
 
     def test_projected_unrotated_vector_list_tile_is_complete(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), symbols=True, units=True, plain_text_values=True).cells}
@@ -325,15 +325,15 @@ class TestPlainText3:
 
     def test_comma_add_drop_zone_does_not_occlude_the_unchanged_grips(self):
         def overlap(a, b):
-            return max(a.x, b.x) < min(a.x + a.w, b.x + b.w) - 0.01
+            return max(a.x, b.x) < min(a.x + a.width, b.x + b.width) - 0.01
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = {**settings.defaults(), "projection": True, "drag_to_combine": True}
         on = {c.id: c for c in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
         assert not overlap(on["grip:commas:add"], on["grip:unchanged:0"])
-        assert on["grip:commas:add"].x + on["grip:commas:add"].w <= on["grip:unchanged:0"].x + 0.51
+        assert on["grip:commas:add"].x + on["grip:commas:add"].width <= on["grip:unchanged:0"].x + 0.51
         full = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1))), s).cells}
         assert not overlap(full["grip:commas:add"], full["grip:unchanged:0"])
-        assert full["grip:commas:add"].x + full["grip:commas:add"].w <= full["grip:unchanged:0"].x + 0.51
+        assert full["grip:commas:add"].x + full["grip:commas:add"].width <= full["grip:unchanged:0"].x + 0.51
         assert full["comma_plus"].x < full["cell:unchanged:0:0"].x
 
     def test_units_row_draft_columns_match_across_the_interval_lists(self):

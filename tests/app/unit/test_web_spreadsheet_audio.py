@@ -102,8 +102,8 @@ class TestCanonicalMapping:
         for c in lay.cells:
             if c.kind not in audio._INTERVAL_KINDS or c.pending:
                 continue
-            rkey = audio._band_of(bands, c.y + c.h / 2)
-            ckey = audio._col_of(spans, c.x + c.w / 2)
+            rkey = audio._band_of(bands, c.y + c.height / 2)
+            ckey = audio._col_of(spans, c.x + c.width / 2)
             if rkey is None or ckey is None:
                 continue
             plays = c.audio is not None and c.audio[0].startswith(tuple(audio._TILE_PREFIX.values()))
@@ -357,7 +357,7 @@ class TestCanonicalMapping:
         narrow = {b.id: b for b in _with(names=False).blocks}
         cells = {c.id: c for c in _with(names=True).cells}
         panel = blocks["block:vector:commas"]
-        assert panel.w > narrow["block:vector:commas"].w
+        assert panel.width > narrow["block:vector:commas"].width
         fold = cells["toggle:tile:vectors:commas"]
         assert fold.x == panel.x + spreadsheet_constants.TOGGLE_INSET
 
