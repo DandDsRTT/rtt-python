@@ -78,8 +78,8 @@ def _emit_prescale_group(cells, resolved, geometry, group, vectors, prescaler_di
         if vector is None:
             for i in range(nrows + geometry.size_rows):
                 cid = f"cell:prescaling:{group}:{i}:{query.col_token(resolved, group, c)}"
-                cx, cy = left[query.comma_value_pos(resolved, c) if group == "commas" else c], query.subrow_top(geometry, "prescaling", i)
-                cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue", text=DASH, unit=u))
+                cell_x, cell_y = left[query.comma_value_pos(resolved, c) if group == "commas" else c], query.subrow_top(geometry, "prescaling", i)
+                cells.append(CellBox(cid, cell_x, cell_y, COL_W, ROW_H, "tuningvalue", text=DASH, unit=u))
             continue
         prescaled = _prescale_vector(vector, prescaler_diag, prescaler_is_matrix, nrows)
         _emit_prescale_cells(cells, resolved, geometry, group, c, vector, prescaled, prime_term, left, u, nrows)
@@ -95,15 +95,15 @@ def _emit_prescale_cells(cells, resolved, geometry, group, c, vector, prescaled,
     for i in range(nrows + geometry.size_rows):
         value = prescaled[i] if i < nrows else geometry.size_factor * sum(prescaled)
         cid = f"cell:prescaling:{group}:{i}:{query.col_token(resolved, group, c)}"
-        cx, cy = left[query.comma_value_pos(resolved, c) if group == "commas" else c], query.subrow_top(geometry, "prescaling", i)
+        cell_x, cell_y = left[query.comma_value_pos(resolved, c) if group == "commas" else c], query.subrow_top(geometry, "prescaling", i)
         if i < nrows and not resolved.flags.superspace and group == "primes" and (i == c or resolved.flags.alt_complexity):
-            cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
+            cells.append(CellBox(cid, cell_x, cell_y, COL_W, ROW_H, "prescalercell",
                                  text=service.prescale_text(value, resolved.flags.decimals), prime=i, unit=u))
         elif i < nrows and resolved.flags.math_expressions and vector[i] != 0 and i in prime_term:
-            cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
+            cells.append(CellBox(cid, cell_x, cell_y, COL_W, ROW_H, "mathexpr",
                                  text=_prescale_math_expr(vector[i], prime_term[i], value, resolved.flags.quantities, resolved.flags.decimals), unit=u))
         else:
-            cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue",
+            cells.append(CellBox(cid, cell_x, cell_y, COL_W, ROW_H, "tuningvalue",
                                  text=service.prescale_text(value, resolved.flags.decimals), unit=u))
 
 
@@ -117,10 +117,10 @@ def _emit_prescale_draft(cells, resolved, geometry, group, prescaler_diag, presc
         ghost_vector = _lift_to_superspace(resolved, (resolved.ghosts.comma_vector,))[0] if resolved.flags.superspace else resolved.ghosts.comma_vector
         ghost_pre = _prescale_vector(ghost_vector, prescaler_diag, prescaler_is_matrix, nrows)
     for i in range(nrows + geometry.size_rows):
-        cy = query.subrow_top(geometry, "prescaling", i)
+        cell_y = query.subrow_top(geometry, "prescaling", i)
         text = ""
         if ghost_pre is not None:
             value = ghost_pre[i] if i < nrows else geometry.size_factor * sum(ghost_pre)
             text = service.prescale_text(value, resolved.flags.decimals)
         cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left[pending_idx[1]],
-                             cy, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
+                             cell_y, COL_W, ROW_H, "tuningvalue", text=text, pending=True))

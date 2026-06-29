@@ -89,9 +89,9 @@ def top_bracket(w, h):
 def angle_bracket(w, h):
     bx1 = w - BR_INSET
     bx0 = bx1 - BR_SERIF_L
-    cy = h / 2
+    center_y = h / 2
     vx, tx = bx0 + _BR_ANGLE_THICK, bx1 - 0.4
-    top, vertex, bot = (tx, 0.2), (vx, cy), (tx, h - 0.2)
+    top, vertex, bot = (tx, 0.2), (vx, center_y), (tx, h - 0.2)
     n = 10
     pts = [
         (
@@ -113,11 +113,11 @@ def angle_bracket(w, h):
 
 
 def brace(w, h):
-    cx = w / 2
+    center_x = w / 2
     end_x, serif_dx, cusp_dx = 2.0, 3.2, 5.5
     span = end_x + serif_dx + cusp_dx + 1.0
-    if span > cx:
-        s = cx / span
+    if span > center_x:
+        s = center_x / span
         end_x, serif_dx, cusp_dx = end_x * s, serif_dx * s, cusp_dx * s
     arm_y = h / 2
     reach = h / 2 - 0.5
@@ -125,9 +125,25 @@ def brace(w, h):
     thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
     n = 10
     pts = _qbez((end_x, tip_y), (end_x, arm_y), (end_x + serif_dx, arm_y), thin, thick, n)
-    pts.append((cx - cusp_dx, arm_y, thick))
-    pts += _qbez((cx - cusp_dx, arm_y), (cx, arm_y), (cx, cusp_y), thick, cusp, n, skip_first=True)
-    pts += _qbez((cx, cusp_y), (cx, arm_y), (cx + cusp_dx, arm_y), cusp, thick, n, skip_first=True)
+    pts.append((center_x - cusp_dx, arm_y, thick))
+    pts += _qbez(
+        (center_x - cusp_dx, arm_y),
+        (center_x, arm_y),
+        (center_x, cusp_y),
+        thick,
+        cusp,
+        n,
+        skip_first=True,
+    )
+    pts += _qbez(
+        (center_x, cusp_y),
+        (center_x, arm_y),
+        (center_x + cusp_dx, arm_y),
+        cusp,
+        thick,
+        n,
+        skip_first=True,
+    )
     pts.append((w - end_x - serif_dx, arm_y, thick))
     pts += _qbez(
         (w - end_x - serif_dx, arm_y),
@@ -142,11 +158,11 @@ def brace(w, h):
 
 
 def curly_bracket(w, h):
-    cy = h / 2
+    center_y = h / 2
     end_y, serif_dy, cusp_dy = 2.0, 3.2, 5.5
     span = end_y + serif_dy + cusp_dy + 1.0
-    if span > cy:
-        s = cy / span
+    if span > center_y:
+        s = center_y / span
         end_y, serif_dy, cusp_dy = end_y * s, serif_dy * s, cusp_dy * s
     tip_x = w - BR_INSET
     cusp_x = tip_x - BR_SERIF_L
@@ -154,9 +170,25 @@ def curly_bracket(w, h):
     thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
     n = 10
     pts = _qbez((tip_x, end_y), (arm_x, end_y), (arm_x, end_y + serif_dy), thin, thick, n)
-    pts.append((arm_x, cy - cusp_dy, thick))
-    pts += _qbez((arm_x, cy - cusp_dy), (arm_x, cy), (cusp_x, cy), thick, cusp, n, skip_first=True)
-    pts += _qbez((cusp_x, cy), (arm_x, cy), (arm_x, cy + cusp_dy), cusp, thick, n, skip_first=True)
+    pts.append((arm_x, center_y - cusp_dy, thick))
+    pts += _qbez(
+        (arm_x, center_y - cusp_dy),
+        (arm_x, center_y),
+        (cusp_x, center_y),
+        thick,
+        cusp,
+        n,
+        skip_first=True,
+    )
+    pts += _qbez(
+        (cusp_x, center_y),
+        (arm_x, center_y),
+        (arm_x, center_y + cusp_dy),
+        cusp,
+        thick,
+        n,
+        skip_first=True,
+    )
     pts.append((arm_x, h - end_y - serif_dy, thick))
     pts += _qbez(
         (arm_x, h - end_y - serif_dy),
@@ -171,9 +203,9 @@ def curly_bracket(w, h):
 
 
 def angle_foot(w, h):
-    cx = w / 2
+    center_x = w / 2
     ty, vy = 0.85, h - 0.5 - _BR_ANGLE_THICK
-    left, vertex, right = (0.8, ty), (cx, vy), (w - 0.8, ty)
+    left, vertex, right = (0.8, ty), (center_x, vy), (w - 0.8, ty)
     n = 8
     pts = [
         (

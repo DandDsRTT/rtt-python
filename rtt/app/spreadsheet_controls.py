@@ -189,17 +189,17 @@ def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cid, n
         or _preset_locked(resolved, context, name)
     fc = next((fn for fn, rk, ck, _l in FORM_CHOOSERS if rk == row_key and ck == column_key), None)
     form_chooser = (f"formchooser:{fc}", "form") if (fc and query.preset_form_label(resolved, name, row_key, column_key)) else None
-    cx, cw, cy = _control_box(cells, blocks, resolved, geometry, f"block:{cid}", column_key, top, query.preset_cap(name), label,
+    control_x, cw, control_y = _control_box(cells, blocks, resolved, geometry, f"block:{cid}", column_key, top, query.preset_cap(name), label,
                               disabled=disabled, scheme_button=(name == "projection"),
                               form_chooser=form_chooser)
-    cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
+    cells.append(CellBox(cid, control_x, control_y, cw, PRESET_H, "preset", text=preset_text[name],
                          disabled=disabled))
     if name == "target" and context.settings["all_interval"]:
         emit_option_check(cells, "all_interval", "all-interval",
-                           service.is_all_interval(context.tuning_scheme), cx + cw + OPT_COL_GAP, cy)
+                           service.is_all_interval(context.tuning_scheme), control_x + cw + OPT_COL_GAP, control_y)
     if name == "prescaler" and context.settings["alt_complexity"]:
         emit_option_check(cells, "diminuator", "replace diminuator",
-                           service.diminuator_replaced(context.tuning_scheme), cx + cw + OPT_COL_GAP, cy)
+                           service.diminuator_replaced(context.tuning_scheme), control_x + cw + OPT_COL_GAP, control_y)
 
 
 def _emit_presets(cells, blocks, resolved, geometry, context) -> None:
@@ -234,8 +234,8 @@ def _emit_form_choosers(cells, blocks, resolved, geometry, context) -> None:
             if not query.tile_open(geometry, context.collapsed, row_key, column_key):
                 continue
             top = query.plain_text_band_y(geometry, row_key) + geometry.rows[row_key].plain_text + geometry.rows[row_key].preset
-            cx, cw, cy = _control_box(cells, blocks, resolved, geometry, f"block:formchooser:{name}", column_key, top, PRESET_W, label)
-            cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser",
+            control_x, cw, control_y = _control_box(cells, blocks, resolved, geometry, f"block:formchooser:{name}", column_key, top, PRESET_W, label)
+            cells.append(CellBox(f"formchooser:{name}", control_x, control_y, cw, PRESET_H, "formchooser",
                                  text=resolved.canon.mapping_form_key if name == "mapping" else resolved.canon.comma_basis_form_key))
 
 
