@@ -95,7 +95,7 @@ def _chart_ticks(lo: float, hi: float) -> list[float]:
 def _bar_chart(
     width: float, height: float, values, indicator=None, indicator_label="", column_gap=0
 ) -> str:
-    axis_x, column_width = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COLUMN_WIDTH
+    axis_x, column_width = spreadsheet_constants.BRACKET_WIDTH, spreadsheet_constants.COLUMN_WIDTH
     pitch = column_width + column_gap
     values = tuple(values)
     present = tuple(v for v in values if v is not None)
@@ -141,7 +141,7 @@ def _bar_chart_indicator(width, axis_x, y_of, indicator, indicator_label) -> lis
         return []
     iy = y_of(indicator)
     lbl_font, sub_font, stub = 9, 6, 8
-    lbl_w = 3 * lbl_font * 0.62 + len(indicator_label) * sub_font * 0.62 + 3
+    lbl_width = 3 * lbl_font * 0.62 + len(indicator_label) * sub_font * 0.62 + 3
     lx = axis_x + stub
     sub = (
         f'<tspan font-size="{sub_font}" dy="2">{_escape(indicator_label)}</tspan>'
@@ -151,7 +151,7 @@ def _bar_chart_indicator(width, axis_x, y_of, indicator, indicator_label) -> lis
     return [
         f'<line x1="{axis_x:.2f}" y1="{iy:.2f}" x2="{lx - 2:.2f}" y2="{iy:.2f}" '
         f'stroke="{_CHART_INDICATOR}" stroke-width="1.5"/>',
-        f'<line x1="{lx + lbl_w + 2:.2f}" y1="{iy:.2f}" x2="{width:.2f}" y2="{iy:.2f}" '
+        f'<line x1="{lx + lbl_width + 2:.2f}" y1="{iy:.2f}" x2="{width:.2f}" y2="{iy:.2f}" '
         f'stroke="{_CHART_INDICATOR}" stroke-width="1.5"/>',
         f'<text x="{lx:.2f}" y="{iy + lbl_font * 0.34:.2f}" font-size="{lbl_font}" '
         f'fill="{_CHART_INDICATOR}"><tspan>⟪</tspan>'
@@ -160,7 +160,7 @@ def _bar_chart_indicator(width, axis_x, y_of, indicator, indicator_label) -> lis
 
 
 def _range_chart(width: float, height: float, ranges, tunings=(), decimals: bool = True) -> str:
-    cx0, column_width = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COLUMN_WIDTH
+    cx0, column_width = spreadsheet_constants.BRACKET_WIDTH, spreadsheet_constants.COLUMN_WIDTH
     if not ranges:
         return svg(
             width,

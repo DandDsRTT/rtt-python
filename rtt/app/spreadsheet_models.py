@@ -199,7 +199,7 @@ class RowBand:
     height: float
     label: str
     collapsible: bool
-    tile_h: float
+    tile_height: float
     tile_top: float
     frame: float
     symbol: float

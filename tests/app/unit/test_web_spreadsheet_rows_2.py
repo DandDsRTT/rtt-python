@@ -40,12 +40,12 @@ class TestInterestTilesAndFolds:
         layout = _with_interest(_INTEREST[:1])
         cells = {c.id: c for c in layout.cells}
         blocks = {b.id: b for b in layout.blocks}
-        content_w = 2 * spreadsheet_constants.BRACKET_W + 1 * spreadsheet_constants.COLUMN_WIDTH
+        content_width = 2 * spreadsheet_constants.BRACKET_WIDTH + 1 * spreadsheet_constants.COLUMN_WIDTH
         floor = max(spreadsheet_text._min_width_for_lines(grid_tables.CAPTIONS[(rk, "interest")], spreadsheet_constants.MAX_CAPTION_LINES)
                     for rk in ("vectors", "mapping", "tuning", "just", "retune"))
-        hug_w = max(content_w, floor)
-        assert blocks["block:interest"].width == hug_w + 2 * spreadsheet_constants.PAD, "the tile hugs that width — just its PAD overhang each side (the + rides the fan, not the tile)"
-        assert cells["header:interest"].width == hug_w
+        hug_width = max(content_width, floor)
+        assert blocks["block:interest"].width == hug_width + 2 * spreadsheet_constants.PAD, "the tile hugs that width — just its PAD overhang each side (the + rides the fan, not the tile)"
+        assert cells["header:interest"].width == hug_width
         assert cells["header:interest"].width < spreadsheet_text._title_w("other intervals\nof interest")
 
     def test_interest_title_overhangs_symmetrically_centred_on_the_gridline(self):
@@ -161,9 +161,9 @@ class TestInterestTilesAndFolds:
     def test_symbol_takes_the_label_slot_and_pushes_the_name_down(self):
         both = {c.id: c for c in _with(symbols=True, names=True).cells}
         sym_only = {c.id: c for c in _with(symbols=True, names=False).cells}
-        assert sym_only["symbol:tuning:primes"].y == sym_only["tuning:prime:0"].y + spreadsheet_constants.ROW_H + spreadsheet_constants.BAND_GAP
+        assert sym_only["symbol:tuning:primes"].y == sym_only["tuning:prime:0"].y + spreadsheet_constants.ROW_HEIGHT + spreadsheet_constants.BAND_GAP
         assert not any(c.startswith("caption:") for c in sym_only)
-        assert both["caption:tuning:primes"].y == both["symbol:tuning:primes"].y + spreadsheet_constants.SYMBOL_H
+        assert both["caption:tuning:primes"].y == both["symbol:tuning:primes"].y + spreadsheet_constants.SYMBOL_HEIGHT
 
     def test_folding_a_row_drops_its_symbols_with_the_rest_of_its_content(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -376,7 +376,7 @@ class TestRowAndColumnLabels:
         left = on["bracket:map:0:l"].x - panel.x
         right = (panel.x + panel.width) - (on["bracket:map:0:r"].x + on["bracket:map:0:r"].width)
         assert abs(left - right) < 0.01, f"primes matrix off-centre in its tile: left={left}, right={right}"
-        assert left >= spreadsheet_constants.MATLABEL_W
+        assert left >= spreadsheet_constants.MATLABEL_WIDTH
 
     def test_complexity_col_labels_spell_out_the_norm_definition(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -549,16 +549,16 @@ class TestRowAndColumnLabels:
         assert on["optimization:power"].width == spreadsheet_constants.COLUMN_WIDTH
         mean_damage_col_x = box.x + spreadsheet_constants.OPT_PAD_L
         assert on["optimization:mean_damage:symbol"].x == mean_damage_col_x
-        assert on["optimization:mean_damage:symbol"].width == spreadsheet_constants.OPT_MEAN_DAMAGE_W
+        assert on["optimization:mean_damage:symbol"].width == spreadsheet_constants.OPT_MEAN_DAMAGE_WIDTH
         assert on["optimization:mean_damage:caption"].x == mean_damage_col_x
-        assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet_constants.OPT_MEAN_DAMAGE_W - spreadsheet_constants.COLUMN_WIDTH) / 2
-        mean_damage_r = mean_damage_col_x + spreadsheet_constants.OPT_MEAN_DAMAGE_W
+        assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet_constants.OPT_MEAN_DAMAGE_WIDTH - spreadsheet_constants.COLUMN_WIDTH) / 2
+        mean_damage_r = mean_damage_col_x + spreadsheet_constants.OPT_MEAN_DAMAGE_WIDTH
         pow_col_x = mean_damage_r + spreadsheet_constants.OPT_COL_GAP
         assert on["optimization:power:caption"].x == pow_col_x
-        assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPT_POW_CAP_W - spreadsheet_constants.COLUMN_WIDTH) / 2
+        assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPT_POW_CAP_WIDTH - spreadsheet_constants.COLUMN_WIDTH) / 2
         cap = on["optimization:power:caption"]
         assert cap.x > mean_damage_r and cap.x + cap.width < box.x + box.width
-        assert box.width >= spreadsheet_constants.OPT_BOX_MIN_W
+        assert box.width >= spreadsheet_constants.OPT_BOX_MIN_WIDTH
         assert on["optimization:power:caption"].height == spreadsheet_constants.CAPTION_LINE, "the caption occupies a single line (so 'optimization power' sits right under 𝑝, not a # two-line band that floats it lower)"
         assert on["optimization:title"].y > box.y
         assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].height
@@ -581,7 +581,7 @@ class TestRowAndColumnLabels:
         s["optimization"] = True
         blk = {b.id: b for b in spreadsheet.build(base, s).blocks}
         box = blk["block:optimization:box"]
-        assert box.width >= spreadsheet_constants.OPT_BOX_MIN_W
+        assert box.width >= spreadsheet_constants.OPT_BOX_MIN_WIDTH
         assert box.width == blk["block:damage:targets"].width - 2 * spreadsheet_constants.PAD
 
     def test_a_manual_generator_tuning_drives_the_displayed_maps(self):

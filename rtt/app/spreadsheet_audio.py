@@ -120,7 +120,7 @@ def assign_audio(cells, resolved, geometry):
     pitches = _Pitches(resolved, geometry)
     bands = sorted(geometry.rows.items(), key=lambda kv: kv[1].y)
     spans = [
-        (column_key, geometry.content_x[column_key], geometry.content_w[column_key])
+        (column_key, geometry.content_x[column_key], geometry.content_width[column_key])
         for column_key in geometry.content_x
     ]
     groups: dict = {}

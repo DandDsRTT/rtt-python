@@ -26,11 +26,13 @@ def apply_view_classes(editor, runtime) -> None:
 
 
 def size_panes(chrome, layout, freeze_x, freeze_y) -> None:
-    base_w = layout.width + layout.right_overhang + 2 * _PAD
-    base_h = layout.height + 2 * _PAD
-    chrome.grid_pane.style(f"width:{base_w}px; height:{base_h}px")
-    fit_w = layout.width + 2 * _PAD
-    chrome.grid_pane.props(f'data-base-w="{base_w}" data-base-h="{base_h}" data-fit-w="{fit_w}"')
+    base_width = layout.width + layout.right_overhang + 2 * _PAD
+    base_height = layout.height + 2 * _PAD
+    chrome.grid_pane.style(f"width:{base_width}px; height:{base_height}px")
+    fit_width = layout.width + 2 * _PAD
+    chrome.grid_pane.props(
+        f'data-base-w="{base_width}" data-base-h="{base_height}" data-fit-w="{fit_width}"'
+    )
     chrome.board.style(f"width:{layout.width}px; height:{layout.height - freeze_y}px")
     chrome.colhead.style(f"height:{freeze_y}px")
     chrome.colhead_inner.style(f"width:{layout.width}px; height:{freeze_y}px")

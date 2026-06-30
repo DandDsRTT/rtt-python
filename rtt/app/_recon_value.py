@@ -41,7 +41,7 @@ def _put_stacked_face(
         m = ui.label(main).classes("rtt-stacked-main").mark(f"{cell_id}:main")
         s = ui.label(sub).classes("rtt-stacked-sub").mark(f"{cell_id}:sub")
     reconciler.cells[cell_id].value.stacked_face = (m, s)
-    reconciler.cells[cell_id].value.stacked_w = width
+    reconciler.cells[cell_id].value.stacked_width = width
     _size_stacked_main(m, main, sub, width)
 
 
@@ -60,7 +60,7 @@ def _sync_stacked_face(reconciler, cell_id: str, main: str, sub: str) -> None:
     m, s = reconciler.cells[cell_id].value.stacked_face
     m.set_text(main)
     s.set_text(sub)
-    _size_stacked_main(m, main, sub, reconciler.cells[cell_id].value.stacked_w)
+    _size_stacked_main(m, main, sub, reconciler.cells[cell_id].value.stacked_width)
 
 
 def set_cents_face(reconciler, cell_id: str, text: str) -> None:
@@ -339,7 +339,7 @@ def _update_decimal(reconciler, cell_box: spreadsheet.CellBox, text: str, *, sig
     reconciler.cells[cell_box.id].value.input.value = whole
     reconciler.cells[cell_box.id].value.den_input.value = frac
     reconciler.cells[cell_box.id].value.frac_edit.props(f"data-decmode={'dec' if frac else 'int'}")
-    fit_w = cell_box.width - _GENSIGN_W if signed else cell_box.width
+    fit_width = cell_box.width - _GENSIGN_W if signed else cell_box.width
     reconciler.cells[cell_box.id].value.frac_edit.style(
-        f"--dec-whole-font:{_digit_fit_font(len(whole), fit_w, float(_CELL_FONT)):.2f}px"
+        f"--dec-whole-font:{_digit_fit_font(len(whole), fit_width, float(_CELL_FONT)):.2f}px"
     )

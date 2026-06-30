@@ -512,7 +512,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             border-top:1px solid #777; }
 /* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
 .rtt-preset-target { width:100%; height:30px; display:flex; gap:0; align-items:center; }
-.rtt-preset-target .rtt-preset-num { flex:0 0 30px; }  /* a gridded value square (COLUMN_WIDTH x ROW_H), touching the select */
+.rtt-preset-target .rtt-preset-num { flex:0 0 30px; }  /* a gridded value square (COLUMN_WIDTH x ROW_HEIGHT), touching the select */
 .rtt-preset-target .rtt-preset { flex:1 1 auto; width:auto; }
 .rtt-preset-num .q-field__control { min-height:0 !important; height:30px;
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px; }

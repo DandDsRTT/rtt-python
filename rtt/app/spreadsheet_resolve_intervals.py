@@ -131,7 +131,7 @@ def resolve_unchanged(inputs, draft):
         unchanged_mapped=unchanged.mapped, unchanged_sizes=unchanged.sizes,
         unchanged_complexities=unchanged.complexities, pending=pending, comma_draft=comma_draft,
         comma_count_shown=comma_count_shown, vector_count_shown=comma_count_shown + unchanged_count,
-        empty_comma_w=(_min_width_for_lines("nullity", 1) if (_udata is not None and comma_count_shown == 0) else 0))
+        empty_comma_width=(_min_width_for_lines("nullity", 1) if (_udata is not None and comma_count_shown == 0) else 0))
 
 
 def augment_born_unchanged(inputs, draft, unchanged, unchanged_count):

@@ -22,21 +22,21 @@ from rtt.app.grid_tables import (
 from rtt.app.spreadsheet_constants import (
     BOX_INNER,
     BOX_OUTER,
-    BRACKET_W,
+    BRACKET_WIDTH,
     CAPTION_LINE,
-    CBOX_NODROP_W,
-    CBOX_W,
+    CBOX_NODROP_WIDTH,
+    CBOX_WIDTH,
     COLUMN_WIDTH,
-    LBOX_DIM_W,
+    LBOX_DIM_WIDTH,
     MAX_CAPTION_LINES,
-    OPT_BOX_MIN_W,
-    PBOX_W,
-    PLAIN_TEXT_EDIT_H,
-    PLAIN_TEXT_H,
-    PRESET_W,
-    SCHEME_CTRL_W,
+    OPT_BOX_MIN_WIDTH,
+    PBOX_WIDTH,
+    PLAIN_TEXT_EDIT_HEIGHT,
+    PLAIN_TEXT_HEIGHT,
+    PRESET_WIDTH,
+    SCHEME_CTRL_WIDTH,
     SYMBOL_FONT,
-    TBOX_W,
+    TBOX_WIDTH,
     V_SPLIT_GAP,
 )
 from rtt.app.spreadsheet_text import (
@@ -208,35 +208,35 @@ def symbol_floor(geometry, resolved, key: str):
 def control_floor(resolved, context, key: str):
     floor = 0
     if key == ("superspace_primes" if resolved.flags.superspace else "primes") and resolved.flags.lbox_show:
-        floor = PBOX_W if resolved.flags.presets else LBOX_DIM_W + 2 * BOX_INNER
+        floor = PBOX_WIDTH if resolved.flags.presets else LBOX_DIM_WIDTH + 2 * BOX_INNER
     if key == "targets" and resolved.flags.cbox_show:
-        cbox_w = CBOX_W if resolved.flags.presets else CBOX_NODROP_W
-        floor = max(floor, cbox_w + 2 * BOX_INNER)
+        cbox_width = CBOX_WIDTH if resolved.flags.presets else CBOX_NODROP_WIDTH
+        floor = max(floor, cbox_width + 2 * BOX_INNER)
     if key == "targets" and resolved.flags.presets and context.settings["all_interval"]:
-        floor = max(floor, TBOX_W)
+        floor = max(floor, TBOX_WIDTH)
     if (key == "targets" and resolved.flags.optimization and "row:damage" not in context.collapsed
             and "tile:damage:targets" not in context.collapsed):
-        floor = max(floor, OPT_BOX_MIN_W)
+        floor = max(floor, OPT_BOX_MIN_WIDTH)
     labels = ([lbl for _n, resolved, c, lbl in PRESETS + PRESET_COPIES if c == key and lbl] if resolved.flags.presets else [])
     labels += [lbl for _n, resolved, c, lbl in FORM_CHOOSERS if c == key and lbl] if resolved.flags.form_controls else []
     if labels:
         floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(lbl, 1) for lbl in labels))
     if key in ("primes", "gens") and context.settings["projection"]:
-        floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_W)
+        floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_WIDTH)
     return floor
 
 
-def commas_band_w(resolved, nc_count: int):
+def commas_band_width(resolved, nc_count: int):
     nv = nc_count + resolved.dims.unchanged_count
     split = V_SPLIT_GAP if (resolved.unchanged.shown and nc_count > 0) else 0
     empty = (_min_width_for_lines("nullity", 1)
              if (resolved.unchanged.shown and nc_count == 0) else 0)
-    return 2 * BRACKET_W + nv * COLUMN_WIDTH + split + empty
+    return 2 * BRACKET_WIDTH + nv * COLUMN_WIDTH + split + empty
 
 
 def _caption_wrap_w(geometry, resolved, context, column_key: str):
     if column_key == "commas" and resolved.ghosts.comma:
-        resting = commas_band_w(resolved, resolved.dims.comma_count + (1 if resolved.commas.pending is not None else 0))
+        resting = commas_band_width(resolved, resolved.dims.comma_count + (1 if resolved.commas.pending is not None else 0))
         return max(resting, caption_floor(geometry, resolved, column_key),
                    control_floor(resolved, context, column_key), symbol_floor(geometry, resolved, column_key))
     return geometry.open_column_width[column_key]
@@ -249,31 +249,31 @@ def caption_band(geometry, resolved, context, key: str, folded: bool):
              if (key, c) in resolved.labels.captions and (key, c) in geometry.declared_tiles]
     if key == "counts" and resolved.unchanged.shown and "commas" in geometry.column_x:
         lines.append(_wrap_lines("unchanged interval count", resolved.dims.unchanged_count * COLUMN_WIDTH))
-        lines.append(_wrap_lines("nullity", resolved.dims.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_w))
+        lines.append(_wrap_lines("nullity", resolved.dims.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_width))
     return max(lines, default=1) * CAPTION_LINE
 
 
 def plain_text_band(geometry, key: str, folded: bool):
     if folded or not any(rk == key for rk, _ck in geometry.plain_text_strings):
         return 0
-    return PLAIN_TEXT_EDIT_H if key in EDITABLE_PLAIN_TEXT_ROWS else PLAIN_TEXT_H
+    return PLAIN_TEXT_EDIT_HEIGHT if key in EDITABLE_PLAIN_TEXT_ROWS else PLAIN_TEXT_HEIGHT
 
 
-def control_region_band_h(content_h):
-    return 2 * BOX_OUTER + 2 * BOX_INNER + content_h
+def control_region_band_height(content_height):
+    return 2 * BOX_OUTER + 2 * BOX_INNER + content_height
 
 
-def _control_band_h(geometry, column_key: str, cap_w, label, scheme_button: bool = False, form_label=None):
-    return 2 * BOX_OUTER + query.control_dims(geometry, column_key, cap_w, label, scheme_button, form_label)[2]
+def _control_band_h(geometry, column_key: str, cap_width, label, scheme_button: bool = False, form_label=None):
+    return 2 * BOX_OUTER + query.control_dims(geometry, column_key, cap_width, label, scheme_button, form_label)[2]
 
 
-def preset_band_h(geometry, resolved, key: str):
+def preset_band_height(geometry, resolved, key: str):
     return max((_control_band_h(geometry, column_key, query.preset_cap(name), label, scheme_button=(name == "projection"),
                                form_label=query.preset_form_label(resolved, name, rk, column_key))
                 for name, rk, column_key, label in PRESETS + PRESET_COPIES
                 if rk == key and column_key in geometry.column_width), default=0)
 
 
-def formchooser_band_h(geometry, key: str):
-    return max((_control_band_h(geometry, column_key, PRESET_W, label)
+def formchooser_band_height(geometry, key: str):
+    return max((_control_band_h(geometry, column_key, PRESET_WIDTH, label)
                 for name, rk, column_key, label in FORM_CHOOSERS if rk == key and column_key in geometry.column_width), default=0)

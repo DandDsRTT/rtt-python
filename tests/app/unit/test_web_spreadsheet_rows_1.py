@@ -341,7 +341,7 @@ class TestCountsRow:
 
     def test_empty_interest_columns_footprint_hugs_its_content_the_title_overhangs(self):
         cells = {c.id: c for c in _layout().cells}
-        assert cells["header:interest"].width == 2 * spreadsheet_constants.BRACKET_W
+        assert cells["header:interest"].width == 2 * spreadsheet_constants.BRACKET_WIDTH
         assert cells["header:interest"].width < spreadsheet_text._title_w("other intervals\nof interest")
 
     def test_empty_interest_column_is_just_a_header_and_axis(self):

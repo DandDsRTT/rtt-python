@@ -459,7 +459,7 @@ class TestPerElementDomainControls:
             draft = cells[draft_id]
             assert draft.kind == "elementratio" and draft.pending and draft.text == "?/?"
             assert minus_id in cells
-        assert cells["basis:pending"].y == cells["basis:2"].y + spreadsheet_constants.ROW_H
+        assert cells["basis:pending"].y == cells["basis:2"].y + spreadsheet_constants.ROW_HEIGHT
         assert cells["basis_plus"].y > cells["basis:pending"].y
         typed = {c.id: c for c in spreadsheet.build(state, s, pending_element="9").cells}
         assert typed["prime:pending"].text == "9" and typed["basis:pending"].text == "9"

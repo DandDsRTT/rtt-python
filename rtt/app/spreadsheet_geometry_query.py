@@ -13,54 +13,54 @@ from rtt.app.grid_tables import (
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
     BOX_INNER,
-    BRACE_H,
-    BRACKET_W,
+    BRACE_HEIGHT,
+    BRACKET_WIDTH,
     CAPTION_LINE,
     COLUMN_WIDTH,
     FRAME_GAP,
-    FRAME_H,
+    FRAME_HEIGHT,
     FRAME_OVERHANG,
     INTERVAL_COL_GAP,
     PAD,
-    PLAIN_TEXT_EDIT_H,
-    PLAIN_TEXT_H,
-    PRESET_H,
-    PRESET_W,
-    ROW_H,
+    PLAIN_TEXT_EDIT_HEIGHT,
+    PLAIN_TEXT_HEIGHT,
+    PRESET_HEIGHT,
+    PRESET_WIDTH,
+    ROW_HEIGHT,
     SCHEME_BUTTON_SQ,
-    TARGET_PRESET_W,
+    TARGET_PRESET_WIDTH,
     V_SPLIT_GAP,
-    VAL_BRACKET_H,
+    VAL_BRACKET_HEIGHT,
 )
 from rtt.app.spreadsheet_text import _sub, _subscript_coord, pending_token
 
 
 def map_top(geometry, i: int) -> float:
-    return geometry.rows["mapping"].y + i * ROW_H
+    return geometry.rows["mapping"].y + i * ROW_HEIGHT
 
 
 def projection_top(geometry, i: int) -> float:
-    return geometry.rows["projection"].y + i * ROW_H
+    return geometry.rows["projection"].y + i * ROW_HEIGHT
 
 
 def canon_top(geometry, i: int) -> float:
-    return geometry.rows["canon"].y + i * ROW_H
+    return geometry.rows["canon"].y + i * ROW_HEIGHT
 
 
 def vector_top(geometry, p: int) -> float:
-    return geometry.rows["vectors"].y + p * ROW_H
+    return geometry.rows["vectors"].y + p * ROW_HEIGHT
 
 
 def superspace_vector_top(geometry, p: int) -> float:
-    return geometry.rows["superspace_vectors"].y + p * ROW_H
+    return geometry.rows["superspace_vectors"].y + p * ROW_HEIGHT
 
 
 def superspace_map_top(geometry, i: int) -> float:
-    return geometry.rows["superspace_mapping"].y + i * ROW_H
+    return geometry.rows["superspace_mapping"].y + i * ROW_HEIGHT
 
 
 def superspace_projection_top(geometry, i: int) -> float:
-    return geometry.rows["superspace_projection"].y + i * ROW_H
+    return geometry.rows["superspace_projection"].y + i * ROW_HEIGHT
 
 
 def prescale_size_gap(geometry) -> float:
@@ -73,7 +73,7 @@ def subrow_top(geometry, row_key: str, i: int) -> float:
         if (row_key == "prescaling" and i >= geometry.prescale_rows)
         else 0
     )
-    return geometry.rows[row_key].y + i * ROW_H + gap
+    return geometry.rows[row_key].y + i * ROW_HEIGHT + gap
 
 
 def comma_picker_band_y(geometry, row_key: str) -> float:
@@ -87,7 +87,7 @@ def plain_text_band_y(geometry, row_key: str) -> float:
 
 
 def frame_top_y(geometry, row_key: str) -> float:
-    return geometry.rows[row_key].y - FRAME_H - FRAME_GAP
+    return geometry.rows[row_key].y - FRAME_HEIGHT - FRAME_GAP
 
 
 def frame_brace_y(geometry, row_key: str) -> float:
@@ -96,46 +96,46 @@ def frame_brace_y(geometry, row_key: str) -> float:
 
 def separator_span(resolved, geometry, row_key: str):
     if row_key not in FRAMED_ROWS:
-        return geometry.rows[row_key].y + (ROW_H - VAL_BRACKET_H) / 2, VAL_BRACKET_H
+        return geometry.rows[row_key].y + (ROW_HEIGHT - VAL_BRACKET_HEIGHT) / 2, VAL_BRACKET_HEIGHT
     if not resolved.flags.ebk:
         return geometry.rows[row_key].y, geometry.rows[row_key].height
     y = frame_top_y(geometry, row_key) - FRAME_OVERHANG
-    return y, frame_brace_y(geometry, row_key) + BRACE_H + FRAME_OVERHANG - y
+    return y, frame_brace_y(geometry, row_key) + BRACE_HEIGHT + FRAME_OVERHANG - y
 
 
-def matlabel_gutter_w(geometry, group_key: str) -> float:
+def matlabel_gutter_width(geometry, group_key: str) -> float:
     if group_key == "primes":
-        return geometry.matlabel_primes_w
+        return geometry.matlabel_primes_width
     if group_key == "superspace_primes":
-        return geometry.matlabel_superspace_primes_w
-    return geometry.matlabel_other_w.get(group_key, 0)
+        return geometry.matlabel_superspace_primes_width
+    return geometry.matlabel_other_width.get(group_key, 0)
 
 
-def handle_gutter_w(geometry, group_key: str) -> float:
-    return geometry.row_handle_w if group_key == "primes" else 0
+def handle_gutter_width(geometry, group_key: str) -> float:
+    return geometry.row_handle_width if group_key == "primes" else 0
 
 
 def etpick_left_pad(geometry, group_key: str) -> float:
-    if group_key != "primes" or not geometry.etpick_w:
+    if group_key != "primes" or not geometry.etpick_width:
         return 0
     return max(
         0,
-        geometry.etpick_w
-        - handle_gutter_w(geometry, group_key)
-        - matlabel_gutter_w(geometry, group_key),
+        geometry.etpick_width
+        - handle_gutter_width(geometry, group_key)
+        - matlabel_gutter_width(geometry, group_key),
     )
 
 
-def outer_gutter_w(geometry, group_key: str) -> float:
+def outer_gutter_width(geometry, group_key: str) -> float:
     return (
         etpick_left_pad(geometry, group_key)
-        + handle_gutter_w(geometry, group_key)
-        + matlabel_gutter_w(geometry, group_key)
+        + handle_gutter_width(geometry, group_key)
+        + matlabel_gutter_width(geometry, group_key)
     )
 
 
 def content_box(geometry, key: str):
-    return geometry.content_x[key], geometry.content_w[key]
+    return geometry.content_x[key], geometry.content_width[key]
 
 
 def tile_box(geometry, key: str):
@@ -151,15 +151,23 @@ def tile_span_box(geometry, row_key: str, column_key: str):
 
 def matrix_span(geometry, resolved, group_key: str):
     x, width = content_box(geometry, group_key)
-    matrix_x = outer_gutter_w(geometry, group_key)
+    matrix_x = outer_gutter_width(geometry, group_key)
     x, width = x + matrix_x, width - 2 * matrix_x
-    if group_key == "commas" and resolved.unchanged.empty_comma_w:
-        x, width = x + resolved.unchanged.empty_comma_w, width - resolved.unchanged.empty_comma_w
+    if group_key == "commas" and resolved.unchanged.empty_comma_width:
+        x, width = (
+            x + resolved.unchanged.empty_comma_width,
+            width - resolved.unchanged.empty_comma_width,
+        )
     return x, width
 
 
 def prime_left(geometry, p: int) -> float:
-    return geometry.primes_x + outer_gutter_w(geometry, "primes") + BRACKET_W + p * COLUMN_WIDTH
+    return (
+        geometry.primes_x
+        + outer_gutter_width(geometry, "primes")
+        + BRACKET_WIDTH
+        + p * COLUMN_WIDTH
+    )
 
 
 def comma_left(geometry, resolved, c: int) -> float:
@@ -168,7 +176,13 @@ def comma_left(geometry, resolved, c: int) -> float:
         if (resolved.unchanged.shown and 0 < resolved.dims.comma_count_shown <= c)
         else 0
     )
-    return geometry.commas_x + BRACKET_W + resolved.unchanged.empty_comma_w + c * COLUMN_WIDTH + gap
+    return (
+        geometry.commas_x
+        + BRACKET_WIDTH
+        + resolved.unchanged.empty_comma_width
+        + c * COLUMN_WIDTH
+        + gap
+    )
 
 
 def comma_value_pos(resolved, i: int) -> int:
@@ -187,47 +201,53 @@ def interval_col_gap(column_key: str) -> float:
     return 0
 
 
-def interval_list_w(n: int, column_key: str) -> float:
-    return 2 * BRACKET_W + n * COLUMN_WIDTH + max(n - 1, 0) * interval_col_gap(column_key)
+def interval_list_width(n: int, column_key: str) -> float:
+    return 2 * BRACKET_WIDTH + n * COLUMN_WIDTH + max(n - 1, 0) * interval_col_gap(column_key)
 
 
 def target_left(geometry, j: int) -> float:
-    return geometry.targets_x + BRACKET_W + j * (COLUMN_WIDTH + interval_col_gap("targets"))
+    return geometry.targets_x + BRACKET_WIDTH + j * (COLUMN_WIDTH + interval_col_gap("targets"))
 
 
 def interest_left(geometry, i: int) -> float:
-    return geometry.interest_x + BRACKET_W + i * (COLUMN_WIDTH + interval_col_gap("interest"))
+    return geometry.interest_x + BRACKET_WIDTH + i * (COLUMN_WIDTH + interval_col_gap("interest"))
 
 
 def held_left(geometry, i: int) -> float:
-    return geometry.held_x + BRACKET_W + i * (COLUMN_WIDTH + interval_col_gap("held"))
+    return geometry.held_x + BRACKET_WIDTH + i * (COLUMN_WIDTH + interval_col_gap("held"))
 
 
 def detempering_left(geometry, i: int) -> float:
-    return geometry.detempering_x + BRACKET_W + i * COLUMN_WIDTH
+    return geometry.detempering_x + BRACKET_WIDTH + i * COLUMN_WIDTH
 
 
 def gen_left(geometry, g: int) -> float:
     return (
-        geometry.content_x["gens"] + outer_gutter_w(geometry, "gens") + BRACKET_W + g * COLUMN_WIDTH
+        geometry.content_x["gens"]
+        + outer_gutter_width(geometry, "gens")
+        + BRACKET_WIDTH
+        + g * COLUMN_WIDTH
     )
 
 
 def canongen_left(geometry, g: int) -> float:
     return (
-        geometry.canongens_x + outer_gutter_w(geometry, "canongens") + BRACKET_W + g * COLUMN_WIDTH
+        geometry.canongens_x
+        + outer_gutter_width(geometry, "canongens")
+        + BRACKET_WIDTH
+        + g * COLUMN_WIDTH
     )
 
 
 def superspace_gen_left(geometry, g: int) -> float:
-    return geometry.superspace_generators_x + BRACKET_W + g * COLUMN_WIDTH
+    return geometry.superspace_generators_x + BRACKET_WIDTH + g * COLUMN_WIDTH
 
 
 def superspace_prime_left(geometry, p: int) -> float:
     return (
         geometry.superspace_primes_x
-        + outer_gutter_w(geometry, "superspace_primes")
-        + BRACKET_W
+        + outer_gutter_width(geometry, "superspace_primes")
+        + BRACKET_WIDTH
         + p * COLUMN_WIDTH
     )
 
@@ -243,7 +263,7 @@ def column_plus_x(geometry, resolved, column_key: str) -> float:
         return matrix_x + matrix_width / 2
     if column_key == "commas" and resolved.unchanged.shown:
         if resolved.dims.comma_count_shown == 0:
-            return geometry.commas_x + BRACKET_W + resolved.unchanged.empty_comma_w / 2
+            return geometry.commas_x + BRACKET_WIDTH + resolved.unchanged.empty_comma_width / 2
         return (
             comma_left(geometry, resolved, resolved.dims.comma_count_shown - 1)
             + COLUMN_WIDTH
@@ -381,19 +401,19 @@ def weight_simplicity_header(resolved, i: int) -> str:
 
 
 def control_dims(
-    geometry, column_key: str, cap_w, label, scheme_button: bool = False, form_label=None
+    geometry, column_key: str, cap_width, label, scheme_button: bool = False, form_label=None
 ):
-    dropdown_w = max(40, min(geometry.column_width[column_key] - 2 * BOX_INNER, cap_w))
-    label_h = CAPTION_LINE if label else 0
-    box_h = 2 * BOX_INNER + PRESET_H + label_h
-    box_h += (SCHEME_BUTTON_SQ + BOX_INNER) if scheme_button else 0
+    dropdown_width = max(40, min(geometry.column_width[column_key] - 2 * BOX_INNER, cap_width))
+    label_height = CAPTION_LINE if label else 0
+    box_height = 2 * BOX_INNER + PRESET_HEIGHT + label_height
+    box_height += (SCHEME_BUTTON_SQ + BOX_INNER) if scheme_button else 0
     if form_label is not None:
-        box_h += BAND_GAP + PRESET_H + (CAPTION_LINE if form_label else 0)
-    return dropdown_w, label_h, box_h
+        box_height += BAND_GAP + PRESET_HEIGHT + (CAPTION_LINE if form_label else 0)
+    return dropdown_width, label_height, box_height
 
 
 def preset_cap(name: str):
-    return TARGET_PRESET_W if name == "target" else PRESET_W
+    return TARGET_PRESET_WIDTH if name == "target" else PRESET_WIDTH
 
 
 def preset_form_label(resolved, name: str, row_key: str, column_key: str):
@@ -417,7 +437,11 @@ def plain_text_editable(resolved, row_key: str, column_key: str) -> bool:
 
 
 def plain_text_height(resolved, row_key: str, column_key: str):
-    return PLAIN_TEXT_EDIT_H if plain_text_editable(resolved, row_key, column_key) else PLAIN_TEXT_H
+    return (
+        PLAIN_TEXT_EDIT_HEIGHT
+        if plain_text_editable(resolved, row_key, column_key)
+        else PLAIN_TEXT_HEIGHT
+    )
 
 
 def panel_rect(geometry, collapsed, row_key: str, column_key: str):
@@ -425,7 +449,7 @@ def panel_rect(geometry, collapsed, row_key: str, column_key: str):
     column_c = f"col:{column_key}" in collapsed or tile_c
     row_c = f"row:{row_key}" in collapsed or tile_c
     tile_x, tile_width = tile_span_box(geometry, row_key, column_key)
-    tile_height, tile_y = geometry.rows[row_key].tile_h, geometry.rows[row_key].tile_top
+    tile_height, tile_y = geometry.rows[row_key].tile_height, geometry.rows[row_key].tile_top
     width, padding_x = (0, 0) if column_c else (tile_width, PAD)
     height, padding_y = (0, 0) if row_c else (tile_height, PAD)
     box_x = tile_x + tile_width / 2 if column_c else tile_x

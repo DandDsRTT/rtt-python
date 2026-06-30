@@ -38,8 +38,8 @@ class TestProjectionBox:
                 assert cell.x == cells[f"cell:mapping:0:{p}"].x
         assert cells["label:mapping"].y < cells["label:projection"].y < cells["label:tuning"].y
         c00 = cells["cell:projection:0:0"]
-        assert c00.width == c00.height == spreadsheet_constants.ROW_H
-        assert cells["cell:projection:1:0"].y == c00.y + spreadsheet_constants.ROW_H
+        assert c00.width == c00.height == spreadsheet_constants.ROW_HEIGHT
+        assert cells["cell:projection:1:0"].y == c00.y + spreadsheet_constants.ROW_HEIGHT
 
     def test_projection_box_is_dashed_until_the_tuning_is_a_rational_projection(self):
         dashed = {c.id: c for c in _projection_build().cells}
@@ -306,7 +306,7 @@ class TestProjectionChrome:
         assert [cells[i].text for i in ("cell:scaling:0", "cell:scaling:u0", "cell:scaling:u1")] == ["0", "1", "1"]
         assert cells["label:scaling_factors"].y < cells["label:vectors"].y
         s0 = cells["cell:scaling:0"]
-        assert s0.height == spreadsheet_constants.ROW_H
+        assert s0.height == spreadsheet_constants.ROW_HEIGHT
         assert s0.x == cells["cell:comma:0:0"].x
 
     def test_projection_consolidates_commas_and_unchanged_into_v(self):

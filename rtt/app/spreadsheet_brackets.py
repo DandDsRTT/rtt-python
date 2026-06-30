@@ -6,18 +6,18 @@ from rtt.app import service
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.layout import CellBox
 from rtt.app.spreadsheet_constants import (
-    BRACE_H,
-    BRACKET_W,
+    BRACE_HEIGHT,
+    BRACKET_WIDTH,
     COLUMN_WIDTH,
     FRAME_GAP,
-    FRAME_H,
+    FRAME_HEIGHT,
     FRAME_OVERHANG,
     MARK_INSET,
-    ROW_H,
-    SEP_W,
-    TRANSPOSE_W,
+    ROW_HEIGHT,
+    SEP_WIDTH,
+    TRANSPOSE_WIDTH,
     V_SPLIT_GAP,
-    VAL_BRACKET_H,
+    VAL_BRACKET_HEIGHT,
 )
 from rtt.app.spreadsheet_emit_model import EmitResult
 
@@ -61,12 +61,12 @@ def bracket(cells, resolved, geometry, bid: str, row_key: str, column_key: str, 
     if fit and not resolved.flags.ebk:
         bracket_y, bracket_height = y, height
     elif fit:
-        bracket_y = y - (FRAME_H + FRAME_GAP) - FRAME_OVERHANG
-        bracket_height = height + (FRAME_H + FRAME_GAP) + (FRAME_GAP + BRACE_H) + 2 * FRAME_OVERHANG
+        bracket_y = y - (FRAME_HEIGHT + FRAME_GAP) - FRAME_OVERHANG
+        bracket_height = height + (FRAME_HEIGHT + FRAME_GAP) + (FRAME_GAP + BRACE_HEIGHT) + 2 * FRAME_OVERHANG
     else:
-        bracket_y, bracket_height = y + (height - VAL_BRACKET_H) / 2, VAL_BRACKET_H
-    cells.append(CellBox(f"bracket:{bid}:l", matrix_x, bracket_y, BRACKET_W, bracket_height, "bracket", text=glyphs[0], pending=pending))
-    cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_W, bracket_y, BRACKET_W, bracket_height, "bracket", text=glyphs[1], pending=pending))
+        bracket_y, bracket_height = y + (height - VAL_BRACKET_HEIGHT) / 2, VAL_BRACKET_HEIGHT
+    cells.append(CellBox(f"bracket:{bid}:l", matrix_x, bracket_y, BRACKET_WIDTH, bracket_height, "bracket", text=glyphs[0], pending=pending))
+    cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_WIDTH, bracket_y, BRACKET_WIDTH, bracket_height, "bracket", text=glyphs[1], pending=pending))
 
 
 def _ebk(resolved, row_key, column_key):
@@ -85,11 +85,11 @@ def matrix_frame(cells, resolved, geometry, context, row_key: str, column_key: s
     matrix_x, matrix_width = span if span else query.matrix_span(geometry, resolved, column_key)
     if not resolved.flags.ebk:
         y, height = geometry.rows[row_key].y, geometry.rows[row_key].height
-        cells.append(CellBox(f"bracket:{bid}:l", matrix_x, y, BRACKET_W, height, "bracket", text="["))
-        cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_W, y, BRACKET_W, height, "bracket", text="]"))
+        cells.append(CellBox(f"bracket:{bid}:l", matrix_x, y, BRACKET_WIDTH, height, "bracket", text="["))
+        cells.append(CellBox(f"bracket:{bid}:r", matrix_x + matrix_width - BRACKET_WIDTH, y, BRACKET_WIDTH, height, "bracket", text="]"))
         return
-    cells.append(CellBox(f"ebktop:{bid}", matrix_x, query.frame_top_y(geometry, row_key), matrix_width, FRAME_H, "ebktop"))
-    cells.append(CellBox(f"{foot}:{bid}", matrix_x, query.frame_brace_y(geometry, row_key), matrix_width, BRACE_H, foot))
+    cells.append(CellBox(f"ebktop:{bid}", matrix_x, query.frame_top_y(geometry, row_key), matrix_width, FRAME_HEIGHT, "ebktop"))
+    cells.append(CellBox(f"{foot}:{bid}", matrix_x, query.frame_brace_y(geometry, row_key), matrix_width, BRACE_HEIGHT, foot))
 
 
 def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_key, left, n_cols, top="ebktop",
@@ -98,12 +98,12 @@ def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_
         return
     foot = _ebk_foot(resolved, row_key, column_key, outer=False)
     if resolved.flags.ebk:
-        mark_w = COLUMN_WIDTH - 2 * MARK_INSET
+        mark_width = COLUMN_WIDTH - 2 * MARK_INSET
         for c in range(n_cols):
             mark_x = left(c) + MARK_INSET
             pend = (c == pending_col)
-            cells.append(CellBox(f"{top}:{name}:{c}", mark_x, query.frame_top_y(geometry, row_key), mark_w, FRAME_H, top, pending=pend))
-            cells.append(CellBox(f"{foot}:{name}:{c}", mark_x, query.frame_brace_y(geometry, row_key), mark_w, BRACE_H, foot, pending=pend))
+            cells.append(CellBox(f"{top}:{name}:{c}", mark_x, query.frame_top_y(geometry, row_key), mark_width, FRAME_HEIGHT, top, pending=pend))
+            cells.append(CellBox(f"{foot}:{name}:{c}", mark_x, query.frame_brace_y(geometry, row_key), mark_width, BRACE_HEIGHT, foot, pending=pend))
     elif n_cols:
         if column_key == "interest":
             for c in range(n_cols):
@@ -113,20 +113,20 @@ def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_
             transpose_mark(cells, geometry, name, matrix_x + matrix_width, row_key)
     if not separators:
         return
-    sep_y, sep_h = query.separator_span(resolved, geometry, row_key)
+    sep_y, sep_height = query.separator_span(resolved, geometry, row_key)
     for c in range(1, n_cols):
-        cells.append(CellBox(f"sep:{name}:{c}", (left(c - 1) + COLUMN_WIDTH + left(c)) / 2 - SEP_W / 2, sep_y, SEP_W, sep_h, "vbar"))
+        cells.append(CellBox(f"sep:{name}:{c}", (left(c - 1) + COLUMN_WIDTH + left(c)) / 2 - SEP_WIDTH / 2, sep_y, SEP_WIDTH, sep_height, "vbar"))
 
 
 def transpose_mark(cells, geometry, name, x, row_key, pending: bool = False) -> None:
-    cells.append(CellBox(f"transpose:{name}", x, geometry.rows[row_key].y - FRAME_GAP, TRANSPOSE_W, ROW_H,
+    cells.append(CellBox(f"transpose:{name}", x, geometry.rows[row_key].y - FRAME_GAP, TRANSPOSE_WIDTH, ROW_HEIGHT,
                          "transpose", text="ᵀ", pending=pending))
 
 
 def v_split_bars(cells, resolved, geometry, context, accum) -> None:
     if not resolved.unchanged.shown or geometry.commas_x is None or resolved.dims.comma_count_shown == 0 or resolved.dims.unchanged_count == 0:
         return
-    x = query.comma_left(geometry, resolved, resolved.dims.comma_count_shown) - V_SPLIT_GAP / 2 - SEP_W / 2
+    x = query.comma_left(geometry, resolved, resolved.dims.comma_count_shown) - V_SPLIT_GAP / 2 - SEP_WIDTH / 2
     u_left = query.comma_left(geometry, resolved, resolved.dims.comma_count_shown)
     u_right = u_left + resolved.dims.unchanged_count * COLUMN_WIDTH
     rows_with_u = set()
@@ -139,36 +139,36 @@ def v_split_bars(cells, resolved, geometry, context, accum) -> None:
     for row_key in rows_with_u:
         if row_key != "counts" and query.tile_open(geometry, context.collapsed, row_key, "commas"):
             sy, sh = query.separator_span(resolved, geometry, row_key)
-            cells.append(CellBox(f"vsplit:{row_key}", x, sy, SEP_W, sh, "vbar"))
+            cells.append(CellBox(f"vsplit:{row_key}", x, sy, SEP_WIDTH, sh, "vbar"))
 
 
 def _emit_canon_stacked_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     if query.row_open(geometry, collapsed, "canon") and query.tile_open(geometry, collapsed, "canon", "primes"):
         for i in range(resolved.dims.canonical_rank):
-            bracket(cells, resolved, geometry, f"canon:map:{i}", "canon", "primes", query.canon_top(geometry, i), ROW_H, stacked=True)
-            bracket(cells, resolved, geometry, f"form:map:{i}", "canon", "gens", query.canon_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"canon:map:{i}", "canon", "primes", query.canon_top(geometry, i), ROW_HEIGHT, stacked=True)
+            bracket(cells, resolved, geometry, f"form:map:{i}", "canon", "gens", query.canon_top(geometry, i), ROW_HEIGHT, stacked=True)
     if query.row_open(geometry, collapsed, "canon") and query.tile_open(geometry, collapsed, "canon", "canongens"):
         for i in range(resolved.dims.canonical_rank):
-            bracket(cells, resolved, geometry, f"fcancel:map:{i}", "canon", "canongens", query.canon_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"fcancel:map:{i}", "canon", "canongens", query.canon_top(geometry, i), ROW_HEIGHT, stacked=True)
     if query.tile_open(geometry, collapsed, "mapping", "canongens"):
         for i in range(resolved.dims.rank):
-            bracket(cells, resolved, geometry, f"finv:map:{i}", "mapping", "canongens", query.map_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"finv:map:{i}", "mapping", "canongens", query.map_top(geometry, i), ROW_HEIGHT, stacked=True)
 
 
 def _emit_canon_fit_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     if not query.row_open(geometry, collapsed, "canon"):
         return
-    canon_y, canon_h = (geometry.rows["canon"].y if "canon" in geometry.rows else 0), resolved.dims.canonical_rank * ROW_H
+    canon_y, canon_height = (geometry.rows["canon"].y if "canon" in geometry.rows else 0), resolved.dims.canonical_rank * ROW_HEIGHT
     if query.tile_open(geometry, collapsed, "canon", "detempering"):
-        bracket(cells, resolved, geometry, "canon_detempering", "canon", "detempering", canon_y, canon_h, fit=True)
+        bracket(cells, resolved, geometry, "canon_detempering", "canon", "detempering", canon_y, canon_height, fit=True)
     if query.tile_open(geometry, collapsed, "canon", "commas"):
-        bracket(cells, resolved, geometry, "canon_comma", "canon", "commas", canon_y, canon_h, fit=True)
+        bracket(cells, resolved, geometry, "canon_comma", "canon", "commas", canon_y, canon_height, fit=True)
     if query.tile_open(geometry, collapsed, "canon", "targets"):
-        bracket(cells, resolved, geometry, "canon_mapped", "canon", "targets", canon_y, canon_h, fit=True)
+        bracket(cells, resolved, geometry, "canon_mapped", "canon", "targets", canon_y, canon_height, fit=True)
     if resolved.dims.held_count and query.tile_open(geometry, collapsed, "canon", "held"):
-        bracket(cells, resolved, geometry, "canon_hmapped", "canon", "held", canon_y, canon_h, fit=True)
+        bracket(cells, resolved, geometry, "canon_hmapped", "canon", "held", canon_y, canon_height, fit=True)
 
 
 def _emit_projection_brackets(cells, resolved, geometry, context) -> None:
@@ -180,10 +180,10 @@ def _emit_projection_brackets(cells, resolved, geometry, context) -> None:
 
 def _emit_projection_embed_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
-    py, ph = geometry.rows["projection"].y, resolved.dims.dimensionality * ROW_H
+    py, ph = geometry.rows["projection"].y, resolved.dims.dimensionality * ROW_HEIGHT
     if query.tile_open(geometry, collapsed, "projection", "primes"):
         for i in range(resolved.dims.dimensionality):
-            bracket(cells, resolved, geometry, f"projection:{i}", "projection", "primes", query.projection_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"projection:{i}", "projection", "primes", query.projection_top(geometry, i), ROW_HEIGHT, stacked=True)
     if query.tile_open(geometry, collapsed, "projection", "gens"):
         bracket(cells, resolved, geometry, "embed", "projection", "gens", py, ph, fit=True)
     if query.tile_open(geometry, collapsed, "projection", "canongens"):
@@ -194,10 +194,10 @@ def _emit_projection_embed_brackets(cells, resolved, geometry, context) -> None:
 
 def _emit_projection_list_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
-    py, ph = geometry.rows["projection"].y, resolved.dims.dimensionality * ROW_H
+    py, ph = geometry.rows["projection"].y, resolved.dims.dimensionality * ROW_HEIGHT
     if query.tile_open(geometry, collapsed, "projection", "superspace_primes"):
         for i in range(resolved.dims.dimensionality):
-            bracket(cells, resolved, geometry, f"projection_superspace:{i}", "projection", "superspace_primes", query.projection_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"projection_superspace:{i}", "projection", "superspace_primes", query.projection_top(geometry, i), ROW_HEIGHT, stacked=True)
     if resolved.unchanged.shown and query.tile_open(geometry, collapsed, "projection", "commas"):
         bracket(cells, resolved, geometry, "projection_vectors", "projection", "commas", py, ph, fit=True)
     if query.tile_open(geometry, collapsed, "projection", "detempering"):
@@ -211,34 +211,34 @@ def _emit_projection_list_brackets(cells, resolved, geometry, context) -> None:
 def _emit_mapping_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     if query.row_open(geometry, collapsed, "scaling_factors") and query.tile_open(geometry, collapsed, "scaling_factors", "commas"):
-        bracket(cells, resolved, geometry, "scaling", "scaling_factors", "commas", geometry.rows["scaling_factors"].y, ROW_H)
+        bracket(cells, resolved, geometry, "scaling", "scaling_factors", "commas", geometry.rows["scaling_factors"].y, ROW_HEIGHT)
     if query.row_open(geometry, collapsed, "mapping"):
         if query.tile_open(geometry, collapsed, "mapping", "primes"):
             for i in range(resolved.dims.rank):
-                bracket(cells, resolved, geometry, f"map:{i}", "mapping", "primes", query.map_top(geometry, i), ROW_H, stacked=True)
+                bracket(cells, resolved, geometry, f"map:{i}", "mapping", "primes", query.map_top(geometry, i), ROW_HEIGHT, stacked=True)
             if context.pending_mapping_row is not None:
-                bracket(cells, resolved, geometry, "map:pending", "mapping", "primes", query.map_top(geometry, resolved.dims.rank), ROW_H, pending=True, stacked=True)
+                bracket(cells, resolved, geometry, "map:pending", "mapping", "primes", query.map_top(geometry, resolved.dims.rank), ROW_HEIGHT, pending=True, stacked=True)
         if query.tile_open(geometry, collapsed, "mapping", "commas"):
-            bracket(cells, resolved, geometry, "mapped_comma", "mapping", "commas", geometry.rows["mapping"].y, resolved.dims.rank_shown * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "mapped_comma", "mapping", "commas", geometry.rows["mapping"].y, resolved.dims.rank_shown * ROW_HEIGHT, fit=True)
         if query.tile_open(geometry, collapsed, "mapping", "targets"):
-            bracket(cells, resolved, geometry, "mapped", "mapping", "targets", geometry.rows["mapping"].y, resolved.dims.rank_shown * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "mapped", "mapping", "targets", geometry.rows["mapping"].y, resolved.dims.rank_shown * ROW_HEIGHT, fit=True)
         if resolved.dims.held_count and query.tile_open(geometry, collapsed, "mapping", "held"):
-            bracket(cells, resolved, geometry, "hmapped", "mapping", "held", geometry.rows["mapping"].y, resolved.dims.rank_shown * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "hmapped", "mapping", "held", geometry.rows["mapping"].y, resolved.dims.rank_shown * ROW_HEIGHT, fit=True)
 
 
 def _emit_superspace_stacked_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "superspace_primes"):
         for i in range(resolved.dims.superspace_rank):
-            bracket(cells, resolved, geometry, f"superspace_map:{i}", "superspace_mapping", "superspace_primes", query.superspace_map_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"superspace_map:{i}", "superspace_mapping", "superspace_primes", query.superspace_map_top(geometry, i), ROW_HEIGHT, stacked=True)
     if query.row_open(geometry, collapsed, "superspace_projection") and query.tile_open(geometry, collapsed, "superspace_projection", "superspace_primes"):
         for i in range(resolved.dims.superspace_dimensionality):
-            bracket(cells, resolved, geometry, f"superspace_projection:{i}", "superspace_projection", "superspace_primes", query.superspace_projection_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"superspace_projection:{i}", "superspace_projection", "superspace_primes", query.superspace_projection_top(geometry, i), ROW_HEIGHT, stacked=True)
 
 
 def _emit_superspace_projection_fit_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
-    superspace_projection_top, superspace_projection_height = (geometry.rows["superspace_projection"].y if "superspace_projection" in geometry.rows else 0), resolved.dims.superspace_dimensionality * ROW_H
+    superspace_projection_top, superspace_projection_height = (geometry.rows["superspace_projection"].y if "superspace_projection" in geometry.rows else 0), resolved.dims.superspace_dimensionality * ROW_HEIGHT
     if query.row_open(geometry, collapsed, "superspace_projection"):
         if query.tile_open(geometry, collapsed, "superspace_projection", "superspace_generators"):
             bracket(cells, resolved, geometry, "superspace_embed", "superspace_projection", "superspace_generators", superspace_projection_top, superspace_projection_height, fit=True)
@@ -258,40 +258,40 @@ def _emit_superspace_rest_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     if query.row_open(geometry, collapsed, "superspace_vectors") and query.tile_open(geometry, collapsed, "superspace_vectors", "superspace_primes"):
         for i in range(resolved.dims.superspace_dimensionality):
-            bracket(cells, resolved, geometry, f"superspace_vector_ji_map:{i}", "superspace_vectors", "superspace_primes", query.superspace_vector_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"superspace_vector_ji_map:{i}", "superspace_vectors", "superspace_primes", query.superspace_vector_top(geometry, i), ROW_HEIGHT, stacked=True)
     if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "primes"):
         for i in range(resolved.dims.superspace_rank):
-            bracket(cells, resolved, geometry, f"superspace_mapping_lift:{i}", "superspace_mapping", "primes", query.superspace_map_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"superspace_mapping_lift:{i}", "superspace_mapping", "primes", query.superspace_map_top(geometry, i), ROW_HEIGHT, stacked=True)
     if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "superspace_generators"):
         bracket(cells, resolved, geometry, "superspace_self_map", "superspace_mapping", "superspace_generators",
-                geometry.rows["superspace_mapping"].y, resolved.dims.superspace_rank * ROW_H, fit=True)
+                geometry.rows["superspace_mapping"].y, resolved.dims.superspace_rank * ROW_HEIGHT, fit=True)
 
 
 def _emit_vector_stacked_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     if query.tile_open(geometry, collapsed, "vectors", "primes"):
         for i in range(resolved.dims.dimensionality):
-            bracket(cells, resolved, geometry, f"vector:primes:{i}", "vectors", "primes", query.vector_top(geometry, i), ROW_H, stacked=True)
+            bracket(cells, resolved, geometry, f"vector:primes:{i}", "vectors", "primes", query.vector_top(geometry, i), ROW_HEIGHT, stacked=True)
     if query.tile_open(geometry, collapsed, "mapping", "gens"):
         bracket(cells, resolved, geometry, "selfmap", "mapping", "gens",
-                geometry.rows["mapping"].y, resolved.dims.rank * ROW_H, fit=True)
+                geometry.rows["mapping"].y, resolved.dims.rank * ROW_HEIGHT, fit=True)
     if query.tile_open(geometry, collapsed, "mapping", "detempering"):
         bracket(cells, resolved, geometry, "mapped_detempering", "mapping", "detempering",
-                geometry.rows["mapping"].y, resolved.dims.rank * ROW_H, fit=True)
+                geometry.rows["mapping"].y, resolved.dims.rank * ROW_HEIGHT, fit=True)
 
 
 def _emit_superspace_vectors_list_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     if query.row_open(geometry, collapsed, "superspace_vectors"):
         if query.tile_open(geometry, collapsed, "superspace_vectors", "primes"):
-            bracket(cells, resolved, geometry, "superspace_vector:primes", "superspace_vectors", "primes", geometry.rows["superspace_vectors"].y, resolved.dims.superspace_dimensionality * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "superspace_vector:primes", "superspace_vectors", "primes", geometry.rows["superspace_vectors"].y, resolved.dims.superspace_dimensionality * ROW_HEIGHT, fit=True)
         for group in ("commas", "targets"):
             if query.tile_open(geometry, collapsed, "superspace_vectors", group):
-                bracket(cells, resolved, geometry, f"superspace_vector:{group}", "superspace_vectors", group, geometry.rows["superspace_vectors"].y, resolved.dims.superspace_dimensionality * ROW_H, fit=True)
+                bracket(cells, resolved, geometry, f"superspace_vector:{group}", "superspace_vectors", group, geometry.rows["superspace_vectors"].y, resolved.dims.superspace_dimensionality * ROW_HEIGHT, fit=True)
         if resolved.dims.held_count and query.tile_open(geometry, collapsed, "superspace_vectors", "held"):
-            bracket(cells, resolved, geometry, "superspace_vector:held", "superspace_vectors", "held", geometry.rows["superspace_vectors"].y, resolved.dims.superspace_dimensionality * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "superspace_vector:held", "superspace_vectors", "held", geometry.rows["superspace_vectors"].y, resolved.dims.superspace_dimensionality * ROW_HEIGHT, fit=True)
         if query.tile_open(geometry, collapsed, "superspace_vectors", "detempering"):
-            bracket(cells, resolved, geometry, "superspace_vector:detempering", "superspace_vectors", "detempering", geometry.rows["superspace_vectors"].y, resolved.dims.superspace_dimensionality * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "superspace_vector:detempering", "superspace_vectors", "detempering", geometry.rows["superspace_vectors"].y, resolved.dims.superspace_dimensionality * ROW_HEIGHT, fit=True)
 
 
 def _emit_superspace_mapped_list_brackets(cells, resolved, geometry, context) -> None:
@@ -299,11 +299,11 @@ def _emit_superspace_mapped_list_brackets(cells, resolved, geometry, context) ->
     if query.row_open(geometry, collapsed, "superspace_mapping"):
         for group in ("commas", "targets"):
             if query.tile_open(geometry, collapsed, "superspace_mapping", group):
-                bracket(cells, resolved, geometry, f"superspace_mapped:{group}", "superspace_mapping", group, geometry.rows["superspace_mapping"].y, resolved.dims.superspace_rank * ROW_H, fit=True)
+                bracket(cells, resolved, geometry, f"superspace_mapped:{group}", "superspace_mapping", group, geometry.rows["superspace_mapping"].y, resolved.dims.superspace_rank * ROW_HEIGHT, fit=True)
         if resolved.dims.held_count and query.tile_open(geometry, collapsed, "superspace_mapping", "held"):
-            bracket(cells, resolved, geometry, "superspace_mapped:held", "superspace_mapping", "held", geometry.rows["superspace_mapping"].y, resolved.dims.superspace_rank * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "superspace_mapped:held", "superspace_mapping", "held", geometry.rows["superspace_mapping"].y, resolved.dims.superspace_rank * ROW_HEIGHT, fit=True)
         if query.tile_open(geometry, collapsed, "superspace_mapping", "detempering"):
-            bracket(cells, resolved, geometry, "superspace_mapped:detempering", "superspace_mapping", "detempering", geometry.rows["superspace_mapping"].y, resolved.dims.superspace_rank * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "superspace_mapped:detempering", "superspace_mapping", "detempering", geometry.rows["superspace_mapping"].y, resolved.dims.superspace_rank * ROW_HEIGHT, fit=True)
 
 
 def _emit_vector_list_brackets(cells, resolved, geometry, context) -> None:
@@ -311,17 +311,17 @@ def _emit_vector_list_brackets(cells, resolved, geometry, context) -> None:
     if query.row_open(geometry, collapsed, "vectors"):
         for group in ("commas", "targets"):
             if query.tile_open(geometry, collapsed, "vectors", group):
-                bracket(cells, resolved, geometry, f"vector:{group}", "vectors", group, geometry.rows["vectors"].y, resolved.dims.dimensionality * ROW_H, fit=True)
+                bracket(cells, resolved, geometry, f"vector:{group}", "vectors", group, geometry.rows["vectors"].y, resolved.dims.dimensionality * ROW_HEIGHT, fit=True)
         if resolved.dims.held_count and query.tile_open(geometry, collapsed, "vectors", "held"):
-            bracket(cells, resolved, geometry, "vector:held", "vectors", "held", geometry.rows["vectors"].y, resolved.dims.dimensionality * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "vector:held", "vectors", "held", geometry.rows["vectors"].y, resolved.dims.dimensionality * ROW_HEIGHT, fit=True)
         if query.tile_open(geometry, collapsed, "vectors", "detempering"):
-            bracket(cells, resolved, geometry, "vector:detempering", "vectors", "detempering", geometry.rows["vectors"].y, resolved.dims.dimensionality * ROW_H, fit=True)
+            bracket(cells, resolved, geometry, "vector:detempering", "vectors", "detempering", geometry.rows["vectors"].y, resolved.dims.dimensionality * ROW_HEIGHT, fit=True)
 
 
 def _emit_prescaling_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     if query.row_open(geometry, collapsed, "prescaling"):
-        ph = (geometry.prescale_rows + geometry.size_rows) * ROW_H + query.prescale_size_gap(geometry)
+        ph = (geometry.prescale_rows + geometry.size_rows) * ROW_HEIGHT + query.prescale_size_gap(geometry)
         bare_col = "superspace_primes" if resolved.flags.superspace else "primes"
         for group in ("commas", "detempering", "targets", "held"):
             if query.tile_open(geometry, collapsed, "prescaling", group):
@@ -334,11 +334,11 @@ def _emit_prescaling_brackets(cells, resolved, geometry, context) -> None:
             pspan = query.matrix_span(geometry, resolved, bare_col)
             for i in range(geometry.prescale_rows + geometry.size_rows):
                 bracket(cells, resolved, geometry, f"prescaling:row:{i}", "prescaling", bare_col,
-                        query.subrow_top(geometry, "prescaling", i), ROW_H, span=pspan, stacked=True)
+                        query.subrow_top(geometry, "prescaling", i), ROW_HEIGHT, span=pspan, stacked=True)
             if geometry.size_rows:
                 matrix_x, matrix_width = pspan
-                bar_y = geometry.rows["prescaling"].y + geometry.prescale_rows * ROW_H + query.prescale_size_gap(geometry) / 2 - SEP_W / 2
-                cells.append(CellBox("bar:prescaling", matrix_x, bar_y, matrix_width, SEP_W, "hbar"))
+                bar_y = geometry.rows["prescaling"].y + geometry.prescale_rows * ROW_HEIGHT + query.prescale_size_gap(geometry) / 2 - SEP_WIDTH / 2
+                cells.append(CellBox("bar:prescaling", matrix_x, bar_y, matrix_width, SEP_WIDTH, "hbar"))
 
 
 def _emit_scalar_row_brackets(cells, resolved, geometry, context) -> None:
@@ -348,37 +348,37 @@ def _emit_scalar_row_brackets(cells, resolved, geometry, context) -> None:
         if query.row_open(geometry, collapsed, key):
             _emit_list_row_brackets(cells, resolved, geometry, context, key)
     if query.tile_open(geometry, collapsed, "weight", "targets"):
-        bracket(cells, resolved, geometry, "weight", "weight", "targets", geometry.rows["weight"].y, ROW_H)
+        bracket(cells, resolved, geometry, "weight", "weight", "targets", geometry.rows["weight"].y, ROW_HEIGHT)
     if query.tile_open(geometry, collapsed, "damage", "targets"):
-        bracket(cells, resolved, geometry, "damage", "damage", "targets", geometry.rows["damage"].y, ROW_H)
+        bracket(cells, resolved, geometry, "damage", "damage", "targets", geometry.rows["damage"].y, ROW_HEIGHT)
 
 
 def _emit_tuning_map_brackets(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     if query.tile_open(geometry, collapsed, "tuning", "gens"):
-        bracket(cells, resolved, geometry, "tuning:genmap", "tuning", "gens", geometry.rows["tuning"].y, ROW_H)
+        bracket(cells, resolved, geometry, "tuning:genmap", "tuning", "gens", geometry.rows["tuning"].y, ROW_HEIGHT)
     if query.tile_open(geometry, collapsed, "tuning", "canongens"):
-        bracket(cells, resolved, geometry, "tuning:cangenmap", "tuning", "canongens", geometry.rows["tuning"].y, ROW_H)
+        bracket(cells, resolved, geometry, "tuning:cangenmap", "tuning", "canongens", geometry.rows["tuning"].y, ROW_HEIGHT)
     if query.tile_open(geometry, collapsed, "tuning", "detempering"):
-        bracket(cells, resolved, geometry, "tuning:detempering", "tuning", "detempering", geometry.rows["tuning"].y, ROW_H)
+        bracket(cells, resolved, geometry, "tuning:detempering", "tuning", "detempering", geometry.rows["tuning"].y, ROW_HEIGHT)
     if query.tile_open(geometry, collapsed, "tuning", "superspace_generators"):
-        bracket(cells, resolved, geometry, "tuning:superspace_generator_map", "tuning", "superspace_generators", geometry.rows["tuning"].y, ROW_H)
+        bracket(cells, resolved, geometry, "tuning:superspace_generator_map", "tuning", "superspace_generators", geometry.rows["tuning"].y, ROW_HEIGHT)
 
 
 def _emit_list_row_brackets(cells, resolved, geometry, context, key: str) -> None:
     collapsed = context.collapsed
     if query.tile_open(geometry, collapsed, key, "primes"):
-        bracket(cells, resolved, geometry, f"{key}:map", key, "primes", geometry.rows[key].y, ROW_H)
+        bracket(cells, resolved, geometry, f"{key}:map", key, "primes", geometry.rows[key].y, ROW_HEIGHT)
     if query.tile_open(geometry, collapsed, key, "commas"):
-        bracket(cells, resolved, geometry, f"{key}:commalist", key, "commas", geometry.rows[key].y, ROW_H)
+        bracket(cells, resolved, geometry, f"{key}:commalist", key, "commas", geometry.rows[key].y, ROW_HEIGHT)
     if query.tile_open(geometry, collapsed, key, "targets"):
-        bracket(cells, resolved, geometry, f"{key}:list", key, "targets", geometry.rows[key].y, ROW_H)
+        bracket(cells, resolved, geometry, f"{key}:list", key, "targets", geometry.rows[key].y, ROW_HEIGHT)
     if resolved.dims.held_count and query.tile_open(geometry, collapsed, key, "held"):
-        bracket(cells, resolved, geometry, f"{key}:hlist", key, "held", geometry.rows[key].y, ROW_H)
+        bracket(cells, resolved, geometry, f"{key}:hlist", key, "held", geometry.rows[key].y, ROW_HEIGHT)
     if key != "tuning" and query.tile_open(geometry, collapsed, key, "detempering"):
-        bracket(cells, resolved, geometry, f"{key}:detemperinglist", key, "detempering", geometry.rows[key].y, ROW_H)
+        bracket(cells, resolved, geometry, f"{key}:detemperinglist", key, "detempering", geometry.rows[key].y, ROW_HEIGHT)
     if (key != "complexity" or resolved.flags.superspace) and query.tile_open(geometry, collapsed, key, "superspace_primes"):
-        bracket(cells, resolved, geometry, f"{key}:superspace_primes", key, "superspace_primes", geometry.rows[key].y, ROW_H)
+        bracket(cells, resolved, geometry, f"{key}:superspace_primes", key, "superspace_primes", geometry.rows[key].y, ROW_HEIGHT)
 
 
 def _emit_ebk_frames(cells, resolved, geometry, context) -> None:

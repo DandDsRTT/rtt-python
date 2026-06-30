@@ -179,12 +179,12 @@ class TestColumnTokens:
     def test_mapping_cells_form_a_square_touching_grid(self):
         cells = {c.id: c for c in _layout().cells}
         c00 = cells["cell:mapping:0:0"]
-        assert c00.width == c00.height == spreadsheet_constants.ROW_H, "each cell is square, so the matrix reads as a grid of squares (mockup z_map2)"
+        assert c00.width == c00.height == spreadsheet_constants.ROW_HEIGHT, "each cell is square, so the matrix reads as a grid of squares (mockup z_map2)"
         assert cells["cell:mapping:0:1"].x == c00.x + c00.width
         assert cells["cell:mapping:0:2"].x == c00.x + 2 * c00.width
         assert cells["cell:mapping:1:0"].y == c00.y + c00.height
         m00 = cells["cell:mapped:0:0"]
-        assert m00.width == m00.height == spreadsheet_constants.ROW_H
+        assert m00.width == m00.height == spreadsheet_constants.ROW_HEIGHT
         assert cells["cell:mapped:0:1"].x == m00.x + m00.width + spreadsheet_constants.INTERVAL_COL_GAP
 
     def test_tuning_rows_over_primes_and_targets(self):
@@ -215,7 +215,7 @@ class TestColumnTokens:
         layout = _layout()
         by = {line.id: line for line in layout.lines}
         cells = {c.id: c for c in layout.cells}
-        half = spreadsheet_constants.LINE_W / 2
+        half = spreadsheet_constants.LINE_WIDTH / 2
         v0, vlast = by["v:prime:0"], by["v:prime:2"]
         assert by["bus:primes:top"].start == v0.pos - half
         assert by["bus:primes:bot"].start == v0.pos - half
@@ -226,7 +226,7 @@ class TestColumnTokens:
 
     def test_mapping_rejoin_bars_span_the_full_generator_fan(self):
         by = {line.id: line for line in _layout().lines}
-        half = spreadsheet_constants.LINE_W / 2
+        half = spreadsheet_constants.LINE_WIDTH / 2
         g0, glast = by["h:mapping:0"], by["h:mapping:1"]
         right = by["vbar:mapping:right"]
         assert right.start == g0.pos - half and right.start + right.length == glast.pos + half

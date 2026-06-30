@@ -346,7 +346,7 @@ class TestWebAppSmoke1:
                 assert u in html and f"<b>{u}</b>" not in html, (text, u)
 
     def test_line_style_centres_the_rule_on_its_coordinate(self):
-        half = spreadsheet_constants.LINE_W / 2
+        half = spreadsheet_constants.LINE_WIDTH / 2
         v = render_html._line_style(Line("trunk:x", "v", 100, 50, 200))
         assert f"transform:translate({100 - half}px,50px)" in v
         assert "height:200px" in v and "left:0; top:0" in v
@@ -364,12 +364,12 @@ class TestWebAppSmoke1:
         assert "border-top-color:transparent" in h_dotted and "repeating-linear-gradient(to right," in h_dotted
         h_solid = render_html._line_style(Line("h:x", "h", 60, 0, 50))
         assert "border-top-color:var(--c-gridline)" in h_solid and "background:none" in h_solid
-        assert f"transparent {spreadsheet_constants.LINE_W}px {render_html._DOT_PITCH}px" in v_dotted
-        assert render_html._DOT_PITCH >= 3 * spreadsheet_constants.LINE_W
+        assert f"transparent {spreadsheet_constants.LINE_WIDTH}px {render_html._DOT_PITCH}px" in v_dotted
+        assert render_html._DOT_PITCH >= 3 * spreadsheet_constants.LINE_WIDTH
 
     def test_shared_axis_gridlines_render_two_pixels_thick(self):
-        assert spreadsheet_constants.LINE_W == 2, "the shared coordinate axes (.rtt-line, the rules the cells sit on, threading the # gaps between tiles) are the board's gridlines; doubled from 1px to 2px so they read # clearly. Both orientations carry the same #e0e0e0 weight"
-        assert f"--line-w:{spreadsheet_constants.LINE_W}px" in page_assets._CSS
+        assert spreadsheet_constants.LINE_WIDTH == 2, "the shared coordinate axes (.rtt-line, the rules the cells sit on, threading the # gaps between tiles) are the board's gridlines; doubled from 1px to 2px so they read # clearly. Both orientations carry the same #e0e0e0 weight"
+        assert f"--line-w:{spreadsheet_constants.LINE_WIDTH}px" in page_assets._CSS
         assert "--c-gridline:#e0e0e0" in page_assets._CSS, "the gridline colour, set in :root so dark mode can retint it"
         assert "border-left:var(--line-w) solid var(--c-gridline)" in page_assets._CSS
         assert "border-top:var(--line-w) solid var(--c-gridline)" in page_assets._CSS

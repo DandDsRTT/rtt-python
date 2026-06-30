@@ -33,12 +33,12 @@ class TestDefaultPage:
 
     def test_grid_pane_publishes_its_base_size_for_the_scrollbar_fit(self, default_page: User) -> None:
         pane = next(iter(default_page.find(marker="gridpane").elements))
-        base_w, base_h = pane._props.get("data-base-w"), pane._props.get("data-base-h")
-        fit_w = pane._props.get("data-fit-w")
-        assert base_w is not None and base_h is not None and fit_w is not None
-        assert float(base_w) == float(pane._style["width"].rstrip("px"))
-        assert float(base_h) == float(pane._style["height"].rstrip("px"))
-        assert 0 < float(fit_w) <= float(base_w), "fit-w is the gridlines' own width — base-w minus the last column title's right overhang — so it # never exceeds base-w; a horizontal scrollbar is owed only when the pane is capped below it"
+        base_width, base_height = pane._props.get("data-base-w"), pane._props.get("data-base-h")
+        fit_width = pane._props.get("data-fit-w")
+        assert base_width is not None and base_height is not None and fit_width is not None
+        assert float(base_width) == float(pane._style["width"].rstrip("px"))
+        assert float(base_height) == float(pane._style["height"].rstrip("px"))
+        assert 0 < float(fit_width) <= float(base_width), "fit-w is the gridlines' own width — base-w minus the last column title's right overhang — so it # never exceeds base-w; a horizontal scrollbar is owed only when the pane is capped below it"
 
     def test_value_cells_carry_data_value_for_the_mapping_demo_overlay(self, default_page: User) -> None:
         cell = next(iter(default_page.find(marker="cell:mapping:1:2").elements))

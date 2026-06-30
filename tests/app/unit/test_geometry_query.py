@@ -2,19 +2,19 @@ from types import SimpleNamespace
 
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.spreadsheet_constants import (
-    BRACKET_W,
+    BRACKET_WIDTH,
     COLUMN_WIDTH,
     FRAME_GAP,
-    FRAME_H,
+    FRAME_HEIGHT,
     INTERVAL_COL_GAP,
-    ROW_H,
+    ROW_HEIGHT,
     V_SPLIT_GAP,
 )
 from rtt.app.spreadsheet_models import RowBand
 
 
 def _row(y, height=10.0, frame=2.0, symbol=3.0, caption=4.0, units=5.0, comma_picker=0.0):
-    return RowBand(y=y, height=height, label="", collapsible=True, tile_h=0.0, tile_top=0.0,
+    return RowBand(y=y, height=height, label="", collapsible=True, tile_height=0.0, tile_top=0.0,
                    frame=frame, symbol=symbol, caption=caption, units=units, plain_text=0.0, preset=0.0,
                    scheme_button=0.0, num_subrows=1, comma_picker=comma_picker)
 
@@ -30,13 +30,13 @@ class TestGeometryQuery:
     def test_row_top_functions_are_pure_over_geometry(self):
         g = _geometry()
         assert query.map_top(g, 0) == 100.0
-        assert query.map_top(g, 2) == 100.0 + 2 * ROW_H
-        assert query.projection_top(g, 1) == 200.0 + ROW_H
+        assert query.map_top(g, 2) == 100.0 + 2 * ROW_HEIGHT
+        assert query.projection_top(g, 1) == 200.0 + ROW_HEIGHT
         assert query.canon_top(g, 0) == 300.0
-        assert query.vector_top(g, 3) == 400.0 + 3 * ROW_H
-        assert query.superspace_vector_top(g, 1) == 500.0 + ROW_H
-        assert query.superspace_map_top(g, 1) == 600.0 + ROW_H
-        assert query.superspace_projection_top(g, 2) == 700.0 + 2 * ROW_H
+        assert query.vector_top(g, 3) == 400.0 + 3 * ROW_HEIGHT
+        assert query.superspace_vector_top(g, 1) == 500.0 + ROW_HEIGHT
+        assert query.superspace_map_top(g, 1) == 600.0 + ROW_HEIGHT
+        assert query.superspace_projection_top(g, 2) == 700.0 + 2 * ROW_HEIGHT
 
     def test_frame_and_band_y_functions_are_pure_over_geometry(self):
         g = _geometry()
@@ -44,32 +44,32 @@ class TestGeometryQuery:
         assert query.comma_picker_band_y(g, "mapping") == row.y + row.height + row.frame
         assert query.plain_text_band_y(g, "mapping") == (
             row.y + row.height + row.frame + row.comma_picker + row.symbol + row.caption + row.units)
-        assert query.frame_top_y(g, "mapping") == row.y - FRAME_H - FRAME_GAP
+        assert query.frame_top_y(g, "mapping") == row.y - FRAME_HEIGHT - FRAME_GAP
         assert query.frame_brace_y(g, "mapping") == row.y + row.height + FRAME_GAP
 
     def test_gutter_and_coordinate_functions_are_pure_over_geometry(self):
         g = SimpleNamespace(
             primes_x=10.0, targets_x=20.0, content_x={"gens": 5.0},
-            matlabel_primes_w=2.0, matlabel_superspace_primes_w=3.0, matlabel_other_w={"gens": 1.0},
-            row_handle_w=4.0, etpick_w=0, group_left={"targets": (100.0, 200.0)})
-        assert query.matlabel_gutter_w(g, "primes") == 2.0
-        assert query.matlabel_gutter_w(g, "superspace_primes") == 3.0
-        assert query.matlabel_gutter_w(g, "gens") == 1.0
-        assert query.handle_gutter_w(g, "primes") == 4.0
-        assert query.handle_gutter_w(g, "gens") == 0
+            matlabel_primes_width=2.0, matlabel_superspace_primes_width=3.0, matlabel_other_width={"gens": 1.0},
+            row_handle_width=4.0, etpick_width=0, group_left={"targets": (100.0, 200.0)})
+        assert query.matlabel_gutter_width(g, "primes") == 2.0
+        assert query.matlabel_gutter_width(g, "superspace_primes") == 3.0
+        assert query.matlabel_gutter_width(g, "gens") == 1.0
+        assert query.handle_gutter_width(g, "primes") == 4.0
+        assert query.handle_gutter_width(g, "gens") == 0
         assert query.etpick_left_pad(g, "primes") == 0
-        assert query.target_left(g, 1) == 20.0 + BRACKET_W + COLUMN_WIDTH + INTERVAL_COL_GAP
-        assert query.prime_left(g, 0) == 10.0 + query.outer_gutter_w(g, "primes") + BRACKET_W
+        assert query.target_left(g, 1) == 20.0 + BRACKET_WIDTH + COLUMN_WIDTH + INTERVAL_COL_GAP
+        assert query.prime_left(g, 0) == 10.0 + query.outer_gutter_width(g, "primes") + BRACKET_WIDTH
         assert query.sub_axis_x(g, "targets", 1) == 200.0 + COLUMN_WIDTH / 2
 
     def test_resolved_dependent_query_functions_are_pure(self):
         g = SimpleNamespace(commas_x=90.0)
-        r = SimpleNamespace(unchanged=SimpleNamespace(shown=True, empty_comma_w=5.0),
+        r = SimpleNamespace(unchanged=SimpleNamespace(shown=True, empty_comma_width=5.0),
                             dims=SimpleNamespace(comma_count=2, comma_count_shown=3))
         assert query.comma_value_pos(r, 1) == 1
         assert query.comma_value_pos(r, 2) == 2 + (3 - 2)
-        assert query.comma_left(g, r, 0) == 90.0 + BRACKET_W + 5.0
-        assert query.comma_left(g, r, 3) == 90.0 + BRACKET_W + 5.0 + 3 * COLUMN_WIDTH + V_SPLIT_GAP
+        assert query.comma_left(g, r, 0) == 90.0 + BRACKET_WIDTH + 5.0
+        assert query.comma_left(g, r, 3) == 90.0 + BRACKET_WIDTH + 5.0 + 3 * COLUMN_WIDTH + V_SPLIT_GAP
 
     def test_openness_predicates_are_pure_over_geometry_and_collapsed(self):
         g = SimpleNamespace(column_x={"primes": 0.0, "targets": 0.0}, rows={"mapping": None},

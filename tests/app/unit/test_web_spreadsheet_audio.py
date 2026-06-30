@@ -97,7 +97,7 @@ class TestPerCellAudio:
         b = _maximized_superspace_builder()
         g, layout, ss = b.geometry, b.layout(), b.resolved.flags.superspace
         bands = sorted(g.rows.items(), key=lambda kv: kv[1].y)
-        spans = [(ck, g.content_x[ck], g.content_w[ck]) for ck in g.content_x]
+        spans = [(ck, g.content_x[ck], g.content_width[ck]) for ck in g.content_x]
         missed, wrongly = [], []
         for c in layout.cells:
             if c.kind not in audio._INTERVAL_KINDS or c.pending:

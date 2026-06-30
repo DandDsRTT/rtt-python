@@ -28,7 +28,7 @@ class TestGeometryRecord:
     def test_geometry_is_a_frozen_record(self, builder):
         assert isinstance(builder.geometry, Geometry)
         with pytest.raises(dataclasses.FrozenInstanceError):
-            builder.geometry.total_w = 0.0
+            builder.geometry.total_width = 0.0
 
     @pytest.mark.parametrize("builder", list(_builders()))
     def test_builder_does_not_mirror_geometry_fields_as_flat_attrs(self, builder):

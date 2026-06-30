@@ -34,7 +34,7 @@ class TestIntervalVectorsRow:
         assert [cells[f"cell:vector:targets:6:{p}"].text for p in range(3)] == ["-2", "0", "1"]
         v, hdr = cells["cell:vector:targets:2:0"], cells["target:2"]
         assert v.x + v.width / 2 == hdr.x + hdr.width / 2
-        assert cells["cell:vector:targets:0:1"].y - cells["cell:vector:targets:0:0"].y == spreadsheet_constants.ROW_H
+        assert cells["cell:vector:targets:0:1"].y - cells["cell:vector:targets:0:0"].y == spreadsheet_constants.ROW_HEIGHT
 
     def test_interval_vectors_domain_primes_identity_renders_with_identity_objects(self):
         J = grid_tables.SUB_OPEN + "j" + grid_tables.SUB_CLOSE
@@ -66,7 +66,7 @@ class TestIntervalVectorsRow:
         gen0 = cells["gen:0"]
         assert cells["basis:0"].x + cells["basis:0"].width / 2 == gen0.x + gen0.width / 2
         assert cells["basis:0"].y == cells["cell:comma:0:0"].y
-        assert cells["basis:1"].y - cells["basis:0"].y == spreadsheet_constants.ROW_H
+        assert cells["basis:1"].y - cells["basis:0"].y == spreadsheet_constants.ROW_HEIGHT
 
     def test_interval_vectors_basis_controls_ride_the_rows_left_bus(self):
         layout = _layout()
@@ -150,7 +150,7 @@ class TestIntervalVectorsRow:
             assert handle.comma == i and handle.x == label.x
             assert handle.y + handle.height <= label.y
             assert label.y < vector0.y
-        assert cells["int_drag:interest:0"].y + spreadsheet_constants.ROW_HANDLE_W <= cells["cell:interest:0:0"].y
+        assert cells["int_drag:interest:0"].y + spreadsheet_constants.ROW_HANDLE_WIDTH <= cells["cell:interest:0:0"].y
         assert "int_drag:target:0" in cells
 
     def test_interval_drag_handles_need_two_entries_and_skip_all_interval_targets(self):

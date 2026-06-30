@@ -33,7 +33,7 @@ class TestCommasColumn:
         assert cells["cell:comma:1:0"].text == "-4"
         assert cells["cell:comma:2:0"].text == "1"
         c00 = cells["cell:comma:0:0"]
-        assert c00.width == c00.height == spreadsheet_constants.ROW_H
+        assert c00.width == c00.height == spreadsheet_constants.ROW_HEIGHT
         assert cells["cell:comma:1:0"].y == c00.y + c00.height
         assert c00.x == cells["comma:0"].x
         assert c00.y == cells["cell:vector:targets:0:0"].y
@@ -227,7 +227,7 @@ class TestCommasColumn:
         assert on["cell:prescaling:primes:0:1"].text == "0"
         assert on["cell:prescaling:primes:0:0"].x == on["prime:0"].x
         assert on["cell:prescaling:primes:1:1"].x == on["prime:1"].x
-        assert on["cell:prescaling:primes:1:0"].y == on["cell:prescaling:primes:0:0"].y + spreadsheet_constants.ROW_H
+        assert on["cell:prescaling:primes:1:0"].y == on["cell:prescaling:primes:0:0"].y + spreadsheet_constants.ROW_HEIGHT
 
     def test_size_factor_grows_the_prescaler_into_the_rectangular_ZL_matrix(self):
         lp = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}
@@ -238,7 +238,7 @@ class TestCommasColumn:
             assert lils[f"cell:prescaling:primes:3:{c}"].text == service.prescale_text(pre[c])
             assert lils[f"cell:prescaling:primes:3:{c}"].kind == "tuningvalue"
         assert lils["cell:prescaling:primes:0:0"].kind == "prescalercell"
-        assert lils["cell:prescaling:primes:3:0"].y == lils["cell:prescaling:primes:2:0"].y + spreadsheet_constants.ROW_H + spreadsheet_constants.V_SPLIT_GAP
+        assert lils["cell:prescaling:primes:3:0"].y == lils["cell:prescaling:primes:2:0"].y + spreadsheet_constants.ROW_HEIGHT + spreadsheet_constants.V_SPLIT_GAP
         assert lils["bracket:prescaling:row:3:l"].text == "⟨" and lils["bracket:prescaling:row:3:r"].text == "]"
 
     def test_size_factor_grows_the_prescaler_product_tiles_and_labels_the_size_row(self):
