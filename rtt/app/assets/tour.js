@@ -20,9 +20,9 @@
   var PAD = 6;            // px breathing room the spotlight leaves around the target
   var GAP = 14;           // px gap between the spotlight and the card
 
-  var cfg = window.rttTour || {};
-  var steps = Array.isArray(cfg.steps) ? cfg.steps : [];
-  var idx = -1;
+  var config = window.rttTour || {};
+  var steps = Array.isArray(config.steps) ? config.steps : [];
+  var index = -1;
   var root = null;        // the live tour DOM (block + spot + card), null while closed
 
   function panelOpen() {
@@ -66,8 +66,8 @@
     document.body.appendChild(root);
 
     card.querySelector(".rtt-tour-skip").addEventListener("click", stop);
-    card.querySelector(".rtt-tour-back").addEventListener("click", function () { go(idx - 1); });
-    card.querySelector(".rtt-tour-next").addEventListener("click", function () { go(idx + 1); });
+    card.querySelector(".rtt-tour-back").addEventListener("click", function () { go(index - 1); });
+    card.querySelector(".rtt-tour-next").addEventListener("click", function () { go(index + 1); });
   }
 
   function place(rect, card, spot, where) {
@@ -95,12 +95,12 @@
 
   function position() {
     if (!root) return;
-    var step = steps[idx];
+    var step = steps[index];
     var spot = root.querySelector(".rtt-tour-spot");
     var card = root.querySelector(".rtt-tour-card");
-    var el = step.sel ? document.querySelector(step.sel) : null;
+    var element = step.sel ? document.querySelector(step.sel) : null;
 
-    if (!el || !el.getClientRects().length) {                          // centred / missing target
+    if (!element || !element.getClientRects().length) {                          // centred / missing target
       // clear any inline rect from a previous anchored step — inline styles beat the
       // .rtt-tour-spot-center CSS, so without this the spotlight stays on the prior target
       spot.style.top = spot.style.left = spot.style.width = spot.style.height = "";
@@ -110,7 +110,7 @@
       return;
     }
     spot.classList.remove("rtt-tour-spot-center");
-    var r = el.getBoundingClientRect();
+    var r = element.getBoundingClientRect();
     spot.style.top = (r.top - PAD) + "px";
     spot.style.left = (r.left - PAD) + "px";
     spot.style.width = (r.width + PAD * 2) + "px";
@@ -122,21 +122,21 @@
   function go(n) {
     if (n < 0) return;
     if (n >= steps.length) { stop(); return; }
-    idx = n;
-    var step = steps[idx];
+    index = n;
+    var step = steps[index];
     if (step.open) openDrawer();
     if (!root) build();
 
     root.querySelector(".rtt-tour-title").textContent = step.title || "";
     root.querySelector(".rtt-tour-body").innerHTML = step.body || "";
-    root.querySelector(".rtt-tour-count").textContent = (idx + 1) + " / " + steps.length;
-    root.querySelector(".rtt-tour-back").style.visibility = idx === 0 ? "hidden" : "visible";
+    root.querySelector(".rtt-tour-count").textContent = (index + 1) + " / " + steps.length;
+    root.querySelector(".rtt-tour-back").style.visibility = index === 0 ? "hidden" : "visible";
     root.querySelector(".rtt-tour-next").textContent =
-      idx === steps.length - 1 ? "Done" : "Next";
+      index === steps.length - 1 ? "Done" : "Next";
 
     // bring the target into view first, then settle the spotlight/card once it's stopped moving
-    var el = step.sel ? document.querySelector(step.sel) : null;
-    if (el && el.scrollIntoView) el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    var element = step.sel ? document.querySelector(step.sel) : null;
+    if (element && element.scrollIntoView) element.scrollIntoView({ block: "nearest", inline: "nearest" });
     setTimeout(position, step.open && !panelOpen() ? 320 : 60);  // wait out the drawer transition
   }
 
@@ -149,14 +149,14 @@
     try { localStorage.setItem(SEEN_KEY, "1"); } catch (e) { /* private mode: just don't persist */ }
     if (root && root.parentNode) root.parentNode.removeChild(root);
     root = null;
-    idx = -1;
+    index = -1;
   }
 
   function onKey(e) {
     if (!root) return;
     if (e.key === "Escape") { stop(); }
-    else if (e.key === "ArrowRight") { go(idx + 1); }
-    else if (e.key === "ArrowLeft") { go(idx - 1); }
+    else if (e.key === "ArrowRight") { go(index + 1); }
+    else if (e.key === "ArrowLeft") { go(index - 1); }
   }
 
   window.addEventListener("keydown", onKey);
@@ -172,7 +172,7 @@
     try { return localStorage.getItem(SEEN_KEY) === "1"; } catch (e) { return false; }
   }
 
-  if (cfg.autostart && !seen()) {
+  if (config.autostart && !seen()) {
     // let the grid finish its first render (the layout settles a beat after load) before the
     // spotlight measures anything
     setTimeout(function () { if (!seen()) start(); }, 700);

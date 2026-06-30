@@ -2,7 +2,7 @@
 // keyboard navigation that moves it. Mouse hover sets the active cell and always wins over the
 // keyboard (hovering a new cell steals it). Arrow keys roam the active cell over EVERY cell in the
 // grid; Tab / Shift+Tab walk it along the matrix it sits in (the map for a row-based matrix, the
-// vector for a col-based one), wrapping within that line. Typing a printable key over an interactive
+// vector for a column-based one), wrapping within that line. Typing a printable key over an interactive
 // cell begins editing it. Keyboard moves scroll the active cell into view (cells off-screen are not
 // even in the DOM under viewport virtualization, so the scroll is what materializes them).
 //
@@ -22,7 +22,7 @@
   // brightest. Tunable in one place.
   var W_CROSS = 0.30;   // the crosshair row OR column through the active cell (each side adds)
   var W_MATRIX = 0.16;  // anywhere in the active cell's matrix
-  var W_ORIENT = 0.34;  // the active cell's map (row-based) or vector (col-based) within that matrix
+  var W_ORIENT = 0.34;  // the active cell's map (row-based) or vector (column-based) within that matrix
   var NONACTIVE_MAX = 0.52;  // every cell but the active one caps here, so the active cell (always
                              // full) stays clearly the brightest even where layers stack on its line
   var EPS = 3;          // px slack: cells in one column share an exact x and one row an exact y, so a
@@ -36,12 +36,12 @@
   // captions, EBK brackets, buttons or other chrome. The server marks them with .rtt-gridval.
   var SEL = '.rtt-app .rtt-cell.rtt-gridval';
   function cells() { return document.querySelectorAll(SEL); }
-  function rectOf(el) { return el.getBoundingClientRect(); }
-  function cx(r) { return (r.left + r.right) / 2; }
-  function cy(r) { return (r.top + r.bottom) / 2; }
+  function rectOf(element) { return element.getBoundingClientRect(); }
+  function centerX(r) { return (r.left + r.right) / 2; }
+  function centerY(r) { return (r.top + r.bottom) / 2; }
 
-  function inRowBand(r, ar) { return cy(r) >= ar.top - EPS && cy(r) <= ar.bottom + EPS; }
-  function inColBand(r, ar) { return cx(r) >= ar.left - EPS && cx(r) <= ar.right + EPS; }
+  function inRowBand(r, activeRect) { return centerY(r) >= activeRect.top - EPS && centerY(r) <= activeRect.bottom + EPS; }
+  function inColumnBand(r, activeRect) { return centerX(r) >= activeRect.left - EPS && centerX(r) <= activeRect.right + EPS; }
 
   // recompute every materialized cell's --rtt-hl for the current active cell.
   function paint() {
@@ -50,28 +50,28 @@
       for (var i = 0; i < all.length; i++) all[i].style.removeProperty('--rtt-hl');
       return;
     }
-    var ar = rectOf(active);
+    var activeRect = rectOf(active);
     var amx = active.dataset.mx || '';
     var amxo = active.dataset.mxo || '';
     for (var k = 0; k < all.length; k++) {
-      var el = all[k], r = rectOf(el), w = 0;
-      var sameRow = inRowBand(r, ar), sameCol = inColBand(r, ar);
+      var element = all[k], r = rectOf(element), w = 0;
+      var sameRow = inRowBand(r, activeRect), sameColumn = inColumnBand(r, activeRect);
       if (sameRow) w += W_CROSS;
-      if (sameCol) w += W_CROSS;
-      if (amx && el.dataset.mx === amx) {
+      if (sameColumn) w += W_CROSS;
+      if (amx && element.dataset.mx === amx) {
         w += W_MATRIX;
-        if (amxo === 'row' ? sameRow : sameCol) w += W_ORIENT;
+        if (amxo === 'row' ? sameRow : sameColumn) w += W_ORIENT;
       }
-      var hl = (el === active) ? 1 : Math.min(NONACTIVE_MAX, w);
-      if (hl > 0) el.style.setProperty('--rtt-hl', hl.toFixed(3));
-      else el.style.removeProperty('--rtt-hl');
+      var hl = (element === active) ? 1 : Math.min(NONACTIVE_MAX, w);
+      if (hl > 0) element.style.setProperty('--rtt-hl', hl.toFixed(3));
+      else element.style.removeProperty('--rtt-hl');
     }
   }
 
-  function setActive(el, hover) {
-    if (el === active && hover === fromHover) return;
+  function setActive(element, hover) {
+    if (element === active && hover === fromHover) return;
     if (active) active.classList.remove('rtt-active');
-    active = el;
+    active = element;
     fromHover = !!hover;
     if (active) active.classList.add('rtt-active');   // carries the CSS :hover affordances by keyboard
     paint();
@@ -84,12 +84,12 @@
 
   // ---- mouse: hovering any cell makes it active and steals from the keyboard ----
   document.addEventListener('mouseover', function (e) {
-    var el = e.target.closest && e.target.closest(SEL);
-    if (el) setActive(el, true);
+    var element = e.target.closest && e.target.closest(SEL);
+    if (element) setActive(element, true);
   });
 
   // ---- keyboard navigation ----
-  function gridInput(el) { return el && el.querySelector && el.querySelector('.rtt-cell-input-field input:not([disabled])'); }
+  function gridInput(element) { return element && element.querySelector && element.querySelector('.rtt-cell-input-field input:not([disabled])'); }
   function isEditing() {
     var a = document.activeElement;
     return a && a.matches && a.matches('.rtt-cell-input-field input');
@@ -103,15 +103,15 @@
   // axis plus a penalty for drifting off it, so it tracks the visually-adjacent cell.
   function neighbour(dirx, diry) {
     if (!active) return null;
-    var ar = rectOf(active), ax = cx(ar), ay = cy(ar), all = cells(), best = null, bestScore = Infinity;
+    var activeRect = rectOf(active), ax = centerX(activeRect), ay = centerY(activeRect), all = cells(), best = null, bestScore = Infinity;
     for (var i = 0; i < all.length; i++) {
-      var el = all[i]; if (el === active) continue;
-      var r = rectOf(el), dx = cx(r) - ax, dy = cy(r) - ay;
+      var element = all[i]; if (element === active) continue;
+      var r = rectOf(element), dx = centerX(r) - ax, dy = centerY(r) - ay;
       var along = dirx ? dx * dirx : dy * diry;
       var off = dirx ? Math.abs(dy) : Math.abs(dx);
       if (along <= 1) continue;
       var score = along + off * 3;
-      if (score < bestScore) { bestScore = score; best = el; }
+      if (score < bestScore) { bestScore = score; best = element; }
     }
     return best;
   }
@@ -121,25 +121,25 @@
   // Tab always moves WITHIN the grid rather than escaping to the page chrome.
   function navLine() {
     if (!active) return [];
-    var ar = rectOf(active), all = cells(), amx = active.dataset.mx;
+    var activeRect = rectOf(active), all = cells(), amx = active.dataset.mx;
     if (!amx) {  // a value cell outside any matrix: walk its visual row, so Tab stays in the grid
       var row = [];
-      for (var j = 0; j < all.length; j++) { var e2 = all[j]; if (inRowBand(rectOf(e2), ar)) row.push(e2); }
-      row.sort(function (a, b) { return cx(rectOf(a)) - cx(rectOf(b)); });
+      for (var j = 0; j < all.length; j++) { var e2 = all[j]; if (inRowBand(rectOf(e2), activeRect)) row.push(e2); }
+      row.sort(function (a, b) { return centerX(rectOf(a)) - centerX(rectOf(b)); });
       return row;
     }
     var amxo = active.dataset.mxo, mat = [], line = [];
     for (var i = 0; i < all.length; i++) {
-      var el = all[i]; if (el.dataset.mx !== amx) continue;
-      mat.push(el);
-      if (amxo === 'row' ? inRowBand(rectOf(el), ar) : inColBand(rectOf(el), ar)) line.push(el);
+      var element = all[i]; if (element.dataset.mx !== amx) continue;
+      mat.push(element);
+      if (amxo === 'row' ? inRowBand(rectOf(element), activeRect) : inColumnBand(rectOf(element), activeRect)) line.push(element);
     }
     // walk the active cell's map/vector; but a matrix that is a single map or vector (its orientation
     // line is one cell — e.g. the JI mapping, a column) has nothing to loop, so walk the whole matrix.
     var out = line.length > 1 ? line : mat;
     out.sort(function (a, b) {
       var ra = rectOf(a), rb = rectOf(b);
-      if (out === line) return amxo === 'row' ? cx(ra) - cx(rb) : cy(ra) - cy(rb);
+      if (out === line) return amxo === 'row' ? centerX(ra) - centerX(rb) : centerY(ra) - centerY(rb);
       return Math.abs(ra.top - rb.top) > 1 ? ra.top - rb.top : ra.left - rb.left;
     });
     return out;
@@ -148,31 +148,31 @@
   function tabStep(back) {
     var line = navLine();
     if (line.length < 2) return null;
-    var idx = line.indexOf(active);
-    if (idx === -1) return null;
-    return line[(idx + (back ? -1 : 1) + line.length) % line.length];
+    var index = line.indexOf(active);
+    if (index === -1) return null;
+    return line[(index + (back ? -1 : 1) + line.length) % line.length];
   }
 
   // moving the active cell by keyboard should look exactly like hovering it: fire the same pointer
   // events the grid's hover features (the audio speaker, the zoom card, tooltips) listen for.
-  function hoverSync(prev, next) {
-    if (prev && prev !== next)
-      prev.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: next }));
+  function hoverSync(previous, next) {
+    if (previous && previous !== next)
+      previous.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: next }));
     if (next)
-      next.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, relatedTarget: prev }));
+      next.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, relatedTarget: previous }));
   }
 
-  function moveTo(el) {
-    if (!el) return;
+  function moveTo(element) {
+    if (!element) return;
     kbdMode();
-    var prev = active;
-    setActive(el, false);
-    el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    hoverSync(prev, el);
+    var previous = active;
+    setActive(element, false);
+    element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    hoverSync(previous, element);
   }
 
-  function beginEdit(el, ch) {
-    var input = gridInput(el);
+  function beginEdit(element, ch) {
+    var input = gridInput(element);
     if (!input) return false;
     input.focus();
     if (input.select) input.select();
