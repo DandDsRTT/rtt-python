@@ -890,10 +890,10 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
                  white-space:nowrap; overflow:visible; }
 /* a per-tile bank control square (waveform / play-mode / hold-loop / include-1/1), the same
    12px box as the fold toggle; .rtt-audio-on marks the active hold/1-1 (greyscale, not blue). */
-.rtt-audio-ctrl { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+.rtt-audio-control { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
            color:#666; cursor:pointer; user-select:none; }
-.rtt-audio-ctrl:hover { color:#000; }
-.rtt-audio-ctrl.rtt-audio-on { background:#666; color:#fff; border-radius:2px; }
+.rtt-audio-control:hover { color:#000; }
+.rtt-audio-control.rtt-audio-on { background:#666; color:#fff; border-radius:2px; }
 .rtt-audio-glyph { width:12px; height:12px; display:block; }
 /* the per-interval audio affordance. Hovering any cell of an interval's column segment floats ONE
    speaker above it — tooltip-style, over the app — and clicking it sounds the interval; both only
@@ -993,7 +993,7 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 .rtt-visual-grid { grid-template-columns:repeat(2, 16px); grid-auto-rows:16px; }
 .rtt-audio-box .rtt-tile-bank { display:grid; grid-template-columns:repeat(3, 16px);
                                 grid-auto-rows:16px; gap:4px; }
-.rtt-vis-ctrl { display:flex; align-items:center; justify-content:center; width:16px; height:16px;
+.rtt-vis-control { display:flex; align-items:center; justify-content:center; width:16px; height:16px;
                 cursor:pointer; }
 .rtt-visual-grid .rtt-darktoggle { width:16px !important; min-width:16px !important;
                                    height:16px !important; min-height:16px !important; }
@@ -1144,11 +1144,11 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
    tile); a 12x12 boxed double-chevron in the fan-control grey */
 .rtt-tile-fold { width:12px; height:12px; color:#555; }
 /* the audio control bank at the head strip's right: the five 12px glyph controls (mute / waveform /
-   play-mode / hold / 1-1). They reuse the grid bank's .rtt-audio-ctrl styling; the leading mute
+   play-mode / hold / 1-1). They reuse the grid bank's .rtt-audio-control styling; the leading mute
    doubles as the kill switch and the engage gate (via the body.rtt-audio-muted class the CSS keys
    off). The bank is always live — mute is itself the on/off, so there is no greyed state. */
 .rtt-tile-bank { display:flex; gap:3px; }
-.rtt-tile-bank .rtt-audio-ctrl { width:12px; height:12px; flex:none; }
+.rtt-tile-bank .rtt-audio-control { width:12px; height:12px; flex:none; }
 /* one stacked layer line; the symbol and name lines seat two parts (parent + sub-control) */
 .rtt-tile-line { display:flex; justify-content:center; align-items:center;
                  min-height:14px; line-height:1.1; }

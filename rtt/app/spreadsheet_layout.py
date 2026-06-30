@@ -30,13 +30,13 @@ from rtt.app.spreadsheet_constants import (
     HEADER_HEIGHT,
     LABEL_WIDTH,
     MATLABEL_HEIGHT,
-    MATLABEL_PAD,
     MATLABEL_W_SS,
     MATLABEL_W_SSPRIMES,
     MATLABEL_WIDTH,
+    MATRIX_LABEL_PADDING,
     OPTIMIZATION_MEAN_DAMAGE_WIDTH,
-    OPTIMIZATION_PAD_B,
-    OPTIMIZATION_PAD_T,
+    OPTIMIZATION_PADDING_B,
+    OPTIMIZATION_PADDING_T,
     OPTIMIZATION_TITLE_GAP,
     OPTIMIZATION_TITLE_HEIGHT,
     PAD,
@@ -259,7 +259,7 @@ def _compute_row_band(geometry, resolved, context, key, natural, collapsible, la
     toggle_band = TOGGLE + 2 * TOGGLE_INSET - PAD
     interval_handle = _row_interval_handle(geometry, resolved, context, key, folded)
     handle_band = (ROW_HANDLE_WIDTH + ROW_HANDLE_GAP) if interval_handle else 0
-    base_head = 0 if folded else max(toggle_band, MATLABEL_HEIGHT + 2 * MATLABEL_PAD if has_matrix_label else toggle_band)
+    base_head = 0 if folded else max(toggle_band, MATLABEL_HEIGHT + 2 * MATRIX_LABEL_PADDING if has_matrix_label else toggle_band)
     head = base_head + handle_band
     top_frame = (FRAME_HEIGHT + FRAME_GAP + FRAME_OVERHANG) if framed else 0
     bot_frame = (BRACE_HEIGHT + FRAME_GAP + FRAME_OVERHANG) if framed else 0
@@ -351,33 +351,33 @@ def _resolve_tile_extras(geometry, resolved, context):
     tuning_ranges_chart = (resolved.flags.tuning_ranges and resolved.flags.tuning_tiles and "row:tuning" not in context.collapsed
                  and query.column_open(geometry, context.collapsed, "generators") and "tile:tuning:generators" not in context.collapsed)
     tuning_ranges_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + RANGE_CHART_HEIGHT + RANGE_GAP + RANGE_MODE_HEIGHT) if tuning_ranges_chart else 0
-    prescaling_box_ctrl = resolved.flags.prescaling_box_show and query.column_open(geometry, context.collapsed, "superspace_primes" if resolved.flags.superspace else "primes") and not resolved.flags.presets
-    prescaling_box_extra = (RANGE_GAP + control_region_band_height(PRESET_HEIGHT + CAPTION_LINE)) if prescaling_box_ctrl else 0
-    complexity_box_ctrl = resolved.flags.complexity_box_show and query.column_open(geometry, context.collapsed, "targets")
-    complexity_box_extra = (RANGE_GAP + control_region_band_height(ROW_HEIGHT + resolved.scalars.ctrl_symbol_height + 3 * CAPTION_LINE)) if complexity_box_ctrl else 0
-    optimization_ctrl = (resolved.flags.optimization and "row:damage" not in context.collapsed
+    prescaling_box_control = resolved.flags.prescaling_box_show and query.column_open(geometry, context.collapsed, "superspace_primes" if resolved.flags.superspace else "primes") and not resolved.flags.presets
+    prescaling_box_extra = (RANGE_GAP + control_region_band_height(PRESET_HEIGHT + CAPTION_LINE)) if prescaling_box_control else 0
+    complexity_box_control = resolved.flags.complexity_box_show and query.column_open(geometry, context.collapsed, "targets")
+    complexity_box_extra = (RANGE_GAP + control_region_band_height(ROW_HEIGHT + resolved.scalars.control_symbol_height + 3 * CAPTION_LINE)) if complexity_box_control else 0
+    optimization_control = (resolved.flags.optimization and "row:damage" not in context.collapsed
                 and query.column_open(geometry, context.collapsed, "targets") and "tile:damage:targets" not in context.collapsed)
     mean_damage_caption = "retuning magnitude" if resolved.scalars.all_interval else "power mean"
     if context.tuning_optimized:
         mean_damage_caption = f"minimized {mean_damage_caption}"
-    optimization_cap_lines = _wrap_lines(mean_damage_caption, OPTIMIZATION_MEAN_DAMAGE_WIDTH) if optimization_ctrl else 1
-    optimization_extra = ((RANGE_GAP + OPTIMIZATION_PAD_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + ROW_HEIGHT + resolved.scalars.ctrl_symbol_height
-                  + optimization_cap_lines * CAPTION_LINE + OPTIMIZATION_PAD_B) if optimization_ctrl else 0)
+    optimization_cap_lines = _wrap_lines(mean_damage_caption, OPTIMIZATION_MEAN_DAMAGE_WIDTH) if optimization_control else 1
+    optimization_extra = ((RANGE_GAP + OPTIMIZATION_PADDING_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + ROW_HEIGHT + resolved.scalars.control_symbol_height
+                  + optimization_cap_lines * CAPTION_LINE + OPTIMIZATION_PADDING_B) if optimization_control else 0)
     show_approach = (service.domain_has_nonprimes(resolved.dimensions.elements)
                      and "row:damage" not in context.collapsed and query.column_open(geometry, context.collapsed, "targets")
                      and "tile:damage:targets" not in context.collapsed)
     approach_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + APPROACH_RADIO_HEIGHT) if show_approach else 0
-    slope_ctrl = (resolved.flags.weighting
+    slope_control = (resolved.flags.weighting
                   and "row:weight" not in context.collapsed
                   and query.column_open(geometry, context.collapsed, "targets") and "tile:weight:targets" not in context.collapsed)
-    slope_locked = slope_ctrl and (service.is_all_interval(context.tuning_scheme)
+    slope_locked = slope_control and (service.is_all_interval(context.tuning_scheme)
                                    or resolved.scalars.custom_weights_active)
-    slope_extra = (RANGE_GAP + control_region_band_height(PRESET_HEIGHT + CAPTION_LINE)) if slope_ctrl else 0
+    slope_extra = (RANGE_GAP + control_region_band_height(PRESET_HEIGHT + CAPTION_LINE)) if slope_control else 0
     geometry = replace(
-        geometry, tuning_ranges_chart=tuning_ranges_chart, tuning_ranges_extra=tuning_ranges_extra, prescaling_box_ctrl=prescaling_box_ctrl, prescaling_box_extra=prescaling_box_extra,
-        complexity_box_ctrl=complexity_box_ctrl, complexity_box_extra=complexity_box_extra, optimization_ctrl=optimization_ctrl, optimization_extra=optimization_extra,
+        geometry, tuning_ranges_chart=tuning_ranges_chart, tuning_ranges_extra=tuning_ranges_extra, prescaling_box_control=prescaling_box_control, prescaling_box_extra=prescaling_box_extra,
+        complexity_box_control=complexity_box_control, complexity_box_extra=complexity_box_extra, optimization_control=optimization_control, optimization_extra=optimization_extra,
         optimization_cap_lines=optimization_cap_lines, show_approach=show_approach, approach_extra=approach_extra,
-        slope_ctrl=slope_ctrl, slope_extra=slope_extra, slope_locked=slope_locked,
+        slope_control=slope_control, slope_extra=slope_extra, slope_locked=slope_locked,
         mean_damage_caption=mean_damage_caption)
     return geometry, {
         "tuning": tuning_ranges_extra,

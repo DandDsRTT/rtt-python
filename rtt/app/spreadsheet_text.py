@@ -17,8 +17,8 @@ from rtt.app.spreadsheet_constants import (
 )
 
 
-def emit_option_check(cells, name: str, label: str, checked: bool, check_x, ctrl_y) -> None:
-    check_y = ctrl_y + (PRESET_HEIGHT - OPTION_BOX_PX) / 2
+def emit_option_check(cells, name: str, label: str, checked: bool, check_x, control_y) -> None:
+    check_y = control_y + (PRESET_HEIGHT - OPTION_BOX_PX) / 2
     cells.append(
         CellBox(
             f"control:{name}",
@@ -35,7 +35,7 @@ def emit_option_check(cells, name: str, label: str, checked: bool, check_x, ctrl
         CellBox(
             f"caption:{name}",
             check_x,
-            ctrl_y + PRESET_HEIGHT,
+            control_y + PRESET_HEIGHT,
             PRESCALING_BOX_DIM_WIDTH,
             CAPTION_LINE,
             "caption",

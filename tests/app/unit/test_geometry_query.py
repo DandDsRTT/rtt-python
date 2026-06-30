@@ -57,7 +57,7 @@ class TestGeometryQuery:
         assert query.matrix_label_gutter_width(g, "generators") == 1.0
         assert query.handle_gutter_width(g, "primes") == 4.0
         assert query.handle_gutter_width(g, "generators") == 0
-        assert query.etpick_left_pad(g, "primes") == 0
+        assert query.etpick_left_padding(g, "primes") == 0
         assert query.target_left(g, 1) == 20.0 + BRACKET_WIDTH + COLUMN_WIDTH + INTERVAL_COL_GAP
         assert query.prime_left(g, 0) == 10.0 + query.outer_gutter_width(g, "primes") + BRACKET_WIDTH
         assert query.sub_axis_x(g, "targets", 1) == 200.0 + COLUMN_WIDTH / 2

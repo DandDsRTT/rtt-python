@@ -264,7 +264,7 @@ def _setting(page_builder, key):
 
 def _visual_toggle(page_builder, key):
     on = _setting(page_builder, key)
-    cls = f"rtt-vis-ctrl rtt-vis-{_VIS_KIND[key]}" + ("" if on else " rtt-vis-off")
+    cls = f"rtt-vis-control rtt-vis-{_VIS_KIND[key]}" + ("" if on else " rtt-vis-off")
     element = (
         ui.html(_VISUAL_ICON[key])
         .classes(cls)

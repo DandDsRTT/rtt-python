@@ -47,7 +47,7 @@ def _emit_mapping_generators(cells, resolved, geometry, context) -> None:
 def _emit_mapping_drag(cells, resolved, geometry, context) -> None:
     if context.settings.get("drag_to_combine") and resolved.dimensions.rank > 1 and query.tile_open(geometry, context.collapsed, "mapping", "primes"):
         for i in range(resolved.dimensions.rank):
-            cells.append(CellBox(f"map_drag:{query.column_token(resolved, 'generators', i)}", geometry.primes_x + query.etpick_left_pad(geometry, "primes"), query.map_top(geometry, i), ROW_HANDLE_WIDTH, ROW_HEIGHT, "map_drag", generator=i))
+            cells.append(CellBox(f"map_drag:{query.column_token(resolved, 'generators', i)}", geometry.primes_x + query.etpick_left_padding(geometry, "primes"), query.map_top(geometry, i), ROW_HANDLE_WIDTH, ROW_HEIGHT, "map_drag", generator=i))
 
 
 def _emit_mapping_rows(cells, resolved, geometry, context) -> None:

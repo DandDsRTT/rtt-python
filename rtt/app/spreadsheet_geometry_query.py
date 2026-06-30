@@ -115,7 +115,7 @@ def handle_gutter_width(geometry, group_key: str) -> float:
     return geometry.row_handle_width if group_key == "primes" else 0
 
 
-def etpick_left_pad(geometry, group_key: str) -> float:
+def etpick_left_padding(geometry, group_key: str) -> float:
     if group_key != "primes" or not geometry.etpick_width:
         return 0
     return max(
@@ -128,7 +128,7 @@ def etpick_left_pad(geometry, group_key: str) -> float:
 
 def outer_gutter_width(geometry, group_key: str) -> float:
     return (
-        etpick_left_pad(geometry, group_key)
+        etpick_left_padding(geometry, group_key)
         + handle_gutter_width(geometry, group_key)
         + matrix_label_gutter_width(geometry, group_key)
     )
@@ -422,9 +422,9 @@ def weight_simplicity_header(resolved, i: int) -> str:
 
 
 def control_dims(
-    geometry, column_key: str, cap_width, label, scheme_button: bool = False, form_label=None
+    geometry, column_key: str, caption_width, label, scheme_button: bool = False, form_label=None
 ):
-    dropdown_width = max(40, min(geometry.column_width[column_key] - 2 * BOX_INNER, cap_width))
+    dropdown_width = max(40, min(geometry.column_width[column_key] - 2 * BOX_INNER, caption_width))
     label_height = CAPTION_LINE if label else 0
     box_height = 2 * BOX_INNER + PRESET_HEIGHT + label_height
     box_height += (SCHEME_BUTTON_SQ + BOX_INNER) if scheme_button else 0

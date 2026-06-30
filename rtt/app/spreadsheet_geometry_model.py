@@ -58,16 +58,16 @@ class Geometry:
 
     tuning_ranges_chart: bool = False
     tuning_ranges_extra: float = 0.0
-    prescaling_box_ctrl: bool = False
+    prescaling_box_control: bool = False
     prescaling_box_extra: float = 0.0
-    complexity_box_ctrl: bool = False
+    complexity_box_control: bool = False
     complexity_box_extra: float = 0.0
-    optimization_ctrl: bool = False
+    optimization_control: bool = False
     optimization_extra: float = 0.0
     optimization_cap_lines: int = 0
     show_approach: bool = False
     approach_extra: float = 0.0
-    slope_ctrl: bool = False
+    slope_control: bool = False
     slope_extra: float = 0.0
     slope_locked: bool = False
     mean_damage_caption: str = ""

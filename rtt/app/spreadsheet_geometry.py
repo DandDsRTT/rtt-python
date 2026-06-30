@@ -34,7 +34,7 @@ from rtt.app.spreadsheet_constants import (
     PRESCALING_BOX_DIM_WIDTH,
     PRESET_BOX_WIDTH,
     PRESET_WIDTH,
-    SCHEME_CTRL_WIDTH,
+    SCHEME_CONTROL_WIDTH,
     SYMBOL_FONT,
     TARGET_BOX_WIDTH,
     V_SPLIT_GAP,
@@ -222,7 +222,7 @@ def control_floor(resolved, context, key: str):
     if labels:
         floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(label, 1) for label in labels))
     if key in ("primes", "generators") and context.settings["projection"]:
-        floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_WIDTH)
+        floor = max(floor, 2 * BOX_OUTER + SCHEME_CONTROL_WIDTH)
     return floor
 
 
@@ -263,8 +263,8 @@ def control_region_band_height(content_height):
     return 2 * BOX_OUTER + 2 * BOX_INNER + content_height
 
 
-def _control_band_h(geometry, column_key: str, cap_width, label, scheme_button: bool = False, form_label=None):
-    return 2 * BOX_OUTER + query.control_dims(geometry, column_key, cap_width, label, scheme_button, form_label)[2]
+def _control_band_h(geometry, column_key: str, caption_width, label, scheme_button: bool = False, form_label=None):
+    return 2 * BOX_OUTER + query.control_dims(geometry, column_key, caption_width, label, scheme_button, form_label)[2]
 
 
 def preset_band_height(geometry, resolved, key: str):

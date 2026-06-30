@@ -149,27 +149,27 @@ def _preset_locked(resolved, context, name: str) -> bool:
     return False
 
 
-def _control_box(cells, blocks, resolved, geometry, box_id: str, column_key: str, top, cap_width, label,
+def _control_box(cells, blocks, resolved, geometry, box_id: str, column_key: str, top, caption_width, label,
                  disabled: bool = False, scheme_button: bool = False, form_chooser=None):
     form_label = form_chooser[1] if form_chooser else None
-    dropdown_width, label_height, box_height = query.control_dims(geometry, column_key, cap_width, label, scheme_button, form_label)
+    dropdown_width, label_height, box_height = query.control_dims(geometry, column_key, caption_width, label, scheme_button, form_label)
     box_x, box_y = geometry.column_x[column_key], top + BOX_OUTER
     blocks.append(Block(box_id, box_x, box_y, geometry.column_width[column_key], box_height, boxed=True))
-    ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
+    control_x, control_y = box_x + BOX_INNER, box_y + BOX_INNER
     if scheme_button:
-        _emit_scheme_button(cells, ctrl_x, ctrl_y, column_key)
-        ctrl_y += SCHEME_BUTTON_SQ + BOX_INNER
+        _emit_scheme_button(cells, control_x, control_y, column_key)
+        control_y += SCHEME_BUTTON_SQ + BOX_INNER
     if label:
-        cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_HEIGHT, dropdown_width, label_height,
+        cells.append(CellBox(f"{box_id}:label", control_x, control_y + PRESET_HEIGHT, dropdown_width, label_height,
                              "caption", text=label, align="left", disabled=disabled))
     if form_chooser:
         fid, fcap = form_chooser
-        form_y = ctrl_y + PRESET_HEIGHT + label_height + BAND_GAP
-        cells.append(CellBox(fid, ctrl_x, form_y, dropdown_width, PRESET_HEIGHT, "formchooser",
+        form_y = control_y + PRESET_HEIGHT + label_height + BAND_GAP
+        cells.append(CellBox(fid, control_x, form_y, dropdown_width, PRESET_HEIGHT, "formchooser",
                              text=resolved.canonical.mapping_form_key if fid.endswith(":mapping") else resolved.canonical.comma_basis_form_key))
-        cells.append(CellBox(f"{fid}:label", ctrl_x, form_y + PRESET_HEIGHT, dropdown_width, CAPTION_LINE,
+        cells.append(CellBox(f"{fid}:label", control_x, form_y + PRESET_HEIGHT, dropdown_width, CAPTION_LINE,
                              "caption", text=fcap, align="left"))
-    return ctrl_x, dropdown_width, ctrl_y
+    return control_x, dropdown_width, control_y
 
 
 def _emit_scheme_button(cells, x, y, column_key: str) -> None:
