@@ -220,7 +220,7 @@ def update_plain_text_pending(reconciler, cell_box: spreadsheet.CellBox) -> None
 
 
 def build_mathexpr(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None:
-    reconciler.cells[cell_box.id].display.expr = ui.html("").classes("rtt-mathexpr")
+    reconciler.cells[cell_box.id].display.expr = ui.html("").classes("rtt-math-expression")
 
 
 def update_mathexpr(reconciler, cell_box: spreadsheet.CellBox) -> None:

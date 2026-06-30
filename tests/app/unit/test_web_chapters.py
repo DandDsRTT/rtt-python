@@ -72,7 +72,7 @@ class TestWebChapters:
         assert "chapter" not in tooltips.SHOW_HELP
 
     def test_unrevealed_controls_are_hidden_two_ways_by_dedicated_css_classes(self):
-        m = re.search(r"\.rtt-chap-hidden\s*\{([^}]*)\}", page_assets._CSS)
+        m = re.search(r"\.rtt-chapter-hidden\s*\{([^}]*)\}", page_assets._CSS)
         assert m and "display:none" in m.group(1).replace(" ", "")
         m2 = re.search(r"\.rtt-chap-invisible\s*\{([^}]*)\}", page_assets._CSS)
         assert m2 and "visibility:hidden" in m2.group(1).replace(" ", "")

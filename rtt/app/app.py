@@ -153,7 +153,7 @@ class _Page:
             for part in parts:
                 _gate(part, "rtt-chap-invisible", show_settings.reveal_chapter(key) > chapter)
         for key, row in self.chrome.show_rows.items():
-            _gate(row, "rtt-chap-hidden", show_settings.reveal_chapter(key) > chapter)
+            _gate(row, "rtt-chapter-hidden", show_settings.reveal_chapter(key) > chapter)
         if "audio_bank" in self.chrome.refs:
             _gate(
                 self.chrome.refs["audio_bank"],

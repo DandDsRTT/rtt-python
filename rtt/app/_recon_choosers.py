@@ -131,7 +131,7 @@ def _build_preset_target(reconciler, cell_box: spreadsheet.CellBox, wrap) -> Non
             .props(
                 'dense borderless hide-bottom-space placeholder="-" inputmode=numeric debounce=300'
             )
-            .classes("rtt-preset-num")
+            .classes("rtt-preset-number")
         )
         # NiceGUI: ui.input defaults loopback off (uncontrolled during typing), so the server can't
         # overwrite what was typed; _wire_target_limit turns loopback on so a rejected value reverts.

@@ -110,7 +110,7 @@ body.rtt-dark .rtt-ratio,
 body.rtt-dark .rtt-tuning-value,
 body.rtt-dark .rtt-stacked-sub,
 body.rtt-dark .rtt-transpose,
-body.rtt-dark .rtt-mathexpr-stack { color:#e3e6ea; }
+body.rtt-dark .rtt-math-expression-stack { color:#e3e6ea; }
 body.rtt-dark .rtt-fraction-numerator { border-bottom-color:#e3e6ea; }   /* the read-only fraction bar */
 /* the editable stacked fraction cells: the dark box rides the WRAP (the two inputs' controls stay
    transparent so it shows through), and the bar + light input text re-light like every dark cell. */
@@ -138,7 +138,7 @@ body.rtt-dark .rtt-rangelabel { color:#e3e6ea; }
 body.rtt-dark .rtt-caption,
 body.rtt-dark .rtt-units { color:#aeb4bc; }
 body.rtt-dark .rtt-caption.rtt-caption-disabled { color:#71777f; }
-body.rtt-dark .rtt-cellunit { color:#9aa1a9; }
+body.rtt-dark .rtt-cell-unit { color:#9aa1a9; }
 body.rtt-dark .rtt-gensign:hover { background:#31373f; }   /* the generator sign's clickable hover box */
 
 /* ── app chrome: the sidebar title and the undo/redo/hamburger buttons ──────────────────────────
@@ -154,9 +154,9 @@ body.rtt-dark .rtt-hamburger .q-icon { color:#cfd4da !important; }
 /* ── settings panel ──────────────────────────────────────────────────────────────────────────── */
 body.rtt-dark .rtt-darktoggle { color:#cfd4da !important; }   /* the dark-mode sun/moon glyph */
 body.rtt-dark .rtt-show-item .q-checkbox__label,
-body.rtt-dark .rtt-ex-cell { color:#e3e6ea; }
+body.rtt-dark .rtt-example-cell { color:#e3e6ea; }
 body.rtt-dark .rtt-show-item.disabled .q-checkbox__label,
-body.rtt-dark .rtt-ex-cell.rtt-ex-disabled { color:#71777f; }
+body.rtt-dark .rtt-example-cell.rtt-ex-disabled { color:#71777f; }
 body.rtt-dark .rtt-show-item.disabled .q-checkbox__inner { color:#71777f !important; }
 /* the general dummy tile's clickable layer parts (black-on / grey-off in light) */
 body.rtt-dark .rtt-part-on { color:#e3e6ea; }
@@ -170,31 +170,31 @@ body.rtt-dark .rtt-mnem-underline { text-decoration-color:#e3e6ea; }
 body.rtt-dark .rtt-audio-ctrl { color:#9aa1a9; }
 body.rtt-dark .rtt-audio-ctrl:hover { color:#cfd4da; }
 body.rtt-dark .rtt-audio-ctrl.rtt-audio-on { background:#4e555d; color:#e3e6ea; }
-body.rtt-dark .rtt-spk-dim::after { background:rgba(255,255,255,0.05); }
-body.rtt-dark .rtt-spk-hover::after { background:rgba(255,255,255,0.11); }
-body.rtt-dark .rtt-spk-on::after { background:rgba(255,255,255,0.22); }
-body.rtt-dark .rtt-spk-float { background:#272c33; border-color:#454c54; color:#9aa1a9; }
-body.rtt-dark .rtt-spk-float:hover { background:#31373f; color:#cfd4da; }
+body.rtt-dark .rtt-speaker-dim::after { background:rgba(255,255,255,0.05); }
+body.rtt-dark .rtt-speaker-hover::after { background:rgba(255,255,255,0.11); }
+body.rtt-dark .rtt-speaker-on::after { background:rgba(255,255,255,0.22); }
+body.rtt-dark .rtt-speaker-float { background:#272c33; border-color:#454c54; color:#9aa1a9; }
+body.rtt-dark .rtt-speaker-float:hover { background:#31373f; color:#cfd4da; }
 
 /* ── choosers: the preset/target dropdowns and their popup ──────────────────────────────────── */
 body.rtt-dark .rtt-preset .q-field__control,
-body.rtt-dark .rtt-preset-num .q-field__control { background:#1b1f24; border-color:#4e555d; }
+body.rtt-dark .rtt-preset-number .q-field__control { background:#1b1f24; border-color:#4e555d; }
 body.rtt-dark .rtt-preset .q-field__native,
 body.rtt-dark .rtt-preset .q-field__input,
-body.rtt-dark .rtt-preset-num .q-field__native,
-body.rtt-dark .rtt-preset-num .q-field__native::placeholder { color:#e3e6ea; }
+body.rtt-dark .rtt-preset-number .q-field__native,
+body.rtt-dark .rtt-preset-number .q-field__native::placeholder { color:#e3e6ea; }
 body.rtt-dark .rtt-preset .q-icon { color:#9aa1a9; }
 body.rtt-dark .rtt-preset.q-field--disabled .q-field__control,
-body.rtt-dark .rtt-preset-num.q-field--disabled .q-field__control { background:#363c44; border-color:#454c54; }
+body.rtt-dark .rtt-preset-number.q-field--disabled .q-field__control { background:#363c44; border-color:#454c54; }
 body.rtt-dark .rtt-preset.q-field--disabled .q-field__native,
 body.rtt-dark .rtt-preset.q-field--disabled .q-icon,
-body.rtt-dark .rtt-preset-num.q-field--disabled .q-field__native,
-body.rtt-dark .rtt-preset-num.q-field--disabled .q-field__native::placeholder { color:#71777f; }
+body.rtt-dark .rtt-preset-number.q-field--disabled .q-field__native,
+body.rtt-dark .rtt-preset-number.q-field--disabled .q-field__native::placeholder { color:#71777f; }
 /* the invalid-limit flag, dark-toned: the light rules redden on white, but the dark base above
    (background:#1b1f24; border #4e555d; text #e3e6ea) outspecifies them, so restate all three for
    dark — a dark-red fill with a brighter red border + number, readable on the dark pane. */
-body.rtt-dark .rtt-preset-num.rtt-limit-error .q-field__control { border-color:#e06666; background:#4a2327; }
-body.rtt-dark .rtt-preset-num.rtt-limit-error .q-field__native { color:#f0a0a0; }
+body.rtt-dark .rtt-preset-number.rtt-limit-error .q-field__control { border-color:#e06666; background:#4a2327; }
+body.rtt-dark .rtt-preset-number.rtt-limit-error .q-field__native { color:#f0a0a0; }
 body.rtt-dark .rtt-select-popup { background:#272c33; }
 body.rtt-dark .rtt-select-popup .q-item,
 body.rtt-dark .rtt-select-popup .q-item__label { color:#e3e6ea; }
@@ -226,7 +226,7 @@ body.rtt-dark svg rect[fill="#fff"][stroke="#bbb"] { fill:#1b1f24; stroke:#4e555
 body.rtt-dark .rtt-glyph { color:#9aa1a9; }
 body.rtt-dark .rtt-glyph:hover { color:#cfd4da; }
 body.rtt-dark .rtt-fraction-cell:hover .rtt-ratio-op.rtt-op-disabled,
-body.rtt-dark .rtt-fraction-cell.rtt-spk-hover .rtt-ratio-op.rtt-op-disabled { color:#4e555d; }
+body.rtt-dark .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-op.rtt-op-disabled { color:#4e555d; }
 
 /* the busy scrim: a dark veil + dark card (see .rtt-busy in rtt.css) */
 body.rtt-dark .rtt-busy { background:rgba(0,0,0,0.45); }

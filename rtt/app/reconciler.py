@@ -192,7 +192,7 @@ class _Reconciler:
         if cell_box.unit:
             if self.cells[cell_box.id].cell_unit is None:
                 with self.entities[cell_box.id].element:
-                    self.cells[cell_box.id].cell_unit = ui.html("").classes("rtt-cellunit")
+                    self.cells[cell_box.id].cell_unit = ui.html("").classes("rtt-cell-unit")
                 self.entities[cell_box.id].element.classes(add="rtt-cell-united")
             if self.cells[cell_box.id].cell_unit_text != (cell_box.unit, cell_box.width):
                 self.cells[cell_box.id].cell_unit.set_content(_bold_units(cell_box.unit))

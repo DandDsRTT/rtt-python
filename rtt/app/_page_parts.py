@@ -409,7 +409,9 @@ def build_show_group(page_builder, group_name, items) -> None:
                 .mark(f"showbox:{key}")
                 .tooltip(tooltips.SHOW_HELP[key])
             )
-            example = ui.html(_example_html(key)).classes("rtt-ex-cell").mark(f"showexample:{key}")
+            example = (
+                ui.html(_example_html(key)).classes("rtt-example-cell").mark(f"showexample:{key}")
+            )
         page_builder._chrome.boxes[key] = box
         page_builder._chrome.examples[key] = example
         page_builder._chrome.show_rows[key] = row
