@@ -191,10 +191,10 @@ class TestBrowserBehavior:
     def test_fraction_slash_opens_the_denominator(self, browser):
         with _page(browser, f"?state={_token(interval_ratios=True)}") as (page, errors):
             opened = page.evaluate(
-                "() => { const num = document.querySelector('.rtt-frac-num-in input');"
-                " if (!num) return null; const box = num.closest('.rtt-frac-edit'); num.focus();"
+                "() => { const num = document.querySelector('.rtt-fraction-numerator-input input');"
+                " if (!num) return null; const box = num.closest('.rtt-fraction-edit'); num.focus();"
                 " num.dispatchEvent(new KeyboardEvent('keydown', {key: '/', bubbles: true, cancelable: true}));"
-                " const den = box.querySelector('.rtt-frac-den-in input');"
+                " const den = box.querySelector('.rtt-fraction-denominator-input input');"
                 " return {mode: box.dataset.fracmode, denFocused: document.activeElement === den}; }"
             )
             assert opened == {"mode": "ratio", "denFocused": True}

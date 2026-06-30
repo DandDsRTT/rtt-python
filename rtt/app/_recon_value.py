@@ -97,9 +97,11 @@ def _ratio_body(reconciler, cell_box: spreadsheet.CellBox, approx: bool) -> None
     if approx and parts:
         ui.label("~").classes("rtt-approx")
     if parts:
-        with ui.element("div").classes("rtt-frac rtt-frac-whole" if whole else "rtt-frac"):
-            num = ui.label(parts[0]).classes("rtt-frac-num").mark(f"{cell_box.id}:num")
-            den = ui.label(parts[1]).classes("rtt-frac-den").mark(f"{cell_box.id}:den")
+        with ui.element("div").classes(
+            "rtt-fraction rtt-fraction-whole" if whole else "rtt-fraction"
+        ):
+            num = ui.label(parts[0]).classes("rtt-fraction-numerator").mark(f"{cell_box.id}:num")
+            den = ui.label(parts[1]).classes("rtt-fraction-denominator").mark(f"{cell_box.id}:den")
         reconciler.cells[cell_box.id].value.frac = (num, den)
         _fit_ratio(reconciler, cell_box.id, parts[0], parts[1], cell_box.width, whole)
     else:
@@ -133,20 +135,20 @@ def build_gridvalue(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
 
 
 def _build_fraction(reconciler, cell_box: spreadsheet.CellBox, wrap, commit, preview) -> None:
-    wrap.classes("rtt-cell-input rtt-fraccell")
-    box = ui.element("div").classes("rtt-frac-edit").mark(f"{cell_box.id}:editbox")
+    wrap.classes("rtt-cell-input rtt-fraction-cell")
+    box = ui.element("div").classes("rtt-fraction-edit").mark(f"{cell_box.id}:editbox")
     with box:
         num = (
             ui.input(on_change=preview)
             .props("dense borderless")
-            .classes("rtt-cellinput rtt-frac-num-in")
+            .classes("rtt-cellinput rtt-fraction-numerator-input")
             .mark(f"{cell_box.id}:num")
         )
-        ui.element("div").classes("rtt-frac-bar")
+        ui.element("div").classes("rtt-fraction-bar")
         den = (
             ui.input(on_change=preview)
             .props("dense borderless")
-            .classes("rtt-cellinput rtt-frac-den-in")
+            .classes("rtt-cellinput rtt-fraction-denominator-input")
             .mark(f"{cell_box.id}:den")
         )
     num.on("blur", commit, js_handler=_STACKED_EXIT_JS)
@@ -288,10 +290,10 @@ def _gridvalue_text(reconciler, cell_box: spreadsheet.CellBox) -> str:
 def _build_decimal(
     reconciler, cell_box: spreadsheet.CellBox, wrap, commit, *, gen_index=None
 ) -> None:
-    wrap.classes("rtt-cell-input rtt-deccell")
-    box = ui.element("div").classes("rtt-dec-edit").mark(f"{cell_box.id}:editbox")
+    wrap.classes("rtt-cell-input rtt-decimal-cell")
+    box = ui.element("div").classes("rtt-decimal-edit").mark(f"{cell_box.id}:editbox")
     with box:
-        with ui.element("div").classes("rtt-dec-main"):
+        with ui.element("div").classes("rtt-decimal-main"):
             if gen_index is not None:
                 s = (
                     ui.label("")
@@ -311,15 +313,15 @@ def _build_decimal(
             whole = (
                 ui.input()
                 .props("dense borderless")
-                .classes("rtt-cellinput rtt-dec-whole-in")
+                .classes("rtt-cellinput rtt-decimal-whole-input")
                 .mark(f"{cell_box.id}:whole")
             )
-        with ui.element("div").classes("rtt-dec-sub"):
-            ui.label(".").classes("rtt-dec-dot")
+        with ui.element("div").classes("rtt-decimal-sub"):
+            ui.label(".").classes("rtt-decimal-dot")
             frac = (
                 ui.input()
                 .props("dense borderless")
-                .classes("rtt-cellinput rtt-dec-frac-in")
+                .classes("rtt-cellinput rtt-decimal-fraction-input")
                 .mark(f"{cell_box.id}:frac")
             )
     whole.on("blur", commit, js_handler=_STACKED_EXIT_JS)

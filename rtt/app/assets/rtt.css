@@ -295,7 +295,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    parts, the per-value unit, the zoom clone — itself a .rtt-cell). The few SVG range labels carry
    .rtt-rangelabel directly. */
 .rtt-cell, .rtt-value, .rtt-count, .rtt-matlabel, .rtt-symbol, .rtt-plain-text, .rtt-plain-text-edit,
-.rtt-ratio, .rtt-frac, .rtt-stacked-main, .rtt-stacked-sub, .rtt-rangelabel, .rtt-preset-num,
+.rtt-ratio, .rtt-fraction, .rtt-stacked-main, .rtt-stacked-sub, .rtt-rangelabel, .rtt-preset-num,
 .rtt-caption, .rtt-ex-cell {
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: 'tnum' 1, 'lnum' 1;
@@ -555,7 +555,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    transform are set inline by the engine), and strip every editable-cell box -- the input fill +
    border, the fraction / decimal cell box -- so the value always reads non-interactively. */
 .rtt-zoom-clone { position:static !important; transition:none !important; }
-.rtt-zoom-clone.rtt-deccell, .rtt-zoom-clone.rtt-fraccell { background:transparent !important; border:none !important; }
+.rtt-zoom-clone.rtt-decimal-cell, .rtt-zoom-clone.rtt-fraction-cell { background:transparent !important; border:none !important; }
 .rtt-zoom-clone .rtt-cellinput .q-field__control { background:transparent !important; border:none !important; }
 /* the folded hover help: a normal-tooltip-style dark grey bubble (Roboto) sitting on the FAR side of
    the loupe from the cursor (the engine flips the stacking). A compact 11px -- Quasar's own 14px reads
@@ -599,17 +599,17 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-ratio { display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }
 .rtt-approx { font-size:13px; align-self:center; }
-.rtt-frac { display:inline-flex; flex-direction:column; align-items:center; line-height:1.04; }
-.rtt-frac-num { border-bottom:1px solid #000; padding:0 3px; }
-.rtt-frac-den { padding:0 3px; }
+.rtt-fraction { display:inline-flex; flex-direction:column; align-items:center; line-height:1.04; }
+.rtt-fraction-numerator { border-bottom:1px solid #000; padding:0 3px; }
+.rtt-fraction-denominator { padding:0 3px; }
 /* a WHOLE read-only ratio "n/1" collapses to a bare big integer (the read-only twin of the
    editable cell's data-fracmode="int" view): drop the fraction bar and the denominator so only the
    numerator shows, sized big by _fit_ratio. Also drop the numerator's 0 3px h-padding — that exists
    to give the (now-hidden) fraction bar its overhang, so without a bar it only pushes a sibling ~
-   too far from the integer (the generators' "~2"). The win on specificity over .rtt-frac-num's bar
+   too far from the integer (the generators' "~2"). The win on specificity over .rtt-fraction-numerator's bar
    (and dark mode's border-bottom-color, which sets colour not style) means no rule re-draws it. */
-.rtt-frac-whole .rtt-frac-den { display:none; }
-.rtt-frac-whole .rtt-frac-num { border-bottom:none; padding:0; }
+.rtt-fraction-whole .rtt-fraction-denominator { display:none; }
+.rtt-fraction-whole .rtt-fraction-numerator { border-bottom:none; padding:0; }
 .rtt-tuning-value { display:flex; flex-direction:column; align-items:center; justify-content:center;
             width:100%; color:#000; white-space:nowrap; line-height:1.04; }
 /* a stacked gridded-value face: a big main glyph over a smaller sub-line. Cents stack the
@@ -621,7 +621,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    mapped integers, rather than the reduced whole-part size that reserves room for a fraction. */
 .rtt-stacked-main.rtt-stacked-solo { font-size:var(--cell-font); }
 /* the generator tuning map's clickable sign glyph, shown left of the whole part (the editable
-   cents cell builds it inside .rtt-dec-main): the otherwise-assumed "+" of a positive generator
+   cents cell builds it inside .rtt-decimal-main): the otherwise-assumed "+" of a positive generator
    (or a "−") that the user clicks to reverse that generator (its mapping row flips too). It reads
    as part of the value (black), with a faint hover box marking it clickable. */
 .rtt-gensign { font-size:10px; pointer-events:auto; cursor:pointer; padding:0 1px; border-radius:2px; }
@@ -629,7 +629,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the editable POWER cell (the optimization power 𝑝 / box-𝒄 norm power 𝑞): ∞ over a small "(max)"
    is not a decimal you can split into two fields like a cents value, so it keeps the overlay-face
    model — the stacked face laid over a single input, transparent until focused. (The cents cells —
-   prescaler / weight / generator tuning — moved to the in-place .rtt-deccell editor below.) */
+   prescaler / weight / generator tuning — moved to the in-place .rtt-decimal-cell editor below.) */
 .rtt-cellface { position:absolute; top:0; left:0; width:100%; height:100%;
             pointer-events:none; z-index:1; }
 .rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent; font-size:10px; }
@@ -661,38 +661,38 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* ---- the editable stacked fraction cells (the unified ratio-or-integer gridvalue, ratio_allowed):
    a numerator input over a bar over a denominator input, edited IN PLACE — no overlay face, no
    diagonal slash. The white box + black outline rides the WRAP (one box around two inputs), and the
-   font cascades from the .rtt-frac-edit box (set inline by _fit_fraction) so num + den shrink
+   font cascades from the .rtt-fraction-edit box (set inline by _fit_fraction) so num + den shrink
    together. data-fracmode flips the view: "int" (denominator blank/1) shows just the big numerator;
    "ratio" shows num over bar over den. _FRACTION_JS keeps it live as you type; the server sets it
    authoritatively from the committed value. ---- */
-.rtt-fraccell { background:#fff; border:var(--cell-border); box-sizing:border-box; overflow:hidden; }
-/* width:max-content so the column hugs its widest input (num/den) — the parent .rtt-fraccell is a
+.rtt-fraction-cell { background:#fff; border:var(--cell-border); box-sizing:border-box; overflow:hidden; }
+/* width:max-content so the column hugs its widest input (num/den) — the parent .rtt-fraction-cell is a
    centred flexbox, so it keeps the hugged stack centred in the cell. This lets the bar's
    align-self:stretch fill the CONTENT width (not the whole cell), matching the read-only ratios.
    max-content (not fit-content, which a flex item resolves to its fill-available cell width here)
    is safe because _fit_fraction already shrinks the font so the digits fit the cell. */
-.rtt-frac-edit { display:flex; flex-direction:column; align-items:center; justify-content:center;
+.rtt-fraction-edit { display:flex; flex-direction:column; align-items:center; justify-content:center;
             width:max-content; height:100%; line-height:1.04; font-size:var(--cell-font); }
-.rtt-fraccell .rtt-cellinput { width:auto !important; height:auto; }
-.rtt-fraccell .rtt-cellinput .q-field__control { position:static !important; background:transparent;
+.rtt-fraction-cell .rtt-cellinput { width:auto !important; height:auto; }
+.rtt-fraction-cell .rtt-cellinput .q-field__control { position:static !important; background:transparent;
             border:none !important; width:auto !important; height:auto !important; min-height:0 !important;
             box-shadow:none !important; }  /* the WRAP owns the box + the pending/preview ring — not each input */
-.rtt-fraccell .rtt-cellinput .q-field__native { font-size:inherit; line-height:1.04; padding:0 3px !important;
+.rtt-fraction-cell .rtt-cellinput .q-field__native { font-size:inherit; line-height:1.04; padding:0 3px !important;
             min-height:0 !important; field-sizing:content; min-width:1ch; text-align:center; }
 /* the bar hugs the digits (align-self:stretch spans the wider input's content-width box, since the
-   inputs above field-size to their text) — the editable twin of the read-only .rtt-frac-num overhang,
+   inputs above field-size to their text) — the editable twin of the read-only .rtt-fraction-numerator overhang,
    so it reads as wide as it needs to be, like the generators' ~ratios, not the full cell. */
-.rtt-frac-bar { height:1px; background:#000; align-self:stretch; margin:0; user-select:none; pointer-events:none; }
-.rtt-frac-edit[data-fracmode="int"] .rtt-frac-den-in,
-.rtt-frac-edit[data-fracmode="int"] .rtt-frac-bar { display:none; }
+.rtt-fraction-bar { height:1px; background:#000; align-self:stretch; margin:0; user-select:none; pointer-events:none; }
+.rtt-fraction-edit[data-fracmode="int"] .rtt-fraction-denominator-input,
+.rtt-fraction-edit[data-fracmode="int"] .rtt-fraction-bar { display:none; }
 /* fraction-cell state colours: the green draft (on the WRAP) and the amber edit-preview reuse the
    blanket text rules already on .q-field__native (no overlay face to double, so no transparent-while-
    unfocused exception is needed); only the bar needs its own colour. */
-.rtt-fraccell.rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
+.rtt-fraction-cell.rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
             background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
-.rtt-fraccell.rtt-pending .q-field__native { color:var(--pending-color) !important; }
-.rtt-fraccell.rtt-pending .rtt-frac-bar { background:var(--pending-color); }
-.rtt-cell.rtt-preview-change .rtt-frac-bar { background:var(--preview-text-color) !important; }
+.rtt-fraction-cell.rtt-pending .q-field__native { color:var(--pending-color) !important; }
+.rtt-fraction-cell.rtt-pending .rtt-fraction-bar { background:var(--pending-color); }
+.rtt-cell.rtt-preview-change .rtt-fraction-bar { background:var(--preview-text-color) !important; }
 /* ---- the editable stacked DECIMAL cells (the cents family: the bare prescaler 𝐋 diagonal, the
    custom-weight 𝒘 cells, the generator tuning map 𝒈): a big whole-part input over a small dot-led
    fraction input, edited IN PLACE — the decimal twin of the fraction cell above, replacing the old
@@ -702,34 +702,34 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    type; the server sets it authoritatively from the committed value. field-sizing:content sizes each
    field to its digits so the sign glyph hugs the whole and the dot hugs the fraction (Chrome's grid).
    The generator cell adds a clickable +/− sign (.rtt-gensign) left of the whole part. ---- */
-.rtt-deccell { background:#fff; border:var(--cell-border); box-sizing:border-box; overflow:hidden; }
-.rtt-dec-edit { display:flex; flex-direction:column; align-items:center; justify-content:center;
+.rtt-decimal-cell { background:#fff; border:var(--cell-border); box-sizing:border-box; overflow:hidden; }
+.rtt-decimal-edit { display:flex; flex-direction:column; align-items:center; justify-content:center;
             width:100%; height:100%; line-height:1.04; }
-.rtt-dec-main, .rtt-dec-sub { display:flex; align-items:baseline; justify-content:center; line-height:1; }
-.rtt-deccell .rtt-cellinput { width:auto !important; height:auto; }
-.rtt-deccell .rtt-cellinput .q-field__control { position:static !important; background:transparent;
+.rtt-decimal-main, .rtt-decimal-sub { display:flex; align-items:baseline; justify-content:center; line-height:1; }
+.rtt-decimal-cell .rtt-cellinput { width:auto !important; height:auto; }
+.rtt-decimal-cell .rtt-cellinput .q-field__control { position:static !important; background:transparent;
             border:none !important; width:auto !important; height:auto !important; min-height:0 !important;
             box-shadow:none !important; }  /* the WRAP owns the box + the pending/preview ring — not each input */
-.rtt-deccell .rtt-cellinput .q-field__native { padding:0 1px !important; min-height:0 !important;
+.rtt-decimal-cell .rtt-cellinput .q-field__native { padding:0 1px !important; min-height:0 !important;
             line-height:1.04; text-align:center; field-sizing:content; min-width:1ch; }
-.rtt-dec-whole-in .q-field__native { font-size:10px; }   /* the whole part big (the cents main size) */
-.rtt-dec-frac-in .q-field__native { font-size:7px; }     /* the fraction small (the cents sub size) */
-.rtt-dec-dot { font-size:7px; user-select:none; pointer-events:none; }
+.rtt-decimal-whole-input .q-field__native { font-size:10px; }   /* the whole part big (the cents main size) */
+.rtt-decimal-fraction-input .q-field__native { font-size:7px; }     /* the fraction small (the cents sub size) */
+.rtt-decimal-dot { font-size:7px; user-select:none; pointer-events:none; }
 /* the int view: no fraction line, and the whole fills the square at the value-cell font (the read-only
    solo-integer look) — the decimal twin of the fraction cell's data-fracmode="int" collapse. A long
    integer (a 4-digit cents value, decimals off) is shrunk to fit the square via --dec-whole-font, set
    per cell by _update_decimal (the editable twin of the read-only solo face's _digit_fit_font). */
-.rtt-dec-edit[data-decmode="int"] .rtt-dec-sub { display:none; }
-.rtt-dec-edit[data-decmode="int"] .rtt-dec-whole-in .q-field__native { font-size:var(--dec-whole-font, var(--cell-font)); }
+.rtt-decimal-edit[data-decmode="int"] .rtt-decimal-sub { display:none; }
+.rtt-decimal-edit[data-decmode="int"] .rtt-decimal-whole-input .q-field__native { font-size:var(--dec-whole-font, var(--cell-font)); }
 /* decimal-cell state colours: the green draft (on the WRAP) reuses the blanket .q-field__native text
    rule (no overlay face to double), like the fraction cell. */
-.rtt-deccell.rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
+.rtt-decimal-cell.rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
             background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
-.rtt-deccell.rtt-pending .q-field__native { color:var(--pending-color) !important; }
+.rtt-decimal-cell.rtt-pending .q-field__native { color:var(--pending-color) !important; }
 /* per-cell unit (the units toggle): lift the stacked value to clear the unit pinned at the cell's
    bottom, and keep the unit's input-padding rule (above) off the dec fields' tight stack. */
-.rtt-cell-united.rtt-deccell .rtt-dec-edit { padding-bottom:9px; }
-.rtt-cell-united.rtt-deccell .rtt-cellinput .q-field__native { padding-bottom:0 !important; }
+.rtt-cell-united.rtt-decimal-cell .rtt-decimal-edit { padding-bottom:9px; }
+.rtt-cell-united.rtt-decimal-cell .rtt-cellinput .q-field__native { padding-bottom:0 !important; }
 /* a pending NEW-entry draft cell: a GREEN inset ring + faint green wash — the SAME highlight style
    as the amber edit-preview and the red remove-preview below, in green to read "being created".
    (Replaces the old red outline so the three highlight states share one visual language: green =
@@ -747,9 +747,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    vector cells) fills it. */
 .rtt-cell-input.rtt-pending .q-field__control { box-shadow:inset 0 0 0 2px var(--pending-color);
             background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
-.rtt-cell-input.rtt-pending .rtt-frac-num,
-.rtt-cell-input.rtt-pending .rtt-frac-den { color:var(--pending-text-color) !important; }
-.rtt-cell-input.rtt-pending .rtt-frac-num { border-bottom-color:var(--pending-text-color) !important; }
+.rtt-cell-input.rtt-pending .rtt-fraction-numerator,
+.rtt-cell-input.rtt-pending .rtt-fraction-denominator { color:var(--pending-text-color) !important; }
+.rtt-cell-input.rtt-pending .rtt-fraction-numerator { border-bottom-color:var(--pending-text-color) !important; }
 /* the typed text greens only WHILE FOCUSED; unfocused it stays transparent (rtt-cell-stacked)
    so the "?/?" face shows alone, not doubled over the raw input text — the bug a plain (always-on)
    colour rule caused by overriding the stacked-cell transparency with !important. */
@@ -791,7 +791,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    reveal a stacked ratio's hidden raw input doubled over its face. The value-cell SVG marks (EBK
    lattice, bar charts) use fixed colours, not currentColor, so this leaves them be. */
 .rtt-cell.rtt-preview-change, .rtt-cell.rtt-preview-change * { color:var(--preview-text-color) !important; }
-.rtt-cell.rtt-preview-change .rtt-frac-num { border-bottom-color:var(--preview-text-color) !important; }
+.rtt-cell.rtt-preview-change .rtt-fraction-numerator { border-bottom-color:var(--preview-text-color) !important; }
 .rtt-cell.rtt-preview-change.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent !important; }
 .rtt-cell.rtt-preview-change.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:var(--preview-text-color) !important; }
 /* the structural remove-preview: hovering a +/- that DELETES a column or row rings the cells it
@@ -809,7 +809,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    bar + the stacked-focus exception, each one class more specific so it wins) so every value face
    reddens yet a stacked ratio's hidden raw input is never doubled over its face. */
 .rtt-cell.rtt-preview-remove, .rtt-cell.rtt-preview-remove * { color:var(--preview-remove-text-color) !important; }
-.rtt-cell.rtt-preview-remove .rtt-frac-num { border-bottom-color:var(--preview-remove-text-color) !important; }
+.rtt-cell.rtt-preview-remove .rtt-fraction-numerator { border-bottom-color:var(--preview-remove-text-color) !important; }
 .rtt-cell.rtt-preview-remove.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent !important; }
 .rtt-cell.rtt-preview-remove.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:var(--preview-remove-text-color) !important; }
 /* the comma basis plain text while a comma is pending: not an editable input (which is
@@ -917,7 +917,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    mid-line so they overhang into the neighbouring cells (the cell turns overflow:visible via
    .rtt-ratioed so they aren't clipped, and lifts its z-index on hover so they sit on top). A
    bare-integer "n" (no visible bar) is flanked as if the vinculum were there. */
-.rtt-fraccell.rtt-ratioed { overflow:visible; }
+.rtt-fraction-cell.rtt-ratioed { overflow:visible; }
 .rtt-ratio-op { position:absolute !important; top:50%; width:var(--button); height:var(--button); z-index:6;
            opacity:0; pointer-events:none; transition:opacity var(--t); }
 .rtt-ratio-op-reduce { left:0; transform:translate(-50%,-50%); }
@@ -925,13 +925,13 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the audio float counts as part of the cell's hover zone: while a cell's speaker segment is lit
    (cursor on the cell OR on its floated icon) keep the reduce/reciprocate buttons up too, so moving
    onto the icon doesn't drop the cell's other hover affordances */
-.rtt-fraccell:hover, .rtt-fraccell.rtt-spk-hover { z-index:10; }   /* lift the whole cell so its overhanging buttons sit ON TOP of the neighbouring value boxes (a later sibling would otherwise paint over the right-hand one) */
-.rtt-fraccell:hover .rtt-ratio-op,
-.rtt-fraccell.rtt-spk-hover .rtt-ratio-op { opacity:1; pointer-events:auto; }
-.rtt-fraccell:focus-within .rtt-ratio-op { display:none; }
+.rtt-fraction-cell:hover, .rtt-fraction-cell.rtt-spk-hover { z-index:10; }   /* lift the whole cell so its overhanging buttons sit ON TOP of the neighbouring value boxes (a later sibling would otherwise paint over the right-hand one) */
+.rtt-fraction-cell:hover .rtt-ratio-op,
+.rtt-fraction-cell.rtt-spk-hover .rtt-ratio-op { opacity:1; pointer-events:auto; }
+.rtt-fraction-cell:focus-within .rtt-ratio-op { display:none; }
 /* a no-op button stays SOLID (the full white box) and greys only its glyph — never semi-transparent */
-.rtt-fraccell:hover .rtt-ratio-op.rtt-op-disabled,
-.rtt-fraccell.rtt-spk-hover .rtt-ratio-op.rtt-op-disabled { color:#bbb; pointer-events:none; cursor:default; }
+.rtt-fraction-cell:hover .rtt-ratio-op.rtt-op-disabled,
+.rtt-fraction-cell.rtt-spk-hover .rtt-ratio-op.rtt-op-disabled { color:#bbb; pointer-events:none; cursor:default; }
 
 /* drag-and-drop reorder grips. The GRIP (.rtt-colgrip) is the shared .rtt-drag-handle ⠿, riding the
    reserved GRIP_BAND room on the fan — along each column's sub-axis gridline, between the − above
