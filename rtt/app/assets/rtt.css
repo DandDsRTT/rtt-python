@@ -230,6 +230,11 @@ html, body { overscroll-behavior-x: none; }
    caption (.rtt-zoom-help, the text below the zoom-hover loupe). The magnifier loupe itself is a
    separate feature (the zoom-hover), so it keeps popping — only its help caption is suppressed. */
 body.rtt-no-anim { --t:0s; }
+/* A browser page-zoom nudges the grid's transitioned cell/line/size values, so with animations on the
+   tiles ANIMATE to their rescaled spots a few at a time instead of zooming as one piece. freeze.js drops
+   this class on for a beat across a zoom (zeroing --t like rtt-no-anim) so the rescale snaps; it is its
+   OWN class so removing it restores whatever the animations toggle was, never forcing animations on. */
+body.rtt-zoom-freeze { --t:0s; }
 body.rtt-no-tooltips .q-tooltip,
 body.rtt-no-tooltips .rtt-zoom-help { display:none !important; }
 

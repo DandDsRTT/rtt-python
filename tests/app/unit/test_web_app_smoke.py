@@ -543,6 +543,15 @@ class TestWebAppSmoke2:
         assert "classList.add('rtt-scrolling')" in js and "remove('rtt-scrolling')" in js
         assert "setTimeout" in js, "cleared a short idle after the last scroll, not on every frame"
 
+    def test_zoom_freezes_animations_for_a_beat_so_the_grid_rescales_as_one(self):
+        assert "--t:0s" in _css_rule("body.rtt-zoom-freeze"), "rtt-zoom-freeze zeroes the transition var like rtt-no-anim, but as its OWN class so a zoom # snaps the grid without disturbing the user's animations toggle"
+        js = page_assets._FREEZE_JS
+        assert "addEventListener('keydown'" in js and "addEventListener('wheel'" in js, "armed on the zoom GESTURE (Ctrl/Cmd +/-/0 keydown, Ctrl+wheel) — which fires BEFORE the browser # rescales — not on the resize after, by when the staggered frame is already painted. A View-menu zoom # has no such pre-paint signal and is deliberately not covered"
+        assert "ctrlKey" in js and "metaKey" in js
+        assert "rtt-zoom-freeze" in js
+        assert "classList.add('rtt-zoom-freeze')" in js and "remove('rtt-zoom-freeze')" in js
+        assert "setTimeout" in js, "held a beat past the last gesture, then removed to restore the animations toggle"
+
     def test_freeze_script_reserves_a_scrollbar_so_one_bar_never_forces_a_second(self):
         js = page_assets._FREEZE_JS
         assert "fit" in js

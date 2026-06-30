@@ -105,6 +105,29 @@ window.rttFreeze = (function () {
   }
   document.addEventListener('scroll', onScroll, true);
   window.addEventListener('resize', all);
+  // With animations on, a browser page-zoom makes the browser animate the grid's transitioned tiles, so they
+  // rescale a few at a time instead of as one piece. rtt-zoom-freeze zeroes --t to stop that, but it must be
+  // ON BEFORE the rescale paints — so it is armed on the zoom GESTURE: the Ctrl/Cmd +/-/0 keydown and the
+  // Ctrl+wheel that fire just before the browser zooms. (A View-menu zoom gives no pre-paint signal — the
+  // reflow that triggers the transitions runs before any event — so it is not covered.) Held a beat past the
+  // last gesture, then removed to restore whatever the animations toggle was — a class of its own, not
+  // rtt-no-anim, so it never forces animations on.
+  var zoomTimer = null;
+  function freezeAnimForZoom() {
+    document.body.classList.add('rtt-zoom-freeze');
+    if (zoomTimer) clearTimeout(zoomTimer);
+    zoomTimer = setTimeout(function () {
+      zoomTimer = null;
+      document.body.classList.remove('rtt-zoom-freeze');
+    }, 500);
+  }
+  var ZOOM_KEYS = { '+': 1, '-': 1, '=': 1, '_': 1, '0': 1, Add: 1, Subtract: 1 };
+  window.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && ZOOM_KEYS[e.key]) freezeAnimForZoom();
+  }, true);
+  window.addEventListener('wheel', function (e) {
+    if (e.ctrlKey) freezeAnimForZoom();
+  }, { capture: true, passive: true });
   // Re-fit when the grid resizes or the settings sidebar slides — neither fires a scroll or window-
   // resize event, but both animate a width: a render retransitions the board's width/height, and
   // opening the drawer transitions the panelgroup's width (which reflows the pane). Listen for those
