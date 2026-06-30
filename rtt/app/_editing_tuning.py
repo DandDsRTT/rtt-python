@@ -172,22 +172,22 @@ def _value_wheel(edit_controller, cell_id, delta_y):
         commit()
 
 
-def _target_limit_wheel(te, delta_y):
-    edit_controller = te.e
+def _target_limit_wheel(tuning_edits, delta_y):
+    edit_controller = tuning_edits.e
     if edit_controller._runtime.building or not delta_y:
         return
     num = edit_controller._rec.cells["preset:target"].chooser.select[0]
     with edit_controller._runtime.building_guard():
         num.value = _wheel_step(num.value, delta_y)
     _target_limit_preview(edit_controller)
-    if te.target_limit_commit is not None:
-        te.target_limit_commit.cancel()
-    te.target_limit_commit = background_tasks.create(
-        _debounced_target_commit(te), name="target-limit-commit"
+    if tuning_edits.target_limit_commit is not None:
+        tuning_edits.target_limit_commit.cancel()
+    tuning_edits.target_limit_commit = background_tasks.create(
+        _debounced_target_commit(tuning_edits), name="target-limit-commit"
     )
 
 
-async def _debounced_target_commit(te):
+async def _debounced_target_commit(tuning_edits):
     # NiceGUI: this runs off the loop (a background task) where the slot stack is empty, so enter the
     # captured page client or on_target_change's ui.notify can't resolve the client and the toast
     # silently vanishes.
@@ -195,8 +195,8 @@ async def _debounced_target_commit(te):
         await asyncio.sleep(_TARGET_LIMIT_DEBOUNCE)
     except asyncio.CancelledError:
         return
-    te.target_limit_commit = None
-    edit_controller = te.e
+    tuning_edits.target_limit_commit = None
+    edit_controller = tuning_edits.e
     with edit_controller._runtime.page_client:
         edit_controller.on_target_change()
 

@@ -93,11 +93,11 @@ def canonical_generator_embedding(state: TemperamentState, held_ratios=()):
         g = get_generator_embedding(*inputs)
         f_inv = inverse_form_matrix(state.mapping)
         r, rc = len(f_inv), len(f_inv[0]) if f_inv else 0
-        gc = tuple(
+        gesture_controller = tuple(
             tuple(sum(g[i][k] * f_inv[k][j] for k in range(r)) for j in range(rc))
             for i in range(len(g))
         )
-        return _matrix_strings(gc)
+        return _matrix_strings(gesture_controller)
     except (ArithmeticError, ValueError, IndexError, TypeError) as exc:
         _log.debug("canonical_generator_embedding dashed: %r", exc)
         return None

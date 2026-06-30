@@ -192,8 +192,8 @@ PARAM_TE_INDIRECTION = (
     "class _TuningEdits:\n"
     "    def __init__(self, e):\n"
     "        self.e = e\n"
-    "def _target_limit_wheel(te, delta_y):\n"
-    "    edit_controller = te.e\n"
+    "def _target_limit_wheel(tuning_edits, delta_y):\n"
+    "    edit_controller = tuning_edits.e\n"
     "    return edit_controller._runtime.building + edit_controller._rec.cells\n"
 )
 
@@ -213,9 +213,9 @@ PARAM_NESTED_CLOSURE = (
     "class GestureController:\n"
     "    def __init__(self, renderer):\n"
     "        self._renderer = renderer\n"
-    "def chooser_hover(gc, cid):\n"
+    "def chooser_hover(gesture_controller, cell_id):\n"
     "    def apply():\n"
-    "        return gc._renderer.render()\n"
+    "        return gesture_controller._renderer.render()\n"
     "    return apply\n"
 )
 

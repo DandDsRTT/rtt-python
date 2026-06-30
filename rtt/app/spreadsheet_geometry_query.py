@@ -310,10 +310,10 @@ def cell_unit(resolved, row_key: str, column_key: str, *, gen=None, prime=None, 
         if superspace:
             u = u.replace(f"g{SUBSCRIPT_L}", f"g{SUBSCRIPT_L}{_sub(gen + 1)}")
         elif f"g{SUBSCRIPT_C}" in u:
-            gc = f"g{SUBSCRIPT_C}"
-            u = _subscript_coord(u.replace(gc, "\x00"), "g", f"g{_sub(gen + 1)}").replace(
-                "\x00", f"{gc}{_sub(gen + 1)}"
-            )
+            gesture_controller = f"g{SUBSCRIPT_C}"
+            u = _subscript_coord(
+                u.replace(gesture_controller, "\x00"), "g", f"g{_sub(gen + 1)}"
+            ).replace("\x00", f"{gesture_controller}{_sub(gen + 1)}")
         else:
             u = _subscript_coord(u, "g", f"g{_sub(gen + 1)}")
     if prime is not None:
