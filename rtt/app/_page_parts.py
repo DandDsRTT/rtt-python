@@ -69,7 +69,7 @@ def build_layout(page_builder) -> None:
         slots.update(build_grid_pane(page_builder))
     slots["cell_parents"] = {
         "corner": slots["corner"],
-        "col": slots["colhead_inner"],
+        "col": slots["columnhead_inner"],
         "row": slots["rowband"],
         "body": slots["board"],
     }
@@ -81,18 +81,18 @@ def build_grid_pane(page_builder) -> dict:
     grid_pane = ui.element("div").classes("rtt-app").mark("gridpane")
     slots: dict = {"grid_pane": grid_pane}
     with grid_pane:
-        colfill = ui.element("div").classes("rtt-column-fill").mark("colfill")
-        slots["colfill"] = colfill
-        with colfill:
-            slots["colfill_inner"] = (
-                ui.element("div").classes("rtt-column-fill-inner").mark("colfillinner")
+        columnfill = ui.element("div").classes("rtt-column-fill").mark("columnfill")
+        slots["columnfill"] = columnfill
+        with columnfill:
+            slots["columnfill_inner"] = (
+                ui.element("div").classes("rtt-column-fill-inner").mark("columnfillinner")
             )
         slots["rowfill"] = ui.element("div").classes("rtt-rowfill").mark("rowfill")
-        colhead = ui.element("div").classes("rtt-column-head").mark("colhead")
-        slots["colhead"] = colhead
-        with colhead:
-            slots["colhead_inner"] = (
-                ui.element("div").classes("rtt-column-head-inner").mark("colheadinner")
+        columnhead = ui.element("div").classes("rtt-column-head").mark("columnhead")
+        slots["columnhead"] = columnhead
+        with columnhead:
+            slots["columnhead_inner"] = (
+                ui.element("div").classes("rtt-column-head-inner").mark("columnheadinner")
             )
         slots.update(build_corner(page_builder))
         slots.update(build_gridbody())

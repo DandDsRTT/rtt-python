@@ -6,7 +6,7 @@ window.rttFreeze = (function () {
       if (!app) continue;
       var inner = app.querySelector('.rtt-column-head-inner');
       if (inner) inner.style.transform = 'translateX(' + (-b.scrollLeft) + 'px)';
-      // The colfill twins ride the horizontal scroll EXACTLY (so each rests glued under its live column
+      // The columnfill twins ride the horizontal scroll EXACTLY (so each rests glued under its live column
       // rule — clamping X would un-glue them in a left overscroll and ghost a second set of verticals).
       // The vertical axis is clamped non-negative: iOS WebKit reports scrollTop negative through a top
       // overscroll (desktop holds it at 0), and only the clamp keeps the twins PUT so they bridge the
@@ -77,7 +77,7 @@ window.rttFreeze = (function () {
       // layout size — final immediately and unaffected by which body scrollbars show, so this can't
       // flip-flop. A vertical scrollbar is needed when the window caps the pane shorter than the grid;
       // a horizontal one when it caps the pane narrower than the GRIDLINES (fw) — not merely the title
-      // overhang, which sits in the frozen colhead and is clipped there, never scrolled in the body.
+      // overhang, which sits in the frozen columnhead and is clipped there, never scrolled in the body.
       var vNeed = pane.clientHeight < bh - 0.5;
       var hNeed = pane.clientWidth < (fw > 0 ? fw : bw) - 0.5;
       pane.style.width = (vNeed ? bw + sbw : bw) + 'px';   // reserve room for the perpendicular bar...

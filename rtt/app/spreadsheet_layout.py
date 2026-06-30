@@ -194,7 +194,7 @@ def _layout_columns(geometry, resolved, context, column_bands, content_x0) -> Ge
     for key, natural, present, collapsible in column_bands:
         if not present:
             continue
-        collapsed_col = f"col:{key}" in context.collapsed
+        collapsed_col = f"column:{key}" in context.collapsed
         hug_width = max(natural, caption_floor(geometry, resolved, key), control_floor(resolved, context, key), symbol_floor(geometry, resolved, key))
         if first_present:
             hug_width = max(hug_width, _title_w(geometry.column_header[key]) - 2 * PAD)

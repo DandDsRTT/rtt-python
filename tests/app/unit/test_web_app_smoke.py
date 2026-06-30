@@ -374,13 +374,13 @@ class TestWebAppSmoke1:
         assert "border-left:var(--line-w) solid var(--c-gridline)" in page_assets._CSS
         assert "border-top:var(--line-w) solid var(--c-gridline)" in page_assets._CSS
 
-    def test_colfill_bounce_layer_sits_behind_the_scroller_carries_no_zindex_and_hugs_the_body_inset(self):
+    def test_columnfill_bounce_layer_sits_behind_the_scroller_carries_no_zindex_and_hugs_the_body_inset(self):
         fill = _css_rule(".rtt-column-fill")
         assert "z-index" not in fill
         assert "pointer-events:none" in fill
         assert "left:var(--pad)" in fill and "bottom:0" in fill
 
-    def test_colfill_is_visible_on_desktop_so_the_top_bounce_bridge_shows_and_hidden_only_on_touch(self):
+    def test_columnfill_is_visible_on_desktop_so_the_top_bounce_bridge_shows_and_hidden_only_on_touch(self):
         assert "visibility:hidden" not in _css_rule(".rtt-column-fill"), "desktop keeps its bounce and pins scrollTop at 0 through it, so the bridge shows only by being # visible at rest (no scroll signal marks the bounce, hence no scrollTop<0 overpull gate); touch # removes the bounce, so the bridge never bares and is hidden there to kill the iOS late-sync echo"
         assert ".rtt-app.rtt-overpull-y" not in page_assets._CSS
         assert "rtt-overpull-y" not in page_assets._FREEZE_JS
@@ -390,20 +390,20 @@ class TestWebAppSmoke1:
 
 
 class TestWebAppSmoke2:
-    def test_rowfill_mirrors_colfill_for_the_sticky_row_bands_top_overpull_gap(self):
+    def test_rowfill_mirrors_columnfill_for_the_sticky_row_bands_top_overpull_gap(self):
         fill = _css_rule(".rtt-rowfill")
         assert "left:var(--pad)" in fill and "bottom:0" in fill
         assert "background:#c0c0c0" in fill
         assert "box-shadow:1px 0 0 var(--seam-x,transparent)" in fill
-        assert "z-index" not in fill, "behind the body, like colfill, so the row band covers it at rest"
+        assert "z-index" not in fill, "behind the body, like columnfill, so the row band covers it at rest"
         assert ".rtt-app.rtt-scrolled-x .rtt-rowfill" in page_assets._CSS
 
     def test_touch_devices_damp_the_overscroll_bounce_so_the_grid_does_not_rubber_band(self):
-        assert "@media (hover: none) and (pointer: coarse)" in page_assets._CSS, "the bounce-zone gridline echo and the collapse-all/row-toggle float are both artifacts of the # elastic overscroll; on touch devices we remove the bounce so neither can occur. It must be # overscroll-behavior:none (contain only stops chaining, keeping the bounce), and scoped to a # coarse-pointer/no-hover device so desktop keeps its bounce and the colfill/rowfill bridges"
+        assert "@media (hover: none) and (pointer: coarse)" in page_assets._CSS, "the bounce-zone gridline echo and the collapse-all/row-toggle float are both artifacts of the # elastic overscroll; on touch devices we remove the bounce so neither can occur. It must be # overscroll-behavior:none (contain only stops chaining, keeping the bounce), and scoped to a # coarse-pointer/no-hover device so desktop keeps its bounce and the columnfill/rowfill bridges"
         touch = re.search(r"@media \(hover: none\) and \(pointer: coarse\) \{(.*?\})\s*\}", page_assets._CSS, re.S)
         assert touch and ".rtt-gridbody" in touch.group(1) and "overscroll-behavior:none" in touch.group(1)
 
-    def test_only_full_height_seam_reaching_column_rules_are_twinned_in_the_colfill_not_centre_stubs(self):
+    def test_only_full_height_seam_reaching_column_rules_are_twinned_in_the_columnfill_not_centre_stubs(self):
         layout = Editor().layout()
         fy = layout.freeze_y
         twinned = {line.id for line in layout.lines if line.orientation == "v" and line.start <= fy and line.length > fy}
@@ -489,9 +489,9 @@ class TestWebAppSmoke2:
 
     def test_seam_appears_only_when_the_body_is_scrolled(self):
         css = page_assets._CSS
-        colhead, rowband = _css_rule(".rtt-column-head"), _css_rule(".rtt-rowband")
-        assert "box-shadow:0 1px 0 var(--seam-y" in colhead
-        assert "border-bottom" not in colhead, "NOT a layout-reserving border"
+        columnhead, rowband = _css_rule(".rtt-column-head"), _css_rule(".rtt-rowband")
+        assert "box-shadow:0 1px 0 var(--seam-y" in columnhead
+        assert "border-bottom" not in columnhead, "NOT a layout-reserving border"
         assert "box-shadow:1px 0 0 var(--seam-x" in rowband
         assert "border-right" not in rowband
         assert ".rtt-app.rtt-scrolled-y .rtt-column-head" in css and "--seam-y:var(--seam)" in css
@@ -529,7 +529,7 @@ class TestWebAppSmoke2:
         assert "rtt-scrolled-x" in js and "rtt-scrolled-y" in js
         assert "addEventListener('scroll'" in js
         assert "ResizeObserver" not in js and "scroll-timeline" not in js
-        assert "Math.max(0, b.scrollTop)" in js, "Only the VERTICAL twin offset is clamped non-negative. iOS WebKit reports scrollTop negative # through a top overscroll (desktop holds it at 0), so clamping keeps the colfill twins put to # bridge the bared strip; the horizontal axis must track raw scroll so the twins stay glued under # their columns — clamping X ghosts a second set of verticals on a left overscroll"
+        assert "Math.max(0, b.scrollTop)" in js, "Only the VERTICAL twin offset is clamped non-negative. iOS WebKit reports scrollTop negative # through a top overscroll (desktop holds it at 0), so clamping keeps the columnfill twins put to # bridge the bared strip; the horizontal axis must track raw scroll so the twins stay glued under # their columns — clamping X ghosts a second set of verticals on a left overscroll"
         assert "-b.scrollLeft" in js
         assert "Math.max(0, b.scrollLeft)" not in js
 

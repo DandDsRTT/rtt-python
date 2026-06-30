@@ -323,7 +323,7 @@ class TestWeightingLabels:
              "alt_complexity": True, "generator_detempering": True}
         on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
         assert on["symbol:prescaling:detempering"].text == "𝐿D"
-        assert on["matrix_label:col:prescaling:detempering:0"].text == "𝐿𝐝₁"
+        assert on["matrix_label:column:prescaling:detempering:0"].text == "𝐿𝐝₁"
 
     def test_size_factor_renames_prescaler_to_pretransformer_in_the_labels(self):
         lp = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True,
@@ -365,7 +365,7 @@ class TestWeightingLabels:
             tuning_scheme="TILT minimax-S").cells}
         assert on["symbol:prescaling:primes"].text == "𝑋"
         assert on["symbol:prescaling:commas"].text == "𝑋C"
-        assert on["matrix_label:col:prescaling:detempering:0"].text == "𝑋𝐝₁"
+        assert on["matrix_label:column:prescaling:detempering:0"].text == "𝑋𝐝₁"
         assert on["matrix_label:row:prescaling:primes:0"].text == "𝒙₁"
 
     def test_returning_the_prescaler_to_its_shown_log_prime_diagonal_restores_the_L_awareness(self):
@@ -437,9 +437,9 @@ class TestWeightingLabels:
 
     def test_weighting_rows_have_units_column_tiles_when_domain_units_on(self):
         cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, domain_units=True, alt_complexity=True).cells}
-        assert cells["ucol:prescaling:0"].text == "oct/"
-        assert cells["ucol:complexity"].text == "(C)/"
-        assert cells["ucol:weight"].text == "(S)/"
+        assert cells["units_column:prescaling:0"].text == "oct/"
+        assert cells["units_column:complexity"].text == "(C)/"
+        assert cells["units_column:weight"].text == "(S)/"
 
     def test_damage_weight_and_complexity_units_track_the_tuning_scheme(self):
         cases = [
@@ -457,16 +457,16 @@ class TestWeightingLabels:
             cells = {c.id: c for c in _with(scheme, weighting=True, units=True, cell_units=True, domain_units=True).cells}
             assert cells["units:damage:targets"].text == f"units: {damage}", scheme
             assert cells["damage:target:0"].unit == damage, scheme
-            assert cells["ucol:damage"].text == f"{damage}/", scheme
+            assert cells["units_column:damage"].text == f"{damage}/", scheme
             assert cells["units:weight:targets"].text == f"units: {weight}", scheme
             assert cells["weight:target:0"].unit == weight, scheme
-            assert cells["ucol:weight"].text == f"{weight}/", scheme
+            assert cells["units_column:weight"].text == f"{weight}/", scheme
             if complexity is None:
                 assert "units:complexity:targets" not in cells, scheme
             else:
                 assert cells["units:complexity:targets"].text == f"units: {complexity}", scheme
                 assert cells["complexity:prime:0"].unit == f"{complexity}/p₁", scheme
-                assert cells["ucol:complexity"].text == f"{complexity}/", scheme
+                assert cells["units_column:complexity"].text == f"{complexity}/", scheme
 
     def test_weighting_rows_render_a_plain_text_box_when_plain_text_on(self):
         cells = {c.id for c in _with("TILT minimax-S", weighting=True, plain_text_values=True, alt_complexity=True).cells}

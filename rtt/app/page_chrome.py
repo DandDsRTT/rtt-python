@@ -10,10 +10,10 @@ class PageChrome:
     def __init__(self) -> None:
         self.panelgroup: Element | None = None
         self.grid_pane: Element | None = None
-        self.colhead: Element | None = None
-        self.colhead_inner: Element | None = None
-        self.colfill: Element | None = None
-        self.colfill_inner: Element | None = None
+        self.columnhead: Element | None = None
+        self.columnhead_inner: Element | None = None
+        self.columnfill: Element | None = None
+        self.columnfill_inner: Element | None = None
         self.rowfill: Element | None = None
         self.corner: Element | None = None
         self.gridbody: Element | None = None

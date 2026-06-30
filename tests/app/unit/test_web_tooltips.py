@@ -45,7 +45,7 @@ _INTERACTIVE_KINDS = [
     ("target_minus", "target_minus:0"),
     ("target_plus", "target_plus"),
     ("rowtoggle", "rowtoggle:row:tuning"),
-    ("coltoggle", "coltoggle:col:targets"),
+    ("columntoggle", "columntoggle:column:targets"),
     ("tiletoggle", "tiletoggle:tile:mapping:primes"),
     ("alltoggle", "alltoggle"),
 ]

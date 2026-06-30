@@ -40,11 +40,11 @@ def emit_headers(resolved, geometry, context) -> EmitResult:
     for key in geometry.column_x:
         hx = geometry.column_x[key] + query.outer_gutter_width(geometry, key)
         hw = geometry.column_width[key] - 2 * query.outer_gutter_width(geometry, key)
-        cells.append(CellBox(f"header:{key}", hx, geometry.header_y, hw, HEADER_HEIGHT, "colheader", text=geometry.column_header[key]))
+        cells.append(CellBox(f"header:{key}", hx, geometry.header_y, hw, HEADER_HEIGHT, "columnheader", text=geometry.column_header[key]))
         if geometry.column_collapsible[key]:
-            glyph = _fold_glyph(f"col:{key}" in context.collapsed)
+            glyph = _fold_glyph(f"column:{key}" in context.collapsed)
             tx = hx + (hw - TOGGLE) / 2
-            cells.append(CellBox(f"toggle:col:{key}", tx, geometry.column_node_y, TOGGLE, TOGGLE, "coltoggle", text=glyph))
+            cells.append(CellBox(f"toggle:column:{key}", tx, geometry.column_node_y, TOGGLE, TOGGLE, "columntoggle", text=glyph))
     for key in geometry.rows:
         label = geometry.rows[key].label
         if geometry.size_factor or resolved.scalars.prescaler_is_matrix:
@@ -109,7 +109,7 @@ def _emit_units_matrix(cells, resolved, geometry, context) -> None:
         if not query.tile_open(geometry, context.collapsed, key, "units"):
             continue
         for i in range(n):
-            cells.append(CellBox(f"ucol:{key}:{i}", geometry.column_x["units"], top(i),
+            cells.append(CellBox(f"units_column:{key}:{i}", geometry.column_x["units"], top(i),
                                  geometry.column_width["units"], ROW_HEIGHT, "units", text=label(i)))
 
 
@@ -122,7 +122,7 @@ def _emit_units_const(cells, resolved, geometry, context) -> None:
             continue
         n = geometry.rows[key].num_subrows
         for i in range(n):
-            cell_id = f"ucol:{key}:{i}" if n > 1 else f"ucol:{key}"
+            cell_id = f"units_column:{key}:{i}" if n > 1 else f"units_column:{key}"
             cells.append(CellBox(cell_id, geometry.column_x["units"], geometry.rows[key].y + i * ROW_HEIGHT,
                                  geometry.column_width["units"], ROW_HEIGHT, "units", text=text))
 
@@ -147,7 +147,7 @@ def _emit_units_columns(cells, resolved, geometry, context) -> None:
         if not query.tile_open(geometry, context.collapsed, "units", key):
             continue
         for i in range(n):
-            cells.append(CellBox(f"urow:{key}:{i}", left(i), uy, COLUMN_WIDTH, ROW_HEIGHT,
+            cells.append(CellBox(f"units_row:{key}:{i}", left(i), uy, COLUMN_WIDTH, ROW_HEIGHT,
                                  "units", text=label(i)))
 
 
@@ -288,18 +288,18 @@ def _emit_qty_grips(cells, resolved, geometry, context) -> None:
         for j in range(resolved.dimensions.unchanged_count):
             if resolved.unchanged.basis[j] is not None:
                 cells.append(CellBox(f"grip:unchanged:{j}", query.sub_axis_x(geometry, "commas", resolved.dimensions.comma_count_shown + j) - COLUMN_WIDTH / 2,
-                                     grip_top, COLUMN_WIDTH, GRIP_BAND, "colgrip", comma=j))
+                                     grip_top, COLUMN_WIDTH, GRIP_BAND, "columngrip", comma=j))
 
 
 def _qty_drag_controls(cells, resolved, geometry, column_key, n, grip_top) -> None:
     for i in range(n):
         cells.append(CellBox(f"grip:{column_key}:{i}", query.sub_axis_x(geometry, column_key, i) - COLUMN_WIDTH / 2,
-                             grip_top, COLUMN_WIDTH, GRIP_BAND, "colgrip", comma=i))
+                             grip_top, COLUMN_WIDTH, GRIP_BAND, "columngrip", comma=i))
     add_width = COLUMN_WIDTH
     if column_key == "commas" and resolved.unchanged.shown:
         add_width = resolved.unchanged.empty_comma_width if resolved.dimensions.comma_count_shown == 0 else V_SPLIT_GAP
     cells.append(CellBox(f"grip:{column_key}:add", geometry.plus_stub_x[column_key] - add_width / 2,
-                         grip_top, add_width, GRIP_BAND, "colgrip"))
+                         grip_top, add_width, GRIP_BAND, "columngrip"))
 
 
 def emit_column_plus_controls(resolved, geometry) -> EmitResult:

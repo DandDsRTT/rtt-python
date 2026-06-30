@@ -74,7 +74,7 @@ class TestGeometryQuery:
     def test_openness_predicates_are_pure_over_geometry_and_collapsed(self):
         g = SimpleNamespace(column_x={"primes": 0.0, "targets": 0.0}, rows={"mapping": None},
                             declared_tiles={("mapping", "primes")})
-        collapsed = frozenset({"col:targets", "row:nope", "tile:mapping:primes"})
+        collapsed = frozenset({"column:targets", "row:nope", "tile:mapping:primes"})
         assert query.column_open(g, collapsed, "primes") is True
         assert query.column_open(g, collapsed, "targets") is False
         assert query.column_open(g, collapsed, "absent") is False

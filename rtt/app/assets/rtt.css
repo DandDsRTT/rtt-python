@@ -173,11 +173,11 @@ html, body { overscroll-behavior-x: none; }
    contain only stops scroll-CHAINING and keeps the bounce). The bounce is where the two stubborn
    mobile artifacts live: the bridge twins sync a frame late so a sustained pull shows a gridline
    echo, and the row band (position:sticky) slides off the fixed corner so the collapse-all floats
-   away from the row toggles. No bounce removes both. Desktop keeps its bounce and its colfill/rowfill
+   away from the row toggles. No bounce removes both. Desktop keeps its bounce and its columnfill/rowfill
    bridges (a coarse pointer with no hover is a phone/tablet, not a trackpad). */
 @media (hover: none) and (pointer: coarse) {
   .rtt-gridbody { overscroll-behavior:none; }
-  /* No bounce on touch means the colfill bridge is never bared — and the twins sync one frame late, so
+  /* No bounce on touch means the columnfill bridge is never bared — and the twins sync one frame late, so
      on iOS they peek out as a ghost-echo on a fast horizontal scroll. Hide the layer here; desktop, which
      keeps its bounce and needs the bridge, keeps it visible. */
   .rtt-column-fill { visibility:hidden; }

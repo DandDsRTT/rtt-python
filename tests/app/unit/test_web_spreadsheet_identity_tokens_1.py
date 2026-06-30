@@ -270,7 +270,7 @@ class TestSpineAndAxes:
         assert abs(spine.position - (header.x + header.width / 2)) < 0.51
         assert spine.start < cells["prime:0"].y
         assert spine.start + spine.length >= cells["label:damage"].y
-        assert "toggle:col:quantities" in cells
+        assert "toggle:column:quantities" in cells
 
     def test_a_spine_hugs_col_w_and_overhangs_its_title_unless_it_is_leftmost(self):
         cells = {c.id: c for c in _with(domain_units=True).cells}
@@ -436,16 +436,16 @@ class TestSpineAndAxes:
     def test_collapsing_the_targets_column_hides_its_cells_across_every_row(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         full = spreadsheet.build(base)
-        coll = spreadsheet.build(base, collapsed={"col:targets"})
+        coll = spreadsheet.build(base, collapsed={"column:targets"})
         cids = {c.id for c in coll.cells}
         assert not any(_in_targets(c) for c in cids)
         assert "header:targets" in cids
-        assert "toggle:col:targets" in cids
+        assert "toggle:column:targets" in cids
         assert coll.width < full.width
 
     def test_collapsing_the_domain_primes_column_hides_the_mapping_matrix(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        cids = {c.id for c in spreadsheet.build(base, collapsed={"col:primes"}).cells}
+        cids = {c.id for c in spreadsheet.build(base, collapsed={"column:primes"}).cells}
         assert not any(c.startswith(("prime:", "cell:mapping:")) for c in cids)
         assert not any(c.startswith(("tuning:prime:", "just:prime:", "retune:prime:")) for c in cids)
         assert "header:primes" in cids
@@ -453,7 +453,7 @@ class TestSpineAndAxes:
 
     def test_collapsed_column_keeps_its_title_at_a_width_that_fits_it(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        coll = {c.id: c for c in spreadsheet.build(base, collapsed={"col:targets"}).cells}["header:targets"]
+        coll = {c.id: c for c in spreadsheet.build(base, collapsed={"column:targets"}).cells}["header:targets"]
         full = {c.id: c for c in spreadsheet.build(base).cells}["header:targets"]
         assert coll.text == "target\nintervals", "the title stays put (not blanked, not rotated)"
         assert spreadsheet_constants.STRIP < coll.width < full.width
@@ -461,17 +461,17 @@ class TestSpineAndAxes:
     def test_collapsed_column_gridline_stays_centred_in_its_fold_node(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         for key in ("commas", "targets"):
-            layout = spreadsheet.build(base, collapsed={f"col:{key}"})
+            layout = spreadsheet.build(base, collapsed={f"column:{key}"})
             trunk = {line.id: line for line in layout.lines}[f"trunk:{key}"]
             cells = {c.id: c for c in layout.cells}
-            toggle, header = cells[f"toggle:col:{key}"], cells[f"header:{key}"]
+            toggle, header = cells[f"toggle:column:{key}"], cells[f"header:{key}"]
             assert abs(trunk.position - (toggle.x + toggle.width / 2)) < 0.51, key
             assert abs(trunk.position - (header.x + header.width / 2)) < 0.51, key
 
     def test_a_collapsed_multiline_title_strip_fits_its_widest_line(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         interest = {c.id: c for c in spreadsheet.build(
-            base, collapsed={"col:interest"}, interest=[(0, 0, 0)] * 5).cells}["header:interest"]
+            base, collapsed={"column:interest"}, interest=[(0, 0, 0)] * 5).cells}["header:interest"]
         assert interest.text == "other intervals\nof interest"
         assert interest.width == len("other intervals") * 8 + 10, "the widest line, not all 27 chars"
         assert interest.width < len("other intervals of interest") * 8 + 10
@@ -480,7 +480,7 @@ class TestSpineAndAxes:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults(); s["domain_units"] = True
         opened = {c.id: c for c in spreadsheet.build(base, s).cells}
-        collapsed = {c.id: c for c in spreadsheet.build(base, s, collapsed={"col:quantities", "col:units"}).cells}
+        collapsed = {c.id: c for c in spreadsheet.build(base, s, collapsed={"column:quantities", "column:units"}).cells}
         for key in ("quantities", "units"):
             assert collapsed[f"header:{key}"].width <= opened[f"header:{key}"].width
         assert collapsed["header:units"].width == spreadsheet_constants.COLUMN_WIDTH
@@ -507,8 +507,8 @@ class TestSpineAndAxes:
     def test_collapsing_a_column_does_not_shrink_its_rows_caption_band(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
-        without_gens = {b.id: b for b in spreadsheet.build(base, s, collapsed={"col:commas"}).blocks}
-        with_gens = {b.id: b for b in spreadsheet.build(base, s, collapsed={"col:commas", "col:gens"}).blocks}
+        without_gens = {b.id: b for b in spreadsheet.build(base, s, collapsed={"column:commas"}).blocks}
+        with_gens = {b.id: b for b in spreadsheet.build(base, s, collapsed={"column:commas", "column:gens"}).blocks}
         for sib in ("block:tuning:primes", "block:tuning:targets"):
             assert with_gens[sib].height == without_gens[sib].height, f"{sib} shrank when the gens column collapsed"
 
@@ -523,7 +523,7 @@ class TestSpineAndAxes:
 
     def test_collapsing_a_column_folds_its_panels_away_and_converges_the_lines(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        layout = spreadsheet.build(base, collapsed={"col:primes"})
+        layout = spreadsheet.build(base, collapsed={"column:primes"})
         blocks = {b.id: b for b in layout.blocks}
         by_id = {line.id: line for line in layout.lines}
         assert blocks["block:mapping"].width == 0
@@ -532,7 +532,7 @@ class TestSpineAndAxes:
 
     def test_a_collapsed_bands_gridline_is_dotted_while_open_bands_stay_solid(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        layout = spreadsheet.build(base, collapsed={"row:tuning", "col:primes"})
+        layout = spreadsheet.build(base, collapsed={"row:tuning", "column:primes"})
         by_id = {line.id: line for line in layout.lines}
         assert by_id["h:tuning"].dotted
         assert by_id["trunk:primes"].dotted

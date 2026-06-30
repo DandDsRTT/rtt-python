@@ -211,18 +211,18 @@ class TestPerCellAudio:
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
         on = _canon_cells(symbols=True, header_symbols=True, form=True)
         assert on["matrix_label:row:mapping:primes:0"].text == f"𝒎{C}{s1}"
-        assert on["matrix_label:col:mapping:commas:0"].text == f"𝑀{C}𝐜{s1}"
-        assert on["matrix_label:col:mapping:targets:0"].text == f"𝐲{C}{s1}"
-        assert on["matrix_label:col:tuning:gens:0"].text == f"𝒈{C}{s1}"
-        assert on["matrix_label:col:tuning:commas:0"].text == f"𝒕𝐜{s1}"
-        assert on["matrix_label:col:vectors:commas:0"].text == f"𝐜{s1}"
+        assert on["matrix_label:column:mapping:commas:0"].text == f"𝑀{C}𝐜{s1}"
+        assert on["matrix_label:column:mapping:targets:0"].text == f"𝐲{C}{s1}"
+        assert on["matrix_label:column:tuning:gens:0"].text == f"𝒈{C}{s1}"
+        assert on["matrix_label:column:tuning:commas:0"].text == f"𝒕𝐜{s1}"
+        assert on["matrix_label:column:vectors:commas:0"].text == f"𝐜{s1}"
         held = _canon_cells(symbols=True, header_symbols=True, form=True, optimization=True,
                             _held_vectors=[(-1, 1, 0)])
-        assert held["matrix_label:col:mapping:held:0"].text == f"𝑀{C}𝐡{s1}"
+        assert held["matrix_label:column:mapping:held:0"].text == f"𝑀{C}𝐡{s1}"
         projection = _canon_cells(symbols=True, header_symbols=True, form=True, projection=True,
                             _held_basis_ratios=("2/1", "5/4"))
-        assert projection["matrix_label:col:mapping:commas:0"].text.startswith(f"𝑀{C}𝐯")
-        assert projection["matrix_label:col:projection:gens:0"].text == f"𝐠{C}{s1}"
+        assert projection["matrix_label:column:mapping:commas:0"].text.startswith(f"𝑀{C}𝐯")
+        assert projection["matrix_label:column:projection:gens:0"].text == f"𝐠{C}{s1}"
 
     def test_form_subscript_is_two_faced_and_the_canon_row_needs_a_noncanonical_form(self):
         C = grid_tables.SUBSCRIPT_C
@@ -254,7 +254,7 @@ class TestPerCellAudio:
                          generator_detempering=True, identity_objects=True)
         assert on["symbol:mapping:gens"].text == f"𝑀{C}G"
         assert on["symbol:mapping:detempering"].text == f"𝑀{C}D"
-        assert on["matrix_label:col:mapping:detempering:0"].text == f"𝑀{C}𝐝{s1}"
+        assert on["matrix_label:column:mapping:detempering:0"].text == f"𝑀{C}𝐝{s1}"
 
     def test_canonical_mapping_row_carries_its_own_symbols_and_row_headers(self):
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
@@ -300,10 +300,10 @@ class TestPerCellAudio:
         assert cells["units:canon:gens"].text == f"units: g{C}/g"
         assert cells["units:canon:detempering"].text == f"units: g{C}"
         assert cells["units:canon:targets"].text == f"units: g{C}"
-        assert cells["matrix_label:col:canon:detempering:0"].text == f"𝑀{C}𝐝{s1}"
-        assert cells["matrix_label:col:canon:commas:0"].text == f"𝑀{C}𝐜{s1}"
-        assert cells["matrix_label:col:canon:targets:0"].text == f"𝐲{C}{s1}"
-        assert cells["matrix_label:col:canon:held:0"].text == f"𝑀{C}𝐡{s1}"
+        assert cells["matrix_label:column:canon:detempering:0"].text == f"𝑀{C}𝐝{s1}"
+        assert cells["matrix_label:column:canon:commas:0"].text == f"𝑀{C}𝐜{s1}"
+        assert cells["matrix_label:column:canon:targets:0"].text == f"𝐲{C}{s1}"
+        assert cells["matrix_label:column:canon:held:0"].text == f"𝑀{C}𝐡{s1}"
 
     def test_canonical_mapping_row_commas_symbol_keeps_subscript_under_unchanged(self):
         C = grid_tables.SUBSCRIPT_C
@@ -314,7 +314,7 @@ class TestPerCellAudio:
             held_basis_ratios=("2/1", "5/4")).cells}
         assert cells["symbol:canon:commas"].text == f"𝑀{C}V", "the '= O' equivalence drops under V (the column is no longer the bare vanishing comma basis), # for both rows; what matters here is the subscript-C surviving the comma C → V swap"
         assert cells["symbol:mapping:commas"].text == "𝑀V"
-        assert cells["matrix_label:col:canon:commas:0"].text.startswith(f"𝑀{C}𝐯")
+        assert cells["matrix_label:column:canon:commas:0"].text.startswith(f"𝑀{C}𝐯")
 
     def test_canonical_mapping_row_carries_plain_text(self):
         s = settings.defaults()

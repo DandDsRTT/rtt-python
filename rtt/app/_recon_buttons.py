@@ -190,7 +190,7 @@ def build_target_plus(reconciler, _cell_box: spreadsheet.CellBox, _wrap) -> None
     )
 
 
-def build_colgrip(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_columngrip(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     # HTML5 DnD: an element is only a valid drop target if it preventDefaults dragover, so each grip
     # is both drag source and drop target with its own client-side dragover preventDefault.
     _, lst, tail = cell_box.id.split(":")

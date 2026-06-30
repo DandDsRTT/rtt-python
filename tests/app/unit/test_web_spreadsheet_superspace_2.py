@@ -278,26 +278,26 @@ class TestSuperspaceBracketsAndMath:
 
     def test_superspace_units_row_labels_columns_gL_and_p(self):
         cells = {c.id: c for c in _barbados_superspace(domain_units=True).cells}
-        assert [cells[f"urow:superspace_generators:{g}"].text for g in range(3)] == ["/gL₁", "/gL₂", "/gL₃"]
-        assert [cells[f"urow:superspace_primes:{p}"].text for p in range(4)] == ["/p₁", "/p₂", "/p₃", "/p₄"]
+        assert [cells[f"units_row:superspace_generators:{g}"].text for g in range(3)] == ["/gL₁", "/gL₂", "/gL₃"]
+        assert [cells[f"units_row:superspace_primes:{p}"].text for p in range(4)] == ["/p₁", "/p₂", "/p₃", "/p₄"]
 
     def test_superspace_units_column_labels_rows_p_and_gL(self):
         cells = {c.id: c for c in _barbados_superspace(domain_units=True).cells}
-        assert [cells[f"ucol:superspace_vectors:{p}"].text for p in range(4)] == ["p₁/", "p₂/", "p₃/", "p₄/"]
-        assert [cells[f"ucol:superspace_mapping:{i}"].text for i in range(3)] == ["gL₁/", "gL₂/", "gL₃/"]
+        assert [cells[f"units_column:superspace_vectors:{p}"].text for p in range(4)] == ["p₁/", "p₂/", "p₃/", "p₄/"]
+        assert [cells[f"units_column:superspace_mapping:{i}"].text for i in range(3)] == ["gL₁/", "gL₂/", "gL₃/"]
 
     def test_superspace_keeps_p_while_the_nonstandard_domain_swaps_to_b(self):
         cells = {c.id: c for c in _barbados_superspace(domain_units=True, units=True, cell_units=True).cells}
-        assert cells["urow:primes:0"].text == "/b₁"
-        assert cells["ucol:vectors:0"].text == "b₁/"
+        assert cells["units_row:primes:0"].text == "/b₁"
+        assert cells["units_column:vectors:0"].text == "b₁/"
         assert cells["tuning:prime:0"].unit == "¢/b₁"
-        assert cells["urow:superspace_primes:0"].text == "/p₁"
-        assert cells["ucol:superspace_vectors:0"].text == "p₁/"
+        assert cells["units_row:superspace_primes:0"].text == "/p₁"
+        assert cells["units_column:superspace_vectors:0"].text == "p₁/"
         assert cells["tuning:superspace_prime:0"].unit == "¢/p₁"
 
     def test_superspace_units_off_without_domain_units(self):
         cells = {c.id for c in _barbados_superspace().cells}
-        assert not any(c.startswith(("urow:superspace_generators", "urow:superspace_primes", "ucol:superspace_")) for c in cells)
+        assert not any(c.startswith(("units_row:superspace_generators", "units_row:superspace_primes", "units_column:superspace_")) for c in cells)
 
     def test_superspace_L_marker_is_a_capital_subscript(self):
         L = grid_tables.SUBSCRIPT_L
@@ -305,7 +305,7 @@ class TestSuperspaceBracketsAndMath:
         cells = {c.id: c for c in _barbados_superspace(counts=True, symbols=True, domain_units=True).cells}
         assert cells["count:superspace_generators"].text == f"\U0001D45F{L} = 3"
         assert cells["symbol:tuning:superspace_generators"].text == f"\U0001D488{L}"
-        assert cells["urow:superspace_generators:0"].text == f"/g{L}₁"
+        assert cells["units_row:superspace_generators:0"].text == f"/g{L}₁"
 
     def test_superspace_mapping_row_labels_clear_the_bracket_and_cells(self):
         cells = {c.id: c for c in _barbados_superspace(symbols=True, header_symbols=True).cells}
@@ -330,10 +330,10 @@ class TestSuperspaceBracketsAndMath:
     def test_superspace_tuning_tiles_get_subcolumn_headers(self):
         L = grid_tables.SUBSCRIPT_L
         cells = {c.id: c for c in _barbados_superspace(symbols=True, header_symbols=True).cells}
-        assert cells["matrix_label:col:tuning:superspace_generators:0"].text == f"\U0001D488{L}₁"
-        assert cells["matrix_label:col:tuning:superspace_primes:0"].text == f"\U0001D495{L}₁"
-        assert cells["matrix_label:col:just:superspace_primes:1"].text == f"\U0001D48B{L}₂"
-        assert cells["matrix_label:col:retune:superspace_primes:0"].text == f"\U0001D493{L}₁"
+        assert cells["matrix_label:column:tuning:superspace_generators:0"].text == f"\U0001D488{L}₁"
+        assert cells["matrix_label:column:tuning:superspace_primes:0"].text == f"\U0001D495{L}₁"
+        assert cells["matrix_label:column:just:superspace_primes:1"].text == f"\U0001D48B{L}₂"
+        assert cells["matrix_label:column:retune:superspace_primes:0"].text == f"\U0001D493{L}₁"
 
     def test_superspace_block_is_a_cyan_region_green_at_temperament_columns(self):
         layout = _barbados_superspace(tuning_colorization=True, temperament_colorization=True,
@@ -359,13 +359,13 @@ class TestSuperspaceBracketsAndMath:
         assert "cell:weight:targets:1:0" not in lils and "bar:weight" not in lils, "NOT a matrix, no size bar"
         assert lils["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹"
         assert lils["caption:weight:targets"].text == "target interval weight list"
-        assert lils["matrix_label:col:weight:targets:0"].text == "w₁ = c₁⁻¹"
-        assert lils["matrix_label:col:weight:targets:2"].text == "w₃ = c₃⁻¹"
+        assert lils["matrix_label:column:weight:targets:0"].text == "w₁ = c₁⁻¹"
+        assert lils["matrix_label:column:weight:targets:2"].text == "w₃ = c₃⁻¹"
         bare = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, header_symbols=True, equivalences=False).cells}
         assert bare["symbol:weight:targets"].text == "𝒘"
-        assert bare["matrix_label:col:weight:targets:0"].text == "w₁"
+        assert bare["matrix_label:column:weight:targets:0"].text == "w₁"
         lp = {c.id: c for c in _with("minimax-S", weighting=True, charts=True, symbols=True, header_symbols=True, equivalences=True).cells}
-        assert lp["symbol:weight:targets"].text == "𝒘 = diag(𝐿)⁻¹" and lp["matrix_label:col:weight:targets:0"].text == "w₁"
+        assert lp["symbol:weight:targets"].text == "𝒘 = diag(𝐿)⁻¹" and lp["matrix_label:column:weight:targets:0"].text == "w₁"
         assert "weight:target:0" in lp and "cell:weight:targets:1:0" not in lp
 
     def test_a_non_diagonal_pretransformer_all_interval_weight_is_a_reciprocal_list(self):
@@ -378,15 +378,15 @@ class TestSuperspaceBracketsAndMath:
         assert "weight:target:0" in on and "chart:weight:targets" in on
         assert "cell:weight:targets:1:0" not in on and "bar:weight" not in on, "NOT a matrix"
         assert on["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹"
-        assert on["matrix_label:col:weight:targets:0"].text == "w₁ = c₁⁻¹", "references the complexity column, not the norm"
-        assert on["matrix_label:col:complexity:targets:0"].text == f"c₁ = ‖𝑋[1]‖{grid_tables.NORM_SUB_OPEN}q{grid_tables.NORM_SUB_CLOSE}"
+        assert on["matrix_label:column:weight:targets:0"].text == "w₁ = c₁⁻¹", "references the complexity column, not the norm"
+        assert on["matrix_label:column:complexity:targets:0"].text == f"c₁ = ‖𝑋[1]‖{grid_tables.NORM_SUB_OPEN}q{grid_tables.NORM_SUB_CLOSE}"
 
     def test_a_matrix_row_carries_a_unit_on_every_subrow_not_just_the_first(self):
         lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, domain_units=True).cells}
-        units = [lils[f"ucol:prescaling:{i}"].text for i in range(4)]
+        units = [lils[f"units_column:prescaling:{i}"].text for i in range(4)]
         assert len(set(units)) == 1 and units[0].endswith("/")
-        assert "ucol:prescaling" not in lils
-        assert "ucol:weight" in lils and "ucol:weight:0" not in lils, "a single-row tile (the weight list) keeps the bare id — generic, not snowflaked"
+        assert "units_column:prescaling" not in lils
+        assert "units_column:weight" in lils and "units_column:weight:0" not in lils, "a single-row tile (the weight list) keeps the bare id — generic, not snowflaked"
 
     def test_read_only_target_vectors_stay_full_width(self):
         cells = {c.id: c for c in _with(scheme="minimax-lils-S").cells}

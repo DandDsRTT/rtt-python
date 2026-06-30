@@ -336,7 +336,7 @@ class TestCountsRow:
     def test_other_intervals_of_interest_column_is_present_right_of_targets(self):
         cells = {c.id: c for c in _layout().cells}
         assert cells["header:interest"].text == "other intervals\nof interest"
-        assert "toggle:col:interest" in cells
+        assert "toggle:column:interest" in cells
         assert cells["header:interest"].x > cells["header:targets"].x
 
     def test_empty_interest_columns_footprint_hugs_its_content_the_title_overhangs(self):

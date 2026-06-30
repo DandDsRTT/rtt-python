@@ -94,7 +94,7 @@ class TestHeldColumn:
     def test_held_column_has_the_full_interval_column_tile_set(self):
         on = _held("TILT minimax-S", weighting=True, alt_complexity=True, domain_units=True)
         assert "cell:prescaling:held:0:0" in on
-        assert "urow:held:0" in on
+        assert "units_row:held:0" in on
 
     def test_generator_detempering_column_holds_the_d_matrix(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -128,7 +128,7 @@ class TestHeldColumn:
                 assert cells[f"cell:mapped_detempering:{i}:{k}"].kind == "mapped"
         assert cells["symbol:mapping:detempering"].text == "\U0001D440D = \U0001D43C"
         assert cells["caption:mapping:detempering"].text == "mapped generator detempering"
-        assert cells["matrix_label:col:mapping:detempering:0"].text == "\U0001D440\U0001D41D₁"
+        assert cells["matrix_label:column:mapping:detempering:0"].text == "\U0001D440\U0001D41D₁"
         assert cells["bracket:mapped_detempering:l"].text == spreadsheet_constants.GENMAP_BRACKETS[0]
         assert cells["ebktop:mapped_detempering:0"].kind == "ebktop"
         assert cells["ebkbrace:mapped_detempering:0"].kind == "ebkbrace"
@@ -199,7 +199,7 @@ class TestHeldColumn:
 
     def test_generator_detempering_units_row_labels_each_generator(self):
         cells = {c.id: c for c in _with(generator_detempering=True, domain_units=True).cells}
-        assert [cells[f"urow:detempering:{i}"].text for i in range(2)] == ["/1", "/1"]
+        assert [cells[f"units_row:detempering:{i}"].text for i in range(2)] == ["/1", "/1"]
 
     def test_generator_detempering_column_fans_without_a_centre_trunk(self):
         layout = _with(generator_detempering=True)
@@ -540,8 +540,8 @@ class TestRetuningChartsAndGenMap:
         cells = {c.id: c for c in layout.cells}
         Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
         at = lambda cell_id: _color_at(layout, *_mid(cells, cell_id))
-        for spine in ("count", "urow"):
-            suffix = ":0" if spine == "urow" else ""
+        for spine in ("count", "units_row"):
+            suffix = ":0" if spine == "units_row" else ""
             assert at(f"{spine}:commas{suffix}") == Y
             assert at(f"{spine}:primes{suffix}") == Y
             assert at(f"{spine}:gens{suffix}") == Y
@@ -549,12 +549,12 @@ class TestRetuningChartsAndGenMap:
             assert at(f"{spine}:held{suffix}") == C
             assert at(f"{spine}:detempering{suffix}") == N
         assert at("gen:0") == Y, "quantities + units COLUMNS take each row's family: mapping yellow; tuning, just, # retuning, prescaling, complexity cyan. The retuning units cell is cyan despite the # retuning VALUE cells being green — the spine follows the band, not the content"
-        assert at("ucol:mapping:0") == Y
-        assert at("ucol:tuning") == C
-        assert at("ucol:just") == C
-        assert at("ucol:retune") == C
-        assert at("ucol:prescaling:0") == C
-        assert at("ucol:complexity") == C
+        assert at("units_column:mapping:0") == Y
+        assert at("units_column:tuning") == C
+        assert at("units_column:just") == C
+        assert at("units_column:retune") == C
+        assert at("units_column:prescaling:0") == C
+        assert at("units_column:complexity") == C
 
     def test_washes_bridge_the_plus_column_gutters(self):
         layout = _colormap_layout()

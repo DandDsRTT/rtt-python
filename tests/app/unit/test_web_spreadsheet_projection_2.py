@@ -150,8 +150,8 @@ class TestProjectionVColumn:
 
     def test_unchanged_columns_have_cross_list_drag_grips(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), drag_to_combine=True).cells}
-        assert cells["grip:unchanged:0"].kind == "colgrip"
-        assert cells["grip:unchanged:1"].kind == "colgrip"
+        assert cells["grip:unchanged:0"].kind == "columngrip"
+        assert cells["grip:unchanged:1"].kind == "columngrip"
         assert cells["grip:unchanged:0"].x == cells["cell:unchanged:0:0"].x
         assert cells["grip:unchanged:1"].x == cells["cell:unchanged:0:1"].x
         assert "grip:unchanged:add" not in cells
@@ -233,10 +233,10 @@ class TestProjectionVColumn:
 
     def test_projection_v_column_labels_are_v_and_lambda(self):
         cells = {c.id: c for c in _with(projection=True, symbols=True, header_symbols=True).cells}
-        assert [cells[f"matrix_label:col:vectors:commas:{i}"].text for i in range(3)] == ["𝐯₁", "𝐯₂", "𝐯₃"], "the C|U split is the vertical bar, so every V sub-column is labelled 𝐯ᵢ (not a 𝐜/𝐮 split)"
-        assert cells["matrix_label:col:mapping:commas:2"].text == "𝑀𝐯₃"
+        assert [cells[f"matrix_label:column:vectors:commas:{i}"].text for i in range(3)] == ["𝐯₁", "𝐯₂", "𝐯₃"], "the C|U split is the vertical bar, so every V sub-column is labelled 𝐯ᵢ (not a 𝐜/𝐮 split)"
+        assert cells["matrix_label:column:mapping:commas:2"].text == "𝑀𝐯₃"
         assert cells["symbol:scaling_factors:commas"].text == "𝝀"
-        assert [cells[f"matrix_label:col:scaling_factors:commas:{i}"].text for i in range(3)] == ["𝜆₁", "𝜆₂", "𝜆₃"]
+        assert [cells[f"matrix_label:column:scaling_factors:commas:{i}"].text for i in range(3)] == ["𝜆₁", "𝜆₂", "𝜆₃"]
 
     def test_projection_prescaling_and_complexity_rows_span_v(self):
         cells = {c.id: c for c in _with("minimax-S", projection=True, weighting=True).cells}
@@ -314,14 +314,14 @@ class TestProjectionDrafts:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = {**settings.defaults(), "projection": True, "header_symbols": True}
         c = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None]).cells}
-        assert c["matrix_label:col:vectors:commas:0"].x == c["cell:comma:0:0"].x
-        assert c["matrix_label:col:vectors:commas:1"].x == c["cell:unchanged:0:0"].x
-        assert c["matrix_label:col:vectors:commas:2"].x == c["cell:unchanged:0:1"].x
-        assert "matrix_label:col:vectors:commas:3" not in c
-        assert c["matrix_label:col:vectors:commas:1"].x != c["cell:comma:0:1"].x
-        assert c["matrix_label:col:projection:commas:1"].x == c["cell:projection_vectors:0:u0"].x
+        assert c["matrix_label:column:vectors:commas:0"].x == c["cell:comma:0:0"].x
+        assert c["matrix_label:column:vectors:commas:1"].x == c["cell:unchanged:0:0"].x
+        assert c["matrix_label:column:vectors:commas:2"].x == c["cell:unchanged:0:1"].x
+        assert "matrix_label:column:vectors:commas:3" not in c
+        assert c["matrix_label:column:vectors:commas:1"].x != c["cell:comma:0:1"].x
+        assert c["matrix_label:column:projection:commas:1"].x == c["cell:projection_vectors:0:u0"].x
         rest = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
-        assert rest["matrix_label:col:vectors:commas:1"].x == rest["cell:unchanged:0:0"].x
+        assert rest["matrix_label:column:vectors:commas:1"].x == rest["cell:unchanged:0:0"].x
 
     def test_comma_add_drop_zone_does_not_occlude_the_unchanged_grips(self):
         def overlap(a, b):
@@ -341,15 +341,15 @@ class TestProjectionDrafts:
         s = {**settings.defaults(), "domain_units": True, "optimization": True}
         k = _target_count()
         ut = {c.id for c in spreadsheet.build(base, s, pending_target=[None, None, None]).cells}
-        assert f"urow:targets:{k}" in ut
+        assert f"units_row:targets:{k}" in ut
         ui = {c.id for c in spreadsheet.build(base, s, interest=((1, 1, -1),), pending_interest=[None, None, None]).cells}
-        assert "urow:interest:1" in ui
+        assert "units_row:interest:1" in ui
         uh = {c.id for c in spreadsheet.build(base, s, held_vectors=((-1, 1, 0),), pending_held=[None, None, None]).cells}
-        assert "urow:held:1" in uh
+        assert "units_row:held:1" in uh
         um = {c.id for c in spreadsheet.build(base, s, pending_mapping_row=[None, None, None]).cells}
-        assert "ucol:mapping:2" in um
+        assert "units_column:mapping:2" in um
         rest = {c.id for c in spreadsheet.build(base, s).cells}
-        assert f"urow:targets:{k}" not in rest and "ucol:mapping:2" not in rest
+        assert f"units_row:targets:{k}" not in rest and "units_column:mapping:2" not in rest
 
     def test_all_interval_mean_damage_value_and_symbol_denote_the_same_quantity(self):
         import math
