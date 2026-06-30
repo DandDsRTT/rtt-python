@@ -266,9 +266,9 @@ def on_target_change(edit_controller):
     if edit_controller._runtime.building:
         return
     edit_controller._gestures.end_chooser_gesture()
-    num, sel = edit_controller._rec.cells["preset:target"].chooser.select
+    num, selection = edit_controller._rec.cells["preset:target"].chooser.select
     out = service.resolve_target_limit(
-        sel.value, num.value, edit_controller._editor.state.domain_basis
+        selection.value, num.value, edit_controller._editor.state.domain_basis
     )
     apply_outcome(edit_controller, out, lambda: edit_controller._editor.set_target_spec(out.value))
 

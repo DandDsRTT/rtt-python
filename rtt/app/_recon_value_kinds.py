@@ -169,7 +169,7 @@ def _build_ratio_face(reconciler, cell_box: spreadsheet.CellBox, wrap, approx: b
 
 
 def update_ratio(reconciler, cell_box: spreadsheet.CellBox) -> None:
-    _set_pending_class(reconciler.entities[cell_box.id].el, cell_box.pending)
+    _set_pending_class(reconciler.entities[cell_box.id].element, cell_box.pending)
     face = reconciler.handles(cell_box.id).value.ratio_face
     if face is None:
         return
@@ -186,7 +186,7 @@ def build_tuning_value(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None
 
 def update_tuning_value(reconciler, cell_box: spreadsheet.CellBox) -> None:
     set_cents_face(reconciler, cell_box.id, cell_box.text)
-    _set_pending_class(reconciler.entities[cell_box.id].el, cell_box.pending)
+    _set_pending_class(reconciler.entities[cell_box.id].element, cell_box.pending)
 
 
 def label_builder(cls: str):
@@ -198,7 +198,7 @@ def label_builder(cls: str):
 
 def update_label(reconciler, cell_box: spreadsheet.CellBox) -> None:
     reconciler.cells[cell_box.id].value.label.set_text(cell_box.text)
-    _set_pending_class(reconciler.entities[cell_box.id].el, cell_box.pending)
+    _set_pending_class(reconciler.entities[cell_box.id].element, cell_box.pending)
 
 
 def update_plain_text(reconciler, cell_box: spreadsheet.CellBox) -> None:

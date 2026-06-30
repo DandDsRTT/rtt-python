@@ -544,14 +544,14 @@ class TestWeightingLabels:
         on = {c.id: c for c in layout.cells}
         blocks = {b.id: b for b in layout.blocks}
         assert "preset:prescaler" not in off
-        sel = on["preset:prescaler"]
-        assert sel.kind == "preset", "with alt. complexity off there is only one prescaler (log-prime), so the chooser has no real # choice: it renders as a DISABLED dropdown (greyed), not an interactive one"
-        assert sel.disabled is True
-        assert sel.text == "log-prime"
+        selection = on["preset:prescaler"]
+        assert selection.kind == "preset", "with alt. complexity off there is only one prescaler (log-prime), so the chooser has no real # choice: it renders as a DISABLED dropdown (greyed), not an interactive one"
+        assert selection.disabled is True
+        assert selection.text == "log-prime"
         pre = on["cell:prescaling:primes:2:2"]
         box = blocks["block:preset:prescaler"]
-        assert sel.y > pre.y
-        assert sel.x == box.x + spreadsheet_constants.BOX_INNER
+        assert selection.y > pre.y
+        assert selection.x == box.x + spreadsheet_constants.BOX_INNER
         assert box.x <= pre.x and pre.x + pre.width <= box.x + box.width
         assert "preset:prescaler" not in {c.id for c in _with("minimax-S", weighting=False, presets=True).cells}
         assert "preset:prescaler" not in {

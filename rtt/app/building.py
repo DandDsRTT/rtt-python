@@ -80,16 +80,16 @@ class PageBuilder:
     def _tile_part(self, key, html, *, marked=False, size=None, style=""):
         fs = size if size is not None else _TILE_FONT.get(key)
         css = (f"font-size:{fs}px;" if fs else "") + style
-        el = ui.html(html).classes("rtt-tile-part").tooltip(tooltips.SHOW_HELP[key])
+        element = ui.html(html).classes("rtt-tile-part").tooltip(tooltips.SHOW_HELP[key])
         if key == "mnemonics":
-            el.classes(add="rtt-tile-mnem")
+            element.classes(add="rtt-tile-mnem")
         if marked:
-            el.mark(f"showpart:{key}")
+            element.mark(f"showpart:{key}")
         if css:
-            el.style(css)
-        el.on("click", lambda k=key: self._edits.on_part_click(k))
-        self._chrome.tile_parts.setdefault(key, []).append(el)
-        return el
+            element.style(css)
+        element.on("click", lambda k=key: self._edits.on_part_click(k))
+        self._chrome.tile_parts.setdefault(key, []).append(element)
+        return element
 
     def _tile_named_part(self, key, *, size=None, style=""):
         return self._tile_part(key, _general_part_html(key), marked=True, size=size, style=style)

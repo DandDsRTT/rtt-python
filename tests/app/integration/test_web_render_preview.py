@@ -299,8 +299,8 @@ class TestEditPreviewRipple:
     async def test_an_invalid_target_limit_stays_reddened_through_the_edit_preview_gesture(self, user: User) -> None:
         await _enable(user, "presets")
         await user.should_see(marker="preset:target")
-        _num, sel = _target_preset(user)
-        sel.set_value("OLD")
+        _num, selection = _target_preset(user)
+        selection.set_value("OLD")
         await user.should_see(marker="preset:target")
         num, _sel = _target_preset(user)
         assert "rtt-limit-error" in num._classes
@@ -312,8 +312,8 @@ class TestEditPreviewRipple:
     async def test_switching_the_family_to_old_over_an_even_limit_toasts(self, user: User) -> None:
         await _enable(user, "presets")
         await user.should_see(marker="preset:target")
-        _num, sel = _target_preset(user)
-        sel.set_value("OLD")
+        _num, selection = _target_preset(user)
+        selection.set_value("OLD")
         await user.should_see("needs an odd limit")
         num, _sel = _target_preset(user)
         assert "rtt-limit-error" in num._classes
@@ -426,12 +426,12 @@ class TestPreviewClearing:
         _toggle(user, "presets")
         user.find(kind=ui.checkbox, content="projection").click()
         await user.should_see(marker="preset:projection")
-        sel = _cell_child(user, "preset:projection")
+        selection = _cell_child(user, "preset:projection")
         wrap = set(user.find(marker="preset:projection").elements)
-        index = list(sel.options).index("1/3-comma")
+        index = list(selection.options).index("1/3-comma")
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": index})
         assert "rtt-preview-change" in _wrap_classes(user, "tuning:gen:1")
-        sel.set_value("1/3-comma")
+        selection.set_value("1/3-comma")
         await user.should_see(marker="preset:projection")
         assert _cell_child(user, "tuning:gen:1").value == "694.786"
         assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:1"), \
@@ -444,18 +444,18 @@ class TestPreviewClearing:
         _toggle(user, "optimization")
         _toggle(user, "weighting")
         await user.should_see(marker="preset:tuning")
-        sel = _cell_child(user, "preset:tuning")
+        selection = _cell_child(user, "preset:tuning")
         wrap = set(user.find(marker="preset:tuning").elements)
         index = list(presets.tuning_scheme_options(False, False, True)).index("minimax-S")
-        UserInteraction(user, {sel}, None).trigger("popupShow")
+        UserInteraction(user, {selection}, None).trigger("popupShow")
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": index})
         assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
-        UserInteraction(user, {sel}, None).trigger("popupHide")
+        UserInteraction(user, {selection}, None).trigger("popupHide")
         assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": index})
         assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1"), \
             "a stale opthover after popup-hide re-armed the preview (the stranded-ring race)"
-        UserInteraction(user, {sel}, None).trigger("popupShow")
+        UserInteraction(user, {selection}, None).trigger("popupShow")
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": index})
         assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
 

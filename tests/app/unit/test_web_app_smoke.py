@@ -117,14 +117,14 @@ class TestWebAppSmoke1:
         reconciler = _Reconciler(Editor())
         reconciler.cells["scheme:primes"] = CellHandles()
         reconciler.cells["scheme:primes"].chooser.scheme_button = "the-button"
-        reconciler.entities["scheme:primes"] = EntityHandles(el=_FakeElement())
+        reconciler.entities["scheme:primes"] = EntityHandles(element=_FakeElement())
         reconciler.entities["scheme:primes"].styled = "left:0"
         reconciler.entities["scheme:primes"].ring_sig = (False, False)
         reconciler.drop("scheme:primes")
         assert "scheme:primes" not in reconciler.cells
         assert "scheme:primes" not in reconciler.entities
         assert reconciler.handles("scheme:primes").chooser.scheme_button is None, "null-object, not a leaked handle"
-        assert reconciler.entity("scheme:primes").el is None
+        assert reconciler.entity("scheme:primes").element is None
 
     def test_handles_sentinel_reads_none_but_refuses_writes(self):
         reconciler = _Reconciler(Editor())
@@ -512,11 +512,11 @@ class TestWebAppSmoke2:
 
     def test_frozen_wash_copies_show_only_at_rest_dropping_once_the_body_scrolls(self):
         css = page_assets._CSS
-        for sel in (".rtt-app.rtt-scrolled-y .rtt-colhead .rtt-wash",
+        for selection in (".rtt-app.rtt-scrolled-y .rtt-colhead .rtt-wash",
                     ".rtt-app.rtt-scrolled-y .rtt-colhead .rtt-washbase",
                     ".rtt-app.rtt-scrolled-x .rtt-rowband .rtt-wash",
                     ".rtt-app.rtt-scrolled-x .rtt-rowband .rtt-washbase"):
-            assert sel in css
+            assert selection in css
         m = re.search(r"rtt-scrolled-y \.rtt-colhead \.rtt-wash[\s\S]*?\{([^}]*)\}", css)
         assert m and "display:none" in m.group(1), "the copies are dropped, not merely restyled"
 

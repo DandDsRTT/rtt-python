@@ -91,8 +91,8 @@ def update_foldtoggle(reconciler, cell_box: spreadsheet.CellBox) -> None:
         reconciler.cells[cell_box.id].chooser.fold_state = cell_box.text
 
 
-def _arm_option_hover(reconciler, sel, wrap, cell_id: str) -> None:
-    sel.add_slot(
+def _arm_option_hover(reconciler, selection, wrap, cell_id: str) -> None:
+    selection.add_slot(
         "option",
         f"""
         <q-item v-bind="props.itemProps" :data-optidx="props.opt.value" data-optcid="{cell_id}">
@@ -105,8 +105,8 @@ def _arm_option_hover(reconciler, sel, wrap, cell_id: str) -> None:
         lambda e: reconciler._cell_box.on_chooser_hover(cell_id, e.args),
         args=["detail"],
     )
-    sel.on("popup-show", lambda _=None: reconciler._cell_box.on_popup(cell_id, True))
-    sel.on("popup-hide", lambda _=None: reconciler._cell_box.on_popup(cell_id, False))
+    selection.on("popup-show", lambda _=None: reconciler._cell_box.on_popup(cell_id, True))
+    selection.on("popup-hide", lambda _=None: reconciler._cell_box.on_popup(cell_id, False))
 
 
 def build_preset(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
@@ -136,7 +136,7 @@ def _build_preset_target(reconciler, cell_box: spreadsheet.CellBox, wrap) -> Non
         # NiceGUI: ui.input defaults loopback off (uncontrolled during typing), so the server can't
         # overwrite what was typed; _wire_target_limit turns loopback on so a rejected value reverts.
         _wire_target_limit(reconciler, num, cell_box)
-        sel = (
+        selection = (
             ui.select(
                 list(presets.TARGET_SETS),
                 value=family,
@@ -145,9 +145,9 @@ def _build_preset_target(reconciler, cell_box: spreadsheet.CellBox, wrap) -> Non
             .props(_select_props(cell_box.width - 30))
             .classes("rtt-preset")
         )
-    _set_offlist_prompt(sel, family)
-    _arm_option_hover(reconciler, sel, wrap, cell_box.id)
-    reconciler.cells[cell_box.id].chooser.select = (num, sel)
+    _set_offlist_prompt(selection, family)
+    _arm_option_hover(reconciler, selection, wrap, cell_box.id)
+    reconciler.cells[cell_box.id].chooser.select = (num, selection)
 
 
 def _wire_target_limit(reconciler, num, cell_box: spreadsheet.CellBox) -> None:
@@ -176,7 +176,7 @@ def _wire_target_limit(reconciler, num, cell_box: spreadsheet.CellBox) -> None:
 
 def _build_preset_temperament(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     value = presets.identify(reconciler._editor.state)
-    sel = (
+    selection = (
         _GroupedSelect(
             presets.temperament_options(),
             value=value,
@@ -186,9 +186,9 @@ def _build_preset_temperament(reconciler, cell_box: spreadsheet.CellBox, wrap) -
         .props(_select_props(cell_box.width))
         .classes("rtt-preset")
     )
-    _set_offlist_prompt(sel, value)
-    _arm_option_hover(reconciler, sel, wrap, cell_box.id)
-    reconciler.cells[cell_box.id].chooser.select = sel
+    _set_offlist_prompt(selection, value)
+    _arm_option_hover(reconciler, selection, wrap, cell_box.id)
+    reconciler.cells[cell_box.id].chooser.select = selection
 
 
 def _scheme_options(reconciler, name: str) -> tuple[list, object, str]:
@@ -211,7 +211,7 @@ def _scheme_options(reconciler, name: str) -> tuple[list, object, str]:
 
 
 def _build_scheme_select(reconciler, cell_box, wrap, options, value, prompt) -> None:
-    sel = (
+    selection = (
         ui.select(
             options,
             value=value,
@@ -220,9 +220,9 @@ def _build_scheme_select(reconciler, cell_box, wrap, options, value, prompt) -> 
         .props(_select_props(cell_box.width))
         .classes("rtt-preset")
     )
-    _set_offlist_prompt(sel, value, prompt)
-    _arm_option_hover(reconciler, sel, wrap, cell_box.id)
-    reconciler.cells[cell_box.id].chooser.select = sel
+    _set_offlist_prompt(selection, value, prompt)
+    _arm_option_hover(reconciler, selection, wrap, cell_box.id)
+    reconciler.cells[cell_box.id].chooser.select = selection
 
 
 def _chooser_reflow_hold(reconciler, cell_id: str) -> bool:
@@ -249,13 +249,13 @@ def update_preset(reconciler, cell_box: spreadsheet.CellBox) -> None:
         reconciler.cells[cell_box.id].chooser.select.value = value
         _set_offlist_prompt(reconciler.cells[cell_box.id].chooser.select, value)
     elif cell_box.id == "preset:target":
-        num, sel = reconciler.cells[cell_box.id].chooser.select
+        num, selection = reconciler.cells[cell_box.id].chooser.select
         limit, family = reconciler._target_preset_values()
         num.value = _limit_text(limit) or service.NO_LIMIT_TEXT
-        sel.value = family
-        _set_offlist_prompt(sel, family)
+        selection.value = family
+        _set_offlist_prompt(selection, family)
         num.set_enabled(not cell_box.disabled)
-        sel.set_enabled(not cell_box.disabled)
+        selection.set_enabled(not cell_box.disabled)
         _sync_target_limit_error(reconciler, num, family, limit)
     elif cell_box.id == "preset:prescaler":
         options = list(presets.prescaler_options(reconciler._editor.settings["alt_complexity"]))
@@ -286,7 +286,7 @@ def update_preset(reconciler, cell_box: spreadsheet.CellBox) -> None:
 
 
 def _build_subpick(reconciler, cell_box, wrap, options, value):
-    sel = (
+    selection = (
         ui.select(
             options,
             value=value if value in options else None,
@@ -297,9 +297,9 @@ def _build_subpick(reconciler, cell_box, wrap, options, value):
         .props(_select_props(_SUBPICK_POPUP_W))
         .classes("rtt-preset rtt-subpick")
     )
-    _set_offlist_prompt(sel, value if value in options else None)
-    _arm_option_hover(reconciler, sel, wrap, cell_box.id)
-    reconciler.cells[cell_box.id].chooser.select = sel
+    _set_offlist_prompt(selection, value if value in options else None)
+    _arm_option_hover(reconciler, selection, wrap, cell_box.id)
+    reconciler.cells[cell_box.id].chooser.select = selection
 
 
 def build_etpick(reconciler, cell_box, wrap):
@@ -322,8 +322,8 @@ def update_subpick(reconciler, cell_box):
     g = reconciler._cur_gesture
     if g is not None and g.kind == "temp" and g.reflowed:
         return
-    sel = reconciler.handles(cell_box.id).chooser.select
-    if not isinstance(sel, ui.select):
+    selection = reconciler.handles(cell_box.id).chooser.select
+    if not isinstance(selection, ui.select):
         return
     state = reconciler._editor.state
     db = state.domain_basis
@@ -340,8 +340,8 @@ def update_subpick(reconciler, cell_box):
         else:
             value = presets.identify_comma(state.comma_basis[cell_box.comma], db)
     value = value if value in options else None
-    sel.set_options(options, value=value)
-    _set_offlist_prompt(sel, value)
+    selection.set_options(options, value=value)
+    _set_offlist_prompt(selection, value)
 
 
 def _sync_target_limit_error(reconciler, num, family, limit) -> None:
@@ -361,7 +361,7 @@ def _sync_target_limit_error(reconciler, num, family, limit) -> None:
 
 
 def build_control_select(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
-    sel = (
+    selection = (
         ui.select(
             list(cell_box.values),
             value=cell_box.text or None,
@@ -372,8 +372,8 @@ def build_control_select(reconciler, cell_box: spreadsheet.CellBox, wrap) -> Non
         .props(_select_props(cell_box.width))
         .classes("rtt-preset")
     )
-    _arm_option_hover(reconciler, sel, wrap, cell_box.id)
-    reconciler.cells[cell_box.id].chooser.select = sel
+    _arm_option_hover(reconciler, selection, wrap, cell_box.id)
+    reconciler.cells[cell_box.id].chooser.select = selection
 
 
 def update_control_select(reconciler, cell_box: spreadsheet.CellBox) -> None:
@@ -419,7 +419,7 @@ def update_control_check(reconciler, cell_box: spreadsheet.CellBox) -> None:
 
 
 def build_formchooser(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
-    sel = (
+    selection = (
         ui.select(
             _formchooser_options(cell_box.id),
             value=cell_box.text or "",
@@ -428,8 +428,8 @@ def build_formchooser(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
         .props(_select_props(cell_box.width))
         .classes("rtt-preset")
     )
-    _arm_option_hover(reconciler, sel, wrap, cell_box.id)
-    reconciler.cells[cell_box.id].chooser.select = sel
+    _arm_option_hover(reconciler, selection, wrap, cell_box.id)
+    reconciler.cells[cell_box.id].chooser.select = selection
 
 
 def update_formchooser(reconciler, cell_box: spreadsheet.CellBox) -> None:
@@ -440,11 +440,11 @@ def update_formchooser(reconciler, cell_box: spreadsheet.CellBox) -> None:
     )
 
 
-def preview_control(reconciler, el, apply) -> None:
-    el.on("mouseenter", lambda _=None: reconciler._cell_box.control_hover(apply))
-    el.on("mouseleave", lambda _=None: reconciler._cell_box.control_unhover())
+def preview_control(reconciler, element, apply) -> None:
+    element.on("mouseenter", lambda _=None: reconciler._cell_box.control_hover(apply))
+    element.on("mouseleave", lambda _=None: reconciler._cell_box.control_unhover())
 
 
-def preview_rank_remove(reconciler, el, axis: str, index: int) -> None:
-    el.on("mouseenter", lambda _=None: reconciler._cell_box.rank_remove_hover(axis, index))
-    el.on("mouseleave", lambda _=None: reconciler._cell_box.rank_remove_unhover())
+def preview_rank_remove(reconciler, element, axis: str, index: int) -> None:
+    element.on("mouseenter", lambda _=None: reconciler._cell_box.rank_remove_hover(axis, index))
+    element.on("mouseleave", lambda _=None: reconciler._cell_box.rank_remove_unhover())

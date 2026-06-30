@@ -101,7 +101,7 @@ class TestViewportVirtualization:
         await user.should_see(marker="chart:retune:targets")
         newborns = set(page.reconciler.entities) - before
         assert newborns, "enabling charts must add cells"
-        assert any("rtt-withhold" in page.reconciler.entities[cell_id].el._classes for cell_id in newborns), \
+        assert any("rtt-withhold" in page.reconciler.entities[cell_id].element._classes for cell_id in newborns), \
             "a structurally-born cell must be withheld for the two-step entrance"
-        assert all("rtt-noentry" not in page.reconciler.entities[cell_id].el._classes for cell_id in newborns), \
+        assert all("rtt-noentry" not in page.reconciler.entities[cell_id].element._classes for cell_id in newborns), \
             "rtt-noentry is only for scroll materialization, never a structural newborn"

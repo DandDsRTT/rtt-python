@@ -11,7 +11,7 @@ def sync_mean_damage_tips(reconciler, editor) -> None:
         if reconciler.handles(cell_id).mean_damage_tip is not None:
             reconciler.cells[cell_id].mean_damage_tip.set_text(mean_damage_help_text)
             continue
-        wrap = reconciler.entity(cell_id).el
+        wrap = reconciler.entity(cell_id).element
         if wrap is not None and wrap._props.get("data-zoomhelp") != mean_damage_help_text:
             wrap._props["data-zoomhelp"] = mean_damage_help_text
             wrap.update()
@@ -26,7 +26,7 @@ def sync_pretransform_help(reconciler, pretransform: bool) -> None:
         if height.guide_help_text is None:
             continue
         plain, relabeled = height.guide_help_text
-        wrap = reconciler.entity(cell_id).el
+        wrap = reconciler.entity(cell_id).element
         text = relabeled if pretransform else plain
         if wrap is not None and wrap._props.get("data-guide-text") != text:
             wrap._props["data-guide-text"] = text

@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class EntityHandles:
-    el: object = None
+    element: object = None
     styled: object = None
     ring_sig: object = None
 

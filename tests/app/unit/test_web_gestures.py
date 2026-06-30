@@ -40,8 +40,8 @@ class _FakeEl:
 
 
 class _FakeEntity:
-    def __init__(self, el):
-        self.el = el
+    def __init__(self, element):
+        self.element = element
         self.ring_sig = None
 
 
@@ -87,22 +87,22 @@ class TestWebGestures:
         assert g.compute_rings(layout) == (frozenset(), frozenset())
 
     def test_paint_cell_adds_amber_ring_and_records_signature(self):
-        el = _FakeEl()
-        reconciler = _FakeRec({"x": _FakeEntity(el)})
+        element = _FakeEl()
+        reconciler = _FakeRec({"x": _FakeEntity(element)})
         g = GestureController(_editor(), SimpleNamespace())
         g.bind(reconciler, None, None)
         g.paint_cell("x", frozenset({"x"}), frozenset())
-        assert "rtt-preview-change" in el.added
+        assert "rtt-preview-change" in element.added
         assert reconciler.entities["x"].ring_sig == (True, False)
 
     def test_paint_cell_is_a_noop_when_signature_unchanged(self):
-        el = _FakeEl()
-        ent = _FakeEntity(el)
+        element = _FakeEl()
+        ent = _FakeEntity(element)
         ent.ring_sig = (True, False)
         g = GestureController(_editor(), SimpleNamespace())
         g.bind(_FakeRec({"x": ent}), None, None)
         g.paint_cell("x", frozenset({"x"}), frozenset())
-        assert el.added == []
+        assert element.added == []
 
     def test_paint_cell_skips_missing_element(self):
         ent = _FakeEntity(None)
