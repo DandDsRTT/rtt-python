@@ -43,7 +43,7 @@ class TestCanonicalGenerators:
 
     def test_form_box_symbols_and_units_match_the_canonical_notation(self):
         from rtt.app.grid_tables import SUBSCRIPT_C
-        gc = f"g{SUBSCRIPT_C}"
+        gesture_controller = f"g{SUBSCRIPT_C}"
         cells = {c.id: c for c in _with(form_tiles=True, identity_objects=True,
                                         symbols=True, equivalences=True, header_symbols=True,
                                         units=True, domain_units=True).cells}
@@ -52,11 +52,11 @@ class TestCanonicalGenerators:
         assert cells["symbol:mapping:canongens"].text == "𝐹"
         assert cells["symbol:canon:canongens"].text == "𝐹⁻¹𝐹 = 𝐼"
         assert cells["matlabel:row:canon:primes:0"].text == f"𝒎{SUBSCRIPT_C}₁"
-        assert cells["units:canon:primes"].text == f"units: {gc}/p"
-        assert cells["units:canon:gens"].text == f"units: {gc}/g"
-        assert cells["units:canon:canongens"].text == f"units: {gc}/{gc}"
-        assert cells["ucol:canon:0"].text == f"{gc}₁/"
-        assert cells["urow:canongens:0"].text == f"/{gc}₁"
+        assert cells["units:canon:primes"].text == f"units: {gesture_controller}/p"
+        assert cells["units:canon:gens"].text == f"units: {gesture_controller}/g"
+        assert cells["units:canon:canongens"].text == f"units: {gesture_controller}/{gesture_controller}"
+        assert cells["ucol:canon:0"].text == f"{gesture_controller}₁/"
+        assert cells["urow:canongens:0"].text == f"/{gesture_controller}₁"
 
     def test_rank_count_merges_across_the_canonical_generators_and_generators_columns(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}
