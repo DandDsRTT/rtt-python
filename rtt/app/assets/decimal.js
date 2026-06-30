@@ -1,4 +1,4 @@
-// Live mode-switching for the editable stacked DECIMAL cells (.rtt-dec-edit: a big whole-part input
+// Live mode-switching for the editable stacked DECIMAL cells (.rtt-decimal-edit: a big whole-part input
 // over a small dot-led fraction input). The DECIMAL twin of fraction.js. A cell shows the big-INTEGER
 // view (just the whole part) when it has no fractional part and the DECIMAL view (whole over a small
 // ".fraction") otherwise — and it flips between them WHILE you edit, with no server round-trip (the
@@ -16,7 +16,7 @@
   if (window.__rttDecimal) return;
   window.__rttDecimal = true;
 
-  function boxOf(el) { return el && el.closest ? el.closest('.rtt-dec-edit') : null; }
+  function boxOf(el) { return el && el.closest ? el.closest('.rtt-decimal-edit') : null; }
 
   // set a field's value AND tell Quasar/NiceGUI about it (the q-input's v-model only updates from the
   // native "input" event; a bare .value would show but never reach the server). The fraction twin of
@@ -30,7 +30,7 @@
   // otherwise the cell collapses to the big-integer (int) view.
   function sync(box) {
     if (!box) return;
-    const frac = box.querySelector('.rtt-dec-frac-in input');
+    const frac = box.querySelector('.rtt-decimal-fraction-input input');
     if (!frac) return;
     const v = (frac.value || '').trim();
     const editing = document.activeElement === frac;
@@ -39,13 +39,13 @@
 
   document.addEventListener('keydown', function (e) {
     const t = e.target;
-    if (!t.matches || !t.matches('.rtt-dec-whole-in input')) return;
+    if (!t.matches || !t.matches('.rtt-decimal-whole-input input')) return;
     if (e.key === '.') {  // open the fraction and move there, instead of typing a dot into the whole
       const box = boxOf(t);
       if (!box) return;
       e.preventDefault();
       box.dataset.decmode = 'dec';  // un-hide the frac line NOW so it is focusable in the same tick
-      const frac = box.querySelector('.rtt-dec-frac-in input');
+      const frac = box.querySelector('.rtt-decimal-fraction-input input');
       if (!frac) return;
       // split the whole part at the caret: text BEFORE it stays in the whole, text AFTER it drops into
       // the fraction — so clicking before the "01" and typing "7." yields 7.01, not 701 (the decimal
@@ -63,7 +63,7 @@
   }, true);
 
   document.addEventListener('input', function (e) {
-    if (e.target.matches && e.target.matches('.rtt-dec-frac-in input, .rtt-dec-whole-in input')) sync(boxOf(e.target));
+    if (e.target.matches && e.target.matches('.rtt-decimal-fraction-input input, .rtt-decimal-whole-input input')) sync(boxOf(e.target));
   }, true);
   document.addEventListener('focusin', function (e) {
     const box = boxOf(e.target);

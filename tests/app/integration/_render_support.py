@@ -203,16 +203,16 @@ class _DecCellProxy:
 
 def _cell_child(user: User, cell_id: str):
     """The inner control of a grid cell (the marker rides its wrap). An editable stacked-fraction
-    cell wraps its numerator + denominator inputs in a .rtt-frac-edit box; the NUMERATOR is the
+    cell wraps its numerator + denominator inputs in a .rtt-fraction-edit box; the NUMERATOR is the
     "primary" control the marker-based interactions drive (and, headless, a whole ``"3/2"`` typed
     into it still commits — cell_value rejoins it with the empty denominator). An editable stacked-
-    decimal (cents) cell wraps a whole-part + fraction input in a .rtt-dec-edit box; a sign-aware
+    decimal (cents) cell wraps a whole-part + fraction input in a .rtt-decimal-edit box; a sign-aware
     proxy makes it read/write like the old single input (see _DecCellProxy)."""
     wrap = next(iter(user.find(marker=cell_id).elements))
     cls = getattr(wrap, "_classes", [])
-    if "rtt-fraccell" in cls:
+    if "rtt-fraction-cell" in cls:
         return _marked(user, f"{cell_id}:num")
-    if "rtt-deccell" in cls:
+    if "rtt-decimal-cell" in cls:
         whole, frac = _dec_inputs(user, cell_id)
         sign = _marked(user, f"{cell_id}:sign", required=False)
         return _DecCellProxy(user, whole, frac, sign)
@@ -221,7 +221,7 @@ def _cell_child(user: User, cell_id: str):
 
 def _dec_mode(user: User, cell_id: str) -> str:
     """An editable decimal cell's data-decmode ("int" — a bare whole, no fraction line — or "dec" —
-    the whole over a small .fraction), read off its .rtt-dec-edit box. The decimal twin of the
+    the whole over a small .fraction), read off its .rtt-decimal-edit box. The decimal twin of the
     fraction cell's data-fracmode; the resting view the server sets from the committed value."""
     box = _marked(user, f"{cell_id}:editbox")
     return box._props.get("data-decmode", "")
@@ -250,13 +250,13 @@ def _wrap_classes(user: User, cell_id: str) -> list[str]:
 def _ro_ratio_face(user: User, cell_id: str):
     """A READ-ONLY ratio face (genratio / commaratio: detempering, generators, unchanged auto-list)
     as ``(numerator_text, denominator_text, collapsed)``. ``collapsed`` is True when the value is a
-    whole ratio ``"n/1"`` shown as a bare integer — flagged by ``rtt-frac-whole`` on the .rtt-frac
+    whole ratio ``"n/1"`` shown as a bare integer — flagged by ``rtt-fraction-whole`` on the .rtt-fraction
     div (the ~ omitted, the bar and denominator hidden). The wrap's first child is the .rtt-ratio
-    container (a label-only "–" placeholder has no .rtt-frac, so callers pass it only when the value
+    container (a label-only "–" placeholder has no .rtt-fraction, so callers pass it only when the value
     is a real ratio)."""
     face = _cell_child(user, cell_id)
-    frac = next(c for c in face.default_slot.children if "rtt-frac" in getattr(c, "_classes", []))
-    collapsed = "rtt-frac-whole" in getattr(frac, "_classes", [])
+    frac = next(c for c in face.default_slot.children if "rtt-fraction" in getattr(c, "_classes", []))
+    collapsed = "rtt-fraction-whole" in getattr(frac, "_classes", [])
     num, den = _marked(user, f"{cell_id}:num"), _marked(user, f"{cell_id}:den")
     return num.text, den.text, collapsed
 

@@ -325,7 +325,7 @@ _TOUR_STEPS = [
 ]
 
 _STACKED_EXIT_JS = (
-    "(e) => { const b = e.target.closest('.rtt-frac-edit, .rtt-dec-edit'); "
+    "(e) => { const b = e.target.closest('.rtt-fraction-edit, .rtt-decimal-edit'); "
     "if (!b || !b.contains(e.relatedTarget)) emit(); }"
 )
 

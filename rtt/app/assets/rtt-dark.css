@@ -111,18 +111,18 @@ body.rtt-dark .rtt-tuning-value,
 body.rtt-dark .rtt-stacked-sub,
 body.rtt-dark .rtt-transpose,
 body.rtt-dark .rtt-mathexpr-stack { color:#e3e6ea; }
-body.rtt-dark .rtt-frac-num { border-bottom-color:#e3e6ea; }   /* the read-only fraction bar */
+body.rtt-dark .rtt-fraction-numerator { border-bottom-color:#e3e6ea; }   /* the read-only fraction bar */
 /* the editable stacked fraction cells: the dark box rides the WRAP (the two inputs' controls stay
    transparent so it shows through), and the bar + light input text re-light like every dark cell. */
-body.rtt-dark .rtt-fraccell { background:#1b1f24; }
-body.rtt-dark .rtt-fraccell .rtt-cellinput .q-field__control { background:transparent; }
-body.rtt-dark .rtt-frac-bar { background:#e3e6ea; }
+body.rtt-dark .rtt-fraction-cell { background:#1b1f24; }
+body.rtt-dark .rtt-fraction-cell .rtt-cellinput .q-field__control { background:transparent; }
+body.rtt-dark .rtt-fraction-bar { background:#e3e6ea; }
 /* the editable stacked decimal (cents) cells: same as the fraction cell — the dark box rides the
    WRAP and the inputs' controls stay transparent so it shows through. The in-place fields show their
    text directly (no transparent-while-unfocused face), so the blanket light-input rule above re-lights
    it with no .rtt-cell-stacked exception needed. */
-body.rtt-dark .rtt-deccell { background:#1b1f24; }
-body.rtt-dark .rtt-deccell .rtt-cellinput .q-field__control { background:transparent; }
+body.rtt-dark .rtt-decimal-cell { background:#1b1f24; }
+body.rtt-dark .rtt-decimal-cell .rtt-cellinput .q-field__control { background:transparent; }
 /* the zoom magnifier loupe tile (rtt.css .rtt-zoom-tile): the dark grid-tile grey; the cloned value
    re-lights for free -- it is a real .rtt-cell carrying the value classes the dark rules above retint
    (the overlay sits on body, so body.rtt-dark reaches the clone). The help bubble matches the app's
@@ -225,8 +225,8 @@ body.rtt-dark .rtt-scheme-button-idle .q-btn__content { color:#71777f !important
 body.rtt-dark svg rect[fill="#fff"][stroke="#bbb"] { fill:#1b1f24; stroke:#4e555d; }
 body.rtt-dark .rtt-glyph { color:#9aa1a9; }
 body.rtt-dark .rtt-glyph:hover { color:#cfd4da; }
-body.rtt-dark .rtt-fraccell:hover .rtt-ratio-op.rtt-op-disabled,
-body.rtt-dark .rtt-fraccell.rtt-spk-hover .rtt-ratio-op.rtt-op-disabled { color:#4e555d; }
+body.rtt-dark .rtt-fraction-cell:hover .rtt-ratio-op.rtt-op-disabled,
+body.rtt-dark .rtt-fraction-cell.rtt-spk-hover .rtt-ratio-op.rtt-op-disabled { color:#4e555d; }
 
 /* the busy scrim: a dark veil + dark card (see .rtt-busy in rtt.css) */
 body.rtt-dark .rtt-busy { background:rgba(0,0,0,0.45); }

@@ -1,4 +1,4 @@
-// Live mode-switching for the editable stacked fraction cells (.rtt-frac-edit: a numerator input
+// Live mode-switching for the editable stacked fraction cells (.rtt-fraction-edit: a numerator input
 // over a bar over a denominator input). A cell shows the big-INTEGER view when its denominator is
 // blank/1 and the RATIO view (num over bar over den) otherwise — and it flips between them WHILE you
 // edit, with no server round-trip (committing only happens on blur; see app.py). One document-level
@@ -14,7 +14,7 @@
   if (window.__rttFraction) return;
   window.__rttFraction = true;
 
-  function boxOf(el) { return el && el.closest ? el.closest('.rtt-frac-edit') : null; }
+  function boxOf(el) { return el && el.closest ? el.closest('.rtt-fraction-edit') : null; }
 
   // set a field's value AND tell Quasar/NiceGUI about it: the q-input's v-model only updates from the
   // native "input" event, so a bare .value assignment would show on screen but never reach the server
@@ -29,7 +29,7 @@
   // (anything but blank or "1"); otherwise the cell collapses to the big-integer view.
   function sync(box) {
     if (!box) return;
-    const den = box.querySelector('.rtt-frac-den-in input');
+    const den = box.querySelector('.rtt-fraction-denominator-input input');
     if (!den) return;
     const v = (den.value || '').trim();
     const editing = document.activeElement === den;
@@ -38,7 +38,7 @@
 
   document.addEventListener('keydown', function (e) {
     const t = e.target;
-    if (!t.matches || !t.matches('.rtt-frac-num-in input')) return;
+    if (!t.matches || !t.matches('.rtt-fraction-numerator-input input')) return;
     if (e.key === '/') {  // open the denominator and move there, instead of typing a slash into the num
       const box = boxOf(t);
       if (!box) return;
@@ -47,8 +47,8 @@
       // shrink to the ratio size NOW so the bar sits where it settles — otherwise the int-size (17px)
       // font lingers until a render (commit) and floats the bar high. 13 == _RATIO_MAX_FONT; a render
       // re-fits both fields (and shrinks a long fraction further) on commit.
-      box.querySelectorAll('.rtt-frac-num-in input, .rtt-frac-den-in input').forEach(function (i) { i.style.fontSize = '13px'; });
-      const den = box.querySelector('.rtt-frac-den-in input');
+      box.querySelectorAll('.rtt-fraction-numerator-input input, .rtt-fraction-denominator-input input').forEach(function (i) { i.style.fontSize = '13px'; });
+      const den = box.querySelector('.rtt-fraction-denominator-input input');
       if (!den) return;
       // split the numerator at the caret: text BEFORE it stays in the numerator, text AFTER it drops
       // into the denominator — so clicking before the "3" and typing "7/" yields 7/3, not 73. Any
@@ -73,7 +73,7 @@
   }, true);
 
   document.addEventListener('input', function (e) {
-    if (e.target.matches && e.target.matches('.rtt-frac-den-in input, .rtt-frac-num-in input')) sync(boxOf(e.target));
+    if (e.target.matches && e.target.matches('.rtt-fraction-denominator-input input, .rtt-fraction-numerator-input input')) sync(boxOf(e.target));
   }, true);
   document.addEventListener('focusin', function (e) {
     const box = boxOf(e.target);
