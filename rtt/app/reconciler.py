@@ -44,6 +44,8 @@ _DEMO_VALUE_KINDS = frozenset(
 def _stamp_value(wrap, cell_box: spreadsheet.CellBox) -> None:
     if cell_box.kind in _DEMO_VALUE_KINDS:
         wrap.props(f'data-value="{cell_box.text}"')
+    if cell_box.matrix:
+        wrap.props(f'data-mx="{cell_box.matrix}" data-mxo="{cell_box.matrix_orient}"')
 
 
 @runtime_checkable
@@ -171,7 +173,7 @@ class _Reconciler:
         self.entities[cell_box.id] = EntityHandles()
         wrap = (
             ui.element("div")
-            .classes("rtt-cell")
+            .classes("rtt-cell" + (" rtt-gridval" if cell_box.in_grid else ""))
             .props(f'data-eid="{cell_box.id}"')
             .mark(cell_box.id)
         )

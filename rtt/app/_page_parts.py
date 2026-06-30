@@ -9,6 +9,7 @@ from rtt.app import (
     tooltips,
 )
 from rtt.app.page_assets import (
+    _ACTIVECELL_JS,
     _AUDIO_GLYPHS,
     _AUDIO_JS,
     _CSS,
@@ -18,7 +19,6 @@ from rtt.app.page_assets import (
     _GUIDE_JS,
     _MAPPING_DEMO_JS,
     _STATE_PARAM,
-    _TABNAV_JS,
     _TOOLTIP_DELAY_MS,
     _TOUR_JS,
     _TOUR_STEPS,
@@ -40,7 +40,7 @@ def setup_page_head() -> None:
     ui.add_body_html(f"<script>{_FREEZE_JS}</script>")
     ui.add_body_html(f"<script>{_FRACTION_JS}</script>")
     ui.add_body_html(f"<script>{_DECIMAL_JS}</script>")
-    ui.add_body_html(f"<script>{_TABNAV_JS}</script>")
+    ui.add_body_html(f"<script>{_ACTIVECELL_JS}</script>")
     ui.add_body_html(f"<script>{_ZOOM_JS}</script>")
     ui.add_body_html(f"<script>{_GUIDE_JS}</script>")
     ui.add_body_html(f"<script>{_MAPPING_DEMO_JS}</script>")

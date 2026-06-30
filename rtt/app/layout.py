@@ -53,6 +53,9 @@ class CellBox:
     disabled: bool = False
     audio: tuple | None = None
     decimals: bool = True
+    matrix: str = ""
+    matrix_orient: str = ""
+    in_grid: bool = False
 
 
 @dataclass(frozen=True)

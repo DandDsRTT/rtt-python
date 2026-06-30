@@ -210,10 +210,7 @@ window.rttAudio = (function () {
       floatEl.addEventListener('mouseleave', planHide);
       floatEl.addEventListener('click', function (ev) {
         ev.preventDefault(); ev.stopPropagation();
-        if (!floatSeg) return;
-        const chord = [], sibs = document.querySelectorAll('.rtt-speaker[data-audio="' + floatSeg.tile + '"]');
-        for (let i = 0; i < sibs.length; i++) chord[+sibs[i].dataset.idx] = +sibs[i].dataset.cents;
-        api.hit(floatSeg.tile, floatSeg.idx, chord);
+        if (floatSeg) api.playSeg(floatSeg.tile, floatSeg.idx);
       });
       document.body.appendChild(floatEl);
     }
@@ -221,6 +218,11 @@ window.rttAudio = (function () {
     floatSeg = { tile: tile, idx: idx };
     placeFloat();   // centred over the highlighted cells, floated above them
   }
+  api.playSeg = function (tile, idx) {  // sound a whole column segment (its live sibling chord)
+    const chord = [], sibs = document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"]');
+    for (let i = 0; i < sibs.length; i++) chord[+sibs[i].dataset.idx] = +sibs[i].dataset.cents;
+    api.hit(tile, idx, chord);
+  };
   function onFloat(t) { return t && t.closest && t.closest('.rtt-speaker-float'); }
   document.addEventListener('mouseover', function (ev) {
     if (S.muted) return;                                   // muted = disengaged: no hover affordance
@@ -243,7 +245,9 @@ window.rttAudio = (function () {
   document.addEventListener('pointerdown', function (ev) {
     if (floatSeg && !onFloat(ev.target)) hideFloat();
   }, true);
-  document.addEventListener('keydown', function () { if (floatSeg) hideFloat(); }, true);
+  // Space is the play key (sounded by _ACTIVECELL_JS for the active/hovered cell) — don't let it
+  // dismiss the float; any OTHER key clears a lingering float so it can't block the next hover.
+  document.addEventListener('keydown', function (ev) { if (ev.key !== ' ' && floatSeg) hideFloat(); }, true);
   // the grid body scrolls in its own scroller (scroll doesn't bubble) — re-anchor the float to its
   // live cells so it rides the page instead of staying pinned to a viewport spot as the grid moves.
   document.addEventListener('scroll', function () { if (floatSeg) placeFloat(); }, true);

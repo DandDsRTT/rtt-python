@@ -7,8 +7,8 @@ from rtt.app.page_assets import (
     _INT_WHEEL_JS,
     _STACKED_EXIT_JS,
     _WHEEL_STEPS,
-    VALUE_KINDS,
 )
+from rtt.app.spreadsheet_constants import VALUE_KINDS
 
 
 def cur_gesture(gestures):

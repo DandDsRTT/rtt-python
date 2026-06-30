@@ -2,6 +2,33 @@ from __future__ import annotations
 
 from rtt.app.marks import BR_INSET, BR_SERIF_L
 
+VALUE_KINDS: frozenset[str] = frozenset(
+    {
+        "prime",
+        "formcell",
+        "mapped",
+        "vector",
+        "tuningvalue",
+        "genratio",
+        "commaratio",
+        "powerdisplay",
+        "mathexpr",
+        "mapping",
+        "commacell",
+        "unchangedcell",
+        "interestcell",
+        "heldcell",
+        "targetcell",
+        "prescalercell",
+        "weightcell",
+        "powerinput",
+        "gentuningcell",
+        "ratiocell",
+        "elementcell",
+        "elementratio",
+    }
+)
+
 ROW_HEIGHT = 37
 COLUMN_WIDTH = 37
 GAP = 28
