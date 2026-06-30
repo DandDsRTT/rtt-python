@@ -8,12 +8,12 @@ from rtt.app import spreadsheet_constants
 from rtt.app.marks import BR_COLOR, rect, svg
 from rtt.library.formatting import strip_negative_zero
 
-_CHART_PAD_T = 9
-_CHART_PAD_B = 2
+_CHART_PADDING_T = 9
+_CHART_PADDING_B = 2
 _CHART_BAR_FRAC = 0.5
 _CHART_GRID = "#bbbbbb"
 _CHART_INDICATOR = "#888888"
-_RANGE_CAP_W = 14
+_RANGE_CAPTION_WIDTH = 14
 _RANGE_MARK_W = 1.6
 _RANGE_PLOT_T = 11
 _RANGE_PLOT_B = 12
@@ -101,7 +101,7 @@ def _bar_chart(
     present = tuple(v for v in values if v is not None)
     ticks = _chart_ticks(min((*present, 0.0)), max((*present, 0.0)))
     axis_lo, axis_hi = ticks[0], ticks[-1]
-    plot_top, plot_bot = _CHART_PAD_T, height - _CHART_PAD_B
+    plot_top, plot_bot = _CHART_PADDING_T, height - _CHART_PADDING_B
     span = axis_hi - axis_lo
 
     def y_of(v):
@@ -170,7 +170,7 @@ def _range_chart(width: float, height: float, ranges, tunings=(), decimals: bool
         )
     plot_top, plot_bot = _RANGE_PLOT_T, height - _RANGE_PLOT_B
     mid, hw = (plot_top + plot_bot) / 2, _RANGE_MARK_W / 2
-    cap_half, tick_half = _RANGE_CAP_W / 2, _RANGE_CAP_W / 2 - 3
+    caption_half, tick_half = _RANGE_CAPTION_WIDTH / 2, _RANGE_CAPTION_WIDTH / 2 - 3
 
     def bar(center_x, y, half):
         return rect(center_x - half, y - hw, 2 * half, _RANGE_MARK_W)
@@ -186,10 +186,10 @@ def _range_chart(width: float, height: float, ranges, tunings=(), decimals: bool
     for i, (lo, hi) in enumerate(ranges):
         center_x = cx0 + i * column_width + column_width / 2
         if hi - lo < 1e-6:
-            body.append(bar(center_x, mid, cap_half) + label(center_x, mid - 4, lo))
+            body.append(bar(center_x, mid, caption_half) + label(center_x, mid - 4, lo))
             continue
         body.append(rect(center_x - hw, plot_top, _RANGE_MARK_W, plot_bot - plot_top))
-        body.append(bar(center_x, plot_top, cap_half) + bar(center_x, plot_bot, cap_half))
+        body.append(bar(center_x, plot_top, caption_half) + bar(center_x, plot_bot, caption_half))
         body.append(label(center_x, plot_top - 4, hi) + label(center_x, plot_bot + 9, lo))
         if i < len(tunings):
             frac = min(1.0, max(0.0, (hi - tunings[i]) / (hi - lo)))

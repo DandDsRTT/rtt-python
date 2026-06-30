@@ -46,15 +46,15 @@ def ribbon(pts):
     )
 
 
-def _qbez(p0, ctrl, p1, w0, w1, n, *, skip_first=False):
+def _qbez(p0, control, p1, w0, w1, n, *, skip_first=False):
     out = []
     for i in range(n + 1):
         if skip_first and i == 0:
             continue
         t = i / n
         mt = 1 - t
-        x = mt * mt * p0[0] + 2 * mt * t * ctrl[0] + t * t * p1[0]
-        y = mt * mt * p0[1] + 2 * mt * t * ctrl[1] + t * t * p1[1]
+        x = mt * mt * p0[0] + 2 * mt * t * control[0] + t * t * p1[0]
+        y = mt * mt * p0[1] + 2 * mt * t * control[1] + t * t * p1[1]
         out.append((x, y, w0 + (w1 - w0) * t))
     return out
 

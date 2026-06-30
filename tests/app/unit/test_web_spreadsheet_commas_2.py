@@ -229,9 +229,9 @@ class TestOptimizationControls:
                                 ("block:slope", "control:slope")):
             box = blocks[box_id]
             assert box.boxed, box_id
-            ctrl = cells[ctrl_id]
-            assert box.x < ctrl.x and ctrl.x + ctrl.width <= box.x + box.width + 0.01, box_id
-            assert box.y < ctrl.y and ctrl.y + ctrl.height <= box.y + box.height + 0.01, box_id
+            control = cells[ctrl_id]
+            assert box.x < control.x and control.x + control.width <= box.x + box.width + 0.01, box_id
+            assert box.y < control.y and control.y + control.height <= box.y + box.height + 0.01, box_id
 
     def test_diminuator_rides_the_pretransformer_chooser_box_when_presets_on(self):
         on = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
@@ -255,11 +255,11 @@ class TestOptimizationControls:
         off = {c.id for c in _with("TILT minimax-S", weighting=True, alt_complexity=False).cells}
         on = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}
         assert "control:diminuator" not in off
-        ctrl = on["control:diminuator"]
-        assert ctrl.kind == "control_check"
-        assert ctrl.text == ""
-        assert ctrl.checked is False
-        assert on["header:primes"].x <= ctrl.x
+        control = on["control:diminuator"]
+        assert control.kind == "control_check"
+        assert control.text == ""
+        assert control.checked is False
+        assert on["header:primes"].x <= control.x
 
     def test_weighting_captions_the_weight_slope_chooser(self):
         on = {c.id: c for c in _with(weighting=True).cells}
@@ -274,20 +274,20 @@ class TestOptimizationControls:
         off = {c.id for c in _with(weighting=False).cells}
         on = {c.id: c for c in _with(weighting=True).cells}
         assert "control:slope" not in off
-        ctrl = on["control:slope"]
-        assert ctrl.kind == "control_select"
-        assert ctrl.disabled is False
-        assert ctrl.text == "unity-weight"
-        assert ctrl.values == ("complexity-weight", "unity-weight", "simplicity-weight")
-        assert ctrl.y > on["weight:target:0"].y
-        assert ctrl.x == on["header:targets"].x + spreadsheet_constants.BOX_INNER
-        assert ctrl.width == on["header:targets"].width - 2 * spreadsheet_constants.BOX_INNER
+        control = on["control:slope"]
+        assert control.kind == "control_select"
+        assert control.disabled is False
+        assert control.text == "unity-weight"
+        assert control.values == ("complexity-weight", "unity-weight", "simplicity-weight")
+        assert control.y > on["weight:target:0"].y
+        assert control.x == on["header:targets"].x + spreadsheet_constants.BOX_INNER
+        assert control.width == on["header:targets"].width - 2 * spreadsheet_constants.BOX_INNER
 
     def test_all_interval_greys_and_locks_the_weight_slope_chooser(self):
         on = {c.id: c for c in _with(scheme="minimax-S", weighting=True).cells}
-        ctrl = on["control:slope"]
-        assert ctrl.disabled is True
-        assert ctrl.text == "simplicity-weight"
+        control = on["control:slope"]
+        assert control.disabled is True
+        assert control.text == "simplicity-weight"
         assert on["caption:slope"].disabled is True, "its caption ('damage weight slope') greys with it — the disabled flag rides the caption too, # so the label is the same disabled grey as the locked value, not darker"
 
     def test_all_interval_greys_the_locked_target_chooser_caption_but_not_the_power_value(self):

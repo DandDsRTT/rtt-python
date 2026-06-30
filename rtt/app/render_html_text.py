@@ -135,13 +135,13 @@ def _plain_text_font(text: str, width: float) -> float:
 
 _RATIO_MAX_FONT = 13.0
 _RATIO_DIGIT_EM = _PLAIN_TEXT_GLYPH_EM["0"]
-_RATIO_PAD = 6.0
+_RATIO_PADDING = 6.0
 
 
 def _digit_fit_font(longest, width: float, max_font: float) -> float:
     if not longest:
         return max_font
-    fit = (width - _RATIO_PAD) / (longest * _RATIO_DIGIT_EM)
+    fit = (width - _RATIO_PADDING) / (longest * _RATIO_DIGIT_EM)
     return int(min(max_font, fit) * 10) / 10
 
 

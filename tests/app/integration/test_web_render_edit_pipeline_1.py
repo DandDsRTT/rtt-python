@@ -252,16 +252,16 @@ class TestCellEditPipeline:
         import math
 
         from rtt.app.render_html import _ratio_font
-        from rtt.app.render_html import _RATIO_DIGIT_EM, _RATIO_MAX_FONT, _RATIO_PAD
+        from rtt.app.render_html import _RATIO_DIGIT_EM, _RATIO_MAX_FONT, _RATIO_PADDING
         cell = spreadsheet_constants.COLUMN_WIDTH
         assert _ratio_font("2", "1", cell) == _RATIO_MAX_FONT
         assert _ratio_font("128", "125", cell) == _RATIO_MAX_FONT
-        overflow = math.floor((cell - _RATIO_PAD) / (_RATIO_DIGIT_EM * _RATIO_MAX_FONT)) + 1
+        overflow = math.floor((cell - _RATIO_PADDING) / (_RATIO_DIGIT_EM * _RATIO_MAX_FONT)) + 1
         for num, den in [("9" * overflow, "1"), ("1", "9" * overflow), ("9" * (overflow + 2), "1")]:
             font = _ratio_font(num, den, cell)
             assert font < _RATIO_MAX_FONT
             longest = max(len(num), len(den))
-            assert longest * _RATIO_DIGIT_EM * font + _RATIO_PAD <= cell + 1e-9
+            assert longest * _RATIO_DIGIT_EM * font + _RATIO_PADDING <= cell + 1e-9
         widths = [_ratio_font("9" * n, "1", cell) for n in range(1, 9)]
         assert widths == sorted(widths, reverse=True)
 

@@ -18,7 +18,7 @@ class ResolveDraft:
     show_charts: object = None
     show_tuning_ranges: object = None
     show_symbols: object = None
-    ctrl_symbol_height: object = None
+    control_symbol_height: object = None
     show_header_symbols: object = None
     show_units: object = None
     show_cell_units: object = None

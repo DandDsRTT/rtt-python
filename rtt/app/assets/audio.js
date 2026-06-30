@@ -98,8 +98,8 @@ window.rttAudio = (function () {
       finish: function () { loop = false; }
     };
   }
-  function ctrlEl(ctrl) {  // the single dummy-tile bank control (data-actrl only — no per-tile copies)
-    return document.querySelector('[data-actrl="' + ctrl + '"]');
+  function ctrlEl(control) {  // the single dummy-tile bank control (data-actrl only — no per-tile copies)
+    return document.querySelector('[data-actrl="' + control + '"]');
   }
   api.hit = function (tile, index, cents) {
     if (S.muted) return;                                  // muted: the kill switch is also the gate

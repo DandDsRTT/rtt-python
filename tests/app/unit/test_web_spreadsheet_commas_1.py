@@ -611,14 +611,14 @@ class TestWeightingLabels:
 
     def test_box_c_complexity_chooser_is_disabled_until_alt_complexity(self):
         on = {c.id: c for c in _with("TILT minimax-S", weighting=True, presets=True).cells}
-        ctrl = on["control:complexity"]
-        assert ctrl.kind == "control_select"
-        assert ctrl.disabled is True
+        control = on["control:complexity"]
+        assert control.kind == "control_select"
+        assert control.disabled is True
         assert on["caption:complexity"].disabled is True
-        assert ctrl.text == "lp (log-product)"
-        assert ctrl.values == ("lp (log-product)",)
-        assert ctrl.y > on["complexity:target:0"].y
-        assert ctrl.x == on["header:targets"].x + spreadsheet_constants.BOX_INNER
+        assert control.text == "lp (log-product)"
+        assert control.values == ("lp (log-product)",)
+        assert control.y > on["complexity:target:0"].y
+        assert control.x == on["header:targets"].x + spreadsheet_constants.BOX_INNER
         full = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True).cells}
         assert full["control:complexity"].disabled is False
         assert full["control:complexity"].values == tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)

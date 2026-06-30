@@ -33,7 +33,7 @@ from rtt.app.spreadsheet_constants import (
     ROW_HEIGHT,
     SYMBOL_HEIGHT,
     UNIT_HEIGHT,
-    WASH_PAD,
+    WASH_PADDING,
 )
 from rtt.app.spreadsheet_emit_model import EmitResult
 from rtt.app.spreadsheet_text import _bus_span, _sub, _subscript_coord
@@ -161,7 +161,7 @@ def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
             text = "𝒛" if size_row else f"{g}{_sub(i + 1)}"
             cells.append(CellBox(
                 f"matrix_label:row:{row_key}:{column_key}:{i}",
-                geometry.content_x[column_key] + query.etpick_left_pad(geometry, column_key) + query.handle_gutter_width(geometry, column_key), top(i),
+                geometry.content_x[column_key] + query.etpick_left_padding(geometry, column_key) + query.handle_gutter_width(geometry, column_key), top(i),
                 query.matrix_label_gutter_width(geometry, column_key), ROW_HEIGHT,
                 "matrix_label", text=text,
             ))
@@ -254,12 +254,12 @@ def _wash_bands(resolved, geometry, context):
     for _bid, row_key, column_key in geometry.tiles:
         if (row_key, column_key) not in geometry.declared_tiles or not query.tile_open(geometry, context.collapsed, row_key, column_key):
             continue
-        y, height = geometry.rows[row_key].tile_top - WASH_PAD, geometry.rows[row_key].tile_height + 2 * WASH_PAD
+        y, height = geometry.rows[row_key].tile_top - WASH_PADDING, geometry.rows[row_key].tile_height + 2 * WASH_PADDING
         for seg_key, (tile_x, tile_width), seg_groups in _wash_segments(resolved, geometry, row_key, column_key):
             groups = sorted(g for g in seg_groups if context.settings.get(f"{g}_colorization"))
             if not groups:
                 continue
-            x, width = tile_x - WASH_PAD, tile_width + 2 * WASH_PAD
+            x, width = tile_x - WASH_PADDING, tile_width + 2 * WASH_PADDING
             if len(groups) == 3:
                 bands.append((f"white:{row_key}:{seg_key}", x, y, width, height, None))
             else:
@@ -332,8 +332,8 @@ def _emit_tile_caption(cells, resolved, geometry, caption_ai, row_key, column_ke
     if resolved.flags.mnemonics and caption_ai:
         underlines += tuple((name.index(width), 1)
                             for width in ALL_INTERVAL_MNEMONICS.get((row_key, column_key), ()) if width in name)
-    cap_x, cap_width = query.tile_span_box(geometry, row_key, column_key)
-    cells.append(CellBox(f"caption:{row_key}:{column_key}", cap_x, center_y, cap_width, geometry.rows[row_key].caption,
+    caption_x, caption_width = query.tile_span_box(geometry, row_key, column_key)
+    cells.append(CellBox(f"caption:{row_key}:{column_key}", caption_x, center_y, caption_width, geometry.rows[row_key].caption,
                          "caption", text=name, underlines=underlines))
 
 

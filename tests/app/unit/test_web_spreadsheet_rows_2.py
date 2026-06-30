@@ -547,7 +547,7 @@ class TestRowAndColumnLabels:
                 < on["optimization:power:caption"].y)
         assert on["optimization:mean_damage"].width == spreadsheet_constants.COLUMN_WIDTH
         assert on["optimization:power"].width == spreadsheet_constants.COLUMN_WIDTH
-        mean_damage_col_x = box.x + spreadsheet_constants.OPTIMIZATION_PAD_L
+        mean_damage_col_x = box.x + spreadsheet_constants.OPTIMIZATION_PADDING_L
         assert on["optimization:mean_damage:symbol"].x == mean_damage_col_x
         assert on["optimization:mean_damage:symbol"].width == spreadsheet_constants.OPTIMIZATION_MEAN_DAMAGE_WIDTH
         assert on["optimization:mean_damage:caption"].x == mean_damage_col_x
@@ -555,7 +555,7 @@ class TestRowAndColumnLabels:
         mean_damage_r = mean_damage_col_x + spreadsheet_constants.OPTIMIZATION_MEAN_DAMAGE_WIDTH
         pow_col_x = mean_damage_r + spreadsheet_constants.OPTIMIZATION_COL_GAP
         assert on["optimization:power:caption"].x == pow_col_x
-        assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPTIMIZATION_POW_CAP_WIDTH - spreadsheet_constants.COLUMN_WIDTH) / 2
+        assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPTIMIZATION_POWER_CAP_WIDTH - spreadsheet_constants.COLUMN_WIDTH) / 2
         cap = on["optimization:power:caption"]
         assert cap.x > mean_damage_r and cap.x + cap.width < box.x + box.width
         assert box.width >= spreadsheet_constants.OPTIMIZATION_BOX_MIN_WIDTH

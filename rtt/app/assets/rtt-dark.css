@@ -170,9 +170,9 @@ body.rtt-dark .rtt-mnem-underline { text-decoration-color:#e3e6ea; }
 /* the audio bank controls (always present on the dummy tile) + the per-interval audio affordance: the
    light greys vanish on the dark panel/cells, so re-light the bank glyphs, dark-tone the hover + the
    sounding flash, and give the floating speaker the panel's surface. */
-body.rtt-dark .rtt-audio-ctrl { color:#9aa1a9; }
-body.rtt-dark .rtt-audio-ctrl:hover { color:#cfd4da; }
-body.rtt-dark .rtt-audio-ctrl.rtt-audio-on { background:#4e555d; color:#e3e6ea; }
+body.rtt-dark .rtt-audio-control { color:#9aa1a9; }
+body.rtt-dark .rtt-audio-control:hover { color:#cfd4da; }
+body.rtt-dark .rtt-audio-control.rtt-audio-on { background:#4e555d; color:#e3e6ea; }
 body.rtt-dark .rtt-speaker-dim::after { background:rgba(255,255,255,0.05); }
 body.rtt-dark .rtt-speaker-hover::after { background:rgba(255,255,255,0.11); }
 body.rtt-dark .rtt-speaker-on::after { background:rgba(255,255,255,0.22); }

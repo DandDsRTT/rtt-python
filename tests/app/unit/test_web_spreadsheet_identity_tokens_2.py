@@ -399,27 +399,27 @@ class TestPresetChoosers:
                                  ("preset:tuning:generators", "established tuning scheme", "block:tuning:generators"),
                                  ("preset:temperament", "temperament", "block:mapping"),
                                  ("preset:target", "target interval set scheme", "block:vector:targets")):
-            ctrl, box, panel = cells[cell_id], boxes[f"block:{cell_id}"], boxes[tile]
+            control, box, panel = cells[cell_id], boxes[f"block:{cell_id}"], boxes[tile]
             assert box.boxed is True, "a bordered box, not a plain tile"
-            assert box.x <= ctrl.x and box.x + box.width >= ctrl.x + ctrl.width
-            assert box.y <= ctrl.y and box.y + box.height >= ctrl.y + ctrl.height
+            assert box.x <= control.x and box.x + box.width >= control.x + control.width
+            assert box.y <= control.y and box.y + box.height >= control.y + control.height
             assert box.x >= panel.x - 0.5 and box.x + box.width <= panel.x + panel.width + 0.5, "the box stays WITHIN its tile -- never spilling out (the reported bug)"
             label_cell = cells[f"block:{cell_id}:label"]
             assert (
                 label_cell.kind == "caption"
                 and label_cell.text == label
                 and label_cell.align == "left"
-                and label_cell.y > ctrl.y
+                and label_cell.y > control.y
             )
         for fcid, form_block_id in (("formchooser:mapping", "block:preset:temperament"),
                            ("formchooser:comma_basis", "block:preset:temperament:commas")):
             assert f"block:{fcid}" not in boxes
-            ctrl, box = cells[fcid], boxes[form_block_id]
-            assert box.y <= ctrl.y and box.y + box.height >= ctrl.y + ctrl.height
+            control, box = cells[fcid], boxes[form_block_id]
+            assert box.y <= control.y and box.y + box.height >= control.y + control.height
             tdrop = cells[form_block_id.removeprefix("block:")]
-            assert ctrl.y > tdrop.y
+            assert control.y > tdrop.y
             flbl = cells[f"{fcid}:label"]
-            assert flbl.kind == "caption" and flbl.text == "form" and flbl.align == "left" and flbl.y > ctrl.y
+            assert flbl.kind == "caption" and flbl.text == "form" and flbl.align == "left" and flbl.y > control.y
 
     def test_a_long_control_label_widens_its_narrow_tile(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))

@@ -602,7 +602,7 @@ class TestWebAppSmoke2:
         assert "<svg" in render_html._example_html("tuning_ranges")
 
     def test_audio_bank_leads_with_a_mute_kill_switch_defaulting_to_on(self):
-        assert [ctrl for ctrl, *_ in page_assets._AUDIO_BANK] == ["mute", "wave", "mode", "hold", "root"], "the bank's first control is mute: it doubles as the kill switch (its engine fn stops all # audio) and the engage gate (muting is what blocks a clicked cell from sounding). Audio now # starts ON (unmuted), so the bank shows the plain (volume_up) glyph; muting shows the slash"
+        assert [control for control, *_ in page_assets._AUDIO_BANK] == ["mute", "wave", "mode", "hold", "root"], "the bank's first control is mute: it doubles as the kill switch (its engine fn stops all # audio) and the engage gate (muting is what blocks a clicked cell from sounding). Audio now # starts ON (unmuted), so the bank shows the plain (volume_up) glyph; muting shows the slash"
         assert page_assets._AUDIO_BANK[0][2] == "toggleMute"
         mute_up, mute_off = page_assets._AUDIO_GLYPHS["mute"]
         assert "volume_up" in mute_up and "volume_off" in mute_off

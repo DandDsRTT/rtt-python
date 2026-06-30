@@ -144,8 +144,8 @@ class TestDefaultPage:
 
     def test_audio_bank_is_always_live_with_a_leading_mute(self, default_page: User) -> None:
         assert "rtt-bank-off" not in next(iter(default_page.find(marker="audiobank").elements))._classes, "the waveform / play-mode / hold / 1-1 bank lives in the frozen audio-settings box and is now # ALWAYS live — mute (its leading control) is the on/off gate, so there is no audio Show toggle # and no greyed bank. All five controls render, mute first"
-        for ctrl in ("mute", "wave", "mode", "hold", "root"):
-            assert default_page.find(marker=f"audioctrl:{ctrl}").elements
+        for control in ("mute", "wave", "mode", "hold", "root"):
+            assert default_page.find(marker=f"audioctrl:{control}").elements
 
     @pytest.mark.parametrize("cell, region", [
         ("header:generators", "columnheadinner"),
