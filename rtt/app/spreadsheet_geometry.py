@@ -24,19 +24,19 @@ from rtt.app.spreadsheet_constants import (
     BOX_OUTER,
     BRACKET_WIDTH,
     CAPTION_LINE,
-    CBOX_NODROP_WIDTH,
-    CBOX_WIDTH,
     COLUMN_WIDTH,
-    LBOX_DIM_WIDTH,
+    COMPLEXITY_BOX_NODROP_WIDTH,
+    COMPLEXITY_BOX_WIDTH,
     MAX_CAPTION_LINES,
-    OPT_BOX_MIN_WIDTH,
-    PBOX_WIDTH,
+    OPTIMIZATION_BOX_MIN_WIDTH,
     PLAIN_TEXT_EDIT_HEIGHT,
     PLAIN_TEXT_HEIGHT,
+    PRESCALING_BOX_DIM_WIDTH,
+    PRESET_BOX_WIDTH,
     PRESET_WIDTH,
     SCHEME_CTRL_WIDTH,
     SYMBOL_FONT,
-    TBOX_WIDTH,
+    TARGET_BOX_WIDTH,
     V_SPLIT_GAP,
 )
 from rtt.app.spreadsheet_text import (
@@ -207,16 +207,16 @@ def symbol_floor(geometry, resolved, key: str):
 
 def control_floor(resolved, context, key: str):
     floor = 0
-    if key == ("superspace_primes" if resolved.flags.superspace else "primes") and resolved.flags.lbox_show:
-        floor = PBOX_WIDTH if resolved.flags.presets else LBOX_DIM_WIDTH + 2 * BOX_INNER
-    if key == "targets" and resolved.flags.cbox_show:
-        cbox_width = CBOX_WIDTH if resolved.flags.presets else CBOX_NODROP_WIDTH
-        floor = max(floor, cbox_width + 2 * BOX_INNER)
+    if key == ("superspace_primes" if resolved.flags.superspace else "primes") and resolved.flags.prescaling_box_show:
+        floor = PRESET_BOX_WIDTH if resolved.flags.presets else PRESCALING_BOX_DIM_WIDTH + 2 * BOX_INNER
+    if key == "targets" and resolved.flags.complexity_box_show:
+        complexity_box_width = COMPLEXITY_BOX_WIDTH if resolved.flags.presets else COMPLEXITY_BOX_NODROP_WIDTH
+        floor = max(floor, complexity_box_width + 2 * BOX_INNER)
     if key == "targets" and resolved.flags.presets and context.settings["all_interval"]:
-        floor = max(floor, TBOX_WIDTH)
+        floor = max(floor, TARGET_BOX_WIDTH)
     if (key == "targets" and resolved.flags.optimization and "row:damage" not in context.collapsed
             and "tile:damage:targets" not in context.collapsed):
-        floor = max(floor, OPT_BOX_MIN_WIDTH)
+        floor = max(floor, OPTIMIZATION_BOX_MIN_WIDTH)
     labels = ([label for _n, resolved, c, label in PRESETS + PRESET_COPIES if c == key and label] if resolved.flags.presets else [])
     labels += [label for _n, resolved, c, label in FORM_CHOOSERS if c == key and label] if resolved.flags.form_controls else []
     if labels:

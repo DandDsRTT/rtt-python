@@ -112,7 +112,7 @@ class PageBuilder:
                 elif "presets" in line:
                     with (
                         ui.element("div").classes("rtt-tile-line rtt-tile-line-wide"),
-                        ui.element("div").classes("rtt-tile-cbox"),
+                        ui.element("div").classes("rtt-tile-complexity-box"),
                     ):
                         self._tile_named_part("presets")
                 else:

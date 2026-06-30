@@ -17,19 +17,19 @@ from rtt.app.spreadsheet_constants import (
     BOX_TITLE_HEIGHT,
     BRACKET_WIDTH,
     CAPTION_LINE,
-    CBOX_DROP_WIDTH,
-    CBOX_SLOT_WIDTH,
     CHART_HEIGHT,
     COLUMN_WIDTH,
-    OPT_COL_GAP,
-    OPT_MEAN_DAMAGE_WIDTH,
-    OPT_PAD_B,
-    OPT_PAD_L,
-    OPT_PAD_R,
-    OPT_PAD_T,
-    OPT_POW_CAP_WIDTH,
-    OPT_TITLE_GAP,
-    OPT_TITLE_HEIGHT,
+    COMPLEXITY_BOX_DROP_WIDTH,
+    COMPLEXITY_BOX_SLOT_WIDTH,
+    OPTIMIZATION_COL_GAP,
+    OPTIMIZATION_MEAN_DAMAGE_WIDTH,
+    OPTIMIZATION_PAD_B,
+    OPTIMIZATION_PAD_L,
+    OPTIMIZATION_PAD_R,
+    OPTIMIZATION_PAD_T,
+    OPTIMIZATION_POW_CAP_WIDTH,
+    OPTIMIZATION_TITLE_GAP,
+    OPTIMIZATION_TITLE_HEIGHT,
     PRESET_HEIGHT,
     RANGE_CHART_HEIGHT,
     RANGE_GAP,
@@ -60,11 +60,11 @@ def emit_tuning(resolved, geometry, context) -> EmitResult:
     _emit_weight_row(cells, region_boxes, chart_tiles, resolved, geometry, context)
     _emit_damage_row(cells, chart_tiles, chart_indicators, resolved, geometry, context)
     _emit_charts(cells, chart_tiles, chart_indicators, geometry, context)
-    gtm_box = _emit_tuning_ranges_box(cells, resolved, geometry, context)
-    opt_box = _emit_optimization_box(cells, resolved, geometry, context)
+    tuning_ranges_box = _emit_tuning_ranges_box(cells, resolved, geometry, context)
+    optimization_box = _emit_optimization_box(cells, resolved, geometry, context)
     approach_frame, approach_box = _emit_approach_box(cells, geometry)
     return EmitResult(cells=tuple(cells), region_boxes=tuple(region_boxes),
-                      extra={"gtm_box": gtm_box, "opt_box": opt_box,
+                      extra={"tuning_ranges_box": tuning_ranges_box, "optimization_box": optimization_box,
                              "approach_frame": approach_frame, "approach_box": approach_box})
 
 
@@ -216,8 +216,8 @@ def _emit_tuning_detempering_rows(cells, chart_tiles, resolved, geometry, contex
 
 
 def _emit_lbox_control(cells, region_boxes, resolved, geometry, context) -> None:
-    if geometry.lbox_ctrl:
-        box_top = geometry.rows["prescaling"].tile_top + geometry.rows["prescaling"].tile_height - geometry.lbox_extra + RANGE_GAP
+    if geometry.prescaling_box_ctrl:
+        box_top = geometry.rows["prescaling"].tile_top + geometry.rows["prescaling"].tile_height - geometry.prescaling_box_extra + RANGE_GAP
         bx, by = control_region(region_boxes, geometry, "block:diminuator", "superspace_primes" if resolved.flags.superspace else "primes",
                                 box_top, PRESET_HEIGHT + CAPTION_LINE)
         emit_option_check(cells, "diminuator", "replace diminuator",
@@ -225,17 +225,17 @@ def _emit_lbox_control(cells, region_boxes, resolved, geometry, context) -> None
 
 
 def _emit_cbox_controls(cells, region_boxes, resolved, geometry, context) -> None:
-    if not geometry.cbox_ctrl:
+    if not geometry.complexity_box_ctrl:
         return
-    box_top = geometry.rows["complexity"].tile_top + geometry.rows["complexity"].tile_height - geometry.cbox_extra + RANGE_GAP
+    box_top = geometry.rows["complexity"].tile_top + geometry.rows["complexity"].tile_height - geometry.complexity_box_extra + RANGE_GAP
     tx, control_y = control_region(region_boxes, geometry, "block:complexity", "targets", box_top, ROW_HEIGHT + resolved.scalars.ctrl_symbol_height + 3 * CAPTION_LINE)
     sym_y = control_y + ROW_HEIGHT
     cap_y = sym_y + resolved.scalars.ctrl_symbol_height
     cap_height = 3 * CAPTION_LINE
-    slot_width = CBOX_SLOT_WIDTH
+    slot_width = COMPLEXITY_BOX_SLOT_WIDTH
     q_slot_x = tx
     if resolved.flags.presets:
-        drop_width = CBOX_DROP_WIDTH
+        drop_width = COMPLEXITY_BOX_DROP_WIDTH
         complexity_key = service.complexity_name_of(context.tuning_scheme)
         if resolved.labels.realized_prescaler is None:
             complexity_key = "custom"
@@ -249,7 +249,7 @@ def _emit_cbox_controls(cells, region_boxes, resolved, geometry, context) -> Non
         cells.append(CellBox("caption:complexity", tx, control_y + PRESET_HEIGHT, drop_width,
                              CAPTION_LINE, "caption", text="predefined complexities",
                              align="left", disabled=complexity_locked))
-        q_slot_x = tx + drop_width + OPT_COL_GAP
+        q_slot_x = tx + drop_width + OPTIMIZATION_COL_GAP
     q_x = q_slot_x + (slot_width - COLUMN_WIDTH) / 2
     q_text = _format_power(service.complexity_norm_power(context.tuning_scheme))
     q_kind = "powerinput" if resolved.flags.alt_complexity else "powerdisplay"
@@ -259,7 +259,7 @@ def _emit_cbox_controls(cells, region_boxes, resolved, geometry, context) -> Non
     cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_width, cap_height, "caption",
                          text="interval complexity norm power"))
     if service.is_all_interval(context.tuning_scheme):
-        dual_slot_x = q_slot_x + slot_width + OPT_COL_GAP
+        dual_slot_x = q_slot_x + slot_width + OPTIMIZATION_COL_GAP
         dual_x = dual_slot_x + (slot_width - COLUMN_WIDTH) / 2
         dual_text = _format_power(service.dual_norm_power(context.tuning_scheme))
         cells.append(CellBox("control:dual", dual_x, control_y, COLUMN_WIDTH, ROW_HEIGHT, "powerdisplay", text=dual_text))
@@ -312,11 +312,11 @@ def _emit_charts(cells, chart_tiles, chart_indicators, geometry, context) -> Non
 
 
 def _emit_tuning_ranges_box(cells, resolved, geometry, context):
-    gtm_box = None
-    if geometry.gtm_chart:
+    tuning_ranges_box = None
+    if geometry.tuning_ranges_chart:
         chosen = resolved.tuning.tuning_map.monotone_generator_range if context.range_mode == "monotone" else resolved.tuning.tuning_map.tradeoff_generator_range
         gens_x, gens_width = geometry.column_x["gens"], geometry.column_width["gens"]
-        control_y = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_height - geometry.gtm_extra + RANGE_GAP
+        control_y = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_height - geometry.tuning_ranges_extra + RANGE_GAP
         cells.append(CellBox("rangetitle:tuning:gens", gens_x, control_y + BOX_INNER, gens_width, BOX_TITLE_HEIGHT, "boxtitle",
                              text="tuning ranges", align="left"))
         chart_y = control_y + BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
@@ -326,30 +326,30 @@ def _emit_tuning_ranges_box(cells, resolved, geometry, context):
                              decimals=resolved.flags.decimals))
         cells.append(CellBox("rangemode:tuning:gens", gens_x, chart_y + RANGE_CHART_HEIGHT + RANGE_GAP, gens_width, RANGE_MODE_HEIGHT,
                              "rangemode", text=context.range_mode))
-        gtm_box = (gens_x, control_y, gens_width, 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + RANGE_CHART_HEIGHT + RANGE_GAP + RANGE_MODE_HEIGHT)
-    return gtm_box
+        tuning_ranges_box = (gens_x, control_y, gens_width, 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + RANGE_CHART_HEIGHT + RANGE_GAP + RANGE_MODE_HEIGHT)
+    return tuning_ranges_box
 
 
 def _emit_optimization_box(cells, resolved, geometry, context):
-    opt_box = None
-    if geometry.opt_ctrl:
+    optimization_box = None
+    if geometry.optimization_ctrl:
         ox = geometry.column_x["targets"]
         box_width = geometry.column_width["targets"]
         box_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
-                   - geometry.opt_extra + RANGE_GAP)
-        title_top = box_top + OPT_PAD_T
-        content_top = title_top + OPT_TITLE_HEIGHT + OPT_TITLE_GAP
+                   - geometry.optimization_extra + RANGE_GAP)
+        title_top = box_top + OPTIMIZATION_PAD_T
+        content_top = title_top + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP
         sym_top = content_top + ROW_HEIGHT
         cap_top = sym_top + resolved.scalars.ctrl_symbol_height
-        cap_band = geometry.opt_cap_lines * CAPTION_LINE
-        body_height = ROW_HEIGHT + resolved.scalars.ctrl_symbol_height + cap_band + OPT_PAD_B
-        mean_damage_x = ox + OPT_PAD_L
-        mean_damage_val_x = mean_damage_x + (OPT_MEAN_DAMAGE_WIDTH - COLUMN_WIDTH) / 2
-        pow_slot_x = mean_damage_x + OPT_MEAN_DAMAGE_WIDTH + OPT_COL_GAP
-        pow_x = pow_slot_x + (OPT_POW_CAP_WIDTH - COLUMN_WIDTH) / 2
+        cap_band = geometry.optimization_cap_lines * CAPTION_LINE
+        body_height = ROW_HEIGHT + resolved.scalars.ctrl_symbol_height + cap_band + OPTIMIZATION_PAD_B
+        mean_damage_x = ox + OPTIMIZATION_PAD_L
+        mean_damage_val_x = mean_damage_x + (OPTIMIZATION_MEAN_DAMAGE_WIDTH - COLUMN_WIDTH) / 2
+        pow_slot_x = mean_damage_x + OPTIMIZATION_MEAN_DAMAGE_WIDTH + OPTIMIZATION_COL_GAP
+        pow_x = pow_slot_x + (OPTIMIZATION_POW_CAP_WIDTH - COLUMN_WIDTH) / 2
         mean_damage = _power_mean(resolved.tuning.target_sizes.damage, _displayed_mean_damage_power(context))
         power = _format_power(_displayed_optimization_power(context))
-        cells.append(CellBox("optimization:title", ox, title_top, box_width, OPT_TITLE_HEIGHT, "boxtitle",
+        cells.append(CellBox("optimization:title", ox, title_top, box_width, OPTIMIZATION_TITLE_HEIGHT, "boxtitle",
                              text="optimization"))
         cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COLUMN_WIDTH, ROW_HEIGHT, "tuningvalue",
                              text=service.cents(mean_damage, resolved.flags.decimals)))
@@ -358,9 +358,9 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         if context.tuning_optimized:
             mean_damage_symbol = f"min({mean_damage_symbol})"
         if resolved.flags.symbols:
-            cells.append(CellBox("optimization:mean_damage:symbol", mean_damage_x, sym_top, OPT_MEAN_DAMAGE_WIDTH, SYMBOL_HEIGHT,
+            cells.append(CellBox("optimization:mean_damage:symbol", mean_damage_x, sym_top, OPTIMIZATION_MEAN_DAMAGE_WIDTH, SYMBOL_HEIGHT,
                                  "symbol", text=mean_damage_symbol))
-        cells.append(CellBox("optimization:mean_damage:caption", mean_damage_x, cap_top, OPT_MEAN_DAMAGE_WIDTH, cap_band,
+        cells.append(CellBox("optimization:mean_damage:caption", mean_damage_x, cap_top, OPTIMIZATION_MEAN_DAMAGE_WIDTH, cap_band,
                              "caption", text=geometry.mean_damage_caption))
         power_locked = resolved.scalars.all_interval or not resolved.flags.alt_complexity
         cells.append(CellBox("optimization:power", pow_x, content_top, COLUMN_WIDTH, ROW_HEIGHT,
@@ -368,10 +368,10 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         if resolved.flags.symbols:
             cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COLUMN_WIDTH, SYMBOL_HEIGHT,
                                  "symbol", text="𝑝"))
-        cells.append(CellBox("optimization:power:caption", pow_x + (COLUMN_WIDTH - OPT_POW_CAP_WIDTH) / 2, cap_top,
-                             OPT_POW_CAP_WIDTH, CAPTION_LINE, "caption", text="optimization power"))
-        opt_box = (ox, box_top, box_width, OPT_PAD_T + OPT_TITLE_HEIGHT + OPT_TITLE_GAP + body_height)
-    return opt_box
+        cells.append(CellBox("optimization:power:caption", pow_x + (COLUMN_WIDTH - OPTIMIZATION_POW_CAP_WIDTH) / 2, cap_top,
+                             OPTIMIZATION_POW_CAP_WIDTH, CAPTION_LINE, "caption", text="optimization power"))
+        optimization_box = (ox, box_top, box_width, OPTIMIZATION_PAD_T + OPTIMIZATION_TITLE_HEIGHT + OPTIMIZATION_TITLE_GAP + body_height)
+    return optimization_box
 
 
 def _emit_approach_box(cells, geometry):
@@ -381,12 +381,12 @@ def _emit_approach_box(cells, geometry):
         ax = geometry.column_x["targets"]
         aw = geometry.column_width["targets"]
         box_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
-                   - geometry.opt_extra - geometry.approach_extra + RANGE_GAP)
+                   - geometry.optimization_extra - geometry.approach_extra + RANGE_GAP)
         cells.append(CellBox("optimization:approach:title", ax, box_top + BOX_INNER, aw, BOX_TITLE_HEIGHT, "boxtitle",
                              text="nonstandard domain approach", align="left"))
         radio_top = box_top + BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
-        approach_box = (ax + OPT_PAD_L, radio_top,
-                        aw - OPT_PAD_L - OPT_PAD_R, APPROACH_RADIO_HEIGHT)
+        approach_box = (ax + OPTIMIZATION_PAD_L, radio_top,
+                        aw - OPTIMIZATION_PAD_L - OPTIMIZATION_PAD_R, APPROACH_RADIO_HEIGHT)
         approach_frame = (ax, box_top, aw, 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + APPROACH_RADIO_HEIGHT)
     return approach_frame, approach_box
 

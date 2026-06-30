@@ -547,18 +547,18 @@ class TestRowAndColumnLabels:
                 < on["optimization:power:caption"].y)
         assert on["optimization:mean_damage"].width == spreadsheet_constants.COLUMN_WIDTH
         assert on["optimization:power"].width == spreadsheet_constants.COLUMN_WIDTH
-        mean_damage_col_x = box.x + spreadsheet_constants.OPT_PAD_L
+        mean_damage_col_x = box.x + spreadsheet_constants.OPTIMIZATION_PAD_L
         assert on["optimization:mean_damage:symbol"].x == mean_damage_col_x
-        assert on["optimization:mean_damage:symbol"].width == spreadsheet_constants.OPT_MEAN_DAMAGE_WIDTH
+        assert on["optimization:mean_damage:symbol"].width == spreadsheet_constants.OPTIMIZATION_MEAN_DAMAGE_WIDTH
         assert on["optimization:mean_damage:caption"].x == mean_damage_col_x
-        assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet_constants.OPT_MEAN_DAMAGE_WIDTH - spreadsheet_constants.COLUMN_WIDTH) / 2
-        mean_damage_r = mean_damage_col_x + spreadsheet_constants.OPT_MEAN_DAMAGE_WIDTH
-        pow_col_x = mean_damage_r + spreadsheet_constants.OPT_COL_GAP
+        assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet_constants.OPTIMIZATION_MEAN_DAMAGE_WIDTH - spreadsheet_constants.COLUMN_WIDTH) / 2
+        mean_damage_r = mean_damage_col_x + spreadsheet_constants.OPTIMIZATION_MEAN_DAMAGE_WIDTH
+        pow_col_x = mean_damage_r + spreadsheet_constants.OPTIMIZATION_COL_GAP
         assert on["optimization:power:caption"].x == pow_col_x
-        assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPT_POW_CAP_WIDTH - spreadsheet_constants.COLUMN_WIDTH) / 2
+        assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPTIMIZATION_POW_CAP_WIDTH - spreadsheet_constants.COLUMN_WIDTH) / 2
         cap = on["optimization:power:caption"]
         assert cap.x > mean_damage_r and cap.x + cap.width < box.x + box.width
-        assert box.width >= spreadsheet_constants.OPT_BOX_MIN_WIDTH
+        assert box.width >= spreadsheet_constants.OPTIMIZATION_BOX_MIN_WIDTH
         assert on["optimization:power:caption"].height == spreadsheet_constants.CAPTION_LINE, "the caption occupies a single line (so 'optimization power' sits right under 𝑝, not a # two-line band that floats it lower)"
         assert on["optimization:title"].y > box.y
         assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].height
@@ -581,7 +581,7 @@ class TestRowAndColumnLabels:
         s["optimization"] = True
         blk = {b.id: b for b in spreadsheet.build(base, s).blocks}
         box = blk["block:optimization:box"]
-        assert box.width >= spreadsheet_constants.OPT_BOX_MIN_WIDTH
+        assert box.width >= spreadsheet_constants.OPTIMIZATION_BOX_MIN_WIDTH
         assert box.width == blk["block:damage:targets"].width - 2 * spreadsheet_constants.PAD
 
     def test_a_manual_generator_tuning_drives_the_displayed_maps(self):

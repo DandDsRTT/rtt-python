@@ -34,8 +34,8 @@ class ResolveDraft:
     weight_unit: object = None
     complexity_unit: object = None
     damage_unit: object = None
-    _lbox_show: object = None
-    _cbox_show: object = None
+    _prescaling_box_show: object = None
+    _complexity_box_show: object = None
     show_generator_detempering: object = None
     show_interest: object = None
     gridded_values: object = None
