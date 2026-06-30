@@ -4,16 +4,16 @@ window.rttFreeze = (function () {
     for (var i = 0; i < bodies.length; i++) {
       var b = bodies[i], app = b.closest('.rtt-app');
       if (!app) continue;
-      var inner = app.querySelector('.rtt-colhead-inner');
+      var inner = app.querySelector('.rtt-column-head-inner');
       if (inner) inner.style.transform = 'translateX(' + (-b.scrollLeft) + 'px)';
       // The colfill twins ride the horizontal scroll EXACTLY (so each rests glued under its live column
       // rule — clamping X would un-glue them in a left overscroll and ghost a second set of verticals).
       // The vertical axis is clamped non-negative: iOS WebKit reports scrollTop negative through a top
       // overscroll (desktop holds it at 0), and only the clamp keeps the twins PUT so they bridge the
       // bared strip instead of riding the content down and baring an empty band (CSS extends them far
-      // upward — see .rtt-colfill-inner — so an arbitrarily long pull still reads unbroken).
+      // upward — see .rtt-column-fill-inner — so an arbitrarily long pull still reads unbroken).
       var sy = Math.max(0, b.scrollTop);
-      var fill = app.querySelector('.rtt-colfill-inner');
+      var fill = app.querySelector('.rtt-column-fill-inner');
       if (fill) fill.style.transform = 'translate(' + (-b.scrollLeft) + 'px,' + (-sy) + 'px)';
       app.classList.toggle('rtt-scrolled-y', b.scrollTop > 0);
       app.classList.toggle('rtt-scrolled-x', b.scrollLeft > 0);

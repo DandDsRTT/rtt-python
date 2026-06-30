@@ -127,7 +127,7 @@ html, body { overscroll-behavior-x: none; }
            overflow:hidden; background:#c0c0c0; font-family:var(--rtt-serif); }
 
 /* The grid pane is split so the body's scrollbars stop AT the frozen titles (like the settings
-   pane): the column-title strip (.rtt-colhead) and the corner sit OUTSIDE the body scroller
+   pane): the column-title strip (.rtt-column-head) and the corner sit OUTSIDE the body scroller
    (.rtt-gridbody), which holds only the value cells + the sticky-left row band. So the body's
    vertical scrollbar starts BELOW the column titles, and its horizontal scrollbar spans only the
    body — neither runs up alongside a frozen title. The strip can't ride the body's scroll via CSS
@@ -140,23 +140,23 @@ html, body { overscroll-behavior-x: none; }
    sizing the pane larger would only show it until the board overflows. The board (.rtt-gridcontent)
    holds the cells at native coords shifted up by freeze_y (the strip's height), so a body cell lands
    at the same pane position it always had. */
-.rtt-colhead { position:absolute; top:var(--pad); left:var(--pad); right:var(--pad); z-index:4; overflow:hidden;
+.rtt-column-head { position:absolute; top:var(--pad); left:var(--pad); right:var(--pad); z-index:4; overflow:hidden;
                background:#c0c0c0; box-sizing:border-box; box-shadow:0 1px 0 var(--seam-y,transparent); }
-.rtt-colhead-inner { position:absolute; top:0; left:0; }
+.rtt-column-head-inner { position:absolute; top:0; left:0; }
 /* A top overscroll slides the body scroller bodily DOWN, baring the pane behind it as an empty band
    between the frozen column strip and the body. This layer sits BEHIND the scroller (first child of
    the pane, no z-index) holding a fixed twin of every full-height column rule; the bared band reveals
    those twins so the gridlines read unbroken through the bounce. It hugs the body's left inset and
    rides the same horizontal scroll as the column strip, so each twin sits exactly under its live rule
    at rest (hidden behind it) and only shows once the scroller pulls away. Pure backdrop — no input. */
-.rtt-colfill { position:absolute; left:var(--pad); right:0; bottom:0; overflow:hidden; pointer-events:none; }
-.rtt-colfill-inner { position:absolute; top:0; left:0; }
+.rtt-column-fill { position:absolute; left:var(--pad); right:0; bottom:0; overflow:hidden; pointer-events:none; }
+.rtt-column-fill-inner { position:absolute; top:0; left:0; }
 /* will-change only WHILE scrolling (rtt-scrolling, set by freeze.js): a permanent will-change keeps these
    strips on their own GPU layer at rest, and Chrome re-rasters that layer a beat out of sync with the body
    under page-zoom — the column titles visibly trail the grid. Don't move it back onto the rules above. */
-.rtt-app.rtt-scrolling .rtt-colhead-inner,
-.rtt-app.rtt-scrolling .rtt-colfill-inner { will-change:transform; }
-/* The left mirror of .rtt-colfill: the row band is position:sticky, so a top overscroll slides it DOWN
+.rtt-app.rtt-scrolling .rtt-column-head-inner,
+.rtt-app.rtt-scrolling .rtt-column-fill-inner { will-change:transform; }
+/* The left mirror of .rtt-column-fill: the row band is position:sticky, so a top overscroll slides it DOWN
    with the content and opens a gap below the fixed corner — breaking the frozen-left edge and baring
    the body's rules through it. This fixed grey strip sits behind the body at the frozen-column inset
    and carries the same seam, so the bared gap reads as unbroken frozen background + edge. */
@@ -180,7 +180,7 @@ html, body { overscroll-behavior-x: none; }
   /* No bounce on touch means the colfill bridge is never bared — and the twins sync one frame late, so
      on iOS they peek out as a ghost-echo on a fast horizontal scroll. Hide the layer here; desktop, which
      keeps its bounce and needs the bridge, keeps it visible. */
-  .rtt-colfill { visibility:hidden; }
+  .rtt-column-fill { visibility:hidden; }
 }
 /* isolate the board so the washes' mix-blend-mode composes only with the board's own layers
    (the white wash bases), not the grey pane behind it */
@@ -193,7 +193,7 @@ html, body { overscroll-behavior-x: none; }
 /* overflow:hidden clips the row branching it now holds — the trunks/left-buses + the ± controls,
    and a − hover zone that drops rightward over the spine — to the band's [0, freeze_x] width, so
    none of it spills over the scrolling body to its right (the column strip clips the same way via
-   .rtt-colhead). The body copy of each row gridline picks up past the seam, continuous. */
+   .rtt-column-head). The body copy of each row gridline picks up past the seam, continuous. */
 .rtt-rowband { position:sticky; left:0; z-index:5; background:#c0c0c0; box-sizing:border-box;
                pointer-events:auto; overflow:hidden; box-shadow:1px 0 0 var(--seam-x,transparent); }
 /* the seam on each frozen region's body-facing edge stays invisible until the body is scrolled on
@@ -203,7 +203,7 @@ html, body { overscroll-behavior-x: none; }
    they stop a pixel short of the seam). A shadow reserves no layout, so the frozen content + its wash
    copies sit flush to the seam — no rest-state gap — and a per-axis custom property (--seam-y/--seam-x,
    unset = transparent) lights the shadow only when that axis scrolls, still shifting nothing. */
-.rtt-app.rtt-scrolled-y .rtt-colhead, .rtt-app.rtt-scrolled-y .rtt-corner { --seam-y:var(--seam); }
+.rtt-app.rtt-scrolled-y .rtt-column-head, .rtt-app.rtt-scrolled-y .rtt-corner { --seam-y:var(--seam); }
 .rtt-app.rtt-scrolled-x .rtt-rowband, .rtt-app.rtt-scrolled-x .rtt-corner,
 .rtt-app.rtt-scrolled-x .rtt-rowfill { --seam-x:var(--seam); }
 /* A top-row / left-column wash overhangs the seam, so besides the body copy it renders one into the
@@ -212,7 +212,7 @@ html, body { overscroll-behavior-x: none; }
    scrolls on an axis the first row/column has left the seam, so the frozen strip would stain the gap
    with a stale colour over the wrong tiles. Drop it then — the seam rule above takes that edge —
    paired on the same axis as the seam (column strip + corner on y, row band + corner on x). */
-.rtt-app.rtt-scrolled-y .rtt-colhead .rtt-wash, .rtt-app.rtt-scrolled-y .rtt-colhead .rtt-washbase,
+.rtt-app.rtt-scrolled-y .rtt-column-head .rtt-wash, .rtt-app.rtt-scrolled-y .rtt-column-head .rtt-washbase,
 .rtt-app.rtt-scrolled-y .rtt-corner .rtt-wash, .rtt-app.rtt-scrolled-y .rtt-corner .rtt-washbase,
 .rtt-app.rtt-scrolled-x .rtt-rowband .rtt-wash, .rtt-app.rtt-scrolled-x .rtt-rowband .rtt-washbase,
 .rtt-app.rtt-scrolled-x .rtt-corner .rtt-wash, .rtt-app.rtt-scrolled-x .rtt-corner .rtt-washbase { display:none; }
@@ -298,7 +298,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    absolutely centred on the cell (= the column gridline) so that overflow spills EVENLY
    to both sides — a balanced overhang into the gaps, not clamped against one neighbour the
    way a flow-positioned flex child is. Tight line-height keeps the stacked lines close. */
-.rtt-colheader { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+.rtt-column-header { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
                  font-size:13px; font-weight:bold; color:#000; white-space:pre;
                  text-align:center; line-height:1.1; }
 .rtt-row-label { font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
@@ -859,7 +859,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-drag-handle:hover { color:#555; }
 .rtt-drag-handle:active { cursor:grabbing; }
 .rtt-drag-handle .rtt-grip { font-size:18px; pointer-events:none; }
-.rtt-col-handle .rtt-grip { font-size:15px; }  /* the column grip rides a shorter band */
+.rtt-column-handle .rtt-grip { font-size:15px; }  /* the column grip rides a shorter band */
 /* the "back to scheme" button on the projection / generator-embedding tiles — a 3D button: a
    light-top/dark-bottom face with a crisp inset bevel (white highlight top-left, soft shadow
    bottom-right) just inside the black cell border, so it reads as raised off the row; greyed
@@ -960,16 +960,16 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation.rtt-operation-disabled,
 .rtt-fraction-cell.rtt-active .rtt-ratio-operation.rtt-operation-disabled { color:#bbb; pointer-events:none; cursor:default; }
 
-/* drag-and-drop reorder grips. The GRIP (.rtt-colgrip) is the shared .rtt-drag-handle ⠿, riding the
+/* drag-and-drop reorder grips. The GRIP (.rtt-column-grip) is the shared .rtt-drag-handle ⠿, riding the
    reserved GRIP_BAND room on the fan — along each column's sub-axis gridline, between the − above
    (at the branch point) and the first tile below. It's BOTH drag source and drop target (the same
    self-contained per-element pattern as drag-to-combine): drop one column's grip on another to move
-   it, or onto the list's "add" zone (.rtt-coldrop) to append. z-index:5 keeps it above the
+   it, or onto the list's "add" zone (.rtt-column-drop) to append. z-index:5 keeps it above the
    cells/gridlines beneath. The "add" zone is drop-only — a gridline target (the trunk when the list
    is empty) with no ⠿ and no grab cursor, so dropping into a list is always "drop on the gridline". */
-.rtt-colgrip { z-index:5; }
-.rtt-colgrip .rtt-grip { font-size:15px; }
-.rtt-coldrop { z-index:5; }
+.rtt-column-grip { z-index:5; }
+.rtt-column-grip .rtt-grip { font-size:15px; }
+.rtt-column-drop { z-index:5; }
 
 /* the fold toggle fills its cell wrap; its boxed glyph is an inline SVG (see .rtt-glyph) */
 .rtt-toggle { width:100%; height:100%; }

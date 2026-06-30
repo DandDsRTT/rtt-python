@@ -233,7 +233,7 @@ class TestBrowserBehavior:
                 "() => { const body = document.querySelector('.rtt-gridbody');"
                 " if (body.scrollWidth <= body.clientWidth) return 'no-overflow';"
                 " body.scrollLeft = 40; window.rttFreeze.update();"
-                " return (document.querySelector('.rtt-colhead-inner') || {}).style.transform; }"
+                " return (document.querySelector('.rtt-column-head-inner') || {}).style.transform; }"
             )
             assert synced == "translateX(-40px)", f"frozen header did not track the scroll: {synced!r}"
             assert not errors

@@ -88,7 +88,7 @@ class TestDefaultPage:
             classes = getattr(element, "_classes", [])
             if "rtt-zoomable" in classes:
                 assert not any(c in classes for c in
-                               ("rtt-colheader", "rtt-row-label", "rtt-symbol", "rtt-box-title"))
+                               ("rtt-column-header", "rtt-row-label", "rtt-symbol", "rtt-box-title"))
 
     def test_value_cell_help_folds_into_the_zoom_magnifier(self, default_page: User) -> None:
         mapping = _wrap(default_page, "cell:mapping:0:0")

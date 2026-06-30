@@ -375,18 +375,18 @@ class TestWebAppSmoke1:
         assert "border-top:var(--line-w) solid var(--c-gridline)" in page_assets._CSS
 
     def test_colfill_bounce_layer_sits_behind_the_scroller_carries_no_zindex_and_hugs_the_body_inset(self):
-        fill = _css_rule(".rtt-colfill")
+        fill = _css_rule(".rtt-column-fill")
         assert "z-index" not in fill
         assert "pointer-events:none" in fill
         assert "left:var(--pad)" in fill and "bottom:0" in fill
 
     def test_colfill_is_visible_on_desktop_so_the_top_bounce_bridge_shows_and_hidden_only_on_touch(self):
-        assert "visibility:hidden" not in _css_rule(".rtt-colfill"), "desktop keeps its bounce and pins scrollTop at 0 through it, so the bridge shows only by being # visible at rest (no scroll signal marks the bounce, hence no scrollTop<0 overpull gate); touch # removes the bounce, so the bridge never bares and is hidden there to kill the iOS late-sync echo"
+        assert "visibility:hidden" not in _css_rule(".rtt-column-fill"), "desktop keeps its bounce and pins scrollTop at 0 through it, so the bridge shows only by being # visible at rest (no scroll signal marks the bounce, hence no scrollTop<0 overpull gate); touch # removes the bounce, so the bridge never bares and is hidden there to kill the iOS late-sync echo"
         assert ".rtt-app.rtt-overpull-y" not in page_assets._CSS
         assert "rtt-overpull-y" not in page_assets._FREEZE_JS
-        touch = re.search(r"@media \(hover: none\) and \(pointer: coarse\) \{(.*?\.rtt-colfill[^}]*\})\s*\}",
+        touch = re.search(r"@media \(hover: none\) and \(pointer: coarse\) \{(.*?\.rtt-column-fill[^}]*\})\s*\}",
                           page_assets._CSS, re.S)
-        assert touch and re.search(r"\.rtt-colfill\s*\{[^}]*visibility:hidden", touch.group(1))
+        assert touch and re.search(r"\.rtt-column-fill\s*\{[^}]*visibility:hidden", touch.group(1))
 
 
 class TestWebAppSmoke2:
@@ -443,9 +443,9 @@ class TestWebAppSmoke2:
 
     def test_titles_freeze_outside_or_sticky_within_the_body_scroller(self):
         assert "position:sticky" in _css_rule(".rtt-rowband") and "left:0" in _css_rule(".rtt-rowband"), "The frozen titles sit so the body's scrollbars stop at them. The row band freezes by # position:sticky to the left of the body scroller; the column-title strip and the corner sit # OUTSIDE the scroller (position:absolute on the pane), so the body's vertical scrollbar starts # below the strip. They stack above the body, the corner above both edges"
-        assert "position:absolute" in _css_rule(".rtt-colhead")
+        assert "position:absolute" in _css_rule(".rtt-column-head")
         assert "position:absolute" in _css_rule(".rtt-corner")
-        assert _z(".rtt-cell") < _z(".rtt-colhead") < _z(".rtt-rowband") < _z(".rtt-corner")
+        assert _z(".rtt-cell") < _z(".rtt-column-head") < _z(".rtt-rowband") < _z(".rtt-corner")
 
     def test_grid_body_reserves_its_grey_margin_as_scroll_padding(self):
         rule = _css_rule(".rtt-gridbody")
@@ -474,7 +474,7 @@ class TestWebAppSmoke2:
     def test_row_band_wrapper_passes_clicks_through_and_the_strip_clips(self):
         assert "pointer-events:none" in _css_rule(".rtt-band"), "the row band rides a full-height .rtt-band wrapper that lets clicks fall through to the body # (pointer-events:none); the sticky inner re-enables them and is opaque #c0c0c0, so the body is # hidden behind the row titles as it scrolls under them. The column strip clips its translated # inner (overflow:hidden) so titles scrolled off the left don't spill over the corner / sidebar"
         assert "pointer-events:auto" in page_assets._CSS
-        assert "overflow:hidden" in _css_rule(".rtt-colhead")
+        assert "overflow:hidden" in _css_rule(".rtt-column-head")
 
     def test_grid_scrolls_in_its_own_body_pane_not_the_page(self):
         assert "overflow:auto" in _css_rule(".rtt-gridbody"), "the grid scrolls inside .rtt-gridbody (overflow:auto) — its own pane, within the grid region # .rtt-app. .rtt-app hugs the grid (flex:0 1 auto — shrinks to the room left of the sidebar # rather than filling it) and only clips (overflow:hidden), hosting the absolutely-placed frozen # regions; the page never scrolls. So a grid bigger than the pane scrolls in the body, scrollbars # bounded there, right of the sidebar"
@@ -489,12 +489,12 @@ class TestWebAppSmoke2:
 
     def test_seam_appears_only_when_the_body_is_scrolled(self):
         css = page_assets._CSS
-        colhead, rowband = _css_rule(".rtt-colhead"), _css_rule(".rtt-rowband")
+        colhead, rowband = _css_rule(".rtt-column-head"), _css_rule(".rtt-rowband")
         assert "box-shadow:0 1px 0 var(--seam-y" in colhead
         assert "border-bottom" not in colhead, "NOT a layout-reserving border"
         assert "box-shadow:1px 0 0 var(--seam-x" in rowband
         assert "border-right" not in rowband
-        assert ".rtt-app.rtt-scrolled-y .rtt-colhead" in css and "--seam-y:var(--seam)" in css
+        assert ".rtt-app.rtt-scrolled-y .rtt-column-head" in css and "--seam-y:var(--seam)" in css
         assert ".rtt-app.rtt-scrolled-x .rtt-rowband" in css and "--seam-x:var(--seam)" in css
         assert f"--seam:{page_assets._SEAM}" in css
 
@@ -512,20 +512,20 @@ class TestWebAppSmoke2:
 
     def test_frozen_wash_copies_show_only_at_rest_dropping_once_the_body_scrolls(self):
         css = page_assets._CSS
-        for selection in (".rtt-app.rtt-scrolled-y .rtt-colhead .rtt-wash",
-                    ".rtt-app.rtt-scrolled-y .rtt-colhead .rtt-washbase",
+        for selection in (".rtt-app.rtt-scrolled-y .rtt-column-head .rtt-wash",
+                    ".rtt-app.rtt-scrolled-y .rtt-column-head .rtt-washbase",
                     ".rtt-app.rtt-scrolled-x .rtt-rowband .rtt-wash",
                     ".rtt-app.rtt-scrolled-x .rtt-rowband .rtt-washbase"):
             assert selection in css
-        m = re.search(r"rtt-scrolled-y \.rtt-colhead \.rtt-wash[\s\S]*?\{([^}]*)\}", css)
+        m = re.search(r"rtt-scrolled-y \.rtt-column-head \.rtt-wash[\s\S]*?\{([^}]*)\}", css)
         assert m and "display:none" in m.group(1), "the copies are dropped, not merely restyled"
 
     def test_freeze_script_syncs_the_column_strip_and_toggles_the_seam_on_body_scroll(self):
         js = page_assets._FREEZE_JS
         assert ".rtt-gridbody" in js
         assert "scrollTop" in js and "scrollLeft" in js
-        assert ".rtt-colhead-inner" in js and "translateX" in js
-        assert ".rtt-colfill-inner" in js
+        assert ".rtt-column-head-inner" in js and "translateX" in js
+        assert ".rtt-column-fill-inner" in js
         assert "rtt-scrolled-x" in js and "rtt-scrolled-y" in js
         assert "addEventListener('scroll'" in js
         assert "ResizeObserver" not in js and "scroll-timeline" not in js
@@ -534,9 +534,9 @@ class TestWebAppSmoke2:
         assert "Math.max(0, b.scrollLeft)" not in js
 
     def test_frozen_strips_are_promoted_to_a_layer_only_while_scrolling(self):
-        assert "will-change" not in _css_rule(".rtt-colhead-inner"), "no PERMANENT compositor layer: a constant will-change keeps the frozen strip on its own GPU # layer at rest, which a browser page-zoom re-rasters out of sync with the body (the column # titles trail the grid). Promotion is confined to active scroll instead"
-        assert "will-change" not in _css_rule(".rtt-colfill-inner")
-        scrolling = _css_rule(".rtt-app.rtt-scrolling .rtt-colhead-inner,\n.rtt-app.rtt-scrolling .rtt-colfill-inner")
+        assert "will-change" not in _css_rule(".rtt-column-head-inner"), "no PERMANENT compositor layer: a constant will-change keeps the frozen strip on its own GPU # layer at rest, which a browser page-zoom re-rasters out of sync with the body (the column # titles trail the grid). Promotion is confined to active scroll instead"
+        assert "will-change" not in _css_rule(".rtt-column-fill-inner")
+        scrolling = _css_rule(".rtt-app.rtt-scrolling .rtt-column-head-inner,\n.rtt-app.rtt-scrolling .rtt-column-fill-inner")
         assert "will-change:transform" in scrolling
         js = page_assets._FREEZE_JS
         assert "rtt-scrolling" in js
