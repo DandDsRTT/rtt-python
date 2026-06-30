@@ -265,18 +265,18 @@ def _setting(page_builder, key):
 def _visual_toggle(page_builder, key):
     on = _setting(page_builder, key)
     cls = f"rtt-vis-ctrl rtt-vis-{_VIS_KIND[key]}" + ("" if on else " rtt-vis-off")
-    el = (
+    element = (
         ui.html(_VISUAL_ICON[key])
         .classes(cls)
         .mark(f"visctrl:{key}")
         .tooltip(tooltips.SHOW_HELP[key])
     )
-    el.on(
+    element.on(
         "click",
         lambda _=None, k=key: page_builder._edits.on_show_toggle(k, not _setting(page_builder, k)),
     )
-    page_builder._chrome.vis_toggles[key] = el
-    return el
+    page_builder._chrome.vis_toggles[key] = element
+    return element
 
 
 def _box_label(*lines):

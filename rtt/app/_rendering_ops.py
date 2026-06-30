@@ -56,11 +56,11 @@ def render_lines(r, layout, seen) -> None:
                 if r._revirtualizing:
                     cls += " rtt-noentry"
                 r._rec.entities[element_id] = EntityHandles(
-                    el=ui.element("div").classes(cls).props(f'data-eid="{element_id}"')
+                    element=ui.element("div").classes(cls).props(f'data-eid="{element_id}"')
                 )
         sty = _line_style(line, shift)
         if r._rec.entity(element_id).styled != sty:
-            r._rec.entities[element_id].el.style(sty)
+            r._rec.entities[element_id].element.style(sty)
             r._rec.entities[element_id].styled = sty
 
     for line in layout.lines:
@@ -106,7 +106,7 @@ def render_blocks(r, layout, seen) -> None:
                 if r._revirtualizing:
                     cls += " rtt-noentry"
                 r._rec.entities[element_id] = EntityHandles(
-                    el=ui.element("div")
+                    element=ui.element("div")
                     .classes(cls)
                     .props(f'data-eid="{element_id}"')
                     .mark(element_id)
@@ -115,7 +115,7 @@ def render_blocks(r, layout, seen) -> None:
         if bl.tint in _TINTS:
             style += f"; background:var(--wash-{bl.tint})"
         if r._rec.entity(element_id).styled != style:
-            r._rec.entities[element_id].el.style(style)
+            r._rec.entities[element_id].element.style(style)
             r._rec.entities[element_id].styled = style
 
     for bl in layout.blocks:
@@ -130,9 +130,9 @@ def make_cell_if_new(r, cell_box, container, structural) -> None:
         with r._chrome.cell_parents[container]:
             r._rec.make_cell(cell_box)
         if r._revirtualizing:
-            r._rec.entities[cell_box.id].el.classes(add="rtt-noentry")
+            r._rec.entities[cell_box.id].element.classes(add="rtt-noentry")
         if structural and not cell_box.pending and cell_box.id in r._newborn_ids:
-            r._rec.entities[cell_box.id].el.classes(add="rtt-withhold")
+            r._rec.entities[cell_box.id].element.classes(add="rtt-withhold")
 
 
 def update_cell_content(r, cell_box) -> None:
@@ -166,7 +166,7 @@ def place_cell(r, cell_box, container, paint) -> None:
     grow = _CELL_BORDER_W if cell_box.kind in GRIDVALUE_KINDS else 0
     placement = f"left:0; top:0; transform:translate({cell_box.x}px,{top}px); width:{cell_box.width + grow}px; height:{cell_box.height + grow}px"
     if r._rec.entity(cell_box.id).styled != placement:
-        r._rec.entities[cell_box.id].el.style(placement)
+        r._rec.entities[cell_box.id].element.style(placement)
         r._rec.entities[cell_box.id].styled = placement
     update_cell_content(r, cell_box)
     amber, red = rings

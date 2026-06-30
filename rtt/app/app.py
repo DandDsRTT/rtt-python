@@ -146,8 +146,8 @@ class _Page:
             show_settings.CHAPTER_TITLES[chapter]
         ) >= 25 else self.chrome.chapter_reading.classes(remove="rtt-chapter-reading-narrow")
 
-        def _gate(el, cls, hidden):
-            el.classes(add=cls) if hidden else el.classes(remove=cls)
+        def _gate(element, cls, hidden):
+            element.classes(add=cls) if hidden else element.classes(remove=cls)
 
         for key, parts in self.chrome.tile_parts.items():
             for part in parts:

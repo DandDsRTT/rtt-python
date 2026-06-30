@@ -144,14 +144,14 @@ class TestChoosers:
     async def test_target_chooser_shows_the_prompt_when_an_interval_is_overridden(self, user: User) -> None:
         await _enable(user, "presets")
         await user.should_see(marker="cell:vector:targets:0:0")
-        num, sel = _target_preset(user)
-        assert "display-value" not in sel._props
+        num, selection = _target_preset(user)
+        assert "display-value" not in selection._props
         assert num.value not in (None, "-")
         _cell_child(user, "cell:vector:targets:0:0").set_value("3")
         _commit(user, "cell:vector:targets:0:0")
         await user.should_see(marker="preset:target")
-        num, sel = _target_preset(user)
-        assert sel._props.get("display-value") == "-"
+        num, selection = _target_preset(user)
+        assert selection._props.get("display-value") == "-"
         assert num.value == "-"
 
     async def test_selecting_a_target_family_clears_an_interval_override(self, user: User) -> None:
@@ -161,12 +161,12 @@ class TestChoosers:
         _cell_child(user, "cell:vector:targets:0:0").set_value("3")
         _commit(user, "cell:vector:targets:0:0")
         await user.should_see(marker="preset:target")
-        _, sel = _target_preset(user)
-        assert sel._props.get("display-value") == "-"
-        sel.set_value("TILT")
+        _, selection = _target_preset(user)
+        assert selection._props.get("display-value") == "-"
+        selection.set_value("TILT")
         await user.should_see(marker="cell:vector:targets:0:0")
-        _, sel = _target_preset(user)
-        assert "display-value" not in sel._props
+        _, selection = _target_preset(user)
+        assert "display-value" not in selection._props
         assert _cell_child(user, "cell:vector:targets:0:0").value == original
 
     async def test_weighting_complexity_chooser_is_disabled_when_lp_only(self, user: User) -> None:
@@ -359,18 +359,18 @@ class TestChoosers:
         await _enable(user, "presets")
         user.find(kind=ui.checkbox, content="optimization").click()
         user.find(kind=ui.checkbox, content="weighting").click()
-        num, sel = _target_preset(user)
-        assert sel.enabled and "display-value" not in sel._props
+        num, selection = _target_preset(user)
+        assert selection.enabled and "display-value" not in selection._props
         user.find(kind=ui.checkbox, content="all-interval").click()
         _cell_child(user, "control:all_interval").set_value(True)
         await user.should_see(marker="preset:target")
-        num, sel = _target_preset(user)
-        assert not sel.enabled and not num.enabled
-        assert sel._props.get("display-value") == "-" and num.value == "-"
+        num, selection = _target_preset(user)
+        assert not selection.enabled and not num.enabled
+        assert selection._props.get("display-value") == "-" and num.value == "-"
         _cell_child(user, "control:all_interval").set_value(False)
         await user.should_see(marker="preset:target")
-        num, sel = _target_preset(user)
-        assert sel.enabled and "display-value" not in sel._props
+        num, selection = _target_preset(user)
+        assert selection.enabled and "display-value" not in selection._props
 
     async def test_hovering_the_all_interval_checkbox_previews_collapsing_to_the_primes(self, user: User) -> None:
         await user.open("/")

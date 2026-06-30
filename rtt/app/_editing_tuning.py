@@ -210,9 +210,11 @@ def _target_limit_preview(edit_controller, typed=None):
         or g.source != "preset:target"
     ):
         return
-    num, sel = edit_controller._rec.cells["preset:target"].chooser.select
+    num, selection = edit_controller._rec.cells["preset:target"].chooser.select
     raw = num.value if typed is None else typed
-    out = service.resolve_target_limit(sel.value, raw, edit_controller._editor.state.domain_basis)
+    out = service.resolve_target_limit(
+        selection.value, raw, edit_controller._editor.state.domain_basis
+    )
     edit_controller._apply_outcome(
         out, lambda: edit_controller._editor.set_target_spec(out.value), preview=True
     )

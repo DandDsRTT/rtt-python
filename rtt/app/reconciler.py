@@ -162,7 +162,7 @@ class _Reconciler:
         return _recon_cells.cur_gesture(self._gestures)
 
     def drop(self, element_id: str) -> None:
-        self.entities[element_id].el.delete()
+        self.entities[element_id].element.delete()
         self.cells.pop(element_id, None)
         self.entities.pop(element_id, None)
 
@@ -180,7 +180,7 @@ class _Reconciler:
             if cell_box.audio is not None:
                 _recon_cells.tag_audio(wrap, cell_box)
         _recon_cells.attach_hover_help(self, wrap, cell_box)
-        self.entities[cell_box.id].el = wrap
+        self.entities[cell_box.id].element = wrap
         self.cells[cell_box.id].kind = cell_box.kind
         _stamp_value(wrap, cell_box)
         _recon_cells.wire_cell_input(self, wrap, cell_box)
@@ -191,9 +191,9 @@ class _Reconciler:
             handlers.update(self, cell_box)
         if cell_box.unit:
             if self.cells[cell_box.id].cell_unit is None:
-                with self.entities[cell_box.id].el:
+                with self.entities[cell_box.id].element:
                     self.cells[cell_box.id].cell_unit = ui.html("").classes("rtt-cellunit")
-                self.entities[cell_box.id].el.classes(add="rtt-cell-united")
+                self.entities[cell_box.id].element.classes(add="rtt-cell-united")
             if self.cells[cell_box.id].cell_unit_text != (cell_box.unit, cell_box.width):
                 self.cells[cell_box.id].cell_unit.set_content(_bold_units(cell_box.unit))
                 self.cells[cell_box.id].cell_unit.style(
@@ -204,10 +204,10 @@ class _Reconciler:
             self.cells[cell_box.id].cell_unit.delete()
             self.cells[cell_box.id].cell_unit = None
             self.cells[cell_box.id].cell_unit_text = None
-            self.entities[cell_box.id].el.classes(remove="rtt-cell-united")
+            self.entities[cell_box.id].element.classes(remove="rtt-cell-united")
         if cell_box.audio is not None:
-            _recon_cells.tag_audio(self.entities[cell_box.id].el, cell_box)
-        _stamp_value(self.entities[cell_box.id].el, cell_box)
+            _recon_cells.tag_audio(self.entities[cell_box.id].element, cell_box)
+        _stamp_value(self.entities[cell_box.id].element, cell_box)
 
     def handles(self, cell_id: str) -> CellHandles:
         return self.cells.get(cell_id, _EMPTY_HANDLES)

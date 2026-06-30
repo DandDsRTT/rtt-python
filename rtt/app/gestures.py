@@ -66,17 +66,17 @@ class GestureController:
         return (amber | static_amber) - pending, (red | static_red) - pending
 
     def paint_cell(self, element_id, amber, red):
-        el = self._rec.entity(element_id).el
-        if el is None:
+        element = self._rec.entity(element_id).element
+        if element is None:
             return
         rsig = (element_id in amber, element_id in red)
         if self._rec.entity(element_id).ring_sig == rsig:
             return
-        el.classes(
+        element.classes(
             add="rtt-preview-change" if element_id in amber else "",
             remove="" if element_id in amber else "rtt-preview-change",
         )
-        el.classes(
+        element.classes(
             add="rtt-preview-remove" if element_id in red else "",
             remove="" if element_id in red else "rtt-preview-remove",
         )

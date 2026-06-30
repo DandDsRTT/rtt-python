@@ -63,20 +63,20 @@ class TestDefaultPage:
         assert grip._props.get("draggable")
 
     def test_settings_and_controls_carry_hover_tooltips(self, default_page: User) -> None:
-        tips = [el.text for el in default_page.client.elements.values() if isinstance(el, Tooltip)]
+        tips = [element.text for element in default_page.client.elements.values() if isinstance(element, Tooltip)]
         assert any("name caption" in t for t in tips)
         mapping = next(iter(default_page.find(marker="cell:mapping:0:0").elements))
         assert "approximate this prime" in mapping._props.get("data-zoomhelp", "")
 
     def test_hover_tooltips_wait_before_appearing(self, default_page: User) -> None:
-        tips = [el for el in default_page.client.elements.values() if isinstance(el, Tooltip)]
+        tips = [element for element in default_page.client.elements.values() if isinstance(element, Tooltip)]
         assert tips
-        assert all(int(el._props.get("delay", 0)) >= 500 for el in tips)
+        assert all(int(element._props.get("delay", 0)) >= 500 for element in tips)
 
     def test_every_hover_tooltip_hides_instantly_so_a_reflow_cannot_strand_it(self, default_page: User) -> None:
-        tips = [el for el in default_page.client.elements.values() if isinstance(el, Tooltip)]
+        tips = [element for element in default_page.client.elements.values() if isinstance(element, Tooltip)]
         assert tips
-        assert all(int(el._props.get("transition-duration", 300)) == 0 for el in tips)
+        assert all(int(element._props.get("transition-duration", 300)) == 0 for element in tips)
 
     def test_every_gridded_value_cell_is_zoomable(self, default_page: User) -> None:
         assert "rtt-zoomable" in _wrap(default_page, "tuning:prime:0")._classes, "hovering ANY gridded value pops the zoom magnifier (_ZOOM_JS clones the cell, scaled): the cell # wraps carry .rtt-zoomable for the engine to find them. Both a read-only value (the octave's # 1200.000 tuning) and an editable one (a mapping entry) get it — the magnifier is for every value, # not just the read-only ones. Structural cells (a row/column header) never become zoomable"
@@ -84,8 +84,8 @@ class TestDefaultPage:
         assert "rtt-zoomable" in _wrap(default_page, "qgen:0")._classes
 
     def test_structural_cells_are_not_zoomable(self, default_page: User) -> None:
-        for el in default_page.client.elements.values():
-            classes = getattr(el, "_classes", [])
+        for element in default_page.client.elements.values():
+            classes = getattr(element, "_classes", [])
             if "rtt-zoomable" in classes:
                 assert not any(c in classes for c in
                                ("rtt-colheader", "rtt-rowlabel", "rtt-symbol", "rtt-boxtitle"))

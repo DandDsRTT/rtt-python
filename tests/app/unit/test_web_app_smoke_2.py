@@ -391,9 +391,9 @@ class TestWebAppSmoke4:
         assert page_assets._TOUR_STEPS, "no tour steps defined"
         for step in page_assets._TOUR_STEPS:
             assert step["title"] and step["body"], f"empty copy: {step}"
-            sel = step["sel"]
-            assert isinstance(sel, str)
-            assert sel == "" or sel.startswith("."), f"selector should be a class, got {sel!r}"
+            selection = step["sel"]
+            assert isinstance(selection, str)
+            assert selection == "" or selection.startswith("."), f"selector should be a class, got {selection!r}"
         assert page_assets._TOUR_JS.strip(), "tour.js not loaded"
         assert ".rtt-tour-card" in page_assets._CSS, "tour.css not folded into the page stylesheet"
         assert "tour" in tooltips.CHROME_HELP

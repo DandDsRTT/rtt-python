@@ -243,7 +243,7 @@ def update_gridvalue(reconciler, cell_box: spreadsheet.CellBox) -> None:
         reconciler.cells[cell_box.id].value.input.value = text
     if spec.pending:
         target = (
-            reconciler.entities[cell_box.id].el
+            reconciler.entities[cell_box.id].element
             if spec.ratio_allowed
             else reconciler.cells[cell_box.id].value.input
         )

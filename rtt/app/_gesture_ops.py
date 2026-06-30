@@ -245,9 +245,9 @@ def preview_subpick_pick(gesture_controller, cell_id, value, index) -> None:
 
 def hover_value_chooser(gesture_controller, cell_id, index) -> None:
     entry = gesture_controller._rec.handles(cell_id).chooser.select
-    sel = entry[1] if isinstance(entry, tuple) else entry
+    selection = entry[1] if isinstance(entry, tuple) else entry
     if cell_id == "preset:target":
-        family = _option_key(sel, index)
+        family = _option_key(selection, index)
         if family not in presets.TARGET_SETS:
             chooser_unhover(gesture_controller)
             return
@@ -256,7 +256,7 @@ def hover_value_chooser(gesture_controller, cell_id, index) -> None:
             gesture_controller, cell_id, lambda: gesture_controller._editor.set_target_spec(spec)
         )
         return
-    apply = gesture_controller._edits.candidate_apply(cell_id, _option_key(sel, index))
+    apply = gesture_controller._edits.candidate_apply(cell_id, _option_key(selection, index))
     if apply is None:
         chooser_unhover(gesture_controller)
         return
@@ -337,21 +337,23 @@ def rank_remove_unhover(gesture_controller):
 
 def on_chooser_hover(gesture_controller, cell_id, detail):
     entry = gesture_controller._rec.handles(cell_id).chooser.select
-    sel = entry[1] if isinstance(entry, tuple) else entry
-    if not isinstance(sel, ui.select):
+    selection = entry[1] if isinstance(entry, tuple) else entry
+    if not isinstance(selection, ui.select):
         return
     index = _hover_index(detail)
     if index is not None and gesture_controller._rec.handles(cell_id).popup_state == "closed":
         return
     if cell_id.startswith(("etpick:", "commapick:")):
         subpick_hover_preview(
-            gesture_controller, cell_id, _option_key(sel, index) if index is not None else None
+            gesture_controller,
+            cell_id,
+            _option_key(selection, index) if index is not None else None,
         )
         return
     if cell_id.startswith("preset:temperament"):
-        temperament_hover_preview(gesture_controller, _option_key(sel, index))
+        temperament_hover_preview(gesture_controller, _option_key(selection, index))
         return
-    if index is None or not sel.enabled:
+    if index is None or not selection.enabled:
         chooser_unhover(gesture_controller)
         return
     hover_value_chooser(gesture_controller, cell_id, index)

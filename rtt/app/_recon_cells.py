@@ -28,9 +28,9 @@ def target_preset_values(editor):
     return limit, family
 
 
-def tag_audio(el, cell_box) -> None:
+def tag_audio(element, cell_box) -> None:
     tile, index, cents = cell_box.audio
-    el.classes(add="rtt-spk").props(
+    element.classes(add="rtt-spk").props(
         f'data-audio="{tile}" data-idx="{index}" data-cents="{cents:.6f}"'
     )
 

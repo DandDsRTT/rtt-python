@@ -157,10 +157,10 @@ def _approx_markers(user: User, cell_id: str) -> list:
     wrap = next(iter(user.find(marker=cell_id).elements))
     found, stack = [], list(wrap.default_slot.children)
     while stack:
-        el = stack.pop()
-        if "rtt-approx" in getattr(el, "_classes", []):
-            found.append(el)
-        slot = getattr(el, "default_slot", None)
+        element = stack.pop()
+        if "rtt-approx" in getattr(element, "_classes", []):
+            found.append(element)
+        slot = getattr(element, "default_slot", None)
         stack.extend(slot.children if slot is not None else [])
     return found
 
@@ -352,8 +352,8 @@ def _target_preset(user: User):
     """The (numeric-limit, TILT/OLD family-select) pair of the target chooser — the one
     preset that nests two controls in a flex div inside its cell wrap."""
     container = _cell_child(user, "preset:target")
-    num, sel = container.default_slot.children
-    return num, sel
+    num, selection = container.default_slot.children
+    return num, selection
 
 
 def _preset_tooltip_text(user: User, cell_id: str):
@@ -374,8 +374,8 @@ def _renders_inside(user: User, cell_marker: str, region_marker: str) -> bool:
     return False
 
 
-def _px(el, prop: str) -> float:
-    return float(el._style.get(prop).rstrip("px"))
+def _px(element, prop: str) -> float:
+    return float(element._style.get(prop).rstrip("px"))
 
 
 _ENABLE_HTML_CELLS = [

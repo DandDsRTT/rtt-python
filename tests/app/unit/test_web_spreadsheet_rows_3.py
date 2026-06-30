@@ -361,20 +361,20 @@ class TestRetuningChartsAndGenMap:
         on = {c.id: c for c in _with(tuning_ranges=True).cells}
         off = {c.id for c in _with(tuning_ranges=False).cells}
         assert "rangemode:tuning:gens" not in off
-        sel, ch = on["rangemode:tuning:gens"], on["rangechart:tuning:gens"]
-        assert sel.kind == "rangemode"
-        assert sel.text == "monotone", "the live mode (default), so the renderer can preset it"
-        assert sel.x == ch.x
-        assert sel.y >= ch.y + ch.height
+        selection, ch = on["rangemode:tuning:gens"], on["rangechart:tuning:gens"]
+        assert selection.kind == "rangemode"
+        assert selection.text == "monotone", "the live mode (default), so the renderer can preset it"
+        assert selection.x == ch.x
+        assert selection.y >= ch.y + ch.height
 
     def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector(self):
         layout = _with(tuning_ranges=True)
         cells = {c.id: c for c in layout.cells}
         pan = {b.id: b for b in layout.blocks}["block:tuning:gens"]
-        v, ch, sel = cells["tuning:gen:0"], cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
+        v, ch, selection = cells["tuning:gen:0"], cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
         assert pan.x <= ch.x and pan.x + pan.width >= ch.x + ch.width
         assert pan.y <= v.y
-        assert pan.y + pan.height >= sel.y + sel.height
+        assert pan.y + pan.height >= selection.y + selection.height
         assert "block:tuning:gens" in {b.id for b in _with(tuning_ranges=False).blocks}
         assert "block:gentuning" not in {b.id for b in layout.blocks}
 
@@ -384,11 +384,11 @@ class TestRetuningChartsAndGenMap:
         boxes = {b.id: b for b in layout.blocks}
         title = cells["rangetitle:tuning:gens"]
         assert title.kind == "boxtitle" and title.text == "tuning ranges"
-        chart, sel = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
+        chart, selection = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
         assert title.y < chart.y
         assert title.x == cells["header:gens"].x
         box = boxes["block:tuning:rangesbox"]
-        assert box.y <= title.y and box.y + box.height >= sel.y + sel.height
+        assert box.y <= title.y and box.y + box.height >= selection.y + selection.height
 
     def test_tuning_ranges_draws_a_bordered_box_around_the_chart_and_selector(self):
         layout = _with(tuning_ranges=True)
@@ -397,9 +397,9 @@ class TestRetuningChartsAndGenMap:
         assert "block:tuning:rangesbox" in boxes
         box = boxes["block:tuning:rangesbox"]
         assert box.boxed is True, "a bordered box, not a plain grey tile"
-        ch, sel = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
+        ch, selection = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
         assert box.x <= ch.x and box.x + box.width >= ch.x + ch.width
-        assert box.y <= ch.y and box.y + box.height >= sel.y + sel.height
+        assert box.y <= ch.y and box.y + box.height >= selection.y + selection.height
         assert "block:tuning:rangesbox" not in {b.id for b in _with(tuning_ranges=False).blocks}
 
     def test_tuning_ranges_box_reserves_row_height_so_following_rows_clear_it(self):

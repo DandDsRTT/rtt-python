@@ -456,8 +456,8 @@ class TestChooserHoverPreviews:
         assert "rtt-preview-change" in _wrap_classes(user, "retune:target:1")
         assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:1")
         assert _ro_value(user, "retune:target:1") != before
-        _num, sel = _target_preset(user)
-        assert sel.value == "TILT", "chooser held steady, not flipped"
+        _num, selection = _target_preset(user)
+        assert selection.value == "TILT", "chooser held steady, not flipped"
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
         assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:1")
         assert _ro_value(user, "retune:target:1") == before
