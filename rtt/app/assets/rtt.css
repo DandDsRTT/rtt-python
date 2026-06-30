@@ -3,6 +3,16 @@
    navigate away. The board's own scroller adds overscroll-behavior-x:contain (see .rtt-gridbody). */
 html, body { overscroll-behavior-x: none; }
 
+/* The editable cells' base fill, dimmed off full white so the active-cell highlight has lightness
+   headroom in light mode (dark mode sets --cell-bg in rtt-dark.css). --cell-fill mixes that base
+   toward white by the per-cell highlight amount --rtt-hl, so an editable value cell lightens on its
+   own painted surface; it resolves --rtt-hl in each cell's own context at use time. */
+/* the editable cells' resting fill, dimmed off white so the highlight has headroom in light mode;
+   --hl-scale lightens LESS in dark (dark cell text is light, see rtt-dark.css). These are theme-level
+   so they live here; --hl and --cell-fill, which read the PER-CELL --rtt-hl, must be declared on
+   .rtt-cell (not here) or var(--rtt-hl) would bind to :root's 0 and inherit frozen. */
+:root { --cell-bg:#f4f6f9; --hl-scale:1; }
+
 /* the grid's frozen top-left corner holds the undo/redo/reset/share/tour button bank (the app
    title moved to the settings sidebar). The light-grey bank hugs its buttons with an equal 6px
    margin on all four sides and stands 28px tall, the same as the sidebar hamburger — it does NOT
@@ -268,7 +278,20 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
              opacity:1;
              transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
 .rtt-cell { position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
-            opacity:1; transition:transform var(--t), opacity var(--t); }
+            opacity:1; transition:transform var(--t), opacity var(--t);
+            /* declared HERE so var(--rtt-hl) resolves to THIS cell's highlight (set by _ACTIVECELL_JS)
+               rather than :root's 0. --hl is the effective white-tint alpha; --cell-fill is the
+               editable fill lightened by it over the resting --cell-bg. */
+            --hl:calc(var(--rtt-hl, 0) * var(--hl-scale, 1));
+            --cell-fill:linear-gradient(rgba(255,255,255,var(--hl)),rgba(255,255,255,var(--hl))), var(--cell-bg); }
+/* EVERY gridded value cell tints toward white by --hl on the WRAP, so editable cells (where the wrap
+   IS the box — fraccell/deccell/cellinput) and read-only cells (transparent over the tile) share one
+   resting look and one highlight, instead of an editable fill that reads darker than its neighbours.
+   Editable wraps add the dimmed --cell-bg base (so they read as a fillable box and the highlight has
+   headroom); read-only cells stay transparent over the tile. Inner controls are transparent so the
+   wrap tint shows through (see below). */
+.rtt-cell.rtt-gridval:not(.rtt-cell-input) { background:rgba(255,255,255,var(--hl)); transition:background 70ms linear; }
+.rtt-cell.rtt-gridval.rtt-cell-input { background:var(--cell-fill); transition:background 70ms linear; }
 /* titles carry explicit "\n" breaks (column_header) so a multi-word header stacks to two
    lines (e.g. "domain" / "primes"); `pre` honors them AND never auto-wraps, so a title
    wider than its (content-hugging) column overflows it rather than rewrapping. It is
@@ -653,7 +676,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-cellinput .q-field__control { position:absolute !important; top:0; left:0;
             width:calc(100% + var(--cell-border-w)) !important; height:calc(100% + var(--cell-border-w)) !important;
             max-width:none !important; min-height:0 !important;
-            box-sizing:border-box; padding:0 !important; background:#fff; border:var(--cell-border); }
+            box-sizing:border-box; padding:0 !important; background:transparent; border:var(--cell-border); }
 .rtt-cellinput .q-field__control::before, .rtt-cellinput .q-field__control::after { display:none !important; }
 .rtt-cellinput .q-field__native { text-align:center; padding:0 !important; color:#000; font-size:var(--cell-font);
             min-height:0; font-family:var(--rtt-serif); }
@@ -876,11 +899,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    speaker above it — tooltip-style, over the app — and clicking it sounds the interval; both only
    while unmuted (the engage gate). audio.js positions + shows the float and manages the hover. The
    hover itself draws NO cell tint (a column wash reads as highlighting a column inside what is often
-   a row-based matrix); only the cells actually SOUNDING flash, via ::after so the tint shows OVER the
-   opaque value face (a background on the wrap is hidden behind the white cell fill) and squared to
-   the cell (no radius). */
-.rtt-speaker-on::after { content:""; position:absolute; inset:0; pointer-events:none; z-index:4;
-    background:rgba(0,0,0,0.20); }
+   a row-based matrix); only the cells actually SOUNDING flash, lightening via a z-index:-1 ::after
+   that sits BEHIND the cell's text (the value face / input are transparent over it) so the flash
+   tints the background without washing the glyphs, squared to the cell (no radius). */
+.rtt-speaker-on::after { content:""; position:absolute; inset:0; pointer-events:none; z-index:-1;
+    background:rgba(255,255,255,0.7); }
 /* the float sits flush ABOVE the column segment (its bottom on the segment's top edge) so moving the
    cursor up onto it never crosses dead space — the mouseout's relatedTarget is the float itself. */
 .rtt-speaker-float { position:fixed; transform:translate(-50%, -100%); z-index:9600; display:none;
@@ -925,13 +948,17 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the audio float counts as part of the cell's hover zone: while a cell's speaker segment is lit
    (cursor on the cell OR on its floated icon) keep the reduce/reciprocate buttons up too, so moving
    onto the icon doesn't drop the cell's other hover affordances */
-.rtt-fraction-cell:hover, .rtt-fraction-cell.rtt-speaker-hover { z-index:10; }   /* lift the whole cell so its overhanging buttons sit ON TOP of the neighbouring value boxes (a later sibling would otherwise paint over the right-hand one) */
-.rtt-fraction-cell:hover .rtt-ratio-op,
-.rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-op { opacity:1; pointer-events:auto; }
+/* the mouse :hover affordances are gated on body:not(.rtt-kbd) so keyboard navigation suppresses
+   them on the mouse-hovered cell; .rtt-active carries them on the keyboard-selected cell instead. */
+body:not(.rtt-kbd) .rtt-fraction-cell:hover, .rtt-fraction-cell.rtt-speaker-hover, .rtt-fraction-cell.rtt-active { z-index:10; }   /* lift the whole cell so its overhanging buttons sit ON TOP of the neighbouring value boxes (a later sibling would otherwise paint over the right-hand one) */
+body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-op,
+.rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-op,
+.rtt-fraction-cell.rtt-active .rtt-ratio-op { opacity:1; pointer-events:auto; }
 .rtt-fraction-cell:focus-within .rtt-ratio-op { display:none; }
 /* a no-op button stays SOLID (the full white box) and greys only its glyph — never semi-transparent */
-.rtt-fraction-cell:hover .rtt-ratio-op.rtt-op-disabled,
-.rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-op.rtt-op-disabled { color:#bbb; pointer-events:none; cursor:default; }
+body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-op.rtt-op-disabled,
+.rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-op.rtt-op-disabled,
+.rtt-fraction-cell.rtt-active .rtt-ratio-op.rtt-op-disabled { color:#bbb; pointer-events:none; cursor:default; }
 
 /* drag-and-drop reorder grips. The GRIP (.rtt-colgrip) is the shared .rtt-drag-handle ⠿, riding the
    reserved GRIP_BAND room on the fan — along each column's sub-axis gridline, between the − above

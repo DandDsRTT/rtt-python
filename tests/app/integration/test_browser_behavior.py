@@ -200,14 +200,15 @@ class TestBrowserBehavior:
             assert opened == {"mode": "ratio", "denFocused": True}
             assert not errors
 
-    def test_tabnav_moves_focus_to_another_grid_cell(self, browser):
+    def test_tab_walks_the_active_cell_along_its_matrix_orientation_line(self, browser):
         with _page(browser) as (page, errors):
             moved = page.evaluate(
-                "() => { const SEL = '.rtt-cell .rtt-cellinput input';"
+                "() => { const SEL = '.rtt-cell[data-mx=\"vectors:commas\"] .rtt-cellinput input';"
                 " const ins = [...document.querySelectorAll(SEL)].filter(i => !i.disabled && i.offsetParent);"
                 " if (ins.length < 2) return null; ins[0].focus(); const before = document.activeElement;"
                 " before.dispatchEvent(new KeyboardEvent('keydown', {key: 'Tab', bubbles: true, cancelable: true}));"
-                " return document.activeElement !== before && document.activeElement.matches(SEL); }"
+                " const now = document.activeElement;"
+                " return now !== before && now.matches(SEL); }"
             )
             assert moved is True
             assert not errors

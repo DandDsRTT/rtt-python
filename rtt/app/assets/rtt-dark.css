@@ -36,6 +36,9 @@ body.rtt-dark {
      over the wash colour cleanly. ~0.13 ≈ the old #363c44 lightness on the bare pane. */
   --c-gridline:rgba(255,255,255,0.13);
   --cell-border:1px solid #8d949d; /* the value cells' shared rule — matched by the marks below */
+  --cell-bg:#1b1f24;               /* the dark base the active-cell highlight (--cell-fill) lightens */
+  --hl-scale:0.3;                  /* lighten LESS in dark: cell text is light, so a near-white
+                                      highlight would erase it — cap the tint at a readable mid-tone */
   --seam:#3c424a;                  /* the frozen-pane / scrolling seam */
   /* the colorization washes, dark-toned — a low-luminance TONAL tint of the dark surface (what dark
      mode wants), not the old mid-grey that out-lit everything around it. The darken blend (kept from
@@ -88,7 +91,7 @@ body.rtt-dark .rtt-show-frozen { border-bottom-color:#3c424a; }
    the editable q-inputs sit on white in light mode; darken the fill and re-light the text, or
    edited cells stay blinding. Their 1px rule rides --cell-border. Read-only values are plain
    rtt-value text (no box), re-lit with the other text roles below. */
-body.rtt-dark .rtt-cellinput .q-field__control { background:#1b1f24; }
+body.rtt-dark .rtt-cellinput .q-field__control { background:transparent; }
 /* an editable cell's raw input text. Plain integer cells (mapping, comma, the vector lists)
    show it directly, so re-light it. But the STACKED cells (cents, ratios, the generator tuning
    map, powers) overlay a formatted face on a transparent input and reveal the raw text only on

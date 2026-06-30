@@ -194,6 +194,7 @@ from rtt.app.service.text_conventions import (
     EBK_CONVENTIONS,
     EbkConvention,
     ebk_convention,
+    matrix_orient,
     render_ebk,
 )
 from rtt.app.service.text_format import (

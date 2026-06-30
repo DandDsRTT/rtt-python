@@ -131,6 +131,14 @@ def ebk_convention(row_key: str, column_key: str, *, superspace: bool = False) -
     return EBK_CONVENTIONS[(row_key, column_key)]
 
 
+def matrix_orient(row_key: str, column_key: str, *, superspace: bool = False) -> str:
+    return (
+        "col"
+        if ebk_convention(row_key, column_key, superspace=superspace).structure == "list"
+        else "row"
+    )
+
+
 def render_ebk(convention: EbkConvention, items, formatter=str) -> str:
     oo, oc, io, ic, sep = (
         convention.outer_open,

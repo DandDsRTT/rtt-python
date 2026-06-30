@@ -138,6 +138,22 @@ def content_box(geometry, key: str):
     return geometry.content_x[key], geometry.content_width[key]
 
 
+def tile_of(geometry, x, y):
+    rkey = next(
+        (
+            rk
+            for rk, band in geometry.rows.items()
+            if band.y - 0.5 <= y < band.y + band.height + 0.5
+        ),
+        None,
+    )
+    ckey = None
+    for ck, cx in geometry.content_x.items():
+        if cx - 0.5 <= x < cx + geometry.content_width[ck] + 0.5:
+            ckey = ck
+    return rkey, ckey
+
+
 def tile_box(geometry, key: str):
     return geometry.column_x[key], geometry.column_width[key]
 

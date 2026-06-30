@@ -233,7 +233,7 @@ _FRACTION_JS = (_ASSETS / "fraction.js").read_text(encoding="utf-8")
 
 _DECIMAL_JS = (_ASSETS / "decimal.js").read_text(encoding="utf-8")
 
-_TABNAV_JS = (_ASSETS / "tabnav.js").read_text(encoding="utf-8")
+_ACTIVECELL_JS = (_ASSETS / "activecell.js").read_text(encoding="utf-8")
 
 _MAPPING_DEMO_JS = (_ASSETS / "mapping_demo.js").read_text(encoding="utf-8")
 
@@ -516,32 +516,6 @@ _TOOLTIP_DISMISS_JS = """
 })()
 """
 
-VALUE_KINDS: frozenset[str] = frozenset(
-    {
-        "prime",
-        "formcell",
-        "mapped",
-        "vector",
-        "tuningvalue",
-        "genratio",
-        "commaratio",
-        "powerdisplay",
-        "mathexpr",
-        "mapping",
-        "commacell",
-        "unchangedcell",
-        "interestcell",
-        "heldcell",
-        "targetcell",
-        "prescalercell",
-        "weightcell",
-        "powerinput",
-        "gentuningcell",
-        "ratiocell",
-        "elementcell",
-        "elementratio",
-    }
-)
 
 _ZOOM_JS = """
 (() => {
