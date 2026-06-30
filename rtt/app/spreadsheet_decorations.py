@@ -115,7 +115,7 @@ def _emit_axes(lines, resolved, geometry, context) -> None:
                       dotted=f"row:{key}" in context.collapsed)
 
 
-def _matlabel_group_count(resolved):
+def _matrix_label_group_count(resolved):
     return {"gens": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality, "commas": resolved.dimensions.comma_count + resolved.dimensions.unchanged_count, "targets": resolved.dimensions.target_count,
             "held": resolved.dimensions.held_count, "detempering": resolved.dimensions.rank, "interest": resolved.dimensions.interest_count,
             "canongens": resolved.dimensions.canonical_rank, "superspace_generators": resolved.dimensions.superspace_rank, "superspace_primes": resolved.dimensions.superspace_dimensionality}
@@ -160,15 +160,15 @@ def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
             g = query.form_subscripted(resolved, glyph, row_key, column_key)
             text = "𝒛" if size_row else f"{g}{_sub(i + 1)}"
             cells.append(CellBox(
-                f"matlabel:row:{row_key}:{column_key}:{i}",
+                f"matrix_label:row:{row_key}:{column_key}:{i}",
                 geometry.content_x[column_key] + query.etpick_left_pad(geometry, column_key) + query.handle_gutter_width(geometry, column_key), top(i),
-                query.matlabel_gutter_width(geometry, column_key), ROW_HEIGHT,
-                "matlabel", text=text,
+                query.matrix_label_gutter_width(geometry, column_key), ROW_HEIGHT,
+                "matrix_label", text=text,
             ))
 
 
 def _emit_matrix_col_labels(cells, resolved, geometry, context) -> None:
-    group_count = _matlabel_group_count(resolved)
+    group_count = _matrix_label_group_count(resolved)
     for (row_key, column_key), label in resolved.labels.column_labels.items():
         if column_key not in group_count or row_key not in geometry.rows or geometry.rows[row_key].matrix_label_top is None:
             continue
@@ -186,9 +186,9 @@ def _emit_matrix_col_labels(cells, resolved, geometry, context) -> None:
                 text = text.replace("𝐜", "𝐯")
             x = left[query.comma_value_pos(resolved, i)] if column_key == "commas" else left[i]
             cells.append(CellBox(
-                f"matlabel:col:{row_key}:{column_key}:{i}",
+                f"matrix_label:col:{row_key}:{column_key}:{i}",
                 x, y, COLUMN_WIDTH, MATLABEL_HEIGHT,
-                "matlabel", text=text,
+                "matrix_label", text=text,
             ))
 
 

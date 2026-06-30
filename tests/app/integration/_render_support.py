@@ -73,7 +73,7 @@ async def _enable(user: User, label: str) -> None:
 
 
 _FEATURE_CELLS = [
-    ("row/col header symbols", "matlabel:row:mapping:primes:0"),
+    ("row/col header symbols", "matrix_label:row:mapping:primes:0"),
     ("plain text values", "plain_text:mapping:primes"),
     ("presets", "preset:temperament"),
     ("presets", "preset:tuning:gens"),
@@ -85,7 +85,7 @@ _FEATURE_CELLS = [
 
 
 _FEATURE_CELLS = [
-    ("row/col header symbols", "matlabel:row:mapping:primes:0"),
+    ("row/col header symbols", "matrix_label:row:mapping:primes:0"),
     ("plain text values", "plain_text:mapping:primes"),
     ("presets", "preset:temperament"),
     ("presets", "preset:tuning:gens"),

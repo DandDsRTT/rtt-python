@@ -151,7 +151,7 @@ class TestFreezeAndStructure:
         assert cells["ebktop:selfmap:0"].kind == "ebktop"
         assert cells["ebkbrace:selfmap:0"].kind == "ebkbrace"
         assert cells["plain_text:mapping:gens"].text == "{[1 0} [0 1}]"
-        assert not any(c.startswith(("matlabel:row:mapping:gens", "matlabel:col:mapping:gens")) for c in cells)
+        assert not any(c.startswith(("matrix_label:row:mapping:gens", "matrix_label:col:mapping:gens")) for c in cells)
 
     def test_mapping_over_generators_identity_gated_off_by_default(self):
         cells = {c.id for c in _layout().cells}

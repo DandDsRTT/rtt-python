@@ -32,7 +32,7 @@ class TestNonstandardDomain:
         VALUE_ROWS = ("quantities", "vectors", "units", "mapping", "tuning", "just", "retune",
                       "prescaling", "complexity", "projection", "scaling_factors",
                       "superspace_vectors", "superspace_mapping", "superspace_projection")
-        STRUCTURAL = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matlabel", "colgrip", "int_drag"}
+        STRUCTURAL = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matrix_label", "colgrip", "int_drag"}
 
         def assert_draft_greened(b, lst, committed, minimum):
             layout = b.layout()
@@ -317,7 +317,7 @@ class TestSuperspaceProjection:
     def test_superspace_projection_caption_symbol_and_units_when_named(self):
         cells = {c.id: c for c in _barbados_projection(names=True, symbols=True, header_symbols=True, units=True).cells}
         assert cells["caption:superspace_projection:superspace_primes"].text == "superspace projection"
-        assert "matlabel:row:superspace_projection:superspace_primes:0" in cells
+        assert "matrix_label:row:superspace_projection:superspace_primes:0" in cells
         assert cells["units:superspace_projection:superspace_primes"].text == "units: p/p"
 
     def test_superspace_rows_get_their_fold_toggles_in_the_label_gutter(self):
@@ -397,9 +397,9 @@ class TestSuperspaceProjection:
         assert cells["plain_text:prescaling:superspace_primes"].kind == "plain_text_edit", "the bare prescaler's plain text stays editable — now in superspace-primes; the 𝐿·B_Ls plain text is # read-only, and reads ⟨[…⟩ …] (a matrix of kets like B_L), NOT the backwards bare-prescaler stack"
         assert cells["plain_text:prescaling:primes"].kind == "plain_text"
         assert cells["plain_text:prescaling:primes"].text.startswith("⟨[") and cells["plain_text:prescaling:primes"].text.endswith("]")
-        assert sum(1 for i in cells if i.startswith("matlabel:row:prescaling:primes:")) == 0, "𝐿·B_Ls is a matrix of kets, so it takes COLUMN headers (one per domain element, like B_L), # NOT the bare prescaler's row headers; the bare prescaler (superspace-primes) keeps its dL row headers"
-        assert sum(1 for i in cells if i.startswith("matlabel:col:prescaling:primes:")) == 3
-        assert sum(1 for i in cells if i.startswith("matlabel:row:prescaling:superspace_primes:")) == 4
+        assert sum(1 for i in cells if i.startswith("matrix_label:row:prescaling:primes:")) == 0, "𝐿·B_Ls is a matrix of kets, so it takes COLUMN headers (one per domain element, like B_L), # NOT the bare prescaler's row headers; the bare prescaler (superspace-primes) keeps its dL row headers"
+        assert sum(1 for i in cells if i.startswith("matrix_label:col:prescaling:primes:")) == 3
+        assert sum(1 for i in cells if i.startswith("matrix_label:row:prescaling:superspace_primes:")) == 4
         assert "preset:prescaler" in cells
         assert abs(cells["preset:prescaler"].x - cells["header:superspace_primes"].x) < abs(cells["preset:prescaler"].x - cells["header:primes"].x)
 

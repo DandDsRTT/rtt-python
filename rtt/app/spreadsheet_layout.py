@@ -103,7 +103,7 @@ def _resolve_col_headers(resolved):
     return column_header
 
 
-def _matlabel_other_w(geometry, resolved):
+def _matrix_label_other_w(geometry, resolved):
     _label_row_present = {"mapping": resolved.flags.temperament_tiles, "vectors": resolved.flags.interval_vectors,
                           "canon": resolved.flags.canon, "projection": resolved.flags.projection,
                           "prescaling": resolved.flags.prescaling_shown, "superspace_mapping": resolved.flags.superspace,
@@ -121,10 +121,10 @@ def _define_col_bands(geometry, resolved, context, label_width):
     geometry = replace(
         geometry,
         column_header=_resolve_col_headers(resolved),
-        matlabel_primes_width=((MATLABEL_W_SS if resolved.flags.superspace else MATLABEL_WIDTH)
+        matrix_label_primes_width=((MATLABEL_W_SS if resolved.flags.superspace else MATLABEL_WIDTH)
                            if (resolved.flags.header_symbols and resolved.flags.temperament_tiles) else 0),
-        matlabel_superspace_primes_width=MATLABEL_W_SSPRIMES if (resolved.flags.header_symbols and resolved.flags.superspace) else 0,
-        matlabel_other_width=_matlabel_other_w(geometry, resolved),
+        matrix_label_superspace_primes_width=MATLABEL_W_SSPRIMES if (resolved.flags.header_symbols and resolved.flags.superspace) else 0,
+        matrix_label_other_width=_matrix_label_other_w(geometry, resolved),
         row_handle_width=(ROW_HANDLE_WIDTH + ROW_HANDLE_GAP) if (
             context.settings.get("drag_to_combine") and resolved.flags.temperament_tiles and resolved.dimensions.rank > 1) else 0,
         etpick_width=(ETPICK_WIDTH + ETPICK_GAP) if (resolved.flags.presets and resolved.flags.temperament_tiles) else 0,
@@ -143,10 +143,10 @@ def _col_bands(geometry, resolved, context):
     return (
         ("quantities", COLUMN_WIDTH, resolved.flags.interval_ratios, True),
         ("units", COLUMN_WIDTH, resolved.flags.domain_units, True),
-        ("canongens", 2 * BRACKET_WIDTH + resolved.dimensions.canonical_rank * COLUMN_WIDTH + 2 * query.matlabel_gutter_width(geometry, "canongens"), resolved.flags.canon, True),
-        ("gens", 2 * BRACKET_WIDTH + resolved.dimensions.rank * COLUMN_WIDTH + 2 * query.matlabel_gutter_width(geometry, "gens"), resolved.flags.temperament_tiles, True),
+        ("canongens", 2 * BRACKET_WIDTH + resolved.dimensions.canonical_rank * COLUMN_WIDTH + 2 * query.matrix_label_gutter_width(geometry, "canongens"), resolved.flags.canon, True),
+        ("gens", 2 * BRACKET_WIDTH + resolved.dimensions.rank * COLUMN_WIDTH + 2 * query.matrix_label_gutter_width(geometry, "gens"), resolved.flags.temperament_tiles, True),
         ("superspace_generators", 2 * BRACKET_WIDTH + resolved.dimensions.superspace_rank * COLUMN_WIDTH, resolved.flags.superspace, True),
-        ("superspace_primes", 2 * BRACKET_WIDTH + resolved.dimensions.superspace_dimensionality * COLUMN_WIDTH + 2 * geometry.matlabel_superspace_primes_width, resolved.flags.superspace, True),
+        ("superspace_primes", 2 * BRACKET_WIDTH + resolved.dimensions.superspace_dimensionality * COLUMN_WIDTH + 2 * geometry.matrix_label_superspace_primes_width, resolved.flags.superspace, True),
         ("primes", 2 * BRACKET_WIDTH + resolved.dimensions.dimensionality_shown * COLUMN_WIDTH + 2 * query.outer_gutter_width(geometry, "primes"), resolved.flags.temperament_tiles, True),
         ("detempering", 2 * BRACKET_WIDTH + resolved.dimensions.rank * COLUMN_WIDTH, resolved.flags.generator_detempering, True),
         ("commas", commas_band_width(resolved, resolved.dimensions.comma_count_shown), resolved.flags.temperament_tiles, True),
@@ -255,11 +255,11 @@ def _row_interval_handle(geometry, resolved, context, key, folded):
 def _compute_row_band(geometry, resolved, context, key, natural, collapsible, label, tile_extra, show_charts, y):
     folded = f"row:{key}" in context.collapsed
     framed = key in BANDS["frame"].rows and not folded
-    has_matlabel = (resolved.flags.header_symbols and key in BANDS["col_label"].rows and not folded)
+    has_matrix_label = (resolved.flags.header_symbols and key in BANDS["col_label"].rows and not folded)
     toggle_band = TOGGLE + 2 * TOGGLE_INSET - PAD
     interval_handle = _row_interval_handle(geometry, resolved, context, key, folded)
     handle_band = (ROW_HANDLE_WIDTH + ROW_HANDLE_GAP) if interval_handle else 0
-    base_head = 0 if folded else max(toggle_band, MATLABEL_HEIGHT + 2 * MATLABEL_PAD if has_matlabel else toggle_band)
+    base_head = 0 if folded else max(toggle_band, MATLABEL_HEIGHT + 2 * MATLABEL_PAD if has_matrix_label else toggle_band)
     head = base_head + handle_band
     top_frame = (FRAME_HEIGHT + FRAME_GAP + FRAME_OVERHANG) if framed else 0
     bot_frame = (BRACE_HEIGHT + FRAME_GAP + FRAME_OVERHANG) if framed else 0
@@ -288,7 +288,7 @@ def _compute_row_band(geometry, resolved, context, key, natural, collapsible, la
     row_height = STRIP if folded else natural
     chart_top = (y + head + top_frame) if charted else None
     interval_handle_top = (y + (handle_band - ROW_HANDLE_WIDTH) // 2) if interval_handle else None
-    matrix_label_top = (y + handle_band + (base_head - MATLABEL_HEIGHT) // 2) if has_matlabel else None
+    matrix_label_top = (y + handle_band + (base_head - MATLABEL_HEIGHT) // 2) if has_matrix_label else None
     trailing_band = symbol + caption + units + preset + plain_text + form_controls + scheme_button + comma_picker + tile_extra.get(key, 0)
     foot = 0 if (folded or trailing_band) else toggle_band
     tile_height = (head + top_frame + chart_band + row_height + bot_frame + comma_picker + symbol + caption + units

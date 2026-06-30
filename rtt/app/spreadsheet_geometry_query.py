@@ -103,12 +103,12 @@ def separator_span(resolved, geometry, row_key: str):
     return y, frame_brace_y(geometry, row_key) + BRACE_HEIGHT + FRAME_OVERHANG - y
 
 
-def matlabel_gutter_width(geometry, group_key: str) -> float:
+def matrix_label_gutter_width(geometry, group_key: str) -> float:
     if group_key == "primes":
-        return geometry.matlabel_primes_width
+        return geometry.matrix_label_primes_width
     if group_key == "superspace_primes":
-        return geometry.matlabel_superspace_primes_width
-    return geometry.matlabel_other_width.get(group_key, 0)
+        return geometry.matrix_label_superspace_primes_width
+    return geometry.matrix_label_other_width.get(group_key, 0)
 
 
 def handle_gutter_width(geometry, group_key: str) -> float:
@@ -122,7 +122,7 @@ def etpick_left_pad(geometry, group_key: str) -> float:
         0,
         geometry.etpick_width
         - handle_gutter_width(geometry, group_key)
-        - matlabel_gutter_width(geometry, group_key),
+        - matrix_label_gutter_width(geometry, group_key),
     )
 
 
@@ -130,7 +130,7 @@ def outer_gutter_width(geometry, group_key: str) -> float:
     return (
         etpick_left_pad(geometry, group_key)
         + handle_gutter_width(geometry, group_key)
-        + matlabel_gutter_width(geometry, group_key)
+        + matrix_label_gutter_width(geometry, group_key)
     )
 
 

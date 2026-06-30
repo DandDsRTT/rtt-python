@@ -132,7 +132,7 @@ body.rtt-dark .rtt-zoom-tile { background:#272c33; box-shadow:0 3px 12px rgba(0,
 body.rtt-dark .rtt-colheader,
 body.rtt-dark .rtt-rowlabel,
 body.rtt-dark .rtt-symbol,
-body.rtt-dark .rtt-matlabel,
+body.rtt-dark .rtt-matrix-label,
 body.rtt-dark .rtt-boxtitle,
 body.rtt-dark .rtt-rangelabel { color:#e3e6ea; }
 body.rtt-dark .rtt-caption,

@@ -93,8 +93,8 @@ class TestProjectionBox:
         assert cells["symbol:projection:gens"].text.startswith("G"), "upright G (a basis), not italic 𝐺"
         assert cells["units:projection:primes"].text == "units: p/p"
         assert cells["units:projection:gens"].text == "units: p/g"
-        assert cells["matlabel:row:projection:primes:0"].text == "𝒑₁"
-        assert cells["matlabel:col:projection:gens:0"].text == "𝐠₁"
+        assert cells["matrix_label:row:projection:primes:0"].text == "𝒑₁"
+        assert cells["matrix_label:col:projection:gens:0"].text == "𝐠₁"
         assert cells["cell:projection:0:0"].kind == "mapped" and cells["cell:embed:0:0"].kind == "mapped"
         assert cells["plain_text:projection:primes"].kind == "plain_text_edit"
         assert cells["plain_text:projection:gens"].kind == "plain_text_edit"
@@ -173,20 +173,20 @@ class TestProjectionBox:
         assert cells["symbol:projection:targets"].text == "𝑃T"
         assert cells["units:projection:detempering"].text == "units: p"
         assert cells["units:projection:targets"].text == "units: p"
-        assert cells["matlabel:col:projection:detempering:0"].text == "𝑃𝐝₁"
-        assert cells["matlabel:col:projection:targets:0"].text == "𝑃𝐭₁"
+        assert cells["matrix_label:col:projection:detempering:0"].text == "𝑃𝐝₁"
+        assert cells["matrix_label:col:projection:targets:0"].text == "𝑃𝐭₁"
 
     def test_projection_held_tile_carries_the_equals_H_equivalence(self):
         cells = {c.id: c for c in _projection_full(optimization=True, held_vectors=[(1, 0, 0), (-2, 0, 1)],
                                              symbols=True, header_symbols=True, equivalences=True).cells}
         assert cells["caption:projection:held"].text == "projected held interval basis"
         assert cells["symbol:projection:held"].text == "𝑃H = H"
-        assert cells["matlabel:col:projection:held:0"].text == "𝑃𝐡₁"
+        assert cells["matrix_label:col:projection:held:0"].text == "𝑃𝐡₁"
 
     def test_projection_interest_tile_caption_and_label(self):
         cells = {c.id: c for c in _projection_full(interest=[(-1, 1, 0), (1, 1, -1)], symbols=True, header_symbols=True).cells}
         assert cells["caption:projection:interest"].text == "projected intervals"
-        assert cells["matlabel:col:projection:interest:0"].text == "𝑃𝐢₁"
+        assert cells["matrix_label:col:projection:interest:0"].text == "𝑃𝐢₁"
         assert "symbol:projection:interest" not in cells
 
     def test_projection_column_tiles_carry_plain_text_bands(self):
@@ -222,8 +222,8 @@ class TestProjectionBox:
         assert cells["symbol:projection:superspace_primes"].text == f"𝑃{SUBSCRIPT_L}→ₛ = G{SUBSCRIPT_L}→ₛ𝑀{SUBSCRIPT_L}"
         assert cells["units:projection:superspace_generators"].text == f"units: b/g{SUBSCRIPT_L}"
         assert cells["units:projection:superspace_primes"].text == "units: b/p"
-        assert cells["matlabel:col:projection:superspace_generators:0"].text == f"𝐠{SUBSCRIPT_L}→ₛ₁"
-        assert cells["matlabel:row:projection:superspace_primes:0"].text == f"𝒑{SUBSCRIPT_L}→ₛ₁"
+        assert cells["matrix_label:col:projection:superspace_generators:0"].text == f"𝐠{SUBSCRIPT_L}→ₛ₁"
+        assert cells["matrix_label:row:projection:superspace_primes:0"].text == f"𝒑{SUBSCRIPT_L}→ₛ₁"
         assert cells["bracket:embed_sl:l"].text == "{" and cells["bracket:embed_sl:r"].text == "]"
         assert cells["bracket:projection_superspace:0:l"].text == "⟨" and cells["bracket:projection_superspace:0:r"].text == "]"
 

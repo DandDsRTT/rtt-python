@@ -403,7 +403,7 @@ RATIO_RECIPROCATE_HELP = (
 READONLY_KINDS: frozenset[str] = frozenset({
     "prime", "colheader", "rowlabel", "mapped", "vector", "tuningvalue", "powerdisplay",
     "genratio", "commaratio", "mathexpr", "plain_text", "plain_text_pending",
-    "symbol", "matlabel", "units", "caption", "count", "boxtitle",
+    "symbol", "matrix_label", "units", "caption", "count", "boxtitle",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "transpose", "vbar", "chart", "rangechart",
 })
 

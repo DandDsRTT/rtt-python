@@ -800,7 +800,7 @@ GRIDDED_KINDS = frozenset(
         "ebkangle",
         "transpose",
         "vbar",
-        "matlabel",
+        "matrix_label",
         "minus",
         "plus",
         "gen_minus",

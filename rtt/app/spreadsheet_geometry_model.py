@@ -28,9 +28,9 @@ class Geometry:
     column_collapsible: Mapping[str, bool] = field(default_factory=dict)
     column_header: Mapping[str, str] = field(default_factory=dict)
     present_caption_rows: frozenset = frozenset()
-    matlabel_primes_width: float = 0.0
-    matlabel_superspace_primes_width: float = 0.0
-    matlabel_other_width: Mapping[str, float] = field(default_factory=dict)
+    matrix_label_primes_width: float = 0.0
+    matrix_label_superspace_primes_width: float = 0.0
+    matrix_label_other_width: Mapping[str, float] = field(default_factory=dict)
     row_handle_width: float = 0.0
     etpick_width: float = 0.0
     primes_x: float | None = None

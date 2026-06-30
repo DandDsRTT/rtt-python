@@ -91,14 +91,18 @@ def build_symbol(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     reconciler.cells[cell_box.id].display.math_cell = ui.html("").classes(cls)
 
 
-def _matlabel_classes(text: str) -> str:
-    return "rtt-matlabel rtt-matlabel-norm" if ("‖" in text or " " in text) else "rtt-matlabel"
+def _matrix_label_classes(text: str) -> str:
+    return (
+        "rtt-matrix-label rtt-matrix-label-norm"
+        if ("‖" in text or " " in text)
+        else "rtt-matrix-label"
+    )
 
 
-def build_matlabel(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
-    wrap.classes("rtt-matlabel-cell")
+def build_matrix_label(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+    wrap.classes("rtt-matrix-label-cell")
     reconciler.cells[cell_box.id].display.math_cell = ui.html("").classes(
-        _matlabel_classes(cell_box.text)
+        _matrix_label_classes(cell_box.text)
     )
 
 
@@ -120,7 +124,7 @@ def update_mathcell(reconciler, cell_box: spreadsheet.CellBox) -> None:
     html = _math_html(cell_box.text)
     font = None
     if (
-        cell_box.kind == "matlabel"
+        cell_box.kind == "matrix_label"
         and ":col:" in cell_box.id
         and "‖" not in cell_box.text
         and " " not in cell_box.text
@@ -133,9 +137,9 @@ def update_mathcell(reconciler, cell_box: spreadsheet.CellBox) -> None:
         if font is not None:
             reconciler.cells[cell_box.id].display.math_cell.style(f"font-size:{font:.2f}px")
         reconciler.cells[cell_box.id].display.math_rendered = (html, font)
-        if cell_box.kind == "matlabel":
+        if cell_box.kind == "matrix_label":
             reconciler.cells[cell_box.id].display.math_cell.classes(
-                replace=_matlabel_classes(cell_box.text)
+                replace=_matrix_label_classes(cell_box.text)
             )
         if cell_box.id == "optimization:mean_damage:symbol":
             wide = "‖" in cell_box.text

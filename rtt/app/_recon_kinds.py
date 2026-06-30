@@ -17,7 +17,7 @@ def register_display_kinds(cell_kinds) -> None:
 
     cell_kinds["count"] = _KindHandlers(display.build_count, display.update_mathcell)
     cell_kinds["symbol"] = _KindHandlers(display.build_symbol, display.update_mathcell)
-    cell_kinds["matlabel"] = _KindHandlers(display.build_matlabel, display.update_mathcell)
+    cell_kinds["matrix_label"] = _KindHandlers(display.build_matrix_label, display.update_mathcell)
     cell_kinds["units"] = _KindHandlers(display.build_units, display.update_mathcell)
     cell_kinds["caption"] = _KindHandlers(display.build_caption, display.update_caption)
 
