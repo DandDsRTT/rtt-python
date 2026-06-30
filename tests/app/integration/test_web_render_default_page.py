@@ -100,10 +100,10 @@ class TestDefaultPage:
         assert slider.value == show_settings.CHAPTER_DEFAULT
         for key in ("counts", "tuning_tiles", "optimization", "interest",
                     "interval_ratios"):
-            assert "rtt-chap-hidden" not in _row_classes(default_page, key), key
-        assert "rtt-chap-hidden" in _row_classes(default_page, "domain_units"), "domain_units moved to ch5 (units analysis), so its row is collapsed at the default ch4"
+            assert "rtt-chapter-hidden" not in _row_classes(default_page, key), key
+        assert "rtt-chapter-hidden" in _row_classes(default_page, "domain_units"), "domain_units moved to ch5 (units analysis), so its row is collapsed at the default ch4"
         for key in ("nonstandard_domain", "projection", "generator_detempering", "identity_objects"):
-            assert "rtt-chap-hidden" in _row_classes(default_page, key), key
+            assert "rtt-chapter-hidden" in _row_classes(default_page, key), key
         assert "rtt-chap-invisible" not in _part_classes(default_page, "gridded_values"), "the dummy tile's parts are gated the space-preserving way: an early layer shows, a ch5 one is # invisible-but-in-place (visibility:hidden, NOT display:none)"
         assert "rtt-chap-invisible" in _part_classes(default_page, "units")
         assert "rtt-chap-invisible" not in next(iter(default_page.find(marker="audiobank").elements))._classes, "the audio bank now lives in the frozen audio-settings box, so it is never chapter-gated invisible"

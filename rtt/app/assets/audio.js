@@ -15,12 +15,12 @@ window.rttAudio = (function () {
     return ctx;
   }
   function hl(tile, idx, on) {  // light EVERY cell sharing this voice (a vector column shares one idx)
-    const es = document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"][data-idx="' + idx + '"]');
-    for (let i = 0; i < es.length; i++) es[i].classList.toggle('rtt-spk-on', on);
+    const es = document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"][data-idx="' + idx + '"]');
+    for (let i = 0; i < es.length; i++) es[i].classList.toggle('rtt-speaker-on', on);
   }
   function clearHl(tile) {
-    const es = document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"]');
-    for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-spk-on');
+    const es = document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"]');
+    for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-speaker-on');
   }
   function vgain(n) { return 0.45 / Math.max(1, n); }
   // start one oscillator; returns a release() that fades it out (and clears its highlight)
@@ -161,12 +161,12 @@ window.rttAudio = (function () {
   window.addEventListener('pagehide', function () { if (ctx) { try { ctx.close(); } catch (e) {} ctx = null; } });
   // Per-COLUMN-SEGMENT audio affordance: a vector's entries aren't individually playable, so the
   // control applies to the whole interval column. Hovering any cell of a column segment lights the
-  // segment (.rtt-spk-hover) and floats ONE speaker above it (tooltip-style, over the app); clicking
+  // segment (.rtt-speaker-hover) and floats ONE speaker above it (tooltip-style, over the app); clicking
   // the float sounds the interval. Gated on unmuted; the chord is derived from the segment's sibling
   // cells live (reorder / retune safe). A grace timer lets the cursor cross the gap onto the button.
   let floatEl = null, floatSeg = null, floatCells = null, hideT = null;
   function segCells(tile, idx) {
-    return document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"][data-idx="' + idx + '"]');
+    return document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"][data-idx="' + idx + '"]');
   }
   function placeFloat() {  // (re)anchor the float over its live cells — viewport coords, so it must
     if (!floatEl || !floatCells || !floatCells.length) return;   // re-run on scroll or it slides away
@@ -181,14 +181,14 @@ window.rttAudio = (function () {
     floatEl.style.top = t + 'px';
   }
   function clearHover() {
-    const es = document.querySelectorAll('.rtt-spk-hover, .rtt-spk-dim');
-    for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-spk-hover', 'rtt-spk-dim');
+    const es = document.querySelectorAll('.rtt-speaker-hover, .rtt-speaker-dim');
+    for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-speaker-hover', 'rtt-speaker-dim');
   }
-  function hideFloat() { if (floatEl) floatEl.classList.remove('rtt-spk-float-on'); clearHover(); floatSeg = null; floatCells = null; }
+  function hideFloat() { if (floatEl) floatEl.classList.remove('rtt-speaker-float-on'); clearHover(); floatSeg = null; floatCells = null; }
   function keepFloat() { if (hideT) { clearTimeout(hideT); hideT = null; } }
   function planHide() { keepFloat(); hideT = setTimeout(hideFloat, 250); }
   function showFloat(tile, idx) {
-    const all = document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"]');
+    const all = document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"]');
     if (!all.length) return;
     clearHover();
     // single-note mode lights just the hovered column SEGMENT; chord / arp modes light the WHOLE tile
@@ -196,35 +196,35 @@ window.rttAudio = (function () {
     let cells;
     if (S.mode === 0) {
       cells = segCells(tile, idx);
-      for (let i = 0; i < cells.length; i++) cells[i].classList.add('rtt-spk-hover');
+      for (let i = 0; i < cells.length; i++) cells[i].classList.add('rtt-speaker-hover');
     } else {
       cells = all; const key = String(idx);
-      for (let i = 0; i < all.length; i++) all[i].classList.add(all[i].dataset.idx === key ? 'rtt-spk-hover' : 'rtt-spk-dim');
+      for (let i = 0; i < all.length; i++) all[i].classList.add(all[i].dataset.idx === key ? 'rtt-speaker-hover' : 'rtt-speaker-dim');
     }
     floatCells = Array.prototype.slice.call(cells);
     if (!floatEl) {
       floatEl = document.createElement('div');
-      floatEl.className = 'rtt-spk-float';
+      floatEl.className = 'rtt-speaker-float';
       floatEl.innerHTML = '<span class="material-icons">volume_up</span>';
       floatEl.addEventListener('mouseenter', keepFloat);
       floatEl.addEventListener('mouseleave', planHide);
       floatEl.addEventListener('click', function (ev) {
         ev.preventDefault(); ev.stopPropagation();
         if (!floatSeg) return;
-        const chord = [], sibs = document.querySelectorAll('.rtt-spk[data-audio="' + floatSeg.tile + '"]');
+        const chord = [], sibs = document.querySelectorAll('.rtt-speaker[data-audio="' + floatSeg.tile + '"]');
         for (let i = 0; i < sibs.length; i++) chord[+sibs[i].dataset.idx] = +sibs[i].dataset.cents;
         api.hit(floatSeg.tile, floatSeg.idx, chord);
       });
       document.body.appendChild(floatEl);
     }
-    floatEl.classList.add('rtt-spk-float-on');
+    floatEl.classList.add('rtt-speaker-float-on');
     floatSeg = { tile: tile, idx: idx };
     placeFloat();   // centred over the highlighted cells, floated above them
   }
-  function onFloat(t) { return t && t.closest && t.closest('.rtt-spk-float'); }
+  function onFloat(t) { return t && t.closest && t.closest('.rtt-speaker-float'); }
   document.addEventListener('mouseover', function (ev) {
     if (S.muted) return;                                   // muted = disengaged: no hover affordance
-    const cell = ev.target.closest && ev.target.closest('.rtt-spk[data-audio]');
+    const cell = ev.target.closest && ev.target.closest('.rtt-speaker[data-audio]');
     if (!cell) {
       if (floatSeg && !onFloat(ev.target)) planHide();     // moved onto something else: let it go
       return;
@@ -233,9 +233,9 @@ window.rttAudio = (function () {
     showFloat(cell.dataset.audio, +cell.dataset.idx);
   });
   document.addEventListener('mouseout', function (ev) {
-    const cell = ev.target.closest && ev.target.closest('.rtt-spk[data-audio]');
+    const cell = ev.target.closest && ev.target.closest('.rtt-speaker[data-audio]');
     if (!cell) return;
-    const to = ev.relatedTarget && ev.relatedTarget.closest && ev.relatedTarget.closest('.rtt-spk[data-audio],.rtt-spk-float');
+    const to = ev.relatedTarget && ev.relatedTarget.closest && ev.relatedTarget.closest('.rtt-speaker[data-audio],.rtt-speaker-float');
     if (!to) planHide();                                   // left the column for something non-audio
   });
   // a click or keypress anywhere but the float (e.g. a re-render the cursor never left) dismisses a

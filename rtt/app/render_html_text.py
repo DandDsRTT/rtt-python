@@ -42,7 +42,7 @@ def _mathexpr_html(text: str, width: float) -> str:
         f'<div style="font-size:{_fit_font(line, width):.2f}px">{line}</div>'
         for line in (_elide_expr_line(raw, width) for raw in text.split("\n"))
     )
-    return f'<div class="rtt-mathexpr-stack">{lines}</div>'
+    return f'<div class="rtt-math-expression-stack">{lines}</div>'
 
 
 def _units_font(text: str, width: float, max_font: float) -> float:

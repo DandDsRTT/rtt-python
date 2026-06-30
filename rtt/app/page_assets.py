@@ -568,7 +568,7 @@ _ZOOM_JS = """
     const ow = overlay.offsetWidth, oh = overlay.offsetHeight;
     const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
     let left = Math.max(4, Math.min(r.left + r.width / 2 - ow / 2, vw - ow - 4));
-    const audioFloat = cell.classList.contains('rtt-spk') && !document.body.classList.contains('rtt-audio-muted');
+    const audioFloat = cell.classList.contains('rtt-speaker') && !document.body.classList.contains('rtt-audio-muted');
     let top = r.top - GAP - oh;
     let above = true;
     if (audioFloat || top < 4) { top = r.bottom + GAP; above = false; }
@@ -631,20 +631,20 @@ _ZOOM_JS = """
     timer = setTimeout(() => { if (anchor === cell && cell.isConnected) build(cell); }, DELAY);
   });
   document.addEventListener('mouseout', (e) => {
-    const toFloat = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.rtt-spk-float');
+    const toFloat = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.rtt-speaker-float');
     const cell = e.target.closest && e.target.closest('.rtt-zoomable');
     if (cell && cell === anchor) {
       if (!toFloat && !cell.contains(e.relatedTarget)) hide();
       return;
     }
-    const fromFloat = e.target.closest && e.target.closest('.rtt-spk-float');
+    const fromFloat = e.target.closest && e.target.closest('.rtt-speaker-float');
     if (fromFloat && anchor && !toFloat) {
       const toCell = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.rtt-zoomable');
       if (toCell !== anchor) hide();
     }
   });
   document.addEventListener('pointerdown', (e) => {
-    if (e.target.closest && e.target.closest('.rtt-spk-float')) return;
+    if (e.target.closest && e.target.closest('.rtt-speaker-float')) return;
     hide();
   }, true);
   document.addEventListener('keydown', hide, true);

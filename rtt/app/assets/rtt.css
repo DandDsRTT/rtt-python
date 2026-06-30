@@ -295,8 +295,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    parts, the per-value unit, the zoom clone — itself a .rtt-cell). The few SVG range labels carry
    .rtt-rangelabel directly. */
 .rtt-cell, .rtt-value, .rtt-count, .rtt-matlabel, .rtt-symbol, .rtt-plain-text, .rtt-plain-text-edit,
-.rtt-ratio, .rtt-fraction, .rtt-stacked-main, .rtt-stacked-sub, .rtt-rangelabel, .rtt-preset-num,
-.rtt-caption, .rtt-ex-cell {
+.rtt-ratio, .rtt-fraction, .rtt-stacked-main, .rtt-stacked-sub, .rtt-rangelabel, .rtt-preset-number,
+.rtt-caption, .rtt-example-cell {
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: 'tnum' 1, 'lnum' 1;
 }
@@ -389,7 +389,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the per-value unit (the `units` toggle): a tiny line in the same single-story-g sans,
    stacked right beneath the value so the value + unit read as one centred pair — like the
    cents int-over-fraction stack, the unit hugging its value rather than floating away. */
-.rtt-cellunit { font-size:7px; line-height:1; color:#555; white-space:nowrap; text-align:center;
+.rtt-cell-unit { font-size:7px; line-height:1; color:#555; white-space:nowrap; text-align:center;
             font-family:var(--rtt-units-sans); }
 /* a read-only value cell simply stacks [value, unit] in a centred column; the value's
    line-height is tightened so the value + unit pair fits the square and stays centred */
@@ -397,7 +397,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-cell-united:not(.rtt-cell-input) .rtt-value { line-height:1; }
 /* an editable value cell keeps its full-size white input box (border stays on the input)
    and overlays the unit INSIDE it, with the number nudged up to clear the unit */
-.rtt-cell-united.rtt-cell-input .rtt-cellunit { position:absolute; left:0; right:0; bottom:6px;
+.rtt-cell-united.rtt-cell-input .rtt-cell-unit { position:absolute; left:0; right:0; bottom:6px;
             pointer-events:none; z-index:1; }
 .rtt-cell-united.rtt-cell-input .rtt-cellinput .q-field__native { padding-bottom:10px !important; }
 /* every EBK mark (⟨ ] [, top bracket, brace, vector rule) is one SVG that fills
@@ -435,13 +435,13 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-subpick .q-field__native, .rtt-subpick .q-field__input {
             color:transparent !important; text-indent:-9999px; width:0; min-width:0; padding:0; }
 .rtt-subpick .q-icon { font-size:14px; }
-/* the target chooser's numeric-limit square (.rtt-preset-num) is a SECOND field beside the select,
+/* the target chooser's numeric-limit square (.rtt-preset-number) is a SECOND field beside the select,
    so it needs the same locked palette — without these it kept its live white fill + #000 value/"-"
    placeholder (its enabled rules below force #000) while the select greyed, reading as half-locked. */
-.rtt-preset-num.q-field--disabled .q-field__control { background:#d6d6d6; border-color:#bbb; }
-.rtt-preset-num.q-field--disabled .q-field__native,
-.rtt-preset-num.q-field--disabled .q-field__native::placeholder { color:#999; }
-.rtt-preset-num.q-field--disabled, .rtt-preset-num.q-field--disabled * { user-select:none !important; }
+.rtt-preset-number.q-field--disabled .q-field__control { background:#d6d6d6; border-color:#bbb; }
+.rtt-preset-number.q-field--disabled .q-field__native,
+.rtt-preset-number.q-field--disabled .q-field__native::placeholder { color:#999; }
+.rtt-preset-number.q-field--disabled, .rtt-preset-number.q-field--disabled * { user-select:none !important; }
 /* lift Quasar's .6 disabled fade on the locked choosers (the weight-slope/target select AND the
    target's numeric square) so their explicit #999 renders TRUE, not a washed-out #999*.6 -- the
    crisp grey itself is the disabled cue, matching the app's other disabled controls. Layered:
@@ -449,7 +449,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    like the cursor ban above. */
 @layer overrides {
   .rtt-preset.q-field--disabled .q-field__control > div,
-  .rtt-preset-num.q-field--disabled .q-field__control > div { opacity:1 !important; }
+  .rtt-preset-number.q-field--disabled .q-field__control > div { opacity:1 !important; }
 }
 .rtt-control-check { width:100%; height:100%; display:flex; justify-content:center;
             align-items:center; }  /* visually centres the q-checkbox inside its cell wrap */
@@ -522,16 +522,16 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             border-top:1px solid #777; }
 /* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
 .rtt-preset-target { width:100%; height:30px; display:flex; gap:0; align-items:center; }
-.rtt-preset-target .rtt-preset-num { flex:0 0 30px; }  /* a gridded value square (COLUMN_WIDTH x ROW_HEIGHT), touching the select */
+.rtt-preset-target .rtt-preset-number { flex:0 0 30px; }  /* a gridded value square (COLUMN_WIDTH x ROW_HEIGHT), touching the select */
 .rtt-preset-target .rtt-preset { flex:1 1 auto; width:auto; }
-.rtt-preset-num .q-field__control { min-height:0 !important; height:30px;
+.rtt-preset-number .q-field__control { min-height:0 !important; height:30px;
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px; }
 /* an invalid limit -- an even odd-limit-diamond (OLD) limit -- is flagged unmistakably red: the
    number itself, the field's border, and a red fill that highlights the whole square (a thin border
    alone reads as too subtle). The explaining tooltip goes red too (.rtt-tip-error below). DARK MODE:
    rtt-dark.css restates all three on the dark field -- its body.rtt-dark rules outspecify these. */
-.rtt-preset-num.rtt-limit-error .q-field__control { border-color:#d33; background:#fbdada; }
-.rtt-preset-num.rtt-limit-error .q-field__native { color:#c0392b; }
+.rtt-preset-number.rtt-limit-error .q-field__control { border-color:#d33; background:#fbdada; }
+.rtt-preset-number.rtt-limit-error .q-field__native { color:#c0392b; }
 /* the matching red error tooltip (set on the target chooser's kept tooltip handle): a red box with
    white text, like a negative toast, instead of the default dark hover bubble. */
 .q-tooltip.rtt-tip-error { background:#d33 !important; color:#fff !important; }
@@ -566,19 +566,19 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* when the target chooser is LOCKED (all-interval), its numeric square greys with its family
    select -- the same flat #d6d6d6 disabled fill -- so the two parts read as one dead unit, not a
    grey dropdown beside a still-white box. (Matches the .rtt-preset disabled rule above.) */
-.rtt-preset-num.q-field--disabled .q-field__control { background:#d6d6d6; border-color:#bbb; }
+.rtt-preset-number.q-field--disabled .q-field__control { background:#d6d6d6; border-color:#bbb; }
 /* its value AND its "-" placeholder grey to the same disabled #999 as the family select's value */
-.rtt-preset-num.q-field--disabled .q-field__native,
-.rtt-preset-num.q-field--disabled .q-field__native::placeholder { color:#999; }
-.rtt-preset-num.q-field--disabled, .rtt-preset-num.q-field--disabled * { user-select:none !important; }
-.rtt-preset-num .q-field__control::before, .rtt-preset-num .q-field__control::after { display:none !important; }
-.rtt-preset-num .q-field__native { font-size:var(--cell-font); color:#000; min-height:0 !important; padding:0;
+.rtt-preset-number.q-field--disabled .q-field__native,
+.rtt-preset-number.q-field--disabled .q-field__native::placeholder { color:#999; }
+.rtt-preset-number.q-field--disabled, .rtt-preset-number.q-field--disabled * { user-select:none !important; }
+.rtt-preset-number .q-field__control::before, .rtt-preset-number .q-field__control::after { display:none !important; }
+.rtt-preset-number .q-field__native { font-size:var(--cell-font); color:#000; min-height:0 !important; padding:0;
             line-height:30px; text-align:center; font-family:var(--rtt-serif); }
-.rtt-preset-num .q-field__native::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.rtt-preset-number .q-field__native::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 /* the "-" placeholder (shown when the limit blanks — an overridden target list) reads like a
    real value, matching the family select's display-value "-", not a greyed prompt */
-.rtt-preset-num .q-field__native::placeholder { color:#000; opacity:1; }
-.rtt-preset-num .q-field__marginal, .rtt-preset-num .q-field__append { display:none !important; }
+.rtt-preset-number .q-field__native::placeholder { color:#000; opacity:1; }
+.rtt-preset-number .q-field__marginal, .rtt-preset-number .q-field__append { display:none !important; }
 /* the monotone/tradeoff range selector under the ranges chart: two square indicators
    stacked vertically (filled = selected), per the mockup, with small serif labels.
    Vertical stack because the bumped 16px boxes don't fit side by side. Each row is
@@ -645,8 +645,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    is clipped to its cell rather than streaking across the page.
    No fixed height (like .rtt-tuning-value): the cell centres it, and when a per-cell unit is
    added the value+unit hug as one pair — height:100% would float the unit to the bottom. */
-.rtt-mathexpr { width:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-.rtt-mathexpr-stack { display:flex; flex-direction:column; align-items:center; justify-content:center;
+.rtt-math-expression { width:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.rtt-math-expression-stack { display:flex; flex-direction:column; align-items:center; justify-content:center;
                       line-height:1.1; color:#000; white-space:nowrap; }
 .rtt-cellinput { width:100% !important; height:100%; min-height:0; overflow:visible; }
 .rtt-cellinput .q-field__inner { overflow:visible; }
@@ -879,17 +879,17 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    a row-based matrix); only the cells actually SOUNDING flash, via ::after so the tint shows OVER the
    opaque value face (a background on the wrap is hidden behind the white cell fill) and squared to
    the cell (no radius). */
-.rtt-spk-on::after { content:""; position:absolute; inset:0; pointer-events:none; z-index:4;
+.rtt-speaker-on::after { content:""; position:absolute; inset:0; pointer-events:none; z-index:4;
     background:rgba(0,0,0,0.20); }
 /* the float sits flush ABOVE the column segment (its bottom on the segment's top edge) so moving the
    cursor up onto it never crosses dead space — the mouseout's relatedTarget is the float itself. */
-.rtt-spk-float { position:fixed; transform:translate(-50%, -100%); z-index:9600; display:none;
+.rtt-speaker-float { position:fixed; transform:translate(-50%, -100%); z-index:9600; display:none;
     align-items:center; justify-content:center; width:24px; height:24px; background:#fff;
     border:1px solid #8a8a8a; border-radius:2px; box-shadow:0 1px 4px rgba(0,0,0,0.3);
     color:#555; cursor:pointer; }
-.rtt-spk-float.rtt-spk-float-on { display:flex; }
-.rtt-spk-float:hover { color:#000; background:#f2f2f2; }
-.rtt-spk-float .material-icons { font-size:15px; }
+.rtt-speaker-float.rtt-speaker-float-on { display:flex; }
+.rtt-speaker-float:hover { color:#000; background:#f2f2f2; }
+.rtt-speaker-float .material-icons { font-size:15px; }
 .material-icons.rtt-audio-glyph { font-size:12px; width:auto; height:auto; }
 .rtt-audio-rootglyph { font-size:8px; font-family:var(--rtt-serif); line-height:1; }
 /* the domain − is a hover affordance: an invisible zone dropping from the removable
@@ -925,13 +925,13 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the audio float counts as part of the cell's hover zone: while a cell's speaker segment is lit
    (cursor on the cell OR on its floated icon) keep the reduce/reciprocate buttons up too, so moving
    onto the icon doesn't drop the cell's other hover affordances */
-.rtt-fraction-cell:hover, .rtt-fraction-cell.rtt-spk-hover { z-index:10; }   /* lift the whole cell so its overhanging buttons sit ON TOP of the neighbouring value boxes (a later sibling would otherwise paint over the right-hand one) */
+.rtt-fraction-cell:hover, .rtt-fraction-cell.rtt-speaker-hover { z-index:10; }   /* lift the whole cell so its overhanging buttons sit ON TOP of the neighbouring value boxes (a later sibling would otherwise paint over the right-hand one) */
 .rtt-fraction-cell:hover .rtt-ratio-op,
-.rtt-fraction-cell.rtt-spk-hover .rtt-ratio-op { opacity:1; pointer-events:auto; }
+.rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-op { opacity:1; pointer-events:auto; }
 .rtt-fraction-cell:focus-within .rtt-ratio-op { display:none; }
 /* a no-op button stays SOLID (the full white box) and greys only its glyph — never semi-transparent */
 .rtt-fraction-cell:hover .rtt-ratio-op.rtt-op-disabled,
-.rtt-fraction-cell.rtt-spk-hover .rtt-ratio-op.rtt-op-disabled { color:#bbb; pointer-events:none; cursor:default; }
+.rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-op.rtt-op-disabled { color:#bbb; pointer-events:none; cursor:default; }
 
 /* drag-and-drop reorder grips. The GRIP (.rtt-colgrip) is the shared .rtt-drag-handle ⠿, riding the
    reserved GRIP_BAND room on the fan — along each column's sub-axis gridline, between the − above
@@ -1075,7 +1075,7 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
    dummy-tile part stays INVISIBLE BUT IN PLACE (visibility:hidden — the tile keeps its shape, and
    the hidden part can't be clicked). Both beat the part-on/off styling and the parent-visibility
    binding. */
-.rtt-chap-hidden { display:none !important; }
+.rtt-chapter-hidden { display:none !important; }
 .rtt-chap-invisible { visibility:hidden !important; }
 /* one toggle row: the checkbox+label in the Show column, its sample in the example column */
 .rtt-show-row { display:grid; grid-template-columns:160px 1fr; align-items:center; min-height:26px; }
@@ -1094,11 +1094,11 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
    far clearer "inactive" cue than Quasar's faint default opacity dim alone */
 .rtt-show-item.disabled .q-checkbox__label { color:#999; }
 .rtt-show-item.disabled .q-checkbox__inner { color:#999 !important; }
-.rtt-ex-cell { font-family:var(--rtt-serif); font-size:13px; color:#000;
+.rtt-example-cell { font-family:var(--rtt-serif); font-size:13px; color:#000;
                display:flex; align-items:center; justify-content:flex-end; min-height:26px; }
 /* a disabled toggle's sample greys to match its label — color for the glyph examples,
    plus the same 0.75 dim Quasar puts on the checkbox so the two read as one shade */
-.rtt-ex-cell.rtt-ex-disabled { color:#999; opacity:0.75; }
+.rtt-example-cell.rtt-ex-disabled { color:#999; opacity:0.75; }
 .rtt-ex { white-space:nowrap; }
 /* the "general" group's dummy tile: a value-tile-styled panel matching a real tile — the grey
    #e0e0e0 fill, a thin #8a8a8a border and SQUARE corners (no radius, like the grid's tiles).

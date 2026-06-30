@@ -132,7 +132,7 @@ def _part_classes(user: User, key: str) -> list[str]:
 
 def _row_classes(user: User, key: str) -> list[str]:
     """The CSS classes on the specific-group toggle row for ``key`` (the chapter slider hides a
-    row by adding ``rtt-chap-hidden``)."""
+    row by adding ``rtt-chapter-hidden``)."""
     return next(iter(user.find(marker=f"showrow:{key}").elements))._classes
 
 

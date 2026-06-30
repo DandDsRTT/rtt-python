@@ -30,7 +30,7 @@ def target_preset_values(editor):
 
 def tag_audio(element, cell_box) -> None:
     tile, index, cents = cell_box.audio
-    element.classes(add="rtt-spk").props(
+    element.classes(add="rtt-speaker").props(
         f'data-audio="{tile}" data-idx="{index}" data-cents="{cents:.6f}"'
     )
 
