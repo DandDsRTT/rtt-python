@@ -41,12 +41,12 @@ class TestWebDarkMode:
 
     def test_dark_theme_flips_text_light_on_every_text_role(self):
         assert _dark_sets(".rtt-drawer-inner", "color"), "the panel text rides .rtt-drawer-inner's colour; the grid's value/label/caption text # each carry their own, so each must be re-lit"
-        for text in (".rtt-value", ".rtt-rowlabel", ".rtt-symbol", ".rtt-caption"):
+        for text in (".rtt-value", ".rtt-row-label", ".rtt-symbol", ".rtt-caption"):
             assert _dark_sets(text, "color"), text
 
     def test_dark_theme_relights_the_editable_cell_inputs(self):
-        assert _dark_sets(".rtt-cellinput", "background"), "an editable value/plain-text cell is a white q-input in light mode; dark must darken # its fill and re-light its typed text, or edited cells stay blinding white"
-        assert _dark_sets(".rtt-cellinput", "color")
+        assert _dark_sets(".rtt-cell-input-field", "background"), "an editable value/plain-text cell is a white q-input in light mode; dark must darken # its fill and re-light its typed text, or edited cells stay blinding white"
+        assert _dark_sets(".rtt-cell-input-field", "color")
         assert _dark_sets(".rtt-plain-text-edit", "background")
 
     def test_dark_theme_retints_the_baked_in_marks_without_disturbing_the_pending_green(self):
@@ -64,10 +64,10 @@ class TestWebDarkMode:
     def test_dark_stacked_cells_show_their_face_not_the_raw_input(self):
         css = page_assets._CSS
         unfocused = re.search(
-            r"body\.rtt-dark \.rtt-cell-stacked \.rtt-cellinput \.q-field__native\s*\{([^}]*)\}", css)
+            r"body\.rtt-dark \.rtt-cell-stacked \.rtt-cell-input-field \.q-field__native\s*\{([^}]*)\}", css)
         assert unfocused and "transparent" in unfocused.group(1)
         focused = re.search(
-            r"body\.rtt-dark \.rtt-cell-stacked:focus-within \.rtt-cellinput \.q-field__native\s*\{([^}]*)\}", css)
+            r"body\.rtt-dark \.rtt-cell-stacked:focus-within \.rtt-cell-input-field \.q-field__native\s*\{([^}]*)\}", css)
         assert focused and "color:" in focused.group(1) and "#000" not in focused.group(1)
 
     def test_dark_mode_is_a_standalone_preference_not_a_show_setting(self):

@@ -52,10 +52,10 @@ class TestDefaultPage:
         assert default_page.find(marker="target:0:reciprocate").elements
         assert default_page.find(marker="comma:0:reduce").elements
         assert default_page.find(marker="comma:0:reciprocate").elements
-        assert "rtt-op-disabled" not in _op_classes(default_page, "target:0:reduce")
-        assert "rtt-op-disabled" in _op_classes(default_page, "target:2:reduce")
-        assert "rtt-op-disabled" not in _op_classes(default_page, "target:0:reciprocate")
-        assert "rtt-op-disabled" not in _op_classes(default_page, "target:2:reciprocate")
+        assert "rtt-operation-disabled" not in _op_classes(default_page, "target:0:reduce")
+        assert "rtt-operation-disabled" in _op_classes(default_page, "target:2:reduce")
+        assert "rtt-operation-disabled" not in _op_classes(default_page, "target:0:reciprocate")
+        assert "rtt-operation-disabled" not in _op_classes(default_page, "target:2:reciprocate")
 
     def test_interval_columns_render_draggable_reorder_grips(self, default_page: User) -> None:
         assert default_page.find(marker="grip:targets:0").elements, "the target list shows by default, so its reorder grip renders with no setup: a draggable # ⠿ over each column (also the drop target). Drive the builder and confirm it's a drag source"
@@ -88,7 +88,7 @@ class TestDefaultPage:
             classes = getattr(element, "_classes", [])
             if "rtt-zoomable" in classes:
                 assert not any(c in classes for c in
-                               ("rtt-colheader", "rtt-rowlabel", "rtt-symbol", "rtt-boxtitle"))
+                               ("rtt-colheader", "rtt-row-label", "rtt-symbol", "rtt-box-title"))
 
     def test_value_cell_help_folds_into_the_zoom_magnifier(self, default_page: User) -> None:
         mapping = _wrap(default_page, "cell:mapping:0:0")
@@ -117,7 +117,7 @@ class TestDefaultPage:
     def test_guide_settings_box_holds_a_dd_default_terminology_radio(self, default_page: User) -> None:
         assert next(iter(default_page.find(marker="guidesettingstitle").elements)).text == "guide settings"
         dd_opt = next(iter(default_page.find(marker="terminologyradio-dd").elements))
-        assert "rtt-rangeopt-on" in dd_opt._classes
+        assert "rtt-range-option-on" in dd_opt._classes
 
     def test_positive_gen_tuning_cell_shows_an_explicit_plus_sign(self, default_page: User) -> None:
         sign_lbl, _, _ = _gentuning_face(default_page, "tuning:gen:1")

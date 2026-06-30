@@ -186,7 +186,7 @@ html, body { overscroll-behavior-x: none; }
    (the white wash bases), not the grey pane behind it */
 .rtt-gridcontent { position:relative; isolation:isolate; transition:width var(--t), height var(--t); }
 .rtt-band { position:absolute; inset:0; pointer-events:none; }
-/* the chapter-9 nonstandard-domain-approach radio: the standard square radio (.rtt-rangemode does
+/* the chapter-9 nonstandard-domain-approach radio: the standard square radio (.rtt-range-mode does
    the vertical square-list layout), positioned over the reserved band inside the approach box
    (inline left/top/size set by render()); this only adds the absolute-positioning stacking. */
 .rtt-approach { z-index:3; box-sizing:border-box; }
@@ -301,7 +301,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-colheader { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
                  font-size:13px; font-weight:bold; color:#000; white-space:pre;
                  text-align:center; line-height:1.1; }
-.rtt-rowlabel { font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
+.rtt-row-label { font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; line-height:1.1; white-space:pre-line; }
 .rtt-value { font-size:var(--cell-font); color:#000; }
 /* the EBK-off transpose mark ᵀ: a small superscript at a vector matrix's top-right corner (its box
@@ -338,14 +338,14 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and captions ("optimization power") stay on ONE
    line — centred under their control, overflowing sideways if need be — so ⟪𝐝⟫ₚ never wraps
    its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
-.rtt-opt-1line { white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }
+.rtt-optimization-1line { white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }
 /* the all-interval mean damage relabels to the retuning magnitude ‖𝒓𝐿⁻¹‖dual(q), far wider than
    the short ⟪𝐝⟫ₚ — shrink it (to the .rtt-matrix-label-norm size used for the other wide ‖…‖q norm
    labels) so it reads within and stays centred over its COLUMN_WIDTH value cell, overflowing symmetrically
-   rather than clipping if it still spills. The selector is compounded (.rtt-symbol.rtt-opt-wide, not
-   a bare .rtt-opt-wide) so it OUT-SPECIFIES .rtt-symbol's own font-size:15px, which is declared later
+   rather than clipping if it still spills. The selector is compounded (.rtt-symbol.rtt-optimization-wide, not
+   a bare .rtt-optimization-wide) so it OUT-SPECIFIES .rtt-symbol's own font-size:15px, which is declared later
    in this sheet and would otherwise win the tie. */
-.rtt-symbol.rtt-opt-wide { font-size:8px; overflow:visible; }
+.rtt-symbol.rtt-optimization-wide { font-size:8px; overflow:visible; }
 /* a left-justified caption sits flush against its left edge (the dropdown it labels), free
    to overhang to the right on one line rather than wrapping (e.g. "predefined prescalers").
    The small left inset aligns the caption's first character vertically with the dropdown's
@@ -422,7 +422,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    and overlays the unit INSIDE it, with the number nudged up to clear the unit */
 .rtt-cell-united.rtt-cell-input .rtt-cell-unit { position:absolute; left:0; right:0; bottom:6px;
             pointer-events:none; z-index:1; }
-.rtt-cell-united.rtt-cell-input .rtt-cellinput .q-field__native { padding-bottom:10px !important; }
+.rtt-cell-united.rtt-cell-input .rtt-cell-input-field .q-field__native { padding-bottom:10px !important; }
 /* every EBK mark (⟨ ] [, top bracket, brace, vector rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill { width:100%; height:100%; line-height:0; }
@@ -579,7 +579,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    border, the fraction / decimal cell box -- so the value always reads non-interactively. */
 .rtt-zoom-clone { position:static !important; transition:none !important; }
 .rtt-zoom-clone.rtt-decimal-cell, .rtt-zoom-clone.rtt-fraction-cell { background:transparent !important; border:none !important; }
-.rtt-zoom-clone .rtt-cellinput .q-field__control { background:transparent !important; border:none !important; }
+.rtt-zoom-clone .rtt-cell-input-field .q-field__control { background:transparent !important; border:none !important; }
 /* the folded hover help: a normal-tooltip-style dark grey bubble (Roboto) sitting on the FAR side of
    the loupe from the cursor (the engine flips the stacking). A compact 11px -- Quasar's own 14px reads
    too big in this dense popup. The app's tooltips are the same grey in both themes, so no dark override. */
@@ -608,20 +608,20 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    LEFT-aligned (align-items:flex-start) so the two boxes line up at the same x, with
    their labels extending to the right — the labels have different widths and would look
    awkward if the boxes were centred and so didn't align vertically. */
-.rtt-rangemode { width:100%; display:flex; flex-direction:column; align-items:flex-start;
+.rtt-range-mode { width:100%; display:flex; flex-direction:column; align-items:flex-start;
                   justify-content:center; gap:3px; line-height:1; overflow:hidden;
                   padding:4px 4px 4px 8px; }  /* top/bottom 4 so the bottom row doesn't touch the box edge */
-.rtt-rangeopt { display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }
+.rtt-range-option { display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }
 .rtt-rangebox { width:var(--option-box); height:var(--option-box); flex:none;
                 box-sizing:border-box; background-repeat:no-repeat; background-size:100% 100%;
                 background-image:var(--option-box-unchecked); }
 /* selected = a square "radio": the SAME SVG art with a centred black inner square (a radio dot,
    but square) — one vector, so it stays square with an even border at any zoom (see _option_box_svg) */
-.rtt-rangeopt-on .rtt-rangebox { background-image:var(--option-box-checked); }
+.rtt-range-option-on .rtt-rangebox { background-image:var(--option-box-checked); }
 .rtt-rangelabel { font-family:var(--rtt-serif); font-size:10px; color:#000; white-space:nowrap; }
 .rtt-ratio { display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }
-.rtt-approx { font-size:13px; align-self:center; }
+.rtt-approximate { font-size:13px; align-self:center; }
 .rtt-fraction { display:inline-flex; flex-direction:column; align-items:center; line-height:1.04; }
 .rtt-fraction-numerator { border-bottom:1px solid #000; padding:0 3px; }
 .rtt-fraction-denominator { padding:0 3px; }
@@ -647,20 +647,20 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    cents cell builds it inside .rtt-decimal-main): the otherwise-assumed "+" of a positive generator
    (or a "−") that the user clicks to reverse that generator (its mapping row flips too). It reads
    as part of the value (black), with a faint hover box marking it clickable. */
-.rtt-gensign { font-size:10px; pointer-events:auto; cursor:pointer; padding:0 1px; border-radius:2px; }
-.rtt-gensign:hover { background:#e0e0e0; }
+.rtt-generator-sign { font-size:10px; pointer-events:auto; cursor:pointer; padding:0 1px; border-radius:2px; }
+.rtt-generator-sign:hover { background:#e0e0e0; }
 /* the editable POWER cell (the optimization power 𝑝 / box-𝒄 norm power 𝑞): ∞ over a small "(max)"
    is not a decimal you can split into two fields like a cents value, so it keeps the overlay-face
    model — the stacked face laid over a single input, transparent until focused. (The cents cells —
    prescaler / weight / generator tuning — moved to the in-place .rtt-decimal-cell editor below.) */
-.rtt-cellface { position:absolute; top:0; left:0; width:100%; height:100%;
+.rtt-cell-face { position:absolute; top:0; left:0; width:100%; height:100%;
             pointer-events:none; z-index:1; }
-.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent; font-size:10px; }
-.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:#000; }
-.rtt-cell-stacked:focus-within .rtt-cellface { display:none; }
+.rtt-cell-stacked .rtt-cell-input-field .q-field__native { color:transparent; font-size:10px; }
+.rtt-cell-stacked:focus-within .rtt-cell-input-field .q-field__native { color:#000; }
+.rtt-cell-stacked:focus-within .rtt-cell-face { display:none; }
 /* with the per-cell unit on, lift the face's centred value to clear the unit pinned at the
    cell's bottom (a read-only cents cell stacks value-over-unit; this overlay pads instead) */
-.rtt-cell-united.rtt-cell-stacked .rtt-cellface { padding-bottom:9px; }
+.rtt-cell-united.rtt-cell-stacked .rtt-cell-face { padding-bottom:9px; }
 /* a just value's closed form, stacked as "1200 · log₂(3/2)" over "= 701.96"; each line's font
    is scaled (inline) to fit the narrow value square, and a giant target/comma ratio that can't
    fit even at the floor font has its log₂ operand elided to (…/…) — so it never overflows.
@@ -671,16 +671,16 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-math-expression { width:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; }
 .rtt-math-expression-stack { display:flex; flex-direction:column; align-items:center; justify-content:center;
                       line-height:1.1; color:#000; white-space:nowrap; }
-.rtt-cellinput { width:100% !important; height:100%; min-height:0; overflow:visible; }
-.rtt-cellinput .q-field__inner { overflow:visible; }
-.rtt-cellinput .q-field__control { position:absolute !important; top:0; left:0;
+.rtt-cell-input-field { width:100% !important; height:100%; min-height:0; overflow:visible; }
+.rtt-cell-input-field .q-field__inner { overflow:visible; }
+.rtt-cell-input-field .q-field__control { position:absolute !important; top:0; left:0;
             width:calc(100% + var(--cell-border-w)) !important; height:calc(100% + var(--cell-border-w)) !important;
             max-width:none !important; min-height:0 !important;
             box-sizing:border-box; padding:0 !important; background:transparent; border:var(--cell-border); }
-.rtt-cellinput .q-field__control::before, .rtt-cellinput .q-field__control::after { display:none !important; }
-.rtt-cellinput .q-field__native { text-align:center; padding:0 !important; color:#000; font-size:var(--cell-font);
+.rtt-cell-input-field .q-field__control::before, .rtt-cell-input-field .q-field__control::after { display:none !important; }
+.rtt-cell-input-field .q-field__native { text-align:center; padding:0 !important; color:#000; font-size:var(--cell-font);
             min-height:0; font-family:var(--rtt-serif); }
-.rtt-cellinput .q-field__bottom, .rtt-cellinput .q-field__marginal { display:none !important; }
+.rtt-cell-input-field .q-field__bottom, .rtt-cell-input-field .q-field__marginal { display:none !important; }
 /* ---- the editable stacked fraction cells (the unified ratio-or-integer gridvalue, ratio_allowed):
    a numerator input over a bar over a denominator input, edited IN PLACE — no overlay face, no
    diagonal slash. The white box + black outline rides the WRAP (one box around two inputs), and the
@@ -696,11 +696,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    is safe because _fit_fraction already shrinks the font so the digits fit the cell. */
 .rtt-fraction-edit { display:flex; flex-direction:column; align-items:center; justify-content:center;
             width:max-content; height:100%; line-height:1.04; font-size:var(--cell-font); }
-.rtt-fraction-cell .rtt-cellinput { width:auto !important; height:auto; }
-.rtt-fraction-cell .rtt-cellinput .q-field__control { position:static !important; background:transparent;
+.rtt-fraction-cell .rtt-cell-input-field { width:auto !important; height:auto; }
+.rtt-fraction-cell .rtt-cell-input-field .q-field__control { position:static !important; background:transparent;
             border:none !important; width:auto !important; height:auto !important; min-height:0 !important;
             box-shadow:none !important; }  /* the WRAP owns the box + the pending/preview ring — not each input */
-.rtt-fraction-cell .rtt-cellinput .q-field__native { font-size:inherit; line-height:1.04; padding:0 3px !important;
+.rtt-fraction-cell .rtt-cell-input-field .q-field__native { font-size:inherit; line-height:1.04; padding:0 3px !important;
             min-height:0 !important; field-sizing:content; min-width:1ch; text-align:center; }
 /* the bar hugs the digits (align-self:stretch spans the wider input's content-width box, since the
    inputs above field-size to their text) — the editable twin of the read-only .rtt-fraction-numerator overhang,
@@ -724,16 +724,16 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    just the big whole; "dec" shows the whole over a small ".fraction". _DECIMAL_JS keeps it live as you
    type; the server sets it authoritatively from the committed value. field-sizing:content sizes each
    field to its digits so the sign glyph hugs the whole and the dot hugs the fraction (Chrome's grid).
-   The generator cell adds a clickable +/− sign (.rtt-gensign) left of the whole part. ---- */
+   The generator cell adds a clickable +/− sign (.rtt-generator-sign) left of the whole part. ---- */
 .rtt-decimal-cell { background:#fff; border:var(--cell-border); box-sizing:border-box; overflow:hidden; }
 .rtt-decimal-edit { display:flex; flex-direction:column; align-items:center; justify-content:center;
             width:100%; height:100%; line-height:1.04; }
 .rtt-decimal-main, .rtt-decimal-sub { display:flex; align-items:baseline; justify-content:center; line-height:1; }
-.rtt-decimal-cell .rtt-cellinput { width:auto !important; height:auto; }
-.rtt-decimal-cell .rtt-cellinput .q-field__control { position:static !important; background:transparent;
+.rtt-decimal-cell .rtt-cell-input-field { width:auto !important; height:auto; }
+.rtt-decimal-cell .rtt-cell-input-field .q-field__control { position:static !important; background:transparent;
             border:none !important; width:auto !important; height:auto !important; min-height:0 !important;
             box-shadow:none !important; }  /* the WRAP owns the box + the pending/preview ring — not each input */
-.rtt-decimal-cell .rtt-cellinput .q-field__native { padding:0 1px !important; min-height:0 !important;
+.rtt-decimal-cell .rtt-cell-input-field .q-field__native { padding:0 1px !important; min-height:0 !important;
             line-height:1.04; text-align:center; field-sizing:content; min-width:1ch; }
 .rtt-decimal-whole-input .q-field__native { font-size:10px; }   /* the whole part big (the cents main size) */
 .rtt-decimal-fraction-input .q-field__native { font-size:7px; }     /* the fraction small (the cents sub size) */
@@ -752,16 +752,16 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* per-cell unit (the units toggle): lift the stacked value to clear the unit pinned at the cell's
    bottom, and keep the unit's input-padding rule (above) off the dec fields' tight stack. */
 .rtt-cell-united.rtt-decimal-cell .rtt-decimal-edit { padding-bottom:9px; }
-.rtt-cell-united.rtt-decimal-cell .rtt-cellinput .q-field__native { padding-bottom:0 !important; }
+.rtt-cell-united.rtt-decimal-cell .rtt-cell-input-field .q-field__native { padding-bottom:0 !important; }
 /* a pending NEW-entry draft cell: a GREEN inset ring + faint green wash — the SAME highlight style
    as the amber edit-preview and the red remove-preview below, in green to read "being created".
    (Replaces the old red outline so the three highlight states share one visual language: green =
    creating, amber = changing, red = deleting/invalid.) Empty until the user types a valid
    independent comma, at which point it commits and reverts to a normal black cell. Repeated on the
    .q-field__control because the input's opaque white fill would otherwise hide the wrap's highlight. */
-.rtt-cellinput.rtt-pending .q-field__control { box-shadow:inset 0 0 0 2px var(--pending-color);
+.rtt-cell-input-field.rtt-pending .q-field__control { box-shadow:inset 0 0 0 2px var(--pending-color);
             background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
-.rtt-cellinput.rtt-pending .q-field__native { color:var(--pending-text-color) !important; }
+.rtt-cell-input-field.rtt-pending .q-field__native { color:var(--pending-text-color) !important; }
 /* a pending comma's "?" quantity (and the draft vector in the plain text), in the same DARK
    green as its draft cells' text — the ring/brackets keep the lighter --pending-color */
 .rtt-pending-q { color:var(--pending-text-color) !important; }
@@ -776,11 +776,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the typed text greens only WHILE FOCUSED; unfocused it stays transparent (rtt-cell-stacked)
    so the "?/?" face shows alone, not doubled over the raw input text — the bug a plain (always-on)
    colour rule caused by overriding the stacked-cell transparency with !important. */
-.rtt-cell-input.rtt-pending:focus-within .rtt-cellinput .q-field__native { color:var(--pending-text-color) !important; }
+.rtt-cell-input.rtt-pending:focus-within .rtt-cell-input-field .q-field__native { color:var(--pending-text-color) !important; }
 /* a pending NON-interactive placeholder: the draft column's computed rows below the vectors
    (mapping, tuning, complexity, …) get filled with blank cells so the WHOLE draft column reads
    green, not just its editable cells up top. Plain .rtt-cell only — :not(.rtt-cell-input) so it
-   never double-rings the editable draft cells (which carry their own .rtt-cellinput/.rtt-cell-input
+   never double-rings the editable draft cells (which carry their own .rtt-cell-input-field/.rtt-cell-input
    green ring) — with the same green inset ring + faint wash the amber preview-change / red
    preview-remove plain cells use. The placeholders are blank, so no text colour is needed. */
 .rtt-cell:not(.rtt-cell-input).rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
@@ -815,8 +815,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    lattice, bar charts) use fixed colours, not currentColor, so this leaves them be. */
 .rtt-cell.rtt-preview-change, .rtt-cell.rtt-preview-change * { color:var(--preview-text-color) !important; }
 .rtt-cell.rtt-preview-change .rtt-fraction-numerator { border-bottom-color:var(--preview-text-color) !important; }
-.rtt-cell.rtt-preview-change.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent !important; }
-.rtt-cell.rtt-preview-change.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:var(--preview-text-color) !important; }
+.rtt-cell.rtt-preview-change.rtt-cell-stacked .rtt-cell-input-field .q-field__native { color:transparent !important; }
+.rtt-cell.rtt-preview-change.rtt-cell-stacked:focus-within .rtt-cell-input-field .q-field__native { color:var(--preview-text-color) !important; }
 /* the structural remove-preview: hovering a +/- that DELETES a column or row rings the cells it
    removes in RED (they are still on screen, so the user sees exactly what goes away), while the
    cells whose value the re-solve only MOVES keep the amber rtt-preview-change above. Same inset ring
@@ -833,8 +833,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    reddens yet a stacked ratio's hidden raw input is never doubled over its face. */
 .rtt-cell.rtt-preview-remove, .rtt-cell.rtt-preview-remove * { color:var(--preview-remove-text-color) !important; }
 .rtt-cell.rtt-preview-remove .rtt-fraction-numerator { border-bottom-color:var(--preview-remove-text-color) !important; }
-.rtt-cell.rtt-preview-remove.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent !important; }
-.rtt-cell.rtt-preview-remove.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:var(--preview-remove-text-color) !important; }
+.rtt-cell.rtt-preview-remove.rtt-cell-stacked .rtt-cell-input-field .q-field__native { color:transparent !important; }
+.rtt-cell.rtt-preview-remove.rtt-cell-stacked:focus-within .rtt-cell-input-field .q-field__native { color:var(--preview-remove-text-color) !important; }
 /* the comma basis plain text while a comma is pending: not an editable input (which is
    one colour) but a static box matching the input's frame, holding the committed commas
    in black and the red draft vector — you edit the draft in the red grid cells */
@@ -885,7 +885,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    control box): left-aligned at the top-left of the box (its cell otherwise centres it),
    padded off the left border. One line that overhangs to the right rather than wrapping —
    the box is sized to seat it, so it never clips. */
-.rtt-boxtitle { font-family:var(--rtt-serif); font-size:11px; font-weight:bold;
+.rtt-box-title { font-family:var(--rtt-serif); font-size:11px; font-weight:bold;
                  color:#000; width:100%; text-align:left; padding-left:8px;
                  white-space:nowrap; overflow:visible; }
 /* a per-tile bank control square (waveform / play-mode / hold-loop / include-1/1), the same
@@ -914,7 +914,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-speaker-float:hover { color:#000; background:#f2f2f2; }
 .rtt-speaker-float .material-icons { font-size:15px; }
 .material-icons.rtt-audio-glyph { font-size:12px; width:auto; height:auto; }
-.rtt-audio-rootglyph { font-size:8px; font-family:var(--rtt-serif); line-height:1; }
+.rtt-audio-root-glyph { font-size:8px; font-family:var(--rtt-serif); line-height:1; }
 /* the domain − is a hover affordance: an invisible zone dropping from the removable
    element's branch point (the column's top-bus split) down over its header reveals the
    button centred ON that branch point — up at the fan, clear of the editable cells below.
@@ -941,24 +941,24 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    .rtt-ratioed so they aren't clipped, and lifts its z-index on hover so they sit on top). A
    bare-integer "n" (no visible bar) is flanked as if the vinculum were there. */
 .rtt-fraction-cell.rtt-ratioed { overflow:visible; }
-.rtt-ratio-op { position:absolute !important; top:50%; width:var(--button); height:var(--button); z-index:6;
+.rtt-ratio-operation { position:absolute !important; top:50%; width:var(--button); height:var(--button); z-index:6;
            opacity:0; pointer-events:none; transition:opacity var(--t); }
-.rtt-ratio-op-reduce { left:0; transform:translate(-50%,-50%); }
-.rtt-ratio-op-recip { right:0; transform:translate(50%,-50%); }
+.rtt-ratio-operation-reduce { left:0; transform:translate(-50%,-50%); }
+.rtt-ratio-operation-reciprocate { right:0; transform:translate(50%,-50%); }
 /* the audio float counts as part of the cell's hover zone: while a cell's speaker segment is lit
    (cursor on the cell OR on its floated icon) keep the reduce/reciprocate buttons up too, so moving
    onto the icon doesn't drop the cell's other hover affordances */
 /* the mouse :hover affordances are gated on body:not(.rtt-kbd) so keyboard navigation suppresses
    them on the mouse-hovered cell; .rtt-active carries them on the keyboard-selected cell instead. */
 body:not(.rtt-kbd) .rtt-fraction-cell:hover, .rtt-fraction-cell.rtt-speaker-hover, .rtt-fraction-cell.rtt-active { z-index:10; }   /* lift the whole cell so its overhanging buttons sit ON TOP of the neighbouring value boxes (a later sibling would otherwise paint over the right-hand one) */
-body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-op,
-.rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-op,
-.rtt-fraction-cell.rtt-active .rtt-ratio-op { opacity:1; pointer-events:auto; }
-.rtt-fraction-cell:focus-within .rtt-ratio-op { display:none; }
+body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation,
+.rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation,
+.rtt-fraction-cell.rtt-active .rtt-ratio-operation { opacity:1; pointer-events:auto; }
+.rtt-fraction-cell:focus-within .rtt-ratio-operation { display:none; }
 /* a no-op button stays SOLID (the full white box) and greys only its glyph — never semi-transparent */
-body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-op.rtt-op-disabled,
-.rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-op.rtt-op-disabled,
-.rtt-fraction-cell.rtt-active .rtt-ratio-op.rtt-op-disabled { color:#bbb; pointer-events:none; cursor:default; }
+body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-disabled,
+.rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation.rtt-operation-disabled,
+.rtt-fraction-cell.rtt-active .rtt-ratio-operation.rtt-operation-disabled { color:#bbb; pointer-events:none; cursor:default; }
 
 /* drag-and-drop reorder grips. The GRIP (.rtt-colgrip) is the shared .rtt-drag-handle ⠿, riding the
    reserved GRIP_BAND room on the fan — along each column's sub-axis gridline, between the − above
@@ -1014,14 +1014,14 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-op.rtt-op-disabled,
 /* preview-highlighting toggle: a value box that cycles the app's pending/change/remove states —
    green "1", amber "2", red "3", then a blank beat — using the exact ring/wash/text the grid uses
    (so it tracks dark mode via the same vars). Off = the same cycle with no colour. */
-.rtt-prev-icon { position:relative; width:12px; height:12px; display:block; }
-.rtt-prev-n { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+.rtt-preview-icon { position:relative; width:12px; height:12px; display:block; }
+.rtt-preview-n { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
               font-size:8px; line-height:1; opacity:0; }
-.rtt-vis-prev .rtt-prev-icon { animation:rtt-prev-box 3s infinite; }
-.rtt-vis-prev .n1 { color:var(--pending-text-color); animation:rtt-prev-n1 3s infinite; }
-.rtt-vis-prev .n2 { color:var(--preview-text-color); animation:rtt-prev-n2 3s infinite; }
-.rtt-vis-prev .n3 { color:var(--preview-remove-text-color); animation:rtt-prev-n3 3s infinite; }
-@keyframes rtt-prev-box {
+.rtt-visibility-preview .rtt-preview-icon { animation:rtt-preview-box 3s infinite; }
+.rtt-visibility-preview .n1 { color:var(--pending-text-color); animation:rtt-preview-n1 3s infinite; }
+.rtt-visibility-preview .n2 { color:var(--preview-text-color); animation:rtt-preview-n2 3s infinite; }
+.rtt-visibility-preview .n3 { color:var(--preview-remove-text-color); animation:rtt-preview-n3 3s infinite; }
+@keyframes rtt-preview-box {
   0%,28%   { box-shadow:inset 0 0 0 1.5px var(--pending-color);
              background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
   33%,61%  { box-shadow:inset 0 0 0 1.5px var(--preview-color);
@@ -1030,12 +1030,12 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-op.rtt-op-disabled,
              background:color-mix(in srgb, var(--preview-remove-color) 14%, transparent); }
   92%,100% { box-shadow:none; background:transparent; }
 }
-@keyframes rtt-prev-n1 { 0%,28% { opacity:1; } 30%,100% { opacity:0; } }
-@keyframes rtt-prev-n2 { 0%,30% { opacity:0; } 33%,61% { opacity:1; } 63%,100% { opacity:0; } }
-@keyframes rtt-prev-n3 { 0%,63% { opacity:0; } 66%,90% { opacity:1; } 92%,100% { opacity:0; } }
-.rtt-vis-prev.rtt-vis-off .rtt-prev-n { color:#777; }
-.rtt-vis-prev.rtt-vis-off .rtt-prev-icon { animation:rtt-prev-box-off 3s infinite; }
-@keyframes rtt-prev-box-off {
+@keyframes rtt-preview-n1 { 0%,28% { opacity:1; } 30%,100% { opacity:0; } }
+@keyframes rtt-preview-n2 { 0%,30% { opacity:0; } 33%,61% { opacity:1; } 63%,100% { opacity:0; } }
+@keyframes rtt-preview-n3 { 0%,63% { opacity:0; } 66%,90% { opacity:1; } 92%,100% { opacity:0; } }
+.rtt-visibility-preview.rtt-vis-off .rtt-preview-n { color:#777; }
+.rtt-visibility-preview.rtt-vis-off .rtt-preview-icon { animation:rtt-preview-box-off 3s infinite; }
+@keyframes rtt-preview-box-off {
   0%,90% { box-shadow:inset 0 0 0 1.5px #999; background:color-mix(in srgb, #999 14%, transparent); }
   92%,100% { box-shadow:none; background:transparent; }
 }
@@ -1067,7 +1067,7 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-op.rtt-op-disabled,
 .rtt-section-all + .rtt-show-head { margin-top:8px; }
 .rtt-show-title { font-size:13px; font-weight:bold; }
 /* the "example" column header right-justifies over its right-aligned sample cells */
-.rtt-show-examplehdr { font-size:13px; font-weight:bold; justify-self:end; }
+.rtt-show-example-header { font-size:13px; font-weight:bold; justify-self:end; }
 /* "tile features" / "app features" head their settings sections at the section-title size
    (matching "guide settings"), a notch larger than the "show"/"example" column words. */
 .rtt-show-tiletitle, .rtt-app-features-title { font-size:14px; font-weight:bold; display:block; margin-bottom:2px; }
@@ -1079,7 +1079,7 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-op.rtt-op-disabled,
    a short header — the "guide chapter" label and a live readout of the current chapter — over a
    marked slider whose notches are the guide's chapters plus a final ★. */
 /* "guide settings" box title — a section title (matches "tile features" / "app features"). */
-.rtt-chapter-boxtitle { font-size:14px; font-weight:bold; display:block; margin-bottom:3px; }
+.rtt-chapter-box-title { font-size:14px; font-weight:bold; display:block; margin-bottom:3px; }
 /* the "max chapter" slider sub-label shares one baseline-aligned line with the live chapter name. */
 .rtt-chapter-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
 .rtt-chapter-title { font-size:12px; font-weight:bold; white-space:nowrap; }

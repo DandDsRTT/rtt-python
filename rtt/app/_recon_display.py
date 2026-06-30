@@ -87,7 +87,11 @@ def build_count(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None:
 
 def build_symbol(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-symbol-cell")
-    cls = "rtt-symbol rtt-opt-1line" if cell_box.id.startswith("optimization:") else "rtt-symbol"
+    cls = (
+        "rtt-symbol rtt-optimization-1line"
+        if cell_box.id.startswith("optimization:")
+        else "rtt-symbol"
+    )
     reconciler.cells[cell_box.id].display.math_cell = ui.html("").classes(cls)
 
 
@@ -144,9 +148,9 @@ def update_mathcell(reconciler, cell_box: spreadsheet.CellBox) -> None:
         if cell_box.id == "optimization:mean_damage:symbol":
             wide = "‖" in cell_box.text
             reconciler.cells[cell_box.id].display.math_cell.classes(
-                replace="rtt-symbol rtt-opt-1line rtt-opt-wide"
+                replace="rtt-symbol rtt-optimization-1line rtt-optimization-wide"
                 if wide
-                else "rtt-symbol rtt-opt-1line"
+                else "rtt-symbol rtt-optimization-1line"
             )
 
 
@@ -156,7 +160,7 @@ def build_caption(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
         cell_box.id.startswith("optimization:")
         and cell_box.id != "optimization:mean_damage:caption"
     )
-    cls = "rtt-caption rtt-opt-1line" if one_line else "rtt-caption"
+    cls = "rtt-caption rtt-optimization-1line" if one_line else "rtt-caption"
     if cell_box.align == "left":
         cls += " rtt-caption-left"
     reconciler.cells[cell_box.id].display.caption = ui.html("").classes(cls)

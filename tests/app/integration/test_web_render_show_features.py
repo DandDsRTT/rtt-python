@@ -27,7 +27,7 @@ class TestFeatureRenderBranches:
         css_path = os.path.join(os.path.dirname(spreadsheet.__file__), "assets", "rtt.css")
         with open(css_path, encoding="utf-8") as f:
             css = f.read()
-        rule = re.search(r"\.rtt-rowlabel\s*\{[^}]*\}", css).group(0)
+        rule = re.search(r"\.rtt-row-label\s*\{[^}]*\}", css).group(0)
         assert "white-space:pre-line" in rule.replace(" ", "")
 
     async def test_state_query_param_loads_a_shared_document(self, user: User) -> None:
@@ -227,10 +227,10 @@ class TestFeatureRenderBranches:
 
     async def test_clicking_reduce_folds_the_interval_into_one_equave(self, user: User) -> None:
         await user.open("/")
-        assert "rtt-op-disabled" not in _op_classes(user, "target:4:reduce")
+        assert "rtt-operation-disabled" not in _op_classes(user, "target:4:reduce")
         UserInteraction(user, set(user.find(marker="target:4:reduce").elements), None).trigger("click")
         assert _cell_child(user, "target:4").value == "5"
-        assert "rtt-op-disabled" in _op_classes(user, "target:4:reduce")
+        assert "rtt-operation-disabled" in _op_classes(user, "target:4:reduce")
 
     async def test_clicking_reciprocate_flips_the_interval(self, user: User) -> None:
         await user.open("/")
@@ -249,9 +249,9 @@ class TestFeatureRenderBranches:
         slider.set_value(show_settings.CHAPTER_STAR)
         _toggle(user, "nonstandard domain")
         await user.should_see(marker="prime:1:reduce")
-        assert "rtt-op-disabled" not in _op_classes(user, "prime:1:reduce")
+        assert "rtt-operation-disabled" not in _op_classes(user, "prime:1:reduce")
         UserInteraction(user, set(user.find(marker="prime:1:reduce").elements), None).trigger("click")
-        assert "rtt-op-disabled" in _op_classes(user, "prime:1:reduce")
+        assert "rtt-operation-disabled" in _op_classes(user, "prime:1:reduce")
 
 
 class TestProjectionPlainText:

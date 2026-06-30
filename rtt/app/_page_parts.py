@@ -251,8 +251,8 @@ _VISUAL_ICON = {
         '<rect class="g" x="9" y="9" width="3" height="3"/></svg>'
     ),
     "preview_highlighting": (
-        '<span class="rtt-prev-icon"><span class="rtt-prev-n n1">1</span>'
-        '<span class="rtt-prev-n n2">2</span><span class="rtt-prev-n n3">3</span></span>'
+        '<span class="rtt-preview-icon"><span class="rtt-preview-n n1">1</span>'
+        '<span class="rtt-preview-n n2">2</span><span class="rtt-preview-n n3">3</span></span>'
     ),
     "tooltips": '<span class="material-icons rtt-vis-mi">chat_bubble</span>',
 }
@@ -310,7 +310,7 @@ def build_show_frozen(page_builder) -> dict:
 
 def build_chapter_group(page_builder) -> dict:
     with ui.element("div").classes("rtt-show-group rtt-chapter-group"):
-        ui.label("guide settings").classes("rtt-chapter-boxtitle").mark("guidesettingstitle")
+        ui.label("guide settings").classes("rtt-chapter-box-title").mark("guidesettingstitle")
         with ui.element("div").classes("rtt-chapter-head"):
             ui.label("max chapter").classes("rtt-chapter-title")
             chapter_reading = (
@@ -340,11 +340,11 @@ def build_chapter_group(page_builder) -> dict:
 
 
 def build_rangemode_radio(page_builder, ref, options, on_select):
-    radio = ui.element("div").classes("rtt-rangemode").mark(ref)
+    radio = ui.element("div").classes("rtt-range-mode").mark(ref)
     opts = {}
     with radio:
         for key, label in options.items():
-            opt = ui.element("div").classes("rtt-rangeopt")
+            opt = ui.element("div").classes("rtt-range-option")
             with opt:
                 ui.element("span").classes("rtt-rangebox")
                 ui.label(label).classes("rtt-rangelabel")
@@ -399,7 +399,7 @@ def build_show_group(page_builder, group_name, items) -> None:
     _select_all_box(page_builder, group_name)
     with ui.element("div").classes("rtt-show-head"):
         ui.label("show").classes("rtt-show-title")
-        ui.label("example").classes("rtt-show-examplehdr")
+        ui.label("example").classes("rtt-show-example-header")
     for key, label, _ in items:
         row = ui.element("div").classes("rtt-show-row").mark(f"showrow:{key}")
         with row:

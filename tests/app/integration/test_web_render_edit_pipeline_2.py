@@ -299,7 +299,7 @@ class TestChoosers:
         await _enable(user, "tuning ranges")
         await user.should_see(marker="rangemode:tuning:gens")
         wrap = next(iter(user.find(marker="rangemode:tuning:gens").elements))
-        on = [c for c in wrap.default_slot.children if "rtt-rangeopt-on" in c._classes]
+        on = [c for c in wrap.default_slot.children if "rtt-range-option-on" in c._classes]
         assert len(on) == 1
 
     async def test_optimization_renders_the_mean_damage_and_power(self, user: User) -> None:

@@ -91,16 +91,16 @@ body.rtt-dark .rtt-show-frozen { border-bottom-color:#3c424a; }
    the editable q-inputs sit on white in light mode; darken the fill and re-light the text, or
    edited cells stay blinding. Their 1px rule rides --cell-border. Read-only values are plain
    rtt-value text (no box), re-lit with the other text roles below. */
-body.rtt-dark .rtt-cellinput .q-field__control { background:transparent; }
+body.rtt-dark .rtt-cell-input-field .q-field__control { background:transparent; }
 /* an editable cell's raw input text. Plain integer cells (mapping, comma, the vector lists)
    show it directly, so re-light it. But the STACKED cells (cents, ratios, the generator tuning
    map, powers) overlay a formatted face on a transparent input and reveal the raw text only on
    focus — so mirror the light cascade exactly: keep the input transparent while unfocused (or the
    face doubles over it) and re-light it (NOT the light rule's #000) once focused, so the editing
    text stays legible on the dark cell. */
-body.rtt-dark .rtt-cellinput .q-field__native { color:#e3e6ea; }
-body.rtt-dark .rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent; }
-body.rtt-dark .rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:#e3e6ea; }
+body.rtt-dark .rtt-cell-input-field .q-field__native { color:#e3e6ea; }
+body.rtt-dark .rtt-cell-stacked .rtt-cell-input-field .q-field__native { color:transparent; }
+body.rtt-dark .rtt-cell-stacked:focus-within .rtt-cell-input-field .q-field__native { color:#e3e6ea; }
 body.rtt-dark .rtt-plain-text-edit .q-field__control,
 body.rtt-dark .rtt-plain-text-pending { background:#1b1f24; border-color:#4e555d; }
 body.rtt-dark .rtt-plain-text-edit .q-field__native,
@@ -118,14 +118,14 @@ body.rtt-dark .rtt-fraction-numerator { border-bottom-color:#e3e6ea; }   /* the 
 /* the editable stacked fraction cells: the dark box rides the WRAP (the two inputs' controls stay
    transparent so it shows through), and the bar + light input text re-light like every dark cell. */
 body.rtt-dark .rtt-fraction-cell { background:#1b1f24; }
-body.rtt-dark .rtt-fraction-cell .rtt-cellinput .q-field__control { background:transparent; }
+body.rtt-dark .rtt-fraction-cell .rtt-cell-input-field .q-field__control { background:transparent; }
 body.rtt-dark .rtt-fraction-bar { background:#e3e6ea; }
 /* the editable stacked decimal (cents) cells: same as the fraction cell — the dark box rides the
    WRAP and the inputs' controls stay transparent so it shows through. The in-place fields show their
    text directly (no transparent-while-unfocused face), so the blanket light-input rule above re-lights
    it with no .rtt-cell-stacked exception needed. */
 body.rtt-dark .rtt-decimal-cell { background:#1b1f24; }
-body.rtt-dark .rtt-decimal-cell .rtt-cellinput .q-field__control { background:transparent; }
+body.rtt-dark .rtt-decimal-cell .rtt-cell-input-field .q-field__control { background:transparent; }
 /* the zoom magnifier loupe tile (rtt.css .rtt-zoom-tile): the dark grid-tile grey; the cloned value
    re-lights for free -- it is a real .rtt-cell carrying the value classes the dark rules above retint
    (the overlay sits on body, so body.rtt-dark reaches the clone). The help bubble matches the app's
@@ -133,16 +133,16 @@ body.rtt-dark .rtt-decimal-cell .rtt-cellinput .q-field__control { background:tr
 body.rtt-dark .rtt-zoom-tile { background:#272c33; box-shadow:0 3px 12px rgba(0,0,0,.6); }
 /* the row/column titles, the per-value symbols & matrix labels, captions, units */
 body.rtt-dark .rtt-colheader,
-body.rtt-dark .rtt-rowlabel,
+body.rtt-dark .rtt-row-label,
 body.rtt-dark .rtt-symbol,
 body.rtt-dark .rtt-matrix-label,
-body.rtt-dark .rtt-boxtitle,
+body.rtt-dark .rtt-box-title,
 body.rtt-dark .rtt-rangelabel { color:#e3e6ea; }
 body.rtt-dark .rtt-caption,
 body.rtt-dark .rtt-units { color:#aeb4bc; }
 body.rtt-dark .rtt-caption.rtt-caption-disabled { color:#71777f; }
 body.rtt-dark .rtt-cell-unit { color:#9aa1a9; }
-body.rtt-dark .rtt-gensign:hover { background:#31373f; }   /* the generator sign's clickable hover box */
+body.rtt-dark .rtt-generator-sign:hover { background:#31373f; }   /* the generator sign's clickable hover box */
 
 /* ── app chrome: the sidebar title and the undo/redo/hamburger buttons ──────────────────────────
    these light rules use !important (to beat Quasar), so the dark overrides must too. */
@@ -228,8 +228,8 @@ body.rtt-dark .rtt-scheme-button-idle .q-btn__content { color:#71777f !important
 body.rtt-dark svg rect[fill="#fff"][stroke="#bbb"] { fill:#1b1f24; stroke:#4e555d; }
 body.rtt-dark .rtt-glyph { color:#9aa1a9; }
 body.rtt-dark .rtt-glyph:hover { color:#cfd4da; }
-body.rtt-dark .rtt-fraction-cell:hover .rtt-ratio-op.rtt-op-disabled,
-body.rtt-dark .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-op.rtt-op-disabled { color:#4e555d; }
+body.rtt-dark .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-disabled,
+body.rtt-dark .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation.rtt-operation-disabled { color:#4e555d; }
 
 /* the busy scrim: a dark veil + dark card (see .rtt-busy in rtt.css) */
 body.rtt-dark .rtt-busy { background:rgba(0,0,0,0.45); }
@@ -239,4 +239,4 @@ body.rtt-dark .rtt-settings-box { background:#2c323a; border-color:#3c424a; }
 body.rtt-dark .rtt-box-label { color:#aeb4bb; }
 body.rtt-dark .rtt-vis-mi { color:#9aa1a9; }
 body.rtt-dark .rtt-anim-icon rect { fill:#9aa1a9; }
-body.rtt-dark .rtt-vis-prev.rtt-vis-off .rtt-prev-n { color:#9aa1a9; }
+body.rtt-dark .rtt-visibility-preview.rtt-vis-off .rtt-preview-n { color:#9aa1a9; }

@@ -67,7 +67,7 @@ def register_label_kinds(cell_kinds) -> None:
         value_kinds.label_builder("rtt-colheader"), value_kinds.update_label
     )
     cell_kinds["rowlabel"] = _KindHandlers(
-        value_kinds.label_builder("rtt-rowlabel"), value_kinds.update_label
+        value_kinds.label_builder("rtt-row-label"), value_kinds.update_label
     )
     cell_kinds["plain_text"] = _KindHandlers(
         value_kinds.label_builder("rtt-plain-text"), value_kinds.update_plain_text
@@ -75,7 +75,7 @@ def register_label_kinds(cell_kinds) -> None:
     cell_kinds["transpose"] = _KindHandlers(
         value_kinds.label_builder("rtt-transpose"), value_kinds.update_label
     )
-    cell_kinds["boxtitle"] = _KindHandlers(value_kinds.label_builder("rtt-boxtitle"), None)
+    cell_kinds["boxtitle"] = _KindHandlers(value_kinds.label_builder("rtt-box-title"), None)
 
 
 def register_control_kinds(cell_kinds) -> None:

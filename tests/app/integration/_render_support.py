@@ -101,7 +101,7 @@ def _pick_terminology(user: User, mode: str) -> None:
 
 
 def _terminology_opt_selected(user: User, mode: str) -> bool:
-    return "rtt-rangeopt-on" in next(iter(user.find(marker=f"terminologyradio-{mode}").elements))._classes
+    return "rtt-range-option-on" in next(iter(user.find(marker=f"terminologyradio-{mode}").elements))._classes
 
 
 def _scheme_select(user: User):
@@ -152,13 +152,13 @@ def _marked(user: User, marker: str, *, required: bool = True):
 
 
 def _approx_markers(user: User, cell_id: str) -> list:
-    """The ``rtt-approx`` "~" labels rendered inside a cell (the approximate-ratio marker). Walks the
+    """The ``rtt-approximate`` "~" labels rendered inside a cell (the approximate-ratio marker). Walks the
     cell wrap's descendants — the ~ rides the ``.rtt-ratio`` face, not the wrap itself."""
     wrap = next(iter(user.find(marker=cell_id).elements))
     found, stack = [], list(wrap.default_slot.children)
     while stack:
         element = stack.pop()
-        if "rtt-approx" in getattr(element, "_classes", []):
+        if "rtt-approximate" in getattr(element, "_classes", []):
             found.append(element)
         slot = getattr(element, "default_slot", None)
         stack.extend(slot.children if slot is not None else [])
