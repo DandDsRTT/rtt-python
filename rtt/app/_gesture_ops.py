@@ -21,56 +21,56 @@ def take_over_gesture(gc):
 
 
 def paint_rings(gc):
-    lay = gc._runtime.last_lay
-    if lay is None:
+    layout = gc._runtime.last_lay
+    if layout is None:
         return
-    amber, red = gc.compute_rings(lay)
-    for cell_box in lay.cells:
+    amber, red = gc.compute_rings(layout)
+    for cell_box in layout.cells:
         gc.paint_cell(cell_box.id, amber, red)
 
 
-def gesture_rings(gc, lay):
+def gesture_rings(gc, layout):
     g = gc.gesture
     if g is None:
         return frozenset(), frozenset()
     if g.apply is not None:
-        base = g.baseline if g.baseline is not None else lay
+        base = g.baseline if g.baseline is not None else layout
         token = gc._editor.capture_for_preview()
         try:
             g.apply()
             hyp = gc._editor.layout(prev_ids=base.identities)
             amber = spreadsheet_text.changed_cell_ids(base, hyp)
-            red = spreadsheet_text.removed_cell_ids(lay, hyp)
+            red = spreadsheet_text.removed_cell_ids(layout, hyp)
         finally:
             gc._editor.restore_for_preview(token)
         return amber - {g.source}, red
     if g.baseline is not None:
-        amber = spreadsheet_text.changed_cell_ids(g.baseline, lay) - {g.source}
+        amber = spreadsheet_text.changed_cell_ids(g.baseline, layout) - {g.source}
         if g.target_pred is not None:
-            amber |= frozenset(cell_box.id for cell_box in lay.cells if g.target_pred(cell_box))
+            amber |= frozenset(cell_box.id for cell_box in layout.cells if g.target_pred(cell_box))
         return amber, frozenset()
     return frozenset(), frozenset()
 
 
-def cell_xy(lay, eid):
-    for c in lay.cells:
-        if c.id == eid:
+def cell_xy(layout, element_id):
+    for c in layout.cells:
+        if c.id == element_id:
             return (round(c.x), round(c.y))
     return None
 
 
-def chooser_hover(gc, cid, apply):
+def chooser_hover(gc, cell_id, apply):
     if not gc._editor.settings["preview_highlighting"]:
         return
     g = gc.gesture
     if g is not None and g.kind in ("edit", "drag"):
         return
-    if g is not None and (g.kind != "chooser" or g.source != cid):
+    if g is not None and (g.kind != "chooser" or g.source != cell_id):
         take_over_gesture(gc)
     if gc.gesture is None:
         gc.gesture = _Gesture(
             kind="chooser",
-            source=cid,
+            source=cell_id,
             token=gc._editor.capture_for_preview(),
             baseline=gc._runtime.last_lay,
         )
@@ -88,7 +88,8 @@ def chooser_hover(gc, cid, apply):
     apply()
     hyp = gc._editor.layout(prev_ids=base.identities if base is not None else None)
     disturbs = base is not None and (
-        spreadsheet_text.removed_cell_ids(base, hyp) or cell_xy(base, cid) != cell_xy(hyp, cid)
+        spreadsheet_text.removed_cell_ids(base, hyp)
+        or cell_xy(base, cell_id) != cell_xy(hyp, cell_id)
     )
     if disturbs:
         gc._editor.restore_for_preview(g.token)
@@ -173,30 +174,32 @@ def ensure_temp_gesture(gc):
     return g
 
 
-def subpick_hover_preview(gc, cid, value):
+def subpick_hover_preview(gc, cell_id, value):
     if value is None:
         end_temperament_preview(gc)
         return
-    draft = cid in ("etpick:draft", "commapick:draft")
-    idx = None
+    draft = cell_id in ("etpick:draft", "commapick:draft")
+    index = None
     if not draft:
-        idx = gc._runtime.token_index(cid, "gens" if cid.startswith("etpick:") else "commas")
-        if idx is None:
+        index = gc._runtime.token_index(
+            cell_id, "gens" if cell_id.startswith("etpick:") else "commas"
+        )
+        if index is None:
             end_temperament_preview(gc)
             return
     g = ensure_temp_gesture(gc)
     if g is None:
         return
     if draft:
-        preview_subpick_draft(gc, cid, value)
+        preview_subpick_draft(gc, cell_id, value)
     else:
-        preview_subpick_pick(gc, cid, value, idx)
+        preview_subpick_pick(gc, cell_id, value, index)
 
 
-def preview_subpick_draft(gc, cid, value) -> None:
+def preview_subpick_draft(gc, cell_id, value) -> None:
     db = gc._editor.state.domain_basis
     g = gc.gesture
-    if cid == "etpick:draft":
+    if cell_id == "etpick:draft":
         gc._editor.pending_mapping_row = list(presets.et_value_to_val(value, db))
     else:
         gc._editor.pending_comma = list(presets.comma_value_to_vector(value, db))
@@ -205,16 +208,16 @@ def preview_subpick_draft(gc, cid, value) -> None:
     gesture_render(gc)
 
 
-def preview_subpick_pick(gc, cid, value, idx) -> None:
+def preview_subpick_pick(gc, cell_id, value, index) -> None:
     db = gc._editor.state.domain_basis
     g = gc.gesture
-    if cid.startswith("etpick:"):
+    if cell_id.startswith("etpick:"):
 
-        def apply(i=idx, v=value):
+        def apply(i=index, v=value):
             return gc._editor.set_mapping_row(i, presets.et_value_to_val(v, db))
     else:
 
-        def apply(c=idx, v=value):
+        def apply(c=index, v=value):
             return gc._editor.set_comma(c, presets.comma_value_to_vector(v, db))
 
     base = gc._editor.state
@@ -234,32 +237,32 @@ def preview_subpick_pick(gc, cid, value, idx) -> None:
         gesture_render(gc)
 
 
-def hover_value_chooser(gc, cid, index) -> None:
-    entry = gc._rec.handles(cid).chooser.select
+def hover_value_chooser(gc, cell_id, index) -> None:
+    entry = gc._rec.handles(cell_id).chooser.select
     sel = entry[1] if isinstance(entry, tuple) else entry
-    if cid == "preset:target":
+    if cell_id == "preset:target":
         family = _option_key(sel, index)
         if family not in presets.TARGET_SETS:
             chooser_unhover(gc)
             return
         spec = service.target_spec(family, entry[0].value)
-        chooser_hover(gc, cid, lambda: gc._editor.set_target_spec(spec))
+        chooser_hover(gc, cell_id, lambda: gc._editor.set_target_spec(spec))
         return
-    apply = gc._edits.candidate_apply(cid, _option_key(sel, index))
+    apply = gc._edits.candidate_apply(cell_id, _option_key(sel, index))
     if apply is None:
         chooser_unhover(gc)
         return
-    chooser_hover(gc, cid, apply)
+    chooser_hover(gc, cell_id, apply)
 
 
-def on_cell_focus(gc, cid):
+def on_cell_focus(gc, cell_id):
     take_over_gesture(gc)
-    gc.gesture = _Gesture(kind="edit", source=cid, baseline=gc._runtime.last_lay)
+    gc.gesture = _Gesture(kind="edit", source=cell_id, baseline=gc._runtime.last_lay)
 
 
-def on_cell_blur(gc, cid=None):
+def on_cell_blur(gc, cell_id=None):
     g = gc.gesture
-    if g is not None and g.kind in ("edit", "wheel") and (cid is None or g.source == cid):
+    if g is not None and g.kind in ("edit", "wheel") and (cell_id is None or g.source == cell_id):
         gc.end_gesture()
         paint_rings(gc)
 
@@ -298,12 +301,12 @@ def combine_end(gc):
     gc._renderer.render()
 
 
-def rank_remove_hover(gc, axis, idx):
+def rank_remove_hover(gc, axis, index):
     if not gc._editor.settings["preview_highlighting"]:
         return
     if gc.gesture is not None and gc.gesture.kind in ("edit", "drag"):
         return
-    gc.rank_remove = (axis, idx)
+    gc.rank_remove = (axis, index)
     gc.rank_rendering = True
     try:
         gc._renderer.render()
@@ -317,51 +320,51 @@ def rank_remove_unhover(gc):
         gc._renderer.render()
 
 
-def on_chooser_hover(gc, cid, detail):
-    entry = gc._rec.handles(cid).chooser.select
+def on_chooser_hover(gc, cell_id, detail):
+    entry = gc._rec.handles(cell_id).chooser.select
     sel = entry[1] if isinstance(entry, tuple) else entry
     if not isinstance(sel, ui.select):
         return
     index = _hover_index(detail)
-    if index is not None and gc._rec.handles(cid).popup_state == "closed":
+    if index is not None and gc._rec.handles(cell_id).popup_state == "closed":
         return
-    if cid.startswith(("etpick:", "commapick:")):
-        subpick_hover_preview(gc, cid, _option_key(sel, index) if index is not None else None)
+    if cell_id.startswith(("etpick:", "commapick:")):
+        subpick_hover_preview(gc, cell_id, _option_key(sel, index) if index is not None else None)
         return
-    if cid.startswith("preset:temperament"):
+    if cell_id.startswith("preset:temperament"):
         temperament_hover_preview(gc, _option_key(sel, index))
         return
     if index is None or not sel.enabled:
         chooser_unhover(gc)
         return
-    hover_value_chooser(gc, cid, index)
+    hover_value_chooser(gc, cell_id, index)
 
 
-def on_popup(gc, cid, is_open):
-    gc._rec.cells[cid].popup_state = "open" if is_open else "closed"
+def on_popup(gc, cell_id, is_open):
+    gc._rec.cells[cell_id].popup_state = "open" if is_open else "closed"
     if not is_open:
-        on_chooser_hover(gc, cid, None)
+        on_chooser_hover(gc, cell_id, None)
 
 
-def gentuning_hover(gc, cid):
+def gentuning_hover(gc, cell_id):
     g = gc.gesture
     if g is not None and g.kind in ("edit", "drag", "hover"):
         return
     take_over_gesture(gc)
-    gc.gesture = _Gesture(kind="wheel", source=cid, baseline=gc._runtime.last_lay)
+    gc.gesture = _Gesture(kind="wheel", source=cell_id, baseline=gc._runtime.last_lay)
 
 
-def gentuning_unhover(gc, cid):
+def gentuning_unhover(gc, cell_id):
     g = gc.gesture
-    if g is None or g.kind != "wheel" or g.source != cid:
+    if g is None or g.kind != "wheel" or g.source != cell_id:
         return
     gc.end_gesture()
     paint_rings(gc)
 
 
-def on_drag_start(gc, lst, idx):
-    gc.drag_src = (lst, idx)
-    gc.reorder_dst = (lst, idx)
+def on_drag_start(gc, lst, index):
+    gc.drag_src = (lst, index)
+    gc.reorder_dst = (lst, index)
     gc.end_gesture()
     gc.gesture = _Gesture(
         kind="drag", token=gc._editor.capture_for_preview(), baseline=gc._runtime.last_lay
@@ -379,8 +382,8 @@ def on_drag_enter(gc, dst_list, dst_idx):
         return
     gc.reorder_dst = (dst_list, dst_idx)
     gc._editor.restore_for_preview(g.token)
-    idx = dst_idx if dst_idx is not None else (1 << 30)
-    gc._editor.move_interval(gc.drag_src[0], gc.drag_src[1], dst_list, idx)
+    index = dst_idx if dst_idx is not None else (1 << 30)
+    gc._editor.move_interval(gc.drag_src[0], gc.drag_src[1], dst_list, index)
     gesture_render(gc)
 
 
@@ -403,6 +406,6 @@ def on_drop(gc, dst_list, dst_idx):
         if had_preview:
             gc._renderer.render()
         return
-    idx = dst_idx if dst_idx is not None else (1 << 30)
-    if gc._editor.move_interval(src[0], src[1], dst_list, idx) or had_preview:
+    index = dst_idx if dst_idx is not None else (1 << 30)
+    if gc._editor.move_interval(src[0], src[1], dst_list, index) or had_preview:
         gc._renderer.render()

@@ -91,11 +91,11 @@ def _mark_dual_axis_previews(cells, resolved, geometry, context):
     if context.pending_mapping_row is not None and resolved.dims.comma_count:
         remove_commas, change_commas = frozenset({resolved.dims.comma_count - 1}), frozenset(range(resolved.dims.comma_count - 1))
     if context.preview_remove is not None:
-        axis, idx = context.preview_remove
+        axis, index = context.preview_remove
         if axis == "comma":
-            remove_commas, change_rows = frozenset({idx}), frozenset(range(resolved.dims.rank))
+            remove_commas, change_rows = frozenset({index}), frozenset(range(resolved.dims.rank))
         else:
-            remove_rows, change_commas = frozenset({idx}), frozenset(range(resolved.dims.comma_count))
+            remove_rows, change_commas = frozenset({index}), frozenset(range(resolved.dims.comma_count))
     if not (remove_rows or change_rows or remove_commas or change_commas):
         return cells
     red_xs = frozenset(query.comma_left(geometry, resolved, c) for c in remove_commas)
@@ -179,7 +179,7 @@ def _emit_scheme_button(cells, x, y, column_key: str) -> None:
                          CAPTION_LINE, "caption", text="return to scheme", align="left"))
 
 
-def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cid, name, row_key, column_key, label):
+def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cell_id, name, row_key, column_key, label):
     if not query.tile_open(geometry, context.collapsed, row_key, column_key):
         return
     if geometry.size_factor or resolved.scalars.prescaler_is_matrix:
@@ -189,10 +189,10 @@ def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cid, n
         or _preset_locked(resolved, context, name)
     fc = next((fn for fn, rk, ck, _l in FORM_CHOOSERS if rk == row_key and ck == column_key), None)
     form_chooser = (f"formchooser:{fc}", "form") if (fc and query.preset_form_label(resolved, name, row_key, column_key)) else None
-    control_x, control_width, control_y = _control_box(cells, blocks, resolved, geometry, f"block:{cid}", column_key, top, query.preset_cap(name), label,
+    control_x, control_width, control_y = _control_box(cells, blocks, resolved, geometry, f"block:{cell_id}", column_key, top, query.preset_cap(name), label,
                               disabled=disabled, scheme_button=(name == "projection"),
                               form_chooser=form_chooser)
-    cells.append(CellBox(cid, control_x, control_y, control_width, PRESET_H, "preset", text=preset_text[name],
+    cells.append(CellBox(cell_id, control_x, control_y, control_width, PRESET_H, "preset", text=preset_text[name],
                          disabled=disabled))
     if name == "target" and context.settings["all_interval"]:
         emit_option_check(cells, "all_interval", "all-interval",

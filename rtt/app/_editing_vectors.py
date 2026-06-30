@@ -49,20 +49,20 @@ class _VectorEdits:
         _edit_vector_grid(self.e, self.e._TARGET_EDIT, preview)
 
     @cb_method
-    def on_ratio_change(self, cid):
-        _ratio_change(self.e, cid)
+    def on_ratio_change(self, cell_id):
+        _ratio_change(self.e, cell_id)
 
     @cb_method
-    def transform_interval(self, cid, op):
-        _transform_interval(self.e, cid, op)
+    def transform_interval(self, cell_id, op):
+        _transform_interval(self.e, cell_id, op)
 
     @cb_method
-    def on_element_change(self, cid):
-        _element_change(self.e, cid)
+    def on_element_change(self, cell_id):
+        _element_change(self.e, cell_id)
 
     @cb_method
-    def on_element_preview(self, cid):
-        _element_preview(self.e, cid)
+    def on_element_preview(self, cell_id):
+        _element_preview(self.e, cell_id)
 
 
 def _edit_pending_vector(edit_controller, spec, preview, toks, d) -> None:
@@ -185,21 +185,24 @@ def _unchanged_change(edit_controller, preview=False):
     )
 
 
-def _ratio_change(edit_controller, cid):
-    if edit_controller._runtime.building or edit_controller._rec.handles(cid).value.input is None:
+def _ratio_change(edit_controller, cell_id):
+    if (
+        edit_controller._runtime.building
+        or edit_controller._rec.handles(cell_id).value.input is None
+    ):
         return
-    group, tok = cid.split(":")
+    group, token = cell_id.split(":")
     out = service.resolve_ratio_edit(
-        edit_controller._rec.cell_value(cid),
+        edit_controller._rec.cell_value(cell_id),
         edit_controller._editor.state.dimensionality,
         edit_controller._editor.state.domain_basis,
     )
     edit_controller._apply_outcome(
-        out, lambda: _apply_ratio_edit(edit_controller, group, tok, out.value)
+        out, lambda: _apply_ratio_edit(edit_controller, group, token, out.value)
     )
 
 
-def _replace_interval_vector(edit_controller, group, tok, vector, current, setter) -> None:
+def _replace_interval_vector(edit_controller, group, token, vector, current, setter) -> None:
     list_name = {
         "target": "targets",
         "held": "held",
@@ -207,16 +210,16 @@ def _replace_interval_vector(edit_controller, group, tok, vector, current, sette
         "comma": "commas",
     }.get(group)
     toks = edit_controller._runtime.col_tokens(list_name) if list_name else []
-    pos = toks.index(int(tok)) if int(tok) in toks else int(tok)
+    pos = toks.index(int(token)) if int(token) in toks else int(token)
     vectors = [list(v) for v in current]
     if vectors[pos] != list(vector):
         vectors[pos] = vector
         setter(vectors)
 
 
-def _apply_ratio_edit(edit_controller, group, tok, vector) -> None:
+def _apply_ratio_edit(edit_controller, group, token, vector) -> None:
     editor = edit_controller._editor
-    if tok == "pending":
+    if token == "pending":
         {
             "comma": editor.set_pending_comma,
             "interest": editor.set_pending_interest,
@@ -225,20 +228,20 @@ def _apply_ratio_edit(edit_controller, group, tok, vector) -> None:
         }[group](vector)
     elif group == "comma":
         _replace_interval_vector(
-            edit_controller, group, tok, vector, editor.state.comma_basis, editor.edit_comma_basis
+            edit_controller, group, token, vector, editor.state.comma_basis, editor.edit_comma_basis
         )
     elif group == "interest":
         _replace_interval_vector(
             edit_controller,
             group,
-            tok,
+            token,
             vector,
             editor.interest_vectors,
             editor.set_interest_vectors,
         )
     elif group == "held":
         _replace_interval_vector(
-            edit_controller, group, tok, vector, editor.held_vectors, editor.set_held_vectors
+            edit_controller, group, token, vector, editor.held_vectors, editor.set_held_vectors
         )
     elif group == "unchanged":
         ratios = [
@@ -255,7 +258,7 @@ def _apply_ratio_edit(edit_controller, group, tok, vector) -> None:
         _replace_interval_vector(
             edit_controller,
             group,
-            tok,
+            token,
             vector,
             service.target_interval_vectors(
                 targets, editor.state.dimensionality, editor.state.domain_basis
@@ -264,9 +267,9 @@ def _apply_ratio_edit(edit_controller, group, tok, vector) -> None:
         )
 
 
-def _transform_domain_element(edit_controller, cid, op, index) -> None:
+def _transform_domain_element(edit_controller, cell_id, op, index) -> None:
     out = service.resolve_domain_element_transform(
-        edit_controller._editor.state, index, edit_controller._rec.cell_value(cid), op
+        edit_controller._editor.state, index, edit_controller._rec.cell_value(cell_id), op
     )
     edit_controller._apply_outcome(
         out, lambda: _apply_domain_element(edit_controller, str(index), out.value)
@@ -303,19 +306,22 @@ def _interval_group_state(edit_controller, group):
     )
 
 
-def _transform_interval(edit_controller, cid, op):
-    if edit_controller._runtime.building or edit_controller._rec.handles(cid).value.input is None:
+def _transform_interval(edit_controller, cell_id, op):
+    if (
+        edit_controller._runtime.building
+        or edit_controller._rec.handles(cell_id).value.input is None
+    ):
         return
-    group, tok = cid.split(":")
-    if group not in ("comma", "target", "held", "interest", "prime") or tok == "pending":
+    group, token = cell_id.split(":")
+    if group not in ("comma", "target", "held", "interest", "prime") or token == "pending":
         return
     edit_controller._gestures.end_commit_gestures()
     if group == "prime":
-        _transform_domain_element(edit_controller, cid, op, int(tok))
+        _transform_domain_element(edit_controller, cell_id, op, int(token))
         return
     current, setter, list_name = _interval_group_state(edit_controller, group)
     toks = edit_controller._runtime.col_tokens(list_name)
-    pos = toks.index(int(tok)) if int(tok) in toks else int(tok)
+    pos = toks.index(int(token)) if int(token) in toks else int(token)
     if not 0 <= pos < len(current):
         return
     new_v = service.transformed_vector(current[pos], op, edit_controller._editor.state.domain_basis)
@@ -327,35 +333,38 @@ def _transform_interval(edit_controller, cid, op):
     edit_controller._renderer.request_render()
 
 
-def _apply_domain_element(edit_controller, tok: str, raw: str) -> None:
-    if tok == "pending":
+def _apply_domain_element(edit_controller, token: str, raw: str) -> None:
+    if token == "pending":
         edit_controller._editor.set_pending_element(raw)
     else:
-        edit_controller._editor.set_domain_element(int(tok), raw)
+        edit_controller._editor.set_domain_element(int(token), raw)
 
 
-def _element_change(edit_controller, cid):
-    if edit_controller._runtime.building or edit_controller._rec.handles(cid).value.input is None:
+def _element_change(edit_controller, cell_id):
+    if (
+        edit_controller._runtime.building
+        or edit_controller._rec.handles(cell_id).value.input is None
+    ):
         return
-    raw = edit_controller._rec.cell_value(cid)
-    tok = cid.split(":")[1]
-    out = service.resolve_domain_element_edit(edit_controller._editor.state, tok, raw)
-    edit_controller._apply_outcome(out, lambda: _apply_domain_element(edit_controller, tok, raw))
+    raw = edit_controller._rec.cell_value(cell_id)
+    token = cell_id.split(":")[1]
+    out = service.resolve_domain_element_edit(edit_controller._editor.state, token, raw)
+    edit_controller._apply_outcome(out, lambda: _apply_domain_element(edit_controller, token, raw))
 
 
-def _element_preview(edit_controller, cid):
+def _element_preview(edit_controller, cell_id):
     g = edit_controller._gestures.gesture
     if (
         edit_controller._runtime.building
         or g is None
         or g.kind != "edit"
-        or g.source != cid
-        or edit_controller._rec.handles(cid).value.input is None
+        or g.source != cell_id
+        or edit_controller._rec.handles(cell_id).value.input is None
     ):
         return
-    raw = edit_controller._rec.cell_value(cid)
-    tok = cid.split(":")[1]
-    out = service.resolve_domain_element_edit(edit_controller._editor.state, tok, raw)
+    raw = edit_controller._rec.cell_value(cell_id)
+    token = cell_id.split(":")[1]
+    out = service.resolve_domain_element_edit(edit_controller._editor.state, token, raw)
     edit_controller._apply_outcome(
-        out, lambda: _apply_domain_element(edit_controller, tok, raw), preview=True
+        out, lambda: _apply_domain_element(edit_controller, token, raw), preview=True
     )

@@ -100,8 +100,8 @@ class TestHeldColumn:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["generator_detempering"] = True
-        lay = spreadsheet.build(base, s)
-        cells = {c.id: c for c in lay.cells}
+        layout = spreadsheet.build(base, s)
+        cells = {c.id: c for c in layout.cells}
         off = {c.id for c in _with(generator_detempering=False).cells}
         assert "header:detempering" in cells
         assert "header:detempering" not in off
@@ -109,7 +109,7 @@ class TestHeldColumn:
         assert [cells[f"cell:vector:detempering:0:{p}"].text for p in range(3)] == ["1", "0", "0"]
         assert [cells[f"cell:vector:detempering:1:{p}"].text for p in range(3)] == ["-1", "1", "0"]
         assert "bracket:vector:detempering:l" in cells
-        assert "trunk:detempering" in {ln.id for ln in lay.lines}
+        assert "trunk:detempering" in {line.id for line in layout.lines}
 
     def test_generator_detempering_vectors_tile_carries_the_D_symbol(self):
         cells = {c.id: c for c in _with(generator_detempering=True, symbols=True).cells}
@@ -202,19 +202,19 @@ class TestHeldColumn:
         assert [cells[f"urow:detempering:{i}"].text for i in range(2)] == ["/1", "/1"]
 
     def test_generator_detempering_column_fans_without_a_centre_trunk(self):
-        lay = _with(generator_detempering=True)
-        assert sum(1 for ln in lay.lines if ln.id == "trunk:detempering") == 1
-        assert sum(1 for ln in lay.lines if ln.id.startswith("v:detempering:")) == 2
+        layout = _with(generator_detempering=True)
+        assert sum(1 for line in layout.lines if line.id == "trunk:detempering") == 1
+        assert sum(1 for line in layout.lines if line.id.startswith("v:detempering:")) == 2
 
     def test_gridline_ids_are_unique_across_every_fan_and_spine(self):
-        lay = spreadsheet.build(
+        layout = spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))),
             {**settings.defaults(), "generator_detempering": True, "optimization": True,
              "weighting": True, "form_tiles": True},
             interest=((-1, 1, 0), (2, 0, -1)),
             held_vectors=((1, 0, 0), (-1, 1, 0)),
         )
-        ids = [ln.id for ln in lay.lines]
+        ids = [line.id for line in layout.lines]
         dupes = sorted({i for i in ids if ids.count(i) > 1})
         assert dupes == [], f"duplicate gridline ids: {dupes}"
 
@@ -270,11 +270,11 @@ class TestRetuningChartsAndGenMap:
     def test_chart_bars_centre_on_their_value_gridlines(self):
         s = settings.defaults()
         s.update(charts=True, symbols=True, optimization=True, generator_detempering=True)
-        lay = spreadsheet.build(
+        layout = spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
             interest=((-3, 2, 0),), held_vectors=((-1, 1, 0),))
-        on = {c.id: c for c in lay.cells}
-        gridline = {ln.id: ln.pos for ln in lay.lines if ln.orientation == "v"}
+        on = {c.id: c for c in layout.cells}
+        gridline = {line.id: line.pos for line in layout.lines if line.orientation == "v"}
         bw, cw = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COL_W
         elem = {"primes": "prime", "commas": "comma", "targets": "target",
                 "interest": "interest", "held": "held", "detempering": "detempering"}
@@ -368,20 +368,20 @@ class TestRetuningChartsAndGenMap:
         assert sel.y >= ch.y + ch.height
 
     def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector(self):
-        lay = _with(tuning_ranges=True)
-        cells = {c.id: c for c in lay.cells}
-        pan = {b.id: b for b in lay.blocks}["block:tuning:gens"]
+        layout = _with(tuning_ranges=True)
+        cells = {c.id: c for c in layout.cells}
+        pan = {b.id: b for b in layout.blocks}["block:tuning:gens"]
         v, ch, sel = cells["tuning:gen:0"], cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
         assert pan.x <= ch.x and pan.x + pan.width >= ch.x + ch.width
         assert pan.y <= v.y
         assert pan.y + pan.height >= sel.y + sel.height
         assert "block:tuning:gens" in {b.id for b in _with(tuning_ranges=False).blocks}
-        assert "block:gentuning" not in {b.id for b in lay.blocks}
+        assert "block:gentuning" not in {b.id for b in layout.blocks}
 
     def test_tuning_ranges_box_has_a_left_aligned_boxtitle(self):
-        lay = _with(tuning_ranges=True)
-        cells = {c.id: c for c in lay.cells}
-        boxes = {b.id: b for b in lay.blocks}
+        layout = _with(tuning_ranges=True)
+        cells = {c.id: c for c in layout.cells}
+        boxes = {b.id: b for b in layout.blocks}
         title = cells["rangetitle:tuning:gens"]
         assert title.kind == "boxtitle" and title.text == "tuning ranges"
         chart, sel = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
@@ -391,9 +391,9 @@ class TestRetuningChartsAndGenMap:
         assert box.y <= title.y and box.y + box.height >= sel.y + sel.height
 
     def test_tuning_ranges_draws_a_bordered_box_around_the_chart_and_selector(self):
-        lay = _with(tuning_ranges=True)
-        boxes = {b.id: b for b in lay.blocks}
-        cells = {c.id: c for c in lay.cells}
+        layout = _with(tuning_ranges=True)
+        boxes = {b.id: b for b in layout.blocks}
+        cells = {c.id: c for c in layout.cells}
         assert "block:tuning:rangesbox" in boxes
         box = boxes["block:tuning:rangesbox"]
         assert box.boxed is True, "a bordered box, not a plain grey tile"
@@ -403,9 +403,9 @@ class TestRetuningChartsAndGenMap:
         assert "block:tuning:rangesbox" not in {b.id for b in _with(tuning_ranges=False).blocks}
 
     def test_tuning_ranges_box_reserves_row_height_so_following_rows_clear_it(self):
-        lay = _with(tuning_ranges=True)
-        cells = {c.id: c for c in lay.cells}
-        panel = {b.id: b for b in lay.blocks}["block:tuning:gens"]
+        layout = _with(tuning_ranges=True)
+        cells = {c.id: c for c in layout.cells}
+        panel = {b.id: b for b in layout.blocks}["block:tuning:gens"]
         box_bottom = panel.y + panel.height
         for nxt in ("just:prime:0", "retune:prime:0", "damage:target:0"):
             assert cells[nxt].y >= box_bottom, f"{nxt} overlaps the ranges box"
@@ -413,10 +413,10 @@ class TestRetuningChartsAndGenMap:
         assert cells["just:prime:0"].y > off["just:prime:0"].y
 
     def test_colorization_follows_the_content_map(self):
-        lay = _colormap_layout()
-        cells = {c.id: c for c in lay.cells}
+        layout = _colormap_layout()
+        cells = {c.id: c for c in layout.cells}
         Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
-        at = lambda cid: _color_at(lay, *_mid(cells, cid))
+        at = lambda cell_id: _color_at(layout, *_mid(cells, cell_id))
         assert at("comma:0") == Y
         assert at("cell:comma:0:0") == Y
         assert at("prime:0") == Y
@@ -453,12 +453,12 @@ class TestRetuningChartsAndGenMap:
         s["weighting"] = True
         s["alt_complexity"] = True
         s["optimization"] = True
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                 tuning_scheme="TILT minimax-S",
                                 interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),))
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
-        at = lambda cid: _color_at(lay, *_mid(cells, cid))
+        at = lambda cell_id: _color_at(layout, *_mid(cells, cell_id))
         assert at("cell:canon:0:0") == Y
         assert at("cell:prescaling:primes:0:0") == G
         assert at("cell:prescaling:commas:0:0") == G
@@ -478,7 +478,7 @@ class TestRetuningChartsAndGenMap:
                  generator_detempering=True, optimization=True, projection=True, identity_objects=True)
         b = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), settings=s,
                                      interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),), held_basis_ratios=("2/1", "5/4"))
-        lay = b.layout()
+        layout = b.layout()
         tg = partial(_tile_groups, b.resolved)
         RED, WHITE, GREEN = {"form", "temperament"}, {"form", "temperament", "tuning"}, {"temperament", "tuning"}
         assert tg("canon", "primes") == RED and tg("canon", "gens") == RED and tg("canon", "detempering") == RED
@@ -488,16 +488,16 @@ class TestRetuningChartsAndGenMap:
         assert tg("projection", "primes") == GREEN and tg("projection", "gens") == GREEN
         assert tg("projection", "detempering") == {"tuning"} and tg("projection", "targets") == {"tuning"}
         assert tg("mapping", "primes") == {"temperament"}
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         yc = cells["cell:canon_mapped:0:0"]
         x, y = yc.x + yc.width / 2, yc.y + yc.height / 2
-        over = lambda pred: any(pred(bl) and bl.x <= x <= bl.x + bl.width and bl.y <= y <= bl.y + bl.height for bl in lay.blocks)
+        over = lambda pred: any(pred(bl) and bl.x <= x <= bl.x + bl.width and bl.y <= y <= bl.y + bl.height for bl in layout.blocks)
         assert over(lambda bl: bl.id.startswith("washbase:"))
         assert not over(lambda bl: bl.tint in ("temperament", "tuning", "form"))
         rank = cells["count:gens"]
         gx, cgx = cells["cell:form:0:0"].x + 5, cells["cell:fcancel:0:0"].x + 5
         in_band = lambda bx, tint: any(bl.tint == tint and bl.x <= bx <= bl.x + bl.width
-                                       and bl.y <= rank.y + rank.height / 2 <= bl.y + bl.height for bl in lay.blocks)
+                                       and bl.y <= rank.y + rank.height / 2 <= bl.y + bl.height for bl in layout.blocks)
         assert in_band(gx, "temperament") and not in_band(gx, "form")
         assert in_band(cgx, "temperament") and in_band(cgx, "form")
 
@@ -522,11 +522,11 @@ class TestRetuningChartsAndGenMap:
         s["weighting"] = True
         s["alt_complexity"] = True
         s["audio"] = True
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                 tuning_scheme="TILT minimax-S")
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
-        at = lambda cid: _color_at(lay, *_mid(cells, cid))
+        at = lambda cell_id: _color_at(layout, *_mid(cells, cell_id))
         assert at("detempering:0") == N
         assert at("cell:vector:detempering:0:0") == N
         assert at("tuning:detempering:0") == G
@@ -536,10 +536,10 @@ class TestRetuningChartsAndGenMap:
         assert at("complexity:detempering:0") == C
 
     def test_spine_rows_and_columns_colorize_by_their_band(self):
-        lay = _spine_colormap()
-        cells = {c.id: c for c in lay.cells}
+        layout = _spine_colormap()
+        cells = {c.id: c for c in layout.cells}
         Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
-        at = lambda cid: _color_at(lay, *_mid(cells, cid))
+        at = lambda cell_id: _color_at(layout, *_mid(cells, cell_id))
         for spine in ("count", "urow"):
             suffix = ":0" if spine == "urow" else ""
             assert at(f"{spine}:commas{suffix}") == Y
@@ -557,16 +557,16 @@ class TestRetuningChartsAndGenMap:
         assert at("ucol:complexity") == C
 
     def test_washes_bridge_the_plus_column_gutters(self):
-        lay = _colormap_layout()
-        cells = {c.id: c for c in lay.cells}
+        layout = _colormap_layout()
+        cells = {c.id: c for c in layout.cells}
         height = lambda k: cells[f"header:{k}"]
         primes_commas = (height("primes").x + height("primes").width + height("commas").x) / 2
         commas_targets = (height("commas").x + height("commas").width + height("targets").x) / 2
         map_y = _mid(cells, "cell:mapping:0:0")[1]
         tun_y = _mid(cells, "tuning:prime:0")[1]
-        assert "temperament" in _color_at(lay, primes_commas, map_y)
-        assert "temperament" in _color_at(lay, commas_targets, map_y)
-        assert {"temperament", "tuning"} <= _color_at(lay, commas_targets, tun_y)
+        assert "temperament" in _color_at(layout, primes_commas, map_y)
+        assert "temperament" in _color_at(layout, commas_targets, map_y)
+        assert {"temperament", "tuning"} <= _color_at(layout, commas_targets, tun_y)
 
     def test_colorization_off_by_default_and_renders_as_base_plus_darken_bands(self):
         assert not any(b.id.startswith(("wash:", "washbase:")) for b in _layout().blocks)

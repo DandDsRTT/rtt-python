@@ -74,16 +74,16 @@ def _with_interest(interest, collapsed=None):
     )
 
 
-def _title_edges(lay):
+def _title_edges(layout):
     return [(c.id.split("header:", 1)[1],
              c.x + c.width / 2 - spreadsheet_text._title_w(c.text) / 2,
              c.x + c.width / 2 + spreadsheet_text._title_w(c.text) / 2)
-            for c in sorted((c for c in lay.cells if c.kind == "colheader"), key=lambda c: c.x)]
+            for c in sorted((c for c in layout.cells if c.kind == "colheader"), key=lambda c: c.x)]
 
 
-def _assert_freeze_partition(lay):
-    fx, fy = lay.freeze_x, lay.freeze_y
-    for cb in lay.cells:
+def _assert_freeze_partition(layout):
+    fx, fy = layout.freeze_x, layout.freeze_y
+    for cb in layout.cells:
         if cb.kind in {"colheader", "coltoggle"}:
             assert cb.y + cb.height <= fy
         elif cb.kind in {"rowlabel", "rowtoggle"}:
@@ -94,7 +94,7 @@ def _assert_freeze_partition(lay):
             assert cb.x < fx or cb.y < fy
         else:
             assert cb.x >= fx and cb.y >= fy
-    for bl in lay.blocks:
+    for bl in layout.blocks:
         if bl.tint == "" and not bl.boxed:
             assert bl.x >= fx and bl.y >= fy
 
@@ -117,20 +117,20 @@ def _maximized_superspace_builder():
 
 
 def _tokens(pairs):
-    return [tok for tok, _ in pairs]
+    return [token for token, _ in pairs]
 
 
 def _held_state():
     return service.from_mapping(((1, 1, 0), (0, 1, 4)))
 
 
-def _reorder_volatile(cid):
-    return cid.startswith(("chart:", "plain_text:", "tuning:", "retune:", "rangechart:"))
+def _reorder_volatile(cell_id):
+    return cell_id.startswith(("chart:", "plain_text:", "tuning:", "retune:", "rangechart:"))
 
 
-def _in_targets(cid):
-    return (cid.startswith(("target:", "cell:mapped:", "damage:target:"))
-            or cid.startswith(("tuning:target:", "just:target:", "retune:target:")))
+def _in_targets(cell_id):
+    return (cell_id.startswith(("target:", "cell:mapped:", "damage:target:"))
+            or cell_id.startswith(("tuning:target:", "just:target:", "retune:target:")))
 
 
 def _foldable(layout):
@@ -177,7 +177,7 @@ def _ebk_text_convention(text):
     return ("row", g[0], g[-1], "", "")
 
 
-def _ebk_grid_convention(b, lay, row_key, column_key):
+def _ebk_grid_convention(b, layout, row_key, column_key):
     """The bracket convention the GRID draws around a tile's cells, reconstructed from its frame
     bands (matrix_frame's ebktop/ebkbrace/ebkangle), per-column ket marks and bracket glyphs.
     Cell-id shape disambiguates: a per-column mark / per-row stacked bracket ends in ``:<int>``,
@@ -193,7 +193,7 @@ def _ebk_grid_convention(b, lay, row_key, column_key):
     frame_top = col_marks = False
     brace = angle = False
     outer, perrow = [], []
-    for c in lay.cells:
+    for c in layout.cells:
         if not in_tile(c):
             continue
         digit = c.id.rsplit(":", 1)[-1].isdigit()
@@ -211,7 +211,7 @@ def _ebk_grid_convention(b, lay, row_key, column_key):
             if base.rsplit(":", 1)[-1].isdigit():
                 perrow.append(c.text)
             else:
-                r = next((x for x in lay.cells if x.id == base + ":r"), None)
+                r = next((x for x in layout.cells if x.id == base + ":r"), None)
                 outer.append((c.text, r.text if r else "]"))
     foot = "}" if brace else "⟩" if angle else ""
     if frame_top:
@@ -246,8 +246,8 @@ def _ebk_table_canonical(convention):
     return (structure, oo, oc, io, ic)
 
 
-def _in_commas(cid):
-    return cid.startswith(("comma:", "cell:comma:")) or cid.split(":")[0:2] in (
+def _in_commas(cell_id):
+    return cell_id.startswith(("comma:", "cell:comma:")) or cell_id.split(":")[0:2] in (
         ["tuning", "comma"], ["just", "comma"], ["retune", "comma"])
 
 
@@ -275,13 +275,13 @@ def _held(scheme=None, **overrides):
         base, s, tuning_scheme=scheme, held_vectors=[(-1, 1, 0)]).cells}
 
 
-def _color_at(lay, x, y):
-    return {b.tint for b in lay.blocks if b.tint in ("temperament", "tuning")
+def _color_at(layout, x, y):
+    return {b.tint for b in layout.blocks if b.tint in ("temperament", "tuning")
             and b.x <= x <= b.x + b.width and b.y <= y <= b.y + b.height}
 
 
-def _mid(cells, cid):
-    c = cells[cid]
+def _mid(cells, cell_id):
+    c = cells[cell_id]
     return c.x + c.width / 2, c.y + c.height / 2
 
 
@@ -324,8 +324,8 @@ def _diff_layout(*cells):
     return Layout(width=0, height=0, lines=(), blocks=(), cells=tuple(cells), freeze_x=0, freeze_y=0)
 
 
-def _diff_cell(cid, text, **kw):
-    return CellBox(id=cid, x=0, y=0, width=10, height=10, kind="tuningvalue", text=text, **kw)
+def _diff_cell(cell_id, text, **kw):
+    return CellBox(id=cell_id, x=0, y=0, width=10, height=10, kind="tuningvalue", text=text, **kw)
 
 
 def _barbados_superspace(**overrides):
@@ -389,8 +389,8 @@ def _projection_superspace(**overrides):
     return spreadsheet.build(st, s, held_basis_ratios=("2/1", "3/1"))
 
 
-def _assert_plain_text_cells_match(lay, pt):
-    plain_text_cells = [c for c in lay.cells if c.id.startswith("plain_text:")]
+def _assert_plain_text_cells_match(layout, pt):
+    plain_text_cells = [c for c in layout.cells if c.id.startswith("plain_text:")]
     assert len(plain_text_cells) >= 8
     for c in plain_text_cells:
         _, row_key, column_key = c.id.split(":")

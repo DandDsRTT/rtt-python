@@ -39,20 +39,20 @@ class _TuningEdits:
         self.target_limit_commit = None
 
     @cb_method
-    def on_power_change(self, cid):
-        _power_change(self.e, cid)
+    def on_power_change(self, cell_id):
+        _power_change(self.e, cell_id)
 
     @cb_method
-    def on_gentuning_change(self, cid):
-        _gentuning_change(self.e, cid)
+    def on_gentuning_change(self, cell_id):
+        _gentuning_change(self.e, cell_id)
 
     @cb_method
-    def on_gentuning_wheel(self, cid, delta_y):
-        _gentuning_wheel(self.e, cid, delta_y)
+    def on_gentuning_wheel(self, cell_id, delta_y):
+        _gentuning_wheel(self.e, cell_id, delta_y)
 
     @cb_method
-    def on_value_wheel(self, cid, delta_y):
-        _value_wheel(self.e, cid, delta_y)
+    def on_value_wheel(self, cell_id, delta_y):
+        _value_wheel(self.e, cell_id, delta_y)
 
     @cb_method
     def on_target_limit_wheel(self, delta_y):
@@ -63,26 +63,29 @@ class _TuningEdits:
         _target_limit_preview(self.e, typed)
 
     @cb_method
-    def on_prescaler_change(self, cid):
-        _prescaler_change(self.e, cid)
+    def on_prescaler_change(self, cell_id):
+        _prescaler_change(self.e, cell_id)
 
     @cb_method
-    def on_weight_change(self, cid):
-        _weight_change(self.e, cid)
+    def on_weight_change(self, cell_id):
+        _weight_change(self.e, cell_id)
 
     @cb_method
-    def on_plain_text_edit(self, cid, value):
-        _plain_text_edit(self.e, cid, value)
+    def on_plain_text_edit(self, cell_id, value):
+        _plain_text_edit(self.e, cell_id, value)
 
 
-def _power_change(edit_controller, cid):
-    if edit_controller._runtime.building or edit_controller._rec.handles(cid).value.input is None:
+def _power_change(edit_controller, cell_id):
+    if (
+        edit_controller._runtime.building
+        or edit_controller._rec.handles(cell_id).value.input is None
+    ):
         return
-    if cid not in ("optimization:power", "control:q"):
+    if cell_id not in ("optimization:power", "control:q"):
         return
-    is_q = cid == "control:q"
+    is_q = cell_id == "control:q"
     power = service.parse_power(
-        edit_controller._rec.cells[cid].value.input.value, minimum=1.0 if is_q else 0.0
+        edit_controller._rec.cells[cell_id].value.input.value, minimum=1.0 if is_q else 0.0
     )
     if power is None:
         return
@@ -93,26 +96,29 @@ def _power_change(edit_controller, cid):
     edit_controller._renderer.request_render()
 
 
-def _gen_position(edit_controller, tok):
+def _gen_position(edit_controller, token):
     toks = edit_controller._runtime.col_tokens("gens")
-    return toks.index(tok) if tok in toks else tok
+    return toks.index(token) if token in toks else token
 
 
-def _gentuning_change(edit_controller, cid):
-    if edit_controller._runtime.building or edit_controller._rec.handles(cid).value.input is None:
+def _gentuning_change(edit_controller, cell_id):
+    if (
+        edit_controller._runtime.building
+        or edit_controller._rec.handles(cell_id).value.input is None
+    ):
         return
-    mag = edit_controller._rec.decimal_value(cid)
+    mag = edit_controller._rec.decimal_value(cell_id)
     if not mag:
         return
     try:
         cents = abs(float(mag))
     except ValueError:
         return
-    glyph = edit_controller._rec.handles(cid).value.gensign_face
+    glyph = edit_controller._rec.handles(cell_id).value.gensign_face
     if glyph is not None and glyph.text not in ("+", ""):
         cents = -cents
-    i = int(cid.rsplit(":", 1)[1])
-    if ":superspace_generator:" in cid:
+    i = int(cell_id.rsplit(":", 1)[1])
+    if ":superspace_generator:" in cell_id:
         edit_controller._editor.set_superspace_generator_tuning_component(i, cents)
     else:
         edit_controller._editor.set_generator_tuning_component(
@@ -121,11 +127,11 @@ def _gentuning_change(edit_controller, cid):
     edit_controller._renderer.request_render()
 
 
-def _gentuning_wheel(edit_controller, cid, delta_y):
+def _gentuning_wheel(edit_controller, cell_id, delta_y):
     if edit_controller._runtime.building or not delta_y:
         return
-    i, steps = int(cid.rsplit(":", 1)[1]), (1 if delta_y < 0 else -1)
-    if ":superspace_generator:" in cid:
+    i, steps = int(cell_id.rsplit(":", 1)[1]), (1 if delta_y < 0 else -1)
+    if ":superspace_generator:" in cell_id:
         edit_controller._editor.nudge_superspace_generator_tuning_component(i, steps)
     else:
         edit_controller._editor.nudge_generator_tuning_component(
@@ -134,25 +140,25 @@ def _gentuning_wheel(edit_controller, cid, delta_y):
     edit_controller._renderer.request_render()
 
 
-def _value_wheel(edit_controller, cid, delta_y):
+def _value_wheel(edit_controller, cell_id, delta_y):
     if (
         edit_controller._runtime.building
         or not delta_y
-        or edit_controller._rec.handles(cid).value.input is None
+        or edit_controller._rec.handles(cell_id).value.input is None
     ):
         return
-    step = _WHEEL_STEPS.get(edit_controller._rec.handles(cid).kind)
+    step = _WHEEL_STEPS.get(edit_controller._rec.handles(cell_id).kind)
     if step is None:
         return
-    if edit_controller._rec.handles(cid).value.den_input is not None:
+    if edit_controller._rec.handles(cell_id).value.den_input is not None:
         with edit_controller._runtime.building_guard():
             edit_controller._rec.set_decimal_value(
-                cid, _wheel_step(edit_controller._rec.decimal_value(cid), delta_y, step)
+                cell_id, _wheel_step(edit_controller._rec.decimal_value(cell_id), delta_y, step)
             )
-        _prescaler_change(edit_controller, cid)
+        _prescaler_change(edit_controller, cell_id)
         return
-    edit_controller._rec.cells[cid].value.input.value = _wheel_step(
-        edit_controller._rec.cells[cid].value.input.value, delta_y, step
+    edit_controller._rec.cells[cell_id].value.input.value = _wheel_step(
+        edit_controller._rec.cells[cell_id].value.input.value, delta_y, step
     )
     commit = {
         "mapping": edit_controller.vectors.on_mapping_change,
@@ -161,7 +167,7 @@ def _value_wheel(edit_controller, cid, delta_y):
         "heldcell": edit_controller.vectors.on_held_change,
         "targetcell": edit_controller.vectors.on_target_cells_change,
         "formcell": edit_controller.vectors.on_form_change,
-    }.get(edit_controller._rec.handles(cid).kind)
+    }.get(edit_controller._rec.handles(cell_id).kind)
     if commit is not None:
         commit()
 
@@ -212,19 +218,25 @@ def _target_limit_preview(edit_controller, typed=None):
     )
 
 
-def _prescaler_change(edit_controller, cid):
-    if edit_controller._runtime.building or edit_controller._rec.handles(cid).value.input is None:
+def _prescaler_change(edit_controller, cell_id):
+    if (
+        edit_controller._runtime.building
+        or edit_controller._rec.handles(cell_id).value.input is None
+    ):
         return
-    parts = cid.split(":")
+    parts = cell_id.split(":")
     i, j = int(parts[3]), int(parts[4])
-    out = service.custom_prescaler_entry(edit_controller._rec.decimal_value(cid), i == j)
+    out = service.custom_prescaler_entry(edit_controller._rec.decimal_value(cell_id), i == j)
     edit_controller._apply_outcome(
         out, lambda: edit_controller._editor.set_custom_prescaler_entry(i, j, out.value)
     )
 
 
-def _weight_change(edit_controller, cid):
-    if edit_controller._runtime.building or edit_controller._rec.handles(cid).value.input is None:
+def _weight_change(edit_controller, cell_id):
+    if (
+        edit_controller._runtime.building
+        or edit_controller._rec.handles(cell_id).value.input is None
+    ):
         return
     raws = [
         edit_controller._rec.decimal_value(o)
@@ -237,39 +249,41 @@ def _weight_change(edit_controller, cid):
     )
 
 
-def _plain_text_edit(edit_controller, cid, value):
+def _plain_text_edit(edit_controller, cell_id, value):
     if edit_controller._runtime.building:
         return
-    editor_method = _PLAIN_TEXT_EDITORS.get(cid)
+    editor_method = _PLAIN_TEXT_EDITORS.get(cell_id)
     if editor_method is None:
         return
     if not edit_controller._editor.settings.get("ebk", True):
-        value = service.simple_matrix_to_ebk(value, _PLAIN_TEXT_DUAL_VECTOR_KIND.get(cid, False))
+        value = service.simple_matrix_to_ebk(
+            value, _PLAIN_TEXT_DUAL_VECTOR_KIND.get(cell_id, False)
+        )
     if getattr(edit_controller._editor, editor_method)(value):
-        edit_controller._rec.cells[cid].value.plain_text_input.classes(
+        edit_controller._rec.cells[cell_id].value.plain_text_input.classes(
             remove="rtt-plain-text-error"
         )
         edit_controller._renderer.request_render()
         return
-    edit_controller._rec.cells[cid].value.plain_text_input.classes(add="rtt-plain-text-error")
-    toast = _plain_text_error_toast(edit_controller, cid, value)
+    edit_controller._rec.cells[cell_id].value.plain_text_input.classes(add="rtt-plain-text-error")
+    toast = _plain_text_error_toast(edit_controller, cell_id, value)
     if toast:
         ui.notify(toast, type="negative", position="top")
 
 
-def _plain_text_error_toast(edit_controller, cid, value):
-    if cid == "plain_text:mapping:primes":
+def _plain_text_error_toast(edit_controller, cell_id, value):
+    if cell_id == "plain_text:mapping:primes":
         st = service.parse_mapping_state(value)
         if st is not None and not service.is_proper_temperament(st.mapping):
             return _INVALID_TEMPERAMENT
-    elif cid == "plain_text:vectors:commas":
+    elif cell_id == "plain_text:vectors:commas":
         b = service.parse_comma_basis(value)
         if b is not None and not service.is_proper_temperament(service.from_comma_basis(b).mapping):
             return _INVALID_TEMPERAMENT
-    elif cid == "plain_text:projection:primes" and service.parse_projection(value) is not None:
+    elif cell_id == "plain_text:projection:primes" and service.parse_projection(value) is not None:
         return _INVALID_PROJECTION
     elif (
-        cid == "plain_text:projection:gens"
+        cell_id == "plain_text:projection:gens"
         and service.parse_embedding(
             value,
             edit_controller._editor.state.dimensionality,

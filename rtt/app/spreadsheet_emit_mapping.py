@@ -169,8 +169,8 @@ def _emit_mapped_grid_colwise(cells, resolved, prefix, grid, n_cols, left, col_k
     for j in range(n_cols):
         for i in range(height):
             text = str(grid[j][i]) if full else DASH
-            tok = j if col_token_key is None else query.col_token(resolved, col_token_key, j)
-            cells.append(CellBox(f"cell:{prefix}:{tok}:{i}", left(j), top(i),
+            token = j if col_token_key is None else query.col_token(resolved, col_token_key, j)
+            cells.append(CellBox(f"cell:{prefix}:{token}:{i}", left(j), top(i),
                                  COL_W, ROW_H, "mapped", text=text, prime=i, **{col_kw: j}))
             if sizes is not None:
                 voice(cells, audio, j, sizes[j])
@@ -191,22 +191,22 @@ def _emit_mapped_grid_rowwise(cells, prefix, grid, n_cols, left, col_kw,
 
 def emit_projection_band(resolved, geometry, context) -> EmitResult:
     cells: list = []
-    cl = context.collapsed
-    emit_mapped_grid(cells, resolved, geometry, cl, "primes", "projection", resolved.projection.matrix, resolved.dims.dimensionality, lambda i: query.prime_left(geometry, i), "prime")
-    emit_mapped_grid(cells, resolved, geometry, cl, "gens", "embed", resolved.projection.embedding_matrix, resolved.dims.rank, lambda i: query.gen_left(geometry, i), "gen")
-    emit_mapped_grid(cells, resolved, geometry, cl, "canongens", "embed_c", resolved.canon.embedding_matrix, resolved.dims.canonical_rank, lambda i: query.canongen_left(geometry, i), "gen")
-    emit_mapped_grid(cells, resolved, geometry, cl, "superspace_generators", "embed_sl", resolved.projection.embedding_superspace, resolved.dims.superspace_rank, lambda i: query.superspace_gen_left(geometry, i), "gen")
-    emit_mapped_grid(cells, resolved, geometry, cl, "superspace_primes", "projection_superspace", resolved.projection.superspace, resolved.dims.superspace_dimensionality, lambda i: query.superspace_prime_left(geometry, i), "prime")
+    collapsed = context.collapsed
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "primes", "projection", resolved.projection.matrix, resolved.dims.dimensionality, lambda i: query.prime_left(geometry, i), "prime")
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "gens", "embed", resolved.projection.embedding_matrix, resolved.dims.rank, lambda i: query.gen_left(geometry, i), "gen")
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "canongens", "embed_c", resolved.canon.embedding_matrix, resolved.dims.canonical_rank, lambda i: query.canongen_left(geometry, i), "gen")
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_generators", "embed_sl", resolved.projection.embedding_superspace, resolved.dims.superspace_rank, lambda i: query.superspace_gen_left(geometry, i), "gen")
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "superspace_primes", "projection_superspace", resolved.projection.superspace, resolved.dims.superspace_dimensionality, lambda i: query.superspace_prime_left(geometry, i), "prime")
     _emit_projection_unchanged(cells, resolved, geometry, context)
     _emit_projection_basis(cells, resolved, geometry, context)
     full_projection = resolved.projection.rationals is not None
-    emit_mapped_grid(cells, resolved, geometry, cl, "detempering", "projection_detempering", resolved.projection.detempering, resolved.dims.rank, lambda i: query.detempering_left(geometry, i), "gen",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "detempering", "projection_detempering", resolved.projection.detempering, resolved.dims.rank, lambda i: query.detempering_left(geometry, i), "gen",
                      full=full_projection, colwise=True, col_token_key="detempering", audio="projection:detempering")
-    emit_mapped_grid(cells, resolved, geometry, cl, "targets", "projection_targets", resolved.projection.targets, resolved.dims.target_count, lambda i: query.target_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "targets", "projection_targets", resolved.projection.targets, resolved.dims.target_count, lambda i: query.target_left(geometry, i), "comma",
                      full=full_projection, colwise=True, pending=resolved.targets.pending, audio="projection:targets")
-    emit_mapped_grid(cells, resolved, geometry, cl, "held", "projection_held", resolved.projection.held, resolved.dims.held_count, lambda i: query.held_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "held", "projection_held", resolved.projection.held, resolved.dims.held_count, lambda i: query.held_left(geometry, i), "comma",
                      full=full_projection, colwise=True, pending=resolved.held.pending, audio="projection:held")
-    emit_mapped_grid(cells, resolved, geometry, cl, "interest", "projection_interest", resolved.projection.interest, resolved.dims.interest_count, lambda i: query.interest_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "interest", "projection_interest", resolved.projection.interest, resolved.dims.interest_count, lambda i: query.interest_left(geometry, i), "comma",
                      full=full_projection, colwise=True, pending=resolved.interest.pending, audio="projection:interest")
     _emit_scaling_factors(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
@@ -286,17 +286,17 @@ def _emit_canon_form(cells, resolved, geometry, context) -> None:
 
 
 def _emit_canon_row(cells, resolved, geometry, context, i) -> None:
-    cl = context.collapsed
-    if query.tile_open(geometry, cl, "canon", "detempering"):
+    collapsed = context.collapsed
+    if query.tile_open(geometry, collapsed, "canon", "detempering"):
         for c in range(resolved.dims.rank):
             cells.append(CellBox(f"cell:canon_detempering:{i}:{query.col_token(resolved, 'detempering', c)}", query.detempering_left(geometry, c), query.canon_top(geometry, i), COL_W, ROW_H, "mapped", text=str(resolved.canon.mapped_detempering[i][c]), gen=i, unit=query.cell_unit(resolved, "canon", "detempering", gen=i)))
-    if query.tile_open(geometry, cl, "canon", "targets"):
+    if query.tile_open(geometry, collapsed, "canon", "targets"):
         _emit_canon_mapped_tile(cells, resolved, geometry, "canon_mapped", "targets", resolved.dims.target_count, lambda c: query.target_left(geometry, c), resolved.canon.mapped, resolved.targets.pending, i)
-    if query.tile_open(geometry, cl, "canon", "interest"):
+    if query.tile_open(geometry, collapsed, "canon", "interest"):
         _emit_canon_mapped_tile(cells, resolved, geometry, "canon_imapped", "interest", resolved.dims.interest_count, lambda c: query.interest_left(geometry, c), resolved.canon.interest_mapped, resolved.interest.pending, i)
-    if query.tile_open(geometry, cl, "canon", "held"):
+    if query.tile_open(geometry, collapsed, "canon", "held"):
         _emit_canon_mapped_tile(cells, resolved, geometry, "canon_hmapped", "held", resolved.dims.held_count, lambda c: query.held_left(geometry, c), resolved.canon.held_mapped, resolved.held.pending, i)
-    if query.tile_open(geometry, cl, "canon", "commas"):
+    if query.tile_open(geometry, collapsed, "canon", "commas"):
         _emit_canon_comma_row(cells, resolved, geometry, i)
 
 

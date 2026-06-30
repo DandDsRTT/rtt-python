@@ -52,9 +52,9 @@ def _test_rel(path):
 
 def _comments(src):
     return [
-        tok
-        for tok in tokenize.generate_tokens(io.StringIO(src).readline)
-        if tok.type == tokenize.COMMENT
+        token
+        for token in tokenize.generate_tokens(io.StringIO(src).readline)
+        if token.type == tokenize.COMMENT
     ]
 
 
@@ -62,13 +62,13 @@ def _comment_blocks(src):
     blocks: list[list] = []
     prev_full = False
     prev_row = -2
-    for tok in _comments(src):
-        full = tok.line.lstrip().startswith("#")
-        if blocks and full and prev_full and tok.start[0] == prev_row + 1:
-            blocks[-1].append(tok)
+    for token in _comments(src):
+        full = token.line.lstrip().startswith("#")
+        if blocks and full and prev_full and token.start[0] == prev_row + 1:
+            blocks[-1].append(token)
         else:
-            blocks.append([tok])
-        prev_full, prev_row = full, tok.start[0]
+            blocks.append([token])
+        prev_full, prev_row = full, token.start[0]
     return blocks
 
 
@@ -117,7 +117,7 @@ class TestDocumentationPolicy:
         comments = _comments(path.read_text(encoding="utf-8"))
         assert not comments, (
             f"{_rel(path)} carries {len(comments)} comment(s): "
-            + " / ".join(f"L{tok.start[0]} {tok.string.strip()[:60]}" for tok in comments[:3])
+            + " / ".join(f"L{token.start[0]} {token.string.strip()[:60]}" for token in comments[:3])
             + f"\nComments are allowed ONLY to flag a language/dependency limitation a reader would "
             f"otherwise 'fix' and break (CLAUDE.md). Otherwise improve the names/tests until the comment "
             f"is unnecessary. If this is a genuine new platform limitation, add the file + its exact "
@@ -149,7 +149,7 @@ class TestDocumentationPolicy:
         offenders = [
             block
             for block in _comment_blocks(path.read_text(encoding="utf-8"))
-            if not _PLATFORM_LIMITATION.search(" ".join(tok.string for tok in block))
+            if not _PLATFORM_LIMITATION.search(" ".join(token.string for token in block))
         ]
         assert not offenders, (
             f"{rel} carries {len(offenders)} comment(s) that name no platform limitation: "
@@ -216,7 +216,7 @@ class TestDocumentationPolicy:
         comments = _comments(path.read_text(encoding="utf-8"))
         assert not comments, (
             f"{_test_rel(path)} carries {len(comments)} comment(s): "
-            + " / ".join(f"L{tok.start[0]} {tok.string.strip()[:60]}" for tok in comments[:3])
+            + " / ".join(f"L{token.start[0]} {token.string.strip()[:60]}" for token in comments[:3])
             + "\nTests document through clear names and assertions, not comments (CLAUDE.md): a comment in "
             "a test rots into a lie just like one in the library. Replace it with a clearer name, a named "
             "constant, or an assertion message. If you must keep it for now, add the file + its exact count "

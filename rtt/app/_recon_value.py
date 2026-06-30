@@ -34,12 +34,14 @@ from rtt.app.render_html import (
 )
 
 
-def _put_stacked_face(reconciler, cid: str, cls: str, main: str, sub: str, width: float) -> None:
+def _put_stacked_face(
+    reconciler, cell_id: str, cls: str, main: str, sub: str, width: float
+) -> None:
     with ui.element("div").classes(cls):
-        m = ui.label(main).classes("rtt-stacked-main").mark(f"{cid}:main")
-        s = ui.label(sub).classes("rtt-stacked-sub").mark(f"{cid}:sub")
-    reconciler.cells[cid].value.stacked_face = (m, s)
-    reconciler.cells[cid].value.stacked_w = width
+        m = ui.label(main).classes("rtt-stacked-main").mark(f"{cell_id}:main")
+        s = ui.label(sub).classes("rtt-stacked-sub").mark(f"{cell_id}:sub")
+    reconciler.cells[cell_id].value.stacked_face = (m, s)
+    reconciler.cells[cell_id].value.stacked_w = width
     _size_stacked_main(m, main, sub, width)
 
 
@@ -54,16 +56,16 @@ def _size_stacked_main(main_label, main: str, sub: str, width: float) -> None:
     main_label.style(f"font-size:{size:.2f}px")
 
 
-def _sync_stacked_face(reconciler, cid: str, main: str, sub: str) -> None:
-    m, s = reconciler.cells[cid].value.stacked_face
+def _sync_stacked_face(reconciler, cell_id: str, main: str, sub: str) -> None:
+    m, s = reconciler.cells[cell_id].value.stacked_face
     m.set_text(main)
     s.set_text(sub)
-    _size_stacked_main(m, main, sub, reconciler.cells[cid].value.stacked_w)
+    _size_stacked_main(m, main, sub, reconciler.cells[cell_id].value.stacked_w)
 
 
-def set_cents_face(reconciler, cid: str, text: str) -> None:
+def set_cents_face(reconciler, cell_id: str, text: str) -> None:
     whole, frac = _cents_parts(text)
-    _sync_stacked_face(reconciler, cid, whole, f".{frac}" if frac else "")
+    _sync_stacked_face(reconciler, cell_id, whole, f".{frac}" if frac else "")
 
 
 def _set_pending_class(element, pending: bool) -> None:
@@ -104,15 +106,17 @@ def _ratio_body(reconciler, cell_box: spreadsheet.CellBox, approx: bool) -> None
         reconciler.cells[cell_box.id].value.label = ui.label(cell_box.text).classes("rtt-value")
 
 
-def _fit_ratio(reconciler, cid: str, num: str, den: str, width: float, whole: bool = False) -> None:
+def _fit_ratio(
+    reconciler, cell_id: str, num: str, den: str, width: float, whole: bool = False
+) -> None:
     size = (
         _digit_fit_font(len(num), width, float(_CELL_FONT))
         if whole
         else _ratio_font(num, den, width)
     )
     font = f"font-size:{size:.2f}px"
-    reconciler.cells[cid].value.frac[0].style(font)
-    reconciler.cells[cid].value.frac[1].style(font)
+    reconciler.cells[cell_id].value.frac[0].style(font)
+    reconciler.cells[cell_id].value.frac[1].style(font)
 
 
 def build_gridvalue(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
@@ -176,18 +180,22 @@ def _arm_ratio_ops(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
         )
     reduce_button.on(
         "click",
-        lambda _=None, cid=cell_box.id: reconciler._cell_box.transform_interval(cid, "reduce"),
+        lambda _=None, cell_id=cell_box.id: reconciler._cell_box.transform_interval(
+            cell_id, "reduce"
+        ),
     )
     reciprocate_button.on(
         "click",
-        lambda _=None, cid=cell_box.id: reconciler._cell_box.transform_interval(cid, "reciprocate"),
+        lambda _=None, cell_id=cell_box.id: reconciler._cell_box.transform_interval(
+            cell_id, "reciprocate"
+        ),
     )
     reconciler.cells[cell_box.id].value.ratio_op = (reduce_button, reciprocate_button)
     _sync_ratio_ops(reconciler, cell_box.id, cell_box.text)
 
 
-def _sync_ratio_ops(reconciler, cid: str, text: str) -> None:
-    ops = reconciler.handles(cid).value.ratio_op
+def _sync_ratio_ops(reconciler, cell_id: str, text: str) -> None:
+    ops = reconciler.handles(cell_id).value.ratio_op
     if ops is None:
         return
     state = reconciler._editor.state
@@ -203,11 +211,11 @@ def _gridvalue_handlers(reconciler, cell_box: spreadsheet.CellBox, spec: _GridVa
     fn = getattr(reconciler._cell_box, spec.commit)
     if spec.cid_arg:
 
-        def commit(_=None, cid=cell_box.id):
-            return fn(cid)
+        def commit(_=None, cell_id=cell_box.id):
+            return fn(cell_id)
 
         pv = getattr(reconciler._cell_box, spec.preview) if spec.preview else None
-        preview = (lambda _e=None, cid=cell_box.id: pv(cid)) if pv else None
+        preview = (lambda _e=None, cell_id=cell_box.id: pv(cell_id)) if pv else None
     else:
 
         def commit(_=None):
@@ -254,15 +262,15 @@ def _update_fraction(reconciler, cell_box: spreadsheet.CellBox, text: str) -> No
     _sync_ratio_ops(reconciler, cell_box.id, text)
 
 
-def _fit_fraction(reconciler, cid: str, num: str, den: str, width: float, ratio: bool) -> None:
+def _fit_fraction(reconciler, cell_id: str, num: str, den: str, width: float, ratio: bool) -> None:
     size = (
         _ratio_font(num, den, width)
         if ratio
         else _digit_fit_font(len(num), width, float(_CELL_FONT))
     )
     style = f"font-size:{size:.2f}px"
-    reconciler.cells[cid].value.input.style(style)
-    reconciler.cells[cid].value.den_input.style(style)
+    reconciler.cells[cell_id].value.input.style(style)
+    reconciler.cells[cell_id].value.den_input.style(style)
 
 
 def _gridvalue_text(reconciler, cell_box: spreadsheet.CellBox) -> str:

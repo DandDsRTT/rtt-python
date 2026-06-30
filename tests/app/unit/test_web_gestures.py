@@ -5,8 +5,8 @@ from rtt.app.gestures import GestureController
 from rtt.app.page_assets import _Gesture
 
 
-def _cell(cid, *, remove=False, change=False, pending=False):
-    return SimpleNamespace(id=cid, preview_remove=remove, preview_change=change, pending=pending)
+def _cell(cell_id, *, remove=False, change=False, pending=False):
+    return SimpleNamespace(id=cell_id, preview_remove=remove, preview_change=change, pending=pending)
 
 
 def _editor(*, highlight=True):
@@ -49,8 +49,8 @@ class _FakeRec:
     def __init__(self, entities):
         self.entities = entities
 
-    def entity(self, eid):
-        return self.entities[eid]
+    def entity(self, element_id):
+        return self.entities[element_id]
 
 
 class TestWebGestures:
@@ -69,7 +69,7 @@ class TestWebGestures:
 
     def test_compute_rings_static_only_when_no_gesture(self):
         g = GestureController(_editor(), SimpleNamespace())
-        lay = SimpleNamespace(
+        layout = SimpleNamespace(
             cells=[
                 _cell("a", remove=True),
                 _cell("b", change=True),
@@ -77,14 +77,14 @@ class TestWebGestures:
                 _cell("d", change=True, pending=True),
             ]
         )
-        amber, red = g.compute_rings(lay)
+        amber, red = g.compute_rings(layout)
         assert amber == frozenset({"b"})
         assert red == frozenset({"a"})
 
     def test_compute_rings_empty_when_preview_highlighting_off(self):
         g = GestureController(_editor(highlight=False), SimpleNamespace())
-        lay = SimpleNamespace(cells=[_cell("a", remove=True)])
-        assert g.compute_rings(lay) == (frozenset(), frozenset())
+        layout = SimpleNamespace(cells=[_cell("a", remove=True)])
+        assert g.compute_rings(layout) == (frozenset(), frozenset())
 
     def test_paint_cell_adds_amber_ring_and_records_signature(self):
         el = _FakeEl()

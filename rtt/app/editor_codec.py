@@ -42,25 +42,27 @@ def _weights_from_json(w):
     return weights if weights_are_solvable(weights) else None
 
 
-def serialize(doc: Document) -> dict:
+def serialize(document: Document) -> dict:
     return {
-        "mapping_ebk": service.mapping_ebk(doc.state),
-        "tuning_scheme": service.scheme_to_json(doc.tuning_scheme),
-        "target_family": doc.target_family,
-        "target_limit": doc.target_limit,
-        "interest_vectors": [list(m) for m in doc.interest_vectors],
-        "held_vectors": [list(m) for m in doc.held_vectors],
-        "range_mode": doc.range_mode,
-        "generator_tuning": list(doc.generator_tuning)
-        if doc.generator_tuning is not None
+        "mapping_ebk": service.mapping_ebk(document.state),
+        "tuning_scheme": service.scheme_to_json(document.tuning_scheme),
+        "target_family": document.target_family,
+        "target_limit": document.target_limit,
+        "interest_vectors": [list(m) for m in document.interest_vectors],
+        "held_vectors": [list(m) for m in document.held_vectors],
+        "range_mode": document.range_mode,
+        "generator_tuning": list(document.generator_tuning)
+        if document.generator_tuning is not None
         else None,
-        "manual_tuning": doc.manual_tuning,
-        "custom_prescaler": _prescaler_to_json(doc.custom_prescaler),
-        "custom_weights": _weights_to_json(doc.custom_weights),
-        "target_override": list(doc.target_override) if doc.target_override is not None else None,
-        "projection_basis": list(doc.projection_basis),
-        "settings": dict(doc.settings),
-        "collapsed": sorted(doc.collapsed),
+        "manual_tuning": document.manual_tuning,
+        "custom_prescaler": _prescaler_to_json(document.custom_prescaler),
+        "custom_weights": _weights_to_json(document.custom_weights),
+        "target_override": list(document.target_override)
+        if document.target_override is not None
+        else None,
+        "projection_basis": list(document.projection_basis),
+        "settings": dict(document.settings),
+        "collapsed": sorted(document.collapsed),
     }
 
 

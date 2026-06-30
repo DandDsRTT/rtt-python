@@ -78,14 +78,14 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group
     is_gen_group = group in ("gens", "superspace_generators")
     is_prime_group = group in ("primes", "superspace_primes")
     for i, v in enumerate(values):
-        cid = f"{key}:{geometry.group_elem[group]}:{query.col_token(resolved, group, i)}"
+        cell_id = f"{key}:{geometry.group_elem[group]}:{query.col_token(resolved, group, i)}"
         x = geometry.group_left[group][query.comma_value_pos(resolved, i) if group == "commas" else i]
         u = query.cell_unit(resolved, key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
         operand = closed_form_operand(resolved, geometry, context, key, group, i, v) if resolved.flags.math_expressions else None
         if operand is not None:
-            cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=u))
+            cells.append(CellBox(cell_id, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=u))
         else:
-            cells.append(CellBox(cid, x, y, COL_W, ROW_H, editable_kind or "tuningvalue",
+            cells.append(CellBox(cell_id, x, y, COL_W, ROW_H, editable_kind or "tuningvalue",
                                  text=service.cents(v, resolved.flags.decimals), unit=u))
         if key in ("tuning", "just"):
             voice(cells, f"{key}:{group}", i, v)

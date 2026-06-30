@@ -33,9 +33,9 @@ class TestSubPickerPlacement:
         assert not any(k.startswith("etpick:") for k in off)
 
     def test_et_picker_keeps_the_mapping_matrix_centred_in_its_tile(self):
-        lay = _with(presets=True, drag_to_combine=True, header_symbols=True)
-        cells = {c.id: c for c in lay.cells}
-        tile = {b.id: b for b in lay.blocks}["block:primes"]
+        layout = _with(presets=True, drag_to_combine=True, header_symbols=True)
+        cells = {c.id: c for c in layout.cells}
+        tile = {b.id: b for b in layout.blocks}["block:primes"]
         lb, rb = cells["bracket:map:0:l"], cells["bracket:map:0:r"]
         m_left, m_right = lb.x, rb.x + rb.width
         assert abs((m_left - tile.x) - ((tile.x + tile.width) - m_right)) < 0.51
@@ -51,8 +51,8 @@ class TestSubPickerPlacement:
         cp = cells["commapick:0"]
         assert cp.kind == "commapick" and cp.comma == 0
         assert cp.width == spreadsheet_constants.COL_W and cp.height == spreadsheet_constants.ROW_H
-        column_cell = next(c for cid, c in cells.items()
-                           if cid.startswith("cell:comma:0:") and c.comma == 0)
+        column_cell = next(c for cell_id, c in cells.items()
+                           if cell_id.startswith("cell:comma:0:") and c.comma == 0)
         assert cp.x == column_cell.x
         assert cp.y > column_cell.y
         assert not any(c.id.startswith("commapick:") for c in _with(presets=False).cells)
@@ -68,7 +68,7 @@ class TestSubPickerPlacement:
         s = {**settings.defaults(), "presets": True}
         cc = {c.id: c for c in spreadsheet.build(base, s, pending_comma=[None, None, None]).cells}
         assert "commapick:draft" in cc and cc["commapick:draft"].pending
-        draft_col = next(c for cid, c in cc.items() if cid.startswith("cell:comma:0:") and c.pending)
+        draft_col = next(c for cell_id, c in cc.items() if cell_id.startswith("cell:comma:0:") and c.pending)
         assert cc["commapick:draft"].x == draft_col.x
         mc = {c.id: c for c in spreadsheet.build(base, s, pending_mapping_row=[None, None, None]).cells}
         assert "etpick:draft" in mc and mc["etpick:draft"].pending

@@ -37,8 +37,8 @@ class PageRuntime:
         finally:
             self.building = prev
 
-    def set_last_lay(self, lay: Layout) -> None:
-        self.last_lay = lay
+    def set_last_lay(self, layout: Layout) -> None:
+        self.last_lay = layout
 
     def bind_client(self, client: Client) -> None:
         self.page_client = client
@@ -49,12 +49,12 @@ class PageRuntime:
 
     def col_tokens(self, name: str) -> list:
         idents = self.last_lay.identities if self.last_lay is not None else None
-        return [tok for tok, _ in (idents or {}).get(name, [])]
+        return [token for token, _ in (idents or {}).get(name, [])]
 
-    def token_index(self, cid: str, name: str) -> int | None:
-        token = cid.split(":", 1)[1]
-        for i, tok in enumerate(self.col_tokens(name)):
-            if str(tok) == token:
+    def token_index(self, cell_id: str, name: str) -> int | None:
+        cell_token = cell_id.split(":", 1)[1]
+        for i, token in enumerate(self.col_tokens(name)):
+            if str(token) == cell_token:
                 return i
         return None
 

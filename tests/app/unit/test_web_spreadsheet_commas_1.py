@@ -55,9 +55,9 @@ class TestCommasColumn:
         assert cells["tuning:comma:0"].x == cells["comma:0"].x
 
     def test_damage_row_has_no_commas_tile(self):
-        lay = _with(names=True, symbols=True, plain_text_values=True, charts=True)
-        cells = {c.id for c in lay.cells}
-        blocks = {b.id for b in lay.blocks}
+        layout = _with(names=True, symbols=True, plain_text_values=True, charts=True)
+        cells = {c.id for c in layout.cells}
+        blocks = {b.id for b in layout.blocks}
         assert "damage:target:0" in cells and "block:damage:targets" in blocks
         assert not any(c.startswith("damage:comma") for c in cells)
         assert "caption:damage:commas" not in cells
@@ -253,14 +253,14 @@ class TestCommasColumn:
         assert lils_sym["matlabel:row:prescaling:primes:3"].text == "𝒛", "the bare matrix's size row carries the 𝒛 row label (the size-sensitizing row, not a 4th prime 𝒍₄)"
 
     def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences(self):
-        lay = spreadsheet.build(
+        layout = spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))),
             {**settings.defaults(), "weighting": True, "alt_complexity": True, "optimization": True,
              "symbols": True, "equivalences": True},
             held_vectors=((-1, 1, 0),),
             tuning_scheme="TILT minimax-S",
         )
-        on = {c.id: c for c in lay.cells}
+        on = {c.id: c for c in layout.cells}
         assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
         assert on["symbol:prescaling:commas"].text == "𝐿C"
         assert on["symbol:prescaling:targets"].text == "𝐿T"
@@ -278,13 +278,13 @@ class TestCommasColumn:
 
     def test_non_log_prime_prescaler_stays_generic_X_named_in_the_equivalence(self):
         scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "identity")
-        lay = spreadsheet.build(
+        layout = spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))),
             {**settings.defaults(), "weighting": True, "alt_complexity": True, "optimization": True,
              "symbols": True, "names": True, "equivalences": True},
             tuning_scheme=scheme, held_vectors=((-1, 1, 0),),
         )
-        on = {c.id: c for c in lay.cells}
+        on = {c.id: c for c in layout.cells}
         assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐼"
         assert on["symbol:prescaling:commas"].text == "𝑋C"
         assert on["symbol:prescaling:targets"].text == "𝑋T"
@@ -293,13 +293,13 @@ class TestCommasColumn:
 
     def test_prime_prescaler_names_diag_p_in_the_equivalence_not_the_projection_letter(self):
         scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "prime")
-        lay = spreadsheet.build(
+        layout = spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))),
             {**settings.defaults(), "weighting": True, "alt_complexity": True, "optimization": True,
              "symbols": True, "equivalences": True},
             tuning_scheme=scheme, held_vectors=((-1, 1, 0),),
         )
-        on = {c.id: c for c in lay.cells}
+        on = {c.id: c for c in layout.cells}
         assert on["symbol:prescaling:primes"].text == "𝑋 = diag(𝒑)"
         assert on["symbol:prescaling:commas"].text == "𝑋C"
         assert on["symbol:prescaling:targets"].text == "𝑋T"
@@ -381,13 +381,13 @@ class TestWeightingLabels:
         assert on["caption:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
 
     def test_complexity_symbol_and_mnemonic_only_on_the_target_list(self):
-        lay = spreadsheet.build(
+        layout = spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))),
             {**settings.defaults(), "weighting": True, "symbols": True, "names": True, "mnemonics": True},
             interest=((-3, 2, 0),),
             tuning_scheme="TILT minimax-S",
         )
-        on = {c.id: c for c in lay.cells}
+        on = {c.id: c for c in layout.cells}
         assert on["symbol:complexity:targets"].text == "𝒄"
         assert on["caption:complexity:targets"].underlines != ()
         for col in ("primes", "commas", "interest"):
@@ -395,9 +395,9 @@ class TestWeightingLabels:
             assert on[f"caption:complexity:{col}"].underlines == (), col
 
     def test_prescaling_row_spans_commas_and_targets_with_L_scaled_vectors(self):
-        lay = _with("TILT minimax-S", weighting=True, alt_complexity=True)
-        on = {c.id: c for c in lay.cells}
-        blocks = {b.id for b in lay.blocks}
+        layout = _with("TILT minimax-S", weighting=True, alt_complexity=True)
+        on = {c.id: c for c in layout.cells}
+        blocks = {b.id for b in layout.blocks}
         pre = service.complexity_prescaler(((1, 1, 0), (0, 1, 4)))
         _t = service.prescale_text
         for i, comp in enumerate((4, -4, 1)):
@@ -415,8 +415,8 @@ class TestWeightingLabels:
         vecbr = {"primes": "⟨]", "commas": "[⟩", "targets": "[⟩"}
         outer = {"primes": "[⟩", "commas": "[]", "targets": "[]"}
         for group in ("primes", "commas", "targets"):
-            coords = [re.fullmatch(rf"cell:prescaling:{group}:(\d+):(\d+)", cid)
-                      for cid in cells]
+            coords = [re.fullmatch(rf"cell:prescaling:{group}:(\d+):(\d+)", cell_id)
+                      for cell_id in cells]
             coords = [(int(m.group(2)), int(m.group(1))) for m in coords if m]
             ncols = max(c for c, _ in coords) + 1
             d = max(r for _, r in coords) + 1
@@ -424,8 +424,8 @@ class TestWeightingLabels:
             vecs = [vo + " ".join(cells[f"cell:prescaling:{group}:{i}:{c}"].text
                                   for i in range(d)) + vc
                     for c in range(ncols)]
-            op, cl = outer[group]
-            assert cells[f"plain_text:prescaling:{group}"].text == f"{op}{' '.join(vecs)}{cl}", group
+            op, collapsed = outer[group]
+            assert cells[f"plain_text:prescaling:{group}"].text == f"{op}{' '.join(vecs)}{collapsed}", group
 
     def test_weighting_rows_show_their_units_line_when_units_on(self):
         cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, units=True, alt_complexity=True).cells}
@@ -478,19 +478,19 @@ class TestWeightingLabels:
         assert on["retune:prime:0"].y < on["cell:prescaling:primes:0:0"].y < on["complexity:prime:0"].y
 
     def test_every_present_row_and_column_has_a_gridline(self):
-        lay = spreadsheet.build(
+        layout = spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))),
             {**settings.defaults(), "weighting": True, "alt_complexity": True},
             interest=((-3, 2, 0),),
         )
-        line_ids = {ln.id for ln in lay.lines}
-        rows = {c.id.split("label:", 1)[1] for c in lay.cells if c.id.startswith("label:")}
+        line_ids = {line.id for line in layout.lines}
+        rows = {c.id.split("label:", 1)[1] for c in layout.cells if c.id.startswith("label:")}
         for key in rows:
             if key in grid_tables.FRAMED_ROWS:
                 assert f"h:{key}:0" in line_ids, f"matrix row {key!r} has no fanned gridline"
             else:
                 assert f"h:{key}" in line_ids, f"row {key!r} has no gridline"
-        cols = {c.id.split("header:", 1)[1] for c in lay.cells if c.id.startswith("header:")}
+        cols = {c.id.split("header:", 1)[1] for c in layout.cells if c.id.startswith("header:")}
         for key in cols:
             assert f"trunk:{key}" in line_ids, f"column {key!r} has no gridline"
 
@@ -540,9 +540,9 @@ class TestWeightingLabels:
 
     def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile(self):
         off = {c.id for c in _with("minimax-S", weighting=True, presets=False).cells}
-        lay = _with("minimax-S", weighting=True, presets=True)
-        on = {c.id: c for c in lay.cells}
-        blocks = {b.id: b for b in lay.blocks}
+        layout = _with("minimax-S", weighting=True, presets=True)
+        on = {c.id: c for c in layout.cells}
+        blocks = {b.id: b for b in layout.blocks}
         assert "preset:prescaler" not in off
         sel = on["preset:prescaler"]
         assert sel.kind == "preset", "with alt. complexity off there is only one prescaler (log-prime), so the chooser has no real # choice: it renders as a DISABLED dropdown (greyed), not an interactive one"

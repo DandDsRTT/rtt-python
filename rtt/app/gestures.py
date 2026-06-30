@@ -56,31 +56,31 @@ class GestureController:
             self.end_gesture()
         self.rank_remove = None
 
-    def compute_rings(self, lay):
+    def compute_rings(self, layout):
         if not self._editor.settings["preview_highlighting"]:
             return frozenset(), frozenset()
-        static_red = frozenset(cell_box.id for cell_box in lay.cells if cell_box.preview_remove)
-        static_amber = frozenset(cell_box.id for cell_box in lay.cells if cell_box.preview_change)
-        amber, red = _gesture_ops.gesture_rings(self, lay)
-        pending = frozenset(cell_box.id for cell_box in lay.cells if cell_box.pending)
+        static_red = frozenset(cell_box.id for cell_box in layout.cells if cell_box.preview_remove)
+        static_amber = frozenset(cell_box.id for cell_box in layout.cells if cell_box.preview_change)
+        amber, red = _gesture_ops.gesture_rings(self, layout)
+        pending = frozenset(cell_box.id for cell_box in layout.cells if cell_box.pending)
         return (amber | static_amber) - pending, (red | static_red) - pending
 
-    def paint_cell(self, eid, amber, red):
-        el = self._rec.entity(eid).el
+    def paint_cell(self, element_id, amber, red):
+        el = self._rec.entity(element_id).el
         if el is None:
             return
-        rsig = (eid in amber, eid in red)
-        if self._rec.entity(eid).ring_sig == rsig:
+        rsig = (element_id in amber, element_id in red)
+        if self._rec.entity(element_id).ring_sig == rsig:
             return
         el.classes(
-            add="rtt-preview-change" if eid in amber else "",
-            remove="" if eid in amber else "rtt-preview-change",
+            add="rtt-preview-change" if element_id in amber else "",
+            remove="" if element_id in amber else "rtt-preview-change",
         )
         el.classes(
-            add="rtt-preview-remove" if eid in red else "",
-            remove="" if eid in red else "rtt-preview-remove",
+            add="rtt-preview-remove" if element_id in red else "",
+            remove="" if element_id in red else "rtt-preview-remove",
         )
-        self._rec.entities[eid].ring_sig = rsig
+        self._rec.entities[element_id].ring_sig = rsig
 
     def edit_candidate(self, apply):
         g = self.gesture
@@ -124,12 +124,12 @@ class _GestureCombine:
         self.gc = gc
 
     @cb_method
-    def on_cell_focus(self, cid):
-        _gesture_ops.on_cell_focus(self.gc, cid)
+    def on_cell_focus(self, cell_id):
+        _gesture_ops.on_cell_focus(self.gc, cell_id)
 
     @cb_method
-    def on_cell_blur(self, cid=None):
-        _gesture_ops.on_cell_blur(self.gc, cid)
+    def on_cell_blur(self, cell_id=None):
+        _gesture_ops.on_cell_blur(self.gc, cell_id)
 
     @cb_method
     def combine_begin(self):
@@ -148,8 +148,8 @@ class _GestureCombine:
         _gesture_ops.combine_end(self.gc)
 
     @cb_method
-    def rank_remove_hover(self, axis, idx):
-        _gesture_ops.rank_remove_hover(self.gc, axis, idx)
+    def rank_remove_hover(self, axis, index):
+        _gesture_ops.rank_remove_hover(self.gc, axis, index)
 
     @cb_method
     def rank_remove_unhover(self):
@@ -161,24 +161,24 @@ class _GestureHover:
         self.gc = gc
 
     @cb_method
-    def on_chooser_hover(self, cid, detail):
-        _gesture_ops.on_chooser_hover(self.gc, cid, detail)
+    def on_chooser_hover(self, cell_id, detail):
+        _gesture_ops.on_chooser_hover(self.gc, cell_id, detail)
 
     @cb_method
-    def on_popup(self, cid, is_open):
-        _gesture_ops.on_popup(self.gc, cid, is_open)
+    def on_popup(self, cell_id, is_open):
+        _gesture_ops.on_popup(self.gc, cell_id, is_open)
 
     @cb_method
-    def gentuning_hover(self, cid):
-        _gesture_ops.gentuning_hover(self.gc, cid)
+    def gentuning_hover(self, cell_id):
+        _gesture_ops.gentuning_hover(self.gc, cell_id)
 
     @cb_method
-    def gentuning_unhover(self, cid):
-        _gesture_ops.gentuning_unhover(self.gc, cid)
+    def gentuning_unhover(self, cell_id):
+        _gesture_ops.gentuning_unhover(self.gc, cell_id)
 
     @cb_method
-    def on_drag_start(self, lst, idx):
-        _gesture_ops.on_drag_start(self.gc, lst, idx)
+    def on_drag_start(self, lst, index):
+        _gesture_ops.on_drag_start(self.gc, lst, index)
 
     @cb_method
     def on_drag_enter(self, dst_list, dst_idx):

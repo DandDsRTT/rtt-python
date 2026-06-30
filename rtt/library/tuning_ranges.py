@@ -77,13 +77,13 @@ def _tradeoff_range(
     chunk = 500_000
     vertices = []
     for start in range(0, len(combos), chunk):
-        idx = combos[start : start + chunk]
-        a = np.empty((len(idx), r, r))
+        index = combos[start : start + chunk]
+        a = np.empty((len(index), r, r))
         a[:, 0] = octave_coords
-        a[:, 1:] = coords[idx]
-        b = np.empty((len(idx), r))
+        a[:, 1:] = coords[index]
+        b = np.empty((len(index), r))
         b[:, 0] = octave_just
-        b[:, 1:] = just_sizes[idx]
+        b[:, 1:] = just_sizes[index]
         keep = np.abs(np.linalg.det(a)) >= 1e-9
         if keep.any():
             vertices.append(np.linalg.solve(a[keep], b[keep, :, None])[:, :, 0])

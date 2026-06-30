@@ -32,14 +32,14 @@ class TestInterestTilesAndFolds:
     def test_adding_intervals_of_interest_never_shrinks_the_header(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         builds = [spreadsheet.build(base, collapsed=frozenset(), interest=[(0, 0, 0)] * n) for n in range(5)]
-        widths = [{c.id: c for c in lay.cells}["header:interest"].width for lay in builds]
+        widths = [{c.id: c for c in layout.cells}["header:interest"].width for layout in builds]
         assert widths == sorted(widths)
         assert min(widths) == widths[0]
 
     def test_interest_tiles_and_footprint_hug_their_content_the_title_overhangs(self):
-        lay = _with_interest(_INTEREST[:1])
-        cells = {c.id: c for c in lay.cells}
-        blocks = {b.id: b for b in lay.blocks}
+        layout = _with_interest(_INTEREST[:1])
+        cells = {c.id: c for c in layout.cells}
+        blocks = {b.id: b for b in layout.blocks}
         content_w = 2 * spreadsheet_constants.BRACKET_W + 1 * spreadsheet_constants.COL_W
         floor = max(spreadsheet_text._min_width_for_lines(grid_tables.CAPTIONS[(rk, "interest")], spreadsheet_constants.MAX_CAPTION_LINES)
                     for rk in ("vectors", "mapping", "tuning", "just", "retune"))
@@ -52,15 +52,15 @@ class TestInterestTilesAndFolds:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         title_w = spreadsheet_text._title_w("other intervals\nof interest")
         for mi in range(3):
-            lay = spreadsheet.build(base, collapsed=frozenset(), interest=[(0, 0, 0)] * mi)
-            cells = {c.id: c for c in lay.cells}
-            lines = {ln.id: ln for ln in lay.lines}
+            layout = spreadsheet.build(base, collapsed=frozenset(), interest=[(0, 0, 0)] * mi)
+            cells = {c.id: c for c in layout.cells}
+            lines = {line.id: line for line in layout.lines}
             header, trunk = cells["header:interest"], lines["trunk:interest"]
             assert header.width < title_w
             assert header.x + header.width / 2 == trunk.pos
         one = _with_interest(_INTEREST[:1])
         cells = {c.id: c for c in one.cells}
-        lines = {ln.id: ln for ln in one.lines}
+        lines = {line.id: line for line in one.lines}
         block = {b.id: b for b in one.blocks}["block:interest"]
         trunk = lines["trunk:interest"]
         assert block.width < title_w
@@ -68,9 +68,9 @@ class TestInterestTilesAndFolds:
         assert lines["v:interest:0"].pos == trunk.pos
 
     def test_per_tile_fold_toggle_hugs_its_tile_corner(self):
-        lay = _with_interest(_INTEREST[:1])
-        cells = {c.id: c for c in lay.cells}
-        blocks = {b.id: b for b in lay.blocks}
+        layout = _with_interest(_INTEREST[:1])
+        cells = {c.id: c for c in layout.cells}
+        blocks = {b.id: b for b in layout.blocks}
         for toggle_id, block_id in (("toggle:tile:vectors:interest", "block:vector:interest"),
                                     ("toggle:tile:mapping:primes", "block:mapping")):
             toggle, tile = cells[toggle_id], blocks[block_id]
@@ -86,11 +86,11 @@ class TestInterestTilesAndFolds:
         assert not any(c.startswith(("bracket:tuning:ilist", "bracket:just:ilist", "bracket:retune:ilist")) for c in cells), "the tempered/just/retuning size rows drop their list brackets too — the whole interest # column is a loose collection, not a matrix/list, so its values stand bare (per the mockup)"
 
     def test_populated_interest_has_per_interval_axes_and_panels(self):
-        lay = _with_interest(_INTEREST[:3])
-        ids = {ln.id for ln in lay.lines}
+        layout = _with_interest(_INTEREST[:3])
+        ids = {line.id for line in layout.lines}
         assert {"v:interest:0", "v:interest:1", "v:interest:2"} <= ids
         assert {"trunk:interest", "bus:interest:top", "bus:interest:bot", "foot:interest"} <= ids
-        blocks = {b.id for b in lay.blocks}
+        blocks = {b.id for b in layout.blocks}
         assert {"block:interest", "block:imapped", "block:tuning:interest", "block:vector:interest"} <= blocks
         assert "block:damage:interest" not in blocks
 
@@ -121,8 +121,8 @@ class TestInterestTilesAndFolds:
     def test_mnemonics_mark_each_quantitys_symbol_letter_and_skip_the_symbolless_ones(self):
         on = {c.id: c for c in _with(names=True, mnemonics=True).cells}
 
-        def underlined(cid):
-            c = on[cid]
+        def underlined(cell_id):
+            c = on[cell_id]
             return "".join(c.text[s:s + n] for s, n in c.underlines)
 
         assert underlined("caption:tuning:primes") == "t"
@@ -137,8 +137,8 @@ class TestInterestTilesAndFolds:
     def test_interval_basis_captions_underline_their_symbol_letters(self):
         on = {c.id: c for c in _with(names=True, mnemonics=True).cells}
 
-        def underlined(cid):
-            c = on[cid]
+        def underlined(cell_id):
+            c = on[cell_id]
             return "".join(c.text[s:s + n] for s, n in c.underlines)
 
         assert underlined("caption:vectors:commas") == "c"
@@ -207,10 +207,10 @@ class TestInterestTilesAndFolds:
         base_for = {"form": service.from_mapping(((1, 0, -4), (0, 1, 4)))}
 
         def snapshot(s, key_base=base):
-            lay = spreadsheet.build(key_base, s, tuning_scheme="TILT minimax-S")
+            layout = spreadsheet.build(key_base, s, tuning_scheme="TILT minimax-S")
             return (
-                frozenset((c.id, c.x, c.y, c.width, c.height, c.kind, c.text, c.unit, c.underlines) for c in lay.cells),
-                frozenset((b.id, b.x, b.y, b.width, b.height, b.tint) for b in lay.blocks),
+                frozenset((c.id, c.x, c.y, c.width, c.height, c.kind, c.text, c.unit, c.underlines) for c in layout.cells),
+                frozenset((b.id, b.x, b.y, b.width, b.height, b.tint) for b in layout.blocks),
             )
 
         rides_on = {"form": "symbols", "form_colorization": "form_tiles"}
@@ -321,12 +321,12 @@ class TestInterestTilesAndFolds:
                 <= on["matlabel:row:mapping:primes:0"].y + on["matlabel:row:mapping:primes:0"].height)
 
     def test_col_labels_sit_inside_the_tile_centred_above_the_bracket(self):
-        lay = spreadsheet.build(
+        layout = spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))),
             {**settings.defaults(), "header_symbols": True},
         )
-        on = {c.id: c for c in lay.cells}
-        blocks = {b.id: b for b in lay.blocks}
+        on = {c.id: c for c in layout.cells}
+        blocks = {b.id: b for b in layout.blocks}
         for tile_block_id, frame_id, label_id in [
             ("block:vector:commas", "vector:commas", "matlabel:col:vectors:commas:0"),
             ("block:vector:targets", "vector:targets", "matlabel:col:vectors:targets:0"),
@@ -370,9 +370,9 @@ class TestRowAndColumnLabels:
         assert ebkbrace.x + ebkbrace.width == right_bracket.x + right_bracket.width
 
     def test_row_labels_balance_the_primes_tile_with_an_equal_right_gutter(self):
-        lay = _with(header_symbols=True)
-        on = {c.id: c for c in lay.cells}
-        panel = {b.id: b for b in lay.blocks}["block:mapping"]
+        layout = _with(header_symbols=True)
+        on = {c.id: c for c in layout.cells}
+        panel = {b.id: b for b in layout.blocks}["block:mapping"]
         left = on["bracket:map:0:l"].x - panel.x
         right = (panel.x + panel.width) - (on["bracket:map:0:r"].x + on["bracket:map:0:r"].width)
         assert abs(left - right) < 0.01, f"primes matrix off-centre in its tile: left={left}, right={right}"
@@ -468,7 +468,7 @@ class TestRowAndColumnLabels:
         assert "units:tuning:primes" in line_only
         assert all(not c.unit for c in line_only.values())
         assert cell_only["tuning:prime:0"].unit == "¢/p₁"
-        assert not any(cid.startswith("units:") for cid in cell_only)
+        assert not any(cell_id.startswith("units:") for cell_id in cell_only)
 
     def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels(self):
         on = {c.id: c for c in _with(domain_units=True).cells}
@@ -510,8 +510,8 @@ class TestRowAndColumnLabels:
         assert on["cell:prescaling:primes:0:1"].unit == "oct/b₂"
 
     def test_optimization_box_sits_at_the_bottom_of_the_damage_tile(self):
-        lay = _with(optimization=True)
-        on = {c.id: c for c in lay.cells}
+        layout = _with(optimization=True)
+        on = {c.id: c for c in layout.cells}
         assert on["optimization:title"].text == "optimization"
         assert on["optimization:mean_damage"].kind == "tuningvalue"
         assert on["optimization:mean_damage:symbol"].text == "⟪𝐝⟫ₚ"
@@ -522,7 +522,7 @@ class TestRowAndColumnLabels:
         assert on["optimization:title"].y > on["damage:target:0"].y
         assert on["optimization:title"].x == on["header:targets"].x
         assert "label:optimization" not in on
-        assert "h:optimization" not in {ln.id for ln in lay.lines}
+        assert "h:optimization" not in {line.id for line in layout.lines}
 
     def test_optimization_power_field_reflects_the_current_scheme(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -537,9 +537,9 @@ class TestRowAndColumnLabels:
         assert "optimization:title" not in cells
 
     def test_optimization_box_lays_out_mean_damage_and_power(self):
-        lay = _with(optimization=True)
-        on = {c.id: c for c in lay.cells}
-        box = {b.id: b for b in lay.blocks}["block:optimization:box"]
+        layout = _with(optimization=True)
+        on = {c.id: c for c in layout.cells}
+        box = {b.id: b for b in layout.blocks}["block:optimization:box"]
         assert on["optimization:mean_damage"].x < on["optimization:power"].x
         assert on["optimization:mean_damage"].y == on["optimization:power"].y
         assert on["optimization:mean_damage"].y < on["optimization:mean_damage:symbol"].y
@@ -562,14 +562,14 @@ class TestRowAndColumnLabels:
         assert on["optimization:power:caption"].height == spreadsheet_constants.CAPTION_LINE, "the caption occupies a single line (so 'optimization power' sits right under 𝑝, not a # two-line band that floats it lower)"
         assert on["optimization:title"].y > box.y
         assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].height
-        ids = {c.id for c in lay.cells}
+        ids = {c.id for c in layout.cells}
         assert "optimization:button" not in ids
         assert "optimization:button:hint" not in ids
         assert not any(c.id.startswith("optimization:") for c in _with(optimization=False).cells)
 
     def test_optimization_box_fills_the_full_width_of_the_damage_tile(self):
-        lay = _with(optimization=True)
-        blk = {b.id: b for b in lay.blocks}
+        layout = _with(optimization=True)
+        blk = {b.id: b for b in layout.blocks}
         box = blk["block:optimization:box"]
         panel = blk["block:damage:targets"]
         assert box.x == panel.x + spreadsheet_constants.PAD
@@ -682,8 +682,8 @@ class TestRowAndColumnLabels:
 
 class TestOptimizationBoxFrame:
     def test_optimization_box_is_a_bordered_frame_nested_in_the_damage_tile(self):
-        lay = _with(optimization=True)
-        blocks = {b.id: b for b in lay.blocks}
+        layout = _with(optimization=True)
+        blocks = {b.id: b for b in layout.blocks}
         box = blocks["block:optimization:box"]
         assert box.boxed
         panel = blocks["block:damage:targets"]

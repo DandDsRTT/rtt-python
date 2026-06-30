@@ -840,8 +840,8 @@ def _set_offlist_prompt(select: ui.select, value, prompt: str = "-") -> None:
         select.props(remove="display-value")
 
 
-def _formchooser_options(cid: str) -> dict:
-    if cid.endswith(":mapping"):
+def _formchooser_options(cell_id: str) -> dict:
+    if cell_id.endswith(":mapping"):
         return {
             "": "choose form",
             **{k: service.MAPPING_FORM_LABELS[k] for k in service.MAPPING_FORM_KEYS},

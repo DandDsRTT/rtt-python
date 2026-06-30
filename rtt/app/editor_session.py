@@ -15,10 +15,10 @@ class _SessionCommands:
         return codec.serialize(self)
 
     def load(self, data: dict) -> None:
-        doc = codec.load(data)
-        if doc is None:
+        document = codec.load(data)
+        if document is None:
             return
-        self.restore(doc)
+        self.restore(document)
         self.reconcile_custom_weights()
         self.history.clear()
 
@@ -28,8 +28,8 @@ class _SessionCommands:
         return (self.capture(), undo, redo, transients)
 
     def restore_for_preview(self, token: tuple) -> None:
-        doc, undo, redo, transients = token
-        self.restore(doc)
+        document, undo, redo, transients = token
+        self.restore(document)
         self.history.restore_stacks(undo, redo)
         *pending_token, nonprime = transients
         self.pending.restore(tuple(pending_token))

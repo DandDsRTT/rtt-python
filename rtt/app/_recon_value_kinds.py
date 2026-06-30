@@ -27,7 +27,7 @@ def build_prescalercell(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None
         reconciler,
         cell_box,
         wrap,
-        lambda _e=None, cid=cell_box.id: reconciler._cell_box.on_prescaler_change(cid),
+        lambda _e=None, cell_id=cell_box.id: reconciler._cell_box.on_prescaler_change(cell_id),
     )
 
 
@@ -40,7 +40,7 @@ def build_weightcell(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
         reconciler,
         cell_box,
         wrap,
-        lambda _e=None, cid=cell_box.id: reconciler._cell_box.on_weight_change(cid),
+        lambda _e=None, cell_id=cell_box.id: reconciler._cell_box.on_weight_change(cell_id),
     )
 
 
@@ -51,7 +51,9 @@ def update_weightcell(reconciler, cell_box: spreadsheet.CellBox) -> None:
 def build_powerinput(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-cell-input rtt-cell-stacked")
     reconciler.cells[cell_box.id].value.input = (
-        ui.input(on_change=lambda _e, cid=cell_box.id: reconciler._cell_box.on_power_change(cid))
+        ui.input(
+            on_change=lambda _e, cell_id=cell_box.id: reconciler._cell_box.on_power_change(cell_id)
+        )
         .props("dense borderless")
         .classes("rtt-cellinput")
     )
@@ -89,19 +91,23 @@ def build_gentuningcell(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None
         reconciler,
         cell_box,
         wrap,
-        lambda _e=None, cid=cell_box.id: reconciler._cell_box.on_gentuning_change(cid),
+        lambda _e=None, cell_id=cell_box.id: reconciler._cell_box.on_gentuning_change(cell_id),
         gen_index=i,
     )
     wrap.on(
         "wheel.prevent",
-        lambda e, cid=cell_box.id: reconciler._cell_box.on_gentuning_wheel(
-            cid, e.args.get("deltaY")
+        lambda e, cell_id=cell_box.id: reconciler._cell_box.on_gentuning_wheel(
+            cell_id, e.args.get("deltaY")
         ),
         args=["deltaY"],
     )
-    wrap.on("mouseenter", lambda _=None, cid=cell_box.id: reconciler._cell_box.gentuning_hover(cid))
     wrap.on(
-        "mouseleave", lambda _=None, cid=cell_box.id: reconciler._cell_box.gentuning_unhover(cid)
+        "mouseenter",
+        lambda _=None, cell_id=cell_box.id: reconciler._cell_box.gentuning_hover(cell_id),
+    )
+    wrap.on(
+        "mouseleave",
+        lambda _=None, cell_id=cell_box.id: reconciler._cell_box.gentuning_unhover(cell_id),
     )
 
 
@@ -114,16 +120,16 @@ def build_plain_text_edit(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> N
         inp = ui.input(value=cell_box.text).props("dense borderless").classes("rtt-plain-text-edit")
         inp.on(
             "blur",
-            lambda _e=None, cid=cell_box.id: reconciler._cell_box.on_plain_text_edit(
-                cid, reconciler.cells[cid].value.plain_text_input.value
+            lambda _e=None, cell_id=cell_box.id: reconciler._cell_box.on_plain_text_edit(
+                cell_id, reconciler.cells[cell_id].value.plain_text_input.value
             ),
         )
     else:
         inp = (
             ui.input(
                 value=cell_box.text,
-                on_change=lambda e, cid=cell_box.id: reconciler._cell_box.on_plain_text_edit(
-                    cid, e.value
+                on_change=lambda e, cell_id=cell_box.id: reconciler._cell_box.on_plain_text_edit(
+                    cell_id, e.value
                 ),
             )
             .props("dense borderless")

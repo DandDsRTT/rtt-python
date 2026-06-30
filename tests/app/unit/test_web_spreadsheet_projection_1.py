@@ -63,7 +63,7 @@ class TestProjectionBox:
         assert brace.y >= last.y + last.height
 
     def test_projection_row_fans_a_gridline_per_subrow(self):
-        lines = {ln.id for ln in _with(projection=True).lines}
+        lines = {line.id for line in _with(projection=True).lines}
         assert {"h:projection:0", "h:projection:1", "h:projection:2"} <= lines
 
     def test_projection_hides_with_its_parent_tuning_tiles(self):
@@ -262,19 +262,19 @@ class TestProjectionChrome:
         assert abs(left - right) <= 1
 
     def test_return_to_scheme_button_is_boxed_above_the_dropdown_with_presets(self):
-        lay = _with(projection=True, presets=True)
-        cells = {c.id: c for c in lay.cells}
+        layout = _with(projection=True, presets=True)
+        cells = {c.id: c for c in layout.cells}
         sq, dropdown = cells["scheme:primes"], cells["preset:projection"]
         assert sq.y < dropdown.y
-        box = next(b for b in lay.blocks if b.id == "block:preset:projection")
+        box = next(b for b in layout.blocks if b.id == "block:preset:projection")
         for cell in (sq, dropdown):
             assert box.x <= cell.x and cell.y >= box.y and cell.y < box.y + box.height
 
     def test_return_to_scheme_button_keeps_its_own_box_without_presets(self):
-        lay = _with(projection=True, presets=False)
-        cells = {c.id: c for c in lay.cells}
+        layout = _with(projection=True, presets=False)
+        cells = {c.id: c for c in layout.cells}
         sq = cells["scheme:primes"]
-        box = next((b for b in lay.blocks if b.id == "block:scheme:primes"), None)
+        box = next((b for b in layout.blocks if b.id == "block:scheme:primes"), None)
         assert box is not None and getattr(box, "boxed", False)
         assert box.x <= sq.x and box.y <= sq.y and sq.x + sq.width <= box.x + box.width and sq.y + sq.height <= box.y + box.height
         assert sq.y - box.y == (box.y + box.height) - (sq.y + sq.height)

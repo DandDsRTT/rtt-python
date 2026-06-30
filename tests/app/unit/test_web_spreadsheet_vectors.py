@@ -69,9 +69,9 @@ class TestIntervalVectorsRow:
         assert cells["basis:1"].y - cells["basis:0"].y == spreadsheet_constants.ROW_H
 
     def test_interval_vectors_basis_controls_ride_the_rows_left_bus(self):
-        lay = _layout()
-        cells = {c.id: c for c in lay.cells}
-        by_id = {ln.id: ln for ln in lay.lines}
+        layout = _layout()
+        cells = {c.id: c for c in layout.cells}
+        by_id = {line.id: line for line in layout.lines}
         plus, minus, bot = cells["basis_plus"], cells["basis_minus"], cells["basis:2"]
         left_bus = by_id["vbar:vectors:left"]
         assert minus.x == left_bus.pos, "− zone drops from the left-bus branch point (button at its edge)"
@@ -82,9 +82,9 @@ class TestIntervalVectorsRow:
         assert abs((left_bus.start + left_bus.length) - (plus.y + plus.height / 2)) < 0.51
 
     def test_mapping_row_controls_ride_the_rows_left_bus(self):
-        lay = _layout()
-        cells = {c.id: c for c in lay.cells}
-        by_id = {ln.id: ln for ln in lay.lines}
+        layout = _layout()
+        cells = {c.id: c for c in layout.cells}
+        by_id = {line.id: line for line in layout.lines}
         left_bus = by_id["vbar:mapping:left"]
         for i in range(2):
             minus = cells[f"map_minus:{i}"]
@@ -104,9 +104,9 @@ class TestIntervalVectorsRow:
         assert {"map_minus:0", "map_minus:1", "map_minus:2"} <= ji
 
     def test_a_rank_one_mapping_still_fans_to_connect_its_plus(self):
-        lay = spreadsheet.build(service.from_mapping(((12, 19, 28),)))
-        cells = {c.id: c for c in lay.cells}
-        by_id = {ln.id: ln for ln in lay.lines}
+        layout = spreadsheet.build(service.from_mapping(((12, 19, 28),)))
+        cells = {c.id: c for c in layout.cells}
+        by_id = {line.id: line for line in layout.lines}
         assert "h:mapping:0" in by_id and "h:mapping" not in by_id, "the fanned sub-rule, not the flat spine"
         left_bus, plus = by_id["vbar:mapping:left"], cells["map_plus"]
         assert abs((plus.x + plus.width / 2) - left_bus.pos) < 0.51
@@ -121,9 +121,9 @@ class TestIntervalVectorsRow:
         assert any(c.startswith("int_drag:target:") for c in on)
 
     def test_mapping_row_drag_handles_sit_left_of_the_row_labels(self):
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
                                 {**settings.defaults(), "symbols": True, "header_symbols": True, "drag_to_combine": True})
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         for i in range(2):
             handle = cells[f"map_drag:{i}"]
             label = cells[f"matlabel:row:mapping:primes:{i}"]
@@ -139,10 +139,10 @@ class TestIntervalVectorsRow:
         assert {"map_drag:0", "map_drag:1"} <= {c.id for c in _drag_layout().cells}
 
     def test_interval_drag_handles_sit_above_the_column_labels_in_the_vectors_row(self):
-        lay = spreadsheet.build(service.from_mapping(((12, 19, 28),)),
+        layout = spreadsheet.build(service.from_mapping(((12, 19, 28),)),
                                 {**settings.defaults(), "symbols": True, "header_symbols": True, "drag_to_combine": True},
                                 interest=((-1, 1, 0), (0, 0, 1)))
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         for i in range(2):
             handle = cells[f"int_drag:comma:{i}"]
             label = cells[f"matlabel:col:vectors:commas:{i}"]
@@ -168,8 +168,8 @@ class TestIntervalVectorsRow:
 
     def test_grid_builds_for_an_octave_less_temperament(self):
         degenerate = service.remove_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4))), 0)
-        lay = spreadsheet.build(degenerate)
-        assert any(c.id == "gen:0" for c in lay.cells)
+        layout = spreadsheet.build(degenerate)
+        assert any(c.id == "gen:0" for c in layout.cells)
 
     def test_interval_vectors_basis_minus_is_absent_when_the_domain_cannot_shrink(self):
         base = service.from_mapping(((1,),))

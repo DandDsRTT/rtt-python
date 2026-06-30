@@ -29,9 +29,9 @@ def target_preset_values(editor):
 
 
 def tag_audio(el, cell_box) -> None:
-    tile, idx, cents = cell_box.audio
+    tile, index, cents = cell_box.audio
     el.classes(add="rtt-spk").props(
-        f'data-audio="{tile}" data-idx="{idx}" data-cents="{cents:.6f}"'
+        f'data-audio="{tile}" data-idx="{index}" data-cents="{cents:.6f}"'
     )
 
 
@@ -124,12 +124,12 @@ def wire_cell_input(reconciler, wrap, cell_box) -> None:
         for fld in (edit_input, den) if den is not None else (edit_input,):
             fld.on(
                 "focus",
-                lambda _=None, cid=cell_box.id: reconciler._cell_box.on_cell_focus(cid),
+                lambda _=None, cell_id=cell_box.id: reconciler._cell_box.on_cell_focus(cell_id),
                 js_handler=guard,
             )
             fld.on(
                 "blur",
-                lambda _=None, cid=cell_box.id: reconciler._cell_box.on_cell_blur(cid),
+                lambda _=None, cell_id=cell_box.id: reconciler._cell_box.on_cell_blur(cell_id),
                 js_handler=guard,
             )
             fld.on("keydown.enter", js_handler="(e) => e.target.blur()")
@@ -138,8 +138,8 @@ def wire_cell_input(reconciler, wrap, cell_box) -> None:
     if cell_box.kind in _WHEEL_STEPS:
         wrap.on(
             "wheel",
-            lambda e, cid=cell_box.id: reconciler._cell_box.on_value_wheel(
-                cid, e.args.get("deltaY")
+            lambda e, cell_id=cell_box.id: reconciler._cell_box.on_value_wheel(
+                cell_id, e.args.get("deltaY")
             ),
             args=["deltaY"],
             js_handler=_INT_WHEEL_JS,

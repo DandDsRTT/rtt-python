@@ -75,8 +75,8 @@ class TestColumnTokens:
 
     def test_build_returns_column_identities_numbered_by_index_when_fresh(self):
         held = [(-1, 1, 0), (2, 0, -1)]
-        lay = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
-        assert _tokens(lay.identities["held"]) == [0, 1]
+        layout = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
+        assert _tokens(layout.identities["held"]) == [0, 1]
 
     def test_reordered_held_column_keeps_its_vector_cell_id_and_glides(self):
         held = [(-1, 1, 0), (2, 0, -1), (1, 1, -1)]
@@ -96,7 +96,7 @@ class TestColumnTokens:
         lay1 = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
         lay2 = spreadsheet.build(_held_state(), _all_on(),
                                  held_vectors=[held[2], held[0], held[1]], prev_ids=lay1.identities)
-        moved = {cid for cid in spreadsheet_text.changed_cell_ids(lay1, lay2) if not _reorder_volatile(cid)}
+        moved = {cell_id for cell_id in spreadsheet_text.changed_cell_ids(lay1, lay2) if not _reorder_volatile(cell_id)}
         assert moved == set(), f"these cells re-filled in place instead of gliding: {sorted(moved)}"
 
     def test_reorder_keeps_controls_position_bound_while_values_glide(self):
@@ -115,7 +115,7 @@ class TestColumnTokens:
         lay1 = spreadsheet.build(_held_state(), _all_on(), interest=interest)
         lay2 = spreadsheet.build(_held_state(), _all_on(),
                                  interest=[interest[2], interest[0], interest[1]], prev_ids=lay1.identities)
-        moved = {cid for cid in spreadsheet_text.changed_cell_ids(lay1, lay2) if not _reorder_volatile(cid)}
+        moved = {cell_id for cell_id in spreadsheet_text.changed_cell_ids(lay1, lay2) if not _reorder_volatile(cell_id)}
         assert moved == set(), f"interest cells re-filled in place instead of gliding: {sorted(moved)}"
 
     def test_reordering_targets_rekeys_its_column_cells(self):
@@ -123,8 +123,8 @@ class TestColumnTokens:
         lay1 = spreadsheet.build(_held_state(), _all_on(), target_override=targets)
         lay2 = spreadsheet.build(_held_state(), _all_on(),
                                  target_override=(targets[2], targets[0], targets[1]), prev_ids=lay1.identities)
-        moved = {cid for cid in spreadsheet_text.changed_cell_ids(lay1, lay2)
-                 if not _reorder_volatile(cid) and not cid.startswith("damage:")}
+        moved = {cell_id for cell_id in spreadsheet_text.changed_cell_ids(lay1, lay2)
+                 if not _reorder_volatile(cell_id) and not cell_id.startswith("damage:")}
         assert moved == set(), f"target cells re-filled in place instead of gliding: {sorted(moved)}"
 
     def test_removing_a_column_keeps_the_survivors_identity_so_they_do_not_ring(self):
@@ -197,24 +197,24 @@ class TestColumnTokens:
         assert cells["tuning:prime:2"].x == cells["cell:mapping:0:2"].x
 
     def test_shared_axes_and_branching(self):
-        lay = _layout()
-        ids = {ln.id for ln in lay.lines}
+        layout = _layout()
+        ids = {line.id for line in layout.lines}
         assert {"v:prime:0", "v:prime:1", "v:prime:2"} <= ids
         assert {"v:target:0", "v:target:1", "v:target:2", "v:target:3"} <= ids
         assert {"h:mapping:0", "h:mapping:1", "h:tuning", "h:just", "h:retune", "h:damage"} <= ids
         assert {"trunk:primes", "trunk:targets", "trunk:gens"} <= ids
         assert {"bus:primes:top", "bus:primes:bot", "foot:primes"} <= ids
-        by_id = {ln.id: ln for ln in lay.lines}
-        cells = {c.id: c for c in lay.cells}
+        by_id = {line.id: line for line in layout.lines}
+        cells = {c.id: c for c in layout.cells}
         assert by_id["bus:primes:top"].pos < cells["prime:0"].y
         assert by_id["v:prime:0"].start == by_id["bus:primes:top"].pos
         assert by_id["bus:primes:bot"].pos > by_id["bus:primes:top"].pos
         assert {"vbar:mapping:left", "vbar:mapping:right", "foot:mapping"} <= ids
 
     def test_convergence_buses_keep_solid_corners_and_the_top_bus_reaches_the_plus(self):
-        lay = _layout()
-        by = {ln.id: ln for ln in lay.lines}
-        cells = {c.id: c for c in lay.cells}
+        layout = _layout()
+        by = {line.id: line for line in layout.lines}
+        cells = {c.id: c for c in layout.cells}
         half = spreadsheet_constants.LINE_W / 2
         v0, vlast = by["v:prime:0"], by["v:prime:2"]
         assert by["bus:primes:top"].start == v0.pos - half
@@ -225,7 +225,7 @@ class TestColumnTokens:
         assert top.start + top.length > vlast.pos + half
 
     def test_mapping_rejoin_bars_span_the_full_generator_fan(self):
-        by = {ln.id: ln for ln in _layout().lines}
+        by = {line.id: line for line in _layout().lines}
         half = spreadsheet_constants.LINE_W / 2
         g0, glast = by["h:mapping:0"], by["h:mapping:1"]
         right = by["vbar:mapping:right"]
@@ -241,9 +241,9 @@ class TestColumnTokens:
         assert bot.y - (top.y + top.height) == spreadsheet_constants.GAP - 2 * spreadsheet_constants.PAD
 
     def test_quantities_spine_row_has_a_horizontal_gridline(self):
-        lay = _layout()
-        by_id = {ln.id: ln for ln in lay.lines}
-        cells = {c.id: c for c in lay.cells}
+        layout = _layout()
+        by_id = {line.id: line for line in layout.lines}
+        cells = {c.id: c for c in layout.cells}
         assert "h:quantities" in by_id
         line, prime = by_id["h:quantities"], cells["prime:0"]
         assert abs(line.pos - (prime.y + prime.height / 2)) < 0.51
@@ -251,18 +251,18 @@ class TestColumnTokens:
         assert line.start + line.length >= cells["target:3"].x
 
     def test_axis_ids_are_stable_across_expand(self):
-        before = {ln.id for ln in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4)))).lines}
+        before = {line.id for line in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4)))).lines}
         expanded = service.expand_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))
-        after = {ln.id for ln in spreadsheet.build(expanded).lines}
+        after = {line.id for line in spreadsheet.build(expanded).lines}
         assert before <= after
         assert "v:prime:3" in after and "v:prime:3" not in before
 
 
 class TestSpineAndAxes:
     def test_quantities_spine_column_is_present_with_a_vertical_gridline(self):
-        lay = _layout()
-        cells = {c.id: c for c in lay.cells}
-        by_id = {ln.id: ln for ln in lay.lines}
+        layout = _layout()
+        cells = {c.id: c for c in layout.cells}
+        by_id = {line.id: line for line in layout.lines}
         assert cells["header:quantities"].text == "interval ratios"
         assert cells["header:quantities"].x < cells["header:gens"].x
         assert "trunk:quantities" in by_id
@@ -279,9 +279,9 @@ class TestSpineAndAxes:
         assert cells["header:quantities"].width > cells["header:units"].width
 
     def test_generators_column_fans_into_per_generator_axes(self):
-        lay = _layout()
-        by_id = {ln.id: ln for ln in lay.lines}
-        cells = {c.id: c for c in lay.cells}
+        layout = _layout()
+        by_id = {line.id: line for line in layout.lines}
+        cells = {c.id: c for c in layout.cells}
         ids = set(by_id)
         assert {"v:gen:0", "v:gen:1"} <= ids
         assert {"trunk:gens", "bus:gens:top", "bus:gens:bot", "foot:gens"} <= ids
@@ -291,9 +291,9 @@ class TestSpineAndAxes:
         assert by_id["trunk:gens"].length < by_id["trunk:quantities"].length, "the trunk is now just the short fan stem above the data, not a full-height spine"
 
     def test_interval_vectors_row_fans_into_per_component_axes(self):
-        lay = _layout()
-        by_id = {ln.id: ln for ln in lay.lines}
-        cells = {c.id: c for c in lay.cells}
+        layout = _layout()
+        by_id = {line.id: line for line in layout.lines}
+        cells = {c.id: c for c in layout.cells}
         ids = set(by_id)
         assert {"h:vectors:0", "h:vectors:1", "h:vectors:2"} <= ids
         assert {"trunk:vectors", "foot:vectors", "vbar:vectors:left", "vbar:vectors:right"} <= ids
@@ -314,8 +314,8 @@ class TestSpineAndAxes:
         assert "cell:mapping:0:0" in off
 
     def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure(self):
-        lay = _with(gridded_values=False)
-        ids = {c.id for c in lay.cells}
+        layout = _with(gridded_values=False)
+        ids = {c.id for c in layout.cells}
         assert not any(c.startswith(("prime:", "target:", "gen:", "cell:mapping:",
                                      "cell:mapped:", "cell:vector:", "comma:", "cell:comma:",
                                      "tuning:", "just:", "retune:", "damage:"))
@@ -325,22 +325,22 @@ class TestSpineAndAxes:
                 "map_minus:0", "map_plus", "target_minus:0", "target_plus"}.isdisjoint(ids)
         assert {"label:mapping", "header:primes", "header:targets", "toggle:row:mapping",
                 "caption:mapping:primes"} <= ids
-        assert any(b.id == "block:mapping" for b in lay.blocks)
-        assert any(ln.id == "v:prime:0" for ln in lay.lines)
+        assert any(b.id == "block:mapping" for b in layout.blocks)
+        assert any(line.id == "v:prime:0" for line in layout.lines)
 
     def test_general_quantities_off_blanks_the_body_numbers_keeping_boxes_and_brackets(self):
         on = {c.id: c for c in _with().cells}
         off = {c.id: c for c in _with(quantities=False).cells}
         body = ("cell:mapping:0:0", "cell:mapped:0:0", "cell:comma:0:0", "tuning:prime:0", "gen:0")
-        for cid in body:
-            assert cid in off and not on[cid].blank
-            assert off[cid].blank and off[cid].text == ""
+        for cell_id in body:
+            assert cell_id in off and not on[cell_id].blank
+            assert off[cell_id].blank and off[cell_id].text == ""
         assert on["cell:mapped:0:0"].text and on["gen:0"].text and on["tuning:prime:0"].text
         assert any(c.startswith("bracket:") for c in off)
         assert "ebktop:primes" in off and "ebkbrace:primes" in off
         assert {"plus", "minus", "comma_plus", "label:mapping", "header:primes", "toggle:row:mapping"} <= set(off), "the domain/comma ± controls and the tile structure carry no value, so they're untouched"
-        for cid in ("prime:0", "comma:0", "target:0"):
-            assert cid in off and not on[cid].blank and off[cid].blank and off[cid].text == ""
+        for cell_id in ("prime:0", "comma:0", "target:0"):
+            assert cell_id in off and not on[cell_id].blank and off[cell_id].blank and off[cell_id].text == ""
 
     def test_general_quantities_off_blanks_the_quantities_row_col_and_unrotated_vectors(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
@@ -354,9 +354,9 @@ class TestSpineAndAxes:
             "qgen:0",
             "superspace_quantity_prime:0", "superspace_quantity_generator:0",
         )
-        for cid in regions:
-            assert cid in on and on[cid].text and not on[cid].blank
-            assert off[cid].blank and off[cid].text == ""
+        for cell_id in regions:
+            assert cell_id in on and on[cell_id].text and not on[cell_id].blank
+            assert off[cell_id].blank and off[cell_id].text == ""
         assert "basis:0" in off and any(c.startswith("bracket:") for c in off), "the structure stays (this is quantities-off, not gridded-off): the spine cell's box survives"
 
     def test_gridded_values_off_also_empties_the_math_expression_cells(self):
@@ -372,9 +372,9 @@ class TestSpineAndAxes:
         assert "label:quantities" not in off_ids
         assert not any(c.startswith(("prime:", "target:")) for c in off_ids)
         assert {"minus", "plus"}.isdisjoint(off_ids)
-        assert "h:quantities" not in {ln.id for ln in off.lines}
+        assert "h:quantities" not in {line.id for line in off.lines}
         assert "header:quantities" not in off_ids
-        assert "trunk:quantities" not in {ln.id for ln in off.lines}
+        assert "trunk:quantities" not in {line.id for line in off.lines}
         assert {"cell:mapping:0:0", "tuning:target:0"} <= off_ids
 
     def test_temperament_tiles_off_removes_the_mapping_row_and_domain_columns(self):
@@ -461,9 +461,9 @@ class TestSpineAndAxes:
     def test_collapsed_column_gridline_stays_centred_in_its_fold_node(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         for key in ("commas", "targets"):
-            lay = spreadsheet.build(base, collapsed={f"col:{key}"})
-            trunk = {ln.id: ln for ln in lay.lines}[f"trunk:{key}"]
-            cells = {c.id: c for c in lay.cells}
+            layout = spreadsheet.build(base, collapsed={f"col:{key}"})
+            trunk = {line.id: line for line in layout.lines}[f"trunk:{key}"]
+            cells = {c.id: c for c in layout.cells}
             toggle, header = cells[f"toggle:col:{key}"], cells[f"header:{key}"]
             assert abs(trunk.pos - (toggle.x + toggle.width / 2)) < 0.51, key
             assert abs(trunk.pos - (header.x + header.width / 2)) < 0.51, key
@@ -514,26 +514,26 @@ class TestSpineAndAxes:
 
     def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        lay = spreadsheet.build(base, collapsed={"row:tuning"})
-        blocks = {b.id: b for b in lay.blocks}
-        lines = {ln.id for ln in lay.lines}
+        layout = spreadsheet.build(base, collapsed={"row:tuning"})
+        blocks = {b.id: b for b in layout.blocks}
+        lines = {line.id for line in layout.lines}
         assert "block:tuning:primes" in blocks, "the panel persists so the renderer can animate it"
         assert blocks["block:tuning:primes"].height == 0
         assert "h:tuning" in lines
 
     def test_collapsing_a_column_folds_its_panels_away_and_converges_the_lines(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        lay = spreadsheet.build(base, collapsed={"col:primes"})
-        blocks = {b.id: b for b in lay.blocks}
-        by_id = {ln.id: ln for ln in lay.lines}
+        layout = spreadsheet.build(base, collapsed={"col:primes"})
+        blocks = {b.id: b for b in layout.blocks}
+        by_id = {line.id: line for line in layout.lines}
         assert blocks["block:mapping"].width == 0
         assert by_id["v:prime:0"].pos == by_id["v:prime:1"].pos == by_id["v:prime:2"].pos, "the per-prime verticals converge onto one x (so they read as a single line)"
         assert by_id["bus:primes:top"].length == 0
 
     def test_a_collapsed_bands_gridline_is_dotted_while_open_bands_stay_solid(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        lay = spreadsheet.build(base, collapsed={"row:tuning", "col:primes"})
-        by_id = {ln.id: ln for ln in lay.lines}
+        layout = spreadsheet.build(base, collapsed={"row:tuning", "col:primes"})
+        by_id = {line.id: line for line in layout.lines}
         assert by_id["h:tuning"].dotted
         assert by_id["trunk:primes"].dotted
         assert by_id["v:prime:0"].dotted
@@ -542,7 +542,7 @@ class TestSpineAndAxes:
 
     def test_a_collapsed_fanned_mapping_row_dots_its_converged_rules(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        by_id = {ln.id: ln for ln in spreadsheet.build(base, collapsed={"row:mapping"}).lines}
+        by_id = {line.id: line for line in spreadsheet.build(base, collapsed={"row:mapping"}).lines}
         assert by_id["trunk:mapping"].dotted and by_id["h:mapping:0"].dotted
 
 

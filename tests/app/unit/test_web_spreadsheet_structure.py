@@ -30,57 +30,57 @@ class TestFreezeAndStructure:
         assert {"minus", "plus"} <= ids
 
     def test_freeze_seam_sits_at_the_first_value_tile(self):
-        lay = _layout()
-        tiles = [bl for bl in lay.blocks if bl.tint == "" and not bl.boxed]
-        assert lay.freeze_y == min(bl.y for bl in tiles)
-        assert lay.freeze_x == min(bl.x for bl in tiles)
-        by_id = {ln.id: ln for ln in lay.lines}
-        assert by_id["trunk:primes"].start < lay.freeze_y
-        assert by_id["trunk:mapping"].start < lay.freeze_x
+        layout = _layout()
+        tiles = [bl for bl in layout.blocks if bl.tint == "" and not bl.boxed]
+        assert layout.freeze_y == min(bl.y for bl in tiles)
+        assert layout.freeze_x == min(bl.x for bl in tiles)
+        by_id = {line.id: line for line in layout.lines}
+        assert by_id["trunk:primes"].start < layout.freeze_y
+        assert by_id["trunk:mapping"].start < layout.freeze_x
 
     def test_the_first_columns_title_clears_the_frozen_corner(self):
-        lay = _layout()
-        height = {c.id: c for c in lay.cells}["header:quantities"]
+        layout = _layout()
+        height = {c.id: c for c in layout.cells}["header:quantities"]
         title_left = (height.x + height.width / 2) - spreadsheet_text._title_w(height.text) / 2
-        assert title_left >= lay.freeze_x - 0.51, "not tucked under the frozen corner"
+        assert title_left >= layout.freeze_x - 0.51, "not tucked under the frozen corner"
 
     def test_branch_controls_ride_the_frozen_bands(self):
-        lay = _layout()
-        cells = {c.id: c for c in lay.cells}
-        assert cells["plus"].y + cells["plus"].height <= lay.freeze_y
-        assert cells["minus"].y < lay.freeze_y
-        assert cells["basis_plus"].x + cells["basis_plus"].width <= lay.freeze_x
-        assert cells["basis_minus"].x < lay.freeze_x
+        layout = _layout()
+        cells = {c.id: c for c in layout.cells}
+        assert cells["plus"].y + cells["plus"].height <= layout.freeze_y
+        assert cells["minus"].y < layout.freeze_y
+        assert cells["basis_plus"].x + cells["basis_plus"].width <= layout.freeze_x
+        assert cells["basis_minus"].x < layout.freeze_x
 
     def test_layout_reports_the_rightmost_title_overhang(self):
-        lay = _layout()
+        layout = _layout()
         rightmost = max(c.x + c.width / 2 + spreadsheet_text._title_w(c.text) / 2
-                        for c in lay.cells if c.kind == "colheader")
-        assert lay.right_overhang == rightmost - lay.width
-        assert lay.right_overhang > 0
+                        for c in layout.cells if c.kind == "colheader")
+        assert layout.right_overhang == rightmost - layout.width
+        assert layout.right_overhang > 0
 
     def test_no_title_overhang_reports_zero(self):
-        lay = _with(interest=False)
+        layout = _with(interest=False)
         rightmost = max(c.x + c.width / 2 + spreadsheet_text._title_w(c.text) / 2
-                        for c in lay.cells if c.kind == "colheader")
-        assert rightmost < lay.width
-        assert lay.right_overhang == 0
+                        for c in layout.cells if c.kind == "colheader")
+        assert rightmost < layout.width
+        assert layout.right_overhang == 0
 
     def test_adjacent_column_titles_keep_a_margin(self):
         s = settings.defaults()
         s["optimization"] = True
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, targets_in_use=False)
-        edges = _title_edges(lay)
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, targets_in_use=False)
+        edges = _title_edges(layout)
         assert [k for k, _l, _r in edges][-2:] == ["held", "interest"]
         for (lk, _ll, lr), (rk, rl, _rr) in zip(edges, edges[1:]):
             assert rl - lr >= spreadsheet_constants.TITLE_MARGIN - 0.5, f"{lk}->{rk} titles only {rl - lr:.1f}px apart"
 
     def test_title_clearance_leaves_shielded_columns_untouched(self):
-        lay = _layout()
-        interest = {c.id: c for c in lay.cells}["header:interest"]
-        targets = {c.id: c for c in lay.cells}["header:targets"]
+        layout = _layout()
+        interest = {c.id: c for c in layout.cells}["header:interest"]
+        targets = {c.id: c for c in layout.cells}["header:targets"]
         assert interest.x == targets.x + targets.width + spreadsheet_constants.GAP, "plain GAP, not widened"
-        assert lay.right_overhang > 0
+        assert layout.right_overhang > 0
 
     def test_freeze_bands_hold_exactly_the_titles_and_toggles(self):
         _assert_freeze_partition(_layout())
@@ -173,9 +173,9 @@ class TestFreezeAndStructure:
         assert cells["prime:0"].y < cells["cell:mapping:0:0"].y
 
     def test_minus_is_revealed_at_the_last_primes_branch_point_clear_of_its_input(self):
-        lay = _layout()
-        cells = {c.id: c for c in lay.cells}
-        by_id = {ln.id: ln for ln in lay.lines}
+        layout = _layout()
+        cells = {c.id: c for c in layout.cells}
+        by_id = {line.id: line for line in layout.lines}
         minus = cells["minus"]
         assert abs((minus.x + minus.width / 2) - by_id["v:prime:2"].pos) < 0.51
         assert minus.y == by_id["bus:primes:top"].pos, "the zone drops from the top bus (branch point)"
@@ -184,10 +184,10 @@ class TestFreezeAndStructure:
     def test_minus_tracks_the_new_last_prime_after_a_shrink(self):
         wide = service.expand_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))
         wlay = spreadsheet.build(wide)
-        wcells, wlines = {c.id: c for c in wlay.cells}, {ln.id: ln for ln in wlay.lines}
+        wcells, wlines = {c.id: c for c in wlay.cells}, {line.id: line for line in wlay.lines}
         assert abs((wcells["minus"].x + wcells["minus"].width / 2) - wlines["v:prime:3"].pos) < 0.51
         slay = spreadsheet.build(service.shrink_domain(wide))
-        scells, slines = {c.id: c for c in slay.cells}, {ln.id: ln for ln in slay.lines}
+        scells, slines = {c.id: c for c in slay.cells}, {line.id: line for line in slay.lines}
         assert "prime:3" not in scells
         assert abs((scells["minus"].x + scells["minus"].width / 2) - slines["v:prime:2"].pos) < 0.51
 
@@ -217,9 +217,9 @@ class TestFreezeAndStructure:
     def test_quantities_row_pluses_ride_the_bus_stub_past_the_last_branch_point(self):
         opts = settings.defaults()
         opts["names"] = False
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), opts, interest=((-1, 1, 0),))
-        cells = {c.id: c for c in lay.cells}
-        by_id = {ln.id: ln for ln in lay.lines}
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), opts, interest=((-1, 1, 0),))
+        cells = {c.id: c for c in layout.cells}
+        by_id = {line.id: line for line in layout.lines}
         for plus_id, col, last_sub, gap in (("plus", "primes", "v:prime:2", 0),
                                             ("comma_plus", "commas", "v:comma:0", 0),
                                             ("interest_plus", "interest", "v:interest:0", spreadsheet_constants.INTERVAL_COL_GAP / 2)):
@@ -274,9 +274,9 @@ class TestAddRemoveControls:
         assert {"comma_minus:0", "target_minus:0"}.isdisjoint(both_hidden)
 
     def test_generators_plus_and_minus_ride_the_generators_fan(self):
-        lay = _layout()
-        cells = {c.id: c for c in lay.cells}
-        by_id = {ln.id: ln for ln in lay.lines}
+        layout = _layout()
+        cells = {c.id: c for c in layout.cells}
+        by_id = {line.id: line for line in layout.lines}
         plus, bus, last_sub = cells["gen_plus"], by_id["bus:gens:top"], by_id["v:gen:1"]
         stub = last_sub.pos + spreadsheet_constants.COL_W
         assert abs((plus.x + plus.width / 2) - stub) < 0.51
@@ -306,9 +306,9 @@ class TestAddRemoveControls:
             assert zone.y + zone.height <= cell.y + 0.51
 
     def test_target_list_carries_a_per_entry_minus_and_a_plus(self):
-        lay = _layout()
-        cells = {c.id: c for c in lay.cells}
-        by_id = {ln.id: ln for ln in lay.lines}
+        layout = _layout()
+        cells = {c.id: c for c in layout.cells}
+        by_id = {line.id: line for line in layout.lines}
         k = len([c for c in cells if c.startswith("target:") and c.split(":")[1].isdigit()])
         assert k >= 2
         assert all(f"target_minus:{j}" in cells for j in range(k))
@@ -318,8 +318,8 @@ class TestAddRemoveControls:
         assert abs((bus.start + bus.length) - stub) < 0.51
 
     def test_target_list_has_no_controls_in_all_interval(self):
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), tuning_scheme="minimax-S")
-        cells = {c.id for c in lay.cells}
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), tuning_scheme="minimax-S")
+        cells = {c.id for c in layout.cells}
         assert "target_plus" not in cells
         assert not any(c.startswith("target_minus:") for c in cells)
 
@@ -337,13 +337,13 @@ class TestAddRemoveControls:
     def test_a_drag_grip_rides_the_fan_band_below_the_minus(self):
         ed = Editor()
         ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])
-        lay = spreadsheet.build(ed.state, _all_on(), held_vectors=ed.held_vectors)
-        cells = {c.id: c for c in lay.cells}
-        sub = {ln.id: ln for ln in lay.lines}["v:held:1"].pos
+        layout = spreadsheet.build(ed.state, _all_on(), held_vectors=ed.held_vectors)
+        cells = {c.id: c for c in layout.cells}
+        sub = {line.id: line for line in layout.lines}["v:held:1"].pos
         grip, minus = cells["grip:held:1"], cells["held_minus:1"]
         assert abs((grip.x + grip.width / 2) - sub) < 0.51
         assert grip.y > minus.y + 0.5
-        assert grip.y + grip.height <= lay.freeze_y + 0.51, "...and above the seam (in the frozen fan, not clipped)"
+        assert grip.y + grip.height <= layout.freeze_y + 0.51, "...and above the seam (in the frozen fan, not clipped)"
 
     def test_an_empty_interval_list_still_offers_a_gridline_drop_zone(self):
         cells = {c.id for c in spreadsheet.build(

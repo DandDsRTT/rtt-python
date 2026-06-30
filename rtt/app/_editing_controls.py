@@ -137,14 +137,14 @@ def add_interval(edit_controller, action, group):
     action()
     edit_controller._renderer.render()
     quant_id, vector_kind = edit_controller.draft_focus[group]
-    lay = edit_controller._runtime.last_lay
-    if any(cell_box.id == quant_id for cell_box in lay.cells):
+    layout = edit_controller._runtime.last_lay
+    if any(cell_box.id == quant_id for cell_box in layout.cells):
         target = quant_id
     elif vector_kind is not None:
         target = next(
             (
                 cell_box.id
-                for cell_box in lay.cells
+                for cell_box in layout.cells
                 if cell_box.pending and cell_box.prime == 0 and cell_box.kind == vector_kind
             ),
             None,
@@ -153,7 +153,7 @@ def add_interval(edit_controller, action, group):
         target = None
     if target is None and group == "element":
         target = next(
-            (cell_box.id for cell_box in lay.cells if cell_box.id == "basis:pending"), None
+            (cell_box.id for cell_box in layout.cells if cell_box.id == "basis:pending"), None
         )
     inp = edit_controller._rec.handles(target).value.input if target is not None else None
     if inp is not None:
@@ -208,10 +208,10 @@ def on_part_click(editor, renderer, runtime, key):
     renderer.render()
 
 
-def on_preset(edit_controller, cid, value):
+def on_preset(edit_controller, cell_id, value):
     if edit_controller._runtime.building:
         return
-    if cid.startswith("preset:temperament"):
+    if cell_id.startswith("preset:temperament"):
         if value in presets.TEMPERAMENT_COMMAS:
             edit_controller._gestures.end_gesture()
             edit_controller._editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
@@ -219,31 +219,31 @@ def on_preset(edit_controller, cid, value):
         else:
             edit_controller._renderer.render()
         return
-    apply = candidate_apply(edit_controller, cid, value)
+    apply = candidate_apply(edit_controller, cell_id, value)
     if apply is not None:
         edit_controller._gestures.end_chooser_gesture()
         apply()
         edit_controller._renderer.request_render()
 
 
-def on_subpick(edit_controller, cid, value):
+def on_subpick(edit_controller, cell_id, value):
     if edit_controller._runtime.building or value is None:
         return
     edit_controller._gestures.end_gesture()
     db = edit_controller._editor.state.domain_basis
-    if cid == "etpick:draft":
+    if cell_id == "etpick:draft":
         edit_controller._editor.set_pending_mapping_row(list(presets.et_value_to_val(value, db)))
         ok = edit_controller._editor.pending_mapping_row is None
-    elif cid == "commapick:draft":
+    elif cell_id == "commapick:draft":
         edit_controller._editor.set_pending_comma(list(presets.comma_value_to_vector(value, db)))
         ok = edit_controller._editor.pending_comma is None
-    elif cid.startswith("etpick:"):
-        i = edit_controller._runtime.token_index(cid, "gens")
+    elif cell_id.startswith("etpick:"):
+        i = edit_controller._runtime.token_index(cell_id, "gens")
         ok = i is not None and edit_controller._editor.set_mapping_row(
             i, presets.et_value_to_val(value, db)
         )
     else:
-        c = edit_controller._runtime.token_index(cid, "commas")
+        c = edit_controller._runtime.token_index(cell_id, "commas")
         ok = c is not None and edit_controller._editor.set_comma(
             c, presets.comma_value_to_vector(value, db)
         )
@@ -252,10 +252,10 @@ def on_subpick(edit_controller, cid, value):
     edit_controller._renderer.render()
 
 
-def on_form_choose(edit_controller, cid, value):
+def on_form_choose(edit_controller, cell_id, value):
     if edit_controller._runtime.building:
         return
-    apply = candidate_apply(edit_controller, cid, value)
+    apply = candidate_apply(edit_controller, cell_id, value)
     if apply is not None:
         edit_controller._gestures.end_chooser_gesture()
         apply()
@@ -273,16 +273,16 @@ def on_target_change(edit_controller):
     apply_outcome(edit_controller, out, lambda: edit_controller._editor.set_target_spec(out.value))
 
 
-def on_control_select(edit_controller, cid, value):
+def on_control_select(edit_controller, cell_id, value):
     if edit_controller._runtime.building or value is None:
         return
-    apply = candidate_apply(edit_controller, cid, value)
+    apply = candidate_apply(edit_controller, cell_id, value)
     if apply is not None:
         edit_controller._gestures.end_chooser_gesture()
         apply()
-    elif cid == "control:diminuator":
+    elif cell_id == "control:diminuator":
         edit_controller._editor.set_diminuator_replaced(bool(value))
-    elif cid == "control:all_interval":
+    elif cell_id == "control:all_interval":
         edit_controller._editor.set_all_interval(bool(value))
     else:
         return
@@ -310,16 +310,16 @@ def on_toggle_all(edit_controller):
     edit_controller._renderer.render()
 
 
-def candidate_apply(edit_controller, cid, value):
+def candidate_apply(edit_controller, cell_id, value):
     if value is None:
         return None
     for prefix, setter in _APPLY_SETTERS:
-        if cid.startswith(prefix):
+        if cell_id.startswith(prefix):
             return lambda v=value, s=setter: getattr(edit_controller._editor, s)(v)
-    if cid == "control:complexity":
+    if cell_id == "control:complexity":
         return complexity_apply(edit_controller, value)
-    if cid.startswith("formchooser:"):
-        return formchooser_apply(edit_controller, cid, value)
+    if cell_id.startswith("formchooser:"):
+        return formchooser_apply(edit_controller, cell_id, value)
     return None
 
 
@@ -330,8 +330,8 @@ def complexity_apply(edit_controller, value):
     return lambda: edit_controller._editor.set_complexity_name(internal)
 
 
-def formchooser_apply(edit_controller, cid, value):
-    name = cid.split(":", 1)[1]
+def formchooser_apply(edit_controller, cell_id, value):
+    name = cell_id.split(":", 1)[1]
     if name == "mapping":
         if value not in service.MAPPING_FORM_KEYS:
             return None

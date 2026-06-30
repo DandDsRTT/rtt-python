@@ -193,15 +193,15 @@ def resolve_domain_element_transform(
     return outcome.accept(new_raw)
 
 
-def resolve_domain_element_edit(state: TemperamentState, tok: str, raw: str) -> Outcome:
+def resolve_domain_element_edit(state: TemperamentState, token: str, raw: str) -> Outcome:
     if raw in ("", "?/?"):
         return outcome.RERENDER
     parsed = parse_domain_element(raw)
     if parsed is None:
         return outcome.reject(f"“{raw}” is not a positive rational basis element (≠ 1)")
-    if tok == "pending":
+    if token == "pending":
         return _resolve_pending_domain_element(state, parsed, raw)
-    return _resolve_existing_domain_element(state, int(tok), parsed, raw)
+    return _resolve_existing_domain_element(state, int(token), parsed, raw)
 
 
 def _resolve_pending_domain_element(state: TemperamentState, parsed, raw: str) -> Outcome:

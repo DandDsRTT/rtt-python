@@ -173,9 +173,9 @@ class TestCanonicalGenerators:
         assert b.y <= first.y and b.y + b.height >= last.y + last.height
 
     def test_the_row_fold_node_clears_the_first_content_tile(self):
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))))
-        node = {c.id: c for c in lay.cells}["toggle:row:mapping"]
-        gens_block = {b.id: b for b in lay.blocks}["block:gens"]
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))))
+        node = {c.id: c for c in layout.cells}["toggle:row:mapping"]
+        gens_block = {b.id: b for b in layout.blocks}["block:gens"]
         assert node.x + node.width <= gens_block.x, "the node does not collide with the tile"
 
     def test_each_content_tile_has_a_top_left_fold_toggle(self):
@@ -189,9 +189,9 @@ class TestCanonicalGenerators:
         assert node.x < first.x and node.y < first.y
 
     def test_tile_toggle_sits_clear_of_the_tile_content_and_panel_edges(self):
-        lay = _layout()
-        cells = {c.id: c for c in lay.cells}
-        blocks = {b.id: b for b in lay.blocks}
+        layout = _layout()
+        cells = {c.id: c for c in layout.cells}
+        blocks = {b.id: b for b in layout.blocks}
         tog, top = cells["toggle:tile:mapping:primes"], cells["ebktop:primes"]
         assert tog.y + tog.height <= top.y
         tt, v = cells["toggle:tile:tuning:primes"], cells["tuning:prime:0"]
@@ -202,9 +202,9 @@ class TestCanonicalGenerators:
 
     def test_collapsing_a_tile_hides_its_content_keeps_its_toggle_and_folds_its_panel(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        lay = spreadsheet.build(base, collapsed={"tile:mapping:primes"})
-        cells = {c.id: c for c in lay.cells}
-        blocks = {b.id: b for b in lay.blocks}
+        layout = spreadsheet.build(base, collapsed={"tile:mapping:primes"})
+        cells = {c.id: c for c in layout.cells}
+        blocks = {b.id: b for b in layout.blocks}
         assert not any(c.startswith("cell:mapping:") for c in cells)
         assert not any(c.startswith("bracket:map:") for c in cells)
         assert "ebktop:primes" not in cells and "ebkbrace:primes" not in cells
@@ -220,7 +220,7 @@ class TestCanonicalGenerators:
         assert "cell:mapped:0:0" in cc
         assert cc["cell:mapped:0:0"].x == fc["cell:mapped:0:0"].x
         assert coll.width == full.width and coll.height == full.height
-        assert {ln.id for ln in coll.lines} == {ln.id for ln in full.lines}
+        assert {line.id for line in coll.lines} == {line.id for line in full.lines}
 
     def test_tile_toggle_glyph_flips_between_collapse_and_expand(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -254,16 +254,16 @@ class TestCanonicalGenerators:
 
     def test_toggle_all_collapses_every_band_when_any_is_open(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        lay = spreadsheet.build(base)
-        after = spreadsheet_text.toggle_all_collapsed(lay, set())
-        assert after == _foldable(lay)
+        layout = spreadsheet.build(base)
+        after = spreadsheet_text.toggle_all_collapsed(layout, set())
+        assert after == _foldable(layout)
         assert {"row:mapping", "col:primes", "col:targets"} <= after
 
     def test_toggle_all_expands_everything_when_fully_collapsed(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        lay = spreadsheet.build(base)
-        every = _foldable(lay)
-        assert spreadsheet_text.toggle_all_collapsed(lay, every | {"tile:mapping:primes"}) == set()
+        layout = spreadsheet.build(base)
+        every = _foldable(layout)
+        assert spreadsheet_text.toggle_all_collapsed(layout, every | {"tile:mapping:primes"}) == set()
 
     def test_collapsing_all_folds_the_whole_grid_down_to_its_strips(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -281,9 +281,9 @@ class TestCanonicalGenerators:
 
 class TestPresetChoosers:
     def test_presets_on_adds_the_three_chooser_dropdowns_under_their_tiles(self):
-        lay = _with(presets=True)
-        cells = {c.id: c for c in lay.cells}
-        blocks = {b.id: b for b in lay.blocks}
+        layout = _with(presets=True)
+        cells = {c.id: c for c in layout.cells}
+        blocks = {b.id: b for b in layout.blocks}
         assert {"preset:temperament", "preset:tuning", "preset:target"} <= set(cells)
         inset = spreadsheet_constants.BOX_INNER
         temp, matrix = cells["preset:temperament"], cells["cell:mapping:0:0"]
@@ -296,30 +296,30 @@ class TestPresetChoosers:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["presets"] = True
-        lay = spreadsheet.build(base, s, displayed_tuning_name="minimax-U")
-        cells = {c.id: c for c in lay.cells}
+        layout = spreadsheet.build(base, s, displayed_tuning_name="minimax-U")
+        cells = {c.id: c for c in layout.cells}
         assert cells["preset:tuning"].kind == "preset"
         assert cells["preset:tuning"].disabled is True
-        assert "block:preset:tuning" in {b.id for b in lay.blocks}
+        assert "block:preset:tuning" in {b.id for b in layout.blocks}
         assert cells["block:preset:tuning:label"].disabled is True
 
     def test_off_list_tuning_chooser_stays_an_interactive_dropdown(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["presets"] = True
-        lay = spreadsheet.build(base, s, displayed_tuning_name=None)
-        cell = {c.id: c for c in lay.cells}["preset:tuning"]
+        layout = spreadsheet.build(base, s, displayed_tuning_name=None)
+        cell = {c.id: c for c in layout.cells}["preset:tuning"]
         assert cell.kind == "preset" and cell.disabled is False
-        assert "block:preset:tuning" in {b.id for b in lay.blocks}
+        assert "block:preset:tuning" in {b.id for b in layout.blocks}
 
     def test_weighting_keeps_the_tuning_chooser_an_enabled_dropdown(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["presets"], s["weighting"] = True, True
-        lay = spreadsheet.build(base, s, displayed_tuning_name="minimax-U")
-        cell = {c.id: c for c in lay.cells}["preset:tuning"]
+        layout = spreadsheet.build(base, s, displayed_tuning_name="minimax-U")
+        cell = {c.id: c for c in layout.cells}["preset:tuning"]
         assert cell.kind == "preset" and cell.disabled is False
-        assert "block:preset:tuning" in {b.id for b in lay.blocks}
+        assert "block:preset:tuning" in {b.id for b in layout.blocks}
 
     def test_tuning_and_target_choosers_show_the_live_selection_temperament_is_a_placeholder(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -368,9 +368,9 @@ class TestPresetChoosers:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["presets"] = True
-        lay = spreadsheet.build(base, s, tuning_scheme="destretched-octave minimax-ES")
-        cells = {c.id: c for c in lay.cells}
-        boxes = {b.id: b for b in lay.blocks}
+        layout = spreadsheet.build(base, s, tuning_scheme="destretched-octave minimax-ES")
+        cells = {c.id: c for c in layout.cells}
+        boxes = {b.id: b for b in layout.blocks}
         inset = spreadsheet_constants.BOX_INNER
         gt = cells["preset:tuning:gens"]
         assert gt.x == cells["header:gens"].x + inset and gt.text == "destretched-octave minimax-ES"
@@ -392,19 +392,19 @@ class TestPresetChoosers:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["presets"], s["form_controls"] = True, True
-        lay = spreadsheet.build(base, s)
-        cells = {c.id: c for c in lay.cells}
-        boxes = {b.id: b for b in lay.blocks}
-        for cid, label, tile in (("preset:tuning", "established tuning scheme", "block:tuning:primes"),
+        layout = spreadsheet.build(base, s)
+        cells = {c.id: c for c in layout.cells}
+        boxes = {b.id: b for b in layout.blocks}
+        for cell_id, label, tile in (("preset:tuning", "established tuning scheme", "block:tuning:primes"),
                                  ("preset:tuning:gens", "established tuning scheme", "block:tuning:gens"),
                                  ("preset:temperament", "temperament", "block:mapping"),
                                  ("preset:target", "target interval set scheme", "block:vector:targets")):
-            ctrl, box, panel = cells[cid], boxes[f"block:{cid}"], boxes[tile]
+            ctrl, box, panel = cells[cell_id], boxes[f"block:{cell_id}"], boxes[tile]
             assert box.boxed is True, "a bordered box, not a plain tile"
             assert box.x <= ctrl.x and box.x + box.width >= ctrl.x + ctrl.width
             assert box.y <= ctrl.y and box.y + box.height >= ctrl.y + ctrl.height
             assert box.x >= panel.x - 0.5 and box.x + box.width <= panel.x + panel.width + 0.5, "the box stays WITHIN its tile -- never spilling out (the reported bug)"
-            lbl = cells[f"block:{cid}:label"]
+            lbl = cells[f"block:{cell_id}:label"]
             assert lbl.kind == "caption" and lbl.text == label and lbl.align == "left" and lbl.y > ctrl.y
         for fcid, tbox in (("formchooser:mapping", "block:preset:temperament"),
                            ("formchooser:comma_basis", "block:preset:temperament:commas")):
@@ -419,9 +419,9 @@ class TestPresetChoosers:
     def test_a_long_control_label_widens_its_narrow_tile(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         gens_off = {b.id: b for b in spreadsheet.build(base, settings.defaults()).blocks}["block:tuning:gens"]
-        lay = spreadsheet.build(base, {**settings.defaults(), "presets": True})
-        gens_on = {b.id: b for b in lay.blocks}["block:tuning:gens"]
-        box = {b.id: b for b in lay.blocks}["block:preset:tuning:gens"]
+        layout = spreadsheet.build(base, {**settings.defaults(), "presets": True})
+        gens_on = {b.id: b for b in layout.blocks}["block:tuning:gens"]
+        box = {b.id: b for b in layout.blocks}["block:preset:tuning:gens"]
         assert gens_on.width > gens_off.width
         assert gens_on.width >= spreadsheet_text._min_width_for_lines("established tuning scheme", 1)
         assert box.x >= gens_on.x and box.x + box.width <= gens_on.x + gens_on.width
@@ -431,11 +431,11 @@ class TestPresetChoosers:
         s = settings.defaults()
         s["presets"], s["form_controls"] = True, True
         boxes = {b.id: b for b in spreadsheet.build(base, s).blocks}
-        for cid, tile in (("block:preset:temperament", "block:mapping"),
+        for cell_id, tile in (("block:preset:temperament", "block:mapping"),
                           ("block:preset:tuning", "block:tuning:primes"),
                           ("block:preset:tuning:gens", "block:tuning:gens"),
                           ("block:preset:target", "block:vector:targets")):
-            box, panel = boxes[cid], boxes[tile]
+            box, panel = boxes[cell_id], boxes[tile]
             left, right = box.x - panel.x, (panel.x + panel.width) - (box.x + box.width)
             assert abs(left - right) < 1
 
@@ -443,9 +443,9 @@ class TestPresetChoosers:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
         s["presets"] = True
-        lay = spreadsheet.build(base, s)
-        box = {b.id: b for b in lay.blocks}["block:preset:target"]
-        dropdown = {c.id: c for c in lay.cells}["preset:target"]
+        layout = spreadsheet.build(base, s)
+        box = {b.id: b for b in layout.blocks}["block:preset:target"]
+        dropdown = {c.id: c for c in layout.cells}["preset:target"]
         assert dropdown.width < box.width - 30
 
     def test_build_honors_the_target_interval_spec(self):
@@ -505,13 +505,13 @@ class TestPresetChoosers:
 
     def test_frame_and_chart_bands_reserve_height_for_what_they_emit(self):
         b = _maximized_superspace_builder()
-        lay = b.layout()
-        frame_ys = {round(c.y, 3) for c in lay.cells if c.kind in {"ebktop", "ebkbrace", "ebkangle"}}
+        layout = b.layout()
+        frame_ys = {round(c.y, 3) for c in layout.cells if c.kind in {"ebktop", "ebkbrace", "ebkangle"}}
         frame_emit = {r for r in b.geometry.rows if round(query.frame_top_y(b.geometry, r), 3) in frame_ys
                       or round(query.frame_brace_y(b.geometry, r), 3) in frame_ys}
         frame_spill = sorted(r for r in frame_emit if b.geometry.rows[r].frame <= 0)
         assert not frame_spill, f"rows draw an EBK matrix frame but reserve no frame band (it will spill): {frame_spill}"
-        chart_emit = {c.id.split(":")[1] for c in lay.cells if c.id.startswith("chart:")}
+        chart_emit = {c.id.split(":")[1] for c in layout.cells if c.id.startswith("chart:")}
         chart_spill = sorted(r for r in chart_emit if b.geometry.rows[r].chart_top is None)
         assert not chart_spill, f"rows draw a bar chart but reserve no chart band (it will spill): {chart_spill}"
 
@@ -529,7 +529,7 @@ class TestPresetChoosers:
             return text[i:]
 
         b = _maximized_superspace_builder()
-        lay = b.layout()
+        layout = b.layout()
         value_rows = PLAIN_TEXT_ROWS - {"quantities"}
         mismatches = []
         checked = 0
@@ -540,7 +540,7 @@ class TestPresetChoosers:
                 continue
             rb, cx, cw = b.geometry.rows[row_key], b.geometry.col_x[column_key], b.geometry.col_w[column_key]
             grid_tokens = []
-            for c in lay.cells:
+            for c in layout.cells:
                 if (c.text and not c.id.startswith("plain_text:")
                         and cx - 2 <= c.x <= cx + cw and rb.y - 2 <= c.y <= rb.y + rb.height + 2):
                     grid_tokens += TOKEN.findall(cell_value(c.text))
@@ -558,7 +558,7 @@ class TestPresetChoosers:
     def test_every_plain_text_band_uses_the_same_brackets_as_its_grid_tile(self):
         from rtt.app.grid_tables import PLAIN_TEXT_ROWS, SPINE_COLUMNS
         b = _maximized_superspace_builder()
-        lay = b.layout()
+        layout = b.layout()
         value_rows = PLAIN_TEXT_ROWS - {"quantities"}
         mismatches, checked = [], 0
         for (row_key, column_key) in sorted(b.geometry.declared_tiles):
@@ -567,7 +567,7 @@ class TestPresetChoosers:
             if (row_key, column_key) not in b.geometry.plain_text_strings:
                 continue
             text_conv = _ebk_canonical(_ebk_text_convention(b.geometry.plain_text_strings[(row_key, column_key)]))
-            grid_conv = _ebk_canonical(_ebk_grid_convention(b, lay, row_key, column_key))
+            grid_conv = _ebk_canonical(_ebk_grid_convention(b, layout, row_key, column_key))
             if text_conv != grid_conv:
                 mismatches.append((row_key, column_key, text_conv, grid_conv, b.geometry.plain_text_strings[(row_key, column_key)]))
             checked += 1
@@ -630,13 +630,13 @@ class TestPlainTextBand:
 
     def test_editable_plain_text_tiles_render_as_inputs(self):
         cells = {c.id: c for c in _with("TILT minimax-S", plain_text_values=True, weighting=True, alt_complexity=True).cells}
-        for cid in ("plain_text:mapping:primes", "plain_text:vectors:commas", "plain_text:tuning:gens",
+        for cell_id in ("plain_text:mapping:primes", "plain_text:vectors:commas", "plain_text:tuning:gens",
                     "plain_text:vectors:targets", "plain_text:prescaling:primes"):
-            assert cells[cid].kind == "plain_text_edit"
-        for cid in ("plain_text:mapping:targets", "plain_text:mapping:commas", "plain_text:tuning:primes",
+            assert cells[cell_id].kind == "plain_text_edit"
+        for cell_id in ("plain_text:mapping:targets", "plain_text:mapping:commas", "plain_text:tuning:primes",
                     "plain_text:quantities:primes", "plain_text:damage:targets",
                     "plain_text:prescaling:commas"):
-            assert cells[cid].kind == "plain_text"
+            assert cells[cell_id].kind == "plain_text"
 
     def test_plain_text_values_are_a_single_line_within_their_column(self):
         cells = {c.id: c for c in _with(plain_text_values=True).cells}
