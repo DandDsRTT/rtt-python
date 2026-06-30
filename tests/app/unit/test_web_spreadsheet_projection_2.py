@@ -58,7 +58,7 @@ class TestProjectionVColumn:
     def test_projection_v_column_has_one_c_u_divider_per_tile_and_no_stray_separators(self):
         cells = {c.id: c for c in _with(projection=True).cells}
         bar = cells["vsplit:vectors"]
-        assert bar.x == cells["cell:unchanged:0:0"].x - spreadsheet_constants.V_SPLIT_GAP / 2 - spreadsheet_constants.SEP_W / 2
+        assert bar.x == cells["cell:unchanged:0:0"].x - spreadsheet_constants.V_SPLIT_GAP / 2 - spreadsheet_constants.SEP_WIDTH / 2
         assert {"vsplit:scaling_factors", "vsplit:mapping", "vsplit:tuning"} <= set(cells)
         assert "vsplit:counts" not in cells, "the counts tile (two scalar tallies, not a matrix) gets none"
         assert not any(c.startswith("sep:mapped_comma:") for c in cells), "the mapped unrotated vector list (M·V) draws NO inter-entry separator rules (the stray- # separator bug is fixed); the lone C|U bar is its only divider"
@@ -123,7 +123,7 @@ class TestProjectionVColumn:
         assert spreadsheet_text._wrap_lines("nullity", cap.width) == 1
         assert n_count.x == cap.x < cells["bracket:vector:commas:l"].x <= cells["cell:unchanged:0:0"].x
         assert cells["count:commas:u"].x == cells["cell:unchanged:0:0"].x
-        assert cells["bracket:vector:commas:l"].x + spreadsheet_constants.BRACKET_W == cells["cell:unchanged:0:0"].x
+        assert cells["bracket:vector:commas:l"].x + spreadsheet_constants.BRACKET_WIDTH == cells["cell:unchanged:0:0"].x
 
     def test_projection_pending_comma_reddens_the_unchanged_interval_it_will_delete(self):
         s = settings.defaults()

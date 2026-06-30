@@ -26,7 +26,7 @@ class TestCanonicalGenerators:
         assert cells["cangen:0"].kind == "genratio"
         assert cells["canon:gen:0"].text == "2/1" and cells["canon:gen:1"].text == "3/1"
         assert cells["canon:gen:0"].x == cells["header:quantities"].x
-        assert cells["cangen:0"].x == cells["header:canongens"].x + spreadsheet_constants.BRACKET_W
+        assert cells["cangen:0"].x == cells["header:canongens"].x + spreadsheet_constants.BRACKET_WIDTH
         assert cells["cangen:0"].y < cells["canon:gen:0"].y
 
     def test_form_matrices_canceling_out_is_an_identity_tile_in_the_canonical_generators_column(self):
@@ -159,7 +159,7 @@ class TestCanonicalGenerators:
         cells = {c.id: c for c in _layout().cells}
         l0, l1 = cells["bracket:map:0:l"], cells["bracket:map:1:l"]
         row0 = cells["cell:mapping:0:0"]
-        assert l0.height < spreadsheet_constants.ROW_H
+        assert l0.height < spreadsheet_constants.ROW_HEIGHT
         assert l0.height == l1.height
         assert abs((l0.y + l0.height / 2) - (row0.y + row0.height / 2)) < 0.51
         gap = l1.y - (l0.y + l0.height)
@@ -169,7 +169,7 @@ class TestCanonicalGenerators:
         cells = {c.id: c for c in _layout().cells}
         b = cells["bracket:mapped:l"]
         first, last = cells["cell:mapped:0:0"], cells["cell:mapped:1:0"]
-        assert b.height > spreadsheet_constants.ROW_H
+        assert b.height > spreadsheet_constants.ROW_HEIGHT
         assert b.y <= first.y and b.y + b.height >= last.y + last.height
 
     def test_the_row_fold_node_clears_the_first_content_tile(self):
@@ -641,10 +641,10 @@ class TestPlainTextBand:
     def test_plain_text_values_are_a_single_line_within_their_column(self):
         cells = {c.id: c for c in _with(plain_text_values=True).cells}
         long, header = cells["plain_text:tuning:targets"], cells["header:targets"]
-        assert long.height == spreadsheet_constants.PLAIN_TEXT_H
+        assert long.height == spreadsheet_constants.PLAIN_TEXT_HEIGHT
         assert long.width == header.width
-        assert cells["plain_text:just:targets"].height == spreadsheet_constants.PLAIN_TEXT_H
-        assert cells["plain_text:mapping:primes"].height == spreadsheet_constants.PLAIN_TEXT_EDIT_H
+        assert cells["plain_text:just:targets"].height == spreadsheet_constants.PLAIN_TEXT_HEIGHT
+        assert cells["plain_text:mapping:primes"].height == spreadsheet_constants.PLAIN_TEXT_EDIT_HEIGHT
 
     def test_names_toggles_in_tile_captions_but_never_the_row_col_titles(self):
         on = {c.id: c for c in _with(names=True).cells}

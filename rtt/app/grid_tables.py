@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from rtt.app.spreadsheet_constants import SYMBOL_H, UNIT_H
+from rtt.app.spreadsheet_constants import SYMBOL_HEIGHT, UNIT_HEIGHT
 
 NORM_SUB_OPEN = chr(0xE001)
 NORM_SUB_CLOSE = chr(0xE002)
@@ -610,9 +610,9 @@ def _carrier_rows(table):
 BANDS = {
     band.name: band
     for band in (
-        Band("symbol", _carrier_rows(SYMBOLS), SYMBOL_H),
+        Band("symbol", _carrier_rows(SYMBOLS), SYMBOL_HEIGHT),
         Band("caption", _carrier_rows(CAPTIONS)),
-        Band("units", _carrier_rows(UNITS), UNIT_H),
+        Band("units", _carrier_rows(UNITS), UNIT_HEIGHT),
         Band("col_label", _carrier_rows(COLUMN_LABEL_LETTERS) | {"prescaling", "complexity"}),
         Band("frame", frozenset({"mapping", "canon", "vectors", "prescaling",
                                  "superspace_vectors", "superspace_mapping", "superspace_projection", "projection"})),

@@ -18,7 +18,7 @@ class ResolveDraft:
     show_charts: object = None
     show_tuning_ranges: object = None
     show_symbols: object = None
-    ctrl_symbol_h: object = None
+    ctrl_symbol_height: object = None
     show_header_symbols: object = None
     show_units: object = None
     show_cell_units: object = None
@@ -119,7 +119,7 @@ class ResolveDraft:
     comma_draft: object = None
     comma_count_shown: object = None
     vector_count_shown: object = None
-    empty_comma_w: object = None
+    empty_comma_width: object = None
     interest: object = None
     interest_count: object = None
     pending_interest: object = None

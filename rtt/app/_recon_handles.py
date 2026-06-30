@@ -20,7 +20,7 @@ class ValueHandles:
     frac: object = None
     ratio_face: object = None
     stacked_face: object = None
-    stacked_w: object = None
+    stacked_width: object = None
     gensign_face: object = None
     plain_text_input: object = None
 

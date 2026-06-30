@@ -116,7 +116,7 @@ class Unchanged:
     sizes: object
     complexities: object
     born: bool
-    empty_comma_w: float
+    empty_comma_width: float
 
 
 @dataclass(frozen=True)
@@ -180,7 +180,7 @@ class Scalars:
     complexity_unit: str
     weight_unit: str
     damage_unit: str
-    ctrl_symbol_h: float
+    ctrl_symbol_height: float
     displayed_projection_name: object
     displayed_tuning_name: object
 
@@ -325,7 +325,7 @@ def _unchanged(b) -> Unchanged:
         sizes=b.unchanged_sizes,
         complexities=b.unchanged_complexities,
         born=b.born_u,
-        empty_comma_w=b.empty_comma_w,
+        empty_comma_width=b.empty_comma_width,
     )
 
 
@@ -405,7 +405,7 @@ def _scalars(b) -> Scalars:
         complexity_unit=b.complexity_unit,
         weight_unit=b.weight_unit,
         damage_unit=b.damage_unit,
-        ctrl_symbol_h=b.ctrl_symbol_h,
+        ctrl_symbol_height=b.ctrl_symbol_height,
         displayed_projection_name=b.displayed_projection_name,
         displayed_tuning_name=b.displayed_tuning_name,
     )

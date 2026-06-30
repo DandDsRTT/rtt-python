@@ -178,7 +178,7 @@ class TestOptimizationControls:
         cap = on["caption:all_interval"]
         assert cap.kind == "caption" and cap.text == "all-interval"
         assert abs((chk.x + chk.width / 2) - (cap.x + cap.width / 2)) < 1
-        gap = (spreadsheet_constants.PRESET_H - spreadsheet_constants.OPTION_BOX_PX) / 2
+        gap = (spreadsheet_constants.PRESET_HEIGHT - spreadsheet_constants.OPTION_BOX_PX) / 2
         assert cap.y == chk.y + chk.height + gap
         on_ai = {c.id: c for c in _with(scheme="minimax-S", all_interval=True).cells}
         assert on_ai["control:all_interval"].checked is True
@@ -216,7 +216,7 @@ class TestOptimizationControls:
         assert cap_d.text == "replace diminuator"
         dim = on["control:diminuator"]
         assert dim.x == on["header:primes"].x + spreadsheet_constants.BOX_INNER
-        gap = (spreadsheet_constants.PRESET_H - spreadsheet_constants.OPTION_BOX_PX) / 2
+        gap = (spreadsheet_constants.PRESET_HEIGHT - spreadsheet_constants.OPTION_BOX_PX) / 2
         assert cap_d.y == dim.y + dim.height + gap
         assert abs((dim.x + dim.width / 2) - (cap_d.x + cap_d.width / 2)) < 1
 
@@ -453,10 +453,10 @@ class TestCustomWeightRow:
         assert spreadsheet_text._wrap_lines(name, cap.width) <= spreadsheet_constants.MAX_CAPTION_LINES
         assert cap.height == spreadsheet_text._wrap_lines(name, cap.width) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
         assert cap.height <= spreadsheet_constants.MAX_CAPTION_LINES * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
-        content_w = 2 * spreadsheet_constants.BRACKET_W + spreadsheet_constants.COLUMN_WIDTH
-        assert cells["header:commas"].width > content_w
+        content_width = 2 * spreadsheet_constants.BRACKET_WIDTH + spreadsheet_constants.COLUMN_WIDTH
+        assert cells["header:commas"].width > content_width
         assert cap.width == cells["header:commas"].width
-        assert cap.y >= cells["tuning:comma:0"].y + spreadsheet_constants.ROW_H
+        assert cap.y >= cells["tuning:comma:0"].y + spreadsheet_constants.ROW_HEIGHT
         panel = blocks["block:tuning:commas"]
         assert panel.x <= cap.x and cap.x + cap.width <= panel.x + panel.width
 
@@ -478,7 +478,7 @@ class TestCustomWeightRow:
                      "(just) comma basis interval size list"):
             width = spreadsheet_text._min_width_for_lines(name, 2)
             assert spreadsheet_text._wrap_lines(name, width) <= 2
-            assert spreadsheet_text._wrap_lines(name, 2 * spreadsheet_constants.BRACKET_W + spreadsheet_constants.COLUMN_WIDTH) > 2
+            assert spreadsheet_text._wrap_lines(name, 2 * spreadsheet_constants.BRACKET_WIDTH + spreadsheet_constants.COLUMN_WIDTH) > 2
 
     def test_short_captions_span_the_full_band_so_css_can_centre_them(self):
         cells = {c.id: c for c in _with(names=True).cells}
@@ -580,7 +580,7 @@ class TestCustomWeightRow:
         cells = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[None, None, None]).cells}
         assert "cell:mapping:1:0" in cells and not cells["cell:mapping:1:0"].pending
         assert cells["cell:mapping:2:0"].text == "" and cells["cell:mapping:2:0"].pending
-        assert cells["cell:mapping:2:0"].y - cells["cell:mapping:1:0"].y == spreadsheet_constants.ROW_H
+        assert cells["cell:mapping:2:0"].y - cells["cell:mapping:1:0"].y == spreadsheet_constants.ROW_HEIGHT
         assert "cell:mapping:3:0" not in cells
         assert cells["gen:pending"].text == "?" and cells["gen:pending"].pending
         assert cells["bracket:map:pending:l"].pending and cells["bracket:map:pending:r"].pending
@@ -602,7 +602,7 @@ class TestPendingMappingRow:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         plain = spreadsheet.build(base)
         drafting = spreadsheet.build(base, pending_mapping_row=[None, None, None])
-        assert drafting.height - plain.height == spreadsheet_constants.ROW_H
+        assert drafting.height - plain.height == spreadsheet_constants.ROW_HEIGHT
 
     def test_the_mapping_plain_text_becomes_a_two_tone_draft_box_while_a_row_is_pending(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -618,11 +618,11 @@ class TestPendingMappingRow:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         plain = {c.id: c for c in spreadsheet.build(base).cells}
         drafting = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[None, None, None]).cells}
-        frame = ((spreadsheet_constants.FRAME_H + spreadsheet_constants.FRAME_GAP) + (spreadsheet_constants.FRAME_GAP + spreadsheet_constants.BRACE_H)
+        frame = ((spreadsheet_constants.FRAME_HEIGHT + spreadsheet_constants.FRAME_GAP) + (spreadsheet_constants.FRAME_GAP + spreadsheet_constants.BRACE_HEIGHT)
                  + 2 * spreadsheet_constants.FRAME_OVERHANG)
         for bid in ("bracket:mapped:l", "bracket:mapped_comma:l"):
-            assert plain[bid].height == 2 * spreadsheet_constants.ROW_H + frame
-            assert drafting[bid].height == plain[bid].height + spreadsheet_constants.ROW_H
+            assert plain[bid].height == 2 * spreadsheet_constants.ROW_HEIGHT + frame
+            assert drafting[bid].height == plain[bid].height + spreadsheet_constants.ROW_HEIGHT
         assert drafting["cell:mapped:2:0"].pending and drafting["cell:mapped:2:0"].text == ""
         assert drafting["cell:mapped_comma:2:0"].preview_remove and not drafting["cell:mapped_comma:2:0"].pending, "...but its cell over the doomed comma is red (the draft generator un-tempers it away), enclosed all the same"
 

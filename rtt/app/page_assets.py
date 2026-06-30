@@ -343,8 +343,8 @@ _CSS_VARS = f""":root {{
   --wash-base:#fff; --wash-tuning:{_TINTS["tuning"]}; --wash-temperament:{_TINTS["temperament"]}; --wash-form:{_TINTS["form"]};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
   --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT};
-  --label-w:{spreadsheet_constants.LABEL_W}px; --header-h:{spreadsheet_constants.HEADER_H}px; --line-w:{spreadsheet_constants.LINE_W}px;
-  --plain-text-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_H}px; --option-box:{spreadsheet_constants.OPTION_BOX_PX}px; --button:{spreadsheet_constants.BUTTON}px;
+  --label-w:{spreadsheet_constants.LABEL_WIDTH}px; --header-h:{spreadsheet_constants.HEADER_HEIGHT}px; --line-w:{spreadsheet_constants.LINE_WIDTH}px;
+  --plain-text-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_HEIGHT}px; --option-box:{spreadsheet_constants.OPTION_BOX_PX}px; --button:{spreadsheet_constants.BUTTON}px;
   --option-box-unchecked:url("{_option_box_svg(None)}");
   --option-box-checked:url("{_option_box_svg("#000")}");
   --option-box-disabled:url("{_option_box_svg("#888")}");
@@ -430,7 +430,7 @@ _TILE_HOST: dict[str, str] = {
 _TILE_FONT = {
     "symbols": 15,
     "equivalences": 15,
-    "rowlabel": spreadsheet_constants.MATLABEL_H - 2,
+    "rowlabel": spreadsheet_constants.MATLABEL_HEIGHT - 2,
     "names": spreadsheet_constants.CAPTION_FONT,
     "mnemonics": spreadsheet_constants.CAPTION_FONT,
     "units": 10,

@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class Geometry:
-    total_w: float = 0.0
-    total_h: float = 0.0
+    total_width: float = 0.0
+    total_height: float = 0.0
     node_x: float = 0.0
     node_edge: float = 0.0
     header_y: float = 0.0
@@ -22,17 +22,17 @@ class Geometry:
 
     column_x: Mapping[str, float] = field(default_factory=dict)
     column_width: Mapping[str, float] = field(default_factory=dict)
-    content_w: Mapping[str, float] = field(default_factory=dict)
+    content_width: Mapping[str, float] = field(default_factory=dict)
     content_x: Mapping[str, float] = field(default_factory=dict)
     open_column_width: Mapping[str, float] = field(default_factory=dict)
     column_collapsible: Mapping[str, bool] = field(default_factory=dict)
     column_header: Mapping[str, str] = field(default_factory=dict)
     present_caption_rows: frozenset = frozenset()
-    matlabel_primes_w: float = 0.0
-    matlabel_superspace_primes_w: float = 0.0
-    matlabel_other_w: Mapping[str, float] = field(default_factory=dict)
-    row_handle_w: float = 0.0
-    etpick_w: float = 0.0
+    matlabel_primes_width: float = 0.0
+    matlabel_superspace_primes_width: float = 0.0
+    matlabel_other_width: Mapping[str, float] = field(default_factory=dict)
+    row_handle_width: float = 0.0
+    etpick_width: float = 0.0
     primes_x: float | None = None
     commas_x: float | None = None
     targets_x: float | None = None

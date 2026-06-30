@@ -15,11 +15,11 @@ def _fit_font(
     width: float,
     max_font: float = _EXPR_MAX_FONT,
     min_font: float = _EXPR_MIN_FONT,
-    char_w: float = _EXPR_CHAR_W,
+    char_width: float = _EXPR_CHAR_W,
 ) -> float:
     if not line:
         return max_font
-    fit = (width - 2) / (len(line) * char_w)
+    fit = (width - 2) / (len(line) * char_width)
     return max(min_font, min(max_font, fit))
 
 

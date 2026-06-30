@@ -6,25 +6,25 @@ from rtt.app import service
 from rtt.app.grid_tables import NORM_SUB_CLOSE, NORM_SUB_OPEN, RINGABLE_KINDS, SUBSCRIPT_L
 from rtt.app.layout import CellBox, Layout
 from rtt.app.spreadsheet_constants import (
-    CAPTION_CHAR_W,
+    CAPTION_CHAR_WIDTH,
     CAPTION_FONT,
     CAPTION_LINE,
-    LBOX_DIM_W,
-    LINE_W,
+    LBOX_DIM_WIDTH,
+    LINE_WIDTH,
     OPTION_BOX_PX,
-    PRESET_H,
+    PRESET_HEIGHT,
     STRIP,
 )
 
 
 def emit_option_check(cells, name: str, label: str, checked: bool, check_x, ctrl_y) -> None:
-    check_y = ctrl_y + (PRESET_H - OPTION_BOX_PX) / 2
+    check_y = ctrl_y + (PRESET_HEIGHT - OPTION_BOX_PX) / 2
     cells.append(
         CellBox(
             f"control:{name}",
             check_x,
             check_y,
-            LBOX_DIM_W,
+            LBOX_DIM_WIDTH,
             OPTION_BOX_PX,
             "control_check",
             text="",
@@ -35,8 +35,8 @@ def emit_option_check(cells, name: str, label: str, checked: bool, check_x, ctrl
         CellBox(
             f"caption:{name}",
             check_x,
-            ctrl_y + PRESET_H,
-            LBOX_DIM_W,
+            ctrl_y + PRESET_HEIGHT,
+            LBOX_DIM_WIDTH,
             CAPTION_LINE,
             "caption",
             text=label,
@@ -260,7 +260,7 @@ def _wrap_chars(words: list[str], max_chars: int) -> int:
 
 
 def _chars_per_line(width: float, font: float = CAPTION_FONT) -> int:
-    return max(1, int((width - 4) / (font * CAPTION_CHAR_W)))
+    return max(1, int((width - 4) / (font * CAPTION_CHAR_WIDTH)))
 
 
 def _wrap_lines(text: str, width: float, font: float = CAPTION_FONT) -> int:
@@ -271,10 +271,10 @@ def _min_width_for_lines(text: str, max_lines: int, font: float = CAPTION_FONT) 
     words = text.split()
     for chars in range(1, len(text) + 1):
         if _wrap_chars(words, chars) <= max_lines:
-            return int(chars * font * CAPTION_CHAR_W + 4) + 1
-    return int(len(text) * font * CAPTION_CHAR_W + 4) + 1
+            return int(chars * font * CAPTION_CHAR_WIDTH + 4) + 1
+    return int(len(text) * font * CAPTION_CHAR_WIDTH + 4) + 1
 
 
 def _bus_span(positions) -> tuple[float, float]:
-    ext = LINE_W if positions[-1] != positions[0] else 0
+    ext = LINE_WIDTH if positions[-1] != positions[0] else 0
     return positions[0] - ext / 2, (positions[-1] - positions[0]) + ext

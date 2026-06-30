@@ -4,7 +4,7 @@ from dataclasses import replace
 from typing import NamedTuple
 
 from rtt.app import service
-from rtt.app.spreadsheet_constants import SYMBOL_H
+from rtt.app.spreadsheet_constants import SYMBOL_HEIGHT
 from rtt.app.spreadsheet_models import _resolve_prescaler_labels, _resolve_show_flags
 
 
@@ -34,7 +34,7 @@ def unpack_show_flags(inputs, draft):
     return replace(
         draft, show_names=show_flags.names, show_mnemonics=show_flags.mnemonics, show_equivalences=show_flags.equivalences,
         show_presets=show_flags.presets, show_counts=show_flags.counts, show_plain_text_values=show_flags.plain_text_values, show_charts=show_flags.charts,
-        show_tuning_ranges=show_flags.tuning_ranges, show_symbols=show_symbols, ctrl_symbol_h=SYMBOL_H if show_symbols else 0,
+        show_tuning_ranges=show_flags.tuning_ranges, show_symbols=show_symbols, ctrl_symbol_height=SYMBOL_HEIGHT if show_symbols else 0,
         show_header_symbols=show_flags.header_symbols, show_units=show_flags.units, show_cell_units=show_flags.cell_units,
         show_domain_units=show_flags.domain_units, show_temperament_tiles=show_flags.temperament_tiles, show_form=show_flags.form,
         show_form_controls=show_flags.form_controls, show_form_tiles=show_flags.form_tiles, show_tuning_tiles=show_flags.tuning_tiles,

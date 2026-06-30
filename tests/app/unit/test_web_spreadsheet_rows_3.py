@@ -275,7 +275,7 @@ class TestRetuningChartsAndGenMap:
             interest=((-3, 2, 0),), held_vectors=((-1, 1, 0),))
         on = {c.id: c for c in layout.cells}
         gridline = {line.id: line.pos for line in layout.lines if line.orientation == "v"}
-        bw, cw = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COLUMN_WIDTH
+        bw, cw = spreadsheet_constants.BRACKET_WIDTH, spreadsheet_constants.COLUMN_WIDTH
         elem = {"primes": "prime", "commas": "comma", "targets": "target",
                 "interest": "interest", "held": "held", "detempering": "detempering"}
         for group, e in elem.items():
@@ -354,7 +354,7 @@ class TestRetuningChartsAndGenMap:
         on = {c.id: c for c in _with(tuning_ranges=True).cells}
         ch = on["rangechart:tuning:gens"]
         assert ch.y > on["tuning:gen:0"].y, "the chart sits below the generator-map values (nested at the bottom of the tile), # not floating over them"
-        mapping_bottom = on["cell:mapping:1:0"].y + spreadsheet_constants.ROW_H
+        mapping_bottom = on["cell:mapping:1:0"].y + spreadsheet_constants.ROW_HEIGHT
         assert ch.y >= mapping_bottom
 
     def test_range_mode_selector_sits_below_the_chart_and_carries_the_current_mode(self):

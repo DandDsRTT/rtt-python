@@ -21,10 +21,10 @@ from rtt.app.spreadsheet_constants import (
     COLUMN_WIDTH,
     OPT_COL_GAP,
     PAD,
-    PRESET_H,
-    PRESET_W,
+    PRESET_HEIGHT,
+    PRESET_WIDTH,
     SCHEME_BUTTON_SQ,
-    SCHEME_LABEL_W,
+    SCHEME_LABEL_WIDTH,
     TOGGLE,
     TOGGLE_INSET,
 )
@@ -149,33 +149,33 @@ def _preset_locked(resolved, context, name: str) -> bool:
     return False
 
 
-def _control_box(cells, blocks, resolved, geometry, box_id: str, column_key: str, top, cap_w, label,
+def _control_box(cells, blocks, resolved, geometry, box_id: str, column_key: str, top, cap_width, label,
                  disabled: bool = False, scheme_button: bool = False, form_chooser=None):
     form_label = form_chooser[1] if form_chooser else None
-    dropdown_w, label_h, box_h = query.control_dims(geometry, column_key, cap_w, label, scheme_button, form_label)
+    dropdown_width, label_height, box_height = query.control_dims(geometry, column_key, cap_width, label, scheme_button, form_label)
     box_x, box_y = geometry.column_x[column_key], top + BOX_OUTER
-    blocks.append(Block(box_id, box_x, box_y, geometry.column_width[column_key], box_h, boxed=True))
+    blocks.append(Block(box_id, box_x, box_y, geometry.column_width[column_key], box_height, boxed=True))
     ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
     if scheme_button:
         _emit_scheme_button(cells, ctrl_x, ctrl_y, column_key)
         ctrl_y += SCHEME_BUTTON_SQ + BOX_INNER
     if label:
-        cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
+        cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_HEIGHT, dropdown_width, label_height,
                              "caption", text=label, align="left", disabled=disabled))
     if form_chooser:
         fid, fcap = form_chooser
-        form_y = ctrl_y + PRESET_H + label_h + BAND_GAP
-        cells.append(CellBox(fid, ctrl_x, form_y, dropdown_w, PRESET_H, "formchooser",
+        form_y = ctrl_y + PRESET_HEIGHT + label_height + BAND_GAP
+        cells.append(CellBox(fid, ctrl_x, form_y, dropdown_width, PRESET_HEIGHT, "formchooser",
                              text=resolved.canon.mapping_form_key if fid.endswith(":mapping") else resolved.canon.comma_basis_form_key))
-        cells.append(CellBox(f"{fid}:label", ctrl_x, form_y + PRESET_H, dropdown_w, CAPTION_LINE,
+        cells.append(CellBox(f"{fid}:label", ctrl_x, form_y + PRESET_HEIGHT, dropdown_width, CAPTION_LINE,
                              "caption", text=fcap, align="left"))
-    return ctrl_x, dropdown_w, ctrl_y
+    return ctrl_x, dropdown_width, ctrl_y
 
 
 def _emit_scheme_button(cells, x, y, column_key: str) -> None:
     cells.append(CellBox(f"scheme:{column_key}", x, y, SCHEME_BUTTON_SQ, SCHEME_BUTTON_SQ, "scheme_button", text="✕"))
     label_y = y + (SCHEME_BUTTON_SQ - CAPTION_LINE) / 2
-    cells.append(CellBox(f"scheme:{column_key}:label", x + SCHEME_BUTTON_SQ + 2, label_y, SCHEME_LABEL_W,
+    cells.append(CellBox(f"scheme:{column_key}:label", x + SCHEME_BUTTON_SQ + 2, label_y, SCHEME_LABEL_WIDTH,
                          CAPTION_LINE, "caption", text="return to scheme", align="left"))
 
 
@@ -192,7 +192,7 @@ def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cell_i
     control_x, control_width, control_y = _control_box(cells, blocks, resolved, geometry, f"block:{cell_id}", column_key, top, query.preset_cap(name), label,
                               disabled=disabled, scheme_button=(name == "projection"),
                               form_chooser=form_chooser)
-    cells.append(CellBox(cell_id, control_x, control_y, control_width, PRESET_H, "preset", text=preset_text[name],
+    cells.append(CellBox(cell_id, control_x, control_y, control_width, PRESET_HEIGHT, "preset", text=preset_text[name],
                          disabled=disabled))
     if name == "target" and context.settings["all_interval"]:
         emit_option_check(cells, "all_interval", "all-interval",
@@ -234,8 +234,8 @@ def _emit_form_choosers(cells, blocks, resolved, geometry, context) -> None:
             if not query.tile_open(geometry, context.collapsed, row_key, column_key):
                 continue
             top = query.plain_text_band_y(geometry, row_key) + geometry.rows[row_key].plain_text + geometry.rows[row_key].preset
-            control_x, control_width, control_y = _control_box(cells, blocks, resolved, geometry, f"block:formchooser:{name}", column_key, top, PRESET_W, label)
-            cells.append(CellBox(f"formchooser:{name}", control_x, control_y, control_width, PRESET_H, "formchooser",
+            control_x, control_width, control_y = _control_box(cells, blocks, resolved, geometry, f"block:formchooser:{name}", column_key, top, PRESET_WIDTH, label)
+            cells.append(CellBox(f"formchooser:{name}", control_x, control_y, control_width, PRESET_HEIGHT, "formchooser",
                                  text=resolved.canon.mapping_form_key if name == "mapping" else resolved.canon.comma_basis_form_key))
 
 

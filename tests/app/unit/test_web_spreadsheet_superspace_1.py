@@ -45,7 +45,7 @@ class TestNonstandardDomain:
             for row_key in VALUE_ROWS:
                 if row_key not in b.geometry.rows or (row_key, lst) not in b.geometry.declared_tiles:
                     continue
-                top, height = b.geometry.rows[row_key].tile_top, b.geometry.rows[row_key].tile_h
+                top, height = b.geometry.rows[row_key].tile_top, b.geometry.rows[row_key].tile_height
                 hit = any(abs(c.x - dx) < 7 and top - 1 <= c.y <= top + height + 1 and c.kind not in STRUCTURAL
                           for c in layout.cells)
                 assert hit, f"first {lst} draft: row {row_key!r} is blank at the draft column (the bug)"
@@ -76,8 +76,8 @@ class TestNonstandardDomain:
         layout = _barbados_superspace(equivalences=False)
         cells = {c.id: c for c in layout.cells}
         rL, dL = 3, 4
-        expected_superspace_generators_w = 2 * spreadsheet_constants.BRACKET_W + rL * spreadsheet_constants.COLUMN_WIDTH
-        expected_superspace_primes_w = 2 * spreadsheet_constants.BRACKET_W + dL * spreadsheet_constants.COLUMN_WIDTH
+        expected_superspace_generators_w = 2 * spreadsheet_constants.BRACKET_WIDTH + rL * spreadsheet_constants.COLUMN_WIDTH
+        expected_superspace_primes_w = 2 * spreadsheet_constants.BRACKET_WIDTH + dL * spreadsheet_constants.COLUMN_WIDTH
         assert cells["header:superspace_generators"].width == expected_superspace_generators_w, "the header spans the column; the column's content footprint matches # (no caption widening here — Phase 3 declares no captioned tiles in the new columns # so the natural width drives the footprint)"
         assert cells["header:superspace_primes"].width == expected_superspace_primes_w
 
@@ -119,8 +119,8 @@ class TestNonstandardDomain:
     def test_nonstandard_domain_superspace_rows_size_to_dL_rL(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
         dL, rL = 4, 3
-        assert cells["label:superspace_vectors"].height == dL * spreadsheet_constants.ROW_H
-        assert cells["label:superspace_mapping"].height == rL * spreadsheet_constants.ROW_H
+        assert cells["label:superspace_vectors"].height == dL * spreadsheet_constants.ROW_HEIGHT
+        assert cells["label:superspace_mapping"].height == rL * spreadsheet_constants.ROW_HEIGHT
 
     def test_nonstandard_domain_off_omits_the_superspace_rows(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
@@ -192,7 +192,7 @@ class TestNonstandardDomain:
     def test_superspace_projection_row_renders_PL_over_the_superspace_primes(self):
         cells = {c.id: c for c in _barbados_projection().cells}
         assert cells["label:superspace_projection"].text == "superspace\nprojection"
-        assert cells["label:superspace_projection"].height == 4 * spreadsheet_constants.ROW_H
+        assert cells["label:superspace_projection"].height == 4 * spreadsheet_constants.ROW_HEIGHT
         assert cells["label:superspace_mapping"].y < cells["label:superspace_projection"].y < cells["label:projection"].y
         assert {f"cell:superspace_projection:superspace_primes:{i}:{j}" for i in range(4) for j in range(4)} <= set(cells)
         assert cells["cell:superspace_projection:superspace_primes:0:0"].text == "1"
