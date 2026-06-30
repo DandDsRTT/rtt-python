@@ -206,9 +206,9 @@ class TestColumnTokens:
         assert {"bus:primes:top", "bus:primes:bot", "foot:primes"} <= ids
         by_id = {line.id: line for line in layout.lines}
         cells = {c.id: c for c in layout.cells}
-        assert by_id["bus:primes:top"].pos < cells["prime:0"].y
-        assert by_id["v:prime:0"].start == by_id["bus:primes:top"].pos
-        assert by_id["bus:primes:bot"].pos > by_id["bus:primes:top"].pos
+        assert by_id["bus:primes:top"].position < cells["prime:0"].y
+        assert by_id["v:prime:0"].start == by_id["bus:primes:top"].position
+        assert by_id["bus:primes:bot"].position > by_id["bus:primes:top"].position
         assert {"vbar:mapping:left", "vbar:mapping:right", "foot:mapping"} <= ids
 
     def test_convergence_buses_keep_solid_corners_and_the_top_bus_reaches_the_plus(self):
@@ -217,22 +217,22 @@ class TestColumnTokens:
         cells = {c.id: c for c in layout.cells}
         half = spreadsheet_constants.LINE_WIDTH / 2
         v0, vlast = by["v:prime:0"], by["v:prime:2"]
-        assert by["bus:primes:top"].start == v0.pos - half
-        assert by["bus:primes:bot"].start == v0.pos - half
-        assert by["bus:primes:bot"].start + by["bus:primes:bot"].length == vlast.pos + half
+        assert by["bus:primes:top"].start == v0.position - half
+        assert by["bus:primes:bot"].start == v0.position - half
+        assert by["bus:primes:bot"].start + by["bus:primes:bot"].length == vlast.position + half
         top, plus = by["bus:primes:top"], cells["plus"]
         assert top.start + top.length == plus.x + plus.width / 2
-        assert top.start + top.length > vlast.pos + half
+        assert top.start + top.length > vlast.position + half
 
     def test_mapping_rejoin_bars_span_the_full_generator_fan(self):
         by = {line.id: line for line in _layout().lines}
         half = spreadsheet_constants.LINE_WIDTH / 2
         g0, glast = by["h:mapping:0"], by["h:mapping:1"]
         right = by["vbar:mapping:right"]
-        assert right.start == g0.pos - half and right.start + right.length == glast.pos + half
+        assert right.start == g0.position - half and right.start + right.length == glast.position + half
         left = by["vbar:mapping:left"]
-        assert left.start == g0.pos - half
-        assert left.start + left.length > glast.pos + half
+        assert left.start == g0.position - half
+        assert left.start + left.length > glast.position + half
 
     def test_adjacent_tiles_keep_a_roomy_minimum_gap(self):
         blocks = {b.id: b for b in _layout().blocks}
@@ -246,7 +246,7 @@ class TestColumnTokens:
         cells = {c.id: c for c in layout.cells}
         assert "h:quantities" in by_id
         line, prime = by_id["h:quantities"], cells["prime:0"]
-        assert abs(line.pos - (prime.y + prime.height / 2)) < 0.51
+        assert abs(line.position - (prime.y + prime.height / 2)) < 0.51
         assert line.start < prime.x
         assert line.start + line.length >= cells["target:3"].x
 
@@ -267,7 +267,7 @@ class TestSpineAndAxes:
         assert cells["header:quantities"].x < cells["header:gens"].x
         assert "trunk:quantities" in by_id
         spine, header = by_id["trunk:quantities"], cells["header:quantities"]
-        assert abs(spine.pos - (header.x + header.width / 2)) < 0.51
+        assert abs(spine.position - (header.x + header.width / 2)) < 0.51
         assert spine.start < cells["prime:0"].y
         assert spine.start + spine.length >= cells["label:damage"].y
         assert "toggle:col:quantities" in cells
@@ -287,7 +287,7 @@ class TestSpineAndAxes:
         assert {"trunk:gens", "bus:gens:top", "bus:gens:bot", "foot:gens"} <= ids
         for i in (0, 1):
             cell = cells[f"tuning:gen:{i}"]
-            assert abs(by_id[f"v:gen:{i}"].pos - (cell.x + cell.width / 2)) < 0.51
+            assert abs(by_id[f"v:gen:{i}"].position - (cell.x + cell.width / 2)) < 0.51
         assert by_id["trunk:gens"].length < by_id["trunk:quantities"].length, "the trunk is now just the short fan stem above the data, not a full-height spine"
 
     def test_interval_vectors_row_fans_into_per_component_axes(self):
@@ -299,10 +299,10 @@ class TestSpineAndAxes:
         assert {"trunk:vectors", "foot:vectors", "vbar:vectors:left", "vbar:vectors:right"} <= ids
         assert "h:vectors" not in ids
         vrow = cells["label:vectors"]
-        rules = [by_id[f"h:vectors:{i}"].pos for i in range(3)]
+        rules = [by_id[f"h:vectors:{i}"].position for i in range(3)]
         assert rules == sorted(rules)
-        for pos in rules:
-            assert vrow.y <= pos <= vrow.y + vrow.height
+        for position in rules:
+            assert vrow.y <= position <= vrow.y + vrow.height
         assert by_id["h:vectors:0"].start + by_id["h:vectors:0"].length >= cells["header:targets"].x
 
     def test_tuning_tiles_off_removes_the_tuning_rows_and_the_target_intervals_column(self):
@@ -465,8 +465,8 @@ class TestSpineAndAxes:
             trunk = {line.id: line for line in layout.lines}[f"trunk:{key}"]
             cells = {c.id: c for c in layout.cells}
             toggle, header = cells[f"toggle:col:{key}"], cells[f"header:{key}"]
-            assert abs(trunk.pos - (toggle.x + toggle.width / 2)) < 0.51, key
-            assert abs(trunk.pos - (header.x + header.width / 2)) < 0.51, key
+            assert abs(trunk.position - (toggle.x + toggle.width / 2)) < 0.51, key
+            assert abs(trunk.position - (header.x + header.width / 2)) < 0.51, key
 
     def test_a_collapsed_multiline_title_strip_fits_its_widest_line(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -527,7 +527,7 @@ class TestSpineAndAxes:
         blocks = {b.id: b for b in layout.blocks}
         by_id = {line.id: line for line in layout.lines}
         assert blocks["block:mapping"].width == 0
-        assert by_id["v:prime:0"].pos == by_id["v:prime:1"].pos == by_id["v:prime:2"].pos, "the per-prime verticals converge onto one x (so they read as a single line)"
+        assert by_id["v:prime:0"].position == by_id["v:prime:1"].position == by_id["v:prime:2"].position, "the per-prime verticals converge onto one x (so they read as a single line)"
         assert by_id["bus:primes:top"].length == 0
 
     def test_a_collapsed_bands_gridline_is_dotted_while_open_bands_stay_solid(self):

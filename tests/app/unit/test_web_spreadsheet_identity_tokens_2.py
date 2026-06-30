@@ -404,8 +404,13 @@ class TestPresetChoosers:
             assert box.x <= ctrl.x and box.x + box.width >= ctrl.x + ctrl.width
             assert box.y <= ctrl.y and box.y + box.height >= ctrl.y + ctrl.height
             assert box.x >= panel.x - 0.5 and box.x + box.width <= panel.x + panel.width + 0.5, "the box stays WITHIN its tile -- never spilling out (the reported bug)"
-            lbl = cells[f"block:{cell_id}:label"]
-            assert lbl.kind == "caption" and lbl.text == label and lbl.align == "left" and lbl.y > ctrl.y
+            label_cell = cells[f"block:{cell_id}:label"]
+            assert (
+                label_cell.kind == "caption"
+                and label_cell.text == label
+                and label_cell.align == "left"
+                and label_cell.y > ctrl.y
+            )
         for fcid, tbox in (("formchooser:mapping", "block:preset:temperament"),
                            ("formchooser:comma_basis", "block:preset:temperament:commas")):
             assert f"block:{fcid}" not in boxes

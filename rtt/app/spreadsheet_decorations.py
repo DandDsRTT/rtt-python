@@ -51,8 +51,8 @@ def emit_decorations(resolved, geometry, context, region_boxes, gtm_box, opt_box
     return EmitResult(cells=tuple(cells), lines=tuple(lines), blocks=tuple(blocks))
 
 
-def _gridline(lines, lid, orientation, pos, start, length, *, dotted) -> None:
-    lines.append(Line(lid, orientation, pos, start, length, dotted=dotted))
+def _gridline(lines, lid, orientation, position, start, length, *, dotted) -> None:
+    lines.append(Line(lid, orientation, position, start, length, dotted=dotted))
 
 
 def _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, key, prefix, n, center_open) -> None:

@@ -210,10 +210,10 @@ def _replace_interval_vector(edit_controller, group, token, vector, current, set
         "comma": "commas",
     }.get(group)
     toks = edit_controller._runtime.column_tokens(list_name) if list_name else []
-    pos = toks.index(int(token)) if int(token) in toks else int(token)
+    position = toks.index(int(token)) if int(token) in toks else int(token)
     vectors = [list(v) for v in current]
-    if vectors[pos] != list(vector):
-        vectors[pos] = vector
+    if vectors[position] != list(vector):
+        vectors[position] = vector
         setter(vectors)
 
 
@@ -321,14 +321,16 @@ def _transform_interval(edit_controller, cell_id, op):
         return
     current, setter, list_name = _interval_group_state(edit_controller, group)
     toks = edit_controller._runtime.column_tokens(list_name)
-    pos = toks.index(int(token)) if int(token) in toks else int(token)
-    if not 0 <= pos < len(current):
+    position = toks.index(int(token)) if int(token) in toks else int(token)
+    if not 0 <= position < len(current):
         return
-    new_v = service.transformed_vector(current[pos], op, edit_controller._editor.state.domain_basis)
+    new_v = service.transformed_vector(
+        current[position], op, edit_controller._editor.state.domain_basis
+    )
     if new_v is None:
         return
     vectors = [list(x) for x in current]
-    vectors[pos] = list(new_v)
+    vectors[position] = list(new_v)
     setter(vectors)
     edit_controller._renderer.request_render()
 

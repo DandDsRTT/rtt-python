@@ -74,10 +74,10 @@ class TestIntervalVectorsRow:
         by_id = {line.id: line for line in layout.lines}
         plus, minus, bot = cells["basis_plus"], cells["basis_minus"], cells["basis:2"]
         left_bus = by_id["vbar:vectors:left"]
-        assert minus.x == left_bus.pos, "− zone drops from the left-bus branch point (button at its edge)"
-        assert abs((minus.y + minus.height / 2) - by_id["h:vectors:2"].pos) < 0.51
+        assert minus.x == left_bus.position, "− zone drops from the left-bus branch point (button at its edge)"
+        assert abs((minus.y + minus.height / 2) - by_id["h:vectors:2"].position) < 0.51
         assert minus.x < cells["basis:2"].x
-        assert abs((plus.x + plus.width / 2) - left_bus.pos) < 0.51
+        assert abs((plus.x + plus.width / 2) - left_bus.position) < 0.51
         assert plus.y >= bot.y + bot.height
         assert abs((left_bus.start + left_bus.length) - (plus.y + plus.height / 2)) < 0.51
 
@@ -88,11 +88,11 @@ class TestIntervalVectorsRow:
         left_bus = by_id["vbar:mapping:left"]
         for i in range(2):
             minus = cells[f"map_minus:{i}"]
-            assert minus.x == left_bus.pos, "− drops from the left-bus branch point"
-            assert abs((minus.y + minus.height / 2) - by_id[f"h:mapping:{i}"].pos) < 0.51
+            assert minus.x == left_bus.position, "− drops from the left-bus branch point"
+            assert abs((minus.y + minus.height / 2) - by_id[f"h:mapping:{i}"].position) < 0.51
             assert minus.x < cells["gen:0"].x
         plus = cells["map_plus"]
-        assert abs((plus.x + plus.width / 2) - left_bus.pos) < 0.51
+        assert abs((plus.x + plus.width / 2) - left_bus.position) < 0.51
         assert plus.y >= cells["gen:1"].y + cells["gen:1"].height
         assert abs((left_bus.start + left_bus.length) - (plus.y + plus.height / 2)) < 0.51
 
@@ -109,7 +109,7 @@ class TestIntervalVectorsRow:
         by_id = {line.id: line for line in layout.lines}
         assert "h:mapping:0" in by_id and "h:mapping" not in by_id, "the fanned sub-rule, not the flat spine"
         left_bus, plus = by_id["vbar:mapping:left"], cells["map_plus"]
-        assert abs((plus.x + plus.width / 2) - left_bus.pos) < 0.51
+        assert abs((plus.x + plus.width / 2) - left_bus.position) < 0.51
         assert abs((left_bus.start + left_bus.length) - (plus.y + plus.height / 2)) < 0.51
         assert abs((plus.x + plus.width / 2) - (cells["basis_plus"].x + cells["basis_plus"].width / 2)) < 0.51, "...and the + sits as close to the spine as the always-fanned basis +, not a FAN further out"
 

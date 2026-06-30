@@ -269,7 +269,7 @@ class TestCountsRow:
         layout = _with(counts=True)
         by_id = {line.id: line for line in layout.lines}
         cells = {c.id: c for c in layout.cells}
-        fan = by_id["bus:primes:top"].pos
+        fan = by_id["bus:primes:top"].position
         count = cells["count:primes"]
         assert fan < count.y
         v0 = by_id["v:prime:0"]
@@ -277,7 +277,7 @@ class TestCountsRow:
         assert v0.start < count.y and v0.start + v0.length > count.y + count.height
         trunk = by_id["trunk:primes"]
         assert trunk.start + trunk.length == fan
-        assert fan == {line.id: line for line in _with(counts=False).lines}["bus:primes:top"].pos
+        assert fan == {line.id: line for line in _with(counts=False).lines}["bus:primes:top"].position
 
     def test_counts_on_by_default_shows_the_counts_row(self):
         cells = {c.id for c in _layout().cells}

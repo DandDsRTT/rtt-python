@@ -24,35 +24,35 @@ class TestEditPreviewRipple:
     async def test_editing_a_cell_previews_the_ripple_then_commits_on_blur(self, user: User) -> None:
         await user.open("/")
         assert _cell_text(user, "cell:mapped:1:6") == "4"
-        src = _cell_child(user, "cell:mapping:1:2")
-        UserInteraction(user, {src}, None).trigger("focus")
-        src.set_value("7")
+        source = _cell_child(user, "cell:mapping:1:2")
+        UserInteraction(user, {source}, None).trigger("focus")
+        source.set_value("7")
         await user.should_see(marker="cell:mapped:1:6")
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapped:1:6")
         assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")
         assert _cell_text(user, "cell:mapped:1:6") == "4", "...and the edit is NOT applied yet (preview only)"
-        UserInteraction(user, {src}, None).trigger("blur")
+        UserInteraction(user, {source}, None).trigger("blur")
         await user.should_see(marker="cell:mapped:1:6")
         assert _cell_text(user, "cell:mapped:1:6") == "7"
         assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")
 
     async def test_repeated_edits_keep_previewing(self, user: User) -> None:
         await user.open("/")
-        src = _cell_child(user, "cell:mapping:1:2")
-        UserInteraction(user, {src}, None).trigger("focus")
-        src.set_value("7")
+        source = _cell_child(user, "cell:mapping:1:2")
+        UserInteraction(user, {source}, None).trigger("focus")
+        source.set_value("7")
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapped:1:6")
-        UserInteraction(user, {src}, None).trigger("blur")
+        UserInteraction(user, {source}, None).trigger("blur")
         await user.should_see(marker="cell:mapped:1:6")
         assert _cell_text(user, "cell:mapped:1:6") == "7"
         assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")
-        src = _cell_child(user, "cell:mapping:1:2")
-        UserInteraction(user, {src}, None).trigger("focus")
-        src.set_value("9")
+        source = _cell_child(user, "cell:mapping:1:2")
+        UserInteraction(user, {source}, None).trigger("focus")
+        source.set_value("9")
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapped:1:6"), \
             "the live preview must keep working on later edits, not only the first"
         assert _cell_text(user, "cell:mapped:1:6") == "7"
-        UserInteraction(user, {src}, None).trigger("blur")
+        UserInteraction(user, {source}, None).trigger("blur")
         await user.should_see(marker="cell:mapped:1:6")
         assert _cell_text(user, "cell:mapped:1:6") == "9"
 

@@ -421,7 +421,7 @@ def on_drag_end(gesture_controller):
 
 
 def on_drop(gesture_controller, dst_list, dst_idx):
-    src = gesture_controller.drag_src
+    source = gesture_controller.drag_src
     gesture_controller.drag_src = None
     gesture_controller.reorder_dst = None
     had_preview = (
@@ -429,10 +429,13 @@ def on_drop(gesture_controller, dst_list, dst_idx):
     )
     if had_preview:
         gesture_controller.end_gesture()
-    if not src:
+    if not source:
         if had_preview:
             gesture_controller._renderer.render()
         return
     index = dst_idx if dst_idx is not None else (1 << 30)
-    if gesture_controller._editor.move_interval(src[0], src[1], dst_list, index) or had_preview:
+    if (
+        gesture_controller._editor.move_interval(source[0], source[1], dst_list, index)
+        or had_preview
+    ):
         gesture_controller._renderer.render()

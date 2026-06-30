@@ -74,17 +74,17 @@ def peek_vector(vectors: list[tuple[int, ...]], i: int) -> tuple[int, ...] | Non
     return vectors[i] if 0 <= i < len(vectors) else None
 
 
-def move_feasible(s: Solve, src: str, dst: str, vector: tuple[int, ...]) -> bool:
+def move_feasible(s: Solve, source: str, destination: str, vector: tuple[int, ...]) -> bool:
     state = s.state
-    if src not in MOVE_LISTS or dst not in MOVE_LISTS:
+    if source not in MOVE_LISTS or destination not in MOVE_LISTS:
         return False
-    if dst == "unchanged":
+    if destination == "unchanged":
         return False
-    if "targets" in (src, dst) and service.is_all_interval(s.tuning_scheme):
+    if "targets" in (source, destination) and service.is_all_interval(s.tuning_scheme):
         return False
-    if src == "commas" and state.nullity == 0:
+    if source == "commas" and state.nullity == 0:
         return False
-    if dst == "commas":
+    if destination == "commas":
         real_comma_basis = state.comma_basis if state.nullity else ()
         domain_basis = state.domain_basis if len(vector) == state.dimensionality else None
         extended = service.from_comma_basis((*real_comma_basis, tuple(vector)), domain_basis)

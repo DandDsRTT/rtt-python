@@ -56,9 +56,9 @@ def _end_row_drag(reconciler) -> None:
 
 
 def _preview_row_drop(reconciler, index: int) -> None:
-    src = reconciler._row_drag
-    valid = src is not None and src != index
-    apply = (lambda: reconciler._editor.add_mapping_row_to(src, index)) if valid else None
+    source = reconciler._row_drag
+    valid = source is not None and source != index
+    apply = (lambda: reconciler._editor.add_mapping_row_to(source, index)) if valid else None
     target = (
         (lambda cell_box: cell_box.kind == "mapping" and getattr(cell_box, "gen", None) == index)
         if valid
@@ -68,11 +68,11 @@ def _preview_row_drop(reconciler, index: int) -> None:
 
 
 def _drop_on_row(reconciler, index: int) -> None:
-    src = reconciler._row_drag
+    source = reconciler._row_drag
     reconciler._row_drag = None
-    if src is not None and src != index:
+    if source is not None and source != index:
         reconciler._cell_box.combine_commit(
-            lambda: reconciler._editor.add_mapping_row_to(src, index)
+            lambda: reconciler._editor.add_mapping_row_to(source, index)
         )
     else:
         reconciler._cell_box.combine_end()
@@ -109,11 +109,11 @@ def arm_col_target(reconciler, wrap, group: str, index: int) -> None:
 def _int_combine(reconciler, group: str, index: int):
     if reconciler._col_drag is None:
         return None
-    src_group, src = reconciler._col_drag
-    if src_group != group or src == index:
+    src_group, source = reconciler._col_drag
+    if src_group != group or source == index:
         return None
     combine = getattr(reconciler._editor, _INTERVAL_COMBINE[group])
-    return lambda: combine(src, index)
+    return lambda: combine(source, index)
 
 
 def _begin_col_drag(reconciler, group: str, index: int) -> None:

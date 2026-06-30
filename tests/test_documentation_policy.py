@@ -50,19 +50,19 @@ def _test_rel(path):
     return path.relative_to(_TESTS).as_posix()
 
 
-def _comments(src):
+def _comments(source):
     return [
         token
-        for token in tokenize.generate_tokens(io.StringIO(src).readline)
+        for token in tokenize.generate_tokens(io.StringIO(source).readline)
         if token.type == tokenize.COMMENT
     ]
 
 
-def _comment_blocks(src):
+def _comment_blocks(source):
     blocks: list[list] = []
     prev_full = False
     prev_row = -2
-    for token in _comments(src):
+    for token in _comments(source):
         full = token.line.lstrip().startswith("#")
         if blocks and full and prev_full and token.start[0] == prev_row + 1:
             blocks[-1].append(token)
@@ -72,9 +72,9 @@ def _comment_blocks(src):
     return blocks
 
 
-def _embedded_comments(src):
+def _embedded_comments(source):
     out = []
-    for node in ast.walk(ast.parse(src)):
+    for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             for offset, line in enumerate(node.value.splitlines()):
                 if _EMBEDDED_COMMENT.search(_QUOTED_SPAN.sub("", line)):
@@ -82,10 +82,10 @@ def _embedded_comments(src):
     return out
 
 
-def _embedded_comment_blocks(src):
+def _embedded_comment_blocks(source):
     blocks: list[list] = []
     prev_row = -2
-    for row, text in _embedded_comments(src):
+    for row, text in _embedded_comments(source):
         if blocks and row == prev_row + 1:
             blocks[-1].append((row, text))
         else:

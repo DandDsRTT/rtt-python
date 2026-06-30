@@ -115,13 +115,13 @@ def apply_outcome(edit_controller, out, commit, preview=False) -> None:
     if out.effect is service.Effect.RERENDER:
         edit_controller._renderer.render()
         return
-    msg = out.message or reason_message(out.reason)
+    message = out.message or reason_message(out.reason)
     if out.effect is service.Effect.REJECT:
-        ui.notify(msg, type="negative", position="top")
+        ui.notify(message, type="negative", position="top")
         edit_controller._renderer.render()
         return
-    if msg:
-        ui.notify(msg, type="negative", position="top")
+    if message:
+        ui.notify(message, type="negative", position="top")
     commit()
     edit_controller._renderer.request_render()
 

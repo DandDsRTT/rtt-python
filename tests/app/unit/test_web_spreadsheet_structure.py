@@ -177,19 +177,19 @@ class TestFreezeAndStructure:
         cells = {c.id: c for c in layout.cells}
         by_id = {line.id: line for line in layout.lines}
         minus = cells["minus"]
-        assert abs((minus.x + minus.width / 2) - by_id["v:prime:2"].pos) < 0.51
-        assert minus.y == by_id["bus:primes:top"].pos, "the zone drops from the top bus (branch point)"
+        assert abs((minus.x + minus.width / 2) - by_id["v:prime:2"].position) < 0.51
+        assert minus.y == by_id["bus:primes:top"].position, "the zone drops from the top bus (branch point)"
         assert minus.y + minus.height <= cells["cell:mapping:0:2"].y
 
     def test_minus_tracks_the_new_last_prime_after_a_shrink(self):
         wide = service.expand_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))
         wlay = spreadsheet.build(wide)
         wcells, wlines = {c.id: c for c in wlay.cells}, {line.id: line for line in wlay.lines}
-        assert abs((wcells["minus"].x + wcells["minus"].width / 2) - wlines["v:prime:3"].pos) < 0.51
+        assert abs((wcells["minus"].x + wcells["minus"].width / 2) - wlines["v:prime:3"].position) < 0.51
         slay = spreadsheet.build(service.shrink_domain(wide))
         scells, slines = {c.id: c for c in slay.cells}, {line.id: line for line in slay.lines}
         assert "prime:3" not in scells
-        assert abs((scells["minus"].x + scells["minus"].width / 2) - slines["v:prime:2"].pos) < 0.51
+        assert abs((scells["minus"].x + scells["minus"].width / 2) - slines["v:prime:2"].position) < 0.51
 
     def test_a_single_prime_domain_has_no_minus_but_keeps_plus(self):
         cells = {c.id for c in spreadsheet.build(service.from_mapping(((1,),))).cells}
@@ -224,9 +224,9 @@ class TestFreezeAndStructure:
                                             ("comma_plus", "commas", "v:comma:0", 0),
                                             ("interest_plus", "interest", "v:interest:0", spreadsheet_constants.INTERVAL_COL_GAP / 2)):
             plus, bus = cells[plus_id], by_id[f"bus:{col}:top"]
-            stub = by_id[last_sub].pos + spreadsheet_constants.COLUMN_WIDTH + gap
+            stub = by_id[last_sub].position + spreadsheet_constants.COLUMN_WIDTH + gap
             assert abs((plus.x + plus.width / 2) - stub) < 0.51
-            assert abs((plus.y + plus.height / 2) - bus.pos) < 0.51
+            assert abs((plus.y + plus.height / 2) - bus.position) < 0.51
             assert abs((bus.start + bus.length) - stub) < 0.51
 
     def test_interval_pluses_survive_hiding_the_quantities_row(self):
@@ -278,13 +278,13 @@ class TestAddRemoveControls:
         cells = {c.id: c for c in layout.cells}
         by_id = {line.id: line for line in layout.lines}
         plus, bus, last_sub = cells["gen_plus"], by_id["bus:gens:top"], by_id["v:gen:1"]
-        stub = last_sub.pos + spreadsheet_constants.COLUMN_WIDTH
+        stub = last_sub.position + spreadsheet_constants.COLUMN_WIDTH
         assert abs((plus.x + plus.width / 2) - stub) < 0.51
-        assert abs((plus.y + plus.height / 2) - bus.pos) < 0.51
+        assert abs((plus.y + plus.height / 2) - bus.position) < 0.51
         assert abs((bus.start + bus.length) - stub) < 0.51
         minus = cells["gen_minus"]
-        assert abs((minus.x + minus.width / 2) - last_sub.pos) < 0.51
-        assert minus.y == bus.pos, "the zone drops from the top bus"
+        assert abs((minus.x + minus.width / 2) - last_sub.position) < 0.51
+        assert minus.y == bus.position, "the zone drops from the top bus"
         assert minus.y + minus.height <= cells["tuning:gen:0"].y
 
     def test_a_single_generator_temperament_has_no_gen_minus_but_keeps_gen_plus(self):
@@ -313,7 +313,7 @@ class TestAddRemoveControls:
         assert k >= 2
         assert all(f"target_minus:{j}" in cells for j in range(k))
         plus, bus, last_sub = cells["target_plus"], by_id["bus:targets:top"], by_id[f"v:target:{k - 1}"]
-        stub = last_sub.pos + spreadsheet_constants.COLUMN_WIDTH + spreadsheet_constants.INTERVAL_COL_GAP
+        stub = last_sub.position + spreadsheet_constants.COLUMN_WIDTH + spreadsheet_constants.INTERVAL_COL_GAP
         assert abs((plus.x + plus.width / 2) - stub) < 0.51
         assert abs((bus.start + bus.length) - stub) < 0.51
 
@@ -339,7 +339,7 @@ class TestAddRemoveControls:
         ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])
         layout = spreadsheet.build(ed.state, _all_on(), held_vectors=ed.held_vectors)
         cells = {c.id: c for c in layout.cells}
-        sub = {line.id: line for line in layout.lines}["v:held:1"].pos
+        sub = {line.id: line for line in layout.lines}["v:held:1"].position
         grip, minus = cells["grip:held:1"], cells["held_minus:1"]
         assert abs((grip.x + grip.width / 2) - sub) < 0.51
         assert grip.y > minus.y + 0.5

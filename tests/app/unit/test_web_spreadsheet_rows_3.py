@@ -274,7 +274,7 @@ class TestRetuningChartsAndGenMap:
             service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
             interest=((-3, 2, 0),), held_vectors=((-1, 1, 0),))
         on = {c.id: c for c in layout.cells}
-        gridline = {line.id: line.pos for line in layout.lines if line.orientation == "v"}
+        gridline = {line.id: line.position for line in layout.lines if line.orientation == "v"}
         bw, cw = spreadsheet_constants.BRACKET_WIDTH, spreadsheet_constants.COLUMN_WIDTH
         elem = {"primes": "prime", "commas": "comma", "targets": "target",
                 "interest": "interest", "held": "held", "detempering": "detempering"}
