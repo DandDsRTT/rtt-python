@@ -132,7 +132,7 @@ html, body { overscroll-behavior-x: none; }
    at the same pane position it always had. */
 .rtt-colhead { position:absolute; top:var(--pad); left:var(--pad); right:var(--pad); z-index:4; overflow:hidden;
                background:#c0c0c0; box-sizing:border-box; box-shadow:0 1px 0 var(--seam-y,transparent); }
-.rtt-colhead-inner { position:absolute; top:0; left:0; will-change:transform; }
+.rtt-colhead-inner { position:absolute; top:0; left:0; }
 /* A top overscroll slides the body scroller bodily DOWN, baring the pane behind it as an empty band
    between the frozen column strip and the body. This layer sits BEHIND the scroller (first child of
    the pane, no z-index) holding a fixed twin of every full-height column rule; the bared band reveals
@@ -140,7 +140,12 @@ html, body { overscroll-behavior-x: none; }
    rides the same horizontal scroll as the column strip, so each twin sits exactly under its live rule
    at rest (hidden behind it) and only shows once the scroller pulls away. Pure backdrop — no input. */
 .rtt-colfill { position:absolute; left:var(--pad); right:0; bottom:0; overflow:hidden; pointer-events:none; }
-.rtt-colfill-inner { position:absolute; top:0; left:0; will-change:transform; }
+.rtt-colfill-inner { position:absolute; top:0; left:0; }
+/* will-change only WHILE scrolling (rtt-scrolling, set by freeze.js): a permanent will-change keeps these
+   strips on their own GPU layer at rest, and Chrome re-rasters that layer a beat out of sync with the body
+   under page-zoom — the column titles visibly trail the grid. Don't move it back onto the rules above. */
+.rtt-app.rtt-scrolling .rtt-colhead-inner,
+.rtt-app.rtt-scrolling .rtt-colfill-inner { will-change:transform; }
 /* The left mirror of .rtt-colfill: the row band is position:sticky, so a top overscroll slides it DOWN
    with the content and opens a gap below the fixed corner — breaking the frozen-left edge and baring
    the body's rules through it. This fixed grey strip sits behind the body at the frozen-column inset

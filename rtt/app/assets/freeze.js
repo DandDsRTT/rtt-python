@@ -88,7 +88,22 @@ window.rttFreeze = (function () {
   }
   function all() { fit(); update(); }
 
-  document.addEventListener('scroll', update, true);
+  // Promote the frozen strips to their own compositor layer only WHILE a body is actively scrolling (see
+  // .rtt-scrolling in the CSS) — a class added on the scrolled .rtt-app and cleared a short idle after the
+  // last scroll. Scoped to the scroll path (not resize) so a page-zoom never promotes them.
+  var scrollIdle = null;
+  function onScroll(e) {
+    update(e);
+    var t = e.target, app = t && t.closest ? t.closest('.rtt-app') : null;
+    if (app) app.classList.add('rtt-scrolling');
+    if (scrollIdle) clearTimeout(scrollIdle);
+    scrollIdle = setTimeout(function () {
+      scrollIdle = null;
+      var apps = document.querySelectorAll('.rtt-app.rtt-scrolling');
+      for (var i = 0; i < apps.length; i++) apps[i].classList.remove('rtt-scrolling');
+    }, 200);
+  }
+  document.addEventListener('scroll', onScroll, true);
   window.addEventListener('resize', all);
   // Re-fit when the grid resizes or the settings sidebar slides — neither fires a scroll or window-
   // resize event, but both animate a width: a render retransitions the board's width/height, and
