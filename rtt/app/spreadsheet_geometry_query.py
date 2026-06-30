@@ -173,7 +173,7 @@ def prime_left(geometry, p: int) -> float:
 def comma_left(geometry, resolved, c: int) -> float:
     gap = (
         V_SPLIT_GAP
-        if (resolved.unchanged.shown and 0 < resolved.dims.comma_count_shown <= c)
+        if (resolved.unchanged.shown and 0 < resolved.dimensions.comma_count_shown <= c)
         else 0
     )
     return (
@@ -188,8 +188,8 @@ def comma_left(geometry, resolved, c: int) -> float:
 def comma_value_pos(resolved, i: int) -> int:
     return (
         i
-        if i < resolved.dims.comma_count
-        else i + (resolved.dims.comma_count_shown - resolved.dims.comma_count)
+        if i < resolved.dimensions.comma_count
+        else i + (resolved.dimensions.comma_count_shown - resolved.dimensions.comma_count)
     )
 
 
@@ -262,10 +262,10 @@ def column_plus_x(geometry, resolved, column_key: str) -> float:
         matrix_x, matrix_width = matrix_span(geometry, resolved, column_key)
         return matrix_x + matrix_width / 2
     if column_key == "commas" and resolved.unchanged.shown:
-        if resolved.dims.comma_count_shown == 0:
+        if resolved.dimensions.comma_count_shown == 0:
             return geometry.commas_x + BRACKET_WIDTH + resolved.unchanged.empty_comma_width / 2
         return (
-            comma_left(geometry, resolved, resolved.dims.comma_count_shown - 1)
+            comma_left(geometry, resolved, resolved.dimensions.comma_count_shown - 1)
             + COLUMN_WIDTH
             + V_SPLIT_GAP / 2
         )
@@ -290,8 +290,8 @@ def tile_open(geometry, collapsed, row_key: str, column_key: str) -> bool:
 
 
 def column_token(resolved, group: str, i: int):
-    if group == "commas" and i >= resolved.dims.comma_count:
-        return f"u{i - resolved.dims.comma_count}"
+    if group == "commas" and i >= resolved.dimensions.comma_count:
+        return f"u{i - resolved.dimensions.comma_count}"
     pairs = resolved.column_ids.get(group)
     return i if pairs is None else pairs[i][0]
 
@@ -302,10 +302,10 @@ def pending_col_token(resolved, group: str):
 
 def pending_draft_idx(resolved, group: str):
     return {
-        "commas": (resolved.scalars.comma_draft or None, resolved.dims.comma_count),
-        "targets": (resolved.targets.pending, resolved.dims.target_count),
-        "held": (resolved.held.pending, resolved.dims.held_count),
-        "interest": (resolved.interest.pending, resolved.dims.interest_count),
+        "commas": (resolved.scalars.comma_draft or None, resolved.dimensions.comma_count),
+        "targets": (resolved.targets.pending, resolved.dimensions.target_count),
+        "held": (resolved.held.pending, resolved.dimensions.held_count),
+        "interest": (resolved.interest.pending, resolved.dimensions.interest_count),
     }.get(group)
 
 

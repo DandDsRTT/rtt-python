@@ -31,23 +31,23 @@ class TestWebResolved:
     def test_resolve_produces_the_domain_model_without_rendering(self):
         model = _resolve(Editor())
         assert isinstance(model, Resolved)
-        assert model.dims.dimensionality == 3
-        assert model.dims.rank == 2
+        assert model.dimensions.dimensionality == 3
+        assert model.dimensions.rank == 2
         assert model.targets.ratios[:3] == ("2/1", "3/1", "3/2")
 
     def test_resolved_is_immutable(self):
         model = _resolve(Editor())
         with pytest.raises(dataclasses.FrozenInstanceError):
-            model.dims = None
+            model.dimensions = None
         with pytest.raises(dataclasses.FrozenInstanceError):
-            model.dims.dimensionality = 0
+            model.dimensions.dimensionality = 0
 
     def test_resolve_matches_the_builders_resolution(self):
         ed = Editor()
         b = _builder(ed)
         model = _resolve(ed)
-        assert model.dims.dimensionality == b.resolved.dims.dimensionality
-        assert model.dims.target_count == b.resolved.dims.target_count
+        assert model.dimensions.dimensionality == b.resolved.dimensions.dimensionality
+        assert model.dimensions.target_count == b.resolved.dimensions.target_count
         assert model.targets.ratios == b.resolved.targets.ratios
         assert model.commas.ratios == b.resolved.commas.ratios
         assert model.tuning.tuning_map is b.resolved.tuning.tuning_map

@@ -65,7 +65,7 @@ class TestGeometryQuery:
     def test_resolved_dependent_query_functions_are_pure(self):
         g = SimpleNamespace(commas_x=90.0)
         r = SimpleNamespace(unchanged=SimpleNamespace(shown=True, empty_comma_width=5.0),
-                            dims=SimpleNamespace(comma_count=2, comma_count_shown=3))
+                            dimensions=SimpleNamespace(comma_count=2, comma_count_shown=3))
         assert query.comma_value_pos(r, 1) == 1
         assert query.comma_value_pos(r, 2) == 2 + (3 - 2)
         assert query.comma_left(g, r, 0) == 90.0 + BRACKET_WIDTH + 5.0
@@ -84,7 +84,7 @@ class TestGeometryQuery:
 
     def test_column_identity_queries_are_pure_over_resolved(self):
         r = SimpleNamespace(
-            dims=SimpleNamespace(comma_count=2, target_count=3, held_count=0, interest_count=0),
+            dimensions=SimpleNamespace(comma_count=2, target_count=3, held_count=0, interest_count=0),
             column_ids={"targets": [(7, "a"), (8, "b"), (9, "c")], "commas": [(0, "x"), (1, "y")]},
             scalars=SimpleNamespace(comma_draft=False),
             targets=SimpleNamespace(pending=None), held=SimpleNamespace(pending=None),
