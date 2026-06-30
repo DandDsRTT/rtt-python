@@ -51,7 +51,7 @@ class TestCanonicalGenerators:
         assert cells["symbol:canon:gens"].text == "𝐹⁻¹"
         assert cells["symbol:mapping:canongens"].text == "𝐹"
         assert cells["symbol:canon:canongens"].text == "𝐹⁻¹𝐹 = 𝐼"
-        assert cells["matlabel:row:canon:primes:0"].text == f"𝒎{SUBSCRIPT_C}₁"
+        assert cells["matrix_label:row:canon:primes:0"].text == f"𝒎{SUBSCRIPT_C}₁"
         assert cells["units:canon:primes"].text == f"units: {gesture_controller}/p"
         assert cells["units:canon:gens"].text == f"units: {gesture_controller}/g"
         assert cells["units:canon:canongens"].text == f"units: {gesture_controller}/{gesture_controller}"
@@ -68,9 +68,9 @@ class TestCanonicalGenerators:
         plain = {c.id: c for c in _layout().cells}
         assert plain["count:gens"].x == plain["header:gens"].x
 
-    def test_form_matrix_row_labels_get_a_balanced_matlabel_gutter(self):
+    def test_form_matrix_row_labels_get_a_balanced_matrix_label_gutter(self):
         cells = {c.id: c for c in _with(form_tiles=True, header_symbols=True).cells}
-        flabel, fbracket = cells["matlabel:row:mapping:canongens:0"], cells["bracket:finv:map:0:l"]
+        flabel, fbracket = cells["matrix_label:row:mapping:canongens:0"], cells["bracket:finv:map:0:l"]
         assert flabel.text == "𝒇₁"
         assert flabel.x + flabel.width <= fbracket.x, "the label sits left of (or up to) the { bracket, not over it"
         assert flabel.width > 0 and fbracket.x - flabel.x >= flabel.width
@@ -100,10 +100,10 @@ class TestCanonicalGenerators:
     def test_canonical_embedding_and_tuning_tiles_carry_their_column_index_headers(self):
         from rtt.app.grid_tables import SUBSCRIPT_C
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), form_tiles=True, header_symbols=True).cells}
-        assert cells["matlabel:col:projection:canongens:0"].text == f"𝐠{SUBSCRIPT_C}₁"
-        assert cells["matlabel:col:projection:canongens:1"].text == f"𝐠{SUBSCRIPT_C}₂"
-        assert cells["matlabel:col:tuning:canongens:0"].text == f"𝒈{SUBSCRIPT_C}₁"
-        assert cells["matlabel:col:tuning:canongens:1"].text == f"𝒈{SUBSCRIPT_C}₂"
+        assert cells["matrix_label:col:projection:canongens:0"].text == f"𝐠{SUBSCRIPT_C}₁"
+        assert cells["matrix_label:col:projection:canongens:1"].text == f"𝐠{SUBSCRIPT_C}₂"
+        assert cells["matrix_label:col:tuning:canongens:0"].text == f"𝒈{SUBSCRIPT_C}₁"
+        assert cells["matrix_label:col:tuning:canongens:1"].text == f"𝒈{SUBSCRIPT_C}₂"
 
     def test_generator_form_matrix_is_interactive(self):
         cells = {c.id: c for c in _with(form_tiles=True, plain_text_values=True).cells}

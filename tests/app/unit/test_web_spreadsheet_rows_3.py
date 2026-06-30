@@ -128,7 +128,7 @@ class TestHeldColumn:
                 assert cells[f"cell:mapped_detempering:{i}:{k}"].kind == "mapped"
         assert cells["symbol:mapping:detempering"].text == "\U0001D440D = \U0001D43C"
         assert cells["caption:mapping:detempering"].text == "mapped generator detempering"
-        assert cells["matlabel:col:mapping:detempering:0"].text == "\U0001D440\U0001D41D₁"
+        assert cells["matrix_label:col:mapping:detempering:0"].text == "\U0001D440\U0001D41D₁"
         assert cells["bracket:mapped_detempering:l"].text == spreadsheet_constants.GENMAP_BRACKETS[0]
         assert cells["ebktop:mapped_detempering:0"].kind == "ebktop"
         assert cells["ebkbrace:mapped_detempering:0"].kind == "ebkbrace"

@@ -47,7 +47,7 @@ class TestIntervalVectorsRow:
                 assert cells[f"cell:vector:primes:{i}:{k}"].kind == "mapped"
         assert cells["symbol:vectors:primes"].text == f"\U0001D440{J} = \U0001D43C"
         assert cells["caption:vectors:primes"].text == "JI mapping"
-        assert cells["matlabel:row:vectors:primes:0"].text == f"\U0001D48E{J}₁"
+        assert cells["matrix_label:row:vectors:primes:0"].text == f"\U0001D48E{J}₁"
         assert cells["ebktop:vector:primes"].kind == "ebktop"
         assert cells["ebkangle:vector:primes"].kind == "ebkangle", "the outer ⟩ foot (operator, not the } of M)"
         assert cells["bracket:vector:primes:0:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
@@ -126,7 +126,7 @@ class TestIntervalVectorsRow:
         cells = {c.id: c for c in layout.cells}
         for i in range(2):
             handle = cells[f"map_drag:{i}"]
-            label = cells[f"matlabel:row:mapping:primes:{i}"]
+            label = cells[f"matrix_label:row:mapping:primes:{i}"]
             assert handle.gen == i
             assert handle.y == cells[f"cell:mapping:{i}:0"].y
             assert handle.x + handle.width <= label.x
@@ -145,7 +145,7 @@ class TestIntervalVectorsRow:
         cells = {c.id: c for c in layout.cells}
         for i in range(2):
             handle = cells[f"int_drag:comma:{i}"]
-            label = cells[f"matlabel:col:vectors:commas:{i}"]
+            label = cells[f"matrix_label:col:vectors:commas:{i}"]
             vector0 = cells[f"cell:comma:0:{i}"]
             assert handle.comma == i and handle.x == label.x
             assert handle.y + handle.height <= label.y

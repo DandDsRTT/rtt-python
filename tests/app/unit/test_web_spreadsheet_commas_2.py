@@ -165,7 +165,7 @@ class TestOptimizationControls:
                                                  custom_prescaler=square).cells}
         assert on["symbol:complexity:targets"].text == "𝒄", "NOT '𝒄 = diag(𝑋)'"
         assert on["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹", "the generic reciprocal, not a matrix inverse"
-        assert on["matlabel:col:weight:targets:0"].text == "w₁ = c₁⁻¹"
+        assert on["matrix_label:col:weight:targets:0"].text == "w₁ = c₁⁻¹"
 
     def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls(self):
         off = {c.id for c in _with().cells}

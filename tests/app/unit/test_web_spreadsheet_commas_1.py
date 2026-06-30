@@ -110,12 +110,12 @@ class TestCommasColumn:
 
     def test_the_size_sensitizing_row_is_labelled_z_not_a_fourth_prime(self):
         lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, header_symbols=True).cells}
-        assert lils["matlabel:row:prescaling:primes:0"].text == "𝒍₁"
-        assert lils["matlabel:row:prescaling:primes:2"].text == "𝒍₃"
-        assert lils["matlabel:row:prescaling:primes:3"].text == "𝒛", "the size row — not 𝒍₄"
+        assert lils["matrix_label:row:prescaling:primes:0"].text == "𝒍₁"
+        assert lils["matrix_label:row:prescaling:primes:2"].text == "𝒍₃"
+        assert lils["matrix_label:row:prescaling:primes:3"].text == "𝒛", "the size row — not 𝒍₄"
         lp = {c.id: c for c in _with("minimax-S", weighting=True, symbols=True, header_symbols=True).cells}
-        assert lp["matlabel:row:prescaling:primes:2"].text == "𝒍₃"
-        assert "matlabel:row:prescaling:primes:3" not in lp
+        assert lp["matrix_label:row:prescaling:primes:2"].text == "𝒍₃"
+        assert "matrix_label:row:prescaling:primes:3" not in lp
 
     def test_size_factor_composes_the_size_sensitizing_matrix_with_each_base_prescaler(self):
         st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -250,7 +250,7 @@ class TestCommasColumn:
         expected = service.prescale_text(sum(pre[j] * comma[j] for j in range(3)))
         assert lils["cell:prescaling:commas:3:0"].text == expected
         assert lils["cell:prescaling:commas:3:0"].kind == "tuningvalue"
-        assert lils_sym["matlabel:row:prescaling:primes:3"].text == "𝒛", "the bare matrix's size row carries the 𝒛 row label (the size-sensitizing row, not a 4th prime 𝒍₄)"
+        assert lils_sym["matrix_label:row:prescaling:primes:3"].text == "𝒛", "the bare matrix's size row carries the 𝒛 row label (the size-sensitizing row, not a 4th prime 𝒍₄)"
 
     def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences(self):
         layout = spreadsheet.build(
@@ -323,7 +323,7 @@ class TestWeightingLabels:
              "alt_complexity": True, "generator_detempering": True}
         on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
         assert on["symbol:prescaling:detempering"].text == "𝐿D"
-        assert on["matlabel:col:prescaling:detempering:0"].text == "𝐿𝐝₁"
+        assert on["matrix_label:col:prescaling:detempering:0"].text == "𝐿𝐝₁"
 
     def test_size_factor_renames_prescaler_to_pretransformer_in_the_labels(self):
         lp = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True,
@@ -365,8 +365,8 @@ class TestWeightingLabels:
             tuning_scheme="TILT minimax-S").cells}
         assert on["symbol:prescaling:primes"].text == "𝑋"
         assert on["symbol:prescaling:commas"].text == "𝑋C"
-        assert on["matlabel:col:prescaling:detempering:0"].text == "𝑋𝐝₁"
-        assert on["matlabel:row:prescaling:primes:0"].text == "𝒙₁"
+        assert on["matrix_label:col:prescaling:detempering:0"].text == "𝑋𝐝₁"
+        assert on["matrix_label:row:prescaling:primes:0"].text == "𝒙₁"
 
     def test_returning_the_prescaler_to_its_shown_log_prime_diagonal_restores_the_L_awareness(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -513,9 +513,9 @@ class TestWeightingLabels:
     def test_outer_matrix_frame_hugs_the_cells_leaving_subrow_labels_outside(self):
         cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, symbols=True, header_symbols=True).cells}
         for top_id, foot_id, label_id, left_id, right_id in (
-            ("ebktop:primes", "ebkbrace:primes", "matlabel:row:mapping:primes:0",
+            ("ebktop:primes", "ebkbrace:primes", "matrix_label:row:mapping:primes:0",
              "bracket:map:0:l", "bracket:map:0:r"),
-            ("ebktop:prescaling", "ebkangle:prescaling", "matlabel:row:prescaling:primes:0",
+            ("ebktop:prescaling", "ebkangle:prescaling", "matrix_label:row:prescaling:primes:0",
              "bracket:prescaling:row:0:l", "bracket:prescaling:row:0:r"),
         ):
             top, foot = cells[top_id], cells[foot_id]

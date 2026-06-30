@@ -294,7 +294,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    numeric inherits, so naming the value containers covers their nested faces (the stacked/frac/dec
    parts, the per-value unit, the zoom clone — itself a .rtt-cell). The few SVG range labels carry
    .rtt-rangelabel directly. */
-.rtt-cell, .rtt-value, .rtt-count, .rtt-matlabel, .rtt-symbol, .rtt-plain-text, .rtt-plain-text-edit,
+.rtt-cell, .rtt-value, .rtt-count, .rtt-matrix-label, .rtt-symbol, .rtt-plain-text, .rtt-plain-text-edit,
 .rtt-ratio, .rtt-fraction, .rtt-stacked-main, .rtt-stacked-sub, .rtt-rangelabel, .rtt-preset-number,
 .rtt-caption, .rtt-example-cell {
   font-variant-numeric: tabular-nums lining-nums;
@@ -317,7 +317,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
 .rtt-opt-1line { white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }
 /* the all-interval mean damage relabels to the retuning magnitude ‖𝒓𝐿⁻¹‖dual(q), far wider than
-   the short ⟪𝐝⟫ₚ — shrink it (to the .rtt-matlabel-norm size used for the other wide ‖…‖q norm
+   the short ⟪𝐝⟫ₚ — shrink it (to the .rtt-matrix-label-norm size used for the other wide ‖…‖q norm
    labels) so it reads within and stays centred over its COLUMN_WIDTH value cell, overflowing symmetrically
    rather than clipping if it still spills. The selector is compounded (.rtt-symbol.rtt-opt-wide, not
    a bare .rtt-opt-wide) so it OUT-SPECIFIES .rtt-symbol's own font-size:15px, which is declared later
@@ -363,19 +363,19 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the per-row / per-column matrix label (𝒎ᵢ at the left of each mapping row, 𝐜ᵢ
    above each comma, 𝒕ᵢ above each tuned prime, …): same _math_html serif as .rtt-symbol
    but smaller, so the subscript reads at a glance without dominating the value below */
-.rtt-matlabel { width:100%; text-align:center; font-size:11px; color:#000; line-height:1;
+.rtt-matrix-label { width:100%; text-align:center; font-size:11px; color:#000; line-height:1;
               font-family:var(--rtt-serif); white-space:nowrap; }
 /* the shrink/wrap variant for any multi-token column label — the complexity row's
    q-norms (‖L𝐜ᵢ‖q) and equation-form headers carrying a space (cₙ = ‖L𝐭ₙ‖q, the
    all-interval weight's wₙ = cₙ⁻¹) — all much wider than a plain subscripted letter.
    Drop the font size so the labels don't collide and let them overflow the COLUMN_WIDTH cell
    width without clipping (overflow:visible). white-space:normal (overriding
-   .rtt-matlabel's nowrap) lets a space-bearing header WRAP at its space onto two stacked
+   .rtt-matrix-label's nowrap) lets a space-bearing header WRAP at its space onto two stacked
    lines (cₙ = / ‖L𝐭ₙ‖q, or wₙ = / cₙ⁻¹), as the mockup shows, instead of overlapping its
    neighbours. The bare auxiliary norms (‖L𝐜ᵢ‖q, …) are single tokens with no break
    point, so they stay one line. */
-.rtt-matlabel-norm { font-size:8px; overflow:visible; white-space:normal; }
-.rtt-matlabel sub { font-size:70%; vertical-align:sub; line-height:0; }
+.rtt-matrix-label-norm { font-size:8px; overflow:visible; white-space:normal; }
+.rtt-matrix-label sub { font-size:70%; vertical-align:sub; line-height:0; }
 /* the per-box "units: …" line below the caption, and the domain-units row/col labels.
    The unit VALUE is set in a SINGLE-STORY-g sans face (the mockup's distinct unit style):
    --rtt-units-sans self-hosts Jost (a geometric single-story-g face, see app.py) ahead of the
@@ -404,7 +404,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill { width:100%; height:100%; line-height:0; }
 /* the symbol + caption (and the units line) hold off their fade-in until the tile has expanded */
-.rtt-caption-cell, .rtt-symbol-cell, .rtt-units-cell, .rtt-matlabel-cell { animation-delay:var(--t); animation-fill-mode:backwards; }
+.rtt-caption-cell, .rtt-symbol-cell, .rtt-units-cell, .rtt-matrix-label-cell { animation-delay:var(--t); animation-fill-mode:backwards; }
 /* the preset chooser dropdowns: a compact bordered q-select that fills its
    PRESET_H cell, with a thin grey rule and a small caret — like the mockup */
 .rtt-preset { width:100%; }

@@ -50,11 +50,11 @@ class TestGeometryQuery:
     def test_gutter_and_coordinate_functions_are_pure_over_geometry(self):
         g = SimpleNamespace(
             primes_x=10.0, targets_x=20.0, content_x={"gens": 5.0},
-            matlabel_primes_width=2.0, matlabel_superspace_primes_width=3.0, matlabel_other_width={"gens": 1.0},
+            matrix_label_primes_width=2.0, matrix_label_superspace_primes_width=3.0, matrix_label_other_width={"gens": 1.0},
             row_handle_width=4.0, etpick_width=0, group_left={"targets": (100.0, 200.0)})
-        assert query.matlabel_gutter_width(g, "primes") == 2.0
-        assert query.matlabel_gutter_width(g, "superspace_primes") == 3.0
-        assert query.matlabel_gutter_width(g, "gens") == 1.0
+        assert query.matrix_label_gutter_width(g, "primes") == 2.0
+        assert query.matrix_label_gutter_width(g, "superspace_primes") == 3.0
+        assert query.matrix_label_gutter_width(g, "gens") == 1.0
         assert query.handle_gutter_width(g, "primes") == 4.0
         assert query.handle_gutter_width(g, "gens") == 0
         assert query.etpick_left_pad(g, "primes") == 0

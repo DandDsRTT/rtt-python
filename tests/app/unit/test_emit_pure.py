@@ -210,7 +210,7 @@ class TestEmitPure:
         assert isinstance(result, EmitResult)
         assert result.lines and result.blocks
         cell_ids = {c.id for c in result.cells}
-        assert any(i.startswith("matlabel:") for i in cell_ids)
+        assert any(i.startswith("matrix_label:") for i in cell_ids)
         full = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on())
         assert cell_ids <= {c.id for c in full.cells}
         assert {b.id for b in result.blocks} <= {b.id for b in full.blocks}

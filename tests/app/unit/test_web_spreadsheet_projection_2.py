@@ -233,10 +233,10 @@ class TestProjectionVColumn:
 
     def test_projection_v_column_labels_are_v_and_lambda(self):
         cells = {c.id: c for c in _with(projection=True, symbols=True, header_symbols=True).cells}
-        assert [cells[f"matlabel:col:vectors:commas:{i}"].text for i in range(3)] == ["𝐯₁", "𝐯₂", "𝐯₃"], "the C|U split is the vertical bar, so every V sub-column is labelled 𝐯ᵢ (not a 𝐜/𝐮 split)"
-        assert cells["matlabel:col:mapping:commas:2"].text == "𝑀𝐯₃"
+        assert [cells[f"matrix_label:col:vectors:commas:{i}"].text for i in range(3)] == ["𝐯₁", "𝐯₂", "𝐯₃"], "the C|U split is the vertical bar, so every V sub-column is labelled 𝐯ᵢ (not a 𝐜/𝐮 split)"
+        assert cells["matrix_label:col:mapping:commas:2"].text == "𝑀𝐯₃"
         assert cells["symbol:scaling_factors:commas"].text == "𝝀"
-        assert [cells[f"matlabel:col:scaling_factors:commas:{i}"].text for i in range(3)] == ["𝜆₁", "𝜆₂", "𝜆₃"]
+        assert [cells[f"matrix_label:col:scaling_factors:commas:{i}"].text for i in range(3)] == ["𝜆₁", "𝜆₂", "𝜆₃"]
 
     def test_projection_prescaling_and_complexity_rows_span_v(self):
         cells = {c.id: c for c in _with("minimax-S", projection=True, weighting=True).cells}
@@ -314,14 +314,14 @@ class TestProjectionDrafts:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = {**settings.defaults(), "projection": True, "header_symbols": True}
         c = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None]).cells}
-        assert c["matlabel:col:vectors:commas:0"].x == c["cell:comma:0:0"].x
-        assert c["matlabel:col:vectors:commas:1"].x == c["cell:unchanged:0:0"].x
-        assert c["matlabel:col:vectors:commas:2"].x == c["cell:unchanged:0:1"].x
-        assert "matlabel:col:vectors:commas:3" not in c
-        assert c["matlabel:col:vectors:commas:1"].x != c["cell:comma:0:1"].x
-        assert c["matlabel:col:projection:commas:1"].x == c["cell:projection_vectors:0:u0"].x
+        assert c["matrix_label:col:vectors:commas:0"].x == c["cell:comma:0:0"].x
+        assert c["matrix_label:col:vectors:commas:1"].x == c["cell:unchanged:0:0"].x
+        assert c["matrix_label:col:vectors:commas:2"].x == c["cell:unchanged:0:1"].x
+        assert "matrix_label:col:vectors:commas:3" not in c
+        assert c["matrix_label:col:vectors:commas:1"].x != c["cell:comma:0:1"].x
+        assert c["matrix_label:col:projection:commas:1"].x == c["cell:projection_vectors:0:u0"].x
         rest = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
-        assert rest["matlabel:col:vectors:commas:1"].x == rest["cell:unchanged:0:0"].x
+        assert rest["matrix_label:col:vectors:commas:1"].x == rest["cell:unchanged:0:0"].x
 
     def test_comma_add_drop_zone_does_not_occlude_the_unchanged_grips(self):
         def overlap(a, b):
