@@ -196,7 +196,7 @@ def build_colgrip(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     _, lst, tail = cell_box.id.split(":")
     wrap.on("dragover", js_handler="(e) => e.preventDefault()")
     if tail == "add":
-        wrap.classes("rtt-colgrip rtt-coldrop")
+        wrap.classes("rtt-column-grip rtt-column-drop")
         wrap.on(
             "dragenter.prevent",
             lambda _=None, which=lst: reconciler._cell_box.on_drag_enter(which, None),
@@ -204,7 +204,7 @@ def build_colgrip(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
         wrap.on("drop.prevent", lambda _=None, which=lst: reconciler._cell_box.on_drop(which, None))
         return
     index = cell_box.comma
-    wrap.classes("rtt-drag-handle rtt-colgrip").props("draggable=true")
+    wrap.classes("rtt-drag-handle rtt-column-grip").props("draggable=true")
     wrap.on(
         "dragstart", lambda _=None, which=lst, i=index: reconciler._cell_box.on_drag_start(which, i)
     )

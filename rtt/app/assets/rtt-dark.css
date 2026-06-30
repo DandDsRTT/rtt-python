@@ -70,7 +70,7 @@ body.rtt-dark [stroke="#1a1a1a"] { stroke:#8d949d; }
 /* ── surfaces ──────────────────────────────────────────────────────────────────────────────── */
 /* the deepest surface: the grid pane and its frozen title bands */
 body.rtt-dark .rtt-app,
-body.rtt-dark .rtt-colhead,
+body.rtt-dark .rtt-column-head,
 body.rtt-dark .rtt-corner,
 body.rtt-dark .rtt-rowband { background:#1f2329; }
 /* the raised panels: the settings sidebar (spans the chrome + drawer), the title tile, and the grey
@@ -132,7 +132,7 @@ body.rtt-dark .rtt-decimal-cell .rtt-cell-input-field .q-field__control { backgr
    normal tooltips, which are the same grey in both themes, so it needs no dark rule. */
 body.rtt-dark .rtt-zoom-tile { background:#272c33; box-shadow:0 3px 12px rgba(0,0,0,.6); }
 /* the row/column titles, the per-value symbols & matrix labels, captions, units */
-body.rtt-dark .rtt-colheader,
+body.rtt-dark .rtt-column-header,
 body.rtt-dark .rtt-row-label,
 body.rtt-dark .rtt-symbol,
 body.rtt-dark .rtt-matrix-label,

@@ -80,7 +80,7 @@ def _drop_on_row(reconciler, index: int) -> None:
 
 def build_int_drag(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     group = cell_box.id.split(":")[1]
-    wrap.classes("rtt-drag-handle rtt-col-handle").props("draggable=true")
+    wrap.classes("rtt-drag-handle rtt-column-handle").props("draggable=true")
     wrap.on(
         "dragstart",
         lambda _=None, g=group, index=cell_box.comma: _begin_col_drag(reconciler, g, index),
