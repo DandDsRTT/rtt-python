@@ -187,7 +187,7 @@ class Scalars:
 
 @dataclass(frozen=True)
 class Labels:
-    col_labels: object
+    column_labels: object
     row_labels: object
     captions: object
     prescaling_symbols: object
@@ -215,7 +215,7 @@ class Resolved:
     flags: Flags
     scalars: Scalars
     complexities: object
-    col_ids: object
+    column_ids: object
 
 
 def _dims(b) -> Dims:
@@ -331,7 +331,7 @@ def _unchanged(b) -> Unchanged:
 
 def _labels(b) -> Labels:
     return Labels(
-        col_labels=b.col_labels,
+        column_labels=b.column_labels,
         row_labels=b.row_labels,
         captions=terminology.substitute_captions(b.effective_captions, b.terminology_mode),
         prescaling_symbols=b.prescaling_symbols,
@@ -458,5 +458,5 @@ def freeze(draft) -> Resolved:
         flags=_flags(draft),
         scalars=_scalars(draft),
         complexities=draft.complexities,
-        col_ids=draft._col_ids,
+        column_ids=draft._col_ids,
     )

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.spreadsheet_constants import (
     BRACKET_W,
-    COL_W,
+    COLUMN_WIDTH,
     FRAME_GAP,
     FRAME_H,
     INTERVAL_COL_GAP,
@@ -58,9 +58,9 @@ class TestGeometryQuery:
         assert query.handle_gutter_w(g, "primes") == 4.0
         assert query.handle_gutter_w(g, "gens") == 0
         assert query.etpick_left_pad(g, "primes") == 0
-        assert query.target_left(g, 1) == 20.0 + BRACKET_W + COL_W + INTERVAL_COL_GAP
+        assert query.target_left(g, 1) == 20.0 + BRACKET_W + COLUMN_WIDTH + INTERVAL_COL_GAP
         assert query.prime_left(g, 0) == 10.0 + query.outer_gutter_w(g, "primes") + BRACKET_W
-        assert query.sub_axis_x(g, "targets", 1) == 200.0 + COL_W / 2
+        assert query.sub_axis_x(g, "targets", 1) == 200.0 + COLUMN_WIDTH / 2
 
     def test_resolved_dependent_query_functions_are_pure(self):
         g = SimpleNamespace(commas_x=90.0)
@@ -69,15 +69,15 @@ class TestGeometryQuery:
         assert query.comma_value_pos(r, 1) == 1
         assert query.comma_value_pos(r, 2) == 2 + (3 - 2)
         assert query.comma_left(g, r, 0) == 90.0 + BRACKET_W + 5.0
-        assert query.comma_left(g, r, 3) == 90.0 + BRACKET_W + 5.0 + 3 * COL_W + V_SPLIT_GAP
+        assert query.comma_left(g, r, 3) == 90.0 + BRACKET_W + 5.0 + 3 * COLUMN_WIDTH + V_SPLIT_GAP
 
     def test_openness_predicates_are_pure_over_geometry_and_collapsed(self):
-        g = SimpleNamespace(col_x={"primes": 0.0, "targets": 0.0}, rows={"mapping": None},
+        g = SimpleNamespace(column_x={"primes": 0.0, "targets": 0.0}, rows={"mapping": None},
                             declared_tiles={("mapping", "primes")})
         collapsed = frozenset({"col:targets", "row:nope", "tile:mapping:primes"})
-        assert query.col_open(g, collapsed, "primes") is True
-        assert query.col_open(g, collapsed, "targets") is False
-        assert query.col_open(g, collapsed, "absent") is False
+        assert query.column_open(g, collapsed, "primes") is True
+        assert query.column_open(g, collapsed, "targets") is False
+        assert query.column_open(g, collapsed, "absent") is False
         assert query.row_open(g, collapsed, "mapping") is True
         assert query.tile_open(g, collapsed, "mapping", "primes") is False
         assert query.tile_open(g, frozenset(), "mapping", "primes") is True
@@ -85,12 +85,12 @@ class TestGeometryQuery:
     def test_column_identity_queries_are_pure_over_resolved(self):
         r = SimpleNamespace(
             dims=SimpleNamespace(comma_count=2, target_count=3, held_count=0, interest_count=0),
-            col_ids={"targets": [(7, "a"), (8, "b"), (9, "c")], "commas": [(0, "x"), (1, "y")]},
+            column_ids={"targets": [(7, "a"), (8, "b"), (9, "c")], "commas": [(0, "x"), (1, "y")]},
             scalars=SimpleNamespace(comma_draft=False),
             targets=SimpleNamespace(pending=None), held=SimpleNamespace(pending=None),
             interest=SimpleNamespace(pending=None))
-        assert query.col_token(r, "targets", 1) == 8
-        assert query.col_token(r, "commas", 3) == "u1"
+        assert query.column_token(r, "targets", 1) == 8
+        assert query.column_token(r, "commas", 3) == "u1"
         assert query.pending_draft_idx(r, "targets") == (None, 3)
         assert query.pending_draft_idx(r, "absent") is None
 

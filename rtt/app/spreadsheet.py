@@ -60,7 +60,7 @@ class _GridBuilder(Resolver):
             freeze_x=geometry.node_edge + GAP - PAD,
             freeze_y=geometry.branch_top_y + GAP + GRIP_BAND - PAD,
             right_overhang=right_overhang,
-            identities=self.resolved.col_ids,
+            identities=self.resolved.column_ids,
             approach_box=approach_box,
             pretransform=bool(geometry.size_factor) or self.resolved.scalars.prescaler_is_matrix,
         )

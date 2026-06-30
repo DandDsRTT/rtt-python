@@ -182,7 +182,7 @@ def _ebk_grid_convention(b, layout, row_key, column_key):
     bands (matrix_frame's ebktop/ebkbrace/ebkangle), per-column ket marks and bracket glyphs.
     Cell-id shape disambiguates: a per-column mark / per-row stacked bracket ends in ``:<int>``,
     a spanning matrix_frame band or an outer list wrap does not."""
-    cx, cw = b.geometry.col_x[column_key], b.geometry.col_w[column_key]
+    cx, cw = b.geometry.column_x[column_key], b.geometry.column_width[column_key]
 
     def in_tile(c):
         if not (cx - 2 <= c.x + c.width / 2 <= cx + cw + 2):

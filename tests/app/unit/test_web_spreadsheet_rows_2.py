@@ -40,7 +40,7 @@ class TestInterestTilesAndFolds:
         layout = _with_interest(_INTEREST[:1])
         cells = {c.id: c for c in layout.cells}
         blocks = {b.id: b for b in layout.blocks}
-        content_w = 2 * spreadsheet_constants.BRACKET_W + 1 * spreadsheet_constants.COL_W
+        content_w = 2 * spreadsheet_constants.BRACKET_W + 1 * spreadsheet_constants.COLUMN_WIDTH
         floor = max(spreadsheet_text._min_width_for_lines(grid_tables.CAPTIONS[(rk, "interest")], spreadsheet_constants.MAX_CAPTION_LINES)
                     for rk in ("vectors", "mapping", "tuning", "just", "retune"))
         hug_w = max(content_w, floor)
@@ -545,17 +545,17 @@ class TestRowAndColumnLabels:
         assert on["optimization:mean_damage"].y < on["optimization:mean_damage:symbol"].y
         assert (on["optimization:power"].y < on["optimization:power:symbol"].y
                 < on["optimization:power:caption"].y)
-        assert on["optimization:mean_damage"].width == spreadsheet_constants.COL_W
-        assert on["optimization:power"].width == spreadsheet_constants.COL_W
+        assert on["optimization:mean_damage"].width == spreadsheet_constants.COLUMN_WIDTH
+        assert on["optimization:power"].width == spreadsheet_constants.COLUMN_WIDTH
         mean_damage_col_x = box.x + spreadsheet_constants.OPT_PAD_L
         assert on["optimization:mean_damage:symbol"].x == mean_damage_col_x
         assert on["optimization:mean_damage:symbol"].width == spreadsheet_constants.OPT_MEAN_DAMAGE_W
         assert on["optimization:mean_damage:caption"].x == mean_damage_col_x
-        assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet_constants.OPT_MEAN_DAMAGE_W - spreadsheet_constants.COL_W) / 2
+        assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet_constants.OPT_MEAN_DAMAGE_W - spreadsheet_constants.COLUMN_WIDTH) / 2
         mean_damage_r = mean_damage_col_x + spreadsheet_constants.OPT_MEAN_DAMAGE_W
         pow_col_x = mean_damage_r + spreadsheet_constants.OPT_COL_GAP
         assert on["optimization:power:caption"].x == pow_col_x
-        assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPT_POW_CAP_W - spreadsheet_constants.COL_W) / 2
+        assert on["optimization:power"].x == pow_col_x + (spreadsheet_constants.OPT_POW_CAP_W - spreadsheet_constants.COLUMN_WIDTH) / 2
         cap = on["optimization:power:caption"]
         assert cap.x > mean_damage_r and cap.x + cap.width < box.x + box.width
         assert box.width >= spreadsheet_constants.OPT_BOX_MIN_W
@@ -645,7 +645,7 @@ class TestRowAndColumnLabels:
         c0, c1 = cells["cell:vector:targets:0:0"], cells["cell:vector:targets:1:0"]
         sep = cells["sep:vector:targets:1"]
         full = cells["cell:mapped:0:0"]
-        assert c0.width == full.width == spreadsheet_constants.COL_W
+        assert c0.width == full.width == spreadsheet_constants.COLUMN_WIDTH
         assert c0.x == full.x
         assert c1.x - (c0.x + c0.width) == spreadsheet_constants.INTERVAL_COL_GAP
         assert c0.x + c0.width <= sep.x

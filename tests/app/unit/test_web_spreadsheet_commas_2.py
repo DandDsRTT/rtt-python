@@ -453,7 +453,7 @@ class TestCustomWeightRow:
         assert spreadsheet_text._wrap_lines(name, cap.width) <= spreadsheet_constants.MAX_CAPTION_LINES
         assert cap.height == spreadsheet_text._wrap_lines(name, cap.width) * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
         assert cap.height <= spreadsheet_constants.MAX_CAPTION_LINES * spreadsheet_constants.CAPTION_LINE + spreadsheet_constants.BAND_GAP
-        content_w = 2 * spreadsheet_constants.BRACKET_W + spreadsheet_constants.COL_W
+        content_w = 2 * spreadsheet_constants.BRACKET_W + spreadsheet_constants.COLUMN_WIDTH
         assert cells["header:commas"].width > content_w
         assert cap.width == cells["header:commas"].width
         assert cap.y >= cells["tuning:comma:0"].y + spreadsheet_constants.ROW_H
@@ -468,7 +468,7 @@ class TestCustomWeightRow:
         by_id = {line.id: line for line in layout.lines}
         assert blocks["block:commas"].width > narrow["block:commas"].width
         plus, bus = cells["comma_plus"], by_id["bus:commas:top"]
-        stub = by_id["v:comma:0"].pos + spreadsheet_constants.COL_W
+        stub = by_id["v:comma:0"].pos + spreadsheet_constants.COLUMN_WIDTH
         assert abs((plus.x + plus.width / 2) - stub) < 0.51, "the + tracks the fan, not the tile edge"
         assert abs((bus.start + bus.length) - stub) < 0.51
 
@@ -478,7 +478,7 @@ class TestCustomWeightRow:
                      "(just) comma basis interval size list"):
             width = spreadsheet_text._min_width_for_lines(name, 2)
             assert spreadsheet_text._wrap_lines(name, width) <= 2
-            assert spreadsheet_text._wrap_lines(name, 2 * spreadsheet_constants.BRACKET_W + spreadsheet_constants.COL_W) > 2
+            assert spreadsheet_text._wrap_lines(name, 2 * spreadsheet_constants.BRACKET_W + spreadsheet_constants.COLUMN_WIDTH) > 2
 
     def test_short_captions_span_the_full_band_so_css_can_centre_them(self):
         cells = {c.id: c for c in _with(names=True).cells}

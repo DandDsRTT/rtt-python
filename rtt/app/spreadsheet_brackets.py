@@ -8,7 +8,7 @@ from rtt.app.layout import CellBox
 from rtt.app.spreadsheet_constants import (
     BRACE_H,
     BRACKET_W,
-    COL_W,
+    COLUMN_WIDTH,
     FRAME_GAP,
     FRAME_H,
     FRAME_OVERHANG,
@@ -98,7 +98,7 @@ def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_
         return
     foot = _ebk_foot(resolved, row_key, column_key, outer=False)
     if resolved.flags.ebk:
-        mark_w = COL_W - 2 * MARK_INSET
+        mark_w = COLUMN_WIDTH - 2 * MARK_INSET
         for c in range(n_cols):
             mark_x = left(c) + MARK_INSET
             pend = (c == pending_col)
@@ -107,7 +107,7 @@ def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_
     elif n_cols:
         if column_key == "interest":
             for c in range(n_cols):
-                transpose_mark(cells, geometry, f"{name}:{c}", left(c) + COL_W - MARK_INSET, row_key, pending=(c == pending_col))
+                transpose_mark(cells, geometry, f"{name}:{c}", left(c) + COLUMN_WIDTH - MARK_INSET, row_key, pending=(c == pending_col))
         else:
             matrix_x, matrix_width = query.matrix_span(geometry, resolved, column_key)
             transpose_mark(cells, geometry, name, matrix_x + matrix_width, row_key)
@@ -115,7 +115,7 @@ def vector_list_marks(cells, resolved, geometry, context, row_key, name, column_
         return
     sep_y, sep_h = query.separator_span(resolved, geometry, row_key)
     for c in range(1, n_cols):
-        cells.append(CellBox(f"sep:{name}:{c}", (left(c - 1) + COL_W + left(c)) / 2 - SEP_W / 2, sep_y, SEP_W, sep_h, "vbar"))
+        cells.append(CellBox(f"sep:{name}:{c}", (left(c - 1) + COLUMN_WIDTH + left(c)) / 2 - SEP_W / 2, sep_y, SEP_W, sep_h, "vbar"))
 
 
 def transpose_mark(cells, geometry, name, x, row_key, pending: bool = False) -> None:
@@ -128,7 +128,7 @@ def v_split_bars(cells, resolved, geometry, context, accum) -> None:
         return
     x = query.comma_left(geometry, resolved, resolved.dims.comma_count_shown) - V_SPLIT_GAP / 2 - SEP_W / 2
     u_left = query.comma_left(geometry, resolved, resolved.dims.comma_count_shown)
-    u_right = u_left + resolved.dims.unchanged_count * COL_W
+    u_right = u_left + resolved.dims.unchanged_count * COLUMN_WIDTH
     rows_with_u = set()
     for cell in accum:
         if u_left - 0.5 <= cell.x < u_right:

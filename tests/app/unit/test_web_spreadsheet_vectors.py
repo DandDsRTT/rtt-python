@@ -62,7 +62,7 @@ class TestIntervalVectorsRow:
     def test_interval_vectors_quantities_tile_shows_the_domain_basis_as_row_index(self):
         cells = {c.id: c for c in _layout().cells}
         assert [cells[f"basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
-        assert cells["basis:0"].width == spreadsheet_constants.COL_W == cells["prime:0"].width
+        assert cells["basis:0"].width == spreadsheet_constants.COLUMN_WIDTH == cells["prime:0"].width
         gen0 = cells["gen:0"]
         assert cells["basis:0"].x + cells["basis:0"].width / 2 == gen0.x + gen0.width / 2
         assert cells["basis:0"].y == cells["cell:comma:0:0"].y

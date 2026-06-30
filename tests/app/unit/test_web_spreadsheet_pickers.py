@@ -25,7 +25,7 @@ class TestSubPickerPlacement:
         for i in range(2):
             ep = cells[f"etpick:{i}"]
             assert ep.kind == "etpick" and ep.gen == i
-            assert ep.width == spreadsheet_constants.COL_W and ep.height == spreadsheet_constants.ROW_H
+            assert ep.width == spreadsheet_constants.COLUMN_WIDTH and ep.height == spreadsheet_constants.ROW_H
             assert ep.y == cells[f"cell:mapping:{i}:0"].y
             close_bracket = cells[f"bracket:map:{i}:r"]
             assert ep.x >= close_bracket.x + close_bracket.width
@@ -50,7 +50,7 @@ class TestSubPickerPlacement:
         cells = {c.id: c for c in _with(presets=True).cells}
         cp = cells["commapick:0"]
         assert cp.kind == "commapick" and cp.comma == 0
-        assert cp.width == spreadsheet_constants.COL_W and cp.height == spreadsheet_constants.ROW_H
+        assert cp.width == spreadsheet_constants.COLUMN_WIDTH and cp.height == spreadsheet_constants.ROW_H
         column_cell = next(c for cell_id, c in cells.items()
                            if cell_id.startswith("cell:comma:0:") and c.comma == 0)
         assert cp.x == column_cell.x

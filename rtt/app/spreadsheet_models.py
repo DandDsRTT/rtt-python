@@ -7,7 +7,7 @@ from typing import NamedTuple
 from rtt.app import service
 from rtt.app.grid_tables import (
     CAPTIONS,
-    COL_LABEL_LETTERS,
+    COLUMN_LABEL_LETTERS,
     PRESCALER_LETTER,
     ROW_LABEL_LETTERS,
     SUBSCRIPT_L,
@@ -106,7 +106,7 @@ class _PrescalerLabels:
     symbol: str
     equivalence: str
     prescaling_symbols: dict
-    col_labels: dict
+    column_labels: dict
     row_labels: dict
     effective_captions: dict
 
@@ -154,7 +154,7 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     return _PrescalerLabels(
         scheme_prescaler=scheme_prescaler, realized=realized, symbol=symbol, equivalence=equivalence,
         prescaling_symbols=prescaling_symbols,
-        col_labels={**COL_LABEL_LETTERS, **_prescaler_col_labels(symbol, show_equivalences, all_interval, show_superspace)},
+        column_labels={**COLUMN_LABEL_LETTERS, **_prescaler_col_labels(symbol, show_equivalences, all_interval, show_superspace)},
         row_labels=row_labels, effective_captions=effective_captions,
     )
 

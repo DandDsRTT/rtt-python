@@ -194,7 +194,7 @@ def resolve_ghost_mapped(inputs, draft):
 
 
 def resolve_col_ids(inputs, draft):
-    col_ids = {
+    column_ids = {
         name: assign_column_tokens(inputs.prev_ids.get(name), keys, claim_unmatched=claim)
         for name, keys, claim in (("targets", draft.targets, False),
                                   ("held", draft.held_ratios, False),
@@ -202,8 +202,8 @@ def resolve_col_ids(inputs, draft):
                                   ("commas", draft.comma_ratios, True),
                                   ("gens", tuple(tuple(row) for row in inputs.state.mapping), True))
     }
-    col_ids["detempering"] = col_ids["gens"]
-    return replace(draft, _col_ids=col_ids)
+    column_ids["detempering"] = column_ids["gens"]
+    return replace(draft, _col_ids=column_ids)
 
 
 class _Unchanged(NamedTuple):

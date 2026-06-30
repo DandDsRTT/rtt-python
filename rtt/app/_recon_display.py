@@ -54,7 +54,7 @@ def update_chart(reconciler, cell_box: spreadsheet.CellBox) -> None:
         cell_box.values,
         cell_box.indicator,
         cell_box.indicator_label,
-        cell_box.col_gap,
+        cell_box.column_gap,
     )
     if reconciler.handles(cell_box.id).display.chart_key != key:
         reconciler.cells[cell_box.id].display.html.set_content(
@@ -64,7 +64,7 @@ def update_chart(reconciler, cell_box: spreadsheet.CellBox) -> None:
                 cell_box.values,
                 cell_box.indicator,
                 cell_box.indicator_label,
-                cell_box.col_gap,
+                cell_box.column_gap,
             )
         )
         reconciler.cells[cell_box.id].display.chart_key = key

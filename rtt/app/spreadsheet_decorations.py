@@ -28,7 +28,7 @@ from rtt.app.grid_tables import (
 from rtt.app.layout import Block, CellBox, Line
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
-    COL_W,
+    COLUMN_WIDTH,
     MATLABEL_H,
     ROW_H,
     SYMBOL_H,
@@ -56,7 +56,7 @@ def _gridline(lines, lid, orientation, pos, start, length, *, dotted) -> None:
 
 
 def _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, key, prefix, n, center_open) -> None:
-    if key not in geometry.col_x:
+    if key not in geometry.column_x:
         return
     fanned_columns.add(key)
     dotted = f"col:{key}" in context.collapsed
@@ -99,11 +99,11 @@ def _emit_axes(lines, resolved, geometry, context) -> None:
     fanned_columns: set = set()
     for key in geometry.group_left:
         _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, key, geometry.group_elem[key], geometry.group_n[key],
-                     lambda i, k=key: geometry.group_left[k][i] + COL_W / 2)
-    for key in geometry.col_x:
+                     lambda i, k=key: geometry.group_left[k][i] + COLUMN_WIDTH / 2)
+    for key in geometry.column_x:
         if key in fanned_columns:
             continue
-        center_x = geometry.col_x[key] + geometry.col_w[key] / 2
+        center_x = geometry.column_x[key] + geometry.column_width[key] / 2
         _gridline(lines, f"trunk:{key}", "v", center_x, geometry.branch_top_y, geometry.total_h - geometry.branch_top_y,
                   dotted=f"col:{key}" in context.collapsed)
     right_bus_x = geometry.total_w - geometry.FAN
@@ -169,25 +169,25 @@ def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
 
 def _emit_matrix_col_labels(cells, resolved, geometry, context) -> None:
     group_count = _matlabel_group_count(resolved)
-    for (row_key, column_key), label in resolved.labels.col_labels.items():
+    for (row_key, column_key), label in resolved.labels.column_labels.items():
         if column_key not in group_count or row_key not in geometry.rows or geometry.rows[row_key].matrix_label_top is None:
             continue
         if not query.tile_open(geometry, context.collapsed, row_key, column_key):
             continue
-        col_label = label
+        column_label = label
         if (row_key, column_key) == ("weight", "targets") and geometry.all_interval_simplicity_weight:
-            col_label = functools.partial(query.weight_simplicity_header, resolved)
+            column_label = functools.partial(query.weight_simplicity_header, resolved)
         left = geometry.group_left[column_key]
         y = geometry.rows[row_key].matrix_label_top
         for i in range(group_count[column_key]):
-            glyph = col_label if callable(col_label) else query.form_subscripted(resolved, col_label, row_key, column_key)
+            glyph = column_label if callable(column_label) else query.form_subscripted(resolved, column_label, row_key, column_key)
             text = glyph(i) if callable(glyph) else f"{glyph}{_sub(i + 1)}"
             if resolved.unchanged.shown and column_key == "commas":
                 text = text.replace("𝐜", "𝐯")
             x = left[query.comma_value_pos(resolved, i)] if column_key == "commas" else left[i]
             cells.append(CellBox(
                 f"matlabel:col:{row_key}:{column_key}:{i}",
-                x, y, COL_W, MATLABEL_H,
+                x, y, COLUMN_WIDTH, MATLABEL_H,
                 "matlabel", text=text,
             ))
 
@@ -200,7 +200,7 @@ def _emit_matrix_labels(cells, resolved, geometry, context) -> None:
 
 
 def _panel(blocks, geometry, context, bid, column_key, row_key) -> None:
-    if column_key not in geometry.col_x or row_key not in geometry.rows:
+    if column_key not in geometry.column_x or row_key not in geometry.rows:
         return
     blocks.append(Block(bid, *query.panel_rect(geometry, context.collapsed, row_key, column_key)))
 
@@ -243,7 +243,7 @@ def _tile_groups(resolved, row_key, column_key):
 
 
 def _wash_segments(resolved, geometry, row_key, column_key):
-    if (row_key, column_key) == ("counts", "gens") and "canongens" in geometry.col_x:
+    if (row_key, column_key) == ("counts", "gens") and "canongens" in geometry.column_x:
         return [("gens", query.tile_box(geometry, "gens"), _tile_groups(resolved, "counts", "gens")),
                 ("canongens", query.tile_box(geometry, "canongens"), _tile_groups(resolved, "counts", "canongens"))]
     return [(column_key, query.tile_span_box(geometry, row_key, column_key), _tile_groups(resolved, row_key, column_key))]
@@ -269,7 +269,7 @@ def _wash_bands(resolved, geometry, context):
 
 
 def _emit_washes(blocks, resolved, geometry, context) -> None:
-    if not (geometry.col_x and geometry.rows):
+    if not (geometry.column_x and geometry.rows):
         return
     bands = _wash_bands(resolved, geometry, context)
     for bid, x, y, width, height, _ in bands:
@@ -312,17 +312,17 @@ def _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row
     base_symbol = query.form_subscripted(resolved, base_symbol, row_key, column_key)
     glyph = base_symbol if (resolved.flags.symbols or equiv) else ""
     if glyph or equiv:
-        cells.append(CellBox(f"symbol:{row_key}:{column_key}", geometry.col_x[column_key], center_y, geometry.col_w[column_key], SYMBOL_H, "symbol", text=glyph + equiv))
+        cells.append(CellBox(f"symbol:{row_key}:{column_key}", geometry.column_x[column_key], center_y, geometry.column_width[column_key], SYMBOL_H, "symbol", text=glyph + equiv))
     return center_y + SYMBOL_H
 
 
 def _emit_unchanged_counts_caption(cells, resolved, geometry, row_key, center_y) -> None:
-    comma_half_w = resolved.dims.comma_count * COL_W + resolved.unchanged.empty_comma_w
+    comma_half_w = resolved.dims.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_w
     if comma_half_w:
         comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_w else query.comma_left(geometry, resolved, 0)
         cells.append(CellBox("caption:counts:commas", comma_half_x, center_y, comma_half_w,
                              geometry.rows[row_key].caption, "caption", text="nullity"))
-    cells.append(CellBox("caption:counts:commas:u", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown), center_y, resolved.dims.unchanged_count * COL_W,
+    cells.append(CellBox("caption:counts:commas:u", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown), center_y, resolved.dims.unchanged_count * COLUMN_WIDTH,
                          geometry.rows[row_key].caption, "caption", text="unchanged interval count"))
 
 
@@ -343,7 +343,7 @@ def _emit_tile_units(cells, resolved, geometry, row_key, column_key) -> None:
         unit = _subscript_coord(unit, "p", resolved.labels.domain_label)
     if resolved.flags.units and unit:
         uy = geometry.rows[row_key].y + geometry.rows[row_key].height + geometry.rows[row_key].frame + geometry.rows[row_key].comma_picker + geometry.rows[row_key].symbol + geometry.rows[row_key].caption
-        cells.append(CellBox(f"units:{row_key}:{column_key}", geometry.col_x[column_key], uy, geometry.col_w[column_key], UNIT_H,
+        cells.append(CellBox(f"units:{row_key}:{column_key}", geometry.column_x[column_key], uy, geometry.column_width[column_key], UNIT_H,
                              "units", text=f"units: {unit}"))
 
 

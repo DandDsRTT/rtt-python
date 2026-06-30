@@ -93,10 +93,10 @@ def _chart_ticks(lo: float, hi: float) -> list[float]:
 
 
 def _bar_chart(
-    width: float, height: float, values, indicator=None, indicator_label="", col_gap=0
+    width: float, height: float, values, indicator=None, indicator_label="", column_gap=0
 ) -> str:
-    axis_x, col_w = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COL_W
-    pitch = col_w + col_gap
+    axis_x, column_width = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COLUMN_WIDTH
+    pitch = column_width + column_gap
     values = tuple(values)
     present = tuple(v for v in values if v is not None)
     ticks = _chart_ticks(min((*present, 0.0)), max((*present, 0.0)))
@@ -124,11 +124,11 @@ def _bar_chart(
         f'stroke="{BR_COLOR}" stroke-width="1"/>'
     )
     body.append(rect(axis_x, plot_top, 0.8, plot_bot - plot_top))
-    bar_width = col_w * _CHART_BAR_FRAC
+    bar_width = column_width * _CHART_BAR_FRAC
     for i, v in enumerate(values):
         if v is None:
             continue
-        center_x = axis_x + i * pitch + col_w / 2
+        center_x = axis_x + i * pitch + column_width / 2
         yv = y_of(v)
         top, bot = min(zero_y, yv), max(zero_y, yv)
         body.append(rect(center_x - bar_width / 2, top, bar_width, bot - top))
@@ -160,7 +160,7 @@ def _bar_chart_indicator(width, axis_x, y_of, indicator, indicator_label) -> lis
 
 
 def _range_chart(width: float, height: float, ranges, tunings=(), decimals: bool = True) -> str:
-    cx0, col_w = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COL_W
+    cx0, column_width = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COLUMN_WIDTH
     if not ranges:
         return svg(
             width,
@@ -184,7 +184,7 @@ def _range_chart(width: float, height: float, ranges, tunings=(), decimals: bool
 
     body = []
     for i, (lo, hi) in enumerate(ranges):
-        center_x = cx0 + i * col_w + col_w / 2
+        center_x = cx0 + i * column_width + column_width / 2
         if hi - lo < 1e-6:
             body.append(bar(center_x, mid, cap_half) + label(center_x, mid - 4, lo))
             continue

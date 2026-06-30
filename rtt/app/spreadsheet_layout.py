@@ -18,7 +18,7 @@ from rtt.app.spreadsheet_constants import (
     CAPTION_LINE,
     CHART_GAP,
     CHART_H,
-    COL_W,
+    COLUMN_WIDTH,
     COMMAPICK_GAP,
     ETPICK_GAP,
     ETPICK_W,
@@ -77,9 +77,9 @@ def compute_geometry(resolved, context):
     tiles, declared_tiles = declare_tiles(resolved, context, interest_tiles, held_tiles, detempering_tiles)
     geometry = Geometry(superspace_tuning_map=init_superspace_tuning(resolved, context),
                         tiles=tiles, declared_tiles=declared_tiles)
-    geometry, col_bands, content_x0 = _define_col_bands(geometry, resolved, context, LABEL_W)
+    geometry, column_bands, content_x0 = _define_col_bands(geometry, resolved, context, LABEL_W)
     geometry, row_bands = _define_row_bands(geometry, resolved)
-    geometry = _layout_columns(geometry, resolved, context, col_bands, content_x0)
+    geometry = _layout_columns(geometry, resolved, context, column_bands, content_x0)
     geometry, tile_extra = _resolve_tile_extras(geometry, resolved, context)
     geometry, rows_top_y = _init_row_geometry(geometry, HEADER_H)
     geometry = _resolve_plain_text_strings(geometry, resolved, context)
@@ -91,7 +91,7 @@ def _resolve_col_headers(resolved):
     domain_title = ("domain basis\nelements"
                     if service.domain_has_nonprimes(resolved.dims.elements)
                     else "domain\nprimes")
-    col_header = {"quantities": "interval ratios", "units": "units",
+    column_header = {"quantities": "interval ratios", "units": "units",
                   "canongens": "canonical\ngenerators", "gens": "generators",
                   "superspace_generators": "superspace\ngenerators", "superspace_primes": "superspace\nprimes",
                   "primes": domain_title, "detempering": "generator\ndetempering",
@@ -99,8 +99,8 @@ def _resolve_col_headers(resolved):
                   "held": "held\nintervals", "targets": "target\nintervals",
                   "interest": "other intervals\nof interest"}
     if resolved.unchanged.shown:
-        col_header["commas"] = "unrotated\nvector list"
-    return col_header
+        column_header["commas"] = "unrotated\nvector list"
+    return column_header
 
 
 def _matlabel_other_w(geometry, resolved):
@@ -120,7 +120,7 @@ def _define_col_bands(geometry, resolved, context, label_w):
     size_factor = service.complexity_size_factor(context.tuning_scheme)
     geometry = replace(
         geometry,
-        col_header=_resolve_col_headers(resolved),
+        column_header=_resolve_col_headers(resolved),
         matlabel_primes_w=((MATLABEL_W_SS if resolved.flags.superspace else MATLABEL_W)
                            if (resolved.flags.header_symbols and resolved.flags.temperament_tiles) else 0),
         matlabel_superspace_primes_w=MATLABEL_W_SSPRIMES if (resolved.flags.header_symbols and resolved.flags.superspace) else 0,
@@ -141,14 +141,14 @@ def _define_col_bands(geometry, resolved, context, label_w):
 
 def _col_bands(geometry, resolved, context):
     return (
-        ("quantities", COL_W, resolved.flags.interval_ratios, True),
-        ("units", COL_W, resolved.flags.domain_units, True),
-        ("canongens", 2 * BRACKET_W + resolved.dims.canonical_rank * COL_W + 2 * query.matlabel_gutter_w(geometry, "canongens"), resolved.flags.canon, True),
-        ("gens", 2 * BRACKET_W + resolved.dims.rank * COL_W + 2 * query.matlabel_gutter_w(geometry, "gens"), resolved.flags.temperament_tiles, True),
-        ("superspace_generators", 2 * BRACKET_W + resolved.dims.superspace_rank * COL_W, resolved.flags.superspace, True),
-        ("superspace_primes", 2 * BRACKET_W + resolved.dims.superspace_dimensionality * COL_W + 2 * geometry.matlabel_superspace_primes_w, resolved.flags.superspace, True),
-        ("primes", 2 * BRACKET_W + resolved.dims.dimensionality_shown * COL_W + 2 * query.outer_gutter_w(geometry, "primes"), resolved.flags.temperament_tiles, True),
-        ("detempering", 2 * BRACKET_W + resolved.dims.rank * COL_W, resolved.flags.generator_detempering, True),
+        ("quantities", COLUMN_WIDTH, resolved.flags.interval_ratios, True),
+        ("units", COLUMN_WIDTH, resolved.flags.domain_units, True),
+        ("canongens", 2 * BRACKET_W + resolved.dims.canonical_rank * COLUMN_WIDTH + 2 * query.matlabel_gutter_w(geometry, "canongens"), resolved.flags.canon, True),
+        ("gens", 2 * BRACKET_W + resolved.dims.rank * COLUMN_WIDTH + 2 * query.matlabel_gutter_w(geometry, "gens"), resolved.flags.temperament_tiles, True),
+        ("superspace_generators", 2 * BRACKET_W + resolved.dims.superspace_rank * COLUMN_WIDTH, resolved.flags.superspace, True),
+        ("superspace_primes", 2 * BRACKET_W + resolved.dims.superspace_dimensionality * COLUMN_WIDTH + 2 * geometry.matlabel_superspace_primes_w, resolved.flags.superspace, True),
+        ("primes", 2 * BRACKET_W + resolved.dims.dimensionality_shown * COLUMN_WIDTH + 2 * query.outer_gutter_w(geometry, "primes"), resolved.flags.temperament_tiles, True),
+        ("detempering", 2 * BRACKET_W + resolved.dims.rank * COLUMN_WIDTH, resolved.flags.generator_detempering, True),
         ("commas", commas_band_w(resolved, resolved.dims.comma_count_shown), resolved.flags.temperament_tiles, True),
         ("held", query.interval_list_w(resolved.dims.held_count_shown, "held"), resolved.flags.optimization, True),
         ("targets", query.interval_list_w(resolved.dims.target_count_shown, "targets"), resolved.flags.tuning_tiles and context.targets_in_use, True),
@@ -186,36 +186,36 @@ def _define_row_bands(geometry, resolved):
     return replace(geometry, present_caption_rows=present_caption_rows), row_bands
 
 
-def _layout_columns(geometry, resolved, context, col_bands, content_x0) -> Geometry:
-    col_x, col_w, content_w, col_collapsible, open_col_w = {}, {}, {}, {}, {}
+def _layout_columns(geometry, resolved, context, column_bands, content_x0) -> Geometry:
+    column_x, column_width, content_w, column_collapsible, open_column_width = {}, {}, {}, {}, {}
     x = content_x0
     first_present = True
     prev_title_oh = None
-    for key, natural, present, collapsible in col_bands:
+    for key, natural, present, collapsible in column_bands:
         if not present:
             continue
         collapsed_col = f"col:{key}" in context.collapsed
         hug_w = max(natural, caption_floor(geometry, resolved, key), control_floor(resolved, context, key), symbol_floor(geometry, resolved, key))
         if first_present:
-            hug_w = max(hug_w, _title_w(geometry.col_header[key]) - 2 * PAD)
+            hug_w = max(hug_w, _title_w(geometry.column_header[key]) - 2 * PAD)
             first_present = False
-        open_col_w[key] = hug_w
+        open_column_width[key] = hug_w
         if collapsed_col:
-            col_w[key] = content_w[key] = min(hug_w, _title_w(geometry.col_header[key]))
+            column_width[key] = content_w[key] = min(hug_w, _title_w(geometry.column_header[key]))
         else:
             content_w[key] = natural
-            col_w[key] = hug_w
-        col_collapsible[key] = collapsible
-        half_oh = _title_w(geometry.col_header[key]) / 2 - col_w[key] / 2
+            column_width[key] = hug_w
+        column_collapsible[key] = collapsible
+        half_oh = _title_w(geometry.column_header[key]) / 2 - column_width[key] / 2
         if prev_title_oh is not None:
             x += max(GAP, TITLE_MARGIN + prev_title_oh + half_oh)
-        col_x[key] = x
-        x += col_w[key]
+        column_x[key] = x
+        x += column_width[key]
         prev_title_oh = half_oh
-    content_x = {key: col_x[key] + (col_w[key] - content_w[key]) / 2 for key in col_x}
+    content_x = {key: column_x[key] + (column_width[key] - content_w[key]) / 2 for key in column_x}
     return replace(
-        geometry, col_x=col_x, col_w=col_w, content_w=content_w, col_collapsible=col_collapsible,
-        open_col_w=open_col_w, total_w=x + GAP, content_x=content_x,
+        geometry, column_x=column_x, column_width=column_width, content_w=content_w, column_collapsible=column_collapsible,
+        open_column_width=open_column_width, total_w=x + GAP, content_x=content_x,
         primes_x=content_x.get("primes"), commas_x=content_x.get("commas"),
         targets_x=content_x.get("targets"), interest_x=content_x.get("interest"),
         held_x=content_x.get("held"), detempering_x=content_x.get("detempering"),
@@ -225,7 +225,7 @@ def _layout_columns(geometry, resolved, context, col_bands, content_x0) -> Geome
 
 def _init_row_geometry(geometry, header_h):
     branch_top_y = header_h + (GAP - TOGGLE) / 2 + TOGGLE
-    geometry = replace(geometry, header_y=0, col_node_y=header_h + (GAP - TOGGLE) / 2,
+    geometry = replace(geometry, header_y=0, column_node_y=header_h + (GAP - TOGGLE) / 2,
                        branch_top_y=branch_top_y, FAN=(GAP - PAD) / 2)
     return geometry, branch_top_y + GAP + GRIP_BAND
 
@@ -246,10 +246,10 @@ def _layout_rows(geometry, resolved, context, row_bands, tile_extra, rows_top_y)
 
 def _row_interval_handle(geometry, resolved, context, key, folded):
     return (key == "vectors" and not folded and context.settings.get("drag_to_combine")
-            and ((resolved.dims.comma_count >= 2 and query.col_open(geometry, context.collapsed, "commas"))
-                 or (resolved.dims.target_count >= 2 and not resolved.scalars.all_interval and query.col_open(geometry, context.collapsed, "targets"))
-                 or (resolved.dims.held_count >= 2 and query.col_open(geometry, context.collapsed, "held"))
-                 or (resolved.dims.interest_count >= 2 and query.col_open(geometry, context.collapsed, "interest"))))
+            and ((resolved.dims.comma_count >= 2 and query.column_open(geometry, context.collapsed, "commas"))
+                 or (resolved.dims.target_count >= 2 and not resolved.scalars.all_interval and query.column_open(geometry, context.collapsed, "targets"))
+                 or (resolved.dims.held_count >= 2 and query.column_open(geometry, context.collapsed, "held"))
+                 or (resolved.dims.interest_count >= 2 and query.column_open(geometry, context.collapsed, "interest"))))
 
 
 def _compute_row_band(geometry, resolved, context, key, natural, collapsible, label, tile_extra, show_charts, y):
@@ -278,7 +278,7 @@ def _compute_row_band(geometry, resolved, context, key, natural, collapsible, la
                 if (resolved.flags.form_controls and not resolved.flags.presets
                     and key in BANDS["form_chooser"].rows and not folded) else 0)
     comma_picker = (COMMAPICK_GAP + ROW_H) if (key == "vectors" and resolved.flags.presets
-                                       and query.col_open(geometry, context.collapsed, "commas")
+                                       and query.column_open(geometry, context.collapsed, "commas")
                                        and (resolved.dims.comma_count > 0 or resolved.commas.pending is not None) and not folded) else 0
     plain_text = plain_text_band(geometry, key, folded)
     symbol += BAND_GAP if symbol else 0
@@ -336,7 +336,7 @@ def _group_geometry_fields(geometry, resolved):
 
 def _init_group_geometry(geometry, resolved, context) -> Geometry:
     geometry = replace(geometry, **_group_geometry_fields(geometry, resolved))
-    plus_stub_x = {column_key: query.col_plus_x(geometry, resolved, column_key)
+    plus_stub_x = {column_key: query.column_plus_x(geometry, resolved, column_key)
                    for column_key in ("gens", "primes", "commas", "targets", "interest", "held")
                    if query.plus_shows(geometry, resolved, context.collapsed, context.state, column_key)}
     row_plus_y = {}
@@ -349,14 +349,14 @@ def _init_group_geometry(geometry, resolved, context) -> Geometry:
 
 def _resolve_tile_extras(geometry, resolved, context):
     gtm_chart = (resolved.flags.tuning_ranges and resolved.flags.tuning_tiles and "row:tuning" not in context.collapsed
-                 and query.col_open(geometry, context.collapsed, "gens") and "tile:tuning:gens" not in context.collapsed)
+                 and query.column_open(geometry, context.collapsed, "gens") and "tile:tuning:gens" not in context.collapsed)
     gtm_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
-    lbox_ctrl = resolved.flags.lbox_show and query.col_open(geometry, context.collapsed, "superspace_primes" if resolved.flags.superspace else "primes") and not resolved.flags.presets
+    lbox_ctrl = resolved.flags.lbox_show and query.column_open(geometry, context.collapsed, "superspace_primes" if resolved.flags.superspace else "primes") and not resolved.flags.presets
     lbox_extra = (RANGE_GAP + control_region_band_h(PRESET_H + CAPTION_LINE)) if lbox_ctrl else 0
-    cbox_ctrl = resolved.flags.cbox_show and query.col_open(geometry, context.collapsed, "targets")
+    cbox_ctrl = resolved.flags.cbox_show and query.column_open(geometry, context.collapsed, "targets")
     cbox_extra = (RANGE_GAP + control_region_band_h(ROW_H + resolved.scalars.ctrl_symbol_h + 3 * CAPTION_LINE)) if cbox_ctrl else 0
     opt_ctrl = (resolved.flags.optimization and "row:damage" not in context.collapsed
-                and query.col_open(geometry, context.collapsed, "targets") and "tile:damage:targets" not in context.collapsed)
+                and query.column_open(geometry, context.collapsed, "targets") and "tile:damage:targets" not in context.collapsed)
     mean_damage_caption = "retuning magnitude" if resolved.scalars.all_interval else "power mean"
     if context.tuning_optimized:
         mean_damage_caption = f"minimized {mean_damage_caption}"
@@ -364,12 +364,12 @@ def _resolve_tile_extras(geometry, resolved, context):
     opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + resolved.scalars.ctrl_symbol_h
                   + opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if opt_ctrl else 0)
     show_approach = (service.domain_has_nonprimes(resolved.dims.elements)
-                     and "row:damage" not in context.collapsed and query.col_open(geometry, context.collapsed, "targets")
+                     and "row:damage" not in context.collapsed and query.column_open(geometry, context.collapsed, "targets")
                      and "tile:damage:targets" not in context.collapsed)
     approach_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H) if show_approach else 0
     slope_ctrl = (resolved.flags.weighting
                   and "row:weight" not in context.collapsed
-                  and query.col_open(geometry, context.collapsed, "targets") and "tile:weight:targets" not in context.collapsed)
+                  and query.column_open(geometry, context.collapsed, "targets") and "tile:weight:targets" not in context.collapsed)
     slope_locked = slope_ctrl and (service.is_all_interval(context.tuning_scheme)
                                    or resolved.scalars.custom_weights_active)
     slope_extra = (RANGE_GAP + control_region_band_h(PRESET_H + CAPTION_LINE)) if slope_ctrl else 0

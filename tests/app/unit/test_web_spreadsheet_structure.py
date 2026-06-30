@@ -224,7 +224,7 @@ class TestFreezeAndStructure:
                                             ("comma_plus", "commas", "v:comma:0", 0),
                                             ("interest_plus", "interest", "v:interest:0", spreadsheet_constants.INTERVAL_COL_GAP / 2)):
             plus, bus = cells[plus_id], by_id[f"bus:{col}:top"]
-            stub = by_id[last_sub].pos + spreadsheet_constants.COL_W + gap
+            stub = by_id[last_sub].pos + spreadsheet_constants.COLUMN_WIDTH + gap
             assert abs((plus.x + plus.width / 2) - stub) < 0.51
             assert abs((plus.y + plus.height / 2) - bus.pos) < 0.51
             assert abs((bus.start + bus.length) - stub) < 0.51
@@ -278,7 +278,7 @@ class TestAddRemoveControls:
         cells = {c.id: c for c in layout.cells}
         by_id = {line.id: line for line in layout.lines}
         plus, bus, last_sub = cells["gen_plus"], by_id["bus:gens:top"], by_id["v:gen:1"]
-        stub = last_sub.pos + spreadsheet_constants.COL_W
+        stub = last_sub.pos + spreadsheet_constants.COLUMN_WIDTH
         assert abs((plus.x + plus.width / 2) - stub) < 0.51
         assert abs((plus.y + plus.height / 2) - bus.pos) < 0.51
         assert abs((bus.start + bus.length) - stub) < 0.51
@@ -313,7 +313,7 @@ class TestAddRemoveControls:
         assert k >= 2
         assert all(f"target_minus:{j}" in cells for j in range(k))
         plus, bus, last_sub = cells["target_plus"], by_id["bus:targets:top"], by_id[f"v:target:{k - 1}"]
-        stub = last_sub.pos + spreadsheet_constants.COL_W + spreadsheet_constants.INTERVAL_COL_GAP
+        stub = last_sub.pos + spreadsheet_constants.COLUMN_WIDTH + spreadsheet_constants.INTERVAL_COL_GAP
         assert abs((plus.x + plus.width / 2) - stub) < 0.51
         assert abs((bus.start + bus.length) - stub) < 0.51
 

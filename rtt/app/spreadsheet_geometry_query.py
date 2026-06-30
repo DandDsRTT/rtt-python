@@ -16,7 +16,7 @@ from rtt.app.spreadsheet_constants import (
     BRACE_H,
     BRACKET_W,
     CAPTION_LINE,
-    COL_W,
+    COLUMN_WIDTH,
     FRAME_GAP,
     FRAME_H,
     FRAME_OVERHANG,
@@ -139,13 +139,13 @@ def content_box(geometry, key: str):
 
 
 def tile_box(geometry, key: str):
-    return geometry.col_x[key], geometry.col_w[key]
+    return geometry.column_x[key], geometry.column_width[key]
 
 
 def tile_span_box(geometry, row_key: str, column_key: str):
-    if (row_key, column_key) == ("counts", "gens") and "canongens" in geometry.col_x:
-        x = geometry.col_x["canongens"]
-        return x, geometry.col_x["gens"] + geometry.col_w["gens"] - x
+    if (row_key, column_key) == ("counts", "gens") and "canongens" in geometry.column_x:
+        x = geometry.column_x["canongens"]
+        return x, geometry.column_x["gens"] + geometry.column_width["gens"] - x
     return tile_box(geometry, column_key)
 
 
@@ -159,7 +159,7 @@ def matrix_span(geometry, resolved, group_key: str):
 
 
 def prime_left(geometry, p: int) -> float:
-    return geometry.primes_x + outer_gutter_w(geometry, "primes") + BRACKET_W + p * COL_W
+    return geometry.primes_x + outer_gutter_w(geometry, "primes") + BRACKET_W + p * COLUMN_WIDTH
 
 
 def comma_left(geometry, resolved, c: int) -> float:
@@ -168,7 +168,7 @@ def comma_left(geometry, resolved, c: int) -> float:
         if (resolved.unchanged.shown and 0 < resolved.dims.comma_count_shown <= c)
         else 0
     )
-    return geometry.commas_x + BRACKET_W + resolved.unchanged.empty_comma_w + c * COL_W + gap
+    return geometry.commas_x + BRACKET_W + resolved.unchanged.empty_comma_w + c * COLUMN_WIDTH + gap
 
 
 def comma_value_pos(resolved, i: int) -> int:
@@ -188,35 +188,39 @@ def interval_col_gap(column_key: str) -> float:
 
 
 def interval_list_w(n: int, column_key: str) -> float:
-    return 2 * BRACKET_W + n * COL_W + max(n - 1, 0) * interval_col_gap(column_key)
+    return 2 * BRACKET_W + n * COLUMN_WIDTH + max(n - 1, 0) * interval_col_gap(column_key)
 
 
 def target_left(geometry, j: int) -> float:
-    return geometry.targets_x + BRACKET_W + j * (COL_W + interval_col_gap("targets"))
+    return geometry.targets_x + BRACKET_W + j * (COLUMN_WIDTH + interval_col_gap("targets"))
 
 
 def interest_left(geometry, i: int) -> float:
-    return geometry.interest_x + BRACKET_W + i * (COL_W + interval_col_gap("interest"))
+    return geometry.interest_x + BRACKET_W + i * (COLUMN_WIDTH + interval_col_gap("interest"))
 
 
 def held_left(geometry, i: int) -> float:
-    return geometry.held_x + BRACKET_W + i * (COL_W + interval_col_gap("held"))
+    return geometry.held_x + BRACKET_W + i * (COLUMN_WIDTH + interval_col_gap("held"))
 
 
 def detempering_left(geometry, i: int) -> float:
-    return geometry.detempering_x + BRACKET_W + i * COL_W
+    return geometry.detempering_x + BRACKET_W + i * COLUMN_WIDTH
 
 
 def gen_left(geometry, g: int) -> float:
-    return geometry.content_x["gens"] + outer_gutter_w(geometry, "gens") + BRACKET_W + g * COL_W
+    return (
+        geometry.content_x["gens"] + outer_gutter_w(geometry, "gens") + BRACKET_W + g * COLUMN_WIDTH
+    )
 
 
 def canongen_left(geometry, g: int) -> float:
-    return geometry.canongens_x + outer_gutter_w(geometry, "canongens") + BRACKET_W + g * COL_W
+    return (
+        geometry.canongens_x + outer_gutter_w(geometry, "canongens") + BRACKET_W + g * COLUMN_WIDTH
+    )
 
 
 def superspace_gen_left(geometry, g: int) -> float:
-    return geometry.superspace_generators_x + BRACKET_W + g * COL_W
+    return geometry.superspace_generators_x + BRACKET_W + g * COLUMN_WIDTH
 
 
 def superspace_prime_left(geometry, p: int) -> float:
@@ -224,15 +228,15 @@ def superspace_prime_left(geometry, p: int) -> float:
         geometry.superspace_primes_x
         + outer_gutter_w(geometry, "superspace_primes")
         + BRACKET_W
-        + p * COL_W
+        + p * COLUMN_WIDTH
     )
 
 
 def sub_axis_x(geometry, column_key: str, i: int) -> float:
-    return geometry.group_left[column_key][i] + COL_W / 2
+    return geometry.group_left[column_key][i] + COLUMN_WIDTH / 2
 
 
-def col_plus_x(geometry, resolved, column_key: str) -> float:
+def column_plus_x(geometry, resolved, column_key: str) -> float:
     n = geometry.group_n[column_key]
     if n == 0:
         matrix_x, matrix_width = matrix_span(geometry, resolved, column_key)
@@ -242,14 +246,14 @@ def col_plus_x(geometry, resolved, column_key: str) -> float:
             return geometry.commas_x + BRACKET_W + resolved.unchanged.empty_comma_w / 2
         return (
             comma_left(geometry, resolved, resolved.dims.comma_count_shown - 1)
-            + COL_W
+            + COLUMN_WIDTH
             + V_SPLIT_GAP / 2
         )
-    return sub_axis_x(geometry, column_key, n - 1) + COL_W + interval_col_gap(column_key)
+    return sub_axis_x(geometry, column_key, n - 1) + COLUMN_WIDTH + interval_col_gap(column_key)
 
 
-def col_open(geometry, collapsed, key: str) -> bool:
-    return key in geometry.col_x and f"col:{key}" not in collapsed
+def column_open(geometry, collapsed, key: str) -> bool:
+    return key in geometry.column_x and f"col:{key}" not in collapsed
 
 
 def row_open(geometry, collapsed, key: str) -> bool:
@@ -260,20 +264,20 @@ def tile_open(geometry, collapsed, row_key: str, column_key: str) -> bool:
     return (
         (row_key, column_key) in geometry.declared_tiles
         and row_open(geometry, collapsed, row_key)
-        and col_open(geometry, collapsed, column_key)
+        and column_open(geometry, collapsed, column_key)
         and f"tile:{row_key}:{column_key}" not in collapsed
     )
 
 
-def col_token(resolved, group: str, i: int):
+def column_token(resolved, group: str, i: int):
     if group == "commas" and i >= resolved.dims.comma_count:
         return f"u{i - resolved.dims.comma_count}"
-    pairs = resolved.col_ids.get(group)
+    pairs = resolved.column_ids.get(group)
     return i if pairs is None else pairs[i][0]
 
 
 def pending_col_token(resolved, group: str):
-    return pending_token([token for token, _ in resolved.col_ids[group]])
+    return pending_token([token for token, _ in resolved.column_ids[group]])
 
 
 def pending_draft_idx(resolved, group: str):
@@ -332,7 +336,7 @@ def row_fans(geometry, key: str) -> bool:
 
 def plus_shows(geometry, resolved, collapsed, state, column_key: str) -> bool:
     if column_key in ("interest", "held"):
-        return col_open(geometry, collapsed, column_key) and (
+        return column_open(geometry, collapsed, column_key) and (
             row_open(geometry, collapsed, "quantities") or row_open(geometry, collapsed, "vectors")
         )
     if column_key == "targets":
@@ -379,7 +383,7 @@ def weight_simplicity_header(resolved, i: int) -> str:
 def control_dims(
     geometry, column_key: str, cap_w, label, scheme_button: bool = False, form_label=None
 ):
-    dropdown_w = max(40, min(geometry.col_w[column_key] - 2 * BOX_INNER, cap_w))
+    dropdown_w = max(40, min(geometry.column_width[column_key] - 2 * BOX_INNER, cap_w))
     label_h = CAPTION_LINE if label else 0
     box_h = 2 * BOX_INNER + PRESET_H + label_h
     box_h += (SCHEME_BUTTON_SQ + BOX_INNER) if scheme_button else 0
@@ -418,12 +422,12 @@ def plain_text_height(resolved, row_key: str, column_key: str):
 
 def panel_rect(geometry, collapsed, row_key: str, column_key: str):
     tile_c = f"tile:{row_key}:{column_key}" in collapsed
-    col_c = f"col:{column_key}" in collapsed or tile_c
+    column_c = f"col:{column_key}" in collapsed or tile_c
     row_c = f"row:{row_key}" in collapsed or tile_c
     tile_x, tile_width = tile_span_box(geometry, row_key, column_key)
     tile_height, tile_y = geometry.rows[row_key].tile_h, geometry.rows[row_key].tile_top
-    width, padding_x = (0, 0) if col_c else (tile_width, PAD)
+    width, padding_x = (0, 0) if column_c else (tile_width, PAD)
     height, padding_y = (0, 0) if row_c else (tile_height, PAD)
-    box_x = tile_x + tile_width / 2 if col_c else tile_x
+    box_x = tile_x + tile_width / 2 if column_c else tile_x
     box_y = tile_y + tile_height / 2 if row_c else tile_y
     return box_x - padding_x, box_y - padding_y, width + 2 * padding_x, height + 2 * padding_y

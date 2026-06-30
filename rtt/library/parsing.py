@@ -32,8 +32,8 @@ def parse_temperament_data(data: str | Temperament) -> Temperament:
     if _MULTIVECTOR_RE.search(data):
         raise ValueError(f"repeated (multivector) brackets are not a map/vector: {data!r}")
     row_match = _ROW_VECTOR_RE.search(data)
-    col_match = _COL_VECTOR_RE.search(data)
-    if row_match and col_match:
+    column_match = _COL_VECTOR_RE.search(data)
+    if row_match and column_match:
         raise ValueError(f"mixed bra/ket variance is not valid EBK: {data!r}")
     if is_covariant_ebk(data):
         variance = Variance.ROW

@@ -76,7 +76,7 @@ def resolve_prescaler_and_domain_labels(inputs, draft):
     return replace(
         draft, _scheme_prescaler=_p.scheme_prescaler, _realized_prescaler=_p.realized,
         prescaler_symbol=_p.symbol, prescaler_equivalence=_p.equivalence,
-        prescaling_symbols=_p.prescaling_symbols, col_labels=_p.col_labels, row_labels=_p.row_labels,
+        prescaling_symbols=_p.prescaling_symbols, column_labels=_p.column_labels, row_labels=_p.row_labels,
         effective_captions=_p.effective_captions,
         show_identity_objects=inputs.settings.get("identity_objects", False),
         standard_domain=service.is_standard_domain(draft.elements),

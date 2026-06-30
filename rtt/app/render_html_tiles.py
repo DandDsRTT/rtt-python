@@ -118,7 +118,7 @@ def _tile_fold_html() -> str:
     return _control_svg(_FOLD_GLYPH["unfold_less"])
 
 
-_TILE_CELL = spreadsheet_constants.COL_W
+_TILE_CELL = spreadsheet_constants.COLUMN_WIDTH
 _TILE_BR_W = 9
 _TILE_ENCLOSE = 5
 _TILE_CAP = 5

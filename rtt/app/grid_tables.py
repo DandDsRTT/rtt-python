@@ -235,7 +235,7 @@ ROW_LABEL_LETTERS = {
     ("superspace_vectors", "superspace_primes"): "𝒎" + SUBSCRIPT_J + SUBSCRIPT_L,
     ("superspace_projection", "superspace_primes"): f"𝒑{SUBSCRIPT_L}",
 }
-COL_LABEL_LETTERS = {
+COLUMN_LABEL_LETTERS = {
     ("mapping", "detempering"): "𝑀𝐝",
     ("scaling_factors", "commas"): "𝜆",
     ("projection", "commas"): "𝑃𝐯",
@@ -613,7 +613,7 @@ BANDS = {
         Band("symbol", _carrier_rows(SYMBOLS), SYMBOL_H),
         Band("caption", _carrier_rows(CAPTIONS)),
         Band("units", _carrier_rows(UNITS), UNIT_H),
-        Band("col_label", _carrier_rows(COL_LABEL_LETTERS) | {"prescaling", "complexity"}),
+        Band("col_label", _carrier_rows(COLUMN_LABEL_LETTERS) | {"prescaling", "complexity"}),
         Band("frame", frozenset({"mapping", "canon", "vectors", "prescaling",
                                  "superspace_vectors", "superspace_mapping", "superspace_projection", "projection"})),
         Band("chart", frozenset({"retune", "weight", "damage"})),
@@ -625,7 +625,7 @@ BANDS = {
 SYMBOLED_ROWS = BANDS["symbol"].rows
 CAPTIONED_ROWS = BANDS["caption"].rows
 UNITED_ROWS = BANDS["units"].rows
-COL_LABELED_ROWS = BANDS["col_label"].rows
+COLUMN_LABELED_ROWS = BANDS["col_label"].rows
 FRAMED_ROWS = BANDS["frame"].rows
 CHARTED_ROWS = BANDS["chart"].rows
 PRESET_ROWS = BANDS["preset"].rows

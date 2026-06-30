@@ -24,7 +24,7 @@ def canonical_form(t: Temperament) -> Temperament:
 
 
 def canonical_ma(matrix: Matrix) -> Matrix:
-    inner = matrix if all_zeros(matrix) else hnf(col_hermite_defactor(matrix))
+    inner = matrix if all_zeros(matrix) else hnf(column_hermite_defactor(matrix))
     return remove_unneeded_zero_lists(inner)
 
 
@@ -32,7 +32,7 @@ def canonical_ca(matrix: Matrix) -> Matrix:
     return rotate_180(canonical_ma(rotate_180(matrix)))
 
 
-def col_hermite_defactor(matrix: Matrix) -> Matrix:
+def column_hermite_defactor(matrix: Matrix) -> Matrix:
     rank = sp.Matrix(matrix).rank()
     inverse = sp.Matrix(_hermite_right_unimodular(matrix)).inv().tolist()
     return tuple(tuple(int(x) for x in inverse[i]) for i in range(rank))
