@@ -55,8 +55,8 @@ class TestCanonicalGenerators:
         assert cells["units:canon:primes"].text == f"units: {gesture_controller}/p"
         assert cells["units:canon:gens"].text == f"units: {gesture_controller}/g"
         assert cells["units:canon:canongens"].text == f"units: {gesture_controller}/{gesture_controller}"
-        assert cells["ucol:canon:0"].text == f"{gesture_controller}₁/"
-        assert cells["urow:canongens:0"].text == f"/{gesture_controller}₁"
+        assert cells["units_column:canon:0"].text == f"{gesture_controller}₁/"
+        assert cells["units_row:canongens:0"].text == f"/{gesture_controller}₁"
 
     def test_rank_count_merges_across_the_canonical_generators_and_generators_columns(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}
@@ -100,10 +100,10 @@ class TestCanonicalGenerators:
     def test_canonical_embedding_and_tuning_tiles_carry_their_column_index_headers(self):
         from rtt.app.grid_tables import SUBSCRIPT_C
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), form_tiles=True, header_symbols=True).cells}
-        assert cells["matrix_label:col:projection:canongens:0"].text == f"𝐠{SUBSCRIPT_C}₁"
-        assert cells["matrix_label:col:projection:canongens:1"].text == f"𝐠{SUBSCRIPT_C}₂"
-        assert cells["matrix_label:col:tuning:canongens:0"].text == f"𝒈{SUBSCRIPT_C}₁"
-        assert cells["matrix_label:col:tuning:canongens:1"].text == f"𝒈{SUBSCRIPT_C}₂"
+        assert cells["matrix_label:column:projection:canongens:0"].text == f"𝐠{SUBSCRIPT_C}₁"
+        assert cells["matrix_label:column:projection:canongens:1"].text == f"𝐠{SUBSCRIPT_C}₂"
+        assert cells["matrix_label:column:tuning:canongens:0"].text == f"𝒈{SUBSCRIPT_C}₁"
+        assert cells["matrix_label:column:tuning:canongens:1"].text == f"𝒈{SUBSCRIPT_C}₂"
 
     def test_generator_form_matrix_is_interactive(self):
         cells = {c.id: c for c in _with(form_tiles=True, plain_text_values=True).cells}
@@ -233,16 +233,16 @@ class TestCanonicalGenerators:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         row_off = {c.id for c in spreadsheet.build(base, collapsed={"row:tuning"}).cells}
         assert not any(c.startswith("toggle:tile:tuning:") for c in row_off)
-        col_off = {c.id for c in spreadsheet.build(base, collapsed={"col:primes"}).cells}
+        col_off = {c.id for c in spreadsheet.build(base, collapsed={"column:primes"}).cells}
         assert not any(c.endswith(":primes") and c.startswith("toggle:tile:") for c in col_off)
 
     def test_master_toggle_sits_in_the_top_left_node_corner(self):
         cells = {c.id: c for c in _layout().cells}
         master = cells["toggle:all"]
         assert master.x == cells["toggle:row:mapping"].x, "it shares the row toggles' x (the node column) and the column toggles' y (the # node row), so it lands in the corner where the two toggle lines converge"
-        assert master.y == cells["toggle:col:primes"].y
+        assert master.y == cells["toggle:column:primes"].y
         assert master.y < cells["toggle:row:mapping"].y
-        assert master.x < cells["toggle:col:primes"].x
+        assert master.x < cells["toggle:column:primes"].x
 
     def test_master_toggle_glyph_reflects_whether_the_whole_grid_is_collapsed(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -257,7 +257,7 @@ class TestCanonicalGenerators:
         layout = spreadsheet.build(base)
         after = spreadsheet_text.toggle_all_collapsed(layout, set())
         assert after == _foldable(layout)
-        assert {"row:mapping", "col:primes", "col:targets"} <= after
+        assert {"row:mapping", "column:primes", "column:targets"} <= after
 
     def test_toggle_all_expands_everything_when_fully_collapsed(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))

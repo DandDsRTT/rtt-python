@@ -401,7 +401,7 @@ RATIO_RECIPROCATE_HELP = (
 
 
 READONLY_KINDS: frozenset[str] = frozenset({
-    "prime", "colheader", "rowlabel", "mapped", "vector", "tuningvalue", "powerdisplay",
+    "prime", "columnheader", "rowlabel", "mapped", "vector", "tuningvalue", "powerdisplay",
     "genratio", "commaratio", "mathexpr", "plain_text", "plain_text_pending",
     "symbol", "matrix_label", "units", "caption", "count", "boxtitle",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "transpose", "vbar", "chart", "rangechart",
@@ -519,11 +519,11 @@ _KIND_HELP: dict[str, str] = {
     "held_minus": "Remove this held interval.",
     "target_plus": "Add a target interval to the list. (⌥/Alt+T)",
     "target_minus": "Remove this target interval from the list.",
-    "colgrip": (
+    "columngrip": (
         "Drag this interval to another list, or reorder it — drop onto the commas to temper it out."
     ),
     "rowtoggle": "Collapse or expand this row.",
-    "coltoggle": "Collapse or expand this column.",
+    "columntoggle": "Collapse or expand this column.",
     "tiletoggle": "Collapse or expand this tile.",
     "alltoggle": "Collapse or expand the entire grid.",
 }

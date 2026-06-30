@@ -289,7 +289,7 @@ def column_plus_x(geometry, resolved, column_key: str) -> float:
 
 
 def column_open(geometry, collapsed, key: str) -> bool:
-    return key in geometry.column_x and f"col:{key}" not in collapsed
+    return key in geometry.column_x and f"column:{key}" not in collapsed
 
 
 def row_open(geometry, collapsed, key: str) -> bool:
@@ -462,7 +462,7 @@ def plain_text_height(resolved, row_key: str, column_key: str):
 
 def panel_rect(geometry, collapsed, row_key: str, column_key: str):
     tile_c = f"tile:{row_key}:{column_key}" in collapsed
-    column_c = f"col:{column_key}" in collapsed or tile_c
+    column_c = f"column:{column_key}" in collapsed or tile_c
     row_c = f"row:{row_key}" in collapsed or tile_c
     tile_x, tile_width = tile_span_box(geometry, row_key, column_key)
     tile_height, tile_y = geometry.rows[row_key].tile_height, geometry.rows[row_key].tile_top

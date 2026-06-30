@@ -55,14 +55,14 @@ class TestFreezeAndStructure:
     def test_layout_reports_the_rightmost_title_overhang(self):
         layout = _layout()
         rightmost = max(c.x + c.width / 2 + spreadsheet_text._title_w(c.text) / 2
-                        for c in layout.cells if c.kind == "colheader")
+                        for c in layout.cells if c.kind == "columnheader")
         assert layout.right_overhang == rightmost - layout.width
         assert layout.right_overhang > 0
 
     def test_no_title_overhang_reports_zero(self):
         layout = _with(interest=False)
         rightmost = max(c.x + c.width / 2 + spreadsheet_text._title_w(c.text) / 2
-                        for c in layout.cells if c.kind == "colheader")
+                        for c in layout.cells if c.kind == "columnheader")
         assert rightmost < layout.width
         assert layout.right_overhang == 0
 
@@ -86,7 +86,7 @@ class TestFreezeAndStructure:
         _assert_freeze_partition(_layout())
 
     def test_freeze_bands_survive_collapsing_rows_and_columns(self):
-        collapsed = {"row:tuning", "row:mapping", "col:targets", "col:primes"}
+        collapsed = {"row:tuning", "row:mapping", "column:targets", "column:primes"}
         _assert_freeze_partition(spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))), collapsed=collapsed))
 
@@ -126,7 +126,7 @@ class TestFreezeAndStructure:
         cells = {c.id: c for c in spreadsheet.build(arch, s).cells}
         assert cells["header:primes"].text == "domain\nprimes"
         assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "7"]
-        assert cells["urow:primes:0"].text == "/p₁", "its coordinate label is p (true primes) too, not the basis-element b"
+        assert cells["units_row:primes:0"].text == "/p₁", "its coordinate label is p (true primes) too, not the basis-element b"
 
     def test_generator_ratios_are_listed_in_the_quantities_column(self):
         cells = {c.id: c for c in _layout().cells}
@@ -151,7 +151,7 @@ class TestFreezeAndStructure:
         assert cells["ebktop:selfmap:0"].kind == "ebktop"
         assert cells["ebkbrace:selfmap:0"].kind == "ebkbrace"
         assert cells["plain_text:mapping:gens"].text == "{[1 0} [0 1}]"
-        assert not any(c.startswith(("matrix_label:row:mapping:gens", "matrix_label:col:mapping:gens")) for c in cells)
+        assert not any(c.startswith(("matrix_label:row:mapping:gens", "matrix_label:column:mapping:gens")) for c in cells)
 
     def test_mapping_over_generators_identity_gated_off_by_default(self):
         cells = {c.id for c in _layout().cells}
@@ -329,10 +329,10 @@ class TestAddRemoveControls:
         ed.set_interest_vectors([(1, 1, -1)])
         cells = {c.id: c for c in spreadsheet.build(
             ed.state, _all_on(), interest=ed.interest_vectors, held_vectors=ed.held_vectors).cells}
-        assert cells["grip:held:0"].kind == "colgrip" and cells["grip:held:1"].kind == "colgrip"
+        assert cells["grip:held:0"].kind == "columngrip" and cells["grip:held:1"].kind == "columngrip"
         assert "grip:held:2" not in cells
-        assert cells["grip:held:add"].kind == "colgrip"
-        assert cells["grip:interest:0"].kind == "colgrip"
+        assert cells["grip:held:add"].kind == "columngrip"
+        assert cells["grip:interest:0"].kind == "columngrip"
 
     def test_a_drag_grip_rides_the_fan_band_below_the_minus(self):
         ed = Editor()

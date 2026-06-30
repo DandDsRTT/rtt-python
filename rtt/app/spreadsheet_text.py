@@ -158,7 +158,7 @@ def _fold_glyph(is_collapsed: bool) -> str:
 
 
 def _foldable_ids(cells) -> set:
-    return {c.id.split("toggle:", 1)[1] for c in cells if c.kind in ("rowtoggle", "coltoggle")}
+    return {c.id.split("toggle:", 1)[1] for c in cells if c.kind in ("rowtoggle", "columntoggle")}
 
 
 def toggle_all_collapsed(layout, collapsed) -> set:

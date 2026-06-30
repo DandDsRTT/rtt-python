@@ -32,7 +32,7 @@ class TestNonstandardDomain:
         VALUE_ROWS = ("quantities", "vectors", "units", "mapping", "tuning", "just", "retune",
                       "prescaling", "complexity", "projection", "scaling_factors",
                       "superspace_vectors", "superspace_mapping", "superspace_projection")
-        STRUCTURAL = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matrix_label", "colgrip", "int_drag"}
+        STRUCTURAL = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matrix_label", "columngrip", "int_drag"}
 
         def assert_draft_greened(b, lst, committed, minimum):
             layout = b.layout()
@@ -187,7 +187,7 @@ class TestNonstandardDomain:
 
     def test_superspace_columns_get_their_fold_toggles_in_the_header_band(self):
         cells = {c.id for c in _barbados_superspace().cells}
-        assert {"toggle:col:superspace_generators", "toggle:col:superspace_primes"} <= cells
+        assert {"toggle:column:superspace_generators", "toggle:column:superspace_primes"} <= cells
 
     def test_superspace_projection_row_renders_PL_over_the_superspace_primes(self):
         cells = {c.id: c for c in _barbados_projection().cells}
@@ -264,8 +264,8 @@ class TestSuperspaceProjection:
 
     def test_superspace_projection_units_column_reads_superspace_prime(self):
         cells = {c.id: c for c in _barbados_projection(domain_units=True).cells}
-        assert cells["ucol:superspace_projection:0"].text == "p₁/"
-        assert cells["ucol:superspace_projection:3"].text == "p₄/"
+        assert cells["units_column:superspace_projection:0"].text == "p₁/"
+        assert cells["units_column:superspace_projection:3"].text == "p₄/"
 
     def test_superspace_projection_row_carries_the_full_projected_tile_set(self):
         cells = {c.id: c for c in _barbados_projection(generator_detempering=True).cells}
@@ -398,7 +398,7 @@ class TestSuperspaceProjection:
         assert cells["plain_text:prescaling:primes"].kind == "plain_text"
         assert cells["plain_text:prescaling:primes"].text.startswith("⟨[") and cells["plain_text:prescaling:primes"].text.endswith("]")
         assert sum(1 for i in cells if i.startswith("matrix_label:row:prescaling:primes:")) == 0, "𝐿·B_Ls is a matrix of kets, so it takes COLUMN headers (one per domain element, like B_L), # NOT the bare prescaler's row headers; the bare prescaler (superspace-primes) keeps its dL row headers"
-        assert sum(1 for i in cells if i.startswith("matrix_label:col:prescaling:primes:")) == 3
+        assert sum(1 for i in cells if i.startswith("matrix_label:column:prescaling:primes:")) == 3
         assert sum(1 for i in cells if i.startswith("matrix_label:row:prescaling:superspace_primes:")) == 4
         assert "preset:prescaler" in cells
         assert abs(cells["preset:prescaler"].x - cells["header:superspace_primes"].x) < abs(cells["preset:prescaler"].x - cells["header:primes"].x)

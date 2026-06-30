@@ -78,19 +78,19 @@ def _title_edges(layout):
     return [(c.id.split("header:", 1)[1],
              c.x + c.width / 2 - spreadsheet_text._title_w(c.text) / 2,
              c.x + c.width / 2 + spreadsheet_text._title_w(c.text) / 2)
-            for c in sorted((c for c in layout.cells if c.kind == "colheader"), key=lambda c: c.x)]
+            for c in sorted((c for c in layout.cells if c.kind == "columnheader"), key=lambda c: c.x)]
 
 
 def _assert_freeze_partition(layout):
     fx, fy = layout.freeze_x, layout.freeze_y
     for cb in layout.cells:
-        if cb.kind in {"colheader", "coltoggle"}:
+        if cb.kind in {"columnheader", "columntoggle"}:
             assert cb.y + cb.height <= fy
         elif cb.kind in {"rowlabel", "rowtoggle"}:
             assert cb.x + cb.width <= fx
         elif cb.kind == "alltoggle":
             assert cb.y + cb.height <= fy and cb.x + cb.width <= fx
-        elif cb.kind.endswith(("plus", "minus")) or cb.kind == "colgrip":
+        elif cb.kind.endswith(("plus", "minus")) or cb.kind == "columngrip":
             assert cb.x < fx or cb.y < fy
         else:
             assert cb.x >= fx and cb.y >= fy
@@ -135,7 +135,7 @@ def _in_targets(cell_id):
 
 def _foldable(layout):
     return {c.id.split("toggle:", 1)[1] for c in layout.cells
-            if c.kind in ("rowtoggle", "coltoggle")}
+            if c.kind in ("rowtoggle", "columntoggle")}
 
 
 _EBK_OPEN, _EBK_CLOSE = "[⟨{", "]⟩}"

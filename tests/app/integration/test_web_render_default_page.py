@@ -148,8 +148,8 @@ class TestDefaultPage:
             assert default_page.find(marker=f"audioctrl:{ctrl}").elements
 
     @pytest.mark.parametrize("cell, region", [
-        ("header:gens", "colheadinner"),
-        ("toggle:col:targets", "colheadinner"),
+        ("header:gens", "columnheadinner"),
+        ("toggle:column:targets", "columnheadinner"),
         ("label:tuning", "rowband"),
         ("toggle:row:tuning", "rowband"),
         ("toggle:all", "corner"),
@@ -158,10 +158,10 @@ class TestDefaultPage:
         assert _renders_inside(default_page, cell, region)
 
     @pytest.mark.parametrize("cell, region", [
-        ("plus", "colheadinner"),
-        ("minus", "colheadinner"),
-        ("gen_plus", "colheadinner"),
-        ("target_plus", "colheadinner"),
+        ("plus", "columnheadinner"),
+        ("minus", "columnheadinner"),
+        ("gen_plus", "columnheadinner"),
+        ("target_plus", "columnheadinner"),
         ("map_plus", "rowband"),
         ("map_minus:0", "rowband"),
     ])
@@ -170,29 +170,29 @@ class TestDefaultPage:
 
     def test_body_cells_render_on_the_board_under_no_frozen_region(self, default_page: User) -> None:
         assert _renders_inside(default_page, "cell:mapping:0:0", "board")
-        for region in ("colheadinner", "rowband", "corner"):
+        for region in ("columnheadinner", "rowband", "corner"):
             assert not _renders_inside(default_page, "cell:mapping:0:0", region)
 
     def test_settings_frozen_header_plus_chrome_bar_matches_the_grid_column_strip_height(self, default_page: User) -> None:
         frozen = next(iter(default_page.find(marker="showfrozen").elements))
-        colhead = next(iter(default_page.find(marker="colhead").elements))
+        columnhead = next(iter(default_page.find(marker="columnhead").elements))
         assert frozen._style.get("height")
-        assert _px(frozen, "height") == _px(colhead, "height") - page_assets._CHROME_H
+        assert _px(frozen, "height") == _px(columnhead, "height") - page_assets._CHROME_H
 
     def test_grid_pane_hugs_the_grid_with_a_margin_all_round(self, default_page: User) -> None:
         layout = Editor().layout()
         pane = next(iter(default_page.find(marker="gridpane").elements))
         board = next(iter(default_page.find(marker="board").elements))
-        colhead = next(iter(default_page.find(marker="colhead").elements))
+        columnhead = next(iter(default_page.find(marker="columnhead").elements))
         assert _px(board, "width") == layout.width
         assert layout.right_overhang > 0
         assert _px(pane, "width") == _px(board, "width") + layout.right_overhang + 24
-        assert _px(pane, "height") == _px(board, "height") + _px(colhead, "height") + 24
+        assert _px(pane, "height") == _px(board, "height") + _px(columnhead, "height") + 24
 
     def test_settings_body_caps_below_the_window_so_it_doesnt_scroll_when_it_fits(self, default_page: User) -> None:
         scroll = next(iter(default_page.find(marker="showscroll").elements))
-        colhead = next(iter(default_page.find(marker="colhead").elements))
-        fy = _px(colhead, "height")
+        columnhead = next(iter(default_page.find(marker="columnhead").elements))
+        fy = _px(columnhead, "height")
         assert scroll._style.get("max-height") == f"calc(100dvh - {page_assets._PAD + fy}px)"
 
     @pytest.mark.parametrize("cell_id", _DEFAULT_HTML_CELLS)

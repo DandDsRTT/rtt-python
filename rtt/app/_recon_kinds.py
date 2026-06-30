@@ -63,7 +63,7 @@ def register_label_kinds(cell_kinds) -> None:
     cell_kinds["prime"] = _KindHandlers(_value_builder, value_kinds.update_label)
     cell_kinds["mapped"] = _KindHandlers(value_kinds.build_mapped, value_kinds.update_ratio)
     cell_kinds["vector"] = _KindHandlers(_value_builder, value_kinds.update_label)
-    cell_kinds["colheader"] = _KindHandlers(
+    cell_kinds["columnheader"] = _KindHandlers(
         value_kinds.label_builder("rtt-column-header"), value_kinds.update_label
     )
     cell_kinds["rowlabel"] = _KindHandlers(
@@ -84,7 +84,9 @@ def register_control_kinds(cell_kinds) -> None:
         choosers.build_scheme_button, choosers.update_scheme_button
     )
     cell_kinds["rowtoggle"] = _KindHandlers(choosers.build_foldtoggle, choosers.update_foldtoggle)
-    cell_kinds["coltoggle"] = _KindHandlers(choosers.build_foldtoggle, choosers.update_foldtoggle)
+    cell_kinds["columntoggle"] = _KindHandlers(
+        choosers.build_foldtoggle, choosers.update_foldtoggle
+    )
     cell_kinds["tiletoggle"] = _KindHandlers(choosers.build_foldtoggle, choosers.update_foldtoggle)
     cell_kinds["alltoggle"] = _KindHandlers(choosers.build_alltoggle, choosers.update_foldtoggle)
 
@@ -122,4 +124,4 @@ def register_button_kinds(cell_kinds) -> None:
     cell_kinds["held_plus"] = _KindHandlers(buttons.build_held_plus)
     cell_kinds["target_minus"] = _KindHandlers(buttons.build_target_minus)
     cell_kinds["target_plus"] = _KindHandlers(buttons.build_target_plus)
-    cell_kinds["colgrip"] = _KindHandlers(buttons.build_colgrip)
+    cell_kinds["columngrip"] = _KindHandlers(buttons.build_columngrip)

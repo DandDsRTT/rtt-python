@@ -145,7 +145,7 @@ class TestIntervalVectorsRow:
         cells = {c.id: c for c in layout.cells}
         for i in range(2):
             handle = cells[f"int_drag:comma:{i}"]
-            label = cells[f"matrix_label:col:vectors:commas:{i}"]
+            label = cells[f"matrix_label:column:vectors:commas:{i}"]
             vector0 = cells[f"cell:comma:0:{i}"]
             assert handle.comma == i and handle.x == label.x
             assert handle.y + handle.height <= label.y

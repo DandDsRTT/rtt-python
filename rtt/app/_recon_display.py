@@ -129,7 +129,7 @@ def update_mathcell(reconciler, cell_box: spreadsheet.CellBox) -> None:
     font = None
     if (
         cell_box.kind == "matrix_label"
-        and ":col:" in cell_box.id
+        and ":column:" in cell_box.id
         and "‖" not in cell_box.text
         and " " not in cell_box.text
     ):

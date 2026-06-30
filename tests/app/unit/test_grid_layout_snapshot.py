@@ -70,7 +70,7 @@ def _custom_weights():
 
 def _collapsed():
     return spreadsheet.build(
-        service.from_mapping(_MEANTONE), _maximized(), collapsed=frozenset({"col:primes", "row:prescaling"}),
+        service.from_mapping(_MEANTONE), _maximized(), collapsed=frozenset({"column:primes", "row:prescaling"}),
     )
 
 

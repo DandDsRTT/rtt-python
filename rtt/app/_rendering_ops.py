@@ -34,12 +34,12 @@ def size_panes(chrome, layout, freeze_x, freeze_y) -> None:
         f'data-base-w="{base_width}" data-base-h="{base_height}" data-fit-w="{fit_width}"'
     )
     chrome.board.style(f"width:{layout.width}px; height:{layout.height - freeze_y}px")
-    chrome.colhead.style(f"height:{freeze_y}px")
-    chrome.colhead_inner.style(f"width:{layout.width}px; height:{freeze_y}px")
+    chrome.columnhead.style(f"height:{freeze_y}px")
+    chrome.columnhead_inner.style(f"width:{layout.width}px; height:{freeze_y}px")
     chrome.corner.style(f"width:{freeze_x}px; height:{freeze_y}px")
     chrome.gridbody.style(f"top:{_PAD + freeze_y}px")
-    chrome.colfill.style(f"top:{_PAD + freeze_y}px")
-    chrome.colfill_inner.style(f"width:{layout.width}px; height:{layout.height}px")
+    chrome.columnfill.style(f"top:{_PAD + freeze_y}px")
+    chrome.columnfill_inner.style(f"width:{layout.width}px; height:{layout.height}px")
     chrome.rowfill.style(f"top:{_PAD + freeze_y}px; width:{freeze_x}px")
     chrome.rowband.style(f"width:{freeze_x}px; height:{layout.height - freeze_y}px")
     chrome.show_frozen.style(f"height:{max(0, freeze_y - _CHROME_H)}px")
@@ -79,9 +79,9 @@ def render_lines(r, layout, seen) -> None:
         if x1 >= freeze_x and y1 >= freeze_y:
             place_line(line, "", r._chrome.board, freeze_y)
             if line.orientation == "v" and y0 <= freeze_y and line.length > freeze_y:
-                place_line(line, "#fill", r._chrome.colfill_inner, freeze_y)
+                place_line(line, "#fill", r._chrome.columnfill_inner, freeze_y)
         if x1 >= freeze_x and y0 < freeze_y:
-            place_line(line, "#col", r._chrome.colhead_inner, 0)
+            place_line(line, "#col", r._chrome.columnhead_inner, 0)
         if x0 < freeze_x and y1 >= freeze_y:
             place_line(line, "#row", r._chrome.rowband, freeze_y)
 

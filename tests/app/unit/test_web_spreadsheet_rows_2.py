@@ -95,10 +95,10 @@ class TestInterestTilesAndFolds:
         assert "block:damage:interest" not in blocks
 
     def test_collapsing_interest_hides_its_cells_but_keeps_the_header(self):
-        coll = _with_interest(_INTEREST[:2], collapsed={"col:interest"})
+        coll = _with_interest(_INTEREST[:2], collapsed={"column:interest"})
         cids = {c.id for c in coll.cells}
         assert not any(c.startswith(("interest:", "cell:imapped:", "cell:interest:", "tuning:interest:")) for c in cids)
-        assert "header:interest" in cids and "toggle:col:interest" in cids
+        assert "header:interest" in cids and "toggle:column:interest" in cids
         assert "cell:mapped:0:0" in cids
 
     def test_interest_captions_match_the_mockup_names(self):
@@ -269,21 +269,21 @@ class TestInterestTilesAndFolds:
         assert on["matrix_label:row:mapping:primes:0"].text == "𝒎₁"
         assert on["matrix_label:row:mapping:primes:1"].text == "𝒎₂"
 
-        assert on["matrix_label:col:vectors:commas:0"].text == "𝐜₁"
-        assert on["matrix_label:col:vectors:targets:0"].text == "𝐭₁"
-        assert on["matrix_label:col:vectors:targets:7"].text == "𝐭₈"
+        assert on["matrix_label:column:vectors:commas:0"].text == "𝐜₁"
+        assert on["matrix_label:column:vectors:targets:0"].text == "𝐭₁"
+        assert on["matrix_label:column:vectors:targets:7"].text == "𝐭₈"
 
-        assert on["matrix_label:col:tuning:primes:0"].text == "𝒕₁"
-        assert on["matrix_label:col:tuning:primes:2"].text == "𝒕₃"
+        assert on["matrix_label:column:tuning:primes:0"].text == "𝒕₁"
+        assert on["matrix_label:column:tuning:primes:2"].text == "𝒕₃"
 
-        assert on["matrix_label:col:tuning:commas:0"].text == "𝒕𝐜₁"
-        assert on["matrix_label:col:mapping:commas:0"].text == "𝑀𝐜₁"
+        assert on["matrix_label:column:tuning:commas:0"].text == "𝒕𝐜₁"
+        assert on["matrix_label:column:mapping:commas:0"].text == "𝑀𝐜₁"
 
-        assert on["matrix_label:col:mapping:targets:0"].text == "𝐲₁", "The mapped target list Y is itself a list of vectors, so its column label is # the renamed bold-upright 𝐲 + subscript"
-        assert on["matrix_label:col:tuning:targets:0"].text == "a₁", "The six target SIZE lists hold SCALARS per cell, so each indexed label is the # bare PLAIN-ASCII letter (neither bold nor italic) — the bold form names the list # (𝐚, 𝐨, 𝐞, 𝒘, 𝐝, 𝒄); the indexed scalar is a/o/e/w/d/c. Plain ASCII passes through # _math_html as plain serif text, with the index subscripted via Unicode"
-        assert on["matrix_label:col:just:targets:0"].text == "o₁"
-        assert on["matrix_label:col:retune:targets:0"].text == "e₁"
-        assert on["matrix_label:col:damage:targets:0"].text == "d₁"
+        assert on["matrix_label:column:mapping:targets:0"].text == "𝐲₁", "The mapped target list Y is itself a list of vectors, so its column label is # the renamed bold-upright 𝐲 + subscript"
+        assert on["matrix_label:column:tuning:targets:0"].text == "a₁", "The six target SIZE lists hold SCALARS per cell, so each indexed label is the # bare PLAIN-ASCII letter (neither bold nor italic) — the bold form names the list # (𝐚, 𝐨, 𝐞, 𝒘, 𝐝, 𝒄); the indexed scalar is a/o/e/w/d/c. Plain ASCII passes through # _math_html as plain serif text, with the index subscripted via Unicode"
+        assert on["matrix_label:column:just:targets:0"].text == "o₁"
+        assert on["matrix_label:column:retune:targets:0"].text == "e₁"
+        assert on["matrix_label:column:damage:targets:0"].text == "d₁"
 
         assert not any(c.startswith("matrix_label:") for c in off), "Header symbols off drops every label (independent of the in-tile symbol/equivalence cells)"
 
@@ -299,10 +299,10 @@ class TestInterestTilesAndFolds:
         on = {c.id for c in _with(header_symbols=True).cells}
         assert {f"matrix_label:row:mapping:primes:{i}" for i in range(2)} <= on
         assert "matrix_label:row:mapping:primes:2" not in on
-        assert {f"matrix_label:col:vectors:targets:{j}" for j in range(8)} <= on
-        assert "matrix_label:col:vectors:targets:8" not in on
-        assert {f"matrix_label:col:tuning:primes:{p}" for p in range(3)} <= on
-        assert "matrix_label:col:tuning:primes:3" not in on
+        assert {f"matrix_label:column:vectors:targets:{j}" for j in range(8)} <= on
+        assert "matrix_label:column:vectors:targets:8" not in on
+        assert {f"matrix_label:column:tuning:primes:{p}" for p in range(3)} <= on
+        assert "matrix_label:column:tuning:primes:3" not in on
 
     def test_matrix_labels_only_emit_where_the_tile_is_open(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -310,12 +310,12 @@ class TestInterestTilesAndFolds:
         s["header_symbols"] = True
         cells = {c.id for c in spreadsheet.build(base, s, collapsed={"row:mapping"}).cells}
         assert not any(c.startswith("matrix_label:row:mapping:") for c in cells)
-        assert "matrix_label:col:vectors:commas:0" in cells
+        assert "matrix_label:column:vectors:commas:0" in cells
 
     def test_matrix_labels_sit_above_or_left_of_the_cells_they_label(self):
         on = {c.id: c for c in _with(header_symbols=True).cells}
-        assert on["matrix_label:col:tuning:primes:0"].x == on["tuning:prime:0"].x
-        assert on["matrix_label:col:tuning:primes:0"].y < on["tuning:prime:0"].y
+        assert on["matrix_label:column:tuning:primes:0"].x == on["tuning:prime:0"].x
+        assert on["matrix_label:column:tuning:primes:0"].y < on["tuning:prime:0"].y
         assert on["matrix_label:row:mapping:primes:0"].x < on["bracket:map:0:l"].x
         assert (on["matrix_label:row:mapping:primes:0"].y <= on["cell:mapping:0:0"].y
                 <= on["matrix_label:row:mapping:primes:0"].y + on["matrix_label:row:mapping:primes:0"].height)
@@ -328,10 +328,10 @@ class TestInterestTilesAndFolds:
         on = {c.id: c for c in layout.cells}
         blocks = {b.id: b for b in layout.blocks}
         for tile_block_id, frame_id, label_id in [
-            ("block:vector:commas", "vector:commas", "matrix_label:col:vectors:commas:0"),
-            ("block:vector:targets", "vector:targets", "matrix_label:col:vectors:targets:0"),
-            ("block:mapped", "mapped", "matrix_label:col:mapping:targets:0"),
-            ("block:mapped_comma", "mapped_comma", "matrix_label:col:mapping:commas:0"),
+            ("block:vector:commas", "vector:commas", "matrix_label:column:vectors:commas:0"),
+            ("block:vector:targets", "vector:targets", "matrix_label:column:vectors:targets:0"),
+            ("block:mapped", "mapped", "matrix_label:column:mapping:targets:0"),
+            ("block:mapped_comma", "mapped_comma", "matrix_label:column:mapping:commas:0"),
         ]:
             label = on[label_id]
             bracket_top = on[f"bracket:{frame_id}:l"].y
@@ -349,13 +349,13 @@ class TestInterestTilesAndFolds:
 class TestRowAndColumnLabels:
     def test_col_labels_sit_above_the_top_frame_in_framed_rows(self):
         on = {c.id: c for c in _with(header_symbols=True).cells}
-        assert on["matrix_label:col:mapping:targets:0"].y + on["matrix_label:col:mapping:targets:0"].height \
+        assert on["matrix_label:column:mapping:targets:0"].y + on["matrix_label:column:mapping:targets:0"].height \
             <= on["ebktop:mapped:0"].y
-        assert on["matrix_label:col:mapping:commas:0"].y + on["matrix_label:col:mapping:commas:0"].height \
+        assert on["matrix_label:column:mapping:commas:0"].y + on["matrix_label:column:mapping:commas:0"].height \
             <= on["ebktop:mapped_comma:0"].y
-        assert on["matrix_label:col:vectors:commas:0"].y + on["matrix_label:col:vectors:commas:0"].height \
+        assert on["matrix_label:column:vectors:commas:0"].y + on["matrix_label:column:vectors:commas:0"].height \
             <= on["ebktop:vector:commas:0"].y
-        assert on["matrix_label:col:vectors:targets:0"].y + on["matrix_label:col:vectors:targets:0"].height \
+        assert on["matrix_label:column:vectors:targets:0"].y + on["matrix_label:column:vectors:targets:0"].height \
             <= on["ebktop:vector:targets:0"].y
 
     def test_mapping_top_frame_hugs_the_cells_not_the_row_label_gutter(self):
@@ -391,28 +391,28 @@ class TestRowAndColumnLabels:
             tuning_scheme="TILT minimax-S",
         ).cells}
         q = grid_tables.NORM_SUB_OPEN + "q" + grid_tables.NORM_SUB_CLOSE
-        assert on["matrix_label:col:complexity:primes:0"].text == f"‖𝐿[1]‖{q}"
-        assert on["matrix_label:col:complexity:primes:2"].text == f"‖𝐿[3]‖{q}"
-        assert on["matrix_label:col:complexity:commas:0"].text == f"‖𝐿𝐜₁‖{q}"
-        assert on["matrix_label:col:complexity:held:0"].text == f"‖𝐿𝐡₁‖{q}"
-        assert on["matrix_label:col:complexity:detempering:0"].text == f"‖𝐿𝐝₁‖{q}"
-        assert on["matrix_label:col:complexity:targets:0"].text == "c₁"
+        assert on["matrix_label:column:complexity:primes:0"].text == f"‖𝐿[1]‖{q}"
+        assert on["matrix_label:column:complexity:primes:2"].text == f"‖𝐿[3]‖{q}"
+        assert on["matrix_label:column:complexity:commas:0"].text == f"‖𝐿𝐜₁‖{q}"
+        assert on["matrix_label:column:complexity:held:0"].text == f"‖𝐿𝐡₁‖{q}"
+        assert on["matrix_label:column:complexity:detempering:0"].text == f"‖𝐿𝐝₁‖{q}"
+        assert on["matrix_label:column:complexity:targets:0"].text == "c₁"
 
     def test_complexity_target_col_headers_gain_the_norm_equivalence(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         q = grid_tables.NORM_SUB_OPEN + "q" + grid_tables.NORM_SUB_CLOSE
         s = {**settings.defaults(), "header_symbols": True, "weighting": True, "equivalences": True}
         on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
-        assert on["matrix_label:col:complexity:targets:0"].text == f"c₁ = ‖𝐿𝐭₁‖{q}"
-        assert on["matrix_label:col:complexity:targets:7"].text == f"c₈ = ‖𝐿𝐭₈‖{q}"
+        assert on["matrix_label:column:complexity:targets:0"].text == f"c₁ = ‖𝐿𝐭₁‖{q}"
+        assert on["matrix_label:column:complexity:targets:7"].text == f"c₈ = ‖𝐿𝐭₈‖{q}"
         allint = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S").cells}
-        assert allint["matrix_label:col:complexity:targets:0"].text == f"c₁ = ‖𝐿[1]‖{q}"
-        assert allint["matrix_label:col:complexity:targets:2"].text == f"c₃ = ‖𝐿[3]‖{q}"
-        assert allint["matrix_label:col:complexity:primes:0"].text == f"‖𝐿[1]‖{q}"
+        assert allint["matrix_label:column:complexity:targets:0"].text == f"c₁ = ‖𝐿[1]‖{q}"
+        assert allint["matrix_label:column:complexity:targets:2"].text == f"c₃ = ‖𝐿[3]‖{q}"
+        assert allint["matrix_label:column:complexity:primes:0"].text == f"‖𝐿[1]‖{q}"
         off = {c.id: c for c in spreadsheet.build(
             base, {**settings.defaults(), "header_symbols": True, "weighting": True, "equivalences": False},
             tuning_scheme="TILT minimax-S").cells}
-        assert off["matrix_label:col:complexity:targets:0"].text == "c₁"
+        assert off["matrix_label:column:complexity:targets:0"].text == "c₁"
 
     def test_prescaling_matrix_row_and_col_labels(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -429,10 +429,10 @@ class TestRowAndColumnLabels:
         assert on["matrix_label:row:prescaling:primes:0"].text == "𝒍₁"
         assert on["matrix_label:row:prescaling:primes:1"].text == "𝒍₂"
         assert on["matrix_label:row:prescaling:primes:2"].text == "𝒍₃"
-        assert on["matrix_label:col:prescaling:commas:0"].text == "𝐿𝐜₁"
-        assert on["matrix_label:col:prescaling:held:0"].text == "𝐿𝐡₁"
-        assert on["matrix_label:col:prescaling:detempering:0"].text == "𝐿𝐝₁"
-        assert on["matrix_label:col:prescaling:targets:0"].text == "𝐿𝐭₁"
+        assert on["matrix_label:column:prescaling:commas:0"].text == "𝐿𝐜₁"
+        assert on["matrix_label:column:prescaling:held:0"].text == "𝐿𝐡₁"
+        assert on["matrix_label:column:prescaling:detempering:0"].text == "𝐿𝐝₁"
+        assert on["matrix_label:column:prescaling:targets:0"].text == "𝐿𝐭₁"
 
     def test_units_annotate_each_box_with_its_unit_string(self):
         on = {c.id: c for c in _with(units=True, names=True).cells}
@@ -473,20 +473,20 @@ class TestRowAndColumnLabels:
     def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels(self):
         on = {c.id: c for c in _with(domain_units=True).cells}
         off = {c.id: c for c in _with(domain_units=False).cells}
-        assert on["ucol:vectors:0"].text == "p₁/"
-        assert on["ucol:vectors:2"].text == "p₃/"
-        assert on["ucol:mapping:0"].text == "g₁/"
-        assert on["ucol:tuning"].text == "¢/"
-        assert on["ucol:damage"].text == "¢(U)/"
-        assert on["urow:gens:0"].text == "/g₁"
-        assert on["urow:primes:0"].text == "/p₁"
-        assert on["urow:primes:2"].text == "/p₃"
-        assert on["urow:targets:0"].text == "/1"
-        assert on["urow:primes:0"].x == on["prime:0"].x
-        assert on["ucol:vectors:0"].y == on["basis:0"].y
-        assert on["ucol:mapping:0"].y == on["gen:0"].y
+        assert on["units_column:vectors:0"].text == "p₁/"
+        assert on["units_column:vectors:2"].text == "p₃/"
+        assert on["units_column:mapping:0"].text == "g₁/"
+        assert on["units_column:tuning"].text == "¢/"
+        assert on["units_column:damage"].text == "¢(U)/"
+        assert on["units_row:gens:0"].text == "/g₁"
+        assert on["units_row:primes:0"].text == "/p₁"
+        assert on["units_row:primes:2"].text == "/p₃"
+        assert on["units_row:targets:0"].text == "/1"
+        assert on["units_row:primes:0"].x == on["prime:0"].x
+        assert on["units_column:vectors:0"].y == on["basis:0"].y
+        assert on["units_column:mapping:0"].y == on["gen:0"].y
         assert "header:units" in on and "label:units" in on
-        assert not any(c.startswith(("ucol:", "urow:")) for c in off)
+        assert not any(c.startswith(("units_column:", "units_row:")) for c in off)
         assert "header:units" not in off and "label:units" not in off
         assert on["header:quantities"].x < on["header:units"].x < on["header:gens"].x
         assert on["label:quantities"].y < on["label:units"].y < on["label:vectors"].y
@@ -500,10 +500,10 @@ class TestRowAndColumnLabels:
         s["weighting"] = True
         s["alt_complexity"] = True
         on = {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="TILT minimax-S").cells}
-        assert on["ucol:vectors:0"].text == "b₁/"
-        assert on["ucol:vectors:2"].text == "b₃/"
-        assert on["urow:primes:0"].text == "/b₁"
-        assert on["urow:primes:2"].text == "/b₃"
+        assert on["units_column:vectors:0"].text == "b₁/"
+        assert on["units_column:vectors:2"].text == "b₃/"
+        assert on["units_row:primes:0"].text == "/b₁"
+        assert on["units_row:primes:2"].text == "/b₃"
         assert on["cell:mapping:0:0"].unit == "g₁/b₁"
         assert on["tuning:prime:0"].unit == "¢/b₁"
         assert on["cell:vector:targets:0:0"].unit == "b₁"

@@ -59,7 +59,7 @@ def _column_axis(lines, resolved, geometry, context, fanned_columns, bot_bus_y, 
     if key not in geometry.column_x:
         return
     fanned_columns.add(key)
-    dotted = f"col:{key}" in context.collapsed
+    dotted = f"column:{key}" in context.collapsed
     matrix_x, matrix_width = query.matrix_span(geometry, resolved, key)
     center_x = matrix_x + matrix_width / 2
     if n == 0:
@@ -105,7 +105,7 @@ def _emit_axes(lines, resolved, geometry, context) -> None:
             continue
         center_x = geometry.column_x[key] + geometry.column_width[key] / 2
         _gridline(lines, f"trunk:{key}", "v", center_x, geometry.branch_top_y, geometry.total_height - geometry.branch_top_y,
-                  dotted=f"col:{key}" in context.collapsed)
+                  dotted=f"column:{key}" in context.collapsed)
     right_bus_x = geometry.total_width - geometry.FAN
     for key in geometry.rows:
         if query.row_fans(geometry, key):
@@ -186,7 +186,7 @@ def _emit_matrix_col_labels(cells, resolved, geometry, context) -> None:
                 text = text.replace("𝐜", "𝐯")
             x = left[query.comma_value_pos(resolved, i)] if column_key == "commas" else left[i]
             cells.append(CellBox(
-                f"matrix_label:col:{row_key}:{column_key}:{i}",
+                f"matrix_label:column:{row_key}:{column_key}:{i}",
                 x, y, COLUMN_WIDTH, MATLABEL_HEIGHT,
                 "matrix_label", text=text,
             ))

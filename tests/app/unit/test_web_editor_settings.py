@@ -151,11 +151,11 @@ class TestShowToggles:
     def test_expand_collapse_state_is_owned_and_undoable(self):
         editor = Editor()
         assert editor.collapsed == set()
-        editor.toggle_collapsed("col:commas")
-        assert "col:commas" in editor.collapsed
+        editor.toggle_collapsed("column:commas")
+        assert "column:commas" in editor.collapsed
         assert editor.can_undo is True
         editor.undo()
-        assert "col:commas" not in editor.collapsed
+        assert "column:commas" not in editor.collapsed
         editor.set_collapsed({"row:tuning"})
         assert editor.collapsed == {"row:tuning"}
         editor.undo()
@@ -167,7 +167,7 @@ class TestShowToggles:
         editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
         editor.set_tuning_scheme("held-octave minimax-ES")
         editor.set_show("charts", True)
-        editor.toggle_collapsed("col:commas")
+        editor.toggle_collapsed("column:commas")
         assert editor.can_reset is True
         editor.reset()
         assert editor.state.mapping == INITIAL_MAPPING
@@ -181,7 +181,7 @@ class TestShowToggles:
         assert editor.state.mapping == ((1, 0, -4), (0, 1, 4))
         assert service.base_scheme_name(editor.tuning_scheme) == "held-octave minimax-ES"
         assert editor.settings["charts"] is True
-        assert "col:commas" in editor.collapsed
+        assert "column:commas" in editor.collapsed
 
 
 class TestSerialization:
@@ -194,7 +194,7 @@ class TestSerialization:
         editor.set_held_vectors([[1, 0, 0]])
         editor.set_range_mode("tradeoff")
         editor.set_show("charts", True)
-        editor.toggle_collapsed("col:commas")
+        editor.toggle_collapsed("column:commas")
         data = editor.serialize()
 
         restored = Editor()
@@ -209,7 +209,7 @@ class TestSerialization:
         assert restored.held_vectors == [(1, 0, 0)]
         assert restored.range_mode == "tradeoff"
         assert restored.settings["charts"] is True
-        assert "col:commas" in restored.collapsed
+        assert "column:commas" in restored.collapsed
         assert restored.can_undo is False, "a load is a fresh start, not an undoable step"
 
     def test_serialize_load_round_trips_a_finite_power_spec(self):

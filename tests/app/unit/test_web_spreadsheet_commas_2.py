@@ -165,7 +165,7 @@ class TestOptimizationControls:
                                                  custom_prescaler=square).cells}
         assert on["symbol:complexity:targets"].text == "𝒄", "NOT '𝒄 = diag(𝑋)'"
         assert on["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹", "the generic reciprocal, not a matrix inverse"
-        assert on["matrix_label:col:weight:targets:0"].text == "w₁ = c₁⁻¹"
+        assert on["matrix_label:column:weight:targets:0"].text == "w₁ = c₁⁻¹"
 
     def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls(self):
         off = {c.id for c in _with().cells}
@@ -393,17 +393,17 @@ class TestCustomWeightRow:
     def test_collapsing_the_commas_column_hides_its_cells_but_keeps_the_header(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         full = spreadsheet.build(base)
-        coll = spreadsheet.build(base, collapsed={"col:commas"})
+        coll = spreadsheet.build(base, collapsed={"column:commas"})
         assert any(_in_commas(c.id) for c in full.cells)
         cids = {c.id for c in coll.cells}
         assert not any(_in_commas(c) for c in cids)
         assert "header:commas" in cids
-        assert "toggle:col:commas" in cids
+        assert "toggle:column:commas" in cids
         assert coll.width < full.width
 
     def test_commas_column_has_panels_that_fold_away_and_converge_when_collapsed(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        layout = spreadsheet.build(base, collapsed={"col:commas"})
+        layout = spreadsheet.build(base, collapsed={"column:commas"})
         blocks = {b.id: b for b in layout.blocks}
         by_id = {line.id: line for line in layout.lines}
         assert blocks["block:commas"].width == 0

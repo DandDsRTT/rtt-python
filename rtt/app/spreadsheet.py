@@ -46,7 +46,7 @@ class _GridBuilder(Resolver):
         geometry = self.geometry
         cells, lines, blocks, approach_box = assemble(self.resolved, geometry, build_context(self))
         title_right = max(
-            (c.x + c.width / 2 + _title_w(c.text) / 2 for c in cells if c.kind == "colheader"),
+            (c.x + c.width / 2 + _title_w(c.text) / 2 for c in cells if c.kind == "columnheader"),
             default=geometry.total_width,
         )
         right_overhang = max(0.0, title_right - geometry.total_width)

@@ -82,10 +82,10 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         weighting=weighting,
         alt_complexity=alt_complexity,
         prescaling_box=(alt_complexity and settings["temperament_tiles"]
-              and "col:primes" not in collapsed and "row:prescaling" not in collapsed
+              and "column:primes" not in collapsed and "row:prescaling" not in collapsed
               and "tile:prescaling:primes" not in collapsed),
         complexity_box=(weighting
-              and "col:targets" not in collapsed and "row:complexity" not in collapsed
+              and "column:targets" not in collapsed and "row:complexity" not in collapsed
               and "tile:complexity:targets" not in collapsed),
         generator_detempering=settings["generator_detempering"],
         interest=settings["interest"],

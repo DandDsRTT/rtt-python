@@ -55,7 +55,7 @@ def declare_interval_column_tiles(resolved):
             ("block:tuning:interest", "tuning", "interest"),
             ("block:just:interest", "just", "interest"),
             ("block:retune:interest", "retune", "interest"),
-            ("block:urow:interest", "units", "interest"),
+            ("block:units_row:interest", "units", "interest"),
             ("block:prescaling:interest", "prescaling", "interest"),
             ("block:complexity:interest", "complexity", "interest"),
         )
@@ -68,7 +68,7 @@ def declare_interval_column_tiles(resolved):
             ("block:tuning:held", "tuning", "held"),
             ("block:just:held", "just", "held"),
             ("block:retune:held", "retune", "held"),
-            ("block:urow:held", "units", "held"),
+            ("block:units_row:held", "units", "held"),
             ("block:prescaling:held", "prescaling", "held"),
             ("block:complexity:held", "complexity", "held"),
         )
@@ -81,7 +81,7 @@ def declare_interval_column_tiles(resolved):
         ("block:retune:detempering", "retune", "detempering"),
         ("block:prescaling:detempering", "prescaling", "detempering"),
         ("block:complexity:detempering", "complexity", "detempering"),
-        ("block:urow:detempering", "units", "detempering"),
+        ("block:units_row:detempering", "units", "detempering"),
     ) if resolved.flags.generator_detempering else ()
     return interest_tiles, held_tiles, detempering_tiles
 

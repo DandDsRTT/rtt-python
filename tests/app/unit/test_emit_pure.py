@@ -89,7 +89,7 @@ class TestEmitPure:
         units = {c.id for c in emit_units(resolved, geometry, context).cells}
         assert "header:primes" in headers and "toggle:all" in headers
         assert "count:primes" in counts
-        assert any(i.startswith(("urow:", "ucol:")) for i in units)
+        assert any(i.startswith(("units_row:", "units_column:")) for i in units)
         full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
         assert (headers | counts | units) <= full
 

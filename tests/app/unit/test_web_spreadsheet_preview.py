@@ -66,7 +66,7 @@ class TestPreviewCellIds:
             CellBox("ebkbrace:targets:0", 0, 0, 10, 10, "ebkbrace"),
             CellBox("ebkangle:vector:commas:1", 0, 0, 10, 10, "ebkangle"),
             CellBox("sep:targets:1", 0, 0, 10, 10, "vbar"),
-            CellBox("grip:targets:0", 0, 0, 10, 10, "colgrip"),
+            CellBox("grip:targets:0", 0, 0, 10, 10, "columngrip"),
             CellBox("comma_minus:0", 0, 0, 10, 10, "comma_minus"),
         )
         assert spreadsheet_text.changed_cell_ids(old, new) == frozenset({"v"})
@@ -82,7 +82,7 @@ class TestPreviewCellIds:
             _diff_cell("value", "2"),
             CellBox("ebkangle:vector:commas:1", 0, 0, 10, 10, "ebkangle"),
             CellBox("sep:targets:1", 0, 0, 10, 10, "vbar"),
-            CellBox("grip:commas:1", 0, 0, 10, 10, "colgrip"),
+            CellBox("grip:commas:1", 0, 0, 10, 10, "columngrip"),
             CellBox("comma_minus:1", 0, 0, 10, 10, "comma_minus"),
         )
         new = _diff_layout(_diff_cell("survivor", "1"), _diff_cell("added", "9"))
