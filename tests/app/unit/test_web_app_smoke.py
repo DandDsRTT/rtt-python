@@ -533,6 +533,16 @@ class TestWebAppSmoke2:
         assert "-b.scrollLeft" in js
         assert "Math.max(0, b.scrollLeft)" not in js
 
+    def test_frozen_strips_are_promoted_to_a_layer_only_while_scrolling(self):
+        assert "will-change" not in _css_rule(".rtt-colhead-inner"), "no PERMANENT compositor layer: a constant will-change keeps the frozen strip on its own GPU # layer at rest, which a browser page-zoom re-rasters out of sync with the body (the column # titles trail the grid). Promotion is confined to active scroll instead"
+        assert "will-change" not in _css_rule(".rtt-colfill-inner")
+        scrolling = _css_rule(".rtt-app.rtt-scrolling .rtt-colhead-inner,\n.rtt-app.rtt-scrolling .rtt-colfill-inner")
+        assert "will-change:transform" in scrolling
+        js = page_assets._FREEZE_JS
+        assert "rtt-scrolling" in js
+        assert "classList.add('rtt-scrolling')" in js and "remove('rtt-scrolling')" in js
+        assert "setTimeout" in js, "cleared a short idle after the last scroll, not on every frame"
+
     def test_freeze_script_reserves_a_scrollbar_so_one_bar_never_forces_a_second(self):
         js = page_assets._FREEZE_JS
         assert "fit" in js
