@@ -11,7 +11,7 @@ class Geometry:
     node_x: float = 0.0
     node_edge: float = 0.0
     header_y: float = 0.0
-    col_node_y: float = 0.0
+    column_node_y: float = 0.0
     branch_top_y: float = 0.0
     fanout_y: float = 0.0
     FAN: float = 0.0
@@ -20,13 +20,13 @@ class Geometry:
     prescale_rows: int = 0
     all_interval_simplicity_weight: bool = False
 
-    col_x: Mapping[str, float] = field(default_factory=dict)
-    col_w: Mapping[str, float] = field(default_factory=dict)
+    column_x: Mapping[str, float] = field(default_factory=dict)
+    column_width: Mapping[str, float] = field(default_factory=dict)
     content_w: Mapping[str, float] = field(default_factory=dict)
     content_x: Mapping[str, float] = field(default_factory=dict)
-    open_col_w: Mapping[str, float] = field(default_factory=dict)
-    col_collapsible: Mapping[str, bool] = field(default_factory=dict)
-    col_header: Mapping[str, str] = field(default_factory=dict)
+    open_column_width: Mapping[str, float] = field(default_factory=dict)
+    column_collapsible: Mapping[str, bool] = field(default_factory=dict)
+    column_header: Mapping[str, str] = field(default_factory=dict)
     present_caption_rows: frozenset = frozenset()
     matlabel_primes_w: float = 0.0
     matlabel_superspace_primes_w: float = 0.0

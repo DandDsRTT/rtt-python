@@ -91,7 +91,7 @@ def _edit_vector_grid(edit_controller, spec, preview=False):
     if edit_controller._runtime.building or (spec.guard is not None and not spec.guard()):
         return
     d = edit_controller._editor.state.dimensionality
-    toks = edit_controller._runtime.col_tokens(spec.group)
+    toks = edit_controller._runtime.column_tokens(spec.group)
     if spec.pending() is not None:
         _edit_pending_vector(edit_controller, spec, preview, toks, d)
         return
@@ -209,7 +209,7 @@ def _replace_interval_vector(edit_controller, group, token, vector, current, set
         "interest": "interest",
         "comma": "commas",
     }.get(group)
-    toks = edit_controller._runtime.col_tokens(list_name) if list_name else []
+    toks = edit_controller._runtime.column_tokens(list_name) if list_name else []
     pos = toks.index(int(token)) if int(token) in toks else int(token)
     vectors = [list(v) for v in current]
     if vectors[pos] != list(vector):
@@ -320,7 +320,7 @@ def _transform_interval(edit_controller, cell_id, op):
         _transform_domain_element(edit_controller, cell_id, op, int(token))
         return
     current, setter, list_name = _interval_group_state(edit_controller, group)
-    toks = edit_controller._runtime.col_tokens(list_name)
+    toks = edit_controller._runtime.column_tokens(list_name)
     pos = toks.index(int(token)) if int(token) in toks else int(token)
     if not 0 <= pos < len(current):
         return

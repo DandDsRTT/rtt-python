@@ -274,7 +274,7 @@ class TestSpineAndAxes:
 
     def test_a_spine_hugs_col_w_and_overhangs_its_title_unless_it_is_leftmost(self):
         cells = {c.id: c for c in _with(domain_units=True).cells}
-        assert cells["header:units"].width == spreadsheet_constants.COL_W
+        assert cells["header:units"].width == spreadsheet_constants.COLUMN_WIDTH
         assert cells["header:units"].width < spreadsheet_text._title_w("units")
         assert cells["header:quantities"].width > cells["header:units"].width
 
@@ -483,7 +483,7 @@ class TestSpineAndAxes:
         collapsed = {c.id: c for c in spreadsheet.build(base, s, collapsed={"col:quantities", "col:units"}).cells}
         for key in ("quantities", "units"):
             assert collapsed[f"header:{key}"].width <= opened[f"header:{key}"].width
-        assert collapsed["header:units"].width == spreadsheet_constants.COL_W
+        assert collapsed["header:units"].width == spreadsheet_constants.COLUMN_WIDTH
 
     def test_a_rows_nested_control_grows_every_tile_in_that_row_uniformly(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))

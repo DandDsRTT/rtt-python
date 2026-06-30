@@ -18,7 +18,7 @@ from rtt.app.spreadsheet_constants import (
     BOX_INNER,
     BOX_OUTER,
     CAPTION_LINE,
-    COL_W,
+    COLUMN_WIDTH,
     OPT_COL_GAP,
     PAD,
     PRESET_H,
@@ -54,7 +54,7 @@ def _mark_doomed_unchanged_column(cells, resolved, geometry):
         return cells
     doomed_x = query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + resolved.dims.unchanged_count - 1)
     return [replace(cell_box, preview_remove=True)
-            if (cell_box.width == COL_W and cell_box.x == doomed_x
+            if (cell_box.width == COLUMN_WIDTH and cell_box.x == doomed_x
                 and cell_box.kind not in ("count", "caption", "colgrip"))
             else cell_box
             for cell_box in cells]
@@ -65,7 +65,7 @@ def _mark_born_column(cells, resolved, geometry):
         return cells
     born_x = query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + resolved.dims.unchanged_count - 1)
     return [replace(cell_box, pending=True)
-            if (cell_box.width == COL_W and cell_box.x == born_x
+            if (cell_box.width == COLUMN_WIDTH and cell_box.x == born_x
                 and cell_box.kind not in ("count", "caption", "colgrip"))
             else cell_box
             for cell_box in cells]
@@ -119,8 +119,8 @@ def emit_tile_toggles(geometry, context) -> EmitResult:
     cells: list = []
     for _bid, row_key, column_key in geometry.tiles:
         if ((row_key, column_key) in geometry.declared_tiles
-                and row_key in geometry.rows and column_key in geometry.col_x
-                and query.row_open(geometry, context.collapsed, row_key) and query.col_open(geometry, context.collapsed, column_key)):
+                and row_key in geometry.rows and column_key in geometry.column_x
+                and query.row_open(geometry, context.collapsed, row_key) and query.column_open(geometry, context.collapsed, column_key)):
             glyph = _fold_glyph(f"tile:{row_key}:{column_key}" in context.collapsed)
             tog_x, _tw = query.tile_span_box(geometry, row_key, column_key)
             cells.append(CellBox(f"toggle:tile:{row_key}:{column_key}",
@@ -153,8 +153,8 @@ def _control_box(cells, blocks, resolved, geometry, box_id: str, column_key: str
                  disabled: bool = False, scheme_button: bool = False, form_chooser=None):
     form_label = form_chooser[1] if form_chooser else None
     dropdown_w, label_h, box_h = query.control_dims(geometry, column_key, cap_w, label, scheme_button, form_label)
-    box_x, box_y = geometry.col_x[column_key], top + BOX_OUTER
-    blocks.append(Block(box_id, box_x, box_y, geometry.col_w[column_key], box_h, boxed=True))
+    box_x, box_y = geometry.column_x[column_key], top + BOX_OUTER
+    blocks.append(Block(box_id, box_x, box_y, geometry.column_width[column_key], box_h, boxed=True))
     ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
     if scheme_button:
         _emit_scheme_button(cells, ctrl_x, ctrl_y, column_key)
@@ -225,7 +225,7 @@ def _emit_all_interval_check_fallback(cells, resolved, geometry, context) -> Non
         top = query.plain_text_band_y(geometry, "vectors") + geometry.rows["vectors"].plain_text
         emit_option_check(cells, "all_interval", "all-interval",
                            service.is_all_interval(context.tuning_scheme),
-                           geometry.col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
+                           geometry.column_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
 
 
 def _emit_form_choosers(cells, blocks, resolved, geometry, context) -> None:
@@ -246,9 +246,9 @@ def _emit_scheme_buttons(cells, blocks, resolved, geometry, context) -> None:
                 continue
             top = query.plain_text_band_y(geometry, "projection") + geometry.rows["projection"].plain_text
             box_y = top + BOX_OUTER
-            blocks.append(Block(f"block:scheme:{column_key}", geometry.col_x[column_key], box_y, geometry.col_w[column_key],
+            blocks.append(Block(f"block:scheme:{column_key}", geometry.column_x[column_key], box_y, geometry.column_width[column_key],
                                 2 * BOX_INNER + SCHEME_BUTTON_SQ, boxed=True))
-            _emit_scheme_button(cells, geometry.col_x[column_key] + BOX_INNER, box_y + BOX_INNER, column_key)
+            _emit_scheme_button(cells, geometry.column_x[column_key] + BOX_INNER, box_y + BOX_INNER, column_key)
 
 
 def _emit_plain_text_band(cells, resolved, geometry, context) -> None:
@@ -264,5 +264,5 @@ def _emit_plain_text_band(cells, resolved, geometry, context) -> None:
                 kind = "plain_text_edit"
             else:
                 kind = "plain_text"
-            cells.append(CellBox(f"plain_text:{row_key}:{column_key}", geometry.col_x[column_key], query.plain_text_band_y(geometry, row_key),
-                                 geometry.col_w[column_key], query.plain_text_height(resolved, row_key, column_key), kind, text=text))
+            cells.append(CellBox(f"plain_text:{row_key}:{column_key}", geometry.column_x[column_key], query.plain_text_band_y(geometry, row_key),
+                                 geometry.column_width[column_key], query.plain_text_height(resolved, row_key, column_key), kind, text=text))

@@ -239,7 +239,7 @@ class TestHeldColumn:
         ch, v0 = on["chart:damage:targets"], on["damage:target:0"]
         assert ch.y + ch.height <= v0.y
         assert on["damage:target:0"].y > off["damage:target:0"].y
-        assert ch.x <= on["target:0"].x and ch.x + ch.width >= on["target:7"].x + spreadsheet_constants.COL_W, "the chart spans the target columns (so its bars can align with them)"
+        assert ch.x <= on["target:0"].x and ch.x + ch.width >= on["target:7"].x + spreadsheet_constants.COLUMN_WIDTH, "the chart spans the target columns (so its bars can align with them)"
 
 
 class TestRetuningChartsAndGenMap:
@@ -275,13 +275,13 @@ class TestRetuningChartsAndGenMap:
             interest=((-3, 2, 0),), held_vectors=((-1, 1, 0),))
         on = {c.id: c for c in layout.cells}
         gridline = {line.id: line.pos for line in layout.lines if line.orientation == "v"}
-        bw, cw = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COL_W
+        bw, cw = spreadsheet_constants.BRACKET_W, spreadsheet_constants.COLUMN_WIDTH
         elem = {"primes": "prime", "commas": "comma", "targets": "target",
                 "interest": "interest", "held": "held", "detempering": "detempering"}
         for group, e in elem.items():
             ch = on[f"chart:retune:{group}"]
             for i in range(len(ch.values)):
-                bar_centre = ch.x + bw + i * (cw + ch.col_gap) + cw / 2
+                bar_centre = ch.x + bw + i * (cw + ch.column_gap) + cw / 2
                 assert bar_centre == gridline[f"v:{e}:{i}"], f"{group} bar {i} is off its gridline"
 
     def test_generator_tuning_map_tile_shows_the_generator_map_cents_in_the_default_view(self):
@@ -291,7 +291,7 @@ class TestRetuningChartsAndGenMap:
         assert cells["tuning:gen:0"].text == service.cents(tuning_map.generator_map[0])
         assert cells["tuning:gen:1"].text == service.cents(tuning_map.generator_map[1])
         assert cells["header:gens"].x <= cells["tuning:gen:0"].x < cells["header:primes"].x
-        assert cells["tuning:gen:1"].x == cells["tuning:gen:0"].x + spreadsheet_constants.COL_W
+        assert cells["tuning:gen:1"].x == cells["tuning:gen:0"].x + spreadsheet_constants.COLUMN_WIDTH
         assert cells["tuning:gen:0"].y == cells["tuning:prime:0"].y
         assert cells["bracket:tuning:genmap:l"].text == "{" and cells["bracket:tuning:genmap:r"].text == "]"
         assert cells["caption:tuning:gens"].text == "generator tuning map"

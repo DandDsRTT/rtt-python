@@ -392,7 +392,7 @@ class TestSuperspaceBracketsAndMath:
         cells = {c.id: c for c in _with(scheme="minimax-lils-S").cells}
         real = cells["cell:vector:targets:0:0"]
         assert real.kind == "vector"
-        assert real.width == spreadsheet_constants.COL_W
+        assert real.width == spreadsheet_constants.COLUMN_WIDTH
 
     def test_domain_elements_are_editable_elementcells_with_the_box_on(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")

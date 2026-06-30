@@ -47,13 +47,13 @@ class PageRuntime:
         self.chapter = clamp_chapter(value)
         return self.chapter
 
-    def col_tokens(self, name: str) -> list:
+    def column_tokens(self, name: str) -> list:
         idents = self.last_lay.identities if self.last_lay is not None else None
         return [token for token, _ in (idents or {}).get(name, [])]
 
     def token_index(self, cell_id: str, name: str) -> int | None:
         cell_token = cell_id.split(":", 1)[1]
-        for i, token in enumerate(self.col_tokens(name)):
+        for i, token in enumerate(self.column_tokens(name)):
             if str(token) == cell_token:
                 return i
         return None

@@ -97,7 +97,7 @@ def _power_change(edit_controller, cell_id):
 
 
 def _gen_position(edit_controller, token):
-    toks = edit_controller._runtime.col_tokens("gens")
+    toks = edit_controller._runtime.column_tokens("gens")
     return toks.index(token) if token in toks else token
 
 

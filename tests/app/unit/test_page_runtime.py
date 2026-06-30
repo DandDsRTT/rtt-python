@@ -39,11 +39,11 @@ class TestPageRuntime:
 
     def test_col_tokens_reads_the_identities_of_the_named_axis(self):
         rt = PageRuntime()
-        assert rt.col_tokens("gens") == []
+        assert rt.column_tokens("gens") == []
         rt.set_last_lay(SimpleNamespace(identities={"gens": [("a", 0), ("b", 0)], "commas": []}))
-        assert rt.col_tokens("gens") == ["a", "b"]
-        assert rt.col_tokens("commas") == []
-        assert rt.col_tokens("absent_axis") == []
+        assert rt.column_tokens("gens") == ["a", "b"]
+        assert rt.column_tokens("commas") == []
+        assert rt.column_tokens("absent_axis") == []
 
     def test_token_index_locates_a_cells_token_within_its_axis(self):
         rt = PageRuntime()

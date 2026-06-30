@@ -63,7 +63,7 @@ class ResolveDraft:
     prescaler_symbol: object = None
     prescaler_equivalence: object = None
     prescaling_symbols: object = None
-    col_labels: object = None
+    column_labels: object = None
     row_labels: object = None
     effective_captions: object = None
     show_identity_objects: object = None

@@ -259,7 +259,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
              transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
 .rtt-cell { position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
             opacity:1; transition:transform var(--t), opacity var(--t); }
-/* titles carry explicit "\n" breaks (col_header) so a multi-word header stacks to two
+/* titles carry explicit "\n" breaks (column_header) so a multi-word header stacks to two
    lines (e.g. "domain" / "primes"); `pre` honors them AND never auto-wraps, so a title
    wider than its (content-hugging) column overflows it rather than rewrapping. It is
    absolutely centred on the cell (= the column gridline) so that overflow spills EVENLY
@@ -308,7 +308,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-opt-1line { white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }
 /* the all-interval mean damage relabels to the retuning magnitude ‖𝒓𝐿⁻¹‖dual(q), far wider than
    the short ⟪𝐝⟫ₚ — shrink it (to the .rtt-matlabel-norm size used for the other wide ‖…‖q norm
-   labels) so it reads within and stays centred over its COL_W value cell, overflowing symmetrically
+   labels) so it reads within and stays centred over its COLUMN_WIDTH value cell, overflowing symmetrically
    rather than clipping if it still spills. The selector is compounded (.rtt-symbol.rtt-opt-wide, not
    a bare .rtt-opt-wide) so it OUT-SPECIFIES .rtt-symbol's own font-size:15px, which is declared later
    in this sheet and would otherwise win the tie. */
@@ -358,7 +358,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the shrink/wrap variant for any multi-token column label — the complexity row's
    q-norms (‖L𝐜ᵢ‖q) and equation-form headers carrying a space (cₙ = ‖L𝐭ₙ‖q, the
    all-interval weight's wₙ = cₙ⁻¹) — all much wider than a plain subscripted letter.
-   Drop the font size so the labels don't collide and let them overflow the COL_W cell
+   Drop the font size so the labels don't collide and let them overflow the COLUMN_WIDTH cell
    width without clipping (overflow:visible). white-space:normal (overriding
    .rtt-matlabel's nowrap) lets a space-bearing header WRAP at its space onto two stacked
    lines (cₙ = / ‖L𝐭ₙ‖q, or wₙ = / cₙ⁻¹), as the mockup shows, instead of overlapping its
@@ -512,7 +512,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             border-top:1px solid #777; }
 /* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
 .rtt-preset-target { width:100%; height:30px; display:flex; gap:0; align-items:center; }
-.rtt-preset-target .rtt-preset-num { flex:0 0 30px; }  /* a gridded value square (COL_W x ROW_H), touching the select */
+.rtt-preset-target .rtt-preset-num { flex:0 0 30px; }  /* a gridded value square (COLUMN_WIDTH x ROW_H), touching the select */
 .rtt-preset-target .rtt-preset { flex:1 1 auto; width:auto; }
 .rtt-preset-num .q-field__control { min-height:0 !important; height:30px;
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px; }

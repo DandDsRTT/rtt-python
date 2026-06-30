@@ -139,7 +139,7 @@ class TestCanonicalGenerators:
         assert "sep:mapped:1" in cells, "the mapped target interval list separates its vector columns with vertical # bars, and the per-column top/bottom marks are inset so they never touch one"
         sep = cells["sep:mapped:1"]
         top0, brace0 = cells["ebktop:mapped:0"], cells["ebkbrace:mapped:0"]
-        assert top0.width < spreadsheet_constants.COL_W and brace0.width < spreadsheet_constants.COL_W, "inset, not full column"
+        assert top0.width < spreadsheet_constants.COLUMN_WIDTH and brace0.width < spreadsheet_constants.COLUMN_WIDTH, "inset, not full column"
         assert top0.x + top0.width < sep.x
         outer = cells["bracket:mapped:l"]
         over = spreadsheet_constants.FRAME_OVERHANG
@@ -498,7 +498,7 @@ class TestPresetChoosers:
             "symbol":       ({r for (r, _c) in SYMBOLS}, set(BANDS["symbol"].rows)),
             "units":        ({r for (r, _c) in UNITS}, set(BANDS["units"].rows)),
             "caption":      ({r for (r, _c) in b.resolved.labels.captions}, set(BANDS["caption"].rows)),
-            "column label": ({r for (r, _c) in b.resolved.labels.col_labels}, set(BANDS["col_label"].rows)),
+            "column label": ({r for (r, _c) in b.resolved.labels.column_labels}, set(BANDS["col_label"].rows)),
         }
         spills = {name: sorted(emit - reserve) for name, (emit, reserve) in bands.items() if emit - reserve}
         assert not spills, f"rows emit a band's content but reserve no height for it (it will spill): {spills}"
@@ -538,7 +538,7 @@ class TestPresetChoosers:
                 continue
             if (row_key, column_key) not in b.geometry.plain_text_strings:
                 continue
-            rb, cx, cw = b.geometry.rows[row_key], b.geometry.col_x[column_key], b.geometry.col_w[column_key]
+            rb, cx, cw = b.geometry.rows[row_key], b.geometry.column_x[column_key], b.geometry.column_width[column_key]
             grid_tokens = []
             for c in layout.cells:
                 if (c.text and not c.id.startswith("plain_text:")

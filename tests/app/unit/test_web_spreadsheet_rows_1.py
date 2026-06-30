@@ -403,7 +403,7 @@ class TestCountsRow:
         cells = {c.id: c for c in _with_interest(_INTEREST).cells}
         c0, c1 = cells["cell:interest:0:0"], cells["cell:interest:0:1"]
         m0 = cells["cell:imapped:0:0"]
-        assert c0.width == m0.width == spreadsheet_constants.COL_W
+        assert c0.width == m0.width == spreadsheet_constants.COLUMN_WIDTH
         assert c1.x - (c0.x + c0.width) == spreadsheet_constants.INTERVAL_COL_GAP / 2
         assert c0.x == m0.x
 

@@ -26,7 +26,7 @@ from rtt.app.spreadsheet_constants import (
     CAPTION_LINE,
     CBOX_NODROP_W,
     CBOX_W,
-    COL_W,
+    COLUMN_WIDTH,
     LBOX_DIM_W,
     MAX_CAPTION_LINES,
     OPT_BOX_MIN_W,
@@ -231,7 +231,7 @@ def commas_band_w(resolved, nc_count: int):
     split = V_SPLIT_GAP if (resolved.unchanged.shown and nc_count > 0) else 0
     empty = (_min_width_for_lines("nullity", 1)
              if (resolved.unchanged.shown and nc_count == 0) else 0)
-    return 2 * BRACKET_W + nv * COL_W + split + empty
+    return 2 * BRACKET_W + nv * COLUMN_WIDTH + split + empty
 
 
 def _caption_wrap_w(geometry, resolved, context, column_key: str):
@@ -239,17 +239,17 @@ def _caption_wrap_w(geometry, resolved, context, column_key: str):
         resting = commas_band_w(resolved, resolved.dims.comma_count + (1 if resolved.commas.pending is not None else 0))
         return max(resting, caption_floor(geometry, resolved, column_key),
                    control_floor(resolved, context, column_key), symbol_floor(geometry, resolved, column_key))
-    return geometry.open_col_w[column_key]
+    return geometry.open_column_width[column_key]
 
 
 def caption_band(geometry, resolved, context, key: str, folded: bool):
     if not (resolved.flags.names and key in BANDS["caption"].rows and not folded):
         return 0
-    lines = [_wrap_lines(resolved.labels.captions[(key, c)], _caption_wrap_w(geometry, resolved, context, c)) for c in geometry.col_x
+    lines = [_wrap_lines(resolved.labels.captions[(key, c)], _caption_wrap_w(geometry, resolved, context, c)) for c in geometry.column_x
              if (key, c) in resolved.labels.captions and (key, c) in geometry.declared_tiles]
-    if key == "counts" and resolved.unchanged.shown and "commas" in geometry.col_x:
-        lines.append(_wrap_lines("unchanged interval count", resolved.dims.unchanged_count * COL_W))
-        lines.append(_wrap_lines("nullity", resolved.dims.comma_count * COL_W + resolved.unchanged.empty_comma_w))
+    if key == "counts" and resolved.unchanged.shown and "commas" in geometry.column_x:
+        lines.append(_wrap_lines("unchanged interval count", resolved.dims.unchanged_count * COLUMN_WIDTH))
+        lines.append(_wrap_lines("nullity", resolved.dims.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_w))
     return max(lines, default=1) * CAPTION_LINE
 
 
@@ -271,9 +271,9 @@ def preset_band_h(geometry, resolved, key: str):
     return max((_control_band_h(geometry, column_key, query.preset_cap(name), label, scheme_button=(name == "projection"),
                                form_label=query.preset_form_label(resolved, name, rk, column_key))
                 for name, rk, column_key, label in PRESETS + PRESET_COPIES
-                if rk == key and column_key in geometry.col_w), default=0)
+                if rk == key and column_key in geometry.column_width), default=0)
 
 
 def formchooser_band_h(geometry, key: str):
     return max((_control_band_h(geometry, column_key, PRESET_W, label)
-                for name, rk, column_key, label in FORM_CHOOSERS if rk == key and column_key in geometry.col_w), default=0)
+                for name, rk, column_key, label in FORM_CHOOSERS if rk == key and column_key in geometry.column_width), default=0)

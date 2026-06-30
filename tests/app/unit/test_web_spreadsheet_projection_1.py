@@ -314,7 +314,7 @@ class TestProjectionChrome:
         assert cells["cell:comma:0:0"].kind == "commacell", "V = C|U: the editable comma vectors C stay, the unchanged basis U appends — also editable now # (a full rational projection), retyping it retunes"
         u_first = cells["cell:unchanged:0:0"]
         assert u_first.kind == "unchangedcell"
-        assert u_first.x == cells["cell:comma:0:0"].x + spreadsheet_constants.COL_W + spreadsheet_constants.V_SPLIT_GAP, "the unchanged half U is pushed right of the comma half by the extra C|U gap (so the divider # clears the cells); within U the columns stay one COL_W apart"
-        assert cells["cell:unchanged:0:1"].x == u_first.x + spreadsheet_constants.COL_W
+        assert u_first.x == cells["cell:comma:0:0"].x + spreadsheet_constants.COLUMN_WIDTH + spreadsheet_constants.V_SPLIT_GAP, "the unchanged half U is pushed right of the comma half by the extra C|U gap (so the divider # clears the cells); within U the columns stay one COL_W apart"
+        assert cells["cell:unchanged:0:1"].x == u_first.x + spreadsheet_constants.COLUMN_WIDTH
         assert [cells[f"cell:unchanged:{p}:0"].text for p in range(3)] == ["1", "0", "0"]
         assert [cells[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["-2", "0", "1"]

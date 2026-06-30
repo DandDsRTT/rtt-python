@@ -20,7 +20,7 @@ from rtt.app.spreadsheet_constants import (
     CBOX_DROP_W,
     CBOX_SLOT_W,
     CHART_H,
-    COL_W,
+    COLUMN_WIDTH,
     OPT_COL_GAP,
     OPT_MEAN_DAMAGE_W,
     OPT_PAD_B,
@@ -78,14 +78,14 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group
     is_gen_group = group in ("gens", "superspace_generators")
     is_prime_group = group in ("primes", "superspace_primes")
     for i, v in enumerate(values):
-        cell_id = f"{key}:{geometry.group_elem[group]}:{query.col_token(resolved, group, i)}"
+        cell_id = f"{key}:{geometry.group_elem[group]}:{query.column_token(resolved, group, i)}"
         x = geometry.group_left[group][query.comma_value_pos(resolved, i) if group == "commas" else i]
         u = query.cell_unit(resolved, key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
         operand = closed_form_operand(resolved, geometry, context, key, group, i, v) if resolved.flags.math_expressions else None
         if operand is not None:
-            cells.append(CellBox(cell_id, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=u))
+            cells.append(CellBox(cell_id, x, y, COLUMN_WIDTH, ROW_H, "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=u))
         else:
-            cells.append(CellBox(cell_id, x, y, COL_W, ROW_H, editable_kind or "tuningvalue",
+            cells.append(CellBox(cell_id, x, y, COLUMN_WIDTH, ROW_H, editable_kind or "tuningvalue",
                                  text=service.cents(v, resolved.flags.decimals), unit=u))
         if key in ("tuning", "just"):
             voice(cells, f"{key}:{group}", i, v)
@@ -98,7 +98,7 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group
             if gsize is not None:
                 text = service.cents(gsize, resolved.flags.decimals)
         cells.append(CellBox(f"{key}:{geometry.group_elem[group]}:draft", geometry.group_left[group][pending_idx[1]],
-                             y, COL_W, ROW_H, "tuningvalue", text=text, pending=True))
+                             y, COLUMN_WIDTH, ROW_H, "tuningvalue", text=text, pending=True))
 
 
 def chart(cells, geometry, context, row_key, column_key, values, indicator=None, indicator_label="") -> None:
@@ -106,9 +106,9 @@ def chart(cells, geometry, context, row_key, column_key, values, indicator=None,
     if values and row_key in geometry.rows and geometry.rows[row_key].chart_top is not None and query.tile_open(geometry, context.collapsed, row_key, column_key):
         x = geometry.group_left[column_key][0] - BRACKET_W
         gap = query.interval_col_gap(column_key)
-        width = 2 * BRACKET_W + len(values) * COL_W + max(len(values) - 1, 0) * gap
+        width = 2 * BRACKET_W + len(values) * COLUMN_WIDTH + max(len(values) - 1, 0) * gap
         cells.append(CellBox(f"chart:{row_key}:{column_key}", x, geometry.rows[row_key].chart_top,
-                             width, CHART_H, "chart", values=values, col_gap=gap,
+                             width, CHART_H, "chart", values=values, column_gap=gap,
                              indicator=indicator, indicator_label=indicator_label))
 
 
@@ -145,10 +145,10 @@ def _emit_tuning_gen_row(cells, resolved, geometry, context) -> None:
             closed_form = _closed_form(resolved, context)
             operand = closed_form.generator_operand(i, v) if closed_form is not None else None
         if operand is not None:
-            cells.append(CellBox(f"tuning:gen:{query.col_token(resolved, 'gens', i)}", geometry.group_left["gens"][i], geometry.rows["tuning"].y, COL_W, ROW_H,
+            cells.append(CellBox(f"tuning:gen:{query.column_token(resolved, 'gens', i)}", geometry.group_left["gens"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_H,
                                  "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "gens", gen=i)))
         else:
-            cells.append(CellBox(f"tuning:gen:{query.col_token(resolved, 'gens', i)}", geometry.group_left["gens"][i], geometry.rows["tuning"].y, COL_W, ROW_H,
+            cells.append(CellBox(f"tuning:gen:{query.column_token(resolved, 'gens', i)}", geometry.group_left["gens"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_H,
                                  gen_kind, text=service.cents(v, resolved.flags.decimals), gen=i, unit=query.cell_unit(resolved, "tuning", "gens", gen=i)))
         voice(cells, "tuning:gens", i, v)
 
@@ -166,10 +166,10 @@ def _emit_tuning_canongen_row(cells, resolved, geometry, context) -> None:
                 coefficients = [resolved.canon.inverse_form_M[k][j] for k in range(resolved.dims.rank)]
                 operand = closed_form.canonical_generator_operand(coefficients, v)
         if operand is not None:
-            cells.append(CellBox(f"tuning:cangen:{j}", query.canongen_left(geometry, j), geometry.rows["tuning"].y, COL_W, ROW_H,
+            cells.append(CellBox(f"tuning:cangen:{j}", query.canongen_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_H,
                                  "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "canongens", gen=j)))
         else:
-            cells.append(CellBox(f"tuning:cangen:{j}", query.canongen_left(geometry, j), geometry.rows["tuning"].y, COL_W, ROW_H,
+            cells.append(CellBox(f"tuning:cangen:{j}", query.canongen_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_H,
                                  "tuningvalue", text=service.cents(v, resolved.flags.decimals), gen=j, unit=query.cell_unit(resolved, "tuning", "canongens", gen=j)))
         voice(cells, "tuning:canongens", j, v)
 
@@ -196,11 +196,11 @@ def _emit_tuning_superspace_generator_row(cells, chart_tiles, resolved, geometry
         operand = superspace_closed_form.generator_operand(i, v) if superspace_closed_form is not None else None
         if operand is not None:
             cells.append(CellBox(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
-                                 COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals),
+                                 COLUMN_WIDTH, ROW_H, "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals),
                                  unit=query.cell_unit(resolved, "tuning", "superspace_generators", gen=i)))
         else:
             cells.append(CellBox(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
-                                 COL_W, ROW_H, "gentuningcell", text=service.cents(v, resolved.flags.decimals),
+                                 COLUMN_WIDTH, ROW_H, "gentuningcell", text=service.cents(v, resolved.flags.decimals),
                                  unit=query.cell_unit(resolved, "tuning", "superspace_generators", gen=i)))
         voice(cells, "tuning:superspace_generators", i, v)
 
@@ -250,19 +250,19 @@ def _emit_cbox_controls(cells, region_boxes, resolved, geometry, context) -> Non
                              CAPTION_LINE, "caption", text="predefined complexities",
                              align="left", disabled=complexity_locked))
         q_slot_x = tx + drop_w + OPT_COL_GAP
-    q_x = q_slot_x + (slot_w - COL_W) / 2
+    q_x = q_slot_x + (slot_w - COLUMN_WIDTH) / 2
     q_text = _format_power(service.complexity_norm_power(context.tuning_scheme))
     q_kind = "powerinput" if resolved.flags.alt_complexity else "powerdisplay"
-    cells.append(CellBox("control:q", q_x, control_y, COL_W, ROW_H, q_kind, text=q_text))
+    cells.append(CellBox("control:q", q_x, control_y, COLUMN_WIDTH, ROW_H, q_kind, text=q_text))
     if resolved.flags.symbols:
         cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
     cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
                          text="interval complexity norm power"))
     if service.is_all_interval(context.tuning_scheme):
         dual_slot_x = q_slot_x + slot_w + OPT_COL_GAP
-        dual_x = dual_slot_x + (slot_w - COL_W) / 2
+        dual_x = dual_slot_x + (slot_w - COLUMN_WIDTH) / 2
         dual_text = _format_power(service.dual_norm_power(context.tuning_scheme))
-        cells.append(CellBox("control:dual", dual_x, control_y, COL_W, ROW_H, "powerdisplay", text=dual_text))
+        cells.append(CellBox("control:dual", dual_x, control_y, COLUMN_WIDTH, ROW_H, "powerdisplay", text=dual_text))
         if resolved.flags.symbols:
             cells.append(CellBox("symbol:dual", dual_slot_x, sym_y, slot_w, SYMBOL_H,
                                  "symbol", text="dual(𝑞)"))
@@ -287,7 +287,7 @@ def _emit_weight_row(cells, region_boxes, chart_tiles, resolved, geometry, conte
     if geometry.slope_ctrl:
         box_top = geometry.rows["weight"].tile_top + geometry.rows["weight"].tile_h - geometry.slope_extra + RANGE_GAP
         bx, by = control_region(region_boxes, geometry, "block:slope", "targets", box_top, PRESET_H + CAPTION_LINE)
-        slope_w = geometry.col_w["targets"] - 2 * BOX_INNER
+        slope_w = geometry.column_width["targets"] - 2 * BOX_INNER
         cells.append(CellBox("control:slope", bx, by, slope_w, PRESET_H,
                              "control_select", text=service.weight_slope_of(context.tuning_scheme),
                              values=tuple(service.WEIGHT_SLOPES), disabled=geometry.slope_locked))
@@ -315,7 +315,7 @@ def _emit_tuning_ranges_box(cells, resolved, geometry, context):
     gtm_box = None
     if geometry.gtm_chart:
         chosen = resolved.tuning.tuning_map.monotone_generator_range if context.range_mode == "monotone" else resolved.tuning.tuning_map.tradeoff_generator_range
-        gens_x, gens_width = geometry.col_x["gens"], geometry.col_w["gens"]
+        gens_x, gens_width = geometry.column_x["gens"], geometry.column_width["gens"]
         control_y = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_h - geometry.gtm_extra + RANGE_GAP
         cells.append(CellBox("rangetitle:tuning:gens", gens_x, control_y + BOX_INNER, gens_width, BOX_TITLE_H, "boxtitle",
                              text="tuning ranges", align="left"))
@@ -333,8 +333,8 @@ def _emit_tuning_ranges_box(cells, resolved, geometry, context):
 def _emit_optimization_box(cells, resolved, geometry, context):
     opt_box = None
     if geometry.opt_ctrl:
-        ox = geometry.col_x["targets"]
-        box_w = geometry.col_w["targets"]
+        ox = geometry.column_x["targets"]
+        box_w = geometry.column_width["targets"]
         box_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_h
                    - geometry.opt_extra + RANGE_GAP)
         title_top = box_top + OPT_PAD_T
@@ -344,14 +344,14 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         cap_band = geometry.opt_cap_lines * CAPTION_LINE
         body_h = ROW_H + resolved.scalars.ctrl_symbol_h + cap_band + OPT_PAD_B
         mean_damage_x = ox + OPT_PAD_L
-        mean_damage_val_x = mean_damage_x + (OPT_MEAN_DAMAGE_W - COL_W) / 2
+        mean_damage_val_x = mean_damage_x + (OPT_MEAN_DAMAGE_W - COLUMN_WIDTH) / 2
         pow_slot_x = mean_damage_x + OPT_MEAN_DAMAGE_W + OPT_COL_GAP
-        pow_x = pow_slot_x + (OPT_POW_CAP_W - COL_W) / 2
+        pow_x = pow_slot_x + (OPT_POW_CAP_W - COLUMN_WIDTH) / 2
         mean_damage = _power_mean(resolved.tuning.target_sizes.damage, _displayed_mean_damage_power(context))
         power = _format_power(_displayed_optimization_power(context))
         cells.append(CellBox("optimization:title", ox, title_top, box_w, OPT_TITLE_H, "boxtitle",
                              text="optimization"))
-        cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COL_W, ROW_H, "tuningvalue",
+        cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COLUMN_WIDTH, ROW_H, "tuningvalue",
                              text=service.cents(mean_damage, resolved.flags.decimals)))
         mean_damage_symbol = (f"⟪𝒓{resolved.labels.prescaler_symbol}⁻¹⟫{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
                       if resolved.scalars.all_interval else "⟪𝐝⟫ₚ")
@@ -363,12 +363,12 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         cells.append(CellBox("optimization:mean_damage:caption", mean_damage_x, cap_top, OPT_MEAN_DAMAGE_W, cap_band,
                              "caption", text=geometry.mean_damage_caption))
         power_locked = resolved.scalars.all_interval or not resolved.flags.alt_complexity
-        cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
+        cells.append(CellBox("optimization:power", pow_x, content_top, COLUMN_WIDTH, ROW_H,
                              "powerdisplay" if power_locked else "powerinput", text=power))
         if resolved.flags.symbols:
-            cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
+            cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COLUMN_WIDTH, SYMBOL_H,
                                  "symbol", text="𝑝"))
-        cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,
+        cells.append(CellBox("optimization:power:caption", pow_x + (COLUMN_WIDTH - OPT_POW_CAP_W) / 2, cap_top,
                              OPT_POW_CAP_W, CAPTION_LINE, "caption", text="optimization power"))
         opt_box = (ox, box_top, box_w, OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + body_h)
     return opt_box
@@ -378,8 +378,8 @@ def _emit_approach_box(cells, geometry):
     approach_frame = None
     approach_box = None
     if geometry.show_approach:
-        ax = geometry.col_x["targets"]
-        aw = geometry.col_w["targets"]
+        ax = geometry.column_x["targets"]
+        aw = geometry.column_width["targets"]
         box_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_h
                    - geometry.opt_extra - geometry.approach_extra + RANGE_GAP)
         cells.append(CellBox("optimization:approach:title", ax, box_top + BOX_INNER, aw, BOX_TITLE_H, "boxtitle",
@@ -393,9 +393,9 @@ def _emit_approach_box(cells, geometry):
 
 def control_region(region_boxes, geometry, box_id, column_key, top, content_h):
     box_y = top + BOX_OUTER
-    region_boxes.append(Block(box_id, geometry.col_x[column_key], box_y, geometry.col_w[column_key],
+    region_boxes.append(Block(box_id, geometry.column_x[column_key], box_y, geometry.column_width[column_key],
                               2 * BOX_INNER + content_h, boxed=True))
-    return geometry.col_x[column_key] + BOX_INNER, box_y + BOX_INNER
+    return geometry.column_x[column_key] + BOX_INNER, box_y + BOX_INNER
 
 
 def _is_sole_option(options, value) -> bool:

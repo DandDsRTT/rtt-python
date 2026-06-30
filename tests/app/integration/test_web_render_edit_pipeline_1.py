@@ -253,7 +253,7 @@ class TestCellEditPipeline:
 
         from rtt.app.render_html import _ratio_font
         from rtt.app.render_html import _RATIO_DIGIT_EM, _RATIO_MAX_FONT, _RATIO_PAD
-        cell = spreadsheet_constants.COL_W
+        cell = spreadsheet_constants.COLUMN_WIDTH
         assert _ratio_font("2", "1", cell) == _RATIO_MAX_FONT
         assert _ratio_font("128", "125", cell) == _RATIO_MAX_FONT
         overflow = math.floor((cell - _RATIO_PAD) / (_RATIO_DIGIT_EM * _RATIO_MAX_FONT)) + 1

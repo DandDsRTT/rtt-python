@@ -70,8 +70,8 @@ def get_largest_minors_l(matrix: Matrix) -> tuple[int, ...]:
     rank = m.rank()
     row_subset = next(iter(combinations(range(m.rows), rank)))
     minors = [
-        int(m.extract(list(row_subset), list(col_subset)).det())
-        for col_subset in combinations(range(m.cols), rank)
+        int(m.extract(list(row_subset), list(column_subset)).det())
+        for column_subset in combinations(range(m.cols), rank)
     ]
     return divide_out_gcd(tuple(minors))
 

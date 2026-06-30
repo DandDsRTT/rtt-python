@@ -5,7 +5,7 @@ from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.layout import CellBox
 from rtt.app.spreadsheet_constants import (
     BUTTON,
-    COL_W,
+    COLUMN_WIDTH,
     COMMAPICK_GAP,
     DASH,
     ROW_H,
@@ -46,17 +46,17 @@ def emit_vectors(resolved, geometry, context) -> EmitResult:
 def _emit_vector_grid(cells, resolved, geometry, g: _VecGrid) -> None:
     for col in range(g.count):
         for p in range(resolved.dims.dimensionality):
-            cells.append(CellBox(g.id_fn(query.col_token(resolved, g.group, col), p), g.left_fn(col), query.vector_top(geometry, p), COL_W, ROW_H, g.committed_kind, text=str(g.data[col][p]), prime=p, comma=col, unit=query.cell_unit(resolved, "vectors", g.group, prime=p)))
+            cells.append(CellBox(g.id_fn(query.column_token(resolved, g.group, col), p), g.left_fn(col), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_H, g.committed_kind, text=str(g.data[col][p]), prime=p, comma=col, unit=query.cell_unit(resolved, "vectors", g.group, prime=p)))
             voice(cells, f"vectors:{g.group}", col, g.sizes.just[col])
     if g.pending is not None:
         for p in range(resolved.dims.dimensionality):
             v = g.pending[p]
-            cells.append(CellBox(g.id_fn(query.pending_col_token(resolved, g.group), p), g.left_fn(g.count), query.vector_top(geometry, p), COL_W, ROW_H, g.pending_kind,
+            cells.append(CellBox(g.id_fn(query.pending_col_token(resolved, g.group), p), g.left_fn(g.count), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_H, g.pending_kind,
                                  text="" if v is None else str(v), prime=p, comma=g.count, pending=True, unit=query.cell_unit(resolved, "vectors", g.group, prime=p)))
 
 
 def _basis_col_x(geometry):
-    basis_x = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
+    basis_x = geometry.column_x["quantities"] + (geometry.column_width["quantities"] - COLUMN_WIDTH) / 2
     basis_bus_x = geometry.node_edge + geometry.FAN if query.row_fans(geometry, "vectors") else geometry.node_edge
     return basis_x, basis_bus_x
 
@@ -64,7 +64,7 @@ def _basis_col_x(geometry):
 def _emit_basis_minus(cells, geometry, cell_id, p, kind, **kw):
     basis_x, basis_bus_x = _basis_col_x(geometry)
     cells.append(CellBox(cell_id, basis_bus_x, query.vector_top(geometry, p),
-                         (basis_x + COL_W) - basis_bus_x, ROW_H, kind, **kw))
+                         (basis_x + COLUMN_WIDTH) - basis_bus_x, ROW_H, kind, **kw))
 
 
 def _emit_vectors_basis_col(cells, resolved, geometry, context) -> None:
@@ -72,10 +72,10 @@ def _emit_vectors_basis_col(cells, resolved, geometry, context) -> None:
     for p in range(resolved.dims.dimensionality):
         text = str(resolved.dims.elements[p])
         kind = element_cell_kind(text) if resolved.flags.nonstandard_domain else "prime"
-        cells.append(CellBox(f"basis:{p}", basis_x, query.vector_top(geometry, p), COL_W, ROW_H, kind, text=text, prime=p))
+        cells.append(CellBox(f"basis:{p}", basis_x, query.vector_top(geometry, p), COLUMN_WIDTH, ROW_H, kind, text=text, prime=p))
     if resolved.scalars.element_draft:
         draft_text = context.pending_element or "?/?"
-        cells.append(CellBox("basis:pending", basis_x, query.vector_top(geometry, resolved.dims.dimensionality), COL_W, ROW_H,
+        cells.append(CellBox("basis:pending", basis_x, query.vector_top(geometry, resolved.dims.dimensionality), COLUMN_WIDTH, ROW_H,
                                   element_cell_kind(draft_text), text=draft_text, prime=resolved.dims.dimensionality, pending=True))
         _emit_basis_minus(cells, geometry, "element_minus:basis:pending", resolved.dims.dimensionality, "element_minus")
     if resolved.flags.nonstandard_domain:
@@ -93,47 +93,47 @@ def _emit_vectors_basis_col(cells, resolved, geometry, context) -> None:
 def _emit_vectors_commas_col(cells, resolved, geometry, context) -> None:
     for c in range(resolved.dims.comma_count):
         for p in range(resolved.dims.dimensionality):
-            cells.append(CellBox(ids.comma_cell(query.col_token(resolved, 'commas', c), p), query.comma_left(geometry, resolved, c), query.vector_top(geometry, p), COL_W, ROW_H, "commacell", text=str(context.state.comma_basis[c][p]), prime=p, comma=c, unit=query.cell_unit(resolved, "vectors", "commas", prime=p)))
+            cells.append(CellBox(ids.comma_cell(query.column_token(resolved, 'commas', c), p), query.comma_left(geometry, resolved, c), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_H, "commacell", text=str(context.state.comma_basis[c][p]), prime=p, comma=c, unit=query.cell_unit(resolved, "vectors", "commas", prime=p)))
             voice(cells, "vectors:commas", c, resolved.tuning.comma_sizes.just[c])
         if resolved.flags.presets:
-            cells.append(CellBox(f"commapick:{query.col_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP, COL_W, ROW_H, "commapick", comma=c))
+            cells.append(CellBox(f"commapick:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP, COLUMN_WIDTH, ROW_H, "commapick", comma=c))
     full_u = resolved.unchanged.basis is not None and all(v is not None for v in resolved.unchanged.basis)
     for j in range(resolved.dims.unchanged_count):
         doomed = resolved.commas.pending is not None and j == resolved.dims.unchanged_count - 1
         born = resolved.unchanged.born and j == resolved.dims.unchanged_count - 1
         for p in range(resolved.dims.dimensionality):
             vector_text = DASH if resolved.unchanged.basis[j] is None else str(resolved.unchanged.basis[j][p])
-            cells.append(CellBox(ids.unchanged_cell(j, p), query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + j), query.vector_top(geometry, p), COL_W, ROW_H,
+            cells.append(CellBox(ids.unchanged_cell(j, p), query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + j), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_H,
                                  "unchangedcell" if (full_u and not doomed and not born) else "vector", text=vector_text, prime=p, comma=resolved.dims.comma_count + j,
                                  unit=query.cell_unit(resolved, "vectors", "commas", prime=p)))
         voice(cells, "vectors:commas", resolved.dims.comma_count + j, resolved.unchanged.sizes.just[j])
     if resolved.scalars.comma_draft:
-        col_kind = "vector" if resolved.ghosts.comma else "commacell"
+        column_kind = "vector" if resolved.ghosts.comma else "commacell"
         for p in range(resolved.dims.dimensionality):
             v = resolved.ghosts.comma_vector[p] if resolved.ghosts.comma else resolved.commas.pending[p]
-            cells.append(CellBox(ids.comma_cell(query.pending_col_token(resolved, 'commas'), p), query.comma_left(geometry, resolved, resolved.dims.comma_count), query.vector_top(geometry, p), COL_W, ROW_H, col_kind,
+            cells.append(CellBox(ids.comma_cell(query.pending_col_token(resolved, 'commas'), p), query.comma_left(geometry, resolved, resolved.dims.comma_count), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_H, column_kind,
                                  text="" if v is None else str(v), prime=p, comma=resolved.dims.comma_count, pending=True, unit=query.cell_unit(resolved, "vectors", "commas", prime=p)))
         if resolved.commas.pending is not None and resolved.flags.presets:
-            cells.append(CellBox("commapick:draft", query.comma_left(geometry, resolved, resolved.dims.comma_count), query.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP, COL_W, ROW_H, "commapick", comma=resolved.dims.comma_count, pending=True))
+            cells.append(CellBox("commapick:draft", query.comma_left(geometry, resolved, resolved.dims.comma_count), query.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP, COLUMN_WIDTH, ROW_H, "commapick", comma=resolved.dims.comma_count, pending=True))
 
 
 def _emit_vectors_detempering_col(cells, resolved, geometry) -> None:
     for i in range(resolved.dims.rank):
         for p in range(resolved.dims.dimensionality):
-            cells.append(CellBox(f"cell:vector:detempering:{query.col_token(resolved, 'detempering', i)}:{p}", query.detempering_left(geometry, i), query.vector_top(geometry, p), COL_W, ROW_H, "vector", text=str(resolved.detempering.vectors[i][p]), unit=query.cell_unit(resolved, "vectors", "detempering", prime=p)))
+            cells.append(CellBox(f"cell:vector:detempering:{query.column_token(resolved, 'detempering', i)}:{p}", query.detempering_left(geometry, i), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_H, "vector", text=str(resolved.detempering.vectors[i][p]), unit=query.cell_unit(resolved, "vectors", "detempering", prime=p)))
             voice(cells, "vectors:detempering", i, resolved.detempering.sizes.just[i])
 
 
 def _emit_vectors_int_handles(cells, resolved, geometry, context) -> None:
     if "vectors" in geometry.rows and geometry.rows["vectors"].interval_handle_top is not None:
         hy = geometry.rows["vectors"].interval_handle_top
-        for group, count, col_left, column_key in (("comma", resolved.dims.comma_count, lambda i: query.comma_left(geometry, resolved, i), "commas"),
+        for group, count, column_left, column_key in (("comma", resolved.dims.comma_count, lambda i: query.comma_left(geometry, resolved, i), "commas"),
                                              ("target", resolved.dims.target_count, lambda i: query.target_left(geometry, i), "targets"),
                                              ("held", resolved.dims.held_count, lambda i: query.held_left(geometry, i), "held"),
                                              ("interest", resolved.dims.interest_count, lambda i: query.interest_left(geometry, i), "interest")):
             if count >= 2 and query.tile_open(geometry, context.collapsed, "vectors", column_key) and (column_key != "targets" or resolved.scalars.targets_editable):
                 for i in range(count):
-                    cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), hy, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
+                    cells.append(CellBox(f"int_drag:{group}:{i}", column_left(i), hy, COLUMN_WIDTH, ROW_HANDLE_W, "int_drag", comma=i))
 
 
 def emit_superspace_rows(resolved, geometry, context) -> EmitResult:
@@ -149,20 +149,20 @@ def emit_superspace_rows(resolved, geometry, context) -> EmitResult:
 def _emit_superspace_quantity_rows(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     if query.row_open(geometry, collapsed, "superspace_vectors") and query.tile_open(geometry, collapsed, "superspace_vectors", "quantities"):
-        basis_x = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
+        basis_x = geometry.column_x["quantities"] + (geometry.column_width["quantities"] - COLUMN_WIDTH) / 2
         for p in range(resolved.dims.superspace_dimensionality):
-            cells.append(CellBox(f"superspace_basis:{p}", basis_x, query.superspace_vector_top(geometry, p), COL_W, ROW_H,
+            cells.append(CellBox(f"superspace_basis:{p}", basis_x, query.superspace_vector_top(geometry, p), COLUMN_WIDTH, ROW_H,
                                  "commaratio", text=str(resolved.dims.superspace_primes[p]), prime=p))
     if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "quantities"):
         superspace_gens = service.superspace_generators(context.state)
         for i in range(resolved.dims.superspace_rank):
-            cells.append(CellBox(f"superspace_gen:{i}", geometry.col_x["quantities"], query.superspace_map_top(geometry, i),
-                                 geometry.col_w["quantities"], ROW_H, "genratio",
+            cells.append(CellBox(f"superspace_gen:{i}", geometry.column_x["quantities"], query.superspace_map_top(geometry, i),
+                                 geometry.column_width["quantities"], ROW_H, "genratio",
                                  text=superspace_gens[i] if i < len(superspace_gens) else ""))
     if query.row_open(geometry, collapsed, "superspace_projection") and query.tile_open(geometry, collapsed, "superspace_projection", "quantities"):
-        basis_x = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
+        basis_x = geometry.column_x["quantities"] + (geometry.column_width["quantities"] - COLUMN_WIDTH) / 2
         for p in range(resolved.dims.superspace_dimensionality):
-            cells.append(CellBox(f"superspace_projection_basis:{p}", basis_x, query.superspace_projection_top(geometry, p), COL_W, ROW_H, "commaratio",
+            cells.append(CellBox(f"superspace_projection_basis:{p}", basis_x, query.superspace_projection_top(geometry, p), COLUMN_WIDTH, ROW_H, "commaratio",
                                  text=str(resolved.dims.superspace_primes[p]), prime=p))
 
 
@@ -175,7 +175,7 @@ def _emit_superspace_matrix_vectors(cells, resolved, geometry, context) -> None:
                 value = basis[elem_idx][superspace_prime_idx]
                 cells.append(CellBox(
                     f"cell:superspace_vectors:primes:{superspace_prime_idx}:{elem_idx}",
-                    query.prime_left(geometry, elem_idx), query.superspace_vector_top(geometry, superspace_prime_idx), COL_W, ROW_H,
+                    query.prime_left(geometry, elem_idx), query.superspace_vector_top(geometry, superspace_prime_idx), COLUMN_WIDTH, ROW_H,
                     "vector", text=str(value), prime=superspace_prime_idx, comma=elem_idx,
                     unit=query.cell_unit(resolved, "superspace_vectors", "primes", prime=superspace_prime_idx, elem=elem_idx)))
     if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "superspace_primes"):
@@ -184,7 +184,7 @@ def _emit_superspace_matrix_vectors(cells, resolved, geometry, context) -> None:
             for superspace_prime_idx in range(resolved.dims.superspace_dimensionality):
                 cells.append(CellBox(
                     f"cell:superspace_mapping:superspace_primes:{gen_idx}:{superspace_prime_idx}",
-                    query.superspace_prime_left(geometry, superspace_prime_idx), query.superspace_map_top(geometry, gen_idx), COL_W, ROW_H,
+                    query.superspace_prime_left(geometry, superspace_prime_idx), query.superspace_map_top(geometry, gen_idx), COLUMN_WIDTH, ROW_H,
                     "mapped", text=str(ml[gen_idx][superspace_prime_idx]), gen=gen_idx, prime=superspace_prime_idx,
                     unit=query.cell_unit(resolved, "superspace_mapping", "superspace_primes", gen=gen_idx, prime=superspace_prime_idx)))
     if query.row_open(geometry, collapsed, "superspace_vectors") and query.tile_open(geometry, collapsed, "superspace_vectors", "superspace_primes"):
@@ -193,7 +193,7 @@ def _emit_superspace_matrix_vectors(cells, resolved, geometry, context) -> None:
             for j in range(resolved.dims.superspace_dimensionality):
                 cells.append(CellBox(
                     f"cell:superspace_vectors:superspace_primes:{i}:{j}",
-                    query.superspace_prime_left(geometry, j), query.superspace_vector_top(geometry, i), COL_W, ROW_H,
+                    query.superspace_prime_left(geometry, j), query.superspace_vector_top(geometry, i), COLUMN_WIDTH, ROW_H,
                     "mapped", text=str(mjl[i][j]), gen=i, prime=j,
                     unit=query.cell_unit(resolved, "superspace_vectors", "superspace_primes", prime=j)))
 
@@ -206,7 +206,7 @@ def _emit_superspace_matrix_mapping(cells, resolved, geometry, context) -> None:
             for j in range(resolved.dims.superspace_rank):
                 cells.append(CellBox(
                     f"cell:superspace_mapping:superspace_generators:{i}:{j}",
-                    query.superspace_gen_left(geometry, j), query.superspace_map_top(geometry, i), COL_W, ROW_H,
+                    query.superspace_gen_left(geometry, j), query.superspace_map_top(geometry, i), COLUMN_WIDTH, ROW_H,
                     "mapped", text=str(mlgl[i][j]), gen=i,
                     unit=query.cell_unit(resolved, "superspace_mapping", "superspace_generators", gen=i)))
     if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "primes"):
@@ -215,7 +215,7 @@ def _emit_superspace_matrix_mapping(cells, resolved, geometry, context) -> None:
             for e in range(resolved.dims.dimensionality):
                 cells.append(CellBox(
                     f"cell:superspace_mapping:primes:{i}:{e}",
-                    query.prime_left(geometry, e), query.superspace_map_top(geometry, i), COL_W, ROW_H,
+                    query.prime_left(geometry, e), query.superspace_map_top(geometry, i), COLUMN_WIDTH, ROW_H,
                     "mapped", text=str(msl[i][e]), gen=i,
                     unit=query.cell_unit(resolved, "superspace_mapping", "primes", gen=i, elem=e)))
 
@@ -241,19 +241,19 @@ def _emit_superspace_vector_list_lift(cells, resolved, geometry, context, row) -
         for p in range(resolved.dims.superspace_dimensionality):
             cells.append(CellBox(
                 f"cell:superspace_vectors:{column_key}:{p}:{c}", left(c), query.superspace_vector_top(geometry, p),
-                COL_W, ROW_H, "vector", text=str(lifted[c][p]), prime=p, comma=c,
+                COLUMN_WIDTH, ROW_H, "vector", text=str(lifted[c][p]), prime=p, comma=c,
                 unit=query.cell_unit(resolved, "superspace_vectors", column_key, prime=p)))
     if draft:
         for p in range(resolved.dims.superspace_dimensionality):
             cells.append(CellBox(f"cell:superspace_vectors:{column_key}:{p}:draft", left(n), query.superspace_vector_top(geometry, p),
-                                 COL_W, ROW_H, "vector", text="", prime=p, pending=True))
+                                 COLUMN_WIDTH, ROW_H, "vector", text="", prime=p, pending=True))
     if column_key == "commas":
         for j in range(resolved.dims.unchanged_count):
             uj = resolved.projection.superspace_unchanged[j]
             for p in range(resolved.dims.superspace_dimensionality):
                 cells.append(CellBox(
                     f"cell:superspace_vectors:commas:{p}:u{j}", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + j), query.superspace_vector_top(geometry, p),
-                    COL_W, ROW_H, "vector", text=DASH if uj is None else str(uj[p]), prime=p, comma=resolved.dims.comma_count + j,
+                    COLUMN_WIDTH, ROW_H, "vector", text=DASH if uj is None else str(uj[p]), prime=p, comma=resolved.dims.comma_count + j,
                     unit=query.cell_unit(resolved, "superspace_vectors", "commas", prime=p)))
 
 
@@ -267,19 +267,19 @@ def _emit_superspace_vector_list_map(cells, resolved, geometry, context, row) ->
         for g in range(resolved.dims.superspace_rank):
             cells.append(CellBox(
                 f"cell:superspace_mapping:{column_key}:{g}:{c}", left(c), query.superspace_map_top(geometry, g),
-                COL_W, ROW_H, "mapped", text=str(mapped[c][g]), gen=g, comma=c,
+                COLUMN_WIDTH, ROW_H, "mapped", text=str(mapped[c][g]), gen=g, comma=c,
                 unit=query.cell_unit(resolved, "superspace_mapping", column_key, gen=g)))
     if draft:
         for g in range(resolved.dims.superspace_rank):
             cells.append(CellBox(f"cell:superspace_mapping:{column_key}:{g}:draft", left(n), query.superspace_map_top(geometry, g),
-                                 COL_W, ROW_H, "mapped", text="", gen=g, pending=True))
+                                 COLUMN_WIDTH, ROW_H, "mapped", text="", gen=g, pending=True))
     if column_key == "commas":
         for j in range(resolved.dims.unchanged_count):
             uj = resolved.projection.superspace_unchanged_mapped[j]
             for g in range(resolved.dims.superspace_rank):
                 cells.append(CellBox(
                     f"cell:superspace_mapping:commas:{g}:u{j}", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + j), query.superspace_map_top(geometry, g),
-                    COL_W, ROW_H, "mapped", text=DASH if uj is None else str(uj[g]), gen=g, comma=resolved.dims.comma_count + j,
+                    COLUMN_WIDTH, ROW_H, "mapped", text=DASH if uj is None else str(uj[g]), gen=g, comma=resolved.dims.comma_count + j,
                     unit=query.cell_unit(resolved, "superspace_mapping", "commas", gen=g)))
 
 
@@ -309,7 +309,7 @@ def _emit_superspace_projection_superspace_primes(cells, resolved, geometry, con
                 text = DASH if not full else resolved.projection.superspace_matrix[i][j]
                 cells.append(CellBox(
                     f"cell:superspace_projection:superspace_primes:{i}:{j}",
-                    query.superspace_prime_left(geometry, j), query.superspace_projection_top(geometry, i), COL_W, ROW_H,
+                    query.superspace_prime_left(geometry, j), query.superspace_projection_top(geometry, i), COLUMN_WIDTH, ROW_H,
                     "mapped", text=text, gen=i, prime=j,
                     unit=query.cell_unit(resolved, "superspace_projection", "superspace_primes", gen=i, prime=j)))
 
@@ -320,7 +320,7 @@ def _emit_superspace_projection_superspace_generators(cells, resolved, geometry,
             for g in range(resolved.dims.superspace_rank):
                 text = DASH if not superspace_full else resolved.projection.superspace_embedding_matrix[i][g]
                 cells.append(CellBox(f"cell:superspace_embed:{i}:{g}", query.superspace_gen_left(geometry, g), query.superspace_projection_top(geometry, i),
-                                     COL_W, ROW_H, "mapped", text=text, gen=g))
+                                     COLUMN_WIDTH, ROW_H, "mapped", text=text, gen=g))
 
 
 def _emit_superspace_projection_primes(cells, resolved, geometry, context, superspace_full) -> None:
@@ -329,7 +329,7 @@ def _emit_superspace_projection_primes(cells, resolved, geometry, context, super
             for p in range(resolved.dims.superspace_dimensionality):
                 text = DASH if not superspace_full else str(resolved.projection.superspace_basis[e][p])
                 cells.append(CellBox(f"cell:superspace_projection_basis_lift:{e}:{p}", query.prime_left(geometry, e), query.superspace_projection_top(geometry, p),
-                                     COL_W, ROW_H, "mapped", text=text, prime=p, comma=e))
+                                     COLUMN_WIDTH, ROW_H, "mapped", text=text, prime=p, comma=e))
 
 
 def _emit_superspace_projection_commas(cells, resolved, geometry, context) -> None:
@@ -338,16 +338,16 @@ def _emit_superspace_projection_commas(cells, resolved, geometry, context) -> No
     for c in range(resolved.dims.comma_count):
         for p in range(resolved.dims.superspace_dimensionality):
             cells.append(CellBox(f"cell:superspace_projection_vectors:{p}:{c}", query.comma_left(geometry, resolved, c), query.superspace_projection_top(geometry, p),
-                                 COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
+                                 COLUMN_WIDTH, ROW_H, "mapped", text="0", prime=p, comma=c))
     if resolved.commas.pending is not None:
         for p in range(resolved.dims.superspace_dimensionality):
             cells.append(CellBox(f"cell:superspace_projection_vectors:{p}:draft", query.comma_left(geometry, resolved, resolved.dims.comma_count), query.superspace_projection_top(geometry, p),
-                                 COL_W, ROW_H, "mapped", text="", prime=p, pending=True))
+                                 COLUMN_WIDTH, ROW_H, "mapped", text="", prime=p, pending=True))
     for j in range(resolved.dims.unchanged_count):
         dashed = resolved.projection.superspace_unchanged[j] is None
         for p in range(resolved.dims.superspace_dimensionality):
             cells.append(CellBox(f"cell:superspace_projection_vectors:{p}:{resolved.dims.comma_count + j}", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown + j), query.superspace_projection_top(geometry, p),
-                                 COL_W, ROW_H, "mapped",
+                                 COLUMN_WIDTH, ROW_H, "mapped",
                                  text=DASH if dashed else str(resolved.projection.superspace_unchanged[j][p]), prime=p, comma=resolved.dims.comma_count + j))
 
 
@@ -360,7 +360,7 @@ def emit_identity_objects(resolved, geometry, context) -> EmitResult:
             for i in range(resolved.dims.rank):
                 for k in range(resolved.dims.rank):
                     cells.append(CellBox(
-                        f"cell:{prefix}:{i}:{k}", left(k), query.map_top(geometry, i), COL_W, ROW_H,
+                        f"cell:{prefix}:{i}:{k}", left(k), query.map_top(geometry, i), COLUMN_WIDTH, ROW_H,
                         "mapped", text="1" if i == k else "0", gen=i,
                         unit=query.cell_unit(resolved, "mapping", column_key, gen=i)))
     _emit_identity_canongens(cells, resolved, geometry, context)
@@ -372,7 +372,7 @@ def _emit_identity_vector_primes(cells, resolved, geometry, context) -> None:
         for i in range(resolved.dims.dimensionality):
             for k in range(resolved.dims.dimensionality):
                 cells.append(CellBox(
-                    f"cell:vector:primes:{i}:{k}", query.prime_left(geometry, k), query.vector_top(geometry, i), COL_W, ROW_H,
+                    f"cell:vector:primes:{i}:{k}", query.prime_left(geometry, k), query.vector_top(geometry, i), COLUMN_WIDTH, ROW_H,
                     "mapped", text="1" if i == k else "0", gen=i, prime=k,
                     unit=query.cell_unit(resolved, "vectors", "primes", prime=k)))
 
@@ -382,6 +382,6 @@ def _emit_identity_canongens(cells, resolved, geometry, context) -> None:
         for i in range(resolved.dims.canonical_rank):
             for k in range(resolved.dims.canonical_rank):
                 cells.append(CellBox(
-                    f"cell:fcancel:{i}:{k}", query.canongen_left(geometry, k), query.canon_top(geometry, i), COL_W, ROW_H,
+                    f"cell:fcancel:{i}:{k}", query.canongen_left(geometry, k), query.canon_top(geometry, i), COLUMN_WIDTH, ROW_H,
                     "mapped", text="1" if i == k else "0", gen=i,
                     unit=query.cell_unit(resolved, "canon", "canongens", gen=i)))

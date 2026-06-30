@@ -4,7 +4,7 @@ from rtt.library.canonicalization import (
     canonical_ca,
     canonical_form,
     canonical_ma,
-    col_hermite_defactor,
+    column_hermite_defactor,
 )
 from rtt.library.parsing import parse_temperament_data
 from rtt.library.temperament import Temperament, Variance
@@ -59,7 +59,7 @@ class TestCanonicalization:
         assert canonical_ca(matrix) == expected
 
     def test_col_hermite_defactor(self):
-        assert col_hermite_defactor(((6, 5, -4), (4, -4, 1))) == ((6, 5, -4), (-4, -4, 3)), "Matches Wolfram exactly. (hermiteRightUnimodular's exact output is omitted: # the unimodular transform isn't unique, and mine differs only by the sign of # one column — which cancels out, so col_hermite_defactor still matches.)"
+        assert column_hermite_defactor(((6, 5, -4), (4, -4, 1))) == ((6, 5, -4), (-4, -4, 3)), "Matches Wolfram exactly. (hermiteRightUnimodular's exact output is omitted: # the unimodular transform isn't unique, and mine differs only by the sign of # one column — which cancels out, so col_hermite_defactor still matches.)"
 
     def test_canonical_form_mapping(self):
         t = Temperament(((5, 8, 12), (7, 11, 16)), Variance.ROW)

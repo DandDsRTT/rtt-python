@@ -94,8 +94,8 @@ class TestProjectionVColumn:
         cells = {c.id: c for c in _with(projection=True).cells}
         assert "comma_plus" in cells and "comma_minus:0" in cells
         assert cells["comma_plus"].x < cells["cell:unchanged:0:0"].x
-        assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet_constants.COL_W + spreadsheet_constants.V_SPLIT_GAP / 2 - spreadsheet_constants.BUTTON / 2)) < 0.51, "the + rides the C|U gap — the visual 'next comma' slot between the comma half and U — kept clear # of BOTH the − (on the lone comma's branch point) and U's first reorder grip, so it doesn't sit on # U's gridline and occlude grip:unchanged:0 (layout-invariants-2)"
-        assert cells["comma_plus"].x - cells["comma_minus:0"].x >= spreadsheet_constants.COL_W - spreadsheet_constants.BUTTON, "and a COL_W clear of the − hover zone on the lone comma (so the + is actually clickable)"
+        assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet_constants.COLUMN_WIDTH + spreadsheet_constants.V_SPLIT_GAP / 2 - spreadsheet_constants.BUTTON / 2)) < 0.51, "the + rides the C|U gap — the visual 'next comma' slot between the comma half and U — kept clear # of BOTH the − (on the lone comma's branch point) and U's first reorder grip, so it doesn't sit on # U's gridline and occlude grip:unchanged:0 (layout-invariants-2)"
+        assert cells["comma_plus"].x - cells["comma_minus:0"].x >= spreadsheet_constants.COLUMN_WIDTH - spreadsheet_constants.BUTTON, "and a COL_W clear of the − hover zone on the lone comma (so the + is actually clickable)"
 
     def test_projection_at_full_rank_shows_the_complete_unchanged_basis(self):
         s = settings.defaults()
@@ -108,7 +108,7 @@ class TestProjectionVColumn:
         assert "comma_plus" in cells
         assert not any(c.startswith("comma_minus") for c in cells)
         assert not any(c.startswith("vsplit:") for c in cells), "no comma half, so no C|U divider and no wasted gap — U starts at the column's left and runs flush"
-        assert cells["cell:unchanged:0:1"].x - cells["cell:unchanged:0:0"].x == spreadsheet_constants.COL_W
+        assert cells["cell:unchanged:0:1"].x - cells["cell:unchanged:0:0"].x == spreadsheet_constants.COLUMN_WIDTH
 
     def test_projection_at_full_rank_keeps_the_nullity_count_in_a_readable_stub(self):
         s = settings.defaults()
@@ -164,7 +164,7 @@ class TestProjectionVColumn:
         cells = {c.id: c for c in layout.cells}
         draft = cells["cell:comma:0:1"]
         u_first = cells["cell:unchanged:0:0"]
-        assert u_first.x > draft.x + spreadsheet_constants.COL_W
+        assert u_first.x > draft.x + spreadsheet_constants.COLUMN_WIDTH
 
     def test_projection_v_column_counts_both_nullity_and_unchanged(self):
         cells = {c.id: c for c in _with(projection=True, counts=True).cells}
@@ -280,7 +280,7 @@ class TestProjectionDrafts:
         k = _target_count()
         pt = {c.id: c for c in spreadsheet.build(base, s, pending_target=[None, None, None]).cells}
         assert all(pt[f"cell:projection_targets:draft:{p}"].pending and pt[f"cell:projection_targets:draft:{p}"].text == "" for p in range(3))
-        assert pt["cell:projection_targets:draft:0"].x == pt[f"cell:projection_targets:{k - 1}:0"].x + spreadsheet_constants.COL_W + spreadsheet_constants.INTERVAL_COL_GAP
+        assert pt["cell:projection_targets:draft:0"].x == pt[f"cell:projection_targets:{k - 1}:0"].x + spreadsheet_constants.COLUMN_WIDTH + spreadsheet_constants.INTERVAL_COL_GAP
         ph = {c.id: c for c in spreadsheet.build(base, s, pending_held=[None, None, None]).cells}
         assert all(ph[f"cell:projection_held:draft:{p}"].pending and ph[f"cell:projection_held:draft:{p}"].text == "" for p in range(3))
         pi = {c.id: c for c in spreadsheet.build(base, s, interest=((1, 1, -1),), pending_interest=[None, None, None]).cells}
