@@ -339,7 +339,7 @@ class TestPerCellAudio:
         assert "interest" not in settings.SUBCONTROLS
         assert "interest" in settings.IMPLEMENTED
         assert settings.defaults()["interest"] is True
-        label = dict((k, lbl) for k, lbl, _d in items)["interest"]
+        label = dict((k, group_label) for k, group_label, _d in items)["interest"]
         assert label == "other intervals\nof interest"
 
     def test_interest_column_follows_its_own_toggle_not_tuning_tiles(self):

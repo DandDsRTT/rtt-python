@@ -45,15 +45,15 @@ _DOT_PITCH = 8
 def _line_style(line, y_shift: float = 0) -> str:
     half = spreadsheet_constants.LINE_WIDTH / 2
     if line.orientation == "v":
-        pos, edge, sweep = (
-            f"left:0; top:0; transform:translate({line.pos - half}px,{line.start - y_shift}px); "
+        position, edge, sweep = (
+            f"left:0; top:0; transform:translate({line.position - half}px,{line.start - y_shift}px); "
             f"height:{line.length}px",
             "left",
             "to bottom",
         )
     else:
-        pos, edge, sweep = (
-            f"left:0; top:0; transform:translate({line.start}px,{line.pos - half - y_shift}px); "
+        position, edge, sweep = (
+            f"left:0; top:0; transform:translate({line.start}px,{line.position - half - y_shift}px); "
             f"width:{line.length}px",
             "top",
             "to right",
@@ -63,8 +63,8 @@ def _line_style(line, y_shift: float = 0) -> str:
             f"repeating-linear-gradient({sweep},var(--c-gridline) 0 {spreadsheet_constants.LINE_WIDTH}px,"
             f"transparent {spreadsheet_constants.LINE_WIDTH}px {_DOT_PITCH}px) border-box"
         )
-        return f"{pos}; border-{edge}-color:transparent; background:{dots}"
-    return f"{pos}; border-{edge}-color:var(--c-gridline); background:none"
+        return f"{position}; border-{edge}-color:transparent; background:{dots}"
+    return f"{position}; border-{edge}-color:var(--c-gridline); background:none"
 
 
 def _select_props(min_width: float) -> str:

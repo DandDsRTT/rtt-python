@@ -207,8 +207,8 @@ def unchanged_interval_data(
 
     def scatter(per_known):
         out = [None] * nu
-        for pos, j in enumerate(kidx):
-            out[j] = per_known[pos]
+        for position, j in enumerate(kidx):
+            out[j] = per_known[position]
         return tuple(out)
 
     ratios = comma_ratios(known, domain_basis) if known else ()

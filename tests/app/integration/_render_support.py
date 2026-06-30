@@ -62,8 +62,8 @@ async def _enable(user: User, label: str) -> None:
     and tuning ranges now nest under optimization)."""
     await user.open("/")
     if label not in _GENERAL_KEY_BY_LABEL:
-        spec_key = next((k for k, lbl, _ in dict(show_settings.SHOW_GROUPS)["app features"]
-                         if lbl == label), None)
+        spec_key = next((k for k, group_label, _ in dict(show_settings.SHOW_GROUPS)["app features"]
+                         if group_label == label), None)
         if spec_key is not None:
             defaults = show_settings.defaults()
             for anc in sorted(show_settings.ancestors_of(spec_key), key=show_settings.depth_of):

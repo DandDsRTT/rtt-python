@@ -341,8 +341,8 @@ def cell_unit(resolved, row_key: str, column_key: str, *, gen=None, prime=None, 
         else:
             u = _subscript_coord(u, "g", f"g{_sub(gen + 1)}")
     if prime is not None:
-        coord = "p" if superspace else resolved.labels.domain_label
-        u = _subscript_coord(u, "p", f"{coord}{_sub(prime + 1)}")
+        coordinate = "p" if superspace else resolved.labels.domain_label
+        u = _subscript_coord(u, "p", f"{coordinate}{_sub(prime + 1)}")
     if elem is not None:
         u = _subscript_coord(
             u, resolved.labels.domain_label, f"{resolved.labels.domain_label}{_sub(elem + 1)}"

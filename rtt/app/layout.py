@@ -8,7 +8,7 @@ from typing import Literal
 class Line:
     id: str
     orientation: Literal["v", "h"]
-    pos: float
+    position: float
     start: float
     length: float
     dotted: bool = False

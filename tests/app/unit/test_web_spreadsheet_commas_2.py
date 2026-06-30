@@ -468,7 +468,7 @@ class TestCustomWeightRow:
         by_id = {line.id: line for line in layout.lines}
         assert blocks["block:commas"].width > narrow["block:commas"].width
         plus, bus = cells["comma_plus"], by_id["bus:commas:top"]
-        stub = by_id["v:comma:0"].pos + spreadsheet_constants.COLUMN_WIDTH
+        stub = by_id["v:comma:0"].position + spreadsheet_constants.COLUMN_WIDTH
         assert abs((plus.x + plus.width / 2) - stub) < 0.51, "the + tracks the fan, not the tile edge"
         assert abs((bus.start + bus.length) - stub) < 0.51
 
@@ -515,14 +515,14 @@ class TestCustomWeightRow:
         one, by1 = {c.id: c for c in layout.cells}, {line.id: line for line in layout.lines}
         assert "comma_minus:0" in one, "the SOLE comma is removable now (un-tempers to just intonation)"
         cm = one["comma_minus:0"]
-        assert abs((cm.x + cm.width / 2) - by1["v:comma:0"].pos) < 0.51
-        assert cm.y == by1["bus:commas:top"].pos
+        assert abs((cm.x + cm.width / 2) - by1["v:comma:0"].position) < 0.51
+        assert cm.y == by1["bus:commas:top"].position
         two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])
         tlay = spreadsheet.build(two)
         cells, by2 = {c.id: c for c in tlay.cells}, {line.id: line for line in tlay.lines}
         assert {"comma_minus:0", "comma_minus:1"} <= set(cells), "any comma removable, not just the last"
-        assert abs((cells["comma_minus:0"].x + cells["comma_minus:0"].width / 2) - by2["v:comma:0"].pos) < 0.51
-        assert abs((cells["comma_minus:1"].x + cells["comma_minus:1"].width / 2) - by2["v:comma:1"].pos) < 0.51
+        assert abs((cells["comma_minus:0"].x + cells["comma_minus:0"].width / 2) - by2["v:comma:0"].position) < 0.51
+        assert abs((cells["comma_minus:1"].x + cells["comma_minus:1"].width / 2) - by2["v:comma:1"].position) < 0.51
         ji = service.add_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4))))
         assert not any(c.startswith("comma_minus") for c in {c.id for c in spreadsheet.build(ji).cells})
 
@@ -537,7 +537,7 @@ class TestCustomWeightRow:
         assert "tuning:comma:1" not in cells
         by_id = {line.id: line for line in spreadsheet.build(base, pending_comma=[None, None, None]).lines}
         assert "comma_minus:0" in cells
-        assert abs((cells["comma_minus:pending"].x + cells["comma_minus:pending"].width / 2) - by_id["v:comma:1"].pos) < 0.51
+        assert abs((cells["comma_minus:pending"].x + cells["comma_minus:pending"].width / 2) - by_id["v:comma:1"].position) < 0.51
 
     def test_a_partly_typed_pending_comma_shows_its_entered_components(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))

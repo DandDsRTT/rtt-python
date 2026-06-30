@@ -217,10 +217,10 @@ def control_floor(resolved, context, key: str):
     if (key == "targets" and resolved.flags.optimization and "row:damage" not in context.collapsed
             and "tile:damage:targets" not in context.collapsed):
         floor = max(floor, OPT_BOX_MIN_WIDTH)
-    labels = ([lbl for _n, resolved, c, lbl in PRESETS + PRESET_COPIES if c == key and lbl] if resolved.flags.presets else [])
-    labels += [lbl for _n, resolved, c, lbl in FORM_CHOOSERS if c == key and lbl] if resolved.flags.form_controls else []
+    labels = ([label for _n, resolved, c, label in PRESETS + PRESET_COPIES if c == key and label] if resolved.flags.presets else [])
+    labels += [label for _n, resolved, c, label in FORM_CHOOSERS if c == key and label] if resolved.flags.form_controls else []
     if labels:
-        floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(lbl, 1) for lbl in labels))
+        floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(label, 1) for label in labels))
     if key in ("primes", "gens") and context.settings["projection"]:
         floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_WIDTH)
     return floor

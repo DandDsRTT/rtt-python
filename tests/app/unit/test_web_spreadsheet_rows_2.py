@@ -57,15 +57,15 @@ class TestInterestTilesAndFolds:
             lines = {line.id: line for line in layout.lines}
             header, trunk = cells["header:interest"], lines["trunk:interest"]
             assert header.width < title_w
-            assert header.x + header.width / 2 == trunk.pos
+            assert header.x + header.width / 2 == trunk.position
         one = _with_interest(_INTEREST[:1])
         cells = {c.id: c for c in one.cells}
         lines = {line.id: line for line in one.lines}
         block = {b.id: b for b in one.blocks}["block:interest"]
         trunk = lines["trunk:interest"]
         assert block.width < title_w
-        assert block.x + block.width / 2 == trunk.pos
-        assert lines["v:interest:0"].pos == trunk.pos
+        assert block.x + block.width / 2 == trunk.position
+        assert lines["v:interest:0"].position == trunk.position
 
     def test_per_tile_fold_toggle_hugs_its_tile_corner(self):
         layout = _with_interest(_INTEREST[:1])

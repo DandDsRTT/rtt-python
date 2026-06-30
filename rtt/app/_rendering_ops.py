@@ -67,14 +67,14 @@ def render_lines(r, layout, seen) -> None:
 
     for line in layout.lines:
         x0, x1 = (
-            (line.pos, line.pos)
+            (line.position, line.position)
             if line.orientation == "v"
             else (line.start, line.start + line.length)
         )
         y0, y1 = (
             (line.start, line.start + line.length)
             if line.orientation == "v"
-            else (line.pos, line.pos)
+            else (line.position, line.position)
         )
         if x1 >= freeze_x and y1 >= freeze_y:
             place_line(line, "", r._chrome.board, freeze_y)
