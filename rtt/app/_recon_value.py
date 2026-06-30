@@ -100,8 +100,16 @@ def _ratio_body(reconciler, cell_box: spreadsheet.CellBox, approx: bool) -> None
         with ui.element("div").classes(
             "rtt-fraction rtt-fraction-whole" if whole else "rtt-fraction"
         ):
-            num = ui.label(parts[0]).classes("rtt-fraction-numerator").mark(f"{cell_box.id}:num")
-            den = ui.label(parts[1]).classes("rtt-fraction-denominator").mark(f"{cell_box.id}:den")
+            num = (
+                ui.label(parts[0])
+                .classes("rtt-fraction-numerator")
+                .mark(f"{cell_box.id}:numerator")
+            )
+            den = (
+                ui.label(parts[1])
+                .classes("rtt-fraction-denominator")
+                .mark(f"{cell_box.id}:denominator")
+            )
         reconciler.cells[cell_box.id].value.frac = (num, den)
         _fit_ratio(reconciler, cell_box.id, parts[0], parts[1], cell_box.width, whole)
     else:
@@ -142,14 +150,14 @@ def _build_fraction(reconciler, cell_box: spreadsheet.CellBox, wrap, commit, pre
             ui.input(on_change=preview)
             .props("dense borderless")
             .classes("rtt-cell-input-field rtt-fraction-numerator-input")
-            .mark(f"{cell_box.id}:num")
+            .mark(f"{cell_box.id}:numerator")
         )
         ui.element("div").classes("rtt-fraction-bar")
         den = (
             ui.input(on_change=preview)
             .props("dense borderless")
             .classes("rtt-cell-input-field rtt-fraction-denominator-input")
-            .mark(f"{cell_box.id}:den")
+            .mark(f"{cell_box.id}:denominator")
         )
     num.on("blur", commit, js_handler=_STACKED_EXIT_JS)
     den.on("blur", commit, js_handler=_STACKED_EXIT_JS)
@@ -322,7 +330,7 @@ def _build_decimal(
                 ui.input()
                 .props("dense borderless")
                 .classes("rtt-cell-input-field rtt-decimal-fraction-input")
-                .mark(f"{cell_box.id}:frac")
+                .mark(f"{cell_box.id}:fraction")
             )
     whole.on("blur", commit, js_handler=_STACKED_EXIT_JS)
     frac.on("blur", commit, js_handler=_STACKED_EXIT_JS)

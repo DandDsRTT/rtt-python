@@ -137,8 +137,8 @@ class TestFeatureRenderBranches:
         _toggle(user, "generator detempering")
         await user.should_see(marker="cell:projection_detempering:1:2")
         assert _cell_text(user, "cell:projection_detempering:1:2") == "1/4"
-        assert _marked(user, "cell:projection_detempering:1:2:num").text == "1"
-        assert _marked(user, "cell:projection_detempering:1:2:den").text == "4"
+        assert _marked(user, "cell:projection_detempering:1:2:numerator").text == "1"
+        assert _marked(user, "cell:projection_detempering:1:2:denominator").text == "4"
         await user.should_see(marker="cell:projection_targets:0:0")
 
     async def test_projection_renders_the_embedding_and_its_choosers(self, user: User) -> None:
