@@ -402,7 +402,7 @@ _TRANSPOSE_MARK = "ᵀ"
 _PLAIN_TEXT_DUAL_VECTOR_KIND = {
     "plain_text:vectors:commas": True,
     "plain_text:vectors:targets": True,
-    "plain_text:projection:gens": True,
+    "plain_text:projection:generators": True,
     "plain_text:mapping:primes": False,
     "plain_text:projection:primes": False,
     "plain_text:prescaling:primes": False,

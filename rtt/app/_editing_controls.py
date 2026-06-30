@@ -27,7 +27,7 @@ _APPLY_SETTERS = (
 
 def build_edit_specs(edit_controller) -> None:
     edit_controller._MAPPING_EDIT = _VecGridEdit(
-        group="gens",
+        group="generators",
         count=lambda: len(edit_controller._editor.state.mapping),
         cell_id=ids.mapping_cell,
         pending=lambda: edit_controller._editor.pending_mapping_row,
@@ -238,7 +238,7 @@ def on_subpick(edit_controller, cell_id, value):
         edit_controller._editor.set_pending_comma(list(presets.comma_value_to_vector(value, db)))
         ok = edit_controller._editor.pending_comma is None
     elif cell_id.startswith("etpick:"):
-        i = edit_controller._runtime.token_index(cell_id, "gens")
+        i = edit_controller._runtime.token_index(cell_id, "generators")
         ok = i is not None and edit_controller._editor.set_mapping_row(
             i, presets.et_value_to_val(value, db)
         )

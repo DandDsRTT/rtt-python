@@ -161,7 +161,7 @@ STACKED_RATIO_KINDS = frozenset(
         "ratiocell",
         "elementcell",
         "elementratio",
-        "genratio",
+        "generator_ratio",
         "commaratio",
         "mapped",
     }

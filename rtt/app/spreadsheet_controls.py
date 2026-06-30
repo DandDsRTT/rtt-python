@@ -75,11 +75,11 @@ def _dual_preview(cell_box, axes):
     remove_rows, red_xs, change_rows, amber_xs = axes
     if cell_box.kind not in RINGABLE_KINDS or cell_box.preview_remove:
         return cell_box
-    if cell_box.gen in remove_rows or cell_box.x in red_xs:
+    if cell_box.generator in remove_rows or cell_box.x in red_xs:
         return replace(cell_box, preview_remove=True, pending=False)
     if cell_box.pending:
         return cell_box
-    if cell_box.gen in change_rows or cell_box.x in amber_xs:
+    if cell_box.generator in change_rows or cell_box.x in amber_xs:
         return replace(cell_box, preview_change=True)
     return cell_box
 
@@ -166,7 +166,7 @@ def _control_box(cells, blocks, resolved, geometry, box_id: str, column_key: str
         fid, fcap = form_chooser
         form_y = ctrl_y + PRESET_HEIGHT + label_height + BAND_GAP
         cells.append(CellBox(fid, ctrl_x, form_y, dropdown_width, PRESET_HEIGHT, "formchooser",
-                             text=resolved.canon.mapping_form_key if fid.endswith(":mapping") else resolved.canon.comma_basis_form_key))
+                             text=resolved.canonical.mapping_form_key if fid.endswith(":mapping") else resolved.canonical.comma_basis_form_key))
         cells.append(CellBox(f"{fid}:label", ctrl_x, form_y + PRESET_HEIGHT, dropdown_width, CAPTION_LINE,
                              "caption", text=fcap, align="left"))
     return ctrl_x, dropdown_width, ctrl_y
@@ -215,7 +215,7 @@ def _emit_presets(cells, blocks, resolved, geometry, context) -> None:
         col = "superspace_primes" if name == "prescaler" and resolved.flags.superspace else column_key
         _emit_preset(cells, blocks, resolved, geometry, context, preset_text, f"preset:{name}", name, row_key, col, label)
     for name, row_key, column_key, label in PRESET_COPIES:
-        col = "superspace_generators" if (name == "tuning" and column_key == "gens"
+        col = "superspace_generators" if (name == "tuning" and column_key == "generators"
                            and resolved.flags.superspace_generators) else column_key
         _emit_preset(cells, blocks, resolved, geometry, context, preset_text, f"preset:{name}:{col}", name, row_key, col, label)
 
@@ -236,12 +236,12 @@ def _emit_form_choosers(cells, blocks, resolved, geometry, context) -> None:
             top = query.plain_text_band_y(geometry, row_key) + geometry.rows[row_key].plain_text + geometry.rows[row_key].preset
             control_x, control_width, control_y = _control_box(cells, blocks, resolved, geometry, f"block:formchooser:{name}", column_key, top, PRESET_WIDTH, label)
             cells.append(CellBox(f"formchooser:{name}", control_x, control_y, control_width, PRESET_HEIGHT, "formchooser",
-                                 text=resolved.canon.mapping_form_key if name == "mapping" else resolved.canon.comma_basis_form_key))
+                                 text=resolved.canonical.mapping_form_key if name == "mapping" else resolved.canonical.comma_basis_form_key))
 
 
 def _emit_scheme_buttons(cells, blocks, resolved, geometry, context) -> None:
     if context.settings["projection"] and not resolved.flags.presets:
-        for column_key in ("primes", "gens"):
+        for column_key in ("primes", "generators"):
             if not query.tile_open(geometry, context.collapsed, "projection", column_key):
                 continue
             top = query.plain_text_band_y(geometry, "projection") + geometry.rows["projection"].plain_text

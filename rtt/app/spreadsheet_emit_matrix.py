@@ -66,7 +66,7 @@ def emit_counts_row(resolved, geometry, context) -> EmitResult:
     cells: list = []
     if not query.row_open(geometry, context.collapsed, "counts"):
         return EmitResult()
-    cardinality = {"gens": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality, "commas": context.state.nullity, "targets": resolved.dimensions.target_count, "held": resolved.dimensions.held_count,
+    cardinality = {"generators": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality, "commas": context.state.nullity, "targets": resolved.dimensions.target_count, "held": resolved.dimensions.held_count,
                    "detempering": resolved.dimensions.rank,
                    "superspace_generators": resolved.dimensions.superspace_rank, "superspace_primes": resolved.dimensions.superspace_dimensionality}
     for column_key, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
@@ -98,7 +98,7 @@ def emit_units(resolved, geometry, context) -> EmitResult:
 def _emit_units_matrix(cells, resolved, geometry, context) -> None:
     matrix_units = {
         "vectors": (resolved.dimensions.dimensionality, lambda i: query.vector_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
-        "canon": (resolved.dimensions.canonical_rank, lambda i: query.canon_top(geometry, i), lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
+        "canonical": (resolved.dimensions.canonical_rank, lambda i: query.canonical_top(geometry, i), lambda i: f"g{SUBSCRIPT_C}{_sub(i + 1)}/"),
         "projection": (resolved.dimensions.dimensionality, lambda i: query.projection_top(geometry, i), lambda i: f"{resolved.labels.domain_label}{_sub(i + 1)}/"),
         "mapping": (resolved.dimensions.rank_shown, lambda i: query.map_top(geometry, i), lambda i: f"g{_sub(i + 1)}/"),
         "superspace_vectors": (resolved.dimensions.superspace_dimensionality, lambda i: query.superspace_vector_top(geometry, i), lambda i: f"p{_sub(i + 1)}/"),
@@ -132,10 +132,10 @@ def _emit_units_columns(cells, resolved, geometry, context) -> None:
         return
     uy = geometry.rows["units"].y
     column_units = {
-        "canongens": (resolved.dimensions.canonical_rank, lambda i: query.canongen_left(geometry, i), lambda i: f"/g{SUBSCRIPT_C}{_sub(i + 1)}"),
-        "gens": (resolved.dimensions.rank, lambda i: query.gen_left(geometry, i), lambda i: f"/g{_sub(i + 1)}"),
+        "canonical_generators": (resolved.dimensions.canonical_rank, lambda i: query.canonical_generator_left(geometry, i), lambda i: f"/g{SUBSCRIPT_C}{_sub(i + 1)}"),
+        "generators": (resolved.dimensions.rank, lambda i: query.generator_left(geometry, i), lambda i: f"/g{_sub(i + 1)}"),
         "primes": (resolved.dimensions.dimensionality, lambda i: query.prime_left(geometry, i), lambda i: f"/{resolved.labels.domain_label}{_sub(i + 1)}"),
-        "superspace_generators": (resolved.dimensions.superspace_rank, lambda i: query.superspace_gen_left(geometry, i), lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
+        "superspace_generators": (resolved.dimensions.superspace_rank, lambda i: query.superspace_generator_left(geometry, i), lambda i: f"/g{SUBSCRIPT_L}{_sub(i + 1)}"),
         "superspace_primes": (resolved.dimensions.superspace_dimensionality, lambda i: query.superspace_prime_left(geometry, i), lambda i: f"/p{_sub(i + 1)}"),
         "commas": (resolved.dimensions.vector_count_shown, lambda i: query.comma_left(geometry, resolved, i), lambda _i: "/1"),
         "detempering": (resolved.dimensions.rank, lambda i: query.detempering_left(geometry, i), lambda _i: "/1"),
@@ -161,8 +161,8 @@ def emit_quantities_row(resolved, geometry, context) -> EmitResult:
         cells.append(CellBox(cell_id, query.sub_axis_x(geometry, column_key, i) - COLUMN_WIDTH / 2, geometry.fanout_y, COLUMN_WIDTH,
                              quantity_y - geometry.fanout_y, kind, **kw))
 
-    _emit_qty_gens(cells, resolved, geometry, context, quantity_y, branch_minus)
-    _emit_qty_canongens(cells, resolved, geometry, context, quantity_y)
+    _emit_qty_generators(cells, resolved, geometry, context, quantity_y, branch_minus)
+    _emit_qty_canonical_generators(cells, resolved, geometry, context, quantity_y)
     _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minus)
     _emit_qty_superspace_generators(cells, resolved, geometry, context, quantity_y)
     _emit_qty_superspace_primes(cells, resolved, geometry, context, quantity_y)
@@ -173,18 +173,18 @@ def emit_quantities_row(resolved, geometry, context) -> EmitResult:
     return EmitResult(cells=tuple(cells))
 
 
-def _emit_qty_gens(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
-    if query.tile_open(geometry, context.collapsed, "quantities", "gens"):
+def _emit_qty_generators(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
+    if query.tile_open(geometry, context.collapsed, "quantities", "generators"):
         for g in range(resolved.dimensions.rank):
-            cells.append(CellBox(f"qgen:{g}", query.gen_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "genratio", text=resolved.scalars.gens[g], gen=g))
+            cells.append(CellBox(f"quantities_generator:{g}", query.generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.scalars.generators[g], generator=g))
         if resolved.dimensions.rank > 1:
-            branch_minus("gen_minus", "gens", resolved.dimensions.rank - 1, "gen_minus", gen=resolved.dimensions.rank - 1)
+            branch_minus("generator_minus", "generators", resolved.dimensions.rank - 1, "generator_minus", generator=resolved.dimensions.rank - 1)
 
 
-def _emit_qty_canongens(cells, resolved, geometry, context, quantity_y) -> None:
-    if query.tile_open(geometry, context.collapsed, "quantities", "canongens"):
+def _emit_qty_canonical_generators(cells, resolved, geometry, context, quantity_y) -> None:
+    if query.tile_open(geometry, context.collapsed, "quantities", "canonical_generators"):
         for g in range(resolved.dimensions.canonical_rank):
-            cells.append(CellBox(f"cangen:{g}", query.canongen_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "genratio", text=resolved.canon.gens[g]))
+            cells.append(CellBox(f"canonical_generator:{g}", query.canonical_generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=resolved.canonical.generators[g]))
 
 
 def _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
@@ -210,9 +210,9 @@ def _emit_qty_primes(cells, resolved, geometry, context, quantity_y, branch_minu
 
 def _emit_qty_superspace_generators(cells, resolved, geometry, context, quantity_y) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "superspace_generators"):
-        superspace_gens = service.superspace_generators(context.state)
+        superspace_generators = service.superspace_generators(context.state)
         for g in range(resolved.dimensions.superspace_rank):
-            cells.append(CellBox(f"superspace_quantity_generator:{g}", query.superspace_gen_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "genratio", text=superspace_gens[g]))
+            cells.append(CellBox(f"superspace_quantity_generator:{g}", query.superspace_generator_left(geometry, g), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "generator_ratio", text=superspace_generators[g]))
 
 
 def _emit_qty_superspace_primes(cells, resolved, geometry, context, quantity_y) -> None:
@@ -249,7 +249,7 @@ def _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minu
 def _emit_qty_detempering(cells, resolved, geometry, context, quantity_y) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "detempering"):
         for i in range(resolved.dimensions.rank):
-            cells.append(CellBox(f"detempering:{i}", query.detempering_left(geometry, i), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "commaratio", text=resolved.scalars.gens[i]))
+            cells.append(CellBox(f"detempering:{i}", query.detempering_left(geometry, i), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "commaratio", text=resolved.scalars.generators[i]))
             voice(cells, "quantities:detempering", i, resolved.detempering.sizes.just[i])
 
 
@@ -305,7 +305,7 @@ def _qty_drag_controls(cells, resolved, geometry, column_key, n, grip_top) -> No
 def emit_column_plus_controls(resolved, geometry) -> EmitResult:
     cells: list = []
     primes_plus = "element_plus" if resolved.flags.nonstandard_domain else "plus"
-    for column_key, cell_id in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
+    for column_key, cell_id in (("generators", "generator_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
                       ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
         if column_key in geometry.plus_stub_x:
             cells.append(CellBox(cell_id, geometry.plus_stub_x[column_key] - BUTTON / 2, geometry.fanout_y - BUTTON / 2, BUTTON, BUTTON, cell_id))

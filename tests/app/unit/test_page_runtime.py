@@ -39,18 +39,18 @@ class TestPageRuntime:
 
     def test_col_tokens_reads_the_identities_of_the_named_axis(self):
         rt = PageRuntime()
-        assert rt.column_tokens("gens") == []
-        rt.set_last_lay(SimpleNamespace(identities={"gens": [("a", 0), ("b", 0)], "commas": []}))
-        assert rt.column_tokens("gens") == ["a", "b"]
+        assert rt.column_tokens("generators") == []
+        rt.set_last_lay(SimpleNamespace(identities={"generators": [("a", 0), ("b", 0)], "commas": []}))
+        assert rt.column_tokens("generators") == ["a", "b"]
         assert rt.column_tokens("commas") == []
         assert rt.column_tokens("absent_axis") == []
 
     def test_token_index_locates_a_cells_token_within_its_axis(self):
         rt = PageRuntime()
-        rt.set_last_lay(SimpleNamespace(identities={"gens": [(3, 0), (7, 0)]}))
-        assert rt.token_index("etpick:7", "gens") == 1
-        assert rt.token_index("etpick:3", "gens") == 0
-        assert rt.token_index("etpick:99", "gens") is None
+        rt.set_last_lay(SimpleNamespace(identities={"generators": [(3, 0), (7, 0)]}))
+        assert rt.token_index("etpick:7", "generators") == 1
+        assert rt.token_index("etpick:3", "generators") == 0
+        assert rt.token_index("etpick:99", "generators") is None
 
     def test_available_keys_filters_implemented_by_current_chapter(self):
         rt = PageRuntime()

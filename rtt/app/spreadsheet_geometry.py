@@ -91,7 +91,7 @@ def declare_tiles(resolved, context, interest_tiles, held_tiles, detempering_til
              + SUPERSPACE_COUNTS_TILES
              + TILES + UNITS_TILES + SUPERSPACE_TILES
              + interest_tiles + held_tiles + detempering_tiles + _projection_col_tiles(resolved)
-             + _superspace_projection_col_tiles(resolved) + _canon_col_tiles(resolved))
+             + _superspace_projection_col_tiles(resolved) + _canonical_col_tiles(resolved))
     declared_tiles = {(row_key, column_key) for _bid, row_key, column_key in tiles}
     return tiles, _prune_declared_tiles(declared_tiles, resolved, context)
 
@@ -139,18 +139,18 @@ def _superspace_projection_col_tiles(resolved):
     return tiles
 
 
-def _canon_col_tiles(resolved):
-    if not resolved.flags.canon:
+def _canonical_col_tiles(resolved):
+    if not resolved.flags.canonical:
         return ()
-    tiles = (("block:canon_comma", "canon", "commas"),)
+    tiles = (("block:canonical_comma", "canonical", "commas"),)
     if resolved.flags.generator_detempering:
-        tiles += (("block:canon_detempering", "canon", "detempering"),)
+        tiles += (("block:canonical_detempering", "canonical", "detempering"),)
     if resolved.scalars.targets_editable:
-        tiles += (("block:canon_mapped", "canon", "targets"),)
+        tiles += (("block:canonical_mapped", "canonical", "targets"),)
     if resolved.dimensions.held_count_shown:
-        tiles += (("block:canon_held", "canon", "held"),)
+        tiles += (("block:canonical_held", "canonical", "held"),)
     if resolved.dimensions.interest_count_shown:
-        tiles += (("block:canon_interest", "canon", "interest"),)
+        tiles += (("block:canonical_interest", "canonical", "interest"),)
     return tiles
 
 
@@ -160,8 +160,8 @@ def _prune_declared_tiles(declared_tiles, resolved, context):
                            ("tuning", "targets"), ("just", "targets"), ("retune", "targets"),
                            ("superspace_vectors", "targets"), ("superspace_mapping", "targets")}
     if not resolved.flags.identity_objects:
-        declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
-                                ("mapping", "detempering"), ("canon", "canongens"),
+        declared_tiles -= {("vectors", "primes"), ("mapping", "generators"),
+                                ("mapping", "detempering"), ("canonical", "canonical_generators"),
                                 ("superspace_vectors", "superspace_primes"), ("superspace_mapping", "superspace_generators")}
     if not resolved.dimensions.held_count_shown:
         declared_tiles -= {("superspace_vectors", "held"), ("superspace_mapping", "held")}
@@ -221,7 +221,7 @@ def control_floor(resolved, context, key: str):
     labels += [label for _n, resolved, c, label in FORM_CHOOSERS if c == key and label] if resolved.flags.form_controls else []
     if labels:
         floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(label, 1) for label in labels))
-    if key in ("primes", "gens") and context.settings["projection"]:
+    if key in ("primes", "generators") and context.settings["projection"]:
         floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_WIDTH)
     return floor
 

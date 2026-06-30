@@ -17,11 +17,11 @@ class _TuningCommands:
         self.projection_basis = ()
 
     def set_generator_tuning_text(self, text: str) -> bool:
-        gens = service.parse_cents_map(text, len(self.state.mapping))
-        if gens is None:
+        generators = service.parse_cents_map(text, len(self.state.mapping))
+        if generators is None:
             return False
         self.snapshot()
-        self.generator_tuning = gens
+        self.generator_tuning = generators
         self.manual_tuning = True
         self.projection_basis = ()
         return True
@@ -65,11 +65,11 @@ class _TuningCommands:
             self.manual_tuning = True
 
     def set_superspace_generator_tuning_text(self, text: str) -> bool:
-        gens = service.parse_cents_map(text, service.superspace_rank(self.state))
-        if gens is None:
+        generators = service.parse_cents_map(text, service.superspace_rank(self.state))
+        if generators is None:
             return False
         self.snapshot()
-        self.pending.superspace_generator_tuning = gens
+        self.pending.superspace_generator_tuning = generators
         self.manual_tuning = True
         return True
 

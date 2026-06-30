@@ -11,7 +11,7 @@ from rtt.app.spreadsheet_resolve_inputs import ResolveInputs
 from rtt.app.spreadsheet_resolve_intervals import resolve_interval_sets
 from rtt.app.spreadsheet_resolve_steps import (
     determine_ghosts,
-    resolve_canon_mapped,
+    resolve_canonical_mapped,
     resolve_complexities,
     resolve_detempering,
     resolve_prescaler_and_domain_labels,
@@ -79,7 +79,7 @@ class Resolver:
         draft = resolve_interval_sets(inputs, draft)
         draft = resolve_complexities(inputs, draft)
         draft = resolve_detempering(inputs, draft)
-        draft = resolve_canon_mapped(inputs, draft)
+        draft = resolve_canonical_mapped(inputs, draft)
         draft = resolve_projection_data(inputs, draft)
         self.resolved = freeze(draft)
         if self._resolve_only:

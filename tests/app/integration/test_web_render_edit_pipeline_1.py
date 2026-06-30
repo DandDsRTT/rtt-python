@@ -17,7 +17,7 @@ from rtt.app import rendering as web_rendering
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _toggle, _enable, _marked, _cell_child, _dec_mode, _frac_inputs, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _stacked_face, _ro_stacked_face, _dec_inputs, _gentuning_face, _ratio_face, _target_preset
+from _render_support import _toggle, _enable, _marked, _cell_child, _dec_mode, _frac_inputs, _ratio_value, _wrap_classes, _click_glyph, _commit, _cell_text, _stacked_face, _ro_stacked_face, _dec_inputs, _generator_tuning_face, _ratio_face, _target_preset
 
 
 class TestCellEditPipeline:
@@ -52,19 +52,19 @@ class TestCellEditPipeline:
 
     async def test_editing_a_generator_tuning_cell_applies_an_override(self, user: User) -> None:
         await user.open("/")
-        _cell_child(user, "tuning:gen:1").set_value("700.000")
-        await user.should_see(marker="tuning:gen:1")
-        assert _cell_child(user, "tuning:gen:1").value == "700.000"
+        _cell_child(user, "tuning:generator:1").set_value("700.000")
+        await user.should_see(marker="tuning:generator:1")
+        assert _cell_child(user, "tuning:generator:1").value == "700.000"
 
     async def test_scrolling_a_generator_tuning_cell_nudges_it_by_a_thousandth_cent(self, user: User) -> None:
         await user.open("/")
-        before = float(_cell_child(user, "tuning:gen:1").value)
-        user.find(marker="tuning:gen:1").trigger("wheel.prevent", {"deltaY": -100})
-        await user.should_see(marker="tuning:gen:1")
-        assert round(float(_cell_child(user, "tuning:gen:1").value) - before, 3) == 0.001
-        user.find(marker="tuning:gen:1").trigger("wheel.prevent", {"deltaY": 100})
-        await user.should_see(marker="tuning:gen:1")
-        assert round(float(_cell_child(user, "tuning:gen:1").value) - before, 3) == 0.0
+        before = float(_cell_child(user, "tuning:generator:1").value)
+        user.find(marker="tuning:generator:1").trigger("wheel.prevent", {"deltaY": -100})
+        await user.should_see(marker="tuning:generator:1")
+        assert round(float(_cell_child(user, "tuning:generator:1").value) - before, 3) == 0.001
+        user.find(marker="tuning:generator:1").trigger("wheel.prevent", {"deltaY": 100})
+        await user.should_see(marker="tuning:generator:1")
+        assert round(float(_cell_child(user, "tuning:generator:1").value) - before, 3) == 0.0
 
     async def test_scrolling_an_integer_cell_steps_it_by_one(self, user: User) -> None:
         await user.open("/")
@@ -129,14 +129,14 @@ class TestCellEditPipeline:
 
     async def test_clicking_the_sign_flips_the_generator_and_its_mapping_row(self, user: User) -> None:
         await user.open("/")
-        before = float(_cell_child(user, "tuning:gen:1").value)
+        before = float(_cell_child(user, "tuning:generator:1").value)
         assert before > 0
         assert _cell_child(user, "cell:mapping:1:2").value == "4"
-        sign_lbl, _, _ = _gentuning_face(user, "tuning:gen:1")
+        sign_lbl, _, _ = _generator_tuning_face(user, "tuning:generator:1")
         UserInteraction(user, {sign_lbl}, None).click()
-        await user.should_see(marker="tuning:gen:1")
-        assert float(_cell_child(user, "tuning:gen:1").value) == -before
-        sign_lbl, _, _ = _gentuning_face(user, "tuning:gen:1")
+        await user.should_see(marker="tuning:generator:1")
+        assert float(_cell_child(user, "tuning:generator:1").value) == -before
+        sign_lbl, _, _ = _generator_tuning_face(user, "tuning:generator:1")
         assert sign_lbl.text == "−"
         assert _cell_child(user, "cell:mapping:1:2").value == "-4"
 
@@ -293,10 +293,10 @@ class TestCellEditPipeline:
         short_main, short_sub = _ro_stacked_face(user, "retune:prime:0")
         assert (short_main.text, short_sub.text) == ("0", "")
         assert float(short_main._style["font-size"].rstrip("px")) == cell_font
-        gen_whole, _ = _dec_inputs(user, "tuning:gen:1")
-        assert len(str(gen_whole.value)) == 3
-        gen_box = _marked(user, "tuning:gen:1:editbox")
-        assert float(gen_box._style["--dec-whole-font"].rstrip("px")) < cell_font, \
+        generator_whole, _ = _dec_inputs(user, "tuning:generator:1")
+        assert len(str(generator_whole.value)) == 3
+        generator_box = _marked(user, "tuning:generator:1:editbox")
+        assert float(generator_box._style["--dec-whole-font"].rstrip("px")) < cell_font, \
             "a signed 3-digit generator must shrink below the full cell font to clear its sign + box edge"
 
     async def test_typing_the_prescaler_plain_text_overrides_the_scheme(self, user: User) -> None:

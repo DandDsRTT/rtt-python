@@ -58,9 +58,9 @@ class TestMathExpressions:
 
     def test_math_expressions_render_rms_generators_as_prime_power_logs(self):
         cells = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
-        assert cells["tuning:gen:0"].kind == "mathexpr"
-        assert cells["tuning:gen:0"].text == "1200 · log₂(2^(17/33)·3^(16/33)·5^(-4/33))\n= 1202.607"
-        assert cells["tuning:gen:1"].text == "1200 · log₂(2^(-1/33)·3^(1/33)·5^(8/33))\n= 696.741"
+        assert cells["tuning:generator:0"].kind == "mathexpr"
+        assert cells["tuning:generator:0"].text == "1200 · log₂(2^(17/33)·3^(16/33)·5^(-4/33))\n= 1202.607"
+        assert cells["tuning:generator:1"].text == "1200 · log₂(2^(-1/33)·3^(1/33)·5^(8/33))\n= 696.741"
 
     def test_math_expressions_render_rms_tempered_primes_as_prime_power_logs(self):
         cells = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
@@ -71,7 +71,7 @@ class TestMathExpressions:
     def test_math_expressions_closed_form_value_equals_the_plain_cents(self):
         off = {c.id: c for c in _with(scheme="miniRMS-U").cells}
         on = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
-        for cell_id in ("tuning:gen:0", "tuning:gen:1", "tuning:prime:0", "tuning:prime:1", "tuning:prime:2"):
+        for cell_id in ("tuning:generator:0", "tuning:generator:1", "tuning:prime:0", "tuning:prime:1", "tuning:prime:2"):
             assert on[cell_id].kind == "mathexpr"
             assert on[cell_id].text.endswith("= " + off[cell_id].text)
 
@@ -82,14 +82,14 @@ class TestMathExpressions:
     def test_math_expressions_skip_minimax_optimum_no_closed_form(self):
         off = {c.id: c for c in _with(scheme="minimax-S").cells}
         on = {c.id: c for c in _with(scheme="minimax-S", math_expressions=True).cells}
-        for cell_id in ("tuning:gen:0", "tuning:gen:1", "tuning:prime:0", "tuning:prime:1"):
+        for cell_id in ("tuning:generator:0", "tuning:generator:1", "tuning:prime:0", "tuning:prime:1"):
             assert on[cell_id].kind != "mathexpr"
             assert on[cell_id].text == off[cell_id].text
 
     def test_math_expressions_skip_weighted_rms_optimum_irrational(self):
         off = {c.id: c for c in _with(scheme="miniRMS-S").cells}
         on = {c.id: c for c in _with(scheme="miniRMS-S", math_expressions=True).cells}
-        for cell_id in ("tuning:gen:0", "tuning:prime:0"):
+        for cell_id in ("tuning:generator:0", "tuning:prime:0"):
             assert on[cell_id].kind != "mathexpr"
             assert on[cell_id].text == off[cell_id].text
 
@@ -108,7 +108,7 @@ class TestMathExpressions:
     def test_math_expressions_render_rms_canonical_generators_as_logs(self):
         off = {c.id: c for c in _with(scheme="miniRMS-U", form_tiles=True).cells}
         on = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True, form_tiles=True).cells}
-        for cell_id in ("tuning:cangen:0", "tuning:cangen:1"):
+        for cell_id in ("tuning:canonical_generator:0", "tuning:canonical_generator:1"):
             assert on[cell_id].kind == "mathexpr"
             assert on[cell_id].text.endswith("= " + off[cell_id].text)
 
@@ -132,8 +132,8 @@ class TestMathExpressions:
             tuning_scheme="miniRMS-U", generator_tuning=(1200.0, 700.0),
         )
         cells = {c.id: c for c in layout.cells}
-        assert cells["tuning:gen:0"].kind != "mathexpr"
-        assert cells["tuning:gen:1"].text == "700.000"
+        assert cells["tuning:generator:0"].kind != "mathexpr"
+        assert cells["tuning:generator:1"].text == "700.000"
 
     def test_math_expressions_is_an_interactive_toggle(self):
         assert "math_expressions" in settings.IMPLEMENTED, "it now builds content, so the panel must offer it live rather than greyed out"
@@ -245,7 +245,7 @@ class TestCountsRow:
 
     def test_counts_on_adds_a_top_row_of_per_column_cardinalities(self):
         cells = {c.id: c for c in _with(counts=True).cells}
-        assert cells["count:gens"].text == "\U0001D45F = 2"
+        assert cells["count:generators"].text == "\U0001D45F = 2"
         assert cells["count:primes"].text == "\U0001D451 = 3"
         assert cells["count:commas"].text == "\U0001D45B = 1"
         assert cells["count:targets"].text == "\U0001D458 = 8"
@@ -253,7 +253,7 @@ class TestCountsRow:
     def test_counts_row_counts_the_generator_detempering_column_too(self):
         cells = {c.id: c for c in _with(counts=True, names=True, generator_detempering=True).cells}
         assert cells["count:detempering"].text == "\U0001D45F = 2"
-        assert cells["count:detempering"].text == cells["count:gens"].text
+        assert cells["count:detempering"].text == cells["count:generators"].text
         assert cells["caption:counts:detempering"].text == "rank", "the same name as the generators count, not a new one"
         assert "count:detempering" not in {c.id for c in _with(counts=True).cells}
 
@@ -261,7 +261,7 @@ class TestCountsRow:
         cells = {c.id: c for c in _with(counts=True).cells}
         assert cells["count:primes"].y < cells["prime:0"].y
         assert cells["count:targets"].y < cells["target:0"].y
-        for column_key in ("gens", "primes", "targets"):
+        for column_key in ("generators", "primes", "targets"):
             assert cells[f"count:{column_key}"].x == cells[f"header:{column_key}"].x
             assert cells[f"count:{column_key}"].width == cells[f"header:{column_key}"].width
 
@@ -293,14 +293,14 @@ class TestCountsRow:
             return {c.id: c for c in spreadsheet.build(base, s).cells}
 
         on = captioned(names=True)
-        assert on["caption:counts:gens"].text == "rank"
+        assert on["caption:counts:generators"].text == "rank"
         assert on["caption:counts:primes"].text == "dimensionality"
         assert on["caption:counts:commas"].text == "nullity"
         assert on["caption:counts:targets"].text == "target interval count"
         assert on["caption:counts:primes"].y > on["count:primes"].y
         off = captioned(names=False)
         assert not any(c.startswith("caption:counts:") for c in off)
-        assert {"count:gens", "count:primes", "count:targets"} <= set(off)
+        assert {"count:generators", "count:primes", "count:targets"} <= set(off)
 
     def test_counts_row_collapses_like_any_other_keeping_its_label_and_gridline(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -320,7 +320,7 @@ class TestCountsRow:
         s["counts"] = True
         cells = {c.id: c for c in spreadsheet.build(expanded, s).cells}
         assert cells["count:primes"].text == "\U0001D451 = 4"
-        assert cells["count:gens"].text == "\U0001D45F = 3"
+        assert cells["count:generators"].text == "\U0001D45F = 3"
 
     def test_every_count_sits_on_its_own_grey_panel(self):
         layout = _with(counts=True)

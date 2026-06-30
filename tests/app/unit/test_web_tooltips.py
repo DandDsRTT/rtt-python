@@ -26,13 +26,13 @@ _INTERACTIVE_KINDS = [
     ("heldcell", "cell:held:0:0"),
     ("targetcell", "cell:target:0:0"),
     ("prescalercell", "cell:prescaling:primes:0:0"),
-    ("gentuningcell", "cell:tuning:gens:0"),
+    ("generator_tuning_cell", "cell:tuning:generators:0"),
     ("plain_text_edit", "plain_text:mapping:primes"),
-    ("rangemode", "rangemode:tuning:gens"),
+    ("rangemode", "rangemode:tuning:generators"),
     ("minus", "minus:2"),
     ("plus", "plus"),
-    ("gen_minus", "gen_minus"),
-    ("gen_plus", "gen_plus"),
+    ("generator_minus", "generator_minus"),
+    ("generator_plus", "generator_plus"),
     ("map_minus", "map_minus:0"),
     ("map_plus", "map_plus"),
     ("basis_minus", "basis_minus"),
@@ -65,11 +65,11 @@ _DISAMBIGUATED = [
     ("preset", "preset:tuning"),
     ("preset", "preset:target"),
     ("preset", "preset:prescaler"),
-    ("preset", "preset:tuning:gens"),
+    ("preset", "preset:tuning:generators"),
     ("preset", "preset:temperament:commas"),
     ("plain_text_edit", "plain_text:mapping:primes"),
     ("plain_text_edit", "plain_text:vectors:commas"),
-    ("plain_text_edit", "plain_text:tuning:gens"),
+    ("plain_text_edit", "plain_text:tuning:generators"),
     ("plain_text_edit", "plain_text:vectors:targets"),
     ("plain_text_edit", "plain_text:prescaling:primes"),
     ("element_minus", "element_minus:1"),
@@ -123,7 +123,7 @@ class TestWebTooltips:
                     _help("preset", "preset:tuning"),
                     _help("preset", "preset:target"),
                     _help("preset", "preset:prescaler")}) == 4
-        assert _help("preset", "preset:tuning:gens") == _help("preset", "preset:tuning")
+        assert _help("preset", "preset:tuning:generators") == _help("preset", "preset:tuning")
         assert _help("element_minus", "element_minus:1") == _help("element_minus", "element_minus:basis:2")
         assert _help("element_minus", "element_minus:pending") == _help("element_minus", "element_minus:basis:pending")
         assert _help("element_minus", "element_minus:1") != _help("element_minus", "element_minus:pending")
@@ -206,8 +206,8 @@ class TestWebTooltips:
     def test_tile_guide_help_for_cell_only_fires_on_three_part_tile_ids(self):
         assert tooltips.tile_guide_help_for_cell("caption:mapping:primes") is \
             tooltips.GUIDE_HELP[("mapping", "primes")]
-        assert tooltips.tile_guide_help_for_cell("symbol:tuning:gens") is \
-            tooltips.GUIDE_HELP[("tuning", "gens")]
+        assert tooltips.tile_guide_help_for_cell("symbol:tuning:generators") is \
+            tooltips.GUIDE_HELP[("tuning", "generators")]
         assert tooltips.tile_guide_help_for_cell("caption:counts:commas") is \
             tooltips.GUIDE_HELP[("counts", "commas")]
         for non_tile in ("caption:q", "symbol:dual", "caption:slope", "caption:all_interval",

@@ -188,7 +188,7 @@ def subpick_hover_preview(gesture_controller, cell_id, value):
     index = None
     if not draft:
         index = gesture_controller._runtime.token_index(
-            cell_id, "gens" if cell_id.startswith("etpick:") else "commas"
+            cell_id, "generators" if cell_id.startswith("etpick:") else "commas"
         )
         if index is None:
             end_temperament_preview(gesture_controller)
@@ -365,7 +365,7 @@ def on_popup(gesture_controller, cell_id, is_open):
         on_chooser_hover(gesture_controller, cell_id, None)
 
 
-def gentuning_hover(gesture_controller, cell_id):
+def generator_tuning_hover(gesture_controller, cell_id):
     g = gesture_controller.gesture
     if g is not None and g.kind in ("edit", "drag", "hover"):
         return
@@ -375,7 +375,7 @@ def gentuning_hover(gesture_controller, cell_id):
     )
 
 
-def gentuning_unhover(gesture_controller, cell_id):
+def generator_tuning_unhover(gesture_controller, cell_id):
     g = gesture_controller.gesture
     if g is None or g.kind != "wheel" or g.source != cell_id:
         return

@@ -28,7 +28,7 @@ from rtt.app.render_html import (
     _cents_parts,
     _control_svg,
     _digit_fit_font,
-    _gentuning_parts,
+    _generator_tuning_parts,
     _ratio_font,
     _ratio_parts,
 )
@@ -239,7 +239,7 @@ def _arm_gridvalue(reconciler, wrap, cell_box: spreadsheet.CellBox, spec: _GridV
     if spec.arm is None:
         return
     if spec.arm[0] == "row":
-        arm_row_target(reconciler, wrap, cell_box.gen)
+        arm_row_target(reconciler, wrap, cell_box.generator)
     else:
         arm_col_target(reconciler, wrap, spec.arm[1], cell_box.comma)
 
@@ -296,28 +296,28 @@ def _gridvalue_text(reconciler, cell_box: spreadsheet.CellBox) -> str:
 
 
 def _build_decimal(
-    reconciler, cell_box: spreadsheet.CellBox, wrap, commit, *, gen_index=None
+    reconciler, cell_box: spreadsheet.CellBox, wrap, commit, *, generator_index=None
 ) -> None:
     wrap.classes("rtt-cell-input rtt-decimal-cell")
     box = ui.element("div").classes("rtt-decimal-edit").mark(f"{cell_box.id}:editbox")
     with box:
         with ui.element("div").classes("rtt-decimal-main"):
-            if gen_index is not None:
+            if generator_index is not None:
                 s = (
                     ui.label("")
                     .classes("rtt-generator-sign")
-                    .mark(f"gensign:{gen_index} {cell_box.id}:sign")
+                    .mark(f"generator_sign:{generator_index} {cell_box.id}:sign")
                     .on(
                         "click",
-                        lambda _=None, i=gen_index: reconciler._cell_box.act(
+                        lambda _=None, i=generator_index: reconciler._cell_box.act(
                             lambda: reconciler._editor.flip_generator(i)
                         ),
                     )
                 )
                 preview_control(
-                    reconciler, s, lambda gi=gen_index: reconciler._editor.flip_generator(gi)
+                    reconciler, s, lambda gi=generator_index: reconciler._editor.flip_generator(gi)
                 )
-                reconciler.cells[cell_box.id].value.gensign_face = s
+                reconciler.cells[cell_box.id].value.generator_sign_face = s
             whole = (
                 ui.input()
                 .props("dense borderless")
@@ -341,9 +341,9 @@ def _build_decimal(
 
 def _update_decimal(reconciler, cell_box: spreadsheet.CellBox, text: str, *, signed=False) -> None:
     if signed:
-        sign, whole, frac = _gentuning_parts(text)
-        if reconciler.handles(cell_box.id).value.gensign_face is not None:
-            reconciler.cells[cell_box.id].value.gensign_face.set_text(sign)
+        sign, whole, frac = _generator_tuning_parts(text)
+        if reconciler.handles(cell_box.id).value.generator_sign_face is not None:
+            reconciler.cells[cell_box.id].value.generator_sign_face.set_text(sign)
     else:
         whole, frac = _cents_parts(text)
     reconciler.cells[cell_box.id].value.input.value = whole

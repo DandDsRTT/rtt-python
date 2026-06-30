@@ -22,14 +22,14 @@ from rtt.app.render_html import (
 
 _PLAIN_TEXT_EDITORS: dict[str, str] = {
     "plain_text:mapping:primes": "try_edit_mapping_text",
-    "plain_text:mapping:canongens": "try_edit_form_matrix_text",
+    "plain_text:mapping:canonical_generators": "try_edit_form_matrix_text",
     "plain_text:vectors:commas": "try_edit_comma_basis_text",
-    "plain_text:tuning:gens": "set_generator_tuning_text",
+    "plain_text:tuning:generators": "set_generator_tuning_text",
     "plain_text:tuning:superspace_generators": "set_superspace_generator_tuning_text",
     "plain_text:vectors:targets": "set_target_override_text",
     "plain_text:prescaling:primes": "set_custom_prescaler_text",
     "plain_text:projection:primes": "try_edit_projection_text",
-    "plain_text:projection:gens": "try_edit_embedding_text",
+    "plain_text:projection:generators": "try_edit_embedding_text",
 }
 
 
@@ -43,12 +43,12 @@ class _TuningEdits:
         _power_change(self.e, cell_id)
 
     @cb_method
-    def on_gentuning_change(self, cell_id):
-        _gentuning_change(self.e, cell_id)
+    def on_generator_tuning_change(self, cell_id):
+        _generator_tuning_change(self.e, cell_id)
 
     @cb_method
-    def on_gentuning_wheel(self, cell_id, delta_y):
-        _gentuning_wheel(self.e, cell_id, delta_y)
+    def on_generator_tuning_wheel(self, cell_id, delta_y):
+        _generator_tuning_wheel(self.e, cell_id, delta_y)
 
     @cb_method
     def on_value_wheel(self, cell_id, delta_y):
@@ -96,12 +96,12 @@ def _power_change(edit_controller, cell_id):
     edit_controller._renderer.request_render()
 
 
-def _gen_position(edit_controller, token):
-    toks = edit_controller._runtime.column_tokens("gens")
+def _generator_position(edit_controller, token):
+    toks = edit_controller._runtime.column_tokens("generators")
     return toks.index(token) if token in toks else token
 
 
-def _gentuning_change(edit_controller, cell_id):
+def _generator_tuning_change(edit_controller, cell_id):
     if (
         edit_controller._runtime.building
         or edit_controller._rec.handles(cell_id).value.input is None
@@ -114,7 +114,7 @@ def _gentuning_change(edit_controller, cell_id):
         cents = abs(float(mag))
     except ValueError:
         return
-    glyph = edit_controller._rec.handles(cell_id).value.gensign_face
+    glyph = edit_controller._rec.handles(cell_id).value.generator_sign_face
     if glyph is not None and glyph.text not in ("+", ""):
         cents = -cents
     i = int(cell_id.rsplit(":", 1)[1])
@@ -122,12 +122,12 @@ def _gentuning_change(edit_controller, cell_id):
         edit_controller._editor.set_superspace_generator_tuning_component(i, cents)
     else:
         edit_controller._editor.set_generator_tuning_component(
-            _gen_position(edit_controller, i), cents
+            _generator_position(edit_controller, i), cents
         )
     edit_controller._renderer.request_render()
 
 
-def _gentuning_wheel(edit_controller, cell_id, delta_y):
+def _generator_tuning_wheel(edit_controller, cell_id, delta_y):
     if edit_controller._runtime.building or not delta_y:
         return
     i, steps = int(cell_id.rsplit(":", 1)[1]), (1 if delta_y < 0 else -1)
@@ -135,7 +135,7 @@ def _gentuning_wheel(edit_controller, cell_id, delta_y):
         edit_controller._editor.nudge_superspace_generator_tuning_component(i, steps)
     else:
         edit_controller._editor.nudge_generator_tuning_component(
-            _gen_position(edit_controller, i), steps
+            _generator_position(edit_controller, i), steps
         )
     edit_controller._renderer.request_render()
 
@@ -285,7 +285,7 @@ def _plain_text_error_toast(edit_controller, cell_id, value):
     elif cell_id == "plain_text:projection:primes" and service.parse_projection(value) is not None:
         return _INVALID_PROJECTION
     elif (
-        cell_id == "plain_text:projection:gens"
+        cell_id == "plain_text:projection:generators"
         and service.parse_embedding(
             value,
             edit_controller._editor.state.dimensionality,

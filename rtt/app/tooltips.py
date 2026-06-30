@@ -51,7 +51,7 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "selection of them that generates all the rest by combination. Intervals differing "
         "by any such combination are thereby tempered together.",
         "Exploring temperaments", "Mapping-row-bases and comma bases"),
-    ("tuning", "gens"): GuideHelp(
+    ("tuning", "generators"): GuideHelp(
         "The generator tuning map gives the size in cents of each generator. The mapping "
         "shows how the generators build the primes; this shows how large the generators "
         "actually are, which is what pins down the tuning.",
@@ -98,7 +98,7 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
     ("mapping", "targets"): GuideHelp(
         "Each target interval mapped through the mapping — how many of each generator it "
         "takes to reach the temperament's version of that interval."),
-    ("canon", "primes"): GuideHelp(
+    ("canonical", "primes"): GuideHelp(
         "The mapping rewritten into its canonical form, serving as a standard identifier "
         "for the temperament.",
         "Mappings", "Standard forms"),
@@ -115,7 +115,7 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
     ("counts", "primes"): GuideHelp(
         "The dimensionality is the count of primes.",
         "Mappings", "Matrices"),
-    ("counts", "gens"): GuideHelp(
+    ("counts", "generators"): GuideHelp(
         "The rank is how many generators the temperament has — equivalently, its number of "
         "different step sizes.",
         "Mappings", "Rank"),
@@ -125,7 +125,7 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "Exploring temperaments", "Rank and nullity"),
     ("counts", "targets"): GuideHelp(
         "The number of target intervals the tuning is optimizing for."),
-    ("mapping", "canongens"): GuideHelp(
+    ("mapping", "canonical_generators"): GuideHelp(
         "The form matrix maps the canonical form of the mapping to the form you're using.",
         page="Projection", anchor="Form matrix"),
     ("vectors", "detempering"): GuideHelp(
@@ -143,17 +143,17 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "yields a map identical to the generator tuning map."),
     ("just", "detempering"): GuideHelp(
         "The justly-intoned size of the intervals chosen for this generator detempering."),
-    ("mapping", "gens"): GuideHelp(
+    ("mapping", "generators"): GuideHelp(
         "The generators mapped through the mapping — the identity, since each generator "
         "maps to exactly itself."),
-    ("canon", "gens"): GuideHelp(
+    ("canonical", "generators"): GuideHelp(
         "The inverse of the form matrix — it converts your mapping's generators back to the "
         "canonical ones.",
         page="Projection", anchor="Form matrix"),
-    ("canon", "canongens"): GuideHelp(
+    ("canonical", "canonical_generators"): GuideHelp(
         "The form matrix times its inverse — the identity, since changing to your form and "
         "back leaves things unchanged."),
-    ("tuning", "canongens"): GuideHelp(
+    ("tuning", "canonical_generators"): GuideHelp(
         "The generator tuning map for the canonical form's generators."),
     ("tuning", "held"): GuideHelp(
         "Each held interval's tempered size — equal to its just size, since the tuning holds "
@@ -204,10 +204,10 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "Uniquely identifies a specific tuning of a specific temperament — a rational map "
         "holding its unchanged intervals exactly just.",
         page="Projection matrix"),
-    ("projection", "gens"): GuideHelp(
+    ("projection", "generators"): GuideHelp(
         "The rational JI interval each generator is tuned to.",
         page="Generator embedding matrix"),
-    ("projection", "canongens"): GuideHelp(
+    ("projection", "canonical_generators"): GuideHelp(
         "The generator embedding for the canonical form's generators."),
     ("counts", "superspace_primes"): GuideHelp(
         "The count of superspace primes."),
@@ -402,7 +402,7 @@ RATIO_RECIPROCATE_HELP = (
 
 READONLY_KINDS: frozenset[str] = frozenset({
     "prime", "columnheader", "rowlabel", "mapped", "vector", "tuningvalue", "powerdisplay",
-    "genratio", "commaratio", "mathexpr", "plain_text", "plain_text_pending",
+    "generator_ratio", "commaratio", "mathexpr", "plain_text", "plain_text_pending",
     "symbol", "matrix_label", "units", "caption", "count", "boxtitle",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "transpose", "vbar", "chart", "rangechart",
 })
@@ -448,7 +448,7 @@ _KIND_HELP: dict[str, str] = {
         "How much this target interval's damage counts relative to the others. Type your own to "
         "override the slope's complexity/simplicity/unity weighting."
     ),
-    "gentuningcell": (
+    "generator_tuning_cell": (
         "This generator's tuned size in cents. Type to set it by hand, click its sign to reverse "
         "the generator (its mapping row flips too, so the tuning is unchanged), or scroll the "
         "wheel to fine-tune by a thousandth of a cent."
@@ -470,10 +470,10 @@ _KIND_HELP: dict[str, str] = {
     ),
     "plus": "Add the next prime to the domain.",
     "minus": "Remove the highest prime from the domain.",
-    "gen_plus": (
+    "generator_plus": (
         "Add a generator — raises the rank and dimensionality, mapping a new prime just. (⌥/Alt+M)"
     ),
-    "gen_minus": "Remove the last generator — lowers the rank and dimensionality.",
+    "generator_minus": "Remove the last generator — lowers the rank and dimensionality.",
     "map_plus": (
         "Add a generator (a mapping row) — un-tempers a comma, raising the rank and holding the "
         "dimensionality. (⌥/Alt+M)"
@@ -600,8 +600,8 @@ _PLAIN_TEXT_HELP: dict[str, str] = {
         "Type the mapping as a plain-text string (e.g. ⟨⟨1 0 -4]]) to drive the grid."
     ),
     "plain_text:vectors:commas": "Type the comma basis as a plain-text string to drive the grid.",
-    "plain_text:tuning:gens": "Type the generator tuning map as a plain-text string to drive the grid.",
-    "plain_text:mapping:canongens": (
+    "plain_text:tuning:generators": "Type the generator tuning map as a plain-text string to drive the grid.",
+    "plain_text:mapping:canonical_generators": (
         "Type the generator form matrix 𝐹 as a plain-text string to re-store the mapping in that "
         "generating set (same temperament); rejected unless 𝐹 is square and unimodular."
     ),
@@ -613,7 +613,7 @@ _PLAIN_TEXT_HELP: dict[str, str] = {
         "Type the projection 𝑃 as a plain-text string to retune to it; rejected unless it's a "
         "valid projection (idempotent, commas in its kernel)."
     ),
-    "plain_text:projection:gens": (
+    "plain_text:projection:generators": (
         "Type the generator embedding 𝐺 as a plain-text string to retune to it; rejected unless 𝑀𝐺 "
         "= 𝐼."
     ),

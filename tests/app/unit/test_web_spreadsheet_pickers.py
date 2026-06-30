@@ -24,7 +24,7 @@ class TestSubPickerPlacement:
         cells = {c.id: c for c in _with(presets=True).cells}
         for i in range(2):
             ep = cells[f"etpick:{i}"]
-            assert ep.kind == "etpick" and ep.gen == i
+            assert ep.kind == "etpick" and ep.generator == i
             assert ep.width == spreadsheet_constants.COLUMN_WIDTH and ep.height == spreadsheet_constants.ROW_HEIGHT
             assert ep.y == cells[f"cell:mapping:{i}:0"].y
             close_bracket = cells[f"bracket:map:{i}:r"]

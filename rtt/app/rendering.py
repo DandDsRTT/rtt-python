@@ -64,7 +64,7 @@ class Renderer:
         self._newborn_ids: frozenset[str] = frozenset()
         self._prev_cell_ids: frozenset[str] = frozenset()
         self._last_rings: tuple = (frozenset(), frozenset())
-        self._fill_gen = 0
+        self._fill_generator = 0
 
     def request_render(self, after=None):
         if helpers.is_user_simulation():
@@ -145,14 +145,14 @@ class Renderer:
         self._schedule_fill(layout)
 
     def _schedule_fill(self, layout) -> None:
-        self._fill_gen += 1
+        self._fill_generator += 1
         if helpers.is_user_simulation():
             return
         if any(cell_box.id not in self._rec.entities for cell_box in layout.cells):
-            background_tasks.create(self._fill_offscreen(self._fill_gen))
+            background_tasks.create(self._fill_offscreen(self._fill_generator))
 
-    async def _fill_offscreen(self, gen) -> None:
-        while self._fill_gen == gen:
+    async def _fill_offscreen(self, generator) -> None:
+        while self._fill_generator == generator:
             layout = self._runtime.last_lay
             if layout is None:
                 return

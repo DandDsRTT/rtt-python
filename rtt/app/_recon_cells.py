@@ -96,7 +96,7 @@ def draft_cancel_eid(cell_box):
         "interest": "interest_minus:pending",
         "held": "held_minus:pending",
         "target": "target_minus:pending",
-        "gen": "map_minus:pending",
+        "generator": "map_minus:pending",
         "prime": "element_minus:pending",
         "basis": "element_minus:basis:pending",
     }

@@ -56,7 +56,7 @@ class TestEditCommitHandlers:
     async def test_a_mapping_row_draft_commit_materializes_a_new_generator_row(self, user: User) -> None:
         await user.open("/")
         await user.should_not_see(marker="cell:mapping:2:0")
-        _click_glyph(user, "gen_plus")
+        _click_glyph(user, "generator_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes
         for p, v in zip(range(3), ("0", "0", "1")):
@@ -110,22 +110,22 @@ class TestEditCommitHandlers:
     async def test_an_invalid_unchanged_basis_reverts_silently(self, user: User) -> None:
         await _enable(user, "projection")
         await user.should_see(marker="cell:unchanged:0:1")
-        before = _cell_child(user, "tuning:gen:1").value
+        before = _cell_child(user, "tuning:generator:1").value
         for p, v in zip(range(3), ("0", "0", "0")):
             _cell_child(user, f"cell:unchanged:{p}:1").set_value(v)
         _commit(user, "cell:unchanged:2:1")
-        await user.should_see(marker="tuning:gen:1")
-        assert _cell_child(user, "tuning:gen:1").value == before
+        await user.should_see(marker="tuning:generator:1")
+        assert _cell_child(user, "tuning:generator:1").value == before
         await user.should_not_see("Not a valid")
 
     async def test_an_unchanged_keystroke_preview_does_not_commit_until_blur(self, user: User) -> None:
         await _enable(user, "projection")
         await user.should_see(marker="cell:unchanged:0:1")
-        before = _cell_child(user, "tuning:gen:1").value
+        before = _cell_child(user, "tuning:generator:1").value
         cell = _cell_child(user, "cell:unchanged:2:1")
         UserInteraction(user, {cell}, None).trigger("focus")
         cell.set_value("-1")
-        assert _cell_child(user, "tuning:gen:1").value == before, "not retuned — no commit on the keystroke"
+        assert _cell_child(user, "tuning:generator:1").value == before, "not retuned — no commit on the keystroke"
 
     async def test_an_interest_keystroke_preview_does_not_commit_until_blur(self, user: User) -> None:
         await user.open("/")
@@ -169,11 +169,11 @@ class TestEditCommitHandlers:
             _cell_child(user, f"cell:held:{p}:0").set_value(v)
         _commit(user, "cell:held:2:0")
         await user.should_see(marker="held:0")
-        assert _cell_child(user, "tuning:gen:1").value == "701.955"
+        assert _cell_child(user, "tuning:generator:1").value == "701.955"
         cell = _cell_child(user, "cell:held:0:0")
         UserInteraction(user, {cell}, None).trigger("focus")
         cell.set_value("-2")
-        assert _cell_child(user, "tuning:gen:1").value == "701.955"
+        assert _cell_child(user, "tuning:generator:1").value == "701.955"
 
     async def test_a_held_draft_commit_materializes_a_new_held_column(self, user: User) -> None:
         await user.open("/")
@@ -230,7 +230,7 @@ class TestEditCommitHandlers:
 
     async def test_a_mapping_draft_keystroke_preview_rings_nothing_from_the_value(self, user: User) -> None:
         await user.open("/")
-        _click_glyph(user, "gen_plus")
+        _click_glyph(user, "generator_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")
         first = _cell_child(user, "cell:mapping:2:0")
@@ -257,18 +257,18 @@ class TestEditCommitHandlers:
 
     async def test_wheeling_a_generator_tuning_rings_the_cells_it_moves(self, user: User) -> None:
         await user.open("/")
-        cell = set(user.find(marker="tuning:gen:0").elements)
+        cell = set(user.find(marker="tuning:generator:0").elements)
         UserInteraction(user, cell, None).trigger("mouseenter")
         UserInteraction(user, cell, None).trigger("wheel.prevent", {"deltaY": -1})
         await user.should_see(marker="retune:target:0")
         assert "rtt-preview-change" in _wrap_classes(user, "retune:target:0")
-        assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:0")
+        assert "rtt-preview-change" not in _wrap_classes(user, "tuning:generator:0")
         UserInteraction(user, cell, None).trigger("mouseleave")
         assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:0")
 
     async def test_hovering_a_generator_tuning_sign_previews_reversing_it(self, user: User) -> None:
         await user.open("/")
-        sign = set(user.find(marker="gensign:1").elements)
+        sign = set(user.find(marker="generator_sign:1").elements)
         UserInteraction(user, sign, None).trigger("mouseenter")
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:2")
         UserInteraction(user, sign, None).trigger("mouseleave")
@@ -374,13 +374,13 @@ class TestChooserHoverPreviews:
         _toggle(user, "form")
         _toggle(user, "form controls")
         await user.should_see(marker="formchooser:mapping")
-        await user.should_not_see(marker="cell:canon:0:2")
+        await user.should_not_see(marker="cell:canonical:0:2")
         wrap = set(user.find(marker="formchooser:mapping").elements)
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})
         await user.should_see(marker="cell:mapping:0:2")
         assert _cell_child(user, "cell:mapping:0:2").value == "-4"
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2"), "ringed amber vs the pre-hover grid"
-        await user.should_not_see(marker="cell:canon:0:2")
+        await user.should_not_see(marker="cell:canonical:0:2")
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
         await user.should_see(marker="cell:mapping:0:2")
         assert _cell_child(user, "cell:mapping:0:2").value == "0"
@@ -409,16 +409,16 @@ class TestChooserHoverPreviews:
         await user.should_see(marker="formchooser:mapping")
         _cell_child(user, "formchooser:mapping").set_value("canonical")
         await user.should_see(marker="cell:mapping:0:2")
-        await user.should_not_see(marker="cell:canon:0:2")
+        await user.should_not_see(marker="cell:canonical:0:2")
         wrap = set(user.find(marker="formchooser:mapping").elements)
         eq_idx = 1 + list(service.MAPPING_FORM_KEYS).index("equave-reduced")
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": eq_idx})
-        await user.should_not_see(marker="cell:canon:0:2")
+        await user.should_not_see(marker="cell:canonical:0:2")
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")
         assert _cell_child(user, "cell:mapping:0:2").value == "0"
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
         assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:2")
-        await user.should_not_see(marker="cell:canon:0:2")
+        await user.should_not_see(marker="cell:canonical:0:2")
 
     def test_option_hover_delegation_cancels_the_settle_timer_on_pointerdown(self) -> None:
         js = "".join(web_app._OPTION_HOVER_DELEGATION.split())
@@ -464,16 +464,16 @@ class TestChooserHoverPreviews:
 
     async def test_hovering_the_generator_minus_previews_the_dual_rank_change(self, user: User) -> None:
         await user.open("/")
-        button = set(user.find(marker="gen_minus").elements)
+        button = set(user.find(marker="generator_minus").elements)
         UserInteraction(user, button, None).trigger("mouseenter")
-        assert "rtt-preview-remove" in _wrap_classes(user, "tuning:gen:1")
+        assert "rtt-preview-remove" in _wrap_classes(user, "tuning:generator:1")
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:1:0")
-        await user.should_see(marker="tuning:gen:1")
+        await user.should_see(marker="tuning:generator:1")
         assert "rtt-preview-change" in _wrap_classes(user, "cell:comma:0:0")
         await user.should_see(marker="cell:comma:0:1")
         assert "rtt-pending" in _wrap_classes(user, "cell:comma:0:1")
         UserInteraction(user, button, None).trigger("mouseleave")
-        assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:gen:1")
+        assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:generator:1")
         await user.should_not_see(marker="cell:comma:0:1")
 
     async def test_hovering_a_column_minus_reddens_the_removed_column(self, user: User) -> None:
@@ -497,9 +497,9 @@ class TestChooserHoverPreviews:
     async def test_clicking_the_mapping_plus_opens_a_green_draft_row_to_fill_in(self, user: User) -> None:
         await user.open("/")
         await user.should_not_see(marker="cell:mapping:2:0")
-        _click_glyph(user, "gen_plus")
+        _click_glyph(user, "generator_plus")
         await user.should_see(marker="cell:mapping:2:0")
-        await user.should_see(marker="gen:pending")
+        await user.should_see(marker="generator:pending")
         assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes
         assert _cell_child(user, "cell:mapping:2:0").value == ""
         for p, v in zip(range(3), ("0", "0", "1")):

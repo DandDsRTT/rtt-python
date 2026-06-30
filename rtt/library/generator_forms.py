@@ -94,19 +94,19 @@ def _fx_generator_sizes_octaves(rows: list[list[int]], jip_octaves) -> np.ndarra
 
 def positive_generator_shift_ma(matrix: Matrix, jip_octaves) -> Matrix:
     rows = [list(r) for r in canonical_ma(matrix)]
-    gen = _fx_generator_sizes_octaves(rows, jip_octaves)
+    generator = _fx_generator_sizes_octaves(rows, jip_octaves)
     jip = np.array(jip_octaves, dtype=float)
     ploid = rows[0][0]
     for i in range(1, len(rows)):
-        if gen[i] >= 0:
+        if generator[i] >= 0:
             continue
         cot = next(b for b in rows[i] if b != 0)
-        whole_periods_in_gen = int(cot * gen[i] // gen[0])
-        whole_periods_in_prime = int((jip[i] % jip[0]) // gen[0])
-        shear = (whole_periods_in_gen - whole_periods_in_prime) % cot
+        whole_periods_in_generator = int(cot * generator[i] // generator[0])
+        whole_periods_in_prime = int((jip[i] % jip[0]) // generator[0])
+        shear = (whole_periods_in_generator - whole_periods_in_prime) % cot
         if shear == cot - ploid:
             rows[i] = [-b for b in rows[i]]
         else:
-            k = int(gen[i] // gen[0])
+            k = int(generator[i] // generator[0])
             rows[0] = [a + b * k for a, b in zip(rows[0], rows[i], strict=False)]
     return _as_matrix(rows)

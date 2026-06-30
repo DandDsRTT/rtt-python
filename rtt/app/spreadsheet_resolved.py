@@ -54,7 +54,7 @@ class Tuning:
 @dataclass(frozen=True)
 class Canon:
     mapping: object
-    gens: object
+    generators: object
     form_M: object
     inverse_form_M: object
     mapping_form_key: object
@@ -122,7 +122,7 @@ class Unchanged:
 @dataclass(frozen=True)
 class Flags:
     alt_complexity: bool
-    canon: bool
+    canonical: bool
     names: bool
     generator_detempering: bool
     ebk: bool
@@ -175,7 +175,7 @@ class Scalars:
     standard_domain: bool
     custom_weights_active: bool
     prescaler_is_matrix: bool
-    gens: object
+    generators: object
     prescaler: object
     complexity_unit: str
     weight_unit: str
@@ -207,7 +207,7 @@ class Resolved:
     interest: IntervalSet
     detempering: IntervalSet
     tuning: Tuning
-    canon: Canon
+    canonical: Canon
     projection: Projection
     ghosts: Ghosts
     unchanged: Unchanged
@@ -257,22 +257,22 @@ def _tuning(b) -> Tuning:
     )
 
 
-def _canon(b) -> Canon:
+def _canonical(b) -> Canon:
     return Canon(
-        mapping=b.canon_mapping,
-        gens=b.canon_gens,
+        mapping=b.canonical_mapping,
+        generators=b.canonical_generators,
         form_M=b.form_M,
         inverse_form_M=b.inverse_form_M,
         mapping_form_key=b.mapping_form_key,
         comma_basis_form_key=b.comma_basis_form_key,
         form_is_canonical=b.form_is_canonical,
-        embedding_matrix=b.canon_embedding_matrix,
-        mapped=b.canon_mapped,
-        held_mapped=b.canon_held_mapped,
-        interest_mapped=b.canon_interest_mapped,
-        mapped_commas=b.canon_mapped_commas,
-        mapped_detempering=b.canon_mapped_detempering,
-        unchanged_mapped=b.canon_unchanged_mapped,
+        embedding_matrix=b.canonical_embedding_matrix,
+        mapped=b.canonical_mapped,
+        held_mapped=b.canonical_held_mapped,
+        interest_mapped=b.canonical_interest_mapped,
+        mapped_commas=b.canonical_mapped_commas,
+        mapped_detempering=b.canonical_mapped_detempering,
+        unchanged_mapped=b.canonical_unchanged_mapped,
     )
 
 
@@ -346,7 +346,7 @@ def _labels(b) -> Labels:
 def _flags(b) -> Flags:
     return Flags(
         alt_complexity=b.show_alt_complexity,
-        canon=b.show_canon,
+        canonical=b.show_canonical,
         names=b.show_names,
         generator_detempering=b.show_generator_detempering,
         ebk=b.show_ebk,
@@ -400,7 +400,7 @@ def _scalars(b) -> Scalars:
         standard_domain=b.standard_domain,
         custom_weights_active=b.custom_weights_active,
         prescaler_is_matrix=b.prescaler_is_matrix,
-        gens=b.gens,
+        generators=b.generators,
         prescaler=b.prescaler,
         complexity_unit=b.complexity_unit,
         weight_unit=b.weight_unit,
@@ -450,7 +450,7 @@ def freeze(draft) -> Resolved:
             pending=None,
         ),
         tuning=_tuning(draft),
-        canon=_canon(draft),
+        canonical=_canonical(draft),
         projection=_projection(draft),
         ghosts=_ghosts(draft),
         unchanged=_unchanged(draft),

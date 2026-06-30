@@ -582,10 +582,10 @@ class TestCustomWeightRow:
         assert cells["cell:mapping:2:0"].text == "" and cells["cell:mapping:2:0"].pending
         assert cells["cell:mapping:2:0"].y - cells["cell:mapping:1:0"].y == spreadsheet_constants.ROW_HEIGHT
         assert "cell:mapping:3:0" not in cells
-        assert cells["gen:pending"].text == "?" and cells["gen:pending"].pending
+        assert cells["generator:pending"].text == "?" and cells["generator:pending"].pending
         assert cells["bracket:map:pending:l"].pending and cells["bracket:map:pending:r"].pending
         assert cells["map_minus:pending"].pending
-        assert "gen:2" not in cells, "the temperament is untouched: the genmap / canonical mapping stay at the committed rank (no 3rd # generator ratio). The derived mapped tiles DO get a blank green placeholder at the draft row, so # the whole row reads green across the band (the row mirror of a draft column reading green down)"
+        assert "generator:2" not in cells, "the temperament is untouched: the generator_map / canonical mapping stay at the committed rank (no 3rd # generator ratio). The derived mapped tiles DO get a blank green placeholder at the draft row, so # the whole row reads green across the band (the row mirror of a draft column reading green down)"
         assert cells["cell:mapped:2:0"].pending and cells["cell:mapped:2:0"].text == ""
 
 

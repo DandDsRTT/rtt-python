@@ -305,12 +305,12 @@ class TestParsing:
         assert service.parse_comma_basis("⟨1 0 0]") is None, "a map, not a vector"
         assert service.parse_comma_basis("nonsense") is None
 
-    def test_parse_cents_map_reads_a_genmap_or_tuning_string(self):
+    def test_parse_cents_map_reads_a_generator_map_or_tuning_string(self):
         assert service.parse_cents_map("{1201.699 697.564]") == (1201.699, 697.564)
         assert service.parse_cents_map("⟨1200.000 1901.955 2786.314]") == (1200.0, 1901.955, 2786.314)
         st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
         generator_map = service.tuning(st.mapping).generator_map
-        parsed = service.parse_cents_map(service.plain_text_values(st)[("tuning", "gens")])
+        parsed = service.parse_cents_map(service.plain_text_values(st)[("tuning", "generators")])
         assert parsed == tuple(round(g, 3) for g in generator_map)
         assert service.parse_cents_map("{1200 700]", 2) == (1200.0, 700.0), "an optional length check, so a caller can demand exactly r generators"
         assert service.parse_cents_map("{1200 700]", 3) is None
@@ -322,8 +322,8 @@ class TestParsing:
 class TestVectorsToRatios:
     def test_vectors_to_ratios_flags_an_over_complex_ratio_instead_of_crashing(self):
         huge = service.from_mapping(((3, 4, -8), (-1, 7, 6), (3, 0, 6)))
-        gens = service.generators(huge.mapping)
-        assert gens == (core_vectors._OVER_COMPLEX_RATIO,) * 3, "flagged, not a 4300+-digit string (no crash)"
+        generators = service.generators(huge.mapping)
+        assert generators == (core_vectors._OVER_COMPLEX_RATIO,) * 3, "flagged, not a 4300+-digit string (no crash)"
         assert service.generators(((1, 1, 0), (0, 1, 4))) == ("2/1", "3/2")
 
     def test_over_complex_generators_round_trip_back_to_a_finite_size(self):
@@ -334,4 +334,4 @@ class TestVectorsToRatios:
         pt = service.plain_text_values(state, "TILT minimax-U", "TILT")
         assert pt[("tuning", "detempering")]
         gb = _grid_with_plain_text(state, "TILT minimax-U")
-        assert core_vectors._OVER_COMPLEX_RATIO in gb.resolved.scalars.gens
+        assert core_vectors._OVER_COMPLEX_RATIO in gb.resolved.scalars.generators

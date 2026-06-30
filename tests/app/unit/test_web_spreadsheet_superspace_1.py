@@ -66,11 +66,11 @@ class TestNonstandardDomain:
         assert_draft_greened(b2, "targets", b2.resolved.dimensions.target_count, minimum=6)
         assert_draft_greened(b2, "commas", b2.resolved.dimensions.comma_count, minimum=6)
 
-    def test_nonstandard_domain_adds_superspace_columns_between_gens_and_primes(self):
+    def test_nonstandard_domain_adds_superspace_columns_between_generators_and_primes(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
         assert cells["header:superspace_generators"].text == "superspace\ngenerators"
         assert cells["header:superspace_primes"].text == "superspace\nprimes"
-        assert cells["header:gens"].x < cells["header:superspace_generators"].x < cells["header:superspace_primes"].x < cells["header:primes"].x
+        assert cells["header:generators"].x < cells["header:superspace_generators"].x < cells["header:superspace_primes"].x < cells["header:primes"].x
 
     def test_nonstandard_domain_superspace_columns_size_to_rL_dL(self):
         layout = _barbados_superspace(equivalences=False)
@@ -92,7 +92,7 @@ class TestNonstandardDomain:
         cells = {c.id: c for c in _barbados_superspace().cells}
         assert [cells[f"superspace_quantity_prime:{p}"].text for p in range(4)] == ["2", "3", "5", "13"]
         assert [cells[f"superspace_quantity_generator:{g}"].text for g in range(3)] == ["2/1", "26/3", "130/3"]
-        assert cells["superspace_quantity_generator:0"].kind == "genratio"
+        assert cells["superspace_quantity_generator:0"].kind == "generator_ratio"
         assert cells["superspace_quantity_prime:0"].kind == "commaratio"
         assert cells["superspace_quantity_generator:0"].x == cells["tuning:superspace_generator:0"].x
         assert cells["superspace_quantity_prime:0"].x == cells["tuning:superspace_prime:0"].x
@@ -428,13 +428,13 @@ class TestSuperspaceProjection:
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         s = settings.defaults() | {"nonstandard_domain": True, "plain_text_values": True, "presets": True}
         prime = {c.id: c for c in spreadsheet.build(state, s, nonprime_approach="prime-based").cells}
-        assert {prime[i].kind for i in prime if i.startswith("tuning:gen:")} == {"tuningvalue"}
-        assert {prime[i].kind for i in prime if i.startswith("tuning:superspace_generator:")} == {"gentuningcell"}
-        assert prime["plain_text:tuning:gens"].kind == "plain_text"
+        assert {prime[i].kind for i in prime if i.startswith("tuning:generator:")} == {"tuningvalue"}
+        assert {prime[i].kind for i in prime if i.startswith("tuning:superspace_generator:")} == {"generator_tuning_cell"}
+        assert prime["plain_text:tuning:generators"].kind == "plain_text"
         assert prime["plain_text:tuning:superspace_generators"].kind == "plain_text_edit"
         assert "preset:tuning:superspace_generators" in prime
         neutral = {c.id: c for c in spreadsheet.build(state, s, nonprime_approach="").cells}
-        assert {neutral[i].kind for i in neutral if i.startswith("tuning:gen:")} == {"gentuningcell"}
+        assert {neutral[i].kind for i in neutral if i.startswith("tuning:generator:")} == {"generator_tuning_cell"}
         assert {neutral[i].kind for i in neutral if i.startswith("tuning:superspace_generator:")} == {"tuningvalue"}
 
     def test_approach_radio_band_only_for_a_nonprime_domain(self):
@@ -485,17 +485,17 @@ class TestMLTile:
         cells = {c.id: c for c in _barbados_superspace().cells}
         ml = service.superspace_mapping(
             service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"))
-        for gen_idx, row in enumerate(ml):
+        for generator_idx, row in enumerate(ml):
             for superspace_prime_idx, value in enumerate(row):
-                assert cells[f"cell:superspace_mapping:superspace_primes:{gen_idx}:{superspace_prime_idx}"].text == str(value)
+                assert cells[f"cell:superspace_mapping:superspace_primes:{generator_idx}:{superspace_prime_idx}"].text == str(value)
 
     def test_M_L_cells_ride_the_superspace_primes_gridlines_and_superspace_mapping_rows(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
-        for gen_idx in range(3):
+        for generator_idx in range(3):
             for superspace_prime_idx in range(4):
-                cell = cells[f"cell:superspace_mapping:superspace_primes:{gen_idx}:{superspace_prime_idx}"]
+                cell = cells[f"cell:superspace_mapping:superspace_primes:{generator_idx}:{superspace_prime_idx}"]
                 assert cell.x == cells[f"cell:superspace_mapping:superspace_primes:0:{superspace_prime_idx}"].x
-                assert cell.y == cells[f"cell:superspace_mapping:superspace_primes:{gen_idx}:0"].y
+                assert cell.y == cells[f"cell:superspace_mapping:superspace_primes:{generator_idx}:0"].y
 
     def test_M_L_off_omits_the_cells(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")

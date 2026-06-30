@@ -63,7 +63,7 @@ class TestIntervalVectorsRow:
         cells = {c.id: c for c in _layout().cells}
         assert [cells[f"basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
         assert cells["basis:0"].width == spreadsheet_constants.COLUMN_WIDTH == cells["prime:0"].width
-        gen0 = cells["gen:0"]
+        gen0 = cells["generator:0"]
         assert cells["basis:0"].x + cells["basis:0"].width / 2 == gen0.x + gen0.width / 2
         assert cells["basis:0"].y == cells["cell:comma:0:0"].y
         assert cells["basis:1"].y - cells["basis:0"].y == spreadsheet_constants.ROW_HEIGHT
@@ -90,10 +90,10 @@ class TestIntervalVectorsRow:
             minus = cells[f"map_minus:{i}"]
             assert minus.x == left_bus.position, "− drops from the left-bus branch point"
             assert abs((minus.y + minus.height / 2) - by_id[f"h:mapping:{i}"].position) < 0.51
-            assert minus.x < cells["gen:0"].x
+            assert minus.x < cells["generator:0"].x
         plus = cells["map_plus"]
         assert abs((plus.x + plus.width / 2) - left_bus.position) < 0.51
-        assert plus.y >= cells["gen:1"].y + cells["gen:1"].height
+        assert plus.y >= cells["generator:1"].y + cells["generator:1"].height
         assert abs((left_bus.start + left_bus.length) - (plus.y + plus.height / 2)) < 0.51
 
     def test_mapping_row_minus_gated_on_rank_and_plus_on_nullity(self):
@@ -127,7 +127,7 @@ class TestIntervalVectorsRow:
         for i in range(2):
             handle = cells[f"map_drag:{i}"]
             label = cells[f"matrix_label:row:mapping:primes:{i}"]
-            assert handle.gen == i
+            assert handle.generator == i
             assert handle.y == cells[f"cell:mapping:{i}:0"].y
             assert handle.x + handle.width <= label.x
             assert label.x + label.width <= cells[f"cell:mapping:{i}:0"].x
@@ -169,7 +169,7 @@ class TestIntervalVectorsRow:
     def test_grid_builds_for_an_octave_less_temperament(self):
         degenerate = service.remove_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4))), 0)
         layout = spreadsheet.build(degenerate)
-        assert any(c.id == "gen:0" for c in layout.cells)
+        assert any(c.id == "generator:0" for c in layout.cells)
 
     def test_interval_vectors_basis_minus_is_absent_when_the_domain_cannot_shrink(self):
         base = service.from_mapping(((1,),))

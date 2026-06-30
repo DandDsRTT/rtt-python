@@ -31,7 +31,7 @@ class TestGeneratorForms:
         assert gf.equave_reduced_ma(SEPTIMAL_MEANTONE, JIP4) == ((1, 1, 0, -3), (0, 1, 4, 10))
 
     def test_positive_generator_flip_matches_the_guide(self):
-        assert gf.positive_generator_ma(SEPTIMAL_MEANTONE, JIP4) == SEPTIMAL_MEANTONE, "'flip': sign-change a row whose generator is negative. Septimal meantone's generators are # already positive, so positive-gen == defactored Hermite (canonical)"
+        assert gf.positive_generator_ma(SEPTIMAL_MEANTONE, JIP4) == SEPTIMAL_MEANTONE, "'flip': sign-change a row whose generator is negative. Septimal meantone's generators are # already positive, so positive-generator == defactored Hermite (canonical)"
         assert gf.positive_generator_ma(PORCUPINE, JIP3) == ((1, 2, 3), (0, -3, -5)), "porcupine's canonical generator is negative (~−163¢), so its row flips sign"
 
     def test_positive_generator_shift_matches_the_temperament_evaluator(self):
@@ -54,9 +54,9 @@ class TestGeneratorForms:
                             (SENSI, JIP3), (NEGRI, JIP3), (MYNA, JIP4),
                             (((1, 0, 0, -5), (0, 1, 0, 2), (0, 0, 1, 2)), JIP4),
                             (((5, 8, 0), (0, 0, 1)), JIP3)]:
-            canon = canonical_ma(matrix)
+            canonical = canonical_ma(matrix)
             for form in ALL_FORMS:
-                assert canonical_ma(form(matrix, jip)) == canon, (form.__name__, matrix)
+                assert canonical_ma(form(matrix, jip)) == canonical, (form.__name__, matrix)
 
     def test_forms_are_idempotent_and_input_independent(self):
         for form in ALL_FORMS:

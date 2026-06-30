@@ -76,9 +76,9 @@ _FEATURE_CELLS = [
     ("row/col header symbols", "matrix_label:row:mapping:primes:0"),
     ("plain text values", "plain_text:mapping:primes"),
     ("presets", "preset:temperament"),
-    ("presets", "preset:tuning:gens"),
+    ("presets", "preset:tuning:generators"),
     ("charts", "chart:retune:targets"),
-    ("tuning ranges", "rangechart:tuning:gens"),
+    ("tuning ranges", "rangechart:tuning:generators"),
     ("units", "units:mapping:primes"),
     ("optimization", "optimization:power"),
 ]
@@ -88,9 +88,9 @@ _FEATURE_CELLS = [
     ("row/col header symbols", "matrix_label:row:mapping:primes:0"),
     ("plain text values", "plain_text:mapping:primes"),
     ("presets", "preset:temperament"),
-    ("presets", "preset:tuning:gens"),
+    ("presets", "preset:tuning:generators"),
     ("charts", "chart:retune:targets"),
-    ("tuning ranges", "rangechart:tuning:gens"),
+    ("tuning ranges", "rangechart:tuning:generators"),
     ("units", "units:mapping:primes"),
     ("optimization", "optimization:power"),
 ]
@@ -248,7 +248,7 @@ def _wrap_classes(user: User, cell_id: str) -> list[str]:
 
 
 def _ro_ratio_face(user: User, cell_id: str):
-    """A READ-ONLY ratio face (genratio / commaratio: detempering, generators, unchanged auto-list)
+    """A READ-ONLY ratio face (generator_ratio / commaratio: detempering, generators, unchanged auto-list)
     as ``(numerator_text, denominator_text, collapsed)``. ``collapsed`` is True when the value is a
     whole ratio ``"n/1"`` shown as a bare integer — flagged by ``rtt-fraction-whole`` on the .rtt-fraction
     div (the ~ omitted, the bar and denominator hidden). The wrap's first child is the .rtt-ratio
@@ -323,15 +323,15 @@ def _dec_inputs(user: User, cell_id: str):
 def _dec_value(user: User, cell_id: str) -> str:
     """The committed magnitude an editable decimal cell shows, rejoined from its whole + fraction
     fields the way decimal_value does (a blank fraction is the big-integer view → the bare whole).
-    Unsigned — the generator cell's sign rides on its glyph (read it via _gentuning_face)."""
+    Unsigned — the generator cell's sign rides on its glyph (read it via _generator_tuning_face)."""
     whole, frac = _dec_inputs(user, cell_id)
     f = str(frac.value).lstrip(".")
     return whole.value if not f else f"{whole.value}.{f}"
 
 
-def _gentuning_face(user: User, cell_id: str):
+def _generator_tuning_face(user: User, cell_id: str):
     """The (sign, whole, fraction) of a generator-tuning cell's in-place signed cents editor. The
-    genmap shows an explicit, clickable sign glyph (+ ordinarily assumed, − when negative) left of the
+    generator_map shows an explicit, clickable sign glyph (+ ordinarily assumed, − when negative) left of the
     big whole part, the small dot-led fraction stacked below. The sign is a label (its .text); the
     whole + fraction are the two real input fields (their .value), now edited in place. Returns
     (sign_label, whole_input, fraction_input), each located by its stable ``{cell_id}:sign`` /
@@ -381,7 +381,7 @@ def _px(element, prop: str) -> float:
 _ENABLE_HTML_CELLS = [
     ("units", "units:mapping:primes"),
     ("charts", "chart:retune:targets"),
-    ("tuning ranges", "rangechart:tuning:gens"),
+    ("tuning ranges", "rangechart:tuning:generators"),
 ]
 
 

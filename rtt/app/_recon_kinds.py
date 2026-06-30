@@ -43,15 +43,17 @@ def register_value_kinds(cell_kinds) -> None:
     cell_kinds["powerdisplay"] = _KindHandlers(
         value_kinds.build_powerdisplay, value_kinds.update_powerdisplay
     )
-    cell_kinds["gentuningcell"] = _KindHandlers(
-        value_kinds.build_gentuningcell, value_kinds.update_gentuningcell
+    cell_kinds["generator_tuning_cell"] = _KindHandlers(
+        value_kinds.build_generator_tuning_cell, value_kinds.update_generator_tuning_cell
     )
 
     cell_kinds["plain_text_edit"] = _KindHandlers(
         value_kinds.build_plain_text_edit, value_kinds.update_plain_text_edit
     )
 
-    cell_kinds["genratio"] = _KindHandlers(value_kinds.build_genratio, value_kinds.update_ratio)
+    cell_kinds["generator_ratio"] = _KindHandlers(
+        value_kinds.build_generator_ratio, value_kinds.update_ratio
+    )
     cell_kinds["commaratio"] = _KindHandlers(value_kinds.build_commaratio, value_kinds.update_ratio)
     cell_kinds["tuningvalue"] = _KindHandlers(
         value_kinds.build_tuning_value, value_kinds.update_tuning_value
@@ -107,8 +109,8 @@ def register_control_kinds(cell_kinds) -> None:
 def register_button_kinds(cell_kinds) -> None:
     cell_kinds["minus"] = _KindHandlers(buttons.build_minus)
     cell_kinds["plus"] = _KindHandlers(buttons.build_plus)
-    cell_kinds["gen_minus"] = _KindHandlers(buttons.build_gen_minus)
-    cell_kinds["gen_plus"] = _KindHandlers(buttons.build_gen_plus)
+    cell_kinds["generator_minus"] = _KindHandlers(buttons.build_generator_minus)
+    cell_kinds["generator_plus"] = _KindHandlers(buttons.build_generator_plus)
     cell_kinds["map_minus"] = _KindHandlers(buttons.build_map_minus)
     cell_kinds["map_plus"] = _KindHandlers(buttons.build_map_plus)
     cell_kinds["map_drag"] = _KindHandlers(drag.build_map_drag)

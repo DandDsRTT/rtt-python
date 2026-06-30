@@ -21,7 +21,7 @@ def _row(y, height=10.0, frame=2.0, symbol=3.0, caption=4.0, units=5.0, comma_pi
 
 def _geometry():
     return SimpleNamespace(
-        rows={"mapping": _row(100.0, comma_picker=7.0), "projection": _row(200.0), "canon": _row(300.0),
+        rows={"mapping": _row(100.0, comma_picker=7.0), "projection": _row(200.0), "canonical": _row(300.0),
               "vectors": _row(400.0), "superspace_vectors": _row(500.0), "superspace_mapping": _row(600.0),
               "superspace_projection": _row(700.0)})
 
@@ -32,7 +32,7 @@ class TestGeometryQuery:
         assert query.map_top(g, 0) == 100.0
         assert query.map_top(g, 2) == 100.0 + 2 * ROW_HEIGHT
         assert query.projection_top(g, 1) == 200.0 + ROW_HEIGHT
-        assert query.canon_top(g, 0) == 300.0
+        assert query.canonical_top(g, 0) == 300.0
         assert query.vector_top(g, 3) == 400.0 + 3 * ROW_HEIGHT
         assert query.superspace_vector_top(g, 1) == 500.0 + ROW_HEIGHT
         assert query.superspace_map_top(g, 1) == 600.0 + ROW_HEIGHT
@@ -49,14 +49,14 @@ class TestGeometryQuery:
 
     def test_gutter_and_coordinate_functions_are_pure_over_geometry(self):
         g = SimpleNamespace(
-            primes_x=10.0, targets_x=20.0, content_x={"gens": 5.0},
-            matrix_label_primes_width=2.0, matrix_label_superspace_primes_width=3.0, matrix_label_other_width={"gens": 1.0},
+            primes_x=10.0, targets_x=20.0, content_x={"generators": 5.0},
+            matrix_label_primes_width=2.0, matrix_label_superspace_primes_width=3.0, matrix_label_other_width={"generators": 1.0},
             row_handle_width=4.0, etpick_width=0, group_left={"targets": (100.0, 200.0)})
         assert query.matrix_label_gutter_width(g, "primes") == 2.0
         assert query.matrix_label_gutter_width(g, "superspace_primes") == 3.0
-        assert query.matrix_label_gutter_width(g, "gens") == 1.0
+        assert query.matrix_label_gutter_width(g, "generators") == 1.0
         assert query.handle_gutter_width(g, "primes") == 4.0
-        assert query.handle_gutter_width(g, "gens") == 0
+        assert query.handle_gutter_width(g, "generators") == 0
         assert query.etpick_left_pad(g, "primes") == 0
         assert query.target_left(g, 1) == 20.0 + BRACKET_WIDTH + COLUMN_WIDTH + INTERVAL_COL_GAP
         assert query.prime_left(g, 0) == 10.0 + query.outer_gutter_width(g, "primes") + BRACKET_WIDTH

@@ -116,9 +116,9 @@ def _emit_axes(lines, resolved, geometry, context) -> None:
 
 
 def _matrix_label_group_count(resolved):
-    return {"gens": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality, "commas": resolved.dimensions.comma_count + resolved.dimensions.unchanged_count, "targets": resolved.dimensions.target_count,
+    return {"generators": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality, "commas": resolved.dimensions.comma_count + resolved.dimensions.unchanged_count, "targets": resolved.dimensions.target_count,
             "held": resolved.dimensions.held_count, "detempering": resolved.dimensions.rank, "interest": resolved.dimensions.interest_count,
-            "canongens": resolved.dimensions.canonical_rank, "superspace_generators": resolved.dimensions.superspace_rank, "superspace_primes": resolved.dimensions.superspace_dimensionality}
+            "canonical_generators": resolved.dimensions.canonical_rank, "superspace_generators": resolved.dimensions.superspace_rank, "superspace_primes": resolved.dimensions.superspace_dimensionality}
 
 
 def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
@@ -127,8 +127,8 @@ def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
         return query.subrow_top(geometry, "prescaling", i)
     row_top = {
         ("mapping", "primes"): lambda i: query.map_top(geometry, i),
-        ("canon", "primes"): lambda i: query.canon_top(geometry, i),
-        ("mapping", "canongens"): lambda i: query.map_top(geometry, i),
+        ("canonical", "primes"): lambda i: query.canonical_top(geometry, i),
+        ("mapping", "canonical_generators"): lambda i: query.map_top(geometry, i),
         ("vectors", "primes"): lambda i: query.vector_top(geometry, i),
         ("projection", "primes"): lambda i: query.projection_top(geometry, i),
         ("projection", "superspace_primes"): lambda i: query.projection_top(geometry, i),
@@ -140,8 +140,8 @@ def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
         ("superspace_projection", "superspace_primes"): lambda i: query.superspace_projection_top(geometry, i),
     }
     row_count = {("mapping", "primes"): resolved.dimensions.rank,
-                 ("canon", "primes"): resolved.dimensions.canonical_rank,
-                 ("mapping", "canongens"): resolved.dimensions.rank,
+                 ("canonical", "primes"): resolved.dimensions.canonical_rank,
+                 ("mapping", "canonical_generators"): resolved.dimensions.rank,
                  ("vectors", "primes"): resolved.dimensions.dimensionality,
                  ("projection", "primes"): resolved.dimensions.dimensionality,
                  ("projection", "superspace_primes"): resolved.dimensions.dimensionality,
@@ -224,7 +224,7 @@ def _as_groups(g):
 
 def _tile_groups(resolved, row_key, column_key):
     region = set()
-    if row_key == "canon" or column_key == "canongens":
+    if row_key == "canonical" or column_key == "canonical_generators":
         region |= {"temperament", "form"}
     if row_key in ("projection", "tuning"):
         region |= {"tuning"}
@@ -243,9 +243,9 @@ def _tile_groups(resolved, row_key, column_key):
 
 
 def _wash_segments(resolved, geometry, row_key, column_key):
-    if (row_key, column_key) == ("counts", "gens") and "canongens" in geometry.column_x:
-        return [("gens", query.tile_box(geometry, "gens"), _tile_groups(resolved, "counts", "gens")),
-                ("canongens", query.tile_box(geometry, "canongens"), _tile_groups(resolved, "counts", "canongens"))]
+    if (row_key, column_key) == ("counts", "generators") and "canonical_generators" in geometry.column_x:
+        return [("generators", query.tile_box(geometry, "generators"), _tile_groups(resolved, "counts", "generators")),
+                ("canonical_generators", query.tile_box(geometry, "canonical_generators"), _tile_groups(resolved, "counts", "canonical_generators"))]
     return [(column_key, query.tile_span_box(geometry, row_key, column_key), _tile_groups(resolved, row_key, column_key))]
 
 
@@ -285,7 +285,7 @@ def _caption_equivalences(resolved, geometry, ai, slope) -> dict:
                     ("prescaling", "superspace_primes" if resolved.flags.superspace else "primes"): resolved.labels.prescaler_equivalence,
                     **(ALL_INTERVAL_EQUIVALENCES if ai else {}),
                     **(FORM_EQUIVALENCES if resolved.flags.form_subscript else {}),
-                    **({("mapping", "primes"): f" = 𝐹𝑀{SUBSCRIPT_C}"} if resolved.flags.canon else {}),
+                    **({("mapping", "primes"): f" = 𝐹𝑀{SUBSCRIPT_C}"} if resolved.flags.canonical else {}),
                     **({("vectors", "commas"): " = C|U", ("mapping", "commas"): ""}
                        if resolved.unchanged.shown else {})}
     if resolved.flags.superspace:

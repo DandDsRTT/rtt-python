@@ -57,23 +57,23 @@ class TestChoosers:
     async def test_tuning_chooser_shows_the_prompt_when_the_generator_tuning_is_overridden(self, user: User) -> None:
         await user.open("/")
         _toggle(user, "presets")
-        both = ("preset:tuning", "preset:tuning:gens")
+        both = ("preset:tuning", "preset:tuning:generators")
         assert all("display-value" not in _cell_child(user, cell_id)._props for cell_id in both)
-        _cell_child(user, "tuning:gen:1").set_value("700.000")
+        _cell_child(user, "tuning:generator:1").set_value("700.000")
         await user.should_see(marker="preset:tuning")
         assert all(_cell_child(user, cell_id)._props.get("display-value") == "-" for cell_id in both)
 
     async def test_picking_a_scheme_clears_the_manual_tuning_and_retunes(self, user: User) -> None:
         await user.open("/")
         _toggle(user, "presets")
-        seed = _cell_child(user, "tuning:gen:1").value
-        _cell_child(user, "tuning:gen:1").set_value("700.000")
+        seed = _cell_child(user, "tuning:generator:1").value
+        _cell_child(user, "tuning:generator:1").set_value("700.000")
         await user.should_see(marker="preset:tuning")
         assert _cell_child(user, "preset:tuning")._props.get("display-value") == "-"
         _cell_child(user, "preset:tuning").set_value("minimax-U")
         await user.should_see(marker="preset:tuning")
         assert "display-value" not in _cell_child(user, "preset:tuning")._props
-        assert _cell_child(user, "tuning:gen:1").value == seed
+        assert _cell_child(user, "tuning:generator:1").value == seed
 
     async def test_prescaler_chooser_shows_the_prompt_when_a_diagonal_is_overridden(self, user: User) -> None:
         await user.open("/")
@@ -297,8 +297,8 @@ class TestChoosers:
 
     async def test_range_mode_selector_highlights_the_live_mode(self, user: User) -> None:
         await _enable(user, "tuning ranges")
-        await user.should_see(marker="rangemode:tuning:gens")
-        wrap = next(iter(user.find(marker="rangemode:tuning:gens").elements))
+        await user.should_see(marker="rangemode:tuning:generators")
+        wrap = next(iter(user.find(marker="rangemode:tuning:generators").elements))
         on = [c for c in wrap.default_slot.children if "rtt-range-option-on" in c._classes]
         assert len(on) == 1
 
@@ -399,7 +399,7 @@ class TestHeldAndInterestCommit:
         _toggle(user, "presets")
         _toggle(user, "optimization")
         assert _cell_child(user, "preset:tuning").value == "minimax-U"
-        assert _cell_child(user, "tuning:gen:1").value != "701.955"
+        assert _cell_child(user, "tuning:generator:1").value != "701.955"
         _click_glyph(user, "held_plus")
         await user.should_see(marker="cell:held:0:0")
         _cell_child(user, "cell:held:0:0").set_value("-1")
@@ -408,7 +408,7 @@ class TestHeldAndInterestCommit:
         _commit(user, "cell:held:2:0")
         await user.should_see(marker="preset:tuning")
         assert _cell_child(user, "cell:held:0:0").value == "-1"
-        assert _cell_child(user, "tuning:gen:1").value == "701.955"
+        assert _cell_child(user, "tuning:generator:1").value == "701.955"
         assert _cell_child(user, "preset:tuning")._props.get("display-value") == "-"
 
     async def test_adding_an_interval_of_interest_commits_when_filled(self, user: User) -> None:

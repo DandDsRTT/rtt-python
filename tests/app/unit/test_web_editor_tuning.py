@@ -112,10 +112,10 @@ class TestTuningSchemes:
 
     def test_picking_a_scheme_retunes_immediately(self):
         editor = Editor()
-        gens = lambda: {c.id: c.text for c in editor.layout().cells}["tuning:gen:1"]
-        before = gens()
+        generators = lambda: {c.id: c.text for c in editor.layout().cells}["tuning:generator:1"]
+        before = generators()
         editor.set_tuning_scheme("minimax-S")
-        assert gens() != before
+        assert generators() != before
         assert editor.effective_generator_tuning() is None
         assert editor.displayed_tuning_scheme_name == "minimax-S"
 

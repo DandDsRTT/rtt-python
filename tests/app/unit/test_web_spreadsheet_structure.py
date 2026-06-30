@@ -22,10 +22,10 @@ from _spreadsheet_support import _memoized_build, _layout, _with, _title_edges, 
 class TestFreezeAndStructure:
     def test_rows_columns_and_cells_are_present(self):
         ids = {c.id for c in _layout().cells}
-        assert {"header:gens", "header:primes"} <= ids
+        assert {"header:generators", "header:primes"} <= ids
         assert {"label:quantities", "label:mapping"} <= ids
         assert {"prime:0", "prime:1", "prime:2"} <= ids
-        assert {"gen:0", "gen:1"} <= ids
+        assert {"generator:0", "generator:1"} <= ids
         assert {"cell:mapping:0:0", "cell:mapping:1:2"} <= ids
         assert {"minus", "plus"} <= ids
 
@@ -95,7 +95,7 @@ class TestFreezeAndStructure:
         cells = {c.id: c for c in spreadsheet.build(state).cells}
         assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "13/5"]
         assert cells["header:primes"].text == "domain basis\nelements"
-        assert cells["gen:1"].text == "15/13"
+        assert cells["generator:1"].text == "15/13"
 
     def test_build_threads_nonprime_approach_through_to_the_tuning(self):
         state = service.from_temperament_data("2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]]")
@@ -103,16 +103,16 @@ class TestFreezeAndStructure:
         nonprime = spreadsheet.build(state, tuning_scheme="TILT minimax-C", nonprime_approach="nonprime-based")
         n = {c.id: c.text for c in neutral.cells}
         np_ = {c.id: c.text for c in nonprime.cells}
-        assert n["tuning:gen:0"] != np_["tuning:gen:0"]
-        assert n["tuning:gen:1"] != np_["tuning:gen:1"]
+        assert n["tuning:generator:0"] != np_["tuning:generator:0"]
+        assert n["tuning:generator:1"] != np_["tuning:generator:1"]
 
     def test_generator_ratios_also_head_the_generators_column_in_the_quantities_row(self):
         cells = {c.id: c for c in _layout().cells}
-        assert cells["qgen:0"].text == "2/1"
-        assert cells["qgen:1"].text == "3/2"
-        assert cells["qgen:0"].x == cells["tuning:gen:0"].x
-        assert cells["qgen:1"].x == cells["tuning:gen:1"].x
-        assert cells["qgen:0"].y == cells["prime:0"].y
+        assert cells["quantities_generator:0"].text == "2/1"
+        assert cells["quantities_generator:1"].text == "3/2"
+        assert cells["quantities_generator:0"].x == cells["tuning:generator:0"].x
+        assert cells["quantities_generator:1"].x == cells["tuning:generator:1"].x
+        assert cells["quantities_generator:0"].y == cells["prime:0"].y
 
     def test_standard_domain_header_still_reads_domain_primes(self):
         cells = {c.id: c for c in _layout().cells}
@@ -130,12 +130,12 @@ class TestFreezeAndStructure:
 
     def test_generator_ratios_are_listed_in_the_quantities_column(self):
         cells = {c.id: c for c in _layout().cells}
-        assert cells["gen:0"].text == "2/1"
-        assert cells["gen:1"].text == "3/2"
-        assert cells["gen:0"].x == cells["header:quantities"].x
-        assert cells["gen:0"].x < cells["header:gens"].x
-        assert cells["gen:0"].y == cells["cell:mapping:0:0"].y
-        assert cells["gen:1"].y == cells["cell:mapping:1:0"].y
+        assert cells["generator:0"].text == "2/1"
+        assert cells["generator:1"].text == "3/2"
+        assert cells["generator:0"].x == cells["header:quantities"].x
+        assert cells["generator:0"].x < cells["header:generators"].x
+        assert cells["generator:0"].y == cells["cell:mapping:0:0"].y
+        assert cells["generator:1"].y == cells["cell:mapping:1:0"].y
 
     def test_mapping_over_generators_identity_renders_with_identity_objects(self):
         cells = {c.id: c for c in _with(identity_objects=True, names=True, symbols=True,
@@ -144,25 +144,25 @@ class TestFreezeAndStructure:
             for k in range(2):
                 assert cells[f"cell:selfmap:{i}:{k}"].text == ("1" if i == k else "0")
                 assert cells[f"cell:selfmap:{i}:{k}"].kind == "mapped"
-        assert cells["symbol:mapping:gens"].text == "\U0001D440G = \U0001D43C"
-        assert cells["caption:mapping:gens"].text == "mapped generators"
+        assert cells["symbol:mapping:generators"].text == "\U0001D440G = \U0001D43C"
+        assert cells["caption:mapping:generators"].text == "mapped generators"
         assert cells["bracket:selfmap:l"].text == spreadsheet_constants.GENMAP_BRACKETS[0]
         assert cells["bracket:selfmap:r"].text == spreadsheet_constants.GENMAP_BRACKETS[1]
         assert cells["ebktop:selfmap:0"].kind == "ebktop"
         assert cells["ebkbrace:selfmap:0"].kind == "ebkbrace"
-        assert cells["plain_text:mapping:gens"].text == "{[1 0} [0 1}]"
-        assert not any(c.startswith(("matrix_label:row:mapping:gens", "matrix_label:column:mapping:gens")) for c in cells)
+        assert cells["plain_text:mapping:generators"].text == "{[1 0} [0 1}]"
+        assert not any(c.startswith(("matrix_label:row:mapping:generators", "matrix_label:column:mapping:generators")) for c in cells)
 
     def test_mapping_over_generators_identity_gated_off_by_default(self):
         cells = {c.id for c in _layout().cells}
         assert not any(c.startswith(("cell:selfmap", "bracket:selfmap", "ebktop:selfmap",
                                      "ebkbrace:selfmap")) for c in cells)
-        assert "toggle:tile:mapping:gens" not in cells
+        assert "toggle:tile:mapping:generators" not in cells
 
     def test_standard_identity_objects_wash_temperament_yellow(self):
         washes = {b.id for b in _with(identity_objects=True, generator_detempering=True,
                                       temperament_colorization=True).blocks}
-        for key in ("vectors:primes", "mapping:gens", "mapping:detempering"):
+        for key in ("vectors:primes", "mapping:generators", "mapping:detempering"):
             assert f"wash:temperament:{key}" in washes
             assert f"wash:tuning:{key}" not in washes, "not cyan"
 
@@ -232,7 +232,7 @@ class TestFreezeAndStructure:
     def test_interval_pluses_survive_hiding_the_quantities_row(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         interval_pluses = {"comma_plus", "target_plus", "interest_plus"}
-        quantities_only = {"plus", "gen_plus"}
+        quantities_only = {"plus", "generator_plus"}
 
         shown = {c.id for c in spreadsheet.build(state).cells}
         assert (interval_pluses | quantities_only) <= shown
@@ -256,11 +256,11 @@ class TestAddRemoveControls:
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
 
         shown = {c.id for c in spreadsheet.build(state).cells}
-        assert {"comma_minus:0", "target_minus:0", "minus", "gen_minus"} <= shown
+        assert {"comma_minus:0", "target_minus:0", "minus", "generator_minus"} <= shown
 
         folded = {c.id for c in spreadsheet.build(state, collapsed={"row:quantities"}).cells}
         assert {"comma_minus:0", "target_minus:0"} <= folded
-        assert {"minus", "gen_minus"}.isdisjoint(folded)
+        assert {"minus", "generator_minus"}.isdisjoint(folded)
         assert "basis_minus" in folded, "(the domain − twin already lives on the vectors row)"
 
         drafts = (("pending_comma", "comma_minus:pending"), ("pending_interest", "interest_minus:pending"))
@@ -277,25 +277,25 @@ class TestAddRemoveControls:
         layout = _layout()
         cells = {c.id: c for c in layout.cells}
         by_id = {line.id: line for line in layout.lines}
-        plus, bus, last_sub = cells["gen_plus"], by_id["bus:gens:top"], by_id["v:gen:1"]
+        plus, bus, last_sub = cells["generator_plus"], by_id["bus:generators:top"], by_id["v:generator:1"]
         stub = last_sub.position + spreadsheet_constants.COLUMN_WIDTH
         assert abs((plus.x + plus.width / 2) - stub) < 0.51
         assert abs((plus.y + plus.height / 2) - bus.position) < 0.51
         assert abs((bus.start + bus.length) - stub) < 0.51
-        minus = cells["gen_minus"]
+        minus = cells["generator_minus"]
         assert abs((minus.x + minus.width / 2) - last_sub.position) < 0.51
         assert minus.y == bus.position, "the zone drops from the top bus"
-        assert minus.y + minus.height <= cells["tuning:gen:0"].y
+        assert minus.y + minus.height <= cells["tuning:generator:0"].y
 
     def test_a_single_generator_temperament_has_no_gen_minus_but_keeps_gen_plus(self):
         cells = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),))).cells}
-        assert "gen_minus" not in cells
-        assert {"gen_plus", "qgen:0"} <= cells, "...but n>0, so a generator can still be added (un-tempering a comma)"
+        assert "generator_minus" not in cells
+        assert {"generator_plus", "quantities_generator:0"} <= cells, "...but n>0, so a generator can still be added (un-tempering a comma)"
 
     def test_generators_plus_is_gated_on_a_comma_to_un_temper(self):
-        assert "gen_plus" in {c.id for c in _layout().cells}, "the generators + un-tempers a comma (−n, +r, hold d), like the mapping +, so it needs a comma: # present at n>0, gone at full rank where there is nothing left to un-temper"
+        assert "generator_plus" in {c.id for c in _layout().cells}, "the generators + un-tempers a comma (−n, +r, hold d), like the mapping +, so it needs a comma: # present at n>0, gone at full rank where there is nothing left to un-temper"
         ji = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
-        assert "gen_plus" not in {c.id for c in spreadsheet.build(ji).cells}
+        assert "generator_plus" not in {c.id for c in spreadsheet.build(ji).cells}
 
     def test_minus_hover_zone_clears_the_editable_quantities_cell(self):
         cells = {c.id: c for c in _layout().cells}

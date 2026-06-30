@@ -85,33 +85,35 @@ def update_powerdisplay(reconciler, cell_box: spreadsheet.CellBox) -> None:
     _sync_stacked_face(reconciler, cell_box.id, *_power_parts(cell_box.text))
 
 
-def build_gentuningcell(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_generator_tuning_cell(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     i = int(cell_box.id.rsplit(":", 1)[1])
     _build_decimal(
         reconciler,
         cell_box,
         wrap,
-        lambda _e=None, cell_id=cell_box.id: reconciler._cell_box.on_gentuning_change(cell_id),
-        gen_index=i,
+        lambda _e=None, cell_id=cell_box.id: reconciler._cell_box.on_generator_tuning_change(
+            cell_id
+        ),
+        generator_index=i,
     )
     wrap.on(
         "wheel.prevent",
-        lambda e, cell_id=cell_box.id: reconciler._cell_box.on_gentuning_wheel(
+        lambda e, cell_id=cell_box.id: reconciler._cell_box.on_generator_tuning_wheel(
             cell_id, e.args.get("deltaY")
         ),
         args=["deltaY"],
     )
     wrap.on(
         "mouseenter",
-        lambda _=None, cell_id=cell_box.id: reconciler._cell_box.gentuning_hover(cell_id),
+        lambda _=None, cell_id=cell_box.id: reconciler._cell_box.generator_tuning_hover(cell_id),
     )
     wrap.on(
         "mouseleave",
-        lambda _=None, cell_id=cell_box.id: reconciler._cell_box.gentuning_unhover(cell_id),
+        lambda _=None, cell_id=cell_box.id: reconciler._cell_box.generator_tuning_unhover(cell_id),
     )
 
 
-def update_gentuningcell(reconciler, cell_box: spreadsheet.CellBox) -> None:
+def update_generator_tuning_cell(reconciler, cell_box: spreadsheet.CellBox) -> None:
     _update_decimal(reconciler, cell_box, "" if cell_box.blank else cell_box.text, signed=True)
 
 
@@ -145,7 +147,7 @@ def update_plain_text_edit(reconciler, cell_box: spreadsheet.CellBox) -> None:
     )
 
 
-def build_genratio(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_generator_ratio(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     _build_ratio_face(reconciler, cell_box, wrap, approx=True)
 
 
@@ -177,7 +179,7 @@ def update_ratio(reconciler, cell_box: spreadsheet.CellBox) -> None:
     reconciler.cells[cell_box.id].value.frac = None
     reconciler.cells[cell_box.id].value.label = None
     with face:
-        _ratio_body(reconciler, cell_box, approx=(cell_box.kind == "genratio"))
+        _ratio_body(reconciler, cell_box, approx=(cell_box.kind == "generator_ratio"))
 
 
 def build_tuning_value(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None:

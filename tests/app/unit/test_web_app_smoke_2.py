@@ -216,7 +216,7 @@ class TestWebAppSmoke3:
 
     def test_ebk_svg_routes_the_curly_open_brace_to_the_curly_bracket(self):
         from rtt.app.layout import CellBox
-        cb = CellBox("bracket:tuning:genmap:l", 0, 0, 16, 30, "bracket", text="{")
+        cb = CellBox("bracket:tuning:generator_map:l", 0, 0, 16, 30, "bracket", text="{")
         assert marks.ebk_svg(cb) == marks.curly_bracket(16, 30), "not the square/angle renderer"
 
     def test_bar_chart_draws_one_scaled_bar_per_value_from_the_baseline(self):

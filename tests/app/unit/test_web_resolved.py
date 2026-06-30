@@ -55,8 +55,8 @@ class TestWebResolved:
 
     def test_the_resolved_model_is_the_only_copy_of_the_domain_facts(self):
         b = _builder(Editor())
-        for mirrored in ("comma_ratios", "tuning_map", "gens", "show_superspace", "projection_matrix",
-                         "canon_mapping", "unchanged_ratios", "ghost_row", "all_interval"):
+        for mirrored in ("comma_ratios", "tuning_map", "generators", "show_superspace", "projection_matrix",
+                         "canonical_mapping", "unchanged_ratios", "ghost_row", "all_interval"):
             assert not hasattr(b, mirrored), f"{mirrored} still shadows the resolved model on self"
         assert b.resolved.commas.ratios is not None
         assert b.resolved.flags.superspace is False

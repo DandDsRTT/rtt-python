@@ -3,7 +3,7 @@ from rtt.app.spreadsheet_brackets import emit_brackets, emit_ebk_frames_and_mark
 from rtt.app.spreadsheet_closed_form import _closed_form, closed_form_operand
 from rtt.app.spreadsheet_controls import emit_controls, emit_tile_toggles, transform_cells
 from rtt.app.spreadsheet_decorations import emit_decorations
-from rtt.app.spreadsheet_emit_mapping import emit_canon_band, emit_mapping, emit_projection_band
+from rtt.app.spreadsheet_emit_mapping import emit_canonical_band, emit_mapping, emit_projection_band
 from rtt.app.spreadsheet_emit_matrix import (
     emit_column_plus_controls,
     emit_counts_row,
@@ -78,7 +78,7 @@ class TestEmitPure:
         result = emit_mapping(*_inputs(_maximized_builder()))
         assert isinstance(result, EmitResult)
         ids = {c.id for c in result.cells}
-        assert "gen:0" in ids
+        assert "generator:0" in ids
         full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
         assert ids <= full
 
@@ -96,7 +96,7 @@ class TestEmitPure:
     def test_emit_quantities_row_is_a_pure_function(self):
         result = emit_quantities_row(*_inputs(_maximized_builder()))
         ids = {c.id for c in result.cells}
-        assert "qgen:0" in ids and "prime:0" in ids
+        assert "quantities_generator:0" in ids and "prime:0" in ids
         full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
         assert ids <= full
 
@@ -105,7 +105,7 @@ class TestEmitPure:
         plus = emit_column_plus_controls(resolved, geometry)
         rehomed = emit_rehomed_minus_controls(resolved, geometry, context)
         assert isinstance(plus, EmitResult) and isinstance(rehomed, EmitResult)
-        assert "gen_plus" in {c.id for c in plus.cells}
+        assert "generator_plus" in {c.id for c in plus.cells}
         assert rehomed.cells == ()
 
     def test_emit_projection_band_is_a_pure_function(self):
@@ -238,9 +238,9 @@ class TestEmitPure:
         context = build_context(builder)
         assert _closed_form(builder.resolved, context) is _closed_form(builder.resolved, context)
 
-    def test_emit_canon_band_is_a_pure_function(self):
+    def test_emit_canonical_band_is_a_pure_function(self):
         builder = spreadsheet._GridBuilder(service.from_mapping(((1, 0, -4), (0, 1, 4))), _all_on())
-        result = emit_canon_band(*_inputs(builder))
+        result = emit_canonical_band(*_inputs(builder))
         ids = {c.id for c in result.cells}
         full = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, -4), (0, 1, 4))), _all_on()).cells}
         assert ids <= full

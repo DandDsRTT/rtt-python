@@ -142,10 +142,10 @@ class TestHeldColumn:
                 "symbol:mapping:detempering", "plain_text:mapping:detempering"}.isdisjoint(cells)
         assert {"header:detempering", "cell:vector:detempering:0:0"} <= cells
 
-    def test_generator_detempering_tuning_row_equals_the_genmap(self):
+    def test_generator_detempering_tuning_row_equals_the_generator_map(self):
         cells = {c.id: c for c in _with(generator_detempering=True).cells}
-        genmap = [cells[f"tuning:gen:{i}"].text for i in range(2)]
-        assert [cells[f"tuning:detempering:{i}"].text for i in range(2)] == genmap
+        generator_map = [cells[f"tuning:generator:{i}"].text for i in range(2)]
+        assert [cells[f"tuning:detempering:{i}"].text for i in range(2)] == generator_map
         assert cells["bracket:tuning:detempering:l"].text == "{"
 
     def test_generator_detempering_size_rows_are_just_and_retuning_lists(self):
@@ -168,7 +168,7 @@ class TestHeldColumn:
 
     def test_generator_detempering_size_rows_plain_text(self):
         cells = {c.id: c for c in _with(generator_detempering=True, plain_text_values=True).cells}
-        assert cells["plain_text:tuning:detempering"].text == cells["plain_text:tuning:gens"].text, "the tuning row is the generator tuning map, so its plain text matches the genmap's ({ ])"
+        assert cells["plain_text:tuning:detempering"].text == cells["plain_text:tuning:generators"].text, "the tuning row is the generator tuning map, so its plain text matches the generator_map's ({ ])"
         assert cells["plain_text:just:detempering"].text == "[1200.000 701.955]"
         assert cells["plain_text:retune:detempering"].text.startswith("[")
 
@@ -288,46 +288,46 @@ class TestRetuningChartsAndGenMap:
         st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         tuning_map = service.tuning(st.mapping, service.DEFAULT_DOCUMENT_SCHEME)
         cells = {c.id: c for c in _layout().cells}
-        assert cells["tuning:gen:0"].text == service.cents(tuning_map.generator_map[0])
-        assert cells["tuning:gen:1"].text == service.cents(tuning_map.generator_map[1])
-        assert cells["header:gens"].x <= cells["tuning:gen:0"].x < cells["header:primes"].x
-        assert cells["tuning:gen:1"].x == cells["tuning:gen:0"].x + spreadsheet_constants.COLUMN_WIDTH
-        assert cells["tuning:gen:0"].y == cells["tuning:prime:0"].y
-        assert cells["bracket:tuning:genmap:l"].text == "{" and cells["bracket:tuning:genmap:r"].text == "]"
-        assert cells["caption:tuning:gens"].text == "generator tuning map"
+        assert cells["tuning:generator:0"].text == service.cents(tuning_map.generator_map[0])
+        assert cells["tuning:generator:1"].text == service.cents(tuning_map.generator_map[1])
+        assert cells["header:generators"].x <= cells["tuning:generator:0"].x < cells["header:primes"].x
+        assert cells["tuning:generator:1"].x == cells["tuning:generator:0"].x + spreadsheet_constants.COLUMN_WIDTH
+        assert cells["tuning:generator:0"].y == cells["tuning:prime:0"].y
+        assert cells["bracket:tuning:generator_map:l"].text == "{" and cells["bracket:tuning:generator_map:r"].text == "]"
+        assert cells["caption:tuning:generators"].text == "generator tuning map"
 
     def test_generator_tuning_map_gets_a_plain_text_value_band(self):
         st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         on = {c.id: c for c in _with(plain_text_values=True).cells}
-        assert "plain_text:tuning:gens" in on
-        assert on["plain_text:tuning:gens"].text == service.plain_text_values(
-            st, service.DEFAULT_DOCUMENT_SCHEME)[("tuning", "gens")]
-        assert on["plain_text:tuning:gens"].text.startswith("{") and on["plain_text:tuning:gens"].text.endswith("]")
+        assert "plain_text:tuning:generators" in on
+        assert on["plain_text:tuning:generators"].text == service.plain_text_values(
+            st, service.DEFAULT_DOCUMENT_SCHEME)[("tuning", "generators")]
+        assert on["plain_text:tuning:generators"].text.startswith("{") and on["plain_text:tuning:generators"].text.endswith("]")
 
     def test_tuning_ranges_on_adds_a_generator_tuning_range_chart_in_the_generators_column(self):
         on = {c.id: c for c in _with(tuning_ranges=True).cells}
         off = {c.id for c in _with(tuning_ranges=False).cells}
-        assert "rangechart:tuning:gens" not in off
-        ch = on["rangechart:tuning:gens"]
+        assert "rangechart:tuning:generators" not in off
+        ch = on["rangechart:tuning:generators"]
         assert ch.kind == "rangechart"
-        assert ch.x == on["header:gens"].x and ch.width == on["header:gens"].width, "it spans the generators column (so its per-generator I-beams align with the cells)"
+        assert ch.x == on["header:generators"].x and ch.width == on["header:generators"].width, "it spans the generators column (so its per-generator I-beams align with the cells)"
 
     def test_generator_range_chart_carries_the_decimals_toggle(self):
-        on = {c.id: c for c in _with(tuning_ranges=True).cells}["rangechart:tuning:gens"]
-        off = {c.id: c for c in _with(tuning_ranges=True, decimals=False).cells}["rangechart:tuning:gens"]
+        on = {c.id: c for c in _with(tuning_ranges=True).cells}["rangechart:tuning:generators"]
+        off = {c.id: c for c in _with(tuning_ranges=True, decimals=False).cells}["rangechart:tuning:generators"]
         assert on.decimals is True
         assert off.decimals is False
 
     def test_the_ranges_chart_answers_to_tuning_ranges_not_charts(self):
         charts_only = {c.id for c in _with(charts=True, tuning_ranges=False).cells}
         ranges_only = {c.id for c in _with(charts=False, tuning_ranges=True).cells}
-        assert "rangechart:tuning:gens" not in charts_only
-        assert "rangechart:tuning:gens" in ranges_only
+        assert "rangechart:tuning:generators" not in charts_only
+        assert "rangechart:tuning:generators" in ranges_only
 
     def test_generator_tuning_range_chart_carries_the_monotone_ranges_by_default(self):
         st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         tuning_map = service.tuning(st.mapping)
-        ch = {c.id: c for c in _with(tuning_ranges=True).cells}["rangechart:tuning:gens"]
+        ch = {c.id: c for c in _with(tuning_ranges=True).cells}["rangechart:tuning:generators"]
         assert ch.ranges == tuning_map.monotone_generator_range
         assert len(ch.ranges) == 2
         assert ch.ranges[0][0] == ch.ranges[0][1]
@@ -338,7 +338,7 @@ class TestRetuningChartsAndGenMap:
         tuning_map = service.tuning(st.mapping)
         s = settings.defaults()
         s["tuning_ranges"] = True
-        ch = {c.id: c for c in spreadsheet.build(st, s, range_mode="tradeoff").cells}["rangechart:tuning:gens"]
+        ch = {c.id: c for c in spreadsheet.build(st, s, range_mode="tradeoff").cells}["rangechart:tuning:generators"]
         assert ch.ranges == tuning_map.tradeoff_generator_range
         assert ch.ranges != tuning_map.monotone_generator_range
 
@@ -347,21 +347,21 @@ class TestRetuningChartsAndGenMap:
         assert service.tuning(st.mapping).monotone_generator_range is None
         s = settings.defaults()
         s["tuning_ranges"] = True
-        ch = {c.id: c for c in spreadsheet.build(st, s, range_mode="monotone").cells}["rangechart:tuning:gens"]
+        ch = {c.id: c for c in spreadsheet.build(st, s, range_mode="monotone").cells}["rangechart:tuning:generators"]
         assert ch.ranges == ()
 
     def test_range_chart_nests_below_the_generator_map_values_inside_the_tile(self):
         on = {c.id: c for c in _with(tuning_ranges=True).cells}
-        ch = on["rangechart:tuning:gens"]
-        assert ch.y > on["tuning:gen:0"].y, "the chart sits below the generator-map values (nested at the bottom of the tile), # not floating over them"
+        ch = on["rangechart:tuning:generators"]
+        assert ch.y > on["tuning:generator:0"].y, "the chart sits below the generator-map values (nested at the bottom of the tile), # not floating over them"
         mapping_bottom = on["cell:mapping:1:0"].y + spreadsheet_constants.ROW_HEIGHT
         assert ch.y >= mapping_bottom
 
     def test_range_mode_selector_sits_below_the_chart_and_carries_the_current_mode(self):
         on = {c.id: c for c in _with(tuning_ranges=True).cells}
         off = {c.id for c in _with(tuning_ranges=False).cells}
-        assert "rangemode:tuning:gens" not in off
-        selection, ch = on["rangemode:tuning:gens"], on["rangechart:tuning:gens"]
+        assert "rangemode:tuning:generators" not in off
+        selection, ch = on["rangemode:tuning:generators"], on["rangechart:tuning:generators"]
         assert selection.kind == "rangemode"
         assert selection.text == "monotone", "the live mode (default), so the renderer can preset it"
         assert selection.x == ch.x
@@ -370,23 +370,23 @@ class TestRetuningChartsAndGenMap:
     def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector(self):
         layout = _with(tuning_ranges=True)
         cells = {c.id: c for c in layout.cells}
-        pan = {b.id: b for b in layout.blocks}["block:tuning:gens"]
-        v, ch, selection = cells["tuning:gen:0"], cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
+        pan = {b.id: b for b in layout.blocks}["block:tuning:generators"]
+        v, ch, selection = cells["tuning:generator:0"], cells["rangechart:tuning:generators"], cells["rangemode:tuning:generators"]
         assert pan.x <= ch.x and pan.x + pan.width >= ch.x + ch.width
         assert pan.y <= v.y
         assert pan.y + pan.height >= selection.y + selection.height
-        assert "block:tuning:gens" in {b.id for b in _with(tuning_ranges=False).blocks}
-        assert "block:gentuning" not in {b.id for b in layout.blocks}
+        assert "block:tuning:generators" in {b.id for b in _with(tuning_ranges=False).blocks}
+        assert "block:generator_tuning" not in {b.id for b in layout.blocks}
 
     def test_tuning_ranges_box_has_a_left_aligned_boxtitle(self):
         layout = _with(tuning_ranges=True)
         cells = {c.id: c for c in layout.cells}
         boxes = {b.id: b for b in layout.blocks}
-        title = cells["rangetitle:tuning:gens"]
+        title = cells["rangetitle:tuning:generators"]
         assert title.kind == "boxtitle" and title.text == "tuning ranges"
-        chart, selection = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
+        chart, selection = cells["rangechart:tuning:generators"], cells["rangemode:tuning:generators"]
         assert title.y < chart.y
-        assert title.x == cells["header:gens"].x
+        assert title.x == cells["header:generators"].x
         box = boxes["block:tuning:rangesbox"]
         assert box.y <= title.y and box.y + box.height >= selection.y + selection.height
 
@@ -397,7 +397,7 @@ class TestRetuningChartsAndGenMap:
         assert "block:tuning:rangesbox" in boxes
         box = boxes["block:tuning:rangesbox"]
         assert box.boxed is True, "a bordered box, not a plain grey tile"
-        ch, selection = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
+        ch, selection = cells["rangechart:tuning:generators"], cells["rangemode:tuning:generators"]
         assert box.x <= ch.x and box.x + box.width >= ch.x + ch.width
         assert box.y <= ch.y and box.y + box.height >= selection.y + selection.height
         assert "block:tuning:rangesbox" not in {b.id for b in _with(tuning_ranges=False).blocks}
@@ -405,7 +405,7 @@ class TestRetuningChartsAndGenMap:
     def test_tuning_ranges_box_reserves_row_height_so_following_rows_clear_it(self):
         layout = _with(tuning_ranges=True)
         cells = {c.id: c for c in layout.cells}
-        panel = {b.id: b for b in layout.blocks}["block:tuning:gens"]
+        panel = {b.id: b for b in layout.blocks}["block:tuning:generators"]
         box_bottom = panel.y + panel.height
         for nxt in ("just:prime:0", "retune:prime:0", "damage:target:0"):
             assert cells[nxt].y >= box_bottom, f"{nxt} overlaps the ranges box"
@@ -420,7 +420,7 @@ class TestRetuningChartsAndGenMap:
         assert at("comma:0") == Y
         assert at("cell:comma:0:0") == Y
         assert at("prime:0") == Y
-        assert at("qgen:0") == Y
+        assert at("quantities_generator:0") == Y
         assert at("target:0") == C
         assert at("interest:0") == N
         assert at("held:0") == C
@@ -428,13 +428,13 @@ class TestRetuningChartsAndGenMap:
         assert at("cell:vector:targets:0:0") == C
         assert at("cell:interest:0:0") == N
         assert at("cell:held:0:0") == C
-        assert at("gen:0") == Y, "the generators in the spine are the generator basis — an input, carrying neither the # tuning map 𝒈 nor the embedding G — so by CONTENT they'd be neutral; but the quantities # spine column colours by its row's BAND (continuity), so the mapping row's generator # ratios take the mapping's temperament yellow (see test_spine_rows_and_columns_…)"
+        assert at("generator:0") == Y, "the generators in the spine are the generator basis — an input, carrying neither the # tuning map 𝒈 nor the embedding G — so by CONTENT they'd be neutral; but the quantities # spine column colours by its row's BAND (continuity), so the mapping row's generator # ratios take the mapping's temperament yellow (see test_spine_rows_and_columns_…)"
         assert at("cell:mapping:0:0") == Y
         assert at("cell:mapped_comma:0:0") == Y
         assert at("cell:mapped:0:0") == G
         assert at("cell:imapped:0:0") == Y
         assert at("cell:hmapped:0:0") == G
-        assert at("tuning:gen:0") == G, "the generators column carries the generator basis B (yellow) in every tile, like the # primes column carries P — so the cyan genmap 𝒈 over it reads green; 𝒕 = 𝒈𝑀 over it is # green too (already had G·M). the retuning row 𝒓 = 𝒕 − 𝒋 keeps the 𝒈𝑀 term's G and 𝑀"
+        assert at("tuning:generator:0") == G, "the generators column carries the generator basis B (yellow) in every tile, like the # primes column carries P — so the cyan generator_map 𝒈 over it reads green; 𝒕 = 𝒈𝑀 over it is # green too (already had G·M). the retuning row 𝒓 = 𝒕 − 𝒋 keeps the 𝒈𝑀 term's G and 𝑀"
         for col in ("prime", "comma", "target", "interest", "held"):
             assert at(f"tuning:{col}:0") == G
             assert at(f"retune:{col}:0") == G
@@ -459,7 +459,7 @@ class TestRetuningChartsAndGenMap:
         cells = {c.id: c for c in layout.cells}
         Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
         at = lambda cell_id: _color_at(layout, *_mid(cells, cell_id))
-        assert at("cell:canon:0:0") == Y
+        assert at("cell:canonical:0:0") == Y
         assert at("cell:prescaling:primes:0:0") == G
         assert at("cell:prescaling:commas:0:0") == G
         assert at("cell:prescaling:targets:0:0") == C
@@ -472,7 +472,7 @@ class TestRetuningChartsAndGenMap:
         assert at("complexity:held:0") == C
         assert at("weight:target:0") == C, "the weight 𝒘 incorporates the target complexity list (𝒘 = 𝒄 / 1 / 1∕𝒄), so it inherits # that list's cyan 𝑋 (and rides the cyan target column T) → cyan"
 
-    def test_form_colorization_washes_the_canon_row_and_column(self):
+    def test_form_colorization_washes_the_canonical_row_and_column(self):
         s = settings.defaults()
         s.update(form_tiles=True, form_colorization=True, temperament_colorization=True, tuning_colorization=True,
                  generator_detempering=True, optimization=True, projection=True, identity_objects=True)
@@ -481,20 +481,20 @@ class TestRetuningChartsAndGenMap:
         layout = b.layout()
         tg = partial(_tile_groups, b.resolved)
         RED, WHITE, GREEN = {"form", "temperament"}, {"form", "temperament", "tuning"}, {"temperament", "tuning"}
-        assert tg("canon", "primes") == RED and tg("canon", "gens") == RED and tg("canon", "detempering") == RED
-        assert tg("canon", "targets") == WHITE and tg("canon", "held") == WHITE
-        assert tg("mapping", "canongens") == RED
-        assert tg("projection", "canongens") == WHITE and tg("tuning", "canongens") == WHITE
-        assert tg("projection", "primes") == GREEN and tg("projection", "gens") == GREEN
+        assert tg("canonical", "primes") == RED and tg("canonical", "generators") == RED and tg("canonical", "detempering") == RED
+        assert tg("canonical", "targets") == WHITE and tg("canonical", "held") == WHITE
+        assert tg("mapping", "canonical_generators") == RED
+        assert tg("projection", "canonical_generators") == WHITE and tg("tuning", "canonical_generators") == WHITE
+        assert tg("projection", "primes") == GREEN and tg("projection", "generators") == GREEN
         assert tg("projection", "detempering") == {"tuning"} and tg("projection", "targets") == {"tuning"}
         assert tg("mapping", "primes") == {"temperament"}
         cells = {c.id: c for c in layout.cells}
-        yc = cells["cell:canon_mapped:0:0"]
+        yc = cells["cell:canonical_mapped:0:0"]
         x, y = yc.x + yc.width / 2, yc.y + yc.height / 2
         over = lambda pred: any(pred(bl) and bl.x <= x <= bl.x + bl.width and bl.y <= y <= bl.y + bl.height for bl in layout.blocks)
         assert over(lambda bl: bl.id.startswith("washbase:"))
         assert not over(lambda bl: bl.tint in ("temperament", "tuning", "form"))
-        rank = cells["count:gens"]
+        rank = cells["count:generators"]
         gx, cgx = cells["cell:form:0:0"].x + 5, cells["cell:fcancel:0:0"].x + 5
         in_band = lambda bx, tint: any(bl.tint == tint and bl.x <= bx <= bl.x + bl.width
                                        and bl.y <= rank.y + rank.height / 2 <= bl.y + bl.height for bl in layout.blocks)
@@ -508,7 +508,7 @@ class TestRetuningChartsAndGenMap:
             b = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))), settings=s,
                                          held_basis_ratios=("2/1", "5/4"))
             b.layout()
-            return {g for g in _tile_groups(b.resolved, "tuning", "canongens") if s.get(f"{g}_colorization")}
+            return {g for g in _tile_groups(b.resolved, "tuning", "canonical_generators") if s.get(f"{g}_colorization")}
         assert active(tuning_colorization=True) == {"tuning"}
         assert active(tuning_colorization=True, temperament_colorization=True) == {"tuning", "temperament"}
         assert active(tuning_colorization=True, temperament_colorization=True,
@@ -544,11 +544,11 @@ class TestRetuningChartsAndGenMap:
             suffix = ":0" if spine == "units_row" else ""
             assert at(f"{spine}:commas{suffix}") == Y
             assert at(f"{spine}:primes{suffix}") == Y
-            assert at(f"{spine}:gens{suffix}") == Y
+            assert at(f"{spine}:generators{suffix}") == Y
             assert at(f"{spine}:targets{suffix}") == C
             assert at(f"{spine}:held{suffix}") == C
             assert at(f"{spine}:detempering{suffix}") == N
-        assert at("gen:0") == Y, "quantities + units COLUMNS take each row's family: mapping yellow; tuning, just, # retuning, prescaling, complexity cyan. The retuning units cell is cyan despite the # retuning VALUE cells being green — the spine follows the band, not the content"
+        assert at("generator:0") == Y, "quantities + units COLUMNS take each row's family: mapping yellow; tuning, just, # retuning, prescaling, complexity cyan. The retuning units cell is cyan despite the # retuning VALUE cells being green — the spine follows the band, not the content"
         assert at("units_column:mapping:0") == Y
         assert at("units_column:tuning") == C
         assert at("units_column:just") == C

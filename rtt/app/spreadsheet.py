@@ -15,7 +15,7 @@ from rtt.app.spreadsheet_controls import (
 )
 from rtt.app.spreadsheet_decorations import emit_decorations
 from rtt.app.spreadsheet_emit_mapping import (
-    emit_canon_band,
+    emit_canonical_band,
     emit_mapping,
     emit_projection_band,
 )
@@ -79,7 +79,7 @@ def assemble(resolved, geometry, context):
     cells.extend(emit_rehomed_minus_controls(resolved, geometry, context).cells)
     cells.extend(emit_mapping(resolved, geometry, context).cells)
     cells.extend(emit_projection_band(resolved, geometry, context).cells)
-    cells.extend(emit_canon_band(resolved, geometry, context).cells)
+    cells.extend(emit_canonical_band(resolved, geometry, context).cells)
     cells.extend(emit_vectors(resolved, geometry, context).cells)
     cells.extend(emit_superspace_rows(resolved, geometry, context).cells)
     cells.extend(emit_identity_objects(resolved, geometry, context).cells)

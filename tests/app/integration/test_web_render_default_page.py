@@ -17,7 +17,7 @@ from rtt.app import rendering as web_rendering
 from rtt.app import _editing_tuning, page_assets, service, spreadsheet, spreadsheet_constants
 from rtt.app import settings as show_settings
 from rtt.app.editor import Editor
-from _render_support import _op_classes, _wrap, _part_classes, _row_classes, _cell_child, _gentuning_face, _ratio_face, _renders_inside, _px, _DEFAULT_HTML_CELLS
+from _render_support import _op_classes, _wrap, _part_classes, _row_classes, _cell_child, _generator_tuning_face, _ratio_face, _renders_inside, _px, _DEFAULT_HTML_CELLS
 
 
 class TestDefaultPage:
@@ -81,7 +81,7 @@ class TestDefaultPage:
     def test_every_gridded_value_cell_is_zoomable(self, default_page: User) -> None:
         assert "rtt-zoomable" in _wrap(default_page, "tuning:prime:0")._classes, "hovering ANY gridded value pops the zoom magnifier (_ZOOM_JS clones the cell, scaled): the cell # wraps carry .rtt-zoomable for the engine to find them. Both a read-only value (the octave's # 1200.000 tuning) and an editable one (a mapping entry) get it — the magnifier is for every value, # not just the read-only ones. Structural cells (a row/column header) never become zoomable"
         assert "rtt-zoomable" in _wrap(default_page, "cell:mapping:0:0")._classes
-        assert "rtt-zoomable" in _wrap(default_page, "qgen:0")._classes
+        assert "rtt-zoomable" in _wrap(default_page, "quantities_generator:0")._classes
 
     def test_structural_cells_are_not_zoomable(self, default_page: User) -> None:
         for element in default_page.client.elements.values():
@@ -119,13 +119,13 @@ class TestDefaultPage:
         dd_opt = next(iter(default_page.find(marker="terminologyradio-dd").elements))
         assert "rtt-range-option-on" in dd_opt._classes
 
-    def test_positive_gen_tuning_cell_shows_an_explicit_plus_sign(self, default_page: User) -> None:
-        sign_lbl, _, _ = _gentuning_face(default_page, "tuning:gen:1")
+    def test_positive_generator_tuning_cell_shows_an_explicit_plus_sign(self, default_page: User) -> None:
+        sign_lbl, _, _ = _generator_tuning_face(default_page, "tuning:generator:1")
         assert sign_lbl.text == "+"
 
-    def test_editable_gen_tuning_cell_renders_a_stacked_cents_face(self, default_page: User) -> None:
-        value = _cell_child(default_page, "tuning:gen:1").value
-        _sign, whole_in, frac_in = _gentuning_face(default_page, "tuning:gen:1")
+    def test_editable_generator_tuning_cell_renders_a_stacked_cents_face(self, default_page: User) -> None:
+        value = _cell_child(default_page, "tuning:generator:1").value
+        _sign, whole_in, frac_in = _generator_tuning_face(default_page, "tuning:generator:1")
         assert "." not in whole_in.value
         assert frac_in.value and "." not in frac_in.value
         assert f"{whole_in.value}.{frac_in.value}" == value
@@ -148,7 +148,7 @@ class TestDefaultPage:
             assert default_page.find(marker=f"audioctrl:{ctrl}").elements
 
     @pytest.mark.parametrize("cell, region", [
-        ("header:gens", "columnheadinner"),
+        ("header:generators", "columnheadinner"),
         ("toggle:column:targets", "columnheadinner"),
         ("label:tuning", "rowband"),
         ("toggle:row:tuning", "rowband"),
@@ -160,7 +160,7 @@ class TestDefaultPage:
     @pytest.mark.parametrize("cell, region", [
         ("plus", "columnheadinner"),
         ("minus", "columnheadinner"),
-        ("gen_plus", "columnheadinner"),
+        ("generator_plus", "columnheadinner"),
         ("target_plus", "columnheadinner"),
         ("map_plus", "rowband"),
         ("map_minus:0", "rowband"),

@@ -27,22 +27,29 @@ def build_map_drag(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     # effectAllowed here — leaving it 'uninitialized' permits all drops; setting it 'copy' leaves it
     # 'none' and blocks every drop. dropEffect='copy' on dragover gives the + cursor.
     wrap.classes("rtt-drag-handle rtt-row-handle").props("draggable=true")
-    wrap.on("dragstart", lambda _=None, index=cell_box.gen: _begin_row_drag(reconciler, index))
+    wrap.on(
+        "dragstart", lambda _=None, index=cell_box.generator: _begin_row_drag(reconciler, index)
+    )
     wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
     wrap.on(
-        "dragenter.prevent", lambda _=None, index=cell_box.gen: _preview_row_drop(reconciler, index)
+        "dragenter.prevent",
+        lambda _=None, index=cell_box.generator: _preview_row_drop(reconciler, index),
     )
     wrap.on("dragend", lambda _=None: _end_row_drag(reconciler))
-    wrap.on("drop.prevent", lambda _=None, index=cell_box.gen: _drop_on_row(reconciler, index))
+    wrap.on(
+        "drop.prevent", lambda _=None, index=cell_box.generator: _drop_on_row(reconciler, index)
+    )
     ui.icon("drag_indicator").classes("rtt-grip")
 
 
-def arm_row_target(reconciler, wrap, gen: int) -> None:
+def arm_row_target(reconciler, wrap, generator: int) -> None:
     # HTML5 DnD: preventDefault on dragover makes a cell a droppable surface and dropEffect='copy'
     # gives the + cursor, so every mapping cell can accept a dragged generator row.
     wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
-    wrap.on("dragenter.prevent", lambda _=None, index=gen: _preview_row_drop(reconciler, index))
-    wrap.on("drop.prevent", lambda _=None, index=gen: _drop_on_row(reconciler, index))
+    wrap.on(
+        "dragenter.prevent", lambda _=None, index=generator: _preview_row_drop(reconciler, index)
+    )
+    wrap.on("drop.prevent", lambda _=None, index=generator: _drop_on_row(reconciler, index))
 
 
 def _begin_row_drag(reconciler, index: int) -> None:
@@ -60,7 +67,11 @@ def _preview_row_drop(reconciler, index: int) -> None:
     valid = source is not None and source != index
     apply = (lambda: reconciler._editor.add_mapping_row_to(source, index)) if valid else None
     target = (
-        (lambda cell_box: cell_box.kind == "mapping" and getattr(cell_box, "gen", None) == index)
+        (
+            lambda cell_box: (
+                cell_box.kind == "mapping" and getattr(cell_box, "generator", None) == index
+            )
+        )
         if valid
         else None
     )

@@ -62,8 +62,8 @@ class ReconcilerCallbacks(Protocol):
     on_toggle_all: _Cb
 
     on_power_change: _Cb
-    on_gentuning_change: _Cb
-    on_gentuning_wheel: _Cb
+    on_generator_tuning_change: _Cb
+    on_generator_tuning_wheel: _Cb
     on_value_wheel: _Cb
     on_target_limit_wheel: _Cb
     on_target_limit_preview: _Cb
@@ -95,8 +95,8 @@ class ReconcilerCallbacks(Protocol):
     rank_remove_unhover: _Cb
     on_chooser_hover: _Cb
     on_popup: _Cb
-    gentuning_hover: _Cb
-    gentuning_unhover: _Cb
+    generator_tuning_hover: _Cb
+    generator_tuning_unhover: _Cb
     on_drag_start: _Cb
     on_drag_enter: _Cb
     on_drag_end: _Cb

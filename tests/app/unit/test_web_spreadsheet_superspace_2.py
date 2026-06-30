@@ -50,9 +50,9 @@ class TestSuperspaceMatrixTiles:
 
     def test_M_L_and_M_jL_cells_are_read_only_mapped_kind(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
-        for gen_idx in range(3):
+        for generator_idx in range(3):
             for superspace_prime_idx in range(4):
-                assert cells[f"cell:superspace_mapping:superspace_primes:{gen_idx}:{superspace_prime_idx}"].kind == "mapped"
+                assert cells[f"cell:superspace_mapping:superspace_primes:{generator_idx}:{superspace_prime_idx}"].kind == "mapped"
 
     def test_M_jL_tile_has_brackets_and_matrix_frame(self):
         cells = {c.id: c for c in _barbados_superspace_identity().cells}
