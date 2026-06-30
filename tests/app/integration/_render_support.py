@@ -138,8 +138,8 @@ def _row_classes(user: User, key: str) -> list[str]:
 
 def _marked(user: User, marker: str, *, required: bool = True):
     """The single live element carrying ``marker`` — the stable test handle the view stamps on a
-    cell's inner control via ``.mark()`` (see _recon_value: ``{cell_id}:num`` / ``:den`` / ``:whole``
-    / ``:frac`` / ``:sign`` / ``:main`` / ``:sub`` / ``:editbox``). The marker-keyed replacement for
+    cell's inner control via ``.mark()`` (see _recon_value: ``{cell_id}:numerator`` / ``:denominator`` / ``:whole``
+    / ``:fraction`` / ``:sign`` / ``:main`` / ``:sub`` / ``:editbox``). The marker-keyed replacement for
     walking ``default_slot.children`` by index, so an added wrapper or reordered child can't shift it.
     Returns None (not raising) when ``required`` is False and no such element is rendered."""
     with user._client:
@@ -211,7 +211,7 @@ def _cell_child(user: User, cell_id: str):
     wrap = next(iter(user.find(marker=cell_id).elements))
     cls = getattr(wrap, "_classes", [])
     if "rtt-fraction-cell" in cls:
-        return _marked(user, f"{cell_id}:num")
+        return _marked(user, f"{cell_id}:numerator")
     if "rtt-decimal-cell" in cls:
         whole, frac = _dec_inputs(user, cell_id)
         sign = _marked(user, f"{cell_id}:sign", required=False)
@@ -230,8 +230,8 @@ def _dec_mode(user: User, cell_id: str) -> str:
 def _frac_inputs(user: User, cell_id: str):
     """The (numerator, denominator) input fields of an editable stacked-fraction cell — the two
     separate fields that replaced the old overlaid num-over-den face, located by their stable
-    ``{cell_id}:num`` / ``:den`` markers (the bar div between them no longer matters)."""
-    return _marked(user, f"{cell_id}:num"), _marked(user, f"{cell_id}:den")
+    ``{cell_id}:numerator`` / ``:denominator`` markers (the bar div between them no longer matters)."""
+    return _marked(user, f"{cell_id}:numerator"), _marked(user, f"{cell_id}:denominator")
 
 
 def _ratio_value(user: User, cell_id: str) -> str:
@@ -257,7 +257,7 @@ def _ro_ratio_face(user: User, cell_id: str):
     face = _cell_child(user, cell_id)
     frac = next(c for c in face.default_slot.children if "rtt-fraction" in getattr(c, "_classes", []))
     collapsed = "rtt-fraction-whole" in getattr(frac, "_classes", [])
-    num, den = _marked(user, f"{cell_id}:num"), _marked(user, f"{cell_id}:den")
+    num, den = _marked(user, f"{cell_id}:numerator"), _marked(user, f"{cell_id}:denominator")
     return num.text, den.text, collapsed
 
 
@@ -277,9 +277,9 @@ def _commit(user: User, cell_id: str) -> None:
 def _cell_text(user: User, cell_id: str) -> str:
     child = _cell_child(user, cell_id)
     if "rtt-ratio" in getattr(child, "_classes", []):
-        num = _marked(user, f"{cell_id}:num", required=False)
+        num = _marked(user, f"{cell_id}:numerator", required=False)
         if num is not None:
-            den = _marked(user, f"{cell_id}:den", required=False)
+            den = _marked(user, f"{cell_id}:denominator", required=False)
             return f"{num.text}/{den.text}" if den is not None else num.text
         inner = child.default_slot.children
         return getattr(inner[0], "text", "") if inner else ""
@@ -315,9 +315,9 @@ def _ro_value(user: User, cell_id: str) -> str:
 def _dec_inputs(user: User, cell_id: str):
     """The (whole, fraction) input fields of an editable stacked-DECIMAL (cents) cell — the two
     separate fields that replaced the old overlaid whole-over-.fraction face, the decimal twin of
-    _frac_inputs, located by their stable ``{cell_id}:whole`` / ``:frac`` markers (no dependence on the
+    _frac_inputs, located by their stable ``{cell_id}:whole`` / ``:fraction`` markers (no dependence on the
     optional sign glyph or the dot div sitting beside them)."""
-    return _marked(user, f"{cell_id}:whole"), _marked(user, f"{cell_id}:frac")
+    return _marked(user, f"{cell_id}:whole"), _marked(user, f"{cell_id}:fraction")
 
 
 def _dec_value(user: User, cell_id: str) -> str:
@@ -335,7 +335,7 @@ def _gentuning_face(user: User, cell_id: str):
     big whole part, the small dot-led fraction stacked below. The sign is a label (its .text); the
     whole + fraction are the two real input fields (their .value), now edited in place. Returns
     (sign_label, whole_input, fraction_input), each located by its stable ``{cell_id}:sign`` /
-    ``:whole`` / ``:frac`` marker."""
+    ``:whole`` / ``:fraction`` marker."""
     sign = _marked(user, f"{cell_id}:sign")
     whole, frac = _dec_inputs(user, cell_id)
     return sign, whole, frac
