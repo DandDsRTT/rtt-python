@@ -161,10 +161,10 @@ class _Reconciler:
     def _cur_gesture(self):
         return _recon_cells.cur_gesture(self._gestures)
 
-    def drop(self, eid: str) -> None:
-        self.entities[eid].el.delete()
-        self.cells.pop(eid, None)
-        self.entities.pop(eid, None)
+    def drop(self, element_id: str) -> None:
+        self.entities[element_id].el.delete()
+        self.cells.pop(element_id, None)
+        self.entities.pop(element_id, None)
 
     def make_cell(self, cell_box: spreadsheet.CellBox) -> None:
         self.cells[cell_box.id] = CellHandles()
@@ -209,14 +209,14 @@ class _Reconciler:
             _recon_cells.tag_audio(self.entities[cell_box.id].el, cell_box)
         _stamp_value(self.entities[cell_box.id].el, cell_box)
 
-    def handles(self, cid: str) -> CellHandles:
-        return self.cells.get(cid, _EMPTY_HANDLES)
+    def handles(self, cell_id: str) -> CellHandles:
+        return self.cells.get(cell_id, _EMPTY_HANDLES)
 
-    def entity(self, eid: str) -> EntityHandles:
-        return self.entities.get(eid, _EMPTY_ENTITY)
+    def entity(self, element_id: str) -> EntityHandles:
+        return self.entities.get(element_id, _EMPTY_ENTITY)
 
-    def cell_value(self, cid: str) -> str:
-        num = str(self.cells[cid].value.input.value).strip()
+    def cell_value(self, cell_id: str) -> str:
+        num = str(self.cells[cell_id].value.input.value).strip()
         if not num:
             return ""
         if num == "?":
@@ -224,30 +224,30 @@ class _Reconciler:
         if "/" in num:
             return num
         den = (
-            str(self.cells[cid].value.den_input.value).strip()
-            if self.cells[cid].value.den_input
+            str(self.cells[cell_id].value.den_input.value).strip()
+            if self.cells[cell_id].value.den_input
             else ""
         )
         return num if den in ("", "1", "?") else f"{num}/{den}"
 
-    def decimal_value(self, cid: str) -> str:
-        whole = str(self.cells[cid].value.input.value).strip()
+    def decimal_value(self, cell_id: str) -> str:
+        whole = str(self.cells[cell_id].value.input.value).strip()
         if not whole:
             return ""
         if "." in whole:
             return whole
         frac = (
-            str(self.cells[cid].value.den_input.value).strip().lstrip(".")
-            if self.cells[cid].value.den_input
+            str(self.cells[cell_id].value.den_input.value).strip().lstrip(".")
+            if self.cells[cell_id].value.den_input
             else ""
         )
         return whole if not frac else f"{whole}.{frac}"
 
-    def set_decimal_value(self, cid: str, text: str) -> None:
+    def set_decimal_value(self, cell_id: str, text: str) -> None:
         whole, frac = _cents_parts(text)
-        self.cells[cid].value.input.value = whole
-        if self.cells[cid].value.den_input:
-            self.cells[cid].value.den_input.value = frac
+        self.cells[cell_id].value.input.value = whole
+        if self.cells[cell_id].value.den_input:
+            self.cells[cell_id].value.den_input.value = frac
 
     def _target_preset_values(self):
         return _recon_cells.target_preset_values(self._editor)

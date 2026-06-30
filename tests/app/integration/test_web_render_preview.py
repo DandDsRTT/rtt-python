@@ -293,8 +293,8 @@ class TestEditPreviewRipple:
         UserInteraction(user, {num}, None).trigger("wheel", {"deltaY": -100})
         num, _sel = _target_preset(user)
         assert int(num.value) == 7
-        for idx in range(8):
-            assert "rtt-preview-remove" not in _wrap_classes(user, f"retune:target:{idx}")
+        for index in range(8):
+            assert "rtt-preview-remove" not in _wrap_classes(user, f"retune:target:{index}")
 
     async def test_an_invalid_target_limit_stays_reddened_through_the_edit_preview_gesture(self, user: User) -> None:
         await _enable(user, "presets")
@@ -381,8 +381,8 @@ class TestEditPreviewRipple:
         wrap = set(user.find(marker="preset:temperament").elements)
         five = next(k for k in presets.temperament_options()
                     if k.startswith("5:") and k in presets.TEMPERAMENT_COMMAS)
-        idx = list(presets.temperament_options()).index(five)
-        UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
+        index = list(presets.temperament_options()).index(five)
+        UserInteraction(user, wrap, None).trigger("opthover", {"detail": index})
         assert "rtt-preview-remove" in _wrap_classes(user, "prime:3")
         other7 = next(k for k in sevens if k != sevens[0])
         _cell_child(user, "preset:temperament").set_value(other7)
@@ -428,8 +428,8 @@ class TestPreviewClearing:
         await user.should_see(marker="preset:projection")
         sel = _cell_child(user, "preset:projection")
         wrap = set(user.find(marker="preset:projection").elements)
-        idx = list(sel.options).index("1/3-comma")
-        UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
+        index = list(sel.options).index("1/3-comma")
+        UserInteraction(user, wrap, None).trigger("opthover", {"detail": index})
         assert "rtt-preview-change" in _wrap_classes(user, "tuning:gen:1")
         sel.set_value("1/3-comma")
         await user.should_see(marker="preset:projection")
@@ -446,17 +446,17 @@ class TestPreviewClearing:
         await user.should_see(marker="preset:tuning")
         sel = _cell_child(user, "preset:tuning")
         wrap = set(user.find(marker="preset:tuning").elements)
-        idx = list(presets.tuning_scheme_options(False, False, True)).index("minimax-S")
+        index = list(presets.tuning_scheme_options(False, False, True)).index("minimax-S")
         UserInteraction(user, {sel}, None).trigger("popupShow")
-        UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
+        UserInteraction(user, wrap, None).trigger("opthover", {"detail": index})
         assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
         UserInteraction(user, {sel}, None).trigger("popupHide")
         assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
-        UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
+        UserInteraction(user, wrap, None).trigger("opthover", {"detail": index})
         assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1"), \
             "a stale opthover after popup-hide re-armed the preview (the stranded-ring race)"
         UserInteraction(user, {sel}, None).trigger("popupShow")
-        UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
+        UserInteraction(user, wrap, None).trigger("opthover", {"detail": index})
         assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
 
     async def test_a_control_hover_preserves_an_open_draft(self, user: User) -> None:

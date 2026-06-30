@@ -25,17 +25,17 @@ class TestViewportVirtualization:
         monkeypatch.setenv("RTT_VIRT_VIEWPORT", "320x320")
         await user.open("/")
         live, page = _live_page()
-        lay, fx, fy, body = _body_cells(live, page)
+        layout, fx, fy, body = _body_cells(live, page)
 
         visible = {c.id for c in body if page.renderer._body_visible(c.x, c.y, c.width, c.height, fy)}
         offscreen = {c.id for c in body} - visible
         assert offscreen, "a 320x320 viewport must leave some body cells off-screen to elide"
 
-        for cid in offscreen:
-            assert cid not in page.reconciler.entities
-        for cid in visible:
-            assert cid in page.reconciler.entities
-        for c in lay.cells:
+        for cell_id in offscreen:
+            assert cell_id not in page.reconciler.entities
+        for cell_id in visible:
+            assert cell_id in page.reconciler.entities
+        for c in layout.cells:
             if _live_render()._freeze_container(c, fx, fy) != "body":
                 assert c.id in page.reconciler.entities
 
@@ -43,7 +43,7 @@ class TestViewportVirtualization:
         monkeypatch.setenv("RTT_VIRT_VIEWPORT", "320x320")
         await user.open("/")
         live, page = _live_page()
-        lay, fx, fy, body = _body_cells(live, page)
+        layout, fx, fy, body = _body_cells(live, page)
 
         far = max(body, key=lambda c: c.y)
         near = min(body, key=lambda c: c.x + c.y)
@@ -59,13 +59,13 @@ class TestViewportVirtualization:
         monkeypatch.setenv("RTT_VIRT_VIEWPORT", "320x320")
         await user.open("/")
         live, page = _live_page()
-        lay, fx, fy, body = _body_cells(live, page)
+        layout, fx, fy, body = _body_cells(live, page)
         deferred = [c.id for c in body if c.id not in page.reconciler.entities]
         assert deferred, "a 320x320 viewport must defer some off-screen cells at cold paint"
 
         await page.renderer._fill_offscreen(page.renderer._fill_gen)
 
-        for c in lay.cells:
+        for c in layout.cells:
             assert c.id in page.reconciler.entities, f"fill left {c.id} unmaterialized"
 
     async def test_revirtualize_keeps_offscreen_scroll_within_overscan_cheap(self, user: User, monkeypatch) -> None:
@@ -101,7 +101,7 @@ class TestViewportVirtualization:
         await user.should_see(marker="chart:retune:targets")
         newborns = set(page.reconciler.entities) - before
         assert newborns, "enabling charts must add cells"
-        assert any("rtt-withhold" in page.reconciler.entities[cid].el._classes for cid in newborns), \
+        assert any("rtt-withhold" in page.reconciler.entities[cell_id].el._classes for cell_id in newborns), \
             "a structurally-born cell must be withheld for the two-step entrance"
-        assert all("rtt-noentry" not in page.reconciler.entities[cid].el._classes for cid in newborns), \
+        assert all("rtt-noentry" not in page.reconciler.entities[cell_id].el._classes for cell_id in newborns), \
             "rtt-noentry is only for scroll materialization, never a structural newborn"

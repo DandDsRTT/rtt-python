@@ -21,8 +21,8 @@ from _spreadsheet_support import _memoized_build, _diff_layout, _diff_cell
 
 class TestPreviewCellIds:
     def test_changed_cell_ids_is_empty_for_an_unchanged_layout(self):
-        lay = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
-        assert spreadsheet_text.changed_cell_ids(lay, lay) == frozenset()
+        layout = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
+        assert spreadsheet_text.changed_cell_ids(layout, layout) == frozenset()
 
     def test_changed_cell_ids_flags_a_cell_whose_text_changed(self):
         old = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
@@ -102,8 +102,8 @@ class TestPreviewCellIds:
         shrunk_ratios = {r for _, r in shrunk.identities["targets"]}
         shared, dropped = base_ratios & shrunk_ratios, base_ratios - shrunk_ratios
         assert shared and dropped, "the two TILTs genuinely overlap AND differ (so the test bites both ways)"
-        shared_tok = next(tok for tok, r in base.identities["targets"] if r in shared)
-        dropped_tok = next(tok for tok, r in base.identities["targets"] if r in dropped)
+        shared_tok = next(token for token, r in base.identities["targets"] if r in shared)
+        dropped_tok = next(token for token, r in base.identities["targets"] if r in dropped)
         removed = spreadsheet_text.removed_cell_ids(base, shrunk)
         assert f"target:{shared_tok}" not in removed
         assert f"target:{dropped_tok}" in removed

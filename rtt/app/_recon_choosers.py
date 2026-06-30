@@ -91,20 +91,22 @@ def update_foldtoggle(reconciler, cell_box: spreadsheet.CellBox) -> None:
         reconciler.cells[cell_box.id].chooser.fold_state = cell_box.text
 
 
-def _arm_option_hover(reconciler, sel, wrap, cid: str) -> None:
+def _arm_option_hover(reconciler, sel, wrap, cell_id: str) -> None:
     sel.add_slot(
         "option",
         f"""
-        <q-item v-bind="props.itemProps" :data-optidx="props.opt.value" data-optcid="{cid}">
+        <q-item v-bind="props.itemProps" :data-optidx="props.opt.value" data-optcid="{cell_id}">
             <q-item-section><q-item-label>{{{{ props.opt.label }}}}</q-item-label></q-item-section>
         </q-item>
     """,
     )
     wrap.on(
-        "opthover", lambda e: reconciler._cell_box.on_chooser_hover(cid, e.args), args=["detail"]
+        "opthover",
+        lambda e: reconciler._cell_box.on_chooser_hover(cell_id, e.args),
+        args=["detail"],
     )
-    sel.on("popup-show", lambda _=None: reconciler._cell_box.on_popup(cid, True))
-    sel.on("popup-hide", lambda _=None: reconciler._cell_box.on_popup(cid, False))
+    sel.on("popup-show", lambda _=None: reconciler._cell_box.on_popup(cell_id, True))
+    sel.on("popup-hide", lambda _=None: reconciler._cell_box.on_popup(cell_id, False))
 
 
 def build_preset(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
@@ -158,7 +160,7 @@ def _wire_target_limit(reconciler, num, cell_box: spreadsheet.CellBox) -> None:
         js_handler=_INT_WHEEL_JS,
     )
     num.on("focus", lambda _=None: reconciler._cell_box.on_cell_focus(cell_box.id))
-    num.on("blur", lambda _=None, cid=cell_box.id: reconciler._cell_box.on_cell_blur(cid))
+    num.on("blur", lambda _=None, cell_id=cell_box.id: reconciler._cell_box.on_cell_blur(cell_id))
     # Quasar: a debounced field only commits its value on a typing pause or blur, so Enter alone
     # never submits; blurring on Enter makes Quasar flush the debounced value (firing on_change).
     num.on("keydown.enter", js_handler="(e) => e.target.blur()")
@@ -223,7 +225,7 @@ def _build_scheme_select(reconciler, cell_box, wrap, options, value, prompt) -> 
     reconciler.cells[cell_box.id].chooser.select = sel
 
 
-def _chooser_reflow_hold(reconciler, cid: str) -> bool:
+def _chooser_reflow_hold(reconciler, cell_id: str) -> bool:
     # Quasar: re-setting a q-select's value/options while its popup is open disrupts or closes the
     # popup, so a hovered chooser's cell update is skipped across the reflow-preview re-render.
     g = reconciler._cur_gesture
@@ -233,7 +235,7 @@ def _chooser_reflow_hold(reconciler, cid: str) -> bool:
     def group(c):
         return ":".join(c.split(":")[:2])
 
-    return group(cid) == group(g.source)
+    return group(cell_id) == group(g.source)
 
 
 def update_preset(reconciler, cell_box: spreadsheet.CellBox) -> None:
@@ -288,7 +290,9 @@ def _build_subpick(reconciler, cell_box, wrap, options, value):
         ui.select(
             options,
             value=value if value in options else None,
-            on_change=lambda e, cid=cell_box.id: reconciler._cell_box.on_subpick(cid, e.value),
+            on_change=lambda e, cell_id=cell_box.id: reconciler._cell_box.on_subpick(
+                cell_id, e.value
+            ),
         )
         .props(_select_props(_SUBPICK_POPUP_W))
         .classes("rtt-preset rtt-subpick")
@@ -361,8 +365,8 @@ def build_control_select(reconciler, cell_box: spreadsheet.CellBox, wrap) -> Non
         ui.select(
             list(cell_box.values),
             value=cell_box.text or None,
-            on_change=lambda e, cid=cell_box.id: reconciler._cell_box.on_control_select(
-                cid, e.value
+            on_change=lambda e, cell_id=cell_box.id: reconciler._cell_box.on_control_select(
+                cell_id, e.value
             ),
         )
         .props(_select_props(cell_box.width))
@@ -386,8 +390,8 @@ def build_control_check(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None
         ui.checkbox(
             cell_box.text,
             value=cell_box.checked,
-            on_change=lambda e, cid=cell_box.id: reconciler._cell_box.on_control_select(
-                cid, e.value
+            on_change=lambda e, cell_id=cell_box.id: reconciler._cell_box.on_control_select(
+                cell_id, e.value
             ),
         )
         .props("dense")
@@ -441,6 +445,6 @@ def preview_control(reconciler, el, apply) -> None:
     el.on("mouseleave", lambda _=None: reconciler._cell_box.control_unhover())
 
 
-def preview_rank_remove(reconciler, el, axis: str, idx: int) -> None:
-    el.on("mouseenter", lambda _=None: reconciler._cell_box.rank_remove_hover(axis, idx))
+def preview_rank_remove(reconciler, el, axis: str, index: int) -> None:
+    el.on("mouseenter", lambda _=None: reconciler._cell_box.rank_remove_hover(axis, index))
     el.on("mouseleave", lambda _=None: reconciler._cell_box.rank_remove_unhover())

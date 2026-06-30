@@ -7,11 +7,11 @@ from rtt.app.page_assets import _STORE_KEY, _TILE_HOST, _doc_store
 
 def sync_mean_damage_tips(reconciler, editor) -> None:
     mean_damage_help_text = tooltips.mean_damage_help(service.is_all_interval(editor.tuning_scheme))
-    for cid in tooltips.MEAN_DAMAGE_IDS:
-        if reconciler.handles(cid).mean_damage_tip is not None:
-            reconciler.cells[cid].mean_damage_tip.set_text(mean_damage_help_text)
+    for cell_id in tooltips.MEAN_DAMAGE_IDS:
+        if reconciler.handles(cell_id).mean_damage_tip is not None:
+            reconciler.cells[cell_id].mean_damage_tip.set_text(mean_damage_help_text)
             continue
-        wrap = reconciler.entity(cid).el
+        wrap = reconciler.entity(cell_id).el
         if wrap is not None and wrap._props.get("data-zoomhelp") != mean_damage_help_text:
             wrap._props["data-zoomhelp"] = mean_damage_help_text
             wrap.update()
@@ -22,18 +22,18 @@ def sync_pretransform_help(reconciler, pretransform: bool) -> None:
         if height.help_tip is not None:
             tip, plain, relabeled = height.help_tip
             tip.set_text(relabeled if pretransform else plain)
-    for cid, height in reconciler.cells.items():
+    for cell_id, height in reconciler.cells.items():
         if height.guide_help_text is None:
             continue
         plain, relabeled = height.guide_help_text
-        wrap = reconciler.entity(cid).el
+        wrap = reconciler.entity(cell_id).el
         text = relabeled if pretransform else plain
         if wrap is not None and wrap._props.get("data-guide-text") != text:
             wrap._props["data-guide-text"] = text
             wrap.update()
 
 
-def sync_chrome(r, lay, freeze_y) -> None:
+def sync_chrome(r, layout, freeze_y) -> None:
     r._chrome.refs["undo"].set_enabled(r._editor.can_undo)
     r._chrome.refs["redo"].set_enabled(r._editor.can_redo)
     r._chrome.refs["reset"].set_enabled(
@@ -47,8 +47,8 @@ def sync_chrome(r, lay, freeze_y) -> None:
             if key == r._editor.settings["terminology"]
             else opt.classes(remove="rtt-rangeopt-on")
         )
-    if lay.approach_box is not None:
-        ax, ay, aw, ah = lay.approach_box
+    if layout.approach_box is not None:
+        ax, ay, aw, ah = layout.approach_box
         r._chrome.refs["approach"].style(
             f"position:absolute; left:{ax}px; top:{ay - freeze_y}px; width:{aw}px; height:{ah}px"
         )

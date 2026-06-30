@@ -79,8 +79,8 @@ _DISAMBIGUATED = [
 ]
 
 
-def _help(kind, cid):
-    return tooltips.control_help(kind, cid)
+def _help(kind, cell_id):
+    return tooltips.control_help(kind, cell_id)
 
 
 def _rendered_cells():
@@ -105,13 +105,13 @@ class TestWebTooltips:
     def test_control_help_is_none_for_readonly_kinds(self, kind):
         assert tooltips.control_help(kind, f"{kind}:mapping:primes") is None
 
-    @pytest.mark.parametrize("kind, cid", _INTERACTIVE_KINDS)
-    def test_control_help_is_present_for_interactive_kinds(self, kind, cid):
-        assert (tooltips.control_help(kind, cid) or "").strip()
+    @pytest.mark.parametrize("kind, cell_id", _INTERACTIVE_KINDS)
+    def test_control_help_is_present_for_interactive_kinds(self, kind, cell_id):
+        assert (tooltips.control_help(kind, cell_id) or "").strip()
 
-    @pytest.mark.parametrize("kind, cid", _DISAMBIGUATED)
-    def test_disambiguated_controls_each_have_text(self, kind, cid):
-        assert (_help(kind, cid) or "").strip()
+    @pytest.mark.parametrize("kind, cell_id", _DISAMBIGUATED)
+    def test_disambiguated_controls_each_have_text(self, kind, cell_id):
+        assert (_help(kind, cell_id) or "").strip()
 
     def test_overloaded_kinds_resolve_to_distinct_text_per_role(self):
         assert _help("powerinput", "optimization:power") != _help("powerinput", "control:q")
@@ -150,7 +150,7 @@ class TestWebTooltips:
 
     def test_every_editable_dual_has_a_distinct_tooltip(self):
         ids = [f"plain_text:{row_key}:{column_key}" for row_key, column_key in grid_tables.EDITABLE_PLAIN_TEXT]
-        texts = [tooltips.control_help("plain_text_edit", cid) for cid in ids]
+        texts = [tooltips.control_help("plain_text_edit", cell_id) for cell_id in ids]
         assert all((t or "").strip() for t in texts)
         assert len(set(texts)) == len(ids)
 
@@ -235,8 +235,8 @@ class TestWebTooltips:
         assert pretransformed.url == plain.url and pretransformed.location == plain.location
 
     def test_pretransform_leaves_help_without_the_prescaler_word_unchanged(self):
-        for kind, cid in (("mapping", "cell:mapping:primes:0:0"), ("preset", "preset:tuning")):
-            assert tooltips.control_help(kind, cid) == tooltips.control_help(kind, cid, pretransform=True)
+        for kind, cell_id in (("mapping", "cell:mapping:primes:0:0"), ("preset", "preset:tuning")):
+            assert tooltips.control_help(kind, cell_id) == tooltips.control_help(kind, cell_id, pretransform=True)
         assert tooltips.tile_guide_help_for_cell("caption:mapping:primes", pretransform=True) is \
             tooltips.GUIDE_HELP[("mapping", "primes")]
 

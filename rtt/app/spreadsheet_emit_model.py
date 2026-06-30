@@ -3,10 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 
-def voice(cells, tile, idx, cents) -> None:
+def voice(cells, tile, index, cents) -> None:
     if cents is None:
         return
-    cells[-1] = replace(cells[-1], audio=(tile, int(idx), float(cents)))
+    cells[-1] = replace(cells[-1], audio=(tile, int(index), float(cents)))
 
 
 def element_cell_kind(text: str) -> str:

@@ -404,9 +404,9 @@ class TestWebAppSmoke2:
         assert touch and ".rtt-gridbody" in touch.group(1) and "overscroll-behavior:none" in touch.group(1)
 
     def test_only_full_height_seam_reaching_column_rules_are_twinned_in_the_colfill_not_centre_stubs(self):
-        lay = Editor().layout()
-        fy = lay.freeze_y
-        twinned = {ln.id for ln in lay.lines if ln.orientation == "v" and ln.start <= fy and ln.length > fy}
+        layout = Editor().layout()
+        fy = layout.freeze_y
+        twinned = {line.id for line in layout.lines if line.orientation == "v" and line.start <= fy and line.length > fy}
         assert {"v:gen:0", "v:prime:0", "v:comma:0", "v:target:0"} <= twinned
         assert "trunk:gens" not in twinned
 

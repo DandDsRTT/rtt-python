@@ -35,7 +35,7 @@ class TestNonstandardDomain:
         STRUCTURAL = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matlabel", "colgrip", "int_drag"}
 
         def assert_draft_greened(b, lst, committed, minimum):
-            lay = b.layout()
+            layout = b.layout()
             left = {"held": lambda i: query.held_left(b.geometry, i),
                     "interest": lambda i: query.interest_left(b.geometry, i),
                     "targets": lambda i: query.target_left(b.geometry, i),
@@ -47,7 +47,7 @@ class TestNonstandardDomain:
                     continue
                 top, height = b.geometry.rows[row_key].tile_top, b.geometry.rows[row_key].tile_h
                 hit = any(abs(c.x - dx) < 7 and top - 1 <= c.y <= top + height + 1 and c.kind not in STRUCTURAL
-                          for c in lay.cells)
+                          for c in layout.cells)
                 assert hit, f"first {lst} draft: row {row_key!r} is blank at the draft column (the bug)"
                 checked += 1
             assert checked >= minimum, f"{lst}: only {checked} rows checked (config not fully lit?)"
@@ -73,8 +73,8 @@ class TestNonstandardDomain:
         assert cells["header:gens"].x < cells["header:superspace_generators"].x < cells["header:superspace_primes"].x < cells["header:primes"].x
 
     def test_nonstandard_domain_superspace_columns_size_to_rL_dL(self):
-        lay = _barbados_superspace(equivalences=False)
-        cells = {c.id: c for c in lay.cells}
+        layout = _barbados_superspace(equivalences=False)
+        cells = {c.id: c for c in layout.cells}
         rL, dL = 3, 4
         expected_superspace_generators_w = 2 * spreadsheet_constants.BRACKET_W + rL * spreadsheet_constants.COL_W
         expected_superspace_primes_w = 2 * spreadsheet_constants.BRACKET_W + dL * spreadsheet_constants.COL_W
@@ -135,8 +135,8 @@ class TestNonstandardDomain:
         assert cells["count:superspace_primes"].text == "\U0001D451L = 4"
 
     def test_count_panels_back_every_superspace_count_too(self):
-        lay = _barbados_superspace(counts=True)
-        blocks = {b.id for b in lay.blocks}
+        layout = _barbados_superspace(counts=True)
+        blocks = {b.id for b in layout.blocks}
         assert "block:counts:superspace_generators" in blocks
         assert "block:counts:superspace_primes" in blocks
 
@@ -160,11 +160,11 @@ class TestNonstandardDomain:
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         s = settings.defaults()
         cells = {c.id for c in spreadsheet.build(state, s).cells}
-        assert not any(cid.startswith("superspace_basis:") for cid in cells)
+        assert not any(cell_id.startswith("superspace_basis:") for cell_id in cells)
 
     def test_superspace_block_tiles_get_their_grey_panels(self):
-        lay = _barbados_superspace()
-        blocks = {b.id for b in lay.blocks}
+        layout = _barbados_superspace()
+        blocks = {b.id for b in layout.blocks}
         expected = {
             "block:superspace_vectors:quantities", "block:superspace_vectors:primes",
             "block:superspace_vectors:commas", "block:superspace_vectors:targets",
@@ -325,12 +325,12 @@ class TestSuperspaceProjection:
         assert {"toggle:row:superspace_vectors", "toggle:row:superspace_mapping"} <= cells
 
     def test_superspace_columns_get_column_axes_fanned_into_per_cell_sub_axes(self):
-        lines = {ln.id for ln in _barbados_superspace().lines}
+        lines = {line.id for line in _barbados_superspace().lines}
         assert {"v:superspace_generator:0", "v:superspace_generator:1", "v:superspace_generator:2"} <= lines
         assert {"v:superspace_prime:0", "v:superspace_prime:1", "v:superspace_prime:2", "v:superspace_prime:3"} <= lines
 
     def test_superspace_rows_get_horizontal_axes(self):
-        lines = {ln.id for ln in _barbados_superspace().lines}
+        lines = {line.id for line in _barbados_superspace().lines}
         assert {"h:superspace_mapping:0", "h:superspace_mapping:1", "h:superspace_mapping:2"} <= lines
         assert {"h:superspace_vectors:0", "h:superspace_vectors:1", "h:superspace_vectors:2", "h:superspace_vectors:3"} <= lines
 
@@ -353,18 +353,18 @@ class TestSuperspaceProjection:
     def test_nonstandard_domain_off_leaves_no_superspace_trace(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         s = settings.defaults() | {"names": True, "symbols": True, "counts": True}
-        lay = spreadsheet.build(state, s)
-        ids = {c.id for c in lay.cells} | {b.id for b in lay.blocks} | {ln.id for ln in lay.lines}
+        layout = spreadsheet.build(state, s)
+        ids = {c.id for c in layout.cells} | {b.id for b in layout.blocks} | {line.id for line in layout.lines}
         assert not any(s in i for i in ids for s in ("superspace_generators", "superspace_primes", "superspace_vectors", "superspace_mapping", "superspace_basis", "superspace_generator", "superspace_prime"))
 
     def test_standard_domain_with_toggle_on_shows_no_superspace_but_enables_editing(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults() | {"nonstandard_domain": True, "counts": True}
-        lay = spreadsheet.build(state, s)
-        cells = {c.id: c for c in lay.cells}
-        ids = {c.id for c in lay.cells} | {b.id for b in lay.blocks} | {ln.id for ln in lay.lines}
-        assert not any(tok in i for i in ids
-                       for tok in ("superspace_generators", "superspace_primes", "superspace_vectors", "superspace_mapping", "superspace_basis",
+        layout = spreadsheet.build(state, s)
+        cells = {c.id: c for c in layout.cells}
+        ids = {c.id for c in layout.cells} | {b.id for b in layout.blocks} | {line.id for line in layout.lines}
+        assert not any(token in i for i in ids
+                       for token in ("superspace_generators", "superspace_primes", "superspace_vectors", "superspace_mapping", "superspace_basis",
                                    "superspace_generator", "superspace_prime"))
         assert cells["prime:0"].kind == "elementcell"
         assert cells["header:primes"].text == "domain\nprimes"
@@ -374,11 +374,11 @@ class TestSuperspaceProjection:
         assert not service.domain_has_nonprimes(state.domain_basis)
         assert not service.is_standard_domain(state.domain_basis)
         s = settings.defaults() | {"nonstandard_domain": True}
-        lay = spreadsheet.build(state, s)
-        cells = {c.id: c for c in lay.cells}
-        ids = {c.id for c in lay.cells} | {b.id for b in lay.blocks} | {ln.id for ln in lay.lines}
-        assert not any(tok in i for i in ids
-                       for tok in ("superspace_generators", "superspace_primes", "superspace_vectors", "superspace_mapping", "superspace_basis",
+        layout = spreadsheet.build(state, s)
+        cells = {c.id: c for c in layout.cells}
+        ids = {c.id for c in layout.cells} | {b.id for b in layout.blocks} | {line.id for line in layout.lines}
+        assert not any(token in i for i in ids
+                       for token in ("superspace_generators", "superspace_primes", "superspace_vectors", "superspace_mapping", "superspace_basis",
                                    "superspace_generator", "superspace_prime"))
         assert cells["prime:0"].kind == "elementcell"
         assert cells["header:primes"].text == "domain\nprimes"
@@ -386,10 +386,10 @@ class TestSuperspaceProjection:
     def test_nonprime_based_approach_collapses_the_entire_superspace(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         s = settings.defaults() | {"nonstandard_domain": True}
-        lay = spreadsheet.build(state, s, nonprime_approach="nonprime-based")
-        ids = {c.id for c in lay.cells} | {b.id for b in lay.blocks} | {ln.id for ln in lay.lines}
-        assert not any(tok in i for i in ids
-                       for tok in ("superspace_generators", "superspace_primes", "superspace_vectors", "superspace_mapping", "superspace_basis",
+        layout = spreadsheet.build(state, s, nonprime_approach="nonprime-based")
+        ids = {c.id for c in layout.cells} | {b.id for b in layout.blocks} | {line.id for line in layout.lines}
+        assert not any(token in i for i in ids
+                       for token in ("superspace_generators", "superspace_primes", "superspace_vectors", "superspace_mapping", "superspace_basis",
                                    "superspace_generator", "superspace_prime"))
 
     def test_superspace_prescaler_interactivity_and_controls_shift_to_superspace_primes(self):
@@ -418,10 +418,10 @@ class TestSuperspaceProjection:
     def test_superspace_prescaler_shift_only_for_neutral_and_prime_based(self):
         for approach in ("nonprime-based",):
             cells = {c.id: c for c in _barbados_prescaling(approach=approach).cells}
-            assert not any(cid.startswith("cell:prescaling:superspace_primes:") for cid in cells)
+            assert not any(cell_id.startswith("cell:prescaling:superspace_primes:") for cell_id in cells)
             assert cells["caption:prescaling:primes"].text.startswith("complexity prescaler"), "the domain-primes tile keeps the plain bare-prescaler name (it stays the bare 𝐿 here), # NOT the shifted 'complexity prescaled subspace basis elements' product caption"
         off = {c.id: c for c in _barbados_prescaling(nonstandard=False).cells}
-        assert not any(cid.startswith("cell:prescaling:superspace_primes:") for cid in off)
+        assert not any(cell_id.startswith("cell:prescaling:superspace_primes:") for cell_id in off)
         assert off["caption:prescaling:primes"].text.startswith("complexity prescaler")
 
     def test_prime_based_shifts_generator_editing_to_superspace(self):
@@ -468,13 +468,13 @@ class TestSuperspaceProjection:
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         s = settings.defaults()
         cids = {c.id for c in spreadsheet.build(state, s).cells}
-        assert not any(cid.startswith("cell:superspace_vectors:primes:") for cid in cids)
+        assert not any(cell_id.startswith("cell:superspace_vectors:primes:") for cell_id in cids)
 
     def test_B_L_absent_over_a_standard_prime_domain(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults() | {"nonstandard_domain": True}
         cids = {c.id for c in spreadsheet.build(state, s).cells}
-        assert not any(cid.startswith("cell:superspace_vectors:primes:") for cid in cids)
+        assert not any(cell_id.startswith("cell:superspace_vectors:primes:") for cell_id in cids)
 
 
     _SUBSCRIPT_DIGITS = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
@@ -501,4 +501,4 @@ class TestMLTile:
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         s = settings.defaults()
         cids = {c.id for c in spreadsheet.build(state, s).cells}
-        assert not any(cid.startswith("cell:superspace_mapping:superspace_primes:") for cid in cids)
+        assert not any(cell_id.startswith("cell:superspace_mapping:superspace_primes:") for cell_id in cids)

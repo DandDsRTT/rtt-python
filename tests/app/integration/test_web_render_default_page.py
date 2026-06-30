@@ -180,13 +180,13 @@ class TestDefaultPage:
         assert _px(frozen, "height") == _px(colhead, "height") - page_assets._CHROME_H
 
     def test_grid_pane_hugs_the_grid_with_a_margin_all_round(self, default_page: User) -> None:
-        lay = Editor().layout()
+        layout = Editor().layout()
         pane = next(iter(default_page.find(marker="gridpane").elements))
         board = next(iter(default_page.find(marker="board").elements))
         colhead = next(iter(default_page.find(marker="colhead").elements))
-        assert _px(board, "width") == lay.width
-        assert lay.right_overhang > 0
-        assert _px(pane, "width") == _px(board, "width") + lay.right_overhang + 24
+        assert _px(board, "width") == layout.width
+        assert layout.right_overhang > 0
+        assert _px(pane, "width") == _px(board, "width") + layout.right_overhang + 24
         assert _px(pane, "height") == _px(board, "height") + _px(colhead, "height") + 24
 
     def test_settings_body_caps_below_the_window_so_it_doesnt_scroll_when_it_fits(self, default_page: User) -> None:

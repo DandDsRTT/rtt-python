@@ -273,7 +273,7 @@ def col_token(resolved, group: str, i: int):
 
 
 def pending_col_token(resolved, group: str):
-    return pending_token([tok for tok, _ in resolved.col_ids[group]])
+    return pending_token([token for token, _ in resolved.col_ids[group]])
 
 
 def pending_draft_idx(resolved, group: str):

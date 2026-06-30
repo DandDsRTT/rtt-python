@@ -115,24 +115,24 @@ class Renderer:
             self.apply_view_classes()
             prev = self._runtime.last_lay.identities if self._runtime.last_lay is not None else None
             cold = self._runtime.last_lay is None
-            lay = self._editor.layout(prev_ids=prev, preview_remove=self._gestures.rank_remove)
-            self._runtime.set_last_lay(lay)
-            self._rec.pretransform = lay.pretransform
-            cur_ids = frozenset(cell_box.id for cell_box in lay.cells)
+            layout = self._editor.layout(prev_ids=prev, preview_remove=self._gestures.rank_remove)
+            self._runtime.set_last_lay(layout)
+            self._rec.pretransform = layout.pretransform
+            cur_ids = frozenset(cell_box.id for cell_box in layout.cells)
             self._newborn_ids = cur_ids - self._prev_cell_ids
-            freeze_x, freeze_y = lay.freeze_x, lay.freeze_y
-            _rendering_ops.size_panes(self._chrome, lay, freeze_x, freeze_y)
+            freeze_x, freeze_y = layout.freeze_x, layout.freeze_y
+            _rendering_ops.size_panes(self._chrome, layout, freeze_x, freeze_y)
             seen: set = set()
 
-            _rendering_ops.render_lines(self, lay, seen)
-            _rendering_ops.render_blocks(self, lay, seen)
-            _rendering_ops.validate_gesture_source(self._gestures, self._rec, lay)
-            amber, red = self._gestures.compute_rings(lay)
+            _rendering_ops.render_lines(self, layout, seen)
+            _rendering_ops.render_blocks(self, layout, seen)
+            _rendering_ops.validate_gesture_source(self._gestures, self._rec, layout)
+            amber, red = self._gestures.compute_rings(layout)
             self._last_rings = (amber, red)
-            _rendering_ops.render_cells(self, lay, seen, (amber, red, cold, True))
+            _rendering_ops.render_cells(self, layout, seen, (amber, red, cold, True))
             rendering_chrome.sync_mean_damage_tips(self._rec, self._editor)
-            rendering_chrome.sync_pretransform_help(self._rec, lay.pretransform)
-            rendering_chrome.sync_chrome(self, lay, freeze_y)
+            rendering_chrome.sync_pretransform_help(self._rec, layout.pretransform)
+            rendering_chrome.sync_chrome(self, layout, freeze_y)
             self._prev_cell_ids = cur_ids
             self._virt_for = self._viewport
         # NiceGUI: run_javascript from inside a handler-driven render hits a torn-down slot context
@@ -142,22 +142,22 @@ class Renderer:
                 "window.rttBusy && window.rttBusy.done();"
                 " window.rttScheduleReveal && window.rttScheduleReveal()"
             )
-        self._schedule_fill(lay)
+        self._schedule_fill(layout)
 
-    def _schedule_fill(self, lay) -> None:
+    def _schedule_fill(self, layout) -> None:
         self._fill_gen += 1
         if helpers.is_user_simulation():
             return
-        if any(cell_box.id not in self._rec.entities for cell_box in lay.cells):
+        if any(cell_box.id not in self._rec.entities for cell_box in layout.cells):
             background_tasks.create(self._fill_offscreen(self._fill_gen))
 
     async def _fill_offscreen(self, gen) -> None:
         while self._fill_gen == gen:
-            lay = self._runtime.last_lay
-            if lay is None:
+            layout = self._runtime.last_lay
+            if layout is None:
                 return
-            freeze_x, freeze_y = lay.freeze_x, lay.freeze_y
-            pending = [cell_box for cell_box in lay.cells if cell_box.id not in self._rec.entities]
+            freeze_x, freeze_y = layout.freeze_x, layout.freeze_y
+            pending = [cell_box for cell_box in layout.cells if cell_box.id not in self._rec.entities]
             if not pending:
                 return
             paint = (freeze_y, False, self._last_rings)
@@ -191,18 +191,18 @@ class Renderer:
                 self._revirtualize()
 
     def _revirtualize(self) -> None:
-        lay = self._runtime.last_lay
-        if lay is None:
+        layout = self._runtime.last_lay
+        if layout is None:
             return
-        self._rec.pretransform = lay.pretransform
+        self._rec.pretransform = layout.pretransform
         with self._runtime.building_guard():
             self._revirtualizing = True
             try:
                 seen: set = set()
                 amber, red = self._last_rings
-                _rendering_ops.render_lines(self, lay, seen)
-                _rendering_ops.render_blocks(self, lay, seen)
-                _rendering_ops.render_cells(self, lay, seen, (amber, red, False, False))
+                _rendering_ops.render_lines(self, layout, seen)
+                _rendering_ops.render_blocks(self, layout, seen)
+                _rendering_ops.render_cells(self, layout, seen, (amber, red, False, False))
             finally:
                 self._revirtualizing = False
         self._virt_for = self._viewport

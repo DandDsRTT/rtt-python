@@ -61,9 +61,9 @@ def _basis_col_x(geometry):
     return basis_x, basis_bus_x
 
 
-def _emit_basis_minus(cells, geometry, cid, p, kind, **kw):
+def _emit_basis_minus(cells, geometry, cell_id, p, kind, **kw):
     basis_x, basis_bus_x = _basis_col_x(geometry)
-    cells.append(CellBox(cid, basis_bus_x, query.vector_top(geometry, p),
+    cells.append(CellBox(cell_id, basis_bus_x, query.vector_top(geometry, p),
                          (basis_x + COL_W) - basis_bus_x, ROW_H, kind, **kw))
 
 
@@ -147,19 +147,19 @@ def emit_superspace_rows(resolved, geometry, context) -> EmitResult:
 
 
 def _emit_superspace_quantity_rows(cells, resolved, geometry, context) -> None:
-    cl = context.collapsed
-    if query.row_open(geometry, cl, "superspace_vectors") and query.tile_open(geometry, cl, "superspace_vectors", "quantities"):
+    collapsed = context.collapsed
+    if query.row_open(geometry, collapsed, "superspace_vectors") and query.tile_open(geometry, collapsed, "superspace_vectors", "quantities"):
         basis_x = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
         for p in range(resolved.dims.superspace_dimensionality):
             cells.append(CellBox(f"superspace_basis:{p}", basis_x, query.superspace_vector_top(geometry, p), COL_W, ROW_H,
                                  "commaratio", text=str(resolved.dims.superspace_primes[p]), prime=p))
-    if query.row_open(geometry, cl, "superspace_mapping") and query.tile_open(geometry, cl, "superspace_mapping", "quantities"):
+    if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "quantities"):
         superspace_gens = service.superspace_generators(context.state)
         for i in range(resolved.dims.superspace_rank):
             cells.append(CellBox(f"superspace_gen:{i}", geometry.col_x["quantities"], query.superspace_map_top(geometry, i),
                                  geometry.col_w["quantities"], ROW_H, "genratio",
                                  text=superspace_gens[i] if i < len(superspace_gens) else ""))
-    if query.row_open(geometry, cl, "superspace_projection") and query.tile_open(geometry, cl, "superspace_projection", "quantities"):
+    if query.row_open(geometry, collapsed, "superspace_projection") and query.tile_open(geometry, collapsed, "superspace_projection", "quantities"):
         basis_x = geometry.col_x["quantities"] + (geometry.col_w["quantities"] - COL_W) / 2
         for p in range(resolved.dims.superspace_dimensionality):
             cells.append(CellBox(f"superspace_projection_basis:{p}", basis_x, query.superspace_projection_top(geometry, p), COL_W, ROW_H, "commaratio",
@@ -167,8 +167,8 @@ def _emit_superspace_quantity_rows(cells, resolved, geometry, context) -> None:
 
 
 def _emit_superspace_matrix_vectors(cells, resolved, geometry, context) -> None:
-    cl = context.collapsed
-    if query.row_open(geometry, cl, "superspace_vectors") and query.tile_open(geometry, cl, "superspace_vectors", "primes"):
+    collapsed = context.collapsed
+    if query.row_open(geometry, collapsed, "superspace_vectors") and query.tile_open(geometry, collapsed, "superspace_vectors", "primes"):
         basis = service.basis_in_superspace(resolved.dims.elements)
         for superspace_prime_idx in range(resolved.dims.superspace_dimensionality):
             for elem_idx in range(resolved.dims.dimensionality):
@@ -178,7 +178,7 @@ def _emit_superspace_matrix_vectors(cells, resolved, geometry, context) -> None:
                     query.prime_left(geometry, elem_idx), query.superspace_vector_top(geometry, superspace_prime_idx), COL_W, ROW_H,
                     "vector", text=str(value), prime=superspace_prime_idx, comma=elem_idx,
                     unit=query.cell_unit(resolved, "superspace_vectors", "primes", prime=superspace_prime_idx, elem=elem_idx)))
-    if query.row_open(geometry, cl, "superspace_mapping") and query.tile_open(geometry, cl, "superspace_mapping", "superspace_primes"):
+    if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "superspace_primes"):
         ml = service.superspace_mapping(context.state)
         for gen_idx in range(resolved.dims.superspace_rank):
             for superspace_prime_idx in range(resolved.dims.superspace_dimensionality):
@@ -187,7 +187,7 @@ def _emit_superspace_matrix_vectors(cells, resolved, geometry, context) -> None:
                     query.superspace_prime_left(geometry, superspace_prime_idx), query.superspace_map_top(geometry, gen_idx), COL_W, ROW_H,
                     "mapped", text=str(ml[gen_idx][superspace_prime_idx]), gen=gen_idx, prime=superspace_prime_idx,
                     unit=query.cell_unit(resolved, "superspace_mapping", "superspace_primes", gen=gen_idx, prime=superspace_prime_idx)))
-    if query.row_open(geometry, cl, "superspace_vectors") and query.tile_open(geometry, cl, "superspace_vectors", "superspace_primes"):
+    if query.row_open(geometry, collapsed, "superspace_vectors") and query.tile_open(geometry, collapsed, "superspace_vectors", "superspace_primes"):
         mjl = service.superspace_just_mapping(resolved.dims.superspace_primes)
         for i in range(resolved.dims.superspace_dimensionality):
             for j in range(resolved.dims.superspace_dimensionality):
@@ -199,8 +199,8 @@ def _emit_superspace_matrix_vectors(cells, resolved, geometry, context) -> None:
 
 
 def _emit_superspace_matrix_mapping(cells, resolved, geometry, context) -> None:
-    cl = context.collapsed
-    if query.row_open(geometry, cl, "superspace_mapping") and query.tile_open(geometry, cl, "superspace_mapping", "superspace_generators"):
+    collapsed = context.collapsed
+    if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "superspace_generators"):
         mlgl = service.superspace_self_map(context.state)
         for i in range(resolved.dims.superspace_rank):
             for j in range(resolved.dims.superspace_rank):
@@ -209,7 +209,7 @@ def _emit_superspace_matrix_mapping(cells, resolved, geometry, context) -> None:
                     query.superspace_gen_left(geometry, j), query.superspace_map_top(geometry, i), COL_W, ROW_H,
                     "mapped", text=str(mlgl[i][j]), gen=i,
                     unit=query.cell_unit(resolved, "superspace_mapping", "superspace_generators", gen=i)))
-    if query.row_open(geometry, cl, "superspace_mapping") and query.tile_open(geometry, cl, "superspace_mapping", "primes"):
+    if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "primes"):
         msl = service.mapping_to_superspace_generators(context.state)
         for i in range(resolved.dims.superspace_rank):
             for e in range(resolved.dims.dimensionality):
@@ -284,20 +284,20 @@ def _emit_superspace_vector_list_map(cells, resolved, geometry, context, row) ->
 
 
 def _emit_superspace_projection_rows(cells, resolved, geometry, context) -> None:
-    cl = context.collapsed
+    collapsed = context.collapsed
     _emit_superspace_projection_superspace_primes(cells, resolved, geometry, context)
     superspace_full = resolved.projection.superspace_rationals is not None
     _emit_superspace_projection_superspace_generators(cells, resolved, geometry, context, superspace_full)
     _emit_superspace_projection_primes(cells, resolved, geometry, context, superspace_full)
     superspace_projection_options = {"full": superspace_full, "colwise": True, "row": "superspace_projection",
            "top": lambda i: query.superspace_projection_top(geometry, i), "height": resolved.dims.superspace_dimensionality}
-    emit_mapped_grid(cells, resolved, geometry, cl, "detempering", "superspace_projection_detempering", resolved.projection.superspace_detempering, resolved.dims.rank, lambda i: query.detempering_left(geometry, i), "gen", **superspace_projection_options)
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "detempering", "superspace_projection_detempering", resolved.projection.superspace_detempering, resolved.dims.rank, lambda i: query.detempering_left(geometry, i), "gen", **superspace_projection_options)
     _emit_superspace_projection_commas(cells, resolved, geometry, context)
-    emit_mapped_grid(cells, resolved, geometry, cl, "targets", "superspace_projection_targets", resolved.projection.superspace_targets, resolved.dims.target_count, lambda i: query.target_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "targets", "superspace_projection_targets", resolved.projection.superspace_targets, resolved.dims.target_count, lambda i: query.target_left(geometry, i), "comma",
                      pending=resolved.targets.pending, **superspace_projection_options)
-    emit_mapped_grid(cells, resolved, geometry, cl, "held", "superspace_projection_held", resolved.projection.superspace_held, resolved.dims.held_count, lambda i: query.held_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "held", "superspace_projection_held", resolved.projection.superspace_held, resolved.dims.held_count, lambda i: query.held_left(geometry, i), "comma",
                      pending=resolved.held.pending, **superspace_projection_options)
-    emit_mapped_grid(cells, resolved, geometry, cl, "interest", "superspace_projection_interest", resolved.projection.superspace_interest, resolved.dims.interest_count, lambda i: query.interest_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "interest", "superspace_projection_interest", resolved.projection.superspace_interest, resolved.dims.interest_count, lambda i: query.interest_left(geometry, i), "comma",
                      pending=resolved.interest.pending, **superspace_projection_options)
 
 

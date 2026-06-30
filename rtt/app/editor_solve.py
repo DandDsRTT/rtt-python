@@ -28,22 +28,22 @@ class Solve:
     settings: dict[str, bool]
 
 
-def solve_model(doc) -> Solve:
+def solve_model(document) -> Solve:
     return Solve(
-        state=doc.state,
-        tuning_scheme=doc.tuning_scheme,
-        nonprime_basis_approach=doc.nonprime_basis_approach,
-        custom_prescaler=doc.custom_prescaler,
-        custom_weights=doc.custom_weights,
-        held_vectors=tuple(doc.held_vectors),
-        interest_vectors=tuple(doc.interest_vectors),
-        target_override=doc.target_override,
-        generator_tuning=doc.generator_tuning,
-        manual_tuning=doc.manual_tuning,
-        projection_basis=doc.projection_basis,
-        superspace_generator_tuning=doc.pending.superspace_generator_tuning,
-        target_spec=doc.target_spec,
-        settings=dict(doc.settings),
+        state=document.state,
+        tuning_scheme=document.tuning_scheme,
+        nonprime_basis_approach=document.nonprime_basis_approach,
+        custom_prescaler=document.custom_prescaler,
+        custom_weights=document.custom_weights,
+        held_vectors=tuple(document.held_vectors),
+        interest_vectors=tuple(document.interest_vectors),
+        target_override=document.target_override,
+        generator_tuning=document.generator_tuning,
+        manual_tuning=document.manual_tuning,
+        projection_basis=document.projection_basis,
+        superspace_generator_tuning=document.pending.superspace_generator_tuning,
+        target_spec=document.target_spec,
+        settings=dict(document.settings),
     )
 
 

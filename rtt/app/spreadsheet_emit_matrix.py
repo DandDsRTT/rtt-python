@@ -122,8 +122,8 @@ def _emit_units_const(cells, resolved, geometry, context) -> None:
             continue
         n = geometry.rows[key].num_subrows
         for i in range(n):
-            cid = f"ucol:{key}:{i}" if n > 1 else f"ucol:{key}"
-            cells.append(CellBox(cid, geometry.col_x["units"], geometry.rows[key].y + i * ROW_H,
+            cell_id = f"ucol:{key}:{i}" if n > 1 else f"ucol:{key}"
+            cells.append(CellBox(cell_id, geometry.col_x["units"], geometry.rows[key].y + i * ROW_H,
                                  geometry.col_w["units"], ROW_H, "units", text=text))
 
 
@@ -157,8 +157,8 @@ def emit_quantities_row(resolved, geometry, context) -> EmitResult:
         return EmitResult()
     quantity_y = geometry.rows["quantities"].y
 
-    def branch_minus(cid, column_key, i, kind, **kw):
-        cells.append(CellBox(cid, query.sub_axis_x(geometry, column_key, i) - COL_W / 2, geometry.fanout_y, COL_W,
+    def branch_minus(cell_id, column_key, i, kind, **kw):
+        cells.append(CellBox(cell_id, query.sub_axis_x(geometry, column_key, i) - COL_W / 2, geometry.fanout_y, COL_W,
                              quantity_y - geometry.fanout_y, kind, **kw))
 
     _emit_qty_gens(cells, resolved, geometry, context, quantity_y, branch_minus)
@@ -305,10 +305,10 @@ def _qty_drag_controls(cells, resolved, geometry, column_key, n, grip_top) -> No
 def emit_column_plus_controls(resolved, geometry) -> EmitResult:
     cells: list = []
     primes_plus = "element_plus" if resolved.flags.nonstandard_domain else "plus"
-    for column_key, cid in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
+    for column_key, cell_id in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
                       ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
         if column_key in geometry.plus_stub_x:
-            cells.append(CellBox(cid, geometry.plus_stub_x[column_key] - BUTTON / 2, geometry.fanout_y - BUTTON / 2, BUTTON, BUTTON, cid))
+            cells.append(CellBox(cell_id, geometry.plus_stub_x[column_key] - BUTTON / 2, geometry.fanout_y - BUTTON / 2, BUTTON, BUTTON, cell_id))
     return EmitResult(cells=tuple(cells))
 
 
@@ -318,8 +318,8 @@ def emit_rehomed_minus_controls(resolved, geometry, context) -> EmitResult:
         return EmitResult()
     vtop = geometry.rows["vectors"].y
 
-    def vector_minus(cid, column_key, i, kind, **kw):
-        cells.append(CellBox(cid, query.sub_axis_x(geometry, column_key, i) - COL_W / 2, geometry.fanout_y,
+    def vector_minus(cell_id, column_key, i, kind, **kw):
+        cells.append(CellBox(cell_id, query.sub_axis_x(geometry, column_key, i) - COL_W / 2, geometry.fanout_y,
                              COL_W, vtop - geometry.fanout_y, kind, **kw))
 
     _emit_rehomed_commas(resolved, geometry, context, vector_minus)

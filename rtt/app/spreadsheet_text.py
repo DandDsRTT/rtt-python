@@ -206,9 +206,9 @@ def removed_cell_ids(old: Layout, new: Layout) -> frozenset:
 def _match_tokens_by_key(tokens, prev, keys) -> list[bool]:
     claimed = [False] * len(prev)
     for j, key in enumerate(keys):
-        for pi, (tok, pkey) in enumerate(prev):
+        for pi, (token, pkey) in enumerate(prev):
             if not claimed[pi] and pkey == key:
-                tokens[j], claimed[pi] = tok, True
+                tokens[j], claimed[pi] = token, True
                 break
     return claimed
 
@@ -234,7 +234,7 @@ def assign_column_tokens(prev, keys, claim_unmatched=False):
         claimed = _match_tokens_by_key(tokens, prev, keys)
         if claim_unmatched:
             _claim_unmatched_tokens(tokens, prev, claimed, keys)
-    nxt = max([t for t in tokens if t is not None] + [tok for tok, _ in prev] + [-1]) + 1
+    nxt = max([t for t in tokens if t is not None] + [token for token, _ in prev] + [-1]) + 1
     for j in range(len(keys)):
         if tokens[j] is None:
             tokens[j], nxt = nxt, nxt + 1

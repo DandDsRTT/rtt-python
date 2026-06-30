@@ -192,12 +192,12 @@ class TestOptimizationControls:
         assert on["control:all_interval"].x > on["preset:target"].x
 
     def test_all_interval_checkbox_sits_inside_the_target_chooser_box(self):
-        lay = _with(all_interval=True, presets=True)
-        cells = {c.id: c for c in lay.cells}
-        blocks = {b.id: b for b in lay.blocks}
+        layout = _with(all_interval=True, presets=True)
+        cells = {c.id: c for c in layout.cells}
+        blocks = {b.id: b for b in layout.blocks}
         box, tile = blocks["block:preset:target"], blocks["block:vector:targets"]
-        for cid in ("control:all_interval", "caption:all_interval"):
-            c = cells[cid]
+        for cell_id in ("control:all_interval", "caption:all_interval"):
+            c = cells[cell_id]
             assert box.x <= c.x and c.x + c.width <= box.x + box.width
             assert box.y <= c.y and c.y + c.height <= box.y + box.height
         assert tile.x <= box.x and box.x + box.width <= tile.x + tile.width
@@ -221,9 +221,9 @@ class TestOptimizationControls:
         assert abs((dim.x + dim.width / 2) - (cap_d.x + cap_d.width / 2)) < 1
 
     def test_weighting_controls_each_sit_in_a_bordered_box(self):
-        lay = _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True)
-        blocks = {b.id: b for b in lay.blocks}
-        cells = {c.id: c for c in lay.cells}
+        layout = _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True)
+        blocks = {b.id: b for b in layout.blocks}
+        cells = {c.id: c for c in layout.cells}
         for box_id, ctrl_id in (("block:preset:prescaler", "control:diminuator"),
                                 ("block:complexity", "control:complexity"),
                                 ("block:slope", "control:slope")):
@@ -245,8 +245,8 @@ class TestOptimizationControls:
         assert "block:diminuator" in off_blocks
 
     def test_weighting_control_boxes_layer_above_their_tile_panels(self):
-        lay = _with("TILT minimax-S", weighting=True, alt_complexity=True)
-        order = {b.id: i for i, b in enumerate(lay.blocks)}
+        layout = _with("TILT minimax-S", weighting=True, alt_complexity=True)
+        order = {b.id: i for i, b in enumerate(layout.blocks)}
         assert order["block:diminuator"] > order["block:prescaling:primes"]
         assert order["block:complexity"] > order["block:complexity:targets"]
         assert order["block:slope"] > order["block:weight:targets"]
@@ -334,12 +334,12 @@ class TestCustomWeightRow:
 
     def test_weight_equivalence_reflects_the_schemes_damage_slope(self):
         def equiv(scheme):
-            lay = spreadsheet.build(
+            layout = spreadsheet.build(
                 service.from_mapping(((1, 1, 0), (0, 1, 4))),
                 {**settings.defaults(), "weighting": True, "symbols": True, "equivalences": True},
                 tuning_scheme=scheme,
             )
-            return {c.id: c for c in lay.cells}["symbol:weight:targets"].text
+            return {c.id: c for c in layout.cells}["symbol:weight:targets"].text
 
         assert equiv("minimax-C") == "𝒘 = 𝒄"
         assert equiv("minimax-U") == "𝒘 = 𝟏"
@@ -347,12 +347,12 @@ class TestCustomWeightRow:
 
     def test_damage_equivalence_names_the_weight_only_when_the_weight_row_is_shown(self):
         def equiv(scheme, weighting):
-            lay = spreadsheet.build(
+            layout = spreadsheet.build(
                 service.from_mapping(((1, 1, 0), (0, 1, 4))),
                 {**settings.defaults(), "weighting": weighting, "symbols": True, "equivalences": True},
                 tuning_scheme=scheme,
             )
-            return {c.id: c for c in lay.cells}["symbol:damage:targets"].text
+            return {c.id: c for c in layout.cells}["symbol:damage:targets"].text
 
         assert equiv("minimax-U", False) == "𝐝 = |𝐞|", "weighting hidden → bare |𝐞|, regardless of the scheme's weight slope (unity vs simplicity)"
         assert equiv("TILT minimax-S", False) == "𝐝 = |𝐞|"
@@ -362,31 +362,31 @@ class TestCustomWeightRow:
     def test_custom_weights_make_the_weight_row_editable(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = {**settings.defaults(), "weighting": True, "custom_weights": True}
-        lay = spreadsheet.build(base, s, custom_weights=(1.0, 2.0, 3.0))
-        weight_cells = [c for c in lay.cells if c.id.startswith("weight:target:")]
+        layout = spreadsheet.build(base, s, custom_weights=(1.0, 2.0, 3.0))
+        weight_cells = [c for c in layout.cells if c.id.startswith("weight:target:")]
         assert weight_cells and all(c.kind == "weightcell" for c in weight_cells)
-        assert next(c for c in lay.cells if c.id == "control:slope").disabled
+        assert next(c for c in layout.cells if c.id == "control:slope").disabled
 
     def test_custom_weights_stay_read_only_in_all_interval_and_math_views(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         ai = {**settings.defaults(), "weighting": True, "custom_weights": True}
-        lay = spreadsheet.build(base, ai, tuning_scheme="minimax-S", custom_weights=(1.0, 2.0, 3.0))
-        assert all(c.kind != "weightcell" for c in lay.cells if c.id.startswith("weight:target:"))
+        layout = spreadsheet.build(base, ai, tuning_scheme="minimax-S", custom_weights=(1.0, 2.0, 3.0))
+        assert all(c.kind != "weightcell" for c in layout.cells if c.id.startswith("weight:target:"))
         m = {**settings.defaults(), "weighting": True, "custom_weights": True, "math_expressions": True}
-        lay = spreadsheet.build(base, m, custom_weights=(1.0, 2.0, 3.0))
-        assert all(c.kind != "weightcell" for c in lay.cells if c.id.startswith("weight:target:"))
+        layout = spreadsheet.build(base, m, custom_weights=(1.0, 2.0, 3.0))
+        assert all(c.kind != "weightcell" for c in layout.cells if c.id.startswith("weight:target:"))
 
     def test_custom_weights_show_the_overridden_values_in_the_weight_row(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = {**settings.defaults(), "weighting": True, "custom_weights": True}
         n = len([c for c in spreadsheet.build(base, s).cells if c.id.startswith("weight:target:")])
         override = tuple(1.0 + 0.5 * i for i in range(n))
-        lay = spreadsheet.build(base, s, custom_weights=override)
-        texts = [c.text for c in lay.cells if c.id.startswith("weight:target:")]
+        layout = spreadsheet.build(base, s, custom_weights=override)
+        texts = [c.text for c in layout.cells if c.id.startswith("weight:target:")]
         assert texts == [service.cents(width) for width in override]
 
     def test_commas_have_a_shared_vertical_axis_per_comma(self):
-        ids = {ln.id for ln in _layout().lines}
+        ids = {line.id for line in _layout().lines}
         assert "v:comma:0" in ids
         assert {"trunk:commas", "bus:commas:top", "bus:commas:bot", "foot:commas"} <= ids
 
@@ -403,9 +403,9 @@ class TestCustomWeightRow:
 
     def test_commas_column_has_panels_that_fold_away_and_converge_when_collapsed(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        lay = spreadsheet.build(base, collapsed={"col:commas"})
-        blocks = {b.id: b for b in lay.blocks}
-        by_id = {ln.id: ln for ln in lay.lines}
+        layout = spreadsheet.build(base, collapsed={"col:commas"})
+        blocks = {b.id: b for b in layout.blocks}
+        by_id = {line.id: line for line in layout.lines}
         assert blocks["block:commas"].width == 0
         assert blocks["block:tuning:commas"].width == 0
         assert by_id["bus:commas:top"].length == 0
@@ -445,9 +445,9 @@ class TestCustomWeightRow:
         assert spreadsheet_text._wrap_lines("tempered comma basis interval size list (made to vanish!)", 62) >= 3
 
     def test_a_long_caption_widens_its_tile_to_stay_within_two_lines(self):
-        lay = _with(names=True)
-        cells = {c.id: c for c in lay.cells}
-        blocks = {b.id: b for b in lay.blocks}
+        layout = _with(names=True)
+        cells = {c.id: c for c in layout.cells}
+        blocks = {b.id: b for b in layout.blocks}
         name = "tempered comma basis interval size list (made to vanish!)"
         cap = cells["caption:tuning:commas"]
         assert spreadsheet_text._wrap_lines(name, cap.width) <= spreadsheet_constants.MAX_CAPTION_LINES
@@ -461,11 +461,11 @@ class TestCustomWeightRow:
         assert panel.x <= cap.x and cap.x + cap.width <= panel.x + panel.width
 
     def test_a_widened_caption_tile_keeps_the_add_control_on_its_fan_stub(self):
-        lay = _with(names=True)
-        cells = {c.id: c for c in lay.cells}
-        blocks = {b.id: b for b in lay.blocks}
+        layout = _with(names=True)
+        cells = {c.id: c for c in layout.cells}
+        blocks = {b.id: b for b in layout.blocks}
         narrow = {b.id: b for b in _with(names=False).blocks}
-        by_id = {ln.id: ln for ln in lay.lines}
+        by_id = {line.id: line for line in layout.lines}
         assert blocks["block:commas"].width > narrow["block:commas"].width
         plus, bus = cells["comma_plus"], by_id["bus:commas:top"]
         stub = by_id["v:comma:0"].pos + spreadsheet_constants.COL_W
@@ -511,15 +511,15 @@ class TestCustomWeightRow:
         assert cells["comma_plus"].x > cells["comma:0"].x
 
     def test_each_comma_carries_its_own_minus_on_its_branch_point(self):
-        lay = _layout()
-        one, by1 = {c.id: c for c in lay.cells}, {ln.id: ln for ln in lay.lines}
+        layout = _layout()
+        one, by1 = {c.id: c for c in layout.cells}, {line.id: line for line in layout.lines}
         assert "comma_minus:0" in one, "the SOLE comma is removable now (un-tempers to just intonation)"
         cm = one["comma_minus:0"]
         assert abs((cm.x + cm.width / 2) - by1["v:comma:0"].pos) < 0.51
         assert cm.y == by1["bus:commas:top"].pos
         two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])
         tlay = spreadsheet.build(two)
-        cells, by2 = {c.id: c for c in tlay.cells}, {ln.id: ln for ln in tlay.lines}
+        cells, by2 = {c.id: c for c in tlay.cells}, {line.id: line for line in tlay.lines}
         assert {"comma_minus:0", "comma_minus:1"} <= set(cells), "any comma removable, not just the last"
         assert abs((cells["comma_minus:0"].x + cells["comma_minus:0"].width / 2) - by2["v:comma:0"].pos) < 0.51
         assert abs((cells["comma_minus:1"].x + cells["comma_minus:1"].width / 2) - by2["v:comma:1"].pos) < 0.51
@@ -535,7 +535,7 @@ class TestCustomWeightRow:
         assert cells["cell:comma:0:1"].text == "" and cells["cell:comma:0:1"].pending
         assert "cell:mapping:1:0" in cells and "cell:mapping:2:0" not in cells, "the mapping is untouched (the draft is not yet a real comma): still 2 rows, no 3rd"
         assert "tuning:comma:1" not in cells
-        by_id = {ln.id: ln for ln in spreadsheet.build(base, pending_comma=[None, None, None]).lines}
+        by_id = {line.id: line for line in spreadsheet.build(base, pending_comma=[None, None, None]).lines}
         assert "comma_minus:0" in cells
         assert abs((cells["comma_minus:pending"].x + cells["comma_minus:pending"].width / 2) - by_id["v:comma:1"].pos) < 0.51
 

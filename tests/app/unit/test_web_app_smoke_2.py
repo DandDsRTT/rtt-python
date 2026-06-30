@@ -367,9 +367,9 @@ class TestWebAppSmoke4:
         s.update(plain_text_values=True, weighting=True, alt_complexity=True)
         cells = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                                     tuning_scheme="TILT minimax-S").cells}
-        for cid in ("plain_text:prescaling:primes", "plain_text:prescaling:targets"):
-            c = cells[cid]
-            assert render_html._plain_text_units(c.text) * render_html._plain_text_font(c.text, c.width) <= c.width, cid
+        for cell_id in ("plain_text:prescaling:primes", "plain_text:prescaling:targets"):
+            c = cells[cell_id]
+            assert render_html._plain_text_units(c.text) * render_html._plain_text_font(c.text, c.width) <= c.width, cell_id
 
     def test_units_fit_their_cell_for_long_alternative_complexity_annotations(self):
         s = show_settings.defaults()

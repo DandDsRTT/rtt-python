@@ -635,20 +635,20 @@ def mean_damage_help(all_interval: bool) -> str:
             "list: the targets' damage combined by the optimization power 𝑝.")
 
 
-def control_help(kind: str, cid: str, *, pretransform: bool = False) -> str | None:
-    text = _control_help(kind, cid)
+def control_help(kind: str, cell_id: str, *, pretransform: bool = False) -> str | None:
+    text = _control_help(kind, cell_id)
     return _pretransform_label(text) if (pretransform and text) else text
 
 
-def _control_help(kind: str, cid: str) -> str | None:
-    if cid in MEAN_DAMAGE_IDS:
+def _control_help(kind: str, cell_id: str) -> str | None:
+    if cell_id in MEAN_DAMAGE_IDS:
         return mean_damage_help(all_interval=False)
     if kind in READONLY_KINDS:
-        return _ID_HELP.get(cid) if cid in HELPED_READONLY_IDS else None
+        return _ID_HELP.get(cell_id) if cell_id in HELPED_READONLY_IDS else None
     if kind == "preset":
-        return _PRESET_HELP.get(cid.split(":")[1])
+        return _PRESET_HELP.get(cell_id.split(":")[1])
     if kind == "plain_text_edit":
-        return _PLAIN_TEXT_HELP.get(cid)
+        return _PLAIN_TEXT_HELP.get(cell_id)
     if kind == "ratiocell":
-        return _RATIO_HELP.get(cid.split(":", maxsplit=1)[0])
-    return _ID_HELP.get(cid) or _KIND_HELP.get(kind)
+        return _RATIO_HELP.get(cell_id.split(":", maxsplit=1)[0])
+    return _ID_HELP.get(cell_id) or _KIND_HELP.get(kind)

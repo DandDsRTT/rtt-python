@@ -32,12 +32,12 @@ class TestFeatureRenderBranches:
 
     async def test_state_query_param_loads_a_shared_document(self, user: User) -> None:
         live = _live()
-        doc = Editor().serialize()
-        doc["settings"]["counts"] = not doc["settings"]["counts"]
-        token = _live_assets()._encode_state(doc)
+        document = Editor().serialize()
+        document["settings"]["counts"] = not document["settings"]["counts"]
+        token = _live_assets()._encode_state(document)
         await user.open(f"/?{_live_assets()._STATE_PARAM}={token}")
         stored = _live_assets()._doc_store()[_live_assets()._STORE_KEY]
-        assert stored["settings"]["counts"] == doc["settings"]["counts"]
+        assert stored["settings"]["counts"] == document["settings"]["counts"]
 
     async def test_a_corrupt_state_query_param_falls_back_to_defaults(self, user: User, caplog) -> None:
         with caplog.at_level(logging.CRITICAL, logger="rtt.app.app"):
@@ -45,9 +45,9 @@ class TestFeatureRenderBranches:
         await user.should_see("quantities")
 
     async def test_a_stacked_fraction_cell_publishes_its_value_uncorrupted(self, user: User) -> None:
-        doc = Editor().serialize()
-        doc["settings"]["projection"] = True
-        token = _live_assets()._encode_state(doc)
+        document = Editor().serialize()
+        document["settings"]["projection"] = True
+        token = _live_assets()._encode_state(document)
         await user.open(f"/?{_live_assets()._STATE_PARAM}={token}")
         cell = next(iter(user.find(marker="cell:projection:2:1").elements))
         assert cell._props.get("data-value") == "1/4", (

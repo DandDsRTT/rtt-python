@@ -45,10 +45,10 @@ class TestMathExpressions:
         off = {c.id: c for c in _with().cells}
         on_lay = _with(math_expressions=True)
         on = {c.id: c for c in on_lay.cells}
-        for cid in ("tuning:prime:1", "tuning:comma:0", "tuning:target:0",
+        for cell_id in ("tuning:prime:1", "tuning:comma:0", "tuning:target:0",
                     "retune:prime:1", "damage:target:0"):
-            assert on[cid].kind == "tuningvalue"
-            assert on[cid].text == off[cid].text
+            assert on[cell_id].kind == "tuningvalue"
+            assert on[cell_id].text == off[cell_id].text
         assert {"bracket:tuning:map:l", "caption:tuning:primes"} <= set(on)
         assert "block:tuning:primes" in {b.id for b in on_lay.blocks}
 
@@ -71,9 +71,9 @@ class TestMathExpressions:
     def test_math_expressions_closed_form_value_equals_the_plain_cents(self):
         off = {c.id: c for c in _with(scheme="miniRMS-U").cells}
         on = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
-        for cid in ("tuning:gen:0", "tuning:gen:1", "tuning:prime:0", "tuning:prime:1", "tuning:prime:2"):
-            assert on[cid].kind == "mathexpr"
-            assert on[cid].text.endswith("= " + off[cid].text)
+        for cell_id in ("tuning:gen:0", "tuning:gen:1", "tuning:prime:0", "tuning:prime:1", "tuning:prime:2"):
+            assert on[cell_id].kind == "mathexpr"
+            assert on[cell_id].text.endswith("= " + off[cell_id].text)
 
     def test_math_expressions_held_octave_rms_shows_the_octave_pure(self):
         cells = {c.id: c for c in _with(scheme="held-octave miniRMS-U", math_expressions=True).cells}
@@ -82,16 +82,16 @@ class TestMathExpressions:
     def test_math_expressions_skip_minimax_optimum_no_closed_form(self):
         off = {c.id: c for c in _with(scheme="minimax-S").cells}
         on = {c.id: c for c in _with(scheme="minimax-S", math_expressions=True).cells}
-        for cid in ("tuning:gen:0", "tuning:gen:1", "tuning:prime:0", "tuning:prime:1"):
-            assert on[cid].kind != "mathexpr"
-            assert on[cid].text == off[cid].text
+        for cell_id in ("tuning:gen:0", "tuning:gen:1", "tuning:prime:0", "tuning:prime:1"):
+            assert on[cell_id].kind != "mathexpr"
+            assert on[cell_id].text == off[cell_id].text
 
     def test_math_expressions_skip_weighted_rms_optimum_irrational(self):
         off = {c.id: c for c in _with(scheme="miniRMS-S").cells}
         on = {c.id: c for c in _with(scheme="miniRMS-S", math_expressions=True).cells}
-        for cid in ("tuning:gen:0", "tuning:prime:0"):
-            assert on[cid].kind != "mathexpr"
-            assert on[cid].text == off[cid].text
+        for cell_id in ("tuning:gen:0", "tuning:prime:0"):
+            assert on[cell_id].kind != "mathexpr"
+            assert on[cell_id].text == off[cell_id].text
 
     def test_math_expressions_show_exact_zero_as_bare_zero(self):
         cells = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
@@ -108,9 +108,9 @@ class TestMathExpressions:
     def test_math_expressions_render_rms_canonical_generators_as_logs(self):
         off = {c.id: c for c in _with(scheme="miniRMS-U", form_tiles=True).cells}
         on = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True, form_tiles=True).cells}
-        for cid in ("tuning:cangen:0", "tuning:cangen:1"):
-            assert on[cid].kind == "mathexpr"
-            assert on[cid].text.endswith("= " + off[cid].text)
+        for cell_id in ("tuning:cangen:0", "tuning:cangen:1"):
+            assert on[cell_id].kind == "mathexpr"
+            assert on[cell_id].text.endswith("= " + off[cell_id].text)
 
     def test_math_expressions_render_superspace_rms_tuning_as_logs(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
@@ -118,20 +118,20 @@ class TestMathExpressions:
         s.update(nonstandard_domain=True, math_expressions=True)
         off = {c.id: c for c in spreadsheet.build(state, {**s, "math_expressions": False}, tuning_scheme="miniRMS-U").cells}
         on = {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="miniRMS-U").cells}
-        for cid in ("tuning:superspace_prime:0", "tuning:superspace_generator:0", "retune:superspace_prime:1"):
-            assert on[cid].kind == "mathexpr"
-            assert "log₂" in on[cid].text
-            assert on[cid].text.endswith("= " + off[cid].text)
+        for cell_id in ("tuning:superspace_prime:0", "tuning:superspace_generator:0", "retune:superspace_prime:1"):
+            assert on[cell_id].kind == "mathexpr"
+            assert "log₂" in on[cell_id].text
+            assert on[cell_id].text.endswith("= " + off[cell_id].text)
         mini = {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="minimax-S").cells}
         assert mini["tuning:superspace_prime:0"].kind == "tuningvalue"
 
     def test_math_expressions_skip_manual_generator_override(self):
-        lay = spreadsheet.build(
+        layout = spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))),
             {**settings.defaults(), "math_expressions": True},
             tuning_scheme="miniRMS-U", generator_tuning=(1200.0, 700.0),
         )
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         assert cells["tuning:gen:0"].kind != "mathexpr"
         assert cells["tuning:gen:1"].text == "700.000"
 
@@ -162,11 +162,11 @@ class TestMathExpressions:
 
     def test_math_expressions_under_prime_prescaler_drop_the_log(self):
         scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "prime")
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
                                 {**settings.defaults(), "weighting": True, "alt_complexity": True,
                                  "math_expressions": True},
                                 tuning_scheme=scheme)
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         assert cells["cell:prescaling:primes:0:0"].kind == "prescalercell", "the diagonal: each prime is the plain value (prescalercell, not mathexpr)"
         assert cells["cell:prescaling:primes:0:0"].text == "2"
         assert cells["cell:prescaling:primes:1:1"].text == "3"
@@ -176,11 +176,11 @@ class TestMathExpressions:
 
     def test_math_expressions_under_identity_prescaler_emit_no_closed_form(self):
         scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "identity")
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
                                 {**settings.defaults(), "weighting": True, "alt_complexity": True,
                                  "math_expressions": True},
                                 tuning_scheme=scheme)
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         assert cells["cell:prescaling:primes:1:1"].kind == "prescalercell"
         assert cells["cell:prescaling:primes:1:1"].text == "1"
         assert cells["cell:prescaling:commas:0:0"].kind == "tuningvalue"
@@ -204,30 +204,30 @@ class TestMathExpressions:
 
     def test_custom_prescaler_override_drives_the_bare_prescaler_diagonal_text(self):
         s = settings.defaults() | {"weighting": True, "alt_complexity": True}
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                 tuning_scheme="TILT minimax-S",
                                 custom_prescaler=(2.5, 7.5, 11.0))
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         assert cells["cell:prescaling:primes:0:0"].text == "2.500"
         assert cells["cell:prescaling:primes:1:1"].text == "7.500"
         assert cells["cell:prescaling:primes:2:2"].text == "11"
 
     def test_custom_prescaler_override_flows_into_the_product_tiles(self):
         s = settings.defaults() | {"weighting": True, "alt_complexity": True}
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                 tuning_scheme="TILT minimax-S",
                                 custom_prescaler=(1.0, 1.0, 2.0))
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         assert cells["cell:prescaling:commas:0:0"].text == "4"
         assert cells["cell:prescaling:commas:1:0"].text == "-4"
         assert cells["cell:prescaling:commas:2:0"].text == "2"
 
     def test_custom_prescaler_override_drives_the_complexity_row(self):
         s = settings.defaults() | {"weighting": True}
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                 tuning_scheme="TILT minimax-S",
                                 custom_prescaler=(1.0, 1.0, 1.0))
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         assert cells["complexity:comma:0"].text == "9.000"
 
 
@@ -266,9 +266,9 @@ class TestCountsRow:
             assert cells[f"count:{column_key}"].width == cells[f"header:{column_key}"].width
 
     def test_counts_present_keeps_the_column_fan_out_immediately_after_the_toggle(self):
-        lay = _with(counts=True)
-        by_id = {ln.id: ln for ln in lay.lines}
-        cells = {c.id: c for c in lay.cells}
+        layout = _with(counts=True)
+        by_id = {line.id: line for line in layout.lines}
+        cells = {c.id: c for c in layout.cells}
         fan = by_id["bus:primes:top"].pos
         count = cells["count:primes"]
         assert fan < count.y
@@ -277,7 +277,7 @@ class TestCountsRow:
         assert v0.start < count.y and v0.start + v0.length > count.y + count.height
         trunk = by_id["trunk:primes"]
         assert trunk.start + trunk.length == fan
-        assert fan == {ln.id: ln for ln in _with(counts=False).lines}["bus:primes:top"].pos
+        assert fan == {line.id: line for line in _with(counts=False).lines}["bus:primes:top"].pos
 
     def test_counts_on_by_default_shows_the_counts_row(self):
         cells = {c.id for c in _layout().cells}
@@ -308,11 +308,11 @@ class TestCountsRow:
         s["counts"] = True
         full = {c.id: c for c in spreadsheet.build(base, s).cells}
         assert "toggle:row:counts" in full
-        lay = spreadsheet.build(base, s, collapsed={"row:counts"})
-        cells = {c.id: c for c in lay.cells}
+        layout = spreadsheet.build(base, s, collapsed={"row:counts"})
+        cells = {c.id: c for c in layout.cells}
         assert not any(c.startswith("count:") for c in cells)
         assert "label:counts" in cells
-        assert {ln.id for ln in lay.lines} >= {"h:counts"}
+        assert {line.id for line in layout.lines} >= {"h:counts"}
 
     def test_counts_track_the_live_domain_after_an_expand(self):
         expanded = service.expand_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))
@@ -323,14 +323,14 @@ class TestCountsRow:
         assert cells["count:gens"].text == "\U0001D45F = 3"
 
     def test_every_count_sits_on_its_own_grey_panel(self):
-        lay = _with(counts=True)
-        blocks = {b.id: b for b in lay.blocks}
-        counts = [c.id for c in lay.cells if c.id.startswith("count:")]
+        layout = _with(counts=True)
+        blocks = {b.id: b for b in layout.blocks}
+        counts = [c.id for c in layout.cells if c.id.startswith("count:")]
         assert counts
-        for cid in counts:
-            column_key = cid.split(":", 1)[1]
+        for cell_id in counts:
+            column_key = cell_id.split(":", 1)[1]
             panel = blocks.get(f"block:counts:{column_key}")
-            assert panel is not None, f"{cid} has no backing panel"
+            assert panel is not None, f"{cell_id} has no backing panel"
             assert panel.width > 0 and panel.height > 0
 
     def test_other_intervals_of_interest_column_is_present_right_of_targets(self):
@@ -345,13 +345,13 @@ class TestCountsRow:
         assert cells["header:interest"].width < spreadsheet_text._title_w("other intervals\nof interest")
 
     def test_empty_interest_column_is_just_a_header_and_axis(self):
-        lay = _layout()
-        cids = {c.id for c in lay.cells}
+        layout = _layout()
+        cids = {c.id for c in layout.cells}
         assert not any(c.startswith(("interest:", "cell:imapped:")) for c in cids)
         assert not any(c.startswith(("tuning:interest:", "just:interest:", "retune:interest:")) for c in cids)
         assert not any("imapped" in c for c in cids)
         assert "caption:mapping:interest" not in cids
-        lids = {ln.id for ln in lay.lines}
+        lids = {line.id for line in layout.lines}
         assert {"trunk:interest", "foot:interest"} <= lids
         assert "v:interest:0" not in lids and "bus:interest:top" not in lids
 

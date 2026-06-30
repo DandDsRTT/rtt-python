@@ -42,23 +42,23 @@ def _rect_in_view(x, y, width, height, freeze_y, view, overscan) -> bool:
 _DOT_PITCH = 8
 
 
-def _line_style(ln, y_shift: float = 0) -> str:
+def _line_style(line, y_shift: float = 0) -> str:
     half = spreadsheet_constants.LINE_W / 2
-    if ln.orientation == "v":
+    if line.orientation == "v":
         pos, edge, sweep = (
-            f"left:0; top:0; transform:translate({ln.pos - half}px,{ln.start - y_shift}px); "
-            f"height:{ln.length}px",
+            f"left:0; top:0; transform:translate({line.pos - half}px,{line.start - y_shift}px); "
+            f"height:{line.length}px",
             "left",
             "to bottom",
         )
     else:
         pos, edge, sweep = (
-            f"left:0; top:0; transform:translate({ln.start}px,{ln.pos - half - y_shift}px); "
-            f"width:{ln.length}px",
+            f"left:0; top:0; transform:translate({line.start}px,{line.pos - half - y_shift}px); "
+            f"width:{line.length}px",
             "top",
             "to right",
         )
-    if ln.dotted:
+    if line.dotted:
         dots = (
             f"repeating-linear-gradient({sweep},var(--c-gridline) 0 {spreadsheet_constants.LINE_W}px,"
             f"transparent {spreadsheet_constants.LINE_W}px {_DOT_PITCH}px) border-box"

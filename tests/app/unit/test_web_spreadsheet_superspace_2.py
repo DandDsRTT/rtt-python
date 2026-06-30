@@ -24,7 +24,7 @@ class TestSuperspaceMatrixTiles:
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults() | {"nonstandard_domain": True}
         cids = {c.id for c in spreadsheet.build(state, s).cells}
-        assert not any(cid.startswith("cell:superspace_mapping:superspace_primes:") for cid in cids)
+        assert not any(cell_id.startswith("cell:superspace_mapping:superspace_primes:") for cell_id in cids)
 
     def test_M_L_tile_carries_per_row_map_brackets_and_a_matrix_frame(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
@@ -79,9 +79,9 @@ class TestSuperspaceMatrixTiles:
         assert sym == "\U0001D440jL = \U0001D43C"
 
     def test_superspace_identity_objects_gate_on_identity_objects(self):
-        lay = _barbados_superspace(symbols=True)
-        cids = {c.id for c in lay.cells}
-        bids = {b.id for b in lay.blocks}
+        layout = _barbados_superspace(symbols=True)
+        cids = {c.id for c in layout.cells}
+        bids = {b.id for b in layout.blocks}
         assert not any(c.startswith("cell:superspace_vectors:superspace_primes:") for c in cids)
         assert not any(c.startswith("cell:superspace_mapping:superspace_generators:") for c in cids)
         assert "block:superspace_vectors:superspace_primes" not in bids
@@ -115,10 +115,10 @@ class TestSuperspaceMatrixTiles:
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         s = settings.defaults()
         cids = {c.id for c in spreadsheet.build(state, s).cells}
-        assert not any(cid.startswith("tuning:superspace_generator:") for cid in cids)
-        assert not any(cid.startswith("tuning:superspace_prime:") for cid in cids)
-        assert not any(cid.startswith("just:superspace_prime:") for cid in cids)
-        assert not any(cid.startswith("retune:superspace_prime:") for cid in cids)
+        assert not any(cell_id.startswith("tuning:superspace_generator:") for cell_id in cids)
+        assert not any(cell_id.startswith("tuning:superspace_prime:") for cell_id in cids)
+        assert not any(cell_id.startswith("just:superspace_prime:") for cell_id in cids)
+        assert not any(cell_id.startswith("retune:superspace_prime:") for cell_id in cids)
 
     def test_superspace_tuning_tiles_carry_their_brackets(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
@@ -148,7 +148,7 @@ class TestSuperspaceMatrixTiles:
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults() | {"nonstandard_domain": True}
         cids = {c.id for c in spreadsheet.build(state, s).cells}
-        assert not any(cid.startswith(pfx) for cid in cids
+        assert not any(cell_id.startswith(pfx) for cell_id in cids
                        for pfx in ("tuning:superspace_generator", "tuning:superspace_prime", "just:superspace_prime", "retune:superspace_prime"))
 
     def test_B_L_tile_has_a_plain_text_string(self):
@@ -191,9 +191,9 @@ class TestSuperspaceMatrixTiles:
             "names": True, "symbols": True, "counts": True, "plain_text_values": True,
             "equivalences": True, "units": True, "presets": True,
         }
-        lay = spreadsheet.build(state, s)
-        ids = ({c.id for c in lay.cells} | {b.id for b in lay.blocks}
-               | {ln.id for ln in lay.lines})
+        layout = spreadsheet.build(state, s)
+        ids = ({c.id for c in layout.cells} | {b.id for b in layout.blocks}
+               | {line.id for line in layout.lines})
         for frag in ("cell:superspace_vectors:primes:", "cell:superspace_mapping:superspace_primes:",
                      "superspace_generator_map", ":superspace_primes:l", ":superspace_primes:r"):
             assert not any(frag in i for i in ids), f"leaked id matching {frag!r}"
@@ -336,21 +336,21 @@ class TestSuperspaceBracketsAndMath:
         assert cells["matlabel:col:retune:superspace_primes:0"].text == f"\U0001D493{L}₁"
 
     def test_superspace_block_is_a_cyan_region_green_at_temperament_columns(self):
-        lay = _barbados_superspace(tuning_colorization=True, temperament_colorization=True,
+        layout = _barbados_superspace(tuning_colorization=True, temperament_colorization=True,
                            counts=True, identity_objects=True)
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         cyan, green = {"tuning"}, {"tuning", "temperament"}
-        assert _color_at(lay, *_mid(cells, "superspace_quantity_generator:0")) == cyan
-        assert _color_at(lay, *_mid(cells, "superspace_quantity_prime:0")) == cyan
-        assert _color_at(lay, *_mid(cells, "cell:superspace_mapping:superspace_primes:0:0")) == cyan
-        assert _color_at(lay, *_mid(cells, "tuning:superspace_generator:0")) == cyan
-        assert _color_at(lay, *_mid(cells, "tuning:superspace_prime:0")) == cyan
-        assert _color_at(lay, *_mid(cells, "just:superspace_prime:0")) == cyan
-        assert _color_at(lay, *_mid(cells, "cell:superspace_vectors:superspace_primes:0:0")) == cyan
-        assert _color_at(lay, *_mid(cells, "count:superspace_primes")) == cyan
-        assert _color_at(lay, *_mid(cells, "cell:superspace_vectors:primes:0:0")) == green
-        assert _color_at(lay, *_mid(cells, "cell:superspace_vectors:commas:0:0")) == green
-        assert _color_at(lay, *_mid(cells, "cell:superspace_mapping:primes:0:0")) == green
+        assert _color_at(layout, *_mid(cells, "superspace_quantity_generator:0")) == cyan
+        assert _color_at(layout, *_mid(cells, "superspace_quantity_prime:0")) == cyan
+        assert _color_at(layout, *_mid(cells, "cell:superspace_mapping:superspace_primes:0:0")) == cyan
+        assert _color_at(layout, *_mid(cells, "tuning:superspace_generator:0")) == cyan
+        assert _color_at(layout, *_mid(cells, "tuning:superspace_prime:0")) == cyan
+        assert _color_at(layout, *_mid(cells, "just:superspace_prime:0")) == cyan
+        assert _color_at(layout, *_mid(cells, "cell:superspace_vectors:superspace_primes:0:0")) == cyan
+        assert _color_at(layout, *_mid(cells, "count:superspace_primes")) == cyan
+        assert _color_at(layout, *_mid(cells, "cell:superspace_vectors:primes:0:0")) == green
+        assert _color_at(layout, *_mid(cells, "cell:superspace_vectors:commas:0:0")) == green
+        assert _color_at(layout, *_mid(cells, "cell:superspace_mapping:primes:0:0")) == green
 
     def test_size_factor_all_interval_weight_is_a_list_mirroring_the_complexity_row(self):
         lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, charts=True,

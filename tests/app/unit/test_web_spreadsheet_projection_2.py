@@ -76,7 +76,7 @@ class TestProjectionVColumn:
         cells = {c.id: c for c in spreadsheet.build(state, s, held_basis_ratios=("2/1", "3/1")).cells}
         assert [cells[f"cell:superspace_vectors:commas:{p}:u0"].text for p in range(4)] == ["1", "0", "0", "0"]
         assert [cells[f"cell:superspace_vectors:commas:{p}:u1"].text for p in range(4)] == ["0", "1", "0", "0"]
-        assert any(cid.startswith("cell:superspace_mapping:commas:") and ":u0" in cid for cid in cells)
+        assert any(cell_id.startswith("cell:superspace_mapping:commas:") and ":u0" in cell_id for cell_id in cells)
         assert cells["vsplit:superspace_vectors"].x == cells["vsplit:vectors"].x
         assert cells["vsplit:superspace_mapping"].x == cells["vsplit:vectors"].x
         assert cells["cell:superspace_vectors:commas:0:0"].x < cells["vsplit:superspace_vectors"].x < cells["cell:superspace_vectors:commas:0:u0"].x
@@ -87,7 +87,7 @@ class TestProjectionVColumn:
         assert not any(c.startswith("sep:mapped_comma:") for c in cells)
 
     def test_projection_v_column_fans_one_gridline_per_subcolumn(self):
-        lines = {ln.id for ln in _with(projection=True).lines}
+        lines = {line.id for line in _with(projection=True).lines}
         assert {"v:comma:0", "v:comma:1", "v:comma:2"} <= lines
 
     def test_projection_keeps_the_comma_add_remove_controls(self):
@@ -129,9 +129,9 @@ class TestProjectionVColumn:
         s = settings.defaults()
         s["projection"] = True
         s["counts"] = True
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                 held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None])
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         nu = sum(1 for i in cells if i.startswith("cell:unchanged:0:"))
         assert nu >= 2
         last = nu - 1
@@ -139,8 +139,8 @@ class TestProjectionVColumn:
                       + [f"cell:mapped_unchanged:{i}:{last}" for i in range(2)]
                       + [f"tuning:comma:u{last}", f"just:comma:u{last}", f"retune:comma:u{last}"]
                       + [f"cell:projection_vectors:{p}:u{last}" for p in range(3)] + [f"cell:scaling:u{last}"])
-        assert all(cells[cid].preview_remove for cid in doomed_ids), \
-            [cid for cid in doomed_ids if not cells[cid].preview_remove]
+        assert all(cells[cell_id].preview_remove for cell_id in doomed_ids), \
+            [cell_id for cell_id in doomed_ids if not cells[cell_id].preview_remove]
         assert not any(cells[f"cell:unchanged:{p}:0"].preview_remove for p in range(3)), "the earlier U column, the unchanged count/caption, and the drag grip are NOT reddened"
         assert not cells["count:commas:u"].preview_remove
         assert not cells[f"grip:unchanged:{last}"].preview_remove
@@ -159,9 +159,9 @@ class TestProjectionVColumn:
     def test_projection_pending_comma_pushes_the_unchanged_half_past_the_draft(self):
         s = settings.defaults()
         s["projection"] = True
-        lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+        layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                                 held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None])
-        cells = {c.id: c for c in lay.cells}
+        cells = {c.id: c for c in layout.cells}
         draft = cells["cell:comma:0:1"]
         u_first = cells["cell:unchanged:0:0"]
         assert u_first.x > draft.x + spreadsheet_constants.COL_W
@@ -252,27 +252,27 @@ class TestProjectionVColumn:
 
     def test_plain_text_band_matches_a_direct_derivation_under_a_custom_prescaler(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        lay = spreadsheet.build(state, {**settings.defaults(), "plain_text_values": True},
+        layout = spreadsheet.build(state, {**settings.defaults(), "plain_text_values": True},
                                 custom_prescaler=(1.0, 2.0, 3.0))
         pt = service.plain_text_values(state, service.DEFAULT_DOCUMENT_SCHEME,
                                        custom_prescaler=(1.0, 2.0, 3.0))
-        _assert_plain_text_cells_match(lay, pt)
+        _assert_plain_text_cells_match(layout, pt)
 
     def test_plain_text_band_matches_a_direct_derivation_under_a_manual_generator_tuning(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        lay = spreadsheet.build(state, {**settings.defaults(), "plain_text_values": True},
+        layout = spreadsheet.build(state, {**settings.defaults(), "plain_text_values": True},
                                 generator_tuning=(1201.7, 697.6))
         pt = service.plain_text_values(state, service.DEFAULT_DOCUMENT_SCHEME,
                                        generator_tuning=(1201.7, 697.6))
-        _assert_plain_text_cells_match(lay, pt)
+        _assert_plain_text_cells_match(layout, pt)
 
 
 class TestProjectionDrafts:
     def test_plain_text_band_matches_a_direct_derivation_over_the_superspace(self):
-        lay = _barbados_superspace(plain_text_values=True)
+        layout = _barbados_superspace(plain_text_values=True)
         pt = service.plain_text_values(_barbados_state(), service.DEFAULT_DOCUMENT_SCHEME,
                                        superspace=True)
-        _assert_plain_text_cells_match(lay, pt)
+        _assert_plain_text_cells_match(layout, pt)
 
     def test_projection_row_grows_a_draft_column_for_target_held_interest_drafts(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))

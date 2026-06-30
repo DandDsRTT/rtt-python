@@ -58,10 +58,10 @@ class TestChoosers:
         await user.open("/")
         _toggle(user, "presets")
         both = ("preset:tuning", "preset:tuning:gens")
-        assert all("display-value" not in _cell_child(user, cid)._props for cid in both)
+        assert all("display-value" not in _cell_child(user, cell_id)._props for cell_id in both)
         _cell_child(user, "tuning:gen:1").set_value("700.000")
         await user.should_see(marker="preset:tuning")
-        assert all(_cell_child(user, cid)._props.get("display-value") == "-" for cid in both)
+        assert all(_cell_child(user, cell_id)._props.get("display-value") == "-" for cell_id in both)
 
     async def test_picking_a_scheme_clears_the_manual_tuning_and_retunes(self, user: User) -> None:
         await user.open("/")

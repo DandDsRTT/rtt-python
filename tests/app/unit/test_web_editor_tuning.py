@@ -54,9 +54,9 @@ class TestTuningSchemes:
         assert all(c.text == "1.000" for c in flat.cells if c.id.startswith("weight:target:"))
         editor.set_weight_slope("simplicity-weight")
         assert service.weight_slope_of(editor.tuning_scheme) == "simplicity-weight"
-        lay = spreadsheet.build(editor.state, {**settings.defaults(), "weighting": True},
+        layout = spreadsheet.build(editor.state, {**settings.defaults(), "weighting": True},
                                 tuning_scheme=editor.tuning_scheme)
-        weights = [c.text for c in lay.cells if c.id.startswith("weight:target:")]
+        weights = [c.text for c in layout.cells if c.id.startswith("weight:target:")]
         assert weights and not all(w == "1.000" for w in weights)
 
     def test_the_weighting_choosers_are_undoable_like_every_other_change(self):
@@ -78,9 +78,9 @@ class TestTuningSchemes:
         editor.set_complexity_prescaler("prime")
         assert service.prescaler_of(editor.tuning_scheme) == "prime"
         editor.set_weight_slope("simplicity-weight")
-        lay = spreadsheet.build(editor.state, {**settings.defaults(), "weighting": True, "alt_complexity": True},
+        layout = spreadsheet.build(editor.state, {**settings.defaults(), "weighting": True, "alt_complexity": True},
                                 tuning_scheme=editor.tuning_scheme)
-        on = {c.id: c.text for c in lay.cells}
+        on = {c.id: c.text for c in layout.cells}
         assert on["cell:prescaling:primes:0:0"] == "2"
         assert on["cell:prescaling:primes:1:1"] == "3"
         assert on["cell:prescaling:primes:2:2"] == "5"
@@ -307,9 +307,9 @@ class TestCustomWeighting:
     def test_load_drops_a_crash_inducing_prescaler_and_still_renders(self):
         editor = Editor()
         editor.set_weight_slope("simplicity-weight")
-        doc = editor.serialize()
-        doc["custom_prescaler"] = [0.0, 1.585, 2.322]
-        editor.load(doc)
+        document = editor.serialize()
+        document["custom_prescaler"] = [0.0, 1.585, 2.322]
+        editor.load(document)
         assert editor.custom_prescaler is None, "the crash-inducing prescaler was dropped"
         editor.layout()
 

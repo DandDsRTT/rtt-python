@@ -33,8 +33,8 @@ def build_gen_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-minus-zone")
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
         "click",
-        lambda _=None, idx=cell_box.gen: reconciler._cell_box.act(
-            lambda: reconciler._editor.remove_mapping_row(idx)
+        lambda _=None, index=cell_box.gen: reconciler._cell_box.act(
+            lambda: reconciler._editor.remove_mapping_row(index)
         ),
     )
     preview_rank_remove(reconciler, wrap, "row", cell_box.gen)
@@ -59,8 +59,8 @@ def build_map_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
         return
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v").on(
         "click",
-        lambda _=None, idx=cell_box.gen: reconciler._cell_box.act(
-            lambda: reconciler._editor.remove_mapping_row(idx)
+        lambda _=None, index=cell_box.gen: reconciler._cell_box.act(
+            lambda: reconciler._editor.remove_mapping_row(index)
         ),
     )
     preview_rank_remove(reconciler, wrap, "row", cell_box.gen)
@@ -112,7 +112,7 @@ def build_element_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None
     action = (
         reconciler._editor.remove_element
         if cell_box.id.endswith(":pending")
-        else (lambda idx=cell_box.prime: reconciler._editor.remove_domain_element(idx))
+        else (lambda index=cell_box.prime: reconciler._editor.remove_domain_element(index))
     )
     button = "rtt-minus-button-v" if ":basis" in cell_box.id else "rtt-minus-button"
     wrap.classes("rtt-minus-zone")
@@ -126,7 +126,7 @@ def _build_list_minus(
     reconciler, cell_box: spreadsheet.CellBox, wrap, cancel, remove, rank_axis=None
 ) -> None:
     pending = cell_box.id.endswith(":pending")
-    action = cancel if pending else (lambda idx=cell_box.comma: remove(idx))
+    action = cancel if pending else (lambda index=cell_box.comma: remove(index))
     wrap.classes("rtt-minus-zone")
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
         "click", lambda _=None: reconciler._cell_box.act(action)
@@ -203,15 +203,17 @@ def build_colgrip(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
         )
         wrap.on("drop.prevent", lambda _=None, which=lst: reconciler._cell_box.on_drop(which, None))
         return
-    idx = cell_box.comma
+    index = cell_box.comma
     wrap.classes("rtt-drag-handle rtt-colgrip").props("draggable=true")
     wrap.on(
-        "dragstart", lambda _=None, which=lst, i=idx: reconciler._cell_box.on_drag_start(which, i)
+        "dragstart", lambda _=None, which=lst, i=index: reconciler._cell_box.on_drag_start(which, i)
     )
     wrap.on(
         "dragenter.prevent",
-        lambda _=None, which=lst, i=idx: reconciler._cell_box.on_drag_enter(which, i),
+        lambda _=None, which=lst, i=index: reconciler._cell_box.on_drag_enter(which, i),
     )
     wrap.on("dragend", lambda _=None: reconciler._cell_box.on_drag_end())
-    wrap.on("drop.prevent", lambda _=None, which=lst, i=idx: reconciler._cell_box.on_drop(which, i))
+    wrap.on(
+        "drop.prevent", lambda _=None, which=lst, i=index: reconciler._cell_box.on_drop(which, i)
+    )
     ui.icon("drag_indicator").classes("rtt-grip")

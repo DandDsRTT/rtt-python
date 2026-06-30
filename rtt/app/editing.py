@@ -59,8 +59,8 @@ class EditController:
     def on_target_change(self):
         _editing_controls.on_target_change(self)
 
-    def candidate_apply(self, cid, value):
-        return _editing_controls.candidate_apply(self, cid, value)
+    def candidate_apply(self, cell_id, value):
+        return _editing_controls.candidate_apply(self, cell_id, value)
 
 
 class _ControlEdits:
@@ -72,20 +72,20 @@ class _ControlEdits:
         _editing_controls.add_interval(self.e, action, group)
 
     @cb_method
-    def on_preset(self, cid, value):
-        _editing_controls.on_preset(self.e, cid, value)
+    def on_preset(self, cell_id, value):
+        _editing_controls.on_preset(self.e, cell_id, value)
 
     @cb_method
-    def on_subpick(self, cid, value):
-        _editing_controls.on_subpick(self.e, cid, value)
+    def on_subpick(self, cell_id, value):
+        _editing_controls.on_subpick(self.e, cell_id, value)
 
     @cb_method
-    def on_form_choose(self, cid, value):
-        _editing_controls.on_form_choose(self.e, cid, value)
+    def on_form_choose(self, cell_id, value):
+        _editing_controls.on_form_choose(self.e, cell_id, value)
 
     @cb_method
-    def on_control_select(self, cid, value):
-        _editing_controls.on_control_select(self.e, cid, value)
+    def on_control_select(self, cell_id, value):
+        _editing_controls.on_control_select(self.e, cell_id, value)
 
     @cb_method
     def on_range_mode(self, value):

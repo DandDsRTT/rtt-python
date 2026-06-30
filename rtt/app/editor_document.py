@@ -50,23 +50,23 @@ class Document(
             preferred_form=tuple(sorted(self.preferred_form.items())),
         )
 
-    def restore(self, doc: _Doc) -> None:
-        self._state = doc.state
-        self.tuning_scheme = doc.tuning_scheme
-        self.target_family = doc.target_family
-        self.target_limit = doc.target_limit
-        self.interest_vectors = [tuple(m) for m in doc.interest_vectors]
-        self.held_vectors = [tuple(m) for m in doc.held_vectors]
-        self.range_mode = doc.range_mode
-        self.generator_tuning = doc.generator_tuning
-        self.manual_tuning = doc.manual_tuning
-        self.custom_prescaler = doc.custom_prescaler
-        self.custom_weights = doc.custom_weights
-        self.target_override = doc.target_override
-        self.projection_basis = doc.projection_basis
-        self.settings = dict(doc.settings)
-        self.collapsed = set(doc.collapsed)
-        self.preferred_form = dict(doc.preferred_form)
+    def restore(self, document: _Doc) -> None:
+        self._state = document.state
+        self.tuning_scheme = document.tuning_scheme
+        self.target_family = document.target_family
+        self.target_limit = document.target_limit
+        self.interest_vectors = [tuple(m) for m in document.interest_vectors]
+        self.held_vectors = [tuple(m) for m in document.held_vectors]
+        self.range_mode = document.range_mode
+        self.generator_tuning = document.generator_tuning
+        self.manual_tuning = document.manual_tuning
+        self.custom_prescaler = document.custom_prescaler
+        self.custom_weights = document.custom_weights
+        self.target_override = document.target_override
+        self.projection_basis = document.projection_basis
+        self.settings = dict(document.settings)
+        self.collapsed = set(document.collapsed)
+        self.preferred_form = dict(document.preferred_form)
         self.pending.reset()
 
     @property

@@ -103,9 +103,9 @@ def _token(**settings) -> str:
     for key, value in settings.items():
         if key == "mapping_text":
             editor.try_edit_mapping_text(value)
-    doc = editor.serialize()
-    doc["settings"].update({k: v for k, v in settings.items() if k != "mapping_text"})
-    return _encode_state(doc)
+    document = editor.serialize()
+    document["settings"].update({k: v for k, v in settings.items() if k != "mapping_text"})
+    return _encode_state(document)
 
 
 @contextmanager

@@ -24,16 +24,16 @@ class TestPerCellAudio:
         cells = {c.id: c for c in _layout().cells}
         cb = cells["comma:0"]
         assert cb.audio is not None
-        tile, idx, cents = cb.audio
-        assert (tile, idx) == ("quantities:commas", 0)
+        tile, index, cents = cb.audio
+        assert (tile, index) == ("quantities:commas", 0)
         assert abs(abs(cents) - 21.506) < 0.01, "the meantone comma 81/80 is ~21.506¢ JUST (it is tempered to ~0¢) — so a magnitude of ~21.5 # confirms the ratio sounds the JUST size, not the tempered one (sign is the comma's stored # orientation, the same value the old audio rows sounded)"
 
     def test_prime_plays_its_just_size_and_a_generator_plays_its_tuned_size(self):
         cells = {c.id: c for c in _layout().cells}
         p = cells["prime:1"]
         assert p.audio is not None
-        tile, idx, cents = p.audio
-        assert (tile, idx) == ("quantities:primes", 1)
+        tile, index, cents = p.audio
+        assert (tile, index) == ("quantities:primes", 1)
         assert abs(cents - 1901.955) < 0.01
         g = cells["qgen:0"]
         assert g.audio is not None and g.audio[0] == "quantities:gens" and abs(g.audio[2]) > 100
@@ -52,8 +52,8 @@ class TestPerCellAudio:
         cells = {c.id: c for c in _layout().cells}
         g = cells["tuning:gen:0"]
         assert g.audio is not None
-        tile, idx, cents = g.audio
-        assert (tile, idx) == ("tuning:gens", 0)
+        tile, index, cents = g.audio
+        assert (tile, index) == ("tuning:gens", 0)
         assert abs(cents) > 100, "a real generator pitch, not silence"
         assert abs(cents - float(cells["tuning:gen:0"].text)) < 0.6
 
@@ -95,11 +95,11 @@ class TestPerCellAudio:
     def test_audio_voices_exactly_the_tiles_whose_ebk_inner_is_a_vector(self):
         from rtt.app import spreadsheet_audio as audio
         b = _maximized_superspace_builder()
-        g, lay, ss = b.geometry, b.layout(), b.resolved.flags.superspace
+        g, layout, ss = b.geometry, b.layout(), b.resolved.flags.superspace
         bands = sorted(g.rows.items(), key=lambda kv: kv[1].y)
         spans = [(ck, g.content_x[ck], g.content_w[ck]) for ck in g.content_x]
         missed, wrongly = [], []
-        for c in lay.cells:
+        for c in layout.cells:
             if c.kind not in audio._INTERVAL_KINDS or c.pending:
                 continue
             rkey = audio._band_of(bands, c.y + c.height / 2)
@@ -228,16 +228,16 @@ class TestPerCellAudio:
         C = grid_tables.SUBSCRIPT_C
         noncanon = {c.id: c for c in _with(symbols=True, form=True).cells}
         assert noncanon["symbol:mapping:primes"].text == "𝑀", "bare: not the canonical form"
-        assert not any(cid.startswith("cell:canon:") for cid in noncanon)
+        assert not any(cell_id.startswith("cell:canon:") for cell_id in noncanon)
         canon = _canon_cells(symbols=True, form=True)
         assert canon["symbol:mapping:primes"].text == f"𝑀{C}"
-        assert not any(cid.startswith("cell:canon:") for cid in canon)
+        assert not any(cell_id.startswith("cell:canon:") for cell_id in canon)
         tiles = {c.id: c for c in _with(symbols=True, form=True, form_tiles=True).cells}
-        assert any(cid.startswith("cell:canon:") for cid in tiles)
+        assert any(cell_id.startswith("cell:canon:") for cell_id in tiles)
         canon_tiles = _canon_cells(symbols=True, form=True, form_tiles=True)
-        assert not any(cid.startswith("cell:canon:") for cid in canon_tiles)
-        assert not any(cid.startswith("cell:finv:") for cid in canon_tiles)
-        assert not any(":canongens" in cid for cid in canon_tiles)
+        assert not any(cell_id.startswith("cell:canon:") for cell_id in canon_tiles)
+        assert not any(cell_id.startswith("cell:finv:") for cell_id in canon_tiles)
+        assert not any(":canongens" in cell_id for cell_id in canon_tiles)
 
     def test_form_box_shows_the_mapping_decomposition_equivalence_only_when_noncanonical(self):
         C = grid_tables.SUBSCRIPT_C
