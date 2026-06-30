@@ -23,7 +23,7 @@ def emit_prescaling_band(resolved, geometry, context) -> EmitResult:
 
 
 def _lift_to_superspace(resolved, vs):
-    return tuple(None if v is None else service.lift_vectors_to_superspace(resolved.dims.elements, (v,))[0]
+    return tuple(None if v is None else service.lift_vectors_to_superspace(resolved.dimensions.elements, (v,))[0]
                  for v in vs)
 
 
@@ -31,13 +31,13 @@ def _prescale_setup(resolved, context, nrows):
     if resolved.flags.superspace:
         prescaler_diag = service.superspace_complexity_prescaler(context.state, context.tuning_scheme)
         prescaler_is_matrix = False
-        superspace_elements = service.superspace_primes(resolved.dims.elements)
+        superspace_elements = service.superspace_primes(resolved.dimensions.elements)
 
         def lift(vs):
             return _lift_to_superspace(resolved, vs)
         prescale_vectors = {
             "superspace_primes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
-            "primes": service.basis_in_superspace(resolved.dims.elements),
+            "primes": service.basis_in_superspace(resolved.dimensions.elements),
             "commas": lift(context.state.comma_basis) + (lift(resolved.unchanged.basis) if resolved.unchanged.shown else ()),
             "targets": lift(resolved.targets.vectors),
             "interest": lift(resolved.interest.vectors),
@@ -49,7 +49,7 @@ def _prescale_setup(resolved, context, nrows):
     else:
         prescaler_diag = resolved.scalars.prescaler
         prescaler_is_matrix = resolved.scalars.prescaler_is_matrix
-        superspace_elements = resolved.dims.elements
+        superspace_elements = resolved.dimensions.elements
         prescale_vectors = {
             "primes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
             "commas": context.state.comma_basis + (resolved.unchanged.basis if resolved.unchanged.shown else ()),

@@ -157,13 +157,13 @@ def _emit_tuning_canongen_row(cells, resolved, geometry, context) -> None:
     if not (query.row_open(geometry, context.collapsed, "tuning") and query.tile_open(geometry, context.collapsed, "tuning", "canongens")):
         return
     generator_map = resolved.tuning.tuning_map.generator_map
-    for j in range(resolved.dims.canonical_rank):
-        v = sum(generator_map[k] * resolved.canon.inverse_form_M[k][j] for k in range(resolved.dims.rank))
+    for j in range(resolved.dimensions.canonical_rank):
+        v = sum(generator_map[k] * resolved.canon.inverse_form_M[k][j] for k in range(resolved.dimensions.rank))
         operand = None
         if resolved.flags.math_expressions:
             closed_form = _closed_form(resolved, context)
             if closed_form is not None:
-                coefficients = [resolved.canon.inverse_form_M[k][j] for k in range(resolved.dims.rank)]
+                coefficients = [resolved.canon.inverse_form_M[k][j] for k in range(resolved.dimensions.rank)]
                 operand = closed_form.canonical_generator_operand(coefficients, v)
         if operand is not None:
             cells.append(CellBox(f"tuning:cangen:{j}", query.canongen_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,

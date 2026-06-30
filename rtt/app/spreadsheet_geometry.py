@@ -47,7 +47,7 @@ from rtt.app.spreadsheet_text import (
 
 def declare_interval_column_tiles(resolved):
     interest_tiles = ()
-    if resolved.dims.interest_count_shown:
+    if resolved.dimensions.interest_count_shown:
         interest_tiles += (
             ("block:vector:interest", "vectors", "interest"),
             ("block:interest", "quantities", "interest"),
@@ -60,7 +60,7 @@ def declare_interval_column_tiles(resolved):
             ("block:complexity:interest", "complexity", "interest"),
         )
     held_tiles = ()
-    if resolved.dims.held_count_shown:
+    if resolved.dimensions.held_count_shown:
         held_tiles += (
             ("block:held", "quantities", "held"),
             ("block:vector:held", "vectors", "held"),
@@ -107,9 +107,9 @@ def _projection_col_tiles(resolved):
         tiles += (("block:projection:detempering", "projection", "detempering"),)
     if resolved.scalars.targets_editable:
         tiles += (("block:projection:targets", "projection", "targets"),)
-    if resolved.dims.held_count_shown:
+    if resolved.dimensions.held_count_shown:
         tiles += (("block:projection:held", "projection", "held"),)
-    if resolved.dims.interest_count_shown:
+    if resolved.dimensions.interest_count_shown:
         tiles += (("block:projection:interest", "projection", "interest"),)
     if resolved.flags.superspace:
         tiles += (
@@ -132,9 +132,9 @@ def _superspace_projection_col_tiles(resolved):
         tiles += (("block:superspace_projection:detempering", "superspace_projection", "detempering"),)
     if resolved.scalars.targets_editable:
         tiles += (("block:superspace_projection:targets", "superspace_projection", "targets"),)
-    if resolved.dims.held_count_shown:
+    if resolved.dimensions.held_count_shown:
         tiles += (("block:superspace_projection:held", "superspace_projection", "held"),)
-    if resolved.dims.interest_count_shown:
+    if resolved.dimensions.interest_count_shown:
         tiles += (("block:superspace_projection:interest", "superspace_projection", "interest"),)
     return tiles
 
@@ -147,9 +147,9 @@ def _canon_col_tiles(resolved):
         tiles += (("block:canon_detempering", "canon", "detempering"),)
     if resolved.scalars.targets_editable:
         tiles += (("block:canon_mapped", "canon", "targets"),)
-    if resolved.dims.held_count_shown:
+    if resolved.dimensions.held_count_shown:
         tiles += (("block:canon_held", "canon", "held"),)
-    if resolved.dims.interest_count_shown:
+    if resolved.dimensions.interest_count_shown:
         tiles += (("block:canon_interest", "canon", "interest"),)
     return tiles
 
@@ -163,9 +163,9 @@ def _prune_declared_tiles(declared_tiles, resolved, context):
         declared_tiles -= {("vectors", "primes"), ("mapping", "gens"),
                                 ("mapping", "detempering"), ("canon", "canongens"),
                                 ("superspace_vectors", "superspace_primes"), ("superspace_mapping", "superspace_generators")}
-    if not resolved.dims.held_count_shown:
+    if not resolved.dimensions.held_count_shown:
         declared_tiles -= {("superspace_vectors", "held"), ("superspace_mapping", "held")}
-    if not resolved.dims.interest_count_shown:
+    if not resolved.dimensions.interest_count_shown:
         declared_tiles -= {("superspace_vectors", "interest"), ("superspace_mapping", "interest")}
     return declared_tiles
 
@@ -227,7 +227,7 @@ def control_floor(resolved, context, key: str):
 
 
 def commas_band_width(resolved, nc_count: int):
-    nv = nc_count + resolved.dims.unchanged_count
+    nv = nc_count + resolved.dimensions.unchanged_count
     split = V_SPLIT_GAP if (resolved.unchanged.shown and nc_count > 0) else 0
     empty = (_min_width_for_lines("nullity", 1)
              if (resolved.unchanged.shown and nc_count == 0) else 0)
@@ -236,7 +236,7 @@ def commas_band_width(resolved, nc_count: int):
 
 def _caption_wrap_w(geometry, resolved, context, column_key: str):
     if column_key == "commas" and resolved.ghosts.comma:
-        resting = commas_band_width(resolved, resolved.dims.comma_count + (1 if resolved.commas.pending is not None else 0))
+        resting = commas_band_width(resolved, resolved.dimensions.comma_count + (1 if resolved.commas.pending is not None else 0))
         return max(resting, caption_floor(geometry, resolved, column_key),
                    control_floor(resolved, context, column_key), symbol_floor(geometry, resolved, column_key))
     return geometry.open_column_width[column_key]
@@ -248,8 +248,8 @@ def caption_band(geometry, resolved, context, key: str, folded: bool):
     lines = [_wrap_lines(resolved.labels.captions[(key, c)], _caption_wrap_w(geometry, resolved, context, c)) for c in geometry.column_x
              if (key, c) in resolved.labels.captions and (key, c) in geometry.declared_tiles]
     if key == "counts" and resolved.unchanged.shown and "commas" in geometry.column_x:
-        lines.append(_wrap_lines("unchanged interval count", resolved.dims.unchanged_count * COLUMN_WIDTH))
-        lines.append(_wrap_lines("nullity", resolved.dims.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_width))
+        lines.append(_wrap_lines("unchanged interval count", resolved.dimensions.unchanged_count * COLUMN_WIDTH))
+        lines.append(_wrap_lines("nullity", resolved.dimensions.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_width))
     return max(lines, default=1) * CAPTION_LINE
 
 

@@ -6,7 +6,7 @@ from rtt.app import terminology
 
 
 @dataclass(frozen=True)
-class Dims:
+class Dimensions:
     dimensionality: int
     superspace_dimensionality: int
     rank: int
@@ -200,7 +200,7 @@ class Labels:
 
 @dataclass(frozen=True)
 class Resolved:
-    dims: Dims
+    dimensions: Dimensions
     targets: IntervalSet
     held: IntervalSet
     commas: IntervalSet
@@ -218,8 +218,8 @@ class Resolved:
     column_ids: object
 
 
-def _dims(b) -> Dims:
-    return Dims(
+def _dimensions(b) -> Dimensions:
+    return Dimensions(
         dimensionality=b.dimensionality,
         superspace_dimensionality=b.superspace_dimensionality,
         rank=b.rank,
@@ -413,7 +413,7 @@ def _scalars(b) -> Scalars:
 
 def freeze(draft) -> Resolved:
     return Resolved(
-        dims=_dims(draft),
+        dimensions=_dimensions(draft),
         targets=IntervalSet(
             ratios=draft.targets,
             sizes=draft.target_sizes,

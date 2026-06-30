@@ -89,7 +89,7 @@ def compute_geometry(resolved, context):
 
 def _resolve_col_headers(resolved):
     domain_title = ("domain basis\nelements"
-                    if service.domain_has_nonprimes(resolved.dims.elements)
+                    if service.domain_has_nonprimes(resolved.dimensions.elements)
                     else "domain\nprimes")
     column_header = {"quantities": "interval ratios", "units": "units",
                   "canongens": "canonical\ngenerators", "gens": "generators",
@@ -126,11 +126,11 @@ def _define_col_bands(geometry, resolved, context, label_width):
         matlabel_superspace_primes_width=MATLABEL_W_SSPRIMES if (resolved.flags.header_symbols and resolved.flags.superspace) else 0,
         matlabel_other_width=_matlabel_other_w(geometry, resolved),
         row_handle_width=(ROW_HANDLE_WIDTH + ROW_HANDLE_GAP) if (
-            context.settings.get("drag_to_combine") and resolved.flags.temperament_tiles and resolved.dims.rank > 1) else 0,
+            context.settings.get("drag_to_combine") and resolved.flags.temperament_tiles and resolved.dimensions.rank > 1) else 0,
         etpick_width=(ETPICK_WIDTH + ETPICK_GAP) if (resolved.flags.presets and resolved.flags.temperament_tiles) else 0,
         size_factor=size_factor,
         size_rows=1 if size_factor else 0,
-        prescale_rows=resolved.dims.superspace_dimensionality if resolved.flags.superspace else resolved.dims.dimensionality,
+        prescale_rows=resolved.dimensions.superspace_dimensionality if resolved.flags.superspace else resolved.dimensions.dimensionality,
         all_interval_simplicity_weight=resolved.scalars.all_interval and (
             bool(size_factor) or resolved.scalars.prescaler_is_matrix),
         node_x=label_width + GAP,
@@ -143,16 +143,16 @@ def _col_bands(geometry, resolved, context):
     return (
         ("quantities", COLUMN_WIDTH, resolved.flags.interval_ratios, True),
         ("units", COLUMN_WIDTH, resolved.flags.domain_units, True),
-        ("canongens", 2 * BRACKET_WIDTH + resolved.dims.canonical_rank * COLUMN_WIDTH + 2 * query.matlabel_gutter_width(geometry, "canongens"), resolved.flags.canon, True),
-        ("gens", 2 * BRACKET_WIDTH + resolved.dims.rank * COLUMN_WIDTH + 2 * query.matlabel_gutter_width(geometry, "gens"), resolved.flags.temperament_tiles, True),
-        ("superspace_generators", 2 * BRACKET_WIDTH + resolved.dims.superspace_rank * COLUMN_WIDTH, resolved.flags.superspace, True),
-        ("superspace_primes", 2 * BRACKET_WIDTH + resolved.dims.superspace_dimensionality * COLUMN_WIDTH + 2 * geometry.matlabel_superspace_primes_width, resolved.flags.superspace, True),
-        ("primes", 2 * BRACKET_WIDTH + resolved.dims.dimensionality_shown * COLUMN_WIDTH + 2 * query.outer_gutter_width(geometry, "primes"), resolved.flags.temperament_tiles, True),
-        ("detempering", 2 * BRACKET_WIDTH + resolved.dims.rank * COLUMN_WIDTH, resolved.flags.generator_detempering, True),
-        ("commas", commas_band_width(resolved, resolved.dims.comma_count_shown), resolved.flags.temperament_tiles, True),
-        ("held", query.interval_list_width(resolved.dims.held_count_shown, "held"), resolved.flags.optimization, True),
-        ("targets", query.interval_list_width(resolved.dims.target_count_shown, "targets"), resolved.flags.tuning_tiles and context.targets_in_use, True),
-        ("interest", query.interval_list_width(resolved.dims.interest_count_shown, "interest"), resolved.flags.interest, True),
+        ("canongens", 2 * BRACKET_WIDTH + resolved.dimensions.canonical_rank * COLUMN_WIDTH + 2 * query.matlabel_gutter_width(geometry, "canongens"), resolved.flags.canon, True),
+        ("gens", 2 * BRACKET_WIDTH + resolved.dimensions.rank * COLUMN_WIDTH + 2 * query.matlabel_gutter_width(geometry, "gens"), resolved.flags.temperament_tiles, True),
+        ("superspace_generators", 2 * BRACKET_WIDTH + resolved.dimensions.superspace_rank * COLUMN_WIDTH, resolved.flags.superspace, True),
+        ("superspace_primes", 2 * BRACKET_WIDTH + resolved.dimensions.superspace_dimensionality * COLUMN_WIDTH + 2 * geometry.matlabel_superspace_primes_width, resolved.flags.superspace, True),
+        ("primes", 2 * BRACKET_WIDTH + resolved.dimensions.dimensionality_shown * COLUMN_WIDTH + 2 * query.outer_gutter_width(geometry, "primes"), resolved.flags.temperament_tiles, True),
+        ("detempering", 2 * BRACKET_WIDTH + resolved.dimensions.rank * COLUMN_WIDTH, resolved.flags.generator_detempering, True),
+        ("commas", commas_band_width(resolved, resolved.dimensions.comma_count_shown), resolved.flags.temperament_tiles, True),
+        ("held", query.interval_list_width(resolved.dimensions.held_count_shown, "held"), resolved.flags.optimization, True),
+        ("targets", query.interval_list_width(resolved.dimensions.target_count_shown, "targets"), resolved.flags.tuning_tiles and context.targets_in_use, True),
+        ("interest", query.interval_list_width(resolved.dimensions.interest_count_shown, "interest"), resolved.flags.interest, True),
     )
 
 
@@ -162,13 +162,13 @@ def _define_row_bands(geometry, resolved):
         ("quantities", ROW_HEIGHT, resolved.flags.interval_ratios, True, "interval\nratios"),
         ("units", ROW_HEIGHT, resolved.flags.domain_units, True, "units"),
         ("scaling_factors", ROW_HEIGHT, resolved.unchanged.shown, True, "scaling factors"),
-        ("vectors", resolved.dims.dimensionality * ROW_HEIGHT, resolved.flags.interval_vectors, True, "interval vectors"),
-        ("canon", resolved.dims.canonical_rank * ROW_HEIGHT, resolved.flags.canon, True, "canonical mapping"),
-        ("mapping", resolved.dims.rank_shown * ROW_HEIGHT, resolved.flags.temperament_tiles, True, "mapping"),
-        ("superspace_vectors", resolved.dims.superspace_dimensionality * ROW_HEIGHT, resolved.flags.superspace, True, "superspace\ninterval vectors"),
-        ("superspace_mapping", resolved.dims.superspace_rank * ROW_HEIGHT, resolved.flags.superspace, True, "superspace\nmapping"),
-        ("superspace_projection", resolved.dims.superspace_dimensionality * ROW_HEIGHT, resolved.flags.superspace_projection, True, "superspace\nprojection"),
-        ("projection", resolved.dims.dimensionality * ROW_HEIGHT, resolved.flags.projection, True, "projection"),
+        ("vectors", resolved.dimensions.dimensionality * ROW_HEIGHT, resolved.flags.interval_vectors, True, "interval vectors"),
+        ("canon", resolved.dimensions.canonical_rank * ROW_HEIGHT, resolved.flags.canon, True, "canonical mapping"),
+        ("mapping", resolved.dimensions.rank_shown * ROW_HEIGHT, resolved.flags.temperament_tiles, True, "mapping"),
+        ("superspace_vectors", resolved.dimensions.superspace_dimensionality * ROW_HEIGHT, resolved.flags.superspace, True, "superspace\ninterval vectors"),
+        ("superspace_mapping", resolved.dimensions.superspace_rank * ROW_HEIGHT, resolved.flags.superspace, True, "superspace\nmapping"),
+        ("superspace_projection", resolved.dimensions.superspace_dimensionality * ROW_HEIGHT, resolved.flags.superspace_projection, True, "superspace\nprojection"),
+        ("projection", resolved.dimensions.dimensionality * ROW_HEIGHT, resolved.flags.projection, True, "projection"),
         ("tuning", ROW_HEIGHT, resolved.flags.tuning_tiles, True, "tuning"),
         ("just", ROW_HEIGHT, resolved.flags.tuning_tiles, True, "just tuning"),
         ("retune", ROW_HEIGHT, resolved.flags.tuning_tiles, True, "retuning"),
@@ -246,10 +246,10 @@ def _layout_rows(geometry, resolved, context, row_bands, tile_extra, rows_top_y)
 
 def _row_interval_handle(geometry, resolved, context, key, folded):
     return (key == "vectors" and not folded and context.settings.get("drag_to_combine")
-            and ((resolved.dims.comma_count >= 2 and query.column_open(geometry, context.collapsed, "commas"))
-                 or (resolved.dims.target_count >= 2 and not resolved.scalars.all_interval and query.column_open(geometry, context.collapsed, "targets"))
-                 or (resolved.dims.held_count >= 2 and query.column_open(geometry, context.collapsed, "held"))
-                 or (resolved.dims.interest_count >= 2 and query.column_open(geometry, context.collapsed, "interest"))))
+            and ((resolved.dimensions.comma_count >= 2 and query.column_open(geometry, context.collapsed, "commas"))
+                 or (resolved.dimensions.target_count >= 2 and not resolved.scalars.all_interval and query.column_open(geometry, context.collapsed, "targets"))
+                 or (resolved.dimensions.held_count >= 2 and query.column_open(geometry, context.collapsed, "held"))
+                 or (resolved.dimensions.interest_count >= 2 and query.column_open(geometry, context.collapsed, "interest"))))
 
 
 def _compute_row_band(geometry, resolved, context, key, natural, collapsible, label, tile_extra, show_charts, y):
@@ -279,7 +279,7 @@ def _compute_row_band(geometry, resolved, context, key, natural, collapsible, la
                     and key in BANDS["form_chooser"].rows and not folded) else 0)
     comma_picker = (COMMAPICK_GAP + ROW_HEIGHT) if (key == "vectors" and resolved.flags.presets
                                        and query.column_open(geometry, context.collapsed, "commas")
-                                       and (resolved.dims.comma_count > 0 or resolved.commas.pending is not None) and not folded) else 0
+                                       and (resolved.dimensions.comma_count > 0 or resolved.commas.pending is not None) and not folded) else 0
     plain_text = plain_text_band(geometry, key, folded)
     symbol += BAND_GAP if symbol else 0
     caption += BAND_GAP if caption else 0
@@ -301,10 +301,10 @@ def _compute_row_band(geometry, resolved, context, key, natural, collapsible, la
 
 
 def _group_geometry_fields(geometry, resolved):
-    group_n = {"gens": resolved.dims.rank, "primes": resolved.dims.dimensionality_shown, "commas": resolved.dims.vector_count_shown,
-               "targets": resolved.dims.target_count_shown,
-               "interest": resolved.dims.interest_count_shown, "held": resolved.dims.held_count_shown, "detempering": resolved.dims.rank,
-               "canongens": resolved.dims.canonical_rank, "superspace_generators": resolved.dims.superspace_rank, "superspace_primes": resolved.dims.superspace_dimensionality}
+    group_n = {"gens": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality_shown, "commas": resolved.dimensions.vector_count_shown,
+               "targets": resolved.dimensions.target_count_shown,
+               "interest": resolved.dimensions.interest_count_shown, "held": resolved.dimensions.held_count_shown, "detempering": resolved.dimensions.rank,
+               "canongens": resolved.dimensions.canonical_rank, "superspace_generators": resolved.dimensions.superspace_rank, "superspace_primes": resolved.dimensions.superspace_dimensionality}
     content_x = geometry.content_x
     left_fn = {"gens": lambda i: query.gen_left(geometry, i),
                "primes": lambda i: query.prime_left(geometry, i),
@@ -324,13 +324,13 @@ def _group_geometry_fields(geometry, resolved):
         "group_left": {g: tuple(fn(i) for i in range(group_n[g])) if g in content_x else ()
                        for g, fn in left_fn.items()},
         "group_ratio": {
-            "primes": tuple(service.element_ratio(e) for e in resolved.dims.elements),
-            "commas": tuple(resolved.commas.ratios[:resolved.dims.comma_count]) + tuple(resolved.unchanged.ratios),
+            "primes": tuple(service.element_ratio(e) for e in resolved.dimensions.elements),
+            "commas": tuple(resolved.commas.ratios[:resolved.dimensions.comma_count]) + tuple(resolved.unchanged.ratios),
             "targets": tuple(resolved.targets.ratios),
             "interest": tuple(resolved.interest.ratios),
             "held": tuple(resolved.held.ratios),
             "detempering": tuple(resolved.scalars.gens),
-            "superspace_primes": tuple(service.element_ratio(e) for e in resolved.dims.superspace_primes),
+            "superspace_primes": tuple(service.element_ratio(e) for e in resolved.dimensions.superspace_primes),
         }}
 
 
@@ -341,9 +341,9 @@ def _init_group_geometry(geometry, resolved, context) -> Geometry:
                    if query.plus_shows(geometry, resolved, context.collapsed, context.state, column_key)}
     row_plus_y = {}
     if query.tile_open(geometry, context.collapsed, "vectors", "quantities") and (resolved.flags.nonstandard_domain or resolved.scalars.standard_domain):
-        row_plus_y["vectors"] = query.vector_top(geometry, resolved.dims.dimensionality_shown) + ROW_HEIGHT / 2
+        row_plus_y["vectors"] = query.vector_top(geometry, resolved.dimensions.dimensionality_shown) + ROW_HEIGHT / 2
     if query.tile_open(geometry, context.collapsed, "mapping", "quantities") and context.state.nullity > 0:
-        row_plus_y["mapping"] = query.map_top(geometry, resolved.dims.rank_shown) + ROW_HEIGHT / 2
+        row_plus_y["mapping"] = query.map_top(geometry, resolved.dimensions.rank_shown) + ROW_HEIGHT / 2
     return replace(geometry, plus_stub_x=plus_stub_x, row_plus_y=row_plus_y)
 
 
@@ -363,7 +363,7 @@ def _resolve_tile_extras(geometry, resolved, context):
     opt_cap_lines = _wrap_lines(mean_damage_caption, OPT_MEAN_DAMAGE_WIDTH) if opt_ctrl else 1
     opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_HEIGHT + OPT_TITLE_GAP + ROW_HEIGHT + resolved.scalars.ctrl_symbol_height
                   + opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if opt_ctrl else 0)
-    show_approach = (service.domain_has_nonprimes(resolved.dims.elements)
+    show_approach = (service.domain_has_nonprimes(resolved.dimensions.elements)
                      and "row:damage" not in context.collapsed and query.column_open(geometry, context.collapsed, "targets")
                      and "tile:damage:targets" not in context.collapsed)
     approach_extra = (RANGE_GAP + 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + APPROACH_RADIO_HEIGHT) if show_approach else 0

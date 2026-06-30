@@ -11,8 +11,8 @@ def _canon_generator_sizes(resolved):
         resolved.canon.inverse_form_M,
     )
     return tuple(
-        sum(generator_map[k] * inverse_form[k][j] for k in range(resolved.dims.rank))
-        for j in range(resolved.dims.canonical_rank)
+        sum(generator_map[k] * inverse_form[k][j] for k in range(resolved.dimensions.rank))
+        for j in range(resolved.dimensions.canonical_rank)
     )
 
 

@@ -63,8 +63,8 @@ class TestNonstandardDomain:
                                       target_override=["3/2", "5/4"], pending_target=[None, None, None],
                                       pending_comma=[None, None, None])
         assert ("units", "targets") in b2.geometry.declared_tiles, "the units tile the targets draft must fill"
-        assert_draft_greened(b2, "targets", b2.resolved.dims.target_count, minimum=6)
-        assert_draft_greened(b2, "commas", b2.resolved.dims.comma_count, minimum=6)
+        assert_draft_greened(b2, "targets", b2.resolved.dimensions.target_count, minimum=6)
+        assert_draft_greened(b2, "commas", b2.resolved.dimensions.comma_count, minimum=6)
 
     def test_nonstandard_domain_adds_superspace_columns_between_gens_and_primes(self):
         cells = {c.id: c for c in _barbados_superspace().cells}

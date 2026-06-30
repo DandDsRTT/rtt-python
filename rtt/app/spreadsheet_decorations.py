@@ -116,9 +116,9 @@ def _emit_axes(lines, resolved, geometry, context) -> None:
 
 
 def _matlabel_group_count(resolved):
-    return {"gens": resolved.dims.rank, "primes": resolved.dims.dimensionality, "commas": resolved.dims.comma_count + resolved.dims.unchanged_count, "targets": resolved.dims.target_count,
-            "held": resolved.dims.held_count, "detempering": resolved.dims.rank, "interest": resolved.dims.interest_count,
-            "canongens": resolved.dims.canonical_rank, "superspace_generators": resolved.dims.superspace_rank, "superspace_primes": resolved.dims.superspace_dimensionality}
+    return {"gens": resolved.dimensions.rank, "primes": resolved.dimensions.dimensionality, "commas": resolved.dimensions.comma_count + resolved.dimensions.unchanged_count, "targets": resolved.dimensions.target_count,
+            "held": resolved.dimensions.held_count, "detempering": resolved.dimensions.rank, "interest": resolved.dimensions.interest_count,
+            "canongens": resolved.dimensions.canonical_rank, "superspace_generators": resolved.dimensions.superspace_rank, "superspace_primes": resolved.dimensions.superspace_dimensionality}
 
 
 def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
@@ -139,18 +139,18 @@ def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
         ("superspace_vectors", "superspace_primes"): lambda i: query.superspace_vector_top(geometry, i),
         ("superspace_projection", "superspace_primes"): lambda i: query.superspace_projection_top(geometry, i),
     }
-    row_count = {("mapping", "primes"): resolved.dims.rank,
-                 ("canon", "primes"): resolved.dims.canonical_rank,
-                 ("mapping", "canongens"): resolved.dims.rank,
-                 ("vectors", "primes"): resolved.dims.dimensionality,
-                 ("projection", "primes"): resolved.dims.dimensionality,
-                 ("projection", "superspace_primes"): resolved.dims.dimensionality,
+    row_count = {("mapping", "primes"): resolved.dimensions.rank,
+                 ("canon", "primes"): resolved.dimensions.canonical_rank,
+                 ("mapping", "canongens"): resolved.dimensions.rank,
+                 ("vectors", "primes"): resolved.dimensions.dimensionality,
+                 ("projection", "primes"): resolved.dimensions.dimensionality,
+                 ("projection", "superspace_primes"): resolved.dimensions.dimensionality,
                  ("prescaling", "primes"): geometry.prescale_rows + geometry.size_rows,
                  ("prescaling", "superspace_primes"): geometry.prescale_rows + geometry.size_rows,
-                 ("superspace_mapping", "superspace_primes"): resolved.dims.superspace_rank,
-                 ("superspace_mapping", "primes"): resolved.dims.superspace_rank,
-                 ("superspace_vectors", "superspace_primes"): resolved.dims.superspace_dimensionality,
-                 ("superspace_projection", "superspace_primes"): resolved.dims.superspace_dimensionality}
+                 ("superspace_mapping", "superspace_primes"): resolved.dimensions.superspace_rank,
+                 ("superspace_mapping", "primes"): resolved.dimensions.superspace_rank,
+                 ("superspace_vectors", "superspace_primes"): resolved.dimensions.superspace_dimensionality,
+                 ("superspace_projection", "superspace_primes"): resolved.dimensions.superspace_dimensionality}
     for (row_key, column_key), glyph in resolved.labels.row_labels.items():
         if not query.tile_open(geometry, context.collapsed, row_key, column_key):
             continue
@@ -317,12 +317,12 @@ def _emit_tile_symbol(cells, resolved, geometry, caption_equivs, caption_ai, row
 
 
 def _emit_unchanged_counts_caption(cells, resolved, geometry, row_key, center_y) -> None:
-    comma_half_width = resolved.dims.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_width
+    comma_half_width = resolved.dimensions.comma_count * COLUMN_WIDTH + resolved.unchanged.empty_comma_width
     if comma_half_width:
         comma_half_x = geometry.commas_x if resolved.unchanged.empty_comma_width else query.comma_left(geometry, resolved, 0)
         cells.append(CellBox("caption:counts:commas", comma_half_x, center_y, comma_half_width,
                              geometry.rows[row_key].caption, "caption", text="nullity"))
-    cells.append(CellBox("caption:counts:commas:u", query.comma_left(geometry, resolved, resolved.dims.comma_count_shown), center_y, resolved.dims.unchanged_count * COLUMN_WIDTH,
+    cells.append(CellBox("caption:counts:commas:u", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown), center_y, resolved.dimensions.unchanged_count * COLUMN_WIDTH,
                          geometry.rows[row_key].caption, "caption", text="unchanged interval count"))
 
 
