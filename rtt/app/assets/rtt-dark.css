@@ -83,7 +83,7 @@ body.rtt-dark .rtt-drawer-inner { color:#e3e6ea; }   /* most panel text inherits
 /* the approach radio's labels are .rtt-rangelabel, lit by the rule below — no separate rule needed */
 /* the lighter inset boxes (a tile's control boxes, the nested tuning-ranges frame) */
 body.rtt-dark .rtt-block-boxed,
-body.rtt-dark .rtt-tile-cbox { background:#31373f; border-color:#454c54; }
+body.rtt-dark .rtt-tile-complexity-box { background:#31373f; border-color:#454c54; }
 body.rtt-dark .rtt-show-group { background:#2c323a; border-color:#3c424a; }
 body.rtt-dark .rtt-show-frozen { border-bottom-color:#3c424a; }
 

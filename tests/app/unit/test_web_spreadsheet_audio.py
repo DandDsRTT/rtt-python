@@ -377,10 +377,10 @@ class TestShowFlagGating:
     def test_show_flags_box_choosers_gate_on_the_collapsed_state(self):
         s = settings.defaults()
         s.update(tuning_tiles=True, weighting=True, alt_complexity=True, temperament_tiles=True)
-        assert spreadsheet_models._resolve_show_flags(s, frozenset()).lbox
-        assert spreadsheet_models._resolve_show_flags(s, frozenset()).cbox
-        assert not spreadsheet_models._resolve_show_flags(s, frozenset({"row:prescaling"})).lbox
-        assert not spreadsheet_models._resolve_show_flags(s, frozenset({"row:complexity"})).cbox
+        assert spreadsheet_models._resolve_show_flags(s, frozenset()).prescaling_box
+        assert spreadsheet_models._resolve_show_flags(s, frozenset()).complexity_box
+        assert not spreadsheet_models._resolve_show_flags(s, frozenset({"row:prescaling"})).prescaling_box
+        assert not spreadsheet_models._resolve_show_flags(s, frozenset({"row:complexity"})).complexity_box
 
     def test_prescaler_labels_resolve_the_log_prime_glyph_and_gated_name(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))

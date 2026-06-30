@@ -94,8 +94,8 @@ def assemble(resolved, geometry, context):
         geometry,
         context,
         region_boxes,
-        tuning.extra["gtm_box"],
-        tuning.extra["opt_box"],
+        tuning.extra["tuning_ranges_box"],
+        tuning.extra["optimization_box"],
         tuning.extra["approach_frame"],
     )
     cells.extend(decorations.cells)

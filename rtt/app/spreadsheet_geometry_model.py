@@ -56,15 +56,15 @@ class Geometry:
     declared_tiles: frozenset = frozenset()
     plain_text_strings: Mapping = field(default_factory=dict)
 
-    gtm_chart: bool = False
-    gtm_extra: float = 0.0
-    lbox_ctrl: bool = False
-    lbox_extra: float = 0.0
-    cbox_ctrl: bool = False
-    cbox_extra: float = 0.0
-    opt_ctrl: bool = False
-    opt_extra: float = 0.0
-    opt_cap_lines: int = 0
+    tuning_ranges_chart: bool = False
+    tuning_ranges_extra: float = 0.0
+    prescaling_box_ctrl: bool = False
+    prescaling_box_extra: float = 0.0
+    complexity_box_ctrl: bool = False
+    complexity_box_extra: float = 0.0
+    optimization_ctrl: bool = False
+    optimization_extra: float = 0.0
+    optimization_cap_lines: int = 0
     show_approach: bool = False
     approach_extra: float = 0.0
     slope_ctrl: bool = False

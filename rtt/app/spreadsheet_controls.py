@@ -19,7 +19,7 @@ from rtt.app.spreadsheet_constants import (
     BOX_OUTER,
     CAPTION_LINE,
     COLUMN_WIDTH,
-    OPT_COL_GAP,
+    OPTIMIZATION_COL_GAP,
     PAD,
     PRESET_HEIGHT,
     PRESET_WIDTH,
@@ -196,10 +196,10 @@ def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cell_i
                          disabled=disabled))
     if name == "target" and context.settings["all_interval"]:
         emit_option_check(cells, "all_interval", "all-interval",
-                           service.is_all_interval(context.tuning_scheme), control_x + control_width + OPT_COL_GAP, control_y)
+                           service.is_all_interval(context.tuning_scheme), control_x + control_width + OPTIMIZATION_COL_GAP, control_y)
     if name == "prescaler" and context.settings["alt_complexity"]:
         emit_option_check(cells, "diminuator", "replace diminuator",
-                           service.diminuator_replaced(context.tuning_scheme), control_x + control_width + OPT_COL_GAP, control_y)
+                           service.diminuator_replaced(context.tuning_scheme), control_x + control_width + OPTIMIZATION_COL_GAP, control_y)
 
 
 def _emit_presets(cells, blocks, resolved, geometry, context) -> None:

@@ -411,12 +411,12 @@ class TestPresetChoosers:
                 and label_cell.align == "left"
                 and label_cell.y > ctrl.y
             )
-        for fcid, tbox in (("formchooser:mapping", "block:preset:temperament"),
+        for fcid, form_block_id in (("formchooser:mapping", "block:preset:temperament"),
                            ("formchooser:comma_basis", "block:preset:temperament:commas")):
             assert f"block:{fcid}" not in boxes
-            ctrl, box = cells[fcid], boxes[tbox]
+            ctrl, box = cells[fcid], boxes[form_block_id]
             assert box.y <= ctrl.y and box.y + box.height >= ctrl.y + ctrl.height
-            tdrop = cells[tbox.removeprefix("block:")]
+            tdrop = cells[form_block_id.removeprefix("block:")]
             assert ctrl.y > tdrop.y
             flbl = cells[f"{fcid}:label"]
             assert flbl.kind == "caption" and flbl.text == "form" and flbl.align == "left" and flbl.y > ctrl.y

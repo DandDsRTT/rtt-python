@@ -39,8 +39,8 @@ class _ShowFlags:
     optimization: bool
     weighting: bool
     alt_complexity: bool
-    lbox: bool
-    cbox: bool
+    prescaling_box: bool
+    complexity_box: bool
     generator_detempering: bool
     interest: bool
     gridded_values: bool
@@ -81,10 +81,10 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         optimization=optimization,
         weighting=weighting,
         alt_complexity=alt_complexity,
-        lbox=(alt_complexity and settings["temperament_tiles"]
+        prescaling_box=(alt_complexity and settings["temperament_tiles"]
               and "col:primes" not in collapsed and "row:prescaling" not in collapsed
               and "tile:prescaling:primes" not in collapsed),
-        cbox=(weighting
+        complexity_box=(weighting
               and "col:targets" not in collapsed and "row:complexity" not in collapsed
               and "tile:complexity:targets" not in collapsed),
         generator_detempering=settings["generator_detempering"],

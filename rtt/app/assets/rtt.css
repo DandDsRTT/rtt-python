@@ -1156,7 +1156,7 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
 .rtt-tile-line-wide { align-self:stretch; }
 /* a control box — a chooser in a bordered box spanning the tile's full width, like a real tile's
    control boxes (.rtt-block-boxed: the lighter #e8e8e8 fill, a #8a8a8a border) */
-.rtt-tile-cbox { width:100%; box-sizing:border-box; display:flex; flex-direction:column;
+.rtt-tile-complexity-box { width:100%; box-sizing:border-box; display:flex; flex-direction:column;
                  align-items:stretch; border:1px solid #8a8a8a; background:#e8e8e8;
                  padding:4px; margin:2px 0; }
 /* every part is a click target. The on/off classes carry the live state — black + opaque when
