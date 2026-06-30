@@ -43,9 +43,9 @@ def sync_chrome(r, layout, freeze_y) -> None:
         r._chrome.chapter_slider.value = r._runtime.chapter
     for key, opt in r._chrome.refs.get("terminologyradio_opts", {}).items():
         (
-            opt.classes(add="rtt-rangeopt-on")
+            opt.classes(add="rtt-range-option-on")
             if key == r._editor.settings["terminology"]
-            else opt.classes(remove="rtt-rangeopt-on")
+            else opt.classes(remove="rtt-range-option-on")
         )
     if layout.approach_box is not None:
         ax, ay, aw, ah = layout.approach_box
@@ -57,9 +57,9 @@ def sync_chrome(r, layout, freeze_y) -> None:
         r._chrome.refs["approach"].set_visibility(False)
     for key, opt in r._chrome.refs["approach_opts"].items():
         (
-            opt.classes(add="rtt-rangeopt-on")
+            opt.classes(add="rtt-range-option-on")
             if key == r._editor.nonprime_basis_approach
-            else opt.classes(remove="rtt-rangeopt-on")
+            else opt.classes(remove="rtt-range-option-on")
         )
     for key, box in r._chrome.boxes.items():
         if box.value != r._editor.settings[key]:

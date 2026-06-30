@@ -55,12 +55,12 @@ def build_powerinput(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
             on_change=lambda _e, cell_id=cell_box.id: reconciler._cell_box.on_power_change(cell_id)
         )
         .props("dense borderless")
-        .classes("rtt-cellinput")
+        .classes("rtt-cell-input-field")
     )
     _put_stacked_face(
         reconciler,
         cell_box.id,
-        "rtt-tuning-value rtt-cellface",
+        "rtt-tuning-value rtt-cell-face",
         *_power_parts(cell_box.text),
         cell_box.width,
     )
@@ -75,7 +75,7 @@ def build_powerdisplay(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None
     _put_stacked_face(
         reconciler,
         cell_box.id,
-        "rtt-tuning-value rtt-cellface",
+        "rtt-tuning-value rtt-cell-face",
         *_power_parts(cell_box.text),
         cell_box.width,
     )

@@ -89,10 +89,10 @@
   });
 
   // ---- keyboard navigation ----
-  function gridInput(el) { return el && el.querySelector && el.querySelector('.rtt-cellinput input:not([disabled])'); }
+  function gridInput(el) { return el && el.querySelector && el.querySelector('.rtt-cell-input-field input:not([disabled])'); }
   function isEditing() {
     var a = document.activeElement;
-    return a && a.matches && a.matches('.rtt-cellinput input');
+    return a && a.matches && a.matches('.rtt-cell-input-field input');
   }
   function activeFromFocus() {
     var a = document.activeElement;

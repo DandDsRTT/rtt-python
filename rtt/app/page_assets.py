@@ -219,7 +219,7 @@ _AUDIO_GLYPHS = {
         '<span class="material-icons rtt-audio-glyph">lock_open</span>',
         '<span class="material-icons rtt-audio-glyph">lock</span>',
     ],
-    "root": '<span class="rtt-audio-rootglyph">1/1</span>',
+    "root": '<span class="rtt-audio-root-glyph">1/1</span>',
 }
 
 _AUDIO_JS = (_ASSETS / "audio.js").read_text(encoding="utf-8")
@@ -576,7 +576,7 @@ _ZOOM_JS = """
     clone.style.transformOrigin = 'top left';
     clone.style.transition = 'none';
     clone.querySelectorAll('.q-tooltip').forEach(n => n.remove());
-    clone.querySelectorAll('.rtt-ratio-op').forEach(n => n.remove());
+    clone.querySelectorAll('.rtt-ratio-operation').forEach(n => n.remove());
     // Browser: cloneNode does NOT copy a live input's typed value (a property, not an attribute), so
     // each editable cell's value is copied onto the clone by hand or it would clone empty.
     const cloneInputs = clone.querySelectorAll('input');
@@ -758,7 +758,7 @@ _BUSY_JS = f"""
   // Quasar's QCheckbox/QRadio commit on a CLICK of their role= div and never emit a DOM `change`,
   // so the committing settings controls are reached here on click, not on a `change` event.
   document.addEventListener('click', (e) => {{
-    if (at(e, '[role=option],.q-item,.q-checkbox,.q-radio,.rtt-rangeopt')) window.rttBusy.arm();
+    if (at(e, '[role=option],.q-item,.q-checkbox,.q-radio,.rtt-range-option')) window.rttBusy.arm();
   }}, true);
   // Browser: keys match on e.code (the physical key) so a Mac's Option+letter dead-keys and special
   // glyphs still match; preventDefault stops the browser's own Ctrl+Z / Alt-mnemonic / Cmd+, firing.

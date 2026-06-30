@@ -203,7 +203,7 @@ class TestBrowserBehavior:
     def test_tab_walks_the_active_cell_along_its_matrix_orientation_line(self, browser):
         with _page(browser) as (page, errors):
             moved = page.evaluate(
-                "() => { const SEL = '.rtt-cell[data-mx=\"vectors:commas\"] .rtt-cellinput input';"
+                "() => { const SEL = '.rtt-cell[data-mx=\"vectors:commas\"] .rtt-cell-input-field input';"
                 " const ins = [...document.querySelectorAll(SEL)].filter(i => !i.disabled && i.offsetParent);"
                 " if (ins.length < 2) return null; ins[0].focus(); const before = document.activeElement;"
                 " before.dispatchEvent(new KeyboardEvent('keydown', {key: 'Tab', bubbles: true, cancelable: true}));"

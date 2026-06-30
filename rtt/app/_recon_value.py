@@ -83,7 +83,7 @@ def cents_face(reconciler, cell_box: spreadsheet.CellBox, cls: str) -> None:
 
 
 def _ratio(reconciler, cell_box: spreadsheet.CellBox, approx: bool, overlay: bool = False) -> None:
-    face = ui.element("div").classes("rtt-ratio rtt-cellface" if overlay else "rtt-ratio")
+    face = ui.element("div").classes("rtt-ratio rtt-cell-face" if overlay else "rtt-ratio")
     reconciler.cells[cell_box.id].value.ratio_face = face
     with face:
         _ratio_body(reconciler, cell_box, approx)
@@ -95,7 +95,7 @@ def _ratio_body(reconciler, cell_box: spreadsheet.CellBox, approx: bool) -> None
         parts = None
     whole = bool(parts) and parts[1] == "1"
     if approx and parts:
-        ui.label("~").classes("rtt-approx")
+        ui.label("~").classes("rtt-approximate")
     if parts:
         with ui.element("div").classes(
             "rtt-fraction rtt-fraction-whole" if whole else "rtt-fraction"
@@ -128,7 +128,7 @@ def build_gridvalue(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
         _build_fraction(reconciler, cell_box, wrap, commit, preview)
     else:
         wrap.classes("rtt-cell-input").props(f'data-vgroup="{_vgroup_key(cell_box)}"')
-        inp = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput")
+        inp = ui.input(on_change=preview).props("dense borderless").classes("rtt-cell-input-field")
         inp.on("blur", commit, js_handler=_GROUP_EXIT_JS)
         reconciler.cells[cell_box.id].value.input = inp
     _arm_gridvalue(reconciler, wrap, cell_box, spec)
@@ -141,14 +141,14 @@ def _build_fraction(reconciler, cell_box: spreadsheet.CellBox, wrap, commit, pre
         num = (
             ui.input(on_change=preview)
             .props("dense borderless")
-            .classes("rtt-cellinput rtt-fraction-numerator-input")
+            .classes("rtt-cell-input-field rtt-fraction-numerator-input")
             .mark(f"{cell_box.id}:num")
         )
         ui.element("div").classes("rtt-fraction-bar")
         den = (
             ui.input(on_change=preview)
             .props("dense borderless")
-            .classes("rtt-cellinput rtt-fraction-denominator-input")
+            .classes("rtt-cell-input-field rtt-fraction-denominator-input")
             .mark(f"{cell_box.id}:den")
         )
     num.on("blur", commit, js_handler=_STACKED_EXIT_JS)
@@ -170,13 +170,13 @@ def _arm_ratio_ops(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     with wrap:
         reduce_button = (
             ui.html(_control_svg("reduce"))
-            .classes("rtt-glyph rtt-ratio-op rtt-ratio-op-reduce")
+            .classes("rtt-glyph rtt-ratio-operation rtt-ratio-operation-reduce")
             .mark(f"{cell_box.id}:reduce")
             .tooltip(tooltips.RATIO_REDUCE_HELP)
         )
         reciprocate_button = (
             ui.html(_control_svg("reciprocate"))
-            .classes("rtt-glyph rtt-ratio-op rtt-ratio-op-recip")
+            .classes("rtt-glyph rtt-ratio-operation rtt-ratio-operation-reciprocate")
             .mark(f"{cell_box.id}:reciprocate")
             .tooltip(tooltips.RATIO_RECIPROCATE_HELP)
         )
@@ -204,8 +204,8 @@ def _sync_ratio_ops(reconciler, cell_id: str, text: str) -> None:
     availability = service.interval_op_availability(text, state.domain_basis)
     for button, enabled in zip(ops, availability, strict=False):
         button.classes(
-            add="" if enabled else "rtt-op-disabled",
-            remove="rtt-op-disabled" if enabled else "",
+            add="" if enabled else "rtt-operation-disabled",
+            remove="rtt-operation-disabled" if enabled else "",
         )
 
 
@@ -297,7 +297,7 @@ def _build_decimal(
             if gen_index is not None:
                 s = (
                     ui.label("")
-                    .classes("rtt-gensign")
+                    .classes("rtt-generator-sign")
                     .mark(f"gensign:{gen_index} {cell_box.id}:sign")
                     .on(
                         "click",
@@ -313,7 +313,7 @@ def _build_decimal(
             whole = (
                 ui.input()
                 .props("dense borderless")
-                .classes("rtt-cellinput rtt-decimal-whole-input")
+                .classes("rtt-cell-input-field rtt-decimal-whole-input")
                 .mark(f"{cell_box.id}:whole")
             )
         with ui.element("div").classes("rtt-decimal-sub"):
@@ -321,7 +321,7 @@ def _build_decimal(
             frac = (
                 ui.input()
                 .props("dense borderless")
-                .classes("rtt-cellinput rtt-decimal-fraction-input")
+                .classes("rtt-cell-input-field rtt-decimal-fraction-input")
                 .mark(f"{cell_box.id}:frac")
             )
     whole.on("blur", commit, js_handler=_STACKED_EXIT_JS)

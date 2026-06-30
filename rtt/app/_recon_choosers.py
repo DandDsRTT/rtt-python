@@ -24,10 +24,10 @@ from rtt.app.render_html import (
 
 
 def build_rangemode(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
-    wrap.classes("rtt-rangemode")
+    wrap.classes("rtt-range-mode")
     opts = {}
     for mode in ("monotone", "tradeoff"):
-        opt = ui.element("div").classes("rtt-rangeopt")
+        opt = ui.element("div").classes("rtt-range-option")
         with opt:
             ui.element("span").classes("rtt-rangebox")
             ui.label(mode).classes("rtt-rangelabel")
@@ -39,9 +39,9 @@ def build_rangemode(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
 def update_rangemode(reconciler, cell_box: spreadsheet.CellBox) -> None:
     for mode, opt in reconciler.cells[cell_box.id].chooser.rangeopts.items():
         (
-            opt.classes(add="rtt-rangeopt-on")
+            opt.classes(add="rtt-range-option-on")
             if mode == cell_box.text
-            else opt.classes(remove="rtt-rangeopt-on")
+            else opt.classes(remove="rtt-range-option-on")
         )
 
 
