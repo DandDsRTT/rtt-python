@@ -98,29 +98,29 @@ def _comma_octaves(d: int, domain_basis=None):
 
 
 def comma_basis_in_form(comma_basis, form: str, domain_basis=None) -> Matrix:
-    cb = _to_matrix(comma_basis)
+    comma_matrix = _to_matrix(comma_basis)
     if form == "canonical":
-        return _to_matrix(canonical_ca(cb))
-    d = len(cb[0]) if cb else (len(domain_basis) if domain_basis else 0)
-    return _to_matrix(_ALT_COMMA_BASIS_FORMS[form](cb, _comma_octaves(d, domain_basis)))
+        return _to_matrix(canonical_ca(comma_matrix))
+    d = len(comma_matrix[0]) if comma_matrix else (len(domain_basis) if domain_basis else 0)
+    return _to_matrix(_ALT_COMMA_BASIS_FORMS[form](comma_matrix, _comma_octaves(d, domain_basis)))
 
 
 def identify_comma_basis_form(comma_basis, domain_basis=None) -> str | None:
-    cb = _to_matrix(comma_basis)
+    comma_matrix = _to_matrix(comma_basis)
     for key in COMMA_BASIS_FORM_KEYS:
-        if comma_basis_in_form(cb, key, domain_basis) == cb:
+        if comma_basis_in_form(comma_matrix, key, domain_basis) == comma_matrix:
             return key
     return None
 
 
 def resolve_comma_basis_form(comma_basis, preferred, domain_basis=None) -> str:
-    cb = _to_matrix(comma_basis)
+    comma_matrix = _to_matrix(comma_basis)
     if (
         preferred in COMMA_BASIS_FORM_KEYS
-        and comma_basis_in_form(cb, preferred, domain_basis) == cb
+        and comma_basis_in_form(comma_matrix, preferred, domain_basis) == comma_matrix
     ):
         return preferred
-    return identify_comma_basis_form(cb, domain_basis) or ""
+    return identify_comma_basis_form(comma_matrix, domain_basis) or ""
 
 
 def form_matrix(mapping) -> Matrix:
