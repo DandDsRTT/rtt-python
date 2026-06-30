@@ -94,7 +94,7 @@ def resolve_complexities(inputs, draft):
         "targets": _complexity(draft.targets),
         "interest": _complexity(draft.interest_ratios),
         "held": _complexity(draft.held_ratios),
-        "detempering": _complexity(draft.gens),
+        "detempering": _complexity(draft.generators),
     }
     prescaler = service.complexity_prescaler(inputs.state.mapping, inputs.tuning_scheme, override=inputs.custom_prescaler)
     return replace(draft, complexities=complexities, prescaler=prescaler,
@@ -105,24 +105,24 @@ def resolve_detempering(inputs, draft):
     return replace(
         draft,
         detempering_vectors=(service.generator_detempering(inputs.state.mapping) if draft.show_generator_detempering else ()),
-        detempering_sizes=(service.interval_sizes(draft.tuning_map, draft.gens, draft.elements) if draft.show_generator_detempering else None))
+        detempering_sizes=(service.interval_sizes(draft.tuning_map, draft.generators, draft.elements) if draft.show_generator_detempering else None))
 
 
-def resolve_canon_mapped(inputs, draft):
-    canon_mapping = draft.canon_mapping
-    _canon_u = [None if (draft.unchanged_basis is None or draft.unchanged_basis[j] is None)
-                else tuple(row[0] for row in service.mapped_commas(canon_mapping, (draft.unchanged_basis[j],)))
+def resolve_canonical_mapped(inputs, draft):
+    canonical_mapping = draft.canonical_mapping
+    _canonical_u = [None if (draft.unchanged_basis is None or draft.unchanged_basis[j] is None)
+                else tuple(row[0] for row in service.mapped_commas(canonical_mapping, (draft.unchanged_basis[j],)))
                 for j in range(draft.unchanged_count)]
-    canon_unchanged_mapped = tuple(
-        tuple((None if _canon_u[j] is None else _canon_u[j][i]) for j in range(draft.unchanged_count))
+    canonical_unchanged_mapped = tuple(
+        tuple((None if _canonical_u[j] is None else _canonical_u[j][i]) for j in range(draft.unchanged_count))
         for i in range(draft.canonical_rank))
     return replace(
-        draft, canon_mapped=service.mapped_intervals(canon_mapping, draft.targets, draft.elements),
-        canon_held_mapped=service.mapped_intervals(canon_mapping, draft.held_ratios, draft.elements),
-        canon_interest_mapped=service.mapped_intervals(canon_mapping, draft.interest_ratios, draft.elements),
-        canon_mapped_commas=service.mapped_commas(canon_mapping, inputs.state.comma_basis),
-        canon_mapped_detempering=(service.mapped_commas(canon_mapping, draft.detempering_vectors) if draft.show_generator_detempering else ()),
-        canon_unchanged_mapped=canon_unchanged_mapped)
+        draft, canonical_mapped=service.mapped_intervals(canonical_mapping, draft.targets, draft.elements),
+        canonical_held_mapped=service.mapped_intervals(canonical_mapping, draft.held_ratios, draft.elements),
+        canonical_interest_mapped=service.mapped_intervals(canonical_mapping, draft.interest_ratios, draft.elements),
+        canonical_mapped_commas=service.mapped_commas(canonical_mapping, inputs.state.comma_basis),
+        canonical_mapped_detempering=(service.mapped_commas(canonical_mapping, draft.detempering_vectors) if draft.show_generator_detempering else ()),
+        canonical_unchanged_mapped=canonical_unchanged_mapped)
 
 
 def resolve_projection_data(inputs, draft):
@@ -149,7 +149,7 @@ def resolve_projection_data(inputs, draft):
         draft, show_projection=show_projection, show_superspace_projection=show_superspace,
         projection_matrix=(service.tuning_projection(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         embedding_matrix=(service.tuning_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None),
-        canon_embedding_matrix=(service.canonical_generator_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None),
+        canonical_embedding_matrix=(service.canonical_generator_embedding(inputs.state, inputs.held_basis_ratios) if show_projection else None),
         projection_rationals=rationals,
         projection_detempering=service.project_vectors(rationals, draft.detempering_vectors),
         projection_held=service.project_vectors(rationals, draft.held),
@@ -170,7 +170,7 @@ def resolve_projection_data(inputs, draft):
 
 
 def _embed_generators_caption(effective_captions):
-    for rc in (("mapping", "gens"), ("superspace_mapping", "superspace_generators")):
+    for rc in (("mapping", "generators"), ("superspace_mapping", "superspace_generators")):
         cap = effective_captions.get(rc)
         if cap and cap.endswith("generators"):
             effective_captions[rc] = cap[:-1] + "(s / embedding)"

@@ -109,14 +109,14 @@ class TestFeatureRenderBranches:
 
     async def test_generators_column_collapses_a_whole_ratio_but_keeps_its_approx_tilde(self, user: User) -> None:
         await user.open("/")
-        num, _den, collapsed = _ro_ratio_face(user, "qgen:0")
+        num, _den, collapsed = _ro_ratio_face(user, "quantities_generator:0")
         assert collapsed and num == "2"
-        assert _approx_markers(user, "qgen:0")
-        _n, _d, gen_collapsed = _ro_ratio_face(user, "qgen:1")
-        assert not gen_collapsed and _approx_markers(user, "qgen:1")
+        assert _approx_markers(user, "quantities_generator:0")
+        _n, _d, generator_collapsed = _ro_ratio_face(user, "quantities_generator:1")
+        assert not generator_collapsed and _approx_markers(user, "quantities_generator:1")
         _toggle(user, "symbols")
-        num2, _d2, still = _ro_ratio_face(user, "qgen:0")
-        assert still and num2 == "2" and _approx_markers(user, "qgen:0")
+        num2, _d2, still = _ro_ratio_face(user, "quantities_generator:0")
+        assert still and num2 == "2" and _approx_markers(user, "quantities_generator:0")
 
     async def test_detempering_column_collapses_a_whole_ratio_to_a_bare_integer(self, user: User) -> None:
         await _enable(user, "generator detempering")
@@ -147,7 +147,7 @@ class TestFeatureRenderBranches:
         user.find(kind=ui.checkbox, content="projection").click()
         await user.should_see(marker="cell:embed:2:1")
         await user.should_see(marker="preset:projection")
-        await user.should_see(marker="preset:projection:gens")
+        await user.should_see(marker="preset:projection:generators")
         assert _cell_child(user, "preset:projection").value == "1/4-comma", "the default meantone (TILT minimax-U) IS quarter-comma — it holds 2/1 and 5/4 — so the choosers # read 1/4-comma and P/G fill in (the 5^(1/4) entries), NOT dashes"
         assert _cell_text(user, "cell:projection:2:1") == "1/4"
         assert _cell_text(user, "cell:embed:2:1") == "1/4"
@@ -155,8 +155,8 @@ class TestFeatureRenderBranches:
         await user.should_see(marker="cell:embed:2:1")
         assert _cell_text(user, "cell:projection:2:1") == "1/3"
         assert _cell_text(user, "cell:embed:2:1") == "1/3"
-        assert _cell_child(user, "preset:projection:gens").value == "1/3-comma"
-        assert _cell_child(user, "tuning:gen:1").value == "694.786"
+        assert _cell_child(user, "preset:projection:generators").value == "1/3-comma"
+        assert _cell_child(user, "tuning:generator:1").value == "694.786"
 
     async def test_projection_choosers_show_a_dash_when_the_tuning_matches_no_named_projection(self, 
         user: User,
@@ -166,10 +166,10 @@ class TestFeatureRenderBranches:
         user.find(kind=ui.checkbox, content="projection").click()
         await user.should_see(marker="preset:projection")
         assert "display-value" not in _cell_child(user, "preset:projection")._props
-        _cell_child(user, "tuning:gen:1").set_value("690")
+        _cell_child(user, "tuning:generator:1").set_value("690")
         await user.should_see(marker="preset:projection")
         assert _cell_child(user, "preset:projection")._props.get("display-value") == "-"
-        assert _cell_child(user, "preset:projection:gens")._props.get("display-value") == "-"
+        assert _cell_child(user, "preset:projection:generators")._props.get("display-value") == "-"
 
     async def test_back_to_scheme_button_reverts_a_picked_projection(self, user: User) -> None:
         await user.open("/")
@@ -186,44 +186,44 @@ class TestFeatureRenderBranches:
     async def test_back_to_scheme_button_shows_without_the_presets_setting(self, user: User) -> None:
         await _enable(user, "projection")
         await user.should_see(marker="scheme:primes")
-        await user.should_see(marker="scheme:gens")
+        await user.should_see(marker="scheme:generators")
         await user.should_not_see(marker="preset:projection")
 
     async def test_editing_the_unchanged_basis_retunes(self, user: User) -> None:
         await _enable(user, "projection")
         await user.should_see(marker="cell:unchanged:0:1")
-        assert _cell_child(user, "tuning:gen:1").value == "696.578"
+        assert _cell_child(user, "tuning:generator:1").value == "696.578"
         _cell_child(user, "cell:unchanged:0:1").set_value("1")
         _cell_child(user, "cell:unchanged:1:1").set_value("1")
         _cell_child(user, "cell:unchanged:2:1").set_value("-1")
         _commit(user, "cell:unchanged:2:1")
-        assert _cell_child(user, "tuning:gen:1").value == "694.786"
+        assert _cell_child(user, "tuning:generator:1").value == "694.786"
 
     async def test_editing_the_unchanged_ratio_retunes(self, user: User) -> None:
         await _enable(user, "projection")
         await user.should_see(marker="unchanged:1")
-        assert _cell_child(user, "tuning:gen:1").value == "696.578"
+        assert _cell_child(user, "tuning:generator:1").value == "696.578"
         _cell_child(user, "unchanged:1").set_value("6/5")
         _commit(user, "unchanged:1")
-        assert _cell_child(user, "tuning:gen:1").value == "694.786"
+        assert _cell_child(user, "tuning:generator:1").value == "694.786"
 
     async def test_editing_the_generator_embedding_retunes(self, user: User) -> None:
         await _enable(user, "projection")
         _toggle(user, "plain text values")
-        await user.should_see(marker="plain_text:projection:gens")
-        assert _cell_child(user, "tuning:gen:1").value == "696.578"
-        _cell_child(user, "plain_text:projection:gens").set_value("{[1 0 0⟩[1/3 -1/3 1/3⟩]")
-        _commit(user, "plain_text:projection:gens")
-        assert _cell_child(user, "tuning:gen:1").value == "694.786"
+        await user.should_see(marker="plain_text:projection:generators")
+        assert _cell_child(user, "tuning:generator:1").value == "696.578"
+        _cell_child(user, "plain_text:projection:generators").set_value("{[1 0 0⟩[1/3 -1/3 1/3⟩]")
+        _commit(user, "plain_text:projection:generators")
+        assert _cell_child(user, "tuning:generator:1").value == "694.786"
 
     async def test_editing_the_projection_matrix_retunes(self, user: User) -> None:
         await _enable(user, "projection")
         _toggle(user, "plain text values")
         await user.should_see(marker="plain_text:projection:primes")
-        assert _cell_child(user, "tuning:gen:1").value == "696.578"
+        assert _cell_child(user, "tuning:generator:1").value == "696.578"
         _cell_child(user, "plain_text:projection:primes").set_value("[⟨1 4/3 4/3]⟨0 -1/3 -4/3]⟨0 1/3 4/3]⟩")
         _commit(user, "plain_text:projection:primes")
-        assert _cell_child(user, "tuning:gen:1").value == "694.786"
+        assert _cell_child(user, "tuning:generator:1").value == "694.786"
 
     async def test_clicking_reduce_folds_the_interval_into_one_equave(self, user: User) -> None:
         await user.open("/")
@@ -261,7 +261,7 @@ class TestProjectionPlainText:
         await user.should_see(marker="plain_text:projection:primes")
         _cell_child(user, "plain_text:projection:primes").set_value("[⟨2 0 0]⟨0 1 0]⟨0 0 1]⟩")
         assert "rtt-plain-text-error" not in _cell_child(user, "plain_text:projection:primes").classes
-        assert _cell_child(user, "tuning:gen:1").value == "696.578", "not retuned"
+        assert _cell_child(user, "tuning:generator:1").value == "696.578", "not retuned"
         _commit(user, "plain_text:projection:primes")
         await user.should_see("isn't a valid projection")
         assert "rtt-plain-text-error" in _cell_child(user, "plain_text:projection:primes").classes
@@ -270,23 +270,23 @@ class TestProjectionPlainText:
         await _enable(user, "projection")
         _toggle(user, "plain text values")
         await user.should_see(marker="plain_text:projection:primes")
-        assert _cell_child(user, "tuning:gen:1").value == "696.578"
+        assert _cell_child(user, "tuning:generator:1").value == "696.578"
         _cell_child(user, "plain_text:projection:primes").set_value("[⟨2 0 0]⟨0 1 0]⟨0 0 1]⟩")
         _commit(user, "plain_text:projection:primes")
         await user.should_see("isn't a valid projection")
         assert "rtt-plain-text-error" in _cell_child(user, "plain_text:projection:primes").classes
-        assert _cell_child(user, "tuning:gen:1").value == "696.578"
+        assert _cell_child(user, "tuning:generator:1").value == "696.578"
 
     async def test_an_invalid_embedding_plain_text_toasts_and_reddens(self, user: User) -> None:
         await _enable(user, "projection")
         _toggle(user, "plain text values")
-        await user.should_see(marker="plain_text:projection:gens")
-        assert _cell_child(user, "tuning:gen:1").value == "696.578"
-        _cell_child(user, "plain_text:projection:gens").set_value("{[0 0 0⟩[0 0 1/4⟩]")
-        _commit(user, "plain_text:projection:gens")
+        await user.should_see(marker="plain_text:projection:generators")
+        assert _cell_child(user, "tuning:generator:1").value == "696.578"
+        _cell_child(user, "plain_text:projection:generators").set_value("{[0 0 0⟩[0 0 1/4⟩]")
+        _commit(user, "plain_text:projection:generators")
         await user.should_see("isn't a valid embedding")
-        assert "rtt-plain-text-error" in _cell_child(user, "plain_text:projection:gens").classes
-        assert _cell_child(user, "tuning:gen:1").value == "696.578"
+        assert "rtt-plain-text-error" in _cell_child(user, "plain_text:projection:generators").classes
+        assert _cell_child(user, "tuning:generator:1").value == "696.578"
 
     async def test_an_unparseable_projection_plain_text_reddens_without_a_toast(self, user: User) -> None:
         await _enable(user, "projection")
@@ -295,7 +295,7 @@ class TestProjectionPlainText:
         _cell_child(user, "plain_text:projection:primes").set_value("not a matrix")
         _commit(user, "plain_text:projection:primes")
         assert "rtt-plain-text-error" in _cell_child(user, "plain_text:projection:primes").classes
-        assert _cell_child(user, "tuning:gen:1").value == "696.578"
+        assert _cell_child(user, "tuning:generator:1").value == "696.578"
 
     async def test_projection_renders_the_consolidated_v_and_scaling_factors(self, user: User) -> None:
         await _enable(user, "projection")
@@ -397,8 +397,8 @@ class TestProjectionPlainText:
     async def test_edge_washes_also_render_into_the_frozen_panes(self, user: User) -> None:
         await user.open("/")
         user.find(kind=ui.checkbox, content="colorization").click()
-        await user.should_see(marker="wash:temperament:counts:gens")
-        await user.should_see(marker="wash:temperament:counts:gens#col")
+        await user.should_see(marker="wash:temperament:counts:generators")
+        await user.should_see(marker="wash:temperament:counts:generators#col")
         await user.should_see(marker="wash:temperament:mapping:quantities#row")
 
     async def test_dummy_tile_parts_reflect_and_drive_the_live_show_state(self, user: User) -> None:
@@ -460,10 +460,10 @@ class TestProjectionPlainText:
 
     async def test_quantities_off_at_runtime_does_not_strand_a_tilde_on_blanked_generator_ratios(self, user: User) -> None:
         await user.open("/")
-        assert _approx_markers(user, "gen:0")
-        assert _approx_markers(user, "qgen:0")
+        assert _approx_markers(user, "generator:0")
+        assert _approx_markers(user, "quantities_generator:0")
         user.find(marker="showpart:quantities").click()
-        assert not _approx_markers(user, "gen:0")
-        assert not _approx_markers(user, "qgen:0")
+        assert not _approx_markers(user, "generator:0")
+        assert not _approx_markers(user, "quantities_generator:0")
         user.find(marker="showpart:quantities").click()
-        assert _approx_markers(user, "gen:0")
+        assert _approx_markers(user, "generator:0")

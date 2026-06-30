@@ -75,12 +75,12 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group
     if key in BANDS["chart"].rows:
         chart_tiles.append((key, group, values))
     y = geometry.rows[key].y
-    is_gen_group = group in ("gens", "superspace_generators")
+    is_generator_group = group in ("generators", "superspace_generators")
     is_prime_group = group in ("primes", "superspace_primes")
     for i, v in enumerate(values):
         cell_id = f"{key}:{geometry.group_elem[group]}:{query.column_token(resolved, group, i)}"
         x = geometry.group_left[group][query.comma_value_pos(resolved, i) if group == "commas" else i]
-        u = query.cell_unit(resolved, key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
+        u = query.cell_unit(resolved, key, group, generator=i if is_generator_group else None, prime=i if is_prime_group else None)
         operand = closed_form_operand(resolved, geometry, context, key, group, i, v) if resolved.flags.math_expressions else None
         if operand is not None:
             cells.append(CellBox(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=u))
@@ -114,8 +114,8 @@ def chart(cells, geometry, context, row_key, column_key, values, indicator=None,
 
 def _emit_tuning_rows(cells, chart_tiles, resolved, geometry, context) -> None:
     _emit_tuning_prime_rows(cells, chart_tiles, resolved, geometry, context)
-    _emit_tuning_gen_row(cells, resolved, geometry, context)
-    _emit_tuning_canongen_row(cells, resolved, geometry, context)
+    _emit_tuning_generator_row(cells, resolved, geometry, context)
+    _emit_tuning_canonical_generator_row(cells, resolved, geometry, context)
     _emit_tuning_superspace_rows(cells, chart_tiles, resolved, geometry, context)
     _emit_tuning_detempering_rows(cells, chart_tiles, resolved, geometry, context)
 
@@ -135,43 +135,43 @@ def _emit_tuning_prime_rows(cells, chart_tiles, resolved, geometry, context) -> 
             tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, "held", held_vals)
 
 
-def _emit_tuning_gen_row(cells, resolved, geometry, context) -> None:
-    if not (query.row_open(geometry, context.collapsed, "tuning") and query.tile_open(geometry, context.collapsed, "tuning", "gens")):
+def _emit_tuning_generator_row(cells, resolved, geometry, context) -> None:
+    if not (query.row_open(geometry, context.collapsed, "tuning") and query.tile_open(geometry, context.collapsed, "tuning", "generators")):
         return
-    gen_kind = "tuningvalue" if resolved.flags.superspace_generators else "gentuningcell"
+    generator_kind = "tuningvalue" if resolved.flags.superspace_generators else "generator_tuning_cell"
     for i, v in enumerate(resolved.tuning.tuning_map.generator_map):
         operand = None
         if resolved.flags.math_expressions and not resolved.flags.superspace_generators:
             closed_form = _closed_form(resolved, context)
             operand = closed_form.generator_operand(i, v) if closed_form is not None else None
         if operand is not None:
-            cells.append(CellBox(f"tuning:gen:{query.column_token(resolved, 'gens', i)}", geometry.group_left["gens"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
-                                 "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "gens", gen=i)))
+            cells.append(CellBox(f"tuning:generator:{query.column_token(resolved, 'generators', i)}", geometry.group_left["generators"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
+                                 "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "generators", generator=i)))
         else:
-            cells.append(CellBox(f"tuning:gen:{query.column_token(resolved, 'gens', i)}", geometry.group_left["gens"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
-                                 gen_kind, text=service.cents(v, resolved.flags.decimals), gen=i, unit=query.cell_unit(resolved, "tuning", "gens", gen=i)))
-        voice(cells, "tuning:gens", i, v)
+            cells.append(CellBox(f"tuning:generator:{query.column_token(resolved, 'generators', i)}", geometry.group_left["generators"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
+                                 generator_kind, text=service.cents(v, resolved.flags.decimals), generator=i, unit=query.cell_unit(resolved, "tuning", "generators", generator=i)))
+        voice(cells, "tuning:generators", i, v)
 
 
-def _emit_tuning_canongen_row(cells, resolved, geometry, context) -> None:
-    if not (query.row_open(geometry, context.collapsed, "tuning") and query.tile_open(geometry, context.collapsed, "tuning", "canongens")):
+def _emit_tuning_canonical_generator_row(cells, resolved, geometry, context) -> None:
+    if not (query.row_open(geometry, context.collapsed, "tuning") and query.tile_open(geometry, context.collapsed, "tuning", "canonical_generators")):
         return
     generator_map = resolved.tuning.tuning_map.generator_map
     for j in range(resolved.dimensions.canonical_rank):
-        v = sum(generator_map[k] * resolved.canon.inverse_form_M[k][j] for k in range(resolved.dimensions.rank))
+        v = sum(generator_map[k] * resolved.canonical.inverse_form_M[k][j] for k in range(resolved.dimensions.rank))
         operand = None
         if resolved.flags.math_expressions:
             closed_form = _closed_form(resolved, context)
             if closed_form is not None:
-                coefficients = [resolved.canon.inverse_form_M[k][j] for k in range(resolved.dimensions.rank)]
+                coefficients = [resolved.canonical.inverse_form_M[k][j] for k in range(resolved.dimensions.rank)]
                 operand = closed_form.canonical_generator_operand(coefficients, v)
         if operand is not None:
-            cells.append(CellBox(f"tuning:cangen:{j}", query.canongen_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
-                                 "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "canongens", gen=j)))
+            cells.append(CellBox(f"tuning:canonical_generator:{j}", query.canonical_generator_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
+                                 "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "canonical_generators", generator=j)))
         else:
-            cells.append(CellBox(f"tuning:cangen:{j}", query.canongen_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
-                                 "tuningvalue", text=service.cents(v, resolved.flags.decimals), gen=j, unit=query.cell_unit(resolved, "tuning", "canongens", gen=j)))
-        voice(cells, "tuning:canongens", j, v)
+            cells.append(CellBox(f"tuning:canonical_generator:{j}", query.canonical_generator_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
+                                 "tuningvalue", text=service.cents(v, resolved.flags.decimals), generator=j, unit=query.cell_unit(resolved, "tuning", "canonical_generators", generator=j)))
+        voice(cells, "tuning:canonical_generators", j, v)
 
 
 def _emit_tuning_superspace_rows(cells, chart_tiles, resolved, geometry, context) -> None:
@@ -197,11 +197,11 @@ def _emit_tuning_superspace_generator_row(cells, chart_tiles, resolved, geometry
         if operand is not None:
             cells.append(CellBox(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
                                  COLUMN_WIDTH, ROW_HEIGHT, "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals),
-                                 unit=query.cell_unit(resolved, "tuning", "superspace_generators", gen=i)))
+                                 unit=query.cell_unit(resolved, "tuning", "superspace_generators", generator=i)))
         else:
             cells.append(CellBox(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
-                                 COLUMN_WIDTH, ROW_HEIGHT, "gentuningcell", text=service.cents(v, resolved.flags.decimals),
-                                 unit=query.cell_unit(resolved, "tuning", "superspace_generators", gen=i)))
+                                 COLUMN_WIDTH, ROW_HEIGHT, "generator_tuning_cell", text=service.cents(v, resolved.flags.decimals),
+                                 unit=query.cell_unit(resolved, "tuning", "superspace_generators", generator=i)))
         voice(cells, "tuning:superspace_generators", i, v)
 
 
@@ -315,18 +315,18 @@ def _emit_tuning_ranges_box(cells, resolved, geometry, context):
     tuning_ranges_box = None
     if geometry.tuning_ranges_chart:
         chosen = resolved.tuning.tuning_map.monotone_generator_range if context.range_mode == "monotone" else resolved.tuning.tuning_map.tradeoff_generator_range
-        gens_x, gens_width = geometry.column_x["gens"], geometry.column_width["gens"]
+        generators_x, generators_width = geometry.column_x["generators"], geometry.column_width["generators"]
         control_y = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_height - geometry.tuning_ranges_extra + RANGE_GAP
-        cells.append(CellBox("rangetitle:tuning:gens", gens_x, control_y + BOX_INNER, gens_width, BOX_TITLE_HEIGHT, "boxtitle",
+        cells.append(CellBox("rangetitle:tuning:generators", generators_x, control_y + BOX_INNER, generators_width, BOX_TITLE_HEIGHT, "boxtitle",
                              text="tuning ranges", align="left"))
         chart_y = control_y + BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
-        cells.append(CellBox("rangechart:tuning:gens", gens_x, chart_y, gens_width, RANGE_CHART_HEIGHT, "rangechart",
+        cells.append(CellBox("rangechart:tuning:generators", generators_x, chart_y, generators_width, RANGE_CHART_HEIGHT, "rangechart",
                              ranges=tuple(chosen) if chosen is not None else (),
                              values=tuple(resolved.tuning.tuning_map.generator_map),
                              decimals=resolved.flags.decimals))
-        cells.append(CellBox("rangemode:tuning:gens", gens_x, chart_y + RANGE_CHART_HEIGHT + RANGE_GAP, gens_width, RANGE_MODE_HEIGHT,
+        cells.append(CellBox("rangemode:tuning:generators", generators_x, chart_y + RANGE_CHART_HEIGHT + RANGE_GAP, generators_width, RANGE_MODE_HEIGHT,
                              "rangemode", text=context.range_mode))
-        tuning_ranges_box = (gens_x, control_y, gens_width, 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + RANGE_CHART_HEIGHT + RANGE_GAP + RANGE_MODE_HEIGHT)
+        tuning_ranges_box = (generators_x, control_y, generators_width, 2 * BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP + RANGE_CHART_HEIGHT + RANGE_GAP + RANGE_MODE_HEIGHT)
     return tuning_ranges_box
 
 

@@ -202,7 +202,7 @@ class TestColumnTokens:
         assert {"v:prime:0", "v:prime:1", "v:prime:2"} <= ids
         assert {"v:target:0", "v:target:1", "v:target:2", "v:target:3"} <= ids
         assert {"h:mapping:0", "h:mapping:1", "h:tuning", "h:just", "h:retune", "h:damage"} <= ids
-        assert {"trunk:primes", "trunk:targets", "trunk:gens"} <= ids
+        assert {"trunk:primes", "trunk:targets", "trunk:generators"} <= ids
         assert {"bus:primes:top", "bus:primes:bot", "foot:primes"} <= ids
         by_id = {line.id: line for line in layout.lines}
         cells = {c.id: c for c in layout.cells}
@@ -264,7 +264,7 @@ class TestSpineAndAxes:
         cells = {c.id: c for c in layout.cells}
         by_id = {line.id: line for line in layout.lines}
         assert cells["header:quantities"].text == "interval ratios"
-        assert cells["header:quantities"].x < cells["header:gens"].x
+        assert cells["header:quantities"].x < cells["header:generators"].x
         assert "trunk:quantities" in by_id
         spine, header = by_id["trunk:quantities"], cells["header:quantities"]
         assert abs(spine.position - (header.x + header.width / 2)) < 0.51
@@ -283,12 +283,12 @@ class TestSpineAndAxes:
         by_id = {line.id: line for line in layout.lines}
         cells = {c.id: c for c in layout.cells}
         ids = set(by_id)
-        assert {"v:gen:0", "v:gen:1"} <= ids
-        assert {"trunk:gens", "bus:gens:top", "bus:gens:bot", "foot:gens"} <= ids
+        assert {"v:generator:0", "v:generator:1"} <= ids
+        assert {"trunk:generators", "bus:generators:top", "bus:generators:bot", "foot:generators"} <= ids
         for i in (0, 1):
-            cell = cells[f"tuning:gen:{i}"]
-            assert abs(by_id[f"v:gen:{i}"].position - (cell.x + cell.width / 2)) < 0.51
-        assert by_id["trunk:gens"].length < by_id["trunk:quantities"].length, "the trunk is now just the short fan stem above the data, not a full-height spine"
+            cell = cells[f"tuning:generator:{i}"]
+            assert abs(by_id[f"v:generator:{i}"].position - (cell.x + cell.width / 2)) < 0.51
+        assert by_id["trunk:generators"].length < by_id["trunk:quantities"].length, "the trunk is now just the short fan stem above the data, not a full-height spine"
 
     def test_interval_vectors_row_fans_into_per_component_axes(self):
         layout = _layout()
@@ -316,12 +316,12 @@ class TestSpineAndAxes:
     def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure(self):
         layout = _with(gridded_values=False)
         ids = {c.id for c in layout.cells}
-        assert not any(c.startswith(("prime:", "target:", "gen:", "cell:mapping:",
+        assert not any(c.startswith(("prime:", "target:", "generator:", "cell:mapping:",
                                      "cell:mapped:", "cell:vector:", "comma:", "cell:comma:",
                                      "tuning:", "just:", "retune:", "damage:"))
                        for c in ids)
         assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
-        assert {"minus", "plus", "comma_minus:0", "comma_plus", "gen_minus", "gen_plus",
+        assert {"minus", "plus", "comma_minus:0", "comma_plus", "generator_minus", "generator_plus",
                 "map_minus:0", "map_plus", "target_minus:0", "target_plus"}.isdisjoint(ids)
         assert {"label:mapping", "header:primes", "header:targets", "toggle:row:mapping",
                 "caption:mapping:primes"} <= ids
@@ -331,11 +331,11 @@ class TestSpineAndAxes:
     def test_general_quantities_off_blanks_the_body_numbers_keeping_boxes_and_brackets(self):
         on = {c.id: c for c in _with().cells}
         off = {c.id: c for c in _with(quantities=False).cells}
-        body = ("cell:mapping:0:0", "cell:mapped:0:0", "cell:comma:0:0", "tuning:prime:0", "gen:0")
+        body = ("cell:mapping:0:0", "cell:mapped:0:0", "cell:comma:0:0", "tuning:prime:0", "generator:0")
         for cell_id in body:
             assert cell_id in off and not on[cell_id].blank
             assert off[cell_id].blank and off[cell_id].text == ""
-        assert on["cell:mapped:0:0"].text and on["gen:0"].text and on["tuning:prime:0"].text
+        assert on["cell:mapped:0:0"].text and on["generator:0"].text and on["tuning:prime:0"].text
         assert any(c.startswith("bracket:") for c in off)
         assert "ebktop:primes" in off and "ebkbrace:primes" in off
         assert {"plus", "minus", "comma_plus", "label:mapping", "header:primes", "toggle:row:mapping"} <= set(off), "the domain/comma ± controls and the tile structure carry no value, so they're untouched"
@@ -351,7 +351,7 @@ class TestSpineAndAxes:
             "prime:0", "prime:2",
             "comma:0", "target:0",
             "basis:0", "basis:2",
-            "qgen:0",
+            "quantities_generator:0",
             "superspace_quantity_prime:0", "superspace_quantity_generator:0",
         )
         for cell_id in regions:
@@ -381,7 +381,7 @@ class TestSpineAndAxes:
         off = {c.id: c for c in _with(temperament_tiles=False).cells}
         on = {c.id: c for c in _with().cells}
         assert "label:mapping" not in off
-        assert not any(c.startswith(("cell:mapping:", "cell:mapped:", "gen:")) for c in off)
+        assert not any(c.startswith(("cell:mapping:", "cell:mapped:", "generator:")) for c in off)
         assert "label:vectors" in off, "the interval-vectors row owns its own toggle now (interval_vectors), so it does NOT go with # the temperament tiles: it stays, still showing the target vectors over the surviving targets # column. Only the cells in the now-gone temperament columns (the comma vectors) vanish"
         assert "cell:vector:targets:0:0" in off
         assert "header:primes" not in off
@@ -489,11 +489,11 @@ class TestSpineAndAxes:
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         ranges = settings.defaults(); ranges["tuning_ranges"] = True
         on = {b.id: b for b in spreadsheet.build(base, ranges).blocks}
-        gens = on["block:tuning:gens"].height
+        generators = on["block:tuning:generators"].height
         for sib in ("block:tuning:primes", "block:tuning:commas", "block:tuning:targets"):
-            assert on[sib].height == gens, sib
+            assert on[sib].height == generators, sib
         off = {b.id: b for b in spreadsheet.build(base).blocks}
-        assert gens > off["block:tuning:primes"].height
+        assert generators > off["block:tuning:primes"].height
 
         alt = settings.defaults(); alt["weighting"] = True; alt["alt_complexity"] = True
         aon = {b.id: b for b in spreadsheet.build(base, alt, tuning_scheme="TILT minimax-S").blocks}
@@ -507,10 +507,10 @@ class TestSpineAndAxes:
     def test_collapsing_a_column_does_not_shrink_its_rows_caption_band(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = settings.defaults()
-        without_gens = {b.id: b for b in spreadsheet.build(base, s, collapsed={"column:commas"}).blocks}
-        with_gens = {b.id: b for b in spreadsheet.build(base, s, collapsed={"column:commas", "column:gens"}).blocks}
+        without_generators = {b.id: b for b in spreadsheet.build(base, s, collapsed={"column:commas"}).blocks}
+        with_generators = {b.id: b for b in spreadsheet.build(base, s, collapsed={"column:commas", "column:generators"}).blocks}
         for sib in ("block:tuning:primes", "block:tuning:targets"):
-            assert with_gens[sib].height == without_gens[sib].height, f"{sib} shrank when the gens column collapsed"
+            assert with_generators[sib].height == without_generators[sib].height, f"{sib} shrank when the generators column collapsed"
 
     def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -538,7 +538,7 @@ class TestSpineAndAxes:
         assert by_id["trunk:primes"].dotted
         assert by_id["v:prime:0"].dotted
         assert not by_id["h:quantities"].dotted
-        assert not by_id["trunk:gens"].dotted
+        assert not by_id["trunk:generators"].dotted
 
     def test_a_collapsed_fanned_mapping_row_dots_its_converged_rules(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -558,36 +558,36 @@ class TestFormBox:
 
     def test_form_box_shows_the_canonical_mapping_over_the_primes(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}
-        assert cells["cell:canon:0:0"].text == "1"
-        assert cells["cell:canon:0:2"].text == "-4"
-        assert cells["cell:canon:1:1"].text == "1"
-        assert cells["cell:canon:1:2"].text == "4"
-        assert not any(c.id.startswith("cell:canon:") for c in _layout().cells)
+        assert cells["cell:canonical:0:0"].text == "1"
+        assert cells["cell:canonical:0:2"].text == "-4"
+        assert cells["cell:canonical:1:1"].text == "1"
+        assert cells["cell:canonical:1:2"].text == "4"
+        assert not any(c.id.startswith("cell:canonical:") for c in _layout().cells)
 
     def test_canonical_mapping_row_is_framed_like_the_mapping_above_it(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}
-        assert cells["bracket:canon:map:0:l"].text == "⟨" and cells["bracket:canon:map:0:r"].text == "]"
-        assert "ebktop:canon" in cells and "ebkbrace:canon" in cells
-        assert cells["ebktop:canon"].y < cells["cell:canon:0:0"].y
-        assert cells["ebkbrace:canon"].y > cells["cell:canon:1:0"].y
-        assert cells["caption:canon:primes"].text == "canonical mapping"
-        assert cells["basis:0"].y < cells["cell:canon:0:0"].y < cells["cell:mapping:0:0"].y
-        assert "ebktop:primes" in cells and cells["ebktop:primes"].y > cells["cell:canon:1:0"].y
+        assert cells["bracket:canonical:map:0:l"].text == "⟨" and cells["bracket:canonical:map:0:r"].text == "]"
+        assert "ebktop:canonical" in cells and "ebkbrace:canonical" in cells
+        assert cells["ebktop:canonical"].y < cells["cell:canonical:0:0"].y
+        assert cells["ebkbrace:canonical"].y > cells["cell:canonical:1:0"].y
+        assert cells["caption:canonical:primes"].text == "canonical mapping"
+        assert cells["basis:0"].y < cells["cell:canonical:0:0"].y < cells["cell:mapping:0:0"].y
+        assert "ebktop:primes" in cells and cells["ebktop:primes"].y > cells["cell:canonical:1:0"].y
 
-    def test_form_box_shows_the_inverse_form_matrix_over_the_gens(self):
+    def test_form_box_shows_the_inverse_form_matrix_over_the_generators(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}
-        assert cells["cell:form:0:0"].text == "1" and cells["cell:form:0:1"].text == "-1", "the canon row's gens tile is 𝐹⁻¹ (𝑀_C = 𝐹⁻¹𝑀, g_C/g) — read-only; the EDITABLE 𝐹 (𝑀 = 𝐹𝑀_C) # rides the mapping row's canonical-generators column instead. For ((1,1,0),(0,1,4)), 𝐹⁻¹ = ((1,-1),(0,1))"
+        assert cells["cell:form:0:0"].text == "1" and cells["cell:form:0:1"].text == "-1", "the canonical row's generators tile is 𝐹⁻¹ (𝑀_C = 𝐹⁻¹𝑀, g_C/g) — read-only; the EDITABLE 𝐹 (𝑀 = 𝐹𝑀_C) # rides the mapping row's canonical-generators column instead. For ((1,1,0),(0,1,4)), 𝐹⁻¹ = ((1,-1),(0,1))"
         assert cells["cell:form:1:0"].text == "0" and cells["cell:form:1:1"].text == "1"
         assert cells["cell:form:0:0"].kind == "mapped"
-        assert cells["caption:canon:gens"].text == "inverse generator form matrix"
+        assert cells["caption:canonical:generators"].text == "inverse generator form matrix"
         assert cells["bracket:form:map:0:l"].text == "{" and cells["bracket:form:map:0:r"].text == "]"
         assert "ebktop:form" in cells and "ebkbrace:form" in cells
         assert not any(c.id.startswith("cell:form:") for c in _layout().cells)
 
     def test_canonical_generators_column_sits_between_units_and_generators(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}
-        assert cells["header:canongens"].text == "canonical\ngenerators"
-        assert cells["header:quantities"].x < cells["header:canongens"].x < cells["header:gens"].x
+        assert cells["header:canonical_generators"].text == "canonical\ngenerators"
+        assert cells["header:quantities"].x < cells["header:canonical_generators"].x < cells["header:generators"].x
         with_units = {c.id: c for c in _with(form_tiles=True, domain_units=True).cells}
-        assert with_units["header:units"].x < with_units["header:canongens"].x < with_units["header:gens"].x
-        assert not any(c.id == "header:canongens" for c in _layout().cells)
+        assert with_units["header:units"].x < with_units["header:canonical_generators"].x < with_units["header:generators"].x
+        assert not any(c.id == "header:canonical_generators" for c in _layout().cells)

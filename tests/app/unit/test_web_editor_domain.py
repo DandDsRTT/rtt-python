@@ -150,8 +150,8 @@ class TestNonprimeApproach:
         neutral = {c.id: c.text for c in editor.layout().cells}
         editor.set_nonprime_basis_approach("nonprime-based")
         nonprime = {c.id: c.text for c in editor.layout().cells}
-        assert neutral["tuning:gen:0"] != nonprime["tuning:gen:0"]
-        assert neutral["tuning:gen:1"] != nonprime["tuning:gen:1"]
+        assert neutral["tuning:generator:0"] != nonprime["tuning:generator:0"]
+        assert neutral["tuning:generator:1"] != nonprime["tuning:generator:1"]
 
     def test_nonprime_basis_approach_resets_when_the_domain_loses_its_nonprimes(self):
         editor = Editor()

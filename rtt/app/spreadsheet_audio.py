@@ -27,7 +27,7 @@ def assign_matrix(cells, resolved, geometry):
 def _canon_generator_sizes(resolved):
     generator_map, inverse_form = (
         resolved.tuning.tuning_map.generator_map,
-        resolved.canon.inverse_form_M,
+        resolved.canonical.inverse_form_M,
     )
     return tuple(
         sum(generator_map[k] * inverse_form[k][j] for k in range(resolved.dimensions.rank))
@@ -94,19 +94,21 @@ _INTERVAL_KINDS = frozenset(
         "interestcell",
         "heldcell",
         "targetcell",
-        "genratio",
+        "generator_ratio",
         "elementcell",
         "elementratio",
     }
 )
 
-_IDENTITY_TILES = frozenset({("mapping", "gens"), ("superspace_mapping", "superspace_generators")})
+_IDENTITY_TILES = frozenset(
+    {("mapping", "generators"), ("superspace_mapping", "superspace_generators")}
+)
 
 _TILE_PREFIX = {
     "quantities": "quantities",
     "vectors": "vectors",
     "mapping": "mapped",
-    "canon": "canon",
+    "canonical": "canonical",
     "projection": "projection",
     "superspace_vectors": "superspace_vectors",
     "superspace_mapping": "superspace_mapped",
@@ -114,14 +116,14 @@ _TILE_PREFIX = {
 }
 
 _JUST_ROWS = frozenset({"quantities", "vectors", "superspace_vectors"})
-_TEMPERED_ROWS = frozenset({"mapping", "canon", "superspace_mapping"})
+_TEMPERED_ROWS = frozenset({"mapping", "canonical", "superspace_mapping"})
 _INTERVALS_RUN_DOWN_THE_COLUMN = frozenset({"quantities"})
 
 _BASIS_MAP = {
     "primes": "just_map",
     "superspace_primes": "superspace_just_map",
-    "gens": "generator_map",
-    "canongens": "canon_generator_sizes",
+    "generators": "generator_map",
+    "canonical_generators": "canon_generator_sizes",
     "superspace_generators": "superspace_generator_map",
 }
 _MIRROR_MAP = {
@@ -130,7 +132,7 @@ _MIRROR_MAP = {
     "superspace_vectors": "superspace_just_map",
     "superspace_projection": "superspace_just_map",
     "mapping": "generator_map",
-    "canon": "canon_generator_sizes",
+    "canonical": "canon_generator_sizes",
     "superspace_mapping": "superspace_generator_map",
 }
 

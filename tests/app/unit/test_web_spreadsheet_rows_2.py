@@ -437,7 +437,7 @@ class TestRowAndColumnLabels:
     def test_units_annotate_each_box_with_its_unit_string(self):
         on = {c.id: c for c in _with(units=True, names=True).cells}
         off = {c.id: c for c in _with(units=False).cells}
-        assert on["units:tuning:gens"].text == "units: ¢/g"
+        assert on["units:tuning:generators"].text == "units: ¢/g"
         assert on["units:tuning:primes"].text == "units: ¢/p"
         assert on["units:mapping:primes"].text == "units: g/p"
         assert on["units:mapping:targets"].text == "units: g"
@@ -452,7 +452,7 @@ class TestRowAndColumnLabels:
         assert on["cell:mapping:0:0"].unit == "g₁/p₁"
         assert on["cell:mapping:1:2"].unit == "g₂/p₃"
         assert on["tuning:prime:0"].unit == "¢/p₁"
-        assert on["tuning:gen:0"].unit == "¢/g₁"
+        assert on["tuning:generator:0"].unit == "¢/g₁"
         assert on["tuning:target:0"].unit == "¢"
         assert on["cell:mapped:0:0"].unit == "g₁"
         assert on["cell:vector:targets:0:0"].unit == "p₁"
@@ -478,17 +478,17 @@ class TestRowAndColumnLabels:
         assert on["units_column:mapping:0"].text == "g₁/"
         assert on["units_column:tuning"].text == "¢/"
         assert on["units_column:damage"].text == "¢(U)/"
-        assert on["units_row:gens:0"].text == "/g₁"
+        assert on["units_row:generators:0"].text == "/g₁"
         assert on["units_row:primes:0"].text == "/p₁"
         assert on["units_row:primes:2"].text == "/p₃"
         assert on["units_row:targets:0"].text == "/1"
         assert on["units_row:primes:0"].x == on["prime:0"].x
         assert on["units_column:vectors:0"].y == on["basis:0"].y
-        assert on["units_column:mapping:0"].y == on["gen:0"].y
+        assert on["units_column:mapping:0"].y == on["generator:0"].y
         assert "header:units" in on and "label:units" in on
         assert not any(c.startswith(("units_column:", "units_row:")) for c in off)
         assert "header:units" not in off and "label:units" not in off
-        assert on["header:quantities"].x < on["header:units"].x < on["header:gens"].x
+        assert on["header:quantities"].x < on["header:units"].x < on["header:generators"].x
         assert on["label:quantities"].y < on["label:units"].y < on["label:vectors"].y
 
     def test_nonstandard_domain_units_use_basis_element_label_b(self):
@@ -604,8 +604,8 @@ class TestRowAndColumnLabels:
 
     def test_generator_tuning_map_cells_are_editable_inputs(self):
         cells = {c.id: c for c in _layout().cells}
-        assert cells["tuning:gen:0"].kind == "gentuningcell"
-        assert cells["tuning:gen:1"].kind == "gentuningcell"
+        assert cells["tuning:generator:0"].kind == "generator_tuning_cell"
+        assert cells["tuning:generator:1"].kind == "generator_tuning_cell"
 
     def test_a_target_override_drives_the_target_columns(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -623,7 +623,7 @@ class TestRowAndColumnLabels:
         plain = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-U", target_spec="TILT").cells}
         overridden = {c.id: c for c in spreadsheet.build(
             base, s, tuning_scheme="TILT minimax-U", target_spec="TILT", target_override=("2/1", "3/2")).cells}
-        assert overridden["tuning:gen:1"].text != plain["tuning:gen:1"].text
+        assert overridden["tuning:generator:1"].text != plain["tuning:generator:1"].text
 
     def test_target_interval_list_cells_and_plain_text_are_editable(self):
         cells = {c.id: c for c in _with(plain_text_values=True).cells}

@@ -63,7 +63,7 @@ class TestViewportVirtualization:
         deferred = [c.id for c in body if c.id not in page.reconciler.entities]
         assert deferred, "a 320x320 viewport must defer some off-screen cells at cold paint"
 
-        await page.renderer._fill_offscreen(page.renderer._fill_gen)
+        await page.renderer._fill_offscreen(page.renderer._fill_generator)
 
         for c in layout.cells:
             assert c.id in page.reconciler.entities, f"fill left {c.id} unmaterialized"

@@ -305,7 +305,7 @@ def _build_subpick(reconciler, cell_box, wrap, options, value):
 def build_etpick(reconciler, cell_box, wrap):
     state = reconciler._editor.state
     db = state.domain_basis
-    value = None if cell_box.pending else presets.identify_et(state.mapping[cell_box.gen], db)
+    value = None if cell_box.pending else presets.identify_et(state.mapping[cell_box.generator], db)
     _build_subpick(reconciler, cell_box, wrap, presets.et_options(db), value)
 
 
@@ -329,10 +329,10 @@ def update_subpick(reconciler, cell_box):
     db = state.domain_basis
     if cell_box.id.startswith("etpick:"):
         options = presets.et_options(db)
-        if cell_box.pending or cell_box.gen >= len(state.mapping):
+        if cell_box.pending or cell_box.generator >= len(state.mapping):
             value = None
         else:
-            value = presets.identify_et(state.mapping[cell_box.gen], db)
+            value = presets.identify_et(state.mapping[cell_box.generator], db)
     else:
         options = presets.comma_options(db)
         if cell_box.pending or cell_box.comma >= len(state.comma_basis):

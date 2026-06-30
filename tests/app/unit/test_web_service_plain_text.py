@@ -57,7 +57,7 @@ class TestPlainTextRows:
         pt = service.plain_text_values(state)
         tuning_map = service.tuning(state.mapping)
         cents = " ".join(f"{v:.3f}" for v in tuning_map.generator_map)
-        assert pt[("tuning", "gens")] == "{" + cents + "]"
+        assert pt[("tuning", "generators")] == "{" + cents + "]"
 
 
 class TestPlainTextColumns:
@@ -147,7 +147,7 @@ class TestPlainTextTuning:
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         base = service.plain_text_values(state, "TILT minimax-U", "TILT")
         overridden = service.plain_text_values(state, "TILT minimax-U", "TILT", target_override=("2/1", "3/2"))
-        assert overridden[("tuning", "gens")] != base[("tuning", "gens")]
+        assert overridden[("tuning", "generators")] != base[("tuning", "generators")]
 
     def test_plain_text_custom_prescaler_matches_the_grid(self):
         state = service.from_mapping(((1, 1, 0), (0, 1, 4)))

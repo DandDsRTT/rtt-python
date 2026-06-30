@@ -39,7 +39,7 @@
   // every interval tile in the band is covered without enumerating tiles.
   const BANDS = [
     { name: 'mapping', matrix: 'cell:mapping:', result: /^cell:(mapped|hmapped|imapped|mapped_comma|mapped_unchanged|mapped_detempering):/, vec: STD_VEC },
-    { name: 'canonical', matrix: 'cell:canon:', result: /^cell:canon_/, vec: STD_VEC },
+    { name: 'canonical', matrix: 'cell:canonical:', result: /^cell:canonical_/, vec: STD_VEC },
     { name: 'projection', matrix: 'cell:projection:', result: /^cell:projection_/, vec: STD_VEC },
     { name: 'superspace_mapping', matrix: 'cell:superspace_mapping:superspace_primes:', result: /^cell:superspace_mapping:(targets|held|interest|commas|detempering):/, vec: SS_VEC },
     { name: 'superspace_projection', matrix: 'cell:superspace_projection:superspace_primes:', result: /^cell:superspace_projection_(targets|held|interest|detempering|vectors):/, vec: SS_VEC },

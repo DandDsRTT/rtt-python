@@ -68,10 +68,10 @@ class TestMatrixEdits:
 
     def test_edit_form_matrix_restores_the_mapping_in_the_typed_generating_set_undoably(self):
         editor = Editor()
-        canon, commas = service.canonical_mapping(editor.state.mapping), editor.state.comma_basis
+        canonical, commas = service.canonical_mapping(editor.state.mapping), editor.state.comma_basis
         assert editor.edit_form_matrix(((1, 2), (0, 1))) is True
         assert editor.state.mapping == ((1, 2, 4), (0, 1, 4))
-        assert service.canonical_mapping(editor.state.mapping) == canon
+        assert service.canonical_mapping(editor.state.mapping) == canonical
         assert editor.state.comma_basis == commas
         assert service.inverse_form_matrix(editor.state.mapping) == ((1, 2), (0, 1))
         editor.undo()

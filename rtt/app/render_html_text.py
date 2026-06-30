@@ -89,7 +89,7 @@ def _approach_visible(editor) -> bool:
     return service.domain_has_nonprimes(editor.state.domain_basis)
 
 
-def _gentuning_parts(text: str) -> tuple[str, str, str]:
+def _generator_tuning_parts(text: str) -> tuple[str, str, str]:
     if not text:
         return "", "", ""
     sign, body = ("−", text[1:]) if text.startswith("-") else ("+", text)

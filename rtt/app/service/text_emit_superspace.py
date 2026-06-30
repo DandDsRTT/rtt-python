@@ -170,7 +170,7 @@ def _superspace_base(context: _TextContext, superspace_context: _SuperspaceConte
         ("superspace_mapping", "interest"): _ket_list(
             map_vectors_into_superspace_generators(s, context.interest), "}", wrap=False
         ),
-        ("tuning", "superspace_generators"): context.formatter.cents_genmap(
+        ("tuning", "superspace_generators"): context.formatter.cents_generator_map(
             superspace_context.superspace_tuning_map.generator_map
         ),
         ("tuning", "superspace_primes"): context.formatter.cents_map(

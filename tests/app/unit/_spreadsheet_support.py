@@ -307,7 +307,7 @@ def _spine_colormap():
 _CANON_MEANTONE = ((1, 0, -4), (0, 1, 4))
 
 
-def _canon_cells(**overrides):
+def _canonical_cells(**overrides):
     s = settings.defaults()
     s.update(overrides)
     held = s.pop("_held_vectors", None)

@@ -10,7 +10,7 @@ from rtt.app.spreadsheet_text import _min_width_for_lines, assign_column_tokens
 def resolve_interval_sets(inputs, draft):
     draft = resolve_ghost_previews(inputs, draft)
     draft = resolve_targets(inputs, draft)
-    draft = resolve_canon_form(inputs, draft)
+    draft = resolve_canonical_form(inputs, draft)
     draft = resolve_held(inputs, draft)
     draft = resolve_tuning(inputs, draft)
     draft = resolve_commas(inputs, draft)
@@ -27,15 +27,15 @@ def resolve_ghost_previews(inputs, draft):
     if draft.ghost_row:
         ghost_new = service.remove_comma(inputs.state, inputs.preview_remove[1])
         ghost_row_map = ghost_new.mapping[-1]
-        born_gens = service.generators(ghost_new.mapping, elements)
-        ghost_row_ratio = born_gens[-1] if born_gens else ""
+        born_generators = service.generators(ghost_new.mapping, elements)
+        ghost_row_ratio = born_generators[-1] if born_generators else ""
     elif draft.ghost_comma:
         ghost_new = service.remove_mapping_row(inputs.state, inputs.preview_remove[1])
         ghost_comma_vector = ghost_new.comma_basis[-1] if ghost_new.comma_basis else None
         born_crs = service.comma_ratios(ghost_new.comma_basis, elements) if ghost_new.comma_basis else ()
         ghost_comma_ratio = born_crs[-1] if born_crs else ""
     return replace(
-        draft, gens=service.generators(inputs.state.mapping, elements), ghost_new=ghost_new,
+        draft, generators=service.generators(inputs.state.mapping, elements), ghost_new=ghost_new,
         ghost_row_map=ghost_row_map, ghost_row_ratio=ghost_row_ratio, ghost_row_mapped={},
         ghost_comma_vector=ghost_comma_vector, ghost_comma_ratio=ghost_comma_ratio,
         ghost_comma_mapped=(), ghost_comma_just=0.0, ghost_comma_complexity=0.0)
@@ -53,22 +53,22 @@ def resolve_targets(inputs, draft):
         mapped=service.mapped_intervals(inputs.state.mapping, targets, draft.elements))
 
 
-def resolve_canon_form(inputs, draft):
-    canon_mapping = service.canonical_mapping(inputs.state.mapping)
+def resolve_canonical_form(inputs, draft):
+    canonical_mapping = service.canonical_mapping(inputs.state.mapping)
     mapping_form_key = service.resolve_mapping_form(
         inputs.state.mapping, inputs.mapping_form, inputs.state.domain_basis)
     form_is_canonical = mapping_form_key == "canonical"
     return replace(
-        draft, canon_mapping=canon_mapping, canonical_rank=len(canon_mapping),
+        draft, canonical_mapping=canonical_mapping, canonical_rank=len(canonical_mapping),
         form_M=service.form_matrix(inputs.state.mapping),
-        canon_gens=service.generators(canon_mapping, draft.elements),
+        canonical_generators=service.generators(canonical_mapping, draft.elements),
         inverse_form_M=service.inverse_form_matrix(inputs.state.mapping),
         mapping_form_key=mapping_form_key,
         comma_basis_form_key=(service.resolve_comma_basis_form(
             inputs.state.comma_basis, inputs.comma_basis_form, inputs.state.domain_basis) if inputs.state.nullity else ""),
         form_is_canonical=form_is_canonical,
         show_form_subscript=draft.show_form and form_is_canonical,
-        show_canon=draft.show_form_tiles and not form_is_canonical)
+        show_canonical=draft.show_form_tiles and not form_is_canonical)
 
 
 def resolve_held(inputs, draft):
@@ -200,9 +200,9 @@ def resolve_col_ids(inputs, draft):
                                   ("held", draft.held_ratios, False),
                                   ("interest", draft.interest_ratios, False),
                                   ("commas", draft.comma_ratios, True),
-                                  ("gens", tuple(tuple(row) for row in inputs.state.mapping), True))
+                                  ("generators", tuple(tuple(row) for row in inputs.state.mapping), True))
     }
-    column_ids["detempering"] = column_ids["gens"]
+    column_ids["detempering"] = column_ids["generators"]
     return replace(draft, _col_ids=column_ids)
 
 

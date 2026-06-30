@@ -43,8 +43,8 @@ def projection_top(geometry, i: int) -> float:
     return geometry.rows["projection"].y + i * ROW_HEIGHT
 
 
-def canon_top(geometry, i: int) -> float:
-    return geometry.rows["canon"].y + i * ROW_HEIGHT
+def canonical_top(geometry, i: int) -> float:
+    return geometry.rows["canonical"].y + i * ROW_HEIGHT
 
 
 def vector_top(geometry, p: int) -> float:
@@ -159,9 +159,12 @@ def tile_box(geometry, key: str):
 
 
 def tile_span_box(geometry, row_key: str, column_key: str):
-    if (row_key, column_key) == ("counts", "gens") and "canongens" in geometry.column_x:
-        x = geometry.column_x["canongens"]
-        return x, geometry.column_x["gens"] + geometry.column_width["gens"] - x
+    if (row_key, column_key) == (
+        "counts",
+        "generators",
+    ) and "canonical_generators" in geometry.column_x:
+        x = geometry.column_x["canonical_generators"]
+        return x, geometry.column_x["generators"] + geometry.column_width["generators"] - x
     return tile_box(geometry, column_key)
 
 
@@ -237,25 +240,25 @@ def detempering_left(geometry, i: int) -> float:
     return geometry.detempering_x + BRACKET_WIDTH + i * COLUMN_WIDTH
 
 
-def gen_left(geometry, g: int) -> float:
+def generator_left(geometry, g: int) -> float:
     return (
-        geometry.content_x["gens"]
-        + outer_gutter_width(geometry, "gens")
+        geometry.content_x["generators"]
+        + outer_gutter_width(geometry, "generators")
         + BRACKET_WIDTH
         + g * COLUMN_WIDTH
     )
 
 
-def canongen_left(geometry, g: int) -> float:
+def canonical_generator_left(geometry, g: int) -> float:
     return (
-        geometry.canongens_x
-        + outer_gutter_width(geometry, "canongens")
+        geometry.canonical_generators_x
+        + outer_gutter_width(geometry, "canonical_generators")
         + BRACKET_WIDTH
         + g * COLUMN_WIDTH
     )
 
 
-def superspace_gen_left(geometry, g: int) -> float:
+def superspace_generator_left(geometry, g: int) -> float:
     return geometry.superspace_generators_x + BRACKET_WIDTH + g * COLUMN_WIDTH
 
 
@@ -338,7 +341,9 @@ def tile_unit(resolved, row_key: str, column_key: str) -> str:
     return base
 
 
-def cell_unit(resolved, row_key: str, column_key: str, *, gen=None, prime=None, elem=None) -> str:
+def cell_unit(
+    resolved, row_key: str, column_key: str, *, generator=None, prime=None, elem=None
+) -> str:
     if not resolved.flags.cell_units:
         return ""
     u = tile_unit(resolved, row_key, column_key)
@@ -346,16 +351,16 @@ def cell_unit(resolved, row_key: str, column_key: str, *, gen=None, prime=None, 
         "superspace_generators",
         "superspace_primes",
     )
-    if gen is not None:
+    if generator is not None:
         if superspace:
-            u = u.replace(f"g{SUBSCRIPT_L}", f"g{SUBSCRIPT_L}{_sub(gen + 1)}")
+            u = u.replace(f"g{SUBSCRIPT_L}", f"g{SUBSCRIPT_L}{_sub(generator + 1)}")
         elif f"g{SUBSCRIPT_C}" in u:
             gesture_controller = f"g{SUBSCRIPT_C}"
             u = _subscript_coord(
-                u.replace(gesture_controller, "\x00"), "g", f"g{_sub(gen + 1)}"
-            ).replace("\x00", f"{gesture_controller}{_sub(gen + 1)}")
+                u.replace(gesture_controller, "\x00"), "g", f"g{_sub(generator + 1)}"
+            ).replace("\x00", f"{gesture_controller}{_sub(generator + 1)}")
         else:
-            u = _subscript_coord(u, "g", f"g{_sub(gen + 1)}")
+            u = _subscript_coord(u, "g", f"g{_sub(generator + 1)}")
     if prime is not None:
         coordinate = "p" if superspace else resolved.labels.domain_label
         u = _subscript_coord(u, "p", f"{coordinate}{_sub(prime + 1)}")
@@ -380,8 +385,8 @@ def plus_shows(geometry, resolved, collapsed, state, column_key: str) -> bool:
             tile_open(geometry, collapsed, "quantities", "targets")
             or tile_open(geometry, collapsed, "vectors", "targets")
         ) and not resolved.scalars.all_interval
-    if column_key == "gens":
-        return tile_open(geometry, collapsed, "quantities", "gens") and state.nullity > 0
+    if column_key == "generators":
+        return tile_open(geometry, collapsed, "quantities", "generators") and state.nullity > 0
     if column_key == "primes":
         return tile_open(geometry, collapsed, "quantities", "primes") and (
             resolved.flags.nonstandard_domain or resolved.scalars.standard_domain

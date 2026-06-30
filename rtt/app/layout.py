@@ -34,7 +34,7 @@ class CellBox:
     height: float
     kind: str
     text: str = ""
-    gen: int = -1
+    generator: int = -1
     prime: int = -1
     comma: int = -1
     underlines: tuple[tuple[int, int], ...] = ()

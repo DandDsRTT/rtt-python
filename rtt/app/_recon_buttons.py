@@ -29,18 +29,18 @@ def build_plus(reconciler, _cell_box: spreadsheet.CellBox, wrap) -> None:
     preview_control(reconciler, wrap, reconciler._editor.expand)
 
 
-def build_gen_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_generator_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-minus-zone")
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button").on(
         "click",
-        lambda _=None, index=cell_box.gen: reconciler._cell_box.act(
+        lambda _=None, index=cell_box.generator: reconciler._cell_box.act(
             lambda: reconciler._editor.remove_mapping_row(index)
         ),
     )
-    preview_rank_remove(reconciler, wrap, "row", cell_box.gen)
+    preview_rank_remove(reconciler, wrap, "row", cell_box.generator)
 
 
-def build_gen_plus(reconciler, _cell_box: spreadsheet.CellBox, _wrap) -> None:
+def build_generator_plus(reconciler, _cell_box: spreadsheet.CellBox, _wrap) -> None:
     ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fan-button rtt-hk-mapping").on(
         "click",
         lambda _=None: reconciler._cell_box.add_interval(
@@ -59,11 +59,11 @@ def build_map_minus(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
         return
     ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-button-v").on(
         "click",
-        lambda _=None, index=cell_box.gen: reconciler._cell_box.act(
+        lambda _=None, index=cell_box.generator: reconciler._cell_box.act(
             lambda: reconciler._editor.remove_mapping_row(index)
         ),
     )
-    preview_rank_remove(reconciler, wrap, "row", cell_box.gen)
+    preview_rank_remove(reconciler, wrap, "row", cell_box.generator)
 
 
 def build_map_plus(reconciler, _cell_box: spreadsheet.CellBox, _wrap) -> None:

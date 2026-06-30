@@ -169,12 +169,12 @@ class _GestureHover:
         _gesture_ops.on_popup(self.gesture_controller, cell_id, is_open)
 
     @cb_method
-    def gentuning_hover(self, cell_id):
-        _gesture_ops.gentuning_hover(self.gesture_controller, cell_id)
+    def generator_tuning_hover(self, cell_id):
+        _gesture_ops.generator_tuning_hover(self.gesture_controller, cell_id)
 
     @cb_method
-    def gentuning_unhover(self, cell_id):
-        _gesture_ops.gentuning_unhover(self.gesture_controller, cell_id)
+    def generator_tuning_unhover(self, cell_id):
+        _gesture_ops.generator_tuning_unhover(self.gesture_controller, cell_id)
 
     @cb_method
     def on_drag_start(self, lst, index):

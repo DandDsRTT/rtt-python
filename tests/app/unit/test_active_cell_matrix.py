@@ -30,7 +30,7 @@ class TestActiveCellMatrix:
         assert all(not c.matrix for c in _all_on_cells() if c.id.startswith("basis:"))
 
     def test_orientation_is_the_ebk_structure_not_the_emit_loop_order(self):
-        assert _stamped()["projection:gens"] == "col"
+        assert _stamped()["projection:generators"] == "col"
 
     def test_every_stamped_matrix_matches_its_ebk_convention(self):
         for mx, orient in _stamped().items():

@@ -58,9 +58,9 @@ class TestCommaForms:
         for matrix, jip in [(MEANTONE, JIP3), (SEPTIMAL_MEANTONE, JIP4),
                             (((1, -5, 3),), JIP3),
                             (((-11, 7, 0, 0), (4, -4, 1, 0)), JIP4)]:
-            canon = canonical_ca(matrix)
+            canonical = canonical_ca(matrix)
             for form in (cf.positive_ratio_ca, cf.minimal_ca):
-                assert canonical_ca(form(matrix, jip)) == canon, (form.__name__, matrix)
+                assert canonical_ca(form(matrix, jip)) == canonical, (form.__name__, matrix)
 
     def test_forms_are_idempotent_and_input_independent(self):
         for form in (cf.positive_ratio_ca, cf.minimal_ca):

@@ -123,11 +123,11 @@ class TestSettingsAndPanes:
         UserInteraction(user, cell(1, 0), None).trigger("dragenter.prevent")
         assert row1() == ["1", "2", "4"]
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:0")
-        assert "rtt-preview-change" in _wrap_classes(user, "gen:0")
+        assert "rtt-preview-change" in _wrap_classes(user, "generator:0")
         UserInteraction(user, grip(0), None).trigger("dragend")
         assert row1() == ["0", "1", "4"]
         assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:0")
-        assert "rtt-preview-change" not in _wrap_classes(user, "gen:0")
+        assert "rtt-preview-change" not in _wrap_classes(user, "generator:0")
 
     async def test_dropping_a_row_on_its_own_cells_does_nothing(self, user: User) -> None:
         await _enable(user, "drag to combine")
@@ -145,7 +145,7 @@ class TestSettingsAndPanes:
     _ENABLE_HTML_CELLS = [
         ("units", "units:mapping:primes"),
         ("charts", "chart:retune:targets"),
-        ("tuning ranges", "rangechart:tuning:gens"),
+        ("tuning ranges", "rangechart:tuning:generators"),
     ]
 
     @pytest.mark.parametrize("label, cell_id", _ENABLE_HTML_CELLS)

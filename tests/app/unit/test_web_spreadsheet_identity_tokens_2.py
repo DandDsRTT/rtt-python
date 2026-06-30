@@ -22,12 +22,12 @@ from _spreadsheet_support import _memoized_build, _layout, _with, _projection_bu
 class TestCanonicalGenerators:
     def test_canonical_generators_render_as_a_ratio_list_over_the_column_and_in_the_spine(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}
-        assert cells["cangen:0"].text == "2/1" and cells["cangen:1"].text == "3/1"
-        assert cells["cangen:0"].kind == "genratio"
-        assert cells["canon:gen:0"].text == "2/1" and cells["canon:gen:1"].text == "3/1"
-        assert cells["canon:gen:0"].x == cells["header:quantities"].x
-        assert cells["cangen:0"].x == cells["header:canongens"].x + spreadsheet_constants.BRACKET_WIDTH
-        assert cells["cangen:0"].y < cells["canon:gen:0"].y
+        assert cells["canonical_generator:0"].text == "2/1" and cells["canonical_generator:1"].text == "3/1"
+        assert cells["canonical_generator:0"].kind == "generator_ratio"
+        assert cells["canonical:generator:0"].text == "2/1" and cells["canonical:generator:1"].text == "3/1"
+        assert cells["canonical:generator:0"].x == cells["header:quantities"].x
+        assert cells["canonical_generator:0"].x == cells["header:canonical_generators"].x + spreadsheet_constants.BRACKET_WIDTH
+        assert cells["canonical_generator:0"].y < cells["canonical:generator:0"].y
 
     def test_form_matrices_canceling_out_is_an_identity_tile_in_the_canonical_generators_column(self):
         cells = {c.id: c for c in _with(form_tiles=True, identity_objects=True).cells}
@@ -35,11 +35,11 @@ class TestCanonicalGenerators:
         assert cells["cell:fcancel:1:0"].text == "0" and cells["cell:fcancel:1:1"].text == "1"
         assert cells["bracket:fcancel:map:0:l"].text == "{" and cells["bracket:fcancel:map:0:r"].text == "]"
         assert "ebktop:fcancel" in cells and "ebkbrace:fcancel" in cells
-        assert cells["caption:canon:canongens"].text == "form matrices canceling out"
-        assert cells["cell:fcancel:0:0"].x == cells["cangen:0"].x
+        assert cells["caption:canonical:canonical_generators"].text == "form matrices canceling out"
+        assert cells["cell:fcancel:0:0"].x == cells["canonical_generator:0"].x
         assert cells["cell:fcancel:0:0"].x < cells["cell:form:0:0"].x
         form_only = {c.id for c in _with(form_tiles=True).cells}
-        assert "cangen:0" in form_only and "cell:fcancel:0:0" not in form_only
+        assert "canonical_generator:0" in form_only and "cell:fcancel:0:0" not in form_only
 
     def test_form_box_symbols_and_units_match_the_canonical_notation(self):
         from rtt.app.grid_tables import SUBSCRIPT_C
@@ -47,30 +47,30 @@ class TestCanonicalGenerators:
         cells = {c.id: c for c in _with(form_tiles=True, identity_objects=True,
                                         symbols=True, equivalences=True, header_symbols=True,
                                         units=True, domain_units=True).cells}
-        assert cells["symbol:canon:primes"].text == f"𝑀{SUBSCRIPT_C}"
-        assert cells["symbol:canon:gens"].text == "𝐹⁻¹"
-        assert cells["symbol:mapping:canongens"].text == "𝐹"
-        assert cells["symbol:canon:canongens"].text == "𝐹⁻¹𝐹 = 𝐼"
-        assert cells["matrix_label:row:canon:primes:0"].text == f"𝒎{SUBSCRIPT_C}₁"
-        assert cells["units:canon:primes"].text == f"units: {gesture_controller}/p"
-        assert cells["units:canon:gens"].text == f"units: {gesture_controller}/g"
-        assert cells["units:canon:canongens"].text == f"units: {gesture_controller}/{gesture_controller}"
-        assert cells["units_column:canon:0"].text == f"{gesture_controller}₁/"
-        assert cells["units_row:canongens:0"].text == f"/{gesture_controller}₁"
+        assert cells["symbol:canonical:primes"].text == f"𝑀{SUBSCRIPT_C}"
+        assert cells["symbol:canonical:generators"].text == "𝐹⁻¹"
+        assert cells["symbol:mapping:canonical_generators"].text == "𝐹"
+        assert cells["symbol:canonical:canonical_generators"].text == "𝐹⁻¹𝐹 = 𝐼"
+        assert cells["matrix_label:row:canonical:primes:0"].text == f"𝒎{SUBSCRIPT_C}₁"
+        assert cells["units:canonical:primes"].text == f"units: {gesture_controller}/p"
+        assert cells["units:canonical:generators"].text == f"units: {gesture_controller}/g"
+        assert cells["units:canonical:canonical_generators"].text == f"units: {gesture_controller}/{gesture_controller}"
+        assert cells["units_column:canonical:0"].text == f"{gesture_controller}₁/"
+        assert cells["units_row:canonical_generators:0"].text == f"/{gesture_controller}₁"
 
     def test_rank_count_merges_across_the_canonical_generators_and_generators_columns(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}
-        rank, hcan, hgen = cells["count:gens"], cells["header:canongens"], cells["header:gens"]
+        rank, hcan, hgen = cells["count:generators"], cells["header:canonical_generators"], cells["header:generators"]
         assert rank.text.endswith(" = 2")
         assert rank.x <= hcan.x and rank.x + rank.width >= hgen.x
-        assert cells["caption:counts:gens"].text == "rank"
-        assert "count:canongens" not in cells
+        assert cells["caption:counts:generators"].text == "rank"
+        assert "count:canonical_generators" not in cells
         plain = {c.id: c for c in _layout().cells}
-        assert plain["count:gens"].x == plain["header:gens"].x
+        assert plain["count:generators"].x == plain["header:generators"].x
 
     def test_form_matrix_row_labels_get_a_balanced_matrix_label_gutter(self):
         cells = {c.id: c for c in _with(form_tiles=True, header_symbols=True).cells}
-        flabel, fbracket = cells["matrix_label:row:mapping:canongens:0"], cells["bracket:finv:map:0:l"]
+        flabel, fbracket = cells["matrix_label:row:mapping:canonical_generators:0"], cells["bracket:finv:map:0:l"]
         assert flabel.text == "𝒇₁"
         assert flabel.x + flabel.width <= fbracket.x, "the label sits left of (or up to) the { bracket, not over it"
         assert flabel.width > 0 and fbracket.x - flabel.x >= flabel.width
@@ -81,44 +81,44 @@ class TestCanonicalGenerators:
                                               form_tiles=True, symbols=True, header_symbols=True).cells}
         assert cells["cell:finv:0:0"].text == "1" and cells["cell:finv:0:1"].text == "1", "𝐹 (generator form matrix) over the mapping row: M = F·M_C, so F = ((1,1),(0,1)) (cell id is the # historical 'cell:finv' from before the 𝐹/𝐹⁻¹ swap)"
         assert cells["cell:finv:1:0"].text == "0" and cells["cell:finv:1:1"].text == "1"
-        assert cells["symbol:mapping:canongens"].text == "𝐹"
+        assert cells["symbol:mapping:canonical_generators"].text == "𝐹"
         assert "bracket:finv:map:0:l" in cells
         assert cells["cell:embed_c:0:0"].text == "1" and cells["cell:embed_c:0:1"].text == "1"
         assert cells["cell:embed_c:2:1"].text == "1/4"
-        assert cells["symbol:projection:canongens"].text == f"G{SUBSCRIPT_C}"
-        assert cells["tuning:cangen:0"].text.startswith("1200")
-        assert cells["tuning:cangen:1"].text.startswith("1896")
-        assert cells["symbol:tuning:canongens"].text == f"𝒈{SUBSCRIPT_C}"
+        assert cells["symbol:projection:canonical_generators"].text == f"G{SUBSCRIPT_C}"
+        assert cells["tuning:canonical_generator:0"].text.startswith("1200")
+        assert cells["tuning:canonical_generator:1"].text.startswith("1896")
+        assert cells["symbol:tuning:canonical_generators"].text == f"𝒈{SUBSCRIPT_C}"
         assert not any(c.id.startswith(("cell:finv:", "cell:embed_c:")) for c in _layout().cells)
 
     def test_canonical_generators_column_tiles_carry_plain_text_matching_their_grids(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), form_tiles=True, plain_text_values=True).cells}
-        assert cells["plain_text:mapping:canongens"].text == "[{1 1] {0 1]}"
-        assert cells["plain_text:projection:canongens"].text == "{[1 0 0⟩ [1 0 1/4⟩]"
-        assert cells["plain_text:tuning:canongens"].text.startswith("{1200")
+        assert cells["plain_text:mapping:canonical_generators"].text == "[{1 1] {0 1]}"
+        assert cells["plain_text:projection:canonical_generators"].text == "{[1 0 0⟩ [1 0 1/4⟩]"
+        assert cells["plain_text:tuning:canonical_generators"].text.startswith("{1200")
 
     def test_canonical_embedding_and_tuning_tiles_carry_their_column_index_headers(self):
         from rtt.app.grid_tables import SUBSCRIPT_C
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), form_tiles=True, header_symbols=True).cells}
-        assert cells["matrix_label:column:projection:canongens:0"].text == f"𝐠{SUBSCRIPT_C}₁"
-        assert cells["matrix_label:column:projection:canongens:1"].text == f"𝐠{SUBSCRIPT_C}₂"
-        assert cells["matrix_label:column:tuning:canongens:0"].text == f"𝒈{SUBSCRIPT_C}₁"
-        assert cells["matrix_label:column:tuning:canongens:1"].text == f"𝒈{SUBSCRIPT_C}₂"
+        assert cells["matrix_label:column:projection:canonical_generators:0"].text == f"𝐠{SUBSCRIPT_C}₁"
+        assert cells["matrix_label:column:projection:canonical_generators:1"].text == f"𝐠{SUBSCRIPT_C}₂"
+        assert cells["matrix_label:column:tuning:canonical_generators:0"].text == f"𝒈{SUBSCRIPT_C}₁"
+        assert cells["matrix_label:column:tuning:canonical_generators:1"].text == f"𝒈{SUBSCRIPT_C}₂"
 
     def test_generator_form_matrix_is_interactive(self):
         cells = {c.id: c for c in _with(form_tiles=True, plain_text_values=True).cells}
         assert cells["cell:finv:0:0"].kind == "formcell", "𝐹: routed to the editable gridvalue component"
-        assert cells["plain_text:mapping:canongens"].kind == "plain_text_edit"
+        assert cells["plain_text:mapping:canonical_generators"].kind == "plain_text_edit"
         assert cells["cell:form:0:0"].kind == "mapped"
-        assert cells["plain_text:canon:gens"].kind == "plain_text"
+        assert cells["plain_text:canonical:generators"].kind == "plain_text"
         from rtt.app.grid_tables import EDITABLE_PLAIN_TEXT
-        assert ("mapping", "canongens") in EDITABLE_PLAIN_TEXT and ("canon", "gens") not in EDITABLE_PLAIN_TEXT
+        assert ("mapping", "canonical_generators") in EDITABLE_PLAIN_TEXT and ("canonical", "generators") not in EDITABLE_PLAIN_TEXT
 
     def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis_boxes(self):
         cells = {c.id: c for c in _with(form_controls=True).cells}
         assert cells["formchooser:mapping"].kind == "formchooser"
         assert cells["formchooser:comma_basis"].kind == "formchooser"
-        assert not any(c.id.startswith(("cell:canon:", "cell:form:")) for c in cells.values()), "form CONTROLS (the dropdowns) does NOT reveal the canonical-mapping row / 𝐹 matrix — those # belong to 'form tiles' (greyed for now); the dropdowns appear without the boxes"
+        assert not any(c.id.startswith(("cell:canonical:", "cell:form:")) for c in cells.values()), "form CONTROLS (the dropdowns) does NOT reveal the canonical-mapping row / 𝐹 matrix — those # belong to 'form tiles' (greyed for now); the dropdowns appear without the boxes"
         inset = spreadsheet_constants.BOX_INNER
         assert cells["formchooser:mapping"].x == cells["header:primes"].x + inset
         assert cells["formchooser:comma_basis"].x == cells["header:commas"].x + inset
@@ -128,10 +128,10 @@ class TestCanonicalGenerators:
     def test_form_chooser_is_stateful_showing_the_mappings_current_form(self):
         cells = {c.id: c for c in _with(form_controls=True).cells}
         assert cells["formchooser:mapping"].text == "equave-reduced"
-        canon = {c.id: c for c in spreadsheet.build(
+        canonical = {c.id: c for c in spreadsheet.build(
             service.from_mapping(((1, 0, -4), (0, 1, 4))),
             {**settings.defaults(), "form_controls": True}).cells}
-        assert canon["formchooser:mapping"].text == "canonical"
+        assert canonical["formchooser:mapping"].text == "canonical"
         assert cells["formchooser:comma_basis"].text == "canonical", "the comma-basis chooser is stateful too: the default meantone's comma basis [⟨4 -4 1⟩] is the # canonical (antitransposed defactored Hermite) form, so its cell reads 'canonical'"
 
     def test_mapped_list_rules_its_vector_columns_apart_clear_of_the_marks(self):
@@ -175,8 +175,8 @@ class TestCanonicalGenerators:
     def test_the_row_fold_node_clears_the_first_content_tile(self):
         layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))))
         node = {c.id: c for c in layout.cells}["toggle:row:mapping"]
-        gens_block = {b.id: b for b in layout.blocks}["block:gens"]
-        assert node.x + node.width <= gens_block.x, "the node does not collide with the tile"
+        generators_block = {b.id: b for b in layout.blocks}["block:generators"]
+        assert node.x + node.width <= generators_block.x, "the node does not collide with the tile"
 
     def test_each_content_tile_has_a_top_left_fold_toggle(self):
         cells = {c.id: c for c in _layout().cells}
@@ -372,9 +372,9 @@ class TestPresetChoosers:
         cells = {c.id: c for c in layout.cells}
         boxes = {b.id: b for b in layout.blocks}
         inset = spreadsheet_constants.BOX_INNER
-        gt = cells["preset:tuning:gens"]
-        assert gt.x == cells["header:gens"].x + inset and gt.text == "destretched-octave minimax-ES"
-        assert boxes["block:preset:tuning:gens"].y == boxes["block:preset:tuning"].y
+        gt = cells["preset:tuning:generators"]
+        assert gt.x == cells["header:generators"].x + inset and gt.text == "destretched-octave minimax-ES"
+        assert boxes["block:preset:tuning:generators"].y == boxes["block:preset:tuning"].y
         ct = cells["preset:temperament:commas"]
         assert ct.x == cells["header:commas"].x + inset and ct.text == ""
 
@@ -396,7 +396,7 @@ class TestPresetChoosers:
         cells = {c.id: c for c in layout.cells}
         boxes = {b.id: b for b in layout.blocks}
         for cell_id, label, tile in (("preset:tuning", "established tuning scheme", "block:tuning:primes"),
-                                 ("preset:tuning:gens", "established tuning scheme", "block:tuning:gens"),
+                                 ("preset:tuning:generators", "established tuning scheme", "block:tuning:generators"),
                                  ("preset:temperament", "temperament", "block:mapping"),
                                  ("preset:target", "target interval set scheme", "block:vector:targets")):
             ctrl, box, panel = cells[cell_id], boxes[f"block:{cell_id}"], boxes[tile]
@@ -423,13 +423,13 @@ class TestPresetChoosers:
 
     def test_a_long_control_label_widens_its_narrow_tile(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-        gens_off = {b.id: b for b in spreadsheet.build(base, settings.defaults()).blocks}["block:tuning:gens"]
+        generators_off = {b.id: b for b in spreadsheet.build(base, settings.defaults()).blocks}["block:tuning:generators"]
         layout = spreadsheet.build(base, {**settings.defaults(), "presets": True})
-        gens_on = {b.id: b for b in layout.blocks}["block:tuning:gens"]
-        box = {b.id: b for b in layout.blocks}["block:preset:tuning:gens"]
-        assert gens_on.width > gens_off.width
-        assert gens_on.width >= spreadsheet_text._min_width_for_lines("established tuning scheme", 1)
-        assert box.x >= gens_on.x and box.x + box.width <= gens_on.x + gens_on.width
+        generators_on = {b.id: b for b in layout.blocks}["block:tuning:generators"]
+        box = {b.id: b for b in layout.blocks}["block:preset:tuning:generators"]
+        assert generators_on.width > generators_off.width
+        assert generators_on.width >= spreadsheet_text._min_width_for_lines("established tuning scheme", 1)
+        assert box.x >= generators_on.x and box.x + box.width <= generators_on.x + generators_on.width
 
     def test_chooser_boxes_span_the_full_width_of_their_tiles(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -438,7 +438,7 @@ class TestPresetChoosers:
         boxes = {b.id: b for b in spreadsheet.build(base, s).blocks}
         for cell_id, tile in (("block:preset:temperament", "block:mapping"),
                           ("block:preset:tuning", "block:tuning:primes"),
-                          ("block:preset:tuning:gens", "block:tuning:gens"),
+                          ("block:preset:tuning:generators", "block:tuning:generators"),
                           ("block:preset:target", "block:vector:targets")):
             box, panel = boxes[cell_id], boxes[tile]
             left, right = box.x - panel.x, (panel.x + panel.width) - (box.x + box.width)
@@ -489,7 +489,7 @@ class TestPresetChoosers:
 
     def test_every_row_that_produces_plain_text_reserves_its_band(self):
         b = _maximized_superspace_builder()
-        assert b.resolved.flags.plain_text_values and b.resolved.flags.canon
+        assert b.resolved.flags.plain_text_values and b.resolved.flags.canonical
         rows_with_text = {r for (r, _c) in b.geometry.plain_text_strings}
         spill = sorted(r for r in rows_with_text if plain_text_band(b.geometry, r, folded=False) <= 0)
         assert not spill, f"rows produce plain text but reserve no band (it will spill past the tile): {spill}"
@@ -635,7 +635,7 @@ class TestPlainTextBand:
 
     def test_editable_plain_text_tiles_render_as_inputs(self):
         cells = {c.id: c for c in _with("TILT minimax-S", plain_text_values=True, weighting=True, alt_complexity=True).cells}
-        for cell_id in ("plain_text:mapping:primes", "plain_text:vectors:commas", "plain_text:tuning:gens",
+        for cell_id in ("plain_text:mapping:primes", "plain_text:vectors:commas", "plain_text:tuning:generators",
                     "plain_text:vectors:targets", "plain_text:prescaling:primes"):
             assert cells[cell_id].kind == "plain_text_edit"
         for cell_id in ("plain_text:mapping:targets", "plain_text:mapping:commas", "plain_text:tuning:primes",

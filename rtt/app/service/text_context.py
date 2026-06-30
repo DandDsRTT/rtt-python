@@ -30,7 +30,7 @@ from rtt.app.service.schemes import (
 from rtt.app.service.state import TemperamentState
 from rtt.app.service.text_conventions import _DASH, ebk_convention, render_ebk
 from rtt.app.service.text_format import (
-    _cents_genmap,
+    _cents_generator_map,
     _cents_list,
     _cents_map,
     _prescale_vector_list,
@@ -61,8 +61,8 @@ class _Formatter:
     def cents_list(self, values, wrap: bool = True) -> str:
         return _cents_list(values, wrap, self.decimals)
 
-    def cents_genmap(self, values) -> str:
-        return _cents_genmap(values, self.decimals)
+    def cents_generator_map(self, values) -> str:
+        return _cents_generator_map(values, self.decimals)
 
     def prescale(self, vectors, col: str = "[⟩", outer: str = "[]") -> str:
         return _prescale_vector_list(vectors, col, outer, self.decimals)
@@ -150,7 +150,7 @@ class _TextContext:
     core: _Core
     prescale: _Prescale
     unchanged: _Unchanged
-    canon: _Canonical
+    canonical: _Canonical
 
     @property
     def state(self) -> TemperamentState:
@@ -370,7 +370,7 @@ def _derive_unchanged(inputs: _Inputs, core: _Core, prescale: _Prescale) -> _Unc
     )
 
 
-def _derive_canon(inputs: _Inputs, targets, core: _Core, unchanged: _Unchanged) -> _Canonical:
+def _derive_canonical(inputs: _Inputs, targets, core: _Core, unchanged: _Unchanged) -> _Canonical:
     state, domain_basis = inputs.state, inputs.domain_basis
     mapping = canonical_mapping(state.mapping)
     rc = len(mapping)
@@ -408,6 +408,6 @@ def _build_context(inputs: _Inputs) -> _TextContext:
     core = _derive_core(inputs, targets, held_ratios)
     prescale = _derive_prescale(inputs)
     unchanged = _derive_unchanged(inputs, core, prescale)
-    canon = _derive_canon(inputs, targets, core, unchanged)
+    canonical = _derive_canonical(inputs, targets, core, unchanged)
     formatter = _Formatter(inputs.decimals, inputs.superspace)
-    return _TextContext(inputs, formatter, core, prescale, unchanged, canon)
+    return _TextContext(inputs, formatter, core, prescale, unchanged, canonical)

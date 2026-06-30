@@ -407,8 +407,8 @@ class TestWebAppSmoke2:
         layout = Editor().layout()
         fy = layout.freeze_y
         twinned = {line.id for line in layout.lines if line.orientation == "v" and line.start <= fy and line.length > fy}
-        assert {"v:gen:0", "v:prime:0", "v:comma:0", "v:target:0"} <= twinned
-        assert "trunk:gens" not in twinned
+        assert {"v:generator:0", "v:prime:0", "v:comma:0", "v:target:0"} <= twinned
+        assert "trunk:generators" not in twinned
 
     def test_temperament_divider_headers_read_as_centred_grey_rules_inset_like_the_items(self):
         label = _css_rule(".rtt-select-popup .q-item.disabled .q-item__label")

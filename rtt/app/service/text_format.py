@@ -126,5 +126,5 @@ def _cents_list(values, wrap: bool = True, decimals: bool = True) -> str:
     )
 
 
-def _cents_genmap(values, decimals: bool = True) -> str:
+def _cents_generator_map(values, decimals: bool = True) -> str:
     return render_ebk(_GENMAP, values, formatter=lambda v: cents(v, decimals))

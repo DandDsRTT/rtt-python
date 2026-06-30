@@ -6,7 +6,7 @@ from _editor_support import _cents_map, BARBADOS, BARBADOS_ALT
 
 
 class TestGeneratorTuning:
-    def test_set_generator_tuning_text_freezes_a_typed_genmap(self):
+    def test_set_generator_tuning_text_freezes_a_typed_generator_map(self):
         editor = Editor()
         assert editor.set_generator_tuning_text("{1200.000 701.955]") is True
         assert editor.effective_generator_tuning() == (1200.0, 701.955)
@@ -120,28 +120,28 @@ class TestGeneratorTuning:
         editor = Editor()
         assert editor.generator_tuning is None
         assert editor.effective_generator_tuning() is None
-        gens = lambda: {c.id: c.text for c in editor.layout().cells}["tuning:gen:1"]
-        before = gens()
+        generators = lambda: {c.id: c.text for c in editor.layout().cells}["tuning:generator:1"]
+        before = generators()
         editor.set_target_override_text("[1 0 0⟩ [-1 1 0⟩")
-        assert gens() != before
+        assert generators() != before
 
     def test_editor_optimum_uses_the_domain_basis_not_standard_primes(self):
         editor = Editor()
         assert editor.try_edit_mapping_text(BARBADOS)
-        gens = editor.optimum_generator_tuning()
+        generators = editor.optimum_generator_tuning()
         grid = service.tuning(editor.state.mapping, editor.tuning_scheme, editor.state.domain_basis).generator_map
-        assert _cents_map(gens) == _cents_map(grid)
-        assert round(gens[0], 3) == 1199.872 and round(gens[1], 3) == 248.766, "the real optimum, not 822 ¢"
+        assert _cents_map(generators) == _cents_map(grid)
+        assert round(generators[0], 3) == 1199.872 and round(generators[1], 3) == 248.766, "the real optimum, not 822 ¢"
 
     def test_editor_optimum_honors_the_custom_prescaler(self):
         editor = Editor()
         editor.set_weight_slope("simplicity-weight")
         editor.set_custom_prescaler_entry(0, 0, 3.0)
-        gens = editor.optimum_generator_tuning()
+        generators = editor.optimum_generator_tuning()
         grid = service.tuning(editor.state.mapping, editor.tuning_scheme,
                               prescaler_override=editor.custom_prescaler).generator_map
-        assert _cents_map(gens) == _cents_map(grid)
-        editor.set_generator_tuning_text("{%f %f]" % gens)
+        assert _cents_map(generators) == _cents_map(grid)
+        editor.set_generator_tuning_text("{%f %f]" % generators)
         assert editor.tuning_is_optimized is True
 
 
@@ -309,8 +309,8 @@ class TestManualOptimized:
         assert editor.try_edit_mapping_text(BARBADOS_ALT)
         assert editor.tuning_is_optimized is True
         assert editor.displayed_tuning_scheme_name == "minimax-U"
-        gens = editor.optimum_generator_tuning()
-        assert round(gens[0], 3) == 1199.872 and round(gens[1], 3) == 951.106
+        generators = editor.optimum_generator_tuning()
+        assert round(generators[0], 3) == 1199.872 and round(generators[1], 3) == 951.106
 
     def test_a_typed_generator_tuning_drops_a_prior_projection_pin(self):
         ed = Editor()

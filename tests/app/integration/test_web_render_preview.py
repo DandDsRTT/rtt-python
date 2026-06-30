@@ -72,7 +72,7 @@ class TestEditPreviewRipple:
 
     async def test_opening_a_mapping_row_draft_previews_the_dropped_comma(self, user: User) -> None:
         await user.open("/")
-        _click_glyph(user, "gen_plus")
+        _click_glyph(user, "generator_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:comma:0:0")
         assert "rtt-preview-remove" in _wrap_classes(user, "comma:0")
@@ -91,7 +91,7 @@ class TestEditPreviewRipple:
         user: User,
     ) -> None:
         await user.open("/")
-        _click_glyph(user, "gen_plus")
+        _click_glyph(user, "generator_plus")
         await user.should_see(marker="cell:mapping:2:0")
         assert _escape_target(user, "cell:mapping:2:0") == "map_minus:pending"
 
@@ -182,15 +182,15 @@ class TestEditPreviewRipple:
         button = set(user.find(marker="map_minus:0").elements)
         UserInteraction(user, button, None).trigger("mouseenter")
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:0:0")
-        assert "rtt-preview-remove" in _wrap_classes(user, "gen:0")
-        assert "rtt-preview-remove" in _wrap_classes(user, "tuning:gen:0")
+        assert "rtt-preview-remove" in _wrap_classes(user, "generator:0")
+        assert "rtt-preview-remove" in _wrap_classes(user, "tuning:generator:0")
         assert "rtt-preview-remove" not in _wrap_classes(user, "cell:mapping:1:0")
         UserInteraction(user, button, None).trigger("mouseleave")
         assert "rtt-preview-remove" not in _wrap_classes(user, "cell:mapping:0:0")
 
     async def test_adding_a_mapping_row_previews_the_rank_raise_while_the_draft_is_green(self, user: User) -> None:
         await user.open("/")
-        _click_glyph(user, "gen_plus")
+        _click_glyph(user, "generator_plus")
         await user.should_see(marker="cell:mapping:2:0")
         for p, v in zip(range(2), ("0", "0")):
             _cell_child(user, f"cell:mapping:2:{p}").set_value(v)
@@ -213,7 +213,7 @@ class TestEditPreviewRipple:
         num.set_value("9")
         await user.should_see(marker="retune:target:8")
         assert "rtt-preview-change" in _wrap_classes(user, "retune:target:8")
-        assert "rtt-preview-change" in _wrap_classes(user, "tuning:gen:0")
+        assert "rtt-preview-change" in _wrap_classes(user, "tuning:generator:0")
         assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:0")
         UserInteraction(user, {num}, None).trigger("blur")
         assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:8")
@@ -359,14 +359,14 @@ class TestEditPreviewRipple:
 
     async def test_an_unrelated_render_does_not_strand_a_control_hovers_red_ring(self, user: User) -> None:
         await user.open("/")
-        button = set(user.find(marker="gen_minus").elements)
+        button = set(user.find(marker="generator_minus").elements)
         UserInteraction(user, button, None).trigger("mouseenter")
-        assert "rtt-preview-remove" in _wrap_classes(user, "tuning:gen:1")
+        assert "rtt-preview-remove" in _wrap_classes(user, "tuning:generator:1")
         _toggle(user, "counts")
-        await user.should_see(marker="tuning:gen:1")
-        assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:gen:1"), "...its red was stripped, not orphaned"
+        await user.should_see(marker="tuning:generator:1")
+        assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:generator:1"), "...its red was stripped, not orphaned"
         UserInteraction(user, button, None).trigger("mouseleave")
-        assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:gen:1")
+        assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:generator:1")
 
     async def test_selecting_a_temperament_clears_a_prior_shrink_hovers_red(self, user: User) -> None:
         from rtt.app import presets
@@ -411,15 +411,15 @@ class TestPreviewClearing:
 
     async def test_clicking_reset_after_hovering_it_clears_the_preview(self, user: User) -> None:
         await user.open("/")
-        _cell_child(user, "tuning:gen:1").set_value("700.000")
+        _cell_child(user, "tuning:generator:1").set_value("700.000")
         await user.should_see(marker="reset")
         button = set(user.find(marker="reset").elements)
         UserInteraction(user, button, None).trigger("mouseenter")
-        assert "rtt-preview-change" in _wrap_classes(user, "tuning:gen:1")
+        assert "rtt-preview-change" in _wrap_classes(user, "tuning:generator:1")
         user.find(marker="reset").click()
-        await user.should_see(marker="tuning:gen:1")
-        assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:1")
-        assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:gen:1")
+        await user.should_see(marker="tuning:generator:1")
+        assert "rtt-preview-change" not in _wrap_classes(user, "tuning:generator:1")
+        assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:generator:1")
 
     async def test_selecting_an_established_projection_clears_the_chooser_preview(self, user: User) -> None:
         await user.open("/")
@@ -430,11 +430,11 @@ class TestPreviewClearing:
         wrap = set(user.find(marker="preset:projection").elements)
         index = list(selection.options).index("1/3-comma")
         UserInteraction(user, wrap, None).trigger("opthover", {"detail": index})
-        assert "rtt-preview-change" in _wrap_classes(user, "tuning:gen:1")
+        assert "rtt-preview-change" in _wrap_classes(user, "tuning:generator:1")
         selection.set_value("1/3-comma")
         await user.should_see(marker="preset:projection")
-        assert _cell_child(user, "tuning:gen:1").value == "694.786"
-        assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:1"), \
+        assert _cell_child(user, "tuning:generator:1").value == "694.786"
+        assert "rtt-preview-change" not in _wrap_classes(user, "tuning:generator:1"), \
             "the projection pick left its hover rings stranded after the commit"
 
     async def test_a_stale_opthover_after_popup_hide_is_dropped(self, user: User) -> None:
@@ -472,11 +472,11 @@ class TestPreviewClearing:
         assert "rtt-pending" in _wrap_classes(user, "comma:pending")
         await user.should_see(marker="cell:comma:0:1")
 
-    async def test_gensign_hover_hands_the_wheel_preview_back(self, user: User) -> None:
+    async def test_generator_sign_hover_hands_the_wheel_preview_back(self, user: User) -> None:
         await user.open("/")
-        cell = set(user.find(marker="tuning:gen:0").elements)
+        cell = set(user.find(marker="tuning:generator:0").elements)
         UserInteraction(user, cell, None).trigger("mouseenter")
-        sign = set(user.find(marker="gensign:0").elements)
+        sign = set(user.find(marker="generator_sign:0").elements)
         UserInteraction(user, sign, None).trigger("mouseenter")
         assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:0")
         UserInteraction(user, sign, None).trigger("mouseleave")
@@ -485,7 +485,7 @@ class TestPreviewClearing:
         await user.should_see(marker="retune:target:0")
         assert "rtt-preview-change" in _wrap_classes(user, "retune:target:0"), \
             "the sign-hover detour lost the wheel gesture — the notch rang nothing"
-        assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:0")
+        assert "rtt-preview-change" not in _wrap_classes(user, "tuning:generator:0")
         UserInteraction(user, cell, None).trigger("mouseleave")
         assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:0")
 

@@ -125,25 +125,27 @@ def resolve_comma_basis_form(comma_basis, preferred, domain_basis=None) -> str:
 
 def form_matrix(mapping) -> Matrix:
     m = _to_matrix(mapping)
-    canon = canonical_ma(m)
+    canonical = canonical_ma(m)
     detemper = get_generator_detempering(Temperament(m, Variance.ROW)).matrix
     return tuple(
         tuple(
-            sum(canon[i][p] * detemper[j][p] for p in range(len(m[0])))
+            sum(canonical[i][p] * detemper[j][p] for p in range(len(m[0])))
             for j in range(len(detemper))
         )
-        for i in range(len(canon))
+        for i in range(len(canonical))
     )
 
 
 def inverse_form_matrix(mapping) -> Matrix:
     m = _to_matrix(mapping)
-    canon = canonical_ma(m)
-    canon_detemper = get_generator_detempering(Temperament(_to_matrix(canon), Variance.ROW)).matrix
+    canonical = canonical_ma(m)
+    canonical_detemper = get_generator_detempering(
+        Temperament(_to_matrix(canonical), Variance.ROW)
+    ).matrix
     return tuple(
         tuple(
-            sum(m[i][p] * canon_detemper[j][p] for p in range(len(m[0])))
-            for j in range(len(canon_detemper))
+            sum(m[i][p] * canonical_detemper[j][p] for p in range(len(m[0])))
+            for j in range(len(canonical_detemper))
         )
         for i in range(len(m))
     )
@@ -161,6 +163,6 @@ def mapping_from_form_matrix(mapping, form_rows) -> Matrix | None:
         return None
     if fm.det() not in (1, -1):
         return None
-    canon = sp.Matrix([list(row) for row in canonical_ma(m)])
-    new = fm * canon
+    canonical = sp.Matrix([list(row) for row in canonical_ma(m)])
+    new = fm * canonical
     return tuple(tuple(int(new[i, j]) for j in range(new.cols)) for i in range(new.rows))

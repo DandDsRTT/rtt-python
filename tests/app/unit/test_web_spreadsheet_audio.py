@@ -16,7 +16,7 @@ from rtt.app.editor import Editor
 from rtt.app.layout import CellBox, Layout
 from rtt.app.spreadsheet_decorations import _tile_groups
 from rtt.app.spreadsheet_geometry import plain_text_band
-from _spreadsheet_support import _memoized_build, _layout, _with, _projection_build, _with_interest, _maximized_superspace_builder, _INTEREST, _held, _CANON_MEANTONE, _canon_cells
+from _spreadsheet_support import _memoized_build, _layout, _with, _projection_build, _with_interest, _maximized_superspace_builder, _INTEREST, _held, _CANON_MEANTONE, _canonical_cells
 
 
 class TestPerCellAudio:
@@ -35,8 +35,8 @@ class TestPerCellAudio:
         tile, index, cents = p.audio
         assert (tile, index) == ("quantities:primes", 1)
         assert abs(cents - 1901.955) < 0.01
-        g = cells["qgen:0"]
-        assert g.audio is not None and g.audio[0] == "quantities:gens" and abs(g.audio[2]) > 100
+        g = cells["quantities_generator:0"]
+        assert g.audio is not None and g.audio[0] == "quantities:generators" and abs(g.audio[2]) > 100
 
     def test_tuning_sounds_tempered_just_sounds_just_and_retuning_errors_are_silent(self):
         cells = {c.id: c for c in _layout().cells}
@@ -48,14 +48,14 @@ class TestPerCellAudio:
         assert abs(abs(just.audio[2]) - 21.506) < 0.01
         assert all(c.audio is None for c in cells.values() if c.id.startswith("retune:")), "the retuning-error row is not a pitch — none of its cells play"
 
-    def test_genmap_cell_sounds_the_generators_tuned_size(self):
+    def test_generator_map_cell_sounds_the_generators_tuned_size(self):
         cells = {c.id: c for c in _layout().cells}
-        g = cells["tuning:gen:0"]
+        g = cells["tuning:generator:0"]
         assert g.audio is not None
         tile, index, cents = g.audio
-        assert (tile, index) == ("tuning:gens", 0)
+        assert (tile, index) == ("tuning:generators", 0)
         assert abs(cents) > 100, "a real generator pitch, not silence"
-        assert abs(cents - float(cells["tuning:gen:0"].text)) < 0.6
+        assert abs(cents - float(cells["tuning:generator:0"].text)) < 0.6
 
     def test_one_pass_voices_every_interval_cell_so_none_are_silently_missed(self):
         s = settings.defaults()
@@ -70,10 +70,10 @@ class TestPerCellAudio:
         ).cells
         interval_kinds = {
             "commacell", "commaratio", "ratiocell", "targetcell", "heldcell", "interestcell",
-            "vec", "unchangedcell", "elementcell", "elementratio", "genratio", "mapped",
+            "vec", "unchangedcell", "elementcell", "elementratio", "generator_ratio", "mapped",
         }
         not_a_pitch = (
-            "cell:mapping", "cell:canon:", "cell:form", "cell:finv", "cell:scaling",
+            "cell:mapping", "cell:canonical:", "cell:form", "cell:finv", "cell:scaling",
             "cell:vec:primes", "retune:", "damage:", "weight:", "optimization:",
             "cell:proj:", "cell:embed_sl", "cell:proj_sl", "cell:ss",
             "cell:selfmap", "cell:fcancel",
@@ -188,82 +188,82 @@ class TestPerCellAudio:
 
     def test_form_layer_subscripts_the_canonical_form_objects_in_symbols(self):
         C = grid_tables.SUBSCRIPT_C
-        on = _canon_cells(symbols=True, form=True, equivalences=False)
-        off = _canon_cells(symbols=True, equivalences=False)
+        on = _canonical_cells(symbols=True, form=True, equivalences=False)
+        off = _canonical_cells(symbols=True, equivalences=False)
         assert on["symbol:mapping:primes"].text == f"𝑀{C}"
         assert on["symbol:mapping:commas"].text == f"𝑀{C}C"
         assert on["symbol:mapping:targets"].text == f"Y{C}"
-        assert on["symbol:tuning:gens"].text == f"𝒈{C}"
-        projection = _canon_cells(symbols=True, projection=True, form=True, equivalences=False)
-        assert projection["symbol:projection:gens"].text == f"G{C}"
+        assert on["symbol:tuning:generators"].text == f"𝒈{C}"
+        projection = _canonical_cells(symbols=True, projection=True, form=True, equivalences=False)
+        assert projection["symbol:projection:generators"].text == f"G{C}"
         assert on["symbol:tuning:primes"].text == "𝒕"
         assert on["symbol:vectors:commas"].text == "C"
         assert off["symbol:mapping:primes"].text == "𝑀"
 
     def test_form_layer_subscripts_the_canonical_form_objects_in_equivalences(self):
         C = grid_tables.SUBSCRIPT_C
-        on = _canon_cells(symbols=True, equivalences=True, projection=True, form=True)
+        on = _canonical_cells(symbols=True, equivalences=True, projection=True, form=True)
         assert on["symbol:tuning:primes"].text == f"𝒕 = 𝒈{C}𝑀{C}"
         assert on["symbol:mapping:targets"].text == f"Y{C} = 𝑀{C}T"
-        assert on["symbol:projection:gens"].text == f"G{C} = U(𝑀{C}U)⁻¹"
+        assert on["symbol:projection:generators"].text == f"G{C} = U(𝑀{C}U)⁻¹"
 
     def test_form_layer_subscripts_the_matrix_header_labels(self):
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
-        on = _canon_cells(symbols=True, header_symbols=True, form=True)
+        on = _canonical_cells(symbols=True, header_symbols=True, form=True)
         assert on["matrix_label:row:mapping:primes:0"].text == f"𝒎{C}{s1}"
         assert on["matrix_label:column:mapping:commas:0"].text == f"𝑀{C}𝐜{s1}"
         assert on["matrix_label:column:mapping:targets:0"].text == f"𝐲{C}{s1}"
-        assert on["matrix_label:column:tuning:gens:0"].text == f"𝒈{C}{s1}"
+        assert on["matrix_label:column:tuning:generators:0"].text == f"𝒈{C}{s1}"
         assert on["matrix_label:column:tuning:commas:0"].text == f"𝒕𝐜{s1}"
         assert on["matrix_label:column:vectors:commas:0"].text == f"𝐜{s1}"
-        held = _canon_cells(symbols=True, header_symbols=True, form=True, optimization=True,
+        held = _canonical_cells(symbols=True, header_symbols=True, form=True, optimization=True,
                             _held_vectors=[(-1, 1, 0)])
         assert held["matrix_label:column:mapping:held:0"].text == f"𝑀{C}𝐡{s1}"
-        projection = _canon_cells(symbols=True, header_symbols=True, form=True, projection=True,
+        projection = _canonical_cells(symbols=True, header_symbols=True, form=True, projection=True,
                             _held_basis_ratios=("2/1", "5/4"))
         assert projection["matrix_label:column:mapping:commas:0"].text.startswith(f"𝑀{C}𝐯")
-        assert projection["matrix_label:column:projection:gens:0"].text == f"𝐠{C}{s1}"
+        assert projection["matrix_label:column:projection:generators:0"].text == f"𝐠{C}{s1}"
 
     def test_form_subscript_is_two_faced_and_the_canon_row_needs_a_noncanonical_form(self):
         C = grid_tables.SUBSCRIPT_C
         noncanon = {c.id: c for c in _with(symbols=True, form=True).cells}
         assert noncanon["symbol:mapping:primes"].text == "𝑀", "bare: not the canonical form"
-        assert not any(cell_id.startswith("cell:canon:") for cell_id in noncanon)
-        canon = _canon_cells(symbols=True, form=True)
-        assert canon["symbol:mapping:primes"].text == f"𝑀{C}"
-        assert not any(cell_id.startswith("cell:canon:") for cell_id in canon)
+        assert not any(cell_id.startswith("cell:canonical:") for cell_id in noncanon)
+        canonical = _canonical_cells(symbols=True, form=True)
+        assert canonical["symbol:mapping:primes"].text == f"𝑀{C}"
+        assert not any(cell_id.startswith("cell:canonical:") for cell_id in canonical)
         tiles = {c.id: c for c in _with(symbols=True, form=True, form_tiles=True).cells}
-        assert any(cell_id.startswith("cell:canon:") for cell_id in tiles)
-        canon_tiles = _canon_cells(symbols=True, form=True, form_tiles=True)
-        assert not any(cell_id.startswith("cell:canon:") for cell_id in canon_tiles)
-        assert not any(cell_id.startswith("cell:finv:") for cell_id in canon_tiles)
-        assert not any(":canongens" in cell_id for cell_id in canon_tiles)
+        assert any(cell_id.startswith("cell:canonical:") for cell_id in tiles)
+        canonical_tiles = _canonical_cells(symbols=True, form=True, form_tiles=True)
+        assert not any(cell_id.startswith("cell:canonical:") for cell_id in canonical_tiles)
+        assert not any(cell_id.startswith("cell:finv:") for cell_id in canonical_tiles)
+        assert not any(":canonical_generators" in cell_id for cell_id in canonical_tiles)
 
     def test_form_box_shows_the_mapping_decomposition_equivalence_only_when_noncanonical(self):
         C = grid_tables.SUBSCRIPT_C
         on = {c.id: c for c in _with(symbols=True, equivalences=True, form_tiles=True).cells}
         assert on["symbol:mapping:primes"].text == f"𝑀 = 𝐹𝑀{C}"
-        canon = _canon_cells(symbols=True, equivalences=True, form=True, form_tiles=True)
-        assert canon["symbol:mapping:primes"].text == f"𝑀{C}"
+        canonical = _canonical_cells(symbols=True, equivalences=True, form=True, form_tiles=True)
+        assert canonical["symbol:mapping:primes"].text == f"𝑀{C}"
         off = {c.id: c for c in _with(symbols=True, equivalences=True).cells}
         assert off["symbol:mapping:primes"].text == "𝑀"
 
     def test_form_subscript_covers_the_whole_mapping_row_including_new_tiles(self):
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
-        on = _canon_cells(symbols=True, header_symbols=True, form=True, equivalences=False,
+        on = _canonical_cells(symbols=True, header_symbols=True, form=True, equivalences=False,
                          generator_detempering=True, identity_objects=True)
-        assert on["symbol:mapping:gens"].text == f"𝑀{C}G"
+        assert on["symbol:mapping:generators"].text == f"𝑀{C}G"
         assert on["symbol:mapping:detempering"].text == f"𝑀{C}D"
         assert on["matrix_label:column:mapping:detempering:0"].text == f"𝑀{C}𝐝{s1}"
 
     def test_canonical_mapping_row_carries_its_own_symbols_and_row_headers(self):
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
         on = {c.id: c for c in _with(symbols=True, header_symbols=True, form=True, form_tiles=True).cells}
-        assert on["symbol:canon:primes"].text == f"𝑀{C}"
-        assert on["symbol:canon:gens"].text == "𝐹⁻¹"
-        assert on["symbol:mapping:canongens"].text == "𝐹"
-        assert on["matrix_label:row:canon:primes:0"].text == f"𝒎{C}{s1}"
-        assert on["matrix_label:row:mapping:canongens:0"].text == f"𝒇{s1}"
+        assert on["symbol:canonical:primes"].text == f"𝑀{C}"
+        assert on["symbol:canonical:generators"].text == "𝐹⁻¹"
+        assert on["symbol:mapping:canonical_generators"].text == "𝐹"
+        assert on["matrix_label:row:canonical:primes:0"].text == f"𝒎{C}{s1}"
+        assert on["matrix_label:row:mapping:canonical_generators:0"].text == f"𝒇{s1}"
 
     def test_canonical_mapping_row_renders_its_mapped_product_tiles(self):
         M = ((1, 1, 0), (0, 1, 4))
@@ -276,14 +276,14 @@ class TestPerCellAudio:
         cells = {c.id: c for c in spreadsheet.build(
             service.from_mapping(M), s, held_vectors=held, interest=interest).cells}
         rc, r = len(Mc), len(M)
-        assert [[cells[f"cell:canon:{i}:{p}"].text for p in range(3)] for i in range(rc)] == \
+        assert [[cells[f"cell:canonical:{i}:{p}"].text for p in range(3)] for i in range(rc)] == \
             [[str(x) for x in row] for row in Mc]
-        assert [[cells[f"cell:canon_detempering:{i}:{c}"].text for c in range(r)] for i in range(rc)] == \
+        assert [[cells[f"cell:canonical_detempering:{i}:{c}"].text for c in range(r)] for i in range(rc)] == \
             [[str(x) for x in row] for row in F]
-        assert all(cells[f"cell:canon_mapped_comma:{i}:0"].text == "0" for i in range(rc))
+        assert all(cells[f"cell:canonical_mapped_comma:{i}:0"].text == "0" for i in range(rc))
         mc_dot = lambda v: [str(sum(Mc[i][p] * v[p] for p in range(3))) for i in range(rc)]
-        assert [cells[f"cell:canon_hmapped:{i}:0"].text for i in range(rc)] == mc_dot(held[0])
-        assert [cells[f"cell:canon_imapped:{i}:0"].text for i in range(rc)] == mc_dot(interest[0])
+        assert [cells[f"cell:canonical_hmapped:{i}:0"].text for i in range(rc)] == mc_dot(held[0])
+        assert [cells[f"cell:canonical_imapped:{i}:0"].text for i in range(rc)] == mc_dot(interest[0])
 
     def test_canonical_mapping_row_tile_symbols_units_and_equivalences(self):
         C, s1 = grid_tables.SUBSCRIPT_C, spreadsheet_text._sub(1)
@@ -292,18 +292,18 @@ class TestPerCellAudio:
                  generator_detempering=True, optimization=True)
         cells = {c.id: c for c in spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))), s, held_vectors=[(-1, 1, 0)]).cells}
-        assert cells["symbol:canon:detempering"].text == f"𝑀{C}D = 𝐹"
-        assert cells["symbol:canon:commas"].text == f"𝑀{C}C = O"
-        assert cells["symbol:canon:targets"].text == f"Y{C} = 𝑀{C}T"
-        assert cells["symbol:canon:held"].text == f"𝑀{C}H"
-        assert cells["units:canon:primes"].text == f"units: g{C}/p"
-        assert cells["units:canon:gens"].text == f"units: g{C}/g"
-        assert cells["units:canon:detempering"].text == f"units: g{C}"
-        assert cells["units:canon:targets"].text == f"units: g{C}"
-        assert cells["matrix_label:column:canon:detempering:0"].text == f"𝑀{C}𝐝{s1}"
-        assert cells["matrix_label:column:canon:commas:0"].text == f"𝑀{C}𝐜{s1}"
-        assert cells["matrix_label:column:canon:targets:0"].text == f"𝐲{C}{s1}"
-        assert cells["matrix_label:column:canon:held:0"].text == f"𝑀{C}𝐡{s1}"
+        assert cells["symbol:canonical:detempering"].text == f"𝑀{C}D = 𝐹"
+        assert cells["symbol:canonical:commas"].text == f"𝑀{C}C = O"
+        assert cells["symbol:canonical:targets"].text == f"Y{C} = 𝑀{C}T"
+        assert cells["symbol:canonical:held"].text == f"𝑀{C}H"
+        assert cells["units:canonical:primes"].text == f"units: g{C}/p"
+        assert cells["units:canonical:generators"].text == f"units: g{C}/g"
+        assert cells["units:canonical:detempering"].text == f"units: g{C}"
+        assert cells["units:canonical:targets"].text == f"units: g{C}"
+        assert cells["matrix_label:column:canonical:detempering:0"].text == f"𝑀{C}𝐝{s1}"
+        assert cells["matrix_label:column:canonical:commas:0"].text == f"𝑀{C}𝐜{s1}"
+        assert cells["matrix_label:column:canonical:targets:0"].text == f"𝐲{C}{s1}"
+        assert cells["matrix_label:column:canonical:held:0"].text == f"𝑀{C}𝐡{s1}"
 
     def test_canonical_mapping_row_commas_symbol_keeps_subscript_under_unchanged(self):
         C = grid_tables.SUBSCRIPT_C
@@ -312,9 +312,9 @@ class TestPerCellAudio:
         cells = {c.id: c for c in spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
             held_basis_ratios=("2/1", "5/4")).cells}
-        assert cells["symbol:canon:commas"].text == f"𝑀{C}V", "the '= O' equivalence drops under V (the column is no longer the bare vanishing comma basis), # for both rows; what matters here is the subscript-C surviving the comma C → V swap"
+        assert cells["symbol:canonical:commas"].text == f"𝑀{C}V", "the '= O' equivalence drops under V (the column is no longer the bare vanishing comma basis), # for both rows; what matters here is the subscript-C surviving the comma C → V swap"
         assert cells["symbol:mapping:commas"].text == "𝑀V"
-        assert cells["matrix_label:column:canon:commas:0"].text.startswith(f"𝑀{C}𝐯")
+        assert cells["matrix_label:column:canonical:commas:0"].text.startswith(f"𝑀{C}𝐯")
 
     def test_canonical_mapping_row_carries_plain_text(self):
         s = settings.defaults()
@@ -323,13 +323,13 @@ class TestPerCellAudio:
         cells = {c.id: c for c in spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
             held_vectors=[(-1, 1, 0)], interest=((1, -2, 1),)).cells}
-        assert cells["plain_text:canon:primes"].text == "[⟨1 0 -4] ⟨0 1 4]}"
-        assert cells["plain_text:canon:gens"].text == "[{1 -1] {0 1]}"
-        assert cells["plain_text:canon:canongens"].text == "[{1 0] {0 1]}"
-        assert cells["plain_text:canon:detempering"].text == "{[1 0} [-1 1}]"
-        assert cells["plain_text:canon:commas"].text == "[[0 0}]"
-        assert cells["plain_text:canon:held"].text == "[[-1 1}]"
-        assert cells["plain_text:canon:interest"].text == "[-3 2}"
+        assert cells["plain_text:canonical:primes"].text == "[⟨1 0 -4] ⟨0 1 4]}"
+        assert cells["plain_text:canonical:generators"].text == "[{1 -1] {0 1]}"
+        assert cells["plain_text:canonical:canonical_generators"].text == "[{1 0] {0 1]}"
+        assert cells["plain_text:canonical:detempering"].text == "{[1 0} [-1 1}]"
+        assert cells["plain_text:canonical:commas"].text == "[[0 0}]"
+        assert cells["plain_text:canonical:held"].text == "[[-1 1}]"
+        assert cells["plain_text:canonical:interest"].text == "[-3 2}"
 
     def test_interest_is_a_top_level_toggle_after_the_tuning_tiles_group(self):
         items = dict(settings.SHOW_GROUPS)["app features"]
