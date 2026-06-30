@@ -47,7 +47,7 @@
   // hovering a bare interval vector flows it through its space's mapping (the forward computation).
   const forwardBand = (id) => (SS_VEC.test(id) ? BANDS[3] : BANDS[0]);
 
-  let svg = null, curKey = null;
+  let svg = null, currentKey = null;
   const board = () => document.querySelector('.rtt-gridcontent');
   const active = () => document.body.classList.contains('rtt-mapping-demos');
 
@@ -58,31 +58,31 @@
     b.appendChild(svg);
     return svg;
   };
-  const clear = () => { if (svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); svg.style.display = 'none'; } curKey = null; };
+  const clear = () => { if (svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); svg.style.display = 'none'; } currentKey = null; };
 
   // the cell carries its model value in data-value (stamped server-side), so the overlay never has to
-  // reconstruct it from the rendered face — a stacked num-over-den fraction's textContent would
+  // reconstruct it from the rendered face — a stacked numerator-over-denominator fraction's textContent would
   // concatenate ("1/4" -> "14"). The input/textContent reads are fallbacks for any value cell that
   // somehow lacks the attribute.
-  const text = (el) => {
-    const dv = el.getAttribute && el.getAttribute('data-value');
+  const text = (element) => {
+    const dv = element.getAttribute && element.getAttribute('data-value');
     if (dv) return dv;
-    const i = el.querySelector('input');
+    const i = element.querySelector('input');
     if (i && i.value !== '') return i.value;
-    return el.textContent;
+    return element.textContent;
   };
 
   // ---- svg primitives -------------------------------------------------------
-  const line = (x1, y1, x2, y2, pal) => {
+  const line = (x1, y1, x2, y2, palette) => {
     const l = document.createElementNS(NS, 'line');
     l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
-    l.setAttribute('stroke', pal.stroke); l.setAttribute('stroke-width', '3'); l.setAttribute('stroke-linecap', 'round');
+    l.setAttribute('stroke', palette.stroke); l.setAttribute('stroke-width', '3'); l.setAttribute('stroke-linecap', 'round');
     svg.appendChild(l);
   };
-  const path = (d, pal) => {
+  const path = (d, palette) => {
     const p = document.createElementNS(NS, 'path');
     p.setAttribute('d', d); p.setAttribute('fill', 'none');
-    p.setAttribute('stroke', pal.stroke); p.setAttribute('stroke-width', '3');
+    p.setAttribute('stroke', palette.stroke); p.setAttribute('stroke-width', '3');
     p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round');
     svg.appendChild(p);
   };
@@ -94,21 +94,21 @@
     t.setAttribute('font-family', "'STIX Two Text', Georgia, serif");
     t.textContent = s; svg.appendChild(t);
   };
-  const chip = (cx, cy, s, sq, pal) => {
+  const chip = (centerX, centerY, s, sq, palette) => {
     const txt = String(s);
     const w = sq ? 16 : Math.max(16, 7 + txt.length * 7), h = 16;
     const r = document.createElementNS(NS, 'rect');
-    r.setAttribute('x', cx - w / 2); r.setAttribute('y', cy - h / 2);
+    r.setAttribute('x', centerX - w / 2); r.setAttribute('y', centerY - h / 2);
     r.setAttribute('width', w); r.setAttribute('height', h);
-    r.setAttribute('rx', 4); r.setAttribute('fill', pal.fill); r.setAttribute('stroke', pal.stroke); r.setAttribute('stroke-width', '1.5');
+    r.setAttribute('rx', 4); r.setAttribute('fill', palette.fill); r.setAttribute('stroke', palette.stroke); r.setAttribute('stroke-width', '1.5');
     svg.appendChild(r);
-    glyph(cx, cy, txt, 11, pal.ink);
+    glyph(centerX, centerY, txt, 11, palette.ink);
   };
-  const ring = (c, pal) => {
+  const ring = (c, palette) => {
     const r = document.createElementNS(NS, 'rect');
     r.setAttribute('x', c.l + 1); r.setAttribute('y', c.t + 1);
     r.setAttribute('width', c.w - 2); r.setAttribute('height', c.h - 2);
-    r.setAttribute('fill', 'none'); r.setAttribute('stroke', pal.stroke); r.setAttribute('stroke-width', '3');
+    r.setAttribute('fill', 'none'); r.setAttribute('stroke', palette.stroke); r.setAttribute('stroke-width', '3');
     svg.appendChild(r);
   };
 
@@ -123,26 +123,26 @@
     const b = board();
     if (!b) return false;
     const bRect = b.getBoundingClientRect();
-    const C = (el) => {
-      const r = el.getBoundingClientRect();
+    const C = (element) => {
+      const r = element.getBoundingClientRect();
       return { x: r.left - bRect.left + r.width / 2, y: r.top - bRect.top + r.height / 2,
                t: r.top - bRect.top, btm: r.bottom - bRect.top, l: r.left - bRect.left, rt: r.right - bRect.left, w: r.width, h: r.height };
     };
-    const colX = C(hov).x;
-    const inCol = (o) => Math.abs(o.c.x - colX) < 8;
+    const columnX = C(hov).x;
+    const inColumn = (o) => Math.abs(o.c.x - columnX) < 8;
     const all = [...board().querySelectorAll('[data-eid]')];
-    const eid = (el) => el.getAttribute('data-eid');
+    const elementId = (element) => element.getAttribute('data-eid');
 
-    const src = all.filter((el) => band.vec.test(eid(el))).map((el) => ({ c: C(el), v: FR.parse(text(el)) }))
-      .filter(inCol).sort((a, z) => a.c.y - z.c.y);
-    const mcells = all.filter((el) => eid(el).startsWith(band.matrix)).map((el) => ({ c: C(el), m: FR.parse(text(el)) }));
-    const res = all.filter((el) => band.result.test(eid(el))).map((el) => ({ c: C(el) }))
-      .filter(inCol).sort((a, z) => a.c.y - z.c.y);
-    if (!src.length || !mcells.length || !res.length) return false;
+    const source = all.filter((element) => band.vec.test(elementId(element))).map((element) => ({ c: C(element), v: FR.parse(text(element)) }))
+      .filter(inColumn).sort((a, z) => a.c.y - z.c.y);
+    const mcells = all.filter((element) => elementId(element).startsWith(band.matrix)).map((element) => ({ c: C(element), m: FR.parse(text(element)) }));
+    const res = all.filter((element) => band.result.test(elementId(element))).map((element) => ({ c: C(element) }))
+      .filter(inColumn).sort((a, z) => a.c.y - z.c.y);
+    if (!source.length || !mcells.length || !res.length) return false;
 
     const ux = cluster(mcells.map((o) => o.c.x)), uy = cluster(mcells.map((o) => o.c.y));
     const at = (i, p) => mcells.find((o) => Math.abs(o.c.y - uy[i]) < 6 && Math.abs(o.c.x - ux[p]) < 6);
-    const P = Math.min(src.length, ux.length), R = Math.min(res.length, uy.length);
+    const P = Math.min(source.length, ux.length), R = Math.min(res.length, uy.length);
     if (!P || !R) return false;
     const W = mcells[0].c.w;
 
@@ -158,9 +158,9 @@
     // split descents; row 0 into the top of its × box, later rows peeling left into the box's left edge.
     for (let p = 0; p < P; p++) {
       const box0 = at(0, p); if (!box0) continue;
-      const leftEdge = box0.c.l, vy = src[p].c.y;
+      const leftEdge = box0.c.l, vy = source[p].c.y;
       const tracks = []; for (let i = 0; i < R; i++) tracks.push(i === 0 ? leftEdge : leftEdge - i * gap);
-      line(Math.min(...tracks), vy, src[p].c.l, vy, AMBER);
+      line(Math.min(...tracks), vy, source[p].c.l, vy, AMBER);
       for (let i = 0; i < R; i++) {
         const box = at(i, p); if (!box) continue;
         if (i === 0) line(leftEdge, vy, leftEdge, box.c.y - CH, AMBER);
@@ -182,14 +182,14 @@
       for (let p = 0; p < P; p++) {
         const cell = at(i, p); if (!cell) continue;
         chip(cell.c.l, cell.c.y, '×', true, AMBER);
-        const prod = (cell.m && src[p].v) ? FR.mul(cell.m, src[p].v) : null;
+        const prod = (cell.m && source[p].v) ? FR.mul(cell.m, source[p].v) : null;
         if (prod) chip(cell.c.x, cell.c.btm, FR.str(prod), false, GREEN);
         if (p < P - 1) chip(cell.c.rt, cell.c.btm, '+', true, GREEN);
       }
     }
 
     // (D) rings on both ends: the operand vector (amber) and the result vector (green).
-    for (let p = 0; p < P; p++) ring(src[p].c, AMBER);
+    for (let p = 0; p < P; p++) ring(source[p].c, AMBER);
     for (let i = 0; i < R; i++) ring(res[i].c, GREEN);
     return true;
   };
@@ -205,19 +205,19 @@
   const keyOf = (h) => h.band.name + ':' + Math.round(h.cell.getBoundingClientRect().left);
 
   document.addEventListener('mouseover', (e) => {
-    if (!active()) { if (curKey) clear(); return; }
+    if (!active()) { if (currentKey) clear(); return; }
     const h = hovered(e.target);
     if (!h) return;
     const key = keyOf(h);
-    if (key === curKey) return;
-    if (draw(h.band, h.cell)) curKey = key;
+    if (key === currentKey) return;
+    if (draw(h.band, h.cell)) currentKey = key;
   });
   document.addEventListener('mouseout', (e) => {
-    if (!curKey) return;
+    if (!currentKey) return;
     const h = hovered(e.relatedTarget);
-    if (h && keyOf(h) === curKey) return;
+    if (h && keyOf(h) === currentKey) return;
     clear();
   });
-  window.addEventListener('scroll', () => { if (curKey) clear(); }, { capture: true, passive: true });
-  document.addEventListener('pointerdown', () => { if (curKey) clear(); }, true);
+  window.addEventListener('scroll', () => { if (currentKey) clear(); }, { capture: true, passive: true });
+  document.addEventListener('pointerdown', () => { if (currentKey) clear(); }, true);
 })()

@@ -1,21 +1,21 @@
 window.rttAudio = (function () {
-  let ctx = null;
+  let context = null;
   const WAVES = ['sine', 'square', 'triangle', 'sawtooth'], BASE = 261.6255653005986, STEP = 0.34;
   // ONE global config + playing-state drives every speaker (the single bank on the dummy tile cycles
   // it); a speaker's `tile` is used ONLY to pick which speakers to highlight while they ring. The
-  // hold-stack (mode 0) keys its held notes by tile:idx so each speaker toggles on/off independently
+  // hold-stack (mode 0) keys its held notes by tile:index so each speaker toggles on/off independently
   // even though the waveform / mode / hold / root config is shared.
   // `live` is EVERY currently-sounding voice's release fn — the kill switch (stopAll) clears it, so a
   // note/drone can always be silenced no matter how it was started (S.stop/S.held don't track them all).
   const S = { wave: 0, mode: 0, hold: false, root: false, muted: false, stop: null, finish: null, held: {}, live: new Set() };
   const api = { glyphs: null };
   function actx() {
-    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
-    return ctx;
+    if (!context) context = new (window.AudioContext || window.webkitAudioContext)();
+    if (context.state === 'suspended') context.resume();
+    return context;
   }
-  function hl(tile, idx, on) {  // light EVERY cell sharing this voice (a vector column shares one idx)
-    const es = document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"][data-idx="' + idx + '"]');
+  function hl(tile, index, on) {  // light EVERY cell sharing this voice (a vector column shares one index)
+    const es = document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"][data-idx="' + index + '"]');
     for (let i = 0; i < es.length; i++) es[i].classList.toggle('rtt-speaker-on', on);
   }
   function clearHl(tile) {
@@ -24,14 +24,14 @@ window.rttAudio = (function () {
   }
   function vgain(n) { return 0.45 / Math.max(1, n); }
   // start one oscillator; returns a release() that fades it out (and clears its highlight)
-  function voice(tile, idx, cents, gain) {
+  function voice(tile, index, cents, gain) {
     const ac = actx(), o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
     o.type = WAVES[S.wave];
     o.frequency.value = BASE * Math.pow(2, cents / 1200);
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
     o.connect(g); g.connect(ac.destination); o.start(t);
-    if (idx >= 0) hl(tile, idx, true);
+    if (index >= 0) hl(tile, index, true);
     let done = false;
     function release() {
       if (done) return; done = true;
@@ -41,15 +41,15 @@ window.rttAudio = (function () {
       g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), r);
       g.gain.exponentialRampToValueAtTime(0.0001, r + 0.09);
       o.stop(r + 0.12);
-      if (idx >= 0) setTimeout(function () { hl(tile, idx, false); }, 110);
+      if (index >= 0) setTimeout(function () { hl(tile, index, false); }, 110);
     }
     S.live.add(release);
     return release;
   }
-  // sound a set of {idx,cents} together (+ optional root drone); returns a stop()
+  // sound a set of {index,cents} together (+ optional root drone); returns a stop()
   function together(tile, items, root) {
     const g = vgain(items.length + (root ? 1 : 0)), rels = [];
-    for (let i = 0; i < items.length; i++) rels.push(voice(tile, items[i].idx, items[i].cents, g));
+    for (let i = 0; i < items.length; i++) rels.push(voice(tile, items[i].index, items[i].cents, g));
     if (root) rels.push(voice(tile, -1, 0, g));
     return function () { for (let i = 0; i < rels.length; i++) rels[i](); };
   }
@@ -101,22 +101,22 @@ window.rttAudio = (function () {
   function ctrlEl(ctrl) {  // the single dummy-tile bank control (data-actrl only — no per-tile copies)
     return document.querySelector('[data-actrl="' + ctrl + '"]');
   }
-  api.hit = function (tile, idx, cents) {
+  api.hit = function (tile, index, cents) {
     if (S.muted) return;                                  // muted: the kill switch is also the gate
     if (S.mode === 0) {                                   // one-off / hold-stack
-      if (!S.hold) { const stop = together(tile, [{ idx: idx, cents: cents[idx] }], S.root); setTimeout(stop, 650); return; }
-      const key = tile + ':' + idx;                       // hold-stack: key per speaker so each toggles alone
+      if (!S.hold) { const stop = together(tile, [{ index: index, cents: cents[index] }], S.root); setTimeout(stop, 650); return; }
+      const key = tile + ':' + index;                       // hold-stack: key per speaker so each toggles alone
       if (S.held[key]) { S.held[key](); delete S.held[key]; }   // click a held note off
-      else { S.held[key] = together(tile, [{ idx: idx, cents: cents[idx] }], S.root); }
+      else { S.held[key] = together(tile, [{ index: index, cents: cents[index] }], S.root); }
       return;
     }
     if (S.stop) { S.stop(); S.stop = null; S.finish = null; if (S.hold) return; }  // a second click stops it
     if (S.mode === 1) {                                   // arpeggiate, always from the leftmost pitch
-      const order = []; for (let k = 0; k < cents.length; k++) order.push(k);  // (float is per-tile; idx is moot)
+      const order = []; for (let k = 0; k < cents.length; k++) order.push(k);  // (float is per-tile; index is moot)
       const seq = sequence(tile, order, cents, S.root, false, S.hold);
       if (S.hold) { S.stop = seq.stop; S.finish = seq.finish; }   // held arp loops; lock-off finishes the pass
     } else if (S.mode === 2) {                            // chord: all together
-      const items = []; for (let i = 0; i < cents.length; i++) items.push({ idx: i, cents: cents[i] });
+      const items = []; for (let i = 0; i < cents.length; i++) items.push({ index: i, cents: cents[i] });
       const stop = together(tile, items, S.root);
       if (S.hold) { S.stop = stop; S.finish = null; }     // a held chord sustains; lock-off releases it (no pass)
       else setTimeout(stop, 1000);
@@ -158,18 +158,18 @@ window.rttAudio = (function () {
   // Close the AudioContext when the page is hidden / reloaded. Without this, each reload leaks its
   // context; a browser caps how many a tab may hold, so after enough reloads (a hot-reload session
   // reloads on every save) new contexts fail to construct and ALL audio dies until the tab is closed.
-  window.addEventListener('pagehide', function () { if (ctx) { try { ctx.close(); } catch (e) {} ctx = null; } });
+  window.addEventListener('pagehide', function () { if (context) { try { context.close(); } catch (e) {} context = null; } });
   // Per-COLUMN-SEGMENT audio affordance: a vector's entries aren't individually playable, so the
   // control applies to the whole interval column. Hovering any cell of a column segment lights the
   // segment (.rtt-speaker-hover) and floats ONE speaker above it (tooltip-style, over the app); clicking
   // the float sounds the interval. Gated on unmuted; the chord is derived from the segment's sibling
   // cells live (reorder / retune safe). A grace timer lets the cursor cross the gap onto the button.
-  let floatEl = null, floatSeg = null, floatCells = null, hideT = null;
-  function segCells(tile, idx) {
-    return document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"][data-idx="' + idx + '"]');
+  let floatElement = null, floatSeg = null, floatCells = null, hideT = null;
+  function segCells(tile, index) {
+    return document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"][data-idx="' + index + '"]');
   }
   function placeFloat() {  // (re)anchor the float over its live cells — viewport coords, so it must
-    if (!floatEl || !floatCells || !floatCells.length) return;   // re-run on scroll or it slides away
+    if (!floatElement || !floatCells || !floatCells.length) return;   // re-run on scroll or it slides away
     let l = Infinity, t = Infinity, r = -Infinity, any = false;
     for (let i = 0; i < floatCells.length; i++) {
       if (!floatCells[i].isConnected) continue;
@@ -177,17 +177,17 @@ window.rttAudio = (function () {
       l = Math.min(l, k.left); t = Math.min(t, k.top); r = Math.max(r, k.right); any = true;
     }
     if (!any) { hideFloat(); return; }
-    floatEl.style.left = ((l + r) / 2) + 'px';
-    floatEl.style.top = t + 'px';
+    floatElement.style.left = ((l + r) / 2) + 'px';
+    floatElement.style.top = t + 'px';
   }
   function clearHover() {
     const es = document.querySelectorAll('.rtt-speaker-hover, .rtt-speaker-dim');
     for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-speaker-hover', 'rtt-speaker-dim');
   }
-  function hideFloat() { if (floatEl) floatEl.classList.remove('rtt-speaker-float-on'); clearHover(); floatSeg = null; floatCells = null; }
+  function hideFloat() { if (floatElement) floatElement.classList.remove('rtt-speaker-float-on'); clearHover(); floatSeg = null; floatCells = null; }
   function keepFloat() { if (hideT) { clearTimeout(hideT); hideT = null; } }
   function planHide() { keepFloat(); hideT = setTimeout(hideFloat, 250); }
-  function showFloat(tile, idx) {
+  function showFloat(tile, index) {
     const all = document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"]');
     if (!all.length) return;
     clearHover();
@@ -195,59 +195,59 @@ window.rttAudio = (function () {
     // (hovered column bright, the rest dim) to preview that every pitch plays, and float over them all.
     let cells;
     if (S.mode === 0) {
-      cells = segCells(tile, idx);
+      cells = segCells(tile, index);
       for (let i = 0; i < cells.length; i++) cells[i].classList.add('rtt-speaker-hover');
     } else {
-      cells = all; const key = String(idx);
+      cells = all; const key = String(index);
       for (let i = 0; i < all.length; i++) all[i].classList.add(all[i].dataset.idx === key ? 'rtt-speaker-hover' : 'rtt-speaker-dim');
     }
     floatCells = Array.prototype.slice.call(cells);
-    if (!floatEl) {
-      floatEl = document.createElement('div');
-      floatEl.className = 'rtt-speaker-float';
-      floatEl.innerHTML = '<span class="material-icons">volume_up</span>';
-      floatEl.addEventListener('mouseenter', keepFloat);
-      floatEl.addEventListener('mouseleave', planHide);
-      floatEl.addEventListener('click', function (ev) {
-        ev.preventDefault(); ev.stopPropagation();
-        if (floatSeg) api.playSeg(floatSeg.tile, floatSeg.idx);
+    if (!floatElement) {
+      floatElement = document.createElement('div');
+      floatElement.className = 'rtt-speaker-float';
+      floatElement.innerHTML = '<span class="material-icons">volume_up</span>';
+      floatElement.addEventListener('mouseenter', keepFloat);
+      floatElement.addEventListener('mouseleave', planHide);
+      floatElement.addEventListener('click', function (event) {
+        event.preventDefault(); event.stopPropagation();
+        if (floatSeg) api.playSeg(floatSeg.tile, floatSeg.index);
       });
-      document.body.appendChild(floatEl);
+      document.body.appendChild(floatElement);
     }
-    floatEl.classList.add('rtt-speaker-float-on');
-    floatSeg = { tile: tile, idx: idx };
+    floatElement.classList.add('rtt-speaker-float-on');
+    floatSeg = { tile: tile, index: index };
     placeFloat();   // centred over the highlighted cells, floated above them
   }
-  api.playSeg = function (tile, idx) {  // sound a whole column segment (its live sibling chord)
+  api.playSeg = function (tile, index) {  // sound a whole column segment (its live sibling chord)
     const chord = [], sibs = document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"]');
     for (let i = 0; i < sibs.length; i++) chord[+sibs[i].dataset.idx] = +sibs[i].dataset.cents;
-    api.hit(tile, idx, chord);
+    api.hit(tile, index, chord);
   };
   function onFloat(t) { return t && t.closest && t.closest('.rtt-speaker-float'); }
-  document.addEventListener('mouseover', function (ev) {
+  document.addEventListener('mouseover', function (event) {
     if (S.muted) return;                                   // muted = disengaged: no hover affordance
-    const cell = ev.target.closest && ev.target.closest('.rtt-speaker[data-audio]');
+    const cell = event.target.closest && event.target.closest('.rtt-speaker[data-audio]');
     if (!cell) {
-      if (floatSeg && !onFloat(ev.target)) planHide();     // moved onto something else: let it go
+      if (floatSeg && !onFloat(event.target)) planHide();     // moved onto something else: let it go
       return;
     }
     keepFloat();
     showFloat(cell.dataset.audio, +cell.dataset.idx);
   });
-  document.addEventListener('mouseout', function (ev) {
-    const cell = ev.target.closest && ev.target.closest('.rtt-speaker[data-audio]');
+  document.addEventListener('mouseout', function (event) {
+    const cell = event.target.closest && event.target.closest('.rtt-speaker[data-audio]');
     if (!cell) return;
-    const to = ev.relatedTarget && ev.relatedTarget.closest && ev.relatedTarget.closest('.rtt-speaker[data-audio],.rtt-speaker-float');
+    const to = event.relatedTarget && event.relatedTarget.closest && event.relatedTarget.closest('.rtt-speaker[data-audio],.rtt-speaker-float');
     if (!to) planHide();                                   // left the column for something non-audio
   });
   // a click or keypress anywhere but the float (e.g. a re-render the cursor never left) dismisses a
   // stuck float, so it can't linger over the grid and block hovering the next cell.
-  document.addEventListener('pointerdown', function (ev) {
-    if (floatSeg && !onFloat(ev.target)) hideFloat();
+  document.addEventListener('pointerdown', function (event) {
+    if (floatSeg && !onFloat(event.target)) hideFloat();
   }, true);
   // Space is the play key (sounded by _ACTIVECELL_JS for the active/hovered cell) — don't let it
   // dismiss the float; any OTHER key clears a lingering float so it can't block the next hover.
-  document.addEventListener('keydown', function (ev) { if (ev.key !== ' ' && floatSeg) hideFloat(); }, true);
+  document.addEventListener('keydown', function (event) { if (event.key !== ' ' && floatSeg) hideFloat(); }, true);
   // the grid body scrolls in its own scroller (scroll doesn't bubble) — re-anchor the float to its
   // live cells so it rides the page instead of staying pinned to a viewport spot as the grid moves.
   document.addEventListener('scroll', function () { if (floatSeg) placeFloat(); }, true);
