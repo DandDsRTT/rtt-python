@@ -23,6 +23,7 @@ from _render_support import _toggle, _enable, _cell_child, _wrap_classes, _commi
 class TestSettingsAndPanes:
     async def test_select_all_turns_on_every_implemented_feature(self, user: User) -> None:
         await user.open("/")
+        next(iter(user.find(marker="chapterslider").elements)).set_value(show_settings.CHAPTER_STAR)
         user.find(kind=ui.checkbox, content="select all / none").click()
         await user.should_see(marker="chart:retune:targets")
 

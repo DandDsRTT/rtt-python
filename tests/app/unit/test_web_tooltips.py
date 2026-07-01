@@ -13,9 +13,6 @@ _GUIDE_DIR = Path(__file__).resolve().parents[3] / "guide" / \
     "Dave Keenan & Douglas Blumeyer's guide to RTT"
 
 
-# GUIDE_HELP tiles with no guide home — a small, deliberately-reviewed list, NOT an accidental gap.
-# Each is either a bare count with no dedicated section, an app-only tracking feature (intervals of
-# interest), or the trivial superspace JI identity. Everything else must carry a guide link.
 _NO_GUIDE_SECTION = frozenset({
     ("counts", "targets"),
     ("counts", "superspace_primes"),
@@ -273,4 +270,7 @@ class TestWebTooltips:
     def test_no_guide_section_lists_only_homeless_tiles(self):
         for key in _NO_GUIDE_SECTION:
             assert key in tooltips.GUIDE_HELP, f"{key} in NO_GUIDE_SECTION but not a GUIDE_HELP tile"
-            assert not tooltips.GUIDE_HELP[key].url, f"{key} has a guide link — drop it from NO_GUIDE_SECTION"
+            assert not tooltips.GUIDE_HELP[key].url, (
+                f"{key} now has a guide home — drop it from NO_GUIDE_SECTION. That set is the small, "
+                "reviewed list of tiles with no guide home: bare counts, the app-only intervals-of-"
+                "interest tracker, and the trivial superspace JI identity. Everything else must link out.")

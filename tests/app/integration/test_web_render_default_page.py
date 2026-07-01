@@ -112,13 +112,6 @@ class TestDefaultPage:
         assert mapping._props.get("data-zoomhelp", "").startswith("How many of this generator")
         assert not any(isinstance(c, Tooltip) for c in mapping.default_slot.children)
 
-    def test_value_cell_in_a_guided_tile_offers_the_guide_hovercard(self, default_page: User) -> None:
-        mapping = _wrap(default_page, "cell:mapping:0:0")
-        assert "rtt-guide-link" in mapping._classes, "a computed value cell in a guided tile also carries the # deep-dive guide hover-card (the terse zoom caption never held a clickable link), so a learner # hovering the NUMBER — not just the tile caption — has a path into the guide"
-        assert mapping._props.get("data-guide-url", "").startswith("https://")
-        assert "Mappings" in mapping._props.get("data-guide-loc", "")
-        assert mapping._props.get("data-guide-text", "")
-
     def test_the_guide_chapter_slider_gates_the_panel_at_the_first_run_chapter(self, default_page: User) -> None:
         slider = next(iter(default_page.find(marker="chapterslider").elements))
         assert slider.value == show_settings.CHAPTER_MIN, "a genuinely-new browser opens at the tour's # start-small chapter, so the fresh page sits at CHAPTER_MIN, not two chapters deep"
@@ -224,3 +217,12 @@ class TestDefaultPage:
         assert default_page.find(marker=cell_id).elements
         assert getattr(_cell_child(default_page, cell_id), "content", ""), \
             f"{cell_id} rendered with empty html content — did render() drop its kind's branch?"
+
+
+class TestDefaultPageGuideLinks:
+    def test_value_cell_in_a_guided_tile_offers_the_guide_hovercard(self, default_page: User) -> None:
+        mapping = _wrap(default_page, "cell:mapping:0:0")
+        assert "rtt-guide-link" in mapping._classes, "a computed value cell in a guided tile also carries the deep-dive guide hover-card (the terse zoom caption never held a clickable link), so a learner hovering the NUMBER — not just the tile caption — has a path into the guide"
+        assert mapping._props.get("data-guide-url", "").startswith("https://")
+        assert "Mappings" in mapping._props.get("data-guide-loc", "")
+        assert mapping._props.get("data-guide-text", "")
