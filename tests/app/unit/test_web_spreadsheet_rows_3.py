@@ -35,7 +35,7 @@ class TestHeldColumn:
         s["optimization"], s["counts"] = True, True
         cells = {c.id: c for c in spreadsheet.build(base, s, held_vectors=[(-1, 1, 0)]).cells}
         assert cells["held:0"].text == "3/2"
-        assert cells["cell:held:0:0"].kind == "heldcell"
+        assert cells["cell:held:0:0"].kind == "held_cell"
         assert [cells[f"cell:held:{p}:0"].text for p in range(3)] == ["-1", "1", "0"]
         assert "held_minus:0" in cells
         assert cells["count:held"].text == "ℎ = 1"
@@ -175,7 +175,7 @@ class TestHeldColumn:
     def test_generator_detempering_quantities_row_shows_the_generator_ratios(self):
         cells = {c.id: c for c in _with(generator_detempering=True).cells}
         assert [cells[f"detempering:{i}"].text for i in range(2)] == ["2/1", "3/2"]
-        assert cells["detempering:0"].kind == "commaratio"
+        assert cells["detempering:0"].kind == "comma_ratio"
 
     def test_generator_detempering_quantities_emits_no_redundant_plain_text(self):
         ids = {c.id for c in _with(generator_detempering=True, plain_text_values=True).cells}
@@ -378,12 +378,12 @@ class TestRetuningChartsAndGenMap:
         assert "block:tuning:generators" in {b.id for b in _with(tuning_ranges=False).blocks}
         assert "block:generator_tuning" not in {b.id for b in layout.blocks}
 
-    def test_tuning_ranges_box_has_a_left_aligned_boxtitle(self):
+    def test_tuning_ranges_box_has_a_left_aligned_box_title(self):
         layout = _with(tuning_ranges=True)
         cells = {c.id: c for c in layout.cells}
         boxes = {b.id: b for b in layout.blocks}
         title = cells["rangetitle:tuning:generators"]
-        assert title.kind == "boxtitle" and title.text == "tuning ranges"
+        assert title.kind == "box_title" and title.text == "tuning ranges"
         chart, selection = cells["rangechart:tuning:generators"], cells["rangemode:tuning:generators"]
         assert title.y < chart.y
         assert title.x == cells["header:generators"].x

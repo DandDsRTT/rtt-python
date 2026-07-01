@@ -132,7 +132,7 @@ class TestEmitPure:
     def test_projection_basis_uses_the_stacked_ratio_kind_for_a_nonstandard_element(self):
         result = emit_projection_band(*_inputs(_superspace_builder()))
         ratio = next(c for c in result.cells if c.id.startswith("projection_basis:") and "/" in c.text)
-        assert ratio.kind == "commaratio"
+        assert ratio.kind == "comma_ratio"
 
     def test_no_basis_cell_renders_a_ratio_as_inline_plain_text(self):
         builds = [

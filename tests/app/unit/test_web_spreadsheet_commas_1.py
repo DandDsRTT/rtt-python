@@ -219,11 +219,11 @@ class TestCommasColumn:
         off = {c.id for c in _with(weighting=False).cells}
         assert "cell:prescaling:primes:0:0" not in off
         pre = service.complexity_prescaler(((1, 1, 0), (0, 1, 4)), service.DEFAULT_TUNING_SCHEME)
-        assert on["cell:prescaling:primes:0:0"].kind == "prescalercell"
+        assert on["cell:prescaling:primes:0:0"].kind == "prescaler_cell"
         assert on["cell:prescaling:primes:0:0"].text == "1"
         assert on["cell:prescaling:primes:1:1"].text == service.cents(pre[1])
         assert on["cell:prescaling:primes:2:2"].text == service.cents(pre[2])
-        assert on["cell:prescaling:primes:0:1"].kind == "tuningvalue"
+        assert on["cell:prescaling:primes:0:1"].kind == "tuning_value"
         assert on["cell:prescaling:primes:0:1"].text == "0"
         assert on["cell:prescaling:primes:0:0"].x == on["prime:0"].x
         assert on["cell:prescaling:primes:1:1"].x == on["prime:1"].x
@@ -236,8 +236,8 @@ class TestCommasColumn:
         assert "cell:prescaling:primes:3:0" not in lp
         for c in range(3):
             assert lils[f"cell:prescaling:primes:3:{c}"].text == service.prescale_text(pre[c])
-            assert lils[f"cell:prescaling:primes:3:{c}"].kind == "tuningvalue"
-        assert lils["cell:prescaling:primes:0:0"].kind == "prescalercell"
+            assert lils[f"cell:prescaling:primes:3:{c}"].kind == "tuning_value"
+        assert lils["cell:prescaling:primes:0:0"].kind == "prescaler_cell"
         assert lils["cell:prescaling:primes:3:0"].y == lils["cell:prescaling:primes:2:0"].y + spreadsheet_constants.ROW_HEIGHT + spreadsheet_constants.V_SPLIT_GAP
         assert lils["bracket:prescaling:row:3:l"].text == "⟨" and lils["bracket:prescaling:row:3:r"].text == "]"
 
@@ -249,7 +249,7 @@ class TestCommasColumn:
         comma = service.from_mapping(mapping).comma_basis[0]
         expected = service.prescale_text(sum(pre[j] * comma[j] for j in range(3)))
         assert lils["cell:prescaling:commas:3:0"].text == expected
-        assert lils["cell:prescaling:commas:3:0"].kind == "tuningvalue"
+        assert lils["cell:prescaling:commas:3:0"].kind == "tuning_value"
         assert lils_sym["matrix_label:row:prescaling:primes:3"].text == "𝒛", "the bare matrix's size row carries the 𝒛 row label (the size-sensitizing row, not a 4th prime 𝒍₄)"
 
     def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences(self):
@@ -345,16 +345,16 @@ class TestWeightingLabels:
         on = {c.id: c for c in spreadsheet.build(
             base, {**settings.defaults(), "weighting": True, "alt_complexity": True},
             tuning_scheme="TILT minimax-S", custom_prescaler=X).cells}
-        assert on["cell:prescaling:primes:0:1"].kind == "prescalercell"
+        assert on["cell:prescaling:primes:0:1"].kind == "prescaler_cell"
         assert on["cell:prescaling:primes:0:1"].text == service.prescale_text(0.5)
-        assert on["cell:prescaling:primes:1:1"].kind == "prescalercell"
-        assert on["cell:prescaling:primes:2:1"].kind == "prescalercell"
+        assert on["cell:prescaling:primes:1:1"].kind == "prescaler_cell"
+        assert on["cell:prescaling:primes:2:1"].kind == "prescaler_cell"
         assert on["cell:prescaling:primes:2:1"].text == "0"
         off = {c.id: c for c in spreadsheet.build(
             base, {**settings.defaults(), "weighting": True, "alt_complexity": False},
             tuning_scheme="minimax-S").cells}
-        assert off["cell:prescaling:primes:1:1"].kind == "prescalercell"
-        assert off["cell:prescaling:primes:0:1"].kind == "tuningvalue"
+        assert off["cell:prescaling:primes:1:1"].kind == "prescaler_cell"
+        assert off["cell:prescaling:primes:0:1"].kind == "tuning_value"
 
     def test_custom_prescaler_diagonal_keeps_the_generic_symbol(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -403,7 +403,7 @@ class TestWeightingLabels:
         for i, comp in enumerate((4, -4, 1)):
             cell = on[f"cell:prescaling:commas:{i}:0"]
             assert cell.text == _t(pre[i] * comp)
-            assert cell.kind == "tuningvalue"
+            assert cell.kind == "tuning_value"
         assert {"block:prescaling:commas", "block:prescaling:targets"} <= blocks
         assert {"ebktop:prescaling:commas:0", "ebkangle:prescaling:commas:0",
                 "ebktop:prescaling:targets:0", "ebkangle:prescaling:targets:0"} <= set(on)
@@ -642,7 +642,7 @@ class TestWeightingLabels:
         assert on["caption:complexity"].kind == "caption"
         assert on["caption:complexity"].text == "predefined complexities"
         assert on["caption:complexity"].y == on["control:complexity"].y + on["control:complexity"].height
-        assert on["control:q"].kind == "powerinput"
+        assert on["control:q"].kind == "power_input"
         assert on["control:q"].text == "1"
         assert on["control:q"].x > on["control:complexity"].x
         assert on["control:q"].y == on["control:complexity"].y
@@ -650,7 +650,7 @@ class TestWeightingLabels:
         assert on["symbol:q"].y > on["control:q"].y
         assert on["caption:q"].text == "interval complexity norm power"
         assert on["caption:q"].y > on["symbol:q"].y
-        assert on["control:dual"].kind == "powerdisplay", "the dual(q) display: the dual norm power, DERIVED from q (never edited), so it renders as a # read-only powerdisplay — the same face as q (∞ at the q numeral's size), minus the white box"
+        assert on["control:dual"].kind == "power_display", "the dual(q) display: the dual norm power, DERIVED from q (never edited), so it renders as a # read-only power_display — the same face as q (∞ at the q numeral's size), minus the white box"
         assert on["control:dual"].text == "∞"
         assert on["control:dual"].x > on["control:q"].x
         assert on["symbol:dual"].text == "dual(𝑞)"
@@ -663,9 +663,9 @@ class TestWeightingLabels:
 class TestGriddedValuesToggle:
     def test_q_norm_power_is_editable_only_with_alt_complexity(self):
         off = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}
-        assert off["control:q"].kind == "powerdisplay"
+        assert off["control:q"].kind == "power_display"
         on = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}
-        assert on["control:q"].kind == "powerinput"
+        assert on["control:q"].kind == "power_input"
         assert off["control:q"].text == on["control:q"].text == "1"
 
     def test_power_value_cells_hide_when_gridded_values_are_off(self):
@@ -681,8 +681,8 @@ class TestGriddedValuesToggle:
         s = {**settings.defaults(), "nonstandard_domain": True, "projection": True}
         on = {c.id: c for c in spreadsheet.build(state, {**s, "gridded_values": True}).cells}
         off = {c.id for c in spreadsheet.build(state, {**s, "gridded_values": False}).cells}
-        assert on["prime:0"].kind == "elementcell" and on["prime:2"].kind == "elementratio"
-        assert on["basis:0"].kind == "elementcell" and on["basis_plus"].kind == "element_plus"
+        assert on["prime:0"].kind == "element_cell" and on["prime:2"].kind == "element_ratio"
+        assert on["basis:0"].kind == "element_cell" and on["basis_plus"].kind == "element_plus"
         domain_value_ids = {"prime:0", "prime:1", "prime:2", "basis:0", "basis:1", "basis:2"}
         domain_control_ids = {"element_minus:0", "element_minus:1", "element_minus:2",
                               "element_minus:basis:0", "element_minus:basis:1", "element_minus:basis:2",
@@ -700,7 +700,7 @@ class TestGriddedValuesToggle:
         on = {c.id: c for c in spreadsheet.build(mt, {**s, "gridded_values": True}, held_basis_ratios=("2/1", "5/4")).cells}
         off = {c.id for c in spreadsheet.build(mt, {**s, "gridded_values": False}, held_basis_ratios=("2/1", "5/4")).cells}
         unchanged_ids = {c for c in on if c.startswith("cell:unchanged:")}
-        assert unchanged_ids and all(on[c].kind == "unchangedcell" for c in unchanged_ids)
+        assert unchanged_ids and all(on[c].kind == "unchanged_cell" for c in unchanged_ids)
         assert not (unchanged_ids & off)
 
     def test_dual_q_shows_only_when_the_scheme_is_all_interval(self):
@@ -763,8 +763,8 @@ class TestGriddedValuesToggle:
         finite_ai = service.scheme_with_power("minimax-S", 2.0)
         assert service.is_all_interval(finite_ai) and service.optimization_power(finite_ai) == 2.0
         allint = {c.id: c for c in _with(scheme=finite_ai, optimization=True).cells}
-        assert allint["optimization:power"].text == "∞" and allint["optimization:power"].kind == "powerdisplay"
+        assert allint["optimization:power"].text == "∞" and allint["optimization:power"].kind == "power_display"
         finite_based = service.scheme_with_power("TILT minimax-S", 2.0)
         based = {c.id: c for c in _with(scheme=finite_based, optimization=True,
                                         weighting=True, alt_complexity=True).cells}
-        assert based["optimization:power"].text == "2" and based["optimization:power"].kind == "powerinput"
+        assert based["optimization:power"].text == "2" and based["optimization:power"].kind == "power_input"

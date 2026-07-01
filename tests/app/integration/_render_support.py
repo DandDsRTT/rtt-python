@@ -248,7 +248,7 @@ def _wrap_classes(user: User, cell_id: str) -> list[str]:
 
 
 def _ro_ratio_face(user: User, cell_id: str):
-    """A READ-ONLY ratio face (generator_ratio / commaratio: detempering, generators, unchanged auto-list)
+    """A READ-ONLY ratio face (generator_ratio / comma_ratio: detempering, generators, unchanged auto-list)
     as ``(numerator_text, denominator_text, collapsed)``. ``collapsed`` is True when the value is a
     whole ratio ``"n/1"`` shown as a bare integer — flagged by ``rtt-fraction-whole`` on the .rtt-fraction
     div (the ~ omitted, the bar and denominator hidden). The wrap's first child is the .rtt-ratio
@@ -268,7 +268,7 @@ def _click_glyph(user: User, cell_id: str) -> None:
 
 
 def _commit(user: User, cell_id: str) -> None:
-    """Fire a ratiocell input's blur handler. The editable quantities-row ratios commit the whole
+    """Fire a ratio_cell input's blur handler. The editable quantities-row ratios commit the whole
     typed fraction on blur / Enter (not per keystroke — parsing "2" of "25/24" would momentarily
     retune to 2/1), so a test sets the value then commits it here."""
     UserInteraction(user, {_cell_child(user, cell_id)}, None).trigger("blur")
@@ -303,7 +303,7 @@ def _ro_stacked_face(user: User, cell_id: str):
 
 
 def _ro_value(user: User, cell_id: str) -> str:
-    """The displayed value of a READ-ONLY stacked value cell (a tuningvalue / read-only weight or
+    """The displayed value of a READ-ONLY stacked value cell (a tuning_value / read-only weight or
     cents face): its big .rtt-stacked-main glyph joined with the small .rtt-stacked-sub line below
     (e.g. "697" + ".564" -> "697.564"). The read-only twin of the editable cells' _dec_value /
     .value — used to assert that a hover PREVIEW reflows a cell's value (shows the NEW number), not

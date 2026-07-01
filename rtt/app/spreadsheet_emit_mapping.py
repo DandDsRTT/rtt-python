@@ -243,7 +243,7 @@ def _emit_projection_basis(cells, resolved, geometry, context) -> None:
     if query.row_open(geometry, context.collapsed, "projection") and query.tile_open(geometry, context.collapsed, "projection", "quantities"):
         bx = query.basis_col_x(geometry)
         for p in range(resolved.dimensions.dimensionality):
-            cells.append(CellBox(f"projection_basis:{p}", bx, query.projection_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, "commaratio", text=str(resolved.dimensions.elements[p]), prime=p))
+            cells.append(CellBox(f"projection_basis:{p}", bx, query.projection_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, "comma_ratio", text=str(resolved.dimensions.elements[p]), prime=p))
 
 
 def _emit_scaling_factors(cells, resolved, geometry, context) -> None:
@@ -319,4 +319,4 @@ def _emit_canonical_finv(cells, resolved, geometry, context) -> None:
         for i in range(resolved.dimensions.rank):
             for j in range(resolved.dimensions.canonical_rank):
                 cells.append(CellBox(f"cell:finv:{i}:{j}", query.canonical_generator_left(geometry, j), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT,
-                                     "formcell", text=str(resolved.canonical.inverse_form_M[i][j]), unit=query.cell_unit(resolved, "mapping", "canonical_generators", generator=i)))
+                                     "form_cell", text=str(resolved.canonical.inverse_form_M[i][j]), unit=query.cell_unit(resolved, "mapping", "canonical_generators", generator=i)))

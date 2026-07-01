@@ -30,11 +30,11 @@ def _chapter_text(chapter: str) -> str:
 
 _INTERACTIVE_KINDS = [
     ("mapping", "cell:mapping:primes:0:0"),
-    ("commacell", "cell:comma:commas:0:0"),
-    ("interestcell", "cell:interest:0:0"),
-    ("heldcell", "cell:held:0:0"),
-    ("targetcell", "cell:target:0:0"),
-    ("prescalercell", "cell:prescaling:primes:0:0"),
+    ("comma_cell", "cell:comma:commas:0:0"),
+    ("interest_cell", "cell:interest:0:0"),
+    ("held_cell", "cell:held:0:0"),
+    ("target_cell", "cell:target:0:0"),
+    ("prescaler_cell", "cell:prescaling:primes:0:0"),
     ("generator_tuning_cell", "cell:tuning:generators:0"),
     ("plain_text_edit", "plain_text:mapping:primes"),
     ("rangemode", "rangemode:tuning:generators"),
@@ -61,9 +61,9 @@ _INTERACTIVE_KINDS = [
 
 
 _DISAMBIGUATED = [
-    ("powerinput", "optimization:power"),
-    ("powerinput", "control:q"),
-    ("powerdisplay", "control:dual"),
+    ("power_input", "optimization:power"),
+    ("power_input", "control:q"),
+    ("power_display", "control:dual"),
     ("control_select", "control:complexity"),
     ("control_select", "control:slope"),
     ("control_check", "control:diminuator"),
@@ -123,7 +123,7 @@ class TestWebTooltips:
         assert (_help(kind, cell_id) or "").strip()
 
     def test_overloaded_kinds_resolve_to_distinct_text_per_role(self):
-        assert _help("powerinput", "optimization:power") != _help("powerinput", "control:q")
+        assert _help("power_input", "optimization:power") != _help("power_input", "control:q")
         assert len({_help("control_select", "control:complexity"),
                     _help("control_select", "control:slope")}) == 2
         assert _help("control_check", "control:diminuator") != _help("control_check", "control:all_interval")

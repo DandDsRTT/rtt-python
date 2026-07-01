@@ -32,16 +32,16 @@ _DEMO_VALUE_KINDS = frozenset(
         "mapping",
         "mapped",
         "vector",
-        "targetcell",
-        "heldcell",
-        "commacell",
-        "interestcell",
-        "unchangedcell",
+        "target_cell",
+        "held_cell",
+        "comma_cell",
+        "interest_cell",
+        "unchanged_cell",
     }
 )
 
 
-_ROLE_BY_KIND = {"columnheader": "columnheader", "rowlabel": "rowheader"}
+_ROLE_BY_KIND = {"column_header": "column_header", "row_label": "rowheader"}
 
 
 def _cell_role(cell_box: spreadsheet.CellBox) -> str | None:

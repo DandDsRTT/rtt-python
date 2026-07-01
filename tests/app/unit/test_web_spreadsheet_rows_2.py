@@ -513,9 +513,9 @@ class TestRowAndColumnLabels:
         layout = _with(optimization=True)
         on = {c.id: c for c in layout.cells}
         assert on["optimization:title"].text == "optimization"
-        assert on["optimization:mean_damage"].kind == "tuningvalue"
+        assert on["optimization:mean_damage"].kind == "tuning_value"
         assert on["optimization:mean_damage:symbol"].text == "⟪𝐝⟫ₚ"
-        assert on["optimization:power"].kind == "powerdisplay"
+        assert on["optimization:power"].kind == "power_display"
         assert on["optimization:power"].text == "∞"
         assert on["optimization:power:symbol"].text == "𝑝"
         assert on["optimization:power:caption"].text == "optimization power"
@@ -613,7 +613,7 @@ class TestRowAndColumnLabels:
         cells = {c.id: c for c in spreadsheet.build(base, s, target_override=("2/1", "3/2")).cells}
         assert cells["target:0"].text == "2/1" and cells["target:1"].text == "3/2"
         assert "target:2" not in cells
-        assert cells["cell:vector:targets:0:0"].kind == "targetcell"
+        assert cells["cell:vector:targets:0:0"].kind == "target_cell"
         for row in ("tuning", "just", "damage"):
             assert f"{row}:target:1" in cells and f"{row}:target:2" not in cells
 
@@ -628,16 +628,16 @@ class TestRowAndColumnLabels:
     def test_target_interval_list_cells_and_plain_text_are_editable(self):
         cells = {c.id: c for c in _with(plain_text_values=True).cells}
         assert cells["plain_text:vectors:targets"].kind == "plain_text_edit"
-        assert cells["cell:vector:targets:0:0"].kind == "targetcell"
+        assert cells["cell:vector:targets:0:0"].kind == "target_cell"
 
     def test_all_interval_target_list_is_read_only(self):
         allint = {c.id: c for c in _with(scheme="minimax-S", plain_text_values=True).cells}
         based = {c.id: c for c in _with(scheme="TILT minimax-S", plain_text_values=True).cells}
         assert allint["cell:vector:targets:0:0"].kind == "vector"
-        assert allint["target:0"].kind == "commaratio"
+        assert allint["target:0"].kind == "comma_ratio"
         assert allint["plain_text:vectors:targets"].kind == "plain_text"
-        assert based["cell:vector:targets:0:0"].kind == "targetcell"
-        assert based["target:0"].kind == "ratiocell"
+        assert based["cell:vector:targets:0:0"].kind == "target_cell"
+        assert based["target:0"].kind == "ratio_cell"
         assert based["plain_text:vectors:targets"].kind == "plain_text_edit"
 
     def test_editable_target_vector_cells_clear_the_column_separator(self):

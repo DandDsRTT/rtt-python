@@ -25,19 +25,19 @@ def emit_vectors(resolved, geometry, context) -> EmitResult:
     if query.tile_open(geometry, context.collapsed, "vectors", "commas"):
         _emit_vectors_commas_col(cells, resolved, geometry, context)
     if query.tile_open(geometry, context.collapsed, "vectors", "targets"):
-        target_kind = "targetcell" if resolved.scalars.targets_editable else "vector"
+        target_kind = "target_cell" if resolved.scalars.targets_editable else "vector"
         _emit_vector_grid(cells, resolved, geometry, _VecGrid("targets", resolved.dimensions.target_count, ids.target_cell,
-            lambda i: query.interval_left(geometry, "targets", i), target_kind, "targetcell",
+            lambda i: query.interval_left(geometry, "targets", i), target_kind, "target_cell",
             resolved.targets.vectors, resolved.targets.pending, resolved.tuning.target_sizes))
     if query.tile_open(geometry, context.collapsed, "vectors", "held"):
         _emit_vector_grid(cells, resolved, geometry, _VecGrid("held", resolved.dimensions.held_count, ids.held_cell,
-            lambda i: query.interval_left(geometry, "held", i), "heldcell", "heldcell",
+            lambda i: query.interval_left(geometry, "held", i), "held_cell", "held_cell",
             resolved.held.vectors, resolved.held.pending, resolved.tuning.held_sizes))
     if query.tile_open(geometry, context.collapsed, "vectors", "detempering"):
         _emit_vectors_detempering_col(cells, resolved, geometry)
     if query.tile_open(geometry, context.collapsed, "vectors", "interest"):
         _emit_vector_grid(cells, resolved, geometry, _VecGrid("interest", resolved.dimensions.interest_count, ids.interest_cell,
-            lambda i: query.interval_left(geometry, "interest", i), "interestcell", "interestcell",
+            lambda i: query.interval_left(geometry, "interest", i), "interest_cell", "interest_cell",
             resolved.interest.vectors, resolved.interest.pending, resolved.tuning.interest_sizes))
     _emit_vectors_int_handles(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
@@ -93,7 +93,7 @@ def _emit_vectors_basis_col(cells, resolved, geometry, context) -> None:
 def _emit_vectors_commas_col(cells, resolved, geometry, context) -> None:
     for c in range(resolved.dimensions.comma_count):
         for p in range(resolved.dimensions.dimensionality):
-            cells.append(CellBox(ids.comma_cell(query.column_token(resolved, 'commas', c), p), query.comma_left(geometry, resolved, c), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, "commacell", text=str(context.state.comma_basis[c][p]), prime=p, comma=c, unit=query.cell_unit(resolved, "vectors", "commas", prime=p)))
+            cells.append(CellBox(ids.comma_cell(query.column_token(resolved, 'commas', c), p), query.comma_left(geometry, resolved, c), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, "comma_cell", text=str(context.state.comma_basis[c][p]), prime=p, comma=c, unit=query.cell_unit(resolved, "vectors", "commas", prime=p)))
             voice(cells, "vectors:commas", c, resolved.tuning.comma_sizes.just[c])
         if resolved.flags.presets:
             cells.append(CellBox(f"commapick:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), query.comma_picker_band_y(geometry, "vectors") + COMMAPICK_GAP, COLUMN_WIDTH, ROW_HEIGHT, "commapick", comma=c))
@@ -103,11 +103,11 @@ def _emit_vectors_commas_col(cells, resolved, geometry, context) -> None:
         for p in range(resolved.dimensions.dimensionality):
             vector_text = DASH if resolved.unchanged.basis[j] is None else str(resolved.unchanged.basis[j][p])
             cells.append(CellBox(ids.unchanged_cell(j, p), query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT,
-                                 "unchangedcell" if (resolved.unchanged.full and not doomed and not born) else "vector", text=vector_text, prime=p, comma=resolved.dimensions.comma_count + j,
+                                 "unchanged_cell" if (resolved.unchanged.full and not doomed and not born) else "vector", text=vector_text, prime=p, comma=resolved.dimensions.comma_count + j,
                                  unit=query.cell_unit(resolved, "vectors", "commas", prime=p)))
         voice(cells, "vectors:commas", resolved.dimensions.comma_count + j, resolved.unchanged.sizes.just[j])
     if resolved.scalars.comma_draft:
-        column_kind = "vector" if resolved.ghosts.comma else "commacell"
+        column_kind = "vector" if resolved.ghosts.comma else "comma_cell"
         for p in range(resolved.dimensions.dimensionality):
             v = resolved.ghosts.comma_vector[p] if resolved.ghosts.comma else resolved.commas.pending[p]
             cells.append(CellBox(ids.comma_cell(query.pending_col_token(resolved, 'commas'), p), query.comma_left(geometry, resolved, resolved.dimensions.comma_count), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, column_kind,
@@ -151,7 +151,7 @@ def _emit_superspace_basis_column(cells, resolved, geometry, context, row_key, i
     basis_x = query.basis_col_x(geometry)
     for p in range(resolved.dimensions.superspace_dimensionality):
         cells.append(CellBox(f"{id_prefix}:{p}", basis_x, top_fn(geometry, p), COLUMN_WIDTH, ROW_HEIGHT,
-                             "commaratio", text=str(resolved.dimensions.superspace_primes[p]), prime=p))
+                             "comma_ratio", text=str(resolved.dimensions.superspace_primes[p]), prime=p))
 
 
 def _emit_superspace_quantity_rows(cells, resolved, geometry, context) -> None:

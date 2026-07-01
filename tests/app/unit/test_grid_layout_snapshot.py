@@ -152,17 +152,17 @@ def _first_divergence(golden, actual, path=""):
 STACKED_RATIO_KINDS = frozenset(
     {
         "mapping",
-        "commacell",
-        "unchangedcell",
-        "interestcell",
-        "heldcell",
-        "targetcell",
-        "formcell",
-        "ratiocell",
-        "elementcell",
-        "elementratio",
+        "comma_cell",
+        "unchanged_cell",
+        "interest_cell",
+        "held_cell",
+        "target_cell",
+        "form_cell",
+        "ratio_cell",
+        "element_cell",
+        "element_ratio",
         "generator_ratio",
-        "commaratio",
+        "comma_ratio",
         "mapped",
     }
 )

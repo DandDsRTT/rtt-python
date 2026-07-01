@@ -44,7 +44,7 @@ from _render_support import (
 
 
 class TestFeatureRenderBranches:
-    def test_rowlabel_renders_a_hard_newline_as_a_line_break(self):
+    def test_row_label_renders_a_hard_newline_as_a_line_break(self):
         import os
         import re
 

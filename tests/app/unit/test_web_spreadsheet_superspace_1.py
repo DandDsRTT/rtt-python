@@ -93,7 +93,7 @@ class TestNonstandardDomain:
         assert [cells[f"superspace_quantity_prime:{p}"].text for p in range(4)] == ["2", "3", "5", "13"]
         assert [cells[f"superspace_quantity_generator:{g}"].text for g in range(3)] == ["2/1", "26/3", "130/3"]
         assert cells["superspace_quantity_generator:0"].kind == "generator_ratio"
-        assert cells["superspace_quantity_prime:0"].kind == "commaratio"
+        assert cells["superspace_quantity_prime:0"].kind == "comma_ratio"
         assert cells["superspace_quantity_generator:0"].x == cells["tuning:superspace_generator:0"].x
         assert cells["superspace_quantity_prime:0"].x == cells["tuning:superspace_prime:0"].x
         assert cells["superspace_quantity_generator:0"].y == cells["prime:0"].y == cells["superspace_quantity_prime:0"].y
@@ -366,7 +366,7 @@ class TestSuperspaceProjection:
         assert not any(token in i for i in ids
                        for token in ("superspace_generators", "superspace_primes", "superspace_vectors", "superspace_mapping", "superspace_basis",
                                    "superspace_generator", "superspace_prime"))
-        assert cells["prime:0"].kind == "elementcell"
+        assert cells["prime:0"].kind == "element_cell"
         assert cells["header:primes"].text == "domain\nprimes"
 
     def test_nonstandard_all_prime_subgroup_with_toggle_on_shows_no_superspace(self):
@@ -380,7 +380,7 @@ class TestSuperspaceProjection:
         assert not any(token in i for i in ids
                        for token in ("superspace_generators", "superspace_primes", "superspace_vectors", "superspace_mapping", "superspace_basis",
                                    "superspace_generator", "superspace_prime"))
-        assert cells["prime:0"].kind == "elementcell"
+        assert cells["prime:0"].kind == "element_cell"
         assert cells["header:primes"].text == "domain\nprimes"
 
     def test_nonprime_based_approach_collapses_the_entire_superspace(self):
@@ -428,21 +428,21 @@ class TestSuperspaceProjection:
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         s = settings.defaults() | {"nonstandard_domain": True, "plain_text_values": True, "presets": True}
         prime = {c.id: c for c in spreadsheet.build(state, s, nonprime_approach="prime-based").cells}
-        assert {prime[i].kind for i in prime if i.startswith("tuning:generator:")} == {"tuningvalue"}
+        assert {prime[i].kind for i in prime if i.startswith("tuning:generator:")} == {"tuning_value"}
         assert {prime[i].kind for i in prime if i.startswith("tuning:superspace_generator:")} == {"generator_tuning_cell"}
         assert prime["plain_text:tuning:generators"].kind == "plain_text"
         assert prime["plain_text:tuning:superspace_generators"].kind == "plain_text_edit"
         assert "preset:tuning:superspace_generators" in prime
         neutral = {c.id: c for c in spreadsheet.build(state, s, nonprime_approach="").cells}
         assert {neutral[i].kind for i in neutral if i.startswith("tuning:generator:")} == {"generator_tuning_cell"}
-        assert {neutral[i].kind for i in neutral if i.startswith("tuning:superspace_generator:")} == {"tuningvalue"}
+        assert {neutral[i].kind for i in neutral if i.startswith("tuning:superspace_generator:")} == {"tuning_value"}
 
     def test_approach_radio_band_only_for_a_nonprime_domain(self):
         on = settings.defaults() | {"nonstandard_domain": True}
         nonprime = spreadsheet.build(service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), on)
         assert nonprime.approach_box is not None
         title = {c.id: c for c in nonprime.cells}["optimization:approach:title"]
-        assert title.kind == "boxtitle" and title.text == "nonstandard domain approach"
+        assert title.kind == "box_title" and title.text == "nonstandard domain approach"
         std = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), on)
         assert std.approach_box is None
         assert "optimization:approach:title" not in {c.id for c in std.cells}

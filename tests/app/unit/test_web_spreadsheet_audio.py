@@ -69,8 +69,8 @@ class TestPerCellAudio:
             interest=((-2, 0, 1),),
         ).cells
         interval_kinds = {
-            "commacell", "commaratio", "ratiocell", "targetcell", "heldcell", "interestcell",
-            "vec", "unchangedcell", "elementcell", "elementratio", "generator_ratio", "mapped",
+            "comma_cell", "comma_ratio", "ratio_cell", "target_cell", "held_cell", "interest_cell",
+            "vec", "unchanged_cell", "element_cell", "element_ratio", "generator_ratio", "mapped",
         }
         not_a_pitch = (
             "cell:mapping", "cell:canonical:", "cell:form", "cell:finv", "cell:scaling",

@@ -55,14 +55,14 @@ class TestFreezeAndStructure:
     def test_layout_reports_the_rightmost_title_overhang(self):
         layout = _layout()
         rightmost = max(c.x + c.width / 2 + spreadsheet_text._title_w(c.text) / 2
-                        for c in layout.cells if c.kind == "columnheader")
+                        for c in layout.cells if c.kind == "column_header")
         assert layout.right_overhang == rightmost - layout.width
         assert layout.right_overhang > 0
 
     def test_no_title_overhang_reports_zero(self):
         layout = _with(interest=False)
         rightmost = max(c.x + c.width / 2 + spreadsheet_text._title_w(c.text) / 2
-                        for c in layout.cells if c.kind == "columnheader")
+                        for c in layout.cells if c.kind == "column_header")
         assert rightmost < layout.width
         assert layout.right_overhang == 0
 

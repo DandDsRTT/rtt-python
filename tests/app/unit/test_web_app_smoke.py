@@ -641,8 +641,8 @@ class TestWebAppSmoke2:
 class TestWebAppSmoke3:
     def test_editable_kinds_derive_from_the_one_spec_table(self):
         assert page_assets.GRIDVALUE_KINDS == {
-            "mapping", "commacell", "unchangedcell", "interestcell", "heldcell",
-            "targetcell", "formcell", "ratiocell", "elementcell", "elementratio",
+            "mapping", "comma_cell", "unchanged_cell", "interest_cell", "held_cell",
+            "target_cell", "form_cell", "ratio_cell", "element_cell", "element_ratio",
         }, "GRIDVALUE_KINDS derives from _GRIDVALUE_SPECS, not a parallel literal; pinning the derived membership makes adding an editable-cell spec a deliberate change"
 
     def test_every_editable_kind_is_a_value_kind(self):

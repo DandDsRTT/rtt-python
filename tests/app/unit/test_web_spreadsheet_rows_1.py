@@ -47,7 +47,7 @@ class TestMathExpressions:
         on = {c.id: c for c in on_lay.cells}
         for cell_id in ("tuning:prime:1", "tuning:comma:0", "tuning:target:0",
                     "retune:prime:1", "damage:target:0"):
-            assert on[cell_id].kind == "tuningvalue"
+            assert on[cell_id].kind == "tuning_value"
             assert on[cell_id].text == off[cell_id].text
         assert {"bracket:tuning:map:l", "caption:tuning:primes"} <= set(on)
         assert "block:tuning:primes" in {b.id for b in on_lay.blocks}
@@ -123,7 +123,7 @@ class TestMathExpressions:
             assert "log₂" in on[cell_id].text
             assert on[cell_id].text.endswith("= " + off[cell_id].text)
         mini = {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="minimax-S").cells}
-        assert mini["tuning:superspace_prime:0"].kind == "tuningvalue"
+        assert mini["tuning:superspace_prime:0"].kind == "tuning_value"
 
     def test_math_expressions_skip_manual_generator_override(self):
         layout = spreadsheet.build(
@@ -140,11 +140,11 @@ class TestMathExpressions:
 
     def test_math_expressions_render_the_prescaler_diagonal_as_logs(self):
         cells = {c.id: c for c in _with("minimax-S", weighting=True, math_expressions=True).cells}
-        assert cells["cell:prescaling:primes:0:0"].kind == "prescalercell"
+        assert cells["cell:prescaling:primes:0:0"].kind == "prescaler_cell"
         assert cells["cell:prescaling:primes:0:0"].text == "1"
         assert cells["cell:prescaling:primes:1:1"].text == "1.585"
         assert cells["cell:prescaling:primes:2:2"].text == "2.322"
-        assert cells["cell:prescaling:primes:0:1"].kind == "tuningvalue"
+        assert cells["cell:prescaling:primes:0:1"].kind == "tuning_value"
         assert cells["cell:prescaling:primes:0:1"].text == "0"
 
     def test_math_expressions_render_the_prescaled_comma_basis_as_logs(self):
@@ -155,7 +155,7 @@ class TestMathExpressions:
 
     def test_math_expressions_without_quantities_show_only_the_prescaler_expression(self):
         cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, math_expressions=True, quantities=False).cells}
-        assert cells["cell:prescaling:primes:1:1"].kind == "prescalercell"
+        assert cells["cell:prescaling:primes:1:1"].kind == "prescaler_cell"
         assert cells["cell:prescaling:primes:1:1"].text == ""
         assert cells["cell:prescaling:primes:1:1"].blank is True
         assert cells["cell:prescaling:commas:1:0"].text == "-4 · log₂3"
@@ -167,7 +167,7 @@ class TestMathExpressions:
                                  "math_expressions": True},
                                 tuning_scheme=scheme)
         cells = {c.id: c for c in layout.cells}
-        assert cells["cell:prescaling:primes:0:0"].kind == "prescalercell", "the diagonal: each prime is the plain value (prescalercell, not math_expression)"
+        assert cells["cell:prescaling:primes:0:0"].kind == "prescaler_cell", "the diagonal: each prime is the plain value (prescaler_cell, not math_expression)"
         assert cells["cell:prescaling:primes:0:0"].text == "2"
         assert cells["cell:prescaling:primes:1:1"].text == "3"
         assert cells["cell:prescaling:primes:2:2"].text == "5"
@@ -181,20 +181,20 @@ class TestMathExpressions:
                                  "math_expressions": True},
                                 tuning_scheme=scheme)
         cells = {c.id: c for c in layout.cells}
-        assert cells["cell:prescaling:primes:1:1"].kind == "prescalercell"
+        assert cells["cell:prescaling:primes:1:1"].kind == "prescaler_cell"
         assert cells["cell:prescaling:primes:1:1"].text == "1"
-        assert cells["cell:prescaling:commas:0:0"].kind == "tuningvalue"
+        assert cells["cell:prescaling:commas:0:0"].kind == "tuning_value"
         assert cells["cell:prescaling:commas:0:0"].text == "4"
 
-    def test_bare_prescaler_diagonal_is_editable_prescalercell_kind(self):
+    def test_bare_prescaler_diagonal_is_editable_prescaler_cell_kind(self):
         cells = {c.id: c for c in _with("minimax-S", weighting=True).cells}
         for i in range(3):
-            assert cells[f"cell:prescaling:primes:{i}:{i}"].kind == "prescalercell"
+            assert cells[f"cell:prescaling:primes:{i}:{i}"].kind == "prescaler_cell"
         for i in range(3):
             for c in range(3):
                 if i == c:
                     continue
-                assert cells[f"cell:prescaling:primes:{i}:{c}"].kind == "tuningvalue"
+                assert cells[f"cell:prescaling:primes:{i}:{c}"].kind == "tuning_value"
                 assert cells[f"cell:prescaling:primes:{i}:{c}"].text == "0"
 
     def test_bare_prescaler_diagonal_carries_its_prime_index(self):
@@ -393,7 +393,7 @@ class TestCountsRow:
         assert cells["cell:interest:0:0"].text == "-1"
         assert cells["cell:interest:1:0"].text == "1" and cells["cell:interest:2:0"].text == "0"
         assert cells["cell:interest:2:2"].text == "1"
-        assert cells["cell:interest:0:0"].kind == "interestcell", "editable, not a static 'vector'"
+        assert cells["cell:interest:0:0"].kind == "interest_cell", "editable, not a static 'vector'"
         assert {"ebktop:vector:interest:0", "ebkangle:vector:interest:0",
                 "ebktop:vector:interest:1", "ebkangle:vector:interest:1"} <= set(cells)
         assert "bracket:vector:interest:l" not in cells and "bracket:vector:interest:r" not in cells

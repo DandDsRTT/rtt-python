@@ -40,7 +40,7 @@ def emit_headers(resolved, geometry, context) -> EmitResult:
     for key in geometry.column_x:
         hx = geometry.column_x[key] + query.outer_gutter_width(geometry, key)
         hw = geometry.column_width[key] - 2 * query.outer_gutter_width(geometry, key)
-        cells.append(CellBox(f"header:{key}", hx, geometry.header_y, hw, HEADER_HEIGHT, "columnheader", text=geometry.column_header[key]))
+        cells.append(CellBox(f"header:{key}", hx, geometry.header_y, hw, HEADER_HEIGHT, "column_header", text=geometry.column_header[key]))
         glyph = _fold_glyph(f"column:{key}" in context.collapsed)
         tx = hx + (hw - TOGGLE) / 2
         cells.append(CellBox(f"toggle:column:{key}", tx, geometry.column_node_y, TOGGLE, TOGGLE, "columntoggle", text=glyph))
@@ -49,7 +49,7 @@ def emit_headers(resolved, geometry, context) -> EmitResult:
         if geometry.size_factor or resolved.scalars.prescaler_is_matrix:
             label = _pretransform_label(label)
             label = label.replace(" pretransforming", chr(160) + "pre-" + chr(10) + "transforming")
-        cells.append(CellBox(f"label:{key}", 0, geometry.rows[key].y, LABEL_WIDTH, geometry.rows[key].height, "rowlabel", text=label))
+        cells.append(CellBox(f"label:{key}", 0, geometry.rows[key].y, LABEL_WIDTH, geometry.rows[key].height, "row_label", text=label))
         glyph = _fold_glyph(f"row:{key}" in context.collapsed)
         ty = geometry.rows[key].y + (geometry.rows[key].height - TOGGLE) / 2
         cells.append(CellBox(f"toggle:row:{key}", geometry.node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
@@ -216,25 +216,25 @@ def _emit_qty_superspace_generators(cells, resolved, geometry, context, quantity
 def _emit_qty_superspace_primes(cells, resolved, geometry, context, quantity_y) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "superspace_primes"):
         for p in range(resolved.dimensions.superspace_dimensionality):
-            cells.append(CellBox(f"superspace_quantity_prime:{p}", query.superspace_prime_left(geometry, p), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "commaratio", text=str(resolved.dimensions.superspace_primes[p]), prime=p))
+            cells.append(CellBox(f"superspace_quantity_prime:{p}", query.superspace_prime_left(geometry, p), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "comma_ratio", text=str(resolved.dimensions.superspace_primes[p]), prime=p))
 
 
 def _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
     if not query.tile_open(geometry, context.collapsed, "quantities", "commas"):
         return
     for c in range(resolved.dimensions.comma_count):
-        cells.append(CellBox(f"comma:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "ratiocell", text=resolved.commas.ratios[c], comma=c))
+        cells.append(CellBox(f"comma:{query.column_token(resolved, 'commas', c)}", query.comma_left(geometry, resolved, c), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "ratio_cell", text=resolved.commas.ratios[c], comma=c))
         voice(cells, "quantities:commas", c, resolved.tuning.comma_sizes.just[c])
     if resolved.scalars.comma_draft:
         cells.append(CellBox("comma:pending", query.comma_left(geometry, resolved, resolved.dimensions.comma_count), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
-                             "commaratio" if resolved.ghosts.comma else "ratiocell",
+                             "comma_ratio" if resolved.ghosts.comma else "ratio_cell",
                              text=(resolved.ghosts.comma_ratio or DASH) if resolved.ghosts.comma else "?/?",
                              comma=resolved.dimensions.comma_count, pending=True))
     if resolved.unchanged.shown:
         for j in range(resolved.dimensions.unchanged_count):
             doomed = resolved.commas.pending is not None and j == resolved.dimensions.unchanged_count - 1
             cells.append(CellBox(f"unchanged:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
-                                 "ratiocell" if (resolved.unchanged.full and not doomed) else "commaratio",
+                                 "ratio_cell" if (resolved.unchanged.full and not doomed) else "comma_ratio",
                                  text=resolved.unchanged.ratios[j] or DASH, comma=resolved.dimensions.comma_count + j))
             voice(cells, "quantities:commas", resolved.dimensions.comma_count + j, resolved.unchanged.sizes.just[j])
     for c in range(resolved.dimensions.comma_count):
@@ -246,7 +246,7 @@ def _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minu
 def _emit_qty_detempering(cells, resolved, geometry, context, quantity_y) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "detempering"):
         for i in range(resolved.dimensions.rank):
-            cells.append(CellBox(f"detempering:{i}", query.detempering_left(geometry, i), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "commaratio", text=resolved.scalars.generators[i]))
+            cells.append(CellBox(f"detempering:{i}", query.detempering_left(geometry, i), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "comma_ratio", text=resolved.scalars.generators[i]))
             voice(cells, "quantities:detempering", i, resolved.detempering.sizes.just[i])
 
 
@@ -254,14 +254,14 @@ def _emit_qty_interests(cells, resolved, geometry, context, quantity_y, branch_m
     if query.tile_open(geometry, context.collapsed, "quantities", "targets"):
         _emit_qty_list(cells, resolved, _QtyList("targets", "target", resolved.dimensions.target_count, lambda i: query.interval_left(geometry, "targets", i), resolved.targets.ratios,
                                      resolved.tuning.target_sizes, resolved.targets.pending,
-                                     "ratiocell" if resolved.scalars.targets_editable else "commaratio",
+                                     "ratio_cell" if resolved.scalars.targets_editable else "comma_ratio",
                                      resolved.scalars.targets_editable), quantity_y, branch_minus)
     if query.tile_open(geometry, context.collapsed, "quantities", "held"):
         _emit_qty_list(cells, resolved, _QtyList("held", "held", resolved.dimensions.held_count, lambda i: query.interval_left(geometry, "held", i), resolved.held.ratios,
-                                     resolved.tuning.held_sizes, resolved.held.pending, "ratiocell", True), quantity_y, branch_minus)
+                                     resolved.tuning.held_sizes, resolved.held.pending, "ratio_cell", True), quantity_y, branch_minus)
     if query.tile_open(geometry, context.collapsed, "quantities", "interest"):
         _emit_qty_list(cells, resolved, _QtyList("interest", "interest", resolved.dimensions.interest_count, lambda i: query.interval_left(geometry, "interest", i), resolved.interest.ratios,
-                                     resolved.tuning.interest_sizes, resolved.interest.pending, "ratiocell", True), quantity_y, branch_minus)
+                                     resolved.tuning.interest_sizes, resolved.interest.pending, "ratio_cell", True), quantity_y, branch_minus)
 
 
 def _emit_qty_list(cells, resolved, q: _QtyList, quantity_y: float, branch_minus) -> None:
@@ -271,7 +271,7 @@ def _emit_qty_list(cells, resolved, q: _QtyList, quantity_y: float, branch_minus
         if q.minus_gate:
             branch_minus(f"{q.singular}_minus:{j}", q.group, j, f"{q.singular}_minus", comma=j)
     if q.pending is not None:
-        cells.append(CellBox(f"{q.singular}:pending", q.left_fn(q.count), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "ratiocell", text="?/?", comma=q.count, pending=True))
+        cells.append(CellBox(f"{q.singular}:pending", q.left_fn(q.count), quantity_y, COLUMN_WIDTH, ROW_HEIGHT, "ratio_cell", text="?/?", comma=q.count, pending=True))
         branch_minus(f"{q.singular}_minus:pending", q.group, q.count, f"{q.singular}_minus")
 
 

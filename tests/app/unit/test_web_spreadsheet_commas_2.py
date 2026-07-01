@@ -22,10 +22,10 @@ from _spreadsheet_support import _memoized_build, _layout, _with, _in_commas
 class TestOptimizationControls:
     def test_optimization_power_is_editable_only_with_alt_complexity(self):
         off = {c.id: c for c in _with("TILT minimax-S", optimization=True).cells}
-        assert off["optimization:power"].kind == "powerdisplay"
+        assert off["optimization:power"].kind == "power_display"
         assert off["optimization:power"].text == "∞"
         on = {c.id: c for c in _with("TILT minimax-S", optimization=True, weighting=True, alt_complexity=True).cells}
-        assert on["optimization:power"].kind == "powerinput"
+        assert on["optimization:power"].kind == "power_input"
 
     def test_all_interval_greys_and_locks_the_target_chooser(self):
         allint = {c.id: c for c in _with(scheme="minimax-S", presets=True).cells}
@@ -364,17 +364,17 @@ class TestCustomWeightRow:
         s = {**settings.defaults(), "weighting": True, "custom_weights": True}
         layout = spreadsheet.build(base, s, custom_weights=(1.0, 2.0, 3.0))
         weight_cells = [c for c in layout.cells if c.id.startswith("weight:target:")]
-        assert weight_cells and all(c.kind == "weightcell" for c in weight_cells)
+        assert weight_cells and all(c.kind == "weight_cell" for c in weight_cells)
         assert next(c for c in layout.cells if c.id == "control:slope").disabled
 
     def test_custom_weights_stay_read_only_in_all_interval_and_math_views(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         ai = {**settings.defaults(), "weighting": True, "custom_weights": True}
         layout = spreadsheet.build(base, ai, tuning_scheme="minimax-S", custom_weights=(1.0, 2.0, 3.0))
-        assert all(c.kind != "weightcell" for c in layout.cells if c.id.startswith("weight:target:"))
+        assert all(c.kind != "weight_cell" for c in layout.cells if c.id.startswith("weight:target:"))
         m = {**settings.defaults(), "weighting": True, "custom_weights": True, "math_expressions": True}
         layout = spreadsheet.build(base, m, custom_weights=(1.0, 2.0, 3.0))
-        assert all(c.kind != "weightcell" for c in layout.cells if c.id.startswith("weight:target:"))
+        assert all(c.kind != "weight_cell" for c in layout.cells if c.id.startswith("weight:target:"))
 
     def test_custom_weights_show_the_overridden_values_in_the_weight_row(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
