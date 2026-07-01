@@ -156,8 +156,7 @@ def _tile_grid_frame_html() -> str:
             cell_y,
             cell,
             cell,
-            '<div style="width:100%;height:100%;box-sizing:border-box;'
-            f'{_CELL_FRAME}"></div>',
+            f'<div style="width:100%;height:100%;box-sizing:border-box;{_CELL_FRAME}"></div>',
         )
         + mark(
             cell_x + cell, cell_y, bracket_width, cell, square_bracket(bracket_width, cell, "right")
