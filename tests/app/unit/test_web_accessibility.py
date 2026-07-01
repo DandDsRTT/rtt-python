@@ -68,6 +68,15 @@ class TestReducedMotion:
             "(including the wordmark's rotate) snaps instantly"
         )
 
+    def test_reduce_motion_neutralizes_the_hard_coded_loop_animations(self):
+        block = _media_blocks(_CSS, "@media (prefers-reduced-motion: reduce)")
+        assert re.search(r"animation-iteration-count\s*:\s*1", block) and (
+            "animation-duration" in block
+        ), (
+            "the busy spinner and the Show-panel demo/preview loops ride their own hard-coded durations "
+            "(not var(--t)), so reduce-motion must also collapse animations to a single instant run"
+        )
+
     def test_tour_autostart_is_suppressed_under_reduced_motion(self):
         assert "prefers-reduced-motion" in _TOUR_JS, (
             "the auto-running first-load tour (with its moving spotlight) must not start itself when "
@@ -126,6 +135,17 @@ class TestTouchAffordances:
         assert reveal and "opacity:1" in reveal.group(1).replace(" ", ""), (
             "touch users have no hover, so a tap that focuses a ratio cell must reveal its "
             "reduce/reciprocate operations"
+        )
+
+    def test_desktop_editing_hide_uses_display_not_opacity(self):
+        block = _media_blocks(_CSS, "@media (hover: hover)")
+        hide = re.search(
+            r"\.rtt-fraction-cell:focus-within\s+\.rtt-ratio-operation\s*\{([^}]*)\}", block
+        )
+        assert hide and "display:none" in hide.group(1).replace(" ", ""), (
+            "the editing-hide must be display:none (gated to hover-capable pointers), not opacity — an "
+            "opacity:0 loses the cascade to the higher-specificity hover reveal when the edited cell is "
+            "also hovered, so the ops would overlap the typed ratio on the normal click-to-edit path"
         )
 
 

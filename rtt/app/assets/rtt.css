@@ -245,12 +245,18 @@ body.rtt-no-anim { --t:0s; }
    this class on for a beat across a zoom (zeroing --t like rtt-no-anim) so the rescale snaps; it is its
    OWN class so removing it restores whatever the animations toggle was, never forcing animations on. */
 body.rtt-zoom-freeze { --t:0s; }
-/* Honor the OS "reduce motion" setting: zero the shared transition var app-wide — the same kill-switch
-   the animations toggle flips — so every slide, fade, grow and the wordmark's rotate (all ride var(--t))
-   snap instantly for users who asked their system to suppress motion. This wins whenever the OS requests
-   reduction, regardless of the in-app animations toggle; the tour also skips its autostart (see tour.js). */
+/* Honor the OS "reduce motion" setting. Two parts, because motion here comes from two sources: (1) zero
+   the shared --t — the same kill-switch the animations toggle flips — so every var(--t) slide/fade/grow/
+   rotate AND the JS reveal delay that reads --t snap instantly; (2) neutralize the autonomous CSS
+   animations that ride their OWN hard-coded durations and never touch --t (the busy spinner, the
+   Show-panel demo/preview loops) by collapsing them to a single near-instant run, so they settle on a
+   still frame instead of looping. This wins whenever the OS requests reduction, regardless of the in-app
+   animations toggle; the tour also skips its autostart (see tour.js). */
 @media (prefers-reduced-motion: reduce) {
   :root { --t:0s; }
+  *, *::before, *::after {
+    animation-duration:0.01ms !important; animation-iteration-count:1 !important; animation-delay:0s !important;
+  }
 }
 /* Narrow viewports (phones): the value grid is a fixed pixel board that must scroll either way, but the
    always-pinned wordmark tab need not cost width here. Shrink the closed sidebar to just its hamburger and
@@ -349,10 +355,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    half a line below a two-line sibling's top rather than hugging the cells. */
 .rtt-caption { width:100%; text-align:center; text-wrap:balance; font-size:9px; line-height:10px;
                color:#333; overflow-wrap:break-word; font-family:var(--rtt-serif); }
-/* a LOCKED control's caption (the disabled flag, app._update_caption) stays a legible muted grey that
-   still clears AA against the grid pane, rather than the near-invisible #999 it once used; the locked
-   state reads from the greyed control itself, not from an illegible label. Compounded selector (0,2,0)
-   to out-specify the base .rtt-caption #333. */
+/* a LOCKED control's caption (the disabled flag, app._update_caption) is a muted grey that still clears
+   AA against the grid pane — dark enough to read, still lighter than the active #333 — rather than the
+   near-invisible #999 it once used. Compounded selector (0,2,0) to out-specify the base .rtt-caption #333. */
 .rtt-caption.rtt-caption-disabled { color:#4d4d4d; }
 .rtt-caption-cell { align-items:center; }
 /* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and captions ("optimization power") stay on ONE
@@ -974,10 +979,15 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover, .rtt-fraction-cell.rtt-speaker-hove
 body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation,
 .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation,
 .rtt-fraction-cell.rtt-active .rtt-ratio-operation { opacity:1; pointer-events:auto; }
-/* hide the ops while the cell's input is focused for editing (they'd overlap the text): a plain
-   opacity:0 rather than display:none so the coarse-pointer rule below can flip them back on for touch.
-   Ordered after the hover reveal so focus-while-hovering still hides them. */
-.rtt-fraction-cell:focus-within .rtt-ratio-operation { opacity:0; pointer-events:none; }
+/* while a ratio cell's input is focused for editing, hide its ops so they don't overlap the text. On a
+   hover-capable (desktop) pointer this is a display:none — which beats the hover reveal outright (they act
+   on different properties) even when the edited cell is also hovered, the normal click-to-edit case that a
+   mere opacity:0 would lose to the higher-specificity hover rule. Touch has no hover, so this never fires
+   there; the coarse-pointer block below instead REVEALS the ops on focus (a tap is the only way to reach
+   them). */
+@media (hover: hover) {
+  .rtt-fraction-cell:focus-within .rtt-ratio-operation { display:none; }
+}
 /* a no-op button stays SOLID (the full white box) and greys only its glyph — never semi-transparent */
 body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-disabled,
 .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation.rtt-operation-disabled,
