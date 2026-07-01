@@ -7,3 +7,6 @@ radon==6.0.1
 pre-commit==4.6.0
 # Real-browser test suite (tests/app/integration/test_browser_*.py); opt-in via RTT_BROWSER_SMOKE=1.
 playwright==1.60.0
+# Font subsetting (tools/subset_fonts.py) + the subset coverage test; brotli codecs the woff2.
+fonttools==4.63.0
+brotli==1.2.0
