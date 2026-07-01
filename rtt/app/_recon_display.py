@@ -23,10 +23,19 @@ from rtt.app.render_html import (
     _math_html,
     _plain_text_font,
     _range_chart,
+    _run_html,
     _underline_html,
     _units_font,
     _units_html,
 )
+
+
+def _pending_html(prefix: str, draft: str, suffix: str) -> str:
+    return (
+        f"{_run_html(prefix)}"
+        f"<span class='rtt-pending-q'>{_run_html(draft)}</span>"
+        f"{_run_html(suffix)}"
+    )
 
 
 def build_svgfill(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None:
@@ -199,9 +208,7 @@ def update_plain_text_pending(reconciler, cell_box: spreadsheet.CellBox) -> None
         prefix, draft, suffix = _squared(
             off, *service.mapping_pending_text(committed, ed.pending_mapping_row), False
         )
-        reconciler.cells[cell_box.id].display.html.set_content(
-            f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}"
-        )
+        reconciler.cells[cell_box.id].display.html.set_content(_pending_html(prefix, draft, suffix))
         reconciler.cells[cell_box.id].display.html.style(
             f"font-size:{_plain_text_font(prefix + draft + suffix, cell_box.width)}px"
         )
@@ -219,9 +226,7 @@ def update_plain_text_pending(reconciler, cell_box: spreadsheet.CellBox) -> None
     prefix, draft, suffix = _squared(
         off, *service.vector_list_pending_text(committed, pending), True
     )
-    reconciler.cells[cell_box.id].display.html.set_content(
-        f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}"
-    )
+    reconciler.cells[cell_box.id].display.html.set_content(_pending_html(prefix, draft, suffix))
     reconciler.cells[cell_box.id].display.html.style(
         f"font-size:{_plain_text_font(prefix + draft + suffix, cell_box.width)}px"
     )
