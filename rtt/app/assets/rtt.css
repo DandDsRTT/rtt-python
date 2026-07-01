@@ -306,7 +306,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
              transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
 .rtt-cell { position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
             opacity:1; transition:transform var(--t), opacity var(--t);
-            /* declared HERE so var(--rtt-hl) resolves to THIS cell's highlight (set by _ACTIVECELL_JS)
+            /* declared HERE so var(--rtt-hl) resolves to THIS cell's highlight (set by activecell.js)
                rather than :root's 0. --hl is the effective white-tint alpha; --cell-fill is the
                editable fill lightened by it over the resting --cell-bg. */
             --hl:calc(var(--rtt-hl, 0) * var(--hl-scale, 1));
@@ -601,7 +601,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the matching red error tooltip (set on the target chooser's kept tooltip handle): a red box with
    white text, like a negative toast, instead of the default dark hover bubble. */
 .q-tooltip.rtt-tip-error { background:#d33 !important; color:#fff !important; }
-/* the zoom-on-hover magnifier (app._ZOOM_JS): hovering ANY gridded value cell (.rtt-zoomable) pops a
+/* the zoom-on-hover magnifier (zoom.js): hovering ANY gridded value cell (.rtt-zoomable) pops a
    loupe -- a LITERAL scaled clone of that cell (value, unit, math expression) enlarged by --zoom-factor
    (so the small whole-part of "1200.000" reaches a normal integer "1" cell's size). The clone is shown
    NON-interactively: every editable-cell box is stripped, so an editable value reads like a read-only
@@ -721,7 +721,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    diagonal slash. The white box + black outline rides the WRAP (one box around two inputs), and the
    font cascades from the .rtt-fraction-edit box (set inline by _fit_fraction) so num + den shrink
    together. data-fracmode flips the view: "int" (denominator blank/1) shows just the big numerator;
-   "ratio" shows num over bar over den. _FRACTION_JS keeps it live as you type; the server sets it
+   "ratio" shows num over bar over den. fraction.js keeps it live as you type; the server sets it
    authoritatively from the committed value. ---- */
 .rtt-fraction-cell { background:#fff; border:var(--cell-border); box-sizing:border-box; overflow:hidden; }
 /* width:max-content so the column hugs its widest input (num/den) — the parent .rtt-fraction-cell is a
@@ -756,7 +756,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    fraction input, edited IN PLACE — the decimal twin of the fraction cell above, replacing the old
    overlay cents face that swapped to a raw single line on focus. The white box + outline rides the
    WRAP (one box around both inputs). data-decmode flips the view: "int" (no fractional part) shows
-   just the big whole; "dec" shows the whole over a small ".fraction". _DECIMAL_JS keeps it live as you
+   just the big whole; "dec" shows the whole over a small ".fraction". decimal.js keeps it live as you
    type; the server sets it authoritatively from the committed value. field-sizing:content sizes each
    field to its digits so the sign glyph hugs the whole and the dot hugs the fraction (Chrome's grid).
    The generator cell adds a clickable +/− sign (.rtt-generator-sign) left of the whole part. ---- */
