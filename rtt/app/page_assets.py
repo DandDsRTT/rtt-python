@@ -453,8 +453,8 @@ def _audio_bank() -> ui.element:
     bank = ui.element("div").classes("rtt-tile-bank").mark("audiobank")
     with bank:
         for control, glyph, fn in _AUDIO_BANK:
-            ui.html(glyph).classes("rtt-audio-control").mark(f"audioctrl:{control}").props(
-                f'data-actrl="{control}"'
+            ui.html(glyph).classes("rtt-audio-control").mark(f"audio_control:{control}").props(
+                f'data-audio-control="{control}"'
             ).on("click", js_handler=f"() => window.rttAudio.{fn}()").tooltip(
                 tooltips.AUDIO_HELP[control]
             )

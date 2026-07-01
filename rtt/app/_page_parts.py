@@ -268,7 +268,7 @@ def _visual_toggle(page_builder, key):
     element = (
         ui.html(_VISUAL_ICON[key])
         .classes(cls)
-        .mark(f"visctrl:{key}")
+        .mark(f"visibility_control:{key}")
         .tooltip(tooltips.SHOW_HELP[key])
     )
     element.on(
