@@ -88,18 +88,18 @@ def hnf_with_transform(matrix: Matrix) -> tuple[Matrix, Matrix]:
         return (), ()
     n_cols = len(rows[0])
     pivot_row = 0
-    for col in range(n_cols):
+    for column in range(n_cols):
         if pivot_row >= size:
             break
-        _reduce_column_to_pivot(rows, transform, pivot_row, col)
-        if rows[pivot_row][col] == 0:
+        _reduce_column_to_pivot(rows, transform, pivot_row, column)
+        if rows[pivot_row][column] == 0:
             continue
-        if rows[pivot_row][col] < 0:
+        if rows[pivot_row][column] < 0:
             rows[pivot_row] = [-x for x in rows[pivot_row]]
             transform[pivot_row] = [-x for x in transform[pivot_row]]
-        pivot = rows[pivot_row][col]
+        pivot = rows[pivot_row][column]
         for r in range(pivot_row):
-            q = rows[r][col] // pivot
+            q = rows[r][column] // pivot
             if q:
                 rows[r] = [a - q * b for a, b in zip(rows[r], rows[pivot_row], strict=False)]
                 transform[r] = [
@@ -218,20 +218,20 @@ def smith_normal_form_with_transforms(matrix: Matrix) -> tuple[Matrix, Matrix, M
 
 
 def _reduce_column_to_pivot(
-    rows: list[list[int]], transform: list[list[int]], pivot_row: int, col: int
+    rows: list[list[int]], transform: list[list[int]], pivot_row: int, column: int
 ) -> None:
     while True:
-        nonzero = [r for r in range(pivot_row, len(rows)) if rows[r][col] != 0]
+        nonzero = [r for r in range(pivot_row, len(rows)) if rows[r][column] != 0]
         if not nonzero:
             return
-        smallest = min(nonzero, key=lambda r: abs(rows[r][col]))
+        smallest = min(nonzero, key=lambda r: abs(rows[r][column]))
         if smallest != pivot_row:
             rows[pivot_row], rows[smallest] = rows[smallest], rows[pivot_row]
             transform[pivot_row], transform[smallest] = transform[smallest], transform[pivot_row]
         reduced = False
         for r in range(pivot_row + 1, len(rows)):
-            if rows[r][col] != 0:
-                q = rows[r][col] // rows[pivot_row][col]
+            if rows[r][column] != 0:
+                q = rows[r][column] // rows[pivot_row][column]
                 rows[r] = [a - q * b for a, b in zip(rows[r], rows[pivot_row], strict=False)]
                 transform[r] = [
                     a - q * b for a, b in zip(transform[r], transform[pivot_row], strict=False)

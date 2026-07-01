@@ -311,8 +311,8 @@ class TestSuperspaceProjection:
 
     def test_superspace_projection_every_tile_emits_a_plain_text_band(self):
         cells = {c.id for c in _barbados_projection(plain_text_values=True, generator_detempering=True).cells}
-        for col in ["superspace_generators", "superspace_primes", "primes", "detempering", "commas", "targets"]:
-            assert f"plain_text:superspace_projection:{col}" in cells, col
+        for column in ["superspace_generators", "superspace_primes", "primes", "detempering", "commas", "targets"]:
+            assert f"plain_text:superspace_projection:{column}" in cells, column
 
     def test_superspace_projection_caption_symbol_and_units_when_named(self):
         cells = {c.id: c for c in _barbados_projection(names=True, symbols=True, header_symbols=True, units=True).cells}

@@ -133,10 +133,10 @@ def _emit_mapping_draft_commas(cells, resolved, geometry, dr, drt) -> None:
 
 
 def _emit_mapped_tile(cells, resolved, geometry, m: _MappedTile, i, rt) -> None:
-    for col in range(m.count):
-        cells.append(CellBox(f"cell:{m.prefix}:{rt}:{query.column_token(resolved, m.group, col)}", m.left_fn(col), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(m.data[i][col]), generator=i, unit=query.cell_unit(resolved, "mapping", m.group, generator=i)))
+    for column in range(m.count):
+        cells.append(CellBox(f"cell:{m.prefix}:{rt}:{query.column_token(resolved, m.group, column)}", m.left_fn(column), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(m.data[i][column]), generator=i, unit=query.cell_unit(resolved, "mapping", m.group, generator=i)))
         if m.sizes is not None:
-            voice(cells, f"mapped:{m.group}", col, m.sizes[col])
+            voice(cells, f"mapped:{m.group}", column, m.sizes[column])
     if m.pending is not None:
         cells.append(CellBox(f"cell:{m.prefix}:{rt}:draft", m.left_fn(m.count), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, pending=True))
 
@@ -319,8 +319,8 @@ def _emit_canonical_finv(cells, resolved, geometry, context) -> None:
 
 
 def _emit_canonical_mapped_tile(cells, resolved, geometry, prefix, group, count, left_fn, data, pending, i) -> None:
-    for col in range(count):
-        cells.append(CellBox(f"cell:{prefix}:{i}:{query.column_token(resolved, group, col)}", left_fn(col), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(data[i][col]), generator=i, unit=query.cell_unit(resolved, "canonical", group, generator=i)))
+    for column in range(count):
+        cells.append(CellBox(f"cell:{prefix}:{i}:{query.column_token(resolved, group, column)}", left_fn(column), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(data[i][column]), generator=i, unit=query.cell_unit(resolved, "canonical", group, generator=i)))
     if pending is not None:
         cells.append(CellBox(f"cell:{prefix}:{i}:draft", left_fn(count), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, pending=True))
 

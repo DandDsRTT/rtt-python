@@ -220,10 +220,10 @@ class TestFreezeAndStructure:
         layout = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), opts, interest=((-1, 1, 0),))
         cells = {c.id: c for c in layout.cells}
         by_id = {line.id: line for line in layout.lines}
-        for plus_id, col, last_sub, gap in (("plus", "primes", "v:prime:2", 0),
+        for plus_id, column, last_sub, gap in (("plus", "primes", "v:prime:2", 0),
                                             ("comma_plus", "commas", "v:comma:0", 0),
                                             ("interest_plus", "interest", "v:interest:0", spreadsheet_constants.INTERVAL_COL_GAP / 2)):
-            plus, bus = cells[plus_id], by_id[f"bus:{col}:top"]
+            plus, bus = cells[plus_id], by_id[f"bus:{column}:top"]
             stub = by_id[last_sub].position + spreadsheet_constants.COLUMN_WIDTH + gap
             assert abs((plus.x + plus.width / 2) - stub) < 0.51
             assert abs((plus.y + plus.height / 2) - bus.position) < 0.51

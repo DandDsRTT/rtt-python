@@ -115,7 +115,7 @@ def _find_modular_solution(ldb: tuple, base: tuple, modulus: int) -> tuple:
     a_rows = transpose(ldb)
     system = sp.Matrix(
         [
-            list(a_rows[j]) + [modulus if col == j else 0 for col in range(width)]
+            list(a_rows[j]) + [modulus if column == j else 0 for column in range(width)]
             for j in range(width)
         ]
     )

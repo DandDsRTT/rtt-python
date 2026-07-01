@@ -137,9 +137,9 @@ class TestPlainTextColumns:
         rows.append([_t(pre[c]) for c in range(3)])
         assert pt[("prescaling", "primes")] == "[" + " ".join("⟨" + " ".join(r) + "]" for r in rows) + "⟩"
         comma = service.from_mapping(mapping).comma_basis[0]
-        col = [pre[i] * comma[i] for i in range(3)]
-        col.append(sum(col))
-        assert pt[("prescaling", "commas")] == "[[" + " ".join(_t(x) for x in col) + "⟩]"
+        column = [pre[i] * comma[i] for i in range(3)]
+        column.append(sum(column))
+        assert pt[("prescaling", "commas")] == "[[" + " ".join(_t(x) for x in column) + "⟩]"
 
 
 class TestPlainTextTuning:
@@ -246,8 +246,8 @@ class TestPlainTextValues:
     def test_plain_text_values_includes_every_superspace_projection_tile(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         pt = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=("2", "13/5"))
-        for col in ("superspace_generators", "superspace_primes", "primes", "detempering", "commas", "targets"):
-            assert ("superspace_projection", col) in pt, col
+        for column in ("superspace_generators", "superspace_primes", "primes", "detempering", "commas", "targets"):
+            assert ("superspace_projection", column) in pt, column
         assert pt[("superspace_projection", "superspace_generators")].startswith("{") and pt[("superspace_projection", "superspace_generators")].endswith("]")
         assert pt[("superspace_projection", "primes")].startswith("⟨")
         assert pt[("superspace_projection", "detempering")].startswith("{")

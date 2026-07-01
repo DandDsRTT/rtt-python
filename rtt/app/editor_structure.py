@@ -33,10 +33,10 @@ def _row_replaced(state: TemperamentState, i: int, val) -> TemperamentState | No
 
 
 def _comma_replaced(state: TemperamentState, c: int, vector) -> TemperamentState | None:
-    cols = state.comma_basis
-    if not 0 <= c < len(cols):
+    columns = state.comma_basis
+    if not 0 <= c < len(columns):
         return None
-    basis = [list(col) for col in cols]
+    basis = [list(column) for column in columns]
     basis[c] = [int(x) for x in vector]
     domain_basis = state.domain_basis if len(basis[c]) == state.dimensionality else None
     new_state = service.from_comma_basis(basis, domain_basis)

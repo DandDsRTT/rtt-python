@@ -390,9 +390,9 @@ class TestWeightingLabels:
         on = {c.id: c for c in layout.cells}
         assert on["symbol:complexity:targets"].text == "𝒄"
         assert on["caption:complexity:targets"].underlines != ()
-        for col in ("primes", "commas", "interest"):
-            assert f"symbol:complexity:{col}" not in on, col
-            assert on[f"caption:complexity:{col}"].underlines == (), col
+        for column in ("primes", "commas", "interest"):
+            assert f"symbol:complexity:{column}" not in on, column
+            assert on[f"caption:complexity:{column}"].underlines == (), column
 
     def test_prescaling_row_spans_commas_and_targets_with_L_scaled_vectors(self):
         layout = _with("TILT minimax-S", weighting=True, alt_complexity=True)
@@ -490,8 +490,8 @@ class TestWeightingLabels:
                 assert f"h:{key}:0" in line_ids, f"matrix row {key!r} has no fanned gridline"
             else:
                 assert f"h:{key}" in line_ids, f"row {key!r} has no gridline"
-        cols = {c.id.split("header:", 1)[1] for c in layout.cells if c.id.startswith("header:")}
-        for key in cols:
+        columns = {c.id.split("header:", 1)[1] for c in layout.cells if c.id.startswith("header:")}
+        for key in columns:
             assert f"trunk:{key}" in line_ids, f"column {key!r} has no gridline"
 
     def test_prescaling_matrices_have_outer_brackets_and_per_column_marks(self):
