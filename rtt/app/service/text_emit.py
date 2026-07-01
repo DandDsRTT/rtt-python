@@ -109,7 +109,7 @@ def _base_prescale_complexity(context: _TextContext) -> dict:
     formatter = context.formatter
     return {
         ("prescaling", "primes"): formatter.prescale(
-            prescale.bare_rows + list(prescale.bare_size_row), col="⟨]", outer="[⟩"
+            prescale.bare_rows + list(prescale.bare_size_row), column="⟨]", outer="[⟩"
         ),
         ("prescaling", "commas"): formatter.prescale(
             list(context.sized(context.prescaled(core.comma_basis))) + unchanged.prescaled
@@ -183,10 +183,10 @@ def _interest_values(context: _TextContext) -> dict:
 
 
 def _projection_cols(context: _TextContext, p_rat, vectors):
-    cols = project_vectors(p_rat, vectors)
+    columns = project_vectors(p_rat, vectors)
     return (
-        list(cols)
-        if cols
+        list(columns)
+        if columns
         else [tuple(_DASH for _ in range(context.dimensionality)) for _ in vectors]
     )
 

@@ -97,10 +97,10 @@ def _superspace_prod(context: _TextContext, superspace_context: _SuperspaceConte
 
 
 def _superspace_prime_cols(context: _TextContext, p_L, superspace_dimensionality: int, vectors):
-    cols = project_vectors(p_L, lift_vectors_to_superspace(context.domain_basis, vectors))
+    columns = project_vectors(p_L, lift_vectors_to_superspace(context.domain_basis, vectors))
     return (
-        list(cols)
-        if cols
+        list(columns)
+        if columns
         else [tuple(_DASH for _ in range(superspace_dimensionality)) for _ in vectors]
     )
 
@@ -256,7 +256,7 @@ def _domain_projection_into_superspace(s, held_basis_ratios, superspace_dimensio
         ("projection", "superspace_primes"): projection_ebk(
             superspace_prime_projection_display(s, held_basis_ratios),
             s.dimensionality,
-            cols=superspace_dimensionality,
+            columns=superspace_dimensionality,
         ),
     }
 
@@ -294,14 +294,14 @@ def _superspace_prescaling(context: _TextContext, superspace_context: _Superspac
         ("prescaling", "superspace_primes"): formatter.prescale(
             _prescaled_superspace(superspace_context, _superspace_units(superspace_dimensionality))
             + superspace_bare_size,
-            col="⟨]",
+            column="⟨]",
             outer="[⟩",
         ),
         ("prescaling", "primes"): formatter.prescale(
             context.sized(
                 _prescaled_superspace(superspace_context, superspace_context.basis_change_matrix)
             ),
-            col="[⟩",
+            column="[⟩",
             outer="⟨]",
         ),
         ("complexity", "superspace_primes"): formatter.cents_map(

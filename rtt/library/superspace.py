@@ -39,8 +39,8 @@ def extend_to_full_image_rank(mapping: Matrix, vectors) -> Matrix | None:
     rL, dL = len(mapping), len(mapping[0])
     m = sp.Matrix([list(row) for row in mapping])
 
-    def image_rank(cols):
-        return (m * sp.Matrix.hstack(*cols)).rank() if cols else 0
+    def image_rank(columns):
+        return (m * sp.Matrix.hstack(*columns)).rank() if columns else 0
 
     columns = [sp.Matrix(dL, 1, list(v)) for v in vectors]
     rank = image_rank(columns)

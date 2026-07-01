@@ -85,9 +85,9 @@ def _ket_list(vectors, close: str, wrap: bool = True) -> str:
     )
 
 
-def projection_ebk(matrix, d: int, cols: int | None = None) -> str:
-    cols = d if cols is None else cols
-    grid = matrix if matrix is not None else [(_DASH,) * cols for _ in range(d)]
+def projection_ebk(matrix, d: int, columns: int | None = None) -> str:
+    columns = d if columns is None else columns
+    grid = matrix if matrix is not None else [(_DASH,) * columns for _ in range(d)]
     return render_ebk(_STACK_ANGLE, grid)
 
 
@@ -97,11 +97,11 @@ def embedding_ebk(matrix, d: int, r: int) -> str:
 
 
 def _prescale_vector_list(
-    vectors, col: str = "[⟩", outer: str = "[]", decimals: bool = True
+    vectors, column: str = "[⟩", outer: str = "[]", decimals: bool = True
 ) -> str:
     oo, oc = (outer[0], outer[1]) if outer else ("", "")
-    structure = "stack" if col[0] == "⟨" else "list"
-    convention = EbkConvention(structure, oo, oc, col[0], col[1], " ")
+    structure = "stack" if column[0] == "⟨" else "list"
+    convention = EbkConvention(structure, oo, oc, column[0], column[1], " ")
     return render_ebk(convention, vectors, formatter=lambda x: prescale_text(x, decimals))
 
 

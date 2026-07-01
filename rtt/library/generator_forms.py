@@ -88,8 +88,8 @@ def positive_generator_ma(matrix: Matrix, jip_octaves) -> Matrix:
 def _fx_generator_sizes_octaves(rows: list[list[int]], jip_octaves) -> np.ndarray:
     m = np.array(rows, dtype=float)
     jip = np.array(jip_octaves, dtype=float)
-    cols = [next(j for j, v in enumerate(r) if v != 0) for r in rows]
-    return jip[cols] @ np.linalg.inv(m[:, cols])
+    columns = [next(j for j, v in enumerate(r) if v != 0) for r in rows]
+    return jip[columns] @ np.linalg.inv(m[:, columns])
 
 
 def positive_generator_shift_ma(matrix: Matrix, jip_octaves) -> Matrix:

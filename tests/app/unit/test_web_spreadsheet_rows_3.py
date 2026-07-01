@@ -435,9 +435,9 @@ class TestRetuningChartsAndGenMap:
         assert at("cell:imapped:0:0") == Y
         assert at("cell:hmapped:0:0") == G
         assert at("tuning:generator:0") == G, "the generators column carries the generator basis B (yellow) in every tile, like the # primes column carries P — so the cyan generator_map 𝒈 over it reads green; 𝒕 = 𝒈𝑀 over it is # green too (already had G·M). the retuning row 𝒓 = 𝒕 − 𝒋 keeps the 𝒈𝑀 term's G and 𝑀"
-        for col in ("prime", "comma", "target", "interest", "held"):
-            assert at(f"tuning:{col}:0") == G
-            assert at(f"retune:{col}:0") == G
+        for column in ("prime", "comma", "target", "interest", "held"):
+            assert at(f"tuning:{column}:0") == G
+            assert at(f"retune:{column}:0") == G
         assert at("just:prime:0") == G, "the just tuning map 𝒋 is cyan; its products green where the column also carries a # yellow object (primes P, commas C), stay cyan where the column is cyan (T, H)"
         assert at("just:comma:0") == G
         assert at("just:target:0") == C

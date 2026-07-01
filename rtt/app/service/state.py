@@ -106,7 +106,7 @@ def can_shrink_domain(state: TemperamentState) -> bool:
 
 def just_intonation(domain_basis) -> TemperamentState:
     d = len(domain_basis)
-    identity = tuple(tuple(int(row == col) for col in range(d)) for row in range(d))
+    identity = tuple(tuple(int(row == column) for column in range(d)) for row in range(d))
     return from_mapping(identity, domain_basis)
 
 

@@ -64,8 +64,8 @@ class _Formatter:
     def cents_generator_map(self, values) -> str:
         return _cents_generator_map(values, self.decimals)
 
-    def prescale(self, vectors, col: str = "[⟩", outer: str = "[]") -> str:
-        return _prescale_vector_list(vectors, col, outer, self.decimals)
+    def prescale(self, vectors, column: str = "[⟩", outer: str = "[]") -> str:
+        return _prescale_vector_list(vectors, column, outer, self.decimals)
 
 
 @dataclass(frozen=True)
@@ -210,8 +210,8 @@ class _TextContext:
     def prescaled(self, vectors):
         return _apply_prescaler(self.prescale, self.state.dimensionality, vectors)
 
-    def sized(self, cols):
-        return _apply_size(self.prescale, cols)
+    def sized(self, columns):
+        return _apply_size(self.prescale, columns)
 
     def complexities(self, ratios):
         return interval_complexities(
@@ -236,10 +236,10 @@ def _apply_prescaler(prescale: _Prescale, d: int, vectors):
     return tuple(tuple(p[i] * v[i] for i in range(d)) for v in vectors)
 
 
-def _apply_size(prescale: _Prescale, cols):
+def _apply_size(prescale: _Prescale, columns):
     if not prescale.size_factor:
-        return cols
-    return tuple((*col, prescale.size_factor * sum(col)) for col in cols)
+        return columns
+    return tuple((*column, prescale.size_factor * sum(column)) for column in columns)
 
 
 def _derive_tuning(inputs: _Inputs, held_ratios):
@@ -324,7 +324,7 @@ def _derive_prescale(inputs: _Inputs) -> _Prescale:
             for i in range(state.dimensionality)
         ]
     bare_size_row = (
-        (tuple(size_factor * sum(col) for col in zip(*bare_rows, strict=False)),)
+        (tuple(size_factor * sum(column) for column in zip(*bare_rows, strict=False)),)
         if size_factor
         else ()
     )

@@ -133,11 +133,11 @@ class TestProjectionBox:
         cells = {c.id: c for c in _projection_build(("2/1", "5/4")).cells}
         expected = (("1", "0", "0"), ("1", "0", "1/4"), ("0", "0", "1/4"), ("1", "0", "-1/4"),
                     ("-1", "0", "1"), ("-1", "0", "3/4"), ("-2", "0", "1"), ("2", "0", "-3/4"))
-        for j, col in enumerate(expected):
+        for j, column in enumerate(expected):
             for p in range(3):
                 cell = cells[f"cell:projection_targets:{j}:{p}"]
                 vector = cells[f"cell:vector:targets:{j}:{p}"]
-                assert cell.text == col[p]
+                assert cell.text == column[p]
                 assert cell.kind == "mapped"
                 assert cell.x + cell.width / 2 == vector.x + vector.width / 2
                 assert cell.y == cells[f"cell:projection:{p}:0"].y

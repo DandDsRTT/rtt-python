@@ -183,9 +183,9 @@ def resolve_ghost_mapped(inputs, draft):
                                 ("held", draft.held_ratios), ("commas", draft.comma_ratios),
                                 ("unchanged", draft.unchanged_ratios))})
     if draft.ghost_comma and draft.ghost_comma_ratio:
-        col = service.mapped_intervals(inputs.state.mapping, (draft.ghost_comma_ratio,), draft.elements)
+        column = service.mapped_intervals(inputs.state.mapping, (draft.ghost_comma_ratio,), draft.elements)
         return replace(
-            draft, ghost_comma_mapped=tuple(row[0] for row in col),
+            draft, ghost_comma_mapped=tuple(row[0] for row in column),
             ghost_comma_just=service.interval_sizes(draft.tuning_map, (draft.ghost_comma_ratio,), draft.elements).just[0],
             ghost_comma_complexity=service.interval_complexities(
                 inputs.state.mapping, inputs.tuning_scheme, (draft.ghost_comma_ratio,),

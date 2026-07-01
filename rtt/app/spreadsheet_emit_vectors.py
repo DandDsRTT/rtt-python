@@ -44,10 +44,10 @@ def emit_vectors(resolved, geometry, context) -> EmitResult:
 
 
 def _emit_vector_grid(cells, resolved, geometry, g: _VecGrid) -> None:
-    for col in range(g.count):
+    for column in range(g.count):
         for p in range(resolved.dimensions.dimensionality):
-            cells.append(CellBox(g.id_fn(query.column_token(resolved, g.group, col), p), g.left_fn(col), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, g.committed_kind, text=str(g.data[col][p]), prime=p, comma=col, unit=query.cell_unit(resolved, "vectors", g.group, prime=p)))
-            voice(cells, f"vectors:{g.group}", col, g.sizes.just[col])
+            cells.append(CellBox(g.id_fn(query.column_token(resolved, g.group, column), p), g.left_fn(column), query.vector_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, g.committed_kind, text=str(g.data[column][p]), prime=p, comma=column, unit=query.cell_unit(resolved, "vectors", g.group, prime=p)))
+            voice(cells, f"vectors:{g.group}", column, g.sizes.just[column])
     if g.pending is not None:
         for p in range(resolved.dimensions.dimensionality):
             v = g.pending[p]
@@ -233,10 +233,10 @@ def _emit_superspace_vector_lists(cells, resolved, geometry, context) -> None:
 
 def _emit_superspace_vector_list_lift(cells, resolved, geometry, context, row) -> None:
     column_key, vectors, n, left, draft = row
-    cols = tuple(vectors)[:n]
+    columns = tuple(vectors)[:n]
     if not (query.row_open(geometry, context.collapsed, "superspace_vectors") and query.tile_open(geometry, context.collapsed, "superspace_vectors", column_key)):
         return
-    lifted = service.lift_vectors_to_superspace(resolved.dimensions.elements, cols)
+    lifted = service.lift_vectors_to_superspace(resolved.dimensions.elements, columns)
     for c in range(len(lifted)):
         for p in range(resolved.dimensions.superspace_dimensionality):
             cells.append(CellBox(
@@ -259,10 +259,10 @@ def _emit_superspace_vector_list_lift(cells, resolved, geometry, context, row) -
 
 def _emit_superspace_vector_list_map(cells, resolved, geometry, context, row) -> None:
     column_key, vectors, n, left, draft = row
-    cols = tuple(vectors)[:n]
+    columns = tuple(vectors)[:n]
     if not (query.row_open(geometry, context.collapsed, "superspace_mapping") and query.tile_open(geometry, context.collapsed, "superspace_mapping", column_key)):
         return
-    mapped = service.map_vectors_into_superspace_generators(context.state, cols)
+    mapped = service.map_vectors_into_superspace_generators(context.state, columns)
     for c in range(len(mapped)):
         for g in range(resolved.dimensions.superspace_rank):
             cells.append(CellBox(

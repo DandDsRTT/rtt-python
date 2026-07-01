@@ -65,9 +65,9 @@ class TestWebIntegration:
         editor.shrink()
         editor.shrink()
         assert editor.state.dimensionality == editor.state.rank + editor.state.nullity
-        cols = [c.id for c in editor.layout().cells
+        columns = [c.id for c in editor.layout().cells
                 if c.id.startswith("comma:") and not c.id.endswith(":pending")]
-        assert len(cols) == editor.state.nullity == 1
+        assert len(columns) == editor.state.nullity == 1
 
     def test_changing_the_mapping_updates_the_comma_basis(self):
         editor = Editor()

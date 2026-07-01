@@ -38,7 +38,7 @@ def _canon_generator_sizes(resolved):
 def _projected(just_map, columns):
     if not columns:
         return ()
-    return tuple(sum(just_map[i] * col[i] for i in range(len(just_map))) for col in columns)
+    return tuple(sum(just_map[i] * column[i] for i in range(len(just_map))) for column in columns)
 
 
 def _attr(obj, name):
@@ -160,13 +160,13 @@ def assign_audio(cells, resolved, geometry):
     for (row_key, column_key), items in groups.items():
         axis = 1 if column_key in _INTERVALS_RUN_DOWN_THE_COLUMN else 0
         keys = sorted({round(item[axis], 1) for item in items})
-        index = {k: col for col, k in enumerate(keys)}
+        index = {k: column for column, k in enumerate(keys)}
         for item in items:
-            col = index[round(item[axis], 1)]
-            cents = _cents(row_key, column_key, col, pitches)
+            column = index[round(item[axis], 1)]
+            cents = _cents(row_key, column_key, column, pitches)
             if cents is not None:
                 cells[item[2]] = replace(
-                    cells[item[2]], audio=(_tile_name(row_key, column_key), col, float(cents))
+                    cells[item[2]], audio=(_tile_name(row_key, column_key), column, float(cents))
                 )
 
 
@@ -205,7 +205,7 @@ def _tile_name(row_key, column_key):
     return f"{_TILE_PREFIX[row_key]}:{'commas' if column_key == 'unchanged' else column_key}"
 
 
-def _cents(row_key, column_key, col, pitches):
+def _cents(row_key, column_key, column, pitches):
     sizes = _basis_sizes(row_key, column_key, pitches)
     if sizes is None:
         source = (
@@ -216,7 +216,7 @@ def _cents(row_key, column_key, col, pitches):
             else pitches.projection
         )
         sizes = _interval_sizes(source, column_key)
-    return sizes[col] if 0 <= col < len(sizes) else None
+    return sizes[column] if 0 <= column < len(sizes) else None
 
 
 def _basis_sizes(row_key, column_key, pitches):
