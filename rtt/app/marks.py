@@ -11,6 +11,11 @@ _BR_ANGLE_THIN = 0.45
 _BR_BRACE_THICK = 1.15
 _BR_BRACE_THIN = 0.4
 _BR_BRACE_CUSP = 0.2
+_BR_BRACE_END = 2.0
+_BR_BRACE_SERIF = 3.2
+_BR_BRACE_CUSP_DX = 5.5
+_BEZIER_SAMPLES = 10
+_FOOT_BEZIER_SAMPLES = 8
 
 
 def svg(width, height, body):
@@ -92,7 +97,7 @@ def angle_bracket(width, height):
     center_y = height / 2
     vx, tx = bx0 + _BR_ANGLE_THICK, bx1 - 0.4
     top, vertex, bot = (tx, 0.2), (vx, center_y), (tx, height - 0.2)
-    n = 10
+    n = _BEZIER_SAMPLES
     pts = [
         (
             top[0] + (vertex[0] - top[0]) * i / n,
@@ -114,7 +119,7 @@ def angle_bracket(width, height):
 
 def brace(width, height):
     center_x = width / 2
-    end_x, serif_dx, cusp_dx = 2.0, 3.2, 5.5
+    end_x, serif_dx, cusp_dx = _BR_BRACE_END, _BR_BRACE_SERIF, _BR_BRACE_CUSP_DX
     span = end_x + serif_dx + cusp_dx + 1.0
     if span > center_x:
         s = center_x / span
@@ -123,7 +128,7 @@ def brace(width, height):
     reach = height / 2 - 0.5
     tip_y, cusp_y = arm_y - reach, arm_y + reach - 0.3
     thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
-    n = 10
+    n = _BEZIER_SAMPLES
     pts = _qbez((end_x, tip_y), (end_x, arm_y), (end_x + serif_dx, arm_y), thin, thick, n)
     pts.append((center_x - cusp_dx, arm_y, thick))
     pts += _qbez(
@@ -159,7 +164,7 @@ def brace(width, height):
 
 def curly_bracket(width, height):
     center_y = height / 2
-    end_y, serif_dy, cusp_dy = 2.0, 3.2, 5.5
+    end_y, serif_dy, cusp_dy = _BR_BRACE_END, _BR_BRACE_SERIF, _BR_BRACE_CUSP_DX
     span = end_y + serif_dy + cusp_dy + 1.0
     if span > center_y:
         s = center_y / span
@@ -168,7 +173,7 @@ def curly_bracket(width, height):
     cusp_x = tip_x - BR_SERIF_L
     arm_x = (tip_x + cusp_x) / 2
     thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
-    n = 10
+    n = _BEZIER_SAMPLES
     pts = _qbez((tip_x, end_y), (arm_x, end_y), (arm_x, end_y + serif_dy), thin, thick, n)
     pts.append((arm_x, center_y - cusp_dy, thick))
     pts += _qbez(
@@ -206,7 +211,7 @@ def angle_foot(width, height):
     center_x = width / 2
     ty, vy = 0.85, height - 0.5 - _BR_ANGLE_THICK
     left, vertex, right = (0.8, ty), (center_x, vy), (width - 0.8, ty)
-    n = 8
+    n = _FOOT_BEZIER_SAMPLES
     pts = [
         (
             left[0] + (vertex[0] - left[0]) * i / n,

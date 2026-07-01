@@ -36,9 +36,9 @@ class TestNonstandardDomain:
 
         def assert_draft_greened(b, lst, committed, minimum):
             layout = b.layout()
-            left = {"held": lambda i: query.held_left(b.geometry, i),
-                    "interest": lambda i: query.interest_left(b.geometry, i),
-                    "targets": lambda i: query.target_left(b.geometry, i),
+            left = {"held": lambda i: query.interval_left(b.geometry, "held", i),
+                    "interest": lambda i: query.interval_left(b.geometry, "interest", i),
+                    "targets": lambda i: query.interval_left(b.geometry, "targets", i),
                     "commas": lambda i: query.comma_left(b.geometry, b.resolved, i)}[lst]
             dx = left(committed)
             checked = 0

@@ -25,7 +25,6 @@ class Geometry:
     content_width: Mapping[str, float] = field(default_factory=dict)
     content_x: Mapping[str, float] = field(default_factory=dict)
     open_column_width: Mapping[str, float] = field(default_factory=dict)
-    column_collapsible: Mapping[str, bool] = field(default_factory=dict)
     column_header: Mapping[str, str] = field(default_factory=dict)
     present_caption_rows: frozenset = frozenset()
     matrix_label_primes_width: float = 0.0

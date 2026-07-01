@@ -27,17 +27,17 @@ def emit_vectors(resolved, geometry, context) -> EmitResult:
     if query.tile_open(geometry, context.collapsed, "vectors", "targets"):
         target_kind = "targetcell" if resolved.scalars.targets_editable else "vector"
         _emit_vector_grid(cells, resolved, geometry, _VecGrid("targets", resolved.dimensions.target_count, ids.target_cell,
-            lambda i: query.target_left(geometry, i), target_kind, "targetcell",
+            lambda i: query.interval_left(geometry, "targets", i), target_kind, "targetcell",
             resolved.targets.vectors, resolved.targets.pending, resolved.tuning.target_sizes))
     if query.tile_open(geometry, context.collapsed, "vectors", "held"):
         _emit_vector_grid(cells, resolved, geometry, _VecGrid("held", resolved.dimensions.held_count, ids.held_cell,
-            lambda i: query.held_left(geometry, i), "heldcell", "heldcell",
+            lambda i: query.interval_left(geometry, "held", i), "heldcell", "heldcell",
             resolved.held.vectors, resolved.held.pending, resolved.tuning.held_sizes))
     if query.tile_open(geometry, context.collapsed, "vectors", "detempering"):
         _emit_vectors_detempering_col(cells, resolved, geometry)
     if query.tile_open(geometry, context.collapsed, "vectors", "interest"):
         _emit_vector_grid(cells, resolved, geometry, _VecGrid("interest", resolved.dimensions.interest_count, ids.interest_cell,
-            lambda i: query.interest_left(geometry, i), "interestcell", "interestcell",
+            lambda i: query.interval_left(geometry, "interest", i), "interestcell", "interestcell",
             resolved.interest.vectors, resolved.interest.pending, resolved.tuning.interest_sizes))
     _emit_vectors_int_handles(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
@@ -128,9 +128,9 @@ def _emit_vectors_int_handles(cells, resolved, geometry, context) -> None:
     if "vectors" in geometry.rows and geometry.rows["vectors"].interval_handle_top is not None:
         hy = geometry.rows["vectors"].interval_handle_top
         for group, count, column_left, column_key in (("comma", resolved.dimensions.comma_count, lambda i: query.comma_left(geometry, resolved, i), "commas"),
-                                             ("target", resolved.dimensions.target_count, lambda i: query.target_left(geometry, i), "targets"),
-                                             ("held", resolved.dimensions.held_count, lambda i: query.held_left(geometry, i), "held"),
-                                             ("interest", resolved.dimensions.interest_count, lambda i: query.interest_left(geometry, i), "interest")):
+                                             ("target", resolved.dimensions.target_count, lambda i: query.interval_left(geometry, "targets", i), "targets"),
+                                             ("held", resolved.dimensions.held_count, lambda i: query.interval_left(geometry, "held", i), "held"),
+                                             ("interest", resolved.dimensions.interest_count, lambda i: query.interval_left(geometry, "interest", i), "interest")):
             if count >= 2 and query.tile_open(geometry, context.collapsed, "vectors", column_key) and (column_key != "targets" or resolved.scalars.targets_editable):
                 for i in range(count):
                     cells.append(CellBox(f"int_drag:{group}:{i}", column_left(i), hy, COLUMN_WIDTH, ROW_HANDLE_WIDTH, "int_drag", comma=i))
@@ -222,9 +222,9 @@ def _emit_superspace_matrix_mapping(cells, resolved, geometry, context) -> None:
 
 def _emit_superspace_vector_lists(cells, resolved, geometry, context) -> None:
     superspace_lists = (("commas", context.state.comma_basis, resolved.dimensions.comma_count, lambda c: query.comma_left(geometry, resolved, c), resolved.scalars.comma_draft),
-                ("targets", resolved.targets.vectors, resolved.dimensions.target_count, lambda c: query.target_left(geometry, c), resolved.targets.pending is not None),
-                ("held", resolved.held.vectors, resolved.dimensions.held_count, lambda c: query.held_left(geometry, c), resolved.held.pending is not None),
-                ("interest", resolved.interest.vectors, resolved.dimensions.interest_count, lambda c: query.interest_left(geometry, c), resolved.interest.pending is not None),
+                ("targets", resolved.targets.vectors, resolved.dimensions.target_count, lambda c: query.interval_left(geometry, "targets", c), resolved.targets.pending is not None),
+                ("held", resolved.held.vectors, resolved.dimensions.held_count, lambda c: query.interval_left(geometry, "held", c), resolved.held.pending is not None),
+                ("interest", resolved.interest.vectors, resolved.dimensions.interest_count, lambda c: query.interval_left(geometry, "interest", c), resolved.interest.pending is not None),
                 ("detempering", resolved.detempering.vectors, resolved.dimensions.rank, lambda c: query.detempering_left(geometry, c), False))
     for row in superspace_lists:
         _emit_superspace_vector_list_lift(cells, resolved, geometry, context, row)
@@ -293,11 +293,11 @@ def _emit_superspace_projection_rows(cells, resolved, geometry, context) -> None
            "top": lambda i: query.superspace_projection_top(geometry, i), "height": resolved.dimensions.superspace_dimensionality}
     emit_mapped_grid(cells, resolved, geometry, collapsed, "detempering", "superspace_projection_detempering", resolved.projection.superspace_detempering, resolved.dimensions.rank, lambda i: query.detempering_left(geometry, i), "generator", **superspace_projection_options)
     _emit_superspace_projection_commas(cells, resolved, geometry, context)
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "targets", "superspace_projection_targets", resolved.projection.superspace_targets, resolved.dimensions.target_count, lambda i: query.target_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "targets", "superspace_projection_targets", resolved.projection.superspace_targets, resolved.dimensions.target_count, lambda i: query.interval_left(geometry, "targets", i), "comma",
                      pending=resolved.targets.pending, **superspace_projection_options)
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "held", "superspace_projection_held", resolved.projection.superspace_held, resolved.dimensions.held_count, lambda i: query.held_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "held", "superspace_projection_held", resolved.projection.superspace_held, resolved.dimensions.held_count, lambda i: query.interval_left(geometry, "held", i), "comma",
                      pending=resolved.held.pending, **superspace_projection_options)
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "interest", "superspace_projection_interest", resolved.projection.superspace_interest, resolved.dimensions.interest_count, lambda i: query.interest_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "interest", "superspace_projection_interest", resolved.projection.superspace_interest, resolved.dimensions.interest_count, lambda i: query.interval_left(geometry, "interest", i), "comma",
                      pending=resolved.interest.pending, **superspace_projection_options)
 
 

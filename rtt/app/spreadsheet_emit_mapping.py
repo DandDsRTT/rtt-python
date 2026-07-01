@@ -61,11 +61,11 @@ def _emit_mapping_rows(cells, resolved, geometry, context) -> None:
             for p in range(resolved.dimensions.dimensionality):
                 cells.append(CellBox(ids.mapping_cell(rt, p), query.prime_left(geometry, p), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapping", text=str(context.state.mapping[i][p]), generator=i, prime=p, unit=query.cell_unit(resolved, "mapping", "primes", generator=i, prime=p)))
         if query.tile_open(geometry, context.collapsed, "mapping", "targets"):
-            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("mapped", "targets", resolved.dimensions.target_count, lambda c: query.target_left(geometry, c), resolved.targets.mapped, resolved.targets.pending, resolved.tuning.target_sizes.tempered), i, rt)
+            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("mapped", "targets", resolved.dimensions.target_count, lambda c: query.interval_left(geometry, "targets", c), resolved.targets.mapped, resolved.targets.pending, resolved.tuning.target_sizes.tempered), i, rt)
         if query.tile_open(geometry, context.collapsed, "mapping", "interest"):
-            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("imapped", "interest", resolved.dimensions.interest_count, lambda c: query.interest_left(geometry, c), resolved.interest.mapped, resolved.interest.pending, resolved.tuning.interest_sizes.tempered), i, rt)
+            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("imapped", "interest", resolved.dimensions.interest_count, lambda c: query.interval_left(geometry, "interest", c), resolved.interest.mapped, resolved.interest.pending, resolved.tuning.interest_sizes.tempered), i, rt)
         if query.tile_open(geometry, context.collapsed, "mapping", "held"):
-            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("hmapped", "held", resolved.dimensions.held_count, lambda c: query.held_left(geometry, c), resolved.tuning.held_mapped, resolved.held.pending, resolved.tuning.held_sizes.tempered), i, rt)
+            _emit_mapped_tile(cells, resolved, geometry, _MappedTile("hmapped", "held", resolved.dimensions.held_count, lambda c: query.interval_left(geometry, "held", c), resolved.tuning.held_mapped, resolved.held.pending, resolved.tuning.held_sizes.tempered), i, rt)
         if query.tile_open(geometry, context.collapsed, "mapping", "commas"):
             _emit_mapping_comma_row(cells, resolved, geometry, i, rt)
 
@@ -114,13 +114,13 @@ def _draft_mapped_text(resolved, key, j) -> str:
 def _emit_mapping_draft_mapped(cells, resolved, geometry, context, dr, drt) -> None:
     if query.tile_open(geometry, context.collapsed, "mapping", "targets"):
         for j in range(resolved.dimensions.target_count):
-            cells.append(CellBox(f"cell:mapped:{drt}:{query.column_token(resolved, 'targets', j)}", query.target_left(geometry, j), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=_draft_mapped_text(resolved, "targets", j), generator=dr, pending=True))
+            cells.append(CellBox(f"cell:mapped:{drt}:{query.column_token(resolved, 'targets', j)}", query.interval_left(geometry, "targets", j), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=_draft_mapped_text(resolved, "targets", j), generator=dr, pending=True))
     if query.tile_open(geometry, context.collapsed, "mapping", "interest"):
         for ii in range(resolved.dimensions.interest_count):
-            cells.append(CellBox(f"cell:imapped:{drt}:{query.column_token(resolved, 'interest', ii)}", query.interest_left(geometry, ii), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=_draft_mapped_text(resolved, "interest", ii), generator=dr, pending=True))
+            cells.append(CellBox(f"cell:imapped:{drt}:{query.column_token(resolved, 'interest', ii)}", query.interval_left(geometry, "interest", ii), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=_draft_mapped_text(resolved, "interest", ii), generator=dr, pending=True))
     if query.tile_open(geometry, context.collapsed, "mapping", "held"):
         for hi in range(resolved.dimensions.held_count):
-            cells.append(CellBox(f"cell:hmapped:{drt}:{query.column_token(resolved, 'held', hi)}", query.held_left(geometry, hi), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=_draft_mapped_text(resolved, "held", hi), generator=dr, pending=True))
+            cells.append(CellBox(f"cell:hmapped:{drt}:{query.column_token(resolved, 'held', hi)}", query.interval_left(geometry, "held", hi), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=_draft_mapped_text(resolved, "held", hi), generator=dr, pending=True))
     if query.tile_open(geometry, context.collapsed, "mapping", "commas"):
         _emit_mapping_draft_commas(cells, resolved, geometry, dr, drt)
 
@@ -202,11 +202,11 @@ def emit_projection_band(resolved, geometry, context) -> EmitResult:
     full_projection = resolved.projection.rationals is not None
     emit_mapped_grid(cells, resolved, geometry, collapsed, "detempering", "projection_detempering", resolved.projection.detempering, resolved.dimensions.rank, lambda i: query.detempering_left(geometry, i), "generator",
                      full=full_projection, colwise=True, column_token_key="detempering", audio="projection:detempering")
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "targets", "projection_targets", resolved.projection.targets, resolved.dimensions.target_count, lambda i: query.target_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "targets", "projection_targets", resolved.projection.targets, resolved.dimensions.target_count, lambda i: query.interval_left(geometry, "targets", i), "comma",
                      full=full_projection, colwise=True, pending=resolved.targets.pending, audio="projection:targets")
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "held", "projection_held", resolved.projection.held, resolved.dimensions.held_count, lambda i: query.held_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "held", "projection_held", resolved.projection.held, resolved.dimensions.held_count, lambda i: query.interval_left(geometry, "held", i), "comma",
                      full=full_projection, colwise=True, pending=resolved.held.pending, audio="projection:held")
-    emit_mapped_grid(cells, resolved, geometry, collapsed, "interest", "projection_interest", resolved.projection.interest, resolved.dimensions.interest_count, lambda i: query.interest_left(geometry, i), "comma",
+    emit_mapped_grid(cells, resolved, geometry, collapsed, "interest", "projection_interest", resolved.projection.interest, resolved.dimensions.interest_count, lambda i: query.interval_left(geometry, "interest", i), "comma",
                      full=full_projection, colwise=True, pending=resolved.interest.pending, audio="projection:interest")
     _emit_scaling_factors(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
@@ -291,11 +291,11 @@ def _emit_canonical_row(cells, resolved, geometry, context, i) -> None:
         for c in range(resolved.dimensions.rank):
             cells.append(CellBox(f"cell:canonical_detempering:{i}:{query.column_token(resolved, 'detempering', c)}", query.detempering_left(geometry, c), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.canonical.mapped_detempering[i][c]), generator=i, unit=query.cell_unit(resolved, "canonical", "detempering", generator=i)))
     if query.tile_open(geometry, collapsed, "canonical", "targets"):
-        _emit_canonical_mapped_tile(cells, resolved, geometry, "canonical_mapped", "targets", resolved.dimensions.target_count, lambda c: query.target_left(geometry, c), resolved.canonical.mapped, resolved.targets.pending, i)
+        _emit_canonical_mapped_tile(cells, resolved, geometry, "canonical_mapped", "targets", resolved.dimensions.target_count, lambda c: query.interval_left(geometry, "targets", c), resolved.canonical.mapped, resolved.targets.pending, i)
     if query.tile_open(geometry, collapsed, "canonical", "interest"):
-        _emit_canonical_mapped_tile(cells, resolved, geometry, "canonical_imapped", "interest", resolved.dimensions.interest_count, lambda c: query.interest_left(geometry, c), resolved.canonical.interest_mapped, resolved.interest.pending, i)
+        _emit_canonical_mapped_tile(cells, resolved, geometry, "canonical_imapped", "interest", resolved.dimensions.interest_count, lambda c: query.interval_left(geometry, "interest", c), resolved.canonical.interest_mapped, resolved.interest.pending, i)
     if query.tile_open(geometry, collapsed, "canonical", "held"):
-        _emit_canonical_mapped_tile(cells, resolved, geometry, "canonical_hmapped", "held", resolved.dimensions.held_count, lambda c: query.held_left(geometry, c), resolved.canonical.held_mapped, resolved.held.pending, i)
+        _emit_canonical_mapped_tile(cells, resolved, geometry, "canonical_hmapped", "held", resolved.dimensions.held_count, lambda c: query.interval_left(geometry, "held", c), resolved.canonical.held_mapped, resolved.held.pending, i)
     if query.tile_open(geometry, collapsed, "canonical", "commas"):
         _emit_canonical_comma_row(cells, resolved, geometry, i)
 

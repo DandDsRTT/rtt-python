@@ -198,7 +198,6 @@ class RowBand:
     y: float
     height: float
     label: str
-    collapsible: bool
     tile_height: float
     tile_top: float
     frame: float
