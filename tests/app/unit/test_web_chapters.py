@@ -59,6 +59,11 @@ class TestWebChapters:
         assert show_settings.CHAPTER["equivalences"] == 2
         assert show_settings.reveal_chapter("equivalences") == 2
 
+    def test_interest_reveals_with_the_tuning_story_not_at_the_mappings_chapter(self):
+        assert show_settings.reveal_chapter("interest") == 3, "intervals of interest belong to the # tuning story (tuning_tiles/optimization reveal at 3), so the simplest chapter-2 mappings view omits them"
+        assert "interest" not in show_settings.revealed(show_settings.CHAPTER_MIN), "the guided tour opens # at chapter 2 showing only the mapping and the comma — interest must not appear there"
+        assert "interest" in show_settings.revealed(show_settings.CHAPTER_DEFAULT), "it is back by the # default-chapter home the tour ramps up to"
+
     def test_star_notch_title_is_short(self):
         assert show_settings.CHAPTER_TITLES[show_settings.CHAPTER_STAR] == "beyond the guide"
 

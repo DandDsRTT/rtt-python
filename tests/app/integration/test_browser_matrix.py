@@ -92,6 +92,7 @@ class TestBrowserMatrix:
                 pytest.skip(f"{engine} engine unavailable (run `playwright install {engine}`): {launch_failure}")
             context = browser.new_context(**_context_kwargs(driver, engine, viewport))
             page = context.new_page()
+            page.add_init_script("try { localStorage.setItem('rttTourSeen', '1'); } catch (e) {}")
             page.on("console", lambda m: client_errors.append(m.text) if m.type == "error" else None)
             page.on("pageerror", lambda e: client_errors.append(str(e)))
             page.goto(served_app, wait_until="networkidle")

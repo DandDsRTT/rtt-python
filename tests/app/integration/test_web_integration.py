@@ -8,6 +8,7 @@ differ in sign from the original's hand-written mocks (e.g. the syntonic comma i
 """
 
 from rtt.app import service
+from rtt.app import settings as show_settings
 from rtt.app.render_html import _parse_int
 from rtt.app.editor import INITIAL_MAPPING, Editor
 
@@ -160,6 +161,24 @@ class TestWebIntegration:
         assert editor.settings["nonstandard_domain"] is False
         assert editor.settings["counts"] is True
         assert editor.undo_count == undo_depth, "a view prune, not an undoable edit"
+
+    def test_reveal_default_settings_restores_the_default_layers_up_to_the_chapter(self):
+        editor = Editor()
+        undo_depth = editor.undo_count
+        editor.disable_hidden_settings(2)
+        assert editor.settings["tuning"] is False and editor.settings["interest"] is False
+        editor.reveal_default_settings(3)
+        assert editor.settings["tuning"] is True, "raising back through the tuning chapter re-reveals the # default-on tuning layers the guided-tour ramp lowered"
+        assert editor.settings["interest"] is True
+        assert editor.undo_count == undo_depth, "a view reveal, not an undoable edit — mirrors disable_hidden_settings"
+
+    def test_reveal_default_settings_leaves_default_off_and_above_chapter_layers_alone(self):
+        editor = Editor()
+        editor.settings["mapping_demos"] = True
+        editor.reveal_default_settings(show_settings.CHAPTER_DEFAULT)
+        assert editor.settings["mapping_demos"] is True, "it only turns default-on layers on — a layer the # tour switched on (mapping demos, default-off) is untouched, never forced back off"
+        assert editor.settings["all_interval"] is False, "a default-off layer above the chapter stays off"
+        assert editor.settings["units"] is False, "units reveals at chapter 5, past the given chapter, so it # is not revealed"
 
     def test_set_all_show_only_flips_the_keys_it_is_given(self):
         editor = Editor()

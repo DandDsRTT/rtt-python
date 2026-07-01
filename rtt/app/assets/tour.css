@@ -16,6 +16,17 @@
   cursor: default;
 }
 
+/* While the tour is running, silence the app's own incidental hover affordances — the zoom-hover
+   loupe and the tooltips — so an interact step's hover shows only the tour's own teaching (its card,
+   spotlight, and the mapping-demo overlay). Their giant magnified value and stray captions otherwise
+   overlap the card and pull the eye off the spotlit lesson. */
+body.rtt-tour-running .rtt-zoom-overlay,
+body.rtt-tour-running .q-tooltip,
+body.rtt-tour-running .rtt-zoom-help,
+body.rtt-tour-running .rtt-guide-card {
+  display: none !important;
+}
+
 /* the spotlight ring: positioned/sized to the target's rect each step. The enormous spread shadow
    IS the page dim; the thin ring marks what the step is pointing at. pointer-events:none so it
    never eats a click (the block beneath handles those). */

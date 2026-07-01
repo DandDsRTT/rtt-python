@@ -45,6 +45,11 @@ class _ShowCommands:
         self.exit_all_interval_if_hidden(had_all_interval)
         self.reconcile_custom_weights()
 
+    def reveal_default_settings(self, chapter: int) -> None:
+        for key, default in show_settings.DEFAULTS.items():
+            if default is True and show_settings.reveal_chapter(key) <= chapter:
+                self.settings[key] = True
+
     def toggle_collapsed(self, item: str) -> None:
         self.snapshot()
         self.collapsed.discard(item) if item in self.collapsed else self.collapsed.add(item)
