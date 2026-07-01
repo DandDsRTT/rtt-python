@@ -19,6 +19,7 @@ from rtt.app.page_assets import (
     _DARK_KEY,
     _LOAD_FAILED,
     _OPTION_HOVER_DELEGATION,
+    _SEED_DARK_JS,
     _STORAGE_SECRET,
     _STORE_KEY,
     _TOOLTIP_DISMISS_JS,
@@ -113,6 +114,9 @@ class _Page:
         ui.run_javascript(_OPTION_HOVER_DELEGATION)
         ui.run_javascript(_TOOLTIP_DISMISS_JS)
         ui.run_javascript(_BUSY_JS)
+        if _DARK_KEY not in _doc_store():
+            ui.on("rtt_seed_dark", lambda _: self._seed_dark())
+            ui.run_javascript(_SEED_DARK_JS)
         if loaded_from_url:
             ui.run_javascript("window.history.replaceState({}, '', window.location.pathname)")
 
@@ -136,6 +140,13 @@ class _Page:
     def on_dark_toggle(self):
         self.runtime.dark_mode = not self.runtime.dark_mode
         _doc_store()[_DARK_KEY] = self.runtime.dark_mode
+        self.apply_theme()
+        self.chrome.dark_button.props(f"icon={self.runtime.dark_icon()}")
+
+    def _seed_dark(self):
+        if _DARK_KEY in _doc_store() or self.runtime.dark_mode:
+            return
+        self.runtime.dark_mode = True
         self.apply_theme()
         self.chrome.dark_button.props(f"icon={self.runtime.dark_icon()}")
 

@@ -140,7 +140,7 @@ body.rtt-dark .rtt-box-title,
 body.rtt-dark .rtt-rangelabel { color:#e3e6ea; }
 body.rtt-dark .rtt-caption,
 body.rtt-dark .rtt-units { color:#aeb4bc; }
-body.rtt-dark .rtt-caption.rtt-caption-disabled { color:#71777f; }
+body.rtt-dark .rtt-caption.rtt-caption-disabled { color:#a4a4a4; }
 body.rtt-dark .rtt-cell-unit { color:#9aa1a9; }
 body.rtt-dark .rtt-generator-sign:hover { background:#31373f; }   /* the generator sign's clickable hover box */
 

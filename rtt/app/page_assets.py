@@ -636,6 +636,17 @@ _ZOOM_JS = """
 })()
 """
 
+_SEED_DARK_JS = """
+(() => {
+  try {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        && typeof emitEvent === 'function') {
+      emitEvent('rtt_seed_dark');
+    }
+  } catch (e) {}
+})()
+"""
+
 # Quasar: a tooltip is pointer-events:none and hides the instant the cursor leaves its anchor, so its
 # link can't be clicked; this builds a real hoverable card instead, kept open while the cursor is on it.
 _GUIDE_JS = """

@@ -172,7 +172,11 @@
     try { return localStorage.getItem(SEEN_KEY) === "1"; } catch (e) { return false; }
   }
 
-  if (config.autostart && !seen()) {
+  // the moving-spotlight autostart is motion; skip it when the OS asks to reduce motion (the ? button
+  // still replays on demand). A first-load-only per-browser walkthrough, so respecting the pref here
+  // costs nothing a user who wants it can't recover.
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (config.autostart && !seen() && !reduceMotion) {
     // let the grid finish its first render (the layout settles a beat after load) before the
     // spotlight measures anything
     setTimeout(function () { if (!seen()) start(); }, 700);

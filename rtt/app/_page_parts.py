@@ -32,6 +32,10 @@ from rtt.app.render_html import (
 
 
 def setup_page_head() -> None:
+    # NiceGUI's page `language` only loads Quasar's i18n pack; it never sets <html lang>, which is what
+    # a screen reader reads for pronunciation. Set it directly, at head-parse time, so it is present
+    # before the body mounts.
+    ui.add_head_html("<script>document.documentElement.lang='en';</script>")
     ui.add_css(_CSS)
     ui.tooltip.default_props(f"delay={_TOOLTIP_DELAY_MS} transition-duration=0")
     ui.add_body_html(
