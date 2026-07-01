@@ -203,38 +203,38 @@ def removed_cell_ids(old: Layout, new: Layout) -> frozenset:
     )
 
 
-def _match_tokens_by_key(tokens, prev, keys) -> list[bool]:
-    claimed = [False] * len(prev)
+def _match_tokens_by_key(tokens, previous, keys) -> list[bool]:
+    claimed = [False] * len(previous)
     for j, key in enumerate(keys):
-        for pi, (token, pkey) in enumerate(prev):
+        for pi, (token, pkey) in enumerate(previous):
             if not claimed[pi] and pkey == key:
                 tokens[j], claimed[pi] = token, True
                 break
     return claimed
 
 
-def _claim_unmatched_tokens(tokens, prev, claimed, keys) -> None:
-    unclaimed = iter([pi for pi in range(len(prev)) if not claimed[pi]])
+def _claim_unmatched_tokens(tokens, previous, claimed, keys) -> None:
+    unclaimed = iter([pi for pi in range(len(previous)) if not claimed[pi]])
     for j in range(len(keys)):
         if tokens[j] is None:
             pi = next(unclaimed, None)
             if pi is None:
                 break
-            tokens[j] = prev[pi][0]
+            tokens[j] = previous[pi][0]
 
 
-def assign_column_tokens(prev, keys, claim_unmatched=False):
+def assign_column_tokens(previous, keys, claim_unmatched=False):
     keys = list(keys)
-    prev = list(prev or [])
+    previous = list(previous or [])
     tokens = [None] * len(keys)
-    if len(keys) == len(prev) and sorted(keys) != sorted(k for _, k in prev):
+    if len(keys) == len(previous) and sorted(keys) != sorted(k for _, k in previous):
         for j in range(len(keys)):
-            tokens[j] = prev[j][0]
+            tokens[j] = previous[j][0]
     else:
-        claimed = _match_tokens_by_key(tokens, prev, keys)
+        claimed = _match_tokens_by_key(tokens, previous, keys)
         if claim_unmatched:
-            _claim_unmatched_tokens(tokens, prev, claimed, keys)
-    nxt = max([t for t in tokens if t is not None] + [token for token, _ in prev] + [-1]) + 1
+            _claim_unmatched_tokens(tokens, previous, claimed, keys)
+    nxt = max([t for t in tokens if t is not None] + [token for token, _ in previous] + [-1]) + 1
     for j in range(len(keys)):
         if tokens[j] is None:
             tokens[j], nxt = nxt, nxt + 1

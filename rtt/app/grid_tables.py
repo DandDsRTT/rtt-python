@@ -784,7 +784,7 @@ GRIDDED_KINDS = frozenset(
         "commacell",
         "vector",
         "tuningvalue",
-        "mathexpr",
+        "math_expression",
         "interestcell",
         "formcell",
         "heldcell",
@@ -849,7 +849,7 @@ BLANKED_NUMBER_KINDS = frozenset(
 
 RINGABLE_KINDS = BLANKED_NUMBER_KINDS | frozenset(
     {
-        "mathexpr",
+        "math_expression",
         "powerdisplay",
     }
 )

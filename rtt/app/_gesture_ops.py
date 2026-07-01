@@ -38,7 +38,7 @@ def gesture_rings(gesture_controller, layout):
         token = gesture_controller._editor.capture_for_preview()
         try:
             g.apply()
-            hyp = gesture_controller._editor.layout(prev_ids=base.identities)
+            hyp = gesture_controller._editor.layout(previous_ids=base.identities)
             amber = spreadsheet_text.changed_cell_ids(base, hyp)
             red = spreadsheet_text.removed_cell_ids(layout, hyp)
         finally:
@@ -86,7 +86,9 @@ def chooser_hover(gesture_controller, cell_id, apply):
         return
     base = g.baseline
     apply()
-    hyp = gesture_controller._editor.layout(prev_ids=base.identities if base is not None else None)
+    hyp = gesture_controller._editor.layout(
+        previous_ids=base.identities if base is not None else None
+    )
     disturbs = base is not None and (
         spreadsheet_text.removed_cell_ids(base, hyp)
         or cell_xy(base, cell_id) != cell_xy(hyp, cell_id)

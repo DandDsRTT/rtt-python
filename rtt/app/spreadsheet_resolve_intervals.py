@@ -195,7 +195,7 @@ def resolve_ghost_mapped(inputs, draft):
 
 def resolve_col_ids(inputs, draft):
     column_ids = {
-        name: assign_column_tokens(inputs.prev_ids.get(name), keys, claim_unmatched=claim)
+        name: assign_column_tokens(inputs.previous_ids.get(name), keys, claim_unmatched=claim)
         for name, keys, claim in (("targets", draft.targets, False),
                                   ("held", draft.held_ratios, False),
                                   ("interest", draft.interest_ratios, False),

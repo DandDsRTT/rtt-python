@@ -37,7 +37,7 @@ def _elide_expr_line(line: str, width: float) -> str:
     return head + ("(…/…)" if "/" in operand else "…")
 
 
-def _mathexpr_html(text: str, width: float) -> str:
+def _math_expression_html(text: str, width: float) -> str:
     lines = "".join(
         f'<div style="font-size:{_fit_font(line, width):.2f}px">{line}</div>'
         for line in (_elide_expr_line(raw, width) for raw in text.split("\n"))

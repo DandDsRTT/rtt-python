@@ -26,26 +26,26 @@ class TestColumnTokens:
 
     def test_reordered_column_keeps_its_token(self):
         a, b, c = (-1, 1, 0), (2, 0, -1), (1, 1, -1)
-        prev = spreadsheet_text.assign_column_tokens(None, [a, b, c])
-        moved = spreadsheet_text.assign_column_tokens(prev, [c, a, b])
+        previous = spreadsheet_text.assign_column_tokens(None, [a, b, c])
+        moved = spreadsheet_text.assign_column_tokens(previous, [c, a, b])
         assert _tokens(moved) == [2, 0, 1]
 
     def test_edited_column_keeps_its_token_by_position(self):
         a, b = (-1, 1, 0), (2, 0, -1)
-        prev = spreadsheet_text.assign_column_tokens(None, [a, b])
-        edited = spreadsheet_text.assign_column_tokens(prev, [(-1, 2, 0), b])
+        previous = spreadsheet_text.assign_column_tokens(None, [a, b])
+        edited = spreadsheet_text.assign_column_tokens(previous, [(-1, 2, 0), b])
         assert _tokens(edited) == [0, 1]
 
     def test_editing_a_column_to_a_value_already_in_the_list_keeps_its_position_token(self):
         a, b, c = (-1, 1, 0), (2, 0, -1), (1, 1, -1)
-        prev = spreadsheet_text.assign_column_tokens(None, [a, b, c])
-        edited = spreadsheet_text.assign_column_tokens(prev, [c, b, c])
+        previous = spreadsheet_text.assign_column_tokens(None, [a, b, c])
+        edited = spreadsheet_text.assign_column_tokens(previous, [c, b, c])
         assert _tokens(edited) == [0, 1, 2]
 
     def test_duplicate_columns_get_distinct_tokens(self):
         a, b = (-1, 1, 0), (2, 0, -1)
-        prev = spreadsheet_text.assign_column_tokens(None, [a, a, b])
-        moved = spreadsheet_text.assign_column_tokens(prev, [a, b, a])
+        previous = spreadsheet_text.assign_column_tokens(None, [a, a, b])
+        moved = spreadsheet_text.assign_column_tokens(previous, [a, b, a])
         assert _tokens(moved) == [0, 2, 1]
         assert len(set(_tokens(moved))) == 3
 
@@ -56,21 +56,21 @@ class TestColumnTokens:
 
     def test_mid_list_removal_keeps_every_survivors_token(self):
         a, b, c = "81/80", "128/125", "64/63"
-        prev = spreadsheet_text.assign_column_tokens(None, [a, b, c])
-        removed = spreadsheet_text.assign_column_tokens(prev, [b, c])
+        previous = spreadsheet_text.assign_column_tokens(None, [a, b, c])
+        removed = spreadsheet_text.assign_column_tokens(previous, [b, c])
         assert _tokens(removed) == [1, 2]
 
     def test_basis_groups_claim_freed_slots_positionally_on_a_resolve(self):
         r0, r1 = (1, 1, 0), (0, 1, 4)
-        prev = spreadsheet_text.assign_column_tokens(None, [r0, r1])
-        dropped = spreadsheet_text.assign_column_tokens(prev, [(12, 19, 28)], claim_unmatched=True)
+        previous = spreadsheet_text.assign_column_tokens(None, [r0, r1])
+        dropped = spreadsheet_text.assign_column_tokens(previous, [(12, 19, 28)], claim_unmatched=True)
         assert _tokens(dropped) == [0]
-        removed = spreadsheet_text.assign_column_tokens(prev, [r1], claim_unmatched=True)
+        removed = spreadsheet_text.assign_column_tokens(previous, [r1], claim_unmatched=True)
         assert _tokens(removed) == [1]
 
     def test_interval_sets_never_relabel_a_dropped_column_as_a_new_one(self):
-        prev = spreadsheet_text.assign_column_tokens(None, ["3/2", "6/5", "5/4"])
-        switched = spreadsheet_text.assign_column_tokens(prev, ["3/2", "7/4"])
+        previous = spreadsheet_text.assign_column_tokens(None, ["3/2", "6/5", "5/4"])
+        switched = spreadsheet_text.assign_column_tokens(previous, ["3/2", "7/4"])
         assert _tokens(switched) == [0, 3], "7/4 is FRESH (3), not relabelled 1 or 2"
 
     def test_build_returns_column_identities_numbered_by_index_when_fresh(self):
@@ -85,7 +85,7 @@ class TestColumnTokens:
         slot0_x, slot2_x = c1["cell:held:0:0"].x, c1["cell:held:0:2"].x
         assert slot0_x != slot2_x
         lay2 = spreadsheet.build(_held_state(), _all_on(),
-                                 held_vectors=[held[2], held[0], held[1]], prev_ids=lay1.identities)
+                                 held_vectors=[held[2], held[0], held[1]], previous_ids=lay1.identities)
         c2 = {c.id: c for c in lay2.cells}
         assert "cell:held:0:2" in c2
         assert c2["cell:held:0:2"].x == slot0_x
@@ -95,7 +95,7 @@ class TestColumnTokens:
         held = [(-1, 1, 0), (2, 0, -1), (1, 1, -1)]
         lay1 = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
         lay2 = spreadsheet.build(_held_state(), _all_on(),
-                                 held_vectors=[held[2], held[0], held[1]], prev_ids=lay1.identities)
+                                 held_vectors=[held[2], held[0], held[1]], previous_ids=lay1.identities)
         moved = {cell_id for cell_id in spreadsheet_text.changed_cell_ids(lay1, lay2) if not _reorder_volatile(cell_id)}
         assert moved == set(), f"these cells re-filled in place instead of gliding: {sorted(moved)}"
 
@@ -105,7 +105,7 @@ class TestColumnTokens:
         c1 = {c.id: c for c in lay1.cells}
         slot_x = [c1[f"grip:held:{i}"].x for i in range(3)]
         c2 = {c.id: c for c in spreadsheet.build(
-            _held_state(), _all_on(), held_vectors=[held[2], held[0], held[1]], prev_ids=lay1.identities).cells}
+            _held_state(), _all_on(), held_vectors=[held[2], held[0], held[1]], previous_ids=lay1.identities).cells}
         assert [c2[f"grip:held:{i}"].x for i in range(3)] == slot_x
         assert all(f"held_minus:{i}" in c2 for i in range(3))
         assert c2["cell:held:0:2"].x == slot_x[0]
@@ -114,7 +114,7 @@ class TestColumnTokens:
         interest = [(1, 1, -1), (-1, 1, 0), (2, 0, -1)]
         lay1 = spreadsheet.build(_held_state(), _all_on(), interest=interest)
         lay2 = spreadsheet.build(_held_state(), _all_on(),
-                                 interest=[interest[2], interest[0], interest[1]], prev_ids=lay1.identities)
+                                 interest=[interest[2], interest[0], interest[1]], previous_ids=lay1.identities)
         moved = {cell_id for cell_id in spreadsheet_text.changed_cell_ids(lay1, lay2) if not _reorder_volatile(cell_id)}
         assert moved == set(), f"interest cells re-filled in place instead of gliding: {sorted(moved)}"
 
@@ -122,7 +122,7 @@ class TestColumnTokens:
         targets = ("2/1", "3/2", "5/4")
         lay1 = spreadsheet.build(_held_state(), _all_on(), target_override=targets)
         lay2 = spreadsheet.build(_held_state(), _all_on(),
-                                 target_override=(targets[2], targets[0], targets[1]), prev_ids=lay1.identities)
+                                 target_override=(targets[2], targets[0], targets[1]), previous_ids=lay1.identities)
         moved = {cell_id for cell_id in spreadsheet_text.changed_cell_ids(lay1, lay2)
                  if not _reorder_volatile(cell_id) and not cell_id.startswith("damage:")}
         assert moved == set(), f"target cells re-filled in place instead of gliding: {sorted(moved)}"
@@ -130,7 +130,7 @@ class TestColumnTokens:
     def test_removing_a_column_keeps_the_survivors_identity_so_they_do_not_ring(self):
         interest = [(1, 1, -1), (-1, 1, 0), (2, 0, -1)]
         lay1 = spreadsheet.build(_held_state(), _all_on(), interest=interest)
-        lay2 = spreadsheet.build(_held_state(), _all_on(), interest=interest[1:], prev_ids=lay1.identities)
+        lay2 = spreadsheet.build(_held_state(), _all_on(), interest=interest[1:], previous_ids=lay1.identities)
         assert spreadsheet_text.changed_cell_ids(lay1, lay2) == frozenset()
 
     def test_editable_vector_tiles_get_editable_quantities_ratios(self):

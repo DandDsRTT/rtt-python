@@ -1,13 +1,13 @@
 // Guided first-run tour. A tiny self-contained walkthrough engine — no library, in the same
 // hand-rolled style as audio.js / freeze.js. The page injects window.rttTour = {steps, autostart}
-// (see app._TOUR_JS): `steps` is an array of {sel, title, body, place, open} and `autostart` asks
+// (see app._TOUR_JS): `steps` is an array of {selector, title, body, place, open} and `autostart` asks
 // the tour to run itself once per browser on first load.
 //
-// Each step spotlights the element matched by its CSS selector `sel` (a region class like
+// Each step spotlights the element matched by its CSS selector `selector` (a region class like
 // .rtt-gridcontent or .rtt-titletile — NOT a NiceGUI .mark(), which is test-only and never reaches
 // the DOM) and floats a card of copy beside it. A step with `open:true` opens the settings drawer
 // first (clicking the hamburger if it's still collapsed) so its target is on screen. A step whose
-// `sel` is empty — or whose element isn't present — shows a centred card with the page dimmed evenly,
+// `selector` is empty — or whose element isn't present — shows a centred card with the page dimmed evenly,
 // so a missing region degrades to a plain slide rather than breaking the run.
 //
 // "Seen" is a per-browser localStorage flag, the natural home for a one-time viewing preference (it
@@ -98,7 +98,7 @@
     var step = steps[index];
     var spot = root.querySelector(".rtt-tour-spot");
     var card = root.querySelector(".rtt-tour-card");
-    var element = step.sel ? document.querySelector(step.sel) : null;
+    var element = step.selector ? document.querySelector(step.selector) : null;
 
     if (!element || !element.getClientRects().length) {                          // centred / missing target
       // clear any inline rect from a previous anchored step — inline styles beat the
@@ -135,7 +135,7 @@
       index === steps.length - 1 ? "Done" : "Next";
 
     // bring the target into view first, then settle the spotlight/card once it's stopped moving
-    var element = step.sel ? document.querySelector(step.sel) : null;
+    var element = step.selector ? document.querySelector(step.selector) : null;
     if (element && element.scrollIntoView) element.scrollIntoView({ block: "nearest", inline: "nearest" });
     setTimeout(position, step.open && !panelOpen() ? 320 : 60);  // wait out the drawer transition
   }

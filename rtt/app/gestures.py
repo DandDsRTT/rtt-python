@@ -102,12 +102,12 @@ class GestureController:
         g = self.gesture
         if g is not None and g.kind in ("edit", "drag"):
             return
-        prev = None
+        previous = None
         if g is not None and g.kind == "wheel":
-            prev = g
+            previous = g
         elif g is not None:
             _gesture_ops.take_over_gesture(self)
-        self.gesture = _Gesture(kind="hover", apply=apply, prev=prev)
+        self.gesture = _Gesture(kind="hover", apply=apply, previous=previous)
         _gesture_ops.paint_rings(self)
 
     @cb_method
@@ -115,7 +115,7 @@ class GestureController:
         g = self.gesture
         if g is None or g.kind != "hover":
             return
-        self.gesture = g.prev
+        self.gesture = g.previous
         _gesture_ops.paint_rings(self)
 
 

@@ -84,13 +84,13 @@ class Renderer:
             again = True
             cont = after
             while again:
-                prev = (
+                previous = (
                     self._runtime.last_lay.identities
                     if self._runtime.last_lay is not None
                     else None
                 )
                 try:
-                    await asyncio.to_thread(self._editor.layout, prev_ids=prev)
+                    await asyncio.to_thread(self._editor.layout, previous_ids=previous)
                 except Exception:
                     _log.exception("off-loop layout warm-up failed; rendering on the loop")
                 self.render()
@@ -113,9 +113,9 @@ class Renderer:
         _rendering_ops.end_stale_gestures(self._gestures)
         with self._runtime.building_guard():
             self.apply_view_classes()
-            prev = self._runtime.last_lay.identities if self._runtime.last_lay is not None else None
+            previous = self._runtime.last_lay.identities if self._runtime.last_lay is not None else None
             cold = self._runtime.last_lay is None
-            layout = self._editor.layout(prev_ids=prev, preview_remove=self._gestures.rank_remove)
+            layout = self._editor.layout(previous_ids=previous, preview_remove=self._gestures.rank_remove)
             self._runtime.set_last_lay(layout)
             self._rec.pretransform = layout.pretransform
             cur_ids = frozenset(cell_box.id for cell_box in layout.cells)

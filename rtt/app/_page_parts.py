@@ -240,7 +240,7 @@ def build_approach_radio(page_builder) -> None:
     radio.on("mouseleave", lambda _=None: on_approach_hover(None))
 
 
-_VIS_KIND = {"animations": "anim", "preview_highlighting": "prev", "tooltips": "tip"}
+_VIS_KIND = {"animations": "anim", "preview_highlighting": "previous", "tooltips": "tip"}
 _VISUAL_ICON = {
     "animations": (
         '<svg class="rtt-anim-icon" viewBox="0 0 14 14">'

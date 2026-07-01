@@ -12,7 +12,7 @@ VALUE_KINDS: frozenset[str] = frozenset(
         "generator_ratio",
         "commaratio",
         "powerdisplay",
-        "mathexpr",
+        "math_expression",
         "mapping",
         "commacell",
         "unchangedcell",

@@ -30,12 +30,12 @@ class PageRuntime:
 
     @contextmanager
     def building_guard(self):
-        prev = self.building
+        previous = self.building
         self.building = True
         try:
             yield
         finally:
-            self.building = prev
+            self.building = previous
 
     def set_last_lay(self, layout: Layout) -> None:
         self.last_lay = layout

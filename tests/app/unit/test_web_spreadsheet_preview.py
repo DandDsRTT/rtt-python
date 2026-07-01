@@ -91,11 +91,11 @@ class TestPreviewCellIds:
     def test_a_domain_change_keeps_target_columns_shared_by_ratio(self):
         ed = Editor()
         base = ed.layout()
-        base = ed.layout(prev_ids=base.identities)
+        base = ed.layout(previous_ids=base.identities)
         token = ed.capture_for_preview()
         try:
             ed.shrink()
-            shrunk = ed.layout(prev_ids=base.identities)
+            shrunk = ed.layout(previous_ids=base.identities)
         finally:
             ed.restore_for_preview(token)
         base_ratios = {r for _, r in base.identities["targets"]}

@@ -237,7 +237,7 @@ class TestSuperspaceBracketsAndMath:
 
     def test_math_expressions_render_j_L_cells_as_log_of_superspace_primes(self):
         cells = {c.id: c for c in _barbados_superspace(math_expressions=True).cells}
-        assert cells["just:superspace_prime:0"].kind == "mathexpr"
+        assert cells["just:superspace_prime:0"].kind == "math_expression"
         assert cells["just:superspace_prime:0"].text == "1200 · log₂2\n= 1200.000"
         assert cells["just:superspace_prime:1"].text == "1200 · log₂3\n= 1901.955"
         assert cells["just:superspace_prime:2"].text == "1200 · log₂5\n= 2786.314"

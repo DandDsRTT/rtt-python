@@ -5,7 +5,7 @@ from rtt.app.editor_document import Document
 from rtt.app.layout import Layout
 
 
-def build(document: Document, prev_ids=None, preview_remove=None) -> Layout:
+def build(document: Document, previous_ids=None, preview_remove=None) -> Layout:
     pending = document.pending
     return spreadsheet.build(
         document.state,
@@ -35,6 +35,6 @@ def build(document: Document, prev_ids=None, preview_remove=None) -> Layout:
         targets_in_use=document.targets_in_use,
         mapping_form=document.preferred_form.get("mapping"),
         comma_basis_form=document.preferred_form.get("comma_basis"),
-        prev_ids=prev_ids,
+        previous_ids=previous_ids,
         preview_remove=preview_remove,
     )
