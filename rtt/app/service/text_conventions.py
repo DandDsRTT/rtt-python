@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from collections import namedtuple
 
+from rtt.app.spreadsheet_constants import DASH as _DASH
+
 EbkConvention = namedtuple(
     "EbkConvention", "structure outer_open outer_close inner_open inner_close sep"
 )
-
-_DASH = "—"
 
 _MAP = EbkConvention("row", "⟨", "]", "", "", " ")
 _GENMAP = EbkConvention("row", "{", "]", "", "", " ")

@@ -33,13 +33,16 @@ _EXAMPLE_TEXT: dict[str, str] = {
 }
 
 
+_CELL_FRAME = "border:1px solid #555;background:#fff"
+
+
 _EXAMPLE_HTML = {
     "animations": (
         '<span style="position:relative;display:inline-block;width:34px;height:16px">'
         '<span style="position:absolute;left:0;top:1px;width:13px;height:13px;'
         'border:1px solid #999;background:#fff;opacity:0.35"></span>'
         '<span style="position:absolute;left:11px;top:1px;width:13px;height:13px;'
-        'border:1px solid #555;background:#fff"></span>'
+        f'{_CELL_FRAME}"></span>'
         '<span class="material-icons" style="position:absolute;right:-3px;top:1px;'
         'font-size:13px;color:#777">east</span></span>'
     ),
@@ -154,7 +157,7 @@ def _tile_grid_frame_html() -> str:
             cell,
             cell,
             '<div style="width:100%;height:100%;box-sizing:border-box;'
-            'border:1px solid #555;background:#fff"></div>',
+            f'{_CELL_FRAME}"></div>',
         )
         + mark(
             cell_x + cell, cell_y, bracket_width, cell, square_bracket(bracket_width, cell, "right")

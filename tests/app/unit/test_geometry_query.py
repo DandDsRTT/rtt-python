@@ -14,7 +14,7 @@ from rtt.app.spreadsheet_models import RowBand
 
 
 def _row(y, height=10.0, frame=2.0, symbol=3.0, caption=4.0, units=5.0, comma_picker=0.0):
-    return RowBand(y=y, height=height, label="", collapsible=True, tile_height=0.0, tile_top=0.0,
+    return RowBand(y=y, height=height, label="", tile_height=0.0, tile_top=0.0,
                    frame=frame, symbol=symbol, caption=caption, units=units, plain_text=0.0, preset=0.0,
                    scheme_button=0.0, num_subrows=1, comma_picker=comma_picker)
 
@@ -58,7 +58,7 @@ class TestGeometryQuery:
         assert query.handle_gutter_width(g, "primes") == 4.0
         assert query.handle_gutter_width(g, "generators") == 0
         assert query.etpick_left_padding(g, "primes") == 0
-        assert query.target_left(g, 1) == 20.0 + BRACKET_WIDTH + COLUMN_WIDTH + INTERVAL_COL_GAP
+        assert query.interval_left(g, "targets", 1) == 20.0 + BRACKET_WIDTH + COLUMN_WIDTH + INTERVAL_COL_GAP
         assert query.prime_left(g, 0) == 10.0 + query.outer_gutter_width(g, "primes") + BRACKET_WIDTH
         assert query.sub_axis_x(g, "targets", 1) == 200.0 + COLUMN_WIDTH / 2
 

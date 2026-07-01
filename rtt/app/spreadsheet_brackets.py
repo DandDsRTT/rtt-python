@@ -466,9 +466,9 @@ def _left_functions(resolved, geometry):
     return {
         "comma": lambda c: query.comma_left(geometry, resolved, c),
         "prime": lambda p: query.prime_left(geometry, p),
-        "target": lambda j: query.target_left(geometry, j),
-        "interest": lambda i: query.interest_left(geometry, i),
-        "held": lambda i: query.held_left(geometry, i),
+        "target": lambda j: query.interval_left(geometry, "targets", j),
+        "interest": lambda i: query.interval_left(geometry, "interest", i),
+        "held": lambda i: query.interval_left(geometry, "held", i),
         "detempering": lambda i: query.detempering_left(geometry, i),
         "generator": lambda g: query.generator_left(geometry, g),
         "canonical_generator": lambda g: query.canonical_generator_left(geometry, g),

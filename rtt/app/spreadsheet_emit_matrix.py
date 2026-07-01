@@ -41,20 +41,18 @@ def emit_headers(resolved, geometry, context) -> EmitResult:
         hx = geometry.column_x[key] + query.outer_gutter_width(geometry, key)
         hw = geometry.column_width[key] - 2 * query.outer_gutter_width(geometry, key)
         cells.append(CellBox(f"header:{key}", hx, geometry.header_y, hw, HEADER_HEIGHT, "columnheader", text=geometry.column_header[key]))
-        if geometry.column_collapsible[key]:
-            glyph = _fold_glyph(f"column:{key}" in context.collapsed)
-            tx = hx + (hw - TOGGLE) / 2
-            cells.append(CellBox(f"toggle:column:{key}", tx, geometry.column_node_y, TOGGLE, TOGGLE, "columntoggle", text=glyph))
+        glyph = _fold_glyph(f"column:{key}" in context.collapsed)
+        tx = hx + (hw - TOGGLE) / 2
+        cells.append(CellBox(f"toggle:column:{key}", tx, geometry.column_node_y, TOGGLE, TOGGLE, "columntoggle", text=glyph))
     for key in geometry.rows:
         label = geometry.rows[key].label
         if geometry.size_factor or resolved.scalars.prescaler_is_matrix:
             label = _pretransform_label(label)
             label = label.replace(" pretransforming", chr(160) + "pre-" + chr(10) + "transforming")
         cells.append(CellBox(f"label:{key}", 0, geometry.rows[key].y, LABEL_WIDTH, geometry.rows[key].height, "rowlabel", text=label))
-        if geometry.rows[key].collapsible:
-            glyph = _fold_glyph(f"row:{key}" in context.collapsed)
-            ty = geometry.rows[key].y + (geometry.rows[key].height - TOGGLE) / 2
-            cells.append(CellBox(f"toggle:row:{key}", geometry.node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
+        glyph = _fold_glyph(f"row:{key}" in context.collapsed)
+        ty = geometry.rows[key].y + (geometry.rows[key].height - TOGGLE) / 2
+        cells.append(CellBox(f"toggle:row:{key}", geometry.node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
     foldable = _foldable_ids(cells)
     all_collapsed = bool(foldable) and foldable <= context.collapsed
     cells.append(CellBox("toggle:all", geometry.node_x, geometry.column_node_y, TOGGLE, TOGGLE, "alltoggle",
@@ -139,9 +137,9 @@ def _emit_units_columns(cells, resolved, geometry, context) -> None:
         "superspace_primes": (resolved.dimensions.superspace_dimensionality, lambda i: query.superspace_prime_left(geometry, i), lambda i: f"/p{_sub(i + 1)}"),
         "commas": (resolved.dimensions.vector_count_shown, lambda i: query.comma_left(geometry, resolved, i), lambda _i: "/1"),
         "detempering": (resolved.dimensions.rank, lambda i: query.detempering_left(geometry, i), lambda _i: "/1"),
-        "targets": (resolved.dimensions.target_count_shown, lambda i: query.target_left(geometry, i), lambda _i: "/1"),
-        "interest": (resolved.dimensions.interest_count_shown, lambda i: query.interest_left(geometry, i), lambda _i: "/1"),
-        "held": (resolved.dimensions.held_count_shown, lambda i: query.held_left(geometry, i), lambda _i: "/1"),
+        "targets": (resolved.dimensions.target_count_shown, lambda i: query.interval_left(geometry, "targets", i), lambda _i: "/1"),
+        "interest": (resolved.dimensions.interest_count_shown, lambda i: query.interval_left(geometry, "interest", i), lambda _i: "/1"),
+        "held": (resolved.dimensions.held_count_shown, lambda i: query.interval_left(geometry, "held", i), lambda _i: "/1"),
     }
     for key, (n, left, label) in column_units.items():
         if not query.tile_open(geometry, context.collapsed, "units", key):
@@ -255,15 +253,15 @@ def _emit_qty_detempering(cells, resolved, geometry, context, quantity_y) -> Non
 
 def _emit_qty_interests(cells, resolved, geometry, context, quantity_y, branch_minus) -> None:
     if query.tile_open(geometry, context.collapsed, "quantities", "targets"):
-        _emit_qty_list(cells, resolved, _QtyList("targets", "target", resolved.dimensions.target_count, lambda i: query.target_left(geometry, i), resolved.targets.ratios,
+        _emit_qty_list(cells, resolved, _QtyList("targets", "target", resolved.dimensions.target_count, lambda i: query.interval_left(geometry, "targets", i), resolved.targets.ratios,
                                      resolved.tuning.target_sizes, resolved.targets.pending,
                                      "ratiocell" if resolved.scalars.targets_editable else "commaratio",
                                      resolved.scalars.targets_editable), quantity_y, branch_minus)
     if query.tile_open(geometry, context.collapsed, "quantities", "held"):
-        _emit_qty_list(cells, resolved, _QtyList("held", "held", resolved.dimensions.held_count, lambda i: query.held_left(geometry, i), resolved.held.ratios,
+        _emit_qty_list(cells, resolved, _QtyList("held", "held", resolved.dimensions.held_count, lambda i: query.interval_left(geometry, "held", i), resolved.held.ratios,
                                      resolved.tuning.held_sizes, resolved.held.pending, "ratiocell", True), quantity_y, branch_minus)
     if query.tile_open(geometry, context.collapsed, "quantities", "interest"):
-        _emit_qty_list(cells, resolved, _QtyList("interest", "interest", resolved.dimensions.interest_count, lambda i: query.interest_left(geometry, i), resolved.interest.ratios,
+        _emit_qty_list(cells, resolved, _QtyList("interest", "interest", resolved.dimensions.interest_count, lambda i: query.interval_left(geometry, "interest", i), resolved.interest.ratios,
                                      resolved.tuning.interest_sizes, resolved.interest.pending, "ratiocell", True), quantity_y, branch_minus)
 
 

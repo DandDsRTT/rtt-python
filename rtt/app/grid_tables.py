@@ -622,14 +622,7 @@ BANDS = {
     )
 }
 
-SYMBOLED_ROWS = BANDS["symbol"].rows
-CAPTIONED_ROWS = BANDS["caption"].rows
-UNITED_ROWS = BANDS["units"].rows
-COLUMN_LABELED_ROWS = BANDS["col_label"].rows
 FRAMED_ROWS = BANDS["frame"].rows
-CHARTED_ROWS = BANDS["chart"].rows
-PRESET_ROWS = BANDS["preset"].rows
-FORM_CHOOSER_ROWS = BANDS["form_chooser"].rows
 
 WEIGHT_EQUIVALENCE_BY_SLOPE = {
     "complexityWeight": " = 𝒄",

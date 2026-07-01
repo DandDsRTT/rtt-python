@@ -134,10 +134,6 @@ def outer_gutter_width(geometry, group_key: str) -> float:
     )
 
 
-def content_box(geometry, key: str):
-    return geometry.content_x[key], geometry.content_width[key]
-
-
 def tile_of(geometry, x, y):
     rkey = next(
         (
@@ -147,10 +143,14 @@ def tile_of(geometry, x, y):
         ),
         None,
     )
-    ckey = None
-    for ck, cx in geometry.content_x.items():
-        if cx - 0.5 <= x < cx + geometry.content_width[ck] + 0.5:
-            ckey = ck
+    ckey = next(
+        (
+            ck
+            for ck, cx in geometry.content_x.items()
+            if cx - 0.5 <= x < cx + geometry.content_width[ck] + 0.5
+        ),
+        None,
+    )
     return rkey, ckey
 
 
@@ -169,7 +169,7 @@ def tile_span_box(geometry, row_key: str, column_key: str):
 
 
 def matrix_span(geometry, resolved, group_key: str):
-    x, width = content_box(geometry, group_key)
+    x, width = geometry.content_x[group_key], geometry.content_width[group_key]
     matrix_x = outer_gutter_width(geometry, group_key)
     x, width = x + matrix_x, width - 2 * matrix_x
     if group_key == "commas" and resolved.unchanged.empty_comma_width:
@@ -224,16 +224,15 @@ def interval_list_width(n: int, column_key: str) -> float:
     return 2 * BRACKET_WIDTH + n * COLUMN_WIDTH + max(n - 1, 0) * interval_col_gap(column_key)
 
 
-def target_left(geometry, j: int) -> float:
-    return geometry.targets_x + BRACKET_WIDTH + j * (COLUMN_WIDTH + interval_col_gap("targets"))
+_INTERVAL_X_ATTR = {"targets": "targets_x", "interest": "interest_x", "held": "held_x"}
 
 
-def interest_left(geometry, i: int) -> float:
-    return geometry.interest_x + BRACKET_WIDTH + i * (COLUMN_WIDTH + interval_col_gap("interest"))
-
-
-def held_left(geometry, i: int) -> float:
-    return geometry.held_x + BRACKET_WIDTH + i * (COLUMN_WIDTH + interval_col_gap("held"))
+def interval_left(geometry, column_key: str, i: int) -> float:
+    return (
+        getattr(geometry, _INTERVAL_X_ATTR[column_key])
+        + BRACKET_WIDTH
+        + i * (COLUMN_WIDTH + interval_col_gap(column_key))
+    )
 
 
 def detempering_left(geometry, i: int) -> float:
