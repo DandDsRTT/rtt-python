@@ -259,6 +259,9 @@ body.rtt-zoom-freeze { --t:0s; }
 @media (max-width: 600px) {
   :root { --tab-w:34px; }
   .rtt-shell { top:2px; left:2px; right:2px; bottom:2px; }
+  /* a flex item's default min-width:auto floors the closed tab at its 40px content min; drop it so the
+     narrowed --tab-w actually takes (the 28px hamburger at a 6px inset still fits the 34px tab). */
+  .rtt-panelgroup:not(.rtt-open) { min-width:0; }
   .rtt-panelgroup:not(.rtt-open) .rtt-sidetitle { display:none; }
 }
 body.rtt-no-tooltips .q-tooltip,
