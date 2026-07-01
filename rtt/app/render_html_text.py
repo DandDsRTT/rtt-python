@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import math
 
 from rtt.app import service, spreadsheet_constants
@@ -39,7 +40,7 @@ def _elide_expr_line(line: str, width: float) -> str:
 
 def _math_expression_html(text: str, width: float) -> str:
     lines = "".join(
-        f'<div style="font-size:{_fit_font(line, width):.2f}px">{line}</div>'
+        f'<div style="font-size:{_fit_font(line, width):.2f}px">{html.escape(line)}</div>'
         for line in (_elide_expr_line(raw, width) for raw in text.split("\n"))
     )
     return f'<div class="rtt-math-expression-stack">{lines}</div>'
@@ -58,10 +59,15 @@ def _parse_int(text: str) -> int | None:
 
 def _wheel_step(value, delta_y, step=1) -> str:
     text = str(value).strip()
-    try:
-        cur = float(text.replace("∞", "inf"))
-    except ValueError:
+    if step <= 0:
+        return text
+    if not text:
         cur = 0.0
+    else:
+        try:
+            cur = float(text.replace("∞", "inf"))
+        except ValueError:
+            return text
     if not math.isfinite(cur):
         return text
     new = cur + (step if delta_y < 0 else -step)

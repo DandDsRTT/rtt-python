@@ -71,13 +71,22 @@ def _doc_store() -> dict:
     return _MEMORY_STORE if helpers.is_user_simulation() else app.storage.user
 
 
+_MAX_STATE_TOKEN = 16384
+_MAX_STATE_BYTES = 256 * 1024
+
+
 def _encode_state(data: dict) -> str:
     raw = json.dumps(data, separators=(",", ":")).encode("utf-8")
     return base64.urlsafe_b64encode(zlib.compress(raw, 9)).decode("ascii")
 
 
 def _decode_state(token: str) -> dict:
-    raw = zlib.decompress(base64.urlsafe_b64decode(token.encode("ascii")))
+    if len(token) > _MAX_STATE_TOKEN:
+        raise ValueError("share-link token too long")
+    decompressor = zlib.decompressobj()
+    raw = decompressor.decompress(base64.urlsafe_b64decode(token.encode("ascii")), _MAX_STATE_BYTES)
+    if not decompressor.eof:
+        raise ValueError("share-link state exceeds the decompression cap")
     return json.loads(raw.decode("utf-8"))
 
 

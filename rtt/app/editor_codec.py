@@ -66,9 +66,31 @@ def serialize(document: Document) -> dict:
     }
 
 
+_MAX_RANK = 128
+_MAX_DIMENSIONALITY = 128
+_MAX_COLLECTION = 512
+
+
+def _within_limits(state, data: dict) -> bool:
+    if state.rank > _MAX_RANK or state.dimensionality > _MAX_DIMENSIONALITY:
+        return False
+    for key in ("interest_vectors", "held_vectors"):
+        vectors = data.get(key) or ()
+        if len(vectors) > _MAX_COLLECTION or any(
+            len(vector) > _MAX_DIMENSIONALITY for vector in vectors
+        ):
+            return False
+    for key in ("target_override", "projection_basis"):
+        if len(data.get(key) or ()) > _MAX_COLLECTION:
+            return False
+    return True
+
+
 def load(data: dict) -> _Doc | None:
     state = service.parse_mapping_state(data.get("mapping_ebk", ""))
     if state is None:
+        return None
+    if not _within_limits(state, data):
         return None
     return _Doc(
         state=state,
