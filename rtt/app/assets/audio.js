@@ -1,6 +1,8 @@
-window.rttAudio = (function () {
+(function () {
+  if (window.__rttAudio) return;
+  window.__rttAudio = true;
   let context = null;
-  const WAVES = ['sine', 'square', 'triangle', 'sawtooth'], BASE = 261.6255653005986, STEP = 0.34;
+  const WAVES = ['sine', 'square', 'triangle', 'sawtooth'], BASE = 261.6255653005986, STEP = 0.34, GAIN_FLOOR = 0.0001;
   // ONE global config + playing-state drives every speaker (the single bank on the dummy tile cycles
   // it); a speaker's `tile` is used ONLY to pick which speakers to highlight while they ring. The
   // hold-stack (mode 0) keys its held notes by tile:index so each speaker toggles on/off independently
@@ -14,12 +16,14 @@ window.rttAudio = (function () {
     if (context.state === 'suspended') context.resume();
     return context;
   }
+  function seg(tile, index) { return document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"][data-idx="' + index + '"]'); }
+  function tiles(tile) { return document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"]'); }
   function hl(tile, index, on) {  // light EVERY cell sharing this voice (a vector column shares one index)
-    const es = document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"][data-idx="' + index + '"]');
+    const es = seg(tile, index);
     for (let i = 0; i < es.length; i++) es[i].classList.toggle('rtt-speaker-on', on);
   }
   function clearHl(tile) {
-    const es = document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"]');
+    const es = tiles(tile);
     for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-speaker-on');
   }
   function vgain(n) { return 0.45 / Math.max(1, n); }
@@ -28,7 +32,7 @@ window.rttAudio = (function () {
     const ac = actx(), o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
     o.type = WAVES[S.wave];
     o.frequency.value = BASE * Math.pow(2, cents / 1200);
-    g.gain.setValueAtTime(0.0001, t);
+    g.gain.setValueAtTime(GAIN_FLOOR, t);
     g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
     o.connect(g); g.connect(ac.destination); o.start(t);
     if (index >= 0) hl(tile, index, true);
@@ -38,8 +42,8 @@ window.rttAudio = (function () {
       S.live.delete(release);
       const r = actx().currentTime;
       g.gain.cancelScheduledValues(r);
-      g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), r);
-      g.gain.exponentialRampToValueAtTime(0.0001, r + 0.09);
+      g.gain.setValueAtTime(Math.max(g.gain.value, GAIN_FLOOR), r);
+      g.gain.exponentialRampToValueAtTime(GAIN_FLOOR, r + 0.09);
       o.stop(r + 0.12);
       if (index >= 0) setTimeout(function () { hl(tile, index, false); }, 110);
     }
@@ -165,9 +169,6 @@ window.rttAudio = (function () {
   // the float sounds the interval. Gated on unmuted; the chord is derived from the segment's sibling
   // cells live (reorder / retune safe). A grace timer lets the cursor cross the gap onto the button.
   let floatElement = null, floatSeg = null, floatCells = null, hideT = null;
-  function segCells(tile, index) {
-    return document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"][data-idx="' + index + '"]');
-  }
   function placeFloat() {  // (re)anchor the float over its live cells — viewport coords, so it must
     if (!floatElement || !floatCells || !floatCells.length) return;   // re-run on scroll or it slides away
     let l = Infinity, t = Infinity, r = -Infinity, any = false;
@@ -188,14 +189,14 @@ window.rttAudio = (function () {
   function keepFloat() { if (hideT) { clearTimeout(hideT); hideT = null; } }
   function planHide() { keepFloat(); hideT = setTimeout(hideFloat, 250); }
   function showFloat(tile, index) {
-    const all = document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"]');
+    const all = tiles(tile);
     if (!all.length) return;
     clearHover();
     // single-note mode lights just the hovered column SEGMENT; chord / arp modes light the WHOLE tile
     // (hovered column bright, the rest dim) to preview that every pitch plays, and float over them all.
     let cells;
     if (S.mode === 0) {
-      cells = segCells(tile, index);
+      cells = seg(tile, index);
       for (let i = 0; i < cells.length; i++) cells[i].classList.add('rtt-speaker-hover');
     } else {
       cells = all; const key = String(index);
@@ -219,7 +220,7 @@ window.rttAudio = (function () {
     placeFloat();   // centred over the highlighted cells, floated above them
   }
   api.playSeg = function (tile, index) {  // sound a whole column segment (its live sibling chord)
-    const chord = [], sibs = document.querySelectorAll('.rtt-speaker[data-audio="' + tile + '"]');
+    const chord = [], sibs = tiles(tile);
     for (let i = 0; i < sibs.length; i++) chord[+sibs[i].dataset.idx] = +sibs[i].dataset.cents;
     api.hit(tile, index, chord);
   };
@@ -250,6 +251,6 @@ window.rttAudio = (function () {
   document.addEventListener('keydown', function (event) { if (event.key !== ' ' && floatSeg) hideFloat(); }, true);
   // the grid body scrolls in its own scroller (scroll doesn't bubble) — re-anchor the float to its
   // live cells so it rides the page instead of staying pinned to a viewport spot as the grid moves.
-  document.addEventListener('scroll', function () { if (floatSeg) placeFloat(); }, true);
-  return api;
+  document.addEventListener('scroll', function () { if (floatSeg) placeFloat(); }, { capture: true, passive: true });
+  window.rttAudio = api;
 })();

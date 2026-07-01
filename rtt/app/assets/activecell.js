@@ -144,7 +144,7 @@
     var activeRect = rectOf(active), all = cells(), amx = active.dataset.mx;
     if (!amx) {  // a value cell outside any matrix: walk its visual row, so Tab stays in the grid
       var row = [];
-      for (var j = 0; j < all.length; j++) { var e2 = all[j]; if (inRowBand(rectOf(e2), activeRect)) row.push(e2); }
+      for (var j = 0; j < all.length; j++) { var el = all[j]; if (inRowBand(rectOf(el), activeRect)) row.push(el); }
       row.sort(function (a, b) { return centerX(rectOf(a)) - centerX(rectOf(b)); });
       return row;
     }
@@ -276,6 +276,5 @@
   else document.addEventListener('DOMContentLoaded', observe);
   // paint() also seeds the roving tabindex, so run it as cells materialize on first load — otherwise
   // no cell is in the tab order until the first scroll/hover/keydown and Tab can't enter the grid.
-  var tries = 0;
-  (function boot() { observe(); schedulePaint(); if (++tries < 12) setTimeout(boot, 100); })();
+  window.rttBoot(function () { observe(); schedulePaint(); });
 })();

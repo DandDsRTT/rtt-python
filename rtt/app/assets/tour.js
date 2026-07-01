@@ -15,10 +15,13 @@
 // button calls window.rttTour.start() to replay it anytime, regardless of the flag.
 (function () {
   "use strict";
+  if (window.__rttTour) return;
+  window.__rttTour = true;
 
   var SEEN_KEY = "rttTourSeen";
   var PAD = 6;            // px breathing room the spotlight leaves around the target
   var GAP = 14;           // px gap between the spotlight and the card
+  var EDGE = 12;          // px viewport inset the card is clamped within
 
   var config = window.rttTour || {};
   var steps = Array.isArray(config.steps) ? config.steps : [];
@@ -85,10 +88,10 @@
     else if (below + ch <= vh) { top = below; left = rect.left; }       // default: below
     else if (above >= 0) { top = above; left = rect.left; }             // else above
     else if (right + cw <= vw) { left = right; top = rect.top; }        // else to the right
-    else { left = leftOf >= 0 ? leftOf : 12; top = rect.top; }
+    else { left = leftOf >= 0 ? leftOf : EDGE; top = rect.top; }
 
-    top = Math.max(12, Math.min(top, vh - ch - 12));
-    left = Math.max(12, Math.min(left, vw - cw - 12));
+    top = Math.max(EDGE, Math.min(top, vh - ch - EDGE));
+    left = Math.max(EDGE, Math.min(left, vw - cw - EDGE));
     card.style.top = top + "px";
     card.style.left = left + "px";
   }
@@ -105,8 +108,8 @@
       // .rtt-tour-spot-center CSS, so without this the spotlight stays on the prior target
       spot.style.top = spot.style.left = spot.style.width = spot.style.height = "";
       spot.classList.add("rtt-tour-spot-center");
-      card.style.top = Math.max(12, (window.innerHeight - card.offsetHeight) / 2) + "px";
-      card.style.left = Math.max(12, (window.innerWidth - card.offsetWidth) / 2) + "px";
+      card.style.top = Math.max(EDGE, (window.innerHeight - card.offsetHeight) / 2) + "px";
+      card.style.left = Math.max(EDGE, (window.innerWidth - card.offsetWidth) / 2) + "px";
       return;
     }
     spot.classList.remove("rtt-tour-spot-center");
@@ -161,7 +164,7 @@
 
   window.addEventListener("keydown", onKey);
   window.addEventListener("resize", position);
-  window.addEventListener("scroll", position, true);
+  window.addEventListener("scroll", position, { capture: true, passive: true });
 
   window.rttTour = window.rttTour || {};
   window.rttTour.steps = steps;

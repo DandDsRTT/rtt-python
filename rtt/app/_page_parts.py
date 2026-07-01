@@ -12,12 +12,14 @@ from rtt.app.page_assets import (
     _ACTIVECELL_JS,
     _AUDIO_GLYPHS,
     _AUDIO_JS,
+    _BOOT_JS,
     _CSS,
     _DECIMAL_JS,
     _FRACTION_JS,
     _FREEZE_JS,
     _GUIDE_JS,
     _MAPPING_DEMO_JS,
+    _STACKED_EDIT_JS,
     _STATE_PARAM,
     _TOOLTIP_DELAY_MS,
     _TOUR_JS,
@@ -27,6 +29,7 @@ from rtt.app.page_assets import (
     _encode_state,
 )
 from rtt.app.render_html import (
+    _RATIO_MAX_FONT,
     _example_html,
 )
 
@@ -36,11 +39,15 @@ def setup_page_head() -> None:
     ui.add_head_html("<script>document.documentElement.lang='en';</script>")
     ui.add_css(_CSS)
     ui.tooltip.default_props(f"delay={_TOOLTIP_DELAY_MS} transition-duration=0")
+    ui.add_body_html(f"<script>{_BOOT_JS}</script>")
+    ui.add_body_html(f"<script>{_STACKED_EDIT_JS}</script>")
     ui.add_body_html(
         f"<script>{_AUDIO_JS}\nwindow.rttAudio.glyphs = {json.dumps(_AUDIO_GLYPHS)};</script>"
     )
     ui.add_body_html(f"<script>{_FREEZE_JS}</script>")
-    ui.add_body_html(f"<script>{_FRACTION_JS}</script>")
+    ui.add_body_html(
+        f"<script>window.rttFraction={{ratioFont:{_RATIO_MAX_FONT:g}}};\n{_FRACTION_JS}</script>"
+    )
     ui.add_body_html(f"<script>{_DECIMAL_JS}</script>")
     ui.add_body_html(f"<script>{_ACTIVECELL_JS}</script>")
     ui.add_body_html(f"<script>{_ZOOM_JS}</script>")

@@ -74,9 +74,12 @@ class TestBrowserSmoke:
             page.wait_for_selector(".rtt-gridcontent", timeout=15000)
             installed = page.evaluate(
                 "() => ({"
-                "  freeze: typeof window.rttFreeze,"
-                "  audio:  typeof window.rttAudio,"
-                "  tour:   typeof window.rttTour"
+                "  boot:    typeof window.rttBoot,"
+                "  stacked: typeof window.rttStackedEditMode,"
+                "  freeze:  typeof window.rttFreeze,"
+                "  audio:   typeof window.rttAudio,"
+                "  tour:    typeof window.rttTour,"
+                "  ratioFont: window.rttFraction && window.rttFraction.ratioFont"
                 "})"
             )
             browser.close()
@@ -91,4 +94,12 @@ class TestBrowserSmoke:
         )
         assert installed["audio"] != "undefined" and installed["tour"] != "undefined", (
             f"a client-JS module did not install its global (bundle partially failed): {installed}"
+        )
+        assert installed["boot"] == "function" and installed["stacked"] == "function", (
+            "a shared client-JS utility did not install — the fraction/decimal twins or the "
+            f"freeze/activecell boot-retry would be dead: {installed}"
+        )
+        assert installed["ratioFont"], (
+            "window.rttFraction.ratioFont was not stamped from the Python _RATIO_MAX_FONT, so the "
+            f"ratio-view font pre-shrink falls back to its default: {installed}"
         )
