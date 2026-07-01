@@ -303,6 +303,20 @@ git ls-remote --exit-code origin "$br" >/dev/null 2>&1 \
   && git push origin --delete "$br"          # $br = your claude/<name>; skip if already gone
 ```
 
+**Verify a real merge before you delete — deleting an OPEN PR's head branch AUTO-CLOSES it
+unmerged.** `git push origin --delete "$br"` on a PR that has NOT actually merged does not just fail
+to confirm the merge — it closes the still-open PR, and your work silently never ships (this
+happened: a masked watcher exit code was read as "merged", the delete auto-closed the open PR, and
+the agent reported success). So gate the delete on a POSITIVE merge check, never on a watcher exit
+code or a task-notification alone (a `bash pr-watch.sh; echo EXIT=$?` wrapper makes the notification
+always report exit 0 — run the watcher bare and read its output file):
+
+```bash
+gh pr view "$pr" --json state,mergedAt -q '.state + " " + (.mergedAt // "null")'
+# proceed to delete ONLY when this prints "MERGED <timestamp>" (state MERGED and mergedAt non-null).
+# Anything else (OPEN/CLOSED, or mergedAt null) means it did NOT merge — do not delete, do not report merged.
+```
+
 Don't try to delete the **local** branch or tear down the **worktree** you're running in — you're
 checked out on that branch, and the worktree is your live workspace; leaving those for the user /
 orchestrator to reap is correct. Cleanup is the remote branch only, and only after terminal — never
