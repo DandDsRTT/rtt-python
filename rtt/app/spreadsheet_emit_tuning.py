@@ -89,15 +89,15 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group
                                  text=service.cents(v, resolved.flags.decimals), unit=u))
         if key in ("tuning", "just"):
             voice(cells, f"{key}:{group}", i, v)
-    pending_idx = query.pending_draft_idx(resolved, group)
-    if pending_idx is not None and pending_idx[0] is not None:
+    pending_index = query.pending_draft_index(resolved, group)
+    if pending_index is not None and pending_index[0] is not None:
         text = ""
         if resolved.ghosts.comma and group == "commas":
             gsize = {"tuning": 0.0, "just": resolved.ghosts.comma_just, "retune": -resolved.ghosts.comma_just,
                      "complexity": resolved.ghosts.comma_complexity}.get(key)
             if gsize is not None:
                 text = service.cents(gsize, resolved.flags.decimals)
-        cells.append(CellBox(f"{key}:{geometry.group_elem[group]}:draft", geometry.group_left[group][pending_idx[1]],
+        cells.append(CellBox(f"{key}:{geometry.group_elem[group]}:draft", geometry.group_left[group][pending_index[1]],
                              y, COLUMN_WIDTH, ROW_HEIGHT, "tuningvalue", text=text, pending=True))
 
 

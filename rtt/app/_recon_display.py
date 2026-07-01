@@ -12,8 +12,8 @@ from rtt.app.marks import (
 )
 from rtt.app.page_assets import (
     _EBK_SQUARE,
-    _MATLABEL_FONT,
-    _MATLABEL_MIN_FONT,
+    _MATRIX_LABEL_FONT,
+    _MATRIX_LABEL_MIN_FONT,
     _TRANSPOSE_MARK,
     _UNITS_MAX_FONT,
 )
@@ -133,9 +133,9 @@ def update_mathcell(reconciler, cell_box: spreadsheet.CellBox) -> None:
         and "‖" not in cell_box.text
         and " " not in cell_box.text
     ):
-        width = spreadsheet_text._min_width_for_lines(cell_box.text, 1, _MATLABEL_FONT)
+        width = spreadsheet_text._min_width_for_lines(cell_box.text, 1, _MATRIX_LABEL_FONT)
         if width > cell_box.width - 2:
-            font = max(_MATLABEL_MIN_FONT, _MATLABEL_FONT * (cell_box.width - 2) / width)
+            font = max(_MATRIX_LABEL_MIN_FONT, _MATRIX_LABEL_FONT * (cell_box.width - 2) / width)
     if reconciler.handles(cell_box.id).display.math_rendered != (html, font):
         reconciler.cells[cell_box.id].display.math_cell.set_content(html)
         if font is not None:

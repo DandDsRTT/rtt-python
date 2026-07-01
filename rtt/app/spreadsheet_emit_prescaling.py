@@ -108,8 +108,8 @@ def _emit_prescale_cells(cells, resolved, geometry, group, c, vector, prescaled,
 
 
 def _emit_prescale_draft(cells, resolved, geometry, group, prescaler_diag, prescaler_is_matrix, nrows) -> None:
-    pending_idx = query.pending_draft_idx(resolved, group)
-    if pending_idx is None or pending_idx[0] is None:
+    pending_index = query.pending_draft_index(resolved, group)
+    if pending_index is None or pending_index[0] is None:
         return
     left = geometry.group_left[group]
     ghost_pre = None
@@ -122,5 +122,5 @@ def _emit_prescale_draft(cells, resolved, geometry, group, prescaler_diag, presc
         if ghost_pre is not None:
             value = ghost_pre[i] if i < nrows else geometry.size_factor * sum(ghost_pre)
             text = service.prescale_text(value, resolved.flags.decimals)
-        cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left[pending_idx[1]],
+        cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left[pending_index[1]],
                              cell_y, COLUMN_WIDTH, ROW_HEIGHT, "tuningvalue", text=text, pending=True))

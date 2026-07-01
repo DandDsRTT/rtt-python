@@ -125,12 +125,12 @@ def render_blocks(r, layout, seen) -> None:
             place_block(bl, pane)
 
 
-def make_cell_if_new(r, cell_box, container, structural) -> None:
+def build_cell_if_new(r, cell_box, container, structural) -> None:
     if cell_box.id in r._rec.entities and r._rec.cells[cell_box.id].kind != cell_box.kind:
         r._rec.drop(cell_box.id)
     if cell_box.id not in r._rec.entities:
         with r._chrome.cell_parents[container]:
-            r._rec.make_cell(cell_box)
+            r._rec.build_cell(cell_box)
         if r._revirtualizing:
             r._rec.entities[cell_box.id].element.classes(add="rtt-noentry")
         if structural and not cell_box.pending and cell_box.id in r._newborn_ids:
@@ -163,7 +163,7 @@ def update_cell_content(r, cell_box) -> None:
 
 def place_cell(r, cell_box, container, paint) -> None:
     freeze_y, structural, rings = paint
-    make_cell_if_new(r, cell_box, container, structural)
+    build_cell_if_new(r, cell_box, container, structural)
     top = cell_box.y - (freeze_y if container in ("body", "row") else 0)
     grow = _CELL_BORDER_W if cell_box.kind in GRIDVALUE_KINDS else 0
     placement = f"left:0; top:0; transform:translate({cell_box.x}px,{top}px); width:{cell_box.width + grow}px; height:{cell_box.height + grow}px"

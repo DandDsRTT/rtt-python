@@ -349,7 +349,7 @@ def build_rangemode_radio(page_builder, ref, options, on_select):
                 ui.element("span").classes("rtt-rangebox")
                 ui.label(label).classes("rtt-rangelabel")
             opt.on("click", lambda _=None, k=key: on_select(k))
-            opt.mark(f"{ref}-{key or label}")
+            opt.mark(f"{ref}:{key or label}")
             opts[key] = opt
     page_builder._chrome.refs[ref] = radio
     page_builder._chrome.refs[f"{ref}_opts"] = opts

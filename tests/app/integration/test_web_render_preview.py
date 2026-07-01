@@ -506,7 +506,7 @@ class TestPreviewClearing:
         _toggle(user, "plain text values")
         _cell_child(user, "plain_text:mapping:primes").set_value("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         await user.should_see(marker="approach")
-        prime_opt = set(user.find(marker="approach-prime-based").elements)
+        prime_opt = set(user.find(marker="approach:prime-based").elements)
         UserInteraction(user, prime_opt, None).trigger("mouseenter")
         assert "rtt-preview-change" in _wrap_classes(user, "tuning:prime:0")
         UserInteraction(user, set(user.find(marker="approach").elements), None).trigger("mouseleave")

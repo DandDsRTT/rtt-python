@@ -91,8 +91,8 @@ class TestGeometryQuery:
             interest=SimpleNamespace(pending=None))
         assert query.column_token(r, "targets", 1) == 8
         assert query.column_token(r, "commas", 3) == "u1"
-        assert query.pending_draft_idx(r, "targets") == (None, 3)
-        assert query.pending_draft_idx(r, "absent") is None
+        assert query.pending_draft_index(r, "targets") == (None, 3)
+        assert query.pending_draft_index(r, "absent") is None
 
     def test_unit_queries_are_pure_over_resolved(self):
         r = SimpleNamespace(

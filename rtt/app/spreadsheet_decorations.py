@@ -29,7 +29,7 @@ from rtt.app.layout import Block, CellBox, Line
 from rtt.app.spreadsheet_constants import (
     BAND_GAP,
     COLUMN_WIDTH,
-    MATLABEL_HEIGHT,
+    MATRIX_LABEL_HEIGHT,
     ROW_HEIGHT,
     SYMBOL_HEIGHT,
     UNIT_HEIGHT,
@@ -187,7 +187,7 @@ def _emit_matrix_col_labels(cells, resolved, geometry, context) -> None:
             x = left[query.comma_value_pos(resolved, i)] if column_key == "commas" else left[i]
             cells.append(CellBox(
                 f"matrix_label:column:{row_key}:{column_key}:{i}",
-                x, y, COLUMN_WIDTH, MATLABEL_HEIGHT,
+                x, y, COLUMN_WIDTH, MATRIX_LABEL_HEIGHT,
                 "matrix_label", text=text,
             ))
 
