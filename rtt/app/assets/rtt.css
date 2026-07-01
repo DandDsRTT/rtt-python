@@ -358,7 +358,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    an even split, not a long first line and a single trailing word. It centres in the
    row's caption band (the cell is the band's full height), so a one-line name sits
    half a line below a two-line sibling's top rather than hugging the cells. */
-.rtt-caption { width:100%; text-align:center; text-wrap:balance; font-size:9px; line-height:10px;
+.rtt-caption { width:100%; text-align:center; text-wrap:balance; font-size:var(--caption-font); line-height:10px;
                color:#333; overflow-wrap:break-word; font-family:var(--rtt-serif); }
 /* a LOCKED control's caption (the disabled flag, app._update_caption) is a muted grey that still clears
    AA against the grid pane — dark enough to read, still lighter than the active #333 — rather than the
@@ -373,7 +373,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    the short ⟪𝐝⟫ₚ — shrink it (to the .rtt-matrix-label-norm size used for the other wide ‖…‖q norm
    labels) so it reads within and stays centred over its COLUMN_WIDTH value cell, overflowing symmetrically
    rather than clipping if it still spills. The selector is compounded (.rtt-symbol.rtt-optimization-wide, not
-   a bare .rtt-optimization-wide) so it OUT-SPECIFIES .rtt-symbol's own font-size:15px, which is declared later
+   a bare .rtt-optimization-wide) so it OUT-SPECIFIES .rtt-symbol's own font-size (var(--symbol-font)), which is declared later
    in this sheet and would otherwise win the tie. */
 .rtt-symbol.rtt-optimization-wide { font-size:8px; overflow:visible; }
 /* a left-justified caption sits flush against its left edge (the dropdown it labels), free
@@ -411,7 +411,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the symbol + its equivalence (e.g. 𝑃 = G𝑀 = V·diag(𝝀)V⁻¹) stay on ONE line — never wrapping.
    The column floors its width to fit the widest symbol (spreadsheet._symbol_floor), so it shouldn't
    need to overflow; nowrap guarantees it never breaks onto a second line regardless. */
-.rtt-symbol { width:100%; text-align:center; font-size:15px; color:#000; line-height:1;
+.rtt-symbol { width:100%; text-align:center; font-size:var(--symbol-font); color:#000; line-height:1;
               white-space:nowrap; overflow:visible; font-family:var(--rtt-serif); }
 /* the per-row / per-column matrix label (𝒎ᵢ at the left of each mapping row, 𝐜ᵢ
    above each comma, 𝒕ᵢ above each tuned prime, …): same _math_html serif as .rtt-symbol
@@ -428,7 +428,6 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    neighbours. The bare auxiliary norms (‖L𝐜ᵢ‖q, …) are single tokens with no break
    point, so they stay one line. */
 .rtt-matrix-label-norm { font-size:8px; overflow:visible; white-space:normal; }
-.rtt-matrix-label sub { font-size:70%; vertical-align:sub; line-height:0; }
 /* the per-box "units: …" line below the caption, and the domain-units row/col labels.
    The unit VALUE is set in a SINGLE-STORY-g sans face (the mockup's distinct unit style):
    --rtt-units-sans self-hosts Jost (a geometric single-story-g face, see app.py) ahead of the
@@ -444,6 +443,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    cents int-over-fraction stack, the unit hugging its value rather than floating away. */
 .rtt-cell-unit { font-size:7px; line-height:1; color:#333; white-space:nowrap; text-align:center;
             font-family:var(--rtt-units-sans); }
+.rtt-matrix-label sub, .rtt-symbol sub, .rtt-count sub, .rtt-units sub, .rtt-cell-unit sub {
+              font-size:var(--sub-font-pct); vertical-align:sub; line-height:0; }
 /* a read-only value cell simply stacks [value, unit] in a centred column; the value's
    line-height is tightened so the value + unit pair fits the square and stays centred */
 .rtt-cell-united:not(.rtt-cell-input) { flex-direction:column; line-height:1; }
@@ -677,8 +678,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             width:100%; color:#000; white-space:nowrap; line-height:1.04; }
 /* a stacked gridded-value face: a big main glyph over a smaller sub-line. Cents stack the
    whole part over the .fraction; a minimax power stacks ∞ over a small "(max)". */
-.rtt-stacked-main { font-size:10px; }
-.rtt-stacked-sub { font-size:7px; color:#000; }
+.rtt-stacked-main { font-size:var(--stacked-main-font); }
+.rtt-stacked-sub { font-size:var(--stacked-sub-font); color:#000; }
 /* a stacked value with no sub-line is a plain integer (a prescaler 0/1, a finite power), not a
    whole-part-over-.fraction: it fills the square at the full value-cell font, like the mapping/
    mapped integers, rather than the reduced whole-part size that reserves room for a fraction. */
@@ -687,7 +688,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    cents cell builds it inside .rtt-decimal-main): the otherwise-assumed "+" of a positive generator
    (or a "−") that the user clicks to reverse that generator (its mapping row flips too). It reads
    as part of the value (black), with a faint hover box marking it clickable. */
-.rtt-generator-sign { font-size:10px; pointer-events:auto; cursor:pointer; padding:0 1px; border-radius:2px; }
+.rtt-generator-sign { font-size:var(--stacked-main-font); pointer-events:auto; cursor:pointer; padding:0 1px; border-radius:2px; }
 .rtt-generator-sign:hover { background:#e0e0e0; }
 /* the editable POWER cell (the optimization power 𝑝 / box-𝒄 norm power 𝑞): ∞ over a small "(max)"
    is not a decimal you can split into two fields like a cents value, so it keeps the overlay-face
@@ -695,7 +696,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    prescaler / weight / generator tuning — moved to the in-place .rtt-decimal-cell editor below.) */
 .rtt-cell-face { position:absolute; top:0; left:0; width:100%; height:100%;
             pointer-events:none; z-index:1; }
-.rtt-cell-stacked .rtt-cell-input-field .q-field__native { color:transparent; font-size:10px; }
+.rtt-cell-stacked .rtt-cell-input-field .q-field__native { color:transparent; font-size:var(--stacked-main-font); }
 .rtt-cell-stacked:focus-within .rtt-cell-input-field .q-field__native { color:#000; }
 .rtt-cell-stacked:focus-within .rtt-cell-face { display:none; }
 /* with the per-cell unit on, lift the face's centred value to clear the unit pinned at the
@@ -775,9 +776,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             box-shadow:none !important; }  /* the WRAP owns the box + the pending/preview ring — not each input */
 .rtt-decimal-cell .rtt-cell-input-field .q-field__native { padding:0 1px !important; min-height:0 !important;
             line-height:1.04; text-align:center; field-sizing:content; min-width:1ch; }
-.rtt-decimal-whole-input .q-field__native { font-size:10px; }   /* the whole part big (the cents main size) */
-.rtt-decimal-fraction-input .q-field__native { font-size:7px; }     /* the fraction small (the cents sub size) */
-.rtt-decimal-dot { font-size:7px; user-select:none; pointer-events:none; }
+.rtt-decimal-whole-input .q-field__native { font-size:var(--stacked-main-font); }   /* the whole part big (the cents main size) */
+.rtt-decimal-fraction-input .q-field__native { font-size:var(--stacked-sub-font); }     /* the fraction small (the cents sub size) */
+.rtt-decimal-dot { font-size:var(--stacked-sub-font); user-select:none; pointer-events:none; }
 /* the int view: no fraction line, and the whole fills the square at the value-cell font (the read-only
    solo-integer look) — the decimal twin of the fraction cell's data-fracmode="int" collapse. A long
    integer (a 4-digit cents value, decimals off) is shrunk to fit the square via --dec-whole-font, set

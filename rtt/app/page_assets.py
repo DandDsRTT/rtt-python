@@ -124,9 +124,9 @@ _PREVIEW_REMOVE_COLOR = "#e53935"
 _PREVIEW_REMOVE_TEXT_COLOR = "color-mix(in srgb, var(--preview-remove-color) 60%, black)"
 _CELL_BORDER_W = 1
 _CELL_BORDER = f"{_CELL_BORDER_W}px solid {BR_COLOR}"
-_CELL_FONT = 17
+_CELL_FONT = spreadsheet_constants.CELL_FONT
 _GENSIGN_W = 9
-_STACKED_MAIN_FONT = 10
+_STACKED_MAIN_FONT = spreadsheet_constants.STACKED_MAIN_FONT
 _TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a", "form": "#cd9acd"}
 
 _DARK_FRAME = "#15171a"
@@ -351,6 +351,7 @@ _CSS_VARS = f""":root {{
   --c-gridline:#e0e0e0;
   --wash-base:#fff; --wash-tuning:{_TINTS["tuning"]}; --wash-temperament:{_TINTS["temperament"]}; --wash-form:{_TINTS["form"]};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
+  --symbol-font:{spreadsheet_constants.SYMBOL_FONT}px; --caption-font:{spreadsheet_constants.CAPTION_FONT}px; --stacked-main-font:{spreadsheet_constants.STACKED_MAIN_FONT}px; --stacked-sub-font:{spreadsheet_constants.STACKED_SUB_FONT}px; --sub-font-pct:{spreadsheet_constants.SUB_FONT_PCT}%;
   --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT};
   --label-w:{spreadsheet_constants.LABEL_WIDTH}px; --header-h:{spreadsheet_constants.HEADER_HEIGHT}px; --line-w:{spreadsheet_constants.LINE_WIDTH}px;
   --plain-text-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_HEIGHT}px; --option-box:{spreadsheet_constants.OPTION_BOX_PX}px; --button:{spreadsheet_constants.BUTTON}px;
