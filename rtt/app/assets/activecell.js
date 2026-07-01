@@ -43,9 +43,19 @@
   function inRowBand(r, activeRect) { return centerY(r) >= activeRect.top - EPS && centerY(r) <= activeRect.bottom + EPS; }
   function inColumnBand(r, activeRect) { return centerX(r) >= activeRect.left - EPS && centerX(r) <= activeRect.right + EPS; }
 
+  // roving tabindex: exactly one value cell is in the tab order (tabindex 0) — the active one, or
+  // the first cell when nothing is active yet, so Tab from the page chrome can enter the grid. Every
+  // other cell is focusable only by script (tabindex -1). Keyboard moves then focus() the new active
+  // cell (see moveTo), so the AT focus and the visual highlight always travel together.
+  function applyRoving(all) {
+    var focusable = (active && active.isConnected) ? active : all[0];
+    for (var i = 0; i < all.length; i++) all[i].tabIndex = (all[i] === focusable) ? 0 : -1;
+  }
+
   // recompute every materialized cell's --rtt-hl for the current active cell.
   function paint() {
     var all = cells();
+    applyRoving(all);
     if (!active || !active.isConnected) {
       for (var i = 0; i < all.length; i++) all[i].style.removeProperty('--rtt-hl');
       return;
@@ -168,6 +178,7 @@
     var previous = active;
     setActive(element, false);
     element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (element.focus) element.focus({ preventScroll: true });
     hoverSync(previous, element);
   }
 
@@ -248,6 +259,8 @@
   }
   if (document.readyState !== 'loading') observe();
   else document.addEventListener('DOMContentLoaded', observe);
+  // paint() also seeds the roving tabindex, so run it as cells materialize on first load — otherwise
+  // no cell is in the tab order until the first scroll/hover/keydown and Tab can't enter the grid.
   var tries = 0;
-  (function boot() { observe(); if (++tries < 12) setTimeout(boot, 100); })();
+  (function boot() { observe(); schedulePaint(); if (++tries < 12) setTimeout(boot, 100); })();
 })();

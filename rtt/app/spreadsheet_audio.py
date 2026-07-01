@@ -24,6 +24,24 @@ def assign_matrix(cells, resolved, geometry):
         cells[i] = replace(cb, **upd)
 
 
+def _clean_label(text) -> str:
+    return " ".join(str(text).split())
+
+
+def annotate_aria(cells, geometry) -> None:
+    for i, cb in enumerate(cells):
+        if not cb.in_grid:
+            continue
+        row_key, column_key = query.tile_of(geometry, cb.x + cb.width / 2, cb.y + cb.height / 2)
+        if row_key is None or column_key is None:
+            continue
+        row_label = _clean_label(geometry.rows[row_key].label)
+        column_label = _clean_label(geometry.column_header.get(column_key, column_key))
+        value = _clean_label(cb.text)
+        parts = [part for part in (row_label, column_label, value) if part]
+        cells[i] = replace(cb, aria=", ".join(parts))
+
+
 def _canon_generator_sizes(resolved):
     generator_map, inverse_form = (
         resolved.tuning.tuning_map.generator_map,

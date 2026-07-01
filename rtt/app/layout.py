@@ -56,6 +56,7 @@ class CellBox:
     matrix: str = ""
     matrix_orient: str = ""
     in_grid: bool = False
+    aria: str = ""
 
 
 @dataclass(frozen=True)

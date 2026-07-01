@@ -78,7 +78,12 @@ def build_layout(page_builder) -> None:
 
 
 def build_grid_pane(page_builder) -> dict:
-    grid_pane = ui.element("div").classes("rtt-app").mark("gridpane")
+    grid_pane = (
+        ui.element("div")
+        .classes("rtt-app")
+        .props('role="grid" aria-label="RTT spreadsheet"')
+        .mark("gridpane")
+    )
     slots: dict = {"grid_pane": grid_pane}
     with grid_pane:
         columnfill = ui.element("div").classes("rtt-column-fill").mark("columnfill")

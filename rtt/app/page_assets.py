@@ -203,10 +203,10 @@ def _vgroup_key(cell_box: spreadsheet.CellBox) -> str:
 
 
 _MODE_FILLS = (
-    frozenset({(1, 1)}),
-    frozenset({(2, 0), (1, 1), (0, 2)}),
-    frozenset({(0, 1), (1, 1), (2, 1)}),
-    frozenset({(2, 0), (1, 1), (0, 2), (1, 2), (2, 1), (2, 2)}),
+    (frozenset({(1, 1)}), "note"),
+    (frozenset({(2, 0), (1, 1), (0, 2)}), "arpeggio"),
+    (frozenset({(0, 1), (1, 1), (2, 1)}), "chord"),
+    (frozenset({(2, 0), (1, 1), (0, 2), (1, 2), (2, 1), (2, 2)}), "rolled chord"),
 )
 _AUDIO_GLYPHS = {
     "mute": [
@@ -214,7 +214,7 @@ _AUDIO_GLYPHS = {
         '<span class="material-icons rtt-audio-glyph">volume_off</span>',
     ],
     "wave": [_wave_svg(w) for w in ("sine", "square", "triangle", "sawtooth")],
-    "mode": [_mode_svg(f) for f in _MODE_FILLS],
+    "mode": [_mode_svg(fill, name) for fill, name in _MODE_FILLS],
     "lock": [
         '<span class="material-icons rtt-audio-glyph">lock_open</span>',
         '<span class="material-icons rtt-audio-glyph">lock</span>',
