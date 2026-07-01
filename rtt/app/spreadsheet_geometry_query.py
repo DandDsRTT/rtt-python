@@ -225,7 +225,9 @@ def interval_list_width(n: int, column_key: str) -> float:
 
 
 def basis_col_x(geometry) -> float:
-    return geometry.column_x["quantities"] + (geometry.column_width["quantities"] - COLUMN_WIDTH) / 2
+    return (
+        geometry.column_x["quantities"] + (geometry.column_width["quantities"] - COLUMN_WIDTH) / 2
+    )
 
 
 _INTERVAL_X_ATTR = {"targets": "targets_x", "interest": "interest_x", "held": "held_x"}
