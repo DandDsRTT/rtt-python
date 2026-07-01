@@ -40,7 +40,7 @@ _SIMULATED_PAGES: list = []
 
 
 def _initial_chapter(store: dict) -> int:
-    return store.get(_CHAPTER_KEY, show_settings.CHAPTER_MIN)
+    return store.get(_CHAPTER_KEY, show_settings.CHAPTER_DEFAULT)
 
 
 class _Page:
