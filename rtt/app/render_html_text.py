@@ -3,12 +3,12 @@ from __future__ import annotations
 import html
 import math
 
-from rtt.app import service, spreadsheet_constants
+from rtt.app import char_metrics, service, spreadsheet_constants
 from rtt.library.formatting import strip_negative_zero
 
 _EXPR_MAX_FONT = 9.0
 _EXPR_MIN_FONT = 3.5
-_EXPR_CHAR_W = 0.5
+_EXPR_CHAR_W = char_metrics.EXPR_EM
 
 
 def _fit_font(
@@ -107,30 +107,12 @@ def _power_parts(text) -> tuple[str, str]:
     return (text, "(max)") if text == "∞" else (text, "")
 
 
-# There is no browser to measure text width in-process, so these per-glyph em-widths for the
-# .rtt-plain-text face estimate it; they are conservative upper bounds over the (narrower) STIX Two Text
-# body face, so a value's estimate stays above its real render and never spills.
-_PLAIN_TEXT_DEFAULT_EM = 0.59
-_PLAIN_TEXT_GLYPH_EM = {
-    **dict.fromkeys("0123456789", 0.59),
-    ".": 0.25,
-    "-": 0.35,
-    "/": 0.52,
-    " ": 0.24,
-    "[": 0.37,
-    "]": 0.37,
-    "{": 0.41,
-    "}": 0.41,
-    "⟨": 0.38,
-    "⟩": 0.38,
-    "⟪": 0.58,
-    "⟫": 0.58,
-    "—": 1.0,
-}
+_PLAIN_TEXT_DEFAULT_EM = char_metrics.DEFAULT_EM
+_PLAIN_TEXT_GLYPH_EM = char_metrics.GLYPH_EM
 
 
 def _plain_text_units(text: str) -> float:
-    return sum(_PLAIN_TEXT_GLYPH_EM.get(c, _PLAIN_TEXT_DEFAULT_EM) for c in text)
+    return char_metrics.em_units(text)
 
 
 def _plain_text_font(text: str, width: float) -> float:

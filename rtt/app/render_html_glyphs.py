@@ -4,7 +4,7 @@ import math
 from html import escape as _escape
 from urllib.parse import quote
 
-from rtt.app import spreadsheet_constants
+from rtt.app import char_metrics, spreadsheet_constants
 from rtt.app.marks import BR_COLOR, rect, svg
 from rtt.library.formatting import strip_negative_zero
 
@@ -17,7 +17,7 @@ _RANGE_CAPTION_WIDTH = 14
 _RANGE_MARK_W = 1.6
 _RANGE_PLOT_T = 11
 _RANGE_PLOT_B = 12
-_RANGE_FONT = 7
+_RANGE_FONT = spreadsheet_constants.RANGE_FONT
 
 
 def _wave_svg(kind: str) -> str:
@@ -154,7 +154,8 @@ def _bar_chart_indicator(width, axis_x, y_of, indicator, indicator_label) -> lis
         return []
     iy = y_of(indicator)
     lbl_font, sub_font, stub = 9, 6, 8
-    lbl_width = 3 * lbl_font * 0.62 + len(indicator_label) * sub_font * 0.62 + 3
+    label_em = char_metrics.CHART_LABEL_EM
+    lbl_width = 3 * lbl_font * label_em + len(indicator_label) * sub_font * label_em + 3
     lx = axis_x + stub
     sub = (
         f'<tspan font-size="{sub_font}" dy="2">{_escape(indicator_label)}</tspan>'

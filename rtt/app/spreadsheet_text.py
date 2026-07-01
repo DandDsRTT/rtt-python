@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import re
 
-from rtt.app import service
+from rtt.app import char_metrics, service
 from rtt.app.grid_tables import NORM_SUB_CLOSE, NORM_SUB_OPEN, RINGABLE_KINDS, SUBSCRIPT_L
 from rtt.app.layout import CellBox, Layout
 from rtt.app.spreadsheet_constants import (
-    CAPTION_CHAR_WIDTH,
     CAPTION_FONT,
     CAPTION_LINE,
     LINE_WIDTH,
@@ -260,7 +259,7 @@ def _wrap_chars(words: list[str], max_chars: int) -> int:
 
 
 def _chars_per_line(width: float, font: float = CAPTION_FONT) -> int:
-    return max(1, int((width - 4) / (font * CAPTION_CHAR_WIDTH)))
+    return max(1, int((width - 4) / (font * char_metrics.CAPTION_EM)))
 
 
 def _wrap_lines(text: str, width: float, font: float = CAPTION_FONT) -> int:
@@ -271,8 +270,8 @@ def _min_width_for_lines(text: str, max_lines: int, font: float = CAPTION_FONT) 
     words = text.split()
     for chars in range(1, len(text) + 1):
         if _wrap_chars(words, chars) <= max_lines:
-            return int(chars * font * CAPTION_CHAR_WIDTH + 4) + 1
-    return int(len(text) * font * CAPTION_CHAR_WIDTH + 4) + 1
+            return int(chars * font * char_metrics.CAPTION_EM + 4) + 1
+    return int(len(text) * font * char_metrics.CAPTION_EM + 4) + 1
 
 
 def _bus_span(positions) -> tuple[float, float]:
