@@ -118,10 +118,10 @@ def wire_cell_input(reconciler, wrap, cell_box) -> None:
         or reconciler.cells[cell_box.id].value.plain_text_input
     )
     if edit_input is not None:
-        den = reconciler.cells[cell_box.id].value.den_input
-        guard = _STACKED_EXIT_JS if den is not None else None
+        denominator = reconciler.cells[cell_box.id].value.denominator_input
+        guard = _STACKED_EXIT_JS if denominator is not None else None
         cancel_element_id = draft_cancel_eid(cell_box) if cell_box.pending else None
-        for fld in (edit_input, den) if den is not None else (edit_input,):
+        for fld in (edit_input, denominator) if denominator is not None else (edit_input,):
             fld.on(
                 "focus",
                 lambda _=None, cell_id=cell_box.id: reconciler._cell_box.on_cell_focus(cell_id),

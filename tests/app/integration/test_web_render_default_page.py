@@ -149,8 +149,8 @@ class TestDefaultPage:
 
     def test_editable_ratio_cell_renders_a_stacked_fraction_face(self, default_page: User) -> None:
         assert isinstance(_cell_child(default_page, "comma:0"), ui.input), "the editable numerator box, not a static label"
-        num, den = _ratio_face(default_page, "comma:0")
-        assert (num.value, den.value) == ("80", "81")
+        num, denominator = _ratio_face(default_page, "comma:0")
+        assert (num.value, denominator.value) == ("80", "81")
 
     def test_a_disabled_toggle_greys_its_box_and_its_example_together(self, default_page: User) -> None:
         def box(key):

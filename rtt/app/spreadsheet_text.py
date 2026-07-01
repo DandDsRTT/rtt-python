@@ -109,8 +109,8 @@ def _prescaler_col_labels(
 
 
 def _log_operand(ratio: str) -> str:
-    num, _, den = ratio.partition("/")
-    return num if den == "1" else f"({num}/{den})"
+    numerator, _, denominator = ratio.partition("/")
+    return numerator if denominator == "1" else f"({numerator}/{denominator})"
 
 
 def _math_expr(operand: str, value: float, show_value: bool, decimals: bool = True) -> str:

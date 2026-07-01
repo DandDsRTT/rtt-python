@@ -224,8 +224,8 @@ class TestCellEditPipeline:
         _toggle(user, "optimization")
         _click_glyph(user, "held_plus")
         await user.should_see(marker="held:pending")
-        num, den = _frac_inputs(user, "held:pending")
-        assert (num.value, den.value) == ("?", "?")
+        num, denominator = _frac_inputs(user, "held:pending")
+        assert (num.value, denominator.value) == ("?", "?")
         num.set_value("2")
         _commit(user, "held:pending")
         await user.should_see(marker="held:0")
@@ -257,28 +257,28 @@ class TestCellEditPipeline:
         assert _ratio_font("2", "1", cell) == _RATIO_MAX_FONT
         assert _ratio_font("128", "125", cell) == _RATIO_MAX_FONT
         overflow = math.floor((cell - _RATIO_PADDING) / (_RATIO_DIGIT_EM * _RATIO_MAX_FONT)) + 1
-        for num, den in [("9" * overflow, "1"), ("1", "9" * overflow), ("9" * (overflow + 2), "1")]:
-            font = _ratio_font(num, den, cell)
+        for num, denominator in [("9" * overflow, "1"), ("1", "9" * overflow), ("9" * (overflow + 2), "1")]:
+            font = _ratio_font(num, denominator, cell)
             assert font < _RATIO_MAX_FONT
-            longest = max(len(num), len(den))
+            longest = max(len(num), len(denominator))
             assert longest * _RATIO_DIGIT_EM * font + _RATIO_PADDING <= cell + 1e-9
         widths = [_ratio_font("9" * n, "1", cell) for n in range(1, 9)]
         assert widths == sorted(widths, reverse=True)
 
     async def test_a_long_ratio_face_shrinks_to_fit_its_cell(self, user: User) -> None:
         await user.open("/")
-        num, den = _ratio_face(user, "target:0")
-        assert (num.value, den.value) == ("2", "")
+        num, denominator = _ratio_face(user, "target:0")
+        assert (num.value, denominator.value) == ("2", "")
         assert "font-size" in num._style, "the fraction field must carry a fitted font size"
         big = float(num._style["font-size"].rstrip("px"))
         _cell_child(user, "target:0").set_value("65536/1")
         _commit(user, "target:0")
         await user.should_see(marker="target:0")
-        num, den = _ratio_face(user, "target:0")
+        num, denominator = _ratio_face(user, "target:0")
         assert num.value == "65536"
         small = float(num._style["font-size"].rstrip("px"))
         assert small < big
-        assert num._style["font-size"] == den._style["font-size"]
+        assert num._style["font-size"] == denominator._style["font-size"]
 
     async def test_decimals_off_shrinks_a_long_integer_to_fit_its_cell(self, user: User) -> None:
         cell_font = float(page_assets._CELL_FONT)

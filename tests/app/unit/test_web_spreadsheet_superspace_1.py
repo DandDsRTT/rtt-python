@@ -277,9 +277,9 @@ class TestSuperspaceProjection:
 
     def test_superspace_projection_embedding_G_L_matches_the_service(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-        gl = service.superspace_tuning_embedding(state, ("2", "13/5"))
+        left_functions = service.superspace_tuning_embedding(state, ("2", "13/5"))
         cells = {c.id: c for c in _barbados_projection().cells}
-        assert [[cells[f"cell:superspace_embed:{i}:{g}"].text for g in range(3)] for i in range(4)] == [list(r) for r in gl]
+        assert [[cells[f"cell:superspace_embed:{i}:{g}"].text for g in range(3)] for i in range(4)] == [list(r) for r in left_functions]
 
     def test_superspace_projection_projected_basis_matches_P_L_times_B_L(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
