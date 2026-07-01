@@ -1,8 +1,10 @@
+import string
 from pathlib import Path
 
 import pytest
 from fontTools.ttLib import TTFont
 
+from rtt.app.spreadsheet_text import _mathit
 from tools.subset_fonts import TEXT_FACES, retain_unicodes
 
 _ROOT = Path(__file__).resolve().parents[3]
@@ -16,8 +18,15 @@ _SOURCE_FILES = (
 )
 
 
+def _runtime_generated_codepoints() -> set[int]:
+    generated: set[int] = set()
+    for letter in string.ascii_lowercase:
+        generated.update(ord(character) for character in _mathit(letter))
+    return generated
+
+
 def _emitted_codepoints() -> set[int]:
-    seen: set[int] = set()
+    seen: set[int] = set(_runtime_generated_codepoints())
     for path in _SOURCE_FILES:
         for character in path.read_text(encoding="utf-8"):
             if ord(character) >= 0x20:
