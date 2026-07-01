@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from rtt.app import page_assets, service, spreadsheet
+from rtt.app import marks, page_assets, service, spreadsheet
 from rtt.app.reconciler import _cell_role
 from rtt.app.render_html_glyphs import _control_svg, _mode_svg, _wave_svg
 
@@ -64,6 +64,9 @@ class TestGlyphAccessibleNames:
         assert "role='img'" in svg
         assert f"aria-label='{name}'" in svg
 
+    def test_decorative_marks_svg_is_hidden_from_assistive_tech(self):
+        assert 'aria-hidden="true"' in marks.svg(10, 10, "<rect/>")
+
 
 class TestGridAriaSemantics:
     def test_every_in_grid_cell_carries_an_aria_label(self):
@@ -90,7 +93,7 @@ class TestGridAriaSemantics:
         [
             (True, "mapped", "gridcell"),
             (True, "ratio_cell", "gridcell"),
-            (False, "column_header", "column_header"),
+            (False, "column_header", "columnheader"),
             (False, "row_label", "rowheader"),
             (False, "count", None),
             (False, "columntoggle", None),
@@ -129,3 +132,7 @@ class TestFocusAndTargetAssets:
     def test_css_shows_a_keyboard_focus_ring_on_value_cells(self):
         css = self._asset("rtt.css")
         assert ".rtt-cell:focus-visible" in css
+
+    def test_dark_mode_recolors_the_base_caption_not_only_the_disabled_variant(self):
+        dark = self._asset("rtt-dark.css")
+        assert re.search(r"body\.rtt-dark\s+\.rtt-caption\s*[,{]", dark)

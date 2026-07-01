@@ -134,6 +134,7 @@ body.rtt-dark .rtt-symbol,
 body.rtt-dark .rtt-matrix-label,
 body.rtt-dark .rtt-box-title,
 body.rtt-dark .rtt-rangelabel { color:var(--dark-text); }
+body.rtt-dark .rtt-caption,
 body.rtt-dark .rtt-units { color:var(--dark-caption); }
 body.rtt-dark .rtt-caption.rtt-caption-disabled { color:#a4a4a4; }
 body.rtt-dark .rtt-cell-unit { color:var(--dark-icon); }

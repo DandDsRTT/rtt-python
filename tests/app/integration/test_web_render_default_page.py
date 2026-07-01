@@ -60,7 +60,7 @@ class TestDefaultPage:
 
     def test_headers_and_row_labels_expose_header_roles(self, default_page: User) -> None:
         header = next(iter(default_page.find(marker="header:primes").elements))
-        assert header._props.get("role") == "column_header"
+        assert header._props.get("role") == "columnheader"
         row_label = next(iter(default_page.find(marker="label:mapping").elements))
         assert row_label._props.get("role") == "rowheader"
 
