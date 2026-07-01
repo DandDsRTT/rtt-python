@@ -29,7 +29,9 @@ from rtt.app.page_assets import (
     _encode_state,
 )
 from rtt.app.render_html import (
+    _FOLD_GLYPH,
     _RATIO_MAX_FONT,
+    _control_svg,
     _example_html,
 )
 
@@ -408,6 +410,51 @@ def _select_all_box(page_builder, group_name):
     return box
 
 
+def _show_row_classes(key) -> str:
+    classes = ["rtt-show-row"]
+    if key in show_settings.GROUPING_PARENTS:
+        classes.append("rtt-grouping-parent")
+    depth = show_settings.depth_of(key)
+    if depth:
+        classes.append(f"rtt-nest-{min(depth, 3)}")
+    return " ".join(classes)
+
+
+def _fold_glyph_html(expanded) -> str:
+    return _control_svg(_FOLD_GLYPH["unfold_less" if expanded else "unfold_more"])
+
+
+def _grouping_fold(page_builder, key):
+    return (
+        ui.html(_fold_glyph_html(_setting(page_builder, key)))
+        .classes("rtt-group-fold")
+        .mark(f"groupfold:{key}")
+    )
+
+
+def build_show_row(page_builder, key, label) -> None:
+    is_parent = key in show_settings.GROUPING_PARENTS
+    row = ui.element("div").classes(_show_row_classes(key)).mark(f"showrow:{key}")
+    with row:
+        fold = _grouping_fold(page_builder, key) if is_parent else None
+        box = (
+            _settings_checkbox(page_builder, key, show_settings.show_label(key, label))
+            .classes("rtt-show-item")
+            .mark(f"showbox:{key}")
+            .tooltip(tooltips.SHOW_HELP[key])
+        )
+        example = ui.html(_example_html(key)).classes("rtt-example-cell").mark(f"showexample:{key}")
+    if fold is not None:
+        fold.bind_content_from(box, "value", backward=_fold_glyph_html)
+    page_builder._chrome.boxes[key] = box
+    page_builder._chrome.examples[key] = example
+    page_builder._chrome.show_rows[key] = row
+    parent = show_settings.SUBCONTROLS.get(key)
+    if parent:
+        box.style(f"margin-left:{show_settings.depth_of(key) * 18}px")
+        row.bind_visibility_from(page_builder._chrome.boxes[parent], "value")
+
+
 def build_show_group(page_builder, group_name, items) -> None:
     ui.label(group_name).classes("rtt-app-features-title").mark("appfeaturestitle")
     _select_all_box(page_builder, group_name)
@@ -415,24 +462,7 @@ def build_show_group(page_builder, group_name, items) -> None:
         ui.label("show").classes("rtt-show-title")
         ui.label("example").classes("rtt-show-example-header")
     for key, label, _ in items:
-        row = ui.element("div").classes("rtt-show-row").mark(f"showrow:{key}")
-        with row:
-            box = (
-                _settings_checkbox(page_builder, key, label)
-                .classes("rtt-show-item")
-                .mark(f"showbox:{key}")
-                .tooltip(tooltips.SHOW_HELP[key])
-            )
-            example = (
-                ui.html(_example_html(key)).classes("rtt-example-cell").mark(f"showexample:{key}")
-            )
-        page_builder._chrome.boxes[key] = box
-        page_builder._chrome.examples[key] = example
-        page_builder._chrome.show_rows[key] = row
-        parent = show_settings.SUBCONTROLS.get(key)
-        if parent:
-            box.style(f"margin-left:{show_settings.depth_of(key) * 18}px")
-            row.bind_visibility_from(page_builder._chrome.boxes[parent], "value")
+        build_show_row(page_builder, key, label)
 
 
 def pane_chrome(page_builder) -> None:

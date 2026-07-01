@@ -15,7 +15,7 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("presets", "presets", False),
             ("quantities", "quantities", True),
             ("decimals", "decimals", True),
-            ("units", "units", False),
+            ("units", "box units", False),
             ("cell_units", "per-cell units", False),
             ("math_expressions", "math expressions", False),
             ("drag_to_combine", "drag to combine", False),
@@ -28,15 +28,15 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("interval_ratios", "interval ratios", True),
             ("interval_vectors", "interval vectors", True),
             ("ebk", "EBK", True),
-            ("domain_units", "units", False),
+            ("domain_units", "domain-basis units", False),
             ("temperament", "temperament", True),
             ("temperament_tiles", "temperament tiles", True),
-            ("temperament_colorization", "colorization", False),
+            ("temperament_colorization", "temperament colorization", False),
             ("mapping_demos", "mapping demos", False),
             ("form", "form", False),
             ("form_controls", "form controls", False),
             ("form_tiles", "form tiles", False),
-            ("form_colorization", "colorization", False),
+            ("form_colorization", "form colorization", False),
             ("tuning", "tuning", True),
             ("tuning_tiles", "tuning tiles", True),
             ("optimization", "optimization", False),
@@ -46,7 +46,7 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("alt_complexity", "alternative complexity", False),
             ("custom_weights", "custom weights", False),
             ("projection", "projection", False),
-            ("tuning_colorization", "colorization", False),
+            ("tuning_colorization", "tuning colorization", False),
             ("interest", "other intervals\nof interest", True),
             ("generator_detempering", "generator detempering", False),
             ("nonstandard_domain", "nonstandard domain", False),
@@ -148,6 +148,26 @@ IMPLEMENTED: frozenset[str] = frozenset(
 )
 
 GROUPING_PARENTS: frozenset[str] = frozenset({"temperament", "tuning"})
+
+REFINEMENTS: frozenset[str] = frozenset(
+    {
+        "mnemonics",
+        "equivalences",
+        "decimals",
+        "mapping_demos",
+        "temperament_colorization",
+        "form_controls",
+        "form_tiles",
+        "form_colorization",
+        "tuning_colorization",
+    }
+)
+
+REFINEMENT_CUE = "↳"
+
+
+def show_label(key: str, label: str) -> str:
+    return f"{REFINEMENT_CUE} {label}" if key in REFINEMENTS else label
 
 
 CHAPTER_MIN = 2
