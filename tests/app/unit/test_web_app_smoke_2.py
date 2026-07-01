@@ -410,13 +410,15 @@ class TestWebAppSmoke4:
                 assert len(c.unit) * render_html._EXPR_CHAR_W * font <= c.width, f"cellunit {c.id}={c.unit!r}"
         assert shrunk, "no units cell shrank — the long-annotation fit never engaged"
 
+
+class TestGuidedTour:
     def test_tour_steps_are_well_formed_and_assets_wired(self):
         assert page_assets._TOUR_STEPS, "no tour steps defined"
         for step in page_assets._TOUR_STEPS:
             assert step["title"] and step["body"], f"empty copy: {step}"
             selection = step["selector"]
             assert isinstance(selection, str)
-            assert selection == "" or selection.startswith("."), f"selector should be a class, got {selection!r}"
+            assert selection == "" or selection[0] in ".[", f"selector should be a real CSS selector # (class or attribute), not a test-only .mark(), got {selection!r}"
         assert page_assets._TOUR_JS.strip(), "tour.js not loaded"
         assert ".rtt-tour-card" in page_assets._CSS, "tour.css not folded into the page stylesheet"
         assert "tour" in tooltips.CHROME_HELP
@@ -429,44 +431,71 @@ class TestWebAppSmoke4:
         assert app._initial_chapter({page_assets._CHAPTER_KEY: 7}) == 7, (
             "an explicit chapter choice is honored across visits")
 
-    def test_orientation_slide_names_the_three_essentials_and_defers_the_equation(self):
-        body = _tour_step("A temperament, at its simplest")["body"]
-        assert "𝒈𝑀" not in body and "𝒕 =" not in body, "the opening slide for an absolute newcomer # must orient before it names — defer the 𝒕 = 𝒈𝑀 tuning equation to a later chapter"
-        for essential in ("primes", "mapping", "comma"):
-            assert essential in body.lower(), f"the simplest-grid orientation must name {essential!r}"
+    def test_tour_copy_is_plain_words_never_math_symbols(self):
+        for step in page_assets._TOUR_STEPS:
+            for ch in step["title"] + step["body"]:
+                assert not (0x1D400 <= ord(ch) <= 0x1D7FF), (
+                    f"the tour teaches in plain words, not the grid's math italics (𝑀 etc.) which a "
+                    f"newcomer can't read: {ch!r} in {step['title']!r}")
 
-    def test_mapping_step_spotlights_a_real_mapping_cell_and_names_it(self):
+    def test_mapping_step_frames_the_whole_mapping_in_plain_words(self):
         from rtt.app import ids
-        step = _tour_step("The mapping 𝑀")
+        step = _tour_step("The mapping")
         assert step["selector"].startswith(".rtt-cell") and "cell:mapping:" in step["selector"]
+        assert step.get("region") is True, "the spotlight frames the WHOLE mapping matrix, not one cell"
         assert ids.mapping_cell("0", 0).startswith("cell:mapping:"), "the selector must match a real # mapping cell id, not a test-only .mark()"
         assert "generator" in step["body"] and "prime" in step["body"]
 
-    def test_tempering_out_step_spotlights_a_real_comma_cell_for_the_hover_demo(self):
+    def test_learner_switches_on_mapping_demos_themselves(self):
+        step = _tour_step("Switch on mapping demos")
+        assert step["selector"] == '[data-show="mapping_demos"]', "the step points at the real # mapping-demos row so the learner ticks the feature on themselves"
+        assert step.get("interact") is True and step.get("open") is True, "the drawer opens and the # scrim lets the click through to the checkbox"
+        assert "mapping demos" in step["body"].lower()
+
+    def test_tempering_out_step_frames_the_whole_comma_for_the_hover_demo(self):
         from rtt.app import ids
         step = _tour_step("Tempering out")
         assert step.get("interact") is True, "the concept is taught by doing: tour.js drops the scrim's # pointer-events so the learner's hover reaches the comma and the mapping demo animates"
         assert step["selector"].startswith(".rtt-cell") and "cell:comma:" in step["selector"]
+        assert step.get("region") is True, "the spotlight frames the WHOLE comma basis, not one cell"
         assert ids.comma_cell("0", 0).startswith("cell:comma:"), "the selector must match a real comma # cell id, not a test-only .mark()"
         assert "temper" in step["body"].lower() and "vanish" in step["body"].lower()
         assert "[0 0]" in step["body"], "the payoff is the comma mapping to the all-zeros generator-count # vector the guide writes [0 0]"
 
-    def test_ramp_step_spotlights_the_chapter_slider_for_the_learner_to_raise(self):
-        step = _tour_step("Ramp up to the full app")
+    def test_try_an_edit_step_is_restored_and_hands_on(self):
+        step = _tour_step("Try an edit")
+        assert step.get("interact") is True and "cell:mapping:" in step["selector"], "the learner # edits a real mapping cell and watches the grid recompute — restored from the old tour"
+        assert "recompute" in step["body"].lower() and "undo" in step["body"].lower()
+
+    def test_learner_raises_the_chapter_themselves(self):
+        step = _tour_step("Reveal more, chapter by chapter")
         assert step["selector"] == ".rtt-chapter-group" and step.get("open") is True
         assert step.get("interact") is True, "the learner drives the real chapter slider up themselves — # an interact step so the drag reaches the control"
         assert "4" in step["body"] and "tuning" in step["body"].lower()
 
+    def test_reshaping_and_undo_and_panel_steps_survive_the_rewrite(self):
+        for title in ("Reshaping the grid", "Undo, reset & share", "Tile features", "App features"):
+            step = _tour_step(title)
+            assert step["title"] and step["body"], f"good onboarding step {title!r} must stay in the tour"
+
     def test_landing_step_returns_to_the_default_chapter_home_and_opens_up_exploration(self):
         step = _tour_step("Explore from here")
         assert step.get("emit") == "rtt_tour_home", "reaching the last step lands the learner back at the # default-chapter home even if they skipped the drag"
-        assert "explore" in step["body"].lower()
+        assert "reset" in step["body"].lower()
 
     def test_tour_js_bridges_the_chapter_to_the_page_at_begin_and_end(self):
         js = page_assets._TOUR_JS
         assert 'emit("rtt_tour_begin")' in js, "start() must drop the grid to its simplest chapter"
         assert 'emit("rtt_tour_end")' in js, "stop() must restore the default-chapter home on skip/finish"
         assert "step.emit" in js, "a step's own server event (the ramp home) fires as it opens"
+
+    def test_tour_region_step_frames_every_matched_cell_not_just_the_first(self):
+        js = page_assets._TOUR_JS
+        assert "step.region" in js and "querySelectorAll" in js, "a region step unions every matched # cell into one spotlight so the whole matrix is framed"
+        region_steps = [s for s in page_assets._TOUR_STEPS if s.get("region")]
+        assert region_steps, "the mapping and comma steps frame their whole matrix"
+        for step in region_steps:
+            assert step["selector"].startswith(".rtt-cell["), "a region step targets a family of cells"
 
     def test_tour_silences_the_apps_incidental_hover_affordances_while_running(self):
         js = page_assets._TOUR_JS
@@ -480,12 +509,12 @@ class TestWebAppSmoke4:
         assert show_settings.CHAPTER_MIN < show_settings.CHAPTER_DEFAULT, "the tour ramps up from the # minimum chapter to the default-chapter home"
         assert app._initial_chapter({}) == show_settings.CHAPTER_DEFAULT, "a genuinely-new browser # still opens at the default chapter — the tour drives the ch2 view, it is never the resting default"
 
-    def test_tour_begin_drops_to_the_simplest_chapter_and_arms_the_mapping_demo(self, monkeypatch):
+    def test_tour_begin_drops_to_the_simplest_chapter_without_touching_the_learners_features(self, monkeypatch):
         page = _tour_page(monkeypatch, {})
         app._Page.tour_begin(page)
         assert page.runtime.chapter == show_settings.CHAPTER_MIN
         assert page.runtime.tour_active is True
-        assert page.editor.settings["mapping_demos"] is True, "the tempering-out demo is armed so the # learner's hover animates the comma collapsing"
+        assert page.editor.settings["mapping_demos"] is False, "begin never flips a feature on for the # learner — they switch mapping demos on themselves at the tempering step"
         assert page.editor.settings["tuning"] is False and page.editor.settings["interest"] is False, "chapter 2 is the simplest grid — the tuning story and intervals of interest are not shown yet"
 
     def test_tour_begin_never_persists_the_transient_chapter_two(self, monkeypatch):
@@ -494,15 +523,16 @@ class TestWebAppSmoke4:
         app._Page.tour_begin(page)
         assert page_assets._CHAPTER_KEY not in store, "chapter 2 is a transient tour view, never the # persisted resting chapter — so a mid-tour refresh can never strand the learner below the default"
 
-    def test_tour_home_restores_the_default_chapter_and_the_pristine_grid(self, monkeypatch):
+    def test_tour_home_restores_the_default_chapter_grid_and_keeps_the_learners_own_toggles(self, monkeypatch):
         store: dict = {}
         page = _tour_page(monkeypatch, store)
         app._Page.tour_begin(page)
+        page.editor.settings["mapping_demos"] = True
         app._Page.tour_home(page, ending=True)
         assert page.runtime.chapter == show_settings.CHAPTER_DEFAULT
         assert page.runtime.tour_active is False
-        assert page.editor.settings["mapping_demos"] is False, "the tour's temporary demo is reverted — the # default-chapter home is the pristine app, not a lingering tour state"
-        assert page.editor.settings["tuning"] is True and page.editor.settings["interest"] is True
+        assert page.editor.settings["tuning"] is True and page.editor.settings["interest"] is True, "the # default-chapter home is the full grid again — the tuning story is back"
+        assert page.editor.settings["mapping_demos"] is True, "a feature the learner switched on is theirs # to keep — home re-reveals the chapter defaults, it does not revert the learner's own choices"
         assert store[page_assets._CHAPTER_KEY] == show_settings.CHAPTER_DEFAULT, "skip/finish lands the # learner at, and keeps, the default chapter — never stranded at the minimum"
 
     def test_tour_ramp_reveals_the_default_layers_only_while_the_tour_is_active(self, monkeypatch):
@@ -542,6 +572,8 @@ class TestWebAppSmoke4:
         app._Page.reset_everything(page)
         assert any("rttTour" in js and "forget" in js for js in calls), "Reset must also clear rttTourSeen # (window.rttTour.forget) so 'reset to defaults' genuinely restores the first-run onboarding, not just # the grid"
 
+
+class TestReconcilerProtocol:
     def test_reconciler_callback_protocol_matches_marked_methods_exactly(self):
         from rtt.app.reconciler import required_callback_names
 

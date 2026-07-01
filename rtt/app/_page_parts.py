@@ -405,7 +405,12 @@ def _grouping_fold(page_builder, key):
 
 def build_show_row(page_builder, key, label) -> None:
     is_parent = key in show_settings.GROUPING_PARENTS
-    row = ui.element("div").classes(_show_row_classes(key)).mark(f"showrow:{key}")
+    row = (
+        ui.element("div")
+        .classes(_show_row_classes(key))
+        .props(f'data-show="{key}"')
+        .mark(f"showrow:{key}")
+    )
     with row:
         fold = _grouping_fold(page_builder, key) if is_parent else None
         box = (

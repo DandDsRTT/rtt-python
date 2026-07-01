@@ -300,47 +300,97 @@ _TOUR_JS = (_ASSETS / "tour.js").read_text(encoding="utf-8")
 _TOUR_STEPS = [
     {
         "selector": "",
-        "title": "A temperament, at its simplest",
-        "body": "This grid is a regular temperament. Pared back to essentials it is three things: the "
-        "domain's <b>primes</b> (2, 3, 5), the <b>mapping 𝑀</b> that defines the temperament, and a "
-        "<b>comma</b>. We'll start here and build up. Use <b>Next</b> / <b>Back</b> (or the arrow "
-        "keys); <b>Skip</b> leaves anytime.",
+        "title": "Welcome to D&D's RTT app",
+        "body": "A grid for exploring regular temperaments. We'll start with the simplest possible "
+        "view and build up from there. Use <b>Next</b> / <b>Back</b> (or the arrow keys), and "
+        "<b>Skip</b> to leave anytime.",
     },
     {
         "selector": '.rtt-cell[data-eid^="cell:mapping:"]',
+        "region": True,
         "place": "bottom",
-        "title": "The mapping 𝑀",
-        "body": "This is <b>𝑀</b>, the mapping. It says how many of each generator approximate each "
-        "prime — one row per generator, one column per prime. 𝑀 <i>is</i> the temperament: every "
-        "value below is computed from it.",
+        "title": "The mapping",
+        "body": "This is the <b>mapping</b> — the heart of a temperament. It says how many of each "
+        "generator it takes to approximate each prime: one row per generator, one column per prime. "
+        "Everything else on the grid is computed from it.",
+    },
+    {
+        "selector": '[data-show="mapping_demos"]',
+        "place": "right",
+        "open": True,
+        "interact": True,
+        "title": "Switch on mapping demos",
+        "body": "Open the panel and tick <b>mapping demos</b>. It draws, right on the grid, how an "
+        "interval flows through the mapping — we'll use it next.",
     },
     {
         "selector": '.rtt-cell[data-eid^="cell:comma:"]',
+        "region": True,
         "place": "top",
         "interact": True,
         "title": "Tempering out",
-        "body": "This comma is <b>81/80</b>, the meantone comma. Hover it and watch 𝑀 send it "
-        "through — it collapses to <b>[0 0]</b>, zero of every generator. The comma <b>vanishes</b>. "
-        "That is what it means to <b>temper it out</b>: the temperament treats this comma as a "
-        "unison, no change in pitch.",
+        "body": "This little interval is the comma <b>81/80</b>. Hover it and watch the mapping send "
+        "it to <b>[0 0]</b> — zero of every generator. It <b>vanishes</b>. That's what it means to "
+        "<b>temper it out</b>: the temperament treats this comma as a unison, no change in pitch.",
+    },
+    {
+        "selector": '.rtt-cell[data-eid^="cell:mapping:"]',
+        "region": True,
+        "place": "bottom",
+        "interact": True,
+        "title": "Try an edit",
+        "body": "Your turn — the boxed numbers in the mapping are editable. Click one, type a "
+        "different whole number, and press Enter. The whole grid recomputes around your new "
+        "temperament. <b>Undo</b> up top always steps back.",
     },
     {
         "selector": ".rtt-chapter-group",
         "place": "right",
         "open": True,
         "interact": True,
-        "title": "Ramp up to the full app",
-        "body": "You have the core idea. Now drag this slider — the guide's chapters — up to <b>4</b>. "
-        "Watch the tuning, the optimization, and the other intervals of interest fill in as you go, "
-        "chapter by chapter, the way D&D's guide introduces them.",
+        "title": "Reveal more, chapter by chapter",
+        "body": "This slider follows D&D's guide, revealing more of the app one chapter at a time. "
+        "Drag it from <b>2</b> up to <b>4</b> and watch the tuning, the optimization, and the other "
+        "intervals of interest fill in as you go.",
+    },
+    {
+        "selector": ".rtt-fan-button",
+        "place": "bottom",
+        "title": "Reshaping the grid",
+        "body": "The grid grows and shrinks with you. A <b>+</b> adds a column or row — a new interval "
+        "or mapping row; hovering a column or row reveals a <b>−</b> to remove it. The little "
+        "chevrons expand or collapse a tile.",
+    },
+    {
+        "selector": ".rtt-titletile",
+        "place": "bottom",
+        "title": "Undo, reset & share",
+        "body": "Up here: <b>undo</b> / <b>redo</b> your edits, <b>reset</b> everything to defaults, "
+        "and <b>share</b> a link that reopens the app in exactly this state.",
+    },
+    {
+        "selector": ".rtt-show-general",
+        "place": "right",
+        "open": True,
+        "title": "Tile features",
+        "body": "This sample tile is a live menu: click any part of it — the name, the symbol, the "
+        "value — to show or hide that feature across the whole grid.",
+    },
+    {
+        "selector": ".rtt-show-scroll .rtt-show-group:last-child",
+        "place": "right",
+        "open": True,
+        "title": "App features",
+        "body": "These checkboxes reveal each kind of feature — not just extra rows and columns, but "
+        "the controls that come with them. The grid starts deliberately full; untick anything you "
+        "don't need to declutter, and tick more back on as you explore.",
     },
     {
         "selector": "",
         "emit": "rtt_tour_home",
         "title": "Explore from here",
-        "body": "That's chapter 4 — the app's home, with everything in place. Nothing here is "
-        "permanent: <b>reset</b> restores the defaults, and the <b>?</b> button replays this tour "
-        "anytime. Explore from here.",
+        "body": "That's the tour. Nothing here is permanent — <b>reset</b> always brings back the "
+        "defaults, and the <b>?</b> button replays this tour anytime. Happy tempering!",
     },
 ]
 

@@ -106,14 +106,36 @@
     card.style.left = left + "px";
   }
 
+  // A `region` step frames the WHOLE target: its selector matches a matrix of cells (the mapping, the
+  // comma basis) and every visible match is unioned into one rect. A plain step anchors on the first
+  // match, as a lone control does. Returns null when nothing on screen matches → a centred card.
+  function targetRect(step) {
+    if (!step.selector) return null;
+    var els = step.region
+      ? document.querySelectorAll(step.selector)
+      : [document.querySelector(step.selector)];
+    var box = null;
+    for (var i = 0; i < els.length; i++) {
+      if (!els[i] || !els[i].getClientRects().length) continue;
+      var r = els[i].getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) continue;
+      if (!box) box = { top: r.top, left: r.left, right: r.right, bottom: r.bottom };
+      else {
+        box.top = Math.min(box.top, r.top); box.left = Math.min(box.left, r.left);
+        box.right = Math.max(box.right, r.right); box.bottom = Math.max(box.bottom, r.bottom);
+      }
+    }
+    return box;
+  }
+
   function position() {
     if (!root) return;
     var step = steps[index];
     var spot = root.querySelector(".rtt-tour-spot");
     var card = root.querySelector(".rtt-tour-card");
-    var element = step.selector ? document.querySelector(step.selector) : null;
+    var box = targetRect(step);
 
-    if (!element || !element.getClientRects().length) {                          // centred / missing target
+    if (!box) {                                                                  // centred / missing target
       // clear any inline rect from a previous anchored step — inline styles beat the
       // .rtt-tour-spot-center CSS, so without this the spotlight stays on the prior target
       spot.style.top = spot.style.left = spot.style.width = spot.style.height = "";
@@ -123,12 +145,11 @@
       return;
     }
     spot.classList.remove("rtt-tour-spot-center");
-    var r = element.getBoundingClientRect();
-    spot.style.top = (r.top - PAD) + "px";
-    spot.style.left = (r.left - PAD) + "px";
-    spot.style.width = (r.width + PAD * 2) + "px";
-    spot.style.height = (r.height + PAD * 2) + "px";
-    place({ top: r.top - PAD, bottom: r.bottom + PAD, left: r.left - PAD, right: r.right + PAD },
+    spot.style.top = (box.top - PAD) + "px";
+    spot.style.left = (box.left - PAD) + "px";
+    spot.style.width = (box.right - box.left + PAD * 2) + "px";
+    spot.style.height = (box.bottom - box.top + PAD * 2) + "px";
+    place({ top: box.top - PAD, bottom: box.bottom + PAD, left: box.left - PAD, right: box.right + PAD },
           card, spot, step.place);
   }
 
@@ -153,10 +174,14 @@
     var block = root.querySelector(".rtt-tour-block");
     if (block) block.style.pointerEvents = step.interact ? "none" : "";
 
-    // bring the target into view first, then settle the spotlight/card once it's stopped moving
+    // once the drawer transition has settled, scroll the target into view (centred, so a control deep
+    // in a scrolling panel — like the mapping-demos row — clears the card) and then place the spotlight.
+    // Scrolling here rather than before the wait keeps it from measuring a still-opening drawer.
     var element = step.selector ? document.querySelector(step.selector) : null;
-    if (element && element.scrollIntoView) element.scrollIntoView({ block: "nearest", inline: "nearest" });
-    setTimeout(position, step.open && !panelOpen() ? 320 : 60);  // wait out the drawer transition
+    setTimeout(function () {
+      if (element && element.scrollIntoView) element.scrollIntoView({ block: "center", inline: "nearest" });
+      position();
+    }, step.open && !panelOpen() ? 320 : 60);
   }
 
   function start() {
