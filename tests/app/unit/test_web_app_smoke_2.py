@@ -446,7 +446,8 @@ class TestWebAppSmoke4:
     def test_tour_autostart_is_desktop_first_but_replay_is_always_available(self):
         js = page_assets._TOUR_JS
         assert "AUTOSTART_MIN_WIDTH" in js and "wideEnough" in js
-        assert "config.autostart && !seen() && wideEnough()" in js, "autostart is gated on viewport width"
+        autostart = js.split("config.autostart", 1)[1].split("{", 1)[0]
+        assert "!seen()" in autostart and "wideEnough()" in autostart, "autostart is gated on width (alongside # any other autostart guards)"
         assert "window.rttTour.start = start" in js, "the ? replay button (start) stays available at any width"
 
     def test_tour_exposes_forget_to_clear_the_seen_flag(self):
