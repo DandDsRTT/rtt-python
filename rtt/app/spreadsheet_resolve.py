@@ -27,7 +27,7 @@ class Resolver:
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
                  custom_prescaler=None, custom_weights=None, tuning_optimized=False,
-                 pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
+                 pending_interest=None, pending_held=None, pending_target=None, previous_ids=None,
                  pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
                  displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
                  targets_in_use=True, pending_mapping_row=None, preview_remove=None,
@@ -62,7 +62,7 @@ class Resolver:
             mapping_form=mapping_form,
             comma_basis_form=comma_basis_form,
             preview_remove=preview_remove,
-            prev_ids=prev_ids or {},
+            previous_ids=previous_ids or {},
         )
         self._build()
 

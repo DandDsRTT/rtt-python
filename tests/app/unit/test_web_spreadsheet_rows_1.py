@@ -22,7 +22,7 @@ from _spreadsheet_support import _memoized_build, _layout, _with, _with_interest
 class TestMathExpressions:
     def test_math_expressions_render_the_just_tuning_primes_as_logs(self):
         cells = {c.id: c for c in _with(math_expressions=True).cells}
-        assert cells["just:prime:0"].kind == "mathexpr"
+        assert cells["just:prime:0"].kind == "math_expression"
         assert cells["just:prime:0"].text == "1200 · log₂2\n= 1200.000"
         assert cells["just:prime:1"].text == "1200 · log₂3\n= 1901.955"
         assert cells["just:prime:2"].text == "1200 · log₂5\n= 2786.314"
@@ -34,7 +34,7 @@ class TestMathExpressions:
 
     def test_math_expressions_render_the_just_comma_sizes_as_logs(self):
         cells = {c.id: c for c in _with(math_expressions=True).cells}
-        assert cells["just:comma:0"].kind == "mathexpr"
+        assert cells["just:comma:0"].kind == "math_expression"
         assert cells["just:comma:0"].text == "1200 · log₂(80/81)\n= -21.506"
 
     def test_math_expressions_show_the_comma_error_as_a_log(self):
@@ -58,13 +58,13 @@ class TestMathExpressions:
 
     def test_math_expressions_render_rms_generators_as_prime_power_logs(self):
         cells = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
-        assert cells["tuning:generator:0"].kind == "mathexpr"
+        assert cells["tuning:generator:0"].kind == "math_expression"
         assert cells["tuning:generator:0"].text == "1200 · log₂(2^(17/33)·3^(16/33)·5^(-4/33))\n= 1202.607"
         assert cells["tuning:generator:1"].text == "1200 · log₂(2^(-1/33)·3^(1/33)·5^(8/33))\n= 696.741"
 
     def test_math_expressions_render_rms_tempered_primes_as_prime_power_logs(self):
         cells = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
-        assert cells["tuning:prime:0"].kind == "mathexpr"
+        assert cells["tuning:prime:0"].kind == "math_expression"
         assert cells["tuning:prime:0"].text == "1200 · log₂(2^(17/33)·3^(16/33)·5^(-4/33))\n= 1202.607"
         assert cells["tuning:prime:2"].text == "1200 · log₂(2^(-4/33)·3^(4/33)·5^(32/33))\n= 2786.965"
 
@@ -72,7 +72,7 @@ class TestMathExpressions:
         off = {c.id: c for c in _with(scheme="miniRMS-U").cells}
         on = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
         for cell_id in ("tuning:generator:0", "tuning:generator:1", "tuning:prime:0", "tuning:prime:1", "tuning:prime:2"):
-            assert on[cell_id].kind == "mathexpr"
+            assert on[cell_id].kind == "math_expression"
             assert on[cell_id].text.endswith("= " + off[cell_id].text)
 
     def test_math_expressions_held_octave_rms_shows_the_octave_pure(self):
@@ -83,25 +83,25 @@ class TestMathExpressions:
         off = {c.id: c for c in _with(scheme="minimax-S").cells}
         on = {c.id: c for c in _with(scheme="minimax-S", math_expressions=True).cells}
         for cell_id in ("tuning:generator:0", "tuning:generator:1", "tuning:prime:0", "tuning:prime:1"):
-            assert on[cell_id].kind != "mathexpr"
+            assert on[cell_id].kind != "math_expression"
             assert on[cell_id].text == off[cell_id].text
 
     def test_math_expressions_skip_weighted_rms_optimum_irrational(self):
         off = {c.id: c for c in _with(scheme="miniRMS-S").cells}
         on = {c.id: c for c in _with(scheme="miniRMS-S", math_expressions=True).cells}
         for cell_id in ("tuning:generator:0", "tuning:prime:0"):
-            assert on[cell_id].kind != "mathexpr"
+            assert on[cell_id].kind != "math_expression"
             assert on[cell_id].text == off[cell_id].text
 
     def test_math_expressions_show_exact_zero_as_bare_zero(self):
         cells = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
-        assert cells["tuning:comma:0"].kind == "mathexpr"
+        assert cells["tuning:comma:0"].kind == "math_expression"
         assert cells["tuning:comma:0"].text == "0"
 
     def test_math_expressions_render_rms_retuning_map_as_prime_power_logs(self):
         off = {c.id: c for c in _with(scheme="miniRMS-U").cells}
         on = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True).cells}
-        assert on["retune:prime:0"].kind == "mathexpr"
+        assert on["retune:prime:0"].kind == "math_expression"
         assert on["retune:prime:0"].text == "1200 · log₂(2^(-16/33)·3^(16/33)·5^(-4/33))\n= " + off["retune:prime:0"].text
         assert on["retune:comma:0"].text == "1200 · log₂(81/80)\n= 21.506", "a tempered-out comma's error keeps the readable inverted-ratio form, not prime powers"
 
@@ -109,7 +109,7 @@ class TestMathExpressions:
         off = {c.id: c for c in _with(scheme="miniRMS-U", form_tiles=True).cells}
         on = {c.id: c for c in _with(scheme="miniRMS-U", math_expressions=True, form_tiles=True).cells}
         for cell_id in ("tuning:canonical_generator:0", "tuning:canonical_generator:1"):
-            assert on[cell_id].kind == "mathexpr"
+            assert on[cell_id].kind == "math_expression"
             assert on[cell_id].text.endswith("= " + off[cell_id].text)
 
     def test_math_expressions_render_superspace_rms_tuning_as_logs(self):
@@ -119,7 +119,7 @@ class TestMathExpressions:
         off = {c.id: c for c in spreadsheet.build(state, {**s, "math_expressions": False}, tuning_scheme="miniRMS-U").cells}
         on = {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="miniRMS-U").cells}
         for cell_id in ("tuning:superspace_prime:0", "tuning:superspace_generator:0", "retune:superspace_prime:1"):
-            assert on[cell_id].kind == "mathexpr"
+            assert on[cell_id].kind == "math_expression"
             assert "log₂" in on[cell_id].text
             assert on[cell_id].text.endswith("= " + off[cell_id].text)
         mini = {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="minimax-S").cells}
@@ -132,7 +132,7 @@ class TestMathExpressions:
             tuning_scheme="miniRMS-U", generator_tuning=(1200.0, 700.0),
         )
         cells = {c.id: c for c in layout.cells}
-        assert cells["tuning:generator:0"].kind != "mathexpr"
+        assert cells["tuning:generator:0"].kind != "math_expression"
         assert cells["tuning:generator:1"].text == "700.000"
 
     def test_math_expressions_is_an_interactive_toggle(self):
@@ -167,7 +167,7 @@ class TestMathExpressions:
                                  "math_expressions": True},
                                 tuning_scheme=scheme)
         cells = {c.id: c for c in layout.cells}
-        assert cells["cell:prescaling:primes:0:0"].kind == "prescalercell", "the diagonal: each prime is the plain value (prescalercell, not mathexpr)"
+        assert cells["cell:prescaling:primes:0:0"].kind == "prescalercell", "the diagonal: each prime is the plain value (prescalercell, not math_expression)"
         assert cells["cell:prescaling:primes:0:0"].text == "2"
         assert cells["cell:prescaling:primes:1:1"].text == "3"
         assert cells["cell:prescaling:primes:2:2"].text == "5"

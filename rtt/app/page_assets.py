@@ -239,18 +239,18 @@ _MAPPING_DEMO_JS = (_ASSETS / "mapping_demo.js").read_text(encoding="utf-8")
 
 _TOUR_JS = (_ASSETS / "tour.js").read_text(encoding="utf-8")
 
-# NiceGUI: a tour step's `sel` must be a real DOM region class, NOT a .mark() (which exists only under
+# NiceGUI: a tour step's `selector` must be a real DOM region class, NOT a .mark() (which exists only under
 # the test simulation), or the spotlight finds nothing in production.
 _TOUR_STEPS = [
     {
-        "sel": "",
+        "selector": "",
         "title": "Welcome to D&D's RTT app",
         "body": "A grid for exploring regular temperaments. Here's a quick tour of what's on "
         "screen — use <b>Next</b> / <b>Back</b> (or the arrow keys), and <b>Skip</b> to leave "
         "anytime.",
     },
     {
-        "sel": "",
+        "selector": "",
         "title": "Reading the grid",
         "body": "The grid sets intervals alongside the temperament objects that act on them, so you "
         "can see how they relate. Follow a column down to watch an interval flow through the "
@@ -259,14 +259,14 @@ _TOUR_STEPS = [
         "behind it.",
     },
     {
-        "sel": ".rtt-zoomable",
+        "selector": ".rtt-zoomable",
         "place": "right",
         "title": "The value cells",
         "body": "Most of the grid is computed values. Cells drawn with a box are editable — type a "
         "new value and the whole grid recomputes.",
     },
     {
-        "sel": ".rtt-fan-button",
+        "selector": ".rtt-fan-button",
         "place": "bottom",
         "title": "Reshaping the grid",
         "body": "The grid grows and shrinks with you. A <b>+</b> button adds a column or row — a new "
@@ -274,14 +274,14 @@ _TOUR_STEPS = [
         "The little chevrons expand or collapse a tile.",
     },
     {
-        "sel": ".rtt-titletile",
+        "selector": ".rtt-titletile",
         "place": "bottom",
         "title": "Undo, reset & share",
         "body": "Up here: <b>undo</b> / <b>redo</b> your edits, <b>reset</b> everything to defaults, "
         "and <b>share</b> a link that reopens the app in exactly this state.",
     },
     {
-        "sel": ".rtt-hamburger",
+        "selector": ".rtt-hamburger",
         "place": "right",
         "open": True,
         "title": "The settings panel",
@@ -289,7 +289,7 @@ _TOUR_STEPS = [
         "open it up.",
     },
     {
-        "sel": ".rtt-chapter-group",
+        "selector": ".rtt-chapter-group",
         "place": "right",
         "open": True,
         "title": "Guide chapters",
@@ -298,7 +298,7 @@ _TOUR_STEPS = [
         "everything.",
     },
     {
-        "sel": ".rtt-show-tile",
+        "selector": ".rtt-show-tile",
         "place": "right",
         "open": True,
         "title": "Tile features",
@@ -307,7 +307,7 @@ _TOUR_STEPS = [
         "audio controls up top drive every speaker.",
     },
     {
-        "sel": ".rtt-show-scroll .rtt-show-group:last-child",
+        "selector": ".rtt-show-scroll .rtt-show-group:last-child",
         "place": "right",
         "open": True,
         "title": "The Show toggles",
@@ -316,7 +316,7 @@ _TOUR_STEPS = [
         "need them — start small and build up.",
     },
     {
-        "sel": "",
+        "selector": "",
         "title": "That's the tour",
         "body": "Explore freely — nothing here is permanent, and <b>reset</b> always brings back the "
         "defaults. Replay this tour anytime from the <b>?</b> button by the undo/redo "
@@ -752,7 +752,7 @@ _BUSY_JS = f"""
   // Browser: render() re-syncs control values programmatically (box.value = …), which fires SYNTHETIC
   // events; the e.isTrusted gate keeps those from re-arming the scrim after a render.
   const BUTTON = '.rtt-fan-button,.rtt-minus-button,.rtt-minus-button-v,.rtt-toggle,.rtt-icon-button';
-  const at = (e, sel) => e.isTrusted && e.target && e.target.closest && e.target.closest(sel);
+  const at = (e, selector) => e.isTrusted && e.target && e.target.closest && e.target.closest(selector);
   document.addEventListener('pointerdown',
     (e) => {{ if (at(e, BUTTON) && !e.target.closest('.rtt-noarm')) window.rttBusy.arm(); }}, true);
   // Quasar's QCheckbox/QRadio commit on a CLICK of their role= div and never emit a DOM `change`,
@@ -765,16 +765,16 @@ _BUSY_JS = f"""
   document.addEventListener('keydown', (e) => {{
     if (!e.isTrusted) return;
     const mod = e.ctrlKey || e.metaKey;
-    let sel = null, arm = true;
-    if (mod && !e.altKey && e.code === 'KeyZ') sel = e.shiftKey ? '.rtt-hk-redo' : '.rtt-hk-undo';
-    else if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyY') sel = '.rtt-hk-redo';
+    let selector = null, arm = true;
+    if (mod && !e.altKey && e.code === 'KeyZ') selector = e.shiftKey ? '.rtt-hk-redo' : '.rtt-hk-undo';
+    else if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyY') selector = '.rtt-hk-redo';
     else if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {{
       const k = {{KeyC: 'comma', KeyM: 'mapping', KeyT: 'target', KeyH: 'held', KeyI: 'interest', KeyE: 'element'}}[e.code];
-      if (k) sel = '.rtt-hk-' + k;
+      if (k) selector = '.rtt-hk-' + k;
     }}
-    else if (mod && !e.altKey && !e.shiftKey && e.code === 'Comma') {{ sel = '.rtt-hamburger'; arm = false; }}  // pane toggle is pure CSS — don't flash the scrim
-    if (sel) {{
-      const el = document.querySelector(sel);
+    else if (mod && !e.altKey && !e.shiftKey && e.code === 'Comma') {{ selector = '.rtt-hamburger'; arm = false; }}  // pane toggle is pure CSS — don't flash the scrim
+    if (selector) {{
+      const el = document.querySelector(selector);
       if (el) {{ e.preventDefault(); if (arm) window.rttBusy.arm(); el.click(); return; }}
     }}
     if (e.key === 'Enter' && e.target.closest && e.target.closest('.rtt-cell')) window.rttBusy.arm();
@@ -853,4 +853,4 @@ class _Gesture:
     target_pred: Callable | None = None
     token: tuple | None = None
     reflowed: bool = False
-    prev: _Gesture | None = None
+    previous: _Gesture | None = None

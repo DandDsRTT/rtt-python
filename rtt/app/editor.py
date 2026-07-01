@@ -56,5 +56,5 @@ class Editor(Document):
     def can_redo(self) -> bool:
         return self.history.can_redo
 
-    def layout(self, prev_ids=None, preview_remove=None):
-        return editor_layout.build(self, prev_ids, preview_remove)
+    def layout(self, previous_ids=None, preview_remove=None):
+        return editor_layout.build(self, previous_ids, preview_remove)

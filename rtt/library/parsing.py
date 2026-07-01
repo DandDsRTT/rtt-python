@@ -76,9 +76,9 @@ def parse_ebk_vector(text: str) -> tuple:
 
 
 def _expand_secor_elisions(text: str) -> str:
-    prev = None
-    while prev != text:
-        prev = text
+    previous = None
+    while previous != text:
+        previous = text
         text = _SECOR_ELISION_RE.sub(", 0 0 0,", text, count=1)
     return text
 

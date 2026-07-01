@@ -190,7 +190,7 @@ def _layout_columns(geometry, resolved, context, column_bands, content_x0) -> Ge
     column_x, column_width, content_width, column_collapsible, open_column_width = {}, {}, {}, {}, {}
     x = content_x0
     first_present = True
-    prev_title_oh = None
+    previous_title_oh = None
     for key, natural, present, collapsible in column_bands:
         if not present:
             continue
@@ -207,11 +207,11 @@ def _layout_columns(geometry, resolved, context, column_bands, content_x0) -> Ge
             column_width[key] = hug_width
         column_collapsible[key] = collapsible
         half_oh = _title_w(geometry.column_header[key]) / 2 - column_width[key] / 2
-        if prev_title_oh is not None:
-            x += max(GAP, TITLE_MARGIN + prev_title_oh + half_oh)
+        if previous_title_oh is not None:
+            x += max(GAP, TITLE_MARGIN + previous_title_oh + half_oh)
         column_x[key] = x
         x += column_width[key]
-        prev_title_oh = half_oh
+        previous_title_oh = half_oh
     content_x = {key: column_x[key] + (column_width[key] - content_width[key]) / 2 for key in column_x}
     return replace(
         geometry, column_x=column_x, column_width=column_width, content_width=content_width, column_collapsible=column_collapsible,

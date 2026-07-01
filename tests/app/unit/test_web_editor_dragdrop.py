@@ -40,7 +40,7 @@ class TestMoveInterval:
         cells1 = {c.id: c for c in lay1.cells}
         front_x = cells1["cell:held:0:0"].x
         editor.move_interval("held", 2, "held", 0)
-        cells2 = {c.id: c for c in editor.layout(prev_ids=lay1.identities).cells}
+        cells2 = {c.id: c for c in editor.layout(previous_ids=lay1.identities).cells}
         assert "cell:held:0:2" in cells2
         assert cells2["cell:held:0:2"].x == front_x
         assert cells2["cell:held:0:2"].text == cells1["cell:held:0:2"].text

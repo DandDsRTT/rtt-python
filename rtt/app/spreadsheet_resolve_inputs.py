@@ -33,4 +33,4 @@ class ResolveInputs:
     mapping_form: object
     comma_basis_form: object
     preview_remove: object
-    prev_ids: object
+    previous_ids: object

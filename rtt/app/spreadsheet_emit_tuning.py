@@ -83,7 +83,7 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group
         u = query.cell_unit(resolved, key, group, generator=i if is_generator_group else None, prime=i if is_prime_group else None)
         operand = closed_form_operand(resolved, geometry, context, key, group, i, v) if resolved.flags.math_expressions else None
         if operand is not None:
-            cells.append(CellBox(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=u))
+            cells.append(CellBox(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=u))
         else:
             cells.append(CellBox(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, editable_kind or "tuningvalue",
                                  text=service.cents(v, resolved.flags.decimals), unit=u))
@@ -146,7 +146,7 @@ def _emit_tuning_generator_row(cells, resolved, geometry, context) -> None:
             operand = closed_form.generator_operand(i, v) if closed_form is not None else None
         if operand is not None:
             cells.append(CellBox(f"tuning:generator:{query.column_token(resolved, 'generators', i)}", geometry.group_left["generators"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
-                                 "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "generators", generator=i)))
+                                 "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "generators", generator=i)))
         else:
             cells.append(CellBox(f"tuning:generator:{query.column_token(resolved, 'generators', i)}", geometry.group_left["generators"][i], geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
                                  generator_kind, text=service.cents(v, resolved.flags.decimals), generator=i, unit=query.cell_unit(resolved, "tuning", "generators", generator=i)))
@@ -167,7 +167,7 @@ def _emit_tuning_canonical_generator_row(cells, resolved, geometry, context) -> 
                 operand = closed_form.canonical_generator_operand(coefficients, v)
         if operand is not None:
             cells.append(CellBox(f"tuning:canonical_generator:{j}", query.canonical_generator_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
-                                 "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "canonical_generators", generator=j)))
+                                 "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "canonical_generators", generator=j)))
         else:
             cells.append(CellBox(f"tuning:canonical_generator:{j}", query.canonical_generator_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
                                  "tuningvalue", text=service.cents(v, resolved.flags.decimals), generator=j, unit=query.cell_unit(resolved, "tuning", "canonical_generators", generator=j)))
@@ -196,7 +196,7 @@ def _emit_tuning_superspace_generator_row(cells, chart_tiles, resolved, geometry
         operand = superspace_closed_form.generator_operand(i, v) if superspace_closed_form is not None else None
         if operand is not None:
             cells.append(CellBox(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,
-                                 COLUMN_WIDTH, ROW_HEIGHT, "mathexpr", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals),
+                                 COLUMN_WIDTH, ROW_HEIGHT, "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals),
                                  unit=query.cell_unit(resolved, "tuning", "superspace_generators", generator=i)))
         else:
             cells.append(CellBox(f"tuning:superspace_generator:{i}", geometry.group_left["superspace_generators"][i], geometry.rows["tuning"].y,

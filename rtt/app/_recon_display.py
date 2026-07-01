@@ -19,8 +19,8 @@ from rtt.app.page_assets import (
 )
 from rtt.app.render_html import (
     _bar_chart,
+    _math_expression_html,
     _math_html,
-    _mathexpr_html,
     _plain_text_font,
     _range_chart,
     _underline_html,
@@ -227,13 +227,13 @@ def update_plain_text_pending(reconciler, cell_box: spreadsheet.CellBox) -> None
     )
 
 
-def build_mathexpr(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None:
+def build_math_expression(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None:
     reconciler.cells[cell_box.id].display.expr = ui.html("").classes("rtt-math-expression")
 
 
-def update_mathexpr(reconciler, cell_box: spreadsheet.CellBox) -> None:
+def update_math_expression(reconciler, cell_box: spreadsheet.CellBox) -> None:
     if reconciler.handles(cell_box.id).display.expr_state != (cell_box.text, cell_box.width):
         reconciler.cells[cell_box.id].display.expr.set_content(
-            _mathexpr_html(cell_box.text, cell_box.width)
+            _math_expression_html(cell_box.text, cell_box.width)
         )
         reconciler.cells[cell_box.id].display.expr_state = (cell_box.text, cell_box.width)

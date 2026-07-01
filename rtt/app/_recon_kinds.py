@@ -24,7 +24,9 @@ def register_display_kinds(cell_kinds) -> None:
     cell_kinds["plain_text_pending"] = _KindHandlers(
         display.build_plain_text_pending, display.update_plain_text_pending
     )
-    cell_kinds["mathexpr"] = _KindHandlers(display.build_mathexpr, display.update_mathexpr)
+    cell_kinds["math_expression"] = _KindHandlers(
+        display.build_math_expression, display.update_math_expression
+    )
 
 
 def register_value_kinds(cell_kinds) -> None:

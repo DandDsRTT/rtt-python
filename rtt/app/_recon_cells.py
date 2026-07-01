@@ -103,9 +103,9 @@ def draft_cancel_eid(cell_box):
     return by_head.get(cell_box.id.split(":")[0])
 
 
-def _draft_escape_js(cancel_eid):
+def _draft_escape_js(cancel_element_id):
     return (
-        f"(e) => {{const b=document.querySelector('[data-eid=\"{cancel_eid}\"] .rtt-glyph');"
+        f"(e) => {{const b=document.querySelector('[data-eid=\"{cancel_element_id}\"] .rtt-glyph');"
         "if(b){e.preventDefault();b.click();}}"
     )
 
@@ -120,7 +120,7 @@ def wire_cell_input(reconciler, wrap, cell_box) -> None:
     if edit_input is not None:
         den = reconciler.cells[cell_box.id].value.den_input
         guard = _STACKED_EXIT_JS if den is not None else None
-        cancel_eid = draft_cancel_eid(cell_box) if cell_box.pending else None
+        cancel_element_id = draft_cancel_eid(cell_box) if cell_box.pending else None
         for fld in (edit_input, den) if den is not None else (edit_input,):
             fld.on(
                 "focus",
@@ -133,8 +133,8 @@ def wire_cell_input(reconciler, wrap, cell_box) -> None:
                 js_handler=guard,
             )
             fld.on("keydown.enter", js_handler="(e) => e.target.blur()")
-            if cancel_eid is not None:
-                fld.on("keydown.escape", js_handler=_draft_escape_js(cancel_eid))
+            if cancel_element_id is not None:
+                fld.on("keydown.escape", js_handler=_draft_escape_js(cancel_element_id))
     if cell_box.kind in _WHEEL_STEPS:
         wrap.on(
             "wheel",

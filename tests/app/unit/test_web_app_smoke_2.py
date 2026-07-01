@@ -283,41 +283,41 @@ class TestWebAppSmoke3:
         assert "no range" in svg
         assert "<rect" not in svg
 
-    def test_mathexpr_html_stacks_two_lines_each_with_a_fitted_font(self):
-        html = render_html._mathexpr_html("1200 · log₂(3/2)\n= 701.96", 30)
+    def test_math_expression_html_stacks_two_lines_each_with_a_fitted_font(self):
+        html = render_html._math_expression_html("1200 · log₂(3/2)\n= 701.96", 30)
         assert html.count("<div") == 3
         assert html.count("font-size:") == 2
         assert "1200 · log₂(3/2)" in html and "= 701.96" in html
 
-    def test_mathexpr_font_shrinks_for_longer_expressions(self):
-        short = render_html._mathexpr_html("1200 · log₂2\n= 1200.00", 30)
-        long = render_html._mathexpr_html("1200 · log₂(6/5)\n= 315.64", 30)
+    def test_math_expression_font_shrinks_for_longer_expressions(self):
+        short = render_html._math_expression_html("1200 · log₂2\n= 1200.00", 30)
+        long = render_html._math_expression_html("1200 · log₂(6/5)\n= 315.64", 30)
         assert _first_font(long) < _first_font(short)
 
     def test_fit_font_is_clamped_between_the_min_and_max(self):
         assert render_html._fit_font("x", 30) == render_html._EXPR_MAX_FONT
         assert render_html._fit_font("x" * 100, 30) == render_html._EXPR_MIN_FONT
 
-    def test_mathexpr_elides_a_giant_ratio_operand_instead_of_streaking(self):
+    def test_math_expression_elides_a_giant_ratio_operand_instead_of_streaking(self):
         giant = spreadsheet_text._math_expr(
             spreadsheet_text._log_operand("2" * 80 + "/" + "3" * 60), 240000.0, show_value=True)
-        html = render_html._mathexpr_html(giant, 37)
+        html = render_html._math_expression_html(giant, 37)
         assert "1200 · log₂(…/…)" in html
         assert "2" * 80 not in html
         assert "= " in html
         assert _first_font(html) > render_html._EXPR_MIN_FONT
 
-    def test_mathexpr_elides_a_giant_bare_integer_operand_to_an_ellipsis(self):
+    def test_math_expression_elides_a_giant_bare_integer_operand_to_an_ellipsis(self):
         giant = spreadsheet_text._math_expr(
             spreadsheet_text._log_operand("2" * 80 + "/1"), 96000.0, show_value=True)
-        html = render_html._mathexpr_html(giant, 37)
+        html = render_html._math_expression_html(giant, 37)
         assert "1200 · log₂…" in html and "(…" not in html
         assert "2" * 80 not in html
 
 
 class TestWebAppSmoke4:
-    def test_mathexpr_leaves_a_small_operand_intact(self):
-        html = render_html._mathexpr_html("1200 · log₂(3/2)\n= 701.96", 37)
+    def test_math_expression_leaves_a_small_operand_intact(self):
+        html = render_html._math_expression_html("1200 · log₂(3/2)\n= 701.96", 37)
         assert "1200 · log₂(3/2)" in html and "…" not in html
 
     def test_elided_expr_line_fits_its_cell_at_the_fitted_font(self):
@@ -391,7 +391,7 @@ class TestWebAppSmoke4:
         assert page_assets._TOUR_STEPS, "no tour steps defined"
         for step in page_assets._TOUR_STEPS:
             assert step["title"] and step["body"], f"empty copy: {step}"
-            selection = step["sel"]
+            selection = step["selector"]
             assert isinstance(selection, str)
             assert selection == "" or selection.startswith("."), f"selector should be a class, got {selection!r}"
         assert page_assets._TOUR_JS.strip(), "tour.js not loaded"

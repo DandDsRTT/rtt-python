@@ -100,7 +100,7 @@ def _emit_prescale_cells(cells, resolved, geometry, group, c, vector, prescaled,
             cells.append(CellBox(cell_id, cell_x, cell_y, COLUMN_WIDTH, ROW_HEIGHT, "prescalercell",
                                  text=service.prescale_text(value, resolved.flags.decimals), prime=i, unit=u))
         elif i < nrows and resolved.flags.math_expressions and vector[i] != 0 and i in prime_term:
-            cells.append(CellBox(cell_id, cell_x, cell_y, COLUMN_WIDTH, ROW_HEIGHT, "mathexpr",
+            cells.append(CellBox(cell_id, cell_x, cell_y, COLUMN_WIDTH, ROW_HEIGHT, "math_expression",
                                  text=_prescale_math_expr(vector[i], prime_term[i], value, resolved.flags.quantities, resolved.flags.decimals), unit=u))
         else:
             cells.append(CellBox(cell_id, cell_x, cell_y, COLUMN_WIDTH, ROW_HEIGHT, "tuningvalue",
