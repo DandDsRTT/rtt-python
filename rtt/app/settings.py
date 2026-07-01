@@ -199,7 +199,7 @@ CHAPTER: dict[str, int] = {
     "temperament_tiles": 2,
     "temperament_colorization": 2,
     "mapping_demos": 2,
-    "interest": 2,
+    "interest": 3,
     "interval_ratios": 2,
     "interval_vectors": 2,
     "domain_units": 5,

@@ -29,6 +29,15 @@
   var index = -1;
   var root = null;        // the live tour DOM (block + spot + card), null while closed
 
+  // the chapter is server-side NiceGUI state, so the tour asks the page to change it via an emitted
+  // event (the same channel freeze.js uses). begin drops the grid to its simplest chapter and arms
+  // the mapping demo; the last step's own `emit` lands the ramp back at the default-chapter home so
+  // its copy is accurate; end restores that home. emitEvent is NiceGUI's global, absent until the
+  // socket is up.
+  function emit(name) {
+    try { if (typeof emitEvent === "function") emitEvent(name); } catch (e) { /* socket not up yet */ }
+  }
+
   function panelOpen() {
     var pg = document.querySelector(".rtt-panelgroup");
     return !!(pg && pg.classList.contains("rtt-open"));
@@ -128,6 +137,7 @@
     if (n >= steps.length) { stop(); return; }
     index = n;
     var step = steps[index];
+    if (step.emit) emit(step.emit);
     if (step.open) openDrawer();
     if (!root) build();
 
@@ -151,10 +161,14 @@
 
   function start() {
     if (!steps.length) return;
+    emit("rtt_tour_begin");
+    document.body.classList.add("rtt-tour-running");
     go(0);
   }
 
   function stop() {
+    emit("rtt_tour_end");
+    document.body.classList.remove("rtt-tour-running");
     try { localStorage.setItem(SEEN_KEY, "1"); } catch (e) { /* private mode: just don't persist */ }
     if (root && root.parentNode) root.parentNode.removeChild(root);
     root = null;

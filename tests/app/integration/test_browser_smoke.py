@@ -68,6 +68,7 @@ class TestBrowserSmoke:
             except Exception as launch_failure:
                 pytest.skip(f"no Chrome available for the browser smoke: {launch_failure}")
             page = browser.new_page()
+            page.add_init_script("try { localStorage.setItem('rttTourSeen', '1'); } catch (e) {}")
             page.on("console", lambda m: client_errors.append(m.text) if m.type == "error" else None)
             page.on("pageerror", lambda e: client_errors.append(str(e)))
             page.goto(served_app, wait_until="networkidle")

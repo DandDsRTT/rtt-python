@@ -112,6 +112,7 @@ def _token(**settings) -> str:
 def _page(browser, query: str = "", *, width: int = 1700, height: int = 1100):
     instance, url = browser
     page = instance.new_page(viewport={"width": width, "height": height})
+    page.add_init_script("try { localStorage.setItem('rttTourSeen', '1'); } catch (e) {}")
     errors: list[str] = []
     page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
     page.on("pageerror", lambda e: errors.append(str(e)))
@@ -225,6 +226,41 @@ class TestBrowserBehavior:
             page.wait_for_timeout(50)
             assert not page.evaluate("() => !!document.querySelector('.rtt-tour-root')")
             assert page.evaluate("() => localStorage.getItem('rttTourSeen')") == "1"
+            assert not errors
+
+    def test_tour_ramps_from_the_simplest_chapter_through_tempering_and_back_home(self, browser):
+        reads = "() => (document.querySelector('.rtt-chapter-reading') || {}).textContent === "
+        has_interest = "() => !!document.querySelector('[data-eid=\"header:interest\"]')"
+        demos_on = "() => document.body.classList.contains('rtt-mapping-demos')"
+        with _page(browser) as (page, errors):
+            assert page.evaluate(has_interest), "the default-chapter home shows intervals of interest"
+            page.evaluate("() => { window.rttTour.stop(); window.rttTour.start(); }")
+            page.wait_for_function(f"{reads} '2: Mappings'", timeout=6000)
+            assert not page.evaluate(has_interest), "the chapter-2 tour view hides intervals of interest"
+            assert page.evaluate(demos_on), "the tempering demo is armed for the hover step"
+
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(150)
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(200)
+            page.evaluate(
+                "() => { const c = document.querySelector('[data-eid^=\"cell:comma:\"]');"
+                " c.dispatchEvent(new MouseEvent('mouseover', {bubbles: true})); }"
+            )
+            page.wait_for_timeout(200)
+            assert _overlay_texts(page) is not None, "hovering the comma mid-tour animates the mapping demo"
+            mapped = page.evaluate(
+                "() => [...document.querySelectorAll('[data-eid^=\"cell:mapped_comma:\"]')]"
+                ".map(c => (c.getAttribute('data-value') || c.textContent).trim())"
+            )
+            assert any(v == "0" for v in mapped) and all(v in ("", "0") for v in mapped), (
+                f"the comma vanishes — every mapped-comma generator count is zero: {mapped}"
+            )
+
+            page.keyboard.press("Escape")
+            page.wait_for_function(f"{reads} '4: Exploring temperaments'", timeout=6000)
+            assert page.evaluate(has_interest), "skipping out lands at the default-chapter home, interest back"
+            assert not page.evaluate(demos_on), "the tour's temporary demo is reverted at the home"
             assert not errors
 
     def test_active_cell_highlight_paints_only_with_an_active_cell(self, browser):
