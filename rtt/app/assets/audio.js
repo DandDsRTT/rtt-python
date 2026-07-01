@@ -246,7 +246,7 @@
   document.addEventListener('pointerdown', function (event) {
     if (floatSeg && !onFloat(event.target)) hideFloat();
   }, true);
-  // Space is the play key (sounded by _ACTIVECELL_JS for the active/hovered cell) — don't let it
+  // Space is the play key (sounded by activecell.js for the active/hovered cell) — don't let it
   // dismiss the float; any OTHER key clears a lingering float so it can't block the next hover.
   document.addEventListener('keydown', function (event) { if (event.key !== ' ' && floatSeg) hideFloat(); }, true);
   // the grid body scrolls in its own scroller (scroll doesn't bubble) — re-anchor the float to its

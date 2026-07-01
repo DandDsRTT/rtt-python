@@ -37,7 +37,7 @@ def tag_audio(element, cell_box) -> None:
 
 def attach_guide_link(wrap, guide_help, tile, text) -> None:
     # Quasar: a ui.tooltip hides the moment the cursor leaves the cell toward it, so its link can't
-    # be clicked; these data-attrs feed a custom body-level hover-card (_GUIDE_JS) that stays open.
+    # be clicked; these data-attrs feed a custom body-level hover-card (guide.js) that stays open.
     wrap.classes("rtt-guide-link")
     wrap._props["data-guide-text"] = text
     wrap._props["data-guide-tile"] = tile

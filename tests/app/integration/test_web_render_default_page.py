@@ -96,7 +96,7 @@ class TestDefaultPage:
         assert all(int(element._props.get("transition-duration", 300)) == 0 for element in tips)
 
     def test_every_gridded_value_cell_is_zoomable(self, default_page: User) -> None:
-        assert "rtt-zoomable" in _wrap(default_page, "tuning:prime:0")._classes, "hovering ANY gridded value pops the zoom magnifier (_ZOOM_JS clones the cell, scaled): the cell # wraps carry .rtt-zoomable for the engine to find them. Both a read-only value (the octave's # 1200.000 tuning) and an editable one (a mapping entry) get it — the magnifier is for every value, # not just the read-only ones. Structural cells (a row/column header) never become zoomable"
+        assert "rtt-zoomable" in _wrap(default_page, "tuning:prime:0")._classes, "hovering ANY gridded value pops the zoom magnifier (zoom.js clones the cell, scaled): the cell # wraps carry .rtt-zoomable for the engine to find them. Both a read-only value (the octave's # 1200.000 tuning) and an editable one (a mapping entry) get it — the magnifier is for every value, # not just the read-only ones. Structural cells (a row/column header) never become zoomable"
         assert "rtt-zoomable" in _wrap(default_page, "cell:mapping:0:0")._classes
         assert "rtt-zoomable" in _wrap(default_page, "quantities_generator:0")._classes
 
