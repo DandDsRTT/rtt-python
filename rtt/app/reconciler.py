@@ -179,7 +179,7 @@ class _Reconciler:
         self.cells.pop(element_id, None)
         self.entities.pop(element_id, None)
 
-    def make_cell(self, cell_box: spreadsheet.CellBox) -> None:
+    def build_cell(self, cell_box: spreadsheet.CellBox) -> None:
         self.cells[cell_box.id] = CellHandles()
         self.entities[cell_box.id] = EntityHandles()
         wrap = (

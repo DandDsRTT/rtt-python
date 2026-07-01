@@ -319,7 +319,7 @@ def pending_col_token(resolved, group: str):
     return pending_token([token for token, _ in resolved.column_ids[group]])
 
 
-def pending_draft_idx(resolved, group: str):
+def pending_draft_index(resolved, group: str):
     return {
         "commas": (resolved.scalars.comma_draft or None, resolved.dimensions.comma_count),
         "targets": (resolved.targets.pending, resolved.dimensions.target_count),

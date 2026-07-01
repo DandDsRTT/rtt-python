@@ -394,8 +394,8 @@ _CSS = (
 
 _UNITS_MAX_FONT = 10.0
 _CELLUNIT_MAX_FONT = 7.0
-_MATLABEL_FONT = 11.0
-_MATLABEL_MIN_FONT = 6.0
+_MATRIX_LABEL_FONT = 11.0
+_MATRIX_LABEL_MIN_FONT = 6.0
 
 
 _EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "hbar"}
@@ -439,7 +439,7 @@ _TILE_HOST: dict[str, str] = {
 _TILE_FONT = {
     "symbols": 15,
     "equivalences": 15,
-    "rowlabel": spreadsheet_constants.MATLABEL_HEIGHT - 2,
+    "rowlabel": spreadsheet_constants.MATRIX_LABEL_HEIGHT - 2,
     "names": spreadsheet_constants.CAPTION_FONT,
     "mnemonics": spreadsheet_constants.CAPTION_FONT,
     "units": 10,

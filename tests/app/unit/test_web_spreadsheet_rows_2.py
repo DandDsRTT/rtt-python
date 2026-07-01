@@ -376,7 +376,7 @@ class TestRowAndColumnLabels:
         left = on["bracket:map:0:l"].x - panel.x
         right = (panel.x + panel.width) - (on["bracket:map:0:r"].x + on["bracket:map:0:r"].width)
         assert abs(left - right) < 0.01, f"primes matrix off-centre in its tile: left={left}, right={right}"
-        assert left >= spreadsheet_constants.MATLABEL_WIDTH
+        assert left >= spreadsheet_constants.MATRIX_LABEL_WIDTH
 
     def test_complexity_col_labels_spell_out_the_norm_definition(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))

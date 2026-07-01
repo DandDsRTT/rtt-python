@@ -1,14 +1,14 @@
 """In-process render coverage for the NiceGUI page — the layer the smoke tests skip.
 
 The rest of the suite builds the layout model (spreadsheet.build) and the pure
-helpers, but never executes index()/render()/_make_cell, so a stale reference or a
+helpers, but never executes index()/render()/build_cell, so a stale reference or a
 bad widget call there passes the suite green yet 500s the live page. NiceGUI's
 ``User`` simulation runs the real page in-process (no browser): opening it drives
 the default render, toggling a Show feature drives that feature's render branch, and
 editing a cell drives the input -> handler -> render pipeline. The ``user`` fixture
 also fails on any ERROR log, so a broken render is caught even when it doesn't raise.
 
-Cells are located by the marker each carries (``.mark(cb.id)`` in _make_cell, the
+Cells are located by the marker each carries (``.mark(cb.id)`` in build_cell, the
 Python-side parallel of the data-eid the JS reconciler uses).
 """
 
@@ -97,11 +97,11 @@ _FEATURE_CELLS = [
 
 
 def _pick_terminology(user: User, mode: str) -> None:
-    user.find(marker=f"terminologyradio-{mode}").click()
+    user.find(marker=f"terminologyradio:{mode}").click()
 
 
 def _terminology_opt_selected(user: User, mode: str) -> bool:
-    return "rtt-range-option-on" in next(iter(user.find(marker=f"terminologyradio-{mode}").elements))._classes
+    return "rtt-range-option-on" in next(iter(user.find(marker=f"terminologyradio:{mode}").elements))._classes
 
 
 def _scheme_select(user: User):

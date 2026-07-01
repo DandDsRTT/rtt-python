@@ -133,7 +133,7 @@ class TestDefaultPage:
 
     def test_guide_settings_box_holds_a_dd_default_terminology_radio(self, default_page: User) -> None:
         assert next(iter(default_page.find(marker="guidesettingstitle").elements)).text == "guide settings"
-        dd_opt = next(iter(default_page.find(marker="terminologyradio-dd").elements))
+        dd_opt = next(iter(default_page.find(marker="terminologyradio:dd").elements))
         assert "rtt-range-option-on" in dd_opt._classes
 
     def test_positive_generator_tuning_cell_shows_an_explicit_plus_sign(self, default_page: User) -> None:

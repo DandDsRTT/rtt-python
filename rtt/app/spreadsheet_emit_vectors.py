@@ -170,23 +170,23 @@ def _emit_superspace_matrix_vectors(cells, resolved, geometry, context) -> None:
     collapsed = context.collapsed
     if query.row_open(geometry, collapsed, "superspace_vectors") and query.tile_open(geometry, collapsed, "superspace_vectors", "primes"):
         basis = service.basis_in_superspace(resolved.dimensions.elements)
-        for superspace_prime_idx in range(resolved.dimensions.superspace_dimensionality):
-            for elem_idx in range(resolved.dimensions.dimensionality):
-                value = basis[elem_idx][superspace_prime_idx]
+        for superspace_prime_index in range(resolved.dimensions.superspace_dimensionality):
+            for elem_index in range(resolved.dimensions.dimensionality):
+                value = basis[elem_index][superspace_prime_index]
                 cells.append(CellBox(
-                    f"cell:superspace_vectors:primes:{superspace_prime_idx}:{elem_idx}",
-                    query.prime_left(geometry, elem_idx), query.superspace_vector_top(geometry, superspace_prime_idx), COLUMN_WIDTH, ROW_HEIGHT,
-                    "vector", text=str(value), prime=superspace_prime_idx, comma=elem_idx,
-                    unit=query.cell_unit(resolved, "superspace_vectors", "primes", prime=superspace_prime_idx, elem=elem_idx)))
+                    f"cell:superspace_vectors:primes:{superspace_prime_index}:{elem_index}",
+                    query.prime_left(geometry, elem_index), query.superspace_vector_top(geometry, superspace_prime_index), COLUMN_WIDTH, ROW_HEIGHT,
+                    "vector", text=str(value), prime=superspace_prime_index, comma=elem_index,
+                    unit=query.cell_unit(resolved, "superspace_vectors", "primes", prime=superspace_prime_index, elem=elem_index)))
     if query.row_open(geometry, collapsed, "superspace_mapping") and query.tile_open(geometry, collapsed, "superspace_mapping", "superspace_primes"):
         ml = service.superspace_mapping(context.state)
-        for generator_idx in range(resolved.dimensions.superspace_rank):
-            for superspace_prime_idx in range(resolved.dimensions.superspace_dimensionality):
+        for generator_index in range(resolved.dimensions.superspace_rank):
+            for superspace_prime_index in range(resolved.dimensions.superspace_dimensionality):
                 cells.append(CellBox(
-                    f"cell:superspace_mapping:superspace_primes:{generator_idx}:{superspace_prime_idx}",
-                    query.superspace_prime_left(geometry, superspace_prime_idx), query.superspace_map_top(geometry, generator_idx), COLUMN_WIDTH, ROW_HEIGHT,
-                    "mapped", text=str(ml[generator_idx][superspace_prime_idx]), generator=generator_idx, prime=superspace_prime_idx,
-                    unit=query.cell_unit(resolved, "superspace_mapping", "superspace_primes", generator=generator_idx, prime=superspace_prime_idx)))
+                    f"cell:superspace_mapping:superspace_primes:{generator_index}:{superspace_prime_index}",
+                    query.superspace_prime_left(geometry, superspace_prime_index), query.superspace_map_top(geometry, generator_index), COLUMN_WIDTH, ROW_HEIGHT,
+                    "mapped", text=str(ml[generator_index][superspace_prime_index]), generator=generator_index, prime=superspace_prime_index,
+                    unit=query.cell_unit(resolved, "superspace_mapping", "superspace_primes", generator=generator_index, prime=superspace_prime_index)))
     if query.row_open(geometry, collapsed, "superspace_vectors") and query.tile_open(geometry, collapsed, "superspace_vectors", "superspace_primes"):
         mjl = service.superspace_just_mapping(resolved.dimensions.superspace_primes)
         for i in range(resolved.dimensions.superspace_dimensionality):
