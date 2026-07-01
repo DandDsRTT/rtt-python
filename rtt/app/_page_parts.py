@@ -9,28 +9,14 @@ from rtt.app import (
     tooltips,
 )
 from rtt.app.page_assets import (
-    _ACTIVECELL_JS,
-    _AUDIO_GLYPHS,
-    _AUDIO_JS,
-    _BOOT_JS,
-    _CSS,
-    _DECIMAL_JS,
-    _FRACTION_JS,
-    _FREEZE_JS,
-    _GUIDE_JS,
-    _MAPPING_DEMO_JS,
-    _STACKED_EDIT_JS,
     _STATE_PARAM,
     _TOOLTIP_DELAY_MS,
-    _TOUR_JS,
-    _TOUR_STEPS,
-    _ZOOM_JS,
+    HEAD_HTML,
     _audio_bank,
     _encode_state,
 )
 from rtt.app.render_html import (
     _FOLD_GLYPH,
-    _RATIO_MAX_FONT,
     _control_svg,
     _example_html,
 )
@@ -39,26 +25,8 @@ from rtt.app.render_html import (
 def setup_page_head() -> None:
     # NiceGUI's page `language` only loads Quasar's i18n pack, never <html lang> (what a screen reader reads), so set it directly.
     ui.add_head_html("<script>document.documentElement.lang='en';</script>")
-    ui.add_css(_CSS)
+    ui.add_head_html(HEAD_HTML)
     ui.tooltip.default_props(f"delay={_TOOLTIP_DELAY_MS} transition-duration=0")
-    ui.add_body_html(f"<script>{_BOOT_JS}</script>")
-    ui.add_body_html(f"<script>{_STACKED_EDIT_JS}</script>")
-    ui.add_body_html(
-        f"<script>{_AUDIO_JS}\nwindow.rttAudio.glyphs = {json.dumps(_AUDIO_GLYPHS)};</script>"
-    )
-    ui.add_body_html(f"<script>{_FREEZE_JS}</script>")
-    ui.add_body_html(
-        f"<script>window.rttFraction={{ratioFont:{_RATIO_MAX_FONT:g}}};\n{_FRACTION_JS}</script>"
-    )
-    ui.add_body_html(f"<script>{_DECIMAL_JS}</script>")
-    ui.add_body_html(f"<script>{_ACTIVECELL_JS}</script>")
-    ui.add_body_html(f"<script>{_ZOOM_JS}</script>")
-    ui.add_body_html(f"<script>{_GUIDE_JS}</script>")
-    ui.add_body_html(f"<script>{_MAPPING_DEMO_JS}</script>")
-    ui.add_body_html(
-        f"<script>window.rttTour={{steps:{json.dumps(_TOUR_STEPS)},autostart:true}};\n"
-        f"{_TOUR_JS}</script>"
-    )
     # NiceGUI: trim its default 16px .nicegui-content padding to a slim app margin.
     ui.query(".nicegui-content").style("padding:6px")
 

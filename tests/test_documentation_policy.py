@@ -16,7 +16,7 @@ _PLATFORM_LIMITATION = re.compile(
 
 _COMMENT_ALLOWANCE = {
     "app/app.py": 13,
-    "app/page_assets.py": 29,
+    "app/page_assets.py": 27,
     "app/_recon_cells.py": 2,
     "app/_recon_choosers.py": 9,
     "app/_recon_buttons.py": 2,
@@ -34,7 +34,7 @@ _COMMENT_ALLOWANCE = {
 _QUOTED_SPAN = re.compile(r"'[^'\n]*'|\"[^\"\n]*\"|`[^`\n]*`")
 _EMBEDDED_COMMENT = re.compile(r"(?<![:/])//|/\*")
 _EMBEDDED_ALLOWANCE = {
-    "app/page_assets.py": 16,
+    "app/page_assets.py": 13,
 }
 
 _TESTS = Path(__file__).resolve().parent
