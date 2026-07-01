@@ -5,6 +5,7 @@ from dataclasses import replace
 from rtt.app import spreadsheet_geometry_query as query
 from rtt.app.service.text_conventions import ebk_convention
 from rtt.app.spreadsheet_constants import VALUE_KINDS
+from rtt.app.tooltips import GUIDE_HELP
 
 
 def assign_matrix(cells, resolved, geometry):
@@ -23,6 +24,9 @@ def assign_matrix(cells, resolved, geometry):
             upd["matrix_orient"] = "col" if convention.structure == "list" else "row"
         except KeyError:
             pass
+        guide = GUIDE_HELP.get((rkey, ckey))
+        if guide is not None and guide.url:
+            upd["guide_key"] = (rkey, ckey)
         cells[i] = replace(cell_box, **upd)
 
 

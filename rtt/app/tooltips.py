@@ -97,7 +97,8 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "Exploring temperaments", "JI as a temperament"),
     ("mapping", "targets"): GuideHelp(
         "Each target interval mapped through the mapping — how many of each generator it "
-        "takes to reach the temperament's version of that interval."),
+        "takes to reach the temperament's version of that interval.",
+        "Mappings", "Mappings"),
     ("canonical", "primes"): GuideHelp(
         "The mapping rewritten into its canonical form, serving as a standard identifier "
         "for the temperament.",
@@ -137,24 +138,30 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "tracked so you can watch how the temperament and tuning treat them."),
     ("mapping", "detempering"): GuideHelp(
         "When the generator detempering is mapped we get an identity matrix, because (by "
-        "definition) each of the detempering's intervals maps to exactly its own generator."),
+        "definition) each of the detempering's intervals maps to exactly its own generator.",
+        page="Generator preimage"),
     ("tuning", "detempering"): GuideHelp(
         "Detempering generators and then retempering them with the tuning map naturally "
-        "yields a map identical to the generator tuning map."),
+        "yields a map identical to the generator tuning map.",
+        page="Generator preimage"),
     ("just", "detempering"): GuideHelp(
-        "The justly-intoned size of the intervals chosen for this generator detempering."),
+        "The justly-intoned size of the intervals chosen for this generator detempering.",
+        page="Generator preimage"),
     ("mapping", "generators"): GuideHelp(
         "The generators mapped through the mapping — the identity, since each generator "
-        "maps to exactly itself."),
+        "maps to exactly itself.",
+        "Mappings", "Mappings"),
     ("canonical", "generators"): GuideHelp(
         "The inverse of the form matrix — it converts your mapping's generators back to the "
         "canonical ones.",
         page="Projection", anchor="Form matrix"),
     ("canonical", "canonical_generators"): GuideHelp(
         "The form matrix times its inverse — the identity, since changing to your form and "
-        "back leaves things unchanged."),
+        "back leaves things unchanged.",
+        page="Projection", anchor="Form matrix"),
     ("tuning", "canonical_generators"): GuideHelp(
-        "The generator tuning map for the canonical form's generators."),
+        "The generator tuning map for the canonical form's generators.",
+        "Tuning fundamentals", "Generators"),
     ("tuning", "held"): GuideHelp(
         "Each held interval's tempered size — equal to its just size, since the tuning holds "
         "it pure.",
@@ -191,15 +198,19 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "The trivial JI mapping over the superspace's primes — the identity, since each "
         "superspace prime maps to itself."),
     ("tuning", "superspace_primes"): GuideHelp(
-        "The superspace tuning map gives the tempered size in cents of each superspace prime."),
+        "The superspace tuning map gives the tempered size in cents of each superspace prime.",
+        "Tuning fundamentals", "Temperament"),
     ("tuning", "superspace_generators"): GuideHelp(
-        "The size in cents of each superspace generator."),
+        "The size in cents of each superspace generator.",
+        "Tuning fundamentals", "Tuning"),
     ("just", "superspace_primes"): GuideHelp(
         "The superspace just tuning map gives each superspace prime's justly-intoned size "
-        "in cents."),
+        "in cents.",
+        "Tuning fundamentals", "Primes"),
     ("retune", "superspace_primes"): GuideHelp(
         "Each superspace prime's retuning — the change the temperament makes to its tuning, "
-        "from just to tempered."),
+        "from just to tempered.",
+        "Tuning fundamentals", "Retuning map"),
     ("projection", "primes"): GuideHelp(
         "Uniquely identifies a specific tuning of a specific temperament — a rational map "
         "holding its unchanged intervals exactly just.",
@@ -208,7 +219,8 @@ GUIDE_HELP: dict[tuple[str, str], GuideHelp] = {
         "The rational JI interval each generator is tuned to.",
         page="Generator embedding matrix"),
     ("projection", "canonical_generators"): GuideHelp(
-        "The generator embedding for the canonical form's generators."),
+        "The generator embedding for the canonical form's generators.",
+        page="Generator embedding matrix"),
     ("counts", "superspace_primes"): GuideHelp(
         "The count of superspace primes."),
     ("counts", "superspace_generators"): GuideHelp(

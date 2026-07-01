@@ -57,6 +57,7 @@ class CellBox:
     matrix_orient: str = ""
     in_grid: bool = False
     aria: str = ""
+    guide_key: tuple[str, str] | None = None
 
 
 @dataclass(frozen=True)

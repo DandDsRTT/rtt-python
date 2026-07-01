@@ -31,6 +31,13 @@ from rtt.app.layout import Line
 from rtt.app.reconciler import _Reconciler
 
 
+def _tour_step(title):
+    for step in page_assets._TOUR_STEPS:
+        if step["title"] == title:
+            return step
+    raise AssertionError(f"no tour step titled {title!r}")
+
+
 class _FakeElement:
     """A stand-in for a ui element with just the .delete() drop() calls."""
 
@@ -397,6 +404,62 @@ class TestWebAppSmoke4:
         assert page_assets._TOUR_JS.strip(), "tour.js not loaded"
         assert ".rtt-tour-card" in page_assets._CSS, "tour.css not folded into the page stylesheet"
         assert "tour" in tooltips.CHROME_HELP
+
+    def test_first_content_slide_motivates_before_it_names_and_defers_the_equation(self):
+        body = _tour_step("Reading the grid")["body"]
+        assert "𝒈𝑀" not in body and "𝒕 =" not in body, "the orientation slide for an absolute newcomer # must motivate before it names — defer the 𝒕 = 𝒈𝑀 matrix equation to a later, symbol-introducing step"
+        assert "cents" in body, "it still teaches the read-a-column-down flow, ending at the size in cents"
+
+    def test_try_it_step_spotlights_a_real_editable_mapping_cell(self):
+        from rtt.app import ids
+        step = _tour_step("Try an edit")
+        assert step.get("interact") is True, "the app teaches by doing, so one step invites a real edit — # tour.js drops the scrim's pointer-events on interact steps so the click reaches the grid"
+        assert step["selector"].startswith(".rtt-cell") and "cell:mapping:" in step["selector"]
+        assert ids.mapping_cell("0", 0).startswith("cell:mapping:"), "the selector must match a real # editable mapping cell id, not a test-only .mark()"
+        assert "interact" in page_assets._TOUR_JS, "tour.js must honour the interact flag"
+
+    def test_tile_features_step_names_only_parts_visible_at_the_first_run_chapter(self):
+        body = _tour_step("Tile features")["body"]
+        assert "units" not in body, "units reveals only at chapter 5 — past the first-run tour chapter — so the # dummy tile shows no units line; the step must not point at a part the learner cannot see or click"
+        for part in ("name", "symbol", "value"):
+            assert part in body
+        tour_chapter = app._initial_chapter({})
+        assert tour_chapter == show_settings.CHAPTER_MIN, "a genuinely-new browser opens at the tour's # start-small chapter"
+        assert show_settings.reveal_chapter("units") > tour_chapter
+        for key in ("names", "symbols", "quantities"):
+            assert show_settings.reveal_chapter(key) <= tour_chapter
+
+    def test_show_toggles_step_frames_toggles_as_decluttering_not_starting_small(self):
+        body = _tour_step("The Show toggles")["body"]
+        assert "start small" not in body.lower(), "the app ships a deliberately full default, so 'start small # and build up' contradicted what the learner sees — reframe the toggles as a way to simplify"
+        assert "declutter" in body.lower() or "simplif" in body.lower()
+        on_by_default = [key for key, value in show_settings.defaults().items() if value is True]
+        assert len(on_by_default) >= 6, "the default Show state really is rich (many layers on), so # 'declutter' is the honest framing the copy must match"
+
+    def test_tour_autostart_is_desktop_first_but_replay_is_always_available(self):
+        js = page_assets._TOUR_JS
+        assert "AUTOSTART_MIN_WIDTH" in js and "wideEnough" in js
+        assert "config.autostart && !seen() && wideEnough()" in js, "autostart is gated on viewport width"
+        assert "window.rttTour.start = start" in js, "the ? replay button (start) stays available at any width"
+
+    def test_tour_exposes_forget_to_clear_the_seen_flag(self):
+        js = page_assets._TOUR_JS
+        assert "function forget()" in js and "removeItem(SEEN_KEY)" in js
+        assert "window.rttTour.forget = forget" in js
+
+    def test_reset_clears_the_tour_seen_flag_so_first_run_onboarding_returns(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(app, "_doc_store", lambda: {})
+        monkeypatch.setattr(app.ui, "run_javascript", lambda js, *a, **k: calls.append(js))
+        page = app._Page.__new__(app._Page)
+        page.runtime = SimpleNamespace(
+            chapter=4, set_chapter=lambda v: setattr(page.runtime, "chapter", v)
+        )
+        page.editor = SimpleNamespace(reset=lambda: None)
+        page.edits = SimpleNamespace(act=lambda fn: fn())
+        page.apply_chapter = lambda: None
+        app._Page.reset_everything(page)
+        assert any("rttTour" in js and "forget" in js for js in calls), "Reset must also clear rttTourSeen # (window.rttTour.forget) so 'reset to defaults' genuinely restores the first-run onboarding, not just # the grid"
 
     def test_reconciler_callback_protocol_matches_marked_methods_exactly(self):
         from rtt.app.reconciler import required_callback_names
