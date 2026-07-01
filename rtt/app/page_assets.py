@@ -290,11 +290,10 @@ _TOUR_STEPS = [
     {
         "selector": "",
         "title": "Reading the grid",
-        "body": "The grid sets intervals alongside the temperament objects that act on them, so you "
-        "can see how they relate. Follow a column down to watch an interval flow through the "
-        "temperament — the mapping 𝑀 sends it to a count of generators, then the tuning turns "
-        "that into cents. Each value's symbol and its equation (like 𝒕 = 𝒈𝑀) name the product "
-        "behind it.",
+        "body": "Each column follows one interval; the rows are what the temperament does to it. "
+        "Read a column top to bottom to watch that interval flow through — from a plain frequency "
+        "ratio up top down to its size in cents at the tuning. The pieces that carry it there, like "
+        "the mapping and the tuning, get introduced by name as we go.",
     },
     {
         "selector": ".rtt-zoomable",
@@ -302,6 +301,15 @@ _TOUR_STEPS = [
         "title": "The value cells",
         "body": "Most of the grid is computed values. Cells drawn with a box are editable — type a "
         "new value and the whole grid recomputes.",
+    },
+    {
+        "selector": '.rtt-cell[data-eid^="cell:mapping:"]',
+        "place": "bottom",
+        "interact": True,
+        "title": "Try an edit",
+        "body": "Your turn: the boxed numbers in the mapping are editable. Click one, type a "
+        "different whole number, and press Enter — the whole grid recomputes around your new "
+        "temperament. <b>Undo</b> up top always steps back.",
     },
     {
         "selector": ".rtt-fan-button",
@@ -341,8 +349,8 @@ _TOUR_STEPS = [
         "open": True,
         "title": "Tile features",
         "body": "This sample tile is a live menu: click any part of it — the name, the symbol, the "
-        "closed form, the units — to show or hide that feature across the whole grid. The "
-        "audio controls up top drive every speaker.",
+        "value — to show or hide that feature across the whole grid. The audio controls up top "
+        "drive every speaker.",
     },
     {
         "selector": ".rtt-show-scroll .rtt-show-group:last-child",
@@ -350,8 +358,9 @@ _TOUR_STEPS = [
         "open": True,
         "title": "The Show toggles",
         "body": "These checkboxes reveal each kind of feature — not only extra rows and columns, but "
-        "the controls that come with them and which cells you can edit. Turn things on as you "
-        "need them — start small and build up.",
+        "the controls that come with them and which cells you can edit. The grid starts "
+        "deliberately full; untick anything you don't need to declutter, and tick more back on as "
+        "you explore.",
     },
     {
         "selector": "",

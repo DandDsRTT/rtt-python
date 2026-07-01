@@ -13,6 +13,18 @@ _GUIDE_DIR = Path(__file__).resolve().parents[3] / "guide" / \
     "Dave Keenan & Douglas Blumeyer's guide to RTT"
 
 
+# GUIDE_HELP tiles with no guide home — a small, deliberately-reviewed list, NOT an accidental gap.
+# Each is either a bare count with no dedicated section, an app-only tracking feature (intervals of
+# interest), or the trivial superspace JI identity. Everything else must carry a guide link.
+_NO_GUIDE_SECTION = frozenset({
+    ("counts", "targets"),
+    ("counts", "superspace_primes"),
+    ("counts", "superspace_generators"),
+    ("vectors", "interest"),
+    ("superspace_vectors", "superspace_primes"),
+})
+
+
 def _chapter_text(chapter: str) -> str:
     matches = [f for f in _GUIDE_DIR.iterdir() if f.name.endswith(chapter)]
     assert len(matches) == 1, f"no unique guide file for chapter {chapter!r}: {matches}"
@@ -246,3 +258,19 @@ class TestWebTooltips:
             assert (row_key, column_key) in captioned, f"{(row_key, column_key)} is not a captioned tile"
             assert tooltips.tile_guide_help(row_key, column_key) is gh
         assert tooltips.tile_guide_help("mapping", "nonsense") is None
+
+    def test_every_guide_help_entry_links_out_or_is_a_reviewed_gap(self):
+        for key, gh in tooltips.GUIDE_HELP.items():
+            has_link = bool(gh.url)
+            reviewed_gap = key in _NO_GUIDE_SECTION
+            assert has_link != reviewed_gap, (
+                f"{key}: every GUIDE_HELP entry must EITHER carry a guide link (chapter/section "
+                "or page/anchor) OR be listed in NO_GUIDE_SECTION as a deliberate, reviewed gap — "
+                "never both, never neither. A learner hovering a guided tile expects the 'read more' "
+                "link; a silent hole is unpredictable. Add a guide home in rtt/app/tooltips.py, or "
+                "review the gap into NO_GUIDE_SECTION here.")
+
+    def test_no_guide_section_lists_only_homeless_tiles(self):
+        for key in _NO_GUIDE_SECTION:
+            assert key in tooltips.GUIDE_HELP, f"{key} in NO_GUIDE_SECTION but not a GUIDE_HELP tile"
+            assert not tooltips.GUIDE_HELP[key].url, f"{key} has a guide link — drop it from NO_GUIDE_SECTION"

@@ -67,18 +67,27 @@ def attach_hover_help(reconciler, wrap, cell_box) -> None:
         else:
             wrap.tooltip(help_text)
     if cell_box.kind in ("symbol", "caption"):
-        guide_help = tooltips.tile_guide_help_for_cell(cell_box.id)
-        if guide_help is not None:
-            guide_help_pretransform = tooltips.tile_guide_help_for_cell(
-                cell_box.id, pretransform=True
-            )
-            text = guide_help_pretransform.text if reconciler.pretransform else guide_help.text
-            attach_guide_link(wrap, guide_help, cell_box.id.split(":", 1)[1], text)
-            if guide_help.text != guide_help_pretransform.text:
-                reconciler.cells[cell_box.id].guide_help_text = (
-                    guide_help.text,
-                    guide_help_pretransform.text,
-                )
+        parts = cell_box.id.split(":")
+        if len(parts) == 3:
+            _attach_tile_guide(reconciler, wrap, cell_box, parts[1], parts[2])
+    elif cell_box.kind in VALUE_KINDS and cell_box.guide_key is not None:
+        _attach_tile_guide(reconciler, wrap, cell_box, *cell_box.guide_key)
+
+
+def _attach_tile_guide(reconciler, wrap, cell_box, row_key, column_key) -> None:
+    guide_help = tooltips.tile_guide_help(row_key, column_key)
+    if guide_help is None:
+        return
+    guide_help_pretransform = tooltips.tile_guide_help_for_cell(
+        f"caption:{row_key}:{column_key}", pretransform=True
+    )
+    text = guide_help_pretransform.text if reconciler.pretransform else guide_help.text
+    attach_guide_link(wrap, guide_help, f"{row_key}:{column_key}", text)
+    if guide_help.text != guide_help_pretransform.text:
+        reconciler.cells[cell_box.id].guide_help_text = (
+            guide_help.text,
+            guide_help_pretransform.text,
+        )
 
 
 def draft_cancel_eid(cell_box):

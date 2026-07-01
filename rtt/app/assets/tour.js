@@ -22,6 +22,7 @@
   var PAD = 6;            // px breathing room the spotlight leaves around the target
   var GAP = 14;           // px gap between the spotlight and the card
   var EDGE = 12;          // px viewport inset the card is clamped within
+  var AUTOSTART_MIN_WIDTH = 760;   // below this the grid can't show the column relationships the tour teaches
 
   var config = window.rttTour || {};
   var steps = Array.isArray(config.steps) ? config.steps : [];
@@ -137,6 +138,11 @@
     root.querySelector(".rtt-tour-next").textContent =
       index === steps.length - 1 ? "Done" : "Next";
 
+    // an `interact` step invites the learner to actually use the spotlit control, so the
+    // click-swallowing scrim must let clicks through to the page (the card's own buttons sit above it)
+    var block = root.querySelector(".rtt-tour-block");
+    if (block) block.style.pointerEvents = step.interact ? "none" : "";
+
     // bring the target into view first, then settle the spotlight/card once it's stopped moving
     var element = step.selector ? document.querySelector(step.selector) : null;
     if (element && element.scrollIntoView) element.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -155,6 +161,10 @@
     index = -1;
   }
 
+  function forget() {
+    try { localStorage.removeItem(SEEN_KEY); } catch (e) { /* private mode: nothing to clear */ }
+  }
+
   function onKey(e) {
     if (!root) return;
     if (e.key === "Escape") { stop(); }
@@ -170,16 +180,24 @@
   window.rttTour.steps = steps;
   window.rttTour.start = start;
   window.rttTour.stop = stop;
+  window.rttTour.forget = forget;
 
   function seen() {
     try { return localStorage.getItem(SEEN_KEY) === "1"; } catch (e) { return false; }
+  }
+
+  // The tour is a desktop-first experience: it teaches by pointing at columns/rows a phone-width
+  // viewport can only show one at a time, so autostart is skipped when the window is too narrow to
+  // read those relationships. The ? replay button still starts it on demand at any width.
+  function wideEnough() {
+    return !window.innerWidth || window.innerWidth >= AUTOSTART_MIN_WIDTH;
   }
 
   // the moving-spotlight autostart is motion; skip it when the OS asks to reduce motion (the ? button
   // still replays on demand). A first-load-only per-browser walkthrough, so respecting the pref here
   // costs nothing a user who wants it can't recover.
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (config.autostart && !seen() && !reduceMotion) {
+  if (config.autostart && !seen() && !reduceMotion && wideEnough()) {
     // let the grid finish its first render (the layout settles a beat after load) before the
     // spotlight measures anything
     setTimeout(function () { if (!seen()) start(); }, 700);

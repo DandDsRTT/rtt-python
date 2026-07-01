@@ -39,6 +39,14 @@ _log = logging.getLogger(__name__)
 _SIMULATED_PAGES: list = []
 
 
+def _initial_chapter(store: dict) -> int:
+    if _CHAPTER_KEY in store:
+        return store[_CHAPTER_KEY]
+    if _STORE_KEY in store:
+        return show_settings.CHAPTER_DEFAULT
+    return show_settings.CHAPTER_MIN
+
+
 class _Page:
     def __init__(self, state: str | None = None) -> None:
         self.runtime = PageRuntime()
@@ -83,7 +91,7 @@ class _Page:
     def _load_document(self, state: str | None) -> bool:
         self.runtime.dark_mode = bool(_doc_store().get(_DARK_KEY, False))
         self.apply_theme()
-        self.runtime.set_chapter(_doc_store().get(_CHAPTER_KEY, show_settings.CHAPTER_DEFAULT))
+        self.runtime.set_chapter(_initial_chapter(_doc_store()))
         self.editor = Editor()
         loaded_from_url = False
         if state:
@@ -210,6 +218,7 @@ class _Page:
         _doc_store()[_CHAPTER_KEY] = self.runtime.chapter
         self.edits.act(self.editor.reset)
         self.apply_chapter()
+        ui.run_javascript("window.rttTour && window.rttTour.forget()")
 
     def _on_disconnect(self):
         if self.edits.tuning.target_limit_commit is not None:

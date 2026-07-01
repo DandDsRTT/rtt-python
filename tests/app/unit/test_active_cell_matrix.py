@@ -1,4 +1,4 @@
-from rtt.app import service, settings, spreadsheet
+from rtt.app import service, settings, spreadsheet, tooltips
 from rtt.app.service.text_conventions import EBK_CONVENTIONS, matrix_orient
 
 
@@ -46,3 +46,14 @@ class TestActiveCellMatrix:
     def test_prescaling_primes_orientation_depends_on_the_superspace_flag(self):
         assert matrix_orient("prescaling", "primes") == "row"
         assert matrix_orient("prescaling", "primes", superspace=True) == "col"
+
+    def test_value_cells_in_linked_tiles_carry_the_tile_guide_key(self):
+        keyed = {c.guide_key for c in _all_on_cells() if c.guide_key is not None}
+        assert ("mapping", "primes") in keyed, "a mapping-matrix value cell should point at its # guide tile so hovering the number, not just the caption, offers the deep dive"
+        assert ("tuning", "generators") in keyed
+
+    def test_guide_keys_only_name_tiles_that_actually_link_out(self):
+        for c in _all_on_cells():
+            if c.guide_key is not None:
+                gh = tooltips.GUIDE_HELP.get(c.guide_key)
+                assert gh is not None and gh.url, f"{c.id} stamped guide_key {c.guide_key} with no guide link"
