@@ -60,8 +60,12 @@ class TestCanonicalForms:
         assert service.canonical_mapping([[1, 0, -4], [0, 1, 4]]) == ((1, 0, -4), (0, 1, 4))
 
     def test_form_matrix_is_the_generator_change_of_basis_to_canonical(self):
-        assert service.form_matrix([[1, 1, 0], [0, 1, 4]]) == ((1, -1), (0, 1))
+        assert service.form_matrix([[1, 1, 0], [0, 1, 4]]) == ((1, 1), (0, 1))
         assert service.form_matrix([[1, 0, -4], [0, 1, 4]]) == ((1, 0), (0, 1))
+
+    def test_inverse_form_matrix_is_the_change_of_basis_from_canonical(self):
+        assert service.inverse_form_matrix([[1, 1, 0], [0, 1, 4]]) == ((1, -1), (0, 1))
+        assert service.inverse_form_matrix([[1, 0, -4], [0, 1, 4]]) == ((1, 0), (0, 1))
 
     def test_canonical_comma_basis_defactors_and_canonicalizes(self):
         assert service.canonical_comma_basis([[-8, 8, -2]]) == ((4, -4, 1),)

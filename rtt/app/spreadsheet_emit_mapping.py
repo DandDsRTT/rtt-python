@@ -262,10 +262,10 @@ def emit_canonical_band(resolved, geometry, context) -> EmitResult:
     if query.row_open(geometry, context.collapsed, "canonical"):
         _emit_canonical_generators(cells, resolved, geometry, context)
         _emit_canonical_primes(cells, resolved, geometry, context)
-        _emit_canonical_form(cells, resolved, geometry, context)
+        _emit_canonical_inverse_form(cells, resolved, geometry, context)
         for i in range(resolved.dimensions.canonical_rank):
             _emit_canonical_row(cells, resolved, geometry, context, i)
-    _emit_canonical_finv(cells, resolved, geometry, context)
+    _emit_canonical_form(cells, resolved, geometry, context)
     return EmitResult(cells=tuple(cells))
 
 
@@ -282,11 +282,11 @@ def _emit_canonical_primes(cells, resolved, geometry, context) -> None:
                 cells.append(CellBox(f"cell:canonical:{i}:{p}", query.prime_left(geometry, p), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.canonical.mapping[i][p]), generator=i, prime=p, unit=query.cell_unit(resolved, "canonical", "primes", generator=i, prime=p)))
 
 
-def _emit_canonical_form(cells, resolved, geometry, context) -> None:
+def _emit_canonical_inverse_form(cells, resolved, geometry, context) -> None:
     if query.tile_open(geometry, context.collapsed, "canonical", "generators"):
-        for i in range(len(resolved.canonical.form_M)):
-            for j in range(len(resolved.canonical.form_M)):
-                cells.append(CellBox(f"cell:form:{i}:{j}", query.generator_left(geometry, j), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.canonical.form_M[i][j]), unit=query.cell_unit(resolved, "canonical", "generators", generator=i)))
+        for i in range(len(resolved.canonical.inverse_form_M)):
+            for j in range(len(resolved.canonical.inverse_form_M)):
+                cells.append(CellBox(f"cell:inverse_form:{i}:{j}", query.generator_left(geometry, j), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.canonical.inverse_form_M[i][j]), unit=query.cell_unit(resolved, "canonical", "generators", generator=i)))
 
 
 def _emit_canonical_row(cells, resolved, geometry, context, i) -> None:
@@ -314,9 +314,9 @@ def _emit_canonical_comma_row(cells, resolved, geometry, i) -> None:
         cells.append(CellBox(f"cell:canonical_mapped_unchanged:{i}:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=ut, generator=i, unit=query.cell_unit(resolved, "canonical", "commas", generator=i)))
 
 
-def _emit_canonical_finv(cells, resolved, geometry, context) -> None:
+def _emit_canonical_form(cells, resolved, geometry, context) -> None:
     if query.tile_open(geometry, context.collapsed, "mapping", "canonical_generators"):
         for i in range(resolved.dimensions.rank):
             for j in range(resolved.dimensions.canonical_rank):
-                cells.append(CellBox(f"cell:finv:{i}:{j}", query.canonical_generator_left(geometry, j), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT,
-                                     "form_cell", text=str(resolved.canonical.inverse_form_M[i][j]), unit=query.cell_unit(resolved, "mapping", "canonical_generators", generator=i)))
+                cells.append(CellBox(f"cell:form:{i}:{j}", query.canonical_generator_left(geometry, j), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT,
+                                     "form_cell", text=str(resolved.canonical.form_M[i][j]), unit=query.cell_unit(resolved, "mapping", "canonical_generators", generator=i)))

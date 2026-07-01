@@ -73,7 +73,7 @@ class TestPerCellAudio:
             "vec", "unchanged_cell", "element_cell", "element_ratio", "generator_ratio", "mapped",
         }
         not_a_pitch = (
-            "cell:mapping", "cell:canonical:", "cell:form", "cell:finv", "cell:scaling",
+            "cell:mapping", "cell:canonical:", "cell:inverse_form", "cell:form", "cell:scaling",
             "cell:vec:primes", "retune:", "damage:", "weight:", "optimization:",
             "cell:proj:", "cell:embed_sl", "cell:proj_sl", "cell:ss",
             "cell:selfmap", "cell:fcancel",
@@ -236,7 +236,7 @@ class TestPerCellAudio:
         assert any(cell_id.startswith("cell:canonical:") for cell_id in tiles)
         canonical_tiles = _canonical_cells(symbols=True, form=True, form_tiles=True)
         assert not any(cell_id.startswith("cell:canonical:") for cell_id in canonical_tiles)
-        assert not any(cell_id.startswith("cell:finv:") for cell_id in canonical_tiles)
+        assert not any(cell_id.startswith("cell:form:") for cell_id in canonical_tiles)
         assert not any(":canonical_generators" in cell_id for cell_id in canonical_tiles)
 
     def test_form_box_shows_the_mapping_decomposition_equivalence_only_when_noncanonical(self):
@@ -268,7 +268,7 @@ class TestPerCellAudio:
     def test_canonical_mapping_row_renders_its_mapped_product_tiles(self):
         M = ((1, 1, 0), (0, 1, 4))
         Mc = service.canonical_mapping(M)
-        F = service.form_matrix(M)
+        F = service.inverse_form_matrix(M)
         held = [(-1, 1, 0)]
         interest = ((1, -2, 1),)
         s = settings.defaults()

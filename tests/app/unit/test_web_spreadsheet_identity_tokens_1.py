@@ -576,13 +576,13 @@ class TestFormBox:
 
     def test_form_box_shows_the_inverse_form_matrix_over_the_generators(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}
-        assert cells["cell:form:0:0"].text == "1" and cells["cell:form:0:1"].text == "-1", "the canonical row's generators tile is 𝐹⁻¹ (𝑀_C = 𝐹⁻¹𝑀, g_C/g) — read-only; the EDITABLE 𝐹 (𝑀 = 𝐹𝑀_C) # rides the mapping row's canonical-generators column instead. For ((1,1,0),(0,1,4)), 𝐹⁻¹ = ((1,-1),(0,1))"
-        assert cells["cell:form:1:0"].text == "0" and cells["cell:form:1:1"].text == "1"
-        assert cells["cell:form:0:0"].kind == "mapped"
+        assert cells["cell:inverse_form:0:0"].text == "1" and cells["cell:inverse_form:0:1"].text == "-1", "the canonical row's generators tile is 𝐹⁻¹ (𝑀_C = 𝐹⁻¹𝑀, g_C/g) — read-only; the EDITABLE 𝐹 (𝑀 = 𝐹𝑀_C) # rides the mapping row's canonical-generators column instead. For ((1,1,0),(0,1,4)), 𝐹⁻¹ = ((1,-1),(0,1))"
+        assert cells["cell:inverse_form:1:0"].text == "0" and cells["cell:inverse_form:1:1"].text == "1"
+        assert cells["cell:inverse_form:0:0"].kind == "mapped"
         assert cells["caption:canonical:generators"].text == "inverse generator form matrix"
-        assert cells["bracket:form:map:0:l"].text == "{" and cells["bracket:form:map:0:r"].text == "]"
+        assert cells["bracket:inverse_form:map:0:l"].text == "{" and cells["bracket:inverse_form:map:0:r"].text == "]"
         assert "ebktop:form" in cells and "ebkbrace:form" in cells
-        assert not any(c.id.startswith("cell:form:") for c in _layout().cells)
+        assert not any(c.id.startswith("cell:inverse_form:") for c in _layout().cells)
 
     def test_canonical_generators_column_sits_between_units_and_generators(self):
         cells = {c.id: c for c in _with(form_tiles=True).cells}

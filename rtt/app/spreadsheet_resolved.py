@@ -55,8 +55,8 @@ class Tuning:
 class Canon:
     mapping: object
     generators: object
-    form_M: object
     inverse_form_M: object
+    form_M: object
     mapping_form_key: object
     comma_basis_form_key: object
     form_is_canonical: bool
@@ -265,8 +265,8 @@ def _canonical(b) -> Canon:
     return Canon(
         mapping=b.canonical_mapping,
         generators=b.canonical_generators,
-        form_M=b.form_M,
         inverse_form_M=b.inverse_form_M,
+        form_M=b.form_M,
         mapping_form_key=b.mapping_form_key,
         comma_basis_form_key=b.comma_basis_form_key,
         form_is_canonical=b.form_is_canonical,

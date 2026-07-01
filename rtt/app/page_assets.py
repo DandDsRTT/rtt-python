@@ -249,7 +249,7 @@ def _vgroup_key(cell_box: spreadsheet.CellBox) -> str:
     if cell_box.kind in ("mapping", "target_cell"):
         return cell_box.id.rsplit(":", 1)[0]
     if cell_box.kind == "form_cell":
-        return "cell:finv"
+        return "cell:form"
     parts = cell_box.id.split(":")
     return ":".join(parts[:2] + parts[3:])
 
