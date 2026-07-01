@@ -11,7 +11,8 @@ html, body { overscroll-behavior-x: none; }
    --hl-scale lightens LESS in dark (dark cell text is light, see rtt-dark.css). These are theme-level
    so they live here; --hl and --cell-fill, which read the PER-CELL --rtt-hl, must be declared on
    .rtt-cell (not here) or var(--rtt-hl) would bind to :root's 0 and inherit frozen. */
-:root { --cell-bg:#f4f6f9; --hl-scale:1; }
+:root { --cell-bg:#f4f6f9; --hl-scale:1; --hl-ring-w:2px; --hl-wash:14%;
+        --tile-border:#8a8a8a; --inset-box:#d4d4d4; --show-col1:160px; --show-row-h:26px; }
 
 /* the grid's frozen top-left corner holds the undo/redo/reset/share/tour button bank (the app
    title moved to the settings sidebar). The light-grey bank hugs its buttons with an equal 6px
@@ -299,7 +300,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
              transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
 /* the nested tuning-ranges box: a thin-bordered frame on the generator tuning map tile
    (per the mockup), above the grey tile but below the chart/selector cells */
-.rtt-block-boxed { position:absolute; z-index:2; background:#e8e8e8; border:1px solid #8a8a8a;
+.rtt-block-boxed { position:absolute; z-index:2; background:var(--inset-box); border:1px solid var(--tile-border);
              opacity:1;
              transition:transform var(--t), width var(--t), height var(--t), opacity var(--t); }
 .rtt-cell { position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
@@ -337,9 +338,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the EBK-off transpose mark ᵀ: a small superscript at a vector matrix's top-right corner (its box
    sits in the top frame band, anchored at the matrix's right edge), top-left aligned so the glyph
    hugs the closing ] above the cells. Greens with a draft column (rtt-pending) like the brackets. */
-.rtt-transpose { width:100%; color:#1a1a1a; font-size:11px; line-height:1; white-space:nowrap;
+.rtt-transpose { width:100%; color:var(--ebk-mark); font-size:11px; line-height:1; white-space:nowrap;
                  display:flex; align-items:flex-start; justify-content:flex-start; pointer-events:none; }
-.rtt-transpose.rtt-pending { color:#2e9e3f; }
+.rtt-transpose.rtt-pending { color:var(--pending-color); }
 /* Every numeric surface uses TABULAR, LINING figures, so a column of integers in a matrix shares
    one baseline and one advance width and scans as data — the figure style a spreadsheet needs.
    This was a silent no-op under the old Georgia fallback (its only figures are old-style
@@ -398,7 +399,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    Its font-size is set inline per box too, so the value stays on one line. */
 .rtt-plain-text-edit { width:100%; height:100%; }
 .rtt-plain-text-edit .q-field__control { min-height:0 !important; height:100%;
-            background:#fff; border:1px solid #8a8a8a; border-radius:2px; padding:0 3px; }
+            background:#fff; border:1px solid var(--tile-border); border-radius:2px; padding:0 3px; }
 .rtt-plain-text-edit .q-field__control::before, .rtt-plain-text-edit .q-field__control::after { display:none !important; }
 .rtt-plain-text-edit .q-field__native { color:#000; min-height:0 !important; padding:0; text-align:center;
             line-height:var(--plain-text-edit-h); white-space:nowrap; font-size:inherit !important;
@@ -461,12 +462,12 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the preset chooser dropdowns: a compact bordered q-select that fills its
    PRESET_H cell, with a thin grey rule and a small caret — like the mockup */
 .rtt-preset { width:100%; }
-.rtt-preset .q-field__control { min-height:0 !important; height:30px;
+.rtt-preset .q-field__control { min-height:0 !important; height:var(--preset-h);
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px 0 6px; }
 .rtt-preset .q-field__control::before, .rtt-preset .q-field__control::after { display:none !important; }
 .rtt-preset .q-field__native, .rtt-preset .q-field__input { font-size:13px; color:#000;
-            min-height:0 !important; padding:0; line-height:30px; font-family:var(--rtt-serif); }
-.rtt-preset .q-field__marginal, .rtt-preset .q-field__append { height:30px; min-height:0 !important; }
+            min-height:0 !important; padding:0; line-height:var(--preset-h); font-family:var(--rtt-serif); }
+.rtt-preset .q-field__marginal, .rtt-preset .q-field__append { height:var(--preset-h); min-height:0 !important; }
 .rtt-preset .q-icon { font-size:15px; color:#555; }
 /* a LOCKED chooser -- set_enabled(False), so Quasar's `q-field--disabled` (the all-interval
    weight-slope chooser, pinned to simplicity; the locked target chooser likewise). Quasar only
@@ -584,10 +585,10 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-select-popup .q-item.disabled .q-item__label::after { content:""; flex:1;
             border-top:1px solid #777; }
 /* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
-.rtt-preset-target { width:100%; height:30px; display:flex; gap:0; align-items:center; }
-.rtt-preset-target .rtt-preset-number { flex:0 0 30px; }  /* a gridded value square (COLUMN_WIDTH x ROW_HEIGHT), touching the select */
+.rtt-preset-target { width:100%; height:var(--preset-h); display:flex; gap:0; align-items:center; }
+.rtt-preset-target .rtt-preset-number { flex:0 0 var(--preset-h); }  /* a gridded value square (COLUMN_WIDTH x ROW_HEIGHT), touching the select */
 .rtt-preset-target .rtt-preset { flex:1 1 auto; width:auto; }
-.rtt-preset-number .q-field__control { min-height:0 !important; height:30px;
+.rtt-preset-number .q-field__control { min-height:0 !important; height:var(--preset-h);
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px; }
 /* an invalid limit -- an even odd-limit-diamond (OLD) limit -- is flagged unmistakably red: the
    number itself, the field's border, and a red fill that highlights the whole square (a thin border
@@ -626,17 +627,9 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-zoom-help { width:max-content; max-width:210px; background:#757575; color:#fafafa; border-radius:4px;
             padding:4px 8px; font-size:9px; line-height:1.35;
             font-family:Roboto,-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif; }
-/* when the target chooser is LOCKED (all-interval), its numeric square greys with its family
-   select -- the same flat #d6d6d6 disabled fill -- so the two parts read as one dead unit, not a
-   grey dropdown beside a still-white box. (Matches the .rtt-preset disabled rule above.) */
-.rtt-preset-number.q-field--disabled .q-field__control { background:#d6d6d6; border-color:#bbb; }
-/* its value AND its "-" placeholder grey to the same disabled #999 as the family select's value */
-.rtt-preset-number.q-field--disabled .q-field__native,
-.rtt-preset-number.q-field--disabled .q-field__native::placeholder { color:#999; }
-.rtt-preset-number.q-field--disabled, .rtt-preset-number.q-field--disabled * { user-select:none !important; }
 .rtt-preset-number .q-field__control::before, .rtt-preset-number .q-field__control::after { display:none !important; }
 .rtt-preset-number .q-field__native { font-size:var(--cell-font); color:#000; min-height:0 !important; padding:0;
-            line-height:30px; text-align:center; font-family:var(--rtt-serif); }
+            line-height:var(--preset-h); text-align:center; font-family:var(--rtt-serif); }
 .rtt-preset-number .q-field__native::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 /* the "-" placeholder (shown when the limit blanks — an overridden target list) reads like a
    real value, matching the family select's display-value "-", not a greyed prompt */
@@ -751,8 +744,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* fraction-cell state colours: the green draft (on the WRAP) and the amber edit-preview reuse the
    blanket text rules already on .q-field__native (no overlay face to double, so no transparent-while-
    unfocused exception is needed); only the bar needs its own colour. */
-.rtt-fraction-cell.rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
-            background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
+.rtt-fraction-cell.rtt-pending { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--pending-color);
+            background:color-mix(in srgb, var(--pending-color) var(--hl-wash), transparent); }
 .rtt-fraction-cell.rtt-pending .q-field__native { color:var(--pending-color) !important; }
 .rtt-fraction-cell.rtt-pending .rtt-fraction-bar { background:var(--pending-color); }
 .rtt-cell.rtt-preview-change .rtt-fraction-bar { background:var(--preview-text-color) !important; }
@@ -786,8 +779,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 .rtt-decimal-edit[data-decmode="int"] .rtt-decimal-whole-input .q-field__native { font-size:var(--dec-whole-font, var(--cell-font)); }
 /* decimal-cell state colours: the green draft (on the WRAP) reuses the blanket .q-field__native text
    rule (no overlay face to double), like the fraction cell. */
-.rtt-decimal-cell.rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
-            background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
+.rtt-decimal-cell.rtt-pending { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--pending-color);
+            background:color-mix(in srgb, var(--pending-color) var(--hl-wash), transparent); }
 .rtt-decimal-cell.rtt-pending .q-field__native { color:var(--pending-color) !important; }
 /* per-cell unit (the units toggle): lift the stacked value to clear the unit pinned at the cell's
    bottom, and keep the unit's input-padding rule (above) off the dec fields' tight stack. */
@@ -799,8 +792,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    creating, amber = changing, red = deleting/invalid.) Empty until the user types a valid
    independent comma, at which point it commits and reverts to a normal black cell. Repeated on the
    .q-field__control because the input's opaque white fill would otherwise hide the wrap's highlight. */
-.rtt-cell-input-field.rtt-pending .q-field__control { box-shadow:inset 0 0 0 2px var(--pending-color);
-            background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
+.rtt-cell-input-field.rtt-pending .q-field__control { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--pending-color);
+            background:color-mix(in srgb, var(--pending-color) var(--hl-wash), transparent); }
 .rtt-cell-input-field.rtt-pending .q-field__native { color:var(--pending-text-color) !important; }
 /* a pending comma's "?" quantity (and the draft vector in the plain text), in the same DARK
    green as its draft cells' text — the ring/brackets keep the lighter --pending-color */
@@ -808,8 +801,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* a pending draft's editable "?/?" ratio (the wrap carries rtt-pending): the same green ring + wash
    on its input frame, with the stacked ?/? fraction face green — until a valid fraction (or the
    vector cells) fills it. */
-.rtt-cell-input.rtt-pending .q-field__control { box-shadow:inset 0 0 0 2px var(--pending-color);
-            background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
+.rtt-cell-input.rtt-pending .q-field__control { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--pending-color);
+            background:color-mix(in srgb, var(--pending-color) var(--hl-wash), transparent); }
 .rtt-cell-input.rtt-pending .rtt-fraction-numerator,
 .rtt-cell-input.rtt-pending .rtt-fraction-denominator { color:var(--pending-text-color) !important; }
 .rtt-cell-input.rtt-pending .rtt-fraction-numerator { border-bottom-color:var(--pending-text-color) !important; }
@@ -823,8 +816,8 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    never double-rings the editable draft cells (which carry their own .rtt-cell-input-field/.rtt-cell-input
    green ring) — with the same green inset ring + faint wash the amber preview-change / red
    preview-remove plain cells use. The placeholders are blank, so no text colour is needed. */
-.rtt-cell:not(.rtt-cell-input).rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
-            background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
+.rtt-cell:not(.rtt-cell-input).rtt-pending { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--pending-color);
+            background:color-mix(in srgb, var(--pending-color) var(--hl-wash), transparent); }
 /* selected text inside a green draft field: with no explicit ::selection the browser paints its
    own default (a pale system blue) highlight, which all but vanishes over the faint 14% green wash —
    you can't tell what is selected. Paint the selection in the pending green instead — darkened 80%
@@ -840,13 +833,13 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    pending and red remove-preview states. The wash uses color-mix (var single-sourced from --preview-color) and
    simply falls back to transparent — leaving the ring — where unsupported. No transition: it tracks
    the live value, appearing the instant the value does. */
-.rtt-cell.rtt-preview-change { box-shadow:inset 0 0 0 2px var(--preview-color);
-            background:color-mix(in srgb, var(--preview-color) 14%, transparent); }
+.rtt-cell.rtt-preview-change { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--preview-color);
+            background:color-mix(in srgb, var(--preview-color) var(--hl-wash), transparent); }
 /* an EDITABLE cell's opaque white Quasar control (.q-field__control) fills the wrap and would hide
    the ring/wash above (e.g. the row/column a drag-to-combine is dropped onto — its input cells get
    the ring). Repeat the highlight on the control so it shows on input cells too. */
-.rtt-cell.rtt-preview-change .q-field__control { box-shadow:inset 0 0 0 2px var(--preview-color);
-            background:color-mix(in srgb, var(--preview-color) 14%, transparent); }
+.rtt-cell.rtt-preview-change .q-field__control { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--preview-color);
+            background:color-mix(in srgb, var(--preview-color) var(--hl-wash), transparent); }
 /* the changing cell's TEXT, the changing analogue of a draft's green and the remove-preview's red: a
    moved value reads in dark gold (--preview-text-color, the amber ring darkened so it's legible as
    text on the pale wash) — "this changed" — instead of the default black. The blanket * + frac-bar +
@@ -861,10 +854,10 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    removes in RED (they are still on screen, so the user sees exactly what goes away), while the
    cells whose value the re-solve only MOVES keep the amber rtt-preview-change above. Same inset ring
    + faint wash, in red — paired with the amber so the two effects read apart at a glance. */
-.rtt-cell.rtt-preview-remove { box-shadow:inset 0 0 0 2px var(--preview-remove-color);
-            background:color-mix(in srgb, var(--preview-remove-color) 14%, transparent); }
-.rtt-cell.rtt-preview-remove .q-field__control { box-shadow:inset 0 0 0 2px var(--preview-remove-color);
-            background:color-mix(in srgb, var(--preview-remove-color) 14%, transparent); }
+.rtt-cell.rtt-preview-remove { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--preview-remove-color);
+            background:color-mix(in srgb, var(--preview-remove-color) var(--hl-wash), transparent); }
+.rtt-cell.rtt-preview-remove .q-field__control { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--preview-remove-color);
+            background:color-mix(in srgb, var(--preview-remove-color) var(--hl-wash), transparent); }
 /* the going-away cell's TEXT: dark red (--preview-remove-text-color, the red ring darkened so it is
    legible on the pale wash) — "this is going away" — the removing analogue of a draft's dark-green
    and a changing cell's dark-gold text, so a cell a hovered +/- will delete reads dark red instead of
@@ -879,7 +872,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    one colour) but a static box matching the input's frame, holding the committed commas
    in black and the red draft vector — you edit the draft in the red grid cells */
 .rtt-plain-text-pending { width:100%; height:100%; box-sizing:border-box; display:flex;
-            align-items:center; justify-content:center; background:#fff; border:1px solid #8a8a8a;
+            align-items:center; justify-content:center; background:#fff; border:1px solid var(--tile-border);
             border-radius:2px; padding:0 3px; color:#000; white-space:nowrap; overflow:hidden;
             font-family:var(--rtt-serif); }
 /* the fan controls — the +/− add/remove buttons and the fold toggles — are inline-SVG glyphs
@@ -919,8 +912,6 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
             background:linear-gradient(#e6e6e6,#d6d6d6) !important;
             box-shadow:inset 1px 1px 0 rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.08) !important; }
 .rtt-scheme-button-idle .q-btn__content { color:#999 !important; }
-.rtt-scheme-button-idle:hover, .rtt-scheme-button-idle:active { background:linear-gradient(#e6e6e6,#d6d6d6) !important;
-            box-shadow:inset 1px 1px 0 rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.08) !important; }
 /* an in-tile box title (the optimization box's "optimization" header, and every titled
    control box): left-aligned at the top-left of the box (its cell otherwise centres it),
    padded off the left border. One line that overhangs to the right rather than wrapping —
@@ -948,7 +939,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    cursor up onto it never crosses dead space — the mouseout's relatedTarget is the float itself. */
 .rtt-speaker-float { position:fixed; transform:translate(-50%, -100%); z-index:9600; display:none;
     align-items:center; justify-content:center; width:24px; height:24px; background:#fff;
-    border:1px solid #8a8a8a; border-radius:2px; box-shadow:0 1px 4px rgba(0,0,0,0.3);
+    border:1px solid var(--tile-border); border-radius:2px; box-shadow:0 1px 4px rgba(0,0,0,0.3);
     color:#555; cursor:pointer; }
 .rtt-speaker-float.rtt-speaker-float-on { display:flex; }
 .rtt-speaker-float:hover { color:#000; background:#f2f2f2; }
@@ -1047,13 +1038,13 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
                     border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6; padding:3px 7px; }
 .rtt-box-label { font-size:11px; font-weight:bold; line-height:1.05; color:#444; white-space:nowrap; }
 .rtt-box-grid { display:grid; gap:4px; margin-left:auto; }
-.rtt-visual-grid { grid-template-columns:repeat(2, 16px); grid-auto-rows:16px; }
-.rtt-audio-box .rtt-tile-bank { display:grid; grid-template-columns:repeat(3, 16px);
-                                grid-auto-rows:16px; gap:4px; }
-.rtt-vis-control { display:flex; align-items:center; justify-content:center; width:16px; height:16px;
+.rtt-visual-grid { grid-template-columns:repeat(2, var(--option-box)); grid-auto-rows:var(--option-box); }
+.rtt-audio-box .rtt-tile-bank { display:grid; grid-template-columns:repeat(3, var(--option-box));
+                                grid-auto-rows:var(--option-box); gap:4px; }
+.rtt-vis-control { display:flex; align-items:center; justify-content:center; width:var(--option-box); height:var(--option-box);
                 cursor:pointer; }
-.rtt-visual-grid .rtt-darktoggle { width:16px !important; min-width:16px !important;
-                                   height:16px !important; min-height:16px !important; }
+.rtt-visual-grid .rtt-darktoggle { width:var(--option-box) !important; min-width:var(--option-box) !important;
+                                   height:var(--option-box) !important; min-height:var(--option-box) !important; }
 .rtt-visual-grid .rtt-darktoggle .q-icon { font-size:14px; }
 .rtt-vis-mi { font-size:12px; color:#555; }
 /* tooltips toggle: a static bubble that greys out when off */
@@ -1079,12 +1070,12 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 .rtt-visibility-preview .n2 { color:var(--preview-text-color); animation:rtt-preview-n2 3s infinite; }
 .rtt-visibility-preview .n3 { color:var(--preview-remove-text-color); animation:rtt-preview-n3 3s infinite; }
 @keyframes rtt-preview-box {
-  0%,28%   { box-shadow:inset 0 0 0 1.5px var(--pending-color);
-             background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
-  33%,61%  { box-shadow:inset 0 0 0 1.5px var(--preview-color);
-             background:color-mix(in srgb, var(--preview-color) 14%, transparent); }
-  66%,90%  { box-shadow:inset 0 0 0 1.5px var(--preview-remove-color);
-             background:color-mix(in srgb, var(--preview-remove-color) 14%, transparent); }
+  0%,28%   { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--pending-color);
+             background:color-mix(in srgb, var(--pending-color) var(--hl-wash), transparent); }
+  33%,61%  { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--preview-color);
+             background:color-mix(in srgb, var(--preview-color) var(--hl-wash), transparent); }
+  66%,90%  { box-shadow:inset 0 0 0 var(--hl-ring-w) var(--preview-remove-color);
+             background:color-mix(in srgb, var(--preview-remove-color) var(--hl-wash), transparent); }
   92%,100% { box-shadow:none; background:transparent; }
 }
 @keyframes rtt-preview-n1 { 0%,28% { opacity:1; } 30%,100% { opacity:0; } }
@@ -1093,7 +1084,7 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 .rtt-visibility-preview.rtt-vis-off .rtt-preview-n { color:#777; }
 .rtt-visibility-preview.rtt-vis-off .rtt-preview-icon { animation:rtt-preview-box-off 3s infinite; }
 @keyframes rtt-preview-box-off {
-  0%,90% { box-shadow:inset 0 0 0 1.5px #999; background:color-mix(in srgb, #999 14%, transparent); }
+  0%,90% { box-shadow:inset 0 0 0 var(--hl-ring-w) #999; background:color-mix(in srgb, #999 var(--hl-wash), transparent); }
   92%,100% { box-shadow:none; background:transparent; }
 }
 /* the scrolling body: the two toggle groups. It sizes to its OWN content (flex:none) capped by a
@@ -1117,7 +1108,7 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-d
 /* the panel's two column headers: "show" (the toggles) and "example" (their sample
    renders), aligned over the grid columns the rows below use. Both share one font and
    sit on a common baseline so the two words line up. */
-.rtt-show-head { display:grid; grid-template-columns:160px 1fr; align-items:baseline;
+.rtt-show-head { display:grid; grid-template-columns:var(--show-col1) 1fr; align-items:baseline;
                  padding:0; }
 /* breathe the app-features select-all off its show/example header, matching the gap the tile-features
    select-all gets from the .rtt-show-tile (margin-top) that follows it */
@@ -1162,7 +1153,7 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
 .rtt-chapter-hidden { display:none !important; }
 .rtt-chap-invisible { visibility:hidden !important; }
 /* one toggle row: the checkbox+label in the Show column, its sample in the example column */
-.rtt-show-row { display:grid; grid-template-columns:160px 1fr; align-items:center; min-height:26px; }
+.rtt-show-row { display:grid; grid-template-columns:var(--show-col1) 1fr; align-items:center; min-height:var(--show-row-h); }
 .rtt-show-item .q-checkbox__label { font-family:var(--rtt-serif); font-size:13px;
                                     color:#000; white-space:pre-line; line-height:1;
                                     /* hanging indent: a two-line name (e.g. "alternative
@@ -1179,7 +1170,7 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
 .rtt-show-item.disabled .q-checkbox__label { color:#999; }
 .rtt-show-item.disabled .q-checkbox__inner { color:#999 !important; }
 .rtt-example-cell { font-family:var(--rtt-serif); font-size:13px; color:#000;
-               display:flex; align-items:center; justify-content:flex-end; min-height:26px; }
+               display:flex; align-items:center; justify-content:flex-end; min-height:var(--show-row-h); }
 /* a disabled toggle's sample greys to match its label — color for the glyph examples,
    plus the same 0.75 dim Quasar puts on the checkbox so the two read as one shade */
 .rtt-example-cell.rtt-ex-disabled { color:#999; opacity:0.75; }
@@ -1191,7 +1182,7 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
    wider min-width keep the tile comfortably square rather than a thin column. */
 .rtt-show-tile { display:flex; flex-direction:column; align-items:center; gap:2px;
                  width:fit-content; min-width:240px; margin:8px auto; padding:12px;
-                 background:#e0e0e0; border:1px solid #8a8a8a;
+                 background:#e0e0e0; border:1px solid var(--tile-border);
                  box-sizing:border-box; font-family:var(--rtt-serif); }
 /* the tile's head strip, like a real audio tile's: the decorative fold toggle on the left, the
    single global audio bank on the right, riding above the stacked content lines */
@@ -1212,9 +1203,9 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
 /* a line that spans the tile's full content width (the control box rides one) */
 .rtt-tile-line-wide { align-self:stretch; }
 /* a control box — a chooser in a bordered box spanning the tile's full width, like a real tile's
-   control boxes (.rtt-block-boxed: the lighter #e8e8e8 fill, a #8a8a8a border) */
+   control boxes (.rtt-block-boxed: the recessed --inset-box fill, a --tile-border) */
 .rtt-tile-complexity-box { width:100%; box-sizing:border-box; display:flex; flex-direction:column;
-                 align-items:stretch; border:1px solid #8a8a8a; background:#e8e8e8;
+                 align-items:stretch; border:1px solid var(--tile-border); background:var(--inset-box);
                  padding:4px; margin:2px 0; }
 /* every part is a click target. The on/off classes carry the live state — black + opaque when
    the layer is shown, grey + dimmed when hidden (the dim also fades the SVG samples, whose

@@ -130,10 +130,37 @@ _STACKED_MAIN_FONT = 10
 _TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a", "form": "#cd9acd"}
 
 _DARK_FRAME = "#15171a"
+_DARK_PANE = "#1f2329"
+_DARK_PANEL = "#272c33"
+_DARK_GROUP = "#2c323a"
+_DARK_BOX = "#31373f"
 _DARK_CELL = "#1b1f24"
-_DARK_MARK = "#8d949d"
 _DARK_TEXT = "#e3e6ea"
+_DARK_CAPTION = "#aeb4bc"
 _DARK_MUTED = "#71777f"
+_DARK_ICON = "#9aa1a9"
+_DARK_HOVER_TEXT = "#cfd4da"
+_DARK_MARK = "#8d949d"
+_DARK_TILE_BORDER = "#454c54"
+_DARK_SOFT_LINE = "#3c424a"
+_DARK_INPUT_LINE = "#4e555d"
+
+_DARK_PALETTE_VARS = (
+    ("--dark-pane", _DARK_PANE),
+    ("--dark-panel", _DARK_PANEL),
+    ("--dark-group", _DARK_GROUP),
+    ("--dark-box", _DARK_BOX),
+    ("--dark-cell", _DARK_CELL),
+    ("--dark-text", _DARK_TEXT),
+    ("--dark-caption", _DARK_CAPTION),
+    ("--dark-muted", _DARK_MUTED),
+    ("--dark-icon", _DARK_ICON),
+    ("--dark-hover-text", _DARK_HOVER_TEXT),
+    ("--dark-mark", _DARK_MARK),
+    ("--dark-tile-border", _DARK_TILE_BORDER),
+    ("--dark-soft-line", _DARK_SOFT_LINE),
+    ("--dark-input-line", _DARK_INPUT_LINE),
+)
 
 _WHEEL_STEPS = {
     "mapping": 1,
@@ -207,8 +234,6 @@ def _vgroup_key(cell_box: spreadsheet.CellBox) -> str:
         return "cell:finv"
     parts = cell_box.id.split(":")
     return ":".join(parts[:2] + parts[3:])
-
-
 
 
 _MODE_FILLS = (
@@ -345,15 +370,17 @@ _GROUP_EXIT_JS = (
 )
 
 
+_WASH_TINT_CSS = "".join(f"--wash-{group}:{tint}; " for group, tint in _TINTS.items())
+
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --tab-w:{_TAB_W}px; --tab-h:{_TAB_H}px; --chrome-h:{_CHROME_H}px; --panel-w:{_PANEL_W}px;
-  --seam:{_SEAM}; --pending-color:{PENDING_COLOR}; --pending-text-color:{_PENDING_TEXT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-text-color:{_PREVIEW_TEXT_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR}; --preview-remove-text-color:{_PREVIEW_REMOVE_TEXT_COLOR};
+  --seam:{_SEAM}; --ebk-mark:{BR_COLOR}; --pending-color:{PENDING_COLOR}; --pending-text-color:{_PENDING_TEXT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-text-color:{_PREVIEW_TEXT_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR}; --preview-remove-text-color:{_PREVIEW_REMOVE_TEXT_COLOR};
   --c-gridline:#e0e0e0;
-  --wash-base:#fff; --wash-tuning:{_TINTS["tuning"]}; --wash-temperament:{_TINTS["temperament"]}; --wash-form:{_TINTS["form"]};
+  --wash-base:#fff; {_WASH_TINT_CSS}
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
   --zoom-factor:{_CELL_FONT / _STACKED_MAIN_FONT};
   --label-w:{spreadsheet_constants.LABEL_WIDTH}px; --header-h:{spreadsheet_constants.HEADER_HEIGHT}px; --line-w:{spreadsheet_constants.LINE_WIDTH}px;
-  --plain-text-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_HEIGHT}px; --option-box:{spreadsheet_constants.OPTION_BOX_PX}px; --button:{spreadsheet_constants.BUTTON}px;
+  --plain-text-edit-h:{spreadsheet_constants.PLAIN_TEXT_EDIT_HEIGHT}px; --option-box:{spreadsheet_constants.OPTION_BOX_PX}px; --button:{spreadsheet_constants.BUTTON}px; --preset-h:{spreadsheet_constants.PRESET_HEIGHT}px;
   --option-box-unchecked:url("{_option_box_svg(None)}");
   --option-box-checked:url("{_option_box_svg("#000")}");
   --option-box-disabled:url("{_option_box_svg("#888")}");
@@ -376,7 +403,10 @@ _FONT_FACE = "".join(
     )
 )
 
+_DARK_PALETTE_CSS = "".join(f"{name}:{value}; " for name, value in _DARK_PALETTE_VARS)
+
 _CSS_DARK_VARS = f"""body.rtt-dark {{
+  {_DARK_PALETTE_CSS}
   --option-box-unchecked:url("{_option_box_svg(None, box=_DARK_CELL, border=_DARK_MARK)}");
   --option-box-checked:url("{_option_box_svg(_DARK_TEXT, box=_DARK_CELL, border=_DARK_MARK)}");
   --option-box-disabled:url("{_option_box_svg(_DARK_MUTED, box=_DARK_CELL, border=_DARK_MARK)}");
@@ -400,10 +430,20 @@ _MATRIX_LABEL_MIN_FONT = 6.0
 
 _EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "hbar"}
 
-GRIDVALUE_KINDS = frozenset({
-    "mapping", "commacell", "unchangedcell", "interestcell", "heldcell", "targetcell",
-    "formcell", "ratiocell", "elementcell", "elementratio",
-})
+GRIDVALUE_KINDS = frozenset(
+    {
+        "mapping",
+        "commacell",
+        "unchangedcell",
+        "interestcell",
+        "heldcell",
+        "targetcell",
+        "formcell",
+        "ratiocell",
+        "elementcell",
+        "elementratio",
+    }
+)
 
 _EBK_SQUARE = str.maketrans("⟨{⟩}", "[[]]")
 _TRANSPOSE_MARK = "ᵀ"
@@ -533,6 +573,7 @@ _ZOOM_JS = """
   const F = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom-factor')) || 1.7;
   const DELAY = 130;
   const GAP = 8;
+  const EDGE = 4;
   let timer = null, anchor = null;
 
   const overlay = document.createElement('div');
@@ -550,12 +591,12 @@ _ZOOM_JS = """
     const r = cell.getBoundingClientRect();
     const ow = overlay.offsetWidth, oh = overlay.offsetHeight;
     const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
-    let left = Math.max(4, Math.min(r.left + r.width / 2 - ow / 2, vw - ow - 4));
+    let left = Math.max(EDGE, Math.min(r.left + r.width / 2 - ow / 2, vw - ow - EDGE));
     const audioFloat = cell.classList.contains('rtt-speaker') && !document.body.classList.contains('rtt-audio-muted');
     let top = r.top - GAP - oh;
     let above = true;
-    if (audioFloat || top < 4) { top = r.bottom + GAP; above = false; }
-    top = Math.max(4, Math.min(top, vh - oh - 4));
+    if (audioFloat || top < EDGE) { top = r.bottom + GAP; above = false; }
+    top = Math.max(EDGE, Math.min(top, vh - oh - EDGE));
     overlay.style.flexDirection = above ? 'column-reverse' : 'column';
     overlay.style.left = left + 'px';
     overlay.style.top = top + 'px';
@@ -656,6 +697,7 @@ _GUIDE_JS = """
   const DELAY = 200;
   const HIDE = 160;
   const GAP = 6;
+  const EDGE = 4;
   let showTimer = null, hideTimer = null, anchor = null, shownTile = null;
 
   const card = document.createElement('div');
@@ -673,9 +715,9 @@ _GUIDE_JS = """
     const r = cell.getBoundingClientRect();
     const card_width = card.offsetWidth, card_height = card.offsetHeight;
     const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
-    let left = Math.max(4, Math.min(r.left, vw - card_width - 4));
+    let left = Math.max(EDGE, Math.min(r.left, vw - card_width - EDGE));
     let top = r.bottom + GAP;
-    if (top + card_height > vh - 4) top = Math.max(4, r.top - GAP - card_height);
+    if (top + card_height > vh - EDGE) top = Math.max(EDGE, r.top - GAP - card_height);
     card.style.left = left + 'px';
     card.style.top = top + 'px';
   };

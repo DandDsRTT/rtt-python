@@ -130,19 +130,19 @@
 /* dark theme: retint the card to match the rest of the dark overlay (the scrim + ring read fine
    as-is). Mirrors the palette anchors in rtt-dark.css. */
 body.rtt-dark .rtt-tour-card {
-  background: #272c33;
-  color: #e3e6ea;
-  border-color: #454c54;
+  background: var(--dark-panel);
+  color: var(--dark-text);
+  border-color: var(--dark-tile-border);
 }
 
 body.rtt-dark .rtt-tour-body {
-  color: #aeb4bc;
+  color: var(--dark-caption);
 }
 
 body.rtt-dark .rtt-tour-buttons button {
-  background: #31373f;
-  border-color: #4e555d;
-  color: #e3e6ea;
+  background: var(--dark-box);
+  border-color: var(--dark-input-line);
+  color: var(--dark-text);
 }
 
 body.rtt-dark .rtt-tour-buttons button:hover {
@@ -152,18 +152,18 @@ body.rtt-dark .rtt-tour-buttons button:hover {
 body.rtt-dark .rtt-tour-buttons button.rtt-tour-skip {
   background: transparent;
   border-color: transparent;
-  color: #71777f;
+  color: var(--dark-muted);
 }
 
 body.rtt-dark .rtt-tour-buttons button.rtt-tour-skip:hover {
-  color: #e3e6ea;
+  color: var(--dark-text);
 }
 
 /* on the dark card a dark "primary" would vanish — flip it to a light grey with dark text */
 body.rtt-dark .rtt-tour-buttons button.rtt-tour-next {
-  background: #aeb4bc;
-  border-color: #aeb4bc;
-  color: #1b1f24;
+  background: var(--dark-caption);
+  border-color: var(--dark-caption);
+  color: var(--dark-cell);
 }
 
 body.rtt-dark .rtt-tour-buttons button.rtt-tour-next:hover {
