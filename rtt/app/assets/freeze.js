@@ -138,7 +138,15 @@ window.rttFreeze = (function () {
   }
   document.addEventListener('transitionstart', onTransition, true);
   document.addEventListener('transitionend', onTransition, true);
+  // fit() is a no-op until render() stamps a pane's base size, so poll only until the first render
+  // lands (then resize/transition drive every later fit); the count is just a fallback.
+  function rendered() {
+    var panes = document.querySelectorAll('.rtt-app');
+    for (var i = 0; i < panes.length; i++)
+      if (parseFloat(panes[i].dataset.baseW) > 0 && parseFloat(panes[i].dataset.baseH) > 0) return true;
+    return false;
+  }
   var tries = 0;
-  (function boot() { all(); if (++tries < 12) setTimeout(boot, 100); })();
+  (function boot() { all(); if (!rendered() && ++tries < 12) setTimeout(boot, 100); })();
   return { update: update, fit: fit };
 })();

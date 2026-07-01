@@ -57,3 +57,43 @@ class TestWebRendering:
         r._virt_for = vp
         r._on_viewport(SimpleNamespace(args={"l": 5.0, "t": 6.0, "w": 1000.0, "h": 800.0}))
         assert r._viewport == vp
+
+    def _commit_renderer(self, calls, received, side_effect=None):
+        gestures = SimpleNamespace(
+            gesture=None, gesture_rendering=False, rank_rendering=False, rank_remove=None
+        )
+        runtime = SimpleNamespace(last_lay=None)
+        sentinel = object()
+
+        def layout(**kwargs):
+            calls.append(kwargs)
+            if side_effect is not None:
+                side_effect(len(calls))
+            return sentinel
+
+        r = Renderer(
+            SimpleNamespace(layout=layout), None, gestures, None, runtime, None
+        )
+        r.render = lambda prebuilt=None: received.append(prebuilt)
+        return r, sentinel
+
+    async def test_commit_render_builds_layout_once_and_reuses_it(self, monkeypatch):
+        monkeypatch.delenv("NICEGUI_USER_SIMULATION", raising=False)
+        calls, received = [], []
+        r, sentinel = self._commit_renderer(calls, received)
+        await r._commit_render()
+        assert len(calls) == 1, "the off-loop build is the render's only layout computation"
+        assert received == [sentinel], "render reuses the off-loop layout instead of rebuilding it"
+
+    async def test_commit_render_rebuilds_when_state_changed_during_the_build(self, monkeypatch):
+        monkeypatch.delenv("NICEGUI_USER_SIMULATION", raising=False)
+        calls, received = [], []
+
+        def race(n):
+            if n == 1:
+                r.render_again = True
+
+        r, sentinel = self._commit_renderer(calls, received, side_effect=race)
+        await r._commit_render()
+        assert received[0] is None, "a request that arrived mid-build must force an on-loop rebuild"
+        assert received[-1] is sentinel, "the follow-up render then reuses a fresh off-loop build"

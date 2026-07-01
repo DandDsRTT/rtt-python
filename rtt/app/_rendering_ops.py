@@ -184,7 +184,6 @@ def render_cells(r, layout, seen, flags) -> None:
         container = _freeze_container(cell_box, freeze_x, freeze_y)
         if (
             cell_box.id not in r._rec.entities
-            and container == "body"
             and not cell_box.pending
             and not r._body_visible(
                 cell_box.x, cell_box.y, cell_box.width, cell_box.height, freeze_y

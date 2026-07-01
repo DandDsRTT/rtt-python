@@ -1,11 +1,11 @@
 {
-  "reach_through_total": 40,
+  "reach_through_total": 39,
   "reach_through_by_handle": {
     "_runtime": 15,
     "_rec": 7,
     "e": 5,
-    "_editor": 5,
     "_chrome": 4,
+    "_editor": 4,
     "_gestures": 2,
     "_edits": 1,
     "class_handles": 1

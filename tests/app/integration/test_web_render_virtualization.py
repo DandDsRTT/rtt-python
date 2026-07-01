@@ -35,9 +35,27 @@ class TestViewportVirtualization:
             assert cell_id not in page.reconciler.entities
         for cell_id in visible:
             assert cell_id in page.reconciler.entities
-        for c in layout.cells:
-            if _live_render()._freeze_container(c, fx, fy) != "body":
-                assert c.id in page.reconciler.entities
+
+    async def test_virtualization_elides_offscreen_frozen_band_cells(self, user: User, monkeypatch) -> None:
+        monkeypatch.setenv("RTT_VIRT_VIEWPORT", "320x320")
+        await user.open("/")
+        live, page = _live_page()
+        layout = page.runtime.last_lay
+        fx, fy = layout.freeze_x, layout.freeze_y
+        frozen = [c for c in layout.cells
+                  if _live_render()._freeze_container(c, fx, fy) != "body" and not c.pending]
+        visible = {c.id for c in frozen
+                   if page.renderer._body_visible(c.x, c.y, c.width, c.height, fy)}
+        offscreen = {c.id for c in frozen} - visible
+        assert offscreen, "a 320x320 viewport must push some frozen-band cells off-screen to elide"
+        for cell_id in offscreen:
+            assert cell_id not in page.reconciler.entities, "an off-screen frozen cell was built at cold paint"
+        for cell_id in visible:
+            assert cell_id in page.reconciler.entities
+
+        await page.renderer._fill_offscreen(page.renderer._fill_generator)
+        for c in frozen:
+            assert c.id in page.reconciler.entities, f"fill left frozen cell {c.id} unmaterialized"
 
     async def test_scrolling_reveals_far_cells_and_retains_near_ones(self, user: User, monkeypatch) -> None:
         monkeypatch.setenv("RTT_VIRT_VIEWPORT", "320x320")

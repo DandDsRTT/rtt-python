@@ -227,6 +227,48 @@ class TestBrowserBehavior:
             assert page.evaluate("() => localStorage.getItem('rttTourSeen')") == "1"
             assert not errors
 
+    def test_active_cell_highlight_paints_only_with_an_active_cell(self, browser):
+        with _page(browser) as (page, errors):
+            highlighted = page.evaluate(
+                "() => [...document.querySelectorAll('.rtt-gridval')]"
+                ".filter(c => c.style.getPropertyValue('--rtt-hl')).length"
+            )
+            assert highlighted == 0, "no cell may carry the highlight before any cell is active"
+            wrote = page.evaluate(
+                "() => new Promise(resolve => {"
+                " let count = 0;"
+                " const obs = new MutationObserver(ms => ms.forEach(m => { if (m.attributeName === 'style') count++; }));"
+                " document.querySelectorAll('.rtt-gridval').forEach(c => obs.observe(c, {attributes: true, attributeFilter: ['style']}));"
+                " document.querySelector('.rtt-gridbody').dispatchEvent(new Event('scroll', {bubbles: true}));"
+                " setTimeout(() => { obs.disconnect(); resolve(count); }, 90); })"
+            )
+            assert wrote == 0, f"a repaint wrote to {wrote} cells while nothing was active"
+            page.hover(".rtt-gridval")
+            page.wait_for_timeout(60)
+            lit = page.evaluate(
+                "() => [...document.querySelectorAll('.rtt-gridval')]"
+                ".filter(c => c.style.getPropertyValue('--rtt-hl')).length"
+            )
+            assert lit > 0, "hovering a value cell must light its crosshair"
+            assert not errors
+
+    def test_arrow_key_moves_the_active_cell_and_highlights_it(self, browser):
+        with _page(browser) as (page, errors):
+            moved = page.evaluate(
+                "() => { const cells = [...document.querySelectorAll('.rtt-app .rtt-cell.rtt-gridval')];"
+                " if (cells.length < 2) return null;"
+                " cells[0].dispatchEvent(new MouseEvent('mouseover', {bubbles: true}));"
+                " const first = document.querySelector('.rtt-gridval.rtt-active');"
+                " document.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true, cancelable: true}));"
+                " const now = document.querySelector('.rtt-gridval.rtt-active');"
+                " return {moved: now !== first, kbd: document.body.classList.contains('rtt-kbd'),"
+                "         lit: now && now.style.getPropertyValue('--rtt-hl') === '1.000'}; }"
+            )
+            assert moved and moved["moved"], "ArrowDown must move the active cell to a new cell"
+            assert moved["kbd"], "a keyboard move must put the grid in keyboard mode"
+            assert moved["lit"], "the keyboard-moved active cell must be fully lit"
+            assert not errors
+
     def test_freeze_syncs_the_frozen_header_to_horizontal_scroll(self, browser):
         with _page(browser, width=760, height=820) as (page, errors):
             synced = page.evaluate(
