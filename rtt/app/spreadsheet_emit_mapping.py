@@ -14,7 +14,7 @@ from rtt.app.spreadsheet_constants import (
     ROW_HANDLE_WIDTH,
     ROW_HEIGHT,
 )
-from rtt.app.spreadsheet_emit_model import EmitResult, voice
+from rtt.app.spreadsheet_emit_model import EmitResult, dash_or_str, voice
 from rtt.app.spreadsheet_models import _MappedTile
 
 
@@ -30,13 +30,18 @@ def emit_mapping(resolved, geometry, context) -> EmitResult:
     return EmitResult(cells=tuple(cells))
 
 
+def _map_minus_span(geometry):
+    map_bus_x = geometry.node_edge + geometry.FAN if query.row_fans(geometry, "mapping") else geometry.node_edge
+    generator_right = geometry.column_x["quantities"] + geometry.column_width["quantities"]
+    return map_bus_x, generator_right
+
+
 def _emit_mapping_generators(cells, resolved, geometry, context) -> None:
     if not query.tile_open(geometry, context.collapsed, "mapping", "quantities"):
         return
     for i in range(resolved.dimensions.rank):
         cells.append(CellBox(f"generator:{query.column_token(resolved, 'generators', i)}", geometry.column_x["quantities"], query.map_top(geometry, i), geometry.column_width["quantities"], ROW_HEIGHT, "generator_ratio", text=resolved.scalars.generators[i] if i < len(resolved.scalars.generators) else "", generator=i))
-    map_bus_x = geometry.node_edge + geometry.FAN if query.row_fans(geometry, "mapping") else geometry.node_edge
-    generator_right = geometry.column_x["quantities"] + geometry.column_width["quantities"]
+    map_bus_x, generator_right = _map_minus_span(geometry)
     if resolved.dimensions.rank > 1:
         for i in range(resolved.dimensions.rank):
             cells.append(CellBox(f"map_minus:{query.column_token(resolved, 'generators', i)}", map_bus_x, query.map_top(geometry, i), generator_right - map_bus_x, ROW_HEIGHT, "map_minus", generator=i))
@@ -78,7 +83,7 @@ def _emit_mapping_comma_row(cells, resolved, geometry, i, rt) -> None:
         mc_text = str(resolved.ghosts.comma_mapped[i]) if (resolved.ghosts.comma and i < len(resolved.ghosts.comma_mapped)) else ""
         cells.append(CellBox(f"cell:mapped_comma:{rt}:{query.pending_col_token(resolved, 'commas')}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=mc_text, generator=i, pending=True))
     for j in range(resolved.dimensions.unchanged_count):
-        mapped_text = DASH if resolved.unchanged.mapped[i][j] is None else str(resolved.unchanged.mapped[i][j])
+        mapped_text = dash_or_str(resolved.unchanged.mapped[i][j])
         cells.append(CellBox(f"cell:mapped_unchanged:{rt}:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=mapped_text, generator=i, unit=query.cell_unit(resolved, "mapping", "commas", generator=i)))
         voice(cells, "mapped:commas", resolved.dimensions.comma_count + j, resolved.unchanged.sizes.tempered[j])
 
@@ -90,8 +95,7 @@ def _emit_mapping_draft_row(cells, resolved, geometry, context) -> None:
         generator_text = resolved.ghosts.row_ratio if resolved.ghosts.row else "?"
         cells.append(CellBox("generator:pending", geometry.column_x["quantities"], query.map_top(geometry, dr), geometry.column_width["quantities"], ROW_HEIGHT, "generator_ratio", text=generator_text, generator=dr, pending=True))
         if not resolved.ghosts.row:
-            map_bus_x = geometry.node_edge + geometry.FAN if query.row_fans(geometry, "mapping") else geometry.node_edge
-            generator_right = geometry.column_x["quantities"] + geometry.column_width["quantities"]
+            map_bus_x, generator_right = _map_minus_span(geometry)
             cells.append(CellBox("map_minus:pending", map_bus_x, query.map_top(geometry, dr), generator_right - map_bus_x, ROW_HEIGHT, "map_minus", generator=dr, pending=True))
     if query.tile_open(geometry, context.collapsed, "mapping", "primes"):
         row_kind = "mapped" if resolved.ghosts.row else "mapping"
@@ -108,7 +112,7 @@ def _draft_mapped_text(resolved, key, j) -> str:
     vals = resolved.ghosts.row_mapped.get(key, ()) if resolved.ghosts.row else ()
     if j >= len(vals):
         return ""
-    return DASH if vals[j] is None else str(vals[j])
+    return dash_or_str(vals[j])
 
 
 def _emit_mapping_draft_mapped(cells, resolved, geometry, context, dr, drt) -> None:
@@ -132,13 +136,13 @@ def _emit_mapping_draft_commas(cells, resolved, geometry, dr, drt) -> None:
         cells.append(CellBox(f"cell:mapped_unchanged:{drt}:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), query.map_top(geometry, dr), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=_draft_mapped_text(resolved, "unchanged", j), generator=dr, pending=True))
 
 
-def _emit_mapped_tile(cells, resolved, geometry, m: _MappedTile, i, rt) -> None:
+def _emit_mapped_tile(cells, resolved, geometry, m: _MappedTile, i, id_index, top_fn=query.map_top, unit_row="mapping") -> None:
     for column in range(m.count):
-        cells.append(CellBox(f"cell:{m.prefix}:{rt}:{query.column_token(resolved, m.group, column)}", m.left_fn(column), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(m.data[i][column]), generator=i, unit=query.cell_unit(resolved, "mapping", m.group, generator=i)))
+        cells.append(CellBox(f"cell:{m.prefix}:{id_index}:{query.column_token(resolved, m.group, column)}", m.left_fn(column), top_fn(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(m.data[i][column]), generator=i, unit=query.cell_unit(resolved, unit_row, m.group, generator=i)))
         if m.sizes is not None:
             voice(cells, f"mapped:{m.group}", column, m.sizes[column])
     if m.pending is not None:
-        cells.append(CellBox(f"cell:{m.prefix}:{rt}:draft", m.left_fn(m.count), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, pending=True))
+        cells.append(CellBox(f"cell:{m.prefix}:{id_index}:draft", m.left_fn(m.count), top_fn(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, pending=True))
 
 
 def emit_mapped_grid(cells, resolved, geometry, collapsed, tile, prefix, grid, n_cols, left, column_kw, *,
@@ -237,7 +241,7 @@ def _emit_projection_unchanged(cells, resolved, geometry, context) -> None:
 
 def _emit_projection_basis(cells, resolved, geometry, context) -> None:
     if query.row_open(geometry, context.collapsed, "projection") and query.tile_open(geometry, context.collapsed, "projection", "quantities"):
-        bx = geometry.column_x["quantities"] + (geometry.column_width["quantities"] - COLUMN_WIDTH) / 2
+        bx = query.basis_col_x(geometry)
         for p in range(resolved.dimensions.dimensionality):
             cells.append(CellBox(f"projection_basis:{p}", bx, query.projection_top(geometry, p), COLUMN_WIDTH, ROW_HEIGHT, "commaratio", text=str(resolved.dimensions.elements[p]), prime=p))
 
@@ -291,11 +295,11 @@ def _emit_canonical_row(cells, resolved, geometry, context, i) -> None:
         for c in range(resolved.dimensions.rank):
             cells.append(CellBox(f"cell:canonical_detempering:{i}:{query.column_token(resolved, 'detempering', c)}", query.detempering_left(geometry, c), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(resolved.canonical.mapped_detempering[i][c]), generator=i, unit=query.cell_unit(resolved, "canonical", "detempering", generator=i)))
     if query.tile_open(geometry, collapsed, "canonical", "targets"):
-        _emit_canonical_mapped_tile(cells, resolved, geometry, "canonical_mapped", "targets", resolved.dimensions.target_count, lambda c: query.interval_left(geometry, "targets", c), resolved.canonical.mapped, resolved.targets.pending, i)
+        _emit_mapped_tile(cells, resolved, geometry, _MappedTile("canonical_mapped", "targets", resolved.dimensions.target_count, lambda c: query.interval_left(geometry, "targets", c), resolved.canonical.mapped, resolved.targets.pending), i, i, query.canonical_top, "canonical")
     if query.tile_open(geometry, collapsed, "canonical", "interest"):
-        _emit_canonical_mapped_tile(cells, resolved, geometry, "canonical_imapped", "interest", resolved.dimensions.interest_count, lambda c: query.interval_left(geometry, "interest", c), resolved.canonical.interest_mapped, resolved.interest.pending, i)
+        _emit_mapped_tile(cells, resolved, geometry, _MappedTile("canonical_imapped", "interest", resolved.dimensions.interest_count, lambda c: query.interval_left(geometry, "interest", c), resolved.canonical.interest_mapped, resolved.interest.pending), i, i, query.canonical_top, "canonical")
     if query.tile_open(geometry, collapsed, "canonical", "held"):
-        _emit_canonical_mapped_tile(cells, resolved, geometry, "canonical_hmapped", "held", resolved.dimensions.held_count, lambda c: query.interval_left(geometry, "held", c), resolved.canonical.held_mapped, resolved.held.pending, i)
+        _emit_mapped_tile(cells, resolved, geometry, _MappedTile("canonical_hmapped", "held", resolved.dimensions.held_count, lambda c: query.interval_left(geometry, "held", c), resolved.canonical.held_mapped, resolved.held.pending), i, i, query.canonical_top, "canonical")
     if query.tile_open(geometry, collapsed, "canonical", "commas"):
         _emit_canonical_comma_row(cells, resolved, geometry, i)
 
@@ -306,7 +310,7 @@ def _emit_canonical_comma_row(cells, resolved, geometry, i) -> None:
     if resolved.scalars.comma_draft:
         cells.append(CellBox(f"cell:canonical_mapped_comma:{i}:{query.pending_col_token(resolved, 'commas')}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, pending=True))
     for j in range(resolved.dimensions.unchanged_count):
-        ut = DASH if resolved.canonical.unchanged_mapped[i][j] is None else str(resolved.canonical.unchanged_mapped[i][j])
+        ut = dash_or_str(resolved.canonical.unchanged_mapped[i][j])
         cells.append(CellBox(f"cell:canonical_mapped_unchanged:{i}:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=ut, generator=i, unit=query.cell_unit(resolved, "canonical", "commas", generator=i)))
 
 
@@ -316,12 +320,3 @@ def _emit_canonical_finv(cells, resolved, geometry, context) -> None:
             for j in range(resolved.dimensions.canonical_rank):
                 cells.append(CellBox(f"cell:finv:{i}:{j}", query.canonical_generator_left(geometry, j), query.map_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT,
                                      "formcell", text=str(resolved.canonical.inverse_form_M[i][j]), unit=query.cell_unit(resolved, "mapping", "canonical_generators", generator=i)))
-
-
-def _emit_canonical_mapped_tile(cells, resolved, geometry, prefix, group, count, left_fn, data, pending, i) -> None:
-    for column in range(count):
-        cells.append(CellBox(f"cell:{prefix}:{i}:{query.column_token(resolved, group, column)}", left_fn(column), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text=str(data[i][column]), generator=i, unit=query.cell_unit(resolved, "canonical", group, generator=i)))
-    if pending is not None:
-        cells.append(CellBox(f"cell:{prefix}:{i}:draft", left_fn(count), query.canonical_top(geometry, i), COLUMN_WIDTH, ROW_HEIGHT, "mapped", text="", generator=i, pending=True))
-
-
