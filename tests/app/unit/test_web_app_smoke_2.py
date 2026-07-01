@@ -439,7 +439,7 @@ class TestWebAppSmoke4:
             assert show_settings.reveal_chapter(key) <= tour_chapter
 
     def test_show_toggles_step_frames_toggles_as_decluttering_not_starting_small(self):
-        body = _tour_step("The Show toggles")["body"]
+        body = _tour_step("App features")["body"]
         assert "start small" not in body.lower(), "the app ships a deliberately full default, so 'start small # and build up' contradicted what the learner sees — reframe the toggles as a way to simplify"
         assert "declutter" in body.lower() or "simplif" in body.lower()
         on_by_default = [key for key, value in show_settings.defaults().items() if value is True]
