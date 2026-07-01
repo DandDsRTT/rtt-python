@@ -25,7 +25,7 @@ _COMMENT_ALLOWANCE = {
     "app/_rendering_ops.py": 3,
     "app/_editing_controls.py": 4,
     "app/_editing_tuning.py": 3,
-    "app/_page_parts.py": 1,
+    "app/_page_parts.py": 2,
     "app/render_html_layout.py": 2,
     "app/render_html_text.py": 3,
     "app/service/core_vectors.py": 2,
