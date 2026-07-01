@@ -79,7 +79,7 @@ _FEATURE_CELLS = [
     ("presets", "preset:tuning:generators"),
     ("charts", "chart:retune:targets"),
     ("tuning ranges", "rangechart:tuning:generators"),
-    ("units", "units:mapping:primes"),
+    ("box units", "units:mapping:primes"),
     ("optimization", "optimization:power"),
 ]
 
@@ -91,7 +91,7 @@ _FEATURE_CELLS = [
     ("presets", "preset:tuning:generators"),
     ("charts", "chart:retune:targets"),
     ("tuning ranges", "rangechart:tuning:generators"),
-    ("units", "units:mapping:primes"),
+    ("box units", "units:mapping:primes"),
     ("optimization", "optimization:power"),
 ]
 
@@ -379,7 +379,7 @@ def _px(element, prop: str) -> float:
 
 
 _ENABLE_HTML_CELLS = [
-    ("units", "units:mapping:primes"),
+    ("box units", "units:mapping:primes"),
     ("charts", "chart:retune:targets"),
     ("tuning ranges", "rangechart:tuning:generators"),
 ]
