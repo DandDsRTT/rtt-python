@@ -362,7 +362,7 @@ _TOUR_STEPS = [
         "everything.",
     },
     {
-        "selector": ".rtt-show-tile",
+        "selector": ".rtt-show-general",
         "place": "right",
         "open": True,
         "title": "Tile features",
@@ -374,7 +374,7 @@ _TOUR_STEPS = [
         "selector": ".rtt-show-scroll .rtt-show-group:last-child",
         "place": "right",
         "open": True,
-        "title": "The Show toggles",
+        "title": "App features",
         "body": "These checkboxes reveal each kind of feature — not only extra rows and columns, but "
         "the controls that come with them and which cells you can edit. The grid starts "
         "deliberately full; untick anything you don't need to declutter, and tick more back on as "
