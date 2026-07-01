@@ -28,12 +28,13 @@ def _wave_svg(kind: str) -> str:
         "sawtooth": "M1,9 L6,3 L6,9 L11,3 L11,9",
     }
     return (
-        f'<svg viewBox="0 0 12 12" class="rtt-audio-glyph"><path d="{paths[kind]}" '
+        f'<svg viewBox="0 0 12 12" class="rtt-audio-glyph" role="img" '
+        f'aria-label="{_escape(kind)} waveform"><path d="{paths[kind]}" '
         f'fill="none" stroke="currentColor" stroke-width="1.1"/></svg>'
     )
 
 
-def _mode_svg(filled) -> str:
+def _mode_svg(filled, name: str) -> str:
     rects = [
         f'<rect x="{1 + c * 3.7:.1f}" y="{1 + r * 3.7:.1f}" width="2.6" height="2.6" '
         f'fill="{"currentColor" if (r, c) in filled else "none"}" stroke="currentColor" '
@@ -41,7 +42,10 @@ def _mode_svg(filled) -> str:
         for r in range(3)
         for c in range(3)
     ]
-    return f'<svg viewBox="0 0 12 12" class="rtt-audio-glyph">{"".join(rects)}</svg>'
+    return (
+        f'<svg viewBox="0 0 12 12" class="rtt-audio-glyph" role="img" '
+        f'aria-label="{_escape(name)} play mode">{"".join(rects)}</svg>'
+    )
 
 
 def _option_box_svg(fill: str | None, *, box: str = "#fff", border: str = "#555") -> str:
@@ -65,11 +69,20 @@ _CONTROL_GLYPHS = {
     "reciprocate": "M6 3L6 9M4.2 4.6L6 3L7.8 4.6M4.2 7.4L6 9L7.8 7.4",
 }
 _FOLD_GLYPH = {"unfold_more": "expand", "unfold_less": "collapse"}
+_CONTROL_NAMES = {
+    "plus": "add",
+    "minus": "remove",
+    "expand": "expand",
+    "collapse": "collapse",
+    "reduce": "octave-reduce",
+    "reciprocate": "reciprocate",
+}
 
 
 def _control_svg(glyph: str) -> str:
     return (
-        f"<svg viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'>"
+        f"<svg viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg' role='img'"
+        f" aria-label='{_CONTROL_NAMES[glyph]}'>"
         f"<rect x='.5' y='.5' width='11' height='11' fill='#fff' stroke='#bbb' stroke-width='1'/>"
         f"<path d='{_CONTROL_GLYPHS[glyph]}' fill='none' stroke='currentColor' stroke-width='1.2'"
         f" stroke-linecap='round' stroke-linejoin='round'/></svg>"

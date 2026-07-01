@@ -292,6 +292,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    wrap tint shows through (see below). */
 .rtt-cell.rtt-gridval:not(.rtt-cell-input) { background:rgba(255,255,255,var(--hl)); transition:background 70ms linear; }
 .rtt-cell.rtt-gridval.rtt-cell-input { background:var(--cell-fill); transition:background 70ms linear; }
+/* keyboard-only focus ring on the value cell the roving tabindex lands on (WCAG 2.4.7): activecell.js
+   focus()es each new active cell, so keyboard/AT users get a visible, announceable position that the
+   mouse-driven highlight alone does not give. Inset so it never bleeds onto a neighbour, raised so a
+   sibling cell cannot occlude it; :focus-visible keeps it off mouse clicks. */
+.rtt-app .rtt-cell:focus-visible { outline:2px solid #1a73e8; outline-offset:-2px; z-index:6; }
 /* titles carry explicit "\n" breaks (column_header) so a multi-word header stacks to two
    lines (e.g. "domain" / "primes"); `pre` honors them AND never auto-wraps, so a title
    wider than its (content-hugging) column overflows it rather than rewrapping. It is
@@ -476,6 +481,16 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 }
 .rtt-control-check { width:100%; height:100%; display:flex; justify-content:center;
             align-items:center; }  /* visually centres the q-checkbox inside its cell wrap */
+/* WCAG 2.2 target size (2.5.8): the in-grid checkbox mark keeps its 16px look but the click
+   target grows to a transparent, centred ≥24px square (≥44px on coarse/touch pointers) via a
+   ::before overlay, so nothing moves and the visible box is unchanged. It sits inside the ~37px
+   grid cell, so at 24px it never overlaps a neighbour. */
+.rtt-control-check .q-checkbox { position:relative; }
+.rtt-control-check .q-checkbox::before { content:""; position:absolute; left:50%; top:50%;
+            width:24px; height:24px; transform:translate(-50%, -50%); }
+@media (pointer:coarse) {
+  .rtt-control-check .q-checkbox::before { width:44px; height:44px; }
+}
 /* a checkbox with no inline label (the in-grid control checks, whose caption is a separate cell
    below them) must not reserve its empty label slot — otherwise centring the box+slot pair nudges
    the box off-centre from the caption beneath it. Universal (every empty label collapses), so it

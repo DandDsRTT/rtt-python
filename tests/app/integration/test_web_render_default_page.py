@@ -47,6 +47,23 @@ class TestDefaultPage:
             "mapping matrix's prime-5 fifth entry is 4, so its wrap must publish it"
         )
 
+    def test_grid_pane_exposes_the_grid_role_for_assistive_tech(self, default_page: User) -> None:
+        pane = next(iter(default_page.find(marker="gridpane").elements))
+        assert pane._props.get("role") == "grid"
+        assert pane._props.get("aria-label") == "RTT spreadsheet"
+
+    def test_value_cells_expose_a_gridcell_role_and_aria_label(self, default_page: User) -> None:
+        cell = next(iter(default_page.find(marker="cell:mapping:1:2").elements))
+        assert cell._props.get("role") == "gridcell"
+        label = cell._props.get("aria-label")
+        assert label and "mapping" in label
+
+    def test_headers_and_row_labels_expose_header_roles(self, default_page: User) -> None:
+        header = next(iter(default_page.find(marker="header:primes").elements))
+        assert header._props.get("role") == "columnheader"
+        row_label = next(iter(default_page.find(marker="label:mapping").elements))
+        assert row_label._props.get("role") == "rowheader"
+
     def test_interval_ratios_carry_reduce_and_reciprocate_buttons(self, default_page: User) -> None:
         assert default_page.find(marker="target:0:reduce").elements
         assert default_page.find(marker="target:0:reciprocate").elements

@@ -41,11 +41,22 @@ _DEMO_VALUE_KINDS = frozenset(
 )
 
 
+_ROLE_BY_KIND = {"columnheader": "columnheader", "rowlabel": "rowheader"}
+
+
+def _cell_role(cell_box: spreadsheet.CellBox) -> str | None:
+    if cell_box.in_grid:
+        return "gridcell"
+    return _ROLE_BY_KIND.get(cell_box.kind)
+
+
 def _stamp_value(wrap, cell_box: spreadsheet.CellBox) -> None:
     if cell_box.kind in _DEMO_VALUE_KINDS:
         wrap.props(f'data-value="{cell_box.text}"')
     if cell_box.matrix:
         wrap.props(f'data-mx="{cell_box.matrix}" data-mxo="{cell_box.matrix_orient}"')
+    if cell_box.aria:
+        wrap.props(f'aria-label="{cell_box.aria.replace(chr(34), chr(39))}"')
 
 
 @runtime_checkable
@@ -177,6 +188,9 @@ class _Reconciler:
             .props(f'data-eid="{cell_box.id}"')
             .mark(cell_box.id)
         )
+        role = _cell_role(cell_box)
+        if role:
+            wrap.props(f'role="{role}"')
         with wrap:
             self.cell_kinds[cell_box.kind].build(self, cell_box, wrap)
             if cell_box.audio is not None:
