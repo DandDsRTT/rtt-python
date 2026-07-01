@@ -10,7 +10,7 @@
   // `live` is EVERY currently-sounding voice's release fn — the kill switch (stopAll) clears it, so a
   // note/drone can always be silenced no matter how it was started (S.stop/S.held don't track them all).
   const S = { wave: 0, mode: 0, hold: false, root: false, muted: false, stop: null, finish: null, held: {}, live: new Set() };
-  const api = { glyphs: null };
+  const api = { glyphs: window.__rttAudioGlyphs || null };
   function actx() {
     if (!context) context = new (window.AudioContext || window.webkitAudioContext)();
     if (context.state === 'suspended') context.resume();

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
 import zlib
@@ -22,6 +23,7 @@ from rtt.app.marks import (
     PENDING_COLOR,
 )
 from rtt.app.render_html import (
+    _RATIO_MAX_FONT,
     _mode_svg,
     _option_box_svg,
     _wave_svg,
@@ -42,11 +44,27 @@ class _KindHandlers(NamedTuple):
 
 _ASSETS = Path(__file__).parent / "assets"
 
+_CACHE_FOREVER = 31536000
+
 # Self-host the body font same-origin so every machine renders the same face (a non-self-hosted face
 # falls back per-OS to differing proportional digits). The Math face supplies the ⟨⟩⟪⟫ EBK brackets
 # the Text face omits. Registering at import is idempotent across the reload worker and the test
 # re-imports (FastAPI's duplicate route is harmless — first match wins).
-app.add_static_files("/rtt-fonts", _ASSETS / "fonts")
+app.add_static_files("/rtt-fonts", _ASSETS / "fonts", max_cache_age=_CACHE_FOREVER)
+app.add_static_files("/rtt-assets", _ASSETS, max_cache_age=_CACHE_FOREVER)
+
+
+def _content_hash(path: Path) -> str:
+    return hashlib.sha1(path.read_bytes()).hexdigest()[:10]
+
+
+def _asset_url(name: str) -> str:
+    return f"/rtt-assets/{name}?v={_content_hash(_ASSETS / name)}"
+
+
+def _font_url(file: str) -> str:
+    return f"/rtt-fonts/{file}?v={_content_hash(_ASSETS / 'fonts' / file)}"
+
 
 _PAD = 12
 _T = "0.25s"
@@ -256,24 +274,10 @@ _AUDIO_GLYPHS = {
     "root": '<span class="rtt-audio-root-glyph">1/1</span>',
 }
 
-_BOOT_JS = (_ASSETS / "boot.js").read_text(encoding="utf-8")
-
-_STACKED_EDIT_JS = (_ASSETS / "stacked_edit.js").read_text(encoding="utf-8")
-
-_AUDIO_JS = (_ASSETS / "audio.js").read_text(encoding="utf-8")
-
 # Browser: the column-title strip sits outside the body scroller (so the scrollbar can stop below it),
 # so CSS can't make it ride the scroll — this listener translateX-syncs it instead. scroll doesn't
 # bubble, so it's caught in the capture phase.
 _FREEZE_JS = (_ASSETS / "freeze.js").read_text(encoding="utf-8")
-
-_FRACTION_JS = (_ASSETS / "fraction.js").read_text(encoding="utf-8")
-
-_DECIMAL_JS = (_ASSETS / "decimal.js").read_text(encoding="utf-8")
-
-_ACTIVECELL_JS = (_ASSETS / "activecell.js").read_text(encoding="utf-8")
-
-_MAPPING_DEMO_JS = (_ASSETS / "mapping_demo.js").read_text(encoding="utf-8")
 
 _TOUR_JS = (_ASSETS / "tour.js").read_text(encoding="utf-8")
 
@@ -398,23 +402,30 @@ _CSS_VARS = f""":root {{
   --option-box-unchecked:url("{_option_box_svg(None)}");
   --option-box-checked:url("{_option_box_svg("#000")}");
   --option-box-disabled:url("{_option_box_svg("#888")}");
-  --rtt-serif:'STIX Two Text','STIX Two Math',Georgia,serif;
+  --rtt-serif:'STIX Two Text','STIX Two Math','STIX Fallback',Georgia,serif;
   --rtt-units-sans:'Jost','Corbel','Candara','Trebuchet MS',sans-serif;
 }}
 """
 
+_FONT_FILES = (
+    ("STIX Two Text", "normal", 400, "STIXTwoText-Regular-subset.woff2"),
+    ("STIX Two Text", "italic", 400, "STIXTwoText-Italic-subset.woff2"),
+    ("STIX Two Text", "normal", 700, "STIXTwoText-Bold-subset.woff2"),
+    ("STIX Two Text", "italic", 700, "STIXTwoText-BoldItalic-subset.woff2"),
+    ("STIX Two Math", "normal", 400, "STIXTwoMath-subset.woff2"),
+    ("Jost", "normal", 400, "Jost-Regular.woff2"),
+    ("Jost", "normal", 700, "Jost-Bold.woff2"),
+)
+
 _FONT_FACE = "".join(
     f"@font-face{{font-family:'{fam}';font-style:{style};font-weight:{weight};"
-    f"font-display:swap;src:url('/rtt-fonts/{file}') format('woff2');}}"
-    for fam, style, weight, file in (
-        ("STIX Two Text", "normal", 400, "STIXTwoText-Regular.woff2"),
-        ("STIX Two Text", "italic", 400, "STIXTwoText-Italic.woff2"),
-        ("STIX Two Text", "normal", 700, "STIXTwoText-Bold.woff2"),
-        ("STIX Two Text", "italic", 700, "STIXTwoText-BoldItalic.woff2"),
-        ("STIX Two Math", "normal", 400, "STIXTwoMath-subset.woff2"),
-        ("Jost", "normal", 400, "Jost-Regular.woff2"),
-        ("Jost", "normal", 700, "Jost-Bold.woff2"),
-    )
+    f"font-display:swap;src:url('{_font_url(file)}') format('woff2');}}"
+    for fam, style, weight, file in _FONT_FILES
+)
+
+_FONT_FALLBACK = (
+    "@font-face{font-family:'STIX Fallback';src:local('Georgia');"
+    "ascent-override:76.2%;descent-override:23.8%;line-gap-override:25%;}"
 )
 
 _DARK_PALETTE_CSS = "".join(f"{name}:{value}; " for name, value in _DARK_PALETTE_VARS)
@@ -434,6 +445,51 @@ _CSS = (
     + (_ASSETS / "rtt-dark.css").read_text(encoding="utf-8")
     + (_ASSETS / "tour.css").read_text(encoding="utf-8")
 )
+
+_CSS_FILES = ("rtt.css", "rtt-dark.css", "tour.css")
+
+_JS_MODULES = (
+    "boot.js",
+    "stacked_edit.js",
+    "audio.js",
+    "freeze.js",
+    "fraction.js",
+    "decimal.js",
+    "activecell.js",
+    "zoom.js",
+    "guide.js",
+    "mapping_demo.js",
+    "tour.js",
+)
+
+_PRELOAD_FONTS = (
+    "STIXTwoText-Regular-subset.woff2",
+    "STIXTwoText-Italic-subset.woff2",
+    "STIXTwoText-Bold-subset.woff2",
+    "STIXTwoMath-subset.woff2",
+    "Jost-Regular.woff2",
+)
+
+
+def _head_html() -> str:
+    preloads = "".join(
+        f'<link rel="preload" as="font" type="font/woff2" href="{_font_url(file)}" crossorigin>'
+        for file in _PRELOAD_FONTS
+    )
+    inline_style = f"<style>{_FONT_FACE}{_FONT_FALLBACK}{_CSS_VARS}{_CSS_DARK_VARS}</style>"
+    stylesheets = "".join(
+        f'<link rel="stylesheet" href="{_asset_url(name)}">' for name in _CSS_FILES
+    )
+    inline_data = (
+        f"<script>window.__rttAudioGlyphs={json.dumps(_AUDIO_GLYPHS)};"
+        f"window.rttFraction={{ratioFont:{_RATIO_MAX_FONT:g}}};"
+        f"window.rttTour={{steps:{json.dumps(_TOUR_STEPS)},autostart:true}};</script>"
+    )
+    scripts = "".join(f'<script defer src="{_asset_url(name)}"></script>' for name in _JS_MODULES)
+    return preloads + inline_style + stylesheets + inline_data + scripts
+
+
+HEAD_HTML = _head_html()
 
 
 _UNITS_MAX_FONT = 10.0
@@ -567,117 +623,6 @@ _TOOLTIP_DISMISS_JS = """
 """
 
 
-_ZOOM_JS = """
-(() => {
-  if (window.__rttZoom) return;
-  window.__rttZoom = true;
-  const F = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom-factor')) || 1.7;
-  const DELAY = 130;
-  const GAP = 8;
-  const EDGE = 4;
-  let timer = null, anchor = null;
-
-  const overlay = document.createElement('div');
-  overlay.className = 'rtt-zoom-overlay';
-  overlay.style.display = 'none';
-  document.body.appendChild(overlay);
-
-  const hide = () => {
-    if (timer) { clearTimeout(timer); timer = null; }
-    if (overlay.style.display !== 'none') { overlay.style.display = 'none'; overlay.innerHTML = ''; }
-    anchor = null;
-  };
-
-  const place = (cell) => {
-    const r = cell.getBoundingClientRect();
-    const ow = overlay.offsetWidth, oh = overlay.offsetHeight;
-    const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
-    let left = Math.max(EDGE, Math.min(r.left + r.width / 2 - ow / 2, vw - ow - EDGE));
-    const audioFloat = cell.classList.contains('rtt-speaker') && !document.body.classList.contains('rtt-audio-muted');
-    let top = r.top - GAP - oh;
-    let above = true;
-    if (audioFloat || top < EDGE) { top = r.bottom + GAP; above = false; }
-    top = Math.max(EDGE, Math.min(top, vh - oh - EDGE));
-    overlay.style.flexDirection = above ? 'column-reverse' : 'column';
-    overlay.style.left = left + 'px';
-    overlay.style.top = top + 'px';
-  };
-
-  const build = (cell) => {
-    const w = cell.offsetWidth, h = cell.offsetHeight;
-    if (!w || !h) return;
-    const srcInputs = cell.querySelectorAll('input');
-    let hasContent = cell.textContent.trim();
-    srcInputs.forEach(i => { if (i.value && i.value.trim()) hasContent = true; });
-    if (!hasContent) return;
-
-    overlay.innerHTML = '';
-    const scale = document.createElement('div');
-    scale.className = 'rtt-zoom-scale';
-    scale.style.width = (w * F) + 'px';
-    scale.style.height = (h * F) + 'px';
-    const clone = cell.cloneNode(true);
-    clone.classList.add('rtt-zoom-clone');
-    clone.removeAttribute('data-eid');
-    clone.style.position = 'static';
-    clone.style.left = clone.style.top = 'auto';
-    clone.style.width = w + 'px';
-    clone.style.height = h + 'px';
-    clone.style.transform = 'scale(' + F + ')';
-    clone.style.transformOrigin = 'top left';
-    clone.style.transition = 'none';
-    clone.querySelectorAll('.q-tooltip').forEach(n => n.remove());
-    clone.querySelectorAll('.rtt-ratio-operation').forEach(n => n.remove());
-    // Browser: cloneNode does NOT copy a live input's typed value (a property, not an attribute), so
-    // each editable cell's value is copied onto the clone by hand or it would clone empty.
-    const cloneInputs = clone.querySelectorAll('input');
-    srcInputs.forEach((s, i) => { if (cloneInputs[i]) cloneInputs[i].value = s.value; });
-    scale.appendChild(clone);
-    const tile = document.createElement('div');
-    tile.className = 'rtt-zoom-tile';
-    tile.appendChild(scale);
-    overlay.appendChild(tile);
-    const help = cell.getAttribute('data-zoomhelp');
-    if (help) {
-      const cap = document.createElement('div');
-      cap.className = 'rtt-zoom-help';
-      cap.textContent = help;
-      overlay.appendChild(cap);
-    }
-    overlay.style.display = 'flex';   // matches the CSS (gap + centering); 'block' would defeat them
-    place(cell);
-  };
-
-  document.addEventListener('mouseover', (e) => {
-    const cell = e.target.closest && e.target.closest('.rtt-zoomable');
-    if (!cell || cell === anchor) return;
-    if (timer) clearTimeout(timer);
-    anchor = cell;
-    timer = setTimeout(() => { if (anchor === cell && cell.isConnected) build(cell); }, DELAY);
-  });
-  document.addEventListener('mouseout', (e) => {
-    const toFloat = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.rtt-speaker-float');
-    const cell = e.target.closest && e.target.closest('.rtt-zoomable');
-    if (cell && cell === anchor) {
-      if (!toFloat && !cell.contains(e.relatedTarget)) hide();
-      return;
-    }
-    const fromFloat = e.target.closest && e.target.closest('.rtt-speaker-float');
-    if (fromFloat && anchor && !toFloat) {
-      const toCell = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.rtt-zoomable');
-      if (toCell !== anchor) hide();
-    }
-  });
-  document.addEventListener('pointerdown', (e) => {
-    if (e.target.closest && e.target.closest('.rtt-speaker-float')) return;
-    hide();
-  }, true);
-  document.addEventListener('keydown', hide, true);
-  document.addEventListener('wheel', hide, {capture: true, passive: true});
-  document.addEventListener('scroll', hide, {capture: true, passive: true});
-})()
-"""
-
 _SEED_DARK_JS = """
 (() => {
   try {
@@ -688,94 +633,6 @@ _SEED_DARK_JS = """
   } catch (e) {}
 })()
 """
-
-# Quasar: a tooltip is pointer-events:none and hides the instant the cursor leaves its anchor, so its
-# link can't be clicked; this builds a real hoverable card instead, kept open while the cursor is on it.
-_GUIDE_JS = """
-(() => {
-  if (window.__rttGuide) return;
-  window.__rttGuide = true;
-  const DELAY = 200;
-  const HIDE = 160;
-  const GAP = 6;
-  const EDGE = 4;
-  let showTimer = null, hideTimer = null, anchor = null, shownTile = null;
-
-  const card = document.createElement('div');
-  card.className = 'rtt-guide-card';
-  card.style.display = 'none';
-  document.body.appendChild(card);
-
-  const reallyHide = () => {
-    card.style.display = 'none'; card.innerHTML = ''; anchor = null; shownTile = null;
-  };
-  const scheduleHide = () => { clearTimeout(hideTimer); hideTimer = setTimeout(reallyHide, HIDE); };
-  const cancelHide = () => { clearTimeout(hideTimer); };
-
-  const place = (cell) => {
-    const r = cell.getBoundingClientRect();
-    const card_width = card.offsetWidth, card_height = card.offsetHeight;
-    const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
-    let left = Math.max(EDGE, Math.min(r.left, vw - card_width - EDGE));
-    let top = r.bottom + GAP;
-    if (top + card_height > vh - EDGE) top = Math.max(EDGE, r.top - GAP - card_height);
-    card.style.left = left + 'px';
-    card.style.top = top + 'px';
-  };
-
-  const show = (cell) => {
-    if (document.body.classList.contains('rtt-no-tooltips')) return;
-    const text = cell.getAttribute('data-guide-text');
-    if (!text) return;
-    const loc = cell.getAttribute('data-guide-loc');
-    const url = cell.getAttribute('data-guide-url');
-    card.innerHTML = '';
-    const body = document.createElement('div');
-    body.className = 'rtt-guide-card-text';
-    body.textContent = text;
-    card.appendChild(body);
-    if (url) {
-      const a = document.createElement('a');
-      a.className = 'rtt-guide-card-link';
-      a.href = url; a.target = '_blank'; a.rel = 'noopener';
-      a.textContent = loc + ' →';
-      card.appendChild(a);
-    }
-    shownTile = cell.getAttribute('data-guide-tile');
-    card.style.display = 'block';
-    place(cell);
-  };
-
-  card.addEventListener('mouseenter', cancelHide);
-  card.addEventListener('mouseleave', scheduleHide);
-
-  document.addEventListener('mouseover', (e) => {
-    const cell = e.target.closest && e.target.closest('.rtt-guide-link');
-    if (!cell) return;
-    cancelHide();
-    if (card.style.display === 'block' && cell.getAttribute('data-guide-tile') === shownTile) return;
-    if (cell === anchor) return;
-    if (showTimer) clearTimeout(showTimer);
-    anchor = cell;
-    showTimer = setTimeout(() => { if (anchor === cell && cell.isConnected) show(cell); }, DELAY);
-  });
-  document.addEventListener('mouseout', (e) => {
-    const cell = e.target.closest && e.target.closest('.rtt-guide-link');
-    if (!cell) return;
-    const to = e.relatedTarget;
-    const toCell = to && to.closest && to.closest('.rtt-guide-link');
-    if (to && (card.contains(to) ||
-               (toCell && toCell.getAttribute('data-guide-tile') === cell.getAttribute('data-guide-tile')))) return;
-    if (showTimer) { clearTimeout(showTimer); showTimer = null; }
-    scheduleHide();
-  });
-  document.addEventListener('pointerdown', (e) => { if (!card.contains(e.target)) reallyHide(); }, true);
-  document.addEventListener('keydown', reallyHide, true);
-  document.addEventListener('wheel', reallyHide, {capture: true, passive: true});
-  document.addEventListener('scroll', reallyHide, {capture: true, passive: true});
-})()
-"""
-
 # The busy scrim is armed client-side because a synchronous re-render holds the event loop until it
 # finishes, so the server can't send a "show scrim" message mid-work — only the browser can in that
 # window. Every server render() ends by calling rttBusy.done(), so the scrim lifts when the grid lands.
