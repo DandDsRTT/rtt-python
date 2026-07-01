@@ -93,7 +93,10 @@ def build_drawer(page_builder) -> dict:
         with show_scroll:
             slots.update(build_chapter_group(page_builder))
             for group_name, items in show_settings.SHOW_GROUPS:
-                with ui.element("div").classes("rtt-show-group"):
+                group = ui.element("div").classes("rtt-show-group")
+                if group_name == "general":
+                    group.classes(add="rtt-show-general")
+                with group:
                     if group_name == "general":
                         page_builder._build_general_tile()
                     else:
