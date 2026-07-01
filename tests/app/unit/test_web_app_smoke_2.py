@@ -405,12 +405,13 @@ class TestWebAppSmoke4:
         assert ".rtt-tour-card" in page_assets._CSS, "tour.css not folded into the page stylesheet"
         assert "tour" in tooltips.CHROME_HELP
 
-    def test_first_run_opens_at_the_tour_start_small_chapter(self):
-        assert app._initial_chapter({}) == show_settings.CHAPTER_MIN, "a genuinely-new browser opens at # the tour's start-small chapter, not two chapters deep past the scaffolding the tour promises"
-        assert app._initial_chapter({page_assets._STORE_KEY: "saved"}) == show_settings.CHAPTER_MIN, (
-            "a saved document alone must NOT count as returning — the grid autosaves on the very first "
-            "render, so keying off it would drop the learner to the deep default after a single refresh")
-        assert app._initial_chapter({page_assets._CHAPTER_KEY: 7}) == 7, "an explicit chapter choice # (the only 'returning' signal) is honored across visits"
+    def test_first_run_opens_at_the_default_chapter(self):
+        assert app._initial_chapter({}) == show_settings.CHAPTER_DEFAULT, (
+            "a genuinely-new browser opens at the default chapter, not the minimum")
+        assert app._initial_chapter({page_assets._STORE_KEY: "saved"}) == show_settings.CHAPTER_DEFAULT, (
+            "a saved document with no explicit chapter still opens at the default chapter")
+        assert app._initial_chapter({page_assets._CHAPTER_KEY: 7}) == 7, (
+            "an explicit chapter choice is honored across visits")
 
     def test_first_content_slide_motivates_before_it_names_and_defers_the_equation(self):
         body = _tour_step("Reading the grid")["body"]
@@ -431,7 +432,8 @@ class TestWebAppSmoke4:
         for part in ("name", "symbol", "value"):
             assert part in body
         tour_chapter = app._initial_chapter({})
-        assert tour_chapter == show_settings.CHAPTER_MIN, "a genuinely-new browser opens at the tour's # start-small chapter"
+        assert tour_chapter == show_settings.CHAPTER_DEFAULT, (
+            "a genuinely-new browser opens at the default chapter")
         assert show_settings.reveal_chapter("units") > tour_chapter
         for key in ("names", "symbols", "quantities"):
             assert show_settings.reveal_chapter(key) <= tour_chapter
