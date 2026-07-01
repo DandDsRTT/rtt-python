@@ -119,15 +119,15 @@ class TestDefaultPage:
         assert "Mappings" in mapping._props.get("data-guide-loc", "")
         assert mapping._props.get("data-guide-text", "")
 
-    def test_the_guide_chapter_slider_gates_the_panel_by_chapter_at_the_default(self, default_page: User) -> None:
+    def test_the_guide_chapter_slider_gates_the_panel_at_the_first_run_chapter(self, default_page: User) -> None:
         slider = next(iter(default_page.find(marker="chapterslider").elements))
-        assert slider.value == show_settings.CHAPTER_DEFAULT
-        for key in ("counts", "tuning_tiles", "optimization", "interest",
-                    "interval_ratios"):
+        assert slider.value == show_settings.CHAPTER_MIN, "a genuinely-new browser opens at the tour's # start-small chapter, so the fresh page sits at CHAPTER_MIN, not two chapters deep"
+        for key in ("counts", "interest", "interval_ratios"):
             assert "rtt-chapter-hidden" not in _row_classes(default_page, key), key
-        assert "rtt-chapter-hidden" in _row_classes(default_page, "domain_units"), "domain_units moved to ch5 (units analysis), so its row is collapsed at the default ch4"
-        for key in ("nonstandard_domain", "projection", "generator_detempering", "identity_objects"):
-            assert "rtt-chapter-hidden" in _row_classes(default_page, key), key
+        for key in ("tuning_tiles", "optimization", "domain_units",
+                    "nonstandard_domain", "projection", "generator_detempering", "identity_objects"):
+            assert "rtt-chapter-hidden" in _row_classes(default_page, key), (
+                f"{key} reveals after chapter {show_settings.CHAPTER_MIN}, so its row is collapsed at first run")
         assert "rtt-chap-invisible" not in _part_classes(default_page, "gridded_values"), "the dummy tile's parts are gated the space-preserving way: an early layer shows, a ch5 one is # invisible-but-in-place (visibility:hidden, NOT display:none)"
         assert "rtt-chap-invisible" in _part_classes(default_page, "units")
         assert "rtt-chap-invisible" not in next(iter(default_page.find(marker="audiobank").elements))._classes, "the audio bank now lives in the frozen audio-settings box, so it is never chapter-gated invisible"
@@ -136,7 +136,7 @@ class TestDefaultPage:
         assert "disable" in _box("nonstandard_domain")._props
         assert "disable" not in _box("counts")._props
         reading = next(iter(default_page.find(marker="chapterreading").elements))
-        assert reading.text == "4: Exploring temperaments"
+        assert reading.text == "2: Mappings"
 
     def test_guide_settings_box_holds_a_dd_default_terminology_radio(self, default_page: User) -> None:
         assert next(iter(default_page.find(marker="guidesettingstitle").elements)).text == "guide settings"
