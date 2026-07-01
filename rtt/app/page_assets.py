@@ -274,10 +274,24 @@ _AUDIO_GLYPHS = {
     "root": '<span class="rtt-audio-root-glyph">1/1</span>',
 }
 
+_BOOT_JS = (_ASSETS / "boot.js").read_text(encoding="utf-8")
+
+_STACKED_EDIT_JS = (_ASSETS / "stacked_edit.js").read_text(encoding="utf-8")
+
+_AUDIO_JS = (_ASSETS / "audio.js").read_text(encoding="utf-8")
+
 # Browser: the column-title strip sits outside the body scroller (so the scrollbar can stop below it),
 # so CSS can't make it ride the scroll — this listener translateX-syncs it instead. scroll doesn't
 # bubble, so it's caught in the capture phase.
 _FREEZE_JS = (_ASSETS / "freeze.js").read_text(encoding="utf-8")
+
+_FRACTION_JS = (_ASSETS / "fraction.js").read_text(encoding="utf-8")
+
+_DECIMAL_JS = (_ASSETS / "decimal.js").read_text(encoding="utf-8")
+
+_ACTIVECELL_JS = (_ASSETS / "activecell.js").read_text(encoding="utf-8")
+
+_MAPPING_DEMO_JS = (_ASSETS / "mapping_demo.js").read_text(encoding="utf-8")
 
 _TOUR_JS = (_ASSETS / "tour.js").read_text(encoding="utf-8")
 
