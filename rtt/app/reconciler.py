@@ -41,7 +41,7 @@ _DEMO_VALUE_KINDS = frozenset(
 )
 
 
-_ROLE_BY_KIND = {"column_header": "column_header", "row_label": "rowheader"}
+_ROLE_BY_KIND = {"column_header": "columnheader", "row_label": "rowheader"}
 
 
 def _cell_role(cell_box: spreadsheet.CellBox) -> str | None:

@@ -21,7 +21,8 @@ _FOOT_BEZIER_SAMPLES = 8
 def svg(width, height, body):
     return (
         f'<svg width="100%" height="100%" viewBox="0 0 {width:.2f} {height:.2f}" '
-        f'preserveAspectRatio="none" style="display:block;overflow:visible">{body}</svg>'
+        f'aria-hidden="true" preserveAspectRatio="none" '
+        f'style="display:block;overflow:visible">{body}</svg>'
     )
 
 
