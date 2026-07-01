@@ -431,20 +431,7 @@ _MATRIX_LABEL_MIN_FONT = 6.0
 
 _EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "hbar"}
 
-GRIDVALUE_KINDS = frozenset(
-    {
-        "mapping",
-        "commacell",
-        "unchangedcell",
-        "interestcell",
-        "heldcell",
-        "targetcell",
-        "formcell",
-        "ratiocell",
-        "elementcell",
-        "elementratio",
-    }
-)
+GRIDVALUE_KINDS = frozenset(_GRIDVALUE_SPECS)
 
 _EBK_SQUARE = str.maketrans("⟨{⟩}", "[[]]")
 _TRANSPOSE_MARK = "ᵀ"
