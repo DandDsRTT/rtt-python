@@ -98,8 +98,8 @@ window.rttAudio = (function () {
       finish: function () { loop = false; }
     };
   }
-  function ctrlEl(control) {  // the single dummy-tile bank control (data-actrl only — no per-tile copies)
-    return document.querySelector('[data-actrl="' + control + '"]');
+  function controlElement(control) {  // the single dummy-tile bank control (data-audio-control only — no per-tile copies)
+    return document.querySelector('[data-audio-control="' + control + '"]');
   }
   api.hit = function (tile, index, cents) {
     if (S.muted) return;                                  // muted: the kill switch is also the gate
@@ -134,9 +134,9 @@ window.rttAudio = (function () {
     S.live.clear();
   }
   api.cycleWave = function () { S.wave = (S.wave + 1) % 4;
-    const e = ctrlEl('wave'); if (e) e.innerHTML = api.glyphs.wave[S.wave]; };
+    const e = controlElement('wave'); if (e) e.innerHTML = api.glyphs.wave[S.wave]; };
   api.cycleMode = function () { stopAll(); S.mode = (S.mode + 1) % 4;
-    const e = ctrlEl('mode'); if (e) e.innerHTML = api.glyphs.mode[S.mode]; };
+    const e = controlElement('mode'); if (e) e.innerHTML = api.glyphs.mode[S.mode]; };
   api.toggleHold = function () {
     S.hold = !S.hold;
     if (!S.hold) {                                        // lock OFF: don't hard-cut — let a loop's current pass
@@ -144,15 +144,15 @@ window.rttAudio = (function () {
       else if (S.stop) { S.stop(); S.stop = null; }       // held note has no pass to finish, so just release it
       for (const k in S.held) S.held[k](); S.held = {};
     }
-    const e = ctrlEl('hold'); if (e) { e.innerHTML = api.glyphs.lock[S.hold ? 1 : 0]; e.classList.toggle('rtt-audio-on', S.hold); }
+    const e = controlElement('hold'); if (e) { e.innerHTML = api.glyphs.lock[S.hold ? 1 : 0]; e.classList.toggle('rtt-audio-on', S.hold); }
   };
   api.toggleRoot = function () { S.root = !S.root;
-    const e = ctrlEl('root'); if (e) e.classList.toggle('rtt-audio-on', S.root); };
+    const e = controlElement('root'); if (e) e.classList.toggle('rtt-audio-on', S.root); };
   // mute leads the bank and is also the kill switch: muting stops everything sounding and (via the
   // body class the CSS keys off) hides every cell's hover speaker, so a clicked cell can't play.
   // Unmuting re-reveals the speakers but sounds nothing until the next click.
   api.toggleMute = function () { S.muted = !S.muted; if (S.muted) { stopAll(); hideFloat(); }
-    const e = ctrlEl('mute'); if (e) e.innerHTML = api.glyphs.mute[S.muted ? 1 : 0];
+    const e = controlElement('mute'); if (e) e.innerHTML = api.glyphs.mute[S.muted ? 1 : 0];
     document.body.classList.toggle('rtt-audio-muted', S.muted); };
   if (document.body && S.muted) document.body.classList.add('rtt-audio-muted');
   // Close the AudioContext when the page is hidden / reloaded. Without this, each reload leaks its
