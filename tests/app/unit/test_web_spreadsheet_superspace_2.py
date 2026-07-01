@@ -29,8 +29,8 @@ class TestSuperspaceMatrixTiles:
     def test_M_L_tile_carries_per_row_map_brackets_and_a_matrix_frame(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
         for i in range(3):
-            assert cells[f"bracket:superspace_map:{i}:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
-            assert cells[f"bracket:superspace_map:{i}:r"].text == spreadsheet_constants.MAP_BRACKETS[1]
+            assert cells[f"bracket:superspace_map:{i}:l"].text == "⟨"
+            assert cells[f"bracket:superspace_map:{i}:r"].text == "]"
         assert "ebktop:superspace_mapping" in cells
         assert "ebkbrace:superspace_mapping" in cells
 
@@ -57,8 +57,8 @@ class TestSuperspaceMatrixTiles:
     def test_M_jL_tile_has_brackets_and_matrix_frame(self):
         cells = {c.id: c for c in _barbados_superspace_identity().cells}
         for i in range(4):
-            assert cells[f"bracket:superspace_vector_ji_map:{i}:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
-            assert cells[f"bracket:superspace_vector_ji_map:{i}:r"].text == spreadsheet_constants.MAP_BRACKETS[1]
+            assert cells[f"bracket:superspace_vector_ji_map:{i}:l"].text == "⟨"
+            assert cells[f"bracket:superspace_vector_ji_map:{i}:r"].text == "]"
         assert "ebktop:superspace_vector_ji_map" in cells
         assert "ebkangle:superspace_vector_ji_map" in cells
 
@@ -122,11 +122,11 @@ class TestSuperspaceMatrixTiles:
 
     def test_superspace_tuning_tiles_carry_their_brackets(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
-        assert cells["bracket:tuning:superspace_generator_map:l"].text == spreadsheet_constants.GENMAP_BRACKETS[0]
-        assert cells["bracket:tuning:superspace_generator_map:r"].text == spreadsheet_constants.GENMAP_BRACKETS[1]
+        assert cells["bracket:tuning:superspace_generator_map:l"].text == "{"
+        assert cells["bracket:tuning:superspace_generator_map:r"].text == "]"
         for key in ("tuning", "just", "retune"):
-            assert cells[f"bracket:{key}:superspace_primes:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
-            assert cells[f"bracket:{key}:superspace_primes:r"].text == spreadsheet_constants.MAP_BRACKETS[1]
+            assert cells[f"bracket:{key}:superspace_primes:l"].text == "⟨"
+            assert cells[f"bracket:{key}:superspace_primes:r"].text == "]"
 
     def test_superspace_tuning_row_captions_and_symbols(self):
         cells = {c.id: c for c in _barbados_superspace(names=True, symbols=True, equivalences=False).cells}
@@ -198,19 +198,19 @@ class TestSuperspaceMatrixTiles:
                      "superspace_generator_map", ":superspace_primes:l", ":superspace_primes:r"):
             assert not any(frag in i for i in ids), f"leaked id matching {frag!r}"
 
-    def test_superspace_M_L_per_row_brackets_reuse_MAP_BRACKETS(self):
+    def test_superspace_M_L_per_row_brackets_are_angle_brackets(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
         for i in range(3):
             assert cells[f"bracket:superspace_map:{i}:l"].text == "⟨"
             assert cells[f"bracket:superspace_map:{i}:r"].text == "]"
 
-    def test_superspace_M_jL_per_row_brackets_reuse_MAP_BRACKETS(self):
+    def test_superspace_M_jL_per_row_brackets_are_angle_brackets(self):
         cells = {c.id: c for c in _barbados_superspace_identity().cells}
         for i in range(4):
             assert cells[f"bracket:superspace_vector_ji_map:{i}:l"].text == "⟨"
             assert cells[f"bracket:superspace_vector_ji_map:{i}:r"].text == "]"
 
-    def test_superspace_t_L_j_L_r_L_brackets_reuse_MAP_BRACKETS(self):
+    def test_superspace_t_L_j_L_r_L_brackets_are_angle_brackets(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
         for key in ("tuning", "just", "retune"):
             assert cells[f"bracket:{key}:superspace_primes:l"].text == "⟨"
@@ -218,7 +218,7 @@ class TestSuperspaceMatrixTiles:
 
 
 class TestSuperspaceBracketsAndMath:
-    def test_superspace_g_L_brackets_reuse_GENMAP_BRACKETS(self):
+    def test_superspace_g_L_brackets_are_curly_brackets(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
         assert cells["bracket:tuning:superspace_generator_map:l"].text == "{"
         assert cells["bracket:tuning:superspace_generator_map:r"].text == "]"
@@ -229,11 +229,6 @@ class TestSuperspaceBracketsAndMath:
         assert cells["ebkbrace:superspace_mapping"].kind == "ebkbrace"
         assert cells["ebktop:superspace_vector_ji_map"].kind == "ebktop"
         assert cells["ebkangle:superspace_vector_ji_map"].kind == "ebkangle"
-
-    def test_existing_bracket_constants_are_unchanged_by_superspace(self):
-        assert spreadsheet_constants.MAP_BRACKETS == ("⟨", "]")
-        assert spreadsheet_constants.LIST_BRACKETS == ("[", "]")
-        assert spreadsheet_constants.GENMAP_BRACKETS == ("{", "]")
 
     def test_math_expressions_render_j_L_cells_as_log_of_superspace_primes(self):
         cells = {c.id: c for c in _barbados_superspace(math_expressions=True).cells}
