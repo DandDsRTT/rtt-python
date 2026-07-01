@@ -150,11 +150,11 @@ def render_ebk(convention: EbkConvention, items, formatter=str) -> str:
     if convention.structure == "row":
         return oo + sep.join(_DASH if v is None else formatter(v) for v in items) + oc
     vectors = list(items)
-    dim = next((len(v) for v in vectors if v is not None), 0)
+    dimension = next((len(v) for v in vectors if v is not None), 0)
     pieces = [
         io
         + " ".join(
-            [_DASH] * dim if v is None else [_DASH if x is None else formatter(x) for x in v]
+            [_DASH] * dimension if v is None else [_DASH if x is None else formatter(x) for x in v]
         )
         + ic
         for v in vectors

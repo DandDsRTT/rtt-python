@@ -155,13 +155,13 @@ class TestWebTooltips:
         assert len(set(texts)) == len(ids)
 
     def test_every_rendered_cell_is_classified_for_tooltips(self):
-        for cb in _rendered_cells():
-            text = tooltips.control_help(cb.kind, cb.id)
-            if cb.kind in tooltips.READONLY_KINDS and cb.id not in tooltips.HELPED_READONLY_IDS:
-                assert text is None, f"read-only {cb.kind!r} ({cb.id}) should carry no tooltip"
+        for cell_box in _rendered_cells():
+            text = tooltips.control_help(cell_box.kind, cell_box.id)
+            if cell_box.kind in tooltips.READONLY_KINDS and cell_box.id not in tooltips.HELPED_READONLY_IDS:
+                assert text is None, f"read-only {cell_box.kind!r} ({cell_box.id}) should carry no tooltip"
             else:
                 assert (text or "").strip(), (
-                    f"control {cb.kind!r} ({cb.id}) has no hover text — add it in rtt/app/tooltips.py")
+                    f"control {cell_box.kind!r} ({cell_box.id}) has no hover text — add it in rtt/app/tooltips.py")
 
     def test_chrome_help_covers_the_app_chrome_buttons(self):
         assert set(tooltips.CHROME_HELP) == {"settings", "chapter", "select_all", "terminology",
@@ -216,9 +216,9 @@ class TestWebTooltips:
             assert tooltips.tile_guide_help_for_cell(non_tile) is None
 
     def test_every_rendered_caption_and_symbol_cell_id_parses_without_error(self):
-        for cb in _rendered_cells():
-            if cb.kind in ("symbol", "caption"):
-                tooltips.tile_guide_help_for_cell(cb.id)
+        for cell_box in _rendered_cells():
+            if cell_box.kind in ("symbol", "caption"):
+                tooltips.tile_guide_help_for_cell(cell_box.id)
 
     def test_pretransform_relabels_the_prescaler_help_to_pretransformer(self):
         preset = tooltips.control_help("preset", "preset:prescaler")

@@ -85,13 +85,13 @@ def minimal_ca(matrix: Matrix, jip_octaves) -> Matrix:
     if not commas or all_zeros(commas):
         return _as_matrix(commas)
     seed = _lll_reduce(commas, jip_octaves)
-    rank, dim = len(seed), len(seed[0])
+    rank, dimension = len(seed), len(seed[0])
 
     k = _enum_bound(rank)
     candidates = []
     for coeffs in itertools.product(range(-k, k + 1), repeat=rank):
         if any(coeffs):
-            vector = [sum(c * seed[r][d] for r, c in enumerate(coeffs)) for d in range(dim)]
+            vector = [sum(c * seed[r][d] for r, c in enumerate(coeffs)) for d in range(dimension)]
             candidates.append(vector)
     candidates.sort(key=lambda c: _complexity(c, jip_octaves))
 

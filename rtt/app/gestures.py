@@ -4,7 +4,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from rtt.app import _gesture_ops
-from rtt.app.page_assets import _Gesture, cb_method
+from rtt.app.page_assets import _Gesture, callback_method
 
 if TYPE_CHECKING:
     from rtt.app.editing import EditController
@@ -95,7 +95,7 @@ class GestureController:
             g.baseline = self._runtime.last_lay
             _gesture_ops.paint_rings(self)
 
-    @cb_method
+    @callback_method
     def control_hover(self, apply):
         if not self._editor.settings["preview_highlighting"]:
             return
@@ -110,7 +110,7 @@ class GestureController:
         self.gesture = _Gesture(kind="hover", apply=apply, previous=previous)
         _gesture_ops.paint_rings(self)
 
-    @cb_method
+    @callback_method
     def control_unhover(self):
         g = self.gesture
         if g is None or g.kind != "hover":
@@ -123,35 +123,35 @@ class _GestureCombine:
     def __init__(self, gesture_controller) -> None:
         self.gesture_controller = gesture_controller
 
-    @cb_method
+    @callback_method
     def on_cell_focus(self, cell_id):
         _gesture_ops.on_cell_focus(self.gesture_controller, cell_id)
 
-    @cb_method
+    @callback_method
     def on_cell_blur(self, cell_id=None):
         _gesture_ops.on_cell_blur(self.gesture_controller, cell_id)
 
-    @cb_method
+    @callback_method
     def combine_begin(self):
         _gesture_ops.combine_begin(self.gesture_controller)
 
-    @cb_method
+    @callback_method
     def combine_preview(self, apply, target_pred=None):
         _gesture_ops.combine_preview(self.gesture_controller, apply, target_pred)
 
-    @cb_method
+    @callback_method
     def combine_commit(self, apply):
         _gesture_ops.combine_commit(self.gesture_controller, apply)
 
-    @cb_method
+    @callback_method
     def combine_end(self):
         _gesture_ops.combine_end(self.gesture_controller)
 
-    @cb_method
+    @callback_method
     def rank_remove_hover(self, axis, index):
         _gesture_ops.rank_remove_hover(self.gesture_controller, axis, index)
 
-    @cb_method
+    @callback_method
     def rank_remove_unhover(self):
         _gesture_ops.rank_remove_unhover(self.gesture_controller)
 
@@ -160,34 +160,34 @@ class _GestureHover:
     def __init__(self, gesture_controller) -> None:
         self.gesture_controller = gesture_controller
 
-    @cb_method
+    @callback_method
     def on_chooser_hover(self, cell_id, detail):
         _gesture_ops.on_chooser_hover(self.gesture_controller, cell_id, detail)
 
-    @cb_method
+    @callback_method
     def on_popup(self, cell_id, is_open):
         _gesture_ops.on_popup(self.gesture_controller, cell_id, is_open)
 
-    @cb_method
+    @callback_method
     def generator_tuning_hover(self, cell_id):
         _gesture_ops.generator_tuning_hover(self.gesture_controller, cell_id)
 
-    @cb_method
+    @callback_method
     def generator_tuning_unhover(self, cell_id):
         _gesture_ops.generator_tuning_unhover(self.gesture_controller, cell_id)
 
-    @cb_method
+    @callback_method
     def on_drag_start(self, lst, index):
         _gesture_ops.on_drag_start(self.gesture_controller, lst, index)
 
-    @cb_method
+    @callback_method
     def on_drag_enter(self, dst_list, dst_idx):
         _gesture_ops.on_drag_enter(self.gesture_controller, dst_list, dst_idx)
 
-    @cb_method
+    @callback_method
     def on_drag_end(self):
         _gesture_ops.on_drag_end(self.gesture_controller)
 
-    @cb_method
+    @callback_method
     def on_drop(self, dst_list, dst_idx):
         _gesture_ops.on_drop(self.gesture_controller, dst_list, dst_idx)

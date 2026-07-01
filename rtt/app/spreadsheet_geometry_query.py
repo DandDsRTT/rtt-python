@@ -342,7 +342,7 @@ def tile_unit(resolved, row_key: str, column_key: str) -> str:
 
 
 def cell_unit(
-    resolved, row_key: str, column_key: str, *, generator=None, prime=None, elem=None
+    resolved, row_key: str, column_key: str, *, generator=None, prime=None, element=None
 ) -> str:
     if not resolved.flags.cell_units:
         return ""
@@ -364,9 +364,9 @@ def cell_unit(
     if prime is not None:
         coordinate = "p" if superspace else resolved.labels.domain_label
         u = _subscript_coord(u, "p", f"{coordinate}{_sub(prime + 1)}")
-    if elem is not None:
+    if element is not None:
         u = _subscript_coord(
-            u, resolved.labels.domain_label, f"{resolved.labels.domain_label}{_sub(elem + 1)}"
+            u, resolved.labels.domain_label, f"{resolved.labels.domain_label}{_sub(element + 1)}"
         )
     return u
 

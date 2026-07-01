@@ -14,7 +14,7 @@ from rtt.app.page_assets import (
     _PLAIN_TEXT_DUAL_VECTOR_KIND,
     _TARGET_LIMIT_DEBOUNCE,
     _WHEEL_STEPS,
-    cb_method,
+    callback_method,
 )
 from rtt.app.render_html import (
     _wheel_step,
@@ -38,39 +38,39 @@ class _TuningEdits:
         self.e = e
         self.target_limit_commit = None
 
-    @cb_method
+    @callback_method
     def on_power_change(self, cell_id):
         _power_change(self.e, cell_id)
 
-    @cb_method
+    @callback_method
     def on_generator_tuning_change(self, cell_id):
         _generator_tuning_change(self.e, cell_id)
 
-    @cb_method
+    @callback_method
     def on_generator_tuning_wheel(self, cell_id, delta_y):
         _generator_tuning_wheel(self.e, cell_id, delta_y)
 
-    @cb_method
+    @callback_method
     def on_value_wheel(self, cell_id, delta_y):
         _value_wheel(self.e, cell_id, delta_y)
 
-    @cb_method
+    @callback_method
     def on_target_limit_wheel(self, delta_y):
         _target_limit_wheel(self, delta_y)
 
-    @cb_method
+    @callback_method
     def on_target_limit_preview(self, typed=None):
         _target_limit_preview(self.e, typed)
 
-    @cb_method
+    @callback_method
     def on_prescaler_change(self, cell_id):
         _prescaler_change(self.e, cell_id)
 
-    @cb_method
+    @callback_method
     def on_weight_change(self, cell_id):
         _weight_change(self.e, cell_id)
 
-    @cb_method
+    @callback_method
     def on_plain_text_edit(self, cell_id, value):
         _plain_text_edit(self.e, cell_id, value)
 

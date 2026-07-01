@@ -9,7 +9,7 @@ from rtt.app.page_assets import (
     _INVALID_FORM,
     _INVALID_TEMPERAMENT,
     _INVALID_UNCHANGED,
-    cb_method,
+    callback_method,
 )
 from rtt.app.render_html import (
     _parse_int,
@@ -20,47 +20,47 @@ class _VectorEdits:
     def __init__(self, e) -> None:
         self.e = e
 
-    @cb_method
+    @callback_method
     def on_mapping_change(self, preview=False):
         _edit_vector_grid(self.e, self.e._MAPPING_EDIT, preview)
 
-    @cb_method
+    @callback_method
     def on_form_change(self, preview=False):
         _form_change(self.e, preview)
 
-    @cb_method
+    @callback_method
     def on_comma_change(self, preview=False):
         _edit_vector_grid(self.e, self.e._COMMA_EDIT, preview)
 
-    @cb_method
+    @callback_method
     def on_unchanged_change(self, preview=False):
         _unchanged_change(self.e, preview)
 
-    @cb_method
+    @callback_method
     def on_interest_change(self, preview=False):
         _edit_vector_grid(self.e, self.e._INTEREST_EDIT, preview)
 
-    @cb_method
+    @callback_method
     def on_held_change(self, preview=False):
         _edit_vector_grid(self.e, self.e._HELD_EDIT, preview)
 
-    @cb_method
+    @callback_method
     def on_target_cells_change(self, preview=False):
         _edit_vector_grid(self.e, self.e._TARGET_EDIT, preview)
 
-    @cb_method
+    @callback_method
     def on_ratio_change(self, cell_id):
         _ratio_change(self.e, cell_id)
 
-    @cb_method
+    @callback_method
     def transform_interval(self, cell_id, op):
         _transform_interval(self.e, cell_id, op)
 
-    @cb_method
+    @callback_method
     def on_element_change(self, cell_id):
         _element_change(self.e, cell_id)
 
-    @cb_method
+    @callback_method
     def on_element_preview(self, cell_id):
         _element_preview(self.e, cell_id)
 

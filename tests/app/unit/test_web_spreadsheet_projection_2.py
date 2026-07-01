@@ -291,10 +291,10 @@ class TestProjectionDrafts:
     def test_scaling_factors_grows_a_green_draft_column_for_a_pending_comma(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = {**settings.defaults(), "projection": True}
-        c = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None]).cells}
+        c = {cell_box.id: cell_box for cell_box in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None]).cells}
         assert c["cell:scaling:draft"].pending and c["cell:scaling:draft"].text == ""
         assert c["cell:scaling:draft"].x == c["cell:projection_vectors:0:draft"].x
-        assert "cell:scaling:draft" not in {cb.id for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
+        assert "cell:scaling:draft" not in {cell_box.id for cell_box in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
 
     def test_superspace_lifted_lists_grow_draft_columns_for_interval_drafts(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
@@ -313,14 +313,14 @@ class TestProjectionDrafts:
     def test_v_column_labels_track_their_cells_during_a_pending_comma(self):
         base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
         s = {**settings.defaults(), "projection": True, "header_symbols": True}
-        c = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None]).cells}
+        c = {cell_box.id: cell_box for cell_box in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None]).cells}
         assert c["matrix_label:column:vectors:commas:0"].x == c["cell:comma:0:0"].x
         assert c["matrix_label:column:vectors:commas:1"].x == c["cell:unchanged:0:0"].x
         assert c["matrix_label:column:vectors:commas:2"].x == c["cell:unchanged:0:1"].x
         assert "matrix_label:column:vectors:commas:3" not in c
         assert c["matrix_label:column:vectors:commas:1"].x != c["cell:comma:0:1"].x
         assert c["matrix_label:column:projection:commas:1"].x == c["cell:projection_vectors:0:u0"].x
-        rest = {cb.id: cb for cb in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
+        rest = {cell_box.id: cell_box for cell_box in spreadsheet.build(base, s, held_basis_ratios=("2/1", "5/4")).cells}
         assert rest["matrix_label:column:vectors:commas:1"].x == rest["cell:unchanged:0:0"].x
 
     def test_comma_add_drop_zone_does_not_occlude_the_unchanged_grips(self):

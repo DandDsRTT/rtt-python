@@ -8,10 +8,12 @@ from rtt.app.spreadsheet_constants import VALUE_KINDS
 
 
 def assign_matrix(cells, resolved, geometry):
-    for i, cb in enumerate(cells):
-        if cb.kind not in VALUE_KINDS:
+    for i, cell_box in enumerate(cells):
+        if cell_box.kind not in VALUE_KINDS:
             continue
-        rkey, ckey = query.tile_of(geometry, cb.x + cb.width / 2, cb.y + cb.height / 2)
+        rkey, ckey = query.tile_of(
+            geometry, cell_box.x + cell_box.width / 2, cell_box.y + cell_box.height / 2
+        )
         if rkey is None or ckey is None:
             continue
         upd = {"in_grid": True}
@@ -21,7 +23,7 @@ def assign_matrix(cells, resolved, geometry):
             upd["matrix_orient"] = "col" if convention.structure == "list" else "row"
         except KeyError:
             pass
-        cells[i] = replace(cb, **upd)
+        cells[i] = replace(cell_box, **upd)
 
 
 def _clean_label(text) -> str:
