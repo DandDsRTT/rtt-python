@@ -11,7 +11,7 @@ run in-process.
 
 import inspect
 
-from rtt.app import _page_parts, page_assets, render_html
+from rtt.app import page_assets, render_html
 
 
 _GUARDED_MODULES = {
@@ -45,8 +45,8 @@ class TestSharedStackedEditFactory:
         frac = page_assets._FRACTION_JS
         assert "13px" not in frac, "the ratio font is the injected _RATIO_MAX_FONT, not a re-typed literal"
         assert "window.rttFraction" in frac and "ratioFont" in frac
-        src = inspect.getsource(_page_parts.setup_page_head)
-        assert "window.rttFraction" in src and "ratioFont" in src and "_RATIO_MAX_FONT" in src
+        assert "window.rttFraction" in page_assets.HEAD_HTML and "ratioFont" in page_assets.HEAD_HTML
+        assert "_RATIO_MAX_FONT" in inspect.getsource(page_assets._head_html)
 
     def test_decimal_twin_keeps_no_font_hack(self):
         assert "fontSize" not in page_assets._DECIMAL_JS, (
