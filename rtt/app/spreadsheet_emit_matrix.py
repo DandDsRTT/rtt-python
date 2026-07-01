@@ -231,11 +231,10 @@ def _emit_qty_commas(cells, resolved, geometry, context, quantity_y, branch_minu
                              text=(resolved.ghosts.comma_ratio or DASH) if resolved.ghosts.comma else "?/?",
                              comma=resolved.dimensions.comma_count, pending=True))
     if resolved.unchanged.shown:
-        full_u = resolved.unchanged.basis is not None and all(v is not None for v in resolved.unchanged.basis)
         for j in range(resolved.dimensions.unchanged_count):
             doomed = resolved.commas.pending is not None and j == resolved.dimensions.unchanged_count - 1
             cells.append(CellBox(f"unchanged:{j}", query.comma_left(geometry, resolved, resolved.dimensions.comma_count_shown + j), quantity_y, COLUMN_WIDTH, ROW_HEIGHT,
-                                 "ratiocell" if (full_u and not doomed) else "commaratio",
+                                 "ratiocell" if (resolved.unchanged.full and not doomed) else "commaratio",
                                  text=resolved.unchanged.ratios[j] or DASH, comma=resolved.dimensions.comma_count + j))
             voice(cells, "quantities:commas", resolved.dimensions.comma_count + j, resolved.unchanged.sizes.just[j])
     for c in range(resolved.dimensions.comma_count):

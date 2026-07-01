@@ -122,9 +122,6 @@ def _matrix_label_group_count(resolved):
 
 
 def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
-
-    def prescale_top(i):
-        return query.subrow_top(geometry, "prescaling", i)
     row_top = {
         ("mapping", "primes"): lambda i: query.map_top(geometry, i),
         ("canonical", "primes"): lambda i: query.canonical_top(geometry, i),
@@ -132,8 +129,8 @@ def _emit_matrix_row_labels(cells, resolved, geometry, context) -> None:
         ("vectors", "primes"): lambda i: query.vector_top(geometry, i),
         ("projection", "primes"): lambda i: query.projection_top(geometry, i),
         ("projection", "superspace_primes"): lambda i: query.projection_top(geometry, i),
-        ("prescaling", "primes"): prescale_top,
-        ("prescaling", "superspace_primes"): prescale_top,
+        ("prescaling", "primes"): lambda i: query.subrow_top(geometry, "prescaling", i),
+        ("prescaling", "superspace_primes"): lambda i: query.subrow_top(geometry, "prescaling", i),
         ("superspace_mapping", "superspace_primes"): lambda i: query.superspace_map_top(geometry, i),
         ("superspace_mapping", "primes"): lambda i: query.superspace_map_top(geometry, i),
         ("superspace_vectors", "superspace_primes"): lambda i: query.superspace_vector_top(geometry, i),
@@ -199,16 +196,11 @@ def _emit_matrix_labels(cells, resolved, geometry, context) -> None:
     _emit_matrix_col_labels(cells, resolved, geometry, context)
 
 
-def _panel(blocks, geometry, context, bid, column_key, row_key) -> None:
-    if column_key not in geometry.column_x or row_key not in geometry.rows:
-        return
-    blocks.append(Block(bid, *query.panel_rect(geometry, context.collapsed, row_key, column_key)))
-
-
 def _emit_panels(blocks, geometry, context, region_boxes, tuning_ranges_box, optimization_box, approach_frame) -> None:
     for bid, row_key, column_key in geometry.tiles:
-        if (row_key, column_key) in geometry.declared_tiles:
-            _panel(blocks, geometry, context, bid, column_key, row_key)
+        if ((row_key, column_key) in geometry.declared_tiles
+                and column_key in geometry.column_x and row_key in geometry.rows):
+            blocks.append(Block(bid, *query.panel_rect(geometry, context.collapsed, row_key, column_key)))
     blocks.extend(region_boxes)
     if tuning_ranges_box is not None:
         blocks.append(Block("block:tuning:rangesbox", *tuning_ranges_box, boxed=True))

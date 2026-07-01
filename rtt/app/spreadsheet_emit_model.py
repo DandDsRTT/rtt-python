@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
+from rtt.app.spreadsheet_constants import DASH
+
 
 def voice(cells, tile, index, cents) -> None:
     if cents is None:
@@ -11,6 +13,10 @@ def voice(cells, tile, index, cents) -> None:
 
 def element_cell_kind(text: str) -> str:
     return "elementratio" if "/" in text else "elementcell"
+
+
+def dash_or_str(v) -> str:
+    return DASH if v is None else str(v)
 
 
 @dataclass(frozen=True)

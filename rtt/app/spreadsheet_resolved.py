@@ -118,6 +118,10 @@ class Unchanged:
     born: bool
     empty_comma_width: float
 
+    @property
+    def full(self) -> bool:
+        return self.basis is not None and all(v is not None for v in self.basis)
+
 
 @dataclass(frozen=True)
 class Flags:
