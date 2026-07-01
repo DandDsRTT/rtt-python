@@ -22,7 +22,7 @@ from rtt.app.render_html import (
 )
 
 
-def build_prescalercell(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_prescaler_cell(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     _build_decimal(
         reconciler,
         cell_box,
@@ -31,11 +31,11 @@ def build_prescalercell(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None
     )
 
 
-def update_prescalercell(reconciler, cell_box: spreadsheet.CellBox) -> None:
+def update_prescaler_cell(reconciler, cell_box: spreadsheet.CellBox) -> None:
     _update_decimal(reconciler, cell_box, cell_box.text)
 
 
-def build_weightcell(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_weight_cell(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     _build_decimal(
         reconciler,
         cell_box,
@@ -44,11 +44,11 @@ def build_weightcell(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     )
 
 
-def update_weightcell(reconciler, cell_box: spreadsheet.CellBox) -> None:
+def update_weight_cell(reconciler, cell_box: spreadsheet.CellBox) -> None:
     _update_decimal(reconciler, cell_box, cell_box.text)
 
 
-def build_powerinput(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_power_input(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     wrap.classes("rtt-cell-input rtt-cell-stacked")
     reconciler.cells[cell_box.id].value.input = (
         ui.input(
@@ -66,12 +66,12 @@ def build_powerinput(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     )
 
 
-def update_powerinput(reconciler, cell_box: spreadsheet.CellBox) -> None:
+def update_power_input(reconciler, cell_box: spreadsheet.CellBox) -> None:
     reconciler.cells[cell_box.id].value.input.value = cell_box.text
     _sync_stacked_face(reconciler, cell_box.id, *_power_parts(cell_box.text))
 
 
-def build_powerdisplay(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None:
+def build_power_display(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None:
     _put_stacked_face(
         reconciler,
         cell_box.id,
@@ -81,7 +81,7 @@ def build_powerdisplay(reconciler, cell_box: spreadsheet.CellBox, _wrap) -> None
     )
 
 
-def update_powerdisplay(reconciler, cell_box: spreadsheet.CellBox) -> None:
+def update_power_display(reconciler, cell_box: spreadsheet.CellBox) -> None:
     _sync_stacked_face(reconciler, cell_box.id, *_power_parts(cell_box.text))
 
 
@@ -151,7 +151,7 @@ def build_generator_ratio(reconciler, cell_box: spreadsheet.CellBox, wrap) -> No
     _build_ratio_face(reconciler, cell_box, wrap, approx=True)
 
 
-def build_commaratio(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
+def build_comma_ratio(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     _build_ratio_face(reconciler, cell_box, wrap, approx=False)
 
 

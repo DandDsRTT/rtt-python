@@ -413,9 +413,9 @@ RATIO_RECIPROCATE_HELP = (
 
 
 READONLY_KINDS: frozenset[str] = frozenset({
-    "prime", "columnheader", "rowlabel", "mapped", "vector", "tuningvalue", "powerdisplay",
-    "generator_ratio", "commaratio", "math_expression", "plain_text", "plain_text_pending",
-    "symbol", "matrix_label", "units", "caption", "count", "boxtitle",
+    "prime", "column_header", "row_label", "mapped", "vector", "tuning_value", "power_display",
+    "generator_ratio", "comma_ratio", "math_expression", "plain_text", "plain_text_pending",
+    "symbol", "matrix_label", "units", "caption", "count", "box_title",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "transpose", "vbar", "chart", "rangechart",
 })
 
@@ -429,34 +429,34 @@ _KIND_HELP: dict[str, str] = {
         "How many of this generator are used to approximate this prime. Type to edit the "
         "temperament, or scroll the wheel to step it by 1."
     ),
-    "formcell": (
+    "form_cell": (
         "Type to re-store the mapping in a new generating set (same temperament), or "
         "scroll the wheel to step it by 1; the whole form matrix must stay unimodular."
     ),
-    "commacell": (
+    "comma_cell": (
         "One prime's exponent in a comma the temperament makes vanish — a small interval that maps "
         "to nothing. Type to edit, or scroll the wheel to step it by 1."
     ),
-    "unchangedcell": (
+    "unchanged_cell": (
         "Unchanged interval entry — this prime's exponent in an interval the tuning holds just. "
         "Type a new basis to retune to the projection that holds it."
     ),
-    "interestcell": (
+    "interest_cell": (
         "Interval-of-interest entry — this prime's exponent in an interval you're tracking. Type "
         "to edit, or scroll the wheel to step it by 1."
     ),
-    "heldcell": (
+    "held_cell": (
         "One prime's exponent in a held interval — one the tuning keeps pure, dealt absolutely "
         "zero damage. Type to edit, or scroll the wheel to step it by 1."
     ),
-    "targetcell": (
+    "target_cell": (
         "One prime's exponent in a target interval, whose damage the tuning works to keep low. "
         "Type to override the chosen target set, or scroll the wheel to step it by 1."
     ),
-    "prescalercell": (
+    "prescaler_cell": (
         "Type to override the scheme's value, or scroll the wheel to nudge it by 0.001."
     ),
-    "weightcell": (
+    "weight_cell": (
         "How much this target interval's damage counts relative to the others. Type your own to "
         "override the slope's complexity/simplicity/unity weighting."
     ),
@@ -465,12 +465,12 @@ _KIND_HELP: dict[str, str] = {
         "the generator (its mapping row flips too, so the tuning is unchanged), or scroll the "
         "wheel to fine-tune by a thousandth of a cent."
     ),
-    "elementcell": (
+    "element_cell": (
         "Domain basis element — a prime, or any rational (e.g. 13/5) for a nonstandard domain. "
         "Type to relabel this basis element; the ?/? draft adds a new one (held just). Valid if "
         "it's a positive rational that keeps the basis independent."
     ),
-    "elementratio": (
+    "element_ratio": (
         "Domain basis element — a prime, or any rational (e.g. 13/5) for a nonstandard domain. "
         "Type to relabel this basis element; the ?/? draft adds a new one (held just). Valid if "
         "it's a positive rational that keeps the basis independent."
@@ -661,6 +661,6 @@ def _control_help(kind: str, cell_id: str) -> str | None:
         return _PRESET_HELP.get(cell_id.split(":")[1])
     if kind == "plain_text_edit":
         return _PLAIN_TEXT_HELP.get(cell_id)
-    if kind == "ratiocell":
+    if kind == "ratio_cell":
         return _RATIO_HELP.get(cell_id.split(":", maxsplit=1)[0])
     return _ID_HELP.get(cell_id) or _KIND_HELP.get(kind)

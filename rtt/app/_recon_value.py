@@ -169,7 +169,7 @@ def _build_fraction(reconciler, cell_box: spreadsheet.CellBox, wrap, commit, pre
 
 def _arm_ratio_ops(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     if (
-        cell_box.kind not in ("ratiocell", "elementcell", "elementratio")
+        cell_box.kind not in ("ratio_cell", "element_cell", "element_ratio")
         or cell_box.pending
         or cell_box.id.split(":", 1)[0] not in ("comma", "target", "held", "interest", "prime")
     ):
@@ -286,10 +286,10 @@ def _fit_fraction(
 
 
 def _gridvalue_text(reconciler, cell_box: spreadsheet.CellBox) -> str:
-    if cell_box.pending and cell_box.kind in ("commacell", "mapping"):
+    if cell_box.pending and cell_box.kind in ("comma_cell", "mapping"):
         draft = (
             reconciler._editor.pending_comma
-            if cell_box.kind == "commacell"
+            if cell_box.kind == "comma_cell"
             else reconciler._editor.pending_mapping_row
         )
         v = draft[cell_box.prime] if draft is not None else None

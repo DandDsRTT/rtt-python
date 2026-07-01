@@ -85,7 +85,7 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group
         if operand is not None:
             cells.append(CellBox(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=u))
         else:
-            cells.append(CellBox(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, editable_kind or "tuningvalue",
+            cells.append(CellBox(cell_id, x, y, COLUMN_WIDTH, ROW_HEIGHT, editable_kind or "tuning_value",
                                  text=service.cents(v, resolved.flags.decimals), unit=u))
         if key in ("tuning", "just"):
             voice(cells, f"{key}:{group}", i, v)
@@ -98,7 +98,7 @@ def tuning_value_row(cells, chart_tiles, resolved, geometry, context, key, group
             if gsize is not None:
                 text = service.cents(gsize, resolved.flags.decimals)
         cells.append(CellBox(f"{key}:{geometry.group_elem[group]}:draft", geometry.group_left[group][pending_index[1]],
-                             y, COLUMN_WIDTH, ROW_HEIGHT, "tuningvalue", text=text, pending=True))
+                             y, COLUMN_WIDTH, ROW_HEIGHT, "tuning_value", text=text, pending=True))
 
 
 def chart(cells, geometry, context, row_key, column_key, values, indicator=None, indicator_label="") -> None:
@@ -138,7 +138,7 @@ def _emit_tuning_prime_rows(cells, chart_tiles, resolved, geometry, context) -> 
 def _emit_tuning_generator_row(cells, resolved, geometry, context) -> None:
     if not (query.row_open(geometry, context.collapsed, "tuning") and query.tile_open(geometry, context.collapsed, "tuning", "generators")):
         return
-    generator_kind = "tuningvalue" if resolved.flags.superspace_generators else "generator_tuning_cell"
+    generator_kind = "tuning_value" if resolved.flags.superspace_generators else "generator_tuning_cell"
     for i, v in enumerate(resolved.tuning.tuning_map.generator_map):
         operand = None
         if resolved.flags.math_expressions and not resolved.flags.superspace_generators:
@@ -170,7 +170,7 @@ def _emit_tuning_canonical_generator_row(cells, resolved, geometry, context) -> 
                                  "math_expression", text=_math_expr(operand, v, resolved.flags.quantities, resolved.flags.decimals), unit=query.cell_unit(resolved, "tuning", "canonical_generators", generator=j)))
         else:
             cells.append(CellBox(f"tuning:canonical_generator:{j}", query.canonical_generator_left(geometry, j), geometry.rows["tuning"].y, COLUMN_WIDTH, ROW_HEIGHT,
-                                 "tuningvalue", text=service.cents(v, resolved.flags.decimals), generator=j, unit=query.cell_unit(resolved, "tuning", "canonical_generators", generator=j)))
+                                 "tuning_value", text=service.cents(v, resolved.flags.decimals), generator=j, unit=query.cell_unit(resolved, "tuning", "canonical_generators", generator=j)))
         voice(cells, "tuning:canonical_generators", j, v)
 
 
@@ -252,7 +252,7 @@ def _emit_cbox_controls(cells, region_boxes, resolved, geometry, context) -> Non
         q_slot_x = tx + drop_width + OPTIMIZATION_COL_GAP
     q_x = q_slot_x + (slot_width - COLUMN_WIDTH) / 2
     q_text = _format_power(service.complexity_norm_power(context.tuning_scheme))
-    q_kind = "powerinput" if resolved.flags.alt_complexity else "powerdisplay"
+    q_kind = "power_input" if resolved.flags.alt_complexity else "power_display"
     cells.append(CellBox("control:q", q_x, control_y, COLUMN_WIDTH, ROW_HEIGHT, q_kind, text=q_text))
     if resolved.flags.symbols:
         cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_width, SYMBOL_HEIGHT, "symbol", text="𝑞"))
@@ -262,7 +262,7 @@ def _emit_cbox_controls(cells, region_boxes, resolved, geometry, context) -> Non
         dual_slot_x = q_slot_x + slot_width + OPTIMIZATION_COL_GAP
         dual_x = dual_slot_x + (slot_width - COLUMN_WIDTH) / 2
         dual_text = _format_power(service.dual_norm_power(context.tuning_scheme))
-        cells.append(CellBox("control:dual", dual_x, control_y, COLUMN_WIDTH, ROW_HEIGHT, "powerdisplay", text=dual_text))
+        cells.append(CellBox("control:dual", dual_x, control_y, COLUMN_WIDTH, ROW_HEIGHT, "power_display", text=dual_text))
         if resolved.flags.symbols:
             cells.append(CellBox("symbol:dual", dual_slot_x, sym_y, slot_width, SYMBOL_HEIGHT,
                                  "symbol", text="dual(𝑞)"))
@@ -283,7 +283,7 @@ def _emit_complexity_row(cells, chart_tiles, resolved, geometry, context) -> Non
 def _emit_weight_row(cells, region_boxes, chart_tiles, resolved, geometry, context) -> None:
     if query.row_open(geometry, context.collapsed, "weight") and query.tile_open(geometry, context.collapsed, "weight", "targets"):
         tuning_value_row(cells, chart_tiles, resolved, geometry, context, "weight", "targets", resolved.tuning.target_weights,
-                         editable_kind="weightcell" if resolved.scalars.custom_weights_active else None)
+                         editable_kind="weight_cell" if resolved.scalars.custom_weights_active else None)
     if geometry.slope_control:
         box_top = geometry.rows["weight"].tile_top + geometry.rows["weight"].tile_height - geometry.slope_extra + RANGE_GAP
         bx, by = control_region(region_boxes, geometry, "block:slope", "targets", box_top, PRESET_HEIGHT + CAPTION_LINE)
@@ -317,7 +317,7 @@ def _emit_tuning_ranges_box(cells, resolved, geometry, context):
         chosen = resolved.tuning.tuning_map.monotone_generator_range if context.range_mode == "monotone" else resolved.tuning.tuning_map.tradeoff_generator_range
         generators_x, generators_width = geometry.column_x["generators"], geometry.column_width["generators"]
         control_y = geometry.rows["tuning"].tile_top + geometry.rows["tuning"].tile_height - geometry.tuning_ranges_extra + RANGE_GAP
-        cells.append(CellBox("rangetitle:tuning:generators", generators_x, control_y + BOX_INNER, generators_width, BOX_TITLE_HEIGHT, "boxtitle",
+        cells.append(CellBox("rangetitle:tuning:generators", generators_x, control_y + BOX_INNER, generators_width, BOX_TITLE_HEIGHT, "box_title",
                              text="tuning ranges", align="left"))
         chart_y = control_y + BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
         cells.append(CellBox("rangechart:tuning:generators", generators_x, chart_y, generators_width, RANGE_CHART_HEIGHT, "rangechart",
@@ -349,9 +349,9 @@ def _emit_optimization_box(cells, resolved, geometry, context):
         power_x = power_slot_x + (OPTIMIZATION_POWER_CAP_WIDTH - COLUMN_WIDTH) / 2
         mean_damage = _power_mean(resolved.tuning.target_sizes.damage, _displayed_mean_damage_power(context))
         power = _format_power(_displayed_optimization_power(context))
-        cells.append(CellBox("optimization:title", ox, title_top, box_width, OPTIMIZATION_TITLE_HEIGHT, "boxtitle",
+        cells.append(CellBox("optimization:title", ox, title_top, box_width, OPTIMIZATION_TITLE_HEIGHT, "box_title",
                              text="optimization"))
-        cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COLUMN_WIDTH, ROW_HEIGHT, "tuningvalue",
+        cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COLUMN_WIDTH, ROW_HEIGHT, "tuning_value",
                              text=service.cents(mean_damage, resolved.flags.decimals)))
         mean_damage_symbol = (f"⟪𝒓{resolved.labels.prescaler_symbol}⁻¹⟫{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
                       if resolved.scalars.all_interval else "⟪𝐝⟫ₚ")
@@ -364,7 +364,7 @@ def _emit_optimization_box(cells, resolved, geometry, context):
                              "caption", text=geometry.mean_damage_caption))
         power_locked = resolved.scalars.all_interval or not resolved.flags.alt_complexity
         cells.append(CellBox("optimization:power", power_x, content_top, COLUMN_WIDTH, ROW_HEIGHT,
-                             "powerdisplay" if power_locked else "powerinput", text=power))
+                             "power_display" if power_locked else "power_input", text=power))
         if resolved.flags.symbols:
             cells.append(CellBox("optimization:power:symbol", power_x, sym_top, COLUMN_WIDTH, SYMBOL_HEIGHT,
                                  "symbol", text="𝑝"))
@@ -382,7 +382,7 @@ def _emit_approach_box(cells, geometry):
         aw = geometry.column_width["targets"]
         box_top = (geometry.rows["damage"].tile_top + geometry.rows["damage"].tile_height
                    - geometry.optimization_extra - geometry.approach_extra + RANGE_GAP)
-        cells.append(CellBox("optimization:approach:title", ax, box_top + BOX_INNER, aw, BOX_TITLE_HEIGHT, "boxtitle",
+        cells.append(CellBox("optimization:approach:title", ax, box_top + BOX_INNER, aw, BOX_TITLE_HEIGHT, "box_title",
                              text="nonstandard domain approach", align="left"))
         radio_top = box_top + BOX_INNER + BOX_TITLE_HEIGHT + BOX_TITLE_GAP
         approach_box = (ax + OPTIMIZATION_PADDING_L, radio_top,

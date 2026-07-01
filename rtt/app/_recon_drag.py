@@ -14,10 +14,10 @@ _INTERVAL_COMBINE: dict[str, str] = {
 }
 
 _GROUP_CELL_KIND: dict[str, str] = {
-    "comma": "commacell",
-    "target": "targetcell",
-    "held": "heldcell",
-    "interest": "interestcell",
+    "comma": "comma_cell",
+    "target": "target_cell",
+    "held": "held_cell",
+    "interest": "interest_cell",
 }
 
 

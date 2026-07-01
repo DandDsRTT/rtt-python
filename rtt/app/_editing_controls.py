@@ -83,10 +83,10 @@ def build_vector_list_specs(edit_controller) -> None:
         draft_arms=True,
     )
     edit_controller.draft_focus = {
-        "comma": ("comma:pending", "commacell"),
-        "target": ("target:pending", "targetcell"),
-        "held": ("held:pending", "heldcell"),
-        "interest": ("interest:pending", "interestcell"),
+        "comma": ("comma:pending", "comma_cell"),
+        "target": ("target:pending", "target_cell"),
+        "held": ("held:pending", "held_cell"),
+        "interest": ("interest:pending", "interest_cell"),
         "element": ("prime:pending", None),
         "mapping": (None, "mapping"),
     }

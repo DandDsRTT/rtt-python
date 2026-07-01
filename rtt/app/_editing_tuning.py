@@ -162,11 +162,11 @@ def _value_wheel(edit_controller, cell_id, delta_y):
     )
     commit = {
         "mapping": edit_controller.vectors.on_mapping_change,
-        "commacell": edit_controller.vectors.on_comma_change,
-        "interestcell": edit_controller.vectors.on_interest_change,
-        "heldcell": edit_controller.vectors.on_held_change,
-        "targetcell": edit_controller.vectors.on_target_cells_change,
-        "formcell": edit_controller.vectors.on_form_change,
+        "comma_cell": edit_controller.vectors.on_comma_change,
+        "interest_cell": edit_controller.vectors.on_interest_change,
+        "held_cell": edit_controller.vectors.on_held_change,
+        "target_cell": edit_controller.vectors.on_target_cells_change,
+        "form_cell": edit_controller.vectors.on_form_change,
     }.get(edit_controller._rec.handles(cell_id).kind)
     if commit is not None:
         commit()

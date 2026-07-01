@@ -107,7 +107,7 @@ class TestCanonicalGenerators:
 
     def test_generator_form_matrix_is_interactive(self):
         cells = {c.id: c for c in _with(form_tiles=True, plain_text_values=True).cells}
-        assert cells["cell:finv:0:0"].kind == "formcell", "𝐹: routed to the editable gridvalue component"
+        assert cells["cell:finv:0:0"].kind == "form_cell", "𝐹: routed to the editable gridvalue component"
         assert cells["plain_text:mapping:canonical_generators"].kind == "plain_text_edit"
         assert cells["cell:form:0:0"].kind == "mapped"
         assert cells["plain_text:canonical:generators"].kind == "plain_text"

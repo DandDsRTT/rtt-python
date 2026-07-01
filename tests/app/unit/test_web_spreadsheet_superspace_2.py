@@ -240,7 +240,7 @@ class TestSuperspaceBracketsAndMath:
 
     def test_math_expressions_off_keeps_j_L_cells_as_plain_tuning_value(self):
         cells = {c.id: c for c in _barbados_superspace(math_expressions=False).cells}
-        assert cells["just:superspace_prime:0"].kind == "tuningvalue"
+        assert cells["just:superspace_prime:0"].kind == "tuning_value"
 
     def test_chart_band_renders_over_the_retune_r_L_tile_when_charts_is_on(self):
         cells = {c.id: c for c in _barbados_superspace(charts=True).cells}
@@ -389,11 +389,11 @@ class TestSuperspaceBracketsAndMath:
         assert real.kind == "vector"
         assert real.width == spreadsheet_constants.COLUMN_WIDTH
 
-    def test_domain_elements_are_editable_elementcells_with_the_box_on(self):
+    def test_domain_elements_are_editable_element_cells_with_the_box_on(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
-        assert on["prime:0"].kind == "elementcell" and on["prime:0"].text == "2"
-        assert on["prime:2"].kind == "elementratio" and on["prime:2"].text == "13/5"
+        assert on["prime:0"].kind == "element_cell" and on["prime:0"].text == "2"
+        assert on["prime:2"].kind == "element_ratio" and on["prime:2"].text == "13/5"
         off = {c.id: c for c in spreadsheet.build(state, settings.defaults()).cells}
         assert off["prime:0"].kind == "prime"
         assert off["prime:2"].kind == "prime"
@@ -411,8 +411,8 @@ class TestSuperspaceBracketsAndMath:
     def test_basis_spine_is_editable_with_the_box_on(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
-        assert on["basis:0"].kind == "elementcell" and on["basis:0"].text == "2"
-        assert on["basis:2"].kind == "elementratio" and on["basis:2"].text == "13/5"
+        assert on["basis:0"].kind == "element_cell" and on["basis:0"].text == "2"
+        assert on["basis:2"].kind == "element_ratio" and on["basis:2"].text == "13/5"
         off = {c.id: c for c in spreadsheet.build(state, settings.defaults()).cells}
         assert off["basis:0"].kind == "prime" and off["basis:2"].kind == "prime"
 
@@ -452,7 +452,7 @@ class TestPerElementDomainControls:
         for draft_id, minus_id in (("prime:pending", "element_minus:pending"),
                                    ("basis:pending", "element_minus:basis:pending")):
             draft = cells[draft_id]
-            assert draft.kind == "elementratio" and draft.pending and draft.text == "?/?"
+            assert draft.kind == "element_ratio" and draft.pending and draft.text == "?/?"
             assert minus_id in cells
         assert cells["basis:pending"].y == cells["basis:2"].y + spreadsheet_constants.ROW_HEIGHT
         assert cells["basis_plus"].y > cells["basis:pending"].y

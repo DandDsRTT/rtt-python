@@ -12,7 +12,7 @@ def voice(cells, tile, index, cents) -> None:
 
 
 def element_cell_kind(text: str) -> str:
-    return "elementratio" if "/" in text else "elementcell"
+    return "element_ratio" if "/" in text else "element_cell"
 
 
 def dash_or_str(v) -> str:

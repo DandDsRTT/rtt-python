@@ -30,8 +30,8 @@ class TestPreviewCellIds:
         assert spreadsheet_text.changed_cell_ids(old, new) == frozenset({"b"})
 
     def test_changed_cell_ids_ignores_a_cell_that_only_moved(self):
-        old = _diff_layout(CellBox("a", 0, 0, 10, 10, "tuningvalue", text="1"))
-        new = _diff_layout(CellBox("a", 99, 50, 20, 20, "tuningvalue", text="1"))
+        old = _diff_layout(CellBox("a", 0, 0, 10, 10, "tuning_value", text="1"))
+        new = _diff_layout(CellBox("a", 99, 50, 20, 20, "tuning_value", text="1"))
         assert spreadsheet_text.changed_cell_ids(old, new) == frozenset()
 
     def test_changed_cell_ids_flags_a_newly_added_cell(self):

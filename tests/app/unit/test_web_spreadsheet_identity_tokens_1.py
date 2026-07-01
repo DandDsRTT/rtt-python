@@ -142,12 +142,12 @@ class TestColumnTokens:
             s[key] = True
         cells = {c.id: c for c in spreadsheet.build(
             ed.state, s, interest=ed.interest_vectors, held_vectors=ed.held_vectors).cells}
-        assert cells["comma:0"].kind == "ratiocell"
-        assert cells["target:0"].kind == "ratiocell"
-        assert cells["held:0"].kind == "ratiocell"
-        assert cells["interest:0"].kind == "ratiocell"
-        assert cells["detempering:0"].kind == "commaratio"
-        assert cells["prime:0"].kind == "elementcell"
+        assert cells["comma:0"].kind == "ratio_cell"
+        assert cells["target:0"].kind == "ratio_cell"
+        assert cells["held:0"].kind == "ratio_cell"
+        assert cells["interest:0"].kind == "ratio_cell"
+        assert cells["detempering:0"].kind == "comma_ratio"
+        assert cells["prime:0"].kind == "element_cell"
         off = settings.defaults()
         off_cells = {c.id: c for c in spreadsheet.build(ed.state, off).cells}
         assert off_cells["prime:0"].kind == "prime"

@@ -182,12 +182,12 @@ _DARK_PALETTE_VARS = (
 
 _WHEEL_STEPS = {
     "mapping": 1,
-    "commacell": 1,
-    "interestcell": 1,
-    "heldcell": 1,
-    "targetcell": 1,
-    "powerinput": 1,
-    "prescalercell": 0.001,
+    "comma_cell": 1,
+    "interest_cell": 1,
+    "held_cell": 1,
+    "target_cell": 1,
+    "power_input": 1,
+    "prescaler_cell": 0.001,
 }
 _INT_WHEEL_JS = (
     "(e) => { if (e.currentTarget.contains(document.activeElement)) "
@@ -220,35 +220,35 @@ class _VecGridEdit(NamedTuple):
 
 
 _GRIDVALUE_SPECS = {
-    "ratiocell": _GridValueSpec(True, True, "on_ratio_change", None, True),
-    "elementcell": _GridValueSpec(True, True, "on_element_change", "on_element_preview", True),
-    "elementratio": _GridValueSpec(True, True, "on_element_change", "on_element_preview", True),
+    "ratio_cell": _GridValueSpec(True, True, "on_ratio_change", None, True),
+    "element_cell": _GridValueSpec(True, True, "on_element_change", "on_element_preview", True),
+    "element_ratio": _GridValueSpec(True, True, "on_element_change", "on_element_preview", True),
     "mapping": _GridValueSpec(
         False, True, "on_mapping_change", "on_mapping_change", False, ("row",)
     ),
-    "formcell": _GridValueSpec(False, False, "on_form_change", "on_form_change", False),
-    "commacell": _GridValueSpec(
+    "form_cell": _GridValueSpec(False, False, "on_form_change", "on_form_change", False),
+    "comma_cell": _GridValueSpec(
         False, True, "on_comma_change", "on_comma_change", False, ("col", "comma")
     ),
-    "unchangedcell": _GridValueSpec(
+    "unchanged_cell": _GridValueSpec(
         False, False, "on_unchanged_change", "on_unchanged_change", False
     ),
-    "interestcell": _GridValueSpec(
+    "interest_cell": _GridValueSpec(
         False, True, "on_interest_change", "on_interest_change", False, ("col", "interest")
     ),
-    "heldcell": _GridValueSpec(
+    "held_cell": _GridValueSpec(
         False, True, "on_held_change", "on_held_change", False, ("col", "held")
     ),
-    "targetcell": _GridValueSpec(
+    "target_cell": _GridValueSpec(
         False, True, "on_target_cells_change", "on_target_cells_change", False, ("col", "target")
     ),
 }
 
 
 def _vgroup_key(cell_box: spreadsheet.CellBox) -> str:
-    if cell_box.kind in ("mapping", "targetcell"):
+    if cell_box.kind in ("mapping", "target_cell"):
         return cell_box.id.rsplit(":", 1)[0]
-    if cell_box.kind == "formcell":
+    if cell_box.kind == "form_cell":
         return "cell:finv"
     parts = cell_box.id.split(":")
     return ":".join(parts[:2] + parts[3:])
@@ -550,7 +550,7 @@ _TILE_HOST: dict[str, str] = {
 _TILE_FONT = {
     "symbols": 15,
     "equivalences": 15,
-    "rowlabel": spreadsheet_constants.MATRIX_LABEL_HEIGHT - 2,
+    "row_label": spreadsheet_constants.MATRIX_LABEL_HEIGHT - 2,
     "names": spreadsheet_constants.CAPTION_FONT,
     "mnemonics": spreadsheet_constants.CAPTION_FONT,
     "units": 10,

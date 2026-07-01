@@ -93,10 +93,10 @@ def _attach_tile_guide(reconciler, wrap, cell_box, row_key, column_key) -> None:
 def draft_cancel_eid(cell_box):
     by_kind = {
         "mapping": "map_minus:pending",
-        "commacell": "comma_minus:pending",
-        "interestcell": "interest_minus:pending",
-        "heldcell": "held_minus:pending",
-        "targetcell": "target_minus:pending",
+        "comma_cell": "comma_minus:pending",
+        "interest_cell": "interest_minus:pending",
+        "held_cell": "held_minus:pending",
+        "target_cell": "target_minus:pending",
     }
     if cell_box.kind in by_kind:
         return by_kind[cell_box.kind]

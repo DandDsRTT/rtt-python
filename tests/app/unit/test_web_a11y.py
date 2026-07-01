@@ -89,9 +89,9 @@ class TestGridAriaSemantics:
         "in_grid, kind, expected",
         [
             (True, "mapped", "gridcell"),
-            (True, "ratiocell", "gridcell"),
-            (False, "columnheader", "columnheader"),
-            (False, "rowlabel", "rowheader"),
+            (True, "ratio_cell", "gridcell"),
+            (False, "column_header", "column_header"),
+            (False, "row_label", "rowheader"),
             (False, "count", None),
             (False, "columntoggle", None),
         ],

@@ -143,7 +143,7 @@ class PageBuilder:
                 "header_symbols",
                 _general_part_html("header_symbols"),
                 marked=True,
-                size=_TILE_FONT["rowlabel"],
+                size=_TILE_FONT["row_label"],
                 style=f"position:absolute;left:{hgut}px;top:{row_y}px;width:{gut - 3}px;"
                 "height:13px;justify-content:flex-end",
             )

@@ -33,17 +33,17 @@ def register_value_kinds(cell_kinds) -> None:
     _gridvalue = _KindHandlers(value.build_gridvalue, value.update_gridvalue)
     for _gv_kind in GRIDVALUE_KINDS:
         cell_kinds[_gv_kind] = _gridvalue
-    cell_kinds["prescalercell"] = _KindHandlers(
-        value_kinds.build_prescalercell, value_kinds.update_prescalercell
+    cell_kinds["prescaler_cell"] = _KindHandlers(
+        value_kinds.build_prescaler_cell, value_kinds.update_prescaler_cell
     )
-    cell_kinds["weightcell"] = _KindHandlers(
-        value_kinds.build_weightcell, value_kinds.update_weightcell
+    cell_kinds["weight_cell"] = _KindHandlers(
+        value_kinds.build_weight_cell, value_kinds.update_weight_cell
     )
-    cell_kinds["powerinput"] = _KindHandlers(
-        value_kinds.build_powerinput, value_kinds.update_powerinput
+    cell_kinds["power_input"] = _KindHandlers(
+        value_kinds.build_power_input, value_kinds.update_power_input
     )
-    cell_kinds["powerdisplay"] = _KindHandlers(
-        value_kinds.build_powerdisplay, value_kinds.update_powerdisplay
+    cell_kinds["power_display"] = _KindHandlers(
+        value_kinds.build_power_display, value_kinds.update_power_display
     )
     cell_kinds["generator_tuning_cell"] = _KindHandlers(
         value_kinds.build_generator_tuning_cell, value_kinds.update_generator_tuning_cell
@@ -56,8 +56,10 @@ def register_value_kinds(cell_kinds) -> None:
     cell_kinds["generator_ratio"] = _KindHandlers(
         value_kinds.build_generator_ratio, value_kinds.update_ratio
     )
-    cell_kinds["commaratio"] = _KindHandlers(value_kinds.build_commaratio, value_kinds.update_ratio)
-    cell_kinds["tuningvalue"] = _KindHandlers(
+    cell_kinds["comma_ratio"] = _KindHandlers(
+        value_kinds.build_comma_ratio, value_kinds.update_ratio
+    )
+    cell_kinds["tuning_value"] = _KindHandlers(
         value_kinds.build_tuning_value, value_kinds.update_tuning_value
     )
 
@@ -67,10 +69,10 @@ def register_label_kinds(cell_kinds) -> None:
     cell_kinds["prime"] = _KindHandlers(_value_builder, value_kinds.update_label)
     cell_kinds["mapped"] = _KindHandlers(value_kinds.build_mapped, value_kinds.update_ratio)
     cell_kinds["vector"] = _KindHandlers(_value_builder, value_kinds.update_label)
-    cell_kinds["columnheader"] = _KindHandlers(
+    cell_kinds["column_header"] = _KindHandlers(
         value_kinds.label_builder("rtt-column-header"), value_kinds.update_label
     )
-    cell_kinds["rowlabel"] = _KindHandlers(
+    cell_kinds["row_label"] = _KindHandlers(
         value_kinds.label_builder("rtt-row-label"), value_kinds.update_label
     )
     cell_kinds["plain_text"] = _KindHandlers(
@@ -79,7 +81,7 @@ def register_label_kinds(cell_kinds) -> None:
     cell_kinds["transpose"] = _KindHandlers(
         value_kinds.label_builder("rtt-transpose"), value_kinds.update_label
     )
-    cell_kinds["boxtitle"] = _KindHandlers(value_kinds.label_builder("rtt-box-title"), None)
+    cell_kinds["box_title"] = _KindHandlers(value_kinds.label_builder("rtt-box-title"), None)
 
 
 def register_control_kinds(cell_kinds) -> None:

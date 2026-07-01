@@ -120,7 +120,7 @@ class TestEditPreviewRipple:
         UserInteraction(user, button, None).trigger("mouseenter")
         await user.should_see(marker="cell:comma:0:1")
         assert "rtt-pending" in _wrap_classes(user, "cell:comma:0:1")
-        assert "rtt-pending" in _wrap_classes(user, "comma:pending"), "its quantities-row ratio face (a read-only commaratio showing the COMPUTED ratio) greens too — # rings its wrap like every sibling value cell down the column, not just the vector/derived rows"
+        assert "rtt-pending" in _wrap_classes(user, "comma:pending"), "its quantities-row ratio face (a read-only comma_ratio showing the COMPUTED ratio) greens too — # rings its wrap like every sibling value cell down the column, not just the vector/derived rows"
         assert [_cell_text(user, f"cell:comma:{p}:1") for p in range(3)] == ["0", "-4", "1"], "the born comma's coords are COMPUTED and shown (dropping meantone's generator un-tempers to the # rank-1 ET whose extra comma is [0 -4 1⟩)"
         assert _cell_text(user, "cell:mapped_comma:1:1") == "0"
         assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:0:0")
