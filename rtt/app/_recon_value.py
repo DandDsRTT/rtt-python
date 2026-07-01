@@ -100,29 +100,29 @@ def _ratio_body(reconciler, cell_box: spreadsheet.CellBox, approx: bool) -> None
         with ui.element("div").classes(
             "rtt-fraction rtt-fraction-whole" if whole else "rtt-fraction"
         ):
-            num = (
+            numerator = (
                 ui.label(parts[0])
                 .classes("rtt-fraction-numerator")
                 .mark(f"{cell_box.id}:numerator")
             )
-            den = (
+            denominator = (
                 ui.label(parts[1])
                 .classes("rtt-fraction-denominator")
                 .mark(f"{cell_box.id}:denominator")
             )
-        reconciler.cells[cell_box.id].value.frac = (num, den)
+        reconciler.cells[cell_box.id].value.frac = (numerator, denominator)
         _fit_ratio(reconciler, cell_box.id, parts[0], parts[1], cell_box.width, whole)
     else:
         reconciler.cells[cell_box.id].value.label = ui.label(cell_box.text).classes("rtt-value")
 
 
 def _fit_ratio(
-    reconciler, cell_id: str, num: str, den: str, width: float, whole: bool = False
+    reconciler, cell_id: str, numerator: str, denominator: str, width: float, whole: bool = False
 ) -> None:
     size = (
-        _digit_fit_font(len(num), width, float(_CELL_FONT))
+        _digit_fit_font(len(numerator), width, float(_CELL_FONT))
         if whole
-        else _ratio_font(num, den, width)
+        else _ratio_font(numerator, denominator, width)
     )
     font = f"font-size:{size:.2f}px"
     reconciler.cells[cell_id].value.frac[0].style(font)
@@ -146,23 +146,23 @@ def _build_fraction(reconciler, cell_box: spreadsheet.CellBox, wrap, commit, pre
     wrap.classes("rtt-cell-input rtt-fraction-cell")
     box = ui.element("div").classes("rtt-fraction-edit").mark(f"{cell_box.id}:editbox")
     with box:
-        num = (
+        numerator = (
             ui.input(on_change=preview)
             .props("dense borderless")
             .classes("rtt-cell-input-field rtt-fraction-numerator-input")
             .mark(f"{cell_box.id}:numerator")
         )
         ui.element("div").classes("rtt-fraction-bar")
-        den = (
+        denominator = (
             ui.input(on_change=preview)
             .props("dense borderless")
             .classes("rtt-cell-input-field rtt-fraction-denominator-input")
             .mark(f"{cell_box.id}:denominator")
         )
-    num.on("blur", commit, js_handler=_STACKED_EXIT_JS)
-    den.on("blur", commit, js_handler=_STACKED_EXIT_JS)
-    reconciler.cells[cell_box.id].value.input = num
-    reconciler.cells[cell_box.id].value.den_input = den
+    numerator.on("blur", commit, js_handler=_STACKED_EXIT_JS)
+    denominator.on("blur", commit, js_handler=_STACKED_EXIT_JS)
+    reconciler.cells[cell_box.id].value.input = numerator
+    reconciler.cells[cell_box.id].value.denominator_input = denominator
     reconciler.cells[cell_box.id].value.frac_edit = box
     _arm_ratio_ops(reconciler, cell_box, wrap)
 
@@ -261,26 +261,28 @@ def update_gridvalue(reconciler, cell_box: spreadsheet.CellBox) -> None:
 
 
 def _update_fraction(reconciler, cell_box: spreadsheet.CellBox, text: str) -> None:
-    num, den = _ratio_parts(text) or (text, "")
-    ratio = den not in ("", "1")
-    reconciler.cells[cell_box.id].value.input.value = num
-    reconciler.cells[cell_box.id].value.den_input.value = den if ratio else ""
+    numerator, denominator = _ratio_parts(text) or (text, "")
+    ratio = denominator not in ("", "1")
+    reconciler.cells[cell_box.id].value.input.value = numerator
+    reconciler.cells[cell_box.id].value.denominator_input.value = denominator if ratio else ""
     reconciler.cells[cell_box.id].value.frac_edit.props(
         f"data-fracmode={'ratio' if ratio else 'int'}"
     )
-    _fit_fraction(reconciler, cell_box.id, num, den, cell_box.width, ratio)
+    _fit_fraction(reconciler, cell_box.id, numerator, denominator, cell_box.width, ratio)
     _sync_ratio_ops(reconciler, cell_box.id, text)
 
 
-def _fit_fraction(reconciler, cell_id: str, num: str, den: str, width: float, ratio: bool) -> None:
+def _fit_fraction(
+    reconciler, cell_id: str, numerator: str, denominator: str, width: float, ratio: bool
+) -> None:
     size = (
-        _ratio_font(num, den, width)
+        _ratio_font(numerator, denominator, width)
         if ratio
-        else _digit_fit_font(len(num), width, float(_CELL_FONT))
+        else _digit_fit_font(len(numerator), width, float(_CELL_FONT))
     )
     style = f"font-size:{size:.2f}px"
     reconciler.cells[cell_id].value.input.style(style)
-    reconciler.cells[cell_id].value.den_input.style(style)
+    reconciler.cells[cell_id].value.denominator_input.style(style)
 
 
 def _gridvalue_text(reconciler, cell_box: spreadsheet.CellBox) -> str:
@@ -335,7 +337,7 @@ def _build_decimal(
     whole.on("blur", commit, js_handler=_STACKED_EXIT_JS)
     frac.on("blur", commit, js_handler=_STACKED_EXIT_JS)
     reconciler.cells[cell_box.id].value.input = whole
-    reconciler.cells[cell_box.id].value.den_input = frac
+    reconciler.cells[cell_box.id].value.denominator_input = frac
     reconciler.cells[cell_box.id].value.frac_edit = box
 
 
@@ -347,7 +349,7 @@ def _update_decimal(reconciler, cell_box: spreadsheet.CellBox, text: str, *, sig
     else:
         whole, frac = _cents_parts(text)
     reconciler.cells[cell_box.id].value.input.value = whole
-    reconciler.cells[cell_box.id].value.den_input.value = frac
+    reconciler.cells[cell_box.id].value.denominator_input.value = frac
     reconciler.cells[cell_box.id].value.frac_edit.props(f"data-decmode={'dec' if frac else 'int'}")
     fit_width = cell_box.width - _GENSIGN_W if signed else cell_box.width
     reconciler.cells[cell_box.id].value.frac_edit.style(

@@ -150,7 +150,7 @@ def _value_wheel(edit_controller, cell_id, delta_y):
     step = _WHEEL_STEPS.get(edit_controller._rec.handles(cell_id).kind)
     if step is None:
         return
-    if edit_controller._rec.handles(cell_id).value.den_input is not None:
+    if edit_controller._rec.handles(cell_id).value.denominator_input is not None:
         with edit_controller._runtime.building_guard():
             edit_controller._rec.set_decimal_value(
                 cell_id, _wheel_step(edit_controller._rec.decimal_value(cell_id), delta_y, step)
@@ -176,9 +176,9 @@ def _target_limit_wheel(tuning_edits, delta_y):
     edit_controller = tuning_edits.e
     if edit_controller._runtime.building or not delta_y:
         return
-    num = edit_controller._rec.cells["preset:target"].chooser.select[0]
+    number = edit_controller._rec.cells["preset:target"].chooser.select[0]
     with edit_controller._runtime.building_guard():
-        num.value = _wheel_step(num.value, delta_y)
+        number.value = _wheel_step(number.value, delta_y)
     _target_limit_preview(edit_controller)
     if tuning_edits.target_limit_commit is not None:
         tuning_edits.target_limit_commit.cancel()
@@ -210,8 +210,8 @@ def _target_limit_preview(edit_controller, typed=None):
         or g.source != "preset:target"
     ):
         return
-    num, selection = edit_controller._rec.cells["preset:target"].chooser.select
-    raw = num.value if typed is None else typed
+    number, selection = edit_controller._rec.cells["preset:target"].chooser.select
+    raw = number.value if typed is None else typed
     out = service.resolve_target_limit(
         selection.value, raw, edit_controller._editor.state.domain_basis
     )

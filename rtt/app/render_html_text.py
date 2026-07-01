@@ -82,8 +82,8 @@ def _limit_text(limit) -> str | None:
 
 
 def _ratio_parts(text) -> tuple[str, str] | None:
-    num, sep, den = str(text).partition("/")
-    return (num, den) if sep and num and den else None
+    numerator, sep, denominator = str(text).partition("/")
+    return (numerator, denominator) if sep and numerator and denominator else None
 
 
 def _cents_parts(text) -> tuple[str, str]:
@@ -151,5 +151,5 @@ def _digit_fit_font(longest, width: float, max_font: float) -> float:
     return int(min(max_font, fit) * 10) / 10
 
 
-def _ratio_font(num, den, width: float) -> float:
-    return _digit_fit_font(max(len(num), len(den)), width, _RATIO_MAX_FONT)
+def _ratio_font(numerator, denominator, width: float) -> float:
+    return _digit_fit_font(max(len(numerator), len(denominator)), width, _RATIO_MAX_FONT)

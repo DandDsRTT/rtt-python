@@ -114,11 +114,11 @@ class TestSuperspaceTuning:
     def test_superspace_tuning_embedding_is_the_dL_by_rL_factor_of_P_L(self):
         import sympy as sp
         barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-        gl = service.superspace_tuning_embedding(barb, ("2", "13/5"))
-        assert len(gl) == 4 and all(len(row) == 3 for row in gl)
+        left_functions = service.superspace_tuning_embedding(barb, ("2", "13/5"))
+        assert len(left_functions) == 4 and all(len(row) == 3 for row in left_functions)
         assert service.superspace_tuning_embedding(barb, ("2",)) is None
         ml = service.superspace_mapping(barb)
-        g = sp.Matrix([[sp.Rational(x) for x in row] for row in gl])
+        g = sp.Matrix([[sp.Rational(x) for x in row] for row in left_functions])
         m = sp.Matrix([list(r) for r in ml])
         pl = sp.Matrix([[sp.Rational(x) for x in row] for row in service.superspace_tuning_projection(barb, ("2", "13/5"))])
         assert g * m == pl

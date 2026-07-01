@@ -13,7 +13,7 @@ class EntityHandles:
 @dataclass
 class ValueHandles:
     input: object = None
-    den_input: object = None
+    denominator_input: object = None
     frac_edit: object = None
     ratio_op: object = None
     label: object = None

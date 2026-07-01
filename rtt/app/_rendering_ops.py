@@ -148,7 +148,7 @@ def update_cell_content(r, cell_box) -> None:
     volatile = any(
         (
             height.value.input,
-            height.value.den_input,
+            height.value.denominator_input,
             height.value.plain_text_input,
             height.chooser.select,
             height.chooser.check,

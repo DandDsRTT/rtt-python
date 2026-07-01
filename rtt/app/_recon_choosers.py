@@ -123,7 +123,7 @@ def build_preset(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
 def _build_preset_target(reconciler, cell_box: spreadsheet.CellBox, wrap) -> None:
     limit, family = reconciler._target_preset_values()
     with ui.element("div").classes("rtt-preset-target"):
-        num = (
+        number = (
             ui.input(
                 value=_limit_text(limit) or service.NO_LIMIT_TEXT,
                 on_change=lambda _e: reconciler._cell_box.on_target_change(),
@@ -135,7 +135,7 @@ def _build_preset_target(reconciler, cell_box: spreadsheet.CellBox, wrap) -> Non
         )
         # NiceGUI: ui.input defaults loopback off (uncontrolled during typing), so the server can't
         # overwrite what was typed; _wire_target_limit turns loopback on so a rejected value reverts.
-        _wire_target_limit(reconciler, num, cell_box)
+        _wire_target_limit(reconciler, number, cell_box)
         selection = (
             ui.select(
                 list(presets.TARGET_SETS),
@@ -147,27 +147,29 @@ def _build_preset_target(reconciler, cell_box: spreadsheet.CellBox, wrap) -> Non
         )
     _set_offlist_prompt(selection, family)
     _arm_option_hover(reconciler, selection, wrap, cell_box.id)
-    reconciler.cells[cell_box.id].chooser.select = (num, selection)
+    reconciler.cells[cell_box.id].chooser.select = (number, selection)
 
 
-def _wire_target_limit(reconciler, num, cell_box: spreadsheet.CellBox) -> None:
-    num.LOOPBACK = True
-    num._props["loopback"] = True
-    num.on(
+def _wire_target_limit(reconciler, number, cell_box: spreadsheet.CellBox) -> None:
+    number.LOOPBACK = True
+    number._props["loopback"] = True
+    number.on(
         "wheel",
         lambda e: reconciler._cell_box.on_target_limit_wheel(e.args.get("deltaY")),
         args=["deltaY"],
         js_handler=_INT_WHEEL_JS,
     )
-    num.on("focus", lambda _=None: reconciler._cell_box.on_cell_focus(cell_box.id))
-    num.on("blur", lambda _=None, cell_id=cell_box.id: reconciler._cell_box.on_cell_blur(cell_id))
+    number.on("focus", lambda _=None: reconciler._cell_box.on_cell_focus(cell_box.id))
+    number.on(
+        "blur", lambda _=None, cell_id=cell_box.id: reconciler._cell_box.on_cell_blur(cell_id)
+    )
     # Quasar: a debounced field only commits its value on a typing pause or blur, so Enter alone
     # never submits; blurring on Enter makes Quasar flush the debounced value (firing on_change).
-    num.on("keydown.enter", js_handler="(e) => e.target.blur()")
+    number.on("keydown.enter", js_handler="(e) => e.target.blur()")
     # NiceGUI/Quasar: a Quasar QInput doesn't forward native `input` to a NiceGUI `.on()` listener,
     # and NiceGUI's `args=` filters only TOP-LEVEL event keys (it can't pull nested target.value),
     # so listen on `keyup` and emit the live DOM text ourselves to preview each keystroke.
-    num.on(
+    number.on(
         "keyup",
         lambda e: reconciler._cell_box.on_target_limit_preview(e.args),
         js_handler="(e) => emit(e.target.value)",
@@ -249,14 +251,14 @@ def update_preset(reconciler, cell_box: spreadsheet.CellBox) -> None:
         reconciler.cells[cell_box.id].chooser.select.value = value
         _set_offlist_prompt(reconciler.cells[cell_box.id].chooser.select, value)
     elif cell_box.id == "preset:target":
-        num, selection = reconciler.cells[cell_box.id].chooser.select
+        number, selection = reconciler.cells[cell_box.id].chooser.select
         limit, family = reconciler._target_preset_values()
-        num.value = _limit_text(limit) or service.NO_LIMIT_TEXT
+        number.value = _limit_text(limit) or service.NO_LIMIT_TEXT
         selection.value = family
         _set_offlist_prompt(selection, family)
-        num.set_enabled(not cell_box.disabled)
+        number.set_enabled(not cell_box.disabled)
         selection.set_enabled(not cell_box.disabled)
-        _sync_target_limit_error(reconciler, num, family, limit)
+        _sync_target_limit_error(reconciler, number, family, limit)
     elif cell_box.id == "preset:prescaler":
         options = list(presets.prescaler_options(reconciler._editor.settings["alt_complexity"]))
         value = reconciler._editor.displayed_prescaler_name
@@ -344,9 +346,9 @@ def update_subpick(reconciler, cell_box):
     _set_offlist_prompt(selection, value)
 
 
-def _sync_target_limit_error(reconciler, num, family, limit) -> None:
+def _sync_target_limit_error(reconciler, number, family, limit) -> None:
     problem = service.target_limit_problem(family, limit)
-    num.classes(
+    number.classes(
         add="rtt-limit-error" if problem else "", remove="" if problem else "rtt-limit-error"
     )
     if reconciler.target_limit_tip is not None:

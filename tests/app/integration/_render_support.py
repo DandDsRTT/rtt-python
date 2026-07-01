@@ -238,8 +238,8 @@ def _ratio_value(user: User, cell_id: str) -> str:
     """The committed ratio a stacked-fraction cell shows, rejoined from its numerator + denominator
     inputs the way cell_value does (a blank/1 denominator is the big-integer view, so it returns the
     bare numerator)."""
-    num, den = _frac_inputs(user, cell_id)
-    return num.value if den.value in ("", "1") else f"{num.value}/{den.value}"
+    numerator, denominator = _frac_inputs(user, cell_id)
+    return numerator.value if denominator.value in ("", "1") else f"{numerator.value}/{denominator.value}"
 
 
 def _wrap_classes(user: User, cell_id: str) -> list[str]:
@@ -257,8 +257,8 @@ def _ro_ratio_face(user: User, cell_id: str):
     face = _cell_child(user, cell_id)
     frac = next(c for c in face.default_slot.children if "rtt-fraction" in getattr(c, "_classes", []))
     collapsed = "rtt-fraction-whole" in getattr(frac, "_classes", [])
-    num, den = _marked(user, f"{cell_id}:numerator"), _marked(user, f"{cell_id}:denominator")
-    return num.text, den.text, collapsed
+    numerator, denominator = _marked(user, f"{cell_id}:numerator"), _marked(user, f"{cell_id}:denominator")
+    return numerator.text, denominator.text, collapsed
 
 
 def _click_glyph(user: User, cell_id: str) -> None:
@@ -277,10 +277,10 @@ def _commit(user: User, cell_id: str) -> None:
 def _cell_text(user: User, cell_id: str) -> str:
     child = _cell_child(user, cell_id)
     if "rtt-ratio" in getattr(child, "_classes", []):
-        num = _marked(user, f"{cell_id}:numerator", required=False)
-        if num is not None:
-            den = _marked(user, f"{cell_id}:denominator", required=False)
-            return f"{num.text}/{den.text}" if den is not None else num.text
+        numerator = _marked(user, f"{cell_id}:numerator", required=False)
+        if numerator is not None:
+            denominator = _marked(user, f"{cell_id}:denominator", required=False)
+            return f"{numerator.text}/{denominator.text}" if denominator is not None else numerator.text
         inner = child.default_slot.children
         return getattr(inner[0], "text", "") if inner else ""
     return getattr(child, "text", "")
@@ -352,8 +352,8 @@ def _target_preset(user: User):
     """The (numeric-limit, TILT/OLD family-select) pair of the target chooser — the one
     preset that nests two controls in a flex div inside its cell wrap."""
     container = _cell_child(user, "preset:target")
-    num, selection = container.default_slot.children
-    return num, selection
+    number, selection = container.default_slot.children
+    return number, selection
 
 
 def _preset_tooltip_text(user: User, cell_id: str):

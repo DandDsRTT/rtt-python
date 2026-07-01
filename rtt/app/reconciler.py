@@ -232,19 +232,19 @@ class _Reconciler:
         return self.entities.get(element_id, _EMPTY_ENTITY)
 
     def cell_value(self, cell_id: str) -> str:
-        num = str(self.cells[cell_id].value.input.value).strip()
-        if not num:
+        numerator = str(self.cells[cell_id].value.input.value).strip()
+        if not numerator:
             return ""
-        if num == "?":
+        if numerator == "?":
             return "?/?"
-        if "/" in num:
-            return num
-        den = (
-            str(self.cells[cell_id].value.den_input.value).strip()
-            if self.cells[cell_id].value.den_input
+        if "/" in numerator:
+            return numerator
+        denominator = (
+            str(self.cells[cell_id].value.denominator_input.value).strip()
+            if self.cells[cell_id].value.denominator_input
             else ""
         )
-        return num if den in ("", "1", "?") else f"{num}/{den}"
+        return numerator if denominator in ("", "1", "?") else f"{numerator}/{denominator}"
 
     def decimal_value(self, cell_id: str) -> str:
         whole = str(self.cells[cell_id].value.input.value).strip()
@@ -253,8 +253,8 @@ class _Reconciler:
         if "." in whole:
             return whole
         frac = (
-            str(self.cells[cell_id].value.den_input.value).strip().lstrip(".")
-            if self.cells[cell_id].value.den_input
+            str(self.cells[cell_id].value.denominator_input.value).strip().lstrip(".")
+            if self.cells[cell_id].value.denominator_input
             else ""
         )
         return whole if not frac else f"{whole}.{frac}"
@@ -262,8 +262,8 @@ class _Reconciler:
     def set_decimal_value(self, cell_id: str, text: str) -> None:
         whole, frac = _cents_parts(text)
         self.cells[cell_id].value.input.value = whole
-        if self.cells[cell_id].value.den_input:
-            self.cells[cell_id].value.den_input.value = frac
+        if self.cells[cell_id].value.denominator_input:
+            self.cells[cell_id].value.denominator_input.value = frac
 
     def _target_preset_values(self):
         return _recon_cells.target_preset_values(self._editor)
