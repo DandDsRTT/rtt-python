@@ -176,7 +176,7 @@ class PageBuilder:
             marked=True,
             size=_TILE_FONT["cellunit"],
             style=f"position:absolute;left:{cell_x}px;top:{cell_y + 28}px;"
-            f"width:{_TILE_CELL}px;height:8px;justify-content:center;color:#555",
+            f"width:{_TILE_CELL}px;height:8px;justify-content:center;color:#333",
         )
 
     def toggle_drawer(self):

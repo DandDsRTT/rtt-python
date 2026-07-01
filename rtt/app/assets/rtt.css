@@ -245,6 +245,22 @@ body.rtt-no-anim { --t:0s; }
    this class on for a beat across a zoom (zeroing --t like rtt-no-anim) so the rescale snaps; it is its
    OWN class so removing it restores whatever the animations toggle was, never forcing animations on. */
 body.rtt-zoom-freeze { --t:0s; }
+/* Honor the OS "reduce motion" setting: zero the shared transition var app-wide — the same kill-switch
+   the animations toggle flips — so every slide, fade, grow and the wordmark's rotate (all ride var(--t))
+   snap instantly for users who asked their system to suppress motion. This wins whenever the OS requests
+   reduction, regardless of the in-app animations toggle; the tour also skips its autostart (see tour.js). */
+@media (prefers-reduced-motion: reduce) {
+  :root { --t:0s; }
+}
+/* Narrow viewports (phones): the value grid is a fixed pixel board that must scroll either way, but the
+   always-pinned wordmark tab need not cost width here. Shrink the closed sidebar to just its hamburger and
+   drop the rotated wordmark in the collapsed state, handing those pixels to the grid pane (its flex sibling,
+   which reclaims them); tighten the outer frame too. The wordmark returns, upright, when the drawer opens. */
+@media (max-width: 600px) {
+  :root { --tab-w:34px; }
+  .rtt-shell { top:2px; left:2px; right:2px; bottom:2px; }
+  .rtt-panelgroup:not(.rtt-open) .rtt-sidetitle { display:none; }
+}
 body.rtt-no-tooltips .q-tooltip,
 body.rtt-no-tooltips .rtt-zoom-help { display:none !important; }
 
@@ -335,10 +351,11 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
    half a line below a two-line sibling's top rather than hugging the cells. */
 .rtt-caption { width:100%; text-align:center; text-wrap:balance; font-size:9px; line-height:10px;
                color:#333; overflow-wrap:break-word; font-family:var(--rtt-serif); }
-/* a LOCKED control's caption (the disabled flag, app._update_caption) greys to the standard
-   disabled #999, matching the locked control's value/caret, so the label is not darker than it.
-   Compounded selector (0,2,0) to out-specify the base .rtt-caption #333. */
-.rtt-caption.rtt-caption-disabled { color:#999; }
+/* a LOCKED control's caption (the disabled flag, app._update_caption) stays a legible muted grey that
+   still clears AA against the grid pane, rather than the near-invisible #999 it once used; the locked
+   state reads from the greyed control itself, not from an illegible label. Compounded selector (0,2,0)
+   to out-specify the base .rtt-caption #333. */
+.rtt-caption.rtt-caption-disabled { color:#4d4d4d; }
 .rtt-caption-cell { align-items:center; }
 /* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and captions ("optimization power") stay on ONE
    line — centred under their control, overflowing sideways if need be — so ⟪𝐝⟫ₚ never wraps
@@ -417,7 +434,7 @@ body.rtt-no-tooltips .rtt-guide-card { display:none !important; }
 /* the per-value unit (the `units` toggle): a tiny line in the same single-story-g sans,
    stacked right beneath the value so the value + unit read as one centred pair — like the
    cents int-over-fraction stack, the unit hugging its value rather than floating away. */
-.rtt-cell-unit { font-size:7px; line-height:1; color:#555; white-space:nowrap; text-align:center;
+.rtt-cell-unit { font-size:7px; line-height:1; color:#333; white-space:nowrap; text-align:center;
             font-family:var(--rtt-units-sans); }
 /* a read-only value cell simply stacks [value, unit] in a centred column; the value's
    line-height is tightened so the value + unit pair fits the square and stays centred */
@@ -969,11 +986,23 @@ body:not(.rtt-kbd) .rtt-fraction-cell:hover, .rtt-fraction-cell.rtt-speaker-hove
 body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation,
 .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation,
 .rtt-fraction-cell.rtt-active .rtt-ratio-operation { opacity:1; pointer-events:auto; }
-.rtt-fraction-cell:focus-within .rtt-ratio-operation { display:none; }
+/* hide the ops while the cell's input is focused for editing (they'd overlap the text): a plain
+   opacity:0 rather than display:none so the coarse-pointer rule below can flip them back on for touch.
+   Ordered after the hover reveal so focus-while-hovering still hides them. */
+.rtt-fraction-cell:focus-within .rtt-ratio-operation { opacity:0; pointer-events:none; }
 /* a no-op button stays SOLID (the full white box) and greys only its glyph — never semi-transparent */
 body:not(.rtt-kbd) .rtt-fraction-cell:hover .rtt-ratio-operation.rtt-operation-disabled,
 .rtt-fraction-cell.rtt-speaker-hover .rtt-ratio-operation.rtt-operation-disabled,
 .rtt-fraction-cell.rtt-active .rtt-ratio-operation.rtt-operation-disabled { color:#bbb; pointer-events:none; cursor:default; }
+/* Touch devices have no hover, so tapping a ratio cell (which focuses its input) is the only way to
+   reach the reduce/reciprocate operations; surface them on focus-within under a coarse pointer. They
+   flank the cell's edges, not its centre, so they don't block typing. Desktop is unchanged — the fine
+   pointer keeps hover-to-show / edit-to-hide. */
+@media (hover: none) and (pointer: coarse) {
+  .rtt-fraction-cell:focus-within .rtt-ratio-operation { opacity:1; pointer-events:auto; }
+  .rtt-fraction-cell:focus-within .rtt-ratio-operation.rtt-operation-disabled {
+    opacity:1; color:#bbb; pointer-events:none; cursor:default; }
+}
 
 /* drag-and-drop reorder grips. The GRIP (.rtt-column-grip) is the shared .rtt-drag-handle ⠿, riding the
    reserved GRIP_BAND room on the fan — along each column's sub-axis gridline, between the − above
