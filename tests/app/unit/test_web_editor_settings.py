@@ -15,7 +15,11 @@ class TestShowToggles:
             return {c.id for c in editor.layout().cells}
 
         symbol_ids = {"optimization:power:symbol", "optimization:mean_damage:symbol", "symbol:q"}
-        caption_ids = {"optimization:power:caption", "optimization:mean_damage:caption", "caption:q"}
+        caption_ids = {
+            "optimization:power:caption",
+            "optimization:mean_damage:caption",
+            "caption:q",
+        }
 
         on = ids()
         assert symbol_ids <= on
@@ -67,23 +71,50 @@ class TestShowToggles:
 
     def test_deselecting_a_parent_cascades_through_nested_subcontrols(self):
         editor = Editor()
-        for key in ("weighting", "all_interval", "alt_complexity", "custom_weights",
-                    "tuning_ranges", "optimization"):
+        for key in (
+            "weighting",
+            "all_interval",
+            "alt_complexity",
+            "custom_weights",
+            "tuning_ranges",
+            "optimization",
+        ):
             editor.set_show(key, True)
         editor.set_show("tuning", False)
-        for key in ("tuning", "tuning_tiles", "weighting", "all_interval", "alt_complexity",
-                    "custom_weights", "tuning_ranges", "optimization", "projection",
-                    "tuning_colorization"):
+        for key in (
+            "tuning",
+            "tuning_tiles",
+            "weighting",
+            "all_interval",
+            "alt_complexity",
+            "custom_weights",
+            "tuning_ranges",
+            "optimization",
+            "projection",
+            "tuning_colorization",
+        ):
             assert editor.settings[key] is False
 
     def test_deselecting_optimization_cascades_the_optimize_subaxes(self):
         editor = Editor()
-        for key in ("weighting", "all_interval", "alt_complexity", "custom_weights", "tuning_ranges"):
+        for key in (
+            "weighting",
+            "all_interval",
+            "alt_complexity",
+            "custom_weights",
+            "tuning_ranges",
+        ):
             editor.set_show(key, True)
         editor.set_show("projection", True)
         editor.set_show("optimization", False)
-        for key in ("optimization", "weighting", "all_interval", "alt_complexity",
-                    "custom_weights", "tuning_ranges"):
+        for key in (
+            "optimization",
+            "weighting",
+            "all_interval",
+            "alt_complexity",
+            "custom_weights",
+            "tuning_ranges",
+        ):
             assert editor.settings[key] is False, key
         assert editor.settings["tuning"] is True
         assert editor.settings["projection"] is True
@@ -127,7 +158,9 @@ class TestShowToggles:
         assert editor.settings["tuning_tiles"] is False, "a sibling, not pulled on by all-interval"
 
     def test_grouping_parents_flatten_their_box_toggles_former_children(self):
-        assert settings.SUBCONTROLS["temperament_colorization"] == "temperament", "the regroup is a flatten, not an extra nesting level: what used to be a direct child of a # box toggle is now a direct child of the GROUP, level with the box toggle (a sibling), not # buried under it. So 'temperament colorization' answers to 'temperament' (not to # 'temperament tiles'), and the whole tuning column answers to 'tuning' (not 'tuning tiles')"
+        assert settings.SUBCONTROLS["temperament_colorization"] == "temperament", (
+            "the regroup is a flatten, not an extra nesting level: what used to be a direct child of a # box toggle is now a direct child of the GROUP, level with the box toggle (a sibling), not # buried under it. So 'temperament colorization' answers to 'temperament' (not to # 'temperament tiles'), and the whole tuning column answers to 'tuning' (not 'tuning tiles')"
+        )
         assert settings.SUBCONTROLS["temperament_tiles"] == "temperament"
         for key in ("tuning_tiles", "optimization", "projection", "tuning_colorization"):
             assert settings.SUBCONTROLS[key] == "tuning", key
@@ -142,7 +175,9 @@ class TestShowToggles:
         assert editor.settings["optimization"] is True
 
     def test_form_is_a_live_layer_not_a_pure_grouping_parent(self):
-        assert settings.DEFAULTS["form"] is False, "'form' heads the form group like temperament/tuning, but unlike those pure grouping parents # it carries a real grid layer (the canonical-form subscript C), so it is LIVE (in IMPLEMENTED) # and NOT in GROUPING_PARENTS. It defaults OFF (the subscript is opt-in, and its group starts # collapsed), and being implemented its saved value is honoured rather than pinned"
+        assert settings.DEFAULTS["form"] is False, (
+            "'form' heads the form group like temperament/tuning, but unlike those pure grouping parents # it carries a real grid layer (the canonical-form subscript C), so it is LIVE (in IMPLEMENTED) # and NOT in GROUPING_PARENTS. It defaults OFF (the subscript is opt-in, and its group starts # collapsed), and being implemented its saved value is honoured rather than pinned"
+        )
         assert "form" in settings.IMPLEMENTED
         assert "form" not in settings.GROUPING_PARENTS
         assert {"temperament", "tuning"} <= settings.GROUPING_PARENTS
@@ -171,8 +206,9 @@ class TestShowToggles:
         assert editor.can_reset is True
         editor.reset()
         assert editor.state.mapping == INITIAL_MAPPING
-        assert service.base_scheme_name(editor.tuning_scheme) \
-            == service.base_scheme_name(service.DEFAULT_DOCUMENT_SCHEME)
+        assert service.base_scheme_name(editor.tuning_scheme) == service.base_scheme_name(
+            service.DEFAULT_DOCUMENT_SCHEME
+        )
         assert service.is_all_interval(editor.tuning_scheme) is False
         assert editor.settings == settings.defaults()
         assert editor.collapsed == set()
@@ -265,10 +301,82 @@ class TestSerialization:
         del no_scheme["tuning_scheme"]
         restored = Editor()
         restored.load(no_scheme)
-        assert service.base_scheme_name(restored.tuning_scheme) \
-            == service.base_scheme_name(service.DEFAULT_DOCUMENT_SCHEME)
+        assert service.base_scheme_name(restored.tuning_scheme) == service.base_scheme_name(
+            service.DEFAULT_DOCUMENT_SCHEME
+        )
 
         both_missing = dict(base)
         del both_missing["mapping_ebk"]
         del both_missing["tuning_scheme"]
         Editor().load(both_missing)
+
+
+def _show_label(key: str) -> str:
+    for _group, items in settings.SHOW_GROUPS:
+        for candidate, label, _default in items:
+            if candidate == key:
+                return label
+    raise KeyError(key)
+
+
+class TestSettingsPanelLabels:
+    def test_each_colorization_toggle_names_the_layer_it_tints(self):
+        assert _show_label("temperament_colorization") == "temperament colorization"
+        assert _show_label("form_colorization") == "form colorization"
+        assert _show_label("tuning_colorization") == "tuning colorization"
+
+    def test_the_three_units_toggles_are_each_self_identifying(self):
+        assert _show_label("units") == "box units"
+        assert _show_label("cell_units") == "per-cell units"
+        assert _show_label("domain_units") == "domain-basis units"
+        assert len({_show_label(k) for k in ("units", "cell_units", "domain_units")}) == 3
+
+    def test_no_two_show_toggles_share_a_label(self):
+        labels = [label for _group, items in settings.SHOW_GROUPS for _key, label, _d in items]
+        duplicates = {label for label in labels if labels.count(label) > 1}
+        assert duplicates == set()
+
+
+class TestRefinementCue:
+    def test_refinements_are_exactly_the_tooltip_refines_toggles(self):
+        from rtt.app import tooltips
+
+        declared = {key for key, help_text in tooltips.SHOW_HELP.items() if "Refines" in help_text}
+        assert settings.REFINEMENTS == declared
+
+    def test_every_refinement_answers_to_a_parent_and_heads_nothing(self):
+        assert settings.REFINEMENTS <= set(settings.SUBCONTROLS)
+        assert settings.REFINEMENTS.isdisjoint(settings.GROUPING_PARENTS)
+
+    def test_show_label_prefixes_only_refinements_with_the_subordinate_cue(self):
+        assert settings.show_label("mnemonics", "mnemonics") == "↳ mnemonics"
+        assert settings.show_label("decimals", "decimals") == "↳ decimals"
+        assert (
+            settings.show_label("tuning_colorization", "tuning colorization")
+            == "↳ tuning colorization"
+        )
+        assert settings.show_label("names", "names") == "names"
+        assert settings.show_label("temperament", "temperament") == "temperament"
+        assert settings.show_label("units", "box units") == "box units"
+
+
+class TestSettingsPanelRowStructure:
+    def test_grouping_parents_get_the_header_class_leaves_do_not(self):
+        from rtt.app import _page_parts
+
+        assert _page_parts._show_row_classes("temperament") == "rtt-show-row rtt-grouping-parent"
+        assert _page_parts._show_row_classes("tuning") == "rtt-show-row rtt-grouping-parent"
+        assert _page_parts._show_row_classes("counts") == "rtt-show-row"
+
+    def test_nested_rows_carry_a_depth_capped_nesting_class(self):
+        from rtt.app import _page_parts
+
+        assert _page_parts._show_row_classes("optimization") == "rtt-show-row rtt-nest-1"
+        assert _page_parts._show_row_classes("weighting") == "rtt-show-row rtt-nest-2"
+        assert _page_parts._show_row_classes("all_interval") == "rtt-show-row rtt-nest-3"
+
+    def test_fold_glyph_reads_expand_when_collapsed_and_collapse_when_open(self):
+        from rtt.app import _page_parts
+
+        assert "<svg" in _page_parts._fold_glyph_html(True)
+        assert _page_parts._fold_glyph_html(True) != _page_parts._fold_glyph_html(False)

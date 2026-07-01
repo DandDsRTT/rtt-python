@@ -12,7 +12,8 @@ html, body { overscroll-behavior-x: none; }
    so they live here; --hl and --cell-fill, which read the PER-CELL --rtt-hl, must be declared on
    .rtt-cell (not here) or var(--rtt-hl) would bind to :root's 0 and inherit frozen. */
 :root { --cell-bg:#f4f6f9; --hl-scale:1; --hl-ring-w:2px; --hl-wash:14%;
-        --tile-border:#8a8a8a; --inset-box:#d4d4d4; --show-col1:160px; --show-row-h:26px; }
+        --tile-border:#8a8a8a; --inset-box:#d4d4d4; --show-col1:160px; --show-row-h:26px;
+        --rtt-nest-guide:rgba(0,0,0,0.12); }
 
 /* the grid's frozen top-left corner holds the undo/redo/reset/share/tour button bank (the app
    title moved to the settings sidebar). The light-grey bank hugs its buttons with an equal 6px
@@ -1176,6 +1177,25 @@ body.rtt-dark .rtt-chapter-slider .q-slider__markers { color:rgba(255,255,255,0.
    plus the same 0.75 dim Quasar puts on the checkbox so the two read as one shade */
 .rtt-example-cell.rtt-ex-disabled { color:#999; opacity:0.75; }
 .rtt-ex { white-space:nowrap; }
+.rtt-grouping-parent { position:relative; border-top:1px solid rgba(0,0,0,0.14);
+                       margin-top:5px; padding-top:3px; }
+.rtt-grouping-parent .q-checkbox__inner { display:none; }
+.rtt-grouping-parent .rtt-show-item .q-checkbox__label { font-weight:bold;
+                       padding-left:22px; text-indent:0; }
+.rtt-group-fold { position:absolute; left:2px; top:calc(50% + 1px);
+                  transform:translateY(-50%); width:13px; height:13px; pointer-events:none; }
+.rtt-group-fold svg { width:13px; height:13px; display:block; }
+.rtt-nest-1, .rtt-nest-2, .rtt-nest-3 { background-repeat:no-repeat; background-size:1px 100%; }
+.rtt-nest-1 { background-image:linear-gradient(var(--rtt-nest-guide),var(--rtt-nest-guide));
+              background-position:9px 0; }
+.rtt-nest-2 { background-image:linear-gradient(var(--rtt-nest-guide),var(--rtt-nest-guide)),
+                               linear-gradient(var(--rtt-nest-guide),var(--rtt-nest-guide));
+              background-size:1px 100%,1px 100%; background-position:9px 0,27px 0; }
+.rtt-nest-3 { background-image:linear-gradient(var(--rtt-nest-guide),var(--rtt-nest-guide)),
+                               linear-gradient(var(--rtt-nest-guide),var(--rtt-nest-guide)),
+                               linear-gradient(var(--rtt-nest-guide),var(--rtt-nest-guide));
+              background-size:1px 100%,1px 100%,1px 100%;
+              background-position:9px 0,27px 0,45px 0; }
 /* the "general" group's dummy tile: a value-tile-styled panel matching a real tile — the grey
    #e0e0e0 fill, a thin #8a8a8a border and SQUARE corners (no radius, like the grid's tiles).
    It hugs its stacked layers (a head strip on top, then the layer lines) and is centred
