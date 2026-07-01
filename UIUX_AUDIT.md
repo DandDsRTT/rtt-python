@@ -96,6 +96,8 @@ Do **WP1 first** (security). Then the P1 tier (WP2–WP5) — the accessibility 
 
 **Scope.** 7 findings (5 medium · 2 low).
 
+**Status — shipped (PR #189), with one accepted limitation on the two `rendered:mobile-375px` items.** The responsive fix is CSS-only (it collapses the wordmark rail). A *genuine* mobile grid reflow is deliberately **out of scope**: `LABEL_WIDTH`/`freeze_x` are Python-computed and synced against by `freeze.js`, so a media query cannot narrow the board without desyncing it. **Mobile is fixed-width horizontal-scroll by design** — a true phone explorer is a layout-engine change *and* a design decision (with Dave), not a CSS follow-up, so don't rediscover it as a bug. WP12 covers the graceful "best on a wider screen" degradation.
+
 - **[medium·L]** No responsive layout: fixed-width grid forces dual-axis scrolling and wastes ~30% of width on mobile  
   `rendered:mobile-375px`  
   *Problem:* On phones the app is effectively unusable for browsing values: the always-pinned rail eats a third of the screen and the user must scroll two axes to read a single mapping row.  
