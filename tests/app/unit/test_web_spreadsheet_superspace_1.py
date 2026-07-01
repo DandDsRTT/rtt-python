@@ -452,16 +452,16 @@ class TestSuperspaceProjection:
     def test_B_L_emits_one_cell_per_superspace_prime_row_and_domain_element_col(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
         expected_by_element = ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, -1, 1))
-        for elem_idx, vector in enumerate(expected_by_element):
+        for element_idx, vector in enumerate(expected_by_element):
             for superspace_prime_idx, value in enumerate(vector):
-                assert cells[f"cell:superspace_vectors:primes:{superspace_prime_idx}:{elem_idx}"].text == str(value)
+                assert cells[f"cell:superspace_vectors:primes:{superspace_prime_idx}:{element_idx}"].text == str(value)
 
     def test_B_L_cells_ride_the_existing_prime_gridlines_and_superspace_vector_rows(self):
         cells = {c.id: c for c in _barbados_superspace().cells}
-        for elem_idx in range(3):
+        for element_idx in range(3):
             for superspace_prime_idx in range(4):
-                bl = cells[f"cell:superspace_vectors:primes:{superspace_prime_idx}:{elem_idx}"]
-                assert bl.x == cells[f"cell:mapping:0:{elem_idx}"].x
+                bl = cells[f"cell:superspace_vectors:primes:{superspace_prime_idx}:{element_idx}"]
+                assert bl.x == cells[f"cell:mapping:0:{element_idx}"].x
                 assert bl.y == cells[f"superspace_basis:{superspace_prime_idx}"].y
 
     def test_B_L_off_omits_the_cells(self):

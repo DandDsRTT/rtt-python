@@ -4,7 +4,7 @@ from rtt.app.editor import Editor
 
 def _grid_texts(mode):
     layout = spreadsheet.build(Editor().state, {**settings.defaults(), "terminology": mode})
-    return " | ".join(cb.text for cb in layout.cells if getattr(cb, "text", None))
+    return " | ".join(cell_box.text for cell_box in layout.cells if getattr(cell_box, "text", None))
 
 
 class TestTerminologyModes:

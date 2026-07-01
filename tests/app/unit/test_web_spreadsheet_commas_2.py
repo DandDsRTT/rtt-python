@@ -214,11 +214,11 @@ class TestOptimizationControls:
         cap_d = on["caption:diminuator"]
         assert cap_d.kind == "caption"
         assert cap_d.text == "replace diminuator"
-        dim = on["control:diminuator"]
-        assert dim.x == on["header:primes"].x + spreadsheet_constants.BOX_INNER
+        dimension = on["control:diminuator"]
+        assert dimension.x == on["header:primes"].x + spreadsheet_constants.BOX_INNER
         gap = (spreadsheet_constants.PRESET_HEIGHT - spreadsheet_constants.OPTION_BOX_PX) / 2
-        assert cap_d.y == dim.y + dim.height + gap
-        assert abs((dim.x + dim.width / 2) - (cap_d.x + cap_d.width / 2)) < 1
+        assert cap_d.y == dimension.y + dimension.height + gap
+        assert abs((dimension.x + dimension.width / 2) - (cap_d.x + cap_d.width / 2)) < 1
 
     def test_weighting_controls_each_sit_in_a_bordered_box(self):
         layout = _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True)
@@ -414,9 +414,9 @@ class TestCustomWeightRow:
         cells = {c.id: c for c in _layout().cells}
         assert cells["bracket:vector:commas:l"].text == "[" and cells["bracket:vector:commas:r"].text == "]"
         assert "ebktop:vector:commas:0" in cells and "ebkangle:vector:commas:0" in cells
-        cb = cells["bracket:vector:commas:l"]
-        assert cb.y <= cells["cell:comma:0:0"].y
-        assert cb.y + cb.height >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].height
+        cell_box = cells["bracket:vector:commas:l"]
+        assert cell_box.y <= cells["cell:comma:0:0"].y
+        assert cell_box.y + cell_box.height >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].height
 
     def test_untempered_vector_columns_get_angle_feet_while_mapped_lists_keep_braces(self):
         cells = {c.id: c for c in _layout().cells}

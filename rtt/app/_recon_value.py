@@ -218,20 +218,20 @@ def _sync_ratio_ops(reconciler, cell_id: str, text: str) -> None:
 
 
 def _gridvalue_handlers(reconciler, cell_box: spreadsheet.CellBox, spec: _GridValueSpec):
-    fn = getattr(reconciler._cell_box, spec.commit)
+    function = getattr(reconciler._cell_box, spec.commit)
     if spec.cid_arg:
 
         def commit(_=None, cell_id=cell_box.id):
-            return fn(cell_id)
+            return function(cell_id)
 
         pv = getattr(reconciler._cell_box, spec.preview) if spec.preview else None
         preview = (lambda _e=None, cell_id=cell_box.id: pv(cell_id)) if pv else None
     else:
 
         def commit(_=None):
-            return fn()
+            return function()
 
-        preview = (lambda _e=None: fn(preview=True)) if spec.preview else None
+        preview = (lambda _e=None: function(preview=True)) if spec.preview else None
     return commit, preview
 
 

@@ -187,7 +187,7 @@ def _emit_preset(cells, blocks, resolved, geometry, context, preset_text, cell_i
     top = query.plain_text_band_y(geometry, row_key) + geometry.rows[row_key].plain_text
     disabled = (name == "target" and service.is_all_interval(context.tuning_scheme)) \
         or _preset_locked(resolved, context, name)
-    fc = next((fn for fn, rk, ck, _l in FORM_CHOOSERS if rk == row_key and ck == column_key), None)
+    fc = next((function for function, rk, ck, _l in FORM_CHOOSERS if rk == row_key and ck == column_key), None)
     form_chooser = (f"formchooser:{fc}", "form") if (fc and query.preset_form_label(resolved, name, row_key, column_key)) else None
     control_x, control_width, control_y = _control_box(cells, blocks, resolved, geometry, f"block:{cell_id}", column_key, top, query.preset_cap(name), label,
                               disabled=disabled, scheme_button=(name == "projection"),

@@ -216,8 +216,8 @@ class TestWebAppSmoke3:
 
     def test_ebk_svg_routes_the_curly_open_brace_to_the_curly_bracket(self):
         from rtt.app.layout import CellBox
-        cb = CellBox("bracket:tuning:generator_map:l", 0, 0, 16, 30, "bracket", text="{")
-        assert marks.ebk_svg(cb) == marks.curly_bracket(16, 30), "not the square/angle renderer"
+        cell_box = CellBox("bracket:tuning:generator_map:l", 0, 0, 16, 30, "bracket", text="{")
+        assert marks.ebk_svg(cell_box) == marks.curly_bracket(16, 30), "not the square/angle renderer"
 
     def test_bar_chart_draws_one_scaled_bar_per_value_from_the_baseline(self):
         svg = render_html._bar_chart(272, 64, (0.0, 5.0, 10.0))
@@ -424,7 +424,7 @@ class TestWebAppSmoke4:
         runtime = SimpleNamespace(building=False)
         edits = EditController(SimpleNamespace(), SimpleNamespace(), gestures, None, runtime)
 
-        cb = bind_callbacks(
+        cell_box = bind_callbacks(
             edits,
             edits.vectors,
             edits.tuning,
@@ -433,9 +433,9 @@ class TestWebAppSmoke4:
             gestures.combine,
             gestures.hover,
         )
-        assert isinstance(cb, ReconcilerCallbacks)
+        assert isinstance(cell_box, ReconcilerCallbacks)
         for name in required_callback_names():
-            assert getattr(cb, name)._rtt_cb is True
+            assert getattr(cell_box, name)._rtt_cb is True
 
     def test_bind_callbacks_fails_loudly_on_a_missing_callback(self):
         from rtt.app.reconciler import bind_callbacks, required_callback_names

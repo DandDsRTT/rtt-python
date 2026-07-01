@@ -321,8 +321,8 @@ def _group_geometry_fields(geometry, resolved):
                        "interest": "interest", "held": "held", "detempering": "detempering",
                        "canonical_generators": "canonical_generator", "superspace_generators": "superspace_generator", "superspace_primes": "superspace_prime"},
         "group_n": group_n,
-        "group_left": {g: tuple(fn(i) for i in range(group_n[g])) if g in content_x else ()
-                       for g, fn in left_fn.items()},
+        "group_left": {g: tuple(function(i) for i in range(group_n[g])) if g in content_x else ()
+                       for g, function in left_fn.items()},
         "group_ratio": {
             "primes": tuple(service.element_ratio(e) for e in resolved.dimensions.elements),
             "commas": tuple(resolved.commas.ratios[:resolved.dimensions.comma_count]) + tuple(resolved.unchanged.ratios),

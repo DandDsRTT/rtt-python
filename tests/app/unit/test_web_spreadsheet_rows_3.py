@@ -261,9 +261,9 @@ class TestRetuningChartsAndGenMap:
             interest=((-3, 2, 0),),
             held_vectors=((-1, 1, 0),),
         ).cells}
-        elem = {"primes": "prime", "commas": "comma", "targets": "target",
+        element = {"primes": "prime", "commas": "comma", "targets": "target",
                 "interest": "interest", "held": "held", "detempering": "detempering"}
-        for group, e in elem.items():
+        for group, e in element.items():
             assert f"retune:{e}:0" in on, f"the retune {group} tile is missing"
             assert on[f"chart:retune:{group}"].kind == "chart", f"the retune {group} tile is not charted"
 
@@ -276,9 +276,9 @@ class TestRetuningChartsAndGenMap:
         on = {c.id: c for c in layout.cells}
         gridline = {line.id: line.position for line in layout.lines if line.orientation == "v"}
         bw, cw = spreadsheet_constants.BRACKET_WIDTH, spreadsheet_constants.COLUMN_WIDTH
-        elem = {"primes": "prime", "commas": "comma", "targets": "target",
+        element = {"primes": "prime", "commas": "comma", "targets": "target",
                 "interest": "interest", "held": "held", "detempering": "detempering"}
-        for group, e in elem.items():
+        for group, e in element.items():
             ch = on[f"chart:retune:{group}"]
             for i in range(len(ch.values)):
                 bar_centre = ch.x + bw + i * (cw + ch.column_gap) + cw / 2

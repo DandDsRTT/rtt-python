@@ -22,9 +22,9 @@ from _spreadsheet_support import _memoized_build, _layout, _with, _projection_bu
 class TestPerCellAudio:
     def test_comma_ratio_cell_is_click_to_play_with_its_just_size(self):
         cells = {c.id: c for c in _layout().cells}
-        cb = cells["comma:0"]
-        assert cb.audio is not None
-        tile, index, cents = cb.audio
+        cell_box = cells["comma:0"]
+        assert cell_box.audio is not None
+        tile, index, cents = cell_box.audio
         assert (tile, index) == ("quantities:commas", 0)
         assert abs(abs(cents) - 21.506) < 0.01, "the meantone comma 81/80 is ~21.506¢ JUST (it is tempered to ~0¢) — so a magnitude of ~21.5 # confirms the ratio sounds the JUST size, not the tempered one (sign is the comma's stored # orientation, the same value the old audio rows sounded)"
 

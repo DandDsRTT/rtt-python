@@ -30,9 +30,9 @@ from rtt.app.render_html import (
 _log = logging.getLogger(__name__)
 
 
-def cb_method(fn):
-    fn._rtt_cb = True
-    return fn
+def callback_method(function):
+    function._rtt_cb = True
+    return function
 
 
 class _KindHandlers(NamedTuple):
@@ -461,10 +461,10 @@ _AUDIO_BANK = (
 def _audio_bank() -> ui.element:
     bank = ui.element("div").classes("rtt-tile-bank").mark("audiobank")
     with bank:
-        for control, glyph, fn in _AUDIO_BANK:
+        for control, glyph, function in _AUDIO_BANK:
             ui.html(glyph).classes("rtt-audio-control").mark(f"audio_control:{control}").props(
                 f'data-audio-control="{control}"'
-            ).on("click", js_handler=f"() => window.rttAudio.{fn}()").tooltip(
+            ).on("click", js_handler=f"() => window.rttAudio.{function}()").tooltip(
                 tooltips.AUDIO_HELP[control]
             )
     return bank

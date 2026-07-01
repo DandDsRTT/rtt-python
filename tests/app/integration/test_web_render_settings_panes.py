@@ -172,11 +172,11 @@ class TestSettingsAndPanes:
         orig = live._Reconciler.update_cell
         fired = {"n": 0}
 
-        def boom(self, cb):
+        def boom(self, cell_box):
             if fired["n"] == 0:
                 fired["n"] = 1
                 raise RuntimeError("mid-render boom")
-            return orig(self, cb)
+            return orig(self, cell_box)
 
         monkeypatch.setattr(live._Reconciler, "update_cell", boom)
         user.find(marker="toggle:row:tuning").click()
@@ -193,9 +193,9 @@ class TestSettingsAndPanes:
         calls: list = []
         orig = live._Reconciler.update_cell
 
-        def counting(self, cb):
-            calls.append(cb.id)
-            return orig(self, cb)
+        def counting(self, cell_box):
+            calls.append(cell_box.id)
+            return orig(self, cell_box)
 
         monkeypatch.setattr(live._Reconciler, "update_cell", counting)
         await user.open("/")
