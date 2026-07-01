@@ -1,4 +1,6 @@
-window.rttFreeze = (function () {
+(function () {
+  if (window.__rttFreeze) return;
+  window.__rttFreeze = true;
   function update() {
     var bodies = document.querySelectorAll('.rtt-gridbody');
     for (var i = 0; i < bodies.length; i++) {
@@ -146,7 +148,6 @@ window.rttFreeze = (function () {
       if (parseFloat(panes[i].dataset.baseW) > 0 && parseFloat(panes[i].dataset.baseH) > 0) return true;
     return false;
   }
-  var tries = 0;
-  (function boot() { all(); if (!rendered() && ++tries < 12) setTimeout(boot, 100); })();
-  return { update: update, fit: fit };
+  window.rttBoot(all, rendered);
+  window.rttFreeze = { update: update, fit: fit };
 })();

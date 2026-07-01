@@ -256,6 +256,10 @@ _AUDIO_GLYPHS = {
     "root": '<span class="rtt-audio-root-glyph">1/1</span>',
 }
 
+_BOOT_JS = (_ASSETS / "boot.js").read_text(encoding="utf-8")
+
+_STACKED_EDIT_JS = (_ASSETS / "stacked_edit.js").read_text(encoding="utf-8")
+
 _AUDIO_JS = (_ASSETS / "audio.js").read_text(encoding="utf-8")
 
 # Browser: the column-title strip sits outside the body scroller (so the scrollbar can stop below it),

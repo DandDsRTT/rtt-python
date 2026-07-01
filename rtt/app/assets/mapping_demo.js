@@ -91,7 +91,7 @@
     t.setAttribute('x', x); t.setAttribute('y', y);
     t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'central');
     t.setAttribute('font-size', size); t.setAttribute('fill', fill);
-    t.setAttribute('font-family', "'STIX Two Text', Georgia, serif");
+    t.style.fontFamily = 'var(--rtt-serif)';
     t.textContent = s; svg.appendChild(t);
   };
   const chip = (centerX, centerY, s, sq, palette) => {
