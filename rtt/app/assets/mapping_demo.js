@@ -130,13 +130,20 @@
     };
     const columnX = C(hov).x;
     const inColumn = (o) => Math.abs(o.c.x - columnX) < 8;
-    const all = [...board().querySelectorAll('[data-eid]')];
-    const elementId = (element) => element.getAttribute('data-eid');
 
-    const source = all.filter((element) => band.vec.test(elementId(element))).map((element) => ({ c: C(element), v: FR.parse(text(element)) }))
+    // one scan of the board's cells, bucketing each by its data-eid into this band's operand vector,
+    // matrix and result, so only the cells that belong to the band are measured (not every cell).
+    const srcEls = [], matEls = [], resEls = [];
+    for (const element of b.querySelectorAll('[data-eid]')) {
+      const id = element.getAttribute('data-eid');
+      if (id.startsWith(band.matrix)) matEls.push(element);
+      if (band.result.test(id)) resEls.push(element);
+      if (band.vec.test(id)) srcEls.push(element);
+    }
+    const source = srcEls.map((element) => ({ c: C(element), v: FR.parse(text(element)) }))
       .filter(inColumn).sort((a, z) => a.c.y - z.c.y);
-    const mcells = all.filter((element) => elementId(element).startsWith(band.matrix)).map((element) => ({ c: C(element), m: FR.parse(text(element)) }));
-    const res = all.filter((element) => band.result.test(elementId(element))).map((element) => ({ c: C(element) }))
+    const mcells = matEls.map((element) => ({ c: C(element), m: FR.parse(text(element)) }));
+    const res = resEls.map((element) => ({ c: C(element) }))
       .filter(inColumn).sort((a, z) => a.c.y - z.c.y);
     if (!source.length || !mcells.length || !res.length) return false;
 

@@ -78,22 +78,26 @@ class Renderer:
             return
         background_tasks.create(self._commit_render(after))
 
+    def _build_layout(self):
+        previous = self._runtime.last_lay.identities if self._runtime.last_lay is not None else None
+        return self._editor.layout(previous_ids=previous, preview_remove=self._gestures.rank_remove)
+
     async def _commit_render(self, after=None):
         self.render_inflight = True
         try:
             again = True
             cont = after
             while again:
-                previous = (
-                    self._runtime.last_lay.identities
-                    if self._runtime.last_lay is not None
-                    else None
-                )
+                _rendering_ops.end_stale_gestures(self._gestures)
+                snapshot = self._runtime.last_lay
                 try:
-                    await asyncio.to_thread(self._editor.layout, previous_ids=previous)
+                    layout = await asyncio.to_thread(self._build_layout)
                 except Exception:
-                    _log.exception("off-loop layout warm-up failed; rendering on the loop")
-                self.render()
+                    _log.exception("off-loop layout failed; rebuilding on the loop")
+                    self.render()
+                else:
+                    reusable = self._runtime.last_lay is snapshot and not self.render_again
+                    self.render(layout if reusable else None)
                 if cont is not None:
                     cont()
                 again = self.render_again
@@ -103,19 +107,15 @@ class Renderer:
         finally:
             self.render_inflight = False
 
-    def apply_view_classes(self):
-        _rendering_ops.apply_view_classes(self._editor, self._runtime)
-
     def _body_visible(self, x, y, width, height, freeze_y) -> bool:
         return _rect_in_view(x, y, width, height, freeze_y, self._viewport, _VIRT_OVERSCAN)
 
-    def render(self):
+    def render(self, prebuilt=None):
         _rendering_ops.end_stale_gestures(self._gestures)
         with self._runtime.building_guard():
-            self.apply_view_classes()
-            previous = self._runtime.last_lay.identities if self._runtime.last_lay is not None else None
+            _rendering_ops.apply_view_classes(self._editor, self._runtime)
             cold = self._runtime.last_lay is None
-            layout = self._editor.layout(previous_ids=previous, preview_remove=self._gestures.rank_remove)
+            layout = prebuilt if prebuilt is not None else self._build_layout()
             self._runtime.set_last_lay(layout)
             self._rec.pretransform = layout.pretransform
             cur_ids = frozenset(cell_box.id for cell_box in layout.cells)
@@ -157,7 +157,9 @@ class Renderer:
             if layout is None:
                 return
             freeze_x, freeze_y = layout.freeze_x, layout.freeze_y
-            pending = [cell_box for cell_box in layout.cells if cell_box.id not in self._rec.entities]
+            pending = [
+                cell_box for cell_box in layout.cells if cell_box.id not in self._rec.entities
+            ]
             if not pending:
                 return
             paint = (freeze_y, False, self._last_rings)

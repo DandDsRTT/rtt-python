@@ -31,6 +31,8 @@
 
   var active = null;        // the active .rtt-cell element (or null)
   var fromHover = false;    // whether the current active cell came from the mouse
+  var painted = [];         // the cells that currently carry a --rtt-hl, so a clear touches only them
+  var synthetic = false;    // set while a keyboard move re-fires the hover events (see hoverSync)
 
   // only gridded VALUE cells take the highlight or the keyboard focus — never names, symbols,
   // captions, EBK brackets, buttons or other chrome. The server marks them with .rtt-gridval.
@@ -52,19 +54,24 @@
     for (var i = 0; i < all.length; i++) all[i].tabIndex = (all[i] === focusable) ? 0 : -1;
   }
 
-  // recompute every materialized cell's --rtt-hl for the current active cell.
+  function clearPaint() {
+    for (var i = 0; i < painted.length; i++) painted[i].style.removeProperty('--rtt-hl');
+    painted = [];
+  }
+
+  // recompute every materialized cell's --rtt-hl for the current active cell. With no active cell
+  // and nothing painted this is a no-op — no cell is touched. Every getBoundingClientRect is read in
+  // one pass BEFORE any --rtt-hl is written, because a browser recomputes layout on the first rect
+  // read after a style write, so interleaving reads and writes reflows once per cell.
   function paint() {
     var all = cells();
     applyRoving(all);
-    if (!active || !active.isConnected) {
-      for (var i = 0; i < all.length; i++) all[i].style.removeProperty('--rtt-hl');
-      return;
-    }
-    var activeRect = rectOf(active);
-    var amx = active.dataset.mx || '';
-    var amxo = active.dataset.mxo || '';
+    if (!active || !active.isConnected) { clearPaint(); return; }
+    var activeRect = rectOf(active), rects = new Array(all.length);
+    for (var i = 0; i < all.length; i++) rects[i] = rectOf(all[i]);
+    var amx = active.dataset.mx || '', amxo = active.dataset.mxo || '', next = [];
     for (var k = 0; k < all.length; k++) {
-      var element = all[k], r = rectOf(element), w = 0;
+      var element = all[k], r = rects[k], w = 0;
       var sameRow = inRowBand(r, activeRect), sameColumn = inColumnBand(r, activeRect);
       if (sameRow) w += W_CROSS;
       if (sameColumn) w += W_CROSS;
@@ -73,9 +80,11 @@
         if (amxo === 'row' ? sameRow : sameColumn) w += W_ORIENT;
       }
       var hl = (element === active) ? 1 : Math.min(NONACTIVE_MAX, w);
-      if (hl > 0) element.style.setProperty('--rtt-hl', hl.toFixed(3));
-      else element.style.removeProperty('--rtt-hl');
+      if (hl > 0) { element.style.setProperty('--rtt-hl', hl.toFixed(3)); next.push(element); }
     }
+    var keep = new Set(next);
+    for (var j = 0; j < painted.length; j++) if (!keep.has(painted[j])) painted[j].style.removeProperty('--rtt-hl');
+    painted = next;
   }
 
   function setActive(element, hover) {
@@ -94,6 +103,7 @@
 
   // ---- mouse: hovering any cell makes it active and steals from the keyboard ----
   document.addEventListener('mouseover', function (e) {
+    if (synthetic) return;   // a keyboard move re-fires this for the hover features; it must not re-steal active
     var element = e.target.closest && e.target.closest(SEL);
     if (element) setActive(element, true);
   });
@@ -166,10 +176,15 @@
   // moving the active cell by keyboard should look exactly like hovering it: fire the same pointer
   // events the grid's hover features (the audio speaker, the zoom card, tooltips) listen for.
   function hoverSync(previous, next) {
-    if (previous && previous !== next)
-      previous.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: next }));
-    if (next)
-      next.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, relatedTarget: previous }));
+    synthetic = true;
+    try {
+      if (previous && previous !== next)
+        previous.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: next }));
+      if (next)
+        next.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, relatedTarget: previous }));
+    } finally {
+      synthetic = false;
+    }
   }
 
   function moveTo(element) {
