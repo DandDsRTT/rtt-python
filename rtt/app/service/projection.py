@@ -13,7 +13,7 @@ from rtt.app.service.core import (
     interval_complexities,
     interval_sizes,
 )
-from rtt.app.service.core_forms import inverse_form_matrix
+from rtt.app.service.core_forms import form_matrix
 from rtt.app.service.core_intervals import interval_vector
 from rtt.app.service.core_vectors import (
     _vectors_to_ratios,
@@ -91,10 +91,10 @@ def canonical_generator_embedding(state: TemperamentState, held_ratios=()):
         if inputs is None:
             return None
         g = get_generator_embedding(*inputs)
-        f_inv = inverse_form_matrix(state.mapping)
-        r, rc = len(f_inv), len(f_inv[0]) if f_inv else 0
+        f = form_matrix(state.mapping)
+        r, rc = len(f), len(f[0]) if f else 0
         gesture_controller = tuple(
-            tuple(sum(g[i][k] * f_inv[k][j] for k in range(r)) for j in range(rc))
+            tuple(sum(g[i][k] * f[k][j] for k in range(r)) for j in range(rc))
             for i in range(len(g))
         )
         return _matrix_strings(gesture_controller)

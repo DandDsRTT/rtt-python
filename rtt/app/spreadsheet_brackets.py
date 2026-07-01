@@ -147,13 +147,13 @@ def _emit_canonical_stacked_brackets(cells, resolved, geometry, context) -> None
     if query.row_open(geometry, collapsed, "canonical") and query.tile_open(geometry, collapsed, "canonical", "primes"):
         for i in range(resolved.dimensions.canonical_rank):
             bracket(cells, resolved, geometry, f"canonical:map:{i}", "canonical", "primes", query.canonical_top(geometry, i), ROW_HEIGHT, stacked=True)
-            bracket(cells, resolved, geometry, f"form:map:{i}", "canonical", "generators", query.canonical_top(geometry, i), ROW_HEIGHT, stacked=True)
+            bracket(cells, resolved, geometry, f"inverse_form:map:{i}", "canonical", "generators", query.canonical_top(geometry, i), ROW_HEIGHT, stacked=True)
     if query.row_open(geometry, collapsed, "canonical") and query.tile_open(geometry, collapsed, "canonical", "canonical_generators"):
         for i in range(resolved.dimensions.canonical_rank):
             bracket(cells, resolved, geometry, f"fcancel:map:{i}", "canonical", "canonical_generators", query.canonical_top(geometry, i), ROW_HEIGHT, stacked=True)
     if query.tile_open(geometry, collapsed, "mapping", "canonical_generators"):
         for i in range(resolved.dimensions.rank):
-            bracket(cells, resolved, geometry, f"finv:map:{i}", "mapping", "canonical_generators", query.map_top(geometry, i), ROW_HEIGHT, stacked=True)
+            bracket(cells, resolved, geometry, f"form:map:{i}", "mapping", "canonical_generators", query.map_top(geometry, i), ROW_HEIGHT, stacked=True)
 
 
 def _emit_canonical_fit_brackets(cells, resolved, geometry, context) -> None:
@@ -386,9 +386,9 @@ def _emit_ebk_frames(cells, resolved, geometry, context) -> None:
     matrix_frame(cells, resolved, geometry, context, "projection", "primes", "projection")
     matrix_frame(cells, resolved, geometry, context, "projection", "superspace_primes", "projection_superspace")
     matrix_frame(cells, resolved, geometry, context, "canonical", "primes", "canonical")
-    matrix_frame(cells, resolved, geometry, context, "canonical", "generators", "form")
+    matrix_frame(cells, resolved, geometry, context, "canonical", "generators", "inverse_form")
     matrix_frame(cells, resolved, geometry, context, "canonical", "canonical_generators", "fcancel")
-    matrix_frame(cells, resolved, geometry, context, "mapping", "canonical_generators", "finv")
+    matrix_frame(cells, resolved, geometry, context, "mapping", "canonical_generators", "form")
     matrix_frame(cells, resolved, geometry, context, "prescaling", "superspace_primes" if resolved.flags.superspace else "primes", "prescaling")
     matrix_frame(cells, resolved, geometry, context, "superspace_mapping", "superspace_primes", "superspace_mapping")
     matrix_frame(cells, resolved, geometry, context, "superspace_projection", "superspace_primes", "superspace_projection")

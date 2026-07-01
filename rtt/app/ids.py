@@ -3,7 +3,7 @@ def mapping_cell(token, prime):
 
 
 def form_cell(row, column):
-    return f"cell:finv:{row}:{column}"
+    return f"cell:form:{row}:{column}"
 
 
 def comma_cell(token, prime):

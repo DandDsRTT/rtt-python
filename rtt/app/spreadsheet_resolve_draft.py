@@ -89,9 +89,9 @@ class ResolveDraft:
     mapped: object = None
     canonical_mapping: object = None
     canonical_rank: object = None
-    form_M: object = None
-    canonical_generators: object = None
     inverse_form_M: object = None
+    canonical_generators: object = None
+    form_M: object = None
     mapping_form_key: object = None
     comma_basis_form_key: object = None
     form_is_canonical: object = None

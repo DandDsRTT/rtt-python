@@ -60,9 +60,9 @@ def resolve_canonical_form(inputs, draft):
     form_is_canonical = mapping_form_key == "canonical"
     return replace(
         draft, canonical_mapping=canonical_mapping, canonical_rank=len(canonical_mapping),
-        form_M=service.form_matrix(inputs.state.mapping),
-        canonical_generators=service.generators(canonical_mapping, draft.elements),
         inverse_form_M=service.inverse_form_matrix(inputs.state.mapping),
+        canonical_generators=service.generators(canonical_mapping, draft.elements),
+        form_M=service.form_matrix(inputs.state.mapping),
         mapping_form_key=mapping_form_key,
         comma_basis_form_key=(service.resolve_comma_basis_form(
             inputs.state.comma_basis, inputs.comma_basis_form, inputs.state.domain_basis) if inputs.state.nullity else ""),

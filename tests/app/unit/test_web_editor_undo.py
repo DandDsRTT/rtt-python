@@ -73,7 +73,7 @@ class TestMatrixEdits:
         assert editor.state.mapping == ((1, 2, 4), (0, 1, 4))
         assert service.canonical_mapping(editor.state.mapping) == canonical
         assert editor.state.comma_basis == commas
-        assert service.inverse_form_matrix(editor.state.mapping) == ((1, 2), (0, 1))
+        assert service.form_matrix(editor.state.mapping) == ((1, 2), (0, 1))
         editor.undo()
         assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))
 

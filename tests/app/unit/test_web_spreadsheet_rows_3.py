@@ -495,7 +495,7 @@ class TestRetuningChartsAndGenMap:
         assert over(lambda bl: bl.id.startswith("washbase:"))
         assert not over(lambda bl: bl.tint in ("temperament", "tuning", "form"))
         rank = cells["count:generators"]
-        gx, cgx = cells["cell:form:0:0"].x + 5, cells["cell:fcancel:0:0"].x + 5
+        gx, cgx = cells["cell:inverse_form:0:0"].x + 5, cells["cell:fcancel:0:0"].x + 5
         in_band = lambda bx, tint: any(bl.tint == tint and bl.x <= bx <= bl.x + bl.width
                                        and bl.y <= rank.y + rank.height / 2 <= bl.y + bl.height for bl in layout.blocks)
         assert in_band(gx, "temperament") and not in_band(gx, "form")

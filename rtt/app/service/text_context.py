@@ -385,8 +385,8 @@ def _derive_canonical(inputs: _Inputs, targets, core: _Core, unchanged: _Unchang
     return _Canonical(
         mapping,
         rc,
-        form_matrix(state.mapping),
         inverse_form_matrix(state.mapping),
+        form_matrix(state.mapping),
         mapped_intervals(mapping, targets, domain_basis),
         mapped_commas(mapping, core.comma_basis),
         mapped_commas(mapping, core.detemper_vectors),

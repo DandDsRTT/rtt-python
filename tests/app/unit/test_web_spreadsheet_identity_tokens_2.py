@@ -37,7 +37,7 @@ class TestCanonicalGenerators:
         assert "ebktop:fcancel" in cells and "ebkbrace:fcancel" in cells
         assert cells["caption:canonical:canonical_generators"].text == "form matrices canceling out"
         assert cells["cell:fcancel:0:0"].x == cells["canonical_generator:0"].x
-        assert cells["cell:fcancel:0:0"].x < cells["cell:form:0:0"].x
+        assert cells["cell:fcancel:0:0"].x < cells["cell:inverse_form:0:0"].x
         form_only = {c.id for c in _with(form_tiles=True).cells}
         assert "canonical_generator:0" in form_only and "cell:fcancel:0:0" not in form_only
 
@@ -70,26 +70,26 @@ class TestCanonicalGenerators:
 
     def test_form_matrix_row_labels_get_a_balanced_matrix_label_gutter(self):
         cells = {c.id: c for c in _with(form_tiles=True, header_symbols=True).cells}
-        flabel, fbracket = cells["matrix_label:row:mapping:canonical_generators:0"], cells["bracket:finv:map:0:l"]
+        flabel, fbracket = cells["matrix_label:row:mapping:canonical_generators:0"], cells["bracket:form:map:0:l"]
         assert flabel.text == "𝒇₁"
         assert flabel.x + flabel.width <= fbracket.x, "the label sits left of (or up to) the { bracket, not over it"
         assert flabel.width > 0 and fbracket.x - flabel.x >= flabel.width
 
-    def test_canonical_generators_column_builds_finv_embedding_and_tuning_tiles(self):
+    def test_canonical_generators_column_builds_form_embedding_and_tuning_tiles(self):
         from rtt.app.grid_tables import SUBSCRIPT_C
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"),
                                               form_tiles=True, symbols=True, header_symbols=True).cells}
-        assert cells["cell:finv:0:0"].text == "1" and cells["cell:finv:0:1"].text == "1", "𝐹 (generator form matrix) over the mapping row: M = F·M_C, so F = ((1,1),(0,1)) (cell id is the # historical 'cell:finv' from before the 𝐹/𝐹⁻¹ swap)"
-        assert cells["cell:finv:1:0"].text == "0" and cells["cell:finv:1:1"].text == "1"
+        assert cells["cell:form:0:0"].text == "1" and cells["cell:form:0:1"].text == "1", "𝐹 (generator form matrix) over the mapping row: M = F·M_C, so F = ((1,1),(0,1))"
+        assert cells["cell:form:1:0"].text == "0" and cells["cell:form:1:1"].text == "1"
         assert cells["symbol:mapping:canonical_generators"].text == "𝐹"
-        assert "bracket:finv:map:0:l" in cells
+        assert "bracket:form:map:0:l" in cells
         assert cells["cell:embed_c:0:0"].text == "1" and cells["cell:embed_c:0:1"].text == "1"
         assert cells["cell:embed_c:2:1"].text == "1/4"
         assert cells["symbol:projection:canonical_generators"].text == f"G{SUBSCRIPT_C}"
         assert cells["tuning:canonical_generator:0"].text.startswith("1200")
         assert cells["tuning:canonical_generator:1"].text.startswith("1896")
         assert cells["symbol:tuning:canonical_generators"].text == f"𝒈{SUBSCRIPT_C}"
-        assert not any(c.id.startswith(("cell:finv:", "cell:embed_c:")) for c in _layout().cells)
+        assert not any(c.id.startswith(("cell:form:", "cell:embed_c:")) for c in _layout().cells)
 
     def test_canonical_generators_column_tiles_carry_plain_text_matching_their_grids(self):
         cells = {c.id: c for c in _projection_build(("2/1", "5/4"), form_tiles=True, plain_text_values=True).cells}
@@ -107,9 +107,9 @@ class TestCanonicalGenerators:
 
     def test_generator_form_matrix_is_interactive(self):
         cells = {c.id: c for c in _with(form_tiles=True, plain_text_values=True).cells}
-        assert cells["cell:finv:0:0"].kind == "form_cell", "𝐹: routed to the editable gridvalue component"
+        assert cells["cell:form:0:0"].kind == "form_cell", "𝐹: routed to the editable gridvalue component"
         assert cells["plain_text:mapping:canonical_generators"].kind == "plain_text_edit"
-        assert cells["cell:form:0:0"].kind == "mapped"
+        assert cells["cell:inverse_form:0:0"].kind == "mapped"
         assert cells["plain_text:canonical:generators"].kind == "plain_text"
         from rtt.app.grid_tables import EDITABLE_PLAIN_TEXT
         assert ("mapping", "canonical_generators") in EDITABLE_PLAIN_TEXT and ("canonical", "generators") not in EDITABLE_PLAIN_TEXT
@@ -118,7 +118,7 @@ class TestCanonicalGenerators:
         cells = {c.id: c for c in _with(form_controls=True).cells}
         assert cells["formchooser:mapping"].kind == "formchooser"
         assert cells["formchooser:comma_basis"].kind == "formchooser"
-        assert not any(c.id.startswith(("cell:canonical:", "cell:form:")) for c in cells.values()), "form CONTROLS (the dropdowns) does NOT reveal the canonical-mapping row / 𝐹 matrix — those # belong to 'form tiles' (greyed for now); the dropdowns appear without the boxes"
+        assert not any(c.id.startswith(("cell:canonical:", "cell:inverse_form:")) for c in cells.values()), "form CONTROLS (the dropdowns) does NOT reveal the canonical-mapping row / 𝐹 matrix — those # belong to 'form tiles' (greyed for now); the dropdowns appear without the boxes"
         inset = spreadsheet_constants.BOX_INNER
         assert cells["formchooser:mapping"].x == cells["header:primes"].x + inset
         assert cells["formchooser:comma_basis"].x == cells["header:commas"].x + inset

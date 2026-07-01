@@ -123,7 +123,7 @@ def resolve_comma_basis_form(comma_basis, preferred, domain_basis=None) -> str:
     return identify_comma_basis_form(comma_matrix, domain_basis) or ""
 
 
-def form_matrix(mapping) -> Matrix:
+def inverse_form_matrix(mapping) -> Matrix:
     m = _to_matrix(mapping)
     canonical = canonical_ma(m)
     detemper = get_generator_detempering(Temperament(m, Variance.ROW)).matrix
@@ -136,7 +136,7 @@ def form_matrix(mapping) -> Matrix:
     )
 
 
-def inverse_form_matrix(mapping) -> Matrix:
+def form_matrix(mapping) -> Matrix:
     m = _to_matrix(mapping)
     canonical = canonical_ma(m)
     canonical_detemper = get_generator_detempering(

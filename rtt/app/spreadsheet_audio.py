@@ -51,7 +51,7 @@ def annotate_aria(cells, geometry) -> None:
 def _canon_generator_sizes(resolved):
     generator_map, inverse_form = (
         resolved.tuning.tuning_map.generator_map,
-        resolved.canonical.inverse_form_M,
+        resolved.canonical.form_M,
     )
     return tuple(
         sum(generator_map[k] * inverse_form[k][j] for k in range(resolved.dimensions.rank))
