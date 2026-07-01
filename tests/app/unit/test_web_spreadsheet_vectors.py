@@ -50,7 +50,7 @@ class TestIntervalVectorsRow:
         assert cells["matrix_label:row:vectors:primes:0"].text == f"\U0001D48E{J}₁"
         assert cells["ebktop:vector:primes"].kind == "ebktop"
         assert cells["ebkangle:vector:primes"].kind == "ebkangle", "the outer ⟩ foot (operator, not the } of M)"
-        assert cells["bracket:vector:primes:0:l"].text == spreadsheet_constants.MAP_BRACKETS[0]
+        assert cells["bracket:vector:primes:0:l"].text == "⟨"
         assert cells["plain_text:vectors:primes"].text == "[⟨1 0 0]⟨0 1 0]⟨0 0 1]⟩"
 
     def test_interval_vectors_domain_primes_identity_gated_off_by_default(self):

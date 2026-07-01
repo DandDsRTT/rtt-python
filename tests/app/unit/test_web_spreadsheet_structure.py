@@ -146,8 +146,8 @@ class TestFreezeAndStructure:
                 assert cells[f"cell:selfmap:{i}:{k}"].kind == "mapped"
         assert cells["symbol:mapping:generators"].text == "\U0001D440G = \U0001D43C"
         assert cells["caption:mapping:generators"].text == "mapped generators"
-        assert cells["bracket:selfmap:l"].text == spreadsheet_constants.GENMAP_BRACKETS[0]
-        assert cells["bracket:selfmap:r"].text == spreadsheet_constants.GENMAP_BRACKETS[1]
+        assert cells["bracket:selfmap:l"].text == "{"
+        assert cells["bracket:selfmap:r"].text == "]"
         assert cells["ebktop:selfmap:0"].kind == "ebktop"
         assert cells["ebkbrace:selfmap:0"].kind == "ebkbrace"
         assert cells["plain_text:mapping:generators"].text == "{[1 0} [0 1}]"
