@@ -73,11 +73,7 @@ class TestCharWidthModel:
         assert char_metrics.EMITTABLE == frozenset(char_metrics.GLYPH_EM)
 
     def test_every_glyph_a_value_face_can_emit_has_a_width(self):
-        brackets = "".join(
-            spreadsheet_constants.MAP_BRACKETS
-            + spreadsheet_constants.LIST_BRACKETS
-            + spreadsheet_constants.GENMAP_BRACKETS
-        )
+        brackets = "⟨][{"
         alphabet = set("0123456789 ./-" + brackets + spreadsheet_constants.DASH)
         missing = alphabet - char_metrics.EMITTABLE
         assert not missing, f"no em-width for {sorted(missing)}; they would fall to DEFAULT_EM and risk a spill"
