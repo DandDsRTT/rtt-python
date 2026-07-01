@@ -111,5 +111,6 @@ class TestStyleNits:
             assert "passive: true" in getattr(page_assets, attr)
 
 
-def test_ratio_max_font_is_a_plain_number_the_stamp_can_serialize():
-    assert isinstance(render_html._RATIO_MAX_FONT, (int, float))
+class TestInjectionSource:
+    def test_ratio_max_font_is_a_plain_number_the_stamp_can_serialize(self):
+        assert isinstance(render_html._RATIO_MAX_FONT, (int, float))
