@@ -61,7 +61,6 @@ class _Page:
         self.edits = EditController(
             self.editor, self.reconciler, self.gestures, self.renderer, self.runtime
         )
-        self._tour_backup: dict | None = None
         self.gestures.bind(self.reconciler, self.renderer, self.edits)
         self.builder = PageBuilder(
             self.editor,
@@ -219,9 +218,6 @@ class _Page:
 
     def tour_begin(self):
         self.runtime.tour_active = True
-        self._tour_backup = dict(self.editor.settings)
-        self.editor.settings["temperament"] = True
-        self.editor.settings["mapping_demos"] = True
         self.runtime.set_chapter(show_settings.CHAPTER_MIN)
         self.editor.disable_hidden_settings(self.runtime.chapter)
         self.apply_chapter()
@@ -230,10 +226,9 @@ class _Page:
     def tour_home(self, ending=False):
         if ending:
             self.runtime.tour_active = False
-        if self._tour_backup is not None:
-            self.editor.settings.update(self._tour_backup)
         self.runtime.set_chapter(show_settings.CHAPTER_DEFAULT)
         _doc_store()[_CHAPTER_KEY] = self.runtime.chapter
+        self.editor.reveal_default_settings(self.runtime.chapter)
         self.editor.disable_hidden_settings(self.runtime.chapter)
         self.apply_chapter()
         self.renderer.render()

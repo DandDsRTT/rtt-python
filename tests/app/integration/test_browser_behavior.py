@@ -228,8 +228,9 @@ class TestBrowserBehavior:
             assert page.evaluate("() => localStorage.getItem('rttTourSeen')") == "1"
             assert not errors
 
-    def test_tour_ramps_from_the_simplest_chapter_through_tempering_and_back_home(self, browser):
+    def test_tour_walks_from_the_simplest_chapter_through_a_learner_driven_tempering(self, browser):
         reads = "() => (document.querySelector('.rtt-chapter-reading') || {}).textContent === "
+        titled = "() => (document.querySelector('.rtt-tour-title') || {}).textContent === "
         has_interest = "() => !!document.querySelector('[data-eid=\"header:interest\"]')"
         demos_on = "() => document.body.classList.contains('rtt-mapping-demos')"
         with _page(browser) as (page, errors):
@@ -237,11 +238,18 @@ class TestBrowserBehavior:
             page.evaluate("() => { window.rttTour.stop(); window.rttTour.start(); }")
             page.wait_for_function(f"{reads} '2: Mappings'", timeout=6000)
             assert not page.evaluate(has_interest), "the chapter-2 tour view hides intervals of interest"
-            assert page.evaluate(demos_on), "the tempering demo is armed for the hover step"
+            assert not page.evaluate(demos_on), "begin arms nothing — the learner switches demos on"
 
             page.keyboard.press("ArrowRight")
             page.wait_for_timeout(150)
             page.keyboard.press("ArrowRight")
+            page.wait_for_function(f"{titled} 'Switch on mapping demos'", timeout=4000)
+            page.wait_for_timeout(400)
+            page.click('[data-show="mapping_demos"] .q-checkbox')
+            page.wait_for_function("() => document.body.classList.contains('rtt-mapping-demos')", timeout=4000)
+
+            page.keyboard.press("ArrowRight")
+            page.wait_for_function(f"{titled} 'Tempering out'", timeout=4000)
             page.wait_for_timeout(200)
             page.evaluate(
                 "() => { const c = document.querySelector('[data-eid^=\"cell:comma:\"]');"
@@ -260,7 +268,7 @@ class TestBrowserBehavior:
             page.keyboard.press("Escape")
             page.wait_for_function(f"{reads} '4: Exploring temperaments'", timeout=6000)
             assert page.evaluate(has_interest), "skipping out lands at the default-chapter home, interest back"
-            assert not page.evaluate(demos_on), "the tour's temporary demo is reverted at the home"
+            assert page.evaluate(demos_on), "the feature the learner switched on is theirs to keep"
             assert not errors
 
     def test_active_cell_highlight_paints_only_with_an_active_cell(self, browser):
