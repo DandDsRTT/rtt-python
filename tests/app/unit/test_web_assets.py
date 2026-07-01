@@ -1,8 +1,41 @@
+import inspect
 import re
 
 import pytest
 
-from rtt.app import page_assets
+from rtt.app import _page_parts, page_assets
+
+
+class TestAssetManifestMatchesDisk:
+    def test_js_modules_list_matches_the_assets_on_disk(self):
+        on_disk = {path.name for path in page_assets._ASSETS.glob("*.js")}
+        assert set(page_assets._JS_MODULES) == on_disk, (
+            "_JS_MODULES has drifted from assets/*.js — an unlisted module never loads in the browser"
+        )
+
+    def test_css_files_list_matches_the_stylesheets_on_disk(self):
+        on_disk = {path.name for path in page_assets._ASSETS.glob("*.css")}
+        assert set(page_assets._CSS_FILES) == on_disk, (
+            "_CSS_FILES has drifted from assets/*.css — an unlisted stylesheet never loads"
+        )
+
+    def test_preload_fonts_exist_on_disk(self):
+        for file in page_assets._PRELOAD_FONTS:
+            assert (page_assets._ASSETS / "fonts" / file).exists(), (
+                f"{file} is preloaded but not present in assets/fonts"
+            )
+
+
+class TestSetupPageHeadWiring:
+    def test_setup_page_head_injects_head_html_and_no_body_scripts(self):
+        source = inspect.getsource(_page_parts.setup_page_head)
+        assert "ui.add_head_html(HEAD_HTML)" in source, (
+            "setup_page_head must inject the cache-busted HEAD_HTML into the document head"
+        )
+        assert "add_body_html" not in source, (
+            "the per-client inline <script> body injection must not return"
+        )
+        assert "add_css" not in source, "the full-CSS inline blob must not return"
 
 
 class TestHeadHtmlDelivery:
