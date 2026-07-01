@@ -405,6 +405,13 @@ class TestWebAppSmoke4:
         assert ".rtt-tour-card" in page_assets._CSS, "tour.css not folded into the page stylesheet"
         assert "tour" in tooltips.CHROME_HELP
 
+    def test_first_run_opens_at_the_tour_start_small_chapter(self):
+        assert app._initial_chapter({}) == show_settings.CHAPTER_MIN, "a genuinely-new browser opens at # the tour's start-small chapter, not two chapters deep past the scaffolding the tour promises"
+        assert app._initial_chapter({page_assets._STORE_KEY: "saved"}) == show_settings.CHAPTER_MIN, (
+            "a saved document alone must NOT count as returning — the grid autosaves on the very first "
+            "render, so keying off it would drop the learner to the deep default after a single refresh")
+        assert app._initial_chapter({page_assets._CHAPTER_KEY: 7}) == 7, "an explicit chapter choice # (the only 'returning' signal) is honored across visits"
+
     def test_first_content_slide_motivates_before_it_names_and_defers_the_equation(self):
         body = _tour_step("Reading the grid")["body"]
         assert "𝒈𝑀" not in body and "𝒕 =" not in body, "the orientation slide for an absolute newcomer # must motivate before it names — defer the 𝒕 = 𝒈𝑀 matrix equation to a later, symbol-introducing step"
