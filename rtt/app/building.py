@@ -82,7 +82,11 @@ class PageBuilder:
         css = (f"font-size:{fs}px;" if fs else "") + style
         if passthrough:
             html = f'<span class="rtt-tile-ink">{html}</span>'
-        element = ui.html(html).classes("rtt-tile-part").tooltip(tooltips.SHOW_HELP[key])
+        element = (
+            ui.html(html)
+            .classes("rtt-tile-part")
+            .tooltip(tooltips.show_help(key, _page_parts._setting(self, "terminology")))
+        )
         if key == "mnemonics":
             element.classes(add="rtt-tile-mnem")
         if passthrough:

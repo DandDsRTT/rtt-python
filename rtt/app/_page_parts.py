@@ -261,7 +261,7 @@ def _visual_toggle(page_builder, key):
         ui.html(_VISUAL_ICON[key])
         .classes(cls)
         .mark(f"visibility_control:{key}")
-        .tooltip(tooltips.SHOW_HELP[key])
+        .tooltip(tooltips.show_help(key, _setting(page_builder, "terminology")))
     )
     element.on(
         "click",
@@ -419,7 +419,7 @@ def build_show_row(page_builder, key, label) -> None:
             _settings_checkbox(page_builder, key, label)
             .classes("rtt-show-item")
             .mark(f"showbox:{key}")
-            .tooltip(tooltips.SHOW_HELP[key])
+            .tooltip(tooltips.show_help(key, _setting(page_builder, "terminology")))
         )
         example = ui.html(_example_html(key)).classes("rtt-example-cell").mark(f"showexample:{key}")
     if fold is not None:
