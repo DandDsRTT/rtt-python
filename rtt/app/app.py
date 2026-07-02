@@ -47,6 +47,7 @@ def _initial_chapter(store: dict) -> int:
 class _Page:
     def __init__(self, state: str | None = None) -> None:
         self.runtime = PageRuntime()
+        self._tour_snapshot: tuple | None = None
         self.chrome = PageChrome()
         loaded_from_url = self._load_document(state)
         self.gestures = GestureController(self.editor, self.runtime)
@@ -121,7 +122,8 @@ class _Page:
             _SIMULATED_PAGES.append(self)
         ui.on("rtt_viewport", self.renderer._on_viewport, throttle=0.05)
         ui.on("rtt_tour_begin", lambda _: self.tour_begin())
-        ui.on("rtt_tour_skip", lambda _: self.on_chapter_change(show_settings.CHAPTER_MIN))
+        ui.on("rtt_tour_skip", lambda _: self.tour_exit(show_settings.CHAPTER_MIN))
+        ui.on("rtt_tour_complete", lambda _: self.tour_exit(show_settings.CHAPTER_DEFAULT))
         ui.run_javascript(_OPTION_HOVER_DELEGATION)
         ui.run_javascript(_TOOLTIP_DISMISS_JS)
         ui.run_javascript(_BUSY_JS)
@@ -223,9 +225,16 @@ class _Page:
         self.renderer.render()
 
     def tour_begin(self):
+        self._tour_snapshot = self.editor.capture_for_preview()
         self.editor.reset()
         self.editor.settings["mapping_demos"] = True
         self.on_chapter_change(show_settings.CHAPTER_MIN)
+
+    def tour_exit(self, chapter):
+        if self._tour_snapshot is not None:
+            self.editor.restore_for_preview(self._tour_snapshot)
+            self._tour_snapshot = None
+        self.on_chapter_change(chapter)
 
     def reset_everything(self):
         self.edits.act(self.editor.reset)
