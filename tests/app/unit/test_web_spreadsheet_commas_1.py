@@ -676,7 +676,7 @@ class TestGriddedValuesToggle:
         on = {c.id for c in spreadsheet.build(base, {**s, "gridded_values": True}, tuning_scheme="minimax-S").cells}
         assert {"control:q", "control:dual", "optimization:power"} <= on
 
-    def test_gridded_values_off_hides_the_nonstandard_domain_element_cells_and_controls(self):
+    def test_gridded_values_off_hides_the_nonstandard_domain_element_cells_but_keeps_the_controls(self):
         state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
         s = {**settings.defaults(), "nonstandard_domain": True, "projection": True}
         on = {c.id: c for c in spreadsheet.build(state, {**s, "gridded_values": True}).cells}
@@ -691,7 +691,7 @@ class TestGriddedValuesToggle:
         assert projection_grid_ids and all(on[c].kind == "mapped" for c in projection_grid_ids)
         assert domain_value_ids <= on.keys() and domain_control_ids <= on.keys()
         assert not (domain_value_ids & off)
-        assert not (domain_control_ids & off)
+        assert domain_control_ids <= off
         assert not (projection_grid_ids & off)
 
     def test_gridded_values_off_hides_the_editable_unchanged_basis_cells(self):
